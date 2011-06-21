@@ -51,27 +51,8 @@ Database = {}
  * @param {Object} data (optional) Data to pass
 */
 Cache.loadGraphics = function(filename, type, load, data) {
-	var path;
-	switch(type) {
-		case "tilesets":
-			path = "Graphics/Tilesets";
-		break;	
-		case "autotiles":
-			path = "Graphics/Autotiles";
-		break;
-		case "characters":
-			path = "Graphics/Characters";
-		break;
-		case "windowskins":
-			path = "Graphics/Windowskins";
-		break;
-		case "animations":
-			path = "Graphics/Animations";
-		break;
-		case "pictures":
-			path = "Graphics/Pictures";
-		break;
-	}
+  var type_capitalized = type.charAt(0).toUpperCase() + type.slice(1);
+	var path = "Graphics/" + type_capitalized;
 	
 	var file = Cache.get(filename, type);
 	if (file) {
@@ -238,21 +219,7 @@ Cache.loadAudio = function(filename, type, load) {
 	
 	if (!filename) return false;
 	
-	var path;
-	switch(type) {
-		case "bgm":
-			path = "Audio/BGM";
-		break;
-		case "bgs":
-			path = "Audio/BGS";
-		break;
-		case "me":
-			path = "Audio/ME";
-		break;
-		case "se":
-			path = "Audio/SE";
-		break;
-	}
+	var path = "Audio/" + type.toUpperCase();
 
 	var snd = new Audio();
 	if (typeof filename != "string") {
