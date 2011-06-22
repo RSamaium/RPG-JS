@@ -1762,7 +1762,7 @@ Event.prototype = {
 			opacity: 0.9,
 			blockMovement: true,
 			onLoad:  function() {
-				this.setText(text, "18px Arial", "#FFF");
+				this.setText(text);
 				this.setKeyClose('Space');
 				this.open();
 			}

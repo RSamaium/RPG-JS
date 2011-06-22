@@ -149,11 +149,17 @@ Window.prototype = {
      * Put a text in the window contents
 	 * @method setText
      * @param {String} text Text.Put \n to skip a line
-     * @param {String} css Property of the text as in CSS. For example: "bold 18px Arial"
-     * @param {String} color Text color in hexadecimal: For example: #FF0000
+     * @param (optional) {Object} text properties:<br />
+     size: {Number} The size of text. For example: 18<br />
+     font: {String} The font of text. For example: "Arial"<br />
+     color: {String} The color of text. For example: "#FF0000"<br />
     */
-	setText: function(text, css, color) {
-		 this.content = new Text(text, css, color);
+	setText: function(text, prop) {
+    var prop = prop || {};
+    var size = prop.size || 18;
+    var color = prop.color || "#FFF";
+    var font = prop.font || "Arial";
+		this.content = new Text(text, size + "px " + font, color);
 	},
 
 	/**
