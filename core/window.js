@@ -150,16 +150,16 @@ Window.prototype = {
 	 * @method setText
      * @param {String} text Text.Put \n to skip a line
      * @param (optional) {Object} text properties:<br />
-     size: {String} The size of text. For example: "18px"<br />
+     size: {Number} The size of text. For example: 18<br />
      font: {String} The font of text. For example: "Arial"<br />
      color: {String} The color of text. For example: "#FF0000"<br />
     */
 	setText: function(text, prop) {
     var prop = prop || {};
-    var size = prop.size || "18px";
+    var size = prop.size || 18;
     var color = prop.color || "#FFF";
     var font = prop.font || "Arial";
-		this.content = new Text(text, size + " " + font, color);
+		this.content = new Text(text, size + "px " + font, color);
 	},
 
 	/**
