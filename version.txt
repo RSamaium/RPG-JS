@@ -1,0 +1,153 @@
+Version Beta 1.0 [September 04, 2011]
+---------------------------------------------------------------
+Added features :
+* rpg.changeScreenColorTone
+* rpg.screenFlash
+* rpg.addHtmlElement
+* rpg.bindMouseEvent
+* rpg.clearMap
+* rpg.setVariable
+* rpg.getVariable
+* rpg.mapFreeze
+* rpg.save
+* rpg.load
+* rpg.addPicture
+* rpg.erasePicture
+* rpg.movePicture
+* rpg.rotatePicture
+* rpg.addItem
+* rpg.removeItem
+* rpg.setItem
+* rpg.getItem
+* rpg.screenShake
+* rpg.playBGS
+* rpg.playME
+* rpg.displayMap
+* rpg.setLang
+* rpg.toLang
+* rpg.battleFormulas
+* rpg.battleEffect
+* Event.makeExpList
+* Event.addExp
+* Event.setExp
+* Event.setLevel
+* Event.setParam
+* Event.equipItem
+* Event.itemIsEquiped
+* Event.removeItemEquiped
+* Event.getItemsEquipedByType
+* Event.skillsToLearn
+* Event.setSkillToLearn
+* Event.setClass
+* Event.setElements
+* Event.learnSkill
+* Event.removeSkill
+* Event.setSkill
+* Event.getSkill
+* Event.addState
+* Event.removeState
+* Event.stateInflicted
+* eEvent.detectionEvents
+* Event.getElementById
+* Event.setMouseElement
+* Cache.getMapGraphics
+* Cache.setMapGraphics
+* Cache.path
+* Cache.progressLoad
+* Cache.finishLoad
+* Window.drawText
+* Window.setPosition
+* Window.setOpacity
+* Window.setBackOpacity
+* Window.setContentOpacity
+* Window.setCursorSize
+* Window.setSize
+* Window.clear
+* Window.addCommand
+* Window.isActive
+* Window.selectable
+* Window.moveCursor
+
+Added propreties :
+
+* Event.exp
+* Even.params
+* Event.currentLevel
+* Event.currentExp
+* Event.maxLevel
+* Event.elements
+* Event.states
+* Event.className
+* Event.width
+* Event.height
+* Event.setTypeMove
+* Rpg.skills
+* Rpg.items
+* Window.index
+* Window.scene
+* Window.active
+* Window.isSelectable
+* Window.commands
+* Window.containerParent
+* Window.height
+* Window.width
+
+Add classes :
+* Input
+* Effect
+* Scene
+* Interpreter
+
+
+Fix :
+* Sound Firefox
+* Adjusting the sound
+* Action after change in appearance
+* Display text (Opera)
+* Moving an event
+
+
+Improvement :
+* Loading
+* Map generated
+* Add Own Event Command
+* Data as JSON
+* Loading a map encoded (base64) - Possible
+* Movement by pixel
+* Contact an event
+* Add external calls
+* Internationalization
+* Moving more realistic (key)
+* Playing with the mouse
+* Adding DOM elements
+* Detection of an event (trigger condition)
+
+Alpha 2.0 [May 7, 2011]
+----------------------------------------------------------------------
+Fixed direction according to a new page
+Fixed regX and regY of event
+Fixed through event
+Improved command "move_route" : add property "step_backward"
+Fixed direction fix
+Improved documentation
+Added commandsExit() in Event.js
+Added command "call" in event
+Fixed local switches to an event (keep in memory)
+Fixed Initial Scrolling
+Added callCommandsEvent()
+Fixed Change in appearance event
+Fixed stop motion of the event when we interact with
+Improved demo
+Fixed Detecting player (ABS)
+Improved the superposition of events
+Fixed Interaction event in touch
+Fixed Interaction event (Firefox 4)
+Fixed Comment in a "Event" (as the server)
+Fixed Transfert
+Improvement of the player transfers to another map (see property "transfert" for loadMap())
+Fixed music volume
+Added compatibility sounds for all browsers
+
+Alpha 1.0 [April 10, 2011]
+----------------------------------------------------------------------
+Initial release.
