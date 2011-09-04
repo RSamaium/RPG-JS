@@ -1509,7 +1509,6 @@ Rpg.prototype = {
 				
 				var img;
 				
-				var __D = "";
 				
 				for (i=0 ; i < 2 ; i++) {
 					img = Cache.getMapGraphics(filename, i);
@@ -1523,7 +1522,6 @@ Rpg.prototype = {
 							var context = map_img[i].canvas.getContext('2d');
 							map_img[i].draw(context);
 							img.src = map_img[i].toDataURL(false);
-							__D += '"layer' + (i+1) + '": "' + img.src + '",';
 							Cache.setMapGraphics(filename, img);
 							map_img[i].removeAllChildren();
 							Ticker.removeListener(map_img[i]);
@@ -1533,10 +1531,7 @@ Rpg.prototype = {
 					self.layer[(i * 4)].addChild(new Bitmap(img));	
 					progressLoad();
 				}
-				
-				$.post("base64.php", {img: __D});
-				
-				
+
 				for (i=0 ; i < self.layer.length ; i++) {
 					  container_map.addChild(self.layer[i]);
 				}
