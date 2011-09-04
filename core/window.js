@@ -36,19 +36,78 @@ THE SOFTWARE.
  * @param {Rpg} rpg Rpg class
  */
 
-function Window(prop, rpg) {
+function Window(rpg, parent, width, height) {
+   if (!rpg) return;
+   var prop = {};
+    /**
+	 * Name windowskin used
+	 * @property windowskin
+	 * @type String
+	 */
    this.windowskin = prop.skin ? prop.skin : rpg.windowskinDefault;
-   this.opacity = prop.opacity;
-   this.onLoad = prop.onLoad;
+   this.opacity = prop.opacity ? prop.opacity : 1;
    this.propfadeIn = prop.fadeIn;
    this.propfadeOut = prop.fadeOut;
    this.blockMovement = prop.blockMovement;
    this.fadeMaxOpacity = this.opacity;
-  
+   this.autoOpen = prop.autoOpen ? prop.autoOpen : true;
+    /**
+	 * Width of the window
+	 * @property width
+	 * @type Integer
+	 */
+   this.width = width ? width : 0;
+    /**
+	 * Width of the window
+	 * @property height
+	 * @type Integer
+	 */
+   this.height  = height ? height : 0;
    this.dialog = {};
+   
    this.rpg = rpg;
-   this.content;
-  
+    /**
+	 * Whether the window is active. If false, the player can not move the cursor
+	 * @property active
+	 * @type Boolean
+	 */
+   this.active = true;
+   /**
+	 * Whether the window has a cursor to select commands
+	 * @property isSelectable
+	 * @type Boolean
+	 */
+   this.isSelectable = false;
+	/**
+	 * Current cursor position (in the array)
+	 * @property index
+	 * @type Integer
+	 */
+   this.index = 0;
+    /**
+	 * The scene where the window is attached
+	 * @property scene
+	 * @type Scene
+	 */
+   this.scene;
+   
+    /**
+	 * List of commands added
+	 * @property commands
+	 * @type Array
+	 */
+   this.commands = [];
+   this.content = new Container();
+   this.cursor = {};
+   /**
+	 * The parent container of the window
+	 * @property containerParent
+	 * @type <a href="http://easeljs.com/docs/Container.html">Container</a>
+	 */
+   this.containerParent = parent ? parent : this.rpg.stage;
+   
+   
+		
    /** 
 	* Callback when the window is closed
 	* @property onClose
@@ -83,7 +142,6 @@ function Window(prop, rpg) {
 Window.prototype = {
 
 	initialize: function() {
-		Ticker.addListener(this);
 		this.setWindowskin();
 	},
 
@@ -91,6 +149,7 @@ Window.prototype = {
 	setWindowskin: function() {
 		var self = this;
 		this.dialog.skin = new Container();
+		this.cursor.skin = new Container();
 		Cache.windowskins(this.windowskin, function(img) {
 			var spriteSheet = new SpriteSheet(img, 128, 128);
 			var bmpSeq = new BitmapSequence(spriteSheet);
@@ -122,7 +181,31 @@ Window.prototype = {
 			borderConstruct(43, 0, 32, 'bottom_left');
 			borderConstruct(46, 32, 32, 'bottom_right');
 			
-			self.onLoad();
+			self.cursor.border = {};
+			var bmp_cursor = new BitmapSequence(new SpriteSheet(img, 32, 32));
+			function cursorConstruct(frame, x, y, position) {
+				bmp_border.currentFrame = frame;
+				bmp_border.x = x;
+				bmp_border.y = y;
+				self.cursor.border[position] = bmp_border;
+				self.cursor.skin.addChild(bmp_border);
+				bmp_border = bmp_border.clone();
+			}
+			bmp_cursor.currentFrame = 15;
+			self.cursor.content = bmp_cursor;
+			self.cursor.skin.alpha = 0;
+			self.cursor.skin.addChild(bmp_cursor);
+			// cursorConstruct(8, 16, 0, 'top');
+			// cursorConstruct(19, 0, 16, 'left');
+			// cursorConstruct(22, 32, 16, 'right');
+			// cursorConstruct(44, 16, 32, 'bottom');
+			// cursorConstruct(55, 0, 0, 'top_left');
+			// cursorConstruct(10, 32, 0, 'top_right');
+			// cursorConstruct(43, 0, 32, 'bottom_left');
+			// cursorConstruct(46, 32, 32, 'bottom_right');
+			
+			if (self.onLoad) self.onLoad();
+			if (self.autoOpen) self.open();
 		});
 		
 	},
@@ -130,7 +213,10 @@ Window.prototype = {
 	/**
      * Assign button to close the window
 	 * @method setKeyClose
-     * @param {String} key The name of the key on the keyboard
+     * @param {Integer} key The code of the key on the keyboard. Example : <br />
+		<pre>
+			this.setKeyClose(Input.Esc);
+		</pre>
     */
 	setKeyClose: function(key) {
 		this.keyclose = key;
@@ -139,7 +225,10 @@ Window.prototype = {
 	/**
      * Assign button to open the window
 	 * @method setKeyOpen
-     * @param {String} key The name of the key on the keyboard
+     * @param {Integer} key The code of the key on the keyboard. Example : <br />
+	 * 	<pre>
+			this.setKeyOpen(Input.Space);
+		</pre>
     */
 	setKeyOpen: function(key) {
 		this.keyopen = key;
@@ -147,33 +236,109 @@ Window.prototype = {
 	
 	/**
      * Put a text in the window contents
-	 * @method setText
+	 * @method drawText (alias setText);
+     * @param {Integer} x Position X
+     * @param {Integer} y Position Y
      * @param {String} text Text.Put \n to skip a line
      * @param {String} css Property of the text as in CSS. For example: "bold 18px Arial"
      * @param {String} color Text color in hexadecimal: For example: #FF0000
+     * @return Text <a href="http://easeljs.com/docs/Text.html">Text Object</a>
     */
-	setText: function(text, css, color) {
-		 this.content = new Text(text, css, color);
+	setText: function(x, y, text, css, color) { this.drawText(x, y, text, css, color) },
+	drawText: function(x, y, text, css, color) {
+		var text = new Text(text, css, color);
+		text.x = x;
+		text.y = y;
+		text.lineHeight = 30;
+		this.content.addChild(text);
+		return text;
 	},
-
+	
 	/**
-     * Open the window
-	 * @method open
-     * @param {Integer} width Width in pixels
-     * @param {Integer} height Height in pixels
-     * @param {String} position Window position on screen (bottom). Default: bottom
+     * Position the window on the canvas
+	 * @method setPosition
+     * @param {Integer} x Position X in pixel
+     * @param {Integer} y Position Y in pixel
     */
-	open: function(width, height, position, next) {
-		var self = this;
-		if (!width) width = 480;
-		if (!height) height = 160;
-		if (!next) next = false;
-		if (!position) position = 'bottom';
-		var border_w = 16;
-		var border_h = 16;
-		var content_w = 128;
-		var content_h = 128;
+	/**
+     * Position the window on the canvas
+	 * @method setPosition
+     * @param {String} position
+		<ul>
+			<li>bottom : Center the window at the bottom of the canvas</li>
+		</ul>
+    */
+	setPosition: function(x, y) {
+		if (x == 'bottom') {
+			this.dialog.skin.x = this.rpg.canvas.width / 2 - this.width / 2;
+			this.dialog.skin.y = this.rpg.canvas.height - this.height - 20;
+		}
+		else {
+			this.dialog.skin.x = x;
+			this.dialog.skin.y = y;
+		}
+	},
+	
+	/**
+     * Opacity of the window
+	 * @method setOpacity
+     * @param {Integer} opacity Opacity between 0 and 1
+    */
+	setOpacity: function(opacity) {
+		this.dialog.skin.alpha = opacity;
+	},
+	
+	/**
+     * Opacity of the background of the window
+	 * @method setBackOpacity
+     * @param {Integer} opacity Opacity between 0 and 1
+    */
+	setBackOpacity: function(opacity) {
+		this.dialog.content.alpha = opacity;
+	},
+	
+	/**
+     * Opacity of the window contents
+	 * @method setContentOpacity
+     * @param {Integer} opacity Opacity between 0 and 1
+    */
+	setContentOpacity: function(opacity) {
+		this.content.alpha = opacity;
+	},
+	
+	/**
+     * Cursor size
+	 * @method setCursorSize
+     * @param {Integer} width Width
+     * @param {Integer} height Height
+    */
+	setCursorSize: function(width, height) {
+		var border_w = 2,
+		border_h = 2,
+		content_w = 32,
+		content_h = 32;
+		this.cursor.border.top.scaleX = this.cursor.border.bottom.scaleX = (width - border_w) / border_w ;
+		this.cursor.border.right.scaleY = this.cursor.border.left.scaleY = (height - border_h) / border_h ;
 		
+		this.cursor.border.top_right.x = this.cursor.border.right.x = this.cursor.border.bottom_right.x =  width - border_w + 5;
+		this.cursor.border.bottom_right.y = this.cursor.border.bottom_left.y = this.cursor.border.bottom.y = height - border_h + 5;
+		
+		this.cursor.content.scaleX = width / content_w;
+		this.cursor.content.scaleY = height / content_h;
+
+	},
+	
+	/**
+     * Window size
+	 * @method setSize
+     * @param {Integer} width Width
+     * @param {Integer} height Height
+    */
+	setSize: function(width, height) {
+		var border_w = 16,
+		border_h = 16,
+		content_w = 128,
+		content_h = 128;
 		this.dialog.border.top.scaleX = this.dialog.border.bottom.scaleX = (width - border_w) / border_w ;
 		this.dialog.border.right.scaleY = this.dialog.border.left.scaleY = (height - border_h) / border_h ;
 		
@@ -183,21 +348,25 @@ Window.prototype = {
 		this.dialog.content.scaleX = width / content_w;
 		this.dialog.content.scaleY = height / content_h;
 		
-		var obj_text = this.content;
-		obj_text.x = 30;
-		obj_text.y = 40;
-		obj_text.lineHeight = 30;
+		this.width = width;
+		this.height = height;
+	},
+
+	/**
+     * Open the window
+	 * @method open
+    */
+	open: function() {
+		var self = this;
 		
-		// getMeasuredLineHeight
-		if (position == 'bottom') {
-			this.dialog.skin.x = this.rpg.canvas.width / 2 - width / 2;
-			this.dialog.skin.y = this.rpg.canvas.height - height - 20;
-		}
+		this.setSize(this.width, this.height);
+		
 		this.dialog.open = true;
-		this.dialog.text = obj_text;
-		this.dialog.skin.addChild(obj_text);
+	//	this.dialog.text = obj_text;
+		this.content.addChild(this.cursor.skin);
+		this.dialog.skin.addChild(this.content);
 		this.dialog.skin.alpha = 0;
-		this.rpg.stage.addChild(this.dialog.skin);
+		this.containerParent.addChild(this.dialog.skin);
 		this.rpg.currentWindows.push(this);
 		this.isOpen = true;
 		
@@ -212,7 +381,16 @@ Window.prototype = {
 			if (self.onOpen) self.onOpen();
 		}
 		
+
 		
+	},
+	
+	/**
+     * Clears the contents of the window
+	 * @method clear
+    */
+	clear: function() {
+		this.content.removeAllChildren();
 	},
 	
 	/**
@@ -233,8 +411,8 @@ Window.prototype = {
 			
 			//console.log(self.rpg.currentWindows);
 
-			self.dialog.skin.removeChild(self.dialog.text);
-			self.rpg.stage.removeChild(self.dialog.skin);	
+			self.clear();
+			self.containerParent.removeChild(self.dialog.skin);	
 			
 			if (self.onClose) self.onClose();
 		}
@@ -248,57 +426,157 @@ Window.prototype = {
 		
 	},
 	
-	// Private
-	tick: function() {
-		if (this.fade && this.fade.value != this.opacity) {
-			var opacity = this.opacity;
-			
-			var speed = Math.round((this.fade.speed / 255) * 100) / 100;
-			if (this.fade.value < opacity) {
-				opacity -= speed;
-			}
-			else {
-				opacity += speed;
-			}
-			if (opacity < 0) {
-				opacity = 0;
-				if (this.fade.callback) this.fade.callback();
-			}
-			else if (opacity > this.fadeMaxOpacity) {
-				opacity = this.fadeMaxOpacity;
-				if (this.fade.callback) this.fade.callback();
-			}
-			this.opacity = opacity;
-			this.dialog.skin.alpha = this.opacity;
-		}
-	},
-	
 	/**
      * Done completely disappear from the window
 	 * @method fadeOut
-     * @param {Integer} speed The higher the value, the greater is slow
+     * @param {Integer} duration Duration in frames
      * @param {Function} callback (optional) Callback when the fade is complete
     */
-	fadeOut: function(speed, callback) {
-		this.fading(0, speed, callback);
+	fadeOut: function(duration, callback) {
+		new Effect(this.dialog.skin).fadeOut(duration, callback);
 	},
 	
 	/**
      * Window will appear to fade
 	 * @method fadeIn
-     * @param {Integer} speed The higher the value, the greater is slow
+     * @param {Integer} duration Duration in frames
      * @param {Function} callback (optional) Callback when the fade is complete
     */
-	fadeIn: function(speed, callback) {
-		this.fading(1, speed, callback);
+	fadeIn: function(duration, callback) {
+		new Effect(this.dialog.skin).fadeStartTo(duration, 0, this.fadeMaxOpacity, callback);
 	},
 	
-	// Private
-	fading: function(value, speed, callback) {
-		this.fade = {};
-		this.fade.value = value;	
-		this.fade.speed = speed;	
-		this.fade.callback = callback;
+	/**
+     * Adds a command window. To be used only if the window is defined as "selectable"
+	 * @method addCommand
+     * @param {Integer} x Position X
+     * @param {Integer} y Position Y
+     * @param {Integer} w Width
+     * @param {Integer} h Height
+     * @param {Function} callback (optional) Callback function when the player validates the command
+    */
+	addCommand: function(x, y, w, h, callback) {
+		this.commands.push({
+			x: x,
+			y: y,
+			w: w,
+			h: h,
+			callback: callback
+		});
 	},
-
+	
+	/**
+     * Enables or disables the cursor of the window. If disabled, the player can not move the cursor
+	 * @method isActive
+     * @param {Boolean} bool true to enable
+    */
+	isActive: function(bool) {
+		this.active = bool;
+	},
+	
+	/**
+     * The window has a cursor. The player can choose to move. Use "addCommand" to add commands.
+	 * @method selectable
+     * @param {Boolean} loop (optional)  The cursor will return to the first command when it comes to the end (and vice versa). true by default
+     * @param {Object} inputs (optional) Keys to assign to the handling of the cursor : <br />
+		<ul>
+			<li>{Integer|Array} enter (optional) : Enter key ([Input.Enter, Input.Space] by default)</li>
+			<li>{Integer|Array} back (optional) : Up key (Input.Up by default)</li>
+			<li>{Integer|Array} next (optional) : Down key (Input.Bottom by default)</li>
+		</ul>
+    */
+	selectable: function(loop, inputs) {
+		loop = loop !== undefined ? loop : true;
+		if (!inputs) inputs = {};
+		if (!inputs.enter) inputs.enter =  [Input.Enter, Input.Space];
+		if (!inputs.back) inputs.back =  Input.Up;
+		if (!inputs.next) inputs.next =  Input.Bottom;
+		this.loop = loop;
+		this.isSelectable = true;
+		this.inputs = inputs;
+		if (this.scene) this.scene._input(inputs);
+		this.cursor.skin.alpha = 1;
+		this.moveCursor();
+		
+	},
+	
+	/**
+     * Place the cursor on a command
+	 * @method moveCursor
+     * @param {Integer} index (optional) Command position in the array. If non-existent parameter is the attribute "index" which is tested
+    */
+	moveCursor: function(index) {
+		var idx = index === undefined ? this.index : index;
+		if (!this.commands[idx]) return;
+		this.cursor.skin.x = this.commands[idx].x;
+		this.cursor.skin.y = this.commands[idx].y;
+		this.cursor.skin.scaleX = this.commands[idx].w;
+		this.cursor.skin.scaleY = this.commands[idx].h;
+	},
+	
+	
+	
+	
 }
+
+/**
+ * @class Scene_Dialog The scene with the dialog. See the command "SHOW_TEXT" in Interpreter
+ * @author Samuel Ronce
+ * @constructor
+ * @param {Rpg} rpg Rpg class
+ */
+function Scene_Dialog(rpg) {
+	this.parent = Scene;  
+	this.parent(rpg);
+	this.main();
+}
+
+var p = Scene_Dialog.prototype = new Scene();
+
+p.main = function() {
+	var self = this;
+	this.setFreeze("movement");
+	this.window = this.addWindow(Window_Dialog);
+	
+	if (Rpg.mobileUserAgent()) {
+		Cache.pictures("next.png", function(img) {
+			var bmp = new Bitmap(img);
+			self.content.addChild(bmp);
+			bmp.x = 500;
+			bmp.y = 410;
+			
+			self.rpg.bindMouseEvent("click", function(obj) {
+				var el = self.content.getObjectUnderPoint(obj.mouse_x, obj.mouse_y);
+				if (el != null && el.id == bmp.id) {
+					self.rpg.unbindMouseEvent("click");
+					Input.trigger(Input.Space, "press");
+				}
+			});
+			
+		});	
+	}
+	
+}
+
+/**
+ * @class Window_Dialog Dialog box in a message.
+ * @author Samuel Ronce
+ * @constructor
+ * @param {Rpg} rpg Rpg class
+ * @param {Window} parent The parent window
+ */
+function Window_Dialog(rpg, parent) {
+	this.parent = Window;  
+	this.parent(rpg, parent, 450, 150);
+}
+
+var p = Window_Dialog.prototype = new Window();
+
+// "onLoad" is called when the windowskin is loaded
+p.onLoad = function() {
+	var self = this;
+	this.setPosition('bottom');
+	this.setBackOpacity(0.8);	
+}
+
+

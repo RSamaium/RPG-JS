@@ -32,13 +32,17 @@ THE SOFTWARE.
  */
 
 function Player(prop, rpg) {
-    var speed = prop.speed ? prop.speed : 4;
+    var speed = prop.speed ? prop.speed : 8;
+	rpg.setScrolling(speed);
 	var prop_event = [{
 		name: 'Player',
 		x: prop.x,
 		y: prop.y,
+		real_x: prop.real_x,
+		real_y: prop.real_y,
 		regX: prop.regX,
-		regY: prop.regY
+		regY: prop.regY,
+		actions: prop.actions
 	},
 	
 		[	
@@ -50,14 +54,18 @@ function Player(prop, rpg) {
 				no_animation: prop.no_animation,
 				speed: speed,
 				commands: [],
-				action_battle: prop.actionBattle
-
+				action_battle: prop.actionBattle,
+				nbSequenceX: prop.nbSequenceX,
+				nbSequenceY: prop.nbSequenceY,
+				speedAnimation: prop.speedAnimation
 			}
 		]
 	];	
    rpg.speedScrolling = speed;
-   
-   this.keyBuffer = 0;
+
+   this.moveWithMouse = false;
+  
+   this._useMouse = false;
    this.moving = false;
    this.keypress = false;
    this.freeze = false;
@@ -68,8 +76,9 @@ function Player(prop, rpg) {
    this.parent = Event;  
    this.parent(prop_event, rpg);
    
-   this.actions = prop.actions;
    this.handleKeyPress();
+   this.setTypeMove("real");
+   this.movementBlock = false;
    this.tickPlayer = this._tick;
    this.old_direction = this.direction;
 	 
@@ -80,97 +89,45 @@ var p = Player.prototype = new Event();
 // Private
 p.handleKeyPress = function() {
 	var self = this;
+	var arrows = [Input.Left, Input.Up, Input.Right, Input.Bottom];
+	var action_id;
 	
-	function keytype(code) {
-		
-		switch (code) {
-			case 97:
-			case 65: return 'A'; break;
-			case 122: return 'Z'; break;
-			case 101: return 'E'; break;
-			case 113: return 'Q'; break;
-			
-			
-			case 13: return 'Enter'; break;
-			case 16: return 'Shift'; break;
-			case 17: return 'Ctrl'; break;
-			case 18: return 'Alt'; break;
-			case 19: return 'Pause'; break;
-			case 32: return 'Space'; break;
-		}
-		
-	}
-	
-	function keyaction(type, e) {
-		var i, act;
-		for (i = 0 ; i < self.actions.length ; i++) {
-			act = self.rpg.actions[self.actions[i]];	
-			if (act[type]) {
-				if (self.rpg.valueExist(act[type], keytype(e.which))) {
-					self.action(self.actions[i]);
-				}
-			}
-		}
-	}
-	
-	document.onkeydown = function(e) {
 
+
+	for (i = 0 ; i < this.actions.length ; i++) {
+		act = this.rpg.actions[this.actions[i]];	
+		if (act['keypress']) {
+			action_id = this.actions[i];
+			Input.press(act['keypress'], function(e) {
+				self.action(action_id);
+			});
+		}
+	}
+	
+	Input.keyDown(arrows, function(e) {
 		var blockMovement = self.movementIsBlocked();
-
 		if (!self.freeze && !blockMovement) {
 			if (!blockMovement) {
-				if (e.keyCode >= 37 && e.keyCode <= 40) {
-					self.keyBuffer = e.keyCode;
-				}
-			}
-
-			keyaction('keydown', e);
-		}
-		
-	},
-	
-
-	document.onkeyup = function(e) {
-		if (self.freeze) return false;
-		if (self.keyBuffer == e.keyCode) {
-			self.keyBuffer = 0;
-		}
-		
-		keyaction('keyup', e);
-	}
-	
-	document.onkeypress = function(e) {
-	
-		var blockMovement = self.movementIsBlocked();
-		
-		var keyCode = e.which;
-		
-		// Close Window
-		var dialog_open = false;
-		var dialog;
-
-		for (var i=0 ; i < self.rpg.currentWindows.length ; i++) {
-			dialog = self.rpg.currentWindows[i];
-			if (dialog.isOpen) {
-				dialog_open = true;
-				if (dialog.keyclose != null && dialog.keyclose == keytype(keyCode)) {
-					dialog.close();
-				}
-			}
-		}
-		
-		if (self.freeze && !blockMovement) return false;
-		
-		if (keyCode == 32 || keyCode == 13) {
-			if (!dialog_open) {
-				self.interactionEventBeside('action_button');
 				
+				if (Rpg.endArray(Input.keyBuffer) !=  e.keyCode) {
+					Input.keyBuffer.push(e.keyCode);
+					
+				}
+
 			}
 		}
-		
-		
-		keyaction('keypress', e);
-	}	
+	});
+	
+	Input.press([Input.Enter, Input.Space], function(e) {
+		self.triggerEventBeside();
+	});
+	
+	Input.keyUp(function(e) {
+		//if (self.freeze) return false;	
+		Input.keyBuffer = Rpg.unsetArrayElement(Input.keyBuffer, e.keyCode);
+		Input.cacheKeyBuffer = Rpg.unsetArrayElement(Input.keyBuffer, e.keyCode);
+	});
+
 }
 
 /**
@@ -181,6 +138,7 @@ p.handleKeyPress = function() {
 p.movementIsBlocked = function() {
 	var blockMovement = false;
 	
+	if (this.movementBlock) return true;
 	if (this.rpg.inAction) return false;
 
 	for (var i=0 ; i < this.rpg.currentWindows.length ; i++) {
@@ -192,54 +150,58 @@ p.movementIsBlocked = function() {
 	return blockMovement;
 }
 
+p.movementPause = function(bool) {
+	this.movementBlock = bool;
+}
+
+p.assignKey = function() {
+	this.handleKeyPress();
+}
+
 // Private
 p._tick = function() {
 	var self = this;
-	 if (this.keyBuffer && !this.moving) {
+	 if ((Input.keyBuffer.length > 0 && !this.moving) || this.moveWithMouse) {
 	 
-		var key = this.keyBuffer;
-		var direction = 0;
-		switch(key) {
-			case 37:
-				if (this.rpg.isPassable(this.x - 1, this.y)) {
-					direction = 4;
-				}
-				this.direction = 'left';
-			break;
-			case 38:
-				if (this.rpg.isPassable(this.x, this.y - 1)) {
-					direction = 2;
-				}
-				this.direction = 'up';
-			break;
-			case 39:	
-				if (this.rpg.isPassable(this.x + 1, this.y)) {
-					direction = 6;
-				}
-				this.direction = 'right';
-			break;
-			case 40:
-				if (this.rpg.isPassable(this.x, this.y + 1)) {
-					direction = 8;
-				}
-				this.direction = 'bottom';
-			break;
+		if (!this.moveWithMouse) {
+			var key = Rpg.endArray(Input.keyBuffer);
+			var direction = 0;
+			switch(key) {
+				case Input.Left:
+					// if (this.rpg.isPassable(this.x - 1, this.y)) {
+						direction = 4;
+					// }
+					this.direction = 'left';
+				break;
+				case Input.Up:
+					// if (this.rpg.isPassable(this.x, this.y - 1)) {
+						direction = 2;
+					// }
+					this.direction = 'up';
+				break;
+				case Input.Right:	
+					// if (this.rpg.isPassable(this.x + 1, this.y)) {
+						direction = 6;
+					// }
+					this.direction = 'right';
+				break;
+				case Input.Bottom:
+					// if (this.rpg.isPassable(this.x, this.y + 1)) {
+						direction = 8;
+					// }
+					this.direction = 'bottom';
+				break;
+			}
 		}
 		
-		if (direction == 0 && !this.moving && !this.inAction) {
-			this.animation('stop');
-		}
-		
-		this.interactionEventBeside('contact');	
-		
-		if (!self.moving && direction != 0) {
+		if (!self.moving) {
 			self.moving = true;
-			self.move([direction], function() {
+			self.move([direction], function(passable) {
 				self.moving = false;
-				if (self.keyBuffer == 0 && !self.inAction) {
+				if (!passable || (Input.keyBuffer.length == 0 && !self.inAction)) {
 					self.animation('stop');
 				}
-			});
+			}, true);
 		}
 		
 		for (var i=0 ; i < this.transfert.length ; i++) {
@@ -260,7 +222,8 @@ p._tick = function() {
 				transfert_x = this.x >= this.transfert[i].x && this.x <= this.transfert[i].x + dx;
 			}
 
-			if (transfert_y && transfert_x && !this.inTransfert && direction) {		
+			if (transfert_y && transfert_x && !this.inTransfert && direction) {	
+				
 				var map = this.rpg.getPreparedMap(this.transfert[i].map);
 				if (map) {
 					if (!map.propreties.player) map.propreties.player = {};
@@ -268,7 +231,7 @@ p._tick = function() {
 					map.propreties.player.y = this.transfert[i].y_final + (this.transfert[i].parallele ? Math.abs(this.y - this.transfert[i].y) : 0);
 					var call = true;
 					this.moving = false;
-					this.keyBuffer = 0;
+					Input.keyBuffer = [];
 					if (this.transfert[i].callback) {
 						call = this.transfert[i].callback();
 					}
@@ -282,10 +245,6 @@ p._tick = function() {
 			
 		}
 		
-		
-		
-		
-		
 	}
 }
 
@@ -294,18 +253,21 @@ p._tick = function() {
  * @method interactionEventBeside
  * @param {String} trigger Name of the trigger to make (action_button|contact)
 */
-p.interactionEventBeside = function(trigger) {
+p.interactionEventBeside = function(e, trigger) {
 	var i, 
 		event,
 		self = this;
-	var e = this.getEventAround()[this.direction];
+	if (e.length == 0) {
+		return false;
+	}
 	for (i=0 ; i < e.length ; i++) {
 		event = e[i];
-		if (event != null) {	
+		if (event != null) {
 			if (event.trigger == trigger) {
-				if (!event.through) {
-					this.keyBuffer = 0;
-				}
+				Input.memorize();
+				/*if (!event.through) {
+					Input.keyBuffer = [];
+				}*/
 				this.freeze = true;
 				var ini_dir = event.direction;
 				if (!event.direction_fix) {
@@ -320,13 +282,92 @@ p.interactionEventBeside = function(trigger) {
 						event.moveType();
 					}
 					self.freeze = false;
+					//self.eventsContact = false;
+					Input.restore();
 				});
 				
 				event.onCommands();
 			}
 		}
 	}
+	return true;
 	
+}
+
+p.moveMouseTo = function(tile_x, tile_y, eventIgnore, callback) {
+	var self = this;
+	if (typeof eventIgnore == "function") {
+		callback = eventIgnore;
+		eventIgnore = undefined;
+	}
+	var blockMovement = this.movementIsBlocked();
+	if (this.freeze && blockMovement) {
+		return;
+	}
+	if (this.x == tile_x && this.y == tile_y) {
+		return;
+	}
+
+	var dir = this.pathfinding(tile_x, tile_y, eventIgnore);
+	this.moveWithMouse = true;	
+	this.move(dir, function(passable) {
+		self.moveWithMouse = false;
+		if (!passable || !self.inAction) {
+			self.animation('stop');
+			if (callback) callback();
+		}
+	}, true);
+
+}
+
+p.triggerEventBeside = function() {
+	var blockMovement = this.movementIsBlocked();
+	
+	if (this.freeze && !blockMovement) return false;
+	// if (this.typeMove == "tile" && !this.eventsContact) {
+		// this.eventsContact = [this.getEventBeside()];
+	// }
+	/*if (this.eventsContact) {
+		this.interactionEventBeside(this.eventsContact, 'action_button');
+	}*/
+	var real_x = this.real_x;
+	var real_y = this.real_y;
+	switch(this.direction) {
+		case 'up':
+			real_y--;
+		break;
+		case 'right':
+			real_x++;
+		break;
+		case 'left':	
+			real_x--;
+		break;
+		case 'bottom':
+			real_y++;
+		break;
+	}
+	var c = this.contactWithEvent(real_x, real_y);
+	if (c.length > 0) {
+		this.interactionEventBeside(c, 'action_button');
+	}
+}
+
+ /**
+ * Indicate that the player can use the mouse to play
+ * @method useMouse
+ * @param {Boolean} bool Enables or disables the use of the mouse
+ * @param {Function} callback (optional) Function called when the user clicks
+ */
+p.useMouse = function(bool, callback) {
+	this._useMouse = bool;
+	if (bool) {
+		this.rpg.bindMouseEvent("click", function(obj) {
+			if (callback) callback(obj);
+		});
+	}
+	else {
+		this.rpg.unbindMouseEvent("click");
+	}
 }
 
 

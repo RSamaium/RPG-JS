@@ -33,7 +33,26 @@ Cache = {
 	files: {},
 	propretiesEvent: {},
 	propretiesMap: {},
-	loadFinish: function() {}
+	graphicsMap: {},
+	loadFinish: function() {},
+	
+	/** 
+	* Function called when loading progress of the resources (pictures and ajax). One parameter: the percentage of progress
+	* @static
+	* @property progressLoad
+	* @type Function
+	*/
+	progressLoad: function() {},
+	/** 
+	* Function called when resources are finite load
+	* @static
+	* @property finishLoad
+	* @type Function
+	*/
+	finishLoad: function() {},
+	currentLoad: 0,
+	totalLoad: 0,
+	path: ''
 }
 
 // Static Database
@@ -51,7 +70,7 @@ Database = {}
  * @param {Object} data (optional) Data to pass
 */
 Cache.loadGraphics = function(filename, type, load, data) {
-  var type_capitalized = type.charAt(0).toUpperCase() + type.slice(1);
+	var type_capitalized = type.charAt(0).toUpperCase() + type.slice(1);
 	var path = "Graphics/" + type_capitalized;
 	
 	var file = Cache.get(filename, type);
@@ -59,10 +78,11 @@ Cache.loadGraphics = function(filename, type, load, data) {
 		callback();
 		return file;
 	}
+	
 	var img = new Image();
 	
 	Cache.nb_files++;
-	img.src = path + "/" + filename;
+	img.src = Cache.path + path + "/" + filename;
 	img.filename = filename;
 	img.onload = function() {
 		Cache.nb_files--;
@@ -76,12 +96,6 @@ Cache.loadGraphics = function(filename, type, load, data) {
 	}
 	
 	function callback() {
-		if (Cache.loadFinish && Cache.nb_files == 0) {
-			var onfinish = Cache.loadFinish;
-			Cache.loadFinish = undefined;
-			onfinish();
-			
-		}
 		if (load) {
 			if (file) {
 				load(file, data);
@@ -90,6 +104,13 @@ Cache.loadGraphics = function(filename, type, load, data) {
 				load(img, data);
 			}
 		}
+		if (Cache.loadFinish && Cache.nb_files == 0) {
+			var onfinish = Cache.loadFinish;
+			Cache.loadFinish = undefined;
+			onfinish();
+			
+		}
+		
 	}
 	
 	return img;
@@ -192,14 +213,20 @@ Cache.pictures = function(filename, load, data) {
  * @static
  * @param {String} filename Filename
  * @param {Function} callback_event Callback when the event was loaded
+ * @param {String} map_name (optional) the folder where is stored the events
+ * @param {Boolean} custompath (optional) Set yourself the path and file name
+ * @param {Boolean} nocache (optional) if true, the event data is not cached
 */
-Cache.event = function(name, callback_event) {
-	if (Cache.propretiesEvent[name]) {
+Cache.event = function(name, callback_event, map_name, custompath, noCache) {
+	var path;
+	if (map_name) name = map_name + '/' + name;
+	path = custompath ? name : Cache.path + 'Data/Events/' + name + '.json';
+	if (Cache.propretiesEvent[name] && !noCache) {
 		callback_event(Cache.propretiesEvent[name]);
 	}
 	else {
-		Cache.ajax('Data/Events/' + name + '.js', function(ret) {
-			eval('var event=' + ret + ';');
+		Cache.ajax(path, function(ret) {
+			var event = JSON.parse(ret);
 			Cache.propretiesEvent[name] = event;
 			callback_event(event);
 		});
@@ -230,11 +257,11 @@ Cache.loadAudio = function(filename, type, load) {
 			else if (!!(snd.canPlayType('audio/ogg;codecs="vorbis"').replace(/no/, ''))) {
 				filename = filename.ogg + '.ogg';	
 			}
-			snd.src = path + "/" + filename;
+			snd.src = Cache.path + path + "/" + filename;
 		}
 	}
 	else {
-		snd.src = path + "/" + filename;
+		snd.src = Cache.path + path + "/" + filename;
 	}
 	var file = Cache.get(filename, type);
 	if (file) {
@@ -312,18 +339,37 @@ Cache.BGS = function(filename, load) {
  * @static
  * @param {String} name Filename
  * @param {Function} callback Callback when the map was loaded
+ * @param {Boolean} custompath (optional) Set yourself the path and file name
+ * @param {Boolean} nocache (optional) if true, the map data is not cached
 */
-Cache.map = function(name, callback) {
-	if (Cache.propretiesMap[name]) {
+Cache.map = function(name, callback, custompath, nocache) {
+	var path = custompath ? name : Cache.path + 'Data/Maps/' + name + '.json';
+	if (Cache.propretiesMap[name] && !nocache) {
 		callback(Cache.propretiesMap[name]);
 	}
 	else {
-		Cache.ajax('Data/Maps/' + name + '.js', function(ret) {
-			eval('var map_data=' + ret);
+		Cache.ajax(path, function(ret) {
+			var map_data = JSON.parse(ret);
 			Cache.propretiesMap[name] = map_data;
 			callback(map_data);
 		});
 	}
+}
+
+
+Cache.getMapGraphics = function(name, layer_img) {
+	if (Cache.graphicsMap[name] && Cache.graphicsMap[name][layer_img]) {
+		return Cache.graphicsMap[name][layer_img];
+	}
+	return false;
+}
+
+Cache.setMapGraphics = function(name, img) {
+	var i;
+	if (!Cache.graphicsMap[name]) {
+		Cache.graphicsMap[name] = [];
+	}
+	Cache.graphicsMap[name].push(img);
 }
 
 /**
@@ -361,12 +407,14 @@ Cache.ajax = function(filename, callback) {
 
 /**
  * Callback after loading several images after. For example :<br />
-	Cache.onload(function() {<br />
-		alert('Loaded images');<br />
-	});	<br />
-	Cache.tilesets("img1.png");<br />
-	Cache.autotiles("img2.png");<br />
-	Cache.autotiles("img3.png");<br />
+	<pre>
+	Cache.onload(function() {
+		alert('Loaded images');
+	});
+	Cache.tilesets("img1.png");
+	Cache.autotiles("img2.png");
+	Cache.autotiles("img3.png");
+	</pre>
 	<br />
 	The callback function is called when "img1" img2 "and " img3 "were responsible
 	
@@ -377,3 +425,18 @@ Cache.ajax = function(filename, callback) {
 Cache.onload = function(load) {
 	Cache.loadFinish = load;
 }
+
+// private
+Cache._progressLoadData = function(finish) {
+	Cache.currentLoad++;
+	var pourcent = Cache.currentLoad * 100 / Cache.totalLoad;
+	Cache.progressLoad(Math.round(pourcent * 100) / 100);
+	if (Cache.currentLoad == Cache.totalLoad) {
+		Cache.finishLoad();
+		if (finish) finish();
+		Cache.currentLoad = 0;
+		Cache.totalLoad = 0;
+	}
+}
+
+

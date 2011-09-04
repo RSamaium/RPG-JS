@@ -25,11 +25,9 @@ THE SOFTWARE.
 /**
  * @class Rpg
  * @author Samuel Ronce
- * @version Alpha 2
+ * @version Beta 1.0
  */
  
-Rpg.debug = false;
-
 function Rpg(canvas_tag) {
 	// -- Canvas
 	/**
@@ -38,6 +36,7 @@ function Rpg(canvas_tag) {
      * @type Canvas
      */
 	this.canvas = document.getElementById(canvas_tag);
+	
 	/**
      * The canvas 2D context object to draw into
 	 * @property ctx
@@ -52,10 +51,12 @@ function Rpg(canvas_tag) {
 	this.stage = new Stage(this.canvas);
 	// this.fps;
 	this.func_trigger = {};
+	this.currentLang;
 	
 	// -- Maps
 	this.maps = [];
 	this.currentMapInfo = {};
+	this.isometric = false;
 	// this.mapData;
 	this.currentMap = [[]];
 	this.containerMap = {x: 0, y: 0};
@@ -67,6 +68,9 @@ function Rpg(canvas_tag) {
 	this.screen_x = 0;
 	this.screen_y = 0;
 	this.screen_refresh = {};
+	this.htmlElements = [];
+	this.onMouseEvent = {};
+	
 	// this.mapClick;
 
 	 /**
@@ -76,15 +80,23 @@ function Rpg(canvas_tag) {
      */
 	this.events = [];
 	this.eventsCache = [];
+	this.typeDirection = 'normal';
 	/** 
 	* List of switches. The key is the name or identifier of the switch. The value is a boolean
 	* @property switches
-	* @type Array
+	* @type Object
 	*/
 	this.switches = {};
 	
+	/** 
+	* List of variables. The key is the name or identifier of the variable. The value is an integer.
+	* @property variables
+	* @type Object
+	*/
+	this.variables = {};
 	
 	this.items = {};
+	this.skills = {};
 	
 	// -- Player
 	/**
@@ -92,7 +104,7 @@ function Rpg(canvas_tag) {
 	 * @property player
      * @type Player
     */
-	//this.player;
+	this.player;
 	/**
      * Amount of money the player
 	 * @property gold
@@ -101,10 +113,15 @@ function Rpg(canvas_tag) {
     */
 	this.gold = 0;
 	
+	// -- Pictures
+	this.pictures = {};
 	
 	// -- Animations
 	this.propAnimations = {};
 	this.animations = {};
+	
+	// -- System
+	this._battleFormulas = {};
 	
 	// Sound
 	 /**
@@ -119,7 +136,7 @@ function Rpg(canvas_tag) {
 		se: ''
 	};
 	 /**
-     * Current volume of each sound. By default : {bgm: 100, bgs: 100, me: 100, se: 100}
+     * Current volume of each sound. By default : {bgm: 1, bgs: 1, me: 1, se: 1}
 	 * @property soundVolume
      * @type Object
      */
@@ -149,19 +166,178 @@ function Rpg(canvas_tag) {
 	this.initialize();
 }
 
+/**
+ * Switch to "DEBUG". Shows FPS. The green square: size of the sprite ; the red square: collision
+ * @property debug
+ * @static
+ * @type Boolean
+*/
+Rpg.debug = false;
+
+/**
+ * Returns the name of the user agent used
+ * @method mobileUserAgent
+ * @static
+ * @param {Object} variable Variable
+ * @return {String|Boolean} name of the agent user ("iphone", "ipod", "ipad", "blackberry", "android" or "windows phone") or false if it is not a mobile
+ * @example
+	if (Rpg.mobileUserAgent()) {
+		// It's a mobile
+	}
+	if (Rpg.mobileUserAgent() == "android") {
+		// It's a Android mobile
+	}
+*/
+Rpg.mobileUserAgent = function() {
+	var ua = navigator.userAgent;
+	if (ua.match(/(iPhone)/))
+		return "iphone";
+	else if (ua.match(/(iPod)/))
+		return "ipod";
+	else if (ua.match(/(iPad)/)) 
+		return "ipad";
+	else if (ua.match(/(BlackBerry)/)) 
+		return "blackberry";
+	else if (ua.match(/(Android)/))
+		return "android";
+	else if (ua.match(/(Windows Phone)/)) 
+		return "windows phone";
+	else
+		return false;
+}
+
+/**
+ * Whether the variable is an array
+ * @method isArray
+ * @static
+ * @param {Object} variable Variable
+ * @return {Boolean} true if an array
+*/
+Rpg.isArray = function(a) {
+	return (typeof(a) ==='object') ? a.constructor.toString().match(/array/i) !== null || a.length !==undefined :false;
+}
+
+/**
+ * Returns the value of an element in the array by its key
+ * @method keyExist
+ * @static
+ * @param {Object|Array} array Object or 2-dimensional array
+ * @param {String} value Key
+ * @return {Object} Element value
+*/	
+Rpg.keyExist = function(a, value) {
+	if (Rpg.isArray(value)) {
+		return a[value[0]] && a[value[0]][value[1]];
+	}
+	else {
+		return a[value];
+	}
+}
+
+/**
+ * Searches value in a table
+ * @method valueExist
+ * @static
+ * @param {Array} array Simple array or 2-dimensional array
+ * @param {String|Integer} value Value
+ * @return {Integer|Boolean} Position of the element found in the array. false if absent
+*/		
+Rpg.valueExist = function(a, value) {
+	var array_find, i, j;
+	for (i=0 ; i < a.length ; i++) {
+		if (Rpg.isArray(value)) {
+			array_find = true;
+			for (j=0 ; j < a[i].length ; j++) {
+				if (a[i][j] != value[j]) {
+					array_find = false;
+				}
+			}
+			if (array_find) {
+				return i;
+			}
+		}
+		else {
+			if (a[i] == value) {
+				return i;
+			}
+		}
+	}
+	return false;
+}
+
+/**
+ * Completely removes an element in an array
+ * @method unsetArrayElement
+ * @static
+ * @param {Array} array Array
+ * @param {String|Integer} value Value contained in the array
+ * @return {Array} The array without the element
+*/		
+Rpg.unsetArrayElement = function(array, value) {
+	var pos = Rpg.valueExist(array, value);
+	var last = array.length-1;
+	if (pos !== false) {
+		if (pos == 0) {
+			array.shift();
+		}
+		else if (pos == last) {
+			array.pop();
+		}
+		else {
+			array.splice(pos, 1);
+		}
+	}
+	return array;
+}
+
+/**
+ * Returns the last value of array
+ * @method endArray
+ * @static
+ * @param {Array} array Array
+ * @return {Object} Last value
+*/	
+Rpg.endArray = function(array) {
+	return array[array.length-1];
+}
+	
+
 Rpg.prototype = {
 	
 	// Constructor
 	initialize: function() {
 	
 		if (Rpg.debug) {
-			this.fpsLabel = new Text("-- fps","bold 18px Arial","#FFF");
+			this.fpsLabel = new Text("-- fps","Bold 18px Arial","#FFF");
 			this.stage.addChild(this.fpsLabel);
 			this.fpsLabel.x = 10;
 			this.fpsLabel.y = 20;
 		}
 	
 		this.setFPS(25);
+		
+		var container = new Container();
+		var id = this.canvas.id + '-dom';
+		div = document.createElement("div");
+		div.setAttribute("id", id);
+		div.style.position = 'absolute';
+		div.style.overflow = 'hidden';
+		// Disable Highlight Color in Android Browser
+		if (!document.head) document.head = document.getElementsByTagName('head')[0];
+		document.head.appendChild(document.createElement("style"));
+		var insertCss = Rpg.endArray(document.styleSheets);
+		insertCss.insertRule("#" + id + " {-webkit-tap-highlight-color: rgba(0, 0, 0, 0);}", insertCss.cssRules.length);
+		//--
+		div.style.left = Math.round(this.canvas.offsetLeft) + "px";
+		div.style.top = Math.round(this.canvas.offsetTop) + "px";
+		div.style.width = this.canvas.width + "px";
+		div.style.height = this.canvas.height + "px";
+		
+		if (navigator.userAgent.toLowerCase().indexOf('msie') != -1) div.style.backgroundColor = "rgba(0, 0, 0, 0)"; 
+		document.body.appendChild(div) ;
+		this._setMouseEvent(div);
+		
+					
 		Ticker.addListener(this);	
 	},
 	
@@ -184,6 +360,10 @@ Rpg.prototype = {
 	setFPS: function(fps) {
 		this.fps = fps;
 		Ticker.setFPS(fps);
+	},
+	
+	mapFreeze: function(value) {
+		Ticker.setPaused(value);
 	},
 	
 	/**
@@ -237,54 +417,87 @@ Rpg.prototype = {
      * @param {Boolean} bool On if true
     */
 	setSwitches: function(switches, bool) {
-		var i;
-		if (this.isArray(switches)) {
-			for (i=0 ; i < switches.length ; i++) {
-				this.switches[switches[i]] = bool;
+		this._setDataValue('switches', switches, bool);
+	},
+	
+	/**
+     * Store a value in a variable
+	 * @method setVariable
+     * @param {Array|Integer} key variable ID (multiple variables if the type is an array)
+     * @param {Integer|String} operand variable value
+    */
+	setVariable: function(key, operand, operation) {
+		var i, _var;
+		if (typeof key == "number") {
+			key = [key];
+		}
+		for (i=0 ; i < key.length ; i++) {
+			_var = this.getVariable(key[i]);
+			switch (operation) {
+				case 'add':
+					_var += operand;
+				break;
+				case 'sub':
+					_var -= operand;
+				break;
+				case 'mul':
+					_var *= operand;
+				break;
+				case 'div':
+					_var /= operand;
+				break;
+				case 'mod':
+					_var %= operand;
+				break;
+				default:
+					_var = operand;
 			}
+			this._setDataValue('variables', key[i], _var);
+			this.call('changeVariable', key[i]);
 		}
-		else {
-			this.switches[switches] = bool;
+		
+	},
+	
+	/**
+     * Get a value in a variable
+	 * @method getVariable
+     * @param {Integer} key variable ID
+     * @return {Integer} value variable value. 0 if variable noexistent
+    */
+	getVariable: function(key) {
+		var value = this.variables[key];
+		if (value === undefined) {
+			value = 0;
 		}
-		this.eventsRefresh();
+		return value;
 	},
 	
 	// Private
-	isArray: function(a) {
-		return (typeof(a) ==='object') ? a.constructor.toString().match(/array/i) !== null || a.length !==undefined :false;
-	},
-	
-	keyExist: function(a, value) {
-		if (this.isArray(value)) {
-			return a[value[0]] && a[value[0]][value[1]];
+	_setDataValue: function(type, key, value) {
+		var i;
+		var obj = type == 'variables' ? this.variables : this.switches;
+		if (Rpg.isArray(key)) {
+			for (i=0 ; i < key.length ; i++) {
+				obj[key[i]] = value;
+			}
 		}
 		else {
-			return a[value];
+			obj[key] = value;
 		}
+		
+		this.eventsRefresh();
+	
 	},
 	
-	valueExist: function(a, value) {
-		var array_find, i, j;
-		for (i=0 ; i < a.length ; i++) {
-			if (this.isArray(value)) {
-				array_find = true;
-				for (j=0 ; j < a[i].length ; j++) {
-					if (a[i][j] != value[j]) {
-						array_find = false;
-					}
-				}
-				if (array_find) {
-					return true;
-				}
-			}
-			else {
-				if (a[i] == value) {
-					return true;
-				}
-			}
-		}
-		return false;
+	_sortEventsDepthIndex: function() {
+		this.layer[3].sortChildren(function (a,b) {
+			var za = a.z !== false ? a.z : a.y;
+			var zb = b.z !== false ? b.z : b.y;
+			return za - zb;
+		});
 	},
+	
+	// Private
 	
 	/**
      * Whether a switch is activated
@@ -294,7 +507,7 @@ Rpg.prototype = {
     */
 	switchesIsOn: function(switches) {
 		var i;
-		if (this.isArray(switches)) {
+		if (Rpg.isArray(switches)) {
 			for (i=0 ; i < switches.length ; i++) {
 				if (!this.switches[switches[i]]) {
 					return false;
@@ -369,8 +582,10 @@ Rpg.prototype = {
 				ennemy.displayBar(ennemy.actionBattle.hp_max, ennemy.actionBattle.hp_max, 70, 5);
 			}
 		}
-		for (i=0 ; i < prop.eventsCache.length ; i++) {
-			this.prepareEventAjax(prop.eventsCache[i]);
+		if (prop.eventsCache) {
+			for (i=0 ; i < prop.eventsCache.length ; i++) {
+				this.prepareEventAjax(prop.eventsCache[i]);
+			}
 		}
 	},
 	
@@ -529,20 +744,27 @@ Rpg.prototype = {
 		
 		this.screen_x = Math.abs(this.containerMap.x);
 		this.screen_y = Math.abs(this.containerMap.y);
+		
 		this.screen_refresh.x = this.screen_x;
 		this.screen_refresh.y = this.screen_y;
 		this.screen_refresh.scroll_y = false;
 		this.screen_refresh.scroll_x = false;
-		this._multipleScreen();
+		var m = this._multipleScreen(this.screen_x, this.screen_y);
+		this.screen_x = m.x;
+		this.screen_y = m.y;
+		this.call('setScreen', {x: x, y: y});
+		this._sortEventsDepthIndex();
 		this.refreshMap(true);
 	},
 	
 	// Private
-	_multipleScreen: function() {
+	_multipleScreen: function(x, y) {
 		var multiple_w = this.tile_w / this.speedScrolling;
 		var multiple_h = this.tile_h / this.speedScrolling;
-		this.screen_x = Math.floor(this.screen_x/multiple_w) * multiple_w ; 
-		this.screen_y = Math.floor(this.screen_y/multiple_h) * multiple_h;
+		
+		x = Math.floor(x/multiple_w) * multiple_w ; 
+		y = Math.floor(y/multiple_h) * multiple_h;
+		return {x: x, y: y};
 	},
 	
 	// Private
@@ -559,16 +781,62 @@ Rpg.prototype = {
 		}
 		
 		
+		
 		if (this.targetScreen != undefined) {
 			
 
 			// containerMap.x -= Math.abs(containerMap.x) == this.screen_x ? 0 : Math.floor((this.screen_x < Math.abs(containerMap.x) ? -32 : 32) / this.speedScrolling);
 			// containerMap.y -= Math.abs(containerMap.y) == this.screen_y ? 0 : Math.floor((this.screen_y < Math.abs(containerMap.y) ? -32 : 32) / this.speedScrolling);
 			
-			this._multipleScreen();
-			
-			containerMap.x -= Math.abs(containerMap.x) == this.screen_x ? 0 : Math.floor((this.screen_x < Math.abs(containerMap.x) ? -this.tile_w : this.tile_w) / this.speedScrolling);
+			//this.screen_x = this._multipleScreen(this.screen_x, 0).x;
+			//console.log(containerMap.x, this.screen_x);
+			//containerMap.x -= Math.abs(containerMap.x) == this.screen_x ? 0 : Math.floor((this.screen_x < Math.abs(containerMap.x) ? -this.tile_w : this.tile_w) / this.speedScrolling);
 			containerMap.y -= Math.abs(containerMap.y) == this.screen_y ? 0 : Math.floor((this.screen_y < Math.abs(containerMap.y) ? -this.tile_h : this.tile_h) / this.speedScrolling);
+			
+			var absx = Math.abs(containerMap.x);
+			var absy = Math.abs(containerMap.y);
+			var speed_x = this.speedScrolling;
+			var speed_y = this.speedScrolling;
+			
+			if (absx != this.screen_x) {
+				if (this.screen_x > absx) {
+					if (absx > this.screen_x - speed_x) {
+						containerMap.x = -this.screen_x;
+					}
+					else {
+						containerMap.x -= speed_x;
+					}
+				}
+				else if (this.screen_x < absx) {
+					if (absx < this.screen_x + speed_x) {
+						containerMap.x = -this.screen_x;
+					}
+					else {
+						containerMap.x += speed_x;
+					}
+				}
+			}
+			if (absy != this.screen_y) {
+				if (this.screen_y > absy) {
+					if (absy > this.screen_y - speed_y) {
+						containerMap.y = -this.screen_y;
+					}
+					else {
+						containerMap.y -= speed_y;
+					}
+				}
+				else if (this.screen_y < absy) {
+					if (absy < this.screen_y + speed_y) {
+						containerMap.y = -this.screen_y;
+					}
+					else {
+						containerMap.y += speed_y;
+					}
+				}
+			}
+			
+			
+
 			
 			// containerMap.x -= Math.floor((this.screen_x - this.canvas.width/2) / this.speedScrolling);
 			// containerMap.y -= Math.floor((this.screen_y - this.canvas.height/2) / this.speedScrolling);			
@@ -578,6 +846,7 @@ Rpg.prototype = {
 			}
 			else if (containerMap.x + this.getMapWidth(true) < this.canvas.width) {
 				containerMap.x = this.canvas.width - this.getMapWidth(true);
+				containerMap.x = this._multipleScreen(containerMap.x, 0).x;
 				this.screen_x = Math.abs(containerMap.x);
 			}
 			
@@ -586,6 +855,7 @@ Rpg.prototype = {
 			}
 			else if (containerMap.y + this.getMapHeight(true) < this.canvas.height) {
 				containerMap.y = this.canvas.height - this.getMapHeight(true);
+				containerMap.y = this._multipleScreen(0, containerMap.y).y;
 				this.screen_y = Math.abs(containerMap.y);
 			}
 			
@@ -675,14 +945,18 @@ Rpg.prototype = {
 			if (this.canvas.width <= this.getMapWidth(true)) {
 				this.containerMap.x = containerMap.x;
 				
+				
 			}
 			if (this.canvas.height <= this.getMapHeight(true)) {
-				this.containerMap.y = containerMap.y;	
+				
+				this.containerMap.y = containerMap.y;
+				// if (this.layer && this.layer[0]) this.layer[0].y = containerMap.y;
 			}	
 			
 		}
 		
-		
+		this._tickHtmlElements();
+		this._tickShake();
 		
 		if (Rpg.debug) {
 			this.fpsLabel.text = Math.round(Ticker.getMeasuredFPS())+" fps";
@@ -690,11 +964,6 @@ Rpg.prototype = {
 		
 		this.call('update');
 		this.stage.update();
-	},
-	
-	menu: function() {
-		
-
 	},
 	
 	// Private
@@ -745,18 +1014,7 @@ Rpg.prototype = {
 		if (!dir) dir = 16;
 	
 		if (x < 0 || y < 0 || x >= this.currentMap.length || y >= this.currentMap[0].length) return false;
-		
-		for (i=0 ; i < this.events.length ; i++) {
-			if (this.events[i].character_hue != undefined && this.events[i].x == x && this.events[i].y == y) {
-				if (this.events[i].through) {
-					return true;
-				}
-				else {
-					return false;
-				}
-			}
-		}
-		
+	
 		var tiles = this.currentMap[x][y];
 		var passage, priority;
 		for (i=2 ; i >= 0 ; i--) {
@@ -844,25 +1102,11 @@ Rpg.prototype = {
 	},
 	
 	/**
-     * Load a map with properties
-	 * @method loadMap
-     * @param {String} filename Name of file in the folder "Data/Maps"
-     * @param {Object} propreties Map Properties. The object is :<br />
-				tileset: {String} Name of file in the folder "Graphics/Tilesets",<br />
-				autotiles (Optional): Array Autotiles. The values ​are the names of files in the folder "Graphics/Autotiles". Each image is divided into 48 tiles with a specific ID,<br />
-				bgm (Optional): {String} Background music that plays automatically,<br />
-				events (Optional):  {Array} Array of events to load. The values ​​are the names of files in the "Data/Events",<br />
-				player (Optional):  {Object} Properties player : <br />
-				<blockquote>
-						x: X Position<br />
-						y: Y Position
-				</blockquote><br />
-     * @param {Function} isLoad (Optional) Callback Function when the map is loaded
+     * Remove the map
+	 * @method clearMap
     */
-	loadMap: function(filename, propreties, isLoad) {
-		var self = this;
-		var autotiles_array = [];
-		var i, j, k, l;
+	clearMap: function() {
+		var i;
 		for (i=0 ; i < 9 ; i++) {
 			this.layer[i] = new Container();
 		}
@@ -880,11 +1124,129 @@ Rpg.prototype = {
 			if (this.player) {
 				this.player.refreshBitmap();
 			}
+			this.stage.removeChild(this.containerMap);
 		}
+	},
+	
+	/**
+     * Display the map. If it is already displayed, the function does nothing
+	 * @method displayMap
+	 * @return Boolean true if the map is displayed
+    */
+	displayMap: function() {
+		if (!this.stage.contains(this.containerMap)) {
+			this.stage.addChildAt(this.containerMap, 0);
+			return true;
+		}
+		return false;
+	},
+	
+	/**
+     * Load a map with properties
+	 * @method loadMap
+     * @param {String|Object} filename Name of file in the folder "Data/Maps". File format: JSON. We can define a custom path if the parameter is an object :
+		<ul>
+			<li>path {String} : Link to map</li>
+			<li>noCache {Boolean} (optional): if true, the map data is not cached. "false" by default</li>
+		<ul>
+		Example :
+		<pre>
+			rpg.loadMap({path: "../dir/map.php", noCache: true}, {tileset: "town.png"}, function() {
+				console.log("the map is loaded");
+			});
+		</pre>
+     * @param {Object} propreties Map Properties. The object is :
+				<ul>
+				<li>tileset (Optional if map encoded in base64): {String} Name of file in the folder "Graphics/Tilesets",</li>
+				<li>autotiles (Optional): Array Autotiles. The values ​are the names of files in the folder "Graphics/Autotiles". Each image is divided into 48 tiles with a specific ID,</li>
+				<li>bgm (Optional): {String|Object} Background music that plays automatically. If object : {mp3: "name", ogg: "name"}</li>
+				<li>bgs (Optional): {String|Object} Background sound that plays automatically. If object : {mp3: "name", ogg: "name"}</li>
+				<li>events (Optional):  {Array|Object} Array of events to load. The values are the names of files in the "Data/Events". We can define a custom path if the element is an object :
+					<ul>
+						<li>path {String} : Link to event</li>
+						<li>noCache {Boolean} (optional): if true, the event data is not cached. "false" by default</li>
+					<ul>
+					Example :
+					<pre>
+						rpg.loadMap("map", {tileset: "town.png", events: {path: "dir/event.php"}}, function() {
+							console.log("the map is loaded");
+						});
+					</pre>
+				</li>
+				<li>autoDisplay (optional) : {Boolean} Directly displays the map after it is loaded. If false, see the method "displayMap()" to display the map manually. true by default</li>
+				<li>transfert (optional) : {Array} Transfer a player to another map when he arrives at a specific position. Array containing objects of each tile transferable :
+				<ul>
+					<li>x: {Integer} X starting position for the transfer</li>
+					<li>y: {Integer} Y starting position for the transfer</li>
+					<li>map: {String} Map name</li>
+					<li>x_final: {Integer} X position of arrival</li>
+					<li>y_final: {Integer} Y position of arrival</li>
+					<li>dx (optional): {Integer} Number of horizontal tiles that can transfer the player</li>
+					<li>dy (optional): {Integer} Number of vertical tiles that can transfer the player</li> 
+					<li>parallele (optional): {Boolean} Each tile transfer the player on the same coordinates X or Y</li>
+					<li>direction (optional): {String} up|bottom|left|right The direction of the player to be able to transfer</li>
+					<li>callback (optional): {Function} Callback function before transferring to another map. If the function returns false, the player will not be transferred.</li>
+				</ul>
+				</li>
+				<li>player (Optional):  {Object} Properties player :
+					<ul>
+							<li>x {Integer}: X Position</li>
+							<li>y {Integer}: Y Position</li>
+							<li>direction (optional) {String} : up|bottom|left|right; Departure Direction</li>
+							<li>filename {String} : Filename</li>
+							<li>regX (optional): {Integer} The x offset for this display object's registration point.</li> 
+							<li>regY (optional): {Integer} The y offset for this display object's registration point</li>
+							<li>speed (optional) : {Integer} Speed</li>
+							<li>nbSequenceX (optional) {Integer}: Sequence number of the image on the X axis</li>
+							<li>nbSequenceY (optional) {Integer}: Sequence number of the image on the Y axis</li>
+							<li>speedAnimation (optional) {Integer}: Animation speed</li>
+							<li>no_animation (optional) {Boolean}: Don't display the animation</li>
+							<li>actionBattle (optional): {Object} see "addEvent()"</li>
+							<li>actions (optional) {Array}: Actions (see "addActions()")</li>
+					</ul></li>
+     * @param {Function} isLoad (Optional) Callback Function when the map is loaded
+    */
+	loadMap: function(filename, propreties, isLoad, load) {
+		var self = this;
+		var autotiles_array = [];
+		var i, j, k, l;
+		
+		if (typeof filename != "string") {
+			propreties.customPath = true;
+			propreties.noCache = filename.noCache;
+			filename = filename.path;
+		}
+		
+		this.clearMap();
+		
+		function progressLoad() {
+			Cache._progressLoadData(function() {
+				self._sortEventsDepthIndex();
+				if (isLoad) isLoad();
+				if (propreties.autoDisplay) {
+					self.displayMap();
+				}
+			});
+				
+		}
+		
+		propreties.autoDisplay = propreties.autoDisplay === undefined ? true : propreties.autoDisplay;
+		
+		// Ajax Map + Tileset + Generate Layer (2)
+		Cache.totalLoad = 4;
+		// Graphics Event + Ajax Event
+		Cache.totalLoad += (propreties.events ? propreties.events.length : 0) * 2;
+		
+		// Auotiles
+		Cache.totalLoad += (propreties.autotiles ? propreties.autotiles.length : 0);
+		// Graphics Characters Player
+		Cache.totalLoad += (propreties.player ? 1 : 0);
+		
+		
 		
 		this.maps.push({name: filename, propreties: propreties, callback: isLoad});
 		this.currentMapInfo = {name: filename, propreties: propreties};
-		Cache.map(filename, callback);
+		Cache.map(filename, callback, propreties.customPath, propreties.noCache);
 		
 		function bitmapAutoTiles(bmp, position, animated) {
 			var i=0;
@@ -957,7 +1319,7 @@ Rpg.prototype = {
 							split.pop();
 							var tile_corner = [];
 							for (k=1 ; k <= 4 ; k++) {
-								if (self.valueExist(split, k)) {
+								if (Rpg.valueExist(split, k)) {
 									
 									tile_corner.push(autotile.corner[k-1]);
 								}
@@ -1052,13 +1414,14 @@ Rpg.prototype = {
 		}
 		
 		function callback(map_data) {
+			progressLoad();
 			self.mapData = map_data;
 			var map = map_data.map;
 			var container_map = new Container();
 			
 			Cache.onload(function() {
+			
 				if (propreties.autotiles) {
-				
 					var autotile = {
 						center: dataAutotile(2, 3),
 						full: 	dataAutotile(1, 1),
@@ -1084,65 +1447,154 @@ Rpg.prototype = {
 						}
 					}
 				}
-				var img_tileset = Cache.get(propreties.tileset, "tilesets");
-				var spriteSheet = new SpriteSheet(img_tileset, self.tile_w, self.tile_h);
-				var bmpSeq = new BitmapSequence(spriteSheet);
 				
-				var k = 0;
-				 for (l=0 ; l < 3 ; l++) {
-					for (i=0 ; i < map.length ; i++) {
-						for (j=0 ; j < map[0].length ; j++) {
-							var id = map[i][j][l];
-							 if (id != null) {
-								var priority = self.tilePriority(id);
-								priority = l + (priority == 0 ? 0 : 4);
-								if (!map[i][j][3]) {
-									map[i][j][3] = {};
-								}
-								if ((id - 48) - autotiles_array.length >= 0) {
-									bmpSeq.name = "tile" + k + "_" + i + "_" + j ;	
-									bmpSeq.x = i*self.tile_w;
-									bmpSeq.y = j*self.tile_h;
-									bmpSeq.currentFrame = id-385;
-
-									
-									map[i][j][3][priority] = bmpSeq;
-									// self.layer[priority].addChild(bmpSeq);
-									
-									// if (k < map.length * map[0].length * 3) { 
-										bmpSeq = bmpSeq.clone(); 
-									// }
-								}
-								else {
-									var cont = autotiles_array[id-48];
-									if (cont) {
-										cont = cont.clone(true);
-										cont.x = i*self.tile_w;
-										cont.y = j*self.tile_h;
-										map[i][j][3][priority] = cont;
-									}
-								}
-								k++;
-							}
-						}
-					}	
+				if (!map_data.layer1) {
+					var img_tileset = Cache.get(propreties.tileset, "tilesets");
+					var spriteSheet = new SpriteSheet(img_tileset, self.tile_w, self.tile_h);
+					var bmpSeq = new BitmapSequence(spriteSheet);
 					
-				 }
-				 			 
+					var k = 0, 
+					canvas, stage
+					map_img = [];
+					 for (i=0 ; i < 2 ; i++) {
+						var canvas = document.createElement("canvas");
+						canvas.width = map.length * self.tile_w;
+						canvas.height = map[0].length * self.tile_h;
+						stage = new Stage(canvas);
+						map_img.push(stage);
+					 }
+
+					 for (l=0 ; l < 3 ; l++) {
+						for (i=0 ; i < map.length ; i++) {
+							for (j=0 ; j < map[0].length ; j++) {
+								var id = map[i][j][l];
+								 if (id != null) {
+									var priority = self.tilePriority(id);
+									var map_img_id = (priority == 0 ? 0 : 1);
+									priority = l + (priority == 0 ? 0 : 4);
+									if (!map[i][j][3]) {
+										map[i][j][3] = {};
+									}
+									if ((id - 48) - autotiles_array.length >= 0) {
+										bmpSeq.name = "tile" + k + "_" + i + "_" + j ;	
+										bmpSeq.x = self._positionValueToReal(i, j).x;
+										bmpSeq.y = self._positionValueToReal(i, j).y;
+										bmpSeq.currentFrame = id-384;
+										
+										map[i][j][3][priority] = bmpSeq;
+										map_img[map_img_id].addChild(bmpSeq);
+
+										
+										bmpSeq = bmpSeq.clone();
+									}
+									else {
+										var cont = autotiles_array[id-48];
+										if (cont) {
+											cont = cont.clone(true);
+											cont.x = self._positionValueToReal(i, j).x;
+											cont.y = self._positionValueToReal(i, j).y;
+											map[i][j][3][priority] = cont;
+											map_img[map_img_id].addChild(cont);
+										}
+									}
+									k++;
+								}
+							}
+						}	
+					 }
+					 
+					
+					 
+				} // endif layer1	
+				
+				var img;
+				
+				var __D = "";
+				
+				for (i=0 ; i < 2 ; i++) {
+					img = Cache.getMapGraphics(filename, i);
+					if (!img) {
+						img = new Image();
+						if (map_data.layer1) {
+							img.src = map_data['layer' + (i+1)];
+							Cache.setMapGraphics(filename, img);
+						}
+						else {
+							var context = map_img[i].canvas.getContext('2d');
+							map_img[i].draw(context);
+							img.src = map_img[i].toDataURL(false);
+							__D += '"layer' + (i+1) + '": "' + img.src + '",';
+							Cache.setMapGraphics(filename, img);
+							map_img[i].removeAllChildren();
+							Ticker.removeListener(map_img[i]);
+							delete map_img[i];
+						}
+					}
+					self.layer[(i * 4)].addChild(new Bitmap(img));	
+					progressLoad();
+				}
+				
+				$.post("base64.php", {img: __D});
+				
+				
 				for (i=0 ; i < self.layer.length ; i++) {
 					  container_map.addChild(self.layer[i]);
 				}
-				self.stage.addChildAt(container_map, 0);
+				
+				
+				
+				self.currentMap = map;
+				self.containerMap = container_map;
+				
+			
+				
+				function graphicPlayerLoad() {
+					if (!self.player) {
+						self.player = new Player(propreties.player, self);
+						self.setCamera(self.player.x, self.player.y);	
+					}
+					else {
+						if (load && load.player) {
+							for (var key in load.player) {
+								self.player[key] = load.player[key];
+							}
+							propreties.player.x = load.player.x;
+							propreties.player.y = load.player.y;
+						}
+						self.player.setPosition(propreties.player.x, propreties.player.y);
+						self.setCamera(self.player.x, self.player.y);
+					}
+					self.player.fixCamera(true);
+					self.player.setTransfert([]);
+					if (propreties.transfert) {
+						self.player.setTransfert(propreties.transfert);
+					}
+					self.player.inTransfert = false;
+					progressLoad();
+				}
+				
+				if (propreties.player) {
+					if (!self.player) {
+						Cache.characters(propreties.player.filename, function() {
+							graphicPlayerLoad();
+						});
+						
+					}
+					else {
+						graphicPlayerLoad();
+						
+					}	
+				}
 					
-				container_map.onClick = function() {
+				/*self.containerMap.onClick = function() {
 					var real_x = self.stage.mouseX - self.containerMap.x;
 					var real_y = self.stage.mouseY - self.containerMap.y;
 					var x = Math.floor(real_x / self.tile_w);
 					var y = Math.floor(real_y / self.tile_h);
 					var obj = this.getObjectUnderPoint(real_x, real_y);
 					if (obj.name == "event") {
-						var event = self.getEventById(obj.id);
-						event.click();
+						var e = self.getEventById(obj.id);
+						if (e != null) e.event.click();
 					}
 					else if (obj.name == "area_actor") {
 						if (self.tactical.event_selected != null) {
@@ -1155,7 +1607,7 @@ Rpg.prototype = {
 							
 						}
 					}
-					else if (self.mapClick != undefined) {
+					else if (self.mapClick) {
 						self.mapClick({
 							mouse_x: real_x,
 							mouse_y: real_y,
@@ -1164,78 +1616,126 @@ Rpg.prototype = {
 							data: self.currentMap[x][y],
 							obj: obj
 						});
+		
+						
 						
 					}
-				}; 
-				
-				
-				
-				self.currentMap = map;
-				self.containerMap = container_map;
-				
-				if (propreties.player) {
-					if (!self.player) {
-						self.player = new Player(propreties.player, self);
+					/*else {
+						var dir = self.player.pathfinding(x, y);
+						self.player.move(dir);
 					}
-					else {
-						self.player.setPosition(propreties.player.x, propreties.player.y);
-					}
-					self.setCamera(self.player.x, self.player.y);
-					self.player.fixCamera(true);
-					self.player.setTransfert([]);
-					if (propreties.transfert) {
-						self.player.setTransfert(propreties.transfert);
-					}
-					
-					self.player.inTransfert = false;
-				}
+				}; */
 
+				var event, nocache, custompath, path;
 				if (propreties.events) {
-					var event;
+					if (!Rpg.isArray(propreties.events)) {
+						path = propreties.events.path;
+						custompath = true;
+						nocache = propreties.events.noCache;
+						propreties.events = [path];
+					}
 					for (i=0 ; i < propreties.events.length ; i++) {
 						event = propreties.events[i];
-						Cache.event(event, function(prop) {
-							self.events.push(new Event(prop, self));
-							if (self.events.length == propreties.events.length) {
-								if (isLoad) isLoad();
-							}
-						});
+						preloadEvent(event);
 					}
 					
 				}
-				else {
-					if (isLoad) isLoad();
+				
+				function preloadEvent(event) {
+					Cache.event(event, function(prop) {
+						if (prop[1][0].character_hue) {
+							Cache.characters(prop[1][0].character_hue, function() {
+								loadEvent(prop, event);
+								progressLoad();
+							});
+						}
+						else {
+							loadEvent(prop, event);	
+							progressLoad();
+						}
+					}, filename, custompath, nocache);
+				}
+				
+				function loadEvent(prop, event_name) {
+					progressLoad();
+					var event, load_event;
+					if (load && load.events) {
+						for (var i=0 ; i < load.events.length ; i++) {
+							load_event = load.events[i];
+							if (event_name == load_event.name) {
+								prop[0].x = load_event.x;
+								prop[0].y = load_event.y;
+								event = new Event(prop, self);
+								for (var key in load_event) {
+									if (key != "x" && key != "y") {
+										event[key] = load_event[key];
+									}
+								}
+								break;
+							}
+						}
+					}
+					else {
+						event = new Event(prop, self);
+					}
+					//self.events.push(event);
 				}
 					
 			}); // Cache
 			
-			Cache.tilesets(propreties.tileset);
+			if (map_data.layer1) {
+				var onfinish = Cache.loadFinish;
+				Cache.loadFinish = undefined;
+				onfinish();
+				progressLoad();
+			}
+			else {
+				Cache.tilesets(propreties.tileset, function() {
+					progressLoad();
+				});
+			}
+			
 			if (propreties.autotiles) {
 				for (i=0 ; i < propreties.autotiles.length ; i++) {
-					Cache.autotiles(propreties.autotiles[i]);
+					Cache.autotiles(propreties.autotiles[i], function() {
+						progressLoad();
+					});
 				}
 			}
 
-			if (propreties.bgm) {
-				var regex = /\/([^\/]+)$/;
-				var array = regex.exec(self.currentSound.bgm.src);
-				var bgm = true;
-				
-				if (array) {
-					if (typeof propreties.bgm == 'string') {
-						bgm = array[1] != propreties.bgm;
+			function playMusic(type) {
+				if (propreties[type]) {
+					var regex = /\/([^\/]+)$/;
+					var array = regex.exec(self.currentSound[type].src);
+					var bg = true;
+					if (array) {
+						if (typeof propreties[type] == 'string') {
+							bg = array[1] != propreties[type];
+						}
+						else {
+							bg = array[1] != propreties[type].mp3 + '.mp3' && array[1] != propreties[type].ogg + '.ogg';
+						}
+						if (bg) { 
+							playBG(propreties[type], type);
+						}
 					}
 					else {
-						bgm = array[1] != propreties.bgm.mp3 + '.mp3' && array[1] != propreties.bgm.ogg + '.ogg';
+						playBG(propreties[type], type);
 					}
-					if (bgm) { 
-						self.playBGM(propreties.bgm);
-					}
+				}		
+			}
+			
+			function playBG(filename, type) {
+				if (type == "bgm") {
+					self.playBGM(filename);
 				}
 				else {
-					self.playBGM(propreties.bgm);
+					self.playBGS(filename);
 				}
 			}
+			
+			playMusic("bgm");
+			playMusic("bgs");
 			
 		}
 		
@@ -1249,7 +1749,9 @@ Rpg.prototype = {
 
 	},
 	
+	// Private
 	refreshMap: function(allclear, clear_prop) {
+		return;
 		var i, j, k, map;
 		var width = Math.ceil(this.canvas.width / this.tile_w);
 		var height = Math.ceil(this.canvas.height / this.tile_h);
@@ -1265,12 +1767,15 @@ Rpg.prototype = {
 							map = this.currentMap[x+i][y+j][3][k];
 							if (map) {
 								this.layer[k].addChild(map);
+								
 							}	
 						}	
 					}
+					
 				}
 			}
-			
+			// this.layer[0].cache(0, 0, 640*2, 480*2);
+			//console.log(img);
 		}
 		
 		if (clear_prop) {
@@ -1353,12 +1858,12 @@ Rpg.prototype = {
 			array_event = [];
 		for (i=0; i < this.events.length ; i++) {
 			switch (by) {
-				case 'name': 
+				case 'name':
 					if (this.events[i].name && this.events[i].name == params.name) {
 						return this.events[i];
 					}
 				break;
-				case 'id': 
+				case 'id': 	
 					if (this.events[i].id && this.events[i].id == params.id) {
 						return {seek: i, event: this.events[i]};
 					}
@@ -1394,12 +1899,18 @@ Rpg.prototype = {
 			obj.event.bitmap = undefined;
 			this.layer[3].removeChild(obj.event.sprite);
 			this.events.splice(obj.seek, 1);
+			this.call('removeEvent', id);
 			return true;
 		}
 		
 		return false;
 	},
 	
+	/**
+     * Set the screen on an object (player, event, mouse ...)
+	 * @method setScreenIn
+     * @param {String} obj Put "Player" to set the screen on the player
+    */
 	setScreenIn: function(obj) {
 		this.targetScreen = obj;
 	},
@@ -1414,12 +1925,162 @@ Rpg.prototype = {
 	   The trigger "changeGold" is called when the amount of money is changed and displays the amount added or removed
 	 * @method bind
      * @param {String} name Name trigger. Existing trigger :
-			changeGold: called when changing the amount of money<br />
-			update: called every frame<br />
-	 * @param {Function} func Function call. Parameters for triggers :
-			changeGold:  {Integer} gold Amount of money<br />
-			update: {Void}<br />
-			eventCall_{Custom name} {Event} Function called by the order of events "call". For example, the command event "{call: "foo"}" calls function "EvenCall_foo (event:Event)"
+	<ul>
+		<li>changeGold: called when changing the amount of money</li>
+		<li>update: called every frame</li>
+		<li>eventCall_{Custom name} : Function called by the order of events "call". For example, the command event "CALL: 'foo'" calls function "EvenCall_foo (event)"</li>
+		<li>changeVariable : called when the value of a variable is changed</li>
+		<li>setScreen : called when the camera is placed on the map</li>
+		<li>removeEvent : called when an event is deleted</li>
+		<li>changeVolumeAudio : called when the sound volume is changed</li>
+		<li>screenFlash : called when a flash on the screen is made</li>
+		<li>screenShake : called when the screen shakes</li>
+		<li>changeScreenColorTone : called when the tone of the screen changes</li>
+		<li>addPicture : called when adding an image on the screen</li>
+		<li>movePicture : called when you move an image on the screen</li>
+		<li>rotatePicture : called when the image rotates</li>
+		<li>erasePicture : called when an image is deleted</li>
+		<li>addItem : called when an item is added</li>
+		<li>removeItem : called when an item is removed</li>
+		<li>selfSwitch : called when a local switch is on or off</li>
+		<li>learnSkill : called when an event is learning a skill</li>
+		<li>removeSkill : called when an event to forget a skill</li>
+		<li>addState : called when an event gets a change of state</li>
+		<li>removeState : called when an event loses a change of state</li>
+		<li>addExp : called when an event gains experience</li>
+		<li>changeLevel : called when an event changes its level</li>
+		<li>eventDetected : called when an event detect other events around him</li>
+		<li>eventContact : called when there is contact between an event and other event (or player)</li>
+	</ul>
+* @param {Function} func Function call. Parameters for triggers :
+	<ul>
+		<li>changeGold:  {Integer} gold Amount of money</li>
+		<li>update: {Void}</li>
+		<li>eventCall_{Custom name} : {Event} </li>
+		<li>changeVariable : {Integer} The identifier of the variable </li>
+		<li>setScreen : {Object} position
+			<ul>
+				<li>x {Integer} : Position X</li>
+				<li>y {Integer} : Position Y</li>
+			</ul>
+		</li>
+		<li>removeEvent : {Integer} The identifier of the event </li>
+		<li>changeVolumeAudio : {Void}</li>
+		<li>screenFlash : {Object} params
+			<ul>
+				<li>color {String} : color (hexadecimal)</li>
+				<li>speed {Integer} : speed</li>
+			</ul>
+		</li>
+		<li>screenShake : {Object} params
+			<ul>
+				<li>power {String} : power</li>
+				<li>speed {Integer} : speed</li>
+				<li>duration {Integer} : duration in frames</li>
+				<li>axis {String} : "x", "y" or "xy"</li>
+			</ul>
+		</li>
+		<li>changeScreenColorTone : {Object} params
+			<ul>
+				<li>color {String} : color (hexadecimal)</li>
+				<li>speed {Integer} : speed</li>
+				<li>composite {String} : "lighter"  or "darker"</li>
+				<li>opacity {Integer} : current opacity</li>
+			</ul>
+		</li>
+		<li>addPicture : {Object} params
+			<ul>
+				<li>id {Integer}</li>
+				<li>filename {String}</li>
+				<li>propreties {Object} : see "addPicture()"</li>
+			</ul>
+		</li>
+		<li>movePicture : {Object} params
+			<ul>
+				<li>id {Integer}</li>
+				<li>duration {Integer}</li>
+				<li>propreties {Object} : see "addPicture()"</li>
+			</ul>
+		</li>
+		<li>rotatePicture : {Object} params
+			<ul>
+				<li>id {Integer}</li>
+				<li>duration {Integer}</li>
+				<li>value {Integer|String} : "loop" or value in degrees</li>
+			</ul>
+		</li>
+		<li>erasePicture : {Integer} id</li>
+		<li>addItem : {Object} params
+			<ul>
+				<li>type {String}</li>
+				<li>id {Integer}</li>
+				<li>propreties {Object} : see "addItem()"</li>
+			</ul>
+		</li>
+		<li>removeItem : {Object} params
+			<ul>
+				<li>type {String}</li>
+				<li>id {Integer}</li>
+			</ul>
+		</li>
+		<li>selfSwitch : {Object} params
+			<ul>
+				<li>event {Event} : current event</li>
+				<li>id {Integer} : local switch id</li>
+				<li>enable {Boolean}</li>
+			</ul>
+		</li>
+		<li>learnSkill : {Object} params
+			<ul>
+				<li>event {Event} : current event</li>
+				<li>id {Integer} : skill id</li>
+				<li>prop {Object} : see "learnSkill()" in Event class</li>
+			</ul>
+		</li>
+		<li>removeSkill : {Object} params
+			<ul>
+				<li>event {Event} : current event</li>
+				<li>id {Integer} : skill id</li>
+			</ul>
+		</li>
+		<li>addState : {Object} params
+			<ul>
+				<li>event {Event} : current event</li>
+				<li>prop {Object} : see "addState()" in Event class</li>
+			</ul>
+		</li>
+		<li>removeState : {Object} params
+			<ul>
+				<li>event {Event} : current event</li>
+				<li>prop {Object} : see "addState()" in Event class</li>
+			</ul>
+		</li>
+		<li>addExp : {Object} params
+			<ul>
+				<li>event {Event} : current event</li>
+				<li>exp {Integer} : Experience points</li>
+			</ul>
+		</li>
+		<li>changeLevel : {Object} params
+			<ul>
+				<li>event {Event} : current event</li>
+				<li>new_level {Integer} : New Level</li>
+				<li>old_level {Integer} : Old Level</li>
+			</ul>
+		</li>
+		<li>eventDetected : {Object} params
+			<ul>
+				<li>src {Event} : current event</li>
+				<li>events {Array} : Array of events</li>
+			</ul>
+		</li>
+		<li>eventContact : {Object} params
+			<ul>
+				<li>src {Event} : current event</li>
+				<li>target {Array} : Array of events</li>
+			</ul>
+		</li>
+	</ul>
 			
     */
 	bind: function(name, func) {
@@ -1444,20 +2105,22 @@ Rpg.prototype = {
 	 * @method addAction
      * @param {String} name Name action
 	 * @param {Object} prop Action Properties :<br />
-				action: {String} 'attack'|'defense'|'wait' State action. Useful for real-time combat<br />
-				suffix_motion: {Array} The array elements are strings. Each string is the suffix of the current image to call. For example, if the image of the event is "Hero.png"and the suffix "_SWD" action will load the image "Hero_SWD.png" and display it on the map. When the movement of the action is completed, the appearance of the event will return to "Hero.png"<br />
-				multiple_motion (Optional): {Object} Not implemented yet<br />
-				duration_motion (Optional) : {Integer} Duration of the movement. The duration is the number of times the movement is repeated<br />
-				block_movement (Optional): {Boolean} During the action, the move is blocked<br />
-				animations (Optional): {Object|String} The animation is displayed at the beginning of motion in a direction : {left : "",  right: "", bottom: "", up"}<br />
-				animation_finish (Optional): {String} Animation is displayed at the end of the action<br />
-				wait_finish (Optional): {Integer} Wait Time frame before reuse of the action<br />
-				keypress (Optional): {Array} Keys that must be pressed to initiate action. For example: ["A"]<br />
-				keydown (Optional): {Array} Event keydown (See keypress)<br />
-				keyup (Optional): {Array} Event keyup (See keypress)<br />
-				condition (Optional): {Function} If the function return false, the action will not be performed<br />
-				onFinish (Optional): {Function} Callback when the action is over<br />
-				onStart (Optional): {Function} Callback when the action begins
+			<ul>
+				<li>action: {String} 'attack'|'defense'|'wait' State action. Useful for real-time combat</li>
+				<li>suffix_motion: {Array} The array elements are strings. Each string is the suffix of the current image to call. For example, if the image of the event is "Hero.png"and the suffix "_SWD" action will load the image "Hero_SWD.png" and display it on the map. When the movement of the action is completed, the appearance of the event will return to "Hero.png"</li>
+				<li>multiple_motion (Optional): {Object} Not implemented yet</li>
+				<li>duration_motion (Optional) : {Integer} Duration of the movement. The duration is the number of times the movement is repeated</li>
+				<li>block_movement (Optional): {Boolean} During the action, the move is blocked</li>
+				<li>animations (Optional): {Object|String} The animation is displayed at the beginning of motion in a direction : {left : "",  right: "", bottom: "", up"}</li>
+				<li>animation_finish (Optional): {String} Animation is displayed at the end of the action</li>
+				<li>wait_finish (Optional): {Integer} Wait Time frame before reuse of the action</li>
+				<li>keypress (Optional): {Array} Keys that must be pressed to initiate action. For example: [Input.A]</li>
+				<li>keydown (Optional): {Array} Event keydown (See keypress)</li>
+				<li>keyup (Optional): {Array} Event keyup (See keypress)</li>
+				<li>condition (Optional): {Function} If the function return false, the action will not be performed</li>
+				<li>onFinish (Optional): {Function} Callback when the action is over</li>
+				<li>onStart (Optional): {Function} Callback when the action begins</li>
+			</ul>
     */
 	addAction: function(name, prop) {
 		this.actions[name] = prop;
@@ -1471,76 +2134,155 @@ Rpg.prototype = {
 		[Object, Array]
 		<br />
 		The first value is the overall properties of the event. His name and positions :<br />
-			name (Optional) : {String} Event Name<br />
-			x (Optional): {Integer} X Position<br />
-			y (Optional): {Integer} Y Position<br />
+		<ul>
+			<li>name (Optional) : {String} Event Name</li>
+			<li>x (Optional): {Integer} X Position</li>
+			<li>y (Optional): {Integer} Y Position</li>
+			<li>real_x (Optional): {Integer} Real position X (pixels)</li>
+			<li>real_y (Optional): {Integer} Real position Y (pixels)</li>
+			<li>id (Optional) : {Integer} ID. A random id is generated if this property is not specified</li>
+		</ul>
 			<br />
 		The second value is the pages of the event. It's always the last page is called when the event is charged only if the existing condition is true. Each page is of type Object and has the following properties :<br />
-			character_hue (Optional): {String} Appearance. The image is in the "Graphics/Characters"<br />
-			trigger: {String} action_button|contact|event_touch|parallel_process|auto|auto_one_time Trigger condition controls the event:<br />
-				action_button: In support of a key when the player is next to the event<br />
-				contact : When the player makes contact with the event<br />
-				event_touch : When the event comes into contact with the player<br />
-				parallel_process : AutoPlay loop but does not block the player<br />
-				auto : AutoPlay loop and block the player<br />
-				auto_one_time: AutoPlay once and hangs the player<br />
-			direction (Optional): {String} up|bottom|left|right Branch Event<br />
-			speed (Optional): {Integer} Speed of movement. The higher the number, the higher the speed is great<br />
-			direction_fix (Optional): {Boolean} The appearance does not change when the direction changes<br />
-			frequence (Optional): {Integer} Frequency of movement. The higher the frequency is low, the movement is more fluid<br />
-			no_animation (Optional) : {Boolean} No animation even when the direction changes<br />
-			stop_animation (Optional) : {Boolean} Animated stationary<br />
-			through (Optional): {Boolean} The player can walk on the event.<br />
-			type (Optional): {String} fixed|random|approach Movement Type<br />
-					fixed (default): Do not move<br />
-					random: Randomizer<br />
-					approach: Approaches the player<br />
-			commands: {Array} Table of commands that will execute the event. See "http://" to the possibilities<br />
-			conditions: {Object}  Conditions for the page is executed. If false, it is the previous page to be executed <br />
-				switches (Optional): IDs of switches that must be activated<br />
-				self_switch (Optional): The ID of the event gives the switches that must be activated<br />
-			tactical (Optional): {Object} If the tactical mode is activated when the event is part of the system<br />
-				play: {String} player|cpu Indicates whether the event can be played by the play or the computer<br />
-				move: {Integer} Number of square displacement,<br />
-				hp_max: {Integer} Number of points of maximum life<br />
-			action_battle (Optional): {Object} If the real-time combat is enabled, the event will be an enemy<br />
-				area:  {Integer} Detection area (number of squares)<br />
-				hp_max: {Integer} Number of points of maximum life<br />
-				animation_death: {String} Animation when the event is death (Name of the animation),<br />
-				drop: {Array} Events left on the ground after the death of the event. Each element is an object :<br />
-					name: {String} Event name<br />
-					probability: {Integer}. Probability that the event leaves an object. Number between 0 and 100<br />
+			<ul>
+			<li>character_hue (Optional): {String} Appearance. The image is in the "Graphics/Characters"</li>
+			<li>trigger: {String} action_button|contact|event_touch|parallel_process|auto|auto_one_time Trigger condition controls the event:
+				<ul>
+					<li>action_button: In support of a key when the player is next to the event</li>
+					<li>contact : When the player makes contact with the event</li>
+					<li>event_touch : When the event comes into contact with the player</li>
+					<li>parallel_process : AutoPlay loop but does not block the player</li>
+					<li>auto : AutoPlay loop and block the player</li>
+					<li>auto_one_time: AutoPlay once and hangs the player</li>
+				</ul>
+			</li>
+			<li>direction (Optional): {String} up|bottom|left|right Branch Event</li>
+			<li>speed (Optional): {Integer} Speed of movement. The higher the number, the higher the speed is great</li>
+			<li>direction_fix (Optional): {Boolean} The appearance does not change when the direction changes</li>
+			<li>frequence (Optional): {Integer} Frequency of movement. The higher the frequency is low, the movement is more fluid</li>
+			<li>no_animation (Optional) : {Boolean} No animation even when the direction changes</li>
+			<li>stop_animation (Optional) : {Boolean} Animated stationary</li>
+			<li>through (Optional): {Boolean} The player can walk on the event.</li>
+			<li>type (Optional): {String} fixed|random|approach Movement Type
+				<ul>
+					<li>fixed (default): Do not move</li>
+					<li>random: Randomizer</li>
+					<li>approach: Approaches the player</li>
+				</ul>
+			</li>
+			<li>commands: {Array} Table of commands that will execute the event. See "http://rpgjs.com/wiki/index.php?title=Event_commands" to the possibilities</li>
+			<li>conditions: {Object}  Conditions for the page is executed. If false, it is the previous page to be executed 
+				<ul>
+					<li>switches (Optional): IDs of switches that must be activated</li>
+					<li>self_switch (Optional): The ID of the event gives the switches that must be activated</li>
+				</ul>
+			</li>
+			<li>tactical (Optional): {Object} If the tactical mode is activated when the event is part of the system
+				<ul>
+					<li>play: {String} player|cpu Indicates whether the event can be played by the play or the computer</li>
+					<li>move: {Integer} Number of square displacement,</li>
+					<li>hp_max: {Integer} Number of points of maximum life</li>
+				</ul>
+			</li>
+			<li>action_battle (Optional): {Object} If the real-time combat is enabled, the event will be an enemy
+				<ul>
+					<li>area:  {Integer} Detection area (number of squares)</li>
+					<li>hp_max: {Integer} Number of points of maximum life</li>
+					<li>params (optional): {Object} The parameters for the fight. see "Event.setParams()"
+					Value constant :<br />
+					Example :
+						<pre>
+							"params": {
+								"attack": 100,
+								"defense": 95
+							}
+						</pre>
+					If the value is an array. The parameter value will be the current level (Array forms a curve proportional)<br />
+					Example :  
+						<pre>
+							"params": {
+								"attack": [100, 300],
+								"defense": 95
+							}
+						</pre>
+					</li>
+					<li>level (optional) {Integer} : Starting level</li>
+					<li>maxLevel (optional) {Integer} : Level max</li>
+					<li>expList (optional) {Object} : Formation of a experience curve. See "Event.expList()". Elements :
+						<ul>
+							<li>basis: {Integer}</li>
+							<li>inflation: {Integer}</li>
+						</ul>
+					</li>
+					<li>items (optional) {Object} : Items equipped. See "Event.equipItem()". Elements :
+						Example:
+						<pre>
+							"items": {
+								"weapons": ["sword"]
+							}
+						</pre>
+					</li>
+					<li>skillsToLearn (optional) {Object} To learn the skills by level. See "Event.skillsToLearn()"
+						Example :
+						<pre>
+							"skillsToLearn": {
+								"2": "fire"
+							}
+						</pre>
+					</li>
+					<li>class (optional) {String} : Name of the class. If existing properties "skillsToLearn" and "elements" will be ignored. See "Event.setClass()"</li>
+					<li>elements (optional) {Object} : Couple of key / value. The key is the name of the element and the value of the percentage allocation of the element. If existing properties "skillsToLearn" and "elements" will be ignored. See "Event.setElements()"</li>
+					<li>states (optional) {Array} : The status effects to perform on the event. The array elements are the names of states. See "Event.addState()"</li>
+					<li>animation_death: {String} Animation when the event is death (Name of the animation),</li>
+					<li>ennemyDead: {Array} Events left on the ground after the death of the event. Each element is an object :
+						<ul>
+							<li>name: {String} Event name</li>
+							<li>probability: {Integer}. Probability that the event leaves an object. Number between 0 and 100</li>
+							<li>call (optional): {String}. Function called in the properties of "setActionBattle"</li>
+						</ul>
+					<li>
+					<li>actions (optional): {Array}. Array of actions in the event (see "addAction)</li>
+					<li>detection (optional): Function called in the properties of "setActionBattle"</li>
+					<li>nodetection (optional): Function called in the properties of "setActionBattle"</li>
+					<li>attack (optional): Function called in the properties of "setActionBattle"</li>
+					<li>affected (optional): Function called in the properties of "setActionBattle"</li>
+					<li>offensive (optional): Function called in the properties of "setActionBattle"</li>
+					<li>passive (optional): Function called in the properties of "setActionBattle"</li>
+				</ul>
+			</li>
+			</ul>
+				<br />
+				To understand the functions, see "setEventMode"
+		
 		<br />		
 		Example :<br />	
 		<pre>
 			[
-			// Global<br />
 			{
-				name: 'pnj',
-				x: 11,
-				y: 8
+				"name": "pnj",
+				"x": 11,
+				"y": 8
 			},
-			// Pages
 			[	
-				// Page 1
 				{
-					character_hue: 'Lancer.png',
-					trigger: 'action_button',
-					direction: 'bottom',
-					commands: [
-						{switches_on: [1]},
-						{show_text: "Hello"}
+					"character_hue: "Lancer.png",
+					"trigger: "action_button",
+					"direction: "bottom",
+					"commands": [
+						"SHOW_TEXT: 'Hello'",
+						"SELF_SWITCH_ON: [1]"
+						
 					]
 				},
 				
 				{
-					conditions: {switches: [1]},
-					character_hue: '009-Lancer01.png',
-					trigger: 'action_button',
-					direction: 'bottom',
-					commands: [
-						{switches_off: [1]},
-						{show_text: "Bye"}
+					"conditions": {"switches": [1]},
+					"character_hue: "Lancer.png",
+					"trigger: "action_button",
+					"direction: "bottom",
+					"commands": [
+						"SHOW_TEXT: 'Bye'",
+						"SELF_SWITCH_OFF: [1]"
 					]
 				}
 				
@@ -1550,8 +2292,7 @@ Rpg.prototype = {
 	* @return {Event} The event added 
     */
 	addEvent: function(prop) {
-		var event = new Event(prop, this);
-		this.events.push(event);	
+		var event = new Event(prop, this);	
 		return event;
 	},
 	
@@ -1587,6 +2328,7 @@ Rpg.prototype = {
      * Get the properties of an event prepared
 	 * @method getEventPreparedByName
      * @param {String} name Event Name
+	 * @return {Event} Event. null if no event found
     */
 	getEventPreparedByName: function(name) {
 		for (var i=0; i < this.eventsCache.length ; i++) {
@@ -1606,17 +2348,15 @@ Rpg.prototype = {
     */
 	setEventPrepared: function(name, propreties, page) {
 		var event = this.getEventPreparedByName(name);
+		var val;
 		if (event != null) {
-			for (var key in event[0]) {
-				if (propreties[key]) {
-					event[0][key] = propreties[key];
+			for (var key in propreties) {
+				val = propreties[key];
+				if (page) {
+					event[1][page][key] = val;
 				}
-			}
-			if (page) {
-				for (var key in event[1][page]) {
-					if (propreties[key]) {
-						event[1][page][key] = propreties[key];
-					}
+				else {
+					event[0][key] = val;
 				}
 			}
 		}
@@ -1635,7 +2375,7 @@ Rpg.prototype = {
      * Prepare an event in the file "Data/Events" (see "prepareEvent")
 	 * @method prepareEventAjax
      * @param {String} name Filename
-     * @param {Object} event Properties (see "addEvent")
+     * @param {Function} (optional) callback Callback
     */
 	prepareEventAjax: function(name, callback) {
 		var self = this;
@@ -1673,7 +2413,7 @@ Rpg.prototype = {
 	/**
      * Change the audio volume for one or all types
 	 * @method setVolumeAudio
-     * @param {Integer} volume Volume between 0 and 100. 0 being mute
+     * @param {Integer} volume Volume between 0 and 1. 0 being mute
      * @param {String} type (optional) If undefined, all types are changed. Possible type: <br />
 		bgm: Background Music<br />
 		bgs: Background Sound<br />
@@ -1685,10 +2425,12 @@ Rpg.prototype = {
 		if (type) {
 			setVolume(type);
 		}
-		for (var key in this.soundVolume) {
-			setVolume(key);
+		else {
+			for (var key in this.soundVolume) {
+				setVolume(key);
+			}
 		}
-		
+		this.call('changeVolumeAudio');
 		function setVolume(key) {
 			self.soundVolume[key] = volume;
 			self.currentSound[key].volume = volume;
@@ -1702,32 +2444,77 @@ Rpg.prototype = {
      * @param {Function} load (optional) Callback when the music is loaded. A parameter is returned: an object "Audio"
     */
 	playBGM: function(filename, load) {
+		this._playBG("bgm", filename, load);
+	},
+	
+	/**
+     * Stop all background sound and plays sound
+	 * @method playBGS
+     * @param {String|Object} filename Filename. Can also define several types depending on the browser. For example : {mp3: "foo", ogg: "bar"}
+     * @param {Function} load (optional) Callback when the music is loaded. A parameter is returned: an object "Audio"
+    */
+	playBGS: function(filename, load) {
+		this._playBG("bgs", filename, load);
+	},
+	
+	_playBG: function(type, filename, load) {
 		var self = this;
-		Cache.audioStop('bgm');
-		Cache.BGM(filename, function(snd) {
-			self.currentSound.bgm = snd;
-			snd.volume = self.soundVolume.bgm;
-			snd.loop = true;
+		var cache = type == "bgm" ? Cache.BGM : Cache.BGS;
+		Cache.audioStop(type);
+		cache(filename, function(snd) {
+			self.currentSound[type] = snd;
+			snd.volume = self.soundVolume[type];
+			if (typeof snd.loop == 'boolean') {
+					snd.loop = true;
+			}
+			else {
+				snd.addEventListener('ended', function() {
+					this.currentTime = 0;
+					this.play();
+				}, false);
+			}
 			snd.play();
 			if (load) load(snd);
 		});
 	},
 	
 	/**
-     * Play a sound
+     * Play a sound effect
 	 * @method playSE
-     * @param {String} filename Filename
+     * @param {String|Object} filename Filename. Can also define several types depending on the browser. For example : {mp3: "foo", ogg: "bar"}
      * @param {Function} load (optional) Callback when the sound is loaded. A parameter is returned: an object "Audio"
     */
 	playSE: function(filename, load) {
+		this._playSoundEffect("se", filename, load);
+	},
+	
+	/**
+     * Play a music effect
+	 * @method playME
+     * @param {String|Object} filename Filename. Can also define several types depending on the browser. For example : {mp3: "foo", ogg: "bar"}
+     * @param {Function} load (optional) Callback when the sound is loaded. A parameter is returned: an object "Audio"
+    */
+	playME: function(filename, load) {
+		this._playSoundEffect("me", filename, load);
+	},
+	
+	_playSoundEffect: function(type, filename, load) {
 		var self = this;
-		Cache.SE(filename, function(snd) {
-			snd.volume = self.soundVolume.se;
+		var cache = type == "se" ? Cache.SE : Cache.ME;
+		cache(filename, function(snd) {
+			snd.volume = self.soundVolume[type];
 			snd.play();
 			if (load) load(snd);
 		});
 	},
 	
+	/**
+     * Call commands event of an event
+	 * @method callCommandsEvent
+     * @param {Event} event Event
+     * @param {Function} load (optional) Callback when commands are completed
+     * @param {Boolean} freeze (optional) Block the movement of the player if true
+    */
 	callCommandsEvent: function(event, onFinishCommand, freeze) {
 		var self = this;
 		var can_freeze = freeze && this.player;
@@ -1737,5 +2524,875 @@ Rpg.prototype = {
 			if (onFinishCommand) onFinishCommand();
 		});
 		event.onCommands();
+	},
+
+	/**
+     * Perform a flash on the screen
+	 * @method screenFlash
+     * @param {String} color Hexadecimal color value. Example : ff0000 for red
+     * @param {Integer} speed Speed of the flash between 0 and 255. The higher the value, the faster is
+     * @param {Function} callback (optional) Callback when the flash is completed
+    */
+	screenFlash: function(color, speed, callback) {
+		var self = this;
+		var flash = new Shape();
+		flash.graphics.beginFill('#' + color).drawRect(0, 0, this.canvas.width * 2, this.canvas.height * 2);
+		flash.x = this.screen_x - Math.round(this.canvas.width / 2);
+		flash.y = this.screen_y - Math.round(this.canvas.height / 2);
+		flash.alpha = .5;
+		this.containerMap.addChild(flash);
+		this.call('screenFlash', {color: color, speed: speed});
+		new Effect(flash).fadeOut(speed, function() {
+			self.containerMap.removeChild(flash);
+			if (callback) callback();
+		});
+		
+	},
+	
+	/**
+     * Shakes the screen
+	 * @method screenShake
+     * @param {Integer} power Intensity of the shake. The higher the value, the greater the shaking is strong
+     * @param {Integer} speed Speed of the shake. The higher the value, the greater the shaking is fast
+     * @param {Integer} duration Duration of shake in frame
+     * @param {String} axis (optional) The axis where there will shake : "x", "y" or "xy". "x" by default
+     * @param {Function} callback (optional) Callback when the shake is completed <br />
+		Examples 
+		
+		<pre>
+			rpg.screenShake(7, 5, 20, function() { // You can omit the parameter "axis" if you do a shake on the X axis
+				alert("finish"); 
+			});
+		</pre>
+		
+		<pre>
+			rpg.screenShake(3, 5, 24, "xy");
+		</pre>
+		
+		<pre>
+			rpg.screenShake(3, 5, 24, "xy", function() {
+				alert("finish"); 
+			});
+		</pre>
+    */
+	screenShake: function(power, speed, duration, axis, callback) {
+		if (typeof axis == "function") {
+			callback = axis;
+			axis = false;
+		}
+		this.shake = {};
+		this.shake.power = power;
+		this.shake.speed = speed;
+		this.shake.duration = duration;
+		this.shake.callback = callback;
+		this.shake.current = 0;
+		this.shake.direction = 1;
+		this.shake.axis = axis || "x";
+		this.call('screenShake', {power: power, speed: speed, duration: duration, axis: axis});
+	},
+	
+	_tickShake: function() {
+		if (this.shake && (this.shake.duration >= 1 || this.shake.current != 0)) {
+			var delta = (this.shake.power * this.shake.speed * this.shake.direction) / 10.0;
+			if (this.shake.duration <= 1 && this.shake.current * (this.shake.current + delta) < 0) {
+				this.shake.current = 0;
+			}
+			else {
+				this.shake.current += delta;
+			}
+			if (this.shake.current > this.shake.power * 2) {
+				this.shake.direction = -1;
+			}
+			if (this.shake.current < -this.shake.power * 2) {
+				this.shake.direction = 1;
+			}
+			if (this.shake.duration >= 1) {
+				this.shake.duration -= 1;
+			}
+			if (/x/.test(this.shake.axis)) {
+				this.stage.x = this.shake.current;
+			}
+			if (/y/.test(this.shake.axis)) {
+				this.stage.y = this.shake.current;
+			}
+			if (this.shake.duration-1 == 0 && this.shake.callback) {
+				this.shake.callback();
+			}
+		}
+	},
+	
+	/**
+     * Change the tone of the screen
+	 * @method changeScreenColorTone
+     * @param {String} color Hexadecimal color value. Example : 000000 for black. You can put "reset" to reset the tone of the screen : br />
+		<pre>
+			rpg.changeScreenColorTone("reset");
+		</pre>
+     * @param {Integer} speed Speed of the tone color between 0 and 255. The higher the value, the faster is
+     * @param {String} composite lighter|darker Darken or lighten the screen
+     * @param {Integer} opacity Change the tone to the opacity assigned. Value between 0 and 1
+     * @param {Function} callback (optional) Callback when the tone color is completed
+    */
+	changeScreenColorTone: function(color, speed, composite, opacity, callback) {
+		var self = this;
+		var exist_tone = false;
+		if (this.tone) {
+			this.containerMap.removeChild(this.tone);
+			exist_tone = true;
+			if (color == 'reset') return;
+		}
+		this.tone = new Shape();
+		this.tone.graphics.beginFill('#' + color).drawRect(0, 0, this.getMapWidth(true), this.getMapHeight(true));
+		this.tone.compositeOperation = composite;
+		this.containerMap.addChild(this.tone);
+		if (!exist_tone) {
+			this.tone.alpha = 0;
+			new Effect(this.tone).fadeStartTo(speed, 0, opacity, function() {
+				if (callback) callback();
+			});
+		}
+		this.call('changeScreenColorTone', {color: color, speed: speed, composite: composite, opacity: opacity});
+	},
+
+	setTypeDirection: function(type) {
+		this.typeDirection = type;
+	},
+	
+	/**
+     * Add an HTML element on the map. The scrolling also applies to the element
+	 * @method addHtmlElement
+     * @param {String|HTMLElement} html HTML element<br />
+		<pre>
+			rpg.addHtmlElement('<div>Hello World</div>', 10, 15);
+		</pre>
+		<br />
+		Or<br />
+		<br />
+		<pre>
+			var element = document.getElementById("foo");
+			rpg.addHtmlElement(element, 10, 15);
+			[...]
+			</script>
+			<div id="foo">Hello World</div>
+		</pre>
+     * @param {Integer} x  X position in pixel
+     * @param {Integer} y  Y position in pixel
+     * @param {Event|Array} event  (optional) Place the HTML element on the event<br />
+		You can get the HTML element with the function "getElementById()"<br />
+		<pre>
+			var event = rpg.getEventByName("foo");
+			rpg.addHtmlElement("<div id="bar">Hello World</div>", -10, -15, event);
+			event.getElementById("bar"); // Return HTMLElement
+		</pre>
+	 * @return HTMLElement Element HTML created or modified
+    */
+	addHtmlElement: function(html, x, y, event) {
+		var self = this, element;
+		var div, element_param, math;
+		var id = this.canvas.id + '-dom';
+		div = document.getElementById(id);
+		
+		if (html instanceof HTMLElement) {
+			match = html.getAttribute("id");
+			element_param = html;
+		}
+		else {
+			match = /id="([^"]+)"/.exec(html);
+		}
+		var container;
+		
+		if (event) {
+			if (event instanceof Array) {
+				for (var i=0 ; i < event.length ; i++) {
+					displayElement(event[i]);
+				}
+			}
+			else {
+				displayElement(event);
+			}
+		}
+		else {
+			displayElement();
+		}
+		
+		function displayElement(event) {
+			var new_id = match[1] + (event ? '-' + event.id : '');
+			if (event) {
+				container = event.sprite;
+			}
+			else {
+				container = self.containerMap;
+			}
+			var pt = container.localToGlobal(x, y);
+			element = element_param ? element_param : document.createElement("div");
+			element.setAttribute("data-px", x);
+			element.setAttribute("data-py", y);
+			
+			if (match) {
+				element.setAttribute("id", new_id + '-parent');
+			}
+			element.style.position = 'absolute';
+			element.style.left = Math.round(pt.x) + "px";
+			element.style.top = Math.round(pt.y) + "px";
+			if (!element_param) {
+				html = html.replace(/id="([^"]+)"/, 'id="' + new_id + '"');
+				element.innerHTML = html;
+			}
+			div.appendChild(element);
+			if (element && event) event.htmlElements.push(element);
+			self.htmlElements.push({element: element, event: event});
+		}
+		return element;
+	},
+	
+	
+	// Private
+	_tickHtmlElements: function() {
+		var i, element, x, y, pt, event;
+		for (i=0 ; i < this.htmlElements.length ; i++) {
+			element = this.htmlElements[i].element;
+			event = this.htmlElements[i].event;	
+			x = element.getAttribute('data-px');
+			y = element.getAttribute('data-py');
+			if (event) {
+				container = event.sprite;
+			}
+			else {
+				container = this.containerMap;
+			}
+			pt = container.localToGlobal(x, y);
+			element.style.left = Math.round(pt.x) + "px";
+			element.style.top = Math.round(pt.y) + "px";
+		}
+	
+	},
+	
+	/**
+     * Removes mouse behavior (This does not remove the movement of the hero with the mouse)
+	 * @method unbindMouseEvent
+     * @param {String} mouse_event click|dblclick|up|down[over|out
+    */
+	unbindMouseEvent: function(mouse_event) {
+		this.onMouseEvent[mouse_event] = undefined;
+		if (this.player && this.player._useMouse) {
+			this.player.useMouse(true);
+		}
+	},
+	
+	/**
+     * Attach a mouse behavior to a function
+	 * @method bindMouseEvent
+     * @param {String} mouse_event click|dblclick|up|down[over|out
+     * @param Function} callback  Callback when the mouse action trigger. The function returns an object as follows :<br />
+		<ul>
+			<li>mouse_x : X position of the mouse relative to the canvas (pixels)</li>
+			<li>mouse_y : Y position of the mouse relative to the canvas (pixels)</li>
+			<li>real_x : X position of the mouse relative to the map (pixels)</li>
+			<li>real_y : Y position of the mouse relative to the map (pixels)</li>
+			<li>x : X position (tiles) on the map</li>
+			<li>y : Y position (tiles) on the map</li>
+			<li>event : Event. null if no event</li>
+		</ul>
+		<br />
+		<pre>
+			rpg.bindMouseEvent("click", function(obj) {
+				console.log(obj); // Object above
+			});
+		</pre>
+		
+     * @param {Event|Array} event  Define this event for the types "over" and "out"<br />
+		<pre>
+			var event = rpg.getEventByName("foo");
+			rpg.bindMouseEvent("over", function(obj) {
+				// Code
+			}, event);
+		</pre>
+    */
+	bindMouseEvent: function(mouse_event, callback, event) {
+		var self = this, div, element, ev;
+		div = document.getElementById(this.canvas.id + '-dom');
+		if (event) {
+			if (!(event instanceof Array)) {
+				event = [event];
+			}
+			for (var i=0 ; i < event.length ; i++) {
+				ev =  event[i];
+				element = ev.htmlElementMouse;
+				mouse("out", ev);
+				mouse("over", ev);
+				div.appendChild(element);
+			}
+			
+		}
+		
+		function mouse(type, ev) {
+			element["onmouse" + type] = function(e) {
+				self._getMouseData(type, e, div, ev);
+			}
+		}
+		
+		this.onMouseEvent[mouse_event] = callback;
+	},
+	
+	// Private
+	_setMouseEvent: function(div) {
+		var self = this;
+		
+		div.onclick = function(e) {
+			self._getMouseData("click", e, this);
+		}
+		div.ondblclick = function(e) {
+			self._getMouseData("dblclick", e, this);
+		}
+		div.onmouseup = function(e) {
+			self._getMouseData("up", e, this);
+		}
+		div.onmousedown = function(e) {
+			self._getMouseData("down", e, this);
+		}
+		
+		
+	},
+	
+	// Private
+	_getMouseData: function(type, e, target, obj) {
+		var event;
+		var self = this;
+		if (this.onMouseEvent[type]) {
+			var real_x = e.clientX - target.offsetLeft;
+			var real_y = e.clientY - target.offsetTop;
+			var x = real_x  - this.containerMap.x;
+			var y = real_y  - this.containerMap.y;
+			var tile_x = Math.floor(x / this.tile_w);
+			var tile_y = Math.floor(y / this.tile_h);
+			obj = obj || this.containerMap.getObjectUnderPoint(x, y);
+			if (this.player && this.player.id == obj.id) {
+				event = this.player;
+			}
+			else if (obj.name == "event") {
+				event = this.getEventById(obj.id);
+				if (event != null) {
+					event = event.event;
+					if (type == "click") {
+						event.click();
+					}
+					if (this.player._useMouse) {
+						this.player.moveMouseTo(tile_x, tile_y, true, function() {
+							if (self.player.distance(0, 0, tile_x,  tile_y).ini <= 1) {
+								self.player.triggerEventBeside();
+							}
+						});
+						//this.player.triggerEventBeside();
+					}
+				}
+			}
+			else {
+				if (this.player._useMouse) {
+					this.player.moveMouseTo(tile_x, tile_y);
+				}
+			}
+			
+			this.onMouseEvent[type]({
+				mouse_x: real_x,
+				mouse_y: real_y,
+				real_x: x,
+				real_y: y,
+				x: tile_x,
+				y: tile_y,
+				event: event || null
+			});
+		}
+		
+		/*function mouseRealMove(mouse_x, mouse_y) {	
+			var real_x = self.player.real_x ;
+			var real_y = self.player.real_y ;
+			
+			var move_id = 0;
+			var move_x_finish = move_y_finish = false;
+			var diff_x, diff_y;
+			if (real_x < mouse_x) {
+				move_id = 6;
+				diff_x = mouse_x - real_x;
+				
+			}
+			else if (real_x > mouse_x) {
+				move_id = 4;
+				diff_x = real_x - mouse_x;
+
+			}
+			else if (real_y < mouse_y) {
+				move_id = 8;
+				diff_y = mouse_y - real_y;
+				if (diff_y <= self.player.speed) {
+					mouse_y = real_y;
+				}
+			}
+			else if (real_y > mouse_y) {
+				move_id = 2;
+				diff_y = real_y - mouse_y;
+				if (diff_y <= self.player.speed) {
+					mouse_y = real_y;
+				}
+			}
+			
+			if (mouse_y != real_y || mouse_x != real_x) {
+				if (diff_x <= self.player.speed) {
+					mouse_x = real_x;
+				}
+				self.player.move(move_id, function() {
+					mouseRealMove(mouse_x, mouse_y);
+				});
+			}
+		}*/
+	},
+	
+	/**
+     * Save game data : Variables, Switches, Self switches (event),  Information of the current map, Current events and Player
+	 * @method save
+     * @param {Integer} (optional) slot If available, the game will be saved locally (localStorage). his name will be "ID of the canvas" + '-' + slot". slot is the placement of the save
+     * @return String JSON. You can get the save for registered other way (eg Ajax request)
+    */
+	save: function(slot) {
+		var save = {};
+		save.switches = this.switches;
+		save.variables = this.variables;
+		save.selfSwitches = Cache.events_data;
+		save.gold = this.gold;
+		save.map = this.currentMapInfo;
+		save.events = [];
+		save.items = this.items;
+		var obj, event, i;
+		for (i=0 ; i < this.events.length ; i++) {
+			event = this.events[i];
+			obj = dataEvent(event);
+			save.events.push(obj);
+		}
+	
+		if (this.player) save.player = dataEvent(this.player);
+		
+		function dataEvent(event) {
+			var obj = {};
+			var exclus = ["htmlElements"];
+			for (var key in event) {
+				var _typeof = typeof event[key];
+				if ((_typeof == "number" ||
+					_typeof == "string" ||
+					_typeof == "boolean" ||
+					event[key] instanceof Array) && exclus.indexOf(key) == -1) {
+					obj[key] = event[key];
+				}
+			}
+			return obj;
+		}
+
+		var json_save = JSON.stringify(save);
+		
+		if (slot && localStorage) {
+			localStorage[this.canvas.id + '-' + slot] = json_save;
+		}
+		return json_save;
+	},
+	
+	/**
+     * Load the game data. Reset Map
+	 * @method load
+     * @param {String|Integer} JSON to load or number of the slot. If this is the slot number, the data will be sought locally (localStorage)
+     * @param {Function} (optional) Callback when the data and the map are loaded
+    */
+	load: function(jsonOrSlot, onLoad) {
+		var json;
+		if (typeof jsonOrSlot == "number") {
+			json = localStorage[this.canvas.id + '-' + jsonOrSlot];
+			if (!json) {
+				return false;
+			}
+		}
+		else {
+			json = jsonOrSlot;
+		}
+		var load = JSON.parse(json);
+		this.switches = load.switches;
+		this.variables = load.variables;
+		this.items = load.items;
+		Cache.events_data = load.selfSwitches;
+		this.gold = load.gold;
+		this.loadMap(load.map.name, load.map.propreties, onLoad, load);
+	},
+	
+	/**
+     * Add a picture and post it on the screen. This image remains fixed relative to the canvas
+	 * @method addPicture
+     * @param {Integer} id Unique identifier of the image in order to manipulate it later
+     * @param {String} filename Name of this image in the "Graphics/Pictures"
+     * @param {Object} propreties The properties of the image :
+		<ul>
+			<li>x : X Position. Default 0</li> 
+			<li>y : Y Position. Default 0</li> 
+			<li>zoom_x : Zoom ratio in the X axis. Default 100</li> 
+			<li>zoom_y : Zoom ratio in the Y axis. Default 100</li> 
+			<li>opacity : Opacity between 0 and 1. Default 1</li> 
+			<li>regX : X Point of Origin. Default 0</li> 
+			<li>regY : Y Point of Origin. Default 0</li> 
+			<li>reg : if "center", point of origin is in center. Default false</li> 
+		</ul>
+	 * @param {Function} (optional) onLoad Callback function when the image is loaded
+    */
+	addPicture: function(id, filename, prop, onLoad) {
+		var self = this;
+		if (!prop) prop = {};
+		Cache.pictures(filename, function(img) {
+			var bitmap = new Bitmap(img);
+			bitmap.x = prop.x ? prop.x : 0;
+			bitmap.y = prop.y ? prop.y : 0;
+			bitmap.scaleX = prop.zoom_x ? prop.zoom_x / 100 : 1;
+			bitmap.scaleY = prop.zoom_y ? prop.zoom_y / 100 : 1;
+			bitmap.alpha = prop.opacity ? prop.opacity : 1;
+			if (prop.reg == "center") {
+				prop.regX = img.width / 2;
+				prop.regY = img.height / 2;
+			}
+			bitmap.regX = prop.regX ? prop.regX : 0
+			bitmap.regY = prop.regY ? prop.regY : 0
+			self.pictures[id] = bitmap;
+			self.stage.addChild(bitmap);
+			self.call("addPicture", {id: id, filemane: filename, prop: prop});
+			if (onLoad) onLoad(img);
+		});
+	},
+	
+	/**
+     * Move, resize or change the opacity of a picture over a period
+	 * @method movePicture
+     * @param {Integer} id Unique identifier of the image
+     * @param {Integer} duration Duration in frame
+     * @param {Object} propreties New Property image. See "addPicture".
+    */
+	movePicture: function(id, duration, prop) {
+		var pic = this.pictures[id];
+		if (prop.opacity) {
+			new Effect(pic).fadeStartTo(duration, pic.alpha, prop.opacity);
+		}
+		if (prop.x !== undefined) {
+			new Effect(pic).linear(duration, prop.x, "x");
+		}
+		if (prop.y !== undefined) {
+			new Effect(pic).linear(duration, prop.y, "y");
+		}
+		if (prop.scaleX) {
+			new Effect(pic).scaling(duration, prop.scaleX, "x");
+		}
+		if (prop.scaleY) {
+			new Effect(pic).scaling(duration, prop.scaleY, "y");
+		}
+		if (prop.regX !== undefined) {
+			pic.regX = prop.regX;
+		}
+		if (prop.regX !== undefined) {
+			pic.regY = prop.regY;
+		}
+		this.call("movePicture", {id: id, duration: duration, prop: prop});
+	},
+	
+	/**
+     * Rotating a picture
+	 * @method rotatePicture
+     * @param {Integer} id ID of the image
+     * @param {Integer} duration Duration in frame
+     * @param {Integer|String} value Value in degrees of rotation. Put "loop" for a full turn and loop
+     * @param {Function} callback Callback when the rotation is complete. Call each turn if the value is "loop"
+    */
+	rotatePicture: function(id, duration, value, callback) {
+		var pic = this.pictures[id];
+		var loop = false;
+		if (typeof value == "string" && value == "loop") {
+			loop = true;
+			value = 360;
+		}
+		this.call("rotatePicture", {id: id, duration: duration, value: value});
+		rotateLoop();
+		function rotateLoop() {
+			new Effect(pic).rotate(duration, value, loop ? rotateLoop : callback);
+			if (callback && loop) callback();
+		}
+	},
+	
+	/**
+     * Delete an image
+	 * @method erasePicture
+     * @param {Integer} id Image ID
+    */
+	erasePicture: function(id) {
+		this.stage.removeChild(this.pictures[id]);
+		this.call("erasePicture", id);
+		delete this.pictures[id];
+	},
+	
+	/**
+     * Adds an item in the player's inventory. You can use the Database object to store object properties. Example :
+		<pre>
+			Database.items = {
+				"potion": {
+					name: "Potion",
+					description: "Restores HP to player.",
+					price: 50,
+					consumable: true,
+					animation: "Use Item",
+					recover_hp: 500,
+					hit_rate: 100
+				}
+			};
+			rpg.addItem("items", 1, Database.items["potion"]);
+		</pre>
+		or 
+		<pre>
+			Database.items = {
+				"potion": {
+					name: "Potion",
+					type: "items", 	// required
+					id: 1 			// required
+				}
+			};
+			rpg.addItem(Database.items["potion"]);
+		</pre>
+	 * @method addItem
+     * @param {String} type Item Type. Examples : "armors", "weapons", etc.
+     * @param {Integer} id Unique Id of the item
+     * @param {Object} prop Property of the item
+    */
+	addItem: function(type, id, prop) {
+		if (typeof type != "string") {
+			prop = type;
+			type = prop.type;
+			id = prop.id;
+		}
+		if (!this.items[type]) this.items[type] = {};
+		if (!this.items[type][id]) {
+			prop.nb = 0;
+		}
+		prop.nb++;
+		this.items[type][id] = prop;
+		this.call('addItem', {type: type, id: id, prop: prop});
+	},
+	
+	/**
+     * Removes an item from the inventory
+	 * @method removeItem
+     * @param {String} type Item Type. Examples : "armors", "weapons", etc.
+     * @param {Integer} id Unique Id of the item
+    */
+	removeItem: function(type, id) {
+		if (!this.items[type][id]) return false;
+		this.items[type][id].nb--;
+		if (this.items[type][id].nb <= 0) {
+			delete this.items[type][id];
+		}
+		this.call('removeItem', {type: type, id: id});
+	},
+	
+	/**
+     * Changes the properties of the item
+	 * @method setItem
+     * @param {String} type Item Type.	See "addItem()"
+     * @param {Integer} id Unique Id of the item
+	 * @param {Object} prop Property of the item
+    */
+	setItem: function(type, id, prop) {
+		for (var key in prop) {
+			this.items[type][id][key] = prop[key];
+		}
+	},
+	
+	/**
+     * Get object properties
+	 * @method getItem
+     * @param {String} type Item Type.	See "addItem()"
+     * @param {Integer} id Unique Id of the item
+     * @return {Object|Boolean} Property of the item or false if the item does not exist
+    */
+	getItem: function(type, id) {
+		return this.items[type][id] ? this.items[type][id] : false;
+	},
+	
+	/**
+	 * Define the formulas of battle
+	 * @method battleFormulas
+     * @param {String} name Name of the formula of combat
+     * @param {Function} fn Call function. Two parameters: the event source and the target event (see "battleEffect()")
+     * @example 
+		<pre>
+		rpg.battleFormulas("attack", function(source, target) {
+			var weapons = source.getItemsEquipedByType("weapons");
+			var attack = 0;
+			if (weapons[0]) attack = Database.items[weapons[0]].atk;
+			var atk = attack - target.getCurrentParam("defense") / 2;
+			return atk * (20 + source.getCurrentParam("str")) / 20;
+		});
+		</pre>
+		Remember to set the parameters for the player and enemy (see "addEvent()"<br />
+		<br />
+		<b>Using the formulas of battle (<i>Documentation RPG Maker XP</i>) : </b><br />
+		<cite>
+			Normal attacks: <br />
+			Power = A's attack power - (B's physical defense ÷ 2)<br />
+			Rate = 20 + A's strength<br />
+			Variance = 15 <br />
+			Minimum force: 0 <br />
+			Skills: <br />
+			Skill's force is positive: <br />
+			Force = Skill's force <br />
+			 + (A's attack power × skill's attack power F ÷ 100)<br />
+			 - (B's physical defense × skill's physical defense F ÷ 200) <br />
+			 - (B's magic defense × skill's magic defense F ÷ 200) <br />
+			<br />
+			Minimum force: 0 <br />
+			Skill's force is negative: <br />
+			Force = Skill's force <br />
+			Rate = 20 <br />
+			 + (A's strength × skill's strength F ÷ 100) <br />
+			 + (A's dexterity × skill's dexterity F ÷ 100) <br />
+			 + (A's agility × skill's agility F ÷ 100) <br />
+			 + (A's intelligence × skill's intelligence F ÷ 100) <br />
+			Variance = Skill's variance <br />
+			Items: <br />
+			HP recovery amount is negative: <br />
+			Force = - Amount of HP recovered <br />
+			 - (B's physical defense × item's physical defense F ÷ 20) <br />
+			 - (B's magic defense × item's magic defense F ÷ 20) <br />
+			<br />
+			Minimum force: 0 <br />
+			HP recovery amount is positive: <br />
+			Force = - Amount of HP recovered <br />
+			Rate = 20<br />
+			Variance = Item's variance <br />
+			Damage = force × multiplier ÷ 20 × elemental modifier × critical modifier × defense modifier (± variance %)<br />
+			<br />
+			<br />
+			Elemental modifier: The weakest of B's effective elements corresponding to the action's element(s).<br />
+			A: 200%, B: 150%, C: 100%, D: 50%, E: 0%, F: -100%<br />
+			Reduced by half if B's armor or state has a defending (opposing) element.<br />
+			When there are more than one of the same defending elements, the damage may be halved multiple times. <br />
+			Critical modifier: Equals 2 when the damage is positive and a critical hit is made. <br />
+			Defense modifier: Equals 1/2 when the damage is positive and B is defending. 
+		</cite>
+	*/
+	battleFormulas: function(name, fn) {
+		if (typeof name == "string") {
+			this._battleFormulas[name] = fn;
+		}
+		else {
+			this._battleFormulas = name;
+		}
+	},
+	
+	/**
+	 * Performs formulas of battle
+	 * @method battleEffect
+     * @param {String} name Name of the formula of battle
+     * @param {Event} source The event source
+     * @param {Event} target The event target
+     * @return {Integer} The result of the formula
+	 * @example
+		In the function "setActionBattle()" :
+		<pre>
+			eventAffected: {
+				_default: function(event) {
+					var hp = rpg.battleEffect("attack", rpg.player, event);
+					event.actionBattle.hp -= hp;
+				}
+			}
+		</pre>
+	 */
+	battleEffect: function(name, source, target) {
+		return this._battleFormulas[name](source, target);
+	},
+	
+	_positionValueToReal: function(x, y) {
+		var pos = {};
+		if (this.isometric) {
+			pos.x = 320 + this.screen_x + (x - y) * this.tile_w / 2;
+			pos.y = this.screen_y + (x + y) * this.tile_h / 2;
+		}	
+		else {
+			pos.x = x * this.tile_w
+			pos.y = y * this.tile_h;
+		}
+		return pos;
+	},
+	
+	_positionRealToValue: function(real_x, real_y) {
+		var pos = {};
+		if (this.isometric) {
+
+			pos.x = real_y / this.tile_h  + real_x / this.tile_w;
+			pos.y = real_y / this.tile_h  - real_x / this.tile_w;
+			
+		}	
+		else {
+			pos.x = Math.floor(real_x / this.tile_w);
+			pos.y = Math.floor(real_y / this.tile_h);
+		}
+		return pos;
+	},
+
+	/**
+     * Sets the language of the game
+	 * @method setLang
+     * @param {String} lang ID of the language in "Database". Example :
+	 <pre>
+		Database.langs = {
+			fr: {
+					"YES": "Oui"
+				},
+			en: {
+					"YES": "Yes"
+				},
+			es: {
+					"YES": "Si"
+				}
+		};
+		rpg.setLang("fr");
+	 </pre>
+    */
+	setLang: function(lang) {
+		this.currentLang = lang;
+	},
+	
+	/**
+     * Convert a text in one language. The phrase to be translated must be between "%". Note: The translation can be applied to the command of events "SHOW_TEXT"
+	 * @method toLang
+     * @param {String} text The original text.
+	 * @return String text converted. Exemple :
+	 <pre>
+		Database.langs = {
+			fr: {
+					"YES": "Oui"
+				},
+			en: {
+					"YES": "Yes"
+				},
+			es: {
+					"YES": "Si"
+				}
+		};
+		rpg.setLang("fr");
+		var text = "%YES%";
+		text = rpg.toLang(text);
+		console.log(text); // Displays "Oui"
+	 </pre>
+    */
+	toLang: function(text) {
+		if (!this.currentLang) {
+			return text;
+		}
+		var regex = /%(.*?)%/g;
+		var match = regex.exec(text);
+		var lang = Database.langs[this.currentLang];
+		while (match != null) {	
+			text = text.replace(match[0], lang[match[1]]);
+			match = regex.exec(text);
+		}
+		
+		return text;
 	}
+		
 }

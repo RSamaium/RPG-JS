@@ -50,19 +50,18 @@
 * @param {String} color Optional. The color to draw the text in. Any valid value for the CSS color attribute
 * is acceptable (ex. "#F00").
 **/
-Text = function(text, font, color) {
+var Text = function(text, font, color) {
   this.initialize(text, font, color);
 }
-
 var p = Text.prototype = new DisplayObject();
 
 
-/**
-* @property _workingContext
-* @type CanvasRenderingContext2D
-* @private 
-**/
-Text._workingContext = document.createElement("canvas").getContext("2d");
+	/**
+	* @property _workingContext
+	* @type CanvasRenderingContext2D
+	* @private
+	**/
+	Text._workingContext = document.createElement("canvas").getContext("2d");
 
 // public properties:
 	/**
@@ -307,8 +306,24 @@ Text._workingContext = document.createElement("canvas").getContext("2d");
 	 * @protected 
 	 **/
 	p._drawTextLine = function(ctx, text, y) {
-		if (this.outline) { ctx.strokeText(text, 0, y, this.maxWidth); }
-		else { ctx.fillText(text, 0, y, this.maxWidth); }
+		var self = this;
+		if (this.outline) { 
+			display("strokeText");
+		}
+		else { 
+			display("fillText");
+		}
+		
+		// Opera text fix - 07/30/11
+		function display(fn) {
+			if (self.maxWidth == null) {
+				ctx[fn](text, 0, y);
+			}
+			else {
+				ctx[fn](text, 0, y, self.maxWidth);
+			}
+		}
+		
 	}
 
 window.Text = Text;
