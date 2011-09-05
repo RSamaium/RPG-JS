@@ -1521,11 +1521,8 @@ Rpg.prototype = {
 						else {
 							var context = map_img[i].canvas.getContext('2d');
 							map_img[i].draw(context);
-							img.src = map_img[i].toDataURL(false);
+							img = map_img[i].canvas;
 							Cache.setMapGraphics(filename, img);
-							map_img[i].removeAllChildren();
-							Ticker.removeListener(map_img[i]);
-							delete map_img[i];
 						}
 					}
 					self.layer[(i * 4)].addChild(new Bitmap(img));	
