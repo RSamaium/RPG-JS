@@ -1251,22 +1251,24 @@ Rpg.prototype = {
 		function bitmapAutoTiles(bmp, position, animated) {
 			var i=0;
 			var cont = new Container();
-			var nb_seq = animated / 16;
+			var mi_tile = self.tile_w / 2;
+			var nb_seq = animated / mi_tile;
 			autotiles_array.push(cont);
 			
 			for (i=0 ; i < 4 ; i++) {
 				bmp.currentFrame = nb_seq * position[i][1] + position[i][0];
-				if (animated) {
+				
+				if (animated / mi_tile > 6) {
 					bmp.waitFrame = 5;
 					bmp.arrayFrames = [];
 					for (k=0 ; k < nb_seq / 6 ; k++) {
 						bmp.arrayFrames.push(bmp.currentFrame + (k*6));
 					}
 				}
-
+				
 				switch (i) {
-					case 1: bmp.x = 16; break;
-					case 2: bmp.y = 16; break;
+					case 1: bmp.x = mi_tile; break;
+					case 2: bmp.y = mi_tile; break;
 					case 3: bmp.x = 0; break;
 				}
 				cont.addChild(bmp);
@@ -1303,7 +1305,7 @@ Rpg.prototype = {
 			var i, j, k;
 			switch (seq) {
 				case 0:
-					bitmapAutoTiles(bmp, autotile.center, animated);	
+					bitmapAutoTiles(bmp, autotile.center, animated);				
 				break;
 				case 1: 
 					var array_corner = [];
@@ -1319,14 +1321,14 @@ Rpg.prototype = {
 							split.pop();
 							var tile_corner = [];
 							for (k=1 ; k <= 4 ; k++) {
-								if (Rpg.valueExist(split, k)) {
-									
+								if (Rpg.valueExist(split, k) !== false) {
 									tile_corner.push(autotile.corner[k-1]);
 								}
 								else {
 									tile_corner.push(autotile.center[k-1]);
 								}
 							}
+							
 							bitmapAutoTiles(bmp, tile_corner, animated);	
 							bmp = bmp.clone();
 						}
@@ -1463,6 +1465,7 @@ Rpg.prototype = {
 						stage = new Stage(canvas);
 						map_img.push(stage);
 					 }
+					 
 
 					 for (l=0 ; l < 3 ; l++) {
 						for (i=0 ; i < map.length ; i++) {
