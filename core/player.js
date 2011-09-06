@@ -265,9 +265,7 @@ p.interactionEventBeside = function(e, trigger) {
 		if (event != null) {
 			if (event.trigger == trigger) {
 				Input.memorize();
-				/*if (!event.through) {
-					Input.keyBuffer = [];
-				}*/
+				Input.keyBuffer = [];
 				this.freeze = true;
 				var ini_dir = event.direction;
 				if (!event.direction_fix) {
