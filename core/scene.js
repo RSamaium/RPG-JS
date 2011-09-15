@@ -153,7 +153,7 @@ Scene.prototype = {
 		this.rpg.mapFreeze(false);
 		switch(type) {
 			case 'movement':
-				this.rpg.player.movementPause(true);
+				if (this.rpg.player) this.rpg.player.movementPause(true);
 			break;
 			case 'all':
 				this.rpg.mapFreeze(true);
@@ -226,7 +226,7 @@ Scene.prototype = {
 	 * @return {Window} The object Window created
     */
 	addWindow: function(_window) {
-		var win = new _window(rpg, this.content);
+		var win = new _window(this.rpg, this.content);
 		win.scene = this;
 		this.windows.push(win);
 		return win;

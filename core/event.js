@@ -403,9 +403,9 @@ var p = {
 			if (self.regX === undefined) {
 				self.regX = self.width - self.rpg.tile_w;
 			}
-			var up = self.nbSequenceY * 3 + self.graphic_pattern;
-			var right = self.nbSequenceX * 2 + self.graphic_pattern;
-			var left = self.nbSequenceX + self.graphic_pattern;
+			var up = self.nbSequenceX * (self.nbSequenceY-1) + self.graphic_pattern; // last line
+			var right = self.nbSequenceX * (self.nbSequenceY-2 < 0 ? 0 : self.nbSequenceY-2) + self.graphic_pattern;
+			var left = self.nbSequenceX * (self.nbSequenceY-3 < 0 ? 0 : self.nbSequenceY-3) + self.graphic_pattern;
 			var bottom = 0 + self.graphic_pattern;
 			var nb = self.nbSequenceX-1;
 			
@@ -424,8 +424,6 @@ var p = {
 			var bmpSeq = new BitmapSequence(spriteSheet);
 			bmpSeq.gotoAndStop(self.direction);
 			bmpSeq.waitFrame = Math.round(self.rpg.fps / self.speedAnimation);
-			
-			
 			
 			self.sprite.regY = self.regY;
 			self.sprite.regX = self.regX;
@@ -675,7 +673,9 @@ var p = {
 
 		if (this.tickPlayer) {
 			this.tickPlayer();
+
 		}
+		
 		
 		if (this.actionBattle) {
 			var detect = this.detectionPlayer(this.actionBattle.area);			
@@ -811,10 +811,12 @@ var p = {
 		}
 		
 		function testContact(x, y, obj, equal) {
-			if  (equal && x == obj.real_x && y == obj.real_y) {
+			var ex = obj.real_x;
+			var ey = obj.real_y;
+			if  (equal && x == ex && y == ey) {
 				return true;
 			}
-			return x > obj.real_x && x < obj.real_x + self.rpg.tile_w && y > obj.real_y && y < obj.real_y + self.rpg.tile_h;
+			return x > ex && x < ex + w && y > ey && y < ey + h;
 			
 		}
 	

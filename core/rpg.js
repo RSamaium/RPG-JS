@@ -1124,6 +1124,9 @@ Rpg.prototype = {
 			if (this.player) {
 				this.player.refreshBitmap();
 			}
+			if (this.tone) {
+				this.tone = undefined;
+			}
 			this.stage.removeChild(this.containerMap);
 		}
 	},
@@ -2642,9 +2645,14 @@ Rpg.prototype = {
 		this.containerMap.addChild(this.tone);
 		if (!exist_tone) {
 			this.tone.alpha = 0;
-			new Effect(this.tone).fadeStartTo(speed, 0, opacity, function() {
-				if (callback) callback();
-			});
+			if (speed > 0) {
+				new Effect(this.tone).fadeStartTo(speed, 0, opacity, function() {
+					if (callback) callback();
+				});
+			}
+			else {
+				this.tone.alpha = opacity;
+			}
 		}
 		this.call('changeScreenColorTone', {color: color, speed: speed, composite: composite, opacity: opacity});
 	},
