@@ -425,6 +425,15 @@ Rpg.prototype = {
 	 * @method setVariable
      * @param {Array|Integer} key variable ID (multiple variables if the type is an array)
      * @param {Integer|String} operand variable value
+     * @param {String} operation add|sub|mul|div|mod|set
+		<ul>
+			<li>add : Add</li>
+			<li>sub : Subtract</li>
+			<li>mul : Multiply</li>
+			<li>div : Divide</li>
+			<li>mod : Modulo</li>
+			<li>set : Set (default)</li>
+		</ul>
     */
 	setVariable: function(key, operand, operation) {
 		var i, _var;
@@ -3396,6 +3405,36 @@ Rpg.prototype = {
 		}
 		
 		return text;
+	},
+	
+	/**
+     * Sets the size of the canvas
+	 * @method setCanvasSize
+     * @param {String} type Put in full screen if "fullscreen"
+    */
+	/**
+     * Sets the size of the canvas. Enlarges also the parent div (if exist) named "(Canvas ID)-parent"
+	 * @method setCanvasSize
+     * @param {Integer} width Width.
+	 * @param {Integer} height Height.
+    */
+	setCanvasSize: function(width, height) {
+		var m = "px";
+		if (width == "fullscreen") {
+			width = window.innerWidth;
+			height = window.innerHeight;
+		}
+
+		this.canvas.width = width;
+		this.canvas.height = height;
+		var el = document.getElementById(this.canvas.id + '-dom');
+		var parent = document.getElementById(this.canvas.id + '-parent');
+		el.style.width = width + m;
+		el.style.height = height + m;
+		if (parent) {
+			parent.style.width = width + m;
+			parent.style.height = height + m;
+		}
 	}
 		
 }
