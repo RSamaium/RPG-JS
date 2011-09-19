@@ -2645,6 +2645,7 @@ Rpg.prototype = {
 		var exist_tone = false;
 		if (this.tone) {
 			this.containerMap.removeChild(this.tone);
+			delete this.tone;
 			exist_tone = true;
 			if (color == 'reset') return;
 		}
