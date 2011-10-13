@@ -35,6 +35,7 @@ function Rpg(canvas_tag) {
 	 * @property canvas
      * @type Canvas
      */
+	
 	this.canvas = document.getElementById(canvas_tag);
 	
 	/**
@@ -43,6 +44,7 @@ function Rpg(canvas_tag) {
      * @type CanvasRenderingContext2D
      */
 	this.ctx = this.canvas.getContext("2d");
+	
 	 /**
      * Object "Stage"
 	 * @property stage
@@ -2985,7 +2987,7 @@ Rpg.prototype = {
 		
 		function dataEvent(event) {
 			var obj = {};
-			var exclus = ["htmlElements"];
+			var exclus = ["htmlElements", "eventsContact"];
 			for (var key in event) {
 				var _typeof = typeof event[key];
 				if ((_typeof == "number" ||
@@ -3428,6 +3430,7 @@ Rpg.prototype = {
 
 		this.canvas.width = width;
 		this.canvas.height = height;
+		
 		var el = document.getElementById(this.canvas.id + '-dom');
 		var parent = document.getElementById(this.canvas.id + '-parent');
 		el.style.width = width + m;
