@@ -124,6 +124,7 @@ Scene.prototype = {
 				if (c) c();
 			});
 		});
+		Input.keyUp(this.inputs.enter);
 	},
 	
 	tick: function() {

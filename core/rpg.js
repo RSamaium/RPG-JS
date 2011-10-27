@@ -1554,25 +1554,21 @@ Rpg.prototype = {
 				
 				self.currentMap = map;
 				self.containerMap = container_map;
-				
-			
-				
+		
 				function graphicPlayerLoad() {
 					if (!self.player) {
-						self.player = new Player(propreties.player, self);
-						self.setCamera(self.player.x, self.player.y);	
+						self.player = new Player(propreties.player, self);	
 					}
-					else {
-						if (load && load.player) {
-							for (var key in load.player) {
-								self.player[key] = load.player[key];
-							}
-							propreties.player.x = load.player.x;
-							propreties.player.y = load.player.y;
+					if (load && load.player) {
+						for (var key in load.player) {
+							self.player[key] = load.player[key];
 						}
-						self.player.setPosition(propreties.player.x, propreties.player.y);
-						self.setCamera(self.player.x, self.player.y);
+						propreties.player.x = load.player.x;
+						propreties.player.y = load.player.y;
+						self.player.freeze = false;
 					}
+					self.player.setPosition(propreties.player.x, propreties.player.y);
+					self.setCamera(self.player.x, self.player.y);
 					self.player.fixCamera(true);
 					self.player.setTransfert([]);
 					if (propreties.transfert) {
@@ -3032,6 +3028,30 @@ Rpg.prototype = {
 		Cache.events_data = load.selfSwitches;
 		this.gold = load.gold;
 		this.loadMap(load.map.name, load.map.propreties, onLoad, load);
+	},
+	
+	/**
+     * Checks if an existing save (localStorage)
+	 * @method slotExist
+     * @param {Integer} slot_id Id slot defined with the method "save"
+     * @return {Boolean} true if existing
+    */
+	slotExist: function(slot_id) {
+		return localStorage[this.canvas.id + '-' + slot_id] ? true : false;
+	},
+	
+	/**
+     * Deletes a save (localStorage)
+	 * @method deleteSlot
+     * @param {Integer} slot_id Id slot defined with the method "save"
+     * @return {Boolean} true if deleted
+    */
+	deleteSlot: function(slot_id) {
+		if (this.slotExist(slot_id)) {
+			localStorage.removeItem(this.canvas.id + '-' + slot_id);
+			return true;
+		}
+		return false;
 	},
 	
 	/**

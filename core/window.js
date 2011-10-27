@@ -386,6 +386,15 @@ Window.prototype = {
 	},
 	
 	/**
+     * Clears the contents of the window and restores the cursor
+	 * @method refresh
+    */
+	refresh: function() {
+		this.clear();
+		this.content.addChild(this.cursor.skin);
+	},
+	
+	/**
      * Clears the contents of the window
 	 * @method clear
     */
