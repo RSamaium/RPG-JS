@@ -10,8 +10,7 @@
  * Copyright 2011, Grant Skinner
  * Dual licensed under the MIT or GPL Version 2 licenses.
  *
- * Date: September 04, 2011
- * Update : Thu Oct 27 23:47:59 2011
+ * Date: December 08, 2011
  */
  
 RPGJS = {}
