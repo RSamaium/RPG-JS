@@ -15,9 +15,9 @@
  */
  
 RPGJS = {}
-RPGJS.loadPath = "core/";
+RPGJS.loadPath = "rpgjs/core/";
 RPGJS.params = {};
-RPGJS.dirPluginsName = "plugins";
+RPGJS.dirPluginsName = "../plugins";
 RPGJS.plugins = [];
 RPGJS.commons_scripts = ["../libs/easel-3.2-modified.min", "cache", "input", "effects", "animations", "scene", "window"];
 RPGJS.local_scripts = ["rpg", "interpreter", "event", "player"];
