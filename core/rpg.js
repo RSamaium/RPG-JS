@@ -165,6 +165,11 @@ function Rpg(canvas_tag) {
 	// this.tactical;
 	this.tacticalMap = [];
 	// this.actionBattle;
+	
+	
+	
+	this.plugins = {};
+	
 	this.initialize();
 }
 
@@ -339,6 +344,7 @@ Rpg.prototype = {
 		document.body.appendChild(div) ;
 		this._setMouseEvent(div);
 		
+		this.initPlugins();
 					
 		Ticker.addListener(this);	
 	},
@@ -531,74 +537,7 @@ Rpg.prototype = {
 		return true;
 	},
 	
-	/**
-     * Defines the battle. The combat A-RPG can be interactions between player and event in real time
-	 * @method setActionBattle
-     * @param {Object} prop Properties of battle :<br />
-				displayHpBar: {Boolean} Show the health bar<br />
-				eventsCache: {Array}<br />
-				onChangeMode: {Function} Function called when the user changes the event. Two parameters: event and the name mode<br />				
-				<br />
-				Each mode can be triggered by personalizing functions (see "setEventMode"). A parameter is sent: Event object. That event involved in the mode<br />
-				<br />
-				detection: {Object} <br />
-				nodetection: {Object} <br />
-				eventInvinsible: {Object}<br />
-				eventAttack: {Object}<br />
-				eventPassive: {Object}<br />
-				eventOffensive: {Object}<br />
-				eventAffected: {Object}<br />
-				ennemyDead: {Object}<br />
-				<br />
-				Example :
-				<br />
-				<pre>
-				detection: {
-					_default: function(event) {
-						if (event.actionBattle.mode != 'passive') {
-							rpg.animations['EM Exclamation'].setPositionEvent(event);
-							rpg.animations['EM Exclamation'].play();
-							event.moveStart();
-							event.approachPlayer();
-							rpg.setEventMode(event, 'offensive');
-						}
-					}
-				}
-				</pre>
-				<br />
-				The function is called if you give property to the event. In the properties of the event (first page) : 
-				<br />
-				<pre>
-				action_battle: {
-					area: 4,
-					hp_max: 200,
-					detection: '_default',
-
-				}
-				</pre>				
-    */
-	setActionBattle: function(prop) {
-		var i;
-		this.actionBattle = prop;
-		this.actionBattle.ennemy = [];
-		for (i=0 ; i < this.events.length ; i++) {
-			if (this.events[i].actionBattle) {
-				this.actionBattle.ennemy.push(this.events[i]);
-			}
-		}
-		if (prop.displayHpBar) {
-			var ennemy;
-			for (i=0 ; i < this.actionBattle.ennemy.length ; i++) {
-				ennemy = this.actionBattle.ennemy[i];
-				ennemy.displayBar(ennemy.actionBattle.hp_max, ennemy.actionBattle.hp_max, 70, 5);
-			}
-		}
-		if (prop.eventsCache) {
-			for (i=0 ; i < prop.eventsCache.length ; i++) {
-				this.prepareEventAjax(prop.eventsCache[i]);
-			}
-		}
-	},
+	
 	
 	setTactical: function(prop) {
 		var i, j;
@@ -763,7 +702,7 @@ Rpg.prototype = {
 		var m = this._multipleScreen(this.screen_x, this.screen_y);
 		this.screen_x = m.x;
 		this.screen_y = m.y;
-		this.call('setScreen', {x: x, y: y});
+		this.call('setScreen', [x, y]);
 		this._sortEventsDepthIndex();
 		this.refreshMap(true);
 	},
@@ -997,7 +936,8 @@ Rpg.prototype = {
 	 * @return {Integer} Priority. Between 0 and 2, the tile is below the events (and player). Beyond 4 (included), the tile overlaps the event (and player). A tile Priority 2 superimposes a square of 0. The latter being the ground
     */
 	tilePriority: function(tile_id) {
-		return this.mapData.propreties[tile_id][0];
+		this._tilePropretiesDefault(tile_id);
+		return this._tileValueDefault(this.mapData.propreties[tile_id][0], 0);
 	},
 	
 	/**
@@ -1007,7 +947,19 @@ Rpg.prototype = {
 	 * @return {Integer} Passage. For example, 2 means that the player (or event) can only pass on the tile down. There may be a combination in hexadecimal. The tile is entirely feasible if the value is 0 or 16
     */
 	tilePassage: function(tile_id) {
-		return this.mapData.propreties[tile_id][1];
+		this._tilePropretiesDefault(tile_id);
+		return this._tileValueDefault(this.mapData.propreties[tile_id][1], 0);
+	},
+	
+	_tilePropretiesDefault: function(tile_id) {
+		if (!this.mapData.propreties[tile_id]) {
+			this.mapData.propreties[tile_id] = [0, 0];
+		}
+	},
+	
+	_tileValueDefault: function(value, _default) {
+		if (value == null) return _default;
+		return value;
 	},
 	
 	/**
@@ -1236,6 +1188,7 @@ Rpg.prototype = {
 		function progressLoad() {
 			Cache._progressLoadData(function() {
 				self._sortEventsDepthIndex();
+				self.call("loadMap");
 				if (isLoad) isLoad();
 				if (propreties.autoDisplay) {
 					self.displayMap();
@@ -1256,7 +1209,18 @@ Rpg.prototype = {
 		// Graphics Characters Player
 		Cache.totalLoad += (propreties.player ? 1 : 0);
 		
-		
+		if (typeof propreties.tileset != "string") {
+			propreties.autotiles = propreties.tileset.autotiles;
+			propreties.propreties = propreties.tileset.propreties;
+			if (propreties.propreties instanceof Array) {
+				var new_prop = {};
+				for (var i=0 ; i < propreties.propreties.length ; i++) {
+					new_prop[384 + i] = propreties.propreties[i];
+				}
+				propreties.propreties = new_prop;
+			}	
+			propreties.tileset = propreties.tileset.graphic;
+		}
 		
 		this.maps.push({name: filename, propreties: propreties, callback: isLoad});
 		this.currentMapInfo = {name: filename, propreties: propreties};
@@ -1432,6 +1396,9 @@ Rpg.prototype = {
 		function callback(map_data) {
 			progressLoad();
 			self.mapData = map_data;
+			if (!self.mapData.propreties && propreties.propreties) {
+				self.mapData.propreties = propreties.propreties;
+			}
 			var map = map_data.map;
 			var container_map = new Container();
 			
@@ -1453,10 +1420,12 @@ Rpg.prototype = {
 					};				
 							
 					var img_autotiles, cont,  bitmap_autotiles, sprite;
+					var autotiles_animated = [];
 					for (i=0 ; i < propreties.autotiles.length ; i++) {
 						img_autotiles = Cache.get(propreties.autotiles[i], "autotiles");
 						sprite = new SpriteSheet(img_autotiles, self.tile_w / 2, self.tile_h / 2);
 						bitmap_autotiles = new BitmapSequence(sprite);
+						autotiles_animated.push(img_autotiles.width > 96);
 						for (j=0 ; j < 7 ; j++) {
 							constructAutoTiles(j, bitmap_autotiles, autotile, img_autotiles.width);
 							bitmap_autotiles = bitmap_autotiles.clone(); 
@@ -1505,13 +1474,24 @@ Rpg.prototype = {
 										bmpSeq = bmpSeq.clone();
 									}
 									else {
-										var cont = autotiles_array[id-48];
+										
+										var real_id = id-48,
+										cont = autotiles_array[real_id],
+										is_animated = autotiles_animated[parseInt(real_id / 48)];
+								
 										if (cont) {
 											cont = cont.clone(true);
 											cont.x = self._positionValueToReal(i, j).x;
 											cont.y = self._positionValueToReal(i, j).y;
-											map[i][j][3][priority] = cont;
-											map_img[map_img_id].addChild(cont);
+											
+											if (is_animated) {
+												self.layer[priority+1].addChild(cont);
+											}
+											else {
+												map[i][j][3][priority] = cont;
+												map_img[map_img_id].addChild(cont);
+											}
+
 										}
 									}
 									k++;
@@ -2099,9 +2079,26 @@ Rpg.prototype = {
 	 * @param {Object} params Parameter of the function assigned	
 	 * @return {Object} Function value
     */
-	call: function(name, params) {
-		if (this.func_trigger[name] != undefined) {
-			return this.func_trigger[name](params);
+	call: function(name, params, instance) {
+		// if (this.func_trigger[name] != undefined) {
+			// return this.func_trigger[name](params);
+		// }
+		var p;
+		if (!(params instanceof Array)) {
+			params = [params];
+		}
+		if (!instance) instance = this;
+		for (var i in this.plugins) {
+			if (instance instanceof Event) {
+				this.plugins[i].event = instance;
+				p = this.plugins[i]['Event'];
+			}
+			else {
+				p = this.plugins[i]['Core'];
+			}
+			if (p[name]) {
+				p[name].apply(this.plugins[i], params);
+			}
 		}
 	},
 	
@@ -2390,30 +2387,7 @@ Rpg.prototype = {
 		});	
 	},
 	
-	/**
-     * Change the mode of an event. Use for fighting
-	 * @method setEventMode
-     * @param {Event} event Object "Event"
-     * @param {String} mode There are several modes:<br />
-	 * 		detection:  the player is detected <br />
-	 * 		nodetection: the player is no longer detected <br />
-	 * 		attack: the event completes an attack <br />
-	 * 		affected: the event is affected (action "attack" made by the player) <br />
-	 * 		passive: the event will do nothing even if it detects the player <br />
-	 * 		defensive: Event fights <br />
-	 * 		offensive: the event is ready to attack the player <br />
-	 *		invinsible: the event is invincible. The action-type "attack" does not affect<br />
-	 * 		death: the event is death
-    */
-	setEventMode: function(event, mode) {
-		var change_mode = this.actionBattle.onChangeMode;
-		event.actionBattle.mode = mode;
-		if (mode == "passive" && this.actionBattle.eventPassive && this.actionBattle.eventPassive[event.actionBattle.passive]) {
-			this.actionBattle.eventPassive[event.actionBattle.passive](event);		
-		}
-		if (change_mode) change_mode(event, mode);
-		
-	},
+	
 	
 	/**
      * Change the audio volume for one or all types
@@ -2546,7 +2520,7 @@ Rpg.prototype = {
 		flash.y = this.screen_y - Math.round(this.canvas.height / 2);
 		flash.alpha = .5;
 		this.containerMap.addChild(flash);
-		this.call('screenFlash', {color: color, speed: speed});
+		this.call('screenFlash', [color, speed]);
 		new Effect(flash).fadeOut(speed, function() {
 			self.containerMap.removeChild(flash);
 			if (callback) callback();
@@ -2593,7 +2567,7 @@ Rpg.prototype = {
 		this.shake.current = 0;
 		this.shake.direction = 1;
 		this.shake.axis = axis || "x";
-		this.call('screenShake', {power: power, speed: speed, duration: duration, axis: axis});
+		this.call('screenShake', [power, speed, duration, axis]);
 	},
 	
 	_tickShake: function() {
@@ -2662,7 +2636,7 @@ Rpg.prototype = {
 				this.tone.alpha = opacity;
 			}
 		}
-		this.call('changeScreenColorTone', {color: color, speed: speed, composite: composite, opacity: opacity});
+		this.call('changeScreenColorTone', [color, speed, composite, opacity]);
 	},
 
 	setTypeDirection: function(type) {
@@ -3090,7 +3064,7 @@ Rpg.prototype = {
 			bitmap.regY = prop.regY ? prop.regY : 0
 			self.pictures[id] = bitmap;
 			self.stage.addChild(bitmap);
-			self.call("addPicture", {id: id, filemane: filename, prop: prop});
+			self.call("addPicture", [id, filename, prop]);
 			if (onLoad) onLoad(img);
 		});
 	},
@@ -3125,7 +3099,7 @@ Rpg.prototype = {
 		if (prop.regX !== undefined) {
 			pic.regY = prop.regY;
 		}
-		this.call("movePicture", {id: id, duration: duration, prop: prop});
+		this.call("movePicture", [id, duration, prop]);
 	},
 	
 	/**
@@ -3143,7 +3117,7 @@ Rpg.prototype = {
 			loop = true;
 			value = 360;
 		}
-		this.call("rotatePicture", {id: id, duration: duration, value: value});
+		this.call("rotatePicture", [id, duration, value]);
 		rotateLoop();
 		function rotateLoop() {
 			new Effect(pic).rotate(duration, value, loop ? rotateLoop : callback);
@@ -3206,7 +3180,7 @@ Rpg.prototype = {
 		}
 		prop.nb++;
 		this.items[type][id] = prop;
-		this.call('addItem', {type: type, id: id, prop: prop});
+		this.call('addItem', [type, id, prop]);
 	},
 	
 	/**
@@ -3221,7 +3195,7 @@ Rpg.prototype = {
 		if (this.items[type][id].nb <= 0) {
 			delete this.items[type][id];
 		}
-		this.call('removeItem', {type: type, id: id});
+		this.call('removeItem', [type, id]);
 	},
 	
 	/**
@@ -3459,6 +3433,46 @@ Rpg.prototype = {
 			parent.style.width = width + m;
 			parent.style.height = height + m;
 		}
-	}
-		
+	},
+	
+	initPlugins: function() {
+		var name, original_name;
+		for (var i=0 ; i < RPGJS.plugins.length ; i++) {
+			original_name = RPGJS.plugins[i];
+			name = original_name.charAt(0).toUpperCase() + original_name.slice(1);
+			this.addPlugin(original_name, new window[name]());
+		}
+	},
+	
+	/**
+     * Add a plugin
+	 * @method addPlugin
+     * @param {String} id ID (plugin name)
+	 * @param {Object} plugin_class the class.
+	 * @example
+		<pre>
+			rpg.addPlugin("myplug", new MyPlugin());
+		</pre>
+    */
+	addPlugin: function(id, plugin_class) {
+		plugin_class.rpg = this;
+		this.plugins[id] = plugin_class;
+	},
+	
+	/**
+     * Get a plugin as its identifier (or name)
+	 * @method plugin
+     * @param {String} id ID (name)
+	 * @return {Object|Boolean} The class of the plugin or false if no plugin
+	 * @example
+		<pre>
+			var myplugin = rpg.plugin("myplugin");
+			if (myplugin) {
+				myplugin.callMyMethod();
+			}
+		</pre>
+    */
+	plugin: function(name) {
+		return this.plugins[name] ? this.plugins[name] : false;
+	}	
 }
