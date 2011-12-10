@@ -197,7 +197,7 @@ Input._key = function(e, key, callback) {
 			if (callback) callback(e);
 		}
 	}
-}
+};
 
 /**
  * Calling a function when a key is pressed (only once)
@@ -208,7 +208,7 @@ Input._key = function(e, key, callback) {
 */
 Input.press = function(key, onPressKey) {
 	Input._press('keyPress', key, onPressKey);
-}
+};
 
 /**
  * Clears the functions assigned to keys indicated
@@ -218,7 +218,7 @@ Input.press = function(key, onPressKey) {
 */
 Input.clearKeys = function(key) {
 	Input.press(key, function() {});
-}
+};
 
 /**
  * Calling a function when a key is down
@@ -229,7 +229,7 @@ Input.clearKeys = function(key) {
 */
 Input.keyDown = function(key, onPressKey) {
 	Input._press('keyDown', key, onPressKey);
-}
+};
 
 /**
  * Calling a function when a key is up
@@ -242,8 +242,8 @@ Input.keyUp = function(key, onKeyUp) {
 	document.onkeyup = function(e) {
 		Input._key(e, key, onKeyUp);
 		Input._keyPress[e.which] = 0;
-	}
-}
+	};
+};
 
 Input._press = function(type, key, onPressKey) {
 	if (key instanceof Array) {
@@ -262,14 +262,14 @@ Input._press = function(type, key, onPressKey) {
 		canvas.onfocus = function(e) {
 			document.onkeydown  = function() {
 				return false;
-			}
+			};
 			if (Input._lock.onFocus) Input._lock.onFocus(e, canvas);
-		}
+		};
 		
 		canvas.onblur = function(e) {
 			document.onkeydown  = null;
 			if (Input._lock.onBlur) Input._lock.onBlur(e, canvas);
-		}
+		};
 	}
 	else {
 		document.onkeydown  = onkeydown;
@@ -288,7 +288,7 @@ Input._press = function(type, key, onPressKey) {
 		Input._keyType[_key] = type;
 		Input._keyFunctions[_key] = onPressKey;
 	}
-}
+};
 
 /**
  * Resets all keys. You must assign the buttons (press(), keyDown() and keyUp()) to restore movement and actions
@@ -297,7 +297,7 @@ Input._press = function(type, key, onPressKey) {
 */
 Input.reset = function() {
 	Input._keyFunctions = {};
-}
+};
 
 /**
  * Lock the keys on the canvas and avoid scrolling of the page
@@ -315,12 +315,12 @@ Input.lock = function(canvas, focus_start, onFocus, onBlur) {
 		dom.focus();
 		document.onkeydown  = function() {
 			return false;
-		}
+		};
 	}
 	Input._lock.canvas = dom;
 	Input._lock.onFocus = onFocus;
 	Input._lock.onBlur = onBlur;
-}
+};
 
 
 /**
@@ -343,7 +343,7 @@ Input.isPressed = function(key, e) {
 		 return true;
 	}
 	return false;
-}
+};
 
 /**
  * Add key (constant). Example :<br />
@@ -360,7 +360,7 @@ Input.isPressed = function(key, e) {
 */
 Input.addKey = function(id, keycode) {
 	Input[id] = keycode;
-}
+};
 
 /**
  * Stores the keys pressed
@@ -369,7 +369,7 @@ Input.addKey = function(id, keycode) {
 */
 Input.memorize = function() {
 	Input.cacheKeyBuffer = Input.keyBuffer;
-}
+};
 
 /**
  * Reassigns the keys pressed cached (see "Input.memorize()")
@@ -378,7 +378,7 @@ Input.memorize = function() {
 */
 Input.restore = function() {
 	 Input.keyBuffer = Input.cacheKeyBuffer;
-}
+};
 
 /**
  * Simulates the call of a key
@@ -420,4 +420,4 @@ Input.trigger = function(key, type, canvas) {
 		dom = document.getElementById(canvas.id + '-dom');
 		dom.focus();
 	}
-}
+};

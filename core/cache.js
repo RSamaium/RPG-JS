@@ -53,10 +53,10 @@ Cache = {
 	currentLoad: 0,
 	totalLoad: 0,
 	path: ''
-}
+};
 
 // Static Database
-Database = {}
+Database = {};
 
 /**
  * Load images in the "Graphics"
@@ -89,11 +89,11 @@ Cache.loadGraphics = function(filename, type, load, data) {
 		if (!Cache.files[type]) Cache.files[type] = [];
 		Cache.files[type].push(img);
 		callback();
-	}
+	};
 	
 	img.onerror = function() {
 		alert('[en] No such file or directory :\n[fr] Impossible de trouver le fichier ou dossier :\n\n' + this.src);
-	}
+	};
 	
 	function callback() {
 		if (load) {
@@ -114,7 +114,7 @@ Cache.loadGraphics = function(filename, type, load, data) {
 	}
 	
 	return img;
-}
+};
 
 /**
  * Get an image already loaded and stored in the cache
@@ -133,7 +133,7 @@ Cache.get = function(filename, type) {
 		}
 	}
 	return false;
-}
+};
 
 /**
  * Load images "Tilesets" in the "Graphics/Tilesets"
@@ -145,7 +145,7 @@ Cache.get = function(filename, type) {
 */
 Cache.tilesets = function(filename, load, data) {
 	return Cache.loadGraphics(filename, "tilesets", load, data);
-}
+};
 
 /**
  * Load images "Autotiles" in the "Graphics/Autotiles"
@@ -157,7 +157,7 @@ Cache.tilesets = function(filename, load, data) {
 */
 Cache.autotiles = function(filename, load, data) {
 	return Cache.loadGraphics(filename, "autotiles", load, data);
-}
+};
 
 /**
  * Load images "Autotiles" in the "Graphics/Characters"
@@ -169,7 +169,7 @@ Cache.autotiles = function(filename, load, data) {
 */
 Cache.characters = function(filename, load, data) {
 	return Cache.loadGraphics(filename, "characters", load, data);
-}
+};
 
 /**
  * Load images "Autotiles" in the "Graphics/Windowskins"
@@ -181,7 +181,7 @@ Cache.characters = function(filename, load, data) {
 */
 Cache.windowskins = function(filename, load, data) {
 	return Cache.loadGraphics(filename, "windowskins", load, data);
-}
+};
 
 /**
  * Load images "Animations" in the "Graphics/Animations"
@@ -193,7 +193,7 @@ Cache.windowskins = function(filename, load, data) {
 */
 Cache.animations = function(filename, load, data) {
 	return Cache.loadGraphics(filename, "animations", load, data);
-}
+};
 
 /**
  * Load images "Pictures" in the "Graphics/Pictures"
@@ -205,7 +205,7 @@ Cache.animations = function(filename, load, data) {
 */
 Cache.pictures = function(filename, load, data) {
 	return Cache.loadGraphics(filename, "pictures", load, data);
-}
+};
 
 /**
  * Load an event in the file "Data/Event"
@@ -231,7 +231,7 @@ Cache.event = function(name, callback_event, map_name, custompath, noCache) {
 			callback_event(event);
 		});
 	}
-}
+};
 
 /**
  * Load audio in the "Audio"
@@ -272,7 +272,7 @@ Cache.loadAudio = function(filename, type, load) {
 	if (!Cache.files[type]) Cache.files[type] = [];
 	Cache.files[type].push(snd);
 	if (load) load(snd);
-}
+};
 
 /**
  * Stop all the sounds of a particular type
@@ -286,7 +286,7 @@ Cache.audioStop = function(type) {
 			Cache.files[type][i].pause();
 		}
 	}
-}
+};
 
 /**
  * Load sound effect in the "Audio/SE"
@@ -297,7 +297,7 @@ Cache.audioStop = function(type) {
 */
 Cache.SE = function(filename, load) {
 	return Cache.loadAudio(filename, "se", load);
-}
+};
 
 /**
  * Load background music in the "Audio/BGM"
@@ -308,7 +308,7 @@ Cache.SE = function(filename, load) {
 */
 Cache.BGM = function(filename, load) {
 	return Cache.loadAudio(filename, "bgm", load);
-}
+};
 
 /**
  * Load music effect in the "Audio/ME"
@@ -319,7 +319,7 @@ Cache.BGM = function(filename, load) {
 */
 Cache.ME = function(filename, load) {
 	return Cache.loadAudio(filename, "me", load);
-}
+};
 
 /**
  * Load background sound in the "Audio/BGS"
@@ -330,7 +330,7 @@ Cache.ME = function(filename, load) {
 */
 Cache.BGS = function(filename, load) {
 	return Cache.loadAudio(filename, "bgs", load);
-}
+};
 
 
 /**
@@ -354,7 +354,7 @@ Cache.map = function(name, callback, custompath, nocache) {
 			callback(map_data);
 		});
 	}
-}
+};
 
 
 Cache.getMapGraphics = function(name, layer_img) {
@@ -362,7 +362,7 @@ Cache.getMapGraphics = function(name, layer_img) {
 		return Cache.graphicsMap[name][layer_img];
 	}
 	return false;
-}
+};
 
 Cache.setMapGraphics = function(name, img) {
 	var i;
@@ -370,7 +370,7 @@ Cache.setMapGraphics = function(name, img) {
 		Cache.graphicsMap[name] = [];
 	}
 	Cache.graphicsMap[name].push(img);
-}
+};
 
 /**
  * Ajax request
@@ -424,7 +424,7 @@ Cache.ajax = function(filename, callback) {
 */
 Cache.onload = function(load) {
 	Cache.loadFinish = load;
-}
+};
 
 // private
 Cache._progressLoadData = function(finish) {
@@ -437,6 +437,6 @@ Cache._progressLoadData = function(finish) {
 		Cache.currentLoad = 0;
 		Cache.totalLoad = 0;
 	}
-}
+};
 
 

@@ -91,7 +91,7 @@ THE SOFTWARE.
 */
  Interpreter.setCommand = function(name, _function) {
 	Interpreter.commandFunction[name] = _function;
- }
+ };
  Interpreter.addCommand = Interpreter.setCommand;
  
  Interpreter.prototype = {
@@ -348,7 +348,7 @@ THE SOFTWARE.
 	
 	// Private
 	cmdShowAnimation: function(anim, self) {
-		anim.target
+		anim.target;
 		if (self.rpg.animations[anim.name]) {
 			var target = self._target(anim.target);
 			if (anim.zoom) {
@@ -682,4 +682,4 @@ THE SOFTWARE.
 		}
 		return _target;
 	}
-}
+};

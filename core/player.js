@@ -128,7 +128,7 @@ p.handleKeyPress = function() {
 		Input.cacheKeyBuffer = Rpg.unsetArrayElement(Input.keyBuffer, e.keyCode);
 	});
 
-}
+};
 
 /**
  * Whether the player's movement is blocked. The movement is blocked when the player is in action or when a window is displayed and property "blockMovement" to true
@@ -148,15 +148,15 @@ p.movementIsBlocked = function() {
 		}
 	}
 	return blockMovement;
-}
+};
 
 p.movementPause = function(bool) {
 	this.movementBlock = bool;
-}
+};
 
 p.assignKey = function() {
 	this.handleKeyPress();
-}
+};
 
 // Private
 p._tick = function() {
@@ -246,7 +246,7 @@ p._tick = function() {
 		}
 		
 	}
-}
+};
 
 /**
  * Raise an event next to the player and by his direction if the trigger fired
@@ -290,7 +290,7 @@ p.interactionEventBeside = function(e, trigger) {
 	}
 	return true;
 	
-}
+};
 
 p.moveMouseTo = function(tile_x, tile_y, eventIgnore, callback) {
 	var self = this;
@@ -316,7 +316,7 @@ p.moveMouseTo = function(tile_x, tile_y, eventIgnore, callback) {
 		}
 	}, true);
 
-}
+};
 
 p.triggerEventBeside = function() {
 	var blockMovement = this.movementIsBlocked();
@@ -348,7 +348,7 @@ p.triggerEventBeside = function() {
 	if (c.length > 0) {
 		this.interactionEventBeside(c, 'action_button');
 	}
-}
+};
 
  /**
  * Indicate that the player can use the mouse to play
@@ -366,9 +366,9 @@ p.useMouse = function(bool, callback) {
 	else {
 		this.rpg.unbindMouseEvent("click");
 	}
-}
+};
 
 
 p.setTransfert = function(prop) {
 	 this.transfert = prop;
-}
+};

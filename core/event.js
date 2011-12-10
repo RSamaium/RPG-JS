@@ -315,7 +315,7 @@ var p = {
 		if (max == undefined) return;
 		if (!min) min = max;
 		if (min > max) {
-			min = max
+			min = max;
 		}
 		
 		var bar = new Shape();
@@ -418,7 +418,7 @@ var p = {
 					right: right,
 					bottom: bottom,
 					left: left				
-			}
+			};
 
 			var spriteSheet = new SpriteSheet(chara, self.width, self.height, anim);
 			var bmpSeq = new BitmapSequence(spriteSheet);
@@ -750,8 +750,8 @@ var p = {
 					this._blink.visible = this._blink.visible ? false : true;
 					this.visible(this._blink.visible);
 				}
-				this._blink.currentDuration++
-				this._blink.currentFrequence++
+				this._blink.currentDuration++;
+				this._blink.currentFrequence++;
 			}
 			else {
 				this._blink.current = false;
@@ -882,7 +882,7 @@ var p = {
 	 * @param {Function} callback (optional) Callback when the blink is complete
     */
 	blink: function(duration, frequence, callback) {
-		this._blink = {}
+		this._blink = {};
 		this._blink.duration = duration;
 		this._blink.currentDuration = 0;
 		this._blink.frequence = frequence;
@@ -1074,7 +1074,7 @@ var p = {
 		var player = this.rpg.player;
 		if (player) {
 			if (player.y < this.y) {
-				dir = 8
+				dir = 8;
 			}
 			else if (player.y > this.y) {
 				dir = 2;
@@ -1543,12 +1543,12 @@ var p = {
 		x_plus < 0 ? this.setStopDirection('left') : this.setStopDirection('right');
 	  }
       else {
-        y_plus < 0 ? this.setStopDirection('up') : this.setStopDirection('down')
+        y_plus < 0 ? this.setStopDirection('up') : this.setStopDirection('down');
 	  }
 	}
 	
-    var new_x = this.x + x_plus
-    var new_y = this.y + y_plus
+    var new_x = this.x + x_plus;
+    var new_y = this.y + y_plus;
 
     // if (x_plus == 0 and y_plus == 0) or passable?(new_x, new_y, 0) {
       
@@ -1778,7 +1778,7 @@ var p = {
 			self.changeBitmap(bmp_ini);
 			self.animation('stop');
 			self.inAction = false;
-			self.action_prop[name] = {}
+			self.action_prop[name] = {};
 			self.action_prop[name].wait = 0;
 			playAnimation('animation_finish');
 			if (action.onFinish) action.onFinish(self);
@@ -2708,7 +2708,7 @@ var p = {
 	
 	
 	
-}
+};
 
 for (var obj in p) { 
 	interpreter[obj] = p[obj]; 

@@ -50,7 +50,7 @@
 **/
 var BitmapSequence = function(spriteSheet) {
   this.initialize(spriteSheet);
-}
+};
 var p = BitmapSequence.prototype = new DisplayObject();
 
 // public properties:
@@ -181,7 +181,7 @@ var p = BitmapSequence.prototype = new DisplayObject();
 	p.initialize = function(spriteSheet) {
 		this.DisplayObject_initialize();
 		this.spriteSheet = spriteSheet;
-	}
+	};
 
 	/**
 	* Returns true or false indicating whether the display object would be visible if drawn to a canvas.
@@ -193,7 +193,7 @@ var p = BitmapSequence.prototype = new DisplayObject();
 	p.isVisible = function() {
 		var image = this.spriteSheet ? this.spriteSheet.image : null;
 		return this.visible && this.alpha > 0 && this.scaleX != 0 && this.scaleY != 0 && image && this.currentFrame >= 0 && (image.complete || image.getContext);
-	}
+	};
 
 	/**
 	* @property DisplayObject_draw
@@ -257,7 +257,7 @@ var p = BitmapSequence.prototype = new DisplayObject();
 			ctx.drawImage(image, frameWidth*col, frameHeight*row, frameWidth, frameHeight, 0, 0, frameWidth, frameHeight);
 		}
 		return true;
-	}
+	};
 
 	//Note, the doc sections below document using the specified APIs (from DisplayObject)  from
 	//Bitmap. This is why they have no method implementations.
@@ -289,7 +289,7 @@ var p = BitmapSequence.prototype = new DisplayObject();
 	p.gotoAndPlay = function(frameOrSequence) {
 		this.paused = false;
 		this._goto(frameOrSequence);
-	}
+	};
 
 	/**
 	* Sets paused to true and seeks to the specified sequence name, named frame, or frame number.
@@ -300,7 +300,7 @@ var p = BitmapSequence.prototype = new DisplayObject();
 	p.gotoAndStop = function(frameOrSequence) {
 		this.paused = true;
 		this._goto(frameOrSequence);
-	}
+	};
 
 	/**
 	* Advances the playhead. This occurs automatically each tick by default.
@@ -308,7 +308,7 @@ var p = BitmapSequence.prototype = new DisplayObject();
 	*/
 	p.advance = function() {
 		this.currentFrame++;
-	}
+	};
 
 	/**
 	* Returns a clone of the Point instance.
@@ -319,7 +319,7 @@ var p = BitmapSequence.prototype = new DisplayObject();
 		var o = new BitmapSequence(this.spriteSheet);
 		this.cloneProps(o);
 		return o;
-	}
+	};
 
 	/**
 	* Returns a string representation of this object.
@@ -328,7 +328,7 @@ var p = BitmapSequence.prototype = new DisplayObject();
 	**/
 	p.toString = function() {
 		return "[BitmapSequence (name="+  this.name +")]";
-	}
+	};
 
 // private methods:
 	/**
@@ -358,7 +358,7 @@ var p = BitmapSequence.prototype = new DisplayObject();
 		}
 		this.currentWaitFrame++;
 		// --
-	}
+	};
 
 	/**
 	* @property DisplayObject_cloneProps
@@ -388,7 +388,7 @@ var p = BitmapSequence.prototype = new DisplayObject();
 		o.nextSequence = this.nextSequence;
 		o.paused = this.paused;
 		o.frameData = this.frameData;
-	}
+	};
 
 	/**
 	* Moves the playhead to the specified frame number of sequence.
@@ -421,7 +421,7 @@ var p = BitmapSequence.prototype = new DisplayObject();
 			this.currentStartFrame = 0;
 			this.currentFrame = frameOrSequence;
 		}
-	}
+	};
 
 window.BitmapSequence = BitmapSequence;
 }(window));

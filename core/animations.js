@@ -171,4 +171,4 @@ Animation.prototype = {
 	}
 
 
-}
+};
