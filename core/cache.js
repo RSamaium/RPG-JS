@@ -55,9 +55,6 @@ Cache = {
 	path: ''
 };
 
-// Static Database
-Database = {};
-
 /**
  * Load images in the "Graphics"
  * @method loadGraphics

@@ -187,57 +187,12 @@ var p = {
 			return;
 		}
 		var prop = this.pages[this.currentPage];
-		var abs = prop.action_battle;
-		this.commands = prop.commands;
-		this.tactical = prop.tactical;		
-		if (!this.actionBattle && prop.action_battle) {
-			this.actionBattle = abs;
-			this.actionBattle.hp = this.actionBattle.hp_max;
-			this.actions = this.actionBattle.actions;
-			
-			if (abs.maxLevel) {
-				this.maxLevel = abs.maxLevel;
-			}
-			if (abs.expList) {
-				this.makeExpList(abs.expList.basis, abs.expList.inflation);
-			}
-			if (abs.level) {
-				this.setLevel(abs.level);
-			}
-			if (abs.params) {
-				var param;
-				for (var key in abs.params) {
-					if (typeof abs.params[key] == "number") {
-						param = abs.params[key]; 
-						abs.params[key] = [param, param];
-					}
-					this.setParam(key, abs.params[key][0], abs.params[key][1], "proportional");
-				}
-			}
-			if (abs.items) {
-				for (var key in abs.items) {
-					for (var i=0 ; i < abs.items[key].length ; i++) {
-						this.equipItem(key, abs.items[key][i]);
-					}
-				}
-			}
-			if (abs.elements) {
-				this.setElements(abs.elements);
-			}
-			if (abs.skillsToLearn) {
-				this.skillsToLearn(abs.skillsToLearn);
-			}
-			if (abs["class"]) {
-				this.setClass(abs["class"]);
-			}
-			if (abs.states) {
-				for (var i=0 ; i < abs.states.length ; i++) {
-					this.addState(abs.states[i]);
-				}
-			}
-			this.setTypeMove("real");
 		
-		}
+		this.commands = prop.commands;
+		this.tactical = prop.tactical;	
+		
+		this.rpg.call('refresh', [prop], this);
+		
 		this.trigger = prop.trigger;
 		this.direction_fix = prop.direction_fix;   // Direction does not change ; no animation
 		this.no_animation = prop.no_animation; // no animation even if the direction changes
@@ -287,62 +242,8 @@ var p = {
 		
 	},
 	
-	/**
-     * Display a bar above the event. If the bar already exists, the bar will be updated
-	 * @method displayBar
-     * @param {Integer} min Filling the bar with respect to the parameter "max"
-     * @param {Integer} max (optional if update) Indicate the value when the bar is completely filled
-     * @param {Integer} width (optional if update) Bar width
-     * @param {Integer} height (optional if update) Bar height
-     * @param {Object} point (optional) bar position (above and centered by default)
-		<ul>
-			<li>x {Integer} : Position X</li>
-			<li>y {Integer} : Position Y</li>
-		</ul>
-	  * @param {Object} colors (optional) Color bar
-		<ul>
-			<li>stroke {String} : Contour Bar ("000" by default)</li>
-			<li>fill {String} : Content of the bar ("8FFF8C" by default)</li>
-		</ul>
-    */
-	displayBar: function(min, max, width, height, point, params) {
-		if (this.bar) {
-			width = width ? width : this.bar.width;
-			height = height ? height : this.bar.height;
-			max = max ? max : this.bar.max;
-			this.sprite.removeChild(this.bar);
-		}
-		if (max == undefined) return;
-		if (!min) min = max;
-		if (min > max) {
-			min = max;
-		}
-		
-		var bar = new Shape();
-		var x, y;
-		
-		if (point) {
-			y = point.y;
-			x = point.x;
-		}
-		else {
-			y = -5;
-			x = -(width / 2 - this.rpg.tile_w / 2);
-		}
-		
-		params = params || {};
-		params.stroke = params.stroke || "000";
-		params.fill = params.fill || "8FFF8C";
-		
-		var pourcent = (100 * min / max) / 100;
-		bar.width = width;
-		bar.height = height;
-		bar.max = max;
-		bar.graphics.beginStroke("#" + params.stroke).drawRect(x, y, width, height);
-		bar.graphics.beginFill("#" + params.fill).drawRect(x, y, width * pourcent, height);
-		this.bar = bar;
-		this.sprite.addChild(bar);
-	},
+	
+	
 	
 	/**
      * Enables or disables a local switch. The event is then refreshed
@@ -360,7 +261,7 @@ var p = {
 			Cache.events_data[_id].self_switch = {};
 		}
 		Cache.events_data[_id].self_switch[id] = bool;
-		this.rpg.call("selfSwitch", {event: this, id: id, enable: bool});
+		this.rpg.call("selfSwitch", [id, bool], this);
 		this.refresh();
 	},
 	
@@ -673,66 +574,10 @@ var p = {
 
 		if (this.tickPlayer) {
 			this.tickPlayer();
-
 		}
 		
+		this.rpg.call("update", null, this);
 		
-		if (this.actionBattle) {
-			var detect = this.detectionPlayer(this.actionBattle.area);			
-			if (detect && !this.detection) {
-				this.detection = true;
-				var detection = this.rpg.actionBattle.detection ? this.rpg.actionBattle.detection[this.actionBattle.detection] : false;
-				this.rpg.setEventMode(this, 'detection');
-				if (detection) {
-					detection(this);
-				}
-			}
-			else if (!detect && this.detection) {
-				this.detection = false;
-				var nodetection = this.rpg.actionBattle.nodetection ? this.rpg.actionBattle.nodetection[this.actionBattle.nodetection] : false;
-				this.rpg.setEventMode(this, 'nodetection');
-				if (nodetection) {
-					nodetection(this);
-				}
-			}
-			
-			if (this.actionBattle.mode == 'offensive') {
-				if (this.rpg.actionBattle.eventOffensive && this.actionBattle.offensive) {
-					this.rpg.actionBattle.eventOffensive[this.actionBattle.offensive](this);			
-				}
-				//var player = this.getEventAround(true);
-				var real_x = this.sprite.x;
-				var real_y = this.sprite.y;
-				switch(this.direction) {
-					case 'up':
-						real_y -= this.speed;
-					break;
-					case 'right':
-						real_x += this.speed;
-					break;
-					case 'left':	
-						real_x -= this.speed;
-					break;
-					case 'bottom':
-						real_y += this.speed;
-					break;
-				}
-				var player = this.contactWithEvent(real_x, real_y);
-				if (player.length > 0) {
-					this.rpg.setEventMode(this, 'attack');
-					if (this.rpg.actionBattle.eventAttack && this.actionBattle.attack) {
-						this.rpg.actionBattle.eventAttack[this.actionBattle.attack](this);			
-					}
-				}
-				
-				// if (player.up.length > 0 || player.left.length > 0 || player.right.length > 0 || player.bottom.length > 0) {
-					// this.rpg.setEventMode(this, 'attack');
-					// if (this.rpg.actionBattle.eventAttack && this.actionBattle.attack) {
-						// this.rpg.actionBattle.eventAttack[this.actionBattle.attack](this);			
-					// }
-				// }
-			}
-		}	
 		
 		// -- Begin Action Wait
 		for (var key in this.action_prop) {
@@ -826,7 +671,7 @@ var p = {
 	contactWithEvent: function(real_x, real_y) {
 		var events = this._contactWith(real_x, real_y, "event");
 		this.call("contact", events);
-		this.rpg.call("eventContact", {src: this, target: events});
+		this.rpg.call("eventContact", [events], this);
 		return events;
 	},
 	
@@ -964,7 +809,7 @@ var p = {
 			}
 		
 		}
-		this.rpg.call("eventDetected", {src: this, events: events_detected});
+		this.rpg.call("eventDetected", [events_detected], this);
 		return events_detected;
 	
 	},
@@ -1646,64 +1491,7 @@ var p = {
 	
 	
 	
-	actionType: function(type) {
-		var event;
-		var self = this;
-		
-		switch (type) {
-			case 'attack':
-				event = this.getEventBeside();
-				if (event && event.actionBattle) {
-				
-					if (event.actionBattle.mode == 'invinsible') {
-						if (this.rpg.actionBattle.eventInvinsible && event.actionBattle.invinsible) {
-							this.rpg.actionBattle.eventInvinsible[event.actionBattle.invinsible](event);			
-						}
-						return;
-					}
-				
-					if (this.rpg.actionBattle.eventAffected && event.actionBattle.affected) {
-						this.rpg.setEventMode(event, 'affected');
-						this.rpg.actionBattle.eventAffected[event.actionBattle.affected](event);			
-					}
-			
-					if (event.actionBattle.hp <= 0) {
-						this.rpg.setEventMode(event, 'death');
-						var anim = event.actionBattle.animation_death;
-						if (anim) {
-							this.rpg.animations[anim].setPosition(event.x, event.y);
-							this.rpg.animations[anim].play();
-						}
-						event.fadeOut(5, function() {
-							var item_drop = event.actionBattle.ennemyDead;
-							var random = Math.floor(Math.random()*100);
-							var min = 0, max = 0, drop_id = null;
-							if (item_drop) {
-								for (var i=0 ; i < item_drop.length ; i++) {
-									max += item_drop[i].probability;
-									if (random >= min && random <= max-1) {
-										drop_id = i;
-										break;
-									}
-									min += max;
-								}
-							}
-							self.rpg.removeEvent(event.id);
-							if (drop_id != null) {
-								var drop_name = item_drop[drop_id].name;
-								var drop = self.rpg.actionBattle.ennemyDead ? self.rpg.actionBattle.ennemyDead[item_drop[drop_id].call] : false;
-								if (drop) drop(event, drop_name);
-							}
-							
-						});
-					}
-					else {
-						event.displayBar(event.actionBattle.hp);
-					}
-				}
-			break;
-		}
-	},
+	
 	
 	/**
      * Perform an action on the event. The action must first be added. See "addAction" in class Rpg
@@ -1753,9 +1541,8 @@ var p = {
 			}
 		}
 		
-		// Action Battle
-		this.actionType(action.action);
-
+		this.rpg.call("action", [name, action.action], this);
+		
 		// Animation Event
 		duration = action.duration_motion ? action.duration_motion : 1;
 		playAnimation('animations');
@@ -1781,6 +1568,7 @@ var p = {
 			self.action_prop[name] = {};
 			self.action_prop[name].wait = 0;
 			playAnimation('animation_finish');
+			self.rpg.call("onActionFinish", [name], self);
 			if (action.onFinish) action.onFinish(self);
 			if (onFinish) onFinish(self);
 		}
@@ -2269,7 +2057,7 @@ var p = {
 	 * @return Integer see setExp()
     */
 	addExp: function(exp) {
-		this.rpg.call("addExp", {event: this, exp: exp});
+		this.rpg.call("addExp", exp, this);
 		return this.setExp(this.currentExp + exp);
 	},
 	
@@ -2300,7 +2088,7 @@ var p = {
 		this.currentLevel = new_level;
 		var diff_level = new_level - current_level;
 		if (diff_level != 0) {
-			this.rpg.call("changeLevel", {event: this, new_level: new_level, old_level: current_level});
+			this.rpg.call("changeLevel", [new_level, current_level], this);
 			this._changeSkills();
 		}
 		return diff_level;
@@ -2316,7 +2104,7 @@ var p = {
 		var old_level = this.currentLevel;
 		this.currentLevel = level;
 		if (this.exp.length > 0) this.currentExp = this.exp[level];
-		this.rpg.call("changeLevel", {event: this, new_level: level, old_level: old_level});
+		this.rpg.call("changeLevel", [level, old_level], this);
 		this._changeSkills();
 		return level - old_level;
 	},
@@ -2560,7 +2348,7 @@ var p = {
 			id = prop.id;
 		}
 		this.skills[id] = prop;
-		this.rpg.call('learnSkill', {event: this, id: id, prop: prop});
+		this.rpg.call('learnSkill', [id, prop], this);
 	},
 	
 	/**
@@ -2575,7 +2363,7 @@ var p = {
 		}
 		if (this.skills[id]) {
 			delete this.skills[id];
-			this.rpg.call('removeSkill', {event: this, id: id});
+			this.rpg.call('removeSkill', id, this);
 			return true;
 		}
 		else
@@ -2651,7 +2439,7 @@ var p = {
 		}
 		prop.duringTime = 0;
 		this.states.push(prop);
-		this.rpg.call('addState', {event: this, prop: prop});
+		this.rpg.call('addState', [prop], this);
 		prop.onStart(this);
 	},
 	
@@ -2667,7 +2455,7 @@ var p = {
 		for (var i=0 ; i < this.states.length ; i++) {
 			if (this.states[i].id == id) {
 				this.states[i].onRelease(this);
-				this.rpg.call('removeState', {event: this, prop: this.states[i]});
+				this.rpg.call('removeState', [this.states[i]], this);
 				delete this.states[i];
 				return;
 			}
