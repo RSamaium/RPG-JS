@@ -1,5 +1,5 @@
 /*!
- * RPG JavaScript Library Beta 2.0
+ * RPG JavaScript Library Beta 2.0.2
  * http://rpgjs.com
  *
  * Copyright 2011, Samuel Ronce
