@@ -72,6 +72,8 @@ function Rpg(canvas_tag) {
 	this.screen_refresh = {};
 	this.htmlElements = [];
 	this.onMouseEvent = {};
+	this._onUpdate = function() {};
+	this._onEventCall = {};
 	
 	// this.mapClick;
 
@@ -913,7 +915,65 @@ Rpg.prototype = {
 		}
 		
 		this.call('update');
+		this._onUpdate.call(this);
 		this.stage.update();
+	},
+	
+	/**
+     * Assigns a function to be called on each tick of the game
+	 * @method onUpdate
+     * @param {Function} func
+    */
+	onUpdate: function(func) {
+		this._onUpdate = func;
+	},
+	
+	/**
+     * Assigns a function when the event command "CALL" is executed
+	 * @method onEventCall
+	 * @param name ID Identifying the function
+	 * @param func Function
+	 * @example 
+		<pre>
+			rpg.onEventCall("myevent", function() {
+				this.move("left"); // "this" is the event called
+			});
+		</pre>
+		In the event :
+		<pre>
+			[
+				{
+				  "x": 7,
+				  "y": 6,
+				  "id": "1",
+				  "name": "EV001"
+				},
+				[
+					{
+						
+						"character_hue": "133-Noble08.png",
+						"pattern": 0,
+						"trigger": "action",
+						"direction": "bottom",
+						"frequence": 16,
+						"type": "fixed",
+						"through": false,
+						"stop_animation": false,
+						"no_animation": false,
+						"direction_fix": false,
+						"alwaysOnTop": false,
+						"speed": 4,
+						"commands": [
+						  "SHOW_TEXT: {'text': 'Hello'}",
+						  "CALL: 'myevent'"
+						]
+					}
+				]
+			]
+		</pre>
+    */
+	onEventCall: function(name, func) {
+		this._onEventCall[name] = func;
 	},
 	
 	// Private
@@ -1079,7 +1139,7 @@ Rpg.prototype = {
 		}
 		
 		this.events = [];
-		this.bind('update', function() {});
+		this._onUpdate = function() {};
 		
 		if (this.containerMap.name !== undefined) {
 			this.stage.clear();

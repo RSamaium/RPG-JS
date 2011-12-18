@@ -405,7 +405,7 @@ THE SOFTWARE.
 	},
 	
 	cmdCall: function(call, self) {
-		self.rpg.call("eventCall_" + call, self);
+		self.rpg._onEventCall[call].call(self);
 		self.nextCommand();
 	},
 	

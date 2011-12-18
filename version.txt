@@ -1,3 +1,38 @@
+Version Beta 2.0.2 [December 18, 2011]
+
+Added features :
+* rpg.onUpdate
+* rpg.onEventCall
+
+Modified :
+
+* Interpreter.cmdCall
+* rpg.clearMap
+* rpg.tick
+* Rpg [Constructor]
+ 
+---------------------------------------------------------------
+
+Version Beta 2.0 [December 08, 2011]
+
+Added features :
+* rpg.setCanvasSize
+* rpg.addPlugin
+* rpg.plugin
+
+Fixed :
+
+* Maps and Events save bug fixed
+* delete this.tone if it's already exists.
+* Fix Event.nbSequenceX, Event.nbSequenceY, Rpg.changeScreenColorTone() and Scene
+* Finish moving if contact
+* fixed autotiles and animation (autotiles)
+
+Improvement :
+
+* A-RPG is a plugin
+
+
 Version Beta 1.0 [September 04, 2011]
 ---------------------------------------------------------------
 Added features :
