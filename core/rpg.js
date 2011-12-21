@@ -179,7 +179,7 @@ function Rpg(canvas_tag) {
  * @static
  * @type Boolean
 */
-Rpg.debug = false;
+Rpg.debug = true;
 
 /**
  * Returns the name of the user agent used
@@ -977,7 +977,7 @@ Rpg.prototype = {
 		if (!dir) dir = 16;
 	
 		if (x < 0 || y < 0 || x >= this.currentMap.length || y >= this.currentMap[0].length) return false;
-	
+		//TODO: This is where the tile checking happens
 		var tiles = this.currentMap[x][y];
 		var passage, priority;
 		for (i=2 ; i >= 0 ; i--) {
@@ -1467,6 +1467,7 @@ Rpg.prototype = {
 										bmpSeq.y = self._positionValueToReal(i, j).y;
 										bmpSeq.currentFrame = id-384;
 										
+										//TODO: This is where the rendering happens
 										map[i][j][3][priority] = bmpSeq;
 										map_img[map_img_id].addChild(bmpSeq);
 
