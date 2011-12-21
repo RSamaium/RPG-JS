@@ -587,5 +587,3 @@ p.onLoad = function() {
 	this.setPosition('bottom');
 	this.setBackOpacity(0.8);	
 };
-
-
