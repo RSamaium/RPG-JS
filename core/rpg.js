@@ -181,7 +181,7 @@ function Rpg(canvas_tag) {
  * @static
  * @type Boolean
 */
-Rpg.debug = false;
+Rpg.debug = true;
 
 /**
  * Returns the name of the user agent used
@@ -213,7 +213,7 @@ Rpg.mobileUserAgent = function() {
 		return "windows phone";
 	else
 		return false;
-}
+};
 
 /**
  * Whether the variable is an array
@@ -224,7 +224,7 @@ Rpg.mobileUserAgent = function() {
 */
 Rpg.isArray = function(a) {
 	return (typeof(a) ==='object') ? a.constructor.toString().match(/array/i) !== null || a.length !==undefined :false;
-}
+};
 
 /**
  * Returns the value of an element in the array by its key
@@ -241,7 +241,7 @@ Rpg.keyExist = function(a, value) {
 	else {
 		return a[value];
 	}
-}
+};
 
 /**
  * Searches value in a table
@@ -272,7 +272,7 @@ Rpg.valueExist = function(a, value) {
 		}
 	}
 	return false;
-}
+};
 
 /**
  * Completely removes an element in an array
@@ -297,7 +297,7 @@ Rpg.unsetArrayElement = function(array, value) {
 		}
 	}
 	return array;
-}
+};
 
 /**
  * Returns the last value of array
@@ -308,7 +308,7 @@ Rpg.unsetArrayElement = function(array, value) {
 */	
 Rpg.endArray = function(array) {
 	return array[array.length-1];
-}
+};
 	
 
 Rpg.prototype = {
@@ -578,7 +578,7 @@ Rpg.prototype = {
 						
 						bitmap.onMouseOver = function() {
 							sound_area_hover.play();
-						}
+						};
 						
 						self.tacticalMap[i][j] = bitmap;
 						self.layer[7].addChild(bitmap);
@@ -597,7 +597,7 @@ Rpg.prototype = {
 					}
 				}
 				
-			}
+			};
 	},
 	
 	tacticalAreaClear: function() {
@@ -673,7 +673,7 @@ Rpg.prototype = {
 			width = -(this.getMapWidth(true) - this.canvas.width);
 		}
 		else {
-			width = -(real_x - this.canvas.width/2 + (this.canvas.width/2 % this.tile_w))
+			width = -(real_x - this.canvas.width/2 + (this.canvas.width/2 % this.tile_w));
 		}
 		
 		if (real_y <= this.canvas.height/2) {
@@ -1037,7 +1037,7 @@ Rpg.prototype = {
 		if (!dir) dir = 16;
 	
 		if (x < 0 || y < 0 || x >= this.currentMap.length || y >= this.currentMap[0].length) return false;
-	
+		//TODO: This is where the tile checking happens
 		var tiles = this.currentMap[x][y];
 		var passage, priority;
 		for (i=2 ; i >= 0 ; i--) {
@@ -1499,7 +1499,7 @@ Rpg.prototype = {
 					var bmpSeq = new BitmapSequence(spriteSheet);
 					
 					var k = 0, 
-					canvas, stage
+					canvas, stage,
 					map_img = [];
 					 for (i=0 ; i < 2 ; i++) {
 						var canvas = document.createElement("canvas");
@@ -1527,6 +1527,7 @@ Rpg.prototype = {
 										bmpSeq.y = self._positionValueToReal(i, j).y;
 										bmpSeq.currentFrame = id-384;
 										
+										//TODO: This is where the rendering happens
 										map[i][j][3][priority] = bmpSeq;
 										map_img[map_img_id].addChild(bmpSeq);
 
@@ -2873,7 +2874,7 @@ Rpg.prototype = {
 		function mouse(type, ev) {
 			element["onmouse" + type] = function(e) {
 				self._getMouseData(type, e, div, ev);
-			}
+			};
 		}
 		
 		this.onMouseEvent[mouse_event] = callback;
@@ -2885,16 +2886,16 @@ Rpg.prototype = {
 		
 		div.onclick = function(e) {
 			self._getMouseData("click", e, this);
-		}
+		};
 		div.ondblclick = function(e) {
 			self._getMouseData("dblclick", e, this);
-		}
+		};
 		div.onmouseup = function(e) {
 			self._getMouseData("up", e, this);
-		}
+		};
 		div.onmousedown = function(e) {
 			self._getMouseData("down", e, this);
-		}
+		};
 		
 		
 	},
@@ -3120,8 +3121,8 @@ Rpg.prototype = {
 				prop.regX = img.width / 2;
 				prop.regY = img.height / 2;
 			}
-			bitmap.regX = prop.regX ? prop.regX : 0
-			bitmap.regY = prop.regY ? prop.regY : 0
+			bitmap.regX = prop.regX ? prop.regX : 0;
+			bitmap.regY = prop.regY ? prop.regY : 0;
 			self.pictures[id] = bitmap;
 			self.stage.addChild(bitmap);
 			self.call("addPicture", [id, filename, prop]);
@@ -3382,7 +3383,7 @@ Rpg.prototype = {
 			pos.y = this.screen_y + (x + y) * this.tile_h / 2;
 		}	
 		else {
-			pos.x = x * this.tile_w
+			pos.x = x * this.tile_w;
 			pos.y = y * this.tile_h;
 		}
 		return pos;
@@ -3535,4 +3536,4 @@ Rpg.prototype = {
 	plugin: function(name) {
 		return this.plugins[name] ? this.plugins[name] : false;
 	}	
-}
+};

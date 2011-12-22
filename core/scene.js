@@ -234,4 +234,4 @@ Scene.prototype = {
 	}
 
 	
-}
+};

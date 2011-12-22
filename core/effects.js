@@ -366,7 +366,7 @@ Effect.prototype = {
 		this.rotation.duration = Math.abs(this.bitmap.rotation - value) / duration;	
 		this.rotation.callback = callback;
 		Ticker.addListener(this, false);
-	},
+	}
 	
 
-}
+};

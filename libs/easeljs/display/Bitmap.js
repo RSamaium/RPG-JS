@@ -45,7 +45,7 @@
 **/
 var Bitmap = function(imageOrUri) {
   this.initialize(imageOrUri);
-}
+};
 var p = Bitmap.prototype = new DisplayObject();
 
 	// public properties:
@@ -86,7 +86,7 @@ var p = Bitmap.prototype = new DisplayObject();
 		} else {
 			this.image = imageOrUri;
 		}
-	}
+	};
 	
 // public methods:
 
@@ -99,7 +99,7 @@ var p = Bitmap.prototype = new DisplayObject();
 	**/
 	p.isVisible = function() {
 		return this.visible && this.alpha > 0 && this.scaleX != 0 && this.scaleY != 0 && this.image && (this.image.complete || this.image.getContext);
-	}
+	};
 
 	/**
 	* @property DisplayObject_draw
@@ -122,7 +122,7 @@ var p = Bitmap.prototype = new DisplayObject();
 		if (this.DisplayObject_draw(ctx, ignoreCache)) { return true; }
 		ctx.drawImage(this.image, 0, 0);
 		return true;
-	}
+	};
 	
 	//Note, the doc sections below document using the specified APIs (from DisplayObject)  from
 	//Bitmap. This is why they have no method implementations.
@@ -154,7 +154,7 @@ var p = Bitmap.prototype = new DisplayObject();
 		var o = new Bitmap(this.image);
 		this.cloneProps(o);
 		return o;
-	}
+	};
 	
 	/**
 	* Returns a string representation of this object.
@@ -163,7 +163,7 @@ var p = Bitmap.prototype = new DisplayObject();
 	**/
 	p.toString = function() {
 		return "[Bitmap (name="+  this.name +")]";
-	}
+	};
 
 // private methods:
 

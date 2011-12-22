@@ -319,7 +319,7 @@ var p = {
 					right: right,
 					bottom: bottom,
 					left: left				
-			}
+			};
 
 			var spriteSheet = new SpriteSheet(chara, self.width, self.height, anim);
 			var bmpSeq = new BitmapSequence(spriteSheet);
@@ -595,8 +595,8 @@ var p = {
 					this._blink.visible = this._blink.visible ? false : true;
 					this.visible(this._blink.visible);
 				}
-				this._blink.currentDuration++
-				this._blink.currentFrequence++
+				this._blink.currentDuration++;
+				this._blink.currentFrequence++;
 			}
 			else {
 				this._blink.current = false;
@@ -727,7 +727,7 @@ var p = {
 	 * @param {Function} callback (optional) Callback when the blink is complete
     */
 	blink: function(duration, frequence, callback) {
-		this._blink = {}
+		this._blink = {};
 		this._blink.duration = duration;
 		this._blink.currentDuration = 0;
 		this._blink.frequence = frequence;
@@ -919,7 +919,7 @@ var p = {
 		var player = this.rpg.player;
 		if (player) {
 			if (player.y < this.y) {
-				dir = 8
+				dir = 8;
 			}
 			else if (player.y > this.y) {
 				dir = 2;
@@ -1067,6 +1067,7 @@ var p = {
 		var x = this.x;
 		var y = this.y;
 		var passable = true;
+		//TODO: this is for the event, not the player
 		switch (dir) {
 			case 2:
 				y--;
@@ -1083,12 +1084,14 @@ var p = {
 		}
 		if (this.rpg.player && this.rpg.player.x == x && this.rpg.player.y == y) {
 			this.moving = false;
+			console.log("Cannot move: " + this.rpg.player.x + " = " + x);
 			return false;
 		}
 		passable = this.rpg.isPassable(x, y);
 		if (!passable) {
 			this.moving = false;
 		}
+		console.log("Can move: " + passable);
 		return passable;
 	},
 	
@@ -1134,11 +1137,11 @@ var p = {
 			}
 			// }
 			// if (real_y % self.rpg.tile_h != 0) {
+			var str = "";
 			bool_x = testPassable(real_x, real_y);
 			bool_x &= testPassable(real_x + w, real_y);
 			
 			bool_y = testPassable(real_x, real_y + h);
-			
 			bool_y &= testPassable(real_x + w, real_y + h);
 			
 			/*if (!bool_y && real_y % self.rpg.tile_h == 0 && (dir == "left" || dir == "right")) {
@@ -1173,13 +1176,32 @@ var p = {
 					self.real_x = real_x;
 					self.real_y = real_y;
 					self.x = new_x;
-	
+					//console.log("Passing through");
 				}
 				else {
-					
+					var mod = self.real_y % self.rpg.tile_h;
+					if(mod > 0){ 		  	//if not squarely positioned in the center of a grid..
+						var topPassable; 	//..check if I can pass between..
+						var bottomPassable; //..grids
+						var pos = self.rpg._positionRealToValue(real_x, real_y);
+						if(dir == 'left'){
+							topPassable = self.rpg.isPassable(pos.x, pos.y);
+							bottomPassable = self.rpg.isPassable(pos.x, pos.y + 1);
+						}else{
+							topPassable = self.rpg.isPassable(pos.x+1, pos.y);
+							bottomPassable = self.rpg.isPassable(pos.x + 1, pos.y + 1);
+						}
+						
+						if(bottomPassable){
+							self.real_y = real_y + mod;
+						}
+						if(topPassable){
+							self.real_y = real_y - mod;
+						}
+					}
 				//	real_x = Math.floor(real_x/self.rpg.tile_w) * self.rpg.tile_w;
 				//	changeRealPosition(real_x, real_y);
-				is_passable = false;
+					is_passable = false;
 					if (contact) {
 						replacePosition(real_x, real_y, dir) ;
 					}
@@ -1214,6 +1236,26 @@ var p = {
 					self.y = new_y;
 				}
 				else {
+					var mod = self.real_x % self.rpg.tile_w;
+					if(mod > 0){ 		  //if not squarely positioned in the center of a grid..
+						var leftPassable; //..check if I can pass between..
+						var rightPassable;//..grids
+						var pos = self.rpg._positionRealToValue(real_x, real_y);
+						if(dir == 'up'){
+							leftPassable = self.rpg.isPassable(pos.x, pos.y);
+							rightPassable = self.rpg.isPassable(pos.x + 1, pos.y);
+						}else{
+							leftPassable = self.rpg.isPassable(pos.x, pos.y + 1);
+							rightPassable = self.rpg.isPassable(pos.x + 1, pos.y + 1);
+						}
+						
+						if(rightPassable){
+							self.real_x = real_x + mod;
+						}
+						if(leftPassable){
+							self.real_x = real_x - mod;
+						}
+					}
 				//	real_y = Math.floor(real_y/self.rpg.tile_h) * self.rpg.tile_h;
 				//	changeRealPosition(real_x, real_y);
 					is_passable = false;
@@ -1258,7 +1300,6 @@ var p = {
 				}
 			}
 
-			
 			return true;
 			
 		}
@@ -1388,12 +1429,12 @@ var p = {
 		x_plus < 0 ? this.setStopDirection('left') : this.setStopDirection('right');
 	  }
       else {
-        y_plus < 0 ? this.setStopDirection('up') : this.setStopDirection('down')
+        y_plus < 0 ? this.setStopDirection('up') : this.setStopDirection('down');
 	  }
 	}
 	
-    var new_x = this.x + x_plus
-    var new_y = this.y + y_plus
+    var new_x = this.x + x_plus;
+    var new_y = this.y + y_plus;
 
     // if (x_plus == 0 and y_plus == 0) or passable?(new_x, new_y, 0) {
       
@@ -1565,7 +1606,7 @@ var p = {
 			self.changeBitmap(bmp_ini);
 			self.animation('stop');
 			self.inAction = false;
-			self.action_prop[name] = {}
+			self.action_prop[name] = {};
 			self.action_prop[name].wait = 0;
 			playAnimation('animation_finish');
 			self.rpg.call("onActionFinish", [name], self);
@@ -2496,7 +2537,7 @@ var p = {
 	
 	
 	
-}
+};
 
 for (var obj in p) { 
 	interpreter[obj] = p[obj]; 

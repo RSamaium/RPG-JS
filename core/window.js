@@ -244,7 +244,7 @@ Window.prototype = {
      * @param {String} color Text color in hexadecimal: For example: #FF0000
      * @return Text <a href="http://easeljs.com/docs/Text.html">Text Object</a>
     */
-	setText: function(x, y, text, css, color) { this.drawText(x, y, text, css, color) },
+	setText: function(x, y, text, css, color) { this.drawText(x, y, text, css, color); },
 	drawText: function(x, y, text, css, color) {
 		var text = new Text(text, css, color);
 		text.x = x;
@@ -521,12 +521,12 @@ Window.prototype = {
 		this.cursor.skin.y = this.commands[idx].y;
 		this.cursor.skin.scaleX = this.commands[idx].w;
 		this.cursor.skin.scaleY = this.commands[idx].h;
-	},
+	}
 	
 	
 	
 	
-}
+};
 
 /**
  * @class Scene_Dialog The scene with the dialog. See the command "SHOW_TEXT" in Interpreter
@@ -565,7 +565,7 @@ p.main = function() {
 		});	
 	}
 	
-}
+};
 
 /**
  * @class Window_Dialog Dialog box in a message.
@@ -586,6 +586,4 @@ p.onLoad = function() {
 	var self = this;
 	this.setPosition('bottom');
 	this.setBackOpacity(0.8);	
-}
-
-
+};
