@@ -181,7 +181,7 @@ function Rpg(canvas_tag) {
  * @static
  * @type Boolean
 */
-Rpg.debug = true;
+Rpg.debug = false;
 
 /**
  * Returns the name of the user agent used
