@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+  <head>
+	<script src="http://canvasengine.net/cdn/dev/canvasengine-latest.all.min.js"></script>
+	<script src="../rpgjs-2.0.0.min.js"></script>
+	
+	<script>
+	
+		
+		RPGJS.Materials = {
+			"characters": {
+				"1": "event1.png",
+				"2": "event2.png"
+			},
+			"tilesets": {
+				"1": "tileset.png"
+			}
+		};
+	
+		RPGJS.Database = {
+			"actors": {
+				"1": {
+					"graphic": "1"
+				}
+			},
+			"tilesets": {
+				"1": {
+					"graphic": "1"
+				}
+			},
+			"map_infos": {		
+				"1": {
+					"tileset_id": "1"
+				}
+			}
+		};
+	
+		RPGJS.defines({
+			canvas: "canvas",
+			autoload: false,
+			scene_path: "../"
+		}).ready(function() {
+		
+			RPGJS.Player.init({
+				actor: 1,
+				start: {x: 10, y: 10, id: 1}
+			});
+			
+			RPGJS.Scene.map(function() {
+			
+				var interpreter = Class.New("Interpreter");
+				
+				interpreter.assignCommands([
+					'SCREEN_SHAKE: {"power":["7","7"], "speed":["4","4"], "duration": 6, "axis":"x"}'
+				]);
+			
+				// http://canvasengine.net/doc/?p=extends.input.keyboard.press
+				RPGJS_Canvas.Input.press(Input.Enter, function() {
+					interpreter.execCommands();
+				});
+					
+			});
+			
+		});
+	
+	</script>
+		
+		
+		
+ </head>
+  <body>
+	<canvas id="canvas" width="640px" height="480px"></canvas>
+	
+  </body>
+</html>

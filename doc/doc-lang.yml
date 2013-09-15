@@ -1,0 +1,26 @@
+game: Core
+sprite: Sprites
+
+rpgjs: RPGJS
+main: Main
+main_scene: Scene
+main_materials: Path
+main_plugin: Plugin
+
+scene_map: Scene Map
+spriteset_map: Map
+sprite_character: Character
+sprite_plugin: Plugin
+
+map: Map
+character: Character
+actors: Actors
+event: Event
+player: Player
+commonevents: Common Events
+switches: Switches
+selfswitches: Self Switches
+system: System
+variables: Variables
+interpreter: Interpreter
+plugin: Plugin

@@ -1,0 +1,23 @@
+game:
+    rpgjs:
+     main:
+     main_scene:
+     main_materials:
+     main_plugin:
+    map:
+    character:
+    actors:
+    player:
+    event:
+    commonevents:
+    switches:
+    selfswitches:
+    variables:
+    system:
+    interpreter:
+    plugin:
+sprite:
+    scene_map:
+    spriteset_map:
+    sprite_character:
+    sprite_plugin:

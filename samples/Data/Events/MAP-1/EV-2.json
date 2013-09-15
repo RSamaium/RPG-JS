@@ -1,0 +1,1 @@
+[{"id":"2","x":"10","y":"18","name":"EV-2"},[{"trigger":"action_button","frequence":"2","type":"random","speed":"4","switch_1":0,"switch_2":0,"switch_3":0,"commands":[],"conditions":{"switch_1":"0","switch_2":"0","switch_3":"0","variable":"0","variable_value":"0","self_switch":"0"},"graphic":"5","graphic-params":{"uniqid":1365432893168}}]]

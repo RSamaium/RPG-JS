@@ -1,0 +1,23 @@
+[
+    {
+        "id": "1",
+        "x": "5",
+        "y": "4",
+        "name": "EV-1"
+    },
+    [
+        {
+            "trigger": "action_button",
+            "frequence": "2",
+            "type": "fixed",
+            "speed": "4",
+            "switch_1": 0,
+            "switch_2": 0,
+            "switch_3": 0,
+            "commands": [
+                "ERASE_EVENT: true"
+            ],
+            "graphic": "2"
+        }
+    ]
+]
