@@ -2,8 +2,10 @@
 
 Follow the steps below to start:
 
-1. Download CanvasEngine 1.3.0 in [http://canvasengine.net]( http://canvasengine.net)
+1. Download CanvasEngine 1.3.0 in [http://canvasengine.net]( http://canvasengine.net) 
+or CDN : [http://canvasengine.net/cdn/dev/canvasengine-latest.all.min.js](http://canvasengine.net/cdn/dev/canvasengine-latest.all.min.js)
 2. Download the code rpgjs-X.Y.Z.min.js on Github
+or CDN : [http://rpgjs.com/cdn/rpgjs-latest.min.js](http://rpgjs.com/cdn/rpgjs-latest.min.js)
 3. Add this code in your page : 
         
 		<!DOCTYPE html>
