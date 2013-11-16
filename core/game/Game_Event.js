@@ -188,6 +188,8 @@ Class.create("Game_Event", {
 			this.old_direction = this.direction;
 			this.direction = this.directionRelativeToPlayer();
 		}
+
+		this.movePause();
 			
 		global.game_map.callScene("refreshEvent", [this.id, this.serialize()]);
 		this.interpreter.execCommands();
@@ -198,7 +200,14 @@ Class.create("Game_Event", {
 		var self = this;
 
 		global.game_player.freeze = false;
-		if (this.old_direction) this.direction = this.old_direction;
+		
+		if (this.type != "fixed" && this.old_direction) {
+			this.direction = this.old_direction;
+		}
+		this.moveStart();
+		
+		RPGJS.Plugin.call("Game", "eventCommandsFinish", [this]);
+
 		global.game_map.callScene("refreshEvent", [this.id, this.serialize()]);
 		
 	},

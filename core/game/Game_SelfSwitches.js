@@ -71,6 +71,7 @@ Class.create("Game_SelfSwitches", {
 			this.data[map_id][event_id] = {};
 		}
 	   this.data[map_id][event_id][key] = value;
+	   RPGJS.Plugin.call("Game", "selfswitch", [map_id, event_id, key, value, this]);
 	   global.game_map.refreshEvents();
 	}
 

@@ -69,7 +69,8 @@ Class.create("Game_CommonEvents", {
 				commands.commands[i] = commands.commands[i].replace(/&apos;/g, "'");
 			}
 			
-			interpreter = Class.New('Interpreter', [this.event, CE.clone(commands.commands)]);
+			RPGJS.Plugin.call("Game", "commonEvents", [event, this]);
+			interpreter = Class.New('Interpreter', [this.event, commands.commands]);
 			interpreter.execCommands(finish);
 		}
 	}

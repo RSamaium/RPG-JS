@@ -51,7 +51,7 @@ Class.create("Sprite_Character", {
 	},
 	
 	refresh: function(data) {
-		
+
 		var self = this;
 		if (data) {
 		
@@ -151,7 +151,7 @@ Class.create("Sprite_Character", {
 			size: [this.nbSequenceX, this.nbSequenceY],
 			tile: [this.width, this.height],
 			set: array,
-			reg: [0 + this.regX, 18 + this.regY]
+			reg: [0 + this.regX, this.height - global.game_map.tile_h + this.regY]
 		  }]
 		});
 	},
@@ -162,9 +162,10 @@ Class.create("Sprite_Character", {
 		// var frequence = 6;
 		var position = {
 			left: 0 - this.regX,
-			top: -18 - this.regY
+			top: -(this.height - global.game_map.tile_h) - this.regY
 		};
-		
+
+
 		this.animation = RPGJS_Canvas.Animation.New({
 		   images: "characters_" + this.graphic,
 		   animations: {
@@ -206,7 +207,8 @@ Class.create("Sprite_Character", {
 				 }
 		   }
 		});
-		this.animation.add(this.entity.el);
+
+		this.animation.add(this.entity.el, true);
 	},
 	
 	initAnimationActions: function(data) {
@@ -376,8 +378,10 @@ Class.create("Sprite_Character", {
 	},
 	changeDirection: function() {
 		var display_direction = this.getDisplayDirection();
-		if (this.spritesheet && this.direction != this.old_direction && this.graphic) {
-			this.spritesheet.draw(this.entity.el, display_direction + "_0");
+		if (this.spritesheet && (this.direction != this.old_direction || this.animation.isStopped())&& this.graphic) {
+			if (this.spritesheet.exist(display_direction + "_0")) {
+				this.spritesheet.draw(this.entity.el, display_direction + "_0");
+			}
 			if (!this.no_animation) {
 				this.animation.play(display_direction, "loop");
 			}

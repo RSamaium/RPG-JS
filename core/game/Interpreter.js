@@ -242,7 +242,7 @@ if (typeof exports != "undefined") {
 */
 	assignCommands: function(commands) {
 		commands = commands || [];
-		this.commands = commands;
+		this.commands =  CE.clone(commands);
 		this.parseCommands();
 	},
 	
@@ -254,6 +254,7 @@ if (typeof exports != "undefined") {
 			indent_if = 0,
 			indent_choice = 0
 			change = false;
+
 		for (var i=0 ; i < this.commands.length ; i++) {
 			cmd = this.commands[i];
 			match = /(^[^:]+)/.exec(cmd);
@@ -310,6 +311,7 @@ if (typeof exports != "undefined") {
 				change = false;
 			}
 		}
+
 	},
  
 /**
@@ -505,15 +507,21 @@ if (typeof exports != "undefined") {
 	cmdMoveRoute: function(dir) {
 		var self = this,
 			event = this._target(dir.target),
-			options = dir.options || [];
+			options = dir.options || [],
+			wait = CE.inArray('wait_end', options) != -1;
+
+		console.log(options);
 
 		event.moveRoute(dir.move, function() {
-			
+			if (wait) self.nextCommand();
 		}, {
 			repeat: CE.inArray('repeat', options) != -1
 		});
 		
-		self.nextCommand();
+		if (!wait) {
+			this.nextCommand();
+		}
+		
 	},
 	
 	// SHOW_ANIMATION: {'name': 1, 'target': 1}

@@ -157,7 +157,7 @@ Class.create("Game_System", {
 	
 	_stopAudio: function(id, type) {
 		this._current[type] = null;
-		RPGJS_Canvas.Sound.get(type + "s_" + id).pause();
+		RPGJS_Canvas.Sound.stop(type + "s_" + id);
 	}
 
 });

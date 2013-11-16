@@ -69,6 +69,7 @@ Class.create("Game_Switches", {
 		for (var i=0 ; i < switch_id.length ; i++) {
 			this.data[switch_id[i]] = value;
 		}
+		RPGJS.Plugin.call("Game", "switches", [switch_id, value, this]);
 		global.game_map.refreshEvents();
 	}
 

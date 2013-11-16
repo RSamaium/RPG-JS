@@ -114,6 +114,7 @@ var _class = {
 		if (this.gold < 0) {
 			this.gold = 0;
 		}
+		RPGJS.Plugin.call("Game", "changeGold", [val, this]);
 	}
 	
 	

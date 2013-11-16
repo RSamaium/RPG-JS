@@ -142,6 +142,7 @@ Variable #5 takes the value of variable #8
 			}
 			this.data[key[i]] = _var;
 		}
+		RPGJS.Plugin.call("Game", "variable", [key, operand, operation, this]);
 		global.game_map.refreshEvents();
 		
 	}

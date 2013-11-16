@@ -146,15 +146,8 @@ Class.create("Game_Character", {
 		this.graphic = +prop.graphic;
 		this.graphic_params = prop["graphic-params"];
 		
-		switch (this.type) {
-			case "random":
-				this.moveRandom();
-			break;
-			case "approach":
-				this.approachPlayer();
-			break;
-		}
 		
+		this.moveStart();
 	},
 
 /**
@@ -380,6 +373,7 @@ Example
 		var current_move = -1,
 			self = this;
 		params = params || {};
+
 		nextRoute();
 		
 		function finishRoute(wait) {
@@ -653,6 +647,21 @@ Example
 				// timer = setTimeout(rand, self.frequence * 60);
 			// }
 			
+		}
+	},
+
+	movePause: function() {
+		if (this._tick) clearTimeout(this._tick);
+	},
+
+	moveStart: function() {
+		switch (this.type) {
+			case "random":
+				this.moveRandom();
+			break;
+			case "approach":
+				this.approachPlayer();
+			break;
 		}
 	},
 	

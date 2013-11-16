@@ -1,6 +1,6 @@
 # RPG JS v2 Beta #
 
->  RPG JS use [CanvasEngine](http://canvasengine.net) 1.3.0 dev. Think integrate CanvasEngine and all extensions before RPG JS
+>  RPG JS use [CanvasEngine](http://canvasengine.net) 1.3.1 dev. Think integrate CanvasEngine and all extensions before RPG JS
 
 > Uses http://localhost for to test
 
@@ -22,7 +22,19 @@ The core of RPG JS is composed of three parts:
 
 ## Changelog ##
 
+#### Beta 1.4.3
+
+* Works on IE
+* Fix refresh an event after choice*
+* Fix collision when the height of the Sprite is different from 48px
+
+#### Beta 1.4.2
+
+* Avoid multiple animations on a moving sprite
+* Fix motion animation that was not displayed sometimes
+
 ## License ##
+
 
 MIT. Free for commercial use.
 
