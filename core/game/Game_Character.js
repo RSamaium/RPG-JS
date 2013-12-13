@@ -1728,7 +1728,8 @@ State #3 = 50%
 @return {Object}
 */
 	getItem: function(type, id) {
-		return this.items[type][id] ? this.items[type][id] : false;
+		var it = this.getItems(type);
+		return it[id] ? this.items[type][id] : false;
 	},
 	
 /**
@@ -1739,6 +1740,9 @@ State #3 = 50%
 */
 	getItems: function(type) {
 		if (type) {
+			if (!this.items[type]) {
+				this.items[type] = {};
+			}
 			return this.items[type];
 		}
 		return this.items;

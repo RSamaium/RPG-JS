@@ -72,13 +72,16 @@ RPGJS_Canvas.Scene.New({
 			array_el.push(el);
 			box.getContent().append(el);
 		}
+
 	
 		var cursor = this.createElement();
 		cursor.fillStyle = "#7778AA";
 		cursor.fillRect(-10, -10, width-30, 30);
 		cursor.opacity = .5;
 
-		box.cursor.init(cursor, array_el);
+		box.cursor.init(cursor, array_el, {
+			enter: [Input.Enter, Input.Space]
+		});
 		
 		box.cursor.select(function(el) {
 			self._onEnterPressChoice(el.attr('index'));

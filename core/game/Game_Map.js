@@ -288,10 +288,10 @@ var _class = {
 			if (!e || (!e.exist || id == entity.id)) continue;
 			
 			state = entity.hit(e);
-			
+
 			if (state.over >= 1) {
 				if (!testLineTile(state.result.coincident)) {
-					e._hit = true;
+					if (entity.id == 0) e._hit = true;
 					entity.restorePosition();
 				
 					if (state.over == 1) {
@@ -310,11 +310,11 @@ var _class = {
 
 				}
 				else {
-					e._hit = false;
+					if (entity.id == 0) e._hit = false;
 				}
 			}
 			else {
-				e._hit = false;
+				if (entity.id == 0) e._hit = false;
 			}
 			
 		}

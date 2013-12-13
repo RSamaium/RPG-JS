@@ -61,7 +61,7 @@ RPGJS_Canvas.Scene.New({
 		var images = [], sounds = [], load_i = 0, self = this;
 		if (data.graphics.tileset) images.push({tileset: RPGJS.Path.get("tilesets", data.graphics.tileset)});
 		if ( data.player.graphic) images.push(RPGJS.Path.get("characters", data.player.graphic, true));
-		// images.push({window: "../materials/Graphics/Windowskins/window.png"});
+		//images.push({window: "../materials/Graphics/Windowskins/window.png"});
 		if (global.materials.windowskins) {
 			var win_id = 1;
 			for (var id in global.materials.windowskins) {
@@ -111,21 +111,48 @@ RPGJS_Canvas.Scene.New({
 		
 		sounds.concat(RPGJS.Plugin.call("Sprite", "mapLoadSounds", [sounds, this]));
 		
-		function finish() {
+		
+
+		 var pourcent = 0,
+            _canvas = this.getCanvas(),
+            bar_full = this.createElement(300, 20),
+            bar_empty = this.createElement(300, 20),
+            text = this.createElement(),
+            width_init = bar_full.width;
+
+        text.font = '15px Arial';
+        text.fillStyle = 'white';
+       
+
+        bar_empty.x = _canvas.width / 2 - bar_empty.width / 2;
+        bar_empty.y = _canvas.height / 2 - bar_empty.height / 2;
+
+        bar_empty.strokeStyle = "white";
+       // bar_empty.strokeRect();
+        
+        bar_empty.append(bar_full, text);
+
+       	this.stage.append(bar_empty);
+
+        function progress() {
+        	var total = images.length + sounds.length;
+        	pourcent += Math.round(100 / total);
+        	bar_full.width = width_init * (pourcent / 100);
+           // bar_full.fillRect("#428bca");
+            text.fillText("Loading " + pourcent + "%", 100, 15);
+        }
+
+        function finish() {
 			if (load_i){
+				self.stage.empty();
 				self.tilesetLoad(data);
 				if (callback) callback();
 			}
 			load_i++;
 		}
 		
-		RPGJS_Canvas.Materials.load("images", images, function(img) {
-			// -- Empty
-		}, finish);
-		
-		RPGJS_Canvas.Materials.load("sounds", sounds, function(snd) {
-			// -- Empty
-		}, finish);
+		RPGJS_Canvas.Materials.load("images", images, progress, finish);		
+		RPGJS_Canvas.Materials.load("sounds", sounds, progress, finish);
 		
 		
 	},
@@ -215,6 +242,7 @@ RPGJS_Canvas.Scene.New({
 	render: function(stage) {
 	
 		if (!this.spriteset) {
+			stage.refresh();
 			return;
 		}
 	

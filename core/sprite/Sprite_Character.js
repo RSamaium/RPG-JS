@@ -92,7 +92,7 @@ Class.create("Sprite_Character", {
 				self.width = img.width / self.nbSequenceX;
 				self.height = img.height / self.nbSequenceY;
 			
-				//self.entity.el.drawImage("characters_" + self.graphic, 0, 0, self.width, self.height, -self.regX, -self.regY, self.width, self.height);
+				self.entity.el.drawImage("characters_" + self.graphic, 0, 0, self.width, self.height, -self.regX, -self.regY, self.width, self.height);
 				self.setAnimation();
 				self.setSpritesheet();
 				self.stop();
@@ -101,12 +101,7 @@ Class.create("Sprite_Character", {
 				}
 			}
 
-			if (this.id != 0) { // if not player
-				RPGJS.Path.loadMaterial("characters", this.graphic, load);
-			}
-			else {
-				load();
-			}
+			RPGJS.Path.loadMaterial("characters", this.graphic, load);
 		}
 		else {
 			this.stop();

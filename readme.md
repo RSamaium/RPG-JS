@@ -1,6 +1,6 @@
-# RPG JS v2 Beta #
+# RPG JS v2 #
 
->  RPG JS use [CanvasEngine](http://canvasengine.net) 1.3.1 dev. Think integrate CanvasEngine and all extensions before RPG JS
+>  RPG JS use [CanvasEngine](http://canvasengine.net) 1.3.1. Think integrate CanvasEngine and all extensions before RPG JS
 
 > Uses http://localhost for to test
 
@@ -22,10 +22,19 @@ The core of RPG JS is composed of three parts:
 
 ## Changelog ##
 
+#### v2.0.0
+
+* Fix change the appearance of the hero
+* Fix execution of an event when the hero is stopped
+* Spacebar usable in the selection
+* Fix the moving pictures and rotations
+* Fix test of a item possessed in the condition command if item does not exist
+* Fix test of self switch 
+
 #### Beta 1.4.3
 
 * Works on IE
-* Fix refresh an event after choice*
+* Fix refresh an event after choice
 * Fix collision when the height of the Sprite is different from 48px
 
 #### Beta 1.4.2

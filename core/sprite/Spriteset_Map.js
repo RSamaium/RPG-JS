@@ -433,7 +433,7 @@ Class.create("Spriteset_Map", {
 			el.width = img.width;
 			el.height = img.height;
 			if (params.origin == "center") {
-				el.setPositionOrigin("middle");
+				el.setOriginPoint("middle");
 			}
 			el.scaleX = params.zoom_x / 100;
 			el.scaleY = params.zoom_y / 100;
@@ -464,7 +464,7 @@ Class.create("Spriteset_Map", {
 		var el = this.pictures[id];
 		if (!el) return false;
 		if (params.origin == "center") {
-			el.setPositionOrigin("middle");
+			el.setOriginPoint("middle");
 		}
 		var t = RPGJS_Canvas.Timeline.New(el);
 		
@@ -473,12 +473,8 @@ Class.create("Spriteset_Map", {
 		params.zoom_y = params.zoom_y || 100;
 		
 		t.to({
-			x: params.x, 
-			y: params.y, 
-			opacity: params.opacity / 255, 
-			scaleX: params.zoom_x / 100, 
-			scaleY: params.zoom_y / 100
-		}, time).call(finish);
+			x: +params.x
+		}, +time).call(finish);
 	},
 	
 /**

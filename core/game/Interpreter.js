@@ -856,6 +856,7 @@ if (typeof exports != "undefined") {
 	// CHANGE_GRAPHIC: {'actor': 'all','graphic': '5'}
 	cmdChangeGraphic: function(params) {
 		global.game_player.graphic = params.graphic;
+		global.game_player.graphic_params = params['graphic-params']
 		global.game_map.refreshPlayer();
 		this.nextCommand();
 	},
@@ -1110,8 +1111,8 @@ if (typeof exports != "undefined") {
 		
 	
 		var _var = {
-			'switch[%1]'					: 'global.game_switches.get(%1)',
 			'self_switch[%1]'				: 'global.game_selfswitches.get(this_event.map_id, this_event.id, "%1")',
+			'switch[%1]'					: 'global.game_switches.get(%1)',
 			'variable[%1]'					: 'global.game_variables.get(%1)',
 			'actor_in_party[%1]'			: 'global.game_actors.getById(%1)',
 			'actor_name[%1]'				: 'actor(%1, "name", "isParameter")',
