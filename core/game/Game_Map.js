@@ -52,7 +52,7 @@ var _class = {
 	_callback: null,
 	_tick: {},
 	initialize: function() {
-		this.tick();
+		
 	},
 	
 /**
@@ -110,10 +110,30 @@ var _class = {
 		}
 		
 		function loadMap(data) {
+			
+			var w, h, tw, th;
+
 			self.map.data = data;
-			self.grid = Class.New('Grid', [data.map.length, data.map[0].length]);
-			self.grid.setCellSize(self.tile_w, self.tile_h);
-			self.grid.setPropertyCell(data.map);
+			if (RPGJS.params.tiled) {
+				w = data.layers[0].width;
+				h = data.layers[0].height;
+				tw = data.tilewidth;
+				th = data.tileheight;
+				self.tileset_prop = self.toTilesetProperties(data.tilesets[0]);
+
+			}
+			else {
+				w = data.map.length;
+				h = data.map[0].length;
+				tw = self.tile_w;
+				th = self.tile_h;
+			}
+
+			self.grid = Class.New('Grid', [w, h]);
+			self.grid.setCellSize(tw, th);
+			
+			self.grid.setPropertyCell(RPGJS.params.tiled ? self.toMapProperties(data.layers, data.width, data.height) : data.map);
+			
 
 			self._setup();
 		}
@@ -125,6 +145,40 @@ var _class = {
 		else {
 			(CE.Core || CE).getJSON("Data/Maps/MAP-" + this.map_id + ".json", loadMap);
 		}
+		this.tick();
+   },
+
+   toMapProperties: function(layers, w, h) {
+
+   		var array = [], map;
+
+   		for (var i=0 ; i < layers.length ; i++) {
+   			if (layers[i].type != "tilelayer") continue;
+   			map = layers[i].data;
+   			for (var j=0 ; j < map.length ; j++) {
+   				if (!array[j]) {
+   					array[j] = [];
+   				}
+   				array[j].push(map[j] == 0 ? null : map[j] + this.nb_autotiles_max * 48 - 1);
+   			}
+   		}
+
+
+   		return CE.toMatrix(array, w, h);
+   },
+
+   toTilesetProperties: function(tileset) {
+   		var tiles_length = (tileset.imageheight / tileset.tileheight) * (tileset.imagewidth / tileset.tilewidth),
+   			array = [], prop, val;
+   		for (var i = 0 ; i < tiles_length ; i++) {
+   			val = [];
+   			prop = tileset.tileproperties[i];
+   			if (prop && prop.passable) {
+   				val = [null, prop.passable];
+   			}
+   			array.push(val);
+   		}
+   		return array;
    },
    
    scrollMap: function(path) {
@@ -284,7 +338,7 @@ var _class = {
 		
 		for (var id in this.events) {
 			e = this.events[id];
-			
+
 			if (!e || (!e.exist || id == entity.id)) continue;
 			
 			state = entity.hit(e);
@@ -319,6 +373,7 @@ var _class = {
 			
 		}
 		
+
 		if (entity.id != 0) {
 			state = entity.hit(global.game_player);
 			
@@ -451,7 +506,10 @@ var _class = {
 		}
 			
 		this._tileset_name = tileset.name;
-		this._priorities = tileset.propreties;
+
+		
+
+		this._priorities = this.tileset_prop ? this.tileset_prop : tileset.propreties;
 		this._autotiles = autotiles ? autotiles.propreties : {};
 
 		function call(id, event) {
@@ -723,14 +781,17 @@ var _class = {
 	
 	tick: function() {
 		var self = this;
-		setInterval(function() {
+		this._tick = setInterval(function() {
 			 RPGJS.Plugin.call("Game", "tick", [self]);
 		}, 1000 / 60);
 	},
 	
 	clear: function() {
-		for (var t in this._tick) {
-			clearTimeout(this._tick[t]);
+		for (var id in this.events) {
+			this.events[id].killIntervalMove();
+		}
+		if (this._tick) {
+			clearInterval(this._tick);
 		}
 	},
 

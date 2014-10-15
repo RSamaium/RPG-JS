@@ -3,9 +3,12 @@ RPGJS_Canvas.Scene.New({
 	
 	materials: {
 		images: {
-			background: "../materials/Graphics/Pictures/Layer00.png",
-			//face: "Graphics/Faces/Aluxes.png",
-			box: "../materials/Graphics/Pictures/Sprite_Status.png"
+			// [CUSTOM_PATH]
+			//background: "../materials/Graphics/Pictures/Layer00.png",
+			// box: "../materials/Graphics/Pictures/Sprite_Status.png"
+			 background: "Graphics/Pictures/Layer00.png",
+			 box: "Graphics/Pictures/Sprite_Status.png"
+			// [END_CUSTOM_PATH]
 		}
 	},
 	

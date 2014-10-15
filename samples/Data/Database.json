@@ -2178,6 +2178,12 @@
             "autotiles_id": "1",
             "events": [],
             "dynamic_event": []
+        },
+		"3": {
+            "tileset_id": "1",
+            "autotiles_id": "1",
+            "events": [],
+            "dynamic_event": []
         }
     }
 }

@@ -34,7 +34,7 @@ RPGJS_Canvas.Scene.New({
 			//"window": "../materials/Graphics/Windowskins/window.png"
 		}
 	},*/
-	ready: function(stage, el, params) {
+	ready: function(stage, params) {
 		var self = this;
 		this.stage = stage;	
 		this.params = params;
@@ -61,7 +61,10 @@ RPGJS_Canvas.Scene.New({
 		var images = [], sounds = [], load_i = 0, self = this;
 		if (data.graphics.tileset) images.push({tileset: RPGJS.Path.get("tilesets", data.graphics.tileset)});
 		if ( data.player.graphic) images.push(RPGJS.Path.get("characters", data.player.graphic, true));
+		// [CUSTOM_PATH]
 		//images.push({window: "../materials/Graphics/Windowskins/window.png"});
+		 images.push({window: "Graphics/Windowskins/window.png"});
+		// [END_CUSTOM_PATH]
 		if (global.materials.windowskins) {
 			var win_id = 1;
 			for (var id in global.materials.windowskins) {
@@ -224,14 +227,14 @@ RPGJS_Canvas.Scene.New({
 		this.keysAssign();
 		
 		if (this.data.system.gamepad != "_no" && typeof(Gamepad) !== 'undefined') {
-			this.gamepad = RPGJS_Canvas.Input.Gamepad.init();
+			/*this.gamepad = RPGJS_Canvas.Input.Gamepad.init();
 			this.gamepad.addListener("faceButton0", Input.A);
 			this.gamepad.addListener("faceButton1", Input.Esc);
 			this.gamepad.addListener("faceButton2", Input.Enter);
 			this.gamepad.addListener("dpadLeft", Input.Left);
 			this.gamepad.addListener("dpadRight", Input.Right);
 			this.gamepad.addListener("dpadDown", Input.Bottom);
-			this.gamepad.addListener("dpadUp", Input.Up);
+			this.gamepad.addListener("dpadUp", Input.Up);*/
 		}
 		
 		
@@ -240,7 +243,7 @@ RPGJS_Canvas.Scene.New({
 
 	},
 	render: function(stage) {
-	
+
 		if (!this.spriteset) {
 			stage.refresh();
 			return;
@@ -274,8 +277,12 @@ RPGJS_Canvas.Scene.New({
 		RPGJS.Plugin.call("Sprite", "sceneMapRender", [this]);
 		
 		stage.refresh();
-		if (this.data.system.gamepad != "_no" && typeof(Gamepad) !== 'undefined') this.gamepad.update();
+		//if (this.data.system.gamepad != "_no" && typeof(Gamepad) !== 'undefined') this.gamepad.update();
 
+	},
+
+	exit: function() {
+		global.game_map.clear();
 	},
 	
 /**

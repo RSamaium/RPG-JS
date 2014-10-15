@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+  <head>
+
+	<script src="http://canvasengine.net/cdn/dev/canvasengine-latest.all.min.js"></script>
+
+	<script src="http://localhost/Github/CanvasEngine/extends/Tiled.js"></script>
+
+	<script src="../core/Main.js"></script>
+	
+	<script src="../core/game/Interpreter.js"></script>
+	<script src="../core/game/Game_Plugin.js"></script>
+	<script src="../core/game/Game_System.js"></script>
+	<script src="../core/game/Game_Switches.js"></script>
+	<script src="../core/game/Game_Variables.js"></script>
+	<script src="../core/game/Game_SelfSwitches.js"></script>
+	<script src="../core/game/Game_CommonEvents.js"></script>
+
+	<script src="../core/game/Game_Map.js"></script>
+	<script src="../core/game/Game_Character.js"></script>
+	<script src="../core/game/Game_Player.js"></script>
+	
+	<script src="../core/game/Game_Event.js"></script>
+	<script src="../core/game/Game_Actor.js"></script>
+	<script src="../core/game/Game_Save.js"></script>
+	<script src="../core/sprite/Sprite.js"></script>
+	<script src="../core/sprite/Sprite_Plugin.js"></script>
+	<script src="../core/sprite/Spriteset_Map.js"></script>
+	<script src="../core/sprite/Sprite_Character.js"></script>
+	
+	<script>
+	
+		RPGJS.Materials = {
+			"characters": {
+				"1": "event1.png",
+				"2": "event2.png"
+			},
+			"tilesets": {
+				"1": "tileset.png"
+			}
+		};
+	
+		RPGJS.Database = {
+			"actors": {
+				"1": {
+					"graphic": "1"
+				}
+			},
+			"tilesets": {
+				"1": {
+					"graphic": "1"
+				}
+			},
+			"map_infos": {		
+				"1": {
+					"tileset_id": "1"
+				},
+				"2": {
+					"tileset_id": "1"
+				},
+				"3": {
+					"tileset_id": "1"
+				}
+			}
+		};
+	
+		RPGJS.defines({
+			canvas: "canvas",
+			autoload: false,
+			scene_path: "../",
+			tiled: true
+		}).ready(function() {
+		
+			RPGJS.Player.init({
+				actor: 1,
+				start: {x: 5, y: 5, id: 3}
+			});
+			
+			RPGJS.Scene.map(function() {
+				
+				var e = RPGJS.Map.createEvent("EV-1", 3, 3);
+				
+				e.addPage({
+					"trigger": "action_button",
+					"type": "fixed",
+					"graphic": "2"
+				}, [
+					"TRANSFER_PLAYER: {'position-type': 'constant', 'appointement': {'x':1,'y': 1, 'id':2}}"
+				]);
+				
+				e.display();
+				
+			});
+		});
+	
+	</script>
+		
+		
+		
+ </head>
+  <body>
+  
+	<canvas id="canvas" width="640px" height="480px"></canvas>
+	
+  </body>
+</html>

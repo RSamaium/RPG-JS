@@ -4,27 +4,20 @@ Class.create("Sprite_Hub", {
 	max_hp: 0,
 
 	mapLoadImages: function(array) {
-		
 		// [CUSTOM_PATH]
 		array.push(RPGJS.Path.getFile("pictures", "../../../materials/Graphics/Pictures/hub.png", "hub"));
 		array.push(RPGJS.Path.getFile("pictures", "../../../materials/Graphics/Pictures/hp_meter.png", "hp_meter"));
-		array.push(RPGJS.Path.getFile("pictures", "../../../materials/Graphics/Pictures/hp_number.png", "hp_number"));
-		array.push(RPGJS.Path.getFile("pictures", "../../../materials/Graphics/Pictures/Hero_Face.png", "hero_face"));
 		array.push(RPGJS.Path.getFile("pictures", "../../../materials/Graphics/Pictures/button_A.png", "button_a"));
 		array.push(RPGJS.Path.getFile("pictures", "../../../materials/Graphics/Pictures/button_B.png", "button_b"));
 		// array.push(RPGJS.Path.getFile("pictures", "hub.png", "hub"));
 		// array.push(RPGJS.Path.getFile("pictures", "hp_meter.png", "hp_meter"));
-		// array.push(RPGJS.Path.getFile("pictures", "hp_number.png", "hp_number"));
-		// array.push(RPGJS.Path.getFile("pictures", "Hero_Face.png", "hero_face"));
 		// array.push(RPGJS.Path.getFile("pictures", "button_A.png", "button_a"));
 		// array.push(RPGJS.Path.getFile("pictures", "button_B.png", "button_b"));
 		// [END_CUSTOM_PATH]
-		
 		return array;
 	},
 
 	drawMapEnd: function(spriteset_map) {
-		
 		var stage = this.scene.getStage(),
 			scene = this.scene,
 			self = this,
@@ -36,7 +29,7 @@ Class.create("Sprite_Hub", {
 		hub.content.x = 10;
 		hub.content.y = 5;
 		
-		hub.hero_face.drawImage("pictures_hero_face");
+		//hub.hero_face.drawImage("pictures_hero_face");
 		hub.hero_face.x = -10;
 		hub.hero_face.y = -10;
 		
@@ -100,7 +93,6 @@ Class.create("Sprite_Hub", {
 			});
 		}
 		
-			
 	},
 	
 	_loadMap: function(hp, max_hp) {

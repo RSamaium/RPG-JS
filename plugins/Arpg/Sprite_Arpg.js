@@ -140,7 +140,7 @@ Class.create("Sprite_Arpg", {
 	},
 	
 	_playerDead: function() {
-		RPGJS_Core.scene.call("Scene_Gameover");
+		RPGJS.Scene.call("Scene_Gameover");
 	},
 	
 	loadMap: function() {

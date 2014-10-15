@@ -37,7 +37,6 @@ Class.create("Sprite_Character", {
 	_actions: {},
 	initialize: function(scene, data, layer, model) {
 		this.scene = scene;
-		
 		this.entity = Class.New("Entity", [scene.getStage(), {}, false]);
 		this.entity.setModel(model);
 		this.refresh(data);

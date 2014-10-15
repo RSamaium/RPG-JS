@@ -15,6 +15,7 @@ RPGJS_Canvas.Scene.New({
 	},
 	
 	box: function() {
+
 	
 		var self = this;
 		

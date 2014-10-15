@@ -47,6 +47,7 @@ Class.create("Spriteset_Map", {
 	nb_layer: 3,
 	nb_autotiles_max: 64,
 	autotiles: [],
+	event_layer: null,
 	events: {},
 /**
 @doc spriteset_map/
@@ -69,15 +70,51 @@ Class.create("Spriteset_Map", {
 		this.data = data;
 		this.params = params;
 		this.map = this.scene.createElement();
-		this.nb_layer = this.nb_layer * 2 + 1;
-		CE.each(this.nb_layer, function(i) {
-			self.layer[i] = scene.createElement();
-			self.map.append(self.layer[i]);
-		});
+		
+
 		this.picture_layer = this.scene.createElement();
 		this.stage.append(this.map, this.picture_layer);
-		this.tilemap({});
+
+		if (RPGJS.params.tiled) {
+			this.tiled();
+		}
+		else {
+			this.nb_layer = this.nb_layer * 2 + 1;
+			CE.each(this.nb_layer, function(i) {
+				self.layer[i] = scene.createElement();
+				self.map.append(self.layer[i]);
+			});
+			this.tilemap({});
+		}
+		
+		
+		
 	},
+
+	tiled: function() {
+
+		RPGJS.Plugin.call("Sprite", "drawMapBegin", [this]);
+
+		var tiled = RPGJS_Canvas.Tiled.new(),
+			self = this;
+
+        tiled.ready(function() {
+
+            self.width = this.width;
+			self.height = this.height;
+
+			RPGJS.Plugin.call("Sprite", "drawMapEnd", [this]);
+
+			self.characters(self.event_layer = this.getLayerObject());
+
+             
+        });
+        tiled.load(this.scene, this.map, this.data.data, {
+        	pack: true
+        });
+
+	},
+
 	tilemap: function(propreties) {
 	
 		RPGJS.Plugin.call("Sprite", "drawMapBegin", [this]);
@@ -310,7 +347,7 @@ Class.create("Spriteset_Map", {
 					prop;
 					  this.width = map_data.length;
 					  this.height = map_data[0].length;
-					  CE.benchmark("draw map");
+
 					  CE.each(map_data, function(i, x) {
 						CE.each(map_data[i], function(j, array) {
 							CE.each(map_data[i][j], function(k, id) {
@@ -368,7 +405,9 @@ Class.create("Spriteset_Map", {
 		
 		RPGJS.Plugin.call("Sprite", "drawMapEnd", [this]);
 
-		this.characters(this.layer[3]);
+		this.event_layer = this.layer[3];
+
+		this.characters(this.event_layer);
 		
 	},
 	
@@ -398,7 +437,7 @@ Class.create("Spriteset_Map", {
 	},
 	
 	addCharacter: function(data) {
-		var sprite = Class.New("Sprite_Character", [this.scene, data, this.layer[3], global.game_map.getEvent(data.id)]);
+		var sprite = Class.New("Sprite_Character", [this.scene, data, this.event_layer, global.game_map.getEvent(data.id)]);
 		this.events[data.id] = sprite;
 		RPGJS.Plugin.call("Sprite", "addCharacter", [sprite, data, this]);
 	},
@@ -558,7 +597,7 @@ Class.create("Spriteset_Map", {
 	moveEvent: function(id, value, dir, nbDir, params) {
 		var axis = dir == "left" || dir == "right" ? "x" : "y";
 		this.getEvent(id).move(axis, value, dir, nbDir, params);
-		this.layer[3].children().sort(function(a, b) {
+		this.event_layer.children().sort(function(a, b) {
 			var za = a._z ? a._z : a.y;
 			var zb = b._z ? b._z : b.y;
 			return za - zb;

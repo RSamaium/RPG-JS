@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.0" orientation="orthogonal" width="20" height="15" tilewidth="32" tileheight="32">
+ <tileset firstgid="1" name="tileset" tilewidth="32" tileheight="32">
+  <image source="../Graphics/Tilesets/tileset.png" width="256" height="1600"/>
+  <tile id="197">
+   <properties>
+    <property name="passable" value="15"/>
+   </properties>
+  </tile>
+  <tile id="198">
+   <properties>
+    <property name="passable" value="15"/>
+   </properties>
+  </tile>
+ </tileset>
+ <layer name="Calque de Tile 1" width="20" height="15">
+  <data encoding="base64" compression="zlib">
+   eJxjZGBgYBzFo3gUj+IhgAHGRgEt
+  </data>
+ </layer>
+ <layer name="Calque 2" width="20" height="15">
+  <data encoding="base64" compression="zlib">
+   eJxjYBgFgxmEoPGPAvExID4OxCcIqMUGYkiwmxi1KSSYR4raUTAKsAEA9WIFQw==
+  </data>
+ </layer>
+ <objectgroup name="Calque d'objets 1" width="20" height="15"/>
+ <layer name="Calque 3" width="20" height="15">
+  <data encoding="base64" compression="zlib">
+   eJxjYBjaYC0QrwPi9UC8gQrmbQXibUC8HYh3UMG8vUC8D4j3A/EBKpg3CkbBSAYAwaIIjw==
+  </data>
+ </layer>
+</map>
