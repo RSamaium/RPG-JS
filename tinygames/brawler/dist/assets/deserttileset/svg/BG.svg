@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Creator: CorelDRAW X6 -->
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="108.373mm" height="81.28mm" version="1.1" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
+viewBox="0 0 5944 4458"
+ xmlns:xlink="http://www.w3.org/1999/xlink">
+ <defs>
+  <style type="text/css">
+   <![CDATA[
+    .fil3 {fill:#A1774D}
+    .fil2 {fill:#B2885E}
+    .fil1 {fill:#BCE2F9}
+    .fil7 {fill:#BF8720}
+    .fil12 {fill:#CB9322}
+    .fil4 {fill:#D99527}
+    .fil8 {fill:#D9ECFF}
+    .fil5 {fill:#DD9F42}
+    .fil10 {fill:#E5A029}
+    .fil6 {fill:#E7C390}
+    .fil9 {fill:#E9AA45}
+    .fil11 {fill:#F3CE97}
+    .fil0 {fill:url(#id0)}
+   ]]>
+  </style>
+  <linearGradient id="id0" gradientUnits="userSpaceOnUse" x1="2971.75" y1="0" x2="2971.75" y2="4457.62">
+   <stop offset="0" style="stop-color:#B8DCFE"/>
+   <stop offset="1" style="stop-color:#FEFEFE"/>
+  </linearGradient>
+ </defs>
+ <g id="Layer_x0020_1">
+  <metadata id="CorelCorpID_0Corel-Layer"/>
+  <g id="_805144640">
+   <rect class="fil0" width="5943" height="4458"/>
+   <path class="fil1" d="M5944 3060c-99,0 -562,135 -921,45 -298,-75 -499,-377 -603,-377 -190,0 -389,332 -604,332 -198,0 -475,-390 -689,-390 -295,0 -533,390 -842,390 -223,0 -332,-431 -554,-431 -215,0 -543,431 -751,431 -191,0 -349,-468 -530,-468 -145,0 -314,468 -450,468l0 780 5944 0c0,-260 0,-520 0,-780z"/>
+   <g>
+    <path class="fil2" d="M0 3168c213,0 464,-391 735,-391 224,0 459,391 711,391 235,0 470,-266 721,-266 349,0 720,266 1084,266 262,0 391,-508 653,-508 253,0 639,508 885,508 225,0 411,-551 624,-551 171,0 371,551 530,551l0 919 -5943 0c0,-306 0,-612 0,-919z"/>
+    <path class="fil3" d="M5943 3468l0 619 -5943 0 0 -619c160,0 374,-406 545,-406 213,0 385,406 610,406 245,0 559,-280 812,-280 262,0 463,280 726,280 364,0 735,-266 1083,-266 252,0 487,266 721,266 252,0 488,-392 711,-392 271,0 523,392 735,392z"/>
+   </g>
+   <g>
+    <polygon class="fil4" points="2773,3773 2315,2869 1748,3683 "/>
+    <polygon class="fil5" points="2772,3772 2315,2869 3266,3478 "/>
+   </g>
+   <g>
+    <polygon class="fil4" points="4603,3492 4988,2789 5463,3515 "/>
+    <polygon class="fil5" points="4603,3491 4988,2789 4187,3262 "/>
+   </g>
+   <g>
+    <path class="fil5" d="M5944 4248l-5944 0 0 -777c332,0 658,-228 967,-200 616,55 1193,375 1825,295 472,-60 1027,-502 1522,-502 491,0 1138,407 1630,407l0 777z"/>
+    <path class="fil4" d="M5944 4248l-5944 0 0 -410c332,0 639,208 948,236 615,54 1096,-235 1728,-315 472,-60 1124,-95 1618,-95 492,0 1158,174 1649,174l1 410z"/>
+    <path class="fil6" d="M0 3509l0 -38c332,0 658,-228 967,-200 616,55 1193,375 1825,295 472,-60 1027,-502 1522,-502 491,0 1138,407 1630,407l0 38c-492,0 -1139,-406 -1630,-406 -495,0 -1050,441 -1522,501 -632,80 -1209,-240 -1825,-295 -309,-27 -635,200 -967,200z"/>
+    <ellipse class="fil7" cx="5005" cy="3432" rx="102" ry="51"/>
+    <ellipse class="fil6" cx="4093" cy="3330" rx="80" ry="31"/>
+    <ellipse class="fil7" cx="3786" cy="3814" rx="53" ry="22"/>
+    <ellipse class="fil7" cx="1997" cy="3734" rx="53" ry="24"/>
+    <ellipse class="fil6" cx="2325" cy="4039" rx="29" ry="5"/>
+    <ellipse class="fil6" cx="647" cy="3587" rx="39" ry="12"/>
+    <ellipse class="fil7" cx="461" cy="3846" rx="51" ry="29"/>
+   </g>
+   <path class="fil8" d="M0 633c2803,-619 4494,435 5943,0l0 -164c-2145,435 -3846,-620 -5943,0l0 164z"/>
+   <path class="fil8" d="M5944 1150c-2804,-388 -4495,273 -5944,0l0 -103c2146,273 3846,-388 5944,0l0 103z"/>
+   <g>
+    <path class="fil9" d="M0 4458l5943 0 0 -778c-332,0 -658,-227 -966,-200 -616,55 -1194,375 -1826,295 -471,-60 -1026,-501 -1521,-501 -492,0 -1138,406 -1630,406l0 778z"/>
+    <path class="fil10" d="M0 4458l5943 0 0 -410c-332,0 -638,208 -947,235 -616,55 -1097,-234 -1728,-314 -472,-60 -1124,-95 -1619,-95 -491,0 -1157,174 -1649,174l0 410z"/>
+    <path class="fil11" d="M5943 3719l0 -39c-332,0 -658,-227 -966,-200 -616,55 -1194,375 -1826,295 -471,-60 -1026,-501 -1521,-501 -492,0 -1138,406 -1630,406l0 39c492,0 1138,-406 1630,-406 495,0 1050,441 1521,501 632,80 1210,-240 1826,-295 308,-28 634,200 966,200z"/>
+    <ellipse class="fil12" cx="938" cy="3642" rx="102" ry="51"/>
+    <ellipse class="fil11" cx="1850" cy="3540" rx="80" ry="31"/>
+    <ellipse class="fil12" cx="2157" cy="4024" rx="53" ry="22"/>
+    <ellipse class="fil12" cx="3947" cy="3944" rx="53" ry="24"/>
+    <ellipse class="fil11" cx="3618" cy="4249" rx="29" ry="5"/>
+    <ellipse class="fil11" cx="5296" cy="3796" rx="39" ry="12"/>
+    <ellipse class="fil12" cx="5483" cy="4055" rx="51" ry="29"/>
+   </g>
+  </g>
+ </g>
+</svg>
