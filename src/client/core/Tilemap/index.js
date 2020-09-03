@@ -8,17 +8,21 @@ PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
 
 export default class TileMap extends PIXI.Container {
 
-    constructor(data) {
-        super();
-        this.data = data
+    constructor() {
+        super()
         this.x = 0
         this.y = 0
-        Object.assign(this, data)
         this.background = new PIXI.Graphics()
         this.eventsLayer = new PIXI.Container()
     }
 
-    load() {
+    load(data) {
+
+        this.removeChildren()
+
+        this.data = data
+        Object.assign(this, data)
+
         this.background.beginFill(0xffffff);
         this.background.drawRect(
             0,
@@ -29,7 +33,7 @@ export default class TileMap extends PIXI.Container {
         this.background.endFill();
         this.addChild(this.background);
 
-        const route = './assets'
+        const route = './assets/maps'
 
         this.data.tileSets.forEach((tileSet) => {
             this.tileSets.push(new TileSet(route, tileSet));
@@ -37,7 +41,7 @@ export default class TileMap extends PIXI.Container {
 
         this.data.layers.forEach((layerData, index) => {
             layerData.map = this
-            if (index == 1) {
+            if (index == 2) {
                 this.addChild(this.eventsLayer) 
             }
             switch (layerData.type) {

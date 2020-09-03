@@ -1,7 +1,7 @@
 import { GameEngine, SimplePhysicsEngine } from 'lance-gg';
 import Player from './Player'
+import Event from './Event'
 import Map from './Map'
-
 
 export default class Game extends GameEngine {
 
@@ -29,8 +29,9 @@ export default class Game extends GameEngine {
     }
 
     registerClasses(serializer) {
-        serializer.registerClass(Player);
-        serializer.registerClass(Map);
+        serializer.registerClass(Player)
+        serializer.registerClass(Map)
+        serializer.registerClass(Event)
     }
 
     gameLogic() {
@@ -47,23 +48,47 @@ export default class Game extends GameEngine {
         return player
     }
 
+    addEvent() {
+        const event = new Event(this, null, { playerId: 0 })
+        this.addObjectToWorld(event)
+        return event
+    }
+
     processInput(inputData, playerId) {
         super.processInput(inputData, playerId)
         let player = this.world.queryObject({ playerId, instanceType: Player })
         if (!player) return
+        
+        const map = Map.buffer.get(player.map)
+        const tileIndex = map.width * Math.floor(player.position.y / map.tileHeight) + Math.floor(player.position.x / map.tileWidth)
+        const tiles = []
+
+        for (let layer of map.layers) {
+            if (layer.type != 'tile') continue
+            tiles.push(layer.tiles[tileIndex])
+        }
+
+        console.log(tiles)
+  
         let nextAction = null
         if (inputData.input === 'right') {
             player.position.x += this.playerSpeedMove
+            player.position.x = Math.floor(player.position.x)
             player.direction = 2
             player.progress -= 3
-            console.log(player.position)
             nextAction = Player.ACTIONS.RUN;
         }
         else if (inputData.input === 'left') {
-            player.position.x -= this.playerSpeedMove
-            player.direction = 1
-            player.progress -= 3
-            nextAction = Player.ACTIONS.RUN;
+            if (player.position.x - this.playerSpeedMove < 0) {
+                player.position.x = 0
+            }
+            else {
+                player.position.x -= this.playerSpeedMove
+                player.position.x = Math.floor(player.position.x)
+                player.direction = 1
+                player.progress -= 3
+                nextAction = Player.ACTIONS.RUN;
+            }
         }
         else if (inputData.input === 'up') {
             player.position.y -= this.playerSpeedMove
@@ -81,12 +106,16 @@ export default class Game extends GameEngine {
             nextAction = Player.ACTIONS.IDLE;
         }
 
+        if (inputData.input === 'space') {
+            this.emit('action', player)
+        }
+
         if (player.action !== nextAction) {
             player.progress = 99;
         }
         if (player.progress <= 0) player.progress = 99
         player.action = nextAction;
-       // player.refreshToPhysics();
+        //player.refreshToPhysics();
     }
 
     serverSideInit() {

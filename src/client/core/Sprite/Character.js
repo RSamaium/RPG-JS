@@ -34,23 +34,41 @@ export default class Character extends PIXI.AnimatedSprite {
 
     update(obj) {
 
-        this._x = this.x
+        this._x = Math.floor(obj.position.x)
+        this._y = Math.floor(obj.position.y)
 
-        this.x = Math.round(obj.x)
-        this.y = Math.round(obj.y)
+       // this._dir = obj.direction
+
+        /*this.x = Math.floor(obj.position.x)
+        this.y = obj.position.y
+
+        console.log('draw', this.x)*/
+
+      
+        if (this._x > this.x) {
+            this.x += Math.min(4, this._x - this.x)
+        }
+
+        if (this._x < this.x) {
+            this.x -= Math.min(4, this.x - this._x)
+        }
+
+        if (this._y > this.y) {
+            this.y += Math.min(4, this._y - this.y)
+        }
+
+        if (this._y < this.y) {
+            this.y -= Math.min(4, this.y - this._y)
+        }
         
-        if (this.x > this._x) console.log(obj)
-
-       //this.x += (Math.floor(Math.random() * Math.floor(2))) == 0 ? 3 : 6
-        
-
+    
       //  console.log(obj.position)
 
         this.textures = this.directions[obj.direction]
 
-        /*let textureCount = this.textures.length;
+        let textureCount = this.textures.length;
         let progress = (99 - obj.progress) / 100;
         let image = Math.floor(progress * textureCount);
-        this.gotoAndStop(image)*/
+        this.gotoAndStop(image)
     }
 }

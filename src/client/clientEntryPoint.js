@@ -8,14 +8,14 @@ const qsOptions = querystring.parse(location.search);
 // is sent to both game engine and client engine
 const defaults = {
     traceLevel: 1000,
-    delayInputCount: 5,
+    delayInputCount: 8,
     scheduler: 'render-schedule',
     syncOptions: {
         sync: qsOptions.sync || 'extrapolate',
-        localObjBending: 0.8,
-        remoteObjBending: 1.0, 
-        bendingIncrements: 6
-    }
+        localObjBending: 0.2,
+        remoteObjBending: 0.8
+    },
+    verbose: true
 };
 let options = Object.assign(defaults, qsOptions);
 

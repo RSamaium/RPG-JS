@@ -19,7 +19,7 @@ export default class TileLayer extends PIXI.Container {
         this.layer = layer;
         this.tileSets = tileSets;
         this.alpha = layer.opacity;
-        this.tiles = [];
+      //  this.tiles = [];
 
         Object.assign(this, layer);
 
@@ -69,7 +69,7 @@ export default class TileLayer extends PIXI.Container {
                             tile.gotoAndPlay(0);
                         }
 
-                        this.tiles.push(tile);
+                      //  this.tiles.push(tile);
 
                         this.addChild(tile);
                     }

@@ -1,5 +1,7 @@
 import { ServerEngine } from 'lance-gg';
 import Player from '../common/Player';
+import Event from '../common/Event';
+import GameMap from '../common/Map';
 import Map from './Map'
 
 let game = null;
@@ -11,25 +13,43 @@ export default class RpgServerEngine extends ServerEngine {
         super(io, gameEngine, inputOptions);
         this.game = gameEngine
         game = gameEngine;
-        game.on('postStep', this.postStep.bind(this));
+        game.on('postStep', this.postStep.bind(this))
+        gameEngine.on('action', this.playerAction.bind(this))
     }
 
     async start() {
-        super.start();
-
-        const map = new Map(this, {
-            id: 'map-0',
-            tilemap: __dirname + '/../../game/assets/test.tmx'
-        })
-
-        this.map = await map.load() 
+        super.start()
     }
 
-    changeMap(mapId, player) {
+    async loadMap(id, name) {
+        const map = new Map(this, {
+            id,
+            tilemap: __dirname + '/../../game/assets/maps/' + name
+        })
+        await map.load() 
+    }
+
+    async changeMap(mapId, player) {
+
+        const MAPS = {
+            '0': 'test.tmx',
+            '1': 'second.tmx'
+        }
+
+        await this.loadMap(mapId, MAPS[mapId])
+
+        //const event = game.addEvent()
+        //this.assignObjectToRoom(event, 'map-0')
+
+        player.map = mapId
+
         this.assignPlayerToRoom(player.playerId, mapId)
         this.assignObjectToRoom(player, mapId)
-        this.sendToPlayer(player, 'map', this.map)
-        
+        this.sendToPlayer(player, 'map', GameMap.buffer.get(mapId))
+    }
+
+    playerAction(player) {
+        this.changeMap('1', player)
     }
 
     sendToPlayer(currentPlayer, eventName, data) {
@@ -44,10 +64,9 @@ export default class RpgServerEngine extends ServerEngine {
     }
 
     onPlayerConnected(socket) {
-        super.onPlayerConnected(socket);
-        const player = game.addPlayer(socket.playerId);
-        this.changeMap('map-' + i, player)
-    
+        super.onPlayerConnected(socket)
+        const player = game.addPlayer(socket.playerId)
+        this.changeMap('0', player)
     }
 
     onPlayerDisconnected(socketId, playerId) {
@@ -59,6 +78,7 @@ export default class RpgServerEngine extends ServerEngine {
     postStep() {
         let players = game.world.queryObjects({ instanceType: Player });
         for (let player of players) {
+            
             //console.log(player._roomName, player.id)
         }
     }

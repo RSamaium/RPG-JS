@@ -4,6 +4,8 @@ import { Renderer } from 'lance-gg';
 import { Viewport } from 'pixi-viewport'
 import TileMap from './core/Tilemap'
 import Character from './core/Sprite/Character';
+import Player from './core/Game/Player';
+import Map from '../common/Map';
 
 let game = null
 
@@ -11,7 +13,7 @@ export default class RpgRenderer extends Renderer {
 
     get ASSETPATHS() {
         return {
-            tileset: 'assets/tileset.png',
+            tileset: 'assets/maps/tileset.png'
         };
     }
 
@@ -25,6 +27,8 @@ export default class RpgRenderer extends Renderer {
             width: 600
         }
         this.sprites = {}
+        this.currentPlayer = null
+        this.tilemap = new TileMap()
     }
 
     init() {
@@ -79,8 +83,10 @@ export default class RpgRenderer extends Renderer {
     }
 
     addMap(obj) {
-        this.tilemap = new TileMap(obj)
-        this.tilemap.load()
+
+        Map.buffer.set(obj.id, obj)
+   
+        this.tilemap.load(obj)
 
         this.viewport = new Viewport({
             screenWidth: this.options.width,
@@ -95,6 +101,8 @@ export default class RpgRenderer extends Renderer {
 
         this.viewport.addChild(this.tilemap)
 
+        console.log(this.currentPlayer)
+
         /*this.viewport.resize({
             worldWidth: obj.width * obj.tileWidth,
             worldHeight: obj.height * obj.tileHeight
@@ -104,19 +112,26 @@ export default class RpgRenderer extends Renderer {
 
     addPlayer(obj) {
         obj.image = {
-            source: 'chara.png',
+            source: 'characters/chara.png',
             width: 128,
             height: 192,
             framesWidth: 4,
             framesHeight: 4
         }
-        const sprite = new Character(obj)
+        const sprite = new Player(obj)
         sprite.load()
+
         this.sprites[obj.id] = sprite
         this.tilemap.eventsLayer.addChild(sprite)
+
         if (obj.playerId === this.gameEngine.playerId) {
-            this.viewport.follow(sprite)
+            this.currentPlayer = sprite
+            this.viewport.follow(this.currentPlayer)
         }  
+    }
+
+    addEvent(obj) {
+        console.log(obj)
     }
 
     removePlayer(obj) {
