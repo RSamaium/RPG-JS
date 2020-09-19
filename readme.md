@@ -1,3 +1,8 @@
+**News on September 19, 2020**
+Version 2 of RPGJS is no longer maintained. However, we were working on version 3. This will allow you to create an RPG or MMORPG with a simple code. The code is not yet on Github. Don't forget to follow this project to support it!
+
+Note that the site is down but we will put it back in the next few days
+
 # RPG JS v2 #
 
 >  RPG JS use [CanvasEngine](http://canvasengine.net) 1.3.1. Think integrate CanvasEngine and all extensions before RPG JS
@@ -18,7 +23,7 @@ The core of RPG JS is composed of three parts:
 
 ## Get Started ##
 
-[http://rpgjs.com/v2/doc/?p=tuto-get_started.html](http://rpgjs.com/v2/doc/?p=tuto-get_started.html)
+[http://rpgjs.com/v2/doc/?p=tuto-get_started.html](/doc/get_started.md)
 
 ## Changelog ##
 
