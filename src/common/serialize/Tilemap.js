@@ -21,8 +21,7 @@ export default class TilemapSerializable extends Serializable {
                     tiles: layer.tiles.map(tile => {
                         return {
                             id: tile.id,
-                            gid: tile.gid,
-                            aaaaaaaaaaa: []
+                            gid: tile.gid
                         }
                     }),
                     horizontalFlips: layer.horizontalFlips,
