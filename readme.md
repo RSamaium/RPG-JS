@@ -1,5 +1,7 @@
 > **News on September 19, 2020**
-Version 2 of RPGJS is no longer maintained. However, we were working on version 3. This will allow you to create an RPG or MMORPG with a simple code. The code is not yet on Github. Don't forget to follow this project to support it!
+Version 2 of RPGJS is no longer maintained. However, we were working on version 3. This will allow you to create an RPG or MMORPG with a simple code. Don't forget to follow this project to support it!
+
+v3 Branch (do not use do not produce yet): https://github.com/RSamaium/RPG-JS/tree/v3
 
 Website: [rpgjs.dev](https://rpgjs.dev)  
 
