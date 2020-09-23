@@ -1,5 +1,6 @@
 import RpgCommonMap  from '../../common/Map'
 import { isBrowser } from '../../common/Utils'
+import path from 'path'
 import tmx from '../parser/tmx'
 
 export class RpgMap extends RpgCommonMap {
@@ -19,6 +20,7 @@ export class RpgMap extends RpgCommonMap {
         }
         const data = await this.parseFile() 
         super.load(data) 
+        RpgCommonMap.buffer.set(this.id, this)
         this.server.createRoom(this.id)
         this._events = this.createEvents('sync')
         this.onLoad()
@@ -31,7 +33,7 @@ export class RpgMap extends RpgCommonMap {
     onLoad() {}
 
     createEvents(type, player?) {
-        const events = []
+        const events: any[] = []
 
         for (let [event, tileX, tileY] of this.events) {
 
@@ -72,7 +74,7 @@ export class RpgMap extends RpgCommonMap {
         return events
     }
 
-    async parseFile() {
+    parseFile() {
         const parse = (content) => {
             return new Promise((resolve, reject) => { 
                 tmx.parseFile(content, (err, map) => {
@@ -85,7 +87,8 @@ export class RpgMap extends RpgCommonMap {
         let filename = this.file
 
         if (isBrowser()) {
-            filename = filename.replace(/\//g, '/../')
+            return fetch('/maps/' + path.basename(filename, '.tmx') + '.json')
+                .then(res => res.json())
         }
         
         return parse(filename)

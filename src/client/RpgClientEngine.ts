@@ -14,7 +14,7 @@ export default class RpgClientEngine extends ClientEngine<any> {
     private controls: KeyboardControls
 
     constructor(gameEngine, options) {
-        super(gameEngine, options, Renderer)
+        super(gameEngine, options.io, options, Renderer)
 
         this.renderer.options = {
             selector: '#rpg-canvas',
@@ -30,6 +30,7 @@ export default class RpgClientEngine extends ClientEngine<any> {
 
        gameEngine._playerClass = this.renderer.options.playerClass || RpgPlayer
        gameEngine._eventClass = this.renderer.options.eventClass || RpgEvent
+       gameEngine.standalone = options.standalone
 
         this._initUi()
         _initSpritesheet(this.renderer.options.spritesheets)
@@ -63,29 +64,6 @@ export default class RpgClientEngine extends ClientEngine<any> {
             }
         })
     }
-
-    /*connect() {
-        this['socket'] = clientIo.connection()
-
-        this['networkMonitor'].registerClient(this);
-
-        this['socket'].on('playerJoined', (playerData) => {
-            this['gameEngine'].playerId = playerData.playerId;
-            this['messageIndex'] = Number(this['gameEngine'].playerId) * 10000;
-        });
-
-        this['socket'].on('worldUpdate', (worldData) => {
-            this['inboundMessages'].push(worldData);
-        });
-
-        this['socket'].on('roomUpdate', (roomData) => {
-            this['gameEngine'].emit('client__roomUpdate', roomData);
-        });
-
-        this['_initSocket']()
-
-        return Promise.resolve()
-    }*/
 
     _initSocket() {
         this.onConnect()

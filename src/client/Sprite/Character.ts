@@ -28,7 +28,7 @@ export default class Character extends PIXI.Sprite {
     private _x: number = 0
     private _y: number = 0
 
-    constructor(private data: any) {
+    constructor(private data: any, private scene: any) {
         super()
         this.x = data.x 
         this.y = data.y
@@ -68,7 +68,11 @@ export default class Character extends PIXI.Sprite {
             this.setGraphic()
         }
 
-        const speed = obj.speed + (obj.speed / 3)
+        let speed = obj.speed
+
+        if (!this.scene.game.standalone) {
+            speed += (obj.speed / 3) // sync move between client and server
+        }
 
         let moving = false
 

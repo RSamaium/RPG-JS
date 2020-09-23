@@ -1,9 +1,6 @@
 import { ServerEngine } from 'lance-gg';
-import Player from '../common/Player';
 import { SceneMap } from './Scenes/Map';
-
 import PlayerObject from './Player'
-import Query from './Query'
 
 export default class RpgServerEngine extends ServerEngine {
 
@@ -38,8 +35,6 @@ export default class RpgServerEngine extends ServerEngine {
         const player = this.gameEngine.addPlayer(this.playerClass, socket.playerId, true)
         player.socket = socket
         player.server = this
-       // const customPlayer = new this.playerClass(player, this)
-       // player.instance = customPlayer
         if (player.onConnected) {
             player.onConnected()
             player.syncChanges()

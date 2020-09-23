@@ -7,43 +7,19 @@
   "description": "RPG JS is a framework for creating RPGs and MMORPG",
   "main": "server.ts",
   "dependencies": {
-    "@babel/node": "^7.2.2",
-    "babel-loader": "^8.0.5",
-    "express": "^4.14.0",
-    "lance-gg": "^4.0.8",
+    "lance-gg": "rpgjs/lance",
     "pend": "^1.2.0",
     "pixi-viewport": "^4.10.0",
     "pixi.js": "^5.2.1",
     "sat": "^0.8.0",
     "sax": "^1.2.4",
-    "socket.io": "^2.1.1",
     "tmx-parser": "^1.5.0",
-    "ts-node-dev": "^1.0.0-pre.44",
     "vue": "^2.6.12"
   },
   "devDependencies": {
-    "@babel/cli": "^7.2.3",
-    "@babel/core": "^7.3.4",
-    "@babel/plugin-proposal-decorators": "^7.10.5",
-    "@babel/plugin-transform-runtime": "^7.11.5",
-    "@babel/preset-env": "^7.3.4",
-    "@babel/preset-typescript": "^7.10.4",
-    "@babel/runtime": "^7.11.2",
-    "eslint": "^3.16.1",
-    "eslint-config-google": "^0.7.1",
-    "jest": "^26.4.2",
-    "mock-socket": "^9.0.3",
-    "typescript": "^3.8.3",
-    "webpack": "^3.12.0"
+    "jest": "^26.4.2"
   },
   "scripts": {
-    "start": "node dist-server/main.js",
-    "start-debug": "node --inspect-brk dist-server/main.js",
-    "start-dev": "npx ts-node-dev --respawn --transpileOnly ./src/main.js",
-    "postinstall": "babel src --source-maps --out-dir dist",
-    "build": "babel src --source-maps --watch --out-dir dist",
-    "stats": "webpack --env production --profile --json > stats.json",
-    "dev": "npx webpack --watch",
     "test": "jest"
   },
   "repository": {
@@ -51,11 +27,9 @@
     "url": ""
   },
   "keywords": [
-    "game",
-    "lance",
-    "lance-gg",
-    "multiplayer",
-    "websockets"
+    "rpg",
+    "mmorpg",
+    "framework"
   ],
   "author": "Samuel Ronce",
   "license": "MIT"

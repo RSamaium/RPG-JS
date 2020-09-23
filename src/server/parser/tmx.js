@@ -3,6 +3,7 @@ var fs = require('fs');
 var path = require('path');
 var zlib = require('zlib');
 var Pend = require('pend');
+const { isBrowser } = require('../../common/Utils')
 
 exports.readFile = defaultReadFile;
 exports.parseFile = parseFile;
@@ -686,7 +687,7 @@ function parse(content, pathToFile, cb) {
 }
 
 function defaultReadFile(name, cb) {
-  if (fs) {
+  if (!isBrowser()) {
     fs.readFile(name, { encoding: 'utf8' }, cb)
   }
   else {

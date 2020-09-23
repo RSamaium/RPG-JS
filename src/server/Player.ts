@@ -35,6 +35,8 @@ export default class Player extends CommonPlayer {
     protected paramsChanged: Set<string> = new Set()
     public socket: any
     public server: any
+    public map: string = ''
+    public events: any[] = []
 
     constructor(gamePlayer, options, props) {
         super(gamePlayer, options, props)

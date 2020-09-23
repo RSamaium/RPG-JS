@@ -17,7 +17,6 @@ export default class RpgCommonMap {
         this.layers = data.layers
         this.shapes = data.shapes
         this._extractShapes()
-        buffer.set(this.id || data.id, this)
     }
 
     get widthPx() {

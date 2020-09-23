@@ -1,8 +1,10 @@
 import Map from '../common/Map'
-import { Command } from './Command'
 import Player from '../common/Player';
 
 class Query {
+
+    private _players = []
+
     /*constructor(player) {
         this.players = []
         this._command = new Command()

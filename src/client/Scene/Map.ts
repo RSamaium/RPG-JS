@@ -18,6 +18,7 @@ export class SceneMap {
 
         const gameMap = new GameMap()
         gameMap.load(obj)
+        if (!this.game.standalone) GameMap.buffer.set(obj.id, gameMap)
 
         this.tilemap.load(obj)
 
@@ -63,7 +64,7 @@ export class SceneMap {
     }
 
     addEvent(obj) {
-        const sprite = new this.game._eventClass(obj)
+        const sprite = new this.game._eventClass(obj, this)
         sprite.load()
         this.eventSprites[obj.id] = sprite
         this.tilemap.getEventLayer().addChild(sprite)
@@ -75,7 +76,7 @@ export class SceneMap {
             return
         }
 
-        const sprite = new this.game._playerClass(obj)
+        const sprite = new this.game._playerClass(obj, this)
         sprite.load()
 
         this.players[obj.id] = sprite

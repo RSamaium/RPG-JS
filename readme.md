@@ -14,9 +14,12 @@ RPG JS is a framework for creating RPGs and MMORPGs.The code remains the same de
 
 ## Installation 
 
-`npx degit rpgjs/template my-rpg-game`
-`cd my-rpg-game`
-`npm install`
+```bash
+npx degit rpgjs/template my-rpg-game
+cd my-rpg-game
+npm install
+npm run dev
+```
 
 ## License
 MIT. Free for commercial use.
