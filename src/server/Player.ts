@@ -317,6 +317,13 @@ export default class Player extends CommonPlayer {
         this.paramsChanged.clear()
     }
 
+    callGui(guiId, data) {
+        this._emit('callGui', {
+            guiId,
+            data
+        })
+    }
+
     private _getMap(id) {
         return RpgCommonMap.buffer.get(id)
     }

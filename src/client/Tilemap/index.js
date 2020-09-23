@@ -36,7 +36,7 @@ export default class TileMap extends PIXI.Container {
         this.data = data
         Object.assign(this, data)
 
-        this.background.beginFill(0xffffff);
+        this.background.beginFill(0x00000);
         this.background.drawRect(
             0,
             0,

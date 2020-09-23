@@ -20,8 +20,8 @@ export default class RpgClientEngine extends ClientEngine<any> {
             selector: '#rpg-canvas',
             selectorGui: '#gui',
             canvas: {
-                width: 600,
-                height: 600
+                width: 800,
+                height: 800
             },
             gui: [],
             spritesheets: [],
@@ -63,6 +63,7 @@ export default class RpgClientEngine extends ClientEngine<any> {
                 }
             }
         })
+        this.renderer.vm = this.vm
     }
 
     _initSocket() {
@@ -80,6 +81,9 @@ export default class RpgClientEngine extends ClientEngine<any> {
             if (data.type == 'event') {
                 this.renderer.updateEvent(data.playerId, data.params)
             }
+        })
+        this.socket.on('callGui', ({ guiId, data }) => {
+            this.displayGui(guiId, data)
         })
         this.socket.on('disconnect', () => {
             this.onDisconnect()

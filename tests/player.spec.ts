@@ -1,5 +1,4 @@
-import { RpgServer, RpgServerEngine, RpgPlayer, Query } from '../server'
-import bootstrap from '../src/server/bootstrap';
+import { RpgServer, RpgServerEngine, RpgPlayer, entryPoint } from '../server'
 import { clientIo, serverIo } from '../src/common/mock/io';
 
 let engine
@@ -20,12 +19,11 @@ class RPGServer extends RpgServerEngine {
 }
 
 beforeAll(() => { 
-   engine = bootstrap(RPGServer, serverIo).start()
+   engine = entryPoint(RPGServer, serverIo)
+   engine.start()
    clientIo.connection()
 })
 
-test('adds 1 + 2 to equal 3', () => {
-   //expect(engine.maps.length).toBe(0);
-   const players = Query.find()
-   console.log(players)
+test('', () => {
+   console.log(engine)
 })

@@ -10,8 +10,10 @@ export class SceneMap {
     
     constructor(private maps: any[], private server: any) {
         this.mapsById = {}
-        for (let map of this.maps) {
-            this.mapsById[map.id] = map
+        if (this.maps) {
+            for (let map of this.maps) {
+                this.mapsById[map.id] = map
+            }
         }
     }
 
