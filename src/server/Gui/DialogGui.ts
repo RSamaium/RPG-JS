@@ -3,12 +3,16 @@ import RpgPlayer from '../Player'
 
 export class DialogGui extends Gui {
     constructor(player: RpgPlayer) {
-        super('window', player)
+        super('rpg-dialog', player)
     }
 
-    open(message: string) {
+    open(message: string, choices?: any) {
         return super.open({
-            message
+            message,
+            // remove value property. It is not useful to know this on the client side.
+            choices: choices.map(choice => ({
+                text: choice.text
+            }))
         }, true)
     }
 }

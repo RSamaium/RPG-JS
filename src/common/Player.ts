@@ -4,7 +4,21 @@ import Map from './Map'
 
 const ACTIONS = { IDLE: 0, RUN: 1, ACTION: 2 }
 
-export default class Player extends DynamicObject {
+export default class Player extends DynamicObject<any, any> {
+
+    map: string = ''
+    graphic: string = ''
+    speed: number = 3
+    height: number = 20
+    width: number = 20
+    events: any[] = []
+    direction: number
+    colissionWith: any[] = []
+    hitbox: any
+    player: any
+    server: any
+
+    private _hitboxPos: any
 
     static get netScheme() {
         return Object.assign({
@@ -20,18 +34,11 @@ export default class Player extends DynamicObject {
         return ACTIONS;
     }
 
-    constructor(gameEngine, options, props = {}) {
+    constructor(gameEngine, options, props: any = {}) {
         super(gameEngine, options, props)
-        this.map = ''
-        this.graphic = ''
-        this.events = []
-        this.speed = 3
-        this.height = 20
-        this.width = 20
         this.direction = props.direction || 0
         this.position.x = props.x || 0
         this.position.y = props.y || 0
-        this.colissionWith = []
         this._hitboxPos = new SAT.Vector(this.position.x, this.position.y)
         this.hitbox = new SAT.Box(this._hitboxPos, this.width, this.height)
     }
@@ -81,6 +88,7 @@ export default class Player extends DynamicObject {
                     y: this.position.y + this.speed
                 }
         }
+        return this.position
     }
 
     setPosition({ x, y, tileX, tileY }, move = true) {
@@ -91,7 +99,7 @@ export default class Player extends DynamicObject {
         if (tileY !== undefined) this.posY = tileY * tileHeight
     }
 
-    triggerCollisionWith(type) {
+    triggerCollisionWith(type?: number) {
         for (let colissionWith of this.colissionWith) {
             if (type == Player.ACTIONS.ACTION) {
                 if (colissionWith.onAction) colissionWith.onAction(this)
@@ -202,12 +210,13 @@ export default class Player extends DynamicObject {
     }
 
     _syncPlayer() {
+        // test player instance for event
         if (this.player) {
-            this.server.sendToPlayer(this.player, 'updateEvent', {
+            /*this.server.sendToPlayer(this.player, 'updateEvent', {
                 id: this.id, 
                 x: this.x,
                 y: this.y
-            })
+            })*/
         }
     }
 

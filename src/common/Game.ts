@@ -1,10 +1,12 @@
-import { GameEngine, SimplePhysicsEngine, Lib } from 'lance-gg';
+import { GameEngine, SimplePhysicsEngine, Utils } from 'lance-gg'
 import Player from './Player'
-import Event from './Event'
 
-const PLAYER_CLASS = Lib.Utils.hashStr('Player')
+const PLAYER_CLASS = Utils.hashStr('Player')
 
-export default class Game extends GameEngine {
+export default class Game extends GameEngine<any> {
+
+    physicsEngine: any
+    events: any
 
     constructor(options) {
         super(options);

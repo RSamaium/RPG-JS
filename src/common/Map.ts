@@ -4,6 +4,14 @@ const buffer = new Map()
 
 export default class RpgCommonMap {
 
+    data: any
+    width: number = 0
+    height: number = 0
+    tileWidth: number = 0
+    tileHeight: number = 0
+    layers: any[] = []
+    shapes: any[] = []
+
     static get buffer() {
         return buffer
     }
@@ -60,7 +68,7 @@ export default class RpgCommonMap {
     }
 
     getTileByIndex(tileIndex) {
-        const tiles = []
+        const tiles: any[] = []
         const objects = []
         let hasColission = false
         for (let layer of this.layers) {

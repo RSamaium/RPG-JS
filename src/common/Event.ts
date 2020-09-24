@@ -7,8 +7,8 @@ export default class Event extends Player {
     }
 
     moveRandom() {
-        const moveDirNb = 0
-        const dir = ''
+        let moveDirNb = 0
+        let dir = ''
         const rand = () => {
             const directions = ['left', 'right', 'up', 'down']
             if (moveDirNb == 0) dir = directions[random(0, 3)]

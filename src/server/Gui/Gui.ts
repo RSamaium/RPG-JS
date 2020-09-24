@@ -12,7 +12,7 @@ export class Gui extends EventEmitter {
         super()
     }
 
-    open(data?, waitingAction: boolean = false) {
+    open(data?, waitingAction: boolean = false): Promise<any> {
         return new Promise((resolve) => {
             this.player._emit('gui.open', {
                 guiId: this.id,

@@ -23,7 +23,9 @@ export default class RpgRenderer extends Renderer<any, any> {
         return Promise.resolve()
     }
 
-    private _resize(w, h) {
+    _resize(w, h) {
+        if (!w) w = this.options.canvas.width
+        if (!h) h = this.options.canvas.height
         if (this.scene && this.scene.viewport) {
             this.scene.viewport.screenWidth = w
             this.scene.viewport.screenHeight = h
@@ -79,7 +81,6 @@ export default class RpgRenderer extends Renderer<any, any> {
             }
         }
         window.addEventListener('resize', size)
-        size()
     }
 
     getScene() {

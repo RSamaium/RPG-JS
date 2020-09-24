@@ -22,8 +22,8 @@ export default class RpgClientEngine extends ClientEngine<any> {
             selector: '#rpg-canvas',
             selectorGui: '#gui',
             canvas: {
-                width: 800,
-                height: 800
+                width: 816,
+                height: 624
             },
             gui: [],
             spritesheets: [],
@@ -75,6 +75,7 @@ export default class RpgClientEngine extends ClientEngine<any> {
             }
         })
         this.renderer.vm = this.vm
+        this.renderer._resize()
     }
 
     _initSocket() {

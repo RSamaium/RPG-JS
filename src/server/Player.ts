@@ -331,10 +331,19 @@ export default class Player extends CommonPlayer {
         this.paramsChanged.clear()
     }
 
-    showText(msg: string) {
+    showText(msg: string, choices?: any[]) {
         const gui = new DialogGui(this)
         this._gui[gui.id] = gui
-        return gui.open(msg)
+        return gui.open(msg, choices)
+    }
+
+    showChoices(msg: string, choices: { text: string, value: any }[]) {
+        return this
+            .showText(msg, choices)
+            .then((indexSelected: number) => {
+                if (!choices[indexSelected]) return null
+                return choices[indexSelected]
+            })
     }
 
     gui(guiId: string) {

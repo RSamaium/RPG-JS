@@ -1,13 +1,15 @@
 class MockIo {
-    constructor() {
-        this.events = new Map()
-    }
+
+    events: Map<string, any> = new Map()
+
     on(name, value) {
         this.events.set(name, value)
     }
+
     once(name, value) {
         this.on(name, value)
     }
+
     _trigger(name, data) {
         const fn = this.events.get(name)
         if (fn) fn(data)
@@ -15,10 +17,11 @@ class MockIo {
 }
 
 class MockSocket {
-    constructor(io) {
-        this.id = 'id'
-        this.io = io
-    }
+
+    id: string = 'id'
+
+    constructor(private io: any) {}
+    
     on(name, value) {
         this.io.on(name, value)
         return this

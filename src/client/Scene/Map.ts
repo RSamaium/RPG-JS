@@ -55,6 +55,9 @@ export class SceneMap {
                 this.addEvent(event)
             }
         }
+        if (this.viewport) {
+           // console.log(this.viewport.top, this.viewport.right)
+        }
     }
 
 
