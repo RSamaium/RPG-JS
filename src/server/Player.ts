@@ -1,6 +1,7 @@
 import { random } from '../common/Utils'
 import RpgCommonMap  from '../common/Map'
 import CommonPlayer from '../common/Player'
+import { Gui, DialogGui } from './Gui'
 
 export default class Player extends CommonPlayer {
 
@@ -32,7 +33,9 @@ export default class Player extends CommonPlayer {
         accelerationB: 30
     }
     private _class: any
+
     protected paramsChanged: Set<string> = new Set()
+    private _gui: { [id: string]: Gui } = {}
     public socket: any
     public server: any
     public map: string = ''
@@ -44,6 +47,17 @@ export default class Player extends CommonPlayer {
         this._hp = this.maxHp = 100
         this._sp = this.maxSp = 100
         this._level = this.initialLevel
+    }
+
+    _init() {
+        this.socket.on('gui.interaction', ({ guiId, name, data }) => {
+            if (this._gui[guiId]) {
+                this._gui[guiId].emit(name, data)
+            }
+        })
+        this.socket.on('gui.exit', ({ guiId, data }) => {
+            this.removeGui(guiId, data)
+        })
     }
 
     set gold(val) {
@@ -317,18 +331,30 @@ export default class Player extends CommonPlayer {
         this.paramsChanged.clear()
     }
 
-    callGui(guiId, data) {
-        this._emit('callGui', {
-            guiId,
-            data
-        })
+    showText(msg: string) {
+        const gui = new DialogGui(this)
+        this._gui[gui.id] = gui
+        return gui.open(msg)
+    }
+
+    gui(guiId: string) {
+        const gui = new Gui(guiId, this)
+        this._gui[guiId] = gui
+        return gui
+    }
+
+    removeGui(guiId: string, data: any) {
+        if (this._gui[guiId]) {
+            this._gui[guiId].close(data)
+            delete this._gui[guiId]
+        }
     }
 
     private _getMap(id) {
         return RpgCommonMap.buffer.get(id)
     }
 
-    private _emit(key, value) {
+    public _emit(key, value) {
         this.socket.emit(key, value)
     }
 

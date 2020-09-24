@@ -35,6 +35,7 @@ export default class RpgServerEngine extends ServerEngine {
         const player = this.gameEngine.addPlayer(this.playerClass, socket.playerId, true)
         player.socket = socket
         player.server = this
+        player._init()
         if (player.onConnected) {
             player.onConnected()
             player.syncChanges()

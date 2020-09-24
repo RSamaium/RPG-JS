@@ -4,6 +4,7 @@ import Renderer from './Renderer'
 import { _initSpritesheet } from './Sprite/Spritesheets'
 import { RpgPlayer } from './Sprite/Player'
 import { RpgEvent} from './Sprite/Event'
+import { EventEmitter } from '../common/EventEmitter'
 
 export default class RpgClientEngine extends ClientEngine<any> {
 
@@ -12,6 +13,7 @@ export default class RpgClientEngine extends ClientEngine<any> {
     public _options: any
     private vm: any
     private controls: KeyboardControls
+    private eventEmitter: EventEmitter = new EventEmitter()
 
     constructor(gameEngine, options) {
         super(gameEngine, options.io, options, Renderer)
@@ -32,10 +34,9 @@ export default class RpgClientEngine extends ClientEngine<any> {
        gameEngine._eventClass = this.renderer.options.eventClass || RpgEvent
        gameEngine.standalone = options.standalone
 
-        this._initUi()
         _initSpritesheet(this.renderer.options.spritesheets)
 
-        this.controls = new KeyboardControls(this);
+        this.controls = new KeyboardControls(this, this.eventEmitter);
         this.controls.bindKey('up', 'up', { repeat: true } )
         this.controls.bindKey('down', 'down', { repeat: true } )
         this.controls.bindKey('left', 'left', { repeat: true } )
@@ -44,7 +45,17 @@ export default class RpgClientEngine extends ClientEngine<any> {
     }
 
     _initUi() {
+        const self = this
         const { gui, selectorGui } = this.renderer.options
+        Vue.prototype.$rpgSocket = this.socket
+        Vue.prototype.$rpgEmitter = this.eventEmitter
+        Vue.prototype.$rpgGuiClose = function(data?) {
+            const guiId = this.$options.name
+            self.socket.emit('gui.exit', {
+                guiId, 
+                data
+            })
+        }
         for (let ui of gui) {
             Vue.component(ui.name, ui)
         }
@@ -82,12 +93,16 @@ export default class RpgClientEngine extends ClientEngine<any> {
                 this.renderer.updateEvent(data.playerId, data.params)
             }
         })
-        this.socket.on('callGui', ({ guiId, data }) => {
+        this.socket.on('gui.open', ({ guiId, data }) => {
             this.displayGui(guiId, data)
+        })
+        this.socket.on('gui.exit', (guiId) => {
+            this.hideGui(guiId)
         })
         this.socket.on('disconnect', () => {
             this.onDisconnect()
         })
+        this._initUi()
     }
 
     onConnect() {}
