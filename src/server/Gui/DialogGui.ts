@@ -6,13 +6,16 @@ export class DialogGui extends Gui {
         super('rpg-dialog', player)
     }
 
-    open(message: string, choices?: any) {
+    open(message: string, choices: any = []) {
         return super.open({
             message,
             // remove value property. It is not useful to know this on the client side.
             choices: choices.map(choice => ({
                 text: choice.text
             }))
-        }, true)
+        }, {
+            waitingAction: true,
+            blockPlayerInput: true
+        })
     }
 }

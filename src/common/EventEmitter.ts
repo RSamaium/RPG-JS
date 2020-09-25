@@ -14,14 +14,16 @@ export class EventEmitter {
     }
 
     emit(name: string, data: any) {
+        const ret: any = []
         if (this.listeners[name]) {
             for (let listener of this.listeners[name]) {
-                listener(data)
+                ret.push(listener(data))
             }
         }
         else if (this.listenersOnce[name]) {
-            this.listenersOnce[name](data)
+            ret.push(this.listenersOnce[name](data))
         }
+        return ret
     }
 
     off(name: string) {

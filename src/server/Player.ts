@@ -2,6 +2,7 @@ import { random } from '../common/Utils'
 import RpgCommonMap  from '../common/Map'
 import CommonPlayer from '../common/Player'
 import { Gui, DialogGui } from './Gui'
+import { isPromise } from '../common/Utils'
 
 export default class Player extends CommonPlayer {
 
@@ -33,6 +34,7 @@ export default class Player extends CommonPlayer {
         accelerationB: 30
     }
     private _class: any
+    private variables: Map<string, any> = new Map()
 
     protected paramsChanged: Set<string> = new Set()
     private _gui: { [id: string]: Gui } = {}
@@ -316,7 +318,7 @@ export default class Player extends CommonPlayer {
         this.skills.push(instance)
     }
 
-    syncChanges(player) {
+    syncChanges(player?) {
         this._eventChanges()
         if (this.paramsChanged.size == 0) return
         const params = {}
@@ -359,12 +361,24 @@ export default class Player extends CommonPlayer {
         }
     }
 
+    setVariable(key, val) {
+        this.variables.set(key, val)
+    }
+
+    getVariable(key) {
+        return this.variables.get(key)
+    }
+
+    removeVariable(key) {
+        return this.variables.delete(key)
+    }
+
     private _getMap(id) {
         return RpgCommonMap.buffer.get(id)
     }
 
     public _emit(key, value) {
-        this.socket.emit(key, value)
+        if (this.socket) this.socket.emit(key, value) 
     }
 
     private _expForLevel(level) {
@@ -375,6 +389,26 @@ export default class Player extends CommonPlayer {
             accelerationB
         } = this.expCurve
         return Math.round(basis * (Math.pow(level - 1, 0.9 + accelerationA / 250)) * level * (level + 1) / (6 + Math.pow(level, 2) / 50 / accelerationB) + (level - 1) * extra)
+    }
+
+    public execMethod(methodName: string, methodData = []) {
+        const ret = this[methodName](...methodData)
+        const sync = () => {
+            const player: any = methodData[0]
+            if (player) {
+                player.syncChanges()
+            }
+            else {
+                this.syncChanges()
+            }
+        }
+
+        if (isPromise(ret)) {
+            ret.then(sync)
+        }
+        else {
+            sync()
+        }
     }
 
     private _triggerHook(name, val?) {

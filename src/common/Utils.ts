@@ -5,3 +5,7 @@ export function random(min, max) {
 export function isBrowser() {
     return typeof window !== 'undefined'
 }
+
+export function isPromise(obj) {
+    return obj instanceof Promise
+}

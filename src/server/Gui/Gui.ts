@@ -4,6 +4,7 @@ import { EventEmitter } from '../../common/EventEmitter'
 export class Gui extends EventEmitter {
 
     private _close: Function = () => {}
+    private _blockPlayerInput: boolean = false
 
     constructor(
         public id: string,
@@ -12,12 +13,19 @@ export class Gui extends EventEmitter {
         super()
     }
 
-    open(data?, waitingAction: boolean = false): Promise<any> {
+    open(data?, {
+        waitingAction = false,
+        blockPlayerInput = false
+    } = {}): Promise<any> {
         return new Promise((resolve) => {
             this.player._emit('gui.open', {
                 guiId: this.id,
                 data
             })
+            this._blockPlayerInput = blockPlayerInput
+            if (blockPlayerInput) {
+                this.player.canMove = 0
+            }
             if (!waitingAction) {
                 resolve()
             }
@@ -29,6 +37,9 @@ export class Gui extends EventEmitter {
 
     close(data?) {
         this.player._emit('gui.exit', this.id)
+        if (this._blockPlayerInput) {
+            this.player.canMove = 1
+        }
         this._close(data)
     }
 }

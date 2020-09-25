@@ -49,6 +49,21 @@ export default class RpgClientEngine extends ClientEngine<any> {
         const { gui, selectorGui } = this.renderer.options
         Vue.prototype.$rpgSocket = this.socket
         Vue.prototype.$rpgEmitter = this.eventEmitter
+        this.eventEmitter.once('keypress', (data) => {
+            function propagateEvent(components, value) {
+                if (!components) {
+                    return
+                }
+                for (let component of components) {
+                    if (component.$rpgKeypress) {
+                        const ret = component.$rpgKeypress(value)
+                        if (ret == false) return false
+                    }
+                    return propagateEvent(component.$children, value)
+                }
+            }
+            return propagateEvent([this.vm], data)
+        })
         Vue.prototype.$rpgGuiClose = function(data?) {
             const guiId = this.$options.name
             self.socket.emit('gui.exit', {

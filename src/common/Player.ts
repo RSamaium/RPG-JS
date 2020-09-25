@@ -11,6 +11,7 @@ export default class Player extends DynamicObject<any, any> {
     speed: number = 3
     height: number = 20
     width: number = 20
+    canMove: number = 1
     events: any[] = []
     direction: number
     colissionWith: any[] = []
@@ -26,7 +27,8 @@ export default class Player extends DynamicObject<any, any> {
             action: { type: BaseTypes.TYPES.INT8 },
             map: { type: BaseTypes.TYPES.STRING },
             speed: { type: BaseTypes.TYPES.INT8 },
-            graphic: { type: BaseTypes.TYPES.STRING }
+            graphic: { type: BaseTypes.TYPES.STRING },
+            canMove: { type: BaseTypes.TYPES.INT8 }
         }, super.netScheme);
     }
 
@@ -102,9 +104,9 @@ export default class Player extends DynamicObject<any, any> {
     triggerCollisionWith(type?: number) {
         for (let colissionWith of this.colissionWith) {
             if (type == Player.ACTIONS.ACTION) {
-                if (colissionWith.onAction) colissionWith.onAction(this)
+                if (colissionWith.onAction) colissionWith.execMethod('onAction', [this])
             }
-            else if (colissionWith.onPlayerTouch) colissionWith.onPlayerTouch(this)
+            else if (colissionWith.onPlayerTouch) colissionWith.execMethod('onPlayerTouch', [this])
         }
     }
 
@@ -226,6 +228,7 @@ export default class Player extends DynamicObject<any, any> {
         this.map = other.map
         this.graphic = other.graphic
         this.speed = other.speed
+        this.canMove = other.canMove
     }
 
 }

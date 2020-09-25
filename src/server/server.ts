@@ -36,10 +36,7 @@ export default class RpgServerEngine extends ServerEngine {
         player.socket = socket
         player.server = this
         player._init()
-        if (player.onConnected) {
-            player.onConnected()
-            player.syncChanges()
-        }
+        player.execMethod('onConnected')
     }
 
     onPlayerDisconnected(socketId, playerId) {

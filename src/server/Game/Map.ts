@@ -64,8 +64,7 @@ export class RpgMap extends RpgCommonMap {
             }
 
             if (ev.onInit && event.syncAll) {
-                ev.onInit(player)
-                ev.syncChanges(player)
+                ev.execMethod('onInit', [player])
             }
 
             events.push(ev)     

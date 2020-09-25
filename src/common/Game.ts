@@ -42,6 +42,7 @@ export default class Game extends GameEngine<any> {
         const player = this.world.getObject(playerId)
 
         if (!player) return
+        if (!player.canMove) return
 
         player.changeDirection(inputData.input)
 
