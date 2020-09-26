@@ -115,6 +115,10 @@ export default class RpgClientEngine extends ClientEngine<any> {
         this.socket.on('gui.exit', (guiId) => {
             this.hideGui(guiId)
         })
+        this.socket.on('player.callMethod', ({ objectId, params, name }) => {
+            const sprite = this.renderer.getScene().getPlayer(objectId)
+            if (sprite[name]) sprite[name](...params)
+        })
         this.socket.on('disconnect', () => {
             this.onDisconnect()
         })

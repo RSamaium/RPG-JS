@@ -1,5 +1,6 @@
 import * as PIXI from 'pixi.js';
 import { spritesheets } from './Spritesheets'
+import { FloatingText } from '../Effects/FloatingText'
 
 export default class Character extends PIXI.Sprite {
 
@@ -27,11 +28,25 @@ export default class Character extends PIXI.Sprite {
     private spritesheet: any
     private _x: number = 0
     private _y: number = 0
+    private effects: any[] = []
 
     constructor(private data: any, private scene: any) {
         super()
         this.x = data.x 
         this.y = data.y
+    }
+
+    addEffect() {
+        const id = Math.random()
+        const text = new FloatingText('123')
+        text['id'] = id
+        this.addChild(text)
+        text.run().then(() => {
+            const index = this.effects.findIndex(effect => effect['id'] == id)
+            this.effects.splice(index, 1)
+            this.removeChild(text)
+        })
+        this.effects.push(text)
     }
 
     setGraphic() {
@@ -66,6 +81,10 @@ export default class Character extends PIXI.Sprite {
         if (obj.graphic != this.graphic) {
             this.graphic = obj.graphic
             this.setGraphic()
+        }
+
+        for (let effect of this.effects) {
+            effect.update(obj)
         }
 
         let speed = obj.speed

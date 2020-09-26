@@ -348,6 +348,14 @@ export default class Player extends CommonPlayer {
             })
     }
 
+    showEffect() {
+        this._emit('player.callMethod', { 
+            objectId: this.playerId,
+            name: 'addEffect',
+            params: []
+        })
+    }
+
     gui(guiId: string) {
         const gui = new Gui(guiId, this)
         this._gui[guiId] = gui

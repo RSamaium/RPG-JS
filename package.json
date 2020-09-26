@@ -7,6 +7,7 @@
   "description": "RPG JS is a framework for creating RPGs and MMORPG",
   "main": "server.ts",
   "dependencies": {
+    "@tweenjs/tween.js": "^18.6.0",
     "lance-gg": "rpgjs/lance",
     "pend": "^1.2.0",
     "pixi-viewport": "^4.10.0",

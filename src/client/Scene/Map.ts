@@ -60,6 +60,9 @@ export class SceneMap {
         }
     }
 
+    getPlayer(id) {
+        return this.players[id]
+    }
 
     setPlayerPosition(id, { x, y }) {
         this.players[id].x = x
@@ -97,8 +100,6 @@ export class SceneMap {
             sprite.destroy()
         }
     }
-
-    
 
     updateEvent(eventId, data) {
         const event = this.game.events.find(ev => ev.id == eventId)
