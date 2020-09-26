@@ -3,6 +3,7 @@ import RpgCommonMap  from '../common/Map'
 import CommonPlayer from '../common/Player'
 import { Gui, DialogGui } from './Gui'
 import { isPromise } from '../common/Utils'
+import { PARAMS_CURVE, PARAMS_NAME } from './Presets/params'
 
 export default class Player extends CommonPlayer {
 
@@ -11,8 +12,6 @@ export default class Player extends CommonPlayer {
     private _gold = 0
     private _hp = 0
     private _sp = 0
-    private maxHp = 100
-    private maxSp = 100
     private name = ''
     private skills: any[] = []
     private items: any[] = []
@@ -35,6 +34,11 @@ export default class Player extends CommonPlayer {
     }
     private _class: any
     private variables: Map<string, any> = new Map()
+    private _parameters: Map<string, {
+        start: number,
+        end: number,
+        extraValue: number
+    }> = new Map()
 
     protected paramsChanged: Set<string> = new Set()
     private _gui: { [id: string]: Gui } = {}
@@ -42,13 +46,22 @@ export default class Player extends CommonPlayer {
     public server: any
     public map: string = ''
     public events: any[] = []
+    public param: any 
 
     constructor(gamePlayer, options, props) {
         super(gamePlayer, options, props)
         this._gold = 0
-        this._hp = this.maxHp = 100
-        this._sp = this.maxSp = 100
         this._level = this.initialLevel
+        this.param = new Proxy({}, {
+            get: (obj, prop: string) => this.getParamValue(prop), 
+            set: () => {
+                console.log("You cannot change the value because the parameter is linked to the parameter's curve")
+                return false
+            }
+        })
+        this.addParameter(PARAMS_NAME.MAXHP, PARAMS_CURVE.MAXHP)
+        this.addParameter(PARAMS_NAME.MAXSP, PARAMS_CURVE.MAXSP)
+        this.allRecovery()
     }
 
     _init() {
@@ -74,8 +87,8 @@ export default class Player extends CommonPlayer {
     }
 
     set hp(val) {
-        if (val > this.maxHp) {
-            val = this.maxHp
+        if (val > this.param[PARAMS_NAME.MAXHP]) {
+            val = this.param[PARAMS_NAME.MAXHP]
         }
         else if (val <= 0) { 
             this._triggerHook('onDead')
@@ -90,8 +103,8 @@ export default class Player extends CommonPlayer {
     }
 
     set sp(val) {
-        if (val > this.maxSp) {
-            val = this.maxSp
+        if (val > this.param[PARAMS_NAME.MAXSP]) {
+            val = this.param[PARAMS_NAME.MAXSP]
         }
         this._sp = val
     }
@@ -138,6 +151,34 @@ export default class Player extends CommonPlayer {
 
     get expForNextlevel() {
         return this._expForLevel(this.level + 1)
+    }
+
+    addParameter(name: string, { start, end }: { start: number, end: number }) {
+        this._parameters.set(name, {
+            start,
+            end,
+            extraValue: 0
+        })
+    }
+
+    private getParam(name: string) {
+        const features = this._parameters.get(name)
+        if (!features) {
+            throw `Parameter ${name} not exists. Please use addParameter() before`
+        }
+        return features
+    }
+
+    getParamValue(name) {
+        const features = this.getParam(name)
+        let curveVal = Math.floor((features.end - features.start) * ((this.level-1) / (this.finalLevel - this.initialLevel))) + features.start
+        curveVal += features.extraValue
+        return curveVal
+    }
+
+    setParamExtraValue(name, val) {
+        const param = this.getParam(name)
+        param.extraValue = val
     }
 
     setGraphic(graphic) {
@@ -254,7 +295,7 @@ export default class Player extends CommonPlayer {
             this.hp += item.hpValue
         }
         if (item.hpRate) {
-            this.hp += this.maxHp / item.hpRate
+            this.hp += this.param[PARAMS_NAME.MAXHP] / item.hpRate
         }
         if (item.addStates) {
             for (let state of item.addStates) {
@@ -318,6 +359,19 @@ export default class Player extends CommonPlayer {
         this.skills.push(instance)
     }
 
+    applyDamage(points: any, fn: Function) {
+       
+    }
+
+    recovery({ hp, sp }: { hp?: number, sp?: number }) {
+        if (hp) this.hp = this.param[PARAMS_NAME.MAXHP] * hp
+        if (sp) this.sp = this.param[PARAMS_NAME.MAXSP] * sp
+    }
+
+    allRecovery() {
+        this.recovery({ hp: 1, sp: 1 })
+    }
+
     syncChanges(player?) {
         this._eventChanges()
         if (this.paramsChanged.size == 0) return
@@ -379,6 +433,22 @@ export default class Player extends CommonPlayer {
 
     removeVariable(key) {
         return this.variables.delete(key)
+    }
+
+    setActor(actorClass) {
+        const actor = new actorClass()
+        this.name  = actor.name
+        this.initialLevel = actor.initialLevel
+        this.finalLevel = actor.finalLevel
+        this.expCurve = actor.expCurve
+        for (let param in actor.parameters) {
+            this.addParameter(param, actor.parameters[param])
+        }
+        for (let item of actor.startingEquipment) {
+            this.addItem(item)
+            this.equip(item, true)
+        }
+        this.setClass(actor.class)
     }
 
     private _getMap(id) {
