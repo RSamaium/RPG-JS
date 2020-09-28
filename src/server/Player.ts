@@ -396,15 +396,24 @@ export default class Player extends CommonPlayer {
         this.paramsChanged.clear()
     }
 
-    showText(msg: string, choices?: any[]) {
+    showText(msg: string, options: {
+        choices?: any[],
+        position?,
+        fullWidth?: boolean,
+        autoClose?: boolean,
+        tranparent?: boolean,
+        typewriterEffect?: boolean
+     } = {}) {
         const gui = new DialogGui(this)
         this._gui[gui.id] = gui
-        return gui.open(msg, choices)
+        return gui.open(msg, options)
     }
 
     showChoices(msg: string, choices: { text: string, value: any }[]) {
         return this
-            .showText(msg, choices)
+            .showText(msg, {
+                choices
+            })
             .then((indexSelected: number) => {
                 if (!choices[indexSelected]) return null
                 return choices[indexSelected]
