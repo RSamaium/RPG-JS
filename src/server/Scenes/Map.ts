@@ -1,7 +1,6 @@
 
 import GameMap  from '../../common/Map'
 
-
 export class SceneMap {
 
     static readonly id: string = 'map'
@@ -64,7 +63,7 @@ export class SceneMap {
             delete layer.map
         }
 
-        this.server.sendToPlayer(player, 'loadScene', {
+        this.server.sendToPlayer(player, 'player.loadScene', {
             name: 'map', 
             data: {
                 id: mapId,
@@ -72,7 +71,6 @@ export class SceneMap {
             }
         })
 
-        this.server.assignPlayerToRoom(player.playerId, mapId)
         this.server.assignObjectToRoom(player, mapId)
 
         player.setPosition(positions)

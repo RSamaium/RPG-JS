@@ -3,7 +3,12 @@ import RpgCommonMap  from '../common/Map'
 import CommonPlayer from '../common/Player'
 import { Gui, DialogGui } from './Gui'
 import { isPromise } from '../common/Utils'
-import { PARAMS_CURVE, PARAMS_NAME } from './Presets/params'
+import { 
+    MAXHP, 
+    MAXSP,
+    MAXHP_CURVE, 
+    MAXSP_CURVE 
+} from '../../preset'
 
 export default class Player extends CommonPlayer {
 
@@ -59,8 +64,8 @@ export default class Player extends CommonPlayer {
                 return false
             }
         })
-        this.addParameter(PARAMS_NAME.MAXHP, PARAMS_CURVE.MAXHP)
-        this.addParameter(PARAMS_NAME.MAXSP, PARAMS_CURVE.MAXSP)
+        this.addParameter(MAXHP, MAXHP_CURVE)
+        this.addParameter(MAXSP, MAXSP_CURVE)
         this.allRecovery()
     }
 
@@ -87,8 +92,8 @@ export default class Player extends CommonPlayer {
     }
 
     set hp(val) {
-        if (val > this.param[PARAMS_NAME.MAXHP]) {
-            val = this.param[PARAMS_NAME.MAXHP]
+        if (val > this.param[MAXHP]) {
+            val = this.param[MAXHP]
         }
         else if (val <= 0) { 
             this._triggerHook('onDead')
@@ -103,8 +108,8 @@ export default class Player extends CommonPlayer {
     }
 
     set sp(val) {
-        if (val > this.param[PARAMS_NAME.MAXSP]) {
-            val = this.param[PARAMS_NAME.MAXSP]
+        if (val > this.param[MAXSP]) {
+            val = this.param[MAXSP]
         }
         this._sp = val
     }
@@ -187,6 +192,10 @@ export default class Player extends CommonPlayer {
 
     changeMap(mapId, positions) {
         return this.server.getScene('map').changeMap(mapId, this, positions)
+    }
+
+    startBattle() {
+        return this.server.getScene('battle').create(this)
     }
 
     setClass(_class) {
@@ -295,7 +304,7 @@ export default class Player extends CommonPlayer {
             this.hp += item.hpValue
         }
         if (item.hpRate) {
-            this.hp += this.param[PARAMS_NAME.MAXHP] / item.hpRate
+            this.hp += this.param[MAXHP] / item.hpRate
         }
         if (item.addStates) {
             for (let state of item.addStates) {
@@ -359,13 +368,13 @@ export default class Player extends CommonPlayer {
         this.skills.push(instance)
     }
 
-    applyDamage(points: any, fn: Function) {
-       
+    applyDamage(otherPlayer: Player, fn: Function) {
+       this.hp = fn(otherPlayer.param, this.param)
     }
 
     recovery({ hp, sp }: { hp?: number, sp?: number }) {
-        if (hp) this.hp = this.param[PARAMS_NAME.MAXHP] * hp
-        if (sp) this.sp = this.param[PARAMS_NAME.MAXSP] * sp
+        if (hp) this.hp = this.param[MAXHP] * hp
+        if (sp) this.sp = this.param[MAXSP] * sp
     }
 
     allRecovery() {
@@ -473,7 +482,7 @@ export default class Player extends CommonPlayer {
         const ret = this[methodName](...methodData)
         const sync = () => {
             const player: any = methodData[0]
-            if (player) {
+            if (player instanceof Player) {
                 player.syncChanges()
             }
             else {

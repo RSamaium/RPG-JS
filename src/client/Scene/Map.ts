@@ -1,8 +1,10 @@
+import * as PIXI from 'pixi.js'
 import GameMap from '../../common/Map'
 import TileMap from '../Tilemap'
 import { Viewport } from 'pixi-viewport'
+import { IScene } from '../Interfaces/Scene'
 
-export class SceneMap {
+export class SceneMap implements IScene {
 
     private tilemap: any = new TileMap()
     private viewport: Viewport | undefined
@@ -14,7 +16,7 @@ export class SceneMap {
             private options: { screenWidth?: number, screenHeight?: number } = {}) {
     }
 
-    load(obj) {
+    load(obj): PIXI.Container {
 
         const gameMap = new GameMap()
         gameMap.load(obj)

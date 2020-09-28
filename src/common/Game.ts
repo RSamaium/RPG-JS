@@ -23,8 +23,8 @@ export default class Game extends GameEngine<any> {
 
     addPlayer(playerClass, playerId, addWord = true) {
         const player = new playerClass(this, { id: playerId }, { playerId })
-        player.classid = PLAYER_CLASS
-        if (addWord) this.addObjectToWorld(player)
+        player.classId = PLAYER_CLASS
+        if (addWord) this.addObjectToWorld(player) //
         return player
     }
 
@@ -32,7 +32,7 @@ export default class Game extends GameEngine<any> {
         const playerId = ''+Math.random()
         const event = new eventClass(this, { id: playerId }, { playerId })
         event.classId =  PLAYER_CLASS
-        if (addWord) this.addObjectToWorld(event)
+        if (addWord) this.addObjectToWorld(event) 
         return event
     }
 
@@ -53,10 +53,6 @@ export default class Game extends GameEngine<any> {
             player.move(inputData.input)
         }
 
-        if (player.onInput) {
-            player.onInput(inputData)
-            player.syncChanges()
-        }
-
+        if (player.execMethod) player.execMethod('onInput', [inputData])
     }
 }

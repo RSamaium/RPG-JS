@@ -1,5 +1,6 @@
 import { ServerEngine } from 'lance-gg';
 import { SceneMap } from './Scenes/Map';
+import { SceneBattle } from './Scenes/Battle';
 import PlayerObject from './Player'
 
 export default class RpgServerEngine extends ServerEngine {
@@ -10,12 +11,12 @@ export default class RpgServerEngine extends ServerEngine {
     constructor(private io, public gameEngine, private inputOptions) {
         super(io, gameEngine, inputOptions)
         this.playerClass = inputOptions.playerClass || PlayerObject
-        this.loadScene(SceneMap.id)
-        //Query._server = this
+        this.loadScenes()
     }
 
-    loadScene(name) {
-        this.scenes[name] =  new SceneMap(this.inputOptions.maps, this)
+    loadScenes() {
+        this.scenes[SceneMap.id] =  new SceneMap(this.inputOptions.maps, this)
+        this.scenes[SceneBattle.id] =  new SceneBattle(this)
     }
 
     getScene(name) {
@@ -24,11 +25,7 @@ export default class RpgServerEngine extends ServerEngine {
 
     sendToPlayer(currentPlayer, eventName, data) {
         currentPlayer.socket.emit(eventName, data);
-    }
-
-    sendToMap(mapId, eventName, data) {
-        this.io.to(mapId).emit(eventName, data)
-    }
+    }   
 
     onPlayerConnected(socket) {
         super.onPlayerConnected(socket)

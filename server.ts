@@ -7,7 +7,6 @@ import { RpgMap } from './src/server/Game/Map'
 import RpgEvent from './src/server/Event'
 import RpgPlayer from './src/server/Player'
 import Query from './src/server/Query'
-import { PRESETS } from './src/server/Presets'
 
 export {
     RpgServerEngine,
@@ -18,6 +17,5 @@ export {
     MapData,
     EventData,
     Query,
-    entryPoint,
-    PRESETS
+    entryPoint
 }

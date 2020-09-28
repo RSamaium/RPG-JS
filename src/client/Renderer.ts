@@ -2,6 +2,7 @@ window.PIXI = require('pixi.js')
 
 import { Renderer } from 'lance-gg'
 import { SceneMap } from './Scene/Map'
+import { SceneBattle } from './Scene/Battle'
 import Player from '../common/Player'
 
 export default class RpgRenderer extends Renderer<any, any> {
@@ -94,11 +95,19 @@ export default class RpgRenderer extends Renderer<any, any> {
     }
 
     loadScene(name, obj) {
-        this.scene = new SceneMap(this.gameEngine, {
-            screenWidth: this.options.canvas.width,
-            screenHeight: this.options.canvas.height
-        })
+        switch (name) {
+            case 'map':
+                this.scene = new SceneMap(this.gameEngine, {
+                    screenWidth: this.options.canvas.width,
+                    screenHeight: this.options.canvas.height
+                })
+                break;
+            case 'battle':
+                this.scene = new SceneBattle(this.gameEngine)
+                break;
+        }
         const container = this.scene.load(obj)
+        
         this.stage.addChild(container)
     }
 
