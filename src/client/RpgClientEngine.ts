@@ -9,6 +9,7 @@ import { EventEmitter } from '../common/EventEmitter'
 export default class RpgClientEngine extends ClientEngine<any> {
 
     public renderer: any
+    public gameEngine: any
     public socket: any
     public _options: any
     private vm: any
@@ -42,27 +43,39 @@ export default class RpgClientEngine extends ClientEngine<any> {
         this.controls.bindKey('left', 'left', { repeat: true } )
         this.controls.bindKey('right', 'right', { repeat: true } )
         this.controls.bindKey('space', 'space')
+        this.controls.bindKey('escape', 'escape')
     }
 
     _initUi() {
         const self = this
         const { gui, selectorGui } = this.renderer.options
         Vue.prototype.$rpgSocket = this.socket
+        Vue.prototype.$rpgStage = this.renderer.stage
         Vue.prototype.$rpgEmitter = this.eventEmitter
-        this.eventEmitter.once('keypress', (data) => {
-            function propagateEvent(components, value) {
-                if (!components) {
-                    return
-                }
-                for (let component of components) {
-                    if (component.$rpgKeypress) {
-                        const ret = component.$rpgKeypress(value)
-                        if (ret == false) return false
-                    }
-                    return propagateEvent(component.$children, value)
-                }
+        Vue.prototype.$gameEngine = this.gameEngine
+        Vue.prototype.$rpgPlayer = (playerId?: string) => {
+            return this.gameEngine.world.getObject(playerId || this.gameEngine.playerId)
+        }
+
+        function propagateEvent(methodName, components, value) {
+            if (!components) {
+                return
             }
-            return propagateEvent([this.vm], data)
+            for (let component of components) {
+                if (component[methodName]) {
+                    const ret = component[methodName](...value)
+                    if (ret == false) return false
+                }
+                return propagateEvent(methodName, component.$children, value)
+            }
+        }
+
+        this.eventEmitter.once('keypress', (data) => {
+            return propagateEvent('$rpgKeypress', [this.vm], [data])
+        })
+        this.eventEmitter.once('player.changeParam', (data) => {
+            const player = this.renderer.updateObject(data.playerId, data.params)
+            if (player) propagateEvent('$rpgPlayerChanged', [this.vm], [player, data.params])
         })
         Vue.prototype.$rpgGuiClose = function(data?) {
             const guiId = this.$options.name
@@ -77,9 +90,7 @@ export default class RpgClientEngine extends ClientEngine<any> {
         this.vm = new Vue({
             template: `
                 <div>
-                    <div v-for="ui in gui">
-                        <component :is="ui.name" v-if="ui.display" v-bind="ui.data"></component>
-                    </div>
+                    <component v-for="ui in gui" :is="ui.name" v-if="ui.display" v-bind="ui.data"></component>
                 </div>
             `,
             el: selectorGui,
@@ -104,11 +115,7 @@ export default class RpgClientEngine extends ClientEngine<any> {
         this.socket.on('events', (data) => {
             this.renderer.addLocalEvents(data)
         });
-        this.socket.on('changeParam', (data) => {
-            if (data.type == 'event') {
-                this.renderer.updateEvent(data.playerId, data.params)
-            }
-        })
+        this.socket.on('player.changeParam', (data) => this.eventEmitter.emit('player.changeParam', data))
         this.socket.on('gui.open', ({ guiId, data }) => {
             this.displayGui(guiId, data)
         })
@@ -119,7 +126,11 @@ export default class RpgClientEngine extends ClientEngine<any> {
             const sprite = this.renderer.getScene().getPlayer(objectId)
             if (sprite[name]) sprite[name](...params)
         })
+        this.socket.on('reconnect', () => {
+            this.hideGui('rpg-disconnected')
+        })
         this.socket.on('disconnect', () => {
+            this.displayGui('rpg-disconnected')
             this.onDisconnect()
         })
         this._initUi()

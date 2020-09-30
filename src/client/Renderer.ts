@@ -117,11 +117,13 @@ export default class RpgRenderer extends Renderer<any, any> {
         }
     }
 
-    updateEvent(id, params) {
-        const logic = this.gameEngine.events[id]
+    updateObject(id, params) {
+        const logic = this.gameEngine.world.getObject(id)
+        if (!logic) return null
         for (let key in params) {
             logic[key] = params[key]
         }
+        return logic
     }
 
     addEvent(obj) {

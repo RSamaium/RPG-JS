@@ -5,7 +5,7 @@ export function _initSpritesheet(_spritesheets) {
         if (spritesheet.images) {
             for (let key in spritesheet.images) {
                 const instance = new spritesheet()
-                instance.image = spritesheet.images[key].default
+                instance.image = spritesheet.images[key]
                 spritesheets.set(key, instance)
             }
         }

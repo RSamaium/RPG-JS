@@ -10,8 +10,8 @@ export default (engine, _options: any = {}) => {
             localObjBending: 0.2,
             remoteObjBending: 0.8
         },
-        verbose: true,
-        ..._options
+        verbose: false,
+        ..._options 
     }
     const gameEngine = new Game(options)
     const clientEngine = new engine(gameEngine, options, _options.io)

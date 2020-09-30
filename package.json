@@ -18,10 +18,12 @@
     "vue": "^2.6.12"
   },
   "devDependencies": {
+    "artillery": "^1.6.1",
     "jest": "^26.4.2"
   },
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "performance": "artillery run tests/charge/muti-user.yml"
   },
   "repository": {
     "type": "git",

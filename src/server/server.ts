@@ -7,6 +7,7 @@ export default class RpgServerEngine extends ServerEngine {
 
     private playerClass: PlayerObject
     private scenes: Map<string, any> = new Map()
+    protected totalConnected: number = 0
     
     constructor(private io, public gameEngine, private inputOptions) {
         super(io, gameEngine, inputOptions)
@@ -33,12 +34,16 @@ export default class RpgServerEngine extends ServerEngine {
         player.socket = socket
         player.server = this
         player._init()
+        this.totalConnected++
+        if (this['onStatus']) this['onStatus'](this.totalConnected)
         player.execMethod('onConnected')
     }
 
     onPlayerDisconnected(socketId, playerId) {
         super.onPlayerDisconnected(socketId, playerId);
         const object = this.gameEngine.world.getObject(playerId)
+        this.totalConnected--
+        if (this['onStatus']) this['onStatus'](this.totalConnected)
         this.gameEngine.removeObjectFromWorld(object.id)
     }
 }

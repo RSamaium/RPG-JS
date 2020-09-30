@@ -24,4 +24,8 @@ export class SceneBattle implements IScene {
             //console.log(obj)
         })
     }
+
+    addObject(obj, id) {}
+
+    removeObject(id) {}
 }

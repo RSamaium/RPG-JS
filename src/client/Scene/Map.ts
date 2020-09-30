@@ -3,8 +3,9 @@ import GameMap from '../../common/Map'
 import TileMap from '../Tilemap'
 import { Viewport } from 'pixi-viewport'
 import { IScene } from '../Interfaces/Scene'
+import { Scene } from './Scene'
 
-export class SceneMap implements IScene {
+export class SceneMap extends Scene implements IScene {
 
     private tilemap: any = new TileMap()
     private viewport: Viewport | undefined
@@ -12,8 +13,9 @@ export class SceneMap implements IScene {
     private eventSprites: object = {}
 
     constructor(
-            private game: any, 
+            protected game: any, 
             private options: { screenWidth?: number, screenHeight?: number } = {}) {
+        super(game)
     }
 
     load(obj): PIXI.Container {
@@ -38,15 +40,7 @@ export class SceneMap implements IScene {
     }
 
     draw(t, dt) {
-        this.game.world.forEachObject((id, obj) => {
-            let sprite = this.players[obj.id]
-            if (sprite) {
-                sprite.update(obj)
-            } 
-            else {
-                this.addPlayer(obj)
-            }
-        })
+        super.draw(t, dt)
         for (let eventId in this.game.events) {
             const sprite = this.eventSprites[eventId]
             const event = this.game.events[eventId]
@@ -56,9 +50,6 @@ export class SceneMap implements IScene {
             else {
                 this.addEvent(event)
             }
-        }
-        if (this.viewport) {
-           // console.log(this.viewport.top, this.viewport.right)
         }
     }
 
@@ -78,7 +69,7 @@ export class SceneMap implements IScene {
         this.tilemap.getEventLayer().addChild(sprite)
     }
 
-    private addPlayer(obj) {
+    addObject(obj, id) {
 
         if (!obj.map) {
             return
@@ -87,7 +78,7 @@ export class SceneMap implements IScene {
         const sprite = new this.game._playerClass(obj, this)
         sprite.load()
 
-        this.players[obj.id] = sprite
+        this.objects.set(id, sprite)
         this.tilemap.getEventLayer().addChild(sprite)
 
         sprite['isCurrentPlayer'] = obj.playerId === this.game.playerId
@@ -95,10 +86,10 @@ export class SceneMap implements IScene {
         if (sprite['isCurrentPlayer']) this.viewport?.follow(sprite)
     }
 
-    removeObject(obj) {
-        let sprite = this.players[obj.id]
+    removeObject(id) {
+        let sprite =  this.objects.get(id)
         if (sprite) {
-            delete this.players[obj.id]
+            this.objects.delete(id)
             sprite.destroy()
         }
     }

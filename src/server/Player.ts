@@ -1,7 +1,7 @@
 import { random } from '../common/Utils'
 import RpgCommonMap  from '../common/Map'
 import CommonPlayer from '../common/Player'
-import { Gui, DialogGui } from './Gui'
+import { Gui, DialogGui, MenuGui } from './Gui'
 import { isPromise } from '../common/Utils'
 import { 
     MAXHP, 
@@ -85,6 +85,7 @@ export default class Player extends CommonPlayer {
             val = 0
         }
         this._gold = val
+        this.paramsChanged.add('gold')
     }
 
     get gold() {
@@ -99,8 +100,8 @@ export default class Player extends CommonPlayer {
             this._triggerHook('onDead')
             val = 0
         }
-        this.paramsChanged.add('hp')
         this._hp = val
+        this.paramsChanged.add('hp')
     }
 
     get hp() {
@@ -381,14 +382,14 @@ export default class Player extends CommonPlayer {
         this.recovery({ hp: 1, sp: 1 })
     }
 
-    syncChanges(player?) {
+    syncChanges(player?: Player) {
         this._eventChanges()
         if (this.paramsChanged.size == 0) return
         const params = {}
         this.paramsChanged.forEach(param => {
             params[param] = this[param] 
         });
-        (player || this)._emit('changeParam', {
+        (player || this)._emit('player.changeParam', {
             playerId: this.playerId,
             params,
             type: this.type
@@ -418,6 +419,12 @@ export default class Player extends CommonPlayer {
                 if (!choices[indexSelected]) return null
                 return choices[indexSelected]
             })
+    }
+
+    callMainMenu() {
+        const gui = new MenuGui(this)
+        this._gui[gui.id] = gui
+        return gui.open()
     }
 
     showEffect() {

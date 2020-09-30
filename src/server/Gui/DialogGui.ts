@@ -1,7 +1,8 @@
 import { Gui } from './Gui'
 import RpgPlayer from '../Player'
+import { IGui } from '../Interfaces/Gui'
 
-export class DialogGui extends Gui {
+export class DialogGui extends Gui implements IGui {
     constructor(player: RpgPlayer) {
         super('rpg-dialog', player)
     }
