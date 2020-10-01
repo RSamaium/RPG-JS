@@ -1,0 +1,16 @@
+{
+  "name": "@rpgjs/default-gui",
+  "version": "3.0.0-alpha",
+  "description": "",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "typescript": "^4.0.3",
+    "vue": "^2.6.12"
+  }
+}

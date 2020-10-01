@@ -1,0 +1,17 @@
+{
+  "name": "@rpgjs/server",
+  "version": "3.0.0-alpha",
+  "description": "",
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@rpgjs/common": "^3.0.0-alpha",
+    "sat": "^0.8.0"
+  }
+}

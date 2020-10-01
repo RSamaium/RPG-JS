@@ -5,25 +5,26 @@
     "node": ">=11.0.0"
   },
   "description": "RPG JS is a framework for creating RPGs and MMORPG",
-  "main": "server.ts",
   "dependencies": {
-    "@tweenjs/tween.js": "^18.6.0",
-    "lance-gg": "rpgjs/lance",
-    "pend": "^1.2.0",
-    "pixi-viewport": "^4.10.0",
-    "pixi.js": "^5.2.1",
-    "sat": "^0.8.0",
-    "sax": "^1.2.4",
-    "tmx-parser": "^1.5.0",
-    "vue": "^2.6.12"
+    "concurrently": "^5.3.0"
   },
   "devDependencies": {
     "artillery": "^1.6.1",
-    "jest": "^26.4.2"
+    "jest": "^26.4.2",
+    "lerna": "^3.22.1"
   },
   "scripts": {
     "test": "jest",
-    "performance": "artillery run tests/charge/muti-user.yml"
+    "lerna:ls": "lerna ls",
+    "performance": "artillery run tests/charge/muti-user.yml",
+    "build": "npm run build:common && npm run build:server && npm run build:client",
+    "build:common": "tsc --build packages/common/tsconfig.json",
+    "build:server": "tsc --build packages/server/tsconfig.json",
+    "build:client": "tsc --build packages/client/tsconfig.json",
+    "watch:common": "tsc --build --watch packages/common/tsconfig.json",
+    "watch:client": "tsc --build --watch packages/client/tsconfig.json",
+    "watch:server": "tsc --build --watch packages/server/tsconfig.json",
+    "dev": "cd packages/sample && npm run build:server && cd ../.. && concurrently -n rpgjs,client,server,nodemon \"npm:watch:*\" \"cd packages/sample && npm run dev:client\" \"cd packages/sample && npm run dev:server\" \"cd packages/sample && npm run dev:nodemon\""
   },
   "repository": {
     "type": "git",

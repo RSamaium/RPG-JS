@@ -1,0 +1,15 @@
+{
+  "name": "@rpgjs/starter-kit-server",
+  "version": "3.0.0-alpha",
+  "description": "",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@rpgjs/server": "^3.0.0-alpha"
+  }
+}

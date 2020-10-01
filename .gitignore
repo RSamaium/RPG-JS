@@ -1,3 +1,4 @@
 node_modules
 dist
 bin/deploy.sh
+lib
