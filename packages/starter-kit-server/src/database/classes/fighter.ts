@@ -1,4 +1,4 @@
-import { Class } from 'rpgjs/database'
+import { Class } from '@rpgjs/database'
 import { Fire } from '../skills/fire'
 
 @Class({

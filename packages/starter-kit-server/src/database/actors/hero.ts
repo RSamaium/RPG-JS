@@ -1,6 +1,8 @@
-import { Actor } from 'rpgjs/database'
-import { MAXHP, MAXSP, MAXHP_CURVE, MAXSP_CURVE } from 'rpgjs/preset'
+import { Actor } from '@rpgjs/database'
+import { Presets } from '@rpgjs/server'
 import { Fighter } from '../classes/fighter'
+
+const { MAXHP, MAXSP, MAXHP_CURVE, MAXSP_CURVE } = Presets
 
 @Actor({
     name: 'Hero',
@@ -19,7 +21,7 @@ import { Fighter } from '../classes/fighter'
     startingEquipment: [
 
     ],
-    class: Fighter
+    class: Fighter 
 })
 export class Hero {
     

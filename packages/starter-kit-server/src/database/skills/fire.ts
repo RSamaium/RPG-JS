@@ -1,4 +1,4 @@
-import { Skill } from 'rpgjs/database'
+import { Skill } from '@rpgjs/database'
 
 @Skill({
    name: 'Fire',

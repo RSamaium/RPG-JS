@@ -1,4 +1,4 @@
-import { Weapon } from 'rpgjs/database'
+import { Weapon } from '@rpgjs/database'
 
 @Weapon({
     name: 'Sword',

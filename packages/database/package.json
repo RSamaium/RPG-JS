@@ -1,0 +1,12 @@
+{
+  "name": "@rpgjs/database",
+  "version": "3.0.0-alpha",
+  "description": "",
+  "main": "lib/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Samuel Ronce",
+  "license": "MIT"
+}
