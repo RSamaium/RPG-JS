@@ -76,7 +76,7 @@ export class RpgMap extends RpgCommonMap {
         const filepath = this.server.inputOptions.basePath + '/' + this.file
    
         if (Utils.isBrowser()) {
-            return fetch('/maps/' + path.basename(this.file, '.tmx') + '.json')
+            return fetch(this.file)
                 .then(res => res.json())
         }
         

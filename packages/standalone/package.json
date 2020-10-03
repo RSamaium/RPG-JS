@@ -1,0 +1,17 @@
+{
+  "name": "@rpgjs/standalone",
+  "version": "3.0.0-alpha",
+  "description": "",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@rpgjs/client": "^3.0.0-alpha",
+    "@rpgjs/common": "^3.0.0-alpha",
+    "@rpgjs/server": "^3.0.0-alpha"
+  }
+}

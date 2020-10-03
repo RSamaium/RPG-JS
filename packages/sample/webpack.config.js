@@ -60,7 +60,22 @@ module.exports = {
             options: {
                 outputPath: 'fonts'
             }
-        }]
+        }, 
+        {
+            test: /\.tmx$/i,
+            use: [
+                {
+                    loader: 'file-loader',
+                    options: {
+                        outputPath(url)  {
+                            return `maps/${url.replace(/.tmx$/, '.json')}`
+                        },
+                        esModule: false
+                    }
+                },  {
+                    loader: 'tmx-loader'
+                }]
+            }]
     },
     optimization: {
         minimize: false
