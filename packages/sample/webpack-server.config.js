@@ -10,7 +10,8 @@ module.exports = {
         __dirname: false
     },
     externals: [nodeExternals({
-        allowlist: ['@rpgjs/default-gui', '@rpgjs/starter-kit-server', '@rpgjs/starter-kit-client']
+        //allowlist: ['@rpgjs/default-gui', '@rpgjs/starter-kit-server', '@rpgjs/starter-kit-client']
+        allowlist: [/^@rpgjs/, 'lance-gg']
     })],
     mode,
     entry: `./src/server/main.ts`,

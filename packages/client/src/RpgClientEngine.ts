@@ -49,12 +49,35 @@ export default class RpgClientEngine extends ClientEngine<any> {
     _initUi() {
         const self = this
         const { gui, selectorGui } = this.renderer.options
+
+        this.vm = new Vue({
+            template: `
+                <div>
+                    <component v-for="ui in gui" :is="ui.name" v-if="ui.display" v-bind="ui.data"></component>
+                </div>
+            `,
+            el: selectorGui,
+            data() {
+                return {
+                    gui
+                }
+            }
+        })
+
         Vue.prototype.$rpgSocket = this.socket
         Vue.prototype.$rpgStage = this.renderer.stage
         Vue.prototype.$rpgEmitter = this.eventEmitter
         Vue.prototype.$gameEngine = this.gameEngine
         Vue.prototype.$rpgPlayer = (playerId?: string) => {
             return this.gameEngine.world.getObject(playerId || this.gameEngine.playerId)
+        }
+
+        Vue.prototype.$rpgGuiClose = function(data?) {
+            const guiId = this.$options.name
+            self.socket.emit('gui.exit', {
+                guiId, 
+                data
+            })
         }
 
         function propagateEvent(methodName, components, value) {
@@ -77,29 +100,11 @@ export default class RpgClientEngine extends ClientEngine<any> {
             const player = this.renderer.updateObject(data.playerId, data.params)
             if (player) propagateEvent('$rpgPlayerChanged', [this.vm], [player, data.params])
         })
-        Vue.prototype.$rpgGuiClose = function(data?) {
-            const guiId = this.$options.name
-            self.socket.emit('gui.exit', {
-                guiId, 
-                data
-            })
-        }
+        
         for (let ui of gui) {
             Vue.component(ui.name, ui)
-        }
-        this.vm = new Vue({
-            template: `
-                <div>
-                    <component v-for="ui in gui" :is="ui.name" v-if="ui.display" v-bind="ui.data"></component>
-                </div>
-            `,
-            el: selectorGui,
-            data() {
-                return {
-                    gui
-                }
-            }
-        })
+        } 
+        
         this.renderer.vm = this.vm
         this.renderer._resize()
     }

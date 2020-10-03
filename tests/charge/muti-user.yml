@@ -3,7 +3,7 @@ config:
     processor: "./random.js"
     phases:
         - duration: 200
-          arrivalRate: 10
+          arrivalRate: 20
 scenarios:
     - name: Test multi user connection
       engine: socketio
