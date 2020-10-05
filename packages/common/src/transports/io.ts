@@ -34,7 +34,7 @@ class MockSocket {
 }
 
 class MockClientIo extends MockIo {
-    id: string
+    id: string = ''
     connection() {
         serverIo.connection(this)
         return this

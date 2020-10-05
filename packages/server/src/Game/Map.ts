@@ -71,20 +71,23 @@ export class RpgMap extends RpgCommonMap {
         return events
     }
 
-    parseFile() {
-        
-        const filepath = this.server.inputOptions.basePath + '/' + this.file
-   
+    parseFile() {   
+        if (this.file.version) {
+            return Promise.resolve(this.file)
+        }
+
         if (Utils.isBrowser()) {
             return fetch(this.file)
                 .then(res => res.json())
         }
+
+        const filepath = this.server.inputOptions.basePath + '/' + this.file
         
-       return new Promise((resolve, reject) => {
+        return new Promise((resolve, reject) => {
             fs.readFile(filepath, 'utf-8', (err, data) => {
                 if (err) return reject(err)
                 resolve(JSON.parse(data))
             })
-       })
+        })
     }
 }

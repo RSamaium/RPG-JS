@@ -224,6 +224,7 @@ export default class Player extends RpgCommonPlayer {
                 nb
             })
         }
+        return this
     }
 
     removeItem(itemClass, nb = 1) {
@@ -271,7 +272,7 @@ export default class Player extends RpgCommonPlayer {
             return ItemLog.notInInventory(itemClass)
         }
         const { item } = inventory
-        if (!item.consumable) {
+        if (item.consumable === false) {
             return ItemLog.notUseItem(itemClass)
         }
         const hitRate = item.hitRate || 100

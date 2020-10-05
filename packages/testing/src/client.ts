@@ -1,8 +1,8 @@
 export class Client {
     constructor(private io) { }
 
-    playerId: string
-    id: string
+    playerId: string = ''
+    id: string = ''
 
     connection() {
         this.io.on('playerJoined', (playerData) => {

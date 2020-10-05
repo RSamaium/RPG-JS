@@ -89,9 +89,7 @@ export class SceneMap {
         }))
 
         player.events.forEach(ev => {
-            if (ev.onInit) {
-                ev.execMethod('onInit', [player])
-            }
+            ev.execMethod('onInit', [player])
         })
     }
    
