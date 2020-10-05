@@ -1,8 +1,5 @@
-import { merge } from './common'
-
-interface RpgClassDatabase {
-    new ()
-}
+import { merge, RpgClassDatabase } from './common'
+import { ISkill } from './skill'
 
 interface ClassOptions {
     name: string,
@@ -10,7 +7,7 @@ interface ClassOptions {
     stateEfficency?: any[],
     elementEfficency?: any[],
     skillsToLearn?: [
-        { level: number, skill: RpgClassDatabase }
+        { level: number, skill: RpgClassDatabase<ISkill> }
     ]
 }
 

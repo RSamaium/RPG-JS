@@ -1,5 +1,9 @@
 import { merge } from './common'
 
+export interface ISkill {
+    onUse()
+}
+
 export interface SkillOptions {
     name: string
     description?: string

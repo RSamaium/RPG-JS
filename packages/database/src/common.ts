@@ -9,3 +9,7 @@ export function merge(options, type, _static = {}) {
         }
     }
 }
+
+export interface RpgClassDatabase<T> {
+    new ()
+}

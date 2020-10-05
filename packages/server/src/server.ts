@@ -2,6 +2,7 @@ import { ServerEngine } from 'lance-gg';
 import { SceneMap } from './Scenes/Map';
 import { SceneBattle } from './Scenes/Battle';
 import PlayerObject from './Player'
+import { Query } from './Query'
 
 export default class RpgServerEngine extends ServerEngine {
 
@@ -13,6 +14,11 @@ export default class RpgServerEngine extends ServerEngine {
         super(io, gameEngine, inputOptions)
         this.playerClass = inputOptions.playerClass || PlayerObject
         this.loadScenes()
+    }
+
+    start() {
+        super.start()
+        Query.Worlds = this.gameEngine.world
     }
 
     loadScenes() {

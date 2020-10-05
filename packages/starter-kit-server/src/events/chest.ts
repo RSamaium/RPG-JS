@@ -27,6 +27,11 @@ class _ChestEvent extends RpgEvent {
         //player.startBattle()
         await player.showText('You have 10 golds')
         player.gold += 10
+
+        const players = new Query()
+            .inMapOf(player)
+            .filter(player => player.hp > 10)
+            .find()
     }
 
     onPlayerTouch() {

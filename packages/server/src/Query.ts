@@ -1,42 +1,38 @@
-class Query {
+import RpgPlayer from './Player'
 
-    private _players = []
+export class Query {
 
-    /*constructor(player) {
-        this.players = []
-        this._command = new Command()
-        this.getPlayer(player)
-    }
+    static Worlds
 
-    get command() {
-        return this._command._setPlayers(this.players)
+    private players: RpgPlayer[] = []
+
+    constructor() {
+        if (!Query.Worlds) {
+            throw new Error('You have to start the RPG server before using the requests.')
+        }
     }
 
     getPlayer(player) {
-        this.players.push(player)
+        return Query.Worlds.getObject(player)
     }
 
-    _getMap(id) {
-        return Map.buffer.get(id) 
-    }*/
+    inMapOf(player: RpgPlayer) {
+        const { map } = player
+        this.players = Query.Worlds.getObjectsOfGroup(map)
+        return this
+    }
 
-    constructor() {
-        this._players = []
+    filter(cb) {
+        this.players = this.players.filter(cb)
+        return this
     }
 
     find() {
-        //const players = this._server.game.world.forEachObject(console.log)
-        return []
+       return this.players
     }
 
     fineOne() {
-
-    }
-
-    exec() {
-        return this._players
+        return this.players[0]
     }
 
 }
-
-export default new Query()

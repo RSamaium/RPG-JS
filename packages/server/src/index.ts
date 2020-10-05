@@ -6,7 +6,7 @@ import { MapData } from './decorators/map'
 import { RpgMap } from './Game/Map'
 import RpgEvent from './Event'
 import RpgPlayer from './Player'
-import Query from './Query'
+import { Query } from './Query'
 import * as Presets from './presets'
 
 export {
