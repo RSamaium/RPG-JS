@@ -12,6 +12,6 @@ import { Event } from './event'
 })
 export default class RPG extends RpgClientEngine {
    onLatency(latency) {
-       console.log(latency) 
+      // console.log(latency)  
    } 
 }

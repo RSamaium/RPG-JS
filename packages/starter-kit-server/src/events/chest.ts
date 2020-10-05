@@ -1,4 +1,5 @@
 import { RpgEvent, EventData, RpgPlayer, Query } from '@rpgjs/server'
+import { Potion } from '../database/items/potion'
 
 @EventData({
     name: 'EV-1',
@@ -26,12 +27,7 @@ class _ChestEvent extends RpgEvent {
         player.setVariable('A', true)*/ 
         //player.startBattle()
         await player.showText('You have 10 golds')
-        player.gold += 10
-
-        const players = new Query()
-            .inMapOf(player)
-            .filter(player => player.hp > 10)
-            .find()
+        player.addItem(Potion)
     }
 
     onPlayerTouch() {

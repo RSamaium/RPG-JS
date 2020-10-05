@@ -1,6 +1,6 @@
 <template>
     <div>
-        <ul>
+        <ul :class="css">
             <li v-for="(choice, index) in choices" :key="index" :class="{ active: selected == index }">
                 <p><Arrow direction="right" v-if="selected == index" /> <span>{{ choice.text }}</span></p>
             </li>
@@ -18,7 +18,7 @@ export default {
             selected: 0
         }
     },
-    props: ['choices'],
+    props: ['choices', 'row'],
     mounted() {
         this.$rpgKeypress = ((name) => {
             if (name == 'down' || name == 'up') this.moveCursor(name)
@@ -38,6 +38,14 @@ export default {
             else {
                 this.selected = this.selected + move
             }
+            this.$emit('change', this.selected)
+        }
+    },
+    computed: {
+        css() {
+            return {
+                row: !!this.row
+            }
         }
     },
     components: {
@@ -55,6 +63,15 @@ export default {
 ul {
     list-style: none;
     padding: 0;
+}
+
+ul.row {
+    display: flex;
+    flex-direction: 'row';
+}
+
+ul.row li {
+    width: 50%;
 }
 
 ul li {

@@ -224,6 +224,7 @@ export default class Player extends RpgCommonPlayer {
                 nb
             })
         }
+        this.paramsChanged.add('items')
         return this
     }
 
@@ -358,8 +359,18 @@ export default class Player extends RpgCommonPlayer {
         if (this.paramsChanged.size == 0) return
         const params = {}
         this.paramsChanged.forEach(param => {
-            params[param] = this[param] 
+            let val = this[param]
+            /*if (param == 'items') {
+                val = val.map(it => ({
+                    nb: it.nb,
+                    item: {
+                        name: it.item.name
+                    }
+                }))
+            }*/
+            params[param] = val
         });
+        console.log(params);
         (player || this)._emit('player.changeParam', {
             playerId: this.playerId,
             params,

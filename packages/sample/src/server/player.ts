@@ -1,4 +1,5 @@
 import { RpgPlayer, Query } from '@rpgjs/server'
+import { database } from '@rpgjs/starter-kit-server'
 
 export class Player extends RpgPlayer {
     onConnected() {
@@ -16,6 +17,7 @@ export class Player extends RpgPlayer {
 
     onInput({ input }) {
       if (input == 'escape') {
+          this.addItem(database.Potion)
           this.callMainMenu()
       }
     }
