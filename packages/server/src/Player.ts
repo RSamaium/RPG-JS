@@ -1,5 +1,6 @@
 import { RpgCommonMap, RpgCommonPlayer, Utils }  from '@rpgjs/common'
 import { Gui, DialogGui, MenuGui } from './Gui'
+import { ItemLog } from './logs'
 import { 
     MAXHP, 
     MAXSP,
@@ -241,17 +242,11 @@ export default class Player extends RpgCommonPlayer {
 
     buyItem(itemClass, nb = 1) {
         if (!itemClass.price) {
-            return {
-                msg: `Define a price > 0 to buy ${itemClass.name}`,
-                id: 'NOT_PRICE'
-            }
+            return ItemLog.haveNotPrice(itemClass)
         }
         const totalPrice = nb * itemClass.price
         if (this.gold < totalPrice) {
-            return {
-                msg: `not enough gold to buy ${nb} ${itemClass.name}`,
-                id: 'NOT_ENOUGH_GOLD'
-            }
+            return ItemLog.notEnoughGold(itemClass, nb)
         }
         this.gold -= totalPrice
         this.addItem(itemClass, nb)
@@ -260,17 +255,11 @@ export default class Player extends RpgCommonPlayer {
     sellItem(itemClass, nbToSell = 1) {
         const inventory = this.getItem(itemClass)
         if (!inventory) {
-            return {
-                msg: `The item ${itemClass.name} is not in inventory`,
-                id: 'ITEM_NOT_INVENTORY'
-            }
+            return ItemLog.notInInventory(itemClass)
         }
         const { item, nb } = inventory
         if (nb - nbToSell < 0) {
-            return {
-                msg: `Too many items to sell: ${nbToSell} ${itemClass.name}, only ${nb} in inventory`,
-                id: 'TOO_MANY_ITEM_TO_SELL'
-            }
+            return ItemLog.tooManyToSell(itemClass, nbToSell, nb)
         }
         this.gold += (itemClass.price / 2) * nbToSell
         this.removeItem(itemClass, nbToSell)
@@ -279,26 +268,17 @@ export default class Player extends RpgCommonPlayer {
     useItem(itemClass) {
         const inventory = this.getItem(itemClass)
         if (!inventory) {
-            return {
-                msg: `The item ${itemClass.name} is not in inventory`,
-                id: 'ITEM_NOT_INVENTORY'
-            }
+            return ItemLog.notInInventory(itemClass)
         }
         const { item } = inventory
         if (!item.consumable) {
-            return {
-                msg: 'You can not use.',
-                id: 'NOT_USE_ITEM'
-            }
+            return ItemLog.notUseItem(itemClass)
         }
         const hitRate = item.hitRate || 100
         const rand = random(0, 100)
         if (rand > hitRate) {
             this.removeItem(itemClass)
-            return {
-                msg: 'Failed to use the item',
-                id: 'USE_CHANCE_ITEM_FAILED'
-            }
+            return ItemLog.chanceToUseFailed(itemClass)
         }
         if (item.hpValue) {
             this.hp += item.hpValue
@@ -341,23 +321,14 @@ export default class Player extends RpgCommonPlayer {
     equip(itemClass, bool) {
         const inventory = this.getItem(itemClass)
         if (!inventory) {
-            return {
-                msg: `The item ${itemClass.name} is not in inventory`,
-                id: 'ITEM_NOT_INVENTORY'
-            }
+            return ItemLog.notInInventory(itemClass)
         }
         if (itemClass._type == 'item') {
-            return {
-                msg: `The item ${itemClass.name} is not a weapon or armor`,
-                id: 'INVALID_ITEM_TO_EQUIP'
-            }
+            return ItemLog.invalidToEquiped(itemClass)
         }
         const { item } = inventory
         if (item.equipped && bool) {
-            return {
-                msg: `The item ${itemClass.name} is already equiped`,
-                id: 'ITEM_ALREADY_EQUIPED'
-            }
+            return ItemLog.isAlreadyEquiped(itemClass)
         }
         item.equipped = bool
         this.equipments.push(item)
@@ -494,6 +465,9 @@ export default class Player extends RpgCommonPlayer {
     }
 
     public execMethod(methodName: string, methodData = []) {
+        if (!this[methodName]) {
+            return
+        }
         const ret = this[methodName](...methodData)
         const sync = () => {
             const player: any = methodData[0]

@@ -12,7 +12,7 @@ export class Query {
         }
     }
 
-    getPlayer(player) {
+    getPlayer(player): RpgPlayer {
         return Query.Worlds.getObject(player)
     }
 

@@ -1,9 +1,10 @@
 {
     "compilerOptions": {
         "target": "es6",
+        "types": ["node", "jest"],
         "module": "commonjs",
         "outDir": "./lib",
-        "rootDir": "./src",
+        "rootDir": "./specs",
         "strict": true,
         "sourceMap": true,
         "strictNullChecks": true,
@@ -21,6 +22,6 @@
         "declaration": true
     },
     "include": [
-        "src"
-    ]
+        "specs/*.ts"
+    ] 
 }
