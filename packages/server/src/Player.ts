@@ -1,5 +1,7 @@
 import { RpgCommonMap, RpgCommonPlayer, Utils }  from '@rpgjs/common'
+import { StrategyBroadcasting } from './decorators/strategy-broadcasting'
 import { Gui, DialogGui, MenuGui } from './Gui'
+import { Query } from './Query'
 import { ItemLog } from './logs'
 import { 
     MAXHP, 
@@ -8,8 +10,14 @@ import {
     MAXSP_CURVE 
 } from './presets'
 
-const { isPromise, random } = Utils
+const { isPromise, random, isArray, isObject } = Utils
 
+@StrategyBroadcasting([
+    {
+        params: ['hp', 'sp', 'gold', 'items'],
+        query: Query.getPlayer
+    }
+])
 export default class Player extends RpgCommonPlayer {
 
     public readonly type: string = 'player'
@@ -52,6 +60,7 @@ export default class Player extends RpgCommonPlayer {
     public map: string = ''
     public events: any[] = []
     public param: any 
+    public $broadcast: any // decorator StrategyBroadcasting
 
     constructor(gamePlayer, options, props) {
         super(gamePlayer, options, props)
@@ -219,6 +228,7 @@ export default class Player extends RpgCommonPlayer {
         }
         else {
             const instance = new itemClass()
+            if (!instance.$broadcast) instance.$broadcast = ['name', 'description', 'price', 'consumable']
             this.items.push({
                 item: instance,
                 nb
@@ -357,25 +367,54 @@ export default class Player extends RpgCommonPlayer {
     syncChanges(player?: Player) {
         this._eventChanges()
         if (this.paramsChanged.size == 0) return
+        const strategyBroadcasting = this.$broadcast || []
         const params = {}
-        this.paramsChanged.forEach(param => {
-            let val = this[param]
-            /*if (param == 'items') {
-                val = val.map(it => ({
-                    nb: it.nb,
-                    item: {
-                        name: it.item.name
-                    }
-                }))
-            }*/
-            params[param] = val
-        });
-        console.log(params);
-        (player || this)._emit('player.changeParam', {
-            playerId: this.playerId,
-            params,
-            type: this.type
-        })
+
+        const deepSerialize = (val) => {
+            if (isArray(val)) {
+                const newArray: any = []
+                for (let item of val) {
+                    newArray.push(deepSerialize(item))
+                }
+                return newArray
+            }
+            if (val.$broadcast) {
+                const obj = {}
+                for (let param of val.$broadcast) {
+                    obj[param] = val[param]
+                }
+                return deepSerialize(obj)
+            }
+            if (isObject(val)) {
+                const newObj = Object.assign({}, val)
+                for (let key in newObj) {
+                    newObj[key] = deepSerialize(val[key])
+                }
+                return newObj
+            }
+            return val
+        }
+
+        for (let strategy of strategyBroadcasting) {
+            this.paramsChanged.forEach(param => {
+                if (!strategy.params.includes(param)) {
+                    return
+                }
+                let val = this[param]
+                params[param] = deepSerialize(val)
+            });
+            let query = strategy.query(player || this)
+            if (!isArray(query)) {
+                query = [query]
+            }
+            for (let players of query) {
+                players._emit('player.changeParam', {
+                    playerId: this.playerId,
+                    params,
+                    type: this.type
+                })
+            }
+        }
         this.paramsChanged.clear()
     }
 

@@ -27,7 +27,8 @@ class _ChestEvent extends RpgEvent {
         player.setVariable('A', true)*/ 
         //player.startBattle()
         await player.showText('You have 10 golds')
-        player.addItem(Potion)
+       // player.addItem(Potion)
+       player.gold += 10
     }
 
     onPlayerTouch() {

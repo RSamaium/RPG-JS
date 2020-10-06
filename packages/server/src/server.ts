@@ -17,8 +17,8 @@ export default class RpgServerEngine extends ServerEngine {
     }
 
     start() {
-        super.start()
-        Query.Worlds = this.gameEngine.world
+        super.start() 
+        Query.worlds = this.gameEngine.world
     }
 
     loadScenes() {

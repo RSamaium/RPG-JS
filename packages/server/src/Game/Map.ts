@@ -48,6 +48,7 @@ export class RpgMap extends RpgCommonMap {
             
             ev.setPosition({ tileX, tileY })
             ev.speed = 1
+            ev.server = this.server
 
             /*const customEvent  = new event()
             customEvent.object = ev

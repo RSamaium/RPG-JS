@@ -1,24 +1,24 @@
 import RpgPlayer from './Player'
 
-export class Query {
+class QueryClass {
 
-    static Worlds
+    worlds
 
     private players: RpgPlayer[] = []
 
-    constructor() {
+   /* constructor() {
         if (!Query.Worlds) {
             throw new Error('You have to start the RPG server before using the requests.')
         }
-    }
+    }*/
 
     getPlayer(player): RpgPlayer {
-        return Query.Worlds.getObject(player)
+        return Query.worlds.getObject(player)
     }
 
     inMapOf(player: RpgPlayer) {
         const { map } = player
-        this.players = Query.Worlds.getObjectsOfGroup(map)
+        this.players = Query.worlds.getObjectsOfGroup(map)
         return this
     }
 
@@ -36,3 +36,5 @@ export class Query {
     }
 
 }
+
+export const Query = new QueryClass()

@@ -1,4 +1,4 @@
-import { RpgPlayer, Query } from '@rpgjs/server'
+import { RpgPlayer } from '@rpgjs/server'
 import { database } from '@rpgjs/starter-kit-server'
 
 export class Player extends RpgPlayer {
