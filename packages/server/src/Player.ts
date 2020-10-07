@@ -21,7 +21,7 @@ const {
 
 @StrategyBroadcasting([
     {
-        params: ['hp', 'sp', 'gold', 'items', 'level', 'exp', 'param', 'name', 'class'],
+        params: ['hp', 'sp', 'gold', 'items', 'level', 'exp', 'param', 'name', '_class', 'expForNextlevel'],
         query: Query.getPlayer
     }
 ])
@@ -103,7 +103,7 @@ export default class Player extends RpgCommonPlayer {
 
     set name(val: string) {
         this._name = val
-      //  this.paramsChanged.add('name')
+        //this.paramsChanged.add('name')
     }
 
     set gold(val) {
@@ -178,6 +178,7 @@ export default class Player extends RpgCommonPlayer {
         if (hasNewLevel > 0) this._triggerHook('onLevelUp', hasNewLevel)
         this._level = val
         this.paramsChanged.add('level')
+        this.paramsChanged.add('expForNextlevel')
         this.paramsChanged.add('param')
     }
 
@@ -231,7 +232,8 @@ export default class Player extends RpgCommonPlayer {
 
     setClass(_class) {
         this._class = new _class()
-        this.paramsChanged.add('class')
+        if (!this._class.$broadcast) this._class.$broadcast = ['name', 'description']
+        this.paramsChanged.add('_class')
     }
 
     getItem(itemClass) {
@@ -534,6 +536,10 @@ export default class Player extends RpgCommonPlayer {
             this.equip(item, true)
         }
         this.setClass(actor.class)
+    }
+
+    status() {
+
     }
 
     private _getMap(id) {

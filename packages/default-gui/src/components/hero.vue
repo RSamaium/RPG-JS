@@ -5,15 +5,16 @@
         </div>
         <div class="name-column">
             <ul>
-                <li>{{ name }}</li>
-                <li class="space-between"><span class="param-name">Level</span> <span>{{ level }}</span></li>
+                <li>{{ player.name }}</li>
+                <li class="space-between"><span class="param-name">Level</span> <span>{{ player.level }}</span></li>
+                <li><bar :nb="player.exp" :max="player.expForNextlevel" name="EXP"  color="gray" /></li>
             </ul>
         </div>
         <div class="bars-column">
              <ul>
-                 <li>Warrior</li>
-                 <li><bar :nb="hp" :max="maxHp" name="HP"  color="orange" /></li>
-                 <li><bar :nb="sp" :max="maxSp" name="SP"  color="blue" /></li>
+                 <li>{{ _class.name }}</li>
+                 <li><bar :nb="player.hp" :max="player.maxHp" name="HP"  color="orange" /></li>
+                 <li><bar :nb="player.sp" :max="player.maxSp" name="SP"  color="blue" /></li>
              </ul>
         </div>
     </div>
@@ -33,23 +34,8 @@ export default {
         player() {
             return this.$rpgPlayer()
         },
-        hp() {
-            return this.player.hp || 0
-        },
-        maxHp() {
-            return this.player.maxHp || 0
-        },
-        sp() {
-            return this.player.sp || 0
-        },
-        maxSp() {
-            return this.player.maxSp || 0
-        },
-        level() {
-            return this.player.level || 1
-        },
-        name() {
-            return this.player.name || ''
+        _class() {
+            return this.player._class
         }
     },
     components: {

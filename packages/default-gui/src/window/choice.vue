@@ -52,6 +52,8 @@ export default {
     methods: {
         moveCursor(move = 0) {
 
+            if (this.choices.length == 0) return
+
             let diff = 0
 
             const checkInView = (container, element,partial) => {

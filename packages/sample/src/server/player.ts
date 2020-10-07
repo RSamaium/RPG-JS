@@ -34,6 +34,8 @@ export class Player extends RpgPlayer {
             x: getRandomInt(50 * 32),
             y: getRandomInt(50 * 32) 
         })
+
+        this.setActor(database.Hero)
     }
 
     onInput({ input }) {

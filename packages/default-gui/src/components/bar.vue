@@ -41,6 +41,11 @@ export default {
     background: linear-gradient(90deg, rgba(0,129,196,1) 0%, rgba(0,193,242,1) 100%);
 }
 
+.gray {
+    background: rgb(68,68,68);
+    background: linear-gradient(90deg, rgba(68,68,68,1) 0%, rgba(170,170,170,1) 100%);
+}
+
 .bar-info {
     font-family: "lato";
     font-size: 18px;

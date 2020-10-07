@@ -39,11 +39,12 @@ export default {
         }
     },
     mounted() {
-        this.items = this.$rpgPlayer().items
+        this.items = this.$rpgPlayer().items || []
         this.$rpgCurrentPlayerChanged = (player) => {
             this.items = player.items
         }
         this.$rpgKeypress = ((name) => {
+            console.log(name)
             if (name == 'escape') {
                 this.$emit('changeLayout', 'MainLayout')
             }
@@ -56,9 +57,11 @@ export default {
     },
     methods: {
         selected(index) {
+            if (!this.items[index]) return
             this.description = this.items[index].item.description
         },
         choiceItem(index) {
+            if (!this.items[index]) return
             const { id, consumable } = this.items[index].item
             if (!consumable) return
             this.$rpgSocket.emit('gui.interaction', {
