@@ -15,6 +15,7 @@ export default class Player extends DynamicObject<any, any> {
     events: any[] = []
     direction: number
     colissionWith: any[] = []
+    data: any = {}
     hitbox: any
     player: any
     server: any

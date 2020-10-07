@@ -21,7 +21,7 @@ const {
 
 @StrategyBroadcasting([
     {
-        params: ['hp', 'sp', 'gold', 'items'],
+        params: ['hp', 'sp', 'gold', 'items', 'level', 'exp', 'param', 'name', 'class'],
         query: Query.getPlayer
     }
 ])
@@ -31,8 +31,8 @@ export default class Player extends RpgCommonPlayer {
 
     private _gold = 0
     private _hp = 0
-    private _sp = 0
-    private name = ''
+    private _sp = 0 
+    private _name = ''
     private skills: any[] = []
     private items: any[] = []
     private states: any[] = []
@@ -71,8 +71,9 @@ export default class Player extends RpgCommonPlayer {
 
     constructor(gamePlayer, options, props) {
         super(gamePlayer, options, props)
-        this._gold = 0
-        this._level = this.initialLevel
+        this.gold = 0
+        this.exp = 0
+        this.level = this.initialLevel
         this.param = new Proxy({}, {
             get: (obj, prop: string) => this.getParamValue(prop), 
             set: () => {
@@ -94,6 +95,15 @@ export default class Player extends RpgCommonPlayer {
         this.socket.on('gui.exit', ({ guiId, data }) => {
             this.removeGui(guiId, data)
         })
+    }
+
+    get name() {
+        return this._name
+    }
+
+    set name(val: string) {
+        this._name = val
+      //  this.paramsChanged.add('name')
     }
 
     set gold(val) {
@@ -129,6 +139,7 @@ export default class Player extends RpgCommonPlayer {
             val = this.param[MAXSP]
         }
         this._sp = val
+        this.paramsChanged.add('sp')
     }
 
     get sp() {
@@ -141,6 +152,7 @@ export default class Player extends RpgCommonPlayer {
         while (this.expForNextlevel < this._exp) {
             this.level += 1
         }
+        this.paramsChanged.add('exp')
         //const hasNewLevel = player.level - lastLevel
     }
 
@@ -165,6 +177,8 @@ export default class Player extends RpgCommonPlayer {
         const hasNewLevel = val - lastLevel
         if (hasNewLevel > 0) this._triggerHook('onLevelUp', hasNewLevel)
         this._level = val
+        this.paramsChanged.add('level')
+        this.paramsChanged.add('param')
     }
 
     get level() {
@@ -217,6 +231,7 @@ export default class Player extends RpgCommonPlayer {
 
     setClass(_class) {
         this._class = new _class()
+        this.paramsChanged.add('class')
     }
 
     getItem(itemClass) {
@@ -417,8 +432,15 @@ export default class Player extends RpgCommonPlayer {
                 if (!strategy.params.includes(param)) {
                     return
                 }
-                let val = this[param]
-                params[param] = deepSerialize(val)
+                if (param == 'param') {
+                    this._parameters.forEach((val, key) => {
+                        params[key] = this.param[key]
+                    })
+                }
+                else {
+                    let val = this[param]
+                    params[param] = deepSerialize(val)
+                }
             });
             let query = strategy.query(player || this)
             if (!isArray(query)) {

@@ -1,12 +1,13 @@
 <template>
     <div class="menu-main">
-       <component :is="layout" @changeLayout="change" @closeMenu="closeMenu" ref="layout"></component>
+       <component :is="layout" @changeLayout="change" ref="layout"></component>
     </div>
 </template>
 
 <script>
 import MainLayout from './layouts/main.vue'
 import ItemsLayout from './layouts/item.vue'
+import StatusLayout from './layouts/status.vue'
 
 export default {
     name: 'rpg-main-menu',
@@ -26,7 +27,6 @@ export default {
             }
             return false
         })
-        this.selected(0)
     },
     methods: {
         change(name) {
@@ -35,7 +35,8 @@ export default {
     },
     components: {
         MainLayout,
-        ItemsLayout
+        ItemsLayout,
+        StatusLayout
     }
 }
 </script>

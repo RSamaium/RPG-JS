@@ -38,12 +38,13 @@ export class Player extends RpgPlayer {
 
     onInput({ input }) {
       if (input == 'escape') {
-          this.addItem(database.Potion, 10)
+         /* this.addItem(database.Potion, 10)
           this.addItem(database.Key)
           this.addItem(A)
           this.addItem(B)
           this.addItem(C)
-          this.addItem(D)
+          this.addItem(D)*/
+          this.level += 1
           this.callMainMenu()
       }
     }

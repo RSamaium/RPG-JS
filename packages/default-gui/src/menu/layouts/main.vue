@@ -37,8 +37,13 @@ export default {
                 text: 'Skills',
                 value: 'skill'
             }, {
-                text: 'Equipment',
+                text: 'Equip',
                 value: 'equipment'
+            }, 
+            {
+                text: 'Status',
+                value: 'status',
+                layout: 'StatusLayout'
             }]
         }
     },

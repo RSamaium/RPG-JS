@@ -15,6 +15,7 @@ export default class RpgClientEngine extends ClientEngine<any> {
     private vm: any
     private controls: KeyboardControls
     private eventEmitter: EventEmitter = new EventEmitter()
+    private bufferParamsChanged: Map<string, any> = new Map()
 
     constructor(gameEngine, options) {
         super(gameEngine, options.io, options, Renderer)
@@ -44,6 +45,17 @@ export default class RpgClientEngine extends ClientEngine<any> {
         this.controls.bindKey('right', 'right', { repeat: true } )
         this.controls.bindKey('space', 'space')
         this.controls.bindKey('escape', 'escape')
+
+        // If the settings are not yet in the player's logic, then we cache the data and apply the settings as soon as the player has been inserted into the logic.
+        setInterval(() => {
+            this.bufferParamsChanged.forEach((dataArray: any[], playerId: string) => {
+                let bool = false
+                for (let data of dataArray) {
+                    bool = this.updateObject(data)
+                }
+                if (bool) this.bufferParamsChanged.set(playerId, [])
+            })
+        }, 500)
     }
 
     _initUi() {
@@ -69,7 +81,8 @@ export default class RpgClientEngine extends ClientEngine<any> {
         Vue.prototype.$rpgEmitter = this.eventEmitter
         Vue.prototype.$gameEngine = this.gameEngine
         Vue.prototype.$rpgPlayer = (playerId?: string) => {
-            return this.gameEngine.world.getObject(playerId || this.gameEngine.playerId)
+            const player = this.gameEngine.world.getObject(playerId || this.gameEngine.playerId)
+            return player.data
         }
 
         Vue.prototype.$rpgGuiClose = function(data?) {
@@ -80,29 +93,18 @@ export default class RpgClientEngine extends ClientEngine<any> {
             })
         }
 
-        function propagateEvent(methodName, components, value) {
-            if (!components) {
-                return
-            }
-            for (let component of components) {
-                if (component[methodName]) {
-                    const ret = component[methodName](...value)
-                    if (ret == false) return false
-                }
-                return propagateEvent(methodName, component.$children, value)
-            }
-        }
-
         this.eventEmitter.once('keypress', (data) => {
-            return propagateEvent('$rpgKeypress', [this.vm], [data])
+            return this.propagateEvent('$rpgKeypress', [this.vm], [data])
         })
         this.eventEmitter.once('player.changeParam', (data) => {
-            const player = this.renderer.updateObject(data.playerId, data.params)
-            if (player) {
-                propagateEvent('$rpgPlayerChanged', [this.vm], [player, data.params])
-                if (data.playerId == this.gameEngine.playerId) {
-                    propagateEvent('$rpgCurrentPlayerChanged', [this.vm], [player, data.params])
+            const findPlayer = this.updateObject(data)
+            if (!findPlayer) {
+                let events = this.bufferParamsChanged.get(data.playerId)
+                if (!events) {
+                    events = []
                 }
+                events.push(data)
+                this.bufferParamsChanged.set(data.playerId, events)
             }
         })
         
@@ -112,6 +114,30 @@ export default class RpgClientEngine extends ClientEngine<any> {
         
         this.renderer.vm = this.vm
         this.renderer._resize()
+    }
+
+    private propagateEvent(methodName, components, value) {
+        if (!components) {
+            return
+        }
+        for (let component of components) {
+            if (component[methodName]) {
+                const ret = component[methodName](...value)
+                if (ret == false) return false
+            }
+            return this.propagateEvent(methodName, component.$children, value)
+        }
+    }
+
+    updateObject(data): boolean {
+        const player = this.renderer.updateObject(data.playerId, data.params)
+        if (player) {
+            this.propagateEvent('$rpgPlayerChanged', [this.vm], [player.data, data.params])
+            if (data.playerId == this.gameEngine.playerId) {
+                this.propagateEvent('$rpgCurrentPlayerChanged', [this.vm], [player.data, data.params])
+            }
+        }
+        return !!player
     }
 
     _initSocket() {
