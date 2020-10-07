@@ -8,7 +8,7 @@ export class Gui extends EventEmitter {
 
     constructor(
         public id: string,
-        private player: RpgPlayer,
+        protected player: RpgPlayer,
     ) {
         super()
     }

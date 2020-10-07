@@ -1,6 +1,6 @@
 <template>
     <div class="menu-main">
-       <component :is="layout" @changeLayout="change"></component>
+       <component :is="layout" @changeLayout="change" @closeMenu="closeMenu" ref="layout"></component>
     </div>
 </template>
 
@@ -14,6 +14,19 @@ export default {
         return {
             layout: 'MainLayout'
         }
+    },
+     mounted() {
+        this.$rpgKeypress = ((name) => {
+            if (name == 'escape') {
+                this.$rpgStage.filters = []
+                this.$rpgGuiClose()
+            }
+            else {
+                this.$refs.layout.$rpgKeypress(name)
+            }
+            return false
+        })
+        this.selected(0)
     },
     methods: {
         change(name) {

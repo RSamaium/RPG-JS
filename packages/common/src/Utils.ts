@@ -6,16 +6,24 @@ export function isBrowser() {
     return typeof window !== 'undefined'
 }
 
-export function isPromise(obj) {
-    return obj instanceof Promise
+export function isPromise(val) {
+    return isInstanceOf(val, Promise)
 }
 
 export function isArray(val) {
-    return val instanceof Array
+    return isInstanceOf(val, Array)
 }
 
 export function isObject(val) {
     return typeof val == 'object'
+}
+
+export function isString(val) {
+    return typeof val == 'string'
+}
+
+export function isInstanceOf(val, _class) {
+    return val instanceof _class
 }
 
 export default {
@@ -23,5 +31,7 @@ export default {
     isBrowser,
     isPromise,
     isArray,
-    isObject
+    isObject,
+    isString,
+    isInstanceOf
 }

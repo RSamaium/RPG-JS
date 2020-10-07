@@ -8,6 +8,15 @@ export class MenuGui extends Gui implements IGui {
     }
 
     open() {
+        this.on('useItem', (id) => {
+            try {
+                this.player.useItem(id)
+                this.player.syncChanges()
+            }
+            catch (err) {
+                console.log(err)
+            }
+        })
         return super.open('', {
             waitingAction: true,
             blockPlayerInput: true

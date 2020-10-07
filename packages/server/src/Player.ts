@@ -10,7 +10,14 @@ import {
     MAXSP_CURVE 
 } from './presets'
 
-const { isPromise, random, isArray, isObject } = Utils
+const { 
+    isPromise, 
+    random, 
+    isArray, 
+    isObject, 
+    isString, 
+    isInstanceOf 
+} = Utils
 
 @StrategyBroadcasting([
     {
@@ -218,7 +225,12 @@ export default class Player extends RpgCommonPlayer {
     }
 
     _getItemIndex(itemClass) {
-        return this.items.findIndex(it => it.item instanceof itemClass)
+        return this.items.findIndex(it => {
+            if (isString(itemClass)) {
+                return it.item.id == itemClass
+            }
+            return isInstanceOf(it.item, itemClass)
+        })
     }
 
     addItem(itemClass, nb = 1) {
@@ -250,6 +262,7 @@ export default class Player extends RpgCommonPlayer {
         else {
             this.items[itemIndex].nb -= nb
         }
+        this.paramsChanged.add('items')
     }
 
     buyItem(itemClass, nb = 1) {
@@ -284,7 +297,7 @@ export default class Player extends RpgCommonPlayer {
         }
         const { item } = inventory
         if (item.consumable === false) {
-            return ItemLog.notUseItem(itemClass)
+            throw ItemLog.notUseItem(itemClass)
         }
         const hitRate = item.hitRate || 100
         const rand = random(0, 100)
@@ -371,6 +384,9 @@ export default class Player extends RpgCommonPlayer {
         const params = {}
 
         const deepSerialize = (val) => {
+            if (val == undefined) {
+                return val
+            }
             if (isArray(val)) {
                 const newArray: any = []
                 for (let item of val) {
@@ -379,10 +395,11 @@ export default class Player extends RpgCommonPlayer {
                 return newArray
             }
             if (val.$broadcast) {
-                const obj = {}
+                const obj: any = {}
                 for (let param of val.$broadcast) {
                     obj[param] = val[param]
                 }
+                obj.id = val.id
                 return deepSerialize(obj)
             }
             if (isObject(val)) {

@@ -1,8 +1,8 @@
 <template>
     <window :position="position" :fullWidth="fullWidth" class="dialog">
-        {{ msg }}
+        <p>{{ msg }}</p>
         <choices :choices="choices" @selected="close" v-if="isChoice" />
-        <Arrow direction="down" class="arrow-center" v-else-if="!autoClose" />
+        <Arrow direction="down" :center="true" v-else-if="!autoClose" />
     </window>
 </template>
 
@@ -64,12 +64,6 @@ export default {
 </script>
 
 <style scoped>
-.arrow-center {
-    position: absolute;
-    left: calc(50% - 0.5em / 2);
-    bottom: 0;
-}
-
 .dialog {
     position: absolute;
     left: 0;

@@ -62,6 +62,7 @@
   },
   "dependencies": {
     "@rpgjs/client": "^3.0.0-alpha",
+    "@rpgjs/database": "^3.0.0-alpha",
     "@rpgjs/default-gui": "^3.0.0-alpha",
     "@rpgjs/server": "^3.0.0-alpha",
     "@rpgjs/standalone": "^3.0.0-alpha",

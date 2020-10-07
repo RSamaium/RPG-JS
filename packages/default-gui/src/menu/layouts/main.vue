@@ -5,7 +5,7 @@
             <rpg-choice :choices="menu" @selected="selectMenu" ref="menu" />
         </rpg-window>
          <rpg-window :fullWidth="true" class="gold">
-            {{ gold }} {{ goldName}}
+            <p>{{ gold }} {{ goldName}}</p>
         </rpg-window>
     </div>
     <div class="menu-right">
@@ -50,13 +50,9 @@ export default {
     mounted() {
         const blur = new PIXI.filters.BlurFilter()
         this.$rpgStage.filters = [blur]
-        this.$rpgPlayerChanged = (player) => {
-            console.log(player)
-        }
         this.$rpgKeypress = ((name) => {
-            if (name == 'escape' ) {
-                this.$rpgStage.filters = []
-                this.$rpgGuiClose()
+            if (name == 'escape') {
+                this.$emit('closeMenu')
             }
             else {
                 this.$refs.menu.$rpgKeypress(name)
@@ -83,7 +79,7 @@ export default {
 }
 
 .menu-left {
-    width: 190px;
+    width: 320px;
     display: flex;
     flex-direction: column;
     flex-flow: row wrap;
@@ -91,6 +87,7 @@ export default {
 
 .menu-choice {
     align-items: flex-start;
+    width: 100%;
 }
 
 .menu-left .gold {
@@ -98,15 +95,8 @@ export default {
     width: 100%;
 }
 
-.menu-left {
-    width: 190px;
-    display: flex;
-    flex-direction: column;
-    flex-flow: row wrap;
-}
-
 .menu-right {
     width: 100%;
-    margin-left: 5px;
+    margin-left: 1px;
 }
 </style>

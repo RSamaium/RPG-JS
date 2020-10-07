@@ -1,5 +1,5 @@
 <template>
-    <i class="arrow" :class="{ [direction]: true }" :style="style"></i>  
+    <i class="arrow" :class="{ [direction]: true, center }" :style="style"></i>  
 </template>
 
 <script>
@@ -12,6 +12,10 @@ export default {
     size: {
       type: Number,
       default: 0.5
+    },
+    center: {
+      type: Boolean,
+      default: false
     }
   },
   computed: {
@@ -65,5 +69,11 @@ export default {
 .right {
   animation: rightarrow 0.6s infinite alternate ease-in-out;
   transform: rotate(-90deg);
+}
+
+.center {
+    position: absolute;
+    left: calc(50% - 0.5em / 2);
+    bottom: 0;
 }
 </style>

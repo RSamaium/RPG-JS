@@ -2,16 +2,25 @@
     <transition name="fade">
         <div v-if="loading" class="window" :class="classPosition" :style="{ height }">
             <div class="window-content" :class="css" :style="{ width }">
-                <p><slot></slot></p>
+                {{ arrow }}
+                <div v-if="arrow == 'up'">
+                    <Arrow :center="true" direction="up" />
+                </div>  
+                <slot></slot>
+                <div v-if="arrow == 'down'">
+                    <Arrow :center="true" direction="down" />
+                </div>  
             </div>
         </div>
    </transition>
 </template>
 
 <script>
+import Arrow from './arrow.vue'
+
 export default {
     name: 'rpg-window',
-    props: ['width', 'height', 'message', 'position', 'fullWidth'],
+    props: ['width', 'height', 'message', 'position', 'fullWidth', 'arrow'],
     data() {
         return {
             loading: false
@@ -31,37 +40,40 @@ export default {
     },
     mounted() {
         this.loading = true
+    },
+    components: {
+        Arrow
     }
 }
 </script>
 
-<style scoped>
+<style>
 @font-face {
  font-family: "lato";
  src: url("../assets/fonts/Lato/Lato-Regular.ttf") format("ttf");
-}
-
-.window {
-    display: flex;
-}
-
-.window-content {
-    border: 4px solid white;
-    border-radius: 10px;
-    background-color: rgba(0, 0, 0, 0.4);
-    padding: 20px;
 }
 
 .window-content p {
     font-family: "lato";
     font-size: 25px;
     color: white;
-    text-shadow:
-    -1px -1px 0 #000,  
-        1px -1px 0 #000,
-        -1px 1px 0 #000,
-        1px 1px 0 #000;
     margin: 0;
+}
+</style>
+
+<style scoped>
+
+.window {
+    display: flex;
+}
+
+.window-content {
+    border: 2.5px solid white;
+    border-radius: 5px;
+    background: rgb(79,82,136);
+    background: linear-gradient(148deg, rgba(79,82,136,0.7) 0%, rgba(42,43,73,0.7) 100%);
+    padding: 20px;
+    overflow: hidden;
 }
 
 .window.top {

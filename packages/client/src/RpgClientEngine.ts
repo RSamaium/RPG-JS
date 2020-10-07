@@ -98,7 +98,12 @@ export default class RpgClientEngine extends ClientEngine<any> {
         })
         this.eventEmitter.once('player.changeParam', (data) => {
             const player = this.renderer.updateObject(data.playerId, data.params)
-            if (player) propagateEvent('$rpgPlayerChanged', [this.vm], [player, data.params])
+            if (player) {
+                propagateEvent('$rpgPlayerChanged', [this.vm], [player, data.params])
+                if (data.playerId == this.gameEngine.playerId) {
+                    propagateEvent('$rpgCurrentPlayerChanged', [this.vm], [player, data.params])
+                }
+            }
         })
         
         for (let ui of gui) {
