@@ -7,5 +7,7 @@ export interface WeaponOptions {
 }
 
 export function Weapon(options: WeaponOptions) {
-    return merge(options, 'weapon')
+    return merge(options, 'weapon', {
+        price: options.price
+    })
 }

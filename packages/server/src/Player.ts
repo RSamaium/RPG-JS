@@ -2,7 +2,7 @@ import { RpgCommonMap, RpgCommonPlayer, Utils }  from '@rpgjs/common'
 import { StrategyBroadcasting } from './decorators/strategy-broadcasting'
 import { Gui, DialogGui, MenuGui, ShopGui } from './Gui'
 import { Query } from './Query'
-import { ItemLog } from './logs'
+import { ItemLog, Log } from './logs'
 import { 
     MAXHP, 
     MAXSP,
@@ -251,8 +251,8 @@ export default class Player extends RpgCommonPlayer {
         })
     }
 
-    addItem(itemClass, nb = 1) {
-        const itemIndex = this._getItemIndex(itemClass)
+    addItem(itemClass, nb = 1): { item: any, nb: number } {
+        let itemIndex = this._getItemIndex(itemClass)
         if (itemIndex != -1) {
             this.items[itemIndex].nb += nb
         }
@@ -263,9 +263,10 @@ export default class Player extends RpgCommonPlayer {
                 item: instance,
                 nb
             })
+            itemIndex = this.items.length - 1
         }
         this.paramsChanged.add('items')
-        return this
+        return this.items[itemIndex]
     }
 
     removeItem(itemClass, nb = 1) {
@@ -283,31 +284,32 @@ export default class Player extends RpgCommonPlayer {
         this.paramsChanged.add('items')
     }
 
-    buyItem(itemClass, nb = 1) {
+    buyItem(itemClass, nb = 1): { item: any, nb: number } {
         if (isString(itemClass)) itemClass = this.databaseById(itemClass)
         if (!itemClass.price) {
-            return ItemLog.haveNotPrice(itemClass)
+            throw ItemLog.haveNotPrice(itemClass)
         }
         const totalPrice = nb * itemClass.price
         if (this.gold < totalPrice) {
-            return ItemLog.notEnoughGold(itemClass, nb)
+            throw ItemLog.notEnoughGold(itemClass, nb)
         }
         this.gold -= totalPrice
-        this.addItem(itemClass, nb)
+        return this.addItem(itemClass, nb)
     }
 
-    sellItem(itemClass, nbToSell = 1) {
+    sellItem(itemClass, nbToSell = 1): { item: any, nb: number } {
         if (isString(itemClass)) itemClass = this.databaseById(itemClass)
         const inventory = this.getItem(itemClass)
         if (!inventory) {
-            return ItemLog.notInInventory(itemClass)
+            throw ItemLog.notInInventory(itemClass)
         }
         const { item, nb } = inventory
         if (nb - nbToSell < 0) {
-            return ItemLog.tooManyToSell(itemClass, nbToSell, nb)
+            throw ItemLog.tooManyToSell(itemClass, nbToSell, nb)
         }
         this.gold += (itemClass.price / 2) * nbToSell
         this.removeItem(itemClass, nbToSell)
+        return inventory
     } 
 
     useItem(itemClass) {
