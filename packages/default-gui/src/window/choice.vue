@@ -1,6 +1,6 @@
 <template>
     <div class="choice-container">
-        <ul :style="css" ref="ul">
+        <ul :style="css" ref="ul" >
             <li v-for="(choice, index) in choices" :key="index" :class="{ active: selected == index }" :ref="`li-${index}`">
                 <slot :choice="choice">
                     <p><span>{{ choice.text }}</span></p>
@@ -29,6 +29,10 @@ export default {
         column: {
             type: Number,
             default: 1
+        },
+        align: {
+            type: String,
+            default: 'left'
         }
     },
     mounted() {
@@ -116,7 +120,8 @@ export default {
             return {
                 'column-count': this.column > 1 ? this.column : undefined,
                 'height': '100%', 
-                'margin-top': this.scrollHeight
+                'margin-top': this.scrollHeight,
+                'text-align': this.align
             }
         }
     },
@@ -131,13 +136,11 @@ export default {
   0% { opacity: 0.4 }
   100% { opacity: 0.7 }
 }
-.choice-container {
-    height: 100%;
-}
 
 ul {
     list-style: none;
     padding: 0;
+    margin: 0;
 }
 
 ul li {
@@ -149,15 +152,17 @@ ul li.active {
     display: block;
 }
 
+ul li > * {
+    padding: 10px;
+}
+
 ul li.active:before {
     content: '';
     position: absolute;
     background: #7782ab;
     width: 100%;
     height: 100%;
-    top: -7px;
-    left: -10px;
-    padding: 5px;
+    left: 0px;
     border: 1px solid #9db0c6;
     animation: cursor 0.6s infinite alternate ease-in-out;
     z-index: 0;

@@ -6,6 +6,7 @@ import { Query } from './Query'
 
 export default class RpgServerEngine extends ServerEngine {
 
+    public database: any = {}
     private playerClass: PlayerObject
     private scenes: Map<string, any> = new Map()
     protected totalConnected: number = 0
@@ -13,6 +14,12 @@ export default class RpgServerEngine extends ServerEngine {
     constructor(public io, public gameEngine, private inputOptions) {
         super(io, gameEngine, inputOptions)
         this.playerClass = inputOptions.playerClass || PlayerObject
+        if (inputOptions.database) {
+            for (let key in inputOptions.database) {
+                const data = inputOptions.database[key]
+                this.database[data.id] = data
+            }
+        }
         this.loadScenes()
     }
 

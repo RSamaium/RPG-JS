@@ -1,6 +1,6 @@
 import { RpgCommonMap, RpgCommonPlayer, Utils }  from '@rpgjs/common'
 import { StrategyBroadcasting } from './decorators/strategy-broadcasting'
-import { Gui, DialogGui, MenuGui } from './Gui'
+import { Gui, DialogGui, MenuGui, ShopGui } from './Gui'
 import { Query } from './Query'
 import { ItemLog } from './logs'
 import { 
@@ -90,6 +90,7 @@ export default class Player extends RpgCommonPlayer {
         this.socket.on('gui.interaction', ({ guiId, name, data }) => {
             if (this._gui[guiId]) {
                 this._gui[guiId].emit(name, data)
+                this.syncChanges()
             }
         })
         this.socket.on('gui.exit', ({ guiId, data }) => {
@@ -283,6 +284,7 @@ export default class Player extends RpgCommonPlayer {
     }
 
     buyItem(itemClass, nb = 1) {
+        if (isString(itemClass)) itemClass = this.databaseById(itemClass)
         if (!itemClass.price) {
             return ItemLog.haveNotPrice(itemClass)
         }
@@ -295,6 +297,7 @@ export default class Player extends RpgCommonPlayer {
     }
 
     sellItem(itemClass, nbToSell = 1) {
+        if (isString(itemClass)) itemClass = this.databaseById(itemClass)
         const inventory = this.getItem(itemClass)
         if (!inventory) {
             return ItemLog.notInInventory(itemClass)
@@ -305,7 +308,7 @@ export default class Player extends RpgCommonPlayer {
         }
         this.gold += (itemClass.price / 2) * nbToSell
         this.removeItem(itemClass, nbToSell)
-    }
+    } 
 
     useItem(itemClass) {
         const inventory = this.getItem(itemClass)
@@ -489,6 +492,12 @@ export default class Player extends RpgCommonPlayer {
         return gui.open()
     }
 
+    callShop(items: any[]) {
+        const gui = new ShopGui(this)
+        this._gui[gui.id] = gui
+        return gui.open(items)
+    }
+
     showEffect() {
         this._emit('player.callMethod', { 
             objectId: this.playerId,
@@ -540,6 +549,10 @@ export default class Player extends RpgCommonPlayer {
 
     status() {
 
+    }
+
+    private databaseById(id: string) {
+        return this.server.database[id]
     }
 
     private _getMap(id) {

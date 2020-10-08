@@ -46,8 +46,14 @@ export class Player extends RpgPlayer {
           this.addItem(B)
           this.addItem(C)
           this.addItem(D)*/
-          this.level += 1
-          this.callMainMenu()
+          //this.level += 1
+          //this.callMainMenu()
+          this.gold += 10000
+          this.syncChanges() 
+          this.callShop([
+            database.Potion,
+            database.Sword
+          ])
       }
     }
 
