@@ -7,6 +7,7 @@ import { StrategyBroadcasting } from './decorators/strategy-broadcasting'
 import { RpgMap } from './Game/Map'
 import RpgEvent from './Event'
 import RpgPlayer from './Player'
+import RpgEnemy from './Enemy'
 import { Query } from './Query'
 import * as Presets from './presets'
 
@@ -16,6 +17,7 @@ export {
     RpgEvent,
     RpgPlayer,
     RpgMap,
+    RpgEnemy,
     MapData,
     EventData,
     Query,

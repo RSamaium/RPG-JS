@@ -9,7 +9,7 @@ beforeEach(() => {
     const fixture = testing(RPGServer)
     client = fixture.createClient()
     socket = client.connection()
-    player = new Query().getPlayer(client)
+    player = Query.getPlayer(client)
 })
 
 test('add an item', () => {
@@ -40,9 +40,13 @@ test('use an item that is not in the inventory', () => {
 })
 
 test('use an item that is not consumable', () => {
-    player.addItem(Key)
-    const ret = player.useItem(Key)
-    expect(ret.id).toBe('NOT_USE_ITEM')
+    try {
+        player.addItem(Key)
+        player.useItem(Key)
+    }
+    catch (err) {
+        expect(err.id).toBe('NOT_USE_ITEM')
+    }
 })
 
 test('buy an item', () => {

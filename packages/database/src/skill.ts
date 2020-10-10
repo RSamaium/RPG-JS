@@ -10,7 +10,13 @@ export interface SkillOptions {
     spCost?: number
     power?: number
     element?: any[]
-    stateChange?: any[]
+    addStates?: any[]
+    removeStates?: any[]
+    coefficient?: {
+        [param: string]: number
+    },
+    variance?: number,
+    hitRate?: number
 }
 
 export function Skill(options: SkillOptions) {   

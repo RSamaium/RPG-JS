@@ -1,4 +1,4 @@
-import { RpgBattle } from '../Game/Battle'
+import { RpgBattle } from '../Game/Battle/Battle'
 
 export class SceneBattle {
 
@@ -8,11 +8,12 @@ export class SceneBattle {
 
     constructor(private server: any) { }
 
-    create(player, options: {}) {
+    create(player, ennemies, options: {}) {
         const battleId = ''+Math.random()
-        const battle = new RpgBattle(this.server, options)
+        const battle = new RpgBattle(this.server, battleId, ennemies, options)
         this.battles.set(battleId, battle)
         this.join(battleId, player)
+        return this
     }
 
     join(battleId: string, player) {

@@ -9,7 +9,7 @@ beforeEach(() => {
     const fixture = testing(RPGServer)
     client = fixture.createClient()
     socket = client.connection()
-    player = new Query().getPlayer(client)
+    player = Query.getPlayer(client)
 })
 
 test('Test HP', () => {

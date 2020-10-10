@@ -1,13 +1,25 @@
 import { RpgCommonMap, RpgCommonPlayer, Utils }  from '@rpgjs/common'
+import { StateRestriction } from '@rpgjs/database'
 import { StrategyBroadcasting } from './decorators/strategy-broadcasting'
 import { Gui, DialogGui, MenuGui, ShopGui } from './Gui'
 import { Query } from './Query'
-import { ItemLog, Log } from './logs'
+import { ItemLog, SkillLog, Log } from './logs'
 import { 
     MAXHP, 
     MAXSP,
+    STR,
+    ATK,
+    INT,
+    DEX,
+    AGI,
+    PDEF,
+    SDEF,
     MAXHP_CURVE, 
-    MAXSP_CURVE 
+    MAXSP_CURVE,
+    STR_CURVE,
+    INT_CURVE,
+    DEX_CURVE,
+    AGI_CURVE
 } from './presets'
 
 const { 
@@ -21,7 +33,21 @@ const {
 
 @StrategyBroadcasting([
     {
-        params: ['hp', 'sp', 'gold', 'items', 'level', 'exp', 'param', 'name', '_class', 'expForNextlevel'],
+        params: [
+            'hp', 
+            'sp', 
+            'gold', 
+            'items', 
+            'level', 
+            'exp', 
+            'param', 
+            'name', 
+            '_class', 
+            'expForNextlevel',
+            'skills',
+            'states',
+            'equipments'
+        ],
         query: Query.getPlayer
     }
 ])
@@ -69,7 +95,7 @@ export default class Player extends RpgCommonPlayer {
     public param: any 
     public $broadcast: any // decorator StrategyBroadcasting
 
-    constructor(gamePlayer, options, props) {
+    constructor(gamePlayer?, options?, props?) {
         super(gamePlayer, options, props)
         this.gold = 0
         this.exp = 0
@@ -83,6 +109,10 @@ export default class Player extends RpgCommonPlayer {
         })
         this.addParameter(MAXHP, MAXHP_CURVE)
         this.addParameter(MAXSP, MAXSP_CURVE)
+        this.addParameter(STR, STR_CURVE)
+        this.addParameter(INT, INT_CURVE)
+        this.addParameter(DEX, DEX_CURVE)
+        this.addParameter(AGI, AGI_CURVE)
         this.allRecovery()
     }
 
@@ -157,7 +187,7 @@ export default class Player extends RpgCommonPlayer {
         //const hasNewLevel = player.level - lastLevel
     }
 
-    get exp() {
+    get exp(): number {
         return this._exp
     }
 
@@ -183,12 +213,32 @@ export default class Player extends RpgCommonPlayer {
         this.paramsChanged.add('param')
     }
 
-    get level() {
+    get level(): number {
         return this._level
     }
 
-    get expForNextlevel() {
+    get expForNextlevel(): number {
         return this._expForLevel(this.level + 1)
+    }
+
+    private getParamItem(name) {
+        let nb = 0
+        for (let item of this.equipments) {
+            nb += item[name] || 0
+        }
+        return nb
+    }
+
+    get atk(): number {
+        return this.getParamItem(ATK)
+    }
+
+    get pdef(): number {
+        return this.getParamItem(PDEF)
+    }
+
+    get sdef(): number {
+        return this.getParamItem(SDEF)
     }
 
     addParameter(name: string, { start, end }: { start: number, end: number }) {
@@ -227,8 +277,8 @@ export default class Player extends RpgCommonPlayer {
         return this.server.getScene('map').changeMap(mapId, this, positions)
     }
 
-    startBattle() {
-        return this.server.getScene('battle').create(this)
+    startBattle(enemies: [{ enemy: any, level: number }]) {
+        return this.server.getScene('battle').create(this, enemies)
     }
 
     setClass(_class) {
@@ -269,10 +319,10 @@ export default class Player extends RpgCommonPlayer {
         return this.items[itemIndex]
     }
 
-    removeItem(itemClass, nb = 1) {
-        const itemIndex = this._getItemIndex(itemClass)
+    removeItem(itemClass, nb = 1): { item: any, nb: number } | undefined {
+        const itemIndex: number = this._getItemIndex(itemClass)
         if (itemIndex == -1) {
-            return false
+            throw ItemLog.notInInventory(itemClass)
         }
         const currentNb = this.items[itemIndex].nb
         if (currentNb - nb <= 0) {
@@ -282,6 +332,7 @@ export default class Player extends RpgCommonPlayer {
             this.items[itemIndex].nb -= nb
         }
         this.paramsChanged.add('items')
+        return this.items[itemIndex]
     }
 
     buyItem(itemClass, nb = 1): { item: any, nb: number } {
@@ -321,7 +372,7 @@ export default class Player extends RpgCommonPlayer {
         if (item.consumable === false) {
             throw ItemLog.notUseItem(itemClass)
         }
-        const hitRate = item.hitRate || 100
+        const hitRate = item.hitRate * 100 || 100
         const rand = random(0, 100)
         if (rand > hitRate) {
             this.removeItem(itemClass)
@@ -333,29 +384,37 @@ export default class Player extends RpgCommonPlayer {
         if (item.hpRate) {
             this.hp += this.param[MAXHP] / item.hpRate
         }
-        if (item.addStates) {
-            for (let state of item.addStates) {
-                this.addState(state)
-            }
-        }
-        if (item.removeStates) {
-            for (let state of item.removeStates) {
-                this.removeState(state)
-            }
-        }
+        this.applyStates(this, item)
         this.removeItem(itemClass)
+    }
+
+    private applyStates(player: Player, { addStates, removeStates }) {
+        if (addStates) {
+            for (let state of addStates) {
+                player.addState(state)
+            }
+        }
+        if (removeStates) {
+            for (let state of removeStates) {
+                player.removeState(state)
+            }
+        } 
     }
 
     hasState(stateClass) {
         return this.states.find(state => state instanceof stateClass)
     }
 
-    addState(stateClass) {
+    addState(stateClass): object | null {
         const hasState = this.hasState(stateClass)
         if (!hasState) {
             const instance = new stateClass()
+            if (!instance.$broadcast) instance.$broadcast = ['name', 'description', 'restriction']
             this.states.push(instance)
+            this.paramsChanged.add('states')
+            return instance
         }
+        return null
     }
 
     removeState(stateClass) {
@@ -363,6 +422,16 @@ export default class Player extends RpgCommonPlayer {
         if (index != -1) {
             this.states.splice(index, 1)
         }
+        this.paramsChanged.add('states')
+    }
+
+    private hasStateRestriction(restriction: StateRestriction): boolean {
+        for (let state of this.states) {
+            if (state.restriction && restriction == state.restriction) {
+                return true
+            }
+        }
+        return false
     }
 
     equip(itemClass, bool) {
@@ -378,16 +447,85 @@ export default class Player extends RpgCommonPlayer {
             return ItemLog.isAlreadyEquiped(itemClass)
         }
         item.equipped = bool
+        this.applyStates(this, item)
         this.equipments.push(item)
+        this.paramsChanged.add('equipments')
     }
 
-    learnSkill(skill) {
-        const instance = new skill()
+    getSkill(skillClass) {
+        const index = this._getSkillIndex(skillClass)
+        return this.skills[index]
+    }
+
+    private _getSkillIndex(skillClass) {
+        return this.skills.findIndex(skill => {
+            if (isString(skill)) {
+                return skill.id == skillClass
+            }
+            return isInstanceOf(skill, skillClass)
+        })
+    }
+
+    learnSkill(skillClass) {
+        const instance = new skillClass()
+        if (!instance.coefficient) instance.coefficient = {
+            [INT]: 1
+        }
+        if (!instance.$broadcast) instance.$broadcast = ['name', 'description', 'spCost']
         this.skills.push(instance)
+        this.paramsChanged.add('skills')
+        return instance
     }
 
-    applyDamage(otherPlayer: Player, fn: Function) {
-       this.hp = fn(otherPlayer.param, this.param)
+    forgetSkill(skillClass) {
+        const index = this._getSkillIndex(skillClass)
+        if (index == -1) {
+            throw SkillLog.notLearned(skillClass)
+        }
+        this.skills.splice(index, 1)
+        this.paramsChanged.add('skills')
+    }
+
+    useSkill(skillClass, otherPlayer?: Player, fn?: Function) {
+        const skill = this.getSkill(skillClass)
+        if (this.hasStateRestriction(StateRestriction.CAN_NOT_SKILL)) {
+            throw SkillLog.restriction(skillClass)
+        }
+        if (!skill) {
+            throw SkillLog.notLearned(skillClass)
+        }
+        if (skill.spCost > this.sp) {
+            throw SkillLog.notEnoughSp(skillClass, skill.spCost, this.sp)
+        }
+        this.sp -= skill.spCost
+        const hitRate = (skill.hitRate * 100) || 100
+        const rand = random(0, 100)
+        if (rand > hitRate) {
+            throw SkillLog.chanceToUseFailed(skillClass)
+        }
+        if (otherPlayer) {
+            this.applyStates(otherPlayer, skill)
+            if (fn) otherPlayer.applyDamage(this, fn, skill)
+        }   
+        return skill
+    }
+
+    applyDamage(otherPlayer: Player, fn: Function, skill: any): number {
+        const getParam = (player) => {
+            const params = {}
+            this._parameters.forEach((val, key) => {
+                params[key] = player.param[key]
+            })
+            return {
+                [ATK]: player.atk,
+                [PDEF]: player.pdef,
+                [SDEF]: player.sdef,
+                ...params
+            }
+        }
+        const damage = fn(getParam(otherPlayer), getParam(this), skill)
+        this.hp -= damage
+        return damage
     }
 
     recovery({ hp, sp }: { hp?: number, sp?: number }) {

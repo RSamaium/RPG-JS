@@ -12,6 +12,7 @@
   "license": "ISC",
   "dependencies": {
     "@rpgjs/common": "^3.0.0-alpha",
+    "@rpgjs/database": "^3.0.0-alpha",
     "sat": "^0.8.0"
   }
 }

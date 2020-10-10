@@ -1,8 +1,7 @@
 import { State } from '@rpgjs/database'
 
 @State({
-    name: 'Paralyze',
-    restriction: ''
+    name: 'Paralyze'
 })
 export class Paralyze {
 

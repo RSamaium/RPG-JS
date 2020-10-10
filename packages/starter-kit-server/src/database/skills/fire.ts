@@ -7,9 +7,6 @@ import { Skill } from '@rpgjs/database'
    power: -150,
    element: [
 
-   ],
-   stateChange: [
-       
    ]
 })
 export class Fire {
