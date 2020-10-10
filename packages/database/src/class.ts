@@ -1,11 +1,10 @@
 import { merge, RpgClassDatabase } from './common'
 import { ISkill } from './skill'
+import { EfficiencyOptions } from './efficiency'
 
-interface ClassOptions {
+interface ClassOptions extends EfficiencyOptions {
     name: string
     equippable?: any[]
-    stateEfficency?: any[]
-    elementEfficency?: any[]
     skillsToLearn?: [
         { level: number, skill: RpgClassDatabase<ISkill> }
     ]

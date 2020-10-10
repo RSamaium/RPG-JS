@@ -13,7 +13,8 @@ interface RpgServerOptions {
     playerClass?: RpgClassPlayer<RpgPlayer>,
     database?: object,
     maps?: RpgClassMap<RpgMap>[],
-    basePath: string
+    basePath: string,
+    damageFormulas?: object
 }
 
 export function RpgServer(options: RpgServerOptions) {

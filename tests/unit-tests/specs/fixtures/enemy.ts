@@ -1,7 +1,9 @@
-import { Enemy } from '@rpgjs/database'
+import { Enemy, Efficiency } from '@rpgjs/database'
 import { RpgEnemy } from '@rpgjs/server'
 import { Sword } from './weapons'
 import { Shield } from './armor'
+import { Confuse } from './state'
+import { Elements } from './elements'
 
 @Enemy({
     name: 'Monster',
@@ -13,7 +15,15 @@ import { Shield } from './armor'
         exp: 10,
         gold: 15
     },
-    equipments: [Sword, Shield]
+    startingEquipment: [Sword, Shield],
+    statesEfficiency: [{
+        state: Confuse,
+        efficiency: Efficiency.PERFECT_INVULNERABLE
+    }],
+    elementsEfficiency: [{ 
+        element: Elements.Fire,
+        efficiency: Efficiency.VERY_VULNERABLE
+    }]
 })
 export class Monster extends RpgEnemy {
 

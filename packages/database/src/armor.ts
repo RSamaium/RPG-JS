@@ -1,12 +1,8 @@
 import { merge } from './common'
+import { EquipmentOptions } from './item'
 
-export interface ArmorOptions {
-    name: string,
-    description?: string,
-    price?: number,
-    pdef?: number,
-    sdef?: number,
-    params?: object
+export interface ArmorOptions extends EquipmentOptions {
+    
 }
 
 export function Armor(options: ArmorOptions) {

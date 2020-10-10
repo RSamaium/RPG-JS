@@ -7,14 +7,26 @@ export default class RpgEnemy extends Player  {
 
     constructor() {
         super()
-        const { parameters, equipments, gain }= this.options
+        const { 
+            parameters = {}, 
+            startingEquipment = [], 
+            startingItems = [],
+            gain, 
+            statesEfficiency = [], 
+            elementsEfficiency = []
+        } = this.options
         for (let param in parameters) {
             this.addParameter(param, parameters[param])
         }
-        for (let item of equipments) {
+        for (let item of startingEquipment) {
             this.addItem(item)
             this.equip(item, true)
         }
+        for (let { nb, item } of startingItems) {
+            this.addItem(item, nb)
+        }
+        this.statesEfficiency = statesEfficiency
+        this.elementsEfficiency = elementsEfficiency
         this.gain = gain
     }
 }

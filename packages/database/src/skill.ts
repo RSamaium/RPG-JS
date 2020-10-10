@@ -9,13 +9,13 @@ export interface SkillOptions {
     description?: string
     spCost?: number
     power?: number
-    element?: any[]
+    elements?: any[]
     addStates?: any[]
     removeStates?: any[]
     coefficient?: {
         [param: string]: number
     },
-    variance?: number,
+    variance?: number
     hitRate?: number
 }
 

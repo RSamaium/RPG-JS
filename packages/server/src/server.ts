@@ -3,10 +3,12 @@ import { SceneMap } from './Scenes/Map';
 import { SceneBattle } from './Scenes/Battle';
 import PlayerObject from './Player'
 import { Query } from './Query'
+import { DAMAGE_SKILL, DAMAGE_PHYSIC, DAMAGE_CRITICAL } from './presets'
 
 export default class RpgServerEngine extends ServerEngine {
 
     public database: any = {}
+    public damageFormulas: any = {}
     private playerClass: PlayerObject
     private scenes: Map<string, any> = new Map()
     protected totalConnected: number = 0
@@ -19,6 +21,13 @@ export default class RpgServerEngine extends ServerEngine {
                 const data = inputOptions.database[key]
                 this.database[data.id] = data
             }
+        }
+        this.damageFormulas = inputOptions.damageFormulas || {}
+        this.damageFormulas = {
+            damageSkill: DAMAGE_SKILL,
+            damagePhysic: DAMAGE_PHYSIC,
+            damageCritical: DAMAGE_CRITICAL,
+            ...this.damageFormulas
         }
         this.loadScenes()
     }

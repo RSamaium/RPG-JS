@@ -2,10 +2,11 @@ import { Item } from './item'
 import { Actor } from './actor'
 import { Class } from './class'
 import { Skill } from './skill'
-import { State, StateRestriction } from './state'
+import { State, StateEffect } from './state'
 import { Weapon } from './weapon'
 import { Armor } from './armor'
 import { Enemy } from './enemy'
+import { Efficiency } from './efficiency';
 
 export { 
     Item,
@@ -13,8 +14,9 @@ export {
     Class,
     Skill,
     State,
-    StateRestriction,
+    StateEffect,
     Weapon,
     Armor,
-    Enemy
+    Enemy,
+    Efficiency
 }

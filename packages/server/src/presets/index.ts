@@ -1,3 +1,7 @@
+import { Utils } from '@rpgjs/common'
+
+const { random } = Utils
+
 export const MAXHP: string = 'maxHp'
 export const MAXSP: string = 'maxSp'
 export const ATK: string = 'atk'
@@ -33,8 +37,16 @@ export const DEX_CURVE = {
     end: 564
 }
 
+export const DAMAGE_CRITICAL = function(damage, a, b) {
+    if (random(0, 100) < 4 * a[DEX] / b[AGI]) {
+        damage *= 2
+    }
+    return damage
+}
+
 export const DAMAGE_PHYSIC = function(a, b) {
-    return Math.round((a[ATK] - b[PDEF] / 2) * ((20 + a[STR]) / 20))
+    let damage = Math.round((a[ATK] - b[PDEF] / 2) * ((20 + a[STR]) / 20))
+    return damage
 }
 
 export const DAMAGE_SKILL = function(a, b, skill) {

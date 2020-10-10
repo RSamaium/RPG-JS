@@ -1,18 +1,8 @@
 import { merge } from './common'
+import { ActorGlobalOptions } from './actor'
 
-interface EnemyOptions {
-    name: string
-    level?: number
-    parameters?: {
-        [key: string]: {
-            start: number, 
-            end: number
-        }
-    },
-    equipment?: any[]
-    items?: [{ nb: number, item: any }]
-    stateEfficency?: any[]
-    elementEfficency?: any[]
+interface EnemyOptions extends ActorGlobalOptions {
+    startingItems?: [{ nb: number, item: any }]
     gain?: {
         exp?: number
         gold?: number

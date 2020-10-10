@@ -6,7 +6,7 @@ import { Fire } from '../skills/fire'
     equippable: [
 
     ],
-    stateEfficency: [
+    stateEfficiency: [
 
     ],
     elementEfficency: [

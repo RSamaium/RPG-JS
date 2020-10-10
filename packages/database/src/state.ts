@@ -1,14 +1,19 @@
 import { merge } from './common'
+import { EfficiencyOptions } from './efficiency'
 
-interface StateOptions {
+interface StateOptions extends EfficiencyOptions {
     name: string,
-    restriction?: StateRestriction
+    effects?: [StateEffect]
 }
 
-export enum StateRestriction {
+export enum StateEffect {
     NONE = 'none',
     CAN_NOT_SKILL = 'can-not-skill',
-    ALWAYS_ATTACK_ENEMIES = 'always-attack-enemies'
+    CAN_NOT_ITEM = 'can-not-item',
+    ALWAYS_ATTACK_ENEMIES = 'always-attack-enemies',
+    CAN_NOT_EVADE = 'can-not-evade',
+    CAN_NOT_GET_EXP = 'can-not-get-exp',
+    CAN_NOT_GET_GOLD = 'can-not-get-gold'
 }
 
 export function State(options: StateOptions) {

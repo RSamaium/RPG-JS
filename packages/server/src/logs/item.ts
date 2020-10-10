@@ -25,4 +25,7 @@ export class ItemLog {
     static tooManyToSell(itemClass, nbToSell, nb) {
         return new Log('TOO_MANY_ITEM_TO_SELL', `Too many items to sell: ${nbToSell} ${itemClass.name}, only ${nb} in inventory`)
     }
+    static restriction(itemClass) {
+        return new Log('RESTRICTION_ITEM', `A state blocks the use of the ${itemClass.name} skill`)
+    }
 }

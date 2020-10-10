@@ -1,5 +1,5 @@
 import { RpgCommonMap, RpgCommonPlayer, Utils }  from '@rpgjs/common'
-import { StateRestriction } from '@rpgjs/database'
+import { StateEffect } from '@rpgjs/database'
 import { StrategyBroadcasting } from './decorators/strategy-broadcasting'
 import { Gui, DialogGui, MenuGui, ShopGui } from './Gui'
 import { Query } from './Query'
@@ -85,6 +85,8 @@ export default class Player extends RpgCommonPlayer {
         end: number,
         extraValue: number
     }> = new Map()
+    public statesEfficiency: any[] = []
+    public elementsEfficiency: any[] = []
 
     protected paramsChanged: Set<string> = new Set()
     private _gui: { [id: string]: Gui } = {}
@@ -241,6 +243,40 @@ export default class Player extends RpgCommonPlayer {
         return this.getParamItem(SDEF)
     }
 
+    private getFeature(name, prop) {
+        const array = {}
+        for (let item of this.equipments) {
+            if (item[name]) {
+                for (let feature of item[name]) {
+                    const { rate } = feature
+                    const instance = feature[prop]
+                    const cache = array[instance.id]
+                    if (cache && cache.rate >= rate) continue
+                    array[instance.id] = feature
+                }
+            }
+        }
+        return Object.values(array)
+    }
+
+    get elementsDefense() {
+        return this.getFeature('elementsDefense', 'element')
+    }
+
+    get statesDefense() {
+        return this.getFeature('statesDefense', 'state')
+    }
+
+    get elements() {
+        let elements: any = []
+        for (let item of this.equipments) {
+            if (item.elements) {
+                elements = [...elements, ...item.elements]
+            }
+        }
+        return [...new Set(elements)]
+    }
+
     addParameter(name: string, { start, end }: { start: number, end: number }) {
         this._parameters.set(name, {
             start,
@@ -284,6 +320,8 @@ export default class Player extends RpgCommonPlayer {
     setClass(_class) {
         this._class = new _class()
         if (!this._class.$broadcast) this._class.$broadcast = ['name', 'description']
+        this.statesEfficiency = _class.statesEfficiency
+        this.elementsEfficiency = _class.elementsEfficiency
         this.paramsChanged.add('_class')
     }
 
@@ -365,18 +403,20 @@ export default class Player extends RpgCommonPlayer {
 
     useItem(itemClass) {
         const inventory = this.getItem(itemClass)
+        if (this.hasStateEffect(StateEffect.CAN_NOT_ITEM)) {
+            throw ItemLog.restriction(itemClass)
+        }
         if (!inventory) {
-            return ItemLog.notInInventory(itemClass)
+            throw ItemLog.notInInventory(itemClass)
         }
         const { item } = inventory
         if (item.consumable === false) {
             throw ItemLog.notUseItem(itemClass)
         }
-        const hitRate = item.hitRate * 100 || 100
-        const rand = random(0, 100)
-        if (rand > hitRate) {
+        const hitRate = item.hitRate || 1
+        if (Math.random() > hitRate) {
             this.removeItem(itemClass)
-            return ItemLog.chanceToUseFailed(itemClass)
+            throw ItemLog.chanceToUseFailed(itemClass)
         }
         if (item.hpValue) {
             this.hp += item.hpValue
@@ -390,44 +430,59 @@ export default class Player extends RpgCommonPlayer {
 
     private applyStates(player: Player, { addStates, removeStates }) {
         if (addStates) {
-            for (let state of addStates) {
-                player.addState(state)
+            for (let { state, rate } of addStates) {
+                player.addState(state, rate)
             }
         }
         if (removeStates) {
-            for (let state of removeStates) {
-                player.removeState(state)
+            for (let { state, rate } of removeStates) {
+                player.removeState(state, rate)
             }
         } 
     }
 
-    hasState(stateClass) {
-        return this.states.find(state => state instanceof stateClass)
+    getState(stateClass) {
+        return this.states.find(({ state }) => state instanceof stateClass)
     }
 
-    addState(stateClass): object | null {
-        const hasState = this.hasState(stateClass)
-        if (!hasState) {
+    addState(stateClass, chance = 1): object | null {
+        const state = this.getState(stateClass)
+        if (!state) {
+            if (Math.random() > chance) {
+                throw '' // TODO
+            }
+            //const efficiency = this.findStateEfficiency(stateClass)
             const instance = new stateClass()
-            if (!instance.$broadcast) instance.$broadcast = ['name', 'description', 'restriction']
+            if (!instance.$broadcast) instance.$broadcast = ['name', 'description', 'effects']
             this.states.push(instance)
+            this.applyStates(this, instance)
             this.paramsChanged.add('states')
             return instance
         }
         return null
     }
 
-    removeState(stateClass) {
+    removeState(stateClass, chance = 1) {
         const index = this.states.findIndex(state => state instanceof stateClass)
         if (index != -1) {
+            if (Math.random() > chance) {
+                throw '' // TODO
+            }
             this.states.splice(index, 1)
+        }
+        else {
+            throw '' // TODO
         }
         this.paramsChanged.add('states')
     }
 
-    private hasStateRestriction(restriction: StateRestriction): boolean {
+    private findStateEfficiency(stateClass) {
+        return this.statesEfficiency.find(state => isInstanceOf(state.state, stateClass))
+    }
+
+    private hasStateEffect(effect: StateEffect): boolean {
         for (let state of this.states) {
-            if (state.restriction && restriction == state.restriction) {
+            if (state.effects && state.effects.includes(effect)) {
                 return true
             }
         }
@@ -486,9 +541,9 @@ export default class Player extends RpgCommonPlayer {
         this.paramsChanged.add('skills')
     }
 
-    useSkill(skillClass, otherPlayer?: Player, fn?: Function) {
+    useSkill(skillClass, otherPlayer?: Player) {
         const skill = this.getSkill(skillClass)
-        if (this.hasStateRestriction(StateRestriction.CAN_NOT_SKILL)) {
+        if (this.hasStateEffect(StateEffect.CAN_NOT_SKILL)) {
             throw SkillLog.restriction(skillClass)
         }
         if (!skill) {
@@ -498,19 +553,18 @@ export default class Player extends RpgCommonPlayer {
             throw SkillLog.notEnoughSp(skillClass, skill.spCost, this.sp)
         }
         this.sp -= skill.spCost
-        const hitRate = (skill.hitRate * 100) || 100
-        const rand = random(0, 100)
-        if (rand > hitRate) {
+        const hitRate = skill.hitRate || 1
+        if (Math.random() > hitRate) {
             throw SkillLog.chanceToUseFailed(skillClass)
         }
         if (otherPlayer) {
             this.applyStates(otherPlayer, skill)
-            if (fn) otherPlayer.applyDamage(this, fn, skill)
+            otherPlayer.applyDamage(this, skill)
         }   
         return skill
     }
 
-    applyDamage(otherPlayer: Player, fn: Function, skill: any): number {
+    applyDamage(otherPlayer: Player, skill: any): { damage: number, critical: boolean } {
         const getParam = (player) => {
             const params = {}
             this._parameters.forEach((val, key) => {
@@ -523,9 +577,51 @@ export default class Player extends RpgCommonPlayer {
                 ...params
             }
         }
-        const damage = fn(getParam(otherPlayer), getParam(this), skill)
+        let damage = 0, fn
+        let critical = false
+        const paramA = getParam(otherPlayer)
+        const paramB = getParam(this)
+        if (skill) {
+            fn = this.getFormulas('damageSkill')
+            if (!fn) {
+                throw new Error('Skill Formulas not exists')
+            }
+            damage = fn(paramA, paramB, skill)
+        }
+        else {
+            fn = this.getFormulas('damagePhysic')
+            if (!fn) {
+                throw new Error('Physic Formulas not exists')
+            }
+            damage = fn(paramA, paramB)
+
+            this.coefficientElements(otherPlayer)
+              
+            fn = this.getFormulas('damageCritical')
+            if (fn) {
+                let newDamage = fn(damage, paramA, paramB)
+                if (damage != newDamage) {
+                    critical = true
+                }
+                damage = newDamage
+            }   
+        }
         this.hp -= damage
-        return damage
+        return {
+            damage,
+            critical
+        }
+    }
+
+    coefficientElements(otherPlayer: Player) {
+        const atkPlayerElements = otherPlayer.elements
+        const playerElements = this.elementsEfficiency
+
+        console.log(atkPlayerElements, playerElements)
+    }
+
+    private getFormulas(name) {
+        return this.server.damageFormulas[name]
     }
 
     recovery({ hp, sp }: { hp?: number, sp?: number }) {
