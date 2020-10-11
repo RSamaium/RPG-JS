@@ -1,7 +1,8 @@
 import { merge } from './common'
+import { Effect } from './effect'
 
-export type Elements = [{ rate: number, element: any } | any]
-export type States = [{ rate: number, state: any } | any]
+export type Elements = { rate: number, element: any }[] | any[]
+export type States = { rate: number, element: any }[] | any[]
 
 export interface ItemGlobalOptions {
     /** Put the name of the item */ 
@@ -10,7 +11,8 @@ export interface ItemGlobalOptions {
     price?: number
     addStates?: any[]
     removeStates?: any[]
-    elements?: Elements
+    elements?: Elements,
+    effects?: Effect[]
 }
 
 export interface EquipmentOptions extends ItemGlobalOptions {

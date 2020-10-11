@@ -49,6 +49,14 @@ export const DAMAGE_PHYSIC = function(a, b) {
     return damage
 }
 
+export const DAMAGE_GUARD = function(damage) {
+    return damage / 2
+}
+
+export const COEFFICIENT_ELEMENTS = function(a, b, bDef) {
+    return ((a.rate + 1) * (b.rate + 1)) / (bDef.rate == 0 ? bDef.rate * 4 : 1)
+}
+
 export const DAMAGE_SKILL = function(a, b, skill) {
     let power = skill.power + (a[ATK] * (skill.coefficient[ATK] || 0))
     if (power > 0) {

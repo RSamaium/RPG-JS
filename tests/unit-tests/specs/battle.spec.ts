@@ -4,6 +4,7 @@ import { RPGServer } from './fixtures/server'
 import { Monster } from './fixtures/enemy'
 import { Shield } from './fixtures/armor'
 import { Fire } from './fixtures/skill'
+import { Fighter } from './fixtures/class'
 
 let  client, socket, player, server
 const { DAMAGE_PHYSIC, DAMAGE_SKILL } = Presets
@@ -24,6 +25,7 @@ test('Test Damage', () => {
   monster.server = server
   player.addItem(Shield)
   player.equip(Shield, true)
+  player.setClass(Fighter)
   const skill = player.learnSkill(Fire)
   const damage = player.applyDamage(monster)
 

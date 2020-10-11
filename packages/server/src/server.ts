@@ -3,7 +3,7 @@ import { SceneMap } from './Scenes/Map';
 import { SceneBattle } from './Scenes/Battle';
 import PlayerObject from './Player'
 import { Query } from './Query'
-import { DAMAGE_SKILL, DAMAGE_PHYSIC, DAMAGE_CRITICAL } from './presets'
+import { DAMAGE_SKILL, DAMAGE_PHYSIC, DAMAGE_CRITICAL, COEFFICIENT_ELEMENTS } from './presets'
 
 export default class RpgServerEngine extends ServerEngine {
 
@@ -27,6 +27,7 @@ export default class RpgServerEngine extends ServerEngine {
             damageSkill: DAMAGE_SKILL,
             damagePhysic: DAMAGE_PHYSIC,
             damageCritical: DAMAGE_CRITICAL,
+            coefficientElements: COEFFICIENT_ELEMENTS,
             ...this.damageFormulas
         }
         this.loadScenes()

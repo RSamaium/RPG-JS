@@ -24,7 +24,7 @@ export function merge(options, type, _static = {}) {
     transformToRate('removeStates', 'state')
     transformToRate('statesDefense', 'state')
     transformToRate('statesEfficiency', 'state')
-    
+
     return (target) => {
         const id = uuidv4()
         target.id = id

@@ -26,6 +26,10 @@ export function isInstanceOf(val, _class) {
     return val instanceof _class
 }
 
+export function arrayUniq(array) {
+    return [...new Set(array)]
+}
+
 export default {
     random,
     isBrowser,

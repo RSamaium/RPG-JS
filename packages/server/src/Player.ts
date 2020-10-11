@@ -1,5 +1,5 @@
 import { RpgCommonMap, RpgCommonPlayer, Utils }  from '@rpgjs/common'
-import { StateEffect } from '@rpgjs/database'
+import { Effect } from '@rpgjs/database'
 import { StrategyBroadcasting } from './decorators/strategy-broadcasting'
 import { Gui, DialogGui, MenuGui, ShopGui } from './Gui'
 import { Query } from './Query'
@@ -28,7 +28,8 @@ const {
     isArray, 
     isObject, 
     isString, 
-    isInstanceOf 
+    isInstanceOf,
+    arrayUniq
 } = Utils
 
 @StrategyBroadcasting([
@@ -79,14 +80,15 @@ export default class Player extends RpgCommonPlayer {
         accelerationB: 30
     }
     private _class: any
+    private _effects: Effect[] = []
     private variables: Map<string, any> = new Map()
     private _parameters: Map<string, {
         start: number,
         end: number,
         extraValue: number
     }> = new Map()
-    public statesEfficiency: any[] = []
-    public elementsEfficiency: any[] = []
+    public _statesEfficiency: { rate: number, state: any }[] = []
+    public _elementsEfficiency: { rate: number, element: any }[] = []
 
     protected paramsChanged: Set<string> = new Set()
     private _gui: { [id: string]: Gui } = {}
@@ -243,7 +245,7 @@ export default class Player extends RpgCommonPlayer {
         return this.getParamItem(SDEF)
     }
 
-    private getFeature(name, prop) {
+    private getFeature(name, prop): any {
         const array = {}
         for (let item of this.equipments) {
             if (item[name]) {
@@ -259,12 +261,31 @@ export default class Player extends RpgCommonPlayer {
         return Object.values(array)
     }
 
-    get elementsDefense() {
+    get elementsDefense(): { rate: number, element: any }[] {
         return this.getFeature('elementsDefense', 'element')
     }
 
-    get statesDefense() {
+    get statesDefense(): { rate: number, state: any }[] {
         return this.getFeature('statesDefense', 'state')
+    }
+
+    get statesEfficiency() {
+        return this._statesEfficiency
+    }
+
+    set statesEfficiency(val) {
+        this._statesEfficiency = val
+    }
+
+    get elementsEfficiency(): { rate: number, element: any }[] {
+        if (this._class) {
+            return <any>[...this._elementsEfficiency, ...this._class.elementsEfficiency]
+        }
+        return this._elementsEfficiency
+    }
+
+    set elementsEfficiency(val) {
+        this._elementsEfficiency = val
     }
 
     get elements() {
@@ -275,6 +296,28 @@ export default class Player extends RpgCommonPlayer {
             }
         }
         return [...new Set(elements)]
+    }
+
+    get effects(): Effect[] {
+        const getEffects = (prop) => {
+            return this[prop]
+                .map(el => el.effects || [])
+                .reduce((acc, val) => acc.concat(val), [])
+        }
+        return arrayUniq([
+            ...this._effects,
+            ...getEffects('states'),
+            ...getEffects('items')
+        ])
+    }
+
+    set effects(val) {
+        if (isArray(val)) {
+            this._effects = val
+        }
+        else {
+            this._effects = [...this._effects, val]
+        }
     }
 
     addParameter(name: string, { start, end }: { start: number, end: number }) {
@@ -320,8 +363,6 @@ export default class Player extends RpgCommonPlayer {
     setClass(_class) {
         this._class = new _class()
         if (!this._class.$broadcast) this._class.$broadcast = ['name', 'description']
-        this.statesEfficiency = _class.statesEfficiency
-        this.elementsEfficiency = _class.elementsEfficiency
         this.paramsChanged.add('_class')
     }
 
@@ -403,7 +444,7 @@ export default class Player extends RpgCommonPlayer {
 
     useItem(itemClass) {
         const inventory = this.getItem(itemClass)
-        if (this.hasStateEffect(StateEffect.CAN_NOT_ITEM)) {
+        if (this.hasEffect(Effect.CAN_NOT_ITEM)) {
             throw ItemLog.restriction(itemClass)
         }
         if (!inventory) {
@@ -480,13 +521,8 @@ export default class Player extends RpgCommonPlayer {
         return this.statesEfficiency.find(state => isInstanceOf(state.state, stateClass))
     }
 
-    private hasStateEffect(effect: StateEffect): boolean {
-        for (let state of this.states) {
-            if (state.effects && state.effects.includes(effect)) {
-                return true
-            }
-        }
-        return false
+    private hasEffect(effect: Effect): boolean {
+        return this.effects.includes(effect)
     }
 
     equip(itemClass, bool) {
@@ -541,9 +577,9 @@ export default class Player extends RpgCommonPlayer {
         this.paramsChanged.add('skills')
     }
 
-    useSkill(skillClass, otherPlayer?: Player) {
+    useSkill(skillClass, otherPlayer?: Player | Player[]) {
         const skill = this.getSkill(skillClass)
-        if (this.hasStateEffect(StateEffect.CAN_NOT_SKILL)) {
+        if (this.hasEffect(Effect.CAN_NOT_SKILL)) {
             throw SkillLog.restriction(skillClass)
         }
         if (!skill) {
@@ -558,13 +594,25 @@ export default class Player extends RpgCommonPlayer {
             throw SkillLog.chanceToUseFailed(skillClass)
         }
         if (otherPlayer) {
-            this.applyStates(otherPlayer, skill)
-            otherPlayer.applyDamage(this, skill)
+            let players: any = otherPlayer
+            if (!isArray(players)) {
+                players = [otherPlayer]
+            }
+            for (let player of players) {
+                this.applyStates(player, skill)
+                player.applyDamage(this, skill)
+            } 
         }   
         return skill
     }
 
-    applyDamage(otherPlayer: Player, skill: any): { damage: number, critical: boolean } {
+    applyDamage(otherPlayer: Player, skill: any): { 
+        damage: number, 
+        critical: boolean, 
+        elementVulnerable: boolean,
+        guard: boolean,
+        superGuard: boolean
+    } {
         const getParam = (player) => {
             const params = {}
             this._parameters.forEach((val, key) => {
@@ -579,6 +627,9 @@ export default class Player extends RpgCommonPlayer {
         }
         let damage = 0, fn
         let critical = false
+        let guard = false
+        let superGuard = false
+        let elementVulnerable = false
         const paramA = getParam(otherPlayer)
         const paramB = getParam(this)
         if (skill) {
@@ -594,9 +645,11 @@ export default class Player extends RpgCommonPlayer {
                 throw new Error('Physic Formulas not exists')
             }
             damage = fn(paramA, paramB)
-
-            this.coefficientElements(otherPlayer)
-              
+            const coef = this.coefficientElements(otherPlayer)
+            if (coef >= 2) {
+                elementVulnerable = true
+            }
+            damage *= coef
             fn = this.getFormulas('damageCritical')
             if (fn) {
                 let newDamage = fn(damage, paramA, paramB)
@@ -604,20 +657,47 @@ export default class Player extends RpgCommonPlayer {
                     critical = true
                 }
                 damage = newDamage
-            }   
+            }
+        }
+        if (this.hasEffect(Effect.GUARD)) {
+            fn = this.getFormulas('damageGuard')
+            if (fn) {
+                let newDamage = fn(damage, paramA, paramB)
+                if (damage != newDamage) {
+                    guard = true
+                }
+                damage = newDamage
+            }
+        }
+        if (this.hasEffect(Effect.SUPER_GUARD)) {
+            damage /= 4
         }
         this.hp -= damage
         return {
             damage,
-            critical
+            critical,
+            elementVulnerable,
+            guard,
+            superGuard
         }
     }
 
-    coefficientElements(otherPlayer: Player) {
-        const atkPlayerElements = otherPlayer.elements
-        const playerElements = this.elementsEfficiency
+    coefficientElements(otherPlayer: Player): number {
+        const atkPlayerElements: any = otherPlayer.elements
+        const playerElements: any = this.elementsEfficiency
+        let coefficient = 0
 
-        console.log(atkPlayerElements, playerElements)
+        for (let atkElement of atkPlayerElements) {
+            const elementPlayer = playerElements.find(el => el.element == atkElement.element)
+            const elementPlayerDef = this.elementsDefense.find(el => el.element == atkElement.element)
+            if (!elementPlayer) continue
+            const fn = this.getFormulas('coefficientElements')
+            if (!fn) {
+                return coefficient
+            }
+            coefficient += fn(atkElement, elementPlayer, elementPlayerDef || { rate: 0 })
+        }
+        return coefficient
     }
 
     private getFormulas(name) {

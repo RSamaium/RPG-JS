@@ -1,8 +1,8 @@
-import { State, StateEffect } from '@rpgjs/database'
+import { State, Effect } from '@rpgjs/database'
 
 @State({
     name: 'Confuse',
-    effects: [StateEffect.CAN_NOT_SKILL]
+    effects: [Effect.CAN_NOT_SKILL]
 })
 export class Confuse {
     
