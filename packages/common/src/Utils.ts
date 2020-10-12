@@ -37,5 +37,6 @@ export default {
     isArray,
     isObject,
     isString,
-    isInstanceOf
+    isInstanceOf,
+    arrayUniq
 }

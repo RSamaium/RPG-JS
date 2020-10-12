@@ -1,5 +1,8 @@
 import { Armor } from '@rpgjs/database'
+import { Presets } from '@rpgjs/server'
 import { Elements } from './elements'
+
+const { MAXHP } = Presets
 
 @Armor({
     name: 'Shield',
@@ -9,3 +12,13 @@ import { Elements } from './elements'
     elementsDefense: [Elements.Fire]
 })
 export class Shield {}
+
+@Armor({
+    name: 'HpUpValue',
+    paramsModifier: {
+        [MAXHP]: {
+            value: 100
+        }
+    }
+})
+export class HpUpValue {}

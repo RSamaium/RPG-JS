@@ -47,7 +47,8 @@ const {
             'expForNextlevel',
             'skills',
             'states',
-            'equipments'
+            'equipments',
+            'effects'
         ],
         query: Query.getPlayer
     }
@@ -87,8 +88,14 @@ export default class Player extends RpgCommonPlayer {
         end: number,
         extraValue: number
     }> = new Map()
-    public _statesEfficiency: { rate: number, state: any }[] = []
-    public _elementsEfficiency: { rate: number, element: any }[] = []
+    private _statesEfficiency: { rate: number, state: any }[] = []
+    private _elementsEfficiency: { rate: number, element: any }[] = []
+    private _paramsModifier: {
+        [key: string]: {
+            value?: number,
+            rate?: number
+        }
+    } = {}
 
     protected paramsChanged: Set<string> = new Set()
     private _gui: { [id: string]: Gui } = {}
@@ -295,10 +302,10 @@ export default class Player extends RpgCommonPlayer {
                 elements = [...elements, ...item.elements]
             }
         }
-        return [...new Set(elements)]
+        return arrayUniq(elements)
     }
 
-    get effects(): Effect[] {
+    get effects(): any[] {
         const getEffects = (prop) => {
             return this[prop]
                 .map(el => el.effects || [])
@@ -307,17 +314,48 @@ export default class Player extends RpgCommonPlayer {
         return arrayUniq([
             ...this._effects,
             ...getEffects('states'),
-            ...getEffects('items')
+            ...getEffects('equipments')
         ])
     }
 
     set effects(val) {
-        if (isArray(val)) {
-            this._effects = val
+        this._effects = val
+    }
+
+    get paramsModifier() {
+        const params = {}
+        const paramsAvg = {}
+        const changeParam = (paramsModifier) => {
+            for (let key in paramsModifier) {
+                const { rate, value } = paramsModifier[key]
+                if (!params[key]) params[key] = { rate: 0, value: 0 }
+                if (!paramsAvg[key]) paramsAvg[key] = 0
+                if (value) params[key].value += value
+                if (rate !== undefined) params[key].rate += rate
+                paramsAvg[key]++
+            }
         }
-        else {
-            this._effects = [...this._effects, val]
+        const getModifier = (prop) => {
+            if (!isString(prop)) {
+                changeParam(prop)
+                return
+            }
+            for (let el of this[prop]) {
+                if (!el.paramsModifier) continue
+                changeParam(el.paramsModifier)
+            }
         }
+        getModifier(this._paramsModifier)
+        getModifier('states')
+        getModifier('equipments')
+        for (let key in params) {
+            params[key].rate /= paramsAvg[key]
+        }
+        return params
+    }
+
+    set paramsModifier(val: any) {
+        this._paramsModifier = val
     }
 
     addParameter(name: string, { start, end }: { start: number, end: number }) {
@@ -339,7 +377,11 @@ export default class Player extends RpgCommonPlayer {
     getParamValue(name) {
         const features = this.getParam(name)
         let curveVal = Math.floor((features.end - features.start) * ((this.level-1) / (this.finalLevel - this.initialLevel))) + features.start
-        curveVal += features.extraValue
+        const modifier = this.paramsModifier[name]
+        if (modifier) {
+            if (modifier.value) curveVal += modifier.value
+            if (modifier.rate) curveVal *= modifier.rate
+        }
         return curveVal
     }
 
@@ -494,7 +536,7 @@ export default class Player extends RpgCommonPlayer {
             }
             //const efficiency = this.findStateEfficiency(stateClass)
             const instance = new stateClass()
-            if (!instance.$broadcast) instance.$broadcast = ['name', 'description', 'effects']
+            if (!instance.$broadcast) instance.$broadcast = ['name', 'description']
             this.states.push(instance)
             this.applyStates(this, instance)
             this.paramsChanged.add('states')
@@ -525,7 +567,7 @@ export default class Player extends RpgCommonPlayer {
         return this.effects.includes(effect)
     }
 
-    equip(itemClass, bool) {
+    equip(itemClass, bool = true) {
         const inventory = this.getItem(itemClass)
         if (!inventory) {
             return ItemLog.notInInventory(itemClass)
@@ -538,8 +580,13 @@ export default class Player extends RpgCommonPlayer {
             return ItemLog.isAlreadyEquiped(itemClass)
         }
         item.equipped = bool
-        this.applyStates(this, item)
-        this.equipments.push(item)
+        if (!bool) {
+            const index = this.equipments.findIndex(it => it.id == item.id)
+            this.equipments.splice(index, 1)
+        }
+        else {
+            this.equipments.push(item)
+        }
         this.paramsChanged.add('equipments')
     }
 
@@ -588,7 +635,7 @@ export default class Player extends RpgCommonPlayer {
         if (skill.spCost > this.sp) {
             throw SkillLog.notEnoughSp(skillClass, skill.spCost, this.sp)
         }
-        this.sp -= skill.spCost
+        this.sp -= (skill.spCost / (this.hasEffect(Effect.HALF_SP_COST) ? 2 : 1))
         const hitRate = skill.hitRate || 1
         if (Math.random() > hitRate) {
             throw SkillLog.chanceToUseFailed(skillClass)
