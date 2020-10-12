@@ -85,8 +85,7 @@ export default class Player extends RpgCommonPlayer {
     private variables: Map<string, any> = new Map()
     private _parameters: Map<string, {
         start: number,
-        end: number,
-        extraValue: number
+        end: number
     }> = new Map()
     private _statesEfficiency: { rate: number, state: any }[] = []
     private _elementsEfficiency: { rate: number, element: any }[] = []
@@ -237,6 +236,11 @@ export default class Player extends RpgCommonPlayer {
         for (let item of this.equipments) {
             nb += item[name] || 0
         }
+        const modifier = this.paramsModifier[name]
+        if (modifier) {
+            if (modifier.value) nb += modifier.value
+            if (modifier.rate) nb *= modifier.rate
+        }
         return nb
     }
 
@@ -361,8 +365,7 @@ export default class Player extends RpgCommonPlayer {
     addParameter(name: string, { start, end }: { start: number, end: number }) {
         this._parameters.set(name, {
             start,
-            end,
-            extraValue: 0
+            end
         })
     }
 
@@ -383,11 +386,6 @@ export default class Player extends RpgCommonPlayer {
             if (modifier.rate) curveVal *= modifier.rate
         }
         return curveVal
-    }
-
-    setParamExtraValue(name, val) {
-        const param = this.getParam(name)
-        param.extraValue = val
     }
 
     setGraphic(graphic) {
