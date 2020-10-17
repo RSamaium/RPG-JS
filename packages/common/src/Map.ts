@@ -1,4 +1,5 @@
 import SAT from 'sat'
+import { random } from './Utils'
 
 const buffer = new Map()
 
@@ -53,17 +54,30 @@ export default class RpgCommonMap {
                     type = 'box'
                     hitbox = new SAT.Box(new SAT.Vector(obj.x, obj.y), obj.width, obj.height)
                 }
-                if (!hitbox) continue
+                else {
+                    hitbox = new SAT.Vector(obj.x, obj.y)
+                    type = obj.type
+                }
                 this.shapes.push({ 
                     properties: obj.properties,
                     hitbox,
-                    type
+                    type,
+                    name: obj.name
                 })
             }
         }
     }
+    
+    getPositionByShape(filter): { x: number, y: number } | null {
+        const startsFind = this.shapes.filter(filter)
+        if (startsFind.length) {
+            const start = startsFind[random(0, startsFind.length-1)]
+            return { x: start.hitbox.x, y: start.hitbox.y }
+        }
+        return null
+    }
 
-    getTileIndex(x, y) {
+    getTileIndex(x, y): number {
         return this.width * Math.floor(y / this.tileHeight) + Math.floor(x / this.tileWidth)
     }
 
@@ -71,19 +85,32 @@ export default class RpgCommonMap {
         const tiles: any[] = []
         const objects = []
         let hasColission = false
+        let isOverlay = false
         for (let layer of this.layers) {
             if (layer.type != 'tile') {
                 continue
             }
             const _tiles = layer.tiles[tileIndex]
-            tiles.push(_tiles)
-            if (!hasColission && _tiles && _tiles.properties) {
-                hasColission = _tiles.properties.collision
+            if (_tiles) {
+                if (!hasColission &&  _tiles.properties) {
+                    hasColission = _tiles.properties.collision
+                }
+                else {
+                    hasColission = false
+                }
+                if (!isOverlay &&  _tiles.properties) {
+                    isOverlay = _tiles.properties.overlay
+                }
+                else {
+                    isOverlay = false
+                }
+                tiles.push(_tiles)
             }
         }
         return {
             tiles,
-            hasColission
+            hasColission,
+            isOverlay
         }
     }
 

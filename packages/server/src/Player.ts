@@ -29,7 +29,8 @@ const {
     isObject, 
     isString, 
     isInstanceOf,
-    arrayUniq
+    arrayUniq,
+    arrayFlat
 } = Utils
 
 @StrategyBroadcasting([
@@ -60,7 +61,7 @@ export default class Player extends RpgCommonPlayer {
     private _gold = 0
     private _hp = 0
     private _sp = 0 
-    private _name = ''
+    private _name
     private skills: any[] = []
     private items: any[] = []
     private states: any[] = []
@@ -311,9 +312,8 @@ export default class Player extends RpgCommonPlayer {
 
     get effects(): any[] {
         const getEffects = (prop) => {
-            return this[prop]
-                .map(el => el.effects || [])
-                .reduce((acc, val) => acc.concat(val), [])
+            return arrayFlat(this[prop]
+                .map(el => el.effects || []))
         }
         return arrayUniq([
             ...this._effects,
@@ -392,7 +392,7 @@ export default class Player extends RpgCommonPlayer {
         this.graphic = graphic
     }
 
-    changeMap(mapId, positions) {
+    changeMap(mapId, positions?) {
         return this.server.getScene('map').changeMap(mapId, this, positions)
     }
 
@@ -497,16 +497,29 @@ export default class Player extends RpgCommonPlayer {
         const hitRate = item.hitRate || 1
         if (Math.random() > hitRate) {
             this.removeItem(itemClass)
+            if (item.onUseFailed) item.onUseFailed(this)
             throw ItemLog.chanceToUseFailed(itemClass)
         }
+        this.applyEffect(item)
+        this.applyStates(this, item)
+        if (item.onUse) item.onUse(this)
+        this.removeItem(itemClass)
+        return inventory
+    }
+
+    private applyEffect(item) {
         if (item.hpValue) {
             this.hp += item.hpValue
         }
         if (item.hpRate) {
             this.hp += this.param[MAXHP] / item.hpRate
         }
-        this.applyStates(this, item)
-        this.removeItem(itemClass)
+        if (item.spValue) {
+            this.sp += item.hpValue
+        }
+        if (item.spRate) {
+            this.sp += this.param[MAXHP] / item.hpRate
+        }
     }
 
     private applyStates(player: Player, { addStates, removeStates }) {
@@ -636,6 +649,7 @@ export default class Player extends RpgCommonPlayer {
         this.sp -= (skill.spCost / (this.hasEffect(Effect.HALF_SP_COST) ? 2 : 1))
         const hitRate = skill.hitRate || 1
         if (Math.random() > hitRate) {
+            if (skill.onUseFailed) skill.onUseFailed(this, otherPlayer)
             throw SkillLog.chanceToUseFailed(skillClass)
         }
         if (otherPlayer) {
@@ -647,7 +661,8 @@ export default class Player extends RpgCommonPlayer {
                 this.applyStates(player, skill)
                 player.applyDamage(this, skill)
             } 
-        }   
+        }
+        if (skill.onUse) skill.onUse(this, otherPlayer)
         return skill
     }
 
@@ -863,6 +878,14 @@ export default class Player extends RpgCommonPlayer {
         this._emit('player.callMethod', { 
             objectId: this.playerId,
             name: 'addEffect',
+            params: []
+        })
+    }
+
+    showAnimation() {
+        this._emit('player.callMethod', { 
+            objectId: this.playerId,
+            name: 'showAnimation',
             params: []
         })
     }

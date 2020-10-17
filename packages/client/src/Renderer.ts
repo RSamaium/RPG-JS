@@ -4,6 +4,7 @@ import { Renderer } from 'lance-gg'
 import { SceneMap } from './Scene/Map'
 import { SceneBattle } from './Scene/Battle'
 import { RpgCommonPlayer } from '@rpgjs/common'
+import { Animation } from './Effects/Animation'
 
 export default class RpgRenderer extends Renderer<any, any> {
 
@@ -14,12 +15,15 @@ export default class RpgRenderer extends Renderer<any, any> {
     public options: any = {}
     private _width: number = 800
     private _height: number = 400
+    animation
 
     init() {
         if (document.readyState === 'complete' || document.readyState === 'interactive')
             this.onDOMLoaded();
         else
-            document.addEventListener('DOMContentLoaded', this.onDOMLoaded.bind(this));
+            document.addEventListener('DOMContentLoaded', this.onDOMLoaded.bind(this))
+
+       // this.animation = new Animation(this.stage, this.renderer)
 
         return Promise.resolve()
     }
@@ -66,7 +70,8 @@ export default class RpgRenderer extends Renderer<any, any> {
             resolution: window.devicePixelRatio || 1,
             ...this.options.canvas
         };
-        this.renderer = PIXI.autoDetectRenderer(options);
+        this.renderer = PIXI.autoDetectRenderer(options)
+        this.gameEngine.renderer = this.renderer
         document.body.querySelector(this.options.selector).appendChild(this.renderer.view)
         this.resize()
     }
@@ -89,12 +94,14 @@ export default class RpgRenderer extends Renderer<any, any> {
     }
     
     draw(t, dt) {
+        window['stats'].begin()
         super.draw(t, dt)
         if (this.scene) this.scene.draw(t, dt)
         this.renderer.render(this.stage)
+        window['stats'].end()
     }
 
-    loadScene(name, obj) {
+    async loadScene(name, obj) {
         switch (name) {
             case 'map':
                 this.scene = new SceneMap(this.gameEngine, {
@@ -106,7 +113,8 @@ export default class RpgRenderer extends Renderer<any, any> {
                 this.scene = new SceneBattle(this.gameEngine)
                 break;
         }
-        const container = this.scene.load(obj)
+        
+        const container = await this.scene.load(obj)
         
         this.stage.addChild(container)
     }
@@ -115,6 +123,12 @@ export default class RpgRenderer extends Renderer<any, any> {
         if (this.scene && this.scene.removeObject) {
             this.scene.removeObject(obj)
         }
+    }
+
+    showAnimation(sprite) { 
+        
+        this.animation.run(200, 160, sprite)
+        this.animation.run(800, 160, sprite)
     }
 
     updateObject(id, params) {

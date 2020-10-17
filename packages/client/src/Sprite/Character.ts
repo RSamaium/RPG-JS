@@ -29,11 +29,23 @@ export default class Character extends PIXI.Sprite {
     private _x: number = 0
     private _y: number = 0
     private effects: any[] = []
+    private debug
 
     constructor(private data: any, private scene: any) {
         super()
         this.x = data.x 
         this.y = data.y
+        this.debug = new PIXI.Graphics()
+        this.displayDebug()
+    }
+
+    private displayDebug() {
+        const { wHitbox, hHitbox } = this.data
+        this.debug.beginFill(0xDE3249)
+        this.debug.drawRect(0, 0, wHitbox, hHitbox)
+        this.debug.endFill()
+        this.debug.alpha = 0.5
+        this.addChild(this.debug)
     }
 
     addEffect() {
@@ -51,7 +63,7 @@ export default class Character extends PIXI.Sprite {
 
     setGraphic() {
         this.spritesheet = spritesheets.get(this.graphic)
-        this.origin()
+        this.origin() 
         this.directions = Character.createDirectionTextures(this.spritesheet)
         this.gotoAndStop(0)
     }
@@ -62,8 +74,8 @@ export default class Character extends PIXI.Sprite {
         }
         const data = this.data
         const { width, height, framesWidth, framesHeight } = this.spritesheet
-        const w = 1 - (data.width / (width / framesWidth))
-        const h = 1 - (data.height / (height / framesHeight))
+        const w = 1 - (data.wHitbox / (width / framesWidth))
+        const h = 1 - (data.hHitbox / (height / framesHeight))
         this.anchor.set(w, h)
     }
 
@@ -76,7 +88,7 @@ export default class Character extends PIXI.Sprite {
         if (this.directions[this.direction]) this.texture = this.directions[this.direction][index]
     }
 
-    update(obj) {
+    update(obj): any {
 
         if (obj.graphic != this.graphic) {
             this.graphic = obj.graphic
@@ -103,30 +115,35 @@ export default class Character extends PIXI.Sprite {
 
         this.direction = obj.direction
         this.zIndex = this._y
+
+        let textureCount = 4
       
         if (this._x > this.x) {
             this.x += Math.min(speed, this._x - this.x)
+            if (this.spritesheet) textureCount = this.spritesheet.framesWidth
             moving = true
         }
 
         if (this._x < this.x) {
             this.x -= Math.min(speed, this.x - this._x)
+            if (this.spritesheet) textureCount = this.spritesheet.framesWidth
             moving = true
         }
 
         if (this._y > this.y) {
             this.y += Math.min(speed, this._y - this.y)
+            if (this.spritesheet) textureCount = this.spritesheet.framesWidth
             moving = true
         }
 
         if (this._y < this.y) {
             this.y -= Math.min(speed, this.y - this._y)
+            if (this.spritesheet) textureCount = this.spritesheet.framesWidth
             moving = true
         }
 
         if (moving) {
-            this.progressAnimation += 3
-            let textureCount = 4;
+            this.progressAnimation += 5
             if (this.progressAnimation >= 100) {
                 this.progressAnimation = 0
             }
@@ -135,7 +152,12 @@ export default class Character extends PIXI.Sprite {
             this.gotoAndStop(image)
         }
         else {
-            this.gotoAndStop(0)
+            this.gotoAndStop(this.spritesheet.action.stand)
+        }
+
+        return {
+            moving,
+            instance: this
         }
          
     }

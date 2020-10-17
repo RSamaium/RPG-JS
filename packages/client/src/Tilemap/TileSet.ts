@@ -7,25 +7,22 @@ export default class TileSet {
     spacing: number= 0
     tileHeight: number = 0
     tileWidth: number= 0
-    image: any = {
-        height: 0,
-        source: '',
-        width: 0,
-    }
+    image: any
     tileOffset: any = {}
     name: string = ''
     baseTexture
+    spritesheet
     textures: any[] = []
 
     constructor(tileSet) {
-
         Object.assign(this, tileSet)
-        
         const spritesheet = spritesheets.get(this.name)
+        this.spritesheet = spritesheet
+    }
 
-        const texture = PIXI.Texture.from(spritesheet.image);
-        this.baseTexture = texture.baseTexture;
-
+    load() {
+        const { texture } = this.spritesheet.resource
+        this.baseTexture = texture.baseTexture
         for (
             let y = this.margin;
             y < this.image.height;
@@ -39,9 +36,9 @@ export default class TileSet {
                 this.textures.push(
                     new PIXI.Texture(
                         this.baseTexture,
-                        new PIXI.Rectangle(x, y, this.tileWidth, this.tileHeight)
+                        new PIXI.Rectangle(+x, +y, +this.tileWidth, +this.tileHeight)
                     )
-                );
+                )
             }
         }
     }

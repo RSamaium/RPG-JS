@@ -30,6 +30,10 @@ export function arrayUniq(array) {
     return [...new Set(array)]
 }
 
+export function arrayFlat(array) {
+    return array.reduce((acc, val) => acc.concat(val), [])
+}
+
 export default {
     random,
     isBrowser,
@@ -38,5 +42,6 @@ export default {
     isObject,
     isString,
     isInstanceOf,
-    arrayUniq
+    arrayUniq,
+    arrayFlat
 }

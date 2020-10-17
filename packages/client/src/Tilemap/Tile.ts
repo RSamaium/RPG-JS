@@ -36,7 +36,8 @@ export default class Tile extends PIXI.AnimatedSprite {
         this.animations = []
 
         this.textures = Tile.getTextures(tile, tileSet);
-
+        this.texture = this.textures[0]
+        
         Object.assign(this, tile);
 
         this.flip()

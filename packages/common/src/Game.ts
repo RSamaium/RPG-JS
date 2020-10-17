@@ -1,5 +1,6 @@
 import { GameEngine, SimplePhysicsEngine, Utils } from 'lance-gg'
 import Player from './Player'
+import SAT from 'sat'
 
 const PLAYER_CLASS = Utils.hashStr('Player')
 
@@ -19,6 +20,7 @@ export default class Game extends GameEngine<any> {
 
     registerClasses(serializer) {
         serializer.registerClass(Player, PLAYER_CLASS)
+        serializer.registerClass(SAT.Box)
     }
 
     addPlayer(playerClass, playerId, addWord = true) {

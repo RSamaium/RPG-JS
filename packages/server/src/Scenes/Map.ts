@@ -1,5 +1,5 @@
 
-import { RpgCommonMap } from '@rpgjs/common'
+import { RpgCommonMap, Utils } from '@rpgjs/common'
 
 export class SceneMap {
 
@@ -44,7 +44,7 @@ export class SceneMap {
         return mapInstance
     }
 
-    async changeMap(mapId, player, positions = { x: 0, y: 0}) {
+    async changeMap(mapId, player, positions?) {
 
         player.prevMap = player.map
         player.map = mapId
@@ -72,9 +72,12 @@ export class SceneMap {
         })
 
         this.server.assignObjectToRoom(player, mapId)
+        
+        if (!positions) positions = mapInstance.getPositionByShape(shape => shape.type == 'start')
+        if (!positions) positions = { x: 0, y: 0 }
 
         player.setPosition(positions)
-
+        
         player.events = mapInstance.createEvents('nosync', player)
 
         this.server.sendToPlayer(player, 'events', player.events.map(event => {

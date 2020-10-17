@@ -3,11 +3,11 @@ import { ChestEvent } from '../events/chest'
 
 @MapData({
     id: 'medieval',
-    file: require('./tmx/medieval.tmx'),
+    file: require('./tmx/samplemap.tmx'),
     name: 'Town',
     events: [
-        [ChestEvent(), 10, 5]
+        ChestEvent()
     ]
 })
-export class MedievalMap extends RpgMap {
+export class SampleMap extends RpgMap {
 }

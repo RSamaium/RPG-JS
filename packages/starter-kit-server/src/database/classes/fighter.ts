@@ -6,12 +6,6 @@ import { Fire } from '../skills/fire'
     equippable: [
 
     ],
-    stateEfficiency: [
-
-    ],
-    elementEfficency: [
-
-    ],
     skillsToLearn: [
         { level: 1, skill: Fire }
     ]

@@ -12,7 +12,10 @@
   "license": "ISC",
   "dependencies": {
     "@rpgjs/common": "^3.0.0-alpha",
+    "@rpgjs/effekseer": "^1.0.0",
     "@tweenjs/tween.js": "^18.6.0",
+    "pixi-heaven": "^0.2.2",
+    "pixi-tilemap": "^2.1.3",
     "pixi-viewport": "^4.15.0",
     "pixi.js": "^5.3.3",
     "vue": "^2.6.12"

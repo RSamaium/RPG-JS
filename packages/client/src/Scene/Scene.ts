@@ -1,6 +1,9 @@
+import * as PIXI from 'pixi.js'
+
 export class Scene {
    
     protected objects: Map<string, any> = new Map()
+    protected loader = PIXI.Loader.shared
 
     constructor(protected game: any) {}
 
@@ -12,7 +15,8 @@ export class Scene {
                 this.addObject(val, key)
             }
             else {
-                renderObjects.get(key).update(val, t, dt)
+                const ret = renderObjects.get(key).update(val, t, dt)
+                if (this.onUpdateObject) this.onUpdateObject(ret)
             }
         })
         if (logicObjects.size < renderObjects.size) {
@@ -24,7 +28,13 @@ export class Scene {
         }
     }
 
+    onUpdateObject(ret) {}
+
     addObject(obj, id) {}
 
     removeObject(id) {}
+
+    getPlayer(id) {
+        return this.objects.get(id)
+    }
 }

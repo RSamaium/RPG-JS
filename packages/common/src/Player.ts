@@ -6,11 +6,12 @@ const ACTIONS = { IDLE: 0, RUN: 1, ACTION: 2 }
 
 export default class Player extends DynamicObject<any, any> {
 
+    name: string
     map: string = ''
     graphic: string = ''
     speed: number = 3
-    height: number = 20
-    width: number = 20
+    height: number = 0
+    width: number = 0
     canMove: number = 1
     events: any[] = []
     direction: number
@@ -29,12 +30,16 @@ export default class Player extends DynamicObject<any, any> {
             map: { type: BaseTypes.TYPES.STRING },
             speed: { type: BaseTypes.TYPES.INT8 },
             graphic: { type: BaseTypes.TYPES.STRING },
-            canMove: { type: BaseTypes.TYPES.INT8 }
+            canMove: { type: BaseTypes.TYPES.INT8 },
+            width: { type: BaseTypes.TYPES.INT8 },
+            height: { type: BaseTypes.TYPES.INT8 },
+            wHitbox: { type: BaseTypes.TYPES.INT8 },
+            hHitbox: { type: BaseTypes.TYPES.INT8 }
         }, super.netScheme);
     }
 
     static get ACTIONS() {
-        return ACTIONS;
+        return ACTIONS
     }
 
     constructor(gameEngine, options, props: any = {}) {
@@ -43,7 +48,7 @@ export default class Player extends DynamicObject<any, any> {
         this.position.x = props.x || 0
         this.position.y = props.y || 0
         this._hitboxPos = new SAT.Vector(this.position.x, this.position.y)
-        this.hitbox = new SAT.Box(this._hitboxPos, this.width, this.height)
+        this.setHitbox(this.width, this.height)
     }
 
     set posX(val) {
@@ -66,6 +71,34 @@ export default class Player extends DynamicObject<any, any> {
 
     get mapInstance() {
         return Map.buffer.get(this.map)
+    }
+
+    setSizes(obj: any) {
+        this.width = obj.width 
+        this.height = obj.height
+        if (obj.hitbox) {
+            this.setHitbox(obj.hitbox.width, obj.hitbox.height)
+        }
+    }
+
+    setHitbox(width, height) {
+        this.hitbox = new SAT.Box(this._hitboxPos, width, height)
+    }
+
+    set wHitbox(val) {
+        this.hitbox.w = val
+    }
+
+    set hHitbox(val) {
+        this.hitbox.h = val
+    }
+
+    get wHitbox() {
+        return this.hitbox.w
+    }
+
+    get hHitbox() {
+        return this.hitbox.h
     }
     
     defineNextPosition(direction) {
@@ -144,13 +177,17 @@ export default class Player extends DynamicObject<any, any> {
             }
         }
 
-        if (tileColission(nextPosition.x, nextPosition.y)) return false
-        if (tileColission(nextPosition.x + this.width, nextPosition.y)) return false
-        if (tileColission(nextPosition.x, nextPosition.y + this.height)) return false
-        if (tileColission(nextPosition.x + this.width, nextPosition.y + this.height)) return false
-        
+        if (
+            tileColission(nextPosition.x, nextPosition.y) || 
+            tileColission(nextPosition.x + this.hitbox.w, nextPosition.y) || 
+            tileColission(nextPosition.x, nextPosition.y + this.hitbox.h) || 
+            tileColission(nextPosition.x + this.hitbox.w, nextPosition.y + this.hitbox.h)
+        ) {
+            return false
+        }
+
         const events = [...this.gameEngine.world.queryObjects({ instanceType: Player }), ...this.events, ...Object.values(this.gameEngine.events)]
-        const hitbox = new SAT.Box(new SAT.Vector(nextPosition.x, nextPosition.y), this.width, this.height)
+        const hitbox = new SAT.Box(new SAT.Vector(nextPosition.x, nextPosition.y), this.hitbox.w, this.hitbox.h)
 
         for (let event of events) {
             if (event.object) event = event.object
@@ -230,6 +267,10 @@ export default class Player extends DynamicObject<any, any> {
         this.graphic = other.graphic
         this.speed = other.speed
         this.canMove = other.canMove
+        this.width = other.width
+        this.height = other.height
+        this.wHitbox = other.wHitbox
+        this.hHitbox = other.hHitbox
     }
 
 }

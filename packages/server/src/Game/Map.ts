@@ -33,7 +33,17 @@ export class RpgMap extends RpgCommonMap {
     createEvents(type, player?) {
         const events: any[] = []
 
-        for (let [event, tileX, tileY] of this.events) {
+        for (let obj of this.events) {
+
+            let event: any, position
+
+            if (obj.x === undefined) {
+                event = obj
+            }
+            else {
+                event = obj.event
+                position = { x: obj.x, y: obj.y }
+            }
 
             if (event.syncAll == false && type == 'sync') {
                 continue
@@ -43,23 +53,17 @@ export class RpgMap extends RpgCommonMap {
             }
 
             const ev = this.game.addEvent(event, event.syncAll)
+
+            if (!position) position = this.getPositionByShape(shape => shape.type == 'event' && shape.name == ev.name)
+            if (!position) position = { x: 0, y: 0 }
             
             ev.map = this.id
-            
-            ev.setPosition({ tileX, tileY })
+            ev.setPosition(position)
             ev.speed = 1
             ev.server = this.server
 
-            /*const customEvent  = new event()
-            customEvent.object = ev
-            ev.instance = customEvent*/
-
             if (event.syncAll == true) {
                 this.server.assignObjectToRoom(ev, this.id)
-            }
-            else {
-               // customEvent.object.player = player
-               // customEvent.object.server = this
             }
 
             if (ev.onInit && event.syncAll) {

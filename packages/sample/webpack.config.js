@@ -60,6 +60,14 @@ module.exports = {
             options: {
                 outputPath: 'fonts'
             }
+        },
+        {
+            test: /\.efk$/i,
+            loader: 'file-loader',
+            options: {
+                outputPath: 'animations',
+                esModule: false
+            }
         }, 
         {
             test: /\.tmx$/i,

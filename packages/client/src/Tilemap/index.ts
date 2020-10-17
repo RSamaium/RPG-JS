@@ -1,5 +1,6 @@
 import * as PIXI from 'pixi.js';
 
+
 import ImageLayer from './ImageLayer';
 import TileLayer from './TileLayer';
 import TileSet from './TileSet';
@@ -19,10 +20,11 @@ export default class TileMap extends PIXI.Container {
     tileSets: any[] = []
     layers: any = {}
 
-    constructor() {
+    constructor(data, private renderer) {
         super()
         this.x = 0
         this.y = 0
+        this.create(data)
     }
 
     getEventLayer(name) {
@@ -36,11 +38,7 @@ export default class TileMap extends PIXI.Container {
         return container
     }
 
-    load(data) {
-
-        this.defaultLayer = null
-        this.removeChildren()
-
+    private create(data) {
         this.data = data
         Object.assign(this, data)
 
@@ -56,13 +54,49 @@ export default class TileMap extends PIXI.Container {
 
         this.tileSets = this.tileSets.map((tileSet) => {
             return new TileSet(tileSet)
-        });
+        })
+    }
+
+    createOverlayTiles(x, y, instance) {
+        const tilesLayer: any = []
+        this.data.layers.forEach((layerData) => {
+            switch (layerData.type) {
+                case 'tile': {
+                    const tileLayer = new TileLayer(layerData, this.tileSets)
+                    const tile = tileLayer.createTile(x, y, {
+                        real: true,
+                        filter: (tile) => {
+                            const { data, y } = instance
+                            const { hHitbox } = data
+                            const { overlay, z = 0 } = tile.properties
+                            if (!overlay) return false
+                            if (y + hHitbox > tile.y + (tile.height * (z+1))) return false
+                            return true
+                        }
+                    })
+                    if (tile) {
+                        tileLayer.addChild(tile)
+                        tilesLayer.push(tileLayer)
+                    }
+                    break;
+                }
+            }
+        })
+        return tilesLayer
+    }
+
+    load() {
+        this.defaultLayer = null
+        this.removeChildren()
+
+        this.tileSets.forEach(tileset => tileset.load())
 
         this.data.layers.forEach((layerData) => {
             layerData.map = this
             switch (layerData.type) {
                 case 'tile': {
-                    const tileLayer = new TileLayer(layerData, this.tileSets);
+                    const tileLayer = new TileLayer(layerData, this.tileSets)
+                    tileLayer.create()
                     this.layers[layerData.name] = tileLayer
                     this.addChild(tileLayer)
                     break;
@@ -74,7 +108,7 @@ export default class TileMap extends PIXI.Container {
                     break;
                 }
                 case 'object': {
-                    this.defaultLayer = this.createEventLayer(layerData.name)
+                   // this.defaultLayer = this.createEventLayer(layerData.name)
                     break;
                 }
             }

@@ -4,42 +4,68 @@ import TileMap from '../Tilemap'
 import { Viewport } from 'pixi-viewport'
 import { IScene } from '../Interfaces/Scene'
 import { Scene } from './Scene'
+import { spritesheets } from '../Sprite/Spritesheets'
 
 export class SceneMap extends Scene implements IScene {
 
-    private tilemap: any = new TileMap()
+    private tilemap: any
     private viewport: Viewport | undefined
     private players: object = {}
     private eventSprites: object = {}
-
+    private isLoaded: boolean = false
+    private gameMap
+  
     constructor(
             protected game: any, 
             private options: { screenWidth?: number, screenHeight?: number } = {}) {
         super(game)
     }
 
-    load(obj): PIXI.Container {
+    load(obj) {
+        this.gameMap = new RpgCommonMap()
+        this.gameMap.load(obj)
+        if (!this.game.standalone) RpgCommonMap.buffer.set(obj.id, this.gameMap)
 
-        const gameMap = new RpgCommonMap()
-        gameMap.load(obj)
-        if (!this.game.standalone) RpgCommonMap.buffer.set(obj.id, gameMap)
+        this.tilemap = new TileMap(obj, this.game.renderer)
 
-        this.tilemap.load(obj)
+        const loader = PIXI.Loader.shared
 
-        this.viewport = new Viewport({
-            screenWidth: this.options.screenWidth,
-            screenHeight: this.options.screenHeight,
-            worldWidth: obj.width * obj.tileWidth,
-            worldHeight: obj.height * obj.tileHeight
+        for (let tileset of this.tilemap.tileSets) {
+            loader.add(tileset.name, tileset.spritesheet.image)
+        }
+
+        loader.load((loader, resources) => {
+            for (let tileset of this.tilemap.tileSets) {
+                const spritesheet = spritesheets.get(tileset.name)
+                spritesheet.resource = resources[tileset.name]
+            }
         })
 
-        this.viewport.clamp({ direction: 'all' })
-        this.viewport.addChild(this.tilemap)
+        return new Promise((resolve, reject) => {
+            loader.onError.add(() => {
+                reject()
+            })
+            loader.onComplete.add(() => {
+                this.tilemap.load(obj)
+                this.viewport = new Viewport({
+                    screenWidth: this.options.screenWidth,
+                    screenHeight: this.options.screenHeight,
+                    worldWidth: obj.width * obj.tileWidth,
+                    worldHeight: obj.height * obj.tileHeight
+                })
 
-        return this.viewport
+                this.viewport.clamp({ direction: 'all' })
+                this.viewport.addChild(this.tilemap)
+                this.isLoaded = true
+                resolve(this.viewport)
+            })
+        })
     }
 
     draw(t, dt) {
+        if (!this.isLoaded) {
+            return
+        }
         super.draw(t, dt)
         for (let eventId in this.game.events) {
             const sprite = this.eventSprites[eventId]
@@ -53,8 +79,21 @@ export class SceneMap extends Scene implements IScene {
         }
     }
 
-    getPlayer(id) {
-        return this.players[id]
+    onUpdateObject({ moving, instance }) {
+        const { x, y, tilesOverlay, anchor, width, height } = instance
+        if (moving) {
+            tilesOverlay.removeChildren()
+            const addTile = (x, y) => {
+                const tiles = this.tilemap.createOverlayTiles(x, y, instance)
+                if (tiles.length) tilesOverlay.addChild(...tiles)
+            }
+            let _x = x - (width * anchor.x)
+            let _y = y - (height * anchor.y)
+            addTile(_x, _y)
+            addTile(_x + height, _y)
+            addTile(_x, _y + height)
+            addTile(_x + width, _y + height)
+        }
     }
 
     setPlayerPosition(id, { x, y }) {
@@ -75,15 +114,26 @@ export class SceneMap extends Scene implements IScene {
             return
         }
 
+        const wrapper = new PIXI.Container()
+        const tilesOverlay = new PIXI.Container()
+
         const sprite = new this.game._playerClass(obj, this)
         sprite.load()
+        sprite.tilesOverlay = tilesOverlay
+
+        wrapper.addChild(sprite, tilesOverlay)
 
         this.objects.set(id, sprite)
-        this.tilemap.getEventLayer().addChild(sprite)
+        this.tilemap.getEventLayer().addChild(wrapper)
 
         sprite['isCurrentPlayer'] = obj.playerId === this.game.playerId
 
         if (sprite['isCurrentPlayer']) this.viewport?.follow(sprite)
+
+        this.onUpdateObject({
+            moving: true,
+            instance: sprite
+        })
     }
 
     removeObject(id) {

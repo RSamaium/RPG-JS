@@ -1,8 +1,8 @@
-import { MedievalMap } from './maps/medieval'
+import { SampleMap } from './maps/samplemap'
 import databaseList  from './database'
 
 export const maps = [
-    MedievalMap
+    SampleMap
 ]
 
-export const database = databaseList
+export const database = databaseList 
