@@ -36,7 +36,7 @@ export default class Character extends PIXI.Sprite {
         this.x = data.x 
         this.y = data.y
         this.debug = new PIXI.Graphics()
-        this.displayDebug()
+        //this.displayDebug()
     }
 
     private displayDebug() {

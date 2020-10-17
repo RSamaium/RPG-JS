@@ -215,8 +215,12 @@
  </tile>
  <tile id="40">
   <properties>
-   <property name="collision" type="bool" value="true"/>
+   <property name="collision" type="bool" value="false"/>
+   <property name="overlay" type="bool" value="true"/>
   </properties>
+  <objectgroup draworder="index" id="2">
+   <object id="1" x="0.0434783" y="9.52174" width="31.9565" height="20.4783"/>
+  </objectgroup>
  </tile>
  <tile id="41">
   <properties>

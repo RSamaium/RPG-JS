@@ -13,7 +13,7 @@ export class Player extends RpgPlayer {
             height: 32,
             hitbox: {
                 width: 32,
-                height: 20
+                height: 16
             }
         })
 

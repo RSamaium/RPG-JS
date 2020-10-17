@@ -11,5 +11,5 @@ export const spritesheets = [
     Battlebacks,
     Battlers,
     Images,
-    Animations
+    //Animations
 ]

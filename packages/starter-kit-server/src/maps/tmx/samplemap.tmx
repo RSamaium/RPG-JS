@@ -588,7 +588,7 @@
   <object id="1" name="Start Position" type="start" x="1600.5" y="1120.17">
    <point/>
   </object>
-  <object id="4" name="EV-1" type="event" x="994.667" y="855.333">
+  <object id="4" name="EV-1" type="event" x="972" y="843.333">
    <point/>
   </object>
  </objectgroup>

@@ -1,5 +1,6 @@
 import { DynamicObject, BaseTypes } from 'lance-gg'
 import SAT from 'sat'
+import { Hit } from './Hit'
 import Map from './Map'
 
 const ACTIONS = { IDLE: 0, RUN: 1, ACTION: 2 }
@@ -170,11 +171,27 @@ export default class Player extends DynamicObject<any, any> {
             return false
         }
 
-        const tileColission = (x, y) => {
+        const hitbox = new SAT.Box(new SAT.Vector(nextPosition.x, nextPosition.y), this.hitbox.w, this.hitbox.h)
+
+        const tileColission = (x, y): boolean => {
             const tile = map.getTileByPosition(x,y)
-            if (tile.hasColission) {
+            if (tile.hasCollision) {
                 return true
             }
+            else if (tile.objectGroups) {
+                const tilePos = map.getTileOriginPosition(x, y) 
+                for (let object of tile.objectGroups) {
+                    const hit = Hit.getHitbox(object, {
+                        x: tilePos.x,
+                        y: tilePos.y
+                    })
+                    const collided = Hit.testPolyCollision(hit.type, hit.hitbox, hitbox)
+                    if (collided) {
+                        return true
+                    }
+                }
+            }
+            return false
         }
 
         if (
@@ -187,12 +204,11 @@ export default class Player extends DynamicObject<any, any> {
         }
 
         const events = [...this.gameEngine.world.queryObjects({ instanceType: Player }), ...this.events, ...Object.values(this.gameEngine.events)]
-        const hitbox = new SAT.Box(new SAT.Vector(nextPosition.x, nextPosition.y), this.hitbox.w, this.hitbox.h)
-
+        
         for (let event of events) {
             if (event.object) event = event.object
             if (event.id == this.id) continue
-            const collided = SAT.testPolygonPolygon(hitbox.toPolygon(), event.hitbox.toPolygon())
+            const collided = Hit.testPolyCollision('box', hitbox, event.hitbox)
             if (collided) {
                 this.colissionWith.push(event)
                 this.triggerCollisionWith()
@@ -201,18 +217,7 @@ export default class Player extends DynamicObject<any, any> {
         }
 
         for (let shape of map.shapes) {
-            let collided = false
-            switch (shape.type) {
-                case 'box':
-                    collided = SAT.testPolygonPolygon(hitbox.toPolygon(), shape.hitbox.toPolygon())
-                break
-                case 'circle':
-                    collided = SAT.testPolygonCircle(hitbox.toPolygon(), shape.hitbox)
-                break
-                case 'polygon':
-                    collided = SAT.testPolygonPolygon(hitbox.toPolygon(), shape.hitbox)
-                break
-            }
+            let collided = Hit.testPolyCollision(shape.type, hitbox, shape.hitbox)
             if (collided) {
                 this.colissionWith.push(shape)
                 if (shape.properties.colission) return false
@@ -247,6 +252,22 @@ export default class Player extends DynamicObject<any, any> {
         if (dir[direction] === undefined) return false
 
         this.direction = dir[direction]
+    }
+
+    private testPolyCollision(type, hit1, hit2): boolean {
+        let collided = false
+        switch (type) {
+            case 'box':
+                collided = SAT.testPolygonPolygon(hit1.toPolygon(), hit2.toPolygon())
+            break
+            case 'circle':
+                collided = SAT.testPolygonCircle(hit1.toPolygon(), hit2.hitbox)
+            break
+            case 'polygon':
+                collided = SAT.testPolygonPolygon(hit1.toPolygon(), hit2.hitbox)
+            break
+        }
+        return collided
     }
 
     _syncPlayer() {

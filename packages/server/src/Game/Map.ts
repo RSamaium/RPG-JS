@@ -56,6 +56,10 @@ export class RpgMap extends RpgCommonMap {
 
             if (!position) position = this.getPositionByShape(shape => shape.type == 'event' && shape.name == ev.name)
             if (!position) position = { x: 0, y: 0 }
+
+            ev.width = event.width || this.tileWidth
+            ev.height = event.height || this.tileHeight
+            if (event.hitbox) ev.setHitbox(event.hitbox.width, event.hitbox.height)
             
             ev.map = this.id
             ev.setPosition(position)

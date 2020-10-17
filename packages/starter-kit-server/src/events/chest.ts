@@ -3,7 +3,13 @@ import { Potion } from '../database/items/potion'
 
 @EventData({
     name: 'EV-1',
-    syncAll: true
+    syncAll: true,
+    width: 32,
+    height: 32,
+    hitbox: {
+        width: 32,
+        height: 16
+    }
 })
 class _ChestEvent extends RpgEvent {
 
