@@ -12,13 +12,13 @@ export class Player extends RpgPlayer {
             width: 32,
             height: 32,
             hitbox: {
-                width: 32,
+                width: 20,
                 height: 16
             }
         })
 
         this.setGraphic('hero')
-        this.changeMap('medieval')
+        this.changeMap('mapz')
 
         this.setActor(database.Hero)
     }

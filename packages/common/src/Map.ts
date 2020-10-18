@@ -1,11 +1,12 @@
 import { Hit, HitObject } from './Hit'
-import { random } from './Utils'
+import { random, intersection } from './Utils'
 
 const buffer = new Map()
 
 interface TileInfo {
     tiles: any[]
     hasCollision: boolean
+    isClimbable: boolean
     isOverlay: boolean
     objectGroups: HitObject[]
 }
@@ -62,30 +63,51 @@ export default class RpgCommonMap {
         return null
     }
 
-    getTileIndex(x, y): number {
-        return this.width * Math.floor(y / this.tileHeight) + Math.floor(x / this.tileWidth)
+    getTileIndex(x, y, [z]): number {
+        return this.width * Math.floor((y - z) / this.tileHeight) + Math.floor(x / this.tileWidth)
     }
 
-    getTileByIndex(tileIndex): TileInfo {
+    getTileByIndex(tileIndex, zPlayer): TileInfo {
         const tiles: any[] = []
         for (let layer of this.layers) {
             if (layer.type != 'tile') {
                 continue
             }
             const _tiles = layer.tiles[tileIndex]
-            if (_tiles) {
+            if (!_tiles) {
+                continue
+            }
+            const zLayer = layer.properties.z
+            const zTile = _tiles.properties.z
+            let z, zIntersection
+            if (zLayer !== undefined) {
+                z = zLayer + (zTile !== undefined ? zTile : 0)
+            }
+            else if (zTile !== undefined) {
+                z = zTile
+            }
+            if (z !== undefined) {
+                const realZ = z * this.tileHeight
+                zIntersection = intersection(zPlayer, [realZ, realZ + this.tileHeight])
+            }
+            if (zIntersection !== undefined) {
+                if (zIntersection) tiles.push(_tiles)
+            }
+            else {
                 tiles.push(_tiles)
             }
         }
         const getLastTile = tiles[tiles.length-1]
         const hasCollision = getLastTile.properties.collision
         const isOverlay = getLastTile.properties.overlay
+        const isClimbable = getLastTile.properties.climb
         const objectGroups = getLastTile.objectGroups
         return {
             tiles,
             hasCollision,
             isOverlay,
-            objectGroups
+            objectGroups,
+            isClimbable
         }
     }
 
@@ -99,9 +121,9 @@ export default class RpgCommonMap {
         }
     }
 
-    getTileByPosition(x, y): TileInfo {
-        const tileIndex = this.getTileIndex(x, y)
-        return this.getTileByIndex(tileIndex)
+    getTileByPosition(x, y, z): TileInfo {
+        const tileIndex = this.getTileIndex(x, y, z)
+        return this.getTileByIndex(tileIndex, z)
     }
 
 }

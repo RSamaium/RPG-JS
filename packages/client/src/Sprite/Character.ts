@@ -108,10 +108,10 @@ export default class Character extends PIXI.Sprite {
 
         let moving = false
 
-        this._x = Math.floor(obj.position.x)
-        this._y = Math.floor(obj.position.y)
         this.z = Math.floor(obj.position.z)
-
+        this._x = Math.floor(obj.position.x)
+        this._y = Math.floor(obj.position.y) - this.z
+        
         obj.posX = obj.position.x
         obj.posY = obj.position.y
 
@@ -119,6 +119,9 @@ export default class Character extends PIXI.Sprite {
         this.zIndex = this._y
 
         let textureCount = 4
+
+        if (Math.abs(this._x - this.x) > speed * 15) this.x = this._x
+        if (Math.abs(this._y - this.y) > speed * 15) this.y = this._y
       
         if (this._x > this.x) {
             this.x += Math.min(speed, this._x - this.x)

@@ -1,4 +1,5 @@
 import { DynamicObject, BaseTypes, ThreeVector } from 'lance-gg'
+import { intersection } from './Utils'
 import SAT from 'sat'
 import { Hit } from './Hit'
 import Map from './Map'
@@ -66,6 +67,10 @@ export default class Player extends DynamicObject<any, any> {
         this._syncPlayer()
     }
 
+    set posZ(val) {
+        this.position.z = val
+    }
+
     get mapInstance() {
         return Map.buffer.get(this.map)
     }
@@ -103,22 +108,26 @@ export default class Player extends DynamicObject<any, any> {
             case 'left':
                 return {
                     x: this.position.x - this.speed,
-                    y: this.position.y
+                    y: this.position.y,
+                    z: this.position.z
                 }
             case 'right':
                 return {
                     x: this.position.x + this.speed,
-                    y: this.position.y
+                    y: this.position.y,
+                    z: this.position.z
                 }
             case 'up':
                 return {
                     x: this.position.x,
-                    y: this.position.y - this.speed
+                    y: this.position.y - this.speed,
+                    z: this.position.z
                 }
             case 'down':
                 return {
                     x: this.position.x,
-                    y: this.position.y + this.speed
+                    y: this.position.y + this.speed,
+                    z: this.position.z
                 }
         }
         return this.position
@@ -139,6 +148,12 @@ export default class Player extends DynamicObject<any, any> {
             }
             else if (colissionWith.onPlayerTouch) colissionWith.execMethod('onPlayerTouch', [this])
         }
+    }
+
+    zCollision(other): boolean {
+        const z = this.position.z
+        const otherZ = other.position.z
+        return intersection([z, z + this.height], [otherZ, otherZ + other.height])
     }
 
     move(direction) {
@@ -168,9 +183,10 @@ export default class Player extends DynamicObject<any, any> {
         }
 
         const hitbox = new SAT.Box(new SAT.Vector(nextPosition.x, nextPosition.y), this.hitbox.w, this.hitbox.h)
+        let isClimbable = false
 
-        const tileColission = (x, y): boolean => {
-            const tile = map.getTileByPosition(x,y)
+        const tileCollision = (x, y): boolean => {
+            const tile = map.getTileByPosition(x, y, [nextPosition.z, this.height])
             if (tile.hasCollision) {
                 return true
             }
@@ -187,14 +203,17 @@ export default class Player extends DynamicObject<any, any> {
                     }
                 }
             }
+            if (!isClimbable && tile.isClimbable) {
+                isClimbable = true
+            }
             return false
         }
 
         if (
-            tileColission(nextPosition.x, nextPosition.y) || 
-            tileColission(nextPosition.x + this.hitbox.w, nextPosition.y) || 
-            tileColission(nextPosition.x, nextPosition.y + this.hitbox.h) || 
-            tileColission(nextPosition.x + this.hitbox.w, nextPosition.y + this.hitbox.h)
+            tileCollision(nextPosition.x, nextPosition.y) || 
+            tileCollision(nextPosition.x + this.hitbox.w, nextPosition.y) || 
+            tileCollision(nextPosition.x, nextPosition.y + this.hitbox.h) || 
+            tileCollision(nextPosition.x + this.hitbox.w, nextPosition.y + this.hitbox.h)
         ) {
             return false
         }
@@ -202,8 +221,8 @@ export default class Player extends DynamicObject<any, any> {
         const events = [...this.gameEngine.world.queryObjects({ instanceType: Player }), ...this.events, ...Object.values(this.gameEngine.events)]
         
         for (let event of events) {
-            if (event.object) event = event.object
             if (event.id == this.id) continue
+            if (!this.zCollision(event)) continue
             const collided = Hit.testPolyCollision('box', hitbox, event.hitbox)
             if (collided) {
                 this.colissionWith.push(event)
@@ -213,10 +232,18 @@ export default class Player extends DynamicObject<any, any> {
         }
 
         for (let shape of map.shapes) {
+            const { collision, z } = shape.properties
+            if (z !== undefined && !this.zCollision({
+                position: { z },
+                height: map.tileHeight
+            })) {
+                continue
+            }
+            const hitbox = new SAT.Box(new SAT.Vector(nextPosition.x, nextPosition.y - nextPosition.z), this.hitbox.w, this.hitbox.h)
             let collided = Hit.testPolyCollision(shape.type, hitbox, shape.hitbox)
             if (collided) {
                 this.colissionWith.push(shape)
-                if (shape.properties.colission) return false
+                if (collision) return false
             }
         }
 
@@ -228,10 +255,20 @@ export default class Player extends DynamicObject<any, any> {
                 this.posX = nextPosition.x
                 break
             case 'up':
-                this.posY = nextPosition.y
+                if (isClimbable) {
+                    this.posZ = nextPosition.z + this.speed
+                }
+                else {
+                    this.posY = nextPosition.y
+                }
                 break
             case 'down':
-                this.posY = nextPosition.y
+                if (isClimbable) {
+                    this.posZ = nextPosition.z - this.speed
+                }
+                else {
+                    this.posY = nextPosition.y
+                }
                 break
         }
         

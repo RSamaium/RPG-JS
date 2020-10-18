@@ -11,6 +11,7 @@ pixi_tilemap.Constant.maxTextures = 16;
 export default class TileLayer extends PIXI.Container {
 
     tilemap
+    properties: any
 
     static findTileSet(gid, tileSets) {
         let tileset;

@@ -33,6 +33,8 @@ export class RpgMap extends RpgCommonMap {
     createEvents(type, player?) {
         const events: any[] = []
 
+        if (!this.events) return events
+
         for (let obj of this.events) {
 
             let event: any, position

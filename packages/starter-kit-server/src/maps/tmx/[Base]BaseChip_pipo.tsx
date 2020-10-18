@@ -424,11 +424,19 @@
   <properties>
    <property name="collision" type="bool" value="false"/>
   </properties>
+  <objectgroup draworder="index" id="2">
+   <object id="1" x="-0.0869565" y="0.0434783" width="32.087" height="1.86957"/>
+  </objectgroup>
  </tile>
  <tile id="74">
   <properties>
    <property name="collision" type="bool" value="false"/>
   </properties>
+  <objectgroup draworder="index" id="2">
+   <object id="1" x="0" y="0.0434783">
+    <polygon points="0,0 17.7826,0.0869565 31.8261,13.6957 32.1304,31.9565 29.913,31.913 29.5652,14.3913 16.9565,2.04348 -0.0434783,2.04348"/>
+   </object>
+  </objectgroup>
  </tile>
  <tile id="75">
   <properties>
@@ -662,6 +670,7 @@
  </tile>
  <tile id="121">
   <properties>
+   <property name="climb" type="bool" value="true"/>
    <property name="collision" type="bool" value="false"/>
   </properties>
  </tile>
@@ -762,6 +771,7 @@
  </tile>
  <tile id="141">
   <properties>
+   <property name="climb" type="bool" value="true"/>
    <property name="collision" type="bool" value="false"/>
   </properties>
  </tile>
@@ -1411,6 +1421,9 @@
   <properties>
    <property name="collision" type="bool" value="false"/>
   </properties>
+  <objectgroup draworder="index" id="2">
+   <object id="1" x="0.0434783" y="14.0435" width="31.913" height="12.1739"/>
+  </objectgroup>
  </tile>
  <tile id="266">
   <properties>
@@ -1507,6 +1520,9 @@
   <properties>
    <property name="collision" type="bool" value="false"/>
   </properties>
+  <objectgroup draworder="index" id="2">
+   <object id="1" x="0.0869565" y="14.1304" width="31.7826" height="12.6087"/>
+  </objectgroup>
  </tile>
  <tile id="282">
   <properties>

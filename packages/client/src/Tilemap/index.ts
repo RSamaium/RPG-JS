@@ -69,11 +69,30 @@ export default class TileMap extends PIXI.Container {
                         filter: (tile) => {
                             const { data, y, z: zObject, height } = instance
                             const { hHitbox } = data
-                            const { z } = tile.properties
-                            if (z === undefined) return false
+                            const zLayer = tileLayer.properties.z
+                            const tileHasZ = tile.properties.z !== undefined
+                            let { z } = tile.properties
+
+                            if (zLayer !== undefined) {
+                                z = zLayer + (z !== undefined ? z : 0)
+                            }
+
+                            if (z == undefined) return false 
+
+                            const realZ = z * tile.height
+
+                            if (zObject + height < realZ) {
+                                return true
+                            }
+                            
+                            if (zObject > realZ + tile.height) {
+                                return false
+                            }
+
+                            if (!tileHasZ) return false 
+
                             // is front of tile
                             if (y + hHitbox > tile.y + tile.height) {
-                                const realZ = z * tile.height
                                 const zIntersection = intersection([zObject, zObject + height], [realZ, realZ + tile.height])
                                 if (!zIntersection) {
                                     return true

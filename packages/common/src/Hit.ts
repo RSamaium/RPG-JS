@@ -29,7 +29,7 @@ class HitClass {
         }
         else if (obj.polygon) {
             type = 'polygon'
-            hitbox = new SAT.Polygon(new SAT.Vector(x, y), obj.polygon.map(pos => new SAT.Vector(pos.x, pos.y)))
+            hitbox = new SAT.Polygon(new SAT.Vector(x, y), obj.polygon.map(pos => new SAT.Vector(+pos.x, +pos.y)))
         }
         else if (!obj.polygon && obj.width > 0 && obj.height > 0) {
             type = 'box'
@@ -54,10 +54,10 @@ class HitClass {
                 collided = SAT.testPolygonPolygon(hit1.toPolygon(), hit2.toPolygon())
             break
             case 'circle':
-                collided = SAT.testPolygonCircle(hit1.toPolygon(), hit2.hitbox)
+                collided = SAT.testPolygonCircle(hit1.toPolygon(), hit2)
             break
             case 'polygon':
-                collided = SAT.testPolygonPolygon(hit1.toPolygon(), hit2.hitbox)
+                collided = SAT.testPolygonPolygon(hit1, hit2.toPolygon())
             break
         }
         return collided
