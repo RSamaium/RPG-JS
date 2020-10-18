@@ -28,6 +28,7 @@ export default class Character extends PIXI.Sprite {
     private spritesheet: any
     private _x: number = 0
     private _y: number = 0
+    public z: number = 0
     private effects: any[] = []
     private debug
 
@@ -102,13 +103,14 @@ export default class Character extends PIXI.Sprite {
         let speed = obj.speed
 
         if (!this.scene.game.standalone) {
-            speed += (obj.speed / 3) // sync move between client and server
+           // speed += (obj.speed / 3) // sync move between client and server
         }
 
         let moving = false
 
         this._x = Math.floor(obj.position.x)
         this._y = Math.floor(obj.position.y)
+        this.z = Math.floor(obj.position.z)
 
         obj.posX = obj.position.x
         obj.posY = obj.position.y

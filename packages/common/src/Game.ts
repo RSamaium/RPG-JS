@@ -1,4 +1,4 @@
-import { GameEngine, SimplePhysicsEngine, Utils } from 'lance-gg'
+import { GameEngine, CannonPhysicsEngine, Utils } from 'lance-gg'
 import Player from './Player'
 import SAT from 'sat'
 
@@ -11,10 +11,11 @@ export default class Game extends GameEngine<any> {
 
     constructor(options) {
         super(options);
-        this.physicsEngine = new SimplePhysicsEngine({ 
+        /*this.physicsEngine = new SimplePhysicsEngine({ 
             gameEngine: this,
             collisions: { type: 'bruteForce', autoResolve: false }
-        });
+        });*/
+        this.physicsEngine = new CannonPhysicsEngine({ gameEngine: this }) 
         this.events = {} // events for all player in map
     }
 

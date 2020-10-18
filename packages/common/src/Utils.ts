@@ -34,6 +34,10 @@ export function arrayFlat(array) {
     return array.reduce((acc, val) => acc.concat(val), [])
 }
 
+export function intersection([start1, end1], [start2, end2]): boolean {
+    return (start1 >= start2 && start1 <= end2) || (start2 >= start1 && start2 < end1)
+}
+
 export default {
     random,
     isBrowser,
@@ -43,5 +47,6 @@ export default {
     isString,
     isInstanceOf,
     arrayUniq,
-    arrayFlat
+    arrayFlat,
+    intersection
 }

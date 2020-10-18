@@ -1,4 +1,4 @@
-import { DynamicObject, BaseTypes } from 'lance-gg'
+import { DynamicObject, BaseTypes, ThreeVector } from 'lance-gg'
 import SAT from 'sat'
 import { Hit } from './Hit'
 import Map from './Map'
@@ -21,6 +21,7 @@ export default class Player extends DynamicObject<any, any> {
     hitbox: any
     player: any
     server: any
+    position: any
 
     private _hitboxPos: any
 
@@ -46,6 +47,7 @@ export default class Player extends DynamicObject<any, any> {
     constructor(gameEngine, options, props: any = {}) {
         super(gameEngine, options, props)
         this.direction = props.direction || 0
+        this.position = new ThreeVector(0, 0, 0)
         this.position.x = props.x || 0
         this.position.y = props.y || 0
         this._hitboxPos = new SAT.Vector(this.position.x, this.position.y)
@@ -62,12 +64,6 @@ export default class Player extends DynamicObject<any, any> {
         this.position.y = val
         this._hitboxPos.y = val
         this._syncPlayer()
-    }
-
-    get bending() {
-        return {
-            velocity: { percent: 0.0 }
-        };
     }
 
     get mapInstance() {
@@ -238,7 +234,7 @@ export default class Player extends DynamicObject<any, any> {
                 this.posY = nextPosition.y
                 break
         }
-
+        
         return true
     }
 
@@ -254,22 +250,6 @@ export default class Player extends DynamicObject<any, any> {
         this.direction = dir[direction]
     }
 
-    private testPolyCollision(type, hit1, hit2): boolean {
-        let collided = false
-        switch (type) {
-            case 'box':
-                collided = SAT.testPolygonPolygon(hit1.toPolygon(), hit2.toPolygon())
-            break
-            case 'circle':
-                collided = SAT.testPolygonCircle(hit1.toPolygon(), hit2.hitbox)
-            break
-            case 'polygon':
-                collided = SAT.testPolygonPolygon(hit1.toPolygon(), hit2.hitbox)
-            break
-        }
-        return collided
-    }
-
     _syncPlayer() {
         // test player instance for event
         if (this.player) {
@@ -282,16 +262,7 @@ export default class Player extends DynamicObject<any, any> {
     }
 
     syncTo(other) {
-        super.syncTo(other)  
-        this.direction = other.direction
-        this.map = other.map
-        this.graphic = other.graphic
-        this.speed = other.speed
-        this.canMove = other.canMove
-        this.width = other.width
-        this.height = other.height
-        this.wHitbox = other.wHitbox
-        this.hHitbox = other.hHitbox
+        super.syncTo(other)
     }
 
 }

@@ -1,9 +1,10 @@
-import * as PIXI from 'pixi.js';
+import * as PIXI from 'pixi.js'
+import { Utils } from '@rpgjs/common'
+import ImageLayer from './ImageLayer'
+import TileLayer from './TileLayer'
+import TileSet from './TileSet'
 
-
-import ImageLayer from './ImageLayer';
-import TileLayer from './TileLayer';
-import TileSet from './TileSet';
+const { intersection } = Utils
 
 PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
 
@@ -66,11 +67,19 @@ export default class TileMap extends PIXI.Container {
                     const tile = tileLayer.createTile(x, y, {
                         real: true,
                         filter: (tile) => {
-                            const { data, y } = instance
+                            const { data, y, z: zObject, height } = instance
                             const { hHitbox } = data
-                            const { overlay, z = 0 } = tile.properties
-                            if (!overlay) return false
-                            if (y + hHitbox > tile.y + (tile.height * (z+1))) return false
+                            const { z } = tile.properties
+                            if (z === undefined) return false
+                            // is front of tile
+                            if (y + hHitbox > tile.y + tile.height) {
+                                const realZ = z * tile.height
+                                const zIntersection = intersection([zObject, zObject + height], [realZ, realZ + tile.height])
+                                if (!zIntersection) {
+                                    return true
+                                }
+                                return false
+                            }
                             return true
                         }
                     })
