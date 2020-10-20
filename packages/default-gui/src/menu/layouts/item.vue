@@ -44,7 +44,6 @@ export default {
             this.items = player.items
         }
         this.$rpgKeypress = ((name) => {
-            console.log(name)
             if (name == 'escape') {
                 this.$emit('changeLayout', 'MainLayout')
             }

@@ -1,17 +1,34 @@
 <template>
-    <rpg-window position="bottom" :fullWidth="true" class="battle-menu">
-        test
-    </rpg-window>
+    <div class="menu-main">
+       <component :is="layout" @changeLayout="change" ref="layout"></component>
+    </div>
 </template>
 
 <script>
+import MainLayout from './layouts/main.vue'
+import ItemsLayout from '../menu/layouts/item.vue'
+
 export default {
-    name: 'rpg-battle'
+    name: 'rpg-battle',
+    data() {
+        return {
+            layout: 'MainLayout'
+        }
+    },
+    methods: {
+        change(name) {
+            this.layout = name
+        }
+    },
+    components: {
+        MainLayout,
+        ItemsLayout 
+    }
 }
 </script>
 
 <style scoped>
-.battle-menu {
+.menu-main {
     height: 100%;
 }
 </style>

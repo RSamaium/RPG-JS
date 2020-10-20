@@ -35,6 +35,7 @@ export default {
             return this.$rpgPlayer()
         },
         _class() {
+            if (!this.player._class) return {}
             return this.player._class
         }
     },

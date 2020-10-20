@@ -82,6 +82,7 @@ export default class RpgClientEngine extends ClientEngine<any> {
         Vue.prototype.$gameEngine = this.gameEngine
         Vue.prototype.$rpgPlayer = (playerId?: string) => {
             const player = this.gameEngine.world.getObject(playerId || this.gameEngine.playerId)
+            if (!player) return {}
             return player.data
         }
 
