@@ -3,6 +3,7 @@ import { ActorGlobalOptions } from './actor'
 
 interface EnemyOptions extends ActorGlobalOptions {
     startingItems?: [{ nb: number, item: any }]
+    graphic?: string,
     gain?: {
         exp?: number
         gold?: number

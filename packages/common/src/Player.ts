@@ -17,7 +17,7 @@ export default class Player extends DynamicObject<any, any> {
     canMove: number = 1
     events: any[] = []
     direction: number
-    colissionWith: any[] = []
+    collisionWith: any[] = []
     data: any = {}
     hitbox: any
     player: any
@@ -142,11 +142,15 @@ export default class Player extends DynamicObject<any, any> {
     }
 
     triggerCollisionWith(type?: number) {
-        for (let colissionWith of this.colissionWith) {
+        for (let collisionWith of this.collisionWith) {
+            const { properties } = collisionWith
             if (type == Player.ACTIONS.ACTION) {
-                if (colissionWith.onAction) colissionWith.execMethod('onAction', [this])
+                if (collisionWith.onAction) collisionWith.execMethod('onAction', [this])
             }
-            else if (colissionWith.onPlayerTouch) colissionWith.execMethod('onPlayerTouch', [this])
+            else if (collisionWith.onPlayerTouch) collisionWith.execMethod('onPlayerTouch', [this])
+            else if (properties) {
+                if (properties['go-map'] && this['changeMap']) this['changeMap'](properties['go-map'])
+            }
         }
     }
 
@@ -157,7 +161,7 @@ export default class Player extends DynamicObject<any, any> {
     }
 
     move(direction) {
-        this.colissionWith = []
+        this.collisionWith = []
 
         const nextPosition = this.defineNextPosition(direction)
         const map = this.mapInstance
@@ -182,7 +186,7 @@ export default class Player extends DynamicObject<any, any> {
             return false
         }
 
-        const hitbox = new SAT.Box(new SAT.Vector(nextPosition.x, nextPosition.y), this.hitbox.w, this.hitbox.h)
+        const hitbox = Hit.createObjectHitbox(nextPosition.x, nextPosition.y, 0, this.hitbox.w, this.hitbox.h)
         let isClimbable = false
 
         const tileCollision = (x, y): boolean => {
@@ -225,9 +229,9 @@ export default class Player extends DynamicObject<any, any> {
             if (!this.zCollision(event)) continue
             const collided = Hit.testPolyCollision('box', hitbox, event.hitbox)
             if (collided) {
-                this.colissionWith.push(event)
+                this.collisionWith.push(event)
                 this.triggerCollisionWith()
-                return false
+                //return false
             }
         }
 
@@ -239,10 +243,11 @@ export default class Player extends DynamicObject<any, any> {
             })) {
                 continue
             }
-            const hitbox = new SAT.Box(new SAT.Vector(nextPosition.x, nextPosition.y - nextPosition.z), this.hitbox.w, this.hitbox.h)
+            const hitbox = Hit.createObjectHitbox(nextPosition.x, nextPosition.y, nextPosition.z, this.hitbox.w, this.hitbox.h)
             let collided = Hit.testPolyCollision(shape.type, hitbox, shape.hitbox)
             if (collided) {
-                this.colissionWith.push(shape)
+                this.collisionWith.push(shape)
+                this.triggerCollisionWith() 
                 if (collision) return false
             }
         }

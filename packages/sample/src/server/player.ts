@@ -18,7 +18,7 @@ export class Player extends RpgPlayer {
         })
 
         this.setGraphic('hero')
-        this.changeMap('mapz')
+        this.changeMap('medieval')
 
         this.setActor(database.Hero)
     }
@@ -27,7 +27,6 @@ export class Player extends RpgPlayer {
       if (input == 'escape') {
           this.showAnimation()
       }
-      
     }
 
     onDead() {

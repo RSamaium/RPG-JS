@@ -22,9 +22,6 @@ export default class RpgRenderer extends Renderer<any, any> {
             this.onDOMLoaded();
         else
             document.addEventListener('DOMContentLoaded', this.onDOMLoaded.bind(this))
-
-       // this.animation = new Animation(this.stage, this.renderer)
-
         return Promise.resolve()
     }
 
@@ -102,6 +99,8 @@ export default class RpgRenderer extends Renderer<any, any> {
     }
 
     async loadScene(name, obj) {
+        this.gameEngine.world.objects = {}
+        this.stage.removeChildren()
         switch (name) {
             case 'map':
                 this.scene = new SceneMap(this.gameEngine, {

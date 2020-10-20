@@ -185,10 +185,10 @@
   <object id="1" name="Start Position" type="start" x="238" y="525">
    <point/>
   </object>
-  <object id="2" x="470.851" y="386.241" width="137" height="84" rotation="-179.798">
+  <object id="2" x="298.35" y="547.264" width="162.785" height="164.932">
    <properties>
     <property name="collision" type="bool" value="true"/>
-    <property name="z" type="int" value="2"/>
+    <property name="go-map" value="medieval"/>
    </properties>
   </object>
  </objectgroup>

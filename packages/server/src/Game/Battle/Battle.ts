@@ -12,11 +12,15 @@ export class RpgBattle {
         return this.server.gameEngine.world.getObjectsOfGroup(this.battleId)
     }
 
+    get game() {
+        return this.server.gameEngine
+    }
+
     private createEnnemies(enemies: any[]): void {
         for (let ennemyObj of enemies) {
-            const enemyData = new ennemyObj.enemy()
-            const enemy = new RpgPlayer()
+            const enemy = this.game.addEvent(ennemyObj.enemy)
             enemy.level = ennemyObj.level
+            this.server.assignObjectToRoom(enemy, this.battleId)
             this.enemies.push(enemy)
         }
     }

@@ -1,4 +1,5 @@
 import { RpgBattle } from '../Game/Battle/Battle'
+import { BattleGui } from '../Gui/BattleGui'
 
 export class SceneBattle {
 
@@ -23,5 +24,8 @@ export class SceneBattle {
             name: SceneBattle.id, 
             data: {}
         })
+        const gui = new BattleGui(player)
+        player._gui[gui.id] = gui
+        gui.open()
     }
 }

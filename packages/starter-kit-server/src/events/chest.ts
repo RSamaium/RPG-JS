@@ -1,5 +1,5 @@
 import { RpgEvent, EventData, RpgPlayer, Query } from '@rpgjs/server'
-import { Potion } from '../database/items/potion'
+import { Monster } from '../database/enemies/monster'
 
 @EventData({
     name: 'EV-1',
@@ -24,17 +24,9 @@ class _ChestEvent extends RpgEvent {
     }
 
     async onAction(player: RpgPlayer) {
-       /* if (player.getVariable('A')) {
-            await player.showText('Already open')
-            return
-        }
-        await player.showText('You have 10 gold')
-        player.gold += 10
-        player.setVariable('A', true)*/ 
-        //player.startBattle()
-        await player.showText('You have 10 golds')
-       // player.addItem(Potion)
-       player.gold += 10
+       player.startBattle([
+            { enemy: Monster, level: 1 }
+       ])
     }
 
     onPlayerTouch() {

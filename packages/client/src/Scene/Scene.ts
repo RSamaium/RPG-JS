@@ -15,7 +15,9 @@ export class Scene {
                 this.addObject(val, key)
             }
             else {
-                const ret = renderObjects.get(key).update(val, t, dt)
+                const object = renderObjects.get(key)
+                if (!object.update) return
+                const ret = object.update(val, t, dt)
                 if (this.onUpdateObject) this.onUpdateObject(ret)
             }
         })

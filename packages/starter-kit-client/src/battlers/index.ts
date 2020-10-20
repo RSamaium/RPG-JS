@@ -2,10 +2,12 @@ import { Spritesheet } from '@rpgjs/client'
 
 @Spritesheet({
     images: {
-        spider: require('./assets/spider.png')
+        bird: require('./assets/pipo-enemy022.png')
     },
-    framesWidth: 4,
-    framesHeight: 1
+    framesWidth: 1,
+    framesHeight: 1,
+    width: 480,
+    height: 480
 })
 export class Battlers {
 

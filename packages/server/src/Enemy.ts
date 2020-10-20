@@ -5,13 +5,14 @@ export default class RpgEnemy extends Player  {
     options: any
     gain: any
 
-    constructor() {
-        super()
+    constructor(...args) {
+        super(...args)
         const { 
             parameters = {}, 
             startingEquipment = [], 
             startingItems = [],
             gain, 
+            graphic,
             statesEfficiency = [], 
             elementsEfficiency = []
         } = this.options
@@ -28,5 +29,6 @@ export default class RpgEnemy extends Player  {
         this.statesEfficiency = statesEfficiency
         this.elementsEfficiency = elementsEfficiency
         this.gain = gain
+        this.graphic = graphic
     }
 }

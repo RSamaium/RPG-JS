@@ -69,11 +69,17 @@ export default class Character extends PIXI.Sprite {
         this.gotoAndStop(0)
     }
 
+    getSpriteAnimation(name) {
+        if (!this.spritesheet.action) return 0
+        return this.spritesheet.action[name] || 0
+    }
+
     origin() {
         if (!this.spritesheet) {
             return
         }
         const data = this.data
+        if (!data.wHitbox || !data.hHitbox) return
         const { width, height, framesWidth, framesHeight } = this.spritesheet
         const w = 1 - (data.wHitbox / (width / framesWidth))
         const h = 1 - (data.hHitbox / (height / framesHeight))
@@ -111,7 +117,7 @@ export default class Character extends PIXI.Sprite {
         this.z = Math.floor(obj.position.z)
         this._x = Math.floor(obj.position.x)
         this._y = Math.floor(obj.position.y) - this.z
-        
+ 
         obj.posX = obj.position.x
         obj.posY = obj.position.y
 
@@ -157,7 +163,7 @@ export default class Character extends PIXI.Sprite {
             this.gotoAndStop(image)
         }
         else {
-            this.gotoAndStop(this.spritesheet.action.stand)
+            this.gotoAndStop(this.getSpriteAnimation('stand'))
         }
 
         return {

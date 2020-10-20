@@ -31,6 +31,7 @@ export class SceneMap extends Scene implements IScene {
         const loader = PIXI.Loader.shared
 
         for (let tileset of this.tilemap.tileSets) {
+            if (tileset.spritesheet.resource) continue
             loader.add(tileset.name, tileset.spritesheet.image)
         }
 
