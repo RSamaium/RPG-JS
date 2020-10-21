@@ -4,8 +4,26 @@ import TileMap from '../Tilemap'
 import { Viewport } from 'pixi-viewport'
 import { IScene } from '../Interfaces/Scene'
 import { Scene } from './Scene'
+import { SceneData } from './SceneData'
 import { spritesheets } from '../Sprite/Spritesheets'
 
+@SceneData({
+    inputs: {
+        'up': {
+            repeat: true
+        },
+        'down': {
+            repeat: true
+        },
+        'left': {
+            repeat: true
+        },
+        'right': {
+            repeat: true
+        },
+        'space': {}
+    }
+})
 export class SceneMap extends Scene implements IScene {
 
     private tilemap: any
@@ -14,7 +32,7 @@ export class SceneMap extends Scene implements IScene {
     private eventSprites: object = {}
     private isLoaded: boolean = false
     private gameMap
-  
+
     constructor(
             protected game: any, 
             private options: { screenWidth?: number, screenHeight?: number } = {}) {

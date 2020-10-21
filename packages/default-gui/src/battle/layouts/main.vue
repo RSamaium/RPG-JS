@@ -1,7 +1,7 @@
 <template>
     <rpg-window position="bottom" :fullWidth="true" class="battle-wrapper">
         <div class="battle-menu">
-            <rpg-choice :choices="actions" :column="1" @selected="choiceAction" ref="list"></rpg-choice>
+            <rpg-choice :choices="actions" :column="1" @selected="choiceAction" ref="actions"></rpg-choice>
             <div>
                 <div class="hero-column">
                     <ul>
@@ -28,6 +28,24 @@ export default {
             ]
         }
     },
+    mounted() {
+         this.$rpgScene().active = false
+         this.$rpgScene().selectEnemy = (index) => {
+             this.$rpgSocket.emit('gui.interaction', {
+                guiId: 'rpg-battle',
+                name: 'attack',
+                data: {
+                    enemy: index
+                }
+            })
+         }
+        this.$rpgSocket.on('battle.damage', (data) => {
+            this.$rpgScene().addEffect(data)
+        })
+        this.$rpgKeypress = ((name) => {
+            return !this.$rpgScene().active
+        })
+    },
     methods: {
         choiceAction(index) {
             const action = this.actions[index]
@@ -35,7 +53,12 @@ export default {
                 case 'item':
                     this.$emit('changeLayout', 'ItemsLayout')
                     break;
-            
+                case 'attack':
+                    this.$rpgScene().pointerActive = true
+                    setTimeout(() => {
+                        this.$rpgScene().listenInputs() 
+                    }, 200)
+                    break;
                 default:
                     break;
             }

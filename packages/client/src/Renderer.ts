@@ -99,8 +99,14 @@ export default class RpgRenderer extends Renderer<any, any> {
     }
 
     async loadScene(name, obj) {
-        this.gameEngine.world.objects = {}
+        for (let id in this.gameEngine.world.objects) {
+            if (id == this.gameEngine.playerId) continue
+            delete this.gameEngine.world.objects[id]
+        }
         this.stage.removeChildren()
+        if (this.scene) {
+            this.scene.controls.boundKeys = {}
+        }
         switch (name) {
             case 'map':
                 this.scene = new SceneMap(this.gameEngine, {

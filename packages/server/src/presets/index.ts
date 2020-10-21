@@ -46,6 +46,7 @@ export const DAMAGE_CRITICAL = function(damage, a, b) {
 
 export const DAMAGE_PHYSIC = function(a, b) {
     let damage = Math.round((a[ATK] - b[PDEF] / 2) * ((20 + a[STR]) / 20))
+    if (damage < 0) damage = 0
     return damage
 }
 

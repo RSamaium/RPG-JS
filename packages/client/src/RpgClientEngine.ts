@@ -1,4 +1,4 @@
-import { ClientEngine, KeyboardControls } from 'lance-gg'
+import { ClientEngine } from 'lance-gg'
 import Vue from 'vue'
 import Renderer from './Renderer'
 import { _initSpritesheet } from './Sprite/Spritesheets'
@@ -13,8 +13,8 @@ export default class RpgClientEngine extends ClientEngine<any> {
     public socket: any
     public _options: any
     private vm: any
-    private controls: KeyboardControls
-    private eventEmitter: EventEmitter = new EventEmitter()
+    
+    public eventEmitter: EventEmitter = new EventEmitter()
     private bufferParamsChanged: Map<string, any> = new Map()
 
     constructor(gameEngine, options) {
@@ -35,16 +35,9 @@ export default class RpgClientEngine extends ClientEngine<any> {
        gameEngine._playerClass = this.renderer.options.playerClass || RpgPlayer
        gameEngine._eventClass = this.renderer.options.eventClass || RpgEvent
        gameEngine.standalone = options.standalone
+       gameEngine.clientEngine = this
 
         _initSpritesheet(this.renderer.options.spritesheets)
-
-        this.controls = new KeyboardControls(this, this.eventEmitter);
-        this.controls.bindKey('up', 'up', { repeat: true } )
-        this.controls.bindKey('down', 'down', { repeat: true } )
-        this.controls.bindKey('left', 'left', { repeat: true } )
-        this.controls.bindKey('right', 'right', { repeat: true } )
-        this.controls.bindKey('space', 'space')
-        this.controls.bindKey('escape', 'escape')
 
         // If the settings are not yet in the player's logic, then we cache the data and apply the settings as soon as the player has been inserted into the logic.
         setInterval(() => {
@@ -78,6 +71,7 @@ export default class RpgClientEngine extends ClientEngine<any> {
 
         Vue.prototype.$rpgSocket = this.socket
         Vue.prototype.$rpgStage = this.renderer.stage
+        Vue.prototype.$rpgScene = this.renderer.getScene.bind(this.renderer)
         Vue.prototype.$rpgEmitter = this.eventEmitter
         Vue.prototype.$gameEngine = this.gameEngine
         Vue.prototype.$rpgPlayer = (playerId?: string) => {

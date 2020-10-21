@@ -24,8 +24,10 @@ export class SceneBattle {
             name: SceneBattle.id, 
             data: {}
         })
-        const gui = new BattleGui(player)
-        player._gui[gui.id] = gui
-        gui.open()
+        if (battle) {
+            const gui = new BattleGui(player, battle)
+            player._gui[gui.id] = gui
+            gui.open()
+        }
     }
 }

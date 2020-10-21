@@ -1,11 +1,31 @@
 import * as PIXI from 'pixi.js'
+import { KeyboardControls, GameEngine } from 'lance-gg'
 
 export class Scene {
    
     protected objects: Map<string, any> = new Map()
     protected loader = PIXI.Loader.shared
+    private controls: KeyboardControls
+    inputs: any
 
-    constructor(protected game: any) {}
+    constructor(protected game: GameEngine<any>) {
+        this.setInput()
+    }
+
+    private setInput() {
+        const clientEngine = this.game.clientEngine
+        this.controls = new KeyboardControls(clientEngine, clientEngine.eventEmitter)
+        if (!this.inputs) return
+        for (let input in this.inputs) {
+            const option = this.inputs[input]
+            const { method } = option
+            if (method) {
+                if (!this[method]) throw new Error(`"${method}" method does not exist on the "${input}" input`)
+                option.method = this[method].bind(this)
+            }
+            this.controls.bindKey(input, option.action || input, option)
+        }
+    }
 
     draw(t, dt) {
         const logicObjects = this.game.world
@@ -30,11 +50,24 @@ export class Scene {
         }
     }
 
+    stopInputs() {
+        this.controls.stop = true
+    }
+
+    listenInputs() {
+        this.controls.stop = false
+    }
+
     onUpdateObject(ret) {}
 
-    addObject(obj, id) {}
+    addObject(obj, id) {
+        const sprite = new PIXI.Container()
+        this.objects.set(id, sprite)
+    }
 
-    removeObject(id) {}
+    removeObject(id) {
+        this.objects.delete(id)
+    }
 
     getPlayer(id) {
         return this.objects.get(id)

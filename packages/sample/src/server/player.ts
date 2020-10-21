@@ -25,7 +25,7 @@ export class Player extends RpgPlayer {
 
     onInput({ input }) {
       if (input == 'escape') {
-          this.showAnimation()
+          
       }
     }
 

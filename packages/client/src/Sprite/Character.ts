@@ -30,12 +30,14 @@ export default class Character extends PIXI.Sprite {
     private _y: number = 0
     public z: number = 0
     private effects: any[] = []
+    private fixed: boolean = false
     private debug
 
     constructor(private data: any, private scene: any) {
         super()
         this.x = data.x 
         this.y = data.y
+        this.fixed = data.fixed
         this.debug = new PIXI.Graphics()
         //this.displayDebug()
     }
@@ -49,9 +51,17 @@ export default class Character extends PIXI.Sprite {
         this.addChild(this.debug)
     }
 
-    addEffect() {
+    addEffect(str) {
         const id = Math.random()
-        const text = new FloatingText('123')
+        const text = new FloatingText(str, {
+            fontFamily : 'Arial', 
+            fontSize: 50, 
+            fill : 0xffffff, 
+            align : 'center',
+            stroke: 'black',
+            letterSpacing: 4,
+            strokeThickness: 3
+        })
         text['id'] = id
         this.addChild(text)
         text.run().then(() => {
@@ -67,6 +77,7 @@ export default class Character extends PIXI.Sprite {
         this.origin() 
         this.directions = Character.createDirectionTextures(this.spritesheet)
         this.gotoAndStop(0)
+        if (this.onSetGraphic) this.onSetGraphic(this.spritesheet)
     }
 
     getSpriteAnimation(name) {
@@ -113,44 +124,45 @@ export default class Character extends PIXI.Sprite {
         }
 
         let moving = false
-
-        this.z = Math.floor(obj.position.z)
-        this._x = Math.floor(obj.position.x)
-        this._y = Math.floor(obj.position.y) - this.z
- 
-        obj.posX = obj.position.x
-        obj.posY = obj.position.y
-
-        this.direction = obj.direction
-        this.zIndex = this._y
-
         let textureCount = 4
 
-        if (Math.abs(this._x - this.x) > speed * 15) this.x = this._x
-        if (Math.abs(this._y - this.y) > speed * 15) this.y = this._y
-      
-        if (this._x > this.x) {
-            this.x += Math.min(speed, this._x - this.x)
-            if (this.spritesheet) textureCount = this.spritesheet.framesWidth
-            moving = true
-        }
-
-        if (this._x < this.x) {
-            this.x -= Math.min(speed, this.x - this._x)
-            if (this.spritesheet) textureCount = this.spritesheet.framesWidth
-            moving = true
-        }
-
-        if (this._y > this.y) {
-            this.y += Math.min(speed, this._y - this.y)
-            if (this.spritesheet) textureCount = this.spritesheet.framesWidth
-            moving = true
-        }
-
-        if (this._y < this.y) {
-            this.y -= Math.min(speed, this.y - this._y)
-            if (this.spritesheet) textureCount = this.spritesheet.framesWidth
-            moving = true
+        if (!this.fixed) {
+            this.z = Math.floor(obj.position.z)
+            this._x = Math.floor(obj.position.x)
+            this._y = Math.floor(obj.position.y) - this.z
+     
+            obj.posX = obj.position.x
+            obj.posY = obj.position.y
+    
+            this.direction = obj.direction
+            this.zIndex = this._y
+    
+            if (Math.abs(this._x - this.x) > speed * 15) this.x = this._x
+            if (Math.abs(this._y - this.y) > speed * 15) this.y = this._y
+          
+            if (this._x > this.x) {
+                this.x += Math.min(speed, this._x - this.x)
+                if (this.spritesheet) textureCount = this.spritesheet.framesWidth
+                moving = true
+            }
+    
+            if (this._x < this.x) {
+                this.x -= Math.min(speed, this.x - this._x)
+                if (this.spritesheet) textureCount = this.spritesheet.framesWidth
+                moving = true
+            }
+    
+            if (this._y > this.y) {
+                this.y += Math.min(speed, this._y - this.y)
+                if (this.spritesheet) textureCount = this.spritesheet.framesWidth
+                moving = true
+            }
+    
+            if (this._y < this.y) {
+                this.y -= Math.min(speed, this.y - this._y)
+                if (this.spritesheet) textureCount = this.spritesheet.framesWidth
+                moving = true
+            }
         }
 
         if (moving) {
@@ -172,4 +184,6 @@ export default class Character extends PIXI.Sprite {
         }
          
     }
+
+    onSetGraphic(spritesheet) {}
 }

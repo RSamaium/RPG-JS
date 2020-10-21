@@ -70,7 +70,7 @@ export default {
 .window-content {
     border: 2.5px solid white;
     border-radius: 5px;
-    background: rgb(79,82,136);
+    background: #4e5188;
     background: linear-gradient(148deg, rgba(79,82,136,0.7) 0%, rgba(42,43,73,0.7) 100%);
     padding: 20px;
     overflow: hidden;

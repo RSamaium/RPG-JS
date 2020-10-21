@@ -396,7 +396,7 @@ export default class Player extends RpgCommonPlayer {
         return this.server.getScene('map').changeMap(mapId, this, positions)
     }
 
-    startBattle(enemies: [{ enemy: any, level: number }]) {
+    startBattle(enemies: { enemy: any, level: number }[]) {
         return this.server.getScene('battle').create(this, enemies)
     }
 
@@ -419,8 +419,20 @@ export default class Player extends RpgCommonPlayer {
             return isInstanceOf(it.item, itemClass)
         })
     }
+    /**
+     * Add an object in the player's inventory. You can give more than one by specifying `nb`
+     * @param itemClass 
+     * @param nb 
+     * 
+     * @example
+     * 
+     * ```ts
+     *  import Potion from 'your-database/potion'
 
-    addItem(itemClass, nb = 1): { item: any, nb: number } {
+        player.addItem(Potion, 5)
+        ```
+     */
+    addItem(itemClass: { new(...args: any[]) }, nb = 1): { item: any, nb: number } {
         let itemIndex = this._getItemIndex(itemClass)
         if (itemIndex != -1) {
             this.items[itemIndex].nb += nb
@@ -745,7 +757,7 @@ export default class Player extends RpgCommonPlayer {
     coefficientElements(otherPlayer: Player): number {
         const atkPlayerElements: any = otherPlayer.elements
         const playerElements: any = this.elementsEfficiency
-        let coefficient = 0
+        let coefficient = 1
 
         for (let atkElement of atkPlayerElements) {
             const elementPlayer = playerElements.find(el => el.element == atkElement.element)
@@ -828,7 +840,7 @@ export default class Player extends RpgCommonPlayer {
                 query = [query]
             }
             for (let players of query) {
-                players._emit('player.changeParam', {
+                players.emit('player.changeParam', {
                     playerId: this.playerId,
                     params,
                     type: this.type
@@ -875,7 +887,7 @@ export default class Player extends RpgCommonPlayer {
     }
 
     showEffect() {
-        this._emit('player.callMethod', { 
+        this.emit('player.callMethod', { 
             objectId: this.playerId,
             name: 'addEffect',
             params: []
@@ -883,7 +895,7 @@ export default class Player extends RpgCommonPlayer {
     }
 
     showAnimation() {
-        this._emit('player.callMethod', { 
+        this.emit('player.callMethod', { 
             objectId: this.playerId,
             name: 'showAnimation',
             params: []
@@ -943,7 +955,7 @@ export default class Player extends RpgCommonPlayer {
         return RpgCommonMap.buffer.get(id)
     }
 
-    public _emit(key, value) {
+    public emit(key, value) {
         if (this.socket) this.socket.emit(key, value) 
     }
 
@@ -982,7 +994,7 @@ export default class Player extends RpgCommonPlayer {
 
     private _triggerHook(name, val?) {
         if (this[name]) this[name](val)
-        this._emit('Player.' + name, val)
+        this.emit('Player.' + name, val)
     }
 
     private _eventChanges() {

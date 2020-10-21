@@ -1,6 +1,8 @@
 import { Actor } from '@rpgjs/database'
 import { Presets } from '@rpgjs/server'
 import { Fighter } from '../classes/fighter'
+import { Sword } from '../weapons/sword'
+import { Shield } from '../armors/shield'
 
 const { MAXHP, MAXSP, MAXHP_CURVE, MAXSP_CURVE } = Presets
 
@@ -19,7 +21,8 @@ const { MAXHP, MAXSP, MAXHP_CURVE, MAXSP_CURVE } = Presets
         [MAXSP]: MAXSP_CURVE
     },
     startingEquipment: [
-
+        Sword,
+        Shield
     ],
     class: Fighter 
 })

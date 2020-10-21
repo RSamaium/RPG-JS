@@ -25,6 +25,7 @@ class _ChestEvent extends RpgEvent {
 
     async onAction(player: RpgPlayer) {
        player.startBattle([
+            { enemy: Monster, level: 1 },
             { enemy: Monster, level: 1 }
        ])
     }
