@@ -143,6 +143,11 @@ export class SceneBattle extends Scene implements IScene {
         this.objects.set(id, sprite)
     }
 
+    removeObject(id) {
+        super.removeObject(id)
+        this.refreshPositions()
+    }
+
     addEffect(data) {
         for (let enemy of data) {
             const { damage } = enemy.damage
@@ -152,6 +157,9 @@ export class SceneBattle extends Scene implements IScene {
 
     private refreshPointer() {
         const sprite = this.enemiesContainer.children[this.pointerIndex]
+        if (!sprite) {
+            return
+        }
         this.pointer.x = sprite.x - POINTER_SIZE.w / 2
         this.pointer.y = 30
     }

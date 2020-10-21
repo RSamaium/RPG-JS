@@ -8,16 +8,20 @@ export class RpgBattle {
         this.createEnnemies(enemies)
     }
 
-    get players() {
-        return this.server.gameEngine.world.getObjectsOfGroup(this.battleId)
-    }
-
     get game() {
         return this.server.gameEngine
     }
 
+    get world() {
+        return this.game.world
+    }
+
+    get players() {
+        return this.world.getObjectsOfGroup(this.battleId)
+    }
+
     getEnemy(id) {
-        return this.server.gameEngine.world.getObject(id)
+        return this.world.getObject(id)
     }
 
     private createEnnemies(enemies: any[]): void {
@@ -25,7 +29,10 @@ export class RpgBattle {
             const enemy = this.game.addEvent(ennemyObj.enemy)
             enemy.server = this.server
             enemy.level = ennemyObj.level
-            this.server.assignObjectToRoom(enemy, this.battleId)
+            enemy.onDead = () => {
+                this.world.removeObject(enemy.id)
+            }
+            this.server.assignObjectToRoom(enemy, this.battleId) 
         }
     }
 }

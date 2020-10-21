@@ -66,7 +66,11 @@ export class Scene {
     }
 
     removeObject(id) {
-        this.objects.delete(id)
+        const sprite =  this.objects.get(id)
+        if (sprite) {
+            this.objects.delete(id)
+            sprite.destroy()
+        }
     }
 
     getPlayer(id) {
