@@ -2,7 +2,7 @@
 import http from 'http'
 import express from 'express'
 import socketIO from 'socket.io'
-import { entryPoint } from '@rpgjs/server'
+import { entryPoint, Monitor } from '@rpgjs/server'
 import RPG from './rpg'
 
 const PORT = process.env.PORT || 3000
@@ -12,7 +12,11 @@ const server = http.createServer(app)
 const io = socketIO(server)
 const rpgGame = entryPoint(RPG, io)
 
-app.use('/', express.static(__dirname + '/../client')) 
+app.use('/', express.static(__dirname + '/../client'))
+
+setInterval(() => {
+    console.log(Monitor.status)
+}, 1000)
 
 server.listen(PORT, () =>  {
     rpgGame.start()

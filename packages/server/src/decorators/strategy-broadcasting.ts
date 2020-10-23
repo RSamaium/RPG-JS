@@ -1,4 +1,5 @@
 import RpgPlayer from '../Player'
+import { BaseTypes } from 'lance-gg'
 
 interface StrategyBroadcastingOptions {
     params: string[],
@@ -8,5 +9,8 @@ interface StrategyBroadcastingOptions {
 export function StrategyBroadcasting(params: StrategyBroadcastingOptions[] | string[]) {
     return function (target) {
         target.prototype.$broadcast = params
+        /*target.prototype.netScheme = {
+            hp: { type: BaseTypes.TYPES.INT8 }
+        }*/
     }
 }

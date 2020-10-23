@@ -222,8 +222,8 @@ export default class Player extends DynamicObject<any, any> {
             return false
         }
 
-        const events = [...this.gameEngine.world.queryObjects({ instanceType: Player }), ...this.events, ...Object.values(this.gameEngine.events)]
-        
+        const events = [...this.gameEngine.world.getObjectsOfGroup(this.map), ...this.events, ...Object.values(this.gameEngine.events)]
+
         for (let event of events) {
             if (event.id == this.id) continue
             if (!this.zCollision(event)) continue

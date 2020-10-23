@@ -16,7 +16,7 @@
   "scripts": {
     "test": "jest",
     "lerna:ls": "lerna ls",
-    "performance": "k6 run -e CHAT_WS=ws://localhost:3000 tests/load-testing/socket.js",
+    "performance": "k6 run -e CHAT_WS=ws://localhost:4000 tests/load-testing/socket.js",
     "build": "npm run build:common && npm run build:server && npm run build:client",
     "build:common": "tsc --build packages/common/tsconfig.json",
     "build:server": "tsc --build packages/server/tsconfig.json",

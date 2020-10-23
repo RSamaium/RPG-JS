@@ -7,7 +7,8 @@ export default function(engine, io, options = {}) {
     const gameEngine = new RpgCommonGame({ traceLevel: Lib.Trace.TRACE_NONE });
     const serverEngine = new engine(io, gameEngine, { 
         debug: {}, 
-        updateRate: 6, 
+        updateRate: 10, 
+        stepRate: 60,
         timeoutInterval: 0, 
         countConnections: false,
         ..._options

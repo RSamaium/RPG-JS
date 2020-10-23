@@ -23,7 +23,7 @@ const POINTER_SIZE = { w: 80, h: 40 }
         'escape': {
             method: 'back'
         }
-    }
+    } 
 })
 export class SceneBattle extends Scene implements IScene {
 

@@ -9,6 +9,7 @@ import RpgEvent from './Event'
 import RpgPlayer from './Player'
 import RpgEnemy from './Enemy'
 import { Query } from './Query'
+import Monitor from './Monitor'
 import * as Presets from './presets'
 
 export {
@@ -23,5 +24,6 @@ export {
     Query,
     entryPoint,
     Presets,
+    Monitor,
     StrategyBroadcasting
 }

@@ -137,6 +137,9 @@ export default class RpgClientEngine extends ClientEngine<any> {
 
     _initSocket() {
         this.onConnect()
+        /*this.socket.on('message', (str) => {
+            console.log(str)
+        })*/
         this.socket.on('player.loadScene', ({ name, data }) => {
             this.renderer.loadScene(name, data)
         })

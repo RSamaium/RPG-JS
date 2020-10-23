@@ -840,11 +840,11 @@ export default class Player extends RpgCommonPlayer {
                 query = [query]
             }
             for (let players of query) {
-                players.emit('player.changeParam', {
+                /*players.emit('player.changeParam', {
                     playerId: this.playerId,
                     params,
                     type: this.type
-                })
+                })*/
             }
         }
         this.paramsChanged.clear()

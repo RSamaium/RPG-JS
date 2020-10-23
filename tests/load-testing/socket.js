@@ -3,7 +3,7 @@ import { check } from "k6";
 
 export const options = {
   stages: [
-    { duration: '30s', target: 200 }
+    { duration: '10s', target: 300 }
   ]
 }
 
@@ -51,7 +51,7 @@ export default function () {
 
     socket.setTimeout(function () {
       socket.close();
-    }, 1000 * 20);
+    }, 1000 * 30);
   });
 
   check(response, { "status is 101": (r) => r && r.status === 101 });
