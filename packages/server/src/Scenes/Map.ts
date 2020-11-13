@@ -1,11 +1,44 @@
 
 import { RpgCommonMap, Utils } from '@rpgjs/common'
+import { StrategyBroadcasting } from '../decorators/strategy-broadcasting'
+import { Query } from '../Query'
 
+@StrategyBroadcasting([
+    {
+        params: [
+            'hp', 
+            'sp', 
+            'gold', 
+            {
+                prop: 'items',
+                broadcast: ['nb', {
+                    prop: 'item',
+                    broadcast: ['name']
+                }]
+            }, 
+            'level', 
+            'exp', 
+            'param', 
+            'name', 
+            {
+                prop: '_class',
+                broadcast: ['name', 'description']
+            }, 
+            'expForNextlevel',
+            'skills',
+            'states',
+            'equipments',
+            'effects'
+        ],
+        query: Query.getPlayer
+    }
+])
 export class SceneMap {
 
     static readonly id: string = 'map'
 
     private mapsById: object = {}
+    $broadcast
     
     constructor(private maps: any[], private server: any) {
         this.mapsById = {}
@@ -48,6 +81,7 @@ export class SceneMap {
 
         player.prevMap = player.map
         player.map = mapId
+        player.paramsChanged.add('map') 
         player.events = []
 
         const mapInstance = await this.loadMap(mapId)
@@ -71,6 +105,9 @@ export class SceneMap {
             }
         })
 
+        this.server.createRoom(mapId, {
+            broadcast: this.$broadcast
+        })
         this.server.assignObjectToRoom(player, mapId)
         
         if (!positions) positions = mapInstance.getPositionByShape(shape => shape.type == 'start')

@@ -1,5 +1,5 @@
 import { Gui } from './Gui'
-import RpgPlayer from '../Player'
+import { RpgPlayer } from '../Player/Player'
 import { IGui } from '../Interfaces/Gui'
 
 export class ShopGui extends Gui implements IGui {

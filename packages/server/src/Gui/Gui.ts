@@ -1,4 +1,4 @@
-import RpgPlayer from '../Player'
+import { RpgPlayer } from '../Player/Player'
 import { EventEmitter } from '@rpgjs/common'
 
 export class Gui extends EventEmitter {

@@ -1,6 +1,6 @@
-import Player from './Player'
+import { RpgPlayer } from './Player/Player'
 
-export default class RpgEnemy extends Player  {
+export default class RpgEnemy extends RpgPlayer  {
     public readonly type: string = 'enemy'
     options: any
     gain: any

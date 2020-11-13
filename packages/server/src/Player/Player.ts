@@ -1,9 +1,10 @@
 import { RpgCommonMap, RpgCommonPlayer, Utils }  from '@rpgjs/common'
 import { Effect } from '@rpgjs/database'
-import { StrategyBroadcasting } from './decorators/strategy-broadcasting'
-import { Gui, DialogGui, MenuGui, ShopGui } from './Gui'
-import { Query } from './Query'
-import { ItemLog, SkillLog, Log } from './logs'
+import { Gui, DialogGui, MenuGui, ShopGui } from '../Gui'
+import { ItemLog, SkillLog, Log } from '../logs'
+import { ItemManager } from './ItemManager'
+import { GoldManager } from './GoldManager'
+
 import { 
     MAXHP, 
     MAXSP,
@@ -20,7 +21,7 @@ import {
     INT_CURVE,
     DEX_CURVE,
     AGI_CURVE
-} from './presets'
+} from '../presets'
 
 const { 
     isPromise, 
@@ -30,40 +31,21 @@ const {
     isString, 
     isInstanceOf,
     arrayUniq,
-    arrayFlat
+    arrayFlat,
+    applyMixins
 } = Utils
 
-@StrategyBroadcasting([
-    {
-        params: [
-            'hp', 
-            'sp', 
-            'gold', 
-            'items', 
-            'level', 
-            'exp', 
-            'param', 
-            'name', 
-            '_class', 
-            'expForNextlevel',
-            'skills',
-            'states',
-            'equipments',
-            'effects'
-        ],
-        query: Query.getPlayer
-    }
-])
-export default class Player extends RpgCommonPlayer {
+export class RpgPlayer extends RpgCommonPlayer {
 
     public readonly type: string = 'player'
-
-    private _gold = 0
+    
     private _hp = 0
     private _sp = 0 
     private _name
     private skills: any[] = []
-    private items: any[] = []
+
+    items: any[] = []
+    
     private states: any[] = []
     private equipments: any[] = []
     private _exp: number = 0
@@ -97,7 +79,7 @@ export default class Player extends RpgCommonPlayer {
         }
     } = {}
 
-    protected paramsChanged: Set<string> = new Set()
+    paramsChanged: Set<string> = new Set()
     private _gui: { [id: string]: Gui } = {}
     public socket: any
     public server: any
@@ -106,8 +88,8 @@ export default class Player extends RpgCommonPlayer {
     public param: any 
     public $broadcast: any // decorator StrategyBroadcasting
 
-    constructor(gamePlayer?, options?, props?) {
-        super(gamePlayer, options, props)
+    constructor(gameEngine?, options?, props?) {
+        super(gameEngine, options, props)
         this.gold = 0
         this.exp = 0
         this.level = this.initialLevel
@@ -148,17 +130,7 @@ export default class Player extends RpgCommonPlayer {
         //this.paramsChanged.add('name')
     }
 
-    set gold(val) {
-        if (val < 0) {
-            val = 0
-        }
-        this._gold = val
-        this.paramsChanged.add('gold')
-    }
-
-    get gold() {
-        return this._gold
-    }
+    
 
     set hp(val) {
         if (val > this.param[MAXHP]) {
@@ -406,118 +378,7 @@ export default class Player extends RpgCommonPlayer {
         this.paramsChanged.add('_class')
     }
 
-    getItem(itemClass) {
-        const index = this._getItemIndex(itemClass)
-        return this.items[index]
-    }
-
-    _getItemIndex(itemClass) {
-        return this.items.findIndex(it => {
-            if (isString(itemClass)) {
-                return it.item.id == itemClass
-            }
-            return isInstanceOf(it.item, itemClass)
-        })
-    }
-    /**
-     * Add an object in the player's inventory. You can give more than one by specifying `nb`
-     * @param itemClass 
-     * @param nb 
-     * 
-     * @example
-     * 
-     * ```ts
-     *  import Potion from 'your-database/potion'
-
-        player.addItem(Potion, 5)
-        ```
-     */
-    addItem(itemClass: { new(...args: any[]) }, nb = 1): { item: any, nb: number } {
-        let itemIndex = this._getItemIndex(itemClass)
-        if (itemIndex != -1) {
-            this.items[itemIndex].nb += nb
-        }
-        else {
-            const instance = new itemClass()
-            if (!instance.$broadcast) instance.$broadcast = ['name', 'description', 'price', 'consumable']
-            this.items.push({
-                item: instance,
-                nb
-            })
-            itemIndex = this.items.length - 1
-        }
-        this.paramsChanged.add('items')
-        return this.items[itemIndex]
-    }
-
-    removeItem(itemClass, nb = 1): { item: any, nb: number } | undefined {
-        const itemIndex: number = this._getItemIndex(itemClass)
-        if (itemIndex == -1) {
-            throw ItemLog.notInInventory(itemClass)
-        }
-        const currentNb = this.items[itemIndex].nb
-        if (currentNb - nb <= 0) {
-            this.items.splice(itemIndex, 1)
-        }
-        else {
-            this.items[itemIndex].nb -= nb
-        }
-        this.paramsChanged.add('items')
-        return this.items[itemIndex]
-    }
-
-    buyItem(itemClass, nb = 1): { item: any, nb: number } {
-        if (isString(itemClass)) itemClass = this.databaseById(itemClass)
-        if (!itemClass.price) {
-            throw ItemLog.haveNotPrice(itemClass)
-        }
-        const totalPrice = nb * itemClass.price
-        if (this.gold < totalPrice) {
-            throw ItemLog.notEnoughGold(itemClass, nb)
-        }
-        this.gold -= totalPrice
-        return this.addItem(itemClass, nb)
-    }
-
-    sellItem(itemClass, nbToSell = 1): { item: any, nb: number } {
-        if (isString(itemClass)) itemClass = this.databaseById(itemClass)
-        const inventory = this.getItem(itemClass)
-        if (!inventory) {
-            throw ItemLog.notInInventory(itemClass)
-        }
-        const { item, nb } = inventory
-        if (nb - nbToSell < 0) {
-            throw ItemLog.tooManyToSell(itemClass, nbToSell, nb)
-        }
-        this.gold += (itemClass.price / 2) * nbToSell
-        this.removeItem(itemClass, nbToSell)
-        return inventory
-    } 
-
-    useItem(itemClass) {
-        const inventory = this.getItem(itemClass)
-        if (this.hasEffect(Effect.CAN_NOT_ITEM)) {
-            throw ItemLog.restriction(itemClass)
-        }
-        if (!inventory) {
-            throw ItemLog.notInInventory(itemClass)
-        }
-        const { item } = inventory
-        if (item.consumable === false) {
-            throw ItemLog.notUseItem(itemClass)
-        }
-        const hitRate = item.hitRate || 1
-        if (Math.random() > hitRate) {
-            this.removeItem(itemClass)
-            if (item.onUseFailed) item.onUseFailed(this)
-            throw ItemLog.chanceToUseFailed(itemClass)
-        }
-        this.applyEffect(item)
-        this.applyStates(this, item)
-        if (item.onUse) item.onUse(this)
-        this.removeItem(itemClass)
-        return inventory
-    }
+   
 
     private applyEffect(item) {
         if (item.hpValue) {
@@ -534,7 +395,7 @@ export default class Player extends RpgCommonPlayer {
         }
     }
 
-    private applyStates(player: Player, { addStates, removeStates }) {
+    private applyStates(player: RpgPlayer, { addStates, removeStates }) {
         if (addStates) {
             for (let { state, rate } of addStates) {
                 player.addState(state, rate)
@@ -647,7 +508,7 @@ export default class Player extends RpgCommonPlayer {
         this.paramsChanged.add('skills')
     }
 
-    useSkill(skillClass, otherPlayer?: Player | Player[]) {
+    useSkill(skillClass, otherPlayer?: RpgPlayer | RpgPlayer[]) {
         const skill = this.getSkill(skillClass)
         if (this.hasEffect(Effect.CAN_NOT_SKILL)) {
             throw SkillLog.restriction(skillClass)
@@ -678,7 +539,7 @@ export default class Player extends RpgCommonPlayer {
         return skill
     }
 
-    applyDamage(otherPlayer: Player, skill: any): { 
+    applyDamage(otherPlayer: RpgPlayer, skill: any): { 
         damage: number, 
         critical: boolean, 
         elementVulnerable: boolean,
@@ -754,7 +615,7 @@ export default class Player extends RpgCommonPlayer {
         }
     }
 
-    coefficientElements(otherPlayer: Player): number {
+    coefficientElements(otherPlayer: RpgPlayer): number {
         const atkPlayerElements: any = otherPlayer.elements
         const playerElements: any = this.elementsEfficiency
         let coefficient = 1
@@ -785,13 +646,13 @@ export default class Player extends RpgCommonPlayer {
         this.recovery({ hp: 1, sp: 1 })
     }
 
-    syncChanges(player?: Player) {
+    syncChanges(player?: RpgPlayer) {
         this._eventChanges()
         if (this.paramsChanged.size == 0) return
         const strategyBroadcasting = this.$broadcast || []
         const params = {}
 
-        const deepSerialize = (val) => {
+        /*const deepSerialize = (val) => {
             if (val == undefined) {
                 return val
             }
@@ -844,10 +705,15 @@ export default class Player extends RpgCommonPlayer {
                     playerId: this.playerId,
                     params,
                     type: this.type
-                })*/
+                })
             }
         }
-        this.paramsChanged.clear()
+        this.paramsChanged.clear()*/
+        this.emit('player.changeParam', {
+            playerId: this.playerId,
+           // params: encode,
+            type: this.type
+        })
     }
 
     showText(msg: string, options: {
@@ -947,7 +813,7 @@ export default class Player extends RpgCommonPlayer {
 
     }
 
-    private databaseById(id: string) {
+    databaseById(id: string) {
         return this.server.database[id]
     }
 
@@ -976,7 +842,7 @@ export default class Player extends RpgCommonPlayer {
         const ret = this[methodName](...methodData)
         const sync = () => {
             const player: any = methodData[0]
-            if (player instanceof Player) {
+            if (player instanceof RpgPlayer) {
                 player.syncChanges()
             }
             else {
@@ -1008,3 +874,7 @@ export default class Player extends RpgCommonPlayer {
         }
     }
 }
+
+export interface RpgPlayer extends ItemManager, GoldManager {}
+
+applyMixins(RpgPlayer, [ItemManager, GoldManager])

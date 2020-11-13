@@ -1,6 +1,6 @@
-import Player from './Player'
+import { RpgPlayer } from './Player/Player'
 
-export default class RpgEvent extends Player  {
+export default class RpgEvent extends RpgPlayer  {
 
     public readonly type: string = 'event'
 

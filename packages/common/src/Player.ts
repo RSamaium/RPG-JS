@@ -24,10 +24,12 @@ export default class Player extends DynamicObject<any, any> {
     server: any
     position: any
 
+    detectChanges: boolean = true 
+
     private _hitboxPos: any
 
     static get netScheme() {
-        return Object.assign({
+        const obj =  Object.assign({
             direction: { type: BaseTypes.TYPES.INT8 },
             action: { type: BaseTypes.TYPES.INT8 },
             map: { type: BaseTypes.TYPES.STRING },
@@ -38,7 +40,8 @@ export default class Player extends DynamicObject<any, any> {
             height: { type: BaseTypes.TYPES.INT8 },
             wHitbox: { type: BaseTypes.TYPES.INT8 },
             hHitbox: { type: BaseTypes.TYPES.INT8 }
-        }, super.netScheme);
+        }, super.netScheme) 
+        return obj
     }
 
     static get ACTIONS() {
@@ -222,7 +225,16 @@ export default class Player extends DynamicObject<any, any> {
             return false
         }
 
-        const events = [...this.gameEngine.world.getObjectsOfGroup(this.map), ...this.events, ...Object.values(this.gameEngine.events)]
+        let eventsCollection
+        
+        if (this.gameEngine.world.groups.has(this.map)) {
+            eventsCollection = this.gameEngine.world.getObjectsOfGroup(this.map)
+        }
+        else {
+            eventsCollection = Object.values(this.gameEngine.world.objects)
+        }
+
+        const events = [...eventsCollection, ...this.events, ...Object.values(this.gameEngine.events)]
 
         for (let event of events) {
             if (event.id == this.id) continue

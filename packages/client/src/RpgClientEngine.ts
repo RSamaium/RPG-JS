@@ -124,7 +124,7 @@ export default class RpgClientEngine extends ClientEngine<any> {
         }
     }
 
-    updateObject(data): boolean {
+    updateObject(data): any {
         const player = this.renderer.updateObject(data.playerId, data.params)
         if (player) {
             this.propagateEvent('$rpgPlayerChanged', [this.vm], [player.data, data.params])

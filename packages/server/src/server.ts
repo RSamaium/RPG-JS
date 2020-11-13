@@ -1,7 +1,7 @@
 import { ServerEngine } from 'lance-gg';
 import { SceneMap } from './Scenes/Map';
 import { SceneBattle } from './Scenes/Battle';
-import PlayerObject from './Player'
+import { RpgPlayer } from './Player/Player'
 import { Query } from './Query'
 import Monitor from './Monitor'
 import { DAMAGE_SKILL, DAMAGE_PHYSIC, DAMAGE_CRITICAL, COEFFICIENT_ELEMENTS } from './presets'
@@ -10,13 +10,13 @@ export default class RpgServerEngine extends ServerEngine {
 
     public database: any = {}
     public damageFormulas: any = {}
-    private playerClass: PlayerObject
+    private playerClass: RpgPlayer
     private scenes: Map<string, any> = new Map()
     protected totalConnected: number = 0
 
     constructor(public io, public gameEngine, private inputOptions) {
         super(io, gameEngine, inputOptions)
-        this.playerClass = inputOptions.playerClass || PlayerObject
+        this.playerClass = inputOptions.playerClass || RpgPlayer
         if (inputOptions.database) {
             for (let key in inputOptions.database) {
                 const data = inputOptions.database[key]
@@ -41,7 +41,7 @@ export default class RpgServerEngine extends ServerEngine {
 
     step() {
         super.step()
-        Monitor.update(this.serverTime)
+        //Monitor.update(this.serverTime)
     }
 
     loadScenes() {
@@ -54,7 +54,7 @@ export default class RpgServerEngine extends ServerEngine {
     }
 
     sendToPlayer(currentPlayer, eventName, data) {
-        //currentPlayer.socket.emit(eventName, data);
+        currentPlayer.socket.emit(eventName, data)
     }   
 
     onPlayerConnected(socket) {

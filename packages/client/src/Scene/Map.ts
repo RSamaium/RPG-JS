@@ -132,6 +132,7 @@ export class SceneMap extends Scene implements IScene {
         console.log(obj)
 
         if (!obj.map) {
+            super.addObject(obj, id)
             return
         }
 

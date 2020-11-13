@@ -1,4 +1,4 @@
-import RpgPlayer from './Player'
+import { RpgPlayer } from './Player/Player'
 
 class QueryClass {
 

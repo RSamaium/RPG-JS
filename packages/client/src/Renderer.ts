@@ -69,6 +69,9 @@ export default class RpgRenderer extends Renderer<any, any> {
         };
         this.renderer = PIXI.autoDetectRenderer(options)
         this.gameEngine.renderer = this.renderer
+        this.gameEngine.on('client__objectUpdate', (object) => {
+            console.log(object) 
+        })
         document.body.querySelector(this.options.selector).appendChild(this.renderer.view)
         this.resize()
     }
@@ -139,6 +142,7 @@ export default class RpgRenderer extends Renderer<any, any> {
     updateObject(id, params) {
         const logic = this.gameEngine.world.getObject(id)
         if (!logic) return null
+        //logic.decode(params)
         for (let key in params) {
             logic.data[key] = params[key]
         }

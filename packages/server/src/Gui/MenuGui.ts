@@ -1,5 +1,5 @@
 import { Gui } from './Gui'
-import RpgPlayer from '../Player'
+import { RpgPlayer } from '../Player/Player'
 import { IGui } from '../Interfaces/Gui'
 
 export class MenuGui extends Gui implements IGui {
@@ -10,7 +10,7 @@ export class MenuGui extends Gui implements IGui {
     open() {
         this.on('useItem', (id) => {
             try {
-                this.player.useItem(id)
+               // this.player.useItem(id)
                 this.player.syncChanges()
             }
             catch (err) {

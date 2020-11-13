@@ -1,4 +1,4 @@
-import RpgPlayer from './Player'
+import { RpgPlayer } from './Player/Player'
 import { RpgMap } from './Game/Map'
 
 interface RpgClassPlayer<T> {
