@@ -26,7 +26,6 @@ export class Utils {
                         }
                     }, []);
         }
-    
         return paths(obj);
     }
 

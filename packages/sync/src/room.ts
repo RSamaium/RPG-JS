@@ -16,6 +16,8 @@ const REGEXP_GENERIC_KEY: string = '\\$[a-zA-Z0-9-_]+'
 
 export class Room {
 
+    private proxyRoom
+
     static readonly propNameUsers = 'users'
 
     join(user, room) {
@@ -59,11 +61,9 @@ export class Room {
             ...obj,
             ...room.$schema
         }
-        console.log()
     }
 
     add(id, roomClass: any) {
-        const self = this
         const room = new roomClass()
         room.id = id
         if (!room.$schema) room.$schema = {}
@@ -71,59 +71,59 @@ export class Room {
         if (!room.$inputs) room.$inputs = {}
         if (!room.users) room.users = {} 
         if (room.$inputs) this.addInputs(room, room.$inputs)
-        const proxyRoom = onChange(room, function (path: string, value: any, previousValue: any, name) {
-            const difference = diff(previousValue, value)
-
-            let schemaObj: any = []
-
-            if (!difference) return
-
-            for (let diffObj of difference) {
-                const rhs = diffObj.rhs
-                let realPath
-                if (diffObj.path) {
-                    realPath = (path ? path + '.' : '') + diffObj.path.join('.')
-                } 
-                else {
-                    realPath = path
-                } 
-                const regexp = new RegExp(`^users\.${REGEXP_GENERIC_KEY}$`)
-                if (regexp.test(realPath)) {
-                    switch (diffObj.kind) {
-                        case ObjectKind.New:
-                            var realUser = World.getUser(diffObj.rhs.id)
-                            self.join(realUser, proxyRoom) 
-                            break;
-                        case ObjectKind.Delete:
-                            var realUser = World.getUser(diffObj.lhs.id)
-                            self.leave(realUser, proxyRoom) 
-                            break;
-                    }
-                }
-                if (Utils.isObject(rhs) || Array.isArray(rhs)) {
-                    schemaObj = [...schemaObj, ...Utils.propertiesToArray(rhs)]
-                    schemaObj = schemaObj.map(p => (realPath != '' ? realPath + '.' : '') + p)
-                }
-                else {
-                    schemaObj = [...schemaObj, realPath]
-                }
-            }
-
-            const newObj = self.getPropertiesBySchema(room, schemaObj)
-
-            if (Object.keys(newObj).length == 0) {
-                return
-            }
- 
-            Transmitter.addPacket(room, newObj)
-        }, {
+        this.proxyRoom = onChange(room, this.detectChanges.bind(this), {
             ignoreUnderscores: true
         })
-        if (proxyRoom.onInit) proxyRoom.onInit()
-        return proxyRoom
+        if (this.proxyRoom.onInit) this.proxyRoom.onInit()
+        return this.proxyRoom
     }
 
-    detectChanges() {
-        
+    detectChanges(path: string, value: any, previousValue: any, name) {
+        const difference = diff(previousValue, value)
+
+        let schemaObj: any = []
+
+        if (!difference) return
+
+        for (let diffObj of difference) {
+            const rhs = diffObj.rhs
+            let realPath
+            if (diffObj.path) {
+                realPath = (path ? path + '.' : '') + diffObj.path.join('.')
+            } 
+            else {
+                realPath = path
+            } 
+            const regexp = new RegExp(`^users\.${REGEXP_GENERIC_KEY}$`)
+            if (regexp.test(realPath)) {
+                switch (diffObj.kind) {
+                    case ObjectKind.New:
+                        var realUser = World.getUser(diffObj.rhs.id)
+                        this.join(realUser, this.proxyRoom) 
+                        break;
+                    case ObjectKind.Delete:
+                        var realUser = World.getUser(diffObj.lhs.id)
+                        this.leave(realUser, this.proxyRoom) 
+                        break;
+                }
+            }
+            if (Utils.isObject(rhs) || Array.isArray(rhs)) {
+                schemaObj = [...schemaObj, ...Utils.propertiesToArray(rhs)]
+                schemaObj = schemaObj.map(p => (realPath != '' ? realPath + '.' : '') + p)
+            }
+            else {
+                schemaObj = [...schemaObj, realPath]
+            }
+        }
+
+        const newObj = this.getPropertiesBySchema(this.proxyRoom, schemaObj)
+
+        if (Object.keys(newObj).length == 0) {
+            return
+        }
+
+        if (this.proxyRoom.onChanges) this.proxyRoom.onChanges(newObj)
+
+        Transmitter.addPacket(this.proxyRoom, newObj)
     }
 }

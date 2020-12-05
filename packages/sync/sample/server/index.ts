@@ -8,10 +8,14 @@ const server = http.createServer(app)
 const io = require("socket.io")(server)
 
 class Page {
-    @Input() title: string = ''
+    @Input() title: string = 'aa'
 
     onJoin() {
         console.log('ok')
+    }
+
+    onChanges(obj) {
+      //  console.log(this.title)
     }
 }
 
