@@ -109,7 +109,7 @@ export class Room {
             }
             if (Utils.isObject(rhs) || Array.isArray(rhs)) {
                 schemaObj = [...schemaObj, ...Utils.propertiesToArray(rhs)]
-                schemaObj = schemaObj.map(p => (realPath != '' ? realPath + '.' : '') + p)
+                schemaObj = schemaObj.map(p => (realPath != '' ? realPath + '.' : '') + p) 
             }
             else {
                 schemaObj = [...schemaObj, realPath]

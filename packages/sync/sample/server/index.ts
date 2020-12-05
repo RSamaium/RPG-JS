@@ -1,23 +1,15 @@
-import { World, Schema, Input, OnInit } from '../../src'
+import { World } from '../../src'
 
 import express from 'express'
 import http from 'http'
+
+import { Page } from './room'
 
 const app = express()
 const server = http.createServer(app)
 const io = require("socket.io")(server)
 
-class Page {
-    @Input() title: string = 'aa'
 
-    onJoin() {
-        console.log('ok')
-    }
-
-    onChanges(obj) {
-      //  console.log(this.title)
-    }
-}
 
 World.transport(io)
 World.addRoom('page', Page)

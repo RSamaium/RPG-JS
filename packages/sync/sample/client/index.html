@@ -4,7 +4,7 @@
 
 
 <div id="app">
-    <input v-model="title">
+
 </div>
 
 <script>
@@ -12,7 +12,8 @@
     const Counter = {
         data() {
             return {
-                title: ''
+                title: '',
+                users: {}
             }
         },
         mounted() {
@@ -20,9 +21,9 @@
             this.socket.on('w', (data) => {
                 const bufView = new Uint8Array(data)
                 const obj = msgpack.decode(bufView)
-                for (let key in obj) {
-                    this[key] = obj[key]
-                }
+                console.log(obj)
+                //this.title = obj.title
+                this.users = Object.assign(this.users, obj.users)
                 //console.log(obj)
             })
             this.socket.emit(':join', 'page')

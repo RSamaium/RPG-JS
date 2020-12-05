@@ -1,7 +1,7 @@
 export class Utils {
 
     static isObject(val) {
-        return typeof val === 'object' && !Array.isArray(val)
+        return typeof val === 'object' && !Array.isArray(val) && val != null
     }
 
     static propertiesToArray(obj: any) {
