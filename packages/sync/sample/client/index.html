@@ -1,0 +1,41 @@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.1/socket.io.js"></script>
+<script src="https://rawgit.com/kawanet/msgpack-lite/master/dist/msgpack.min.js"></script>
+<script src="https://unpkg.com/vue@next"></script>
+
+
+<div id="app">
+    <input v-model="title">
+</div>
+
+<script>
+    
+    const Counter = {
+        data() {
+            return {
+                title: ''
+            }
+        },
+        mounted() {
+            this.socket = io()
+            this.socket.on('w', (data) => {
+                const bufView = new Uint8Array(data)
+                const obj = msgpack.decode(bufView)
+                for (let key in obj) {
+                    this[key] = obj[key]
+                }
+                //console.log(obj)
+            })
+            this.socket.emit(':join', 'page')
+        },
+        watch: {
+            title(val) {
+                this.socket.emit(':input', {
+                    prop: 'title',
+                    value: val
+                })
+            }
+        }
+    }
+
+    Vue.createApp(Counter).mount('#app')
+</script>

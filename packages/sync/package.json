@@ -1,0 +1,27 @@
+{
+  "name": "sync",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@babel/preset-env": "^7.12.7",
+    "@babel/preset-typescript": "^7.12.7",
+    "@rpgjs/common": "^3.0.0-alpha",
+    "deep-diff": "^1.0.2",
+    "get-value": "^3.0.1",
+    "msgpack-lite": "^0.1.26",
+    "on-change": "^2.2.0",
+    "set-value": "^3.0.2"
+  },
+  "devDependencies": {
+    "@types/jest": "^26.0.16",
+    "jest": "^26.6.3",
+    "ts-jest": "^26.4.4"
+  }
+}
