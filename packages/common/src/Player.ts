@@ -6,9 +6,15 @@ import Map from './Map'
 
 const ACTIONS = { IDLE: 0, RUN: 1, ACTION: 2 }
 
+enum Direction { 
+    Up = 'up',
+    Down = 'down',
+    Left = 'left',
+    Right = 'right'
+}
+
 export default class Player extends DynamicObject<any, any> {
 
-    name: string
     map: string = ''
     graphic: string = ''
     speed: number = 3
@@ -34,7 +40,7 @@ export default class Player extends DynamicObject<any, any> {
             action: { type: BaseTypes.TYPES.INT8 },
             map: { type: BaseTypes.TYPES.STRING },
             speed: { type: BaseTypes.TYPES.INT8 },
-            graphic: { type: BaseTypes.TYPES.STRING },
+           // graphic: { type: BaseTypes.TYPES.STRING },
             canMove: { type: BaseTypes.TYPES.INT8 },
             width: { type: BaseTypes.TYPES.INT8 },
             height: { type: BaseTypes.TYPES.INT8 },
@@ -163,7 +169,7 @@ export default class Player extends DynamicObject<any, any> {
         return intersection([z, z + this.height], [otherZ, otherZ + other.height])
     }
 
-    move(direction) {
+    move(direction: Direction) {
         this.collisionWith = []
 
         const nextPosition = this.defineNextPosition(direction)
@@ -292,7 +298,7 @@ export default class Player extends DynamicObject<any, any> {
         return true
     }
 
-    changeDirection(direction) {
+    changeDirection(direction: Direction) {
         const dir = { 
             down: 0, 
             left: 1, 

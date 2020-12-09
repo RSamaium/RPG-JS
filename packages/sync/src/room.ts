@@ -6,6 +6,8 @@ import { Utils } from './utils'
 import { Transmitter } from './transmitter'
 import { Packet } from './packet'
 import { World } from './world'
+import { RoomClass } from './interfaces/room.interface';
+import { User } from './rooms/default';
 
 enum ObjectKind {
     New = 'N',
@@ -16,31 +18,33 @@ const REGEXP_GENERIC_KEY: string = '\\$[a-zA-Z0-9-_]+'
 
 export class Room {
 
-    private proxyRoom
+    private proxyRoom: RoomClass
 
-    static readonly propNameUsers = 'users'
+    static readonly propNameUsers: string = 'users'
 
-    join(user, room) {
+    private join(user: User, room: RoomClass) {
         if (!user._rooms) user._rooms = []
         user._rooms.push(room.id)
         if (!user.id) user.id = Utils.generateId()
-        if (room.onJoin) room.onJoin.call(room, user)
+        if (room['onJoin']) room['onJoin'](user)
         const newObj = this.getPropertiesBySchema(room)
         const packet = new Packet(newObj)
         Transmitter.emit(user, packet)
     }
 
-    leave(user, room) {
+    private leave(user: User, room: RoomClass): void {
         const index = user._rooms.findIndex(id => room.id == id)
         user._rooms.splice(index, 1)
-        if (room.onLeave) room.onLeave(user)
+        if (room['onLeave']) room['onLeave'](user)
     }
 
-    getPropertiesBySchema(room, schemaObj?) {
+    private getPropertiesBySchema(room: RoomClass, schemaObj?: string[]): Object {
         let newObj = {}
 
         const schema = Utils.propertiesToArray(room.$schema)
         if (!schemaObj) schemaObj = Utils.propertiesToArray(room)
+
+        if (!schemaObj) return newObj
 
         for (let propSchema of schema) {
             let prop = propSchema.replace(/\.[0-9]+/g, '.$x')
@@ -56,15 +60,14 @@ export class Room {
         return newObj
     }
 
-    addInputs(room, obj) {
+    addInputs(room: RoomClass, obj: Object): void {
         room.$schema = {
             ...obj,
             ...room.$schema
         }
     }
 
-    add(id, roomClass: any) {
-        const room = new roomClass()
+    add(id: string, room: RoomClass): RoomClass {
         room.id = id
         if (!room.$schema) room.$schema = {}
         if (!room.$schema.users) room.$schema.users = [{id: String}]
@@ -74,11 +77,11 @@ export class Room {
         this.proxyRoom = onChange(room, this.detectChanges.bind(this), {
             ignoreUnderscores: true
         })
-        if (this.proxyRoom.onInit) this.proxyRoom.onInit()
+        if (this.proxyRoom['onInit']) this.proxyRoom['onInit']()
         return this.proxyRoom
     }
 
-    detectChanges(path: string, value: any, previousValue: any, name) {
+    detectChanges(path: string, value: any, previousValue: any): void {
         const difference = diff(previousValue, value)
 
         let schemaObj: any = []
@@ -122,7 +125,7 @@ export class Room {
             return
         }
 
-        if (this.proxyRoom.onChanges) this.proxyRoom.onChanges(newObj)
+        if (this.proxyRoom['onChanges']) this.proxyRoom['onChanges'](newObj)
 
         Transmitter.addPacket(this.proxyRoom, newObj)
     }

@@ -1,3 +1,5 @@
+import { User } from '../rooms/default';
+
 export interface OnInit {
     onInit: () => void
 }
@@ -8,4 +10,18 @@ export interface OnJoin {
 
 export interface OnLeave {
     onLeave: (user: any) => void
+}
+
+export interface RoomClass {
+    id?: string
+    users: {
+        [userId: string]: User
+    }
+    $schema?: any
+    $inputs?: {
+        [key: string]: string
+    }
+    $actions?: {
+        [key: string]: string
+    }
 }

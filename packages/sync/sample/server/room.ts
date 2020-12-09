@@ -1,12 +1,16 @@
-import {  Schema, Input } from '../../src'
+import { Input } from '../../src'
+import { Player } from './player'
+import { Schema } from '../../src/decorators/schema';
 
 @Schema({
-   list: [String]
+    users: [Player.schema]
 })
 export class Page {
-    list = []
+    @Input() title = ''
 
-    onInit() {
-        
+    onJoin(user: Player) {
+        setTimeout(() => {
+            user.name = 'toto'
+        }, 1000)
     }
 }

@@ -41,25 +41,18 @@ test('Test Room properties', () => {
 test('Getall data of room', async () => {
     class Room {
         $schema = {
-            users: {
+            users: [{
                 name: String
-            }
+            }]
         }
     }
     const room =  World.addRoom('room', Room)
     
-    /*await (new Promise((resolve, reject) => {
-        
-    }))*/
-
-    socket.on('w', (packet) => {
-        console.log(packet)
-        //resolve()
-    })
-
     socket.emit(':join', 'room')
 
     const user = room.users['$mock']
-    const packet =  Transmitter.getPacket(room)
-    
+    const packets =  Transmitter.getPackets(room)
+
+    expect(user.id).toBe('$mock')
+    console.log(packets)
 })

@@ -1,18 +1,19 @@
-import { World } from '../../src'
+import { World, User } from '../../src'
 
 import express from 'express'
 import http from 'http'
 
 import { Page } from './room'
+import { Schema } from '../../src/decorators/schema';
+import { Player } from './player';
 
 const app = express()
 const server = http.createServer(app)
 const io = require("socket.io")(server)
 
-
-
 World.transport(io)
-World.addRoom('page', Page)
+World.setUserClass(Player)
+World.addRoom('page', new Page())
 
 setInterval(() => {
     World.send()

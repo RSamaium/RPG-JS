@@ -2,8 +2,9 @@
 import { RpgCommonMap, Utils } from '@rpgjs/common'
 import { StrategyBroadcasting } from '../decorators/strategy-broadcasting'
 import { Query } from '../Query'
+import { Schema, World } from '@rpgjs/sync'
 
-@StrategyBroadcasting([
+/*@StrategyBroadcasting([
     {
         params: [
             'hp', 
@@ -32,7 +33,7 @@ import { Query } from '../Query'
         ],
         query: Query.getPlayer
     }
-])
+])*/
 export class SceneMap {
 
     static readonly id: string = 'map'
@@ -70,7 +71,9 @@ export class SceneMap {
             mapInstance =  RpgCommonMap.buffer.get(id)
         }
         else {
-            mapInstance = new mapClass(this.server)
+            // TODO
+            mapInstance = World.addRoom(id, mapClass)
+            //mapInstance = new mapClass(this.server)
             await mapInstance.load()
         }
        

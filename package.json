@@ -22,6 +22,7 @@
     "build:server": "tsc --build packages/server/tsconfig.json",
     "build:client": "tsc --build packages/client/tsconfig.json",
     "build:database": "tsc --build packages/database/tsconfig.json",
+    "build:sync": "tsc --build packages/sync/tsconfig.json",
     "watch:common": "tsc --build --watch packages/common/tsconfig.json",
     "watch:client": "tsc --build --watch packages/client/tsconfig.json",
     "watch:server": "tsc --build --watch packages/server/tsconfig.json",

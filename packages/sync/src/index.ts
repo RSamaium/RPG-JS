@@ -1,6 +1,7 @@
 import { World } from './world'
 import { Schema, Input } from './decorators'
 import { OnInit, OnJoin, OnLeave } from './interfaces/room.interface'
+import { User } from './user'
 
 export { 
     World,
@@ -8,5 +9,6 @@ export {
     Input,
     OnInit,
     OnJoin,
-    OnLeave
+    OnLeave,
+    User
 }

@@ -6,7 +6,7 @@ export default class Event extends Player {
         return super.netScheme
     }
 
-    moveRandom() {
+    /*moveRandom() {
         let moveDirNb = 0
         let dir = ''
         const rand = () => {
@@ -21,7 +21,7 @@ export default class Event extends Player {
             }
         }
         setInterval(rand, 20)
-    }
+    }*/
 
     syncTo(other) {
         super.syncTo(other)

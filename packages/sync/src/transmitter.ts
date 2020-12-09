@@ -1,26 +1,32 @@
 import { Packet } from './packet'
+import { RoomClass } from './interfaces/room.interface';
+import { User } from './rooms/default';
 
 class TransmitterClass {
-    private packets = {}
+    private packets: {
+        [roomId: string]: Packet[]
+    } = {}
 
-    addPacket(room, obj) {
+    addPacket(room: RoomClass, obj: Object): void {
         const { id } = room
+        if (!id) return
         if (!this.packets[id]) this.packets[id] = []
-        this.packets[id] = new Packet(obj)
+        this.packets[id].push(new Packet(obj))
     }
 
-    forEach(cb) {
-        for (let id in this.packets) {
-            cb(this.packets[id], id)
+    forEach(cb: (packet: Packet[], roomId: string) => void): void {
+        for (let roomId in this.packets) {
+            cb(this.packets[roomId], roomId)
         }
     }
 
-    getPacket(room) {
-       return this.packets[room.id]
+    getPackets(room: RoomClass): Packet[] | undefined {
+        if (!room.id) return
+        return this.packets[room.id]
     }
 
-    clear(room?) {
-        if (room) {
+    clear(room?: RoomClass): void {
+        if (room && room.id) {
             this.packets[room.id] = []
         }
         else {
@@ -28,7 +34,7 @@ class TransmitterClass {
         }
     }
 
-    emit(user, packet) {
+    emit(user: User, packet: Packet): void {
         user._socket.emit('w', packet.encode())
     }
 

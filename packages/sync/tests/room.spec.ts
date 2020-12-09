@@ -28,10 +28,10 @@ test('Change properties', () => {
             y: 2
         }
     }
-    const room =  World.addRoom('room', Room)
+    const room: any =  World.addRoom('room', Room)
     room.position.x = 5
-    const packet =  Transmitter.getPacket(room)
-    expect(packet.data).toMatchObject({ position: { x: 5 }})
+    const packet =  Transmitter.getPackets(room)
+    expect(packet[0].body).toMatchObject({ position: { x: 5 }})
 })
 
 test('change root propertie in room', () => {
@@ -47,10 +47,10 @@ test('change root propertie in room', () => {
             y: 2
         }
     }
-    const room =  World.addRoom('room', Room)
+    const room: any =  World.addRoom('room', Room)
     room.position = { x: 5, y: 2 }
-    const packet =  Transmitter.getPacket(room)
-    expect(packet.data).toMatchObject({ position: { x: 5 }})
+    const packet =  Transmitter.getPackets(room)
+    expect(packet[0].body).toMatchObject({ position: { x: 5 }})
 })
 
 test('Not listen properties', () => {
@@ -60,8 +60,8 @@ test('Not listen properties', () => {
             y: 2
         }
     }
-    const room =  World.addRoom('room', Room)
+    const room: any =  World.addRoom('room', Room)
     room.position.x = 5
-    const packet =  Transmitter.getPacket(room)
+    const packet =  Transmitter.getPackets(room)
     expect(packet).toBeUndefined()
 })

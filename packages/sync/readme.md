@@ -16,7 +16,7 @@ class Page {
 import { World } from './world'
 
 World.transport(io) // io is socket.io variable
-const room = Word.addRoom('room_id', Page)
+const room = Word.addRoom('room_id', new Page())
 ```
 
 3. Send packets to client:

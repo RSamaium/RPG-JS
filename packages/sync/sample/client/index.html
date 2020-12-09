@@ -4,7 +4,7 @@
 
 
 <div id="app">
-
+    <input :value="title" @keyup="setTitle">
 </div>
 
 <script>
@@ -21,15 +21,16 @@
             this.socket.on('w', (data) => {
                 const bufView = new Uint8Array(data)
                 const obj = msgpack.decode(bufView)
+                if (obj.title) this.title = obj.title
                 console.log(obj)
-                //this.title = obj.title
                 this.users = Object.assign(this.users, obj.users)
                 //console.log(obj)
             })
             this.socket.emit(':join', 'page')
         },
-        watch: {
-            title(val) {
+        methods: {
+            setTitle(ev) {
+                const val = ev.target.value
                 this.socket.emit(':input', {
                     prop: 'title',
                     value: val
