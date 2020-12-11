@@ -114,7 +114,7 @@ export class SceneMap {
 
         player.setPosition(positions)
         
-        player.events = mapInstance.createEvents('nosync', player)
+        /*player.events = mapInstance.createEvents('nosync', player)
 
         this.server.sendToPlayer(player, 'events', player.events.map(event => {
             return {
@@ -129,7 +129,7 @@ export class SceneMap {
 
         player.events.forEach(ev => {
             ev.execMethod('onInit', [player])
-        })
+        })*/
     }
    
 }

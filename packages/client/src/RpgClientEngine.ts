@@ -170,17 +170,23 @@ export default class RpgClientEngine extends ClientEngine<any> {
         })
 
         World.listen(this.socket).value.subscribe((val: { data: any }) => {
+            console.log(val)
             if (!val.data) {
                 return
             }
-            const { users } = val.data
-            for (let key in users) {
-                if (!users[key]) continue
-                this.eventEmitter.emit('player.changeParam', {
-                    playerId: key,
-                    params: users[key]
-                })
+            const change = (prop) => {
+                const list = val.data[prop]
+                for (let key in list) {
+                    if (!list[key]) continue
+                    this.eventEmitter.emit('player.changeParam', {
+                        playerId: key,
+                        params: list[key]
+                    })
+                }
             }
+
+            change('users')
+            change('events')
         })
         
         this.socket.on('reconnect', () => {

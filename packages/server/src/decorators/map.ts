@@ -9,8 +9,9 @@ export function MapData(options: MapOptions) {
     return (target) => {
         target.file = options.file
         target.id = options.id
-        for (let key in options) {
-            target.prototype[key] = options[key]
-        }
+        target.prototype.name = options.name
+        target.prototype.file = options.file
+        target.prototype.id = options.id
+        target.prototype._events = options.events
     }
 }

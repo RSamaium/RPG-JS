@@ -23,11 +23,8 @@ class _ChestEvent extends RpgEvent {
         }
     }
 
-    async onAction(player: RpgPlayer) {
-       player.startBattle([
-            { enemy: Monster, level: 1 },
-            { enemy: Monster, level: 1 }
-       ])
+    onAction(player: RpgPlayer) {
+       player.gold = 10
     }
 
     onPlayerTouch() {

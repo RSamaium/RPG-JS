@@ -4,14 +4,15 @@ import { Schema } from '@rpgjs/sync-server'
 import { RpgPlayer } from '../Player/Player';
 
 @Schema({
-    users: [RpgPlayer.schemas]
+    users: [RpgPlayer.schemas],
+    events: [RpgPlayer.schemas]
 })
 export class RpgMap extends RpgCommonMap {
 
-    public events: any
+    public _events: any
     public id: any
     public file: any 
-    public _events: any[] = []
+    public events = {}
 
     constructor(private _server: any) {
         super()
@@ -24,7 +25,7 @@ export class RpgMap extends RpgCommonMap {
         const data = await this.parseFile() 
         super.load(data) 
         RpgCommonMap.buffer.set(this.id, this)
-        this._events = this.createEvents('sync')
+        this.events = this.createEvents('sync')
         this.onLoad()
     }
 
@@ -35,11 +36,11 @@ export class RpgMap extends RpgCommonMap {
     onLoad() {}
 
     createEvents(type, player?) {
-        const events: any[] = []
+        const events  = {}
 
-        if (!this.events) return events
+        if (!this._events) return events
 
-        for (let obj of this.events) {
+        for (let obj of this._events) {
 
             let event: any, position
 
@@ -76,11 +77,9 @@ export class RpgMap extends RpgCommonMap {
                 this._server.assignObjectToRoom(ev, this.id)
             }
 
-            if (ev.onInit && event.syncAll) {
-                ev.execMethod('onInit', [player])
-            }
+            ev.execMethod('onInit')
 
-            events.push(ev)     
+            events[ev.id] = ev
         }
 
         return events

@@ -29,7 +29,7 @@ export default class Game extends GameEngine<any> {
 
     addObject(_class, playerId?) {
         let event
-        if (!playerId) playerId = ''+Math.random()
+        if (!playerId) playerId = Utils.generateUID()
         if (_class.constructor.name == 'Function') {
             event = new _class(this, { id: playerId }, { playerId })
         }

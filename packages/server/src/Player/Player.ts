@@ -794,16 +794,7 @@ export class RpgPlayer extends RpgCommonPlayer {
             return
         }
         const ret = this[methodName](...methodData)
-        const sync = () => {
-            const player: any = methodData[0]
-            if (player instanceof RpgPlayer) {
-                player.syncChanges()
-            }
-            else {
-                this.syncChanges()
-            }
-        }
-
+        const sync = () => this.syncChanges()
         if (isPromise(ret)) {
             ret.then(sync)
         }
