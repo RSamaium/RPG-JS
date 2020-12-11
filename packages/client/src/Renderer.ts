@@ -142,9 +142,8 @@ export default class RpgRenderer extends Renderer<any, any> {
     updateObject(id, params) {
         const logic = this.gameEngine.world.getObject(id)
         if (!logic) return null
-        //logic.decode(params)
         for (let key in params) {
-            logic.data[key] = params[key]
+            logic[key] = params[key]
         }
         return logic
     }

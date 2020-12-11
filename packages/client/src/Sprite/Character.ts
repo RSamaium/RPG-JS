@@ -108,16 +108,16 @@ export default class Character extends PIXI.Sprite {
 
     update(obj): any {
 
-        if (obj.graphic != this.graphic) {
-            this.graphic = obj.graphic
+        const { graphic, speed } = obj
+
+        if (graphic != this.graphic) {
+            this.graphic = graphic
             this.setGraphic()
         }
 
         for (let effect of this.effects) {
             effect.update(obj)
         }
-
-        let speed = obj.speed
 
         if (!this.scene.game.standalone) {
            // speed += (obj.speed / 3) // sync move between client and server

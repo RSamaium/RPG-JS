@@ -38,6 +38,19 @@ const {
 export class RpgPlayer extends RpgCommonPlayer {
 
     public readonly type: string = 'player'
+
+    static schemas = {
+        hp: Number,
+        graphic: String,
+        action: Number,
+        map: String,
+        speed: Number,
+        canMove: Boolean,
+        width: Number,
+        height: Number,
+        wHitbox: Number,
+        hHitbox: Number
+    }
     
     private _hp = 0
     private _sp = 0 

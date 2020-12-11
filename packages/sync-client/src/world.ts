@@ -19,7 +19,8 @@ class WorldClass {
             const [roomId, data] = decode
             this.obs$.next({
                 roomId, 
-                data: merge(this.obs$.value.data || {}, data)
+                data: merge(this.obs$.value.data || {}, data),
+                partial: data
             })
         })
         return this

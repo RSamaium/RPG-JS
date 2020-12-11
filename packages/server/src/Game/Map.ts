@@ -1,16 +1,17 @@
 import { RpgCommonMap, Utils }  from '@rpgjs/common'
 import fs from 'fs'
+import { Schema } from '@rpgjs/sync-server'
+import { RpgPlayer } from '../Player/Player';
 
+@Schema({
+    users: [RpgPlayer.schemas]
+})
 export class RpgMap extends RpgCommonMap {
 
     public events: any
     public id: any
     public file: any 
     public _events: any[] = []
-
-    $schema = {
-        width: Number
-    }
 
     constructor(private _server: any) {
         super()

@@ -119,29 +119,7 @@ export class Room {
         
         const difference = diff(this.prevMemoryObject, this.memoryObject)
 
-        let schemaObj: any = []
-
         if (Object.keys(difference).length == 0) return
-
-
-       /* for (let diffObj of difference) {
-            const rhs = diffObj.rhs
-            let realPath
- 
-            const regexp = new RegExp(`^users\.${REGEXP_GENERIC_KEY}$`)
-            if (regexp.test(realPath)) {
-                switch (diffObj.kind) {
-                    case ObjectKind.New:
-                        var realUser = World.getUser(diffObj.rhs.id)
-                        this.join(realUser, this.proxyRoom) 
-                        break;
-                    case ObjectKind.Delete:
-                        var realUser = World.getUser(diffObj.lhs.id)
-                        this.leave(realUser, this.proxyRoom) 
-                        break;
-                }
-            }
-        }*/
 
         if (this.proxyRoom['onChanges']) this.proxyRoom['onChanges'](difference)
 

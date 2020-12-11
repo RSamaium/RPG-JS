@@ -6,7 +6,7 @@ import { ChestEvent } from '../events/chest'
     file: require('./tmx/samplemap.tmx'),
     name: 'Town',
     events: [
-        ChestEvent()
+        //ChestEvent()
     ]
 })
 export class SampleMap extends RpgMap {

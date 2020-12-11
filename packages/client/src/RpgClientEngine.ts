@@ -67,6 +67,11 @@ export default class RpgClientEngine extends ClientEngine<any> {
                 return {
                     gui
                 }
+            },
+            provide() {
+                return {
+
+                }
             }
         })
 
@@ -89,9 +94,9 @@ export default class RpgClientEngine extends ClientEngine<any> {
             })
         }
 
-        this.eventEmitter.once('keypress', (data) => {
+        /*this.eventEmitter.once('keypress', (data) => {
             return this.propagateEvent('$rpgKeypress', [this.vm], [data])
-        })
+        })*/
         this.eventEmitter.once('player.changeParam', (data) => {
             const findPlayer = this.updateObject(data)
             if (!findPlayer) {
@@ -150,7 +155,7 @@ export default class RpgClientEngine extends ClientEngine<any> {
         this.socket.on('events', (data) => {
             this.renderer.addLocalEvents(data)
         });
-        this.socket.on('player.changeParam', (data) => this.eventEmitter.emit('player.changeParam', data))
+       // this.socket.on('player.changeParam', (data) => this.eventEmitter.emit('player.changeParam', data))
         this.socket.on('gui.open', ({ guiId, data }) => {
             this.displayGui(guiId, data)
         })
@@ -164,8 +169,17 @@ export default class RpgClientEngine extends ClientEngine<any> {
             //if (sprite[name]) sprite[name](...params)
         })
 
-        World.listen(this.socket).value.subscribe((val) => {
-            console.log(val)
+        World.listen(this.socket).value.subscribe((val: { data: any }) => {
+            if (!val.data) {
+                return
+            }
+            const { users } = val.data
+            for (let key in users) {
+                this.eventEmitter.emit('player.changeParam', {
+                    playerId: key,
+                    params: users[key]
+                })
+            }
         })
         
         this.socket.on('reconnect', () => {

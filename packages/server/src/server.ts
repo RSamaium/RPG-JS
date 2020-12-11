@@ -69,7 +69,7 @@ export default class RpgServerEngine extends ServerEngine {
         player.execMethod('onConnected') 
     }
 
-    onPlayerDisconnected(socketId, playerId) {
+    onPlayerDisconnected(socketId, playerId) { 
         super.onPlayerDisconnected(socketId, playerId);
         const object = this.gameEngine.world.getObject(playerId)
         Monitor.removeMonitor(socketId)
