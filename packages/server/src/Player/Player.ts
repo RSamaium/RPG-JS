@@ -4,6 +4,7 @@ import { Gui, DialogGui, MenuGui, ShopGui } from '../Gui'
 import { ItemLog, SkillLog, Log } from '../logs'
 import { ItemManager } from './ItemManager'
 import { GoldManager } from './GoldManager'
+import { World } from '@rpgjs/sync-server'
 
 import { 
     MAXHP, 
@@ -375,7 +376,7 @@ export class RpgPlayer extends RpgCommonPlayer {
         return curveVal
     }
 
-    setGraphic(graphic) {
+    setGraphic(graphic: string) {
         this.graphic = graphic
     }
 
@@ -661,73 +662,11 @@ export class RpgPlayer extends RpgCommonPlayer {
         this.recovery({ hp: 1, sp: 1 })
     }
 
-    syncChanges(player?: RpgPlayer) {
+    syncChanges() {
         this._eventChanges()
-        if (this.paramsChanged.size == 0) return
-        const strategyBroadcasting = this.$broadcast || []
-        const params = {}
-
-        /*const deepSerialize = (val) => {
-            if (val == undefined) {
-                return val
-            }
-            if (isArray(val)) {
-                const newArray: any = []
-                for (let item of val) {
-                    newArray.push(deepSerialize(item))
-                }
-                return newArray
-            }
-            if (val.$broadcast) {
-                const obj: any = {}
-                for (let param of val.$broadcast) {
-                    obj[param] = val[param]
-                }
-                obj.id = val.id
-                return deepSerialize(obj)
-            }
-            if (isObject(val)) {
-                const newObj = Object.assign({}, val)
-                for (let key in newObj) {
-                    newObj[key] = deepSerialize(val[key])
-                }
-                return newObj
-            }
-            return val
-        }
-
-        for (let strategy of strategyBroadcasting) {
-            this.paramsChanged.forEach(param => {
-                if (!strategy.params.includes(param)) {
-                    return
-                }
-                if (param == 'param') {
-                    this._parameters.forEach((val, key) => {
-                        params[key] = this.param[key]
-                    })
-                }
-                else {
-                    let val = this[param]
-                    params[param] = deepSerialize(val)
-                }
-            });
-            let query = strategy.query(player || this)
-            if (!isArray(query)) {
-                query = [query]
-            }
-            for (let players of query) {
-                /*players.emit('player.changeParam', {
-                    playerId: this.playerId,
-                    params,
-                    type: this.type
-                })
-            }
-        }
-        this.paramsChanged.clear()*/
-        this.emit('player.changeParam', {
-            playerId: this.playerId,
-           // params: encode,
-            type: this.type
+        // Trigger detect changes cycle in @rpgjs/sync-server package
+        World.forEachUserRooms(''+this.playerId, (room: any) => {
+            if (room) room.$detectChanges()
         })
     }
 

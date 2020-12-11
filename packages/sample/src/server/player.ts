@@ -24,8 +24,9 @@ export class Player extends RpgPlayer {
     }
 
     onInput({ input }) {
-      if (input == 'escape') {
-          this.addItem(database.Potion)
+      if (input == 'space') {
+          //this.addItem(database.Potion)
+          this.setGraphic('hero2')
       }
     }
 

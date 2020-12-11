@@ -175,6 +175,7 @@ export default class RpgClientEngine extends ClientEngine<any> {
             }
             const { users } = val.data
             for (let key in users) {
+                if (!users[key]) continue
                 this.eventEmitter.emit('player.changeParam', {
                     playerId: key,
                     params: users[key]

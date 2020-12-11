@@ -81,6 +81,8 @@ export default class Character extends PIXI.Sprite {
     }
 
     getSpriteAnimation(name) {
+        // not graphic yet
+        if (!this.spritesheet) return 
         if (!this.spritesheet.action) return 0
         return this.spritesheet.action[name] || 0
     }

@@ -129,11 +129,6 @@ export class SceneMap extends Scene implements IScene {
 
     addObject(obj, id) {
 
-        if (!obj.map) {
-            super.addObject(obj, id)
-            return
-        }
-
         const wrapper = new PIXI.Container()
         const tilesOverlay = new PIXI.Container()
 
