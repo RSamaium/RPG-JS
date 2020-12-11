@@ -5,7 +5,7 @@ import { RpgPlayer } from './Player/Player'
 import { Query } from './Query'
 import Monitor from './Monitor'
 import { DAMAGE_SKILL, DAMAGE_PHYSIC, DAMAGE_CRITICAL, COEFFICIENT_ELEMENTS } from './presets'
-import { World } from '@rpgjs/sync'
+import { World } from '@rpgjs/sync-server'
 
 export default class RpgServerEngine extends ServerEngine {
 

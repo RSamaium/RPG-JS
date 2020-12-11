@@ -2,7 +2,7 @@
 import { RpgCommonMap, Utils } from '@rpgjs/common'
 import { StrategyBroadcasting } from '../decorators/strategy-broadcasting'
 import { Query } from '../Query'
-import { Schema, World } from '@rpgjs/sync'
+import { Schema, World } from '@rpgjs/sync-server'
 
 /*@StrategyBroadcasting([
     {

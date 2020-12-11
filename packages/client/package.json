@@ -12,6 +12,7 @@
   "license": "ISC",
   "dependencies": {
     "@rpgjs/common": "^3.0.0-alpha",
+    "@rpgjs/sync-client": "^1.0.0",
     "@tweenjs/tween.js": "^18.6.0",
     "pixi-heaven": "^0.2.2",
     "pixi-tilemap": "^2.1.3",

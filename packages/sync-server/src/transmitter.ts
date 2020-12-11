@@ -11,7 +11,7 @@ class TransmitterClass {
         const { id } = room
         if (!id) return
         if (!this.packets[id]) this.packets[id] = []
-        this.packets[id].push(new Packet(obj))
+        this.packets[id].push(new Packet(obj, id))
     }
 
     forEach(cb: (packet: Packet[], roomId: string) => void): void {

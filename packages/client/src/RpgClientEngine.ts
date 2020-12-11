@@ -5,6 +5,7 @@ import { _initSpritesheet } from './Sprite/Spritesheets'
 import { RpgPlayer } from './Sprite/Player'
 import { RpgEvent} from './Sprite/Event'
 import { EventEmitter } from '@rpgjs/common'
+import { World } from '@rpgjs/sync-client'
 
 export default class RpgClientEngine extends ClientEngine<any> {
 
@@ -162,9 +163,11 @@ export default class RpgClientEngine extends ClientEngine<any> {
             this.renderer.showAnimation(sprite)
             //if (sprite[name]) sprite[name](...params)
         })
-        this.socket.on('w', (data) => {
-            console.log(data)
+
+        World.listen(this.socket).value.subscribe((val) => {
+            console.log(val)
         })
+        
         this.socket.on('reconnect', () => {
             this.hideGui('rpg-disconnected')
         })

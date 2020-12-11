@@ -28,7 +28,7 @@ export class Room {
         user._rooms.push(room.id)
         if (!user.id) user.id = Utils.generateId()
         if (room['onJoin']) room['onJoin'](user)
-        const packet = new Packet(this.memoryObject)
+        const packet = new Packet(this.memoryObject, <string>room.id)
         Transmitter.emit(user, packet)
     }
 

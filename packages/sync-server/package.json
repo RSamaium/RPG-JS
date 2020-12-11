@@ -1,5 +1,5 @@
 {
-  "name": "@rpgjs/sync",
+  "name": "@rpgjs/sync-server",
   "version": "0.9.0",
   "description": "",
   "main": "./lib/index.js",
