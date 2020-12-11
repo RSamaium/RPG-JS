@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "es6",
+    "target": "es2017",
     "module": "commonjs",
     "outDir": "./lib",
     "rootDir": "./src",
@@ -20,7 +20,7 @@
     "experimentalDecorators": true, 
     "emitDecoratorMetadata": true,
     "typeRoots": ["./types", "./node_modules/@types"],
-    "types": ["reflect-metadata", "jest"]
+    "types": ["jest"]
   },
   "include": [
       "src"

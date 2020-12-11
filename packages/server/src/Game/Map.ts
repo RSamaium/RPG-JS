@@ -1,5 +1,4 @@
 import { RpgCommonMap, Utils }  from '@rpgjs/common'
-import path from 'path'
 import fs from 'fs'
 
 export class RpgMap extends RpgCommonMap {
@@ -9,7 +8,11 @@ export class RpgMap extends RpgCommonMap {
     public file: any 
     public _events: any[] = []
 
-    constructor(private server: any) {
+    $schema = {
+        width: Number
+    }
+
+    constructor(private _server: any) {
         super()
     }
 
@@ -25,7 +28,7 @@ export class RpgMap extends RpgCommonMap {
     }
 
     get game() {
-        return this.server.gameEngine
+        return this._server.gameEngine
     }
 
     onLoad() {}
@@ -66,10 +69,10 @@ export class RpgMap extends RpgCommonMap {
             ev.map = this.id
             ev.setPosition(position)
             ev.speed = 1
-            ev.server = this.server
+            ev.server = this._server
 
             if (event.syncAll == true) {
-                this.server.assignObjectToRoom(ev, this.id)
+                this._server.assignObjectToRoom(ev, this.id)
             }
 
             if (ev.onInit && event.syncAll) {
@@ -92,7 +95,7 @@ export class RpgMap extends RpgCommonMap {
                 .then(res => res.json())
         }
 
-        const filepath = this.server.inputOptions.basePath + '/' + this.file
+        const filepath = this._server.inputOptions.basePath + '/' + this.file
         
         return new Promise((resolve, reject) => {
             fs.readFile(filepath, 'utf-8', (err, data) => {

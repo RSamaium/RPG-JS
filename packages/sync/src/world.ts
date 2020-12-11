@@ -19,22 +19,9 @@ export class WorldClass {
 
     transport(io): void {
         const transport = new Transport(io)
-        transport.onConnected((socket, id: string) => {
-            const user = new this.userClass()
-            user._socket = socket
-            user._rooms = []
-            user.id = id
-            this.users[id] = user
-        })
-        transport.onDisconnected((socket, id: string) => {
-            this.forEachUserRooms(id, (room) => {
-                delete room.users[id]
-            })
-            delete this.users[id]
-        })
-        transport.onJoin((roomId, id) => {
-            this.joinRoom(roomId, id)
-        })
+        transport.onConnected(this.connectUser.bind(this))
+        transport.onDisconnected(this.disconnectUser.bind(this))
+        transport.onJoin(this.joinRoom.bind(this))
         transport.onInput((id: string, prop: string, value: any) => {
             this.forEachUserRooms(id, (room: RoomClass) => {
                 if (room.$inputs && room.$inputs[prop]) {
@@ -51,7 +38,7 @@ export class WorldClass {
         })
     }
 
-    forEachUserRooms(userId: string, cb: (room: RoomClass, user?: User) => void): void {
+    forEachUserRooms(userId: string, cb: (room: RoomClass, user: User) => void): void {
         const user = this.getUser(userId)
         for (let roomId of user._rooms) {
             const room = this.getRoom(roomId)
@@ -60,10 +47,14 @@ export class WorldClass {
     }
 
     getUser(id: string): User {
-        if (!id.startsWith('$')) {
-            throw new Error('The user identifier must begin with the $ character')
-        }
         return this.users[id]
+    }
+
+    setUser(user, socket?) {
+        if (socket) user._socket = socket
+        user._rooms = []
+        this.users[user.id] = user
+        return user
     }
 
     send(): void {
@@ -79,18 +70,40 @@ export class WorldClass {
         Transmitter.clear()
     }
 
-    joinRoom(roomId: string, userId: string): RoomClass | undefined {
+    connectUser(socket, id: string): User {
+        const user = new this.userClass()
+        user.id = id
+        this.setUser(user, socket)
+        return user
+    }
+
+    disconnectUser(userId: string): void {
+        this.forEachUserRooms(userId, (room: RoomClass, user: User) => {
+            if (room.$leave) room.$leave(user)
+        })
+        delete this.users[userId]
+    }
+
+    private joinOrLeaveRoom(type: string, roomId: string, userId: string): RoomClass | undefined  {
         const room = this.getRoom(roomId)
         if (!room) return
-        room.users[userId] = this.users[userId]
+        if (room[type]) room[type](this.getUser(userId))
         return room
     }
 
-    addRoom(id: string, roomClass): RoomClass {
+    leaveRoom(roomId: string, userId: string): RoomClass | undefined {
+        return this.joinOrLeaveRoom('$leave', roomId, userId)
+    }
+
+    joinRoom(roomId: string, userId: string): RoomClass | undefined {
+        return this.joinOrLeaveRoom('$join', roomId, userId)
+    }
+
+    addRoom(id: string, roomClass, options?: any): RoomClass {
         if (roomClass.constructor.name == 'Function') {
             roomClass = new roomClass()
         }
-        const room = new Room().add(id, roomClass)
+        const room = new Room().add(id, roomClass, options)
         this.rooms.set(id, room)
         return room
     }

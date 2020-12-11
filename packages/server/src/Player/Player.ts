@@ -81,12 +81,14 @@ export class RpgPlayer extends RpgCommonPlayer {
 
     paramsChanged: Set<string> = new Set()
     private _gui: { [id: string]: Gui } = {}
-    public socket: any
+    public _socket: any
     public server: any
     public map: string = ''
     public events: any[] = []
     public param: any 
     public $broadcast: any // decorator StrategyBroadcasting
+
+    _rooms = []
 
     constructor(gameEngine?, options?, props?) {
         super(gameEngine, options, props)
@@ -110,13 +112,13 @@ export class RpgPlayer extends RpgCommonPlayer {
     }
 
     _init() {
-        this.socket.on('gui.interaction', ({ guiId, name, data }) => {
+        this._socket.on('gui.interaction', ({ guiId, name, data }) => {
             if (this._gui[guiId]) {
                 this._gui[guiId].emit(name, data)
                 this.syncChanges()
             }
         })
-        this.socket.on('gui.exit', ({ guiId, data }) => {
+        this._socket.on('gui.exit', ({ guiId, data }) => {
             this.removeGui(guiId, data)
         })
     }
@@ -822,7 +824,7 @@ export class RpgPlayer extends RpgCommonPlayer {
     }
 
     public emit(key, value) {
-        if (this.socket) this.socket.emit(key, value) 
+        if (this._socket) this._socket.emit(key, value) 
     }
 
     private _expForLevel(level) {

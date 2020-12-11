@@ -36,7 +36,7 @@ export default class Player extends DynamicObject<any, any> {
 
     static get netScheme() {
         const obj =  Object.assign({
-            direction: { type: BaseTypes.TYPES.INT8 },
+           /* direction: { type: BaseTypes.TYPES.INT8 },
             action: { type: BaseTypes.TYPES.INT8 },
             map: { type: BaseTypes.TYPES.STRING },
             speed: { type: BaseTypes.TYPES.INT8 },
@@ -45,7 +45,7 @@ export default class Player extends DynamicObject<any, any> {
             width: { type: BaseTypes.TYPES.INT8 },
             height: { type: BaseTypes.TYPES.INT8 },
             wHitbox: { type: BaseTypes.TYPES.INT8 },
-            hHitbox: { type: BaseTypes.TYPES.INT8 }
+            hHitbox: { type: BaseTypes.TYPES.INT8 }*/
         }, super.netScheme) 
         return obj
     }

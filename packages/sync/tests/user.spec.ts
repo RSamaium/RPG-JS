@@ -4,9 +4,11 @@ import { EventEmitter } from '@rpgjs/common'
 
 let event, socket
 
+const CLIENT_ID = 'mock'
+
 class SocketMock extends EventEmitter {
     client = {
-        id: 'mock'
+        id: CLIENT_ID
     }
 }
 
@@ -19,7 +21,7 @@ beforeEach(() => {
 })
 
 test('Test User in World', () => {
-    const user = World.getUser('$mock')
+    const user = World.getUser(CLIENT_ID)
     expect(user).toBeDefined()
     expect(user._rooms).toHaveLength(0)
 })
@@ -32,7 +34,7 @@ test('Test Room properties', () => {
     }
     const room =  World.addRoom('room', Room)
     socket.emit(':join', 'room')
-    const user = room.users['$mock']
+    const user = room.users[CLIENT_ID]
     expect(user).toBeDefined()
     expect(user._socket).toBeDefined()
     expect(user._rooms).toHaveLength(1)
@@ -45,14 +47,18 @@ test('Getall data of room', async () => {
                 name: String
             }]
         }
+
+        onJoin(user) {
+            user.name = 'test'
+        }
     }
     const room =  World.addRoom('room', Room)
     
     socket.emit(':join', 'room')
 
-    const user = room.users['$mock']
-    const packets =  Transmitter.getPackets(room)
+    const user = room.users[CLIENT_ID]
+    const [packet] =  Transmitter.getPackets(room)
 
-    expect(user.id).toBe('$mock')
-    console.log(packets)
+    expect(user.id).toBe(CLIENT_ID)
+    expect(packet.body).toMatchObject({ users: { [CLIENT_ID]: { name: 'test' } } })
 })

@@ -30,6 +30,7 @@ test('Change properties', () => {
     }
     const room: any =  World.addRoom('room', Room)
     room.position.x = 5
+    room.$detectChanges()
     const packet =  Transmitter.getPackets(room)
     expect(packet[0].body).toMatchObject({ position: { x: 5 }})
 })
@@ -49,6 +50,7 @@ test('change root propertie in room', () => {
     }
     const room: any =  World.addRoom('room', Room)
     room.position = { x: 5, y: 2 }
+    room.$detectChanges()
     const packet =  Transmitter.getPackets(room)
     expect(packet[0].body).toMatchObject({ position: { x: 5 }})
 })
@@ -62,6 +64,7 @@ test('Not listen properties', () => {
     }
     const room: any =  World.addRoom('room', Room)
     room.position.x = 5
+    room.$detectChanges()
     const packet =  Transmitter.getPackets(room)
     expect(packet).toBeUndefined()
 })

@@ -11,12 +11,12 @@ export default class RpgServerEngine extends ServerEngine {
 
     public database: any = {}
     public damageFormulas: any = {}
-    private playerClass: RpgPlayer
+    private playerClass: any
     private scenes: Map<string, any> = new Map()
     protected totalConnected: number = 0
 
     constructor(public io, public gameEngine, private inputOptions) {
-        super(io, gameEngine, inputOptions)
+        super(io, gameEngine, World, inputOptions) 
         this.playerClass = inputOptions.playerClass || RpgPlayer
         if (inputOptions.database) {
             for (let key in inputOptions.database) {
@@ -32,7 +32,6 @@ export default class RpgServerEngine extends ServerEngine {
             coefficientElements: COEFFICIENT_ELEMENTS,
             ...this.damageFormulas
         }
-        World.transport(io)
         this.loadScenes()
     }
 
@@ -56,13 +55,14 @@ export default class RpgServerEngine extends ServerEngine {
     }
 
     sendToPlayer(currentPlayer, eventName, data) {
-        currentPlayer.socket.emit(eventName, data)
+        currentPlayer._socket.emit(eventName, data)
     }   
 
     onPlayerConnected(socket) {
-        super.onPlayerConnected(socket)
-        const player = this.gameEngine.addPlayer(this.playerClass, socket.playerId, true)
-        player.socket = socket
+        const playerId = super.onPlayerConnected(socket)
+        const player = new this.playerClass(this.gameEngine, { id: playerId }, { playerId })
+        this.gameEngine.addPlayer(player, socket.playerId, true) 
+        World.setUser(player, socket)
         Monitor.addMonitor(socket)
         player.server = this
         player._init()

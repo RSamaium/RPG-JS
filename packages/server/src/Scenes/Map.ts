@@ -39,7 +39,6 @@ export class SceneMap {
     static readonly id: string = 'map'
 
     private mapsById: object = {}
-    $broadcast
     
     constructor(private maps: any[], private server: any) {
         this.mapsById = {}
@@ -71,9 +70,7 @@ export class SceneMap {
             mapInstance =  RpgCommonMap.buffer.get(id)
         }
         else {
-            // TODO
-            mapInstance = World.addRoom(id, mapClass)
-            //mapInstance = new mapClass(this.server)
+            mapInstance = World.addRoom(id, new mapClass(this.server))
             await mapInstance.load()
         }
        
@@ -108,10 +105,9 @@ export class SceneMap {
             }
         })
 
-        this.server.createRoom(mapId, {
-            broadcast: this.$broadcast
-        })
+        this.server.createRoom(mapId)
         this.server.assignObjectToRoom(player, mapId)
+        World.joinRoom(mapId, player.id)
         
         if (!positions) positions = mapInstance.getPositionByShape(shape => shape.type == 'start')
         if (!positions) positions = { x: 0, y: 0 }

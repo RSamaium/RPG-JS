@@ -14,7 +14,7 @@ export class Utils {
                     {
                         const [key] = array
                         const value: any = array[1]
-                        let fullPath = addDelimiter(head, key)
+                        let fullPath = addDelimiter(head, key == '0' ? '$' : key)
                         if (key[0] != '_' && (Utils.isObject(value) || Array.isArray(value))) {
                             if (Object.keys(value).length == 0) {
                                 return product.concat(fullPath)

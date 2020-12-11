@@ -4,7 +4,7 @@ export class User {
     }
     id: string
     _socket
-    _rooms = []
+    _rooms: any[] = []
 }
 
 export class DefaultRoom  {

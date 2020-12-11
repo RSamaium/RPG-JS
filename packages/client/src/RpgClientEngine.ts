@@ -162,6 +162,9 @@ export default class RpgClientEngine extends ClientEngine<any> {
             this.renderer.showAnimation(sprite)
             //if (sprite[name]) sprite[name](...params)
         })
+        this.socket.on('w', (data) => {
+            console.log(data)
+        })
         this.socket.on('reconnect', () => {
             this.hideGui('rpg-disconnected')
         })

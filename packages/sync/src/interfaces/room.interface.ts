@@ -23,5 +23,9 @@ export interface RoomClass {
     }
     $actions?: {
         [key: string]: string
-    }
+    },
+    $detectChanges?: () => void,
+    $join?: (user: User) => void
+    $leave?: (user: User) => void
+    $currentState?: Object
 }
