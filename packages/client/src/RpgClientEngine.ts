@@ -94,9 +94,10 @@ export default class RpgClientEngine extends ClientEngine<any> {
             })
         }
 
-        /*this.eventEmitter.once('keypress', (data) => {
+        this.eventEmitter.once('keypress', (data) => {
             return this.propagateEvent('$rpgKeypress', [this.vm], [data])
-        })*/
+        })
+
         this.eventEmitter.once('player.changeParam', (data) => {
             const findPlayer = this.updateObject(data)
             if (!findPlayer) {
@@ -143,9 +144,6 @@ export default class RpgClientEngine extends ClientEngine<any> {
 
     _initSocket() {
         this.onConnect()
-        /*this.socket.on('message', (str) => {
-            console.log(str)
-        })*/
         this.socket.on('player.loadScene', ({ name, data }) => {
             this.renderer.loadScene(name, data)
         })
@@ -164,13 +162,11 @@ export default class RpgClientEngine extends ClientEngine<any> {
         })
         this.socket.on('player.callMethod', ({ objectId, params, name }) => {
             const sprite = this.renderer.getScene().getPlayer(objectId)
-            console.log(sprite)
             this.renderer.showAnimation(sprite)
             //if (sprite[name]) sprite[name](...params)
         })
 
         World.listen(this.socket).value.subscribe((val: { data: any }) => {
-            console.log(val)
             if (!val.data) {
                 return
             }

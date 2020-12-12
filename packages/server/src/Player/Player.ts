@@ -91,6 +91,16 @@ export class RpgPlayer extends RpgCommonPlayer {
             accelerationA: 30,
             accelerationB: 30
         }
+
+        this.param = new Proxy({}, {
+            get: (obj, prop: string) => this.getParamValue(prop), 
+            set: () => {
+                console.log("You cannot change the value because the parameter is linked to the parameter's curve")
+                return false
+            }
+        })
+
+
         this.parameters = new Map()
         this.variables = new Map()
         this.states = []
@@ -100,16 +110,11 @@ export class RpgPlayer extends RpgCommonPlayer {
         this.skills = []
         this.gold = 0
         this.exp = 0
+    
+        this.initialLevel = 1
+        this.finalLevel = 99
         this.level = this.initialLevel
         this._gui = {}
-
-        this.param = new Proxy({}, {
-            get: (obj, prop: string) => this.getParamValue(prop), 
-            set: () => {
-                console.log("You cannot change the value because the parameter is linked to the parameter's curve")
-                return false
-            }
-        })
 
         this.addParameter(MAXHP, MAXHP_CURVE)
         this.addParameter(MAXSP, MAXSP_CURVE)

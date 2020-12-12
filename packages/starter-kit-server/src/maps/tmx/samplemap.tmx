@@ -454,6 +454,9 @@
 </data>
  </layer>
  <layer id="11" name="building_up" width="60" height="60">
+  <properties>
+   <property name="z" type="int" value="3"/>
+  </properties>
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,711,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,719,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -646,7 +649,7 @@
 </data>
  </layer>
  <objectgroup id="14" name="Object Layer 1" offsetx="8" offsety="0">
-  <object id="1" name="Start Position" type="start" x="972" y="885.5">
+  <object id="1" name="Start Position" type="start" x="970" y="909.5">
    <point/>
   </object>
   <object id="4" name="EV-1" type="event" x="972" y="843.333">
