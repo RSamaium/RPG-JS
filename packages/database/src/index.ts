@@ -1,4 +1,4 @@
-import { Item } from './item'
+import { Item, ItemOptions } from './item'
 import { Actor } from './actor'
 import { Class } from './class'
 import { Skill } from './skill'
@@ -10,7 +10,7 @@ import { Effect } from './effect'
 import { Efficiency } from './efficiency';
 
 export { 
-    Item,
+    Item, ItemOptions,
     Actor,
     Class,
     Skill,

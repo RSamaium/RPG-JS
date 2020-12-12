@@ -29,6 +29,5 @@ export default class RpgEvent extends RpgPlayer  {
 
     setGraphic(graphic) {
         super.setGraphic(graphic)
-        this.paramsChanged.add('graphic')
     }
 }

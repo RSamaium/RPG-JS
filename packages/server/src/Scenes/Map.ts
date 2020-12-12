@@ -49,7 +49,6 @@ export class SceneMap {
 
         player.prevMap = player.map
         player.map = mapId
-        player.paramsChanged.add('map') 
         player.events = []
 
         const mapInstance = await this.loadMap(mapId)

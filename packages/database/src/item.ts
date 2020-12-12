@@ -30,7 +30,7 @@ export interface EquipmentOptions extends ItemGlobalOptions {
     elementsDefense?: Elements
 }
 
-interface ItemOptions extends ItemGlobalOptions {
+export interface ItemOptions extends ItemGlobalOptions {
     hpValue?: number,
     hitRate?: number,
     consumable?: boolean
