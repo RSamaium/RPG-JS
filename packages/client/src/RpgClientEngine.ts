@@ -4,7 +4,7 @@ import Renderer from './Renderer'
 import { _initSpritesheet } from './Sprite/Spritesheets'
 import { RpgPlayer } from './Sprite/Player'
 import { RpgEvent} from './Sprite/Event'
-import { EventEmitter } from '@rpgjs/common'
+import { EventEmitter, Utils } from '@rpgjs/common'
 import { World } from '@rpgjs/sync-client'
 
 export default class RpgClientEngine extends ClientEngine<any> {

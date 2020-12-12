@@ -48,6 +48,8 @@ export class SceneMap extends Scene implements IScene {
 
         const loader = PIXI.Loader.shared
 
+        loader.reset()
+
         for (let tileset of this.tilemap.tileSets) {
             if (tileset.spritesheet.resource) continue
             loader.add(tileset.name, tileset.spritesheet.image)
@@ -128,7 +130,6 @@ export class SceneMap extends Scene implements IScene {
     }
 
     addObject(obj, id) {
-
         const wrapper = new PIXI.Container()
         const tilesOverlay = new PIXI.Container()
 

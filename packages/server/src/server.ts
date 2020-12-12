@@ -67,7 +67,7 @@ export default class RpgServerEngine extends ServerEngine {
         if (!Utils.isBrowser()) Monitor.addMonitor(socket)
         player.server = this
         player._init()
-        player.execMethod('onConnected') 
+        player.execMethod('onConnected')
     }
 
     onPlayerDisconnected(socketId, playerId) { 

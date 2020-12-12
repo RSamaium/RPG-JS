@@ -15,7 +15,6 @@ export function entryPoint(clientClass, serverClass) {
        start() {
             server.start()
             client.start()
-            io.connection()
        }
    }
 }
