@@ -1,39 +1,7 @@
 
-import { RpgCommonMap, Utils } from '@rpgjs/common'
-import { StrategyBroadcasting } from '../decorators/strategy-broadcasting'
-import { Query } from '../Query'
-import { Schema, World } from '@rpgjs/sync-server'
+import { RpgCommonMap } from '@rpgjs/common'
+import { World } from '@rpgjs/sync-server'
 
-/*@StrategyBroadcasting([
-    {
-        params: [
-            'hp', 
-            'sp', 
-            'gold', 
-            {
-                prop: 'items',
-                broadcast: ['nb', {
-                    prop: 'item',
-                    broadcast: ['name']
-                }]
-            }, 
-            'level', 
-            'exp', 
-            'param', 
-            'name', 
-            {
-                prop: '_class',
-                broadcast: ['name', 'description']
-            }, 
-            'expForNextlevel',
-            'skills',
-            'states',
-            'equipments',
-            'effects'
-        ],
-        query: Query.getPlayer
-    }
-])*/
 export class SceneMap {
 
     static readonly id: string = 'map'

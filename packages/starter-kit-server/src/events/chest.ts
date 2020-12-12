@@ -23,8 +23,8 @@ class _ChestEvent extends RpgEvent {
         }
     }
 
-    onAction(player: RpgPlayer) {
-       player.gold = 10
+    async onAction(player: RpgPlayer) {
+       await player.showText('Hello World !')
     }
 
     onPlayerTouch() {

@@ -36,12 +36,31 @@ const {
     applyMixins
 } = Utils
 
+const itemSchemas = { 
+    name: String,
+    description: String,
+    price: Number
+}
+
 export class RpgPlayer extends RpgCommonPlayer {
 
     public readonly type: string = 'player'
 
     static schemas = {
         hp: Number,
+        sp: Number,
+        gold: Number,
+        level: Number, 
+        exp: Number, 
+        name: String, 
+        expForNextlevel: Number,
+        items: [{ nb: Number, item: itemSchemas }],
+        _class: { name: String, description: String },
+        equipments: [itemSchemas],
+        skills: [{ name: String, description: String, spCost: Number }],
+        states: [{ name: String, description: String }],
+        effects: [String],
+
         graphic: String,
         action: Number,
         map: String,
@@ -157,7 +176,6 @@ export class RpgPlayer extends RpgCommonPlayer {
             val = 0
         }
         this._hp = val
-        this.paramsChanged.add('hp')
     }
 
     get hp() {
@@ -169,7 +187,6 @@ export class RpgPlayer extends RpgCommonPlayer {
             val = this.param[MAXSP]
         }
         this._sp = val
-        this.paramsChanged.add('sp')
     }
 
     get sp() {
@@ -182,7 +199,6 @@ export class RpgPlayer extends RpgCommonPlayer {
         while (this.expForNextlevel < this._exp) {
             this.level += 1
         }
-        this.paramsChanged.add('exp')
         //const hasNewLevel = player.level - lastLevel
     }
 
@@ -207,9 +223,6 @@ export class RpgPlayer extends RpgCommonPlayer {
         const hasNewLevel = val - lastLevel
         if (hasNewLevel > 0) this._triggerHook('onLevelUp', hasNewLevel)
         this._level = val
-        this.paramsChanged.add('level')
-        this.paramsChanged.add('expForNextlevel')
-        this.paramsChanged.add('param')
     }
 
     get level(): number {
@@ -390,11 +403,8 @@ export class RpgPlayer extends RpgCommonPlayer {
 
     setClass(_class) {
         this._class = new _class()
-        if (!this._class.$broadcast) this._class.$broadcast = ['name', 'description']
         this.paramsChanged.add('_class')
     }
-
-   
 
     private applyEffect(item) {
         if (item.hpValue) {
@@ -436,10 +446,8 @@ export class RpgPlayer extends RpgCommonPlayer {
             }
             //const efficiency = this.findStateEfficiency(stateClass)
             const instance = new stateClass()
-            if (!instance.$broadcast) instance.$broadcast = ['name', 'description']
             this.states.push(instance)
             this.applyStates(this, instance)
-            this.paramsChanged.add('states')
             return instance
         }
         return null
@@ -456,7 +464,6 @@ export class RpgPlayer extends RpgCommonPlayer {
         else {
             throw '' // TODO
         }
-        this.paramsChanged.add('states')
     }
 
     private findStateEfficiency(stateClass) {
@@ -487,7 +494,6 @@ export class RpgPlayer extends RpgCommonPlayer {
         else {
             this.equipments.push(item)
         }
-        this.paramsChanged.add('equipments')
     }
 
     getSkill(skillClass) {
@@ -509,9 +515,7 @@ export class RpgPlayer extends RpgCommonPlayer {
         if (!instance.coefficient) instance.coefficient = {
             [INT]: 1
         }
-        if (!instance.$broadcast) instance.$broadcast = ['name', 'description', 'spCost']
         this.skills.push(instance)
-        this.paramsChanged.add('skills')
         return instance
     }
 
@@ -521,7 +525,6 @@ export class RpgPlayer extends RpgCommonPlayer {
             throw SkillLog.notLearned(skillClass)
         }
         this.skills.splice(index, 1)
-        this.paramsChanged.add('skills')
     }
 
     useSkill(skillClass, otherPlayer?: RpgPlayer | RpgPlayer[]) {

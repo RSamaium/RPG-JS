@@ -240,7 +240,7 @@ export default class Player extends DynamicObject<any, any> {
             if (collided) {
                 this.collisionWith.push(event)
                 this.triggerCollisionWith()
-                //return false
+                return false
             }
         }
 
