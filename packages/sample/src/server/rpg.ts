@@ -12,4 +12,4 @@ export default class RPG extends RpgServerEngine {
     onStatus(nb) {
         console.log(`${nb} players connected`) 
     }
-}
+} 

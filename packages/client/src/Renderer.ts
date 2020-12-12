@@ -94,11 +94,9 @@ export default class RpgRenderer extends Renderer<any, any> {
     }
     
     draw(t, dt) {
-        window['stats'].begin()
         super.draw(t, dt)
         if (this.scene) this.scene.draw(t, dt)
         this.renderer.render(this.stage)
-        window['stats'].end()
     }
 
     async loadScene(name, obj) {

@@ -6,6 +6,7 @@ import { Query } from './Query'
 import Monitor from './Monitor'
 import { DAMAGE_SKILL, DAMAGE_PHYSIC, DAMAGE_CRITICAL, COEFFICIENT_ELEMENTS } from './presets'
 import { World } from '@rpgjs/sync-server'
+import { Utils } from '@rpgjs/common'
 
 export default class RpgServerEngine extends ServerEngine {
 
@@ -63,7 +64,7 @@ export default class RpgServerEngine extends ServerEngine {
         const player = new this.playerClass(this.gameEngine, { id: playerId }, { playerId })
         this.gameEngine.addPlayer(player, socket.playerId, true) 
         World.setUser(player, socket)
-        Monitor.addMonitor(socket)
+        if (!Utils.isBrowser()) Monitor.addMonitor(socket)
         player.server = this
         player._init()
         player.execMethod('onConnected') 
@@ -72,7 +73,7 @@ export default class RpgServerEngine extends ServerEngine {
     onPlayerDisconnected(socketId, playerId) { 
         super.onPlayerDisconnected(socketId, playerId);
         const object = this.gameEngine.world.getObject(playerId)
-        Monitor.removeMonitor(socketId)
+        if (!Utils.isBrowser()) Monitor.removeMonitor(socketId)
         this.gameEngine.removeObjectFromWorld(object.id)
     }
 }
