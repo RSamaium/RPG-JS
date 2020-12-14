@@ -61,8 +61,6 @@ export default class Game extends GameEngine<any> {
         if (!player) return
         if (!player.canMove) return
 
-        player.changeDirection(inputData.input)
-
         if (inputData.input === 'space') {
             player.triggerCollisionWith(Player.ACTIONS.ACTION)
         }

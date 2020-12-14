@@ -31,8 +31,15 @@ export interface EquipmentOptions extends ItemGlobalOptions {
 }
 
 export interface ItemOptions extends ItemGlobalOptions {
+    /** 
+     * The number of heart points given back by the item 
+     * @typeParam number
+     * 
+     * */ 
     hpValue?: number,
+    /** the success rate of the object. Value between 0 and 1. Even if the use of the item failed, the item will be removed from the player's inventory. */ 
     hitRate?: number,
+    /** Indicate if the item can be used. If not, an error will be sent */ 
     consumable?: boolean
 }
 

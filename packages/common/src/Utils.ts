@@ -6,6 +6,10 @@ export function isBrowser() {
     return typeof window !== 'undefined'
 }
 
+export function isFunction(val) {
+    return {}.toString.call(val) === '[object Function]'
+}
+
 export function isPromise(val) {
     return isInstanceOf(val, Promise)
 }
@@ -57,6 +61,7 @@ export default {
     isArray,
     isObject,
     isString,
+    isFunction,
     isInstanceOf,
     arrayUniq,
     arrayFlat,

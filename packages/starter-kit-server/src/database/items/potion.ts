@@ -3,7 +3,7 @@ import { Paralyze } from '../states/paralyze'
 
 @Item({  
     name: 'Potion',
-    description: 'Donne 5 PV',
+    description: 'Give 100 HP',
     price: 200,
     hpValue: 100,
     hitRate: 100,
@@ -16,5 +16,7 @@ import { Paralyze } from '../states/paralyze'
     ]
 })
 export class Potion {
-   
+   async onAdd(player) {
+        await player.showText('A potion has been added to your inventory')
+   }
 }

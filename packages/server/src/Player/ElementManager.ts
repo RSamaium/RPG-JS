@@ -1,5 +1,6 @@
 import { Utils }  from '@rpgjs/common'
 import { RpgPlayer } from './Player';
+import { ItemModel } from '../models/Item';
 
 const { 
     isInstanceOf,
@@ -88,7 +89,7 @@ export class ElementManager {
 }
 
 export interface ElementManager{ 
-    equipments: any[]
+    equipments: ItemModel[]
     getFormulas: any, 
     _class: any
 }

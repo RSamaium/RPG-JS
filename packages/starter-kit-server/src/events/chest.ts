@@ -1,5 +1,6 @@
-import { RpgEvent, EventData, RpgPlayer, Query } from '@rpgjs/server'
+import { RpgEvent, EventData, RpgPlayer, Query, Move } from '@rpgjs/server'
 import { Monster } from '../database/enemies/monster'
+import { Potion } from '../database/items/potion';
 
 @EventData({
     name: 'EV-1',
@@ -14,6 +15,7 @@ import { Monster } from '../database/enemies/monster'
 class _ChestEvent extends RpgEvent {
 
     onInit() {
+        this.speed = 3
         this.setGraphic('hero')
     }
 
@@ -24,7 +26,11 @@ class _ChestEvent extends RpgEvent {
     }
 
     async onAction(player: RpgPlayer) {
-       await player.showText('Hello World !')
+        /*await player.showText('Hey !')
+        player.addItem(Potion)*/
+        await this.moveRoutes([
+            Move.tileRandom(10)
+        ])
     }
 
     onPlayerTouch() {

@@ -18,15 +18,15 @@ const {
     applyMixins
 } = Utils
 
-type ItemClass = { new(...args: any[]), price?: number, }
+type ItemClass = { new(...args: any[]), price?: number, _type?: string }
 type Inventory =  { nb: number, item: ItemModel }
 
 export class ItemManager {
 
     items: Inventory[]
-    equipments: any[] = []
+    equipments: ItemModel[] = []
     
-    getItem(itemClass: ItemClass) {
+    getItem(itemClass: ItemClass): Inventory {
         const index: number = this._getItemIndex(itemClass)
         return this.items[index]
     }
@@ -67,6 +67,8 @@ import { ItemModel } from '../models/Item';
             })
             itemIndex = this.items.length - 1
         }
+        const { item } = this.items[itemIndex]
+        this['execMethod']('onAdd', [this], item)
         return this.items[itemIndex]
     }
 
@@ -76,12 +78,14 @@ import { ItemModel } from '../models/Item';
             throw ItemLog.notInInventory(itemClass)
         }
         const currentNb: number = this.items[itemIndex].nb
+        const { item } = this.items[itemIndex]
         if (currentNb - nb <= 0) {
             this.items.splice(itemIndex, 1)
         }
         else {
             this.items[itemIndex].nb -= nb
         }
+        this['execMethod']('onRemove', [this], item)
         return this.items[itemIndex]
     }
 
@@ -141,7 +145,7 @@ import { ItemModel } from '../models/Item';
         return this.getParamItem(SDEF)
     }
 
-    useItem(itemClass: ItemClass) {
+    useItem(itemClass: ItemClass): Inventory {
         const inventory = this.getItem(itemClass)
         if (this.hasEffect(Effect.CAN_NOT_ITEM)) {
             throw ItemLog.restriction(itemClass)
@@ -156,27 +160,27 @@ import { ItemModel } from '../models/Item';
         const hitRate = item.hitRate || 1
         if (Math.random() > hitRate) {
             this.removeItem(itemClass)
-            if (item.onUseFailed) item.onUseFailed(<any>this)
+            this['execMethod']('onUseFailed', [this], item)
             throw ItemLog.chanceToUseFailed(itemClass)
         }
         this.applyEffect(item)
         this.applyStates(<any>this, <any>item)
-        if (item.onUse) item.onUse(<any>this)
+        this['execMethod']('onUse', [this], item)
         this.removeItem(itemClass)
         return inventory
     }
 
-    equip(itemClass, bool = true) {
-        const inventory = this.getItem(itemClass)
+    equip(itemClass: ItemClass, bool: boolean = true): void {
+        const inventory: Inventory = this.getItem(itemClass)
         if (!inventory) {
-            return ItemLog.notInInventory(itemClass)
+            throw ItemLog.notInInventory(itemClass)
         }
         if (itemClass._type == 'item') {
-            return ItemLog.invalidToEquiped(itemClass)
+            throw ItemLog.invalidToEquiped(itemClass)
         }
         const { item } = inventory
         if (item.equipped && bool) {
-            return ItemLog.isAlreadyEquiped(itemClass)
+            throw ItemLog.isAlreadyEquiped(itemClass)
         }
         item.equipped = bool
         if (!bool) {
@@ -192,5 +196,5 @@ import { ItemModel } from '../models/Item';
 applyMixins(ItemManager, [GoldManager, StateManager, EffectManager])
 
 export interface ItemManager extends GoldManager, StateManager, EffectManager {
-    databaseById(itemClass: any)
+    databaseById(itemClass: any),
 }

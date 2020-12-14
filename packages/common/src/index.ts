@@ -1,4 +1,4 @@
-import RpgCommonPlayer from './Player'
+import RpgCommonPlayer, { Direction } from './Player'
 import RpgCommonEvent from './Event'
 import RpgCommonMap from './Map'
 import RpgCommonGame from './Game'
@@ -13,5 +13,6 @@ export {
     RpgCommonGame,
     EventEmitter,
     Utils,
-    TransportIo
+    TransportIo,
+    Direction
 }

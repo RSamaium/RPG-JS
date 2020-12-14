@@ -10,17 +10,15 @@ import { ClassManager } from './ClassManager';
 import { ElementManager } from './ElementManager'
 import { GuiManager } from './GuiManager'
 import { VariableManager } from './VariableManager'
+import { MoveManager } from './MoveManager'
 
 import { 
     MAXHP, 
     MAXSP,
     STR,
-    ATK,
     INT,
     DEX,
     AGI,
-    PDEF,
-    SDEF,
     MAXHP_CURVE, 
     MAXSP_CURVE,
     STR_CURVE,
@@ -252,6 +250,10 @@ export class RpgPlayer extends RpgCommonPlayer {
         return this.server.database[id]
     }
 
+    getCurrentMap() {
+        return this._getMap(this.map)
+    }
+
     private _getMap(id) {
         return RpgCommonMap.buffer.get(id)
     }
@@ -260,11 +262,11 @@ export class RpgPlayer extends RpgCommonPlayer {
         if (this._socket) this._socket.emit(key, value) 
     }
 
-    public execMethod(methodName: string, methodData = []) {
-        if (!this[methodName]) {
+    public execMethod(methodName: string, methodData = [], instance = this): void {
+        if (!instance[methodName]) {
             return
         }
-        const ret = this[methodName](...methodData)
+        const ret = instance[methodName](...methodData)
         const sync = () => this.syncChanges()
         if (isPromise(ret)) {
             ret.then(sync)
@@ -301,7 +303,8 @@ export interface RpgPlayer extends
     ClassManager,
     ElementManager,
     GuiManager,
-    VariableManager
+    VariableManager,
+    MoveManager
 {
     _socket: any 
     server: any
@@ -317,5 +320,6 @@ applyMixins(RpgPlayer, [
     ClassManager,
     ElementManager,
     GuiManager,
-    VariableManager
+    VariableManager,
+    MoveManager
 ])

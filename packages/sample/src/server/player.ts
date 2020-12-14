@@ -25,7 +25,7 @@ export class Player extends RpgPlayer {
 
     onInput({ input }) {
       if (input == 'space') {
-          this.addItem(database.Potion)
+          //this.addItem(database.Potion)
       }
     }
 

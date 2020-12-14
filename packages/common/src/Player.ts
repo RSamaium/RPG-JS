@@ -6,7 +6,7 @@ import Map from './Map'
 
 const ACTIONS = { IDLE: 0, RUN: 1, ACTION: 2 }
 
-enum Direction { 
+export enum Direction { 
     Up = 'up',
     Down = 'down',
     Left = 'left',
@@ -160,8 +160,10 @@ export default class Player extends DynamicObject<any, any> {
         return intersection([z, z + this.height], [otherZ, otherZ + other.height])
     }
 
-    move(direction: Direction) {
+    move(direction: Direction): boolean {
         this.collisionWith = []
+
+        this.changeDirection(direction)
 
         const nextPosition = this.defineNextPosition(direction)
         const map = this.mapInstance

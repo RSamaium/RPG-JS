@@ -11,6 +11,7 @@ import RpgEnemy from './Enemy'
 import { Query } from './Query'
 import Monitor from './Monitor'
 import * as Presets from './presets'
+import { Move } from './Player/MoveManager';
 
 export {
     RpgServerEngine,
@@ -25,5 +26,6 @@ export {
     entryPoint,
     Presets,
     Monitor,
-    StrategyBroadcasting
+    StrategyBroadcasting,
+    Move
 }
