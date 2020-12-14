@@ -132,13 +132,14 @@ export default class Character extends PIXI.Sprite {
             this.z = Math.floor(obj.position.z)
             this._x = Math.floor(obj.position.x)
             this._y = Math.floor(obj.position.y) - this.z
+
+            this.parent.zIndex = this._y
      
             obj.posX = obj.position.x
             obj.posY = obj.position.y
     
             this.direction = obj.direction
-            this.zIndex = this._y
-    
+
             // If the positions coming from the server are too different from the client, we reposition the player.
             if (Math.abs(this._x - this.x) > speed * 15) this.x = this._x
             if (Math.abs(this._y - this.y) > speed * 15) this.y = this._y
