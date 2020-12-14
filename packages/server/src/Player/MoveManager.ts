@@ -92,6 +92,36 @@ export const Move = new class {
             return directions
         }
     }
+
+    awayFromPlayer(player: RpgPlayer, repeat: number = 1): Direction[] {
+        switch (player.getDirection()) {
+            case Direction.Left:
+                return this.right(repeat)
+            case Direction.Right:
+                return this.left(repeat)
+            case Direction.Up:
+                return this.up(repeat)
+            case Direction.Down:
+                return this.down(repeat)
+            default: 
+                return []
+        }
+    }
+
+    tileAwayFromPlayer(player: RpgPlayer, repeat: number = 1): CallbackTileMove {
+        switch (player.getDirection()) {
+            case Direction.Left:
+                return this.tileRight(repeat)
+            case Direction.Right:
+                return this.tileLeft(repeat)
+            case Direction.Up:
+                return this.tileUp(repeat)
+            case Direction.Down:
+                return this.tileDown(repeat)
+            default: 
+                return () => []
+        }
+    }
 }
 
 export class MoveManager {

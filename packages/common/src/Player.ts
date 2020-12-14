@@ -1,5 +1,5 @@
 import { DynamicObject, BaseTypes, ThreeVector } from 'lance-gg'
-import { intersection } from './Utils'
+import { intersection, isString } from './Utils'
 import SAT from 'sat'
 import { Hit } from './Hit'
 import Map from './Map'
@@ -105,25 +105,25 @@ export default class Player extends DynamicObject<any, any> {
     
     defineNextPosition(direction) {
         switch (direction) {
-            case 'left':
+            case Direction.Left:
                 return {
                     x: this.position.x - this.speed,
                     y: this.position.y,
                     z: this.position.z
                 }
-            case 'right':
+            case Direction.Right:
                 return {
                     x: this.position.x + this.speed,
                     y: this.position.y,
                     z: this.position.z
                 }
-            case 'up':
+            case Direction.Up:
                 return {
                     x: this.position.x,
                     y: this.position.y - this.speed,
                     z: this.position.z
                 }
-            case 'down':
+            case Direction.Down:
                 return {
                     x: this.position.x,
                     y: this.position.y + this.speed,
@@ -264,13 +264,14 @@ export default class Player extends DynamicObject<any, any> {
         }
 
         switch (direction) {
-            case 'left':
+            case Direction.Left:
                 this.posX = nextPosition.x
                 break
-            case 'right':
+            case Direction.Right:
                 this.posX = nextPosition.x
                 break
-            case 'up':
+            case Direction.Up:
+                // Todo
                 if (isClimbable) {
                     this.posZ = nextPosition.z + this.speed
                 }
@@ -278,7 +279,8 @@ export default class Player extends DynamicObject<any, any> {
                     this.posY = nextPosition.y
                 }
                 break
-            case 'down':
+            case Direction.Down:
+                // Todo
                 if (isClimbable) {
                     this.posZ = nextPosition.z - this.speed
                 }
@@ -291,16 +293,29 @@ export default class Player extends DynamicObject<any, any> {
         return true
     }
 
-    changeDirection(direction: Direction) {
-        const dir = { 
-            down: 0, 
-            left: 1, 
-            right: 2,
-            up: 3
+    /**
+     * returns either the equivalent number or the direction according to the number
+     * @param direction 
+     */
+    getDirection(direction?: Direction | number): string | number {
+        const currentDir = direction || this.direction
+        if (!isString(currentDir)) {
+            return [Direction.Down, Direction.Left, Direction.Right, Direction.Up][currentDir]
         }
-        if (dir[direction] === undefined) return false
+        const dir = { 
+            [Direction.Down]: 0, 
+            [Direction.Left]: 1, 
+            [Direction.Right]: 2,
+            [Direction.Up]: 3
+        }
+        return dir[currentDir]
+    }
 
-        this.direction = dir[direction]
+    changeDirection(direction: Direction): boolean {
+        const dir = +this.getDirection(direction)
+        if (dir === undefined) return false
+        this.direction = dir
+        return true
     }
 
     _syncPlayer() {
