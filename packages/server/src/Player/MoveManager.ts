@@ -5,7 +5,8 @@ import { RpgPlayer } from './Player';
 const {
     arrayFlat,
     random,
-    isFunction
+    isFunction,
+    capitalize
 } = Utils
 
 function wait(sec: number) {
@@ -93,33 +94,81 @@ export const Move = new class {
         }
     }
 
-    awayFromPlayer(player: RpgPlayer, repeat: number = 1): Direction[] {
-        switch (player.getDirection()) {
+    _awayFromPlayerDirection(player: RpgPlayer, otherPlayer: RpgPlayer): string {
+        const directionOtherPlayer = otherPlayer.getDirection()
+        let newDirection = ''
+        switch (directionOtherPlayer) {
             case Direction.Left:
-                return this.right(repeat)
             case Direction.Right:
-                return this.left(repeat)
+                if (otherPlayer.position.x > player.position.x) {
+                    newDirection = Direction.Left
+                }
+                else {
+                    newDirection = Direction.Right
+                }
+                break
             case Direction.Up:
-                return this.up(repeat)
             case Direction.Down:
-                return this.down(repeat)
-            default: 
-                return []
+                if (otherPlayer.position.y > player.position.y) {
+                    newDirection = Direction.Up
+                }
+                else {
+                    newDirection = Direction.Down
+                }
+                break
+        }  
+        return newDirection     
+    }
+
+    _awayFromPlayer(isTile: boolean, otherPlayer: RpgPlayer, repeat: number = 1) {
+        const method = dir => this[isTile ? 'tile' + capitalize(dir) : dir](repeat)
+        return (player: RpgPlayer, map) => {
+            const newDirection = this._awayFromPlayerDirection(player, otherPlayer)
+            let direction: any = method(newDirection)
+            if (isFunction(direction)) {
+                direction = direction(player, map)
+            }
+            return direction
         }
     }
 
+    awayFromPlayer(player: RpgPlayer, repeat: number = 1): CallbackTileMove {
+        return this._awayFromPlayer(false, player, repeat)
+    }
+
     tileAwayFromPlayer(player: RpgPlayer, repeat: number = 1): CallbackTileMove {
-        switch (player.getDirection()) {
-            case Direction.Left:
-                return this.tileRight(repeat)
-            case Direction.Right:
-                return this.tileLeft(repeat)
-            case Direction.Up:
-                return this.tileUp(repeat)
-            case Direction.Down:
-                return this.tileDown(repeat)
-            default: 
-                return () => []
+        return this._awayFromPlayer(true, player, repeat)
+    } 
+
+    turnLeft(): string {
+        return 'turn-left'
+    }
+
+    turnRight(): string {
+        return 'turn-right'
+    }
+
+    turnUp(): string {
+        return 'turn-up'
+    }
+
+    turnDown(): string {
+        return 'turn-down'
+    }
+
+    turnRandom(): string {
+        return [
+            this.turnRight(),
+            this.turnLeft(),
+            this.turnUp(),
+            this.turnDown()
+        ][random(0, 3)]
+    }
+
+    turnTowardPlayer(otherPlayer: RpgPlayer) {
+        return (player: RpgPlayer) => {
+            const direction = this._awayFromPlayerDirection(player, otherPlayer)
+            return 'turn-' + direction
         }
     }
 }
@@ -127,6 +176,11 @@ export const Move = new class {
 export class MoveManager {
     
     private movingInterval
+
+    speed: number
+    canMove: boolean
+    through: boolean
+    frequence: number
     
     /**
      * Gives an itinerary
@@ -161,7 +215,20 @@ export class MoveManager {
                     case Direction.Up:
                         this.move(route)
                         break
+                    case 'turn-left':
+                        this.changeDirection(Direction.Left)
+                        break
+                    case 'turn-right':
+                        this.changeDirection(Direction.Right)
+                        break
+                    case 'turn-up':
+                         this.changeDirection(Direction.Up)
+                        break
+                    case 'turn-down':
+                        this.changeDirection(Direction.Down)
+                        break
                 }
+
                 routes.shift()
             }
             move()
@@ -175,5 +242,6 @@ export class MoveManager {
 
 export interface MoveManager{ 
     move: (direction: Direction) => boolean
+    changeDirection: (direction: Direction) => boolean
     getCurrentMap: any
 }

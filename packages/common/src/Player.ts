@@ -17,10 +17,10 @@ export default class Player extends DynamicObject<any, any> {
 
     map: string = ''
     graphic: string = ''
-    speed: number = 3
     height: number = 0
     width: number = 0
-    canMove: number = 1
+    canMove: boolean
+    speed: number
     events: any[] = []
     direction: number
     collisionWith: any[] = []

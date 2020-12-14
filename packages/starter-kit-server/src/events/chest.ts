@@ -29,7 +29,7 @@ class _ChestEvent extends RpgEvent {
         /*await player.showText('Hey !')
         player.addItem(Potion)*/
         await this.moveRoutes([
-            Move.tileAwayFromPlayer(player)
+            Move.turnTowardPlayer(player)
         ])
     }
 

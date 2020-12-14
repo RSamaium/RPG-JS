@@ -108,6 +108,8 @@ export class RpgPlayer extends RpgCommonPlayer {
         this.skills = []
         this.gold = 0
         this.exp = 0
+        this.speed = 3
+        this.canMove = true
     
         this.initialLevel = 1
         this.finalLevel = 99

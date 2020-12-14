@@ -42,6 +42,11 @@ export function intersection([start1, end1], [start2, end2]): boolean {
     return (start1 >= start2 && start1 <= end2) || (start2 >= start1 && start2 < end1)
 }
 
+export function capitalize(s) {
+    if (typeof s !== 'string') return ''
+    return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
 export function applyMixins(derivedCtor: any, baseCtors: any[]) {
     baseCtors.forEach((baseCtor) => {
         Object.getOwnPropertyNames(baseCtor.prototype).forEach((name) => {
@@ -66,5 +71,6 @@ export default {
     arrayUniq,
     arrayFlat,
     intersection,
-    applyMixins
+    applyMixins,
+    capitalize
 }
