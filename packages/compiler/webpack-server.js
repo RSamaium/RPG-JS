@@ -1,6 +1,7 @@
 const path = require('path')
 const { CleanWebpackPlugin } = require('clean-webpack-plugin')
 const nodeExternals = require('webpack-node-externals')
+const webpackCommon = require('./webpack-common')
 
 const mode = process.env.NODE_ENV || 'development'
 
@@ -25,30 +26,17 @@ module.exports = function(dirname, extend = {}) {
         },
         module: {
             rules: [{
-                test: /\.ts$/,
-                use: [{
-                    loader: 'ts-loader',
-                    options: {
-                        onlyCompileBundledFiles: true
-                    }
-                }],
-                exclude: [/node_modules/]
-            }, 
-            {
-                test: /\.tmx$/i,
-                use: [
-                    {
-                        loader: 'file-loader',
+                    test: /\.ts$/,
+                    use: [{
+                        loader: require.resolve('ts-loader'),
                         options: {
-                            outputPath(url)  {
-                                return `maps/${url.replace(/.tmx$/, '.json')}`
-                            },
-                            esModule: false
+                            onlyCompileBundledFiles: true
                         }
-                    },  {
-                        loader: 'tmx-loader'
-                    }]
-                }]
+                    }],
+                    exclude: [/node_modules/]
+                },
+                ...webpackCommon(dirname)
+            ]
         },
         optimization: {
             minimize: false

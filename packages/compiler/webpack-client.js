@@ -2,6 +2,7 @@ const path = require('path')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const VueLoaderPlugin = require('vue-loader/lib/plugin')
 const MiniCssExtractPlugin = require("mini-css-extract-plugin")
+const webpackCommon = require('./webpack-common')
 
 const mode = process.env.NODE_ENV || 'development'
 const type = process.env.RPG_TYPE || 'mmorpg'
@@ -30,7 +31,7 @@ module.exports = function(dirname, extend = {}) {
             rules: [{
                 test: /\.ts$/,
                 use: [{
-                    loader: 'ts-loader',
+                    loader: require.resolve('ts-loader'),
                     options: {
                         onlyCompileBundledFiles: true,
                         appendTsSuffixTo: [/\.vue$/]
@@ -39,17 +40,17 @@ module.exports = function(dirname, extend = {}) {
     
             }, {
                 test: /\.vue$/,
-                loader: 'vue-loader'
+                loader: require.resolve('vue-loader')
             }, 
             {
                 test: /\.css$/,
                 use: [
                     MiniCssExtractPlugin.loader,
-                    'css-loader'
+                    require.resolve('css-loader')
                 ]
             }, {
                 test: /\.(png|jpe?g|gif)$/i,
-                loader: 'file-loader',
+                loader: require.resolve('file-loader'),
                 options: {
                     outputPath: 'images',
                     esModule: false
@@ -57,34 +58,13 @@ module.exports = function(dirname, extend = {}) {
             },
             {
                 test: /\.(woff(2)?|ttf|eot|svg)$/i,
-                loader: 'file-loader',
+                loader: require.resolve('file-loader'),
                 options: {
                     outputPath: 'fonts'
                 }
             },
-            {
-                test: /\.efk$/i,
-                loader: 'file-loader',
-                options: {
-                    outputPath: 'animations',
-                    esModule: false
-                }
-            }, 
-            {
-                test: /\.tmx$/i,
-                use: [
-                    {
-                        loader: 'file-loader',
-                        options: {
-                            outputPath(url)  {
-                                return `maps/${url.replace(/.tmx$/, '.json')}`
-                            },
-                            esModule: false
-                        }
-                    },  {
-                        loader: 'tmx-loader'
-                    }]
-                }]
+            ...webpackCommon(dirname)
+           ]
         },
         optimization: {
             minimize: false
