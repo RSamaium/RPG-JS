@@ -25,5 +25,9 @@
     "webpack": "^4.44.1",
     "webpack-cli": "^3.3.12",
     "webpack-node-externals": "^2.5.2"
+  },
+  "devDependencies": {
+    "nodemon-webpack-plugin": "^4.3.2",
+    "webpack-dev-server": "^3.11.0"
   }
 }

@@ -13,8 +13,8 @@
     "dev:client": "RPG_SIDE=client npx webpack -w",
     "dev:server": "RPG_SIDE=server npx webpack -w",
     "dev:rpg": "RPG_TYPE=rpg npx webpack -w",
-    "dev:mmorpg": "concurrently -n server,client,nodemon \"npm run dev:server\" \"npm run dev:client\" \"npm run dev:nodemon\"",
-    "dev": "npm run dev:mmorpg",
+    "dev:mmorpg": "concurrently -n client,server \"npm run dev:client\" \"npm run dev:server\"",
+    "dev": "npx webpack -w",
     "dev:nodemon": "nodemon dist/server/index.js",
     "start": "node dist/server"
   },
@@ -49,6 +49,7 @@
     "@rpgjs/testing": "^3.0.0-alpha",
     "express": "^4.17.1",
     "socket.io": "^2.3.0",
-    "vue": "^2.6.12"
+    "vue": "^2.6.12",
+    "webpack-dev-server": "^3.11.0"
   }
 }

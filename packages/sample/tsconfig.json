@@ -3,7 +3,6 @@
     "target": "es6",
     "module": "commonjs",
     "outDir": "dist",
-    "rootDir": "./src",
     "strict": true,
     "sourceMap": true,
     "strictNullChecks": true,
@@ -16,12 +15,12 @@
     "noImplicitThis": false,
     "noImplicitAny": false,
     "noImplicitReturns": false,
-    "declaration": true,
+    "declaration": false,
     "experimentalDecorators": true, 
     "emitDecoratorMetadata": true
   },
   "files": ["index.d.ts"],
   "include": [
-      "src"
+      "src", "index.d.ts"
   ]
 }

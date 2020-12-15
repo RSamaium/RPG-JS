@@ -19,7 +19,7 @@ export class Player extends RpgPlayer {
 
         this.through = true
 
-        this.setGraphic('hero')
+        this.setGraphic('hero2')
         this.changeMap('medieval')
 
         this.setActor(database.Hero)
