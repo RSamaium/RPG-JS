@@ -241,6 +241,8 @@ export class MoveManager {
      * ```
      */
     moveRoutes(routes: (string | Promise<any> | Direction | Function)[]): Promise<undefined> {
+        let count = 0
+        let frequence = this.frequence
         return new Promise((resolve) => {
             routes = routes.map((route: any) => {
                 if (isFunction(route)) {
@@ -250,6 +252,17 @@ export class MoveManager {
             })
             routes = arrayFlat(routes)
             const move = () => {
+
+                if (count % this.nbPixelInTile == 0) {
+                    if (frequence < this.frequence) {
+                        frequence++
+                        return
+                    }
+                }
+
+                frequence = 0
+                count++
+
                 const [route] = routes
 
                 if (!route) {
@@ -294,4 +307,5 @@ export interface MoveManager{
     move: (direction: Direction) => boolean
     changeDirection: (direction: Direction) => boolean
     getCurrentMap: any
+    nbPixelInTile: number
 }

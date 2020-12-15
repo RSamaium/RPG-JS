@@ -28,10 +28,9 @@ class _ChestEvent extends RpgEvent {
     async onAction(player: RpgPlayer) {
         /*await player.showText('Hey !')
         player.addItem(Potion)*/
+        this.frequence = 200
         await this.moveRoutes([
-            Move.tileRight(),
-            Move.wait(5),
-            Move.tileRight()
+            Move.tileRight(2)
         ])
     }
 

@@ -318,6 +318,24 @@ export default class Player extends DynamicObject<any, any> {
         return true
     }
 
+    /**
+     * Gets the necessary number of pixels to allow the player to cross a tile. 
+     * This is the ratio between the height or width of the tile and the speed of the player.
+     */
+    get nbPixelInTile(): number {
+        const direction = this.getDirection()
+        switch (direction) {
+            case Direction.Down:
+            case Direction.Up:
+                return this.mapInstance.tileHeight / this.speed
+            case Direction.Left:
+            case Direction.Right:
+                return this.mapInstance.tileWidth / this.speed
+            default: 
+                return NaN
+        }
+    }
+
     _syncPlayer() {
         // test player instance for event
         if (this.player) {
