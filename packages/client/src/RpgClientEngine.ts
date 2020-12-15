@@ -170,9 +170,6 @@ export default class RpgClientEngine extends ClientEngine<any> {
             if (!val.data) {
                 return
             }
-
-            console.log(val)
-
             const change = (prop) => {
                 const list = val.data[prop]
                 for (let key in list) {
