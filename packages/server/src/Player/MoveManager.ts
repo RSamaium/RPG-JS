@@ -16,6 +16,7 @@ function wait(sec: number) {
 }
 
 type CallbackTileMove = (player: RpgPlayer, map) => Direction[]
+type CallbackTurnMove = (player: RpgPlayer, map) => string
 
 export const Move = new class {
 
@@ -120,10 +121,44 @@ export const Move = new class {
         return newDirection     
     }
 
-    _awayFromPlayer(isTile: boolean, otherPlayer: RpgPlayer, repeat: number = 1) {
+    _towardPlayerDirection(player: RpgPlayer, otherPlayer: RpgPlayer): string {
+        const directionOtherPlayer = otherPlayer.getDirection()
+        let newDirection = ''
+        switch (directionOtherPlayer) {
+            case Direction.Left:
+            case Direction.Right:
+                if (otherPlayer.position.x > player.position.x) {
+                    newDirection = Direction.Right
+                }
+                else {
+                    newDirection = Direction.Left
+                }
+                break
+            case Direction.Up:
+            case Direction.Down:
+                if (otherPlayer.position.y > player.position.y) {
+                    newDirection = Direction.Down
+                }
+                else {
+                    newDirection = Direction.Up
+                }
+                break
+        }  
+        return newDirection     
+    }
+
+    _awayFromPlayer({ isTile, typeMov }: { isTile: boolean, typeMov: string}, otherPlayer: RpgPlayer, repeat: number = 1) {
         const method = dir => this[isTile ? 'tile' + capitalize(dir) : dir](repeat)
         return (player: RpgPlayer, map) => {
-            const newDirection = this._awayFromPlayerDirection(player, otherPlayer)
+            let newDirection = ''
+            switch (typeMov) {
+                case 'away':
+                    newDirection = this._awayFromPlayerDirection(player, otherPlayer)
+                    break;
+                case 'toward':
+                    newDirection = this._towardPlayerDirection(player, otherPlayer)
+                    break
+            }
             let direction: any = method(newDirection)
             if (isFunction(direction)) {
                 direction = direction(player, map)
@@ -132,12 +167,20 @@ export const Move = new class {
         }
     }
 
+    towardPlayer(player: RpgPlayer, repeat: number = 1) {
+        return this._awayFromPlayer({ isTile: false, typeMov: 'toward' }, player, repeat)
+    }
+
+    tileTowardPlayer(player: RpgPlayer, repeat: number = 1) {
+        return this._awayFromPlayer({ isTile: true, typeMov: 'toward' }, player, repeat)
+    }
+
     awayFromPlayer(player: RpgPlayer, repeat: number = 1): CallbackTileMove {
-        return this._awayFromPlayer(false, player, repeat)
+        return this._awayFromPlayer({ isTile: false, typeMov: 'away' }, player, repeat)
     }
 
     tileAwayFromPlayer(player: RpgPlayer, repeat: number = 1): CallbackTileMove {
-        return this._awayFromPlayer(true, player, repeat)
+        return this._awayFromPlayer({ isTile: true, typeMov: 'away' }, player, repeat)
     } 
 
     turnLeft(): string {
@@ -165,9 +208,16 @@ export const Move = new class {
         ][random(0, 3)]
     }
 
-    turnTowardPlayer(otherPlayer: RpgPlayer) {
+    turnAwayFromPlayer(otherPlayer: RpgPlayer): CallbackTurnMove {
         return (player: RpgPlayer) => {
             const direction = this._awayFromPlayerDirection(player, otherPlayer)
+            return 'turn-' + direction
+        }
+    }
+
+    turnTowardPlayer(otherPlayer: RpgPlayer): CallbackTurnMove {
+        return (player: RpgPlayer) => {
+            const direction = this._towardPlayerDirection(player, otherPlayer)
             return 'turn-' + direction
         }
     }
