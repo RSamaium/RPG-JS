@@ -1,4 +1,4 @@
 export interface IGui {
-    open(...any)
+    open(...any): Promise<any>
     close?()
 }

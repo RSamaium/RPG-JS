@@ -24,7 +24,7 @@ export class Gui extends EventEmitter {
             })
             this._blockPlayerInput = blockPlayerInput
             if (blockPlayerInput) {
-                this.player.canMove = true
+                this.player.canMove = false
             }
             if (!waitingAction) {
                 resolve()
@@ -38,7 +38,7 @@ export class Gui extends EventEmitter {
     close(data?) {
         this.player.emit('gui.exit', this.id)
         if (this._blockPlayerInput) {
-            this.player.canMove = false
+            this.player.canMove = true
         }
         this._close(data)
     }

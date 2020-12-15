@@ -1,23 +1,17 @@
 import { Gui, DialogGui, MenuGui, ShopGui } from '../Gui'
+import { DialogOptions, Choice } from '../Gui/DialogGui'
 
 export class GuiManager {
 
     _gui: { [id: string]: Gui }
     
-    showText(msg: string, options: {
-        choices?: any[],
-        position?,
-        fullWidth?: boolean,
-        autoClose?: boolean,
-        tranparent?: boolean,
-        typewriterEffect?: boolean
-     } = {}) {
+    showText(msg: string, options: DialogOptions = {}): Promise<any> {
         const gui = new DialogGui(<any>this)
         this._gui[gui.id] = gui
-        return gui.open(msg, options)
+        return gui.openDialog(msg, options)
     }
 
-    showChoices(msg: string, choices: { text: string, value: any }[]) {
+    showChoices(msg: string, choices: Choice[]): Promise<Choice | null> {
         return this
             .showText(msg, {
                 choices

@@ -10,7 +10,7 @@ import { ClassManager } from './ClassManager';
 import { ElementManager } from './ElementManager'
 import { GuiManager } from './GuiManager'
 import { VariableManager } from './VariableManager'
-import { MoveManager } from './MoveManager'
+import { Frequency, MoveManager, Speed } from './MoveManager'
 
 import { 
     MAXHP, 
@@ -61,8 +61,11 @@ export class RpgPlayer extends RpgCommonPlayer {
         graphic: String,
         action: Number,
         map: String,
+
         speed: Number,
         canMove: Boolean,
+        through: Boolean, 
+
         width: Number,
         height: Number,
         wHitbox: Number,
@@ -98,7 +101,6 @@ export class RpgPlayer extends RpgCommonPlayer {
             }
         })
 
-
         this.parameters = new Map()
         this.variables = new Map()
         this.states = []
@@ -108,8 +110,10 @@ export class RpgPlayer extends RpgCommonPlayer {
         this.skills = []
         this.gold = 0
         this.exp = 0
-        this.speed = 3
+        this.speed = Speed.Normal
+        this.frequency = Frequency.None
         this.canMove = true
+        this.through = false
     
         this.initialLevel = 1
         this.finalLevel = 99

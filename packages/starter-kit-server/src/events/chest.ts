@@ -14,9 +14,11 @@ import { Potion } from '../database/items/potion';
 })
 class _ChestEvent extends RpgEvent {
 
-    onInit() {
-        this.speed = 3
+    async onInit() {
+        this.speed = 1
+        this.frequency = 200
         this.setGraphic('hero')
+        this.infiniteMoveRoute([ Move.tileRandom() ])
     }
 
     onChanges(player) {
@@ -28,10 +30,7 @@ class _ChestEvent extends RpgEvent {
     async onAction(player: RpgPlayer) {
         /*await player.showText('Hey !')
         player.addItem(Potion)*/
-        this.frequence = 200
-        await this.moveRoutes([
-            Move.tileRight(2)
-        ])
+        await player.showText('Hey', { talkWith: this })
     }
 
     onPlayerTouch() {

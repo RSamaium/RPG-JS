@@ -17,6 +17,18 @@ function wait(sec: number) {
 
 type CallbackTileMove = (player: RpgPlayer, map) => Direction[]
 type CallbackTurnMove = (player: RpgPlayer, map) => string
+type Routes = (string | Promise<any> | Direction | Function)[]
+
+export enum Frequency {
+    Low = 400,
+    None = 0
+}
+
+export enum Speed {
+    Slow = 1,
+    Normal = 3,
+    Fast = 5
+}
 
 export const Move = new class {
 
@@ -226,11 +238,13 @@ export const Move = new class {
 export class MoveManager {
     
     private movingInterval
+    private _infiniteRoutes: Routes
+    private _finishRoute: Function
 
     speed: number
     canMove: boolean
     through: boolean
-    frequence: number
+    frequency: number
     
     /**
      * Gives an itinerary
@@ -240,10 +254,11 @@ export class MoveManager {
      * player.moveRoutes([Move.Left, Move.turnLeft, Move.wait(5)])
      * ```
      */
-    moveRoutes(routes: (string | Promise<any> | Direction | Function)[]): Promise<undefined> {
+    moveRoutes(routes: Routes) : Promise<boolean> {
         let count = 0
-        let frequence = this.frequence
+        let frequence = this.frequency
         return new Promise((resolve) => {
+            this._finishRoute = resolve
             routes = routes.map((route: any) => {
                 if (isFunction(route)) {
                     return route(this, this.getCurrentMap())
@@ -253,8 +268,8 @@ export class MoveManager {
             routes = arrayFlat(routes)
             const move = () => {
 
-                if (count % this.nbPixelInTile == 0) {
-                    if (frequence < this.frequence) {
+                if (count % this['nbPixelInTile'] == 0) {
+                    if (frequence < this.frequency) {
                         frequence++
                         return
                     }
@@ -267,7 +282,6 @@ export class MoveManager {
 
                 if (!route) {
                     this.breakRoutes()
-                    resolve()
                     return
                 }
                 
@@ -298,8 +312,27 @@ export class MoveManager {
             this.movingInterval = setInterval(move, 16)
         })
     }
-    breakRoutes() {
-        if (this.movingInterval) clearInterval(this.movingInterval)
+
+    infiniteMoveRoute(routes: Routes): void {
+        this._infiniteRoutes = routes
+
+        const move = (isBreaking: boolean) => {
+            if (isBreaking) return
+            this.moveRoutes(routes).then(move)
+        }
+
+        move(false)
+    }
+
+    breakRoutes(force: boolean = false): void {
+        if (this._finishRoute) {
+            clearInterval(this.movingInterval)
+            this._finishRoute(force)
+        }
+    }
+
+    replayRoutes(): void {
+        if (this._infiniteRoutes) this.infiniteMoveRoute(this._infiniteRoutes)
     }
 }
 
@@ -307,5 +340,4 @@ export interface MoveManager{
     move: (direction: Direction) => boolean
     changeDirection: (direction: Direction) => boolean
     getCurrentMap: any
-    nbPixelInTile: number
 }

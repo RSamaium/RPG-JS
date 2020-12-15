@@ -242,7 +242,7 @@ export default class Player extends DynamicObject<any, any> {
             if (collided) {
                 this.collisionWith.push(event)
                 this.triggerCollisionWith()
-                return false
+                if (!event.through) return false 
             }
         }
 
@@ -322,7 +322,7 @@ export default class Player extends DynamicObject<any, any> {
      * Gets the necessary number of pixels to allow the player to cross a tile. 
      * This is the ratio between the height or width of the tile and the speed of the player.
      */
-    get nbPixelInTile(): number {
+    get nbPixelInTile(): any {
         const direction = this.getDirection()
         switch (direction) {
             case Direction.Down:

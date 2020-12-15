@@ -17,6 +17,8 @@ export class Player extends RpgPlayer {
             }
         })
 
+        this.through = true
+
         this.setGraphic('hero')
         this.changeMap('medieval')
 
