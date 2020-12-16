@@ -1,1 +1,0 @@
-rsync -rave "ssh -i ~/.ssh/newbot.pem"  ./packages/sample newbot@195.154.112.221:/home/newbot/rpgjs --exclude node_modules --exclude .git
