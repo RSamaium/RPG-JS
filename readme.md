@@ -14,12 +14,56 @@ RPG JS is a framework for creating RPGs and MMORPGs.The code remains the same de
 
 ## Installation 
 
+> These lines don't work yet (for soon!)
+
 ```bash
 npx degit rpgjs/template my-rpg-game
 cd my-rpg-game
 npm install
 npm run dev
 ```
+
+To test only in RPG mode:
+
+`RPG_TYPE=rpg npm run dev`
+
+## Production
+
+To put into production:
+
+**MMORPG**
+
+`NODE_ENV=production npm run build`
+
+1. Put the folders `dist/server` and `dist/client` on a server
+2. Starting the server in `dist/server/index.js`.
+
+Example 1:
+
+`node dist/server`
+
+Example 2: (with [PM2](https://pm2.keymetrics.io))
+
+`pm2 start dist/server/index.js`
+
+**RPG**
+
+`NODE_ENV=production RPG_TYPE=rpg npm run build`
+
+Put the files in the `dist/standalone` folder on a static server (as [Vercel](https://vercel.com) or [Netlify](https://www.netlify.com) or your own server)
+
+## Contribute to developments
+
+To contribute to the developments, install the sources locally:
+
+```bash
+git clone ...
+npm install
+npx lerna bootstrap
+npm run dev
+```
+
+The game can be found in `@rpgjs/sample` package.
 
 ## License
 MIT. Free for commercial use.
