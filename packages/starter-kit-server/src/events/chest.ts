@@ -18,7 +18,7 @@ class _ChestEvent extends RpgEvent {
         this.speed = 1
         this.frequency = 200
         this.setGraphic('hero')
-        this.infiniteMoveRoute([ Move.tileRandom() ])
+        //this.infiniteMoveRoute([ Move.tileRandom() ])
     }
 
     onChanges(player) {
@@ -30,7 +30,7 @@ class _ChestEvent extends RpgEvent {
     async onAction(player: RpgPlayer) {
         /*await player.showText('Hey !')
         player.addItem(Potion)*/
-        await player.showText('Hey', { talkWith: this })
+       // await player.showText('Hey', { talkWith: this })
     }
 
     onPlayerTouch() {

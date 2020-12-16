@@ -16,7 +16,7 @@
   "scripts": {
     "test": "jest",
     "lerna:ls": "lerna ls",
-    "performance": "k6 run -e CHAT_WS=ws://localhost:4000 tests/load-testing/socket.js",
+    "load-testing": "k6 run -e CHAT_WS=ws://localhost:4000 tests/load-testing/socket.js",
     "build": "npm run build:common && npm run build:server && npm run build:client",
     "build:common": "tsc --build packages/common/tsconfig.json",
     "build:server": "tsc --build packages/server/tsconfig.json",
@@ -30,10 +30,10 @@
     "watch:client": "tsc --build --watch packages/client/tsconfig.json",
     "watch:server": "tsc --build --watch packages/server/tsconfig.json",
     "watch:database": "tsc --build --watch packages/database/tsconfig.json",
-    "dev": "cd packages/sample && npm run build:server && cd ../.. && concurrently -n rpgjs,client,server,nodemon \"npm:watch:*\" \"cd packages/sample && npm run dev:client\" \"cd packages/sample && npm run dev:server\" \"cd packages/sample && npm run dev:nodemon\""
+    "dev": "concurrently -n rpgjs,sample \"npm:watch:*\" \"cd packages/sample && npm run dev\""
   },
   "repository": {
-    "type": "git",
+    "type": "git", 
     "url": ""
   },
   "keywords": [

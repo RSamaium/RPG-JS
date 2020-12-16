@@ -11,6 +11,7 @@ export type ParamsModifier = {
 }
 
 export interface ItemGlobalOptions {
+    id?: string
     /** Put the name of the item */ 
     name: string,
     description?: string

@@ -5,15 +5,15 @@
   "main": "lib/index.js",
   "types": "./lib/index.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Samuel Ronce",
+  "license": "MIT",
   "dependencies": {
     "@rpgjs/common": "^3.0.0-alpha",
     "@rpgjs/sync-client": "^1.0.0",
     "@tweenjs/tween.js": "^18.6.0",
+    "lance-gg": "github:rpgjs/lance",
     "pixi-heaven": "^0.2.2",
     "pixi-tilemap": "^2.1.3",
     "pixi-viewport": "^4.15.0",

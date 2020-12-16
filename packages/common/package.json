@@ -4,13 +4,12 @@
   "description": "",
   "main": "lib/index.js",
   "types": "./lib/index.d.ts",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+  "scripts": {},
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Samuel Ronce",
+  "license": "MIT",
   "dependencies": {
+    "lance-gg": "github:rpgjs/lance",
     "sat": "^0.8.0"
   }
 }

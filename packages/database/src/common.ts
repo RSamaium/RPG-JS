@@ -26,7 +26,7 @@ export function merge(options, type, _static = {}) {
     transformToRate('statesEfficiency', 'state')
 
     return (target) => {
-        const id = uuidv4()
+        const id = options.id || target.name.toLowerCase()
         target.id = id
         target.prototype.id = id
         target._type = type
@@ -35,6 +35,9 @@ export function merge(options, type, _static = {}) {
         }
         for (let key in options) {
             target.prototype[key] = options[key]
+        }
+        target.prototype.toJSON = function() {
+            return this.id
         }
     }
 }

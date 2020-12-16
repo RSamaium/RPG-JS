@@ -3,11 +3,9 @@
   "version": "3.0.0-alpha",
   "description": "",
   "main": "src/index.ts",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+  "scripts": {},
   "keywords": [],
-  "author": "",
+  "author": "Samuel Ronce",
   "license": "MIT",
   "dependencies": {
     "@rpgjs/client": "^3.0.0-alpha",

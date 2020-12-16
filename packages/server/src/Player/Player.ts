@@ -1,4 +1,5 @@
 import { RpgCommonMap, RpgCommonPlayer, Utils }  from '@rpgjs/common'
+import merge from 'lodash.merge'
 import { ItemManager } from './ItemManager'
 import { GoldManager } from './GoldManager'
 import { World } from '@rpgjs/sync-server'
@@ -29,7 +30,8 @@ import {
 
 const { 
     isPromise, 
-    applyMixins
+    applyMixins,
+    isString
 } = Utils
 
 const itemSchemas = { 
@@ -159,6 +161,54 @@ export class RpgPlayer extends RpgCommonPlayer {
 
     startBattle(enemies: { enemy: any, level: number }[]) {
         return this.server.getScene('battle').create(this, enemies)
+    }
+
+    load(json: any) {
+        if (isString(json)) json = JSON.parse(<string>json)
+        json = json.items.map(it => ({ nb: it.nb, item: this.databaseById(it.id) }))
+        merge(this, json)
+        /*if (this.map) {
+            this.changeMap(this.map, this.position)
+        }*/
+    }
+
+    save() {
+        return this.toJSON()
+    }
+
+    toJSON() {
+        const obj = {}
+        const props = [
+            'hp', 
+            'sp',
+            'gold', 
+            'level', 
+            'exp', 
+            'name', 
+            'position', 
+            'items', 
+            '_class', 
+            'equipments', 
+            'skills',
+            'states',
+            'effects',
+            'graphic',
+            'map',
+            'speed',
+            'canMove',
+            'through',
+            'width',
+            'height',
+            'wHitbox',
+            'hHistbox',
+            'direction',
+            'initialLevel',
+            'finalLevel'
+        ]
+        for (let prop of props) {
+            obj[prop] = this[prop]
+        }
+        return obj
     }
     
 

@@ -39,7 +39,7 @@ export class ParameterManager {
         accelerationB: number
     }
     
-    set hp(val) {
+    set hp(val: number) {
         if (val > this.param[MAXHP]) {
             val = this.param[MAXHP]
         }
@@ -50,22 +50,22 @@ export class ParameterManager {
         this._hp = val
     }
 
-    get hp() {
+    get hp(): number {
         return this._hp
     }
 
-    set sp(val) {
+    set sp(val: number) {
         if (val > this.param[MAXSP]) {
             val = this.param[MAXSP]
         }
         this._sp = val
     }
 
-    get sp() {
+    get sp(): number {
         return this._sp
     }
 
-    set exp(val) {
+    set exp(val: number) {
         this._exp = val
         const lastLevel = this.level
         while (this.expForNextlevel < this._exp) {
@@ -78,7 +78,7 @@ export class ParameterManager {
         return this._exp
     }
 
-    set level(val) {
+    set level(val: number) {
         const lastLevel = this._level
         if (this.finalLevel && this._level > this.finalLevel) {
             val = this.finalLevel
@@ -149,7 +149,7 @@ export class ParameterManager {
         this._parameters = val
     }
 
-    private _expForLevel(level) {
+    private _expForLevel(level: number): number {
         const {
             basis,
             extra,
@@ -167,7 +167,7 @@ export class ParameterManager {
         return features
     }
 
-    getParamValue(name) {
+    getParamValue(name: string): number {
         const features = this.getParam(name)
         let curveVal = Math.floor((features.end - features.start) * ((this.level-1) / (this.finalLevel - this.initialLevel))) + features.start
         const modifier = this.paramsModifier[name]
@@ -178,7 +178,7 @@ export class ParameterManager {
         return curveVal
     }
 
-    addParameter(name: string, { start, end }: { start: number, end: number }) {
+    addParameter(name: string, { start, end }: { start: number, end: number }): void {
         this._parameters.set(name, {
             start,
             end
@@ -190,7 +190,7 @@ export class ParameterManager {
         if (sp) this.sp = this.param[MAXSP] * sp
     }
 
-    allRecovery() {
+    allRecovery(): void {
         this.recovery({ hp: 1, sp: 1 })
     }
 }
