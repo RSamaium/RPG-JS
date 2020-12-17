@@ -40,19 +40,19 @@ export class ItemManager {
         })
     }
     /**
-     * Add an object in the player's inventory. You can give more than one by specifying `nb`
-     * @param itemClass 
-     * @param nb 
-     * 
+     * Add an item in the player's inventory. You can give more than one by specifying `nb`
+     * @title Add Item
+     * @method player.addItem(item,nb=1)
+     * @param {ItemClass} itemClass 
+     * @param {number} [nb] Default 1
+     * @returns {{ nb: number, item: instance of ItemClass }}
+     * @memberof ItemManager
      * @example
      * 
      * ```ts
-     *  import Potion from 'your-database/potion'
-import { StateManager } from './StateManager';
-import { ItemModel } from '../models/Item';
-
-        player.addItem(Potion, 5)
-        ```
+     * import Potion from 'your-database/potion'
+     * player.addItem(Potion, 5)
+     *  ```
      */
     addItem(itemClass: ItemClass, nb: number = 1): Inventory {
         let itemIndex: number = this._getItemIndex(itemClass)
@@ -72,7 +72,37 @@ import { ItemModel } from '../models/Item';
         return this.items[itemIndex]
     }
 
-    removeItem(itemClass: ItemClass, nb = 1): Inventory | undefined {
+    /**
+     * Deletes an item. Decreases the value `nb`. If the number falls to 0, then the item is removed from the inventory. The method then returns `undefined`
+     * @title Remove Item
+     * @method player.removeItem(item,nb=1)
+     * @param {ItemClass} itemClass 
+     * @param {number} [nb] Default 1
+     * @returns {{ nb: number, item: instance of ItemClass } | undefined}
+     * @throws {ItemLog} notInInventory 
+     * If the object is not in the inventory, an exception is raised
+     *  ```
+        {
+            id: ITEM_NOT_INVENTORY,
+            msg: '...'
+        }
+        ```
+        > If the first parameter is a string, then it must represent the identifier of the item.
+     * @memberof ItemManager
+     * @example
+     * 
+     * ```ts
+     * import Potion from 'your-database/potion'
+     * 
+     * try {
+     *    player.removeItem(Potion, 5)
+     * }
+     * catch (err) {
+     *    console.log(err)
+     * }
+     * ```
+     */
+    removeItem(itemClass: ItemClass, nb: number = 1): Inventory | undefined {
         const itemIndex: number = this._getItemIndex(itemClass)
         if (itemIndex == -1) {
             throw ItemLog.notInInventory(itemClass)

@@ -83,21 +83,5 @@ export class SceneMap {
         player.setPosition(positions)
         
         player.events = mapInstance.createEvents(EventMode.Scenario, player)
-
-       /* this.server.sendToPlayer(player, 'events', player.events.map(event => {
-            return {
-                x: event.x, 
-                y: event.y,
-                direction: event.direction,
-                id: event.id,
-                width: event.width,
-                height: event.height
-            }
-        }))
-
-        player.events.forEach(ev => {
-            ev.execMethod('onInit', [player])
-        })*/
     }
-   
 }

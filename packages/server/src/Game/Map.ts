@@ -44,6 +44,7 @@ export class RpgMap extends RpgCommonMap {
         for (let obj of this._events) {
             let event: any, position
 
+            // We retrieve the information of the event ([Event] or [{event: Event, x: number, y: number}])
             if (obj.x === undefined) {
                 event = obj
             }
@@ -52,10 +53,12 @@ export class RpgMap extends RpgCommonMap {
                 position = { x: obj.x, y: obj.y }
             }
 
+            // The event is ignored if the mode is different.
             if (event.mode != mode) {
                 continue
             }
 
+            // Create an instance of RpgEvent and assign its options
             const ev = this.game.addEvent(event, mode == EventMode.Shared)
 
             if (!position) position = this.getPositionByShape(shape => shape.type == 'event' && shape.name == ev.name)
@@ -68,6 +71,7 @@ export class RpgMap extends RpgCommonMap {
             ev.setPosition(position)
             ev.server = this._server
 
+            // We add in the room if shared mode
             if (event.mode == EventMode.Shared) {
                 this._server.assignObjectToRoom(ev, this.id)
             }

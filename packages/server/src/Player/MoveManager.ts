@@ -1,6 +1,8 @@
 import { Direction } from '@rpgjs/common'
 import { Utils } from '@rpgjs/common'
 import { RpgPlayer } from './Player';
+import { EventMode } from '../Event';
+import { World } from '@rpgjs/sync-server';
 
 const {
     arrayFlat,
@@ -248,10 +250,17 @@ export class MoveManager {
     
     /**
      * Gives an itinerary
-     * @param routes 
+     * @title Give an itinerary
+     * @method player.moveRoutes(routes)
+     * @param {Array<string | Promise<any> | Direction | Function>} routes
+     * @returns {Promise}
+     * @memberof MoveManager
      * @example 
+     * 
      * ```ts
-     * player.moveRoutes([Move.Left, Move.turnLeft, Move.wait(5)])
+     * import { Move } from '@rpgjs/server'
+     * 
+     * player.moveRoutes([ Move.tileLeft(), Move.tileDown(2) ])
      * ```
      */
     moveRoutes(routes: Routes) : Promise<boolean> {
@@ -267,7 +276,6 @@ export class MoveManager {
             })
             routes = arrayFlat(routes)
             const move = () => {
-
                 if (count % this['nbPixelInTile'] == 0) {
                     if (frequence < this.frequency) {
                         frequence++
@@ -305,8 +313,13 @@ export class MoveManager {
                         this.changeDirection(Direction.Down)
                         break
                 }
-
                 routes.shift()
+
+                // If the event is in Scenario mode, you don't use the launcher-gg library for the positions but @rpgjs/sync-server
+                if (this.constructor['mode'] == EventMode.Scenario) {
+                    const room = World.getRoom(this['map'])
+                    if (room.$detectChanges) room.$detectChanges()
+                }
             }
             move()
             this.movingInterval = setInterval(move, 16)
