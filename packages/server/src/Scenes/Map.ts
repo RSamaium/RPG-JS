@@ -1,6 +1,7 @@
 
 import { RpgCommonMap } from '@rpgjs/common'
 import { World } from '@rpgjs/sync-server'
+import { EventMode } from '../Event';
 
 export class SceneMap {
 
@@ -81,9 +82,9 @@ export class SceneMap {
 
         player.setPosition(positions)
         
-        /*player.events = mapInstance.createEvents('nosync', player)
+        player.events = mapInstance.createEvents(EventMode.Scenario, player)
 
-        this.server.sendToPlayer(player, 'events', player.events.map(event => {
+       /* this.server.sendToPlayer(player, 'events', player.events.map(event => {
             return {
                 x: event.x, 
                 y: event.y,

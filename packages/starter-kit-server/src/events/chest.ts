@@ -1,10 +1,10 @@
-import { RpgEvent, EventData, RpgPlayer, Query, Move } from '@rpgjs/server'
+import { RpgEvent, EventData, RpgPlayer, Query, Move, EventMode } from '@rpgjs/server'
 import { Monster } from '../database/enemies/monster'
 import { Potion } from '../database/items/potion';
 
 @EventData({
     name: 'EV-1',
-    syncAll: true,
+    mode: EventMode.Scenario,
     width: 32,
     height: 32,
     hitbox: {
@@ -30,6 +30,7 @@ class _ChestEvent extends RpgEvent {
     async onAction(player: RpgPlayer) {
         /*await player.showText('Hey !')
         player.addItem(Potion)*/
+        this.moveRoutes([ Move.tileAwayFromPlayer(player) ])
        // await player.showText('Hey', { talkWith: this })
     }
 

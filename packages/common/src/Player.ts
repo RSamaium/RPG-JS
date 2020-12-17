@@ -1,5 +1,5 @@
 import { DynamicObject, BaseTypes, ThreeVector } from 'lance-gg'
-import { intersection, isString } from './Utils'
+import { intersection, isString, isBrowser } from './Utils'
 import SAT from 'sat'
 import { Hit } from './Hit'
 import Map from './Map'
@@ -28,7 +28,7 @@ export default class Player extends DynamicObject<any, any> {
     hitbox: any
     player: any
     server: any
-    position: any
+    private _position: any
 
     detectChanges: boolean = true 
 
@@ -48,23 +48,34 @@ export default class Player extends DynamicObject<any, any> {
     constructor(gameEngine, options, props: any = {}) {
         super(gameEngine, options, props)
         this.direction = props.direction || 0
+        this._hitboxPos = new SAT.Vector(0, 0)
+        this.setHitbox(this.width, this.height)
         this.position = new ThreeVector(0, 0, 0)
         this.position.x = props.x || 0
         this.position.y = props.y || 0
-        this._hitboxPos = new SAT.Vector(this.position.x, this.position.y)
-        this.setHitbox(this.width, this.height)
+    }
+
+    set position(val) {
+        this._position = new Proxy(val, {
+            get: (target, prop: string) => target[prop], 
+            set: (target, prop, value) => {
+                this._hitboxPos[prop] = value
+                target[prop] = value
+                return true
+            }
+        })
+    }
+
+    get position() {
+        return this._position
     }
 
     set posX(val) {
         this.position.x = val
-        this._hitboxPos.x = val
-        this._syncPlayer()
     }
 
     set posY(val) {
         this.position.y = val
-        this._hitboxPos.y = val
-        this._syncPlayer()
     }
 
     set posZ(val) {
@@ -233,7 +244,8 @@ export default class Player extends DynamicObject<any, any> {
             eventsCollection = Object.values(this.gameEngine.world.objects)
         }
 
-        const events = [...eventsCollection, ...this.events, ...Object.values(this.gameEngine.events)]
+        const localEvents = isBrowser() ? this.gameEngine.events : this.events
+        const events = [...eventsCollection, ...Object.values(localEvents)]
 
         for (let event of events) {
             if (event.id == this.id) continue
@@ -336,19 +348,7 @@ export default class Player extends DynamicObject<any, any> {
         }
     }
 
-    _syncPlayer() {
-        // test player instance for event
-        if (this.player) {
-            /*this.server.sendToPlayer(this.player, 'updateEvent', {
-                id: this.id, 
-                x: this.x,
-                y: this.y
-            })*/
-        }
-    }
-
     syncTo(other) {
         super.syncTo(other)
     }
-
 }

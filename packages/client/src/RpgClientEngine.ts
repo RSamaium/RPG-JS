@@ -132,7 +132,7 @@ export default class RpgClientEngine extends ClientEngine<any> {
     }
 
     updateObject(data): any {
-        const player = this.renderer.updateObject(data.playerId, data.params)
+        const player = this.renderer.updateObject(data.playerId, data.params, data.localEvent)
         if (player) {
             this.propagateEvent('$rpgPlayerChanged', [this.vm], [player.data, data.params])
             if (data.playerId == this.gameEngine.playerId) {
@@ -170,17 +170,21 @@ export default class RpgClientEngine extends ClientEngine<any> {
             if (!val.data) {
                 return
             }
-            const change = (prop) => {
-                const list = val.data[prop]
+            const change = (prop, root = val.data, localEvent = false) => {
+                const list = root[prop]
                 for (let key in list) {
-                    if (!list[key]) continue
+                    const obj = list[key]
+                    if (!obj) continue
+                    if (prop == 'users' && this.gameEngine.playerId == key && obj.events) {
+                       change('events', obj, true)
+                    }
                     this.eventEmitter.emit('player.changeParam', {
                         playerId: key,
-                        params: list[key]
+                        params: obj,
+                        localEvent
                     })
                 }
             }
-
             change('users')
             change('events')
         })

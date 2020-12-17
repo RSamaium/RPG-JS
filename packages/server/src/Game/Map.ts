@@ -2,6 +2,7 @@ import { RpgCommonMap, Utils }  from '@rpgjs/common'
 import fs from 'fs'
 import { Schema } from '@rpgjs/sync-server'
 import { RpgPlayer } from '../Player/Player';
+import { EventMode } from '../Event';
 
 @Schema({
     users: [RpgPlayer.schemas],
@@ -25,7 +26,7 @@ export class RpgMap extends RpgCommonMap {
         const data = await this.parseFile() 
         super.load(data) 
         RpgCommonMap.buffer.set(this.id, this)
-        this.events = this.createEvents('sync')
+        this.events = this.createEvents(EventMode.Shared)
         this.onLoad()
     }
 
@@ -35,13 +36,12 @@ export class RpgMap extends RpgCommonMap {
 
     onLoad() {}
 
-    createEvents(type, player?) {
+    createEvents(mode: EventMode, player?) {
         const events  = {}
 
         if (!this._events) return events
 
         for (let obj of this._events) {
-
             let event: any, position
 
             if (obj.x === undefined) {
@@ -52,14 +52,11 @@ export class RpgMap extends RpgCommonMap {
                 position = { x: obj.x, y: obj.y }
             }
 
-            if (event.syncAll == false && type == 'sync') {
-                continue
-            }
-            if (event.syncAll == true && type == 'nosync') {
+            if (event.mode != mode) {
                 continue
             }
 
-            const ev = this.game.addEvent(event, event.syncAll)
+            const ev = this.game.addEvent(event, mode == EventMode.Shared)
 
             if (!position) position = this.getPositionByShape(shape => shape.type == 'event' && shape.name == ev.name)
             if (!position) position = { x: 0, y: 0 }
@@ -67,13 +64,11 @@ export class RpgMap extends RpgCommonMap {
             ev.width = event.width || this.tileWidth
             ev.height = event.height || this.tileHeight
             if (event.hitbox) ev.setHitbox(event.hitbox.width, event.hitbox.height)
-            
             ev.map = this.id
             ev.setPosition(position)
-            ev.speed = 1
             ev.server = this._server
 
-            if (event.syncAll == true) {
+            if (event.mode == EventMode.Shared) {
                 this._server.assignObjectToRoom(ev, this.id)
             }
 

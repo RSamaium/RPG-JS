@@ -137,26 +137,22 @@ export default class RpgRenderer extends Renderer<any, any> {
         this.animation.run(800, 160, sprite)
     }
 
-    updateObject(id, params) {
-        const logic = this.gameEngine.world.getObject(id)
+    updateObject(id: string, params, localEvent: boolean = false) {
+        let logic
+        if (localEvent) {
+            logic = this.gameEngine.events[id]
+            if (!logic) {
+                logic = this.gameEngine.addEvent(RpgCommonPlayer, false)
+                this.gameEngine.events[id] = logic
+            }
+        }
+        else {
+            logic = this.gameEngine.world.getObject(id)
+        }
         if (!logic) return null
         for (let key in params) {
             logic[key] = params[key]
         }
         return logic
-    }
-
-    addEvent(obj) {
-        const logic = this.gameEngine.addEvent(RpgCommonPlayer, false)
-        logic.posX  = obj.x
-        logic.posY = obj.y
-        logic.id = obj.id
-        this.gameEngine.events[obj.id] = logic
-    }
-
-    addLocalEvents(array) {
-        for (let event of array) {
-            this.addEvent(event)
-        }
     }
 }

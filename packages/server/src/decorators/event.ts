@@ -1,6 +1,16 @@
-export function EventData(options) {
+import { EventMode } from '../Event'
+
+export interface EventOptions {
+    mode?: EventMode,
+    width?: number,
+    height: number,
+    hitbox?: any
+    name: string
+}
+
+export function EventData(options: EventOptions) {
     return (target) => {
-        target.syncAll = options.syncAll
+        target.mode = options.mode || EventMode.Shared
         target.width = options.width
         target.height = options.height
         target.hitbox = options.hitbox

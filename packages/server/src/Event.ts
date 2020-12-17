@@ -2,7 +2,12 @@ import { RpgPlayer } from './Player/Player'
 import { Utils } from '@rpgjs/common';
 import { World } from '@rpgjs/sync-server'
 
-export default class RpgEvent extends RpgPlayer  {
+export enum EventMode {
+    Shared = 'shared',
+    Scenario = 'scenario'
+}
+
+export class RpgEvent extends RpgPlayer  {
 
     public readonly type: string = 'event'
 

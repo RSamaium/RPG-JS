@@ -17,12 +17,6 @@ export class Player extends RpgPlayer {
             }
         })
 
-        if (true) {
-            const dump = `{"hp":741,"sp":534,"gold":0,"level":1,"exp":0,"name":"Hero","position":{"x":1048,"y":921,"z":0},"items":[{"item":"sword","nb":1},{"item":"shield","nb":1}],"_class":"fighter","equipments":["sword","shield"],"skills":[],"states":[],"effects":[],"graphic":"hero2","map":"medieval","speed":3,"canMove":true,"through":true,"width":32,"height":32,"wHitbox":20,"direction":3,"initialLevel":1,"finalLevel":99} `
-            this.load(dump)
-            return
-        }
-
         this.through = true
 
         this.setGraphic('hero2')

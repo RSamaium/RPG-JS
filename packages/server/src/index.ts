@@ -5,7 +5,7 @@ import { EventData } from './decorators/event'
 import { MapData } from './decorators/map'
 import { StrategyBroadcasting } from './decorators/strategy-broadcasting'
 import { RpgMap } from './Game/Map'
-import RpgEvent from './Event'
+import { RpgEvent, EventMode } from './Event'
 import { RpgPlayer } from './Player/Player'
 import RpgEnemy from './Enemy'
 import { Query } from './Query'
@@ -27,5 +27,6 @@ export {
     Presets,
     Monitor,
     StrategyBroadcasting,
-    Move
+    Move,
+    EventMode
 }

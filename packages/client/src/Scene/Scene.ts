@@ -28,9 +28,10 @@ export class Scene {
     }
 
     draw(t, dt) {
-        const logicObjects = this.game.world
+        const logicObjects = { ...this.game.world.objects, ...this.game.events }
         const renderObjects = this.objects
-        logicObjects.forEach((val, key) => {
+        for (let key in logicObjects) {
+            const val = logicObjects[key]
             if (!renderObjects.has(key)) {
                 this.addObject(val, key)
             }
@@ -40,7 +41,7 @@ export class Scene {
                 const ret = object.update(val, t, dt)
                 if (this.onUpdateObject) this.onUpdateObject(ret)
             }
-        })
+        }
         if (logicObjects.size < renderObjects.size) {
             renderObjects.forEach((val, key) => {
                 if (!logicObjects.has(key)) {

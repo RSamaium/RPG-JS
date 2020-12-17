@@ -41,37 +41,46 @@ const itemSchemas = {
     consumable: Boolean
 }
 
+const playerSchemas = {
+    hp: Number,
+    sp: Number,
+    gold: Number,
+    level: Number, 
+    exp: Number, 
+    name: String, 
+    expForNextlevel: Number,
+    items: [{ nb: Number, item: itemSchemas }],
+    _class: { name: String, description: String },
+    equipments: [itemSchemas],
+    skills: [{ name: String, description: String, spCost: Number }],
+    states: [{ name: String, description: String }],
+    effects: [String],
+
+    graphic: String,
+    action: Number,
+    map: String,
+
+    speed: Number,
+    canMove: Boolean,
+    through: Boolean, 
+
+    width: Number,
+    height: Number,
+    wHitbox: Number,
+    hHitbox: Number
+}
+
 export class RpgPlayer extends RpgCommonPlayer {
 
     public readonly type: string = 'player'
 
     static schemas = {
-        hp: Number,
-        sp: Number,
-        gold: Number,
-        level: Number, 
-        exp: Number, 
-        name: String, 
-        expForNextlevel: Number,
-        items: [{ nb: Number, item: itemSchemas }],
-        _class: { name: String, description: String },
-        equipments: [itemSchemas],
-        skills: [{ name: String, description: String, spCost: Number }],
-        states: [{ name: String, description: String }],
-        effects: [String],
-
-        graphic: String,
-        action: Number,
-        map: String,
-
-        speed: Number,
-        canMove: Boolean,
-        through: Boolean, 
-
-        width: Number,
-        height: Number,
-        wHitbox: Number,
-        hHitbox: Number
+       ...playerSchemas,
+        events: [{
+            position: { x: Number, y: Number, z: Number },
+            direction: Number,
+            ...playerSchemas
+        }]
     }
     
     private _name
@@ -342,7 +351,7 @@ export class RpgPlayer extends RpgCommonPlayer {
         const {
             _events
         } = this._getMap(this.map)
-        const arrayEvents = [...this.events, ..._events]
+        const arrayEvents = [...Object.values(this.events), ..._events]
         for (let event of arrayEvents) {
             if (event.onChanges) event.onChanges(this)
         }
