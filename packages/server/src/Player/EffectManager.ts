@@ -16,6 +16,7 @@ export class EffectManager {
     
     _effects: Effect[]
 
+    // TODO
     applyEffect(item) {
         if (item.hpValue) {
             this.hp += item.hpValue
@@ -31,10 +32,33 @@ export class EffectManager {
         }
     }
 
+    /** 
+     * ```ts
+     * import { Effect } from '@rpgjs/server'
+     * 
+     * const bool = player.hasEffect(Effect.CAN_NOT_SKILL)
+     * ```
+     * 
+     * @title Has Effect
+     * @method player.hasEffect(effect)
+     * @param {Effect} effect
+     * @returns {boolean}
+     * @memberof EffectManager
+     * */
     hasEffect(effect: Effect): boolean {
         return this.effects.includes(effect)
     }
 
+    /** 
+     * Retrieves a array of effects assigned to the player, state effects and effects of weapons and armors equipped with the player's own weapons.
+     * 
+     * ```ts
+     * console.log(player.effects)
+     * ``` 
+     * @title Get Effects
+     * @prop {Array<Effect>} player.effects
+     * @memberof EffectManager
+     * */
     get effects(): any[] {
         const getEffects = (prop) => {
             return arrayFlat(this[prop]
@@ -47,6 +71,18 @@ export class EffectManager {
         ])
     }
 
+    /** 
+     * Assigns effects to the player. If you give a array, it does not change the effects of the player's states and armor/weapons equipped.
+     * 
+     * ```ts
+     * import { Effect } from '@rpgjs/server'
+     * 
+     * player.effects = [Effect.CAN_NOT_SKILL]
+     * ``` 
+     * @title Set Effects
+     * @prop {Array<Effect>} player.effects
+     * @memberof EffectManager
+     * */
     set effects(val) {
         this._effects = val
     }

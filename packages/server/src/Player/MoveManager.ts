@@ -32,6 +32,33 @@ export enum Speed {
     Fast = 5
 }
 
+ /** 
+ * @title Move
+ * @enum {Object}
+ * 
+ * Move.right(repeat=1) | Movement of a number of pixels on the right
+ * Move.left(repeat=1) | Movement of a number of pixels on the left 
+ * Move.up(repeat=1) | Movement of a number of pixels on the up
+ * Move.down(repeat=1) | Movement of a number of pixels on the down
+ * Move.random(repeat=1) | Movement of a number of pixels in a random direction
+ * Move.towardPlayer(player, repeat=1) | Moves a number of pixels in the direction of the designated player
+ * Move.awayFromPlayer(player, repeat=1) | Moves a number of pixels in the opposite direction of the designated player
+ * Move.tileRight(repeat=1) | Movement of a number of tiles on the right
+ * Move.tileLeft(repeat=1) | Movement of a number of tiles on the left
+ * Move.tileUp(repeat=1) | Movement of a number of tiles on the up
+ * Move.tileDown(repeat=1) | Movement of a number of tiles on the down
+ * Move.tileRandom(repeat=1) | Movement of a number of tiles in a random direction
+ * Move.tileTowardPlayer(player, repeat=1) | Moves a number of tiles in the direction of the designated player
+ * Move.tileAwayFromPlayer(player, repeat=1) | Moves a number of tiles in the opposite direction of the designated player
+ * Move.turnRight() | Turn to the right
+ * Move.turnLeft() | Turn to the left
+ * Move.turnUp() | Turn to the up
+ * Move.turnDown() | Turn to the down
+ * Move.turnRandom() | Turn to random direction
+ * Move.turnAwayFromPlayer(player) | Turns in the opposite direction of the designated player
+ * Move.turnTowardPlayer(player) | Turns in the direction of the designated player
+ * @memberof Move
+ * */
 export const Move = new class {
 
     repeatMove(direction: Direction, repeat: number): Direction[] {
@@ -243,16 +270,124 @@ export class MoveManager {
     private _infiniteRoutes: Routes
     private _finishRoute: Function
 
+    /** 
+     * Changes the player's speed
+     * 
+     * ```ts
+     * player.speed = 1
+     * ```
+     * 
+     * You can use Speed enum
+     * 
+     * ```ts
+     * import { Speed } from '@rpgjs/server'
+     * player.speed = Speed.Slow
+     * ```
+     * 
+     * @title Change Speed
+     * @prop {number} player.speed
+     * @enum {number}
+     * 
+     * Speed.Slow | 1
+     * Speed.Normal | 3
+     * Speed.Fast | 5
+     * @default 3
+     * @memberof MoveManager
+     * */
     speed: number
+
+    /** 
+     * Blocks the movement. The player will not be able to move even if he presses the direction keys on the keyboard.
+     * 
+     * ```ts
+     * player.canMove = false
+     * ```
+     * 
+     * @title Block movement
+     * @prop {boolean} player.canMove
+     * @default true
+     * @memberof MoveManager
+     * */
     canMove: boolean
+
+    /** 
+     * No collision will occur if the value of this property is `true`.
+     * 
+     * ```ts
+     * player.through = true
+     * ```
+     * 
+     * @title Go through the player
+     * @prop {boolean} player.through
+     * @default false
+     * @memberof MoveManager
+     * */
     through: boolean
+
+    /** 
+     * The frequency allows to put a stop time between each movement in the array of the moveRoutes() method.
+     * The value represents a dwell time in milliseconds. The higher the value, the slower the frequency.
+     * 
+     * ```ts
+     * player.frequency = 400
+     * ```
+     * 
+     * You can use Frequency enum
+     * 
+     * ```ts
+     * import { Frequency } from '@rpgjs/server'
+     * player.frequency = Frequency.Low
+     * ```
+     * 
+     * @title Change Frequency
+     * @prop {number} player.speed
+     * @enum {number}
+     * 
+     * Frequency.Low | 400
+     * Frequency.None | 0
+     * @default 0
+     * @memberof MoveManager
+     * */
     frequency: number
     
     /**
-     * Gives an itinerary
+     * Gives an itinerary. 
+     * 
+     * You can create your own motion function:
+     * 
+     * ```ts
+     * import { Direction } from '@rpgjs/server'
+     * 
+     * const customMove = () => {
+     *      return [Direction.Left, Direction.Up]
+     * }
+     * 
+     * player.moveRoutes([ customMove() ])
+     * ```
+     * 
+     * Your function can also return a function:
+     * 
+     *  ```ts
+     * import { Direction, RpgPlayer } from '@rpgjs/server'
+     * 
+     * // This function can be found in another file. By returning a function, you have access to the player who is making a move.
+     * const customMove = (otherPlayer: RpgPlayer) => {
+     *      return (player: RpgPlayer, map) => {
+     *          return otherPlayer.position.x > player.position.x ? Direction.Left : Direction.Right
+     *      }
+     * }
+     * 
+     * player.moveRoutes([ customMove(otherPlayer) ])
+     * ```
+     * 
+     * the function contains two parameters:
+     * 
+     * - `player`: the player concerned by the movement
+     * - `map`: The information of the current map
+     * 
      * @title Give an itinerary
      * @method player.moveRoutes(routes)
-     * @param {Array<string | Promise<any> | Direction | Function>} routes
+     * @param {Array<Move>} routes
      * @returns {Promise}
      * @memberof MoveManager
      * @example 
@@ -260,7 +395,8 @@ export class MoveManager {
      * ```ts
      * import { Move } from '@rpgjs/server'
      * 
-     * player.moveRoutes([ Move.tileLeft(), Move.tileDown(2) ])
+     * await player.moveRoutes([ Move.tileLeft(), Move.tileDown(2) ])
+     * // The path is over when the promise is resolved
      * ```
      */
     moveRoutes(routes: Routes) : Promise<boolean> {
@@ -326,6 +462,24 @@ export class MoveManager {
         })
     }
 
+    /**
+     * Giving a path that repeats itself in a loop to a character
+     * 
+     * You can stop the movement at any time with `breakRoutes()` and replay it with `replayRoutes()`.
+     * 
+     * @title Infinite Move Routes
+     * @method player.infiniteMoveRoute(routes)
+     * @param {Array<Move>} routes
+     * @returns {void}
+     * @memberof MoveManager
+     * @example 
+     * 
+     * ```ts
+     * import { Move } from '@rpgjs/server'
+     * 
+     * player.infiniteMoveRoute([ Move.tileRandom() ])
+     * ```
+     */
     infiniteMoveRoute(routes: Routes): void {
         this._infiniteRoutes = routes
 
@@ -337,6 +491,23 @@ export class MoveManager {
         move(false)
     }
 
+    /**
+     * Works only for infinite movements. You must first use the method `infiniteMoveRoute()`
+     * 
+     * @title Stop an infinite movement
+     * @method player.breakRoutes(force=false)
+     * @param {boolean} [force] Forces the stop of the infinite movement
+     * @returns {void}
+     * @memberof MoveManager
+     * @example 
+     * 
+     * ```ts
+     * import { Move } from '@rpgjs/server'
+     * 
+     * player.infiniteMoveRoute([ Move.tileRandom() ])
+     * player.breakRoutes(true)
+     * ```
+     */
     breakRoutes(force: boolean = false): void {
         if (this._finishRoute) {
             clearInterval(this.movingInterval)
@@ -344,6 +515,24 @@ export class MoveManager {
         }
     }
 
+    /**
+     * Works only for infinite movements. You must first use the method `infiniteMoveRoute()`
+     * If the road was stopped with `breakRoutes()`, you can restart it with this method
+     * 
+     * @title Replay an infinite movement
+     * @method player.replayRoutes()
+     * @returns {void}
+     * @memberof MoveManager
+     * @example 
+     * 
+     * ```ts
+     * import { Move } from '@rpgjs/server'
+     * 
+     * player.infiniteMoveRoute([ Move.tileRandom() ])
+     * player.breakRoutes(true)
+     * player.replayRoutes()
+     * ```
+     */
     replayRoutes(): void {
         if (this._infiniteRoutes) this.infiniteMoveRoute(this._infiniteRoutes)
     }

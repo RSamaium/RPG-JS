@@ -12,6 +12,23 @@ const {
 
 export class ParameterManager {
 
+    /** 
+     * Read the value of a parameter. Put the name of the parameter.
+     * 
+     * ```ts
+     * import { Presets } from '@rpgjs/server'
+     * 
+     * const { MAXHP } = Presets 
+     * 
+     * console.log(player.param[MAXHP])
+     * ```
+     * 
+     * > Possible to use the `player.getParamValue(name)` method instead
+     * @title Get Param Value
+     * @prop {object} player.param
+     * @readonly
+     * @memberof ParameterManager
+     * */
     param: any
 
     private _paramsModifier: {
@@ -110,6 +127,19 @@ export class ParameterManager {
         return this._hp
     }
 
+    /** 
+     * Changes the skill points
+     * - Cannot exceed the MaxSP parameter
+     * - Cannot have a negative value
+     * 
+     * ```ts
+     * player.sp = 200
+     * ``` 
+     * @title Change SP
+     * @prop {number} player.sp
+     * @default MaxSPValue
+     * @memberof ParameterManager
+     * */
     set sp(val: number) {
         if (val > this.param[MAXSP]) {
             val = this.param[MAXSP]
@@ -242,6 +272,63 @@ export class ParameterManager {
         return params
     }
 
+    /** 
+     * Changes the values of some parameters
+     * 
+     * > It is important that these parameters have been created beforehand with the `addParameter()` method.
+     * > By default, the following settings have been created: 
+     * - maxhp
+     * - maxsp
+     * - str
+     * - int
+     * - dex
+     * - agi
+     * 
+     * **Object Key**
+     * 
+     * The key of the object is the name of the parameter
+     * 
+     * > The good practice is to retrieve the name coming from a constant
+     * 
+     * **Object Value**
+     * 
+     * The value of the key is an object containing: 
+     * ``` 
+     * {
+     *   value: number,
+     *   rate: number
+     * }
+     * ```
+     * 
+     * - value: Adds a number to the parameter
+     * - rate: Adds a rate to the parameter
+     * 
+     * > Note that you can put both (value and rate)
+     * 
+     * In the case of a state or the equipment of a weapon or armor, the parameters will be changed but if the state disappears or the armor/weapon is de-equipped, then the parameters will return to the initial state.
+     * 
+     * @prop {Object} [paramsModifier]
+     * @example
+     * 
+     * ```ts
+     * import { Presets } from '@rpgjs/server'
+     * 
+     * const { MAXHP } = Presets
+     * 
+     * player.paramsModifier = {
+     *      [MAXHP]: {
+     *          value: 100
+     *      }
+     * }
+     * ```
+     * 
+     * 1. Player has 741 MaxHp
+     * 2. After changing the parameter, he will have 841 MaxHp
+     * 
+     * @title Set Parameters Modifier
+     * @prop {number} paramsModifier
+     * @memberof ParameterManager
+     * */
     set paramsModifier(val: { 
         [key: string]: {
             value?: number,
@@ -288,6 +375,30 @@ export class ParameterManager {
         return curveVal
     }
 
+    /** 
+     * Give a new parameter. Give a start value and an end value. 
+     * The start value will be set to the level set at `player.initialLevel` and the end value will be linked to the level set at `player.finalLevel`.
+     * 
+     * ```ts
+     * const SPEED = 'speed'
+     * 
+     * player.addParameter(SPEED, {
+     *     start: 10,
+     *     end: 100
+     * })
+     * 
+     * player.param[SPEED] // 10
+     * player.level += 5
+     * player.param[SPEED] // 14
+     * ```
+     * 
+     * @title Add custom parameters
+     * @method player.addParameter(name,curve)
+     * @param {name} name 
+     * @param {object} curve Scheme of the object: { start: number, end: number }
+     * @returns {void}
+     * @memberof ParameterManager
+     * */
     addParameter(name: string, { start, end }: { start: number, end: number }): void {
         this._parameters.set(name, {
             start,
@@ -295,11 +406,51 @@ export class ParameterManager {
         })
     }
 
+    /** 
+     * Gives back in percentage of health points to skill points
+     * 
+     * ```ts
+     * import { Presets } from '@rpgjs/server'
+     * 
+     * const { MAXHP } = Presets 
+     * 
+     * console.log(player.param[MAXHP]) // 800
+     * player.hp = 100
+     * player.recovery({ hp: 0.5 }) // = 800 * 0.5
+     * console.log(player.hp) // 400
+     * ```
+     * 
+     * @title Recovery HP and/or SP
+     * @method player.recovery(params)
+     * @param {object} params Scheme of the object: { hp: number, sp: number }. The values of the numbers must be in 0 and 1
+     * @returns {void}
+     * @memberof ParameterManager
+     * */
     recovery({ hp, sp }: { hp?: number, sp?: number }) {
         if (hp) this.hp = this.param[MAXHP] * hp
         if (sp) this.sp = this.param[MAXSP] * sp
     }
 
+    /** 
+     * restores all HP and SP
+     * 
+     * ```ts
+     * import { Presets } from '@rpgjs/server'
+     * 
+     * const { MAXHP, MAXSP } = Presets 
+     * 
+     * console.log(player.param[MAXHP], player.param[MAXSP]) // 800, 230
+     * player.hp = 100
+     * player.sp = 0
+     * player.allRecovery()
+     * console.log(player.hp, player.sp) // 800, 230
+     * ```
+     * 
+     * @title All Recovery
+     * @method player.allRecovery()
+     * @returns {void}
+     * @memberof ParameterManager
+     * */
     allRecovery(): void {
         this.recovery({ hp: 1, sp: 1 })
     }

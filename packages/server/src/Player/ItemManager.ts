@@ -26,6 +26,23 @@ export class ItemManager {
     items: Inventory[]
     equipments: ItemModel[] = []
     
+     /**
+     * Retrieves the information of an object: the number and the instance 
+     * @title Get Item
+     * @method player.getItem(itemClass)
+     * @param {ItemClass} itemClass 
+     * @returns {{ nb: number, item: instance of ItemClass }}
+     * @memberof ItemManager
+     * @example
+     * 
+     * ```ts
+     * import Potion from 'your-database/potion'
+     * 
+     * player.addItem(Potion, 5)
+     * const inventory = player.getItem(Potion)
+     * console.log(inventory) // { nb: 5, item: <instance of Potion> }
+     *  ```
+     */
     getItem(itemClass: ItemClass): Inventory {
         const index: number = this._getItemIndex(itemClass)
         return this.items[index]
@@ -41,6 +58,9 @@ export class ItemManager {
     }
     /**
      * Add an item in the player's inventory. You can give more than one by specifying `nb`
+     * 
+     * `onAdd()` method is called on the ItemClass
+     * 
      * @title Add Item
      * @method player.addItem(item,nb=1)
      * @param {ItemClass} itemClass 
@@ -74,20 +94,22 @@ export class ItemManager {
 
     /**
      * Deletes an item. Decreases the value `nb`. If the number falls to 0, then the item is removed from the inventory. The method then returns `undefined`
+     * 
+     * `onRemove()` method is called on the ItemClass
+     * 
      * @title Remove Item
      * @method player.removeItem(item,nb=1)
-     * @param {ItemClass} itemClass 
+     * @param {ItemClass | string} itemClass string is item id
      * @param {number} [nb] Default 1
      * @returns {{ nb: number, item: instance of ItemClass } | undefined}
      * @throws {ItemLog} notInInventory 
      * If the object is not in the inventory, an exception is raised
      *  ```
-        {
-            id: ITEM_NOT_INVENTORY,
-            msg: '...'
-        }
-        ```
-        > If the first parameter is a string, then it must represent the identifier of the item.
+     * {
+     *      id: ITEM_NOT_INVENTORY,
+     *      msg: '...'
+     * }
+     * ```
      * @memberof ItemManager
      * @example
      * 
@@ -119,6 +141,46 @@ export class ItemManager {
         return this.items[itemIndex]
     }
 
+    /**
+     * Purchases an item and reduces the amount of gold
+     * 
+     * `onAdd()` method is called on the ItemClass
+     * 
+     * @title Buy Item
+     * @method player.buyItem(item,nb=1)
+     * @param {ItemClass | string} itemClass string is item id
+     * @param {number} [nb] Default 1
+     * @returns {{ nb: number, item: instance of ItemClass }}
+     * @throws {ItemLog} haveNotPrice 
+     * If you have not set a price on the item
+     *  ```
+     * {
+     *      id: NOT_PRICE,
+     *      msg: '...'
+     * }
+     * ```
+     * @throws {ItemLog} notEnoughGold 
+     * If the player does not have enough money
+     *  ```
+     * {
+     *      id: NOT_ENOUGH_GOLD,
+     *      msg: '...'
+     * }
+     * ```
+     * @memberof ItemManager
+     * @example
+     * 
+     * ```ts
+     * import Potion from 'your-database/potion'
+     * 
+     * try {
+     *    player.buyItem(Potion)
+     * }
+     * catch (err) {
+     *    console.log(err)
+     * }
+     * ```
+     */
     buyItem(itemClass: ItemClass, nb = 1): Inventory {
         if (isString(itemClass)) itemClass = this.databaseById(itemClass)
         if (!itemClass.price) {
@@ -132,6 +194,55 @@ export class ItemManager {
         return this.addItem(itemClass, nb)
     }
 
+    /**
+     * Sell an item and the player wins the amount of the item divided by 2
+     * 
+     * `onRemove()` method is called on the ItemClass
+     * 
+     * @title Sell Item
+     * @method player.sellItem(item,nb=1)
+     * @param {ItemClass} itemClass 
+     * @param {number} [nbToSell] Default 1
+     * @returns {{ nb: number, item: instance of ItemClass }}
+     * @throws {ItemLog} haveNotPrice 
+     * If you have not set a price on the item
+     *   ```
+     * {
+     *      id: NOT_PRICE,
+     *      msg: '...'
+     * }
+     * ```
+     * @throws {ItemLog} notInInventory 
+     * If the object is not in the inventory, an exception is raised
+     *  ```
+     * {
+     *      id: ITEM_NOT_INVENTORY,
+     *      msg: '...'
+     * }
+     * ```
+     * @throws {ItemLog} tooManyToSell 
+     * If the number of items for sale exceeds the number of actual items in the inventory
+     *  ```
+     * {
+     *      id: TOO_MANY_ITEM_TO_SELL,
+     *      msg: '...'
+     * }
+     * ```
+     * @memberof ItemManager
+     * @example
+     * 
+     * ```ts
+     * import Potion from 'your-database/potion'
+     * 
+     * try {
+     *     player.addItem(Potion)
+     *     player.sellItem(Potion)
+     * }
+     * catch (err) {
+     *    console.log(err)
+     * }
+     * ```
+     */
     sellItem(itemClass: ItemClass, nbToSell = 1): Inventory {
         if (isString(itemClass)) itemClass = this.databaseById(itemClass)
         const inventory = this.getItem(itemClass)
@@ -175,6 +286,67 @@ export class ItemManager {
         return this.getParamItem(SDEF)
     }
 
+    /**
+     *  Use an object. Applies effects and states. Removes the object from the inventory then
+     * 
+     * `onUse()` method is called on the ItemClass (If the use has worked)
+     * `onRemove()` method is called on the ItemClass
+     * 
+     * @title Use an Item
+     * @method player.useItem(item,nb=1)
+     * @param {ItemClass} itemClass 
+     * @returns {{ nb: number, item: instance of ItemClass }}
+     * @throws {ItemLog} restriction 
+     * If the player has the `Effect.CAN_NOT_ITEM` effect
+     *   ```
+     * {
+     *      id: RESTRICTION_ITEM,
+     *      msg: '...'
+     * }
+     * ```
+     * @throws {ItemLog} notInInventory 
+     * If the object is not in the inventory, an exception is raised
+     *  ```
+     * {
+     *      id: ITEM_NOT_INVENTORY,
+     *      msg: '...'
+     * }
+     * ```
+     * @throws {ItemLog} notUseItem 
+     * If the `consumable` property is on false
+     *  ```
+     * {
+     *      id: NOT_USE_ITEM,
+     *      msg: '...'
+     * }
+     * ```
+     * @throws {ItemLog} chanceToUseFailed 
+     * Chance to use the item has failed. Chances of use is defined with `ItemClass.hitRate`
+     *  ```
+     * {
+     *      id: USE_CHANCE_ITEM_FAILED,
+     *      msg: '...'
+     * }
+     * ```
+     * > the item is still deleted from the inventory
+     * 
+     * `onUseFailed()` method is called on the ItemClass
+     * 
+     * @memberof ItemManager
+     * @example
+     * 
+     * ```ts
+     * import Potion from 'your-database/potion'
+     * 
+     * try {
+     *     player.addItem(Potion)
+     *     player.useItem(Potion)
+     * }
+     * catch (err) {
+     *    console.log(err)
+     * }
+     * ```
+     */
     useItem(itemClass: ItemClass): Inventory {
         const inventory = this.getItem(itemClass)
         if (this.hasEffect(Effect.CAN_NOT_ITEM)) {
@@ -202,6 +374,9 @@ export class ItemManager {
 
     /**
      * Equips a weapon or armor on a player. Think first to add the item in the inventory with the `addItem()` method before equipping the item.
+     * 
+     * `onEquip()` method is called on the ItemClass
+     * 
      * @title Equip Weapon or Armor
      * @method player.equip(itemClass,equip=true)
      * @param {ItemClass} itemClass 

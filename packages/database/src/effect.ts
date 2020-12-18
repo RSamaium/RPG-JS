@@ -1,5 +1,5 @@
  /** 
- * Existing effects
+ * @title Existing effects
  * @enum {string}
  * 
  * Effect.NONE | No effect
