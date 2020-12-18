@@ -242,7 +242,12 @@ export class ParameterManager {
         return params
     }
 
-    set paramsModifier(val: any) {
+    set paramsModifier(val: { 
+        [key: string]: {
+            value?: number,
+            rate?: number
+        }
+    }) {
         this._paramsModifier = val
     }
 

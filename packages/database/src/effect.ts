@@ -1,3 +1,12 @@
+ /** 
+ * Existing effects
+ * @enum {string}
+ * 
+ * Effect.NONE | No effect
+ * Effect.CAN_NOT_SKILL | The player will not be able to use a skill. The `player.useSkill()` method will return an exception with the `RESTRICTION_SKILL` id
+ * Effect.CAN_NOT_ITEM | The player may not use an item. The `player.useItem()` method will return an exception with the `RESTRICTION_ITEM` id
+ * @memberof Effect
+ * */
 export enum Effect {
     NONE = 'NONE',
     CAN_NOT_SKILL = 'CAN_NOT_SKILL',
@@ -22,5 +31,4 @@ export enum Effect {
     DUAL_ATTACK = 'DUAL_ATTACK',
     // Each turn, the hero loses 10% of his health points.
     SLIP_DAMAGE = 'SLIP_DAMAGE',
-    
 }

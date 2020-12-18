@@ -1,17 +1,14 @@
-import { merge } from './common'
+import { merge, Data } from './common'
+import { StatesOption } from './interfaces/states'
+import { ElementsOption } from './interfaces/elements';
 
 export interface ISkill {
     onUse()
 }
 
-export interface SkillOptions {
-    name: string
-    description?: string
+export interface SkillOptions extends StatesOption, ElementsOption, Data {
     spCost?: number
     power?: number
-    elements?: any[]
-    addStates?: any[]
-    removeStates?: any[]
     // The coefficient indicates which parameter influences the skill
     coefficient?: {
         [param: string]: number

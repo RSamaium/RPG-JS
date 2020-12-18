@@ -1,19 +1,9 @@
-import { merge } from './common'
-import { EfficiencyOptions } from './efficiency'
-import { Effect } from './effect'
-import { ParamsModifier } from './item'
+import { merge, Data } from './common'
+import { EfficiencyOptions } from './interfaces/efficiency'
+import { ParamsModifierOption } from './interfaces/params-modifier'
+import { EffectsOption } from './interfaces/effects';
 
-interface StateOptions extends EfficiencyOptions {
-    name: string,
-    description?: string
-     /** 
-     * List of effects that the competency has on the target group. 
-     * @prop {Effect[]} [effect]
-     * @memberof State
-     * */ 
-    effects?: [Effect]
-    paramsModifier?: ParamsModifier
-}
+interface StateOptions extends EfficiencyOptions, ParamsModifierOption, EffectsOption, Data { }
 
 export function State(options: StateOptions) {
     return merge(options, 'state')

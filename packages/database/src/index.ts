@@ -7,7 +7,7 @@ import { Weapon } from './weapon'
 import { Armor } from './armor'
 import { Enemy } from './enemy'
 import { Effect } from './effect'
-import { Efficiency } from './efficiency';
+import { Efficiency } from './interfaces/efficiency';
 
 export { 
     Item, ItemOptions,

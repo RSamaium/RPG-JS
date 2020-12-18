@@ -1,8 +1,7 @@
-import { merge } from './common'
-import { EfficiencyOptions } from './efficiency'
+import { merge, Data } from './common'
+import { EfficiencyOptions } from './interfaces/efficiency'
 
-export interface ActorGlobalOptions extends EfficiencyOptions {
-    name: string
+export interface ActorGlobalOptions extends EfficiencyOptions, Data {
     parameters?: {
         [key: string]: {
             start: number, 
