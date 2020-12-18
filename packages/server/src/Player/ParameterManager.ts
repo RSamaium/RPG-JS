@@ -30,8 +30,50 @@ export class ParameterManager {
     private _sp = 0
     private _exp: number = 0
     private _level: number = 0
+
+     /** 
+     * ```ts
+     * player.initialLevel = 5
+     * ``` 
+     * 
+     * @title Set initial level
+     * @prop {number} player.initialLevel
+     * @default 1
+     * @memberof ParameterManager
+     * */
     public initialLevel:number = 1
+
+    /** 
+     * ```ts
+     * player.finalLevel = 50
+     * ``` 
+     * 
+     * @title Set final level
+     * @prop {number} player.finalLevel
+     * @default 99
+     * @memberof ParameterManager
+     * */
     public finalLevel:number = 99
+
+    /** 
+     * With Object-based syntax, you can use following options:
+     * - `basis: number`
+     * - `extra: number`
+     * - `accelerationA: number`
+     * - `accelerationB: number`
+     * @title Change Experience Curve
+     * @prop {object} player.expCurve
+     * @default 
+     *  ```ts
+     * {
+     *      basis: 30,
+     *      extra: 20,
+     *      accelerationA: 30,
+     *      accelerationB: 30
+     * }
+     * ```
+     * @memberof ParameterManager
+     * */
     public expCurve: { 
         basis: number,
         extra: number,
@@ -39,6 +81,20 @@ export class ParameterManager {
         accelerationB: number
     }
     
+    /** 
+     * Changes the health points
+     * - Cannot exceed the MaxHP parameter
+     * - Cannot have a negative value
+     * - If the value is 0, a hook named `onDead()` is called in the RpgPlayer class.
+     * 
+     * ```ts
+     * player.hp = 100
+     * ``` 
+     * @title Change HP
+     * @prop {number} player.hp
+     * @default MaxHPValue
+     * @memberof ParameterManager
+     * */
     set hp(val: number) {
         if (val > this.param[MAXHP]) {
             val = this.param[MAXHP]
@@ -65,6 +121,26 @@ export class ParameterManager {
         return this._sp
     }
 
+    /** 
+     * Changing the player's experience. 
+     * ```ts
+     * player.exp += 100
+     * ```
+     * 
+     * Levels are based on the experience curve.
+     * 
+     * ```ts
+     * console.log(player.level) // 1
+     * console.log(player.expForNextlevel) // 150
+     * player.exp += 160
+     * console.log(player.level) // 2
+     * ```
+     * 
+     * @title Change Experience
+     * @prop {number} player.exp
+     * @default 0
+     * @memberof ParameterManager
+     * */
     set exp(val: number) {
         this._exp = val
         const lastLevel = this.level
@@ -78,6 +154,26 @@ export class ParameterManager {
         return this._exp
     }
 
+    /** 
+     * Changing the player's level. 
+     * 
+     * ```ts
+     * player.level += 1
+     * ``` 
+     * 
+     * The level will be between the initial level given by the `initialLevel` and final level given by `finalLevel`
+     * 
+     * ```ts
+     * player.finalLevel = 50
+     * player.level = 60 
+     * console.log(player.level) // 50
+     * ```
+     * 
+     * @title Change Level
+     * @prop {number} player.level
+     * @default 1
+     * @memberof ParameterManager
+     * */
     set level(val: number) {
         const lastLevel = this._level
         if (this.finalLevel && this._level > this.finalLevel) {
@@ -101,6 +197,15 @@ export class ParameterManager {
         return this._level
     }
 
+     /** 
+     * ```ts
+     * console.log(player.expForNextlevel) // 150
+     * ```
+     * @title Experience for next level ?
+     * @prop {number} player.expForNextlevel
+     * @readonly
+     * @memberof ParameterManager
+     * */
     get expForNextlevel(): number {
         return this._expForLevel(this.level + 1)
     }

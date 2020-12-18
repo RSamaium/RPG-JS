@@ -200,7 +200,53 @@ export class ItemManager {
         return inventory
     }
 
-    equip(itemClass: ItemClass, bool: boolean = true): void {
+    /**
+     * Equips a weapon or armor on a player. Think first to add the item in the inventory with the `addItem()` method before equipping the item.
+     * @title Equip Weapon or Armor
+     * @method player.equip(itemClass,equip=true)
+     * @param {ItemClass} itemClass 
+     * @param {number} [equip] Equip the object if true or un-equipped if false
+     * @returns {void}
+     * @throws {ItemLog} notInInventory 
+     * If the item is not in the inventory
+     *  ```
+        {
+            id: ITEM_NOT_INVENTORY,
+            msg: '...'
+        }
+        ```
+     * @throws {ItemLog} invalidToEquiped 
+        If the item is not by a weapon or armor
+        ```
+        {
+            id: INVALID_ITEM_TO_EQUIP,
+            msg: '...'
+        }
+        ```
+    * @throws {ItemLog} isAlreadyEquiped 
+        If the item Is already equipped
+        ```
+        {
+            id: ITEM_ALREADY_EQUIPED,
+            msg: '...'
+        }
+        ```
+     * @memberof ItemManager
+     * @example
+     * 
+     * ```ts
+     * import Sword from 'your-database/sword'
+     * 
+     * try {
+     *      player.addItem(Sword)
+     *      player.equip(Sword)
+     * }
+     * catch (err) {
+     *    console.log(err)
+     * }
+     * ```
+     */
+    equip(itemClass: ItemClass, equip: boolean = true): void {
         const inventory: Inventory = this.getItem(itemClass)
         if (!inventory) {
             throw ItemLog.notInInventory(itemClass)
@@ -209,17 +255,18 @@ export class ItemManager {
             throw ItemLog.invalidToEquiped(itemClass)
         }
         const { item } = inventory
-        if (item.equipped && bool) {
+        if (item.equipped && equip) {
             throw ItemLog.isAlreadyEquiped(itemClass)
         }
-        item.equipped = bool
-        if (!bool) {
+        item.equipped = equip
+        if (!equip) {
             const index = this.equipments.findIndex(it => it.id == item.id)
             this.equipments.splice(index, 1)
         }
         else {
             this.equipments.push(item)
         }
+        this['execMethod']('onEquip', [this, equip], item)
     }
 }
 

@@ -7,7 +7,5 @@
   "keywords": [],
   "author": "Samuel Ronce",
   "license": "MIT",
-  "dependencies": {
-    "uuid": "^8.3.1"
-  }
+  "dependencies": {}
 }

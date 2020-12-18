@@ -1,5 +1,3 @@
-import { v4 as uuidv4 } from 'uuid'
-
 export function merge(options, type, _static = {}) {
     
     const transformToRate = (optionName: string, propName: string) => {

@@ -6,6 +6,11 @@ import { ParamsModifier } from './item'
 interface StateOptions extends EfficiencyOptions {
     name: string,
     description?: string
+     /** 
+     * List of effects that the competency has on the target group. 
+     * @prop {Effect[]} [effect]
+     * @memberof State
+     * */ 
     effects?: [Effect]
     paramsModifier?: ParamsModifier
 }
