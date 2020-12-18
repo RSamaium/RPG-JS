@@ -1,3 +1,6 @@
+> **News on December 18, 2020**
+Very soon, the v3 alpha version will be released with a demo. You will have the opportunity to play an MMORPG as a demo.
+
 > **News on September 19, 2020**
 Version 2 of RPGJS is no longer maintained. However, we were working on version 3. This will allow you to create an RPG or MMORPG with a simple code. Don't forget to follow this project to support it!
 
