@@ -90,6 +90,6 @@ export class ElementManager {
 
 export interface ElementManager{ 
     equipments: ItemModel[]
-    getFormulas: any, 
+    getFormulas: (name: string) => any, 
     _class: any
 }

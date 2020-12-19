@@ -27,7 +27,7 @@ export class Gui extends EventEmitter {
                 this.player.canMove = false
             }
             if (!waitingAction) {
-                resolve()
+                resolve(null)
             }
             else {
                 this._close = resolve

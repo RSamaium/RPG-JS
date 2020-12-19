@@ -12,6 +12,7 @@ import { ElementManager } from './ElementManager'
 import { GuiManager } from './GuiManager'
 import { VariableManager } from './VariableManager'
 import { Frequency, MoveManager, Speed } from './MoveManager'
+import { BattleManager } from './BattleManager';
 
 import { 
     MAXHP, 
@@ -220,87 +221,6 @@ export class RpgPlayer extends RpgCommonPlayer {
         return obj
     }
     
-
-  /*  applyDamage(otherPlayer: RpgPlayer, skill: any): { 
-        damage: number, 
-        critical: boolean, 
-        elementVulnerable: boolean,
-        guard: boolean,
-        superGuard: boolean
-    } {
-        const getParam = (player) => {
-            const params = {}
-            this.parameters.forEach((val, key) => {
-                params[key] = player.param[key]
-            })
-            return {
-                [ATK]: player.atk,
-                [PDEF]: player.pdef,
-                [SDEF]: player.sdef,
-                ...params
-            }
-        }
-        let damage = 0, fn
-        let critical = false
-        let guard = false
-        let superGuard = false
-        let elementVulnerable = false
-        const paramA = getParam(otherPlayer)
-        const paramB = getParam(this)
-        if (skill) {
-            fn = this.getFormulas('damageSkill')
-            if (!fn) {
-                throw new Error('Skill Formulas not exists')
-            }
-            damage = fn(paramA, paramB, skill)
-        }
-        else {
-            fn = this.getFormulas('damagePhysic')
-            if (!fn) {
-                throw new Error('Physic Formulas not exists')
-            }
-            damage = fn(paramA, paramB)
-            const coef = this.coefficientElements(otherPlayer)
-            if (coef >= 2) {
-                elementVulnerable = true
-            }
-            damage *= coef
-            fn = this.getFormulas('damageCritical')
-            if (fn) {
-                let newDamage = fn(damage, paramA, paramB)
-                if (damage != newDamage) {
-                    critical = true
-                }
-                damage = newDamage
-            }
-        }
-        if (this.hasEffect(Effect.GUARD)) {
-            fn = this.getFormulas('damageGuard')
-            if (fn) {
-                let newDamage = fn(damage, paramA, paramB)
-                if (damage != newDamage) {
-                    guard = true
-                }
-                damage = newDamage
-            }
-        }
-        if (this.hasEffect(Effect.SUPER_GUARD)) {
-            damage /= 4
-        }
-        this.hp -= damage
-        return {
-            damage,
-            critical,
-            elementVulnerable,
-            guard,
-            superGuard
-        }
-    }*/
-    
-    getFormulas(name) {
-        return this.server.damageFormulas[name]
-    }
-
     syncChanges() {
         this._eventChanges()
         // Trigger detect changes cycle in @rpgjs/sync-server package
@@ -309,8 +229,6 @@ export class RpgPlayer extends RpgCommonPlayer {
         })
     }
 
-    
-   
     databaseById(id: string) {
         return this.server.database[id]
     }
@@ -369,7 +287,8 @@ export interface RpgPlayer extends
     ElementManager,
     GuiManager,
     VariableManager,
-    MoveManager
+    MoveManager,
+    BattleManager
 {
     _socket: any 
     server: any
@@ -386,5 +305,6 @@ applyMixins(RpgPlayer, [
     ElementManager,
     GuiManager,
     VariableManager,
-    MoveManager
+    MoveManager,
+    BattleManager
 ])
