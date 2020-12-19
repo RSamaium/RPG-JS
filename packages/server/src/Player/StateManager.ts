@@ -1,8 +1,98 @@
+import { Utils }  from '@rpgjs/common'
+import { ItemFixture } from './ItemFixture';
 import { RpgPlayer } from './Player';
 
-export class StateManager {
+const { 
+    isInstanceOf
+} = Utils
+
+export class StateManager extends ItemFixture {
 
     states: any[] = []
+
+    private _statesEfficiency: { rate: number, state: any }[] = []
+
+    /** 
+     * Recovers the player's states defense on inventory.  This list is generated from the `statesDefense` property defined on the weapons or armors equipped.
+     * If several items have the same element, only the highest rate will be taken into account.
+     * 
+     * ```ts
+     * import { Armor, State } from '@rpgjs/server'
+     * 
+     * @State({
+     *      name: 'Paralyze'
+     * })
+     * class Paralyze {}
+     * 
+     * @Armor({
+     *      name: 'Shield',
+     *      statesDefense: [{ rate: 1, state: Paralyze }]
+     * })
+     * class Shield {}
+     * 
+     * @Armor({
+     *      name: 'FireShield',
+     *      statesDefense: [{ rate: 0.5, state: Paralyze }]
+     * })
+     * class FireShield {}
+     *
+     * player.addItem(Shield)
+     * player.addItem(FireShield)
+     * player.equip(Shield)
+     * player.equip(FireShield)
+     * 
+     * console.log(player.statesDefense) // [{ rate: 1, state: instance of Paralyze }]
+     * ``` 
+     * @title Get States Defense
+     * @prop {Array<{ rate: number, state: StateClass}>} player.statesDefense
+     * @readonly
+     * @memberof StateManager
+     * */
+    get statesDefense(): { rate: number, state: any }[] {
+        return this.getFeature('statesDefense', 'state')
+    }
+
+    /** 
+     * Set or retrieves all the states where the player is vulnerable or not. 
+     * 
+     * ```ts
+     * import { Class, State } from '@rpgjs/server'
+     * 
+     * @State({
+     *      name: 'Paralyze'
+     * })
+     * class Paralyze {}
+     * 
+     * @State({
+     *      name: 'Sleep'
+     * })
+     * class Sleep {}
+     * 
+     * @Class({
+     *      name: 'Fighter',
+     *      statesEfficiency: [{ rate: 1, state: Paralyze }]
+     * })
+     * class Hero {}
+     * 
+     * player.setClass(Hero)
+     * 
+     * console.log(player.statesEfficiency) // [{ rate: 1, instance of Paralyze }]
+     * 
+     * player.statesEfficiency = [{ rate: 2, state: Sleep }]
+     * 
+     * console.log(player.statesEfficiency) // [{ rate: 1, state: instance of Paralyze }, { rate: 2, state: instance of Sleep }]
+     * ``` 
+     * @title Set/Get States Efficiency
+     * @prop {Array<{ rate: number, state: StateClass}>} player.statesEfficiency
+     * @memberof StateManager
+     * */
+    get statesEfficiency() {
+        return this._statesEfficiency
+    }
+
+    set statesEfficiency(val) {
+        this._statesEfficiency = val
+    }
 
     applyStates(player: RpgPlayer, { addStates, removeStates }) {
         if (addStates) {
@@ -127,5 +217,9 @@ export class StateManager {
         else {
             throw '' // TODO
         }
+    }
+
+    private findStateEfficiency(stateClass) {
+        return this.statesEfficiency.find(state => isInstanceOf(state.state, stateClass))
     }
 }

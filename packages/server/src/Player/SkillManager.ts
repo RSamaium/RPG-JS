@@ -92,7 +92,7 @@ export class SkillManager {
      * }
      *  ```
      * 
-     * @title Learn Skill
+     * @title Forget Skill
      * @method player.learnSkill(skillClass)
      * @param {SkillClass} skillClass 
      * @throws {SkillLog} notLearned 
