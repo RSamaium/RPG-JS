@@ -28,6 +28,7 @@ import {
     DEX_CURVE,
     AGI_CURVE
 } from '../presets'
+import { RpgMap } from '../Game/Map'
 
 const { 
     isPromise, 
@@ -153,7 +154,15 @@ export class RpgPlayer extends RpgCommonPlayer {
         })
     }
 
-    get name() {
+    /** 
+     * ```ts
+     * player.name = 'Link'
+     * ``` 
+     * @title Read/Give a name
+     * @prop {string} player.name
+     * @memberof Player
+     * */
+    get name(): string {
         return this._name
     }
 
@@ -161,11 +170,35 @@ export class RpgPlayer extends RpgCommonPlayer {
         this._name = val
     }
 
+    /**
+     * Give the spritesheet identifier
+     * 
+     * > You must, on the client side, create the spritesheet in question. Guide: [Create Sprite](/guide/create-sprite.html)
+     * 
+     * @title Set Graphic
+     * @method player.setGraphic(graphic)
+     * @param {string} graphic
+     * @returns {void}
+     * @memberof Player
+     */
     setGraphic(graphic: string) {
         this.graphic = graphic
     }
 
-    changeMap(mapId, positions?) {
+    /**
+     * Change your map. Indicate the positions to put the player at a place on the map
+     * 
+     * > The map must be added to RpgServer beforehand. Guide: [Create Map](/guide/create-map.html)
+     * 
+     * You don't have to give positions but you can put a starting position in the TMX file. Guide: [Start Position](/guide/player-start.html)
+     * @title Change Map
+     * @method player.changeMap(mapId,positions)
+     * @param {string} mapId
+     * @param { {x: number, y: number} } [positions]
+     * @returns {Promise<RpgMap>}
+     * @memberof Player
+     */
+    changeMap(mapId: string, positions?): Promise<RpgMap> {
         return this.server.getScene('map').changeMap(mapId, this, positions)
     }
 
@@ -221,6 +254,22 @@ export class RpgPlayer extends RpgCommonPlayer {
         return obj
     }
     
+    /**
+     * Run the change detection cycle. Normally, as soon as a hook is called in a class, the cycle is started. But you can start it manually
+     * The method calls the `onChanges` method on events and synchronizes all map data with the client.
+     * 
+     * ```ts
+     * // restarts the change detection cycle every 3s
+     * setInterval(() => {
+     *      player.hp += 10
+     *      player.syncChanges()
+     * }, 3000)
+     * ```
+     * @title Run Sync Changes
+     * @method player.syncChanges()
+     * @returns {void}
+     * @memberof Player
+     */
     syncChanges() {
         this._eventChanges()
         // Trigger detect changes cycle in @rpgjs/sync-server package
@@ -233,7 +282,15 @@ export class RpgPlayer extends RpgCommonPlayer {
         return this.server.database[id]
     }
 
-    getCurrentMap() {
+    /**
+     * Retrieves data from the current map
+     * 
+     * @title Get Current Map
+     * @method player.getCurrentMap()
+     * @returns {RpgMap}
+     * @memberof Player
+     */
+    getCurrentMap(): RpgMap {
         return this._getMap(this.map)
     }
 
@@ -241,7 +298,17 @@ export class RpgPlayer extends RpgCommonPlayer {
         return RpgCommonMap.buffer.get(id)
     }
 
-    public emit(key, value): void {
+    /**
+     * Emit data to clients with socket
+     * 
+     * @title Emit to client
+     * @method player.emit(key,value)
+     * @param {string} key
+     * @param {any} value
+     * @returns {void}
+     * @memberof Player
+     */
+    public emit(key: string, value: any): void {
         if (this._socket) this._socket.emit(key, value) 
     }
 

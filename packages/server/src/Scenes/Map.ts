@@ -2,6 +2,7 @@
 import { RpgCommonMap } from '@rpgjs/common'
 import { World } from '@rpgjs/sync-server'
 import { EventMode } from '../Event';
+import { RpgMap } from '../Game/Map';
 
 export class SceneMap {
 
@@ -27,7 +28,7 @@ export class SceneMap {
         return mapClass
     }
 
-    async loadMap(id: string) {
+    async loadMap(id: string): Promise<RpgMap> {
         const mapClass = this.getMapBydId(id)
         let mapInstance
         
@@ -46,7 +47,7 @@ export class SceneMap {
         return mapInstance
     }
 
-    async changeMap(mapId, player, positions?) {
+    async changeMap(mapId, player, positions?): Promise<RpgMap> {
 
         player.prevMap = player.map
         player.map = mapId
@@ -54,7 +55,7 @@ export class SceneMap {
 
         const mapInstance = await this.loadMap(mapId)
 
-        if (mapInstance.onEnter) mapInstance.onEnter(player, player.prevMap || null)
+        player.execMethod('onEnter', [player, player.prevMap || null], mapInstance)
 
         let { data: serializeMap } = Object.assign({}, RpgCommonMap.buffer.get(mapId))
         delete serializeMap.shapes 
@@ -83,5 +84,7 @@ export class SceneMap {
         player.setPosition(positions)
         
         player.events = mapInstance.createEvents(EventMode.Scenario, player)
+
+        return mapInstance
     }
 }

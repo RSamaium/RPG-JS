@@ -55,6 +55,15 @@ export default class Player extends DynamicObject<any, any> {
         this.position.y = props.y || 0
     }
 
+    /**
+     * Get/Set position x, y and z of player
+     * 
+     * z is the depth layer. By default, its value is 0. Collisions and overlays will be performed with other objects on the same z-position. 
+     * 
+     * @title Get/Set position
+     * @prop { { x: number, y: number, z: number } } position
+     * @memberof Player
+     */
     set position(val) {
         this._position = new Proxy(val, {
             get: (target, prop: string) => target[prop], 
@@ -86,7 +95,36 @@ export default class Player extends DynamicObject<any, any> {
         return Map.buffer.get(this.map)
     }
 
-    setSizes(obj: any) {
+    /**
+     * Define the size of the player. You can set the hitbox for collisions
+     * 
+     * ```ts
+     * player.setSizes({
+     *      width: 32,
+     *      height: 32
+     * })
+     * ```
+     * 
+     * and with hitbox:
+     * 
+     *  ```ts
+     * player.setSizes({
+     *      width: 32,
+     *      height: 32,
+     *      hitbox: {
+     *          width: 20,
+     *          height: 20
+     *      }
+     * })
+     * ```
+     * 
+     * @title Set Sizes
+     * @method player.setSizes(key,value)
+     * @param { { width: number, height: number, hitbox?: { width: number, height: number } } } obj
+     * @returns {void}
+     * @memberof Player
+     */
+    setSizes(obj: { width: number, height: number, hitbox?: { width: number, height: number } }): void {
         this.width = obj.width 
         this.height = obj.height
         if (obj.hitbox) {
@@ -94,7 +132,24 @@ export default class Player extends DynamicObject<any, any> {
         }
     }
 
-    setHitbox(width, height) {
+    /**
+     * Define the hitbox of the player.
+     * 
+     * ```ts
+     * player.setHitbox({
+     *      width: 20,
+     *      height: 20
+     * })
+     * ```
+     * 
+     * @title Set Hitbox
+     * @method player.setHitbox(width,height)
+     * @param {number} width
+     * @param {number} height
+     * @returns {void}
+     * @memberof Player
+     */
+    setHitbox(width: number, height: number): void {
         this.hitbox = new SAT.Box(this._hitboxPos, width, height)
     }
 
@@ -305,9 +360,16 @@ export default class Player extends DynamicObject<any, any> {
         return true
     }
 
-    /**
-     * returns either the equivalent number or the direction according to the number
-     * @param direction 
+     /**
+     * Get the current direction.
+     * 
+     * player.getDirection()
+     * ```
+     * 
+     * @title Get Direction
+     * @method player.getDirection()
+     * @returns {string} left, right, up or down
+     * @memberof Player
      */
     getDirection(direction?: Direction | number): string | number {
         const currentDir = direction || this.direction
@@ -323,6 +385,27 @@ export default class Player extends DynamicObject<any, any> {
         return dir[currentDir]
     }
 
+     /**
+     * Changes the player's direction
+     * 
+     * ```ts
+     * import { Direction } from '@rpgjs/server'
+     * 
+     * player.changeDirection(Direction.Left)
+     * ```
+     * 
+     * @title Change direction
+     * @method player.changeDirection(direction)
+     * @param {Direction} direction
+     * @enum {string}
+     * 
+     * Direction.Left | left
+     * Direction.Right | right
+     * Direction.Up | up
+     * Direction.Down | down
+     * @returns {boolean} the direction has changed
+     * @memberof Player
+     */
     changeDirection(direction: Direction): boolean {
         const dir = +this.getDirection(direction)
         if (dir === undefined) return false
