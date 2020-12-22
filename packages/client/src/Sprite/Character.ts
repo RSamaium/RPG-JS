@@ -21,6 +21,7 @@ export default class Character extends PIXI.Sprite {
         return directions
     }
 
+    tilesOverlay: any
     private direction: number = 0
     private directions: any = []
     private progressAnimation: number  = 0

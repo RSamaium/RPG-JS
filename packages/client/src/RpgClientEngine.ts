@@ -2,8 +2,7 @@ import { ClientEngine } from 'lance-gg'
 import Vue from 'vue'
 import Renderer from './Renderer'
 import { _initSpritesheet } from './Sprite/Spritesheets'
-import { RpgPlayer } from './Sprite/Player'
-import { RpgEvent} from './Sprite/Event'
+import { RpgSprite } from './Sprite/Player'
 import { EventEmitter, Utils } from '@rpgjs/common'
 import { World } from '@rpgjs/sync-client'
 
@@ -33,8 +32,7 @@ export default class RpgClientEngine extends ClientEngine<any> {
             ...this._options
         }
 
-       gameEngine._playerClass = this.renderer.options.playerClass || RpgPlayer
-       gameEngine._eventClass = this.renderer.options.eventClass || RpgEvent
+       gameEngine._playerClass = this.renderer.options.spriteClass || RpgSprite
        gameEngine.standalone = options.standalone
        gameEngine.clientEngine = this
 
@@ -132,7 +130,7 @@ export default class RpgClientEngine extends ClientEngine<any> {
     }
 
     updateObject(data): any {
-        const player = this.renderer.updateObject(data.playerId, data.params, data.localEvent)
+        const player = this.renderer.updateObject(data)
         if (player) {
             this.propagateEvent('$rpgPlayerChanged', [this.vm], [player.data, data.params])
             if (data.playerId == this.gameEngine.playerId) {
@@ -166,25 +164,31 @@ export default class RpgClientEngine extends ClientEngine<any> {
             //if (sprite[name]) sprite[name](...params)
         })
 
-        World.listen(this.socket).value.subscribe((val: { data: any }) => {
+        World.listen(this.socket).value.subscribe((val: { data: any, partial: any }) => {
             if (!val.data) {
                 return
             }
-            const change = (prop, root = val.data, localEvent = false) => {
-                const list = root[prop]
+            const change = (prop, root = val, localEvent = false) => {
+                const list = root.data[prop]
+                const partial = val.partial[prop]
                 for (let key in list) {
                     const obj = list[key]
+                    const paramsChanged = partial ? partial[key] : undefined
                     if (obj == null) {
                         this.renderer.removeObject(key)
                     }
                     if (!obj) continue
                     if (prop == 'users' && this.gameEngine.playerId == key && obj.events) {
-                       change('events', obj, true)
+                       change('events', {
+                           data: obj,
+                           partial: paramsChanged
+                       }, true)
                     }
                     this.eventEmitter.emit('player.changeParam', {
                         playerId: key,
                         params: obj,
-                        localEvent
+                        localEvent,
+                        paramsChanged
                     })
                 }
             }

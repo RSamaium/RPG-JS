@@ -27,19 +27,29 @@ export class Scene {
         }
     }
 
+    private triggerSpriteChanges(logic, sprite) {
+
+        if (sprite['onChanges'] && logic.paramsChanged) {
+            sprite['onChanges'](logic.paramsChanged)
+            logic.paramsChanged = null
+        }
+    }
+
     draw(t, dt) {
         const logicObjects = { ...this.game.world.objects, ...this.game.events }
         const renderObjects = this.objects
         for (let key in logicObjects) {
             const val = logicObjects[key]
             if (!renderObjects.has(key)) {
-                this.addObject(val, key)
+                const sprite = this.addObject(val, key)
+                this.triggerSpriteChanges(val, sprite)
             }
             else {
                 const object = renderObjects.get(key)
                 if (!object.update) return
                 const ret = object.update(val, t, dt)
                 if (this.onUpdateObject) this.onUpdateObject(ret)
+                this.triggerSpriteChanges(val, object)
             }
         }
         if (logicObjects.size < renderObjects.size) {

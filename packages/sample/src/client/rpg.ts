@@ -1,14 +1,12 @@
 import { RpgClient, RpgClientEngine } from '@rpgjs/client'
 import { spritesheets } from '@rpgjs/starter-kit-client'
 import gui from '@rpgjs/default-gui'
-import { Player } from './player'
-import { Event } from './event'
+import { Sprite } from './player'
 
 @RpgClient({
     spritesheets,
     gui,
-    playerClass: Player,
-    eventClass: Event
+    spriteClass: Sprite
 })
 export default class RPG extends RpgClientEngine {
    onLatency(latency) {

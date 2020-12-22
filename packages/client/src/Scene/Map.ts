@@ -6,6 +6,8 @@ import { IScene } from '../Interfaces/Scene'
 import { Scene } from './Scene'
 import { SceneData } from './SceneData'
 import { spritesheets } from '../Sprite/Spritesheets'
+import Character from '../Sprite/Character'
+import { RpgSprite } from '../Sprite/Player'
 
 @SceneData({
     inputs: {
@@ -108,7 +110,7 @@ export class SceneMap extends Scene implements IScene {
         }
     }
 
-    onUpdateObject({ moving, instance }) {
+    onUpdateObject({ moving, instance }: { moving: boolean, instance: Character }): Character {
         const { x, y, tilesOverlay, anchor, width, height } = instance
         if (moving) {
             tilesOverlay.removeChildren()
@@ -123,6 +125,8 @@ export class SceneMap extends Scene implements IScene {
             addTile(_x, _y + height)
             addTile(_x + width, _y + height)
         }
+
+        return instance
     }
 
     setPlayerPosition(id, { x, y }) {
@@ -137,7 +141,7 @@ export class SceneMap extends Scene implements IScene {
         this.tilemap.getEventLayer().addChild(sprite)
     }
 
-    addObject(obj, id) {
+    addObject(obj, id): Character {
         const wrapper = new PIXI.Container()
         const tilesOverlay = new PIXI.Container()
         const sprite = new this.game._playerClass(obj, this)
@@ -157,6 +161,10 @@ export class SceneMap extends Scene implements IScene {
             moving: true,
             instance: sprite
         })
+
+        if (sprite.onInit) sprite.onInit()
+
+        return sprite
     }
 
     removeObject(id) {

@@ -4,6 +4,7 @@ import { Renderer } from 'lance-gg'
 import { SceneMap } from './Scene/Map'
 import { SceneBattle } from './Scene/Battle'
 import { RpgCommonPlayer } from '@rpgjs/common'
+import merge from 'lodash.merge'
 import { Animation } from './Effects/Animation'
 
 export default class RpgRenderer extends Renderer<any, any> {
@@ -138,7 +139,13 @@ export default class RpgRenderer extends Renderer<any, any> {
         this.animation.run(800, 160, sprite)
     }
 
-    updateObject(id: string, params, localEvent: boolean = false) {
+    updateObject(obj) {
+        const {
+            playerId: id,
+            params,
+            localEvent,
+            paramsChanged
+        } = obj
         let logic
         if (localEvent) {
             logic = this.gameEngine.events[id]
@@ -153,6 +160,10 @@ export default class RpgRenderer extends Renderer<any, any> {
         if (!logic) return null
         for (let key in params) {
             logic[key] = params[key]
+        }
+        if (paramsChanged) {
+            if (!logic.paramsChanged) logic.paramsChanged = {}
+            logic.paramsChanged = merge(paramsChanged, logic.paramsChanged)
         }
         return logic
     }

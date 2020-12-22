@@ -1,8 +1,7 @@
 import entryPoint from './clientEntryPoint'
 import RpgClientEngine from './RpgClientEngine'
 import { RpgClient } from './RpgClient'
-import { RpgPlayer } from './Sprite/Player'
-import { RpgEvent } from './Sprite/Event'
+import { RpgSprite } from './Sprite/Player'
 import { Spritesheet } from './Sprite/Spritesheet'
 
 export {
@@ -10,6 +9,5 @@ export {
     RpgClient,
     entryPoint,
     Spritesheet,
-    RpgPlayer,
-    RpgEvent
+    RpgSprite
 }

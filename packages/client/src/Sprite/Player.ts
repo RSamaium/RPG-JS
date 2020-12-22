@@ -1,5 +1,5 @@
 import Character from './Character';
 
-export class RpgPlayer extends Character {
+export class RpgSprite extends Character {
     
 }

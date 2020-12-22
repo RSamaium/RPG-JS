@@ -1,5 +1,11 @@
-import { RpgPlayer } from '@rpgjs/client'
+import { RpgSprite } from '@rpgjs/client'
 
-export class Player extends RpgPlayer {
+export class Sprite extends RpgSprite {
+    onInit() {
+        console.log('init')
+    }
     
+    onChanges(data) {
+        console.log('---', data)
+    }
 }

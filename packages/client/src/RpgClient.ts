@@ -1,5 +1,4 @@
-import { RpgPlayer } from './Sprite/Player'
-import { RpgEvent } from './Sprite/Event'
+import { RpgSprite } from './Sprite/Player'
 
 interface RpgClass<T> {
     new (data: any, scene: any): T,
@@ -13,8 +12,7 @@ interface RpgClientOptions {
     /**
      * Represents the sprite for the different players on it.
      */
-    playerClass?: RpgClass<RpgPlayer>
-    eventClass?: RpgClass<RpgEvent>,
+    spriteClass?: RpgClass<RpgSprite>
     /**
      * @param {object} [options] - The optional renderer parameters
      * @param {number} [options.width=800] - the width of the screen
