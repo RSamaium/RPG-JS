@@ -3,25 +3,10 @@ import { database } from '@rpgjs/starter-kit-server'
 
 export class Player extends RpgPlayer {
     onConnected() {
-
-        function getRandomInt(max) {
-            return Math.floor(Math.random() * Math.floor(max));
-        }
-       
-        this.setSizes({
-            width: 32,
-            height: 32,
-            hitbox: {
-                width: 20,
-                height: 16
-            }
-        })
-
         this.through = true
-
+        this.setHitbox(20, 16)
         this.setGraphic('hero2')
         this.changeMap('medieval')
-
         this.setActor(database.Hero)
     }
 

@@ -6,7 +6,7 @@ export class GuiManager {
     _gui: { [id: string]: Gui }
     
     /**
-     * Show a text. This is a graphical interface already built
+     * Show a text. This is a graphical interface already built. Opens the GUI named `rpg-dialog`
      * 
      * ```ts
      * player.showText('Hello World')
@@ -96,6 +96,27 @@ export class GuiManager {
         return gui.openDialog(msg, options)
     }
 
+    /**
+     * Shows a dialog box with a choice. Opens the GUI named `rpg-dialog`
+     * 
+     * ```ts
+     * const choice = await player.showChoices('What color do you prefer?', [
+     *      { text: 'Black', value: 'black' },
+     *      { text: 'Rather the blue', value: 'blue' },
+     *      { text: 'I don\'t have a preference!', value: 'none' }
+     * ])
+     * 
+     * // If the player selects the first
+     * console.log(choice) // { text: 'Black', value: 'black' }
+     * ```
+     * 
+     * @title Show Choices 
+     * @method player.showChoices(text,choices)
+     * @param {string} text 
+     * @param {Array<{ text: string, value: any }>} choices
+     * @returns {Promise<Choice | null>}
+     * @memberof GuiManager
+     */
     showChoices(msg: string, choices: Choice[]): Promise<Choice | null> {
         return this
             .showText(msg, {
@@ -107,12 +128,28 @@ export class GuiManager {
             })
     }
 
+    /**
+     * Calls main menu. Opens the GUI named `rpg-main-menu`
+     * 
+     * @title Call Main Menu
+     * @method player.callMainMenu()
+     * @returns {void}
+     * @memberof GuiManager
+     */
     callMainMenu() {
         const gui = new MenuGui(<any>this)
         this._gui[gui.id] = gui
         return gui.open()
     }
 
+    /**
+     * Calls shop menu. Opens the GUI named `rpg-shop`
+     * 
+     * @title Call Shop Menu
+     * @method player.callShop()
+     * @returns {void}
+     * @memberof GuiManager
+     */
     callShop(items: any[]) {
         const gui = new ShopGui(<any>this)
         this._gui[gui.id] = gui
@@ -135,13 +172,58 @@ export class GuiManager {
         })
     }
 
+    /**
+     * Call a custom Gui
+
+     * ```ts
+     * // Calls a client-side component, created with VueJS, named "inn".
+     * const gui = player.gui('inn')
+     * 
+     *  // You can wait for actions on the menu. It only works if the menu is open.
+     * gui.on('accept', () => {
+     *      player.recoveryAll()
+     * })
+     * 
+     * // The GUI is opened by passing recoverable data on the client side.
+     * gui.open({ hello: 'world' })
+     * ```
+     * 
+     * When opening the GUI, one can give options
+     * 
+     * ```ts
+     * await gui.open({ hello: 'world' }, {
+     *      waitingAction: true,
+     *      blockPlayerInput: true
+     * })
+     * // After the GUI is closed
+     * ```
+     * 
+     * - `blockPlayerInput`: while the GUI is open, the player can not move on the map
+     * - `waitingAction`: We explicitly wait until the GUI is closed for the promise to be resolved.
+     * 
+     * @title Call custom GUI
+     * @method player.gui(guiId)
+     * @param {string} guiId
+     * @returns {Gui}
+     * @memberof GuiManager
+     */
     gui(guiId: string) {
         const gui = new Gui(guiId, <any>this)
         this._gui[guiId] = gui
         return gui
     }
 
-    removeGui(guiId: string, data: any) {
+    /**
+     * Closes the GUI and removes it from memory
+     * 
+     * @title Close custom GUI
+     * @method player.removeGui(guiId,data)
+     * @param {string} guiId
+     * @param {object} [data] Passing data if you close the GUI 
+     * @returns {Gui}
+     * @memberof GuiManager
+     */
+    removeGui(guiId: string, data?: any) {
         if (this._gui[guiId]) {
             this._gui[guiId].close(data)
             delete this._gui[guiId]

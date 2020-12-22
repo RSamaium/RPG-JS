@@ -55,6 +55,11 @@ export class SceneMap {
 
         const mapInstance = await this.loadMap(mapId)
 
+        if (!player.height) player.height = mapInstance.tileHeight
+        if (!player.width) player.width = mapInstance.tileWidth
+        if (!player.hitbox.h) player.hitbox.h = mapInstance.tileHeight
+        if (!player.hitbox.w) player.hitbox.w = mapInstance.tileWidth
+
         player.execMethod('onEnter', [player, player.prevMap || null], mapInstance)
 
         let { data: serializeMap } = Object.assign({}, RpgCommonMap.buffer.get(mapId))

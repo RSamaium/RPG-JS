@@ -1,10 +1,11 @@
+import { PrebuildGui } from '@rpgjs/common'
 import { Gui } from './Gui'
 import { RpgPlayer } from '../Player/Player'
 import { IGui } from '../Interfaces/Gui'
 
 export class MenuGui extends Gui implements IGui {
     constructor(player: RpgPlayer) {
-        super('rpg-main-menu', player)
+        super(PrebuildGui.MainMenu, player)
     }
 
     open() {

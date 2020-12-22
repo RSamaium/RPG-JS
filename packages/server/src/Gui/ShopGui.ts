@@ -1,10 +1,11 @@
+import { PrebuildGui } from '@rpgjs/common'
 import { Gui } from './Gui'
 import { RpgPlayer } from '../Player/Player'
 import { IGui } from '../Interfaces/Gui'
 
 export class ShopGui extends Gui implements IGui {
     constructor(player: RpgPlayer) {
-        super('rpg-shop', player)
+        super(PrebuildGui.Shop, player)
     }
 
     open(items: any[]) {

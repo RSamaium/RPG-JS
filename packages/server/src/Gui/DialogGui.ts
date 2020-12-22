@@ -1,3 +1,4 @@
+import { PrebuildGui } from '@rpgjs/common'
 import { Gui } from './Gui'
 import { RpgPlayer } from '../Player/Player'
 import { IGui } from '../Interfaces/Gui'
@@ -23,7 +24,7 @@ export interface DialogOptions {
 
 export class DialogGui extends Gui implements IGui {
     constructor(player: RpgPlayer) {
-        super('rpg-dialog', player)
+        super(PrebuildGui.Dialog, player)
     }
 
     openDialog(message: string, options: DialogOptions): Promise<any> {
