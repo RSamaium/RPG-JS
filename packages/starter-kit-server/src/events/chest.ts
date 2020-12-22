@@ -4,7 +4,7 @@ import { Potion } from '../database/items/potion';
 
 @EventData({
     name: 'EV-1',
-    mode: EventMode.Scenario,
+    mode: EventMode.Shared, 
     width: 32,
     height: 32,
     hitbox: {

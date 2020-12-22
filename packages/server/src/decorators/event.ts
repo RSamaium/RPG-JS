@@ -4,7 +4,10 @@ export interface EventOptions {
     mode?: EventMode,
     width?: number,
     height: number,
-    hitbox?: any
+    hitbox?: { 
+        width?: number, 
+        height?: number
+    },
     name: string
 }
 

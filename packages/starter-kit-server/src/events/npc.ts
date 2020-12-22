@@ -1,8 +1,7 @@
 import { RpgEvent, EventData, RpgPlayer } from '@rpgjs/server'
 
 @EventData({
-    name: 'Npc',
-    syncAll: true
+    name: 'Npc'
 })
 class NpcEvent extends RpgEvent {
 

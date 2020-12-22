@@ -334,10 +334,11 @@ export class RpgPlayer extends RpgCommonPlayer {
     private _eventChanges() {
         if (!this._getMap(this.map)) return
         const {
-            _events
+            events
         } = this._getMap(this.map)
-        const arrayEvents = [...Object.values(this.events), ..._events]
+        const arrayEvents = [...Object.values(this.events), ...Object.values(events)]
         for (let event of arrayEvents) {
+            // TODO, sync client
             if (event.onChanges) event.onChanges(this)
         }
     }

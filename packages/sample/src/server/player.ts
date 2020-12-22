@@ -12,6 +12,7 @@ export class Player extends RpgPlayer {
 
     onInput({ input }) {
       if (input == 'space') {
+        this.changeMap('mapz')
           //this.addItem(database.Potion)
       }
     }

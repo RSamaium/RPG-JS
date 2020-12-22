@@ -47,26 +47,26 @@ export class SceneMap extends Scene implements IScene {
         this.tilemap = new TileMap(obj, this.game.renderer)
 
         const loader = PIXI.Loader.shared
+        let nbLoad = 0
 
         loader.reset()
 
         for (let tileset of this.tilemap.tileSets) {
             if (tileset.spritesheet.resource) continue
             loader.add(tileset.name, tileset.spritesheet.image)
+            nbLoad++
         }
 
         loader.load((loader, resources) => {
             for (let tileset of this.tilemap.tileSets) {
                 const spritesheet = spritesheets.get(tileset.name)
-                spritesheet.resource = resources[tileset.name]
+                if (resources[tileset.name]) spritesheet.resource = resources[tileset.name]  
             }
         })
 
         return new Promise((resolve, reject) => {
-            loader.onError.add(() => {
-                reject()
-            })
-            loader.onComplete.add(() => {
+            
+            const complete = () => {
                 this.tilemap.load(obj)
                 this.viewport = new Viewport({
                     screenWidth: this.options.screenWidth,
@@ -74,12 +74,20 @@ export class SceneMap extends Scene implements IScene {
                     worldWidth: obj.width * obj.tileWidth,
                     worldHeight: obj.height * obj.tileHeight
                 })
-
+    
                 this.viewport.clamp({ direction: 'all' })
                 this.viewport.addChild(this.tilemap)
                 this.isLoaded = true
                 resolve(this.viewport)
+            }
+    
+            loader.onError.add(() => {
+                reject()
             })
+            loader.onComplete.add(complete)
+            if (nbLoad == 0) {
+                complete()
+            }
         })
     }
 

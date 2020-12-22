@@ -181,7 +181,7 @@ export class GuiManager {
      * 
      *  // You can wait for actions on the menu. It only works if the menu is open.
      * gui.on('accept', () => {
-     *      player.recoveryAll()
+     *      player.allRecovery()
      * })
      * 
      * // The GUI is opened by passing recoverable data on the client side.
