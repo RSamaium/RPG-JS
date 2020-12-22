@@ -6,7 +6,7 @@ const buffer = new Map()
 interface TileInfo {
     tiles: any[]
     hasCollision: boolean
-    isClimbable: boolean
+    isClimbable?: boolean
     isOverlay: boolean
     objectGroups: HitObject[]
 }
@@ -98,6 +98,14 @@ export default class RpgCommonMap {
             }
         }
         const getLastTile = tiles[tiles.length-1]
+        if (!getLastTile) {
+            return {
+                tiles,
+                hasCollision: true,
+                isOverlay: false,
+                objectGroups: []
+            }
+        }
         const hasCollision = getLastTile.properties.collision
         const isOverlay = getLastTile.properties.overlay
         const isClimbable = getLastTile.properties.climb

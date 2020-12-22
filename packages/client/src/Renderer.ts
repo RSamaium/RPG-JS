@@ -100,10 +100,7 @@ export default class RpgRenderer extends Renderer<any, any> {
     }
 
     async loadScene(name, obj) {
-        for (let id in this.gameEngine.world.objects) {
-            if (id == this.gameEngine.playerId) continue
-            delete this.gameEngine.world.objects[id]
-        }
+        this.gameEngine.world.removeObject(this.gameEngine.playerId)
         this.stage.removeChildren()
         if (this.scene) {
             this.scene.controls.boundKeys = {}
@@ -125,9 +122,13 @@ export default class RpgRenderer extends Renderer<any, any> {
         this.stage.addChild(container)
     }
 
-    removeObject(obj) {
+    removeObject(id: any) {
         if (this.scene && this.scene.removeObject) {
-            this.scene.removeObject(obj)
+            const logic = this.gameEngine.world.getObject(id)
+            if (logic) {
+                this.gameEngine.world.removeObject(id)
+            }
+            this.scene.removeObject(id)
         }
     }
 

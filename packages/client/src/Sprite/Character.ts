@@ -121,10 +121,6 @@ export default class Character extends PIXI.Sprite {
             effect.update(obj)
         }
 
-        if (!this.scene.game.standalone) {
-           // speed += (obj.speed / 3) // sync move between client and server
-        }
-
         let moving = false
         let textureCount = 4
 

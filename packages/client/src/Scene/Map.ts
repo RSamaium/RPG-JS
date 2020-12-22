@@ -140,7 +140,6 @@ export class SceneMap extends Scene implements IScene {
     addObject(obj, id) {
         const wrapper = new PIXI.Container()
         const tilesOverlay = new PIXI.Container()
-
         const sprite = new this.game._playerClass(obj, this)
         sprite.load()
         sprite.tilesOverlay = tilesOverlay

@@ -185,7 +185,7 @@
   <object id="1" name="Start Position" type="start" x="238" y="525">
    <point/>
   </object>
-  <object id="2" x="298.35" y="547.264" width="162.785" height="164.932">
+  <object id="2" x="296.35" y="480.264" width="162.785" height="164.932">
    <properties>
     <property name="collision" type="bool" value="true"/>
     <property name="go-map" value="medieval"/>

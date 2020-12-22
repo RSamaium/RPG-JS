@@ -174,6 +174,9 @@ export default class RpgClientEngine extends ClientEngine<any> {
                 const list = root[prop]
                 for (let key in list) {
                     const obj = list[key]
+                    if (obj == null) {
+                        this.renderer.removeObject(key)
+                    }
                     if (!obj) continue
                     if (prop == 'users' && this.gameEngine.playerId == key && obj.events) {
                        change('events', obj, true)

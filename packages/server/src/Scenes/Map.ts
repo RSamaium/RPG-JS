@@ -48,10 +48,15 @@ export class SceneMap {
     }
 
     async changeMap(mapId, player, positions?): Promise<RpgMap> {
-
+        
         player.prevMap = player.map
         player.map = mapId
         player.events = []
+
+        if (player.prevMap) {
+            this.server.gameEngine.world.removeObjectOfGroup(player.prevMap, player.id)
+            World.leaveRoom(player.prevMap, player.id)
+        }
 
         const mapInstance = await this.loadMap(mapId)
 
