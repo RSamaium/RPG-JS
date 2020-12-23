@@ -19,9 +19,11 @@
       "noImplicitReturns": false,
       "declaration": true,
       "experimentalDecorators": true, 
-      "emitDecoratorMetadata": true
+      "emitDecoratorMetadata": true,
+      
     },
     "include": [
         "src"
-    ]
+    ],
+    
   }

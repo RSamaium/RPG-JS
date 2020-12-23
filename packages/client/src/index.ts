@@ -4,6 +4,7 @@ import { RpgClient } from './RpgClient'
 import { RpgSprite } from './Sprite/Player'
 import { Spritesheet } from './Sprite/Spritesheet'
 import { Sound } from './Sound/Sound'
+import { Howler } from 'howler'
 
 export {
     RpgClientEngine,
@@ -11,5 +12,6 @@ export {
     entryPoint,
     Spritesheet,
     RpgSprite,
-    Sound
+    Sound,
+    Howler
 }

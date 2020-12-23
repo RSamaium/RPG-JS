@@ -9,6 +9,7 @@ import { spritesheets } from '../Sprite/Spritesheets'
 import Character from '../Sprite/Character'
 import { RpgSprite } from '../Sprite/Player'
 import { RpgSound } from '../Sound/RpgSound'
+import { Howler } from 'howler'
 
 @SceneData({
     inputs: {
@@ -66,6 +67,8 @@ export class SceneMap extends Scene implements IScene {
                 if (resources[tileset.name]) spritesheet.resource = resources[tileset.name]  
             }
         })
+
+        Howler.stop()
 
         return new Promise((resolve, reject) => {
             
