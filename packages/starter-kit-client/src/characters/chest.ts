@@ -2,6 +2,6 @@ import { Spritesheet } from '@rpgjs/client'
 
 @Spritesheet({
     id: 'chest',
-    image: require('./assets/treasure_chests_32x32.png')
+    image: require('./assets/chest.png')
 })
 export class Chest { }
