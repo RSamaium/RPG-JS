@@ -28,11 +28,7 @@ class _ChestEvent extends RpgEvent {
     }
 
     async onAction(player: RpgPlayer) {
-        /*await player.showText('Hey !')
-        player.addItem(Potion)*/
-        player.name = 'aaa'
-        this.moveRoutes([ Move.tileAwayFromPlayer(player) ])
-       // await player.showText('Hey', { talkWith: this })
+        await player.showText('Hey !')
     }
 
     onPlayerTouch() {

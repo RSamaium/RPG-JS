@@ -3,7 +3,7 @@ import { EventMode } from '../Event'
 export interface EventOptions {
     mode?: EventMode,
     width?: number,
-    height: number,
+    height?: number,
     hitbox?: { 
         width?: number, 
         height?: number

@@ -1,12 +1,16 @@
 import { RpgMap, MapData } from '@rpgjs/server'
-import { ChestEvent } from '../events/chest'
+import { NpcEvent } from '../events/npc'
 
 @MapData({
     id: 'medieval',
     file: require('./tmx/samplemap.tmx'),
     name: 'Town',
     events: [
-        ChestEvent()
+        NpcEvent({
+            name: 'EV-1',
+            text: 'Welcome to the RPGJS demo!',
+            graphic: 'male12'
+        })
     ],
     sounds: ['town']
 })

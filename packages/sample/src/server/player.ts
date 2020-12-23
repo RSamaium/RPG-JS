@@ -5,7 +5,7 @@ export class Player extends RpgPlayer {
     onConnected() {
         this.through = true
         this.setHitbox(20, 16)
-        this.setGraphic('hero2')
+        this.setGraphic('male1_2')
         this.changeMap('medieval')
         this.setActor(database.Hero)
     }
