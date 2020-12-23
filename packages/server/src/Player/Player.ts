@@ -294,6 +294,13 @@ export class RpgPlayer extends RpgCommonPlayer {
         return this._getMap(this.map)
     }
 
+    loadScene(name: string, data: any): void {
+        this.emit('player.loadScene', {
+            name, 
+            data
+        })
+    }
+
     private _getMap(id) {
         return RpgCommonMap.buffer.get(id)
     }

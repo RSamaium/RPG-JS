@@ -104,3 +104,7 @@ export class RpgMap extends RpgCommonMap {
         })
     }
 }
+
+export interface RpgMap {
+    sounds: string[]
+}

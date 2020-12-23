@@ -2,6 +2,7 @@ import { ClientEngine } from 'lance-gg'
 import Vue from 'vue'
 import Renderer from './Renderer'
 import { _initSpritesheet } from './Sprite/Spritesheets'
+import { _initSound } from './Sound/Sounds'
 import { RpgSprite } from './Sprite/Player'
 import { EventEmitter, Utils } from '@rpgjs/common'
 import { World } from '@rpgjs/sync-client'
@@ -29,6 +30,7 @@ export default class RpgClientEngine extends ClientEngine<any> {
             },
             gui: [],
             spritesheets: [],
+            sounds: [],
             ...this._options
         }
 
@@ -37,6 +39,7 @@ export default class RpgClientEngine extends ClientEngine<any> {
        gameEngine.clientEngine = this
 
         _initSpritesheet(this.renderer.options.spritesheets)
+        _initSound(this.renderer.options.sounds)
 
         // If the settings are not yet in the player's logic, then we cache the data and apply the settings as soon as the player has been inserted into the logic.
         setInterval(() => {

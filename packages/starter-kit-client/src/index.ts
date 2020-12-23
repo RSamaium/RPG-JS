@@ -4,6 +4,7 @@ import { Battlebacks } from './battlebacks'
 import { Animations } from './animations'
 import { Battlers } from './battlers'
 import { Images } from './images'
+import { Sounds } from './sounds'
 
 export const spritesheets = [
     MedievalTilesets,
@@ -12,4 +13,8 @@ export const spritesheets = [
     Battlers,
     Images,
     //Animations
+]
+
+export const sounds = [
+    Sounds
 ]

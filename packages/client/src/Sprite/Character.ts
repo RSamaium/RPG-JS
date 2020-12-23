@@ -32,24 +32,12 @@ export default class Character extends PIXI.Sprite {
     public z: number = 0
     private effects: any[] = []
     private fixed: boolean = false
-    private debug
 
     constructor(private data: any, private scene: any) {
         super()
         this.x = data.x 
         this.y = data.y
         this.fixed = data.fixed
-        this.debug = new PIXI.Graphics()
-        //this.displayDebug()
-    }
-
-    private displayDebug() {
-        const { wHitbox, hHitbox } = this.data
-        this.debug.beginFill(0xDE3249)
-        this.debug.drawRect(0, 0, wHitbox, hHitbox)
-        this.debug.endFill()
-        this.debug.alpha = 0.5
-        this.addChild(this.debug)
     }
 
     addEffect(str) {

@@ -9,6 +9,7 @@ interface RpgClientOptions {
     selectorGui?: string,
     spritesheets?: any[],
     gui?: any[],
+    sounds?: any[],
     /**
      * Represents the sprite for the different players on it.
      */

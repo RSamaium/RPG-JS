@@ -1,5 +1,6 @@
 import * as PIXI from 'pixi.js'
 import { KeyboardControls, GameEngine } from 'lance-gg'
+import Character from '../Sprite/Character'
 
 export class Scene {
    
@@ -27,10 +28,10 @@ export class Scene {
         }
     }
 
-    private triggerSpriteChanges(logic, sprite) {
-
+    private triggerSpriteChanges(logic, sprite, moving: boolean) {
+        if (this.onUpdateObject) this.onUpdateObject(logic, sprite, moving)
         if (sprite['onChanges'] && logic.paramsChanged) {
-            sprite['onChanges'](logic.paramsChanged)
+            sprite['onChanges'](logic.paramsChanged, logic.prevParamsChanged)
             logic.paramsChanged = null
         }
     }
@@ -42,14 +43,13 @@ export class Scene {
             const val = logicObjects[key]
             if (!renderObjects.has(key)) {
                 const sprite = this.addObject(val, key)
-                this.triggerSpriteChanges(val, sprite)
+                this.triggerSpriteChanges(val, sprite, true)
             }
             else {
                 const object = renderObjects.get(key)
                 if (!object.update) return
                 const ret = object.update(val, t, dt)
-                if (this.onUpdateObject) this.onUpdateObject(ret)
-                this.triggerSpriteChanges(val, object)
+                this.triggerSpriteChanges(val, object, ret.moving)
             }
         }
         if (logicObjects.size < renderObjects.size) {
@@ -69,7 +69,7 @@ export class Scene {
         this.controls.stop = false
     }
 
-    onUpdateObject(ret) {}
+    onUpdateObject(logic, sprite: Character, moving: boolean): any {}
 
     addObject(obj, id) {
         const sprite = new PIXI.Container()

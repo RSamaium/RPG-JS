@@ -76,12 +76,10 @@ export class SceneMap {
             delete layer.map
         }
 
-        this.server.sendToPlayer(player, 'player.loadScene', {
-            name: 'map', 
-            data: {
-                id: mapId,
-                ...serializeMap
-            }
+        player.loadScene('map', {
+            id: mapId,
+            sounds: mapInstance.sounds,
+            ...serializeMap
         })
 
         this.server.createRoom(mapId)

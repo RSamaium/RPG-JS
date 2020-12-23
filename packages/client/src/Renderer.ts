@@ -158,6 +158,7 @@ export default class RpgRenderer extends Renderer<any, any> {
             logic = this.gameEngine.world.getObject(id)
         }
         if (!logic) return null
+        logic.prevParamsChanged = Object.assign({}, logic)
         for (let key in params) {
             logic[key] = params[key]
         }

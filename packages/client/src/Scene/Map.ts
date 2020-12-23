@@ -8,6 +8,7 @@ import { SceneData } from './SceneData'
 import { spritesheets } from '../Sprite/Spritesheets'
 import Character from '../Sprite/Character'
 import { RpgSprite } from '../Sprite/Player'
+import { RpgSound } from '../Sound/RpgSound'
 
 @SceneData({
     inputs: {
@@ -80,6 +81,10 @@ export class SceneMap extends Scene implements IScene {
                 this.viewport.clamp({ direction: 'all' })
                 this.viewport.addChild(this.tilemap)
                 this.isLoaded = true
+                if (obj.sounds) {
+                    const sound = new RpgSound(obj.sounds[0])
+                    sound.play()
+                }
                 resolve(this.viewport)
             }
     
@@ -110,12 +115,13 @@ export class SceneMap extends Scene implements IScene {
         }
     }
 
-    onUpdateObject({ moving, instance }: { moving: boolean, instance: Character }): Character {
-        const { x, y, tilesOverlay, anchor, width, height } = instance
-        if (moving) {
+    onUpdateObject(logic, sprite: Character, moving: boolean): Character {
+        const { x, y, tilesOverlay, anchor, width, height } = sprite
+        const { paramsChanged } = logic
+        if (moving || (paramsChanged && (paramsChanged.width || paramsChanged.height))) {
             tilesOverlay.removeChildren()
             const addTile = (x, y) => {
-                const tiles = this.tilemap.createOverlayTiles(x, y, instance)
+                const tiles = this.tilemap.createOverlayTiles(x, y, sprite)
                 if (tiles.length) tilesOverlay.addChild(...tiles)
             }
             let _x = x - (width * anchor.x)
@@ -126,7 +132,7 @@ export class SceneMap extends Scene implements IScene {
             addTile(_x + width, _y + height)
         }
 
-        return instance
+        return sprite
     }
 
     setPlayerPosition(id, { x, y }) {
@@ -156,11 +162,6 @@ export class SceneMap extends Scene implements IScene {
         sprite['isCurrentPlayer'] = obj.playerId === this.game.playerId
 
         if (sprite['isCurrentPlayer']) this.viewport?.follow(sprite)
-
-        this.onUpdateObject({
-            moving: true,
-            instance: sprite
-        })
 
         if (sprite.onInit) sprite.onInit()
 

@@ -7,7 +7,8 @@ import { ChestEvent } from '../events/chest'
     name: 'Town',
     events: [
         ChestEvent()
-    ]
+    ],
+    sounds: ['town']
 })
 export class SampleMap extends RpgMap {
 }

@@ -63,6 +63,14 @@ module.exports = function(dirname, extend = {}) {
                     outputPath: 'fonts'
                 }
             },
+            {
+                test: /\.(wav|mp3|mpeg|opus|ogg|oga|aac|caf|m4a|m4b|mp4|weba|webm|dolby|flac)$/i,
+                loader: require.resolve('file-loader'),
+                options: {
+                    outputPath: 'sounds',
+                    esModule: false
+                }
+            },
             ...webpackCommon(dirname)
            ]
         },
