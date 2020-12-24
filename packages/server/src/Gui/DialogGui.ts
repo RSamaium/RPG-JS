@@ -34,7 +34,9 @@ export class DialogGui extends Gui implements IGui {
         if (options.fullWidth == undefined) options.fullWidth = true
         if (options.typewriterEffect  == undefined) options.typewriterEffect = true
         const event = options.talkWith
+        let memoryDir
         if (event) {
+            memoryDir = event.direction
             event.breakRoutes(true)
             event.moveRoutes([ Move.turnTowardPlayer(this.player) ])
         }
@@ -57,6 +59,7 @@ export class DialogGui extends Gui implements IGui {
         }).then((val: any) => {
             if (event) {
                 event.replayRoutes()
+                event.direction = memoryDir
             }
             return val
         })
