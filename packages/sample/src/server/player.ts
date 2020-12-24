@@ -2,19 +2,17 @@ import { RpgPlayer } from '@rpgjs/server'
 import { database } from '@rpgjs/starter-kit-server'
 
 export class Player extends RpgPlayer {
-    onConnected() {
+    async onConnected() {
         this.through = true
         this.setHitbox(20, 16)
         this.setGraphic('male1_2')
-        this.changeMap('medieval')
         this.setActor(database.Hero)
+        await this.changeMap('medieval')
     }
 
     onInput({ input }) {
-      if (input == 'space') {
-        //this.changeMap('mapz')
-          //this.addItem(database.Potion)
-          this.level++
+      if (input == 'escape') {
+        this.callMainMenu()
       }
     }
 

@@ -36,6 +36,8 @@ const {
     isString
 } = Utils
 
+type Position = { x: number, y: number, z: number }
+
 const itemSchemas = { 
     name: String,
     description: String,
@@ -44,6 +46,11 @@ const itemSchemas = {
 }
 
 const playerSchemas = {
+    initPos: {
+        x: Number, 
+        y: Number,
+        z: Number
+    },
     hp: Number,
     sp: Number,
     gold: Number,
@@ -84,9 +91,11 @@ export class RpgPlayer extends RpgCommonPlayer {
             ...playerSchemas
         }]
     }
+
+    // initial positions
+    initPos
     
     private _name
-  
     public events: any[] = []
     public param: any 
     public _rooms = []
@@ -191,15 +200,52 @@ export class RpgPlayer extends RpgCommonPlayer {
      * > The map must be added to RpgServer beforehand. Guide: [Create Map](/guide/create-map.html)
      * 
      * You don't have to give positions but you can put a starting position in the TMX file. Guide: [Start Position](/guide/player-start.html)
+     * 
      * @title Change Map
      * @method player.changeMap(mapId,positions)
      * @param {string} mapId
-     * @param { {x: number, y: number} } [positions]
+     * @param { {x: number, y: number, z?: number} | string } [positions]
      * @returns {Promise<RpgMap>}
      * @memberof Player
      */
     changeMap(mapId: string, positions?): Promise<RpgMap> {
         return this.server.getScene('map').changeMap(mapId, this, positions) 
+    }
+
+    /**
+     * Allows to change the positions of the player on the current map. 
+     * You can put the X and Y positions or the name of the created shape on Tiled Map Editor.
+     * If you have several shapes with the same name, one position will be chosen randomly.
+     * 
+     * ```ts
+     * player.teleport({ x: 100, y: 500 })
+     * ```
+     * 
+     * or
+     * 
+     * ```ts
+     * player.teleport('my-shape-name')
+     * ```
+     * 
+     * If no parameter: 
+     * 
+     * ```ts
+     * player.teleport() // { x: 0, y: 0, z: 0 }
+     * ```
+     * 
+     * @title Teleport on the map
+     * @method player.teleport(positions)
+     * @param { {x: number, y: number, z?: number} | string } [positions]
+     * @returns { {x: number, y: number, z: number} }
+     * @memberof Player
+     */
+    teleport(positions?: { x: number, y: number, z?: number } | string): Position {
+        if (isString(positions)) positions = <Position>this.getCurrentMap().getPositionByShape(shape => shape.name == positions || shape.type == positions)
+        if (!positions) positions = { x: 0, y: 0 }
+        if (!(positions as Position).z) (positions as Position).z = 0
+        this.initPos = positions
+        this.position.copy(positions)
+        return (positions as Position)
     }
 
     startBattle(enemies: { enemy: any, level: number }[]) {

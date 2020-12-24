@@ -86,11 +86,8 @@ export class SceneMap {
         this.server.assignObjectToRoom(player, mapId)
         World.joinRoom(mapId, player.id)
         
-        if (!positions) positions = mapInstance.getPositionByShape(shape => shape.type == 'start')
-        if (!positions) positions = { x: 0, y: 0 }
 
-        player.setPosition(positions)
-        
+        player.teleport(positions || 'start')
         player.events = mapInstance.createEvents(EventMode.Scenario, player)
 
         return mapInstance

@@ -1,11 +1,15 @@
 import { ClientEngine } from 'lance-gg'
-import Vue from 'vue'
 import Renderer from './Renderer'
 import { _initSpritesheet } from './Sprite/Spritesheets'
 import { _initSound } from './Sound/Sounds'
 import { RpgSprite } from './Sprite/Player'
 import { EventEmitter, Utils } from '@rpgjs/common'
 import { World } from '@rpgjs/sync-client'
+import { BehaviorSubject, Subject } from 'rxjs'
+import { RpgGui } from './RpgGui'
+import { RpgCommonPlayer } from '@rpgjs/common'
+import merge from 'lodash.merge'
+import { Animation } from './Effects/Animation'
 
 export default class RpgClientEngine extends ClientEngine<any> {
 
@@ -13,10 +17,13 @@ export default class RpgClientEngine extends ClientEngine<any> {
     public gameEngine: any
     public socket: any
     public _options: any
-    private vm: any
-    
-    public eventEmitter: EventEmitter = new EventEmitter()
-    private bufferParamsChanged: Map<string, any> = new Map()
+    private _objects: BehaviorSubject<{
+        [playerId: string]: {
+            object: any,
+            paramsChanged: any
+        }
+    }> = new BehaviorSubject({})
+    public keyChange: Subject<string> = new Subject()
 
     constructor(gameEngine, options) {
         super(gameEngine, options.io, options, Renderer)
@@ -41,85 +48,67 @@ export default class RpgClientEngine extends ClientEngine<any> {
         _initSpritesheet(this.renderer.options.spritesheets)
         _initSound(this.renderer.options.sounds)
 
-        // If the settings are not yet in the player's logic, then we cache the data and apply the settings as soon as the player has been inserted into the logic.
-        setInterval(() => {
-            this.bufferParamsChanged.forEach((dataArray: any[], playerId: string) => {
-                let bool = false
-                for (let data of dataArray) {
-                    bool = this.updateObject(data)
-                }
-                if (bool) this.bufferParamsChanged.set(playerId, [])
-            })
-        }, 500)
+        RpgGui._initalize(this)
     }
 
-    _initUi() {
-        const self = this
-        const { gui, selectorGui } = this.renderer.options
+    get objects() {
+        return this._objects.asObservable()
+    }
 
-        this.vm = new Vue({
-            template: `
-                <div>
-                    <component v-for="ui in gui" :is="ui.name" v-if="ui.display" v-bind="ui.data"></component>
-                </div>
-            `,
-            el: selectorGui,
-            data() {
-                return {
-                    gui
-                }
-            },
-            provide() {
-                return {
+    removeObject(id: any) {
+        const logic = this.gameEngine.world.getObject(id)
+        if (logic) {
+            this.gameEngine.world.removeObject(id)
+        }
+    }
 
+    updateObject(obj) {
+        const {
+            playerId: id,
+            params,
+            localEvent,
+            paramsChanged
+        } = obj
+        let logic
+        if (localEvent) {
+            logic = this.gameEngine.events[id]
+            if (!logic) {
+                logic = this.gameEngine.addEvent(RpgCommonPlayer, false)
+                this.gameEngine.events[id] = logic
+            }
+        }
+        else {
+            logic = this.gameEngine.world.getObject(id)
+        }
+        if (!logic) {
+            logic = this.gameEngine.addPlayer(RpgCommonPlayer, id)
+        }
+        logic.prevParamsChanged = Object.assign({}, logic)
+        for (let key in params) {
+            logic[key] = params[key]
+        }
+        if (paramsChanged) {
+            if (paramsChanged.initPos) {
+                if (paramsChanged.initPos.x) logic.position.x = paramsChanged.initPos.x
+                if (paramsChanged.initPos.y) logic.position.y = paramsChanged.initPos.y
+                if (paramsChanged.initPos.z) logic.position.z = paramsChanged.initPos.z
+            }
+            if (!logic.paramsChanged) logic.paramsChanged = {}
+            logic.paramsChanged = merge(paramsChanged, logic.paramsChanged)
+        }
+        this._objects.next({
+            ...this._objects.value,
+            ...{
+                [id]: {
+                    object: logic,
+                    paramsChanged
                 }
             }
         })
-
-        Vue.prototype.$rpgSocket = this.socket
-        Vue.prototype.$rpgStage = this.renderer.stage
-        Vue.prototype.$rpgScene = this.renderer.getScene.bind(this.renderer)
-        Vue.prototype.$rpgEmitter = this.eventEmitter
-        Vue.prototype.$gameEngine = this.gameEngine
-        Vue.prototype.$rpgPlayer = (playerId?: string) => {
-            const player = this.gameEngine.world.getObject(playerId || this.gameEngine.playerId)
-            if (!player) return {}
-            return player.data
-        }
-
-        Vue.prototype.$rpgGuiClose = function(data?) {
-            const guiId = this.$options.name
-            self.socket.emit('gui.exit', {
-                guiId, 
-                data
-            })
-        }
-
-        this.eventEmitter.once('keypress', (data) => {
-            return this.propagateEvent('$rpgKeypress', [this.vm], [data])
-        })
-
-        this.eventEmitter.once('player.changeParam', (data) => {
-            const findPlayer = this.updateObject(data)
-            if (!findPlayer) {
-                let events = this.bufferParamsChanged.get(data.playerId)
-                if (!events) {
-                    events = []
-                }
-                events.push(data)
-                this.bufferParamsChanged.set(data.playerId, events)
-            }
-        })
-        
-        for (let ui of gui) {
-            Vue.component(ui.name, ui)
-        } 
-        
-        this.renderer.vm = this.vm
-        this.renderer._resize()
+        return logic
     }
 
-    private propagateEvent(methodName, components, value) {
+    /*private propagateEvent(methodName, components, value) {
         if (!components) {
             return
         }
@@ -141,19 +130,14 @@ export default class RpgClientEngine extends ClientEngine<any> {
             }
         }
         return !!player
-    }
+    }*/
 
     _initSocket() {
         this.onConnect()
         this.socket.on('player.loadScene', ({ name, data }) => {
             this.renderer.loadScene(name, data)
         })
-        this.socket.on('gui.open', ({ guiId, data }) => {
-            this.displayGui(guiId, data)
-        })
-        this.socket.on('gui.exit', (guiId) => {
-            this.hideGui(guiId)
-        })
+        
         this.socket.on('player.callMethod', ({ objectId, params, name }) => {
             const sprite = this.renderer.getScene().getPlayer(objectId)
             this.renderer.showAnimation(sprite)
@@ -171,7 +155,7 @@ export default class RpgClientEngine extends ClientEngine<any> {
                     const obj = list[key]
                     const paramsChanged = partial ? partial[key] : undefined
                     if (obj == null) {
-                        this.renderer.removeObject(key)
+                        this.removeObject(key)
                     }
                     if (!obj) continue
                     if (prop == 'users' && this.gameEngine.playerId == key && obj.events) {
@@ -180,7 +164,7 @@ export default class RpgClientEngine extends ClientEngine<any> {
                            partial: paramsChanged
                        }, true)
                     }
-                    this.eventEmitter.emit('player.changeParam', {
+                    this.updateObject({
                         playerId: key,
                         params: obj,
                         localEvent,
@@ -193,13 +177,13 @@ export default class RpgClientEngine extends ClientEngine<any> {
         })
         
         this.socket.on('reconnect', () => {
-            this.hideGui('rpg-disconnected')
+            RpgGui.hide('rpg-disconnected')
         })
         this.socket.on('disconnect', () => {
-            this.displayGui('rpg-disconnected')
+            RpgGui.display('rpg-disconnected')
             this.onDisconnect()
         })
-        this._initUi()
+        RpgGui._setSocket(this.socket)
     }
 
     onConnect() {}
@@ -209,33 +193,6 @@ export default class RpgClientEngine extends ClientEngine<any> {
     connect() {
         return super.connect({}).then(() => {
             this._initSocket()
-        })
-    }
-
-    _setGui(id, obj) {
-        if (typeof id != 'string') {
-            id = id.name
-        }
-        const index = this.vm.gui.findIndex(gui => gui.name == id)
-        if (index == -1) {
-            return
-        }
-        for (let key in obj) {
-            this.vm.gui[index][key] = obj[key]
-        }
-        this.vm.$set(this.vm.gui, index, this.vm.gui[index])
-    }
-
-    displayGui(id, data = {}) {
-        this._setGui(id, {
-            display: true,
-            data
-        })
-    }
-
-    hideGui(id) {
-        this._setGui(id, {
-            display: false
         })
     }
 }

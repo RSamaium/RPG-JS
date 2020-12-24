@@ -5,7 +5,7 @@
             <rpg-choice :choices="menu" @selected="selectMenu" ref="menu" />
         </rpg-window>
          <rpg-window :fullWidth="true" class="gold">
-            <p>{{ gold }} {{ goldName}}</p>
+            <p>{{ player.gold }} {{ goldName}}</p>
         </rpg-window>
     </div>
     <div class="menu-right">
@@ -26,17 +26,19 @@ export default {
             default: 'Gold'
         }
     },
-    
+    inject: ['rpgCurrentPlayer', 'rpgKeypress', 'rpgScene', 'rpgStage', 'rpgGuiClose'],
     data() {
         return {
+            player: {},
+            active: true,
             menu: [{
                 text: 'Items',
                 value: 'item',
                 layout: 'ItemsLayout'
-            }, {
+            },/*  {
                 text: 'Skills',
                 value: 'skill'
-            }, {
+            },  {
                 text: 'Equip',
                 value: 'equipment'
             }, 
@@ -44,26 +46,26 @@ export default {
                 text: 'Status',
                 value: 'status',
                 layout: 'StatusLayout'
-            }]
-        }
-    },
-    computed: {
-        gold() {
-            return this.$rpgPlayer().gold || 0
+            } */]
         }
     },
     mounted() {
-        const blur = new PIXI.filters.BlurFilter()
-        this.$rpgStage.filters = [blur]
-        this.$rpgKeypress = ((name) => {
-            if (name == 'escape') {
-                this.$emit('closeMenu')
-            }
-            else {
-                this.$refs.menu.$rpgKeypress(name)
-            }
-            return false
+        this.obsCurrentPlayer = this.rpgCurrentPlayer.subscribe(({ object }) => {
+           this.player = object
         })
+        this.obsKeyPress = this.rpgKeypress.subscribe((name) => {
+            if (!this.active) return
+            if (name == 'escape') {
+                this.rpgStage.filters = []
+                this.rpgGuiClose('rpg-main-menu')
+                this.rpgScene().listenInputs()
+            }
+        })
+    },
+    // TODO, beforeUnmount for VueJS3
+    destroyed() {
+        this.obsKeyPress.unsubscribe()
+        this.obsCurrentPlayer.unsubscribe()
     },
     methods: {
         selectMenu(index) {

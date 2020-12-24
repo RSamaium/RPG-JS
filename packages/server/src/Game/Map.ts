@@ -60,15 +60,11 @@ export class RpgMap extends RpgCommonMap {
 
             // Create an instance of RpgEvent and assign its options
             const ev = this.game.addEvent(event, mode == EventMode.Shared)
-
-            if (!position) position = this.getPositionByShape(shape => shape.type == 'event' && shape.name == ev.name)
-            if (!position) position = { x: 0, y: 0 }
-
             ev.width = event.width || this.tileWidth
             ev.height = event.height || this.tileHeight
             if (event.hitbox) ev.setHitbox(event.hitbox.width, event.hitbox.height)
             ev.map = this.id
-            ev.setPosition(position)
+            ev.teleport(position || ev.name)
             ev.server = this._server
 
             // We add in the room if shared mode

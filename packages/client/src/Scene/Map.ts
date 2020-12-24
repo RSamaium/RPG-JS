@@ -25,7 +25,8 @@ import { Howler } from 'howler'
         'right': {
             repeat: true
         },
-        'space': {}
+        'space': {},
+        'escape': {}
     }
 })
 export class SceneMap extends Scene implements IScene {

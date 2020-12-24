@@ -22,6 +22,7 @@
 import Icon from '../../components/icon.vue'
 
 export default {
+    inject: ['rpgCurrentPlayer', 'rpgKeypress', 'rpgSocket'],
     data() {
         return {
             description: '',
@@ -39,20 +40,19 @@ export default {
         }
     },
     mounted() {
-        this.items = this.$rpgPlayer().items || []
-        this.$rpgCurrentPlayerChanged = (player) => {
-            this.items = player.items
-        }
-        this.$rpgKeypress = ((name) => {
+        this.obsCurrentPlayer = this.rpgCurrentPlayer.subscribe(({ object }) => {
+           this.items = Object.values(object.items)
+        })
+        this.obsKeyPress = this.rpgKeypress.subscribe((name) => {
             if (name == 'escape') {
                 this.$emit('changeLayout', 'MainLayout')
             }
-            else {
-                this.$refs.choice.$rpgKeypress(name)
-            }
-            return false
         })
         this.selected(0)
+    },
+    destroyed() {
+        this.obsKeyPress.unsubscribe()
+        this.obsCurrentPlayer.unsubscribe()
     },
     methods: {
         selected(index) {

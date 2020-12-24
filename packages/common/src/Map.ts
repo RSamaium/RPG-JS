@@ -54,11 +54,11 @@ export default class RpgCommonMap {
         }
     }
     
-    getPositionByShape(filter): { x: number, y: number } | null {
+    getPositionByShape(filter): { x: number, y: number, z: number } | null {
         const startsFind = this.shapes.filter(filter)
         if (startsFind.length) {
             const start = startsFind[random(0, startsFind.length-1)]
-            return { x: start.hitbox.x, y: start.hitbox.y }
+            return { x: start.hitbox.x, y: start.hitbox.y, z: 0 }
         }
         return null
     }

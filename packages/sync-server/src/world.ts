@@ -40,6 +40,7 @@ export class WorldClass {
 
     forEachUserRooms(userId: string, cb: (room: RoomClass, user: User) => void): void {
         const user = this.getUser(userId)
+        if (!user) return
         for (let roomId of user._rooms) {
             const room = this.getRoom(roomId)
             cb(room, user)

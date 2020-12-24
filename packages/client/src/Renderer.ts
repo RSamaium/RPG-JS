@@ -3,9 +3,6 @@ window.PIXI = require('pixi.js')
 import { Renderer } from 'lance-gg'
 import { SceneMap } from './Scene/Map'
 import { SceneBattle } from './Scene/Battle'
-import { RpgCommonPlayer } from '@rpgjs/common'
-import merge from 'lodash.merge'
-import { Animation } from './Effects/Animation'
 
 export default class RpgRenderer extends Renderer<any, any> {
 
@@ -18,12 +15,8 @@ export default class RpgRenderer extends Renderer<any, any> {
     private _height: number = 400
     animation
 
-    init() {
-        if (document.readyState === 'complete' || document.readyState === 'interactive')
-            this.onDOMLoaded();
-        else
-            document.addEventListener('DOMContentLoaded', this.onDOMLoaded.bind(this))
-        return Promise.resolve()
+    async init() {
+        this.onDOMLoaded()
     }
 
     _resize(w, h) {
@@ -70,9 +63,6 @@ export default class RpgRenderer extends Renderer<any, any> {
         };
         this.renderer = PIXI.autoDetectRenderer(options)
         this.gameEngine.renderer = this.renderer
-        this.gameEngine.on('client__objectUpdate', (object) => {
-            console.log(object) 
-        })
         document.body.querySelector(this.options.selector).appendChild(this.renderer.view)
         this.resize()
     }
@@ -88,6 +78,7 @@ export default class RpgRenderer extends Renderer<any, any> {
             }
         }
         window.addEventListener('resize', size)
+        size()
     }
 
     getScene() {
@@ -123,49 +114,4 @@ export default class RpgRenderer extends Renderer<any, any> {
         this.stage.addChild(container)
     }
 
-    removeObject(id: any) {
-        if (this.scene && this.scene.removeObject) {
-            const logic = this.gameEngine.world.getObject(id)
-            if (logic) {
-                this.gameEngine.world.removeObject(id)
-            }
-            this.scene.removeObject(id)
-        }
-    }
-
-    showAnimation(sprite) { 
-        
-        this.animation.run(200, 160, sprite)
-        this.animation.run(800, 160, sprite)
-    }
-
-    updateObject(obj) {
-        const {
-            playerId: id,
-            params,
-            localEvent,
-            paramsChanged
-        } = obj
-        let logic
-        if (localEvent) {
-            logic = this.gameEngine.events[id]
-            if (!logic) {
-                logic = this.gameEngine.addEvent(RpgCommonPlayer, false)
-                this.gameEngine.events[id] = logic
-            }
-        }
-        else {
-            logic = this.gameEngine.world.getObject(id)
-        }
-        if (!logic) return null
-        logic.prevParamsChanged = Object.assign({}, logic)
-        for (let key in params) {
-            logic[key] = params[key]
-        }
-        if (paramsChanged) {
-            if (!logic.paramsChanged) logic.paramsChanged = {}
-            logic.paramsChanged = merge(paramsChanged, logic.paramsChanged)
-        }
-        return logic
-    }
 }

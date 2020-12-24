@@ -25,14 +25,22 @@ import Bar from './bar.vue'
 
 export default {
     props: ['face'],
+    inject: ['rpgCurrentPlayer'],
+    data() {
+        return {
+            player: {}
+        }
+    },
+    mounted() {
+        this.rpgCurrentPlayer.subscribe(({ object }) => {
+           this.player = object
+        })
+    },
     computed: {
         image() {
             return {
                 backgroundImage: `url(${this.face})`
             }
-        },
-        player() {
-            return this.$rpgPlayer()
         },
         _class() {
             if (!this.player._class) return {}

@@ -15,6 +15,7 @@ import Arrow from './arrow.vue'
 
 export default {
     name: 'rpg-choice',
+    inject: ['rpgKeypress'],
     data() {
         return {
             selected: 0,
@@ -36,7 +37,7 @@ export default {
         }
     },
     mounted() {
-        this.$rpgKeypress = ((name) => {
+        this.rpgKeypress.subscribe((name) => {
             if (this.column > 1) {
                 if (name == 'left') {
                     this.selected = Math.floor(this.selected - this.choices.length / this.column)

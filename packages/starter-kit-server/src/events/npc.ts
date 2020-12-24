@@ -23,9 +23,11 @@ export function NpcEvent(options: {
             if (options.moveRandom) this.infiniteMoveRoute([ Move.tileRandom() ])
         }
         async onAction(player: RpgPlayer) {
-            await player.showText(options.text, {
+            /*await player.showText(options.text, {
                 talkWith: this
-            })
+            })*/
+            //this.teleport({ x: 100, y: 100 })
+           
         }
     }
     return NpcEvent

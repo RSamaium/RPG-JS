@@ -11,22 +11,16 @@ import StatusLayout from './layouts/status.vue'
 
 export default {
     name: 'rpg-main-menu',
+    inject: ['rpgScene', 'rpgStage'],
     data() {
         return {
             layout: 'MainLayout'
         }
     },
-     mounted() {
-        this.$rpgKeypress = ((name) => {
-            if (name == 'escape') {
-                this.$rpgStage.filters = []
-                this.$rpgGuiClose()
-            }
-            else {
-                this.$refs.layout.$rpgKeypress(name)
-            }
-            return false
-        })
+    mounted() {
+        this.rpgScene().stopInputs()
+        const blur = new PIXI.filters.BlurFilter()
+        this.rpgStage.filters = [blur]
     },
     methods: {
         change(name) {
