@@ -148,13 +148,6 @@ export default class RpgClientEngine extends ClientEngine<any> {
         this.socket.on('player.loadScene', ({ name, data }) => {
             this.renderer.loadScene(name, data)
         })
-        this.socket.on('positions', (data) => {
-            this.renderer.setPlayerPosition(data.id, data)
-        });
-        this.socket.on('events', (data) => {
-            this.renderer.addLocalEvents(data)
-        });
-       // this.socket.on('player.changeParam', (data) => this.eventEmitter.emit('player.changeParam', data))
         this.socket.on('gui.open', ({ guiId, data }) => {
             this.displayGui(guiId, data)
         })

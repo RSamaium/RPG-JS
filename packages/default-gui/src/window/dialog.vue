@@ -21,10 +21,12 @@ export default {
     },
     async mounted() {
         let interval
+        this.$rpgScene().stopInputs()
         if (!this.isChoice && !this.autoClose) {
             this.$rpgKeypress = ((name) => {
                 if (name == 'space' || name == 'enter') {
                     this.close()
+                    this.$rpgScene().listenInputs()
                 }
                 return false
             })

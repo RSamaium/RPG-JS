@@ -649,10 +649,10 @@
 </data>
  </layer>
  <objectgroup id="14" name="Object Layer 1" offsetx="8" offsety="0">
-  <object id="1" name="Start Position" type="start" x="383" y="392.5">
+  <object id="1" name="Start Position" type="start" x="308" y="411.5">
    <point/>
   </object>
-  <object id="4" name="EV-1" type="event" x="980" y="873.333">
+  <object id="4" name="EV-1" type="event" x="423" y="335.333">
    <point/>
   </object>
  </objectgroup>
