@@ -42,7 +42,8 @@ const itemSchemas = {
     name: String,
     description: String,
     price: Number,
-    consumable: Boolean
+    consumable: Boolean,
+    id: String
 }
 
 const playerSchemas = {
@@ -59,10 +60,10 @@ const playerSchemas = {
     name: String, 
     expForNextlevel: Number,
     items: [{ nb: Number, item: itemSchemas }],
-    _class: { name: String, description: String },
+    _class: { name: String, description: String, id: String },
     equipments: [itemSchemas],
-    skills: [{ name: String, description: String, spCost: Number }],
-    states: [{ name: String, description: String }],
+    skills: [{ name: String, description: String, spCost: Number, id: String }],
+    states: [{ name: String, description: String, id: String }],
     effects: [String],
 
     graphic: String,

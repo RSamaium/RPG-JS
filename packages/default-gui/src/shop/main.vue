@@ -70,7 +70,7 @@ export default {
     },
     mounted() {
         this.rpgScene().stopInputs()
-        
+
         this.obsCurrentPlayer = this.rpgCurrentPlayer.subscribe(({ object }) => {
             this.player = object
             this._computedWatchers.playerItems.run()
@@ -103,7 +103,7 @@ export default {
                 }
                 this.quantity -= 1
             }
-            else if (name == 'enter') {
+            else if (name == 'enter' || name == 'space') {
                 this.rpgSocket().emit('gui.interaction', {
                     guiId: 'rpg-shop',
                     name: 'buyItem',
@@ -132,7 +132,7 @@ export default {
                 }
                 this.quantity -= 1
             }
-            else if (name == 'enter') {
+            else if (name == 'enter' || name == 'space') {
                 this.rpgSocket().emit('gui.interaction', {
                     guiId: 'rpg-shop',
                     name: 'sellItem',

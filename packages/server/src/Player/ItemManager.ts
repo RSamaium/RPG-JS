@@ -243,9 +243,10 @@ export class ItemManager {
      * }
      * ```
      */
-    sellItem(itemClass: ItemClass, nbToSell = 1): Inventory {
+    sellItem(itemClass: ItemClass | string, nbToSell = 1): Inventory {
         if (isString(itemClass)) itemClass = this.databaseById(itemClass)
-        const inventory = this.getItem(itemClass)
+        const ItemClass = itemClass as ItemClass
+        const inventory = this.getItem(ItemClass)
         if (!inventory) {
             throw ItemLog.notInInventory(itemClass)
         }
@@ -253,11 +254,11 @@ export class ItemManager {
         if (nb - nbToSell < 0) {
             throw ItemLog.tooManyToSell(itemClass, nbToSell, nb)
         }
-        if (!itemClass.price) {
+        if (!ItemClass.price) {
             throw ItemLog.haveNotPrice(itemClass)
         }
-        this.gold += (itemClass.price / 2) * nbToSell
-        this.removeItem(itemClass, nbToSell)
+        this.gold += (ItemClass.price / 2) * nbToSell
+        this.removeItem(ItemClass, nbToSell)
         return inventory
     } 
 
