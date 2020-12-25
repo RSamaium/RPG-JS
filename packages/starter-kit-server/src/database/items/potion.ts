@@ -16,7 +16,4 @@ import { Paralyze } from '../states/paralyze'
     ]
 })
 export class Potion {
-   async onAdd(player) {
-        await player.showText('A potion has been added to your inventory')
-   }
 }

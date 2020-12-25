@@ -48,16 +48,10 @@ class Gui {
                         })
                     },
                     rpgKeypress: this.clientEngine.keyChange,
-                    rpgSocket: this.socket
+                    rpgSocket: () => this.socket
                 }
             }
         })
-
-        Vue.prototype.$rpgScene = this.renderer.getScene.bind(this.renderer)
-       // Vue.prototype.$rpgEmitter = this.eventEmitter
-        /*this.eventEmitter.once('keypress', (data) => {
-            return this.propagateEvent('$rpgKeypress', [this.vm], [data])
-        })*/
 
         for (let ui of gui) {
             Vue.component(ui.name, ui)

@@ -34,10 +34,15 @@ export default {
         align: {
             type: String,
             default: 'left'
+        },
+        active: {
+            type: Boolean,
+            default: true
         }
     },
     mounted() {
-        this.rpgKeypress.subscribe((name) => {
+        this.obsKeyPress = this.rpgKeypress.subscribe((name) => {
+            if (!this.active) return
             if (this.column > 1) {
                 if (name == 'left') {
                     this.selected = Math.floor(this.selected - this.choices.length / this.column)
@@ -125,6 +130,9 @@ export default {
                 'text-align': this.align
             }
         }
+    },
+    destroyed() {
+        this.obsKeyPress.unsubscribe()
     },
     components: {
         Arrow

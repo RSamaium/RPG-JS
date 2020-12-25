@@ -1,7 +1,7 @@
 <template>
     <rpg-window :fullWidth="true" height="100%" class="shop-menu">
         <div class="row">
-            <rpg-choice :choices="menu" :column="3" @selected="changeMenu" align="center" ref="menu" />
+            <rpg-choice :choices="menu" :column="3" @selected="changeMenu" align="center" :active="menuActive" />
             <div>
                 <p>{{ player.gold }} {{ goldName }}</p>
             </div>
@@ -42,9 +42,12 @@
 <script>
 export default {
     name: 'rpg-shop',
+    inject: ['rpgCurrentPlayer', 'rpgKeypress', 'rpgGuiClose', 'rpgSocket', 'rpgScene'],
     props: ['items'],
     data() {
         return {
+            player: {},
+            menuActive: true,
             menu: [{
                 text: 'Buy',
                 value: 'buy'
@@ -66,19 +69,21 @@ export default {
         }
     },
     mounted() {
-        this._playerItems = this.player.items || []
-        this.$rpgCurrentPlayerChanged = (player) => {
-            this._playerItems = player.items
+        this.rpgScene().stopInputs()
+        
+        this.obsCurrentPlayer = this.rpgCurrentPlayer.subscribe(({ object }) => {
+            this.player = object
             this._computedWatchers.playerItems.run()
             this._computedWatchers.buyerItems.run()
             this._computedWatchers.listItems.run()
             this.$forceUpdate()
-            if (this.doAction) {
-                this.step = 0
-                this.quantity = 1
-                this.selected(this.indexSelected)
-                this.doAction= false
-            }
+        })
+
+        const doAction = () => {
+            this.step = 0
+            this.quantity = 1
+            this.selected(this.indexSelected)
+            this.doAction= false
         }
 
         const interactionBuy = (name) => {
@@ -99,8 +104,7 @@ export default {
                 this.quantity -= 1
             }
             else if (name == 'enter') {
-                this.doAction = true
-                this.$rpgSocket.emit('gui.interaction', {
+                this.rpgSocket().emit('gui.interaction', {
                     guiId: 'rpg-shop',
                     name: 'buyItem',
                     data: {
@@ -108,6 +112,7 @@ export default {
                         nb: this.quantity
                     }
                 })
+                doAction()
             }
         }
 
@@ -128,8 +133,7 @@ export default {
                 this.quantity -= 1
             }
             else if (name == 'enter') {
-                this.doAction = true
-                this.$rpgSocket.emit('gui.interaction', {
+                this.rpgSocket().emit('gui.interaction', {
                     guiId: 'rpg-shop',
                     name: 'sellItem',
                     data: {
@@ -137,40 +141,32 @@ export default {
                         nb: this.quantity
                     }
                 })
+                doAction()
             }
         }
 
-        this.$rpgKeypress = ((name) => {
+        this.obsKeyPress = this.rpgKeypress.subscribe((name) => {
             if (!this.mode) {
                 if (name == 'escape') {
-                    this.$rpgGuiClose()
-                }
-                else {
-                    this.$refs.menu.$rpgKeypress(name)
+                    this.close()
                 }
             }
             else if (this.mode) {
                 if (this.step == 1) {
-                   if (this. mode == 'buy') interactionBuy(name)
-                   if (this. mode == 'sell') interactionSell(name)
+                   if (this.mode == 'buy') interactionBuy(name)
+                   if (this.mode == 'sell') interactionSell(name)
                 }
                 else {
                     if (name == 'escape') {
                         this.mode = ''
                         this.description = ''
-                    }
-                    else {
-                        this.$refs.list.$rpgKeypress(name)
+                        this.menuActive = true
                     }
                 }
             }
-            return false
         })
     },
     computed: {
-        player() {
-            return this.$rpgPlayer()
-        },
         buyerItems() {
             return this.items.map(item => {
                 const playerItem =  this.playerItems.find(playerItem => playerItem.id == item.id) || {nb: 0}
@@ -190,10 +186,12 @@ export default {
             }
             return nb
         },
-        playerItems() {
-            return this._playerItems.map(({ item, nb }) => ({
-               ...item,
-               nb
+       playerItems() {
+            const items = Object.values(this.player.items)
+            if (!items) return []
+            return items.map(({ item, nb }) => ({
+                ...item,
+                nb
             }))
         }
     },
@@ -211,9 +209,10 @@ export default {
         changeMenu(index) {
             const mode = this.menu[index].value
             if (mode == 'cancel') {
-                this.$rpgGuiClose()
+                this.close()
                 return
             }
+            this.menuActive = false
             this.mode = mode
             this.selected(0)
         },
@@ -229,7 +228,15 @@ export default {
             else {
                 return nb
             }
+        },
+        close() {
+            this.rpgGuiClose()
+            this.rpgScene().listenInputs()
         }
+    },
+    destroyed() {
+        this.obsKeyPress.unsubscribe()
+        this.obsCurrentPlayer.unsubscribe()
     }
 }
 </script>
