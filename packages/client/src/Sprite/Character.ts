@@ -63,6 +63,9 @@ export default class Character extends PIXI.Sprite {
 
     setGraphic() {
         this.spritesheet = spritesheets.get(this.graphic)
+        if (!this.spritesheet) {
+            throw new Error(`Impossible to find the ${this.graphic} graphic. Did you put the right name or create the spritesheet?`)
+        }
         this.origin() 
         this.directions = Character.createDirectionTextures(this.spritesheet)
         this.gotoAndStop(0)

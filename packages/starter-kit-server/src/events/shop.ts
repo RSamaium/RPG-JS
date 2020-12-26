@@ -1,5 +1,5 @@
 import { RpgEvent, EventData, RpgPlayer } from '@rpgjs/server'
-import { Potion } from '../database/items/potion';
+import { Key } from '../database/items/key';
 
 @EventData({
     name: 'shop',
@@ -13,7 +13,6 @@ export class ShopEvent extends RpgEvent {
         this.setGraphic('male4_1')
     }
     async onAction(player: RpgPlayer) {
-        player.gold += 10000
-        await player.callShop([ Potion ])
+        await player.callShop([ Key ])
     }
 }

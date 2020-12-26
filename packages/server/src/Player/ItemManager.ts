@@ -30,7 +30,7 @@ export class ItemManager {
      * Retrieves the information of an object: the number and the instance 
      * @title Get Item
      * @method player.getItem(itemClass)
-     * @param {ItemClass} itemClass 
+     * @param {ItemClass | string} itemClass Identifier of the object if the parameter is a string
      * @returns {{ nb: number, item: instance of ItemClass }}
      * @memberof ItemManager
      * @example
@@ -43,9 +43,28 @@ export class ItemManager {
      * console.log(inventory) // { nb: 5, item: <instance of Potion> }
      *  ```
      */
-    getItem(itemClass: ItemClass): Inventory {
+    getItem(itemClass: ItemClass | string): Inventory {
         const index: number = this._getItemIndex(itemClass)
         return this.items[index]
+    }
+
+    /**
+     * Check if the player has the item in his inventory.
+     * @title Has Item
+     * @method player.hasItem(itemClass)
+     * @param {ItemClass | string} itemClass Identifier of the object if the parameter is a string
+     * @returns {boolean}
+     * @memberof ItemManager
+     * @example
+     * 
+     * ```ts
+     * import Potion from 'your-database/potion'
+     * 
+     * player.hasItem(Potion) // false
+     *  ```
+     */
+    hasItem(itemClass: ItemClass | string): boolean {
+        return !!this.getItem(itemClass)
     }
 
     _getItemIndex(itemClass: ItemClass | string): number {
@@ -124,7 +143,7 @@ export class ItemManager {
      * }
      * ```
      */
-    removeItem(itemClass: ItemClass, nb: number = 1): Inventory | undefined {
+    removeItem(itemClass: ItemClass | string, nb: number = 1): Inventory | undefined {
         const itemIndex: number = this._getItemIndex(itemClass)
         if (itemIndex == -1) {
             throw ItemLog.notInInventory(itemClass)
@@ -181,17 +200,18 @@ export class ItemManager {
      * }
      * ```
      */
-    buyItem(itemClass: ItemClass, nb = 1): Inventory {
+    buyItem(itemClass: ItemClass | string, nb = 1): Inventory {
         if (isString(itemClass)) itemClass = this.databaseById(itemClass)
-        if (!itemClass.price) {
+        const ItemClass = itemClass as ItemClass
+        if (!ItemClass.price) {
             throw ItemLog.haveNotPrice(itemClass)
         }
-        const totalPrice = nb * itemClass.price
+        const totalPrice = nb * ItemClass.price
         if (this.gold < totalPrice) {
             throw ItemLog.notEnoughGold(itemClass, nb)
         }
         this.gold -= totalPrice
-        return this.addItem(itemClass, nb)
+        return this.addItem(ItemClass, nb)
     }
 
     /**
@@ -201,7 +221,7 @@ export class ItemManager {
      * 
      * @title Sell Item
      * @method player.sellItem(item,nb=1)
-     * @param {ItemClass} itemClass 
+     * @param {ItemClass | string} itemClass string is item id
      * @param {number} [nbToSell] Default 1
      * @returns {{ nb: number, item: instance of ItemClass }}
      * @throws {ItemLog} haveNotPrice 
@@ -295,7 +315,7 @@ export class ItemManager {
      * 
      * @title Use an Item
      * @method player.useItem(item,nb=1)
-     * @param {ItemClass} itemClass 
+     * @param {ItemClass | string} itemClass string is item id
      * @returns {{ nb: number, item: instance of ItemClass }}
      * @throws {ItemLog} restriction 
      * If the player has the `Effect.CAN_NOT_ITEM` effect
@@ -348,7 +368,7 @@ export class ItemManager {
      * }
      * ```
      */
-    useItem(itemClass: ItemClass): Inventory {
+    useItem(itemClass: ItemClass | string): Inventory {
         const inventory = this.getItem(itemClass)
         if (this.hasEffect(Effect.CAN_NOT_ITEM)) {
             throw ItemLog.restriction(itemClass)
@@ -380,7 +400,7 @@ export class ItemManager {
      * 
      * @title Equip Weapon or Armor
      * @method player.equip(itemClass,equip=true)
-     * @param {ItemClass} itemClass 
+     * @param {ItemClass | string} itemClass string is item id
      * @param {number} [equip] Equip the object if true or un-equipped if false
      * @returns {void}
      * @throws {ItemLog} notInInventory 
@@ -422,12 +442,12 @@ export class ItemManager {
      * }
      * ```
      */
-    equip(itemClass: ItemClass, equip: boolean = true): void {
+    equip(itemClass: ItemClass | string, equip: boolean = true): void {
         const inventory: Inventory = this.getItem(itemClass)
         if (!inventory) {
             throw ItemLog.notInInventory(itemClass)
         }
-        if (itemClass._type == 'item') {
+        if ((itemClass as ItemClass)._type == 'item') {
             throw ItemLog.invalidToEquiped(itemClass)
         }
         const { item } = inventory

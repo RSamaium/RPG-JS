@@ -1,7 +1,7 @@
 import { RpgEvent, EventData, RpgPlayer, Move } from '@rpgjs/server'
 
 export function NpcEvent(options: {
-    text: string,
+    text: string | string[],
     name: string,
     graphic: string,
     moveRandom?: boolean,
@@ -23,11 +23,13 @@ export function NpcEvent(options: {
             if (options.moveRandom) this.infiniteMoveRoute([ Move.tileRandom() ])
         }
         async onAction(player: RpgPlayer) {
-            /*await player.showText(options.text, {
-                talkWith: this
-            })*/
-            //this.teleport({ x: 100, y: 100 })
-           
+            let text = options.text
+            if (typeof text == 'string') text = [text]
+            for (let msg of text) {
+                await player.showText(msg, {
+                    talkWith: this
+                })
+            }
         }
     }
     return NpcEvent

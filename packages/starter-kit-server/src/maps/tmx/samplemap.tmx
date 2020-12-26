@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.2" tiledversion="1.3.3" orientation="orthogonal" renderorder="right-down" width="60" height="60" tilewidth="32" tileheight="32" infinite="0" nextlayerid="17" nextobjectid="7">
+<map version="1.2" tiledversion="1.3.3" orientation="orthogonal" renderorder="right-down" width="60" height="60" tilewidth="32" tileheight="32" infinite="0" nextlayerid="17" nextobjectid="10">
  <tileset firstgid="1" source="[A]WaterFall_pipo.tsx"/>
  <tileset firstgid="577" source="[Base]BaseChip_pipo.tsx"/>
  <tileset firstgid="1641" source="[A]Grass_pipo.tsx"/>
@@ -649,13 +649,22 @@
 </data>
  </layer>
  <objectgroup id="14" name="Object Layer 1" offsetx="8" offsety="0">
-  <object id="1" name="Start Position" type="start" x="1008" y="913.5">
+  <object id="1" name="Start Position" type="start" x="386.667" y="368.167">
    <point/>
   </object>
   <object id="4" name="EV-1" type="event" x="423" y="335.333">
    <point/>
   </object>
-  <object id="5" name="shop" x="968.667" y="850.667">
+  <object id="5" name="shop" x="966.667" y="840.167">
+   <point/>
+  </object>
+  <object id="7" name="EV-2" x="389" y="954">
+   <point/>
+  </object>
+  <object id="8" name="EV-4" x="1475" y="1097">
+   <point/>
+  </object>
+  <object id="9" name="EV-3" x="1149" y="945">
    <point/>
   </object>
  </objectgroup>

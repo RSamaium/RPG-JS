@@ -114,13 +114,15 @@ export class GuiManager {
      * @method player.showChoices(text,choices)
      * @param {string} text 
      * @param {Array<{ text: string, value: any }>} choices
+     * @param {object} [options] Same options as the openDialog method
      * @returns {Promise<Choice | null>}
      * @memberof GuiManager
      */
-    showChoices(msg: string, choices: Choice[]): Promise<Choice | null> {
+    showChoices(msg: string, choices: Choice[], options?: DialogOptions): Promise<Choice | null> {
         return this
             .showText(msg, {
-                choices
+                choices,
+                ...options
             })
             .then((indexSelected: number) => {
                 if (!choices[indexSelected]) return null
