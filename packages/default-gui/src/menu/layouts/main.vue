@@ -62,8 +62,7 @@ export default {
             }
         })
     },
-    // TODO, beforeUnmount for VueJS3
-    destroyed() {
+    unmounted() {
         this.obsKeyPress.unsubscribe()
         this.obsCurrentPlayer.unsubscribe()
     },

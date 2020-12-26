@@ -1,6 +1,7 @@
 const path = require('path')
+const webpack = require('webpack')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
-const VueLoaderPlugin = require('vue-loader/lib/plugin')
+const { VueLoaderPlugin } = require('vue-loader')
 const MiniCssExtractPlugin = require("mini-css-extract-plugin")
 const webpackCommon = require('./webpack-common')
 
@@ -23,7 +24,7 @@ module.exports = function(dirname, extend = {}) {
         devtool: prod ? false : 'source-map',
         resolve: {
             alias: {
-                'vue$': 'vue/dist/vue.esm.js'
+                'vue$': path.join(dirname, 'node_modules/vue/dist/vue.esm-bundler.js')
             },
             extensions: ['.ts', '.js']
         },
@@ -40,7 +41,7 @@ module.exports = function(dirname, extend = {}) {
     
             }, {
                 test: /\.vue$/,
-                loader: require.resolve('vue-loader')
+                loader: require.resolve('vue-loader'),
             }, 
             {
                 test: /\.css$/,
@@ -84,7 +85,11 @@ module.exports = function(dirname, extend = {}) {
             new MiniCssExtractPlugin({
                 filename: 'style.css'
             }),
-            new VueLoaderPlugin()
+            new VueLoaderPlugin(),
+            new webpack.DefinePlugin({
+                __VUE_OPTIONS_API__: true,
+                __VUE_PROD_DEVTOOLS__: false
+            })
         ],
         ...extend
     }

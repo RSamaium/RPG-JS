@@ -50,7 +50,7 @@ export default {
         })
         this.selected(0)
     },
-    destroyed() {
+    unmounted() {
         this.obsKeyPress.unsubscribe()
         this.obsCurrentPlayer.unsubscribe()
     },

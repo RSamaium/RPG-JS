@@ -10,6 +10,6 @@
   "license": "MIT",
   "dependencies": {
     "typescript": "^4.0.3",
-    "vue": "^2.6.12"
+    "vue": "^3.0.4"
   }
 }

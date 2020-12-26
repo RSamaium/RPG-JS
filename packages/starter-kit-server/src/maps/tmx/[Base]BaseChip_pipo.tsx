@@ -1333,7 +1333,11 @@
  <tile id="236">
   <properties>
    <property name="collision" type="bool" value="false"/>
+   <property name="z" type="int" value="0"/>
   </properties>
+  <objectgroup draworder="index" id="2">
+   <object id="1" x="4.18182" y="17.4545" width="23.8182" height="14"/>
+  </objectgroup>
  </tile>
  <tile id="237">
   <properties>
@@ -1507,6 +1511,7 @@
  <tile id="267">
   <properties>
    <property name="collision" type="bool" value="false"/>
+   <property name="z" type="int" value="0"/>
   </properties>
   <objectgroup draworder="index" id="2">
    <object id="1" x="11.0435" y="16.2609" width="7.43478" height="15.8696">
@@ -1524,6 +1529,7 @@
  <tile id="269">
   <properties>
    <property name="collision" type="bool" value="false"/>
+   <property name="z" type="int" value="0"/>
   </properties>
   <objectgroup draworder="index" id="4">
    <object id="4" x="14.5272" y="16.125" width="6.28261" height="16.0734"/>
@@ -5010,11 +5016,25 @@
   <properties>
    <property name="collision" type="bool" value="false"/>
   </properties>
+  <objectgroup draworder="index" id="2">
+   <object id="1" x="8" y="11.2727" width="15.4545" height="18.7273">
+    <properties>
+     <property name="z" type="int" value="0"/>
+    </properties>
+   </object>
+  </objectgroup>
  </tile>
  <tile id="950">
   <properties>
    <property name="collision" type="bool" value="false"/>
   </properties>
+  <objectgroup draworder="index" id="2">
+   <object id="1" x="10.1818" y="12.9091" width="12" height="15.6364">
+    <properties>
+     <property name="z" type="int" value="0"/>
+    </properties>
+   </object>
+  </objectgroup>
  </tile>
  <tile id="951">
   <properties>
@@ -5565,6 +5585,13 @@
   <properties>
    <property name="collision" type="bool" value="false"/>
   </properties>
+  <objectgroup draworder="index" id="2">
+   <object id="1" x="11.8182" y="15.4545" width="8.36364" height="14">
+    <properties>
+     <property name="z" type="int" value="0"/>
+    </properties>
+   </object>
+  </objectgroup>
  </tile>
  <tile id="1061">
   <properties>

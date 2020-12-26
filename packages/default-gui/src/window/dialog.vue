@@ -57,7 +57,7 @@ export default {
             this.rpgGuiClose('rpg-dialog', indexSelect)
         }
     },
-    destroyed() {
+    unmounted() {
         if (this.obsKeyPress) this.obsKeyPress.unsubscribe()
     },
     components: {

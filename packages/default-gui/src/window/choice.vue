@@ -131,7 +131,7 @@ export default {
             }
         }
     },
-    destroyed() {
+    unmounted() {
         this.obsKeyPress.unsubscribe()
     },
     components: {

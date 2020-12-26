@@ -1,4 +1,4 @@
-import Vue from 'vue'
+import { createApp, ref } from 'vue'
 import { map } from 'rxjs/operators'
 
 class Gui {
@@ -6,8 +6,10 @@ class Gui {
     private renderer
     private gameEngine
     private clientEngine
+    private app
     private vm
     private socket
+    private gui = {}
 
     _initalize(clientEngine) {
 
@@ -18,13 +20,14 @@ class Gui {
         const self = this
         const { gui, selectorGui } = this.renderer.options
 
-        this.vm = new Vue({
+        this.app = createApp({
             template: `
                 <div>
-                    <component v-for="ui in gui" :is="ui.name" v-if="ui.display" v-bind="ui.data"></component>
+                    <template v-for="(ui, name) in gui">
+                        <component :is="name" v-bind="ui.data" v-if="ui.display"></component>
+                    </template>  
                 </div>
             `,
-            el: selectorGui,
             data() {
                 return {
                     gui
@@ -54,9 +57,16 @@ class Gui {
         })
 
         for (let ui of gui) {
-            Vue.component(ui.name, ui)
+            this.app.component(ui.name, ui)
+            this.gui[ui.name] = {
+                data: ui.data,
+                display: false
+            }
         } 
-        
+
+        this.vm = this.app.mount(selectorGui)
+        this.vm.gui = this.gui
+        this.renderer.app = this.app
         this.renderer.vm = this.vm
     }
 
@@ -74,14 +84,12 @@ class Gui {
         if (typeof id != 'string') {
             id = id.name
         }
-        const index = this.vm.gui.findIndex(gui => gui.name == id)
-        if (index == -1) {
-            return
-        }
+        const guiObj = this.gui[id]
         for (let key in obj) {
-            this.vm.gui[index][key] = obj[key]
+            guiObj[key] = obj[key]
         }
-        this.vm.$set(this.vm.gui, index, this.vm.gui[index])
+        //this.vm.gui.set(id, guiObj)
+        this.vm.gui = Object.assign({}, this.vm.gui)
     }
 
     display(id, data = {}) {

@@ -234,7 +234,7 @@ export default {
             this.rpgScene().listenInputs()
         }
     },
-    destroyed() {
+    unmounted() {
         this.obsKeyPress.unsubscribe()
         this.obsCurrentPlayer.unsubscribe()
     }

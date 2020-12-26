@@ -108,30 +108,6 @@ export default class RpgClientEngine extends ClientEngine<any> {
         return logic
     }
 
-    /*private propagateEvent(methodName, components, value) {
-        if (!components) {
-            return
-        }
-        for (let component of components) {
-            if (component[methodName]) {
-                const ret = component[methodName](...value)
-                if (ret == false) return false
-            }
-            return this.propagateEvent(methodName, component.$children, value)
-        }
-    }
-
-    updateObject(data): any {
-        const player = this.renderer.updateObject(data)
-        if (player) {
-            this.propagateEvent('$rpgPlayerChanged', [this.vm], [player.data, data.params])
-            if (data.playerId == this.gameEngine.playerId) {
-                this.propagateEvent('$rpgCurrentPlayerChanged', [this.vm], [player.data, data.params])
-            }
-        }
-        return !!player
-    }*/
-
     _initSocket() {
         this.onConnect()
         this.socket.on('player.loadScene', ({ name, data }) => {
