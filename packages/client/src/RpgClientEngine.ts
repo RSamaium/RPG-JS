@@ -81,16 +81,16 @@ export default class RpgClientEngine extends ClientEngine<any> {
         }
         if (!logic) {
             logic = this.gameEngine.addPlayer(RpgCommonPlayer, id)
+            
         }
         logic.prevParamsChanged = Object.assign({}, logic)
         for (let key in params) {
+            if (key == 'position' && !localEvent) continue
             logic[key] = params[key]
         }
         if (paramsChanged) {
-            if (paramsChanged.initPos) {
-                if (paramsChanged.initPos.x) logic.position.x = paramsChanged.initPos.x
-                if (paramsChanged.initPos.y) logic.position.y = paramsChanged.initPos.y
-                if (paramsChanged.initPos.z) logic.position.z = paramsChanged.initPos.z
+            if (paramsChanged.teleported) {
+                logic.position.copy(params.position)
             }
             if (!logic.paramsChanged) logic.paramsChanged = {}
             logic.paramsChanged = merge(paramsChanged, logic.paramsChanged)
@@ -130,7 +130,6 @@ export default class RpgClientEngine extends ClientEngine<any> {
         })
 
         World.listen(this.socket).value.subscribe((val: { data: any, partial: any }) => {
-            console.log(val)
             if (!val.data) {
                 return
             }

@@ -47,11 +47,13 @@ const itemSchemas = {
 }
 
 const playerSchemas = {
-    initPos: {
+    position: {
         x: Number, 
         y: Number,
         z: Number
     },
+    teleported: Number,
+
     param: Object,
     hp: Number,
     sp: Number,
@@ -89,15 +91,11 @@ export class RpgPlayer extends RpgCommonPlayer {
     static schemas = {
        ...playerSchemas,
         events: [{
-            position: { x: Number, y: Number, z: Number },
             direction: Number,
             ...playerSchemas
         }]
     }
 
-    // initial positions
-    initPos
-    
     private _name
     public events: any[] = []
     public param: any 
@@ -108,7 +106,8 @@ export class RpgPlayer extends RpgCommonPlayer {
         this.initialize()
     }
 
-    // initialize data
+    // As soon as a teleport has been made, the value is changed to force the client to change the positions on the map without making a move.
+    teleported: number = 0
 
     initialize() {
         this.expCurve =  {
@@ -239,7 +238,7 @@ export class RpgPlayer extends RpgCommonPlayer {
         if (isString(positions)) positions = <Position>this.getCurrentMap().getPositionByShape(shape => shape.name == positions || shape.type == positions)
         if (!positions) positions = { x: 0, y: 0 }
         if (!(positions as Position).z) (positions as Position).z = 0
-        this.initPos = positions
+        this.teleported++
         this.position.copy(positions)
         return (positions as Position)
     }
