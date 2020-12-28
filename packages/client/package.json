@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/client",
-  "version": "3.0.0-alpha.0",
+  "version": "3.0.0-alpha",
   "description": "",
   "main": "lib/index.js",
   "types": "./lib/index.d.ts",
@@ -16,8 +16,8 @@
   "author": "Samuel Ronce",
   "license": "MIT",
   "dependencies": {
-    "@rpgjs/common": "^3.0.0-alpha.0",
-    "@rpgjs/sync-client": "^3.0.0-alpha.0",
+    "@rpgjs/common": "^3.0.0-alpha",
+    "@rpgjs/sync-client": "^3.0.0-alpha",
     "@tweenjs/tween.js": "^18.6.0",
     "@types/howler": "^2.2.1",
     "howler": "^2.2.1",
