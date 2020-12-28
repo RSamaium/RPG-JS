@@ -22,5 +22,6 @@
     "lance-gg": "github:rpgjs/lance",
     "lodash.merge": "^4.6.2",
     "sat": "^0.8.0"
-  }
+  },
+  "gitHead": "be12bff59531eaf9b4d1c9dacb02791ac058ac81"
 }
