@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/testing",
-  "version": "3.0.0-alpha.0",
+  "version": "3.0.0-alpha",
   "description": "",
   "main": "src/index.ts",
   "scripts": {
@@ -10,7 +10,7 @@
   "author": "Samuel Ronce",
   "license": "MIT",
   "dependencies": {
-    "@rpgjs/common": "^3.0.0-alpha.0",
-    "@rpgjs/server": "^3.0.0-alpha.0"
+    "@rpgjs/common": "^3.0.0-alpha",
+    "@rpgjs/server": "^3.0.0-alpha"
   }
 }

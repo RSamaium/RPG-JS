@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/starter-kit-client",
-  "version": "3.0.0-alpha.0",
+  "version": "3.0.0-alpha",
   "description": "",
   "main": "src/index.ts",
   "scripts": {},
@@ -8,6 +8,6 @@
   "author": "Samuel Ronce",
   "license": "MIT",
   "dependencies": {
-    "@rpgjs/client": "^3.0.0-alpha.0"
+    "@rpgjs/client": "^3.0.0-alpha"
   }
 }
