@@ -5,8 +5,12 @@
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "scripts": {
+    "prepublish": "npm run build",
+    "build": "tsc",
+    "watch": "tsc -w",
     "test": "jest"
   },
+  "files": ["lib"],
   "keywords": [],
   "author": "Samuel Ronce",
   "license": "MIT",
