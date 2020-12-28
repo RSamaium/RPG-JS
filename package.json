@@ -17,7 +17,7 @@
     "test": "jest",
     "lerna:ls": "lerna ls",
     "load-testing": "k6 run -e CHAT_WS=ws://localhost:4000 tests/load-testing/socket.js",
-    "build": "npm run build:common && npm run build:server && npm run build:client",
+    "build": "concurrently -n build \"npm:build:*\"",
     "build:common": "cd packages/common && npm run build",
     "build:server": "cd packages/server && npm run build",
     "build:client": "cd packages/client && npm run build",
