@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/standalone",
-  "version": "3.0.0-alpha",
+  "version": "3.0.0-alpha.0",
   "description": "",
   "main": "src/index.ts",
   "scripts": {},
@@ -8,8 +8,8 @@
   "author": "Samuel Ronce",
   "license": "MIT",
   "dependencies": {
-    "@rpgjs/client": "^3.0.0-alpha",
-    "@rpgjs/common": "^3.0.0-alpha",
-    "@rpgjs/server": "^3.0.0-alpha"
+    "@rpgjs/client": "^3.0.0-alpha.0",
+    "@rpgjs/common": "^3.0.0-alpha.0",
+    "@rpgjs/server": "^3.0.0-alpha.0"
   }
 }
