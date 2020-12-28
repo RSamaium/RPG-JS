@@ -22,14 +22,23 @@ type CallbackTurnMove = (player: RpgPlayer, map) => string
 type Routes = (string | Promise<any> | Direction | Function)[]
 
 export enum Frequency {
-    Low = 400,
+    Lowest = 600,
+    Lower = 400,
+    Low = 200,
+    High = 100,
+    Highter = 50,
+    Highest = 25,
     None = 0
 }
 
 export enum Speed {
+    Slowest = 0.2,
+    Slower = 0.5,
     Slow = 1,
     Normal = 3,
-    Fast = 5
+    Fast = 5,
+    Faster = 7,
+    Fastest = 10
 }
 
  /** 
@@ -288,9 +297,13 @@ export class MoveManager {
      * @prop {number} player.speed
      * @enum {number}
      * 
+     * Speed.Slowest | 0.2
+     * Speed.Slower | 0.5
      * Speed.Slow | 1
      * Speed.Normal | 3
      * Speed.Fast | 5
+     * Speed.Faster | 7
+     * Speed.Fastest | 10
      * @default 3
      * @memberof MoveManager
      * */
@@ -343,7 +356,12 @@ export class MoveManager {
      * @prop {number} player.speed
      * @enum {number}
      * 
-     * Frequency.Low | 400
+     * Frequency.Lowest | 600
+     * Frequency.Lower | 400
+     * Frequency.Low | 200
+     * Frequency.High | 100
+     * Frequency.Highter | 50
+     * Frequency.Highest | 25
      * Frequency.None | 0
      * @default 0
      * @memberof MoveManager
