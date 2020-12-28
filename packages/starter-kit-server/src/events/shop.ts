@@ -13,7 +13,6 @@ export class ShopEvent extends RpgEvent {
         this.setGraphic('male4_1')
     }
     async onAction(player: RpgPlayer) {
-        player.level += 1
         await player.callShop([ Key ])
     }
 }

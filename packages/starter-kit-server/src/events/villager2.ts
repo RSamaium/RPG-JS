@@ -15,7 +15,7 @@ export class Villager2Event extends RpgEvent {
         this.infiniteMoveRoute([ Move.tileRandom() ])
     }
     async onAction(player: RpgPlayer) {
-        /*if (!player.getVariable('ASK_BROTHER')) {
+        if (!player.getVariable('ASK_BROTHER')) {
             await player.showText('I think you should talk to my brother, he\'s in the northwestern part of the village.', {
                 talkWith: this
             })
@@ -26,7 +26,7 @@ export class Villager2Event extends RpgEvent {
                 talkWith: this
             })
             return
-        }*/
+        }
         const choice = await player.showChoices('My brother wants the key to the dungeon. To buy it, you must have gold. Do you want it?', [
             { value: true, text: 'Yes' },
             { value: false, text: 'No' }
