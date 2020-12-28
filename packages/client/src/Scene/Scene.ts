@@ -39,6 +39,7 @@ export class Scene {
     draw(t, dt) {
         const logicObjects = { ...this.game.world.objects, ...this.game.events }
         const renderObjects = this.objects
+        const sizeLogic = Object.values(logicObjects).length
         for (let key in logicObjects) {
             const val = logicObjects[key]
             if (!renderObjects.has(key)) {
@@ -52,9 +53,9 @@ export class Scene {
                 this.triggerSpriteChanges(val, object, ret.moving)
             }
         }
-        if (logicObjects.size < renderObjects.size) {
+        if (sizeLogic < renderObjects.size) {
             renderObjects.forEach((val, key) => {
-                if (!logicObjects.has(key)) {
+                if (!logicObjects[key]) {
                     this.removeObject(key)
                 }
             })
