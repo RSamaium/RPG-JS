@@ -42,7 +42,7 @@
     "@rpgjs/starter-kit-server": "^3.0.0-alpha",
     "@rpgjs/testing": "^3.0.0-alpha",
     "express": "^4.17.1",
-    "socket.io": "^2.3.0",
+    "socket.io": "^3.0.4",
     "vue": "^3.0.4"
   }
 }

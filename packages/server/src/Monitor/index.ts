@@ -24,6 +24,8 @@ class Monitor extends EventEmitter {
     }
 
     addMonitor(socket) {
+        // TODO
+        /*
         let bytesIn = 0 
         let bytesOut = 0
         const update = () => {
@@ -42,7 +44,7 @@ class Monitor extends EventEmitter {
         })
         socket._emit = socket.emit.bind(socket)
         socket.emit = (name, data) => {
-            /*let size = 0
+            let size = 0
             let obj = data
             if (name == 'worldUpdate') {
                 obj = Object.assign({}, data)
@@ -50,10 +52,11 @@ class Monitor extends EventEmitter {
                 obj.dataBuffer = {_placeholder: true, num: 0}
             }
             size += `451-["${name},${JSON.stringify(obj)}"]`.length
-            bytesOut += size*/
+            bytesOut += size
             update()
             return socket._emit(name, data) 
         }
+        */
         this.totalConnected++
     }
 

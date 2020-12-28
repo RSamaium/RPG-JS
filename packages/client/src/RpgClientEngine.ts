@@ -3,11 +3,10 @@ import Renderer from './Renderer'
 import { _initSpritesheet } from './Sprite/Spritesheets'
 import { _initSound } from './Sound/Sounds'
 import { RpgSprite } from './Sprite/Player'
-import { EventEmitter, Utils } from '@rpgjs/common'
 import { World } from '@rpgjs/sync-client'
 import { BehaviorSubject, Subject } from 'rxjs'
 import { RpgGui } from './RpgGui'
-import { RpgCommonPlayer } from '@rpgjs/common'
+import { RpgCommonPlayer, PrebuildGui } from '@rpgjs/common'
 import merge from 'lodash.merge'
 import { Animation } from './Effects/Animation'
 
@@ -109,8 +108,16 @@ export default class RpgClientEngine extends ClientEngine<any> {
     }
 
     _initSocket() {
-        this.onConnect()
-        this.socket.on('player.loadScene', ({ name, data }) => {
+
+        this.socket.on('connect', () => {
+            this.onConnect()
+        })
+
+        this.socket.on('connect_error', (err: any) => {
+            this.onConnectError(err)
+        })
+
+        this.socket.on('loadScene', ({ name, data }) => {
             this.renderer.loadScene(name, data)
         })
         
@@ -153,22 +160,28 @@ export default class RpgClientEngine extends ClientEngine<any> {
         })
         
         this.socket.on('reconnect', () => {
-            RpgGui.hide('rpg-disconnected')
+            RpgGui.hide(PrebuildGui.Disconnect)
+            this.onReconnect()
         })
-        this.socket.on('disconnect', () => {
-            RpgGui.display('rpg-disconnected')
-            this.onDisconnect()
+
+        this.socket.on('disconnect', (reason: string) => {
+            RpgGui.display(PrebuildGui.Disconnect)
+            this.onDisconnect(reason)
         })
+
         RpgGui._setSocket(this.socket)
     }
 
     onConnect() {}
 
-    onDisconnect() {}
+    onReconnect() {}
 
-    connect() {
-        return super.connect({}).then(() => {
-            this._initSocket()
-        })
+    onConnectError(err: any) {}
+
+    onDisconnect(reason: string) {}
+
+    async connect() {
+         super.connect({})
+         this._initSocket()
     }
 }

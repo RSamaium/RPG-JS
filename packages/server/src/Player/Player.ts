@@ -342,7 +342,7 @@ export class RpgPlayer extends RpgCommonPlayer {
     }
 
     loadScene(name: string, data: any): void {
-        this.emit('player.loadScene', {
+        this.emit('loadScene', {
             name, 
             data
         })
