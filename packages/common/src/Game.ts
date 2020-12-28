@@ -1,5 +1,5 @@
 import { GameEngine, CannonPhysicsEngine, Utils } from 'lance-gg'
-import Player from './Player'
+import { RpgCommonPlayer } from './Player'
 import Event from './Event'
 import SAT from 'sat'
 
@@ -22,7 +22,7 @@ export default class Game extends GameEngine<any> {
     }
 
     registerClasses(serializer) {
-        serializer.registerClass(Player, PLAYER_CLASS)
+        serializer.registerClass(RpgCommonPlayer, PLAYER_CLASS)
         serializer.registerClass(Event, EVENT_CLASS)
         serializer.registerClass(SAT.Box)
     }
@@ -62,7 +62,7 @@ export default class Game extends GameEngine<any> {
         if (!player.canMove) return
 
         if (inputData.input === 'space') {
-            player.triggerCollisionWith(Player.ACTIONS.ACTION)
+            player.triggerCollisionWith(RpgCommonPlayer.ACTIONS.ACTION)
         }
         else {
             player.move(inputData.input)

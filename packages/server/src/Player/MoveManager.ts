@@ -323,8 +323,22 @@ export class MoveManager {
      * */
     canMove: boolean
 
+     /** 
+     * The player passes through the other players (or vice versa). But the player does not go through the events.
+     * 
+     * ```ts
+     * player.throughOtherPlayer = true
+     * ```
+     * 
+     * @title Go through to other player
+     * @prop {boolean} player.throughOtherPlayer
+     * @default true
+     * @memberof MoveManager
+     * */
+    throughOtherPlayer: boolean
+
     /** 
-     * No collision will occur if the value of this property is `true`.
+     * The player goes through the event or the other players (or vice versa)
      * 
      * ```ts
      * player.through = true

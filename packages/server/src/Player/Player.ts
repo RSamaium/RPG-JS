@@ -74,6 +74,7 @@ const playerSchemas = {
     speed: Number,
     canMove: Boolean,
     through: Boolean, 
+    throughOtherPlayer: Boolean,
 
     width: Number,
     height: Number,
@@ -130,6 +131,7 @@ export class RpgPlayer extends RpgCommonPlayer {
         this.frequency = Frequency.None
         this.canMove = true
         this.through = false
+        this.throughOtherPlayer = true
     
         this.initialLevel = 1
         this.finalLevel = 99

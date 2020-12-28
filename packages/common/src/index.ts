@@ -1,4 +1,4 @@
-import RpgCommonPlayer, { Direction } from './Player'
+import { Direction, RpgCommonPlayer, PlayerType } from './Player'
 import RpgCommonEvent from './Event'
 import RpgCommonMap from './Map'
 import RpgCommonGame from './Game'
@@ -16,5 +16,6 @@ export {
     Utils,
     TransportIo,
     Direction,
-    PrebuildGui
+    PrebuildGui,
+    PlayerType
 }

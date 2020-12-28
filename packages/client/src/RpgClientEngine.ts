@@ -6,7 +6,7 @@ import { RpgSprite } from './Sprite/Player'
 import { World } from '@rpgjs/sync-client'
 import { BehaviorSubject, Subject } from 'rxjs'
 import { RpgGui } from './RpgGui'
-import { RpgCommonPlayer, PrebuildGui } from '@rpgjs/common'
+import { RpgCommonPlayer, PrebuildGui, PlayerType } from '@rpgjs/common'
 import merge from 'lodash.merge'
 import { Animation } from './Effects/Animation'
 
@@ -130,6 +130,7 @@ export default class RpgClientEngine extends ClientEngine<any> {
         })
 
         World.listen(this.socket).value.subscribe((val: { data: any, partial: any }) => {
+            console.log(val)
             if (!val.data) {
                 return
             }
@@ -143,6 +144,7 @@ export default class RpgClientEngine extends ClientEngine<any> {
                         this.removeObject(key)
                     }
                     if (!obj) continue
+                    obj.type = prop == 'users' ? PlayerType.Player : PlayerType.Event
                     if (prop == 'users' && this.gameEngine.playerId == key && obj.events) {
                        change('events', {
                            data: obj,

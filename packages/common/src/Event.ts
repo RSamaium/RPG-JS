@@ -1,7 +1,7 @@
 import { random } from './Utils';
-import Player from './Player'
+import { RpgCommonPlayer } from './Player'
 
-export default class Event extends Player {
+export default class Event extends RpgCommonPlayer {
     static get netScheme() {
         return super.netScheme
     }

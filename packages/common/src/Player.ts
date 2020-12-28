@@ -13,7 +13,12 @@ export enum Direction {
     Right = 'right'
 }
 
-export default class Player extends DynamicObject<any, any> {
+export enum PlayerType {
+    Player = 'player',
+    Event = 'event'
+}
+
+export class RpgCommonPlayer extends DynamicObject<any, any> {
 
     map: string = ''
     graphic: string = ''
@@ -26,12 +31,8 @@ export default class Player extends DynamicObject<any, any> {
     collisionWith: any[] = []
     data: any = {}
     hitbox: any
-    player: any
-    server: any
+
     private _position: any
-
-    detectChanges: boolean = true 
-
     private _hitboxPos: any
 
     static get netScheme() {
@@ -210,7 +211,7 @@ export default class Player extends DynamicObject<any, any> {
     triggerCollisionWith(type?: number) {
         for (let collisionWith of this.collisionWith) {
             const { properties } = collisionWith
-            if (type == Player.ACTIONS.ACTION) {
+            if (type == RpgCommonPlayer.ACTIONS.ACTION) {
                 if (collisionWith.onAction) collisionWith.execMethod('onAction', [this])
             }
             else if (collisionWith.onPlayerTouch) collisionWith.execMethod('onPlayerTouch', [this])
@@ -309,7 +310,16 @@ export default class Player extends DynamicObject<any, any> {
             if (collided) {
                 this.collisionWith.push(event)
                 this.triggerCollisionWith()
-                if (!event.through) return false 
+                let throughOtherPlayer = false
+                if (event.type == PlayerType.Player && this.type == PlayerType.Player) {
+                    if (!(event.throughOtherPlayer || this.throughOtherPlayer)) {
+                        return false
+                    }
+                    else {
+                        throughOtherPlayer = true
+                    }
+                }
+                if (!throughOtherPlayer && (!(event.through || this.through))) return false 
             }
         }
 
@@ -434,4 +444,10 @@ export default class Player extends DynamicObject<any, any> {
     syncTo(other) {
         super.syncTo(other)
     }
+}
+
+export interface RpgCommonPlayer {
+    readonly type: string
+    through: boolean
+    throughOtherPlayer: boolean
 }
