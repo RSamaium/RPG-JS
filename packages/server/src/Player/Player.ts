@@ -52,6 +52,7 @@ const playerSchemas = {
         y: Number,
         z: Number
     },
+    param: Object,
     hp: Number,
     sp: Number,
     gold: Number,
@@ -115,15 +116,7 @@ export class RpgPlayer extends RpgCommonPlayer {
             accelerationA: 30,
             accelerationB: 30
         }
-
-        this.param = new Proxy({}, {
-            get: (obj, prop: string) => this.getParamValue(prop), 
-            set: () => {
-                console.log("You cannot change the value because the parameter is linked to the parameter's curve")
-                return false
-            }
-        })
-
+        
         this.parameters = new Map()
         this.variables = new Map()
         this.states = []

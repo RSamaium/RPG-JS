@@ -100,11 +100,11 @@ export class WorldClass {
         return this.joinOrLeaveRoom('$join', roomId, userId)
     }
 
-    addRoom(id: string, roomClass, options?: any): RoomClass {
+    addRoom(id: string, roomClass): RoomClass {
         if (roomClass.constructor.name == 'Function') {
             roomClass = new roomClass()
         }
-        const room = new Room().add(id, roomClass, options)
+        const room = new Room().add(id, roomClass)
         this.rooms.set(id, room)
         return room
     }

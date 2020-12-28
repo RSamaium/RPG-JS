@@ -88,7 +88,7 @@ export class SceneMap {
         
 
         player.teleport(positions || 'start')
-        player.events = mapInstance.createEvents(EventMode.Scenario, player)
+        player.events = mapInstance.createEvents(EventMode.Scenario)
 
         return mapInstance
     }

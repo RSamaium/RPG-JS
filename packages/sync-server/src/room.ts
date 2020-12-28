@@ -4,16 +4,8 @@ import  set from 'set-value'
 import { Utils } from './utils'
 import { Transmitter } from './transmitter'
 import { Packet } from './packet'
-import { World } from './world'
 import { RoomClass } from './interfaces/room.interface';
 import { User } from './rooms/default';
-
-enum ObjectKind {
-    New = 'N',
-    Delete = 'D'
-}
-
-const REGEXP_GENERIC_KEY: string = '\\$[a-zA-Z0-9-_]+'
 
 export class Room {
 
@@ -45,17 +37,14 @@ export class Room {
         }
     }
 
-    add(id: string, room: RoomClass, options?: any): RoomClass {
+    add(id: string, room: RoomClass): RoomClass {
         room.id = id
         if (!room.$schema) room.$schema = {}
         if (!room.$schema.users) room.$schema.users = [{id: String}]
         if (!room.$inputs) room.$inputs = {}
         if (!room.users) room.users = {} 
         if (room.$inputs) this.addInputs(room, room.$inputs)
-       /* this.proxyRoom = onChange(room, this.detectChanges.bind(this), {
-            ignoreUnderscores: true,
-            ...options
-        })*/
+
         room.$detectChanges = () => {
             this.detectChanges(room)
         }

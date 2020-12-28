@@ -1,4 +1,5 @@
-import { Utils }  from '@rpgjs/common'
+import { Utils } from '@rpgjs/common'
+import { RpgPlayer } from './Player'
 
 import { 
     MAXHP, 
@@ -6,30 +7,10 @@ import {
 } from '../presets'
 
 const { 
-    applyMixins,
     isString
 } = Utils
 
 export class ParameterManager {
-
-    /** 
-     * Read the value of a parameter. Put the name of the parameter.
-     * 
-     * ```ts
-     * import { Presets } from '@rpgjs/server'
-     * 
-     * const { MAXHP } = Presets 
-     * 
-     * console.log(player.param[MAXHP])
-     * ```
-     * 
-     * > Possible to use the `player.getParamValue(name)` method instead
-     * @title Get Param Value
-     * @prop {object} player.param
-     * @readonly
-     * @memberof ParameterManager
-     * */
-    param: any
 
     private _paramsModifier: {
         [key: string]: {
@@ -238,6 +219,31 @@ export class ParameterManager {
      * */
     get expForNextlevel(): number {
         return this._expForLevel(this.level + 1)
+    }
+
+    /** 
+     * Read the value of a parameter. Put the name of the parameter.
+     * 
+     * ```ts
+     * import { Presets } from '@rpgjs/server'
+     * 
+     * const { MAXHP } = Presets 
+     * 
+     * console.log(player.param[MAXHP])
+     * ```
+     * 
+     * > Possible to use the `player.getParamValue(name)` method instead
+     * @title Get Param Value
+     * @prop {object} player.param
+     * @readonly
+     * @memberof ParameterManager
+     * */
+    get param() {
+        const obj = {}
+        this._parameters.forEach((val, name) => {
+            obj[name] = this.getParamValue(name)
+        })
+        return obj
     }
 
     get paramsModifier() {
@@ -457,5 +463,6 @@ export class ParameterManager {
 }
 
 export interface ParameterManager {
-    _class
+    _class,
+    $schema
 }

@@ -121,6 +121,7 @@ export default class RpgClientEngine extends ClientEngine<any> {
             this.renderer.loadScene(name, data)
         })
         
+        // TODO
         this.socket.on('player.callMethod', ({ objectId, params, name }) => {
             const sprite = this.renderer.getScene().getPlayer(objectId)
             this.renderer.showAnimation(sprite)
@@ -128,6 +129,7 @@ export default class RpgClientEngine extends ClientEngine<any> {
         })
 
         World.listen(this.socket).value.subscribe((val: { data: any, partial: any }) => {
+            console.log(val)
             if (!val.data) {
                 return
             }

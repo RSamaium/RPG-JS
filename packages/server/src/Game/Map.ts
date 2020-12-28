@@ -36,7 +36,7 @@ export class RpgMap extends RpgCommonMap {
 
     onLoad() {}
 
-    createEvents(mode: EventMode, player?) {
+    createEvents(mode: EventMode) {
         const events  = {}
 
         if (!this._events) return events
