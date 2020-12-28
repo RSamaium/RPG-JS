@@ -100,7 +100,7 @@ export default {
             
             this.$emit('change', this.selected)
 
-            const [li] = this.$refs[`li-${this.selected}`]
+            const li = this.$refs[`li-${this.selected}`]
             const ul = this.$parent.$el
             
             checkInView(ul, li, false)
@@ -114,7 +114,7 @@ export default {
                 this.$emit('canScroll', null)
             }
             this.$nextTick(() => {
-                 const [lastLi] = this.$refs[`li-${this.choices.length-1}`]
+                 const lastLi = this.$refs[`li-${this.choices.length-1}`]
                  const inView = checkInView(ul, lastLi, false)
                  if (!inView) this.$emit('canScroll', 'down')
             })
@@ -180,5 +180,6 @@ ul li.active:before {
 p {
     margin: 0;
     position: relative;
+    padding: 10px;
 }
 </style>

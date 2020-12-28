@@ -11,15 +11,15 @@
             <div :class="{'item-quantity': step == 1}">
                 <rpg-choice :choices="listItems" :column="1" @change="selected" @selected="choiceItem" ref="list" v-if="step == 0">
                     <template v-slot:default="{ choice }">
-                        <p class="space-between" :class="{ 'can-not-buy': choice.price > player.gold }">
-                            <span><Icon name="potion" /> {{ choice.name }}</span> 
+                        <p class="space-between item" :class="{ 'can-not-buy': choice.price > player.gold }">
+                            <span>{{ choice.name }}</span> 
                             <span>{{ price(choice.price) }}</span> 
                         </p>
                     </template>
                 </rpg-choice>
                 <div v-else>
                     <p class="space-between">
-                        <span><Icon name="potion" /> {{ currentItem.name }}</span> 
+                        <span>{{ currentItem.name }}</span> 
                         <span class="cursor"><span>x {{ quantity }}</span></span> 
                     </p>
                     <p class="space-between">
@@ -47,6 +47,7 @@ export default {
     data() {
         return {
             player: {},
+            inventory: [],
             menuActive: true,
             menu: [{
                 text: 'Buy',
@@ -63,7 +64,6 @@ export default {
             goldName: 'Gold',
             step: 0,
             quantity: 1,
-            _playerItems: [],
             indexSelected: 0,
             doAction: false
         }
@@ -73,18 +73,15 @@ export default {
 
         this.obsCurrentPlayer = this.rpgCurrentPlayer.subscribe(({ object }) => {
             this.player = object
-            this._computedWatchers.playerItems.run()
-            this._computedWatchers.buyerItems.run()
-            this._computedWatchers.listItems.run()
-            this.$forceUpdate()
-        })
-
-        const doAction = () => {
-            this.step = 0
-            this.quantity = 1
+            this.inventory = Object.values(this.player.items)
+            // Wait for the return of the server to reset values
+            if (this.doAction) {
+                this.step = 0
+                this.quantity = 1
+                this.doAction = false
+            }
             this.selected(this.indexSelected)
-            this.doAction= false
-        }
+        })
 
         const interactionBuy = (name) => {
             if (name == 'escape') {
@@ -104,6 +101,7 @@ export default {
                 this.quantity -= 1
             }
             else if (name == 'enter' || name == 'space') {
+                this.doAction = true
                 this.rpgSocket().emit('gui.interaction', {
                     guiId: 'rpg-shop',
                     name: 'buyItem',
@@ -112,7 +110,6 @@ export default {
                         nb: this.quantity
                     }
                 })
-                doAction()
             }
         }
 
@@ -133,6 +130,7 @@ export default {
                 this.quantity -= 1
             }
             else if (name == 'enter' || name == 'space') {
+                this.doAction = true
                 this.rpgSocket().emit('gui.interaction', {
                     guiId: 'rpg-shop',
                     name: 'sellItem',
@@ -141,7 +139,6 @@ export default {
                         nb: this.quantity
                     }
                 })
-                doAction()
             }
         }
 
@@ -187,9 +184,7 @@ export default {
             return nb
         },
        playerItems() {
-            const items = Object.values(this.player.items)
-            if (!items) return []
-            return items.map(({ item, nb }) => ({
+            return this.inventory.map(({ item, nb }) => ({
                 ...item,
                 nb
             }))
@@ -217,7 +212,7 @@ export default {
             this.selected(0)
         },
         choiceItem(index) {
-            const item = this.listItems[index].description
+            const item = this.listItems[index]
             if (item.price > this.player.gold) return
             this.step = 1
         },
@@ -298,6 +293,12 @@ hr {
 
 .can-not-buy {
     opacity: 0.5;
+}
+
+.item {
+    margin: 0;
+    position: relative;
+    padding: 10px;
 }
 
 .item-quantity {

@@ -7,6 +7,7 @@ export class Player extends RpgPlayer {
         this.setHitbox(20, 16)
         this.setGraphic('male1_2')
         this.setActor(database.Hero)
+        this.gold = 100000
         await this.changeMap('medieval')
     }
 
