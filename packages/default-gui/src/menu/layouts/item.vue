@@ -4,8 +4,8 @@
             <div class="row">
                <rpg-choice :choices="mapItems" :column="1" @change="selected" @selected="choiceItem" ref="choice" @canScroll="arrow = $event">
                    <template v-slot:default="{ choice }">
-                       <p class="space-between" :class="{'not-consumable': !choice.consumable}">
-                           <span><Icon name="potion" /> {{ choice.text }}</span> 
+                       <p class="space-between item" :class="{'not-consumable': !choice.consumable}">
+                           <span>{{ choice.text }}</span> 
                            <span>{{ choice.nb }}</span> 
                         </p>
                    </template>
@@ -87,6 +87,12 @@ export default {
 
 .not-consumable {
     opacity: 0.5;
+}
+
+.item {
+    margin: 0;
+    position: relative;
+    padding: 10px;
 }
 
 .space-between {
