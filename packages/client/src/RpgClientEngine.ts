@@ -110,6 +110,7 @@ export default class RpgClientEngine extends ClientEngine<any> {
     _initSocket() {
 
         this.socket.on('connect', () => {
+            if (RpgGui.exists(PrebuildGui.Disconnect)) RpgGui.hide(PrebuildGui.Disconnect)
             this.onConnect()
         })
 
@@ -129,7 +130,6 @@ export default class RpgClientEngine extends ClientEngine<any> {
         })
 
         World.listen(this.socket).value.subscribe((val: { data: any, partial: any }) => {
-            console.log(val)
             if (!val.data) {
                 return
             }
@@ -160,14 +160,9 @@ export default class RpgClientEngine extends ClientEngine<any> {
             change('users')
             change('events')
         })
-        
-        this.socket.on('reconnect', () => {
-            RpgGui.hide(PrebuildGui.Disconnect)
-            this.onReconnect()
-        })
 
         this.socket.on('disconnect', (reason: string) => {
-            RpgGui.display(PrebuildGui.Disconnect)
+            if (RpgGui.exists(PrebuildGui.Disconnect)) RpgGui.display(PrebuildGui.Disconnect)
             this.onDisconnect(reason)
         })
 

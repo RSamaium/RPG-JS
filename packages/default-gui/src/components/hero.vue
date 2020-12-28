@@ -11,10 +11,10 @@
             </ul>
         </div>
         <div class="bars-column">
-             <ul>
+             <ul v-if="player.param">
                  <li>{{ _class.name }}</li>
-                 <li><bar :nb="player.hp" :max="player.maxHp" name="HP"  color="orange" /></li>
-                 <li><bar :nb="player.sp" :max="player.maxSp" name="SP"  color="blue" /></li>
+                 <li><bar :nb="player.hp" :max="player.param.maxHp" name="HP"  color="orange" /></li>
+                 <li><bar :nb="player.sp" :max="player.param.maxSp" name="SP"  color="blue" /></li>
              </ul>
         </div>
     </div>
@@ -32,7 +32,7 @@ export default {
         }
     },
     mounted() {
-        this.rpgCurrentPlayer.subscribe(({ object }) => {
+        this.obsCurrentPlayer = this.rpgCurrentPlayer.subscribe(({ object }) => {
            this.player = object
         })
     },
@@ -46,6 +46,9 @@ export default {
             if (!this.player._class) return {}
             return this.player._class
         }
+    },
+    unmounted() {
+        this.obsCurrentPlayer.unsubscribe()
     },
     components: {
         Bar

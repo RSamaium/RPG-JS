@@ -81,15 +81,25 @@ class Gui {
     }
 
     _setGui(id, obj) {
-        if (typeof id != 'string') {
-            id = id.name
+        const guiObj = this.get(id)
+        if (!guiObj) {
+            throw `The GUI named ${id} is non-existent. Please add the component in the gui property of the decorator @RpgClient`
         }
-        const guiObj = this.gui[id]
         for (let key in obj) {
             guiObj[key] = obj[key]
         }
-        //this.vm.gui.set(id, guiObj)
         this.vm.gui = Object.assign({}, this.vm.gui)
+    }
+
+    get(id) {
+        if (typeof id != 'string') {
+            id = id.name
+        }
+        return this.gui[id]
+    }
+
+    exists(id): boolean {
+        return !!this.get(id)
     }
 
     display(id, data = {}) {
