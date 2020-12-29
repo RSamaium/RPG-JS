@@ -24,6 +24,7 @@
     "build:server": "cd packages/server && npm run build",
     "build:client": "cd packages/client && npm run build",
     "build:database": "cd packages/database && npm run build",
+    "build:testing": "cd packages/testing && npm run build",
     "build:sync-server": "cd packages/sync-server && npm run build",
     "watch:sync-server": "cd packages/sync-server && npm run watch",
     "build:sync-client": "cd packages/sync-client && npm run build",
