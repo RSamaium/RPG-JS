@@ -4,6 +4,9 @@
   "description": "",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "prepublish": "npm run build",
     "build": "tsc",
@@ -31,6 +34,5 @@
     "@types/jest": "^26.0.16",
     "jest": "^26.6.3",
     "ts-jest": "^26.4.4"
-  },
-  "gitHead": "be12bff59531eaf9b4d1c9dacb02791ac058ac81"
+  }
 }

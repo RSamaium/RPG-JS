@@ -4,6 +4,9 @@
   "description": "",
   "main": "lib/index.js",
   "types": "./lib/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "prepublish": "npm run build",
     "build": "tsc",
@@ -18,6 +21,5 @@
   "dependencies": {
     "lance-gg": "github:rpgjs/lance",
     "sat": "^0.8.0"
-  },
-  "gitHead": "be12bff59531eaf9b4d1c9dacb02791ac058ac81"
+  }
 }

@@ -3,6 +3,9 @@
   "version": "3.0.0-alpha",
   "description": "",
   "main": "src/index.ts",
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {},
   "keywords": [],
   "author": "Samuel Ronce",
@@ -11,6 +14,5 @@
     "@rpgjs/client": "^3.0.0-alpha",
     "@rpgjs/common": "^3.0.0-alpha",
     "@rpgjs/server": "^3.0.0-alpha"
-  },
-  "gitHead": "be12bff59531eaf9b4d1c9dacb02791ac058ac81"
+  }
 }
