@@ -1,0 +1,13 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    - duration: 20
+      arrivalRate: 1
+  engines:
+   socketio-v3: {}
+scenarios:
+  - name: SocketIO
+    engine: "socketio-v3"
+    flow:
+       - emit: ["move",  { input: direction, options: {"movement": true}, step: 0 }]
+       - think: 20

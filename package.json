@@ -10,13 +10,15 @@
   },
   "devDependencies": {
     "artillery": "^1.6.1",
+    "artillery-engine-socketio-v3": "^1.0.1",
     "jest": "^26.4.2",
     "lerna": "^3.22.1"
   },
   "scripts": {
     "test": "jest",
+    "load": "artillery run tests/load-testing/socket.yml",
     "lerna:ls": "lerna ls",
-    "load-testing": "k6 run -e CHAT_WS=ws://localhost:4000 tests/load-testing/socket.js",
+    "load-testing": "k6 run -e CHAT_WS=ws://localhost:3000 tests/load-testing/socket.js",
     "build": "concurrently -n build \"npm:build:*\"",
     "build:common": "cd packages/common && npm run build",
     "build:server": "cd packages/server && npm run build",
@@ -33,7 +35,7 @@
     "dev": "concurrently -n rpgjs,sample \"npm:watch:*\" \"cd packages/sample && npm run dev\""
   },
   "repository": {
-    "type": "git", 
+    "type": "git",
     "url": ""
   },
   "keywords": [

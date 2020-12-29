@@ -3,7 +3,7 @@ import { check } from "k6";
 
 export const options = {
   stages: [
-    { duration: '10s', target: 300 }
+    { duration: '10s', target: 10 }
   ]
 }
 
@@ -15,10 +15,11 @@ export default function () {
   const { CHAT_WS } = __ENV
   const token =
     "....token...";
-  const url = `${CHAT_WS}/socket.io/?token=${token}&tokenType=jwt&EIO=3&transport=websocket`
+  const url = `${CHAT_WS}/socket.io/?token=${token}&tokenType=jwt&EIO=4&transport=websocket`
   let i=0
   const response = ws.connect(url, {}, function (socket) {
     socket.on("open", function open() {
+      console.log('connect')
       let direction = 'right'
       socket.setInterval(function timeout() {
         if (i == 50) {

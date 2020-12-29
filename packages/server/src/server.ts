@@ -43,7 +43,7 @@ export default class RpgServerEngine extends ServerEngine {
 
     step() {
         super.step()
-        //Monitor.update(this.serverTime)
+        if (!Utils.isBrowser()) Monitor.update(this)
     }
 
     loadScenes() {

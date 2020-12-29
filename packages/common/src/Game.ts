@@ -67,7 +67,7 @@ export default class Game extends GameEngine<any> {
         else {
             player.move(inputData.input)
         }
-
-        if (player.execMethod) player.execMethod('onInput', [inputData])
+        //if (player.execMethod) player.execMethod('onInput', [inputData])
+        if (player.onInput) player.onInput(inputData) 
     }
 }

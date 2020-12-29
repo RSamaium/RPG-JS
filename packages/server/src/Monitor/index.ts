@@ -3,8 +3,8 @@ import os from 'os'
 
 class Monitor extends EventEmitter {
     private monitors: Map<string, any> = new Map()
-    private lastTime: number = 0
-    loopMs: number = 0
+    private lastTime: any
+    loopMs
     totalConnected: number = 0
 
     get status() {
@@ -18,9 +18,18 @@ class Monitor extends EventEmitter {
         return this.monitors.get(id)
     }
 
-    update(time) {
-        this.loopMs = time - this.lastTime
-        this.lastTime = time
+    update(server) {
+        const { scheduler, options } = server
+        if (this.lastTime) {
+            const hrtime = process.hrtime(this.lastTime)
+            this.loopMs = hrtime[1] / 1e6
+        }
+        const period = scheduler.options.period
+        if (this.loopMs > period + 10) {
+            const { stepRate } = options
+            console.warn('Warning Low FPS. %s players connected. Game Loop: %s FPS', this.totalConnected, Math.round(stepRate / (this.loopMs / period)))
+        }
+        this.lastTime = process.hrtime()
     }
 
     addMonitor(socket) {
