@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/sync-client",
-  "version": "3.0.0-alpha.0",
+  "version": "3.0.0-alpha",
   "description": "",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
@@ -22,5 +22,6 @@
     "lodash.merge": "^4.6.2",
     "msgpack-lite": "^0.1.26",
     "rxjs": "^6.6.3"
-  }
+  },
+  "gitHead": "554653befd7225e7954c65cab1efb590434016c0"
 }

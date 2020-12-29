@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/starter-kit-server",
-  "version": "3.0.0-alpha.0",
+  "version": "3.0.0-alpha",
   "description": "",
   "main": "src/index.ts",
   "publishConfig": {
@@ -11,7 +11,8 @@
   "author": "Samuel Ronce",
   "license": "MIT",
   "dependencies": {
-    "@rpgjs/database": "^3.0.0-alpha.0",
-    "@rpgjs/server": "^3.0.0-alpha.0"
-  }
+    "@rpgjs/database": "^3.0.0-alpha",
+    "@rpgjs/server": "^3.0.0-alpha"
+  },
+  "gitHead": "554653befd7225e7954c65cab1efb590434016c0"
 }

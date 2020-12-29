@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/common",
-  "version": "3.0.0-alpha.0",
+  "version": "3.0.0-alpha",
   "description": "",
   "main": "lib/index.js",
   "types": "./lib/index.d.ts",
@@ -21,5 +21,6 @@
   "dependencies": {
     "lance-gg": "github:rpgjs/lance",
     "sat": "^0.8.0"
-  }
+  },
+  "gitHead": "554653befd7225e7954c65cab1efb590434016c0"
 }
