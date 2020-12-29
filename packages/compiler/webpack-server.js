@@ -33,8 +33,7 @@ module.exports = function(dirname, extend = {}) {
                         options: {
                             onlyCompileBundledFiles: true
                         }
-                    }],
-                    exclude: [/node_modules/]
+                    }]
                 },
                 ...webpackCommon(dirname)
             ]
