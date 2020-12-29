@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/testing",
-  "version": "3.0.0-alpha",
+  "version": "3.0.0-alpha.1",
   "description": "",
   "main": "lib/index.js",
   "publishConfig": {
@@ -9,13 +9,15 @@
   "scripts": {
     "build": "tsc"
   },
-  "files": ["lib"],
+  "files": [
+    "lib"
+  ],
   "keywords": [],
   "author": "Samuel Ronce",
   "license": "MIT",
   "dependencies": {
-    "@rpgjs/common": "^3.0.0-alpha",
-    "@rpgjs/server": "^3.0.0-alpha"
+    "@rpgjs/common": "^3.0.0-alpha.1",
+    "@rpgjs/server": "^3.0.0-alpha.1"
   },
   "gitHead": "554653befd7225e7954c65cab1efb590434016c0"
 }
