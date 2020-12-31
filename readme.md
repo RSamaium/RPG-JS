@@ -4,23 +4,40 @@
 
 RPG JS is a framework for creating RPGs and MMORPGs.The code remains the same depending on the type of game!
 
+[rpgjs.dev](https://rpgjs.dev)
+
+## Summary
+
+* [Features](#features)
+* [Demo](#demo)
+* [Why Alpha Version](#why-alpha-version-)
+* [Documentation](#documentation)
+* [Installation](#installation)
+* [Production](#production)
+* [Contribute to developments](#contribute-to-developments)
+* [Old Version](#old-version)
+* [License](#license)
+
 ## Features
 
-* The engine has been designed to create a game designed for the RPG: a top-down map, colissions, gain experience points of and level, etc...
-* Map creation with Tiled Map Editor. You can have as many scenery layers and event layers as you want
-* The creation of the game uses TypeScript. The interest is to know the properties and to make the structure clearer.
-* Game rendering uses WebGL rendering (with PixiJS) for better rendering performance
-* The API is simple. For example, just by doing: `player.exp += 100`. This can raise the player one level automatically, you can indicate this to all the players on the map, and the map events will be updated according to this new state.
+* **Create events** Shared/Scenario mode
+* **Tiled Map Editor** Map creation with Tiled Map Editor. You can have as many scenery layers and event layers as you want
+* **Collisions by tile or precise**
+* **WebGL Rendering** Game rendering uses WebGL rendering (with PixiJS) for better rendering performance
+* **Precise movement, pixel by pixel**
+* **MMORPG Performance** Low Bandwidth, Client-Side Prediction
+* **Using VueJS for user interfaces**  Prebuilt GUI (dialog box, main menu, shop menu, etc.)
+* **Code with Typescript** The creation of the game uses TypeScript. The interest is to know the properties and to make the structure clearer.
+* **Thought for the RPG** The API is simple. For example, just by doing: `player.exp += 100`. This can raise the player one level automatically, you can indicate this to all the players on the map, and the map events will be updated according to this new state.
+* **With same code: MMORPG or RPG**
+* **Modular**
+* **Unit tests**
 
 ## Demo 
 
 [Demo](https://rpgjs.dev)
 
 ![Demo](/docs/demo.png)
-
-## WebSite
-
-[rpgjs.dev](https://rpgjs.dev)
 
 ## Why Alpha Version ?
 
@@ -35,6 +52,7 @@ because, there are still several parts to realize
 * Battle System
 * Animation (must improve the spritesheet)
 * Must complete the main menu
+* Provide the means to customize data sharing with the client
 * Chat GUI
 * Guild GUI
 
