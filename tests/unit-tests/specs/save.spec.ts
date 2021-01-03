@@ -18,9 +18,11 @@ beforeEach(() => {
 
 test('Test Save', () => {
     player.addItem(Potion)
+    player.setVariable('TEST', true)
     const json = player.save()
     const obj = JSON.parse(json)
     expect(obj.items).toMatchObject([{"item":"potion","nb":1}])
+    expect(obj.variables).toHaveLength(1)
 })
 
 test('Test Load', () => {
@@ -29,12 +31,14 @@ test('Test Load', () => {
     player.equip(Sword)
     player.addState(Confuse)
     player.learnSkill(Fire)
+    player.setVariable('TEST', true)
     player.statesEfficiency = [{ rate: 1, state: Confuse }]
     const json = player.save()
     player.removeItem(Potion)
     player.equip(Sword, false)
     player.removeState(Confuse)
     player.forgetSkill(Fire)
+    player.removeVariable('TEST')
     player.load(json)
     expect(player).toHaveProperty('items.0.item.hpValue')
     expect(player).toHaveProperty('equipments.0.atk')
@@ -42,4 +46,5 @@ test('Test Load', () => {
     expect(player.equipments[0].equipped).toBeTruthy()
     expect(player).toHaveProperty('states.0.effects')
     expect(player).toHaveProperty('skills.0.power')
+    expect(player.getVariable('TEST')).toBe(true)
 })

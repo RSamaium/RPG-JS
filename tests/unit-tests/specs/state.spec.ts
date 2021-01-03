@@ -1,7 +1,10 @@
-import { Query } from '@rpgjs/server'
+import { Query, Presets } from '@rpgjs/server'
 import { testing } from '@rpgjs/testing'
 import { RPGServer } from './fixtures/server'
-import { Confuse } from './fixtures/state';
+import { Confuse, HpPlus } from './fixtures/state';
+import { Class, State, Armor } from '@rpgjs/database'
+
+const { MAXHP_CURVE, MAXSP_CURVE, MAXHP, ATK, PDEF, SDEF, MAXSP } = Presets
 
 let  client, socket, player
 
@@ -51,4 +54,130 @@ test('remove state but state is not applied', () => {
     catch (err) {
         expect(err.id).toBe('STATE_NOT_APPLIED')
     }
+})
+
+test('Add a state does not influence statesEfficiency', () => {
+    player.addState(Confuse)
+    expect(player.statesEfficiency).toHaveLength(0)
+})
+
+test('[statesEfficiency] Add an effective state', () => {
+    player.statesEfficiency = [{ rate: 1, state: Confuse }]
+    expect(player.statesEfficiency).toHaveLength(1)
+    expect(player.statesEfficiency[0]).toHaveProperty('state.name')
+})
+
+/*test('[statesEfficiency] Retrieves the highest rate and an uniq element ', () => {
+    player.statesEfficiency = [{ rate: 1, state: Confuse }, { rate: 2, state: Confuse }]
+    expect(player.statesEfficiency).toHaveLength(1)
+})*/
+
+test('State: Modifier params with static value', () => {
+    const beforeMaxHp = player.param[MAXHP]
+    player.addState(HpPlus)
+    const afterMaxHp = player.param[MAXHP]
+    expect(afterMaxHp).toBe(beforeMaxHp + 100)
+})
+
+test('State: Modifier params with rate', () => {
+    @State({
+        name: 'HP Plus',
+        paramsModifier: {
+            [MAXHP]: {
+                rate: 2
+            }
+        }
+    })
+    class HpPlus { }
+
+    const beforeMaxHp = player.param[MAXHP]
+    player.addState(HpPlus)
+    const afterMaxHp = player.param[MAXHP]
+    expect(afterMaxHp).toBe(beforeMaxHp * 2)
+})
+
+test('State: Modifier params with rate and value', () => {
+    @State({
+        name: 'HP Plus',
+        paramsModifier: {
+            [MAXHP]: {
+                rate: 2,
+                value: 100
+            }
+        }
+    })
+    class HpPlus { }
+
+    const beforeMaxHp = player.param[MAXHP]
+    player.addState(HpPlus)
+    const afterMaxHp = player.param[MAXHP]
+    expect(afterMaxHp).toBe(beforeMaxHp * 2 + 100)
+})
+
+test('State: Several modifiers with rate and value', () => {
+    
+    @State({
+        name: 'HP Plus',
+        paramsModifier: {
+            [MAXHP]: {
+                rate: 2,
+                value: 100
+            }
+        }
+    })
+    class HpPlus { }
+
+    @State({
+        name: 'HP Plus More',
+        paramsModifier: {
+            [MAXHP]: {
+                rate: 3,
+                value: 100
+            }
+        }
+    })
+    class HpPlusMore { }
+
+    const beforeMaxHp = player.param[MAXHP]
+    player.addState(HpPlus)
+    player.addState(HpPlusMore)
+    const afterMaxHp = player.param[MAXHP]
+    expect(afterMaxHp).toBe(beforeMaxHp * 2.5 + 200)
+})
+
+test('the defense of a state', () => {
+    @Armor({
+        name: 'Shield',
+        statesDefense: [Confuse]
+    })
+    class Shield {}
+
+    player.addItem(Shield)
+    player.equip(Shield)
+
+    expect(player).toHaveProperty('statesDefense.0.rate', 1)
+    expect(player).toHaveProperty('statesDefense.0.state')
+})
+
+test('If several armors with the same defense, takes the highest rate', () => {
+    @Armor({
+        name: 'Shield',
+        statesDefense: [Confuse]
+    })
+    class Shield {}
+
+    @Armor({
+        name: 'ShieldPlus',
+        statesDefense: [{ rate: 2, state: Confuse }]
+    })
+    class ShieldPlus {}
+
+    player.addItem(Shield)
+    player.equip(Shield)
+
+    player.addItem(ShieldPlus)
+    player.equip(ShieldPlus)
+
+    expect(player.statesDefense).toHaveLength(1)
+    expect(player).toHaveProperty('statesDefense.0.rate', 2)
 })

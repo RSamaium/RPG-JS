@@ -280,6 +280,7 @@ export class RpgPlayer extends RpgCommonPlayer {
         })
         json.states = json.states.map(id => getData(id))
         json.skills = json.skills.map(id => getData(id))
+        json.variables = new Map(json.variables)
         merge(this, json)
         this.position.copy(json.position)
         if (json.map) {
@@ -308,7 +309,7 @@ export class RpgPlayer extends RpgCommonPlayer {
     }
 
     toJSON() {
-        const obj = {}
+        const obj: any = {}
         const props = [
             'hp', 
             'sp',
@@ -340,6 +341,7 @@ export class RpgPlayer extends RpgCommonPlayer {
         for (let prop of props) {
             obj[prop] = this[prop]
         }
+        obj.variables = [...this.variables]
         return obj
     }
     

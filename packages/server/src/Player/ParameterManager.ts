@@ -375,8 +375,8 @@ export class ParameterManager {
         let curveVal = Math.floor((features.end - features.start) * ((this.level-1) / (this.finalLevel - this.initialLevel))) + features.start
         const modifier = this.paramsModifier[name]
         if (modifier) {
-            if (modifier.value) curveVal += modifier.value
             if (modifier.rate) curveVal *= modifier.rate
+            if (modifier.value) curveVal += modifier.value
         }
         return curveVal
     }
