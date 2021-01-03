@@ -1,5 +1,6 @@
 import { Weapon } from '@rpgjs/database'
 import { Elements } from './elements'
+import { Confuse } from './state';
 
 @Weapon({
     name: 'Sword',

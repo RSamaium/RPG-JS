@@ -136,6 +136,8 @@ export class RpgPlayer extends RpgCommonPlayer {
         this.finalLevel = 99
         this.level = this.initialLevel
         this._gui = {}
+        this._elementsEfficiency = []
+        this._statesEfficiency = []
 
         this.addParameter(MAXHP, MAXHP_CURVE)
         this.addParameter(MAXSP, MAXSP_CURVE)
@@ -247,17 +249,62 @@ export class RpgPlayer extends RpgCommonPlayer {
         return this.server.getScene('battle').create(this, enemies)
     }
 
+    /**
+     * Load the saved data with the method save()
+     * If the player was on a map, it repositions the player on the map. 
+     * 
+     * ```ts
+     * const json = player.save()
+     * player.load(json)
+     * ```
+     * 
+     * @title Load progress
+     * @method player.load(json)
+     * @param {string} json The JSON sent by the method save()
+     * @returns {string}
+     * @memberof Player
+     */
     load(json: any) {
-        if (isString(json)) json = JSON.parse(<string>json)
-        json = json.items.map(it => ({ nb: it.nb, item: this.databaseById(it.id) }))
+        if (isString(json)) json = JSON.parse(json)
+
+        const getData = (id) => new (this.databaseById(id))() 
+
+        const items = {}
+        for (let it of json.items) {
+            items[it.item] = getData(it.item)
+        }
+        json.items = json.items.map(it => ({ nb: it.nb, item: items[it.item] }))
+        json.equipments = json.equipments.map(it => {
+            items[it].equipped = true
+            return items[it]
+        })
+        json.states = json.states.map(id => getData(id))
+        json.skills = json.skills.map(id => getData(id))
         merge(this, json)
-        /*if (this.map) {
-            this.changeMap(this.map, this.position)
-        }*/
+        this.position.copy(json.position)
+        if (json.map) {
+            this.map = ''
+            this.changeMap(json.map, json.position)
+        }
     }
 
+    /**
+     * Returns a JSON with all the data to keep in memory. Then use the `load()` method to load the data
+     * 
+     * You can also use the JSON.stringify 
+     * 
+     * ```ts
+     * const json = player.save() // or JSON.stringify(player)
+     * player.load(json)
+     * ```
+     * 
+     * @title Save progress
+     * @method player.save()
+     * @returns {string}
+     * @memberof Player
+     */
     save() {
-        return this.toJSON()
+        return JSON.stringify(this)
     }
 
     toJSON() {
@@ -275,6 +322,7 @@ export class RpgPlayer extends RpgCommonPlayer {
             'equipments', 
             'skills',
             'states',
+            '_statesEfficiency',
             'effects',
             'graphic',
             'map',
@@ -284,7 +332,7 @@ export class RpgPlayer extends RpgCommonPlayer {
             'width',
             'height',
             'wHitbox',
-            'hHistbox',
+            'hHitbox',
             'direction',
             'initialLevel',
             'finalLevel'
@@ -320,7 +368,9 @@ export class RpgPlayer extends RpgCommonPlayer {
     }
 
     databaseById(id: string) {
-        return this.server.database[id]
+        const data = this.server.database[id]
+        if (!data) throw new Error(`The ID=${id} data is not found in the database. Add the data in the property "database" of @RpgServer decorator.`)
+        return data
     }
 
     /**

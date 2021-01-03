@@ -1,16 +1,18 @@
 import { Utils }  from '@rpgjs/common'
-import { ItemFixture } from './ItemFixture';
-import { RpgPlayer } from './Player';
+import { ItemFixture } from './ItemFixture'
+import { RpgPlayer } from './Player'
+import { StateLog } from '../logs/state'
 
 const { 
-    isInstanceOf
+    isInstanceOf,
+    applyMixins
 } = Utils
 
-export class StateManager extends ItemFixture {
+export class StateManager {
 
     states: any[] = []
 
-    private _statesEfficiency: { rate: number, state: any }[] = []
+    _statesEfficiency: { rate: number, state: any }[]
 
     /** 
      * Recovers the player's states defense on inventory.  This list is generated from the `statesDefense` property defined on the weapons or armors equipped.
@@ -142,7 +144,7 @@ export class StateManager extends ItemFixture {
      * @method player.addState(stateClass,chance=1)
      * @param {StateClass} stateClass
      * @param {number} [chance] 1 by default
-     * @throws {StateLog} todo 
+     * @throws {StateLog} addFailed 
      * If the chance to add the state has failed (defined with the `chance` param)
      *  ```
      * {
@@ -158,7 +160,7 @@ export class StateManager extends ItemFixture {
         const state = this.getState(stateClass)
         if (!state) {
             if (Math.random() > chance) {
-                throw '' // TODO
+                throw StateLog.addFailed(stateClass)
             }
             //const efficiency = this.findStateEfficiency(stateClass)
             const instance = new stateClass()
@@ -186,7 +188,7 @@ export class StateManager extends ItemFixture {
      * @method player.removeState(stateClass,chance=1)
      * @param {StateClass} stateClass
      * @param {number} [chance] 1 by default
-     * @throws {StateLog} todo 
+     * @throws {StateLog} removeFailed 
      * If the chance to remove the state has failed (defined with the `chance` param)
      *  ```
      * {
@@ -194,7 +196,7 @@ export class StateManager extends ItemFixture {
      *      msg: '...'
      * }
      * ```
-     * @throws {StateLog} todo 
+     * @throws {StateLog} notApplied 
      * If the status does not exist
      *  ```
      * {
@@ -204,18 +206,17 @@ export class StateManager extends ItemFixture {
      * ```
      * @returns {instance of StateClass}
      * @memberof StateManager
-     * @todo
      */
     removeState(stateClass, chance = 1) {
         const index = this.states.findIndex(state => state instanceof stateClass)
         if (index != -1) {
             if (Math.random() > chance) {
-                throw '' // TODO
+                throw StateLog.removeFailed(stateClass)
             }
             this.states.splice(index, 1)
         }
         else {
-            throw '' // TODO
+            throw StateLog.notApplied(stateClass)
         }
     }
 
@@ -223,3 +224,7 @@ export class StateManager extends ItemFixture {
         return this.statesEfficiency.find(state => isInstanceOf(state.state, stateClass))
     }
 }
+
+applyMixins(StateManager, [ItemFixture])
+
+export interface StateManager extends ItemFixture { }

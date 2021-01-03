@@ -15,7 +15,7 @@
     "lerna": "^3.22.1"
   },
   "scripts": {
-    "test": "jest",
+    "test": "cd tests/unit-tests && npm test",
     "load": "artillery run tests/load-testing/socket.yml",
     "lerna:ls": "lerna ls",
     "load-testing": "k6 run -e CHAT_WS=ws://localhost:3000 tests/load-testing/socket.js",

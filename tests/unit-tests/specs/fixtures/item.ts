@@ -2,7 +2,8 @@ import { Item } from '@rpgjs/database'
 
 @Item({
     name: 'Potion',
-    price: 100
+    price: 100,
+    hpValue: 100
 })
 export class Potion {}
 

@@ -4,11 +4,12 @@ import { ItemModel } from '../models/Item';
 import { ItemFixture } from './ItemFixture';
 
 const { 
-    arrayUniq
+    arrayUniq,
+    applyMixins
 } = Utils
 
 export class ElementManager extends ItemFixture {
-    private _elementsEfficiency: { rate: number, element: any }[] = []
+    _elementsEfficiency: { rate: number, element: any }[]
     
      /** 
      * Recovers the player's elements defense on inventory.  This list is generated from the `elementsDefense` property defined on the weapons or armors equipped.
@@ -134,3 +135,8 @@ export interface ElementManager{
     getFormulas: (name: string) => any, 
     _class: any
 }
+
+
+applyMixins(ElementManager, [ItemFixture])
+
+export interface ElementManager extends ItemFixture { }

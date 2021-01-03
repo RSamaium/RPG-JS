@@ -3,11 +3,17 @@ import { spritesheets, sounds } from '@rpgjs/starter-kit-client'
 import gui from '@rpgjs/default-gui'
 import Stats from 'stats.js'
 import { Sprite } from './player'
+import hud from './gui/hud.vue'
+import inn from './gui/inn.vue'
 
 @RpgClient({
     spritesheets,
     sounds,
-    gui,
+    gui: [
+       ...gui,
+       hud,
+       inn
+    ],
     spriteClass: Sprite
 })
 export default class RPG extends RpgClientEngine {
@@ -19,6 +25,7 @@ export default class RPG extends RpgClientEngine {
    } 
 
    async start() {
+      
       super.start()
       this.stats = new Stats()
       document.body.appendChild( this.stats.dom )

@@ -1,5 +1,5 @@
 import { GameEngine, CannonPhysicsEngine, Utils } from 'lance-gg'
-import { RpgCommonPlayer } from './Player'
+import { RpgCommonPlayer, Direction } from './Player'
 import Event from './Event'
 import SAT from 'sat'
 
@@ -57,15 +57,21 @@ export default class Game extends GameEngine<any> {
         super.processInput(inputData, playerId)
 
         const player = this.world.getObject(playerId)
+        const { input } = inputData
 
         if (!player) return
         if (!player.canMove) return
 
-        if (inputData.input === 'space') {
+        if (input == 'space' || input == 'enter') {
             player.triggerCollisionWith(RpgCommonPlayer.ACTIONS.ACTION)
         }
-        else {
-            player.move(inputData.input)
+        else if (
+            input == Direction.Left || 
+            input == Direction.Right || 
+            input == Direction.Up || 
+            input == Direction.Down
+            ) {
+            player.move(input)
         }
         //if (player.execMethod) player.execMethod('onInput', [inputData])
         if (player.onInput) player.onInput(inputData) 

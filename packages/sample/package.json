@@ -45,6 +45,7 @@
     "@rpgjs/starter-kit-server": "^3.0.0-alpha.1",
     "@rpgjs/testing": "^3.0.0-alpha.1",
     "express": "^4.17.1",
+    "pouchdb": "^7.2.2",
     "socket.io": "^3.0.4",
     "stats.js": "^0.17.0",
     "vue": "^3.0.4"
