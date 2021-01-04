@@ -1,30 +1,17 @@
 import * as PIXI from 'pixi.js';
+import { Direction, Utils } from '@rpgjs/common'
 import { spritesheets } from './Spritesheets'
 import { FloatingText } from '../Effects/FloatingText'
+import { Animation } from '../Effects/Animation'
+
+const { capitalize } = Utils
 
 export default class Character extends PIXI.Sprite {
-
-    static createDirectionTextures(spritesheet) {
-        const { baseTexture } = PIXI.Texture.from(spritesheet.image)
-        const directions: any = []
-        const { width, height, framesHeight, framesWidth } = spritesheet
-        const spriteWidth = width / framesWidth
-        const spriteHeight = height / framesHeight
-        for (let i = 0; i < framesHeight; i++) {
-            directions[i] = []
-            for (let j = 0; j < framesWidth; j++) {
-                directions[i].push(
-                    new PIXI.Texture(baseTexture, new PIXI.Rectangle(j * spriteWidth, i * spriteHeight, spriteWidth, spriteHeight))
-                )
-            }
-        }
-        return directions
-    }
-
+   
     tilesOverlay: any
+    h: number = 1
+    w: number = 1
     private direction: number = 0
-    private directions: any = []
-    private progressAnimation: number  = 0
     private graphic: string = ''
     private spritesheet: any
     private _x: number = 0
@@ -32,11 +19,12 @@ export default class Character extends PIXI.Sprite {
     public z: number = 0
     private effects: any[] = []
     private fixed: boolean = false
+    private animation 
 
     constructor(private data: any, private scene: any) {
         super()
-        this.x = data.x 
-        this.y = data.y
+        this.x = data.position.x 
+        this.y = data.position.y
         this.fixed = data.fixed
     }
 
@@ -61,43 +49,27 @@ export default class Character extends PIXI.Sprite {
         this.effects.push(text)
     }
 
-    setGraphic() {
-        this.spritesheet = spritesheets.get(this.graphic)
-        if (!this.spritesheet) {
-            throw new Error(`Impossible to find the ${this.graphic} graphic. Did you put the right name or create the spritesheet?`)
-        }
-        this.origin() 
-        this.directions = Character.createDirectionTextures(this.spritesheet)
-        this.gotoAndStop(0)
-        if (this.onSetGraphic) this.onSetGraphic(this.spritesheet)
-    }
-
-    getSpriteAnimation(name) {
-        // not graphic yet
-        if (!this.spritesheet) return 
-        if (!this.spritesheet.action) return 0
-        return this.spritesheet.action[name] || 0
-    }
-
     origin() {
-        if (!this.spritesheet) {
+        if (!this.animation) {
             return
         }
         const data = this.data
         if (!data.wHitbox || !data.hHitbox) return
-        const { width, height, framesWidth, framesHeight } = this.spritesheet
-        const w = 1 - (data.wHitbox / (width / framesWidth))
-        const h = 1 - (data.hHitbox / (height / framesHeight))
+        const spritesheet = spritesheets.get(this.graphic)
+        const { width, height, framesWidth, framesHeight } = spritesheet
+        this.w = width / framesWidth
+        this.h = height / framesHeight
+        const w = 1 - (data.wHitbox / this.w)
+        const h = 1 - (data.hHitbox / this.h)
+        spritesheet.anchor = [w, h]
         this.anchor.set(w, h)
     }
 
-    load() {
-        this.x = this.data.position.x
-        this.y = this.data.position.y
-    }
-
-    gotoAndStop(index) {
-        if (this.directions[this.direction]) this.texture = this.directions[this.direction][index]
+    setGraphic() {
+        this.animation = new Animation(this.graphic)
+        this.addChild(this.animation)
+        this.origin()
+        if (this.onSetGraphic) this.onSetGraphic(this.spritesheet)
     }
 
     update(obj): any {
@@ -114,7 +86,6 @@ export default class Character extends PIXI.Sprite {
         }
 
         let moving = false
-        let textureCount = 4
 
         if (!this.fixed) {
             this.z = Math.floor(obj.position.z)
@@ -134,47 +105,47 @@ export default class Character extends PIXI.Sprite {
           
             if (this._x > this.x) {
                 this.x += Math.min(speed, this._x - this.x)
-                if (this.spritesheet) textureCount = this.spritesheet.framesWidth
                 moving = true
             }
     
             if (this._x < this.x) {
                 this.x -= Math.min(speed, this.x - this._x)
-                if (this.spritesheet) textureCount = this.spritesheet.framesWidth
                 moving = true
             }
     
             if (this._y > this.y) {
                 this.y += Math.min(speed, this._y - this.y)
-                if (this.spritesheet) textureCount = this.spritesheet.framesWidth
                 moving = true
             }
     
             if (this._y < this.y) {
                 this.y -= Math.min(speed, this.y - this._y)
-                if (this.spritesheet) textureCount = this.spritesheet.framesWidth
                 moving = true
             }
         }
 
+        this.animation.update()
+
         if (moving) {
-            this.progressAnimation += 5
-            if (this.progressAnimation >= 100) {
-                this.progressAnimation = 0
-            }
-            let progress = (99 - this.progressAnimation) / 100;
-            let image = Math.floor(progress * textureCount)
-            this.gotoAndStop(image)
+            this.animation.play(this.getAnimationByDirection('walk'))
         }
         else {
-            this.gotoAndStop(this.getSpriteAnimation('stand'))
+            this.animation.play(this.getAnimationByDirection('stand'))
         }
 
         return {
             moving,
             instance: this
         }
-         
+    }
+
+    getAnimationByDirection(name: string) {
+        return name + capitalize([
+            Direction.Down, 
+            Direction.Left, 
+            Direction.Right,
+            Direction.Up
+        ][this.direction])
     }
 
     onSetGraphic(spritesheet) {}

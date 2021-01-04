@@ -10,18 +10,20 @@ export class Player extends RpgPlayer {
 
     async onConnected() {
 
-       const data = await db.get('test')
+       /*const data = await db.get('test')
 
-       if (data) {
+       if (false) {
          this.load(data.data)
          this._rev = data._rev
        }
        else {
-        this.setHitbox(20, 16)
+        
+       }  */
+
+       this.setHitbox(20, 16)
         this.setGraphic('male1_2')
         this.setActor(database.Hero)
         await this.changeMap('medieval') 
-       }  
     }
 
     onInput({ input }) {

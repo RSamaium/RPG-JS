@@ -14,7 +14,7 @@ export class Sprite extends RpgSprite {
     }
 
     onChanges(data, old) {
-        /*if (data.wHitbox) {
+        if (data.wHitbox) {
             this.debug = new PIXI.Graphics()
             const { wHitbox, hHitbox } = data
             this.debug.beginFill(0xDE3249)
@@ -22,7 +22,7 @@ export class Sprite extends RpgSprite {
             this.debug.endFill()
             this.debug.alpha = 0.5
             this.addChild(this.debug)
-        }*/
+        }
         //this.addEffect('test')
     }
 }

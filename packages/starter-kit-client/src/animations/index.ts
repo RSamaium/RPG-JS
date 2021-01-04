@@ -4,6 +4,10 @@ import { Spritesheet } from '@rpgjs/client'
    /* images: {
         flame: 
     }*/
+    framesWidth: 3,
+    framesHeight: 4,
+    width: 96,
+    height: 128
 })
 export class Animations {
 }

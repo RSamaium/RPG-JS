@@ -1,4 +1,14 @@
-interface SpritesheetOptions {
+export interface AnimationOptions {
+    [animationName: string]: {
+        time: number,
+        frameX?: number,
+        frameY?: number
+        x?: number
+        y?: number
+    }[][]
+}
+
+export interface SpritesheetOptions {
     images?: {
         [id: string]: string
     }
@@ -8,9 +18,8 @@ interface SpritesheetOptions {
     framesHeight?: number,
     width?: number,
     height?: number,
-    action?: {
-        [actionName: string]: number | number[]
-    }
+    animations?: AnimationOptions,
+    anchor?: number[]
 }
 
 export function frameTo() {

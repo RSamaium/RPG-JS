@@ -120,7 +120,7 @@ export class SceneMap extends Scene implements IScene {
     }
 
     onUpdateObject(logic, sprite: Character, moving: boolean): Character {
-        const { x, y, tilesOverlay, anchor, width, height } = sprite
+        const { x, y, tilesOverlay, anchor, w: width, h: height } = sprite
         const { paramsChanged } = logic
         if (moving || (paramsChanged && (paramsChanged.width || paramsChanged.height))) {
             tilesOverlay.removeChildren()
@@ -146,7 +146,7 @@ export class SceneMap extends Scene implements IScene {
 
     addEvent(obj) {
         const sprite = new this.game._eventClass(obj, this)
-        sprite.load()
+        
         this.eventSprites[obj.id] = sprite
         this.tilemap.getEventLayer().addChild(sprite)
     }
@@ -155,7 +155,7 @@ export class SceneMap extends Scene implements IScene {
         const wrapper = new PIXI.Container()
         const tilesOverlay = new PIXI.Container()
         const sprite = new this.game._playerClass(obj, this)
-        sprite.load()
+        
         sprite.tilesOverlay = tilesOverlay
 
         wrapper.addChild(sprite, tilesOverlay)
