@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.2" tiledversion="1.3.3" orientation="orthogonal" renderorder="right-down" width="60" height="60" tilewidth="32" tileheight="32" infinite="0" nextlayerid="17" nextobjectid="10">
+<map version="1.2" tiledversion="1.3.3" orientation="orthogonal" renderorder="right-down" width="60" height="60" tilewidth="32" tileheight="32" infinite="0" nextlayerid="17" nextobjectid="11">
  <tileset firstgid="1" source="[A]WaterFall_pipo.tsx"/>
  <tileset firstgid="577" source="[Base]BaseChip_pipo.tsx"/>
  <tileset firstgid="1641" source="[A]Grass_pipo.tsx"/>
@@ -665,6 +665,9 @@
    <point/>
   </object>
   <object id="9" name="EV-3" x="1149" y="945">
+   <point/>
+  </object>
+  <object id="10" name="chest-1" x="590" y="211">
    <point/>
   </object>
  </objectgroup>

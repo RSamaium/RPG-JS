@@ -3,6 +3,8 @@ import { NpcEvent } from '../events/npc'
 import { ShopEvent } from '../events/shop'
 import { Villager1Event } from '../events/villager1';
 import { Villager2Event } from '../events/villager2';
+import { ChestEvent } from '../events/chest';
+import { Potion } from '../database/items/potion';
 
 @MapData({
     id: 'medieval',
@@ -23,7 +25,14 @@ import { Villager2Event } from '../events/villager2';
             graphic: 'female19',
             moveRandom: true
         }),
-        ShopEvent
+        ShopEvent,
+        ChestEvent({
+            name: 'chest-1',
+            text: 'You got a potion!',
+            gain: {
+                item: Potion
+            }
+        })
     ],
     sounds: ['town']
 })

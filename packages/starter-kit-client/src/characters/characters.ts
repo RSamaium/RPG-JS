@@ -1,5 +1,32 @@
 import { Spritesheet } from '@rpgjs/client'
 
+const SimpleSpritesheet = (framesWidth, framesHeight, frameStand = 1) => {
+
+    const stand = frameY => [{ time: 0, frameX: frameStand, frameY }]
+    const walk = frameY => {
+        const array: any = []
+        for (let i=0 ; i < framesWidth ; i++) {
+            array.push({ time: i*10,  frameX: i, frameY })
+        }
+        return array
+    }
+
+    return {
+        animations:  {
+            standDown: [stand(0)],
+            standUp: [stand(3)],
+            standRight: [stand(2)],
+            standLeft: [stand(1)],
+            walkDown: [walk(0)],
+            walkRight: [walk(2)],
+            walkLeft: [walk(1)],
+            walkUp: [walk(3)]
+        },
+        framesHeight,
+        framesWidth
+    }
+}
+
 @Spritesheet({
     images: {
         female13: require('./assets/Female 13-2.png'),
@@ -10,51 +37,8 @@ import { Spritesheet } from '@rpgjs/client'
         male17: require('./assets/Male 17-2.png'),
         male1_2: require('./assets/Male 01-2.png')
     },
-    framesWidth: 3,
-    framesHeight: 4,
     width: 96,
     height: 128,
-    animations: {
-        standDown: [
-            [{ time: 0, frameX: 1, frameY: 0 }]
-        ],
-        standUp: [
-            [{ time: 0, frameX: 1, frameY: 3 }]
-        ],
-        standRight: [
-            [{ time: 0, frameX: 1, frameY: 2 }]
-        ],
-        standLeft: [
-            [{ time: 0, frameX: 1, frameY: 1 }]
-        ],
-        walkDown: [
-            [
-                { time: 0,  frameX: 0, frameY: 0 },
-                { time: 5,  frameX: 1, frameY: 0 },
-                { time: 10, frameX: 2, frameY: 0 }
-            ]
-        ],
-        walkRight: [
-            [
-                { time: 0,  frameX: 0, frameY: 2 },
-                { time: 5,  frameX: 1, frameY: 2 },
-                { time: 10, frameX: 2, frameY: 2 }
-            ]
-        ],
-        walkLeft: [
-            [
-                { time: 0,  frameX: 0, frameY: 1 },
-                { time: 5,  frameX: 1, frameY: 1 },
-                { time: 10, frameX: 2, frameY: 1 }
-            ]
-        ],
-        walkUp: [
-            [
-                { time: 0,  frameX: 0, frameY: 3 },
-                { time: 5,  frameX: 1, frameY: 3 },
-                { time: 10, frameX: 2, frameY: 3 }
-            ]
-        ]
-    }
+    ...SimpleSpritesheet(3, 4)
 })
 export class Characters { }

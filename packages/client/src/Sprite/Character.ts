@@ -59,10 +59,10 @@ export default class Character extends PIXI.Sprite {
         const { width, height, framesWidth, framesHeight } = spritesheet
         this.w = width / framesWidth
         this.h = height / framesHeight
-        const w = 1 - (data.wHitbox / this.w)
+        const w = (1 - (data.wHitbox / this.w)) / 2
         const h = 1 - (data.hHitbox / this.h)
         spritesheet.anchor = [w, h]
-        this.anchor.set(w, h)
+        this.anchor.set(...spritesheet.anchor)
     }
 
     setGraphic() {

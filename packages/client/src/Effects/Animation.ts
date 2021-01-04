@@ -89,6 +89,8 @@ export class Animation extends PIXI.Sprite {
         this.currentAnimation = animation
         this.time = 0
         this.addChild(animation)
+        // Updates immediately to avoid flickering
+        this.update()
     }
 
     update() {
