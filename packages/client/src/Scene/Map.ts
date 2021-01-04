@@ -145,8 +145,7 @@ export class SceneMap extends Scene implements IScene {
     }
 
     addEvent(obj) {
-        const sprite = new this.game._eventClass(obj, this)
-        
+        const sprite = new this.game._playerClass(obj, this)
         this.eventSprites[obj.id] = sprite
         this.tilemap.getEventLayer().addChild(sprite)
     }
