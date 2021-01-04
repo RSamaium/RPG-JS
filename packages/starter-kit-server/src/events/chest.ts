@@ -1,6 +1,4 @@
-import { RpgEvent, EventData, RpgPlayer, Query, Move, EventMode, Direction } from '@rpgjs/server'
-import { Monster } from '../database/enemies/monster'
-
+import { RpgEvent, EventData, RpgPlayer, EventMode, Direction } from '@rpgjs/server'
 
 export function ChestEvent(options) {
 
@@ -21,6 +19,9 @@ export function ChestEvent(options) {
         }
         async onAction(player: RpgPlayer) {
             if (player.getVariable(name)) {
+                return
+            }
+            if (player.getDirection() != Direction.Up) {
                 return
             }
             await player.showText(text)

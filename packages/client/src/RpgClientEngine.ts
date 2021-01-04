@@ -122,11 +122,18 @@ export default class RpgClientEngine extends ClientEngine<any> {
             this.renderer.loadScene(name, data)
         })
         
-        // TODO
-        this.socket.on('player.callMethod', ({ objectId, params, name }) => {
-            const sprite = this.renderer.getScene().getPlayer(objectId)
-            this.renderer.showAnimation(sprite)
-            //if (sprite[name]) sprite[name](...params)
+        this.socket.on('callMethod', ({ objectId, params, name }) => {
+            const scene = this.renderer.getScene()
+            const sprite = scene.getPlayer(objectId)
+            switch (name) {
+                case 'showAnimation':
+                    scene.showAnimation({ 
+                        attachTo: sprite,
+                        graphic: params[0],
+                        animationName: params[1]
+                    })
+                break
+            }
         })
 
         World.listen(this.socket).value.subscribe((val: { data: any, partial: any }) => {

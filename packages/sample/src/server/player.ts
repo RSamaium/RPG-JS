@@ -32,7 +32,9 @@ export class Player extends RpgPlayer {
           amount: 30
         })*/
 
-        db.save(this).catch(console.log)
+        this.showAnimation('shield', 'default')
+
+        //db.save(this).catch(console.log)
       }
     }
 

@@ -10,6 +10,8 @@ export class Animation extends PIXI.Sprite {
     private time: number = 0
     private animations: Map<string, PIXI.Sprite> = new Map()
 
+    onFinish: () => void
+
     constructor(private id: string) {
         super()
         this.spritesheet = spritesheets.get(this.id)
@@ -74,6 +76,7 @@ export class Animation extends PIXI.Sprite {
 
     stop() {
         this.currentAnimation = null
+        this.parent.removeChild(this)
     }
 
     play(name: string) {
@@ -94,22 +97,48 @@ export class Animation extends PIXI.Sprite {
     }
 
     update() {
-        if (!this.isPlaying() || !this.currentAnimation) return
+        if (!this.isPlaying() || !this.currentAnimation) return  
         for (let container of this.currentAnimation.children) {
             const sprite = container as PIXI.Sprite
             const frame = sprite['animationObj'][this.time]
             if (!frame) continue
             sprite.texture = this.frames[frame.frameY][frame.frameX]
-            if (frame.anchor) {
-                sprite.anchor.set(frame.anchor)
+
+            const applyTransform = (prop) => {
+                if (frame[prop]) {
+                    sprite[prop].set(frame.anchor)
+                }
+                else if (this.spritesheet[prop]) {
+                    sprite[prop].set(...this.spritesheet[prop])
+                }
             }
-            else if (this.spritesheet.anchor) {
-                sprite.anchor.set(...this.spritesheet.anchor)
+
+            const applyTransformValue = (prop, alias = '') => {
+                const optionProp = alias || prop
+                if (frame[optionProp] !== undefined) {
+                    sprite[prop] = frame[optionProp]
+                }
+                else if (this.spritesheet[optionProp] !== undefined) {
+                    sprite[prop] = this.spritesheet[optionProp]
+                }
             }
+
+            applyTransform('anchor')
+            applyTransform('scale')
+            applyTransform('skew')
+            applyTransform('pivot')
+
+            applyTransformValue('alpha', 'opacity')
+            applyTransformValue('x')
+            applyTransformValue('y')
+            applyTransformValue('angle')
+            applyTransformValue('rotation')
+            applyTransformValue('visible')
         }
         this.time++
         if (this.time > this.currentAnimation['maxTime']) {
             this.time = 0
+            if (this.onFinish) this.onFinish()
         }
     }
 }

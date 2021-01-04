@@ -21,6 +21,8 @@ export default class Character extends PIXI.Sprite {
     private fixed: boolean = false
     private animation 
 
+    anim
+
     constructor(private data: any, private scene: any) {
         super()
         this.x = data.position.x 
@@ -81,9 +83,7 @@ export default class Character extends PIXI.Sprite {
             this.setGraphic()
         }
 
-        for (let effect of this.effects) {
-            effect.update(obj)
-        }
+        if (this.anim) this.anim.update()
 
         let moving = false
 

@@ -373,6 +373,7 @@ export class RpgCommonPlayer extends DynamicObject<any, any> {
      /**
      * Get the current direction.
      * 
+     * ```ts
      * player.getDirection()
      * ```
      * 

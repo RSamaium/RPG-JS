@@ -398,6 +398,23 @@ export class RpgPlayer extends RpgCommonPlayer {
         return RpgCommonMap.buffer.get(id)
     }
 
+    // TODO
+    showEffect() {
+        this.emit('callMethod', { 
+            objectId: this.playerId,
+            name: 'addEffect',
+            params: []
+        })
+    }
+
+    showAnimation(graphic: string, animationName: string) {
+        this.emit('callMethod', { 
+            objectId: this.playerId,
+            name: 'showAnimation',
+            params: [graphic, animationName]
+        })
+    }
+
     /**
      * Emit data to clients with socket
      * 

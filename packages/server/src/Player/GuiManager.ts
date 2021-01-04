@@ -158,22 +158,6 @@ export class GuiManager {
         return gui.open(items)
     }
 
-    showEffect() {
-        this.emit('player.callMethod', { 
-            objectId: this.playerId,
-            name: 'addEffect',
-            params: []
-        })
-    }
-
-    showAnimation() {
-        this.emit('player.callMethod', { 
-            objectId: this.playerId,
-            name: 'showAnimation',
-            params: []
-        })
-    }
-
     /**
      * Call a custom Gui
 

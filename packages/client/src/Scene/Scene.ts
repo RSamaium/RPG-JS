@@ -1,12 +1,14 @@
 import * as PIXI from 'pixi.js'
 import { KeyboardControls, GameEngine } from 'lance-gg'
 import Character from '../Sprite/Character'
+import { Animation } from '../Effects/Animation'
 
 export class Scene {
    
     protected objects: Map<string, any> = new Map()
     protected loader = PIXI.Loader.shared
     private controls: KeyboardControls
+    private animations: Animation[] = []
     inputs: any
 
     constructor(protected game: GameEngine<any>) {
@@ -60,6 +62,9 @@ export class Scene {
                 }
             })
         }
+        for (let animation of this.animations) {
+            animation.update()
+        }
     }
 
     stopInputs() {
@@ -83,6 +88,34 @@ export class Scene {
             this.objects.delete(id)
             sprite.destroy()
         }
+    }
+
+    showAnimation({ 
+        graphic,
+        animationName,
+        attachTo,
+        x = 0,
+        y = 0,
+        loop = false
+    }: { 
+        graphic: string, 
+        animationName: string, 
+        attachTo: PIXI.Sprite, 
+        x?: number, 
+        y?: number,
+        loop?: boolean
+    }) {
+        const animation = new Animation(graphic)
+        attachTo.addChild(animation)
+        if (!loop) {
+            animation.onFinish = () => {
+                animation.stop()
+            }
+        }
+        animation.x = x
+        animation.y = y
+        animation.play(animationName)
+        this.animations.push(animation)
     }
 
     getPlayer(id) {

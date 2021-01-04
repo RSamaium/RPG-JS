@@ -1,14 +1,27 @@
-export interface AnimationOptions {
-    [animationName: string]: {
-        time: number,
-        frameX?: number,
-        frameY?: number
-        x?: number
-        y?: number
-    }[][]
+export interface TransformOptions {
+    opacity?: number
+    pivot?: number[]
+    anchor?: number[]
+    angle?: number
+    rotation?: number
+    scale?: number[]
+    skew?: number[]
+    x?: number
+    y?: number
+    visible?: boolean
 }
 
-export interface SpritesheetOptions {
+export interface FrameOptions extends TransformOptions {
+    time: number,
+    frameX?: number
+    frameY?: number
+}
+
+export interface AnimationOptions {
+    [animationName: string]: FrameOptions[][]
+}
+
+export interface SpritesheetOptions extends TransformOptions {
     images?: {
         [id: string]: string
     }
@@ -18,8 +31,7 @@ export interface SpritesheetOptions {
     framesHeight?: number,
     width?: number,
     height?: number,
-    animations?: AnimationOptions,
-    anchor?: number[]
+    animations?: AnimationOptions
 }
 
 export function frameTo() {
