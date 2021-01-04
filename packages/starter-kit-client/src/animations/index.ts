@@ -19,10 +19,10 @@ const to = () => {
     framesHeight: 4,
     width: 960,
     height: 768,
-    opacity: 0.3,
+    opacity: 1,
     anchor: [0.5],
     animations: {
-        default: [to()]
+        default: [ to() ]
     }
 })
 export class Animations {

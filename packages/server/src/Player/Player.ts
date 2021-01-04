@@ -1,4 +1,5 @@
 import { RpgCommonMap, RpgCommonPlayer, Utils }  from '@rpgjs/common'
+import { Query } from '../Query'
 import merge from 'lodash.merge'
 import { ItemManager } from './ItemManager'
 import { GoldManager } from './GoldManager'
@@ -408,7 +409,7 @@ export class RpgPlayer extends RpgCommonPlayer {
     }
 
     showAnimation(graphic: string, animationName: string) {
-        this.emit('callMethod', { 
+        this.emitToMap('callMethod', { 
             objectId: this.playerId,
             name: 'showAnimation',
             params: [graphic, animationName]
@@ -427,6 +428,10 @@ export class RpgPlayer extends RpgCommonPlayer {
      */
     public emit(key: string, value: any): void {
         if (this._socket) this._socket.emit(key, value) 
+    }
+
+    emitToMap(key: string, value: any) {
+        Query.getPlayersOfMap(this.map).forEach(player => player.emit(key, value))
     }
 
     public execMethod(methodName: string, methodData = [], instance = this): void {
