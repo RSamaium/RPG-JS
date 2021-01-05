@@ -408,6 +408,37 @@ export class RpgPlayer extends RpgCommonPlayer {
         })
     }
 
+    /**
+     * Calls the showAnimation() method on the client side to display an animation on the player
+     * You must remember to create the spritesheet beforehand
+     * 
+     * For this type of spritesheet:
+     * 
+     * ```ts
+     * @Spritesheet({
+     *  id: 'fire',
+     *  image: require('')
+     *  animations: {
+     *      default: [
+     *      ]
+     *   }
+     * })
+     * export class FireAnimation {}
+     * ```
+     * 
+     * Here is the call of the method:
+     * 
+     * ```ts
+     * player.animation('fire', 'default')
+     * ```
+     * 
+     * @title Show Animation
+     * @method player.showAnimation(graphic,animationName)
+     * @param {string} graphic spritesheet identifier
+     * @param {string} animationName Name of the animation in the spritesheet
+     * @returns {void}
+     * @memberof Player
+     */
     showAnimation(graphic: string, animationName: string) {
         this.emitToMap('callMethod', { 
             objectId: this.playerId,
