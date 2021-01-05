@@ -1,31 +1,6 @@
-import { Spritesheet } from '@rpgjs/client'
+import { Spritesheet, Presets } from '@rpgjs/client'
 
-const SimpleSpritesheet = (framesWidth, framesHeight, frameStand = 1) => {
-
-    const stand = frameY => [{ time: 0, frameX: frameStand, frameY }]
-    const walk = frameY => {
-        const array: any = []
-        for (let i=0 ; i < framesWidth ; i++) {
-            array.push({ time: i*10,  frameX: i, frameY })
-        }
-        return array
-    }
-
-    return {
-        animations:  {
-            standDown: [stand(0)],
-            standUp: [stand(3)],
-            standRight: [stand(2)],
-            standLeft: [stand(1)],
-            walkDown: [walk(0)],
-            walkRight: [walk(2)],
-            walkLeft: [walk(1)],
-            walkUp: [walk(3)]
-        },
-        framesHeight,
-        framesWidth
-    }
-}
+const { RMSpritesheet } = Presets
 
 @Spritesheet({
     images: {
@@ -39,6 +14,6 @@ const SimpleSpritesheet = (framesWidth, framesHeight, frameStand = 1) => {
     },
     width: 96,
     height: 128,
-    ...SimpleSpritesheet(3, 4)
+    ...RMSpritesheet(3, 4)
 })
 export class Characters { }
