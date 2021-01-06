@@ -47,6 +47,10 @@ export function capitalize(s) {
     return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
+export function arrayEquals(a, b) {
+  return a.length === b.length && a.every((v, i) => v === b[i])
+}
+
 export function applyMixins(derivedCtor: any, baseCtors: any[]) {
     baseCtors.forEach((baseCtor) => {
         Object.getOwnPropertyNames(baseCtor.prototype).forEach((name) => {
@@ -70,6 +74,7 @@ export default {
     isInstanceOf,
     arrayUniq,
     arrayFlat,
+    arrayEquals,
     intersection,
     applyMixins,
     capitalize

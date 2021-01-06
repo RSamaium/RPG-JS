@@ -1,5 +1,3 @@
-import Character from './Character';
+import Character from './Character'
 
-export class RpgSprite extends Character {
-    
-}
+export class RpgSprite extends Character {}

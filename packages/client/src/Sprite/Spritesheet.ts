@@ -118,45 +118,12 @@ export interface TransformOptions {
 }
 
 export interface FrameOptions extends TransformOptions {
-    time: number,
+    time: number
     frameX?: number
     frameY?: number
 }
 
-export interface AnimationOptions {
-    [animationName: string]: FrameOptions[][]
-}
-
-export interface SpritesheetOptions extends TransformOptions {
-    /** 
-     * Put the different images that are concerned by the properties below.
-     * The key of the object is the identifier of the spritesheet and the value and the link to the image.
-     * 
-     * > Remember to wrap the link to the image with the `require` function.
-     * 
-     * ```ts
-     * images: {
-     *    hero: require('./assets/hero.png')
-     * }
-     * ```
-     * 
-     * @prop { { [id: string]: string } } [images]
-     * @memberof Spritesheet
-     * */
-    images?: {
-        [id: string]: string
-    }
-
-    /** 
-     * Spritesheet identifier.
-     * The key of the object is the identifier of the spritesheet and the value and the link to the image.
-     * 
-     * > Do not use the `images` property
-     * 
-     * @prop {string} [id]
-     * @memberof Spritesheet
-     * */
-    id?: string
+export interface TextureOptions {
 
     /** 
      * The link to the image
@@ -203,8 +170,52 @@ export interface SpritesheetOptions extends TransformOptions {
      * @prop {number} [height]
      * @memberof Spritesheet
      * */
-    height?: number,
+    height?: number
 
+    rectWidth?: number,
+    rectHeight?: number,
+
+    offset?: { x: number, y: number }
+}
+
+export type AnimationFrames = FrameOptions[][] | ((...args: any) => FrameOptions[][])
+
+export interface TexturesOptions extends TextureOptions {
+    animations: AnimationFrames
+}
+
+export interface SpritesheetOptions extends TransformOptions, TextureOptions {
+    /** 
+     * Put the different images that are concerned by the properties below.
+     * The key of the object is the identifier of the spritesheet and the value and the link to the image.
+     * 
+     * > Remember to wrap the link to the image with the `require` function.
+     * 
+     * ```ts
+     * images: {
+     *    hero: require('./assets/hero.png')
+     * }
+     * ```
+     * 
+     * @prop { { [id: string]: string } } [images]
+     * @memberof Spritesheet
+     * */
+    images?: {
+        [id: string]: string
+    }
+
+    /** 
+     * Spritesheet identifier.
+     * The key of the object is the identifier of the spritesheet and the value and the link to the image.
+     * 
+     * > Do not use the `images` property
+     * 
+     * @prop {string} [id]
+     * @memberof Spritesheet
+     * */
+    id?: string
+
+    
      /** 
      * Object containing all animations. 
      * The key to the object is the name of the animation. The value is a two-dimensional array
@@ -240,7 +251,9 @@ export interface SpritesheetOptions extends TransformOptions {
      * @prop { { [animName: string]: Array<Array<FrameOptions>> } } [animations]
      * @memberof Spritesheet
      * */
-    animations?: AnimationOptions
+    textures?: {
+        [animationName: string]: TexturesOptions
+    }
 }
 
 export function Spritesheet(options: SpritesheetOptions) {

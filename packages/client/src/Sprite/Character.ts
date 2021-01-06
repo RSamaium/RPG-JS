@@ -3,6 +3,7 @@ import { Direction, Utils } from '@rpgjs/common'
 import { spritesheets } from './Spritesheets'
 import { FloatingText } from '../Effects/FloatingText'
 import { Animation } from '../Effects/Animation'
+import { Animation as AnimationEnum } from '../Effects/AnimationCharacter';
 
 const { capitalize } = Utils
 
@@ -11,7 +12,7 @@ export default class Character extends PIXI.Sprite {
     tilesOverlay: any
     h: number = 1
     w: number = 1
-    private direction: number = 0
+    protected direction: number = 0
     private graphic: string = ''
     private spritesheet: any
     private _x: number = 0
@@ -19,9 +20,18 @@ export default class Character extends PIXI.Sprite {
     public z: number = 0
     private effects: any[] = []
     private fixed: boolean = false
-    private animation 
+    public animation: Animation
 
     anim
+
+    get dir() {
+        return [
+            Direction.Down, 
+            Direction.Left, 
+            Direction.Right,
+            Direction.Up
+        ][this.direction]
+    }
 
     constructor(private data: any, private scene: any) {
         super()
@@ -64,6 +74,7 @@ export default class Character extends PIXI.Sprite {
         const w = (1 - (data.wHitbox / this.w)) / 2
         const h = 1 - (data.hHitbox / this.h)
         spritesheet.anchor = [w, h]
+        this.spritesheet = spritesheet
         this.anchor.set(...spritesheet.anchor)
     }
 
@@ -127,10 +138,10 @@ export default class Character extends PIXI.Sprite {
         this.animation.update()
 
         if (moving) {
-            this.animation.play(this.getAnimationByDirection('walk'))
+            this.playAnimation(AnimationEnum.Walk)
         }
         else {
-            this.animation.play(this.getAnimationByDirection('stand'))
+            this.playAnimation(AnimationEnum.Stand)
         }
 
         return {
@@ -139,13 +150,15 @@ export default class Character extends PIXI.Sprite {
         }
     }
 
-    getAnimationByDirection(name: string) {
-        return name + capitalize([
-            Direction.Down, 
-            Direction.Left, 
-            Direction.Right,
-            Direction.Up
-        ][this.direction])
+    private playAnimation(name: string) {
+        const hook = `onCharacter${capitalize(name)}`
+        if (!this.spritesheet) return
+        if (this.spritesheet[hook]) {
+            this.spritesheet[hook](this)
+        }
+        else if (this.animation.has(name)) {
+            this.animation.play(name, [this.dir])
+        }
     }
 
     onSetGraphic(spritesheet) {}

@@ -21,8 +21,10 @@ const to = () => {
     height: 768,
     opacity: 1,
     anchor: [0.5],
-    animations: {
-        default: [ to() ]
+    textures: {
+        default: {
+            animations: [ to() ]
+        }
     }
 })
 export class Animations {

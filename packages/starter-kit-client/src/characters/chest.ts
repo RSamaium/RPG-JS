@@ -7,13 +7,13 @@ import { Spritesheet } from '@rpgjs/client'
     height: 61,
     framesHeight: 2,
     framesWidth: 4,
-    animations: {
-        standUp: [
+    textures: {
+       /* standUp: [
             [{time: 0, frameX: 3, frameY: 0 }]
         ],
         standDown: [
             [{time: 0, frameX: 3, frameY: 1 }]
-        ]
+        ]*/
     }
 })
 export class Chest { }

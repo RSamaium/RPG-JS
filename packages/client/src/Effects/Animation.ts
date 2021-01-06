@@ -1,14 +1,29 @@
 import * as PIXI from 'pixi.js'
+import { Utils } from '@rpgjs/common'
 import { spritesheets } from '../Sprite/Spritesheets'
-import { SpritesheetOptions } from '../Sprite/Spritesheet'
+import { SpritesheetOptions, TextureOptions, AnimationFrames, FrameOptions } from '../Sprite/Spritesheet'
+
+const { isFunction, arrayEquals } = Utils
+
+type AnimationDataFrames = {
+    container: PIXI.Sprite,
+    sprites: {
+        [time: number]: FrameOptions
+    },
+    maxTime: number,
+    frames: PIXI.Texture[][],
+    name: string,
+    animations: AnimationFrames,
+    params: any[]
+} 
 
 export class Animation extends PIXI.Sprite {
 
     private frames: PIXI.Texture[][] = []
     private spritesheet: SpritesheetOptions
-    private currentAnimation: PIXI.Sprite | null = null
+    private currentAnimation: AnimationDataFrames | null = null
     private time: number = 0
-    private animations: Map<string, PIXI.Sprite> = new Map()
+    private animations: Map<string, AnimationDataFrames> = new Map()
 
     onFinish: () => void
 
@@ -18,45 +33,41 @@ export class Animation extends PIXI.Sprite {
         if (!this.spritesheet) {
             throw new Error(`Impossible to find the ${this.id} spritesheet. Did you put the right name or create the spritesheet?`)
         }
-        this.createTextures()
         this.createAnimations()
     }
 
-    createTextures(): void {
-        if (!this.spritesheet.image) return
-        const { baseTexture } = PIXI.Texture.from(this.spritesheet.image)
-        const { width, height, framesHeight, framesWidth } = this.spritesheet
-        if (!width || !framesWidth || !height || !framesHeight) return
-        const spriteWidth = width / framesWidth
-        const spriteHeight = height / framesHeight
-        for (let i = 0; i < framesHeight; i++) {
-            this.frames[i] = []
+    createTextures(options: TextureOptions): PIXI.Texture[][] {
+        const { width, height, framesHeight, framesWidth, rectWidth, rectHeight, image, offset }: any = options
+        const { baseTexture } = PIXI.Texture.from(image)
+        const spriteWidth = rectWidth ? rectWidth : width / framesWidth
+        const spriteHeight = rectHeight ? rectHeight : height / framesHeight
+        const frames: any = []
+        const offsetX = (offset && offset.x) || 0
+        const offsetY = (offset && offset.y) || 0
+        for (let i = 0; i < framesHeight ; i++) {
+            frames[i] = []
             for (let j = 0; j < framesWidth; j++) {
-                this.frames[i].push(
-                    new PIXI.Texture(baseTexture, new PIXI.Rectangle(j * spriteWidth, i * spriteHeight, spriteWidth, spriteHeight))
+                frames[i].push(
+                    new PIXI.Texture(baseTexture, new PIXI.Rectangle(j * spriteWidth + offsetX, i * spriteHeight + offsetY, spriteWidth, spriteHeight))
                 )
             }
         }
+        return frames
     }
 
     createAnimations() {
-        const { animations } = this.spritesheet
-        for (let animationName in animations) {
-            const animation = animations[animationName]
-            const animSprite = new PIXI.Sprite()
-            animSprite.name = animationName
-            animSprite['maxTime'] = 0
-            for (let layer of animation) {
-                const sprite = new PIXI.Sprite()
-                const obj: any = {}
-                for (let frame of layer) {
-                    obj[frame.time] = frame
-                    animSprite['maxTime'] = Math.max(animSprite['maxTime'], frame.time)
-                }
-                sprite['animationObj'] = obj
-                animSprite.addChild(sprite)
-            }
-            this.animations.set(animationName, animSprite)
+        const { textures } = this.spritesheet
+        for (let animationName in textures) {
+            const optionsTextures = Object.assign(this.spritesheet, textures[animationName])
+            this.animations.set(animationName, {
+                container: new PIXI.Sprite(),
+                maxTime: 0,
+                frames: this.createTextures(optionsTextures),
+                name: animationName,
+                animations: textures[animationName].animations,
+                params: [],
+                sprites: {}
+            })
         }
     }
 
@@ -64,8 +75,8 @@ export class Animation extends PIXI.Sprite {
         return this.animations.has(name)
     }
 
-    get(name: string): PIXI.Sprite {
-        return this.animations.get(name) as PIXI.Sprite
+    get(name: string): AnimationDataFrames {
+        return this.animations.get(name) as AnimationDataFrames
     }
 
     isPlaying(name?: string): boolean {
@@ -79,31 +90,56 @@ export class Animation extends PIXI.Sprite {
         this.parent.removeChild(this)
     }
 
-    play(name: string) {
-        if (this.isPlaying(name)) return
+    play(name: string, params: any[] = []) {
+
+        const animParams = this.currentAnimation?.params
+
+        if (this.isPlaying(name) && arrayEquals(params, animParams || [])) return
        
-        const animation: PIXI.Sprite = this.get(name)
+        const animation = this.get(name)
 
         if (!animation) {
             throw new Error(`Impossible to play the ${name} animation because it doesn't exist on the ${this.id} spritesheet`)
         }
-        
+
         this.removeChildren()
+        animation.sprites = {}
         this.currentAnimation = animation
+        this.currentAnimation.params = params
         this.time = 0
-        this.addChild(animation)
+
+        let animations: any = animation.animations;
+        animations = isFunction(animations) ? (animations as Function)(...params) : animations
+
+        this.currentAnimation.container = new PIXI.Sprite()
+
+        for (let container of (animations as FrameOptions[][])) {
+            const sprite = new PIXI.Sprite()
+            const obj: any = {}
+            for (let frame of container) {
+                this.currentAnimation.sprites[frame.time] = frame
+                this.currentAnimation.maxTime = Math.max(this.currentAnimation.maxTime, frame.time)
+            }
+           this.currentAnimation.container.addChild(sprite)
+        }
+
+        this.addChild(this.currentAnimation.container)
         // Updates immediately to avoid flickering
         this.update()
     }
 
     update() {
         if (!this.isPlaying() || !this.currentAnimation) return  
-        for (let container of this.currentAnimation.children) {
-            const sprite = container as PIXI.Sprite
-            const frame = sprite['animationObj'][this.time]
-            if (!frame) continue
-            sprite.texture = this.frames[frame.frameY][frame.frameX]
 
+        const { frames, container, sprites } = this.currentAnimation
+
+        for (let _sprite of container.children) {
+            const sprite = _sprite as PIXI.Sprite
+            const frame = sprites[this.time]
+            if (!frame || frame.frameY == undefined || frame.frameX == undefined) {
+                continue
+            }
+            sprite.texture = frames[frame.frameY][frame.frameX]
             const applyTransform = (prop) => {
                 if (frame[prop]) {
                     sprite[prop].set(frame.anchor)
@@ -112,7 +148,6 @@ export class Animation extends PIXI.Sprite {
                     sprite[prop].set(...this.spritesheet[prop])
                 }
             }
-
             const applyTransformValue = (prop, alias = '') => {
                 const optionProp = alias || prop
                 if (frame[optionProp] !== undefined) {
@@ -136,7 +171,7 @@ export class Animation extends PIXI.Sprite {
             applyTransformValue('visible')
         }
         this.time++
-        if (this.time > this.currentAnimation['maxTime']) {
+        if (this.time > this.currentAnimation.maxTime) {
             this.time = 0
             if (this.onFinish) this.onFinish()
         }
