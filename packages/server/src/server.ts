@@ -2,7 +2,6 @@ import { ServerEngine } from 'lance-gg';
 import { SceneMap } from './Scenes/Map';
 import { SceneBattle } from './Scenes/Battle';
 import { RpgPlayer } from './Player/Player'
-import { Query } from './Query'
 import Monitor from './Monitor'
 import { DAMAGE_SKILL, DAMAGE_PHYSIC, DAMAGE_CRITICAL, COEFFICIENT_ELEMENTS } from './presets'
 import { World } from '@rpgjs/sync-server'
@@ -37,8 +36,7 @@ export default class RpgServerEngine extends ServerEngine {
     }
 
     start() {
-        super.start() 
-        Query.worlds = this.gameEngine.world
+        super.start()
     }
 
     step() {

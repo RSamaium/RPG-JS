@@ -28,6 +28,7 @@
     "get-value": "^3.0.1",
     "msgpack-lite": "^0.1.26",
     "on-change": "^2.2.0",
+    "rxjs": "^6.6.3",
     "set-value": "^3.0.2"
   },
   "devDependencies": {

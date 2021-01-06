@@ -312,6 +312,7 @@ export class RpgPlayer extends RpgCommonPlayer {
     toJSON() {
         const obj: any = {}
         const props = [
+            'id',
             'hp', 
             'sp',
             'gold', 

@@ -1,0 +1,67 @@
+/**
+ * = Accordions
+ */
+
+ .accordion{ 
+    .card {
+        margin-bottom: 1.5rem;
+        .card-header {
+            user-select: none;
+        
+            button{
+                
+                .icon {
+                    color: $dark;
+                    transition: $transition-base;
+                    span {
+                        font-size: $font-size-sm;
+                    }
+                }
+                .icon-title {
+                    margin-right: 1rem;
+                    
+                    span {
+                        margin-right: 1rem;
+                    }
+            
+                    & + .icon {
+                        height: 1rem;
+                    }
+                }
+
+                &[aria-expanded="true"]{
+                    > .icon {
+                        @include transform(rotateZ(45deg));
+                    }
+                }
+            
+                &[aria-expanded="true"], &:hover{
+                    > * {
+                    color: theme-color('dark');
+                        i{ 
+                            fill: theme-color('dark');
+                        }
+                    }
+                }
+            }
+        
+            &:hover {
+                cursor: pointer;
+        
+            }
+
+            .btn{
+                .btn-check:focus + &,
+                &:focus {
+                  outline: 0;
+                  box-shadow: none;
+                }
+            }
+          
+        }
+        &:hover{
+            background-color: $soft;
+        }
+    }
+}
+

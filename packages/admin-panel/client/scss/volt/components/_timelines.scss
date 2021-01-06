@@ -1,0 +1,22 @@
+/**
+ * = Timelines
+ */
+
+.list-group-timeline {
+    .list-group-item {
+        position: relative;
+        .col-auto{
+            z-index: 999;
+        }
+        &:not(:last-child){
+            &::before {
+                content: '';
+                position: absolute;
+                top: 1rem;
+                left: 2.5rem;
+                height: 100%;
+                border-left: 1px solid $light;
+            }
+        }
+    }
+}

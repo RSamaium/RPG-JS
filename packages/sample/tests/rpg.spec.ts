@@ -1,4 +1,4 @@
-import { Query } from '@rpgjs/server'
+import { RpgWorld } from '@rpgjs/server'
 import { testing } from '@rpgjs/testing'
 import RPGServer from '../src/server/rpg'
 
@@ -8,7 +8,7 @@ beforeEach(() => {
     const fixture = testing(RPGServer)
     client = fixture.createClient()
     socket = client.connection()
-    player = Query.getPlayer(client)
+    player = RpgWorld.getPlayer(client.id)
 })
 
 test('test player', () => {

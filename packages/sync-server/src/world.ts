@@ -1,9 +1,10 @@
 import { Room } from './room'
 import { Transmitter } from './transmitter'
 import { Transport } from './transports/socket'
-import { DefaultRoom, User } from './rooms/default'
+import { User } from './rooms/default'
 import { Packet } from './packet';
-import { RoomClass } from './interfaces/room.interface';
+import { RoomClass } from './interfaces/room.interface'
+import { BehaviorSubject } from 'rxjs'
 
 export class WorldClass {
 
@@ -12,6 +13,7 @@ export class WorldClass {
         [key: string]: User
     } = {}
     private userClass = User
+    changes: BehaviorSubject<any> = new BehaviorSubject({})
 
     setUserClass(userClass: any) {
         this.userClass = userClass
@@ -45,6 +47,10 @@ export class WorldClass {
             const room = this.getRoom(roomId)
             cb(room, user)
         }
+    }
+
+    getUsers() {
+        return this.users 
     }
 
     getUser(id: string): User {

@@ -6,7 +6,7 @@ export function testing(rpgServer) {
     const engine = entryPoint(rpgServer, serverIo)
     engine.start()
     return {
-        createClient() {
+        createClient(): Client {
             return new Client(new ClientIo())
         },
         server: engine

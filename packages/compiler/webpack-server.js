@@ -1,4 +1,5 @@
 const path = require('path')
+const webpack = require('webpack')
 const { CleanWebpackPlugin } = require('clean-webpack-plugin')
 const nodeExternals = require('webpack-node-externals')
 const webpackCommon = require('./webpack-common')
@@ -13,7 +14,6 @@ module.exports = function(dirname, extend = {}) {
             __dirname: false
         },
         externals: [nodeExternals({
-            //allowlist: ['@rpgjs/default-gui', '@rpgjs/starter-kit-server', '@rpgjs/starter-kit-client']
             allowlist: [/^@rpgjs/, 'lance-gg']
         })],
         mode,
@@ -33,7 +33,7 @@ module.exports = function(dirname, extend = {}) {
                         options: {
                             onlyCompileBundledFiles: true
                         }
-                    }]
+                    }] 
                 },
                 ...webpackCommon(dirname)
             ]

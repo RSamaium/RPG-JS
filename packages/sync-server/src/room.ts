@@ -5,7 +5,8 @@ import { Utils } from './utils'
 import { Transmitter } from './transmitter'
 import { Packet } from './packet'
 import { RoomClass } from './interfaces/room.interface';
-import { User } from './rooms/default';
+import { User } from './rooms/default'
+import { World } from './world'
 
 export class Room {
 
@@ -111,6 +112,13 @@ export class Room {
         if (Object.keys(difference).length == 0) return
 
         if (this.proxyRoom['onChanges']) this.proxyRoom['onChanges'](difference)
+
+        const id: string = room.id as string
+
+        World.changes.next({
+            ...World.changes.value,
+            [id]: room
+        })
 
         Transmitter.addPacket(this.proxyRoom, difference)
     }

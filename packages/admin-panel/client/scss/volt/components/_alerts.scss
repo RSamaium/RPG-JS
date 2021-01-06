@@ -1,0 +1,10 @@
+.alert-heading{
+    font-weight: $font-weight-bold;
+}
+
+.alert-icon{
+    margin-bottom: .5rem;
+    span{
+        font-size: $alert-icon-font-size;
+    }
+}
