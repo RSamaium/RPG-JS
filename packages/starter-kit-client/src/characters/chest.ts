@@ -1,4 +1,4 @@
-import { Spritesheet } from '@rpgjs/client'
+import { Spritesheet, Animation, Direction, RpgSprite } from '@rpgjs/client'
 
 @Spritesheet({
     id: 'chest',
@@ -8,12 +8,9 @@ import { Spritesheet } from '@rpgjs/client'
     framesHeight: 2,
     framesWidth: 4,
     textures: {
-       /* standUp: [
-            [{time: 0, frameX: 3, frameY: 0 }]
-        ],
-        standDown: [
-            [{time: 0, frameX: 3, frameY: 1 }]
-        ]*/
+        [Animation.Stand]: {
+            animations: direction => [[ {time: 0, frameX: 3, frameY: direction == Direction.Up ? 0 : 1 } ]]
+        }
     }
 })
-export class Chest { }
+export class Chest  { }

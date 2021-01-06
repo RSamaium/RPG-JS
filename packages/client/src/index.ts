@@ -1,3 +1,4 @@
+import { Direction } from '@rpgjs/common'
 import entryPoint from './clientEntryPoint'
 import RpgClientEngine from './RpgClientEngine'
 import { RpgClient } from './RpgClient'
@@ -8,6 +9,7 @@ import { Howler as RpgGlobalSound }  from 'howler'
 import { RpgSound } from './Sound/RpgSound'
 import * as Presets from './Presets/AnimationSpritesheet'
 import { Animation } from './Effects/AnimationCharacter'
+import { ISpriteCharacter } from './Interfaces/Character';
 
 export {
     RpgClientEngine,
@@ -19,5 +21,7 @@ export {
     RpgGlobalSound,
     RpgSound,
     Presets,
-    Animation
+    Animation,
+    Direction,
+    ISpriteCharacter
 }
