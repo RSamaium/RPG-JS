@@ -221,10 +221,12 @@ export interface SpritesheetOptions extends TransformOptions, TextureOptions {
      * The key to the object is the name of the animation. The value is a two-dimensional array
      * 
      * ```ts
-     * animations: {
-     *      myanim: [
-     *          [ { time: 0, frameX: 0, frameY: 0 } ]
-     *      ]
+     * textures: {
+     *      myanim: {
+     *         animations: [
+     *              [ { time: 0, frameX: 0, frameY: 0 } ]
+     *         ]
+     *      }
      * }
      * ```
      * 
@@ -247,8 +249,61 @@ export interface SpritesheetOptions extends TransformOptions, TextureOptions {
      * * `y`
      * * `visible`
      * 
+     * --- 
      * 
-     * @prop { { [animName: string]: Array<Array<FrameOptions>> } } [animations]
+     * **Advanced**
+     * 
+     * You can create an animation that will be linked to a data. For example, different animation according to a direction of the character.
+     * 
+     * Full example: 
+     * 
+     * ```ts
+     * import { Spritesheet, Animation, Direction } from '@rpgjs/client'
+     * 
+     * @Spritesheet({
+     *      id: 'chest',
+     *      image: require('./assets/chest.png'),
+     *      width: 124,
+     *      height: 61,
+     *      framesHeight: 2,
+     *      framesWidth: 4,
+     *      textures: {
+     *          [Animation.Stand]: {
+     *              animations: direction => [[ {time: 0, frameX: 3, frameY: direction == Direction.Up ? 0 : 1 } ]]
+     *          }
+     *      })
+     * })
+     * export class Chest  { }
+     * ```
+     * 
+     * > It is important to know that `Animation.Stand` animation is called if it exists. it only works in the case of an event that doesn't move. The direction is then sent
+     * 
+     * As you can see, the property contains a function that returns the array for the animation. Here, it is the direction but the parameters depend on the call of the animation. Example: 
+     * 
+     * ```ts
+     * import { Spritesheet, Animation, Direction, RpgSprite, ISpriteCharacter } from '@rpgjs/client'
+     * 
+     * @Spritesheet({
+     *      id: 'chest',
+     *      image: require('./assets/chest.png'),
+     *      width: 124,
+     *      height: 61,
+     *      framesHeight: 2,
+     *      framesWidth: 4,
+     *      textures: {
+     *          [Animation.Stand]: {
+     *              animations: str => [[ {time: 0, frameX: 3, frameY: str == 'hello' ? 0 : 1 } ]]
+     *          }
+     *      }
+     * })
+     * export class Chest implements ISpriteCharacter { 
+     *      onCharacterStand(sprite: RpgSprite) {
+     *         sprite.animation.play(Animation.Stand, ['hello'])
+     *      }
+     * }
+     * ```
+     * 
+     * @prop { { [animName: string]: { animations: Array<Array<FrameOptions>> | Function, ...other } } } [textures]
      * @memberof Spritesheet
      * */
     textures?: {
