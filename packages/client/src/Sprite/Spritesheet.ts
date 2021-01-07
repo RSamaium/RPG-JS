@@ -249,6 +249,32 @@ export interface SpritesheetOptions extends TransformOptions, TextureOptions {
      * * `y`
      * * `visible`
      * 
+     * ---
+     * **Extract Animation of Spritesheet**
+     * 
+     * Sometimes the animation is part of the image
+     * 
+     * ```ts
+     * textures: {
+     *      myanim: {
+     *          rectWidth: 64,
+     *          rectHeight: 64,
+     *          frameX: 10,
+     *          frameY: 2,
+     *          offset: {x: 0, y: 230},
+     *          animations: [
+     *               [ { time: 0, frameX: 0, frameY: 0 } ]
+     *          ]
+     *      }
+     * }
+     * ```
+     * 
+     * Above, we can specify which part we want to recover
+     * 
+     * 1. We go to the position {0, 230} of the image (`offset`)
+     * 2. We recover cells of 64px (`rectWidth` and `rectHeight`)
+     * 3. And we get 20 cells (10 on the width, 2 on the height) (`frameX` and `frameY`)
+     * 
      * --- 
      * 
      * **Advanced**

@@ -27,5 +27,4 @@ const to = () => {
         }
     }
 })
-export class Animations {
-}
+export class Animations { }

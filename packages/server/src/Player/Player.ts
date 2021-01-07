@@ -419,9 +419,12 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @Spritesheet({
      *  id: 'fire',
      *  image: require('')
-     *  animations: {
-     *      default: [
-     *      ]
+     *  textures: {
+     *      default: {
+     *          animations: [
+     *          
+     *          ]
+     *      }
      *   }
      * })
      * export class FireAnimation {}
