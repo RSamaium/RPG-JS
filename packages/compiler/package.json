@@ -17,8 +17,10 @@
     "deasync": "^0.1.21",
     "file-loader": "^6.2.0",
     "html-webpack-plugin": "^4.4.1",
+    "install": "^0.13.0",
     "mini-css-extract-plugin": "^1.3.3",
     "nodemon-webpack-plugin": "^4.3.2",
+    "npm": "^6.14.10",
     "tmx-parser": "^1.5.0",
     "ts-loader": "^8.0.12",
     "typescript": "^4.1.3",
@@ -27,7 +29,9 @@
     "vue-template-compiler": "^2.6.12",
     "webpack": "^4.44.1",
     "webpack-cli": "^3.3.12",
-    "webpack-node-externals": "^2.5.2"
+    "webpack-node-externals": "^2.5.2",
+    "webpack-pwa-manifest": "^4.3.0",
+    "workbox-webpack-plugin": "^6.0.2"
   },
   "gitHead": "554653befd7225e7954c65cab1efb590434016c0"
 }

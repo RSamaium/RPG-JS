@@ -1,0 +1,12 @@
+{
+    "name": "My Game",
+    "short_name": "Game",
+    "description": "Beautiful Game",
+    "background_color": "#ffffff",
+    "icons": [
+        {
+            "src": "icon.png",
+            "sizes": [96, 128, 192, 256]
+        }
+    ]
+}

@@ -1,8 +1,11 @@
+const fs = require('fs')
 const path = require('path')
 const webpack = require('webpack')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const { VueLoaderPlugin } = require('vue-loader')
 const MiniCssExtractPlugin = require("mini-css-extract-plugin")
+const WorkboxWebpackPlugin = require("workbox-webpack-plugin")
+const WebpackPwaManifest = require('webpack-pwa-manifest')
 const webpackCommon = require('./webpack-common')
 
 const mode = process.env.NODE_ENV || 'development'
@@ -11,6 +14,28 @@ const prod = mode === 'production'
 const dir = type == 'mmorpg' ? 'client' : 'standalone'
 
 module.exports = function(dirname, extend = {}) {
+
+    let rpgConfig = {
+        title: 'My RPG Game'
+    }
+    const rpgConfigPath = path.join(dirname, 'rpg.json')
+    const plugins = []
+
+    if (fs.existsSync(rpgConfigPath)) {
+        rpgConfig = JSON.parse(fs.readFileSync(rpgConfigPath, 'utf-8'))
+        plugins.push(
+            new WebpackPwaManifest(rpgConfig)
+        )
+    }
+
+    if (mode == 'production') {
+        plugins.push(
+            new WorkboxWebpackPlugin.GenerateSW({
+                maximumFileSizeToCacheInBytes: 1024 * 1024 * 20 // Mo
+            })
+        )
+    }
+
     return  {
         mode,
         node: {
@@ -80,6 +105,7 @@ module.exports = function(dirname, extend = {}) {
         },
         plugins: [
             new HtmlWebpackPlugin({
+                title: rpgConfig.title,
                 template: path.join(dirname, 'src/client/index.html')
             }),
             new MiniCssExtractPlugin({
@@ -89,7 +115,8 @@ module.exports = function(dirname, extend = {}) {
             new webpack.DefinePlugin({
                 __VUE_OPTIONS_API__: true,
                 __VUE_PROD_DEVTOOLS__: false
-            })
+            }),
+            ...plugins
         ],
         ...extend
     }
