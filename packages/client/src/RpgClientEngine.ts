@@ -27,13 +27,11 @@ export default class RpgClientEngine extends ClientEngine<any> {
     constructor(gameEngine, options) {
         super(gameEngine, options.io, options, Renderer)
 
+        this.renderer.client = this
         this.renderer.options = {
-            selector: '#rpg-canvas',
+            selector: '#rpg',
             selectorGui: '#gui',
-            canvas: {
-                width: 816,
-                height: 624
-            },
+            canvas: {},
             gui: [],
             spritesheets: [],
             sounds: [],
@@ -52,8 +50,6 @@ export default class RpgClientEngine extends ClientEngine<any> {
                 navigator.serviceWorker.register('/service-worker.js')
             })
         }
-
-        RpgGui._initalize(this)
     }
 
     get objects() {

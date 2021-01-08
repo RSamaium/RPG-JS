@@ -18,7 +18,8 @@ class Gui {
         this.gameEngine = clientEngine.gameEngine
 
         const self = this
-        const { gui, selectorGui } = this.renderer.options
+        const { gui } = this.renderer.options
+        const selectorGui = this.renderer.guiEl
 
         this.app = createApp({
             template: `

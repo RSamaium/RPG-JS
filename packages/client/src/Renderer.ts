@@ -3,6 +3,7 @@ window.PIXI = require('pixi.js')
 import { Renderer } from 'lance-gg'
 import { SceneMap } from './Scene/Map'
 import { SceneBattle } from './Scene/Battle'
+import { RpgGui } from './RpgGui'
 
 export default class RpgRenderer extends Renderer<any, any> {
 
@@ -13,7 +14,10 @@ export default class RpgRenderer extends Renderer<any, any> {
     public options: any = {}
     private _width: number = 800
     private _height: number = 400
+    guiEl: HTMLDivElement
+    selector: HTMLElement
     animation
+    client
 
     async init() {
         this.onDOMLoaded()
@@ -28,10 +32,6 @@ export default class RpgRenderer extends Renderer<any, any> {
         }
         if (this.vm) {
             this.vm.$el.style = `width:${w}px;height:${h}px`
-        }
-        const wrapper = document.querySelector('#screen')
-        if (wrapper) {
-            wrapper.setAttribute('style', `width:${w}px;height:${h}px`)
         }
         this.renderer.resize(w, h)
         this._width = w
@@ -63,19 +63,29 @@ export default class RpgRenderer extends Renderer<any, any> {
         };
         this.renderer = PIXI.autoDetectRenderer(options)
         this.gameEngine.renderer = this.renderer
-        document.body.querySelector(this.options.selector).appendChild(this.renderer.view)
+        this.selector = document.body.querySelector(this.options.selector)
+        this.guiEl = this.selector.querySelector(this.options.selectorGui)
+
+        if (!this.guiEl) {
+            this.guiEl = document.createElement('div')
+            this.selector.appendChild(this.guiEl)
+        }
+        
+        this.selector.insertBefore(this.renderer.view, this.selector.firstChild)
+        const screens = document.querySelector(this.options.selector).children
+        for (let screen of screens) {
+            screen.style.position = 'absolute'
+        }
+
+        RpgGui._initalize(this.client)
+
         this.resize()
     }
 
     resize() {
         const size = () => {
-            const { fullScreen, width, height } = this.options.canvas
-            if (fullScreen) {
-                this._resize(window.innerWidth, window.innerHeight)
-            }
-            else {
-                this._resize(width, height)
-            }
+            const { offsetWidth, offsetHeight } = this.selector
+            this._resize(offsetWidth, offsetHeight)
         }
         window.addEventListener('resize', size)
         size()
@@ -100,8 +110,8 @@ export default class RpgRenderer extends Renderer<any, any> {
         switch (name) {
             case 'map':
                 this.scene = new SceneMap(this.gameEngine, {
-                    screenWidth: this.options.canvas.width,
-                    screenHeight: this.options.canvas.height
+                    screenWidth: this.renderer.screen.width,
+                    screenHeight: this.renderer.screen.height
                 })
                 break;
             case 'battle':

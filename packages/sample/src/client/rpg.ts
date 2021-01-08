@@ -16,10 +16,8 @@ import inn from './gui/inn.vue'
     ],
     spriteClass: Sprite,
     canvas: {
-        width: 500,
-        height: 300,
-        autoDensity: true,
-        resolution: 2
+        fullScreen: true
+
     },
 })
 export default class RPG extends RpgClientEngine {

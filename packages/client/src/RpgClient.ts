@@ -41,7 +41,8 @@ interface RpgClientOptions {
         antialias?: boolean,
         resolution?: number
         preserveDrawingBuffer?: boolean
-        backgroundColor?: number
+        backgroundColor?: number,
+        fullScreen?: boolean
     }
 }
 
