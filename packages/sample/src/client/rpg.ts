@@ -14,26 +14,14 @@ import inn from './gui/inn.vue'
        hud,
        inn
     ],
-    spriteClass: Sprite
+    spriteClass: Sprite,
+    canvas: {
+        width: 500,
+        height: 300,
+        autoDensity: true,
+        resolution: 2
+    },
 })
 export default class RPG extends RpgClientEngine {
 
-   stats
-
-   onLatency(latency) {
-      // console.log(latency)  
-   } 
-
-   async start() {
-      
-      super.start()
-      this.stats = new Stats()
-      document.body.appendChild( this.stats.dom )
-   }
-
-   step(t, dt) {
-      this.stats.begin()
-      super.step(t, dt)
-      this.stats.end()
-   }
 }

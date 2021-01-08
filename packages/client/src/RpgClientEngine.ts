@@ -87,7 +87,6 @@ export default class RpgClientEngine extends ClientEngine<any> {
         }
         if (!logic) {
             logic = this.gameEngine.addPlayer(RpgCommonPlayer, id)
-            
         }
         logic.prevParamsChanged = Object.assign({}, logic)
         for (let key in params) {

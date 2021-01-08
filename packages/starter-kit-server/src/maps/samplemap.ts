@@ -34,7 +34,7 @@ import { Potion } from '../database/items/potion';
             }
         })
     ],
-    sounds: ['town']
+    //sounds: ['town']
 })
 export class SampleMap extends RpgMap {
 }

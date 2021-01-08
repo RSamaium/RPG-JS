@@ -81,7 +81,7 @@ export class SceneMap extends Scene implements IScene {
                     worldWidth: obj.width * obj.tileWidth,
                     worldHeight: obj.height * obj.tileHeight
                 })
-    
+
                 this.viewport.clamp({ direction: 'all' })
                 this.viewport.addChild(this.tilemap)
                 this.isLoaded = true
@@ -107,16 +107,6 @@ export class SceneMap extends Scene implements IScene {
             return
         }
         super.draw(t, dt)
-        for (let eventId in this.game.events) {
-            const sprite = this.eventSprites[eventId]
-            const event = this.game.events[eventId]
-            if (sprite) {
-                sprite.update(event)
-            } 
-            else {
-                this.addEvent(event)
-            }
-        }
     }
 
     onUpdateObject(logic, sprite: Character, moving: boolean): Character {
@@ -135,7 +125,6 @@ export class SceneMap extends Scene implements IScene {
             addTile(_x, _y + height)
             addTile(_x + width, _y + height)
         }
-
         return sprite
     }
 
@@ -147,7 +136,7 @@ export class SceneMap extends Scene implements IScene {
     addEvent(obj) {
         const sprite = new this.game._playerClass(obj, this)
         this.eventSprites[obj.id] = sprite
-        this.tilemap.getEventLayer().addChild(sprite)
+       // this.tilemap.getEventLayer().addChild(sprite)
     }
 
     addObject(obj, id): Character {
