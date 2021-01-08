@@ -6,7 +6,6 @@ import { pixi_tilemap } from 'pixi-tilemap'
 const { arrayFlat } = Utils
 
 pixi_tilemap.Constant.maxTextures = 4;
-pixi_tilemap.Constant.maxTextures = 16;
 
 export default class TileLayer extends PIXI.Container {
 

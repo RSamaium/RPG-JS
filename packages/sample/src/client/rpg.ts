@@ -14,11 +14,7 @@ import inn from './gui/inn.vue'
        hud,
        inn
     ],
-    spriteClass: Sprite,
-    canvas: {
-        fullScreen: true
-
-    },
+    spriteClass: Sprite
 })
 export default class RPG extends RpgClientEngine {
 

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<tileset version="1.2" tiledversion="1.3.3" name="[Base]BaseChip_pipo" tilewidth="32" tileheight="32" tilecount="1064" columns="8">
- <image source="../../../../starter-kit-client/src/maps/assets/[Base]BaseChip_pipo2.png" width="256" height="4000"/>
+<tileset version="1.4" tiledversion="1.4.3" name="[Base]BaseChip_pipo" tilewidth="32" tileheight="32" tilecount="1000" columns="8">
+ <image source="../../../../../../../../../www/RPGJS/RPGJS/packages/starter-kit-client/src/maps/assets/[Base]BaseChip_pipo.png" width="256" height="4000"/>
  <tile id="0">
   <properties>
    <property name="collision" type="bool" value="false"/>
