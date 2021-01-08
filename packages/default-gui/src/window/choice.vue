@@ -1,7 +1,12 @@
 <template>
     <div class="choice-container">
         <ul :style="css" ref="ul" >
-            <li v-for="(choice, index) in choices" :key="index" :class="{ active: selected == index }" :ref="`li-${index}`">
+            <li v-for="(choice, index) in choices" 
+                :key="index" 
+                :class="{ active: selected == index }" 
+                @click="$emit('selected', index)" 
+                @mouseover="mouseOver(index)"
+                :ref="`li-${index}`">
                 <slot :choice="choice">
                     <p><span>{{ choice.text }}</span></p>
                 </slot>
@@ -119,6 +124,10 @@ export default {
                  if (!inView) this.$emit('canScroll', 'down')
             })
            
+        },
+        mouseOver(index) {
+            this.selected = index
+            this.moveCursor()
         }
     },
     computed: {

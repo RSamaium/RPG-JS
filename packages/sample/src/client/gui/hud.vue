@@ -32,7 +32,7 @@ export default {
 }
 </script>
 
-<style>
+<style scoped>
 .health-bar {
     width: 200px;
     margin-top: 10px;
