@@ -112,6 +112,7 @@ export default class RpgClientEngine extends ClientEngine<any> {
 
         this.socket.on('connect', () => {
             if (RpgGui.exists(PrebuildGui.Disconnect)) RpgGui.hide(PrebuildGui.Disconnect)
+            RpgGui.display('rpg-controls')
             this.onConnect()
         })
 

@@ -67,6 +67,18 @@ export class Scene {
         }
     }
 
+    emitKeyDown() {
+        const event: any = new Event('keydown')
+        event.keyCode = 39
+        this.controls.onKeyChange(event, true)
+    }
+
+    emitKeyUp() {
+        const event: any = new Event('keyup')
+        event.keyCode = 39
+        this.controls.onKeyChange(event, false)
+    }
+
     stopInputs() {
         this.controls.stop = true
     }
