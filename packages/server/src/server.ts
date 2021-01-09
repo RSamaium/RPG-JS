@@ -2,6 +2,7 @@ import { ServerEngine } from 'lance-gg';
 import { SceneMap } from './Scenes/Map';
 import { SceneBattle } from './Scenes/Battle';
 import { RpgPlayer } from './Player/Player'
+import { Query } from './Query'
 import Monitor from './Monitor'
 import { DAMAGE_SKILL, DAMAGE_PHYSIC, DAMAGE_CRITICAL, COEFFICIENT_ELEMENTS } from './presets'
 import { World } from '@rpgjs/sync-server'
@@ -35,6 +36,13 @@ export default class RpgServerEngine extends ServerEngine {
         this.loadScenes()
     }
 
+     /**
+     * Start the RPG server
+     * 
+     * @method server.start()
+     * @returns {void}
+     * @memberof RpgServerEngine
+     */
     start() {
         super.start()
     }
@@ -69,9 +77,10 @@ export default class RpgServerEngine extends ServerEngine {
     }
 
     onPlayerDisconnected(socketId, playerId) { 
-        super.onPlayerDisconnected(socketId, playerId);
-        const object = this.gameEngine.world.getObject(playerId)
+        super.onPlayerDisconnected(socketId, playerId)
+        const player = this.gameEngine.world.getObject(playerId)
         if (!Utils.isBrowser()) Monitor.removeMonitor(socketId)
-        this.gameEngine.removeObjectFromWorld(object.id)
+        player.execMethod('onDisconnected')
+        this.gameEngine.removeObjectFromWorld(player.id)
     }
 }

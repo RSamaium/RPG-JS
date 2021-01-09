@@ -32,7 +32,11 @@ export class Player extends RpgPlayer {
           amount: 30
         })*/
 
-        this.callMainMenu()
+       // const data = this.getCurrentMap()
+
+        //console.log(data)
+
+       // this.callMainMenu()
 
         //db.save(this).catch(console.log)
       }
