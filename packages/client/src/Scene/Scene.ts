@@ -6,13 +6,24 @@ import { Animation } from '../Effects/Animation'
 
 const { isArray } = Utils
 
+interface ControlOptions {
+    repeat?: boolean
+    bind: string | string[]
+    method?: Function
+}
+
+interface Controls {
+    [controlName: string]: ControlOptions
+}
+
 export class Scene {
    
     protected objects: Map<string, any> = new Map()
     protected loader = PIXI.Loader.shared
-    private controls: KeyboardControls
+    controls: KeyboardControls
     private animations: Animation[] = []
     inputs: any
+    private _controlsOptions: Controls = {}
 
     constructor(protected game: GameEngine<any>) {
         this.controls = this.game.clientEngine.controls
@@ -80,21 +91,20 @@ export class Scene {
      * 
      * 
      * @title Set Inputs
-     * @method scene.setInputs(object)
-     * @param {object} object
+     * @method scene.setInputs(inputs)
+     * @param {object} inputs
      * @memberof RpgScene
      */
-    setInputs(inputs) {
+    setInputs(inputs: Controls) {
         if (!inputs) return
         this.controls['boundKeys'] = {}
         for (let control in inputs) {
             const option = inputs[control]
             const { method, bind } = option
             if (method) {
-                if (!this[method]) throw new Error(`"${method}" method does not exist on the "${control}" control`)
                 option.method = method.bind(this)
             }
-            let inputsKey = bind
+            let inputsKey: any = bind
             if (!isArray(inputsKey)) {
                 inputsKey = [bind]
             }
@@ -102,6 +112,7 @@ export class Scene {
                 this.controls.bindKey(input, control, option)
             }
         }
+        this._controlsOptions = inputs
     }
 
     private triggerSpriteChanges(logic, sprite, moving: boolean) {
@@ -178,6 +189,53 @@ export class Scene {
     getControl(inputName: string): { actionName: string, options: any } | undefined {
         const { boundKeys  } = this.controls as any
         return boundKeys[inputName]
+    }
+
+    /**
+     * Triggers an input according to the name of the control
+     * 
+     * ```ts 
+     * import { RpgSceneMap, Control } from '@rpgjs/client'
+     * 
+     * export class SceneMap extends RpgSceneMap {
+     *      onLoad() {
+     *          this.applyControl(Control.Action)
+     *      }
+     * }
+     * ```
+     * 
+     * You can put a second parameter or indicate on whether the key is pressed or released
+     * 
+     * ```ts 
+     * import { RpgSceneMap, Control } from '@rpgjs/client'
+     * 
+     * export class SceneMap extends RpgSceneMap {
+     *      onLoad() {
+     *          this.applyControl(Control.Up, true) // keydown
+     *          this.applyControl(Control.Up, false) // keyup
+     *      }
+     * }
+     * ```
+     * @title Apply Control
+     * @method scene.applyControl(controlName,isDown)
+     * @param {string} controlName
+     * @param {boolean} [isDown]
+     * @memberof RpgScene
+     */
+    applyControl(controlName: string, isDown?: boolean | undefined) {
+        const control = this._controlsOptions[controlName]
+        if (control) {
+            const input = isArray(control.bind) ? control.bind[0] : control.bind
+            if (isDown === undefined) {
+                this.controls.applyKeyPress(input as string)
+            }
+            else if (isDown) {
+                this.controls.applyKeyDown(input as string)
+            }
+            else {
+                this.controls.applyKeyUp(input as string)
+            }
+        }
     }
 
     /**

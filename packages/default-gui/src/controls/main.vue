@@ -11,26 +11,11 @@
 <script>
 import nipplejs from 'nipplejs'
 
-const DIRECTION_CODES = {
-    'left': 37,
-    'up': 38,
-    'right': 39,
-    'down': 40
-}
-
-const simulateKey = (keyCode) => {
-    const event = new Event('keydown')
-    event.keyCode = keyCode
-    document.dispatchEvent(event)
-    setTimeout(() => {
-        const eventUp = new Event('keyup')
-        eventUp.keyCode = keyCode
-        document.dispatchEvent(eventUp)
-    }, 200)
-}
+const DIRECTIONS = ['left', 'right', 'up', 'down']
 
 export default {
     name: 'rpg-controls',
+    inject: ['rpgScene'],
     mounted() {
         const manager  = nipplejs.create({
             zone: this.$refs.dPad
@@ -38,16 +23,14 @@ export default {
         let directions = {}
         let lastMoving = {}
         let moving = false
-        manager.on('added', function (evt, nipple) {
-            const keyup = (keyCode) => {
-                const event = new Event('keyup')
-                event.keyCode = keyCode
-                document.dispatchEvent(event)
+        manager.on('added', (evt, nipple) => {
+            const keyup = (key) => {
+                 this.rpgScene().applyControl(key, false)
             }
             const end = () => {
                 moving = false
-                for (let keyCode of Object.values(DIRECTION_CODES)) {
-                    keyup(keyCode)
+                for (let key of DIRECTIONS) {
+                    keyup(key)
                 }
             }
             nipple.on('end', end)
@@ -68,9 +51,9 @@ export default {
                         }
                     }
 
-                    for (let dir in DIRECTION_CODES) {
+                    for (let dir in DIRECTIONS) {
                         if (!directions[dir]) {
-                            keyup(DIRECTION_CODES[dir])
+                            keyup(dir)
                         }
                     }
                    
@@ -80,9 +63,7 @@ export default {
             setInterval(() => {
                 if (moving) {
                     for (let dir in directions) {
-                        const event = new Event('keydown')
-                        event.keyCode = DIRECTION_CODES[dir]
-                        document.dispatchEvent(event)
+                        this.rpgScene().applyControl(dir, true)
                     }
                 }
             }, 200)
@@ -91,10 +72,10 @@ export default {
     },
     methods: {
         openMenu() {
-            simulateKey(27)
+            this.rpgScene().applyControl('back')
         },
         action() {
-            simulateKey(32)
+            this.rpgScene().applyControl('action')
         }
     }
 }
