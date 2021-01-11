@@ -1,5 +1,7 @@
  /** 
  * 
+ * Pre-made GUIs already exist. For example, the command `player.showText()` displays the rpg-dialog component. It is up to you to customize the component or take advantage of the `@rpgjs/default-gui` module which already contains ready-made components
+ * 
  * @title Prebuilt GUI
  * @enum {string}
  * 

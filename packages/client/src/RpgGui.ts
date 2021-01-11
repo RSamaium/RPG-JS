@@ -339,7 +339,7 @@ class Gui {
      * RpgGui.hide('my-gui')
      * ```
      * 
-     * @title Display GUI
+     * @title Hide GUI
      * @method RpgGui.hide(id)
      * @param {string} id 
      * @returns {void}

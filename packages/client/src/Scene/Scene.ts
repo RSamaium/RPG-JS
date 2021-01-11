@@ -87,9 +87,14 @@ export class Scene {
             }
      * }
      * ```
+     * @enum {string} Control 
      * 
-     * 
-     * 
+     * Control.Up | up
+     * Control.Down | down
+     * Control.Left | left
+     * Control.Right | right
+     * Control.Action | action
+     * Control.Back | back
      * @title Set Inputs
      * @method scene.setInputs(inputs)
      * @param {object} inputs
