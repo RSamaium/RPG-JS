@@ -3,7 +3,7 @@ import RpgCommonEvent from './Event'
 import RpgCommonMap from './Map'
 import RpgCommonGame from './Game'
 import { EventEmitter } from './EventEmitter'
-import { PrebuildGui } from './gui/PrebuildGui'
+import { PrebuiltGui } from './gui/PrebuiltGui'
 import Utils from './Utils'
 import * as TransportIo from './transports/io'
 
@@ -16,6 +16,6 @@ export {
     Utils,
     TransportIo,
     Direction,
-    PrebuildGui,
+    PrebuiltGui,
     PlayerType
 }

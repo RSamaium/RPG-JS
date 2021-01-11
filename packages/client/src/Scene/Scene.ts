@@ -12,15 +12,35 @@ export class Scene {
     inputs: any
 
     constructor(protected game: GameEngine<any>) {
-        this.setInput()
+        this.setInput(this.inputs)
     }
 
-    private setInput() {
+    /**
+     * Assign custom inputs to the scene
+     * 
+     * The object is the following:
+     * 
+     * ```ts 
+     * import { RpgSceneMap } from '@rpgjs/client'
+     * 
+     * export class SceneMap extends RpgSceneMap {
+     *      onInit() {
+     *          this.setInputs()
+     *      }
+     * }
+     * ```
+     * 
+     * @title Set Inputs
+     * @method scene.setInput(object)
+     * @param {object} object
+     * @memberof RpgScene
+     */
+    setInput(inputs) {
         const clientEngine = this.game.clientEngine
         this.controls = new KeyboardControls(clientEngine, clientEngine.eventEmitter)
-        if (!this.inputs) return
-        for (let input in this.inputs) {
-            const option = this.inputs[input]
+        if (!inputs) return
+        for (let input in inputs) {
+            const option = inputs[input]
             const { method } = option
             if (method) {
                 if (!this[method]) throw new Error(`"${method}" method does not exist on the "${input}" input`)
@@ -80,10 +100,26 @@ export class Scene {
         this.controls.onKeyChange(event, false)
     }
 
+    /**
+     * Stop listening to the inputs. Pressing a key won't do anything
+     * 
+     * @title Stop Inputs
+     * @method scene.stopInputs()
+     * @returns {void}
+     * @memberof RpgScene
+     */
     stopInputs() {
         this.controls.stop = true
     }
 
+    /**
+     * Listen to the inputs again
+     * 
+     * @title Listen Inputs
+     * @method scene.listenInputs()
+     * @returns {void}
+     * @memberof RpgScene
+     */
     listenInputs() {
         this.controls.stop = false
     }
@@ -103,6 +139,50 @@ export class Scene {
         }
     }
 
+    /**
+     * Display an animation on the scene
+     * 
+     * The object is the following:
+     * * `graphic`: Spritesheet id
+     * * `animationName`: The name of the animation
+     * * `attachTo`: Define a sprite. The animation will follow this sprite (optional)
+     * * `x`: Position X (0 by default)
+     * * `y`: Position Y (0 by default)
+     * * `loop`: Display the animation in a loop (false by default)
+     * 
+     * ```ts 
+     * import { RpgSceneMap } from '@rpgjs/client'
+     * 
+     * export class SceneMap extends RpgSceneMap {
+     *      onLoad() {
+     *          const animation = this.showAnimation({
+     *              graphic: 'my-spritesheet',
+     *              animationName: 'my-anim'
+     *          })
+     *      }
+     * }
+     * ```
+     * 
+     * The return is an animation containing two methods:
+     * * `play()`: Play the animation (Already the case when calling the method)
+     * * `stop()`: Stop the animation
+     * 
+     * They have a hook:
+     * 
+     * `onFinish`: Triggered when the animation is finished 
+     * 
+     * ```ts
+     * animation.onFinish = () => {
+     *      console.log('finish !')
+     * }
+     * ```
+     * 
+     * @title Show Animation
+     * @method scene.showAnimation(object)
+     * @param {object} object
+     * @returns {Animation}
+     * @memberof RpgScene
+     */
     showAnimation({ 
         graphic,
         animationName,
@@ -117,7 +197,7 @@ export class Scene {
         x?: number, 
         y?: number,
         loop?: boolean
-    }) {
+    }): Animation {
         const animation = new Animation(graphic)
         attachTo.addChild(animation)
         if (!loop) {
@@ -129,6 +209,7 @@ export class Scene {
         animation.y = y
         animation.play(animationName)
         this.animations.push(animation)
+        return animation
     }
 
     getPlayer(id) {

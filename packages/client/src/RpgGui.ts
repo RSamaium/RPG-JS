@@ -9,7 +9,12 @@ class Gui {
     private app
     private vm
     private socket
-    private gui = {}
+    private gui: {
+        [guiName: string]: {
+            data: any,
+            display: boolean
+        }
+    } = {}
 
     _initalize(clientEngine) {
 
@@ -246,6 +251,22 @@ class Gui {
         this.vm.gui = Object.assign({}, this.vm.gui)
     }
 
+    /**
+     * Get a GUI. You retrieve GUI data and information whether it is displayed or not
+     * 
+     * ```ts
+     * import { RpgGui } from '@rpgjs/client'
+     * 
+     * const gui = RpgGui.get('my-gui') 
+     * console.log(gui.display) // false
+     * ```
+     * 
+     * @title Get a GUI
+     * @method RpgGui.get(id)
+     * @param {string} id 
+     * @returns { { data: any, display: boolean }}
+     * @memberof RpgGui
+     */
     get(id) {
         if (typeof id != 'string') {
             id = id.name
@@ -253,10 +274,41 @@ class Gui {
         return this.gui[id]
     }
 
+    /**
+     * Checks if the GUI exists RpgClient's gui array
+     * 
+     * ```ts
+     * import { RpgGui } from '@rpgjs/client'
+     * 
+     * RpgGui.exists('my-gui') // true
+     * ```
+     * 
+     * @title GUI Exists ?
+     * @method RpgGui.exists(id)
+     * @param {string} id 
+     * @returns {boolean}
+     * @memberof RpgGui
+     */
     exists(id): boolean {
         return !!this.get(id)
     }
 
+    /**
+     * Calls a GUI according to identifier. You can send retrievable data in the component
+     * 
+     * ```ts
+     * import { RpgGui } from '@rpgjs/client'
+     * 
+     * RpgGui.display('my-gui')
+     * ```
+     * 
+     * @title Display GUI
+     * @method RpgGui.display(id,data)
+     * @param {string} id 
+     * @param {object} [data]
+     * @returns {void}
+     * @memberof RpgGui
+     */
     display(id, data = {}) {
         this._setGui(id, {
             display: true,
@@ -264,6 +316,21 @@ class Gui {
         })
     }
 
+    /**
+     * Hide a GUI according to its identifier
+     * 
+     * ```ts
+     * import { RpgGui } from '@rpgjs/client'
+     * 
+     * RpgGui.hide('my-gui')
+     * ```
+     * 
+     * @title Display GUI
+     * @method RpgGui.hide(id)
+     * @param {string} id 
+     * @returns {void}
+     * @memberof RpgGui
+     */
     hide(id) {
         this._setGui(id, {
             display: false

@@ -25,14 +25,26 @@ import { Howler } from 'howler'
         'right': {
             repeat: true
         },
-        'space': {},
-        'escape': {}
+        'action': {
+            alias: 'escape'
+        }
     }
 })
 export class SceneMap extends Scene implements IScene {
 
     private tilemap: any
-    private viewport: Viewport | undefined
+
+    /** 
+     * The viewport of the map
+     * 
+     * It automatically follows the sprite representing the player but you can attach it to something else
+     * 
+     * > Do not change the size of the viewport
+     * 
+     * @prop {PIXI.Viewport} viewport
+     * @memberof RpgSceneMap
+     * */
+    protected viewport: Viewport | undefined
     private players: object = {}
     private eventSprites: object = {}
     private isLoaded: boolean = false
