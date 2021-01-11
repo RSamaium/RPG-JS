@@ -45,11 +45,11 @@ export default class RpgClientEngine extends ClientEngine<any> {
         _initSpritesheet(this.renderer.options.spritesheets)
         _initSound(this.renderer.options.sounds)
 
-        if ('serviceWorker' in navigator){
+        /*if ('serviceWorker' in navigator){
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/service-worker.js')
             })
-        }
+        }*/
     }
 
     get objects() {

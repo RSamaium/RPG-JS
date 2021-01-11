@@ -5,6 +5,7 @@ import Stats from 'stats.js'
 import { Sprite } from './player'
 import hud from './gui/hud.vue'
 import inn from './gui/inn.vue'
+import { SceneMap } from './map'
 
 @RpgClient({
     spritesheets,
@@ -14,7 +15,10 @@ import inn from './gui/inn.vue'
        hud,
        inn
     ],
-    spriteClass: Sprite
+    spriteClass: Sprite,
+    scenes: {
+        map: SceneMap
+    }
 })
 export default class RPG extends RpgClientEngine {
 

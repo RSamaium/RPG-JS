@@ -3,6 +3,7 @@ window.PIXI = require('pixi.js')
 import { Renderer } from 'lance-gg'
 import { SceneMap } from './Scene/Map'
 import { SceneBattle } from './Scene/Battle'
+import { Scene } from './Presets/Scene'
 import { RpgGui } from './RpgGui'
 
 export default class RpgRenderer extends Renderer<any, any> {
@@ -104,19 +105,22 @@ export default class RpgRenderer extends Renderer<any, any> {
     async loadScene(name, obj) {
         this.gameEngine.world.removeObject(this.gameEngine.playerId)
         this.stage.removeChildren()
+        const scenes = this.options.scenes || {}
         if (this.scene) {
             this.scene.controls.boundKeys = {}
         }
         switch (name) {
-            case 'map':
-                this.scene = new SceneMap(this.gameEngine, {
+            case Scene.Map:
+                const sceneClass = scenes[Scene.Map] || SceneMap
+                this.scene = new sceneClass(this.gameEngine, {
                     screenWidth: this.renderer.screen.width,
                     screenHeight: this.renderer.screen.height
                 })
                 break;
-            case 'battle':
+            /*case 'battle':
                 this.scene = new SceneBattle(this.gameEngine)
                 break;
+            */
         }
         
         const container = await this.scene.load(obj)

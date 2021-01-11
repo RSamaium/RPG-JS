@@ -42,6 +42,7 @@ export class SceneMap extends Scene implements IScene {
             protected game: any, 
             private options: { screenWidth?: number, screenHeight?: number } = {}) {
         super(game)
+        this.onInit()
     }
 
     load(obj) {
@@ -90,6 +91,7 @@ export class SceneMap extends Scene implements IScene {
                     sound.play()
                 }
                 resolve(this.viewport)
+                if  (this.onLoad) this.onLoad()
             }
     
             loader.onError.add(() => {
@@ -133,12 +135,6 @@ export class SceneMap extends Scene implements IScene {
         this.players[id].y = y
     }
 
-    addEvent(obj) {
-        const sprite = new this.game._playerClass(obj, this)
-        this.eventSprites[obj.id] = sprite
-       // this.tilemap.getEventLayer().addChild(sprite)
-    }
-
     addObject(obj, id): Character {
         const wrapper = new PIXI.Container()
         const tilesOverlay = new PIXI.Container()
@@ -156,6 +152,7 @@ export class SceneMap extends Scene implements IScene {
         if (sprite['isCurrentPlayer']) this.viewport?.follow(sprite)
 
         if (sprite.onInit) sprite.onInit()
+        this.onAddSprite(sprite)
 
         return sprite
     }
@@ -164,14 +161,8 @@ export class SceneMap extends Scene implements IScene {
         let sprite =  this.objects.get(id)
         if (sprite) {
             this.objects.delete(id)
+            this.onRemoveSprite(sprite)
             sprite.destroy()
         }
-    }
-
-    updateEvent(eventId, data) {
-        const event = this.game.events.find(ev => ev.id == eventId)
-        event.position.x = data.x 
-        event.position.y = data.y
-    }
-    
+    }  
 }

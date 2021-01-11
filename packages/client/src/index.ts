@@ -9,7 +9,10 @@ import { Howler as RpgGlobalSound }  from 'howler'
 import { RpgSound } from './Sound/RpgSound'
 import * as Presets from './Presets/AnimationSpritesheet'
 import { Animation } from './Effects/AnimationCharacter'
-import { ISpriteCharacter } from './Interfaces/Character';
+import { ISpriteCharacter } from './Interfaces/Character'
+import { SceneData } from './Scene/SceneData'
+import { SceneMap as RpgSceneMap } from './Scene/Map'
+import { RpgGui } from './RpgGui';
 
 export {
     RpgClientEngine,
@@ -23,5 +26,8 @@ export {
     Presets,
     Animation,
     Direction,
-    ISpriteCharacter
+    ISpriteCharacter,
+    SceneData,
+    RpgSceneMap,
+    RpgGui
 }

@@ -65,6 +65,7 @@ export class Scene {
         for (let animation of this.animations) {
             animation.update()
         }
+        this.onDraw(t, dt)
     }
 
     emitKeyDown() {
@@ -133,4 +134,11 @@ export class Scene {
     getPlayer(id) {
         return this.objects.get(id)
     }
+
+    // Hooks
+    onInit() {}
+    onLoad() {}
+    onDraw(t: number, dt: number) {}
+    onAddSprite(sprite: Character) {}
+    onRemoveSprite(sprite: Character) {}
 }

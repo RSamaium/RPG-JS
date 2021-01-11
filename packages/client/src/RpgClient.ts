@@ -129,6 +129,10 @@ interface RpgClientOptions {
      * */
     spriteClass?: RpgClass<RpgSprite>
 
+    scenes?: {
+        [sceneName: string]: any
+    }
+
      /** 
      * Canvas Options
      * 
