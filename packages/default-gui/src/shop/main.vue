@@ -84,7 +84,7 @@ export default {
         })
 
         const interactionBuy = (name) => {
-            if (name == 'escape') {
+            if (name == 'back') {
                 this.step = 0
             }
             else if (name == 'up') {
@@ -100,7 +100,7 @@ export default {
                 }
                 this.quantity -= 1
             }
-            else if (name == 'enter' || name == 'space') {
+            else if (name == 'action') {
                 this.doAction = true
                 this.rpgSocket().emit('gui.interaction', {
                     guiId: 'rpg-shop',
@@ -114,7 +114,7 @@ export default {
         }
 
         const interactionSell = (name) => {
-            if (name == 'escape') {
+            if (name == 'back') {
                 this.step = 0
             }
             else if (name == 'up') {
@@ -129,7 +129,7 @@ export default {
                 }
                 this.quantity -= 1
             }
-            else if (name == 'enter' || name == 'space') {
+            else if (name == 'action') {
                 this.doAction = true
                 this.rpgSocket().emit('gui.interaction', {
                     guiId: 'rpg-shop',
@@ -142,9 +142,11 @@ export default {
             }
         }
 
-        this.obsKeyPress = this.rpgKeypress.subscribe((name) => {
+        this.obsKeyPress = this.rpgKeypress.subscribe(({ control }) => {
+            if (!control) return
+            const name = control.actionName
             if (!this.mode) {
-                if (name == 'escape') {
+                if (name == 'back') {
                     this.close()
                 }
             }
@@ -154,7 +156,7 @@ export default {
                    if (this.mode == 'sell') interactionSell(name)
                 }
                 else {
-                    if (name == 'escape') {
+                    if (name == 'back') {
                         this.mode = ''
                         this.description = ''
                         this.menuActive = true

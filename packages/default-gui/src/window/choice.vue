@@ -46,8 +46,9 @@ export default {
         }
     },
     mounted() {
-        this.obsKeyPress = this.rpgKeypress.subscribe((name) => {
-            if (!this.active) return
+        this.obsKeyPress = this.rpgKeypress.subscribe(({ control }) => {
+            if (!this.active || !control) return
+            const name = control.actionName
             if (this.column > 1) {
                 if (name == 'left') {
                     this.selected = Math.floor(this.selected - this.choices.length / this.column)
@@ -60,7 +61,7 @@ export default {
             }
             if (name == 'down') this.moveCursor(1)
             else if (name == 'up') this.moveCursor(-1)
-            else if (name == 'space' || name == 'enter') this.$emit('selected', this.selected)
+            else if (name == 'action') this.$emit('selected', this.selected)
             return false
         })
     },

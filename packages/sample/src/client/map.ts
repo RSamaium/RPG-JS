@@ -1,27 +1,30 @@
-import { RpgSceneMap, RpgGui, SceneData } from '@rpgjs/client'
-
-@SceneData({
-    inputs: {
-        'up': {
-            repeat: true
-        },
-        'down': {
-            repeat: true
-        },
-        'left': {
-            repeat: true
-        },
-        'right': {
-            repeat: true
-        },
-        'escape': {
-            method: 'back'
-        }
-    }
-})
+import { RpgSceneMap, RpgGui, SceneData, Control, Input } from '@rpgjs/client'
 export class SceneMap extends RpgSceneMap {
     onLoad() {
-       
+        this.setInputs({
+            [Control.Up]: {
+                repeat: true,
+                bind: Input.Up
+            },
+            [Control.Down]: {
+                repeat: true,
+                bind: Input.Down
+            },
+            [Control.Right]: {
+                repeat: true,
+                bind: Input.Right
+            },
+            [Control.Left]: {
+                repeat: true,
+                bind: Input.Left
+            },
+            [Control.Action]: {
+                bind: [Input.M]
+            },
+            [Control.Back]: {
+                bind: Input.Escape
+            }
+        })
     }
 
     back() {

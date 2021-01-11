@@ -53,9 +53,9 @@ export default {
         this.obsCurrentPlayer = this.rpgCurrentPlayer.subscribe(({ object }) => {
            this.player = object
         })
-        this.obsKeyPress = this.rpgKeypress.subscribe((name) => {
-            if (!this.active) return
-            if (name == 'escape') {
+        this.obsKeyPress = this.rpgKeypress.subscribe(({ control }) => {
+            if (!this.active || !control) return
+            if (control.actionName == 'back') {
                 this.rpgStage.filters = []
                 this.rpgGuiClose('rpg-main-menu')
                 this.rpgScene().listenInputs()

@@ -6,6 +6,7 @@ import { EventEmitter } from './EventEmitter'
 import { PrebuiltGui } from './gui/PrebuiltGui'
 import Utils from './Utils'
 import * as TransportIo from './transports/io'
+import { Input, Control } from './Input'
 
 export {
     RpgCommonPlayer,
@@ -17,5 +18,7 @@ export {
     TransportIo,
     Direction,
     PrebuiltGui,
-    PlayerType
+    PlayerType,
+    Input,
+    Control
 }

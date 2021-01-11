@@ -177,8 +177,9 @@ class Gui {
                      * export default {
                      *      inject: ['rpgKeypress'],
                      *      mounted() {
-                     *          this.obs = this.rpgKeypress.subscribe((name) => {
-                     *              console.log(name) // "enter" by example
+                     *          this.obs = this.rpgKeypress.subscribe(({ inputName, control }) => {
+                     *              console.log(inputName) // "escape"
+                     *              console.log(control.actionName) // "back"
                      *          })
                      *      },
                      *      unmounted() {
@@ -190,10 +191,23 @@ class Gui {
                      * * `object`: The whole player
                      * * `paramsChanged`: Only the representation of the properties that have been changed on this player
                      * 
-                     * @prop {Observable<string>} [rpgKeypress]
+                     * @prop {Observable<{ inputName: string, control: { actionName: string, options: any } }>} [rpgKeypress]
                      * @memberof VueInject
                      * */
-                    rpgKeypress: this.clientEngine.keyChange,
+                    rpgKeypress: this.clientEngine.keyChange
+                        .pipe(
+                            map(name => {
+                                const scene = this.renderer.getScene()
+                                let control
+                                if (scene) {
+                                    control = scene.getControl(name)
+                                }
+                                return {
+                                    inputName: name,
+                                    control
+                                }
+                            })
+                        ),
 
                     /** 
                      * Recovers the socket.

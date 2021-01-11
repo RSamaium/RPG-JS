@@ -1,4 +1,4 @@
-import { ClientEngine } from 'lance-gg'
+import { ClientEngine, KeyboardControls } from 'lance-gg'
 import Renderer from './Renderer'
 import { _initSpritesheet } from './Sprite/Spritesheets'
 import { _initSound } from './Sound/Sounds'
@@ -6,7 +6,7 @@ import { RpgSprite } from './Sprite/Player'
 import { World } from '@rpgjs/sync-client'
 import { BehaviorSubject, Subject } from 'rxjs'
 import { RpgGui } from './RpgGui'
-import { RpgCommonPlayer, PrebuildGui, PlayerType } from '@rpgjs/common'
+import { RpgCommonPlayer, PrebuiltGui, PlayerType } from '@rpgjs/common'
 import merge from 'lodash.merge'
 import { Animation } from './Effects/Animation'
 
@@ -23,6 +23,7 @@ export default class RpgClientEngine extends ClientEngine<any> {
         }
     }> = new BehaviorSubject({})
     public keyChange: Subject<string> = new Subject()
+    controls: KeyboardControls
 
     constructor(gameEngine, options) {
         super(gameEngine, options.io, options, Renderer)
@@ -50,6 +51,8 @@ export default class RpgClientEngine extends ClientEngine<any> {
                 navigator.serviceWorker.register('/service-worker.js')
             })
         }*/
+
+        this.controls = new KeyboardControls(this, this.eventEmitter)
     }
 
     get objects() {
@@ -111,7 +114,7 @@ export default class RpgClientEngine extends ClientEngine<any> {
     _initSocket() {
 
         this.socket.on('connect', () => {
-            if (RpgGui.exists(PrebuildGui.Disconnect)) RpgGui.hide(PrebuildGui.Disconnect)
+            if (RpgGui.exists(PrebuiltGui.Disconnect)) RpgGui.hide(PrebuiltGui.Disconnect)
             RpgGui.display('rpg-controls')
             this.onConnect()
         })
@@ -172,7 +175,7 @@ export default class RpgClientEngine extends ClientEngine<any> {
         })
 
         this.socket.on('disconnect', (reason: string) => {
-            if (RpgGui.exists(PrebuildGui.Disconnect)) RpgGui.display(PrebuildGui.Disconnect)
+            if (RpgGui.exists(PrebuiltGui.Disconnect)) RpgGui.display(PrebuiltGui.Disconnect)
             this.onDisconnect(reason)
         })
 

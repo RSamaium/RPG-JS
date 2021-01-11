@@ -1,5 +1,6 @@
 import { GameEngine, CannonPhysicsEngine, Utils } from 'lance-gg'
 import { RpgCommonPlayer, Direction } from './Player'
+import { Control } from './Input'
 import Event from './Event'
 import SAT from 'sat'
 
@@ -62,7 +63,7 @@ export default class Game extends GameEngine<any> {
         if (!player) return
         if (!player.canMove) return
 
-        if (input == 'space' || input == 'enter') {
+        if (input == Control.Action) {
             player.triggerCollisionWith(RpgCommonPlayer.ACTIONS.ACTION)
         }
         else if (

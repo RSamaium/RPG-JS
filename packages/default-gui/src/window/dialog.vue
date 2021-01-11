@@ -24,8 +24,8 @@ export default {
         let interval
         this.rpgScene().stopInputs()
         if (!this.isChoice && !this.autoClose) {
-            this.obsKeyPress = this.rpgKeypress.subscribe((name) => {
-                if (name == 'space' || name == 'enter') {
+            this.obsKeyPress = this.rpgKeypress.subscribe(({ control }) => {
+                if (control && control.actionName == 'action') {
                     this.close()
                     this.rpgScene().listenInputs()
                 }

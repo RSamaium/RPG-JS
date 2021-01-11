@@ -1,6 +1,6 @@
 import entryPoint from './entry-point'
 import RpgServerEngine from './server'
-import { Direction } from '@rpgjs/common'
+import { Direction, Input, Control } from '@rpgjs/common'
 import { RpgServer } from './RpgServer'
 import { EventData } from './decorators/event'
 import { MapData } from './decorators/map'
@@ -31,5 +31,7 @@ export {
     StrategyBroadcasting,
     Move,
     EventMode,
-    Direction
+    Direction,
+    Input,
+    Control
 }

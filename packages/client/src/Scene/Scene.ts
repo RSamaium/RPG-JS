@@ -1,7 +1,10 @@
+import { Utils } from '@rpgjs/common'
 import * as PIXI from 'pixi.js'
 import { KeyboardControls, GameEngine } from 'lance-gg'
 import Character from '../Sprite/Character'
 import { Animation } from '../Effects/Animation'
+
+const { isArray } = Utils
 
 export class Scene {
    
@@ -12,7 +15,8 @@ export class Scene {
     inputs: any
 
     constructor(protected game: GameEngine<any>) {
-        this.setInput(this.inputs)
+        this.controls = this.game.clientEngine.controls
+        this.setInputs(this.inputs)
     }
 
     /**
@@ -20,33 +24,83 @@ export class Scene {
      * 
      * The object is the following:
      * 
+     * * the key of the object is the name of the control. Either it is existing controls (Up, Dow, Left, Right, Action, Back) or customized controls
+     * * The value is an object representing control information:
+     *      * repeat {boolean} The key can be held down to repeat the action. (false by default)
+     *      * bind {string | string[]} To which key is linked the control
+     *      * method {Function} Function to be triggered. If you do not set this property, the name of the control is sent directly to the server.
+     * 
      * ```ts 
-     * import { RpgSceneMap } from '@rpgjs/client'
+     * import { RpgSceneMap, Control, Input } from '@rpgjs/client'
      * 
      * export class SceneMap extends RpgSceneMap {
      *      onInit() {
-     *          this.setInputs()
+     *          this.setInputs({
+                    [Control.Up]: {
+                        repeat: true,
+                        bind: Input.Up
+                    },
+                    [Control.Down]: {
+                        repeat: true,
+                        bind: Input.Down
+                    },
+                    [Control.Right]: {
+                        repeat: true,
+                        bind: Input.Right
+                    },
+                    [Control.Left]: {
+                        repeat: true,
+                        bind: Input.Left
+                    },
+                    [Control.Action]: {
+                        bind: [Input.Space, Input.Enter]
+                    },
+                    [Control.Back]: {
+                        bind: Input.Escape
+                    },
+
+                    // The myscustom1 control is sent to the server when the A key is pressed.
+                    mycustom1: {
+                        bind: Input.A
+                    },
+
+                    // the myAction method is executed when the B key is pressed
+                    mycustom2: {
+                        bind: Input.B,
+                        method: this.myAction
+                    }
+                })
      *      }
+            myAction() {
+
+            }
      * }
      * ```
      * 
+     * 
+     * 
      * @title Set Inputs
-     * @method scene.setInput(object)
+     * @method scene.setInputs(object)
      * @param {object} object
      * @memberof RpgScene
      */
-    setInput(inputs) {
-        const clientEngine = this.game.clientEngine
-        this.controls = new KeyboardControls(clientEngine, clientEngine.eventEmitter)
+    setInputs(inputs) {
         if (!inputs) return
-        for (let input in inputs) {
-            const option = inputs[input]
-            const { method } = option
+        this.controls['boundKeys'] = {}
+        for (let control in inputs) {
+            const option = inputs[control]
+            const { method, bind } = option
             if (method) {
-                if (!this[method]) throw new Error(`"${method}" method does not exist on the "${input}" input`)
-                option.method = this[method].bind(this)
+                if (!this[method]) throw new Error(`"${method}" method does not exist on the "${control}" control`)
+                option.method = method.bind(this)
             }
-            this.controls.bindKey(input, option.action || input, option)
+            let inputsKey = bind
+            if (!isArray(inputsKey)) {
+                inputsKey = [bind]
+            }
+            for (let input of inputsKey) {
+                this.controls.bindKey(input, control, option)
+            }
         }
     }
 
@@ -98,6 +152,32 @@ export class Scene {
         const event: any = new Event('keyup')
         event.keyCode = 39
         this.controls.onKeyChange(event, false)
+    }
+
+    /**
+     * From the name of the entry, we retrieve the control information
+     * 
+     * ```ts 
+     * import { RpgSceneMap, Input } from '@rpgjs/client'
+     * 
+     * export class SceneMap extends RpgSceneMap {
+     *      onLoad() {
+     *          const control = this.getControl(Input.Enter)
+     *          if (control) {
+     *              console.log(control.actionName) // action
+     *          }
+     *      }
+     * }
+     * ```
+     * @title Get Control
+     * @method scene.getControl(inputName)
+     * @param {string} inputName
+     * @returns { { actionName: string, options: any } | undefined }
+     * @memberof RpgScene
+     */
+    getControl(inputName: string): { actionName: string, options: any } | undefined {
+        const { boundKeys  } = this.controls as any
+        return boundKeys[inputName]
     }
 
     /**

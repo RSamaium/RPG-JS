@@ -1,5 +1,5 @@
 import * as PIXI from 'pixi.js'
-import { RpgCommonMap } from '@rpgjs/common'
+import { RpgCommonMap, Input, Control } from '@rpgjs/common'
 import TileMap from '../Tilemap'
 import { Viewport } from 'pixi-viewport'
 import { IScene } from '../Interfaces/Scene'
@@ -13,20 +13,27 @@ import { Howler } from 'howler'
 
 @SceneData({
     inputs: {
-        'up': {
-            repeat: true
+        [Control.Up]: {
+            repeat: true,
+            bind: Input.Up
         },
-        'down': {
-            repeat: true
+        [Control.Down]: {
+            repeat: true,
+            bind: Input.Down
         },
-        'left': {
-            repeat: true
+        [Control.Right]: {
+            repeat: true,
+            bind: Input.Right
         },
-        'right': {
-            repeat: true
+        [Control.Left]: {
+            repeat: true,
+            bind: Input.Left
         },
-        'action': {
-            alias: 'escape'
+        [Control.Action]: {
+            bind: [Input.Space, Input.Enter]
+        },
+        [Control.Back]: {
+            bind: Input.Escape
         }
     }
 })

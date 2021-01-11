@@ -43,8 +43,9 @@ export default {
         this.obsCurrentPlayer = this.rpgCurrentPlayer.subscribe(({ object }) => {
            this.items = Object.values(object.items)
         })
-        this.obsKeyPress = this.rpgKeypress.subscribe((name) => {
-            if (name == 'escape') {
+        this.obsKeyPress = this.rpgKeypress.subscribe(({ control }) => {
+            if (!control) return
+            if (control.actionName == 'back') {
                 this.$emit('changeLayout', 'MainLayout')
             }
         })

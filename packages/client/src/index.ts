@@ -1,4 +1,4 @@
-import { Direction } from '@rpgjs/common'
+import { Direction, Control, Input } from '@rpgjs/common'
 import entryPoint from './clientEntryPoint'
 import RpgClientEngine from './RpgClientEngine'
 import { RpgClient } from './RpgClient'
@@ -29,5 +29,7 @@ export {
     ISpriteCharacter,
     SceneData,
     RpgSceneMap,
-    RpgGui
+    RpgGui,
+    Control, 
+    Input
 }
