@@ -2,11 +2,13 @@ import * as PIXI from 'pixi.js'
 import { Utils } from '@rpgjs/common'
 import { spritesheets } from '../Sprite/Spritesheets'
 import { SpritesheetOptions, TextureOptions, AnimationFrames, FrameOptions } from '../Sprite/Spritesheet'
+import RpgSprite from '../Sprite/Character'
+
 
 const { isFunction, arrayEquals } = Utils
 
 type AnimationDataFrames = {
-    container: PIXI.Sprite,
+    container: PIXI.Container,
     sprites: {
         [time: number]: FrameOptions
     },
@@ -19,6 +21,7 @@ type AnimationDataFrames = {
 
 export class Animation extends PIXI.Sprite {
 
+    public attachTo: RpgSprite
     private frames: PIXI.Texture[][] = []
     private spritesheet: SpritesheetOptions
     private currentAnimation: AnimationDataFrames | null = null
@@ -111,11 +114,10 @@ export class Animation extends PIXI.Sprite {
         let animations: any = animation.animations;
         animations = isFunction(animations) ? (animations as Function)(...params) : animations
 
-        this.currentAnimation.container = new PIXI.Sprite()
+        this.currentAnimation.container = new PIXI.Container()
 
         for (let container of (animations as FrameOptions[][])) {
             const sprite = new PIXI.Sprite()
-            const obj: any = {}
             for (let frame of container) {
                 this.currentAnimation.sprites[frame.time] = frame
                 this.currentAnimation.maxTime = Math.max(this.currentAnimation.maxTime, frame.time)
@@ -132,6 +134,12 @@ export class Animation extends PIXI.Sprite {
         if (!this.isPlaying() || !this.currentAnimation) return  
 
         const { frames, container, sprites } = this.currentAnimation
+
+        if (this.attachTo) {
+            const { x, y } = this.attachTo.getPositionsOfGraphic('middle')
+            container.x = x
+            container.y = y
+        }
 
         for (let _sprite of container.children) {
             const sprite = _sprite as PIXI.Sprite

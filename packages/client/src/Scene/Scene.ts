@@ -20,9 +20,10 @@ export class Scene {
    
     protected objects: Map<string, any> = new Map()
     protected loader = PIXI.Loader.shared
-    controls: KeyboardControls
+    protected animationLayer: PIXI.Container = new PIXI.Container()
+
+    private controls: KeyboardControls
     private animations: Animation[] = []
-    inputs: any
     private _controlsOptions: Controls = {}
 
     constructor(protected game: GameEngine<any>) {
@@ -267,7 +268,9 @@ export class Scene {
         this.controls.stop = false
     }
 
-    onUpdateObject(logic, sprite: Character, moving: boolean): any {}
+    onUpdateObject(logic, sprite: Character, moving: boolean): any {
+
+    }
 
     addObject(obj, id) {
         const sprite = new PIXI.Container()
@@ -336,13 +339,13 @@ export class Scene {
     }: { 
         graphic: string, 
         animationName: string, 
-        attachTo: PIXI.Sprite, 
+        attachTo?: PIXI.Sprite, 
         x?: number, 
         y?: number,
         loop?: boolean
     }): Animation {
         const animation = new Animation(graphic)
-        attachTo.addChild(animation)
+        this.animationLayer.addChild(animation)
         if (!loop) {
             animation.onFinish = () => {
                 animation.stop()
@@ -350,6 +353,7 @@ export class Scene {
         }
         animation.x = x
         animation.y = y
+        animation.attachTo = attachTo
         animation.play(animationName)
         this.animations.push(animation)
         return animation
@@ -359,10 +363,18 @@ export class Scene {
         return this.objects.get(id)
     }
 
+    getCurrentPlayer() {
+        return this.objects.get(this.game.playerId)
+    }
+
     // Hooks
     onInit() {}
     onLoad() {}
     onDraw(t: number, dt: number) {}
     onAddSprite(sprite: Character) {}
     onRemoveSprite(sprite: Character) {}
+}
+
+export interface Scene {
+    inputs: Controls
 }

@@ -28,8 +28,8 @@ export default class TileMap extends PIXI.Container {
         this.create(data)
     }
 
-    getEventLayer(name) {
-        return this.eventsLayers[name] || this.defaultLayer
+    getEventLayer(name?: string) {
+        return name ? this.eventsLayers[name] : this.defaultLayer
     }
 
     createEventLayer(name) {

@@ -39,7 +39,7 @@ import { Howler } from 'howler'
 })
 export class SceneMap extends Scene implements IScene {
 
-    private tilemap: any
+    protected tilemap: TileMap
 
     /** 
      * The viewport of the map
@@ -53,9 +53,8 @@ export class SceneMap extends Scene implements IScene {
      * */
     protected viewport: Viewport | undefined
     private players: object = {}
-    private eventSprites: object = {}
     private isLoaded: boolean = false
-    private gameMap
+    private gameMap: RpgCommonMap
 
     constructor(
             protected game: any, 
@@ -94,14 +93,14 @@ export class SceneMap extends Scene implements IScene {
         return new Promise((resolve, reject) => {
             
             const complete = () => {
-                this.tilemap.load(obj)
+                this.tilemap.load()
                 this.viewport = new Viewport({
                     screenWidth: this.options.screenWidth,
                     screenHeight: this.options.screenHeight,
                     worldWidth: obj.width * obj.tileWidth,
                     worldHeight: obj.height * obj.tileHeight
                 })
-
+                this.tilemap.addChild(this.animationLayer)
                 this.viewport.clamp({ direction: 'all' })
                 this.viewport.addChild(this.tilemap)
                 this.isLoaded = true
@@ -183,5 +182,5 @@ export class SceneMap extends Scene implements IScene {
             this.onRemoveSprite(sprite)
             sprite.destroy()
         }
-    }  
+    }
 }

@@ -23,11 +23,19 @@ export class SceneMap extends RpgSceneMap {
             },
             [Control.Back]: {
                 bind: Input.Escape
+            },
+            anim: {
+                bind: Input.A,
+                method: this.anim
             }
         })
     }
 
-    back() {
-        console.log('ll')
+    anim() {
+        this.showAnimation({ 
+            graphic: 'shield',
+            animationName: 'default',
+            attachTo: this.getCurrentPlayer()
+        })
     }
 }

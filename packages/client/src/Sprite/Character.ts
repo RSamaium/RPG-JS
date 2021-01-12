@@ -78,6 +78,14 @@ export default class Character extends PIXI.Sprite {
         this.anchor.set(...spritesheet.anchor)
     }
 
+    getPositionsOfGraphic(align?: string): { x: number, y: number } {
+        const isMiddle = align == 'middle'
+        return {
+            x: this.x - this.w * this.anchor.x + (isMiddle ? this.w / 2 : 0),
+            y: this.y - this.h * this.anchor.y + (isMiddle ? this.h / 2 : 0)
+        }
+    }
+
     setGraphic() {
         this.animation = new Animation(this.graphic)
         this.addChild(this.animation)

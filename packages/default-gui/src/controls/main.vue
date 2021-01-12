@@ -51,7 +51,7 @@ export default {
                         }
                     }
 
-                    for (let dir in DIRECTIONS) {
+                    for (let dir of DIRECTIONS) {
                         if (!directions[dir]) {
                             keyup(dir)
                         }
