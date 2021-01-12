@@ -86,6 +86,7 @@ export default {
 
 .window.middle {
     align-items: center;
+    justify-content: center;
 }
 
 .window-content.full-width {

@@ -159,17 +159,13 @@ export class SceneMap extends Scene implements IScene {
         const sprite = new this.game._playerClass(obj, this)
         
         sprite.tilesOverlay = tilesOverlay
-
         wrapper.addChild(sprite, tilesOverlay)
-
         this.objects.set(id, sprite)
         this.tilemap.getEventLayer().addChild(wrapper)
 
-        sprite['isCurrentPlayer'] = obj.playerId === this.game.playerId
+        if (sprite.isCurrentPlayer) this.viewport?.follow(sprite)
+        sprite.onInit()
 
-        if (sprite['isCurrentPlayer']) this.viewport?.follow(sprite)
-
-        if (sprite.onInit) sprite.onInit()
         this.onAddSprite(sprite)
 
         return sprite

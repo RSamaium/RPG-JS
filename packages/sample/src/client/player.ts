@@ -4,25 +4,21 @@ export class Sprite extends RpgSprite {
 
     debug
 
+    nameText: PIXI.Text = new PIXI.Text('', {
+        fontSize: 13
+    })
+
     onInit() {
-        this.interactive = true
-        this.buttonMode = true
-        this.on('pointerdown', (ev) => {
-            console.log(ev)
-        })
-           
+        this.nameText.y =- 25
+        this.nameText.x += 15
+        this.nameText.anchor.set(0.5)
+        this.addChild(this.nameText)    
     }
 
-    onChanges(data, old) {
-        if (data.wHitbox) {
-            this.debug = new PIXI.Graphics()
-            const { wHitbox, hHitbox } = data
-            this.debug.beginFill(0xDE3249)
-            this.debug.drawRect(0, 0, wHitbox, hHitbox)
-            this.debug.endFill()
-            this.debug.alpha = 0.5
-            this.addChild(this.debug)
+    onChanges(data) {
+        const name = data.name
+        if (this.isPlayer && name) {
+            this.nameText.text = name
         }
-        //this.addEffect('test')
     }
 }

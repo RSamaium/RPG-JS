@@ -1,7 +1,7 @@
 import { Utils } from '@rpgjs/common'
 import * as PIXI from 'pixi.js'
 import { KeyboardControls, GameEngine } from 'lance-gg'
-import Character from '../Sprite/Character'
+import RpgSprite from '../Sprite/Character'
 import { Animation } from '../Effects/Animation'
 
 const { isArray } = Utils
@@ -159,18 +159,6 @@ export class Scene {
         this.onDraw(t, dt)
     }
 
-    emitKeyDown() {
-        const event: any = new Event('keydown')
-        event.keyCode = 39
-        this.controls.onKeyChange(event, true)
-    }
-
-    emitKeyUp() {
-        const event: any = new Event('keyup')
-        event.keyCode = 39
-        this.controls.onKeyChange(event, false)
-    }
-
     /**
      * From the name of the entry, we retrieve the control information
      * 
@@ -268,9 +256,7 @@ export class Scene {
         this.controls.stop = false
     }
 
-    onUpdateObject(logic, sprite: Character, moving: boolean): any {
-
-    }
+    onUpdateObject(logic, sprite: RpgSprite, moving: boolean): any {}
 
     addObject(obj, id) {
         const sprite = new PIXI.Container()
@@ -339,7 +325,7 @@ export class Scene {
     }: { 
         graphic: string, 
         animationName: string, 
-        attachTo?: PIXI.Sprite, 
+        attachTo?: RpgSprite, 
         x?: number, 
         y?: number,
         loop?: boolean
@@ -359,11 +345,29 @@ export class Scene {
         return animation
     }
 
-    getPlayer(id) {
+     /**
+     * Retrieve a sprite according to its identifier
+     * 
+     * @title Get Sprite
+     * @method scene.getSprite(id)
+     * @param {string} id
+     * @returns {RpgSprite}
+     * @memberof RpgScene
+     */
+    getSprite(id: string) { return this.getPlayer(id) }
+    getPlayer(id: string): RpgSprite {
         return this.objects.get(id)
     }
 
-    getCurrentPlayer() {
+     /**
+     * Retrieve a sprite that the player controls
+     * 
+     * @title Get Current Player
+     * @method scene.getCurrentPlayer()
+     * @returns {RpgSprite}
+     * @memberof RpgScene
+     */
+    getCurrentPlayer(): RpgSprite {
         return this.objects.get(this.game.playerId)
     }
 
@@ -371,8 +375,8 @@ export class Scene {
     onInit() {}
     onLoad() {}
     onDraw(t: number, dt: number) {}
-    onAddSprite(sprite: Character) {}
-    onRemoveSprite(sprite: Character) {}
+    onAddSprite(sprite: RpgSprite) {}
+    onRemoveSprite(sprite: RpgSprite) {}
 }
 
 export interface Scene {

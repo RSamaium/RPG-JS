@@ -162,10 +162,42 @@ class Gui {
                      * @prop {Function(name, data)} [rpgGuiClose]
                      * @memberof VueInject
                      * */
-                    rpgGuiClose: function(name: string, data?) {
+                    rpgGuiClose(name: string, data?) {
                         const guiId = name || this.$options.name
                         self.socket.emit('gui.exit', {
                             guiId, 
+                            data
+                        })
+                    },
+
+                    /** 
+                     * Perform an interaction with the open GUI
+                     * 
+                     * It is a function with 2 parameters:
+                     * * `guiId`: The name of the component/Gui
+                     * * `name`: The name of the interaction (defined on the server side)
+                     * * `data`: Data to be sent
+                     * 
+                     * ```js
+                     * export default {
+                     *      inject: ['rpgGuiInteraction'],
+                     *      methods: {
+                     *          changeGold() {
+                     *              this.rpgGuiInteraction('gui-name', 'change-gold', {
+                     *                  amount: 100
+                     *              })
+                     *          }
+                     *      }
+                     * }
+                     * ``` 
+                     * 
+                     * @prop {Function(guiId, name, data = {})} [rpgGuiInteraction]
+                     * @memberof VueInject
+                     * */
+                    rpgGuiInteraction: (guiId: string, name: string, data: any = {}) => {
+                        this.socket.emit('gui.interaction', {
+                            guiId,
+                            name,
                             data
                         })
                     },

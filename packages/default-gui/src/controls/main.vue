@@ -84,6 +84,8 @@ export default {
 <style scoped>
 .controls {
     height: 100%;
+    position: absolute;
+    width: 100%;
 }
 
 .d-pad {

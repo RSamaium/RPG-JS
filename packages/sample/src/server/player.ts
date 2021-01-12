@@ -10,6 +10,22 @@ export class Player extends RpgPlayer {
 
     async onConnected() {
 
+      this.setHitbox(20, 16)
+      this.setGraphic('male1_2')
+      this.setActor(database.Hero)
+
+      const gui = this.gui('gui-name')
+
+      gui.on('change-name', (name) => {
+           this.name = name
+           gui.close()
+      })
+
+      await gui.open({}, {
+          waitingAction: true,
+          blockPlayerInput: true
+      })
+
        /*const data = await db.get('test')
 
        if (false) {
@@ -19,27 +35,12 @@ export class Player extends RpgPlayer {
        else {
         
        }  */
-
-       this.setHitbox(20, 16)
-        this.setGraphic('male1_2')
-        this.setActor(database.Hero)
+  
         await this.changeMap('medieval') 
     }
 
     onInput({ input }) {
-      if (input == 'escape') {
-        /*this.gui('my-inn').open({
-          amount: 30
-        })*/
-
-       // const data = this.getCurrentMap()
-
-        //console.log(data)
-
-       // this.callMainMenu()
-
-        //db.save(this).catch(console.log)
-      }
+      
     }
 
     onDead() {
