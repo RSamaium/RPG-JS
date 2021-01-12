@@ -2,13 +2,14 @@
     <div class="name">
         <rpg-window position="middle" height="100%">
           <div class="padding">
-                <div class="header">
-                    <h1>Put a nickname </h1>
-                    <p class="error" v-if="error">{{ error }}</p>
-                </div>
-                <input type="text" v-model="name" maxlength="10">
-                <br>
-                <button @click="changeName">Play</button>
+                <form @submit.prevent="changeName">
+                    <div class="header">
+                        <h1>Put a nickname </h1>
+                    </div>
+                    <input type="text" v-model="name" maxlength="10">
+                    <br>
+                    <button v-if="name">Play</button>
+                </form>
           </div>
         </rpg-window>
     </div>
@@ -16,27 +17,17 @@
 
 <script>
 const NAME = 'gui-name'
-const LIMIT_CHAR = 10
 
 export default {
     name: NAME,
     inject: ['rpgGuiInteraction'],
     data() {
         return {
-            name: '',
-            error: false
+            name: ''
         }
     },
     methods: {
         changeName() {
-            if (this.name.length == 0) {
-                this.error = 'The field is required'
-                return 
-            }
-            if (this.name.length > LIMIT_CHAR) {
-                this.error = `The number of characters is limited to ${LIMIT_CHAR}`
-                return 
-            }
             this.rpgGuiInteraction(NAME, 'change-name', this.name)
         }
     }
@@ -58,10 +49,24 @@ export default {
 
 .padding {
     padding: 50px;
+    text-align: center;
+    height: 250px;
 }
 
 button {
+    background: rgba(255, 255, 255, 0.1);
+    border: 0;
+    color: white;
+    margin-top: 60px;
+    font-size: 23px;
+    padding: 20px;
+    border-radius: 21px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
 
+button:hover {
+    background: rgba(255, 255, 255, 0.3);
 }
 
 input {

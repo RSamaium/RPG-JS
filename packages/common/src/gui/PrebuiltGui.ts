@@ -11,6 +11,7 @@
  * PrebuiltGui.Disconnect | rpg-disconnect
  * PrebuiltGui.Gameover | rpg-gameover
  * PrebuiltGui.Save | rpg-save
+ * PrebuiltGui.Controls | rpg-controls
  * @memberof PrebuiltGui
  * */
 export enum PrebuiltGui {
@@ -19,5 +20,6 @@ export enum PrebuiltGui {
     Shop = 'rpg-shop',
     Disconnect = 'rpg-disconnect',
     Gameover = 'rpg-gameover',
-    Save = 'rpg-save'
+    Save = 'rpg-save',
+    Controls = 'rpg-controls'
 }

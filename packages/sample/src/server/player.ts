@@ -14,7 +14,7 @@ export class Player extends RpgPlayer {
       this.setGraphic('male1_2')
       this.setActor(database.Hero)
 
-      const gui = this.gui('gui-name')
+     /* const gui = this.gui('gui-name')
 
       gui.on('change-name', (name) => {
            this.name = name
@@ -25,6 +25,7 @@ export class Player extends RpgPlayer {
           waitingAction: true,
           blockPlayerInput: true
       })
+      */
 
        /*const data = await db.get('test')
 

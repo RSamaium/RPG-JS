@@ -44,13 +44,8 @@ RPG JS is a framework for creating RPGs and MMORPGs.The code remains the same de
 because, there are still several parts to realize
 
 * Put unit tests
-* Responsive Design
-* Offline Mode (PWA)
-* Query System (Retrieve players with queries)
-* Save/Load
 * Admin Front 
-* Battle System
-* Animation (must improve the spritesheet)
+* Battle System (continuous development)
 * Must complete the main menu
 * Provide the means to customize data sharing with the client
 * Chat GUI

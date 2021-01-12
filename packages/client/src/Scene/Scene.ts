@@ -337,9 +337,13 @@ export class Scene {
                 animation.stop()
             }
         }
-        animation.x = x
-        animation.y = y
-        animation.attachTo = attachTo
+        if (attachTo) {
+            animation.attachTo = attachTo
+        }
+        else {
+            animation.x = x
+            animation.y = y
+        }
         animation.play(animationName)
         this.animations.push(animation)
         return animation
