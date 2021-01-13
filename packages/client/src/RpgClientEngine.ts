@@ -10,6 +10,8 @@ import { RpgCommonPlayer, PrebuiltGui, PlayerType } from '@rpgjs/common'
 import merge from 'lodash.merge'
 import { Animation } from './Effects/Animation'
 
+declare var __RPGJS_PRODUCTION__: boolean;
+
 export default class RpgClientEngine extends ClientEngine<any> {
 
     public renderer: any
@@ -46,11 +48,16 @@ export default class RpgClientEngine extends ClientEngine<any> {
         _initSpritesheet(this.renderer.options.spritesheets)
         _initSound(this.renderer.options.sounds)
 
-        /*if ('serviceWorker' in navigator){
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js')
-            })
-        }*/
+        if (__RPGJS_PRODUCTION__) {
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('/service-worker.js')
+                })
+            }
+        }
+        else {
+            console.log('> RPGJS is in development mode <')
+        }
 
         this.controls = new KeyboardControls(this, this.eventEmitter)
     }

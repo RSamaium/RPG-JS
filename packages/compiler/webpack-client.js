@@ -21,19 +21,18 @@ module.exports = function(dirname, extend = {}) {
     const rpgConfigPath = path.join(dirname, 'rpg.json')
     const plugins = []
 
-    if (fs.existsSync(rpgConfigPath)) {
-        rpgConfig = JSON.parse(fs.readFileSync(rpgConfigPath, 'utf-8'))
-        plugins.push(
-            new WebpackPwaManifest(rpgConfig)
-        )
-    }
-
     if (mode == 'production') {
         plugins.push(
             new WorkboxWebpackPlugin.GenerateSW({
                 maximumFileSizeToCacheInBytes: 1024 * 1024 * 20 // Mo
             })
         )
+        if (fs.existsSync(rpgConfigPath)) {
+            rpgConfig = JSON.parse(fs.readFileSync(rpgConfigPath, 'utf-8'))
+            plugins.push(
+                new WebpackPwaManifest(rpgConfig)
+            )
+        }
     }
 
     return  {
@@ -114,7 +113,8 @@ module.exports = function(dirname, extend = {}) {
             new VueLoaderPlugin(),
             new webpack.DefinePlugin({
                 __VUE_OPTIONS_API__: true,
-                __VUE_PROD_DEVTOOLS__: false
+                __VUE_PROD_DEVTOOLS__: false,
+                __RPGJS_PRODUCTION__: JSON.stringify(prod)
             }),
             ...plugins
         ],
