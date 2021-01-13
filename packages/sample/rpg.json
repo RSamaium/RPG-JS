@@ -1,6 +1,7 @@
 {
     "name": "My Game",
     "short_name": "Game",
+    "orientation": "landscape",
     "description": "Beautiful Game",
     "background_color": "#ffffff",
     "icons": [

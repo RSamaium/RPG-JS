@@ -8,7 +8,7 @@ import { BehaviorSubject, Subject } from 'rxjs'
 import { RpgGui } from './RpgGui'
 import { RpgCommonPlayer, PrebuiltGui, PlayerType } from '@rpgjs/common'
 import merge from 'lodash.merge'
-import { Animation } from './Effects/Animation'
+import entryPoint from './clientEntryPoint'
 
 declare var __RPGJS_PRODUCTION__: boolean;
 
@@ -25,6 +25,7 @@ export default class RpgClientEngine extends ClientEngine<any> {
         }
     }> = new BehaviorSubject({})
     public keyChange: Subject<string> = new Subject()
+    private hasBeenDisconnected: boolean = false
     controls: KeyboardControls
 
     constructor(gameEngine, options) {
@@ -123,6 +124,12 @@ export default class RpgClientEngine extends ClientEngine<any> {
         this.socket.on('connect', () => {
             if (RpgGui.exists(PrebuiltGui.Disconnect)) RpgGui.hide(PrebuiltGui.Disconnect)
             this.onConnect()
+            if (this.hasBeenDisconnected) {
+                // Todo
+                window.location.reload()
+                //entryPoint()
+            }
+            this.hasBeenDisconnected = false
         })
 
         this.socket.on('connect_error', (err: any) => {
@@ -183,6 +190,7 @@ export default class RpgClientEngine extends ClientEngine<any> {
         this.socket.on('disconnect', (reason: string) => {
             if (RpgGui.exists(PrebuiltGui.Disconnect)) RpgGui.display(PrebuiltGui.Disconnect)
             this.onDisconnect(reason)
+            this.hasBeenDisconnected = true
         })
 
         RpgGui._setSocket(this.socket)

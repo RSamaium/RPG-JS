@@ -4,10 +4,24 @@ const { CleanWebpackPlugin } = require('clean-webpack-plugin')
 const nodeExternals = require('webpack-node-externals')
 const webpackCommon = require('./webpack-common')
 const NodemonPlugin = require('nodemon-webpack-plugin')
+const PostCompile = require('./sync')
 
 const mode = process.env.NODE_ENV || 'development'
+const prod = mode === 'production'
 
 module.exports = function(dirname, extend = {}) {
+
+    const plugins = []
+
+    if (!prod) {
+        plugins.push(
+            new PostCompile({
+                isServer: true,
+                isRpg: false
+            })
+        )
+    }
+
    return {
         target: 'node',
         node: {
@@ -46,7 +60,8 @@ module.exports = function(dirname, extend = {}) {
             new NodemonPlugin({
                 script: './dist/server/index.js',
                 watch: path.resolve('./dist/server')
-            })
+            }),
+            ...plugins
         ],
         ...extend
     }

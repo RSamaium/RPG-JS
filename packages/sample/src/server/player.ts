@@ -10,9 +10,9 @@ export class Player extends RpgPlayer {
 
     async onConnected() {
 
-      this.setHitbox(20, 16)
+      this.setHitbox(20, 16) 
       this.setGraphic('male1_2')
-      this.setActor(database.Hero)
+      this.setActor(database.Hero) 
 
      /* const gui = this.gui('gui-name')
 

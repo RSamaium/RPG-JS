@@ -1,6 +1,16 @@
 import { RpgCommonGame } from '@rpgjs/common'
 
-export default (engine, _options: any = {}) => {
+let cache: any = {}
+
+export default (engine?, _options: any = {}) => {
+
+    if (!engine && cache.engine) {
+        engine = cache.engine
+        _options = cache._options
+    }
+    
+    cache = { engine, _options }
+    
     const options = {
         traceLevel: 1000,
         delayInputCount: 8,

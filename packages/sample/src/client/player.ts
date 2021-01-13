@@ -12,7 +12,7 @@ export class Sprite extends RpgSprite {
         this.nameText.y =- 25
         this.nameText.x += 15
         this.nameText.anchor.set(0.5)
-        //this.addChild(this.nameText)    
+        this.addChild(this.nameText)    
     }
 
     onChanges(data) {

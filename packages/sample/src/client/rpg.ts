@@ -23,5 +23,4 @@ import { SceneMap } from './map'
     }
 })
 export default class RPG extends RpgClientEngine {
-
 }
