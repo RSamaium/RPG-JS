@@ -7,6 +7,7 @@ import { PrebuiltGui } from './gui/PrebuiltGui'
 import Utils from './Utils'
 import * as TransportIo from './transports/io'
 import { Input, Control } from './Input'
+import * as MockIo from './transports/io'
 
 export {
     RpgCommonPlayer,
@@ -20,5 +21,6 @@ export {
     PrebuiltGui,
     PlayerType,
     Input,
-    Control
+    Control,
+    MockIo
 }

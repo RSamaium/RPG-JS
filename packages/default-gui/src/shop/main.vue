@@ -37,12 +37,15 @@
             <p>{{ currentItem.description }}</p>
         </div>
     </rpg-window>
+    <BackButton />
 </template>
 
 <script>
+import BackButton from '../components/back.vue'
+
 export default {
     name: 'rpg-shop',
-    inject: ['rpgCurrentPlayer', 'rpgKeypress', 'rpgGuiClose', 'rpgSocket', 'rpgScene'],
+    inject: ['rpgCurrentPlayer', 'rpgKeypress', 'rpgGuiClose', 'rpgSocket', 'rpgScene', 'rpgGui'],
     props: ['items'],
     data() {
         return {
@@ -69,6 +72,9 @@ export default {
         }
     },
     mounted() {
+
+        this.rpgGui.hide('rpg-controls') 
+
         this.rpgScene().stopInputs()
 
         this.obsCurrentPlayer = this.rpgCurrentPlayer.subscribe(({ object }) => {
@@ -229,7 +235,11 @@ export default {
         close() {
             this.rpgGuiClose()
             this.rpgScene().listenInputs()
+            this.rpgGui.display('rpg-controls') 
         }
+    },
+    components: {
+        BackButton
     },
     unmounted() {
         this.obsKeyPress.unsubscribe()
@@ -246,6 +256,8 @@ export default {
 
 .shop-menu {
     display: flex;
+    position: absolute;
+    width: 100%;
 }
 
 .shop-content {

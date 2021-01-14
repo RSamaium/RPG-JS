@@ -26,7 +26,7 @@ export default {
             default: 'Gold'
         }
     },
-    inject: ['rpgCurrentPlayer', 'rpgKeypress', 'rpgScene', 'rpgStage', 'rpgGuiClose'],
+    inject: ['rpgCurrentPlayer', 'rpgKeypress', 'rpgScene', 'rpgStage', 'rpgGuiClose', 'rpgGui'],
     data() {
         return {
             player: {},
@@ -57,6 +57,7 @@ export default {
             if (!this.active || !control) return
             if (control.actionName == 'back') {
                 this.rpgStage.filters = []
+                this.rpgGui.display('rpg-controls') 
                 this.rpgGuiClose('rpg-main-menu')
                 this.rpgScene().listenInputs()
             }

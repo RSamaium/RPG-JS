@@ -257,7 +257,24 @@ class Gui {
                      * @prop {Function returns RpgScene} [rpgSocket]
                      * @memberof VueInject
                      * */
-                    rpgSocket: () => this.socket
+                    rpgSocket: () => this.socket,
+
+                    /** 
+                     * The RpgGui object to control GUIs
+                     * 
+                     * ```js
+                     * export default {
+                     *      inject: ['rpgGui'],
+                     *      mounted() {
+                     *         const guis = this.rpgGui.getAll()
+                     *      }
+                     * }
+                     * ``` 
+                     * 
+                     * @prop {RpgGui} [rpgGui]
+                     * @memberof VueInject
+                     * */
+                    rpgGui: this
                 }
             }
         })
@@ -310,7 +327,7 @@ class Gui {
      * @title Get a GUI
      * @method RpgGui.get(id)
      * @param {string} id 
-     * @returns { { data: any, display: boolean }}
+     * @returns { { data: any, display: boolean } }
      * @memberof RpgGui
      */
     get(id) {
@@ -318,6 +335,25 @@ class Gui {
             id = id.name
         }
         return this.gui[id]
+    }
+
+    /**
+     * Get all GUI. You retrieve GUI data and information whether it is displayed or not
+     * 
+     * ```ts
+     * import { RpgGui } from '@rpgjs/client'
+     * 
+     * const gui = RpgGui.getAll() 
+     * console.log(gui) // { 'rpg-dialog': { data: {}, display: true } }
+     * ```
+     * 
+     * @title Get a GUI
+     * @method RpgGui.getAll()
+     * @returns { { [guiName]: { data: any, display: boolean }  }}
+     * @memberof RpgGui
+     */
+    getAll() {
+        return this.gui
     }
 
     /**

@@ -1,6 +1,8 @@
-import { ClientIo, serverIo } from '@rpgjs/common/src/transports/io'
+import { MockIo } from '@rpgjs/common'
 import { entryPoint as entryPointServer } from '@rpgjs/server'
 import { entryPoint as entryPointClient } from '@rpgjs/client'
+
+const { ClientIo, serverIo } = MockIo
 
 export function entryPoint(clientClass, serverClass) {
     const io = new ClientIo()

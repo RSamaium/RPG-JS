@@ -41,7 +41,9 @@ export class Player extends RpgPlayer {
     }
 
     onInput({ input }) {
-      
+      if (input == 'back') {
+        this.callMainMenu()
+      }
     }
 
     onDead() {
