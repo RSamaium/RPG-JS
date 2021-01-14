@@ -347,7 +347,7 @@ class Gui {
      * console.log(gui) // { 'rpg-dialog': { data: {}, display: true } }
      * ```
      * 
-     * @title Get a GUI
+     * @title Get all GUI
      * @method RpgGui.getAll()
      * @returns { { [guiName]: { data: any, display: boolean }  }}
      * @memberof RpgGui
