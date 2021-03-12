@@ -63,7 +63,11 @@ export default class RpgServerEngine extends ServerEngine {
 
     sendToPlayer(currentPlayer, eventName, data) {
         currentPlayer._socket.emit(eventName, data)
-    }   
+    }
+
+    getPlayerId(socket) {
+       return '$$' + socket.id
+    } 
 
     onPlayerConnected(socket) {
         const playerId = super.onPlayerConnected(socket)

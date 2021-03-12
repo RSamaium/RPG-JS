@@ -25,9 +25,9 @@ class Monitor extends EventEmitter {
             this.loopMs = hrtime[1] / 1e6
         }
         const period = scheduler.options.period
-        if (this.loopMs > period + 10) {
+        if (this.loopMs > period + 20) {
             const { stepRate } = options
-            console.warn('Warning Low FPS. %s players connected. Game Loop: %s FPS', this.totalConnected, Math.round(stepRate / (this.loopMs / period)))
+            console.warn('%s - Warning Low FPS. %s players connected. Game Loop: %s FPS', new Date(), this.totalConnected, Math.round(stepRate / (this.loopMs / period)))
         }
         this.lastTime = process.hrtime()
     }

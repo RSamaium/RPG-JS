@@ -18,6 +18,7 @@ export interface RoomClass {
         [userId: string]: User
     }
     $schema?: any
+    $dict?: any
     $inputs?: {
         [key: string]: string
     }
@@ -27,5 +28,6 @@ export interface RoomClass {
     $detectChanges?: () => void,
     $join?: (user: User) => void
     $leave?: (user: User) => void
-    $currentState?: Object
+    $currentState?: () => Object
+    $clearCurrentState?: () => void
 }

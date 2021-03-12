@@ -8,7 +8,7 @@ import { BehaviorSubject } from 'rxjs'
 
 export class WorldClass {
 
-    private rooms = new Map()
+    private rooms: Map<string, RoomClass> = new Map()
     private users: {
         [key: string]: User
     } = {}
@@ -65,14 +65,22 @@ export class WorldClass {
     }
 
     send(): void {
-        Transmitter.forEach((packets: Packet[], id: string) => {
-            const room = this.getRoom(id)
+        this.rooms.forEach((room: any, id: string) => {
+            const obj = room.$currentState()
+            if (Object.keys(obj).length == 0) {
+                return
+            }
+            Transmitter.addPacket(room, obj)
             for (let id in room.users) {
                 const user = room.users[id]
-                for (let packet of packets) {
-                    Transmitter.emit(user, packet) 
-                } 
+                const packets = Transmitter.getPackets(room)
+                if (packets) {
+                    for (let packet of packets) {
+                        Transmitter.emit(user, packet) 
+                    }
+                }
             }
+            room.$clearCurrentState()
         })
         Transmitter.clear()
     }
@@ -106,7 +114,7 @@ export class WorldClass {
         return this.joinOrLeaveRoom('$join', roomId, userId)
     }
 
-    addRoom(id: string, roomClass): RoomClass {
+    addRoom(id: string, roomClass): any {
         if (roomClass.constructor.name == 'Function') {
             roomClass = new roomClass()
         }
@@ -115,7 +123,7 @@ export class WorldClass {
         return room
     }
 
-    getRoom(id: string): RoomClass {
+    getRoom(id: string): any {
         return this.rooms.get(id)
     }
 

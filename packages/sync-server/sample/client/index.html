@@ -4,7 +4,8 @@
 
 
 <div id="app">
-    <input :value="title" @keyup="setTitle">
+    {{ title }}
+    {{ ids  }}
 </div>
 
 <script>
@@ -13,17 +14,23 @@
         data() {
             return {
                 title: '',
-                users: {}
+                users: {},
+                ids: []
             }
         },
         mounted() {
             this.socket = io()
             this.socket.on('w', (data) => {
                 const bufView = new Uint8Array(data)
-                const obj = msgpack.decode(bufView)
+                const [room, obj] = msgpack.decode(bufView)
                 if (obj.title) this.title = obj.title
-                console.log(obj)
                 this.users = Object.assign(this.users, obj.users)
+                for (let key in this.users) {
+                    if (this.users[key] == undefined) {
+                        delete this.users[key]
+                    }
+                }
+                this.ids = Object.keys(this.users)
                 //console.log(obj)
             })
             this.socket.emit(':join', 'page')

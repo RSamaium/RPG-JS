@@ -156,7 +156,7 @@ Typescript
 export class Page {
     list: any = {}
     constructor() {
-        this.list['$mykey'] = {
+        this.list['$$mykey'] = {
             id: 1
         }
     }

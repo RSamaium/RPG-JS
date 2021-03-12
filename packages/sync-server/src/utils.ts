@@ -1,3 +1,5 @@
+export const GENERIC_KEY_SCHEMA = '@'
+
 export class Utils {
 
     static isObject(val) {
@@ -14,7 +16,7 @@ export class Utils {
                     {
                         const [key] = array
                         const value: any = array[1]
-                        let fullPath = addDelimiter(head, key == '0' ? '$' : key)
+                        let fullPath = addDelimiter(head, key == '0' ? GENERIC_KEY_SCHEMA : key)
                         if (key[0] != '_' && (Utils.isObject(value) || Array.isArray(value))) {
                             if (Object.keys(value).length == 0) {
                                 return product.concat(fullPath)

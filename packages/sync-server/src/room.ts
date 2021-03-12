@@ -1,7 +1,6 @@
-import { diff } from 'deep-object-diff';
 import  get from 'get-value'
 import  set from 'set-value'
-import { Utils } from './utils'
+import { Utils, GENERIC_KEY_SCHEMA } from './utils'
 import { Transmitter } from './transmitter'
 import { Packet } from './packet'
 import { RoomClass } from './interfaces/room.interface';
@@ -11,7 +10,6 @@ import { World } from './world'
 export class Room {
 
     private proxyRoom: RoomClass
-    private prevMemoryObject: Object = {}
     private memoryObject: Object = {}
 
     static readonly propNameUsers: string = 'users'
@@ -21,7 +19,8 @@ export class Room {
         user._rooms.push(room.id)
         if (!user.id) user.id = Utils.generateId()
         if (room['onJoin']) room['onJoin'](user)
-        const packet = new Packet(this.memoryObject, <string>room.id)
+        const object = this.extractObjectOfRoom(room)
+        const packet = new Packet(object, <string>room.id)
         Transmitter.emit(user, packet)
     }
 
@@ -40,6 +39,7 @@ export class Room {
 
     add(id: string, room: RoomClass): RoomClass {
         room.id = id
+        room.$dict = {}
         if (!room.$schema) room.$schema = {}
         if (!room.$schema.users) room.$schema.users = [{id: String}]
         if (!room.$inputs) room.$inputs = {}
@@ -47,49 +47,123 @@ export class Room {
         if (room.$inputs) this.addInputs(room, room.$inputs)
 
         room.$detectChanges = () => {
-            this.detectChanges(room)
+            //this.detectChanges(room)
         }
 
         room.$join = (user: User) => {
             room.users[user.id] = user
-            this.join(user, room)
-            this.detectChanges(room)
+            this.join(room.users[user.id], room)
+            //this.detectChanges(room)
         }
 
         room.$leave = (user: User) => {
             this.leave(user, room)
             delete room.users[user.id]
-            this.detectChanges(room)
+            //this.detectChanges(room)
         }
 
         room.$currentState = () => this.memoryObject
+        room.$clearCurrentState = () => this.memoryObject = {}
 
-        this.extractObjectOfRoom(room)
+        const dict = {}
+        const self = this
 
-        this.proxyRoom = room
+        function toDict(obj, path = '') {
+            for (let prop in obj) {
+                const val = obj[prop]
+                let p =  (path ? path + '.' : '') + prop
+                if (Array.isArray(val)) {
+                    p += '.' + GENERIC_KEY_SCHEMA
+                    dict[p] = Object.keys(val[0])
+                    toDict(val[0], p)
+                }
+                else if (Utils.isObject(val)) {
+                    dict[p] = Object.keys(val)
+                    toDict(val, p)
+                }
+                else {
+                    dict[p] = val
+                }
+            }
+        }
+
+        toDict(room.$schema)
+        room.$dict = dict
+
+        const getInfoDict = (path, key): { fullPath: string, infoDict: object } => {
+            const p: string = (path ? path + '.' : '') + (key as string)    
+            const genericPath = p.replace(/\$\$[^.]+/g, GENERIC_KEY_SCHEMA)
+            return {
+                fullPath: p,
+                infoDict: dict[genericPath]
+            }
+        }
+
+        function deepProxy(object, path = '') {
+            return new Proxy(object, {
+                set(target, key, val, receiver) {
+                    const { fullPath: p, infoDict } = getInfoDict(path, key)
+                    if (typeof val == 'object' && infoDict && val != null) {
+                        Reflect.set(target, key, deepProxy(val, p), receiver)
+                    }
+                    else {
+                        Reflect.set(target, key, val, receiver)
+                    }
+                    if (infoDict) {
+                        let newObj
+                        if (Array.isArray(infoDict)) {
+                            newObj = {}
+                            for (let prop of infoDict) {
+                                newObj[prop] = val[prop]
+                            }
+                        }
+                        else {
+                            newObj = val
+                        }
+                        self.detectChanges(room, newObj, p)
+                    }
+                    return true
+                },
+                get(target, key, receiver) {
+                    let val = Reflect.get(target, key, receiver)
+                    const { fullPath: p, infoDict } = getInfoDict(path, key)
+                    if (typeof val == 'object' && key[0] != '_' && val != null && infoDict) {
+                        val = deepProxy(val, p)
+                    }
+                    return val
+                },
+                deleteProperty(target, key) {
+                    const { fullPath: p, infoDict } = getInfoDict(path, key)
+                    if (infoDict) self.detectChanges(room, undefined, p)
+                    delete target[key]
+                    return true
+                }
+            })
+        }
+        this.proxyRoom = room = deepProxy(room)
         if (this.proxyRoom['onInit']) this.proxyRoom['onInit']()
         return this.proxyRoom
     }
 
-    extractObjectOfRoom(room: RoomClass): Object {
+    extractObjectOfRoom(room: RoomClass): any {
         const newObj = {}
         const schemas: string[] = []
         const schema = Utils.propertiesToArray(room.$schema)
 
         function extract(path: string) {
-            const match = /^(.*?)\.\$/.exec(path)
+            const match = new RegExp('^(.*?)\\.\\' + GENERIC_KEY_SCHEMA).exec(path)
             if (match) {
                 const generic = get(room, match[1])
                 const keys = Object.keys(generic)
                 for (let key of keys) {
-                   extract(path.replace('$', key))
+                   extract(path.replace(GENERIC_KEY_SCHEMA, '$' + key))
                 }
             }
             else {
                 schemas.push(path)
             }
         }
-        
+
         for (let path of schema) {
             extract(path)
         }
@@ -98,20 +172,13 @@ export class Room {
             set(newObj, sheme, get(room, sheme))
         }
 
-        this.prevMemoryObject = { ...this.memoryObject }
-        this.memoryObject = newObj
-
         return newObj
     }
 
-    detectChanges(room: RoomClass): void {
-        this.extractObjectOfRoom(room)
-        
-        const difference = diff(this.prevMemoryObject, this.memoryObject)
+    detectChanges(room: RoomClass, obj: Object | undefined, path: string): void {
+        set(this.memoryObject, path, obj)
 
-        if (Object.keys(difference).length == 0) return
-
-        if (this.proxyRoom['onChanges']) this.proxyRoom['onChanges'](difference)
+        if (this.proxyRoom['onChanges']) this.proxyRoom['onChanges']()
 
         const id: string = room.id as string
 
@@ -119,7 +186,5 @@ export class Room {
             ...World.changes.value,
             [id]: room
         })
-
-        Transmitter.addPacket(this.proxyRoom, difference)
     }
 }
