@@ -5,7 +5,7 @@ import { testSend } from './fixture'
 
 let event, socket
 
-const CLIENT_ID = '$$mock'
+const CLIENT_ID = 'mock'
 
 class SocketMock extends EventEmitter {
     client = {

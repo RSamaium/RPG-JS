@@ -73,6 +73,7 @@ export class Room {
                 const val = obj[prop]
                 let p =  (path ? path + '.' : '') + prop
                 if (Array.isArray(val)) {
+                    dict[p] = GENERIC_KEY_SCHEMA
                     p += '.' + GENERIC_KEY_SCHEMA
                     dict[p] = Object.keys(val[0])
                     toDict(val[0], p)
@@ -90,21 +91,24 @@ export class Room {
         toDict(room.$schema)
         room.$dict = dict
 
-        const getInfoDict = (path, key): { fullPath: string, infoDict: object } => {
-            const p: string = (path ? path + '.' : '') + (key as string)    
-            const genericPath = p.replace(/\$\$[^.]+/g, GENERIC_KEY_SCHEMA)
+        const getInfoDict = (path, key, dictPath): { fullPath: string, genericPath: string, infoDict: object } => {
+            const basePath = dict[path]
+            const p: string = (path ? path + '.' : '') + key as string   
+            const genericPath = (dictPath ? dictPath + '.' : '') + 
+            (basePath == GENERIC_KEY_SCHEMA ? GENERIC_KEY_SCHEMA  : key as string )
             return {
                 fullPath: p,
+                genericPath,
                 infoDict: dict[genericPath]
             }
         }
 
-        function deepProxy(object, path = '') {
+        function deepProxy(object, path = '', dictPath = '') {
             return new Proxy(object, {
                 set(target, key, val, receiver) {
-                    const { fullPath: p, infoDict } = getInfoDict(path, key)
+                    const { fullPath: p, infoDict, genericPath } = getInfoDict(path, key, dictPath)
                     if (typeof val == 'object' && infoDict && val != null) {
-                        Reflect.set(target, key, deepProxy(val, p), receiver)
+                        Reflect.set(target, key, deepProxy(val, p, genericPath), receiver)
                     }
                     else {
                         Reflect.set(target, key, val, receiver)
@@ -125,15 +129,26 @@ export class Room {
                     return true
                 },
                 get(target, key, receiver) {
-                    let val = Reflect.get(target, key, receiver)
-                    const { fullPath: p, infoDict } = getInfoDict(path, key)
-                    if (typeof val == 'object' && key[0] != '_' && val != null && infoDict) {
-                        val = deepProxy(val, p)
+                    const toProxy = (val, path) => {
+                        const { fullPath: p, infoDict, genericPath } = getInfoDict(path, key, dictPath)
+                        if (typeof val == 'object' && key[0] != '_' && val != null && infoDict) {
+                            val = deepProxy(val, p, genericPath)
+                        }
+                        return val
                     }
+                    let val = Reflect.get(target, key, receiver)
+                   /* if (Array.isArray(val)) {
+                        val = val.map(el => toProxy(el, <string>key + '.' + GENERIC_KEY_SCHEMA))
+                        
+                    }
+                    else {
+                        val = toProxy(val, path)
+                    }*/
+                    val = toProxy(val, path)
                     return val
                 },
                 deleteProperty(target, key) {
-                    const { fullPath: p, infoDict } = getInfoDict(path, key)
+                    const { fullPath: p, infoDict } = getInfoDict(path, key, dictPath)
                     if (infoDict) self.detectChanges(room, undefined, p)
                     delete target[key]
                     return true
@@ -156,7 +171,7 @@ export class Room {
                 const generic = get(room, match[1])
                 const keys = Object.keys(generic)
                 for (let key of keys) {
-                   extract(path.replace(GENERIC_KEY_SCHEMA, '$' + key))
+                   extract(path.replace(GENERIC_KEY_SCHEMA, key))
                 }
             }
             else {
@@ -177,7 +192,6 @@ export class Room {
 
     detectChanges(room: RoomClass, obj: Object | undefined, path: string): void {
         set(this.memoryObject, path, obj)
-
         if (this.proxyRoom['onChanges']) this.proxyRoom['onChanges']()
 
         const id: string = room.id as string

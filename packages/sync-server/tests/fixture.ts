@@ -6,8 +6,8 @@ export function testSend(room) {
              emit(event, value) {
                  resolve(value)
              }
-         }, '$$test')
-         World.joinRoom(room.id, '$$test')
+         }, 'test')
+         World.joinRoom(room.id, 'test')
          World.send()
     })
  }
