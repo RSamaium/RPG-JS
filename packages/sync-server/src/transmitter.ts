@@ -3,6 +3,9 @@ import { RoomClass } from './interfaces/room.interface';
 import { User } from './rooms/default';
 
 class TransmitterClass {
+    
+    public encode: boolean = true
+    
     private packets: {
         [roomId: string]: Packet[]
     } = {}
@@ -35,7 +38,7 @@ class TransmitterClass {
     }
 
     emit(user: User, packet: Packet): void {
-        user._socket.emit('w', packet.encode())
+        user._socket.emit('w', this.encode ? packet.encode() : packet.message)
     }
 
     on(user) {

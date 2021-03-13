@@ -1,14 +1,15 @@
 import { World } from '../src/world'
 import { Transmitter } from '../src/transmitter'
 import { EventEmitter } from '@rpgjs/common'
+import { testSend } from './fixture'
 
 let event, socket
 
-const CLIENT_ID = 'mock'
+const CLIENT_ID = '$$mock'
 
 class SocketMock extends EventEmitter {
     client = {
-        id: CLIENT_ID
+        id: CLIENT_ID.replace('$$', '')
     }
 }
 
@@ -17,7 +18,7 @@ beforeEach(() => {
     World.transport(event)
     socket = new SocketMock()
     event.emit('connection', socket)
-    Transmitter.clear()
+    Transmitter.encode = false
 })
 
 test('Test User in World', () => {
@@ -40,25 +41,30 @@ test('Test Room properties', () => {
     expect(user._rooms).toHaveLength(1)
 })
 
-test('Getall data of room', async () => {
-    class Room {
-        $schema = {
-            users: [{
-                name: String
-            }]
-        }
-
-        onJoin(user) {
-            user.name = 'test'
-        }
-    }
-    const room =  World.addRoom('room', Room)
+test('Getall data of room', () => {
+    return new Promise((resolve) => {
+        class Room {
+            $schema = {
+                users: [{
+                    name: String
+                }]
+            }
     
-    socket.emit(':join', 'room')
+            onJoin(user) {
+                user.name = 'test'
+            }
+        }
 
-    const user = room.users[CLIENT_ID]
-    const [packet] =  Transmitter.getPackets(room)
+        socket.on('w', ([ev, value]) => {
+            const user = room.users[CLIENT_ID]
+            expect(user.id).toBe(CLIENT_ID)
+            expect(value).toMatchObject({ users: { [CLIENT_ID]: { name: 'test' } } })
+            resolve()
+        })
 
-    expect(user.id).toBe(CLIENT_ID)
-    expect(packet.body).toMatchObject({ users: { [CLIENT_ID]: { name: 'test' } } })
+        const room =  World.addRoom('room', Room) 
+        socket.emit(':join', 'room')
+
+        World.send()
+    })
 })

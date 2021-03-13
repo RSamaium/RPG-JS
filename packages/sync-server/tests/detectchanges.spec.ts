@@ -1,13 +1,14 @@
 import { World } from '../src/world'
 import { Transmitter } from '../src/transmitter'
+import { testSend } from './fixture'
 import { EventEmitter } from '@rpgjs/common'
 
 beforeEach(() => {
     World.transport(new EventEmitter())
-    Transmitter.clear()
+    Transmitter.encode = false
 })
 
-test('Test Array properties', () => {
+test('Test Array properties', async () => {
     class Room {
         $schema = {
             list: [{
@@ -23,8 +24,6 @@ test('Test Array properties', () => {
         secret: 's'
     })
 
-    room.$detectChanges()
-
-    const packet =  Transmitter.getPackets(room)
-    expect(packet[0].body).toMatchObject({ list: { '0': { public: 'p' } }})
+    const value  = await testSend(room)
+    expect(value[1]).toMatchObject({ list: { '$0': { public: 'p' } }})
 })

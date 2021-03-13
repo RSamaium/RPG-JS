@@ -7,7 +7,11 @@ export class Packet {
         return this.data
     }
 
+    get message() {
+        return [this.roomId, this.data]
+    }
+
     encode() {
-        return msgpack.encode([this.roomId, this.data])
+        return msgpack.encode(this.message)
     }
 }

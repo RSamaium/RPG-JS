@@ -1,10 +1,11 @@
 import { World } from '../src/world'
 import { Transmitter } from '../src/transmitter'
 import { EventEmitter } from '@rpgjs/common'
+import { testSend } from './fixture'
 
 beforeEach(() => {
     World.transport(new EventEmitter())
-    Transmitter.clear()
+    Transmitter.encode = false
 })
 
 test('Test Room properties', () => {
@@ -15,7 +16,7 @@ test('Test Room properties', () => {
     expect(room.$schema.users[0].id).toBeDefined()
 })
 
-test('Change properties', () => {
+test('Change properties', async () => {
     class Room { 
         $schema = {
             position: {
@@ -30,12 +31,12 @@ test('Change properties', () => {
     }
     const room: any =  World.addRoom('room', Room)
     room.position.x = 5
-    room.$detectChanges()
-    const packet =  Transmitter.getPackets(room)
-    expect(packet[0].body).toMatchObject({ position: { x: 5 }})
+
+    const value = await testSend(room)
+    expect(value[1]).toMatchObject({ position: { x: 5 }})
 })
 
-test('change root propertie in room', () => {
+test('change root propertie in room', async () => {
     class Room { 
         $schema = {
             position: {
@@ -50,9 +51,8 @@ test('change root propertie in room', () => {
     }
     const room: any =  World.addRoom('room', Room)
     room.position = { x: 5, y: 2 }
-    room.$detectChanges()
-    const packet =  Transmitter.getPackets(room)
-    expect(packet[0].body).toMatchObject({ position: { x: 5 }})
+    const value  = await testSend(room)
+    expect(value[1]).toMatchObject({ position: { x: 5 }})
 })
 
 test('Not listen properties', () => {
@@ -64,7 +64,6 @@ test('Not listen properties', () => {
     }
     const room: any =  World.addRoom('room', Room)
     room.position.x = 5
-    room.$detectChanges()
     const packet =  Transmitter.getPackets(room)
     expect(packet).toBeUndefined()
 })
