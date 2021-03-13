@@ -19,7 +19,7 @@ export class Room {
         user._rooms.push(room.id)
         if (!user.id) user.id = Utils.generateId()
         if (room['onJoin']) room['onJoin'](user)
-        const object = this.extractObjectOfRoom(room)
+        const object = this.extractObjectOfRoom(room, room.$schema)
         const packet = new Packet(object, <string>room.id)
         Transmitter.emit(user, packet)
     }
@@ -75,11 +75,11 @@ export class Room {
                 if (Array.isArray(val)) {
                     dict[p] = GENERIC_KEY_SCHEMA
                     p += '.' + GENERIC_KEY_SCHEMA
-                    dict[p] = Object.keys(val[0])
+                    dict[p] = val[0]
                     toDict(val[0], p)
                 }
                 else if (Utils.isObject(val)) {
-                    dict[p] = Object.keys(val)
+                    dict[p] = val
                     toDict(val, p)
                 }
                 else {
@@ -91,7 +91,7 @@ export class Room {
         toDict(room.$schema)
         room.$dict = dict
 
-        const getInfoDict = (path, key, dictPath): { fullPath: string, genericPath: string, infoDict: object } => {
+        const getInfoDict = (path, key, dictPath): { fullPath: string, genericPath: string, infoDict: any } => {
             const basePath = dict[path]
             const p: string = (path ? path + '.' : '') + key as string   
             const genericPath = (dictPath ? dictPath + '.' : '') + 
@@ -115,11 +115,11 @@ export class Room {
                     }
                     if (infoDict) {
                         let newObj
-                        if (Array.isArray(infoDict)) {
-                            newObj = {}
-                            for (let prop of infoDict) {
-                                newObj[prop] = val[prop]
-                            }
+                        if (Utils.isObject(infoDict)) {
+                            newObj = self.extractObjectOfRoom(val, infoDict)
+                        }
+                        else if (infoDict == GENERIC_KEY_SCHEMA) {
+                            newObj = self.extractObjectOfRoom(val, dict[genericPath + '.' + GENERIC_KEY_SCHEMA])
                         }
                         else {
                             newObj = val
@@ -130,8 +130,14 @@ export class Room {
                 },
                 get(target, key, receiver) {
                     const toProxy = (val, path) => {
+                        if (typeof key != 'string') {
+                            return val
+                        }
+                        if (key[0] == '_' || val == null) {
+                            return val
+                        }
                         const { fullPath: p, infoDict, genericPath } = getInfoDict(path, key, dictPath)
-                        if (typeof val == 'object' && key[0] != '_' && val != null && infoDict) {
+                        if (typeof val == 'object' && infoDict) {
                             val = deepProxy(val, p, genericPath)
                         }
                         return val
@@ -160,10 +166,10 @@ export class Room {
         return this.proxyRoom
     }
 
-    extractObjectOfRoom(room: RoomClass): any {
+    extractObjectOfRoom(room: Object, schema): any {
         const newObj = {}
         const schemas: string[] = []
-        const schema = Utils.propertiesToArray(room.$schema)
+        const _schema = Utils.propertiesToArray(schema)
 
         function extract(path: string) {
             const match = new RegExp('^(.*?)\\.\\' + GENERIC_KEY_SCHEMA).exec(path)
@@ -179,7 +185,7 @@ export class Room {
             }
         }
 
-        for (let path of schema) {
+        for (let path of _schema) {
             extract(path)
         }
 
@@ -192,6 +198,7 @@ export class Room {
 
     detectChanges(room: RoomClass, obj: Object | undefined, path: string): void {
         set(this.memoryObject, path, obj)
+       
         if (this.proxyRoom['onChanges']) this.proxyRoom['onChanges']()
 
         const id: string = room.id as string

@@ -15,9 +15,16 @@ beforeEach(() => {
         $schema = {
             list: [{
                 public: String
-            }]
+            }],
+            keys: {
+                a: {
+                    public: String
+                },
+                b: Number
+            }
         }
         list = []
+        keys = {}
     }
 
     room = World.addRoom('room', Room)
@@ -69,4 +76,38 @@ test('Test Array properties and next change', () => {
         }
         World.send()
    })
+})
+
+test('Test Deep Change', async () => {
+    return new Promise(async (resolve) => {
+        room.keys = { 
+            a: {
+                public: 'test',
+                secret: 'noop'
+            },
+            b: 18
+        }
+        
+        const value  = await testSend(room)
+        const user = room.users['test']
+        const secretKey = value[1].keys.a.secret
+        expect(secretKey).toBeUndefined()
+
+        room.keys = { 
+            a: {
+                public: 'yo',
+                secret: 'aa'
+            },
+            b: 42
+        }
+        
+        user._socket.emit = (ev, value) => {
+            const secretKey = value[1].keys.a.secret
+            expect(secretKey).toBeUndefined()
+            resolve()
+        }
+
+        World.send()
+   })
+
 })

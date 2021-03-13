@@ -65,10 +65,6 @@ export default class RpgServerEngine extends ServerEngine {
         currentPlayer._socket.emit(eventName, data)
     }
 
-    getPlayerId(socket) {
-       return '$$' + socket.id
-    } 
-
     onPlayerConnected(socket) {
         const playerId = super.onPlayerConnected(socket)
         const player = new this.playerClass(this.gameEngine, { id: playerId }, { playerId })

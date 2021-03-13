@@ -38,6 +38,7 @@ class TransmitterClass {
     }
 
     emit(user: User, packet: Packet): void {
+       // console.log(packet.message)
         user._socket.emit('w', this.encode ? packet.encode() : packet.message)
     }
 
