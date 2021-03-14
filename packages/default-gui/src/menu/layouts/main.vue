@@ -5,7 +5,7 @@
             <rpg-choice :choices="menu" @selected="selectMenu" ref="menu" />
         </rpg-window>
          <rpg-window :fullWidth="true" class="gold">
-            <p>{{ player.gold }} {{ goldName}}</p>
+            <p>{{ gold }} {{ goldName}}</p>
         </rpg-window>
     </div>
     <div class="menu-right">
@@ -31,6 +31,7 @@ export default {
         return {
             player: {},
             active: true,
+            gold: 0,
             menu: [{
                 text: 'Items',
                 value: 'item',
@@ -51,7 +52,7 @@ export default {
     },
     mounted() {
         this.obsCurrentPlayer = this.rpgCurrentPlayer.subscribe(({ object }) => {
-           this.player = object
+           this.gold = object.gold
         })
         this.obsKeyPress = this.rpgKeypress.subscribe(({ control }) => {
             if (!this.active || !control) return

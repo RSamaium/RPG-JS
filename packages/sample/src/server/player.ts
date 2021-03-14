@@ -42,7 +42,6 @@ export class Player extends RpgPlayer {
 
     onInput({ input }) {
       if (input == 'back') {
-        this.gold += 1000
         this.callMainMenu()
       }
     }

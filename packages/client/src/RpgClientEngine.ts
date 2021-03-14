@@ -97,7 +97,6 @@ export default class RpgClientEngine extends ClientEngine<any> {
         }
         logic.prevParamsChanged = Object.assign({}, logic)
         for (let key in params) {
-           // console.log(key, params, localEvent)
             if (key == 'position' && !localEvent) continue
             logic[key] = params[key]
         }

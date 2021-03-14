@@ -203,7 +203,7 @@ export class Room {
 
     detectChanges(room: RoomClass, obj: Object | undefined, path: string): void {
         set(this.memoryObject, path, obj)
-       
+
         if (this.proxyRoom['onChanges']) this.proxyRoom['onChanges']()
 
         const id: string = room.id as string
