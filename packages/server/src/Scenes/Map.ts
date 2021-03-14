@@ -85,6 +85,8 @@ export class SceneMap {
         World.joinRoom(mapId, player.id)
 
         player = World.getUser(player.id)
+        this.server.gameEngine.world.objects[player.id] = player
+        
         player.execMethod('onEnter', [player, player.prevMap || null], mapInstance)
         player.teleport(positions || 'start')
         player.events = mapInstance.createEvents(EventMode.Scenario)

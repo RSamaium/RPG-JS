@@ -92,7 +92,7 @@ export class Room {
         room.$dict = dict
 
         const getInfoDict = (path, key, dictPath): { fullPath: string, genericPath: string, infoDict: any } => {
-            const basePath = dict[path]
+            const basePath = dict[dictPath]
             const p: string = (path ? path + '.' : '') + key as string   
             const genericPath = (dictPath ? dictPath + '.' : '') + 
             (basePath == GENERIC_KEY_SCHEMA ? GENERIC_KEY_SCHEMA  : key as string )
@@ -116,6 +116,9 @@ export class Room {
                     }
                     else {
                         Reflect.set(target, key, val, receiver)
+                    }
+                    if (key == 'length' && dict[dictPath] == GENERIC_KEY_SCHEMA) {
+                        return true
                     }
                     if (infoDict) {
                         let newObj

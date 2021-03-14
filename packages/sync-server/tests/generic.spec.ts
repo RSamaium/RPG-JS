@@ -22,7 +22,7 @@ beforeEach(() => {
     room = World.addRoom('room', Room)
 })
 
-/*test('Test Generic Key 1',  () => {
+test('Test Generic Key 1',  () => {
     return new Promise(async (resolve) => {
         room.list = {}
         await testSend(room)
@@ -41,7 +41,7 @@ beforeEach(() => {
 
         World.send()
    })
-})*/
+})
 
 test('Test Generic Key 2',  () => {
     return new Promise(async (resolve) => {
@@ -58,6 +58,41 @@ test('Test Generic Key 2',  () => {
         
         user._socket.emit = (ev, value) => {
             expect(value[1]).toMatchObject({ list: { mykey: { public: 'p' } } })
+            resolve()
+        }
+
+        World.send()
+   })
+})
+
+test('Test Generic Key with array',  () => {
+    return new Promise(async (resolve) => {
+
+        class Room {
+            $schema = {
+                list: [{
+                    nb: [String]
+                }]
+            }
+
+            list = {}
+        }
+    
+        room = World.addRoom('room', Room)
+
+        room.list.mykey = {
+            nb: []
+        }
+
+        await testSend(room)
+
+        const user = room.users['test']
+
+        room.list.mykey.nb.push('hello')
+        
+        user._socket.emit = (ev, value) => {
+            expect(value[1]).toMatchObject({ list: { mykey: { nb: { '0': 'hello' } } } })
+            expect(value[1].list.mykey.nb.length).toBeUndefined()
             resolve()
         }
 
