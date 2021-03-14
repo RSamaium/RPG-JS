@@ -9,7 +9,7 @@ import { BehaviorSubject } from 'rxjs'
 export class WorldClass {
 
     private rooms: Map<string, RoomClass> = new Map()
-    private users: {
+    public users: {
         [key: string]: User
     } = {}
     private userClass = User
@@ -61,7 +61,7 @@ export class WorldClass {
         if (socket) user._socket = socket
         user._rooms = []
         this.users[user.id] = user
-        return user
+        return this.users[user.id]
     }
 
     send(): void {

@@ -105,21 +105,28 @@ export class Room {
 
         function deepProxy(object, path = '', dictPath = '') {
             return new Proxy(object, {
-                set(target, key, val, receiver) {
+                set(target, key: string, val, receiver) {
                     const { fullPath: p, infoDict, genericPath } = getInfoDict(path, key, dictPath)
                     if (typeof val == 'object' && infoDict && val != null) {
-                        Reflect.set(target, key, deepProxy(val, p, genericPath), receiver)
+                        const valProxy = deepProxy(val, p, genericPath)
+                        if (path == 'users') {
+                            World.users[key] = valProxy
+                        }
+                        Reflect.set(target, key, valProxy, receiver)
                     }
                     else {
                         Reflect.set(target, key, val, receiver)
                     }
                     if (infoDict) {
                         let newObj
-                        if (Utils.isObject(infoDict)) {
+                        if (Utils.isObject(infoDict) && val != null) {
                             newObj = self.extractObjectOfRoom(val, infoDict)
                         }
                         else if (infoDict == GENERIC_KEY_SCHEMA) {
-                            newObj = self.extractObjectOfRoom(val, dict[genericPath + '.' + GENERIC_KEY_SCHEMA])
+                            newObj = {}
+                            for (let key in val) {
+                                newObj[key] = self.extractObjectOfRoom(val[key], dict[genericPath + '.' + GENERIC_KEY_SCHEMA])
+                            }
                         }
                         else {
                             newObj = val
@@ -143,13 +150,6 @@ export class Room {
                         return val
                     }
                     let val = Reflect.get(target, key, receiver)
-                   /* if (Array.isArray(val)) {
-                        val = val.map(el => toProxy(el, <string>key + '.' + GENERIC_KEY_SCHEMA))
-                        
-                    }
-                    else {
-                        val = toProxy(val, path)
-                    }*/
                     val = toProxy(val, path)
                     return val
                 },
@@ -175,9 +175,11 @@ export class Room {
             const match = new RegExp('^(.*?)\\.\\' + GENERIC_KEY_SCHEMA).exec(path)
             if (match) {
                 const generic = get(room, match[1])
-                const keys = Object.keys(generic)
-                for (let key of keys) {
-                   extract(path.replace(GENERIC_KEY_SCHEMA, key))
+                if (generic) {
+                    const keys = Object.keys(generic)
+                    for (let key of keys) {
+                        extract(path.replace(GENERIC_KEY_SCHEMA, key))
+                    }
                 }
             }
             else {

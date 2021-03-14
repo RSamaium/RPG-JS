@@ -65,8 +65,6 @@ export class SceneMap {
         if (!player.hitbox.h) player.hitbox.h = mapInstance.tileHeight
         if (!player.hitbox.w) player.hitbox.w = mapInstance.tileWidth
 
-        player.execMethod('onEnter', [player, player.prevMap || null], mapInstance)
-
         let { data: serializeMap } = Object.assign({}, RpgCommonMap.buffer.get(mapId))
         delete serializeMap.shapes 
         delete serializeMap.events
@@ -85,11 +83,11 @@ export class SceneMap {
         this.server.createRoom(mapId)
         this.server.assignObjectToRoom(player, mapId)
         World.joinRoom(mapId, player.id)
-        
 
+        player = World.getUser(player.id)
+        player.execMethod('onEnter', [player, player.prevMap || null], mapInstance)
         player.teleport(positions || 'start')
         player.events = mapInstance.createEvents(EventMode.Scenario)
-
         return mapInstance
     }
 }

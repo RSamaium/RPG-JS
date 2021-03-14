@@ -36,12 +36,14 @@ export class Player extends RpgPlayer {
        else {
         
        }  */
-  
+       
         await this.changeMap('medieval')
+        this.gold = 2000
     }
 
     onInput({ input }) {
       if (input == 'back') {
+        this.gold = 1000
         this.callMainMenu()
       }
     }

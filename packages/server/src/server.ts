@@ -67,9 +67,12 @@ export default class RpgServerEngine extends ServerEngine {
 
     onPlayerConnected(socket) {
         const playerId = super.onPlayerConnected(socket)
-        const player = new this.playerClass(this.gameEngine, { id: playerId }, { playerId })
-        this.gameEngine.addPlayer(player, socket.playerId, true) 
+        let player = new this.playerClass(this.gameEngine, { id: playerId }, { playerId })
+        
         World.setUser(player, socket)
+
+        this.gameEngine.addPlayer(player, socket.playerId, true)
+
         if (!Utils.isBrowser()) Monitor.addMonitor(socket)
         player.server = this
         player._init()
