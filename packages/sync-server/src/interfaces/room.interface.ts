@@ -1,4 +1,5 @@
 import { User } from '../rooms/default';
+import { Packet } from '../packet';
 
 export interface OnInit {
     onInit: () => void
@@ -30,4 +31,6 @@ export interface RoomClass {
     $leave?: (user: User) => void
     $currentState?: () => Object
     $clearCurrentState?: () => void
+
+    filterEmit?: (user: User, packet: Packet) => Packet | Promise<Packet>
 }

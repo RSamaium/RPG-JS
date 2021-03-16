@@ -20,7 +20,9 @@ export default class Character extends PIXI.Sprite {
     public z: number = 0
     private effects: any[] = []
     private fixed: boolean = false
+    private playStandardAnimation: boolean = true
     public animation: Animation
+    private objSaved: object = {}
 
     anim
 
@@ -135,6 +137,27 @@ export default class Character extends PIXI.Sprite {
         }
     }
 
+    showAnimation(graphic: string, animationName: string) {
+        const refreshAnimation = (graphic) => {
+            this.removeChild(this.animation)
+            this.animation = new Animation(graphic)
+            this.addChild(this.animation)
+        }
+        const memoryGraphic = this.graphic
+
+        refreshAnimation(graphic)
+        
+        this.animation.onFinish = () => {
+            this.playStandardAnimation = true
+            refreshAnimation(memoryGraphic)
+            this.update(this.objSaved)
+        }
+
+        this.playStandardAnimation = false
+        this.playAnimation(animationName)
+        return this.animation
+    }
+
     setGraphic() {
         this.animation = new Animation(this.graphic)
         this.addChild(this.animation)
@@ -142,7 +165,6 @@ export default class Character extends PIXI.Sprite {
     }
 
     update(obj): any {
-
         const { graphic, speed } = obj
 
         if (graphic != this.graphic) {
@@ -191,17 +213,20 @@ export default class Character extends PIXI.Sprite {
             }
         }
 
-        this.animation.update()
+        if (this.animation) this.animation.update()
 
-        if (moving) {
-            this.onMove()
-            this.playAnimation(AnimationEnum.Walk)
-        }
-        else {
-            this.playAnimation(AnimationEnum.Stand)
+        if (this.playStandardAnimation) {
+            if (moving) {
+                this.onMove()
+                this.playAnimation(AnimationEnum.Walk)
+            }
+            else {
+                this.playAnimation(AnimationEnum.Stand)
+            }
         }
 
         this.onUpdate(obj)
+        this.objSaved = obj
 
         return {
             moving,
@@ -209,7 +234,7 @@ export default class Character extends PIXI.Sprite {
         }
     }
 
-    private playAnimation(name: string) {
+    playAnimation(name: string) {
         const hook = `onCharacter${capitalize(name)}`
         if (!this.spritesheet) return
         if (this.spritesheet[hook]) {

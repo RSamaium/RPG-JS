@@ -61,7 +61,12 @@ export class Animation extends PIXI.Sprite {
     createAnimations() {
         const { textures } = this.spritesheet
         for (let animationName in textures) {
-            const optionsTextures = Object.assign(this.spritesheet, textures[animationName])
+            const parentObj = ['width', 'height', 'framesHeight', 'framesWidth', 'rectWidth', 'rectHeight', 'offset', 'image']
+                .reduce((prev, val) => ({ ...prev, [val]: this.spritesheet[val] }), {})
+            const optionsTextures = {
+                ...parentObj,
+                ...textures[animationName]
+            }
             this.animations.set(animationName, {
                 container: new PIXI.Sprite(),
                 maxTime: 0,

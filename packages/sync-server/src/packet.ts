@@ -6,9 +6,13 @@ export class Packet {
     get body() {
         return this.data
     }
-
+    
     get message() {
         return [this.roomId, this.data]
+    }
+
+    clone(data) {
+        return new Packet(data, this.roomId)
     }
 
     encode() {

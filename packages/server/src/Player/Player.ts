@@ -440,14 +440,15 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @method player.showAnimation(graphic,animationName)
      * @param {string} graphic spritesheet identifier
      * @param {string} animationName Name of the animation in the spritesheet
+     * @param {boolean} [replaceGraphic] Replace the event graphic with the animation. After the end of the animation, the original graphic is reapplied
      * @returns {void}
      * @memberof Player
      */
-    showAnimation(graphic: string, animationName: string) {
+    showAnimation(graphic: string, animationName: string, replaceGraphic: boolean = false) {
         this.emitToMap('callMethod', { 
             objectId: this.playerId,
             name: 'showAnimation',
-            params: [graphic, animationName]
+            params: [graphic, animationName, replaceGraphic]
         })
     }
 

@@ -1,0 +1,12 @@
+{
+  "name": "a-rpg-system",
+  "version": "3.0.0-alpha.3",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Samuel Ronce",
+  "license": "MIT"
+}

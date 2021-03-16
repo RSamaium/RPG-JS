@@ -321,15 +321,20 @@ export class Scene {
         attachTo,
         x = 0,
         y = 0,
-        loop = false
+        loop = false,
+        replaceGraphic = false
     }: { 
         graphic: string, 
         animationName: string, 
         attachTo?: RpgSprite, 
         x?: number, 
         y?: number,
-        loop?: boolean
+        loop?: boolean,
+        replaceGraphic?: boolean
     }): Animation {
+        if (replaceGraphic && attachTo) {
+            return attachTo.showAnimation(graphic, animationName)
+        }
         const animation = new Animation(graphic)
         this.animationLayer.addChild(animation)
         if (!loop) {

@@ -148,7 +148,8 @@ export default class RpgClientEngine extends ClientEngine<any> {
                     scene.showAnimation({ 
                         attachTo: sprite,
                         graphic: params[0],
-                        animationName: params[1]
+                        animationName: params[1],
+                        replaceGraphic: params[2]
                     })
                 break
             }

@@ -32,18 +32,15 @@ setInterval(() => {
 With `socket.io`
 
 ```html
-<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.1/socket.io.js"></script>
-<script src="https://rawgit.com/kawanet/msgpack-lite/master/dist/msgpack.min.js"></script>
+<script src="sync-client.js"></script>
 ```
 
 ```js
 const socket = io()
-socket.on('w', (packet) => {
-    const bufView = new Uint8Array(packet)
-    const obj = msgpack.decode(bufView)
-    console.log(obj)
-})
 socket.emit(':join', 'room_id')
+World.listen(socket).value.subscribe((val: { data: any, partial: any }) => {
+    console.log(val)
+})
 ```
 
 # Add Room Properties:
@@ -156,7 +153,7 @@ Typescript
 export class Page {
     list: any = {}
     constructor() {
-        this.list['$$mykey'] = {
+        this.list['mykey'] = {
             id: 1
         }
     }
@@ -172,7 +169,7 @@ export class Page {
     list = {}
     
     constructor() {
-        this.list['$mykey'] = {
+        this.list['mykey'] = {
             id: 1
         }
     }

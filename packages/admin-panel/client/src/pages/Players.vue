@@ -19,7 +19,8 @@ export default {
                 { key: 'id', label: 'ID' },
                 { key: 'map', label: 'Current Map' },
                 { key: 'hp', label: 'Healt Point' },
-                { key: 'level', label: 'Level' }
+                { key: 'level', label: 'Level' },
+                { key: 'position', label: 'Position' }
             ]
        }
     },

@@ -13,11 +13,11 @@ const io = require("socket.io")(server)
 
 World.transport(io)
 World.setUserClass(Player)
-const room = World.addRoom('page', new Page())
+World.addRoom('page', new Page())
 
 setInterval(() => {
     World.send()
-}, 1000)
+}, 100)
 
 app.use('/', express.static(__dirname + '/../client'))
 

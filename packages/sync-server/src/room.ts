@@ -21,7 +21,7 @@ export class Room {
         if (room['onJoin']) room['onJoin'](user)
         const object = this.extractObjectOfRoom(room, room.$schema)
         const packet = new Packet(object, <string>room.id)
-        Transmitter.emit(user, packet)
+        Transmitter.emit(user, packet, room)
     }
 
     private leave(user: User, room: RoomClass): void {
@@ -158,8 +158,8 @@ export class Room {
                 },
                 deleteProperty(target, key) {
                     const { fullPath: p, infoDict } = getInfoDict(path, key, dictPath)
-                    if (infoDict) self.detectChanges(room, undefined, p)
                     delete target[key]
+                    if (infoDict) self.detectChanges(room, undefined, p)
                     return true
                 }
             })
@@ -204,7 +204,7 @@ export class Room {
     detectChanges(room: RoomClass, obj: Object | undefined, path: string): void {
         set(this.memoryObject, path, obj)
 
-        if (this.proxyRoom['onChanges']) this.proxyRoom['onChanges']()
+        if (this.proxyRoom['onChanges']) this.proxyRoom['onChanges'](this.memoryObject)
 
         const id: string = room.id as string
 

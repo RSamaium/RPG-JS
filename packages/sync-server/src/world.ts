@@ -76,7 +76,7 @@ export class WorldClass {
                 const packets = Transmitter.getPackets(room)
                 if (packets) {
                     for (let packet of packets) {
-                        Transmitter.emit(user, packet) 
+                        Transmitter.emit(user, packet, room)
                     }
                 }
             }

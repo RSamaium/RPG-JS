@@ -32,6 +32,7 @@
                 }
                 this.ids = Object.keys(this.users)
                 //console.log(obj)
+                console.log(JSON.stringify(this.users, null, 2))
             })
             this.socket.emit(':join', 'page')
         },

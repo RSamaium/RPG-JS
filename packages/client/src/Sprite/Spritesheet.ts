@@ -258,8 +258,8 @@ export interface SpritesheetOptions extends TransformOptions, TextureOptions {
      *      myanim: {
      *          rectWidth: 64,
      *          rectHeight: 64,
-     *          frameX: 10,
-     *          frameY: 2,
+     *          framesWidth: 10,
+     *          framesHeight: 2,
      *          offset: {x: 0, y: 230},
      *          animations: [
      *               [ { time: 0, frameX: 0, frameY: 0 } ]

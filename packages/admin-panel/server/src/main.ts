@@ -9,6 +9,10 @@ export function bootstrap(app: any, io: any, world: any) {
   adminNamespace.on('connection', socket => {
       world.changes.subscribe((rooms) => {
          const players = world.getPlayers()
+         /*for (let roomName in rooms) {
+            const room = rooms[roomName]
+            console.log(players)
+         }*/
          socket.emit('players', players)
       })
   })
