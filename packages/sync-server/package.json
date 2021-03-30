@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/sync-server",
-  "version": "3.0.0-alpha.4.1",
+  "version": "3.0.0-alpha.4.2",
   "description": "",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
@@ -22,7 +22,7 @@
   "dependencies": {
     "@babel/preset-env": "^7.12.7",
     "@babel/preset-typescript": "^7.12.7",
-    "@rpgjs/common": "^3.0.0-alpha.4.1",
+    "@rpgjs/common": "^3.0.0-alpha.4.2",
     "deep-diff": "^1.0.2",
     "get-value": "^3.0.1",
     "msgpack-lite": "^0.1.26",
@@ -35,5 +35,5 @@
     "jest": "^26.6.3",
     "ts-jest": "^26.4.4"
   },
-  "gitHead": "554653befd7225e7954c65cab1efb590434016c0"
+  "gitHead": "44ebfaebe7c3292777f27cdaadf3c1373bdec917"
 }

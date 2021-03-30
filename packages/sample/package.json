@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/sample-game",
-  "version": "3.0.0-alpha.4.1",
+  "version": "3.0.0-alpha.4.2",
   "description": "",
   "main": "index.js",
   "types": "index.d.ts",
@@ -36,20 +36,20 @@
     "webpack-cli": "^3.3.12"
   },
   "dependencies": {
-    "@rpgjs/admin-panel": "^3.0.0-alpha.4.1",
-    "@rpgjs/client": "^3.0.0-alpha.4.1",
-    "@rpgjs/compiler": "^3.0.0-alpha.4.1",
-    "@rpgjs/database": "^3.0.0-alpha.4.1",
-    "@rpgjs/default-gui": "^3.0.0-alpha.4.1",
-    "@rpgjs/server": "^3.0.0-alpha.4.1",
-    "@rpgjs/standalone": "^3.0.0-alpha.4.1",
-    "@rpgjs/starter-kit-client": "^3.0.0-alpha.4.1",
-    "@rpgjs/starter-kit-server": "^3.0.0-alpha.4.1",
-    "@rpgjs/testing": "^3.0.0-alpha.4.1",
+    "@rpgjs/admin-panel": "^3.0.0-alpha.4.2",
+    "@rpgjs/client": "^3.0.0-alpha.4.2",
+    "@rpgjs/compiler": "^3.0.0-alpha.4.2",
+    "@rpgjs/database": "^3.0.0-alpha.4.2",
+    "@rpgjs/default-gui": "^3.0.0-alpha.4.2",
+    "@rpgjs/server": "^3.0.0-alpha.4.2",
+    "@rpgjs/standalone": "^3.0.0-alpha.4.2",
+    "@rpgjs/starter-kit-client": "^3.0.0-alpha.4.2",
+    "@rpgjs/starter-kit-server": "^3.0.0-alpha.4.2",
+    "@rpgjs/testing": "^3.0.0-alpha.4.2",
     "express": "^4.17.1",
     "socket.io": "^3.0.4",
     "stats.js": "^0.17.0",
     "vue": "^3.0.4"
   },
-  "gitHead": "554653befd7225e7954c65cab1efb590434016c0"
+  "gitHead": "44ebfaebe7c3292777f27cdaadf3c1373bdec917"
 }

@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/client",
-  "version": "3.0.0-alpha.4.1",
+  "version": "3.0.0-alpha.4.2",
   "description": "",
   "main": "lib/index.js",
   "types": "./lib/index.d.ts",
@@ -19,8 +19,8 @@
   "author": "Samuel Ronce",
   "license": "MIT",
   "dependencies": {
-    "@rpgjs/common": "^3.0.0-alpha.4.1",
-    "@rpgjs/sync-client": "^3.0.0-alpha.4.1",
+    "@rpgjs/common": "^3.0.0-alpha.4.2",
+    "@rpgjs/sync-client": "^3.0.0-alpha.4.2",
     "@tweenjs/tween.js": "^18.6.0",
     "@types/howler": "^2.2.1",
     "howler": "^2.2.1",
@@ -33,5 +33,5 @@
     "rxjs": "^6.6.3",
     "vue": "^3.0.4"
   },
-  "gitHead": "554653befd7225e7954c65cab1efb590434016c0"
+  "gitHead": "44ebfaebe7c3292777f27cdaadf3c1373bdec917"
 }

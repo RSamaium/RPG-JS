@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/admin-panel",
-  "version": "3.0.0-alpha.4.1",
+  "version": "3.0.0-alpha.4.2",
   "description": "",
   "author": "Samuel Ronce",
   "main": "dist/main.js",
@@ -69,5 +69,6 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
-  }
+  },
+  "gitHead": "44ebfaebe7c3292777f27cdaadf3c1373bdec917"
 }
