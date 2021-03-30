@@ -6,7 +6,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "private": "true",
   "keywords": [],
   "author": "Samuel Ronce",
-  "license": "MIT"
+  "license": "MIT",
+  "gitHead": "44ebfaebe7c3292777f27cdaadf3c1373bdec917"
 }

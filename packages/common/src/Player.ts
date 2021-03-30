@@ -235,6 +235,8 @@ export class RpgCommonPlayer extends DynamicObject<any, any> {
         const nextPosition = this.defineNextPosition(direction)
         const map = this.mapInstance
 
+        const hitbox = Hit.createObjectHitbox(nextPosition.x, nextPosition.y, 0, this.hitbox.w, this.hitbox.h)
+
         if (!map) {
             return false
         }
@@ -246,16 +248,15 @@ export class RpgCommonPlayer extends DynamicObject<any, any> {
             this.posY = 0 
             return false
         }
-        if (nextPosition.x > map.widthPx - this.width) {
-            this.posX = map.widthPx - this.width
+        if (nextPosition.x > map.widthPx - this.hitbox.w) {
+            this.posX = map.widthPx - this.hitbox.w
             return false
         }
-        if (nextPosition.y > map.heightPx - this.height) {
-            this.posY = map.heightPx - this.height
+        if (nextPosition.y > map.heightPx - this.hitbox.h) {
+            this.posY = map.heightPx - this.hitbox.h
             return false
         }
 
-        const hitbox = Hit.createObjectHitbox(nextPosition.x, nextPosition.y, 0, this.hitbox.w, this.hitbox.h)
         let isClimbable = false
 
         const tileCollision = (x, y): boolean => {

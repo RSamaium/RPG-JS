@@ -13,6 +13,7 @@
   "keywords": [],
   "author": "",
   "license": "MIT",
+  "private": "true",
   "jest": {
     "transform": {
       "\\.ts$": "ts-jest",
@@ -44,5 +45,6 @@
     "express": "^4.17.1",
     "socket.io": "^3.0.4",
     "vue": "^3.0.4"
-  }
+  },
+  "gitHead": "44ebfaebe7c3292777f27cdaadf3c1373bdec917"
 }
