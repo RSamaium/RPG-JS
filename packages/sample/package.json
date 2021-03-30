@@ -36,11 +36,11 @@
     "webpack-cli": "^3.3.12"
   },
   "dependencies": {
-    "@rpgjs/admin-panel": "^3.0.0-alpha.4.2",
+    "@rpgjs/admin-panel": "^3.0.0-alpha.4.3",
     "@rpgjs/client": "^3.0.0-alpha.4.3",
     "@rpgjs/compiler": "^3.0.0-alpha.4.3",
-    "@rpgjs/database": "^3.0.0-alpha.4.2",
-    "@rpgjs/default-gui": "^3.0.0-alpha.4.2",
+    "@rpgjs/database": "^3.0.0-alpha.4.3",
+    "@rpgjs/default-gui": "^3.0.0-alpha.4.3",
     "@rpgjs/server": "^3.0.0-alpha.4.3",
     "@rpgjs/standalone": "^3.0.0-alpha.4.3",
     "@rpgjs/starter-kit-client": "^3.0.0-alpha.4.3",

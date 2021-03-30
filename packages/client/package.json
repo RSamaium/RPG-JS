@@ -20,7 +20,7 @@
   "license": "MIT",
   "dependencies": {
     "@rpgjs/common": "^3.0.0-alpha.4.3",
-    "@rpgjs/sync-client": "^3.0.0-alpha.4.2",
+    "@rpgjs/sync-client": "^3.0.0-alpha.4.3",
     "@tweenjs/tween.js": "^18.6.0",
     "@types/howler": "^2.2.1",
     "howler": "^2.2.1",
