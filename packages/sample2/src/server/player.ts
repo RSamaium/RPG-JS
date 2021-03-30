@@ -14,5 +14,6 @@ export class Player extends RpgPlayer {
       if (input == 'attack') {
           this.showAnimation('hero', 'attack', true)
       }
+      
     }
 }

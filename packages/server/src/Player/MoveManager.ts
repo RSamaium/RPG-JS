@@ -8,7 +8,8 @@ const {
     arrayFlat,
     random,
     isFunction,
-    capitalize
+    capitalize,
+    perlin
 } = Utils
 
 function wait(sec: number) {
@@ -433,7 +434,7 @@ export class MoveManager {
      */
     moveRoutes(routes: Routes) : Promise<boolean> {
         let count = 0
-        let frequence = this.frequency
+        let frequence = 0
         return new Promise((resolve) => {
             this._finishRoute = resolve
             routes = routes.map((route: any) => {

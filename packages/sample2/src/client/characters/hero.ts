@@ -1,5 +1,4 @@
-import { Spritesheet, Animation, Direction } from '@rpgjs/client'
-import { RpgSprite } from '../../../../client/src/Sprite/Player';
+import { Spritesheet, Animation, Direction, RpgSprite } from '@rpgjs/client'
 
 const frameY = direction => {
     return {
@@ -30,8 +29,6 @@ const frameAttackY = direction => {
         [Animation.Stand]: {
             rectWidth: 16,
             rectHeight: 32,
-            framesWidth: 4,
-            framesHeight: 4,
             animations: direction => [
                 [{ time: 0, frameX: 2, frameY: frameY(direction) }]
             ]
