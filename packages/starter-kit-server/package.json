@@ -7,7 +7,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc && cp -R ./src/maps/tmx ./lib/maps/tmx",
+    "build": "tsc && cp -R ./src/maps/tmx ./lib/maps",
     "watch": "tsc -w"
   },
   "files": [
