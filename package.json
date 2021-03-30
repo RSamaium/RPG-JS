@@ -28,6 +28,7 @@
     "build:testing": "cd packages/testing && npm run build",
     "build:sync-server": "cd packages/sync-server && npm run build",
     "build:starter-kit-server": "cd packages/starter-kit-server && npm run build",
+    "watch:starter-kit-server": "cd packages/starter-kit-server && npm run watch",
     "watch:sync-server": "cd packages/sync-server && npm run watch",
     "build:sync-client": "cd packages/sync-client && npm run build",
     "watch:sync-client": "cd packages/sync-client && npm run watch",

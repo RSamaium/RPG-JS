@@ -7,7 +7,7 @@ export function NpcEvent(options: {
     moveRandom?: boolean,
     frequency?: number,
     speed?: number
-}) {
+}): object {
     @EventData({
         name: options.name, 
         hitbox: {

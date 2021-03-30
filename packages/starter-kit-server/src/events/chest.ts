@@ -1,6 +1,6 @@
 import { RpgEvent, EventData, RpgPlayer, EventMode, Direction } from '@rpgjs/server'
 
-export function ChestEvent(options) {
+export function ChestEvent(options): object {
 
     const { name, text, gain } = options
 
@@ -12,7 +12,7 @@ export function ChestEvent(options) {
             height: 16
         }
     })
-    class _ChestEvent extends RpgEvent {
+    class ChestEventClass extends RpgEvent {
         onInit() {
             this.changeDirection(Direction.Up) 
             this.setGraphic('chest')
@@ -30,5 +30,5 @@ export function ChestEvent(options) {
             player.setVariable(name, true)
         }
     }
-    return _ChestEvent
+    return ChestEventClass
 }

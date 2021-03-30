@@ -1,5 +1,5 @@
 {
-  "name": "a-rpg-system",
+  "name": "@rpgjs/a-rpg-system",
   "version": "3.0.0-alpha.3",
   "description": "",
   "main": "index.js",

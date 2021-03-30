@@ -2,12 +2,13 @@
   "name": "@rpgjs/starter-kit-server",
   "version": "3.0.0-alpha.3",
   "description": "",
-  "main": "src/index.ts",
+  "main": "lib/index.js",
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "tsc"
+    "build": "tsc && cp -R ./src/maps/tmx ./lib/maps/tmx",
+    "watch": "tsc -w"
   },
   "keywords": [],
   "author": "Samuel Ronce",
