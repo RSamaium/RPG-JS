@@ -65,6 +65,12 @@ module.exports = function(dirname, extend = {}) {
             },
             extensions: ['.ts', '.js']
         },
+        resolveLoader: { 
+            alias: { 
+                server: path.resolve(__dirname, 'loaders', 'null.js'),
+                client: path.resolve(__dirname, 'loaders', 'content.js')
+            } 
+        },
         module: {
             rules: [{
                 test: /\.ts$/,
