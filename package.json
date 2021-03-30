@@ -17,7 +17,7 @@
   "scripts": {
     "test": "cd tests/unit-tests && npm test",
     "load": "artillery run tests/load-testing/socket.yml",
-    "lerna:publish": "lerna publish --ignore-prepublish",
+    "lerna:publish": "lerna publish --ignore-prepublish --force-publish --no-private --no-push",
     "lerna:ls": "lerna ls",
     "load-testing": "k6 run -e CHAT_WS=ws://localhost:3000 tests/load-testing/socket.js",
     "build": "concurrently -n build \"npm:build:*\"",
