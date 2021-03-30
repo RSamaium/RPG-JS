@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/starter-kit-server",
-  "version": "3.0.0-alpha.4.2",
+  "version": "3.0.0-alpha.4.3",
   "description": "",
   "main": "lib/index.js",
   "publishConfig": {
@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@rpgjs/database": "^3.0.0-alpha.4.2",
-    "@rpgjs/server": "^3.0.0-alpha.4.2"
+    "@rpgjs/server": "^3.0.0-alpha.4.3"
   },
   "gitHead": "44ebfaebe7c3292777f27cdaadf3c1373bdec917"
 }

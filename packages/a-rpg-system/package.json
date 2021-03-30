@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/a-rpg-system",
-  "version": "3.0.0-alpha.4.1",
+  "version": "3.0.0-alpha.4.3",
   "description": "",
   "main": "index.js",
   "scripts": {
