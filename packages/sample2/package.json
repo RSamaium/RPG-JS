@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/rpg-sample2",
-  "version": "3.0.0-alpha.4",
+  "version": "3.0.0-alpha.4.1",
   "description": "",
   "main": "index.js",
   "types": "index.d.ts",
@@ -34,13 +34,13 @@
     "webpack-cli": "^3.3.12"
   },
   "dependencies": {
-    "@rpgjs/client": "^3.0.0-alpha.4",
-    "@rpgjs/compiler": "^3.0.0-alpha.4",
-    "@rpgjs/database": "^3.0.0-alpha.4",
-    "@rpgjs/default-gui": "^3.0.0-alpha.4",
-    "@rpgjs/server": "^3.0.0-alpha.4",
-    "@rpgjs/standalone": "^3.0.0-alpha.4",
-    "@rpgjs/testing": "^3.0.0-alpha.4",
+    "@rpgjs/client": "^3.0.0-alpha.4.1",
+    "@rpgjs/compiler": "^3.0.0-alpha.4.1",
+    "@rpgjs/database": "^3.0.0-alpha.4.1",
+    "@rpgjs/default-gui": "^3.0.0-alpha.4.1",
+    "@rpgjs/server": "^3.0.0-alpha.4.1",
+    "@rpgjs/standalone": "^3.0.0-alpha.4.1",
+    "@rpgjs/testing": "^3.0.0-alpha.4.1",
     "express": "^4.17.1",
     "socket.io": "^3.0.4",
     "vue": "^3.0.4"
