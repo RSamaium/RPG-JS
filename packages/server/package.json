@@ -20,7 +20,7 @@
   "license": "MIT",
   "dependencies": {
     "@rpgjs/common": "^3.0.0-alpha.4",
-    "@rpgjs/database": "^3.0.0-alpha",
+    "@rpgjs/database": "^3.0.0-alpha.4",
     "@rpgjs/sync-server": "^3.0.0-alpha.4",
     "lance-gg": "github:rpgjs/lance",
     "lodash.merge": "^4.6.2",
