@@ -6,7 +6,7 @@ import { Query } from './Query'
 import Monitor from './Monitor'
 import { DAMAGE_SKILL, DAMAGE_PHYSIC, DAMAGE_CRITICAL, COEFFICIENT_ELEMENTS } from './presets'
 import { World } from '@rpgjs/sync-server'
-import { Utils } from '@rpgjs/common'
+import { Utils, RpgPlugin } from '@rpgjs/common'
 
 export default class RpgServerEngine extends ServerEngine {
 
@@ -36,6 +36,10 @@ export default class RpgServerEngine extends ServerEngine {
         this.loadScenes()
     }
 
+    loadPlugins() {
+
+    }
+
      /**
      * Start the RPG server
      * 
@@ -48,8 +52,8 @@ export default class RpgServerEngine extends ServerEngine {
     }
 
     step() {
-        super.step()
-        if (!Utils.isBrowser()) Monitor.update(this)
+        super.step() 
+       // if (!Utils.isBrowser()) Monitor.update(this)
     }
 
     loadScenes() {
@@ -67,13 +71,14 @@ export default class RpgServerEngine extends ServerEngine {
 
     onPlayerConnected(socket) {
         const playerId = super.onPlayerConnected(socket)
+        RpgPlugin.emit('Server.onPlayerConnected', [socket, playerId])
+       
         let player = new this.playerClass(this.gameEngine, { id: playerId }, { playerId })
         
         World.setUser(player, socket)
 
         this.gameEngine.addPlayer(player, socket.playerId, true)
 
-        if (!Utils.isBrowser()) Monitor.addMonitor(socket)
         player.server = this
         player._init()
         player.execMethod('onConnected')
@@ -81,8 +86,9 @@ export default class RpgServerEngine extends ServerEngine {
 
     onPlayerDisconnected(socketId, playerId) { 
         super.onPlayerDisconnected(socketId, playerId)
+        RpgPlugin.emit('Server.onPlayerDisconnected', [socketId, playerId])
+        
         const player = this.gameEngine.world.getObject(playerId)
-        if (!Utils.isBrowser()) Monitor.removeMonitor(socketId)
         player.execMethod('onDisconnected')
         this.gameEngine.removeObjectFromWorld(player.id)
     }

@@ -1,6 +1,7 @@
 {
   "packages": [
     "packages/*",
+    "packages/plugins/*",
     "packages/admin-panel/server"
   ],
   "version": "3.0.0-alpha.4.4"

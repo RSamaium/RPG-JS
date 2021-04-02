@@ -1,6 +1,6 @@
 import entryPoint from './entry-point'
 import RpgServerEngine from './server'
-import { Direction, Input, Control } from '@rpgjs/common'
+import { Direction, Input, Control, RpgPlugin } from '@rpgjs/common'
 import { RpgServer } from './RpgServer'
 import { EventData } from './decorators/event'
 import { MapData } from './decorators/map'
@@ -19,6 +19,7 @@ export {
     RpgServer,
     RpgEvent,
     RpgPlayer,
+    RpgPlugin,
     RpgMap,
     RpgEnemy,
     MapData,

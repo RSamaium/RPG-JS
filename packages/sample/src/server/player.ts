@@ -1,8 +1,5 @@
 import { RpgPlayer } from '@rpgjs/server'
 import { database } from '@rpgjs/starter-kit-server'
-import { Db } from './db'
-
-const db = new Db('db')
 
 export class Player extends RpgPlayer {
 

@@ -7,8 +7,9 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc && cp -R ./src/maps/tmx ./lib/maps",
-    "watch": "tsc -w"
+    "build": "tsc && npm run copy",
+    "watch": "npm run copy && tsc -w",
+    "copy": "cp -R ./src/maps/tmx ./lib/maps"
   },
   "files": [
     "lib"

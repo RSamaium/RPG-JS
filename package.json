@@ -32,8 +32,6 @@
     "watch:sync-server": "cd packages/sync-server && npm run watch",
     "build:sync-client": "cd packages/sync-client && npm run build",
     "watch:sync-client": "cd packages/sync-client && npm run watch",
-    "watch:admin-client": "cd packages/admin-panel/client && npm run serve",
-    "watch:admin-server": "cd packages/admin-panel/server && npm run start:dev",
     "watch:common": "cd packages/common && npm run watch",
     "watch:client": "cd packages/client && npm run watch",
     "watch:server": "cd packages/server && npm run watch",

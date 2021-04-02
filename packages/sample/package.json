@@ -41,6 +41,7 @@
     "@rpgjs/compiler": "^3.0.0-alpha.4.4",
     "@rpgjs/database": "^3.0.0-alpha.4.4",
     "@rpgjs/default-gui": "^3.0.0-alpha.4.4",
+    "@rpgjs/plugin-monitoring": "^1.0.0",
     "@rpgjs/server": "^3.0.0-alpha.4.4",
     "@rpgjs/standalone": "^3.0.0-alpha.4.4",
     "@rpgjs/starter-kit-client": "^3.0.0-alpha.4.4",

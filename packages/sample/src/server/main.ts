@@ -2,9 +2,10 @@
 import http from 'http'
 import express from 'express'
 import { Server } from 'socket.io'
-import { entryPoint, RpgWorld } from '@rpgjs/server'
-import { bootstrap } from '@rpgjs/admin-panel'
-import RPG from './rpg'
+import { entryPoint, RpgWorld, RpgPlugin } from '@rpgjs/server'
+import RPG from './rpg' 
+
+import RpgMonitoringPlugin from '@rpgjs/plugin-monitoring'
 
 const PORT = process.env.PORT || 3000
 
@@ -19,12 +20,25 @@ const io = new Server(server, {
 })
 const rpgGame = entryPoint(RPG, io)
 
+let register
+
+RpgMonitoringPlugin.server({
+    RpgPlugin
+}, {
+    init(_register) {
+        register = _register
+    }
+})
+
+app.use('/metrics', async (req, res) => {
+    res.setHeader('Content-Type', register.contentType)
+    res.end(await register.metrics())
+})
+
 app.use('/', express.static(__dirname + '/../client'))
 
-bootstrap(app, io, RpgWorld)
-
 server.listen(PORT, () =>  {
-    rpgGame.start()
+    rpgGame.start() 
     console.log(`
         ===> MMORPG is running on http://localhost:${PORT} <===
     `)

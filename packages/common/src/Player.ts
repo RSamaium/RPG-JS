@@ -302,7 +302,7 @@ export class RpgCommonPlayer extends DynamicObject<any, any> {
         }
 
         const localEvents = isBrowser() ? this.gameEngine.events : this.events
-        const events = [...eventsCollection, ...Object.values(localEvents)]
+        const events = [...eventsCollection, ...Object.values(localEvents)] 
 
         for (let event of events) {
             if (event.id == this.id) continue

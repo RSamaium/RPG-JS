@@ -1,13 +1,17 @@
 config:
   target: "http://localhost:3000"
   phases:
-    - duration: 20
+    - duration: 50
       arrivalRate: 1
   engines:
    socketio-v3: {}
+  processor: "./random-move.js"
 scenarios:
   - name: SocketIO
     engine: "socketio-v3"
-    flow:
-       - emit: ["move",  { input: direction, options: {"movement": true}, step: 0 }]
-       - think: 20
+    flow: 
+       - loop:
+          - function: "randomDir"
+          - emit: ["move", { input: "{{direction}}", options: {"movement": true}, step: 0 }]
+          - think: 1
+       - think: 50
