@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/sync-server",
-  "version": "3.0.0-alpha.4.4",
+  "version": "3.0.0-alpha.5",
   "description": "",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
@@ -23,7 +23,7 @@
     "@babel/preset-env": "^7.12.7",
     "@babel/preset-typescript": "^7.12.7",
     "@geckos.io/snapshot-interpolation": "^1.0.2",
-    "@rpgjs/common": "^3.0.0-alpha.4.4",
+    "@rpgjs/common": "^3.0.0-alpha.5",
     "deep-diff": "^1.0.2",
     "get-value": "^3.0.1",
     "install": "^0.13.0",

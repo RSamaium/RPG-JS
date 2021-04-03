@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/admin-panel",
-  "version": "3.0.0-alpha.4.4",
+  "version": "3.0.0-alpha.5",
   "description": "",
   "author": "Samuel Ronce",
   "main": "dist/main.js",
