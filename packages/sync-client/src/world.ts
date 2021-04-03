@@ -16,11 +16,12 @@ class WorldClass {
         this.socket.on('w', (response) => {
             const bufView = new Uint8Array(response)
             const decode = msgpack.decode(bufView)
-            const [roomId, data] = decode
+            const [roomId, time, data] = decode
             this.obs$.next({
                 roomId, 
                 data: merge(this.obs$.value.data || {}, data),
-                partial: data
+                partial: data,
+                time
             })
         })
         return this

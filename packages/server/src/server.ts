@@ -1,4 +1,3 @@
-import { ServerEngine } from 'lance-gg';
 import { SceneMap } from './Scenes/Map';
 import { SceneBattle } from './Scenes/Battle';
 import { RpgPlayer } from './Player/Player'
@@ -6,18 +5,20 @@ import { Query } from './Query'
 import Monitor from './Monitor'
 import { DAMAGE_SKILL, DAMAGE_PHYSIC, DAMAGE_CRITICAL, COEFFICIENT_ELEMENTS } from './presets'
 import { World } from '@rpgjs/sync-server'
-import { Utils, RpgPlugin } from '@rpgjs/common'
+import { Utils, RpgPlugin, Scheduler } from '@rpgjs/common'
 
-export default class RpgServerEngine extends ServerEngine {
+let tick = 0
+
+export default class RpgServerEngine {
 
     public database: any = {}
     public damageFormulas: any = {}
     private playerClass: any
     private scenes: Map<string, any> = new Map()
     protected totalConnected: number = 0
+    private scheduler
 
-    constructor(public io, public gameEngine, private inputOptions) {
-        super(io, gameEngine, World, inputOptions) 
+    constructor(public io, public gameEngine, private inputOptions) { 
         this.playerClass = inputOptions.playerClass || RpgPlayer
         if (inputOptions.database) {
             for (let key in inputOptions.database) {
@@ -48,12 +49,28 @@ export default class RpgServerEngine extends ServerEngine {
      * @memberof RpgServerEngine
      */
     start() {
-        super.start()
+        let schedulerConfig = {
+            tick: this.step.bind(this),
+            period: 1000 / this.inputOptions.stepRate,
+            delay: 4
+        };
+        this.scheduler = new Scheduler(schedulerConfig).start();
+        this.gameEngine.start({
+            getObject(id) {
+                return Query.getPlayer(id) 
+            },
+            getObjectsOfGroup(groupId: string, player: RpgPlayer) {
+                return Query.getObjectsOfMap(groupId, player)
+            }
+        })
+        this.io.on('connection', this.onPlayerConnected.bind(this))
     }
 
     step() {
-        super.step() 
-       // if (!Utils.isBrowser()) Monitor.update(this)
+        tick++
+        if (tick % 4 === 0) {
+            World.send()
+        }
     }
 
     loadScenes() {
@@ -70,26 +87,34 @@ export default class RpgServerEngine extends ServerEngine {
     }
 
     onPlayerConnected(socket) {
-        const playerId = super.onPlayerConnected(socket)
+        const playerId = Utils.generateUID()
+
         RpgPlugin.emit('Server.onPlayerConnected', [socket, playerId])
        
-        let player = new this.playerClass(this.gameEngine, { id: playerId }, { playerId })
+        let player: RpgPlayer = new this.playerClass(this.gameEngine, playerId)
+
+        socket.on('move', (data) => {
+            this.gameEngine.processInput(data, playerId)
+        })
+
+        socket.on('disconnect', () => {
+            this.onPlayerDisconnected(socket.id, playerId)
+        })
         
         World.setUser(player, socket)
 
-        this.gameEngine.addPlayer(player, socket.playerId, true)
+        socket.emit('playerJoined', { playerId })
 
         player.server = this
         player._init()
+
         player.execMethod('onConnected')
     }
 
     onPlayerDisconnected(socketId, playerId) { 
-        super.onPlayerDisconnected(socketId, playerId)
         RpgPlugin.emit('Server.onPlayerDisconnected', [socketId, playerId])
-        
-        const player = this.gameEngine.world.getObject(playerId)
+        const player = World.getUser(playerId)
         player.execMethod('onDisconnected')
-        this.gameEngine.removeObjectFromWorld(player.id)
+        World.disconnectUser(playerId)
     }
 }

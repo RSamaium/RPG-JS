@@ -1,5 +1,4 @@
 import { RpgPlayer } from '../Player/Player'
-import { BaseTypes } from 'lance-gg'
 
 interface StrategyBroadcastingOptions {
     params: any[],

@@ -434,7 +434,7 @@ export class MoveManager {
      */
     moveRoutes(routes: Routes) : Promise<boolean> {
         let count = 0
-        let frequence = 0
+        let frequence = this.frequency
         return new Promise((resolve) => {
             this._finishRoute = resolve
             routes = routes.map((route: any) => {
@@ -484,11 +484,12 @@ export class MoveManager {
                 }
                 routes.shift()
 
-                // If the event is in Scenario mode, you don't use the launcher-gg library for the positions but @rpgjs/sync-server
+                /*
                 if (this.constructor['mode'] == EventMode.Scenario) {
                     const room = World.getRoom(this['map'])
                     if (room.$detectChanges) room.$detectChanges()
                 }
+                */
             }
             move()
             this.movingInterval = setInterval(move, 16)

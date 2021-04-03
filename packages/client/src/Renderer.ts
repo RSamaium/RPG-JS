@@ -1,12 +1,12 @@
 window.PIXI = require('pixi.js')
 
-import { Renderer } from 'lance-gg'
 import { SceneMap } from './Scene/Map'
-import { SceneBattle } from './Scene/Battle'
 import { Scene } from './Presets/Scene'
 import { RpgGui } from './RpgGui'
 
-export default class RpgRenderer extends Renderer<any, any> {
+const TIME_RESET_THRESHOLD = 100
+
+export default class RpgRenderer  {
 
     public vm: any
     private scene: any = null
@@ -19,6 +19,12 @@ export default class RpgRenderer extends Renderer<any, any> {
     selector: HTMLElement
     animation
     client
+    gameEngine
+    doReset = false
+
+    constructor(private clientEngine) {
+        this.gameEngine = clientEngine.gameEngine
+    }
 
     async init() {
         this.onDOMLoaded()
@@ -63,7 +69,7 @@ export default class RpgRenderer extends Renderer<any, any> {
             ...this.options.canvas
         };
         this.renderer = PIXI.autoDetectRenderer(options)
-        this.gameEngine.renderer = this.renderer
+        //this.gameEngine.renderer = this.renderer
         this.selector = document.body.querySelector(this.options.selector)
         this.guiEl = this.selector.querySelector(this.options.selectorGui)
 
@@ -97,7 +103,6 @@ export default class RpgRenderer extends Renderer<any, any> {
     }
     
     draw(t, dt) {
-        super.draw(t, dt)
         if (this.scene) this.scene.draw(t, dt)
         this.renderer.render(this.stage)
     }

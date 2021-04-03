@@ -71,6 +71,19 @@ class QueryClass {
         return Object.values(users) as RpgPlayer[]
     }
 
+    getObjectsOfMap(map: string, playerId?: RpgPlayer | string) {
+        const room: any = World.getRoom(map)
+        let player: any = null
+        if (playerId) {
+            player = this.getPlayer(playerId)
+        }
+        return [
+            ...Object.values(room.users),
+            ...Object.values(room.events),
+            ...(player ? Object.values(player.events) : [])
+        ]
+    }
+
     /**
      * Recover all the players of a map
      * 

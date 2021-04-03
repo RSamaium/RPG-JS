@@ -67,13 +67,7 @@ export class RpgMap extends RpgCommonMap {
             ev.teleport(position || ev.name)
             ev.server = this._server
 
-            // We add in the room if shared mode
-            if (event.mode == EventMode.Shared) {
-                this._server.assignObjectToRoom(ev, this.id)
-            }
-
             ev.execMethod('onInit')
-
             events[ev.id] = ev
         }
 

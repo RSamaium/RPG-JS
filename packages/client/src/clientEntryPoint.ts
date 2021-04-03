@@ -23,7 +23,7 @@ export default (engine?, _options: any = {}) => {
         verbose: false,
         ..._options 
     }
-    const gameEngine = new RpgCommonGame(options)
+    const gameEngine = new RpgCommonGame()
     const clientEngine = new engine(gameEngine, options, _options.io)
     return clientEngine
 }

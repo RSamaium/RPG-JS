@@ -54,7 +54,6 @@ export class SceneMap {
         player.events = []
 
         if (player.prevMap) {
-            this.server.gameEngine.world.removeObjectOfGroup(player.prevMap, player.id)
             World.leaveRoom(player.prevMap, player.id)
         }
 
@@ -80,13 +79,9 @@ export class SceneMap {
             ...serializeMap
         })
 
-        this.server.createRoom(mapId)
-        this.server.assignObjectToRoom(player, mapId)
         World.joinRoom(mapId, player.id)
-
         player = World.getUser(player.id)
-        this.server.gameEngine.world.objects[player.id] = player
-        
+
         player.execMethod('onEnter', [player, player.prevMap || null], mapInstance)
         player.teleport(positions || 'start')
         player.events = mapInstance.createEvents(EventMode.Scenario)

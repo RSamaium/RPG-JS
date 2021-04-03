@@ -1,10 +1,9 @@
-import { Lib } from 'lance-gg'
 import { RpgCommonGame } from '@rpgjs/common'
 
 export default function(engine, io, options = {}) {
     const _options = Object.assign(engine._options, options)
 
-    const gameEngine = new RpgCommonGame({ traceLevel: Lib.Trace.TRACE_NONE });
+    const gameEngine = new RpgCommonGame()
     const serverEngine = new engine(io, gameEngine, { 
         debug: {}, 
         updateRate: 10, 

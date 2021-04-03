@@ -1,38 +1,27 @@
-import { GameEngine, CannonPhysicsEngine, Utils } from 'lance-gg'
+import { generateUID } from './Utils'
+import { EventEmitter } from './EventEmitter'
 import { RpgCommonPlayer, Direction } from './Player'
 import { Control } from './Input'
-import Event from './Event'
-import SAT from 'sat'
 
-const PLAYER_CLASS = Utils.hashStr('Player')
-const EVENT_CLASS = Utils.hashStr('Event')
+export default class Game extends EventEmitter {
 
-export default class Game extends GameEngine<any> {
-
-    physicsEngine: any
     events: any
+    world: any
 
-    constructor(options) {
-        super(options);
-        /*this.physicsEngine = new SimplePhysicsEngine({ 
-            gameEngine: this,
-            collisions: { type: 'bruteForce', autoResolve: false }
-        });*/
-        this.physicsEngine = new CannonPhysicsEngine({ gameEngine: this }) 
+    constructor() {
+        super()
         this.events = {} // events for all player in map
     }
 
-    registerClasses(serializer) {
-        serializer.registerClass(RpgCommonPlayer, PLAYER_CLASS)
-        serializer.registerClass(Event, EVENT_CLASS)
-        serializer.registerClass(SAT.Box)
+    start(world) {
+        this.world = world
     }
-
+    
     addObject(_class, playerId?) {
         let event
-        if (!playerId) playerId = Utils.generateUID()
+        if (!playerId) playerId = generateUID()
         if (_class.constructor.name == 'Function') {
-            event = new _class(this, { id: playerId }, { playerId })
+            event = new _class(this, playerId)
         }
         else {
             event = _class
@@ -42,21 +31,15 @@ export default class Game extends GameEngine<any> {
 
     addPlayer(playerClass, playerId, addWord = true) {
         const player = this.addObject(playerClass, playerId)
-        player.classId =  PLAYER_CLASS
-        if (addWord) this.addObjectToWorld(player) 
         return player
     }
 
     addEvent(eventClass, addWord = true) {
         const event = this.addObject(eventClass)
-        event.classId =  EVENT_CLASS
-        if (addWord) this.addObjectToWorld(event) 
         return event
     }
 
     processInput(inputData, playerId) {
-        super.processInput(inputData, playerId)
-
         const player = this.world.getObject(playerId)
         const { input } = inputData
 

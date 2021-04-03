@@ -8,7 +8,7 @@ export class Packet {
     }
     
     get message() {
-        return [this.roomId, this.data]
+        return [this.roomId, Date.now(), this.data]
     }
 
     clone(data) {

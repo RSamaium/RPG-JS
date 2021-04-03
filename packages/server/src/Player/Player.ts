@@ -53,6 +53,7 @@ const playerSchemas = {
         y: Number,
         z: Number
     },
+    direction: Number,
     teleported: Number,
 
     param: Object,
@@ -91,10 +92,7 @@ export class RpgPlayer extends RpgCommonPlayer {
 
     static schemas = {
        ...playerSchemas,
-        events: [{
-            direction: Number,
-            ...playerSchemas
-        }]
+        events: [playerSchemas]
     }
 
     private _name
@@ -102,8 +100,8 @@ export class RpgPlayer extends RpgCommonPlayer {
     public param: any 
     public _rooms = []
 
-    constructor(gameEngine?, options?, props?) {
-        super(gameEngine, options, props)
+    constructor(gameEngine?, playerId?) {
+        super(gameEngine, playerId)
         this.initialize()
     }
 
@@ -242,7 +240,7 @@ export class RpgPlayer extends RpgCommonPlayer {
         if (!positions) positions = { x: 0, y: 0 }
         if (!(positions as Position).z) (positions as Position).z = 0
         this.teleported++
-        this.position.copy(positions)
+        this.position = positions
         return (positions as Position)
     }
 

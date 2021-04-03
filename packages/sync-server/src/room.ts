@@ -63,7 +63,9 @@ export class Room {
         }
 
         room.$currentState = () => this.memoryObject
-        room.$clearCurrentState = () => this.memoryObject = {}
+        room.$clearCurrentState = () => {
+            this.memoryObject = {}
+        }
 
         const dict = {}
         const self = this

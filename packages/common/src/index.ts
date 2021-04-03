@@ -8,6 +8,7 @@ import Utils from './Utils'
 import { RpgPlugin } from './Plugin'
 import * as TransportIo from './transports/io'
 import { Input, Control } from './Input'
+import { Scheduler } from './Scheduler'
 import * as MockIo from './transports/io'
 
 export {
@@ -24,5 +25,6 @@ export {
     Input,
     Control,
     MockIo,
-    RpgPlugin
+    RpgPlugin,
+    Scheduler
 }

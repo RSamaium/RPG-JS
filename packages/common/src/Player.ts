@@ -1,4 +1,3 @@
-import { DynamicObject, BaseTypes, ThreeVector } from 'lance-gg'
 import { intersection, isString, isBrowser } from './Utils'
 import SAT from 'sat'
 import { Hit } from './Hit'
@@ -18,7 +17,7 @@ export enum PlayerType {
     Event = 'event'
 }
 
-export class RpgCommonPlayer extends DynamicObject<any, any> {
+export class RpgCommonPlayer {
 
     map: string = ''
     graphic: string = ''
@@ -27,7 +26,7 @@ export class RpgCommonPlayer extends DynamicObject<any, any> {
     canMove: boolean
     speed: number
     events: any[] = []
-    direction: number
+    direction: number = 0
     collisionWith: any[] = []
     data: any = {}
     hitbox: any
@@ -35,25 +34,22 @@ export class RpgCommonPlayer extends DynamicObject<any, any> {
     private _position: any
     private _hitboxPos: any
 
-    static get netScheme() {
-        const obj =  Object.assign({
-            direction: { type: BaseTypes.TYPES.INT8 }
-        }, super.netScheme) 
-        return obj
-    }
-
     static get ACTIONS() {
         return ACTIONS
     }
 
-    constructor(gameEngine, options, props: any = {}) {
-        super(gameEngine, options, props)
-        this.direction = props.direction || 0
+    constructor(private gameEngine, public playerId) {
         this._hitboxPos = new SAT.Vector(0, 0)
         this.setHitbox(this.width, this.height)
-        this.position = new ThreeVector(0, 0, 0)
-        this.position.x = props.x || 0
-        this.position.y = props.y || 0
+        this.position = { x: 0, y: 0, z: 0 }
+    }
+
+    get id() {
+        return this.playerId
+    }
+
+    set id(str: string) {
+        this.playerId = str
     }
 
     /**
@@ -66,6 +62,9 @@ export class RpgCommonPlayer extends DynamicObject<any, any> {
      * @memberof Player
      */
     set position(val) {
+        this._hitboxPos.x = val.x
+        this._hitboxPos.y = val.y
+        this._hitboxPos.z = val.z
         this._position = new Proxy(val, {
             get: (target, prop: string) => target[prop], 
             set: (target, prop, value) => {
@@ -292,17 +291,7 @@ export class RpgCommonPlayer extends DynamicObject<any, any> {
             return false
         }
 
-        let eventsCollection
-        
-        if (this.gameEngine.world.groups.has(this.map)) {
-            eventsCollection = this.gameEngine.world.getObjectsOfGroup(this.map)
-        }
-        else {
-            eventsCollection = Object.values(this.gameEngine.world.objects)
-        }
-
-        const localEvents = isBrowser() ? this.gameEngine.events : this.events
-        const events = [...eventsCollection, ...Object.values(localEvents)] 
+        let events = this.gameEngine.world.getObjectsOfGroup(this.map, this)
 
         for (let event of events) {
             if (event.id == this.id) continue
@@ -367,7 +356,7 @@ export class RpgCommonPlayer extends DynamicObject<any, any> {
                 }
                 break
         }
-        
+
         return true
     }
 
@@ -441,10 +430,6 @@ export class RpgCommonPlayer extends DynamicObject<any, any> {
             default: 
                 return NaN
         }
-    }
-
-    syncTo(other) {
-        super.syncTo(other)
     }
 }
 

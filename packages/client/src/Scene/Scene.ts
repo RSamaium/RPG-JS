@@ -1,6 +1,6 @@
 import { Utils } from '@rpgjs/common'
 import * as PIXI from 'pixi.js'
-import { KeyboardControls, GameEngine } from 'lance-gg'
+import { KeyboardControls } from '../KeyboardControls'
 import RpgSprite from '../Sprite/Character'
 import { Animation } from '../Effects/Animation'
 
@@ -26,7 +26,7 @@ export class Scene {
     private animations: Animation[] = []
     private _controlsOptions: Controls = {}
 
-    constructor(protected game: GameEngine<any>) {
+    constructor(protected game: any) {
         this.controls = this.game.clientEngine.controls
         this.setInputs(this.inputs)
     }
@@ -130,11 +130,11 @@ export class Scene {
     }
 
     draw(t, dt) {
-        const logicObjects = { ...this.game.world.objects, ...this.game.events }
+        const logicObjects = { ...this.game.world.getObjects(), ...this.game.events }
         const renderObjects = this.objects
         const sizeLogic = Object.values(logicObjects).length
         for (let key in logicObjects) {
-            const val = logicObjects[key]
+            const val = logicObjects[key].object
             if (!renderObjects.has(key)) {
                 const sprite = this.addObject(val, key)
                 this.triggerSpriteChanges(val, sprite, true)
