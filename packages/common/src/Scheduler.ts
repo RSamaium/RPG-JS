@@ -1,4 +1,4 @@
-import EventEmitter from 'event-emitter';
+import { EventEmitter } from './EventEmitter';
 
 const SIXTY_PER_SEC = 1000 / 60;
 const LOOP_SLOW_THRESH = 0.3;
@@ -41,7 +41,6 @@ export class Scheduler {
         let eventEmitter = new EventEmitter();
         this.on = eventEmitter.on;
         this.once = eventEmitter.once;
-        this.removeListener = eventEmitter.removeListener;
         this.emit = eventEmitter.emit;
 
     }
