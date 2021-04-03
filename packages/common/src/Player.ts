@@ -38,7 +38,7 @@ export class RpgCommonPlayer {
         return ACTIONS
     }
 
-    constructor(private gameEngine, public playerId) {
+    constructor(private gameEngine, public playerId: string) {
         this._hitboxPos = new SAT.Vector(0, 0)
         this.setHitbox(this.width, this.height)
         this.position = { x: 0, y: 0, z: 0 }

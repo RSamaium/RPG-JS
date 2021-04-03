@@ -217,8 +217,3 @@ export class GuiManager {
     }
 
 }
-
-export interface GuiManager{ 
-    playerId: number
-    emit: (key, value) => void
-}
