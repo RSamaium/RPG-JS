@@ -19,7 +19,6 @@
   "author": "Samuel Ronce",
   "license": "MIT",
   "dependencies": {
-    "lance-gg": "github:rpgjs/lance",
     "sat": "^0.8.0"
   },
   "gitHead": "44ebfaebe7c3292777f27cdaadf3c1373bdec917"

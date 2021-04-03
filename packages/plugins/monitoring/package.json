@@ -6,11 +6,13 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "keywords": [],
   "author": "Samuel Ronce",
   "license": "MIT",
   "dependencies": {
-    "prom-client": "^13.1.0",
-    "swagger-stats": "^0.95.19"
+    "prom-client": "^13.1.0"
   }
 }

@@ -36,7 +36,6 @@
     "webpack-cli": "^3.3.12"
   },
   "dependencies": {
-    "@rpgjs/admin-panel": "^3.0.0-alpha.4.4",
     "@rpgjs/client": "^3.0.0-alpha.4.4",
     "@rpgjs/compiler": "^3.0.0-alpha.4.4",
     "@rpgjs/database": "^3.0.0-alpha.4.4",
