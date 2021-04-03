@@ -27,6 +27,9 @@ export class RpgMap extends RpgCommonMap {
         super.load(data) 
         RpgCommonMap.buffer.set(this.id, this)
         this.events = this.createEvents(EventMode.Shared)
+        for (let key in this.events) {
+            this.events[key].execMethod('onInit')
+        }
         this.onLoad()
     }
 
@@ -66,8 +69,6 @@ export class RpgMap extends RpgCommonMap {
             ev.map = this.id
             ev.teleport(position || ev.name)
             ev.server = this._server
-
-            ev.execMethod('onInit')
             events[ev.id] = ev
         }
 

@@ -17,13 +17,13 @@ import { Potion } from '../database/items/potion';
             name: 'EV-2',
             text: 'I find this city very quiet!',
             graphic: 'female13',
-            //moveRandom: true
+            moveRandom: true
         }),
         NpcEvent({
             name: 'EV-3',
             text: 'It is beautiful today!',
             graphic: 'female19',
-            //moveRandom: true
+            moveRandom: true
         }),
         ShopEvent,
         ChestEvent({
