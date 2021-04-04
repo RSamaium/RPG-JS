@@ -16,16 +16,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "jest": {
-    "transform": {
-      "\\.ts$": "ts-jest",
-      "\\.tmx$": "<rootDir>/node_modules/@rpgjs/compiler/tmx-loader/index.js"
-    },
-    "moduleFileExtensions": [
-      "ts",
-      "js"
-    ]
-  },
   "devDependencies": {
     "@types/jest": "^26.0.19",
     "jest": "^26.6.3",
