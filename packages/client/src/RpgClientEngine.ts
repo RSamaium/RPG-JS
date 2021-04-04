@@ -197,7 +197,6 @@ export default class RpgClientEngine {
       
           if (serverSnapshot && playerSnapshot) {
             const serverPos = serverSnapshot.state.filter(s => s.id === playerId)[0]
-            // calculate the offset between server and client
             const offsetX = playerSnapshot.state[0].x - serverPos.x
             const offsetY = playerSnapshot.state[0].y - serverPos.y
             const correction = 60
@@ -233,8 +232,16 @@ export default class RpgClientEngine {
     }
 
     _initSocket() {
-        this.socket = this.io()
 
+        const { standalone } = this.gameEngine
+
+        if (!standalone) {
+            this.socket = this.io()
+        }
+        else {
+            this.socket = this.io
+        }
+    
         this.socket.on('connect', () => {
             if (RpgGui.exists(PrebuiltGui.Disconnect)) RpgGui.hide(PrebuiltGui.Disconnect)
             this.onConnect()
@@ -327,6 +334,10 @@ export default class RpgClientEngine {
         })
 
         RpgGui._setSocket(this.socket)
+
+        if (standalone) {
+            this.socket.connection()
+        }
     }
 
     onConnect() {}
