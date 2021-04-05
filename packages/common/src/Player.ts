@@ -31,6 +31,7 @@ export class RpgCommonPlayer {
     data: any = {}
     hitbox: any
 
+    private memoryTiles: { [position: string] : boolean } = {}
     private _position: any
     private _hitboxPos: any
 
@@ -258,13 +259,28 @@ export class RpgCommonPlayer {
 
         let isClimbable = false
 
+        for (let oldPos in this.memoryTiles) {
+            map.clearObjectPos(this, oldPos)
+        }
+
+        this.memoryTiles = {}
+
+        //let events: any = []
+
         const tileCollision = (x, y): boolean => {
             const tile = map.getTileByPosition(x, y, [nextPosition.z, this.height])
+            const tilePos = map.getTileOriginPosition(x, y) 
+            // const keyPos = `${tilePos.x},${tilePos.y}`
+            // if (map.objects[keyPos]) {
+            //     events = [...events, ...Object.values(map.objects[keyPos])]
+            // }
+            // this.memoryTiles[keyPos] = true
+            // map.addObjectByPos(this, tilePos.x, tilePos.y)
             if (tile.hasCollision) {
                 return true
             }
             else if (tile.objectGroups) {
-                const tilePos = map.getTileOriginPosition(x, y) 
+                
                 for (let object of tile.objectGroups) {
                     const hit = Hit.getHitbox(object, {
                         x: tilePos.x,
@@ -293,7 +309,10 @@ export class RpgCommonPlayer {
 
         let events = this.gameEngine.world.getObjectsOfGroup(this.map, this)
 
-        for (let event of events) {
+        //const uniqEvent = new Set(events)
+
+        for (let eventsId of events) {
+            let event = this.gameEngine.world.getObject(eventsId)
             if (event.id == this.id) continue
             if (!this.zCollision(event)) continue
             const collided = Hit.testPolyCollision('box', hitbox, event.hitbox)
@@ -330,7 +349,7 @@ export class RpgCommonPlayer {
             }
         }
 
-        switch (direction) {
+        /*switch (direction) {
             case Direction.Left:
                 this.posX = nextPosition.x
                 break
@@ -355,8 +374,9 @@ export class RpgCommonPlayer {
                     this.posY = nextPosition.y
                 }
                 break
-        }
-
+        }*/
+        this.position = nextPosition
+ 
         return true
     }
 

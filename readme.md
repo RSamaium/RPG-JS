@@ -96,6 +96,10 @@ Example 2: (with [PM2](https://pm2.keymetrics.io))
 
 Put the files in the `dist/standalone` folder on a static server (as [Vercel](https://vercel.com) or [Netlify](https://www.netlify.com) or your own server)
 
+# Benchmark
+
+WIP|
+
 ## Contribute to developments
 
 To contribute to the developments, install the sources locally:

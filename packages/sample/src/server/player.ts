@@ -34,7 +34,7 @@ export class Player extends RpgPlayer {
         
        }  */
        
-        await this.changeMap('medieval')
+        await this.changeMap('cave')
     }
 
     onInput({ input }) {

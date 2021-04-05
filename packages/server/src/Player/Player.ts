@@ -348,14 +348,7 @@ export class RpgPlayer extends RpgCommonPlayer {
     /**
      * Run the change detection cycle. Normally, as soon as a hook is called in a class, the cycle is started. But you can start it manually
      * The method calls the `onChanges` method on events and synchronizes all map data with the client.
-     * 
-     * ```ts
-     * // restarts the change detection cycle every 3s
-     * setInterval(() => {
-     *      player.hp += 10
-     *      player.syncChanges()
-     * }, 3000)
-     * ```
+
      * @title Run Sync Changes
      * @method player.syncChanges()
      * @returns {void}
@@ -363,10 +356,6 @@ export class RpgPlayer extends RpgCommonPlayer {
      */
     syncChanges() {
         this._eventChanges()
-        // Trigger detect changes cycle in @rpgjs/sync-server package
-        World.forEachUserRooms(''+this.playerId, (room: any) => {
-            if (room) room.$detectChanges()
-        })
     }
 
     databaseById(id: string) {

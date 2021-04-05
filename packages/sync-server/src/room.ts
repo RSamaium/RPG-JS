@@ -17,7 +17,7 @@ export class Room {
     private join(user: User, room: RoomClass) {
         if (!user._rooms) user._rooms = []
         user._rooms.push(room.id)
-        if (!user.id) user.id = Utils.generateId()
+        if (!user.id) user.id = Utils.generateId() 
         if (room['onJoin']) room['onJoin'](user)
         const object = this.extractObjectOfRoom(room, room.$schema)
         const packet = new Packet(object, <string>room.id)
@@ -46,7 +46,7 @@ export class Room {
         if (!room.users) room.users = {} 
         if (room.$inputs) this.addInputs(room, room.$inputs)
 
-        room.$detectChanges = () => {
+        room.$detectChanges = () => { 
             //this.detectChanges(room)
         }
 

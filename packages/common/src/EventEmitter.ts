@@ -13,7 +13,7 @@ export class EventEmitter {
         return this
     }
 
-    emit(name: string, data: any) {
+    emit(name: string, data?: any) {
         const ret: any = []
         if (this.listeners[name]) {
             for (let listener of this.listeners[name]) {

@@ -2,7 +2,7 @@ config:
   target: "http://localhost:3000"
   phases:
     - duration: 50
-      arrivalRate: 1
+      arrivalRate: 3
   engines:
    socketio-v3: {}
   processor: "./random-move.js"

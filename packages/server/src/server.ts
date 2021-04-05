@@ -69,7 +69,7 @@ export default class RpgServerEngine {
     step() {
         tick++
         if (tick % 4 === 0) {
-            World.send()
+            World.send() 
         }
     }
 
@@ -101,7 +101,7 @@ export default class RpgServerEngine {
             this.onPlayerDisconnected(socket.id, playerId)
         })
         
-        World.setUser(player, socket)
+        World.setUser(player, socket) 
 
         socket.emit('playerJoined', { playerId })
 

@@ -1,5 +1,6 @@
 import { Hit, HitObject } from './Hit'
 import { random, intersection } from './Utils'
+import { RpgCommonPlayer } from './Player'
 
 const buffer = new Map()
 
@@ -20,9 +21,24 @@ export default class RpgCommonMap {
     tileHeight: number = 0
     layers: any[] = []
     shapes: any[] = []
+    // define objects in tiles. Allows you to search for objects by tile for performance 
+    objects: { [positions: string]: { [objectId: string]: string }  } = {}
 
     static get buffer() {
         return buffer
+    }
+
+    addObjectByPos(object, x, y) {
+        const key = `${x},${y}`
+        if (!this.objects[key]) this.objects[key] = {}
+        this.objects[key][object.id] = object.id
+    }
+
+    clearObjectPos(object, key) {
+        delete this.objects[key][object.id]
+        if (Object.keys(this.objects[key]).length == 0) {
+            delete this.objects[key]
+        }
     }
 
     load(data) {
