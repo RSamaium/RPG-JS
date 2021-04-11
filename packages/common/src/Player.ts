@@ -92,7 +92,7 @@ export class RpgCommonPlayer {
         this.position.z = val
     }
 
-    get mapInstance() {
+    get mapInstance(): Map {
         return Map.buffer.get(this.map)
     }
 
@@ -233,7 +233,7 @@ export class RpgCommonPlayer {
         this.changeDirection(direction)
 
         const nextPosition = this.defineNextPosition(direction)
-        const map = this.mapInstance
+        const map: Map = this.mapInstance
 
         const hitbox = Hit.createObjectHitbox(nextPosition.x, nextPosition.y, 0, this.hitbox.w, this.hitbox.h)
 
@@ -259,23 +259,9 @@ export class RpgCommonPlayer {
 
         let isClimbable = false
 
-        for (let oldPos in this.memoryTiles) {
-            map.clearObjectPos(this, oldPos)
-        }
-
-        this.memoryTiles = {}
-
-        //let events: any = []
-
         const tileCollision = (x, y): boolean => {
             const tile = map.getTileByPosition(x, y, [nextPosition.z, this.height])
-            const tilePos = map.getTileOriginPosition(x, y) 
-            // const keyPos = `${tilePos.x},${tilePos.y}`
-            // if (map.objects[keyPos]) {
-            //     events = [...events, ...Object.values(map.objects[keyPos])]
-            // }
-            // this.memoryTiles[keyPos] = true
-            // map.addObjectByPos(this, tilePos.x, tilePos.y)
+            const tilePos = map.getTileOriginPosition(x, y)
             if (tile.hasCollision) {
                 return true
             }
@@ -309,10 +295,7 @@ export class RpgCommonPlayer {
 
         let events = this.gameEngine.world.getObjectsOfGroup(this.map, this)
 
-        //const uniqEvent = new Set(events)
-
-        for (let eventsId of events) {
-            let event = this.gameEngine.world.getObject(eventsId)
+        for (let event of events) {
             if (event.id == this.id) continue
             if (!this.zCollision(event)) continue
             const collided = Hit.testPolyCollision('box', hitbox, event.hitbox)
@@ -348,35 +331,7 @@ export class RpgCommonPlayer {
                 if (collision) return false
             }
         }
-
-        /*switch (direction) {
-            case Direction.Left:
-                this.posX = nextPosition.x
-                break
-            case Direction.Right:
-                this.posX = nextPosition.x
-                break
-            case Direction.Up:
-                // Todo
-                if (isClimbable) {
-                    this.posZ = nextPosition.z + this.speed
-                }
-                else {
-                    this.posY = nextPosition.y
-                }
-                break
-            case Direction.Down:
-                // Todo
-                if (isClimbable) {
-                    this.posZ = nextPosition.z - this.speed
-                }
-                else {
-                    this.posY = nextPosition.y
-                }
-                break
-        }*/
         this.position = nextPosition
- 
         return true
     }
 

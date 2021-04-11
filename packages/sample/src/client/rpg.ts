@@ -6,6 +6,7 @@ import { Sprite } from './player'
 import hud from './gui/hud.vue'
 import inn from './gui/inn.vue'
 import name from './gui/name.vue'
+import info from './gui/info.vue'
 import { SceneMap } from './map'
 
 @RpgClient({
@@ -15,7 +16,8 @@ import { SceneMap } from './map'
        ...gui,
        hud,
        inn,
-       name
+       name,
+       info
     ],
     spriteClass: Sprite,
     scenes: {

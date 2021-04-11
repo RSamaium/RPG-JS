@@ -79,10 +79,8 @@ export default class RpgRenderer  {
         }
         
         this.selector.insertBefore(this.renderer.view, this.selector.firstChild)
-        const screens = document.querySelector(this.options.selector).children
-        for (let screen of screens) {
-            screen.style.position = 'absolute'
-        }
+        const [canvas] = document.querySelector(this.options.selector).children
+        canvas.style.position = 'absolute'
 
         RpgGui._initalize(this.client)
 

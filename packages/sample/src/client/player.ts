@@ -4,6 +4,13 @@ export class Sprite extends RpgSprite {
 
     hitbox: PIXI.Graphics = new PIXI.Graphics()
 
+    onInit() {
+        this.interactive = true
+        this.on('pointerdown', (ev) => {
+            console.log(ev)
+        });
+    }
+
     onChanges(data, old) { 
         if (data.wHitbox && data.hHitbox) {
             this.hitbox.beginFill(0xFF0000);

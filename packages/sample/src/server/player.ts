@@ -35,6 +35,10 @@ export class Player extends RpgPlayer {
        }  */
        
         await this.changeMap('cave')
+
+        const gui = this.gui('info')
+
+        await gui.open({})
     }
 
     onInput({ input }) {

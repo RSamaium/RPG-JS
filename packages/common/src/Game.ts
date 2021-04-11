@@ -41,7 +41,7 @@ export default class Game extends EventEmitter {
 
     processInput(inputData, playerId) {
         const player = this.world.getObject(playerId)
-        const { input } = inputData
+        const { input } = inputData 
 
         if (!player) return
         if (!player.canMove) return
