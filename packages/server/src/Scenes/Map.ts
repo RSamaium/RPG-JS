@@ -85,6 +85,8 @@ export class SceneMap {
         autoBind(player) 
 
         player.execMethod('onEnter', [player, player.prevMap || null], mapInstance)
+        player.execMethod('onJoinMap', [mapInstance])
+
         player.teleport(positions || 'start')
         player.events = mapInstance.createEvents(EventMode.Scenario)
         for (let key in player.events) {
