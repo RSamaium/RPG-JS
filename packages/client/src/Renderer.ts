@@ -16,6 +16,7 @@ export default class RpgRenderer  {
     private _width: number = 800
     private _height: number = 400
     guiEl: HTMLDivElement
+    canvasEl: HTMLElement
     selector: HTMLElement
     animation
     client
@@ -72,16 +73,22 @@ export default class RpgRenderer  {
         //this.gameEngine.renderer = this.renderer
         this.selector = document.body.querySelector(this.options.selector)
         this.guiEl = this.selector.querySelector(this.options.selectorGui)
+        this.canvasEl = this.selector.querySelector(this.options.selectorCanvas)
 
         if (!this.guiEl) {
             this.guiEl = document.createElement('div')
             this.selector.appendChild(this.guiEl)
         }
-        
-        this.selector.insertBefore(this.renderer.view, this.selector.firstChild)
-        const [canvas] = document.querySelector(this.options.selector).children
-        canvas.style.position = 'absolute'
 
+        if (!this.canvasEl) {
+            this.selector.insertBefore(this.renderer.view, this.selector.firstChild)
+            const [canvas] = document.querySelector(this.options.selector).children
+            canvas.style.position = 'absolute'
+        }
+        else {
+            this.canvasEl.appendChild(this.renderer.view)
+        }
+        
         RpgGui._initalize(this.client)
 
         this.resize()
@@ -89,7 +96,7 @@ export default class RpgRenderer  {
 
     resize() {
         const size = () => {
-            const { offsetWidth, offsetHeight } = this.selector
+            const { offsetWidth, offsetHeight } = this.canvasEl || this.selector
             this._resize(offsetWidth, offsetHeight)
         }
         window.addEventListener('resize', size)

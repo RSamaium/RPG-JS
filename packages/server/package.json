@@ -22,6 +22,7 @@
     "@rpgjs/common": "^3.0.0-alpha.5.1",
     "@rpgjs/database": "^3.0.0-alpha.5.1",
     "@rpgjs/sync-server": "^3.0.0-alpha.5.1",
+    "auto-bind": "^4.0.0",
     "lodash.merge": "^4.6.2",
     "sat": "^0.8.0"
   },

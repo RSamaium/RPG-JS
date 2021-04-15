@@ -51,7 +51,7 @@ class HitClass {
         }
     }
 
-    testPolyCollision(type, hit1, hit2): boolean {
+    testPolyCollision(type: string, hit1: SAT, hit2: SAT): boolean {
         let collided = false
         switch (type) {
             case 'box':

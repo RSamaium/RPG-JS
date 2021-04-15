@@ -31,7 +31,6 @@ export class RpgCommonPlayer {
     data: any = {}
     hitbox: any
 
-    private memoryTiles: { [position: string] : boolean } = {}
     private _position: any
     private _hitboxPos: any
 

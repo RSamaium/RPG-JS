@@ -42,6 +42,7 @@ export default class RpgClientEngine {
         this.renderer.client = this
         this.renderer.options = {
             selector: '#rpg',
+            selectorCanvas: '#canvas',
             selectorGui: '#gui',
             canvas: {},
             gui: [],

@@ -1,6 +1,7 @@
 
 import { RpgCommonMap } from '@rpgjs/common'
 import { World } from '@rpgjs/sync-server'
+import autoBind from 'auto-bind'
 import { EventMode } from '../Event';
 import { RpgMap } from '../Game/Map';
 
@@ -81,6 +82,7 @@ export class SceneMap {
 
         World.joinRoom(mapId, player.id)
         player = World.getUser(player.id)
+        autoBind(player) 
 
         player.execMethod('onEnter', [player, player.prevMap || null], mapInstance)
         player.teleport(positions || 'start')
