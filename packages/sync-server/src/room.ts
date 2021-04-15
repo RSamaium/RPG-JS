@@ -130,7 +130,14 @@ export class Room {
                         else if (infoDict == GENERIC_KEY_SCHEMA) {
                             newObj = {}
                             for (let key in val) {
-                                newObj[key] = self.extractObjectOfRoom(val[key], dict[genericPath + '.' + GENERIC_KEY_SCHEMA])
+                                const item = val[key]
+                                if (typeof item == 'string' || 
+                                    typeof item == 'number' || 
+                                    typeof item == 'boolean') {
+                                    newObj[key] = item
+                                    continue
+                                }
+                                newObj[key] = self.extractObjectOfRoom(item, dict[genericPath + '.' + GENERIC_KEY_SCHEMA])
                             }
                         }
                         else {
