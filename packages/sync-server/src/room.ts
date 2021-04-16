@@ -37,36 +37,7 @@ export class Room {
         }
     }
 
-    add(id: string, room: RoomClass): RoomClass {
-        room.id = id
-        room.$dict = {}
-        if (!room.$schema) room.$schema = {}
-        if (!room.$schema.users) room.$schema.users = [{id: String}]
-        if (!room.$inputs) room.$inputs = {}
-        if (!room.users) room.users = {} 
-        if (room.$inputs) this.addInputs(room, room.$inputs)
-
-        room.$detectChanges = () => { 
-            //this.detectChanges(room)
-        }
-
-        room.$join = (user: User) => {
-            room.users[user.id] = user
-            this.join(room.users[user.id], room)
-            //this.detectChanges(room)
-        }
-
-        room.$leave = (user: User) => {
-            this.leave(user, room)
-            delete room.users[user.id]
-            //this.detectChanges(room)
-        }
-
-        room.$currentState = () => this.memoryObject
-        room.$clearCurrentState = () => {
-            this.memoryObject = {}
-        }
-
+    setProxy(room: RoomClass) {
         const dict = {}
         const self = this
 
@@ -173,7 +144,45 @@ export class Room {
                 }
             })
         }
-        this.proxyRoom = room = deepProxy(room)
+        return deepProxy(room)
+    }
+
+    add(id: string, room: RoomClass): RoomClass {
+        room.id = id
+        room.$dict = {}
+        if (!room.$schema) room.$schema = {}
+        if (!room.$schema.users) room.$schema.users = [{id: String}]
+        if (!room.$inputs) room.$inputs = {}
+        if (!room.users) room.users = {} 
+        if (room.$inputs) this.addInputs(room, room.$inputs)
+
+        room.$detectChanges = () => { 
+            //this.detectChanges(room)
+        }
+
+        room.$setSchema = (schema) => {
+            room.$schema = schema
+            return this.setProxy(room)
+        }
+
+        room.$join = (user: User) => {
+            room.users[user.id] = user
+            this.join(room.users[user.id], room)
+            //this.detectChanges(room)
+        }
+
+        room.$leave = (user: User) => {
+            this.leave(user, room)
+            delete room.users[user.id]
+            //this.detectChanges(room)
+        }
+
+        room.$currentState = () => this.memoryObject
+        room.$clearCurrentState = () => {
+            this.memoryObject = {}
+        }
+
+        this.proxyRoom = room = this.setProxy(room)
         if (this.proxyRoom['onInit']) this.proxyRoom['onInit']()
         return this.proxyRoom
     }

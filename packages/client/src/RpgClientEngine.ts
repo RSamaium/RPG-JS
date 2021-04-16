@@ -285,6 +285,7 @@ export default class RpgClientEngine {
             if (!val.data) {
                 return
             }
+
             const snapshot: any = { 
                 id: Utils.generateUID(),
                 time: val.time,
@@ -323,8 +324,16 @@ export default class RpgClientEngine {
                     })
                 }
             }
+
             change('users')
             change('events')
+
+            const scene = this.renderer.getScene()
+
+            if (scene) {
+                scene._data.next(val)
+            }
+
             SI.snapshot.add(snapshot)
         })
 

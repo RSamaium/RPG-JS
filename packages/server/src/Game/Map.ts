@@ -1,13 +1,7 @@
 import { RpgCommonMap, Utils }  from '@rpgjs/common'
 import fs from 'fs'
-import { Schema } from '@rpgjs/sync-server'
-import { RpgPlayer } from '../Player/Player';
-import { EventMode } from '../Event';
+import { EventMode } from '../Event'
 
-@Schema({
-    users: [RpgPlayer.schemas],
-    events: [RpgPlayer.schemas]
-})
 export class RpgMap extends RpgCommonMap {
 
     public _events: any
@@ -94,8 +88,13 @@ export class RpgMap extends RpgCommonMap {
             })
         })
     }
+
+    setSync(schema: any) {
+        return this.$setSchema(schema)
+    }
 }
 
 export interface RpgMap {
     sounds: string[]
+    $setSchema: (schema: any) => void
 }

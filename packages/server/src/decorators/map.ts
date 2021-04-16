@@ -1,3 +1,5 @@
+import { RpgPlayer } from '../Player/Player'
+
 interface MapOptions {
     /** 
      * Map identifier. Allows to go to the map (for example with player.changeMap())
@@ -73,6 +75,67 @@ interface MapOptions {
      * @memberof MapData
      * */
     sounds?: string[]
+
+    /** 
+     * Specify which properties will be synchronized with the client. On the client side, you can retrieve the values synchronized with the valueChanges property on the scene
+     * 
+     * You must create the schema:
+     * 
+     * ```ts
+     * import { MapData, RpgMap } from '@rpgjs/server'
+     * 
+     * @MapData({
+     *      id: 'medieval',
+     *      file: require('./tmx/town.tmx'),
+     *      syncSchema: {
+     *          count: Number
+     *      }
+     * })
+     * export class TownMap extends RpgMap {
+     *      count: number = 0
+     * 
+     *      onEnter() {
+     *          this.count++
+     *      }
+     * 
+     *      onLeave() {
+     *          this.count--
+     *      }
+     * }
+     * 
+     * ```
+     * 
+     * If you want to change the scheme of players and events, consider overwriting the existing scheme
+     * 
+     *  ```ts
+     * import { MapData, RpgMap, RpgPlayer } from '@rpgjs/server'
+     * 
+     * 
+     * export class Player extends RpgPlayer {
+     *    customProp: string = 'test'
+     * }
+     * 
+     * @MapData({
+     *      id: 'medieval',
+     *      file: require('./tmx/town.tmx'),
+     *      syncSchema: {
+     *          users: [
+     *              {
+     *                  customProp: String,
+     *                  ...RpgPlayer.schemas
+     *              }
+     *          ]
+     *      }
+     * })
+     * export class TownMap extends RpgMap {}
+     * ```
+     * 
+     * The properties are called `users` and `events`. Their scheme is identical and defined in `RpgPlayer.schemas`. To write schematics, refer to the [documentation of the @rpgjs/sync-server](https://github.com/RSamaium/RPG-JS/tree/v3/packages/sync-server#define-schema) module
+     * 
+     * @prop {object} [syncSchema]
+     * @memberof MapData
+     * */
+    syncSchema?: any
 }
 
 export function MapData(options: MapOptions) {
@@ -83,6 +146,19 @@ export function MapData(options: MapOptions) {
         target.prototype.file = options.file
         target.prototype.id = options.id
         target.prototype.sounds = options.sounds
+
+        target.prototype.$schema = {}
+        
+        if (options.syncSchema) {
+            target.prototype.$schema = options.syncSchema
+        }
+        if (!target.prototype.$schema.users) {
+            target.prototype.$schema.users = [RpgPlayer.schemas]
+        }
+        if (!target.prototype.$schema.events) {
+            target.prototype.$schema.events = [RpgPlayer.schemas]
+        }
+    
         target.prototype._events = options.events
     }
 }

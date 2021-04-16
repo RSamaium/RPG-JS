@@ -4,7 +4,6 @@ import { Direction, Input, Control, RpgPlugin } from '@rpgjs/common'
 import { RpgServer } from './RpgServer'
 import { EventData } from './decorators/event'
 import { MapData } from './decorators/map'
-import { StrategyBroadcasting } from './decorators/strategy-broadcasting'
 import { RpgMap } from './Game/Map'
 import { RpgEvent, EventMode } from './Event'
 import { RpgPlayer } from './Player/Player'
@@ -29,7 +28,6 @@ export {
     entryPoint,
     Presets,
     Monitor,
-    StrategyBroadcasting,
     Move,
     EventMode,
     Direction,

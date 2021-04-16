@@ -56,6 +56,7 @@ export class SceneMap {
 
         if (player.prevMap) {
             World.leaveRoom(player.prevMap, player.id)
+            player.execMethod('onLeave', [player], player.mapInstance)
         }
 
         const mapInstance = await this.loadMap(mapId)
