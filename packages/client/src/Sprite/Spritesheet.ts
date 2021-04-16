@@ -1,3 +1,5 @@
+import { log } from "../Logger"
+
 export interface TransformOptions {
     /** 
      * The global value of opacity (between 0 and 1)

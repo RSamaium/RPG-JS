@@ -3,6 +3,7 @@ import { Utils } from '@rpgjs/common'
 import { spritesheets } from '../Sprite/Spritesheets'
 import { SpritesheetOptions, TextureOptions, AnimationFrames, FrameOptions } from '../Sprite/Spritesheet'
 import RpgSprite from '../Sprite/Character'
+import { log } from '../Logger'
 
 
 const { isFunction, arrayEquals } = Utils
@@ -34,7 +35,7 @@ export class Animation extends PIXI.Sprite {
         super()
         this.spritesheet = spritesheets.get(this.id)
         if (!this.spritesheet) {
-            throw new Error(`Impossible to find the ${this.id} spritesheet. Did you put the right name or create the spritesheet?`)
+            throw log(`Impossible to find the ${this.id} spritesheet. Did you put the right name or create the spritesheet?`)
         }
         this.createAnimations()
     }
@@ -50,8 +51,16 @@ export class Animation extends PIXI.Sprite {
         for (let i = 0; i < framesHeight ; i++) {
             frames[i] = []
             for (let j = 0; j < framesWidth; j++) {
+                const rectX = j * spriteWidth + offsetX
+                const rectY = i * spriteHeight + offsetY
+                if (rectY > height) {
+                    throw log(`Warning, there is a problem with the height of the "${this.id}" spritesheet. When cutting into frames, the frame exceeds the height of the image.`)
+                }
+                if (rectX > width) {
+                    throw log(`Warning, there is a problem with the width of the "${this.id}" spritesheet. When cutting into frames, the frame exceeds the width of the image.`)
+                }
                 frames[i].push(
-                    new PIXI.Texture(baseTexture, new PIXI.Rectangle(j * spriteWidth + offsetX, i * spriteHeight + offsetY, spriteWidth, spriteHeight))
+                    new PIXI.Texture(baseTexture, new PIXI.Rectangle(rectX, rectY, spriteWidth, spriteHeight))
                 )
             }
         }
