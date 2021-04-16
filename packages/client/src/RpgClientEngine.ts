@@ -286,6 +286,8 @@ export default class RpgClientEngine {
                 return
             }
 
+            console.log(val)
+
             const snapshot: any = { 
                 id: Utils.generateUID(),
                 time: val.time,

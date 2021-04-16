@@ -164,7 +164,7 @@ export class Animation extends PIXI.Sprite {
             sprite.texture = frames[frame.frameY][frame.frameX]
             const applyTransform = (prop) => {
                 if (frame[prop]) {
-                    sprite[prop].set(frame.anchor)
+                    sprite[prop].set(...frame[prop])
                 }
                 else if (this.spritesheet[prop]) {
                     sprite[prop].set(...this.spritesheet[prop])
