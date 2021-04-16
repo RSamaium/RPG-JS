@@ -13,6 +13,7 @@ import { ISpriteCharacter } from './Interfaces/Character'
 import { SceneData } from './Scene/SceneData'
 import { SceneMap as RpgSceneMap } from './Scene/Map'
 import { RpgGui } from './RpgGui';
+import { Timeline, Ease } from './Effects/Timeline';
 
 export {
     RpgClientEngine,
@@ -25,6 +26,8 @@ export {
     RpgSound,
     Presets,
     Animation,
+    Timeline,
+    Ease,
     Direction,
     ISpriteCharacter,
     SceneData,
