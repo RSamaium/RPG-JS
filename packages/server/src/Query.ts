@@ -42,7 +42,7 @@ class QueryClass {
      * 
      * @title Get Player
      * @method RpgWorld.getPlayer(player)
-     * @param {RpgPlayer | string} player spritesheet identifier
+     * @param {RpgPlayer | string} player identifier
      * @returns {RpgPlayer}
      * @memberof RpgWorld
      */
@@ -71,7 +71,31 @@ class QueryClass {
         return Object.values(users) as RpgPlayer[]
     }
 
-    getObjectsOfMap(map: string, playerId?: RpgPlayer | string) {
+     /**
+     * Allows to recover all the objects of the map (players and events) 
+     * 
+     * ```ts
+     * import { RpgWorld } from '@rpgjs/server'
+     * 
+     * const objects = RpgWorld.getObjectsOfMap('mapname')
+     * ```
+     * 
+     * If you specify the player, you can retrieve his events in Scenario mode
+     * 
+     * ```ts
+     * import { RpgWorld } from '@rpgjs/server'
+     * 
+     * const objects = RpgWorld.getObjectsOfMap('mapname', 'playerid')
+     * ```
+     * 
+     * @title Get all objects of map
+     * @method RpgWorld.getObjectsOfMap(map,playerId?)
+     * @param {string} map Map Name
+     * @param {RpgPlayer | string} playerId player identifier
+     * @returns {Array<RpgPlayer>}
+     * @memberof RpgWorld
+     */
+    getObjectsOfMap(map: string, playerId?: RpgPlayer | string): RpgPlayer[] {
         const room: any = World.getRoom(map)
         let player: any = null
         if (playerId) {
@@ -81,7 +105,12 @@ class QueryClass {
             ...Object.values(room.users),
             ...Object.values(room.events),
             ...(player ? Object.values(player.events) : [])
-        ]
+        ] as RpgPlayer[]
+    }
+
+    // TODO
+    getRooms() {
+        return World.getRooms()
     }
 
     /**

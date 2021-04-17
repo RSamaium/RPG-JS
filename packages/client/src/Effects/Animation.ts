@@ -5,7 +5,6 @@ import { SpritesheetOptions, TextureOptions, AnimationFrames, FrameOptions } fro
 import RpgSprite from '../Sprite/Character'
 import { log } from '../Logger'
 
-
 const { isFunction, arrayEquals } = Utils
 
 type AnimationDataFrames = {

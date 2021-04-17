@@ -127,6 +127,10 @@ export class WorldClass {
         return this.rooms.get(id)
     }
 
+    getRooms() {
+        return this.rooms
+    }
+
     removeRoom(id: string): void {
         this.rooms.delete(id)
     }
