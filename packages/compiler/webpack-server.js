@@ -28,7 +28,7 @@ module.exports = function(dirname, extend = {}) {
             __dirname: false
         },
         externals: [nodeExternals({
-            allowlist: [/^@rpgjs/, 'lance-gg']
+            allowlist: [/^@rpgjs/]
         })],
         mode,
         entry: `./src/server/main.ts`,

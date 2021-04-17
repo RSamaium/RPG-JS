@@ -8,8 +8,10 @@ import inn from './gui/inn.vue'
 import name from './gui/name.vue'
 import info from './gui/info.vue'
 import { SceneMap } from './map'
+import plugins from '../plugins'
 
 @RpgClient({
+    plugins,
     spritesheets,
     sounds,
     gui: [

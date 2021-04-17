@@ -12,3 +12,8 @@ declare module "client!*" {
     const value: any;
     export default value;
 }
+
+declare module "development!*" {
+    const value: any;
+    export default value;
+}

@@ -2,7 +2,6 @@ import { SceneMap } from './Scenes/Map';
 import { SceneBattle } from './Scenes/Battle';
 import { RpgPlayer } from './Player/Player'
 import { Query } from './Query'
-import Monitor from './Monitor'
 import { DAMAGE_SKILL, DAMAGE_PHYSIC, DAMAGE_CRITICAL, COEFFICIENT_ELEMENTS } from './presets'
 import { World } from '@rpgjs/sync-server'
 import { Utils, RpgPlugin, Scheduler } from '@rpgjs/common'
@@ -16,7 +15,7 @@ export default class RpgServerEngine {
     private playerClass: any
     private scenes: Map<string, any> = new Map()
     protected totalConnected: number = 0
-    private scheduler
+    private scheduler: Scheduler
 
     constructor(public io, public gameEngine, private inputOptions) { 
         this.playerClass = inputOptions.playerClass || RpgPlayer
@@ -34,11 +33,11 @@ export default class RpgServerEngine {
             coefficientElements: COEFFICIENT_ELEMENTS,
             ...this.damageFormulas
         }
+        RpgPlugin.loadServerPlugins(inputOptions.plugins, {
+            server: this,
+            RpgWorld: Query
+        })
         this.loadScenes()
-    }
-
-    loadPlugins() {
-
     }
 
      /**
@@ -110,7 +109,7 @@ export default class RpgServerEngine {
         player.execMethod('onConnected')
     }
 
-    onPlayerDisconnected(socketId, playerId) { 
+    onPlayerDisconnected(socketId, playerId: string) { 
         RpgPlugin.emit('Server.onPlayerDisconnected', [socketId, playerId])
         const player: RpgPlayer = World.getUser(playerId) as RpgPlayer
         player.execMethod('onDisconnected')

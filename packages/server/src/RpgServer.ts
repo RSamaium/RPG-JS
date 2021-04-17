@@ -1,3 +1,4 @@
+import { Plugin } from '@rpgjs/common'
 import { RpgPlayer } from './Player/Player'
 import { RpgMap } from './Game/Map'
 
@@ -10,6 +11,9 @@ interface RpgClassMap<T> {
 }
 
 interface RpgServerOptions { 
+
+    plugins?: Plugin[]
+
     /** 
      * Give the `RpgPlayer` class. Each time a player connects, an instance of `RpgPlayer` is created.
      * 
