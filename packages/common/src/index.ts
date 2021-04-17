@@ -5,7 +5,7 @@ import RpgCommonGame from './Game'
 import { EventEmitter } from './EventEmitter'
 import { PrebuiltGui } from './gui/PrebuiltGui'
 import Utils from './Utils'
-import { RpgPlugin, Plugin } from './Plugin'
+import { RpgPlugin, Plugin, HookServer, HookClient } from './Plugin'
 import * as TransportIo from './transports/io'
 import { Input, Control } from './Input'
 import { Scheduler } from './Scheduler'
@@ -27,5 +27,7 @@ export {
     MockIo,
     RpgPlugin,
     Plugin,
+    HookServer,
+    HookClient,
     Scheduler
 }

@@ -6,13 +6,11 @@ import { RpgSprite } from './Sprite/Player'
 import { World } from '@rpgjs/sync-client'
 import { BehaviorSubject, Subject } from 'rxjs'
 import { RpgGui } from './RpgGui'
-import { RpgCommonPlayer, PrebuiltGui, PlayerType, Utils } from '@rpgjs/common'
+import { RpgCommonPlayer, PrebuiltGui, PlayerType, Utils, Plugin, RpgPlugin } from '@rpgjs/common'
 import merge from 'lodash.merge'
-import entryPoint from './clientEntryPoint'
 import { SnapshotInterpolation, Vault } from '@geckos.io/snapshot-interpolation'
 
 const SI = new SnapshotInterpolation(15) 
-const STEP_DELAY_MSEC = 12
 
 declare var __RPGJS_PRODUCTION__: boolean;
 
@@ -72,6 +70,10 @@ export default class RpgClientEngine {
         }
 
         this.controls = new KeyboardControls(this)
+        RpgPlugin.loadClientPlugins(options.plugins, {
+            RpgPlugin,
+            client: this
+        })
     }
 
     async start() {

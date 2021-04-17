@@ -4,7 +4,7 @@ import { RpgPlayer } from './Player/Player'
 import { Query } from './Query'
 import { DAMAGE_SKILL, DAMAGE_PHYSIC, DAMAGE_CRITICAL, COEFFICIENT_ELEMENTS } from './presets'
 import { World } from '@rpgjs/sync-server'
-import { Utils, RpgPlugin, Scheduler } from '@rpgjs/common'
+import { Utils, RpgPlugin, Scheduler, HookServer, HookClient} from '@rpgjs/common'
 
 let tick = 0
 
@@ -33,11 +33,11 @@ export default class RpgServerEngine {
             coefficientElements: COEFFICIENT_ELEMENTS,
             ...this.damageFormulas
         }
+        this.loadScenes()
         RpgPlugin.loadServerPlugins(inputOptions.plugins, {
             server: this,
             RpgWorld: Query
         })
-        this.loadScenes()
     }
 
      /**
@@ -63,6 +63,7 @@ export default class RpgServerEngine {
             }
         })
         this.io.on('connection', this.onPlayerConnected.bind(this))
+        RpgPlugin.emit(HookServer.Start)
     }
 
     step() {
@@ -88,7 +89,7 @@ export default class RpgServerEngine {
     onPlayerConnected(socket) {
         const playerId = Utils.generateUID()
 
-        RpgPlugin.emit('Server.onPlayerConnected', [socket, playerId])
+        RpgPlugin.emit(HookServer.PlayerConnected, [socket, playerId])
        
         let player: RpgPlayer = new this.playerClass(this.gameEngine, playerId)
 
@@ -110,7 +111,7 @@ export default class RpgServerEngine {
     }
 
     onPlayerDisconnected(socketId, playerId: string) { 
-        RpgPlugin.emit('Server.onPlayerDisconnected', [socketId, playerId])
+        RpgPlugin.emit(HookServer.PlayerDisconnected, [socketId, playerId])
         const player: RpgPlayer = World.getUser(playerId) as RpgPlayer
         player.execMethod('onDisconnected')
         World.disconnectUser(playerId)

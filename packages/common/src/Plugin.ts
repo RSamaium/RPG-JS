@@ -4,6 +4,16 @@ import { isArray } from './Utils'
 type PluginFunction = (obj: any, options?: any) => void
 export type Plugin = { client: null | PluginFunction, server:  null | PluginFunction }
 
+export enum HookServer {
+    Start = 'Server.Start',
+    PlayerConnected = 'Server.PlayerConnected',
+    PlayerDisconnected = 'Server.PlayerDisconnected'
+}  
+
+export enum HookClient {
+
+}
+
 export class PluginSystem extends EventEmitter {
     private loadPlugins(plugins: Plugin[], shared: any, type: string) {
         if (!plugins) return

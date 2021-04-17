@@ -13,6 +13,7 @@
   "author": "Samuel Ronce",
   "license": "MIT",
   "dependencies": {
+    "@rpgjs/server": "^3.0.0-alpha.5.1",
     "prom-client": "^13.1.0"
   }
 }

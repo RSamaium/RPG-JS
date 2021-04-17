@@ -1,4 +1,4 @@
-import { Direction, Control, Input, PrebuiltGui } from '@rpgjs/common'
+import { Direction, Control, Input, PrebuiltGui, HookServer, HookClient } from '@rpgjs/common'
 import entryPoint from './clientEntryPoint'
 import RpgClientEngine from './RpgClientEngine'
 import { RpgClient } from './RpgClient'
@@ -35,5 +35,7 @@ export {
     RpgGui,
     Control, 
     Input,
-    PrebuiltGui
+    PrebuiltGui,
+    HookServer,
+    HookClient
 }
