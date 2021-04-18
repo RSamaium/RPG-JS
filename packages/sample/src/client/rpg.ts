@@ -18,8 +18,7 @@ import plugins from '../plugins'
        ...gui,
        hud,
        inn,
-       name,
-       info
+       name
     ],
     spriteClass: Sprite,
     scenes: {

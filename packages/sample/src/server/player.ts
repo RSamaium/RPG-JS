@@ -36,14 +36,18 @@ export class Player extends RpgPlayer {
        
         await this.changeMap('cave')
 
-        const gui = this.gui('info')
+        
+    }
 
-        await gui.open({})
+    onJoinMap() {
+      //const gui = this.gui('info')
+      //gui.open({})
     }
 
     onInput({ input }) {
       if (input == 'back') {
-        this.callMainMenu()
+        //this.callMainMenu()
+        this.showAnimation('bubble', 'like')
       }
     }
 

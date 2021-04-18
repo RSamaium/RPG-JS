@@ -11,7 +11,10 @@ export enum HookServer {
 }  
 
 export enum HookClient {
-
+    Start = 'Client.Start',
+    AddSpriteSheet = 'Client.AddSpriteSheet',
+    AddGui = 'Client.AddGui',
+    AddSound = 'Client.AddSound'
 }
 
 export class PluginSystem extends EventEmitter {

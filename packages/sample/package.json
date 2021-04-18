@@ -30,6 +30,7 @@
     "@rpgjs/compiler": "^3.0.0-alpha.5.1",
     "@rpgjs/database": "^3.0.0-alpha.5.1",
     "@rpgjs/default-gui": "^3.0.0-alpha.5.1",
+    "@rpgjs/plugin-emotion-bubbles": "^3.0.0-alpha.5.1",
     "@rpgjs/plugin-monitoring": "^3.0.0-alpha.5.1",
     "@rpgjs/server": "^3.0.0-alpha.5.1",
     "@rpgjs/standalone": "^3.0.0-alpha.5.1",

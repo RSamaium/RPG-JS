@@ -1,4 +1,5 @@
 import { KeyboardControls } from './KeyboardControls'
+import { RpgClientOptions } from './RpgClient'
 import Renderer from './Renderer'
 import { _initSpritesheet } from './Sprite/Spritesheets'
 import { _initSound } from './Sound/Sounds'
@@ -6,7 +7,14 @@ import { RpgSprite } from './Sprite/Player'
 import { World } from '@rpgjs/sync-client'
 import { BehaviorSubject, Subject } from 'rxjs'
 import { RpgGui } from './RpgGui'
-import { RpgCommonPlayer, PrebuiltGui, PlayerType, Utils, Plugin, RpgPlugin } from '@rpgjs/common'
+import { 
+    RpgCommonPlayer, 
+    PrebuiltGui, 
+    PlayerType, 
+    Utils, 
+    RpgPlugin, 
+    HookClient 
+} from '@rpgjs/common'
 import merge from 'lodash.merge'
 import { SnapshotInterpolation, Vault } from '@geckos.io/snapshot-interpolation'
 
@@ -38,6 +46,24 @@ export default class RpgClientEngine {
     constructor(private gameEngine, private options) {
         this.renderer = new Renderer(this)
         this.renderer.client = this
+
+        RpgPlugin.loadClientPlugins(this._options.plugins, {
+            RpgPlugin,
+            client: this
+        })
+
+        const pluginLoadRessource = (hookName: string, type: string) => {
+            const resource = this._options[type] || []
+            this._options[type] = [
+                ...Utils.arrayFlat(RpgPlugin.emit(hookName, resource)) || [],
+                ...resource
+            ]
+        }
+
+        pluginLoadRessource(HookClient.AddSpriteSheet, 'spritesheets')
+        pluginLoadRessource(HookClient.AddGui, 'gui')
+        pluginLoadRessource(HookClient.AddSound, 'sounds')
+
         this.renderer.options = {
             selector: '#rpg',
             selectorCanvas: '#canvas',
@@ -49,10 +75,10 @@ export default class RpgClientEngine {
             ...this._options
         }
 
-        this.io = options.io
+        this.io = options['io']
 
        gameEngine._playerClass = this.renderer.options.spriteClass || RpgSprite
-       gameEngine.standalone = options.standalone
+       gameEngine.standalone = options['standalone']
        gameEngine.clientEngine = this
 
         _initSpritesheet(this.renderer.options.spritesheets)
@@ -70,10 +96,6 @@ export default class RpgClientEngine {
         }
 
         this.controls = new KeyboardControls(this)
-        RpgPlugin.loadClientPlugins(options.plugins, {
-            RpgPlugin,
-            client: this
-        })
     }
 
     async start() {
@@ -102,6 +124,7 @@ export default class RpgClientEngine {
         })
         window.requestAnimationFrame(renderLoop)
         this._initSocket()
+        RpgPlugin.emit(HookClient.Start)
     }
 
     get objects() {

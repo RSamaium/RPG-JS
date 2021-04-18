@@ -5,7 +5,7 @@ interface RpgClass<T> {
     new (data: any, scene: any): T,
 }
 
-interface RpgClientOptions {
+export interface RpgClientOptions {
      /** 
      * The element selector that will display the canvas. By default, `#rpg`
      * 
