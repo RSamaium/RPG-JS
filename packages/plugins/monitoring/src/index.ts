@@ -1,6 +1,3 @@
-import server from 'server!./server'
+import obj from 'mmorpg!./mmorpg'
 
-export default {
-    server,
-    client: null
-}
+export default obj

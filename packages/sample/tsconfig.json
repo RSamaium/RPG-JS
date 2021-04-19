@@ -20,9 +20,6 @@
     "emitDecoratorMetadata": true,
     "types": ["node", "jest"]
   },
-  "files": [
-    "index.d.ts"
-  ],
   "include": [
       "src", 
       "index.d.ts", 

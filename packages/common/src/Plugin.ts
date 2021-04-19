@@ -22,6 +22,7 @@ export class PluginSystem extends EventEmitter {
     private loadPlugins(plugins: Plugin[], shared: any, type: string) {
         if (!plugins) return
         for (let plugin of plugins) {
+            if (!plugin) continue
             let plug: any = []
             if (!isArray(plugin)) {
                 plug = [plugin]

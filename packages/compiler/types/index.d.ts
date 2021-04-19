@@ -17,3 +17,18 @@ declare module "development!*" {
     const value: any;
     export default value;
 }
+
+declare module "production!*" {
+    const value: any;
+    export default value;
+}
+
+declare module "rpg!*" {
+    const value: any;
+    export default value;
+}
+
+declare module "mmorpg!*" {
+    const value: any;
+    export default value;
+}

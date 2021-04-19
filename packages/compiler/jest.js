@@ -19,6 +19,10 @@ module.exports = {
     ],
     moduleNameMapper: {
         '^server!(.*)$': '$1',
+        '^mmorpg!(.*)$': '$1',
+        '^rpg!(.*)$': '$1',
+        '^development!(.*)$': '$1',
+        '^production!(.*)$': '$1',
         '^client!(.*)$': '<rootDir>/node_modules/@rpgjs/compiler/loaders/null.js'
     }
 }

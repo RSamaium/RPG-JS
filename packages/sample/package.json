@@ -7,7 +7,7 @@
     "access": "public"
   },
   "scripts": {
-    "test": "jest",
+    "test": "NODE_ENV=test jest",
     "build": "rimraf dist && webpack",
     "dev": "webpack -w",
     "start": "node dist/server"
