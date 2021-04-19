@@ -2,7 +2,8 @@ import { EventEmitter } from './EventEmitter'
 import { isArray } from './Utils'
 
 type PluginFunction = (obj: any, options?: any) => void
-export type Plugin = { client: null | PluginFunction, server:  null | PluginFunction }
+type PluginSides = { client: null | PluginFunction, server:  null | PluginFunction }
+export type Plugin = PluginSides | [PluginSides, any]
 
 export enum HookServer {
     Start = 'Server.Start',
