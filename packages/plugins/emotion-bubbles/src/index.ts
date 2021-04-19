@@ -1,6 +1,12 @@
 import client from 'client!./client'
+import server from 'server!./server'
 
 export default {
     client,
-    server: null
+    server
+}
+
+export enum EmotionBubble {
+    Like = 'like',
+    Confusion = 'confusion'
 }

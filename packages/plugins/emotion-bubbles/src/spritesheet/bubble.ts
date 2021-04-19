@@ -1,4 +1,5 @@
 import { Spritesheet, Timeline, Ease } from '@rpgjs/client'
+import { EmotionBubble } from '../index'
 
 const icon = (frameX, frameY) => {
     return {
@@ -32,8 +33,8 @@ const icon = (frameX, frameY) => {
 
 export function Emote(options: any = {}) {
     if (!options.textures) options.textures = {
-        confusion: [0, 0],
-        like: [2, 1]
+        [EmotionBubble.Confusion]: [0, 0],
+        [EmotionBubble.Like]: [2, 1]
     }
     for (let key in options.textures) {
         options.textures[key] = icon.apply(null, options.textures[key])

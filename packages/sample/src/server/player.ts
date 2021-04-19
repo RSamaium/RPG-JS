@@ -1,5 +1,6 @@
 import { RpgPlayer } from '@rpgjs/server'
 import { database } from '@rpgjs/starter-kit-server'
+import { EmotionBubble } from '@rpgjs/plugin-emotion-bubbles'
 
 export class Player extends RpgPlayer {
 
@@ -47,7 +48,7 @@ export class Player extends RpgPlayer {
     onInput({ input }) {
       if (input == 'back') {
         //this.callMainMenu()
-        this.showAnimation('bubble', 'like')
+        this.showEmotionBubble(EmotionBubble.Confusion)
       }
     }
 

@@ -36,6 +36,7 @@ export default class RpgServerEngine {
         this.loadScenes()
         RpgPlugin.loadServerPlugins(inputOptions.plugins, {
             server: this,
+            RpgPlayer: this.playerClass,
             RpgWorld: Query
         })
     }
