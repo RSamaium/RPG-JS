@@ -205,7 +205,7 @@ export default class RpgClientEngine {
         return logic
     }
 
-    sendInput(actionName, inputOptions) {
+    sendInput(actionName: string) {
         const inputEvent = { input: actionName, playerId: this.gameEngine.playerId }
         this.gameEngine.processInput(inputEvent, this.gameEngine.playerId)
         this.socket.emit('move', inputEvent)
@@ -226,7 +226,6 @@ export default class RpgClientEngine {
             const offsetX = playerSnapshot.state[0].x - serverPos.x
             const offsetY = playerSnapshot.state[0].y - serverPos.y
             const correction = 60
-
             player.position.x -= offsetX / correction
             player.position.y -= offsetY / correction
           }
@@ -237,7 +236,7 @@ export default class RpgClientEngine {
         this.gameEngine.emit('client__preStep')
         const { playerId } = this.gameEngine
         const player = this.gameEngine.world.getObject(playerId)
-        if (player) {
+        if (player && player.teleported) {
             const { x, y } = player.position
             this.playerVault.add(
                 SI.snapshot.create([{ id: playerId, x, y }])
