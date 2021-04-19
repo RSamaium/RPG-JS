@@ -8,7 +8,9 @@ export type Plugin = PluginSides | [PluginSides, any]
 export enum HookServer {
     Start = 'Server.Start',
     PlayerConnected = 'Server.PlayerConnected',
-    PlayerDisconnected = 'Server.PlayerDisconnected'
+    PlayerDisconnected = 'Server.PlayerDisconnected',
+    AddMap = 'Server.AddMap',
+    AddDatabase = 'Server.AddDatabase'
 }  
 
 export enum HookClient {

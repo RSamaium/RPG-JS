@@ -1,5 +1,4 @@
 import { RpgPlayer } from '@rpgjs/server'
-import { database } from '@rpgjs/starter-kit-server'
 
 export class Player extends RpgPlayer {
 
@@ -7,9 +6,8 @@ export class Player extends RpgPlayer {
 
     async onConnected() {
 
-      this.setHitbox(20, 16) 
-      this.setGraphic('male1_2')
-      this.setActor(database.Hero) 
+      
+      
 
      /* const gui = this.gui('gui-name')
 
@@ -33,8 +31,7 @@ export class Player extends RpgPlayer {
        else {
         
        }  */
-       
-        await this.changeMap('cave')
+      
 
         
     }
@@ -46,8 +43,8 @@ export class Player extends RpgPlayer {
 
     onInput({ input }) {
       if (input == 'back') {
-        //this.callMainMenu()
-        this.showEmotionBubble('confusion')
+        this.callMainMenu()
+        //this.showEmotionBubble('confusion')
       }
     }
 

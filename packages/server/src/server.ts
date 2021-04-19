@@ -19,12 +19,11 @@ export default class RpgServerEngine {
 
     constructor(public io, public gameEngine, private inputOptions) { 
         this.playerClass = inputOptions.playerClass || RpgPlayer
-        if (inputOptions.database) {
-            for (let key in inputOptions.database) {
-                const data = inputOptions.database[key]
-                this.database[data.id] = data
-            }
-        }
+        RpgPlugin.loadServerPlugins(inputOptions.plugins, {
+            server: this,
+            RpgPlayer: this.playerClass,
+            RpgWorld: Query
+        })
         this.damageFormulas = inputOptions.damageFormulas || {}
         this.damageFormulas = {
             damageSkill: DAMAGE_SKILL,
@@ -33,12 +32,30 @@ export default class RpgServerEngine {
             coefficientElements: COEFFICIENT_ELEMENTS,
             ...this.damageFormulas
         }
+
+        if (!this.inputOptions.maps) this.inputOptions.maps = []
+        this.inputOptions.maps = [
+            ...Utils.arrayFlat(RpgPlugin.emit(HookServer.AddMap, this.inputOptions.maps)) || [],
+            ...this.inputOptions.maps
+        ]
+
+        if (!inputOptions.database) inputOptions.database = {}
+       
+        const datas = RpgPlugin.emit(HookServer.AddDatabase, this.inputOptions.database) || []
+        
+        for (let plug of datas) {
+            this.inputOptions.database = {
+                ...plug,
+                ...this.inputOptions.database
+            }
+        }
+
+        for (let key in inputOptions.database) {
+            const data = inputOptions.database[key]
+            this.database[data.id] = data
+        }
+
         this.loadScenes()
-        RpgPlugin.loadServerPlugins(inputOptions.plugins, {
-            server: this,
-            RpgPlayer: this.playerClass,
-            RpgWorld: Query
-        })
     }
 
      /**
@@ -89,9 +106,6 @@ export default class RpgServerEngine {
 
     onPlayerConnected(socket) {
         const playerId = Utils.generateUID()
-
-        RpgPlugin.emit(HookServer.PlayerConnected, [socket, playerId])
-       
         let player: RpgPlayer = new this.playerClass(this.gameEngine, playerId)
 
         socket.on('move', (data) => {
@@ -108,12 +122,14 @@ export default class RpgServerEngine {
 
         player.server = this
         player._init()
+        
+        RpgPlugin.emit(HookServer.PlayerConnected, player)
         player.execMethod('onConnected')
     }
 
     onPlayerDisconnected(socketId, playerId: string) { 
-        RpgPlugin.emit(HookServer.PlayerDisconnected, [socketId, playerId])
         const player: RpgPlayer = World.getUser(playerId) as RpgPlayer
+        RpgPlugin.emit(HookServer.PlayerDisconnected, player)
         player.execMethod('onDisconnected')
         World.disconnectUser(playerId)
     }
