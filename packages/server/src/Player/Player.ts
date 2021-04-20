@@ -508,15 +508,15 @@ export class RpgPlayer extends RpgCommonPlayer {
     }
 
     public execMethod(methodName: string, methodData = [], instance = this): void {
+        RpgPlugin.emit(`Server.${methodName}`, {
+            player: this,
+            params: methodData
+        })
         if (!instance[methodName]) {
             return
         }
         const ret = instance[methodName](...methodData)
         const sync = () => this.syncChanges()
-        RpgPlugin.emit(`Server.${methodName}`, {
-            player: this,
-            params: methodData
-        })
         if (isPromise(ret)) {
             ret.then(sync)
         }
