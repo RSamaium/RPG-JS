@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/testing",
-  "version": "3.0.0-alpha.6",
+  "version": "3.0.0-alpha.7",
   "description": "",
   "main": "lib/index.js",
   "publishConfig": {
@@ -16,8 +16,8 @@
   "author": "Samuel Ronce",
   "license": "MIT",
   "dependencies": {
-    "@rpgjs/common": "^3.0.0-alpha.6",
-    "@rpgjs/server": "^3.0.0-alpha.6"
+    "@rpgjs/common": "^3.0.0-alpha.7",
+    "@rpgjs/server": "^3.0.0-alpha.7"
   },
   "gitHead": "90f32de0618ffddadf918fa313cecc3e3c78aa0b"
 }
