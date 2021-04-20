@@ -56,14 +56,6 @@ export class Player extends RpgPlayer {
        
     }
 
-    onInVision(other: RpgPlayer) {
-      console.log('in')
-    }
-
-    onOutVision(other: RpgPlayer) {
-
-    }
-
     onLevelUp(nbLevel) {
         
     }

@@ -196,6 +196,30 @@ export class RpgPlayer extends RpgCommonPlayer {
         this.graphic = graphic
     }
 
+    /**
+     * Define a vision for the event. 
+     * 
+     * The object in parameter
+     * - type: `box`
+     * - height: Height
+     * - width: Width
+     * 
+     * the `onInVision()` and `onOutVision()` methods are triggered on the `RpgPlayer` class
+     * 
+     * ```ts
+     * player.setVision({
+     *      type: 'box',
+     *      width: 100, 
+     *      height: 100
+     * })
+     * ```
+     * 
+     * @title Set Vision
+     * @todo
+     * @method player.setVision(obj)
+     * @param {object} obj
+     * @memberof Player
+     */
     setVision(obj: {
         ellipse?: boolean,
         height: number,

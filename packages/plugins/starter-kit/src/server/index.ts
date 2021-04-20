@@ -18,7 +18,7 @@ export default function({ RpgPlugin }) {
     RpgPlugin.on(HookServer.PlayerConnected, ({ player }) => {
         player.setHitbox(20, 16) 
         player.setGraphic('male1_2')
-        player.changeMap('cave')
+        player.changeMap('medieval')
         player.setActor(databaseList.Hero) 
     })
 }

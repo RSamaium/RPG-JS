@@ -174,7 +174,7 @@ export class RpgCommonPlayer {
     }
 
     get visionHitbox() {
-        if (!this.vision) return null
+        if (!this.vision.type) return null
         const x = this.position.x - (this.vision.width / 2 - this.wHitbox / 2)
         const y = this.position.y -(this.vision.height / 2 - this.hHitbox / 2)
         return Hit.getHitbox({
@@ -310,7 +310,7 @@ export class RpgCommonPlayer {
         let events: RpgCommonPlayer[] = this.gameEngine.world.getObjectsOfGroup(this.map, this)
 
         const inArea = (player1: RpgCommonPlayer, player2: RpgCommonPlayer) => {
-            if (player1.vision) {
+            if (player1.vision && player1.vision.type) {
                 const playerInVision = Hit.testPolyCollision('box', player2.hitbox, player1.visionHitbox?.hitbox)
                 if (playerInVision && !player1.inVision[player2.id]) {
                     player1.inVision[player2.id] = true

@@ -8,4 +8,4 @@ export default [
     emotionBubblesPlugin,
     defaultGui,
     starterKit
-] 
+]
