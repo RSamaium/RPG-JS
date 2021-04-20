@@ -12,6 +12,13 @@ interface RpgClassMap<T> {
 
 interface RpgServerOptions { 
 
+    /**
+     * Add server-side plugins
+     * 
+     * @todo
+     * @prop { { client: null | Function, server: null | Function }[]} [plugins]
+     * @memberof RpgServer
+     */
     plugins?: Plugin[]
 
     /** 

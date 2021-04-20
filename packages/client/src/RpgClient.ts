@@ -32,6 +32,13 @@ export interface RpgClientOptions {
      * */
     selectorCanvas?: string
 
+    /**
+     * Adding client-side plugins
+     * 
+     * @todo
+     * @prop { { client: null | Function, server: null | Function }[]} [plugins]
+     * @memberof RpgClient
+     */
     plugins?: Plugin[]
 
     /** 
