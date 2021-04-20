@@ -21,7 +21,6 @@ export default {
             zone: this.$refs.dPad
         })
         let directions = {}
-        let lastMoving = {}
         let moving = false
         manager.on('added', (evt, nipple) => {
             const keyup = (key) => {
