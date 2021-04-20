@@ -49,7 +49,8 @@ module.exports = function(dirname, extend = {}) {
                     use: [{
                         loader: require.resolve('ts-loader'),
                         options: {
-                            onlyCompileBundledFiles: true
+                            onlyCompileBundledFiles: true,
+                            allowTsInNodeModules: true
                         }
                     }] 
                 },

@@ -76,7 +76,8 @@ module.exports = function(dirname, extend = {}) {
                     loader: require.resolve('ts-loader'),
                     options: {
                         onlyCompileBundledFiles: true,
-                        appendTsSuffixTo: [/\.vue$/]
+                        appendTsSuffixTo: [/\.vue$/],
+                        allowTsInNodeModules: true
                     }
                 }]
     
