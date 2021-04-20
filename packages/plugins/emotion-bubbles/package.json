@@ -11,6 +11,10 @@
   "publishConfig": {
     "access": "public"
   },
+  "files": [
+    "src",
+    "index.d.ts"
+  ],
   "keywords": [],
   "author": "Samuel Ronce",
   "license": "MIT",
@@ -18,5 +22,5 @@
     "@rpgjs/client": "^3.0.0-alpha.6.1",
     "@rpgjs/server": "^3.0.0-alpha.6.1"
   },
-  "gitHead": "c59fb38fd645b1c5182c8426c28d82c95a18dc43"
+  "gitHead": "29b5620a3b8455ec0937c2ee47ab8146cc536ea3"
 }
