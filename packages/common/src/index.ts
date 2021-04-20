@@ -8,6 +8,7 @@ import Utils from './Utils'
 import { RpgPlugin, Plugin, HookServer, HookClient } from './Plugin'
 import * as TransportIo from './transports/io'
 import { Input, Control } from './Input'
+import { Hit } from './Hit'
 import { Scheduler } from './Scheduler'
 import * as MockIo from './transports/io'
 
@@ -29,5 +30,6 @@ export {
     Plugin,
     HookServer,
     HookClient,
-    Scheduler
+    Scheduler,
+    Hit
 }

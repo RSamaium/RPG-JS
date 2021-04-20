@@ -208,6 +208,7 @@ export default class RpgClientEngine {
     sendInput(actionName: string) {
         const inputEvent = { input: actionName, playerId: this.gameEngine.playerId }
         this.gameEngine.processInput(inputEvent, this.gameEngine.playerId)
+        RpgPlugin.emit(HookClient.SendInput, inputEvent)
         this.socket.emit('move', inputEvent)
     }
 

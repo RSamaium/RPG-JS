@@ -122,14 +122,11 @@ export default class RpgServerEngine {
 
         player.server = this
         player._init()
-        
-        RpgPlugin.emit(HookServer.PlayerConnected, player)
         player.execMethod('onConnected')
     }
 
     onPlayerDisconnected(socketId, playerId: string) { 
         const player: RpgPlayer = World.getUser(playerId) as RpgPlayer
-        RpgPlugin.emit(HookServer.PlayerDisconnected, player)
         player.execMethod('onDisconnected')
         World.disconnectUser(playerId)
     }

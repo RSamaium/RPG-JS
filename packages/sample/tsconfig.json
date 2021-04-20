@@ -24,7 +24,6 @@
       "src", 
       "index.d.ts", 
       "tests", 
-      "node_modules", 
       "node_modules/@rpgjs/compiler/types/*.d.ts"
   ]
 }

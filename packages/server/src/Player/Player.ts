@@ -1,9 +1,8 @@
-import { RpgCommonMap, RpgCommonPlayer, Utils }  from '@rpgjs/common'
+import { RpgCommonMap, RpgCommonPlayer, Utils, RpgPlugin }  from '@rpgjs/common'
 import { Query } from '../Query'
 import merge from 'lodash.merge'
 import { ItemManager } from './ItemManager'
 import { GoldManager } from './GoldManager'
-import { World } from '@rpgjs/sync-server'
 import { StateManager } from './StateManager';
 import { SkillManager } from './SkillManager'
 import { ParameterManager } from './ParameterManager';
@@ -55,6 +54,13 @@ const playerSchemas = {
     },
     direction: Number,
     teleported: Number,
+
+    vision: {
+        ellipse: Boolean,
+        height: Number,
+        width: Number,
+        type: String
+    },
 
     param: Object,
     hp: Number,
@@ -188,6 +194,18 @@ export class RpgPlayer extends RpgCommonPlayer {
      */
     setGraphic(graphic: string) {
         this.graphic = graphic
+    }
+
+    setVision(obj: {
+        ellipse?: boolean,
+        height: number,
+        width: number,
+        type: string
+    }) {
+        if (!this.hitbox) {
+            throw 'Please define hitbox property before'
+        }
+        this.vision = obj
     }
 
     /**
@@ -471,6 +489,10 @@ export class RpgPlayer extends RpgCommonPlayer {
         }
         const ret = instance[methodName](...methodData)
         const sync = () => this.syncChanges()
+        RpgPlugin.emit(`Server.${methodName}`, {
+            player: this,
+            params: methodData
+        })
         if (isPromise(ret)) {
             ret.then(sync)
         }
@@ -512,7 +534,8 @@ export interface RpgPlayer extends
     BattleManager
 {
     _socket: any 
-    server: any
+    server: any,
+    vision
 }
 
 applyMixins(RpgPlayer, [

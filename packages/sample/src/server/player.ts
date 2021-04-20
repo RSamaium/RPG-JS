@@ -7,7 +7,11 @@ export class Player extends RpgPlayer {
     async onConnected() {
 
       
-      
+      this.setVision({
+        type: 'box',
+        width: 100,
+        height: 100
+      })
 
      /* const gui = this.gui('gui-name')
 
@@ -50,6 +54,14 @@ export class Player extends RpgPlayer {
 
     onDead() {
        
+    }
+
+    onInVision(other: RpgPlayer) {
+      console.log('in')
+    }
+
+    onOutVision(other: RpgPlayer) {
+
     }
 
     onLevelUp(nbLevel) {

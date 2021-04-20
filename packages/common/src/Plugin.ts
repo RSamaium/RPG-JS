@@ -7,17 +7,30 @@ export type Plugin = PluginSides | [PluginSides, any]
 
 export enum HookServer {
     Start = 'Server.Start',
-    PlayerConnected = 'Server.PlayerConnected',
-    PlayerDisconnected = 'Server.PlayerDisconnected',
+    PlayerConnected = 'Server.onConnected',
+    PlayerDisconnected = 'Server.onDisconnected',
     AddMap = 'Server.AddMap',
-    AddDatabase = 'Server.AddDatabase'
-}  
+    AddDatabase = 'Server.AddDatabase',
+    PlayerInVision = 'Server.onInVision',
+    PlayerOutVision = 'Server.onOutVision',
+    PlayerInput = 'Server.onInput',
+    PlayerJoinMap = 'Server.onJoinMap',
+    PlayerLeaveMap = 'Server.onLeaveMap',
+    PlayerLevelUp = 'Server.onLevelUp',
+    PlayerDead = 'Server.onDead'
+}
 
 export enum HookClient {
     Start = 'Client.Start',
     AddSpriteSheet = 'Client.AddSpriteSheet',
     AddGui = 'Client.AddGui',
-    AddSound = 'Client.AddSound'
+    AddSound = 'Client.AddSound',
+    SendInput = 'Client.SendInput',
+    SceneLoaded = 'Client.SceneLoaded',
+    SceneLoading = 'Client.SceneLoading',
+    AddSprite = 'Client.AddSprite',
+    RemoveSprite = 'Client.RemoveSprite',
+    UpdateSprite = 'Client.UpdateSprite'
 }
 
 export class PluginSystem extends EventEmitter {

@@ -1,4 +1,4 @@
-import { Utils } from '@rpgjs/common'
+import { Utils, RpgPlugin, HookClient } from '@rpgjs/common'
 import * as PIXI from 'pixi.js'
 import { KeyboardControls } from '../KeyboardControls'
 import RpgSprite from '../Sprite/Character'
@@ -161,10 +161,15 @@ export class Scene {
         this._controlsOptions = inputs
     }
 
-    private triggerSpriteChanges(logic, sprite, moving: boolean) {
+    private triggerSpriteChanges(logic, sprite: RpgSprite, moving: boolean) {
         if (this.onUpdateObject) this.onUpdateObject(logic, sprite, moving)
-        if (sprite['onChanges'] && logic.paramsChanged) {
-            sprite['onChanges'](logic.paramsChanged, logic.prevParamsChanged)
+        if (logic.paramsChanged) {
+            sprite.onChanges(logic.paramsChanged, logic.prevParamsChanged)
+            RpgPlugin.emit(HookClient.UpdateSprite, {
+                sprite,
+                moving,
+                logic
+            })
             logic.paramsChanged = null
         }
     }
@@ -176,7 +181,7 @@ export class Scene {
         for (let key in logicObjects) {
             const val = logicObjects[key].object
             if (!renderObjects.has(key)) {
-                const sprite = this.addObject(val, key)
+                const sprite: any = this.addObject(val, key)
                 this.triggerSpriteChanges(val, sprite, true)
             }
             else {

@@ -1,5 +1,6 @@
 window.PIXI = require('pixi.js')
 
+import { RpgPlugin, HookClient } from '@rpgjs/common'
 import { SceneMap } from './Scene/Map'
 import { Scene } from './Presets/Scene'
 import { RpgGui } from './RpgGui'
@@ -113,6 +114,10 @@ export default class RpgRenderer  {
     }
 
     async loadScene(name, obj) {
+        RpgPlugin.emit(HookClient.SceneLoading, {
+            name, 
+            obj
+        })
         this.gameEngine.world.removeObject(this.gameEngine.playerId)
         this.stage.removeChildren()
         const scenes = this.options.scenes || {}
@@ -134,8 +139,8 @@ export default class RpgRenderer  {
         }
         
         const container = await this.scene.load(obj)
-        
         this.stage.addChild(container)
+        RpgPlugin.emit(HookClient.SceneLoaded, this.scene)
     }
 
 }
