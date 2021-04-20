@@ -20,5 +20,5 @@
     "@rpgjs/server": "^3.0.0-alpha.6.1",
     "prom-client": "^13.1.0"
   },
-  "gitHead": "d8c611fcf37cb81eeacc8b035a128e0063d77268"
+  "gitHead": "90f32de0618ffddadf918fa313cecc3e3c78aa0b"
 }

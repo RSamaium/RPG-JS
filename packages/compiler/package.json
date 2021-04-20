@@ -34,5 +34,5 @@
     "webpack-pwa-manifest": "^4.3.0",
     "workbox-webpack-plugin": "^6.0.2"
   },
-  "gitHead": "d8c611fcf37cb81eeacc8b035a128e0063d77268"
+  "gitHead": "90f32de0618ffddadf918fa313cecc3e3c78aa0b"
 }
