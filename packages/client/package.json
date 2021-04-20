@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/client",
-  "version": "3.0.0-alpha.6.1",
+  "version": "3.0.0-alpha.6",
   "description": "",
   "main": "lib/index.js",
   "types": "./lib/index.d.ts",
@@ -20,8 +20,8 @@
   "license": "MIT",
   "dependencies": {
     "@geckos.io/snapshot-interpolation": "^1.0.2",
-    "@rpgjs/common": "^3.0.0-alpha.6.1",
-    "@rpgjs/sync-client": "^3.0.0-alpha.6.1",
+    "@rpgjs/common": "^3.0.0-alpha.6",
+    "@rpgjs/sync-client": "^3.0.0-alpha.6",
     "@tweenjs/tween.js": "^18.6.0",
     "@types/howler": "^2.2.1",
     "howler": "^2.2.1",
