@@ -15,5 +15,6 @@
   "dependencies": {
     "@rpgjs/server": "^3.0.0-alpha.6",
     "prom-client": "^13.1.0"
-  }
+  },
+  "gitHead": "c59fb38fd645b1c5182c8426c28d82c95a18dc43"
 }

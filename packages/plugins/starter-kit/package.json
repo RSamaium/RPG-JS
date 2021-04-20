@@ -24,5 +24,6 @@
     "@rpgjs/client": "^3.0.0-alpha.6",
     "@rpgjs/database": "^3.0.0-alpha.6",
     "@rpgjs/server": "^3.0.0-alpha.6"
-  }
+  },
+  "gitHead": "c59fb38fd645b1c5182c8426c28d82c95a18dc43"
 }
