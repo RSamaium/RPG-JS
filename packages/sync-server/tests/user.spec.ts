@@ -55,7 +55,7 @@ test('Getall data of room', () => {
             }
         }
 
-        socket.on('w', ([ev, value]) => {
+        socket.on('w', ([ev, time, value]) => {
             const user = room.users[CLIENT_ID]
             expect(user.id).toBe(CLIENT_ID)
             expect(value).toMatchObject({ users: { [CLIENT_ID]: { name: 'test' } } })
@@ -65,6 +65,42 @@ test('Getall data of room', () => {
         const room =  World.addRoom('room', Room) 
         socket.emit(':join', 'room')
 
+        World.send()
+    })
+})
+
+test('Change Schema', () => {
+    return new Promise((resolve) => {
+        let send = 0
+        class Room {
+            $schema = {
+                count: Number
+            }
+            countAsync = 0
+            count = 0
+        }
+
+        socket.on('w', ([ev, time, value]) => {
+            send++
+            switch (send) {
+                case 1:
+                    expect(value).toMatchObject({ count: 0 })
+                    break;
+                case 3:
+                    expect(value.countAsync).toEqual(1)
+                    resolve()
+                    break;
+            }
+        })
+
+        let room =  World.addRoom('room', Room) 
+        socket.emit(':join', 'room')
+        World.send()
+        room = room.$setSchema({
+            count: Number,
+            countAsync: Number
+        })
+        room.countAsync++
         World.send()
     })
 })

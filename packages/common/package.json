@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/common",
-  "version": "3.0.0-alpha.5.1",
+  "version": "3.0.0-alpha.7",
   "description": "",
   "main": "lib/index.js",
   "types": "./lib/index.d.ts",
@@ -21,5 +21,5 @@
   "dependencies": {
     "sat": "^0.8.0"
   },
-  "gitHead": "44ebfaebe7c3292777f27cdaadf3c1373bdec917"
+  "gitHead": "90f32de0618ffddadf918fa313cecc3e3c78aa0b"
 }

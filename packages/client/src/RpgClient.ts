@@ -1,10 +1,11 @@
 import { RpgSprite } from './Sprite/Player'
+import { Plugin } from '@rpgjs/common'
 
 interface RpgClass<T> {
     new (data: any, scene: any): T,
 }
 
-interface RpgClientOptions {
+export interface RpgClientOptions {
      /** 
      * The element selector that will display the canvas. By default, `#rpg`
      * 
@@ -14,13 +15,31 @@ interface RpgClientOptions {
     selector?: string,
 
     /** 
-     * The selector that corresponds to the GUIs
+     * The selector that corresponds to the GUIs. By default, `#gui`
      * If you didn't put a GUI element in the div, an element will be automatically created.
      * 
      * @prop {string} [selectorGui]
      * @memberof RpgClient
      * */
-    selectorGui?: string,
+    selectorGui?: string
+
+    /** 
+     * The selector that corresponds to the element contains canvas. By default, `#canvas`
+     * If you didn't put element in the main div, an element will be automatically created.
+     * 
+     * @prop {string} [selectorCanvas]
+     * @memberof RpgClient
+     * */
+    selectorCanvas?: string
+
+    /**
+     * Adding client-side plugins
+     * 
+     * @todo
+     * @prop { { client: null | Function, server: null | Function }[]} [plugins]
+     * @memberof RpgClient
+     */
+    plugins?: Plugin[]
 
     /** 
      * Array containing the list of spritesheets

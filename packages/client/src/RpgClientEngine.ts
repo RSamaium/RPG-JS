@@ -1,4 +1,5 @@
 import { KeyboardControls } from './KeyboardControls'
+import { RpgClientOptions } from './RpgClient'
 import Renderer from './Renderer'
 import { _initSpritesheet } from './Sprite/Spritesheets'
 import { _initSound } from './Sound/Sounds'
@@ -6,13 +7,18 @@ import { RpgSprite } from './Sprite/Player'
 import { World } from '@rpgjs/sync-client'
 import { BehaviorSubject, Subject } from 'rxjs'
 import { RpgGui } from './RpgGui'
-import { RpgCommonPlayer, PrebuiltGui, PlayerType, Utils } from '@rpgjs/common'
+import { 
+    RpgCommonPlayer, 
+    PrebuiltGui, 
+    PlayerType, 
+    Utils, 
+    RpgPlugin, 
+    HookClient 
+} from '@rpgjs/common'
 import merge from 'lodash.merge'
-import entryPoint from './clientEntryPoint'
 import { SnapshotInterpolation, Vault } from '@geckos.io/snapshot-interpolation'
 
 const SI = new SnapshotInterpolation(15) 
-const STEP_DELAY_MSEC = 12
 
 declare var __RPGJS_PRODUCTION__: boolean;
 
@@ -40,8 +46,27 @@ export default class RpgClientEngine {
     constructor(private gameEngine, private options) {
         this.renderer = new Renderer(this)
         this.renderer.client = this
+
+        RpgPlugin.loadClientPlugins(this._options.plugins, {
+            RpgPlugin,
+            client: this
+        })
+
+        const pluginLoadRessource = (hookName: string, type: string) => {
+            const resource = this._options[type] || []
+            this._options[type] = [
+                ...Utils.arrayFlat(RpgPlugin.emit(hookName, resource)) || [],
+                ...resource
+            ]
+        }
+
+        pluginLoadRessource(HookClient.AddSpriteSheet, 'spritesheets')
+        pluginLoadRessource(HookClient.AddGui, 'gui')
+        pluginLoadRessource(HookClient.AddSound, 'sounds')
+
         this.renderer.options = {
             selector: '#rpg',
+            selectorCanvas: '#canvas',
             selectorGui: '#gui',
             canvas: {},
             gui: [],
@@ -50,10 +75,10 @@ export default class RpgClientEngine {
             ...this._options
         }
 
-        this.io = options.io
+        this.io = options['io']
 
        gameEngine._playerClass = this.renderer.options.spriteClass || RpgSprite
-       gameEngine.standalone = options.standalone
+       gameEngine.standalone = options['standalone']
        gameEngine.clientEngine = this
 
         _initSpritesheet(this.renderer.options.spritesheets)
@@ -99,6 +124,7 @@ export default class RpgClientEngine {
         })
         window.requestAnimationFrame(renderLoop)
         this._initSocket()
+        RpgPlugin.emit(HookClient.Start)
     }
 
     get objects() {
@@ -179,9 +205,10 @@ export default class RpgClientEngine {
         return logic
     }
 
-    sendInput(actionName, inputOptions) {
+    sendInput(actionName: string) {
         const inputEvent = { input: actionName, playerId: this.gameEngine.playerId }
         this.gameEngine.processInput(inputEvent, this.gameEngine.playerId)
+        RpgPlugin.emit(HookClient.SendInput, inputEvent)
         this.socket.emit('move', inputEvent)
     }
 
@@ -197,11 +224,9 @@ export default class RpgClientEngine {
       
           if (serverSnapshot && playerSnapshot) {
             const serverPos = serverSnapshot.state.filter(s => s.id === playerId)[0]
-            // calculate the offset between server and client
             const offsetX = playerSnapshot.state[0].x - serverPos.x
             const offsetY = playerSnapshot.state[0].y - serverPos.y
             const correction = 60
-
             player.position.x -= offsetX / correction
             player.position.y -= offsetY / correction
           }
@@ -212,7 +237,7 @@ export default class RpgClientEngine {
         this.gameEngine.emit('client__preStep')
         const { playerId } = this.gameEngine
         const player = this.gameEngine.world.getObject(playerId)
-        if (player) {
+        if (player && player.teleported) {
             const { x, y } = player.position
             this.playerVault.add(
                 SI.snapshot.create([{ id: playerId, x, y }])
@@ -233,8 +258,16 @@ export default class RpgClientEngine {
     }
 
     _initSocket() {
-        this.socket = this.io()
 
+        const { standalone } = this.gameEngine
+
+        if (!standalone) {
+            this.socket = this.io()
+        }
+        else {
+            this.socket = this.io
+        }
+    
         this.socket.on('connect', () => {
             if (RpgGui.exists(PrebuiltGui.Disconnect)) RpgGui.hide(PrebuiltGui.Disconnect)
             this.onConnect()
@@ -277,6 +310,7 @@ export default class RpgClientEngine {
             if (!val.data) {
                 return
             }
+
             const snapshot: any = { 
                 id: Utils.generateUID(),
                 time: val.time,
@@ -315,8 +349,16 @@ export default class RpgClientEngine {
                     })
                 }
             }
+
             change('users')
             change('events')
+
+            const scene = this.renderer.getScene()
+
+            if (scene) {
+                scene._data.next(val)
+            }
+
             SI.snapshot.add(snapshot)
         })
 
@@ -327,6 +369,10 @@ export default class RpgClientEngine {
         })
 
         RpgGui._setSocket(this.socket)
+
+        if (standalone) {
+            this.socket.connection()
+        }
     }
 
     onConnect() {}

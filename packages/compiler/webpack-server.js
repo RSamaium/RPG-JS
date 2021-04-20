@@ -5,6 +5,7 @@ const nodeExternals = require('webpack-node-externals')
 const webpackCommon = require('./webpack-common')
 const NodemonPlugin = require('nodemon-webpack-plugin')
 const PostCompile = require('./sync')
+const resolveLoader = require('./loaders/resolve')
 
 const mode = process.env.NODE_ENV || 'development'
 const prod = mode === 'production'
@@ -28,7 +29,7 @@ module.exports = function(dirname, extend = {}) {
             __dirname: false
         },
         externals: [nodeExternals({
-            allowlist: [/^@rpgjs/, 'lance-gg']
+            allowlist: [/^@rpgjs/]
         })],
         mode,
         entry: `./src/server/main.ts`,
@@ -40,10 +41,7 @@ module.exports = function(dirname, extend = {}) {
             extensions: ['.ts', '.js']
         },
         resolveLoader: { 
-            alias: { 
-                server: path.resolve(__dirname, 'loaders', 'content.js'),
-                client: path.resolve(__dirname, 'loaders', 'null.js')
-            } 
+            alias: resolveLoader('server', 'mmorpg', mode)
         },
         module: {
             rules: [{
@@ -51,7 +49,8 @@ module.exports = function(dirname, extend = {}) {
                     use: [{
                         loader: require.resolve('ts-loader'),
                         options: {
-                            onlyCompileBundledFiles: true
+                            onlyCompileBundledFiles: true,
+                            allowTsInNodeModules: true
                         }
                     }] 
                 },

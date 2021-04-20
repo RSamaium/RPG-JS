@@ -36,7 +36,7 @@ test('Test Array properties 1', async () => {
         secret: 's'
     }
     const value  = await testSend(room)
-    expect(value[1]).toMatchObject({ list: { '0': { public: 'p' } }})
+    expect(value[2]).toMatchObject({ list: { '0': { public: 'p' } }})
 })
 
 test('Test Array properties 2', async () => {
@@ -45,7 +45,7 @@ test('Test Array properties 2', async () => {
         secret: 's'
     }]
     const value  = await testSend(room)
-    expect(value[1]).toMatchObject({ list: { '0': { public: 'p' } }})
+    expect(value[2]).toMatchObject({ list: { '0': { public: 'p' } }})
 })
 
 test('Test Array properties 3', async () => {
@@ -54,7 +54,7 @@ test('Test Array properties 3', async () => {
         secret: 's'
     })
     const value  = await testSend(room)
-    expect(value[1]).toMatchObject({ list: { '0': { public: 'p' } }})
+    expect(value[2]).toMatchObject({ list: { '0': { public: 'p' } }})
 })
 
 test('Test Array properties and next change', () => {
@@ -67,11 +67,11 @@ test('Test Array properties and next change', () => {
         const value  = await testSend(room)
         const user = room.users['test']
 
-        expect(value[1]).toMatchObject({ list: { '0': { public: 'p' } }})
+        expect(value[2]).toMatchObject({ list: { '0': { public: 'p' } }})
         room.list[0].public = 'change'
         
         user._socket.emit = (ev, value) => {
-            expect(value[1]).toMatchObject({ list: { '0': { public: 'change' } }})
+            expect(value[2]).toMatchObject({ list: { '0': { public: 'change' } }})
             resolve()
         }
         World.send()
@@ -90,7 +90,7 @@ test('Test Deep Change', async () => {
         
         const value  = await testSend(room)
         const user = room.users['test']
-        const secretKey = value[1].keys.a.secret
+        const secretKey = value[2].keys.a.secret
         expect(secretKey).toBeUndefined()
 
         room.keys = { 
@@ -102,7 +102,7 @@ test('Test Deep Change', async () => {
         }
         
         user._socket.emit = (ev, value) => {
-            const secretKey = value[1].keys.a.secret
+            const secretKey = value[2].keys.a.secret
             expect(secretKey).toBeUndefined()
             resolve()
         }

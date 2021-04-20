@@ -31,6 +31,7 @@ export interface RoomClass {
     $leave?: (user: User) => void
     $currentState?: () => Object
     $clearCurrentState?: () => void
+    $setSchema: (schema: any) => void
 
     filterEmit?: (user: User, packet: Packet) => Packet | Promise<Packet>
 }

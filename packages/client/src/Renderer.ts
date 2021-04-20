@@ -1,5 +1,6 @@
 window.PIXI = require('pixi.js')
 
+import { RpgPlugin, HookClient } from '@rpgjs/common'
 import { SceneMap } from './Scene/Map'
 import { Scene } from './Presets/Scene'
 import { RpgGui } from './RpgGui'
@@ -16,6 +17,7 @@ export default class RpgRenderer  {
     private _width: number = 800
     private _height: number = 400
     guiEl: HTMLDivElement
+    canvasEl: HTMLElement
     selector: HTMLElement
     animation
     client
@@ -72,18 +74,22 @@ export default class RpgRenderer  {
         //this.gameEngine.renderer = this.renderer
         this.selector = document.body.querySelector(this.options.selector)
         this.guiEl = this.selector.querySelector(this.options.selectorGui)
+        this.canvasEl = this.selector.querySelector(this.options.selectorCanvas)
 
         if (!this.guiEl) {
             this.guiEl = document.createElement('div')
             this.selector.appendChild(this.guiEl)
         }
-        
-        this.selector.insertBefore(this.renderer.view, this.selector.firstChild)
-        const screens = document.querySelector(this.options.selector).children
-        for (let screen of screens) {
-            screen.style.position = 'absolute'
-        }
 
+        if (!this.canvasEl) {
+            this.selector.insertBefore(this.renderer.view, this.selector.firstChild)
+            const [canvas] = document.querySelector(this.options.selector).children
+            canvas.style.position = 'absolute'
+        }
+        else {
+            this.canvasEl.appendChild(this.renderer.view)
+        }
+        
         RpgGui._initalize(this.client)
 
         this.resize()
@@ -91,7 +97,7 @@ export default class RpgRenderer  {
 
     resize() {
         const size = () => {
-            const { offsetWidth, offsetHeight } = this.selector
+            const { offsetWidth, offsetHeight } = this.canvasEl || this.selector
             this._resize(offsetWidth, offsetHeight)
         }
         window.addEventListener('resize', size)
@@ -108,6 +114,10 @@ export default class RpgRenderer  {
     }
 
     async loadScene(name, obj) {
+        RpgPlugin.emit(HookClient.SceneLoading, {
+            name, 
+            obj
+        })
         this.gameEngine.world.removeObject(this.gameEngine.playerId)
         this.stage.removeChildren()
         const scenes = this.options.scenes || {}
@@ -129,8 +139,8 @@ export default class RpgRenderer  {
         }
         
         const container = await this.scene.load(obj)
-        
         this.stage.addChild(container)
+        RpgPlugin.emit(HookClient.SceneLoaded, this.scene)
     }
 
 }

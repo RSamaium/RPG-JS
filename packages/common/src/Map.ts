@@ -1,5 +1,6 @@
 import { Hit, HitObject } from './Hit'
 import { random, intersection } from './Utils'
+import { RpgCommonPlayer } from './Player'
 
 const buffer = new Map()
 

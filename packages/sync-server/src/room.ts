@@ -17,7 +17,7 @@ export class Room {
     private join(user: User, room: RoomClass) {
         if (!user._rooms) user._rooms = []
         user._rooms.push(room.id)
-        if (!user.id) user.id = Utils.generateId()
+        if (!user.id) user.id = Utils.generateId() 
         if (room['onJoin']) room['onJoin'](user)
         const object = this.extractObjectOfRoom(room, room.$schema)
         const packet = new Packet(object, <string>room.id)
@@ -37,36 +37,7 @@ export class Room {
         }
     }
 
-    add(id: string, room: RoomClass): RoomClass {
-        room.id = id
-        room.$dict = {}
-        if (!room.$schema) room.$schema = {}
-        if (!room.$schema.users) room.$schema.users = [{id: String}]
-        if (!room.$inputs) room.$inputs = {}
-        if (!room.users) room.users = {} 
-        if (room.$inputs) this.addInputs(room, room.$inputs)
-
-        room.$detectChanges = () => {
-            //this.detectChanges(room)
-        }
-
-        room.$join = (user: User) => {
-            room.users[user.id] = user
-            this.join(room.users[user.id], room)
-            //this.detectChanges(room)
-        }
-
-        room.$leave = (user: User) => {
-            this.leave(user, room)
-            delete room.users[user.id]
-            //this.detectChanges(room)
-        }
-
-        room.$currentState = () => this.memoryObject
-        room.$clearCurrentState = () => {
-            this.memoryObject = {}
-        }
-
+    setProxy(room: RoomClass) {
         const dict = {}
         const self = this
 
@@ -130,7 +101,14 @@ export class Room {
                         else if (infoDict == GENERIC_KEY_SCHEMA) {
                             newObj = {}
                             for (let key in val) {
-                                newObj[key] = self.extractObjectOfRoom(val[key], dict[genericPath + '.' + GENERIC_KEY_SCHEMA])
+                                const item = val[key]
+                                if (typeof item == 'string' || 
+                                    typeof item == 'number' || 
+                                    typeof item == 'boolean') {
+                                    newObj[key] = item
+                                    continue
+                                }
+                                newObj[key] = self.extractObjectOfRoom(item, dict[genericPath + '.' + GENERIC_KEY_SCHEMA])
                             }
                         }
                         else {
@@ -166,7 +144,45 @@ export class Room {
                 }
             })
         }
-        this.proxyRoom = room = deepProxy(room)
+        return deepProxy(room)
+    }
+
+    add(id: string, room: RoomClass): RoomClass {
+        room.id = id
+        room.$dict = {}
+        if (!room.$schema) room.$schema = {}
+        if (!room.$schema.users) room.$schema.users = [{id: String}]
+        if (!room.$inputs) room.$inputs = {}
+        if (!room.users) room.users = {} 
+        if (room.$inputs) this.addInputs(room, room.$inputs)
+
+        room.$detectChanges = () => { 
+            //this.detectChanges(room)
+        }
+
+        room.$setSchema = (schema) => {
+            room.$schema = schema
+            return this.setProxy(room)
+        }
+
+        room.$join = (user: User) => {
+            room.users[user.id] = user
+            this.join(room.users[user.id], room)
+            //this.detectChanges(room)
+        }
+
+        room.$leave = (user: User) => {
+            this.leave(user, room)
+            delete room.users[user.id]
+            //this.detectChanges(room)
+        }
+
+        room.$currentState = () => this.memoryObject
+        room.$clearCurrentState = () => {
+            this.memoryObject = {}
+        }
+
+        this.proxyRoom = room = this.setProxy(room)
         if (this.proxyRoom['onInit']) this.proxyRoom['onInit']()
         return this.proxyRoom
     }

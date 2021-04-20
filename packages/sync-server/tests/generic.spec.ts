@@ -35,7 +35,7 @@ test('Test Generic Key 1',  () => {
         }
         
         user._socket.emit = (ev, value) => {
-            expect(value[1]).toMatchObject({ list: { mykey: { public: 'p' } } })
+            expect(value[2]).toMatchObject({ list: { mykey: { public: 'p' } } })
             resolve()
         }
 
@@ -57,7 +57,7 @@ test('Test Generic Key 2',  () => {
         }
         
         user._socket.emit = (ev, value) => {
-            expect(value[1]).toMatchObject({ list: { mykey: { public: 'p' } } })
+            expect(value[2]).toMatchObject({ list: { mykey: { public: 'p' } } })
             resolve()
         }
 
@@ -91,8 +91,8 @@ test('Test Generic Key with array',  () => {
         room.list.mykey.nb.push('hello')
         
         user._socket.emit = (ev, value) => {
-            expect(value[1]).toMatchObject({ list: { mykey: { nb: { '0': 'hello' } } } })
-            expect(value[1].list.mykey.nb.length).toBeUndefined()
+            expect(value[2]).toMatchObject({ list: { mykey: { nb: { '0': 'hello' } } } })
+            expect(value[2].list.mykey.nb.length).toBeUndefined()
             resolve()
         }
 

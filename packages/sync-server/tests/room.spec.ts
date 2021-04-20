@@ -33,7 +33,7 @@ test('Change properties', async () => {
     room.position.x = 5
 
     const value = await testSend(room)
-    expect(value[1]).toMatchObject({ position: { x: 5 }})
+    expect(value[2]).toMatchObject({ position: { x: 5 }})
 })
 
 test('change root propertie in room', async () => {
@@ -52,7 +52,7 @@ test('change root propertie in room', async () => {
     const room: any =  World.addRoom('room', Room)
     room.position = { x: 5, y: 2 }
     const value  = await testSend(room)
-    expect(value[1]).toMatchObject({ position: { x: 5 }})
+    expect(value[2]).toMatchObject({ position: { x: 5 }})
 })
 
 test('Not listen properties', () => {

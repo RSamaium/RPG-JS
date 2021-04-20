@@ -1,5 +1,5 @@
 import * as PIXI from 'pixi.js'
-import { RpgCommonMap, Input, Control } from '@rpgjs/common'
+import { RpgCommonMap, Input, Control, RpgPlugin, HookClient } from '@rpgjs/common'
 import TileMap from '../Tilemap'
 import { Viewport } from 'pixi-viewport'
 import { IScene } from '../Interfaces/Scene'
@@ -167,6 +167,7 @@ export class SceneMap extends Scene implements IScene {
         sprite.onInit()
 
         this.onAddSprite(sprite)
+        RpgPlugin.emit(HookClient.AddSprite, sprite)
 
         return sprite
     }
@@ -176,6 +177,7 @@ export class SceneMap extends Scene implements IScene {
         if (sprite) {
             this.objects.delete(id)
             this.onRemoveSprite(sprite)
+            RpgPlugin.emit(HookClient.RemoveSprite, sprite)
             sprite.destroy()
         }
     }

@@ -1,9 +1,8 @@
-import { RpgCommonMap, RpgCommonPlayer, Utils }  from '@rpgjs/common'
+import { RpgCommonMap, RpgCommonPlayer, Utils, RpgPlugin }  from '@rpgjs/common'
 import { Query } from '../Query'
 import merge from 'lodash.merge'
 import { ItemManager } from './ItemManager'
 import { GoldManager } from './GoldManager'
-import { World } from '@rpgjs/sync-server'
 import { StateManager } from './StateManager';
 import { SkillManager } from './SkillManager'
 import { ParameterManager } from './ParameterManager';
@@ -55,6 +54,13 @@ const playerSchemas = {
     },
     direction: Number,
     teleported: Number,
+
+    vision: {
+        ellipse: Boolean,
+        height: Number,
+        width: Number,
+        type: String
+    },
 
     param: Object,
     hp: Number,
@@ -188,6 +194,42 @@ export class RpgPlayer extends RpgCommonPlayer {
      */
     setGraphic(graphic: string) {
         this.graphic = graphic
+    }
+
+    /**
+     * Define a vision for the event. 
+     * 
+     * The object in parameter
+     * - type: `box`
+     * - height: Height
+     * - width: Width
+     * 
+     * the `onInVision()` and `onOutVision()` methods are triggered on the `RpgPlayer` class
+     * 
+     * ```ts
+     * player.setVision({
+     *      type: 'box',
+     *      width: 100, 
+     *      height: 100
+     * })
+     * ```
+     * 
+     * @title Set Vision
+     * @todo
+     * @method player.setVision(obj)
+     * @param {object} obj
+     * @memberof Player
+     */
+    setVision(obj: {
+        ellipse?: boolean,
+        height: number,
+        width: number,
+        type: string
+    }) {
+        if (!this.hitbox) {
+            throw 'Please define hitbox property before'
+        }
+        this.vision = obj
     }
 
     /**
@@ -348,14 +390,7 @@ export class RpgPlayer extends RpgCommonPlayer {
     /**
      * Run the change detection cycle. Normally, as soon as a hook is called in a class, the cycle is started. But you can start it manually
      * The method calls the `onChanges` method on events and synchronizes all map data with the client.
-     * 
-     * ```ts
-     * // restarts the change detection cycle every 3s
-     * setInterval(() => {
-     *      player.hp += 10
-     *      player.syncChanges()
-     * }, 3000)
-     * ```
+
      * @title Run Sync Changes
      * @method player.syncChanges()
      * @returns {void}
@@ -363,10 +398,6 @@ export class RpgPlayer extends RpgCommonPlayer {
      */
     syncChanges() {
         this._eventChanges()
-        // Trigger detect changes cycle in @rpgjs/sync-server package
-        World.forEachUserRooms(''+this.playerId, (room: any) => {
-            if (room) room.$detectChanges()
-        })
     }
 
     databaseById(id: string) {
@@ -477,6 +508,10 @@ export class RpgPlayer extends RpgCommonPlayer {
     }
 
     public execMethod(methodName: string, methodData = [], instance = this): void {
+        RpgPlugin.emit(`Server.${methodName}`, {
+            player: this,
+            params: methodData
+        })
         if (!instance[methodName]) {
             return
         }
@@ -523,7 +558,8 @@ export interface RpgPlayer extends
     BattleManager
 {
     _socket: any 
-    server: any
+    server: any,
+    vision
 }
 
 applyMixins(RpgPlayer, [

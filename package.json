@@ -12,7 +12,11 @@
     "artillery": "^1.6.1",
     "artillery-engine-socketio-v3": "^1.0.1",
     "jest": "^26.4.2",
-    "lerna": "^3.22.1"
+    "lerna": "^4.0.0",
+    "npm-packlist": "^2.1.5"
+  },
+  "resolutions": {
+    "npm-packlist": "2.1.5"
   },
   "scripts": {
     "test": "cd tests/unit-tests && npm test",
@@ -27,8 +31,6 @@
     "build:database": "cd packages/database && npm run build",
     "build:testing": "cd packages/testing && npm run build",
     "build:sync-server": "cd packages/sync-server && npm run build",
-    "build:starter-kit-server": "cd packages/starter-kit-server && npm run build",
-    "watch:starter-kit-server": "cd packages/starter-kit-server && npm run watch",
     "watch:sync-server": "cd packages/sync-server && npm run watch",
     "build:sync-client": "cd packages/sync-client && npm run build",
     "watch:sync-client": "cd packages/sync-client && npm run watch",

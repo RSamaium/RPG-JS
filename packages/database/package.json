@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/database",
-  "version": "3.0.0-alpha.5.1",
+  "version": "3.0.0-alpha.7",
   "description": "",
   "main": "lib/index.js",
   "publishConfig": {
@@ -17,5 +17,5 @@
   "keywords": [],
   "author": "Samuel Ronce",
   "license": "MIT",
-  "gitHead": "44ebfaebe7c3292777f27cdaadf3c1373bdec917"
+  "gitHead": "90f32de0618ffddadf918fa313cecc3e3c78aa0b"
 }

@@ -8,16 +8,12 @@ const LOOP_SLOW_COUNT = 10;
  * Scheduler class
  *
  */
-export class Scheduler {
+export class Scheduler extends EventEmitter {
 
     options
     nextExecTime
     requestedDelay
     delayCounter
-    on
-    once
-    removeListener
-    emit
 
     /**
      * schedule a function to be called
@@ -28,6 +24,7 @@ export class Scheduler {
      * @param {Number} options.delay number of milliseconds to add when delaying or hurrying the execution
      */
     constructor(options) {
+        super()
         this.options = Object.assign({
             tick: null,
             period: SIXTY_PER_SEC,
@@ -36,13 +33,6 @@ export class Scheduler {
         this.nextExecTime = null;
         this.requestedDelay = 0;
         this.delayCounter = 0;
-
-        // mixin for EventEmitter
-        let eventEmitter = new EventEmitter();
-        this.on = eventEmitter.on;
-        this.once = eventEmitter.once;
-        this.emit = eventEmitter.emit;
-
     }
 
     // in same cases, setTimeout is ignored by the browser,

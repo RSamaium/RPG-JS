@@ -1,6 +1,7 @@
 
 import { RpgCommonMap } from '@rpgjs/common'
 import { World } from '@rpgjs/sync-server'
+import autoBind from 'auto-bind'
 import { EventMode } from '../Event';
 import { RpgMap } from '../Game/Map';
 
@@ -55,6 +56,8 @@ export class SceneMap {
 
         if (player.prevMap) {
             World.leaveRoom(player.prevMap, player.id)
+            player.execMethod('onLeave', [player], player.mapInstance)
+            player.execMethod('onLeaveMap', [player.mapInstance])
         }
 
         const mapInstance = await this.loadMap(mapId)
@@ -81,8 +84,11 @@ export class SceneMap {
 
         World.joinRoom(mapId, player.id)
         player = World.getUser(player.id)
+        autoBind(player) 
 
         player.execMethod('onEnter', [player, player.prevMap || null], mapInstance)
+        player.execMethod('onJoinMap', [mapInstance])
+
         player.teleport(positions || 'start')
         player.events = mapInstance.createEvents(EventMode.Scenario)
         for (let key in player.events) {

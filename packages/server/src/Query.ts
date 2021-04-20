@@ -42,7 +42,7 @@ class QueryClass {
      * 
      * @title Get Player
      * @method RpgWorld.getPlayer(player)
-     * @param {RpgPlayer | string} player player identifier
+     * @param {RpgPlayer | string} player identifier
      * @returns {RpgPlayer}
      * @memberof RpgWorld
      */
@@ -86,20 +86,17 @@ class QueryClass {
      * ```ts
      * import { RpgWorld } from '@rpgjs/server'
      * 
-     * const mapId = 'mapname'
-     * const [ firstPlayerOfMap ] = RpgWorld.getPlayersOfMap(mapId)
-     * const objects = RpgWorld.getObjectsOfMap(mapId, firstPlayerOfMap)
-     * console.log(objects)
+     * const objects = RpgWorld.getObjectsOfMap('mapname', 'playerid')
      * ```
      * 
-     * @title Recover all map objects
+     * @title Get all objects of map
      * @method RpgWorld.getObjectsOfMap(map,playerId?)
      * @param {string} map Map Name
-     * @param {RpgPlayer | string} [player] player identifier
+     * @param {RpgPlayer | string} playerId player identifier
      * @returns {Array<RpgPlayer>}
      * @memberof RpgWorld
      */
-    getObjectsOfMap(map: string, playerId?: RpgPlayer | string) {
+    getObjectsOfMap(map: string, playerId?: RpgPlayer | string): RpgPlayer[] {
         const room: any = World.getRoom(map)
         let player: any = null
         if (playerId) {
@@ -109,7 +106,12 @@ class QueryClass {
             ...Object.values(room.users),
             ...Object.values(room.events),
             ...(player ? Object.values(player.events) : [])
-        ]
+        ] as RpgPlayer[]
+    }
+
+    // TODO
+    getRooms() {
+        return World.getRooms()
     }
 
     /**

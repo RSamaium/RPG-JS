@@ -1,8 +1,10 @@
-import { Utils } from '@rpgjs/common'
+import { Utils, RpgPlugin, HookClient } from '@rpgjs/common'
 import * as PIXI from 'pixi.js'
 import { KeyboardControls } from '../KeyboardControls'
 import RpgSprite from '../Sprite/Character'
 import { Animation } from '../Effects/Animation'
+import { BehaviorSubject, Observable } from 'rxjs'
+import { map, tap } from 'rxjs/operators'
 
 const { isArray } = Utils
 
@@ -26,9 +28,47 @@ export class Scene {
     private animations: Animation[] = []
     private _controlsOptions: Controls = {}
 
+    _data: BehaviorSubject<{ data: object, partial: object }> = new BehaviorSubject({
+        data: {},
+        partial: {}
+    })
+
     constructor(protected game: any) {
         this.controls = this.game.clientEngine.controls
         this.setInputs(this.inputs)
+    }
+
+    /**
+     * Listen to all the synchronized values of the scene with the server
+     * 
+     * ```ts 
+     * import { RpgSceneMap } from '@rpgjs/client'
+     * 
+     * export class SceneMap extends RpgSceneMap {
+     *      onLoad() {
+     *          this.valuesChange.subscribe((obj) => {
+     *              console.log(obj.data, obj.partial)
+     *          })
+     *      }
+     * }
+     * ```
+     * 
+     * - `data` represents all the current data of the scene (`users`, `events` and others)
+     * - `partial` represents only the data that has changed on the scene
+     * 
+     * > In the class, you can also use the onChanges hook
+     * 
+     * 
+     * @prop {Observable<{ data: object, partial: object }>} [valuesChange]
+     * @readonly
+     * @memberof RpgScene
+     */
+    get valuesChange(): Observable<{ data: object, partial: object }> {
+        return this._data
+            .asObservable()
+            .pipe(
+                tap(this.onChanges.bind(this))
+            )
     }
 
     /**
@@ -121,10 +161,15 @@ export class Scene {
         this._controlsOptions = inputs
     }
 
-    private triggerSpriteChanges(logic, sprite, moving: boolean) {
+    private triggerSpriteChanges(logic, sprite: RpgSprite, moving: boolean) {
         if (this.onUpdateObject) this.onUpdateObject(logic, sprite, moving)
-        if (sprite['onChanges'] && logic.paramsChanged) {
-            sprite['onChanges'](logic.paramsChanged, logic.prevParamsChanged)
+        if (logic.paramsChanged) {
+            sprite.onChanges(logic.paramsChanged, logic.prevParamsChanged)
+            RpgPlugin.emit(HookClient.UpdateSprite, {
+                sprite,
+                moving,
+                logic
+            })
             logic.paramsChanged = null
         }
     }
@@ -136,7 +181,7 @@ export class Scene {
         for (let key in logicObjects) {
             const val = logicObjects[key].object
             if (!renderObjects.has(key)) {
-                const sprite = this.addObject(val, key)
+                const sprite: any = this.addObject(val, key)
                 this.triggerSpriteChanges(val, sprite, true)
             }
             else {
@@ -383,6 +428,7 @@ export class Scene {
     // Hooks
     onInit() {}
     onLoad() {}
+    onChanges(obj) {}
     onDraw(t: number, dt: number) {}
     onAddSprite(sprite: RpgSprite) {}
     onRemoveSprite(sprite: RpgSprite) {}

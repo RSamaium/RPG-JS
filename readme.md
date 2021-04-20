@@ -50,9 +50,14 @@ because, there are still several parts to realize
 
 Planned for the Beta version
 
-* Provide the means to customize data sharing with the client
 * Admin Front
 * Guild GUI
+
+## Can I use the current version in production?
+
+For the moment, i do not recommend it. The Alpha version is unstable and its structure may change. You can try RpgJS in experimental mode or get familiar with it in order to make a game later
+
+I will update to indicate when the version is more stable 
 
 ## Documentation 
 
@@ -95,6 +100,10 @@ Example 2: (with [PM2](https://pm2.keymetrics.io))
 `NODE_ENV=production RPG_TYPE=rpg npm run build`
 
 Put the files in the `dist/standalone` folder on a static server (as [Vercel](https://vercel.com) or [Netlify](https://www.netlify.com) or your own server)
+
+# Benchmark
+
+WIP|
 
 ## Contribute to developments
 

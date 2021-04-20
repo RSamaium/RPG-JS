@@ -1,6 +1,6 @@
 import { intersection, isString, isBrowser } from './Utils'
-import SAT from 'sat'
 import { Hit } from './Hit'
+import SAT from 'sat'
 import Map from './Map'
 
 const ACTIONS = { IDLE: 0, RUN: 1, ACTION: 2 }
@@ -30,7 +30,11 @@ export class RpgCommonPlayer {
     collisionWith: any[] = []
     data: any = {}
     hitbox: any
+    vision: any
 
+    private inVision: {
+        [playerId: string]: boolean
+    } = {}
     private _position: any
     private _hitboxPos: any
 
@@ -91,7 +95,7 @@ export class RpgCommonPlayer {
         this.position.z = val
     }
 
-    get mapInstance() {
+    get mapInstance(): Map {
         return Map.buffer.get(this.map)
     }
 
@@ -168,6 +172,17 @@ export class RpgCommonPlayer {
     get hHitbox() {
         return this.hitbox.h
     }
+
+    get visionHitbox() {
+        if (!this.vision.type) return null
+        const x = this.position.x - (this.vision.width / 2 - this.wHitbox / 2)
+        const y = this.position.y -(this.vision.height / 2 - this.hHitbox / 2)
+        return Hit.getHitbox({
+            ...this.vision,
+            x,
+            y
+        })
+    }
     
     defineNextPosition(direction) {
         switch (direction) {
@@ -232,7 +247,7 @@ export class RpgCommonPlayer {
         this.changeDirection(direction)
 
         const nextPosition = this.defineNextPosition(direction)
-        const map = this.mapInstance
+        const map: Map = this.mapInstance
 
         const hitbox = Hit.createObjectHitbox(nextPosition.x, nextPosition.y, 0, this.hitbox.w, this.hitbox.h)
 
@@ -260,11 +275,12 @@ export class RpgCommonPlayer {
 
         const tileCollision = (x, y): boolean => {
             const tile = map.getTileByPosition(x, y, [nextPosition.z, this.height])
+            const tilePos = map.getTileOriginPosition(x, y)
             if (tile.hasCollision) {
                 return true
             }
             else if (tile.objectGroups) {
-                const tilePos = map.getTileOriginPosition(x, y) 
+                
                 for (let object of tile.objectGroups) {
                     const hit = Hit.getHitbox(object, {
                         x: tilePos.x,
@@ -291,12 +307,30 @@ export class RpgCommonPlayer {
             return false
         }
 
-        let events = this.gameEngine.world.getObjectsOfGroup(this.map, this)
+        let events: RpgCommonPlayer[] = this.gameEngine.world.getObjectsOfGroup(this.map, this)
+
+        const inArea = (player1: RpgCommonPlayer, player2: RpgCommonPlayer) => {
+            if (player1.vision && player1.vision.type) {
+                const playerInVision = Hit.testPolyCollision('box', player2.hitbox, player1.visionHitbox?.hitbox)
+                if (playerInVision && !player1.inVision[player2.id]) {
+                    player1.inVision[player2.id] = true
+                    player1.execMethod('onInVision', [player2])
+                }
+                if (!playerInVision && player1.inVision[player2.id]) {
+                    delete player1.inVision[player2.id]
+                    player1.execMethod('onOutVision', [player2])
+                }
+            }
+        }
 
         for (let event of events) {
             if (event.id == this.id) continue
             if (!this.zCollision(event)) continue
             const collided = Hit.testPolyCollision('box', hitbox, event.hitbox)
+            
+            inArea(event, this)
+            inArea(this, event)
+            
             if (collided) {
                 this.collisionWith.push(event)
                 this.triggerCollisionWith()
@@ -329,34 +363,7 @@ export class RpgCommonPlayer {
                 if (collision) return false
             }
         }
-
-        switch (direction) {
-            case Direction.Left:
-                this.posX = nextPosition.x
-                break
-            case Direction.Right:
-                this.posX = nextPosition.x
-                break
-            case Direction.Up:
-                // Todo
-                if (isClimbable) {
-                    this.posZ = nextPosition.z + this.speed
-                }
-                else {
-                    this.posY = nextPosition.y
-                }
-                break
-            case Direction.Down:
-                // Todo
-                if (isClimbable) {
-                    this.posZ = nextPosition.z - this.speed
-                }
-                else {
-                    this.posY = nextPosition.y
-                }
-                break
-        }
-
+        this.position = nextPosition
         return true
     }
 
@@ -431,6 +438,8 @@ export class RpgCommonPlayer {
                 return NaN
         }
     }
+
+    execMethod(methodName: string, methodData: any = []) {}
 }
 
 export interface RpgCommonPlayer {

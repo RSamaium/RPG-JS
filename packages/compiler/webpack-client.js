@@ -8,6 +8,7 @@ const WorkboxWebpackPlugin = require("workbox-webpack-plugin")
 const WebpackPwaManifest = require('webpack-pwa-manifest')
 const webpackCommon = require('./webpack-common')
 const PostCompile = require('./sync')
+const resolveLoader = require('./loaders/resolve')
 
 const mode = process.env.NODE_ENV || 'development'
 const type = process.env.RPG_TYPE || 'mmorpg'
@@ -66,10 +67,7 @@ module.exports = function(dirname, extend = {}) {
             extensions: ['.ts', '.js']
         },
         resolveLoader: { 
-            alias: { 
-                server: path.resolve(__dirname, 'loaders', 'null.js'),
-                client: path.resolve(__dirname, 'loaders', 'content.js')
-            } 
+            alias: resolveLoader('client', type, mode)
         },
         module: {
             rules: [{
@@ -78,7 +76,8 @@ module.exports = function(dirname, extend = {}) {
                     loader: require.resolve('ts-loader'),
                     options: {
                         onlyCompileBundledFiles: true,
-                        appendTsSuffixTo: [/\.vue$/]
+                        appendTsSuffixTo: [/\.vue$/],
+                        allowTsInNodeModules: true
                     }
                 }]
     
