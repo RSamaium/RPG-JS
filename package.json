@@ -6,13 +6,17 @@
   },
   "description": "RPG JS is a framework for creating RPGs and MMORPG",
   "dependencies": {
-    "concurrently": "^5.3.0"
+    "concurrently": "^5.3.0",
+    "npm-packlist": "^2.1.5"
   },
   "devDependencies": {
     "artillery": "^1.6.1",
     "artillery-engine-socketio-v3": "^1.0.1",
     "jest": "^26.4.2",
     "lerna": "^3.22.1"
+  },
+  "resolutions": {
+    "npm-packlist": "2.1.5"
   },
   "scripts": {
     "test": "cd tests/unit-tests && npm test",
