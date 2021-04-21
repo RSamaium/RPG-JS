@@ -25,7 +25,9 @@ export class Shape  {
     in(player: RpgCommonPlayer): boolean {
         if (!this.playerIsIn(player)) {
             this.playersIn[player.id] = true
-            if (this.onIn) this.onIn(player)
+            player.inShapes[this.name] = this
+            player.execMethod('onInShape', [this])
+            player.execMethod('onIn', [player], this)
             return true
         }
         return false
@@ -34,7 +36,9 @@ export class Shape  {
     out(player: RpgCommonPlayer): boolean {
         if (this.playerIsIn(player)) {
             delete this.playersIn[player.id]
-            if (this.onOut) this.onOut(player)
+            delete player.inShapes[this.name]
+            player.execMethod('onOutShape', [this])
+            player.execMethod('onOut', [player], this)
             return true
         }
         return false

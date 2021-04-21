@@ -33,7 +33,7 @@ export class RpgCommonPlayer {
     hitbox: any
     vision: any
     
-    private inShapes: {
+    inShapes: {
         [shapeId: string]: Shape
     } = {}
 
@@ -367,18 +367,12 @@ export class RpgCommonPlayer {
             let collided = Hit.testPolyCollision(shape.type, hitbox, shape.hitbox)
             if (collided) {
                 this.collisionWith.push(shape)
+                if (!collision) shape.in(this)
                 this.triggerCollisionWith()
                 if (collision) return false
-                if (shape.in(this)) {
-                    this.inShapes[shape.name] = shape
-                    this.execMethod('onInShape', [shape])
-                }
             }
             else {
-                if (shape.out(this)) {
-                    delete this.inShapes[shape.name]
-                    this.execMethod('onOutShape', [shape])
-                }
+                shape.out(this)
             }
         }
         this.position = nextPosition
@@ -462,7 +456,7 @@ import { Shape } from './Shape';
         }
     }
 
-    execMethod(methodName: string, methodData: any = []) {}
+    execMethod(methodName: string, methodData: any = [], instance: any = null) {}
 }
 
 export interface RpgCommonPlayer {

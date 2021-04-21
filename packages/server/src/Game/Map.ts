@@ -1,6 +1,7 @@
 import { RpgCommonMap, Utils }  from '@rpgjs/common'
 import fs from 'fs'
 import { EventMode } from '../Event'
+import { RpgPlayer } from '../Player/Player'
 
 export class RpgMap extends RpgCommonMap {
 
@@ -32,6 +33,10 @@ export class RpgMap extends RpgCommonMap {
     }
 
     onLoad() {}
+
+    onLeave(player: RpgPlayer) {
+       this.getShapes().forEach(shape => shape.out(player))
+    }
 
     createEvents(mode: EventMode) {
         const events  = {}
