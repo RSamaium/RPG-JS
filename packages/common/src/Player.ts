@@ -1,5 +1,6 @@
 import { intersection, isString, isBrowser } from './Utils'
 import { Hit } from './Hit'
+import { Shape } from './Shape'
 import SAT from 'sat'
 import Map from './Map'
 
@@ -31,10 +32,15 @@ export class RpgCommonPlayer {
     data: any = {}
     hitbox: any
     vision: any
+    
+    private inShapes: {
+        [shapeId: string]: Shape
+    } = {}
 
     private inVision: {
         [playerId: string]: boolean
     } = {}
+
     private _position: any
     private _hitboxPos: any
 
@@ -347,8 +353,10 @@ export class RpgCommonPlayer {
             }
         }
 
-        for (let shape of map.shapes) {
+        const shapes = map.getShapes()
+        for (let shape of shapes) {
             const { collision, z } = shape.properties
+            if (shape.isShapePosition()) continue
             if (z !== undefined && !this.zCollision({
                 position: { z },
                 height: map.tileHeight
@@ -359,12 +367,26 @@ export class RpgCommonPlayer {
             let collided = Hit.testPolyCollision(shape.type, hitbox, shape.hitbox)
             if (collided) {
                 this.collisionWith.push(shape)
-                this.triggerCollisionWith() 
+                this.triggerCollisionWith()
                 if (collision) return false
+                if (shape.in(this)) {
+                    this.inShapes[shape.name] = shape
+                    this.execMethod('onInShape', [shape])
+                }
+            }
+            else {
+                if (shape.out(this)) {
+                    delete this.inShapes[shape.name]
+                    this.execMethod('onOutShape', [shape])
+                }
             }
         }
         this.position = nextPosition
         return true
+    }
+
+    getInShapes(): Shape[] {
+        return Object.values(this.inShapes)
     }
 
      /**
@@ -398,6 +420,7 @@ export class RpgCommonPlayer {
      * 
      * ```ts
      * import { Direction } from '@rpgjs/server'
+import { Shape } from './Shape';
      * 
      * player.changeDirection(Direction.Left)
      * ```

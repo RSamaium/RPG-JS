@@ -17,7 +17,9 @@ export enum HookServer {
     PlayerJoinMap = 'Server.onJoinMap',
     PlayerLeaveMap = 'Server.onLeaveMap',
     PlayerLevelUp = 'Server.onLevelUp',
-    PlayerDead = 'Server.onDead'
+    PlayerDead = 'Server.onDead',
+    PlayerInShape = 'Server.onInShape',
+    PlayerOutShape = 'Server.onOutShape'
 }
 
 export enum HookClient {

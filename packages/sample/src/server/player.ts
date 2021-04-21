@@ -40,9 +40,18 @@ export class Player extends RpgPlayer {
         
     }
 
-    onJoinMap() {
+    onJoinMap(map) {
       //const gui = this.gui('info')
       //gui.open({})
+      map.createShape({
+        properties: {},
+        type: 'box',
+        name: 'lol',
+        x: 149,
+        y: 6,
+        width: 259,
+        height: 145
+      })
     }
 
     onInput({ input }) {
@@ -50,6 +59,14 @@ export class Player extends RpgPlayer {
         this.callMainMenu()
         //this.showEmotionBubble('confusion')
       }
+    }
+
+    onInShape(shape) {
+      console.log('in', shape)
+    }
+
+    onOutShape(shape) {
+      console.log('out', shape)
     }
 
     onDead() {
