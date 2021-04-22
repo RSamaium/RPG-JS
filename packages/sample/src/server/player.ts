@@ -43,15 +43,6 @@ export class Player extends RpgPlayer {
     onJoinMap(map) {
       //const gui = this.gui('info')
       //gui.open({})
-      /*map.createShape({
-        properties: {},
-        type: 'box',
-        name: 'lol',
-        x: 149,
-        y: 6,
-        width: 259,
-        height: 145
-      })*/
     }
 
     onInput({ input }) {

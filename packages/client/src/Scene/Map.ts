@@ -91,6 +91,8 @@ export class SceneMap extends Scene implements IScene {
 
         Howler.stop()
 
+        RpgPlugin.emit(HookClient.SceneMapLoading, loader)
+
         return new Promise((resolve, reject) => {
             
             const complete = () => {
@@ -112,7 +114,6 @@ export class SceneMap extends Scene implements IScene {
                 resolve(this.viewport)
                 if  (this.onLoad) this.onLoad()
             }
-    
             loader.onError.add(() => {
                 reject()
             })

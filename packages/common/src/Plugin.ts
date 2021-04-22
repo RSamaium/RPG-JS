@@ -28,11 +28,13 @@ export enum HookClient {
     AddGui = 'Client.AddGui',
     AddSound = 'Client.AddSound',
     SendInput = 'Client.SendInput',
-    SceneLoaded = 'Client.SceneLoaded',
-    SceneLoading = 'Client.SceneLoading',
+    BeforeSceneLoading = 'Client.BeforeSceneLoading',
+    AfterSceneLoading = 'Client.AfterSceneLoading',
+    SceneMapLoading = 'Client.SceneMapLoading',
     AddSprite = 'Client.AddSprite',
     RemoveSprite = 'Client.RemoveSprite',
-    UpdateSprite = 'Client.UpdateSprite'
+    UpdateSprite = 'Client.UpdateSprite',
+    WindowResize = 'Client.WindowResize'
 }
 
 export class PluginSystem extends EventEmitter {
