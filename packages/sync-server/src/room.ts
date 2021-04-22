@@ -219,7 +219,7 @@ export class Room {
         return newObj
     }
 
-    detectChanges(room: RoomClass, obj: Object | undefined, path: string): void {
+    detectChanges(room: RoomClass, obj: Object | undefined, path: string): void {     
         set(this.memoryObject, path, obj)
 
         if (this.proxyRoom['onChanges']) this.proxyRoom['onChanges'](this.memoryObject)

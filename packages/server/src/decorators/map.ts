@@ -152,6 +152,22 @@ export function MapData(options: MapOptions) {
         if (options.syncSchema) {
             target.prototype.$schema = options.syncSchema
         }
+        if (!target.prototype.$schema.shapes) {
+            target.prototype.$schema.shapes = [
+                {
+                    type: String,
+                    name: String,
+                    hitbox: {
+                        pos: {
+                            x: Number,
+                            y: Number
+                        },
+                        w: Number,
+                        h: Number
+                    }
+                }
+            ]
+        }
         if (!target.prototype.$schema.users) {
             target.prototype.$schema.users = [RpgPlayer.schemas]
         }

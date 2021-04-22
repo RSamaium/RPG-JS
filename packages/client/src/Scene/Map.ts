@@ -63,9 +63,10 @@ export class SceneMap extends Scene implements IScene {
         this.onInit()
     }
 
-    load(obj) {
+    load(obj): Promise<Viewport> {
         this.gameMap = new RpgCommonMap()
         this.gameMap.load(obj)
+
         if (!this.game.standalone) RpgCommonMap.buffer.set(obj.id, this.gameMap)
 
         this.tilemap = new TileMap(obj, this.game.renderer)
@@ -122,11 +123,11 @@ export class SceneMap extends Scene implements IScene {
         })
     }
 
-    draw(t, dt) {
+    draw(t: number) {
         if (!this.isLoaded) {
             return
         }
-        super.draw(t, dt)
+        super.draw(t)
     }
 
     onUpdateObject(logic, sprite: Character, moving: boolean): Character {
@@ -148,12 +149,41 @@ export class SceneMap extends Scene implements IScene {
         return sprite
     }
 
-    setPlayerPosition(id, { x, y }) {
+    setPlayerPosition(id: string, { x, y }: { x: number, y: number }) {
         this.players[id].x = x
         this.players[id].y = y
     }
 
-    addObject(obj, id): Character {
+    updateScene(obj) {
+        const shapes = obj.partial.shapes
+        if (shapes) {
+            const shapesInMap = this.gameMap.shapes
+            for (let name in shapes) {
+                const shapeMap = shapesInMap[name]
+                let shape = shapes[name]
+                shape = {
+                    ...shape,
+                    x: shape.hitbox.pos.x,
+                    y: shape.hitbox.pos.y,
+                    width: shape.hitbox.w,
+                    height: shape.hitbox.h,
+                    properties: {}
+                }
+                if (shape == undefined) {
+                    this.gameMap.removeShape(name)
+                    continue
+                }
+                if (shapesInMap[name]) {
+                    shapeMap.set(shape)
+                }
+                else {
+                    this.gameMap.createShape(shape)
+                }
+            }
+        }
+    }
+
+    addObject(obj, id: string): Character {
         const wrapper = new PIXI.Container()
         const tilesOverlay = new PIXI.Container()
         const sprite = new this.game._playerClass(obj, this)
@@ -172,7 +202,7 @@ export class SceneMap extends Scene implements IScene {
         return sprite
     }
 
-    removeObject(id) {
+    removeObject(id: string) {
         let sprite =  this.objects.get(id)
         if (sprite) {
             this.objects.delete(id)

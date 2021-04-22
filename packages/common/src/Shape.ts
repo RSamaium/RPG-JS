@@ -18,6 +18,10 @@ export class Shape  {
     private onOut: (player: RpgCommonPlayer) => void
     
     constructor(obj: ShapeObject) {
+        this.set(obj)
+    }
+
+    set(obj: ShapeObject) {
         const hit = Hit.getHitbox(obj)
         Object.assign(this, hit)
     }

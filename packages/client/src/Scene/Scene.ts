@@ -18,6 +18,8 @@ interface Controls {
     [controlName: string]: ControlOptions
 }
 
+type SceneObservableData = { data: object, partial: object }
+
 export class Scene {
    
     protected objects: Map<string, any> = new Map()
@@ -28,7 +30,7 @@ export class Scene {
     private animations: Animation[] = []
     private _controlsOptions: Controls = {}
 
-    _data: BehaviorSubject<{ data: object, partial: object }> = new BehaviorSubject({
+    private _data: BehaviorSubject<SceneObservableData> = new BehaviorSubject({
         data: {},
         partial: {}
     })
@@ -63,12 +65,8 @@ export class Scene {
      * @readonly
      * @memberof RpgScene
      */
-    get valuesChange(): Observable<{ data: object, partial: object }> {
-        return this._data
-            .asObservable()
-            .pipe(
-                tap(this.onChanges.bind(this))
-            )
+    get valuesChange(): Observable<SceneObservableData> {
+        return this._data.asObservable() 
     }
 
     /**
@@ -174,7 +172,13 @@ export class Scene {
         }
     }
 
-    draw(t, dt) {
+    update(obj: SceneObservableData) {
+        this.updateScene(obj)
+        this.onChanges(obj)
+        this._data.next(obj)
+    }
+
+    draw(t) {
         const logicObjects = { ...this.game.world.getObjects(), ...this.game.events }
         const renderObjects = this.objects
         const sizeLogic = Object.values(logicObjects).length
@@ -187,7 +191,7 @@ export class Scene {
             else {
                 const object = renderObjects.get(key)
                 if (!object.update) return
-                const ret = object.update(val, t, dt)
+                const ret = object.update(val, t)
                 this.triggerSpriteChanges(val, object, ret.moving)
             }
         }
@@ -201,7 +205,7 @@ export class Scene {
         for (let animation of this.animations) {
             animation.update()
         }
-        this.onDraw(t, dt)
+        this.onDraw(t)
     }
 
     /**
@@ -429,11 +433,12 @@ export class Scene {
     onInit() {}
     onLoad() {}
     onChanges(obj) {}
-    onDraw(t: number, dt: number) {}
+    onDraw(t: number) {}
     onAddSprite(sprite: RpgSprite) {}
     onRemoveSprite(sprite: RpgSprite) {}
 }
 
 export interface Scene {
-    inputs: Controls
+    inputs: Controls,
+    updateScene(obj: SceneObservableData)
 }

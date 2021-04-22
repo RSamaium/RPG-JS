@@ -258,7 +258,6 @@ export default class RpgClientEngine {
     }
 
     _initSocket() {
-
         const { standalone } = this.gameEngine
 
         if (!standalone) {
@@ -356,7 +355,7 @@ export default class RpgClientEngine {
             const scene = this.renderer.getScene()
 
             if (scene) {
-                scene._data.next(val)
+                scene.update(val)
             }
 
             SI.snapshot.add(snapshot)
