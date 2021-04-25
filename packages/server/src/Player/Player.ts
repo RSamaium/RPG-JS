@@ -508,10 +508,7 @@ export class RpgPlayer extends RpgCommonPlayer {
     }
 
     public execMethod(methodName: string, methodData = [], instance = this): void {
-        RpgPlugin.emit(`Server.${methodName}`, {
-            player: this,
-            params: methodData
-        })
+        RpgPlugin.emit(`Server.${methodName}`, [this, ...methodData], true)
         if (!instance[methodName]) {
             return
         }
