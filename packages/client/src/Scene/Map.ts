@@ -162,6 +162,10 @@ export class SceneMap extends Scene implements IScene {
             for (let name in shapes) {
                 const shapeMap = shapesInMap[name]
                 let shape = shapes[name]
+                if (shape == null) {
+                    this.gameMap.removeShape(name)
+                    continue
+                }
                 shape = {
                     ...shape,
                     x: shape.hitbox.pos.x,
@@ -169,10 +173,6 @@ export class SceneMap extends Scene implements IScene {
                     width: shape.hitbox.w,
                     height: shape.hitbox.h,
                     properties: {}
-                }
-                if (shape == undefined) {
-                    this.gameMap.removeShape(name)
-                    continue
                 }
                 if (shapesInMap[name]) {
                     shapeMap.set(shape)

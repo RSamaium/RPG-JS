@@ -63,6 +63,7 @@ export default class RpgCommonMap {
     }
 
     removeShape(name: string) {
+        // TODO: out players after delete shape
         delete this.shapes[name]
     }
 

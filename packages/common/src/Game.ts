@@ -57,6 +57,7 @@ export default class Game extends EventEmitter {
             ) {
             player.move(input)
         }
+        // TODO: RpgPlugin
         //if (player.execMethod) player.execMethod('onInput', [inputData])
         if (player.onInput) player.onInput(inputData) 
     }
