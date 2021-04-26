@@ -2,6 +2,7 @@ import { generateUID } from './Utils'
 import { EventEmitter } from './EventEmitter'
 import { RpgCommonPlayer, Direction } from './Player'
 import { Control } from './Input'
+import { RpgPlugin } from './Plugin'
 
 export default class Game extends EventEmitter {
 
@@ -57,8 +58,7 @@ export default class Game extends EventEmitter {
             ) {
             player.move(input)
         }
-        // TODO: RpgPlugin
-        //if (player.execMethod) player.execMethod('onInput', [inputData])
+        RpgPlugin.emit('Server.onInput', [player, inputData], true)
         if (player.onInput) player.onInput(inputData) 
     }
 }

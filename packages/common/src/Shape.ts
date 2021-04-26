@@ -21,6 +21,10 @@ export class Shape  {
         this.set(obj)
     }
 
+    isEvent(): boolean {
+        return this.type == 'event'
+    }
+
     set(obj: ShapeObject) {
         const hit = Hit.getHitbox(obj)
         Object.assign(this, hit)

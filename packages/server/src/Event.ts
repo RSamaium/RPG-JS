@@ -10,6 +10,7 @@ export enum EventMode {
 export class RpgEvent extends RpgPlayer  {
 
     public readonly type: string = 'event'
+    properties: any = {}
 
     execMethod(methodName: string, methodData = []) {
         if (!this[methodName]) {
@@ -30,9 +31,5 @@ export class RpgEvent extends RpgPlayer  {
         else {
             sync()
         }
-    }
-
-    setGraphic(graphic) {
-        super.setGraphic(graphic)
     }
 }

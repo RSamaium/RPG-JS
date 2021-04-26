@@ -309,7 +309,7 @@ export default class RpgClientEngine {
             if (!val.data) {
                 return
             }
-
+            
             const snapshot: any = { 
                 id: Utils.generateUID(),
                 time: val.time,

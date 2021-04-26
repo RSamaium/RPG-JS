@@ -367,6 +367,8 @@ export class RpgCommonPlayer {
             let collided = Hit.testPolyCollision(shape.type, hitbox, shape.hitbox)
             if (collided) {
                 this.collisionWith.push(shape)
+
+                // TODO: in shape after map load
                 if (!collision) shape.in(this)
                 this.triggerCollisionWith()
                 if (collision) return false

@@ -1,4 +1,4 @@
-import { RpgCommonMap, RpgCommonPlayer, Utils, RpgPlugin }  from '@rpgjs/common'
+import { RpgCommonPlayer, Utils, RpgPlugin }  from '@rpgjs/common'
 import { Query } from '../Query'
 import merge from 'lodash.merge'
 import { ItemManager } from './ItemManager'
@@ -12,7 +12,7 @@ import { ElementManager } from './ElementManager'
 import { GuiManager } from './GuiManager'
 import { VariableManager } from './VariableManager'
 import { Frequency, MoveManager, Speed } from './MoveManager'
-import { BattleManager } from './BattleManager';
+import { BattleManager } from './BattleManager'
 
 import { 
     MAXHP, 
@@ -426,7 +426,7 @@ export class RpgPlayer extends RpgCommonPlayer {
     }
 
     private _getMap(id) {
-        return RpgCommonMap.buffer.get(id)
+        return RpgMap.buffer.get(id)
     }
 
     // TODO
@@ -436,6 +436,19 @@ export class RpgPlayer extends RpgCommonPlayer {
             name: 'addEffect',
             params: []
         })
+    }
+
+    /**
+     * @todo
+     */
+    createDynamicEvent(obj, mode): RpgPlayer | null {
+        const map = (this.mapInstance as RpgMap)
+        const event = map.createEvent(obj, mode)
+        if (event) {
+            map.events[event.name] = event
+            event.execMethod('onInit')
+        }
+        return event
     }
 
     /**
