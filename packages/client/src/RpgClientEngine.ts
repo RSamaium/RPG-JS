@@ -18,7 +18,7 @@ import {
 import merge from 'lodash.merge'
 import { SnapshotInterpolation, Vault } from '@geckos.io/snapshot-interpolation'
 
-const SI = new SnapshotInterpolation(15) 
+const SI = new SnapshotInterpolation(60) 
 
 declare var __RPGJS_PRODUCTION__: boolean;
 
@@ -187,7 +187,7 @@ export default class RpgClientEngine {
         }
         logic.prevParamsChanged = Object.assign({}, logic)
         for (let key in params) {
-            if (key == 'position' && !localEvent) {
+            if (!localEvent && (key == 'position' || key == 'direction')) {
                 continue
             }
             logic[key] = params[key]
@@ -261,12 +261,13 @@ export default class RpgClientEngine {
         if (snapshot) {
             const { state } = snapshot
             state.forEach(s => {
-                const { id, x, y } = s
+                const { id, x, y, direction } = s
                 const player = this.gameEngine.world.getObject(id)
                 if (player) {
                     if (id === this.gameEngine.playerId) return
                     player.position.x = x
                     player.position.y = y
+                    player.direction = direction
                 }
             })
         }
@@ -365,7 +366,8 @@ export default class RpgClientEngine {
                         id: key,
                         x: obj.position.x,
                         y: obj.position.y,
-                        z: obj.position.z
+                        z: obj.position.z,
+                        direction: obj.direction
                     })
                     this.updateObject({
                         playerId: key,
