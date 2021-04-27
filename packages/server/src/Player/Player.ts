@@ -1,4 +1,4 @@
-import { RpgCommonPlayer, Utils, RpgPlugin }  from '@rpgjs/common'
+import { RpgCommonPlayer, Utils, RpgPlugin, RpgCommonMap as RpgMap }  from '@rpgjs/common'
 import { Query } from '../Query'
 import merge from 'lodash.merge'
 import { ItemManager } from './ItemManager'
@@ -28,7 +28,6 @@ import {
     DEX_CURVE,
     AGI_CURVE
 } from '../presets'
-import { RpgMap } from '../Game/Map'
 
 const { 
     isPromise, 
@@ -442,7 +441,7 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @todo
      */
     createDynamicEvent(obj, mode): RpgPlayer | null {
-        const map = (this.mapInstance as RpgMap)
+        const map: any = (this.mapInstance as RpgMap)
         const event = map.createEvent(obj, mode)
         if (event) {
             map.events[event.name] = event

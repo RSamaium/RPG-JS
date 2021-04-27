@@ -43,7 +43,7 @@ class AutoEvent extends RpgEvent {
         }
     }
 }
-
+ 
 export class RpgMap extends RpgCommonMap {
 
     public _events: EventOption[]

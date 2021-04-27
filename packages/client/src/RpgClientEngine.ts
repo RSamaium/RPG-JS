@@ -142,6 +142,10 @@ export default class RpgClientEngine {
         return val
     }
 
+    resetObjects() {
+        this._objects.next({})
+    }
+
     removeObject(id: any): boolean {
         const logic = this.getObject(id)
         if (logic) {
@@ -215,7 +219,6 @@ export default class RpgClientEngine {
     serverReconciliation()  {
         const { playerId } = this.gameEngine
         const player = this.gameEngine.world.getObject(playerId)
-      
         if (player) {
           const serverSnapshot: any = SI.vault.get()
 
@@ -224,11 +227,14 @@ export default class RpgClientEngine {
       
           if (serverSnapshot && playerSnapshot) {
             const serverPos = serverSnapshot.state.filter(s => s.id === playerId)[0]
-            const offsetX = playerSnapshot.state[0].x - serverPos.x
-            const offsetY = playerSnapshot.state[0].y - serverPos.y
-            const correction = 60
-            player.position.x -= offsetX / correction
-            player.position.y -= offsetY / correction
+            const playerState = playerSnapshot.state[0]
+            if (playerState) {
+                const offsetX = playerState.x - serverPos.x
+                const offsetY = playerState.y - serverPos.y
+                const correction = 60
+                player.position.x -= offsetX / correction
+                player.position.y -= offsetY / correction
+            }   
           }
         }
       }
@@ -250,9 +256,11 @@ export default class RpgClientEngine {
             state.forEach(s => {
                 const { id, x, y } = s
                 const player = this.gameEngine.world.getObject(id)
-                if (id === this.gameEngine.playerId) return
-                player.position.x = x
-                player.position.y = y
+                if (player) {
+                    if (id === this.gameEngine.playerId) return
+                    player.position.x = x
+                    player.position.y = y
+                }
             })
         }
     }
@@ -305,11 +313,21 @@ export default class RpgClientEngine {
             }
         })
 
-        World.listen(this.socket).value.subscribe((val: { data: any, partial: any, time: number }) => {
+        let lastRoomId = ''
+
+        World.listen(this.socket)
+            .value
+            .subscribe((val: { data: any, partial: any, time: number, roomId: string }) => {
+
             if (!val.data) {
                 return
             }
-            
+
+            if (val.roomId != lastRoomId) {
+                this.resetObjects()
+                lastRoomId = val.roomId
+            }
+
             const snapshot: any = { 
                 id: Utils.generateUID(),
                 time: val.time,
@@ -331,7 +349,8 @@ export default class RpgClientEngine {
                        change('events', {
                            data: obj,
                            partial: paramsChanged,
-                           time: val.time
+                           time: val.time,
+                           roomId: val.roomId
                        }, true)
                     }
                     if (!localEvent) snapshot.state.push({ 

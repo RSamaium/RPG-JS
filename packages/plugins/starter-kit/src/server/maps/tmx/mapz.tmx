@@ -188,7 +188,7 @@
   <object id="2" x="296.35" y="480.264" width="162.785" height="164.932">
    <properties>
     <property name="collision" type="bool" value="true"/>
-    <property name="go-map" value="medieval"/>
+    <property name="go-map" value="cave"/>
    </properties>
   </object>
  </objectgroup>
