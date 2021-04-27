@@ -82,8 +82,9 @@ export class SceneMap {
         })
 
         World.joinRoom(mapId, player.id)
-        player = World.getUser(player.id)
 
+        player = World.getUser(player.id)
+        
         player.execMethod('onEnter', [player, player.prevMap || null], mapInstance)
         player.execMethod('onJoinMap', [mapInstance])
 

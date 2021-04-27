@@ -130,6 +130,10 @@ export class RpgMap extends RpgCommonMap {
         const ev = this.game.addEvent(event, mode == EventMode.Shared)
         const _shape = shape || this.getEventShape(ev.name)
 
+        if (!_shape.visible) {
+            return null
+        }
+
         ev.width = event.width || this.tileWidth
         ev.height = event.height || this.tileHeight
         if (_shape.properties) ev.properties = _shape.properties

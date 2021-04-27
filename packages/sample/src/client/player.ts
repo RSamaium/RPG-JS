@@ -13,7 +13,7 @@ export class Sprite extends RpgSprite {
     }
 
     onChanges(data, old) { 
-        if (data.wHitbox && data.hHitbox) {
+        /*if (data.wHitbox && data.hHitbox) {
             this.hitbox.beginFill(0xFF0000);
             this.hitbox.drawRect(0, 0, data.wHitbox, data.hHitbox);
             this.hitbox.endFill();
@@ -26,6 +26,6 @@ export class Sprite extends RpgSprite {
             this.visionHitbox.drawRect(-x, -y, data.vision.width, data.vision.height);
             this.visionHitbox.endFill();
             this.addChild(this.visionHitbox)
-        } 
+        } */
     }
 }
