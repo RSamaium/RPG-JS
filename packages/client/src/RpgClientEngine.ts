@@ -39,6 +39,7 @@ export default class RpgClientEngine {
     private hasBeenDisconnected: boolean = false
     controls: KeyboardControls
     private playerVault = new Vault()
+    private isTeleported: boolean = false
     io
     lastTimestamp
     scheduler
@@ -165,6 +166,7 @@ export default class RpgClientEngine {
             paramsChanged
         } = obj
         let logic
+        let teleported = false
         if (localEvent) {
             logic = this.gameEngine.events[id]
             if (!logic) {
@@ -192,6 +194,7 @@ export default class RpgClientEngine {
         }
         if (paramsChanged) {
             if (paramsChanged.teleported) {
+                teleported = true
                 logic.position = { ...params.position } // clone
             }
             if (!logic.paramsChanged) logic.paramsChanged = {}
@@ -206,6 +209,10 @@ export default class RpgClientEngine {
                 }
             }
         })
+        if (teleported && id == this.gameEngine.playerId) {
+            this.isTeleported = true
+            this.playerVault['_vault'] = []
+        }
         return logic
     }
 
@@ -243,7 +250,7 @@ export default class RpgClientEngine {
         this.gameEngine.emit('client__preStep')
         const { playerId } = this.gameEngine
         const player = this.gameEngine.world.getObject(playerId)
-        if (player && player.teleported) {
+        if (player && this.isTeleported) {
             const { x, y } = player.position
             this.playerVault.add(
                 SI.snapshot.create([{ id: playerId, x, y }])
@@ -326,6 +333,7 @@ export default class RpgClientEngine {
             if (val.roomId != lastRoomId) {
                 this.resetObjects()
                 lastRoomId = val.roomId
+                this.isTeleported = false
             }
 
             const snapshot: any = { 
