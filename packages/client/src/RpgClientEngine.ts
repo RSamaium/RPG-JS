@@ -265,8 +265,8 @@ export default class RpgClientEngine {
                 const player = this.gameEngine.world.getObject(id)
                 if (player) {
                     if (id === this.gameEngine.playerId) return
-                    player.position.x = x
-                    player.position.y = y
+                    player.position.x = Math.round(x as number)
+                    player.position.y = Math.round(y as number)
                     player.direction = direction
                 }
             })

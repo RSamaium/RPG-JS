@@ -1,4 +1,5 @@
 import { RpgCommonPlayer, Utils, RpgPlugin, RpgCommonMap as RpgMap }  from '@rpgjs/common'
+import * as Kompute from 'kompute/build/Kompute'
 import { Query } from '../Query'
 import merge from 'lodash.merge'
 import { ItemManager } from './ItemManager'
@@ -28,6 +29,7 @@ import {
     DEX_CURVE,
     AGI_CURVE
 } from '../presets'
+import { BehaviorManager } from './BehaviorManager'
 
 const { 
     isPromise, 
@@ -35,7 +37,7 @@ const {
     isString
 } = Utils
 
-type Position = { x: number, y: number, z: number }
+export type Position = { x: number, y: number, z: number }
 
 const itemSchemas = { 
     name: String,
@@ -113,6 +115,8 @@ export class RpgPlayer extends RpgCommonPlayer {
     // As soon as a teleport has been made, the value is changed to force the client to change the positions on the map without making a move.
     teleported: number = 0
 
+    
+
     initialize() {
         this.expCurve =  {
             basis: 30,
@@ -135,6 +139,8 @@ export class RpgPlayer extends RpgCommonPlayer {
         this.canMove = true
         this.through = false
         this.throughOtherPlayer = true
+
+        this.steerable = new Kompute.Steerable(this.playerId, new Kompute.Vector3D(), new Kompute.Vector3D(10, 10, 0))
     
         this.initialLevel = 1
         this.finalLevel = 99
@@ -276,12 +282,12 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @returns { {x: number, y: number, z: number} }
      * @memberof Player
      */
-    teleport(positions?: { x: number, y: number, z?: number } | string): Position {
+    teleport(positions?: Position | string): Position {
         if (isString(positions)) positions = <Position>this.getCurrentMap().getPositionByShape(shape => shape.name == positions || shape.type == positions)
-        if (!positions) positions = { x: 0, y: 0 }
+        if (!positions) positions = { x: 0, y: 0, z: 0 }
         if (!(positions as Position).z) (positions as Position).z = 0
         this.teleported++
-        this.position = positions
+        this.position = positions as Position
         return (positions as Position)
     }
 
@@ -322,7 +328,7 @@ export class RpgPlayer extends RpgCommonPlayer {
         json.skills = json.skills.map(id => getData(id))
         json.variables = new Map(json.variables)
         merge(this, json)
-        this.position.copy(json.position)
+        this.position = json.position
         if (json.map) {
             this.map = ''
             this.changeMap(json.map, json.position)
@@ -564,11 +570,13 @@ export interface RpgPlayer extends
     GuiManager,
     VariableManager,
     MoveManager,
-    BattleManager
+    BattleManager,
+    BehaviorManager
 {
     _socket: any 
     server: any,
-    vision
+    vision,
+    steerable: Kompute
 }
 
 applyMixins(RpgPlayer, [
@@ -583,5 +591,6 @@ applyMixins(RpgPlayer, [
     GuiManager,
     VariableManager,
     MoveManager,
-    BattleManager
+    BattleManager,
+    BehaviorManager
 ])

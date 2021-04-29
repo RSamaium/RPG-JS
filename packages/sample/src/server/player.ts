@@ -43,6 +43,12 @@ export class Player extends RpgPlayer {
     onJoinMap(map) {
       //const gui = this.gui('info')
       //gui.open({})
+      Object.values(map.events).forEach((event: any) => {
+        const { type } = event.properties
+        if (type == 'enemy') {
+          event.setBehavior(this)
+        }
+      })
     }
 
     onInput({ input }) {

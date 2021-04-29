@@ -53,7 +53,8 @@ export class WorldClass {
         return this.users 
     }
 
-    getUser(id: string, getProxy: boolean = true): User {
+    getUser(id: string, getProxy: boolean = true): User | null {
+        if (!this.users[id]) return null
         if (getProxy && this.users[id]['proxy']) {
             return this.users[id]['proxy'] 
         }

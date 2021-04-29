@@ -6,6 +6,8 @@ import Map from './Map'
 
 const ACTIONS = { IDLE: 0, RUN: 1, ACTION: 2 }
 
+export type Position = { x: number, y: number, z: number }
+
 export enum Direction { 
     Up = 'up',
     Down = 'down',
@@ -71,14 +73,21 @@ export class RpgCommonPlayer {
      * @prop { { x: number, y: number, z: number } } position
      * @memberof Player
      */
-    set position(val) {
-        this._hitboxPos.x = val.x
-        this._hitboxPos.y = val.y
-        this._hitboxPos.z = val.z
+    set position(val: Position) {
+        const { x, y, z } = val
+        this._hitboxPos.x = x
+        this._hitboxPos.y = y
+        this._hitboxPos.z = z
+        if (this.steerable && this.steerable.lastWorldPosition) {
+            this.steerable.setPosition(this.getVector3D(x, y, z))
+        }
         this._position = new Proxy(val, {
             get: (target, prop: string) => target[prop], 
             set: (target, prop, value) => {
                 this._hitboxPos[prop] = value
+                if (this.steerable && this.steerable.lastWorldPosition) {
+                    this.steerable[prop] = value
+                }
                 target[prop] = value
                 return true
             }
@@ -161,6 +170,7 @@ export class RpgCommonPlayer {
      */
     setHitbox(width: number, height: number): void {
         this.hitbox = new SAT.Box(this._hitboxPos, width, height)
+        if (this.steerable) this.steerable.setSize(this.getVector3D(width, height, this.height))
     }
 
     set wHitbox(val) {
@@ -190,7 +200,7 @@ export class RpgCommonPlayer {
         })
     }
     
-    defineNextPosition(direction) {
+    defineNextPosition(direction): Position {
         switch (direction) {
             case Direction.Left:
                 return {
@@ -247,13 +257,36 @@ export class RpgCommonPlayer {
         return intersection([z, z + this.height], [otherZ, otherZ + other.height])
     }
 
-    move(direction: Direction): boolean {
+    moveByDirection(direction: Direction): boolean {
+        const nextPosition = this.defineNextPosition(direction)
+        return this.move(nextPosition)
+    }
+
+    move(nextPosition: Position): boolean {
         this.collisionWith = []
 
-        this.changeDirection(direction)
-
-        const nextPosition = this.defineNextPosition(direction)
         const map: Map = this.mapInstance
+
+        {
+            const { x, y } = this.position
+            const { x: nx, y: ny } = nextPosition
+            if (Math.abs(x - nx) > Math.abs(y - ny)) {
+                if (nx > x) {
+                    this.changeDirection(Direction.Right)
+                }
+                else {
+                    this.changeDirection(Direction.Left)
+                }
+            }
+            else {
+                if (ny > y) {
+                    this.changeDirection(Direction.Down)
+                }
+                else {
+                    this.changeDirection(Direction.Up)
+                }
+            }
+        }
 
         const hitbox = Hit.createObjectHitbox(nextPosition.x, nextPosition.y, 0, this.hitbox.w, this.hitbox.h)
 
@@ -465,4 +498,6 @@ export interface RpgCommonPlayer {
     readonly type: string
     through: boolean
     throughOtherPlayer: boolean
+    steerable: any
+    getVector3D(x, y, z): any
 }

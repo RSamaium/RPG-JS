@@ -467,7 +467,7 @@ export class MoveManager {
                     case Direction.Down:
                     case Direction.Right:
                     case Direction.Up:
-                        this.move(route)
+                        this.moveByDirection(route)
                         break
                     case 'turn-left':
                         this.changeDirection(Direction.Left)
@@ -573,7 +573,7 @@ export class MoveManager {
 }
 
 export interface MoveManager{ 
-    move: (direction: Direction) => boolean
+    moveByDirection: (direction: Direction) => boolean
     changeDirection: (direction: Direction) => boolean
     getCurrentMap: any
 }

@@ -1,4 +1,5 @@
 import { RpgCommonMap, Utils }  from '@rpgjs/common'
+import * as Kompute from 'kompute/build/Kompute'
 import fs from 'fs'
 import { EventOptions } from '../decorators/event'
 import { EventMode, RpgEvent } from '../Event'
@@ -52,6 +53,7 @@ export class RpgMap extends RpgCommonMap {
     public events: { 
         [eventId: string]: RpgEvent
     } = {}
+    kWorld: Kompute
 
     constructor(private _server: any) {
         super()
@@ -65,6 +67,7 @@ export class RpgMap extends RpgCommonMap {
         super.load(data) 
         RpgCommonMap.buffer.set(this.id, this)
         this.events = this.createEvents(this._events, EventMode.Shared)
+        this.kWorld = new Kompute.World(data.width * data.tileWidth, data.height * data.tileHeight, 1000, 32)
         this.autoLoadEvent()
         for (let key in this.events) {
             this.events[key].execMethod('onInit')
@@ -78,15 +81,21 @@ export class RpgMap extends RpgCommonMap {
 
     onLoad() {}
 
+    onJoin(player: RpgPlayer) {
+        this.kWorld.insertEntity(player.steerable)
+    }
+
     onLeave(player: RpgPlayer) {
-       this.getShapes().forEach(shape => shape.out(player))
+        player.stopBehavior()
+        this.kWorld.removeEntity(player.steerable)
+        this.getShapes().forEach(shape => shape.out(player))
     }
 
     autoLoadEvent() {
         this.getShapes().forEach(shape => {
             const { properties } = shape
+            const { x, y, pos, w, h } = shape.hitbox
             if (shape.isEvent() && !this.events[shape.name]) {
-                const { x, y } = shape.hitbox
                 const mode = properties.mode || EventMode.Shared
                 AutoEvent.prototype['_name'] = shape.name
                 AutoEvent.mode = mode
@@ -100,6 +109,11 @@ export class RpgMap extends RpgCommonMap {
                     event: AutoEvent
                 }, mode, shape)
                 if (event) this.events[shape.name] = event
+            }
+            else if (properties.obstacle && pos) {
+                const { x, y } = pos
+                const obstacle = new Kompute.Entity("obstacle1", new Kompute.Vector3D(x, y, 0), new Kompute.Vector3D(w, h, 32))
+                this.kWorld.insertEntity(obstacle)
             }
         })
     }
@@ -130,9 +144,7 @@ export class RpgMap extends RpgCommonMap {
         const ev = this.game.addEvent(event, mode == EventMode.Shared)
         const _shape = shape || this.getEventShape(ev.name)
 
-        if (!_shape.visible) {
-            return null
-        }
+        this.kWorld.insertEntity(ev.steerable)
 
         ev.width = event.width || this.tileWidth
         ev.height = event.height || this.tileHeight

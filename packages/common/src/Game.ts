@@ -56,7 +56,7 @@ export default class Game extends EventEmitter {
             input == Direction.Up || 
             input == Direction.Down
             ) {
-            player.move(input)
+            player.moveByDirection(input)
         }
         RpgPlugin.emit('Server.onInput', [player, inputData], true)
         if (player.onInput) player.onInput(inputData) 
