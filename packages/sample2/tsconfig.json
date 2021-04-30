@@ -20,8 +20,10 @@
     "emitDecoratorMetadata": true,
     "types": ["node", "jest"]
   },
-  "files": ["index.d.ts"],
   "include": [
-      "src", "index.d.ts", "tests"
+      "src", 
+      "index.d.ts", 
+      "tests", 
+      "node_modules/@rpgjs/compiler/types/*.d.ts"
   ]
 }

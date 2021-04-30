@@ -159,9 +159,10 @@ export default class Character extends PIXI.Sprite {
     }
 
     setGraphic() {
+        this.spritesheet = spritesheets.get(this.graphic)
         this.animation = new Animation(this.graphic)
         this.addChild(this.animation)
-        this.origin()
+        //this.origin()
     }
 
     update(obj): any {

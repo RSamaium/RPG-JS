@@ -5,7 +5,7 @@ import { MonsterEvent } from '../events/enemy';
     id: 'overworld',
     file: require('./overworld.tmx'),
     events: [
-        { event: MonsterEvent, x: 0, y: 0 }
+        MonsterEvent
     ]
 })
 export class OverWorldMap extends RpgMap {}

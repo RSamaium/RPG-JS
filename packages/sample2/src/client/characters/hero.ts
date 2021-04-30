@@ -30,7 +30,7 @@ const frameAttackY = direction => {
             rectWidth: 16,
             rectHeight: 32,
             animations: direction => [
-                [{ time: 0, frameX: 2, frameY: frameY(direction) }]
+                [{ time: 0, anchor: [0, 0.6], frameX: 2, frameY: frameY(direction) }]
             ]
         },
         [Animation.Walk]:  {
@@ -38,7 +38,7 @@ const frameAttackY = direction => {
             rectHeight: 32,
             animations: direction => [
                     [ 
-                        { time: 0, frameX: 0, frameY: frameY(direction) },
+                        { time: 0, anchor: [0, 0.6], frameX: 0, frameY: frameY(direction) },
                         { time: 10, frameX: 1, frameY: frameY(direction) },
                         { time: 20, frameX: 2, frameY: frameY(direction) },
                         { time: 30, frameX: 3, frameY: frameY(direction) }
@@ -52,7 +52,7 @@ const frameAttackY = direction => {
             animations:  (direction) => {
                 return [
                     [ 
-                        { time: 0, frameX: 0, frameY: frameAttackY(direction) },
+                        { time: 0, frameX: 0, anchor: [0.25, 0.6], frameY: frameAttackY(direction) },
                         { time: 5, frameX: 1, frameY: frameAttackY(direction) },
                         { time: 10, frameX: 2, frameY: frameAttackY(direction) },
                         { time: 25, frameX: 3, frameY: frameAttackY(direction) }

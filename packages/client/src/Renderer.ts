@@ -89,7 +89,7 @@ export default class RpgRenderer  {
         else {
             this.canvasEl.appendChild(this.renderer.view)
         }
-        
+
         RpgGui._initalize(this.client)
 
         this.resize()

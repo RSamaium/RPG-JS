@@ -66,8 +66,8 @@ export class RpgMap extends RpgCommonMap {
         const data = await this.parseFile() 
         super.load(data) 
         RpgCommonMap.buffer.set(this.id, this)
+        this.kWorld = new Kompute.World(data.width * data.tileWidth, data.height * data.tileHeight, 1000, 32) 
         this.events = this.createEvents(this._events, EventMode.Shared)
-        this.kWorld = new Kompute.World(data.width * data.tileWidth, data.height * data.tileHeight, 1000, 32)
         this.autoLoadEvent()
         for (let key in this.events) {
             this.events[key].execMethod('onInit')
@@ -110,11 +110,6 @@ export class RpgMap extends RpgCommonMap {
                 }, mode, shape)
                 if (event) this.events[shape.name] = event
             }
-            else if (properties.obstacle && pos) {
-                const { x, y } = pos
-                const obstacle = new Kompute.Entity("obstacle1", new Kompute.Vector3D(x, y, 0), new Kompute.Vector3D(w, h, 32))
-                this.kWorld.insertEntity(obstacle)
-            }
         })
     }
 
@@ -148,7 +143,7 @@ export class RpgMap extends RpgCommonMap {
 
         ev.width = event.width || this.tileWidth
         ev.height = event.height || this.tileHeight
-        if (_shape.properties) ev.properties = _shape.properties
+        if (_shape && _shape.properties) ev.properties = _shape.properties
         if (event.hitbox) ev.setHitbox(event.hitbox.width, event.hitbox.height)
         ev.map = this.id
         ev.teleport(position || ev.name)

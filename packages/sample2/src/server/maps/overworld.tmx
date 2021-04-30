@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.4" tiledversion="1.4.3" orientation="orthogonal" renderorder="right-down" width="20" height="20" tilewidth="16" tileheight="16" infinite="0" nextlayerid="4" nextobjectid="2">
+<map version="1.4" tiledversion="1.4.3" orientation="orthogonal" renderorder="right-down" width="20" height="20" tilewidth="16" tileheight="16" infinite="0" nextlayerid="4" nextobjectid="3">
  <tileset firstgid="1" source="Overworld.tsx"/>
  <layer id="1" name="Tile Layer 1" width="20" height="20">
   <data encoding="base64">
@@ -12,7 +12,10 @@
   </data>
  </layer>
  <objectgroup id="3" name="Object Layer 1">
-  <object id="1" name="Start Player" type="start" x="157.943" y="171.232">
+  <object id="1" name="Start Player" type="start" x="152.32" y="174.81">
+   <point/>
+  </object>
+  <object id="2" name="Enemy" type="Enemy" x="87.9163" y="223.369">
    <point/>
   </object>
  </objectgroup>

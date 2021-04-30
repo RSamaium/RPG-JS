@@ -2,6 +2,9 @@ import { RpgSceneMap, RpgGui, SceneData, Control, Input, PrebuiltGui } from '@rp
 
 export class SceneMap extends RpgSceneMap {
     onLoad() {
+        if (this.viewport) {
+            this.viewport.setZoom(2)
+        }
         this.setInputs({
             [Control.Up]: {
                 repeat: true,

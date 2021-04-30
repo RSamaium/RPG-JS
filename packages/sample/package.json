@@ -25,6 +25,7 @@
     "webpack-cli": "^3.3.12"
   },
   "dependencies": {
+    "@rpgjs/arpg-system": "^3.0.0-alpha.4.3",
     "@rpgjs/client": "^3.0.0-alpha.8",
     "@rpgjs/compiler": "^3.0.0-alpha.8",
     "@rpgjs/database": "^3.0.0-alpha.8",
