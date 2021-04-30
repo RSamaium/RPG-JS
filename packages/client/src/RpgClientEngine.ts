@@ -80,6 +80,7 @@ export default class RpgClientEngine {
 
        gameEngine._playerClass = this.renderer.options.spriteClass || RpgSprite
        gameEngine.standalone = options['standalone']
+       gameEngine.renderer = this.renderer
        gameEngine.clientEngine = this
 
         _initSpritesheet(this.renderer.options.spritesheets)
@@ -100,12 +101,14 @@ export default class RpgClientEngine {
     }
 
     async start() {
+        let frame = 0
         let renderLoop = (timestamp) => {
             this.lastTimestamp = this.lastTimestamp || timestamp;
-            this.renderer.draw(timestamp, timestamp - this.lastTimestamp);
+            this.renderer.draw(timestamp, timestamp - this.lastTimestamp, frame)
             this.lastTimestamp = timestamp;
             this.step(timestamp, 0)
-            window.requestAnimationFrame(renderLoop);
+            frame++
+            window.requestAnimationFrame(renderLoop)
         };
         await this.renderer.init()
         this.gameEngine.start({

@@ -27,8 +27,13 @@ export default function({ RpgPlugin }) {
         graphic.beginFill(0xDE3249)
         graphic.drawRect(0, 0, data.hitbox.w, data.hitbox.h)
         graphic.endFill()
-
         sprite.addChild(graphic)
+
+        const overlay = new PIXI.Graphics()
+        overlay.beginFill(0x0000FF)
+        overlay.drawRect(sprite.overlayShape.x, sprite.overlayShape.y, sprite.overlayShape.width, sprite.overlayShape.height)
+        overlay.endFill()
+        sprite.addChild(overlay)
 
         fullBar.addChild(innerBar)
         sprite.addChild(fullBar)

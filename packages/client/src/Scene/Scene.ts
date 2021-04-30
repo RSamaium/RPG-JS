@@ -178,7 +178,7 @@ export class Scene {
         this._data.next(obj)
     }
 
-    draw(t) {
+    draw(t: number, dt: number, frame: number) {
         const logicObjects = { ...this.game.world.getObjects(), ...this.game.events }
         const renderObjects = this.objects
         const sizeLogic = Object.values(logicObjects).length

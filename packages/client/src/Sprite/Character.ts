@@ -25,6 +25,7 @@ export default class Character extends PIXI.Sprite {
     private objSaved: object = {}
 
     anim
+    overlayShape: { x: number, y: number, width: number, height: number }
 
      /** 
      * the direction of the sprite
@@ -76,6 +77,12 @@ export default class Character extends PIXI.Sprite {
         this.x = data.position.x 
         this.y = data.position.y
         this.fixed = data.fixed
+        this.overlayShape = {
+            x: 0,
+            y: -32,
+            width: 32,
+            height: 32+16
+        }
     }
 
     // Todo

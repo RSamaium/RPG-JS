@@ -3,6 +3,7 @@ import { Utils } from '@rpgjs/common'
 import ImageLayer from './ImageLayer'
 import TileLayer from './TileLayer'
 import TileSet from './TileSet'
+import Tile from './Tile'
 
 const { intersection } = Utils
 
@@ -18,14 +19,23 @@ export default class TileMap extends PIXI.Container {
     _height: number = 0
     tileWidth: number = 0 
     tileHeight: number = 0
+    frameRateAnimation: number = 10
     tileSets: any[] = []
     layers: any = {}
+    private frameTile: number = 0
 
     constructor(data, private renderer) {
         super()
         this.x = 0
         this.y = 0
         this.create(data)
+    }
+
+    drawAnimateTile(frame: number) {
+        if (frame % this.frameRateAnimation == 0) {
+            this.renderer.renderer.plugins.tilemap.tileAnim[0] = this.frameTile
+            this.frameTile++
+        }
     }
 
     getEventLayer(name?: string) {
@@ -66,8 +76,8 @@ export default class TileMap extends PIXI.Container {
                     const tileLayer = new TileLayer(layerData, this.tileSets)
                     const tile = tileLayer.createTile(x, y, {
                         real: true,
-                        filter: (tile) => {
-                            const { data, y, z: zObject, height } = instance
+                        filter: (tile: Tile) => {
+                            const { data, y: yObject, z: zObject, height } = instance
                             const { hHitbox } = data
                             const zLayer = tileLayer.properties.z
                             const tileHasZ = tile.properties.z !== undefined
@@ -92,7 +102,7 @@ export default class TileMap extends PIXI.Container {
                             if (!tileHasZ) return false 
 
                             // is front of tile
-                            if (y + hHitbox > tile.y + tile.height) {
+                            if (yObject + hHitbox > tile.y + tile.height) {
                                 const zIntersection = intersection([zObject, zObject + height], [realZ, realZ + tile.height])
                                 if (!zIntersection) {
                                     return true
@@ -104,6 +114,13 @@ export default class TileMap extends PIXI.Container {
                     })
                     if (tile) {
                         tileLayer.addChild(tile)
+                        const size = tile.animations.length
+                        if (size > 0) {
+                            const ms = 1000 / 60
+                            tile.animationSpeed = ms / (ms * this.frameRateAnimation)
+                            const frameIndex = (this.frameTile-1) - (size * Math.floor(this.frameTile / size))
+                            tile.gotoAndPlay(frameIndex)
+                        }
                         tilesLayer.push(tileLayer)
                     }
                     break;

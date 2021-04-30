@@ -124,15 +124,18 @@ export class SceneMap extends Scene implements IScene {
         })
     }
 
-    draw(t: number) {
+    draw(t: number, dt: number, frame: number) {
         if (!this.isLoaded) {
             return
         }
-        super.draw(t)
+        super.draw(t, dt, frame)
+        this.tilemap.drawAnimateTile(frame)
     }
 
     onUpdateObject(logic, sprite: Character, moving: boolean): Character {
-        const { x, y, tilesOverlay, anchor, w: width, h: height } = sprite
+        if (!sprite.overlayShape) return sprite
+        const { x, y, tilesOverlay }: any = sprite
+        const { x: offsetX, y: offsetY, width, height } = sprite.overlayShape
         const { paramsChanged } = logic
         if (moving || (paramsChanged && (paramsChanged.width || paramsChanged.height))) {
             tilesOverlay.removeChildren()
@@ -140,12 +143,13 @@ export class SceneMap extends Scene implements IScene {
                 const tiles = this.tilemap.createOverlayTiles(x, y, sprite)
                 if (tiles.length) tilesOverlay.addChild(...tiles)
             }
-            let _x = x - (width * anchor.x)
-            let _y = y - (height * anchor.y)
-            addTile(_x, _y)
-            addTile(_x + height, _y)
-            addTile(_x, _y + height)
-            addTile(_x + width, _y + height)
+            let _x = x + offsetX
+            let _y = y + offsetY
+            for (let i = _x ; i <= _x + width ; i += this.gameMap.tileWidth) {
+                for (let j = _y ; j <= _y + height ; j += this.gameMap.tileHeight) {
+                    addTile(i, j)
+                }
+            }
         }
         return sprite
     }

@@ -109,8 +109,8 @@ export default class RpgRenderer  {
         return this.scene
     }
     
-    draw(t, dt) {
-        if (this.scene) this.scene.draw(t, dt)
+    draw(t: number, dt: number, frame: number) {
+        if (this.scene) this.scene.draw(t, dt, frame)
         this.renderer.render(this.stage)
     }
 
