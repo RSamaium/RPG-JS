@@ -23,7 +23,7 @@ export default function({ RpgPlugin }) {
 
         const innerBar = bar(width, 1)
 
-        const graphic = new PIXI.Graphics()
+        /*const graphic = new PIXI.Graphics()
         graphic.beginFill(0xDE3249)
         graphic.drawRect(0, 0, data.hitbox.w, data.hitbox.h)
         graphic.endFill()
@@ -33,7 +33,7 @@ export default function({ RpgPlugin }) {
         overlay.beginFill(0x0000FF)
         overlay.drawRect(sprite.overlayShape.x, sprite.overlayShape.y, sprite.overlayShape.width, sprite.overlayShape.height)
         overlay.endFill()
-        sprite.addChild(overlay)
+        sprite.addChild(overlay)*/
 
         fullBar.addChild(innerBar)
         sprite.addChild(fullBar)

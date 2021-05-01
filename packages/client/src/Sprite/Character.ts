@@ -25,7 +25,10 @@ export default class Character extends PIXI.Sprite {
     private objSaved: object = {}
 
     anim
-    overlayShape: { x: number, y: number, width: number, height: number }
+    overlayShape: { 
+        offset: [number, number],
+        sizeTiles: [number, number]
+    }
 
      /** 
      * the direction of the sprite
@@ -78,10 +81,8 @@ export default class Character extends PIXI.Sprite {
         this.y = data.position.y
         this.fixed = data.fixed
         this.overlayShape = {
-            x: 0,
-            y: -32,
-            width: 32,
-            height: 32+16
+            offset: [0, 0],
+            sizeTiles: [1, 1]
         }
     }
 
@@ -105,23 +106,6 @@ export default class Character extends PIXI.Sprite {
             this.removeChild(text)
         })
         this.effects.push(text)
-    }
-
-    origin() {
-        if (!this.animation) {
-            return
-        }
-        const data = this.data
-        if (!data.wHitbox || !data.hHitbox) return
-        const spritesheet = spritesheets.get(this.graphic)
-        const { width, height, framesWidth, framesHeight } = spritesheet
-        this.w = width / framesWidth
-        this.h = height / framesHeight
-        const w = (1 - (data.wHitbox / this.w)) / 2
-        const h = 1 - (data.hHitbox / this.h)
-        spritesheet.anchor = [w, h]
-        this.spritesheet = spritesheet
-        this.anchor.set(...spritesheet.anchor)
     }
 
     /**
@@ -169,7 +153,31 @@ export default class Character extends PIXI.Sprite {
         this.spritesheet = spritesheets.get(this.graphic)
         this.animation = new Animation(this.graphic)
         this.addChild(this.animation)
-        //this.origin()
+        this.animation.applyTransform = (frame, spritesheet) => {
+            const { spriteWidth, spriteHeight } = spritesheet
+            let anchor = [0, 0]
+            
+            if (frame.anchor) {
+                anchor = frame.anchor
+            }
+            else {
+                const data = this.data
+                if (this.data.wHitbox && this.data.hHitbox) {
+                    const w = (1 - (data.wHitbox / spriteWidth)) / 2
+                    const h = 1 - (data.hHitbox / spriteHeight)
+                    anchor = [w, h]
+                }
+            }
+            
+            this.overlayShape = {
+                offset: [-spriteWidth * anchor[0], -spriteWidth * anchor[1]],
+                sizeTiles: [1, 1]
+            }
+
+            return {
+                anchor
+            }
+        }
     }
 
     update(obj): any {

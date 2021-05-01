@@ -16,12 +16,14 @@ type AnimationDataFrames = {
     frames: PIXI.Texture[][],
     name: string,
     animations: AnimationFrames,
-    params: any[]
+    params: any[],
+    data: any
 } 
 
 export class Animation extends PIXI.Sprite {
 
     public attachTo: RpgSprite
+    public applyTransform: Function
     private frames: PIXI.Texture[][] = []
     private spritesheet: SpritesheetOptions
     private currentAnimation: AnimationDataFrames | null = null
@@ -42,8 +44,8 @@ export class Animation extends PIXI.Sprite {
     createTextures(options: TextureOptions): PIXI.Texture[][] {
         const { width, height, framesHeight, framesWidth, rectWidth, rectHeight, image, offset }: any = options
         const { baseTexture } = PIXI.Texture.from(image)
-        const spriteWidth = rectWidth ? rectWidth : width / framesWidth
-        const spriteHeight = rectHeight ? rectHeight : height / framesHeight
+        const spriteWidth = options['spriteWidth']
+        const spriteHeight = options['spriteHeight']
         const frames: any = []
         const offsetX = (offset && offset.x) || 0
         const offsetY = (offset && offset.y) || 0
@@ -71,10 +73,13 @@ export class Animation extends PIXI.Sprite {
         for (let animationName in textures) {
             const parentObj = ['width', 'height', 'framesHeight', 'framesWidth', 'rectWidth', 'rectHeight', 'offset', 'image']
                 .reduce((prev, val) => ({ ...prev, [val]: this.spritesheet[val] }), {})
-            const optionsTextures = {
+            const optionsTextures: any = {
                 ...parentObj,
                 ...textures[animationName]
             }
+            const { rectWidth, width, framesWidth, rectHeight, height, framesHeight } = optionsTextures
+            optionsTextures.spriteWidth = rectWidth ? rectWidth : width / framesWidth
+            optionsTextures.spriteHeight = rectHeight ? rectHeight : height / framesHeight
             this.animations.set(animationName, {
                 container: new PIXI.Sprite(),
                 maxTime: 0,
@@ -82,6 +87,7 @@ export class Animation extends PIXI.Sprite {
                 name: animationName,
                 animations: textures[animationName].animations,
                 params: [],
+                data: optionsTextures,
                 sprites: {}
             })
         }
@@ -146,7 +152,7 @@ export class Animation extends PIXI.Sprite {
     update() {
         if (!this.isPlaying() || !this.currentAnimation) return  
 
-        const { frames, container, sprites } = this.currentAnimation
+        const { frames, container, sprites, data } = this.currentAnimation
 
         if (this.attachTo) {
             const { x, y } = this.attachTo.getPositionsOfGraphic('middle')
@@ -156,7 +162,7 @@ export class Animation extends PIXI.Sprite {
 
         for (let _sprite of container.children) {
             const sprite = _sprite as PIXI.Sprite
-            const frame = sprites[this.time]
+            let frame = sprites[this.time]
             if (!frame || frame.frameY == undefined || frame.frameX == undefined) {
                 continue
             }
@@ -177,6 +183,14 @@ export class Animation extends PIXI.Sprite {
                 else if (this.spritesheet[optionProp] !== undefined) {
                     sprite[prop] = this.spritesheet[optionProp]
                 }
+            }
+
+            if (this.applyTransform) {
+                frame = {
+                    ...frame,
+                    ...this.applyTransform(frame, data)
+                }
+    
             }
 
             applyTransform('anchor')

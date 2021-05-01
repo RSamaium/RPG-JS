@@ -39,9 +39,9 @@ const frameAttackY = direction => {
             animations: direction => [
                     [ 
                         { time: 0, anchor: [0, 0.6], frameX: 0, frameY: frameY(direction) },
-                        { time: 10, frameX: 1, frameY: frameY(direction) },
-                        { time: 20, frameX: 2, frameY: frameY(direction) },
-                        { time: 30, frameX: 3, frameY: frameY(direction) }
+                        { time: 5, frameX: 1, frameY: frameY(direction) },
+                        { time: 10, frameX: 2, frameY: frameY(direction) },
+                        { time: 15, frameX: 3, frameY: frameY(direction) }
                     ]
                 ]
          },

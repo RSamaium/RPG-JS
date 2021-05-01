@@ -145,6 +145,98 @@
    <property name="collision" type="bool" value="true"/>
   </properties>
  </tile>
+ <tile id="382">
+  <properties>
+   <property name="z" type="int" value="0"/>
+  </properties>
+  <objectgroup draworder="index" id="2">
+   <object id="1" x="0.5625" y="15.8125">
+    <polygon points="0,0 5.375,-8.875 15.3125,-9.0625 15.4375,0.0625"/>
+   </object>
+  </objectgroup>
+  <animation>
+   <frame tileid="382" duration="100"/>
+   <frame tileid="385" duration="100"/>
+   <frame tileid="388" duration="100"/>
+  </animation>
+ </tile>
+ <tile id="383">
+  <properties>
+   <property name="z" type="int" value="0"/>
+  </properties>
+  <objectgroup draworder="index" id="2">
+   <object id="1" x="0.0625" y="5.5625" width="15.8125" height="10.375"/>
+  </objectgroup>
+  <animation>
+   <frame tileid="383" duration="100"/>
+   <frame tileid="386" duration="100"/>
+   <frame tileid="389" duration="100"/>
+  </animation>
+ </tile>
+ <tile id="384">
+  <properties>
+   <property name="z" type="int" value="0"/>
+  </properties>
+  <objectgroup draworder="index" id="2">
+   <object id="1" x="0.0625" y="6.3125">
+    <polygon points="0,0 9.375,-0.1875 15.75,9.4375 0.0625,9.5"/>
+   </object>
+  </objectgroup>
+  <animation>
+   <frame tileid="384" duration="100"/>
+   <frame tileid="387" duration="100"/>
+   <frame tileid="390" duration="100"/>
+  </animation>
+ </tile>
+ <tile id="422">
+  <properties>
+   <property name="collision" type="bool" value="false"/>
+  </properties>
+  <animation>
+   <frame tileid="422" duration="100"/>
+   <frame tileid="425" duration="100"/>
+   <frame tileid="428" duration="100"/>
+  </animation>
+ </tile>
+ <tile id="423">
+  <properties>
+   <property name="collision" type="bool" value="false"/>
+  </properties>
+  <animation>
+   <frame tileid="423" duration="100"/>
+   <frame tileid="426" duration="100"/>
+   <frame tileid="429" duration="100"/>
+  </animation>
+ </tile>
+ <tile id="424">
+  <properties>
+   <property name="collision" type="bool" value="false"/>
+  </properties>
+  <animation>
+   <frame tileid="424" duration="100"/>
+   <frame tileid="427" duration="100"/>
+   <frame tileid="430" duration="100"/>
+  </animation>
+ </tile>
+ <tile id="462">
+  <objectgroup draworder="index" id="2">
+   <object id="1" x="0.9375" y="0.0625">
+    <polygon points="0,0 14.9375,13.8125 15.1875,0"/>
+   </object>
+  </objectgroup>
+ </tile>
+ <tile id="463">
+  <objectgroup draworder="index" id="2">
+   <object id="1" x="0.125" y="-0.0625" width="15.8125" height="12.9375"/>
+  </objectgroup>
+ </tile>
+ <tile id="464">
+  <objectgroup draworder="index" id="2">
+   <object id="1" x="0.125" y="0.125">
+    <polygon points="0,0 0,12.25 15.625,0"/>
+   </object>
+  </objectgroup>
+ </tile>
  <tile id="645">
   <properties>
    <property name="z" type="int" value="1"/>
