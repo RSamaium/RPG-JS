@@ -140,6 +140,7 @@ export class RpgCommonPlayer {
      * @title Set Sizes
      * @method player.setSizes(key,value)
      * @param { { width: number, height: number, hitbox?: { width: number, height: number } } } obj
+     * @deprecated
      * @returns {void}
      * @memberof Player
      */
@@ -147,7 +148,7 @@ export class RpgCommonPlayer {
         this.width = obj.width 
         this.height = obj.height
         if (obj.hitbox) {
-            this.setHitbox(obj.hitbox.width, obj.hitbox.height)
+            this.hitbox = new SAT.Box(this._hitboxPos, obj.hitbox.width, obj.hitbox.height)
         }
     }
 
@@ -169,7 +170,14 @@ export class RpgCommonPlayer {
      * @memberof Player
      */
     setHitbox(width: number, height: number): void {
+        const map = this.mapInstance
+        if (map) {
+            this.width = map.tileWidth 
+            this.height = map.tileHeight
+        }
         this.hitbox = new SAT.Box(this._hitboxPos, width, height)
+        this.wHitbox = width
+        this.hHitbox = height
         if (this.steerable) this.steerable.setSize(this.getVector3D(width, height, this.height))
     }
 

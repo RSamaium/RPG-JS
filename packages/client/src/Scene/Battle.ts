@@ -104,8 +104,8 @@ export class SceneBattle extends Scene implements IScene {
         return this.pointerActive
     }
 
-    draw(t) {
-        super.draw(t)
+    draw(t, dt, frame) {
+        super.draw(t, dt, frame)
         TWEEN.update(TWEEN.now())
         this.pointer.visible = this.pointerActive
     }

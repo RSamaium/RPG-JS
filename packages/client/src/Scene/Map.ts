@@ -133,18 +133,16 @@ export class SceneMap extends Scene implements IScene {
     }
 
     onUpdateObject(logic, sprite: Character, moving: boolean): Character {
-        if (!sprite.overlayShape) return sprite
         const { paramsChanged } = logic
         if (moving || (paramsChanged && (paramsChanged.width || paramsChanged.height))) {
             const { tileWidth, tileHeight } = this.gameMap
-            const { x, y, tilesOverlay }: any = sprite
-            const { offset, sizeTiles } = sprite.overlayShape
-            const offsetX = offset[0]
-            const offsetY = offset[1]
-            const width = sizeTiles[0] * tileWidth
-            const height = sizeTiles[1] * tileHeight
-            const _x = x + offsetX
-            const _y = y + offsetY
+            const { tilesOverlay }: any = sprite
+            const bounds = sprite.parent.getLocalBounds()
+            const width = Math.ceil(bounds.width / tileWidth) * tileWidth
+            const height = Math.ceil(bounds.height / tileHeight) * tileHeight
+            const _x = bounds.x
+            const _y = bounds.y
+
             const addTile = (x, y) => {
                 const tiles = this.tilemap.createOverlayTiles(x, y, sprite)
                 if (tiles.length) tilesOverlay.addChild(...tiles)
@@ -197,11 +195,14 @@ export class SceneMap extends Scene implements IScene {
 
     addObject(obj, id: string): Character {
         const wrapper = new PIXI.Container()
+        const inner = new PIXI.Container()
         const tilesOverlay = new PIXI.Container()
         const sprite = new this.game._playerClass(obj, this)
         
         sprite.tilesOverlay = tilesOverlay
-        wrapper.addChild(sprite, tilesOverlay)
+        inner.addChild(sprite)
+        wrapper.addChild(inner, tilesOverlay)
+
         this.objects.set(id, sprite)
         this.tilemap.getEventLayer().addChild(wrapper)
 
@@ -210,7 +211,6 @@ export class SceneMap extends Scene implements IScene {
 
         this.onAddSprite(sprite)
         RpgPlugin.emit(HookClient.AddSprite, sprite)
-
         return sprite
     }
 

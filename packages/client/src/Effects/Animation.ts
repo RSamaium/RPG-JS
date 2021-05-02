@@ -23,6 +23,7 @@ type AnimationDataFrames = {
 export class Animation extends PIXI.Sprite {
 
     public attachTo: RpgSprite
+    public hitbox: { w: number, h: number }
     public applyTransform: Function
     private frames: PIXI.Texture[][] = []
     private spritesheet: SpritesheetOptions
@@ -42,7 +43,7 @@ export class Animation extends PIXI.Sprite {
     }
 
     createTextures(options: TextureOptions): PIXI.Texture[][] {
-        const { width, height, framesHeight, framesWidth, rectWidth, rectHeight, image, offset }: any = options
+        const { width, height, framesHeight, framesWidth, image, offset }: any = options
         const { baseTexture } = PIXI.Texture.from(image)
         const spriteWidth = options['spriteWidth']
         const spriteHeight = options['spriteHeight']
@@ -168,30 +169,38 @@ export class Animation extends PIXI.Sprite {
             }
             sprite.texture = frames[frame.frameY][frame.frameX]
             const applyTransform = (prop) => {
-                if (frame[prop]) {
-                    sprite[prop].set(...frame[prop])
-                }
-                else if (this.spritesheet[prop]) {
-                    sprite[prop].set(...this.spritesheet[prop])
+                const val = frame[prop] || data[prop] || this.spritesheet[prop]
+                if (val) {
+                    sprite[prop].set(...val)
                 }
             }
             const applyTransformValue = (prop, alias = '') => {
                 const optionProp = alias || prop
-                if (frame[optionProp] !== undefined) {
-                    sprite[prop] = frame[optionProp]
-                }
-                else if (this.spritesheet[optionProp] !== undefined) {
-                    sprite[prop] = this.spritesheet[optionProp]
+                const val = frame[optionProp] || data[optionProp] || this.spritesheet[optionProp]
+                if (val !== undefined) {
+                    sprite[prop] = val
                 }
             }
 
             if (this.applyTransform) {
                 frame = {
                     ...frame,
-                    ...this.applyTransform(frame, data)
+                    ...this.applyTransform(frame, data, this.spritesheet)
                 }
     
             }
+
+            const applyAnchorBySize = () => {
+                const prop = 'anchorBySize'
+                const val = frame[prop] || data[prop] || this.spritesheet[prop]
+                if (val && this.hitbox) {
+                    const w = ((data.spriteWidth - this.hitbox.w) / 2) / data.spriteWidth
+                    const h = 1 - (this.hitbox.h / (val[1] || val[0]))
+                    sprite.anchor.set(w, h)
+                }
+            }
+
+            applyAnchorBySize()
 
             applyTransform('anchor')
             applyTransform('scale')

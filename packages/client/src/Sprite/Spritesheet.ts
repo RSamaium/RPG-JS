@@ -40,6 +40,8 @@ export interface TransformOptions {
      * */
     anchor?: number[]
 
+    anchorBySize?: number[]
+
     /** 
      * The global value of rotation
      * 
@@ -182,7 +184,7 @@ export interface TextureOptions {
 
 export type AnimationFrames = FrameOptions[][] | ((...args: any) => FrameOptions[][])
 
-export interface TexturesOptions extends TextureOptions {
+export interface TexturesOptions extends TextureOptions, TransformOptions {
     animations: AnimationFrames
 }
 

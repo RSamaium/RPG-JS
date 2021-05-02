@@ -25,10 +25,6 @@ export default class Character extends PIXI.Sprite {
     private objSaved: object = {}
 
     anim
-    overlayShape: { 
-        offset: [number, number],
-        sizeTiles: [number, number]
-    }
 
      /** 
      * the direction of the sprite
@@ -80,10 +76,6 @@ export default class Character extends PIXI.Sprite {
         this.x = data.position.x 
         this.y = data.position.y
         this.fixed = data.fixed
-        this.overlayShape = {
-            offset: [0, 0],
-            sizeTiles: [1, 1]
-        }
     }
 
     // Todo
@@ -133,6 +125,7 @@ export default class Character extends PIXI.Sprite {
             this.removeChild(this.animation)
             this.animation = new Animation(graphic)
             this.addChild(this.animation)
+            this.setAnimationAnchor()
         }
         const memoryGraphic = this.graphic
 
@@ -153,29 +146,20 @@ export default class Character extends PIXI.Sprite {
         this.spritesheet = spritesheets.get(this.graphic)
         this.animation = new Animation(this.graphic)
         this.addChild(this.animation)
-        this.animation.applyTransform = (frame, spritesheet) => {
-            const { spriteWidth, spriteHeight } = spritesheet
-            let anchor = [0, 0]
-            
-            if (frame.anchor) {
-                anchor = frame.anchor
-            }
-            else {
-                const data = this.data
-                if (this.data.wHitbox && this.data.hHitbox) {
-                    const w = (1 - (data.wHitbox / spriteWidth)) / 2
-                    const h = 1 - (data.hHitbox / spriteHeight)
-                    anchor = [w, h]
-                }
-            }
-            
-            this.overlayShape = {
-                offset: [-spriteWidth * anchor[0], -spriteWidth * anchor[1]],
-                sizeTiles: [1, 1]
-            }
+        this.setAnimationAnchor()
+    }
 
+    private setAnimationAnchor() {
+        this.animation.hitbox = { h: this.data.hHitbox, w: this.data.wHitbox }
+        this.animation.applyTransform = (frame, animation, spritesheet) => {
+            const { spriteWidth, spriteHeight } = animation
+            const prop = 'anchorBySize'
+            const currentAnchor = frame[prop] || animation[prop] || spritesheet[prop]
+            if (currentAnchor) {
+                return {}
+            }
             return {
-                anchor
+                anchorBySize: [spriteWidth, spriteHeight]
             }
         }
     }

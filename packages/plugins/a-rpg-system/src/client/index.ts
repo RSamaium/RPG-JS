@@ -3,7 +3,6 @@ import { HookClient, RpgSprite } from '@rpgjs/client'
 export default function({ RpgPlugin }) {
     const bar = new PIXI.Graphics()
     RpgPlugin.on(HookClient.AddSprite, (sprite: RpgSprite) => {
-        
         const data = sprite['data']
         const bar = (width, opacity) => {
             const graphic = new PIXI.Graphics()
@@ -23,18 +22,12 @@ export default function({ RpgPlugin }) {
 
         const innerBar = bar(width, 1)
 
-        /*const graphic = new PIXI.Graphics()
+        const graphic = new PIXI.Graphics()
         graphic.beginFill(0xDE3249)
         graphic.drawRect(0, 0, data.hitbox.w, data.hitbox.h)
         graphic.endFill()
+
         sprite.addChild(graphic)
-
-        const overlay = new PIXI.Graphics()
-        overlay.beginFill(0x0000FF)
-        overlay.drawRect(sprite.overlayShape.x, sprite.overlayShape.y, sprite.overlayShape.width, sprite.overlayShape.height)
-        overlay.endFill()
-        sprite.addChild(overlay)*/
-
         fullBar.addChild(innerBar)
         sprite.addChild(fullBar)
     })

@@ -77,8 +77,8 @@ export default class TileMap extends PIXI.Container {
                     const tile = tileLayer.createTile(x, y, {
                         real: true,
                         filter: (tile: Tile) => {
-                            const { data, y: yObject, z: zObject, height } = instance
-                            const { hHitbox } = data
+                            const { data, y: yObject, z: zObject } = instance
+                            const { hHitbox, height } = data
                             const zLayer = tileLayer.properties.z
                             const tileHasZ = tile.properties.z !== undefined
                             let { z } = tile.properties
