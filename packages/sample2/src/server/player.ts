@@ -17,6 +17,6 @@ export class Player extends RpgPlayer {
       
     }
     onJoinMap() {
-      this.setHitbox(16, 8)
+      this.setHitbox(10, 8)
     }
 }

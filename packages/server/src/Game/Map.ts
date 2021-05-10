@@ -1,6 +1,7 @@
 import { RpgCommonMap, Utils }  from '@rpgjs/common'
 import * as Kompute from 'kompute/build/Kompute'
 import fs from 'fs'
+import * as YUKA from 'yuka'
 import { EventOptions } from '../decorators/event'
 import { EventMode, RpgEvent } from '../Event'
 import { Move } from '../Player/MoveManager'
@@ -54,6 +55,7 @@ export class RpgMap extends RpgCommonMap {
         [eventId: string]: RpgEvent
     } = {}
     kWorld: Kompute
+    entityManager = new YUKA.EntityManager()
 
     constructor(private _server: any) {
         super()
@@ -66,7 +68,7 @@ export class RpgMap extends RpgCommonMap {
         const data = await this.parseFile() 
         super.load(data) 
         RpgCommonMap.buffer.set(this.id, this)
-        this.kWorld = new Kompute.World(data.width * data.tileWidth, data.height * data.tileHeight, 1000, 32) 
+        //this.kWorld = new Kompute.World(data.width * data.tileWidth, data.height * data.tileHeight, 1000, 32) 
         this.events = this.createEvents(this._events, EventMode.Shared)
         this.autoLoadEvent()
         for (let key in this.events) {
@@ -82,12 +84,12 @@ export class RpgMap extends RpgCommonMap {
     onLoad() {}
 
     onJoin(player: RpgPlayer) {
-        this.kWorld.insertEntity(player.steerable)
+        this.entityManager.add(player.steerable)
     }
 
     onLeave(player: RpgPlayer) {
         player.stopBehavior()
-        this.kWorld.removeEntity(player.steerable)
+        this.entityManager.remove(player.steerable)
         this.getShapes().forEach(shape => shape.out(player))
     }
 
@@ -139,7 +141,7 @@ export class RpgMap extends RpgCommonMap {
         const ev = this.game.addEvent(event, mode == EventMode.Shared)
         const _shape = shape || this.getEventShape(ev.name)
 
-        this.kWorld.insertEntity(ev.steerable)
+        this.entityManager.add(ev.steerable)
 
         ev.width = event.width || this.tileWidth
         ev.height = event.height || this.tileHeight

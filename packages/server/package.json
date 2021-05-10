@@ -24,7 +24,9 @@
     "@rpgjs/sync-server": "^3.0.0-alpha.8",
     "kompute": "^1.13.0",
     "lodash.merge": "^4.6.2",
-    "sat": "^0.8.0"
+    "pathfinding": "^0.4.18",
+    "sat": "^0.8.0",
+    "yuka": "^0.7.5"
   },
   "gitHead": "90f32de0618ffddadf918fa313cecc3e3c78aa0b"
 }

@@ -1,5 +1,6 @@
 import { RpgCommonPlayer, Utils, RpgPlugin, RpgCommonMap as RpgMap }  from '@rpgjs/common'
 import * as Kompute from 'kompute/build/Kompute'
+import * as YUKA from 'yuka'
 import { Query } from '../Query'
 import merge from 'lodash.merge'
 import { ItemManager } from './ItemManager'
@@ -140,7 +141,9 @@ export class RpgPlayer extends RpgCommonPlayer {
         this.through = false
         this.throughOtherPlayer = true
 
-        this.steerable = new Kompute.Steerable(this.playerId, new Kompute.Vector3D(), new Kompute.Vector3D(10, 10, 0))
+       // this.steerable = new Kompute.Steerable(this.playerId, new Kompute.Vector3D(), new Kompute.Vector3D(10, 10, 0))
+
+        this.steerable = new YUKA.Vehicle()
     
         this.initialLevel = 1
         this.finalLevel = 99

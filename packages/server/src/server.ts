@@ -87,7 +87,7 @@ export default class RpgServerEngine {
     step() {
         tick++
         if (tick % 4 === 0) {
-            World.send() 
+            World.send()
         }
     }
 

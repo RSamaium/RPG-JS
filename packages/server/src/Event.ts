@@ -1,6 +1,5 @@
 import { RpgPlayer } from './Player/Player'
-import { Utils } from '@rpgjs/common';
-import { World } from '@rpgjs/sync-server'
+import { Utils, RpgPlugin } from '@rpgjs/common';
 
 export enum EventMode {
     Shared = 'shared',
@@ -13,6 +12,7 @@ export class RpgEvent extends RpgPlayer  {
     properties: any = {}
 
     execMethod(methodName: string, methodData = []) {
+        RpgPlugin.emit(`Server.${methodName}`, [this, ...methodData], true)
         if (!this[methodName]) {
             return
         }
@@ -22,8 +22,6 @@ export class RpgEvent extends RpgPlayer  {
             if (player instanceof RpgPlayer) {
                 player.syncChanges()
             }
-            const room = World.getRoom(this.map)
-            if (room.$detectChanges) room.$detectChanges()
         }
         if (Utils.isPromise(ret)) {
             ret.then(sync)

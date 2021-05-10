@@ -46,6 +46,10 @@ export default class RpgCommonMap {
         return this.height * this.tileHeight
     }
 
+    get zTileHeight() {
+        return this.tileHeight
+    }
+
     _extractShapes() {
         for (let layer of this.layers) {
             if (layer.type != 'object') continue
@@ -75,7 +79,7 @@ export default class RpgCommonMap {
         const startsFind = this.getShapes().filter(filter)
         if (startsFind.length) {
             const start = startsFind[random(0, startsFind.length-1)]
-            return { x: start.hitbox.x, y: start.hitbox.y, z: 0 }
+            return { x: start.hitbox.x, y: start.hitbox.y, z: start.properties.z * this.zTileHeight || 0 }
         }
         return null
     }

@@ -78,14 +78,14 @@ export class RpgCommonPlayer {
         this._hitboxPos.x = x
         this._hitboxPos.y = y
         this._hitboxPos.z = z
-        if (this.steerable && this.steerable.lastWorldPosition) {
-            this.steerable.setPosition(this.getVector3D(x, y, z))
+        if (this.steerable) {
+            this.steerable.position.copy(this.getVector3D(x, z, y))
         }
         this._position = new Proxy(val, {
             get: (target, prop: string) => target[prop], 
             set: (target, prop, value) => {
                 this._hitboxPos[prop] = value
-                if (this.steerable && this.steerable.lastWorldPosition) {
+                if (this.steerable) {
                     this.steerable[prop] = value
                 }
                 target[prop] = value
@@ -178,7 +178,6 @@ export class RpgCommonPlayer {
         this.hitbox = new SAT.Box(this._hitboxPos, width, height)
         this.wHitbox = width
         this.hHitbox = height
-        if (this.steerable) this.steerable.setSize(this.getVector3D(width, height, this.height))
     }
 
     set wHitbox(val) {
@@ -361,11 +360,11 @@ export class RpgCommonPlayer {
                 const playerInVision = Hit.testPolyCollision('box', player2.hitbox, player1.visionHitbox?.hitbox)
                 if (playerInVision && !player1.inVision[player2.id]) {
                     player1.inVision[player2.id] = true
-                    player1.execMethod('onInVision', [player2])
+                    if (player1.execMethod) player1.execMethod('onInVision', [player2])
                 }
                 if (!playerInVision && player1.inVision[player2.id]) {
                     delete player1.inVision[player2.id]
-                    player1.execMethod('onOutVision', [player2])
+                    if (player1.execMethod) player1.execMethod('onOutVision', [player2])
                 }
             }
         }
@@ -499,7 +498,7 @@ import { Shape } from './Shape';
         }
     }
 
-    execMethod(methodName: string, methodData: any = [], instance: any = null) {}
+    execMethod(methodName: string, methodData?, instance?) {}
 }
 
 export interface RpgCommonPlayer {
@@ -508,4 +507,5 @@ export interface RpgCommonPlayer {
     throughOtherPlayer: boolean
     steerable: any
     getVector3D(x, y, z): any
+    execMethod(methodName: string, methodData?, instance?)
 }

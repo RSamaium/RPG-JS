@@ -94,7 +94,8 @@ export default class TileMap extends PIXI.Container {
                             if (zObject + height < realZ) {
                                 return true
                             }
-                            
+
+                            // player is on a tile but the player has a high z
                             if (zObject > realZ + tile.height) {
                                 return false
                             }
@@ -103,6 +104,9 @@ export default class TileMap extends PIXI.Container {
 
                             // is front of tile
                             if (yObject + hHitbox > tile.y + tile.height) {
+                                if (yObject - tile.y > height) {
+                                    return false
+                                }
                                 const zIntersection = intersection([zObject, zObject + height], [realZ, realZ + tile.height])
                                 if (!zIntersection) {
                                     return true

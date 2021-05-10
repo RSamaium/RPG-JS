@@ -16,12 +16,13 @@ const frameY = direction => {
     framesHeight: 4, 
     width: 192,
     height: 128,
+    anchorBySize: [16, 24],
     textures: {
         [Animation.Stand]: {
             rectWidth: 32,
             rectHeight: 32,
             animations: direction => [
-                [{ time: 0, frameX: 2, anchor: [0.25, 0.65],frameY: frameY(direction) }]
+                [{ time: 0, frameX: 2, frameY: frameY(direction) }]
             ]
         },
         [Animation.Walk]:  {
@@ -29,7 +30,7 @@ const frameY = direction => {
             rectHeight: 32,
             animations: direction => [
                     [ 
-                        { time: 0, frameX: 0, anchor: [0, 0.6], frameY: frameY(direction) },
+                        { time: 0, frameX: 0, frameY: frameY(direction) },
                         { time: 10, frameX: 1, frameY: frameY(direction) },
                         { time: 20, frameX: 2, frameY: frameY(direction) },
                         { time: 30, frameX: 3, frameY: frameY(direction) }
