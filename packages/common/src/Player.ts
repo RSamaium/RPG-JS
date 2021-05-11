@@ -269,52 +269,30 @@ export class RpgCommonPlayer {
         return this.move(nextPosition)
     }
 
-    move(nextPosition: Position): boolean {
+    isCollided(nextPosition: Position): boolean {
         this.collisionWith = []
 
         const map: Map = this.mapInstance
-
-        {
-            const { x, y } = this.position
-            const { x: nx, y: ny } = nextPosition
-            if (Math.abs(x - nx) > Math.abs(y - ny)) {
-                if (nx > x) {
-                    this.changeDirection(Direction.Right)
-                }
-                else {
-                    this.changeDirection(Direction.Left)
-                }
-            }
-            else {
-                if (ny > y) {
-                    this.changeDirection(Direction.Down)
-                }
-                else {
-                    this.changeDirection(Direction.Up)
-                }
-            }
-        }
-
         const hitbox = Hit.createObjectHitbox(nextPosition.x, nextPosition.y, 0, this.hitbox.w, this.hitbox.h)
 
         if (!map) {
-            return false
+            return true
         }
         if (nextPosition.x < 0) {
             this.posX = 0 
-            return false
+            return true
         }
         if (nextPosition.y < 0) {
             this.posY = 0 
-            return false
+            return true
         }
         if (nextPosition.x > map.widthPx - this.hitbox.w) {
             this.posX = map.widthPx - this.hitbox.w
-            return false
+            return true
         }
         if (nextPosition.y > map.heightPx - this.hitbox.h) {
             this.posY = map.heightPx - this.hitbox.h
-            return false
+            return true
         }
 
         let isClimbable = false
@@ -350,9 +328,8 @@ export class RpgCommonPlayer {
             tileCollision(nextPosition.x, nextPosition.y + this.hitbox.h) || 
             tileCollision(nextPosition.x + this.hitbox.w, nextPosition.y + this.hitbox.h)
         ) {
-            return false
+            return true
         }
-
         let events: RpgCommonPlayer[] = this.gameEngine.world.getObjectsOfGroup(this.map, this)
 
         const inArea = (player1: RpgCommonPlayer, player2: RpgCommonPlayer) => {
@@ -383,13 +360,13 @@ export class RpgCommonPlayer {
                 let throughOtherPlayer = false
                 if (event.type == PlayerType.Player && this.type == PlayerType.Player) {
                     if (!(event.throughOtherPlayer || this.throughOtherPlayer)) {
-                        return false
+                        return true
                     }
                     else {
                         throughOtherPlayer = true
                     }
                 }
-                if (!throughOtherPlayer && (!(event.through || this.through))) return false 
+                if (!throughOtherPlayer && (!(event.through || this.through))) return true 
             }
         }
 
@@ -411,13 +388,42 @@ export class RpgCommonPlayer {
                 // TODO: in shape after map load
                 if (!collision) shape.in(this)
                 this.triggerCollisionWith()
-                if (collision) return false
+                if (collision) return true
             }
             else {
                 shape.out(this)
             }
         }
-        this.position = nextPosition
+
+        return false
+    }
+
+    move(nextPosition: Position, testCollision:  boolean = true): boolean {
+        {
+            const { x, y } = this.position
+            const { x: nx, y: ny } = nextPosition
+            if (Math.abs(x - nx) > Math.abs(y - ny)) {
+                if (nx > x) {
+                    this.changeDirection(Direction.Right)
+                }
+                else {
+                    this.changeDirection(Direction.Left)
+                }
+            }
+            else {
+                if (ny > y) {
+                    this.changeDirection(Direction.Down)
+                }
+                else {
+                    this.changeDirection(Direction.Up)
+                }
+            }
+        }
+
+        if (testCollision && !this.isCollided(nextPosition)) {
+            this.position = nextPosition
+        }
+
         return true
     }
 

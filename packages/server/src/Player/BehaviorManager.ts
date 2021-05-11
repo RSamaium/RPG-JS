@@ -96,11 +96,14 @@ export class BehaviorManager {
 
             const { x, y, z } = target
 
-            if (self['move']({
+            if (self['isCollided']({
                 x,
                 y: z,
                 z: y
             })) {
+                //console.log(x, y, z)
+            }
+            else {
                 this.position.copy( target )
             }
 

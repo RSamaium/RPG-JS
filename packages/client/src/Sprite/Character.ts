@@ -181,7 +181,7 @@ export default class Character extends PIXI.Sprite {
             this._x = Math.floor(obj.position.x)
             this._y = Math.floor(obj.position.y) - this.z
 
-            this.parent.zIndex = this._y
+            this.parent.parent.zIndex = this._y
      
             obj.posX = obj.position.x
             obj.posY = obj.position.y

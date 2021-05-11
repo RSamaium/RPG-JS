@@ -104,9 +104,9 @@ export default class TileMap extends PIXI.Container {
 
                             // is front of tile
                             if (yObject + hHitbox > tile.y + tile.height) {
-                                if (yObject - tile.y > height) {
-                                    return false
-                                }
+                                // if (yObject - tile.y >= height) {
+                                //     return false
+                                // }
                                 const zIntersection = intersection([zObject, zObject + height], [realZ, realZ + tile.height])
                                 if (!zIntersection) {
                                     return true
