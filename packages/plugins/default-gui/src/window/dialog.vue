@@ -23,7 +23,6 @@ export default {
     async mounted() {
         let interval
         this.rpgScene().stopInputs()
-        this.rpgGui.hide('rpg-controls') 
         if (!this.isChoice && !this.autoClose) {
             this.obsKeyPress = this.rpgKeypress.subscribe(({ control }) => {
                 if (control && control.actionName == 'action') {
@@ -56,7 +55,6 @@ export default {
         close(indexSelect) {
             this.rpgGuiClose('rpg-dialog', indexSelect)
             this.rpgScene().listenInputs()
-            this.rpgGui.show('rpg-controls') 
         }
     },
     unmounted() {

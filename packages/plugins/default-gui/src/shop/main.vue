@@ -79,7 +79,8 @@ export default {
 
         this.obsCurrentPlayer = this.rpgCurrentPlayer.subscribe(({ object }) => {
             this.player = object
-            this.inventory = Object.values(this.player.items)
+            // ignore deleted items
+            this.inventory = Object.values(this.player.items).filter(item => item)
             // Wait for the return of the server to reset values
             if (this.doAction) {
                 this.step = 0
