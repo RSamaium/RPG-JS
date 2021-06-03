@@ -71,6 +71,29 @@ interface MapOptions {
     /** 
      * The sounds that will be played when the map is open. Sounds must be defined on the client side. Then, put the name of the sound identifier
      * 
+     * So, it is possible to play several sounds (in loop or not) on the card. You can put a background music (BGM) and a background noise (BGS) for example
+     * 
+     *  ```ts
+     * sounds: ['my-bgm', 'my-bgs']
+     * ```
+     * 
+     * And client side:
+     * 
+     * ```ts
+     * import { Sound } from '@rpgjs/client'
+     * 
+     * @Sound({
+     *      sounds: {
+     *          'my-bgm': require('./assets/bgm.ogg'),
+     *          'my-bgs': require('./assets/bgs.ogg')
+     *      },
+     *      loop: true
+     * })
+     * export class Sounds {}
+     * ```
+     * 
+     * See [https://docs.rpgjs.dev/classes/sound.html#properties](RpgSound Decorator)
+     * 
      * @prop {Array<string>} [sounds]
      * @memberof MapData
      * */
