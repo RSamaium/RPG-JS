@@ -40,10 +40,12 @@ export class Player extends RpgPlayer {
         
     }
 
-    onJoinMap(map) {
-      //const gui = this.gui('info')
-      //gui.open({})
-      
+    async onJoinMap(map) {
+      const choice = await this.showChoices('What color do you prefer?', [
+        { text: 'Black', value: 'black' },
+        { text: 'Rather the blue', value: 'blue' },
+        { text: 'I don\'t have a preference!', value: 'none' }
+       ])
     }
 
     onInput({ input }) {
