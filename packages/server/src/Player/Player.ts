@@ -559,6 +559,54 @@ export class RpgPlayer extends RpgCommonPlayer {
             if (event.onChanges) event.onChanges(this)
         }
     }
+
+    /**
+     * Allows to play a sound, heard only by the player or by the players of the map
+     * 
+     * Here is a sound, client side:
+     * 
+     * ```ts
+     * import { Sound } from '@rpgjs/client'
+     * @Sound({
+     *      id: 'town-music',
+     *      sound: require('./sound/town.ogg')
+     * })
+     * export class TownMusic {}
+     * ```
+     * 
+     * Here is the call of the method, server side:
+     * 
+     * ```ts
+     * player.playSound('town-music')
+     * ```
+     * 
+     * If you want everyone to listen to the sound on the map:
+     * 
+     * ```ts
+     * player.playSound('town-music', true)
+     * ```
+     * 
+     * @title Play Sound
+     * @method player.playSound(soundId,allMap=false)
+     * @param {string} soundId Sound identifier, defined on the client side
+     * @param {boolean} [allMap] Indicate if the sound is heard by the players on the card
+     * @since 3.0.0-alpha.9
+     * @stability 1
+     * @returns {void}
+     * @memberof Player
+     */
+    playSound(soundId: string, allMap: boolean = false) {
+        const obj = { 
+            objectId: this.playerId,
+            name: 'playSound',
+            params: [soundId]
+        }
+        if (!allMap) {
+            this.emit('callMethod', obj)
+            return
+        }
+        this.emitToMap('callMethod', obj)
+    }
 }
 
 export interface RpgPlayer extends 

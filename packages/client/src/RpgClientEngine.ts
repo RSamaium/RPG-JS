@@ -17,6 +17,7 @@ import {
 } from '@rpgjs/common'
 import merge from 'lodash.merge'
 import { SnapshotInterpolation, Vault } from '@geckos.io/snapshot-interpolation'
+import { RpgSound } from './Sound/RpgSound'
 
 const SI = new SnapshotInterpolation(60) 
 
@@ -320,6 +321,9 @@ export default class RpgClientEngine {
                         animationName: params[1],
                         replaceGraphic: params[2]
                     })
+                break
+                case 'playSound':
+                    RpgSound.get(params[0]).play()
                 break
             }
         })
