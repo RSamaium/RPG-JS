@@ -1,10 +1,14 @@
-import { Howl } from 'howler'
+import { Howl, Howler } from 'howler'
+import { log } from '../Logger'
 import { sounds } from './Sounds'
 
-export class RpgSound extends Howl {
-    constructor(id: string) {
+class RpgSoundClass {
+    get(id: string): Howl {
         const resource = sounds.get(id)
-        super({
+        if (!resource) {
+            throw log(`Impossible to find the ${id} sound. Did you put the right name or create the sound?`)
+        }
+        return new Howl({
             src: [resource.sound],
             loop: resource.loop,
             autoplay: resource.autoplay,
@@ -12,4 +16,9 @@ export class RpgSound extends Howl {
             sprite: resource.sprite
         })
     }
+    get global(): typeof Howler {
+        return Howler
+    }
 }
+
+export const RpgSound = new RpgSoundClass()

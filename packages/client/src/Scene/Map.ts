@@ -7,9 +7,7 @@ import { Scene } from './Scene'
 import { SceneData } from './SceneData'
 import { spritesheets } from '../Sprite/Spritesheets'
 import Character from '../Sprite/Character'
-import { RpgSprite } from '../Sprite/Player'
 import { RpgSound } from '../Sound/RpgSound'
-import { Howler } from 'howler'
 
 @SceneData({
     inputs: {
@@ -89,7 +87,7 @@ export class SceneMap extends Scene implements IScene {
             }
         })
 
-        Howler.stop()
+        RpgSound.global.stop()
 
         RpgPlugin.emit(HookClient.SceneMapLoading, loader)
 
@@ -108,7 +106,7 @@ export class SceneMap extends Scene implements IScene {
                 this.viewport.addChild(this.tilemap)
                 this.isLoaded = true
                 if (obj.sounds) {
-                    const sound = new RpgSound(obj.sounds[0])
+                    const sound = RpgSound.get(obj.sounds[0])
                     sound.play()
                 }
                 resolve(this.viewport)

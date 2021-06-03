@@ -1,4 +1,4 @@
-import { RpgSprite } from '@rpgjs/client'
+import { RpgSprite, RpgSound } from '@rpgjs/client'
 
 
 export class Sprite extends RpgSprite {
@@ -9,7 +9,7 @@ export class Sprite extends RpgSprite {
     onInit() {
         this.interactive = true
         this.on('pointerdown', (ev) => {
-            console.log(ev)
+            RpgSound.get('chestaaa').play()
         });
     }
 
