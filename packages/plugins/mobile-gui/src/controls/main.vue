@@ -101,7 +101,7 @@ export default {
 }
 
 .action {
-    background-image: url('../assets/controls/flatDark35.png');
+    background-image: url('../assets/flatDark35.png');
     width: 80px;
     height: 80px;
     opacity: 0.8;
@@ -111,7 +111,7 @@ export default {
 }
 
 .menu-access {
-    background-image: url('../assets/controls/flatDark32.png');
+    background-image: url('../assets/flatDark32.png');
     width: 48px;
     height: 48px;
     opacity: 0.8;

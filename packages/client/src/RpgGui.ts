@@ -85,7 +85,8 @@ class Gui {
                      *      inject: ['rpgObjects'],
                      *      mounted() {
                      *          this.obs = this.rpgObjects.subscribe((objects) => {
-                     *              for (let obj in objects) {
+                     *              for (let id in objects) {
+                     *                  const obj = objects[id]
                      *                  console.log(obj.object, obj.paramsChanged)
                      *              }
                      *          })
