@@ -4,6 +4,7 @@ import { Sound } from '@rpgjs/client'
     sounds: {
         town: require('./assets/Town_Theme.ogg')
     },
-    loop: true
+    loop: true,
+    volume: 0.5
 })
 export class Sounds {}

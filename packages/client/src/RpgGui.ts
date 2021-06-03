@@ -1,5 +1,6 @@
 import { createApp, ref } from 'vue'
 import { map } from 'rxjs/operators'
+import { RpgSound } from './Sound/RpgSound'
 
 class Gui {
 
@@ -28,7 +29,14 @@ class Gui {
 
         this.app = createApp({
             template: `
-                <div>
+                <div 
+                    @pointerdown="propagate('pointerdown', $event)"
+                    @pointermove="propagate('pointermove', $event)"
+                    @pointerleave="propagate('pointerleave', $event)"
+                    @pointerover="propagate('pointerover', $event)"
+                    @pointercancel="propagate('pointercancel', $event)"
+                    @pointerup="propagate('pointerup', $event)"
+                >
                     <template v-for="(ui, name) in gui">
                         <component :is="name" v-bind="ui.data" v-if="ui.display"></component>
                     </template>  
@@ -276,6 +284,11 @@ class Gui {
                      * @memberof VueInject
                      * */
                     rpgGui: this
+                }
+            },
+            methods: {
+                propagate: (type: string, event) => {
+                    this.renderer.renderer.view.dispatchEvent(new MouseEvent(type, event))
                 }
             }
         })

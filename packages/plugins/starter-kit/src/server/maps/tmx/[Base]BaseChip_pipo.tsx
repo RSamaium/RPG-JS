@@ -1283,6 +1283,7 @@
  <tile id="228">
   <properties>
    <property name="collision" type="bool" value="false"/>
+   <property name="z" type="int" value="0"/>
   </properties>
   <objectgroup draworder="index" id="2">
    <object id="1" x="6.75" y="10.75" width="17.25" height="19">
