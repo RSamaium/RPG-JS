@@ -1,7 +1,7 @@
 import { RpgSceneMap, RpgGui, SceneData, Control, Input, PrebuiltGui } from '@rpgjs/client'
 export class SceneMap extends RpgSceneMap {
     onLoad() {
-        /*this.setInputs({
+        this.setInputs({
             [Control.Up]: {
                 repeat: true,
                 bind: Input.Up
@@ -29,7 +29,6 @@ export class SceneMap extends RpgSceneMap {
                 method: this.anim
             }
         })
-        RpgGui.display(PrebuiltGui.Controls)*/
     }
 
     anim() {

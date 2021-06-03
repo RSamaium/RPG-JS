@@ -4,6 +4,7 @@ import { spritesheets } from '../Sprite/Spritesheets'
 import { SpritesheetOptions, TextureOptions, AnimationFrames, FrameOptions } from '../Sprite/Spritesheet'
 import RpgSprite from '../Sprite/Character'
 import { log } from '../Logger'
+import { RpgSound } from '../Sound/RpgSound'
 
 const { isFunction, arrayEquals } = Utils
 
@@ -72,7 +73,7 @@ export class Animation extends PIXI.Sprite {
     createAnimations() {
         const { textures } = this.spritesheet
         for (let animationName in textures) {
-            const parentObj = ['width', 'height', 'framesHeight', 'framesWidth', 'rectWidth', 'rectHeight', 'offset', 'image']
+            const parentObj = ['width', 'height', 'framesHeight', 'framesWidth', 'rectWidth', 'rectHeight', 'offset', 'image', 'sound']
                 .reduce((prev, val) => ({ ...prev, [val]: this.spritesheet[val] }), {})
             const optionsTextures: any = {
                 ...parentObj,
@@ -145,6 +146,12 @@ export class Animation extends PIXI.Sprite {
            this.currentAnimation.container.addChild(sprite)
         }
 
+        const sound = this.currentAnimation.data.sound
+
+        if (this.currentAnimation.data.sound) {
+            RpgSound.get(sound).play()
+        }
+
         this.addChild(this.currentAnimation.container)
         // Updates immediately to avoid flickering
         this.update()
@@ -168,15 +175,18 @@ export class Animation extends PIXI.Sprite {
                 continue
             }
             sprite.texture = frames[frame.frameY][frame.frameX]
+            
+            const getVal = (prop) => frame[prop] || data[prop] || this.spritesheet[prop]
+            
             const applyTransform = (prop) => {
-                const val = frame[prop] || data[prop] || this.spritesheet[prop]
+                const val = getVal(prop)
                 if (val) {
                     sprite[prop].set(...val)
                 }
             }
             const applyTransformValue = (prop, alias = '') => {
                 const optionProp = alias || prop
-                const val = frame[optionProp] || data[optionProp] || this.spritesheet[optionProp]
+                const val = getVal(optionProp)
                 if (val !== undefined) {
                     sprite[prop] = val
                 }
@@ -192,12 +202,16 @@ export class Animation extends PIXI.Sprite {
 
             const applyAnchorBySize = () => {
                 const prop = 'anchorBySize'
-                const val = frame[prop] || data[prop] || this.spritesheet[prop]
+                const val = getVal(prop)
                 if (val && this.hitbox) {
                     const w = ((data.spriteWidth - this.hitbox.w) / 2) / data.spriteWidth
                     const h = 1 - (this.hitbox.h / (val[1] || val[0]))
                     sprite.anchor.set(w, h)
                 }
+            }
+
+            if (frame.sound) {
+                RpgSound.get(frame.sound).play()
             }
 
             applyAnchorBySize()

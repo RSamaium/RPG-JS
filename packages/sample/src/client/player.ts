@@ -9,7 +9,7 @@ export class Sprite extends RpgSprite {
     onInit() {
         this.interactive = true
         this.on('pointerdown', (ev) => {
-            RpgSound.get('chestaaa').play()
+            
         });
     }
 

@@ -283,7 +283,24 @@ class Gui {
                      * @prop {RpgGui} [rpgGui]
                      * @memberof VueInject
                      * */
-                    rpgGui: this
+                    rpgGui: this,
+
+                    /** 
+                     * Equivalent to RpgSound
+                     * 
+                     * ```js
+                     * export default {
+                     *      inject: ['rpgSound'],
+                     *      mounted() {
+                     *         this.rpgSound.get('my-sound-id').play()
+                     *      }
+                     * }
+                     * ``` 
+                     * 
+                     * @prop {RpgSound} [rpgSound]
+                     * @memberof VueInject
+                     * */
+                    rpgSound: RpgSound
                 }
             },
             methods: {

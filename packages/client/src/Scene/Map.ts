@@ -106,8 +106,7 @@ export class SceneMap extends Scene implements IScene {
                 this.viewport.addChild(this.tilemap)
                 this.isLoaded = true
                 if (obj.sounds) {
-                    const sound = RpgSound.get(obj.sounds[0])
-                    sound.play()
+                    obj.sounds.forEach(soundId => RpgSound.get(soundId).play())
                 }
                 resolve(this.viewport)
                 if  (this.onLoad) this.onLoad()
