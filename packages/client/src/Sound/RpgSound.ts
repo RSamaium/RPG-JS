@@ -6,7 +6,10 @@ export class RpgSound extends Howl {
         const resource = sounds.get(id)
         super({
             src: [resource.sound],
-            ...resource
+            loop: resource.loop,
+            autoplay: resource.autoplay,
+            volume: resource.volume,
+            sprite: resource.sprite
         })
     }
 }
