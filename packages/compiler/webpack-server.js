@@ -32,7 +32,7 @@ module.exports = function(dirname, extend = {}) {
             allowlist: [/^@rpgjs/]
         })],
         mode,
-        entry: `./src/server/main.ts`,
+        entry: `./src/server.ts`,
         output: {
             path: path.join(dirname, 'dist/server'),
             filename: 'index.js'

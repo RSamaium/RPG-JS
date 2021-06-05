@@ -1,17 +1,33 @@
-import { RpgCommonGame } from '@rpgjs/common'
+import { RpgCommonGame, RpgPlugin, HookServer, loadModules } from '@rpgjs/common'
+import { RpgServerEngine } from './server'
 
-export default function(engine, io, options = {}) {
-    const _options = Object.assign(engine._options, options)
-
+export default function(modules, options = {}) {
     const gameEngine = new RpgCommonGame()
-    const serverEngine = new engine(io, gameEngine, { 
+
+    const relations = {
+        onConnected: HookServer.PlayerConnected,
+        onInput: HookServer.PlayerInput,
+        onJoinMap: HookServer.PlayerJoinMap,
+        onLeaveMap: HookServer.PlayerLeaveMap,
+        onLevelUp: HookServer.PlayerLevelUp,
+        onDead: HookServer.PlayerDead,
+        onDisconnected: HookServer.PlayerDisconnected
+    }
+
+    loadModules(modules, {
+        side: 'server',
+        relations: {
+            player: relations
+        }
+    })
+
+    const serverEngine = new RpgServerEngine(options['io'], gameEngine, { 
         debug: {}, 
         updateRate: 10, 
         stepRate: 60,
         timeoutInterval: 0, 
         countConnections: false,
-        ..._options
+        ...options
     })
-
     return serverEngine
 }

@@ -1,11 +1,33 @@
 import { RpgSprite } from './Sprite/Player'
-import { Plugin } from '@rpgjs/common'
+import { Plugin, RpgModule } from '@rpgjs/common'
+import { Scene } from './Scene/Scene'
 
 interface RpgClass<T> {
     new (data: any, scene: any): T,
 }
 
-export interface RpgClientOptions {
+export interface RpgSpriteHooks {
+    onInit?: (sprite: RpgSprite) => any
+    onDestroy?: (sprite: RpgSprite) => any
+    onChanges?: (sprite: RpgSprite, data: any, old: any) => any
+    onUpdate?: (sprite: RpgSprite, obj: any) => any
+    onMove?: (sprite: RpgSprite) => any
+}
+
+export interface RpgSceneHooks {
+    onAddSprite?: (scene: Scene, sprite: RpgSprite) => any
+    onRemoveSprite?: (scene: Scene, sprite: RpgSprite) => any
+    onBeforeLoading?: (scene: Scene) => any
+    onAfterLoading?: (scene: Scene) => any
+    onChanges?: (scene: Scene, obj: { data: any, partial: any }) => any
+    onDraw?: (scene: Scene, t: number) => any
+}
+
+export interface RpgSceneMapHooks extends RpgSceneHooks {
+    onMapLoading?: (scene: Scene) => any
+}
+
+export interface RpgClient {
      /** 
      * The element selector that will display the canvas. By default, `#rpg`
      * 
@@ -39,7 +61,7 @@ export interface RpgClientOptions {
      * @prop { { client: null | Function, server: null | Function }[]} [plugins]
      * @memberof RpgClient
      */
-    plugins?: Plugin[]
+    imports?: any[]
 
     /** 
      * Array containing the list of spritesheets
@@ -146,7 +168,7 @@ export interface RpgClientOptions {
      * @prop {RpgClass<RpgSprite>} [spriteClass]
      * @memberof RpgClient
      * */
-    spriteClass?: RpgClass<RpgSprite>
+    sprite?: RpgSpriteHooks
 
     /** 
      * Reference the scenes of the game. Here you can put your own class that inherits RpgSceneMap
@@ -173,7 +195,7 @@ export interface RpgClientOptions {
      * @memberof RpgClient
      * */
     scenes?: {
-        [sceneName: string]: any
+        map: RpgSceneMapHooks
     }
 
      /** 
@@ -202,14 +224,5 @@ export interface RpgClientOptions {
         resolution?: number
         preserveDrawingBuffer?: boolean
         backgroundColor?: number
-    }
-}
-
-export function RpgClient(options: RpgClientOptions) {
-    return (target) => {
-        target.prototype._options = {}
-        for (let key in options) {
-            target.prototype._options[key] = options[key]
-        }
     }
 }

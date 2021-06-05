@@ -1,29 +1,34 @@
-import { RpgCommonGame } from '@rpgjs/common'
+import { RpgCommonGame, RpgPlugin, HookClient, loadModules } from '@rpgjs/common'
+import { RpgClientEngine } from './RpgClientEngine'
 
-let cache: any = {}
+export default (modules, options: any = {}) => {
 
-export default (engine?, _options: any = {}) => {
-
-    if (!engine && cache.engine) {
-        engine = cache.engine
-        _options = cache._options
+    const relations = {
+        onInit: HookClient.AddSprite,
+        onDestroy: HookClient.RemoveSprite,
+        onUpdate: HookClient.UpdateSprite,
+        onChanges: HookClient.ChangesSprite
     }
-    
-    cache = { engine, _options }
-    
-    const options = {
-        traceLevel: 1000,
-        delayInputCount: 8,
-        scheduler: _options.standalone ? 'fixed' : 'render-schedule',
-        syncOptions: {
-            sync: _options.standalone ? 'frameSync' : 'extrapolate',
-            localObjBending: 0.2,
-            remoteObjBending: 0.8
-        },
-        verbose: false,
-        ..._options 
+
+    const relationsMap = {
+        onAddSprite: HookClient.SceneAddSprite,
+        onRemoveSprite: HookClient.SceneRemoveSprite,
+        onBeforeLoading: HookClient.BeforeSceneLoading,
+        onAfterLoading: HookClient.AfterSceneLoading,
+        onMapLoading: HookClient.SceneMapLoading,
+        onChanges: HookClient.SceneOnChanges,
+        onDraw: HookClient.SceneDraw
     }
+
+    loadModules(modules, {
+        side: 'client',
+        relations: {
+            player: relations,
+            sceneMap: relationsMap
+        }
+    })
+
     const gameEngine = new RpgCommonGame()
-    const clientEngine = new engine(gameEngine, options, _options.io)
+    const clientEngine = new RpgClientEngine(gameEngine, options)
     return clientEngine
 }

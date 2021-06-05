@@ -1,0 +1,34 @@
+{
+  "name": "sample3",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/server.ts",
+  "types": "index.d.ts",
+  "scripts": {
+    "test": "jest",
+    "build": "rimraf dist && webpack",
+    "dev": "webpack -w",
+    "start": "node dist/server"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@rpgjs/client": "^3.0.0-alpha.8",
+    "@rpgjs/compiler": "^3.0.0-alpha.8",
+    "@rpgjs/default-gui": "^3.0.0-alpha.8",
+    "@rpgjs/mobile-gui": "^1.0.0",
+    "@rpgjs/server": "^3.0.0-alpha.8",
+    "@rpgjs/starter-kit": "^3.0.0-alpha.8",
+    "express": "^4.17.1",
+    "socket.io": "^4.1.2",
+    "socket.io-client": "^4.1.2",
+    "vue": "^3.0.11"
+  },
+  "devDependencies": {
+    "rimraf": "^3.0.2",
+    "typescript": "^4.3.2",
+    "webpack": "^4.46.0",
+    "webpack-cli": "^3.3.12"
+  }
+}

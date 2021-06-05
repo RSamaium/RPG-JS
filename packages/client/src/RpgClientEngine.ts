@@ -1,5 +1,4 @@
 import { KeyboardControls } from './KeyboardControls'
-import { RpgClientOptions } from './RpgClient'
 import Renderer from './Renderer'
 import { _initSpritesheet } from './Sprite/Spritesheets'
 import { _initSound } from './Sound/Sounds'
@@ -28,7 +27,7 @@ type ObjectFixture = {
     paramsChanged: any
 }
 
-export default class RpgClientEngine {
+export class RpgClientEngine {
 
     public renderer: any
     public socket: any
@@ -49,14 +48,9 @@ export default class RpgClientEngine {
         this.renderer = new Renderer(this)
         this.renderer.client = this
 
-        RpgPlugin.loadClientPlugins(this._options.plugins, {
-            RpgPlugin,
-            client: this
-        })
-
         const pluginLoadRessource = (hookName: string, type: string) => {
-            const resource = this._options[type] || []
-            this._options[type] = [
+            const resource = this.options[type] || []
+            this.options[type] = [
                 ...Utils.arrayFlat(RpgPlugin.emit(hookName, resource)) || [],
                 ...resource
             ]
@@ -74,7 +68,7 @@ export default class RpgClientEngine {
             gui: [],
             spritesheets: [],
             sounds: [],
-            ...this._options
+            ...this.options
         }
 
         this.io = options['io']

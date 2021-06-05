@@ -1,13 +1,13 @@
-import { HookClient, PrebuiltGui, RpgGui } from '@rpgjs/client'
+import { RpgModule, RpgClient } from '@rpgjs/client'
 import ControlGui from './controls/main.vue'
+import { sceneMap } from './scene-map'
 
-export default function({ RpgPlugin }) {
-    RpgPlugin.on(HookClient.AddGui, () => {
-        return [
-           ControlGui
-        ]
-    })
-    RpgPlugin.on(HookClient.AfterSceneLoading, () => {
-        RpgGui.display(PrebuiltGui.Controls) 
-    })
-}
+@RpgModule<RpgClient>({
+    gui: [
+        ControlGui
+    ],
+    scenes: {
+        map: sceneMap
+    }
+})
+export default class RpgClientEngine {}

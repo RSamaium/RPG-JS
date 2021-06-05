@@ -10,7 +10,17 @@ interface RpgClassMap<T> {
     new (server: any): T,
 }
 
-interface RpgServerOptions { 
+export interface RpgPlayerHooks {
+    onJoinMap?: (player: RpgPlayer, map: RpgMap) => any
+    onConnected?: (player: RpgPlayer) => any
+    onInput?: (player: RpgPlayer, data: { input: any }) => any
+    onLeaveMap?: (player: RpgPlayer, map: RpgMap) => any
+    onLevelUp?: (player: RpgPlayer, nbLevel: number) => any
+    onDead?: (player: RpgPlayer) => any,
+    onDisconnected?: (player: RpgPlayer) => any
+}
+
+export interface RpgServer { 
 
     /**
      * Add server-side plugins
@@ -19,7 +29,7 @@ interface RpgServerOptions {
      * @prop { { client: null | Function, server: null | Function }[]} [plugins]
      * @memberof RpgServer
      */
-    plugins?: Plugin[]
+    imports?: any[]
 
     /** 
      * Give the `RpgPlayer` class. Each time a player connects, an instance of `RpgPlayer` is created.
@@ -43,7 +53,7 @@ interface RpgServerOptions {
      * @prop {RpgClassPlayer<RpgPlayer>} [playerClass]
      * @memberof RpgServer
      * */
-    playerClass?: RpgClassPlayer<RpgPlayer>,
+    player?: RpgPlayerHooks,
 
     /** 
      * References all data in the server. it is mainly used to retrieve data according to their identifier
@@ -103,7 +113,7 @@ interface RpgServerOptions {
      * @prop {string} basePath
      * @memberof RpgServer
      * */
-    basePath: string,
+    basePath?: string,
 
     /** 
      * Combat formula used in the method player.applyDamage(). There are already formulas in the RPGJS engine but you can customize them
@@ -149,14 +159,5 @@ interface RpgServerOptions {
         damagePhysic?: (a, b) => number,
         damageCritical?: (damage, a, b) => number
         coefficientElements?: (a, b, bDef) => number
-    }
-}
-
-export function RpgServer(options: RpgServerOptions) {
-    return (target) => {
-        target._options = {}
-        for (let key in options) {
-            target._options[key] = options[key]
-        }
     }
 }

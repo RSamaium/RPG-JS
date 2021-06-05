@@ -206,7 +206,7 @@ export class SceneMap extends Scene implements IScene {
         if (sprite.isCurrentPlayer) this.viewport?.follow(sprite)
         sprite.onInit()
 
-        this.onAddSprite(sprite)
+        RpgPlugin.emit(HookClient.SceneAddSprite, [this, sprite], true)
         RpgPlugin.emit(HookClient.AddSprite, sprite)
         return sprite
     }
@@ -215,7 +215,7 @@ export class SceneMap extends Scene implements IScene {
         let sprite =  this.objects.get(id)
         if (sprite) {
             this.objects.delete(id)
-            this.onRemoveSprite(sprite)
+            RpgPlugin.emit(HookClient.SceneRemoveSprite, [this, sprite], true)
             RpgPlugin.emit(HookClient.RemoveSprite, sprite)
             sprite.destroy()
         }

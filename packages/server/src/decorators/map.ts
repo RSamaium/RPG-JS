@@ -165,6 +165,7 @@ export function MapData(options: MapOptions) {
     return (target) => {
         target.file = options.file
         target.id = options.id
+        target.type = 'map'
         target.prototype.name = options.name
         target.prototype.file = options.file
         target.prototype.id = options.id

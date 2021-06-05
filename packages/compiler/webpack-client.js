@@ -54,7 +54,7 @@ module.exports = function(dirname, extend = {}) {
         node: {
             fs: 'empty'
         },
-        entry: `./src/${ type == 'mmorpg' ? 'client/main.ts' : 'standalone/index.ts' }`,
+        entry: `./src/${ type == 'mmorpg' ? 'client.ts' : 'standalone/index.ts' }`,
         output: {
             path: path.join(dirname, 'dist/' + dir),
             filename: 'bundle.js'
@@ -123,7 +123,7 @@ module.exports = function(dirname, extend = {}) {
         plugins: [
             new HtmlWebpackPlugin({
                 title: rpgConfig.title,
-                template: path.join(dirname, 'src/client/index.html')
+                template: path.join(dirname, 'src/index.html')
             }),
             new MiniCssExtractPlugin({
                 filename: 'style.css'

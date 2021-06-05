@@ -8,8 +8,9 @@ import { Utils, RpgPlugin, Scheduler, HookServer, HookClient} from '@rpgjs/commo
 
 let tick = 0
 
-export default class RpgServerEngine {
+export class RpgServerEngine {
 
+    app
     public database: any = {}
     public damageFormulas: any = {}
     private playerClass: any
@@ -19,11 +20,6 @@ export default class RpgServerEngine {
 
     constructor(public io, public gameEngine, private inputOptions) { 
         this.playerClass = inputOptions.playerClass || RpgPlayer
-        RpgPlugin.loadServerPlugins(inputOptions.plugins, {
-            server: this,
-            RpgPlayer: this.playerClass,
-            RpgWorld: Query
-        })
         this.damageFormulas = inputOptions.damageFormulas || {}
         this.damageFormulas = {
             damageSkill: DAMAGE_SKILL,

@@ -161,20 +161,17 @@ export class Scene {
 
     private triggerSpriteChanges(logic, sprite: RpgSprite, moving: boolean) {
         if (this.onUpdateObject) this.onUpdateObject(logic, sprite, moving)
+        RpgPlugin.emit(HookClient.UpdateSprite, [sprite, logic], true)
         if (logic.paramsChanged) {
             sprite.onChanges(logic.paramsChanged, logic.prevParamsChanged)
-            RpgPlugin.emit(HookClient.UpdateSprite, {
-                sprite,
-                moving,
-                logic
-            })
+            RpgPlugin.emit(HookClient.ChangesSprite, [sprite, logic.paramsChanged, logic.prevParamsChanged], true)
             logic.paramsChanged = null
         }
     }
 
     update(obj: SceneObservableData) {
         this.updateScene(obj)
-        this.onChanges(obj)
+        RpgPlugin.emit(HookClient.SceneOnChanges, [this, obj], true)
         this._data.next(obj)
     }
 
@@ -206,6 +203,7 @@ export class Scene {
             animation.update()
         }
         this.onDraw(t)
+        RpgPlugin.emit(HookClient.SceneDraw, this)
     }
 
     /**

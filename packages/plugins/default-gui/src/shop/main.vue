@@ -73,7 +73,7 @@ export default {
     },
     mounted() {
 
-        this.rpgGui.hide('rpg-controls') 
+        if (this.rpgGui.exists('rpg-controls')) this.rpgGui.hide('rpg-controls') 
 
         this.rpgScene().stopInputs()
 
@@ -236,7 +236,7 @@ export default {
         close() {
             this.rpgGuiClose()
             this.rpgScene().listenInputs()
-            this.rpgGui.display('rpg-controls') 
+            if (this.rpgGui.exists('rpg-controls')) this.rpgGui.display('rpg-controls') 
         }
     },
     components: {

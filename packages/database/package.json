@@ -7,7 +7,6 @@
     "access": "public"
   },
   "scripts": {
-    "prepublish": "npm run build",
     "build": "tsc",
     "watch": "tsc -w"
   },
