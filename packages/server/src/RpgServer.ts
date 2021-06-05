@@ -7,12 +7,62 @@ interface RpgClassMap<T> {
 }
 
 export interface RpgPlayerHooks {
+     /**
+     *  When the player joins the map
+     * 
+     * @prop { (player: RpgPlayer, map: RpgMap) => any } [onJoinMap]
+     * @memberof RpgPlayerHooks
+     */
     onJoinMap?: (player: RpgPlayer, map: RpgMap) => any
+
+     /**
+     *  When the player is connected to the server
+     * 
+     * @prop { (player: RpgPlayer) => any } [onConnected]
+     * @memberof RpgPlayerHooks
+     */
     onConnected?: (player: RpgPlayer) => any
+
+     /**
+     *  When the player presses a key on the client side
+     * 
+     * @prop { (player: RpgPlayer, data: { input: any }) => any } [onInput]
+     * @memberof RpgPlayerHooks
+     */
     onInput?: (player: RpgPlayer, data: { input: any }) => any
+
+     /**
+     *  When the player leaves the map
+     * 
+     * @prop { (player: RpgPlayer, map: RpgMap) => any } [onLeaveMap]
+     * @memberof RpgPlayerHooks
+     */
     onLeaveMap?: (player: RpgPlayer, map: RpgMap) => any
+
+     /**
+     *  When the player increases one level
+     * 
+     * @prop { (player: RpgPlayer, nbLevel: number) => any } [onLevelUp]
+     * @stability 1
+     * @memberof RpgPlayerHooks
+     */
     onLevelUp?: (player: RpgPlayer, nbLevel: number) => any
+
+     /**
+     *  When the player's HP drops to 0
+     * 
+     * @prop { (player: RpgPlayer) => any } [onDead]
+     * @stability 1
+     * @memberof RpgPlayerHooks
+     */
     onDead?: (player: RpgPlayer) => any,
+
+     /**
+     *  When the player leaves the server
+     * 
+     * @prop { (player: RpgPlayer) => any } [onDisconnected]
+     * @memberof RpgPlayerHooks
+     */
     onDisconnected?: (player: RpgPlayer) => any
 }
 
@@ -20,8 +70,7 @@ export interface RpgServer {
 
     /**
      * Adding sub-modules
-     * 
-     * @todo
+     *
      * @prop { { client: null | Function, server: null | Function }[]} [imports]
      * @memberof RpgServer
      */
@@ -45,7 +94,7 @@ export interface RpgServer {
      * class RpgServerEngine { } 
      * ``` 
      * 
-     * @prop {RpgClassPlayer<RpgPlayer>} [playerClass]
+     * @prop {RpgClassPlayer<RpgPlayer>} [player]
      * @memberof RpgServer
      * */
     player?: RpgPlayerHooks,

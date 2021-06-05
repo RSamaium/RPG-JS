@@ -3,31 +3,109 @@ import { ModuleType } from '@rpgjs/common'
 import { Scene } from './Scene/Scene'
 
 export interface RpgSpriteHooks {
+    /**
+     * As soon as the sprite is initialized
+     * 
+     * @prop { (sprite: RpgSprite) => any } [onInit]
+     * @memberof RpgSpriteHooks
+     */
     onInit?: (sprite: RpgSprite) => any
+
+    /**
+     * Called when the sprite is deleted
+     * 
+     * @prop { (sprite: RpgSprite) => any } [onDestroy]
+     */
     onDestroy?: (sprite: RpgSprite) => any
+
+    /**
+     * As soon as a data is changed on the server side (the name for example), you are able to know the new data but also the old data.
+     * 
+     * @prop { (sprite: RpgSprite, data: any, old: any) => any } [onChanges]
+     * @memberof RpgSpriteHooks
+     */
     onChanges?: (sprite: RpgSprite, data: any, old: any) => any
+
+    /**
+     * At each tick, the method is called
+     * 
+     * @prop { (sprite: RpgSprite, obj: any) => any } [onUpdate]
+     * @memberof RpgSpriteHooks
+     */
     onUpdate?: (sprite: RpgSprite, obj: any) => any
+
+    /**
+     * When the x, y positions change
+     * 
+     * @prop { (sprite: RpgSprite) => any } [onMove]
+     */
     onMove?: (sprite: RpgSprite) => any
 }
 
 export interface RpgSceneHooks {
+     /**
+     * a sprite has been added on the scene
+     * 
+     * @prop { (scene: RpgScene, sprite: RpgSprite) => any } [onAddSprite]
+     * @memberof RpgSceneHooks
+     */
     onAddSprite?: (scene: Scene, sprite: RpgSprite) => any
+
+     /**
+     * a sprite has been removed on the scene
+     * 
+     * @prop { (scene: RpgScene, sprite: RpgSprite) => any } [onRemoveSprite]
+     * @memberof RpgSceneHooks
+     */
     onRemoveSprite?: (scene: Scene, sprite: RpgSprite) => any
+
+     /**
+     * Before the scene is loaded
+     * 
+     * @prop { (scene: RpgScene) => any } [onBeforeLoading]
+     * @memberof RpgSceneHooks
+     */
     onBeforeLoading?: (scene: Scene) => any
+
+     /**
+     *  When the scene is loaded (Image of the loaded tileset, drawing completed and viewport assigned)
+     * 
+     * @prop { (scene: RpgScene) => any } [onAfterLoading]
+     * @memberof RpgSceneHooks
+     */
     onAfterLoading?: (scene: Scene) => any
+
+     /**
+     * When server data changes on the map (events, players, or other)
+     * 
+     * @prop { (scene: RpgScene, obj: { data: any, partial: any }) => any } [onChanges]
+     * @memberof RpgSceneHooks
+     */
     onChanges?: (scene: Scene, obj: { data: any, partial: any }) => any
+
+     /**
+     *  the scene is drawn
+     * 
+     * @prop { (scene: RpgScene, t: number) => any } [onDraw]
+     * @memberof RpgSceneHooks
+     */
     onDraw?: (scene: Scene, t: number) => any
 }
 
 export interface RpgSceneMapHooks extends RpgSceneHooks {
-    onMapLoading?: (scene: Scene) => any
+    /**
+     * The map and resources are being loaded
+     * 
+     * @prop { (scene: RpgSceneMap, loader: PIXI.Loader) => any } [onMapLoading]
+     * @memberof RpgSceneHooks
+     */
+    onMapLoading?: (scene: Scene, loader: PIXI.Loader) => any
 }
 
 export interface RpgClient {
     /**
      * Adding sub-modules
      * 
-     * @todo
      * @prop { { client: null | Function, server: null | Function }[]} [imports]
      * @memberof RpgClient
      */
@@ -133,7 +211,7 @@ export interface RpgClient {
      * class RpgClientEngine {}
      * ``` 
      * 
-     * @prop {RpgClass<RpgSprite>} [spriteClass]
+     * @prop {RpgClass<RpgSprite>} [sprite]
      * @memberof RpgClient
      * */
     sprite?: RpgSpriteHooks
