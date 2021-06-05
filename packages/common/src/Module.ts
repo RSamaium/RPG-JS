@@ -1,9 +1,21 @@
 import { RpgPlugin, HookServer, HookClient } from './Plugin'
+import { isArray, isClass, isFunction } from './Utils'
+import { warning } from './Logger'
 
 enum Side {
     Server = 'server',
     Client = 'client'
 }
+
+type ModuleSide = {
+    client?: any,
+    server?: any
+}
+
+export type ModuleType = ModuleSide | [ModuleSide, {
+    client?: any,
+    server?: any
+}]
 
 export function RpgModule<T>(options: T) {
     return (target) => {
@@ -16,8 +28,27 @@ export function RpgModule<T>(options: T) {
 export function loadModules(modules, obj) {
     const { side, relations } = obj
     for (let module of modules) {
-        if (!module[side]) continue
-        const mod = new module[side]()
+        if (!module) continue
+        let plug: any = []
+        if (!isArray(module)) {
+            plug = [module]
+        }
+        else {
+            plug = module
+        }
+        const [moduleClassSides, options] = plug
+        const moduleClass = moduleClassSides[side]
+        if (!moduleClass) continue
+        let mod
+        if (options && side == Side.Client && options[Side.Server]) {
+            warning(`Data that may be sensitive (normally visible only on the server side) are made optional and visible on the client side.\nInstead, import the configuration with the server! flag into an import. Example: \n\nimport config from 'server!./config\n\n'`, options[Side.Server])
+        }
+        if (options && !isClass(moduleClass) && isFunction(moduleClass)) {
+            mod = new (moduleClass(options[side]))()
+        }
+        else {
+            mod = new moduleClass()
+        }
         const { imports, maps, spritesheets, sounds, gui, scenes } = mod
         if (imports) {
             loadModules(imports, obj)

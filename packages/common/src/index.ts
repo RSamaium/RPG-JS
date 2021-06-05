@@ -10,8 +10,9 @@ import * as TransportIo from './transports/io'
 import { Input, Control } from './Input'
 import { Hit } from './Hit'
 import { Scheduler } from './Scheduler'
-import { RpgModule, loadModules } from './Module'
+import { RpgModule, loadModules, ModuleType } from './Module'
 import * as MockIo from './transports/io'
+import * as Logger from './Logger';
 
 export {
     RpgCommonPlayer,
@@ -34,5 +35,7 @@ export {
     Scheduler,
     Hit,
     RpgModule,
-    loadModules
+    loadModules,
+    Logger,
+    ModuleType
 }

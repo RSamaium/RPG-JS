@@ -1,10 +1,6 @@
-import { Plugin } from '@rpgjs/common'
+import { ModuleType } from '@rpgjs/common'
 import { RpgPlayer } from './Player/Player'
 import { RpgMap } from './Game/Map'
-
-interface RpgClassPlayer<T> {
-    new (gamePlayer: any, options: any, props: any): T,
-}
 
 interface RpgClassMap<T> {
     new (server: any): T,
@@ -23,31 +19,30 @@ export interface RpgPlayerHooks {
 export interface RpgServer { 
 
     /**
-     * Add server-side plugins
+     * Adding sub-modules
      * 
      * @todo
-     * @prop { { client: null | Function, server: null | Function }[]} [plugins]
+     * @prop { { client: null | Function, server: null | Function }[]} [imports]
      * @memberof RpgServer
      */
-    imports?: any[]
+    imports?: ModuleType[]
 
     /** 
-     * Give the `RpgPlayer` class. Each time a player connects, an instance of `RpgPlayer` is created.
+     * Give the `player` object hooks. Each time a player connects, an instance of `RpgPlayer` is created.
      * 
      * ```ts
-     * import { RpgPlayer, RpgServer, RpgServerEngine } from '@rpgjs/server'
+     * import { RpgPlayer, RpgServer, RpgPlayerHooks, RpgModule } from '@rpgjs/server'
      * 
-     * class Player extends RpgPlayer {
-     *      onConnected() {
-     *          console.log('connected')
+     * const player: RpgPlayerHooks = {
+     *      onConnected(player: RpgPlayer) {
+     *          
      *      }
      * }
      * 
-     * @RpgServer({
-     *      basePath: __dirname,
-     *      playerClass: Player
+     * @RpgModule<RpgServer>({
+     *      player
      * })
-     * class RPG extends RpgServerEngine { } 
+     * class RpgServerEngine { } 
      * ``` 
      * 
      * @prop {RpgClassPlayer<RpgPlayer>} [playerClass]
@@ -59,16 +54,15 @@ export interface RpgServer {
      * References all data in the server. it is mainly used to retrieve data according to their identifier
      * 
      * ```ts
-     * import { RpgServer, RpgServerEngine } from '@rpgjs/server'
+     * import { RpgServer, RpgModule } from '@rpgjs/server'
      * import { Potion } from 'my-database/items/potion'
      * 
-     * @RpgServer({
-     *      basePath: __dirname,
+     * @RpgModule<RpgServer>({
      *      database: {
      *          Potion
      *      }
      * })
-     * class RPG extends RpgServerEngine { } 
+     * class RpgServerEngine { } 
      * ``` 
      * 
      * @prop { { [dataName]: data } } [database]
@@ -80,7 +74,7 @@ export interface RpgServer {
      * Array of all maps. Each element is an `RpgMap` class
      * 
      * ```ts
-     * import { RpgMap, MapData, RpgServer, RpgServerEngine } from '@rpgjs/server'
+     * import { RpgMap, MapData, RpgServer, RpgModule } from '@rpgjs/server'
      * 
      * @MapData({
      *      id: 'town',
@@ -89,13 +83,12 @@ export interface RpgServer {
      * })
      * class TownMap extends RpgMap { }
      * 
-     * @RpgServer({
-     *      basePath: __dirname,
+     * @RpgModule<RpgServer>({
      *      maps: [
      *          TownMap
      *      ]
      * })
-     * class RPG extends RpgServerEngine { } 
+     * class RpgServerEngine { } 
      * ``` 
      * 
      * @prop {RpgClassMap<RpgMap>[]} [maps]
@@ -103,18 +96,7 @@ export interface RpgServer {
      * */
     maps?: RpgClassMap<RpgMap>[],
 
-    /** 
-     * It allows you to know where the maps are located. Usually put `__dirname` for the current directory.
-     * 
-     * ```ts
-     * basePath: __dirname
-     * ``` 
-     * 
-     * @prop {string} basePath
-     * @memberof RpgServer
-     * */
-    basePath?: string,
-
+    
     /** 
      * Combat formula used in the method player.applyDamage(). There are already formulas in the RPGJS engine but you can customize them
      *  
@@ -135,12 +117,11 @@ export interface RpgServer {
      * Example:
      * 
      * ```ts
-     * import { RpgServer, RpgServerEngine, Presets } from '@rpgjs/server'
+     * import { RpgModule, RpgServer, Presets } from '@rpgjs/server'
      * 
      * const { ATK, PDEF } = Presets
      * 
-     * @RpgServer({
-     *      basePath: __dirname,
+     * @RpgModule<RpgServer>({
      *      damageFormulas: {
      *          damagePhysic(a, b) {
      *              let damage = a[ATK] - b[PDEF]
@@ -149,7 +130,7 @@ export interface RpgServer {
      *          }
      *      }
      * })
-     * class RPG extends RpgServerEngine { } 
+     * class RpgServerEngine { } 
      * ```
      * @prop {object} damageFormulas
      * @memberof RpgServer

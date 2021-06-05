@@ -1,7 +1,5 @@
-import { RpgSprite } from '@rpgjs/client'
+import { RpgSprite, RpgSpriteHooks } from '@rpgjs/client'
 
-export const sprite = {
-    onConnected(player: RpgSprite) {
-        
-    }
+export const sprite: RpgSpriteHooks = {
+   
 }
