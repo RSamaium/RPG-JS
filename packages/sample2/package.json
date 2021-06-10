@@ -10,6 +10,7 @@
     "dev": "webpack -w",
     "start": "node dist/server"
   },
+  "private": true,
   "keywords": [],
   "author": "",
   "license": "MIT",

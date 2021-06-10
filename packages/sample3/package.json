@@ -11,6 +11,7 @@
     "start": "node dist/server"
   },
   "keywords": [],
+  "private": true,
   "author": "",
   "license": "ISC",
   "dependencies": {
