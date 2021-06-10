@@ -7,7 +7,6 @@ const MiniCssExtractPlugin = require("mini-css-extract-plugin")
 const WorkboxWebpackPlugin = require("workbox-webpack-plugin")
 const WebpackPwaManifest = require('webpack-pwa-manifest')
 const webpackCommon = require('./webpack-common')
-const PostCompile = require('./sync')
 const resolveLoader = require('./loaders/resolve')
 
 const mode = process.env.NODE_ENV || 'development'
@@ -37,15 +36,6 @@ module.exports = function(dirname, extend = {}) {
         )
         plugins.push(
             new WebpackPwaManifest(rpgConfig)
-        )
-    }
-    else {
-        plugins.push(
-            new PostCompile({
-                baseDir: path.join(dirname, 'dist/standalone'),
-                isServer: false,
-                isRpg
-            })
         )
     }
 

@@ -18,7 +18,7 @@ const io = new Server(server, {
 })
 
 const rpgGame = entryPoint(modules, { io, basePath: __dirname })
-rpgGame.app = app
+rpgGame.app = app 
 
 /*app.use('/metrics', async (req, res) => {
     res.setHeader('Content-Type', register.contentType)
