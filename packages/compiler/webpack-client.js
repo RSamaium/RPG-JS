@@ -54,7 +54,7 @@ module.exports = function(dirname, extend = {}) {
         node: {
             fs: 'empty'
         },
-        entry: `./src/${ type == 'mmorpg' ? 'client.ts' : 'standalone/index.ts' }`,
+        entry: `./src/${ type == 'mmorpg' ? 'client.ts' : 'standalone.ts' }`,
         output: {
             path: path.join(dirname, 'dist/' + dir),
             filename: 'bundle.js'

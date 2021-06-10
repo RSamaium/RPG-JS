@@ -20,6 +20,8 @@ interface RpgServerEntryPointOptions {
      * @memberof RpgServerEntryPoint
      * */
      basePath: string
+
+     standalone?: boolean
 }
 
 export default function(modules: ModuleType[], options: RpgServerEntryPointOptions) {

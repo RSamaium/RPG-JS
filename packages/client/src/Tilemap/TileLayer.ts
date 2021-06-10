@@ -1,9 +1,6 @@
 import Tile from './Tile';
-import { Utils } from '@rpgjs/common'
 
 import { pixi_tilemap } from 'pixi-tilemap'
-
-const { arrayFlat } = Utils
 
 pixi_tilemap.Constant.maxTextures = 4;
 

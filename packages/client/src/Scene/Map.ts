@@ -1,4 +1,3 @@
-import * as PIXI from 'pixi.js'
 import { RpgCommonMap, Input, Control, RpgPlugin, HookClient } from '@rpgjs/common'
 import TileMap from '../Tilemap'
 import { Viewport } from 'pixi-viewport'
@@ -92,7 +91,6 @@ export class SceneMap extends Scene implements IScene {
         RpgPlugin.emit(HookClient.SceneMapLoading, loader)
 
         return new Promise((resolve, reject) => {
-            
             const complete = () => {
                 this.tilemap.load()
                 this.viewport = new Viewport({

@@ -1,10 +1,8 @@
 import { Utils, RpgPlugin, HookClient } from '@rpgjs/common'
-import * as PIXI from 'pixi.js'
 import { KeyboardControls } from '../KeyboardControls'
 import RpgSprite from '../Sprite/Character'
 import { Animation } from '../Effects/Animation'
 import { BehaviorSubject, Observable } from 'rxjs'
-import { map, tap } from 'rxjs/operators'
 
 const { isArray } = Utils
 

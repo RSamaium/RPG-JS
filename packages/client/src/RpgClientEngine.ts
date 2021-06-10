@@ -81,7 +81,7 @@ export class RpgClientEngine {
         _initSpritesheet(this.renderer.options.spritesheets)
         _initSound(this.renderer.options.sounds)
 
-        if (__RPGJS_PRODUCTION__) {
+        if (typeof __RPGJS_PRODUCTION__ != 'undefined' && __RPGJS_PRODUCTION__) {
             if ('serviceWorker' in navigator) {
                 window.addEventListener('load', () => {
                     navigator.serviceWorker.register('/service-worker.js')
@@ -280,7 +280,7 @@ export class RpgClientEngine {
         else {
             this.socket = this.io
         }
-    
+
         this.socket.on('connect', () => {
             if (RpgGui.exists(PrebuiltGui.Disconnect)) RpgGui.hide(PrebuiltGui.Disconnect)
             this.onConnect()

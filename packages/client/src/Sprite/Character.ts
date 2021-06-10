@@ -1,4 +1,3 @@
-import * as PIXI from 'pixi.js';
 import { Direction, Utils } from '@rpgjs/common'
 import { spritesheets } from './Spritesheets'
 import { FloatingText } from '../Effects/FloatingText'

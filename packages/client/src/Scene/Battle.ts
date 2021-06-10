@@ -4,7 +4,6 @@ import { Scene } from './Scene'
 import { SceneData } from './SceneData'
 import Character from '../Sprite/Character'
 import { spritesheets } from '../Sprite/Spritesheets'
-import * as PIXI from 'pixi.js'
 import TWEEN from '@tweenjs/tween.js'
 
 const POINTER_SIZE = { w: 80, h: 40 }

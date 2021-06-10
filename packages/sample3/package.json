@@ -5,7 +5,7 @@
   "main": "src/server.ts",
   "types": "index.d.ts",
   "scripts": {
-    "test": "jest",
+    "test": "NODE_ENV=test jest",
     "build": "rimraf dist && webpack",
     "dev": "webpack -w",
     "start": "node dist/server"
@@ -14,19 +14,26 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "canvas": "^2.8.0",
+    "express": "^4.17.1",
+    "socket.io": "^4.1.2",
+    "socket.io-client": "^4.1.2",
+    "vue": "^3.0.11",
     "@rpgjs/client": "^3.0.0-alpha.8",
     "@rpgjs/compiler": "^3.0.0-alpha.8",
     "@rpgjs/default-gui": "^3.0.0-alpha.8",
     "@rpgjs/mobile-gui": "^1.0.0",
     "@rpgjs/server": "^3.0.0-alpha.8",
+    "@rpgjs/standalone": "^3.0.0-alpha.8",
     "@rpgjs/starter-kit": "^3.0.0-alpha.8",
-    "express": "^4.17.1",
-    "socket.io": "^4.1.2",
-    "socket.io-client": "^4.1.2",
-    "vue": "^3.0.11"
+    "@rpgjs/testing": "^3.0.0-alpha.8"
   },
   "devDependencies": {
+    "@types/jest": "^26.0.23",
+    "jest": "^27.0.4",
+    "jest-webgl-canvas-mock": "^0.2.3",
     "rimraf": "^3.0.2",
+    "ts-jest": "^27.0.2",
     "typescript": "^4.3.2",
     "webpack": "^4.46.0",
     "webpack-cli": "^3.3.12"

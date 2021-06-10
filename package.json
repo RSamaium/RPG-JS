@@ -37,7 +37,9 @@
     "watch:common": "cd packages/common && npm run watch",
     "watch:client": "cd packages/client && npm run watch",
     "watch:server": "cd packages/server && npm run watch",
+    "watch:testing": "cd packages/testing && npm run watch",
     "watch:database": "cd packages/database && npm run watch",
+    "dev:watch": "concurrently -n rpgjs \"npm:watch:*\"",
     "dev": "concurrently -n rpgjs,sample \"npm:watch:*\" \"cd packages/sample3 && npm run dev\""
   },
   "repository": {

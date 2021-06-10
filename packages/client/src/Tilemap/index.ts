@@ -1,4 +1,3 @@
-import * as PIXI from 'pixi.js'
 import { Utils } from '@rpgjs/common'
 import ImageLayer from './ImageLayer'
 import TileLayer from './TileLayer'

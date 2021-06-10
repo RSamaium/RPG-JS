@@ -1,5 +1,3 @@
-import { resources } from "pixi.js"
-
 export function _initResource(memory: Map<string, any>, _resources, prop: string) {
     for (let resource of _resources) {
         const pluralProp = prop + 's'

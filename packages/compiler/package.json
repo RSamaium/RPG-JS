@@ -19,6 +19,7 @@
     "file-loader": "^6.2.0",
     "html-webpack-plugin": "^4.4.1",
     "install": "^0.13.0",
+    "jest-webgl-canvas-mock": "^0.2.3",
     "mini-css-extract-plugin": "^1.3.3",
     "nodemon-webpack-plugin": "^4.3.2",
     "npm": "^6.14.10",

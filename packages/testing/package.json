@@ -7,6 +7,7 @@
     "access": "public"
   },
   "scripts": {
+    "watch": "tsc -w",
     "build": "tsc"
   },
   "files": [
@@ -16,6 +17,7 @@
   "author": "Samuel Ronce",
   "license": "MIT",
   "dependencies": {
+    "@rpgjs/client": "^3.0.0-alpha.8",
     "@rpgjs/common": "^3.0.0-alpha.8",
     "@rpgjs/server": "^3.0.0-alpha.8"
   },

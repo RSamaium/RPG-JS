@@ -61,6 +61,8 @@ interface RpgClientEntryPointOptions {
      * @memberof RpgClientEntryPoint
      * */
     selectorCanvas?: string
+
+    standalone?: boolean
 }
 
 export default (modules: ModuleType[], options: RpgClientEntryPointOptions) => {
