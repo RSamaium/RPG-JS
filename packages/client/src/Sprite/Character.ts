@@ -141,7 +141,13 @@ export default class Character extends PIXI.Sprite {
         return this.animation
     }
 
-    setGraphic() {
+    setGraphic(graphic) {
+        (this.children as Animation[]).forEach((graphic: Animation, index: number) => {
+            if (graphic.id == this.graphic) {
+                this.removeChildAt(index)
+            }
+        })
+        this.graphic = graphic
         this.spritesheet = spritesheets.get(this.graphic)
         this.animation = new Animation(this.graphic)
         this.addChild(this.animation)
@@ -167,8 +173,7 @@ export default class Character extends PIXI.Sprite {
         const { graphic, speed } = obj
 
         if (graphic != this.graphic) {
-            this.graphic = graphic
-            this.setGraphic()
+            this.setGraphic(graphic)
         }
 
         if (this.anim) this.anim.update()

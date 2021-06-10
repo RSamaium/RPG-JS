@@ -6,7 +6,7 @@ export const player: RpgPlayerHooks = {
     },
     onInput(player: RpgPlayer, { input }) {
         if (input == 'back') {
-            player.callMainMenu()
+            player.setGraphic('female13') 
         }
     }
 }

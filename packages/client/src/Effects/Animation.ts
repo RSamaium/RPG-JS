@@ -33,7 +33,7 @@ export class Animation extends PIXI.Sprite {
 
     onFinish: () => void
 
-    constructor(private id: string) {
+    constructor(public id: string) {
         super()
         this.spritesheet = spritesheets.get(this.id)
         if (!this.spritesheet) {
