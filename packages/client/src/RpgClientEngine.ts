@@ -44,21 +44,23 @@ export class RpgClientEngine {
     lastTimestamp
     scheduler
 
-    constructor(private gameEngine, private options) {
+    constructor(private gameEngine, private options) { }
+
+    private async _init() {
         this.renderer = new Renderer(this)
         this.renderer.client = this
 
-        const pluginLoadRessource = (hookName: string, type: string) => {
+        const pluginLoadRessource = async (hookName: string, type: string) => {
             const resource = this.options[type] || []
             this.options[type] = [
-                ...Utils.arrayFlat(RpgPlugin.emit(hookName, resource)) || [],
+                ...Utils.arrayFlat(await RpgPlugin.emit(hookName, resource)) || [],
                 ...resource
             ]
         }
 
-        pluginLoadRessource(HookClient.AddSpriteSheet, 'spritesheets')
-        pluginLoadRessource(HookClient.AddGui, 'gui')
-        pluginLoadRessource(HookClient.AddSound, 'sounds')
+        await pluginLoadRessource(HookClient.AddSpriteSheet, 'spritesheets')
+        await pluginLoadRessource(HookClient.AddGui, 'gui')
+        await pluginLoadRessource(HookClient.AddSound, 'sounds')
 
         this.renderer.options = {
             selector: '#rpg',
@@ -71,12 +73,12 @@ export class RpgClientEngine {
             ...this.options
         }
 
-        this.io = options['io']
+        this.io = this.options['io']
 
-       gameEngine._playerClass = this.renderer.options.spriteClass || RpgSprite
-       gameEngine.standalone = options['standalone']
-       gameEngine.renderer = this.renderer
-       gameEngine.clientEngine = this
+       this.gameEngine._playerClass = this.renderer.options.spriteClass || RpgSprite
+       this.gameEngine.standalone = this.options['standalone']
+       this.gameEngine.renderer = this.renderer
+       this.gameEngine.clientEngine = this
 
         _initSpritesheet(this.renderer.options.spritesheets)
         _initSound(this.renderer.options.sounds)
@@ -93,9 +95,11 @@ export class RpgClientEngine {
         }
 
         this.controls = new KeyboardControls(this)
+        
     }
 
     async start() {
+        await this._init()
         let frame = 0
         let renderLoop = (timestamp) => {
             this.lastTimestamp = this.lastTimestamp || timestamp;

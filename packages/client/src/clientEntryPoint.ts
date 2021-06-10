@@ -92,7 +92,7 @@ export default (modules: ModuleType[], options: RpgClientEntryPointOptions) => {
         }
     })
 
-    const gameEngine = new RpgCommonGame()
+    const gameEngine = new RpgCommonGame('client')
     const clientEngine = new RpgClientEngine(gameEngine, options)
     return clientEngine
 }

@@ -8,6 +8,7 @@ const WorkboxWebpackPlugin = require("workbox-webpack-plugin")
 const WebpackPwaManifest = require('webpack-pwa-manifest')
 const webpackCommon = require('./webpack-common')
 const resolveLoader = require('./loaders/resolve')
+const PostCompile = require('./sync')
 
 const mode = process.env.NODE_ENV || 'development'
 const type = process.env.RPG_TYPE || 'mmorpg'
@@ -36,6 +37,15 @@ module.exports = function(dirname, extend = {}) {
         )
         plugins.push(
             new WebpackPwaManifest(rpgConfig)
+        )
+    }
+    else if (isRpg) {
+        plugins.push(
+            new PostCompile({
+                baseDir: path.join(dirname, 'dist/standalone'),
+                isServer: false,
+                isRpg
+            })
         )
     }
 

@@ -4,7 +4,7 @@ import { RpgPlayer } from './Player/Player'
 import { Query } from './Query'
 import { DAMAGE_SKILL, DAMAGE_PHYSIC, DAMAGE_CRITICAL, COEFFICIENT_ELEMENTS } from './presets'
 import { World } from '@rpgjs/sync-server'
-import { Utils, RpgPlugin, Scheduler, HookServer, HookClient} from '@rpgjs/common'
+import { Utils, RpgPlugin, Scheduler, HookServer } from '@rpgjs/common'
 
 let tick = 0
 
@@ -19,8 +19,12 @@ export class RpgServerEngine {
     private scheduler: Scheduler
 
     constructor(public io, public gameEngine, private inputOptions) { 
-        this.playerClass = inputOptions.playerClass || RpgPlayer
-        this.damageFormulas = inputOptions.damageFormulas || {}
+        
+    }
+
+    private async _init() {
+        this.playerClass = this.inputOptions.playerClass || RpgPlayer
+        this.damageFormulas = this.inputOptions.damageFormulas || {}
         this.damageFormulas = {
             damageSkill: DAMAGE_SKILL,
             damagePhysic: DAMAGE_PHYSIC,
@@ -30,14 +34,15 @@ export class RpgServerEngine {
         }
 
         if (!this.inputOptions.maps) this.inputOptions.maps = []
+
         this.inputOptions.maps = [
-            ...Utils.arrayFlat(RpgPlugin.emit(HookServer.AddMap, this.inputOptions.maps)) || [],
+            ...Utils.arrayFlat(await RpgPlugin.emit(HookServer.AddMap, this.inputOptions.maps)) || [],
             ...this.inputOptions.maps
         ]
 
-        if (!inputOptions.database) inputOptions.database = {}
+        if (!this.inputOptions.database) this.inputOptions.database = {}
        
-        const datas = RpgPlugin.emit(HookServer.AddDatabase, this.inputOptions.database) || []
+        const datas = await RpgPlugin.emit(HookServer.AddDatabase, this.inputOptions.database) || []
         
         for (let plug of datas) {
             this.inputOptions.database = {
@@ -46,8 +51,8 @@ export class RpgServerEngine {
             }
         }
 
-        for (let key in inputOptions.database) {
-            const data = inputOptions.database[key]
+        for (let key in this.inputOptions.database) {
+            const data = this.inputOptions.database[key]
             this.database[data.id] = data
         }
 
@@ -61,7 +66,8 @@ export class RpgServerEngine {
      * @returns {void}
      * @memberof RpgServerEngine
      */
-    start() {
+    async start() {
+        await this._init()
         let schedulerConfig = {
             tick: this.step.bind(this),
             period: 1000 / this.inputOptions.stepRate,
@@ -88,12 +94,11 @@ export class RpgServerEngine {
     }
 
     loadScenes() {
-        this.scenes[SceneMap.id] =  new SceneMap(this.inputOptions.maps, this)
-        this.scenes[SceneBattle.id] =  new SceneBattle(this)
+        this.scenes.set(SceneMap.id, new SceneMap(this.inputOptions.maps, this))
     }
 
-    getScene(name) {
-        return this.scenes[name]
+    getScene(name: string) {
+        return this.scenes.get(name)
     }
 
     sendToPlayer(currentPlayer, eventName, data) {

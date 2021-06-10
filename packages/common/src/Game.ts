@@ -9,7 +9,7 @@ export default class Game extends EventEmitter {
     events: any
     world: any
 
-    constructor() {
+    constructor(private side: string) {
         super()
         this.events = {} // events for all player in map
     }
@@ -58,7 +58,6 @@ export default class Game extends EventEmitter {
             ) {
             player.moveByDirection(input)
         }
-        RpgPlugin.emit('Server.onInput', [player, inputData], true)
-        if (player.onInput) player.onInput(inputData) 
+        if (this.side == 'server') RpgPlugin.emit('Server.onInput', [player, inputData], true)
     }
 }

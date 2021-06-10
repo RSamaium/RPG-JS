@@ -1,3 +1,5 @@
+import { isPromise } from './Utils'
+
 export class EventEmitter {
     private listeners: {
         [eventName: string]: Function[]
@@ -18,7 +20,7 @@ export class EventEmitter {
         return this
     }
 
-    emit(name: string, data?: any, rest: boolean = false): any[] {
+    emit(name: string, data?: any, rest: boolean = false): Promise<any[]> {
         const ret: any = []
         if (this.listeners[name]) {
             for (let listener of this.listeners[name]) {
@@ -30,7 +32,12 @@ export class EventEmitter {
             if (rest) ret.push(this.listenersOnce[name](...data))
             else ret.push(this.listenersOnce[name](data))
         }
-        return ret
+        return Promise.all(ret.map(val => {
+            if (!isPromise(val)) {
+                return Promise.resolve(val)
+            }
+            return val
+        }))
     }
 
     off(name: string) {

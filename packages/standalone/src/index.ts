@@ -8,16 +8,17 @@ export function entryPoint(modules) {
     const io = new ClientIo()
     const server = entryPointServer(modules, {
         io: serverIo,
-        standalone: true
+        standalone: true,
+        basePath: ''
     })
     const client = entryPointClient(modules, { 
         standalone: true,
         io
     })
    return {
-       start() {
-            server.start()
-            client.start()
+       async start() {
+            await server.start()
+            await client.start()
        }
    }
 }

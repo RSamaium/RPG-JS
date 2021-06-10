@@ -25,7 +25,7 @@ interface RpgServerEntryPointOptions {
 }
 
 export default function(modules: ModuleType[], options: RpgServerEntryPointOptions) {
-    const gameEngine = new RpgCommonGame()
+    const gameEngine = new RpgCommonGame('server')
 
     const relations = {
         onConnected: HookServer.PlayerConnected,
