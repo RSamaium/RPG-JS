@@ -4,6 +4,11 @@
 
 RPG JS is a framework for creating RPGs and MMORPGs.The code remains the same depending on the type of game!
 
+> The alpha.10 version has brought a lot of changes on the structure of a project. From now on, a system of modules has been added to the game development.
+> **I remind that it is not yet appropriate to make a game to put it in production because the version is still unstable**. However, we will soon have a Beta version which will be more interesting for your future projects.
+
+> **Don't hesitate to propose your ideas, your remarks and feedbacks on bugs, that will allow us to progress faster on the project!**
+
 [rpgjs.dev](https://rpgjs.dev)
 
 ## Summary
