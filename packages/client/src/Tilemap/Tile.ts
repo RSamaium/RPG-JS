@@ -19,6 +19,7 @@ export default class Tile extends PIXI.AnimatedSprite {
     _y: number = 0
     gid: number = 0
     properties: any = {}
+    texture: any
 
     constructor(
         private tile,

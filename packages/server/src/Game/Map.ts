@@ -70,7 +70,8 @@ export class RpgMap extends RpgCommonMap {
         RpgCommonMap.buffer.set(this.id, this)
         //this.kWorld = new Kompute.World(data.width * data.tileWidth, data.height * data.tileHeight, 1000, 32) 
         this.events = this.createEvents(this._events, EventMode.Shared)
-        this.autoLoadEvent()
+        // TODO
+       // this.autoLoadEvent()
         for (let key in this.events) {
             this.events[key].execMethod('onInit')
         }

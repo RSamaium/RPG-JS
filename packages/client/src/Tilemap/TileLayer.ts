@@ -59,7 +59,7 @@ export default class TileLayer extends PIXI.Container {
         tile.y =
             y * tileHeight +
             (tileHeight -
-                tile.textures[0].height);
+                tile.texture.height);
 
         tile._x = x;
         tile._y = y;

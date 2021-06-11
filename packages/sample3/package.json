@@ -1,6 +1,6 @@
 {
-  "name": "sample3",
-  "version": "1.0.0",
+  "name": "@rpgjs/sample3",
+  "version": "3.0.0-alpha.9",
   "description": "",
   "main": "src/server.ts",
   "types": "index.d.ts",
@@ -11,23 +11,22 @@
     "start": "node dist/server"
   },
   "keywords": [],
-  "private": true,
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@rpgjs/client": "^3.0.0-alpha.9",
+    "@rpgjs/compiler": "^3.0.0-alpha.9",
+    "@rpgjs/default-gui": "^3.0.0-alpha.9",
+    "@rpgjs/mobile-gui": "^3.0.0-alpha.9",
+    "@rpgjs/server": "^3.0.0-alpha.9",
+    "@rpgjs/standalone": "^3.0.0-alpha.9",
+    "@rpgjs/starter-kit": "^3.0.0-alpha.9",
+    "@rpgjs/testing": "^3.0.0-alpha.9",
     "canvas": "^2.8.0",
     "express": "^4.17.1",
     "socket.io": "^4.1.2",
     "socket.io-client": "^4.1.2",
-    "vue": "^3.0.11",
-    "@rpgjs/client": "^3.0.0-alpha.8",
-    "@rpgjs/compiler": "^3.0.0-alpha.8",
-    "@rpgjs/default-gui": "^3.0.0-alpha.8",
-    "@rpgjs/mobile-gui": "^1.0.0",
-    "@rpgjs/server": "^3.0.0-alpha.8",
-    "@rpgjs/standalone": "^3.0.0-alpha.8",
-    "@rpgjs/starter-kit": "^3.0.0-alpha.8",
-    "@rpgjs/testing": "^3.0.0-alpha.8"
+    "vue": "^3.0.11"
   },
   "devDependencies": {
     "@types/jest": "^26.0.23",

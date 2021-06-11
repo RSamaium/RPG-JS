@@ -12,10 +12,21 @@ export class RpgEvent extends RpgPlayer  {
     properties: any = {}
 
     async execMethod(methodName: string, methodData = []) {
-        const ret = await RpgPlugin.emit(`Server.${methodName}`, [this, ...methodData], true)
-        const player: any = methodData[0]
-        if (player instanceof RpgPlayer) {
-            player.syncChanges()
+        if (!this[methodName]) {
+            return
+        }
+        const ret = this[methodName](...methodData)
+        const sync = () => {
+            const player: any = methodData[0]
+            if (player instanceof RpgPlayer) {
+                player.syncChanges()
+            }
+        }
+        if (Utils.isPromise(ret)) {
+            ret.then(sync)
+        }
+        else {
+            sync()
         }
         return ret
     }

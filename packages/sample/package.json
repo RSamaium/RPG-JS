@@ -28,7 +28,6 @@
     "@rpgjs/compiler": "^3.0.0-alpha.8",
     "@rpgjs/database": "^3.0.0-alpha.8",
     "@rpgjs/default-gui": "^3.0.0-alpha.8",
-    "@rpgjs/mobile-gui": "^1.0.0",
     "@rpgjs/plugin-emotion-bubbles": "^3.0.0-alpha.8",
     "@rpgjs/plugin-monitoring": "^3.0.0-alpha.8",
     "@rpgjs/plugin-tooltip": "^1.0.0",
