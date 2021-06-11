@@ -16,6 +16,7 @@ const frameY = direction => {
     framesHeight: 4, 
     width: 192,
     height: 128,
+    anchorBySize: [16, 24],
     textures: {
         [Animation.Stand]: {
             rectWidth: 32,
@@ -38,6 +39,4 @@ const frameY = direction => {
          }
     }
 })
-export class MonsterCharacter {
-  
-}
+export class MonsterCharacter { }

@@ -53,7 +53,11 @@ export class WorldClass {
         return this.users 
     }
 
-    getUser(id: string): User {
+    getUser(id: string, getProxy: boolean = true): User | null {
+        if (!this.users[id]) return null
+        if (getProxy && this.users[id]['proxy']) {
+            return this.users[id]['proxy'] 
+        }
         return this.users[id]
     }
 
@@ -102,7 +106,7 @@ export class WorldClass {
     private joinOrLeaveRoom(type: string, roomId: string, userId: string): RoomClass | undefined  {
         const room = this.getRoom(roomId)
         if (!room) return
-        if (room[type]) room[type](this.getUser(userId))
+        if (room[type]) room[type](this.getUser(userId, false))
         return room
     }
 

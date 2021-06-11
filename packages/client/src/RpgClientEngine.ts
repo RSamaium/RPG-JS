@@ -1,5 +1,4 @@
 import { KeyboardControls } from './KeyboardControls'
-import { RpgClientOptions } from './RpgClient'
 import Renderer from './Renderer'
 import { _initSpritesheet } from './Sprite/Spritesheets'
 import { _initSound } from './Sound/Sounds'
@@ -17,8 +16,9 @@ import {
 } from '@rpgjs/common'
 import merge from 'lodash.merge'
 import { SnapshotInterpolation, Vault } from '@geckos.io/snapshot-interpolation'
+import { RpgSound } from './Sound/RpgSound'
 
-const SI = new SnapshotInterpolation(15) 
+const SI = new SnapshotInterpolation(60) 
 
 declare var __RPGJS_PRODUCTION__: boolean;
 
@@ -27,7 +27,7 @@ type ObjectFixture = {
     paramsChanged: any
 }
 
-export default class RpgClientEngine {
+export class RpgClientEngine {
 
     public renderer: any
     public socket: any
@@ -39,30 +39,28 @@ export default class RpgClientEngine {
     private hasBeenDisconnected: boolean = false
     controls: KeyboardControls
     private playerVault = new Vault()
+    private isTeleported: boolean = false
     io
     lastTimestamp
     scheduler
 
-    constructor(private gameEngine, private options) {
+    constructor(private gameEngine, private options) { }
+
+    private async _init() {
         this.renderer = new Renderer(this)
         this.renderer.client = this
 
-        RpgPlugin.loadClientPlugins(this._options.plugins, {
-            RpgPlugin,
-            client: this
-        })
-
-        const pluginLoadRessource = (hookName: string, type: string) => {
-            const resource = this._options[type] || []
-            this._options[type] = [
-                ...Utils.arrayFlat(RpgPlugin.emit(hookName, resource)) || [],
+        const pluginLoadRessource = async (hookName: string, type: string) => {
+            const resource = this.options[type] || []
+            this.options[type] = [
+                ...Utils.arrayFlat(await RpgPlugin.emit(hookName, resource)) || [],
                 ...resource
             ]
         }
 
-        pluginLoadRessource(HookClient.AddSpriteSheet, 'spritesheets')
-        pluginLoadRessource(HookClient.AddGui, 'gui')
-        pluginLoadRessource(HookClient.AddSound, 'sounds')
+        await pluginLoadRessource(HookClient.AddSpriteSheet, 'spritesheets')
+        await pluginLoadRessource(HookClient.AddGui, 'gui')
+        await pluginLoadRessource(HookClient.AddSound, 'sounds')
 
         this.renderer.options = {
             selector: '#rpg',
@@ -72,19 +70,20 @@ export default class RpgClientEngine {
             gui: [],
             spritesheets: [],
             sounds: [],
-            ...this._options
+            ...this.options
         }
 
-        this.io = options['io']
+        this.io = this.options['io']
 
-       gameEngine._playerClass = this.renderer.options.spriteClass || RpgSprite
-       gameEngine.standalone = options['standalone']
-       gameEngine.clientEngine = this
+       this.gameEngine._playerClass = this.renderer.options.spriteClass || RpgSprite
+       this.gameEngine.standalone = this.options['standalone']
+       this.gameEngine.renderer = this.renderer
+       this.gameEngine.clientEngine = this
 
         _initSpritesheet(this.renderer.options.spritesheets)
         _initSound(this.renderer.options.sounds)
 
-        if (__RPGJS_PRODUCTION__) {
+        if (typeof __RPGJS_PRODUCTION__ != 'undefined' && __RPGJS_PRODUCTION__) {
             if ('serviceWorker' in navigator) {
                 window.addEventListener('load', () => {
                     navigator.serviceWorker.register('/service-worker.js')
@@ -96,15 +95,19 @@ export default class RpgClientEngine {
         }
 
         this.controls = new KeyboardControls(this)
+        
     }
 
     async start() {
+        await this._init()
+        let frame = 0
         let renderLoop = (timestamp) => {
             this.lastTimestamp = this.lastTimestamp || timestamp;
-            this.renderer.draw(timestamp, timestamp - this.lastTimestamp);
+            this.renderer.draw(timestamp, timestamp - this.lastTimestamp, frame)
             this.lastTimestamp = timestamp;
             this.step(timestamp, 0)
-            window.requestAnimationFrame(renderLoop);
+            frame++
+            window.requestAnimationFrame(renderLoop)
         };
         await this.renderer.init()
         this.gameEngine.start({
@@ -142,6 +145,10 @@ export default class RpgClientEngine {
         return val
     }
 
+    resetObjects() {
+        this._objects.next({})
+    }
+
     removeObject(id: any): boolean {
         const logic = this.getObject(id)
         if (logic) {
@@ -161,6 +168,7 @@ export default class RpgClientEngine {
             paramsChanged
         } = obj
         let logic
+        let teleported = false
         if (localEvent) {
             logic = this.gameEngine.events[id]
             if (!logic) {
@@ -181,13 +189,14 @@ export default class RpgClientEngine {
         }
         logic.prevParamsChanged = Object.assign({}, logic)
         for (let key in params) {
-            if (key == 'position' && !localEvent) {
+            if (!localEvent && (key == 'position' || key == 'direction')) {
                 continue
             }
             logic[key] = params[key]
         }
         if (paramsChanged) {
             if (paramsChanged.teleported) {
+                teleported = true
                 logic.position = { ...params.position } // clone
             }
             if (!logic.paramsChanged) logic.paramsChanged = {}
@@ -202,6 +211,10 @@ export default class RpgClientEngine {
                 }
             }
         })
+        if (teleported && id == this.gameEngine.playerId) {
+            this.isTeleported = true
+            this.playerVault['_vault'] = []
+        }
         return logic
     }
 
@@ -215,7 +228,6 @@ export default class RpgClientEngine {
     serverReconciliation()  {
         const { playerId } = this.gameEngine
         const player = this.gameEngine.world.getObject(playerId)
-      
         if (player) {
           const serverSnapshot: any = SI.vault.get()
 
@@ -224,11 +236,14 @@ export default class RpgClientEngine {
       
           if (serverSnapshot && playerSnapshot) {
             const serverPos = serverSnapshot.state.filter(s => s.id === playerId)[0]
-            const offsetX = playerSnapshot.state[0].x - serverPos.x
-            const offsetY = playerSnapshot.state[0].y - serverPos.y
-            const correction = 60
-            player.position.x -= offsetX / correction
-            player.position.y -= offsetY / correction
+            const playerState = playerSnapshot.state[0]
+            if (playerState) {
+                const offsetX = playerState.x - serverPos.x
+                const offsetY = playerState.y - serverPos.y
+                const correction = 60
+                player.position.x -= offsetX / correction
+                player.position.y -= offsetY / correction
+            }   
           }
         }
       }
@@ -237,7 +252,7 @@ export default class RpgClientEngine {
         this.gameEngine.emit('client__preStep')
         const { playerId } = this.gameEngine
         const player = this.gameEngine.world.getObject(playerId)
-        if (player && player.teleported) {
+        if (player && this.isTeleported) {
             const { x, y } = player.position
             this.playerVault.add(
                 SI.snapshot.create([{ id: playerId, x, y }])
@@ -248,17 +263,19 @@ export default class RpgClientEngine {
         if (snapshot) {
             const { state } = snapshot
             state.forEach(s => {
-                const { id, x, y } = s
+                const { id, x, y, direction } = s
                 const player = this.gameEngine.world.getObject(id)
-                if (id === this.gameEngine.playerId) return
-                player.position.x = x
-                player.position.y = y
+                if (player) {
+                    if (id === this.gameEngine.playerId) return
+                    player.position.x = Math.round(x as number)
+                    player.position.y = Math.round(y as number)
+                    player.direction = direction
+                }
             })
         }
     }
 
     _initSocket() {
-
         const { standalone } = this.gameEngine
 
         if (!standalone) {
@@ -267,7 +284,7 @@ export default class RpgClientEngine {
         else {
             this.socket = this.io
         }
-    
+
         this.socket.on('connect', () => {
             if (RpgGui.exists(PrebuiltGui.Disconnect)) RpgGui.hide(PrebuiltGui.Disconnect)
             this.onConnect()
@@ -303,12 +320,26 @@ export default class RpgClientEngine {
                         replaceGraphic: params[2]
                     })
                 break
+                case 'playSound':
+                    RpgSound.get(params[0]).play()
+                break
             }
         })
 
-        World.listen(this.socket).value.subscribe((val: { data: any, partial: any, time: number }) => {
+        let lastRoomId = ''
+
+        World.listen(this.socket)
+            .value
+            .subscribe((val: { data: any, partial: any, time: number, roomId: string }) => {
+
             if (!val.data) {
                 return
+            }
+
+            if (val.roomId != lastRoomId) {
+                this.resetObjects()
+                lastRoomId = val.roomId
+                this.isTeleported = false
             }
 
             const snapshot: any = { 
@@ -332,14 +363,16 @@ export default class RpgClientEngine {
                        change('events', {
                            data: obj,
                            partial: paramsChanged,
-                           time: val.time
+                           time: val.time,
+                           roomId: val.roomId
                        }, true)
                     }
                     if (!localEvent) snapshot.state.push({ 
                         id: key,
                         x: obj.position.x,
                         y: obj.position.y,
-                        z: obj.position.z
+                        z: obj.position.z,
+                        direction: obj.direction
                     })
                     this.updateObject({
                         playerId: key,
@@ -356,7 +389,7 @@ export default class RpgClientEngine {
             const scene = this.renderer.getScene()
 
             if (scene) {
-                scene._data.next(val)
+                scene.update(val)
             }
 
             SI.snapshot.add(snapshot)

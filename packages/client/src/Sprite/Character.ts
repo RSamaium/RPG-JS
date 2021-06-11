@@ -1,4 +1,3 @@
-import * as PIXI from 'pixi.js';
 import { Direction, Utils } from '@rpgjs/common'
 import { spritesheets } from './Spritesheets'
 import { FloatingText } from '../Effects/FloatingText'
@@ -100,23 +99,6 @@ export default class Character extends PIXI.Sprite {
         this.effects.push(text)
     }
 
-    origin() {
-        if (!this.animation) {
-            return
-        }
-        const data = this.data
-        if (!data.wHitbox || !data.hHitbox) return
-        const spritesheet = spritesheets.get(this.graphic)
-        const { width, height, framesWidth, framesHeight } = spritesheet
-        this.w = width / framesWidth
-        this.h = height / framesHeight
-        const w = (1 - (data.wHitbox / this.w)) / 2
-        const h = 1 - (data.hHitbox / this.h)
-        spritesheet.anchor = [w, h]
-        this.spritesheet = spritesheet
-        this.anchor.set(...spritesheet.anchor)
-    }
-
     /**
      * Recover the position according to the graphic
      * Normally, the position is that of the hitbox but, we retrieve the top left corner of the graphic
@@ -142,6 +124,7 @@ export default class Character extends PIXI.Sprite {
             this.removeChild(this.animation)
             this.animation = new Animation(graphic)
             this.addChild(this.animation)
+            this.setAnimationAnchor()
         }
         const memoryGraphic = this.graphic
 
@@ -158,18 +141,39 @@ export default class Character extends PIXI.Sprite {
         return this.animation
     }
 
-    setGraphic() {
+    setGraphic(graphic) {
+        (this.children as Animation[]).forEach((graphic: Animation, index: number) => {
+            if (graphic.id == this.graphic) {
+                this.removeChildAt(index)
+            }
+        })
+        this.graphic = graphic
+        this.spritesheet = spritesheets.get(this.graphic)
         this.animation = new Animation(this.graphic)
         this.addChild(this.animation)
-        this.origin()
+        this.setAnimationAnchor()
+    }
+
+    private setAnimationAnchor() {
+        this.animation.hitbox = { h: this.data.hHitbox, w: this.data.wHitbox }
+        this.animation.applyTransform = (frame, animation, spritesheet) => {
+            const { spriteWidth, spriteHeight } = animation
+            const prop = 'anchorBySize'
+            const currentAnchor = frame[prop] || animation[prop] || spritesheet[prop]
+            if (currentAnchor) {
+                return {}
+            }
+            return {
+                anchorBySize: [spriteWidth, spriteHeight]
+            }
+        }
     }
 
     update(obj): any {
         const { graphic, speed } = obj
 
         if (graphic != this.graphic) {
-            this.graphic = graphic
-            this.setGraphic()
+            this.setGraphic(graphic)
         }
 
         if (this.anim) this.anim.update()
@@ -181,7 +185,7 @@ export default class Character extends PIXI.Sprite {
             this._x = Math.floor(obj.position.x)
             this._y = Math.floor(obj.position.y) - this.z
 
-            this.parent.zIndex = this._y
+            this.parent.parent.zIndex = this._y
      
             obj.posX = obj.position.x
             obj.posY = obj.position.y

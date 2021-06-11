@@ -27,6 +27,7 @@ declare module "howler" {
         loop?: boolean;
         sprite?: IHowlSoundSpriteDefinition;
         volume?: number;
+        src: string[]
         urls?: string[];
         onend?: IHowlCallback;
         onload?: IHowlCallback;

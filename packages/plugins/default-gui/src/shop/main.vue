@@ -73,13 +73,14 @@ export default {
     },
     mounted() {
 
-        this.rpgGui.hide('rpg-controls') 
+        if (this.rpgGui.exists('rpg-controls')) this.rpgGui.hide('rpg-controls') 
 
         this.rpgScene().stopInputs()
 
         this.obsCurrentPlayer = this.rpgCurrentPlayer.subscribe(({ object }) => {
             this.player = object
-            this.inventory = Object.values(this.player.items)
+            // ignore deleted items
+            this.inventory = Object.values(this.player.items).filter(item => item)
             // Wait for the return of the server to reset values
             if (this.doAction) {
                 this.step = 0
@@ -235,7 +236,7 @@ export default {
         close() {
             this.rpgGuiClose()
             this.rpgScene().listenInputs()
-            this.rpgGui.display('rpg-controls') 
+            if (this.rpgGui.exists('rpg-controls')) this.rpgGui.display('rpg-controls') 
         }
     },
     components: {

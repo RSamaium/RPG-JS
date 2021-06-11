@@ -1,4 +1,5 @@
-import { RpgSprite } from '@rpgjs/client'
+import { RpgSprite, RpgSound } from '@rpgjs/client'
+
 
 export class Sprite extends RpgSprite {
 
@@ -8,12 +9,12 @@ export class Sprite extends RpgSprite {
     onInit() {
         this.interactive = true
         this.on('pointerdown', (ev) => {
-            console.log(ev)
+            
         });
     }
 
     onChanges(data, old) { 
-        if (data.wHitbox && data.hHitbox) {
+        /*if (data.wHitbox && data.hHitbox) {
             this.hitbox.beginFill(0xFF0000);
             this.hitbox.drawRect(0, 0, data.wHitbox, data.hHitbox);
             this.hitbox.endFill();
@@ -26,6 +27,6 @@ export class Sprite extends RpgSprite {
             this.visionHitbox.drawRect(-x, -y, data.vision.width, data.vision.height);
             this.visionHitbox.endFill();
             this.addChild(this.visionHitbox)
-        } 
+        } */
     }
 }

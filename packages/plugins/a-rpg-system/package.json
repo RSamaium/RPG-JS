@@ -1,14 +1,18 @@
 {
-  "name": "@rpgjs/a-rpg-system",
+  "name": "@rpgjs/arpg-system",
   "version": "3.0.0-alpha.4.3",
   "description": "",
-  "main": "index.js",
+  "main": "src/index.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "private": "true",
+  "private": true,
   "keywords": [],
   "author": "Samuel Ronce",
   "license": "MIT",
-  "gitHead": "44ebfaebe7c3292777f27cdaadf3c1373bdec917"
+  "gitHead": "44ebfaebe7c3292777f27cdaadf3c1373bdec917",
+  "dependencies": {
+    "@rpgjs/client": "^3.0.0-alpha.8",
+    "@rpgjs/server": "^3.0.0-alpha.8"
+  }
 }

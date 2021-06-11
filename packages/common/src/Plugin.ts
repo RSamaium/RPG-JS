@@ -17,7 +17,9 @@ export enum HookServer {
     PlayerJoinMap = 'Server.onJoinMap',
     PlayerLeaveMap = 'Server.onLeaveMap',
     PlayerLevelUp = 'Server.onLevelUp',
-    PlayerDead = 'Server.onDead'
+    PlayerDead = 'Server.onDead',
+    PlayerInShape = 'Server.onInShape',
+    PlayerOutShape = 'Server.onOutShape'
 }
 
 export enum HookClient {
@@ -26,13 +28,23 @@ export enum HookClient {
     AddGui = 'Client.AddGui',
     AddSound = 'Client.AddSound',
     SendInput = 'Client.SendInput',
-    SceneLoaded = 'Client.SceneLoaded',
-    SceneLoading = 'Client.SceneLoading',
+
+    BeforeSceneLoading = 'Client.BeforeSceneLoading',
+    AfterSceneLoading = 'Client.AfterSceneLoading',
+    SceneMapLoading = 'Client.SceneMapLoading',
+    SceneAddSprite = 'Client.SceneAddSprite',
+    SceneOnChanges = 'Client.SceneOnChanges',
+    SceneDraw = 'Client.SceneDraw',
+    SceneRemoveSprite = 'Client.SceneRemoveSprite',
+
     AddSprite = 'Client.AddSprite',
     RemoveSprite = 'Client.RemoveSprite',
-    UpdateSprite = 'Client.UpdateSprite'
+    UpdateSprite = 'Client.UpdateSprite',
+    ChangesSprite = 'Client.ChangesSprite',
+    WindowResize = 'Client.WindowResize'
 }
 
+// deprecated
 export class PluginSystem extends EventEmitter {
     private loadPlugins(plugins: Plugin[], shared: any, type: string) {
         if (!plugins) return

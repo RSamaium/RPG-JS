@@ -58,7 +58,7 @@ export default {
             if (!this.active || !control) return
             if (control.actionName == 'back') {
                 this.rpgStage.filters = []
-                this.rpgGui.display('rpg-controls') 
+                if (this.rpgGui.exists('rpg-controls')) this.rpgGui.display('rpg-controls') 
                 this.rpgGuiClose('rpg-main-menu')
                 this.rpgScene().listenInputs()
             }

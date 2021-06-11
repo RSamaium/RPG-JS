@@ -20,7 +20,7 @@ export default {
         }
     },
     mounted() {
-        this.rpgGui.hide('rpg-controls') 
+        if (this.rpgGui.exists('rpg-controls')) this.rpgGui.hide('rpg-controls') 
         this.rpgScene().stopInputs()
         const blur = new PIXI.filters.BlurFilter()
         this.rpgStage.filters = [blur]

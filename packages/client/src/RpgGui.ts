@@ -1,5 +1,6 @@
 import { createApp, ref } from 'vue'
 import { map } from 'rxjs/operators'
+import { RpgSound } from './Sound/RpgSound'
 
 class Gui {
 
@@ -28,7 +29,14 @@ class Gui {
 
         this.app = createApp({
             template: `
-                <div>
+                <div 
+                    @pointerdown="propagate('pointerdown', $event)"
+                    @pointermove="propagate('pointermove', $event)"
+                    @pointerleave="propagate('pointerleave', $event)"
+                    @pointerover="propagate('pointerover', $event)"
+                    @pointercancel="propagate('pointercancel', $event)"
+                    @pointerup="propagate('pointerup', $event)"
+                >
                     <template v-for="(ui, name) in gui">
                         <component :is="name" v-bind="ui.data" v-if="ui.display"></component>
                     </template>  
@@ -85,7 +93,8 @@ class Gui {
                      *      inject: ['rpgObjects'],
                      *      mounted() {
                      *          this.obs = this.rpgObjects.subscribe((objects) => {
-                     *              for (let obj in objects) {
+                     *              for (let id in objects) {
+                     *                  const obj = objects[id]
                      *                  console.log(obj.object, obj.paramsChanged)
                      *              }
                      *          })
@@ -274,7 +283,29 @@ class Gui {
                      * @prop {RpgGui} [rpgGui]
                      * @memberof VueInject
                      * */
-                    rpgGui: this
+                    rpgGui: this,
+
+                    /** 
+                     * Equivalent to RpgSound
+                     * 
+                     * ```js
+                     * export default {
+                     *      inject: ['rpgSound'],
+                     *      mounted() {
+                     *         this.rpgSound.get('my-sound-id').play()
+                     *      }
+                     * }
+                     * ``` 
+                     * 
+                     * @prop {RpgSound} [rpgSound]
+                     * @memberof VueInject
+                     * */
+                    rpgSound: RpgSound
+                }
+            },
+            methods: {
+                propagate: (type: string, event) => {
+                    this.renderer.renderer.view.dispatchEvent(new MouseEvent(type, event))
                 }
             }
         })

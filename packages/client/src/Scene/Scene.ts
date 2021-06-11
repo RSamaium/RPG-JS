@@ -1,10 +1,8 @@
 import { Utils, RpgPlugin, HookClient } from '@rpgjs/common'
-import * as PIXI from 'pixi.js'
 import { KeyboardControls } from '../KeyboardControls'
 import RpgSprite from '../Sprite/Character'
 import { Animation } from '../Effects/Animation'
 import { BehaviorSubject, Observable } from 'rxjs'
-import { map, tap } from 'rxjs/operators'
 
 const { isArray } = Utils
 
@@ -18,6 +16,8 @@ interface Controls {
     [controlName: string]: ControlOptions
 }
 
+type SceneObservableData = { data: object, partial: object }
+
 export class Scene {
    
     protected objects: Map<string, any> = new Map()
@@ -28,7 +28,7 @@ export class Scene {
     private animations: Animation[] = []
     private _controlsOptions: Controls = {}
 
-    _data: BehaviorSubject<{ data: object, partial: object }> = new BehaviorSubject({
+    private _data: BehaviorSubject<SceneObservableData> = new BehaviorSubject({
         data: {},
         partial: {}
     })
@@ -63,12 +63,8 @@ export class Scene {
      * @readonly
      * @memberof RpgScene
      */
-    get valuesChange(): Observable<{ data: object, partial: object }> {
-        return this._data
-            .asObservable()
-            .pipe(
-                tap(this.onChanges.bind(this))
-            )
+    get valuesChange(): Observable<SceneObservableData> {
+        return this._data.asObservable() 
     }
 
     /**
@@ -163,18 +159,21 @@ export class Scene {
 
     private triggerSpriteChanges(logic, sprite: RpgSprite, moving: boolean) {
         if (this.onUpdateObject) this.onUpdateObject(logic, sprite, moving)
+        RpgPlugin.emit(HookClient.UpdateSprite, [sprite, logic], true)
         if (logic.paramsChanged) {
             sprite.onChanges(logic.paramsChanged, logic.prevParamsChanged)
-            RpgPlugin.emit(HookClient.UpdateSprite, {
-                sprite,
-                moving,
-                logic
-            })
+            RpgPlugin.emit(HookClient.ChangesSprite, [sprite, logic.paramsChanged, logic.prevParamsChanged], true)
             logic.paramsChanged = null
         }
     }
 
-    draw(t, dt) {
+    update(obj: SceneObservableData) {
+        this.updateScene(obj)
+        RpgPlugin.emit(HookClient.SceneOnChanges, [this, obj], true)
+        this._data.next(obj)
+    }
+
+    draw(t: number, dt: number, frame: number) {
         const logicObjects = { ...this.game.world.getObjects(), ...this.game.events }
         const renderObjects = this.objects
         const sizeLogic = Object.values(logicObjects).length
@@ -187,7 +186,7 @@ export class Scene {
             else {
                 const object = renderObjects.get(key)
                 if (!object.update) return
-                const ret = object.update(val, t, dt)
+                const ret = object.update(val, t)
                 this.triggerSpriteChanges(val, object, ret.moving)
             }
         }
@@ -201,7 +200,8 @@ export class Scene {
         for (let animation of this.animations) {
             animation.update()
         }
-        this.onDraw(t, dt)
+        this.onDraw(t)
+        RpgPlugin.emit(HookClient.SceneDraw, this)
     }
 
     /**
@@ -429,11 +429,12 @@ export class Scene {
     onInit() {}
     onLoad() {}
     onChanges(obj) {}
-    onDraw(t: number, dt: number) {}
+    onDraw(t: number) {}
     onAddSprite(sprite: RpgSprite) {}
     onRemoveSprite(sprite: RpgSprite) {}
 }
 
 export interface Scene {
-    inputs: Controls
+    inputs: Controls,
+    updateScene(obj: SceneObservableData)
 }

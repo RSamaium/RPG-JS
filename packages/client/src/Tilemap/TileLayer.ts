@@ -1,9 +1,6 @@
 import Tile from './Tile';
-import { Utils } from '@rpgjs/common'
 
 import { pixi_tilemap } from 'pixi-tilemap'
-
-const { arrayFlat } = Utils
 
 pixi_tilemap.Constant.maxTextures = 4;
 
@@ -29,7 +26,7 @@ export default class TileLayer extends PIXI.Container {
         Object.assign(this, layer);
     }
 
-    createTile(x, y, options: any = {}) {
+    createTile(x: number, y: number, options: any = {}): Tile | undefined {
         const { real, filter } = options
         const { width, tileWidth, tileHeight } = this.layer.map.data
         if (real) {
@@ -62,7 +59,7 @@ export default class TileLayer extends PIXI.Container {
         tile.y =
             y * tileHeight +
             (tileHeight -
-                tile.textures[0].height);
+                tile.texture.height);
 
         tile._x = x;
         tile._y = y;
@@ -86,12 +83,10 @@ export default class TileLayer extends PIXI.Container {
         for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) { 
                 const tile = this.createTile(x, y)
-                if (tile) this.tilemap.addFrame(tile.texture, tile.x, tile.y)
-
-                /*if (tile.textures.length > 1) {
-                    tile.animationSpeed = 1000 / 60 / tile.animations[0].duration;
-                    tile.gotoAndPlay(0);
-                }*/
+                if (tile) {
+                    const frame = this.tilemap.addFrame(tile.texture, tile.x, tile.y)
+                    tile.setAnimation(frame)
+                }
             }
         }
         this.addChild(this.tilemap)

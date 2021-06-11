@@ -1,4 +1,6 @@
-import { RpgCommonMap, RpgCommonPlayer, Utils, RpgPlugin }  from '@rpgjs/common'
+import { RpgCommonPlayer, Utils, RpgPlugin, RpgCommonMap as RpgMap }  from '@rpgjs/common'
+import * as Kompute from 'kompute/build/Kompute'
+import * as YUKA from 'yuka'
 import { Query } from '../Query'
 import merge from 'lodash.merge'
 import { ItemManager } from './ItemManager'
@@ -12,7 +14,7 @@ import { ElementManager } from './ElementManager'
 import { GuiManager } from './GuiManager'
 import { VariableManager } from './VariableManager'
 import { Frequency, MoveManager, Speed } from './MoveManager'
-import { BattleManager } from './BattleManager';
+import { BattleManager } from './BattleManager'
 
 import { 
     MAXHP, 
@@ -28,7 +30,7 @@ import {
     DEX_CURVE,
     AGI_CURVE
 } from '../presets'
-import { RpgMap } from '../Game/Map'
+import { BehaviorManager } from './BehaviorManager'
 
 const { 
     isPromise, 
@@ -36,7 +38,7 @@ const {
     isString
 } = Utils
 
-type Position = { x: number, y: number, z: number }
+export type Position = { x: number, y: number, z: number }
 
 const itemSchemas = { 
     name: String,
@@ -114,6 +116,8 @@ export class RpgPlayer extends RpgCommonPlayer {
     // As soon as a teleport has been made, the value is changed to force the client to change the positions on the map without making a move.
     teleported: number = 0
 
+    
+
     initialize() {
         this.expCurve =  {
             basis: 30,
@@ -136,6 +140,10 @@ export class RpgPlayer extends RpgCommonPlayer {
         this.canMove = true
         this.through = false
         this.throughOtherPlayer = true
+
+       // this.steerable = new Kompute.Steerable(this.playerId, new Kompute.Vector3D(), new Kompute.Vector3D(10, 10, 0))
+
+        this.steerable = new YUKA.Vehicle()
     
         this.initialLevel = 1
         this.finalLevel = 99
@@ -277,12 +285,12 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @returns { {x: number, y: number, z: number} }
      * @memberof Player
      */
-    teleport(positions?: { x: number, y: number, z?: number } | string): Position {
+    teleport(positions?: Position | string): Position {
         if (isString(positions)) positions = <Position>this.getCurrentMap().getPositionByShape(shape => shape.name == positions || shape.type == positions)
-        if (!positions) positions = { x: 0, y: 0 }
+        if (!positions) positions = { x: 0, y: 0, z: 0 }
         if (!(positions as Position).z) (positions as Position).z = 0
         this.teleported++
-        this.position = positions
+        this.position = positions as Position
         return (positions as Position)
     }
 
@@ -323,7 +331,7 @@ export class RpgPlayer extends RpgCommonPlayer {
         json.skills = json.skills.map(id => getData(id))
         json.variables = new Map(json.variables)
         merge(this, json)
-        this.position.copy(json.position)
+        this.position = json.position
         if (json.map) {
             this.map = ''
             this.changeMap(json.map, json.position)
@@ -426,7 +434,7 @@ export class RpgPlayer extends RpgCommonPlayer {
     }
 
     private _getMap(id) {
-        return RpgCommonMap.buffer.get(id)
+        return RpgMap.buffer.get(id)
     }
 
     // TODO
@@ -436,6 +444,19 @@ export class RpgPlayer extends RpgCommonPlayer {
             name: 'addEffect',
             params: []
         })
+    }
+
+    /**
+     * @todo
+     */
+    createDynamicEvent(obj, mode): RpgPlayer | null {
+        const map: any = (this.mapInstance as RpgMap)
+        const event = map.createEvent(obj, mode)
+        if (event) {
+            map.events[event.name] = event
+            event.execMethod('onInit')
+        }
+        return event
     }
 
     /**
@@ -507,22 +528,10 @@ export class RpgPlayer extends RpgCommonPlayer {
         Query.getPlayersOfMap(this.map).forEach(player => player.emit(key, value))
     }
 
-    public execMethod(methodName: string, methodData = [], instance = this): void {
-        RpgPlugin.emit(`Server.${methodName}`, {
-            player: this,
-            params: methodData
-        })
-        if (!instance[methodName]) {
-            return
-        }
-        const ret = instance[methodName](...methodData)
-        const sync = () => this.syncChanges()
-        if (isPromise(ret)) {
-            ret.then(sync)
-        }
-        else {
-            sync()
-        }
+    async execMethod(methodName: string, methodData = []) {
+        const ret = await RpgPlugin.emit(`Server.${methodName}`, [this, ...methodData], true)
+        this.syncChanges()
+        return ret
     }
 
     _triggerHook(name, val?) {
@@ -541,6 +550,54 @@ export class RpgPlayer extends RpgCommonPlayer {
             if (event.onChanges) event.onChanges(this)
         }
     }
+
+    /**
+     * Allows to play a sound, heard only by the player or by the players of the map
+     * 
+     * Here is a sound, client side:
+     * 
+     * ```ts
+     * import { Sound } from '@rpgjs/client'
+     * @Sound({
+     *      id: 'town-music',
+     *      sound: require('./sound/town.ogg')
+     * })
+     * export class TownMusic {}
+     * ```
+     * 
+     * Here is the call of the method, server side:
+     * 
+     * ```ts
+     * player.playSound('town-music')
+     * ```
+     * 
+     * If you want everyone to listen to the sound on the map:
+     * 
+     * ```ts
+     * player.playSound('town-music', true)
+     * ```
+     * 
+     * @title Play Sound
+     * @method player.playSound(soundId,allMap=false)
+     * @param {string} soundId Sound identifier, defined on the client side
+     * @param {boolean} [allMap] Indicate if the sound is heard by the players on the card
+     * @since 3.0.0-alpha.9
+     * @stability 1
+     * @returns {void}
+     * @memberof Player
+     */
+    playSound(soundId: string, allMap: boolean = false) {
+        const obj = { 
+            objectId: this.playerId,
+            name: 'playSound',
+            params: [soundId]
+        }
+        if (!allMap) {
+            this.emit('callMethod', obj)
+            return
+        }
+        this.emitToMap('callMethod', obj)
+    }
 }
 
 export interface RpgPlayer extends 
@@ -555,11 +612,13 @@ export interface RpgPlayer extends
     GuiManager,
     VariableManager,
     MoveManager,
-    BattleManager
+    BattleManager,
+    BehaviorManager
 {
     _socket: any 
     server: any,
-    vision
+    vision,
+    steerable: Kompute
 }
 
 applyMixins(RpgPlayer, [
@@ -574,5 +633,6 @@ applyMixins(RpgPlayer, [
     GuiManager,
     VariableManager,
     MoveManager,
-    BattleManager
+    BattleManager,
+    BehaviorManager
 ])

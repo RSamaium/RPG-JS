@@ -1,29 +1,98 @@
-import { RpgCommonGame } from '@rpgjs/common'
+import { RpgCommonGame, HookClient, loadModules, ModuleType } from '@rpgjs/common'
+import { RpgClientEngine } from './RpgClientEngine'
 
-let cache: any = {}
-
-export default (engine?, _options: any = {}) => {
-
-    if (!engine && cache.engine) {
-        engine = cache.engine
-        _options = cache._options
+interface RpgClientEntryPointOptions {
+    /** 
+     * Represents socket io client but you can put something else (which is the same schema as socket io)
+     * 
+     * @prop {SocketIO or other} io
+     * @memberof RpgClientEntryPoint
+     * */
+    io: any
+    /** 
+     * Canvas Options
+     * 
+     * * {boolean} [options.transparent=false] - If the render view is transparent, default false
+     * * {boolean} [options.autoDensity=false] - Resizes renderer view in CSS pixels to allow for
+     *   resolutions other than 1
+     * * {boolean} [options.antialias=false] - sets antialias
+     * * {number} [options.resolution=1] - The resolution / device pixel ratio of the renderer. The
+     *  resolution of the renderer retina would be 2.
+     * * {boolean} [options.preserveDrawingBuffer=false] - enables drawing buffer preservation,
+     *  enable this if you need to call toDataUrl on the webgl context.
+     * * {boolean} [options.clearBeforeRender=true] - This sets if the renderer will clear the canvas or
+     *      not before the new render pass.
+     * * {number} [options.backgroundColor=0x000000] - The background color of the rendered area
+     *  (shown if not transparent).
+     * 
+     * @prop {object} [canvas]
+     * @memberof RpgClientEntryPoint
+     * */
+     canvas?: {
+        transparent?: boolean,
+        autoDensity?: boolean,
+        antialias?: boolean,
+        resolution?: number
+        preserveDrawingBuffer?: boolean
+        backgroundColor?: number
     }
-    
-    cache = { engine, _options }
-    
-    const options = {
-        traceLevel: 1000,
-        delayInputCount: 8,
-        scheduler: _options.standalone ? 'fixed' : 'render-schedule',
-        syncOptions: {
-            sync: _options.standalone ? 'frameSync' : 'extrapolate',
-            localObjBending: 0.2,
-            remoteObjBending: 0.8
-        },
-        verbose: false,
-        ..._options 
+    /** 
+     * The element selector that will display the canvas. By default, `#rpg`
+     * 
+     * @prop {string} [selector]
+     * @memberof RpgClientEntryPoint
+     * */
+    selector?: string,
+
+    /** 
+     * The selector that corresponds to the GUIs. By default, `#gui`
+     * If you didn't put a GUI element in the div, an element will be automatically created.
+     * 
+     * @prop {string} [selectorGui]
+     * @memberof RpgClientEntryPoint
+     * */
+    selectorGui?: string
+
+    /** 
+     * The selector that corresponds to the element contains canvas. By default, `#canvas`
+     * If you didn't put element in the main div, an element will be automatically created.
+     * 
+     * @prop {string} [selectorCanvas]
+     * @memberof RpgClientEntryPoint
+     * */
+    selectorCanvas?: string
+
+    standalone?: boolean
+}
+
+export default (modules: ModuleType[], options: RpgClientEntryPointOptions) => {
+
+    const relations = {
+        onInit: HookClient.AddSprite,
+        onDestroy: HookClient.RemoveSprite,
+        onUpdate: HookClient.UpdateSprite,
+        onChanges: HookClient.ChangesSprite
     }
-    const gameEngine = new RpgCommonGame()
-    const clientEngine = new engine(gameEngine, options, _options.io)
+
+    const relationsMap = {
+        onAddSprite: HookClient.SceneAddSprite,
+        onRemoveSprite: HookClient.SceneRemoveSprite,
+        onBeforeLoading: HookClient.BeforeSceneLoading,
+        onAfterLoading: HookClient.AfterSceneLoading,
+        onMapLoading: HookClient.SceneMapLoading,
+        onChanges: HookClient.SceneOnChanges,
+        onDraw: HookClient.SceneDraw
+    }
+
+    loadModules(modules, {
+        side: 'client',
+        relations: {
+            player: relations,
+            sceneMap: relationsMap
+        }
+    })
+
+    const gameEngine = new RpgCommonGame('client')
+    const clientEngine = new RpgClientEngine(gameEngine, options)
     return clientEngine
 }

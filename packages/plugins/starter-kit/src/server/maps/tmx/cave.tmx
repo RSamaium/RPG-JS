@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.4" tiledversion="1.4.3" orientation="orthogonal" renderorder="right-down" width="20" height="20" tilewidth="32" tileheight="32" infinite="0" nextlayerid="4" nextobjectid="3">
+<map version="1.4" tiledversion="1.4.3" orientation="orthogonal" renderorder="right-down" width="20" height="20" tilewidth="32" tileheight="32" infinite="0" nextlayerid="4" nextobjectid="12">
  <tileset firstgid="1" source="[Base]BaseChip_pipo.tsx"/>
  <layer id="1" name="Tile Layer 1" width="20" height="20">
   <data encoding="base64">
@@ -14,6 +14,33 @@
  <objectgroup id="3" name="Object Layer 1">
   <object id="1" name="start" type="start" x="444.818" y="156.045">
    <point/>
+  </object>
+  <object id="8" type="event" x="231.377" y="301.328">
+   <properties>
+    <property name="direction" value="up"/>
+    <property name="frequency" type="int" value="200"/>
+    <property name="graphic" value="female13"/>
+    <property name="speed" type="int" value="1"/>
+    <property name="text" value="Hello World"/>
+    <property name="type" value="enemy"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="10" type="event" x="401.413" y="281.957">
+   <properties>
+    <property name="direction" value="up"/>
+    <property name="frequency" type="int" value="200"/>
+    <property name="graphic" value="female13"/>
+    <property name="speed" type="int" value="1"/>
+    <property name="text" value="Hello World"/>
+    <property name="type" value="enemy"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="11" x="294.871" y="173.264" width="235.682" height="46.2754">
+   <properties>
+    <property name="obstacle" type="bool" value="true"/>
+   </properties>
   </object>
  </objectgroup>
 </map>

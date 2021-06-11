@@ -1,17 +1,15 @@
 {
   "name": "@rpgjs/sample-game",
-  "version": "3.0.0-alpha.7",
+  "version": "3.0.0-alpha.8",
   "description": "",
   "main": "index.js",
-  "publishConfig": {
-    "access": "public"
-  },
   "scripts": {
     "test": "NODE_ENV=test jest",
     "build": "rimraf dist && webpack",
     "dev": "webpack -w",
     "start": "node dist/server"
   },
+  "private": true,
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -25,16 +23,18 @@
     "webpack-cli": "^3.3.12"
   },
   "dependencies": {
-    "@rpgjs/client": "^3.0.0-alpha.7",
-    "@rpgjs/compiler": "^3.0.0-alpha.7",
-    "@rpgjs/database": "^3.0.0-alpha.7",
-    "@rpgjs/default-gui": "^3.0.0-alpha.7",
-    "@rpgjs/plugin-emotion-bubbles": "^3.0.0-alpha.7",
-    "@rpgjs/plugin-monitoring": "^3.0.0-alpha.7",
-    "@rpgjs/server": "^3.0.0-alpha.7",
-    "@rpgjs/standalone": "^3.0.0-alpha.7",
-    "@rpgjs/starter-kit": "^3.0.0-alpha.7",
-    "@rpgjs/testing": "^3.0.0-alpha.7",
+    "@rpgjs/arpg-system": "^3.0.0-alpha.4.3",
+    "@rpgjs/client": "^3.0.0-alpha.8",
+    "@rpgjs/compiler": "^3.0.0-alpha.8",
+    "@rpgjs/database": "^3.0.0-alpha.8",
+    "@rpgjs/default-gui": "^3.0.0-alpha.8",
+    "@rpgjs/plugin-emotion-bubbles": "^3.0.0-alpha.8",
+    "@rpgjs/plugin-monitoring": "^3.0.0-alpha.8",
+    "@rpgjs/plugin-tooltip": "^1.0.0",
+    "@rpgjs/server": "^3.0.0-alpha.8",
+    "@rpgjs/standalone": "^3.0.0-alpha.8",
+    "@rpgjs/starter-kit": "^3.0.0-alpha.8",
+    "@rpgjs/testing": "^3.0.0-alpha.8",
     "express": "^4.17.1",
     "socket.io": "^3.0.4",
     "socket.io-client": "^4.0.1",

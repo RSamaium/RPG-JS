@@ -40,6 +40,8 @@ export interface TransformOptions {
      * */
     anchor?: number[]
 
+    anchorBySize?: number[]
+
     /** 
      * The global value of rotation
      * 
@@ -117,6 +119,14 @@ export interface TransformOptions {
      * @memberof Spritesheet
      * */
     visible?: boolean
+
+     /** 
+     * Define the sound that will be played for all animations in the spritesheet. Remember to create the sound before with the @Sound decorator
+     * 
+     * @prop {string} [sound]
+     * @memberof Spritesheet
+     * */
+    sound?: string
 }
 
 export interface FrameOptions extends TransformOptions {
@@ -182,7 +192,7 @@ export interface TextureOptions {
 
 export type AnimationFrames = FrameOptions[][] | ((...args: any) => FrameOptions[][])
 
-export interface TexturesOptions extends TextureOptions {
+export interface TexturesOptions extends TextureOptions, TransformOptions {
     animations: AnimationFrames
 }
 
@@ -249,6 +259,7 @@ export interface SpritesheetOptions extends TransformOptions, TextureOptions {
      * * `x`
      * * `y`
      * * `visible`
+     * * `sound`: The sound that will be played during the frame
      * 
      * ---
      * **Extract Animation of Spritesheet**
@@ -263,6 +274,7 @@ export interface SpritesheetOptions extends TransformOptions, TextureOptions {
      *          framesWidth: 10,
      *          framesHeight: 2,
      *          offset: {x: 0, y: 230},
+     *          sound: 'my-sound-id', // You can put a sound just for the animation
      *          animations: [
      *               [ { time: 0, frameX: 0, frameY: 0 } ]
      *          ]

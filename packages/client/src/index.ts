@@ -1,7 +1,7 @@
 import { Direction, Control, Input, PrebuiltGui, HookServer, HookClient } from '@rpgjs/common'
 import entryPoint from './clientEntryPoint'
-import RpgClientEngine from './RpgClientEngine'
-import { RpgClient } from './RpgClient'
+import {  RpgModule } from '@rpgjs/common'
+import { RpgClient, RpgSceneHooks, RpgSceneMapHooks, RpgSpriteHooks } from './RpgClient'
 import { RpgSprite } from './Sprite/Player'
 import { Spritesheet } from './Sprite/Spritesheet'
 import { Sound } from './Sound/Sound'
@@ -16,7 +16,6 @@ import { RpgGui } from './RpgGui';
 import { Timeline, Ease } from './Effects/Timeline';
 
 export {
-    RpgClientEngine,
     RpgClient,
     entryPoint,
     Spritesheet,
@@ -37,5 +36,9 @@ export {
     Input,
     PrebuiltGui,
     HookServer,
-    HookClient
+    HookClient,
+    RpgModule,
+    RpgSceneHooks,
+    RpgSceneMapHooks,
+    RpgSpriteHooks
 }

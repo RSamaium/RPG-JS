@@ -2,13 +2,14 @@ import { generateUID } from './Utils'
 import { EventEmitter } from './EventEmitter'
 import { RpgCommonPlayer, Direction } from './Player'
 import { Control } from './Input'
+import { RpgPlugin } from './Plugin'
 
 export default class Game extends EventEmitter {
 
     events: any
     world: any
 
-    constructor() {
+    constructor(private side: string) {
         super()
         this.events = {} // events for all player in map
     }
@@ -29,12 +30,12 @@ export default class Game extends EventEmitter {
         return event
     }
 
-    addPlayer(playerClass, playerId, addWord = true) {
+    addPlayer(playerClass, playerId) {
         const player = this.addObject(playerClass, playerId)
         return player
     }
 
-    addEvent(eventClass, addWord = true) {
+    addEvent(eventClass) {
         const event = this.addObject(eventClass)
         return event
     }
@@ -55,9 +56,8 @@ export default class Game extends EventEmitter {
             input == Direction.Up || 
             input == Direction.Down
             ) {
-            player.move(input)
+            player.moveByDirection(input)
         }
-        //if (player.execMethod) player.execMethod('onInput', [inputData])
-        if (player.onInput) player.onInput(inputData) 
+        if (this.side == 'server') RpgPlugin.emit('Server.onInput', [player, inputData], true)
     }
 }

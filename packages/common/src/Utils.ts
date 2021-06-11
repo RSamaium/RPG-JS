@@ -10,6 +10,11 @@ export function isFunction(val) {
     return {}.toString.call(val) === '[object Function]'
 }
 
+export function isClass(func) {
+    return typeof func === 'function'
+        && /^class\s/.test(Function.prototype.toString.call(func));
+}
+
 export function isPromise(val) {
     return isInstanceOf(val, Promise)
 }
@@ -127,6 +132,7 @@ export default {
     isObject,
     isString,
     isFunction,
+    isClass,
     isInstanceOf,
     arrayUniq,
     arrayFlat,

@@ -1,9 +1,12 @@
 import { intersection, isString, isBrowser } from './Utils'
 import { Hit } from './Hit'
+import { Shape } from './Shape'
 import SAT from 'sat'
 import Map from './Map'
 
 const ACTIONS = { IDLE: 0, RUN: 1, ACTION: 2 }
+
+export type Position = { x: number, y: number, z: number }
 
 export enum Direction { 
     Up = 'up',
@@ -31,10 +34,15 @@ export class RpgCommonPlayer {
     data: any = {}
     hitbox: any
     vision: any
+    
+    inShapes: {
+        [shapeId: string]: Shape
+    } = {}
 
     private inVision: {
         [playerId: string]: boolean
     } = {}
+
     private _position: any
     private _hitboxPos: any
 
@@ -65,14 +73,21 @@ export class RpgCommonPlayer {
      * @prop { { x: number, y: number, z: number } } position
      * @memberof Player
      */
-    set position(val) {
-        this._hitboxPos.x = val.x
-        this._hitboxPos.y = val.y
-        this._hitboxPos.z = val.z
+    set position(val: Position) {
+        const { x, y, z } = val
+        this._hitboxPos.x = x
+        this._hitboxPos.y = y
+        this._hitboxPos.z = z
+        if (this.steerable) {
+            this.steerable.position.copy(this.getVector3D(x, z, y))
+        }
         this._position = new Proxy(val, {
             get: (target, prop: string) => target[prop], 
             set: (target, prop, value) => {
                 this._hitboxPos[prop] = value
+                if (this.steerable) {
+                    this.steerable[prop] = value
+                }
                 target[prop] = value
                 return true
             }
@@ -125,6 +140,7 @@ export class RpgCommonPlayer {
      * @title Set Sizes
      * @method player.setSizes(key,value)
      * @param { { width: number, height: number, hitbox?: { width: number, height: number } } } obj
+     * @deprecated
      * @returns {void}
      * @memberof Player
      */
@@ -132,7 +148,7 @@ export class RpgCommonPlayer {
         this.width = obj.width 
         this.height = obj.height
         if (obj.hitbox) {
-            this.setHitbox(obj.hitbox.width, obj.hitbox.height)
+            this.hitbox = new SAT.Box(this._hitboxPos, obj.hitbox.width, obj.hitbox.height)
         }
     }
 
@@ -154,7 +170,14 @@ export class RpgCommonPlayer {
      * @memberof Player
      */
     setHitbox(width: number, height: number): void {
+        const map = this.mapInstance
+        if (map) {
+            this.width = map.tileWidth 
+            this.height = map.tileHeight
+        }
         this.hitbox = new SAT.Box(this._hitboxPos, width, height)
+        this.wHitbox = width
+        this.hHitbox = height
     }
 
     set wHitbox(val) {
@@ -184,7 +207,7 @@ export class RpgCommonPlayer {
         })
     }
     
-    defineNextPosition(direction) {
+    defineNextPosition(direction): Position {
         switch (direction) {
             case Direction.Left:
                 return {
@@ -241,34 +264,35 @@ export class RpgCommonPlayer {
         return intersection([z, z + this.height], [otherZ, otherZ + other.height])
     }
 
-    move(direction: Direction): boolean {
+    moveByDirection(direction: Direction): boolean {
+        const nextPosition = this.defineNextPosition(direction)
+        return this.move(nextPosition)
+    }
+
+    isCollided(nextPosition: Position): boolean {
         this.collisionWith = []
 
-        this.changeDirection(direction)
-
-        const nextPosition = this.defineNextPosition(direction)
         const map: Map = this.mapInstance
-
         const hitbox = Hit.createObjectHitbox(nextPosition.x, nextPosition.y, 0, this.hitbox.w, this.hitbox.h)
 
         if (!map) {
-            return false
+            return true
         }
         if (nextPosition.x < 0) {
             this.posX = 0 
-            return false
+            return true
         }
         if (nextPosition.y < 0) {
             this.posY = 0 
-            return false
+            return true
         }
         if (nextPosition.x > map.widthPx - this.hitbox.w) {
             this.posX = map.widthPx - this.hitbox.w
-            return false
+            return true
         }
         if (nextPosition.y > map.heightPx - this.hitbox.h) {
             this.posY = map.heightPx - this.hitbox.h
-            return false
+            return true
         }
 
         let isClimbable = false
@@ -304,9 +328,8 @@ export class RpgCommonPlayer {
             tileCollision(nextPosition.x, nextPosition.y + this.hitbox.h) || 
             tileCollision(nextPosition.x + this.hitbox.w, nextPosition.y + this.hitbox.h)
         ) {
-            return false
+            return true
         }
-
         let events: RpgCommonPlayer[] = this.gameEngine.world.getObjectsOfGroup(this.map, this)
 
         const inArea = (player1: RpgCommonPlayer, player2: RpgCommonPlayer) => {
@@ -314,11 +337,11 @@ export class RpgCommonPlayer {
                 const playerInVision = Hit.testPolyCollision('box', player2.hitbox, player1.visionHitbox?.hitbox)
                 if (playerInVision && !player1.inVision[player2.id]) {
                     player1.inVision[player2.id] = true
-                    player1.execMethod('onInVision', [player2])
+                    if (player1.execMethod) player1.execMethod('onInVision', [player2])
                 }
                 if (!playerInVision && player1.inVision[player2.id]) {
                     delete player1.inVision[player2.id]
-                    player1.execMethod('onOutVision', [player2])
+                    if (player1.execMethod) player1.execMethod('onOutVision', [player2])
                 }
             }
         }
@@ -337,18 +360,20 @@ export class RpgCommonPlayer {
                 let throughOtherPlayer = false
                 if (event.type == PlayerType.Player && this.type == PlayerType.Player) {
                     if (!(event.throughOtherPlayer || this.throughOtherPlayer)) {
-                        return false
+                        return true
                     }
                     else {
                         throughOtherPlayer = true
                     }
                 }
-                if (!throughOtherPlayer && (!(event.through || this.through))) return false 
+                if (!throughOtherPlayer && (!(event.through || this.through))) return true 
             }
         }
 
-        for (let shape of map.shapes) {
+        const shapes = map.getShapes()
+        for (let shape of shapes) {
             const { collision, z } = shape.properties
+            if (shape.isShapePosition()) continue
             if (z !== undefined && !this.zCollision({
                 position: { z },
                 height: map.tileHeight
@@ -359,12 +384,51 @@ export class RpgCommonPlayer {
             let collided = Hit.testPolyCollision(shape.type, hitbox, shape.hitbox)
             if (collided) {
                 this.collisionWith.push(shape)
-                this.triggerCollisionWith() 
-                if (collision) return false
+
+                // TODO: in shape after map load
+                if (!collision) shape.in(this)
+                this.triggerCollisionWith()
+                if (collision) return true
+            }
+            else {
+                shape.out(this)
             }
         }
-        this.position = nextPosition
+
+        return false
+    }
+
+    move(nextPosition: Position, testCollision:  boolean = true): boolean {
+        {
+            const { x, y } = this.position
+            const { x: nx, y: ny } = nextPosition
+            if (Math.abs(x - nx) > Math.abs(y - ny)) {
+                if (nx > x) {
+                    this.changeDirection(Direction.Right)
+                }
+                else {
+                    this.changeDirection(Direction.Left)
+                }
+            }
+            else {
+                if (ny > y) {
+                    this.changeDirection(Direction.Down)
+                }
+                else {
+                    this.changeDirection(Direction.Up)
+                }
+            }
+        }
+
+        if (testCollision && !this.isCollided(nextPosition)) {
+            this.position = nextPosition
+        }
+
         return true
+    }
+
+    getInShapes(): Shape[] {
+        return Object.values(this.inShapes)
     }
 
      /**
@@ -398,6 +462,7 @@ export class RpgCommonPlayer {
      * 
      * ```ts
      * import { Direction } from '@rpgjs/server'
+import { Shape } from './Shape';
      * 
      * player.changeDirection(Direction.Left)
      * ```
@@ -439,11 +504,14 @@ export class RpgCommonPlayer {
         }
     }
 
-    execMethod(methodName: string, methodData: any = []) {}
+    execMethod(methodName: string, methodData?, instance?) {}
 }
 
 export interface RpgCommonPlayer {
     readonly type: string
     through: boolean
     throughOtherPlayer: boolean
+    steerable: any
+    getVector3D(x, y, z): any
+    execMethod(methodName: string, methodData?, instance?)
 }

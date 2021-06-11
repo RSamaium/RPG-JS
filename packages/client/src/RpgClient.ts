@@ -1,52 +1,122 @@
 import { RpgSprite } from './Sprite/Player'
-import { Plugin } from '@rpgjs/common'
+import { ModuleType } from '@rpgjs/common'
+import { Scene } from './Scene/Scene'
 
-interface RpgClass<T> {
-    new (data: any, scene: any): T,
-}
-
-export interface RpgClientOptions {
-     /** 
-     * The element selector that will display the canvas. By default, `#rpg`
+export interface RpgSpriteHooks {
+    /**
+     * As soon as the sprite is initialized
      * 
-     * @prop {string} [selector]
-     * @memberof RpgClient
-     * */
-    selector?: string,
-
-    /** 
-     * The selector that corresponds to the GUIs. By default, `#gui`
-     * If you didn't put a GUI element in the div, an element will be automatically created.
-     * 
-     * @prop {string} [selectorGui]
-     * @memberof RpgClient
-     * */
-    selectorGui?: string
-
-    /** 
-     * The selector that corresponds to the element contains canvas. By default, `#canvas`
-     * If you didn't put element in the main div, an element will be automatically created.
-     * 
-     * @prop {string} [selectorCanvas]
-     * @memberof RpgClient
-     * */
-    selectorCanvas?: string
+     * @prop { (sprite: RpgSprite) => any } [onInit]
+     * @memberof RpgSpriteHooks
+     */
+    onInit?: (sprite: RpgSprite) => any
 
     /**
-     * Adding client-side plugins
+     * Called when the sprite is deleted
      * 
-     * @todo
-     * @prop { { client: null | Function, server: null | Function }[]} [plugins]
+     * @prop { (sprite: RpgSprite) => any } [onDestroy]
+     */
+    onDestroy?: (sprite: RpgSprite) => any
+
+    /**
+     * As soon as a data is changed on the server side (the name for example), you are able to know the new data but also the old data.
+     * 
+     * @prop { (sprite: RpgSprite, data: any, old: any) => any } [onChanges]
+     * @memberof RpgSpriteHooks
+     */
+    onChanges?: (sprite: RpgSprite, data: any, old: any) => any
+
+    /**
+     * At each tick, the method is called
+     * 
+     * @prop { (sprite: RpgSprite, obj: any) => any } [onUpdate]
+     * @memberof RpgSpriteHooks
+     */
+    onUpdate?: (sprite: RpgSprite, obj: any) => any
+
+    /**
+     * When the x, y positions change
+     * 
+     * @prop { (sprite: RpgSprite) => any } [onMove]
+     */
+    onMove?: (sprite: RpgSprite) => any
+}
+
+export interface RpgSceneHooks {
+     /**
+     * a sprite has been added on the scene
+     * 
+     * @prop { (scene: RpgScene, sprite: RpgSprite) => any } [onAddSprite]
+     * @memberof RpgSceneHooks
+     */
+    onAddSprite?: (scene: Scene, sprite: RpgSprite) => any
+
+     /**
+     * a sprite has been removed on the scene
+     * 
+     * @prop { (scene: RpgScene, sprite: RpgSprite) => any } [onRemoveSprite]
+     * @memberof RpgSceneHooks
+     */
+    onRemoveSprite?: (scene: Scene, sprite: RpgSprite) => any
+
+     /**
+     * Before the scene is loaded
+     * 
+     * @prop { (scene: RpgScene) => any } [onBeforeLoading]
+     * @memberof RpgSceneHooks
+     */
+    onBeforeLoading?: (scene: Scene) => any
+
+     /**
+     *  When the scene is loaded (Image of the loaded tileset, drawing completed and viewport assigned)
+     * 
+     * @prop { (scene: RpgScene) => any } [onAfterLoading]
+     * @memberof RpgSceneHooks
+     */
+    onAfterLoading?: (scene: Scene) => any
+
+     /**
+     * When server data changes on the map (events, players, or other)
+     * 
+     * @prop { (scene: RpgScene, obj: { data: any, partial: any }) => any } [onChanges]
+     * @memberof RpgSceneHooks
+     */
+    onChanges?: (scene: Scene, obj: { data: any, partial: any }) => any
+
+     /**
+     *  the scene is drawn
+     * 
+     * @prop { (scene: RpgScene, t: number) => any } [onDraw]
+     * @memberof RpgSceneHooks
+     */
+    onDraw?: (scene: Scene, t: number) => any
+}
+
+export interface RpgSceneMapHooks extends RpgSceneHooks {
+    /**
+     * The map and resources are being loaded
+     * 
+     * @prop { (scene: RpgSceneMap, loader: PIXI.Loader) => any } [onMapLoading]
+     * @memberof RpgSceneHooks
+     */
+    onMapLoading?: (scene: Scene, loader: PIXI.Loader) => any
+}
+
+export interface RpgClient {
+    /**
+     * Adding sub-modules
+     * 
+     * @prop { { client: null | Function, server: null | Function }[]} [imports]
      * @memberof RpgClient
      */
-    plugins?: Plugin[]
+    imports?: ModuleType[]
 
     /** 
      * Array containing the list of spritesheets
      * An element contains a class with the `@Spritesheet` decorator
      * 
      * ```ts
-     * import { Spritesheet, Animation, Direction, RpgClient, RpgClientEngine } from '@rpgjs/client'
+     * import { Spritesheet, Animation, Direction, RpgClient, RpgModule } from '@rpgjs/client'
      * 
      * @Spritesheet({
      *      id: 'chest',
@@ -55,12 +125,12 @@ export interface RpgClientOptions {
      * })
      * class Chest  { }
      * 
-     * @RpgClient({
+     * @RpgModule<RpgClient>({
      *      spritesheets: [
      *          Chest
      *      ]
      * })
-     * class RPG extends RpgClientEngine {}
+     * class RpgClientEngine {}
      * ```
      * 
      * [Guide: Create Sprite](/guide/create-sprite.html)
@@ -74,7 +144,7 @@ export interface RpgClientOptions {
      * Array containing the list of VueJS components
      * 
      * ```ts
-     * import { RpgClient, RpgClientEngine } from '@rpgjs/client'
+     * import { RpgClient, RpgModule } from '@rpgjs/client'
      * 
      * const component = {
      *      name: 'my-gui',
@@ -85,12 +155,12 @@ export interface RpgClientOptions {
      *      `
      * }
      * 
-     * @RpgClient({
+     * @RpgModule<RpgClient>({
      *      gui: [
      *          component
      *      ]
      * })
-     * class RPG extends RpgClientEngine {}
+     * class RpgClientEngine {}
      * ```
      * 
      * [Guide: Create GUI](/guide/create-gui.html)
@@ -105,7 +175,7 @@ export interface RpgClientOptions {
      * An element contains a class with the `@Sound` decorator
      * 
      * ```ts
-     * import { Sound } from '@rpgjs/client'
+     * import { Sound, RpgModule, RpgClient } from '@rpgjs/client'
      * 
      * @Sound({
      *      sounds: {
@@ -114,10 +184,10 @@ export interface RpgClientOptions {
      * })
      * class Sounds {}
      * 
-     * @RpgClient({
+     * @RpgModule<RpgClient>({
      *      sounds: [ Sounds ]
      * })
-     * class RPG extends RpgClientEngine {}
+     * class RpgClientEngine {}
      * ```
      * 
      * @prop {Array<Class>} [sounds]
@@ -129,87 +199,46 @@ export interface RpgClientOptions {
      * Give the `RpgSprite` class. A Sprite represents a player or an event
      * 
      * ```ts
-     * import { RpgPlayer, RpgServer, RpgServerEngine } from '@rpgjs/server'
+     * import { RpgSprite, RpgSpriteHooks, RpgClient, RpgModule } from '@rpgjs/client'
      * 
-     * class Sprite extends RpgSprite {
-     *      onInit() {
-     *          console.log('sprite is initialized')
-     *      }
+     * export const sprite: RpgSpriteHooks = {
+     *    onInit(sprite: RpgSprite) {}
      * }
      * 
-     * @RpgClient({
-     *      spriteClass: Sprite
+     * @RpgModule<RpgClient>({
+     *      sprite
      * })
-     * class RPG extends RpgClientEngine { } 
+     * class RpgClientEngine {}
      * ``` 
      * 
-     * @prop {RpgClass<RpgSprite>} [spriteClass]
+     * @prop {RpgClass<RpgSprite>} [sprite]
      * @memberof RpgClient
      * */
-    spriteClass?: RpgClass<RpgSprite>
+    sprite?: RpgSpriteHooks
 
     /** 
      * Reference the scenes of the game. Here you can put your own class that inherits RpgSceneMap
      * 
      * ```ts
-     * import { RpgPlayer, RpgServer, RpgServerEngine, RpgSceneMap } from '@rpgjs/server'
+     * import { RpgSceneMapHooks, RpgClient, RpgModule } from '@rpgjs/client'
      * 
-     * class SceneMap extends RpgSceneMap {
-     *      onLoad() {
-     *          // is loaded
-     *      }
+     * export const sceneMap: RpgSceneMapHooks = {
+     *     
      * }
      * 
-     * @RpgClient({
+     * @RpgModule<RpgClient>({
      *      scenes: {
-     *      // If you put the RpgSceneMap scene, Thhe key is called mandatory `map`
-     *          map: SceneMap
+     *          // If you put the RpgSceneMap scene, Thhe key is called mandatory `map`
+     *          map: sceneMap
      *      }
      * })
-     * class RPG extends RpgClientEngine { } 
+     * class RpgClientEngine {}
      * ``` 
      * 
      * @prop { [sceneName: string]: Class of RpgSceneMap } [scenes]
      * @memberof RpgClient
      * */
     scenes?: {
-        [sceneName: string]: any
-    }
-
-     /** 
-     * Canvas Options
-     * 
-     * * {boolean} [options.transparent=false] - If the render view is transparent, default false
-     * * {boolean} [options.autoDensity=false] - Resizes renderer view in CSS pixels to allow for
-     *   resolutions other than 1
-     * * {boolean} [options.antialias=false] - sets antialias
-     * * {number} [options.resolution=1] - The resolution / device pixel ratio of the renderer. The
-     *  resolution of the renderer retina would be 2.
-     * * {boolean} [options.preserveDrawingBuffer=false] - enables drawing buffer preservation,
-     *  enable this if you need to call toDataUrl on the webgl context.
-     * * {boolean} [options.clearBeforeRender=true] - This sets if the renderer will clear the canvas or
-     *      not before the new render pass.
-     * * {number} [options.backgroundColor=0x000000] - The background color of the rendered area
-     *  (shown if not transparent).
-     * 
-     * @prop {object} [canvas]
-     * @memberof RpgClient
-     * */
-    canvas?: {
-        transparent?: boolean,
-        autoDensity?: boolean,
-        antialias?: boolean,
-        resolution?: number
-        preserveDrawingBuffer?: boolean
-        backgroundColor?: number
-    }
-}
-
-export function RpgClient(options: RpgClientOptions) {
-    return (target) => {
-        target.prototype._options = {}
-        for (let key in options) {
-            target.prototype._options[key] = options[key]
-        }
+        map: RpgSceneMapHooks
     }
 }

@@ -1,64 +1,117 @@
-import { Plugin } from '@rpgjs/common'
+import { ModuleType } from '@rpgjs/common'
 import { RpgPlayer } from './Player/Player'
 import { RpgMap } from './Game/Map'
-
-interface RpgClassPlayer<T> {
-    new (gamePlayer: any, options: any, props: any): T,
-}
 
 interface RpgClassMap<T> {
     new (server: any): T,
 }
 
-interface RpgServerOptions { 
+export interface RpgPlayerHooks {
+     /**
+     *  When the player joins the map
+     * 
+     * @prop { (player: RpgPlayer, map: RpgMap) => any } [onJoinMap]
+     * @memberof RpgPlayerHooks
+     */
+    onJoinMap?: (player: RpgPlayer, map: RpgMap) => any
+
+     /**
+     *  When the player is connected to the server
+     * 
+     * @prop { (player: RpgPlayer) => any } [onConnected]
+     * @memberof RpgPlayerHooks
+     */
+    onConnected?: (player: RpgPlayer) => any
+
+     /**
+     *  When the player presses a key on the client side
+     * 
+     * @prop { (player: RpgPlayer, data: { input: any }) => any } [onInput]
+     * @memberof RpgPlayerHooks
+     */
+    onInput?: (player: RpgPlayer, data: { input: any }) => any
+
+     /**
+     *  When the player leaves the map
+     * 
+     * @prop { (player: RpgPlayer, map: RpgMap) => any } [onLeaveMap]
+     * @memberof RpgPlayerHooks
+     */
+    onLeaveMap?: (player: RpgPlayer, map: RpgMap) => any
+
+     /**
+     *  When the player increases one level
+     * 
+     * @prop { (player: RpgPlayer, nbLevel: number) => any } [onLevelUp]
+     * @stability 1
+     * @memberof RpgPlayerHooks
+     */
+    onLevelUp?: (player: RpgPlayer, nbLevel: number) => any
+
+     /**
+     *  When the player's HP drops to 0
+     * 
+     * @prop { (player: RpgPlayer) => any } [onDead]
+     * @stability 1
+     * @memberof RpgPlayerHooks
+     */
+    onDead?: (player: RpgPlayer) => any,
+
+     /**
+     *  When the player leaves the server
+     * 
+     * @prop { (player: RpgPlayer) => any } [onDisconnected]
+     * @memberof RpgPlayerHooks
+     */
+    onDisconnected?: (player: RpgPlayer) => any
+}
+
+export interface RpgServer { 
 
     /**
-     * Add server-side plugins
-     * 
-     * @todo
-     * @prop { { client: null | Function, server: null | Function }[]} [plugins]
+     * Adding sub-modules
+     *
+     * @prop { { client: null | Function, server: null | Function }[]} [imports]
      * @memberof RpgServer
      */
-    plugins?: Plugin[]
+    imports?: ModuleType[]
 
     /** 
-     * Give the `RpgPlayer` class. Each time a player connects, an instance of `RpgPlayer` is created.
+     * Give the `player` object hooks. Each time a player connects, an instance of `RpgPlayer` is created.
      * 
      * ```ts
-     * import { RpgPlayer, RpgServer, RpgServerEngine } from '@rpgjs/server'
+     * import { RpgPlayer, RpgServer, RpgPlayerHooks, RpgModule } from '@rpgjs/server'
      * 
-     * class Player extends RpgPlayer {
-     *      onConnected() {
-     *          console.log('connected')
+     * const player: RpgPlayerHooks = {
+     *      onConnected(player: RpgPlayer) {
+     *          
      *      }
      * }
      * 
-     * @RpgServer({
-     *      basePath: __dirname,
-     *      playerClass: Player
+     * @RpgModule<RpgServer>({
+     *      player
      * })
-     * class RPG extends RpgServerEngine { } 
+     * class RpgServerEngine { } 
      * ``` 
      * 
-     * @prop {RpgClassPlayer<RpgPlayer>} [playerClass]
+     * @prop {RpgClassPlayer<RpgPlayer>} [player]
      * @memberof RpgServer
      * */
-    playerClass?: RpgClassPlayer<RpgPlayer>,
+    player?: RpgPlayerHooks,
 
     /** 
      * References all data in the server. it is mainly used to retrieve data according to their identifier
      * 
      * ```ts
-     * import { RpgServer, RpgServerEngine } from '@rpgjs/server'
+     * import { RpgServer, RpgModule } from '@rpgjs/server'
      * import { Potion } from 'my-database/items/potion'
      * 
-     * @RpgServer({
-     *      basePath: __dirname,
+     * @RpgModule<RpgServer>({
      *      database: {
      *          Potion
      *      }
      * })
-     * class RPG extends RpgServerEngine { } 
+     * class RpgServerEngine { } 
      * ``` 
      * 
      * @prop { { [dataName]: data } } [database]
@@ -70,7 +123,7 @@ interface RpgServerOptions {
      * Array of all maps. Each element is an `RpgMap` class
      * 
      * ```ts
-     * import { RpgMap, MapData, RpgServer, RpgServerEngine } from '@rpgjs/server'
+     * import { RpgMap, MapData, RpgServer, RpgModule } from '@rpgjs/server'
      * 
      * @MapData({
      *      id: 'town',
@@ -79,13 +132,12 @@ interface RpgServerOptions {
      * })
      * class TownMap extends RpgMap { }
      * 
-     * @RpgServer({
-     *      basePath: __dirname,
+     * @RpgModule<RpgServer>({
      *      maps: [
      *          TownMap
      *      ]
      * })
-     * class RPG extends RpgServerEngine { } 
+     * class RpgServerEngine { } 
      * ``` 
      * 
      * @prop {RpgClassMap<RpgMap>[]} [maps]
@@ -93,18 +145,7 @@ interface RpgServerOptions {
      * */
     maps?: RpgClassMap<RpgMap>[],
 
-    /** 
-     * It allows you to know where the maps are located. Usually put `__dirname` for the current directory.
-     * 
-     * ```ts
-     * basePath: __dirname
-     * ``` 
-     * 
-     * @prop {string} basePath
-     * @memberof RpgServer
-     * */
-    basePath: string,
-
+    
     /** 
      * Combat formula used in the method player.applyDamage(). There are already formulas in the RPGJS engine but you can customize them
      *  
@@ -125,12 +166,11 @@ interface RpgServerOptions {
      * Example:
      * 
      * ```ts
-     * import { RpgServer, RpgServerEngine, Presets } from '@rpgjs/server'
+     * import { RpgModule, RpgServer, Presets } from '@rpgjs/server'
      * 
      * const { ATK, PDEF } = Presets
      * 
-     * @RpgServer({
-     *      basePath: __dirname,
+     * @RpgModule<RpgServer>({
      *      damageFormulas: {
      *          damagePhysic(a, b) {
      *              let damage = a[ATK] - b[PDEF]
@@ -139,7 +179,7 @@ interface RpgServerOptions {
      *          }
      *      }
      * })
-     * class RPG extends RpgServerEngine { } 
+     * class RpgServerEngine { } 
      * ```
      * @prop {object} damageFormulas
      * @memberof RpgServer
@@ -149,14 +189,5 @@ interface RpgServerOptions {
         damagePhysic?: (a, b) => number,
         damageCritical?: (damage, a, b) => number
         coefficientElements?: (a, b, bDef) => number
-    }
-}
-
-export function RpgServer(options: RpgServerOptions) {
-    return (target) => {
-        target._options = {}
-        for (let key in options) {
-            target._options[key] = options[key]
-        }
     }
 }

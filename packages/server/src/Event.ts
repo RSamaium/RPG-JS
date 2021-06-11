@@ -1,6 +1,5 @@
 import { RpgPlayer } from './Player/Player'
-import { Utils } from '@rpgjs/common';
-import { World } from '@rpgjs/sync-server'
+import { Utils, RpgPlugin } from '@rpgjs/common';
 
 export enum EventMode {
     Shared = 'shared',
@@ -10,8 +9,9 @@ export enum EventMode {
 export class RpgEvent extends RpgPlayer  {
 
     public readonly type: string = 'event'
+    properties: any = {}
 
-    execMethod(methodName: string, methodData = []) {
+    async execMethod(methodName: string, methodData = []) {
         if (!this[methodName]) {
             return
         }
@@ -21,8 +21,6 @@ export class RpgEvent extends RpgPlayer  {
             if (player instanceof RpgPlayer) {
                 player.syncChanges()
             }
-            const room = World.getRoom(this.map)
-            if (room.$detectChanges) room.$detectChanges()
         }
         if (Utils.isPromise(ret)) {
             ret.then(sync)
@@ -30,9 +28,6 @@ export class RpgEvent extends RpgPlayer  {
         else {
             sync()
         }
-    }
-
-    setGraphic(graphic) {
-        super.setGraphic(graphic)
+        return ret
     }
 }

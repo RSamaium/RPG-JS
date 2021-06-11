@@ -13,7 +13,7 @@ import Arrow from './arrow.vue'
 
 export default {
     name: 'rpg-dialog',
-    inject: ['rpgScene', 'rpgKeypress', 'rpgGuiClose'],
+    inject: ['rpgScene', 'rpgKeypress', 'rpgGuiClose', 'rpgGui'],
     props: ['message', 'choices', 'position', 'fullWidth', 'autoClose', 'typewriterEffect'],
     data() {
         return {
@@ -27,7 +27,6 @@ export default {
             this.obsKeyPress = this.rpgKeypress.subscribe(({ control }) => {
                 if (control && control.actionName == 'action') {
                     this.close()
-                    this.rpgScene().listenInputs()
                 }
             })
         }
@@ -55,6 +54,7 @@ export default {
     methods: {
         close(indexSelect) {
             this.rpgGuiClose('rpg-dialog', indexSelect)
+            this.rpgScene().listenInputs()
         }
     },
     unmounted() {
@@ -78,5 +78,6 @@ export default {
     display: flex;
     justify-content: center;
     min-width: 300px;
+    z-index: 10;
 }
 </style>

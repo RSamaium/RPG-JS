@@ -1,5 +1,3 @@
-import * as PIXI from 'pixi.js';
-
 export default class Tile extends PIXI.AnimatedSprite {
 
     static getTextures(tile, tileSet) {
@@ -16,10 +14,12 @@ export default class Tile extends PIXI.AnimatedSprite {
         return textures;
     }
 
-    animations: any[] = []
+    animations: { tileId: number, duration: number }[] = []
     _x: number = 0 
     _y: number = 0
     gid: number = 0
+    properties: any = {}
+    texture: any
 
     constructor(
         private tile,
@@ -41,6 +41,14 @@ export default class Tile extends PIXI.AnimatedSprite {
         Object.assign(this, tile);
 
         this.flip()
+    }
+
+    setAnimation(frame) {
+        const size = this.animations.length
+        if (size > 1) {
+            const offest = (this.animations[1].tileId - this.animations[0].tileId) * this.width
+            frame.tileAnimX(offest, size)
+        }
     }
 
     flip() {

@@ -1,5 +1,3 @@
-import * as PIXI from 'pixi.js';
-
 export default class ImageLayer extends PIXI.Container {
   constructor(layer, route) {
     super();

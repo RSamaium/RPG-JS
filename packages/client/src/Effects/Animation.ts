@@ -1,9 +1,9 @@
-import * as PIXI from 'pixi.js'
 import { Utils } from '@rpgjs/common'
 import { spritesheets } from '../Sprite/Spritesheets'
 import { SpritesheetOptions, TextureOptions, AnimationFrames, FrameOptions } from '../Sprite/Spritesheet'
 import RpgSprite from '../Sprite/Character'
 import { log } from '../Logger'
+import { RpgSound } from '../Sound/RpgSound'
 
 const { isFunction, arrayEquals } = Utils
 
@@ -16,12 +16,15 @@ type AnimationDataFrames = {
     frames: PIXI.Texture[][],
     name: string,
     animations: AnimationFrames,
-    params: any[]
+    params: any[],
+    data: any
 } 
 
 export class Animation extends PIXI.Sprite {
 
     public attachTo: RpgSprite
+    public hitbox: { w: number, h: number }
+    public applyTransform: Function
     private frames: PIXI.Texture[][] = []
     private spritesheet: SpritesheetOptions
     private currentAnimation: AnimationDataFrames | null = null
@@ -30,7 +33,7 @@ export class Animation extends PIXI.Sprite {
 
     onFinish: () => void
 
-    constructor(private id: string) {
+    constructor(public id: string) {
         super()
         this.spritesheet = spritesheets.get(this.id)
         if (!this.spritesheet) {
@@ -40,10 +43,10 @@ export class Animation extends PIXI.Sprite {
     }
 
     createTextures(options: TextureOptions): PIXI.Texture[][] {
-        const { width, height, framesHeight, framesWidth, rectWidth, rectHeight, image, offset }: any = options
+        const { width, height, framesHeight, framesWidth, image, offset }: any = options
         const { baseTexture } = PIXI.Texture.from(image)
-        const spriteWidth = rectWidth ? rectWidth : width / framesWidth
-        const spriteHeight = rectHeight ? rectHeight : height / framesHeight
+        const spriteWidth = options['spriteWidth']
+        const spriteHeight = options['spriteHeight']
         const frames: any = []
         const offsetX = (offset && offset.x) || 0
         const offsetY = (offset && offset.y) || 0
@@ -69,12 +72,15 @@ export class Animation extends PIXI.Sprite {
     createAnimations() {
         const { textures } = this.spritesheet
         for (let animationName in textures) {
-            const parentObj = ['width', 'height', 'framesHeight', 'framesWidth', 'rectWidth', 'rectHeight', 'offset', 'image']
+            const parentObj = ['width', 'height', 'framesHeight', 'framesWidth', 'rectWidth', 'rectHeight', 'offset', 'image', 'sound']
                 .reduce((prev, val) => ({ ...prev, [val]: this.spritesheet[val] }), {})
-            const optionsTextures = {
+            const optionsTextures: any = {
                 ...parentObj,
                 ...textures[animationName]
             }
+            const { rectWidth, width, framesWidth, rectHeight, height, framesHeight } = optionsTextures
+            optionsTextures.spriteWidth = rectWidth ? rectWidth : width / framesWidth
+            optionsTextures.spriteHeight = rectHeight ? rectHeight : height / framesHeight
             this.animations.set(animationName, {
                 container: new PIXI.Sprite(),
                 maxTime: 0,
@@ -82,6 +88,7 @@ export class Animation extends PIXI.Sprite {
                 name: animationName,
                 animations: textures[animationName].animations,
                 params: [],
+                data: optionsTextures,
                 sprites: {}
             })
         }
@@ -138,6 +145,12 @@ export class Animation extends PIXI.Sprite {
            this.currentAnimation.container.addChild(sprite)
         }
 
+        const sound = this.currentAnimation.data.sound
+
+        if (this.currentAnimation.data.sound) {
+            RpgSound.get(sound).play()
+        }
+
         this.addChild(this.currentAnimation.container)
         // Updates immediately to avoid flickering
         this.update()
@@ -146,7 +159,7 @@ export class Animation extends PIXI.Sprite {
     update() {
         if (!this.isPlaying() || !this.currentAnimation) return  
 
-        const { frames, container, sprites } = this.currentAnimation
+        const { frames, container, sprites, data } = this.currentAnimation
 
         if (this.attachTo) {
             const { x, y } = this.attachTo.getPositionsOfGraphic('middle')
@@ -156,28 +169,51 @@ export class Animation extends PIXI.Sprite {
 
         for (let _sprite of container.children) {
             const sprite = _sprite as PIXI.Sprite
-            const frame = sprites[this.time]
+            let frame = sprites[this.time]
             if (!frame || frame.frameY == undefined || frame.frameX == undefined) {
                 continue
             }
             sprite.texture = frames[frame.frameY][frame.frameX]
+            
+            const getVal = (prop) => frame[prop] || data[prop] || this.spritesheet[prop]
+            
             const applyTransform = (prop) => {
-                if (frame[prop]) {
-                    sprite[prop].set(...frame[prop])
-                }
-                else if (this.spritesheet[prop]) {
-                    sprite[prop].set(...this.spritesheet[prop])
+                const val = getVal(prop)
+                if (val) {
+                    sprite[prop].set(...val)
                 }
             }
             const applyTransformValue = (prop, alias = '') => {
                 const optionProp = alias || prop
-                if (frame[optionProp] !== undefined) {
-                    sprite[prop] = frame[optionProp]
-                }
-                else if (this.spritesheet[optionProp] !== undefined) {
-                    sprite[prop] = this.spritesheet[optionProp]
+                const val = getVal(optionProp)
+                if (val !== undefined) {
+                    sprite[prop] = val
                 }
             }
+
+            if (this.applyTransform) {
+                frame = {
+                    ...frame,
+                    ...this.applyTransform(frame, data, this.spritesheet)
+                }
+    
+            }
+
+            const applyAnchorBySize = () => {
+                const prop = 'anchorBySize'
+                const val = getVal(prop)
+                if (val && this.hitbox) {
+                    const w = ((data.spriteWidth - this.hitbox.w) / 2) / data.spriteWidth
+                    const h = 1 - (this.hitbox.h / (val[1] || val[0]))
+                    sprite.anchor.set(w, h)
+                }
+            }
+
+            if (frame.sound) {
+                RpgSound.get(frame.sound).play()
+            }
+
+            applyAnchorBySize()
 
             applyTransform('anchor')
             applyTransform('scale')

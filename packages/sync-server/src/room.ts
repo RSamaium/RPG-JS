@@ -83,7 +83,7 @@ export class Room {
                     if (typeof val == 'object' && infoDict && val != null) {
                         const valProxy = deepProxy(val, p, genericPath)
                         if (path == 'users') {
-                            World.users[key] = valProxy
+                            World.users[key]['proxy'] = valProxy
                         }
                         Reflect.set(target, key, valProxy, receiver)
                     }
@@ -174,6 +174,7 @@ export class Room {
         room.$leave = (user: User) => {
             this.leave(user, room)
             delete room.users[user.id]
+            delete World.users[user.id]['proxy']
             //this.detectChanges(room)
         }
 
@@ -219,7 +220,18 @@ export class Room {
         return newObj
     }
 
-    detectChanges(room: RoomClass, obj: Object | undefined, path: string): void {
+    detectChanges(room: RoomClass, obj: Object | undefined, path: string): void {   
+        
+        // If after changing a room, we continue to use the wrong player instance, we ignore the changes made on an old proxy 
+        if (obj != undefined) {
+            const [prop, userId] = path.split('.')
+            if (prop == 'users') {
+                if (!room.users[userId]) {
+                    return
+                }
+            }
+        }
+
         set(this.memoryObject, path, obj)
 
         if (this.proxyRoom['onChanges']) this.proxyRoom['onChanges'](this.memoryObject)

@@ -1,4 +1,3 @@
-import * as PIXI from 'pixi.js'
 import { RpgCommonMap, Input, Control, RpgPlugin, HookClient } from '@rpgjs/common'
 import TileMap from '../Tilemap'
 import { Viewport } from 'pixi-viewport'
@@ -7,9 +6,7 @@ import { Scene } from './Scene'
 import { SceneData } from './SceneData'
 import { spritesheets } from '../Sprite/Spritesheets'
 import Character from '../Sprite/Character'
-import { RpgSprite } from '../Sprite/Player'
 import { RpgSound } from '../Sound/RpgSound'
-import { Howler } from 'howler'
 
 @SceneData({
     inputs: {
@@ -63,9 +60,10 @@ export class SceneMap extends Scene implements IScene {
         this.onInit()
     }
 
-    load(obj) {
+    load(obj): Promise<Viewport> {
         this.gameMap = new RpgCommonMap()
         this.gameMap.load(obj)
+
         if (!this.game.standalone) RpgCommonMap.buffer.set(obj.id, this.gameMap)
 
         this.tilemap = new TileMap(obj, this.game.renderer)
@@ -88,10 +86,11 @@ export class SceneMap extends Scene implements IScene {
             }
         })
 
-        Howler.stop()
+        RpgSound.global.stop()
+
+        RpgPlugin.emit(HookClient.SceneMapLoading, loader)
 
         return new Promise((resolve, reject) => {
-            
             const complete = () => {
                 this.tilemap.load()
                 this.viewport = new Viewport({
@@ -105,13 +104,11 @@ export class SceneMap extends Scene implements IScene {
                 this.viewport.addChild(this.tilemap)
                 this.isLoaded = true
                 if (obj.sounds) {
-                    const sound = new RpgSound(obj.sounds[0])
-                    sound.play()
+                    obj.sounds.forEach(soundId => RpgSound.get(soundId).play())
                 }
                 resolve(this.viewport)
                 if  (this.onLoad) this.onLoad()
             }
-    
             loader.onError.add(() => {
                 reject()
             })
@@ -122,61 +119,101 @@ export class SceneMap extends Scene implements IScene {
         })
     }
 
-    draw(t, dt) {
+    draw(t: number, dt: number, frame: number) {
         if (!this.isLoaded) {
             return
         }
-        super.draw(t, dt)
+        super.draw(t, dt, frame)
+        this.tilemap.drawAnimateTile(frame)
     }
 
     onUpdateObject(logic, sprite: Character, moving: boolean): Character {
-        const { x, y, tilesOverlay, anchor, w: width, h: height } = sprite
         const { paramsChanged } = logic
         if (moving || (paramsChanged && (paramsChanged.width || paramsChanged.height))) {
-            tilesOverlay.removeChildren()
+            const { tileWidth, tileHeight } = this.gameMap
+            const { tilesOverlay }: any = sprite
+            const bounds = sprite.parent.getLocalBounds()
+            const width = Math.ceil(bounds.width / tileWidth) * tileWidth
+            const height = Math.ceil(bounds.height / tileHeight) * tileHeight
+            const _x = bounds.x
+            const _y = bounds.y
+
             const addTile = (x, y) => {
                 const tiles = this.tilemap.createOverlayTiles(x, y, sprite)
                 if (tiles.length) tilesOverlay.addChild(...tiles)
             }
-            let _x = x - (width * anchor.x)
-            let _y = y - (height * anchor.y)
-            addTile(_x, _y)
-            addTile(_x + height, _y)
-            addTile(_x, _y + height)
-            addTile(_x + width, _y + height)
+
+            tilesOverlay.removeChildren()
+
+            for (let i = _x ; i <= _x + width ; i += tileWidth) {
+                for (let j = _y ; j <= _y + height ; j += tileHeight) {
+                    addTile(i, j)
+                }
+            }
         }
         return sprite
     }
 
-    setPlayerPosition(id, { x, y }) {
+    setPlayerPosition(id: string, { x, y }: { x: number, y: number }) {
         this.players[id].x = x
         this.players[id].y = y
     }
 
-    addObject(obj, id): Character {
+    updateScene(obj) {
+        const shapes = obj.partial.shapes
+        if (shapes) {
+            const shapesInMap = this.gameMap.shapes
+            for (let name in shapes) {
+                const shapeMap = shapesInMap[name]
+                let shape = shapes[name]
+                if (shape == null) {
+                    this.gameMap.removeShape(name)
+                    continue
+                }
+                shape = {
+                    ...shape,
+                    x: shape.hitbox.pos.x,
+                    y: shape.hitbox.pos.y,
+                    width: shape.hitbox.w,
+                    height: shape.hitbox.h,
+                    properties: {}
+                }
+                if (shapesInMap[name]) {
+                    shapeMap.set(shape)
+                }
+                else {
+                    this.gameMap.createShape(shape)
+                }
+            }
+        }
+    }
+
+    addObject(obj, id: string): Character {
         const wrapper = new PIXI.Container()
+        const inner = new PIXI.Container()
         const tilesOverlay = new PIXI.Container()
         const sprite = new this.game._playerClass(obj, this)
         
         sprite.tilesOverlay = tilesOverlay
-        wrapper.addChild(sprite, tilesOverlay)
+        inner.addChild(sprite)
+        wrapper.addChild(inner, tilesOverlay)
+
         this.objects.set(id, sprite)
         this.tilemap.getEventLayer().addChild(wrapper)
 
         if (sprite.isCurrentPlayer) this.viewport?.follow(sprite)
         sprite.onInit()
 
-        this.onAddSprite(sprite)
+        RpgPlugin.emit(HookClient.SceneAddSprite, [this, sprite], true)
         RpgPlugin.emit(HookClient.AddSprite, sprite)
-
         return sprite
     }
 
-    removeObject(id) {
+    removeObject(id: string) {
         let sprite =  this.objects.get(id)
         if (sprite) {
             this.objects.delete(id)
-            this.onRemoveSprite(sprite)
+            RpgPlugin.emit(HookClient.SceneRemoveSprite, [this, sprite], true)
             RpgPlugin.emit(HookClient.RemoveSprite, sprite)
             sprite.destroy()
         }

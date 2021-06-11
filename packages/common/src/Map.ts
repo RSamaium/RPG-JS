@@ -1,6 +1,6 @@
-import { Hit, HitObject } from './Hit'
-import { random, intersection } from './Utils'
-import { RpgCommonPlayer } from './Player'
+import { HitObject } from './Hit'
+import { random, intersection, generateUID } from './Utils'
+import { Shape } from './Shape'
 
 const buffer = new Map()
 
@@ -20,7 +20,9 @@ export default class RpgCommonMap {
     tileWidth: number = 0
     tileHeight: number = 0
     layers: any[] = []
-    shapes: any[] = []
+    shapes: {
+        [name: string]: any
+    } = {}
 
     static get buffer() {
         return buffer
@@ -33,7 +35,6 @@ export default class RpgCommonMap {
         this.tileHeight = data.tileHeight
         this.height = data.height
         this.layers = data.layers
-        this.shapes = data.shapes
         this._extractShapes()
     }
 
@@ -45,21 +46,40 @@ export default class RpgCommonMap {
         return this.height * this.tileHeight
     }
 
+    get zTileHeight() {
+        return this.tileHeight
+    }
+
     _extractShapes() {
-        this.shapes = []
         for (let layer of this.layers) {
             if (layer.type != 'object') continue
             for (let obj of layer.objects) {
-                this.shapes.push(Hit.getHitbox(obj))
+                this.createShape(obj)
             }
         }
     }
+
+    createShape(obj: HitObject): Shape {
+        obj.name = (obj.name || generateUID()) as string
+        const shape = new Shape(obj)
+        this.shapes[obj.name] = shape
+        return shape
+    }
+
+    removeShape(name: string) {
+        // TODO: out players after delete shape
+        delete this.shapes[name]
+    }
+
+    getShapes(): Shape[] {
+        return Object.values(this.shapes)
+    }
     
     getPositionByShape(filter): { x: number, y: number, z: number } | null {
-        const startsFind = this.shapes.filter(filter)
+        const startsFind = this.getShapes().filter(filter)
         if (startsFind.length) {
             const start = startsFind[random(0, startsFind.length-1)]
-            return { x: start.hitbox.x, y: start.hitbox.y, z: 0 }
+            return { x: start.hitbox.x, y: start.hitbox.y, z: start.properties.z * this.zTileHeight || 0 }
         }
         return null
     }

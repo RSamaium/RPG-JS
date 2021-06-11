@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.2" tiledversion="1.3.3" orientation="orthogonal" renderorder="right-down" width="25" height="25" tilewidth="32" tileheight="32" infinite="0" nextlayerid="8" nextobjectid="3">
+<map version="1.4" tiledversion="1.4.3" orientation="orthogonal" renderorder="right-down" width="25" height="25" tilewidth="32" tileheight="32" infinite="0" nextlayerid="8" nextobjectid="3">
  <tileset firstgid="1" source="[Base]BaseChip_pipo.tsx"/>
  <layer id="1" name="ground" width="25" height="25">
   <data encoding="csv">
@@ -182,13 +182,13 @@
 </data>
  </layer>
  <objectgroup id="3" name="Object Layer 1">
-  <object id="1" name="Start Position" type="start" x="238" y="525">
+  <object id="1" name="start" type="start" x="238" y="525">
    <point/>
   </object>
-  <object id="2" x="296.35" y="480.264" width="162.785" height="164.932">
+  <object id="2" x="3.56506" y="1.58386" width="162.785" height="164.932">
    <properties>
     <property name="collision" type="bool" value="true"/>
-    <property name="go-map" value="medieval"/>
+    <property name="go-map" value="cave"/>
    </properties>
   </object>
  </objectgroup>

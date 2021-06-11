@@ -1,0 +1,43 @@
+{
+  "name": "@rpgjs/sample3",
+  "version": "3.0.0-alpha.10",
+  "description": "",
+  "main": "src/server.ts",
+  "types": "index.d.ts",
+  "scripts": {
+    "test": "NODE_ENV=test jest",
+    "build": "rimraf dist && webpack",
+    "dev": "webpack -w",
+    "start": "node dist/server"
+  },
+  "keywords": [],
+  "author": "",
+  "private": true,
+  "license": "ISC",
+  "dependencies": {
+    "@rpgjs/client": "^3.0.0-alpha.10",
+    "@rpgjs/compiler": "^3.0.0-alpha.10",
+    "@rpgjs/default-gui": "^3.0.0-alpha.10",
+    "@rpgjs/mobile-gui": "^3.0.0-alpha.10",
+    "@rpgjs/server": "^3.0.0-alpha.10",
+    "@rpgjs/standalone": "^3.0.0-alpha.10",
+    "@rpgjs/starter-kit": "^3.0.0-alpha.10",
+    "@rpgjs/testing": "^3.0.0-alpha.10",
+    "canvas": "^2.8.0",
+    "express": "^4.17.1",
+    "socket.io": "^4.1.2",
+    "socket.io-client": "^4.1.2",
+    "vue": "^3.0.11"
+  },
+  "devDependencies": {
+    "@types/jest": "^26.0.23",
+    "jest": "^27.0.4",
+    "jest-webgl-canvas-mock": "^0.2.3",
+    "rimraf": "^3.0.2",
+    "ts-jest": "^27.0.2",
+    "typescript": "^4.3.2",
+    "webpack": "^4.46.0",
+    "webpack-cli": "^3.3.12"
+  },
+  "gitHead": "6c4d8eeb21ae8954d2ecf619c024e79b1760e8ee"
+}

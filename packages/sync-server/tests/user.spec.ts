@@ -21,7 +21,7 @@ beforeEach(() => {
     Transmitter.encode = false
 })
 
-test('Test User in World', () => {
+/*test('Test User in World', () => {
     const user = World.getUser(CLIENT_ID)
     expect(user).toBeDefined()
     expect(user._rooms).toHaveLength(0)
@@ -101,6 +101,55 @@ test('Change Schema', () => {
             countAsync: Number
         })
         room.countAsync++
+        World.send()
+    })
+})*/
+
+test('Change Room', () => {
+    return new Promise((resolve) => {
+        let send = 0
+        
+        class Room {
+            $schema = {
+                users: [{
+                    position: {
+                        x: Number,
+                        y: Number
+                    }
+                }]
+            }
+        }
+
+        socket.on('w', ([room, time, value]) => {
+            send++
+            const user = value.users[CLIENT_ID]
+            switch (send) {
+                case 2:
+                    expect(room).toBe('room1')
+                    expect(user).toMatchObject({ position: {x: 10, y: 10} })
+                    break;
+                case 4:
+                    expect(room).toBe('room2')
+                    expect(user).toMatchObject({ position: {x: 20, y: 20} })
+                    resolve()
+                    break;
+            }
+        })
+
+        let user
+        let room1 =  World.addRoom('room1', Room) 
+        World.joinRoom(room1.id, CLIENT_ID)
+        user = World.getUser(CLIENT_ID)
+        user.position = {x: 10, y: 10}
+        World.send()
+
+        World.leaveRoom(room1.id, CLIENT_ID)
+
+        let room2 =  World.addRoom('room2', Room) 
+        World.joinRoom(room2.id, CLIENT_ID)
+        user = World.getUser(CLIENT_ID)
+        user.position.x = 20
+        user.position.y = 20
         World.send()
     })
 })

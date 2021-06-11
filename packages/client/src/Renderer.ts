@@ -89,7 +89,7 @@ export default class RpgRenderer  {
         else {
             this.canvasEl.appendChild(this.renderer.view)
         }
-        
+
         RpgGui._initalize(this.client)
 
         this.resize()
@@ -99,6 +99,7 @@ export default class RpgRenderer  {
         const size = () => {
             const { offsetWidth, offsetHeight } = this.canvasEl || this.selector
             this._resize(offsetWidth, offsetHeight)
+            RpgPlugin.emit(HookClient.WindowResize)
         }
         window.addEventListener('resize', size)
         size()
@@ -108,13 +109,13 @@ export default class RpgRenderer  {
         return this.scene
     }
     
-    draw(t, dt) {
-        if (this.scene) this.scene.draw(t, dt)
+    draw(t: number, dt: number, frame: number) {
+        if (this.scene) this.scene.draw(t, dt, frame)
         this.renderer.render(this.stage)
     }
 
     async loadScene(name, obj) {
-        RpgPlugin.emit(HookClient.SceneLoading, {
+        RpgPlugin.emit(HookClient.BeforeSceneLoading, {
             name, 
             obj
         })
@@ -132,15 +133,11 @@ export default class RpgRenderer  {
                     screenHeight: this.renderer.screen.height
                 })
                 break;
-            /*case 'battle':
-                this.scene = new SceneBattle(this.gameEngine)
-                break;
-            */
         }
         
         const container = await this.scene.load(obj)
         this.stage.addChild(container)
-        RpgPlugin.emit(HookClient.SceneLoaded, this.scene)
+        RpgPlugin.emit(HookClient.AfterSceneLoading, this.scene)
     }
 
 }

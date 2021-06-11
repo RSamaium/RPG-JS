@@ -7,8 +7,8 @@ const MiniCssExtractPlugin = require("mini-css-extract-plugin")
 const WorkboxWebpackPlugin = require("workbox-webpack-plugin")
 const WebpackPwaManifest = require('webpack-pwa-manifest')
 const webpackCommon = require('./webpack-common')
-const PostCompile = require('./sync')
 const resolveLoader = require('./loaders/resolve')
+const PostCompile = require('./sync')
 
 const mode = process.env.NODE_ENV || 'development'
 const type = process.env.RPG_TYPE || 'mmorpg'
@@ -39,7 +39,7 @@ module.exports = function(dirname, extend = {}) {
             new WebpackPwaManifest(rpgConfig)
         )
     }
-    else {
+    else if (isRpg) {
         plugins.push(
             new PostCompile({
                 baseDir: path.join(dirname, 'dist/standalone'),
@@ -54,7 +54,7 @@ module.exports = function(dirname, extend = {}) {
         node: {
             fs: 'empty'
         },
-        entry: `./src/${ type == 'mmorpg' ? 'client/main.ts' : 'standalone/index.ts' }`,
+        entry: `./src/${ type == 'mmorpg' ? 'client.ts' : 'standalone.ts' }`,
         output: {
             path: path.join(dirname, 'dist/' + dir),
             filename: 'bundle.js'
@@ -123,7 +123,7 @@ module.exports = function(dirname, extend = {}) {
         plugins: [
             new HtmlWebpackPlugin({
                 title: rpgConfig.title,
-                template: path.join(dirname, 'src/client/index.html')
+                template: path.join(dirname, 'src/index.html')
             }),
             new MiniCssExtractPlugin({
                 filename: 'style.css'

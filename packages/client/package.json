@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/client",
-  "version": "3.0.0-alpha.7",
+  "version": "3.0.0-alpha.10",
   "description": "",
   "main": "lib/index.js",
   "types": "./lib/index.d.ts",
@@ -8,7 +8,6 @@
     "access": "public"
   },
   "scripts": {
-    "prepublish": "npm run build",
     "build": "tsc",
     "watch": "tsc -w"
   },
@@ -19,19 +18,19 @@
   "author": "Samuel Ronce",
   "license": "MIT",
   "dependencies": {
-    "@geckos.io/snapshot-interpolation": "^1.0.2",
-    "@rpgjs/common": "^3.0.0-alpha.7",
-    "@rpgjs/sync-client": "^3.0.0-alpha.7",
+    "@geckos.io/snapshot-interpolation": "1.0.2",
+    "@rpgjs/common": "^3.0.0-alpha.10",
+    "@rpgjs/sync-client": "^3.0.0-alpha.10",
     "@tweenjs/tween.js": "^18.6.0",
-    "@types/howler": "^2.2.1",
-    "howler": "^2.2.1",
-    "lodash.merge": "^4.6.2",
-    "pixi-heaven": "^0.2.2",
-    "pixi-tilemap": "^2.1.3",
-    "pixi-viewport": "^4.15.0",
-    "pixi.js": "^5.3.3",
-    "rxjs": "^6.6.3",
-    "vue": "^3.0.4"
+    "@types/howler": "2.2.1",
+    "howler": "2.2.1",
+    "lodash.merge": "4.6.2",
+    "pixi-heaven": "0.2.2",
+    "pixi-tilemap": "2.1.3",
+    "pixi-viewport": "4.15.0",
+    "pixi.js": "5.3.10",
+    "rxjs": "6.6.3",
+    "vue": "3.0.4"
   },
-  "gitHead": "90f32de0618ffddadf918fa313cecc3e3c78aa0b"
+  "gitHead": "6c4d8eeb21ae8954d2ecf619c024e79b1760e8ee"
 }
