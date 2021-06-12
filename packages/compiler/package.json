@@ -17,7 +17,6 @@
     "css-loader": "4.3.0",
     "deasync": "0.1.21",
     "file-loader": "6.2.0",
-    "generate-template-files": "^3.0.0",
     "html-webpack-plugin": "4.4.1",
     "install": "0.13.0",
     "jest-webgl-canvas-mock": "0.2.3",

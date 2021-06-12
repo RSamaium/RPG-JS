@@ -24,6 +24,10 @@ export enum HookServer {
 
 export enum HookClient {
     Start = 'Client.Start',
+    Connected = 'Client.Connected',
+    Disconnect = 'Client.Disconnect',
+    ConnectedError = 'Client.ConnectedError',
+
     AddSpriteSheet = 'Client.AddSpriteSheet',
     AddGui = 'Client.AddGui',
     AddSound = 'Client.AddSound',

@@ -126,8 +126,11 @@ export class RpgClientEngine {
             }
         })
         window.requestAnimationFrame(renderLoop)
-        this._initSocket()
-        RpgPlugin.emit(HookClient.Start)
+        RpgPlugin.emit(HookClient.Start, this)
+            .then((ret: boolean[]) => {
+                const hasFalseValue = ret.findIndex(el => el === false) != - 1
+                if (!hasFalseValue) this._initSocket()
+            })
     }
 
     get objects() {
@@ -221,7 +224,7 @@ export class RpgClientEngine {
     sendInput(actionName: string) {
         const inputEvent = { input: actionName, playerId: this.gameEngine.playerId }
         this.gameEngine.processInput(inputEvent, this.gameEngine.playerId)
-        RpgPlugin.emit(HookClient.SendInput, inputEvent)
+        RpgPlugin.emit(HookClient.SendInput, [this, inputEvent], true)
         this.socket.emit('move', inputEvent)
     }
 
@@ -287,7 +290,7 @@ export class RpgClientEngine {
 
         this.socket.on('connect', () => {
             if (RpgGui.exists(PrebuiltGui.Disconnect)) RpgGui.hide(PrebuiltGui.Disconnect)
-            this.onConnect()
+            RpgPlugin.emit(HookClient.Connected, [this, this.socket], true)
             if (this.hasBeenDisconnected) {
                 // Todo
                 window.location.reload()
@@ -301,7 +304,7 @@ export class RpgClientEngine {
         })
 
         this.socket.on('connect_error', (err: any) => {
-            this.onConnectError(err)
+            RpgPlugin.emit(HookClient.ConnectedError, [this, err, this.socket], true)
         })
 
         this.socket.on('loadScene', ({ name, data }) => {
@@ -398,6 +401,7 @@ export class RpgClientEngine {
         this.socket.on('disconnect', (reason: string) => {
             if (RpgGui.exists(PrebuiltGui.Disconnect)) RpgGui.display(PrebuiltGui.Disconnect)
             this.onDisconnect(reason)
+            RpgPlugin.emit(HookClient.Disconnect, [this, reason, this.socket], true)
             this.hasBeenDisconnected = true
         })
 

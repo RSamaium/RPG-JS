@@ -23,6 +23,7 @@
     "@rpgjs/standalone": "^3.0.0-alpha.10",
     "@rpgjs/starter-kit": "^3.0.0-alpha.10",
     "@rpgjs/testing": "^3.0.0-alpha.10",
+    "@rpgjs/title-screen": "^1.0.0",
     "canvas": "^2.8.0",
     "express": "^4.17.1",
     "socket.io": "^4.1.2",

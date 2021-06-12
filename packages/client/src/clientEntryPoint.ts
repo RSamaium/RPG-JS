@@ -84,11 +84,20 @@ export default (modules: ModuleType[], options: RpgClientEntryPointOptions) => {
         onDraw: HookClient.SceneDraw
     }
 
+    const relationsEngine = {
+        onStart: HookClient.Start,
+        onConnected: HookClient.Connected,
+        onDisconnect: HookClient.Disconnect,
+        onConnectError: HookClient.ConnectedError,
+        onInput: HookClient.SendInput
+    }
+
     loadModules(modules, {
         side: 'client',
         relations: {
             player: relations,
-            sceneMap: relationsMap
+            sceneMap: relationsMap,
+            engine: relationsEngine
         }
     })
 

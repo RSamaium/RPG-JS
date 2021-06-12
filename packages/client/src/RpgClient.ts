@@ -1,6 +1,49 @@
 import { RpgSprite } from './Sprite/Player'
 import { ModuleType } from '@rpgjs/common'
 import { Scene } from './Scene/Scene'
+import { RpgClientEngine } from './RpgClientEngine'
+
+export interface RpgEngineHooks {
+    /**
+     * When the engine is started. If you send false, you prevent the client from connecting to the server
+     * 
+     * @prop { (engine: RpgClientEngine) => boolean | any } [onStart]
+     * @memberof RpgEngineHooks
+     */
+    onStart?: (engine: RpgClientEngine) => any
+
+    /**
+     * Recover keys from the pressed keyboard
+     * 
+     * @prop { (engine: RpgClientEngine, obj: { input: string, playerId: number }) => any } [onInput]
+     * @memberof RpgEngineHooks
+     */
+    onInput?: (engine: RpgClientEngine, obj: { input: string, playerId: number }) => any
+
+    /**
+     * Called when the user is connected to the server
+     * 
+     * @prop { (engine: RpgClientEngine, socket: any) => any } [onConnected]
+     * @memberof RpgEngineHooks
+     */
+    onConnected?: (engine: RpgClientEngine, socket: any) => any
+
+    /**
+     * Called when the user is disconnected to the server
+     * 
+     * @prop { (engine: RpgClientEngine, reason: any, socket: any) => any } [onDisconnect]
+     * @memberof RpgEngineHooks
+     */
+    onDisconnect?: (engine: RpgClientEngine, reason: any, socket: any) => any
+
+    /**
+     * Called when there was a connection error
+     * 
+     * @prop { (engine: RpgClientEngine, err: any, socket: any) => any } [onConnectError]
+     * @memberof RpgEngineHooks
+     */
+    onConnectError?: (engine: RpgClientEngine, err: any, socket: any) => any
+}
 
 export interface RpgSpriteHooks {
     /**
@@ -111,6 +154,14 @@ export interface RpgClient {
      */
     imports?: ModuleType[]
 
+    /**
+     * Object containing the hooks concerning the engine
+     * 
+     * @prop {RpgEngineHooks} [engine]
+     * @memberof RpgClient
+     */
+    engine?: RpgEngineHooks
+
     /** 
      * Array containing the list of spritesheets
      * An element contains a class with the `@Spritesheet` decorator
@@ -211,7 +262,7 @@ export interface RpgClient {
      * class RpgClientEngine {}
      * ``` 
      * 
-     * @prop {RpgClass<RpgSprite>} [sprite]
+     * @prop {RpgSpriteHooks} [sprite]
      * @memberof RpgClient
      * */
     sprite?: RpgSpriteHooks
@@ -235,7 +286,7 @@ export interface RpgClient {
      * class RpgClientEngine {}
      * ``` 
      * 
-     * @prop { [sceneName: string]: Class of RpgSceneMap } [scenes]
+     * @prop { [sceneName: string]: RpgSceneMapHooks } [scenes]
      * @memberof RpgClient
      * */
     scenes?: {

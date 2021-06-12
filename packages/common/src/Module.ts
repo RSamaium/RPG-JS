@@ -49,7 +49,7 @@ export function loadModules(modules, obj) {
         else {
             mod = new moduleClass()
         }
-        const { imports, maps, spritesheets, sounds, gui, scenes } = mod
+        const { imports, maps, spritesheets, sounds, gui, scenes, engine } = mod
         if (imports) {
             loadModules(imports, obj)
         }
@@ -75,6 +75,7 @@ export function loadModules(modules, obj) {
             }
         }
         loadRelations(player, 'player')
+        loadRelations(engine, 'engine')
         if (scenes) loadRelations(scenes.map, 'sceneMap')
     }
 }
