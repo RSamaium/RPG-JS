@@ -30,7 +30,7 @@ export default {
 }
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 @keyframes uparrow {
   0% { transform: translateY(0); opacity: 0.4 }
   100% { transform: translateY(-0.4em); opacity: 0.9 }
@@ -54,7 +54,7 @@ export default {
     text-indent:-9999px;
     transform-origin: 50% 50%;
     width:0;
-    border-top: 0.5em solid white;
+    border-top: 0.5em solid $window-arrow-color;
 }
 
 .up {

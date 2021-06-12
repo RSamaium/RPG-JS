@@ -14,6 +14,13 @@ import { SceneData } from './Scene/SceneData'
 import { SceneMap as RpgSceneMap } from './Scene/Map'
 import { RpgGui } from './RpgGui';
 import { Timeline, Ease } from './Effects/Timeline';
+import { spritesheets } from './Sprite/Spritesheets'
+import { sounds } from './Sound/Sounds'
+
+const RpgResource = {
+    spritesheets,
+    sounds
+}
 
 export {
     RpgClient,
@@ -40,5 +47,6 @@ export {
     RpgModule,
     RpgSceneHooks,
     RpgSceneMapHooks,
-    RpgSpriteHooks
+    RpgSpriteHooks,
+    RpgResource
 }

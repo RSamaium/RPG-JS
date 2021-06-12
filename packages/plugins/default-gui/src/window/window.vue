@@ -47,33 +47,27 @@ export default {
 }
 </script>
 
-<style>
-@font-face {
- font-family: "lato";
- src: url("../assets/fonts/Lato/Lato-Regular.ttf") format("ttf");
-}
-
+<style lang="scss">
 .window-content p {
-    font-family: "lato";
-    font-size: 25px;
-    color: white;
+    font-family: $window-font-family;
+    font-size: $window-font-size;
+    color: $window-font-color;
     margin: 0;
 }
 </style>
 
-<style scoped>
-
+<style scoped lang="scss">
 .window {
     display: flex;
 }
 
 .window-content {
-    border: 2.5px solid white;
-    border-radius: 5px;
-    background: #4e5188;
-    background: linear-gradient(148deg, rgba(79,82,136,0.7) 0%, rgba(42,43,73,0.7) 100%);
+    border: $window-border;
+    border-radius: $window-border-radius;
+    background: $window-background;
     padding: 20px;
     overflow: hidden;
+    @include window-content;
 }
 
 .window.top {
@@ -82,6 +76,12 @@ export default {
 
 .window.bottom {
    align-items: flex-end;
+}
+
+.window.bottom-middle {
+   align-items: flex-end;
+   justify-content: center;
+   width: 100%;
 }
 
 .window.middle {

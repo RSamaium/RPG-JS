@@ -1,6 +1,7 @@
-import { createApp, ref } from 'vue'
+import { createApp } from 'vue'
 import { map } from 'rxjs/operators'
 import { RpgSound } from './Sound/RpgSound'
+import { RpgResource } from './index'
 
 class Gui {
 
@@ -300,7 +301,9 @@ class Gui {
                      * @prop {RpgSound} [rpgSound]
                      * @memberof VueInject
                      * */
-                    rpgSound: RpgSound
+                    rpgSound: RpgSound,
+
+                    rpgResource: RpgResource
                 }
             },
             methods: {

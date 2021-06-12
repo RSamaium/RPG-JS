@@ -150,7 +150,7 @@ export default {
 }
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 @keyframes cursor {
   0% { opacity: 0.4 }
   100% { opacity: 0.7 }
@@ -178,11 +178,11 @@ ul li > * {
 ul li.active:before {
     content: '';
     position: absolute;
-    background: #7782ab;
+    background: $cursor-background;
     width: 100%;
     height: 100%;
     left: 0px;
-    border: 1px solid #9db0c6;
+    border: $cursor-border;
     animation: cursor 0.6s infinite alternate ease-in-out;
     z-index: 0;
 }

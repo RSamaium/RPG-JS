@@ -62,7 +62,8 @@ module.exports = function(dirname, extend = {}) {
         devtool: prod ? false : 'source-map',
         resolve: {
             alias: {
-                'vue$': path.join(dirname, 'node_modules/vue/dist/vue.esm-bundler.js')
+                'vue$': path.join(dirname, 'node_modules/vue/dist/vue.esm-bundler.js'),
+                '@': path.join(dirname, 'src')
             },
             extensions: ['.ts', '.js']
         },
@@ -91,7 +92,22 @@ module.exports = function(dirname, extend = {}) {
                     MiniCssExtractPlugin.loader,
                     require.resolve('css-loader')
                 ]
-            }, {
+            }, 
+            {
+                test: /\.scss$/,
+                use: [
+                     require.resolve('vue-style-loader'),
+                     MiniCssExtractPlugin.loader,
+                     require.resolve('css-loader'),
+                     {
+                         loader: require.resolve('sass-loader'),
+                         options: {
+                            additionalData: `@import '@/config/_variables.scss';`
+                         }
+                     }
+                ]
+             },
+            {
                 test: /\.(png|jpe?g|gif)$/i,
                 loader: require.resolve('file-loader'),
                 options: {
