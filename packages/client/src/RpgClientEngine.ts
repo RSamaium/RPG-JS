@@ -129,7 +129,7 @@ export class RpgClientEngine {
         RpgPlugin.emit(HookClient.Start, this)
             .then((ret: boolean[]) => {
                 const hasFalseValue = ret.findIndex(el => el === false) != - 1
-                if (!hasFalseValue) this._initSocket()
+                if (!hasFalseValue) this.connection()
             })
     }
 
@@ -278,7 +278,7 @@ export class RpgClientEngine {
         }
     }
 
-    _initSocket() {
+    connection() {
         const { standalone } = this.gameEngine
 
         if (!standalone) {

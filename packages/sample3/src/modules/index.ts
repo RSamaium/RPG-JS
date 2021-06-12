@@ -6,6 +6,7 @@ import titleScreen from '@rpgjs/title-screen'
 
 export default [
     titleScreen,
+    starterKit,
     main,
     defaultGui,
     mobileGui

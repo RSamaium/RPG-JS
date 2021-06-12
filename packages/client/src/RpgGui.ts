@@ -303,7 +303,9 @@ class Gui {
                      * */
                     rpgSound: RpgSound,
 
-                    rpgResource: RpgResource
+                    rpgResource: RpgResource,
+
+                    rpgEngine: this.clientEngine
                 }
             },
             methods: {
