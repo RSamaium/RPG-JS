@@ -230,9 +230,6 @@ class Gui {
                      * }
                      * ``` 
                      * 
-                     * * `object`: The whole player
-                     * * `paramsChanged`: Only the representation of the properties that have been changed on this player
-                     * 
                      * @prop {Observable<{ inputName: string, control: { actionName: string, options: any } }>} [rpgKeypress]
                      * @memberof VueInject
                      * */
@@ -303,8 +300,39 @@ class Gui {
                      * */
                     rpgSound: RpgSound,
 
+                    /** 
+                     * Find the game's image and sound library
+                     * 
+                     * ```js
+                     * export default {
+                     *      inject: ['rpgResource'],
+                     *      mounted() {
+                     *         const resourceImage = this.rpgResource.spritesheets.get('image_id')
+                     *         const resourceSound = this.rpgResource.sounds.get('sound_id')
+                     *      }
+                     * }
+                     * ``` 
+                     * 
+                     * @prop { { spritesheets: Map, sounds: Map } } [rpgResource]
+                     * @memberof VueInject
+                     * */
                     rpgResource: RpgResource,
 
+                    /** 
+                     * Get RpgClientEngine instance
+                     * 
+                     * ```js
+                     * export default {
+                     *      inject: ['rpgEngine'],
+                     *      mounted() {
+                     *         const vueInstance = this.rpgEngine.renderer.app
+                     *      }
+                     * }
+                     * ``` 
+                     * 
+                     * @prop {RpgClientEngine} [rpgEngine]
+                     * @memberof VueInject
+                     * */
                     rpgEngine: this.clientEngine
                 }
             },

@@ -4,7 +4,7 @@ import { _initSpritesheet } from './Sprite/Spritesheets'
 import { _initSound } from './Sound/Sounds'
 import { RpgSprite } from './Sprite/Player'
 import { World } from '@rpgjs/sync-client'
-import { BehaviorSubject, Subject } from 'rxjs'
+import { BehaviorSubject, Observable, Subject } from 'rxjs'
 import { RpgGui } from './RpgGui'
 import { 
     RpgCommonPlayer, 
@@ -29,8 +29,24 @@ type ObjectFixture = {
 
 export class RpgClientEngine {
 
+    /** 
+     * Get the rendering 
+     * 
+     * @prop {RpgRenderer} [renderer]
+     * @readonly
+     * @memberof RpgClientEngine
+     * */
     public renderer: any
+
+    /** 
+     * Get the socket
+     * 
+     * @prop {Socket} [socket]
+     * @readonly
+     * @memberof RpgClientEngine
+     * */
     public socket: any
+
     public _options: any
     private _objects: BehaviorSubject<{
         [playerId: string]: ObjectFixture
@@ -40,9 +56,9 @@ export class RpgClientEngine {
     controls: KeyboardControls
     private playerVault = new Vault()
     private isTeleported: boolean = false
+    // TODO, public or private
     io
-    lastTimestamp
-    scheduler
+    private lastTimestamp: number = 0
 
     constructor(private gameEngine, private options) { }
 
@@ -73,7 +89,7 @@ export class RpgClientEngine {
             ...this.options
         }
 
-        this.io = this.options['io']
+        this.io = this.options.io
 
        this.gameEngine._playerClass = this.renderer.options.spriteClass || RpgSprite
        this.gameEngine.standalone = this.options['standalone']
@@ -94,10 +110,17 @@ export class RpgClientEngine {
             console.log('> RPGJS is in development mode <')
         }
 
-        this.controls = new KeyboardControls(this)
-        
+        this.controls = new KeyboardControls(this) 
     }
 
+    /**
+     * Starts the client side and connects to the server
+     *
+     * @title Start Client Engine
+     * @method start()
+     * @returns {Promise< void >}
+     * @memberof RpgClientEngine
+     */
     async start() {
         await this._init()
         let frame = 0
@@ -133,26 +156,38 @@ export class RpgClientEngine {
             })
     }
 
-    get objects() {
+    /**
+     * Read objects synchronized with the server
+     *
+     * @prop {Observable< {
+            [id: string]: {
+                object: any,
+                paramsChanged: any
+            }
+      } >} [objects]
+     * @readonly
+     * @memberof RpgClientEngine
+     */
+    get objects(): Observable<{ [id: string]: ObjectFixture }> {
         return this._objects.asObservable()
     }
 
-    getObjects() {
+    private getObjects(): { [id: string]: ObjectFixture } {
         return this._objects.value
     }
 
-    getObject(id): ObjectFixture | null {
+    private getObject(id): ObjectFixture | null {
         const objects = this._objects.value
         const val = objects[id]
         if (!val) return null
         return val
     }
 
-    resetObjects() {
+    private resetObjects() {
         this._objects.next({})
     }
 
-    removeObject(id: any): boolean {
+    private removeObject(id: any): boolean {
         const logic = this.getObject(id)
         if (logic) {
             const objects = { ...this._objects.value } // clone
@@ -163,7 +198,7 @@ export class RpgClientEngine {
         return false
     }
 
-    updateObject(obj) {
+    private updateObject(obj) {
         const {
             playerId: id,
             params,
@@ -228,7 +263,7 @@ export class RpgClientEngine {
         this.socket.emit('move', inputEvent)
     }
 
-    serverReconciliation()  {
+    private serverReconciliation()  {
         const { playerId } = this.gameEngine
         const player = this.gameEngine.world.getObject(playerId)
         if (player) {
@@ -251,7 +286,7 @@ export class RpgClientEngine {
         }
       }
 
-    step(t, dt) {
+    private step(t, dt) {
         this.gameEngine.emit('client__preStep')
         const { playerId } = this.gameEngine
         const player = this.gameEngine.world.getObject(playerId)
@@ -278,6 +313,14 @@ export class RpgClientEngine {
         }
     }
 
+    /**
+     *Connect to the server
+     *
+     * @title Connect to server
+     * @method connection()
+     * @returns {void}
+     * @memberof RpgClientEngine
+     */
     connection() {
         const { standalone } = this.gameEngine
 
@@ -400,7 +443,6 @@ export class RpgClientEngine {
 
         this.socket.on('disconnect', (reason: string) => {
             if (RpgGui.exists(PrebuiltGui.Disconnect)) RpgGui.display(PrebuiltGui.Disconnect)
-            this.onDisconnect(reason)
             RpgPlugin.emit(HookClient.Disconnect, [this, reason, this.socket], true)
             this.hasBeenDisconnected = true
         })
@@ -412,11 +454,42 @@ export class RpgClientEngine {
         }
     }
 
-    onConnect() {}
+    // shortcuts
 
-    onReconnect() {}
+     /** 
+     * VueJS Application instance
+     * 
+     * [https://v3.vuejs.org/api/application-api.html](https://v3.vuejs.org/api/application-api.html)
+     * 
+     * @prop {Vue} [vueApp]
+     * @readonly
+     * @memberof RpgClientEngine
+     * */
+    get vueApp() {
+        return this.renderer.app
+    }
 
-    onConnectError(err: any) {}
+    /** 
+     * VueJS Parent component instance
+     * 
+     * [https://v3.vuejs.org/api/instance-properties.html](https://v3.vuejs.org/api/instance-properties.html)
+     * 
+     * @prop {Vue Instance} [vueInstance]
+     * @readonly
+     * @memberof RpgClientEngine
+     * */
+    get vueInstance() {
+        return this.renderer.vm
+    }
 
-    onDisconnect(reason: string) {}
+    /** 
+     * retrieves the current scene (SceneMap if you are on a map)
+     * 
+     * @prop {RpgScene} [scene]
+     * @readonly
+     * @memberof RpgClientEngine
+     * */
+    get scene() {
+        return this.renderer.getScene()
+    }
 }

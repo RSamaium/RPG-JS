@@ -36,7 +36,13 @@ import { RpgSound } from '../Sound/RpgSound'
 })
 export class SceneMap extends Scene implements IScene {
 
-    protected tilemap: TileMap
+    /** 
+     * Get the tilemap
+     * 
+     * @prop {TileMap} [tilemap]
+     * @memberof RpgSceneMap
+     * */
+    public tilemap: TileMap
 
     /** 
      * The viewport of the map
