@@ -236,11 +236,7 @@ class Gui {
                     rpgKeypress: this.clientEngine.keyChange
                         .pipe(
                             map(name => {
-                                const scene = this.renderer.getScene()
-                                let control
-                                if (scene) {
-                                    control = scene.getControl(name)
-                                }
+                                const control = this.clientEngine.controls.getControl(name)
                                 return {
                                     inputName: name,
                                     control

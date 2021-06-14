@@ -1,20 +1,8 @@
-import { Utils, RpgPlugin, HookClient } from '@rpgjs/common'
-import { KeyboardControls } from '../KeyboardControls'
+import { RpgPlugin, HookClient } from '@rpgjs/common'
+import { KeyboardControls, Controls } from '../KeyboardControls'
 import RpgSprite from '../Sprite/Character'
 import { Animation } from '../Effects/Animation'
 import { BehaviorSubject, Observable } from 'rxjs'
-
-const { isArray } = Utils
-
-interface ControlOptions {
-    repeat?: boolean
-    bind: string | string[]
-    method?: Function
-}
-
-interface Controls {
-    [controlName: string]: ControlOptions
-}
 
 type SceneObservableData = { data: object, partial: object }
 
@@ -26,7 +14,6 @@ export class Scene {
 
     private controls: KeyboardControls
     private animations: Animation[] = []
-    private _controlsOptions: Controls = {}
 
     private _data: BehaviorSubject<SceneObservableData> = new BehaviorSubject({
         data: {},
@@ -34,8 +21,9 @@ export class Scene {
     })
 
     constructor(protected game: any) {
+        const { globalConfig } = this.game.clientEngine
         this.controls = this.game.clientEngine.controls
-        this.setInputs(this.inputs)
+        this.controls.setInputs(this.inputs || globalConfig.inputs)
     }
 
     /**
@@ -67,95 +55,7 @@ export class Scene {
         return this._data.asObservable() 
     }
 
-    /**
-     * Assign custom inputs to the scene
-     * 
-     * The object is the following:
-     * 
-     * * the key of the object is the name of the control. Either it is existing controls (Up, Dow, Left, Right, Action, Back) or customized controls
-     * * The value is an object representing control information:
-     *      * repeat {boolean} The key can be held down to repeat the action. (false by default)
-     *      * bind {string | string[]} To which key is linked the control
-     *      * method {Function} Function to be triggered. If you do not set this property, the name of the control is sent directly to the server.
-     * 
-     * ```ts 
-     * import { RpgSceneMap, Control, Input } from '@rpgjs/client'
-     * 
-     * export class SceneMap extends RpgSceneMap {
-     *      onInit() {
-     *          this.setInputs({
-                    [Control.Up]: {
-                        repeat: true,
-                        bind: Input.Up
-                    },
-                    [Control.Down]: {
-                        repeat: true,
-                        bind: Input.Down
-                    },
-                    [Control.Right]: {
-                        repeat: true,
-                        bind: Input.Right
-                    },
-                    [Control.Left]: {
-                        repeat: true,
-                        bind: Input.Left
-                    },
-                    [Control.Action]: {
-                        bind: [Input.Space, Input.Enter]
-                    },
-                    [Control.Back]: {
-                        bind: Input.Escape
-                    },
-
-                    // The myscustom1 control is sent to the server when the A key is pressed.
-                    mycustom1: {
-                        bind: Input.A
-                    },
-
-                    // the myAction method is executed when the B key is pressed
-                    mycustom2: {
-                        bind: Input.B,
-                        method: this.myAction
-                    }
-                })
-     *      }
-            myAction() {
-
-            }
-     * }
-     * ```
-     * @enum {string} Control 
-     * 
-     * Control.Up | up
-     * Control.Down | down
-     * Control.Left | left
-     * Control.Right | right
-     * Control.Action | action
-     * Control.Back | back
-     * @title Set Inputs
-     * @method scene.setInputs(inputs)
-     * @param {object} inputs
-     * @memberof RpgScene
-     */
-    setInputs(inputs: Controls) {
-        if (!inputs) return
-        this.controls['boundKeys'] = {}
-        for (let control in inputs) {
-            const option = inputs[control]
-            const { method, bind } = option
-            if (method) {
-                option.method = method.bind(this)
-            }
-            let inputsKey: any = bind
-            if (!isArray(inputsKey)) {
-                inputsKey = [bind]
-            }
-            for (let input of inputsKey) {
-                this.controls.bindKey(input, control, option)
-            }
-        }
-        this._controlsOptions = inputs
-    }
+    
 
     private triggerSpriteChanges(logic, sprite: RpgSprite, moving: boolean) {
         if (this.onUpdateObject) this.onUpdateObject(logic, sprite, moving)
@@ -202,103 +102,6 @@ export class Scene {
         }
         this.onDraw(t)
         RpgPlugin.emit(HookClient.SceneDraw, this)
-    }
-
-    /**
-     * From the name of the entry, we retrieve the control information
-     * 
-     * ```ts 
-     * import { RpgSceneMap, Input } from '@rpgjs/client'
-     * 
-     * export class SceneMap extends RpgSceneMap {
-     *      onLoad() {
-     *          const control = this.getControl(Input.Enter)
-     *          if (control) {
-     *              console.log(control.actionName) // action
-     *          }
-     *      }
-     * }
-     * ```
-     * @title Get Control
-     * @method scene.getControl(inputName)
-     * @param {string} inputName
-     * @returns { { actionName: string, options: any } | undefined }
-     * @memberof RpgScene
-     */
-    getControl(inputName: string): { actionName: string, options: any } | undefined {
-        const { boundKeys  } = this.controls as any
-        return boundKeys[inputName]
-    }
-
-    /**
-     * Triggers an input according to the name of the control
-     * 
-     * ```ts 
-     * import { RpgSceneMap, Control } from '@rpgjs/client'
-     * 
-     * export class SceneMap extends RpgSceneMap {
-     *      onLoad() {
-     *          this.applyControl(Control.Action)
-     *      }
-     * }
-     * ```
-     * 
-     * You can put a second parameter or indicate on whether the key is pressed or released
-     * 
-     * ```ts 
-     * import { RpgSceneMap, Control } from '@rpgjs/client'
-     * 
-     * export class SceneMap extends RpgSceneMap {
-     *      onLoad() {
-     *          this.applyControl(Control.Up, true) // keydown
-     *          this.applyControl(Control.Up, false) // keyup
-     *      }
-     * }
-     * ```
-     * @title Apply Control
-     * @method scene.applyControl(controlName,isDown)
-     * @param {string} controlName
-     * @param {boolean} [isDown]
-     * @memberof RpgScene
-     */
-    applyControl(controlName: string, isDown?: boolean | undefined) {
-        const control = this._controlsOptions[controlName]
-        if (control) {
-            const input = isArray(control.bind) ? control.bind[0] : control.bind
-            if (isDown === undefined) {
-                this.controls.applyKeyPress(input as string)
-            }
-            else if (isDown) {
-                this.controls.applyKeyDown(input as string)
-            }
-            else {
-                this.controls.applyKeyUp(input as string)
-            }
-        }
-    }
-
-    /**
-     * Stop listening to the inputs. Pressing a key won't do anything
-     * 
-     * @title Stop Inputs
-     * @method scene.stopInputs()
-     * @returns {void}
-     * @memberof RpgScene
-     */
-    stopInputs() {
-        this.controls.stop = true
-    }
-
-    /**
-     * Listen to the inputs again
-     * 
-     * @title Listen Inputs
-     * @method scene.listenInputs()
-     * @returns {void}
-     * @memberof RpgScene
-     */
-    listenInputs() {
-        this.controls.stop = false
     }
 
     onUpdateObject(logic, sprite: RpgSprite, moving: boolean): any {}

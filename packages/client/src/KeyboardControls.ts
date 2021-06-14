@@ -1,4 +1,5 @@
-// based on http://keycode.info/
+import { Utils } from '@rpgjs/common'
+import { RpgClientEngine } from './RpgClientEngine';
 
 // keyboard handling
 const keyCodeTable = {
@@ -166,6 +167,8 @@ const keyCodeTable = {
     255: 'toggle touchpad'
 };
 
+const { isArray } = Utils
+
 const inverse = (obj) => {
     const newObj = {}
     for (let key in obj) {
@@ -177,31 +180,34 @@ const inverse = (obj) => {
 
 const inverseKeyCodeTable = inverse(keyCodeTable)
 
-/**
- * This class allows easy usage of device keyboard controls.  Use the method {@link KeyboardControls#bindKey} to
- * generate events whenever a key is pressed.
- *
- * @example
- *    // in the ClientEngine constructor
- *    this.controls = new KeyboardControls(this);
- *    this.controls.bindKey('left', 'left', { repeat: true } );
- *    this.controls.bindKey('right', 'right', { repeat: true } );
- *    this.controls.bindKey('space', 'space');
- *
- */
+export interface ControlOptions {
+    repeat?: boolean
+    bind: string | string[]
+    method?: Function
+}
+
+export interface Controls {
+    [controlName: string]: ControlOptions
+}
+
+type BoundKey = { actionName: string, options: any }
+
 export class KeyboardControls {
 
-    gameEngine
-    keyState = {}
-    boundKeys = {}
-    stop = false
-    lastKeyPressed
+    private gameEngine
+    private keyState = {}
+    private boundKeys = {}
+    private stop = false
+    private lastKeyPressed
+    private _controlsOptions = {}
 
-    constructor(private clientEngine) {
-
+    constructor(private clientEngine: RpgClientEngine) {
+        const { globalConfig } = clientEngine
         this.gameEngine = clientEngine.gameEngine;
 
         this.setupListeners();
+
+        if (globalConfig.inputs) this.setInputs(globalConfig.inputs)
 
         this.gameEngine.on('client__preStep', () => {
             for (let keyName of Object.keys(this.boundKeys)) {
@@ -218,16 +224,11 @@ export class KeyboardControls {
                             parameters = parameters();
                         }
 
-                        // todo movement is probably redundant
-                        let inputOptions = Object.assign({
-                            movement: true
-                        }, parameters || {});
-
                         if (method) {
                             method(this.boundKeys[keyName])
                         }
                         else {
-                            this.clientEngine.sendInput(this.boundKeys[keyName].actionName, inputOptions);
+                            this.clientEngine.sendInput(this.boundKeys[keyName].actionName);
                         }
             
                         this.keyState[keyName].count++;
@@ -237,28 +238,12 @@ export class KeyboardControls {
         });
     }
 
-    setupListeners() {
+    private setupListeners() {
         document.addEventListener('keydown', (e) => { this.onKeyChange(e, true);});
         document.addEventListener('keyup', (e) => { this.onKeyChange(e, false);});
     }
 
-    /**
-     * Bind a keyboard key to a Lance client event.  Each time the key is pressed,
-     * an event will be transmitted by the client engine, using {@link ClientEngine#sendInput},
-     * and the specified event name.
-     *
-     * Common key names: up, down, left, right, enter, shift, ctrl, alt,
-     * escape, space, page up, page down, end, home, 0..9, a..z, A..Z.
-     * For a full list, please check the source link above.
-     *
-     * @param {String} keys - keyboard key (or array of keys) which will cause the event.
-     * @param {String} actionName - the event name
-     * @param {Object} options - options object
-     * @param {Boolean} options.repeat - if set to true, an event continues to be sent on each game step, while the key is pressed
-     * @param {Object/Function} parameters - parameters (or function to get parameters) to be sent to
-     *                                       the server with sendInput as the inputOptions
-     */
-    bindKey(keys, actionName, options, parameters?) {
+    private bindKey(keys, actionName, options, parameters?) {
         if (!Array.isArray(keys)) keys = [keys];
 
         let keyOptions = Object.assign({
@@ -270,30 +255,28 @@ export class KeyboardControls {
         });
     }
 
-    applyKeyDown(name) {
+    private applyKeyDown(name: string) {
         const code = inverseKeyCodeTable[name]
         const e: any = new Event('keydown')
         e.keyCode = code
         this.onKeyChange(e, true)
     }
 
-    applyKeyUp(name) {
+    private applyKeyUp(name: string) {
         const code = inverseKeyCodeTable[name]
         const e: any = new Event('keyup')
         e.keyCode = code
         this.onKeyChange(e, false)
     }
 
-    applyKeyPress(name) {
+    private applyKeyPress(name: string) {
         this.applyKeyDown(name)
         setTimeout(() => {
             this.applyKeyUp(name)
         }, 200)
     }
 
-    // todo implement unbindKey
-
-    onKeyChange(e, isDown) {
+    private onKeyChange(e, isDown) {
         e = e || window.event;
 
         let keyName = keyCodeTable[e.keyCode];
@@ -320,4 +303,178 @@ export class KeyboardControls {
             e.preventDefault();
         }
     }
+
+    /**
+     * From the name of the entry, we retrieve the control information
+     * 
+     * ```ts 
+     * import { Input } from '@rpgjs/client'
+     * 
+     * // In method hooks, client is RpgClientEngine
+     * client.controls.getControl(Input.Enter)
+     * if (control) {
+     *    console.log(control.actionName) // action
+     * }
+     * ```
+     * @title Get Control
+     * @method getControl(inputName)
+     * @param {string} inputName
+     * @returns { { actionName: string, options: any } | undefined }
+     * @memberof KeyboardControls
+     */
+     getControl(inputName: string): BoundKey | undefined {
+        return this.boundKeys[inputName]
+    }
+
+    /**
+     * Triggers an input according to the name of the control
+     * 
+     * ```ts 
+     * import { Control } from '@rpgjs/client'
+     * 
+     * // In method hooks, client is RpgClientEngine
+     * client.controls.applyControl(Control.Action)
+     * ```
+     * 
+     * You can put a second parameter or indicate on whether the key is pressed or released
+     * 
+     * ```ts 
+     * import { Control } from '@rpgjs/client'
+     * 
+     * client.controls.applyControl(Control.Up, true) // keydown
+     * client.controls.applyControl(Control.Up, false) // keyup
+     * ```
+     * @title Apply Control
+     * @method applyControl(controlName,isDown)
+     * @param {string} controlName
+     * @param {boolean} [isDown]
+     * @memberof KeyboardControls
+     */
+    applyControl(controlName: string, isDown?: boolean | undefined) {
+        const control = this._controlsOptions[controlName]
+        if (control) {
+            const input = isArray(control.bind) ? control.bind[0] : control.bind
+            if (isDown === undefined) {
+                this.applyKeyPress(input as string)
+            }
+            else if (isDown) {
+                this.applyKeyDown(input as string)
+            }
+            else {
+                this.applyKeyUp(input as string)
+            }
+        }
+    }
+
+    /**
+     * Stop listening to the inputs. Pressing a key won't do anything
+     * 
+     * @title Stop Inputs
+     * @method stopInputs()
+     * @returns {void}
+     * @memberof KeyboardControls
+     */
+    stopInputs() {
+        this.stop = true
+    }
+
+    /**
+     * Listen to the inputs again
+     * 
+     * @title Listen Inputs
+     * @method listenInputs()
+     * @returns {void}
+     * @memberof KeyboardControls
+     */
+    listenInputs() {
+        this.stop = false
+    }
+
+    /**
+     * Assign custom inputs to the scene
+     * 
+     * The object is the following:
+     * 
+     * * the key of the object is the name of the control. Either it is existing controls (Up, Dow, Left, Right, Action, Back) or customized controls
+     * * The value is an object representing control information:
+     *      * repeat {boolean} The key can be held down to repeat the action. (false by default)
+     *      * bind {string | string[]} To which key is linked the control
+     *      * method {Function} Function to be triggered. If you do not set this property, the name of the control is sent directly to the server.
+     * 
+     * ```ts 
+     * import { Control, Input } from '@rpgjs/client'
+     * 
+     * // In method hooks, client is RpgClientEngine
+     * client.controls.setInputs({
+            [Control.Up]: {
+                repeat: true,
+                bind: Input.Up
+            },
+            [Control.Down]: {
+                repeat: true,
+                bind: Input.Down
+            },
+            [Control.Right]: {
+                repeat: true,
+                bind: Input.Right
+            },
+            [Control.Left]: {
+                repeat: true,
+                bind: Input.Left
+            },
+            [Control.Action]: {
+                bind: [Input.Space, Input.Enter]
+            },
+            [Control.Back]: {
+                bind: Input.Escape
+            },
+
+            // The myscustom1 control is sent to the server when the A key is pressed.
+            mycustom1: {
+                bind: Input.A
+            },
+
+            // the myAction method is executed when the B key is pressed
+            mycustom2: {
+                bind: Input.B,
+                method({ actionName }) {
+                    console.log('cool', actionName)
+                }
+            }
+        })
+     * 
+     * ```
+     * @enum {string} Control 
+     * 
+     * Control.Up | up
+     * Control.Down | down
+     * Control.Left | left
+     * Control.Right | right
+     * Control.Action | action
+     * Control.Back | back
+     * @title Set Inputs
+     * @method setInputs(inputs)
+     * @param {object} inputs
+     * @memberof KeyboardControls
+     */
+    setInputs(inputs: Controls) {
+        if (!inputs) return
+        this.boundKeys = {}
+        for (let control in inputs) {
+            const option = inputs[control]
+            const { method, bind } = option
+            if (method) {
+                option.method = method
+            }
+            let inputsKey: any = bind
+            if (!isArray(inputsKey)) {
+                inputsKey = [bind]
+            }
+            for (let input of inputsKey) {
+                this.bindKey(input, control, option)
+            }
+        }
+        this._controlsOptions = inputs
+    }
+
 }

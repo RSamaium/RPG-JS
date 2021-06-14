@@ -102,7 +102,7 @@ module.exports = function(dirname, extend = {}) {
                      {
                          loader: require.resolve('sass-loader'),
                          options: {
-                            additionalData: `@import '@/config/_variables.scss';`
+                            additionalData: `@import '@/config/client/_variables.scss';`
                          }
                      }
                 ]

@@ -22,10 +22,20 @@ interface RpgServerEntryPointOptions {
      basePath: string
 
      standalone?: boolean
+
+      /** 
+     * The general configurations of the game.
+     * 
+     * @prop {object} [globalConfig]
+     * @memberof RpgServerEntryPoint
+     * */
+    globalConfig?: any
 }
 
 export default function(modules: ModuleType[], options: RpgServerEntryPointOptions) {
     const gameEngine = new RpgCommonGame('server')
+
+    if (!options.globalConfig) options.globalConfig = {}
 
     const relations = {
         onConnected: HookServer.PlayerConnected,

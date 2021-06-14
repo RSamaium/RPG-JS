@@ -24,7 +24,7 @@ export default {
         let moving = false
         manager.on('added', (evt, nipple) => {
             const keyup = (key) => {
-                 this.rpgScene().applyControl(key, false)
+                 this.rpgScene().controls.applyControl(key, false)
             }
             const end = () => {
                 moving = false

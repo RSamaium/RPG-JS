@@ -63,9 +63,19 @@ interface RpgClientEntryPointOptions {
     selectorCanvas?: string
 
     standalone?: boolean
+
+    /** 
+     * The general configurations of the game. For example, default keyboard keys, cursor noise. This is information that external modules can reuse
+     * 
+     * @prop {object} [globalConfig]
+     * @memberof RpgClientEntryPoint
+     * */
+    globalConfig?: any
 }
 
 export default (modules: ModuleType[], options: RpgClientEntryPointOptions) => {
+
+    if (!options.globalConfig) options.globalConfig = {}
 
     const relations = {
         onInit: HookClient.AddSprite,

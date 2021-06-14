@@ -1,4 +1,4 @@
-import { KeyboardControls } from './KeyboardControls'
+import { KeyboardControls, Controls, ControlOptions } from './KeyboardControls'
 import Renderer from './Renderer'
 import { _initSpritesheet } from './Sprite/Spritesheets'
 import { _initSound } from './Sound/Sounds'
@@ -47,20 +47,37 @@ export class RpgClientEngine {
      * */
     public socket: any
 
+     /** 
+     * retrieve the global configurations assigned at the entry point
+     * 
+     * @prop {object} [globalConfig]
+     * @readonly
+     * @memberof RpgClientEngine
+     * */
+    public globalConfig: any = {}
+
+    /** 
+     * Get the class managing the keyboard
+     * 
+     * @prop {KeyboardControls} [controls]
+     * @readonly
+     * @memberof RpgClientEngine
+     * */
+    public controls: KeyboardControls
+
     public _options: any
     private _objects: BehaviorSubject<{
         [playerId: string]: ObjectFixture
     }> = new BehaviorSubject({})
     public keyChange: Subject<string> = new Subject()
     private hasBeenDisconnected: boolean = false
-    controls: KeyboardControls
     private playerVault = new Vault()
     private isTeleported: boolean = false
     // TODO, public or private
     io
     private lastTimestamp: number = 0
 
-    constructor(private gameEngine, private options) { }
+    constructor(public gameEngine, private options) { }
 
     private async _init() {
         this.renderer = new Renderer(this)
@@ -90,6 +107,7 @@ export class RpgClientEngine {
         }
 
         this.io = this.options.io
+        this.globalConfig = this.options.globalConfig
 
        this.gameEngine._playerClass = this.renderer.options.spriteClass || RpgSprite
        this.gameEngine.standalone = this.options['standalone']
@@ -260,7 +278,7 @@ export class RpgClientEngine {
         const inputEvent = { input: actionName, playerId: this.gameEngine.playerId }
         this.gameEngine.processInput(inputEvent, this.gameEngine.playerId)
         RpgPlugin.emit(HookClient.SendInput, [this, inputEvent], true)
-        this.socket.emit('move', inputEvent)
+        if (this.socket) this.socket.emit('move', inputEvent)
     }
 
     private serverReconciliation()  {

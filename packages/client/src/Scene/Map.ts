@@ -1,39 +1,12 @@
-import { RpgCommonMap, Input, Control, RpgPlugin, HookClient } from '@rpgjs/common'
+import { RpgCommonMap, RpgPlugin, HookClient } from '@rpgjs/common'
 import TileMap from '../Tilemap'
 import { Viewport } from 'pixi-viewport'
 import { IScene } from '../Interfaces/Scene'
 import { Scene } from './Scene'
-import { SceneData } from './SceneData'
 import { spritesheets } from '../Sprite/Spritesheets'
 import Character from '../Sprite/Character'
 import { RpgSound } from '../Sound/RpgSound'
 
-@SceneData({
-    inputs: {
-        [Control.Up]: {
-            repeat: true,
-            bind: Input.Up
-        },
-        [Control.Down]: {
-            repeat: true,
-            bind: Input.Down
-        },
-        [Control.Right]: {
-            repeat: true,
-            bind: Input.Right
-        },
-        [Control.Left]: {
-            repeat: true,
-            bind: Input.Left
-        },
-        [Control.Action]: {
-            bind: [Input.Space, Input.Enter]
-        },
-        [Control.Back]: {
-            bind: Input.Escape
-        }
-    }
-})
 export class SceneMap extends Scene implements IScene {
 
     /** 
