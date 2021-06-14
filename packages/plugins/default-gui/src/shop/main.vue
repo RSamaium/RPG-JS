@@ -45,7 +45,7 @@ import BackButton from '../components/back.vue'
 
 export default {
     name: 'rpg-shop',
-    inject: ['rpgCurrentPlayer', 'rpgKeypress', 'rpgGuiClose', 'rpgSocket', 'rpgScene', 'rpgGui'],
+    inject: ['rpgCurrentPlayer', 'rpgKeypress', 'rpgGuiClose', 'rpgSocket', 'rpgEngine', 'rpgGui'],
     props: ['items'],
     data() {
         return {
@@ -75,7 +75,7 @@ export default {
 
         if (this.rpgGui.exists('rpg-controls')) this.rpgGui.hide('rpg-controls') 
 
-        this.rpgScene().stopInputs()
+        this.rpgEngine.controls.stopInputs()
 
         this.obsCurrentPlayer = this.rpgCurrentPlayer.subscribe(({ object }) => {
             this.player = object
@@ -235,7 +235,7 @@ export default {
         },
         close() {
             this.rpgGuiClose()
-            this.rpgScene().listenInputs()
+            this.rpgEngine.controls.listenInputs()
             if (this.rpgGui.exists('rpg-controls')) this.rpgGui.display('rpg-controls') 
         }
     },

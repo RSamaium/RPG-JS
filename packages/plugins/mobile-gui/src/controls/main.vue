@@ -15,7 +15,7 @@ const DIRECTIONS = ['left', 'right', 'up', 'down']
 
 export default {
     name: 'rpg-controls',
-    inject: ['rpgScene'],
+    inject: ['rpgEngine'],
     mounted() {
         const manager  = nipplejs.create({
             zone: this.$refs.dPad
@@ -24,7 +24,7 @@ export default {
         let moving = false
         manager.on('added', (evt, nipple) => {
             const keyup = (key) => {
-                 this.rpgScene().controls.applyControl(key, false)
+                 this.rpgEngine.controls.applyControl(key, false)
             }
             const end = () => {
                 moving = false
@@ -62,19 +62,19 @@ export default {
             setInterval(() => {
                 if (moving) {
                     for (let dir in directions) {
-                        this.rpgScene().applyControl(dir, true)
+                        this.rpgEngine.controls.applyControl(dir, true)
                     }
                 }
-            }, 200)
+            }, 400)
         })
         
     },
     methods: {
         openMenu() {
-            this.rpgScene().applyControl('back')
+            this.rpgEngine.controls.applyControl('back')
         },
         action() {
-            this.rpgScene().applyControl('action')
+            this.rpgEngine.controls.applyControl('action')
         }
     }
 }
