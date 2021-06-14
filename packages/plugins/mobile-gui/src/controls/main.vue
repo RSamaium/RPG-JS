@@ -85,6 +85,7 @@ export default {
     height: 100%;
     position: absolute;
     width: 100%;
+    z-index: 100;
 }
 
 .d-pad {
