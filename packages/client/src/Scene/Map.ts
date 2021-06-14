@@ -141,7 +141,7 @@ export class SceneMap extends Scene implements IScene {
     updateScene(obj) {
         const shapes = obj.partial.shapes
         if (shapes) {
-            const shapesInMap = this.gameMap.shapes
+            const shapesInMap = this.gameMap.getShapes()
             for (let name in shapes) {
                 const shapeMap = shapesInMap[name]
                 let shape = shapes[name]

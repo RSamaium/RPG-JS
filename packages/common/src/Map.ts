@@ -20,9 +20,7 @@ export default class RpgCommonMap {
     tileWidth: number = 0
     tileHeight: number = 0
     layers: any[] = []
-    shapes: {
-        [name: string]: any
-    } = {}
+    private shapes: Shape[] = []
 
     static get buffer() {
         return buffer
@@ -62,17 +60,17 @@ export default class RpgCommonMap {
     createShape(obj: HitObject): Shape {
         obj.name = (obj.name || generateUID()) as string
         const shape = new Shape(obj)
-        this.shapes[obj.name] = shape
+        this.shapes.push(shape)
         return shape
     }
 
     removeShape(name: string) {
         // TODO: out players after delete shape
-        delete this.shapes[name]
+        this.shapes = this.shapes.filter(shape => shape.name != name)
     }
 
     getShapes(): Shape[] {
-        return Object.values(this.shapes)
+        return this.shapes
     }
     
     getPositionByShape(filter): { x: number, y: number, z: number } | null {

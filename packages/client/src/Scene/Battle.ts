@@ -96,7 +96,7 @@ export class SceneBattle extends Scene implements IScene {
 
     set active(val) {
         this.pointerActive = val
-        val ? this.listenInputs() : this.stopInputs()
+        //val ? this.listenInputs() : this.stopInputs()
     }
 
     get active() {
