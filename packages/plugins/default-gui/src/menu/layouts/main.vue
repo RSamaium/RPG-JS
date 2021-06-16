@@ -10,7 +10,7 @@
     </div>
     <div class="menu-right">
          <rpg-window :fullWidth="true" height="100%">
-            <Hero :face="require('../assets/face.png')" />
+            <Hero class="hero-face" />
         </rpg-window>
     </div>
  </div>
@@ -79,7 +79,16 @@ export default {
 }
 </script>
 
-<style scoped>
+<style lang="scss">
+$hero-face: none !default;
+
+.hero-face .face-column > div {
+    background-image: $hero-face;
+}
+</style>
+
+<style scoped lang="scss">
+
 .menu-row {
     flex-direction: row;
     display: flex;

@@ -17,6 +17,8 @@ $window-font-family: 'lato';
 $cursor-background: #7782ab;
 $cursor-border: 1px solid #9db0c6;
 
+$hero-face: url('@/config/client/assets/face.png');
+
 @mixin window-content {
     // add extra style stylesheet
 }

@@ -1,7 +1,7 @@
 <template>
     <div class="hero">
         <div class="face-column">
-            <div :style="image"></div>
+            <div></div>
         </div>
         <div class="name-column">
             <ul>
