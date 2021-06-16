@@ -73,7 +73,7 @@ interface RpgClientEntryPointOptions {
     globalConfig?: any
 }
 
-export default (modules: ModuleType[], options: RpgClientEntryPointOptions) => {
+export default (modules: ModuleType[], options: RpgClientEntryPointOptions): RpgClientEngine => {
 
     if (!options.globalConfig) options.globalConfig = {}
 

@@ -157,6 +157,21 @@ export interface RpgClient {
     /**
      * Object containing the hooks concerning the engine
      * 
+     * ```ts
+     * import { RpgClientEngine, RpgSpriteHooks, RpgModule, RpgClient } from '@rpgjs/client'
+     * 
+     * const engine: RpgEngineHooks = {
+     *      onConnected(engine: RpgClientEngine) {
+     *          console.log('client is connected')
+     *      }
+     * }
+     * 
+     * @RpgModule<RpgClient>({
+     *      engine
+     * })
+     * class RpgClientModule {}
+     * ```
+     * 
      * @prop {RpgEngineHooks} [engine]
      * @memberof RpgClient
      */

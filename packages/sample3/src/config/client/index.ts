@@ -1,5 +1,5 @@
 import { inputs } from './inputs'
 
-export {
+export default {
     inputs
 }
