@@ -19,7 +19,7 @@ const isRpg = type == 'rpg'
 module.exports = function(dirname, extend = {}) {
 
     let rpgConfig = {
-        title: 'My RPG Game'
+        name: 'My RPG Game'
     }
 
     const rpgConfigPath = path.join(dirname, 'rpg.json')
@@ -138,7 +138,7 @@ module.exports = function(dirname, extend = {}) {
         },
         plugins: [
             new HtmlWebpackPlugin({
-                title: rpgConfig.title,
+                title: rpgConfig.name,
                 template: path.join(dirname, 'src/index.html')
             }),
             new MiniCssExtractPlugin({
