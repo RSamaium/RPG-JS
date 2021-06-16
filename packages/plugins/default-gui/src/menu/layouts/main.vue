@@ -26,7 +26,7 @@ export default {
             default: 'Gold'
         }
     },
-    inject: ['rpgCurrentPlayer', 'rpgKeypress', 'rpgScene', 'rpgStage', 'rpgGuiClose', 'rpgGui'],
+    inject: ['rpgCurrentPlayer', 'rpgKeypress', 'rpgEngine', 'rpgStage', 'rpgGuiClose', 'rpgGui'],
     data() {
         return {
             player: {},
@@ -60,7 +60,7 @@ export default {
                 this.rpgStage.filters = []
                 if (this.rpgGui.exists('rpg-controls')) this.rpgGui.display('rpg-controls') 
                 this.rpgGuiClose('rpg-main-menu')
-                this.rpgScene().listenInputs()
+                this.rpgEngine.controls.listenInputs()
             }
         })
     },

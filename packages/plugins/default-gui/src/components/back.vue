@@ -4,10 +4,10 @@
 
 <script>
 export default {
-    inject: ['rpgScene'],
+    inject: ['rpgEngine'],
     methods: {
         back() {
-            this.rpgScene().applyControl('back')
+            this.rpgEngine.controls.applyControl('back')
         }
     }
 }
