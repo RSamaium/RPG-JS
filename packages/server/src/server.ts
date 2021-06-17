@@ -1,5 +1,4 @@
 import { SceneMap } from './Scenes/Map';
-import { SceneBattle } from './Scenes/Battle';
 import { RpgPlayer } from './Player/Player'
 import { Query } from './Query'
 import { DAMAGE_SKILL, DAMAGE_PHYSIC, DAMAGE_CRITICAL, COEFFICIENT_ELEMENTS } from './presets'
@@ -10,17 +9,42 @@ let tick = 0
 
 export class RpgServerEngine {
 
+     /**
+     * Express App Instance. If you have assigned this variable before starting the game, you can get the instance of Express
+     * 
+     * @prop {Express App} [app]
+     * @memberof RpgServerEngine
+     */
     app
+
+    /**
+     * List of the data
+     * 
+     * @prop {object} [database]
+     * @memberof RpgServerEngine
+     */
     public database: any = {}
+
+    /**
+     * Combat formulas
+     * 
+     * @prop {object} [damageFormulas]
+     * @memberof RpgServerEngine
+     */
     public damageFormulas: any = {}
+
     private playerClass: any
     private scenes: Map<string, any> = new Map()
     protected totalConnected: number = 0
     private scheduler: Scheduler
 
-    constructor(public io, public gameEngine, private inputOptions) { 
-        
-    }
+    /**
+     * Combat formulas
+     * 
+     * @prop {Socket Io Server} [io]
+     * @memberof RpgServerEngine
+     */
+    constructor(public io, public gameEngine, private inputOptions) {}
 
     private async _init() {
         this.playerClass = this.inputOptions.playerClass || RpgPlayer
@@ -83,7 +107,7 @@ export class RpgServerEngine {
             }
         })
         this.io.on('connection', this.onPlayerConnected.bind(this))
-        RpgPlugin.emit(HookServer.Start)
+        RpgPlugin.emit(HookServer.Start, this)
     }
 
     step() {
@@ -93,7 +117,7 @@ export class RpgServerEngine {
         }
     }
 
-    loadScenes() {
+    private loadScenes() {
         this.scenes.set(SceneMap.id, new SceneMap(this.inputOptions.maps, this))
     }
 
@@ -105,7 +129,7 @@ export class RpgServerEngine {
         currentPlayer._socket.emit(eventName, data)
     }
 
-    onPlayerConnected(socket) {
+    private onPlayerConnected(socket) {
         const playerId = Utils.generateUID()
         let player: RpgPlayer = new this.playerClass(this.gameEngine, playerId)
 
@@ -126,7 +150,7 @@ export class RpgServerEngine {
         player.execMethod('onConnected')
     }
 
-    onPlayerDisconnected(socketId, playerId: string) { 
+    private onPlayerDisconnected(socketId, playerId: string) { 
         const player: RpgPlayer = World.getUser(playerId) as RpgPlayer
         player.execMethod('onDisconnected')
         World.disconnectUser(playerId)

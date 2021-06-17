@@ -19,6 +19,7 @@
     "@rpgjs/compiler": "^3.0.0-alpha.10",
     "@rpgjs/default-gui": "^3.0.0-alpha.10",
     "@rpgjs/mobile-gui": "^3.0.0-alpha.10",
+    "@rpgjs/save": "^1.0.0",
     "@rpgjs/server": "^3.0.0-alpha.10",
     "@rpgjs/standalone": "^3.0.0-alpha.10",
     "@rpgjs/starter-kit": "^3.0.0-alpha.10",

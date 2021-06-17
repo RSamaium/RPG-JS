@@ -3,7 +3,7 @@ import { ModuleType } from '@rpgjs/common'
 import { Scene } from './Scene/Scene'
 import { RpgClientEngine } from './RpgClientEngine'
 
-export interface RpgEngineHooks {
+export interface RpgClientEngineHooks {
     /**
      * When the engine is started. If you send false, you prevent the client from connecting to the server
      * 
@@ -158,9 +158,9 @@ export interface RpgClient {
      * Object containing the hooks concerning the engine
      * 
      * ```ts
-     * import { RpgClientEngine, RpgSpriteHooks, RpgModule, RpgClient } from '@rpgjs/client'
+     * import { RpgClientEngine, RpgClientEngineHooks, RpgModule, RpgClient } from '@rpgjs/client'
      * 
-     * const engine: RpgEngineHooks = {
+     * const engine: RpgClientEngineHooks = {
      *      onConnected(engine: RpgClientEngine) {
      *          console.log('client is connected')
      *      }
@@ -172,10 +172,10 @@ export interface RpgClient {
      * class RpgClientModule {}
      * ```
      * 
-     * @prop {RpgEngineHooks} [engine]
+     * @prop {RpgClientEngineHooks} [engine]
      * @memberof RpgClient
      */
-    engine?: RpgEngineHooks
+    engine?: RpgClientEngineHooks
 
     /** 
      * Array containing the list of spritesheets

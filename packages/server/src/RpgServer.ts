@@ -1,9 +1,14 @@
 import { ModuleType } from '@rpgjs/common'
 import { RpgPlayer } from './Player/Player'
 import { RpgMap } from './Game/Map'
+import { RpgServerEngine } from './server'
 
 interface RpgClassMap<T> {
     new (server: any): T,
+}
+
+export interface RpgServerEngineHooks {
+    onStart?: (server: RpgServerEngine) => any
 }
 
 export interface RpgPlayerHooks {
@@ -75,6 +80,29 @@ export interface RpgServer {
      * @memberof RpgServer
      */
     imports?: ModuleType[]
+
+    /**
+     * Object containing the hooks concerning the engine
+     * 
+     * ```ts
+     * import { RpgServerEngine, RpgServerEngineHooks, RpgModule, RpgClient } from '@rpgjs/server'
+     * 
+     * const engine: RpgEngineHooks = {
+     *      onStart(server: RpgServerEngine) {
+     *          console.log('server is started')
+     *      }
+     * }
+     * 
+     * @RpgModule<RpgServer>({
+     *      engine
+     * })
+     * class RpgServerModule {}
+     * ```
+     * 
+     * @prop {RpgServerEngineHooks} [engine]
+     * @memberof RpgServer
+     */
+    engine?: RpgServerEngineHooks
 
     /** 
      * Give the `player` object hooks. Each time a player connects, an instance of `RpgPlayer` is created.

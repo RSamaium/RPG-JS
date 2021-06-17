@@ -8,7 +8,7 @@
         position="bottom-middle" 
         class="margin-bottom" 
         >
-          <rpg-choice :choices="menu" @selected="selected"></rpg-choice>
+          <rpg-choice :choices="menuChoice" @selected="selected"></rpg-choice>
       </rpg-window>
   </div>
 </template>
@@ -23,17 +23,41 @@ export default {
         return {
             menu: [
                 { text:  'Start Game', value: 'start' },
-                { text: 'Load Game', value: 'load' }
+                { text: 'Load Game', value: 'load' },
+                { text: 'Options', value: 'options' }
             ]
         }
     },
     methods: {
         selected(index) {
             const { value } = this.menu[index]
-            if (value == 'start') {
-                this.rpgEngine.connection()
-                this.rpgGui.hide(name)
+            switch (value) {
+                case 'start':
+                    this.rpgEngine.connection()
+                    this.rpgGui.hide(name)
+                    break
+                case 'load':
+                    this.rpgGui.hide(name)
+                    this.rpgGui.display('rpg-load')
+                    break
+                case 'options':
+                    this.rpgGui.hide(name)
+                    this.rpgGui.display('rpg-options')
+                    break
             }
+        }
+    },
+    computed: {
+        menuChoice() {
+            return this.menu.filter(menu => {
+                if (menu.value == 'load' && !this.rpgGui.exists('rpg-load')) {
+                    return false
+                }
+                else if (menu.value == 'options' && !this.rpgGui.exists('rpg-options')) {
+                    return false
+                }
+                return true
+            })
         }
     }
 }

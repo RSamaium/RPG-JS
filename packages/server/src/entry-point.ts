@@ -32,7 +32,7 @@ interface RpgServerEntryPointOptions {
     globalConfig?: any
 }
 
-export default function(modules: ModuleType[], options: RpgServerEntryPointOptions) {
+export default function(modules: ModuleType[], options: RpgServerEntryPointOptions): RpgServerEngine {
     const gameEngine = new RpgCommonGame('server')
 
     if (!options.globalConfig) options.globalConfig = {}
@@ -47,10 +47,15 @@ export default function(modules: ModuleType[], options: RpgServerEntryPointOptio
         onDisconnected: HookServer.PlayerDisconnected
     }
 
+    const relationsEngine = {
+        onStart: HookServer.Start
+    }
+
     loadModules(modules, {
         side: 'server',
         relations: {
-            player: relations
+            player: relations,
+            engine: relationsEngine
         }
     })
 

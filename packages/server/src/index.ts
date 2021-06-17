@@ -1,6 +1,6 @@
 import entryPoint from './entry-point'
 import { Direction, Input, Control, RpgPlugin, HookServer, HookClient, RpgModule } from '@rpgjs/common'
-import { RpgServer, RpgPlayerHooks } from './RpgServer'
+import { RpgServer, RpgPlayerHooks, RpgServerEngineHooks } from './RpgServer'
 import { EventData } from './decorators/event'
 import { MapData } from './decorators/map'
 import { RpgMap } from './Game/Map'
@@ -11,6 +11,7 @@ import { Query } from './Query'
 import Monitor from './Monitor'
 import * as Presets from './presets'
 import { Move } from './Player/MoveManager'
+import { RpgServerEngine } from './server'
 
 export {
     RpgServer,
@@ -34,5 +35,7 @@ export {
     HookServer,
     HookClient,
     RpgModule,
-    RpgPlayerHooks
+    RpgPlayerHooks,
+    RpgServerEngineHooks,
+    RpgServerEngine
 }
