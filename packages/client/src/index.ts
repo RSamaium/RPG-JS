@@ -1,7 +1,7 @@
 import { Direction, Control, Input, PrebuiltGui, HookServer, HookClient } from '@rpgjs/common'
 import entryPoint from './clientEntryPoint'
 import {  RpgModule } from '@rpgjs/common'
-import { RpgClient, RpgSceneHooks, RpgSceneMapHooks, RpgSpriteHooks, RpgEngineHooks } from './RpgClient'
+import { RpgClient, RpgSceneHooks, RpgSceneMapHooks, RpgSpriteHooks, RpgClientEngineHooks } from './RpgClient'
 import { RpgClientEngine } from './RpgClientEngine'
 import { RpgSprite } from './Sprite/Player'
 import { Spritesheet } from './Sprite/Spritesheet'
@@ -49,7 +49,7 @@ export {
     RpgSceneHooks,
     RpgSceneMapHooks,
     RpgSpriteHooks,
-    RpgEngineHooks,
+    RpgClientEngineHooks,
     RpgResource,
     RpgClientEngine
 }

@@ -15,6 +15,7 @@
   "private": true,
   "license": "ISC",
   "dependencies": {
+    "@rpgjs/chat": "^1.0.0",
     "@rpgjs/client": "^3.0.0-alpha.10",
     "@rpgjs/compiler": "^3.0.0-alpha.10",
     "@rpgjs/default-gui": "^3.0.0-alpha.10",
