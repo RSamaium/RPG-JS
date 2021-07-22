@@ -11,9 +11,7 @@ import { player } from './player'
         MapZ,
         CaveMap,
     ],
-    database: {
-        databaseList
-    },
+    database: databaseList,
     player
 })
 export default class RpgServerEngine {}

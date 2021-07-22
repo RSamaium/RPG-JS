@@ -49,12 +49,15 @@ export function loadModules(modules, obj) {
         else {
             mod = new moduleClass()
         }
-        const { imports, maps, spritesheets, sounds, gui, scenes, engine } = mod
+        const { imports, maps, spritesheets, sounds, gui, scenes, engine, database } = mod
         if (imports) {
             loadModules(imports, obj)
         }
         if (maps) {
             RpgPlugin.on(HookServer.AddMap, () => maps)
+        }
+        if (database) {
+            RpgPlugin.on(HookServer.AddDatabase, () => database)
         }
         if (spritesheets) {
             RpgPlugin.on(HookClient.AddSpriteSheet, () => spritesheets)
