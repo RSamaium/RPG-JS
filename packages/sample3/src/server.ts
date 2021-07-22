@@ -2,7 +2,7 @@
 import http from 'http'
 import express from 'express'
 import { Server } from 'socket.io'
-import { entryPoint } from '@rpgjs/server'
+import { entryPoint, RpgWorld, Direction } from '@rpgjs/server'
 import modules from './modules' 
 
 const PORT = process.env.PORT || 3000

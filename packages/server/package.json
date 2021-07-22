@@ -27,5 +27,8 @@
     "sat": "^0.8.0",
     "yuka": "^0.7.5"
   },
-  "gitHead": "3e530eb453e1c18cf736fa68c5981a88fb7bf8f5"
+  "gitHead": "3e530eb453e1c18cf736fa68c5981a88fb7bf8f5",
+  "devDependencies": {
+    "typescript": "^4.3.5"
+  }
 }

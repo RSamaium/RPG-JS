@@ -115,7 +115,7 @@ WIP|
 To contribute to the developments, install the sources locally:
 
 ```bash
-git clone ...
+git clone https://github.com/RSamaium/RPG-JS.git
 npm install
 npx lerna bootstrap
 npm run dev

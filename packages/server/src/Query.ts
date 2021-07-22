@@ -68,7 +68,8 @@ class QueryClass {
      */
     getPlayers(): RpgPlayer[] {
         const users: any = World.getUsers() 
-        return Object.values(users) as RpgPlayer[]
+        const array = Object.values(users) as RpgPlayer[]
+        return array.map((user: RpgPlayer) => this.getPlayer(user))
     }
 
     /**

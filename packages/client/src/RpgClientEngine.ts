@@ -245,7 +245,9 @@ export class RpgClientEngine {
         }
         logic.prevParamsChanged = Object.assign({}, logic)
         for (let key in params) {
-            if (!localEvent && (key == 'position' || key == 'direction')) {
+            if (!localEvent && 
+                (key == 'position' || 
+                (key == 'direction' && paramsChanged && paramsChanged.position))) {
                 continue
             }
             logic[key] = params[key]
