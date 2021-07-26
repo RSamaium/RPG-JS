@@ -76,6 +76,7 @@ export class RpgClientEngine {
     // TODO, public or private
     io
     private lastTimestamp: number = 0
+    private pressInput: boolean = false
 
     constructor(public gameEngine, private options) { }
 
@@ -223,6 +224,7 @@ export class RpgClientEngine {
             localEvent,
             paramsChanged
         } = obj
+        const isMe = () => id == this.gameEngine.playerId
         let logic
         let teleported = false
         if (localEvent) {
@@ -248,7 +250,7 @@ export class RpgClientEngine {
             if (!localEvent && 
                 (key == 'position' || 
                 (key == 'direction' && paramsChanged && paramsChanged.position))) {
-                continue
+                if ((isMe() && this.pressInput) || !isMe()) continue
             }
             logic[key] = params[key]
         }
@@ -269,7 +271,7 @@ export class RpgClientEngine {
                 }
             }
         })
-        if (teleported && id == this.gameEngine.playerId) {
+        if (teleported && isMe()) {
             this.isTeleported = true
             this.playerVault['_vault'] = []
         }
@@ -277,6 +279,7 @@ export class RpgClientEngine {
     }
 
     sendInput(actionName: string) {
+        this.pressInput = true
         const inputEvent = { input: actionName, playerId: this.gameEngine.playerId }
         this.gameEngine.processInput(inputEvent, this.gameEngine.playerId)
         RpgPlugin.emit(HookClient.SendInput, [this, inputEvent], true)
@@ -310,7 +313,7 @@ export class RpgClientEngine {
         this.gameEngine.emit('client__preStep')
         const { playerId } = this.gameEngine
         const player = this.gameEngine.world.getObject(playerId)
-        if (player && this.isTeleported) {
+        if (player && this.isTeleported && this.pressInput) {
             const { x, y } = player.position
             this.playerVault.add(
                 SI.snapshot.create([{ id: playerId, x, y }])
@@ -330,6 +333,9 @@ export class RpgClientEngine {
                     player.direction = direction
                 }
             })
+        }
+        else {
+            this.pressInput = false
         }
     }
 

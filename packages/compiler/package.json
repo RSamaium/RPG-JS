@@ -42,5 +42,5 @@
   "bin": {
     "rpgjs": "./bin/generate/index.js"
   },
-  "gitHead": "3e530eb453e1c18cf736fa68c5981a88fb7bf8f5"
+  "gitHead": "b65af6f39f9d7ae733b11086bf29257bfa830e23"
 }

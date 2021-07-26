@@ -2,7 +2,7 @@
 import http from 'http'
 import express from 'express'
 import { Server } from 'socket.io'
-import { entryPoint, RpgWorld, Direction } from '@rpgjs/server'
+import { entryPoint, RpgWorld, Direction, Move } from '@rpgjs/server'
 import modules from './modules' 
 
 const PORT = process.env.PORT || 3000
@@ -24,6 +24,13 @@ rpgGame.app = app
     res.setHeader('Content-Type', register.contentType)
     res.end(await register.metrics())
 })*/
+
+app.use('/moveleft', async (req, res) => {
+    const [player] = RpgWorld.getPlayers()
+    player.frequency = 0
+    player.moveRoutes([ Move.tileLeft(4) ])
+    res.send()
+})
 
 app.use('/', express.static(__dirname + '/../client'))
 

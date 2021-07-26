@@ -20,7 +20,7 @@ function wait(sec: number) {
 
 type CallbackTileMove = (player: RpgPlayer, map) => Direction[]
 type CallbackTurnMove = (player: RpgPlayer, map) => string
-type Routes = (string | Promise<any> | Direction | Function)[]
+type Routes = (string | Promise<any> | Direction | Direction[] | Function)[]
 
 export enum Frequency {
     Lowest = 600,

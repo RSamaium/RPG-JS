@@ -11,7 +11,7 @@ import { Potion } from '../database/items/potion';
     file: require('./tmx/samplemap.tmx'),
     name: 'Town',
     events: [
-        Villager1Event,
+       /* Villager1Event,
         Villager2Event,
         NpcEvent({
             name: 'EV-2',
@@ -32,7 +32,7 @@ import { Potion } from '../database/items/potion';
             gain: {
                 item: Potion
             }
-        })
+        })*/
     ],
     sounds: ['town']
 })
