@@ -4,16 +4,18 @@ import { entryPoint as entryPointClient } from '@rpgjs/client'
 
 const { ClientIo, serverIo } = MockIo
 
-export function entryPoint(modules) {
+export function entryPoint(modules, options = {}) {
     const io = new ClientIo()
     const server = entryPointServer(modules, {
         io: serverIo,
         standalone: true,
-        basePath: ''
+        basePath: '',
+        ...options
     })
     const client = entryPointClient(modules, { 
         standalone: true,
-        io
+        io,
+        ...options
     })
    return {
        async start() {

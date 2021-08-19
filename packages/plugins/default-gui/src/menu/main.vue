@@ -9,6 +9,7 @@
 import MainLayout from './layouts/main.vue'
 import ItemsLayout from './layouts/item.vue'
 import StatusLayout from './layouts/status.vue'
+import EquipmentLayout from './layouts/equipment.vue'
 import BackButton from '../components/back.vue'
 
 export default {
@@ -34,7 +35,8 @@ export default {
         MainLayout,
         ItemsLayout,
         StatusLayout,
-        BackButton
+        BackButton,
+        EquipmentLayout
     }
 }
 </script>

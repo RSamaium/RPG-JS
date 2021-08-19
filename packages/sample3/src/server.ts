@@ -25,13 +25,6 @@ rpgGame.app = app
     res.end(await register.metrics())
 })*/
 
-app.use('/moveleft', async (req, res) => {
-    const [player] = RpgWorld.getPlayers()
-    player.frequency = 0
-    player.moveRoutes([ Move.tileLeft(4) ])
-    res.send()
-})
-
 app.use('/', express.static(__dirname + '/../client'))
 
 server.listen(PORT, () =>  {

@@ -36,12 +36,13 @@ export default {
                 text: 'Items',
                 value: 'item',
                 layout: 'ItemsLayout'
-            },/*  {
+            }, /*  {
                 text: 'Skills',
                 value: 'skill'
             },  {
-                text: 'Equip',
-                value: 'equipment'
+                text: 'Equipment',
+                value: 'equipment',
+                layout: 'EquipmentLayout'
             }, 
             {
                 text: 'Status',

@@ -150,6 +150,11 @@ export class RpgServerEngine {
         player.execMethod('onConnected')
     }
 
+    /**
+     * 
+     * @param {string} socketId - The socketId of the player that disconnected
+     * @param {string} playerId - The playerId of the player that disconnected 
+     */
     private onPlayerDisconnected(socketId, playerId: string) { 
         const player: RpgPlayer = World.getUser(playerId) as RpgPlayer
         player.execMethod('onDisconnected')
