@@ -49,6 +49,16 @@ module.exports = function(dirname, extend = {}) {
         )
     }
 
+    let outputStandalone = {}
+
+    if (type != 'mmorpg') {
+        outputStandalone = {
+            libraryTarget: 'umd',
+            libraryExport: 'default',
+            library: 'RPGJS'
+        }
+    }
+
     return  {
         mode,
         node: {
@@ -57,7 +67,8 @@ module.exports = function(dirname, extend = {}) {
         entry: `./src/${ type == 'mmorpg' ? 'client.ts' : 'standalone.ts' }`,
         output: {
             path: path.join(dirname, 'dist/' + dir),
-            filename: 'bundle.js'
+            filename: 'bundle.js',
+            ...outputStandalone
         },
         devtool: prod ? false : 'source-map',
         resolve: {

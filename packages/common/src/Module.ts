@@ -46,8 +46,11 @@ export function loadModules(modules, obj) {
         if (options && !isClass(moduleClass) && isFunction(moduleClass)) {
             mod = new (moduleClass(options[side]))()
         }
-        else {
+        else if (isClass(moduleClass)) {
             mod = new moduleClass()
+        }
+        else {
+            mod = moduleClass
         }
         const { imports, maps, spritesheets, sounds, gui, scenes, engine, database } = mod
         if (imports) {

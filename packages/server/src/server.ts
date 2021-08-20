@@ -90,7 +90,8 @@ export class RpgServerEngine {
      * @returns {void}
      * @memberof RpgServerEngine
      */
-    async start() {
+    async start(inputOptions?) {
+        if (inputOptions) this.inputOptions = inputOptions
         await this._init()
         let schedulerConfig = {
             tick: this.step.bind(this),
