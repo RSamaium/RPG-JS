@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "es6",
+    "module": "commonjs",
+    "outDir": "dist",
+    "strict": true,
+    "sourceMap": true,
+    "strictNullChecks": true,
+    "strictPropertyInitialization": false,
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "removeComments": false,
+    "noUnusedParameters": false,
+    "noUnusedLocals": false,
+    "noImplicitThis": false,
+    "noImplicitAny": false,
+    "noImplicitReturns": false,
+    "declaration": false,
+    "experimentalDecorators": true, 
+    "emitDecoratorMetadata": true,
+    "types": ["node", "jest"]
+  },
+  "include": [
+    "src", 
+    "index.d.ts", 
+    "tests", 
+    "node_modules/@rpgjs/compiler/types/*.d.ts"
+  ]
+}
