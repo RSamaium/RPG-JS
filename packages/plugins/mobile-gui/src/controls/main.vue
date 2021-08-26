@@ -32,6 +32,13 @@ export default {
                     keyup(key)
                 }
             }
+            const move = () => {
+                if (moving) {
+                    for (let dir in directions) {
+                        this.rpgEngine.controls.applyControl(dir, true)
+                    }
+                }
+            }
             nipple.on('end', end)
             nipple.on('move', (evt, data) => {
                if (data.direction) {
@@ -57,15 +64,11 @@ export default {
                     }
                    
                     moving = true
+
+                    move()
                }
             })
-            setInterval(() => {
-                if (moving) {
-                    for (let dir in directions) {
-                        this.rpgEngine.controls.applyControl(dir, true)
-                    }
-                }
-            }, 400)
+            setInterval(move, 400)
         })
         
     },

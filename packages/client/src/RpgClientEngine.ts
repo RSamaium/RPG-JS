@@ -311,6 +311,7 @@ export class RpgClientEngine {
 
     private step(t, dt) {
         this.gameEngine.emit('client__preStep')
+        RpgPlugin.emit(HookClient.Step, [this, t, dt], true)
         const { playerId } = this.gameEngine
         const player = this.gameEngine.world.getObject(playerId)
         if (player && this.isTeleported && this.pressInput) {

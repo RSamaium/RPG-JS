@@ -1,0 +1,17 @@
+{
+  "name": "@rpgjs/gamepad",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@rpgjs/client": "^3.0.0-alpha.13",
+    "gamepad.js": "github:neogeek/gamepad.js",
+    "joypad.js": "^2.2.5"
+  }
+}

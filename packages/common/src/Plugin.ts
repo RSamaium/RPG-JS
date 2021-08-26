@@ -24,6 +24,7 @@ export enum HookServer {
 
 export enum HookClient {
     Start = 'Client.Start',
+    Step = 'Client.Step',
     Connected = 'Client.Connected',
     Disconnect = 'Client.Disconnect',
     ConnectedError = 'Client.ConnectedError',

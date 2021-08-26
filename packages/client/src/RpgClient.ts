@@ -13,6 +13,14 @@ export interface RpgClientEngineHooks {
     onStart?: (engine: RpgClientEngine) => any
 
     /**
+     * Each frame
+     * 
+     * @prop { (engine: RpgClientEngine, t: number) => boolean | any } [onStep]
+     * @memberof RpgEngineHooks
+     */
+     onStep?: (engine: RpgClientEngine, t?: number, dt?: number) => any
+
+    /**
      * Recover keys from the pressed keyboard
      * 
      * @prop { (engine: RpgClientEngine, obj: { input: string, playerId: number }) => any } [onInput]

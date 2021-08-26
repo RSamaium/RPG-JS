@@ -18,6 +18,7 @@
     "@rpgjs/client": "^3.0.0-alpha.13",
     "@rpgjs/compiler": "^3.0.0-alpha.13",
     "@rpgjs/default-gui": "^3.0.0-alpha.13",
+    "@rpgjs/gamepad": "^1.0.0",
     "@rpgjs/mobile-gui": "^3.0.0-alpha.13",
     "@rpgjs/server": "^3.0.0-alpha.13",
     "@rpgjs/standalone": "^3.0.0-alpha.13",

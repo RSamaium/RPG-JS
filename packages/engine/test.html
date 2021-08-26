@@ -3,5 +3,52 @@
 <script src="rpg.engine.js"></script>
 
 <script>
+
+    const component = {
+        name: 'my-gui',
+        template: `
+            <div style="color: white; position: absolute;">
+                Component
+            </div>
+        `
+    }
+
+    RPGJS.load('pipoya')//
+
+   /**
+    *  {
+            'author': 'pipoya',
+            'license': '',
+            'website': 'https://pipoya.itch.io/pipoya-rpg-tileset-32x32',
+            'tilesets': {
+                '[A]Dirt_pipo': {
+                    'source': 'test.png',
+                    'tsx': 'test.tsx'
+                }
+                '[A]Flower_pipo': require('./assets/[A]Flower_pipo.png'),
+                '[A]Grass_pipo': require('./assets/[A]Grass_pipo.png'),
+                '[A]Wall-Up_pipo': require('./assets/[A]Wall-Up_pipo.png'),
+                '[A]WaterFall_pipo': require('./assets/[A]WaterFall_pipo.png'),
+                '[A]Water_pipo': require('./assets/[A]Water_pipo.png'),
+                '[Base]BaseChip_pipo': require('./assets/[Base]BaseChip_pipo.png')
+            }
+        }
+    * 
+    * /
+
+    RPGJS.renderHooks({
+        gui: [
+            component
+        ]
+    })
+
+    RPGJS.logicHooks({
+        player: {
+            onConnected(player) {
+                
+            }
+        }
+    })
+
     RPGJS.start()
 </script>

@@ -1,0 +1,74 @@
+import { RpgClient, RpgModule, RpgClientEngine, Direction, RpgGui } from '@rpgjs/client'
+import 'joypad.js'
+
+const joypad = window['joypad']
+let moving = false
+let directions = {}
+let axisDate = 0
+const DIRECTIONS = [Direction.Left, Direction.Right, Direction.Up, Direction.Down]
+
+@RpgModule<RpgClient>({ 
+    engine: {
+        onStart(engine: RpgClientEngine) {
+            const move = () => {
+                if (moving) {
+                    for (let dir in directions) {
+                        engine.controls.applyControl(dir, true)
+                    }
+                }
+            }
+            joypad.on('connect', e => {
+                RpgGui.display('rpg-notification', {
+                    message: 'Your gamepad is connected !',
+                    time: 2000
+                })
+                setInterval(move, 400)
+            })
+            joypad.on('disconnect', e => {
+                RpgGui.display('rpg-notification', {
+                    message: 'Your gamepad is disconnected !',
+                    time: 2000
+                })
+            })
+            joypad.on('button_press', e => {
+                const { buttonName } = e.detail;
+                switch (buttonName) {
+                    case 'button_0':
+                        engine.controls.applyControl('action')
+                        break;
+                    case 'button_1':
+                    case 'button_9':
+                        engine.controls.applyControl('back')
+                        break;
+                }
+            })
+            joypad.on('axis_move', async e => {
+                moving = true
+                axisDate = Date.now()
+                let direction = e.detail.directionOfMovement
+                if (direction == 'bottom') direction = Direction.Down
+                else if (direction == 'top') direction = Direction.Up
+                directions = {
+                    [direction]: true
+                }
+                for (let dir of DIRECTIONS) {
+                    if (!directions[dir]) {
+                        engine.controls.applyControl(dir, false)
+                    }
+                }
+                move()
+            });
+        },
+        onStep(engine: RpgClientEngine) {
+            let now = Date.now()
+            if (now - axisDate > 100 && moving) {
+                for (let dir of DIRECTIONS) {
+                    directions = {}
+                    moving = false
+                    engine.controls.applyControl(dir, false)
+                }
+            }
+        }
+    }
+})
+export default class RpgClientModule {}

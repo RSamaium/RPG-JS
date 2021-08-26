@@ -12,6 +12,7 @@
   "license": "MIT",
   "dependencies": {
     "@rpgjs/client": "^3.0.0-alpha.13",
+    "rxjs": "^7.3.0",
     "typescript": "^4.0.3",
     "vue": "^3.0.4"
   },

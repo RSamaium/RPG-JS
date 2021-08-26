@@ -96,6 +96,7 @@ export default (modules: ModuleType[], options: RpgClientEntryPointOptions): Rpg
 
     const relationsEngine = {
         onStart: HookClient.Start,
+        onStep: HookClient.Step,
         onConnected: HookClient.Connected,
         onDisconnect: HookClient.Disconnect,
         onConnectError: HookClient.ConnectedError,

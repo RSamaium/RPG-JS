@@ -5,6 +5,7 @@ import MenuUi from './menu/main.vue'
 import ShopUi from './shop/main.vue'
 import WindowUi from './window/window.vue'
 import DisconnectUi from './notifications/disconnected.vue'
+import NotificationUi from './notifications/alert.vue'
 
 @RpgModule<RpgClient>({
     gui: [
@@ -13,7 +14,8 @@ import DisconnectUi from './notifications/disconnected.vue'
         WindowUi,
         ChoiceUi,
         DisconnectUi,
-        ShopUi
+        ShopUi,
+        NotificationUi
     ]
 })
 export default class RpgClientEngine {}

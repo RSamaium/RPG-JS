@@ -17,6 +17,7 @@
 
 <script>
 import Arrow from './arrow.vue'
+import { debounceTime } from 'rxjs/operators'
 
 export default {
     name: 'rpg-choice',
@@ -46,7 +47,11 @@ export default {
         }
     },
     mounted() {
-        this.obsKeyPress = this.rpgKeypress.subscribe(({ control }) => {
+        this.obsKeyPress = this.rpgKeypress
+            .pipe(
+                debounceTime(100)
+            )
+            .subscribe(({ control }) => {
             if (!this.active || !control) return
             const name = control.actionName
             if (this.column > 1) {
