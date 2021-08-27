@@ -1,4 +1,4 @@
-import { Gui, DialogGui, MenuGui, ShopGui } from '../Gui'
+import { Gui, DialogGui, MenuGui, ShopGui, NotificationGui } from '../Gui'
 import { DialogOptions, Choice } from '../Gui/DialogGui'
 
 export class GuiManager {
@@ -128,6 +128,29 @@ export class GuiManager {
                 if (!choices[indexSelected]) return null
                 return choices[indexSelected]
             })
+    }
+
+    /**
+     * Displays a notification . Opens the GUI named `rpg-notification`
+     * 
+     * @title Displays a notification
+     * @method player.showNotification()
+     * @param {string} message - The message to display in the notification
+     * @param {object} options - An object containing options for the notification
+     * @param {number} options.time - The time to display the notification for (in ms). Default: 2000ms
+     * @param {string} options.icon - The icon to display in the notification. Put the identifier of the spritesheet (defined on the client side)
+     * @param {string} options.sound - The sound to play when the notification is shown. Set the sound ID (defined on the client side)
+     * @returns {void}
+     * @memberof GuiManager
+     */
+    showNotification(message: string, options: { time?: number, icon?: string, sound?: string } = {}): Promise<any> {
+        const gui = new NotificationGui(<any>this)
+        this._gui[gui.id] = gui
+        const data = {
+            message,
+            ...options
+        }
+        return gui.open(data)
     }
 
     /**

@@ -12,6 +12,7 @@
  * PrebuiltGui.Gameover | rpg-gameover
  * PrebuiltGui.Save | rpg-save
  * PrebuiltGui.Controls | rpg-controls
+ * PrebuiltGui.Notification | rpg-notification
  * @memberof PrebuiltGui
  * */
 export enum PrebuiltGui {
@@ -21,5 +22,6 @@ export enum PrebuiltGui {
     Disconnect = 'rpg-disconnect',
     Gameover = 'rpg-gameover',
     Save = 'rpg-save',
-    Controls = 'rpg-controls'
+    Controls = 'rpg-controls',
+    Notification = 'rpg-notification'
 }

@@ -130,7 +130,8 @@ module.exports = function(dirname, extend = {}) {
                 test: /\.(woff(2)?|ttf|eot|svg)$/i,
                 loader: require.resolve('file-loader'),
                 options: {
-                    outputPath: 'fonts'
+                    outputPath: 'fonts',
+                    esModule: false
                 }
             },
             {

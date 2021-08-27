@@ -1,4 +1,4 @@
-import { RpgClient, RpgModule } from '@rpgjs/client'
+import { RpgClient, RpgModule, Spritesheet } from '@rpgjs/client'
 import { sprite } from './sprite'
 
 @RpgModule<RpgClient>({ 

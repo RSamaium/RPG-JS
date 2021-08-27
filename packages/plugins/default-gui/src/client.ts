@@ -6,6 +6,7 @@ import ShopUi from './shop/main.vue'
 import WindowUi from './window/window.vue'
 import DisconnectUi from './notifications/disconnected.vue'
 import NotificationUi from './notifications/alert.vue'
+import { GuiSounds } from './assets/sounds'
 
 @RpgModule<RpgClient>({
     gui: [
@@ -16,6 +17,9 @@ import NotificationUi from './notifications/alert.vue'
         DisconnectUi,
         ShopUi,
         NotificationUi
+    ],
+    sounds: [
+        GuiSounds
     ]
 })
 export default class RpgClientEngine {}

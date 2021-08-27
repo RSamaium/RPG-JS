@@ -1,6 +1,6 @@
 <template>
   <div class="chat">
-      <input type="text" @keyup="typing" @focus="stopMove" @blur="startMove">
+      <input type="text" @keyup="typing" @focus="stopMove" @keyup.enter.stop="startMove">
   </div>
 </template>
 
@@ -16,7 +16,6 @@ export default {
             this.rpgEngine.controls.stop = true
         },
         startMove() {
-            console.log('ll')
             this.rpgEngine.controls.stop = false
         }
     }
