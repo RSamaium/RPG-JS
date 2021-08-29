@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/sync-client",
-  "version": "3.0.0-alpha.13",
+  "version": "3.0.0-beta",
   "description": "",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
@@ -23,7 +23,7 @@
     "msgpack-lite": "0.1.26",
     "rxjs": "6.6.3"
   },
-  "gitHead": "b65af6f39f9d7ae733b11086bf29257bfa830e23",
+  "gitHead": "f92f6329c5635baf373b7214248ca37ceb5fdf03",
   "devDependencies": {
     "typescript": "^4.3.5"
   }

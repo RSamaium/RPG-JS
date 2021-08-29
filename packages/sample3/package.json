@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/sample3",
-  "version": "3.0.0-alpha.13",
+  "version": "3.0.0-beta",
   "description": "",
   "main": "src/server.ts",
   "types": "index.d.ts",
@@ -15,15 +15,15 @@
   "license": "ISC",
   "dependencies": {
     "@rpgjs/chat": "^3.0.0-alpha.12",
-    "@rpgjs/client": "^3.0.0-alpha.13",
-    "@rpgjs/compiler": "^3.0.0-alpha.13",
-    "@rpgjs/default-gui": "^3.0.0-alpha.13",
-    "@rpgjs/gamepad": "^1.0.0",
-    "@rpgjs/mobile-gui": "^3.0.0-alpha.13",
-    "@rpgjs/server": "^3.0.0-alpha.13",
-    "@rpgjs/standalone": "^3.0.0-alpha.13",
-    "@rpgjs/starter-kit": "^3.0.0-alpha.13",
-    "@rpgjs/testing": "^3.0.0-alpha.13",
+    "@rpgjs/client": "^3.0.0-beta",
+    "@rpgjs/compiler": "^3.0.0-beta",
+    "@rpgjs/default-gui": "^3.0.0-beta",
+    "@rpgjs/gamepad": "^3.0.0-beta",
+    "@rpgjs/mobile-gui": "^3.0.0-beta",
+    "@rpgjs/server": "^3.0.0-beta",
+    "@rpgjs/standalone": "^3.0.0-beta",
+    "@rpgjs/starter-kit": "^3.0.0-beta",
+    "@rpgjs/testing": "^3.0.0-beta",
     "@rpgjs/title-screen": "^1.0.0",
     "canvas": "^2.8.0",
     "express": "^4.17.1",
@@ -41,5 +41,5 @@
     "webpack": "^4.46.0",
     "webpack-cli": "^3.3.12"
   },
-  "gitHead": "b65af6f39f9d7ae733b11086bf29257bfa830e23"
+  "gitHead": "f92f6329c5635baf373b7214248ca37ceb5fdf03"
 }

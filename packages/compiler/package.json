@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/compiler",
-  "version": "3.0.0-alpha.13",
+  "version": "3.0.0-beta",
   "description": "",
   "main": "index.js",
   "publishConfig": {
@@ -42,5 +42,5 @@
   "bin": {
     "rpgjs": "./bin/generate/index.js"
   },
-  "gitHead": "b65af6f39f9d7ae733b11086bf29257bfa830e23"
+  "gitHead": "f92f6329c5635baf373b7214248ca37ceb5fdf03"
 }

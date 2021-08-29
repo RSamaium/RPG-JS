@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/client",
-  "version": "3.0.0-alpha.13",
+  "version": "3.0.0-beta",
   "description": "",
   "main": "lib/index.js",
   "types": "./lib/index.d.ts",
@@ -19,8 +19,8 @@
   "license": "MIT",
   "dependencies": {
     "@geckos.io/snapshot-interpolation": "1.0.2",
-    "@rpgjs/common": "^3.0.0-alpha.13",
-    "@rpgjs/sync-client": "^3.0.0-alpha.13",
+    "@rpgjs/common": "^3.0.0-beta",
+    "@rpgjs/sync-client": "^3.0.0-beta",
     "@tweenjs/tween.js": "^18.6.0",
     "@types/howler": "2.2.1",
     "howler": "2.2.1",
@@ -32,7 +32,7 @@
     "rxjs": "6.6.3",
     "vue": "3.0.4"
   },
-  "gitHead": "b65af6f39f9d7ae733b11086bf29257bfa830e23",
+  "gitHead": "f92f6329c5635baf373b7214248ca37ceb5fdf03",
   "devDependencies": {
     "typescript": "^4.3.5"
   }
