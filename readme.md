@@ -1,11 +1,8 @@
 ![Header icon](/docs/header.png)
 
-# RPG JS v3-alpha. Create RPG and MMORPG in your browser
+# RPG JS v3-beta. Create RPG and MMORPG in your browser
 
 RPG JS is a framework for creating RPGs and MMORPGs.The code remains the same depending on the type of game!
-
-> The alpha.10 version has brought a lot of changes on the structure of a project. From now on, a system of modules has been added to the game development.
-> **I remind that it is not yet appropriate to make a game to put it in production because the version is still unstable**. However, we will soon have a Beta version which will be more interesting for your future projects.
 
 > **Don't hesitate to propose your ideas, your remarks and feedbacks on bugs, that will allow us to progress faster on the project!**
 
@@ -30,6 +27,7 @@ RPG JS is a framework for creating RPGs and MMORPGs.The code remains the same de
 * **Collisions by tile or precise**
 * **WebGL Rendering** Game rendering uses WebGL rendering (with PixiJS) for better rendering performance
 * **Precise movement, pixel by pixel**
+* Playing on **mobile**, with a **gamepad** and of course the **keyboard**
 * **MMORPG Performance** Low Bandwidth, Client-Side Prediction
 * **Using VueJS for user interfaces**  Prebuilt GUI (dialog box, main menu, shop menu, etc.)
 * **Code with Typescript** The creation of the game uses TypeScript. The interest is to know the properties and to make the structure clearer.
@@ -43,26 +41,6 @@ RPG JS is a framework for creating RPGs and MMORPGs.The code remains the same de
 [Demo](https://rpgjs.dev)
 
 ![Demo](/docs/demo.png)
-
-## Why Alpha Version ?
-
-because, there are still several parts to realize
-
-* Put unit tests
-* Battle System (A-RPG System)
-* Must complete the main menu
-* Chat GUI
-
-Planned for the Beta version
-
-* Admin Front
-* Guild GUI
-
-## Can I use the current version in production?
-
-For the moment, i do not recommend it. The Alpha version is unstable and its structure may change. You can try RpgJS in experimental mode or get familiar with it in order to make a game later
-
-I will update to indicate when the version is more stable 
 
 ## Documentation 
 
@@ -108,7 +86,7 @@ Put the files in the `dist/standalone` folder on a static server (as [Vercel](ht
 
 # Benchmark
 
-WIP|
+WIP
 
 ## Contribute to developments
 
@@ -121,7 +99,7 @@ npx lerna bootstrap
 npm run dev
 ```
 
-The game can be found in `@rpgjs/sample` package.
+The game can be found in `@rpgjs/sample3` package.
 
 ## Old Version
 

@@ -5,6 +5,7 @@ import { BehaviorSubject } from 'rxjs'
 class WorldClass {
 
     socket: any
+    userId: string | null = null
     private obs$: BehaviorSubject<any> = new BehaviorSubject({})
 
     get value() {
@@ -13,6 +14,9 @@ class WorldClass {
 
     listen(socket, transformData?: Function) {
         this.socket = socket
+        this.socket.on('uid', (response) => {
+            this.userId = response
+        })
         this.socket.on('w', (response) => {
             const bufView = new Uint8Array(response)
             const decode = msgpack.decode(bufView)

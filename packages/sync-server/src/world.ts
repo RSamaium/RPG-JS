@@ -92,6 +92,7 @@ export class WorldClass {
     connectUser(socket, id: string): User {
         const user = new this.userClass()
         user.id = id
+        socket.emit('uid', id)
         this.setUser(user, socket)
         return user
     }
