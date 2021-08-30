@@ -1,0 +1,14 @@
+# WIP
+
+FROM node:14
+
+WORKDIR /app
+
+ADD . /app
+
+RUN npm install
+RUN npx lerna bootstrap
+
+EXPOSE 3000
+
+CMD ["npm", "run", "dev"]

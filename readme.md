@@ -101,6 +101,12 @@ npm run dev
 
 The game can be found in `@rpgjs/sample3` package.
 
+### With Docker
+
+1. `docker build -t rpgjs -f Dockerfile.dev .`
+2. `docker run -p 3000:3000 rpgjs`
+
+
 ## Old Version
 
 [RPGJS Version 2](https://v2.rpgjs.dev)

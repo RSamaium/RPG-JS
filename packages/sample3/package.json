@@ -12,6 +12,7 @@
   },
   "keywords": [],
   "author": "",
+  "private": true,
   "license": "ISC",
   "dependencies": {
     "@rpgjs/chat": "^3.0.0-alpha.12",

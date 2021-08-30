@@ -36,7 +36,7 @@
     "webpack-cli": "3.3.12",
     "webpack-node-externals": "2.5.2",
     "webpack-pwa-manifest": "4.3.0",
-    "workbox-webpack-plugin": "6.0.2",
+    "workbox-webpack-plugin": "6.2.4",
     "yargs": "^17.0.0-candidate.13"
   },
   "bin": {
