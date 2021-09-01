@@ -16,7 +16,7 @@ import CreateAccount from './create-account.vue'
 
 export default {
     name: 'rpg-login',
-    inject: ['rpgGui', 'rpgGuiInteraction'],
+    inject: ['rpgGui', 'rpgGuiInteraction', 'rpgSocket'],
     components: {
         CreateAccount
     },
@@ -26,12 +26,37 @@ export default {
            user: {}
         }
     },
+    mounted() {
+        const socket = this.rpgSocket()
+        socket.on('login-fail', ({ message }) => {
+            let msg = ''
+            switch (message) {
+                case 'LOGIN_FAIL':
+                    msg = 'Your login details are not correct!'
+                    break;
+                 case 'PLAYER_IN_GAME':
+                    msg = 'You are already playing in the game'
+                    break;
+                default:
+                    msg = 'An error has occurred'
+            }
+            this.notificationError(msg)
+        })
+    },
     methods: {
-        async login() {
+        login() {
+            if (!this.user.nickname) {
+                return this.notificationError('Please enter a nickname')
+            }
+            if (!this.user.password) {
+                return this.notificationError('Please enter a password')
+            }
             this.rpgGuiInteraction('rpg-title-screen', 'login', this.user)
+        },
+        notificationError(msg) {
             this.rpgGui.display('rpg-notification', {
-                message: 'ok',
-                time: 500000,
+                message: msg,
+                time: 5000,
                 position: 'top',
                 type: 'error'
             })

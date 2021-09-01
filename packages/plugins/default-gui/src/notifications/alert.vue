@@ -84,26 +84,26 @@ $notification-font-family: 'lato' !default;
     transition: 0.5s all ease;
     max-width: 400px;
 
-    .bottom {
+    &.bottom {
         transform: translateY(50px);
         margin-top: auto;
-        .show {
+        &.show {
             transform: translateY(-10px);
         }
     }
 
-    .top {
+    &.top {
         transform: translateY(-50px);
-        .show {
+        &.show {
             transform: translateY(10px);
         }
     }
 
-    .error {
+    &.error {
         background-color: rgba(181, 64, 64, 0.7);
     }
 
-    .success {
+    &.success {
         background-color: rgba(40, 121, 30, 0.7);
     }
 }
@@ -118,8 +118,12 @@ $notification-font-family: 'lato' !default;
     overflow: hidden;
     z-index: 100;
 
-    .bottom {
+    &.bottom {
         height: 100%;
+    }
+
+    &.top {
+        padding-bottom: 10px;
     }
 }
 

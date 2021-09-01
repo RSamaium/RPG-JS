@@ -1,5 +1,5 @@
 import mongoose from 'mongoose'
-import { RpgServer, RpgModule, RpgServerEngine, RpgPlayer } from '@rpgjs/server'
+import { RpgServer, RpgModule, RpgServerEngine, RpgPlayer, RpgWorld } from '@rpgjs/server'
 import Player from './model'
 
 function mongoLog(msg, ...more) {
@@ -56,6 +56,20 @@ async function login(body) {
                     res.status(err.status || 500).json(err)
                 }
             })
+            app.post('/user/exists', async (req, res, next) => {
+                try {
+                    const { nickname } = req.body
+                    const player = await Player.findOne({
+                        nickname
+                    }) as any
+                    res.json({
+                        exists: !!player
+                    })
+                }
+                catch (err) {
+                    res.status(500).json(err)
+                }
+            })
             app.post('/user/create', async (req, res, next) => {
                 try {
                     const { nickname, email, password } = req.body
@@ -77,16 +91,37 @@ async function login(body) {
         onConnected(player: RpgPlayer) {
             const gui = player.gui('rpg-title-screen')
             gui.on('login', async (body) => {
-                const user = await login(body)
-                if (!user.data) {
-                    player.name = user.nickname
-                    player.changeMap('medieval')
+                try {
+                    const user = await login(body)
+                    const playerIsAlreadyInGame = !!RpgWorld.getPlayers().find(p => !!p.mongoId)
+                    if (playerIsAlreadyInGame) {
+                        throw new Error('PLAYER_IN_GAME')
+                    }
+                    player.mongoId = user._id
+                    if (!user.data) {
+                        player.name = user.nickname
+                        player.changeMap('medieval')
+                    }
+                    else {
+                        player.load(user.data)
+                        player.canMove = true
+                    }
+                    gui.close()
                 }
-                else {
-                    player.load(user.data)
-                    player.canMove = true
+                catch (err) {
+                    let error = {}
+                    if (err.status == 401) {
+                        error = {
+                            message: 'LOGIN_FAIL'
+                        }
+                    }
+                    else {
+                        error = {
+                            message: err.message
+                        }
+                    }
+                    player.emit('login-fail', error)
                 }
-                gui.close()
             })
             gui.open()
         }
