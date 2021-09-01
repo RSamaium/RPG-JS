@@ -1,6 +1,6 @@
 <template>
-    <div class="alert-panel">
-        <div class="alert" :class="{show}">
+    <div class="alert-panel" :class="position">
+        <div class="alert" :class="{ show, [position]: true, [type]: true }">
             <div class="icon" v-if="image"><img :src="image"></div>
             <span class="msg">{{ message }}</span>
         </div>
@@ -23,6 +23,12 @@ export default {
         },
         time: {
             default: 2000
+        },
+        position: {
+            default: 'bottom'
+        },
+        type: {
+            default: ''
         }
     },
     name: guiName,
@@ -46,7 +52,7 @@ export default {
             this.show = true
             const globalConfig = this.rpgEngine.globalConfig.notification
             const globalSound = (globalConfig && globalConfig.sound)
-            const sound = this.sound || globalSound || 'alert'
+            const sound = this.sound || globalSound || (this.type == 'error' ? 'error' : 'alert')
             if (sound && globalSound !== null) {
                 this.rpgSound.get(sound).play()
             }
@@ -70,19 +76,36 @@ $notification-font-family: 'lato' !default;
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-top: auto;
     color: $notification-font-color;
     font-family: $notification-font-family;
     padding: 15px 35px;
     border-radius: 5px;
     background-color: $notification-background-color;
-    transform: translateY(50px);
     transition: 0.5s all ease;
     max-width: 400px;
-}
 
-.alert.show {
-    transform: translateY(-10px);
+    .bottom {
+        transform: translateY(50px);
+        margin-top: auto;
+        .show {
+            transform: translateY(-10px);
+        }
+    }
+
+    .top {
+        transform: translateY(-50px);
+        .show {
+            transform: translateY(10px);
+        }
+    }
+
+    .error {
+        background-color: rgba(181, 64, 64, 0.7);
+    }
+
+    .success {
+        background-color: rgba(40, 121, 30, 0.7);
+    }
 }
 
 .alert-panel {
@@ -92,8 +115,12 @@ $notification-font-family: 'lato' !default;
     flex-direction: column;
     position: absolute;
     width: 100%;
-    height: 100%;
     overflow: hidden;
+    z-index: 100;
+
+    .bottom {
+        height: 100%;
+    }
 }
 
 .icon img {

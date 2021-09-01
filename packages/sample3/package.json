@@ -21,6 +21,8 @@
     "@rpgjs/default-gui": "^3.0.0-beta.1",
     "@rpgjs/gamepad": "^3.0.0-beta.1",
     "@rpgjs/mobile-gui": "^3.0.0-beta.1",
+    "@rpgjs/plugin-emotion-bubbles": "^3.0.0-beta.1",
+    "@rpgjs/save": "^3.0.0-beta.1",
     "@rpgjs/server": "^3.0.0-beta.1",
     "@rpgjs/standalone": "^3.0.0-beta.1",
     "@rpgjs/starter-kit": "^3.0.0-beta.1",

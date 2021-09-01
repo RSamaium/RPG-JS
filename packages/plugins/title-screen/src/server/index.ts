@@ -1,7 +1,4 @@
-import { RpgServer, RpgModule } from '@rpgjs/server'
-import { player } from './player'
+import mmorpgServer from 'mmorpg!./mmorpg'
+import rpgServer from 'rpg!./rpg'
 
-@RpgModule<RpgServer>({ 
-    player
-})
-export default class RpgServerEngine {}
+export default mmorpgServer || rpgServer

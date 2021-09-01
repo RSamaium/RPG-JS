@@ -360,7 +360,6 @@ export class RpgPlayer extends RpgCommonPlayer {
     toJSON() {
         const obj: any = {}
         const props = [
-            'id',
             'hp', 
             'sp',
             'gold', 
@@ -522,6 +521,20 @@ export class RpgPlayer extends RpgCommonPlayer {
      */
     public emit(key: string, value: any): void {
         if (this._socket) this._socket.emit(key, value) 
+    }
+
+    /**
+     * Listen to the data (socket) sent by the client
+     * 
+     * @title Listen to data from the client
+     * @method player.on(key,cb)
+     * @param {string} key
+     * @param {function} cb
+     * @returns {void}
+     * @memberof Player
+     */
+    public on(key: string, cb: Function) {
+        if (this._socket) this._socket.on(key, cb) 
     }
 
     emitToMap(key: string, value: any) {

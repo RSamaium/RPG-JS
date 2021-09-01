@@ -1,22 +1,14 @@
 <template>
-   <rpg-window>
-          <rpg-choice :choices="choice"></rpg-choice>
-  </rpg-window>
+   <Slots mode="load" />
 </template>
 
 <script>
+import Slots from './slots.vue'
+
 export default {
     name: 'rpg-load',
-    data() {
-        return {
-            choice: [
-                { text:  'Slot 1', value: '1' }
-            ]
-        }
+    components: {
+        Slots
     }
 }
 </script>
-
-<style>
-
-</style>

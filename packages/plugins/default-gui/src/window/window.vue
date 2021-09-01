@@ -48,11 +48,73 @@ export default {
 </script>
 
 <style lang="scss">
-.window-content p {
+$window-button-success-color: #1c8634 !default;
+$window-button-success-shadow: #0d4c30 !default;
+
+.window-content p, .window-content a {
     font-family: $window-font-family;
     font-size: $window-font-size;
     color: $window-font-color;
     margin: 0;
+}
+
+.window-content input {
+    border: 1px solid black;
+    padding: 10px;
+    display: block;
+    margin: 5px;
+}
+
+.window-content {
+    .css-button-3d--grey {
+        min-width: 130px;
+        height: 40px;
+        color: #fff;
+        padding: 5px 10px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        display: inline-block;
+        outline: none;
+        border-radius: 5px;
+        border: none;
+        background: #6c757d;
+        box-shadow: 0 5px #495057;
+    }
+    .css-button-3d--grey:hover {
+        box-shadow: 0 3px #495057;
+        top: 1px;
+    }
+    .css-button-3d--grey:active {
+        box-shadow: 0 0 #495057;
+        top: 5px;
+    }
+
+    .btn-success {
+        min-width: 130px;
+        height: 40px;
+        color: #fff;
+        padding: 5px 10px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        display: inline-block;
+        outline: none;
+        border-radius: 5px;
+        border: none;
+        background: $window-button-success-color;
+        box-shadow: 0 5px $window-button-success-shadow;
+    }
+    .btn-success:hover {
+        box-shadow: 0 3px $window-button-success-shadow;
+        top: 1px;
+    }
+    .btn-success:active {
+        box-shadow: 0 0 $window-button-success-shadow;
+        top: 5px;
+    }
 }
 </style>
 

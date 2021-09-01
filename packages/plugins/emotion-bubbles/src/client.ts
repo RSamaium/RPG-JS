@@ -1,10 +1,9 @@
-import { HookClient } from '@rpgjs/client'
+import { RpgClient, RpgModule } from '@rpgjs/client'
 import { Emote } from './spritesheet/bubble'
 
-export default function({ RpgPlugin }, options) {
-    RpgPlugin.on(HookClient.AddSpriteSheet, () => {
-        return [
-            Emote(options)
-        ]
-    })
-}
+@RpgModule<RpgClient>({ 
+  spritesheets: [
+    Emote()
+  ]
+})
+export default class RpgClientModule {}

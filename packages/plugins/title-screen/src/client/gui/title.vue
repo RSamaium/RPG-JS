@@ -1,15 +1,20 @@
 <template>
   <div class="background">
-      <div class="title">
+      <div class="title" v-if="step == 'title'">
           <h1>My Rpg Game</h1>
       </div>
-      <rpg-window 
+      <div v-if="!isMMO" class="full" :class="`step-${step}`">
+          <rpg-window 
         width="200px" 
         position="bottom-middle" 
         class="margin-bottom" 
+        v-if="step == 'title'"
         >
           <rpg-choice :choices="menuChoice" @selected="selected"></rpg-choice>
-      </rpg-window>
+        </rpg-window>
+        <rpg-load v-else></rpg-load>
+    </div>
+    <rpg-login v-else class="margin-bottom"></rpg-login>
   </div>
 </template>
 
@@ -18,27 +23,37 @@ const name = 'rpg-title-screen'
 
 export default {
     name,
-    inject: ['rpgEngine', 'rpgGui'],
+    inject: ['rpgEngine', 'rpgGui', 'rpgGuiInteraction', 'rpgKeypress'],
     data() {
         return {
             menu: [
                 { text:  'Start Game', value: 'start' },
                 { text: 'Load Game', value: 'load' },
                 { text: 'Options', value: 'options' }
-            ]
+            ],
+            step: 'title'
         }
+    },
+    mounted() {
+        this.obsKeyPress = this.rpgKeypress.subscribe(({ control }) => {
+            if (!control) return
+            if (control.actionName == 'back') {
+                this.step = 'title'
+            }
+        })
+    },
+    unmounted() {
+        this.obsKeyPress.unsubscribe()
     },
     methods: {
         selected(index) {
             const { value } = this.menu[index]
             switch (value) {
                 case 'start':
-                    this.rpgEngine.connection()
-                    this.rpgGui.hide(name)
+                    this.rpgGuiInteraction('rpg-title-screen', 'start-game')
                     break
                 case 'load':
-                    this.rpgGui.hide(name)
-                    this.rpgGui.display('rpg-load')
+                    this.step = 'load'
                     break
                 case 'options':
                     this.rpgGui.hide(name)
@@ -58,6 +73,9 @@ export default {
                 }
                 return true
             })
+        },
+        isMMO() {
+            return __RPGJS_MMORPG__
         }
     }
 }
@@ -93,9 +111,18 @@ $title-screen-background: url('./assets/default.png') !default;
     width: 100%;
     height: 100%;
     display: flex;
+    background-size: cover;
 }
 
 .margin-bottom {
     margin-bottom: 50px;
+}
+
+.full {
+    width: 100%;
+}
+
+.step-title {
+    display: flex;
 }
 </style>

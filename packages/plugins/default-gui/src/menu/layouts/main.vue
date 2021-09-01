@@ -36,7 +36,13 @@ export default {
                 text: 'Items',
                 value: 'item',
                 layout: 'ItemsLayout'
-            }, /*  {
+            }, 
+            {
+                text: 'Save',
+                value: 'save',
+                layout: 'SaveLayout'
+            }
+            /*  {
                 text: 'Skills',
                 value: 'skill'
             },  {
