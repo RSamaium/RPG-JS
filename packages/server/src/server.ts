@@ -25,6 +25,15 @@ export class RpgServerEngine {
      */
     public database: any = {}
 
+    /** 
+     * retrieve the global configurations assigned at the entry point
+     * 
+     * @prop {object} [globalConfig]
+     * @readonly
+     * @memberof RpgServerEngine
+     * */
+    public globalConfig: any = {}
+
     /**
      * Combat formulas
      * 
@@ -56,6 +65,8 @@ export class RpgServerEngine {
             coefficientElements: COEFFICIENT_ELEMENTS,
             ...this.damageFormulas
         }
+
+        this.globalConfig = this.inputOptions.globalConfig
 
         if (!this.inputOptions.maps) this.inputOptions.maps = []
 

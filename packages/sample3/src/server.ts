@@ -1,8 +1,10 @@
 
 import http from 'http'
 import express from 'express'
+import bodyParser from 'body-parser'
 import { Server } from 'socket.io'
 import { entryPoint, RpgWorld, Direction, Move } from '@rpgjs/server'
+import globalConfig from './config/server'
 import modules from './modules' 
 
 const PORT = process.env.PORT || 3000
@@ -17,7 +19,9 @@ const io = new Server(server, {
     }
 })
 
-const rpgGame = entryPoint(modules, { io, basePath: __dirname })
+app.use(bodyParser.json())
+
+const rpgGame = entryPoint(modules, { io, basePath: __dirname, globalConfig })
 rpgGame.app = app 
 
 /*app.use('/metrics', async (req, res) => {

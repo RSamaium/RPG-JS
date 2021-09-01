@@ -2,10 +2,10 @@
    <rpg-window width="300px" position="bottom-middle">
          <p>Create account to play</p>
          <form @submit.prevent="createAccount">
-             <input type="text" placeholder="Pseudo">
-             <input type="email" placeholder="Email">
-             <input type="password" placeholder="Password">
-             <input type="password" placeholder="Confirm Password">
+             <input type="text" placeholder="Pseudo" v-model="user.nickname">
+             <input type="email" placeholder="Email" v-model="user.email">
+             <input type="password" placeholder="Password" v-model="user.password">
+             <input type="password" placeholder="Confirm Password" v-model="confirmPassword">
              <button class="btn-success login">Create</button>
              <button class="css-button-3d--grey" type="button" @click="$emit('back')">Back</button>
         </form>
@@ -13,16 +13,20 @@
 </template>
 
 <script>
+import axios from 'axios'
+
 export default {
     name: 'rpg-login',
     data() {
         return {
-           
+           user: {},
+           confirmPassword: ''
         }
     },
     methods: {
-        createAccount() {
-
+        async createAccount() {
+            await axios.post('/user/create', this.user)
+            this.$emit('back')
         }
     }
 }
