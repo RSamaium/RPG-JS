@@ -1,5 +1,10 @@
 import { inputs } from './inputs'
+import rpgConfig from '../../../rpg.json'
 
 export default {
-    inputs
+    inputs,
+    screenTitle: {
+        title: rpgConfig.name,
+        music: 'town'
+    }
 }

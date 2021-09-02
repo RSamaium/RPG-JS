@@ -18,7 +18,8 @@
     "declaration": false,
     "experimentalDecorators": true, 
     "emitDecoratorMetadata": true,
-    "types": ["node", "jest"]
+    "types": ["node", "jest"],
+    "resolveJsonModule": true
   },
   "include": [
       "src", 

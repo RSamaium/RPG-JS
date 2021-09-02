@@ -28,33 +28,36 @@ export default {
     },
     inject: ['rpgCurrentPlayer', 'rpgKeypress', 'rpgEngine', 'rpgStage', 'rpgGuiClose', 'rpgGui'],
     data() {
+        const menu = [{
+            text: 'Items',
+            value: 'item',
+            layout: 'ItemsLayout'
+        }, 
+        /*  {
+            text: 'Skills',
+            value: 'skill'
+        },  {
+            text: 'Equipment',
+            value: 'equipment',
+            layout: 'EquipmentLayout'
+        }, 
+        {
+            text: 'Status',
+            value: 'status',
+            layout: 'StatusLayout'
+        } */]
+        if (!__RPGJS_MMORPG__ && this.rpgGui.exists('rpg-save')) {
+            menu.push({
+                text: 'Save',
+                value: 'save',
+                layout: 'SaveLayout'
+            })
+        }
         return {
             player: {},
             active: true,
             gold: 0,
-            menu: [{
-                text: 'Items',
-                value: 'item',
-                layout: 'ItemsLayout'
-            }, 
-            {
-                text: 'Save',
-                value: 'save',
-                layout: 'SaveLayout'
-            }
-            /*  {
-                text: 'Skills',
-                value: 'skill'
-            },  {
-                text: 'Equipment',
-                value: 'equipment',
-                layout: 'EquipmentLayout'
-            }, 
-            {
-                text: 'Status',
-                value: 'status',
-                layout: 'StatusLayout'
-            } */]
+            menu
         }
     },
     mounted() {

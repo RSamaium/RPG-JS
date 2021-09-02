@@ -1,7 +1,7 @@
 <template>
   <div class="background">
       <div class="title" v-if="step == 'title'">
-          <h1>My Rpg Game</h1>
+          <h1>{{ title }}</h1>
       </div>
       <div v-if="!isMMO" class="full" :class="`step-${step}`">
           <rpg-window 
@@ -23,7 +23,7 @@ const name = 'rpg-title-screen'
 
 export default {
     name,
-    inject: ['rpgEngine', 'rpgGui', 'rpgGuiInteraction', 'rpgKeypress'],
+    inject: ['rpgEngine', 'rpgGui', 'rpgGuiInteraction', 'rpgKeypress', 'rpgSound'],
     data() {
         return {
             menu: [
@@ -31,10 +31,18 @@ export default {
                 { text: 'Load Game', value: 'load' },
                 { text: 'Options', value: 'options' }
             ],
-            step: 'title'
+            step: 'title',
+            title: ''
         }
     },
     mounted() {
+        const { screenTitle } = this.rpgEngine.globalConfig
+        if (screenTitle) {
+            this.title = screenTitle.title
+            if (screenTitle.music) {
+                this.rpgSound.get(screenTitle.music).play()
+            }
+        }
         this.obsKeyPress = this.rpgKeypress.subscribe(({ control }) => {
             if (!control) return
             if (control.actionName == 'back') {

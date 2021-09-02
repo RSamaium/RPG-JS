@@ -91,7 +91,7 @@ export class SceneMap {
         player.teleport(positions || 'start')
         player.events = mapInstance.createEvents(mapInstance._events, EventMode.Scenario)
         for (let key in player.events) {
-            player.events[key].execMethod('onInit')
+            player.events[key].execMethod('onInit', [player])
         }
         return mapInstance
     }

@@ -259,6 +259,7 @@ export default {
     display: flex;
     position: absolute;
     width: 100%;
+     z-index: 100;
 }
 
 .shop-content {

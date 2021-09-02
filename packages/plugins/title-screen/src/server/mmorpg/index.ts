@@ -2,6 +2,12 @@ import mongoose from 'mongoose'
 import { RpgServer, RpgModule, RpgServerEngine, RpgPlayer, RpgWorld } from '@rpgjs/server'
 import Player from './model'
 
+declare module '@rpgjs/server' {
+    export interface RpgPlayer {
+        mongoId: string
+    }
+}
+
 function mongoLog(msg, ...more) {
     console.log(`RPGJS MongoDB => ${msg}`, ...more)
 }
@@ -30,6 +36,14 @@ async function login(body) {
         data: player.data
     }
 }
+const originalSaveMethod = RpgPlayer.prototype.save
+RpgPlayer.prototype.save = function(): string {
+    const json = originalSaveMethod.apply(this)
+    Player.findByIdAndUpdate(this.mongoId.toString(), { data: json }).catch(err => {
+        console.log(err)
+    })
+    return json
+}
 
 @RpgModule<RpgServer>({ 
     engine: {
@@ -42,7 +56,7 @@ async function login(body) {
             else {
                 mongoLog('Waiting for connection to MongoDB...')
                 mongoose.connect(mongodb).then(() => {
-                    mongoLog('Super, Tour Game is connected with MongoDB')
+                    mongoLog('Super, your Game is connected with MongoDB')
                 }).catch(err => {
                     mongoLog('A problem occurred when connecting to MongoDB', err)
                 })
@@ -89,6 +103,7 @@ async function login(body) {
     },
     player: {
         onConnected(player: RpgPlayer) {
+            const { startMap } = player.server.globalConfig
             const gui = player.gui('rpg-title-screen')
             gui.on('login', async (body) => {
                 try {
@@ -100,7 +115,7 @@ async function login(body) {
                     player.mongoId = user._id
                     if (!user.data) {
                         player.name = user.nickname
-                        player.changeMap('medieval')
+                        player.changeMap(startMap)
                     }
                     else {
                         player.load(user.data)

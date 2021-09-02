@@ -61,6 +61,7 @@ export default {
     z-index: 101;
     bottom: 0;
     background: rgba(0, 0, 0, 0.7);
+    z-index: 5;
 }
 
 .chat input {

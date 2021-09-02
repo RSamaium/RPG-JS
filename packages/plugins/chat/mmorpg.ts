@@ -1,3 +1,7 @@
-import mmorpg from 'mmorpg!./mmorpg'
+import client from 'client!./client'
+import server from 'server!./server'
 
-export default mmorpg
+export default {
+  client,
+  server
+}

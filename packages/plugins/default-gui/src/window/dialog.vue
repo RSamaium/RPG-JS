@@ -78,6 +78,6 @@ export default {
     display: flex;
     justify-content: center;
     min-width: 300px;
-    z-index: 10;
+    z-index: 101;
 }
 </style>
