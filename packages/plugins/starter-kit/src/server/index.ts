@@ -1,9 +1,10 @@
-import { RpgModule, RpgServer } from '@rpgjs/server'
+import { RpgModule, RpgServer, RpgPlayer, RpgServerEngine } from '@rpgjs/server'
 import { SampleMap } from './maps/samplemap'
 import { MapZ } from './maps/mapz'
 import { CaveMap } from './maps/cave';
-import databaseList  from './database'
-import { player } from './player'
+import databaseList from './database'
+
+let serverEngine
 
 @RpgModule<RpgServer>({
     maps: [
@@ -12,6 +13,20 @@ import { player } from './player'
         CaveMap,
     ],
     database: databaseList,
-    player
+    player: {
+        onConnected(player: RpgPlayer) {
+            player.setHitbox(20, 16) 
+            player.setGraphic('male1_2')
+            if (!serverEngine.startMap) {
+                player.changeMap('medieval')
+            }
+            player.setActor(databaseList.Hero) 
+        }
+    },
+    engine: {
+        onStart(engine: RpgServerEngine) {
+            serverEngine = engine
+        }
+    }
 })
-export default class RpgServerEngine {}
+export default class RpgServerModule {}

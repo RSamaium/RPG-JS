@@ -4,7 +4,7 @@ import { entryPoint as entryPointClient } from '@rpgjs/client'
 
 const { ClientIo, serverIo } = MockIo
 
-export function entryPoint(modules, options = {}) {
+export function entryPoint(modules, options: any = {}) {
     const io = new ClientIo()
 
     class Module {}
@@ -18,11 +18,13 @@ export function entryPoint(modules, options = {}) {
                 io: serverIo,
                 standalone: true,
                 basePath: '',
+                globalConfig: options.globalConfigServer
                 ...options
             })
             this.client = entryPointClient(modules, { 
                 standalone: true,
                 io,
+                globalConfig: options.globalConfigClient,
                 ...options
             })
             await this.server.start()

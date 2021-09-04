@@ -50,6 +50,8 @@ export default {
 <style lang="scss">
 $window-button-success-color: #1c8634 !default;
 $window-button-success-shadow: #0d4c30 !default;
+$window-button-color: rgba(128, 130, 162, 0.7) !default;
+$window-button-shadow: rgb(128, 130, 162) !default;
 
 .window-content p, .window-content a {
     font-family: $window-font-family;
@@ -79,15 +81,14 @@ $window-button-success-shadow: #0d4c30 !default;
         outline: none;
         border-radius: 5px;
         border: none;
-        background: #6c757d;
-        box-shadow: 0 5px #495057;
+        background: $window-button-color;
     }
     .css-button-3d--grey:hover {
-        box-shadow: 0 3px #495057;
+        box-shadow: 0 3px $window-button-shadow;
         top: 1px;
     }
     .css-button-3d--grey:active {
-        box-shadow: 0 0 #495057;
+        box-shadow: 0 0 $window-button-shadow;
         top: 5px;
     }
 
@@ -105,7 +106,6 @@ $window-button-success-shadow: #0d4c30 !default;
         border-radius: 5px;
         border: none;
         background: $window-button-success-color;
-        box-shadow: 0 5px $window-button-success-shadow;
     }
     .btn-success:hover {
         box-shadow: 0 3px $window-button-success-shadow;

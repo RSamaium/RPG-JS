@@ -4,7 +4,6 @@ import rpgConfig from '../../../rpg.json'
 export default {
     inputs,
     screenTitle: {
-        title: rpgConfig.name,
-        music: 'town'
+        title: rpgConfig.name
     }
 }

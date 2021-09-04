@@ -1,9 +1,11 @@
 import { entryPoint } from '@rpgjs/standalone'
-import globalConfig from './config/client'
+import globalConfigClient from './config/client'
+import globalConfigServer from './config/server'
 import modules from './modules'
 
 document.addEventListener('DOMContentLoaded', function() { 
     entryPoint(modules, { 
-        globalConfig
+        globalConfigClient,
+        globalConfigServer
     }).start() 
 })
