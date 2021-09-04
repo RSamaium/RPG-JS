@@ -18,7 +18,7 @@ export function entryPoint(modules, options: any = {}) {
                 io: serverIo,
                 standalone: true,
                 basePath: '',
-                globalConfig: options.globalConfigServer
+                globalConfig: options.globalConfigServer,
                 ...options
             })
             this.client = entryPointClient(modules, { 

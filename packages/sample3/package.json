@@ -11,9 +11,9 @@
     "start": "node dist/server"
   },
   "keywords": [],
-  "author": "",
+  "author": "Samuel Ronce",
   "private": true,
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "@rpgjs/chat": "^3.0.0-beta.1",
     "@rpgjs/client": "^3.0.0-beta.1",

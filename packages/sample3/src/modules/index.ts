@@ -8,12 +8,12 @@ import titleScreen from '@rpgjs/title-screen'
 import save from '@rpgjs/save'
 
 export default [
-   // starterKit,
+    starterKit,
     gamepad,
     main,
     defaultGui,
     mobileGui,
     chat,
     titleScreen,
-    save
+    save 
 ]

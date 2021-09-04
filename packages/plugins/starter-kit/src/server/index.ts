@@ -17,7 +17,7 @@ let serverEngine
         onConnected(player: RpgPlayer) {
             player.setHitbox(20, 16) 
             player.setGraphic('male1_2')
-            if (!serverEngine.startMap) {
+            if (!serverEngine.globalConfig.startMap) {
                 player.changeMap('medieval')
             }
             player.setActor(databaseList.Hero) 
