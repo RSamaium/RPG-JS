@@ -2,7 +2,7 @@
   "packages": [
     "packages/*",
     "packages/plugins/*",
-    "packages/admin-panel/server"
+    "tests/*"
   ],
   "version": "3.0.0-beta.2"
 }

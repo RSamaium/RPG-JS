@@ -1,17 +1,18 @@
-import { Query, Presets } from '@rpgjs/server'
+import { Presets } from '@rpgjs/server'
 import { Armor, Weapon, State } from '@rpgjs/database'
-import { testing } from '@rpgjs/testing'
-import { RPGServer } from './fixtures/server'
 import { HpUpValue } from './fixtures/armor'
+import _beforeEach from './beforeEach'
 
-let  client, socket, player
 const { MAXHP_CURVE, MAXSP_CURVE, MAXHP, ATK, PDEF, SDEF, MAXSP } = Presets
 
-beforeEach(() => {
-    const fixture = testing(RPGServer)
-    client = fixture.createClient()
-    socket = client.connection()
-    player = Query.getPlayer(client)
+let  client, player, fixture, playerId
+
+beforeEach(async () => {
+    const ret = await _beforeEach()
+    client = ret.client
+    player = ret.player
+    fixture = ret.fixture
+    playerId = ret.playerId
 })
 
 test('Test HP', () => {

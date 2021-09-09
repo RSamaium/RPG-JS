@@ -1,15 +1,14 @@
-import { Query } from '@rpgjs/server'
-import { testing } from '@rpgjs/testing'
 import { Potion, Key } from './fixtures/item'
-import { RPGServer } from './fixtures/server'
+import _beforeEach from './beforeEach'
 
-let  client, socket, player
+let  client, player, fixture, playerId
 
-beforeEach(() => {
-    const fixture = testing(RPGServer)
-    client = fixture.createClient()
-    socket = client.connection()
-    player = Query.getPlayer(client)
+beforeEach(async () => {
+    const ret = await _beforeEach()
+    client = ret.client
+    player = ret.player
+    fixture = ret.fixture
+    playerId = ret.playerId
 })
 
 test('add an item', () => {

@@ -10,16 +10,20 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@rpgjs/database": "^3.0.0-alpha",
-    "@rpgjs/server": "^3.0.0-alpha",
-    "@rpgjs/testing": "^3.0.0-alpha"
+    "@rpgjs/compiler": "^3.0.0-beta.1",
+    "@rpgjs/database": "^3.0.0-beta.1",
+    "@rpgjs/server": "^3.0.0-beta.1",
+    "@rpgjs/testing": "^3.0.0-beta.1",
+    "canvas": "^2.8.0",
+    "jest": "^27.0.4",
+    "jest-webgl-canvas-mock": "^0.2.3",
+    "ts-jest": "^27.0.2"
   },
   "devDependencies": {
     "@babel/plugin-proposal-decorators": "^7.10.5",
     "@babel/plugin-transform-runtime": "^7.11.5",
     "@babel/preset-env": "^7.11.5",
     "@babel/preset-typescript": "^7.10.4",
-    "@types/jest": "^26.0.14",
-    "jest": "^26.4.2"
+    "@types/jest": "^26.0.24"
   }
 }

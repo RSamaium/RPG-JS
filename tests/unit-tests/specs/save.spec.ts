@@ -1,19 +1,34 @@
-import { Query, Presets, RpgPlayer } from '@rpgjs/server'
-import { testing } from '@rpgjs/testing'
-import { RPGServer } from './fixtures/server'
+import { RpgServer, RpgModule } from '@rpgjs/server'
 import { Potion } from './fixtures/item'
 import { Sword } from './fixtures/weapons'
 import { Confuse } from './fixtures/state'
 import { Fire } from './fixtures/skill'
+import _beforeEach from './beforeEach'
 
-let  client, socket, player, server
+let  client, player, fixture, playerId
 
-beforeEach(() => {
-    const fixture = testing(RPGServer)
-    server = fixture.server
-    client = fixture.createClient()
-    socket = client.connection()
-    player = Query.getPlayer(client)
+@RpgModule<RpgServer>({
+    database: {
+        Potion,
+        Sword,
+        Confuse,
+        Fire
+    }
+})
+class RpgServerModule {}
+
+const modules = [
+    {
+        server: RpgServerModule
+    }
+]
+
+beforeEach(async () => {
+    const ret = await _beforeEach(modules)
+    client = ret.client
+    player = ret.player
+    fixture = ret.fixture
+    playerId = ret.playerId
 })
 
 test('Test Save', () => {

@@ -1,26 +1,23 @@
-import { Query, Presets, RpgPlayer } from '@rpgjs/server'
-import { testing } from '@rpgjs/testing'
-import { RPGServer } from './fixtures/server'
+import { Presets } from '@rpgjs/server'
 import { Monster } from './fixtures/enemy'
 import { Shield } from './fixtures/armor'
 import { Fire } from './fixtures/skill'
 import { Fighter } from './fixtures/class'
+import _beforeEach from './beforeEach'
 
-let  client, socket, player, server
 const { DAMAGE_PHYSIC, DAMAGE_SKILL } = Presets
 
-beforeEach(() => {
-    const fixture = testing(RPGServer)
-    server = fixture.server
-    client = fixture.createClient()
-    socket = client.connection()
-    player = Query.getPlayer(client)
+let  client, player, fixture, playerId
+
+beforeEach(async () => {
+    const ret = await _beforeEach()
+    client = ret.client
+    player = ret.player
+    fixture = ret.fixture
+    playerId = ret.playerId
 })
 
-test('Test Damage', () => {
-  /*player.startBattle([
-    { enemy: Monster, level: 1 }
-  ])*/
+/*test('Test Damage', () => {
   const monster = new Monster()
   monster.server = server
   player.addItem(Shield)
@@ -34,4 +31,4 @@ test('Test Damage', () => {
   // expect(player.hp).toBe(MAXHP_CURVE.start)
 
    //player.useSkill(Fire, monster)
-})
+})*/

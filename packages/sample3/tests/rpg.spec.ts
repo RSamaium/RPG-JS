@@ -1,7 +1,7 @@
 import { RpgWorld, RpgPlugin } from '@rpgjs/server'
 import { HookClient } from '@rpgjs/client'
 import { testing } from '@rpgjs/testing'
-import modules from '../src/game'
+import modules from '../src/modules'
 
 let  client, engine, player, fixture, playerId
 
