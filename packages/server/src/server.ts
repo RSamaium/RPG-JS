@@ -122,10 +122,14 @@ export class RpgServerEngine {
         RpgPlugin.emit(HookServer.Start, this)
     }
 
+    send() {
+        World.send()
+    }
+
     step() {
         tick++
         if (tick % 4 === 0) {
-            World.send()
+            this.send()
         }
     }
 

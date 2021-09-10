@@ -1,19 +1,63 @@
+import { RpgModule, RpgServer, RpgWorld } from '@rpgjs/server'
 import { Potion, Key } from './fixtures/item'
+import { SampleMap } from './fixtures/maps/map'
 import _beforeEach from './beforeEach'
 
 let  client, player, fixture, playerId
 
+@RpgModule<RpgServer>({
+    maps: [SampleMap]
+})
+class RpgServerModule {}
+
+const modules = [
+    {
+        server: RpgServerModule
+    }
+]
+
 beforeEach(async () => {
-    const ret = await _beforeEach()
+    const ret = await _beforeEach(modules)
     client = ret.client
     player = ret.player
     fixture = ret.fixture
     playerId = ret.playerId
+    await player.changeMap('map')
+    player = RpgWorld.getPlayer(player)
+})
+
+test('add an item', () => {
+    return new Promise((resolve: any) => {
+        player.addItem(Potion)
+        const { item, nb } = player.getItem(Potion)
+
+        expect(item.name).toBe('Potion')
+        expect(nb).toBe(1)
+
+        fixture.server.send()
+
+        client.objects.subscribe((objects) => {
+            const player: any = Object.values(objects)[0]
+            expect(player.object.items).toBeDefined()
+            expect(player.object.items[0]).toMatchObject({
+                nb: 1,
+                item: {
+                  name: 'Potion',
+                  description: null,
+                  price: 100,
+                  consumable: null,
+                  id: 'potion'
+                }
+              }
+          )
+            resolve()
+        })
+    })
 })
 
 test('add an item', () => {
     player.addItem(Potion)
-    const { item, nb } = player.getItem(Potion)
+    const { item, nb } = player.getItem(Potion) 
     expect(item.name).toBe('Potion')
     expect(nb).toBe(1)
 })

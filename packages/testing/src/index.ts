@@ -1,21 +1,31 @@
 import { MockIo } from '@rpgjs/common'
-import { entryPoint } from '@rpgjs/server'
-import { entryPoint as entryPointClient } from '@rpgjs/client'
+import { entryPoint, RpgServerEngine } from '@rpgjs/server'
+import { entryPoint as entryPointClient, RpgClientEngine } from '@rpgjs/client'
 
 const { serverIo, ClientIo } = MockIo
 
-export function testing(modules, options) {
+interface Testing {
+    createClient(): Promise<{
+        client: RpgClientEngine,
+        socket: any,
+        playerId: string
+    }>,
+    server: RpgServerEngine
+}
+
+export function testing(modules, optionsServer: any = {}, optionsClient: any = {}): Testing {
     const engine = entryPoint(modules, { 
         io: serverIo,
         standalone: true,
-        ...options
+        ...optionsServer
     })
     engine.start()
     return {
         async createClient() {
             const client = entryPointClient(modules, {
                 io: new ClientIo(),
-                standalone: true
+                standalone: true,
+                ...optionsClient
             })
             await client.start()
             return {
