@@ -1,29 +1,14 @@
-import { RpgModule, RpgServer, RpgWorld } from '@rpgjs/server'
 import { Potion, Key } from './fixtures/item'
-import { SampleMap } from './fixtures/maps/map'
 import _beforeEach from './beforeEach'
 
 let  client, player, fixture, playerId
 
-@RpgModule<RpgServer>({
-    maps: [SampleMap]
-})
-class RpgServerModule {}
-
-const modules = [
-    {
-        server: RpgServerModule
-    }
-]
-
 beforeEach(async () => {
-    const ret = await _beforeEach(modules)
+    const ret = await _beforeEach()
     client = ret.client
     player = ret.player
     fixture = ret.fixture
     playerId = ret.playerId
-    await player.changeMap('map')
-    player = RpgWorld.getPlayer(player)
 })
 
 test('add an item', () => {

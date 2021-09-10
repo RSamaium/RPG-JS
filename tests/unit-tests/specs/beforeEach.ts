@@ -1,14 +1,31 @@
-import { RpgWorld } from '@rpgjs/server'
+import { RpgModule, RpgServer, RpgWorld } from '@rpgjs/server'
+import { SampleMap } from './fixtures/maps/map'
 import { testing } from '@rpgjs/testing'
 
+@RpgModule<RpgServer>({
+    maps: [SampleMap]
+})
+class RpgServerModule {}
+
+const commonModules = [
+    {
+        server: RpgServerModule
+    }
+]
+
 export default async (modules: any = []) => {
-    const fixture = testing(modules, {
+    const fixture = testing([
+        ...commonModules,
+        ...modules
+    ], {
         basePath: __dirname
     })
     const clientFixture = await fixture.createClient()
     const client = clientFixture.client
     const playerId = clientFixture.playerId
-    const player = RpgWorld.getPlayer(playerId)
+    let player = RpgWorld.getPlayer(playerId)
+    await player.changeMap('map')
+    player = RpgWorld.getPlayer(player)
     return {
         fixture,
         client,
