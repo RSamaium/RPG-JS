@@ -1,4 +1,4 @@
-import { ModuleType } from '@rpgjs/common'
+import { ModuleType, RpgShape } from '@rpgjs/common'
 import { RpgPlayer } from './Player/Player'
 import { RpgMap } from './Game/Map'
 import { RpgServerEngine } from './server'
@@ -69,6 +69,24 @@ export interface RpgPlayerHooks {
      * @memberof RpgPlayerHooks
      */
     onDisconnected?: (player: RpgPlayer) => any
+
+     /**
+     *  When the player enters the shape
+     * 
+     * @prop { (player: RpgPlayer, shape: RpgShape) => any } [onInShape]
+     * @since beta.3
+     * @memberof RpgPlayerHooks
+     */
+    onInShape?: (player: RpgPlayer, shape: RpgShape) => any
+
+    /**
+     *  When the player leaves the shape
+     * 
+     * @prop { (player: RpgPlayer, shape: RpgShape) => any } [onOutShape]
+     * @since beta.3
+     * @memberof RpgPlayerHooks
+     */
+     onOutShape?: (player: RpgPlayer, shape: RpgShape) => any
 }
 
 export interface RpgServer { 

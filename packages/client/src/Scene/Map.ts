@@ -32,6 +32,8 @@ export class SceneMap extends Scene implements IScene {
     private isLoaded: boolean = false
     private gameMap: RpgCommonMap
 
+    shapes = {}
+
     constructor(
             protected game: any, 
             private options: { screenWidth?: number, screenHeight?: number } = {}) {
@@ -138,13 +140,14 @@ export class SceneMap extends Scene implements IScene {
         this.players[id].y = y
     }
 
-    updateScene(obj) {
+    updateScene(obj: { data: any, partial: any }) {
         const shapes = obj.partial.shapes
+        const fullShapesObj = obj.data.shapes
         if (shapes) {
-            const shapesInMap = this.gameMap.getShapes()
-            for (let name in shapes) {
-                const shapeMap = shapesInMap[name]
-                let shape = shapes[name]
+            for (let i in shapes) {
+                let shape = fullShapesObj[i]
+                const { name } = shape
+                const shapeMap = this.gameMap.getShape(name)
                 if (shape == null) {
                     this.gameMap.removeShape(name)
                     continue
@@ -155,13 +158,18 @@ export class SceneMap extends Scene implements IScene {
                     y: shape.hitbox.pos.y,
                     width: shape.hitbox.w,
                     height: shape.hitbox.h,
-                    properties: {}
+                    properties: shape.properties
                 }
-                if (shapesInMap[name]) {
+                if (shapeMap) {
                     shapeMap.set(shape)
                 }
                 else {
-                    this.gameMap.createShape(shape)
+                    const instanceShape  = this.gameMap.createShape(shape)
+                    instanceShape.clientContainer = new PIXI.Container()
+                    instanceShape.clientContainer.x = shape.x
+                    instanceShape.clientContainer.y = shape.y
+                    this.viewport?.addChild(instanceShape.clientContainer)
+                    this.shapes[name] = instanceShape.clientContainer
                 }
             }
         }

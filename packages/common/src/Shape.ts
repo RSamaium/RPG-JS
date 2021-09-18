@@ -6,7 +6,7 @@ type ShapeObject = HitObject & {
     onOut?(player: RpgCommonPlayer)
 }
 
-export class Shape  {
+export class RpgShape  {
     hitbox: any
     properties: any = {}
     type: string = 'box'
@@ -16,9 +16,36 @@ export class Shape  {
     } = {}
     private onIn: (player: RpgCommonPlayer) => void
     private onOut: (player: RpgCommonPlayer) => void
+    clientContainer: any = null
     
     constructor(obj: ShapeObject) {
         this.set(obj)
+    }
+
+    private setPos(type: string, val: number) {
+        if (this.isShapePosition()) {
+            this.hitbox[type] = val
+        }
+        else {
+            this.hitbox.pos[type] = val
+        }
+        if (this.clientContainer) this.clientContainer[type] = val
+    }
+
+    get x(): number {
+        return this.hitbox.x || this.hitbox.pos.x
+    }
+
+    set x(val: number) {
+        this.setPos('x', val)
+    }
+
+    get y(): number {
+        return this.hitbox.y || this.hitbox.pos.y
+    }
+
+    set y(val: number) {
+        this.setPos('y', val)
     }
 
     isEvent(): boolean {
@@ -28,6 +55,8 @@ export class Shape  {
     set(obj: ShapeObject) {
         const hit = Hit.getHitbox(obj)
         Object.assign(this, hit)
+        this.x = obj.x
+        this.y = obj.y
     }
 
     in(player: RpgCommonPlayer): boolean {

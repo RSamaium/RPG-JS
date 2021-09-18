@@ -188,6 +188,9 @@ export function MapData(options: MapOptions) {
                         },
                         w: Number,
                         h: Number
+                    },
+                    properties: {
+                        collision: Boolean
                     }
                 }
             ]

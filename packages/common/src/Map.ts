@@ -1,6 +1,6 @@
 import { HitObject } from './Hit'
 import { random, intersection, generateUID } from './Utils'
-import { Shape } from './Shape'
+import { RpgShape } from './Shape'
 
 const buffer = new Map()
 
@@ -20,7 +20,7 @@ export default class RpgCommonMap {
     tileWidth: number = 0
     tileHeight: number = 0
     layers: any[] = []
-    private shapes: Shape[] = []
+    private shapes: RpgShape[] = []
 
     static get buffer() {
         return buffer
@@ -57,11 +57,11 @@ export default class RpgCommonMap {
         }
     }
 
-    createShape(obj: HitObject): Shape {
+    createShape(obj: HitObject): RpgShape {
         obj.name = (obj.name || generateUID()) as string
-        const shape = new Shape(obj)
+        const shape = new RpgShape(obj)
         this.shapes.push(shape)
-        return shape
+        return this.shapes[this.shapes.length-1]
     }
 
     removeShape(name: string) {
@@ -69,8 +69,12 @@ export default class RpgCommonMap {
         this.shapes = this.shapes.filter(shape => shape.name != name)
     }
 
-    getShapes(): Shape[] {
+    getShapes(): RpgShape[] {
         return this.shapes
+    }
+
+    getShape(name: string): RpgShape | undefined {
+        return this.shapes.find(shape => shape.name == name)
     }
     
     getPositionByShape(filter): { x: number, y: number, z: number } | null {

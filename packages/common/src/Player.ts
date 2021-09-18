@@ -1,6 +1,6 @@
 import { intersection, isString, isBrowser } from './Utils'
 import { Hit } from './Hit'
-import { Shape } from './Shape'
+import { RpgShape } from './Shape'
 import SAT from 'sat'
 import Map from './Map'
 
@@ -36,7 +36,7 @@ export class RpgCommonPlayer {
     vision: any
     
     inShapes: {
-        [shapeId: string]: Shape
+        [shapeId: string]: RpgShape
     } = {}
 
     private inVision: {
@@ -384,7 +384,6 @@ export class RpgCommonPlayer {
             let collided = Hit.testPolyCollision(shape.type, hitbox, shape.hitbox)
             if (collided) {
                 this.collisionWith.push(shape)
-
                 // TODO: in shape after map load
                 if (!collision) shape.in(this)
                 this.triggerCollisionWith()
@@ -427,7 +426,7 @@ export class RpgCommonPlayer {
         return true
     }
 
-    getInShapes(): Shape[] {
+    getInShapes(): RpgShape[] {
         return Object.values(this.inShapes)
     }
 
