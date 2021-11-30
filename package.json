@@ -1,6 +1,6 @@
 {
   "name": "rpgjs",
-  "version": "3.0.0-alpha",
+  "version": "3.0.0-beta",
   "engines": {
     "node": ">=11.0.0"
   },

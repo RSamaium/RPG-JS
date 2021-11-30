@@ -7,13 +7,12 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "private": true,
   "keywords": [],
   "author": "Samuel Ronce",
   "license": "MIT",
   "dependencies": {
-    "@rpgjs/client": "^3.0.0-beta.1",
-    "@rpgjs/server": "^3.0.0-beta.1"
+    "@rpgjs/client": "^3.0.0-beta.2",
+    "@rpgjs/server": "^3.0.0-beta.2"
   },
   "gitHead": "3e530eb453e1c18cf736fa68c5981a88fb7bf8f5"
 }

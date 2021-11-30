@@ -7,7 +7,6 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "private": true,
   "keywords": [],
   "author": "Samuel Ronce",
   "license": "MIT",

@@ -2,15 +2,16 @@ import { RpgPlayer, RpgMap, RpgPlayerHooks, Direction, Move, RpgShape } from '@r
 
 export const player: RpgPlayerHooks = {
     onJoinMap(player: RpgPlayer, map: RpgMap) {
-       setTimeout(() => {
-        const shape = map.createShape({
+       /*
+
+        map.createShape({
             ellipse: false,
             gid: 1,
             height: 100,
             polygon: null,
             polyline: null,
             properties: {
-                collision: true
+                
             },
             rotation: 0,
             visible: true,
@@ -18,10 +19,7 @@ export const player: RpgPlayerHooks = {
             x: 500,
             y: 500
            })
-           setInterval(() => {
-            shape.x += 50
-           }, 2000)
-       }, 3000)
+        */
     },
     onInput(player: RpgPlayer, { input }) {
         if (input == 'back') {
