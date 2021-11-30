@@ -95,16 +95,14 @@ To contribute to the developments, install the sources locally:
 ```bash
 git clone https://github.com/RSamaium/RPG-JS.git
 npm install
-npx lerna bootstrap
 npm run dev
 ```
 
+> It only works on NodeJS version 14. You can help with the development to make it work on version 16 (you will have to update Webpack and Node SASS in packages/compiler)
+
+> The installation is a bit long, don't worry!
+
 The game can be found in `@rpgjs/sample3` package.
-
-### With Docker
-
-1. `docker build -t rpgjs -f Dockerfile.dev .`
-2. `docker run -p 3000:3000 rpgjs`
 
 
 ## Old Version
