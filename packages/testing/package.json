@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/testing",
-  "version": "3.0.0-beta.1",
+  "version": "3.0.0-beta.2",
   "description": "",
   "main": "lib/index.js",
   "publishConfig": {
@@ -21,8 +21,5 @@
     "@rpgjs/common": "^3.0.0-beta.1",
     "@rpgjs/server": "^3.0.0-beta.1"
   },
-  "gitHead": "f92f6329c5635baf373b7214248ca37ceb5fdf03",
-  "devDependencies": {
-    "typescript": "^4.3.5"
-  }
+  "gitHead": "f92f6329c5635baf373b7214248ca37ceb5fdf03"
 }

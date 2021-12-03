@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/server",
-  "version": "3.0.0-beta.1",
+  "version": "3.0.0-beta.2",
   "description": "",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
@@ -27,8 +27,5 @@
     "sat": "^0.8.0",
     "yuka": "^0.7.5"
   },
-  "gitHead": "f92f6329c5635baf373b7214248ca37ceb5fdf03",
-  "devDependencies": {
-    "typescript": "^4.3.5"
-  }
+  "gitHead": "f92f6329c5635baf373b7214248ca37ceb5fdf03"
 }

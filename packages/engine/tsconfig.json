@@ -16,14 +16,17 @@
     "noImplicitAny": false,
     "noImplicitReturns": false,
     "declaration": false,
-    "experimentalDecorators": true, 
+    "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "types": ["node", "jest"]
+    "types": [
+      "node",
+      "jest"
+    ]
   },
   "include": [
-    "src", 
-    "index.d.ts", 
-    "tests", 
+    "src",
+    "index.d.ts",
+    "tests",
     "node_modules/@rpgjs/compiler/types/*.d.ts"
   ]
 }

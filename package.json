@@ -9,11 +9,12 @@
     "concurrently": "^5.3.0"
   },
   "devDependencies": {
-    "artillery": "^1.6.1",
-    "artillery-engine-socketio-v3": "^1.0.1",
+    "artillery": "^1.7.9",
+    "artillery-engine-socketio-v3": "^1.1.2",
     "jest": "^26.4.2",
     "lerna": "^4.0.0",
-    "npm-packlist": "^2.1.5"
+    "npm-packlist": "^2.1.5",
+    "typescript": "^4.5.2"
   },
   "resolutions": {
     "npm-packlist": "2.1.5"
@@ -32,8 +33,8 @@
     "build:database": "cd packages/database && npm run build",
     "build:testing": "cd packages/testing && npm run build",
     "build:sync-server": "cd packages/sync-server && npm run build",
-    "watch:sync-server": "cd packages/sync-server && npm run watch",
     "build:sync-client": "cd packages/sync-client && npm run build",
+    "watch:sync-server": "cd packages/sync-server && npm run watch",
     "watch:sync-client": "cd packages/sync-client && npm run watch",
     "watch:common": "cd packages/common && npm run watch",
     "watch:client": "cd packages/client && npm run watch",
