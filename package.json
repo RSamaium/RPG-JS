@@ -20,7 +20,7 @@
   },
   "scripts": {
     "postinstall": "lerna bootstrap && npm run build:common && npm run build:sync-client && npm run build:sync-server && npm run build:client && npm run build:database && npm run build:server && npm run build:testing",
-    "test": "cd tests/unit-tests && npm test",
+    "test": "cd tests/unit-tests && npm test && cd ../../packages/sync-server && npm test",
     "load": "artillery run tests/load-testing/socket.yml",
     "lerna:publish": "lerna publish --ignore-prepublish --force-publish --no-private --no-push --no-git-tag-version",
     "lerna:ls": "lerna ls",
