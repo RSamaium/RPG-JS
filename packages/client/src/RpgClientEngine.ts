@@ -125,9 +125,6 @@ export class RpgClientEngine {
                 })
             }
         }
-        else {
-            console.log('> RPGJS is in development mode <')
-        }
 
         this.controls = new KeyboardControls(this) 
     }
@@ -141,6 +138,7 @@ export class RpgClientEngine {
      * @memberof RpgClientEngine
      */
     async start() {
+        PIXI.utils.skipHello()
         await this._init()
         let frame = 0
         let renderLoop = (timestamp) => {
