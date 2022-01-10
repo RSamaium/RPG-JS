@@ -332,6 +332,7 @@ export class RpgCommonPlayer {
         }
         let events: RpgCommonPlayer[] = this.gameEngine.world.getObjectsOfGroup(this.map, this)
 
+        // deprecated
         const inArea = (player1: RpgCommonPlayer, player2: RpgCommonPlayer) => {
             if (player1.vision && player1.vision.type) {
                 const playerInVision = Hit.testPolyCollision('box', player2.hitbox, player1.visionHitbox?.hitbox)

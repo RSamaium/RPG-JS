@@ -21,6 +21,7 @@ export default class TileMap extends PIXI.Container {
     frameRateAnimation: number = 10
     tileSets: any[] = []
     layers: any = {}
+    shapeLayer: PIXI.Container = new PIXI.Container()
     private frameTile: number = 0
 
     constructor(data, private renderer) {
@@ -165,5 +166,7 @@ export default class TileMap extends PIXI.Container {
         if (!this.defaultLayer) {
             this.defaultLayer = this.createEventLayer('event-layer')
         }
+
+        this.addChild(this.shapeLayer)
     }
 }

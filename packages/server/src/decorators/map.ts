@@ -190,7 +190,8 @@ export function MapData(options: MapOptions) {
                         h: Number
                     },
                     properties: {
-                        collision: Boolean
+                        collision: Boolean,
+                        color: String
                     }
                 }
             ]

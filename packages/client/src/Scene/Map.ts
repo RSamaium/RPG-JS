@@ -163,14 +163,21 @@ export class SceneMap extends Scene implements IScene {
                 if (shapeMap) {
                     shapeMap.set(shape)
                 }
-                else {
+                if (!this.shapes[name]) {
                     const instanceShape  = this.gameMap.createShape(shape)
                     instanceShape.clientContainer = new PIXI.Container()
+                    if (shape.properties.color) {
+                        const graphics = new PIXI.Graphics()
+                        graphics.beginFill(shape.properties.color);
+                        graphics.drawRect(0, 0, shape.width, shape.height)
+                        graphics.endFill()
+                        instanceShape.clientContainer.addChild(graphics)
+                    }
                     instanceShape.clientContainer.x = shape.x
                     instanceShape.clientContainer.y = shape.y
-                    this.viewport?.addChild(instanceShape.clientContainer)
+                    this.tilemap.shapeLayer.addChild(instanceShape.clientContainer)
                     this.shapes[name] = instanceShape.clientContainer
-                }
+                }     
             }
         }
     }
