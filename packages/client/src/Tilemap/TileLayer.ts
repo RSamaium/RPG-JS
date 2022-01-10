@@ -2,7 +2,8 @@ import Tile from './Tile';
 
 import { pixi_tilemap } from 'pixi-tilemap'
 
-pixi_tilemap.Constant.maxTextures = 4;
+pixi_tilemap.Constant.maxTextures = 4
+pixi_tilemap.Constant.use32bitIndex = true
 
 export default class TileLayer extends PIXI.Container {
 

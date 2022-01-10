@@ -8,6 +8,10 @@ RPG JS is a framework for creating RPGs and MMORPGs.The code remains the same de
 
 [rpgjs.dev](https://rpgjs.dev)
 
+## Important Note
+
+> It only works on NodeJS version 14. You can help with the development to make it work on version 16 (you will have to update Webpack and Node SASS in packages/compiler)
+
 ## Summary
 
 * [Features](#features)
@@ -97,8 +101,6 @@ git clone https://github.com/RSamaium/RPG-JS.git
 npm install
 npm run dev
 ```
-
-> It only works on NodeJS version 14. You can help with the development to make it work on version 16 (you will have to update Webpack and Node SASS in packages/compiler)
 
 > The installation is a bit long, don't worry!
 
