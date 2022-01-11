@@ -110,13 +110,13 @@ export class RpgClientEngine {
         this.io = this.options.io
         this.globalConfig = this.options.globalConfig
 
-       this.gameEngine._playerClass = this.renderer.options.spriteClass || RpgSprite
-       this.gameEngine.standalone = this.options['standalone']
-       this.gameEngine.renderer = this.renderer
-       this.gameEngine.clientEngine = this
+        this.gameEngine._playerClass = this.renderer.options.spriteClass || RpgSprite
+        this.gameEngine.standalone = this.options['standalone']
+        this.gameEngine.renderer = this.renderer
+        this.gameEngine.clientEngine = this
 
-        _initSpritesheet(this.renderer.options.spritesheets)
-        _initSound(this.renderer.options.sounds)
+        this.addSpriteSheet(this.renderer.options.spritesheets)
+        this.addSound(this.renderer.options.sounds)
 
         if (typeof __RPGJS_PRODUCTION__ != 'undefined' && __RPGJS_PRODUCTION__) {
             if ('serviceWorker' in navigator) {
@@ -127,6 +127,40 @@ export class RpgClientEngine {
         }
 
         this.controls = new KeyboardControls(this) 
+    }
+
+    private addResource(resourceClass, cb) {
+        let array = resourceClass
+        if (!Utils.isArray(resourceClass)) {
+            array = [resourceClass]
+        }
+        cb(array, this)
+    }
+
+    /**
+     * Adds Spritesheet classes
+     *
+     * @title Add Spritesheet
+     * @method addSpriteSheet(spritesheetClass | spritesheetClass[])
+     * @returns {void}
+     * @since beta.3
+     * @memberof RpgClientEngine
+     */
+    addSpriteSheet(spritesheetClass) {
+        this.addResource(spritesheetClass, _initSpritesheet)
+    }
+
+    /**
+     * Adds Sound classes
+     *
+     * @title Add Sound
+     * @method addSpriteSheet(soundClass | soundClass[])
+     * @returns {void}
+     * @since beta.3
+     * @memberof RpgClientEngine
+     */
+    addSound(soundClass) {
+        this.addResource(soundClass, _initSound)
     }
 
     /**

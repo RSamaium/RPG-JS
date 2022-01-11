@@ -1,4 +1,4 @@
-import { Direction, Control, Input, PrebuiltGui, HookServer, HookClient } from '@rpgjs/common'
+import { Direction, Control, Input, PrebuiltGui, HookServer, HookClient, RpgPlugin } from '@rpgjs/common'
 import entryPoint from './clientEntryPoint'
 import {  RpgModule } from '@rpgjs/common'
 import { RpgClient, RpgSceneHooks, RpgSceneMapHooks, RpgSpriteHooks, RpgClientEngineHooks } from './RpgClient'
@@ -51,5 +51,6 @@ export {
     RpgSpriteHooks,
     RpgClientEngineHooks,
     RpgResource,
-    RpgClientEngine
+    RpgClientEngine,
+    RpgPlugin
 }

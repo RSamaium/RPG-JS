@@ -1,4 +1,6 @@
-export function _initResource(memory: Map<string, any>, _resources, prop: string) {
+import { RpgClientEngine } from "./RpgClientEngine"
+
+export function _initResource(memory: Map<string, any>, _resources, prop: string, engine: RpgClientEngine) {
     for (let resource of _resources) {
         const pluralProp = prop + 's'
         if (resource[pluralProp]) {
@@ -9,7 +11,7 @@ export function _initResource(memory: Map<string, any>, _resources, prop: string
             }
         }
         else {
-            const instance = new resource()
+            const instance = new resource(engine)
             instance[prop] = instance[prop]
             memory.set(resource.id, instance)
         }

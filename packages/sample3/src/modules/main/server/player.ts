@@ -1,4 +1,5 @@
 import { RpgPlayer, RpgMap, RpgPlayerHooks, Direction, Move, RpgShape, ShapePositioning } from '@rpgjs/server'
+import { EmotionBubble } from '@rpgjs/plugin-emotion-bubbles'
 
 export const player: RpgPlayerHooks = {
     onJoinMap(player: RpgPlayer, map: RpgMap) {
@@ -18,6 +19,7 @@ export const player: RpgPlayerHooks = {
     },
     onInShape(player: RpgPlayer, shape: RpgShape) {
         console.log('in', player.name, shape.name)
+        player.showEmotionBubble(EmotionBubble.zZ)
     },
     onOutShape(player: RpgPlayer, shape: RpgShape) {
         console.log('out', player.name, shape.name)

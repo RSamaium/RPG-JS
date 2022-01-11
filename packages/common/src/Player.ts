@@ -375,6 +375,7 @@ export class RpgCommonPlayer {
      * - positioning: Indicate where the shape is placed.
      * - properties: An object in order to retrieve information when interacting with the shape
      * - name: The name of the shape
+     * @since beta.3
      * @returns {RpgShape}
      * @memberof Player
      */
@@ -400,6 +401,7 @@ export class RpgCommonPlayer {
      * @title Get Shapes
      * @method player.getShapes()
      * @returns {RpgShape[]}
+     * @since beta.3
      * @memberof Player
      */
     getShapes(): RpgShape[] {
@@ -474,6 +476,7 @@ export class RpgCommonPlayer {
      * @title Get In-Shapes
      * @method player.getInShapes()
      * @returns {RpgShape[]}
+     * @since beta.3
      * @memberof Player
      */
     getInShapes(): RpgShape[] {
