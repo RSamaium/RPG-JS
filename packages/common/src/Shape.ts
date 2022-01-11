@@ -17,6 +17,12 @@ export class RpgShape  {
     _hitbox: any
     private _properties: any = {}
     type: string = 'box'
+    /**
+    * Get/Set name
+    * @title name
+    * @prop { string } name
+    * @memberof Shape
+    */
     name: string = ''
     fixEvent?: RpgCommonPlayer
     private playersIn: {
@@ -25,6 +31,13 @@ export class RpgShape  {
     private onIn: (player: RpgCommonPlayer) => void
     private onOut: (player: RpgCommonPlayer) => void
     clientContainer: any = null
+    /**
+    * Get/Set positioning
+    * @title positioning
+    * @prop { ShapePositioning } positioning
+    * @default default
+    * @memberof Shape
+    */
     positioning?: ShapePositioning = ShapePositioning.Default
     
     constructor(obj: ShapeObject) {
@@ -59,6 +72,12 @@ export class RpgShape  {
         this._hitbox = val
     }
 
+    /**
+    * Get/Set x
+    * @title x
+    * @prop { number } x
+    * @memberof Shape
+    */
     get x(): number {
         return this.hitbox.x || this.hitbox.pos.x
     }
@@ -67,6 +86,12 @@ export class RpgShape  {
         this.setPos('x', val)
     }
 
+    /**
+    * Get/Set y
+    * @title y
+    * @prop { number } y
+    * @memberof Shape
+    */
     get y(): number {
         return this.hitbox.y || this.hitbox.pos.y
     }
@@ -75,6 +100,13 @@ export class RpgShape  {
         this.setPos('y', val)
     }
 
+    /**
+    * Get/Set properties
+
+    * @title Properties
+    * @prop { object } Properties
+    * @memberof Shape
+    */
     get properties() {
         if (this.fixEvent) {
             return { 
@@ -124,6 +156,14 @@ export class RpgShape  {
         return false
     }
 
+    /**
+     * Whether the player is in this shape
+     * 
+     * @title Player is in this shape ?
+     * @method shape.playerIsIn(player: RpgPlayer)
+     * @returns {boolean}
+     * @memberof Shape
+     */
     playerIsIn(player: RpgCommonPlayer): boolean {
         return !!this.playersIn[player.id]
     }
@@ -132,6 +172,14 @@ export class RpgShape  {
         return !this.hitbox.w
     }
 
+   /**
+     * Recover the player with the shape. You must have used the `attachShape()` method on the player
+     * 
+     * @title Get Player Owner
+     * @method shape.getPlayerOwner()
+     * @returns {RpgPlayer [ undefined]}
+     * @memberof Shape
+     */
     getPlayerOwner(): RpgCommonPlayer | undefined {
         return this.fixEvent
     }

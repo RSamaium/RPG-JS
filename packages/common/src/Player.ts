@@ -33,14 +33,9 @@ export class RpgCommonPlayer {
     collisionWith: any[] = []
     data: any = {}
     hitbox: any
-    vision: any
     
     inShapes: {
         [shapeId: string]: RpgShape
-    } = {}
-
-    private inVision: {
-        [playerId: string]: boolean
     } = {}
 
     private shapes: RpgShape[] = []
@@ -196,17 +191,6 @@ export class RpgCommonPlayer {
 
     get hHitbox() {
         return this.hitbox.h
-    }
-
-    get visionHitbox() {
-        if (!this.vision.type) return null
-        const x = this.position.x - (this.vision.width / 2 - this.wHitbox / 2)
-        const y = this.position.y -(this.vision.height / 2 - this.hHitbox / 2)
-        return Hit.getHitbox({
-            ...this.vision,
-            x,
-            y
-        })
     }
     
     defineNextPosition(direction): Position {
@@ -372,6 +356,28 @@ export class RpgCommonPlayer {
         return false
     }
 
+    /**
+     * Attach a shape to the player (and allow interaction with it)
+     * 
+     * ```ts
+     * import { ShapePositioning } from '@rpgjs/server'
+     * 
+     * player.attachShape({
+     *      width: 100,
+     *      height: 100,
+     *      positioning: ShapePositioning.Center
+     * })
+     * ```
+     * 
+     * @title Attach Shape
+     * @method player.attachShape(parameters)
+     * @param { { width: number, height: number, positioning?, name?, properties?: object } } obj
+     * - positioning: Indicate where the shape is placed.
+     * - properties: An object in order to retrieve information when interacting with the shape
+     * - name: The name of the shape
+     * @returns {RpgShape}
+     * @memberof Player
+     */
     attachShape(obj: { 
         width: number, 
         height: number 
@@ -388,6 +394,14 @@ export class RpgCommonPlayer {
         return shape
     }
 
+    /**
+     * Returns all shapes assigned to this player
+     * 
+     * @title Get Shapes
+     * @method player.getShapes()
+     * @returns {RpgShape[]}
+     * @memberof Player
+     */
     getShapes(): RpgShape[] {
         return this.shapes
     }
@@ -454,6 +468,14 @@ export class RpgCommonPlayer {
         return true
     }
 
+    /**
+     * Retrieves all shapes where the player is located
+     * 
+     * @title Get In-Shapes
+     * @method player.getInShapes()
+     * @returns {RpgShape[]}
+     * @memberof Player
+     */
     getInShapes(): RpgShape[] {
         return Object.values(this.inShapes)
     }

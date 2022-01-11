@@ -205,42 +205,6 @@ export class RpgPlayer extends RpgCommonPlayer {
     }
 
     /**
-     * Define a vision for the event. 
-     * 
-     * The object in parameter
-     * - type: `box`
-     * - height: Height
-     * - width: Width
-     * 
-     * the `onInVision()` and `onOutVision()` methods are triggered on the `RpgPlayer` class
-     * 
-     * ```ts
-     * player.setVision({
-     *      type: 'box',
-     *      width: 100, 
-     *      height: 100
-     * })
-     * ```
-     * 
-     * @title Set Vision
-     * @todo
-     * @method player.setVision(obj)
-     * @param {object} obj
-     * @memberof Player
-     */
-    setVision(obj: {
-        ellipse?: boolean,
-        height: number,
-        width: number,
-        type: string
-    }) {
-        if (!this.hitbox) {
-            throw 'Please define hitbox property before'
-        }
-        this.vision = obj
-    }
-
-    /**
      * Change your map. Indicate the positions to put the player at a place on the map
      * 
      * > The map must be added to RpgServer beforehand. Guide: [Create Map](/guide/create-map.html)

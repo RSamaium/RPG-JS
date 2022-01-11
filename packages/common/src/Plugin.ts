@@ -11,8 +11,6 @@ export enum HookServer {
     PlayerDisconnected = 'Server.onDisconnected',
     AddMap = 'Server.AddMap',
     AddDatabase = 'Server.AddDatabase',
-    PlayerInVision = 'Server.onInVision',
-    PlayerOutVision = 'Server.onOutVision',
     PlayerInput = 'Server.onInput',
     PlayerJoinMap = 'Server.onJoinMap',
     PlayerLeaveMap = 'Server.onLeaveMap',
