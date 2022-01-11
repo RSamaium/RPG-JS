@@ -7,7 +7,8 @@ import {
     HookServer, 
     HookClient, 
     RpgModule,
-    RpgShape 
+    RpgShape,
+    ShapePositioning
 } from '@rpgjs/common'
 import { RpgServer, RpgPlayerHooks, RpgServerEngineHooks } from './RpgServer'
 import { EventData } from './decorators/event'
@@ -47,5 +48,6 @@ export {
     RpgPlayerHooks,
     RpgServerEngineHooks,
     RpgServerEngine,
-    RpgShape
+    RpgShape,
+    ShapePositioning
 }

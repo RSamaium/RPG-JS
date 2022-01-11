@@ -1,5 +1,5 @@
-import { intersection, isString, isBrowser } from './Utils'
-import { Hit } from './Hit'
+import { intersection, isString, isBrowser, generateUID } from './Utils'
+import { Hit, HitObject } from './Hit'
 import { RpgShape } from './Shape'
 import SAT from 'sat'
 import Map from './Map'
@@ -42,6 +42,8 @@ export class RpgCommonPlayer {
     private inVision: {
         [playerId: string]: boolean
     } = {}
+
+    private shapes: RpgShape[] = []
 
     private _position: any
     private _hitboxPos: any
@@ -332,28 +334,18 @@ export class RpgCommonPlayer {
         }
         let events: RpgCommonPlayer[] = this.gameEngine.world.getObjectsOfGroup(this.map, this)
 
-        // deprecated
-        const inArea = (player1: RpgCommonPlayer, player2: RpgCommonPlayer) => {
-            if (player1.vision && player1.vision.type) {
-                const playerInVision = Hit.testPolyCollision('box', player2.hitbox, player1.visionHitbox?.hitbox)
-                if (playerInVision && !player1.inVision[player2.id]) {
-                    player1.inVision[player2.id] = true
-                    if (player1.execMethod) player1.execMethod('onInVision', [player2])
-                }
-                if (!playerInVision && player1.inVision[player2.id]) {
-                    delete player1.inVision[player2.id]
-                    if (player1.execMethod) player1.execMethod('onOutVision', [player2])
-                }
-            }
-        }
-
         for (let event of events) {
             if (event.id == this.id) continue
             if (!this.zCollision(event)) continue
             const collided = Hit.testPolyCollision('box', hitbox, event.hitbox)
             
-            inArea(event, this)
-            inArea(this, event)
+            for (let shape of this.shapes) {
+                this.collisionWithShape(shape, event)
+            }
+
+            for (let shape of event.shapes) {
+                event.collisionWithShape(shape, this)
+            }
             
             if (collided) {
                 this.collisionWith.push(event)
@@ -373,26 +365,61 @@ export class RpgCommonPlayer {
 
         const shapes = map.getShapes()
         for (let shape of shapes) {
-            const { collision, z } = shape.properties
-            if (shape.isShapePosition()) continue
-            if (z !== undefined && !this.zCollision({
-                position: { z },
-                height: map.tileHeight
-            })) {
-                continue
-            }
-            const hitbox = Hit.createObjectHitbox(nextPosition.x, nextPosition.y, nextPosition.z, this.hitbox.w, this.hitbox.h)
-            let collided = Hit.testPolyCollision(shape.type, hitbox, shape.hitbox)
-            if (collided) {
-                this.collisionWith.push(shape)
-                // TODO: in shape after map load
-                if (!collision) shape.in(this)
-                this.triggerCollisionWith()
-                if (collision) return true
-            }
-            else {
-                shape.out(this)
-            }
+            const bool = this.collisionWithShape(shape, this, nextPosition)
+            if (bool) return true
+        }
+
+        return false
+    }
+
+    attachShape(obj: { 
+        width: number, 
+        height: number 
+        positioning?: string
+        name?: string
+        properties?: object
+    }): RpgShape {
+        obj.name = (obj.name || generateUID()) as string
+        const shape = new RpgShape({
+            ...obj,
+            fixEvent: this
+        } as any)
+        this.shapes.push(shape)
+        return shape
+    }
+
+    getShapes(): RpgShape[] {
+        return this.shapes
+    }
+
+    collisionWithShape(shape: RpgShape, player: RpgCommonPlayer, nextPosition?: Position): boolean {
+        const { collision, z } = shape.properties
+        if (shape.isShapePosition()) return false
+        if (z !== undefined && !this.zCollision({
+            position: { z },
+            height: this.mapInstance.tileHeight
+        })) {
+            return false
+        }
+        let { position, hitbox } = player
+        if (nextPosition) position = nextPosition
+        const hitboxObj = Hit.createObjectHitbox(
+            position.x, 
+            position.y, 
+            position.z, 
+            hitbox.w, 
+            hitbox.h
+        )
+        let collided = Hit.testPolyCollision(shape.type, hitboxObj, shape.hitbox)
+        if (collided) {
+            this.collisionWith.push(shape)
+            // TODO: in shape after map load
+            if (!collision) shape.in(this)
+            this.triggerCollisionWith()
+            if (collision) return true
+        }
+        else {
+            shape.out(this)
         }
 
         return false
@@ -462,7 +489,6 @@ export class RpgCommonPlayer {
      * 
      * ```ts
      * import { Direction } from '@rpgjs/server'
-import { Shape } from './Shape';
      * 
      * player.changeDirection(Direction.Left)
      * ```

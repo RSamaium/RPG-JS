@@ -143,6 +143,22 @@ export class SceneMap extends Scene implements IScene {
     updateScene(obj: { data: any, partial: any }) {
         const shapes = obj.partial.shapes
         const fullShapesObj = obj.data.shapes
+
+        const createShapeContainer = (instanceShape, shape) => {
+            instanceShape.clientContainer = new PIXI.Container()
+            if (shape.properties.color) {
+                const graphics = new PIXI.Graphics()
+                graphics.beginFill(shape.properties.color);
+                graphics.drawRect(0, 0, shape.width, shape.height)
+                graphics.endFill()
+                instanceShape.clientContainer.addChild(graphics)
+            }
+            instanceShape.clientContainer.x = shape.x
+            instanceShape.clientContainer.y = shape.y
+            this.tilemap.shapeLayer.addChild(instanceShape.clientContainer)
+            this.shapes[shape.name] = instanceShape.clientContainer
+        }
+
         if (shapes) {
             for (let i in shapes) {
                 let shape = fullShapesObj[i]
@@ -161,22 +177,14 @@ export class SceneMap extends Scene implements IScene {
                     properties: shape.properties
                 }
                 if (shapeMap) {
+                    if (!shapeMap.clientContainer) {
+                        createShapeContainer(shapeMap, shape)
+                    }
                     shapeMap.set(shape)
                 }
                 if (!this.shapes[name]) {
                     const instanceShape  = this.gameMap.createShape(shape)
-                    instanceShape.clientContainer = new PIXI.Container()
-                    if (shape.properties.color) {
-                        const graphics = new PIXI.Graphics()
-                        graphics.beginFill(shape.properties.color);
-                        graphics.drawRect(0, 0, shape.width, shape.height)
-                        graphics.endFill()
-                        instanceShape.clientContainer.addChild(graphics)
-                    }
-                    instanceShape.clientContainer.x = shape.x
-                    instanceShape.clientContainer.y = shape.y
-                    this.tilemap.shapeLayer.addChild(instanceShape.clientContainer)
-                    this.shapes[name] = instanceShape.clientContainer
+                    createShapeContainer(instanceShape, shape)
                 }     
             }
         }

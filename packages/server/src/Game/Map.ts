@@ -92,6 +92,11 @@ export class RpgMap extends RpgCommonMap {
         player.stopBehavior()
         this.entityManager.remove(player.steerable)
         this.getShapes().forEach(shape => shape.out(player))
+        const events: RpgPlayer[] = this.game.world.getObjectsOfGroup(this.id, player)
+        for (let event of events) {
+            player.getShapes().forEach(shape => shape.out(event))
+            event.getShapes().forEach(shape => shape.out(player))
+        }
     }
 
     autoLoadEvent() {

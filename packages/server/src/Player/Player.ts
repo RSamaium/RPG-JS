@@ -291,6 +291,8 @@ export class RpgPlayer extends RpgCommonPlayer {
         if (!(positions as Position).z) (positions as Position).z = 0
         this.teleported++
         this.position = positions as Position
+        // force interaction with event or shape
+        this.move(this.position)
         return (positions as Position)
     }
 
@@ -631,7 +633,8 @@ export interface RpgPlayer extends
     _socket: any 
     server: any,
     vision,
-    steerable: Kompute
+    steerable: Kompute,
+    attachShape: any
 }
 
 applyMixins(RpgPlayer, [

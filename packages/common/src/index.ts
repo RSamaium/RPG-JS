@@ -13,7 +13,7 @@ import { Scheduler } from './Scheduler'
 import { RpgModule, loadModules, ModuleType } from './Module'
 import * as MockIo from './transports/io'
 import * as Logger from './Logger';
-import { RpgShape } from './Shape'
+import { RpgShape, ShapePositioning } from './Shape'
 
 export {
     RpgCommonPlayer,
@@ -39,5 +39,6 @@ export {
     loadModules,
     Logger,
     ModuleType,
-    RpgShape
+    RpgShape,
+    ShapePositioning
 }

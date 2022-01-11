@@ -61,6 +61,7 @@ export default class RpgCommonMap {
         obj.name = (obj.name || generateUID()) as string
         const shape = new RpgShape(obj)
         this.shapes.push(shape)
+        // trick to sync with client
         return this.shapes[this.shapes.length-1]
     }
 

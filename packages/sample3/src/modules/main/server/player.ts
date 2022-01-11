@@ -1,25 +1,15 @@
-import { RpgPlayer, RpgMap, RpgPlayerHooks, Direction, Move, RpgShape } from '@rpgjs/server'
+import { RpgPlayer, RpgMap, RpgPlayerHooks, Direction, Move, RpgShape, ShapePositioning } from '@rpgjs/server'
 
 export const player: RpgPlayerHooks = {
     onJoinMap(player: RpgPlayer, map: RpgMap) {
-       /*
-
-        map.createShape({
-            ellipse: false,
-            gid: 1,
+        player.name = ''+Math.random()
+        console.log('Enter', player.name)
+        player.attachShape({
             height: 100,
-            polygon: null,
-            polyline: null,
-            properties: {
-                
-            },
-            rotation: 0,
-            visible: true,
             width: 100,
-            x: 500,
-            y: 500
-           })
-        */
+            positioning: ShapePositioning.Center
+        })
+        
     },
     onInput(player: RpgPlayer, { input }) {
         if (input == 'back') {
@@ -27,9 +17,9 @@ export const player: RpgPlayerHooks = {
         }
     },
     onInShape(player: RpgPlayer, shape: RpgShape) {
-        console.log('in', shape)
+        console.log('in', player.name, shape.name)
     },
     onOutShape(player: RpgPlayer, shape: RpgShape) {
-        console.log('out', shape)
+        console.log('out', player.name, shape.name)
     }
 }
