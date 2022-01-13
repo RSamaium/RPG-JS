@@ -57,8 +57,29 @@ export default class RpgCommonMap {
         }
     }
 
+    /**
+     * Create a shape dynamically on the map
+     * 
+     * Object:
+     *  - (number) x: Position X
+     *  - (number) y: Position Y
+     *  - (number) width: Width
+     *  - (number) height: Height
+     *  - (object) properties (optionnal): 
+     *      - (number) z: Position Z
+     *      - (hexadecimal) color: Color (shared with client)
+     *      - (boolean) collision
+     *      - You can your own properties
+     * 
+     * @title Create Shape
+     * @since beta.3
+     * @method map.createShape(obj)
+     * @returns {RpgShape}
+     * @memberof Map
+     */
     createShape(obj: HitObject): RpgShape {
         obj.name = (obj.name || generateUID()) as string
+        obj.properties = obj.properties || {}
         const shape = new RpgShape(obj)
         this.shapes.push(shape)
         // trick to sync with client

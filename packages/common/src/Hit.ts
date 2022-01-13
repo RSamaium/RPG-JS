@@ -1,14 +1,14 @@
 import SAT from 'sat'
 
 export interface HitObject {
-    ellipse: boolean
-    gid: number | null
+    ellipse?: boolean
+    gid?: number
     height: number
-    polygon: any[] | null
-    polyline: any[] | null
-    properties: object
-    rotation: number
-    visible: boolean
+    polygon?: any[]
+    polyline?: any[]
+    properties?: object
+    rotation?: number
+    visible?: boolean
     width: number
     x: number
     y: number

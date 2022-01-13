@@ -1,5 +1,25 @@
 import { RpgClientEngine } from "./RpgClientEngine"
 
+/**
+* Get/Set images in resources
+ ```ts
+    import { RpgResource } from '@rpg/client'
+    const fileLink = RpgResource.spritesheets.get('resource_id')
+  ```
+* @title Get/Set image link
+* @prop { Map< string, string > } spritesheets
+* @memberof Resources
+*/
+/**
+* Get/Set sounds in resources
+ ```ts
+    import { RpgResource } from '@rpg/client'
+    const fileLink = RpgResource.sounds.get('resource_id')
+  ```
+* @title Get/Set sound link
+* @prop { Map< string, string > } sounds
+* @memberof Resources
+*/
 export function _initResource(memory: Map<string, any>, _resources, prop: string, engine: RpgClientEngine) {
     for (let resource of _resources) {
         const pluralProp = prop + 's'
