@@ -1,0 +1,26 @@
+{
+  "name": "@rpgjs/fx",
+  "version": "3.0.0-beta.3",
+  "description": "",
+  "main": "src/index.ts",
+  "types": "index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src",
+    "index.d.ts"
+  ],
+  "keywords": [],
+  "author": "Samuel Ronce",
+  "license": "MIT",
+  "dependencies": {
+    "@rpgjs/client": "^3.0.0-beta.3",
+    "jszip": "3.7.1",
+    "revolt-fx": "1.1.0"
+  }
+}
