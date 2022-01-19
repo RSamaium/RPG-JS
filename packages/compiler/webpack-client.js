@@ -135,6 +135,14 @@ module.exports = function(dirname, extend = {}) {
                 }
             },
             {
+                test: /\.zip$/i,
+                loader: require.resolve('file-loader'),
+                options: {
+                    outputPath: 'bundles',
+                    esModule: false
+                }
+            },
+            {
                 test: /\.(wav|mp3|mpeg|opus|ogg|oga|aac|caf|m4a|m4b|mp4|weba|webm|dolby|flac)$/i,
                 loader: require.resolve('file-loader'),
                 options: {
