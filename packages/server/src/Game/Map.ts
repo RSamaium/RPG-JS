@@ -7,11 +7,13 @@ import { EventMode, RpgEvent } from '../Event'
 import { Move } from '../Player/MoveManager'
 import { RpgPlayer } from '../Player/Player'
 
-type EventOption = {
+export type EventPosOption = {
     x: number,
     y: number,
+    z?: number,
     event: EventOptions
-} | EventOptions
+}
+export type EventOption = EventPosOption | EventOptions
 
 class AutoEvent extends RpgEvent {
     static mode: EventMode
@@ -68,13 +70,7 @@ export class RpgMap extends RpgCommonMap {
         const data = await this.parseFile() 
         super.load(data) 
         RpgCommonMap.buffer.set(this.id, this)
-        //this.kWorld = new Kompute.World(data.width * data.tileWidth, data.height * data.tileHeight, 1000, 32) 
-        this.events = this.createEvents(this._events, EventMode.Shared)
-        // TODO
-       // this.autoLoadEvent()
-        for (let key in this.events) {
-            this.events[key].execMethod('onInit')
-        }
+        this.createDynamicEvent(this._events as EventPosOption[])
         this.onLoad()
     }
 
@@ -126,16 +122,60 @@ export class RpgMap extends RpgCommonMap {
         return this.getShapes().find(shape => shape.name == eventName)
     }
 
-    createEvent(obj: EventOption, mode: EventMode, shape?: any): RpgEvent | null {
+    /**
+     * Dynamically create an event in Shared mode
+     * 
+     * ```ts
+     * @EventData({
+     *  name: 'EV-1'
+     * })
+     * class MyEvent extends RpgEvent {
+     *  onAction() {
+     *      console.log('ok')
+     *  }
+     * } 
+     *
+     * map.createDynamicEvent({
+     *      x: 100,
+     *      y: 100,
+     *      event: MyEvent
+     * })
+     * ```
+     * 
+     * You can also put an array of objects to create several events at once
+     * 
+     * @title Create Dynamic Event
+     * @since 3.beta-4
+     * @method map.createDynamicEvent(eventObj | eventObj[])
+     * @param { { x: number, y: number, z?: number, event: eventClass } } [eventsList]
+     * @returns { { [eventId: string]: RpgEvent } }
+     * @memberof Map
+     */
+    createDynamicEvent(eventsList: EventPosOption | EventPosOption[]): { 
+        [eventId: string]: RpgEvent
+    } {
+        if (!eventsList) return  {}
+        if (!Utils.isArray(eventsList)) {
+            eventsList = [eventsList as EventPosOption]
+        }
+        const events = this.createEvents(eventsList as EventPosOption[], EventMode.Shared)
+        for (let key in events) {
+            this.events[key] = events[key]
+            this.events[key].execMethod('onInit')
+        }
+        return events
+    }
+
+    createEvent(obj: EventPosOption, mode: EventMode, shape?: any): RpgEvent | null {
         let event: any, position
         
         // We retrieve the information of the event ([Event] or [{event: Event, x: number, y: number}])
-        if (obj['x'] === undefined) {
+        if (obj.x === undefined) {
             event = obj
         }
         else {
-            event = obj['event']
-            position = { x: obj['x'], y: obj['y'] }
+            event = obj.event
+            position = { x: obj.x, y: obj.y, z: 0 }
         }
 
         // The event is ignored if the mode is different.

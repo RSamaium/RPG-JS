@@ -1,4 +1,5 @@
 import { RpgCommonPlayer, Utils, RpgPlugin, RpgCommonMap as RpgMap }  from '@rpgjs/common'
+import { RpgMap as GameMap } from '@rpgjs/server'
 import * as Kompute from 'kompute/build/Kompute'
 import * as YUKA from 'yuka'
 import { Query } from '../Query'
@@ -31,6 +32,8 @@ import {
     AGI_CURVE
 } from '../presets'
 import { BehaviorManager } from './BehaviorManager'
+import { EventOption, EventPosOption } from '../Game/Map'
+import { EventMode, RpgEvent } from '..'
 
 const { 
     isPromise, 
@@ -223,6 +226,61 @@ export class RpgPlayer extends RpgCommonPlayer {
     }
 
     /**
+     * Dynamically create an event in Scenario mode on the current map
+     * 
+     * ```ts
+     * @EventData({
+     *  name: 'EV-1'
+     * })
+     * class MyEvent extends RpgEvent {
+     *  onAction() {
+     *      console.log('ok')
+     *  }
+     * } 
+     *
+     * player.createDynamicEvent({
+     *      x: 100,
+     *      y: 100,
+     *      event: MyEvent
+     * })
+     * ```
+     * 
+     * You can also put an array of objects to create several events at once
+     * 
+     * @title Create Dynamic Event
+     * @since 3.beta-4
+     * @method player.createDynamicEvent(eventObj | eventObj[])
+     * @param { { x: number, y: number, z?: number, event: eventClass } } [eventsList]
+     * @returns { { [eventId: string]: RpgEvent } }
+     * @memberof Player
+     */
+    createDynamicEvent(eventsList: EventPosOption | EventPosOption[], forceMode: boolean = true): { 
+        [eventId: string]: RpgEvent
+    } {
+        if (!eventsList) return  {}
+        const mapInstance: GameMap = this.getCurrentMap() as GameMap
+        if (!mapInstance) {
+            throw 'The player is not assigned to any map'
+        }
+        if (!Utils.isArray(eventsList)) {
+            eventsList = [eventsList as EventPosOption]
+        }
+        let eventsListMode = eventsList
+        if (forceMode) {
+            eventsListMode = (eventsList as EventPosOption[]).map(event => {
+                event.event.mode = EventMode.Scenario
+                return event
+            })
+        }
+        const events = mapInstance.createEvents(eventsListMode, EventMode.Scenario)
+        for (let key in events) {
+            this.events[key] = events[key]
+            this.events[key].execMethod('onInit', [this])
+        }
+        return events
+    }
+
+    /**
      * Allows to change the positions of the player on the current map. 
      * You can put the X and Y positions or the name of the created shape on Tiled Map Editor.
      * If you have several shapes with the same name, one position will be chosen randomly.
@@ -409,19 +467,6 @@ export class RpgPlayer extends RpgCommonPlayer {
             name: 'addEffect',
             params: []
         })
-    }
-
-    /**
-     * @todo
-     */
-    createDynamicEvent(obj, mode): RpgPlayer | null {
-        const map: any = (this.mapInstance as RpgMap)
-        const event = map.createEvent(obj, mode)
-        if (event) {
-            map.events[event.name] = event
-            event.execMethod('onInit')
-        }
-        return event
     }
 
     /**

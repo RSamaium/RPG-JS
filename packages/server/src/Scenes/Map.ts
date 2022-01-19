@@ -48,7 +48,6 @@ export class SceneMap {
     }
 
     async changeMap(mapId, player, positions?): Promise<RpgMap> {
-        
         player.prevMap = player.map
         player.map = mapId
         player.events = []
@@ -89,10 +88,7 @@ export class SceneMap {
         player.execMethod('onJoinMap', [mapInstance])
 
         player.teleport(positions || 'start')
-        player.events = mapInstance.createEvents(mapInstance._events, EventMode.Scenario)
-        for (let key in player.events) {
-            player.events[key].execMethod('onInit', [player])
-        }
+        player.createDynamicEvent(mapInstance._events, false)
         return mapInstance
     }
 }
