@@ -2,8 +2,7 @@ function getRandomInt(max) {
     return Math.floor(Math.random() * Math.floor(max));
 }
 
-function randomDir(context, events, done) {
-    
+function randomDir() {
     const rand = getRandomInt(4)
     const direction = [
         'right',
@@ -12,9 +11,7 @@ function randomDir(context, events, done) {
         'up'
     ][rand];
     
-    context.vars.direction = direction
-  
-    return done();
+    return direction
 }
 
 module.exports = {

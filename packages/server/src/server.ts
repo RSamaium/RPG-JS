@@ -129,8 +129,9 @@ export class RpgServerEngine {
     step() {
         tick++
         if (tick % 4 === 0) {
-            this.send()
+            this.send() 
         }
+        RpgPlugin.emit(HookServer.Step, this)
     }
 
     private loadScenes() {

@@ -7,6 +7,12 @@ interface RpgClassMap<T> {
     new (server: any): T,
 }
 
+/**
+     *  When the server starts
+     * 
+     * @prop { (engine: RpgServerEngine) => any } [onStart]
+     * @memberof RpgServerEngineHooks
+     */
 export interface RpgServerEngineHooks {
     onStart?: (server: RpgServerEngine) => any
 }
