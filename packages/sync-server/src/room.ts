@@ -166,9 +166,10 @@ export class Room {
         }
 
         room.$join = (user: User) => {
-            room.users[user.id] = user
-            this.join(room.users[user.id], room)
-            //this.detectChanges(room)
+            if (user) {
+                room.users[user.id] = user
+                this.join(room.users[user.id], room)
+            }
         }
 
         room.$leave = (user: User) => {

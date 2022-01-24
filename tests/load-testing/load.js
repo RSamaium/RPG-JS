@@ -58,7 +58,7 @@ const createClient = () => {
   });
 
   if (++clientCount < MAX_CLIENTS) {
-    setTimeout(createClient, +CLIENT_CREATION_INTERVAL);
+    setTimeout(createClient, +CLIENT_CREATION_INTERVAL * 1000);
   }
 };
 

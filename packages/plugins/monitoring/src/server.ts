@@ -21,7 +21,7 @@ function cpu(oldUsage?) {
   return usage
 }
 
-let gaugeNbPlayer, gaugeStep
+let gaugeNbPlayer
 
 @RpgModule<RpgServer>({ 
     player: {
@@ -68,7 +68,6 @@ let gaugeNbPlayer, gaugeStep
 
           register.registerMetric(gaugeNbPlayer)
           register.registerMetric(gaugeCpu)
-          register.registerMetric(gaugeStep)
       
           let usage
       

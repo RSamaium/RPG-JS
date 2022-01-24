@@ -83,12 +83,15 @@ export class SceneMap {
         World.joinRoom(mapId, player.id)
 
         player = World.getUser(player.id)
-        
-        player.execMethod('onEnter', [player, player.prevMap || null], mapInstance)
-        player.execMethod('onJoinMap', [mapInstance])
 
-        player.teleport(positions || 'start')
-        player.createDynamicEvent(mapInstance._events, false)
+        if (player) {
+            player.execMethod('onEnter', [player, player.prevMap || null], mapInstance)
+            player.execMethod('onJoinMap', [mapInstance])
+
+            player.teleport(positions || 'start')
+            player.createDynamicEvent(mapInstance._events, false)
+        }
+        
         return mapInstance
     }
 }
