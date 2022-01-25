@@ -315,7 +315,7 @@ export class RpgClientEngine {
         const inputEvent = { input: actionName, playerId: this.gameEngine.playerId }
         this.gameEngine.processInput(inputEvent, this.gameEngine.playerId)
         RpgPlugin.emit(HookClient.SendInput, [this, inputEvent], true)
-        if (this.socket) this.socket.emit('move', inputEvent)
+        if (this.socket) this.socket.emit('move', { input: actionName })
     }
 
     private serverReconciliation()  {

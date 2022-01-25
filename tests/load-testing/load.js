@@ -40,14 +40,14 @@ let clientCount = 0;
 let lastReport = new Date().getTime();
 let packetsSinceLastReport = 0;
 
+function round(num) {
+  return Math.round(num * 100) / 100
+}
+
 const createClient = () => {
   const socket = io(URL, {
     transports: ['websocket']
   });
-
-  setInterval(() => {
-    socket.emit("move",  { input: randomDir(), options: {"movement": true}, step: 0 });
-  }, EMIT_INTERVAL_IN_MS);
 
   socket.on("w", () => {
     packetsSinceLastReport++;
@@ -55,7 +55,13 @@ const createClient = () => {
 
   socket.on("disconnect", (reason) => {
     console.log(`disconnect due to ${reason}`);
-  });
+  })
+
+  socket.on('loadScene', () => {
+    setInterval(() => {
+      socket.emit("move",  { input: randomDir() });
+    }, EMIT_INTERVAL_IN_MS);
+  })
 
   if (++clientCount < MAX_CLIENTS) {
     setTimeout(createClient, +CLIENT_CREATION_INTERVAL * 1000);
@@ -75,7 +81,7 @@ const printReport = () => {
     packetsSinceLastReport / durationSinceLastReport
   ).toFixed(2);
 
-  mkReport += `${time / 1000} | ${clientCount} | ${packetsPerSeconds} | ${packetsPerSeconds / clientCount}
+  mkReport += `${time / 1000} | ${clientCount} | ${packetsPerSeconds} | ${round(packetsPerSeconds / clientCount)}
 `
 
   console.log(

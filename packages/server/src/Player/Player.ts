@@ -453,7 +453,7 @@ export class RpgPlayer extends RpgCommonPlayer {
         this.emit('loadScene', {
             name, 
             data
-        })
+        }) 
     }
 
     private _getMap(id) {
