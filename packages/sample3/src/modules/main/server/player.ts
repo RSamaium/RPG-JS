@@ -28,7 +28,7 @@ export const player: RpgPlayerHooks = {
             map.setTile(pos.x, pos.y, 'Tile Layer 2', {
                 gid: 6
             })
-        })
+        }) 
     },
     onJoinMap(player: RpgPlayer, map: RpgMap) {
         
