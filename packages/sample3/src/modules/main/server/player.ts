@@ -27,13 +27,10 @@ export const player: RpgPlayerHooks = {
     onInput(player: RpgPlayer, { input }) {
         if (input == Control.Back) {
             //player.callMainMenu()
-            const map = player.getCurrentMap()
-            player.createDynamicEvent({
-                x: 200,
-                y: 100,
-                event: MyEvent
-            })
         }
+        const map = player.getCurrentMap()
+        const index = map.getTileIndex(0, 0)
+        console.log(map.getTileByIndex(index))
     },
     onInShape(player: RpgPlayer, shape: RpgShape) {
         console.log('in', player.name, shape.name)

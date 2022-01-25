@@ -35,15 +35,15 @@ export function isInstanceOf(val, _class) {
     return val instanceof _class
 }
 
-export function arrayUniq(array) {
+export function arrayUniq(array: any[]): any[] {
     return [...new Set(array)]
 }
 
-export function arrayFlat(array) {
+export function arrayFlat(array: any[]): any[] {
     return array.reduce((acc, val) => acc.concat(val), [])
 }
 
-export function intersection([start1, end1], [start2, end2]): boolean {
+export function intersection([start1, end1]: [number, number], [start2, end2]: [number, number]): boolean {
     return (start1 >= start2 && start1 <= end2) || (start2 >= start1 && start2 < end1)
 }
 
@@ -68,7 +68,7 @@ export function applyMixins(derivedCtor: any, baseCtors: any[]) {
     })
 }
 
-export function generateUID() {
+export function generateUID(): string {
     let firstPart: any = (Math.random() * 46656) | 0
     let secondPart: any = (Math.random() * 46656) | 0
     firstPart = ("000" + firstPart.toString(36)).slice(-3)
