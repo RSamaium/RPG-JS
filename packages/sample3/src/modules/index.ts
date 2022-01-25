@@ -11,7 +11,7 @@ export default [
     gamepad,
     main,
     defaultGui,
-    mobileGui,
+    //mobileGui,
     emotionBubblesPlugin,
     monitoring
 ]

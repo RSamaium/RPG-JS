@@ -18,8 +18,29 @@ export default class RpgCommonMap {
     data: any
     width: number = 0
     height: number = 0
+
+    /** 
+     * @title Width of a tile
+     * @prop {number} [tileWidth]
+     * @readonly
+     * @memberof Map
+     * */
     tileWidth: number = 0
+
+     /** 
+     * @title Height of a tile
+     * @prop {number} [tileHeight]
+     * @readonly
+     * @memberof Map
+     * */
     tileHeight: number = 0
+    
+    /** 
+     * @title Layers of map
+     * @prop {object[]} [layers]
+     * @readonly
+     * @memberof Map
+     * */
     layers: any[] = []
     private shapes: RpgShape[] = []
 
@@ -39,7 +60,7 @@ export default class RpgCommonMap {
 
     /** 
      * @title Width of the map in pixels
-     * @prop {number} map.widthPx
+     * @prop {number} [widthPx]
      * @readonly
      * @memberof Map
      * */
@@ -49,7 +70,7 @@ export default class RpgCommonMap {
 
     /** 
      * @title Height of the map in pixels
-     * @prop {number} map.heightPx
+     * @prop {number} [heightPx]
      * @readonly
      * @memberof Map
      * */
@@ -214,6 +235,7 @@ export default class RpgCommonMap {
             if (!_tiles) {
                 continue
             }
+            if (!_tiles.properties) _tiles.properties = {}
             const zLayer = layer.properties.z
             const zTile = _tiles.properties.z
             let z, zIntersection

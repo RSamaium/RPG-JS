@@ -1,8 +1,6 @@
 import { RpgPlayer, RpgMap, RpgPlayerHooks, Direction, Move, RpgShape, ShapePositioning, Control, RpgEvent, EventData } from '@rpgjs/server'
 import { EmotionBubble } from '@rpgjs/plugin-emotion-bubbles'
 
-let bool = false
-
 @EventData({
     name: 'EV-1', 
     hitbox: {
@@ -23,17 +21,22 @@ export class MyEvent extends RpgEvent {
 }
 
 export const player: RpgPlayerHooks = {
+    onConnected(player: RpgPlayer) {
+        player.canMove = false
+        player.on('change-tile', (pos) => {
+            const map = player.getCurrentMap()
+            map.setTile(pos.x, pos.y, 'Tile Layer 2', {
+                gid: 6
+            })
+        })
+    },
     onJoinMap(player: RpgPlayer, map: RpgMap) {
         
     },
     onInput(player: RpgPlayer, { input }) {
         if (input == Control.Back) {
-            //player.callMainMenu()
-            const map = player.getCurrentMap()
-            map.setTile(9 * 32, 13 * 32, 'Tile Layer 2', {
-                gid: 6 
-            })
-            bool = !bool
+            player.canMove = true
+            player.callMainMenu()
         }
         
     },

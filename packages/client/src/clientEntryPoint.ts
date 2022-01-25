@@ -100,7 +100,8 @@ export default (modules: ModuleType[], options: RpgClientEntryPointOptions): Rpg
         onConnected: HookClient.Connected,
         onDisconnect: HookClient.Disconnect,
         onConnectError: HookClient.ConnectedError,
-        onInput: HookClient.SendInput
+        onInput: HookClient.SendInput,
+        onWindowResize: HookClient.WindowResize
     }
 
     loadModules(modules, {
