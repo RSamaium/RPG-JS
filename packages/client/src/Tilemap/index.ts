@@ -3,6 +3,7 @@ import ImageLayer from './ImageLayer'
 import TileLayer from './TileLayer'
 import TileSet from './TileSet'
 import Tile from './Tile'
+import { log } from '../Logger'
 
 const { intersection } = Utils
 
@@ -132,6 +133,11 @@ export default class TileMap extends PIXI.Container {
             }
         })
         return tilesLayer
+    }
+
+    changeTile(x: number, y: number, layerName: string) {
+        if (!this.layers[layerName]) throw log(`${layerName} not exists`)
+        this.layers[layerName].changeTile(x, y)
     }
 
     load() {

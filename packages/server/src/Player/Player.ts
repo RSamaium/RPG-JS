@@ -1,5 +1,5 @@
 import { RpgCommonPlayer, Utils, RpgPlugin, RpgCommonMap as RpgMap }  from '@rpgjs/common'
-import { RpgMap as GameMap } from '@rpgjs/server'
+import { RpgMap as GameMap } from '../Game/Map'
 import * as Kompute from 'kompute/build/Kompute'
 import * as YUKA from 'yuka'
 import { Query } from '../Query'
@@ -272,7 +272,7 @@ export class RpgPlayer extends RpgCommonPlayer {
                 return event
             })
         }
-        const events = mapInstance.createEvents(eventsListMode, EventMode.Scenario)
+        const events = mapInstance.createEvents(eventsListMode as EventPosOption[], EventMode.Scenario)
         for (let key in events) {
             this.events[key] = events[key]
             this.events[key].execMethod('onInit', [this])

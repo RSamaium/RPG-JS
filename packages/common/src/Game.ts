@@ -40,7 +40,7 @@ export default class Game extends EventEmitter {
         return event
     }
 
-    processInput(inputData, playerId) {
+    processInput(inputData: { input: Control | Direction }, playerId: string) {
         const player = this.world.getObject(playerId)
         const { input } = inputData 
         

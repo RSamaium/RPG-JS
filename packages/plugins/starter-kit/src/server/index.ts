@@ -18,7 +18,7 @@ let serverEngine
             player.setHitbox(20, 16) 
             player.setGraphic('male1_2')
             if (!serverEngine.globalConfig.startMap) {
-                player.changeMap('medieval')
+                player.changeMap('cave')
             }
             player.setActor(databaseList.Hero) 
         }

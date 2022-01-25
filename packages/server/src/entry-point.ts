@@ -51,7 +51,7 @@ export default function(modules: ModuleType[], options: RpgServerEntryPointOptio
 
     const relationsEngine = {
         onStart: HookServer.Start,
-        onStep: HookServer.onStep
+        onStep: HookServer.Step
     }
 
     loadModules(modules, {

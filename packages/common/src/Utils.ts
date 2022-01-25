@@ -76,6 +76,16 @@ export function generateUID(): string {
     return firstPart + secondPart
 }
 
+export function createConstructor(...propNames){
+    return class {
+        constructor(...propValues){
+            propNames.forEach((name, idx) => {
+                this[name] = propValues[idx]
+            })
+        }
+    }
+}
+
 export function perlin() {
     let perlin = {
         rand_vect: function(){
@@ -141,5 +151,6 @@ export default {
     applyMixins,
     capitalize,
     perlin,
-    generateUID
+    generateUID,
+    createConstructor
 }

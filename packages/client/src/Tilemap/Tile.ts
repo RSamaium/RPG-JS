@@ -3,7 +3,7 @@ export default class Tile extends PIXI.AnimatedSprite {
     static getTextures(tile, tileSet) {
         const textures: any = [];
 
-        if (tile.animations.length) {
+        if (tile.animations && tile.animations.length) {
             tile.animations.forEach(frame => {
                 textures.push(tileSet.textures[frame.tileId]);
             });
@@ -18,6 +18,7 @@ export default class Tile extends PIXI.AnimatedSprite {
     _x: number = 0 
     _y: number = 0
     gid: number = 0
+    pointsBufIndex: number
     properties: any = {}
     texture: any
 

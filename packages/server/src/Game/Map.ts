@@ -1,4 +1,4 @@
-import { RpgCommonMap, Utils }  from '@rpgjs/common'
+import { RpgCommonMap, Utils, RpgShape }  from '@rpgjs/common'
 import * as Kompute from 'kompute/build/Kompute'
 import fs from 'fs'
 import * as YUKA from 'yuka'
@@ -6,6 +6,7 @@ import { EventOptions } from '../decorators/event'
 import { EventMode, RpgEvent } from '../Event'
 import { Move } from '../Player/MoveManager'
 import { RpgPlayer } from '../Player/Player'
+import { RpgServerEngine } from '../server'
 
 export type EventPosOption = {
     x: number,
@@ -59,7 +60,7 @@ export class RpgMap extends RpgCommonMap {
     kWorld: Kompute
     entityManager = new YUKA.EntityManager()
 
-    constructor(private _server: any) {
+    constructor(private _server: RpgServerEngine) {
         super()
     }
 
@@ -117,8 +118,17 @@ export class RpgMap extends RpgCommonMap {
         })
     }
 
+    setTile(x: number, y: number, layerFilter: string | ((tile: any) => boolean), tileInfo: any): any {
+        const tiles = super.setTile(x, y, layerFilter, tileInfo)
+        const players: RpgPlayer[] = Object.values(this['users'])
+        for (let player of players) {
+            player.emit('changeTile', tiles)
+        }
+        return tiles
+    }
+
     // TODO: return type
-    getEventShape(eventName: string): any | null {
+    getEventShape(eventName: string): RpgShape | undefined {
         return this.getShapes().find(shape => shape.name == eventName)
     }
 
@@ -207,7 +217,7 @@ export class RpgMap extends RpgCommonMap {
         if (!eventsList) return events
 
         for (let obj of eventsList) {
-            const ev = this.createEvent(obj, mode)
+            const ev = this.createEvent(obj as EventPosOption, mode)
             if (ev) {
                 events[ev.id] = ev
             }

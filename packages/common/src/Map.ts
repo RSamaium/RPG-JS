@@ -1,5 +1,5 @@
 import { HitObject } from './Hit'
-import { random, intersection, generateUID } from './Utils'
+import { random, intersection, generateUID, isString } from './Utils'
 import { RpgShape } from './Shape'
 
 const buffer = new Map()
@@ -9,7 +9,8 @@ interface TileInfo {
     hasCollision: boolean
     isClimbable?: boolean
     isOverlay: boolean
-    objectGroups: HitObject[]
+    objectGroups: HitObject[],
+    tileIndex: number
 }
 
 export default class RpgCommonMap {
@@ -153,6 +154,28 @@ export default class RpgCommonMap {
         return null
     }
 
+    setTile(x: number, y: number, layerFilter: string | ((tile: any) => boolean), tileInfo: any): any {
+        const tileIndex = this.getTileIndex(x, y)
+        let fnFilter
+        let tilesEdited = {}
+        if (isString(layerFilter)) {
+            fnFilter = (layer) => layer.name == layerFilter
+        }
+        else {
+            fnFilter = layerFilter
+        }
+        for (let layer of this.layers) {
+            if (!fnFilter(layer)) continue
+            tilesEdited[layer.name] = tileInfo
+            layer.tiles[tileIndex] = tilesEdited[layer.name]
+        }
+        return {
+            x,
+            y,
+            tiles: tilesEdited
+        }
+    } 
+
     /**
      * Get the tile index on the tileset
      * 
@@ -217,7 +240,8 @@ export default class RpgCommonMap {
                 tiles,
                 hasCollision: true,
                 isOverlay: false,
-                objectGroups: []
+                objectGroups: [],
+                tileIndex
             }
         }
         const hasCollision = getLastTile.properties.collision
@@ -229,7 +253,8 @@ export default class RpgCommonMap {
             hasCollision,
             isOverlay,
             objectGroups,
-            isClimbable
+            isClimbable,
+            tileIndex
         }
     }
 

@@ -1,13 +1,13 @@
 import { RpgPlayer } from '../Player/Player'
 
-interface MapOptions {
+export interface MapOptions {
     /** 
      * Map identifier. Allows to go to the map (for example with player.changeMap())
      * 
-     * @prop {string} id
+     * @prop {string} [id]
      * @memberof MapData
      * */
-    id: string,
+    id?: string,
 
      /** 
      * the path to the .tmx file (Tiled Map Editor)

@@ -412,6 +412,11 @@ export class RpgClientEngine {
         this.socket.on('loadScene', ({ name, data }) => {
             this.renderer.loadScene(name, data)
         })
+
+        this.socket.on('changeTile', ({ tiles, x, y }) => {
+            const scene = this.renderer.getScene()
+            scene.changeTile(x, y, tiles)
+        })
         
         this.socket.on('callMethod', ({ objectId, params, name }) => {
             const scene = this.renderer.getScene()

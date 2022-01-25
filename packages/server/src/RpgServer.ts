@@ -2,6 +2,7 @@ import { ModuleType, RpgShape } from '@rpgjs/common'
 import { RpgPlayer } from './Player/Player'
 import { RpgMap } from './Game/Map'
 import { RpgServerEngine } from './server'
+import { MapOptions } from './decorators/map'
 
 interface RpgClassMap<T> {
     new (server: any): T,
@@ -192,10 +193,26 @@ export interface RpgServer {
      * class RpgServerEngine { } 
      * ``` 
      * 
+     * It is possible to just give the object as well
+     * 
+     * ```ts
+     * @RpgModule<RpgServer>({
+     *      maps: [
+     *          {
+     *              id: 'town',
+     *              file: require('./tmx/mymap.tmx'),
+     *              name: 'Town'
+     *          }
+     *      ]
+     * })
+     * class RpgServerEngine { } 
+     * ``` 
+     * 
+     * 
      * @prop {RpgClassMap<RpgMap>[]} [maps]
      * @memberof RpgServer
      * */
-    maps?: RpgClassMap<RpgMap>[],
+    maps?: RpgClassMap<RpgMap>[] | MapOptions[],
 
     
     /** 

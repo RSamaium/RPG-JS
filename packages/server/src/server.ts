@@ -53,7 +53,7 @@ export class RpgServerEngine {
      * @prop {Socket Io Server} [io]
      * @memberof RpgServerEngine
      */
-    constructor(public io, public gameEngine, private inputOptions) {}
+    constructor(public io, public gameEngine, public inputOptions) {}
 
     private async _init() {
         this.playerClass = this.inputOptions.playerClass || RpgPlayer
@@ -140,6 +140,17 @@ export class RpgServerEngine {
 
     getScene(name: string) {
         return this.scenes.get(name)
+    }
+
+    /**
+     * Return the scene that manages the maps of the game
+     * 
+     * @prop {SceneMap} [sceneMap]
+     * @since 3.beta-4
+     * @memberof RpgServerEngine
+     */
+    get sceneMap() {
+        return this.getScene(SceneMap.id)
     }
 
     sendToPlayer(currentPlayer, eventName, data) {
