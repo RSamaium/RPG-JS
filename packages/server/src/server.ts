@@ -88,16 +88,42 @@ export class RpgServerEngine {
 
         for (let key in this.inputOptions.database) {
             const data = this.inputOptions.database[key]
-            this.database[data.id] = data
+            this.addInDatabase(data.id, data)
         }
 
         this.loadScenes()
+    }
+
+    /**
+     * Adds data to the server's database (in RAM) for later use
+     * 
+     * @method server.addInDatabase(id,data)
+     * @title Add in database
+     * @param {number} id resource id
+     * @param {class} dataClass A class representing the data
+     * @since 3.beta-4
+     * @example
+     * ```ts
+     * @Item({
+     *      name: 'Potion',
+     *      description: 'Gives 100 HP',
+     * })
+     * class MyItem() {}
+     * 
+     * server.addInDatabase('dynamic_item', MyItem)
+     * ```
+     * @returns {void}
+     * @memberof RpgServerEngine
+     */
+    addInDatabase(id: string, dataClass: any) {
+        this.database[id] = dataClass
     }
 
      /**
      * Start the RPG server
      * 
      * @method server.start()
+     * @title Start Server
      * @returns {void}
      * @memberof RpgServerEngine
      */
@@ -122,6 +148,14 @@ export class RpgServerEngine {
         RpgPlugin.emit(HookServer.Start, this)
     }
 
+    /**
+     * Sends all packages to clients. The sending is done automatically but you can decide to send yourself by calling this method (for example, for unit tests)
+     * 
+     * @method server.send()
+     * @title Send All Packets
+     * @returns {void}
+     * @memberof RpgServerEngine
+     */
     send() {
         World.send()
     }
@@ -144,7 +178,6 @@ export class RpgServerEngine {
 
     /**
      * Return the scene that manages the maps of the game
-     * 
      * @prop {SceneMap} [sceneMap]
      * @since 3.beta-4
      * @memberof RpgServerEngine

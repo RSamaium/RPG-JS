@@ -159,7 +159,7 @@ export default class RpgCommonMap {
      * @title Get Shape by name
      * @method map.getShape(name)
      * @param {string} name Name of shape
-     * @returns {RpgShape[] | undefine}
+     * @returns {RpgShape[] | undefined}
      * @memberof Map
      */
     getShape(name: string): RpgShape | undefined {
@@ -220,7 +220,7 @@ export default class RpgCommonMap {
     /**
      * Retrieves tiles according to its index
 
-     * @title Get index of tile
+     * @title Get tile by index
      * @method map.getTileByIndex(tileIndex)
      * @param {number} tileIndex tile index
      * @returns {TileInfo}
@@ -315,7 +315,7 @@ export default class RpgCommonMap {
     /**
      * Recover tiles according to a position
 
-     * @title Get index of tile
+     * @title Get tile by position
      * @method map.getTileByPosition(x,y)
      * @param {number} x Position X
      * @param {number} x Position Y

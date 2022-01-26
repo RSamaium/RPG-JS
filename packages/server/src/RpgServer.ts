@@ -8,14 +8,22 @@ interface RpgClassMap<T> {
     new (server: any): T,
 }
 
-/**
+export interface RpgServerEngineHooks {
+    /**
      *  When the server starts
      * 
      * @prop { (engine: RpgServerEngine) => any } [onStart]
      * @memberof RpgServerEngineHooks
      */
-export interface RpgServerEngineHooks {
     onStart?: (server: RpgServerEngine) => any
+
+    /**
+     *  At each server frame. Normally represents 60FPS
+     * 
+     * @prop { (engine: RpgServerEngine) => any } [onStep]
+     * @memberof RpgServerEngineHooks
+     */
+     onStep?: (server: RpgServerEngine) => any
 }
 
 export interface RpgPlayerHooks {

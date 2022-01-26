@@ -3,7 +3,7 @@ import { Potion } from './fixtures/item'
 import { Sword } from './fixtures/weapons'
 import { Confuse } from './fixtures/state'
 import { Fire } from './fixtures/skill'
-import _beforeEach from './beforeEach'
+import {_beforeEach} from './beforeEach'
 
 let  client, player, fixture, playerId
 

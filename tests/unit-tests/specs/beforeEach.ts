@@ -13,7 +13,7 @@ const commonModules = [
     }
 ]
 
-export default async (modules: any = []) => {
+export const _beforeEach: any = async (modules: any = []) => {
     const fixture = testing([
         ...commonModules,
         ...modules
@@ -28,6 +28,7 @@ export default async (modules: any = []) => {
     player = RpgWorld.getPlayer(player)
     return {
         fixture,
+        server: fixture.server,
         client,
         playerId,
         player

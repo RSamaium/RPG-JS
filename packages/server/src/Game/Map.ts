@@ -124,7 +124,7 @@ export class RpgMap extends RpgCommonMap {
      * 
      * @title Change Tile in map
      * @since 3.beta-4
-     * @method map.setTile(x, y, layer, tileInfo)
+     * @method map.setTile(x,y,layer,tileInfo)
      * @param {number} x Position X
      * @param {number} y Position Y
      * @param {string | ((layer: any) => boolean)} layer Name of the layer where you want to put a tile. OYou can also put a function that will act as a filter. The first parameter is the layer and you return a boolean to indicate if you modify the tile of this layer or not
@@ -132,7 +132,7 @@ export class RpgMap extends RpgCommonMap {
      *  - {number} gid: The tile number in tileset (from 1)
      *  - {object} properties Property of the tile. You own object. To set a collision, set the `collision:true` property
      * @example
-     *     * ```ts
+     * ```ts
      * map.setTile(15, 18, 'mylayer', { gid: 2 })
      * ```
      * @returns {void}

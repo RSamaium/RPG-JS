@@ -1,7 +1,7 @@
 import { Presets} from '@rpgjs/server'
 import { Confuse, HpPlus } from './fixtures/state';
 import { State, Armor } from '@rpgjs/database'
-import _beforeEach from './beforeEach'
+import {_beforeEach} from './beforeEach'
 
 const { MAXHP_CURVE, MAXSP_CURVE, MAXHP, ATK, PDEF, SDEF, MAXSP } = Presets
 

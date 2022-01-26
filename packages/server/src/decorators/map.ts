@@ -63,7 +63,7 @@ export interface MapOptions {
      * events: [{ event: NpcEvent, x: 10, y: 30 }]
      * ```
      * 
-     * @prop {Array<Class RpgEvent> | { event: Class RpgEvent, x: number, y: number }} [events]
+     * @prop {Class of RpgEvent[] | { event: Class RpgEvent, x: number, y: number }} [events]
      * @memberof MapData
      * */
     events?: { event: any, x: number, y: number }[] | any[],

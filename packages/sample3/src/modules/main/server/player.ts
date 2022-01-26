@@ -22,7 +22,6 @@ export class MyEvent extends RpgEvent {
 
 export const player: RpgPlayerHooks = {
     onConnected(player: RpgPlayer) {
-        player.canMove = false
         player.on('change-tile', (pos) => {
             const map = player.getCurrentMap()
             map.setTile(pos.x, pos.y, 'Tile Layer 2', {
@@ -35,7 +34,7 @@ export const player: RpgPlayerHooks = {
     },
     onInput(player: RpgPlayer, { input }) {
         if (input == Control.Back) {
-            player.canMove = true
+            //player.canMove = true
             player.callMainMenu()
         }
         

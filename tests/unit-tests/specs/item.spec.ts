@@ -1,14 +1,14 @@
 import { Potion, Key } from './fixtures/item'
-import _beforeEach from './beforeEach'
-import { World } from '@rpgjs/sync-server'
+import {_beforeEach} from './beforeEach'
 
-let  client, player, fixture, playerId
+let  client, player, fixture, playerId, server
 
 beforeEach(async () => {
     const ret = await _beforeEach()
     client = ret.client
     player = ret.player
     fixture = ret.fixture
+    server = ret.server
     playerId = ret.playerId
 })
 
@@ -20,7 +20,7 @@ test('add an item', () => {
         expect(item.name).toBe('Potion')
         expect(nb).toBe(1)
 
-        World.send()
+        server.send()
 
         client.objects.subscribe((objects) => {
             const player: any = Object.values(objects)[0]
