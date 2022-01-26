@@ -100,7 +100,9 @@ export class SceneMap extends Scene implements IScene {
         })
     }
 
-    changeTile(x, y, layers) {
+    changeTile(x: number, y: number, layers: {
+        [layerName: string]: object
+    }) {
         for (let layerName in layers) {
             const layerInfo = layers[layerName]
             this.gameMap.setTile(x, y, layerName, layerInfo)

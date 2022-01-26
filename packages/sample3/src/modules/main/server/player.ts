@@ -26,7 +26,7 @@ export const player: RpgPlayerHooks = {
         player.on('change-tile', (pos) => {
             const map = player.getCurrentMap()
             map.setTile(pos.x, pos.y, 'Tile Layer 2', {
-                gid: 6
+                gid: 11
             })
         }) 
     },
@@ -46,5 +46,5 @@ export const player: RpgPlayerHooks = {
     },
     onOutShape(player: RpgPlayer, shape: RpgShape) {
         console.log('out', player.name, shape.name)
-    }
+    },
 }

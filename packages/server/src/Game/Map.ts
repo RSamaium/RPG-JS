@@ -118,7 +118,30 @@ export class RpgMap extends RpgCommonMap {
         })
     }
 
-    setTile(x: number, y: number, layerFilter: string | ((tile: any) => boolean), tileInfo: any): any {
+    /**
+     * Edit a tile on the map. All players on the map will see the modified tile
+     * 
+     * 
+     * @title Change Tile in map
+     * @since 3.beta-4
+     * @method map.setTile(x, y, layer, tileInfo)
+     * @param {number} x Position X
+     * @param {number} y Position Y
+     * @param {string | ((layer: any) => boolean)} layer Name of the layer where you want to put a tile. OYou can also put a function that will act as a filter. The first parameter is the layer and you return a boolean to indicate if you modify the tile of this layer or not
+     * @param {object} tileInfo Object with the following properties:
+     *  - {number} gid: The tile number in tileset (from 1)
+     *  - {object} properties Property of the tile. You own object. To set a collision, set the `collision:true` property
+     * @example
+     *     * ```ts
+     * map.setTile(15, 18, 'mylayer', { gid: 2 })
+     * ```
+     * @returns {void}
+     * @memberof Map
+     */
+    setTile(x: number, y: number, layerFilter: string | ((layer: any) => boolean), tileInfo: {
+        gid: number,
+        properties?: object
+    }): any {
         const tiles = super.setTile(x, y, layerFilter, tileInfo)
         const players: RpgPlayer[] = Object.values(this['users'])
         for (let player of players) {
@@ -157,7 +180,7 @@ export class RpgMap extends RpgCommonMap {
      * @title Create Dynamic Event
      * @since 3.beta-4
      * @method map.createDynamicEvent(eventObj | eventObj[])
-     * @param { { x: number, y: number, z?: number, event: eventClass } } [eventsList]
+     * @param { { x: number, y: number, z?: number, event: eventClass } } eventsList
      * @returns { { [eventId: string]: RpgEvent } }
      * @memberof Map
      */

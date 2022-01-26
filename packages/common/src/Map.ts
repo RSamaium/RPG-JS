@@ -175,7 +175,13 @@ export default class RpgCommonMap {
         return null
     }
 
-    setTile(x: number, y: number, layerFilter: string | ((tile: any) => boolean), tileInfo: any): any {
+    setTile(x: number, y: number, layerFilter: string | ((layer: any) => boolean), tileInfo: any): {
+        x: number,
+        y: number,
+        tiles: {
+            [tileIndex: number]: object
+        }
+    } {
         const tileIndex = this.getTileIndex(x, y)
         let fnFilter
         let tilesEdited = {}
