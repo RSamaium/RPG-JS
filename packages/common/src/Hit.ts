@@ -18,7 +18,7 @@ export interface HitObject {
 
 class HitClass {
 
-    createObjectHitbox(x: number, y: number, z: number, w: number, h: number) {
+    createObjectHitbox(x: number, y: number, z: number, w: number, h: number): SAT.Box {
         return new SAT.Box(new SAT.Vector(x, y - z), w, h)
     }
     

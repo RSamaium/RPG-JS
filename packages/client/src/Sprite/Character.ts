@@ -1,4 +1,4 @@
-import { Direction, Utils } from '@rpgjs/common'
+import { Direction, Utils, RpgPlugin, HookClient, RpgCommonPlayer } from '@rpgjs/common'
 import { spritesheets } from './Spritesheets'
 import { FloatingText } from '../Effects/FloatingText'
 import { Animation } from '../Effects/Animation'
@@ -68,6 +68,10 @@ export default class Character extends PIXI.Sprite {
      * */
     get isCurrentPlayer(): boolean {
         return this.data.playerId === this.scene.game.playerId
+    }
+
+    get logic(): RpgCommonPlayer {
+        return this.scene.game.world.getObject(this.data.playerId)
     }
 
     constructor(private data: any, protected scene: any) {
@@ -221,7 +225,7 @@ export default class Character extends PIXI.Sprite {
 
         if (this.playStandardAnimation) {
             if (moving) {
-                this.onMove()
+                RpgPlugin.emit(HookClient.SpriteMove, this)
                 this.playAnimation(AnimationEnum.Walk)
             }
             else {

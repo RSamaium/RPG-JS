@@ -1,10 +1,11 @@
 import { HitObject } from './Hit'
 import { random, intersection, generateUID, isString } from './Utils'
 import { RpgShape } from './Shape'
+import { Hit } from './Hit'
 
 const buffer = new Map()
 
-interface TileInfo {
+export interface TileInfo {
     tiles: any[]
     hasCollision: boolean
     isClimbable?: boolean
@@ -15,6 +16,13 @@ interface TileInfo {
 
 export default class RpgCommonMap {
 
+    /** 
+     * @title Data of map
+     * @prop {object} [data]
+     * @readonly
+     * @memberof Map
+     * @memberof RpgSceneMap
+     * */
     data: any
     width: number = 0
     height: number = 0
@@ -24,6 +32,7 @@ export default class RpgCommonMap {
      * @prop {number} [tileWidth]
      * @readonly
      * @memberof Map
+     * @memberof RpgSceneMap
      * */
     tileWidth: number = 0
 
@@ -32,6 +41,7 @@ export default class RpgCommonMap {
      * @prop {number} [tileHeight]
      * @readonly
      * @memberof Map
+     * @memberof RpgSceneMap
      * */
     tileHeight: number = 0
     
@@ -40,6 +50,7 @@ export default class RpgCommonMap {
      * @prop {object[]} [layers]
      * @readonly
      * @memberof Map
+     * @memberof RpgSceneMap
      * */
     layers: any[] = []
     private shapes: RpgShape[] = []
@@ -63,6 +74,7 @@ export default class RpgCommonMap {
      * @prop {number} [widthPx]
      * @readonly
      * @memberof Map
+     * @memberof RpgSceneMap
      * */
     get widthPx(): number {
         return this.width * this.tileWidth
@@ -73,6 +85,7 @@ export default class RpgCommonMap {
      * @prop {number} [heightPx]
      * @readonly
      * @memberof Map
+     * @memberof RpgSceneMap
      * */
     get heightPx(): number {
         return this.height * this.tileHeight
@@ -83,6 +96,7 @@ export default class RpgCommonMap {
      * @prop {number} map.zTileHeight
      * @readonly
      * @memberof Map
+     * @memberof RpgSceneMap
      * */
     get zTileHeight(): number {
         return this.tileHeight
@@ -148,6 +162,7 @@ export default class RpgCommonMap {
      * @method map.getShapes()
      * @returns {RpgShape[]}
      * @memberof Map
+     * @memberof RpgSceneMap
      */
     getShapes(): RpgShape[] {
         return this.shapes
@@ -161,6 +176,7 @@ export default class RpgCommonMap {
      * @param {string} name Name of shape
      * @returns {RpgShape[] | undefined}
      * @memberof Map
+     * @memberof RpgSceneMap
      */
     getShape(name: string): RpgShape | undefined {
         return this.shapes.find(shape => shape.name == name)
@@ -212,6 +228,7 @@ export default class RpgCommonMap {
      * @param {number} x Position Y
      * @returns {number}
      * @memberof Map
+     * @memberof RpgSceneMap
      */
     getTileIndex(x: number, y: number, [z] = [0]): number {
         return this.width * Math.floor((y - z) / this.tileHeight) + Math.floor(x / this.tileWidth)
@@ -230,6 +247,7 @@ export default class RpgCommonMap {
      *  const tiles = map.getTileByIndex(index)
      *  ```
      * @memberof Map
+     * @memberof RpgSceneMap
      */
     getTileByIndex(tileIndex: number, zPlayer: [number, number] = [0, 0]): TileInfo {
         const tiles: any[] = []
@@ -301,6 +319,7 @@ export default class RpgCommonMap {
      *  console.log(position) // { x: 32, y: 0 }
      *  ```
      * @memberof Map
+     * @memberof RpgSceneMap
      */
     getTileOriginPosition(x: number, y: number): {
         x: number
@@ -325,10 +344,37 @@ export default class RpgCommonMap {
      *  const tiles = map.getTileByPosition(0, 0)
      *  ```
      * @memberof Map
+     * @memberof RpgSceneMap
      */
     getTileByPosition(x: number, y: number, z: [number, number] = [0, 0]): TileInfo {
         const tileIndex = this.getTileIndex(x, y, [z[0]])
         return this.getTileByIndex(tileIndex, z)
+    }
+
+    /**
+     * Get tile and verify collision with hitbox
+     * @param hitbox 
+     * @param x 
+     * @param y 
+     * @param z 
+     * @returns TileInfo
+     */
+    getTile(hitbox, x: number, y: number, z: [number, number] = [0, 0]): TileInfo {
+        const tile = this.getTileByPosition(x, y, z)
+        const tilePos = this.getTileOriginPosition(x, y)
+        if (tile.objectGroups) {        
+            for (let object of tile.objectGroups) {
+                const hit = Hit.getHitbox(object, {
+                    x: tilePos.x,
+                    y: tilePos.y
+                })
+                const collided = Hit.testPolyCollision(hit.type, hit.hitbox, hitbox)
+                if (collided) {
+                    tile.hasCollision = true
+                }
+            }
+        }
+        return tile
     }
 
 }

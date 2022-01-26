@@ -17,6 +17,7 @@ import {
 import merge from 'lodash.merge'
 import { SnapshotInterpolation, Vault } from '@geckos.io/snapshot-interpolation'
 import { RpgSound } from './Sound/RpgSound'
+import { SceneMap } from './Scene/Map'
 
 const SI = new SnapshotInterpolation(60) 
 
@@ -414,7 +415,7 @@ export class RpgClientEngine {
         })
 
         this.socket.on('changeTile', ({ tiles, x, y }) => {
-            const scene = this.renderer.getScene()
+            const scene = this.renderer.getScene() as SceneMap
             scene.changeTile(x, y, tiles)
         })
         

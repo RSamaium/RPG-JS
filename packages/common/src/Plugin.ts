@@ -18,7 +18,8 @@ export enum HookServer {
     PlayerLevelUp = 'Server.onLevelUp',
     PlayerDead = 'Server.onDead',
     PlayerInShape = 'Server.onInShape',
-    PlayerOutShape = 'Server.onOutShape'
+    PlayerOutShape = 'Server.onOutShape',
+    PlayerMove = 'Server.PlayerMove'
 }
 
 export enum HookClient {
@@ -45,7 +46,8 @@ export enum HookClient {
     RemoveSprite = 'Client.RemoveSprite',
     UpdateSprite = 'Client.UpdateSprite',
     ChangesSprite = 'Client.ChangesSprite',
-    WindowResize = 'Client.WindowResize'
+    WindowResize = 'Client.WindowResize',
+    SpriteMove = 'Client.SpriteMove'
 }
 
 // deprecated

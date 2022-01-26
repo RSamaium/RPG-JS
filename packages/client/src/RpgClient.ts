@@ -76,6 +76,7 @@ export interface RpgSpriteHooks {
      * Called when the sprite is deleted
      * 
      * @prop { (sprite: RpgSprite) => any } [onDestroy]
+     * @memberof RpgSpriteHooks
      */
     onDestroy?: (sprite: RpgSprite) => any
 
@@ -99,6 +100,8 @@ export interface RpgSpriteHooks {
      * When the x, y positions change
      * 
      * @prop { (sprite: RpgSprite) => any } [onMove]
+     * @since 3.beta-4
+     * @memberof RpgSpriteHooks
      */
     onMove?: (sprite: RpgSprite) => any
 }

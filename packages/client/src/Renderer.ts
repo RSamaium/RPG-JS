@@ -105,7 +105,7 @@ export default class RpgRenderer  {
         size()
     }
 
-    getScene() {
+    getScene(): Scene {
         return this.scene
     }
     

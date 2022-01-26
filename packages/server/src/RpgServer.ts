@@ -1,4 +1,4 @@
-import { ModuleType, RpgShape } from '@rpgjs/common'
+import { ModuleType, RpgShape, Direction, Control } from '@rpgjs/common'
 import { RpgPlayer } from './Player/Player'
 import { RpgMap } from './Game/Map'
 import { RpgServerEngine } from './server'
@@ -46,10 +46,10 @@ export interface RpgPlayerHooks {
      /**
      *  When the player presses a key on the client side
      * 
-     * @prop { (player: RpgPlayer, data: { input: any }) => any } [onInput]
+     * @prop { (player: RpgPlayer, data: { input: Direction | Control | string, moving: boolean }) => any } [onInput]
      * @memberof RpgPlayerHooks
      */
-    onInput?: (player: RpgPlayer, data: { input: any }) => any
+    onInput?: (player: RpgPlayer, data: { input: Direction | Control | string, moving: boolean }) => any
 
      /**
      *  When the player leaves the map
@@ -102,6 +102,15 @@ export interface RpgPlayerHooks {
      * @memberof RpgPlayerHooks
      */
      onOutShape?: (player: RpgPlayer, shape: RpgShape) => any
+
+     /**
+     * When the x, y positions change
+     * 
+     * @prop { (player: RpgPlayer) => any } [onMove]
+     * @since 3.beta-4
+     * @memberof RpgPlayerHooks
+     */
+     onMove?: (player: RpgPlayer) => any
 }
 
 export interface RpgServer { 

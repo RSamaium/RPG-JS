@@ -1,4 +1,4 @@
-import { RpgCommonMap, RpgPlugin, HookClient } from '@rpgjs/common'
+import { RpgCommonMap, RpgPlugin, HookClient, RpgShape } from '@rpgjs/common'
 import TileMap from '../Tilemap'
 import { Viewport } from 'pixi-viewport'
 import { IScene } from '../Interfaces/Scene'
@@ -30,6 +30,7 @@ export class SceneMap extends Scene implements IScene {
     protected viewport: Viewport | undefined
     private players: object = {}
     private isLoaded: boolean = false
+
     private gameMap: RpgCommonMap
 
     shapes = {}
@@ -41,8 +42,29 @@ export class SceneMap extends Scene implements IScene {
         this.onInit()
     }
 
+    private constructMethods() {
+        [
+            'getTileIndex',
+            'getTileByIndex',
+            'getTileOriginPosition',
+            'getTileByPosition',
+            'getShapes',
+            'getShape'
+        ].forEach(method => this[method] = this.gameMap[method].bind(this.gameMap));
+        [
+            'heightPx',
+            'widthPx',
+            'zTileHeight',
+            'tileHeight',
+            'tileWidth',
+            'data'
+        ].forEach(prop => this[prop] = this.gameMap[prop])
+        
+    }
+
     load(obj): Promise<Viewport> {
         this.gameMap = new RpgCommonMap()
+        this.constructMethods()
         this.gameMap.load(obj)
 
         if (!this.game.standalone) RpgCommonMap.buffer.set(obj.id, this.gameMap)
@@ -235,7 +257,8 @@ export class SceneMap extends Scene implements IScene {
      * Listen to the events of the smile on the stage
      *
      * @title Listen mouvse event
-     * @method on()
+     * @method on(eventName,callback)
+     * @since 3.beta-4
      * @param {string} eventName  Name of the event (see PIXI documentation). Name often used in the codes
      * - click
      * - mousedown
@@ -263,4 +286,28 @@ export class SceneMap extends Scene implements IScene {
             cb(pos, ev)
         })
     }
+}
+
+export interface SceneMap {
+     data: any;
+     tileWidth: number;
+     tileHeight: number;
+     layers: any[];
+     widthPx: number;
+     heightPx: number;
+     zTileHeight: number
+     getShapes(): RpgShape[];
+     getShape(name: string): RpgShape | undefined;
+     getPositionByShape(filter: (shape: RpgShape) => {}): {
+         x: number;
+         y: number;
+         z: number;
+     } | null;
+     getTileIndex(x: number, y: number, [z]?: [number]): number;  
+     getTileByIndex(tileIndex: number, zPlayer?: [number, number]): any;
+     getTileOriginPosition(x: number, y: number): {
+         x: number;
+         y: number;
+     };
+     getTileByPosition(x: number, y: number, z?: [number, number]): any;
 }
