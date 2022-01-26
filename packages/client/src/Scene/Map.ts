@@ -230,4 +230,37 @@ export class SceneMap extends Scene implements IScene {
             sprite.destroy()
         }
     }
+
+    /**
+     * Listen to the events of the smile on the stage
+     *
+     * @title Listen mouvse event
+     * @method on()
+     * @param {string} eventName  Name of the event (see PIXI documentation). Name often used in the codes
+     * - click
+     * - mousedown
+     * - mouseup
+     * - mousemove
+     * - pointerdown
+     * - pointermove
+     * - pointerup
+     * - (etc...)
+     * @param {(position: { x: number, y: number }, ev?: PIXI.InteractionEvent ) => any} callback
+     * @example
+     * ```ts
+     * sceneMap.on('pointerdown', (position) => {
+     *      console.log(position)
+     * })
+     * ```
+     * @returns {void}
+     * @memberof RpgSceneMap
+     */
+    on(eventName: string, cb: (position: { x: number, y: number }, ev?: PIXI.InteractionEvent ) => any) {
+        if (!this.tilemap) return
+        this.tilemap.background.interactive = true
+        this.tilemap.background.on(eventName, function(ev) {
+            const pos = ev.data.getLocalPosition(this.parent)
+            cb(pos, ev)
+        })
+    }
 }

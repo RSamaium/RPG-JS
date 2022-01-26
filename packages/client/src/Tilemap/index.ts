@@ -176,12 +176,4 @@ export default class TileMap extends PIXI.Container {
         }
         this.addChild(this.shapeLayer)
     }
-
-    addEventListener(eventName: string, cb: (position: { x: number, y: number }, ev? ) => any) {
-        this.background.interactive = true
-        this.background.on(eventName, function(ev) {
-            const pos = ev.data.getLocalPosition(this.parent)
-            cb(pos, ev)
-        })
-    }
 }
