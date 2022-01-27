@@ -14,6 +14,16 @@ export interface TileInfo {
     tileIndex: number
 }
 
+export interface LayerInfo {
+    type: string,
+    name: string,
+    opacity: number,
+    visible: boolean,
+    properties: any,
+    objects: HitObject[]
+    tiles: any[]
+}
+
 export default class RpgCommonMap {
 
     /** 
@@ -52,7 +62,7 @@ export default class RpgCommonMap {
      * @memberof Map
      * @memberof RpgSceneMap
      * */
-    layers: any[] = []
+    layers: LayerInfo[] = []
     private shapes: RpgShape[] = []
 
     static get buffer() {
@@ -109,6 +119,24 @@ export default class RpgCommonMap {
                 this.createShape(obj)
             }
         }
+    }
+
+    /**
+     * Find a layer by name. Returns `undefined` is the layer is not found
+
+     * @title Get Layer by name
+     * @method map.getLayerByName(name)
+     * @param {string} name layer name
+     * @returns {LayerInfo | undefined}
+     * @example
+     *  ```ts
+     *  const tiles = map.getLayerByName(0, 0)
+     *  ```
+     * @memberof Map
+     * @memberof RpgSceneMap
+     */
+    getLayerByName(name: string): LayerInfo | undefined {
+        return this.layers.find(layer => layer.name == name)
     }
 
     /**
@@ -260,7 +288,7 @@ export default class RpgCommonMap {
                 continue
             }
             if (!_tiles.properties) _tiles.properties = {}
-            const zLayer = layer.properties.z
+            const zLayer = layer.properties ? layer.properties.z : 0
             const zTile = _tiles.properties.z
             let z, zIntersection
             if (zLayer !== undefined) {

@@ -142,7 +142,7 @@ export class RpgClientEngine {
      * Adds Spritesheet classes
      *
      * @title Add Spritesheet
-     * @method addSpriteSheet(spritesheetClass | spritesheetClass[])
+     * @method addSpriteSheet(spritesheetClass|spritesheetClass[])
      * @returns {void}
      * @since beta.3
      * @memberof RpgClientEngine
@@ -155,7 +155,7 @@ export class RpgClientEngine {
      * Adds Sound classes
      *
      * @title Add Sound
-     * @method addSpriteSheet(soundClass | soundClass[])
+     * @method addSpriteSheet(soundClass|soundClass[])
      * @returns {void}
      * @since beta.3
      * @memberof RpgClientEngine

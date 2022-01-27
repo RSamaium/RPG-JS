@@ -118,7 +118,7 @@ export class RpgCommonPlayer {
      * 
      * Recovers all the colliding tiles of the current player 
      * 
-     * @title Get/Set position
+     * @title Get Collision of tiles
      * @since 3.beta-4
      * @readonly
      * @prop { TileInfo[] } tiles
@@ -133,7 +133,7 @@ export class RpgCommonPlayer {
      * 
      * Recovers all other players and events colliding with the current player's hitbox
      * 
-     * @title Get/Set position
+     * @title Get Collision of other players/events
      * @since 3.beta-4
      * @readonly
      * @prop { (RpgPlayer | Rpgvent)[] } otherPlayersCollision

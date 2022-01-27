@@ -12,7 +12,7 @@ export class SceneMap extends Scene implements IScene {
     /** 
      * Get the tilemap
      * 
-     * @prop {TileMap} [tilemap]
+     * @prop {PIXI.Container} [tilemap]
      * @memberof RpgSceneMap
      * */
     public tilemap: TileMap
@@ -49,7 +49,8 @@ export class SceneMap extends Scene implements IScene {
             'getTileOriginPosition',
             'getTileByPosition',
             'getShapes',
-            'getShape'
+            'getShape',
+            'getLayerByName'
         ].forEach(method => this[method] = this.gameMap[method].bind(this.gameMap));
         [
             'heightPx',
@@ -57,15 +58,16 @@ export class SceneMap extends Scene implements IScene {
             'zTileHeight',
             'tileHeight',
             'tileWidth',
-            'data'
+            'data',
+            'layers'
         ].forEach(prop => this[prop] = this.gameMap[prop])
         
     }
 
     load(obj): Promise<Viewport> {
         this.gameMap = new RpgCommonMap()
-        this.constructMethods()
         this.gameMap.load(obj)
+        this.constructMethods()
 
         if (!this.game.standalone) RpgCommonMap.buffer.set(obj.id, this.gameMap)
 
@@ -256,7 +258,7 @@ export class SceneMap extends Scene implements IScene {
     /**
      * Listen to the events of the smile on the stage
      *
-     * @title Listen mouvse event
+     * @title Listen mouse event
      * @method on(eventName,callback)
      * @since 3.beta-4
      * @param {string} eventName  Name of the event (see PIXI documentation). Name often used in the codes
@@ -310,4 +312,5 @@ export interface SceneMap {
          y: number;
      };
      getTileByPosition(x: number, y: number, z?: [number, number]): any;
+     getLayerByName(name: string): any
 }

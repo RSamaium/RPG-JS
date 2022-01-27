@@ -1,6 +1,9 @@
 import { RpgModule, RpgServer, RpgWorld } from '@rpgjs/server'
+import { RpgPlugin, HookClient } from '@rpgjs/client'
 import { SampleMap } from './fixtures/maps/map'
 import { testing } from '@rpgjs/testing'
+
+jest.setTimeout(60000)
 
 @RpgModule<RpgServer>({
     maps: [SampleMap]
@@ -24,8 +27,14 @@ export const _beforeEach: any = async (modules: any = []) => {
     const client = clientFixture.client
     const playerId = clientFixture.playerId
     let player = RpgWorld.getPlayer(playerId)
+    const clientMapLoading = new Promise((resolve: any) => {
+        RpgPlugin.on(HookClient.AfterSceneLoading, () => {
+            resolve()
+        })
+    })
     await player.changeMap('map')
     player = RpgWorld.getPlayer(player)
+    await clientMapLoading
     return {
         fixture,
         server: fixture.server,

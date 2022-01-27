@@ -96,23 +96,28 @@ export default class TileLayer extends PIXI.Container {
                 this.tiles[x + ';' + y] = newTile
                 const pointsBufComposite = bufComposite.children[0].pointsBuf
                 // Change Texture (=0, 1 and 7, rotate (=4), animX (=5), animY (=6))
-                ;[0, 1, 4, 5, 6, 7].forEach((i) => this.pointsBuf[oldTile.pointsBufIndex+i] = pointsBufComposite[i])
+                ;[0, 1, 4, 5, 6, 7].forEach((i) => {
+                    if (this.pointsBuf) this.pointsBuf[oldTile.pointsBufIndex+i] = pointsBufComposite[i]
+                })
                 this.tilemap.children[0].modificationMarker = 0
             }
             else {
                 delete this.tiles[x + ';' + y]
-                this.pointsBuf.splice(oldTile.pointsBufIndex, POINT_STRUCT_SIZE)
+                if (this.pointsBuf) this.pointsBuf.splice(oldTile.pointsBufIndex, POINT_STRUCT_SIZE)
             }
         }
     }
 
-    get pointsBuf() {
-       return this.tilemap.children[0].pointsBuf 
+    get pointsBuf(): number[] | null {
+        const child = this.tilemap.children[0]
+        if (!child) return null
+        return child.pointsBuf 
     }
 
-    private addFrame(tile, x, y) {
+    private addFrame(tile: Tile, x: number, y: number) {
         const frame = this.tilemap.addFrame(tile.texture, tile.x, tile.y)
         const pb = this.pointsBuf
+        if (!pb) return null
         tile.pointsBufIndex = pb.length - POINT_STRUCT_SIZE
         tile.setAnimation(frame)
         this.tiles[x + ';' + y] = tile

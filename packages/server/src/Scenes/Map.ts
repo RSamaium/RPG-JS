@@ -3,6 +3,7 @@ import { RpgCommonMap, Utils } from '@rpgjs/common'
 import { World } from '@rpgjs/sync-server'
 import { MapOptions } from '../decorators/map'
 import { RpgMap } from '../Game/Map'
+import { RpgPlayer } from '../Player/Player'
 
 export class SceneMap {
 
@@ -76,15 +77,19 @@ export class SceneMap {
         this.mapsById[mapData.id] = mapData
     }
 
-    async changeMap(mapId, player, positions?): Promise<RpgMap> {
+    async changeMap(
+        mapId: string, 
+        player: RpgPlayer, 
+        positions?: { x: number, y: number, z: number } | string
+    ): Promise<RpgMap> {
+        
         player.prevMap = player.map
         player.map = mapId
         player.events = []
 
         if (player.prevMap) {
             World.leaveRoom(player.prevMap, player.id)
-            player.execMethod('onLeave', [player], player.mapInstance)
-            player.execMethod('onLeaveMap', [player.mapInstance])
+            player.execMethod('onLeaveMap', <any>[player.getCurrentMap()])
         }
 
         const mapInstance = await this.loadMap(mapId)
@@ -111,14 +116,12 @@ export class SceneMap {
 
         World.joinRoom(mapId, player.id)
 
-        player = World.getUser(player.id)
+        player = World.getUser(player.id) as RpgPlayer
 
         if (player) {
-            player.execMethod('onEnter', [player, player.prevMap || null], mapInstance)
-            player.execMethod('onJoinMap', [mapInstance])
-
-            player.teleport(positions || 'start')
-            player.createDynamicEvent(mapInstance._events, false)
+            player.execMethod('onJoinMap', <any>[mapInstance])
+            player.teleport(positions)
+            player.createDynamicEvent(<any>mapInstance._events, false)
         }
         
         return mapInstance
