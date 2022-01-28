@@ -46,6 +46,7 @@ export class RpgServerEngine {
     private scenes: Map<string, any> = new Map()
     protected totalConnected: number = 0
     private scheduler: Scheduler
+    world: any = World
 
     /**
      * Combat formulas
@@ -127,7 +128,7 @@ export class RpgServerEngine {
      * @returns {void}
      * @memberof RpgServerEngine
      */
-    async start(inputOptions?) {
+    async start(inputOptions?, scheduler = true) {
         if (inputOptions) this.inputOptions = inputOptions
         await this._init()
         let schedulerConfig = {
@@ -135,7 +136,8 @@ export class RpgServerEngine {
             period: 1000 / this.inputOptions.stepRate,
             delay: 4
         };
-        this.scheduler = new Scheduler(schedulerConfig).start();
+        this.scheduler = new Scheduler(schedulerConfig)
+        if (scheduler) this.scheduler.start()
         this.gameEngine.start({
             getObject(id) {
                 return Query.getPlayer(id) 

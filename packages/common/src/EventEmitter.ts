@@ -44,4 +44,9 @@ export class EventEmitter {
         delete this.listeners[name]
         delete this.listenersOnce[name]
     }
+
+    clear() {
+        this.listeners = {}
+        this.listenersOnce = {}
+    }
 }

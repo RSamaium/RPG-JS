@@ -2,6 +2,7 @@ import { Presets} from '@rpgjs/server'
 import { Confuse, HpPlus } from './fixtures/state';
 import { State, Armor } from '@rpgjs/database'
 import {_beforeEach} from './beforeEach'
+import { clear } from '@rpgjs/testing'
 
 const { MAXHP_CURVE, MAXSP_CURVE, MAXHP, ATK, PDEF, SDEF, MAXSP } = Presets
 
@@ -180,4 +181,8 @@ test('If several armors with the same defense, takes the highest rate', () => {
 
     expect(player.statesDefense).toHaveLength(1)
     expect(player).toHaveProperty('statesDefense.0.rate', 2)
+})
+
+afterEach(() => {
+    clear()
 })

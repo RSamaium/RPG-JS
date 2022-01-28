@@ -1,13 +1,14 @@
 import { Potion, Key } from './fixtures/item'
 import {_beforeEach} from './beforeEach'
-import { RpgMap, RpgPlayer } from '@rpgjs/server'
+import { HookClient, RpgMap, RpgPlayer, RpgPlugin, RpgServerEngine } from '@rpgjs/server'
 import { RpgClientEngine, RpgSceneMap } from '@rpgjs/client'
+import { clear } from '@rpgjs/testing'
 
 let  client: RpgClientEngine, 
 player: RpgPlayer, 
 fixture, 
 playerId, 
-server, 
+server: RpgServerEngine, 
 map: RpgMap,
 sceneMap: RpgSceneMap,
 side: string
@@ -102,4 +103,36 @@ describe('Server Side', () => {
         const tileInfoClient = sceneMap.getTileByPosition(0, 0)
         expect(tileInfoClient.tiles[0].gid).toEqual(2)
     })
+})
+
+describe('Shape', () => {
+    test('Create Shape', () => {
+       return new Promise((resolve: any) => {
+            const shape = map.createShape({
+                x: 0,
+                y: 0,
+                width: 100,
+                height: 100,
+                name: 'test'
+            })
+            expect(shape.type).toEqual('box')
+            expect(shape.name).toBeDefined()
+
+            const mapShape = map.getShape('test')
+            expect(mapShape).toBeDefined()
+
+            RpgPlugin.on(HookClient.SceneOnChanges, (scene) => {
+                const mapShape = scene.getShape('test')
+                expect(mapShape).toBeDefined()
+                expect(mapShape.x).toEqual(0)
+                expect(mapShape.y).toEqual(0)
+                resolve()
+            })
+            server.send()
+       })
+    })
+})
+
+afterEach(() => {
+    clear()
 })

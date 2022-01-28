@@ -4,7 +4,7 @@ import { _initSpritesheet } from './Sprite/Spritesheets'
 import { _initSound } from './Sound/Sounds'
 import { RpgSprite } from './Sprite/Player'
 import { World } from '@rpgjs/sync-client'
-import { BehaviorSubject, Observable, Subject } from 'rxjs'
+import { BehaviorSubject, Observable, Subject, Subscription } from 'rxjs'
 import { RpgGui } from './RpgGui'
 import { 
     RpgCommonPlayer, 
@@ -78,6 +78,7 @@ export class RpgClientEngine {
     io
     private lastTimestamp: number = 0
     private pressInput: boolean = false
+    private subscriptionWorld: Subscription
 
     constructor(public gameEngine, private options) { }
 
@@ -439,10 +440,10 @@ export class RpgClientEngine {
 
         let lastRoomId = ''
 
-        World.listen(this.socket)
+        this.subscriptionWorld = World.listen(this.socket)
             .value
             .subscribe((val: { data: any, partial: any, time: number, roomId: string }) => {
-
+                
             if (!val.data) {
                 return
             }
@@ -519,7 +520,11 @@ export class RpgClientEngine {
         }
     }
 
-    // shortcuts
+    get world(): any {
+        return World
+    }
+
+     // shortcuts
 
      /** 
      * VueJS Application instance
@@ -556,5 +561,10 @@ export class RpgClientEngine {
      * */
     get scene() {
         return this.renderer.getScene()
+    }
+
+    reset() {
+        this.subscriptionWorld.unsubscribe()
+        this.world.reset()
     }
 }

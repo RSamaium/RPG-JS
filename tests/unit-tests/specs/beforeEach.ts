@@ -1,9 +1,7 @@
-import { RpgModule, RpgServer, RpgWorld } from '@rpgjs/server'
+import { RpgMap, RpgModule, RpgServer, RpgWorld } from '@rpgjs/server'
 import { RpgPlugin, HookClient } from '@rpgjs/client'
 import { SampleMap } from './fixtures/maps/map'
 import { testing } from '@rpgjs/testing'
-
-jest.setTimeout(60000)
 
 @RpgModule<RpgServer>({
     maps: [SampleMap]

@@ -139,6 +139,11 @@ export class WorldClass {
     removeRoom(id: string): void {
         this.rooms.delete(id)
     }
+
+    clear() {
+        this.rooms.clear()
+        this.users = {}
+    }
 }
 
 export const World = new WorldClass()

@@ -1,5 +1,6 @@
 import { Potion, Key } from './fixtures/item'
 import {_beforeEach} from './beforeEach'
+import { clear } from '@rpgjs/testing'
 
 let  client, player, fixture, playerId, server
 
@@ -153,4 +154,8 @@ test('to equip a classic object', () => {
     catch (err) {
         expect(err.id).toBe('INVALID_ITEM_TO_EQUIP')
     }
+})
+
+afterEach(() => {
+    clear()
 })

@@ -1,5 +1,5 @@
-import { MockIo } from '@rpgjs/common'
-import { entryPoint, RpgServerEngine } from '@rpgjs/server'
+import { HookClient, HookServer, MockIo, RpgPlugin } from '@rpgjs/common'
+import { entryPoint, RpgServerEngine, RpgMap } from '@rpgjs/server'
 import { entryPoint as entryPointClient, RpgClientEngine } from '@rpgjs/client'
 
 const { serverIo, ClientIo } = MockIo
@@ -13,13 +13,19 @@ interface Testing {
     server: RpgServerEngine
 }
 
+let server: RpgServerEngine
+let clients: RpgClientEngine[]
+
 export function testing(modules, optionsServer: any = {}, optionsClient: any = {}): Testing {
+    RpgPlugin.clear()
     const engine = entryPoint(modules, { 
         io: serverIo,
         standalone: true,
         ...optionsServer
     })
-    engine.start()
+    engine.start({}, false)
+    server = engine
+    clients = []
     return {
         async createClient() {
             const client = entryPointClient(modules, {
@@ -28,6 +34,7 @@ export function testing(modules, optionsServer: any = {}, optionsClient: any = {
                 ...optionsClient
             })
             await client.start()
+            clients.push(client)
             return {
                 client,
                 socket: client.socket,
@@ -36,4 +43,10 @@ export function testing(modules, optionsServer: any = {}, optionsClient: any = {
         },
         server: engine
     }
+}
+
+export function clear() {
+    server.world.clear()
+    clients.forEach(client => client.reset())
+    RpgMap.buffer.clear()
 }
