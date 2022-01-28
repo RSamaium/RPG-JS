@@ -1,13 +1,13 @@
 import { RpgPlayer } from '../Player/Player'
 
-interface MapOptions {
+export interface MapOptions {
     /** 
      * Map identifier. Allows to go to the map (for example with player.changeMap())
      * 
-     * @prop {string} id
+     * @prop {string} [id]
      * @memberof MapData
      * */
-    id: string,
+    id?: string,
 
      /** 
      * the path to the .tmx file (Tiled Map Editor)
@@ -63,7 +63,7 @@ interface MapOptions {
      * events: [{ event: NpcEvent, x: 10, y: 30 }]
      * ```
      * 
-     * @prop {Array<Class RpgEvent> | { event: Class RpgEvent, x: number, y: number }} [events]
+     * @prop {Class of RpgEvent[] | { event: Class RpgEvent, x: number, y: number }} [events]
      * @memberof MapData
      * */
     events?: { event: any, x: number, y: number }[] | any[],

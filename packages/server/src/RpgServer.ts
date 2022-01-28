@@ -1,14 +1,29 @@
-import { ModuleType, RpgShape } from '@rpgjs/common'
+import { ModuleType, RpgShape, Direction, Control } from '@rpgjs/common'
 import { RpgPlayer } from './Player/Player'
 import { RpgMap } from './Game/Map'
 import { RpgServerEngine } from './server'
+import { MapOptions } from './decorators/map'
 
 interface RpgClassMap<T> {
     new (server: any): T,
 }
 
 export interface RpgServerEngineHooks {
+    /**
+     *  When the server starts
+     * 
+     * @prop { (engine: RpgServerEngine) => any } [onStart]
+     * @memberof RpgServerEngineHooks
+     */
     onStart?: (server: RpgServerEngine) => any
+
+    /**
+     *  At each server frame. Normally represents 60FPS
+     * 
+     * @prop { (engine: RpgServerEngine) => any } [onStep]
+     * @memberof RpgServerEngineHooks
+     */
+     onStep?: (server: RpgServerEngine) => any
 }
 
 export interface RpgPlayerHooks {
@@ -31,10 +46,10 @@ export interface RpgPlayerHooks {
      /**
      *  When the player presses a key on the client side
      * 
-     * @prop { (player: RpgPlayer, data: { input: any }) => any } [onInput]
+     * @prop { (player: RpgPlayer, data: { input: Direction | Control | string, moving: boolean }) => any } [onInput]
      * @memberof RpgPlayerHooks
      */
-    onInput?: (player: RpgPlayer, data: { input: any }) => any
+    onInput?: (player: RpgPlayer, data: { input: Direction | Control | string, moving: boolean }) => any
 
      /**
      *  When the player leaves the map
@@ -74,7 +89,7 @@ export interface RpgPlayerHooks {
      *  When the player enters the shape
      * 
      * @prop { (player: RpgPlayer, shape: RpgShape) => any } [onInShape]
-     * @since beta.3
+     * 3.0.0-beta.3
      * @memberof RpgPlayerHooks
      */
     onInShape?: (player: RpgPlayer, shape: RpgShape) => any
@@ -83,10 +98,19 @@ export interface RpgPlayerHooks {
      *  When the player leaves the shape
      * 
      * @prop { (player: RpgPlayer, shape: RpgShape) => any } [onOutShape]
-     * @since beta.3
+     * 3.0.0-beta.3
      * @memberof RpgPlayerHooks
      */
      onOutShape?: (player: RpgPlayer, shape: RpgShape) => any
+
+     /**
+     * When the x, y positions change
+     * 
+     * @prop { (player: RpgPlayer) => any } [onMove]
+     * @since 3.0.0-beta.4
+     * @memberof RpgPlayerHooks
+     */
+     onMove?: (player: RpgPlayer) => any
 }
 
 export interface RpgServer { 
@@ -186,10 +210,26 @@ export interface RpgServer {
      * class RpgServerEngine { } 
      * ``` 
      * 
+     * It is possible to just give the object as well
+     * 
+     * ```ts
+     * @RpgModule<RpgServer>({
+     *      maps: [
+     *          {
+     *              id: 'town',
+     *              file: require('./tmx/mymap.tmx'),
+     *              name: 'Town'
+     *          }
+     *      ]
+     * })
+     * class RpgServerEngine { } 
+     * ``` 
+     * 
+     * 
      * @prop {RpgClassMap<RpgMap>[]} [maps]
      * @memberof RpgServer
      * */
-    maps?: RpgClassMap<RpgMap>[],
+    maps?: RpgClassMap<RpgMap>[] | MapOptions[],
 
     
     /** 

@@ -160,7 +160,7 @@ export class RpgShape  {
      * Whether the player is in this shape
      * 
      * @title Player is in this shape ?
-     * @method shape.playerIsIn(player: RpgPlayer)
+     * @method shape.playerIsIn(player)
      * @returns {boolean}
      * @memberof Shape
      */
@@ -177,7 +177,7 @@ export class RpgShape  {
      * 
      * @title Get Player Owner
      * @method shape.getPlayerOwner()
-     * @returns {RpgPlayer [ undefined]}
+     * @returns {RpgPlayer | undefined}
      * @memberof Shape
      */
     getPlayerOwner(): RpgCommonPlayer | undefined {

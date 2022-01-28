@@ -1,4 +1,4 @@
-import { RpgCommonMap, RpgPlugin, HookClient } from '@rpgjs/common'
+import { RpgCommonMap, RpgPlugin, HookClient, RpgShape } from '@rpgjs/common'
 import TileMap from '../Tilemap'
 import { Viewport } from 'pixi-viewport'
 import { IScene } from '../Interfaces/Scene'
@@ -12,7 +12,7 @@ export class SceneMap extends Scene implements IScene {
     /** 
      * Get the tilemap
      * 
-     * @prop {TileMap} [tilemap]
+     * @prop {PIXI.Container} [tilemap]
      * @memberof RpgSceneMap
      * */
     public tilemap: TileMap
@@ -30,6 +30,7 @@ export class SceneMap extends Scene implements IScene {
     protected viewport: Viewport | undefined
     private players: object = {}
     private isLoaded: boolean = false
+
     private gameMap: RpgCommonMap
 
     shapes = {}
@@ -41,9 +42,32 @@ export class SceneMap extends Scene implements IScene {
         this.onInit()
     }
 
+    private constructMethods() {
+        [
+            'getTileIndex',
+            'getTileByIndex',
+            'getTileOriginPosition',
+            'getTileByPosition',
+            'getShapes',
+            'getShape',
+            'getLayerByName'
+        ].forEach(method => this[method] = this.gameMap[method].bind(this.gameMap));
+        [
+            'heightPx',
+            'widthPx',
+            'zTileHeight',
+            'tileHeight',
+            'tileWidth',
+            'data',
+            'layers'
+        ].forEach(prop => this[prop] = this.gameMap[prop])
+        
+    }
+
     load(obj): Promise<Viewport> {
         this.gameMap = new RpgCommonMap()
         this.gameMap.load(obj)
+        this.constructMethods()
 
         if (!this.game.standalone) RpgCommonMap.buffer.set(obj.id, this.gameMap)
 
@@ -98,6 +122,16 @@ export class SceneMap extends Scene implements IScene {
                 complete()
             }
         })
+    }
+
+    changeTile(x: number, y: number, layers: {
+        [layerName: string]: object
+    }) {
+        for (let layerName in layers) {
+            const layerInfo = layers[layerName]
+            this.gameMap.setTile(x, y, layerName, layerInfo)
+            this.tilemap.changeTile(x, y, layerName)
+        }
     }
 
     draw(t: number, dt: number, frame: number) {
@@ -220,4 +254,63 @@ export class SceneMap extends Scene implements IScene {
             sprite.destroy()
         }
     }
+
+    /**
+     * Listen to the events of the smile on the stage
+     *
+     * @title Listen mouse event
+     * @method on(eventName,callback)
+     * @since 3.0.0-beta.4
+     * @param {string} eventName  Name of the event (see PIXI documentation). Name often used in the codes
+     * - click
+     * - mousedown
+     * - mouseup
+     * - mousemove
+     * - pointerdown
+     * - pointermove
+     * - pointerup
+     * - (etc...)
+     * @param {(position: { x: number, y: number }, ev?: PIXI.InteractionEvent ) => any} callback
+     * @example
+     * ```ts
+     * sceneMap.on('pointerdown', (position) => {
+     *      console.log(position)
+     * })
+     * ```
+     * @returns {void}
+     * @memberof RpgSceneMap
+     */
+    on(eventName: string, cb: (position: { x: number, y: number }, ev?: PIXI.InteractionEvent ) => any) {
+        if (!this.tilemap) return
+        this.tilemap.background.interactive = true
+        this.tilemap.background.on(eventName, function(ev) {
+            const pos = ev.data.getLocalPosition(this.parent)
+            cb(pos, ev)
+        })
+    }
+}
+
+export interface SceneMap {
+     data: any;
+     tileWidth: number;
+     tileHeight: number;
+     layers: any[];
+     widthPx: number;
+     heightPx: number;
+     zTileHeight: number
+     getShapes(): RpgShape[];
+     getShape(name: string): RpgShape | undefined;
+     getPositionByShape(filter: (shape: RpgShape) => {}): {
+         x: number;
+         y: number;
+         z: number;
+     } | null;
+     getTileIndex(x: number, y: number, [z]?: [number]): number;  
+     getTileByIndex(tileIndex: number, zPlayer?: [number, number]): any;
+     getTileOriginPosition(x: number, y: number): {
+         x: number;
+         y: number;
+     };
+     getTileByPosition(x: number, y: number, z?: [number, number]): any;
+     getLayerByName(name: string): any
 }

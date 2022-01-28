@@ -1,22 +1,21 @@
-import { RpgPlayer, RpgMap, RpgPlayerHooks, Direction, Move, RpgShape, ShapePositioning, Control } from '@rpgjs/server'
+import { RpgPlayer, RpgMap, RpgPlayerHooks, Direction, Move, RpgShape, ShapePositioning, Control, RpgEvent, EventData } from '@rpgjs/server'
 import { EmotionBubble } from '@rpgjs/plugin-emotion-bubbles'
 
 export const player: RpgPlayerHooks = {
-    onJoinMap(player: RpgPlayer, map: RpgMap) {
-        map.createShape({ 
-            x: 10,
-            y: 10,
-            width: 100,
-            height: 100,
-            properties: {
-                color: '0xDE3249'
-            }
-        })
+    onConnected(player: RpgPlayer) {
+        player.setHitbox(32, 16)
+        player.setGraphic('male1_2')
+        player.changeMap('cave')
     },
-    onInput(player: RpgPlayer, { input }) {
+    onJoinMap(player: RpgPlayer, map: RpgMap) {
+        
+    },
+    onInput(player: RpgPlayer, { input, moving }) {
         if (input == Control.Back) {
-            player.callMainMenu()
+            //player.canMove = true
+            //player.callMainMenu()
         }
+        
     },
     onInShape(player: RpgPlayer, shape: RpgShape) {
         console.log('in', player.name, shape.name)

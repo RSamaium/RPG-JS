@@ -7,6 +7,7 @@ export type Plugin = PluginSides | [PluginSides, any]
 
 export enum HookServer {
     Start = 'Server.Start',
+    Step = "Server.Step",
     PlayerConnected = 'Server.onConnected',
     PlayerDisconnected = 'Server.onDisconnected',
     AddMap = 'Server.AddMap',
@@ -17,7 +18,8 @@ export enum HookServer {
     PlayerLevelUp = 'Server.onLevelUp',
     PlayerDead = 'Server.onDead',
     PlayerInShape = 'Server.onInShape',
-    PlayerOutShape = 'Server.onOutShape'
+    PlayerOutShape = 'Server.onOutShape',
+    PlayerMove = 'Server.PlayerMove'
 }
 
 export enum HookClient {
@@ -44,7 +46,8 @@ export enum HookClient {
     RemoveSprite = 'Client.RemoveSprite',
     UpdateSprite = 'Client.UpdateSprite',
     ChangesSprite = 'Client.ChangesSprite',
-    WindowResize = 'Client.WindowResize'
+    WindowResize = 'Client.WindowResize',
+    SpriteMove = 'Client.SpriteMove'
 }
 
 // deprecated

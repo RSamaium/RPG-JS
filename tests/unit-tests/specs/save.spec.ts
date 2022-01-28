@@ -3,7 +3,8 @@ import { Potion } from './fixtures/item'
 import { Sword } from './fixtures/weapons'
 import { Confuse } from './fixtures/state'
 import { Fire } from './fixtures/skill'
-import _beforeEach from './beforeEach'
+import {_beforeEach} from './beforeEach'
+import { clear } from '@rpgjs/testing'
 
 let  client, player, fixture, playerId
 
@@ -62,4 +63,8 @@ test('Test Load', () => {
     expect(player).toHaveProperty('states.0.effects')
     expect(player).toHaveProperty('skills.0.power')
     expect(player.getVariable('TEST')).toBe(true)
+})
+
+afterEach(() => {
+    clear()
 })

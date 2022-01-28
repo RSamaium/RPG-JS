@@ -1,7 +1,8 @@
 import { Presets } from '@rpgjs/server'
 import { Armor, Weapon, State } from '@rpgjs/database'
 import { HpUpValue } from './fixtures/armor'
-import _beforeEach from './beforeEach'
+import {_beforeEach} from './beforeEach'
+import { clear } from '@rpgjs/testing'
 
 const { MAXHP_CURVE, MAXSP_CURVE, MAXHP, ATK, PDEF, SDEF, MAXSP } = Presets
 
@@ -177,4 +178,8 @@ test('Test Atk Multi Modifier Rate', () => {
    player.addState(State1)
 
    expect(player[ATK]).toBe(200)
+})
+
+afterEach(() => {
+   clear()
 })

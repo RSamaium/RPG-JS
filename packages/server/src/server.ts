@@ -46,6 +46,7 @@ export class RpgServerEngine {
     private scenes: Map<string, any> = new Map()
     protected totalConnected: number = 0
     private scheduler: Scheduler
+    world: any = World
 
     /**
      * Combat formulas
@@ -53,7 +54,7 @@ export class RpgServerEngine {
      * @prop {Socket Io Server} [io]
      * @memberof RpgServerEngine
      */
-    constructor(public io, public gameEngine, private inputOptions) {}
+    constructor(public io, public gameEngine, public inputOptions) {}
 
     private async _init() {
         this.playerClass = this.inputOptions.playerClass || RpgPlayer
@@ -88,20 +89,46 @@ export class RpgServerEngine {
 
         for (let key in this.inputOptions.database) {
             const data = this.inputOptions.database[key]
-            this.database[data.id] = data
+            this.addInDatabase(data.id, data)
         }
 
         this.loadScenes()
+    }
+
+    /**
+     * Adds data to the server's database (in RAM) for later use
+     * 
+     * @method server.addInDatabase(id,data)
+     * @title Add in database
+     * @param {number} id resource id
+     * @param {class} dataClass A class representing the data
+     * @since 3.0.0-beta.4
+     * @example
+     * ```ts
+     * @Item({
+     *      name: 'Potion',
+     *      description: 'Gives 100 HP',
+     * })
+     * class MyItem() {}
+     * 
+     * server.addInDatabase('dynamic_item', MyItem)
+     * ```
+     * @returns {void}
+     * @memberof RpgServerEngine
+     */
+    addInDatabase(id: string, dataClass: any) {
+        this.database[id] = dataClass
     }
 
      /**
      * Start the RPG server
      * 
      * @method server.start()
+     * @title Start Server
      * @returns {void}
      * @memberof RpgServerEngine
      */
-    async start(inputOptions?) {
+    async start(inputOptions?, scheduler = true) {
         if (inputOptions) this.inputOptions = inputOptions
         await this._init()
         let schedulerConfig = {
@@ -109,7 +136,8 @@ export class RpgServerEngine {
             period: 1000 / this.inputOptions.stepRate,
             delay: 4
         };
-        this.scheduler = new Scheduler(schedulerConfig).start();
+        this.scheduler = new Scheduler(schedulerConfig)
+        if (scheduler) this.scheduler.start()
         this.gameEngine.start({
             getObject(id) {
                 return Query.getPlayer(id) 
@@ -122,6 +150,14 @@ export class RpgServerEngine {
         RpgPlugin.emit(HookServer.Start, this)
     }
 
+    /**
+     * Sends all packages to clients. The sending is done automatically but you can decide to send yourself by calling this method (for example, for unit tests)
+     * 
+     * @method server.send()
+     * @title Send All Packets
+     * @returns {void}
+     * @memberof RpgServerEngine
+     */
     send() {
         World.send()
     }
@@ -129,8 +165,9 @@ export class RpgServerEngine {
     step() {
         tick++
         if (tick % 4 === 0) {
-            this.send()
+            this.send() 
         }
+        RpgPlugin.emit(HookServer.Step, this)
     }
 
     private loadScenes() {
@@ -139,6 +176,16 @@ export class RpgServerEngine {
 
     getScene(name: string) {
         return this.scenes.get(name)
+    }
+
+    /**
+     * Return the scene that manages the maps of the game
+     * @prop {SceneMap} [sceneMap]
+     * @since 3.0.0-beta.4
+     * @memberof RpgServerEngine
+     */
+    get sceneMap() {
+        return this.getScene(SceneMap.id)
     }
 
     sendToPlayer(currentPlayer, eventName, data) {
@@ -157,7 +204,7 @@ export class RpgServerEngine {
             this.onPlayerDisconnected(socket.id, playerId)
         })
         
-        World.setUser(player, socket) 
+        World.setUser(player, socket)
 
         socket.emit('playerJoined', { playerId })
 

@@ -3,6 +3,7 @@ import ImageLayer from './ImageLayer'
 import TileLayer from './TileLayer'
 import TileSet from './TileSet'
 import Tile from './Tile'
+import { log } from '../Logger'
 
 const { intersection } = Utils
 
@@ -22,6 +23,7 @@ export default class TileMap extends PIXI.Container {
     tileSets: any[] = []
     layers: any = {}
     shapeLayer: PIXI.Container = new PIXI.Container()
+    tilesLayer: PIXI.Container = new PIXI.Container()
     private frameTile: number = 0
 
     constructor(data, private renderer) {
@@ -134,10 +136,15 @@ export default class TileMap extends PIXI.Container {
         return tilesLayer
     }
 
+    changeTile(x: number, y: number, layerName: string) {
+        if (!this.layers[layerName]) throw log(`${layerName} not exists`)
+        this.layers[layerName].changeTile(x, y)
+    }
+
     load() {
         this.defaultLayer = null
-        this.removeChildren()
-
+        this.tilesLayer.removeChildren()
+        
         this.tileSets.forEach(tileset => tileset.load())
 
         this.data.layers.forEach((layerData) => {
@@ -147,13 +154,13 @@ export default class TileMap extends PIXI.Container {
                     const tileLayer = new TileLayer(layerData, this.tileSets)
                     tileLayer.create()
                     this.layers[layerData.name] = tileLayer
-                    this.addChild(tileLayer)
+                    this.tilesLayer.addChild(tileLayer)
                     break;
                 }
                 case 'image': {
                     const imageLayer = new ImageLayer(layerData, /** TODO */ null);
                     this.layers[layerData.name] = imageLayer
-                    this.addChild(imageLayer)
+                    this.tilesLayer.addChild(imageLayer)
                     break;
                 }
                 case 'object': {
@@ -163,10 +170,10 @@ export default class TileMap extends PIXI.Container {
             }
         })
 
+        this.addChild(this.tilesLayer)
         if (!this.defaultLayer) {
             this.defaultLayer = this.createEventLayer('event-layer')
         }
-
         this.addChild(this.shapeLayer)
     }
 }

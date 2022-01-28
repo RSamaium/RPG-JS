@@ -2,7 +2,9 @@ import { intersection, isString, isBrowser, generateUID } from './Utils'
 import { Hit, HitObject } from './Hit'
 import { RpgShape } from './Shape'
 import SAT from 'sat'
-import Map from './Map'
+import Map, { TileInfo } from './Map'
+import { RpgPlugin } from './Plugin'
+import { HookServer } from '.'
 
 const ACTIONS = { IDLE: 0, RUN: 1, ACTION: 2 }
 
@@ -30,7 +32,8 @@ export class RpgCommonPlayer {
     speed: number
     events: any[] = []
     direction: number = 0
-    collisionWith: any[] = []
+    private collisionWith: any[] = []
+    private _collisionWithTiles: TileInfo[] = []
     data: any = {}
     hitbox: any
     
@@ -111,6 +114,36 @@ export class RpgCommonPlayer {
         return Map.buffer.get(this.map)
     }
 
+     /**
+     * 
+     * Recovers all the colliding tiles of the current player 
+     * 
+     * @title Get Collision of tiles
+     * @since 3.0.0-beta.4
+     * @readonly
+     * @prop { TileInfo[] } tiles
+     * @memberof Player
+     * @memberof RpgSpriteLogic
+     */
+    get tilesCollision(): TileInfo[] {
+        return this._collisionWithTiles
+    }
+
+    /**
+     * 
+     * Recovers all other players and events colliding with the current player's hitbox
+     * 
+     * @title Get Collision of other players/events
+     * @since 3.0.0-beta.4
+     * @readonly
+     * @prop { (RpgPlayer | Rpgvent)[] } otherPlayersCollision
+     * @memberof Player
+     * @memberof RpgSpriteLogic
+     */
+    get otherPlayersCollision(): RpgCommonPlayer[] {
+        return this.collisionWith
+    }
+
     /**
      * Define the size of the player. You can set the hitbox for collisions
      * 
@@ -153,10 +186,7 @@ export class RpgCommonPlayer {
      * Define the hitbox of the player.
      * 
      * ```ts
-     * player.setHitbox({
-     *      width: 20,
-     *      height: 20
-     * })
+     * player.setHitbox(20, 20)
      * ```
      * 
      * @title Set Hitbox
@@ -255,8 +285,56 @@ export class RpgCommonPlayer {
         return this.move(nextPosition)
     }
 
+    /**
+     * Retrieves a tile and checks if the player has a collision
+     * 
+     * ```ts
+     * const tileInfo = player.getTile(20, 30)
+     * console.log(tileInfo)
+     * ```
+     * 
+     * Example of returns: 
+     * 
+     ```ts
+        {
+            tiles: [
+                {
+                    id: 0,
+                    terrain: [],
+                    probability: null,
+                    properties: [Object],
+                    animations: [],
+                    objectGroups: [],
+                    image: null,
+                    gid: 1
+                }
+            ],
+            hasCollision: false,
+            isOverlay: undefined,
+            objectGroups: [],
+            isClimbable: undefined,
+            tileIndex: 93
+        }
+        ```
+     * 
+     * @title Get Tile
+     * @since 3.0.0-beta.4
+     * @method player.getTile(x,y,z?)
+     * @param {number} x
+     * @param {number} y
+     * @param {number} [z]
+     * @returns {object}
+     * @memberof Player
+     * @memberof RpgSpriteLogic
+     */
+    getTile(x: number, y: number, z: number = 0, hitbox?: SAT.Box): TileInfo {
+        const map: Map = this.mapInstance
+        return map.getTile(hitbox || this.hitbox, x, y, [z, this.height])
+    }
+
     isCollided(nextPosition: Position): boolean {
         this.collisionWith = []
+        this._collisionWithTiles = []
 
         const map: Map = this.mapInstance
         const hitbox = Hit.createObjectHitbox(nextPosition.x, nextPosition.y, 0, this.hitbox.w, this.hitbox.h)
@@ -281,29 +359,11 @@ export class RpgCommonPlayer {
             return true
         }
 
-        let isClimbable = false
-
         const tileCollision = (x, y): boolean => {
-            const tile = map.getTileByPosition(x, y, [nextPosition.z, this.height])
-            const tilePos = map.getTileOriginPosition(x, y)
+            const tile = this.getTile(x, y, nextPosition.z, hitbox)
             if (tile.hasCollision) {
+                this._collisionWithTiles.push(tile)
                 return true
-            }
-            else if (tile.objectGroups) {
-                
-                for (let object of tile.objectGroups) {
-                    const hit = Hit.getHitbox(object, {
-                        x: tilePos.x,
-                        y: tilePos.y
-                    })
-                    const collided = Hit.testPolyCollision(hit.type, hit.hitbox, hitbox)
-                    if (collided) {
-                        return true
-                    }
-                }
-            }
-            if (!isClimbable && tile.isClimbable) {
-                isClimbable = true
             }
             return false
         }
@@ -375,7 +435,7 @@ export class RpgCommonPlayer {
      * - positioning: Indicate where the shape is placed.
      * - properties: An object in order to retrieve information when interacting with the shape
      * - name: The name of the shape
-     * @since beta.3
+     * @since 3.0.0-beta.3
      * @returns {RpgShape}
      * @memberof Player
      */
@@ -401,8 +461,9 @@ export class RpgCommonPlayer {
      * @title Get Shapes
      * @method player.getShapes()
      * @returns {RpgShape[]}
-     * @since beta.3
+     * @since 3.0.0-beta.3
      * @memberof Player
+     * @memberof RpgSpriteLogic
      */
     getShapes(): RpgShape[] {
         return this.shapes
@@ -463,8 +524,11 @@ export class RpgCommonPlayer {
             }
         }
 
-        if (testCollision && !this.isCollided(nextPosition)) {
+        const collided = testCollision && !this.isCollided(nextPosition)
+
+        if (collided) {
             this.position = nextPosition
+            RpgPlugin.emit(HookServer.PlayerMove, this)
         }
 
         return true
@@ -476,7 +540,7 @@ export class RpgCommonPlayer {
      * @title Get In-Shapes
      * @method player.getInShapes()
      * @returns {RpgShape[]}
-     * @since beta.3
+     * @since 3.0.0-beta.3
      * @memberof Player
      */
     getInShapes(): RpgShape[] {

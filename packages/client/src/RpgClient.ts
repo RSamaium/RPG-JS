@@ -1,6 +1,7 @@
 import { RpgSprite } from './Sprite/Player'
 import { ModuleType } from '@rpgjs/common'
 import { Scene } from './Scene/Scene'
+import { SceneMap } from './Scene/Map'
 import { RpgClientEngine } from './RpgClientEngine'
 
 export interface RpgClientEngineHooks {
@@ -51,6 +52,15 @@ export interface RpgClientEngineHooks {
      * @memberof RpgEngineHooks
      */
     onConnectError?: (engine: RpgClientEngine, err: any, socket: any) => any
+
+    /**
+     * Called when window is resized
+     * 
+     * @prop { () => any } [onWindowResize]
+     * @since 3.0.0-beta.4
+     * @memberof RpgEngineHooks
+     */
+    onWindowResize?: () => any
 }
 
 export interface RpgSpriteHooks {
@@ -66,6 +76,7 @@ export interface RpgSpriteHooks {
      * Called when the sprite is deleted
      * 
      * @prop { (sprite: RpgSprite) => any } [onDestroy]
+     * @memberof RpgSpriteHooks
      */
     onDestroy?: (sprite: RpgSprite) => any
 
@@ -89,11 +100,13 @@ export interface RpgSpriteHooks {
      * When the x, y positions change
      * 
      * @prop { (sprite: RpgSprite) => any } [onMove]
+     * @since 3.0.0-beta.4
+     * @memberof RpgSpriteHooks
      */
     onMove?: (sprite: RpgSprite) => any
 }
 
-export interface RpgSceneHooks {
+export interface RpgSceneHooks<Scene> {
      /**
      * a sprite has been added on the scene
      * 
@@ -143,14 +156,14 @@ export interface RpgSceneHooks {
     onDraw?: (scene: Scene, t: number) => any
 }
 
-export interface RpgSceneMapHooks extends RpgSceneHooks {
+export interface RpgSceneMapHooks extends RpgSceneHooks<SceneMap> {
     /**
      * The map and resources are being loaded
      * 
      * @prop { (scene: RpgSceneMap, loader: PIXI.Loader) => any } [onMapLoading]
      * @memberof RpgSceneHooks
      */
-    onMapLoading?: (scene: Scene, loader: PIXI.Loader) => any
+    onMapLoading?: (scene: SceneMap, loader: PIXI.Loader) => any
 }
 
 export interface RpgClient {

@@ -40,10 +40,11 @@ export default class Game extends EventEmitter {
         return event
     }
 
-    processInput(inputData, playerId) {
+    processInput(inputData: { input: Control | Direction }, playerId: string) {
         const player = this.world.getObject(playerId)
         const { input } = inputData 
-
+        let moving = false
+        
         if (!player) return
         if (!player.canMove) return
 
@@ -56,8 +57,12 @@ export default class Game extends EventEmitter {
             input == Direction.Up || 
             input == Direction.Down
             ) {
+            moving = true
             player.moveByDirection(input)
         }
-        if (this.side == 'server') RpgPlugin.emit('Server.onInput', [player, inputData], true)
+        if (this.side == 'server') RpgPlugin.emit('Server.onInput', [player, {
+            ...inputData,
+            moving
+        }], true)
     }
 }

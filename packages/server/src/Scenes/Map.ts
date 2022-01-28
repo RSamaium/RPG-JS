@@ -1,8 +1,9 @@
 
-import { RpgCommonMap } from '@rpgjs/common'
+import { RpgCommonMap, Utils } from '@rpgjs/common'
 import { World } from '@rpgjs/sync-server'
-import { EventMode } from '../Event';
-import { RpgMap } from '../Game/Map';
+import { MapOptions } from '../decorators/map'
+import { RpgMap } from '../Game/Map'
+import { RpgPlayer } from '../Player/Player'
 
 export class SceneMap {
 
@@ -14,17 +15,18 @@ export class SceneMap {
         this.mapsById = {}
         if (this.maps) {
             for (let map of this.maps) {
-                this.mapsById[map.id] = map
+                this.createDynamicMap(map)
             }
         }
     }
 
     getMapBydId(id) {
-        const mapClass = this.mapsById[id]
+        let mapClass = this.mapsById[id]
         if (!mapClass) {
             console.log(`Map ${id} not exists`)
             return false
         }
+        if (!Utils.isClass(mapClass)) mapClass = Utils.createConstructor(mapClass)
         return mapClass
     }
 
@@ -47,7 +49,39 @@ export class SceneMap {
         return mapInstance
     }
 
-    async changeMap(mapId, player, positions?): Promise<RpgMap> {
+    /**
+     * Create a dynamic map
+     * 
+     * @method sceneMap.createDynamicMap(mapData)
+     * @title Create a dynamic map
+     * @param {object | RpgMap} mapData The same property as [@MapData decorator](https://docs.rpgjs.dev/classes/map.html#mapdata-decorator)
+     * @returns {void}
+     * @since 3.0.0-beta.4
+     * @memberof SceneMap
+     * @example
+     * ```ts
+     * sceneMap.createDynamicMap({
+     *      id: 'myid',
+     *      file: require('./tmx/mymap.tmx')
+     * })
+     * ```
+     * 
+     * And later, on the player:
+     * 
+     * ```ts
+     * player.changeMap('myid')
+     * ```
+     */
+    createDynamicMap(mapData: MapOptions) {
+        mapData.id = mapData.id || Utils.generateUID()
+        this.mapsById[mapData.id] = mapData
+    }
+
+    async changeMap(
+        mapId: string, 
+        player: RpgPlayer, 
+        positions?: { x: number, y: number, z: number } | string
+    ): Promise<RpgMap> {
         
         player.prevMap = player.map
         player.map = mapId
@@ -55,8 +89,7 @@ export class SceneMap {
 
         if (player.prevMap) {
             World.leaveRoom(player.prevMap, player.id)
-            player.execMethod('onLeave', [player], player.mapInstance)
-            player.execMethod('onLeaveMap', [player.mapInstance])
+            player.execMethod('onLeaveMap', <any>[player.getCurrentMap()])
         }
 
         const mapInstance = await this.loadMap(mapId)
@@ -83,16 +116,14 @@ export class SceneMap {
 
         World.joinRoom(mapId, player.id)
 
-        player = World.getUser(player.id)
-        
-        player.execMethod('onEnter', [player, player.prevMap || null], mapInstance)
-        player.execMethod('onJoinMap', [mapInstance])
+        player = World.getUser(player.id) as RpgPlayer
 
-        player.teleport(positions || 'start')
-        player.events = mapInstance.createEvents(mapInstance._events, EventMode.Scenario)
-        for (let key in player.events) {
-            player.events[key].execMethod('onInit', [player])
+        if (player) {
+            player.execMethod('onJoinMap', <any>[mapInstance])
+            player.teleport(positions || 'start')
+            player.createDynamicEvent(<any>mapInstance._events, false)
         }
+        
         return mapInstance
     }
 }

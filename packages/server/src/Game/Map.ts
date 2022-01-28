@@ -1,4 +1,4 @@
-import { RpgCommonMap, Utils }  from '@rpgjs/common'
+import { RpgCommonMap, Utils, RpgShape }  from '@rpgjs/common'
 import * as Kompute from 'kompute/build/Kompute'
 import fs from 'fs'
 import * as YUKA from 'yuka'
@@ -6,12 +6,15 @@ import { EventOptions } from '../decorators/event'
 import { EventMode, RpgEvent } from '../Event'
 import { Move } from '../Player/MoveManager'
 import { RpgPlayer } from '../Player/Player'
+import { RpgServerEngine } from '../server'
 
-type EventOption = {
+export type EventPosOption = {
     x: number,
     y: number,
+    z?: number,
     event: EventOptions
-} | EventOptions
+}
+export type EventOption = EventPosOption | EventOptions
 
 class AutoEvent extends RpgEvent {
     static mode: EventMode
@@ -49,15 +52,26 @@ class AutoEvent extends RpgEvent {
 export class RpgMap extends RpgCommonMap {
 
     public _events: EventOption[]
-    public id: any
+     /** 
+     * @title map id
+     * @readonly
+     * @prop {string} [id]
+     * @memberof Map
+     * */
+    readonly id: string
     public file: any 
+     /** 
+     * @title event list
+     * @prop { { [eventId: string]: RpgEvent } } [events]
+     * @memberof Map
+     * */
     public events: { 
         [eventId: string]: RpgEvent
     } = {}
     kWorld: Kompute
     entityManager = new YUKA.EntityManager()
 
-    constructor(private _server: any) {
+    constructor(private _server: RpgServerEngine) {
         super()
     }
 
@@ -68,13 +82,7 @@ export class RpgMap extends RpgCommonMap {
         const data = await this.parseFile() 
         super.load(data) 
         RpgCommonMap.buffer.set(this.id, this)
-        //this.kWorld = new Kompute.World(data.width * data.tileWidth, data.height * data.tileHeight, 1000, 32) 
-        this.events = this.createEvents(this._events, EventMode.Shared)
-        // TODO
-       // this.autoLoadEvent()
-        for (let key in this.events) {
-            this.events[key].execMethod('onInit')
-        }
+        this.createDynamicEvent(this._events as EventPosOption[])
         this.onLoad()
     }
 
@@ -121,21 +129,112 @@ export class RpgMap extends RpgCommonMap {
         })
     }
 
+    /**
+     * Edit a tile on the map. All players on the map will see the modified tile
+     * 
+     * 
+     * @title Change Tile in map
+     * @since 3.0.0-beta.4
+     * @method map.setTile(x,y,layer,tileInfo)
+     * @param {number} x Position X
+     * @param {number} y Position Y
+     * @param {string | ((layer: any) => boolean)} layer Name of the layer where you want to put a tile. OYou can also put a function that will act as a filter. The first parameter is the layer and you return a boolean to indicate if you modify the tile of this layer or not
+     * @param {object} tileInfo Object with the following properties:
+     *  - {number} gid: The tile number in tileset (from 1)
+     *  - {object} properties Property of the tile. You own object. To set a collision, set the `collision:true` property
+     * @example
+     * ```ts
+     * map.setTile(15, 18, 'mylayer', { gid: 2 })
+     * ```
+     * @returns {void}
+     * @memberof Map
+     */
+    setTile(x: number, y: number, layerFilter: string | ((layer: any) => boolean), tileInfo: {
+        gid: number,
+        properties?: object
+    }): any {
+        const tiles = super.setTile(x, y, layerFilter, tileInfo)
+        const players: RpgPlayer[] = Object.values(this['users'])
+        for (let player of players) {
+            player.emit('changeTile', tiles)
+        }
+        return tiles
+    }
+
     // TODO: return type
-    getEventShape(eventName: string): any | null {
+    getEventShape(eventName: string): RpgShape | undefined {
         return this.getShapes().find(shape => shape.name == eventName)
     }
 
-    createEvent(obj: EventOption, mode: EventMode, shape?: any): RpgEvent | null {
+    /**
+     * Dynamically create an event in Shared mode
+     * 
+     * ```ts
+     * @EventData({
+     *  name: 'EV-1'
+     * })
+     * class MyEvent extends RpgEvent {
+     *  onAction() {
+     *      console.log('ok')
+     *  }
+     * } 
+     *
+     * map.createDynamicEvent({
+     *      x: 100,
+     *      y: 100,
+     *      event: MyEvent
+     * })
+     * ```
+     * 
+     * You can also put an array of objects to create several events at once
+     * 
+     * @title Create Dynamic Event
+     * @since 3.0.0-beta.4
+     * @method map.createDynamicEvent(eventObj|eventObj[])
+     * @param { { x: number, y: number, z?: number, event: eventClass } } eventsList
+     * @returns { { [eventId: string]: RpgEvent } }
+     * @memberof Map
+     */
+    createDynamicEvent(eventsList: EventPosOption | EventPosOption[]): { 
+        [eventId: string]: RpgEvent
+    } {
+        if (!eventsList) return  {}
+        if (!Utils.isArray(eventsList)) {
+            eventsList = [eventsList as EventPosOption]
+        }
+        const events = this.createEvents(eventsList as EventPosOption[], EventMode.Shared)
+        for (let key in events) {
+            this.events[key] = events[key]
+            this.events[key].execMethod('onInit')
+        }
+        return events
+    }
+
+    /**
+     * Removes an event from the map. Returns false if the event is not found
+     * @title Remove Event
+     * @since 3.0.0-beta.4
+     * @method map.removeEvent(eventId)
+     * @param {string} eventId Event Name
+     * @returns {boolean}
+     * @memberof Map
+     */
+    removeEvent(eventId: string): boolean {
+        if (!this.events[eventId]) return false
+        delete this.events[eventId]
+        return true
+    }
+
+    createEvent(obj: EventPosOption, mode: EventMode, shape?: any): RpgEvent | null {
         let event: any, position
         
         // We retrieve the information of the event ([Event] or [{event: Event, x: number, y: number}])
-        if (obj['x'] === undefined) {
+        if (obj.x === undefined) {
             event = obj
         }
         else {
-            event = obj['event']
-            position = { x: obj['x'], y: obj['y'] }
+            event = obj.event
+            position = { x: obj.x, y: obj.y, z: 0 }
         }
 
         // The event is ignored if the mode is different.
@@ -167,7 +266,7 @@ export class RpgMap extends RpgCommonMap {
         if (!eventsList) return events
 
         for (let obj of eventsList) {
-            const ev = this.createEvent(obj, mode)
+            const ev = this.createEvent(obj as EventPosOption, mode)
             if (ev) {
                 events[ev.id] = ev
             }

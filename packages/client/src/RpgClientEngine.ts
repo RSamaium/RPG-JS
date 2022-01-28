@@ -4,7 +4,7 @@ import { _initSpritesheet } from './Sprite/Spritesheets'
 import { _initSound } from './Sound/Sounds'
 import { RpgSprite } from './Sprite/Player'
 import { World } from '@rpgjs/sync-client'
-import { BehaviorSubject, Observable, Subject } from 'rxjs'
+import { BehaviorSubject, Observable, Subject, Subscription } from 'rxjs'
 import { RpgGui } from './RpgGui'
 import { 
     RpgCommonPlayer, 
@@ -17,6 +17,7 @@ import {
 import merge from 'lodash.merge'
 import { SnapshotInterpolation, Vault } from '@geckos.io/snapshot-interpolation'
 import { RpgSound } from './Sound/RpgSound'
+import { SceneMap } from './Scene/Map'
 
 const SI = new SnapshotInterpolation(60) 
 
@@ -77,6 +78,7 @@ export class RpgClientEngine {
     io
     private lastTimestamp: number = 0
     private pressInput: boolean = false
+    private subscriptionWorld: Subscription
 
     constructor(public gameEngine, private options) { }
 
@@ -141,9 +143,9 @@ export class RpgClientEngine {
      * Adds Spritesheet classes
      *
      * @title Add Spritesheet
-     * @method addSpriteSheet(spritesheetClass | spritesheetClass[])
+     * @method addSpriteSheet(spritesheetClass|spritesheetClass[])
      * @returns {void}
-     * @since beta.3
+     * @since 3.0.0-beta.3
      * @memberof RpgClientEngine
      */
     addSpriteSheet(spritesheetClass) {
@@ -154,9 +156,9 @@ export class RpgClientEngine {
      * Adds Sound classes
      *
      * @title Add Sound
-     * @method addSpriteSheet(soundClass | soundClass[])
+     * @method addSpriteSheet(soundClass|soundClass[])
      * @returns {void}
-     * @since beta.3
+     * @since 3.0.0-beta.3
      * @memberof RpgClientEngine
      */
     addSound(soundClass) {
@@ -315,7 +317,7 @@ export class RpgClientEngine {
         const inputEvent = { input: actionName, playerId: this.gameEngine.playerId }
         this.gameEngine.processInput(inputEvent, this.gameEngine.playerId)
         RpgPlugin.emit(HookClient.SendInput, [this, inputEvent], true)
-        if (this.socket) this.socket.emit('move', inputEvent)
+        if (this.socket) this.socket.emit('move', { input: actionName })
     }
 
     private serverReconciliation()  {
@@ -412,6 +414,11 @@ export class RpgClientEngine {
         this.socket.on('loadScene', ({ name, data }) => {
             this.renderer.loadScene(name, data)
         })
+
+        this.socket.on('changeTile', ({ tiles, x, y }) => {
+            const scene = this.renderer.getScene() as SceneMap
+            scene.changeTile(x, y, tiles)
+        })
         
         this.socket.on('callMethod', ({ objectId, params, name }) => {
             const scene = this.renderer.getScene()
@@ -433,10 +440,10 @@ export class RpgClientEngine {
 
         let lastRoomId = ''
 
-        World.listen(this.socket)
+        this.subscriptionWorld = World.listen(this.socket)
             .value
             .subscribe((val: { data: any, partial: any, time: number, roomId: string }) => {
-
+ 
             if (!val.data) {
                 return
             }
@@ -513,7 +520,11 @@ export class RpgClientEngine {
         }
     }
 
-    // shortcuts
+    get world(): any {
+        return World
+    }
+
+     // shortcuts
 
      /** 
      * VueJS Application instance
@@ -550,5 +561,10 @@ export class RpgClientEngine {
      * */
     get scene() {
         return this.renderer.getScene()
+    }
+
+    reset() {
+        this.subscriptionWorld.unsubscribe()
+        this.world.reset()
     }
 }

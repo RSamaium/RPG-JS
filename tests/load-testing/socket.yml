@@ -12,6 +12,8 @@ scenarios:
     flow: 
        - loop:
           - function: "randomDir"
-          - emit: ["move", { input: "{{direction}}", options: {"movement": true}, step: 0 }]
+          - emit: 
+              channel: move
+              data: { input: "{{direction}}", options: {"movement": true}, step: 0 }
           - think: 1
        - think: 50

@@ -1,4 +1,5 @@
 import { RpgCommonPlayer, Utils, RpgPlugin, RpgCommonMap as RpgMap }  from '@rpgjs/common'
+import { RpgMap as GameMap } from '../Game/Map'
 import * as Kompute from 'kompute/build/Kompute'
 import * as YUKA from 'yuka'
 import { Query } from '../Query'
@@ -31,6 +32,8 @@ import {
     AGI_CURVE
 } from '../presets'
 import { BehaviorManager } from './BehaviorManager'
+import { EventOption, EventPosOption } from '../Game/Map'
+import { EventMode, RpgEvent } from '..'
 
 const { 
     isPromise, 
@@ -38,7 +41,7 @@ const {
     isString
 } = Utils
 
-export type Position = { x: number, y: number, z: number }
+export interface Position { x: number, y: number, z: number }
 
 const itemSchemas = { 
     name: String,
@@ -104,9 +107,10 @@ export class RpgPlayer extends RpgCommonPlayer {
     }
 
     private _name
-    public events: any[] = []
+    public events: any = {}
     public param: any 
     public _rooms = []
+    public prevMap: string = ''
 
     constructor(gameEngine?, playerId?) {
         super(gameEngine, playerId)
@@ -115,8 +119,6 @@ export class RpgPlayer extends RpgCommonPlayer {
 
     // As soon as a teleport has been made, the value is changed to force the client to change the positions on the map without making a move.
     teleported: number = 0
-
-    
 
     initialize() {
         this.expCurve =  {
@@ -223,6 +225,76 @@ export class RpgPlayer extends RpgCommonPlayer {
     }
 
     /**
+     * Dynamically create an event in Scenario mode on the current map
+     * 
+     * ```ts
+     * @EventData({
+     *  name: 'EV-1'
+     * })
+     * class MyEvent extends RpgEvent {
+     *  onAction() {
+     *      console.log('ok')
+     *  }
+     * } 
+     *
+     * player.createDynamicEvent({
+     *      x: 100,
+     *      y: 100,
+     *      event: MyEvent
+     * })
+     * ```
+     * 
+     * You can also put an array of objects to create several events at once
+     * 
+     * @title Create Dynamic Event
+     * @since 3.0.0-beta.4
+     * @method player.createDynamicEvent(eventObj | eventObj[])
+     * @param { { x: number, y: number, z?: number, event: eventClass } } [eventsList]
+     * @returns { { [eventId: string]: RpgEvent } }
+     * @memberof Player
+     */
+    createDynamicEvent(eventsList: EventPosOption | EventPosOption[], forceMode: boolean = true): { 
+        [eventId: string]: RpgEvent
+    } {
+        if (!eventsList) return  {}
+        const mapInstance: GameMap = this.getCurrentMap() as GameMap
+        if (!mapInstance) {
+            throw 'The player is not assigned to any map'
+        }
+        if (!Utils.isArray(eventsList)) {
+            eventsList = [eventsList as EventPosOption]
+        }
+        let eventsListMode = eventsList
+        if (forceMode) {
+            eventsListMode = (eventsList as EventPosOption[]).map(event => {
+                event.event.mode = EventMode.Scenario
+                return event
+            })
+        }
+        const events = mapInstance.createEvents(eventsListMode as EventPosOption[], EventMode.Scenario)
+        for (let key in events) {
+            this.events[key] = events[key]
+            this.events[key].execMethod('onInit', [this])
+        }
+        return events
+    }
+
+    /**
+     * Removes an event from the map (Scenario Mode). Returns false if the event is not found
+     * @title Remove Event
+     * @since 3.0.0-beta.4
+     * @method player.removeEvent(eventId)
+     * @param {string} eventId Event Name
+     * @returns {boolean}
+     * @memberof Player
+     */
+    removeEvent(eventId: string): boolean {
+        if (!this.events[eventId]) return false
+        delete this.events[eventId]
+        return true
+    }
+
+    /**
      * Allows to change the positions of the player on the current map. 
      * You can put the X and Y positions or the name of the created shape on Tiled Map Editor.
      * If you have several shapes with the same name, one position will be chosen randomly.
@@ -249,14 +321,14 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @returns { {x: number, y: number, z: number} }
      * @memberof Player
      */
-    teleport(positions?: Position | string): Position {
+    teleport(positions?: {x: number, y: number, z?: number} | string): Position {
         if (isString(positions)) positions = <Position>this.getCurrentMap().getPositionByShape(shape => shape.name == positions || shape.type == positions)
         if (!positions) positions = { x: 0, y: 0, z: 0 }
         if (!(positions as Position).z) (positions as Position).z = 0
         this.teleported++
         this.position = positions as Position
         // force interaction with event or shape
-        this.move(this.position)
+        this.isCollided(this.position)
         return (positions as Position)
     }
 
@@ -395,7 +467,7 @@ export class RpgPlayer extends RpgCommonPlayer {
         this.emit('loadScene', {
             name, 
             data
-        })
+        }) 
     }
 
     private _getMap(id) {
@@ -409,19 +481,6 @@ export class RpgPlayer extends RpgCommonPlayer {
             name: 'addEffect',
             params: []
         })
-    }
-
-    /**
-     * @todo
-     */
-    createDynamicEvent(obj, mode): RpgPlayer | null {
-        const map: any = (this.mapInstance as RpgMap)
-        const event = map.createEvent(obj, mode)
-        if (event) {
-            map.events[event.name] = event
-            event.execMethod('onInit')
-        }
-        return event
     }
 
     /**
@@ -523,7 +582,7 @@ export class RpgPlayer extends RpgCommonPlayer {
         const {
             events
         } = this._getMap(this.map)
-        const arrayEvents = [...Object.values(this.events), ...Object.values(events)]
+        const arrayEvents: any[] = [...Object.values(this.events), ...Object.values(events)]
         for (let event of arrayEvents) {
             // TODO, sync client
             if (event.onChanges) event.onChanges(this)

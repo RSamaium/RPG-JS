@@ -1,4 +1,4 @@
-import { Direction, Utils } from '@rpgjs/common'
+import { Direction, Utils, RpgPlugin, HookClient, RpgCommonPlayer } from '@rpgjs/common'
 import { spritesheets } from './Spritesheets'
 import { FloatingText } from '../Effects/FloatingText'
 import { Animation } from '../Effects/Animation'
@@ -29,6 +29,7 @@ export default class Character extends PIXI.Sprite {
      * the direction of the sprite
      * 
      * @prop {Direction} dir up, down, left or up
+     * @readonly
      * @memberof RpgSprite
      * */
     get dir(): Direction {
@@ -44,6 +45,7 @@ export default class Character extends PIXI.Sprite {
      * To know if the sprite is a player
      * 
      * @prop {boolean} isPlayer
+     * @readonly
      * @memberof RpgSprite
      * */
     get isPlayer(): boolean {
@@ -54,6 +56,7 @@ export default class Character extends PIXI.Sprite {
      * To know if the sprite is an event
      * 
      * @prop {boolean} isEvent
+     * @readonly
      * @memberof RpgSprite
      * */
     get isEvent(): boolean {
@@ -64,10 +67,23 @@ export default class Character extends PIXI.Sprite {
      * To know if the sprite is the sprite controlled by the player
      * 
      * @prop {boolean} isCurrentPlayer
+     * @readonly
      * @memberof RpgSprite
      * */
     get isCurrentPlayer(): boolean {
         return this.data.playerId === this.scene.game.playerId
+    }
+
+    /** 
+     * Retrieves the logic of the sprite
+     * 
+     * @prop {RpgSpriteLogic} logic
+     * @readonly
+     * @since 3.0.0-beta.4
+     * @memberof RpgSprite
+     * */
+    get logic(): RpgCommonPlayer {
+        return this.scene.game.world.getObject(this.data.playerId)
     }
 
     constructor(private data: any, protected scene: any) {
@@ -221,7 +237,7 @@ export default class Character extends PIXI.Sprite {
 
         if (this.playStandardAnimation) {
             if (moving) {
-                this.onMove()
+                RpgPlugin.emit(HookClient.SpriteMove, this)
                 this.playAnimation(AnimationEnum.Walk)
             }
             else {

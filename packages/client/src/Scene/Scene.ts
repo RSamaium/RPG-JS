@@ -30,15 +30,20 @@ export class Scene {
      * Listen to all the synchronized values of the scene with the server
      * 
      * ```ts 
-     * import { RpgSceneMap } from '@rpgjs/client'
+     * import { RpgClient, RpgModule, RpgSceneMap, RpgSprite } from '@rpgjs/client'
      * 
-     * export class SceneMap extends RpgSceneMap {
-     *      onLoad() {
-     *          this.valuesChange.subscribe((obj) => {
-     *              console.log(obj.data, obj.partial)
-     *          })
-     *      }
-     * }
+     *  @RpgModule<RpgClient>({ 
+            scenes: {
+                map: {
+                    onAfterLoading(scene: RpgSceneMap, sprite: RpgSprite) {
+                      scene.valuesChange.subscribe((obj) => {
+                         console.log(obj.data, obj.partial)
+                      })
+                    }
+                }
+            }
+        })
+        export default class RpgClientModuleEngine {}
      * ```
      * 
      * - `data` represents all the current data of the scene (`users`, `events` and others)
@@ -131,16 +136,22 @@ export class Scene {
      * * `loop`: Display the animation in a loop (false by default)
      * 
      * ```ts 
-     * import { RpgSceneMap } from '@rpgjs/client'
+     * import { RpgClient, RpgModule, RpgSceneMap, RpgSprite } from '@rpgjs/client'
      * 
-     * export class SceneMap extends RpgSceneMap {
-     *      onLoad() {
-     *          const animation = this.showAnimation({
-     *              graphic: 'my-spritesheet',
-     *              animationName: 'my-anim'
-     *          })
-     *      }
-     * }
+
+     * @RpgModule<RpgClient>({ 
+            scenes: {
+                map: {
+                    onAfterLoading(scene: RpgSceneMap, sprite: RpgSprite) {
+                      const animation = scene.showAnimation({
+                         graphic: 'my-spritesheet',
+                          animationName: 'my-anim'
+                      })
+                    }
+                }
+            }
+        })
+        export default class RpgClientModuleEngine {}
      * ```
      * 
      * The return is an animation containing two methods:

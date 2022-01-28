@@ -45,6 +45,9 @@ class WorldClass {
         return this
     }
 
+    reset() {
+        this.obs$ = new BehaviorSubject({})
+    }
 }
 
 export const World = new WorldClass()

@@ -1,4 +1,4 @@
-import { RpgCommonGame, HookClient, loadModules, ModuleType } from '@rpgjs/common'
+import { RpgCommonGame, HookClient, HookServer, loadModules, ModuleType } from '@rpgjs/common'
 import { RpgClientEngine } from './RpgClientEngine'
 
 interface RpgClientEntryPointOptions {
@@ -81,7 +81,8 @@ export default (modules: ModuleType[], options: RpgClientEntryPointOptions): Rpg
         onInit: HookClient.AddSprite,
         onDestroy: HookClient.RemoveSprite,
         onUpdate: HookClient.UpdateSprite,
-        onChanges: HookClient.ChangesSprite
+        onChanges: HookClient.ChangesSprite,
+        onMove: HookClient.SpriteMove
     }
 
     const relationsMap = {
@@ -100,7 +101,8 @@ export default (modules: ModuleType[], options: RpgClientEntryPointOptions): Rpg
         onConnected: HookClient.Connected,
         onDisconnect: HookClient.Disconnect,
         onConnectError: HookClient.ConnectedError,
-        onInput: HookClient.SendInput
+        onInput: HookClient.SendInput,
+        onWindowResize: HookClient.WindowResize
     }
 
     loadModules(modules, {
