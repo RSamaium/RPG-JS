@@ -52,8 +52,19 @@ class AutoEvent extends RpgEvent {
 export class RpgMap extends RpgCommonMap {
 
     public _events: EventOption[]
-    public id: any
+     /** 
+     * @title map id
+     * @readonly
+     * @prop {string} [id]
+     * @memberof Map
+     * */
+    readonly id: string
     public file: any 
+     /** 
+     * @title event list
+     * @prop { { [eventId: string]: RpgEvent } } [events]
+     * @memberof Map
+     * */
     public events: { 
         [eventId: string]: RpgEvent
     } = {}
@@ -179,7 +190,7 @@ export class RpgMap extends RpgCommonMap {
      * 
      * @title Create Dynamic Event
      * @since 3.beta-4
-     * @method map.createDynamicEvent(eventObj | eventObj[])
+     * @method map.createDynamicEvent(eventObj|eventObj[])
      * @param { { x: number, y: number, z?: number, event: eventClass } } eventsList
      * @returns { { [eventId: string]: RpgEvent } }
      * @memberof Map
@@ -197,6 +208,21 @@ export class RpgMap extends RpgCommonMap {
             this.events[key].execMethod('onInit')
         }
         return events
+    }
+
+    /**
+     * Removes an event from the map. Returns false if the event is not found
+     * @title Remove Event
+     * @since 3.beta-4
+     * @method map.removeEvent(eventId)
+     * @param {string} eventId Event Name
+     * @returns {boolean}
+     * @memberof Map
+     */
+    removeEvent(eventId: string): boolean {
+        if (!this.events[eventId]) return false
+        delete this.events[eventId]
+        return true
     }
 
     createEvent(obj: EventPosOption, mode: EventMode, shape?: any): RpgEvent | null {

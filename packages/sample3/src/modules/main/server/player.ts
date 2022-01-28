@@ -14,7 +14,6 @@ export const player: RpgPlayerHooks = {
         if (input == Control.Back) {
             //player.canMove = true
             //player.callMainMenu()
-            
         }
         
     },

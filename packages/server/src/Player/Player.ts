@@ -107,7 +107,7 @@ export class RpgPlayer extends RpgCommonPlayer {
     }
 
     private _name
-    public events: any[] = []
+    public events: any = {}
     public param: any 
     public _rooms = []
     public prevMap: string = ''
@@ -277,6 +277,21 @@ export class RpgPlayer extends RpgCommonPlayer {
             this.events[key].execMethod('onInit', [this])
         }
         return events
+    }
+
+    /**
+     * Removes an event from the map (Scenario Mode). Returns false if the event is not found
+     * @title Remove Event
+     * @since 3.beta-4
+     * @method player.removeEvent(eventId)
+     * @param {string} eventId Event Name
+     * @returns {boolean}
+     * @memberof Player
+     */
+    removeEvent(eventId: string): boolean {
+        if (!this.events[eventId]) return false
+        delete this.events[eventId]
+        return true
     }
 
     /**
@@ -567,7 +582,7 @@ export class RpgPlayer extends RpgCommonPlayer {
         const {
             events
         } = this._getMap(this.map)
-        const arrayEvents = [...Object.values(this.events), ...Object.values(events)]
+        const arrayEvents: any[] = [...Object.values(this.events), ...Object.values(events)]
         for (let event of arrayEvents) {
             // TODO, sync client
             if (event.onChanges) event.onChanges(this)
