@@ -443,7 +443,7 @@ export class RpgClientEngine {
         this.subscriptionWorld = World.listen(this.socket)
             .value
             .subscribe((val: { data: any, partial: any, time: number, roomId: string }) => {
-                
+ 
             if (!val.data) {
                 return
             }

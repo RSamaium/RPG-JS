@@ -105,6 +105,28 @@ describe('Server Side', () => {
     })
 })
 
+test('Player Teleport in map', () => {
+    player.teleport({ x: 100, y: 200 })
+    expect(player.position).toMatchObject({ x: 100, y: 200, z: 0 })
+    server.send()
+    const playerClient = client.gameEngine.world.getObject(playerId)
+    const { x, y } = playerClient.position
+    expect(x).toEqual(100)
+    expect(y).toEqual(200)
+})
+
+test('Player Teleport in map by shape', () => {
+    map.createShape({
+        x: 100,
+        y: 200,
+        width: 0,
+        height: 0,
+        name: 'start'
+    })
+    player.teleport('start')
+    expect(player.position).toMatchObject({ x: 100, y: 200, z: 0 })
+})
+
 describe('Shape', () => {
     test('Create Shape', () => {
        return new Promise((resolve: any) => {

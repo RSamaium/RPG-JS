@@ -120,7 +120,7 @@ export class SceneMap {
 
         if (player) {
             player.execMethod('onJoinMap', <any>[mapInstance])
-            player.teleport(positions)
+            player.teleport(positions || 'start')
             player.createDynamicEvent(<any>mapInstance._events, false)
         }
         
