@@ -154,7 +154,7 @@ export default class RpgCommonMap {
      *      - You can your own properties
      * 
      * @title Create Shape
-     * @since beta.3
+     * @since 3.0.0-beta.3
      * @method map.createShape(obj)
      * @param {object} obj
      * @returns {RpgShape}

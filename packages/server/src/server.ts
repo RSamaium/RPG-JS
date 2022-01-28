@@ -102,7 +102,7 @@ export class RpgServerEngine {
      * @title Add in database
      * @param {number} id resource id
      * @param {class} dataClass A class representing the data
-     * @since 3.beta-4
+     * @since 3.0.0-beta.4
      * @example
      * ```ts
      * @Item({
@@ -181,7 +181,7 @@ export class RpgServerEngine {
     /**
      * Return the scene that manages the maps of the game
      * @prop {SceneMap} [sceneMap]
-     * @since 3.beta-4
+     * @since 3.0.0-beta.4
      * @memberof RpgServerEngine
      */
     get sceneMap() {

@@ -134,7 +134,7 @@ export class RpgMap extends RpgCommonMap {
      * 
      * 
      * @title Change Tile in map
-     * @since 3.beta-4
+     * @since 3.0.0-beta.4
      * @method map.setTile(x,y,layer,tileInfo)
      * @param {number} x Position X
      * @param {number} y Position Y
@@ -189,7 +189,7 @@ export class RpgMap extends RpgCommonMap {
      * You can also put an array of objects to create several events at once
      * 
      * @title Create Dynamic Event
-     * @since 3.beta-4
+     * @since 3.0.0-beta.4
      * @method map.createDynamicEvent(eventObj|eventObj[])
      * @param { { x: number, y: number, z?: number, event: eventClass } } eventsList
      * @returns { { [eventId: string]: RpgEvent } }
@@ -213,7 +213,7 @@ export class RpgMap extends RpgCommonMap {
     /**
      * Removes an event from the map. Returns false if the event is not found
      * @title Remove Event
-     * @since 3.beta-4
+     * @since 3.0.0-beta.4
      * @method map.removeEvent(eventId)
      * @param {string} eventId Event Name
      * @returns {boolean}

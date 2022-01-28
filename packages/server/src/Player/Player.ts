@@ -247,7 +247,7 @@ export class RpgPlayer extends RpgCommonPlayer {
      * You can also put an array of objects to create several events at once
      * 
      * @title Create Dynamic Event
-     * @since 3.beta-4
+     * @since 3.0.0-beta.4
      * @method player.createDynamicEvent(eventObj | eventObj[])
      * @param { { x: number, y: number, z?: number, event: eventClass } } [eventsList]
      * @returns { { [eventId: string]: RpgEvent } }
@@ -282,7 +282,7 @@ export class RpgPlayer extends RpgCommonPlayer {
     /**
      * Removes an event from the map (Scenario Mode). Returns false if the event is not found
      * @title Remove Event
-     * @since 3.beta-4
+     * @since 3.0.0-beta.4
      * @method player.removeEvent(eventId)
      * @param {string} eventId Event Name
      * @returns {boolean}

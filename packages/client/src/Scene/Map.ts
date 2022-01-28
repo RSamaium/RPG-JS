@@ -260,7 +260,7 @@ export class SceneMap extends Scene implements IScene {
      *
      * @title Listen mouse event
      * @method on(eventName,callback)
-     * @since 3.beta-4
+     * @since 3.0.0-beta.4
      * @param {string} eventName  Name of the event (see PIXI documentation). Name often used in the codes
      * - click
      * - mousedown

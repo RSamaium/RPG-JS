@@ -79,7 +79,7 @@ export default class Character extends PIXI.Sprite {
      * 
      * @prop {RpgSpriteLogic} logic
      * @readonly
-     * @since 3.beta-4
+     * @since 3.0.0-beta.4
      * @memberof RpgSprite
      * */
     get logic(): RpgCommonPlayer {

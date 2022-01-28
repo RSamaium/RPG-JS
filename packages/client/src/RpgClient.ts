@@ -57,7 +57,7 @@ export interface RpgClientEngineHooks {
      * Called when window is resized
      * 
      * @prop { () => any } [onWindowResize]
-     * @since 3.beta-4
+     * @since 3.0.0-beta.4
      * @memberof RpgEngineHooks
      */
     onWindowResize?: () => any
@@ -100,7 +100,7 @@ export interface RpgSpriteHooks {
      * When the x, y positions change
      * 
      * @prop { (sprite: RpgSprite) => any } [onMove]
-     * @since 3.beta-4
+     * @since 3.0.0-beta.4
      * @memberof RpgSpriteHooks
      */
     onMove?: (sprite: RpgSprite) => any

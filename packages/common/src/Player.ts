@@ -119,7 +119,7 @@ export class RpgCommonPlayer {
      * Recovers all the colliding tiles of the current player 
      * 
      * @title Get Collision of tiles
-     * @since 3.beta-4
+     * @since 3.0.0-beta.4
      * @readonly
      * @prop { TileInfo[] } tiles
      * @memberof Player
@@ -134,7 +134,7 @@ export class RpgCommonPlayer {
      * Recovers all other players and events colliding with the current player's hitbox
      * 
      * @title Get Collision of other players/events
-     * @since 3.beta-4
+     * @since 3.0.0-beta.4
      * @readonly
      * @prop { (RpgPlayer | Rpgvent)[] } otherPlayersCollision
      * @memberof Player
@@ -318,7 +318,7 @@ export class RpgCommonPlayer {
         ```
      * 
      * @title Get Tile
-     * @since 3.beta-4
+     * @since 3.0.0-beta.4
      * @method player.getTile(x,y,z?)
      * @param {number} x
      * @param {number} y
@@ -435,7 +435,7 @@ export class RpgCommonPlayer {
      * - positioning: Indicate where the shape is placed.
      * - properties: An object in order to retrieve information when interacting with the shape
      * - name: The name of the shape
-     * @since beta.3
+     * @since 3.0.0-beta.3
      * @returns {RpgShape}
      * @memberof Player
      */
@@ -461,7 +461,7 @@ export class RpgCommonPlayer {
      * @title Get Shapes
      * @method player.getShapes()
      * @returns {RpgShape[]}
-     * @since beta.3
+     * @since 3.0.0-beta.3
      * @memberof Player
      * @memberof RpgSpriteLogic
      */
@@ -540,7 +540,7 @@ export class RpgCommonPlayer {
      * @title Get In-Shapes
      * @method player.getInShapes()
      * @returns {RpgShape[]}
-     * @since beta.3
+     * @since 3.0.0-beta.3
      * @memberof Player
      */
     getInShapes(): RpgShape[] {

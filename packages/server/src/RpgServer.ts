@@ -89,7 +89,7 @@ export interface RpgPlayerHooks {
      *  When the player enters the shape
      * 
      * @prop { (player: RpgPlayer, shape: RpgShape) => any } [onInShape]
-     * @since beta.3
+     * 3.0.0-beta.3
      * @memberof RpgPlayerHooks
      */
     onInShape?: (player: RpgPlayer, shape: RpgShape) => any
@@ -98,7 +98,7 @@ export interface RpgPlayerHooks {
      *  When the player leaves the shape
      * 
      * @prop { (player: RpgPlayer, shape: RpgShape) => any } [onOutShape]
-     * @since beta.3
+     * 3.0.0-beta.3
      * @memberof RpgPlayerHooks
      */
      onOutShape?: (player: RpgPlayer, shape: RpgShape) => any
@@ -107,7 +107,7 @@ export interface RpgPlayerHooks {
      * When the x, y positions change
      * 
      * @prop { (player: RpgPlayer) => any } [onMove]
-     * @since 3.beta-4
+     * @since 3.0.0-beta.4
      * @memberof RpgPlayerHooks
      */
      onMove?: (player: RpgPlayer) => any

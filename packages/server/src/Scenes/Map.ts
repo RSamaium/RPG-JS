@@ -56,7 +56,7 @@ export class SceneMap {
      * @title Create a dynamic map
      * @param {object | RpgMap} mapData The same property as [@MapData decorator](https://docs.rpgjs.dev/classes/map.html#mapdata-decorator)
      * @returns {void}
-     * @since 3.beta-4
+     * @since 3.0.0-beta.4
      * @memberof SceneMap
      * @example
      * ```ts
