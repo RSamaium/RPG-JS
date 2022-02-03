@@ -12,10 +12,10 @@
   </data>
  </layer>
  <objectgroup id="3" name="Object Layer 1" offsetx="1" offsety="0">
-  <object id="1" name="start" type="start" x="444.818" y="156.045">
+  <object id="1" name="start pos" type="start" x="444.818" y="156.045">
    <point/>
   </object>
-  <object id="11" x="357.871" y="211.264" width="235.682" height="46.2754">
+  <object id="11" x="299.424" y="446.079" width="235.682" height="46.2754">
    <properties>
     <property name="color" value="0xDE3249"/>
     <property name="obstacle" type="bool" value="true"/>

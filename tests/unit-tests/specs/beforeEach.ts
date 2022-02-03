@@ -14,13 +14,14 @@ const commonModules = [
     }
 ]
 
-export const _beforeEach: any = async (modules: any = []) => {
+export const _beforeEach: any = async (modules: any = [], serverOptions: any = {}, clientOptions: any = {}) => {
     const fixture = testing([
         ...commonModules,
         ...modules
     ], {
-        basePath: __dirname
-    })
+        basePath: __dirname,
+        ...serverOptions
+    }, clientOptions)
     const clientFixture = await fixture.createClient()
     const client = clientFixture.client
     const playerId = clientFixture.playerId

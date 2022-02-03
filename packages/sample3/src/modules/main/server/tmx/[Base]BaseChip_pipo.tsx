@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<tileset version="1.4" tiledversion="1.4.3" name="[Base]BaseChip_pipo" tilewidth="32" tileheight="32" tilecount="1000" columns="8">
- <image source="../../../client/maps/assets/[Base]BaseChip_pipo.png" width="256" height="4000"/>
+<tileset version="1.5" tiledversion="1.7.1" name="[Base]BaseChip_pipo" tilewidth="32" tileheight="32" tilecount="1000" columns="8">
+ <image source="../../client/maps/assets/[Base]BaseChip_pipo.png" width="256" height="4000"/>
  <tile id="0">
   <properties>
    <property name="collision" type="bool" value="false"/>

@@ -1,7 +1,5 @@
-import { RpgSpriteHooks, RpgSprite } from '@rpgjs/client'
+import { RpgSprite, RpgSpriteHooks } from '@rpgjs/client'
 
 export const sprite: RpgSpriteHooks = {
-   onMove(sprite: RpgSprite) {
-     
-   }
-} 
+    
+}

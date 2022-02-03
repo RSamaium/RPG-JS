@@ -15,7 +15,7 @@
   <object id="1" name="start" type="start" x="444.818" y="156.045">
    <point/>
   </object>
-  <object id="11" x="357.871" y="211.264" width="235.682" height="46.2754">
+  <object id="11" x="345.871" y="202.264" width="235.682" height="46.2754">
    <properties>
     <property name="color" value="0xDE3249"/>
     <property name="obstacle" type="bool" value="true"/>

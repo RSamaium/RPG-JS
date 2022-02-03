@@ -127,62 +127,6 @@ test('Player Teleport in map by shape', () => {
     expect(player.position).toMatchObject({ x: 100, y: 200, z: 0 })
 })
 
-test('Create Dynamic Event', () => {
-    @EventData({
-        name: 'test'
-    })
-    class MyEvent extends RpgEvent {}
-    const events = map.createDynamicEvent({
-        x: 100,
-        y: 200,
-        event: MyEvent
-    })
-    expect(events).toBeDefined()
-    expect(Object.values(map.events)).toHaveLength(1)
-    const eventId = Object.keys(events)[0]
-
-    server.send()
-
-    return new Promise((resolve: any) => {
-        client.objects.subscribe((objects) => {
-            const events: any = Object.values(objects)
-            const event = events.find(ev => ev.object.id == eventId)
-            expect(event).toBeDefined()
-            expect(event.object.position.x).toEqual(100)
-            expect(event.object.position.y).toEqual(200)
-            resolve()
-        })
-    })
-})
-
-test('Remove Event', () => {
-    @EventData({
-        name: 'test'
-    })
-    class MyEvent extends RpgEvent {}
-    const events = map.createDynamicEvent({
-        x: 100,
-        y: 200,
-        event: MyEvent
-    })
-    const eventId = Object.keys(events)[0]
-
-    server.send()
-
-    const bool = map.removeEvent(eventId)
-    expect(bool).toBeTruthy()
-
-    server.send()
-    
-    return new Promise((resolve: any) => {
-        client.objects.subscribe((objects) => {
-            const events: any = Object.values(objects)
-            const event = events.find(ev => ev.object.id == eventId)
-            expect(event).toBeUndefined()
-            resolve()
-        })
-    })
-})
 
 describe('Shape', () => {
     test('Create Shape', () => {
