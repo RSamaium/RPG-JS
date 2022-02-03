@@ -5,30 +5,14 @@ import { clear } from '@rpgjs/testing'
 import { inputs } from './fixtures/control'
 
 let  client: RpgClientEngine, 
-player: RpgPlayer, 
-fixture, 
-playerId, 
-server: RpgServerEngine, 
-map: RpgMap,
-sceneMap: RpgSceneMap,
-side: string
+player: RpgPlayer
 
-let modules = []
-
-@RpgModule<RpgServer>({
-    player:
-})
-class RpgServerModule {}
+const wait = () => new Promise(resolve =>  setTimeout(resolve, 200))
 
 beforeEach(async () => {
     const ret = await _beforeEach()
     client = ret.client
     player = ret.player
-    fixture = ret.fixture
-    server = ret.server
-    playerId = ret.playerId
-    map = player.getCurrentMap() as RpgMap
-    sceneMap = client.scene
 })
 
 test('Get Controls', () => {
@@ -58,9 +42,76 @@ test('Apply Custom Controls (Client Side)', () => {
    })
 })
 
-test('Apply Custom Controls (Server Side)', () => {
-    // TODO
- })
+test('Apply Controls - Action (Server Side)', () => {
+    return new Promise(async (resolve: any) => {
+        clear()
+
+        @RpgModule<RpgServer>({
+            player: {
+                onInput(player: RpgPlayer, { input, moving }) {
+                    expect(player).toBeDefined()
+                    expect(input).toEqual(Control.Action)
+                    expect(moving).toEqual(false)
+                    resolve()
+                }
+            }
+        })
+        class RpgServerModule {}
+
+        const { client } = await _beforeEach([{
+            server: RpgServerModule
+        }])
+
+        client.controls.setInputs({
+            [Control.Action]: {
+                bind: Input.Enter
+            }
+        })
+
+        client.controls.applyControl(Control.Action)
+    })
+})
+
+test('Apply Controls - Move (Server Side)', () => {
+    return new Promise(async (resolve: any) => {
+        clear()
+
+        @RpgModule<RpgServer>({
+            player: {
+                onInput(player: RpgPlayer, { input, moving }) {
+                    expect(player).toBeDefined()
+                    expect(input).toEqual(Control.Right)
+                    expect(moving).toEqual(true)
+                    resolve()
+                }
+            }
+        })
+        class RpgServerModule {}
+
+        const { client } = await _beforeEach([{
+            server: RpgServerModule
+        }])
+
+        client.controls.setInputs(inputs)
+        client.controls.applyControl(Control.Right, true)
+    })
+})
+
+test('Listen / Stop Controls', async () => {
+    const fn = jest.fn()
+    client.controls.setInputs({
+        mycustom: {
+            bind: Input.Enter,
+            method: fn
+        }
+    })
+    await client.controls.applyControl('mycustom')
+    client.controls.stopInputs()
+    await client.controls.applyControl('mycustom')
+    client.controls.listenInputs()
+    await client.controls.applyControl('mycustom')
+    expect(fn).toHaveBeenCalledTimes(2)
+})
 
 afterEach(() => {
     clear()

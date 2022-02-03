@@ -269,11 +269,14 @@ export class KeyboardControls {
         this.onKeyChange(e, false)
     }
 
-    private applyKeyPress(name: string) {
-        this.applyKeyDown(name)
-        setTimeout(() => {
-            this.applyKeyUp(name)
-        }, 200)
+    private applyKeyPress(name: string): Promise<void> {
+        return new Promise((resolve: any) => {
+            this.applyKeyDown(name)
+            setTimeout(() => {
+                this.applyKeyUp(name)
+                resolve()
+            }, 200)
+        })
     }
 
     private onKeyChange(e, isDown) {
@@ -348,14 +351,15 @@ export class KeyboardControls {
      * @method applyControl(controlName,isDown)
      * @param {string} controlName
      * @param {boolean} [isDown]
+     * @returns {Promise<void>}
      * @memberof KeyboardControls
      */
-    applyControl(controlName: string, isDown?: boolean | undefined) {
+    async applyControl(controlName: string, isDown?: boolean | undefined): Promise<void> {
         const control = this._controlsOptions[controlName]
         if (control) {
             const input = isArray(control.bind) ? control.bind[0] : control.bind
             if (isDown === undefined) {
-                this.applyKeyPress(input as string)
+                await this.applyKeyPress(input as string)
             }
             else if (isDown) {
                 this.applyKeyDown(input as string)
