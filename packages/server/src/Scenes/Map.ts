@@ -82,15 +82,15 @@ export class SceneMap {
         player: RpgPlayer, 
         positions?: { x: number, y: number, z: number } | string
     ): Promise<RpgMap> {
-        
         player.prevMap = player.map
+        
+        if (player.prevMap) {
+            player.execMethod('onLeaveMap', <any>[player.getCurrentMap()])
+            World.leaveRoom(player.prevMap, player.id)    
+        }
+
         player.map = mapId
         player.events = []
-
-        if (player.prevMap) {
-            World.leaveRoom(player.prevMap, player.id)
-            player.execMethod('onLeaveMap', <any>[player.getCurrentMap()])
-        }
 
         const mapInstance = await this.loadMap(mapId)
 

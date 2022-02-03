@@ -70,8 +70,8 @@ test('Test onLeaveMap Hook', () => {
                     expect(map).toBeDefined()
                     expect(player.prevMap).toEqual('map')
                     const playerMap = player.getCurrentMap() as RpgMap
-                    expect(playerMap.id).toEqual('other-map')
-                    console.log(map)
+                    expect(playerMap.id).toEqual('map')
+                    expect(playerMap.id).toEqual(map.id)
                     resolve()
                 }
             }
