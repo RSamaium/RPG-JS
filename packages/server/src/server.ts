@@ -2,7 +2,7 @@ import { SceneMap } from './Scenes/Map';
 import { RpgPlayer } from './Player/Player'
 import { Query } from './Query'
 import { DAMAGE_SKILL, DAMAGE_PHYSIC, DAMAGE_CRITICAL, COEFFICIENT_ELEMENTS } from './presets'
-import { World } from '@rpgjs/sync-server'
+import { World, WorldClass } from '@rpgjs/sync-server'
 import { Utils, RpgPlugin, Scheduler, HookServer } from '@rpgjs/common'
 
 let tick = 0
@@ -46,7 +46,7 @@ export class RpgServerEngine {
     private scenes: Map<string, any> = new Map()
     protected totalConnected: number = 0
     private scheduler: Scheduler
-    world: any = World
+    world: WorldClass = World
 
     /**
      * Combat formulas
@@ -159,7 +159,7 @@ export class RpgServerEngine {
      * @memberof RpgServerEngine
      */
     send() {
-        World.send()
+        this.world.send()
     }
 
     step() {
@@ -204,7 +204,7 @@ export class RpgServerEngine {
             this.onPlayerDisconnected(socket.id, playerId)
         })
         
-        World.setUser(player, socket)
+        this.world.setUser(player, socket)
 
         socket.emit('playerJoined', { playerId })
 
@@ -221,6 +221,6 @@ export class RpgServerEngine {
     private onPlayerDisconnected(socketId, playerId: string) { 
         const player: RpgPlayer = World.getUser(playerId) as RpgPlayer
         player.execMethod('onDisconnected')
-        World.disconnectUser(playerId)
+        this.world.disconnectUser(playerId)
     }
 }

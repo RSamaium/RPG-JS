@@ -1,5 +1,5 @@
 import {_beforeEach} from './beforeEach'
-import { EventData, Input, RpgEvent, RpgMap, RpgPlayer, RpgServerEngine } from '@rpgjs/server'
+import { EventData, Input, MapData, RpgEvent, RpgMap, RpgModule, RpgPlayer, RpgServer, RpgServerEngine } from '@rpgjs/server'
 import { RpgClientEngine, RpgSceneMap, Control } from '@rpgjs/client'
 import { clear } from '@rpgjs/testing'
 import { inputs } from './fixtures/control'
@@ -133,15 +133,24 @@ test('Test onAction', () => {
                 resolve()
              }
          }
-         player.createDynamicEvent({
-             x: 100,
-             y: 200,
+         // if no tile is created, the collision is set to true and no interaction with the events
+         map.setTile(0, 0, 'Tile Layer 1', { 
+            gid: 1,
+            properties: {
+                collision: false
+            }
+        })
+         map.createDynamicEvent({
+             x: 0,
+             y: 0,
              event: MyEvent
          })
-         player.teleport({ x: 100, y: 200 })
+         player.setHitbox(1, 1)
+         player.teleport({ x: 0, y: 0 })
+
          client.controls.setInputs({
             [Control.Action]: {
-                bind: [Input.Enter]
+                bind: Input.Enter
             }
          })
          client.controls.applyControl(Control.Action)
@@ -167,24 +176,47 @@ test('Test onChanges Hook [syncChanges method)', () => {
     })
  })
 
-/* test('Test onChanges Hook [after method)', () => {
-    return new Promise((resolve: any) => {
-         @EventData({
-             name: 'test'
-         })
-         class MyEvent extends RpgEvent {
-             onChanges(player: RpgPlayer) {
-                 resolve()
-             }
-         }
-         player.createDynamicEvent({
-             x: 100,
-             y: 200,
-             event: MyEvent
-         })
-         player.syncChanges()
+ test('Test onChanges Hook [after method)', () => {
+    return new Promise(async (resolve: any) => {
+        clear()
+
+        @EventData({
+            name: 'test'
+        })
+        class MyEvent extends RpgEvent {
+            onChanges(_player: RpgPlayer) {
+               expect(_player).toBeDefined()
+               expect(_player.getVariable('test')).toEqual(true)
+               resolve()
+            }
+        }
+
+        @MapData({
+            id: 'other-map',
+            file: require('./fixtures/maps/map.tmx'),
+            events: [MyEvent]
+        })
+        class OtherMap extends RpgMap {}
+
+        @RpgModule<RpgServer>({
+            maps: [
+                OtherMap
+            ],
+            player: {
+                onJoinMap(player: RpgPlayer, map: RpgMap) {
+                    player.setVariable('test', true)
+                }
+            }
+        })
+        class RpgServerModule {}
+
+        const { player } = await _beforeEach([{
+            server: RpgServerModule
+        }])
+
+         player.changeMap('other-map')
     })
- })*/
+ })
 
 afterEach(() => {
     clear()
