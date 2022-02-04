@@ -2,6 +2,7 @@ import { RpgClient, RpgModule, Spritesheet, RpgSceneMap, RpgSprite, RpgClientEng
 import Characters from './characters'
 import { MedievalTilesets } from './maps/medieval'
 import { sprite } from './sprite'
+import hpGui from './gui/hp.vue'
 
 let engine
 
@@ -20,6 +21,9 @@ let engine
                 
             }
         }
-    }
+    },
+    gui: [
+        hpGui
+    ]
 })
 export default class RpgClientModuleEngine {}

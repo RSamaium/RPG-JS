@@ -7,8 +7,6 @@ import { inputs } from './fixtures/control'
 let  client: RpgClientEngine, 
 player: RpgPlayer
 
-const wait = () => new Promise(resolve =>  setTimeout(resolve, 200))
-
 beforeEach(async () => {
     const ret = await _beforeEach()
     client = ret.client

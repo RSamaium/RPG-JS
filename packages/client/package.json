@@ -30,7 +30,7 @@
     "pixi-viewport": "4.15.0",
     "pixi.js": "5.3.10",
     "rxjs": "6.6.3",
-    "vue": "3.0.4"
+    "vue": "^3.0.4"
   },
   "gitHead": "7bb0326cc3216764a4bfc86f53e7b24464a2040f",
   "devDependencies": {

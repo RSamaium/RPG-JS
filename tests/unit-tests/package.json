@@ -6,6 +6,7 @@
   "scripts": {
     "test": "jest"
   },
+  "types": "index.d.ts",
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -19,14 +20,19 @@
     "canvas": "^2.8.0",
     "jest": "^27.0.4",
     "jest-webgl-canvas-mock": "^0.2.3",
-    "ts-jest": "^27.0.2"
+    "ts-jest": "^27.0.2",
+    "vue": "^3.0.4"
   },
   "devDependencies": {
     "@babel/plugin-proposal-decorators": "^7.10.5",
     "@babel/plugin-transform-runtime": "^7.11.5",
     "@babel/preset-env": "^7.11.5",
     "@babel/preset-typescript": "^7.10.4",
-    "@types/jest": "^26.0.24"
+    "@testing-library/vue": "^6.4.2",
+    "@types/jest": "^26.0.24",
+    "@vue/compiler-sfc": "^3.0.4",
+    "@vue/vue3-jest": "^27.0.0-alpha.4",
+    "typescript": "^4.5.5"
   },
   "gitHead": "7bb0326cc3216764a4bfc86f53e7b24464a2040f"
 }
