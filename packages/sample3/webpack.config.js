@@ -1,3 +1,15 @@
-const webpack = require('@rpgjs/compiler')
+const webpack = require('webpack')
+const webpackCompiler = require('@rpgjs/compiler')
 
-module.exports = webpack(__dirname)
+const [clientConfig, serverConfig] = webpackCompiler(__dirname)
+
+module.exports = [
+    {
+        ...clientConfig,
+        plugins: [
+            ...clientConfig.plugins,
+            new webpack.EnvironmentPlugin(['SERVER_URL'])
+        ]
+    },
+    serverConfig
+]
