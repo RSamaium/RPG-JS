@@ -172,7 +172,7 @@ export default class RpgCommonMap {
     /**
      * Delete a shape
      * 
-     * @title Get Shapes
+     * @title Delete Shape
      * @method map.removeShape(name)
      * @param {string} name Name of shape
      * @returns {void}

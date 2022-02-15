@@ -68,7 +68,7 @@ test('use an item that is not in the inventory', () => {
     try {
         player.useItem(Potion)
     }
-    catch (err) {
+    catch (err: any) {
         expect(err.id).toBe('ITEM_NOT_INVENTORY')
     }
 })
@@ -78,7 +78,7 @@ test('use an item that is not consumable', () => {
         player.addItem(Key)
         player.useItem(Key)
     }
-    catch (err) {
+    catch (err: any) {
         expect(err.id).toBe('NOT_USE_ITEM')
     }
 })
@@ -105,7 +105,7 @@ test('buy an item but not gold :)', () => {
     try {
         player.buyItem(Potion)
     }
-    catch (err) {
+    catch (err: any) {
         expect(err.id).toBe('NOT_ENOUGH_GOLD')
     }
 })
@@ -114,7 +114,7 @@ test('buy an item but not saleable', () => {
     try {
         player.buyItem(Key)
     }
-    catch (err) {
+    catch (err: any) {
         expect(err.id).toBe('NOT_PRICE')
     }
 })
@@ -131,7 +131,7 @@ test('sell an item not in the inventory', () => {
     try {
         player.sellItem(Potion)
     }
-    catch (err) {
+    catch (err: any) {
         expect(err.id).toBe('ITEM_NOT_INVENTORY')
     }
 })
@@ -141,7 +141,7 @@ test('Sell more items than inventory', () => {
         player.addItem(Potion, 5)
         player.sellItem(Potion, 10)
     }
-    catch (err) {
+    catch (err: any) {
         expect(err.id).toBe('TOO_MANY_ITEM_TO_SELL')
     }
 })
@@ -151,7 +151,7 @@ test('to equip a classic object', () => {
         player.addItem(Potion)
         player.equip(Potion)
     }
-    catch (err) {
+    catch (err: any) {
         expect(err.id).toBe('INVALID_ITEM_TO_EQUIP')
     }
 })

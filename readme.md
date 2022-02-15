@@ -57,7 +57,7 @@ I am pleased to announce the opening of the RPGJS discussion forum. Do you need 
 ## Installation 
 
 ```bash
-npx degit rpgjs/template my-rpg-game
+npx degit rpgjs/starter my-rpg-game
 cd my-rpg-game
 npm install
 npm run dev

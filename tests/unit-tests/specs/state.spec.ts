@@ -26,7 +26,7 @@ test('add state with not chance', () => {
     try {
         player.addState(Confuse, 0)
     }
-    catch (err) {
+    catch (err: any) {
         expect(err.id).toBe('ADD_STATE_FAILED')
     }
 })
@@ -43,7 +43,7 @@ test('remove state with not chance', () => {
         player.addState(Confuse)
         player.removeState(Confuse, 0)
     }
-    catch (err) {
+    catch (err: any) {
         expect(err.id).toBe('REMOVE_STATE_FAILED')
     }
 })
@@ -52,7 +52,7 @@ test('remove state but state is not applied', () => {
     try {
         player.removeState(Confuse)
     }
-    catch (err) {
+    catch (err: any) {
         expect(err.id).toBe('STATE_NOT_APPLIED')
     }
 })

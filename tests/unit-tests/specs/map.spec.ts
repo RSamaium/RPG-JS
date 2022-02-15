@@ -1,6 +1,6 @@
 import { Potion, Key } from './fixtures/item'
 import {_beforeEach} from './beforeEach'
-import { EventData, HookClient, RpgEvent, RpgMap, RpgPlayer, RpgPlugin, RpgServerEngine } from '@rpgjs/server'
+import { EventData, HookClient, MapData, RpgEvent, RpgMap, RpgPlayer, RpgPlugin, RpgServerEngine } from '@rpgjs/server'
 import { RpgClientEngine, RpgSceneMap } from '@rpgjs/client'
 import { clear } from '@rpgjs/testing'
 
@@ -102,6 +102,19 @@ describe('Server Side', () => {
 
         const tileInfoClient = sceneMap.getTileByPosition(0, 0)
         expect(tileInfoClient.tiles[0].gid).toEqual(2)
+    })
+
+    test('Create Dynamic Map', async () => {
+        const sceneMap = server.sceneMap
+
+        @MapData({
+            id: 'myid',
+            file: require('./fixtures/maps/map.tmx')
+        })
+        class SampleMap extends RpgMap {}
+
+        sceneMap.createDynamicMap(SampleMap)
+        await player.changeMap('myid')
     })
 })
 
