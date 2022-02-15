@@ -104,7 +104,7 @@ describe('Server Side', () => {
         expect(tileInfoClient.tiles[0].gid).toEqual(2)
     })
 
-    test('Create Dynamic Map', async () => {
+    test('Create Dynamic Map, Class', async () => {
         const sceneMap = server.sceneMap
 
         @MapData({
@@ -114,6 +114,15 @@ describe('Server Side', () => {
         class SampleMap extends RpgMap {}
 
         sceneMap.createDynamicMap(SampleMap)
+        await player.changeMap('myid')
+    })
+
+    test('Create Dynamic Map, Object', async () => {
+        const sceneMap = server.sceneMap
+        sceneMap.createDynamicMap({
+            id: 'myid',
+            file: require('./fixtures/maps/map.tmx')
+        })
         await player.changeMap('myid')
     })
 

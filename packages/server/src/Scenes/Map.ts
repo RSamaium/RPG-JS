@@ -1,7 +1,7 @@
 
 import { RpgCommonMap, Utils } from '@rpgjs/common'
 import { World } from '@rpgjs/sync-server'
-import { MapOptions } from '../decorators/map'
+import { MapOptions, MapData } from '../decorators/map'
 import { RpgMap } from '../Game/Map'
 import { RpgPlayer } from '../Player/Player'
 
@@ -73,6 +73,11 @@ export class SceneMap {
      * ```
      */
     createDynamicMap(mapData: MapOptions) {
+        if (!Utils.isClass(mapData)) {
+            @MapData(mapData)
+            class DynamicMap extends RpgMap {}
+            mapData = DynamicMap as any
+        }
         mapData.id = mapData.id || Utils.generateUID()
         this.mapsById[mapData.id] = mapData
     }
