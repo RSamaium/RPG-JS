@@ -116,6 +116,69 @@ describe('Server Side', () => {
         sceneMap.createDynamicMap(SampleMap)
         await player.changeMap('myid')
     })
+
+    test('onJoin hook', async () => {
+        return new Promise(async (resolve: any) => {
+            const sceneMap = server.sceneMap
+
+            @MapData({
+                id: 'myid',
+                file: require('./fixtures/maps/map.tmx')
+            })
+            class SampleMap extends RpgMap {
+                onJoin(player: RpgPlayer) {
+                    expect(player).toBeDefined()
+                    resolve()
+                }
+            }
+
+            sceneMap.createDynamicMap(SampleMap)
+            await player.changeMap('myid')
+        })
+    })
+
+    test('onLeave hook', async () => {
+        return new Promise(async (resolve: any) => {
+            const sceneMap = server.sceneMap
+
+            @MapData({
+                id: 'myid',
+                file: require('./fixtures/maps/map.tmx')
+            })
+            class SampleMap extends RpgMap {
+                onLeave(player: RpgPlayer) {
+                    expect(player).toBeDefined()
+                    resolve()
+                }
+            }
+
+            sceneMap.createDynamicMap(SampleMap)
+            await player.changeMap('myid')
+            await player.changeMap('map')
+        })
+    })
+
+    test('onLoad hook', async () => {
+        return new Promise(async (resolve: any) => {
+            const sceneMap = server.sceneMap
+
+            @MapData({
+                id: 'myid',
+                file: require('./fixtures/maps/map.tmx')
+            })
+            class SampleMap extends RpgMap {
+                onLoad() {
+                    expect(this.data).toBeDefined()
+                    const tile = this.getTileByPosition(0, 0)
+                    expect(tile.tileIndex).toBe(0)
+                    resolve()
+                }
+            }
+
+            sceneMap.createDynamicMap(SampleMap)
+            await player.changeMap('myid')
+        })
+    })
 })
 
 test('Player Teleport in map', () => {
