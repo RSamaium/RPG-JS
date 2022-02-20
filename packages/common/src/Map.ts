@@ -5,8 +5,19 @@ import { Hit } from './Hit'
 
 const buffer = new Map()
 
+export interface Tile {
+    id: number,
+    terrain: any[],
+    probability: any,
+    properties: any,
+    animations:  any[],
+    objectGroups: any[],
+    image: any,
+    gid: number
+}
+
 export interface TileInfo {
-    tiles: any[]
+    tiles: Tile[]
     hasCollision: boolean
     isClimbable?: boolean
     isOverlay: boolean
@@ -21,7 +32,7 @@ export interface LayerInfo {
     visible: boolean,
     properties: any,
     objects: HitObject[]
-    tiles: any[]
+    tiles: Tile[]
 }
 
 export default class RpgCommonMap {
