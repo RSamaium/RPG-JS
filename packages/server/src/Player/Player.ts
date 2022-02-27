@@ -1,4 +1,4 @@
-import { RpgCommonPlayer, Utils, RpgPlugin, RpgCommonMap as RpgMap }  from '@rpgjs/common'
+import { RpgCommonPlayer, Utils, RpgPlugin, RpgCommonMap as RpgMap, EventEmitter }  from '@rpgjs/common'
 import { RpgMap as GameMap } from '../Game/Map'
 import * as Kompute from 'kompute/build/Kompute'
 import * as YUKA from 'yuka'
@@ -560,6 +560,35 @@ export class RpgPlayer extends RpgCommonPlayer {
      */
     public on(key: string, cb: Function) {
         if (this._socket) this._socket.on(key, cb) 
+    }
+
+    /**
+     * Adds a one-time listener function for the event named eventName
+     * 
+     * @title Listen one-time to data from the client
+     * @method player.once(key,cb)
+     * @since 3.0.0-beta.5
+     * @param {string} key
+     * @param {function} cb
+     * @returns {void}
+     * @memberof Player
+     */
+    public once(key: string, cb: Function) {
+        if (this._socket) this._socket.once(key, cb) 
+    }
+
+    /**
+     * Removes all listeners of the specified eventName.
+     * 
+     * @title Removes all listeners of the client
+     * @method player.off(key)
+     * @since 3.0.0-beta.5
+     * @param {string} key
+     * @returns {void}
+     * @memberof Player
+     */
+    public off(key: string) {
+        if (this._socket) this._socket.removeAllListeners(key) 
     }
 
     emitToMap(key: string, value: any) {

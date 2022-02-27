@@ -22,6 +22,38 @@ test('player.emit() test', () => {
     })
 })
 
+test('player.on() test', () => {
+    return new Promise((resolve: any) => {
+        player.on('test', (val) => {
+            expect(val).toBe('foo')
+            resolve()
+        })
+        client.socket.emit('test', 'foo')
+    })
+})
+
+test('player.once() test', () => {
+    return new Promise((resolve: any) => {
+        let i = 0
+        player.once('test', (val) => {
+            i++
+        })
+        player.once('test', (val) => {
+            expect(i).toBe(0)
+            resolve()
+        })
+        client.socket.emit('test', 'foo')
+    })
+})
+
+test('player.off() test', () => {
+    const fn  = jest.fn()
+    player.on('test', fn)
+    player.off('test')
+    client.socket.emit('test', 'foo')
+    expect(fn).toHaveBeenCalledTimes(0)
+})
+
 test('player.graphic() test', () => {
     return new Promise((resolve: any) => {
         player.setGraphic('mygraphic')
