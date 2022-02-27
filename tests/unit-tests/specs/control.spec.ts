@@ -38,7 +38,7 @@ test('Apply Custom Controls (Client Side)', () => {
         })
         client.controls.applyControl('mycustom')
 
-        client.nextTick(0)
+        client.nextFrame(0)
    })
 })
 
@@ -70,7 +70,7 @@ test('Apply Controls - Action (Server Side)', () => {
 
         client.controls.applyControl(Control.Action)
 
-        client.nextTick(0)
+        client.nextFrame(0)
     })
 })
 
@@ -97,7 +97,7 @@ test('Apply Controls - Move (Server Side)', () => {
         client.controls.setInputs(inputs)
         client.controls.applyControl(Control.Right, true)
 
-        client.nextTick(0)
+        client.nextFrame(0)
     })
 })
 
@@ -111,14 +111,14 @@ test('Listen / Stop Controls', async () => {
     })
     client.controls.applyControl('mycustom', true)
     client.controls.stopInputs()
-    client.nextTick(0)
+    client.nextFrame(0)
     client.controls.applyControl('mycustom', false)
     client.controls.applyControl('mycustom', true)
     client.controls.listenInputs()
-    client.nextTick(0)
+    client.nextFrame(0)
     client.controls.applyControl('mycustom', false)
     client.controls.applyControl('mycustom', true)
-    client.nextTick(0)
+    client.nextFrame(0)
     client.controls.applyControl('mycustom', false)
     expect(fn).toHaveBeenCalledTimes(2)
 })

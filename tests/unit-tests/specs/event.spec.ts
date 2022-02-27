@@ -149,7 +149,7 @@ test('Test onAction', () => {
          })
          client.controls.applyControl(Control.Action)
 
-         client.nextTick(0)
+         client.nextFrame(0)
     })
  })
 

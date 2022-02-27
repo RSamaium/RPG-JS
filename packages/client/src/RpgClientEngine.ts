@@ -196,7 +196,11 @@ export class RpgClientEngine {
             }
         })
         if (options.renderLoop) {
-            window.requestAnimationFrame(this.nextTick.bind(this))
+            const loop = (timestamp) => {
+                this.nextFrame(timestamp)
+                window.requestAnimationFrame(loop)
+            }
+            window.requestAnimationFrame(loop)
         }  
         RpgPlugin.emit(HookClient.Start, this)
             .then((ret: boolean[]) => {
@@ -205,7 +209,16 @@ export class RpgClientEngine {
             })
     }
 
-    nextTick(timestamp: number) {
+    /**
+     * Display the next frame. Useful for unit tests
+     *
+     * @title Next Frame
+     * @since 3.0.0-beta.5
+     * @param {number} timestamp Indicate the timestamp of the frame
+     * @method nextFrame()
+     * @memberof RpgClientEngine
+     */
+    nextFrame(timestamp: number) {
         this.lastTimestamp = this.lastTimestamp || timestamp;
         this.renderer.draw(timestamp, timestamp - this.lastTimestamp, this.frame)
         this.lastTimestamp = timestamp;
