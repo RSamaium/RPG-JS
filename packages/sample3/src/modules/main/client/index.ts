@@ -10,7 +10,7 @@ let engine
     spritesheets: [MedievalTilesets, ...Characters],
     sprite,
     engine: {
-        onConnected(rpgEngine: RpgClientEngine) {
+        onConnected(rpgEngine: RpgClientEngine, socket: any) {
             engine = rpgEngine
         }
     },

@@ -40,7 +40,7 @@ export const _beforeEach: any = async (modules: any = [], serverOptions: any = {
     await player.changeMap('map')
     player = RpgWorld.getPlayer(player)
     await clientMapLoading
-    client.nextTick(0)
+    client.nextFrame(0)
     return {
         fixture,
         server: fixture.server,

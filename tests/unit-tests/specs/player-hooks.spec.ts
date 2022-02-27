@@ -13,7 +13,7 @@ server: RpgServerEngine,
 map: RpgMap,
 sceneMap: RpgSceneMap
 
-/*test('Test onConnected Hook', () => {
+test('Test onConnected Hook', () => {
     return new Promise(async (resolve: any) => {
         @RpgModule<RpgServer>({
             player: {
@@ -51,7 +51,7 @@ test('Test onJoinMap Hook', () => {
             server: RpgServerModule
         }])
     })
-})*/
+})
 
 test('Test onLeaveMap Hook', () => {
     return new Promise(async (resolve: any) => {

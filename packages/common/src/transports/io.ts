@@ -37,6 +37,7 @@ class MockClientIo extends MockIo {
     id: string = ''
     connection() {
         serverIo.connection(this)
+        this._trigger('connect', undefined)
         return this
     }
     emit(name, data) {
