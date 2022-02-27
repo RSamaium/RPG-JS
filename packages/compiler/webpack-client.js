@@ -16,7 +16,7 @@ const prod = mode === 'production'
 const dir = type == 'mmorpg' ? 'client' : 'standalone'
 const isRpg = type == 'rpg'
 
-module.exports = function(dirname, extend = {}) {
+module.exports = function(dirname, extend = {}, envsClient = null) {
 
     let rpgConfig = {
         name: 'My RPG Game'
@@ -46,6 +46,12 @@ module.exports = function(dirname, extend = {}) {
                 isServer: false,
                 isRpg
             })
+        )
+    }
+
+    if (envsClient) {
+        plugins.push(
+            new webpack.EnvironmentPlugin(envsClient)
         )
     }
 
