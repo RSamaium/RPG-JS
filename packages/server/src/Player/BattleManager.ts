@@ -33,7 +33,7 @@ export class BattleManager {
      * @returns {object} 
      * @memberof BattleManager
      * */
-    applyDamage(otherPlayer: RpgPlayer, skill: any): { 
+    applyDamage(otherPlayer: RpgPlayer, skill?: any): { 
         damage: number, 
         critical: boolean, 
         elementVulnerable: boolean,
