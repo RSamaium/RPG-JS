@@ -223,7 +223,6 @@ export class KeyboardControls {
                         if (typeof parameters === "function") {
                             parameters = parameters();
                         }
-
                         if (method) {
                             method(this.boundKeys[keyName])
                         }

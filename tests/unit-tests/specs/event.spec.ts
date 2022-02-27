@@ -133,13 +133,7 @@ test('Test onAction', () => {
                 resolve()
              }
          }
-         // if no tile is created, the collision is set to true and no interaction with the events
-         map.setTile(0, 0, 'Tile Layer 1', { 
-            gid: 1,
-            properties: {
-                collision: false
-            }
-        })
+        
          map.createDynamicEvent({
              x: 0,
              y: 0,
@@ -154,6 +148,8 @@ test('Test onAction', () => {
             }
          })
          client.controls.applyControl(Control.Action)
+
+         client.nextTick(0)
     })
  })
 

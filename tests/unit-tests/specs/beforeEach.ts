@@ -1,6 +1,6 @@
 import { RpgMap, RpgModule, RpgServer, RpgWorld } from '@rpgjs/server'
-import { RpgPlugin, HookClient } from '@rpgjs/client'
-import { SampleMap } from './fixtures/maps/map'
+import { RpgPlugin, HookClient, RpgClient } from '@rpgjs/client'
+import { SampleMap, Tileset } from './fixtures/maps/map'
 import { testing } from '@rpgjs/testing'
 
 @RpgModule<RpgServer>({
@@ -8,9 +8,15 @@ import { testing } from '@rpgjs/testing'
 })
 class RpgServerModule {}
 
+@RpgModule<RpgClient>({
+    spritesheets: [Tileset]
+})
+class RpgClientModule {}
+
 const commonModules = [
     {
-        server: RpgServerModule
+        server: RpgServerModule,
+        client: RpgClientModule
     }
 ]
 
@@ -34,6 +40,7 @@ export const _beforeEach: any = async (modules: any = [], serverOptions: any = {
     await player.changeMap('map')
     player = RpgWorld.getPlayer(player)
     await clientMapLoading
+    client.nextTick(0)
     return {
         fixture,
         server: fixture.server,

@@ -33,7 +33,9 @@ export function testing(modules, optionsServer: any = {}, optionsClient: any = {
                 standalone: true,
                 ...optionsClient
             })
-            await client.start()
+            await client.start({
+                renderLoop: false
+            })
             clients.push(client)
             return {
                 client,
@@ -49,4 +51,10 @@ export function clear() {
     server.world.clear()
     clients.forEach(client => client.reset())
     RpgMap.buffer.clear()
+    for (let textureUrl in PIXI.utils.BaseTextureCache) {
+        delete PIXI.utils.BaseTextureCache[textureUrl]
+    }
+    for (let textureUrl in PIXI.utils.TextureCache) {
+        delete PIXI.utils.TextureCache[textureUrl]
+    }
 }

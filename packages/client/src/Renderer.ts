@@ -4,8 +4,7 @@ import { RpgPlugin, HookClient } from '@rpgjs/common'
 import { SceneMap } from './Scene/Map'
 import { Scene } from './Presets/Scene'
 import { RpgGui } from './RpgGui'
-
-const TIME_RESET_THRESHOLD = 100
+import { RpgClientEngine } from './RpgClientEngine'
 
 export default class RpgRenderer  {
 
@@ -24,7 +23,7 @@ export default class RpgRenderer  {
     gameEngine
     doReset = false
 
-    constructor(private clientEngine) {
+    constructor(private clientEngine: RpgClientEngine) {
         this.gameEngine = clientEngine.gameEngine
     }
 

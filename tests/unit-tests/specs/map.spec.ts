@@ -53,9 +53,8 @@ const testMap = function(side) {
             expect(map.getTileIndex(0, 0)).toEqual(0)
             const tile = map.getTileByIndex(0)
             expect(tile).toMatchObject({
-                tiles: [],
-                hasCollision: true,
-                isOverlay: false,
+                ...tile,
+                hasCollision: false,
                 objectGroups: [],
                 tileIndex: 0
             })
@@ -68,16 +67,15 @@ const testMap = function(side) {
             expect(origin.y).toEqual(0)
         })
     
-        test('get tile by position', () => {
+        test('get tile by origin position', () => {
             const map = getMap(side)
             const origin = map.getTileOriginPosition(35, 12)
             expect(origin.x).toEqual(TILE_SIZE)
             expect(origin.y).toEqual(0)
             const tile = map.getTileByPosition(35, 12)
             expect(tile).toMatchObject({
-                tiles: [],
-                hasCollision: true,
-                isOverlay: false,
+                ...tile,
+                hasCollision: false,
                 objectGroups: [],
                 tileIndex: 1
             })
@@ -210,35 +208,6 @@ test('Player Teleport in map by shape', () => {
     })
     player.teleport('start')
     expect(player.position).toMatchObject({ x: 100, y: 200, z: 0 })
-})
-
-
-describe('Shape', () => {
-    test('Create Shape', () => {
-       return new Promise((resolve: any) => {
-            const shape = map.createShape({
-                x: 0,
-                y: 0,
-                width: 100,
-                height: 100,
-                name: 'test'
-            })
-            expect(shape.type).toEqual('box')
-            expect(shape.name).toBeDefined()
-
-            const mapShape = map.getShape('test')
-            expect(mapShape).toBeDefined()
-
-            RpgPlugin.on(HookClient.SceneOnChanges, (scene) => {
-                const mapShape = scene.getShape('test')
-                expect(mapShape).toBeDefined()
-                expect(mapShape.x).toEqual(0)
-                expect(mapShape.y).toEqual(0)
-                resolve()
-            })
-            server.send()
-       })
-    })
 })
 
 afterEach(() => {

@@ -483,13 +483,6 @@ export class MoveManager {
                         break
                 }
                 routes.shift()
-
-                /*
-                if (this.constructor['mode'] == EventMode.Scenario) {
-                    const room = World.getRoom(this['map'])
-                    if (room.$detectChanges) room.$detectChanges()
-                }
-                */
             }
             move()
             this.movingInterval = setInterval(move, 16)

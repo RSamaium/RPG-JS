@@ -1,8 +1,9 @@
 import {_beforeEach} from './beforeEach'
 import { EventData, Input, MapData, RpgEvent, RpgMap, RpgModule, RpgPlayer, RpgPlayerHooks, RpgServer, RpgServerEngine } from '@rpgjs/server'
-import { RpgClientEngine, RpgSceneMap, Control } from '@rpgjs/client'
+import { RpgClientEngine, RpgSceneMap, Control, RpgClient } from '@rpgjs/client'
 import { clear } from '@rpgjs/testing'
 import { inputs } from './fixtures/control'
+import { Tileset } from './fixtures/maps/map'
 
 let  client: RpgClientEngine, 
 player: RpgPlayer, 
@@ -12,7 +13,7 @@ server: RpgServerEngine,
 map: RpgMap,
 sceneMap: RpgSceneMap
 
-test('Test onConnected Hook', () => {
+/*test('Test onConnected Hook', () => {
     return new Promise(async (resolve: any) => {
         @RpgModule<RpgServer>({
             player: {
@@ -50,7 +51,7 @@ test('Test onJoinMap Hook', () => {
             server: RpgServerModule
         }])
     })
-})
+})*/
 
 test('Test onLeaveMap Hook', () => {
     return new Promise(async (resolve: any) => {

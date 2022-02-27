@@ -1,7 +1,7 @@
-import { KeyboardControls, Controls, ControlOptions } from './KeyboardControls'
+import { KeyboardControls } from './KeyboardControls'
 import Renderer from './Renderer'
-import { _initSpritesheet } from './Sprite/Spritesheets'
-import { _initSound } from './Sound/Sounds'
+import { _initSpritesheet, spritesheets } from './Sprite/Spritesheets'
+import { _initSound, sounds } from './Sound/Sounds'
 import { RpgSprite } from './Sprite/Player'
 import { World } from '@rpgjs/sync-client'
 import { BehaviorSubject, Observable, Subject, Subscription } from 'rxjs'
@@ -77,6 +77,7 @@ export class RpgClientEngine {
     // TODO, public or private
     io
     private lastTimestamp: number = 0
+    private frame: number = 0
     private pressInput: boolean = false
     private subscriptionWorld: Subscription
 
@@ -173,18 +174,11 @@ export class RpgClientEngine {
      * @returns {Promise< void >}
      * @memberof RpgClientEngine
      */
-    async start() {
+    async start(options: { renderLoop: boolean } = {
+        renderLoop: true
+    }) {
         PIXI.utils.skipHello()
         await this._init()
-        let frame = 0
-        let renderLoop = (timestamp) => {
-            this.lastTimestamp = this.lastTimestamp || timestamp;
-            this.renderer.draw(timestamp, timestamp - this.lastTimestamp, frame)
-            this.lastTimestamp = timestamp;
-            this.step(timestamp, 0)
-            frame++
-            window.requestAnimationFrame(renderLoop)
-        };
         await this.renderer.init()
         this.gameEngine.start({
             getObjects: this.getObjects.bind(this),
@@ -201,12 +195,22 @@ export class RpgClientEngine {
                 }).map((ev: any) => ev.object)
             }
         })
-        window.requestAnimationFrame(renderLoop)
+        if (options.renderLoop) {
+            window.requestAnimationFrame(this.nextTick.bind(this))
+        }  
         RpgPlugin.emit(HookClient.Start, this)
             .then((ret: boolean[]) => {
                 const hasFalseValue = ret.findIndex(el => el === false) != - 1
                 if (!hasFalseValue) this.connection()
             })
+    }
+
+    nextTick(timestamp: number) {
+        this.lastTimestamp = this.lastTimestamp || timestamp;
+        this.renderer.draw(timestamp, timestamp - this.lastTimestamp, this.frame)
+        this.lastTimestamp = timestamp;
+        this.step(timestamp, 0)
+        this.frame++
     }
 
     /**
@@ -566,5 +570,8 @@ export class RpgClientEngine {
     reset() {
         this.subscriptionWorld.unsubscribe()
         this.world.reset()
+        spritesheets.clear()
+        sounds.clear()
+        PIXI.Loader.shared.reset()
     }
 }

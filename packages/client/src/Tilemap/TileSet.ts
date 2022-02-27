@@ -1,4 +1,5 @@
 import { spritesheets } from '../Sprite/Spritesheets'
+import { log } from '../Logger'
 
 export default class TileSet {
 
@@ -17,6 +18,9 @@ export default class TileSet {
     constructor(tileSet) {
         Object.assign(this, tileSet)
         const spritesheet = spritesheets.get(this.name)
+        if (!spritesheet) {
+            throw log(`There are no tilesets for ${this.name}`)
+        }
         this.spritesheet = spritesheet
     }
 
