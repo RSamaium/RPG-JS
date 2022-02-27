@@ -27,7 +27,7 @@ export enum Frequency {
     Lower = 400,
     Low = 200,
     High = 100,
-    Highter = 50,
+    Higher = 50,
     Highest = 25,
     None = 0
 }
@@ -375,7 +375,7 @@ export class MoveManager {
      * Frequency.Lower | 400
      * Frequency.Low | 200
      * Frequency.High | 100
-     * Frequency.Highter | 50
+     * Frequency.Higher | 50
      * Frequency.Highest | 25
      * Frequency.None | 0
      * @default 0
