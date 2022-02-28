@@ -7,7 +7,7 @@ module.exports = {
         "\\.vue$": "@vue/vue3-jest"
     },
     transformIgnorePatterns: [
-        "/node_modules/(?!(@rpgjs/.+)/)/"
+        "/node_modules/(?!(@?rpgjs.+)/)/"
     ],
     moduleFileExtensions: [
         "ts",

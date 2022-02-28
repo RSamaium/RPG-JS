@@ -19,7 +19,7 @@ module.exports = function(dirname, extend = {}) {
             __dirname: false
         },
         externals: [nodeExternals({
-            allowlist: [/^@rpgjs/]
+            allowlist: [/^@rpgjs/, /^rpgjs-/]
         })],
         mode,
         entry: `./src/server.ts`,
