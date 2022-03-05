@@ -77,7 +77,7 @@ export class RpgClientEngine {
         [playerId: string]: ObjectFixture
     }> = new BehaviorSubject({})
     private _tick: BehaviorSubject<Tick> = new BehaviorSubject({
-        timestamp: 0,
+        timestamp: -1,
         deltaTime: 0,
         frame: 0
     })
@@ -94,7 +94,7 @@ export class RpgClientEngine {
 
     constructor(public gameEngine, private options) { 
         this.tick.subscribe(({ timestamp, deltaTime }) => {
-            if (timestamp != 0) this.step(timestamp, deltaTime)
+            if (timestamp != -1) this.step(timestamp, deltaTime)
         })
     }
 
@@ -155,6 +155,21 @@ export class RpgClientEngine {
         cb(array, this)
     }
 
+    /** 
+     * Listen to each frame
+     * 
+     * @prop {Observable<{ timestamp: number, deltaTime: number, frame: number }>} tick
+     * @readonly
+     * @since 3.0.0-beta.5
+     * @memberof RpgClientEngine
+     * @example
+     * 
+     * ```ts
+     * client.tick.subscribe(({ timestamp, deltaTime, frame }) => {
+     * 
+     * })
+     * ```
+     * */
     get tick(): Observable<Tick> {
         return this._tick.asObservable()
     }

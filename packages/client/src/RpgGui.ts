@@ -364,12 +364,11 @@ class Gui {
                     const left = position.x - viewport.left
                     const top = position.y - viewport.top
                     return {
-                        transform: `translate(${left}px,${top}px)`,
-                        //transition: 'transform 0.1s'
+                        transform: `translate(${left}px,${top}px)`
                     }
                 },
                 tooltipFilter(sprites: RpgCommonPlayer[], ui: GuiOptions): RpgCommonPlayer[] {
-                    return sprites.filter(tooltip => tooltip.guiOpened)
+                    return sprites.filter(tooltip => tooltip.guiDisplay)
                 }
             }
         })
@@ -378,7 +377,7 @@ class Gui {
             this.app.component(ui.name, ui)
             this.gui[ui.name] = {
                 data: ui.data,
-                attachToSprite: ui.attachToSprite,
+                attachToSprite: ui.rpgAttachToSprite,
                 display: false,
                 name: ui.name
             }
@@ -393,20 +392,16 @@ class Gui {
         this.vm.tooltips = Object.values(logicObjects).map((object: any) => object.object)
     }
 
-    _attachSprites() {
-        const scene = this.renderer.getScene()
-        scene.valuesChange.subscribe((obj) => {
-            this.vm.tooltips = [
-                ...Object.values(obj.data.users),
-                ...Object.values(obj.data.events)
-            ]
-        })
-    }
-
     _setSocket(socket) {
         this.socket = socket
         this.socket.on('gui.open', ({ guiId, data }) => {
             this.display(guiId, data)
+        })
+        this.socket.on('gui.tooltip', ({ players, display }) => {
+            for (let playerId of players) {
+                const sprite = this.renderer.getScene().getSprite(playerId)
+                sprite.guiDisplay = display
+            }   
         })
         this.socket.on('gui.exit', (guiId) => {
             this.hide(guiId)

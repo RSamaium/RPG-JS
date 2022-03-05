@@ -1,4 +1,4 @@
-import { RpgClient, RpgModule, Spritesheet, RpgSceneMap, RpgSprite, RpgClientEngine } from '@rpgjs/client'
+import { RpgClient, RpgModule, Spritesheet, RpgSceneMap, RpgSprite, RpgClientEngine, RpgGui } from '@rpgjs/client'
 import Characters from './characters'
 import { MedievalTilesets } from './maps/medieval'
 import { sprite } from './sprite'
@@ -12,6 +12,7 @@ let engine
     engine: {
         onConnected(rpgEngine: RpgClientEngine, socket: any) {
             engine = rpgEngine
+            RpgGui.display('hp')
         }
     },
     scenes: {

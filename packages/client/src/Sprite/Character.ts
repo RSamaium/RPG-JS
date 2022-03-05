@@ -85,13 +85,13 @@ export default class Character extends PIXI.Sprite {
     get logic(): RpgCommonPlayer {
         return this.scene.game.world.getObject(this.data.playerId)
     }
-
+    
     get guiDisplay(): boolean {
-        return this.logic.guiOpened
+        return this.logic.guiDisplay
     }
 
     set guiDisplay(val: boolean) {
-        this.logic.guiOpened = val
+        this.logic.guiDisplay = val
     }
 
     constructor(private data: any, protected scene: any) {

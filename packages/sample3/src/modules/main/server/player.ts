@@ -1,4 +1,4 @@
-import { RpgPlayer, RpgMap, RpgPlayerHooks, Direction, Move, RpgShape, ShapePositioning, Control, RpgEvent, EventData } from '@rpgjs/server'
+import { RpgPlayer, RpgMap, RpgPlayerHooks, Direction, Move, RpgShape, ShapePositioning, Control, RpgEvent, EventData, RpgWorld } from '@rpgjs/server'
 import { Armor } from '@rpgjs/database'
 
 let i=0
@@ -30,7 +30,8 @@ export const player: RpgPlayerHooks = {
             }
             i++
             //player.canMove = true
-            //player.callMainMenu()
+            player.showAttachedGui()
+            player.callMainMenu()
         }
         
     },

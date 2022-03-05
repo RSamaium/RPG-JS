@@ -1,3 +1,5 @@
+import { Utils } from '@rpgjs/common'
+import { RpgPlayer } from './Player'
 import { Gui, DialogGui, MenuGui, ShopGui, NotificationGui } from '../Gui'
 import { DialogOptions, Choice } from '../Gui/DialogGui'
 
@@ -239,4 +241,66 @@ export class GuiManager {
         }
     }
 
+    private _attachedGui(players: RpgPlayer[] | RpgPlayer, display: boolean) {
+        if (!Utils.isArray(players)) {
+            players = [players] as RpgPlayer[]
+        }
+        this.emit('gui.tooltip', {
+            players: (players as RpgPlayer[]).map(player => player.id),
+            display
+        })
+    }
+
+    /** 
+     * Display the GUI attached to the players
+     * 
+     * If you don't specify the players as parameters, it will display the GUI of the instance 
+     * But you can specify which GUIs to display by specifying the players as the first parameter
+     * 
+     * @method player.showAttachedGui(players?)
+     * @param {RpgPlayer[] | RpgPlayer} [players] The GUIs attached to the players to display
+     * @since 3.0.0-beta.5
+     * @example
+     * ```ts
+     * player.showAttachedGui()
+     * ```
+     * ```ts
+     * player.showAttachedGui(aPlayer)
+     * ```
+     * ```ts
+     * player.showAttachedGui([player1, player2])
+     * ```
+     * @memberof GuiManager
+     * */
+    showAttachedGui(players?: RpgPlayer[] | RpgPlayer) {
+        const _players = players || this
+        this._attachedGui(_players as RpgPlayer[], true)
+    }
+
+    /** 
+     * Hide the GUI attached to the players
+     * 
+     * @method player.hideAttachedGui(players?)
+     * @param {RpgPlayer[] | RpgPlayer} [players] The GUIs attached to the players to hide
+     * @since 3.0.0-beta.5
+     * @example
+     * ```ts
+     * player.hideAttachedGui()
+     * ```
+     * ```ts
+     * player.hideAttachedGui(aPlayer)
+     * ```
+     * ```ts
+     * player.hideAttachedGui([player1, player2])
+     * ```
+     * @memberof GuiManager
+     * */
+    hideAttachedGui(players?: RpgPlayer[] | RpgPlayer) {
+        const _players = players || this
+        this._attachedGui(_players as RpgPlayer[], false)
+    }
+}
+
+export interface GuiManager{ 
+    emit: any
 }

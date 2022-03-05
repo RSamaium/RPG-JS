@@ -57,4 +57,16 @@ export function clear() {
     for (let textureUrl in PIXI.utils.TextureCache) {
         delete PIXI.utils.TextureCache[textureUrl]
     }
+    window.document.body.innerHTML = `<div id="rpg"></div>`
+}
+
+export function nextTick(client: RpgClientEngine, timestamp = 0) {
+    server.send()
+    return new Promise((resolve: any) => {
+        client.objects.subscribe(async (objects) => {
+            client.nextFrame(timestamp)
+            await client.vueInstance.$nextTick()
+            resolve(objects)
+        })
+    })
 }

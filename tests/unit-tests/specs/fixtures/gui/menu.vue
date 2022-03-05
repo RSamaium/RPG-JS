@@ -1,5 +1,5 @@
 <template>
-    <div class="health-bar">
+    <div class="health-bar" id="bar">
         <p>{{ hp }} / {{ maxHp }}</p>
         <div class="bar">
             <div class="inner-bar" :style="{ width }"></div>

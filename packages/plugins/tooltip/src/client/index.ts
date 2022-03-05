@@ -5,18 +5,18 @@ import tooltipGui from './gui/tooltip.vue'
     gui: [
         tooltipGui
     ],
-    engine: {
-        
-    },
     sprite: {
         onInit(sprite: RpgSprite) {
-            sprite.guiDisplay = true
+            sprite.interactive = true
+            sprite.on('click', () => {
+                sprite.guiDisplay = true
+            }) 
         }
     },
     scenes: {
         map: {
             onAfterLoading() {
-                RpgGui.display('rpg-tooltip')
+               RpgGui.display('rpg-tooltip')
             }
         }
     }
