@@ -3,6 +3,7 @@ import { KeyboardControls, Controls } from '../KeyboardControls'
 import RpgSprite from '../Sprite/Character'
 import { Animation } from '../Effects/Animation'
 import { BehaviorSubject, Observable } from 'rxjs'
+import { RpgGui } from '../RpgGui'
 
 type SceneObservableData = { data: object, partial: object }
 
@@ -60,8 +61,6 @@ export class Scene {
         return this._data.asObservable() 
     }
 
-    
-
     private triggerSpriteChanges(logic, sprite: RpgSprite, moving: boolean) {
         if (this.onUpdateObject) this.onUpdateObject(logic, sprite, moving)
         RpgPlugin.emit(HookClient.UpdateSprite, [sprite, logic], true)
@@ -106,6 +105,7 @@ export class Scene {
             animation.update()
         }
         this.onDraw(t)
+        RpgGui.update(logicObjects)
         RpgPlugin.emit(HookClient.SceneDraw, this)
     }
 

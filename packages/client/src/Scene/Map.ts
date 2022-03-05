@@ -6,6 +6,7 @@ import { Scene } from './Scene'
 import { spritesheets } from '../Sprite/Spritesheets'
 import Character from '../Sprite/Character'
 import { RpgSound } from '../Sound/RpgSound'
+import { RpgGui } from '../RpgGui'
 
 export class SceneMap extends Scene implements IScene {
 
@@ -112,6 +113,7 @@ export class SceneMap extends Scene implements IScene {
                     obj.sounds.forEach(soundId => RpgSound.get(soundId).play())
                 }
                 resolve(this.viewport)
+                //RpgGui._attachSprites()
                 if  (this.onLoad) this.onLoad()
             }
             loader.onError.add(() => {

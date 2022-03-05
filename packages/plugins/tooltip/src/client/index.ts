@@ -1,16 +1,24 @@
-import { HookClient, RpgGui } from '@rpgjs/client'
+import { HookClient, RpgClient, RpgGui, RpgModule, RpgSprite } from '@rpgjs/client'
 import tooltipGui from './gui/tooltip.vue'
 
-export default ({ RpgPlugin }) => {
-    const obj = {
-        gui: [
-            tooltipGui
-        ]
-    } 
-    RpgPlugin.on(HookClient.AddGui, () => {
-        return obj.gui
-    })
-    RpgPlugin.on(HookClient.AddSprite, (sprite) => {
-        RpgGui.display('tooltip')
-    })
-}
+@RpgModule<RpgClient>({ 
+    gui: [
+        tooltipGui
+    ],
+    engine: {
+        
+    },
+    sprite: {
+        onInit(sprite: RpgSprite) {
+            sprite.guiDisplay = true
+        }
+    },
+    scenes: {
+        map: {
+            onAfterLoading() {
+                RpgGui.display('rpg-tooltip')
+            }
+        }
+    }
+})
+export default class RpgClientModuleEngine {}

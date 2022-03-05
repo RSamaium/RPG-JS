@@ -1,23 +1,33 @@
 <template>
     <div>
-        test
+        <input type="text">
     </div>
 </template>
 
 <script>
 export default {
-    name: 'tooltip',
-    inject: ['rpgScene'],
+    name: 'rpg-tooltip',
+    attachToSprite: true,
+    props: ['spriteData'],
+    inject: ['rpgEngine', 'rpgScene'],
+    data() {
+        return {
+            opacity: 1
+        }
+    },
     mounted() {
-        this.rpgScene.valuesChange.subscribe((obj) => {
-             console.log(obj.data, obj.partial)
-         })
+        const sprite = this.rpgScene().getSprite(this.spriteData.id)
+    },
+    methods: {
+        
     }
 }
 </script>
 
 <style scoped>
-div {
-    position: absolute;
+.red {
+    width: 100px;
+    height: 100px;
+    background: red;
 }
 </style>

@@ -25,6 +25,9 @@ export default class RpgRenderer  {
 
     constructor(private clientEngine: RpgClientEngine) {
         this.gameEngine = clientEngine.gameEngine
+        this.clientEngine.tick.subscribe(({ timestamp, deltaTime, frame }) => {
+            this.draw(timestamp, deltaTime, frame)
+        })
     }
 
     async init() {
@@ -109,6 +112,7 @@ export default class RpgRenderer  {
     }
     
     draw(t: number, dt: number, frame: number) {
+        if (!this.renderer) return
         if (this.scene) this.scene.draw(t, dt, frame)
         this.renderer.render(this.stage)
     }

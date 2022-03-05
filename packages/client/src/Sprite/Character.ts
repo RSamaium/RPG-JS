@@ -86,6 +86,14 @@ export default class Character extends PIXI.Sprite {
         return this.scene.game.world.getObject(this.data.playerId)
     }
 
+    get guiDisplay(): boolean {
+        return this.logic.guiOpened
+    }
+
+    set guiDisplay(val: boolean) {
+        this.logic.guiOpened = val
+    }
+
     constructor(private data: any, protected scene: any) {
         super()
         this.x = data.position.x 

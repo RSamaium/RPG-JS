@@ -36,6 +36,7 @@ export class RpgCommonPlayer {
     private _collisionWithTiles: TileInfo[] = []
     data: any = {}
     hitbox: any
+    guiOpened: boolean // display GUI of sprite
     
     inShapes: {
         [shapeId: string]: RpgShape

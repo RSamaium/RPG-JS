@@ -7,7 +7,7 @@ declare module '@rpgjs/client' {
 }
 
 export const sprite: RpgSpriteHooks = {
-    onInit(sprite: RpgSprite) {
+   /* onInit(sprite: RpgSprite) {
         const style = new PIXI.TextStyle({
             fontSize: 14,
             fontWeight: 'bold'
@@ -25,5 +25,5 @@ export const sprite: RpgSpriteHooks = {
             sprite.textGraphic.x = name.length + 12
             sprite.textGraphic.text = name
         }
-    }
+    }*/
 }
