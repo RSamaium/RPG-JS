@@ -145,7 +145,7 @@ export class RpgCommonPlayer {
      * @title Get Collision of other players/events
      * @since 3.0.0-beta.4
      * @readonly
-     * @prop { (RpgPlayer | Rpgvent)[] } otherPlayersCollision
+     * @prop { (RpgPlayer | RpgEvent)[] } otherPlayersCollision
      * @memberof Player
      * @memberof RpgSpriteLogic
      */

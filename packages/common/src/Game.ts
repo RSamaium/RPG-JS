@@ -41,7 +41,7 @@ export default class Game extends EventEmitter {
     }
 
     processInput(inputData: { input: Control | Direction }, playerId: string) {
-        const player = this.world.getObject(playerId)
+        const player: RpgCommonPlayer = this.world.getObject(playerId)
         const { input } = inputData 
         let moving = false
         

@@ -117,6 +117,11 @@ export class RpgPlayer extends RpgCommonPlayer {
         this.initialize()
     }
 
+    // redefine type (as RpgPlayer)
+    get otherPlayersCollision(): RpgPlayer[] {
+        return super.otherPlayersCollision as RpgPlayer[]
+    }
+
     // As soon as a teleport has been made, the value is changed to force the client to change the positions on the map without making a move.
     teleported: number = 0
 
