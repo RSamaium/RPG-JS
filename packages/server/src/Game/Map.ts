@@ -100,11 +100,12 @@ export class RpgMap extends RpgCommonMap {
         player.stopBehavior()
         this.entityManager.remove(player.steerable)
         this.getShapes().forEach(shape => shape.out(player))
-        const events: RpgPlayer[] = this.game.world.getObjectsOfGroup(this.id, player)
+        const events: RpgPlayer[] = Object.values(this.game.world.getObjectsOfGroup(this.id, player))
         for (let event of events) {
             player.getShapes().forEach(shape => shape.out(event))
             event.getShapes().forEach(shape => shape.out(player))
         }
+        this.grid.clearObjectInCells(player.id)
     }
 
     autoLoadEvent() {

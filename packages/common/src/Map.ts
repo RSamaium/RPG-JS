@@ -2,6 +2,7 @@ import { HitObject } from './Hit'
 import { random, intersection, generateUID, isString } from './Utils'
 import { RpgShape } from './Shape'
 import { Hit } from './Hit'
+import { VirtualGrid } from './VirtualGrid'
 
 const buffer = new Map()
 
@@ -36,6 +37,8 @@ export interface LayerInfo {
 }
 
 export default class RpgCommonMap {
+
+    grid: VirtualGrid
 
     /** 
      * @title Data of map
@@ -87,6 +90,7 @@ export default class RpgCommonMap {
         this.tileHeight = data.tileHeight
         this.height = data.height
         this.layers = data.layers
+        this.grid = new VirtualGrid(this.width, this.tileWidth, this.tileHeight).zoom(10)
         this._extractShapes()
     }
 

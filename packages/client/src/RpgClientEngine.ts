@@ -223,10 +223,10 @@ export class RpgClientEngine {
             },
             removeObject: this.removeObject.bind(this),
             getObjectsOfGroup: () => {
-                return  Object.values({
+                return {
                     ...this.getObjects(),
                     ...this.gameEngine.events
-                }).map((ev: any) => ev.object)
+                }
             }
         })
         if (options.renderLoop) {

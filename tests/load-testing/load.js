@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+// ex: ./load.js --players=100 --output=0  --arrival=10 --duration=1000
+
 const { io } = require("socket.io-client");
 const { hideBin } = require('yargs/helpers')
 const { randomDir } = require('./random-move')

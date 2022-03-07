@@ -35,7 +35,7 @@ export class RpgCommonPlayer {
     private collisionWith: any[] = []
     private _collisionWithTiles: TileInfo[] = []
     data: any = {}
-    hitbox: any
+    hitbox: SAT.Box
     
      /** 
      * Display/Hide the GUI attached to this sprite
@@ -89,6 +89,10 @@ export class RpgCommonPlayer {
         this._hitboxPos.z = z
         if (this.steerable) {
             this.steerable.position.copy(this.getVector3D(x, z, y))
+        }
+        const map = this.mapInstance
+        if (map) {
+            map.grid.insertInCells(this.id, this.getSizeMaxShape())
         }
         this._position = new Proxy(val, {
             get: (target, prop: string) => target[prop], 
@@ -385,9 +389,12 @@ export class RpgCommonPlayer {
         ) {
             return true
         }
-        let events: RpgCommonPlayer[] = this.gameEngine.world.getObjectsOfGroup(this.map, this)
+        const events: { [id: string]: RpgCommonPlayer } = this.gameEngine.world.getObjectsOfGroup(this.map, this)
+        const objects = map.grid.getObjectsByBox(this.getSizeMaxShape(nextPosition.x, nextPosition.y))
 
-        for (let event of events) {
+        for (let objectId of objects) {
+            // client side: read "object" propertie
+            const event = events[objectId]['object'] || events[objectId] 
             if (event.id == this.id) continue
             if (!this.zCollision(event)) continue
             const collided = Hit.testPolyCollision('box', hitbox, event.hitbox)
@@ -625,6 +632,30 @@ export class RpgCommonPlayer {
                 return this.mapInstance.tileWidth / this.speed
             default: 
                 return NaN
+        }
+    }
+
+    getSizeMaxShape(x?: number, y?: number): { minX: number, minY: number, maxX: number, maxY: number } {
+        const _x = x || this.position.x
+        const _y = y || this.position.y
+        let minX = _x
+        let minY = _y
+        let maxX = _x + this.wHitbox
+        let maxY = _y + this.hHitbox
+        const shapes = this.getShapes()
+        for (let shape of shapes) {
+            if (shape.x < minX) minX = shape.x
+            if (shape.y < minY) minX = shape.y
+            const shapeMaxX = shape.x + shape.width
+            const shapeMaxY = shape.y + shape.height
+            if (shapeMaxX > maxX) maxX = shapeMaxX
+            if (shapeMaxY > maxY) maxY = shapeMaxY
+        }
+        return {
+            minX,
+            minY,
+            maxX,
+            maxY
         }
     }
 

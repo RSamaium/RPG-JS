@@ -143,7 +143,7 @@ export class RpgServerEngine {
                 return Query.getPlayer(id) 
             },
             getObjectsOfGroup(groupId: string, player: RpgPlayer) {
-                return Query.getObjectsOfMap(groupId, player)
+                return Query._getObjectsOfMap(groupId, player)
             }
         })
         this.io.on('connection', this.onPlayerConnected.bind(this))

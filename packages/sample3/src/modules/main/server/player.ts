@@ -10,30 +10,27 @@ let i=0
 })
 export class Shield {}
 
+function getRandomInt(min, max) {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
 export const player: RpgPlayerHooks = {
     onConnected(player: RpgPlayer) {
         player.setHitbox(32, 16)
         player.setGraphic('male1_2')
-        player.changeMap('cave')
+        player.changeMap('cave', {
+            x: getRandomInt(0, 32 * 200),
+            y: getRandomInt(0, 32 * 200)
+        })
     },
     onJoinMap(player: RpgPlayer, map: RpgMap) {
         
     },
     onInput(player: RpgPlayer, { input, moving }) {
         if (input == Control.Back) {
-            player.addItem(Shield)  
-            if (i > 0) {
-                player.equip(Shield, false)
-            }
-            else {
-                player.equip(Shield)
-            }
-            i++
-            //player.canMove = true
-            player.showAttachedGui()
-            player.callMainMenu()
-            const map = player.getCurrentMap() as RpgMap
-           
+            console.log(player.getSizeMaxShape())  
         }
         
     },

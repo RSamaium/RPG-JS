@@ -1,8 +1,6 @@
 import { Direction } from '@rpgjs/common'
 import { Utils } from '@rpgjs/common'
 import { RpgPlayer } from './Player';
-import { EventMode } from '../Event';
-import { World } from '@rpgjs/sync-server';
 
 const {
     arrayFlat,

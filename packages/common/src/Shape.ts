@@ -51,7 +51,11 @@ export class RpgShape  {
         else {
             this.hitbox.pos[type] = val
         }
-        if (this.clientContainer) this.clientContainer[type] = val
+        if (this.clientContainer) {
+            if (type == 'w') type = 'width'
+            else if (type == 'h') type = 'height'
+            this.clientContainer[type] = val
+        }
     }
 
     get hitbox() {
@@ -70,6 +74,36 @@ export class RpgShape  {
 
     set hitbox(val) {
         this._hitbox = val
+    }
+
+    /**
+    * Get/Set width
+    * @title width
+    * @prop { number } width
+    * @since 3.0.0-beta.5
+    * @memberof Shape
+    */
+    get width(): number {
+        return this.hitbox.w || 0
+    }
+
+    set width(val: number) {
+        this.setPos('w', val)
+    }
+
+    /**
+    * Get/Set height
+    * @title height
+    * @prop { number } height
+    * @since 3.0.0-beta.5
+    * @memberof Shape
+    */
+    get height(): number {
+        return this.hitbox.h || 0
+    }
+
+    set height(val: number) {
+        this.setPos('h', val)
     }
 
     /**

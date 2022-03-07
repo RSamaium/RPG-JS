@@ -98,16 +98,20 @@ class QueryClass {
      * @memberof RpgWorld
      */
     getObjectsOfMap(map: string, playerId?: RpgPlayer | string): RpgPlayer[] {
+        return Object.values(this._getObjectsOfMap(map, playerId)) as RpgPlayer[]
+    }
+
+    _getObjectsOfMap(map: string, playerId?: RpgPlayer | string): { [id: string]: RpgPlayer } {
         const room: any = World.getRoom(map)
         let player: any = null
         if (playerId) {
             player = this.getPlayer(playerId)
         }
-        return [
-            ...Object.values(room.users),
-            ...Object.values(room.events),
-            ...(player ? Object.values(player.events) : [])
-        ] as RpgPlayer[]
+        return {
+            ...room.users,
+            ...room.events,
+            ...(player ? player.events : {})
+        }
     }
 
     // TODO
