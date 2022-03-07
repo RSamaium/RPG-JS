@@ -32,6 +32,8 @@ export const player: RpgPlayerHooks = {
             //player.canMove = true
             player.showAttachedGui()
             player.callMainMenu()
+            const map = player.getCurrentMap() as RpgMap
+           
         }
         
     },
