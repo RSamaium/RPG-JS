@@ -1,24 +1,28 @@
 import { createApp } from 'vue'
+import { RpgCommonPlayer } from '@rpgjs/common'
 import { map } from 'rxjs/operators'
 import { RpgSound } from './Sound/RpgSound'
-import { RpgResource } from './index'
+import { RpgClientEngine, RpgResource, RpgScene, RpgSprite } from './index'
+
+interface GuiOptions {
+    data: any,
+    attachToSprite: boolean
+    display: boolean,
+    name: string
+}
 
 class Gui {
-
     private renderer
     private gameEngine
-    private clientEngine
+    private clientEngine: RpgClientEngine
     private app
     private vm
     private socket
     private gui: {
-        [guiName: string]: {
-            data: any,
-            display: boolean
-        }
+        [guiName: string]: GuiOptions
     } = {}
 
-    _initalize(clientEngine) {
+    _initalize(clientEngine: RpgClientEngine) {
 
         this.clientEngine = clientEngine
         this.renderer = clientEngine.renderer
@@ -38,14 +42,24 @@ class Gui {
                     @pointercancel="propagate('pointercancel', $event)"
                     @pointerup="propagate('pointerup', $event)"
                 >
-                    <template v-for="(ui, name) in gui">
-                        <component :is="name" v-bind="ui.data" v-if="ui.display"></component>
-                    </template>  
+                    <template v-for="ui in fixedGui">
+                        <component :is="ui.name" v-bind="ui.data" v-if="ui.display"></component>
+                    </template>
+                    <div id="tooltips" style="position: absolute; top: 0; left: 0;">
+                        <template v-for="ui in attachedGui">
+                            <template v-if="ui.display">
+                                <div v-for="tooltip of tooltipFilter(tooltips, ui)" :style="tooltipPosition(tooltip.position)">
+                                    <component :is="ui.name" v-bind="{ ...ui.data, spriteData: tooltip }" :ref="ui.name"></component>
+                                </div>
+                            </template>
+                        </template>
+                    </div>
                 </div>
             `,
             data() {
                 return {
-                    gui
+                    gui,
+                    tooltips: []
                 }
             },
             provide: () => {
@@ -332,9 +346,29 @@ class Gui {
                     rpgEngine: this.clientEngine
                 }
             },
+            computed: {
+                fixedGui() {
+                    return Object.values(this.gui).filter((gui: any) => !gui.attachToSprite)
+                },
+                attachedGui() {
+                    return Object.values(this.gui).filter((gui: any) => gui.attachToSprite)
+                }
+            },
             methods: {
                 propagate: (type: string, event) => {
                     this.renderer.renderer.view.dispatchEvent(new MouseEvent(type, event))
+                },
+                tooltipPosition: (position: { x: number, y: number }) => {
+                    const scene = this.renderer.getScene()
+                    const viewport = scene.viewport
+                    const left = position.x - viewport.left
+                    const top = position.y - viewport.top
+                    return {
+                        transform: `translate(${left}px,${top}px)`
+                    }
+                },
+                tooltipFilter(sprites: RpgCommonPlayer[], ui: GuiOptions): RpgCommonPlayer[] {
+                    return sprites.filter(tooltip => tooltip.guiDisplay)
                 }
             }
         })
@@ -343,20 +377,31 @@ class Gui {
             this.app.component(ui.name, ui)
             this.gui[ui.name] = {
                 data: ui.data,
-                display: false
+                attachToSprite: ui.rpgAttachToSprite,
+                display: false,
+                name: ui.name
             }
         } 
-
         this.vm = this.app.mount(selectorGui)
         this.vm.gui = this.gui
         this.renderer.app = this.app
         this.renderer.vm = this.vm
     }
 
+    update(logicObjects) {
+        this.vm.tooltips = Object.values(logicObjects).map((object: any) => object.object)
+    }
+
     _setSocket(socket) {
         this.socket = socket
         this.socket.on('gui.open', ({ guiId, data }) => {
             this.display(guiId, data)
+        })
+        this.socket.on('gui.tooltip', ({ players, display }) => {
+            for (let playerId of players) {
+                const sprite = this.renderer.getScene().getSprite(playerId)
+                sprite.guiDisplay = display
+            }   
         })
         this.socket.on('gui.exit', (guiId) => {
             this.hide(guiId)

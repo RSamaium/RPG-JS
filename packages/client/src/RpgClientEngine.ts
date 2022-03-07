@@ -28,6 +28,12 @@ type ObjectFixture = {
     paramsChanged: any
 }
 
+type Tick = {
+    timestamp: number
+    deltaTime: number
+    frame: number
+}
+
 export class RpgClientEngine {
 
     /** 
@@ -70,6 +76,11 @@ export class RpgClientEngine {
     private _objects: BehaviorSubject<{
         [playerId: string]: ObjectFixture
     }> = new BehaviorSubject({})
+    private _tick: BehaviorSubject<Tick> = new BehaviorSubject({
+        timestamp: -1,
+        deltaTime: 0,
+        frame: 0
+    })
     public keyChange: Subject<string> = new Subject()
     private hasBeenDisconnected: boolean = false
     private playerVault = new Vault()
@@ -81,7 +92,11 @@ export class RpgClientEngine {
     private pressInput: boolean = false
     private subscriptionWorld: Subscription
 
-    constructor(public gameEngine, private options) { }
+    constructor(public gameEngine, private options) { 
+        this.tick.subscribe(({ timestamp, deltaTime }) => {
+            if (timestamp != -1) this.step(timestamp, deltaTime)
+        })
+    }
 
     private async _init() {
         this.renderer = new Renderer(this)
@@ -138,6 +153,25 @@ export class RpgClientEngine {
             array = [resourceClass]
         }
         cb(array, this)
+    }
+
+    /** 
+     * Listen to each frame
+     * 
+     * @prop {Observable<{ timestamp: number, deltaTime: number, frame: number }>} tick
+     * @readonly
+     * @since 3.0.0-beta.5
+     * @memberof RpgClientEngine
+     * @example
+     * 
+     * ```ts
+     * client.tick.subscribe(({ timestamp, deltaTime, frame }) => {
+     * 
+     * })
+     * ```
+     * */
+    get tick(): Observable<Tick> {
+        return this._tick.asObservable()
     }
 
     /**
@@ -219,10 +253,13 @@ export class RpgClientEngine {
      * @memberof RpgClientEngine
      */
     nextFrame(timestamp: number) {
-        this.lastTimestamp = this.lastTimestamp || timestamp;
-        this.renderer.draw(timestamp, timestamp - this.lastTimestamp, this.frame)
-        this.lastTimestamp = timestamp;
-        this.step(timestamp, 0)
+        this.lastTimestamp = this.lastTimestamp || timestamp
+        this._tick.next({
+            timestamp, 
+            deltaTime: timestamp - this.lastTimestamp,
+            frame: this.frame
+        })
+        this.lastTimestamp = timestamp
         this.frame++
     }
 
@@ -360,7 +397,7 @@ export class RpgClientEngine {
         }
       }
 
-    private step(t, dt) {
+    private step(t: number, dt: number) {
         this.gameEngine.emit('client__preStep')
         RpgPlugin.emit(HookClient.Step, [this, t, dt], true)
         const { playerId } = this.gameEngine

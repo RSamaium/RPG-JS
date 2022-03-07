@@ -37,6 +37,15 @@ export class RpgCommonPlayer {
     data: any = {}
     hitbox: any
     
+     /** 
+     * Display/Hide the GUI attached to this sprite
+     * 
+     * @prop {boolean} guiDisplay
+     * @since 3.0.0-beta.5
+     * @memberof RpgSprite
+     * */
+    guiDisplay: boolean
+    
     inShapes: {
         [shapeId: string]: RpgShape
     } = {}
