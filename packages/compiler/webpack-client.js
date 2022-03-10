@@ -71,6 +71,7 @@ module.exports = function(dirname, extend = {}, envsClient = null) {
             fs: 'empty'
         },
         entry: `./src/${ type == 'mmorpg' ? 'client.ts' : 'standalone.ts' }`,
+        context: process.cwd(),
         output: {
             path: path.join(dirname, 'dist/' + dir),
             filename: 'bundle.js',

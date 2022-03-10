@@ -6,8 +6,7 @@ const {
     arrayFlat,
     random,
     isFunction,
-    capitalize,
-    perlin
+    capitalize
 } = Utils
 
 function wait(sec: number) {
@@ -465,7 +464,7 @@ export class MoveManager {
                     case Direction.Down:
                     case Direction.Right:
                     case Direction.Up:
-                        this.moveByDirection(route)
+                        this.moveByDirection(route, 1)
                         break
                     case 'turn-left':
                         this.changeDirection(Direction.Left)
@@ -564,7 +563,7 @@ export class MoveManager {
 }
 
 export interface MoveManager{ 
-    moveByDirection: (direction: Direction) => boolean
+    moveByDirection: (direction: Direction, deltaTimeInt: number) => boolean
     changeDirection: (direction: Direction) => boolean
     getCurrentMap: any
 }

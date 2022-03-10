@@ -125,6 +125,8 @@ export class RpgPlayer extends RpgCommonPlayer {
     // As soon as a teleport has been made, the value is changed to force the client to change the positions on the map without making a move.
     teleported: number = 0
 
+    pendingMove: { input: string } | null = null
+
     initialize() {
         this.expCurve =  {
             basis: 30,
@@ -398,6 +400,27 @@ export class RpgPlayer extends RpgCommonPlayer {
      */
     save() {
         return JSON.stringify(this)
+    }
+
+    // TODO
+    toObject() {
+        return {
+            direction: this.direction,
+            id: this.id,
+            canMove: this.canMove,
+            position: {
+                x: this.position.x,
+                y: this.position.y,
+                z: this.position.z
+            },
+            hitbox: {
+                width: this.wHitbox,
+                height: this.hHitbox
+            },
+            map: this.map,
+            pendingMove: this.pendingMove,
+            speed: this.speed
+        }
     }
 
     toJSON() {

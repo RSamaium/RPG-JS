@@ -20,12 +20,9 @@ export const player: RpgPlayerHooks = {
     onConnected(player: RpgPlayer) {
         player.setHitbox(32, 16)
         player.setGraphic('male1_2')
-        player.changeMap('cave', {
-            x: getRandomInt(0, 32 * 200),
-            y: getRandomInt(0, 32 * 200)
-        })
+        player.changeMap('cave')
     },
-    onJoinMap(player: RpgPlayer, map: RpgMap) {
+    onJoinMap(player: RpgPlayer, map: RpgMap) { 
         
     },
     onInput(player: RpgPlayer, { input, moving }) {
@@ -39,5 +36,5 @@ export const player: RpgPlayerHooks = {
     },
     onOutShape(player: RpgPlayer, shape: RpgShape) {
         console.log('out', player.name, shape.name)
-    }
+    } 
 }

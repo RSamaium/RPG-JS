@@ -336,9 +336,9 @@ export class RpgClientEngine {
         logic.prevParamsChanged = Object.assign({}, logic)
         for (let key in params) {
             if (!localEvent && 
-                (key == 'position' || 
+                (key == 'position' ||
                 (key == 'direction' && paramsChanged && paramsChanged.position))) {
-                if ((isMe() && this.pressInput) || !isMe()) continue
+                if ((isMe() && this.pressInput)) continue
             }
             logic[key] = params[key]
         }
@@ -386,13 +386,14 @@ export class RpgClientEngine {
           if (serverSnapshot && playerSnapshot) {
             const serverPos = serverSnapshot.state.filter(s => s.id === playerId)[0]
             const playerState = playerSnapshot.state[0]
-            if (playerState) {
-                const offsetX = playerState.x - serverPos.x
-                const offsetY = playerState.y - serverPos.y
-                const correction = 60
-                player.position.x -= offsetX / correction
-                player.position.y -= offsetY / correction
-            }   
+            //console.log(serverPos, playerState)
+            // if (playerState) {
+            //     const offsetX = playerState.x - serverPos.x
+            //     const offsetY = playerState.y - serverPos.y
+            //     const correction = 60
+            //     player.position.x = serverPos.x
+            //     player.position.y = serverPos.y
+            // }   
           }
         }
       }
@@ -412,16 +413,17 @@ export class RpgClientEngine {
         const snapshot = SI.calcInterpolation('x y') 
         if (snapshot) {
             const { state } = snapshot
-            state.forEach(s => {
-                const { id, x, y, direction } = s
-                const player = this.gameEngine.world.getObject(id)
-                if (player) {
-                    if (id === this.gameEngine.playerId) return
-                    player.position.x = Math.round(x as number)
-                    player.position.y = Math.round(y as number)
-                    player.direction = direction
-                }
-            })
+            // state.forEach(s => {
+            //     const { id, x, y, direction } = s
+            //     console.log(s)
+            //     const player = this.gameEngine.world.getObject(id)
+            //     if (player) {
+            //         if (id === this.gameEngine.playerId) return
+            //         player.position.x = Math.round(x as number)
+            //         player.position.y = Math.round(y as number)
+            //         player.direction = direction
+            //     }
+            // })
         }
         else {
             this.pressInput = false
@@ -497,7 +499,7 @@ export class RpgClientEngine {
         this.subscriptionWorld = World.listen(this.socket)
             .value
             .subscribe((val: { data: any, partial: any, time: number, roomId: string }) => {
- 
+
             if (!val.data) {
                 return
             }

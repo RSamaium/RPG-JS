@@ -3,8 +3,7 @@ import { Hit, HitObject } from './Hit'
 import { RpgShape } from './Shape'
 import SAT from 'sat'
 import Map, { TileInfo } from './Map'
-import { RpgPlugin } from './Plugin'
-import { HookServer } from '.'
+import { RpgPlugin, HookServer } from './Plugin'
 
 const ACTIONS = { IDLE: 0, RUN: 1, ACTION: 2 }
 
@@ -89,7 +88,7 @@ export class RpgCommonPlayer {
         this._hitboxPos.z = z
         if (this.steerable) {
             this.steerable.position.copy(this.getVector3D(x, z, y))
-        }
+        } 
         const map = this.mapInstance
         if (map) {
             map.grid.insertInCells(this.id, this.getSizeMaxShape())
@@ -236,30 +235,30 @@ export class RpgCommonPlayer {
         return this.hitbox.h
     }
     
-    defineNextPosition(direction): Position {
+    defineNextPosition(direction: Direction, deltaTimeInt: number): Position {
         switch (direction) {
             case Direction.Left:
                 return {
-                    x: this.position.x - this.speed,
+                    x: this.position.x - this.speed * deltaTimeInt,
                     y: this.position.y,
                     z: this.position.z
                 }
             case Direction.Right:
                 return {
-                    x: this.position.x + this.speed,
+                    x: this.position.x + this.speed * deltaTimeInt,
                     y: this.position.y,
                     z: this.position.z
                 }
             case Direction.Up:
                 return {
                     x: this.position.x,
-                    y: this.position.y - this.speed,
+                    y: this.position.y - this.speed * deltaTimeInt,
                     z: this.position.z
                 }
             case Direction.Down:
                 return {
                     x: this.position.x,
-                    y: this.position.y + this.speed,
+                    y: this.position.y + this.speed * deltaTimeInt,
                     z: this.position.z
                 }
         }
@@ -293,8 +292,8 @@ export class RpgCommonPlayer {
         return intersection([z, z + this.height], [otherZ, otherZ + other.height])
     }
 
-    moveByDirection(direction: Direction): boolean {
-        const nextPosition = this.defineNextPosition(direction)
+    moveByDirection(direction: Direction, deltaTimeInt: number): boolean {
+        const nextPosition = this.defineNextPosition(direction, deltaTimeInt)
         return this.move(nextPosition)
     }
 
@@ -346,10 +345,10 @@ export class RpgCommonPlayer {
     }
 
     isCollided(nextPosition: Position): boolean {
-        this.collisionWith = []
+        return false
+        this.collisionWith = [] 
         this._collisionWithTiles = []
-
-        const map: Map = this.mapInstance
+        const map: Map = this.mapInstance 
         const hitbox = Hit.createObjectHitbox(nextPosition.x, nextPosition.y, 0, this.hitbox.w, this.hitbox.h)
 
         if (!map) {
@@ -389,11 +388,13 @@ export class RpgCommonPlayer {
         ) {
             return true
         }
+
         const events: { [id: string]: RpgCommonPlayer } = this.gameEngine.world.getObjectsOfGroup(this.map, this)
         const objects = map.grid.getObjectsByBox(this.getSizeMaxShape(nextPosition.x, nextPosition.y))
 
         for (let objectId of objects) {
             // client side: read "object" propertie
+            if (!events[objectId]) continue
             const event = events[objectId]['object'] || events[objectId] 
             if (event.id == this.id) continue
             if (!this.zCollision(event)) continue

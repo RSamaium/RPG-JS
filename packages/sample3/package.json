@@ -7,7 +7,7 @@
   "scripts": {
     "test": "NODE_ENV=test jest",
     "build": "rimraf dist && webpack",
-    "dev": "webpack -w",
+    "dev": "rpgjs dev",
     "start": "node dist/server"
   },
   "keywords": [],
@@ -25,7 +25,6 @@
     "@rpgjs/mobile-gui": "^3.0.0-beta.2",
     "@rpgjs/monitoring": "^3.0.0-beta.3",
     "@rpgjs/plugin-emotion-bubbles": "^3.0.0-beta.2",
-    "@rpgjs/plugin-tooltip": "^3.0.0-beta.2",
     "@rpgjs/save": "^3.0.0-beta.2",
     "@rpgjs/server": "^3.0.0-beta.2",
     "@rpgjs/standalone": "^3.0.0-beta.2",
@@ -46,7 +45,6 @@
     "rimraf": "^3.0.2",
     "ts-jest": "^27.0.2",
     "typescript": "^4.1.3",
-    "webpack": "^4.44.1",
     "webpack-cli": "^3.3.12"
   },
   "gitHead": "f92f6329c5635baf373b7214248ca37ceb5fdf03"

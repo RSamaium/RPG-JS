@@ -21,7 +21,7 @@ const io = new Server(server, {
 
 app.use(bodyParser.json())
 
-const rpgGame = entryPoint(modules, { io, basePath: __dirname, globalConfig })
+const rpgGame = entryPoint(modules, { io, basePath: __dirname, globalConfig, workers: true })
 rpgGame.app = app 
 
 /*app.use('/metrics', async (req, res) => {
@@ -32,8 +32,8 @@ rpgGame.app = app
 app.use('/', express.static(__dirname + '/../client'))
 
 server.listen(PORT, () =>  {
-    rpgGame.start() 
+    rpgGame.start()
     console.log(`
         ===> MMORPG is running on http://localhost:${PORT} <===
-    `)
-}) 
+    `) 
+})

@@ -128,7 +128,6 @@ export class SceneMap {
             player.teleport(positions || 'start')
             player.createDynamicEvent(<any>mapInstance._events, false)
         }
-        
         return mapInstance
     }
 }

@@ -3,6 +3,7 @@ import { EventEmitter } from './EventEmitter'
 import { RpgCommonPlayer, Direction } from './Player'
 import { Control } from './Input'
 import { RpgPlugin } from './Plugin'
+import { GameWorker } from './Worker'
 
 export default class Game extends EventEmitter {
 
@@ -16,6 +17,10 @@ export default class Game extends EventEmitter {
 
     start(world) {
         this.world = world
+    }
+
+    createWorkers(workerClass: any) {
+        return new GameWorker(workerClass)
     }
     
     addObject(_class, playerId?) {
@@ -40,11 +45,11 @@ export default class Game extends EventEmitter {
         return event
     }
 
-    processInput(inputData: { input: Control | Direction }, playerId: string) {
+    processInput(inputData: { input: Control | Direction, deltaTimeInt?: number }, playerId: string) {
         const player: RpgCommonPlayer = this.world.getObject(playerId)
-        const { input } = inputData 
+        const { input, deltaTimeInt } = inputData 
         let moving = false
-        
+
         if (!player) return
         if (!player.canMove) return
 
@@ -58,8 +63,8 @@ export default class Game extends EventEmitter {
             input == Direction.Down
             ) {
             moving = true
-            player.moveByDirection(input)
-        }
+            player.moveByDirection(input, deltaTimeInt || 1) 
+        } 
         if (this.side == 'server') RpgPlugin.emit('Server.onInput', [player, {
             ...inputData,
             moving

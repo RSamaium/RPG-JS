@@ -7,13 +7,14 @@ const { hideBin } = require('yargs/helpers')
 const { randomDir } = require('./random-move')
 const os = require('os');
 const fs = require('fs')
+const msgpack = require('msgpack-lite')
 const yargs = require('yargs/yargs')
 const argv = yargs(hideBin(process.argv)).argv
 
 const URL = process.env.URL || "http://localhost:3000";
 const MAX_CLIENTS = argv.players || 100;
 const CLIENT_CREATION_INTERVAL = argv.arrival || 0.1;
-const EMIT_INTERVAL_IN_MS = 100
+const EMIT_INTERVAL_IN_MS = 16
 const MAX_TIME = 1000 * (argv.duration || 30)
 const OUTPUT = +argv.output ?? true
 const REPORT_INTERVAL = 5000
@@ -41,6 +42,8 @@ Note: Having less than 10 paquest/s per player is not a good result
 let clientCount = 0;
 let lastReport = new Date().getTime();
 let packetsSinceLastReport = 0;
+let packetBytes = 0
+let canMove = false
 
 function round(num) {
   return Math.round(num * 100) / 100
@@ -51,7 +54,15 @@ const createClient = () => {
     transports: ['websocket']
   });
 
-  socket.on("w", () => {
+  socket.on("w", (data) => {
+    packetBytes += data.length
+    const bufView = new Uint8Array(data)
+    const decode = msgpack.decode(bufView)
+    const users = Object.values(decode[2].users)
+    if (users.length >= MAX_CLIENTS && !canMove) {
+      console.log('--- Move Stress Test ----')
+      canMove = true
+    }
     packetsSinceLastReport++;
   });
 
@@ -61,7 +72,7 @@ const createClient = () => {
 
   socket.on('loadScene', () => {
     setInterval(() => {
-      socket.emit("move",  { input: randomDir() });
+     if (canMove) socket.emit("move",  { input: randomDir() });
     }, EMIT_INTERVAL_IN_MS);
   })
 
@@ -79,6 +90,7 @@ const printReport = () => {
   time += REPORT_INTERVAL
   const now = new Date().getTime();
   const durationSinceLastReport = (now - lastReport) / 1000;
+  console.log(durationSinceLastReport)
   const packetsPerSeconds = (
     packetsSinceLastReport / durationSinceLastReport
   ).toFixed(2);
@@ -87,10 +99,12 @@ const printReport = () => {
 `
 
   console.log(
-    `client count: ${clientCount} ; average packets received per second: ${packetsPerSeconds}`
+    `client count: ${clientCount} ; average packets received per second: ${packetsPerSeconds}`,
+    `${packetBytes / 8 / 1024 / durationSinceLastReport} Kbit/s`
   );
 
   packetsSinceLastReport = 0;
+  packetBytes = 0
   lastReport = now;
 
   if (time >= MAX_TIME) {

@@ -5,9 +5,15 @@ const nodeExternals = require('webpack-node-externals')
 const webpackCommon = require('./webpack-common')
 const NodemonPlugin = require('nodemon-webpack-plugin')
 const resolveLoader = require('./loaders/resolve')
+const ThreadsPlugin = require('threads-plugin');
 
 const mode = process.env.NODE_ENV || 'development'
 const prod = mode === 'production'
+
+const CORE_PACKAGES = [
+    '@rpgjs/server',
+    '@rpgjs/database'
+]
 
 module.exports = function(dirname, extend = {}) {
 
@@ -19,10 +25,19 @@ module.exports = function(dirname, extend = {}) {
             __dirname: false
         },
         externals: [nodeExternals({
-            allowlist: [/^@rpgjs/, /^rpgjs-/]
+            allowlist: ['tiny-worker', /^rpgjs-/, (moduleName => {
+                if (moduleName.startsWith('@rpgjs')) {
+                    if (CORE_PACKAGES.includes(moduleName)) {
+                        return false
+                    }
+                    return true
+                }
+                return false
+            })]
         })],
         mode,
         entry: `./src/server.ts`,
+        context: process.cwd(),
         output: {
             path: path.join(dirname, 'dist/server'),
             filename: 'index.js'
@@ -40,7 +55,10 @@ module.exports = function(dirname, extend = {}) {
                         loader: require.resolve('ts-loader'),
                         options: {
                             onlyCompileBundledFiles: true,
-                            allowTsInNodeModules: true
+                            allowTsInNodeModules: true,
+                            compilerOptions: {
+                                module: "esnext"
+                            }
                         }
                     }] 
                 },
@@ -52,6 +70,7 @@ module.exports = function(dirname, extend = {}) {
         },
         plugins: [
             new CleanWebpackPlugin(),
+            new ThreadsPlugin(),
             new NodemonPlugin({
                 script: './dist/server/index.js',
                 watch: path.resolve('./dist/server')

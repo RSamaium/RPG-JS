@@ -10,10 +10,13 @@ const LOOP_SLOW_COUNT = 10;
  */
 export class Scheduler extends EventEmitter {
 
-    options
     nextExecTime
-    requestedDelay
-    delayCounter
+    requestedDelay: number
+    delayCounter: number
+    timestamp: number = 0
+    lastTimestamp: number = 0
+    deltaTime: number = 0
+    deltaTimeInt: number = 0
 
     /**
      * schedule a function to be called
@@ -23,7 +26,12 @@ export class Scheduler extends EventEmitter {
      * @param {Number} options.period number of milliseconds between each invocation, not including the function's execution time
      * @param {Number} options.delay number of milliseconds to add when delaying or hurrying the execution
      */
-    constructor(options) {
+    constructor(private options: { 
+        tick: Function,
+        period: number, 
+        delay: number, 
+        stepPeriod?: number 
+    }) {
         super()
         this.options = Object.assign({
             tick: null,
@@ -43,30 +51,33 @@ export class Scheduler extends EventEmitter {
         if (currentTime > this.nextExecTime) {
             this.delayCounter++;
             this.callTick();
-            this.nextExecTime = currentTime + this.options.stepPeriod;
+            this.nextExecTime = currentTime + (this.options.stepPeriod || 0);
         }
         window.requestAnimationFrame(this.nextTickChecker.bind(this));
     }
 
     nextTick() {
-        let stepStartTime = (new Date()).getTime();
-        if (stepStartTime > this.nextExecTime + this.options.period * LOOP_SLOW_THRESH) {
+        const now = (new Date()).getTime()
+        this.deltaTime = now - this.timestamp 
+        this.deltaTimeInt = Math.round(this.deltaTime / this.options.period)
+        this.timestamp = now;
+        if (this.timestamp > this.nextExecTime + this.options.period * LOOP_SLOW_THRESH) {
             this.delayCounter++;
         } else
             this.delayCounter = 0;
 
         this.callTick();
-        this.nextExecTime = stepStartTime + this.options.period + this.requestedDelay;
+        this.nextExecTime = this.timestamp + this.options.period + this.requestedDelay;
         this.requestedDelay = 0;
         setTimeout(this.nextTick.bind(this), this.nextExecTime - (new Date()).getTime());
     }
 
     callTick() {
         if (this.delayCounter >= LOOP_SLOW_COUNT) {
-            this.emit('loopRunningSlow');
+            console.warn('[RPGJS] Warning, Event Loop is slow !')
             this.delayCounter = 0;
         }
-        this.options.tick();
+        this.options.tick(this.timestamp, this.deltaTime);
     }
 
     /**

@@ -81,6 +81,10 @@ export class RpgMap extends RpgCommonMap {
         }
         const data = await this.parseFile() 
         super.load(data) 
+        this._server.workers.call('loadMap', {
+            id: this.id,
+            data
+        })
         RpgCommonMap.buffer.set(this.id, this)
         this.createDynamicEvent(this._events as EventPosOption[])
         this.onLoad()

@@ -5,7 +5,7 @@ import monitoring from '@rpgjs/monitoring'
 import gamepad from '@rpgjs/gamepad'
 import emotionBubblesPlugin from '@rpgjs/plugin-emotion-bubbles'
 //import plugin from 'rpgjs-plugin-template'
-import tooltipPlugin from '@rpgjs/plugin-tooltip'
+//import tooltipPlugin from '@rpgjs/plugin-tooltip'
 
 export default [
     gamepad,
@@ -14,6 +14,6 @@ export default [
     //mobileGui,
     emotionBubblesPlugin,
     monitoring,
-    tooltipPlugin,
-   // plugin
+    //tooltipPlugin,
+   // plugin 
 ]

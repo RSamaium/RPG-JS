@@ -3,6 +3,8 @@
 const yargs = require('yargs/yargs')
 const { hideBin } = require('yargs/helpers')
 const generateModule = require('./module')
+const webpack = require('webpack')
+const webpackConfig = require('../../index')
 
 yargs(hideBin(process.argv))
   .command('generate [type] [directory_name]', 'Generate', (yargs) => {
@@ -24,5 +26,17 @@ yargs(hideBin(process.argv))
       return
     }
     generateModule(directory)
+  })
+  .command('dev', 'Dev', (yargs) => {
+    const compiler = webpack(webpackConfig(process.cwd()))
+    const watching = compiler.watch({
+      // Example [watchOptions](/configuration/watch/#watchoptions)
+      aggregateTimeout: 300,
+      poll: undefined
+    }, (err, stats) => { // [Stats Object](#stats-object)
+      // Print watch/build result here...
+      if (err) console.log(err)
+      console.log(stats);
+    });
   })
   .argv

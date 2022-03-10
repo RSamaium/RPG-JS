@@ -36,6 +36,7 @@ export interface LayerInfo {
     tiles: Tile[]
 }
 
+
 export default class RpgCommonMap {
 
     grid: VirtualGrid
