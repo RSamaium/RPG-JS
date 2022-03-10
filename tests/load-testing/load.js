@@ -49,19 +49,33 @@ function round(num) {
   return Math.round(num * 100) / 100
 }
 
+const clients = {}
+
 const createClient = () => {
   const socket = io(URL, {
     transports: ['websocket']
   });
 
+  socket.on('connect', () => {
+    clients[socket.id] = {
+      connected: Date.now(),
+      loaded: false
+    }
+  })
+
   socket.on("w", (data) => {
     packetBytes += data.length
     const bufView = new Uint8Array(data)
     const decode = msgpack.decode(bufView)
-    const users = Object.values(decode[2].users)
-    if (users.length >= MAX_CLIENTS && !canMove) {
+    const isLoad = !!decode[2].shapes
+    const nbClients = Object.values(clients).filter(client => client.loaded).length
+    if (nbClients >= MAX_CLIENTS && !canMove) {
       console.log('--- Move Stress Test ----')
       canMove = true
+    }
+    if (isLoad) {
+      clients[socket.id].loaded = true
+      console.log('Load', socket.id, Date.now() - clients[socket.id].connected)
     }
     packetsSinceLastReport++;
   });
@@ -90,7 +104,6 @@ const printReport = () => {
   time += REPORT_INTERVAL
   const now = new Date().getTime();
   const durationSinceLastReport = (now - lastReport) / 1000;
-  console.log(durationSinceLastReport)
   const packetsPerSeconds = (
     packetsSinceLastReport / durationSinceLastReport
   ).toFixed(2);

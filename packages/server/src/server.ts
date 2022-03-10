@@ -4,7 +4,6 @@ import { Query } from './Query'
 import { DAMAGE_SKILL, DAMAGE_PHYSIC, DAMAGE_CRITICAL, COEFFICIENT_ELEMENTS } from './presets'
 import { World, WorldClass } from '@rpgjs/sync-server'
 import { Utils, RpgPlugin, Scheduler, HookServer } from '@rpgjs/common'
-import { Worker } from 'worker_threads'
 
 if (process.pid) {
     console.log('This process is your pid ' + process.pid);
@@ -65,15 +64,7 @@ export class RpgServerEngine {
         if (this.inputOptions.workers) {
             console.log('workers enabled')
         }
-        this.workers = this.gameEngine.createWorkers(Worker).load()
-        this.workers.on((data) => {
-            const player = this.world.getUser(data.id) as RpgPlayer
-            if (player) {
-                player.posX = data.x
-                player.posY = data.y
-                player.direction = data.direction
-            }
-        })
+        this.workers = this.gameEngine.createWorkers(this.inputOptions.workers).load()
     }
 
     private async _init() {
@@ -195,7 +186,18 @@ export class RpgServerEngine {
                 player.pendingMove = null
             }
         }
-        if (this.inputOptions.workers) this.workers.call('movePlayers', obj)
+        if (this.inputOptions.workers) {
+            this.workers.call('movePlayers', obj).then((players) => {
+                for (let playerId in players) {
+                    const player = this.world.getUser(playerId) as RpgPlayer
+                    const data = players[playerId]
+                    if (player) {
+                        player.position = data.position
+                        player.direction = data.direction
+                    }
+                }
+            })
+        }
     }
 
     step(t: number, dt: number) {

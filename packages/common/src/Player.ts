@@ -86,20 +86,15 @@ export class RpgCommonPlayer {
         this._hitboxPos.x = x
         this._hitboxPos.y = y
         this._hitboxPos.z = z
-        if (this.steerable) {
-            this.steerable.position.copy(this.getVector3D(x, z, y))
-        } 
+        this._position = val
         const map = this.mapInstance
-        if (map) {
+        if (map && this.gameEngine.isWorker) {
             map.grid.insertInCells(this.id, this.getSizeMaxShape())
         }
         this._position = new Proxy(val, {
             get: (target, prop: string) => target[prop], 
             set: (target, prop, value) => {
                 this._hitboxPos[prop] = value
-                if (this.steerable) {
-                    this.steerable[prop] = value
-                }
                 target[prop] = value
                 return true
             }
@@ -345,7 +340,6 @@ export class RpgCommonPlayer {
     }
 
     isCollided(nextPosition: Position): boolean {
-        return false
         this.collisionWith = [] 
         this._collisionWithTiles = []
         const map: Map = this.mapInstance 

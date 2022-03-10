@@ -15,12 +15,16 @@ export default class Game extends EventEmitter {
         this.events = {} // events for all player in map
     }
 
+    get isWorker() {
+        return this.side == 'worker'
+    }
+
     start(world) {
         this.world = world
     }
 
-    createWorkers(workerClass: any) {
-        return new GameWorker(workerClass)
+    createWorkers(options: any) {
+        return new GameWorker(options)
     }
     
     addObject(_class, playerId?) {
@@ -63,11 +67,13 @@ export default class Game extends EventEmitter {
             input == Direction.Down
             ) {
             moving = true
-            player.moveByDirection(input, deltaTimeInt || 1) 
+            player.moveByDirection(input, deltaTimeInt || 1)
         } 
         if (this.side == 'server') RpgPlugin.emit('Server.onInput', [player, {
             ...inputData,
             moving
         }], true)
+
+        return player
     }
 }

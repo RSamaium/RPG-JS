@@ -113,12 +113,21 @@ export class SceneMap {
             delete layer.map
         }
 
-        player.loadScene('map', {
-            id: mapId,
-            sounds: mapInstance.sounds,
-            ...serializeMap
-        })
-
+        // TODO
+        if (player._socket.request.headers['user-agent']) {
+            player.loadScene('map', {
+                id: mapId,
+                sounds: mapInstance.sounds,
+                ...serializeMap
+            })
+        }
+        else {
+            player.loadScene('map', {
+                id: mapId,
+                sounds: mapInstance.sounds
+            })
+        }
+        
         World.joinRoom(mapId, player.id)
 
         player = World.getUser(player.id) as RpgPlayer

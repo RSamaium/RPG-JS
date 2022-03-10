@@ -1,18 +1,17 @@
-export class GameWorker {
-    workers: any
+import workerpool from 'workerpool'
 
-    constructor(private workerClass: any) {}
-    
+export class GameWorker {
+    pool: any
+
+    constructor(private options = {}) {
+        this.pool = workerpool.pool(__dirname + '/workers/move.js', options)
+    }
+
     load() {
-        this.workers = new this.workerClass(__dirname + '/workers/move.js')
         return this
     } 
 
     call(methodName: string, data: any) {
-        this.workers.postMessage({ method: methodName, data })
-    }
-
-    on(cb) {
-        this.workers.on('message', cb)
+       return this.pool.exec(methodName, [data])
     }
 }
