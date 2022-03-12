@@ -6,9 +6,11 @@ import { Server } from 'socket.io'
 import { entryPoint, RpgWorld, Direction, Move } from '@rpgjs/server'
 import globalConfig from './config/server'
 import modules from './modules' 
+import PrettyError from 'pretty-error'
 
 const PORT = process.env.PORT || 3000
 
+const pe = new PrettyError()
 const app = express()
 const server = http.createServer(app)
 const io = new Server(server, {
@@ -21,8 +23,8 @@ const io = new Server(server, {
 
 app.use(bodyParser.json())
 
-const rpgGame = entryPoint(modules, { io, basePath: __dirname, globalConfig, workers: {} })
-rpgGame.app = app 
+const rpgGame = entryPoint(modules, { io, basePath: __dirname, globalConfig, workers: false })
+rpgGame.app = app
 
 /*app.use('/metrics', async (req, res) => {
     res.setHeader('Content-Type', register.contentType)
@@ -36,4 +38,12 @@ server.listen(PORT, () =>  {
     console.log(`
         ===> MMORPG is running on http://localhost:${PORT} <===
     `) 
+})  
+
+process.on('uncaughtException', function(error){
+    console.log(pe.render(error))
+}) 
+
+process.on('unhandledRejection', function(reason: any){
+    console.log(pe.render(reason)) 
 })

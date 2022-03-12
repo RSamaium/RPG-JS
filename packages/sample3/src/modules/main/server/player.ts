@@ -27,9 +27,8 @@ export const player: RpgPlayerHooks = {
     },
     onInput(player: RpgPlayer, { input, moving }) {
         if (input == Control.Back) {
-            console.log(player.getSizeMaxShape())  
+            player.teleport({ x: 0, y: 0 }) 
         }
-        
     },
     onInShape(player: RpgPlayer, shape: RpgShape) {
         console.log('in', player.name, shape.name)

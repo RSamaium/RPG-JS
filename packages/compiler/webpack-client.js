@@ -9,6 +9,7 @@ const WebpackPwaManifest = require('webpack-pwa-manifest')
 const webpackCommon = require('./webpack-common')
 const resolveLoader = require('./loaders/resolve')
 const PostCompile = require('./sync')
+const FriendlyErrorsWebpackPlugin = require('friendly-errors-webpack-plugin')
 
 const mode = process.env.NODE_ENV || 'development'
 const type = process.env.RPG_TYPE || 'mmorpg'
@@ -172,6 +173,7 @@ module.exports = function(dirname, extend = {}, envsClient = null) {
                 filename: 'style.css'
             }),
             new VueLoaderPlugin(),
+            new FriendlyErrorsWebpackPlugin(),
             new webpack.DefinePlugin({
                 __VUE_OPTIONS_API__: true,
                 __VUE_PROD_DEVTOOLS__: false,

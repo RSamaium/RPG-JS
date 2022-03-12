@@ -3,6 +3,7 @@
 const yargs = require('yargs/yargs')
 const { hideBin } = require('yargs/helpers')
 const generateModule = require('./module')
+var blessed = require('blessed');
 const webpack = require('webpack')
 const webpackConfig = require('../../index')
 
@@ -33,10 +34,11 @@ yargs(hideBin(process.argv))
       // Example [watchOptions](/configuration/watch/#watchoptions)
       aggregateTimeout: 300,
       poll: undefined
-    }, (err, stats) => { // [Stats Object](#stats-object)
-      // Print watch/build result here...
-      if (err) console.log(err)
-      console.log(stats);
-    });
+    }, (err, { stats }) => {
+      if (err) {
+        console.error(err)
+        return
+      }
+    })
   })
   .argv

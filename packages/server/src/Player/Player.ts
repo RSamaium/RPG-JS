@@ -112,6 +112,8 @@ export class RpgPlayer extends RpgCommonPlayer {
     public _rooms = []
     public prevMap: string = ''
 
+    _lastFrame: number = 0
+
     constructor(gameEngine?, playerId?) {
         super(gameEngine, playerId)
         this.initialize()
@@ -124,8 +126,6 @@ export class RpgPlayer extends RpgCommonPlayer {
 
     // As soon as a teleport has been made, the value is changed to force the client to change the positions on the map without making a move.
     teleported: number = 0
-
-    pendingMove: { input: string } | null = null
 
     initialize() {
         this.expCurve =  {

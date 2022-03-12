@@ -5,10 +5,6 @@ import { DAMAGE_SKILL, DAMAGE_PHYSIC, DAMAGE_CRITICAL, COEFFICIENT_ELEMENTS } fr
 import { World, WorldClass } from '@rpgjs/sync-server'
 import { Utils, RpgPlugin, Scheduler, HookServer } from '@rpgjs/common'
 
-if (process.pid) {
-    console.log('This process is your pid ' + process.pid);
-  }
-
 const WORKER_ENABLED = true
 
 export class RpgServerEngine {
@@ -177,13 +173,21 @@ export class RpgServerEngine {
         const obj: any = []
         for (let playerId in players) {
             const player = players[playerId] as RpgPlayer
-            if (player.pendingMove) {
+            if (player.pendingMove.length > 0) {
                 if (this.inputOptions.workers) obj.push(player.toObject())
-                else this.gameEngine.processInput({
-                    ...player.pendingMove,
-                    deltaTimeInt
-                }, playerId)
-                player.pendingMove = null
+                else {
+                    //const lastFrame = player.pendingMove[player.pendingMove.length-1]
+                    this.gameEngine.processInput({
+                        ...player.pendingMove,
+                        deltaTimeInt
+                    }, playerId)
+                    // const map = player.getCurrentMap()
+                    // if (map) {
+                    //     const state = map['$currentState']()
+                    //     state.frame = lastFrame.frame
+                    // }
+                }
+                player.pendingMove = []
             }
         }
         if (this.inputOptions.workers) {
@@ -195,6 +199,10 @@ export class RpgServerEngine {
                         player.position = data.position
                         player.direction = data.direction
                     }
+                    RpgPlugin.emit('Server.onInput', [player, {
+                        input: data.direction,
+                        moving: true
+                    }], true)
                 }
             })
         }
@@ -202,10 +210,10 @@ export class RpgServerEngine {
 
     step(t: number, dt: number) {
         this.tick++
+        this.updatePlayersMove(1) 
         if (this.tick % 4 === 0) {
             this.send() 
         }
-        this.updatePlayersMove(1) 
         RpgPlugin.emit(HookServer.Step, this)
     }
 
@@ -234,9 +242,9 @@ export class RpgServerEngine {
     private onPlayerConnected(socket) {
         const playerId = Utils.generateUID()
         let player: RpgPlayer = new this.playerClass(this.gameEngine, playerId)
-
-        socket.on('move', (data) => {
-            player.pendingMove = data
+        socket.on('move', (data) => { 
+            player._lastFrame = data.frame
+            player.pendingMove.push(data)
            // this.updatePlayersMove()
            //this.gameEngine.processInput(player.pendingMove, playerId)
         })

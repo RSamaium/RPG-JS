@@ -35,6 +35,7 @@ export class RpgCommonPlayer {
     private _collisionWithTiles: TileInfo[] = []
     data: any = {}
     hitbox: SAT.Box
+    pendingMove: { input: string }[] = []
     
      /** 
      * Display/Hide the GUI attached to this sprite

@@ -22,6 +22,7 @@ export default class Character extends PIXI.Sprite {
     private playStandardAnimation: boolean = true
     public animation: Animation
     private objSaved: object = {}
+    private teleported: number = 0
 
     anim
 
@@ -194,7 +195,7 @@ export default class Character extends PIXI.Sprite {
     }
 
     update(obj): any {
-        const { graphic, speed } = obj
+        const { graphic, speed, teleported } = obj
 
         if (graphic != this.graphic) {
             this.setGraphic(graphic)
@@ -209,16 +210,18 @@ export default class Character extends PIXI.Sprite {
             this._x = Math.floor(obj.position.x)
             this._y = Math.floor(obj.position.y) - this.z
 
+            if (teleported != this.teleported) {
+                this.x = this._x
+                this.y = this._y
+                this.teleported = teleported
+            }
+
             this.parent.parent.zIndex = this._y
      
             obj.posX = obj.position.x
             obj.posY = obj.position.y
     
             this.direction = obj.direction
-
-            // If the positions coming from the server are too different from the client, we reposition the player.
-            if (Math.abs(this._x - this.x) > speed * 15) this.x = this._x
-            if (Math.abs(this._y - this.y) > speed * 15) this.y = this._y
           
             if (this._x > this.x) {
                 this.x += Math.min(speed, this._x - this.x)

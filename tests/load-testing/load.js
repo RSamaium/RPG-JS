@@ -86,7 +86,7 @@ const createClient = () => {
 
   socket.on('loadScene', () => {
     setInterval(() => {
-     if (canMove) socket.emit("move",  { input: randomDir() });
+     socket.emit("move",  { input: randomDir() });
     }, EMIT_INTERVAL_IN_MS);
   })
 

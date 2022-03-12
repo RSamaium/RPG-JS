@@ -49,30 +49,36 @@ export default class Game extends EventEmitter {
         return event
     }
 
-    processInput(inputData: { input: Control | Direction, deltaTimeInt?: number }, playerId: string) {
+    processInput(inputData: { input: Control | Direction, deltaTimeInt?: number }, playerId: string): RpgCommonPlayer {
         const player: RpgCommonPlayer = this.world.getObject(playerId)
-        const { input, deltaTimeInt } = inputData 
-        let moving = false
+       // const { input, deltaTimeInt } = inputData 
+        while (player.pendingMove.length > 0) {
+            const inputData = player.pendingMove.shift()
+            const { input, deltaTimeInt } = inputData as any
+            let moving = false
 
-        if (!player) return
-        if (!player.canMove) return
+            if (!player) return player
+            if (!player.canMove) return player
 
-        if (input == Control.Action) {
-            player.triggerCollisionWith(RpgCommonPlayer.ACTIONS.ACTION)
+            if (input == Control.Action) {
+                player.triggerCollisionWith(RpgCommonPlayer.ACTIONS.ACTION)
+            }
+            else if (
+                input == Direction.Left || 
+                input == Direction.Right || 
+                input == Direction.Up || 
+                input == Direction.Down
+                ) {
+                moving = true
+                player.moveByDirection(input, deltaTimeInt || 1)
+            } 
+            // TODO, is Worker
+            if (this.side == 'server') RpgPlugin.emit('Server.onInput', [player, {
+                ...inputData,
+                moving
+            }], true)
+
         }
-        else if (
-            input == Direction.Left || 
-            input == Direction.Right || 
-            input == Direction.Up || 
-            input == Direction.Down
-            ) {
-            moving = true
-            player.moveByDirection(input, deltaTimeInt || 1)
-        } 
-        if (this.side == 'server') RpgPlugin.emit('Server.onInput', [player, {
-            ...inputData,
-            moving
-        }], true)
 
         return player
     }

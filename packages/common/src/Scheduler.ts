@@ -17,6 +17,7 @@ export class Scheduler extends EventEmitter {
     lastTimestamp: number = 0
     deltaTime: number = 0
     deltaTimeInt: number = 0
+    frame: number = 0
 
     /**
      * schedule a function to be called
@@ -59,6 +60,7 @@ export class Scheduler extends EventEmitter {
     nextTick() {
         const now = (new Date()).getTime()
         this.deltaTime = now - this.timestamp 
+        this.frame++
         this.deltaTimeInt = Math.round(this.deltaTime / this.options.period)
         this.timestamp = now;
         if (this.timestamp > this.nextExecTime + this.options.period * LOOP_SLOW_THRESH) {

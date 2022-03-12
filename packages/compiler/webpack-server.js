@@ -6,6 +6,7 @@ const webpackCommon = require('./webpack-common')
 const NodemonPlugin = require('nodemon-webpack-plugin')
 const resolveLoader = require('./loaders/resolve')
 const ThreadsPlugin = require('threads-plugin');
+const FriendlyErrorsWebpackPlugin = require('friendly-errors-webpack-plugin')
 
 const mode = process.env.NODE_ENV || 'development'
 const prod = mode === 'production'
@@ -71,6 +72,7 @@ module.exports = function(dirname, extend = {}) {
         plugins: [
             new CleanWebpackPlugin(),
             new ThreadsPlugin(),
+            new FriendlyErrorsWebpackPlugin(),
             new NodemonPlugin({
                 script: './dist/server/index.js',
                 watch: path.resolve('./dist/server')
