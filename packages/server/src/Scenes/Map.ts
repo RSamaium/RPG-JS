@@ -118,16 +118,17 @@ export class SceneMap {
             sounds: mapInstance.sounds,
             ...serializeMap
         })
-        
+  
         World.joinRoom(mapId, player.id)
 
         player = World.getUser(player.id) as RpgPlayer
 
         if (player) {
-            player.execMethod('onJoinMap', <any>[mapInstance])
             player.teleport(positions || 'start')
             player.createDynamicEvent(<any>mapInstance._events, false)
+            player.execMethod('onJoinMap', <any>[mapInstance])
         }
+
         return mapInstance
     }
 }

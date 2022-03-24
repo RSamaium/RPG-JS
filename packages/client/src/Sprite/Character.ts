@@ -23,6 +23,7 @@ export default class Character extends PIXI.Sprite {
     public animation: Animation
     private objSaved: object = {}
     private teleported: number = 0
+    private map: string = ''
 
     anim
 
@@ -190,7 +191,7 @@ export default class Character extends PIXI.Sprite {
     }
 
     update(obj): any {
-        const { graphic, speed, teleported } = obj
+        const { graphic, speed, teleported, map } = obj
 
         if (graphic != this.graphic) {
             this.setGraphic(graphic)
@@ -205,10 +206,11 @@ export default class Character extends PIXI.Sprite {
             this._x = Math.floor(obj.position.x)
             this._y = Math.floor(obj.position.y) - this.z
 
-            if (teleported != this.teleported) {
+            if (teleported != this.teleported || map != this.map) {
                 this.x = this._x
                 this.y = this._y
                 this.teleported = teleported
+                this.map = map
             }
 
             this.parent.parent.zIndex = this._y

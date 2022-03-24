@@ -27,7 +27,7 @@ export const player: RpgPlayerHooks = {
     },
     onInput(player: RpgPlayer, { input, moving }) {
         if (input == Control.Back) {
-            player.teleport({ x: 0, y: 0 }) 
+            player.changeMap('samplemap')
         }
     },
     onInShape(player: RpgPlayer, shape: RpgShape) {

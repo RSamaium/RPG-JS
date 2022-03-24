@@ -118,11 +118,17 @@ export default class RpgRenderer  {
     }
 
     async loadScene(name, obj) {
+        const currentPlayerId = this.gameEngine.playerId
         RpgPlugin.emit(HookClient.BeforeSceneLoading, {
             name, 
             obj
         })
-        this.gameEngine.world.removeObject(this.gameEngine.playerId)
+        this.gameEngine.world.removeObject(currentPlayerId)
+        // If a scene exists, remove the current player and viewport
+        if (this.scene) {
+            this.scene.removeObject(currentPlayerId)
+            if (this.scene.viewport) this.scene.viewport.plugins.remove('follow')
+        }
         this.stage.removeChildren()
         const scenes = this.options.scenes || {}
         if (this.scene) {

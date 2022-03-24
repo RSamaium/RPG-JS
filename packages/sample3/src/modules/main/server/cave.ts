@@ -15,3 +15,11 @@ class MyEvent extends RpgEvent {
 export class CaveMap extends RpgMap {
     
 }
+
+@MapData({
+    id: 'samplemap',
+    file: require('./tmx/samplemap.tmx')
+})
+export class SampleMap extends RpgMap {
+    
+}

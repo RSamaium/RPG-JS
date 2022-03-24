@@ -93,7 +93,7 @@ export class RpgCommonPlayer {
         this._hitboxPos.z = z
         this._position = val
         const map = this.mapInstance
-        if (map && this.gameEngine.isWorker) {
+        if (map /*&& this.gameEngine.isWorker TODO */) {
             map.grid.insertInCells(this.id, this.getSizeMaxShape())
         }
         this._position = new Proxy(val, {

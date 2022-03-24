@@ -1,5 +1,5 @@
 import { RpgServer, RpgModule } from '@rpgjs/server'
-import { CaveMap } from './cave'
+import { CaveMap, SampleMap } from './cave'
 import { player } from './player'
 
 let last
@@ -15,7 +15,8 @@ let last
         }
     },
     maps: [
-        CaveMap
+        CaveMap,
+        SampleMap
     ]
 })
 export default class RpgServerEngine {}

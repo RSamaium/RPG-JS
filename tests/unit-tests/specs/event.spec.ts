@@ -1,7 +1,7 @@
 import {_beforeEach} from './beforeEach'
 import { EventData, Input, MapData, RpgEvent, RpgMap, RpgModule, RpgPlayer, RpgServer, RpgServerEngine } from '@rpgjs/server'
 import { RpgClientEngine, RpgSceneMap, Control } from '@rpgjs/client'
-import { clear } from '@rpgjs/testing'
+import { clear, nextTick } from '@rpgjs/testing'
 import { inputs } from './fixtures/control'
 
 let  client: RpgClientEngine, 
@@ -150,6 +150,7 @@ test('Test onAction', () => {
          client.controls.applyControl(Control.Action)
 
          client.nextFrame(0)
+         nextTick(client)
     })
  })
 
