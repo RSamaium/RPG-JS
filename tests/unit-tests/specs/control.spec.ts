@@ -1,7 +1,7 @@
 import {_beforeEach} from './beforeEach'
 import { EventData, Input, RpgEvent, RpgMap, RpgModule, RpgPlayer, RpgServer, RpgServerEngine } from '@rpgjs/server'
 import { RpgClientEngine, RpgSceneMap, Control } from '@rpgjs/client'
-import { clear } from '@rpgjs/testing'
+import { clear, nextTick } from '@rpgjs/testing'
 import { inputs } from './fixtures/control'
 
 let  client: RpgClientEngine, 
@@ -71,6 +71,7 @@ test('Apply Controls - Action (Server Side)', () => {
         client.controls.applyControl(Control.Action)
 
         client.nextFrame(0)
+        nextTick(client)
     })
 })
 
@@ -82,7 +83,7 @@ test('Apply Controls - Move (Server Side)', () => {
             player: {
                 onInput(player: RpgPlayer, { input, moving }) {
                     expect(player).toBeDefined()
-                    expect(input).toEqual(Control.Right)
+                    expect(+input).toEqual(Control.Right)
                     expect(moving).toEqual(true)
                     resolve()
                 }
@@ -98,6 +99,7 @@ test('Apply Controls - Move (Server Side)', () => {
         client.controls.applyControl(Control.Right, true)
 
         client.nextFrame(0)
+        nextTick(client)
     })
 })
 

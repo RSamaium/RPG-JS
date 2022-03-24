@@ -59,7 +59,7 @@ export default class Game extends EventEmitter {
 
         while (player.pendingMove.length > 0) {
             const inputData = player.pendingMove.shift()
-            const { input, deltaTimeInt } = inputData as any
+            let { input, deltaTimeInt } = inputData as any
             let moving = false
 
             if (input == Control.Action) {
@@ -72,7 +72,7 @@ export default class Game extends EventEmitter {
                 input == Direction.Down
             ) {
                 moving = true
-                const isMove = player.moveByDirection(input, deltaTimeInt || 1)
+                const isMove = player.moveByDirection(+input, deltaTimeInt || 1)
                 if (isMove) {
                     routesMove.push(inputData)
                 }

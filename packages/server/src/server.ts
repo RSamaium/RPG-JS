@@ -169,7 +169,7 @@ export class RpgServerEngine {
     private updatePlayersMove(deltaTimeInt: number) {
         const players = this.world.getUsers() 
         const obj: any = []
-        for (let playerId in players) {
+         for (let playerId in players) {
             const player = players[playerId] as RpgPlayer
             if (player.pendingMove.length > 0) {
                 if (this.inputOptions.workers) obj.push(player.toObject())

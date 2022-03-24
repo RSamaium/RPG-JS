@@ -1,4 +1,4 @@
-import { Control, Direction, Utils } from '@rpgjs/common'
+import { Control, Direction, Input, Utils } from '@rpgjs/common'
 import { RpgClientEngine } from './RpgClientEngine';
 
 // keyboard handling
@@ -186,11 +186,10 @@ const inverse = (obj) => {
 }
 
 const inverseKeyCodeTable = inverse(keyCodeTable)
-const inverseDirectionCode = inverse(directionCode)
 
 export interface ControlOptions {
     repeat?: boolean
-    bind: string | string[]
+    bind: string | string[] | Input | Input[]
     method?: Function
 }
 
