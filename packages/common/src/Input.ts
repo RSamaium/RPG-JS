@@ -1,10 +1,10 @@
 export enum Control {
     Action = 'action',
     Back = 'back',
-    Up = 'up',
-    Down = 'down',
-    Right = 'right',
-    Left = 'left'
+    Up = 1,
+    Down = 3,
+    Right = 2,
+    Left = 4
 }
 
 export enum Input {
@@ -26,10 +26,10 @@ export enum Input {
     PageDown = 'page down',
     End = 'end',
     Home = 'home',
-    Left = 'left',
-    Up = 'up',
-    Right = 'right',
-    Down = 'down',
+    Left = 4,
+    Up = 1,
+    Right = 2,
+    Down = 3,
     Select = 'select',
     Print = 'print',
     Execute = 'execute',

@@ -94,7 +94,6 @@ export class RpgClientEngine {
     io
     private lastTimestamp: number = 0
     private frame: number = 0
-    private pressInput: boolean = false
     private subscriptionWorld: Subscription
 
     private clientFrames: Map<number, FrameData> = new Map()
@@ -375,16 +374,10 @@ export class RpgClientEngine {
     }
 
     sendInput(actionName: string) {
-        this.pressInput = true
         const inputEvent = { input: actionName, playerId: this.gameEngine.playerId }
         const player = this.gameEngine.world.getObject(this.gameEngine.playerId)
         player.pendingMove.push(inputEvent)
-        this.gameEngine.processInput(inputEvent, this.gameEngine.playerId)
-        player.pendingMove = []
-        const { x, y } = player.position
-        // this.playerVault.add(
-        //     SI.snapshot.create([{ id: player.id, x, y }])
-        // )
+        this.gameEngine.processInput(this.gameEngine.playerId)
         this.clientFrames.set(this.frame, {
             data: player.position,
             time: Date.now()
@@ -396,7 +389,7 @@ export class RpgClientEngine {
         }
     }
 
-    private serverReconciliation(t)  {
+    private serverReconciliation()  {
         const { playerId } = this.gameEngine
         const player = this.gameEngine.world.getObject(playerId)
         if (player) {
@@ -407,65 +400,20 @@ export class RpgClientEngine {
                     player.position.x = serverPos.x
                     player.position.y = serverPos.y
                 }
-                if (client) {
-                    const { time: clientTime } = client
-                    console.log(serverTime - clientTime)
-                }
+                // if (client) {
+                //     const { time: clientTime } = client
+                //     console.log(serverTime - clientTime)
+                // }
                 this.serverFrames.delete(frame)
                 this.clientFrames.delete(frame)
             })
-            
-          /*const serverSnapshot: any = SI.vault.get()
-
-          if (!serverSnapshot) return
-          const playerSnapshot: any = this.playerVault.get(serverSnapshot.time, true)
-
-          if (serverSnapshot && playerSnapshot) {
-            const serverPos = serverSnapshot.state.filter(s => s.id === playerId)[0]
-            const playerState = playerSnapshot.state[0]  
-
-            if (playerState) {
-                const offsetX = Math.abs(playerState.x - serverPos.x)
-                const offsetY = Math.abs(playerState.y - serverPos.y)
-                if (offsetX > player.speed * 5 || offsetY > player.speed * 5) {
-                     player.position.x = serverPos.x
-                     player.position.y = serverPos.y
-                }
-            }
-          }*/
         }
       }
 
     private step(t: number, dt: number) {
-        this.gameEngine.emit('client__preStep')
+        this.controls.preStep()
         RpgPlugin.emit(HookClient.Step, [this, t, dt], true)
-        const { playerId } = this.gameEngine
-        const player = this.gameEngine.world.getObject(playerId)
-        if (player) {
-            const { x, y } = player.position
-            // this.playerVault.add(
-            //     SI.snapshot.create([{ id: playerId, x, y }])
-            // )
-            this.serverReconciliation(t)
-        }
-        const snapshot = SI.calcInterpolation('x y') 
-        if (snapshot) {
-            const { state } = snapshot
-            // state.forEach(s => {
-            //     const { id, x, y, direction } = s
-            //     console.log(s)
-            //     const player = this.gameEngine.world.getObject(id)
-            //     if (player) {
-            //         if (id === this.gameEngine.playerId) return
-            //         player.position.x = Math.round(x as number)
-            //         player.position.y = Math.round(y as number)
-            //         player.direction = direction
-            //     }
-            // })
-        }
-        else {
-            this.pressInput = false
-        }
+        this.serverReconciliation()
     }
 
     /**

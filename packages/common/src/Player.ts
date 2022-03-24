@@ -1,4 +1,4 @@
-import { intersection, isString, isBrowser, generateUID } from './Utils'
+import { intersection, isString, isBrowser, generateUID, toRadians } from './Utils'
 import { Hit, HitObject } from './Hit'
 import { RpgShape } from './Shape'
 import SAT from 'sat'
@@ -10,10 +10,14 @@ const ACTIONS = { IDLE: 0, RUN: 1, ACTION: 2 }
 export type Position = { x: number, y: number, z: number }
 
 export enum Direction { 
-    Up = 'up',
-    Down = 'down',
-    Left = 'left',
-    Right = 'right'
+    Up = 1,
+    Down = 3,
+    Left = 4,
+    Right = 2,
+    UpRight = 1.5,
+    DownRight = 2.5,
+    DownLeft = 3.5,
+    UpLeft =  2.5
 }
 
 export enum PlayerType {
@@ -30,7 +34,7 @@ export class RpgCommonPlayer {
     canMove: boolean
     speed: number
     events: any[] = []
-    direction: number = 0
+    direction: number = 3
     private collisionWith: any[] = []
     private _collisionWithTiles: TileInfo[] = []
     data: any = {}
@@ -230,35 +234,23 @@ export class RpgCommonPlayer {
     get hHitbox() {
         return this.hitbox.h
     }
+
+    private directionToAngle(direction: number): number {
+        const angle = (direction < 2 ? +direction + 2 : direction - 2) * 90
+        return toRadians(angle)
+    }
     
-    defineNextPosition(direction: Direction, deltaTimeInt: number): Position {
-        switch (direction) {
-            case Direction.Left:
-                return {
-                    x: this.position.x - this.speed * deltaTimeInt,
-                    y: this.position.y,
-                    z: this.position.z
-                }
-            case Direction.Right:
-                return {
-                    x: this.position.x + this.speed * deltaTimeInt,
-                    y: this.position.y,
-                    z: this.position.z
-                }
-            case Direction.Up:
-                return {
-                    x: this.position.x,
-                    y: this.position.y - this.speed * deltaTimeInt,
-                    z: this.position.z
-                }
-            case Direction.Down:
-                return {
-                    x: this.position.x,
-                    y: this.position.y + this.speed * deltaTimeInt,
-                    z: this.position.z
-                }
+    defineNextPosition(direction: number, deltaTimeInt: number): Position {
+        const angle = this.directionToAngle(direction)
+        const computePosition = (prop: string) => {
+            return this.position[prop] + this.speed * deltaTimeInt 
+                * (Math.round(Math[prop == 'x' ? 'cos' : 'sin'](angle) * 100) / 100)
         }
-        return this.position
+        return {
+            x: computePosition('x'),
+            y: computePosition('y'),
+            z: this.position.z
+        }
     }
 
     setPosition({ x, y, tileX, tileY }, move = true) {
@@ -568,21 +560,11 @@ export class RpgCommonPlayer {
      * 
      * @title Get Direction
      * @method player.getDirection()
-     * @returns {string} left, right, up or down
+     * @returns {Direction | number} direction
      * @memberof Player
      */
     getDirection(direction?: Direction | number): string | number {
-        const currentDir = direction || this.direction
-        if (!isString(currentDir)) {
-            return [Direction.Down, Direction.Left, Direction.Right, Direction.Up][currentDir]
-        }
-        const dir = { 
-            [Direction.Down]: 0, 
-            [Direction.Left]: 1, 
-            [Direction.Right]: 2,
-            [Direction.Up]: 3
-        }
-        return dir[currentDir]
+        return direction || this.direction
     }
 
      /**

@@ -177,10 +177,7 @@ export class RpgServerEngine {
                 if (this.inputOptions.workers) obj.push(player.toObject())
                 else {
                     //const lastFrame = player.pendingMove[player.pendingMove.length-1]
-                    this.gameEngine.processInput({
-                        ...player.pendingMove,
-                        deltaTimeInt
-                    }, playerId)
+                    this.gameEngine.processInput(playerId)
                     // const map = player.getCurrentMap()
                     // if (map) {
                     //     const state = map['$currentState']()
@@ -245,8 +242,6 @@ export class RpgServerEngine {
         socket.on('move', (data) => { 
             player._lastFrame = data.frame
             player.pendingMove.push(data)
-           // this.updatePlayersMove()
-           //this.gameEngine.processInput(player.pendingMove, playerId)
         })
 
         socket.on('disconnect', () => {

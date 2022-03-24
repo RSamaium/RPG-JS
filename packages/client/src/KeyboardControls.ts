@@ -1,4 +1,4 @@
-import { Utils } from '@rpgjs/common'
+import { Control, Direction, Utils } from '@rpgjs/common'
 import { RpgClientEngine } from './RpgClientEngine';
 
 // keyboard handling
@@ -21,10 +21,10 @@ const keyCodeTable = {
     34: 'page down',
     35: 'end',
     36: 'home',
-    37: 'left',
-    38: 'up',
-    39: 'right',
-    40: 'down',
+    37: Direction.Left,
+    38: Direction.Up,
+    39: Direction.Right,
+    40: Direction.Down,
     41: 'select',
     42: 'print',
     43: 'execute',
@@ -167,6 +167,13 @@ const keyCodeTable = {
     255: 'toggle touchpad'
 };
 
+const directionCode = {
+    [Direction.Up]: 1,
+    [Direction.Right]: 2,
+    [Direction.Down]: 3,
+    [Direction.Left]: 4
+}
+
 const { isArray } = Utils
 
 const inverse = (obj) => {
@@ -179,6 +186,7 @@ const inverse = (obj) => {
 }
 
 const inverseKeyCodeTable = inverse(keyCodeTable)
+const inverseDirectionCode = inverse(directionCode)
 
 export interface ControlOptions {
     repeat?: boolean
@@ -208,33 +216,59 @@ export class KeyboardControls {
         this.setupListeners();
 
         if (globalConfig.inputs) this.setInputs(globalConfig.inputs)
+    }
 
-        this.gameEngine.on('client__preStep', () => {
-            for (let keyName of Object.keys(this.boundKeys)) {
-                if (this.keyState[keyName] && this.keyState[keyName].isDown) {
-
-                    const { repeat, method } = this.boundKeys[keyName].options
-
-                    // handle repeat press
-                    if (repeat || this.keyState[keyName].count == 0) {
-
-                        // callback to get live parameters if function
-                        let parameters = this.boundKeys[keyName].parameters;
-                        if (typeof parameters === "function") {
-                            parameters = parameters();
-                        }
-                        if (method) {
-                            method(this.boundKeys[keyName])
-                        }
-                        else {
-                            this.clientEngine.sendInput(this.boundKeys[keyName].actionName);
-                        }
-            
-                        this.keyState[keyName].count++;
+    preStep() {
+        //this.directionToAngle()
+        const boundKeys = Object.keys(this.boundKeys)
+        const applyInput = (keyName) => {
+            if (this.keyState[keyName] && this.keyState[keyName].isDown) {
+                const { repeat, method } = this.boundKeys[keyName].options
+                if (repeat || this.keyState[keyName].count == 0) {
+                    let parameters = this.boundKeys[keyName].parameters;
+                    if (typeof parameters === "function") {
+                        parameters = parameters();
                     }
+                    if (method) {
+                        method(this.boundKeys[keyName])
+                    }
+                    else {
+                        this.clientEngine.sendInput(this.boundKeys[keyName].actionName);
+                    }
+        
+                    this.keyState[keyName].count++;
                 }
             }
-        });
+        }
+        for (let keyName of boundKeys) {
+            applyInput(keyName)
+        }
+    }
+
+    // TODO, merge direction
+    private directionToAngle() {
+        let directionVal = 0
+        let nbFound = 0
+        for (let keyName of Object.keys(this.boundKeys)) {
+            if (this.keyState[keyName] && this.keyState[keyName].isDown) {
+               if (directionCode[keyName]) {
+                    this.keyState[keyName] = null
+                    directionVal += directionCode[keyName]
+                    nbFound++
+               }
+            }
+        }
+        if (!nbFound) return
+
+        const index = directionVal / nbFound
+
+        if (!this.keyState[index]) {
+            this.keyState[index] = {
+                count: 0
+            }
+        }
+
+        this.keyState[index].isDown = true
     }
 
     private setupListeners() {
@@ -244,7 +278,6 @@ export class KeyboardControls {
 
     private bindKey(keys, actionName, options, parameters?) {
         if (!Array.isArray(keys)) keys = [keys];
-
         let keyOptions = Object.assign({
             repeat: false
         }, options);
@@ -281,7 +314,7 @@ export class KeyboardControls {
     private onKeyChange(e, isDown) {
         e = e || window.event;
 
-        let keyName = keyCodeTable[e.keyCode];
+        const keyName: string = keyCodeTable[e.keyCode];
         const isStopped = this.stop
 
         if (isDown) this.clientEngine.keyChange.next(keyName)
@@ -353,7 +386,7 @@ export class KeyboardControls {
      * @returns {Promise<void>}
      * @memberof KeyboardControls
      */
-    async applyControl(controlName: string, isDown?: boolean | undefined): Promise<void> {
+    async applyControl(controlName: string | number, isDown?: boolean | undefined): Promise<void> {
         const control = this._controlsOptions[controlName]
         if (control) {
             const input = isArray(control.bind) ? control.bind[0] : control.bind

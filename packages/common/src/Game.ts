@@ -49,16 +49,18 @@ export default class Game extends EventEmitter {
         return event
     }
 
-    processInput(inputData: { input: Control | Direction, deltaTimeInt?: number }, playerId: string): RpgCommonPlayer {
+    processInput(playerId: string): RpgCommonPlayer {
         const player: RpgCommonPlayer = this.world.getObject(playerId)
-       // const { input, deltaTimeInt } = inputData 
+
+        if (!player) return player
+        if (!player.canMove) return player
+
+        const routesMove: any = []
+
         while (player.pendingMove.length > 0) {
             const inputData = player.pendingMove.shift()
             const { input, deltaTimeInt } = inputData as any
             let moving = false
-
-            if (!player) return player
-            if (!player.canMove) return player
 
             if (input == Control.Action) {
                 player.triggerCollisionWith(RpgCommonPlayer.ACTIONS.ACTION)
@@ -68,9 +70,12 @@ export default class Game extends EventEmitter {
                 input == Direction.Right || 
                 input == Direction.Up || 
                 input == Direction.Down
-                ) {
+            ) {
                 moving = true
-                player.moveByDirection(input, deltaTimeInt || 1)
+                const isMove = player.moveByDirection(input, deltaTimeInt || 1)
+                if (isMove) {
+                    routesMove.push(inputData)
+                }
             } 
             // TODO, is Worker
             if (this.side == 'server') RpgPlugin.emit('Server.onInput', [player, {
@@ -79,7 +84,6 @@ export default class Game extends EventEmitter {
             }], true)
 
         }
-
         return player
     }
 }

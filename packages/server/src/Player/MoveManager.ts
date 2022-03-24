@@ -143,9 +143,9 @@ export const Move = new class {
         }
     }
 
-    _awayFromPlayerDirection(player: RpgPlayer, otherPlayer: RpgPlayer): string {
+    _awayFromPlayerDirection(player: RpgPlayer, otherPlayer: RpgPlayer): number {
         const directionOtherPlayer = otherPlayer.getDirection()
-        let newDirection = ''
+        let newDirection = 0
         switch (directionOtherPlayer) {
             case Direction.Left:
             case Direction.Right:
@@ -169,9 +169,9 @@ export const Move = new class {
         return newDirection     
     }
 
-    _towardPlayerDirection(player: RpgPlayer, otherPlayer: RpgPlayer): string {
+    _towardPlayerDirection(player: RpgPlayer, otherPlayer: RpgPlayer): number {
         const directionOtherPlayer = otherPlayer.getDirection()
-        let newDirection = ''
+        let newDirection = 0
         switch (directionOtherPlayer) {
             case Direction.Left:
             case Direction.Right:
@@ -198,7 +198,7 @@ export const Move = new class {
     _awayFromPlayer({ isTile, typeMov }: { isTile: boolean, typeMov: string}, otherPlayer: RpgPlayer, repeat: number = 1) {
         const method = dir => this[isTile ? 'tile' + capitalize(dir) : dir](repeat)
         return (player: RpgPlayer, map) => {
-            let newDirection = ''
+            let newDirection = 0
             switch (typeMov) {
                 case 'away':
                     newDirection = this._awayFromPlayerDirection(player, otherPlayer)

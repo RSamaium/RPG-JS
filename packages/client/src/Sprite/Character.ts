@@ -29,17 +29,12 @@ export default class Character extends PIXI.Sprite {
      /** 
      * the direction of the sprite
      * 
-     * @prop {Direction} dir up, down, left or up
+     * @prop {Direction} dir
      * @readonly
      * @memberof RpgSprite
      * */
     get dir(): Direction {
-        return [
-            Direction.Down, 
-            Direction.Left, 
-            Direction.Right,
-            Direction.Up
-        ][this.direction]
+        return this.direction
     }
 
     /** 
@@ -222,7 +217,7 @@ export default class Character extends PIXI.Sprite {
             obj.posY = obj.position.y
     
             this.direction = obj.direction
-          
+
             if (this._x > this.x) {
                 this.x += Math.min(speed, this._x - this.x)
                 moving = true

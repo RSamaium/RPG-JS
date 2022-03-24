@@ -97,6 +97,10 @@ export function sharedArrayBuffer() {
     return buffer
 }
 
+export function toRadians(angle: number) {
+    return angle * (Math.PI / 180)
+}
+
 export default {
     random,
     isBrowser,
@@ -115,5 +119,6 @@ export default {
     capitalize,
     sharedArrayBuffer,
     generateUID,
-    createConstructor
+    createConstructor,
+    toRadians
 }

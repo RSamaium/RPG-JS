@@ -12,7 +12,7 @@ export const RMSpritesheet = (framesWidth, framesHeight, frameStand = 1) => {
         }[direction]
     }
 
-    const stand = (direction: string) => [{ time: 0, frameX: frameStand, frameY: frameY(direction) }]
+    const stand = (direction: number) => [{ time: 0, frameX: frameStand, frameY: frameY(direction) }]
     const walk = direction => {
         const array: any = []
         for (let i=0 ; i < framesWidth ; i++) {
