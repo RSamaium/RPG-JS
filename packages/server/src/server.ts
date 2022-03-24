@@ -5,8 +5,6 @@ import { DAMAGE_SKILL, DAMAGE_PHYSIC, DAMAGE_CRITICAL, COEFFICIENT_ELEMENTS } fr
 import { World, WorldClass } from '@rpgjs/sync-server'
 import { Utils, RpgPlugin, Scheduler, HookServer } from '@rpgjs/common'
 
-const WORKER_ENABLED = true
-
 export class RpgServerEngine {
 
      /**
@@ -59,8 +57,8 @@ export class RpgServerEngine {
     constructor(public io, public gameEngine, public inputOptions) {
         if (this.inputOptions.workers) {
             console.log('workers enabled')
-        }
-        this.workers = this.gameEngine.createWorkers(this.inputOptions.workers).load()
+            this.workers = this.gameEngine.createWorkers(this.inputOptions.workers).load()
+        }    
     }
 
     private async _init() {
@@ -176,13 +174,7 @@ export class RpgServerEngine {
             if (player.pendingMove.length > 0) {
                 if (this.inputOptions.workers) obj.push(player.toObject())
                 else {
-                    //const lastFrame = player.pendingMove[player.pendingMove.length-1]
                     this.gameEngine.processInput(playerId)
-                    // const map = player.getCurrentMap()
-                    // if (map) {
-                    //     const state = map['$currentState']()
-                    //     state.frame = lastFrame.frame
-                    // }
                 }
                 player.pendingMove = []
             }
