@@ -8,6 +8,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
+  "private": true,
   "author": "Samuel Ronce",
   "license": "MIT",
   "dependencies": {
