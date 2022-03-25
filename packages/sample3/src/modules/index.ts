@@ -3,17 +3,14 @@ import defaultGui from '@rpgjs/default-gui'
 import mobileGui from '@rpgjs/mobile-gui'
 import monitoring from '@rpgjs/monitoring'
 import gamepad from '@rpgjs/gamepad'
+import starterKit from '@rpgjs/starter-kit'
 import emotionBubblesPlugin from '@rpgjs/plugin-emotion-bubbles'
-//import plugin from 'rpgjs-plugin-template'
-//import tooltipPlugin from '@rpgjs/plugin-tooltip'
 
 export default [
     gamepad,
-    main,
+    starterKit,
     defaultGui,
     //mobileGui,
     emotionBubblesPlugin,
     monitoring,
-    //tooltipPlugin,
-   // plugin 
 ]

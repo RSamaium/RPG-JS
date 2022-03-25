@@ -15,9 +15,10 @@
     </div>
 </template>
 
-<script>
+<script lang="ts">
 import Arrow from './arrow.vue'
 import { debounceTime } from 'rxjs/operators'
+import { Control } from '@rpgjs/client'
 
 export default {
     name: 'rpg-choice',
@@ -55,18 +56,18 @@ export default {
             if (!this.active || !control) return
             const name = control.actionName
             if (this.column > 1) {
-                if (name == 'left') {
+                if (name == Control.Left) {
                     this.selected = Math.floor(this.selected - this.choices.length / this.column)
                     this.moveCursor()
                 }
-                else if (name == 'right') {
+                else if (name == Control.Right) {
                     this.selected = Math.floor(this.choices.length / this.column + this.selected)
                     this.moveCursor()
                 }
             }
-            if (name == 'down') this.moveCursor(1)
-            else if (name == 'up') this.moveCursor(-1)
-            else if (name == 'action') this.$emit('selected', this.selected)
+            if (name == Control.Down) this.moveCursor(1)
+            else if (name == Control.Up) this.moveCursor(-1)
+            else if (name == Control.Action) this.$emit('selected', this.selected)
             return false
         })
     },

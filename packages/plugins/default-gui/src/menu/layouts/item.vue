@@ -18,8 +18,9 @@
    </div>
 </template>
 
-<script>
+<script  lang="ts">
 import Icon from '../../components/icon.vue'
+import { Control } from '@rpgjs/client'
 
 export default {
     inject: ['rpgCurrentPlayer', 'rpgKeypress', 'rpgSocket'],
@@ -45,7 +46,7 @@ export default {
         })
         this.obsKeyPress = this.rpgKeypress.subscribe(({ control }) => {
             if (!control) return
-            if (control.actionName == 'back') {
+            if (control.actionName == Control.Back) {
                 this.$emit('changeLayout', 'MainLayout')
             }
         })

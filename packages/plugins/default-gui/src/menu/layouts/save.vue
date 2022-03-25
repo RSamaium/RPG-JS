@@ -2,13 +2,15 @@
    <rpg-save @saved="back"></rpg-save>
 </template>
 
-<script>
+<script lang="ts">
+import { Control } from '@rpgjs/client'
+
 export default {
    inject: ['rpgKeypress'],
     mounted() {
         this.obsKeyPress = this.rpgKeypress.subscribe(({ control }) => {
             if (!control) return
-            if (control.actionName == 'back') {
+            if (control.actionName == Control.Back) {
                 this.back()
             }
         })
