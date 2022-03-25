@@ -1,6 +1,6 @@
-import { Move, ShapePositioning } from '@rpgjs/server'
+import { Move, ShapePositioning, Direction } from '@rpgjs/server'
 import {_beforeEach} from './beforeEach'
-import { clear } from '@rpgjs/testing'
+import { clear, nextTick } from '@rpgjs/testing'
 
 let  client, player, fixture, playerId
 
@@ -21,6 +21,25 @@ test('Default Speed', async () => {
 test('Move Route', async () => {
    await player.moveRoutes([ Move.right() ])
    expect(player.position).toMatchObject({ x: INITIAL_SPEED, y: 0, z: 0 })
+})
+
+test('Repeat Move Route', async () => {
+    await player.moveRoutes([ Move.repeatMove(Direction.Right, 2) ])
+    expect(player.position).toMatchObject({ x: INITIAL_SPEED * 2, y: 0, z: 0 })
+})
+
+test('Repeat Tile Move Route', async () => {
+    await player.moveRoutes([ Move.tileRight(2) ])
+    expect(player.position).toMatchObject({ x: 60, y: 0, z: 0 })
+})
+
+test('Move but limit of the map', async () => {
+    player.position.x = 1
+    await player.moveRoutes([ Move.left() ])
+    expect(player.position).toMatchObject({ x: 0, y: 0, z: 0 })
+    nextTick(client)
+    const logic = client.gameEngine.world.getObject(playerId)
+    expect(logic.position).toMatchObject({ x: 0, y: 0, z: 0 })
 })
 
 describe('Size Max Shape of Player', () => {

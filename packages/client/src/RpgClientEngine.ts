@@ -397,8 +397,8 @@ export class RpgClientEngine {
                 const { data: serverPos, time: serverTime } = serverData
                 const client = this.clientFrames.get(frame)
                 if (!client || (client && client.data.x != serverPos.x || client.data.y != serverPos.y)) {
-                    player.position.x = serverPos.x
-                    player.position.y = serverPos.y
+                    if (serverPos.x) player.position.x = serverPos.x
+                    if (serverPos.y) player.position.y = serverPos.y
                 }
                 // if (client) {
                 //     const { time: clientTime } = client

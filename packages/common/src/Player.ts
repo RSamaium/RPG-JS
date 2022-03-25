@@ -510,7 +510,8 @@ export class RpgCommonPlayer {
         {
             const { x, y } = this.position
             const { x: nx, y: ny } = nextPosition
-            if (Math.abs(x - nx) > Math.abs(y - ny)) {
+            const diff = Math.abs(x - nx) > Math.abs(y - ny)
+            if (diff) {
                 if (nx > x) {
                     this.changeDirection(Direction.Right)
                 }

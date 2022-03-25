@@ -66,13 +66,13 @@ export enum Speed {
  * Move.turnTowardPlayer(player) | Turns in the direction of the designated player
  * @memberof Move
  * */
-export const Move = new class {
-
+class MoveList {
+    
     repeatMove(direction: Direction, repeat: number): Direction[] {
         return new Array(repeat).fill(direction)
     }
 
-    repeatTileMove(direction: Direction, repeat: number, propMap: string): CallbackTileMove {
+    private repeatTileMove(direction: string, repeat: number, propMap: string): CallbackTileMove {
         return (player: RpgPlayer, map): Direction[] => {
             const repeatTile = Math.floor(map[propMap] / player.speed) * repeat
             return this[direction](repeatTile)
@@ -109,19 +109,19 @@ export const Move = new class {
     }
 
     tileRight(repeat: number = 1): CallbackTileMove {
-        return this.repeatTileMove(Direction.Right, repeat, 'tileWidth')
+        return this.repeatTileMove('right', repeat, 'tileWidth')
     }
 
     tileLeft(repeat: number = 1): CallbackTileMove {
-        return this.repeatTileMove(Direction.Left, repeat, 'tileWidth')
+        return this.repeatTileMove('left', repeat, 'tileWidth')
     }
 
     tileUp(repeat: number = 1): CallbackTileMove {
-        return this.repeatTileMove(Direction.Up, repeat, 'tileHeight')
+        return this.repeatTileMove('up', repeat, 'tileHeight')
     }
 
     tileDown(repeat: number = 1): CallbackTileMove {
-        return this.repeatTileMove(Direction.Down, repeat, 'tileHeight')
+        return this.repeatTileMove('down', repeat, 'tileHeight')
     }
 
     tileRandom(repeat: number = 1): CallbackTileMove {
@@ -143,7 +143,7 @@ export const Move = new class {
         }
     }
 
-    _awayFromPlayerDirection(player: RpgPlayer, otherPlayer: RpgPlayer): number {
+    private _awayFromPlayerDirection(player: RpgPlayer, otherPlayer: RpgPlayer): number {
         const directionOtherPlayer = otherPlayer.getDirection()
         let newDirection = 0
         switch (directionOtherPlayer) {
@@ -169,7 +169,7 @@ export const Move = new class {
         return newDirection     
     }
 
-    _towardPlayerDirection(player: RpgPlayer, otherPlayer: RpgPlayer): number {
+    private _towardPlayerDirection(player: RpgPlayer, otherPlayer: RpgPlayer): number {
         const directionOtherPlayer = otherPlayer.getDirection()
         let newDirection = 0
         switch (directionOtherPlayer) {
@@ -195,7 +195,7 @@ export const Move = new class {
         return newDirection     
     }
 
-    _awayFromPlayer({ isTile, typeMov }: { isTile: boolean, typeMov: string}, otherPlayer: RpgPlayer, repeat: number = 1) {
+    private _awayFromPlayer({ isTile, typeMov }: { isTile: boolean, typeMov: string}, otherPlayer: RpgPlayer, repeat: number = 1) {
         const method = dir => this[isTile ? 'tile' + capitalize(dir) : dir](repeat)
         return (player: RpgPlayer, map) => {
             let newDirection = 0
@@ -270,6 +270,8 @@ export const Move = new class {
         }
     }
 }
+
+export const Move = new MoveList()
 
 export class MoveManager {
     
