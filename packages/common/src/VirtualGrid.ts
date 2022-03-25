@@ -71,7 +71,7 @@ export class VirtualGrid {
             if (!memoryCells) {
                 this.cells.set(index, new Set())
             }
-            memoryCells?.add(id)
+            this.cells.get(index)?.add(id)
         })
         this.inverseCells.set(id, cells)
     }

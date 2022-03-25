@@ -14,6 +14,7 @@ import { RpgModule, loadModules, ModuleType } from './Module'
 import * as MockIo from './transports/io'
 import * as Logger from './Logger';
 import { RpgShape, ShapePositioning } from './Shape'
+import { VirtualGrid } from './VirtualGrid'
 
 export {
     RpgCommonPlayer,
@@ -40,5 +41,6 @@ export {
     Logger,
     ModuleType,
     RpgShape,
-    ShapePositioning
+    ShapePositioning,
+    VirtualGrid
 }

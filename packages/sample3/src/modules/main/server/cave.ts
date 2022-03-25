@@ -4,7 +4,13 @@ import { RpgMap, MapData, EventData, RpgEvent } from '@rpgjs/server'
     name: 'EV-1'
 })
 class MyEvent extends RpgEvent {
-    
+    onInit() {
+        this.setGraphic('female13')
+        this.setHitbox(32, 16)
+    }
+    onAction() {
+        console.log('ok')
+    }
 }
 
 @MapData({
