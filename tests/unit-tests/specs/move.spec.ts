@@ -1,4 +1,4 @@
-import { Move } from '@rpgjs/server'
+import { Move, ShapePositioning } from '@rpgjs/server'
 import {_beforeEach} from './beforeEach'
 import { clear } from '@rpgjs/testing'
 
@@ -16,14 +16,65 @@ beforeEach(async () => {
 
 test('Default Speed', async () => {
     expect(player.speed).toBe(INITIAL_SPEED) // default speed
- })
+})
 
 test('Move Route', async () => {
    await player.moveRoutes([ Move.right() ])
    expect(player.position).toMatchObject({ x: INITIAL_SPEED, y: 0, z: 0 })
 })
 
+describe('Size Max Shape of Player', () => {
+    test('(default)', async () => {
+        const maxShape = player.getSizeMaxShape()
+        expect(maxShape).toMatchObject({ minX: 0, minY: 0, maxX: 32, maxY: 32 })
+    })
 
+    test('(hitbox)', async () => {
+        player.setHitbox(100, 100)
+        const maxShape = player.getSizeMaxShape()
+        expect(maxShape).toMatchObject({ minX: 0, minY: 0, maxX: 100, maxY: 100 })
+    })
+
+    test('(hitbox) + (position)', async () => {
+        player.setHitbox(100, 100)
+        player.position.x = 50
+        player.position.y = 50
+        const maxShape = player.getSizeMaxShape()
+        expect(maxShape).toMatchObject({ minX: 50, minY: 50, maxX: 150, maxY: 150 })
+    })
+
+    test('(attach shape)', async () => {
+        player.position.x = 200
+        player.position.y = 200
+        player.setHitbox(10, 10)
+        player.attachShape({
+            width: 100,
+            height: 100,
+            positioning: ShapePositioning.Center
+        })
+        const maxShape = player.getSizeMaxShape()
+        expect(maxShape).toMatchObject({ minX: 155, minY: 155, maxX: 255, maxY: 255 })
+    })
+
+    test('(multi attach shape)', async () => {
+        player.position.x = 200
+        player.position.y = 200
+        player.setHitbox(10, 10)
+        player.attachShape({
+            width: 100,
+            height: 100,
+            positioning: ShapePositioning.Center
+        })
+        player.attachShape({
+            width: 50,
+            height: 200,
+            positioning: ShapePositioning.Center
+        })
+        const maxShape = player.getSizeMaxShape()
+        expect(maxShape).toMatchObject({ minX: 155, minY: 105, maxX: 255, maxY: 305 })
+    })
+})
+ 
 afterEach(() => {
     clear()
 })

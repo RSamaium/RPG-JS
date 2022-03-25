@@ -623,7 +623,7 @@ export class RpgCommonPlayer {
         const shapes = this.getShapes()
         for (let shape of shapes) {
             if (shape.x < minX) minX = shape.x
-            if (shape.y < minY) minX = shape.y
+            if (shape.y < minY) minY = shape.y
             const shapeMaxX = shape.x + shape.width
             const shapeMaxY = shape.y + shape.height
             if (shapeMaxX > maxX) maxX = shapeMaxX

@@ -1,5 +1,5 @@
 import {_beforeEach} from './beforeEach'
-import { EventData, HookClient, MapData, Move, RpgEvent, RpgMap, RpgModule, RpgPlayer, RpgPlugin, RpgServer, RpgServerEngine, RpgShape } from '@rpgjs/server'
+import { EventData, HookClient, MapData, Move, RpgEvent, RpgMap, RpgModule, RpgPlayer, RpgPlugin, RpgServer, RpgServerEngine, RpgShape, ShapePositioning } from '@rpgjs/server'
 import { RpgClientEngine, RpgSceneMap } from '@rpgjs/client'
 import { clear } from '@rpgjs/testing'
 
@@ -81,6 +81,40 @@ test('Create Shape', () => {
         player.moveRoutes([ Move.right() ])
      })
  })
+
+test('Attach Shape in player', () => {
+    player.position.x = 50
+    player.position.y = 50
+    player.attachShape({
+        width: 100,
+        height: 100
+    })
+    const shapes = player.getShapes()
+    expect(shapes).toHaveLength(1)
+    const [shape] = shapes
+    expect(shape.fixEvent).toBeTruthy()
+    expect(shape.x).toBe(50)
+    expect(shape.y).toBe(50)
+    expect(shape.width).toBe(100)
+    expect(shape.height).toBe(100)
+})
+
+test('Attach Shape in player (center)', () => {
+    player.position.x = 50
+    player.position.y = 50
+    player.setHitbox(10, 10)
+    player.attachShape({
+        width: 100,
+        height: 100,
+        positioning: ShapePositioning.Center
+    })
+    const shapes = player.getShapes()
+    const [shape] = shapes
+    expect(shape.x).toBe(5)
+    expect(shape.y).toBe(5)
+    expect(shape.width).toBe(100)
+    expect(shape.height).toBe(100)
+})
 
 afterEach(() => {
     clear()
