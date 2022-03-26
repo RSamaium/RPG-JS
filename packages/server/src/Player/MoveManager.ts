@@ -232,19 +232,19 @@ class MoveList {
     } 
 
     turnLeft(): string {
-        return 'turn-left'
+        return 'turn-' + Direction.Left
     }
 
     turnRight(): string {
-        return 'turn-right'
+        return 'turn-' + Direction.Right
     }
 
     turnUp(): string {
-        return 'turn-up'
+        return 'turn-' + Direction.Up
     }
 
     turnDown(): string {
-        return 'turn-down'
+        return 'turn-' + Direction.Down
     }
 
     turnRandom(): string {
@@ -468,16 +468,16 @@ export class MoveManager {
                     case Direction.Up:
                         this.moveByDirection(route, 1)
                         break
-                    case 'turn-left':
+                    case 'turn-' + Direction.Left:
                         this.changeDirection(Direction.Left)
                         break
-                    case 'turn-right':
+                    case 'turn-' + Direction.Right:
                         this.changeDirection(Direction.Right)
                         break
-                    case 'turn-up':
+                    case 'turn-' + Direction.Up:
                          this.changeDirection(Direction.Up)
                         break
-                    case 'turn-down':
+                    case 'turn-' + Direction.Down:
                         this.changeDirection(Direction.Down)
                         break
                 }

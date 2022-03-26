@@ -46,12 +46,12 @@ export default class Game extends EventEmitter {
         return event
     }
 
-    addPlayer(playerClass, playerId: string) {
+    addPlayer(playerClass, playerId?: string) {
         const player = this.addObject(playerClass, playerId)
         return player
     }
 
-    addEvent(eventClass, eventId: string) {
+    addEvent(eventClass, eventId?: string) {
         const event = this.addObject(eventClass, eventId)
         return event
     }

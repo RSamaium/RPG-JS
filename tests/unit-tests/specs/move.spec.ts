@@ -1,10 +1,11 @@
-import { Move, ShapePositioning, Direction } from '@rpgjs/server'
+import { Move, ShapePositioning, Direction, EventData, EventMode, RpgEvent } from '@rpgjs/server'
 import {_beforeEach} from './beforeEach'
 import { clear, nextTick } from '@rpgjs/testing'
 
 let  client, player, fixture, playerId
 
 const INITIAL_SPEED = 3
+const INITIAL_DIRECTION = 3
 
 beforeEach(async () => {
     const ret = await _beforeEach()
@@ -31,6 +32,48 @@ test('Repeat Move Route', async () => {
 test('Repeat Tile Move Route', async () => {
     await player.moveRoutes([ Move.tileRight(2) ])
     expect(player.position).toMatchObject({ x: 60, y: 0, z: 0 })
+})
+
+describe('Change Direction', () => {
+    test('Change Direction [Right]', async () => {
+        await player.moveRoutes([ Move.turnRight() ])
+        expect(player.direction).toBe(2)
+    })
+
+    test('Change Direction [Left]', async () => {
+        await player.moveRoutes([ Move.turnLeft() ])
+        expect(player.direction).toBe(4)
+    })
+
+    test('Change Direction [Up]', async () => {
+        await player.moveRoutes([ Move.turnUp() ])
+        expect(player.direction).toBe(1)
+    })
+
+    test('Change Direction [Down]', async () => {
+        await player.moveRoutes([ Move.turnDown() ])
+        expect(player.direction).toBe(3)
+    })
+
+    test('Turn Direction Toward Player', async () => {
+        @EventData({
+            name: 'test',
+            mode: EventMode.Scenario
+        })
+        class MyEvent extends RpgEvent {}
+        const events = player.createDynamicEvent({
+            x: 0,
+            y: 0,
+            event: MyEvent
+        })
+        const [event] = Object.values(events) as RpgEvent[]
+        expect(event.direction).toBe(INITIAL_DIRECTION)
+
+        event.position.y = 50
+
+        await event.moveRoutes([ Move.turnTowardPlayer(player) ])
+        expect(event.direction).toBe(1)
+    })
 })
 
 test('Move but limit of the map', async () => {

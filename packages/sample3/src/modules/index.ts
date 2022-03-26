@@ -7,11 +7,11 @@ import starterKit from '@rpgjs/starter-kit'
 import emotionBubblesPlugin from '@rpgjs/plugin-emotion-bubbles'
 
 export default [
-    main,
+    //main,
     gamepad,
-    //starterKit,
+    starterKit,
     defaultGui,
     //mobileGui,
     emotionBubblesPlugin,
-    monitoring,
+    monitoring, 
 ]

@@ -1,4 +1,4 @@
-import { RpgCommonMap, Utils, RpgShape }  from '@rpgjs/common'
+import { RpgCommonMap, Utils, RpgShape, RpgCommonGame }  from '@rpgjs/common'
 import fs from 'fs'
 import { EventOptions } from '../decorators/event'
 import { EventMode, RpgEvent } from '../Event'
@@ -86,7 +86,7 @@ export class RpgMap extends RpgCommonMap {
         this.onLoad()
     }
 
-    get game() {
+    get game(): RpgCommonGame {
         return this._server.gameEngine
     }
 
@@ -242,7 +242,7 @@ export class RpgMap extends RpgCommonMap {
         }
 
         // Create an instance of RpgEvent and assign its options
-        const ev = this.game.addEvent(event, mode == EventMode.Shared)
+        const ev = this.game.addEvent(event)
         const _shape = shape || this.getEventShape(ev.name)
 
         ev.width = event.width || this.tileWidth
