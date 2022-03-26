@@ -77,6 +77,10 @@ export class SceneMap extends Scene implements IScene {
         const loader = PIXI.Loader.shared
         let nbLoad = 0
 
+        this.objects.forEach((object: Character) => {
+            object.logic.updateInVirtualGrid()
+        })
+
         loader.reset()
 
         for (let tileset of this.tilemap.tileSets) {

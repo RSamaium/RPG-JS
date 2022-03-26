@@ -12,7 +12,8 @@ import {
     PlayerType, 
     Utils, 
     RpgPlugin, 
-    HookClient 
+    HookClient, 
+    RpgCommonGame
 } from '@rpgjs/common'
 import merge from 'lodash.merge'
 import { SnapshotInterpolation, Vault } from '@geckos.io/snapshot-interpolation'
@@ -99,7 +100,7 @@ export class RpgClientEngine {
     private clientFrames: Map<number, FrameData> = new Map()
     private serverFrames: Map<number, FrameData> = new Map()
 
-    constructor(public gameEngine, private options) { 
+    constructor(public gameEngine: RpgCommonGame, private options) { 
         this.tick.subscribe(({ timestamp, deltaTime }) => {
             if (timestamp != -1) this.step(timestamp, deltaTime)
         })
@@ -325,7 +326,7 @@ export class RpgClientEngine {
         if (localEvent) {
             logic = this.gameEngine.events[id]
             if (!logic) {
-                logic = this.gameEngine.addEvent(RpgCommonPlayer, false)
+                logic = this.gameEngine.addEvent(RpgCommonPlayer, id)
                 this.gameEngine.events[id] = {
                     object: logic
                 }
@@ -486,6 +487,8 @@ export class RpgClientEngine {
             .value
             .subscribe((val: { data: any, partial: any, time: number, roomId: string }) => {
 
+            const scene = this.renderer.getScene()
+
             if (!val.data) {
                 return
             }
@@ -551,7 +554,7 @@ export class RpgClientEngine {
             change('users')
             change('events')
 
-            const scene = this.renderer.getScene()
+            //const scene = this.renderer.getScene()
 
             if (scene) {
                 scene.update(val)

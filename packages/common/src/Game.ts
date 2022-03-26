@@ -1,4 +1,4 @@
-import { generateUID } from './Utils'
+import { generateUID, isClass } from './Utils'
 import { EventEmitter } from './EventEmitter'
 import { RpgCommonPlayer, Direction } from './Player'
 import { Control } from './Input'
@@ -9,6 +9,13 @@ export default class Game extends EventEmitter {
 
     events: any
     world: any
+
+    // client side only
+    playerId: string
+    standalone: boolean
+    clientEngine: any
+    renderer: any
+    _playerClass: any
 
     constructor(private side: string) {
         super()
@@ -27,10 +34,10 @@ export default class Game extends EventEmitter {
         return new GameWorker(options)
     }
     
-    addObject(_class, playerId?) {
+    addObject(_class, playerId?: string) {
         let event
         if (!playerId) playerId = generateUID()
-        if (_class.constructor.name == 'Function') {
+        if (isClass(_class)) {
             event = new _class(this, playerId)
         }
         else {
@@ -39,13 +46,13 @@ export default class Game extends EventEmitter {
         return event
     }
 
-    addPlayer(playerClass, playerId) {
+    addPlayer(playerClass, playerId: string) {
         const player = this.addObject(playerClass, playerId)
         return player
     }
 
-    addEvent(eventClass) {
-        const event = this.addObject(eventClass)
+    addEvent(eventClass, eventId: string) {
+        const event = this.addObject(eventClass, eventId)
         return event
     }
 

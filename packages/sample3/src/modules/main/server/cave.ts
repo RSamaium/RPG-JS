@@ -1,13 +1,13 @@
-import { RpgMap, MapData, EventData, RpgEvent, Move } from '@rpgjs/server'
+import { RpgMap, MapData, EventData, RpgEvent, Move, EventMode } from '@rpgjs/server'
 
 @EventData({
-    name: 'EV-1'
+    name: 'EV-1',
+    mode: EventMode.Scenario
 })
 class MyEvent extends RpgEvent {
     onInit() {
         this.setGraphic('female13')
         this.setHitbox(32, 16)
-        this.infiniteMoveRoute([ Move.tileRandom() ])
     }
     onAction() {
         console.log('ok')

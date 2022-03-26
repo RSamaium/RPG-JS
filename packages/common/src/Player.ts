@@ -77,6 +77,13 @@ export class RpgCommonPlayer {
         this.playerId = str
     }
 
+    updateInVirtualGrid() {
+        const map = this.mapInstance
+        if (map /*&& this.gameEngine.isWorker TODO */) {
+            map.grid.insertInCells(this.id, this.getSizeMaxShape())
+        }
+    }
+
     /**
      * Get/Set position x, y and z of player
      * 
@@ -92,10 +99,7 @@ export class RpgCommonPlayer {
         this._hitboxPos.y = y
         this._hitboxPos.z = z
         this._position = val
-        const map = this.mapInstance
-        if (map /*&& this.gameEngine.isWorker TODO */) {
-            map.grid.insertInCells(this.id, this.getSizeMaxShape())
-        }
+        this.updateInVirtualGrid()
         this._position = new Proxy(val, {
             get: (target, prop: string) => target[prop], 
             set: (target, prop, value) => {
@@ -645,7 +649,6 @@ export interface RpgCommonPlayer {
     readonly type: string
     through: boolean
     throughOtherPlayer: boolean
-    steerable: any
     getVector3D(x, y, z): any
     execMethod(methodName: string, methodData?, instance?)
 }

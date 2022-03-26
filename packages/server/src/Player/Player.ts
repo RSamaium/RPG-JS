@@ -1,7 +1,5 @@
 import { RpgCommonPlayer, Utils, RpgPlugin, RpgCommonMap as RpgMap, EventEmitter }  from '@rpgjs/common'
 import { RpgMap as GameMap } from '../Game/Map'
-import * as Kompute from 'kompute/build/Kompute'
-import * as YUKA from 'yuka'
 import { Query } from '../Query'
 import merge from 'lodash.merge'
 import { ItemManager } from './ItemManager'
@@ -31,7 +29,6 @@ import {
     DEX_CURVE,
     AGI_CURVE
 } from '../presets'
-import { BehaviorManager } from './BehaviorManager'
 import { EventOption, EventPosOption } from '../Game/Map'
 import { EventMode, RpgEvent } from '..'
 
@@ -134,7 +131,6 @@ export class RpgPlayer extends RpgCommonPlayer {
             accelerationA: 30,
             accelerationB: 30
         }
-        
         this.parameters = new Map()
         this.variables = new Map()
         this.states = []
@@ -149,11 +145,6 @@ export class RpgPlayer extends RpgCommonPlayer {
         this.canMove = true
         this.through = false
         this.throughOtherPlayer = true
-
-       // this.steerable = new Kompute.Steerable(this.playerId, new Kompute.Vector3D(), new Kompute.Vector3D(10, 10, 0))
-
-        this.steerable = new YUKA.Vehicle()
-    
         this.initialLevel = 1
         this.finalLevel = 99
         this.level = this.initialLevel
@@ -707,13 +698,11 @@ export interface RpgPlayer extends
     GuiManager,
     VariableManager,
     MoveManager,
-    BattleManager,
-    BehaviorManager
+    BattleManager
 {
     _socket: any 
     server: any,
     vision,
-    steerable: Kompute,
     attachShape: any
 }
 
@@ -729,6 +718,5 @@ applyMixins(RpgPlayer, [
     GuiManager,
     VariableManager,
     MoveManager,
-    BattleManager,
-    BehaviorManager
+    BattleManager
 ])

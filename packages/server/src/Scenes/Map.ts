@@ -95,7 +95,7 @@ export class SceneMap {
         }
 
         player.map = mapId
-        player.events = []
+        player.events = {}
 
         const mapInstance = await this.loadMap(mapId)
 
