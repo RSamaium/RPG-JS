@@ -1,6 +1,6 @@
 {
   "name": "unit-tests",
-  "version": "3.0.0-beta.3",
+  "version": "3.0.0-beta.6",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -12,12 +12,12 @@
   "license": "ISC",
   "private": true,
   "dependencies": {
-    "@rpgjs/client": "^3.0.0-beta.3",
-    "@rpgjs/common": "^3.0.0-beta.3",
-    "@rpgjs/compiler": "^3.0.0-beta.3",
-    "@rpgjs/database": "^3.0.0-beta.3",
-    "@rpgjs/server": "^3.0.0-beta.3",
-    "@rpgjs/testing": "^3.0.0-beta.3",
+    "@rpgjs/client": "^3.0.0-beta.6",
+    "@rpgjs/common": "^3.0.0-beta.6",
+    "@rpgjs/compiler": "^3.0.0-beta.6",
+    "@rpgjs/database": "^3.0.0-beta.6",
+    "@rpgjs/server": "^3.0.0-beta.6",
+    "@rpgjs/testing": "^3.0.0-beta.6",
     "canvas": "^2.8.0",
     "jest": "^27.0.4",
     "jest-webgl-canvas-mock": "^0.2.3",
