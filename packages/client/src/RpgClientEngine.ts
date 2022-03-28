@@ -300,6 +300,9 @@ export class RpgClientEngine {
 
     private removeObject(id: any): boolean {
         const logic = this.getObject(id)
+        if (this.gameEngine.events[id]) {
+            delete this.gameEngine.events[id]
+        }
         if (logic) {
             const objects = { ...this._objects.value } // clone
             delete objects[id]
@@ -509,12 +512,18 @@ export class RpgClientEngine {
                     obj.type = prop == 'users' ? PlayerType.Player : PlayerType.Event
                     if (prop == 'users' && this.gameEngine.playerId == key) {
                         if (obj.events) {
-                            change('events', {
-                                data: obj,
-                                partial: paramsChanged,
-                                time: val.time,
-                                roomId: val.roomId
-                            }, true)
+                            const nbEvents = Object.values(obj.events)
+                            if (nbEvents.length == 0) {
+                                this.gameEngine.events = {}
+                            }
+                            else {
+                                change('events', {
+                                    data: obj,
+                                    partial: paramsChanged,
+                                    time: val.time,
+                                    roomId: val.roomId
+                                }, true)
+                            }
                         }
                         if (paramsChanged?.position && partialRoom?.frame) {
                             this.serverFrames.set(partialRoom.frame, {

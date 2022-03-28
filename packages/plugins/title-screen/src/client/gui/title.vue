@@ -21,6 +21,8 @@
 <script lang="ts">
 import { Control } from '@rpgjs/client'
 
+declare var __RPGJS_MMORPG__: boolean
+
 const name = 'rpg-title-screen'
 
 export default {

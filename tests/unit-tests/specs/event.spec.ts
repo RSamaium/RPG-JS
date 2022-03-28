@@ -324,6 +324,7 @@ describe('Test Scenario Event', () => {
 
         const events = client.gameEngine.world.getObjectsOfGroup()
         expect(Object.keys(events)).toHaveLength(1)
+        expect(Object.keys(client.gameEngine.events)).toHaveLength(0)
      })
 })
 
