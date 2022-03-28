@@ -18,7 +18,7 @@
     "lerna": "^4.0.0"
   },
   "scripts": {
-    "postinstall": "lerna bootstrap --ci && npm run build:common && npm run build:sync-client && npm run build:sync-server && npm run build:client && npm run build:database && npm run build:server && npm run build:testing && cd tests/unit-tests && npm i && cd ../.. && lerna link",
+    "postinstall": "lerna bootstrap --ci && npm run build:common && npm run build:sync-client && npm run build:sync-server && npm run build:client && npm run build:database && npm run build:server && npm run build:testing && cd tests/unit-tests && npm i && cd ../.. && lerna link && cd packages/client && npm i vue@3 && cd ../.. && lerna link",
     "test": "cd tests/unit-tests && npm test && cd ../../packages/sync-server && npm test",
     "lerna:publish": "lerna publish --ignore-prepublish --force-publish --no-private --no-push --no-git-tag-version",
     "lerna:ls": "lerna ls",
