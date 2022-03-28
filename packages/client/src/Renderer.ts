@@ -123,6 +123,7 @@ export default class RpgRenderer  {
             name, 
             obj
         })
+        this.scene = null
         this.gameEngine.world.removeObject(currentPlayerId)
         // If a scene exists, remove the current player and viewport
         if (this.scene) {
