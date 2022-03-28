@@ -19,7 +19,6 @@
   "license": "MIT",
   "dependencies": {
     "sat": "^0.8.0",
-    "threads": "^1.7.0",
     "workerpool": "^6.2.0"
   },
   "gitHead": "7bb0326cc3216764a4bfc86f53e7b24464a2040f",

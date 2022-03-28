@@ -1,6 +1,5 @@
 import { Direction, Utils, RpgPlugin, HookClient, RpgCommonPlayer } from '@rpgjs/common'
 import { spritesheets } from './Spritesheets'
-import { FloatingText } from '../Effects/FloatingText'
 import { Animation } from '../Effects/Animation'
 import { Animation as AnimationEnum } from '../Effects/AnimationCharacter';
 
@@ -96,28 +95,6 @@ export default class Character extends PIXI.Sprite {
         this.x = data.position.x 
         this.y = data.position.y
         this.fixed = data.fixed
-    }
-
-    // Todo
-    addEffect(str) {
-        const id = Math.random()
-        const text = new FloatingText(str, {
-            fontFamily : 'Arial', 
-            fontSize: 50, 
-            fill : 0xffffff, 
-            align : 'center',
-            stroke: 'black',
-            letterSpacing: 4,
-            strokeThickness: 3
-        })
-        text['id'] = id
-        this.addChild(text)
-        text.run().then(() => {
-            const index = this.effects.findIndex(effect => effect['id'] == id)
-            this.effects.splice(index, 1)
-            this.removeChild(text)
-        })
-        this.effects.push(text)
     }
 
     /**

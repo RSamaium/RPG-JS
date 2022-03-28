@@ -16,11 +16,8 @@ import {
     RpgCommonGame
 } from '@rpgjs/common'
 import merge from 'lodash.merge'
-import { SnapshotInterpolation, Vault } from '@geckos.io/snapshot-interpolation'
 import { RpgSound } from './Sound/RpgSound'
 import { SceneMap } from './Scene/Map'
-
-const SI = new SnapshotInterpolation(15) 
 
 declare var __RPGJS_PRODUCTION__: boolean;
 
@@ -89,7 +86,6 @@ export class RpgClientEngine {
     })
     public keyChange: Subject<string> = new Subject()
     private hasBeenDisconnected: boolean = false
-    private playerVault = new Vault()
     private isTeleported: boolean = false
     // TODO, public or private
     io
@@ -369,7 +365,6 @@ export class RpgClientEngine {
         })
         if (teleported && isMe()) {
             this.isTeleported = true
-            this.playerVault['_vault'] = []
         }
         return logic
     }
@@ -501,12 +496,6 @@ export class RpgClientEngine {
                 this.isTeleported = false
             }
 
-            /*const snapshot: any = { 
-                id: Utils.generateUID(),
-                time: val.time,
-                state: []
-            }*/
-            
             const change = (prop, root = val, localEvent = false) => {
                 const list = root.data[prop]
                 const partial = val.partial[prop]
@@ -535,13 +524,6 @@ export class RpgClientEngine {
                         }
                     }
                     
-                    // if (!localEvent) snapshot.state.push({ 
-                    //     id: key,
-                    //     x: obj.position.x,
-                    //     y: obj.position.y,
-                    //     z: obj.position.z,
-                    //     direction: obj.direction
-                    // })
                     this.updateObject({
                         playerId: key,
                         params: obj,
@@ -554,13 +536,9 @@ export class RpgClientEngine {
             change('users')
             change('events')
 
-            //const scene = this.renderer.getScene()
-
             if (scene) {
                 scene.update(val)
             }
-
-            //SI.snapshot.add(snapshot)
         })
 
         this.socket.on('disconnect', (reason: string) => {

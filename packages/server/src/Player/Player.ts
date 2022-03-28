@@ -330,10 +330,6 @@ export class RpgPlayer extends RpgCommonPlayer {
         return (positions as Position)
     }
 
-    startBattle(enemies: { enemy: any, level: number }[]) {
-        return this.server.getScene('battle').create(this, enemies)
-    }
-
     /**
      * Load the saved data with the method save()
      * If the player was on a map, it repositions the player on the map. 
@@ -493,15 +489,6 @@ export class RpgPlayer extends RpgCommonPlayer {
         return RpgMap.buffer.get(id)
     }
 
-    // TODO
-    showEffect() {
-        this.emit('callMethod', { 
-            objectId: this.playerId,
-            name: 'addEffect',
-            params: []
-        })
-    }
-
     /**
      * Calls the showAnimation() method on the client side to display an animation on the player
      * You must remember to create the spritesheet beforehand
@@ -632,7 +619,6 @@ export class RpgPlayer extends RpgCommonPlayer {
         } = this._getMap(this.map)
         const arrayEvents: any[] = [...Object.values(this.events), ...Object.values(events)]
         for (let event of arrayEvents) {
-            // TODO, sync client
             if (event.onChanges) event.onChanges(this)
         }
     }
@@ -666,7 +652,7 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @title Play Sound
      * @method player.playSound(soundId,allMap=false)
      * @param {string} soundId Sound identifier, defined on the client side
-     * @param {boolean} [allMap] Indicate if the sound is heard by the players on the card
+     * @param {boolean} [allMap] Indicate if the sound is heard by the players on the map
      * @since 3.0.0-alpha.9
      * @stability 1
      * @returns {void}

@@ -23,7 +23,7 @@ const io = new Server(server, {
 
 app.use(bodyParser.json())
 
-const rpgGame = entryPoint(modules, { io, basePath: __dirname, globalConfig, workers: false })
+const rpgGame = entryPoint(modules, { io, basePath: __dirname, globalConfig })
 rpgGame.app = app
 
 /*app.use('/metrics', async (req, res) => {
