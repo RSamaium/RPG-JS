@@ -1,15 +1,12 @@
 import { Direction } from '@rpgjs/common'
 import { Utils } from '@rpgjs/common'
 import { RpgPlayer } from './Player';
-import { EventMode } from '../Event';
-import { World } from '@rpgjs/sync-server';
 
 const {
     arrayFlat,
     random,
     isFunction,
-    capitalize,
-    perlin
+    capitalize
 } = Utils
 
 function wait(sec: number) {
@@ -69,13 +66,13 @@ export enum Speed {
  * Move.turnTowardPlayer(player) | Turns in the direction of the designated player
  * @memberof Move
  * */
-export const Move = new class {
-
+class MoveList {
+    
     repeatMove(direction: Direction, repeat: number): Direction[] {
         return new Array(repeat).fill(direction)
     }
 
-    repeatTileMove(direction: Direction, repeat: number, propMap: string): CallbackTileMove {
+    private repeatTileMove(direction: string, repeat: number, propMap: string): CallbackTileMove {
         return (player: RpgPlayer, map): Direction[] => {
             const repeatTile = Math.floor(map[propMap] / player.speed) * repeat
             return this[direction](repeatTile)
@@ -112,19 +109,19 @@ export const Move = new class {
     }
 
     tileRight(repeat: number = 1): CallbackTileMove {
-        return this.repeatTileMove(Direction.Right, repeat, 'tileWidth')
+        return this.repeatTileMove('right', repeat, 'tileWidth')
     }
 
     tileLeft(repeat: number = 1): CallbackTileMove {
-        return this.repeatTileMove(Direction.Left, repeat, 'tileWidth')
+        return this.repeatTileMove('left', repeat, 'tileWidth')
     }
 
     tileUp(repeat: number = 1): CallbackTileMove {
-        return this.repeatTileMove(Direction.Up, repeat, 'tileHeight')
+        return this.repeatTileMove('up', repeat, 'tileHeight')
     }
 
     tileDown(repeat: number = 1): CallbackTileMove {
-        return this.repeatTileMove(Direction.Down, repeat, 'tileHeight')
+        return this.repeatTileMove('down', repeat, 'tileHeight')
     }
 
     tileRandom(repeat: number = 1): CallbackTileMove {
@@ -146,9 +143,9 @@ export const Move = new class {
         }
     }
 
-    _awayFromPlayerDirection(player: RpgPlayer, otherPlayer: RpgPlayer): string {
+    private _awayFromPlayerDirection(player: RpgPlayer, otherPlayer: RpgPlayer): number {
         const directionOtherPlayer = otherPlayer.getDirection()
-        let newDirection = ''
+        let newDirection = 0
         switch (directionOtherPlayer) {
             case Direction.Left:
             case Direction.Right:
@@ -172,9 +169,9 @@ export const Move = new class {
         return newDirection     
     }
 
-    _towardPlayerDirection(player: RpgPlayer, otherPlayer: RpgPlayer): string {
+    private _towardPlayerDirection(player: RpgPlayer, otherPlayer: RpgPlayer): number {
         const directionOtherPlayer = otherPlayer.getDirection()
-        let newDirection = ''
+        let newDirection = 0
         switch (directionOtherPlayer) {
             case Direction.Left:
             case Direction.Right:
@@ -198,10 +195,10 @@ export const Move = new class {
         return newDirection     
     }
 
-    _awayFromPlayer({ isTile, typeMov }: { isTile: boolean, typeMov: string}, otherPlayer: RpgPlayer, repeat: number = 1) {
+    private _awayFromPlayer({ isTile, typeMov }: { isTile: boolean, typeMov: string}, otherPlayer: RpgPlayer, repeat: number = 1) {
         const method = dir => this[isTile ? 'tile' + capitalize(dir) : dir](repeat)
         return (player: RpgPlayer, map) => {
-            let newDirection = ''
+            let newDirection = 0
             switch (typeMov) {
                 case 'away':
                     newDirection = this._awayFromPlayerDirection(player, otherPlayer)
@@ -235,19 +232,19 @@ export const Move = new class {
     } 
 
     turnLeft(): string {
-        return 'turn-left'
+        return 'turn-' + Direction.Left
     }
 
     turnRight(): string {
-        return 'turn-right'
+        return 'turn-' + Direction.Right
     }
 
     turnUp(): string {
-        return 'turn-up'
+        return 'turn-' + Direction.Up
     }
 
     turnDown(): string {
-        return 'turn-down'
+        return 'turn-' + Direction.Down
     }
 
     turnRandom(): string {
@@ -273,6 +270,8 @@ export const Move = new class {
         }
     }
 }
+
+export const Move = new MoveList()
 
 export class MoveManager {
     
@@ -467,18 +466,18 @@ export class MoveManager {
                     case Direction.Down:
                     case Direction.Right:
                     case Direction.Up:
-                        this.moveByDirection(route)
+                        this.moveByDirection(route, 1)
                         break
-                    case 'turn-left':
+                    case 'turn-' + Direction.Left:
                         this.changeDirection(Direction.Left)
                         break
-                    case 'turn-right':
+                    case 'turn-' + Direction.Right:
                         this.changeDirection(Direction.Right)
                         break
-                    case 'turn-up':
+                    case 'turn-' + Direction.Up:
                          this.changeDirection(Direction.Up)
                         break
-                    case 'turn-down':
+                    case 'turn-' + Direction.Down:
                         this.changeDirection(Direction.Down)
                         break
                 }
@@ -566,7 +565,7 @@ export class MoveManager {
 }
 
 export interface MoveManager{ 
-    moveByDirection: (direction: Direction) => boolean
+    moveByDirection: (direction: Direction, deltaTimeInt: number) => boolean
     changeDirection: (direction: Direction) => boolean
     getCurrentMap: any
 }

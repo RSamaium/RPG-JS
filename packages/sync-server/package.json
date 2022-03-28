@@ -21,14 +21,9 @@
   "dependencies": {
     "@babel/preset-env": "7.12.7",
     "@babel/preset-typescript": "7.12.7",
-    "@geckos.io/snapshot-interpolation": "1.0.2",
     "@rpgjs/common": "^3.0.0-beta.3",
-    "deep-diff": "1.0.2",
     "get-value": "3.0.1",
-    "install": "0.13.0",
     "msgpack-lite": "0.1.26",
-    "npm": "7.8.0",
-    "on-change": "2.2.0",
     "rxjs": "6.6.3",
     "set-value": "3.0.2"
   },

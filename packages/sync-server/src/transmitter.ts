@@ -38,7 +38,10 @@ class TransmitterClass {
     }
 
     emit(user: User, packet: Packet, room: RoomClass): void {
-        const send = (packet) => user._socket.emit('w', this.encode ? packet.encode() : packet.message)
+        const send = (packet) => {
+            const data = { frame: user['_lastFrame'] }
+            user._socket.emit('w', this.encode ? packet.encode(data) : packet.message(data))
+        }
         if (room.filterEmit) {
             const objectPacket = room.filterEmit(user, packet)
             const promiseObjectPacket = objectPacket as Promise<Packet>

@@ -5,8 +5,6 @@ import { DAMAGE_SKILL, DAMAGE_PHYSIC, DAMAGE_CRITICAL, COEFFICIENT_ELEMENTS } fr
 import { World, WorldClass } from '@rpgjs/sync-server'
 import { Utils, RpgPlugin, Scheduler, HookServer } from '@rpgjs/common'
 
-let tick = 0
-
 export class RpgServerEngine {
 
      /**
@@ -46,7 +44,9 @@ export class RpgServerEngine {
     private scenes: Map<string, any> = new Map()
     protected totalConnected: number = 0
     private scheduler: Scheduler
+    private tick: number = 0
     world: WorldClass = World
+    workers: any
 
     /**
      * Combat formulas
@@ -54,7 +54,12 @@ export class RpgServerEngine {
      * @prop {Socket Io Server} [io]
      * @memberof RpgServerEngine
      */
-    constructor(public io, public gameEngine, public inputOptions) {}
+    constructor(public io, public gameEngine, public inputOptions) {
+        if (this.inputOptions.workers) {
+            console.log('workers enabled')
+            this.workers = this.gameEngine.createWorkers(this.inputOptions.workers).load()
+        }    
+    }
 
     private async _init() {
         this.playerClass = this.inputOptions.playerClass || RpgPlayer
@@ -131,19 +136,18 @@ export class RpgServerEngine {
     async start(inputOptions?, scheduler = true) {
         if (inputOptions) this.inputOptions = inputOptions
         await this._init()
-        let schedulerConfig = {
+        this.scheduler = new Scheduler({
             tick: this.step.bind(this),
             period: 1000 / this.inputOptions.stepRate,
             delay: 4
-        };
-        this.scheduler = new Scheduler(schedulerConfig)
+        })
         if (scheduler) this.scheduler.start()
         this.gameEngine.start({
             getObject(id) {
                 return Query.getPlayer(id) 
             },
             getObjectsOfGroup(groupId: string, player: RpgPlayer) {
-                return Query.getObjectsOfMap(groupId, player)
+                return Query._getObjectsOfMap(groupId, player)
             }
         })
         this.io.on('connection', this.onPlayerConnected.bind(this))
@@ -162,9 +166,41 @@ export class RpgServerEngine {
         this.world.send()
     }
 
-    step() {
-        tick++
-        if (tick % 4 === 0) {
+    private updatePlayersMove(deltaTimeInt: number) {
+        const players = this.world.getUsers() 
+        const obj: any = []
+         for (let playerId in players) {
+            const player = players[playerId] as RpgPlayer
+            if (player.pendingMove.length > 0) {
+                if (this.inputOptions.workers) obj.push(player.toObject())
+                else {
+                    this.gameEngine.processInput(playerId)
+                }
+                player.pendingMove = []
+            }
+        }
+        if (this.inputOptions.workers) {
+            this.workers.call('movePlayers', obj).then((players) => {
+                for (let playerId in players) {
+                    const player = this.world.getUser(playerId) as RpgPlayer
+                    const data = players[playerId]
+                    if (player) {
+                        player.position = data.position
+                        player.direction = data.direction
+                    }
+                    RpgPlugin.emit('Server.onInput', [player, {
+                        input: data.direction,
+                        moving: true
+                    }], true)
+                }
+            })
+        }
+    }
+
+    step(t: number, dt: number) {
+        this.tick++
+        this.updatePlayersMove(1) 
+        if (this.tick % 4 === 0) {
             this.send() 
         }
         RpgPlugin.emit(HookServer.Step, this)
@@ -195,9 +231,9 @@ export class RpgServerEngine {
     private onPlayerConnected(socket) {
         const playerId = Utils.generateUID()
         let player: RpgPlayer = new this.playerClass(this.gameEngine, playerId)
-
-        socket.on('move', (data) => {
-            this.gameEngine.processInput(data, playerId)
+        socket.on('move', (data) => { 
+            player._lastFrame = data.frame
+            player.pendingMove.push(data)
         })
 
         socket.on('disconnect', () => {

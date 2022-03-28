@@ -1,6 +1,5 @@
 import { Direction, Utils, RpgPlugin, HookClient, RpgCommonPlayer } from '@rpgjs/common'
 import { spritesheets } from './Spritesheets'
-import { FloatingText } from '../Effects/FloatingText'
 import { Animation } from '../Effects/Animation'
 import { Animation as AnimationEnum } from '../Effects/AnimationCharacter';
 
@@ -22,23 +21,20 @@ export default class Character extends PIXI.Sprite {
     private playStandardAnimation: boolean = true
     public animation: Animation
     private objSaved: object = {}
+    private teleported: number = 0
+    private map: string = ''
 
     anim
 
      /** 
      * the direction of the sprite
      * 
-     * @prop {Direction} dir up, down, left or up
+     * @prop {Direction} dir
      * @readonly
      * @memberof RpgSprite
      * */
     get dir(): Direction {
-        return [
-            Direction.Down, 
-            Direction.Left, 
-            Direction.Right,
-            Direction.Up
-        ][this.direction]
+        return this.direction
     }
 
     /** 
@@ -99,28 +95,6 @@ export default class Character extends PIXI.Sprite {
         this.x = data.position.x 
         this.y = data.position.y
         this.fixed = data.fixed
-    }
-
-    // Todo
-    addEffect(str) {
-        const id = Math.random()
-        const text = new FloatingText(str, {
-            fontFamily : 'Arial', 
-            fontSize: 50, 
-            fill : 0xffffff, 
-            align : 'center',
-            stroke: 'black',
-            letterSpacing: 4,
-            strokeThickness: 3
-        })
-        text['id'] = id
-        this.addChild(text)
-        text.run().then(() => {
-            const index = this.effects.findIndex(effect => effect['id'] == id)
-            this.effects.splice(index, 1)
-            this.removeChild(text)
-        })
-        this.effects.push(text)
     }
 
     /**
@@ -194,7 +168,7 @@ export default class Character extends PIXI.Sprite {
     }
 
     update(obj): any {
-        const { graphic, speed } = obj
+        const { graphic, speed, teleported, map } = obj
 
         if (graphic != this.graphic) {
             this.setGraphic(graphic)
@@ -209,6 +183,13 @@ export default class Character extends PIXI.Sprite {
             this._x = Math.floor(obj.position.x)
             this._y = Math.floor(obj.position.y) - this.z
 
+            if (teleported != this.teleported || map != this.map) {
+                this.x = this._x
+                this.y = this._y
+                this.teleported = teleported
+                this.map = map
+            }
+
             this.parent.parent.zIndex = this._y
      
             obj.posX = obj.position.x
@@ -216,10 +197,6 @@ export default class Character extends PIXI.Sprite {
     
             this.direction = obj.direction
 
-            // If the positions coming from the server are too different from the client, we reposition the player.
-            if (Math.abs(this._x - this.x) > speed * 15) this.x = this._x
-            if (Math.abs(this._y - this.y) > speed * 15) this.y = this._y
-          
             if (this._x > this.x) {
                 this.x += Math.min(speed, this._x - this.x)
                 moving = true

@@ -18,7 +18,11 @@
   </div>
 </template>
 
-<script>
+<script lang="ts">
+import { Control } from '@rpgjs/client'
+
+declare var __RPGJS_MMORPG__: boolean
+
 const name = 'rpg-title-screen'
 
 export default {
@@ -45,7 +49,7 @@ export default {
         }
         this.obsKeyPress = this.rpgKeypress.subscribe(({ control }) => {
             if (!control) return
-            if (control.actionName == 'back') {
+            if (control.actionName == Control.Back) {
                 this.step = 'title'
             }
         })

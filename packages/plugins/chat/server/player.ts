@@ -24,7 +24,8 @@ export const player: RpgPlayerHooks = {
             player,
             type: 'info'
         })
-        player.once('chat-message', (message) => {
+        player.off('chat-message')
+        player.on('chat-message', (message) => {
             sendMessage({
                 message: `${player.name}: ${message}`, 
                 map, 

@@ -21,11 +21,9 @@
     "@rpgjs/common": "^3.0.0-beta.3",
     "@rpgjs/database": "^3.0.0-beta.3",
     "@rpgjs/sync-server": "^3.0.0-beta.3",
-    "kompute": "^1.13.0",
     "lodash.merge": "^4.6.2",
     "pathfinding": "^0.4.18",
-    "sat": "^0.8.0",
-    "yuka": "^0.7.5"
+    "sat": "^0.8.0"
   },
   "gitHead": "7bb0326cc3216764a4bfc86f53e7b24464a2040f",
   "devDependencies": {

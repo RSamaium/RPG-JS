@@ -12,14 +12,12 @@ import {
     PlayerType, 
     Utils, 
     RpgPlugin, 
-    HookClient 
+    HookClient, 
+    RpgCommonGame
 } from '@rpgjs/common'
 import merge from 'lodash.merge'
-import { SnapshotInterpolation, Vault } from '@geckos.io/snapshot-interpolation'
 import { RpgSound } from './Sound/RpgSound'
 import { SceneMap } from './Scene/Map'
-
-const SI = new SnapshotInterpolation(60) 
 
 declare var __RPGJS_PRODUCTION__: boolean;
 
@@ -32,6 +30,11 @@ type Tick = {
     timestamp: number
     deltaTime: number
     frame: number
+}
+
+type FrameData = {
+    time: number,
+    data: any
 }
 
 export class RpgClientEngine {
@@ -83,16 +86,17 @@ export class RpgClientEngine {
     })
     public keyChange: Subject<string> = new Subject()
     private hasBeenDisconnected: boolean = false
-    private playerVault = new Vault()
     private isTeleported: boolean = false
     // TODO, public or private
     io
     private lastTimestamp: number = 0
     private frame: number = 0
-    private pressInput: boolean = false
     private subscriptionWorld: Subscription
 
-    constructor(public gameEngine, private options) { 
+    private clientFrames: Map<number, FrameData> = new Map()
+    private serverFrames: Map<number, FrameData> = new Map()
+
+    constructor(public gameEngine: RpgCommonGame, private options) { 
         this.tick.subscribe(({ timestamp, deltaTime }) => {
             if (timestamp != -1) this.step(timestamp, deltaTime)
         })
@@ -223,10 +227,10 @@ export class RpgClientEngine {
             },
             removeObject: this.removeObject.bind(this),
             getObjectsOfGroup: () => {
-                return  Object.values({
+                return {
                     ...this.getObjects(),
                     ...this.gameEngine.events
-                }).map((ev: any) => ev.object)
+                }
             }
         })
         if (options.renderLoop) {
@@ -296,6 +300,9 @@ export class RpgClientEngine {
 
     private removeObject(id: any): boolean {
         const logic = this.getObject(id)
+        if (this.gameEngine.events[id]) {
+            delete this.gameEngine.events[id]
+        }
         if (logic) {
             const objects = { ...this._objects.value } // clone
             delete objects[id]
@@ -318,7 +325,7 @@ export class RpgClientEngine {
         if (localEvent) {
             logic = this.gameEngine.events[id]
             if (!logic) {
-                logic = this.gameEngine.addEvent(RpgCommonPlayer, false)
+                logic = this.gameEngine.addEvent(RpgCommonPlayer, id)
                 this.gameEngine.events[id] = {
                     object: logic
                 }
@@ -336,9 +343,9 @@ export class RpgClientEngine {
         logic.prevParamsChanged = Object.assign({}, logic)
         for (let key in params) {
             if (!localEvent && 
-                (key == 'position' || 
+                (key == 'position' ||
                 (key == 'direction' && paramsChanged && paramsChanged.position))) {
-                if ((isMe() && this.pressInput) || !isMe()) continue
+                if (isMe()) continue
             }
             logic[key] = params[key]
         }
@@ -361,71 +368,51 @@ export class RpgClientEngine {
         })
         if (teleported && isMe()) {
             this.isTeleported = true
-            this.playerVault['_vault'] = []
         }
         return logic
     }
 
     sendInput(actionName: string) {
-        this.pressInput = true
         const inputEvent = { input: actionName, playerId: this.gameEngine.playerId }
-        this.gameEngine.processInput(inputEvent, this.gameEngine.playerId)
+        const player = this.gameEngine.world.getObject(this.gameEngine.playerId)
+        player.pendingMove.push(inputEvent)
+        this.gameEngine.processInput(this.gameEngine.playerId)
+        this.clientFrames.set(this.frame, {
+            data: player.position,
+            time: Date.now()
+        })
         RpgPlugin.emit(HookClient.SendInput, [this, inputEvent], true)
-        if (this.socket) this.socket.emit('move', { input: actionName })
+        
+        if (this.socket) {
+            this.socket.emit('move', { input: actionName, frame: this.frame })
+        }
     }
 
     private serverReconciliation()  {
         const { playerId } = this.gameEngine
         const player = this.gameEngine.world.getObject(playerId)
         if (player) {
-          const serverSnapshot: any = SI.vault.get()
-
-          if (!serverSnapshot) return
-          const playerSnapshot: any = this.playerVault.get(serverSnapshot.time, true)
-      
-          if (serverSnapshot && playerSnapshot) {
-            const serverPos = serverSnapshot.state.filter(s => s.id === playerId)[0]
-            const playerState = playerSnapshot.state[0]
-            if (playerState) {
-                const offsetX = playerState.x - serverPos.x
-                const offsetY = playerState.y - serverPos.y
-                const correction = 60
-                player.position.x -= offsetX / correction
-                player.position.y -= offsetY / correction
-            }   
-          }
+            this.serverFrames.forEach((serverData, frame) => {
+                const { data: serverPos, time: serverTime } = serverData
+                const client = this.clientFrames.get(frame)
+                if (!client || (client && client.data.x != serverPos.x || client.data.y != serverPos.y)) {
+                    if (serverPos.x) player.position.x = serverPos.x
+                    if (serverPos.y) player.position.y = serverPos.y
+                }
+                // if (client) {
+                //     const { time: clientTime } = client
+                //     console.log(serverTime - clientTime)
+                // }
+                this.serverFrames.delete(frame)
+                this.clientFrames.delete(frame)
+            })
         }
       }
 
     private step(t: number, dt: number) {
-        this.gameEngine.emit('client__preStep')
+        this.controls.preStep()
         RpgPlugin.emit(HookClient.Step, [this, t, dt], true)
-        const { playerId } = this.gameEngine
-        const player = this.gameEngine.world.getObject(playerId)
-        if (player && this.isTeleported && this.pressInput) {
-            const { x, y } = player.position
-            this.playerVault.add(
-                SI.snapshot.create([{ id: playerId, x, y }])
-            )
-            this.serverReconciliation()
-        }
-        const snapshot = SI.calcInterpolation('x y') 
-        if (snapshot) {
-            const { state } = snapshot
-            state.forEach(s => {
-                const { id, x, y, direction } = s
-                const player = this.gameEngine.world.getObject(id)
-                if (player) {
-                    if (id === this.gameEngine.playerId) return
-                    player.position.x = Math.round(x as number)
-                    player.position.y = Math.round(y as number)
-                    player.direction = direction
-                }
-            })
-        }
-        else {
-            this.pressInput = false
-        }
+        this.serverReconciliation()
     }
 
     /**
@@ -497,10 +484,14 @@ export class RpgClientEngine {
         this.subscriptionWorld = World.listen(this.socket)
             .value
             .subscribe((val: { data: any, partial: any, time: number, roomId: string }) => {
- 
+
+            const scene = this.renderer.getScene()
+
             if (!val.data) {
                 return
             }
+
+            const partialRoom = val.partial
 
             if (val.roomId != lastRoomId) {
                 this.resetObjects()
@@ -508,12 +499,6 @@ export class RpgClientEngine {
                 this.isTeleported = false
             }
 
-            const snapshot: any = { 
-                id: Utils.generateUID(),
-                time: val.time,
-                state: []
-            }
-            
             const change = (prop, root = val, localEvent = false) => {
                 const list = root.data[prop]
                 const partial = val.partial[prop]
@@ -525,21 +510,29 @@ export class RpgClientEngine {
                     }
                     if (!obj) continue
                     obj.type = prop == 'users' ? PlayerType.Player : PlayerType.Event
-                    if (prop == 'users' && this.gameEngine.playerId == key && obj.events) {
-                       change('events', {
-                           data: obj,
-                           partial: paramsChanged,
-                           time: val.time,
-                           roomId: val.roomId
-                       }, true)
+                    if (prop == 'users' && this.gameEngine.playerId == key) {
+                        if (obj.events) {
+                            const nbEvents = Object.values(obj.events)
+                            if (nbEvents.length == 0) {
+                                this.gameEngine.events = {}
+                            }
+                            else {
+                                change('events', {
+                                    data: obj,
+                                    partial: paramsChanged,
+                                    time: val.time,
+                                    roomId: val.roomId
+                                }, true)
+                            }
+                        }
+                        if (paramsChanged?.position && partialRoom?.frame) {
+                            this.serverFrames.set(partialRoom.frame, {
+                                data: paramsChanged.position,
+                                time: Date.now()
+                            })
+                        }
                     }
-                    if (!localEvent) snapshot.state.push({ 
-                        id: key,
-                        x: obj.position.x,
-                        y: obj.position.y,
-                        z: obj.position.z,
-                        direction: obj.direction
-                    })
+                    
                     this.updateObject({
                         playerId: key,
                         params: obj,
@@ -552,13 +545,9 @@ export class RpgClientEngine {
             change('users')
             change('events')
 
-            const scene = this.renderer.getScene()
-
             if (scene) {
                 scene.update(val)
             }
-
-            SI.snapshot.add(snapshot)
         })
 
         this.socket.on('disconnect', (reason: string) => {

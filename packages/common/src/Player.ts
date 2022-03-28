@@ -1,20 +1,23 @@
-import { intersection, isString, isBrowser, generateUID } from './Utils'
+import { intersection, isString, isBrowser, generateUID, toRadians } from './Utils'
 import { Hit, HitObject } from './Hit'
 import { RpgShape } from './Shape'
 import SAT from 'sat'
 import Map, { TileInfo } from './Map'
-import { RpgPlugin } from './Plugin'
-import { HookServer } from '.'
+import { RpgPlugin, HookServer } from './Plugin'
 
 const ACTIONS = { IDLE: 0, RUN: 1, ACTION: 2 }
 
 export type Position = { x: number, y: number, z: number }
 
 export enum Direction { 
-    Up = 'up',
-    Down = 'down',
-    Left = 'left',
-    Right = 'right'
+    Up = 1,
+    Down = 3,
+    Left = 4,
+    Right = 2,
+    UpRight = 1.5,
+    DownRight = 2.5,
+    DownLeft = 3.5,
+    UpLeft =  2.5
 }
 
 export enum PlayerType {
@@ -31,11 +34,12 @@ export class RpgCommonPlayer {
     canMove: boolean
     speed: number
     events: any[] = []
-    direction: number = 0
+    direction: number = 3
     private collisionWith: any[] = []
     private _collisionWithTiles: TileInfo[] = []
     data: any = {}
-    hitbox: any
+    hitbox: SAT.Box
+    pendingMove: { input: string }[] = []
     
      /** 
      * Display/Hide the GUI attached to this sprite
@@ -73,6 +77,13 @@ export class RpgCommonPlayer {
         this.playerId = str
     }
 
+    updateInVirtualGrid() {
+        const map = this.mapInstance
+        if (map /*&& this.gameEngine.isWorker TODO */) {
+            map.grid.insertInCells(this.id, this.getSizeMaxShape())
+        }
+    }
+
     /**
      * Get/Set position x, y and z of player
      * 
@@ -87,16 +98,12 @@ export class RpgCommonPlayer {
         this._hitboxPos.x = x
         this._hitboxPos.y = y
         this._hitboxPos.z = z
-        if (this.steerable) {
-            this.steerable.position.copy(this.getVector3D(x, z, y))
-        }
+        this._position = val
+        this.updateInVirtualGrid()
         this._position = new Proxy(val, {
             get: (target, prop: string) => target[prop], 
             set: (target, prop, value) => {
                 this._hitboxPos[prop] = value
-                if (this.steerable) {
-                    this.steerable[prop] = value
-                }
                 target[prop] = value
                 return true
             }
@@ -145,7 +152,7 @@ export class RpgCommonPlayer {
      * @title Get Collision of other players/events
      * @since 3.0.0-beta.4
      * @readonly
-     * @prop { (RpgPlayer | Rpgvent)[] } otherPlayersCollision
+     * @prop { (RpgPlayer | RpgEvent)[] } otherPlayersCollision
      * @memberof Player
      * @memberof RpgSpriteLogic
      */
@@ -231,35 +238,23 @@ export class RpgCommonPlayer {
     get hHitbox() {
         return this.hitbox.h
     }
+
+    private directionToAngle(direction: number): number {
+        const angle = (direction < 2 ? +direction + 2 : direction - 2) * 90
+        return toRadians(angle)
+    }
     
-    defineNextPosition(direction): Position {
-        switch (direction) {
-            case Direction.Left:
-                return {
-                    x: this.position.x - this.speed,
-                    y: this.position.y,
-                    z: this.position.z
-                }
-            case Direction.Right:
-                return {
-                    x: this.position.x + this.speed,
-                    y: this.position.y,
-                    z: this.position.z
-                }
-            case Direction.Up:
-                return {
-                    x: this.position.x,
-                    y: this.position.y - this.speed,
-                    z: this.position.z
-                }
-            case Direction.Down:
-                return {
-                    x: this.position.x,
-                    y: this.position.y + this.speed,
-                    z: this.position.z
-                }
+    defineNextPosition(direction: number, deltaTimeInt: number): Position {
+        const angle = this.directionToAngle(direction)
+        const computePosition = (prop: string) => {
+            return this.position[prop] + this.speed * deltaTimeInt 
+                * (Math.round(Math[prop == 'x' ? 'cos' : 'sin'](angle) * 100) / 100)
         }
-        return this.position
+        return {
+            x: computePosition('x'),
+            y: computePosition('y'),
+            z: this.position.z
+        }
     }
 
     setPosition({ x, y, tileX, tileY }, move = true) {
@@ -289,8 +284,8 @@ export class RpgCommonPlayer {
         return intersection([z, z + this.height], [otherZ, otherZ + other.height])
     }
 
-    moveByDirection(direction: Direction): boolean {
-        const nextPosition = this.defineNextPosition(direction)
+    moveByDirection(direction: Direction, deltaTimeInt: number): boolean {
+        const nextPosition = this.defineNextPosition(direction, deltaTimeInt)
         return this.move(nextPosition)
     }
 
@@ -342,10 +337,9 @@ export class RpgCommonPlayer {
     }
 
     isCollided(nextPosition: Position): boolean {
-        this.collisionWith = []
+        this.collisionWith = [] 
         this._collisionWithTiles = []
-
-        const map: Map = this.mapInstance
+        const map: Map = this.mapInstance 
         const hitbox = Hit.createObjectHitbox(nextPosition.x, nextPosition.y, 0, this.hitbox.w, this.hitbox.h)
 
         if (!map) {
@@ -385,9 +379,14 @@ export class RpgCommonPlayer {
         ) {
             return true
         }
-        let events: RpgCommonPlayer[] = this.gameEngine.world.getObjectsOfGroup(this.map, this)
 
-        for (let event of events) {
+        const events: { [id: string]: RpgCommonPlayer } = this.gameEngine.world.getObjectsOfGroup(this.map, this)
+        const objects = map.grid.getObjectsByBox(this.getSizeMaxShape(nextPosition.x, nextPosition.y))
+
+        for (let objectId of objects) {
+            // client side: read "object" propertie
+            if (!events[objectId]) continue
+            const event = events[objectId]['object'] || events[objectId] 
             if (event.id == this.id) continue
             if (!this.zCollision(event)) continue
             const collided = Hit.testPolyCollision('box', hitbox, event.hitbox)
@@ -515,7 +514,8 @@ export class RpgCommonPlayer {
         {
             const { x, y } = this.position
             const { x: nx, y: ny } = nextPosition
-            if (Math.abs(x - nx) > Math.abs(y - ny)) {
+            const diff = Math.abs(x - nx) > Math.abs(y - ny)
+            if (diff) {
                 if (nx > x) {
                     this.changeDirection(Direction.Right)
                 }
@@ -565,21 +565,11 @@ export class RpgCommonPlayer {
      * 
      * @title Get Direction
      * @method player.getDirection()
-     * @returns {string} left, right, up or down
+     * @returns {Direction | number} direction
      * @memberof Player
      */
     getDirection(direction?: Direction | number): string | number {
-        const currentDir = direction || this.direction
-        if (!isString(currentDir)) {
-            return [Direction.Down, Direction.Left, Direction.Right, Direction.Up][currentDir]
-        }
-        const dir = { 
-            [Direction.Down]: 0, 
-            [Direction.Left]: 1, 
-            [Direction.Right]: 2,
-            [Direction.Up]: 3
-        }
-        return dir[currentDir]
+        return direction || this.direction
     }
 
      /**
@@ -628,6 +618,30 @@ export class RpgCommonPlayer {
         }
     }
 
+    getSizeMaxShape(x?: number, y?: number): { minX: number, minY: number, maxX: number, maxY: number } {
+        const _x = x || this.position.x
+        const _y = y || this.position.y
+        let minX = _x
+        let minY = _y
+        let maxX = _x + this.wHitbox
+        let maxY = _y + this.hHitbox
+        const shapes = this.getShapes()
+        for (let shape of shapes) {
+            if (shape.x < minX) minX = shape.x
+            if (shape.y < minY) minY = shape.y
+            const shapeMaxX = shape.x + shape.width
+            const shapeMaxY = shape.y + shape.height
+            if (shapeMaxX > maxX) maxX = shapeMaxX
+            if (shapeMaxY > maxY) maxY = shapeMaxY
+        }
+        return {
+            minX,
+            minY,
+            maxX,
+            maxY
+        }
+    }
+
     execMethod(methodName: string, methodData?, instance?) {}
 }
 
@@ -635,7 +649,6 @@ export interface RpgCommonPlayer {
     readonly type: string
     through: boolean
     throughOtherPlayer: boolean
-    steerable: any
     getVector3D(x, y, z): any
     execMethod(methodName: string, methodData?, instance?)
 }

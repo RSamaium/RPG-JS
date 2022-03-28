@@ -108,7 +108,7 @@ npm run dev
 
 > The installation is a bit long, don't worry!
 
-The game can be found in `@rpgjs/sample3` package.
+The game can be found in `@rpgjs/sample` package.
 
 
 ## Old Version

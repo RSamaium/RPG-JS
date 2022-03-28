@@ -77,6 +77,10 @@ export class SceneMap extends Scene implements IScene {
         const loader = PIXI.Loader.shared
         let nbLoad = 0
 
+        this.objects.forEach((object: Character) => {
+            object.logic.updateInVirtualGrid()
+        })
+
         loader.reset()
 
         for (let tileset of this.tilemap.tileSets) {
@@ -86,7 +90,7 @@ export class SceneMap extends Scene implements IScene {
         }
 
         loader.load((loader, resources) => {
-            for (let tileset of this.tilemap.tileSets) {
+             for (let tileset of this.tilemap.tileSets) {
                 const spritesheet = spritesheets.get(tileset.name)
                 if (resources[tileset.name]) spritesheet.resource = resources[tileset.name]  
             }
@@ -113,7 +117,6 @@ export class SceneMap extends Scene implements IScene {
                     obj.sounds.forEach(soundId => RpgSound.get(soundId).play())
                 }
                 resolve(this.viewport)
-                //RpgGui._attachSprites()
                 if  (this.onLoad) this.onLoad()
             }
             loader.onError.add(() => {
@@ -231,7 +234,7 @@ export class SceneMap extends Scene implements IScene {
         const inner = new PIXI.Container()
         const tilesOverlay = new PIXI.Container()
         const sprite = new this.game._playerClass(obj, this)
-        
+ 
         sprite.tilesOverlay = tilesOverlay
         inner.addChild(sprite)
         wrapper.addChild(inner, tilesOverlay)

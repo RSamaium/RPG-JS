@@ -6,10 +6,11 @@
     </window>
 </template>
 
-<script>
+<script lang="ts">
 import Window from './window.vue'
 import Choices from './choice.vue'
 import Arrow from './arrow.vue'
+import { Control } from '@rpgjs/client'
 
 export default {
     name: 'rpg-dialog',
@@ -25,7 +26,7 @@ export default {
         this.rpgEngine.controls.stopInputs()
         if (!this.isChoice && !this.autoClose) {
             this.obsKeyPress = this.rpgKeypress.subscribe(({ control }) => {
-                if (control && control.actionName == 'action') {
+                if (control && control.actionName == Control.Action) {
                     this.close()
                 }
             })

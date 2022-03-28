@@ -1,7 +1,5 @@
-import { RpgCommonMap, Utils, RpgShape }  from '@rpgjs/common'
-import * as Kompute from 'kompute/build/Kompute'
+import { RpgCommonMap, Utils, RpgShape, RpgCommonGame }  from '@rpgjs/common'
 import fs from 'fs'
-import * as YUKA from 'yuka'
 import { EventOptions } from '../decorators/event'
 import { EventMode, RpgEvent } from '../Event'
 import { Move } from '../Player/MoveManager'
@@ -68,8 +66,6 @@ export class RpgMap extends RpgCommonMap {
     public events: { 
         [eventId: string]: RpgEvent
     } = {}
-    kWorld: Kompute
-    entityManager = new YUKA.EntityManager()
 
     constructor(private _server: RpgServerEngine) {
         super()
@@ -81,30 +77,33 @@ export class RpgMap extends RpgCommonMap {
         }
         const data = await this.parseFile() 
         super.load(data) 
+        this._server.workers?.call('loadMap', {
+            id: this.id,
+            data
+        })
         RpgCommonMap.buffer.set(this.id, this)
         this.createDynamicEvent(this._events as EventPosOption[])
         this.onLoad()
     }
 
-    get game() {
+    get game(): RpgCommonGame {
         return this._server.gameEngine
     }
 
     onLoad() {}
 
     onJoin(player: RpgPlayer) {
-        this.entityManager.add(player.steerable)
+        
     }
 
     onLeave(player: RpgPlayer) {
-        player.stopBehavior()
-        this.entityManager.remove(player.steerable)
         this.getShapes().forEach(shape => shape.out(player))
-        const events: RpgPlayer[] = this.game.world.getObjectsOfGroup(this.id, player)
+        const events: RpgPlayer[] = Object.values(this.game.world.getObjectsOfGroup(this.id, player))
         for (let event of events) {
             player.getShapes().forEach(shape => shape.out(event))
             event.getShapes().forEach(shape => shape.out(player))
         }
+        this.grid.clearObjectInCells(player.id)
     }
 
     autoLoadEvent() {
@@ -243,10 +242,8 @@ export class RpgMap extends RpgCommonMap {
         }
 
         // Create an instance of RpgEvent and assign its options
-        const ev = this.game.addEvent(event, mode == EventMode.Shared)
+        const ev = this.game.addEvent(event)
         const _shape = shape || this.getEventShape(ev.name)
-
-        this.entityManager.add(ev.steerable)
 
         ev.width = event.width || this.tileWidth
         ev.height = event.height || this.tileHeight

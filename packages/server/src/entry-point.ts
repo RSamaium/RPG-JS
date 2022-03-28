@@ -30,6 +30,8 @@ interface RpgServerEntryPointOptions {
      * @memberof RpgServerEntryPoint
      * */
     globalConfig?: any
+
+    workers?: any
 }
 
 export default function(modules: ModuleType[], options: RpgServerEntryPointOptions): RpgServerEngine {

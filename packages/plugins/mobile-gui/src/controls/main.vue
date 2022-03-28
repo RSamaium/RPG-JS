@@ -8,10 +8,23 @@
     </div>
 </template>
 
-<script>
+<script lang="ts">
+import { Control, Direction } from '@rpgjs/client'
 import nipplejs from 'nipplejs'
 
-const DIRECTIONS = ['left', 'right', 'up', 'down']
+const DIRECTIONS = {
+    [Direction.Left]: 'left',
+    [Direction.Right]: 'right',
+    [Direction.Up]: 'up',
+    [Direction.Down]: 'down'
+}
+
+const DIRECTIONS_INVERSE = {
+    left: Direction.Left,
+    right: Direction.Right,
+    up: Direction.Up,
+    down: Direction.Down
+}
 
 export default {
     name: 'rpg-controls',
@@ -22,20 +35,20 @@ export default {
         })
         let directions = {}
         let moving = false
-        manager.on('added', (evt, nipple) => {
+        manager.on('added', (evt, nipple: any) => {
             const keyup = (key) => {
                  this.rpgEngine.controls.applyControl(key, false)
             }
             const end = () => {
                 moving = false
-                for (let key of DIRECTIONS) {
+                for (let key in DIRECTIONS) {
                     keyup(key)
                 }
             }
             const move = () => {
                 if (moving) {
                     for (let dir in directions) {
-                        this.rpgEngine.controls.applyControl(dir, true)
+                        this.rpgEngine.controls.applyControl(DIRECTIONS_INVERSE[dir], true)
                     }
                 }
             }
@@ -57,8 +70,9 @@ export default {
                         }
                     }
 
-                    for (let dir of DIRECTIONS) {
-                        if (!directions[dir]) {
+                    for (let dir in DIRECTIONS) {
+                        const directionName = DIRECTIONS[dir]
+                        if (!directions[directionName]) {
                             keyup(dir)
                         }
                     }
@@ -74,10 +88,10 @@ export default {
     },
     methods: {
         openMenu() {
-            this.rpgEngine.controls.applyControl('back')
+            this.rpgEngine.controls.applyControl(Control.Back)
         },
         action() {
-            this.rpgEngine.controls.applyControl('action')
+            this.rpgEngine.controls.applyControl(Control.Action)
         }
     }
 }

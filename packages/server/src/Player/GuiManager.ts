@@ -257,6 +257,7 @@ export class GuiManager {
      * If you don't specify the players as parameters, it will display the GUI of the instance 
      * But you can specify which GUIs to display by specifying the players as the first parameter
      * 
+     * @title View to GUI attached
      * @method player.showAttachedGui(players?)
      * @param {RpgPlayer[] | RpgPlayer} [players] The GUIs attached to the players to display
      * @since 3.0.0-beta.5
@@ -280,6 +281,7 @@ export class GuiManager {
     /** 
      * Hide the GUI attached to the players
      * 
+     * @title Hide to GUI attached
      * @method player.hideAttachedGui(players?)
      * @param {RpgPlayer[] | RpgPlayer} [players] The GUIs attached to the players to hide
      * @since 3.0.0-beta.5

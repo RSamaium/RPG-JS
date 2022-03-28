@@ -1,7 +1,7 @@
 import {_beforeEach} from './beforeEach'
-import { EventData, Input, MapData, RpgEvent, RpgMap, RpgModule, RpgPlayer, RpgServer, RpgServerEngine } from '@rpgjs/server'
+import { EventData, EventMode, Input, MapData, RpgEvent, RpgMap, RpgModule, RpgPlayer, RpgServer, RpgServerEngine } from '@rpgjs/server'
 import { RpgClientEngine, RpgSceneMap, Control } from '@rpgjs/client'
-import { clear } from '@rpgjs/testing'
+import { clear, nextTick } from '@rpgjs/testing'
 import { inputs } from './fixtures/control'
 
 let  client: RpgClientEngine, 
@@ -150,6 +150,7 @@ test('Test onAction', () => {
          client.controls.applyControl(Control.Action)
 
          client.nextFrame(0)
+         nextTick(client)
     })
  })
 
@@ -213,6 +214,119 @@ test('Test onChanges Hook [syncChanges method)', () => {
          player.changeMap('other-map')
     })
  })
+
+describe('Test Scenario Event', () => {
+
+    test('onInit Hook', () => {
+        return new Promise(async (resolve: any) => {
+            @EventData({
+                name: 'test',
+                mode: EventMode.Scenario
+            })
+            class MyEvent extends RpgEvent {
+                onInit(_player: RpgPlayer) {
+                    expect(_player.id).toBe(playerId)
+                    resolve()
+                }
+            }
+        
+            player.createDynamicEvent({
+                x: 0,
+                y: 0,
+                event: MyEvent
+            })
+        })
+     })
+
+    test('Test Collision with local event', () => {
+        @EventData({
+            name: 'test',
+            mode: EventMode.Scenario
+        })
+        class MyEvent extends RpgEvent {}
+       
+        player.createDynamicEvent({
+            x: 0,
+            y: 0,
+            event: MyEvent
+        })
+        player.setHitbox(1, 1)
+        player.teleport({ x: 0, y: 0 })
+
+        expect(player.otherPlayersCollision).toHaveLength(1)
+        const [event] = player.otherPlayersCollision
+        expect(event).toBeInstanceOf(MyEvent)
+     })
+
+     test('Get local event (client side)', async () => {
+        @EventData({
+            name: 'test',
+            mode: EventMode.Scenario
+        })
+        class MyEvent extends RpgEvent {}
+       
+        player.createDynamicEvent({
+            x: 0,
+            y: 0,
+            event: MyEvent
+        })
+        
+        await nextTick(client)
+
+        const events = client.gameEngine.world.getObjectsOfGroup()
+        expect(Object.keys(events)).toHaveLength(2)
+
+        const onlyEvents =( Object.values(events) as any[]).filter(ev => ev.object.type == 'event')
+        expect(onlyEvents).toHaveLength(1)
+        
+        for (let eventId in events) {
+            const event = events[eventId]
+            if (event.object.type != 'event') continue
+            expect(eventId).toBe(event.object.id)
+        }
+     })
+
+     test('Clear Map Events after leave map', async () => {
+        @EventData({
+            name: 'test',
+            mode: EventMode.Scenario
+        })
+        class MyEvent extends RpgEvent {}
+
+        @MapData({
+            id: 'other-map',
+            file: require('./fixtures/maps/map.tmx')
+        })
+        class OtherMap extends RpgMap {}
+
+        @RpgModule<RpgServer>({
+            maps: [
+                OtherMap
+            ]
+        })
+        class RpgServerModule {}
+
+        const { player } = await _beforeEach([{
+            server: RpgServerModule
+        }])
+
+        player.createDynamicEvent({
+            x: 0,
+            y: 0,
+            event: MyEvent
+        })
+
+        await player.changeMap('other-map')
+
+        expect(Object.values(player.events)).toHaveLength(0)
+
+        await nextTick(client)
+
+        const events = client.gameEngine.world.getObjectsOfGroup()
+        expect(Object.keys(events)).toHaveLength(1)
+        expect(Object.keys(client.gameEngine.events)).toHaveLength(0)
+     })
+})
 
 afterEach(() => {
     clear()

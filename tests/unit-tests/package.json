@@ -13,6 +13,7 @@
   "private": true,
   "dependencies": {
     "@rpgjs/client": "^3.0.0-beta.3",
+    "@rpgjs/common": "^3.0.0-beta.3",
     "@rpgjs/compiler": "^3.0.0-beta.3",
     "@rpgjs/database": "^3.0.0-beta.3",
     "@rpgjs/server": "^3.0.0-beta.3",

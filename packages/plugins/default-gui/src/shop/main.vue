@@ -40,8 +40,9 @@
     <BackButton />
 </template>
 
-<script>
+<script lang="ts">
 import BackButton from '../components/back.vue'
+import { Control } from '@rpgjs/client'
 
 export default {
     name: 'rpg-shop',
@@ -91,23 +92,23 @@ export default {
         })
 
         const interactionBuy = (name) => {
-            if (name == 'back') {
+            if (name == Control.Back) {
                 this.step = 0
             }
-            else if (name == 'up') {
+            else if (name == Control.Up) {
                 const nextPrice = this.currentItem.price * (this.quantity+1)
                 if (nextPrice > this.player.gold) {
                     return false
                 }
                 this.quantity += 1
             }
-            else if (name == 'down') {
+            else if (name == Control.Down) {
                 if (this.quantity - 1 == 0) {
                     return false
                 }
                 this.quantity -= 1
             }
-            else if (name == 'action') {
+            else if (name == Control.Action) {
                 this.doAction = true
                 this.rpgSocket().emit('gui.interaction', {
                     guiId: 'rpg-shop',
@@ -121,22 +122,22 @@ export default {
         }
 
         const interactionSell = (name) => {
-            if (name == 'back') {
+            if (name == Control.Back) {
                 this.step = 0
             }
-            else if (name == 'up') {
+            else if (name == Control.Up) {
                 if (this.quantity + 1 > this.currentItem.nb) {
                     return false
                 }
                 this.quantity += 1
             }
-            else if (name == 'down') {
+            else if (name == Control.Down) {
                 if (this.quantity - 1 == 0) {
                     return false
                 }
                 this.quantity -= 1
             }
-            else if (name == 'action') {
+            else if (name == Control.Action) {
                 this.doAction = true
                 this.rpgSocket().emit('gui.interaction', {
                     guiId: 'rpg-shop',
@@ -153,7 +154,7 @@ export default {
             if (!control) return
             const name = control.actionName
             if (!this.mode) {
-                if (name == 'back') {
+                if (name == Control.Back) {
                     this.close()
                 }
             }
@@ -163,7 +164,7 @@ export default {
                    if (this.mode == 'sell') interactionSell(name)
                 }
                 else {
-                    if (name == 'back') {
+                    if (name == Control.Back) {
                         this.mode = ''
                         this.description = ''
                         this.menuActive = true
