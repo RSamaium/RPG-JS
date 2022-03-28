@@ -5,13 +5,15 @@ import monitoring from '@rpgjs/monitoring'
 import gamepad from '@rpgjs/gamepad'
 import starterKit from '@rpgjs/starter-kit'
 import emotionBubblesPlugin from '@rpgjs/plugin-emotion-bubbles'
+import title from '@rpgjs/title-screen'
 
 export default [
-    //main,
+    main,
     gamepad,
-    starterKit,
+    //starterKit,
     defaultGui,
-    //mobileGui,
+    mobileGui,
     emotionBubblesPlugin,
     monitoring, 
+    //title
 ]
