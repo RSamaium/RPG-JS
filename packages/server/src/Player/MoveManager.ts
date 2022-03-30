@@ -1,4 +1,4 @@
-import { Direction } from '@rpgjs/common'
+import { Direction, LiteralDirection } from '@rpgjs/common'
 import { Utils } from '@rpgjs/common'
 import { RpgPlayer } from './Player';
 
@@ -196,7 +196,10 @@ class MoveList {
     }
 
     private _awayFromPlayer({ isTile, typeMov }: { isTile: boolean, typeMov: string}, otherPlayer: RpgPlayer, repeat: number = 1) {
-        const method = dir => this[isTile ? 'tile' + capitalize(dir) : dir](repeat)
+        const method = (dir: number) => {
+            const direction: string = LiteralDirection[dir]
+            return this[isTile ? 'tile' + capitalize(direction) : direction](repeat)
+        }
         return (player: RpgPlayer, map) => {
             let newDirection = 0
             switch (typeMov) {

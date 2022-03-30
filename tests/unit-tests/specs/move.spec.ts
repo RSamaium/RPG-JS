@@ -55,24 +55,39 @@ describe('Change Direction', () => {
         expect(player.direction).toBe(3)
     })
 
-    test('Turn Direction Toward Player', async () => {
-        @EventData({
-            name: 'test',
-            mode: EventMode.Scenario
+    describe('Event Move', () => {
+        let event: RpgEvent
+        beforeEach(() => {
+            @EventData({
+                name: 'test',
+                mode: EventMode.Scenario
+            })
+            class MyEvent extends RpgEvent {}
+            const events = player.createDynamicEvent({
+                x: 0,
+                y: 0,
+                event: MyEvent
+            })
+            event = Object.values(events)[0] as RpgEvent
         })
-        class MyEvent extends RpgEvent {}
-        const events = player.createDynamicEvent({
-            x: 0,
-            y: 0,
-            event: MyEvent
+
+        test('Turn Direction Toward Player', async () => {
+            event.position.y = 50
+            await event.moveRoutes([ Move.turnTowardPlayer(player) ])
+            expect(event.direction).toBe(1)
         })
-        const [event] = Object.values(events) as RpgEvent[]
-        expect(event.direction).toBe(INITIAL_DIRECTION)
+    
+        test('Away From Player', async () => {
+            event.position.y = 50
+            await event.moveRoutes([ Move.awayFromPlayer(player) ])
+            expect(event.position).toMatchObject({ x:0, y: 50 + INITIAL_SPEED, z: 0 })
+        })
 
-        event.position.y = 50
-
-        await event.moveRoutes([ Move.turnTowardPlayer(player) ])
-        expect(event.direction).toBe(1)
+        test('Toward Player', async () => {
+            event.position.y = 50
+            await event.moveRoutes([ Move.towardPlayer(player) ])
+            expect(event.position).toMatchObject({ x:0, y: 50 - INITIAL_SPEED, z: 0 })
+        })
     })
 })
 

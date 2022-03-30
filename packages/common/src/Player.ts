@@ -20,6 +20,13 @@ export enum Direction {
     UpLeft =  2.5
 }
 
+export const LiteralDirection =  {
+    1: 'up',
+    2: 'right',
+    3: 'down',
+    4: 'left'
+}
+
 export enum PlayerType {
     Player = 'player',
     Event = 'event'
