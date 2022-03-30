@@ -215,6 +215,37 @@ test('Test onChanges Hook [syncChanges method)', () => {
     })
  })
 
+ async function getDynamicEvent(instance: RpgPlayer | RpgMap) {
+    @EventData({
+        name: 'test'
+    })
+    class MyEvent extends RpgEvent {}
+    const events = instance.createDynamicEvent({
+        x: 100,
+        y: 200,
+        event: MyEvent
+    })
+    const [event] = Object.values(events)
+    expect(event).toBeTruthy()
+    event.position.x = 150
+    await nextTick(client)
+    const clientEvent = client.gameEngine.world.getObject(event.id)
+    return  {
+        event, 
+        clientEvent
+    }
+ }
+
+ test('Event Sync after create dynamic event (map)', async () => {
+    const { clientEvent, event } = await getDynamicEvent(map)
+    expect(clientEvent.position.x).toBe(event.position.x)
+ })
+
+ test('Event Sync after create dynamic event (player)', async () => {
+    const { clientEvent, event } = await getDynamicEvent(player)
+    expect(clientEvent.position.x).toBe(event.position.x)
+ })
+
 describe('Test Scenario Event', () => {
 
     test('onInit Hook', () => {

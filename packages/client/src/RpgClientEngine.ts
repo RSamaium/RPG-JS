@@ -606,11 +606,16 @@ export class RpgClientEngine {
         return this.renderer.getScene()
     }
 
+    get PIXI() {
+        return PIXI
+    }
+
     reset() {
         this.subscriptionWorld.unsubscribe()
         this.world.reset()
         spritesheets.clear()
         sounds.clear()
         PIXI.Loader.shared.reset()
+        PIXI.utils.clearTextureCache()
     }
 }

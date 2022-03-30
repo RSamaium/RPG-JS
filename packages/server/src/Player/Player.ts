@@ -270,11 +270,14 @@ export class RpgPlayer extends RpgCommonPlayer {
             })
         }
         const events = mapInstance.createEvents(eventsListMode as EventPosOption[], EventMode.Scenario)
+        let ret = {}
         for (let key in events) {
             this.events[key] = events[key]
             this.events[key].execMethod('onInit', [this])
+            // force to get Proxy object to sync with client
+            ret = { ...ret, [key]: this.events[key] }
         }
-        return events
+        return ret
     }
 
     /**

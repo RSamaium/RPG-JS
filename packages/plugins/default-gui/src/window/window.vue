@@ -2,7 +2,6 @@
     <transition name="fade">
         <div v-if="loading" class="window" :class="classPosition" :style="{ height }">
             <div class="window-content" :class="css" :style="{ width }">
-                {{ arrow }}
                 <div v-if="arrow == 'up'">
                     <Arrow :center="true" direction="up" />
                 </div>  

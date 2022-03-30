@@ -202,11 +202,14 @@ export class RpgMap extends RpgCommonMap {
             eventsList = [eventsList as EventPosOption]
         }
         const events = this.createEvents(eventsList as EventPosOption[], EventMode.Shared)
+        let ret = {}
         for (let key in events) {
             this.events[key] = events[key]
             this.events[key].execMethod('onInit')
+            // force to get Proxy object to sync with client
+            ret = { ...ret, [key]: this.events[key] }
         }
-        return events
+        return ret
     }
 
     /**

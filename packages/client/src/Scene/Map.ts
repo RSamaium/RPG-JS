@@ -90,7 +90,7 @@ export class SceneMap extends Scene implements IScene {
         }
 
         loader.load((loader, resources) => {
-             for (let tileset of this.tilemap.tileSets) {
+            for (let tileset of this.tilemap.tileSets) {
                 const spritesheet = spritesheets.get(tileset.name)
                 if (resources[tileset.name]) spritesheet.resource = resources[tileset.name]  
             }
