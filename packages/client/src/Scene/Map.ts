@@ -6,10 +6,9 @@ import { Scene } from './Scene'
 import { spritesheets } from '../Sprite/Spritesheets'
 import Character from '../Sprite/Character'
 import { RpgSound } from '../Sound/RpgSound'
-import { RpgGui } from '../RpgGui'
+import { RpgSprite } from '../Sprite/Player'
 
 export class SceneMap extends Scene implements IScene {
-
     /** 
      * Get the tilemap
      * 
@@ -28,10 +27,9 @@ export class SceneMap extends Scene implements IScene {
      * @prop {PIXI.Viewport} viewport
      * @memberof RpgSceneMap
      * */
-    protected viewport: Viewport | undefined
+    public viewport: Viewport | undefined
     private players: object = {}
     private isLoaded: boolean = false
-
     private gameMap: RpgCommonMap
 
     shapes = {}
@@ -233,7 +231,7 @@ export class SceneMap extends Scene implements IScene {
         const wrapper = new PIXI.Container()
         const inner = new PIXI.Container()
         const tilesOverlay = new PIXI.Container()
-        const sprite = new this.game._playerClass(obj, this)
+        const sprite = new RpgSprite(obj, this)
  
         sprite.tilesOverlay = tilesOverlay
         inner.addChild(sprite)

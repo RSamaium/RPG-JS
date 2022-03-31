@@ -437,6 +437,7 @@ export class MoveManager {
     moveRoutes(routes: Routes) : Promise<boolean> {
         let count = 0
         let frequence = 0
+        this.breakRoutes() // break previous route
         return new Promise((resolve) => {
             this._finishRoute = resolve
             routes = routes.map((route: any) => {

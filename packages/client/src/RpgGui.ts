@@ -1,8 +1,11 @@
-import { createApp } from 'vue'
+import { App, ComponentPublicInstance, createApp } from 'vue'
 import { RpgCommonPlayer } from '@rpgjs/common'
 import { map } from 'rxjs/operators'
 import { RpgSound } from './Sound/RpgSound'
-import { RpgClientEngine, RpgResource, RpgScene, RpgSprite } from './index'
+import { RpgClientEngine, RpgResource } from './index'
+import { RpgRenderer } from './Renderer'
+import { GameEngineClient } from './GameEngine'
+import { SceneMap } from './Scene/Map'
 
 interface GuiOptions {
     data: any,
@@ -11,16 +14,23 @@ interface GuiOptions {
     name: string
 }
 
+interface GuiList {
+    [guiName: string]: GuiOptions
+}
+
+interface VueInstance extends ComponentPublicInstance {
+    gui: GuiList,
+    tooltips: RpgCommonPlayer[]
+}
+
 class Gui {
-    private renderer
-    private gameEngine
+    private renderer: RpgRenderer
+    private gameEngine: GameEngineClient
     private clientEngine: RpgClientEngine
-    private app
-    private vm
+    private app: App
+    private vm: VueInstance
     private socket
-    private gui: {
-        [guiName: string]: GuiOptions
-    } = {}
+    private gui: GuiList = {}
 
     _initalize(clientEngine: RpgClientEngine) {
 
@@ -356,16 +366,18 @@ class Gui {
             },
             methods: {
                 propagate: (type: string, event) => {
-                    this.renderer.renderer.view.dispatchEvent(new MouseEvent(type, event))
+                    this.renderer.canvas.dispatchEvent(new MouseEvent(type, event))
                 },
                 tooltipPosition: (position: { x: number, y: number }) => {
-                    const scene = this.renderer.getScene()
+                    const scene = this.renderer.getScene<SceneMap>()
                     const viewport = scene.viewport
-                    const left = position.x - viewport.left
-                    const top = position.y - viewport.top
-                    return {
-                        transform: `translate(${left}px,${top}px)`
-                    }
+                    if (viewport) {
+                        const left = position.x - viewport.left
+                        const top = position.y - viewport.top
+                        return {
+                            transform: `translate(${left}px,${top}px)`
+                        }
+                    }  
                 },
                 tooltipFilter(sprites: RpgCommonPlayer[], ui: GuiOptions): RpgCommonPlayer[] {
                     return sprites.filter(tooltip => tooltip.guiDisplay)
@@ -382,13 +394,13 @@ class Gui {
                 name: ui.name
             }
         } 
-        this.vm = this.app.mount(selectorGui)
+        this.vm = this.app.mount(selectorGui) as VueInstance
         this.vm.gui = this.gui
         this.renderer.app = this.app
         this.renderer.vm = this.vm
     }
 
-    update(logicObjects) {
+    update(logicObjects: RpgCommonPlayer) {
         this.vm.tooltips = Object.values(logicObjects).map((object: any) => object.object)
     }
 
@@ -399,7 +411,7 @@ class Gui {
         })
         this.socket.on('gui.tooltip', ({ players, display }) => {
             for (let playerId of players) {
-                const sprite = this.renderer.getScene().getSprite(playerId)
+                const sprite = this.renderer.getScene<SceneMap>().getSprite(playerId)
                 sprite.guiDisplay = display
             }   
         })
@@ -476,7 +488,7 @@ class Gui {
      * @returns {boolean}
      * @memberof RpgGui
      */
-    exists(id): boolean {
+    exists(id: string): boolean {
         return !!this.get(id)
     }
 
@@ -496,7 +508,7 @@ class Gui {
      * @returns {void}
      * @memberof RpgGui
      */
-    display(id, data = {}) {
+    display(id: string, data = {}) {
         this._setGui(id, {
             display: true,
             data
@@ -518,7 +530,7 @@ class Gui {
      * @returns {void}
      * @memberof RpgGui
      */
-    hide(id) {
+    hide(id: string) {
         this._setGui(id, {
             display: false
         })

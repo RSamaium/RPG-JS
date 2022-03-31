@@ -1,8 +1,7 @@
 import { KeyboardControls } from './KeyboardControls'
-import Renderer from './Renderer'
+import { RpgRenderer } from './Renderer'
 import { _initSpritesheet, spritesheets } from './Sprite/Spritesheets'
 import { _initSound, sounds } from './Sound/Sounds'
-import { RpgSprite } from './Sprite/Player'
 import { World } from '@rpgjs/sync-client'
 import { BehaviorSubject, Observable, Subject, Subscription } from 'rxjs'
 import { RpgGui } from './RpgGui'
@@ -13,11 +12,11 @@ import {
     Utils, 
     RpgPlugin, 
     HookClient, 
-    RpgCommonGame
 } from '@rpgjs/common'
 import merge from 'lodash.merge'
 import { RpgSound } from './Sound/RpgSound'
 import { SceneMap } from './Scene/Map'
+import { GameEngineClient } from './GameEngine'
 
 declare var __RPGJS_PRODUCTION__: boolean;
 
@@ -46,7 +45,7 @@ export class RpgClientEngine {
      * @readonly
      * @memberof RpgClientEngine
      * */
-    public renderer: any
+    public renderer: RpgRenderer
 
     /** 
      * Get the socket
@@ -96,14 +95,14 @@ export class RpgClientEngine {
     private clientFrames: Map<number, FrameData> = new Map()
     private serverFrames: Map<number, FrameData> = new Map()
 
-    constructor(public gameEngine: RpgCommonGame, private options) { 
+    constructor(public gameEngine: GameEngineClient, private options) { 
         this.tick.subscribe(({ timestamp, deltaTime }) => {
             if (timestamp != -1) this.step(timestamp, deltaTime)
         })
     }
 
     private async _init() {
-        this.renderer = new Renderer(this)
+        this.renderer = new RpgRenderer(this)
         this.renderer.client = this
 
         const pluginLoadRessource = async (hookName: string, type: string) => {
@@ -132,8 +131,7 @@ export class RpgClientEngine {
         this.io = this.options.io
         this.globalConfig = this.options.globalConfig
 
-        this.gameEngine._playerClass = this.renderer.options.spriteClass || RpgSprite
-        this.gameEngine.standalone = this.options['standalone']
+        this.gameEngine.standalone = this.options.standalone
         this.gameEngine.renderer = this.renderer
         this.gameEngine.clientEngine = this
 
@@ -457,12 +455,12 @@ export class RpgClientEngine {
         })
 
         this.socket.on('changeTile', ({ tiles, x, y }) => {
-            const scene = this.renderer.getScene() as SceneMap
+            const scene = this.renderer.getScene<SceneMap>()
             scene.changeTile(x, y, tiles)
         })
         
         this.socket.on('callMethod', ({ objectId, params, name }) => {
-            const scene = this.renderer.getScene()
+            const scene = this.renderer.getScene<SceneMap>()
             const sprite = scene.getPlayer(objectId)
             switch (name) {
                 case 'showAnimation':
@@ -485,7 +483,7 @@ export class RpgClientEngine {
             .value
             .subscribe((val: { data: any, partial: any, time: number, roomId: string }) => {
 
-            const scene = this.renderer.getScene()
+            const scene = this.renderer.getScene<SceneMap>()
 
             if (!val.data) {
                 return

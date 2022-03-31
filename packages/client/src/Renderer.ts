@@ -2,16 +2,19 @@ window.PIXI = require('pixi.js')
 
 import { RpgPlugin, HookClient } from '@rpgjs/common'
 import { SceneMap } from './Scene/Map'
-import { Scene } from './Presets/Scene'
+import { Scene } from './Scene/Scene'
+import { Scene as PresetScene } from './Presets/Scene'
 import { RpgGui } from './RpgGui'
 import { RpgClientEngine } from './RpgClientEngine'
+import { App, ComponentPublicInstance } from 'vue'
 
-export default class RpgRenderer  {
+export class RpgRenderer  {
 
-    public vm: any
-    private scene: any = null
-    private stage: PIXI.Container = new PIXI.Container()
-    private renderer: any
+    public vm: ComponentPublicInstance
+    public app: App
+    private scene: Scene | null = null
+    public readonly stage: PIXI.Container = new PIXI.Container()
+    private renderer: PIXI.Renderer
     public options: any = {}
     private _width: number = 800
     private _height: number = 400
@@ -34,12 +37,13 @@ export default class RpgRenderer  {
         this.onDOMLoaded()
     }
 
-    _resize(w, h) {
+    _resize(w: number, h: number) {
         if (!w) w = this.options.canvas.width
         if (!h) h = this.options.canvas.height
-        if (this.scene && this.scene.viewport) {
-            this.scene.viewport.screenWidth = w
-            this.scene.viewport.screenHeight = h
+        const scene = this.getScene<SceneMap>()
+        if (this.scene && scene.viewport) {
+            scene.viewport.screenWidth = w
+            scene.viewport.screenHeight = h
         }
         if (this.vm) {
             this.vm.$el.style = `width:${w}px;height:${h}px`
@@ -47,6 +51,10 @@ export default class RpgRenderer  {
         this.renderer.resize(w, h)
         this._width = w
         this._height = h
+    }
+
+    get canvas(): HTMLCanvasElement {
+        return this.renderer.view
     }
 
     get height() {
@@ -73,7 +81,6 @@ export default class RpgRenderer  {
             ...this.options.canvas
         };
         this.renderer = PIXI.autoDetectRenderer(options)
-        //this.gameEngine.renderer = this.renderer
         this.selector = document.body.querySelector(this.options.selector)
         this.guiEl = this.selector.querySelector(this.options.selectorGui)
         this.canvasEl = this.selector.querySelector(this.options.selectorCanvas)
@@ -107,8 +114,8 @@ export default class RpgRenderer  {
         size()
     }
 
-    getScene(): Scene {
-        return this.scene
+    getScene<T = Scene>(): T {
+        return this.scene as any
     }
     
     draw(t: number, dt: number, frame: number) {
@@ -117,7 +124,7 @@ export default class RpgRenderer  {
         this.renderer.render(this.stage)
     }
 
-    async loadScene(name, obj) {
+    async loadScene(name: string, obj) {
         const currentPlayerId = this.gameEngine.playerId
         RpgPlugin.emit(HookClient.BeforeSceneLoading, {
             name, 
@@ -125,27 +132,22 @@ export default class RpgRenderer  {
         })
         this.scene = null
         this.gameEngine.world.removeObject(currentPlayerId)
-        // If a scene exists, remove the current player and viewport
-        if (this.scene) {
-            this.scene.removeObject(currentPlayerId)
-            if (this.scene.viewport) this.scene.viewport.plugins.remove('follow')
-        }
         this.stage.removeChildren()
         const scenes = this.options.scenes || {}
-        if (this.scene) {
-            this.scene.controls.boundKeys = {}
-        }
         switch (name) {
-            case Scene.Map:
-                const sceneClass = scenes[Scene.Map] || SceneMap
+            case PresetScene.Map:
+                const sceneClass = scenes[PresetScene.Map] || SceneMap
                 this.scene = new sceneClass(this.gameEngine, {
                     screenWidth: this.renderer.screen.width,
                     screenHeight: this.renderer.screen.height
                 })
                 break;
         }
+
+        if (!this.scene) return
         
-        const container = await this.scene.load(obj)
+        const container = await this.getScene<SceneMap>().load(obj)
+
         this.stage.addChild(container)
         RpgPlugin.emit(HookClient.AfterSceneLoading, this.scene)
     }

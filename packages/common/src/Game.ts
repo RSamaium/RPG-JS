@@ -9,14 +9,7 @@ export default class Game extends EventEmitter {
 
     events: any
     world: any
-
-    // client side only
-    playerId: string
-    standalone: boolean
-    clientEngine: any
-    renderer: any
-    _playerClass: any
-
+    
     constructor(private side: string) {
         super()
         this.events = {} // events for all player in map
