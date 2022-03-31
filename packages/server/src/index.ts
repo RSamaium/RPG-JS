@@ -20,7 +20,7 @@ import RpgEnemy from './Enemy'
 import { Query } from './Query'
 import Monitor from './Monitor'
 import * as Presets from './presets'
-import { Move } from './Player/MoveManager'
+import { Move, Frequency, Speed } from './Player/MoveManager'
 import { RpgServerEngine } from './server'
 
 export {
@@ -49,5 +49,7 @@ export {
     RpgServerEngineHooks,
     RpgServerEngine,
     RpgShape,
-    ShapePositioning
+    ShapePositioning,
+    Frequency,
+    Speed
 }

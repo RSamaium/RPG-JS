@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.5" tiledversion="1.7.1" orientation="orthogonal" renderorder="right-down" width="200" height="200" tilewidth="32" tileheight="32" infinite="0" nextlayerid="4" nextobjectid="13">
+<map version="1.8" tiledversion="1.8.2" orientation="orthogonal" renderorder="right-down" width="200" height="200" tilewidth="32" tileheight="32" infinite="0" nextlayerid="4" nextobjectid="13">
  <tileset firstgid="1" source="[Base]BaseChip_pipo.tsx"/>
  <layer id="1" name="Tile Layer 1" width="200" height="200">
   <data encoding="base64">
@@ -17,7 +17,6 @@
   </object>
   <object id="11" x="299.424" y="446.079" width="235.682" height="46.2754">
    <properties>
-    <property name="color" value="0xDE3249"/>
     <property name="obstacle" type="bool" value="true"/>
    </properties>
   </object>

@@ -616,10 +616,10 @@ export class RpgCommonPlayer {
         switch (direction) {
             case Direction.Down:
             case Direction.Up:
-                return this.mapInstance.tileHeight / this.speed
+                return Math.floor(this.mapInstance.tileHeight / this.speed)
             case Direction.Left:
             case Direction.Right:
-                return this.mapInstance.tileWidth / this.speed
+                return Math.floor(this.mapInstance.tileWidth / this.speed)
             default: 
                 return NaN
         }

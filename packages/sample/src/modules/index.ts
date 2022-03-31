@@ -13,9 +13,9 @@ export default [
     gamepad,
     //starterKit,
     defaultGui,
-    mobileGui,
+    //mobileGui,
     emotionBubblesPlugin,
     monitoring, 
-    chat,
+    //chat,
     //title
 ]

@@ -436,7 +436,7 @@ export class MoveManager {
      */
     moveRoutes(routes: Routes) : Promise<boolean> {
         let count = 0
-        let frequence = this.frequency
+        let frequence = 0
         return new Promise((resolve) => {
             this._finishRoute = resolve
             routes = routes.map((route: any) => {
@@ -447,13 +447,13 @@ export class MoveManager {
             })
             routes = arrayFlat(routes)
             const move = () => {
-                if (count % this['nbPixelInTile'] == 0) {
+                if (count >= this['nbPixelInTile']) {
                     if (frequence < this.frequency) {
                         frequence++
                         return
                     }
                 }
-
+                
                 frequence = 0
                 count++
 
