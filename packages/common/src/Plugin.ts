@@ -50,7 +50,9 @@ export enum HookClient {
     SpriteMove = 'Client.SpriteMove'
 }
 
-// deprecated
+/**
+ * @deprecated
+ */
 export class PluginSystem extends EventEmitter {
     private loadPlugins(plugins: Plugin[], shared: any, type: string) {
         if (!plugins) return

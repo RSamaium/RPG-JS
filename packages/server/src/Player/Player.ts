@@ -557,6 +557,7 @@ export class RpgPlayer extends RpgCommonPlayer {
         if (this._socket) this._socket.emit(key, value) 
     }
 
+  
     /**
      * Listen to the data (socket) sent by the client
      * 
@@ -583,6 +584,7 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @memberof Player
      */
     public once(key: string, cb: Function) {
+        this.on('mm', () => {})
         if (this._socket) this._socket.once(key, cb) 
     }
 
