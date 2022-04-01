@@ -9,25 +9,21 @@ import { RpgClientEngine } from './RpgClientEngine'
 import { App, ComponentPublicInstance } from 'vue'
 
 export class RpgRenderer  {
-
     public vm: ComponentPublicInstance
     public app: App
-    private scene: Scene | null = null
     public readonly stage: PIXI.Container = new PIXI.Container()
-    private renderer: PIXI.Renderer
     public options: any = {}
+    public guiEl: HTMLDivElement
+
+    private scene: Scene | null = null
+    private renderer: PIXI.Renderer
     private _width: number = 800
-    private _height: number = 400
-    guiEl: HTMLDivElement
-    canvasEl: HTMLElement
-    selector: HTMLElement
-    animation
-    client
-    gameEngine
-    doReset = false
+    private _height: number = 400 
+    private canvasEl: HTMLElement
+    private selector: HTMLElement
+    private gameEngine = this.clientEngine.gameEngine
 
     constructor(private clientEngine: RpgClientEngine) {
-        this.gameEngine = clientEngine.gameEngine
         this.clientEngine.tick.subscribe(({ timestamp, deltaTime, frame }) => {
             this.draw(timestamp, deltaTime, frame)
         })
@@ -57,19 +53,19 @@ export class RpgRenderer  {
         return this.renderer.view
     }
 
-    get height() {
+    get height(): number {
         return this._height
     }
 
-    set height(val) {
+    set height(val: number) {
        this._resize(this._width, val)
     }
 
-    get width() {
+    get width(): number {
         return this._width
     }
 
-    set width(val) {
+    set width(val: number) {
         this._resize(val, this.height)
     }
 
@@ -99,7 +95,7 @@ export class RpgRenderer  {
             this.canvasEl.appendChild(this.renderer.view)
         }
 
-        RpgGui._initalize(this.client)
+        RpgGui._initalize(this.clientEngine)
 
         this.resize()
     }

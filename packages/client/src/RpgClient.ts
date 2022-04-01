@@ -1,8 +1,9 @@
 import { RpgSprite } from './Sprite/Player'
 import { ModuleType } from '@rpgjs/common'
-import { Scene } from './Scene/Scene'
 import { SceneMap } from './Scene/Map'
 import { RpgClientEngine } from './RpgClientEngine'
+
+type RpgClass<T = any> = new (...args: any[]) => T
 
 export interface RpgClientEngineHooks {
     /**
@@ -11,7 +12,7 @@ export interface RpgClientEngineHooks {
      * @prop { (engine: RpgClientEngine) => boolean | any } [onStart]
      * @memberof RpgEngineHooks
      */
-    onStart?: (engine: RpgClientEngine) => any
+    onStart?: (engine: RpgClientEngine) => boolean | void
 
     /**
      * Each frame
@@ -225,7 +226,7 @@ export interface RpgClient {
      * @prop {Array<Class>} [spritesheets]
      * @memberof RpgClient
      * */
-    spritesheets?: any[],
+    spritesheets?: RpgClass[],
 
     /** 
      * Array containing the list of VueJS components
@@ -280,7 +281,7 @@ export interface RpgClient {
      * @prop {Array<Class>} [sounds]
      * @memberof RpgClient
      * */
-    sounds?: any[],
+    sounds?: RpgClass[],
 
     /** 
      * Give the `RpgSprite` class. A Sprite represents a player or an event

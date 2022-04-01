@@ -21,7 +21,7 @@ beforeEach(async () => {
     server = ret.server
     playerId = ret.playerId
     map = player.getCurrentMap() as RpgMap
-    sceneMap = client.scene
+    sceneMap = client.getScene<RpgSceneMap>()
 })
 
 test('Create Dynamic Event', () => {

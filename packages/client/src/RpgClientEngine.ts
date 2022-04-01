@@ -17,6 +17,7 @@ import merge from 'lodash.merge'
 import { RpgSound } from './Sound/RpgSound'
 import { SceneMap } from './Scene/Map'
 import { GameEngineClient } from './GameEngine'
+import { Scene } from './Scene/Scene'
 
 declare var __RPGJS_PRODUCTION__: boolean;
 
@@ -103,7 +104,6 @@ export class RpgClientEngine {
 
     private async _init() {
         this.renderer = new RpgRenderer(this)
-        this.renderer.client = this
 
         const pluginLoadRessource = async (hookName: string, type: string) => {
             const resource = this.options[type] || []
@@ -597,11 +597,24 @@ export class RpgClientEngine {
      * retrieves the current scene (SceneMap if you are on a map)
      * 
      * @prop {RpgScene} [scene]
+     * @deprecated
      * @readonly
      * @memberof RpgClientEngine
      * */
     get scene() {
         return this.renderer.getScene()
+    }
+
+    /**
+     * retrieves the current scene (SceneMap if you are on a map)
+     *
+     * @title Connect to server
+     * @method getScene()
+     * @returns {RpgScene}
+     * @memberof RpgClientEngine
+     */
+    getScene<T = Scene>(): T {
+        return this.renderer.getScene<T>()
     }
 
     get PIXI() {
