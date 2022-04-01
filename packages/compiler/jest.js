@@ -7,7 +7,8 @@ module.exports = {
         "\\.vue$": "@vue/vue3-jest"
     },
     transformIgnorePatterns: [
-        "/node_modules/(?!(@?rpgjs.+)/)/"
+        "/node_modules/(?!(@?rpgjs.+)/)/",
+        "/@rpgjs/server/"
     ],
     moduleFileExtensions: [
         "ts",
@@ -30,8 +31,6 @@ module.exports = {
         '^rpg!(.*)$': '$1',
         '^development!(.*)$': '$1',
         '^production!(.*)$': '$1',
-        '^client!(.*)$': '$1',
-        
-        //'^client!(.*)$': '<rootDir>/node_modules/@rpgjs/compiler/loaders/null.js'
+        '^client!(.*)$': '$1'
     }
 }

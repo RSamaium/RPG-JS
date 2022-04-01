@@ -213,6 +213,19 @@ export class RpgMap extends RpgCommonMap {
     }
 
     /**
+     * Get Event in current map
+     * @title Get Event
+     * @since 3.0.0-beta.7
+     * @method map.getEvent(eventId)
+     * @param {string} eventId Event Id
+     * @returns {RpgEvent | undefined}
+     * @memberof Map
+     */
+    getEvent<T extends RpgEvent>(eventId: string): T | undefined {
+        return this.events[eventId] as T
+    }
+
+    /**
      * Removes an event from the map. Returns false if the event is not found
      * @title Remove Event
      * @since 3.0.0-beta.4

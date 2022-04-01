@@ -1,7 +1,6 @@
 import {_beforeEach} from './beforeEach'
 import { Move, RpgModule, RpgPlayer, RpgServerEngine } from '@rpgjs/server'
 import { RpgClientEngine, RpgClient, RpgGui } from '@rpgjs/client'
-import {render, fireEvent} from '@testing-library/vue'
 import { clear, nextTick } from '@rpgjs/testing'
 import menuGui from './fixtures/gui/menu.vue'
 import tooltipGui from './fixtures/gui/tooltip.vue'
