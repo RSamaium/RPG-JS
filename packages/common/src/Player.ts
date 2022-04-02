@@ -34,7 +34,6 @@ export enum PlayerType {
 }
 
 export class RpgCommonPlayer {
-    /** @internal */
     map: string = ''
     graphic: string = ''
     height: number = 0
@@ -87,7 +86,6 @@ export class RpgCommonPlayer {
         this.playerId = str
     }
 
-    /** @internal */
     updateInVirtualGrid() {
         const map = this.mapInstance
         if (map /*&& this.gameEngine.isWorker TODO */) {
@@ -353,7 +351,6 @@ export class RpgCommonPlayer {
         return map.getTile(hitbox || this.hitbox, x, y, [z, this.height])
     }
 
-    /** @internal */
     isCollided(nextPosition: Position): boolean {
         this.collisionWith = [] 
         this._collisionWithTiles = []
