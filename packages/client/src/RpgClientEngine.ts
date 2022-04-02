@@ -370,6 +370,7 @@ export class RpgClientEngine {
         return logic
     }
 
+     /** @internal */
     sendInput(actionName: string) {
         const inputEvent = { input: actionName, playerId: this.gameEngine.playerId }
         const player = this.gameEngine.world.getObject(this.gameEngine.playerId)

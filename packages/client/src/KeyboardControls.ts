@@ -219,6 +219,7 @@ export class KeyboardControls {
         if (globalConfig.inputs) this.setInputs(globalConfig.inputs)
     }
 
+     /** @internal */
     preStep() {
         //this.directionToAngle()
         const boundKeys = Object.keys(this.boundKeys)

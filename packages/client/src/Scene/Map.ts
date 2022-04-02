@@ -2,13 +2,13 @@ import { RpgCommonMap, RpgPlugin, HookClient, RpgShape } from '@rpgjs/common'
 import TileMap from '../Tilemap'
 import { Viewport } from 'pixi-viewport'
 import { IScene } from '../Interfaces/Scene'
-import { Scene } from './Scene'
+import { Scene, SceneObservableData, SceneSpriteLogic } from './Scene'
 import { spritesheets } from '../Sprite/Spritesheets'
 import Character from '../Sprite/Character'
 import { RpgSound } from '../Sound/RpgSound'
 import { RpgSprite } from '../Sprite/Player'
 
-export class SceneMap extends Scene implements IScene {
+export class SceneMap extends Scene {
     /** 
      * Get the tilemap
      * 
@@ -63,6 +63,7 @@ export class SceneMap extends Scene implements IScene {
         
     }
 
+    /** @internal */
     load(obj): Promise<Viewport> {
         this.gameMap = new RpgCommonMap()
         this.gameMap.load(obj)
@@ -127,6 +128,7 @@ export class SceneMap extends Scene implements IScene {
         })
     }
 
+    /** @internal */
     changeTile(x: number, y: number, layers: {
         [layerName: string]: object
     }) {
@@ -137,6 +139,7 @@ export class SceneMap extends Scene implements IScene {
         }
     }
 
+    /** @internal */
     draw(t: number, dt: number, frame: number) {
         if (!this.isLoaded) {
             return
@@ -145,7 +148,7 @@ export class SceneMap extends Scene implements IScene {
         this.tilemap.drawAnimateTile(frame)
     }
 
-    onUpdateObject(logic, sprite: Character, moving: boolean): Character {
+    onUpdateObject(logic: SceneSpriteLogic, sprite: Character, moving: boolean): Character {
         const { paramsChanged } = logic
         if (moving || (paramsChanged && (paramsChanged.width || paramsChanged.height))) {
             const { tileWidth, tileHeight } = this.gameMap
@@ -172,12 +175,14 @@ export class SceneMap extends Scene implements IScene {
         return sprite
     }
 
+    /** @internal */
     setPlayerPosition(id: string, { x, y }: { x: number, y: number }) {
         this.players[id].x = x
         this.players[id].y = y
     }
 
-    updateScene(obj: { data: any, partial: any }) {
+    /** @internal */
+    updateScene(obj: SceneObservableData) {
         const shapes = obj.partial.shapes
         const fullShapesObj = obj.data.shapes
 
@@ -238,7 +243,7 @@ export class SceneMap extends Scene implements IScene {
         wrapper.addChild(inner, tilesOverlay)
 
         this.objects.set(id, sprite)
-        this.tilemap.getEventLayer().addChild(wrapper)
+        this.tilemap.getEventLayer()?.addChild(wrapper)
 
         if (sprite.isCurrentPlayer) this.viewport?.follow(sprite)
         sprite.onInit()

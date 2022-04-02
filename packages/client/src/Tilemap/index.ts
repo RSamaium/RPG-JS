@@ -10,20 +10,23 @@ const { intersection } = Utils
 PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
 
 export default class TileMap extends PIXI.Container {
-
     background: PIXI.Graphics = new PIXI.Graphics()
-    eventsLayers: any = {}
-    defaultLayer: any = null
+    eventsLayers: {
+        [eventLayerName: string]: PIXI.Container
+    } = {}
+    defaultLayer: PIXI.Container | null = null
     data
-    _width: number = 0
-    _height: number = 0
+    private _width: number = 0
+    private _height: number = 0
     tileWidth: number = 0 
     tileHeight: number = 0
-    frameRateAnimation: number = 10
-    tileSets: any[] = []
-    layers: any = {}
+    private frameRateAnimation: number = 10
+    tileSets: TileSet[] = []
+    layers: {
+        [layerName: string]: TileLayer | ImageLayer
+    } = {}
     shapeLayer: PIXI.Container = new PIXI.Container()
-    tilesLayer: PIXI.Container = new PIXI.Container()
+    private tilesLayer: PIXI.Container = new PIXI.Container()
     private frameTile: number = 0
 
     constructor(data, private renderer) {
@@ -33,6 +36,7 @@ export default class TileMap extends PIXI.Container {
         this.create(data)
     }
 
+    /** @internal */
     drawAnimateTile(frame: number) {
         if (frame % this.frameRateAnimation == 0) {
             this.renderer.renderer.plugins.tilemap.tileAnim[0] = this.frameTile
@@ -54,7 +58,6 @@ export default class TileMap extends PIXI.Container {
     private create(data) {
         this.data = data
         Object.assign(this, data)
-
         this.background.beginFill(0x00000);
         this.background.drawRect(
             0,
@@ -70,6 +73,7 @@ export default class TileMap extends PIXI.Container {
         })
     }
 
+    /** @internal */
     createOverlayTiles(x, y, instance) {
         const tilesLayer: any = []
         this.data.layers.forEach((layerData) => {
@@ -136,11 +140,16 @@ export default class TileMap extends PIXI.Container {
         return tilesLayer
     }
 
+    /** @internal */
     changeTile(x: number, y: number, layerName: string) {
-        if (!this.layers[layerName]) throw log(`${layerName} not exists`)
-        this.layers[layerName].changeTile(x, y)
+        const layer = this.layers[layerName]
+        if (!layer) throw log(`${layerName} not exists`)
+        if (layer instanceof TileLayer) {
+            layer.changeTile(x, y)
+        }     
     }
 
+    /** @internal */
     load() {
         this.defaultLayer = null
         this.tilesLayer.removeChildren()

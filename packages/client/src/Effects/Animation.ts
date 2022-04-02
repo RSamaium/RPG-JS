@@ -42,7 +42,7 @@ export class Animation extends PIXI.Sprite {
         this.createAnimations()
     }
 
-    createTextures(options: TextureOptions): PIXI.Texture[][] {
+    private createTextures(options: TextureOptions): PIXI.Texture[][] {
         const { width, height, framesHeight, framesWidth, image, offset }: any = options
         const { baseTexture } = PIXI.Texture.from(image)
         const spriteWidth = options['spriteWidth']
@@ -69,7 +69,7 @@ export class Animation extends PIXI.Sprite {
         return frames
     }
 
-    createAnimations() {
+     private createAnimations() {
         const { textures } = this.spritesheet
         for (let animationName in textures) {
             const parentObj = ['width', 'height', 'framesHeight', 'framesWidth', 'rectWidth', 'rectHeight', 'offset', 'image', 'sound']
@@ -156,6 +156,7 @@ export class Animation extends PIXI.Sprite {
         this.update()
     }
 
+     /** @internal */
     update() {
         if (!this.isPlaying() || !this.currentAnimation) return  
 

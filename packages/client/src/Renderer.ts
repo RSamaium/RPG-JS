@@ -29,10 +29,12 @@ export class RpgRenderer  {
         })
     }
 
+     /** @internal */
     async init() {
         this.onDOMLoaded()
     }
 
+     /** @internal */
     _resize(w: number, h: number) {
         if (!w) w = this.options.canvas.width
         if (!h) h = this.options.canvas.height
@@ -69,6 +71,7 @@ export class RpgRenderer  {
         this._resize(val, this.height)
     }
 
+     /** @internal */
     onDOMLoaded() {
         let options = {
             antialias: true,
@@ -100,6 +103,7 @@ export class RpgRenderer  {
         this.resize()
     }
 
+     /** @internal */
     resize() {
         const size = () => {
             const { offsetWidth, offsetHeight } = this.canvasEl || this.selector
@@ -110,16 +114,19 @@ export class RpgRenderer  {
         size()
     }
 
+     /** @internal */
     getScene<T = Scene>(): T {
         return this.scene as any
     }
     
+     /** @internal */
     draw(t: number, dt: number, frame: number) {
         if (!this.renderer) return
         if (this.scene) this.scene.draw(t, dt, frame)
         this.renderer.render(this.stage)
     }
 
+     /** @internal */
     async loadScene(name: string, obj) {
         const currentPlayerId = this.gameEngine.playerId
         RpgPlugin.emit(HookClient.BeforeSceneLoading, {

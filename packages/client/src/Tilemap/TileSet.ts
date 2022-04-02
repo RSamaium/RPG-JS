@@ -8,12 +8,15 @@ export default class TileSet {
     spacing: number= 0
     tileHeight: number = 0
     tileWidth: number= 0
-    image: any
+    image: {
+        width: number,
+        height: number
+    }
     tileOffset: any = {}
     name: string = ''
-    baseTexture
+    private baseTexture: PIXI.BaseTexture
     spritesheet
-    textures: any[] = []
+    private textures: PIXI.Texture[] = []
 
     constructor(tileSet) {
         Object.assign(this, tileSet)
@@ -24,6 +27,7 @@ export default class TileSet {
         this.spritesheet = spritesheet
     }
 
+    /** @internal */
     load() {
         const { texture } = this.spritesheet.resource
         this.baseTexture = texture.baseTexture

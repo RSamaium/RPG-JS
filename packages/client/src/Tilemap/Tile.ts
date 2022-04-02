@@ -1,7 +1,9 @@
-export default class Tile extends PIXI.AnimatedSprite {
+import { Texture } from "pixi.js";
+import { RpgRectTileLayer } from "./TileLayer";
 
+export default class Tile extends PIXI.AnimatedSprite {
     static getTextures(tile, tileSet) {
-        const textures: any = [];
+        const textures: Texture[] = [];
 
         if (tile.animations && tile.animations.length) {
             tile.animations.forEach(frame => {
@@ -20,7 +22,6 @@ export default class Tile extends PIXI.AnimatedSprite {
     gid: number = 0
     pointsBufIndex: number
     properties: any = {}
-    texture: any
 
     constructor(
         private tile,
@@ -37,14 +38,14 @@ export default class Tile extends PIXI.AnimatedSprite {
         this.animations = []
 
         this.textures = Tile.getTextures(tile, tileSet);
-        this.texture = this.textures[0]
+        this.texture = this.textures[0] as Texture
         
         Object.assign(this, tile);
 
         this.flip()
     }
 
-    setAnimation(frame) {
+    setAnimation(frame: RpgRectTileLayer) {
         const size = this.animations.length
         if (size > 1) {
             const offest = (this.animations[1].tileId - this.animations[0].tileId) * this.width

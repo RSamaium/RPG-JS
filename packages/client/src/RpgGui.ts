@@ -32,6 +32,7 @@ class Gui {
     private socket
     private gui: GuiList = {}
 
+     /** @internal */
     _initalize(clientEngine: RpgClientEngine) {
 
         this.clientEngine = clientEngine
@@ -400,10 +401,12 @@ class Gui {
         this.renderer.vm = this.vm
     }
 
+     /** @internal */
     update(logicObjects: RpgCommonPlayer) {
         this.vm.tooltips = Object.values(logicObjects).map((object: any) => object.object)
     }
 
+     /** @internal */
     _setSocket(socket) {
         this.socket = socket
         this.socket.on('gui.open', ({ guiId, data }) => {
@@ -420,6 +423,7 @@ class Gui {
         })
     }
 
+     /** @internal */
     _setGui(id, obj) {
         const guiObj = this.get(id)
         if (!guiObj) {
