@@ -539,6 +539,11 @@ class Gui {
             display: false
         })
     }
+
+    /** @internal */
+    clear() {
+        this.gui = {}
+    }
 }
 
 export const RpgGui = new Gui()

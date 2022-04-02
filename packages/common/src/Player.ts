@@ -4,6 +4,7 @@ import { RpgShape } from './Shape'
 import SAT from 'sat'
 import Map, { TileInfo } from './Map'
 import { RpgPlugin, HookServer } from './Plugin'
+import { RpgCommonGame } from '.'
 
 const ACTIONS = { IDLE: 0, RUN: 1, ACTION: 2 }
 
@@ -33,7 +34,7 @@ export enum PlayerType {
 }
 
 export class RpgCommonPlayer {
-
+    /** @internal */
     map: string = ''
     graphic: string = ''
     height: number = 0
@@ -44,6 +45,8 @@ export class RpgCommonPlayer {
     direction: number = 3
     private collisionWith: any[] = []
     private _collisionWithTiles: TileInfo[] = []
+
+    /** @internal */
     data: any = {}
     hitbox: SAT.Box
     pendingMove: { input: string }[] = []
@@ -70,7 +73,7 @@ export class RpgCommonPlayer {
         return ACTIONS
     }
 
-    constructor(private gameEngine, public playerId: string) {
+    constructor(private gameEngine: RpgCommonGame, public playerId: string) {
         this._hitboxPos = new SAT.Vector(0, 0)
         this.setHitbox(this.width, this.height)
         this.position = { x: 0, y: 0, z: 0 }
@@ -84,6 +87,7 @@ export class RpgCommonPlayer {
         this.playerId = str
     }
 
+    /** @internal */
     updateInVirtualGrid() {
         const map = this.mapInstance
         if (map /*&& this.gameEngine.isWorker TODO */) {
@@ -133,6 +137,7 @@ export class RpgCommonPlayer {
         this.position.z = val
     }
 
+    /** @internal */
     get mapInstance(): Map {
         return Map.buffer.get(this.map)
     }
@@ -251,6 +256,7 @@ export class RpgCommonPlayer {
         return toRadians(angle)
     }
     
+    /** @internal */
     defineNextPosition(direction: number, deltaTimeInt: number): Position {
         const angle = this.directionToAngle(direction)
         const computePosition = (prop: string) => {
@@ -264,6 +270,7 @@ export class RpgCommonPlayer {
         }
     }
 
+    /** @internal */
     setPosition({ x, y, tileX, tileY }, move = true) {
         const { tileWidth, tileHeight } = this.mapInstance
         if (x !== undefined) this.posX = x 
@@ -272,6 +279,7 @@ export class RpgCommonPlayer {
         if (tileY !== undefined) this.posY = tileY * tileHeight
     }
 
+    /** @internal */
     triggerCollisionWith(type?: number) {
         for (let collisionWith of this.collisionWith) {
             const { properties } = collisionWith
@@ -285,12 +293,14 @@ export class RpgCommonPlayer {
         }
     }
 
+    /** @internal */
     zCollision(other): boolean {
         const z = this.position.z
         const otherZ = other.position.z
         return intersection([z, z + this.height], [otherZ, otherZ + other.height])
     }
 
+    /** @internal */
     moveByDirection(direction: Direction, deltaTimeInt: number): boolean {
         const nextPosition = this.defineNextPosition(direction, deltaTimeInt)
         return this.move(nextPosition)
@@ -343,6 +353,7 @@ export class RpgCommonPlayer {
         return map.getTile(hitbox || this.hitbox, x, y, [z, this.height])
     }
 
+    /** @internal */
     isCollided(nextPosition: Position): boolean {
         this.collisionWith = [] 
         this._collisionWithTiles = []
@@ -484,6 +495,7 @@ export class RpgCommonPlayer {
         return this.shapes
     }
 
+    /** @internal */
     collisionWithShape(shape: RpgShape, player: RpgCommonPlayer, nextPosition?: Position): boolean {
         const { collision, z } = shape.properties
         if (shape.isShapePosition()) return false
@@ -517,6 +529,7 @@ export class RpgCommonPlayer {
         return false
     }
 
+    /** @internal */
     move(nextPosition: Position, testCollision:  boolean = true): boolean {
         {
             const { x, y } = this.position
@@ -625,6 +638,7 @@ export class RpgCommonPlayer {
         }
     }
 
+    /** @internal */
     getSizeMaxShape(x?: number, y?: number): { minX: number, minY: number, maxX: number, maxY: number } {
         const _x = x || this.position.x
         const _y = y || this.position.y
@@ -649,6 +663,7 @@ export class RpgCommonPlayer {
         }
     }
 
+    /** @internal */
     execMethod(methodName: string, methodData?, instance?) {}
 }
 

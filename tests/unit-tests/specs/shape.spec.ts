@@ -1,7 +1,7 @@
 import {_beforeEach} from './beforeEach'
-import { EventData, HookClient, MapData, Move, RpgEvent, RpgMap, RpgModule, RpgPlayer, RpgPlugin, RpgServer, RpgServerEngine, RpgShape, ShapePositioning } from '@rpgjs/server'
-import { RpgClientEngine, RpgSceneMap } from '@rpgjs/client'
-import { clear } from '@rpgjs/testing'
+import { HookClient, RpgMap, RpgPlayer,  RpgServerEngine, ShapePositioning, RpgShape, RpgServer, RpgModule, Move } from '@rpgjs/server'
+import { RpgClientEngine, RpgSceneMap, RpgPlugin } from '@rpgjs/client'
+import { clear, nextTick } from '@rpgjs/testing'
 
 let  client: RpgClientEngine, 
 player: RpgPlayer, 
@@ -48,7 +48,7 @@ test('Create Shape', () => {
              expect(mapShape.y).toEqual(0)
              resolve()
          })
-         server.send()
+         nextTick(client)
     })
  })
 

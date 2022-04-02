@@ -478,7 +478,7 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @memberof Player
      */
     getCurrentMap(): RpgMap {
-        return this._getMap(this.map)
+        return this._getMap(this.map) as RpgMap
     }
 
     loadScene(name: string, data: any): void {

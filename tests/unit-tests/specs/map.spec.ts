@@ -37,7 +37,7 @@ const testMap = function(side) {
         expect(map).toBeDefined()
         expect(map.tileWidth).toEqual(TILE_SIZE)
         expect(map.tileHeight).toEqual(TILE_SIZE)
-        expect(map.layers).toHaveLength(1)
+        expect(map.layers).toHaveLength(2)
         expect(map.widthPx).toEqual(TILE_SIZE*10)
         expect(map.heightPx).toEqual(TILE_SIZE*10)
         expect(map.zTileHeight).toEqual(TILE_SIZE)

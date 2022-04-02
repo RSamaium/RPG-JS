@@ -629,5 +629,6 @@ export class RpgClientEngine {
         sounds.clear()
         PIXI.Loader.shared.reset()
         PIXI.utils.clearTextureCache()
+        RpgGui.clear()
     }
 }
