@@ -11,20 +11,15 @@ import {
     PlayerType, 
     Utils, 
     RpgPlugin, 
-    HookClient, 
+    HookClient,
+    RpgCommonMap, 
 } from '@rpgjs/common'
-import merge from 'lodash.merge'
 import { RpgSound } from './Sound/RpgSound'
 import { SceneMap } from './Scene/Map'
-import { GameEngineClient } from './GameEngine'
+import { GameEngineClient, ObjectFixture } from './GameEngine'
 import { Scene } from './Scene/Scene'
 
 declare var __RPGJS_PRODUCTION__: boolean;
-
-type ObjectFixture = {
-    object: any,
-    paramsChanged: any
-}
 
 type Tick = {
     timestamp: number
@@ -76,9 +71,7 @@ export class RpgClientEngine {
     public controls: KeyboardControls
 
     public _options: any
-    private _objects: BehaviorSubject<{
-        [playerId: string]: ObjectFixture
-    }> = new BehaviorSubject({})
+    
     private _tick: BehaviorSubject<Tick> = new BehaviorSubject({
         timestamp: -1,
         deltaTime: 0,
@@ -95,6 +88,20 @@ export class RpgClientEngine {
 
     private clientFrames: Map<number, FrameData> = new Map()
     private serverFrames: Map<number, FrameData> = new Map()
+
+    /**
+     * Read objects synchronized with the server
+     *
+     * @prop {Observable< {
+            [id: string]: {
+                object: any,
+                paramsChanged: any
+            }
+      } >} [objects]
+     * @readonly
+     * @memberof RpgClientEngine
+     */
+    objects: Observable<{ [id: string]: ObjectFixture }> = this.gameEngine.objects
 
     constructor(public gameEngine: GameEngineClient, private options) { 
         this.tick.subscribe(({ timestamp, deltaTime }) => {
@@ -216,21 +223,6 @@ export class RpgClientEngine {
         PIXI.utils.skipHello()
         await this._init()
         await this.renderer.init()
-        this.gameEngine.start({
-            getObjects: this.getObjects.bind(this),
-            getObject: (id) => {
-                const obj = this.getObject(id)
-                if (!obj) return null
-                return obj.object
-            },
-            removeObject: this.removeObject.bind(this),
-            getObjectsOfGroup: () => {
-                return {
-                    ...this.getObjects(),
-                    ...this.gameEngine.events
-                }
-            }
-        })
         if (options.renderLoop) {
             const loop = (timestamp) => {
                 this.nextFrame(timestamp)
@@ -263,117 +255,13 @@ export class RpgClientEngine {
         })
         this.lastTimestamp = timestamp
         this.frame++
-    }
-
-    /**
-     * Read objects synchronized with the server
-     *
-     * @prop {Observable< {
-            [id: string]: {
-                object: any,
-                paramsChanged: any
-            }
-      } >} [objects]
-     * @readonly
-     * @memberof RpgClientEngine
-     */
-    get objects(): Observable<{ [id: string]: ObjectFixture }> {
-        return this._objects.asObservable()
-    }
-
-    private getObjects(): { [id: string]: ObjectFixture } {
-        return this._objects.value
-    }
-
-    private getObject(id): ObjectFixture | null {
-        const objects = this._objects.value
-        const val = objects[id]
-        if (!val) return null
-        return val
-    }
-
-    private resetObjects() {
-        this._objects.next({})
-    }
-
-    private removeObject(id: any): boolean {
-        const logic = this.getObject(id)
-        if (this.gameEngine.events[id]) {
-            delete this.gameEngine.events[id]
-        }
-        if (logic) {
-            const objects = { ...this._objects.value } // clone
-            delete objects[id]
-            this._objects.next(objects)
-            return true
-        }
-        return false
-    }
-
-    private updateObject(obj) {
-        const {
-            playerId: id,
-            params,
-            localEvent,
-            paramsChanged
-        } = obj
-        const isMe = () => id == this.gameEngine.playerId
-        let logic
-        let teleported = false
-        if (localEvent) {
-            logic = this.gameEngine.events[id]
-            if (!logic) {
-                logic = this.gameEngine.addEvent(RpgCommonPlayer, id)
-                this.gameEngine.events[id] = {
-                    object: logic
-                }
-            }
-            else {
-                logic = logic.object
-            }
-        }
-        else {
-            logic = this.gameEngine.world.getObject(id)
-        }
-        if (!logic) {
-            logic = this.gameEngine.addPlayer(RpgCommonPlayer, id)
-        }
-        logic.prevParamsChanged = Object.assign({}, logic)
-        for (let key in params) {
-            if (!localEvent && 
-                (key == 'position' ||
-                (key == 'direction' && paramsChanged && paramsChanged.position))) {
-                if (isMe()) continue
-            }
-            logic[key] = params[key]
-        }
-        if (paramsChanged) {
-            if (paramsChanged.teleported) {
-                teleported = true
-                logic.position = { ...params.position } // clone
-            }
-            if (!logic.paramsChanged) logic.paramsChanged = {}
-            logic.paramsChanged = merge(paramsChanged, logic.paramsChanged)
-        }
-        this._objects.next({
-            ...this._objects.value,
-            ...{
-                [id]: {
-                    object: logic,
-                    paramsChanged
-                }
-            }
-        })
-        if (teleported && isMe()) {
-            this.isTeleported = true
-        }
-        return logic
-    }
+    } 
 
      /** @internal */
     sendInput(actionName: string) {
         const inputEvent = { input: actionName, playerId: this.gameEngine.playerId }
         const player = this.gameEngine.world.getObject(this.gameEngine.playerId)
+        if (!player) return
         player.pendingMove.push(inputEvent)
         this.gameEngine.processInput(this.gameEngine.playerId)
         this.clientFrames.set(this.frame, {
@@ -493,7 +381,7 @@ export class RpgClientEngine {
             const partialRoom = val.partial
 
             if (val.roomId != lastRoomId) {
-                this.resetObjects()
+                this.gameEngine.resetObjects()
                 lastRoomId = val.roomId
                 this.isTeleported = false
             }
@@ -505,7 +393,7 @@ export class RpgClientEngine {
                     const obj = list[key]
                     const paramsChanged = partial ? partial[key] : undefined
                     if (obj == null) {
-                        this.removeObject(key)
+                        this.gameEngine.removeObject(key)
                     }
                     if (!obj) continue
                     obj.type = prop == 'users' ? PlayerType.Player : PlayerType.Event
@@ -532,7 +420,7 @@ export class RpgClientEngine {
                         }
                     }
                     
-                    this.updateObject({
+                    this.gameEngine.updateObject({
                         playerId: key,
                         params: obj,
                         localEvent,
@@ -630,5 +518,6 @@ export class RpgClientEngine {
         PIXI.Loader.shared.reset()
         PIXI.utils.clearTextureCache()
         RpgGui.clear()
+        RpgCommonMap.buffer.clear()
     }
 }

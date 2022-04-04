@@ -58,7 +58,7 @@ export class RpgServerEngine {
         if (this.inputOptions.workers) {
             console.log('workers enabled')
             this.workers = this.gameEngine.createWorkers(this.inputOptions.workers).load()
-        }    
+        }
     }
 
     private async _init() {

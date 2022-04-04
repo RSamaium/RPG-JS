@@ -15,7 +15,7 @@
   <object id="1" name="start pos" type="start" x="444.818" y="156.045">
    <point/>
   </object>
-  <object id="11" x="299.424" y="446.079" width="235.682" height="46.2754">
+  <object id="11" x="491.424" y="43.079" width="235.682" height="46.2754">
    <properties>
     <property name="obstacle" type="bool" value="true"/>
    </properties>

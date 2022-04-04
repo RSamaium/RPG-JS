@@ -1,5 +1,5 @@
 import {_beforeEach} from './beforeEach'
-import { HookClient, RpgMap, RpgPlayer,  RpgServerEngine, ShapePositioning, RpgShape, RpgServer, RpgModule, Move } from '@rpgjs/server'
+import { HookClient, RpgMap, RpgPlayer,  RpgServerEngine, ShapePositioning, RpgShape, RpgServer, RpgModule, Move, MapData } from '@rpgjs/server'
 import { RpgClientEngine, RpgSceneMap, RpgPlugin } from '@rpgjs/client'
 import { clear, nextTick } from '@rpgjs/testing'
 
@@ -52,7 +52,7 @@ test('Create Shape', () => {
     })
  })
 
- test('Shape In - Hook', () => {
+ test('Shape In - Hook', async () => {
      return new Promise(async (resolve: any) => {
          clear()
 
@@ -78,9 +78,52 @@ test('Create Shape', () => {
             height: 100,
             name: 'test'
         })
-        player.moveRoutes([ Move.right() ])
+        await player.moveRoutes([ Move.right() ])
      })
  })
+
+ test('Shape In - change map - verify position client side', () => {
+    return new Promise(async (resolve: any) => {
+        clear()
+
+        @MapData({
+            id: 'myid',
+            file: require('./fixtures/maps/map.tmx')
+        })
+        class SampleMap extends RpgMap {}
+
+        @RpgModule<RpgServer>({
+            maps: [SampleMap],
+            player: {
+                onInShape(player: RpgPlayer,shape: RpgShape) {
+                   player.changeMap('myid', {
+                       x: 100,
+                       y: 120
+                   })
+                }
+            }
+        })
+        class RpgServerModule {}
+
+        const { player } = await _beforeEach([{
+            server: RpgServerModule
+        }])
+        map = player.getCurrentMap() as RpgMap
+        map.createShape({
+           x: 0,
+           y: 0,
+           width: 100,
+           height: 100,
+           name: 'test'
+       })
+       await player.moveRoutes([ Move.right() ])
+       await nextTick(client)
+       const object = client.gameEngine.world.getObject(playerId)
+       expect(object?.position.x).toBe(100)
+       expect(object?.position.y).toBe(120)
+       resolve()
+    })
+})
 
 test('Attach Shape in player', () => {
     player.position.x = 50

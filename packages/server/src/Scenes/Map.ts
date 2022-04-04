@@ -13,6 +13,7 @@ export class SceneMap {
     
     constructor(private maps: any[], private server: any) {
         this.mapsById = {}
+        RpgCommonMap.buffer.clear()
         if (this.maps) {
             for (let map of this.maps) {
                 this.createDynamicMap(map)
@@ -39,7 +40,7 @@ export class SceneMap {
         }
 
         if (RpgCommonMap.buffer.has(id)) {
-            mapInstance =  RpgCommonMap.buffer.get(id)
+            mapInstance = RpgCommonMap.buffer.get(id)
         }
         else {
             mapInstance = World.addRoom(id, new mapClass(this.server))
