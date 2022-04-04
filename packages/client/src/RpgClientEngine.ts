@@ -282,6 +282,7 @@ export class RpgClientEngine {
                 const { data: serverPos, time: serverTime } = serverData
                 const client = this.clientFrames.get(frame)
                 if (!client || (client && client.data.x != serverPos.x || client.data.y != serverPos.y)) {
+                    console.log(serverData.data, client?.data, frame)
                     if (serverPos.x) player.position.x = serverPos.x
                     if (serverPos.y) player.position.y = serverPos.y
                 }

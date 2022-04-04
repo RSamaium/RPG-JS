@@ -48,7 +48,7 @@ export class RpgCommonPlayer {
     /** @internal */
     data: any = {}
     hitbox: SAT.Box
-    pendingMove: { input: string }[] = []
+    pendingMove: { input: string, frame: number }[] = []
     
      /** 
      * Display/Hide the GUI attached to this sprite

@@ -173,10 +173,12 @@ export class RpgServerEngine {
         for (let playerId in players) {
             const player = players[playerId] as RpgPlayer
             if (player.pendingMove.length > 0) {
+                const lastFrame = player.pendingMove[player.pendingMove.length-1]
                 if (this.inputOptions.workers) obj.push(player.toObject())
                 else {
                     p.push(this.gameEngine.processInput(playerId).then(() => {
                         player.pendingMove = []
+                        player._lastFrame = lastFrame.frame
                     }))
                 }
             }
@@ -235,7 +237,6 @@ export class RpgServerEngine {
         const playerId = Utils.generateUID()
         let player: RpgPlayer = new this.playerClass(this.gameEngine, playerId)
         socket.on('move', (data) => { 
-            player._lastFrame = data.frame
             player.pendingMove.push(data)
         })
 
