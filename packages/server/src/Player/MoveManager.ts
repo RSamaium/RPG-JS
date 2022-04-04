@@ -447,7 +447,7 @@ export class MoveManager {
                 return route
             })
             routes = arrayFlat(routes)
-            const move = () => {
+            const move = async () => {
                 if (count >= this['nbPixelInTile']) {
                     if (frequence < this.frequency) {
                         frequence++
@@ -470,7 +470,7 @@ export class MoveManager {
                     case Direction.Down:
                     case Direction.Right:
                     case Direction.Up:
-                        this.moveByDirection(route, 1)
+                        await this.moveByDirection(route, 1)
                         break
                     case 'turn-' + Direction.Left:
                         this.changeDirection(Direction.Left)

@@ -218,7 +218,7 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @returns {Promise<RpgMap>}
      * @memberof Player
      */
-    changeMap(mapId: string, positions?): Promise<RpgMap> {
+    changeMap(mapId: string, positions?: { x: number, y: number, z?: number} | string): Promise<RpgMap> {
         return this.server.getScene('map').changeMap(mapId, this, positions) 
     }
 

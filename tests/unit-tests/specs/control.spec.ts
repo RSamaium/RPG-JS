@@ -69,9 +69,8 @@ test('Apply Controls - Action (Server Side)', () => {
         })
 
         client.controls.applyControl(Control.Action)
-
         client.nextFrame(0)
-        nextTick(client)
+        await nextTick(client)
     })
 })
 
@@ -99,7 +98,7 @@ test('Apply Controls - Move (Server Side)', () => {
         client.controls.applyControl(Control.Right, true)
 
         client.nextFrame(0)
-        nextTick(client)
+        nextTick(client) 
     })
 })
 

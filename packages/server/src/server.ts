@@ -169,14 +169,16 @@ export class RpgServerEngine {
     private updatePlayersMove(deltaTimeInt: number) {
         const players = this.world.getUsers() 
         const obj: any = []
-         for (let playerId in players) {
+        let p: Promise<any>[] = []
+        for (let playerId in players) {
             const player = players[playerId] as RpgPlayer
             if (player.pendingMove.length > 0) {
                 if (this.inputOptions.workers) obj.push(player.toObject())
                 else {
-                    this.gameEngine.processInput(playerId)
+                    p.push(this.gameEngine.processInput(playerId).then(() => {
+                        player.pendingMove = []
+                    }))
                 }
-                player.pendingMove = []
             }
         }
         if (this.inputOptions.workers) {
@@ -195,6 +197,7 @@ export class RpgServerEngine {
                 }
             })
         }
+        return Promise.all(p)
     }
 
     step(t: number, dt: number) {

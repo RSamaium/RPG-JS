@@ -95,11 +95,11 @@ test('Create Shape', () => {
         @RpgModule<RpgServer>({
             maps: [SampleMap],
             player: {
-                onInShape(player: RpgPlayer,shape: RpgShape) {
-                   player.changeMap('myid', {
-                       x: 100,
-                       y: 120
-                   })
+                async onInShape(player: RpgPlayer,shape: RpgShape) {
+                    await player.changeMap('myid', {
+                        x: 100,
+                        y: 120
+                    })
                 }
             }
         })
@@ -116,12 +116,12 @@ test('Create Shape', () => {
            height: 100,
            name: 'test'
        })
-       await player.moveRoutes([ Move.right() ])
-       await nextTick(client)
-       const object = client.gameEngine.world.getObject(playerId)
-       expect(object?.position.x).toBe(100)
-       expect(object?.position.y).toBe(120)
-       resolve()
+        await player.moveRoutes([ Move.right() ])
+        await nextTick(client)
+        const object = client.gameEngine.world.getObject(playerId)
+        expect(object?.position.x).toBe(100)
+        expect(object?.position.y).toBe(120)
+        resolve()
     })
 })
 

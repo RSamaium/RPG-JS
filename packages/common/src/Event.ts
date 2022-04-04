@@ -1,3 +1,3 @@
 import { RpgCommonPlayer } from './Player'
 
-export class RpgEvent extends RpgCommonPlayer {}
+export class RpgCommonEvent extends RpgCommonPlayer {}

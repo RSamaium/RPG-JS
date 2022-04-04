@@ -299,7 +299,7 @@ export class RpgCommonPlayer {
     }
 
     /** @internal */
-    moveByDirection(direction: Direction, deltaTimeInt: number): boolean {
+    moveByDirection(direction: Direction, deltaTimeInt: number): Promise<boolean> {
         const nextPosition = this.defineNextPosition(direction, deltaTimeInt)
         return this.move(nextPosition)
     }
@@ -351,10 +351,11 @@ export class RpgCommonPlayer {
         return map.getTile(hitbox || this.hitbox, x, y, [z, this.height])
     }
 
-    isCollided(nextPosition: Position): boolean {
+    async isCollided(nextPosition: Position): Promise<boolean> {
         this.collisionWith = [] 
         this._collisionWithTiles = []
         const map: Map = this.mapInstance 
+        const prevMapId = this.map
         const hitbox = Hit.createObjectHitbox(nextPosition.x, nextPosition.y, 0, this.hitbox.w, this.hitbox.h)
 
         if (!map) {
@@ -407,11 +408,11 @@ export class RpgCommonPlayer {
             const collided = Hit.testPolyCollision('box', hitbox, event.hitbox)
             
             for (let shape of this.shapes) {
-                this.collisionWithShape(shape, event)
+                await this.collisionWithShape(shape, event)
             }
 
             for (let shape of event.shapes) {
-                event.collisionWithShape(shape, this)
+                await event.collisionWithShape(shape, this)
             }
             
             if (collided) {
@@ -432,8 +433,12 @@ export class RpgCommonPlayer {
 
         const shapes = map.getShapes()
         for (let shape of shapes) {
-            const bool = this.collisionWithShape(shape, this, nextPosition)
+            const bool = await this.collisionWithShape(shape, this, nextPosition)
             if (bool) return true
+        }
+
+        if (prevMapId != this.map) {
+            return true
         }
 
         return false
@@ -493,7 +498,7 @@ export class RpgCommonPlayer {
     }
 
     /** @internal */
-    collisionWithShape(shape: RpgShape, player: RpgCommonPlayer, nextPosition?: Position): boolean {
+    async collisionWithShape(shape: RpgShape, player: RpgCommonPlayer, nextPosition?: Position): Promise<boolean> {
         const { collision, z } = shape.properties
         if (shape.isShapePosition()) return false
         if (z !== undefined && !this.zCollision({
@@ -515,19 +520,19 @@ export class RpgCommonPlayer {
         if (collided) {
             this.collisionWith.push(shape)
             // TODO: in shape after map load
-            if (!collision) shape.in(this)
+            if (!collision) await shape.in(this)
             this.triggerCollisionWith()
             if (collision) return true
         }
         else {
-            shape.out(this)
+            await shape.out(this)
         }
 
         return false
     }
 
     /** @internal */
-    move(nextPosition: Position, testCollision:  boolean = true): boolean {
+    async move(nextPosition: Position, testCollision:  boolean = true): Promise<boolean> {
         {
             const { x, y } = this.position
             const { x: nx, y: ny } = nextPosition
@@ -550,11 +555,11 @@ export class RpgCommonPlayer {
             }
         }
 
-        const collided = testCollision && !this.isCollided(nextPosition)
+        const collided = testCollision && !(await this.isCollided(nextPosition))
 
         if (collided) {
             this.position = nextPosition
-            RpgPlugin.emit(HookServer.PlayerMove, this)
+            await RpgPlugin.emit(HookServer.PlayerMove, this)
         }
 
         return true
@@ -661,7 +666,7 @@ export class RpgCommonPlayer {
     }
 
     /** @internal */
-    execMethod(methodName: string, methodData?, instance?) {}
+    async execMethod(methodName: string, methodData?, instance?) {}
 }
 
 export interface RpgCommonPlayer {

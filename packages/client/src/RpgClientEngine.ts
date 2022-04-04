@@ -258,21 +258,20 @@ export class RpgClientEngine {
     } 
 
      /** @internal */
-    sendInput(actionName: string) {
+    async sendInput(actionName: string) {
         const inputEvent = { input: actionName, playerId: this.gameEngine.playerId }
         const player = this.gameEngine.world.getObject(this.gameEngine.playerId)
         if (!player) return
         player.pendingMove.push(inputEvent)
-        this.gameEngine.processInput(this.gameEngine.playerId)
+        await this.gameEngine.processInput(this.gameEngine.playerId)
         this.clientFrames.set(this.frame, {
             data: player.position,
             time: Date.now()
         })
-        RpgPlugin.emit(HookClient.SendInput, [this, inputEvent], true)
-        
         if (this.socket) {
             this.socket.emit('move', { input: actionName, frame: this.frame })
         }
+        RpgPlugin.emit(HookClient.SendInput, [this, inputEvent], true)  
     }
 
     private serverReconciliation()  {

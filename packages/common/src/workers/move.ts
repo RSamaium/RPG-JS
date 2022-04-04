@@ -35,12 +35,12 @@ function loadMap(data) {
   RpgMap.buffer.set(data.id, map)
 }
 
-function movePlayers(data) {
+async function movePlayers(data) {
   objectsByMap = {}
   const ret = {}
   for (let object of data) {
     gameEngine.world.addObject(object.id, object)
-    const player = gameEngine.processInput(object.id)
+    const player = await gameEngine.processInput(object.id)
     if (player) {
       ret[player.id] = {
         position: {
