@@ -39,7 +39,7 @@ export class RpgRenderer  {
         if (!w) w = this.options.canvas.width
         if (!h) h = this.options.canvas.height
         const scene = this.getScene<SceneMap>()
-        if (this.scene && scene.viewport) {
+        if (this.scene && scene?.viewport) {
             scene.viewport.screenWidth = w
             scene.viewport.screenHeight = h
         }
@@ -115,7 +115,7 @@ export class RpgRenderer  {
     }
 
      /** @internal */
-    getScene<T = Scene>(): T {
+    getScene<T = Scene>(): T | null {
         return this.scene as any
     }
     
@@ -149,10 +149,11 @@ export class RpgRenderer  {
 
         if (!this.scene) return
         
-        const container = await this.getScene<SceneMap>().load(obj)
-
-        this.stage.addChild(container)
-        RpgPlugin.emit(HookClient.AfterSceneLoading, this.scene)
+        const container = await this.getScene<SceneMap>()?.load(obj)
+        
+        if (container) {
+            this.stage.addChild(container)
+            RpgPlugin.emit(HookClient.AfterSceneLoading, this.scene)
+        }
     }
-
 }

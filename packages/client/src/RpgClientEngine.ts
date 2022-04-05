@@ -266,7 +266,7 @@ export class RpgClientEngine {
             input: inputEvent.input,
             frame: this.frame
         })
-        await this.gameEngine.processInput(this.gameEngine.playerId)
+        await this.gameEngine.processInput<RpgCommonPlayer>(this.gameEngine.playerId)
         this.clientFrames.set(this.frame, {
             data: player.position,
             time: Date.now()
@@ -347,15 +347,16 @@ export class RpgClientEngine {
 
         this.socket.on('changeTile', ({ tiles, x, y }) => {
             const scene = this.renderer.getScene<SceneMap>()
-            scene.changeTile(x, y, tiles)
+            scene?.changeTile(x, y, tiles)
         })
         
         this.socket.on('callMethod', ({ objectId, params, name }) => {
             const scene = this.renderer.getScene<SceneMap>()
-            const sprite = scene.getPlayer(objectId)
+            const sprite = scene?.getPlayer(objectId)
+            if (!sprite) return
             switch (name) {
                 case 'showAnimation':
-                    scene.showAnimation({ 
+                    scene?.showAnimation({ 
                         attachTo: sprite,
                         graphic: params[0],
                         animationName: params[1],
@@ -504,7 +505,7 @@ export class RpgClientEngine {
      * @returns {RpgScene}
      * @memberof RpgClientEngine
      */
-    getScene<T = Scene>(): T {
+    getScene<T = Scene>(): T | null {
         return this.renderer.getScene<T>()
     }
 
@@ -520,6 +521,6 @@ export class RpgClientEngine {
         PIXI.Loader.shared.reset()
         PIXI.utils.clearTextureCache()
         RpgGui.clear()
-        RpgCommonMap.buffer.clear()
+        RpgCommonMap.bufferClient.clear()
     }
 }

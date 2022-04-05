@@ -3,7 +3,7 @@ import { RpgPlayer } from './Player/Player'
 import { Query } from './Query'
 import { DAMAGE_SKILL, DAMAGE_PHYSIC, DAMAGE_CRITICAL, COEFFICIENT_ELEMENTS } from './presets'
 import { World, WorldClass } from '@rpgjs/sync-server'
-import { Utils, RpgPlugin, Scheduler, HookServer } from '@rpgjs/common'
+import { Utils, RpgPlugin, Scheduler, HookServer, RpgCommonGame } from '@rpgjs/common'
 
 export class RpgServerEngine {
 
@@ -52,7 +52,7 @@ export class RpgServerEngine {
      * @prop {Socket Io Server} [io]
      * @memberof RpgServerEngine
      */
-    constructor(public io, public gameEngine, public inputOptions) {
+    constructor(public io, public gameEngine: RpgCommonGame, public inputOptions) {
         if (this.inputOptions.workers) {
             console.log('workers enabled')
             this.workers = this.gameEngine.createWorkers(this.inputOptions.workers).load()
@@ -233,7 +233,7 @@ export class RpgServerEngine {
 
     private onPlayerConnected(socket) {
         const playerId = Utils.generateUID()
-        let player: RpgPlayer = new RpgPlayer(this.gameEngine, playerId)
+        const player: RpgPlayer = new RpgPlayer(this.gameEngine, playerId)
         socket.on('move', (data) => { 
             player.pendingMove.push(data)
         })
@@ -241,7 +241,7 @@ export class RpgServerEngine {
         socket.on('disconnect', () => {
             this.onPlayerDisconnected(socket.id, playerId)
         })
-        
+
         this.world.setUser(player, socket)
 
         socket.emit('playerJoined', { playerId })

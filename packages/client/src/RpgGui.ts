@@ -371,7 +371,7 @@ class Gui {
                 },
                 tooltipPosition: (position: { x: number, y: number }) => {
                     const scene = this.renderer.getScene<SceneMap>()
-                    const viewport = scene.viewport
+                    const viewport = scene?.viewport
                     if (viewport) {
                         const left = position.x - viewport.left
                         const top = position.y - viewport.top
@@ -414,8 +414,8 @@ class Gui {
         })
         this.socket.on('gui.tooltip', ({ players, display }) => {
             for (let playerId of players) {
-                const sprite = this.renderer.getScene<SceneMap>().getSprite(playerId)
-                sprite.guiDisplay = display
+                const sprite = this.renderer.getScene<SceneMap>()?.getSprite(playerId)
+                if (sprite) sprite.guiDisplay = display
             }   
         })
         this.socket.on('gui.exit', (guiId) => {

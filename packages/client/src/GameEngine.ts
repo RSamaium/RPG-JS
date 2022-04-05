@@ -1,4 +1,4 @@
-import { RpgCommonGame, RpgCommonPlayer } from "@rpgjs/common";
+import { RpgCommonGame, RpgCommonPlayer, GameSide } from "@rpgjs/common";
 import { BehaviorSubject, Observable } from "rxjs";
 import { RpgRenderer } from "./Renderer";
 import { RpgClientEngine } from "./RpgClientEngine";
@@ -36,7 +36,7 @@ export class GameEngineClient extends RpgCommonGame {
     }
 
     constructor() {
-        super('client')
+        super(GameSide.Client)
     }
 
     get objects(): Observable<{ [id: string]: ObjectFixture }> {

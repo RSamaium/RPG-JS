@@ -1,7 +1,8 @@
 import {_beforeEach} from './beforeEach'
 import { HookClient, RpgMap, RpgPlayer,  RpgServerEngine, ShapePositioning, RpgShape, RpgServer, RpgModule, Move, MapData } from '@rpgjs/server'
-import { RpgClientEngine, RpgSceneMap, RpgPlugin } from '@rpgjs/client'
+import { RpgClientEngine, RpgSceneMap, RpgPlugin, Control } from '@rpgjs/client'
 import { clear, nextTick } from '@rpgjs/testing'
+import { inputs } from './fixtures/control'
 
 let  client: RpgClientEngine, 
 player: RpgPlayer, 
@@ -85,7 +86,6 @@ test('Create Shape', () => {
  test('Shape In - change map - verify position client side', () => {
     return new Promise(async (resolve: any) => {
         clear()
-
         @MapData({
             id: 'myid',
             file: require('./fixtures/maps/map.tmx')
@@ -100,12 +100,17 @@ test('Create Shape', () => {
                         x: 100,
                         y: 120
                     })
+                    await nextTick(client)
+                    const object = client.gameEngine.world.getObject(player.id)
+                    expect(object?.position.x).toBe(100)
+                    expect(object?.position.y).toBe(120)
+                    resolve()
                 }
             }
         })
         class RpgServerModule {}
 
-        const { player } = await _beforeEach([{
+        const { player, client, server } = await _beforeEach([{
             server: RpgServerModule
         }])
         map = player.getCurrentMap() as RpgMap
@@ -115,13 +120,14 @@ test('Create Shape', () => {
            width: 100,
            height: 100,
            name: 'test'
-       })
-        await player.moveRoutes([ Move.right() ])
-        await nextTick(client)
-        const object = client.gameEngine.world.getObject(playerId)
-        expect(object?.position.x).toBe(100)
-        expect(object?.position.y).toBe(120)
-        resolve()
+        })
+        client.controls.setInputs(inputs)
+        client.controls.applyControl(Control.Right, true)
+        client.nextFrame(0)
+        RpgPlugin.on(HookClient.SendInput, () => {
+            server.step()
+            client.controls.applyControl(Control.Right, false)
+        }) 
     })
 })
 

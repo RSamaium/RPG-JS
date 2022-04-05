@@ -5,12 +5,18 @@ import { Control } from './Input'
 import { RpgPlugin } from './Plugin'
 import { GameWorker } from './Worker'
 
-export default class Game extends EventEmitter {
+export enum GameSide {
+    Server = 'server',
+    Client = 'client',
+    Worker = 'worker'
+}
+
+export class RpgCommonGame extends EventEmitter {
 
     events: any
     world: any
     
-    constructor(private side: string) {
+    constructor(public side: GameSide) {
         super()
         this.events = {} // events for all player in map
     }
@@ -49,8 +55,8 @@ export default class Game extends EventEmitter {
         return event
     }
 
-    async processInput(playerId: string): Promise<RpgCommonPlayer> {
-        const player: RpgCommonPlayer = this.world.getObject(playerId)
+    async processInput<RpgPlayer extends RpgCommonPlayer>(playerId: string): Promise<RpgPlayer> {
+        const player: RpgPlayer = this.world.getObject(playerId)
 
         if (!player) return player
         if (!player.canMove) return player

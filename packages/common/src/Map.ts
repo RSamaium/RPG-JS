@@ -5,6 +5,7 @@ import { Hit } from './Hit'
 import { VirtualGrid } from './VirtualGrid'
 
 const buffer = new Map()
+const bufferClient = new Map()
 
 export interface Tile {
     id: number,
@@ -80,8 +81,18 @@ export default class RpgCommonMap {
     layers: LayerInfo[] = []
     private shapes: RpgShape[] = []
 
+    /**
+     * Memorize the maps so you don't have to make a new request or open a file each time you load a map
+     */
     static get buffer() {
         return buffer
+    }
+
+    /**
+     * In RPG mode, to avoid confusion with buffer, we have a new variable to memorize the maps
+     */
+    static get bufferClient() {
+        return bufferClient
     }
 
     load(data) {

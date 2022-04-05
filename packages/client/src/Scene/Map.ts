@@ -69,7 +69,7 @@ export class SceneMap extends Scene {
         this.gameMap.load(obj)
         this.constructMethods()
 
-        if (!this.game.standalone) RpgCommonMap.buffer.set(obj.id, this.gameMap)
+        RpgCommonMap.bufferClient.set(obj.id, this.gameMap)
 
         this.tilemap = new TileMap(obj, this.game.renderer)
 

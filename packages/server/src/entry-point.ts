@@ -1,4 +1,4 @@
-import { RpgCommonGame, HookServer, loadModules, ModuleType } from '@rpgjs/common'
+import { RpgCommonGame, HookServer, loadModules, ModuleType, GameSide } from '@rpgjs/common'
 import { RpgServerEngine } from './server'
 
 interface RpgServerEntryPointOptions {
@@ -35,7 +35,7 @@ interface RpgServerEntryPointOptions {
 }
 
 export default function(modules: ModuleType[], options: RpgServerEntryPointOptions): RpgServerEngine {
-    const gameEngine = new RpgCommonGame('server')
+    const gameEngine = new RpgCommonGame(GameSide.Server)
 
     if (!options.globalConfig) options.globalConfig = {}
 

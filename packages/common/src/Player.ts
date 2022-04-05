@@ -5,6 +5,7 @@ import SAT from 'sat'
 import Map, { TileInfo } from './Map'
 import { RpgPlugin, HookServer } from './Plugin'
 import { RpgCommonGame } from '.'
+import { GameSide } from './Game'
 
 const ACTIONS = { IDLE: 0, RUN: 1, ACTION: 2 }
 
@@ -137,6 +138,9 @@ export class RpgCommonPlayer {
 
     /** @internal */
     get mapInstance(): Map {
+        if (this.gameEngine.side == GameSide.Client) {
+            return Map.bufferClient.get(this.map)
+        }
         return Map.buffer.get(this.map)
     }
 

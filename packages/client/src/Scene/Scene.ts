@@ -224,11 +224,11 @@ export abstract class Scene {
      * @title Get Sprite
      * @method scene.getSprite(id)
      * @param {string} id
-     * @returns {RpgSprite}
+     * @returns {RpgSprite | undefined}
      * @memberof RpgScene
      */
     getSprite(id: string) { return this.getPlayer(id) }
-    getPlayer(id: string): RpgSprite {
+    getPlayer(id: string): RpgSprite | undefined {
         return this.objects.get(id)
     }
 
@@ -237,10 +237,10 @@ export abstract class Scene {
      * 
      * @title Get Current Player
      * @method scene.getCurrentPlayer()
-     * @returns {RpgSprite}
+     * @returns {RpgSprite | undefined}
      * @memberof RpgScene
      */
-    getCurrentPlayer(): RpgSprite {
+    getCurrentPlayer(): RpgSprite | undefined {
         return this.objects.get(this.game.playerId)
     }
 
