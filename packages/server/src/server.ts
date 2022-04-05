@@ -234,8 +234,13 @@ export class RpgServerEngine {
     private onPlayerConnected(socket) {
         const playerId = Utils.generateUID()
         const player: RpgPlayer = new RpgPlayer(this.gameEngine, playerId)
-        socket.on('move', (data) => { 
-            player.pendingMove.push(data)
+        socket.on('move', (data: { input: string[], frame: number }) => {
+            for (let input of data.input) {
+                player.pendingMove.push({
+                    input,
+                    frame: data.frame
+                })
+            }
         })
 
         socket.on('disconnect', () => {

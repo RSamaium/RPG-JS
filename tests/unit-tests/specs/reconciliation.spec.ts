@@ -15,6 +15,7 @@ beforeEach(async () => {
     server = ret.server
 })
 
+
 test('Test reconciliation', async () => {
    return new Promise(async (resolve: any) => {
         RpgPlugin.on(HookClient.SendInput, async (client, name) => {
@@ -26,7 +27,7 @@ test('Test reconciliation', async () => {
             const frame = 2
             expect(serverFrames.size).toBe(1)
             expect(clientFrames.size).toBe(1)
-            expect(clientFrames.get(frame).data).toMatchObject(clientFrames.get(frame).data)
+            expect(serverFrames.get(frame).data).toMatchObject(clientFrames.get(frame).data)
             resolve()
         })  
         client.controls.setInputs(inputs)
@@ -34,6 +35,23 @@ test('Test reconciliation', async () => {
         client.nextFrame(0)
    })
 })
+
+test('Multi input', async () => {
+    return new Promise(async (resolve: any) => {
+        RpgPlugin.on(HookClient.SendInput, async (client, name) => {
+            await server['updatePlayersMove'](1)
+            server.send()
+            const frame = 2
+            const { serverFrames, clientFrames } = client
+            expect(serverFrames.get(frame).data).toMatchObject(clientFrames.get(frame).data)
+            resolve() 
+        })  
+        client.controls.setInputs(inputs)
+        client.controls.applyControl(Control.Right, true)
+        client.controls.applyControl(Control.Down, true)
+        client.nextFrame(0)
+    })
+ })
 
 afterEach(() => {
     clear()

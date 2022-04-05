@@ -1,11 +1,11 @@
 import workerpool from 'workerpool'
 import RpgMap from '../Map'
-import Game from '../Game'
+import { RpgCommonGame, GameSide } from '../Game'
 import { RpgCommonPlayer } from '../Player'
 
 const objects: any = {}
 let objectsByMap: any = {}
-const gameEngine = new Game('worker')
+const gameEngine = new RpgCommonGame(GameSide.Worker)
 gameEngine.start({
   getObject(playerId) {
     return objects[playerId]

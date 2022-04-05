@@ -259,49 +259,51 @@ export class RpgClientEngine {
 
      /** @internal */
     async sendInput(actionName: string) {
-        const inputEvent = { input: actionName, playerId: this.gameEngine.playerId }
         const player = this.gameEngine.world.getObject(this.gameEngine.playerId)
         if (!player) return
         player.pendingMove.push({
-            input: inputEvent.input,
+            input: actionName,
             frame: this.frame
         })
-        await this.gameEngine.processInput<RpgCommonPlayer>(this.gameEngine.playerId)
-        this.clientFrames.set(this.frame, {
-            data: player.position,
-            time: Date.now()
-        })
-        if (this.socket) {
-            this.socket.emit('move', { input: actionName, frame: this.frame })
-        } 
-        RpgPlugin.emit(HookClient.SendInput, [this, inputEvent], true)  
     }
 
-    private serverReconciliation()  {
-        const { playerId } = this.gameEngine
-        const player = this.gameEngine.world.getObject(playerId)
-        if (player) {
-            this.serverFrames.forEach((serverData, frame) => {
-                const { data: serverPos, time: serverTime } = serverData
-                const client = this.clientFrames.get(frame)
-                if (!client || (client && client.data.x != serverPos.x || client.data.y != serverPos.y)) {
-                    if (serverPos.x) player.position.x = serverPos.x
-                    if (serverPos.y) player.position.y = serverPos.y
-                }
-                // if (client) {
-                //     const { time: clientTime } = client
-                //     console.log(serverTime - clientTime)
-                // }
-                this.serverFrames.delete(frame)
-                this.clientFrames.delete(frame)
-            })
-        }
+    private serverReconciliation(player: RpgCommonPlayer)  {
+        this.serverFrames.forEach((serverData, frame) => {
+            const { data: serverPos, time: serverTime } = serverData
+            const client = this.clientFrames.get(frame)
+            if (!client || (client && client.data.x != serverPos.x || client.data.y != serverPos.y)) {
+                if (serverPos.x) player.position.x = serverPos.x
+                if (serverPos.y) player.position.y = serverPos.y
+            }
+            // if (client) {
+            //     const { time: clientTime } = client
+            //     console.log(serverTime - clientTime)
+            // }
+            this.serverFrames.delete(frame)
+            this.clientFrames.delete(frame)
+        })
       }
 
-    private step(t: number, dt: number) {
+    private async step(t: number, dt: number) {
+        const { playerId } = this.gameEngine
+        const player = this.gameEngine.world.getObject(playerId)
         this.controls.preStep()
-        RpgPlugin.emit(HookClient.Step, [this, t, dt], true)
-        this.serverReconciliation()
+        if (player) {
+            if (player.pendingMove.length > 0) {
+                const inputEvent = { input: player.pendingMove.map(input => input.input), playerId: this.gameEngine.playerId }
+                await this.gameEngine.processInput<RpgCommonPlayer>(this.gameEngine.playerId)
+                this.clientFrames.set(this.frame, {
+                    data: player.position,
+                    time: Date.now()
+                })
+                if (this.socket) {
+                    this.socket.emit('move', { input: inputEvent.input, frame: this.frame })
+                }
+                RpgPlugin.emit(HookClient.SendInput, [this, inputEvent], true)
+            }  
+            this.serverReconciliation(player)
+        }
+        RpgPlugin.emit(HookClient.Step, [this, t, dt], true) 
     }
 
     /**
