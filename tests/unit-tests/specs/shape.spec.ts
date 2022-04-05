@@ -95,7 +95,7 @@ test('Create Shape', () => {
         @RpgModule<RpgServer>({
             maps: [SampleMap],
             player: {
-                async onInShape(player: RpgPlayer,shape: RpgShape) {
+                async onInShape(player: RpgPlayer, shape: RpgShape) {
                     await player.changeMap('myid', {
                         x: 100,
                         y: 120

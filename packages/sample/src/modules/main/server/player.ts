@@ -30,9 +30,9 @@ export const player: RpgPlayerHooks = {
             
         }
     },
-    onInShape(player: RpgPlayer, shape: RpgShape) {
+    async onInShape(player: RpgPlayer, shape: RpgShape) {
         console.log('in', player.name, shape.name)
-        player.changeMap('samplemap')
+        await player.changeMap('samplemap')
     },
     onOutShape(player: RpgPlayer, shape: RpgShape) {
         console.log('out', player.name, shape.name)

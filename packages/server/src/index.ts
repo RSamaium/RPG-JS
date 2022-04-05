@@ -16,7 +16,6 @@ import { MapData } from './decorators/map'
 import { RpgMap } from './Game/Map'
 import { RpgEvent, EventMode } from './Event'
 import { RpgPlayer } from './Player/Player'
-import RpgEnemy from './Enemy'
 import { Query } from './Query'
 import Monitor from './Monitor'
 import * as Presets from './presets'
@@ -29,7 +28,6 @@ export {
     RpgPlayer,
     RpgPlugin,
     RpgMap,
-    RpgEnemy,
     MapData,
     EventData,
     Query as RpgWorld,

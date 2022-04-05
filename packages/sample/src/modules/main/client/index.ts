@@ -29,4 +29,4 @@ let engine
         myTooltip
     ]
 })
-export default class RpgClientModuleEngine {}
+export default class RpgClientModuleEngine {} 

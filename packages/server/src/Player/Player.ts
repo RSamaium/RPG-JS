@@ -1,4 +1,4 @@
-import { RpgCommonPlayer, Utils, RpgPlugin, RpgCommonMap as RpgMap, EventEmitter }  from '@rpgjs/common'
+import { RpgCommonPlayer, Utils, RpgPlugin, RpgCommonMap as RpgMap, EventEmitter, RpgCommonGame }  from '@rpgjs/common'
 import { RpgMap as GameMap } from '../Game/Map'
 import { Query } from '../Query'
 import merge from 'lodash.merge'
@@ -31,6 +31,8 @@ import {
 } from '../presets'
 import { EventOption, EventPosOption } from '../Game/Map'
 import { EventMode, RpgEvent } from '..'
+import { SceneMap } from '../Scenes/Map'
+import { RpgServerEngine } from '../server'
 
 const { 
     isPromise, 
@@ -108,10 +110,12 @@ export class RpgPlayer extends RpgCommonPlayer {
     public param: any 
     public _rooms = []
     public prevMap: string = ''
+    /** @internal */
+    public server: RpgServerEngine
 
     _lastFrame: number = 0
 
-    constructor(gameEngine?, playerId?) {
+    constructor(gameEngine: RpgCommonGame, playerId: string) {
         super(gameEngine, playerId)
         this.initialize()
     }
@@ -124,6 +128,7 @@ export class RpgPlayer extends RpgCommonPlayer {
     // As soon as a teleport has been made, the value is changed to force the client to change the positions on the map without making a move.
     teleported: number = 0
 
+    /** @internal */
     initialize() {
         this.expCurve =  {
             basis: 30,
@@ -219,7 +224,7 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @memberof Player
      */
     changeMap(mapId: string, positions?: { x: number, y: number, z?: number} | string): Promise<RpgMap> {
-        return this.server.getScene('map').changeMap(mapId, this, positions) 
+        return this.server.sceneMap.changeMap(mapId, this, positions) 
     }
 
     /**
@@ -692,7 +697,6 @@ export interface RpgPlayer extends
     BattleManager
 {
     _socket: any 
-    server: any,
     vision,
     attachShape: any
 }

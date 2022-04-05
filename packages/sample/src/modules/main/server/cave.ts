@@ -1,8 +1,7 @@
 import { RpgMap, MapData, EventData, RpgEvent, Move, EventMode } from '@rpgjs/server'
 
 @EventData({
-    name: 'EV-1',
-    mode: EventMode.Scenario
+    name: 'EV-1'
 })
 class MyEvent extends RpgEvent {
     onInit() {
@@ -19,7 +18,7 @@ class MyEvent extends RpgEvent {
 @MapData({
     id: 'cave',
     file: require('./tmx/cave.tmx'),
-    events: [MyEvent]
+    //events: [MyEvent]
 })
 export class CaveMap extends RpgMap {
     

@@ -262,7 +262,10 @@ export class RpgClientEngine {
         const inputEvent = { input: actionName, playerId: this.gameEngine.playerId }
         const player = this.gameEngine.world.getObject(this.gameEngine.playerId)
         if (!player) return
-        player.pendingMove.push(inputEvent)
+        player.pendingMove.push({
+            input: inputEvent.input,
+            frame: this.frame
+        })
         await this.gameEngine.processInput(this.gameEngine.playerId)
         this.clientFrames.set(this.frame, {
             data: player.position,
@@ -270,7 +273,7 @@ export class RpgClientEngine {
         })
         if (this.socket) {
             this.socket.emit('move', { input: actionName, frame: this.frame })
-        }
+        } 
         RpgPlugin.emit(HookClient.SendInput, [this, inputEvent], true)  
     }
 
@@ -282,7 +285,6 @@ export class RpgClientEngine {
                 const { data: serverPos, time: serverTime } = serverData
                 const client = this.clientFrames.get(frame)
                 if (!client || (client && client.data.x != serverPos.x || client.data.y != serverPos.y)) {
-                    console.log(serverData.data, client?.data, frame)
                     if (serverPos.x) player.position.x = serverPos.x
                     if (serverPos.y) player.position.y = serverPos.y
                 }

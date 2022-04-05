@@ -39,8 +39,6 @@ export class RpgServerEngine {
      * @memberof RpgServerEngine
      */
     public damageFormulas: any = {}
-
-    private playerClass: any
     private scenes: Map<string, any> = new Map()
     protected totalConnected: number = 0
     private scheduler: Scheduler
@@ -62,7 +60,6 @@ export class RpgServerEngine {
     }
 
     private async _init() {
-        this.playerClass = this.inputOptions.playerClass || RpgPlayer
         this.damageFormulas = this.inputOptions.damageFormulas || {}
         this.damageFormulas = {
             damageSkill: DAMAGE_SKILL,
@@ -170,6 +167,7 @@ export class RpgServerEngine {
         const players = this.world.getUsers() 
         const obj: any = []
         let p: Promise<any>[] = []
+        let id = Math.random()
         for (let playerId in players) {
             const player = players[playerId] as RpgPlayer
             if (player.pendingMove.length > 0) {
@@ -215,7 +213,7 @@ export class RpgServerEngine {
         this.scenes.set(SceneMap.id, new SceneMap(this.inputOptions.maps, this))
     }
 
-    getScene(name: string) {
+    getScene<T>(name: string): T {
         return this.scenes.get(name)
     }
 
@@ -225,8 +223,8 @@ export class RpgServerEngine {
      * @since 3.0.0-beta.4
      * @memberof RpgServerEngine
      */
-    get sceneMap() {
-        return this.getScene(SceneMap.id)
+    get sceneMap(): SceneMap {
+        return this.getScene<SceneMap>(SceneMap.id)
     }
 
     sendToPlayer(currentPlayer, eventName, data) {
@@ -235,7 +233,7 @@ export class RpgServerEngine {
 
     private onPlayerConnected(socket) {
         const playerId = Utils.generateUID()
-        let player: RpgPlayer = new this.playerClass(this.gameEngine, playerId)
+        let player: RpgPlayer = new RpgPlayer(this.gameEngine, playerId)
         socket.on('move', (data) => { 
             player.pendingMove.push(data)
         })

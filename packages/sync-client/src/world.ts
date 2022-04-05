@@ -21,7 +21,7 @@ class WorldClass {
             const bufView = new Uint8Array(response)
             const decode = msgpack.decode(bufView)
             const [roomId, time, data] = decode
-            const lastRoomId = this.obs$.value.roomId
+            const lastRoomId = this.obs$.value.roomId 
             if (lastRoomId != roomId) {
                 this.obs$.next({
                     roomId, 

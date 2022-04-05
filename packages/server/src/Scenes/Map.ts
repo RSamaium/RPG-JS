@@ -86,7 +86,7 @@ export class SceneMap {
     async changeMap(
         mapId: string, 
         player: RpgPlayer, 
-        positions?: { x: number, y: number, z: number } | string
+        positions?: { x: number, y: number, z?: number } | string
     ): Promise<RpgMap> {
         player.prevMap = player.map
         
@@ -119,14 +119,14 @@ export class SceneMap {
             sounds: mapInstance.sounds,
             ...serializeMap
         })
+
+        player.teleport(positions || 'start')
   
         World.joinRoom(mapId, player.id)
 
         player = World.getUser(player.id) as RpgPlayer
 
         if (player) {
-            player.teleport(positions || 'start')
-            player.events = {}
             player.createDynamicEvent(<any>mapInstance._events, false)
             player.execMethod('onJoinMap', <any>[mapInstance])
         }

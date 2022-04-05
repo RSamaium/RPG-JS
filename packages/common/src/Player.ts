@@ -437,6 +437,7 @@ export class RpgCommonPlayer {
             if (bool) return true
         }
 
+        // if there is a change of map after a move, the moves are not changed
         if (prevMapId != this.map) {
             return true
         }
