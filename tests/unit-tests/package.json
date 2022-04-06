@@ -1,6 +1,6 @@
 {
   "name": "unit-tests",
-  "version": "3.0.0-beta.6",
+  "version": "3.0.0-beta.7",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -12,12 +12,12 @@
   "license": "ISC",
   "private": true,
   "dependencies": {
-    "@rpgjs/client": "^3.0.0-beta.6",
-    "@rpgjs/common": "^3.0.0-beta.6",
-    "@rpgjs/compiler": "^3.0.0-beta.6",
-    "@rpgjs/database": "^3.0.0-beta.6",
-    "@rpgjs/server": "^3.0.0-beta.6",
-    "@rpgjs/testing": "^3.0.0-beta.6",
+    "@rpgjs/client": "^3.0.0-beta.7",
+    "@rpgjs/common": "^3.0.0-beta.7",
+    "@rpgjs/compiler": "^3.0.0-beta.7",
+    "@rpgjs/database": "^3.0.0-beta.7",
+    "@rpgjs/server": "^3.0.0-beta.7",
+    "@rpgjs/testing": "^3.0.0-beta.7",
     "@vue/cli-plugin-babel": "^5.0.4",
     "canvas": "^2.8.0",
     "core-js": "^3.21.1",
