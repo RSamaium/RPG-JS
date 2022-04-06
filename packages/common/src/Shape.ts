@@ -1,5 +1,7 @@
 import { RpgCommonPlayer } from './Player'
 import { Hit, HitObject } from './Hit'
+import { isInstanceOf } from './Utils'
+import SAT from 'sat'
 
 export enum ShapePositioning {
     Default = 'default',
@@ -201,7 +203,9 @@ export class RpgShape  {
     }
 
     isShapePosition(): boolean {
-        return !this.hitbox.w && !this.hitbox.r
+        return !isInstanceOf(this.hitbox, SAT.Polygon) 
+            && !isInstanceOf(this.hitbox, SAT.Circle)
+            && !isInstanceOf(this.hitbox, SAT.Box)
     }
 
    /**

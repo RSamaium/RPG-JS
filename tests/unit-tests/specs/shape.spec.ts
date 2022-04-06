@@ -60,9 +60,15 @@ test('Create Shape', () => {
     expect(shape.hitbox.pos.y).toBe(circle.width / 2)
  })
 
- /*
+ test('Create Shape (polygon)', () => {
+    const shape = map.createShape(polygon)
+    expect(shape.type).toEqual('polygon')
+    expect(shape.name).toBeDefined()
+    expect(shape.hitbox.edges).toBeDefined()
+ })
+ 
  describe('Shape In - Hook', () => {
-    function onInShape(shape): Promise<RpgShape> {
+    function onInShape(shape, position = { x: 50, y: 50 }): Promise<RpgShape> {
         return new Promise(async (resolve: any) => {
             clear()
    
@@ -82,8 +88,8 @@ test('Create Shape', () => {
             }])
             map = player.getCurrentMap()
             map.createShape(shape)
-            player.position.x = 50
-            player.position.y = 50
+            player.position.x = position.x
+            player.position.y = position.y
             await player.moveRoutes([ Move.right() ])
         })
     }
@@ -97,7 +103,12 @@ test('Create Shape', () => {
         const shape = await onInShape(circle)
         expect(shape.type).toBe('circle')
     })
- }) */
+
+    test('Polygon', async () => {
+        const shape = await onInShape(polygon)
+        expect(shape.type).toBe('polygon')
+    })
+ }) 
 
  test('Shape In - change map - verify position client side', () => {
     return new Promise(async (resolve: any) => {

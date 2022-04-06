@@ -94,7 +94,7 @@ describe('Hit tests', () => {
 
     test('Get Hitbox (circle)', () => {
         const hitbox = Hit.getHitbox(circle)
-        expect(hitbox.hitbox.r).toBe(100)
+        expect(hitbox.hitbox.r).toBe(50)
         expect(hitbox.type).toBe('circle')
     })
 
