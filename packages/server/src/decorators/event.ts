@@ -1,4 +1,4 @@
-import { EventMode } from '../Event'
+import { EventMode } from '../Player/Player'
 
 export interface EventOptions {
     /** 

@@ -36,5 +36,5 @@ export const player: RpgPlayerHooks = {
     },
     onOutShape(player: RpgPlayer, shape: RpgShape) {
         console.log('out', player.name, shape.name)
-    }
+    } 
 }

@@ -1,6 +1,6 @@
 import {_beforeEach} from './beforeEach'
 import { EventData, EventMode, Input, MapData, RpgEvent, RpgMap, RpgModule, RpgPlayer, RpgServer, RpgServerEngine } from '@rpgjs/server'
-import { RpgClientEngine, RpgSceneMap, Control } from '@rpgjs/client'
+import { RpgClientEngine, RpgSceneMap, Control, RpgPlugin, HookClient } from '@rpgjs/client'
 import { clear, nextTick } from '@rpgjs/testing'
 import { inputs } from './fixtures/control'
 
@@ -149,8 +149,12 @@ test('Test onAction', () => {
          })
          client.controls.applyControl(Control.Action)
 
+         RpgPlugin.on(HookClient.SendInput, () => {
+            nextTick(client)
+         }) 
+
          client.nextFrame(0)
-         nextTick(client)
+         
     })
  })
 

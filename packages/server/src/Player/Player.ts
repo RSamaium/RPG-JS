@@ -1,5 +1,5 @@
-import { RpgCommonPlayer, Utils, RpgPlugin, RpgCommonMap as RpgMap, EventEmitter, RpgCommonGame }  from '@rpgjs/common'
-import { RpgMap as GameMap } from '../Game/Map'
+import { RpgCommonPlayer, Utils, RpgPlugin, RpgCommonGame, RpgCommonMap }  from '@rpgjs/common'
+import { RpgMap, EventPosOption } from '../Game/Map'
 import { Query } from '../Query'
 import merge from 'lodash.merge'
 import { ItemManager } from './ItemManager'
@@ -29,9 +29,6 @@ import {
     DEX_CURVE,
     AGI_CURVE
 } from '../presets'
-import { EventOption, EventPosOption } from '../Game/Map'
-import { EventMode, RpgEvent } from '..'
-import { SceneMap } from '../Scenes/Map'
 import { RpgServerEngine } from '../server'
 
 const { 
@@ -260,7 +257,7 @@ export class RpgPlayer extends RpgCommonPlayer {
         [eventId: string]: RpgEvent
     } {
         if (!eventsList) return  {}
-        const mapInstance: GameMap = this.getCurrentMap() as GameMap
+        const mapInstance = this.getCurrentMap<RpgMap>()
         if (!mapInstance) {
             throw 'The player is not assigned to any map'
         }
@@ -482,8 +479,8 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @returns {RpgMap}
      * @memberof Player
      */
-    getCurrentMap(): RpgMap {
-        return this._getMap(this.map) as RpgMap
+    getCurrentMap<T extends RpgMap = RpgMap>(): T {
+        return this._getMap(this.map)
     }
 
     loadScene(name: string, data: any): void {
@@ -494,7 +491,7 @@ export class RpgPlayer extends RpgCommonPlayer {
     }
 
     private _getMap(id) {
-        return RpgMap.buffer.get(id)
+        return RpgCommonMap.buffer.get(id)
     }
 
     /**
@@ -715,3 +712,34 @@ applyMixins(RpgPlayer, [
     MoveManager,
     BattleManager
 ])
+
+export enum EventMode {
+    Shared = 'shared',
+    Scenario = 'scenario'
+}
+
+export class RpgEvent extends RpgPlayer  {
+
+    public readonly type: string = 'event'
+    properties: any = {}
+
+    async execMethod(methodName: string, methodData = []) {
+        if (!this[methodName]) {
+            return
+        }
+        const ret = this[methodName](...methodData)
+        const sync = () => {
+            const player: any = methodData[0]
+            if (player instanceof RpgPlayer) {
+                player.syncChanges()
+            }
+        }
+        if (Utils.isPromise(ret)) {
+            ret.then(sync)
+        }
+        else {
+            sync()
+        }
+        return ret
+    }
+}

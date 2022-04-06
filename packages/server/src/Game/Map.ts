@@ -1,9 +1,8 @@
 import { RpgCommonMap, Utils, RpgShape, RpgCommonGame }  from '@rpgjs/common'
 import fs from 'fs'
 import { EventOptions } from '../decorators/event'
-import { EventMode, RpgEvent } from '../Event'
+import { RpgPlayer, EventMode, RpgEvent } from '../Player/Player'
 import { Move } from '../Player/MoveManager'
-import { RpgPlayer } from '../Player/Player'
 import { RpgServerEngine } from '../server'
 
 export type EventPosOption = {

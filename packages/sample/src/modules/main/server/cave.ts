@@ -1,4 +1,4 @@
-import { RpgMap, MapData, EventData, RpgEvent, Move, EventMode } from '@rpgjs/server'
+import { RpgMap, MapData, EventData, RpgEvent, Move, EventMode, RpgPlayer } from '@rpgjs/server'
 
 @EventData({
     name: 'EV-1'
@@ -10,15 +10,16 @@ class MyEvent extends RpgEvent {
         this.frequency = 150  
         this.infiniteMoveRoute([ Move.tileRandom() ])
     }
-    onAction() {
-        console.log('ok')
+    onAction(player: RpgPlayer) {
+        const map = player.getCurrentMap()
+        map.removeEvent(this.id)
     }
 }
 
 @MapData({
     id: 'cave',
     file: require('./tmx/cave.tmx'),
-    //events: [MyEvent]
+    events: [MyEvent]
 })
 export class CaveMap extends RpgMap {
     
