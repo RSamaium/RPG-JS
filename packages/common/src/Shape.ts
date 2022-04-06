@@ -162,8 +162,6 @@ export class RpgShape  {
     set(obj: ShapeObject) {
         const hit = Hit.getHitbox(obj)
         Object.assign(this, hit)
-        this.x = obj.x || 0
-        this.y = obj.y || 0
         this.positioning = obj.positioning
         this.fixEvent = obj.fixEvent
     }
@@ -203,7 +201,7 @@ export class RpgShape  {
     }
 
     isShapePosition(): boolean {
-        return !this.hitbox.w
+        return !this.hitbox.w && !this.hitbox.r
     }
 
    /**

@@ -44,7 +44,8 @@ class HitClass {
         const y = obj.y + offset.y
         if (obj.ellipse) {
             type = HitType.Circle
-            hitbox = new SAT.Circle(new SAT.Vector(x, y), obj.width)
+            const radius = obj.width / 2
+            hitbox = new SAT.Circle(new SAT.Vector(x + radius, y + radius), radius)
         }
         else if (obj.polygon) {
             type = HitType.Polygon

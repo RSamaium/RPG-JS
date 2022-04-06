@@ -2,6 +2,7 @@ import { EventData, Move, RpgEvent, RpgMap, RpgPlayer } from '@rpgjs/server'
 import { Hit } from '@rpgjs/common'
 import {_beforeEach} from './beforeEach'
 import { clear, nextTick } from '@rpgjs/testing'
+import { box, circle, polygon } from './fixtures/shape'
 
 let client, player: RpgPlayer, fixture, playerId
 let event, map: RpgMap
@@ -64,7 +65,7 @@ test('Test Collision with event (position changed because through property)', as
     expect(player.position.x).not.toBe(0)
 })
 
-test('Test Collision with shape (position not changed', async () => {
+test('Test Collision with shape (position not changed)', async () => {
     map.createShape({
         x: 0,
         y: 0,
@@ -79,39 +80,6 @@ test('Test Collision with shape (position not changed', async () => {
 })
 
 describe('Hit tests', () => {
-    const box = {
-        x: 0,
-        y: 0,
-        width: 100,
-        height: 100
-    }
-    const circle = {
-        ellipse: true,
-        x: 0,
-        y: 0,
-        width: 100,
-        height: 100
-    }
-    const polygon = {
-        polygon: [{
-            x: 0,
-            y: 0
-        }, {
-            x: -10,
-            y: 52.6667
-        }, {
-            x: 74,
-            y: 28.6667
-        }, {
-            x: 72.6667,
-            y: -24
-        }],
-        x: 0,
-        y: 0,
-        width: 0,
-        height: 0
-    }
-
     test('Create Hitbox', () => {
         const hitbox = Hit.createObjectHitbox(0, 0, 0, 100, 100)
         expect(hitbox.pos).toMatchObject({ x: 0, y: 0 })

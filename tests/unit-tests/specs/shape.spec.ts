@@ -3,6 +3,7 @@ import { HookClient, RpgMap, RpgPlayer,  RpgServerEngine, ShapePositioning, RpgS
 import { RpgClientEngine, RpgSceneMap, RpgPlugin, Control } from '@rpgjs/client'
 import { clear, nextTick } from '@rpgjs/testing'
 import { inputs } from './fixtures/control'
+import { box, circle, polygon } from './fixtures/shape'
 
 let  client: RpgClientEngine, 
 player: RpgPlayer, 
@@ -51,35 +52,52 @@ test('Create Shape', () => {
     })
  })
 
- test('Shape In - Hook', async () => {
-     return new Promise(async (resolve: any) => {
-         clear()
-
-         @RpgModule<RpgServer>({
-             player: {
-                 onInShape(player: RpgPlayer,shape: RpgShape) {
-                    expect(player.id).toBeDefined()
-                    expect(shape.name).toBeDefined()
-                    resolve()
-                 }
-             }
-         })
-         class RpgServerModule {}
- 
-         const { player } = await _beforeEach([{
-             server: RpgServerModule
-         }])
-         map = player.getCurrentMap() as RpgMap
-         map.createShape({
-            x: 0,
-            y: 0,
-            width: 100,
-            height: 100,
-            name: 'test'
-        })
-        await player.moveRoutes([ Move.right() ])
-     })
+ test('Create Shape (circle)', () => {
+    const shape = map.createShape(circle)
+    expect(shape.type).toEqual('circle')
+    expect(shape.name).toBeDefined()
+    expect(shape.hitbox.pos.x).toBe(circle.width / 2)
+    expect(shape.hitbox.pos.y).toBe(circle.width / 2)
  })
+
+ /*
+ describe('Shape In - Hook', () => {
+    function onInShape(shape): Promise<RpgShape> {
+        return new Promise(async (resolve: any) => {
+            clear()
+   
+            @RpgModule<RpgServer>({
+                player: {
+                    onInShape(player: RpgPlayer,shape: RpgShape) {
+                       expect(player.id).toBeDefined()
+                       expect(shape.name).toBeDefined()
+                       resolve(shape)
+                    }
+                }
+            })
+            class RpgServerModule {}
+    
+            const { player } = await _beforeEach([{
+                server: RpgServerModule
+            }])
+            map = player.getCurrentMap()
+            map.createShape(shape)
+            player.position.x = 50
+            player.position.y = 50
+            await player.moveRoutes([ Move.right() ])
+        })
+    }
+
+    test('Box', async () => {
+        const shape = await onInShape(box)
+        expect(shape.type).toBe('box')
+    })
+
+    test('Circle', async () => {
+        const shape = await onInShape(circle)
+        expect(shape.type).toBe('circle')
+    })
+ }) */
 
  test('Shape In - change map - verify position client side', () => {
     return new Promise(async (resolve: any) => {
