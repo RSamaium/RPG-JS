@@ -13,6 +13,7 @@ export class SceneMap {
     
     constructor(private maps: any[], private server: any) {
         this.mapsById = {}
+        RpgCommonMap.buffer.clear()
         if (this.maps) {
             for (let map of this.maps) {
                 this.createDynamicMap(map)
@@ -39,7 +40,7 @@ export class SceneMap {
         }
 
         if (RpgCommonMap.buffer.has(id)) {
-            mapInstance =  RpgCommonMap.buffer.get(id)
+            mapInstance = RpgCommonMap.buffer.get(id)
         }
         else {
             mapInstance = World.addRoom(id, new mapClass(this.server))
@@ -72,20 +73,20 @@ export class SceneMap {
      * player.changeMap('myid')
      * ```
      */
-    createDynamicMap(mapData: MapOptions) {
+    createDynamicMap(mapData: MapOptions | (new (...args: any[]) => any)) {
         if (!Utils.isClass(mapData)) {
-            @MapData(mapData)
+            @MapData(mapData as MapOptions)
             class DynamicMap extends RpgMap {}
-            mapData = DynamicMap as any
+            mapData = DynamicMap
         }
-        mapData.id = mapData.id || Utils.generateUID()
-        this.mapsById[mapData.id] = mapData
+        mapData['id'] = mapData['id'] || Utils.generateUID()
+        this.mapsById[mapData['id']] = mapData
     }
 
     async changeMap(
         mapId: string, 
         player: RpgPlayer, 
-        positions?: { x: number, y: number, z: number } | string
+        positions?: { x: number, y: number, z?: number } | string
     ): Promise<RpgMap> {
         player.prevMap = player.map
         
@@ -118,14 +119,14 @@ export class SceneMap {
             sounds: mapInstance.sounds,
             ...serializeMap
         })
+
+        player.teleport(positions || 'start')
   
         World.joinRoom(mapId, player.id)
 
         player = World.getUser(player.id) as RpgPlayer
 
         if (player) {
-            player.teleport(positions || 'start')
-            player.events = {}
             player.createDynamicEvent(<any>mapInstance._events, false)
             player.execMethod('onJoinMap', <any>[mapInstance])
         }

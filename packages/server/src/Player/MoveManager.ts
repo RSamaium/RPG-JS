@@ -1,4 +1,4 @@
-import { Direction } from '@rpgjs/common'
+import { Direction, LiteralDirection } from '@rpgjs/common'
 import { Utils } from '@rpgjs/common'
 import { RpgPlayer } from './Player';
 
@@ -196,7 +196,10 @@ class MoveList {
     }
 
     private _awayFromPlayer({ isTile, typeMov }: { isTile: boolean, typeMov: string}, otherPlayer: RpgPlayer, repeat: number = 1) {
-        const method = dir => this[isTile ? 'tile' + capitalize(dir) : dir](repeat)
+        const method = (dir: number) => {
+            const direction: string = LiteralDirection[dir]
+            return this[isTile ? 'tile' + capitalize(direction) : direction](repeat)
+        }
         return (player: RpgPlayer, map) => {
             let newDirection = 0
             switch (typeMov) {
@@ -433,7 +436,8 @@ export class MoveManager {
      */
     moveRoutes(routes: Routes) : Promise<boolean> {
         let count = 0
-        let frequence = this.frequency
+        let frequence = 0
+        this.breakRoutes() // break previous route
         return new Promise((resolve) => {
             this._finishRoute = resolve
             routes = routes.map((route: any) => {
@@ -443,14 +447,14 @@ export class MoveManager {
                 return route
             })
             routes = arrayFlat(routes)
-            const move = () => {
-                if (count % this['nbPixelInTile'] == 0) {
+            const move = async () => {
+                if (count >= this['nbPixelInTile']) {
                     if (frequence < this.frequency) {
                         frequence++
                         return
                     }
                 }
-
+                
                 frequence = 0
                 count++
 
@@ -466,7 +470,7 @@ export class MoveManager {
                     case Direction.Down:
                     case Direction.Right:
                     case Direction.Up:
-                        this.moveByDirection(route, 1)
+                        await this.moveByDirection(route, 1)
                         break
                     case 'turn-' + Direction.Left:
                         this.changeDirection(Direction.Left)

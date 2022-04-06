@@ -20,7 +20,7 @@
       "declaration": true,
       "experimentalDecorators": true, 
       "emitDecoratorMetadata": true,
-      
+      "stripInternal": true
     },
     "include": [
         "src"

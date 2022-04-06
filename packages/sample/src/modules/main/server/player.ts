@@ -27,13 +27,14 @@ export const player: RpgPlayerHooks = {
     },
     onInput(player: RpgPlayer, { input, moving }) {
         if (input == Control.Back) {
-            player.changeMap('samplemap')
+            
         }
     },
-    onInShape(player: RpgPlayer, shape: RpgShape) {
+    async onInShape(player: RpgPlayer, shape: RpgShape) {
         console.log('in', player.name, shape.name)
+        // await player.changeMap('samplemap')
     },
     onOutShape(player: RpgPlayer, shape: RpgShape) {
         console.log('out', player.name, shape.name)
-    } 
+    }
 }

@@ -33,6 +33,9 @@ export const _beforeEach: any = async (modules: any = [], serverOptions: any = {
     const playerId = clientFixture.playerId
     let player = RpgWorld.getPlayer(playerId)
     const clientMapLoading = new Promise((resolve: any) => {
+        RpgPlugin.on(HookClient.BeforeSceneLoading, () => {
+            PIXI.utils.clearTextureCache()
+        })
         RpgPlugin.on(HookClient.AfterSceneLoading, () => {
             resolve()
         })

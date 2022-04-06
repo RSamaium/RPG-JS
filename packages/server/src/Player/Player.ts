@@ -1,5 +1,5 @@
-import { RpgCommonPlayer, Utils, RpgPlugin, RpgCommonMap as RpgMap, EventEmitter }  from '@rpgjs/common'
-import { RpgMap as GameMap } from '../Game/Map'
+import { RpgCommonPlayer, Utils, RpgPlugin, RpgCommonGame, RpgCommonMap }  from '@rpgjs/common'
+import { RpgMap, EventPosOption } from '../Game/Map'
 import { Query } from '../Query'
 import merge from 'lodash.merge'
 import { ItemManager } from './ItemManager'
@@ -29,8 +29,7 @@ import {
     DEX_CURVE,
     AGI_CURVE
 } from '../presets'
-import { EventOption, EventPosOption } from '../Game/Map'
-import { EventMode, RpgEvent } from '..'
+import { RpgServerEngine } from '../server'
 
 const { 
     isPromise, 
@@ -108,10 +107,12 @@ export class RpgPlayer extends RpgCommonPlayer {
     public param: any 
     public _rooms = []
     public prevMap: string = ''
+    /** @internal */
+    public server: RpgServerEngine
 
     _lastFrame: number = 0
 
-    constructor(gameEngine?, playerId?) {
+    constructor(gameEngine: RpgCommonGame, playerId: string) {
         super(gameEngine, playerId)
         this.initialize()
     }
@@ -124,6 +125,7 @@ export class RpgPlayer extends RpgCommonPlayer {
     // As soon as a teleport has been made, the value is changed to force the client to change the positions on the map without making a move.
     teleported: number = 0
 
+    /** @internal */
     initialize() {
         this.expCurve =  {
             basis: 30,
@@ -218,8 +220,8 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @returns {Promise<RpgMap>}
      * @memberof Player
      */
-    changeMap(mapId: string, positions?): Promise<RpgMap> {
-        return this.server.getScene('map').changeMap(mapId, this, positions) 
+    changeMap(mapId: string, positions?: { x: number, y: number, z?: number} | string): Promise<RpgMap> {
+        return this.server.sceneMap.changeMap(mapId, this, positions) 
     }
 
     /**
@@ -255,7 +257,7 @@ export class RpgPlayer extends RpgCommonPlayer {
         [eventId: string]: RpgEvent
     } {
         if (!eventsList) return  {}
-        const mapInstance: GameMap = this.getCurrentMap() as GameMap
+        const mapInstance = this.getCurrentMap<RpgMap>()
         if (!mapInstance) {
             throw 'The player is not assigned to any map'
         }
@@ -270,11 +272,14 @@ export class RpgPlayer extends RpgCommonPlayer {
             })
         }
         const events = mapInstance.createEvents(eventsListMode as EventPosOption[], EventMode.Scenario)
+        let ret = {}
         for (let key in events) {
             this.events[key] = events[key]
             this.events[key].execMethod('onInit', [this])
+            // force to get Proxy object to sync with client
+            ret = { ...ret, [key]: this.events[key] }
         }
-        return events
+        return ret
     }
 
     /**
@@ -474,7 +479,7 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @returns {RpgMap}
      * @memberof Player
      */
-    getCurrentMap(): RpgMap {
+    getCurrentMap<T extends RpgMap = RpgMap>(): T {
         return this._getMap(this.map)
     }
 
@@ -486,7 +491,7 @@ export class RpgPlayer extends RpgCommonPlayer {
     }
 
     private _getMap(id) {
-        return RpgMap.buffer.get(id)
+        return RpgCommonMap.buffer.get(id)
     }
 
     /**
@@ -554,6 +559,7 @@ export class RpgPlayer extends RpgCommonPlayer {
         if (this._socket) this._socket.emit(key, value) 
     }
 
+  
     /**
      * Listen to the data (socket) sent by the client
      * 
@@ -580,6 +586,7 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @memberof Player
      */
     public once(key: string, cb: Function) {
+        this.on('mm', () => {})
         if (this._socket) this._socket.once(key, cb) 
     }
 
@@ -687,7 +694,6 @@ export interface RpgPlayer extends
     BattleManager
 {
     _socket: any 
-    server: any,
     vision,
     attachShape: any
 }
@@ -706,3 +712,34 @@ applyMixins(RpgPlayer, [
     MoveManager,
     BattleManager
 ])
+
+export enum EventMode {
+    Shared = 'shared',
+    Scenario = 'scenario'
+}
+
+export class RpgEvent extends RpgPlayer  {
+
+    public readonly type: string = 'event'
+    properties: any = {}
+
+    async execMethod(methodName: string, methodData = []) {
+        if (!this[methodName]) {
+            return
+        }
+        const ret = this[methodName](...methodData)
+        const sync = () => {
+            const player: any = methodData[0]
+            if (player instanceof RpgPlayer) {
+                player.syncChanges()
+            }
+        }
+        if (Utils.isPromise(ret)) {
+            ret.then(sync)
+        }
+        else {
+            sync()
+        }
+        return ret
+    }
+}

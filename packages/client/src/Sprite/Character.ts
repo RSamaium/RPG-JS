@@ -7,8 +7,11 @@ const { capitalize } = Utils
 
 export default class Character extends PIXI.Sprite {
    
+     /** @internal */
     tilesOverlay: any
+     /** @internal */
     h: number = 1
+     /** @internal */
     w: number = 1
     protected direction: number = 0
     private graphic: string = ''
@@ -16,7 +19,6 @@ export default class Character extends PIXI.Sprite {
     private _x: number = 0
     private _y: number = 0
     public z: number = 0
-    private effects: any[] = []
     private fixed: boolean = false
     private playStandardAnimation: boolean = true
     public animation: Animation
@@ -24,7 +26,8 @@ export default class Character extends PIXI.Sprite {
     private teleported: number = 0
     private map: string = ''
 
-    anim
+    /** @internal */
+    anim: Animation
 
      /** 
      * the direction of the sprite
@@ -117,6 +120,7 @@ export default class Character extends PIXI.Sprite {
         }
     }
 
+    /** @internal */
     showAnimation(graphic: string, animationName: string) {
         const refreshAnimation = (graphic) => {
             this.removeChild(this.animation)
@@ -139,6 +143,7 @@ export default class Character extends PIXI.Sprite {
         return this.animation
     }
 
+    /** @internal */
     setGraphic(graphic) {
         (this.children as Animation[]).forEach((graphic: Animation, index: number) => {
             if (graphic.id == this.graphic) {
@@ -167,6 +172,7 @@ export default class Character extends PIXI.Sprite {
         }
     }
 
+    /** @internal */
     update(obj): any {
         const { graphic, speed, teleported, map } = obj
 
@@ -239,6 +245,7 @@ export default class Character extends PIXI.Sprite {
         }
     }
 
+    /** @internal */
     playAnimation(name: string) {
         const hook = `onCharacter${capitalize(name)}`
         if (!this.spritesheet) return

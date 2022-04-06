@@ -1,4 +1,4 @@
-import { Control, Direction, Input, Utils } from '@rpgjs/common'
+import { Direction, Input, Utils } from '@rpgjs/common'
 import { RpgClientEngine } from './RpgClientEngine';
 
 // keyboard handling
@@ -197,33 +197,36 @@ export interface Controls {
     [controlName: string]: ControlOptions
 }
 
-type BoundKey = { actionName: string, options: any }
+type BoundKey = { actionName: string, options: any, parameters?: any }
 
 export class KeyboardControls {
-
-    private gameEngine
-    private keyState = {}
-    private boundKeys = {}
-    private stop = false
-    private lastKeyPressed
-    private _controlsOptions = {}
+    private keyState: {
+        [keyName: string]: {
+            isDown: boolean,
+            count: number
+        } | null
+    } = {}
+    private boundKeys: {
+        [keyName: string]: BoundKey
+    } = {}
+    private stop: boolean = false
+    private lastKeyPressed: number | null = null
+    private _controlsOptions: Controls = {}
 
     constructor(private clientEngine: RpgClientEngine) {
         const { globalConfig } = clientEngine
-        this.gameEngine = clientEngine.gameEngine;
-
         this.setupListeners();
-
         if (globalConfig.inputs) this.setInputs(globalConfig.inputs)
     }
 
+     /** @internal */
     preStep() {
         //this.directionToAngle()
         const boundKeys = Object.keys(this.boundKeys)
         const applyInput = (keyName) => {
-            if (this.keyState[keyName] && this.keyState[keyName].isDown) {
+            if (this.keyState[keyName]?.isDown) {
                 const { repeat, method } = this.boundKeys[keyName].options
-                if (repeat || this.keyState[keyName].count == 0) {
+                if (repeat || this.keyState[keyName]?.count == 0) {
                     let parameters = this.boundKeys[keyName].parameters;
                     if (typeof parameters === "function") {
                         parameters = parameters();
@@ -235,7 +238,7 @@ export class KeyboardControls {
                         this.clientEngine.sendInput(this.boundKeys[keyName].actionName);
                     }
         
-                    this.keyState[keyName].count++;
+                    this.keyState[keyName]!.count++;
                 }
             }
         }
@@ -249,7 +252,7 @@ export class KeyboardControls {
         let directionVal = 0
         let nbFound = 0
         for (let keyName of Object.keys(this.boundKeys)) {
-            if (this.keyState[keyName] && this.keyState[keyName].isDown) {
+            if (this.keyState[keyName]?.isDown) {
                if (directionCode[keyName]) {
                     this.keyState[keyName] = null
                     directionVal += directionCode[keyName]
@@ -261,13 +264,14 @@ export class KeyboardControls {
 
         const index = directionVal / nbFound
 
-        if (!this.keyState[index]) {
+        if (this.keyState[index] !== null) {
             this.keyState[index] = {
-                count: 0
+                count: 0,
+                isDown: true
             }
         }
 
-        this.keyState[index].isDown = true
+        this.keyState[index]!.isDown = true
     }
 
     private setupListeners() {
@@ -275,15 +279,14 @@ export class KeyboardControls {
         document.addEventListener('keyup', (e) => { this.onKeyChange(e, false);});
     }
 
-    private bindKey(keys, actionName, options, parameters?) {
-        if (!Array.isArray(keys)) keys = [keys];
-        let keyOptions = Object.assign({
+    private bindKey(keys: Input | Input[], actionName: string, options: object, parameters?: object) {
+        if (!isArray(keys)) keys = [keys] as Input[]
+        const keyOptions = Object.assign({
             repeat: false
         }, options);
-
-        keys.forEach(keyName => {
-            this.boundKeys[keyName] = { actionName, options: keyOptions, parameters: parameters };
-        });
+        (keys as Input[]).forEach(keyName => {
+            this.boundKeys[keyName] = { actionName, options: keyOptions, parameters }
+        })
     }
 
     private applyKeyDown(name: string) {
@@ -310,7 +313,7 @@ export class KeyboardControls {
         })
     }
 
-    private onKeyChange(e, isDown) {
+    private onKeyChange(e: KeyboardEvent, isDown: boolean) {
         e = e || window.event;
 
         const keyName: string = keyCodeTable[e.keyCode];
@@ -323,13 +326,14 @@ export class KeyboardControls {
         if (keyName && this.boundKeys[keyName]) {
             if (this.keyState[keyName] == null) {
                 this.keyState[keyName] = {
-                    count: 0
+                    count: 0,
+                    isDown: true
                 };
             }
-            this.keyState[keyName].isDown = isDown;
+            this.keyState[keyName]!.isDown = isDown;
 
             // key up, reset press count
-            if (!isDown) this.keyState[keyName].count = 0;
+            if (!isDown) this.keyState[keyName]!.count = 0;
 
             // keep reference to the last key pressed to avoid duplicates
             this.lastKeyPressed = isDown ? e.keyCode : null;

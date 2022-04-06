@@ -13,14 +13,12 @@ import {
 import { RpgServer, RpgPlayerHooks, RpgServerEngineHooks } from './RpgServer'
 import { EventData } from './decorators/event'
 import { MapData } from './decorators/map'
+import { RpgPlayer, RpgEvent, EventMode } from './Player/Player'
 import { RpgMap } from './Game/Map'
-import { RpgEvent, EventMode } from './Event'
-import { RpgPlayer } from './Player/Player'
-import RpgEnemy from './Enemy'
 import { Query } from './Query'
 import Monitor from './Monitor'
 import * as Presets from './presets'
-import { Move } from './Player/MoveManager'
+import { Move, Frequency, Speed } from './Player/MoveManager'
 import { RpgServerEngine } from './server'
 
 export {
@@ -29,7 +27,6 @@ export {
     RpgPlayer,
     RpgPlugin,
     RpgMap,
-    RpgEnemy,
     MapData,
     EventData,
     Query as RpgWorld,
@@ -49,5 +46,7 @@ export {
     RpgServerEngineHooks,
     RpgServerEngine,
     RpgShape,
-    ShapePositioning
+    ShapePositioning,
+    Frequency,
+    Speed
 }

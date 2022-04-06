@@ -5,19 +5,18 @@ import { Control } from './Input'
 import { RpgPlugin } from './Plugin'
 import { GameWorker } from './Worker'
 
-export default class Game extends EventEmitter {
+export enum GameSide {
+    Server = 'server',
+    Client = 'client',
+    Worker = 'worker'
+}
+
+export class RpgCommonGame extends EventEmitter {
 
     events: any
     world: any
-
-    // client side only
-    playerId: string
-    standalone: boolean
-    clientEngine: any
-    renderer: any
-    _playerClass: any
-
-    constructor(private side: string) {
+    
+    constructor(public side: GameSide) {
         super()
         this.events = {} // events for all player in map
     }
@@ -56,8 +55,8 @@ export default class Game extends EventEmitter {
         return event
     }
 
-    processInput(playerId: string): RpgCommonPlayer {
-        const player: RpgCommonPlayer = this.world.getObject(playerId)
+    async processInput<RpgPlayer extends RpgCommonPlayer>(playerId: string): Promise<RpgPlayer> {
+        const player: RpgPlayer = this.world.getObject(playerId)
 
         if (!player) return player
         if (!player.canMove) return player
@@ -68,7 +67,6 @@ export default class Game extends EventEmitter {
             const inputData = player.pendingMove.shift()
             let { input, deltaTimeInt } = inputData as any
             let moving = false
-
             if (input == Control.Action) {
                 player.triggerCollisionWith(RpgCommonPlayer.ACTIONS.ACTION)
             }
@@ -79,13 +77,13 @@ export default class Game extends EventEmitter {
                 input == Direction.Down
             ) {
                 moving = true
-                const isMove = player.moveByDirection(+input, deltaTimeInt || 1)
+                const isMove = await player.moveByDirection(+input, deltaTimeInt || 1)
                 if (isMove) {
                     routesMove.push(inputData)
                 }
             } 
             // TODO, is Worker
-            if (this.side == 'server') RpgPlugin.emit('Server.onInput', [player, {
+            RpgPlugin.emit('Server.onInput', [player, {
                 ...inputData,
                 moving
             }], true)

@@ -2,14 +2,13 @@ import { RpgCommonMap, RpgPlugin, HookClient, RpgShape } from '@rpgjs/common'
 import TileMap from '../Tilemap'
 import { Viewport } from 'pixi-viewport'
 import { IScene } from '../Interfaces/Scene'
-import { Scene } from './Scene'
+import { Scene, SceneObservableData, SceneSpriteLogic } from './Scene'
 import { spritesheets } from '../Sprite/Spritesheets'
 import Character from '../Sprite/Character'
 import { RpgSound } from '../Sound/RpgSound'
-import { RpgGui } from '../RpgGui'
+import { RpgSprite } from '../Sprite/Player'
 
-export class SceneMap extends Scene implements IScene {
-
+export class SceneMap extends Scene {
     /** 
      * Get the tilemap
      * 
@@ -28,10 +27,9 @@ export class SceneMap extends Scene implements IScene {
      * @prop {PIXI.Viewport} viewport
      * @memberof RpgSceneMap
      * */
-    protected viewport: Viewport | undefined
+    public viewport: Viewport | undefined
     private players: object = {}
     private isLoaded: boolean = false
-
     private gameMap: RpgCommonMap
 
     shapes = {}
@@ -65,12 +63,13 @@ export class SceneMap extends Scene implements IScene {
         
     }
 
+    /** @internal */
     load(obj): Promise<Viewport> {
         this.gameMap = new RpgCommonMap()
         this.gameMap.load(obj)
         this.constructMethods()
 
-        if (!this.game.standalone) RpgCommonMap.buffer.set(obj.id, this.gameMap)
+        RpgCommonMap.bufferClient.set(obj.id, this.gameMap)
 
         this.tilemap = new TileMap(obj, this.game.renderer)
 
@@ -90,7 +89,7 @@ export class SceneMap extends Scene implements IScene {
         }
 
         loader.load((loader, resources) => {
-             for (let tileset of this.tilemap.tileSets) {
+            for (let tileset of this.tilemap.tileSets) {
                 const spritesheet = spritesheets.get(tileset.name)
                 if (resources[tileset.name]) spritesheet.resource = resources[tileset.name]  
             }
@@ -129,6 +128,7 @@ export class SceneMap extends Scene implements IScene {
         })
     }
 
+    /** @internal */
     changeTile(x: number, y: number, layers: {
         [layerName: string]: object
     }) {
@@ -139,6 +139,7 @@ export class SceneMap extends Scene implements IScene {
         }
     }
 
+    /** @internal */
     draw(t: number, dt: number, frame: number) {
         if (!this.isLoaded) {
             return
@@ -147,7 +148,7 @@ export class SceneMap extends Scene implements IScene {
         this.tilemap.drawAnimateTile(frame)
     }
 
-    onUpdateObject(logic, sprite: Character, moving: boolean): Character {
+    onUpdateObject(logic: SceneSpriteLogic, sprite: Character, moving: boolean): Character {
         const { paramsChanged } = logic
         if (moving || (paramsChanged && (paramsChanged.width || paramsChanged.height))) {
             const { tileWidth, tileHeight } = this.gameMap
@@ -174,12 +175,14 @@ export class SceneMap extends Scene implements IScene {
         return sprite
     }
 
+    /** @internal */
     setPlayerPosition(id: string, { x, y }: { x: number, y: number }) {
         this.players[id].x = x
         this.players[id].y = y
     }
 
-    updateScene(obj: { data: any, partial: any }) {
+    /** @internal */
+    updateScene(obj: SceneObservableData) {
         const shapes = obj.partial.shapes
         const fullShapesObj = obj.data.shapes
 
@@ -233,14 +236,14 @@ export class SceneMap extends Scene implements IScene {
         const wrapper = new PIXI.Container()
         const inner = new PIXI.Container()
         const tilesOverlay = new PIXI.Container()
-        const sprite = new this.game._playerClass(obj, this)
+        const sprite = new RpgSprite(obj, this)
  
         sprite.tilesOverlay = tilesOverlay
         inner.addChild(sprite)
         wrapper.addChild(inner, tilesOverlay)
 
         this.objects.set(id, sprite)
-        this.tilemap.getEventLayer().addChild(wrapper)
+        this.tilemap.getEventLayer()?.addChild(wrapper)
 
         if (sprite.isCurrentPlayer) this.viewport?.follow(sprite)
         sprite.onInit()

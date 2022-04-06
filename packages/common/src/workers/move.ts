@@ -1,11 +1,11 @@
 import workerpool from 'workerpool'
 import RpgMap from '../Map'
-import Game from '../Game'
+import { RpgCommonGame, GameSide } from '../Game'
 import { RpgCommonPlayer } from '../Player'
 
 const objects: any = {}
 let objectsByMap: any = {}
-const gameEngine = new Game('worker')
+const gameEngine = new RpgCommonGame(GameSide.Worker)
 gameEngine.start({
   getObject(playerId) {
     return objects[playerId]
@@ -35,12 +35,12 @@ function loadMap(data) {
   RpgMap.buffer.set(data.id, map)
 }
 
-function movePlayers(data) {
+async function movePlayers(data) {
   objectsByMap = {}
   const ret = {}
   for (let object of data) {
     gameEngine.world.addObject(object.id, object)
-    const player = gameEngine.processInput(object.id)
+    const player = await gameEngine.processInput(object.id)
     if (player) {
       ret[player.id] = {
         position: {

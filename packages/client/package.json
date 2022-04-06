@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/client",
-  "version": "3.0.0-beta.3",
+  "version": "3.0.0-beta.7",
   "description": "",
   "main": "lib/index.js",
   "types": "./lib/index.d.ts",
@@ -18,8 +18,8 @@
   "author": "Samuel Ronce",
   "license": "MIT",
   "dependencies": {
-    "@rpgjs/common": "^3.0.0-beta.3",
-    "@rpgjs/sync-client": "^3.0.0-beta.3",
+    "@rpgjs/common": "^3.0.0-beta.7",
+    "@rpgjs/sync-client": "^3.0.0-beta.7",
     "@types/howler": "2.2.1",
     "howler": "2.2.1",
     "lodash.merge": "4.6.2",

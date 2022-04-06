@@ -7,7 +7,7 @@
     </div>
 </template>
 
-<script lang="ts">
+<script>
 export default {
     name: 'my-hud',
     inject: ['rpgCurrentPlayer'],

@@ -3,6 +3,7 @@ import Characters from './characters'
 import { MedievalTilesets } from './maps/medieval'
 import { sprite } from './sprite'
 import hpGui from './gui/hp.vue'
+import myTooltip from './gui/tooltip.vue'
 
 let engine
 
@@ -12,7 +13,7 @@ let engine
     engine: {
         onConnected(rpgEngine: RpgClientEngine, socket: any) {
             engine = rpgEngine
-            RpgGui.display('hp')
+            RpgGui.display('my-tooltip')
         }
     },
     scenes: {
@@ -24,7 +25,8 @@ let engine
         }
     },
     gui: [
-        hpGui
+        hpGui,
+        myTooltip
     ]
 })
-export default class RpgClientModuleEngine {}
+export default class RpgClientModuleEngine {} 

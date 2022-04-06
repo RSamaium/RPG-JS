@@ -3,7 +3,7 @@ import { RpgPlayer } from './Player/Player'
 import { Query } from './Query'
 import { DAMAGE_SKILL, DAMAGE_PHYSIC, DAMAGE_CRITICAL, COEFFICIENT_ELEMENTS } from './presets'
 import { World, WorldClass } from '@rpgjs/sync-server'
-import { Utils, RpgPlugin, Scheduler, HookServer } from '@rpgjs/common'
+import { Utils, RpgPlugin, Scheduler, HookServer, RpgCommonGame } from '@rpgjs/common'
 
 export class RpgServerEngine {
 
@@ -39,8 +39,6 @@ export class RpgServerEngine {
      * @memberof RpgServerEngine
      */
     public damageFormulas: any = {}
-
-    private playerClass: any
     private scenes: Map<string, any> = new Map()
     protected totalConnected: number = 0
     private scheduler: Scheduler
@@ -54,15 +52,14 @@ export class RpgServerEngine {
      * @prop {Socket Io Server} [io]
      * @memberof RpgServerEngine
      */
-    constructor(public io, public gameEngine, public inputOptions) {
+    constructor(public io, public gameEngine: RpgCommonGame, public inputOptions) {
         if (this.inputOptions.workers) {
             console.log('workers enabled')
             this.workers = this.gameEngine.createWorkers(this.inputOptions.workers).load()
-        }    
+        }
     }
 
     private async _init() {
-        this.playerClass = this.inputOptions.playerClass || RpgPlayer
         this.damageFormulas = this.inputOptions.damageFormulas || {}
         this.damageFormulas = {
             damageSkill: DAMAGE_SKILL,
@@ -169,14 +166,19 @@ export class RpgServerEngine {
     private updatePlayersMove(deltaTimeInt: number) {
         const players = this.world.getUsers() 
         const obj: any = []
-         for (let playerId in players) {
+        let p: Promise<any>[] = []
+        let id = Math.random()
+        for (let playerId in players) {
             const player = players[playerId] as RpgPlayer
             if (player.pendingMove.length > 0) {
+                const lastFrame = player.pendingMove[player.pendingMove.length-1]
                 if (this.inputOptions.workers) obj.push(player.toObject())
                 else {
-                    this.gameEngine.processInput(playerId)
+                    p.push(this.gameEngine.processInput(playerId).then(() => {
+                        player.pendingMove = []
+                        player._lastFrame = lastFrame.frame
+                    }))
                 }
-                player.pendingMove = []
             }
         }
         if (this.inputOptions.workers) {
@@ -195,6 +197,7 @@ export class RpgServerEngine {
                 }
             })
         }
+        return Promise.all(p)
     }
 
     step(t: number, dt: number) {
@@ -210,7 +213,7 @@ export class RpgServerEngine {
         this.scenes.set(SceneMap.id, new SceneMap(this.inputOptions.maps, this))
     }
 
-    getScene(name: string) {
+    getScene<T>(name: string): T {
         return this.scenes.get(name)
     }
 
@@ -220,8 +223,8 @@ export class RpgServerEngine {
      * @since 3.0.0-beta.4
      * @memberof RpgServerEngine
      */
-    get sceneMap() {
-        return this.getScene(SceneMap.id)
+    get sceneMap(): SceneMap {
+        return this.getScene<SceneMap>(SceneMap.id)
     }
 
     sendToPlayer(currentPlayer, eventName, data) {
@@ -230,16 +233,20 @@ export class RpgServerEngine {
 
     private onPlayerConnected(socket) {
         const playerId = Utils.generateUID()
-        let player: RpgPlayer = new this.playerClass(this.gameEngine, playerId)
-        socket.on('move', (data) => { 
-            player._lastFrame = data.frame
-            player.pendingMove.push(data)
+        const player: RpgPlayer = new RpgPlayer(this.gameEngine, playerId)
+        socket.on('move', (data: { input: string[], frame: number }) => {
+            for (let input of data.input) {
+                player.pendingMove.push({
+                    input,
+                    frame: data.frame
+                })
+            }
         })
 
         socket.on('disconnect', () => {
             this.onPlayerDisconnected(socket.id, playerId)
         })
-        
+
         this.world.setUser(player, socket)
 
         socket.emit('playerJoined', { playerId })

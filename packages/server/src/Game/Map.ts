@@ -1,9 +1,8 @@
 import { RpgCommonMap, Utils, RpgShape, RpgCommonGame }  from '@rpgjs/common'
 import fs from 'fs'
 import { EventOptions } from '../decorators/event'
-import { EventMode, RpgEvent } from '../Event'
+import { RpgPlayer, EventMode, RpgEvent } from '../Player/Player'
 import { Move } from '../Player/MoveManager'
-import { RpgPlayer } from '../Player/Player'
 import { RpgServerEngine } from '../server'
 
 export type EventPosOption = {
@@ -202,11 +201,27 @@ export class RpgMap extends RpgCommonMap {
             eventsList = [eventsList as EventPosOption]
         }
         const events = this.createEvents(eventsList as EventPosOption[], EventMode.Shared)
+        let ret = {}
         for (let key in events) {
             this.events[key] = events[key]
             this.events[key].execMethod('onInit')
+            // force to get Proxy object to sync with client
+            ret = { ...ret, [key]: this.events[key] }
         }
-        return events
+        return ret
+    }
+
+    /**
+     * Get Event in current map
+     * @title Get Event
+     * @since 3.0.0-beta.7
+     * @method map.getEvent(eventId)
+     * @param {string} eventId Event Id
+     * @returns {RpgEvent | undefined}
+     * @memberof Map
+     */
+    getEvent<T extends RpgEvent>(eventId: string): T | undefined {
+        return this.events[eventId] as T
     }
 
     /**

@@ -133,8 +133,8 @@ export const Ease = {
 type EaseType = (t: number, b: number, c: number, d: number) => number
 
 export class Timeline {
-    time: number = 0
-    animation: FrameOptions[][] = []
+    private time: number = 0
+    private animation: FrameOptions[][] = []
 
     /**
      * Allows you to create complex animations more easily. For example, to display a movement with an Easing function

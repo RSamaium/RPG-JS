@@ -10,7 +10,7 @@ fixture,
 playerId, 
 server: RpgServerEngine, 
 map: RpgMap,
-sceneMap: RpgSceneMap,
+sceneMap: RpgSceneMap | null,
 side: string
 
 const TILE_SIZE = 32
@@ -24,7 +24,7 @@ beforeEach(async () => {
     server = ret.server
     playerId = ret.playerId
     map = player.getCurrentMap() as RpgMap
-    sceneMap = client.scene
+    sceneMap = client.getScene<RpgSceneMap>()
 })
 
 const getMap = (side) => {
@@ -35,13 +35,13 @@ const testMap = function(side) {
     test('get current map', () => {
         const map = getMap(side)
         expect(map).toBeDefined()
-        expect(map.tileWidth).toEqual(TILE_SIZE)
-        expect(map.tileHeight).toEqual(TILE_SIZE)
-        expect(map.layers).toHaveLength(1)
-        expect(map.widthPx).toEqual(TILE_SIZE*10)
-        expect(map.heightPx).toEqual(TILE_SIZE*10)
-        expect(map.zTileHeight).toEqual(TILE_SIZE)
-        expect(map.getLayerByName(LAYER_NAME)).toMatchObject({
+        expect(map?.tileWidth).toEqual(TILE_SIZE)
+        expect(map?.tileHeight).toEqual(TILE_SIZE)
+        expect(map?.layers).toHaveLength(2)
+        expect(map?.widthPx).toEqual(TILE_SIZE*10)
+        expect(map?.heightPx).toEqual(TILE_SIZE*10)
+        expect(map?.zTileHeight).toEqual(TILE_SIZE)
+        expect(map?.getLayerByName(LAYER_NAME)).toMatchObject({
             type: 'tile',
             name: LAYER_NAME
         })
@@ -50,8 +50,8 @@ const testMap = function(side) {
     describe('Tile System', () => {
         test('get tile by index', () => {
             const map = getMap(side)
-            expect(map.getTileIndex(0, 0)).toEqual(0)
-            const tile = map.getTileByIndex(0)
+            expect(map?.getTileIndex(0, 0)).toEqual(0)
+            const tile = map?.getTileByIndex(0)
             expect(tile).toMatchObject({
                 ...tile,
                 hasCollision: false,
@@ -62,17 +62,17 @@ const testMap = function(side) {
         
         test('get tile by position', () => {
             const map = getMap(side)
-            const origin = map.getTileOriginPosition(35, 12)
-            expect(origin.x).toEqual(TILE_SIZE)
-            expect(origin.y).toEqual(0)
+            const origin = map?.getTileOriginPosition(35, 12)
+            expect(origin?.x).toEqual(TILE_SIZE)
+            expect(origin?.y).toEqual(0)
         })
     
         test('get tile by origin position', () => {
             const map = getMap(side)
-            const origin = map.getTileOriginPosition(35, 12)
-            expect(origin.x).toEqual(TILE_SIZE)
-            expect(origin.y).toEqual(0)
-            const tile = map.getTileByPosition(35, 12)
+            const origin = map?.getTileOriginPosition(35, 12)
+            expect(origin?.x).toEqual(TILE_SIZE)
+            expect(origin?.y).toEqual(0)
+            const tile = map?.getTileByPosition(35, 12)
             expect(tile).toMatchObject({
                 ...tile,
                 hasCollision: false,
@@ -98,7 +98,7 @@ describe('Server Side', () => {
         const tileInfo = map.getTileByPosition(0, 0)
         expect(tileInfo.tiles[0].gid).toEqual(2)
 
-        const tileInfoClient = sceneMap.getTileByPosition(0, 0)
+        const tileInfoClient = sceneMap?.getTileByPosition(0, 0)
         expect(tileInfoClient.tiles[0].gid).toEqual(2)
     })
 
@@ -193,7 +193,7 @@ test('Player Teleport in map', () => {
     expect(player.position).toMatchObject({ x: 100, y: 200, z: 0 })
     server.send()
     const playerClient = client.gameEngine.world.getObject(playerId)
-    const { x, y } = playerClient.position
+    const { x, y } = playerClient?.position || {}
     expect(x).toEqual(100)
     expect(y).toEqual(200)
 })

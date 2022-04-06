@@ -1,4 +1,5 @@
-import { RpgCommonGame, HookClient, HookServer, loadModules, ModuleType } from '@rpgjs/common'
+import { HookClient, loadModules, ModuleType } from '@rpgjs/common'
+import { GameEngineClient } from './GameEngine'
 import { RpgClientEngine } from './RpgClientEngine'
 
 interface RpgClientEntryPointOptions {
@@ -114,7 +115,7 @@ export default (modules: ModuleType[], options: RpgClientEntryPointOptions): Rpg
         }
     })
 
-    const gameEngine = new RpgCommonGame('client')
+    const gameEngine = new GameEngineClient()
     const clientEngine = new RpgClientEngine(gameEngine, options)
     return clientEngine
 }

@@ -65,7 +65,7 @@ export default {
             if (!this.items[index]) return
             const { id, consumable } = this.items[index].item
             if (!consumable) return
-            this.$rpgSocket.emit('gui.interaction', {
+            this.rpgSocket.emit('gui.interaction', {
                 guiId: 'rpg-main-menu',
                 name: 'useItem',
                 data: id

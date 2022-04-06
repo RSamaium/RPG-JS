@@ -1,11 +1,10 @@
-import { RpgSprite, RpgSpriteHooks, RpgSpriteLogic } from '@rpgjs/client'
-
-declare module '@rpgjs/client' {
-    export interface RpgSprite {
-        textGraphic: PIXI.Text
-    }
-}
+import { RpgSprite, RpgSpriteHooks } from '@rpgjs/client'
 
 export const sprite: RpgSpriteHooks = {
-    
+    onInit(sprite: RpgSprite) {
+        sprite.interactive = true
+        sprite.on('click', () => {
+            sprite.guiDisplay = !sprite.guiDisplay
+        })
+    }
 }

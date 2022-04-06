@@ -1,5 +1,7 @@
 import { RpgCommonPlayer } from './Player'
 import { Hit, HitObject } from './Hit'
+import { isInstanceOf } from './Utils'
+import SAT from 'sat'
 
 export enum ShapePositioning {
     Default = 'default',
@@ -162,29 +164,27 @@ export class RpgShape  {
     set(obj: ShapeObject) {
         const hit = Hit.getHitbox(obj)
         Object.assign(this, hit)
-        this.x = obj.x || 0
-        this.y = obj.y || 0
         this.positioning = obj.positioning
         this.fixEvent = obj.fixEvent
     }
 
-    in(player: RpgCommonPlayer): boolean {
+    async in(player: RpgCommonPlayer): Promise<boolean> {
         if (!this.playerIsIn(player)) {
             this.playersIn[player.id] = true
             player.inShapes[this.name] = this
-            player.execMethod('onInShape', [this])
-            player.execMethod('onIn', [player], this)
+            await player.execMethod('onInShape', [this])
+            await player.execMethod('onIn', [player], this)
             return true
         }
         return false
     }
 
-    out(player: RpgCommonPlayer): boolean {
+    async out(player: RpgCommonPlayer): Promise<boolean> {
         if (this.playerIsIn(player)) {
             delete this.playersIn[player.id]
             delete player.inShapes[this.name]
-            player.execMethod('onOutShape', [this])
-            player.execMethod('onOut', [player], this)
+            await player.execMethod('onOutShape', [this])
+            await player.execMethod('onOut', [player], this)
             return true
         }
         return false
@@ -203,7 +203,9 @@ export class RpgShape  {
     }
 
     isShapePosition(): boolean {
-        return !this.hitbox.w
+        return !isInstanceOf(this.hitbox, SAT.Polygon) 
+            && !isInstanceOf(this.hitbox, SAT.Circle)
+            && !isInstanceOf(this.hitbox, SAT.Box)
     }
 
    /**

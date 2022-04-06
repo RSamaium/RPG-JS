@@ -357,5 +357,6 @@ export function Spritesheet(options: SpritesheetOptions) {
         for (let key in options) {
             target.prototype[key] = options[key]
         }
+        return
     }
 }

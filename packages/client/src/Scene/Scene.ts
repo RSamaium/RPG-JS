@@ -5,9 +5,23 @@ import { Animation } from '../Effects/Animation'
 import { BehaviorSubject, Observable } from 'rxjs'
 import { RpgGui } from '../RpgGui'
 
-type SceneObservableData = { data: object, partial: object }
+export type SceneObservableData = { 
+    data: {
+        [key: string]: any
+    }, 
+    partial: {
+        [key: string]: any
+    } 
+}
 
-export class Scene {
+export interface SceneSpriteLogic {
+    paramsChanged: {
+        [key: string]: any
+    } | null,
+    prevParamsChanged: object
+}
+
+export abstract class Scene {
    
     protected objects: Map<string, any> = new Map()
     protected loader = PIXI.Loader.shared
@@ -61,7 +75,7 @@ export class Scene {
         return this._data.asObservable() 
     }
 
-    private triggerSpriteChanges(logic, sprite: RpgSprite, moving: boolean) {
+    private triggerSpriteChanges(logic: SceneSpriteLogic, sprite: RpgSprite, moving: boolean) {
         if (this.onUpdateObject) this.onUpdateObject(logic, sprite, moving)
         RpgPlugin.emit(HookClient.UpdateSprite, [sprite, logic], true)
         if (logic.paramsChanged) {
@@ -71,12 +85,14 @@ export class Scene {
         }
     }
 
+     /** @internal */
     update(obj: SceneObservableData) {
         this.updateScene(obj)
         RpgPlugin.emit(HookClient.SceneOnChanges, [this, obj], true)
         this._data.next(obj)
     }
 
+     /** @internal */
     draw(t: number, dt: number, frame: number) {
         const logicObjects = { ...this.game.world.getObjects(), ...this.game.events }
         const renderObjects = this.objects
@@ -109,20 +125,9 @@ export class Scene {
         RpgPlugin.emit(HookClient.SceneDraw, this)
     }
 
-    onUpdateObject(logic, sprite: RpgSprite, moving: boolean): any {}
-
-    addObject(obj, id) {
-        const sprite = new PIXI.Container()
-        this.objects.set(id, sprite)
-    }
-
-    removeObject(id) {
-        const sprite =  this.objects.get(id)
-        if (sprite) {
-            this.objects.delete(id)
-            sprite.destroy()
-        }
-    }
+    abstract onUpdateObject(logic: SceneSpriteLogic, sprite: RpgSprite, moving: boolean): void
+    abstract addObject(obj, id: string)
+    abstract removeObject(id: string)
 
     /**
      * Display an animation on the scene
@@ -219,11 +224,11 @@ export class Scene {
      * @title Get Sprite
      * @method scene.getSprite(id)
      * @param {string} id
-     * @returns {RpgSprite}
+     * @returns {RpgSprite | undefined}
      * @memberof RpgScene
      */
     getSprite(id: string) { return this.getPlayer(id) }
-    getPlayer(id: string): RpgSprite {
+    getPlayer(id: string): RpgSprite | undefined {
         return this.objects.get(id)
     }
 
@@ -232,10 +237,10 @@ export class Scene {
      * 
      * @title Get Current Player
      * @method scene.getCurrentPlayer()
-     * @returns {RpgSprite}
+     * @returns {RpgSprite | undefined}
      * @memberof RpgScene
      */
-    getCurrentPlayer(): RpgSprite {
+    getCurrentPlayer(): RpgSprite | undefined {
         return this.objects.get(this.game.playerId)
     }
 

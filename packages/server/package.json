@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/server",
-  "version": "3.0.0-beta.3",
+  "version": "3.0.0-beta.7",
   "description": "",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
@@ -18,9 +18,9 @@
   "author": "Samuel Ronce",
   "license": "MIT",
   "dependencies": {
-    "@rpgjs/common": "^3.0.0-beta.3",
-    "@rpgjs/database": "^3.0.0-beta.3",
-    "@rpgjs/sync-server": "^3.0.0-beta.3",
+    "@rpgjs/common": "^3.0.0-beta.7",
+    "@rpgjs/database": "^3.0.0-beta.7",
+    "@rpgjs/sync-server": "^3.0.0-beta.7",
     "lodash.merge": "^4.6.2",
     "pathfinding": "^0.4.18",
     "sat": "^0.8.0"
