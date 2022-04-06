@@ -10,7 +10,7 @@ fixture,
 playerId, 
 server: RpgServerEngine, 
 map: RpgMap,
-sceneMap: RpgSceneMap,
+sceneMap: RpgSceneMap | null,
 side: string
 
 beforeEach(async () => {
@@ -238,12 +238,12 @@ test('Test onChanges Hook [syncChanges method)', () => {
 
  test('Event Sync after create dynamic event (map)', async () => {
     const { clientEvent, event } = await getDynamicEvent(map)
-    expect(clientEvent.position.x).toBe(event.position.x)
+    expect(clientEvent?.position.x).toBe(event.position.x)
  })
 
  test('Event Sync after create dynamic event (player)', async () => {
     const { clientEvent, event } = await getDynamicEvent(player)
-    expect(clientEvent.position.x).toBe(event.position.x)
+    expect(clientEvent?.position.x).toBe(event.position.x)
  })
 
 describe('Test Scenario Event', () => {

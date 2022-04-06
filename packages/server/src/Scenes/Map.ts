@@ -73,14 +73,14 @@ export class SceneMap {
      * player.changeMap('myid')
      * ```
      */
-    createDynamicMap(mapData: MapOptions) {
+    createDynamicMap(mapData: MapOptions | (new (...args: any[]) => any)) {
         if (!Utils.isClass(mapData)) {
-            @MapData(mapData)
+            @MapData(mapData as MapOptions)
             class DynamicMap extends RpgMap {}
-            mapData = DynamicMap as any
+            mapData = DynamicMap
         }
-        mapData.id = mapData.id || Utils.generateUID()
-        this.mapsById[mapData.id] = mapData
+        mapData['id'] = mapData['id'] || Utils.generateUID()
+        this.mapsById[mapData['id']] = mapData
     }
 
     async changeMap(

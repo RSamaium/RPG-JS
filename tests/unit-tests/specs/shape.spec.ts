@@ -10,7 +10,6 @@ fixture,
 playerId, 
 server: RpgServerEngine, 
 map: RpgMap,
-sceneMap: RpgSceneMap,
 side: string
 
 const TILE_SIZE = 32
@@ -24,7 +23,6 @@ beforeEach(async () => {
     server = ret.server
     playerId = ret.playerId
     map = player.getCurrentMap() as RpgMap
-    sceneMap = client.getScene<RpgSceneMap>()
 })
 
 test('Create Shape', () => {
