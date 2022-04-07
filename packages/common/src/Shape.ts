@@ -219,4 +219,13 @@ export class RpgShape  {
     getPlayerOwner(): RpgCommonPlayer | undefined {
         return this.fixEvent
     }
+
+    getSizeBox(margin: number = 0): { minX: number, minY: number, maxX: number, maxY: number }  {
+        return {
+            minX: this.x - margin,
+            maxX: this.x + this.width + margin,
+            minY: this.y - margin,
+            maxY: this.y + this.height + margin
+        }
+    }
 }

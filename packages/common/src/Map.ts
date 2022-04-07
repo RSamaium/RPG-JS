@@ -38,9 +38,10 @@ export interface LayerInfo {
 }
 
 
-export default class RpgCommonMap {
+export class RpgCommonMap {
 
     grid: VirtualGrid
+    gridShapes: VirtualGrid
 
     /** 
      * @title Data of map
@@ -79,7 +80,11 @@ export default class RpgCommonMap {
      * @memberof RpgSceneMap
      * */
     layers: LayerInfo[] = []
-    private shapes: RpgShape[] = []
+    
+    /** @internal */
+    shapes: {
+        [shapeName: string]: RpgShape
+    } = {}
 
     /**
      * Memorize the maps so you don't have to make a new request or open a file each time you load a map
@@ -103,6 +108,7 @@ export default class RpgCommonMap {
         this.height = data.height
         this.layers = data.layers
         this.grid = new VirtualGrid(this.width, this.tileWidth, this.tileHeight).zoom(10)
+        this.gridShapes = new VirtualGrid(this.width, this.tileWidth, this.tileHeight).zoom(20)
         this._extractShapes()
     }
 
@@ -188,12 +194,13 @@ export default class RpgCommonMap {
      * @memberof Map
      */
     createShape(obj: HitObject): RpgShape {
-        obj.name = (obj.name || generateUID()) as string
+        const id = obj.name = (obj.name || generateUID()) as string
         obj.properties = obj.properties || {}
         const shape = new RpgShape(obj)
-        this.shapes.push(shape)
+        this.shapes[id] = shape
+        this.gridShapes.insertInCells(id, shape.getSizeBox(this.tileWidth))
         // trick to sync with client
-        return this.shapes[this.shapes.length-1]
+        return this.shapes[id]
     }
 
     /**
@@ -207,7 +214,8 @@ export default class RpgCommonMap {
      */
     removeShape(name: string) {
         // TODO: out players after delete shape
-        this.shapes = this.shapes.filter(shape => shape.name != name)
+        //this.shapes = this.shapes.filter(shape => shape.name != name)
+        delete this.shapes[name]
     }
 
     /**
@@ -220,7 +228,7 @@ export default class RpgCommonMap {
      * @memberof RpgSceneMap
      */
     getShapes(): RpgShape[] {
-        return this.shapes
+        return Object.values(this.shapes)
     }
 
     /**
@@ -234,7 +242,7 @@ export default class RpgCommonMap {
      * @memberof RpgSceneMap
      */
     getShape(name: string): RpgShape | undefined {
-        return this.shapes.find(shape => shape.name == name)
+        return this.getShapes().find(shape => shape.name == name)
     }
     
     getPositionByShape(filter: (shape: RpgShape) => {}): { x: number, y: number, z: number } | null {

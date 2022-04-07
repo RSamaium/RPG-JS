@@ -1,11 +1,10 @@
-import { intersection, isString, isBrowser, generateUID, toRadians } from './Utils'
-import { Hit, HitObject } from './Hit'
+import { intersection, generateUID, toRadians } from './Utils'
+import { Hit } from './Hit'
 import { RpgShape } from './Shape'
 import SAT from 'sat'
-import Map, { TileInfo } from './Map'
+import { TileInfo, RpgCommonMap } from './Map'
 import { RpgPlugin, HookServer } from './Plugin'
-import { RpgCommonGame } from '.'
-import { GameSide } from './Game'
+import { GameSide, RpgCommonGame } from './Game'
 
 const ACTIONS = { IDLE: 0, RUN: 1, ACTION: 2 }
 
@@ -137,11 +136,11 @@ export class RpgCommonPlayer {
     }
 
     /** @internal */
-    get mapInstance(): Map {
+    get mapInstance(): RpgCommonMap {
         if (this.gameEngine.side == GameSide.Client) {
-            return Map.bufferClient.get(this.map)
+            return RpgCommonMap.bufferClient.get(this.map)
         }
-        return Map.buffer.get(this.map)
+        return RpgCommonMap.buffer.get(this.map)
     }
 
      /**
@@ -351,14 +350,14 @@ export class RpgCommonPlayer {
      * @memberof RpgSpriteLogic
      */
     getTile(x: number, y: number, z: number = 0, hitbox?: SAT.Box): TileInfo {
-        const map: Map = this.mapInstance
+        const map = this.mapInstance
         return map.getTile(hitbox || this.hitbox, x, y, [z, this.height])
     }
 
     async isCollided(nextPosition: Position): Promise<boolean> {
         this.collisionWith = [] 
         this._collisionWithTiles = []
-        const map: Map = this.mapInstance 
+        const map = this.mapInstance 
         const prevMapId = this.map
         const hitbox = Hit.createObjectHitbox(nextPosition.x, nextPosition.y, 0, this.hitbox.w, this.hitbox.h)
 
@@ -400,8 +399,9 @@ export class RpgCommonPlayer {
             return true
         }
 
+        const playerSizeBox = this.getSizeMaxShape(nextPosition.x, nextPosition.y)
         const events: { [id: string]: RpgCommonPlayer } = this.gameEngine.world.getObjectsOfGroup(this.map, this)
-        const objects = map.grid.getObjectsByBox(this.getSizeMaxShape(nextPosition.x, nextPosition.y))
+        const objects = map.grid.getObjectsByBox(playerSizeBox)
 
         for (let objectId of objects) {
             // client side: read "object" propertie
@@ -435,8 +435,11 @@ export class RpgCommonPlayer {
             }
         }
 
-        const shapes = map.getShapes()
-        for (let shape of shapes) {
+        const shapes = map.shapes
+        const shapesInGrid = map.gridShapes.getObjectsByBox(playerSizeBox)
+
+        for (let shapeId of shapesInGrid) {
+            const shape = shapes[shapeId]
             const bool = await this.collisionWithShape(shape, this, nextPosition)
             if (bool) return true
         }

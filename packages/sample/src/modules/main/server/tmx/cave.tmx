@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.8" tiledversion="1.8.2" orientation="orthogonal" renderorder="right-down" width="200" height="200" tilewidth="32" tileheight="32" infinite="0" nextlayerid="5" nextobjectid="15">
+<map version="1.8" tiledversion="1.8.2" orientation="orthogonal" renderorder="right-down" width="200" height="200" tilewidth="32" tileheight="32" infinite="0" nextlayerid="5" nextobjectid="16">
  <tileset firstgid="1" source="[Base]BaseChip_pipo.tsx"/>
  <layer id="1" name="Tile Layer 1" width="200" height="200">
   <data encoding="base64">
@@ -18,8 +18,6 @@
   <object id="12" name="EV-1" type="event" x="339" y="236">
    <point/>
   </object>
-  <object id="14" x="533" y="71">
-   <polygon points="0,0 71,-9 255,83 235,273 31,235"/>
-  </object>
+  <object id="15" x="519" y="74" width="247" height="210"/>
  </objectgroup>
 </map>
