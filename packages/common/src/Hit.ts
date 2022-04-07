@@ -19,7 +19,7 @@ export interface HitObject {
     name?: string
 }
 
-enum HitType {
+export enum HitType {
     Box = 'box',
     Circle = 'circle',
     Polygon = 'polygon'

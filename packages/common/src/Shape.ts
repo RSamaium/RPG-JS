@@ -1,5 +1,5 @@
 import { RpgCommonPlayer } from './Player'
-import { Hit, HitObject } from './Hit'
+import { Hit, HitObject, HitType } from './Hit'
 import { isInstanceOf } from './Utils'
 import SAT from 'sat'
 
@@ -18,7 +18,7 @@ type ShapeObject = HitObject & {
 export class RpgShape  {
     _hitbox: any
     private _properties: any = {}
-    type: string = 'box'
+    type: string = HitType.Box
     /**
     * Get/Set name
     * @title name
@@ -164,6 +164,15 @@ export class RpgShape  {
     set(obj: ShapeObject) {
         const hit = Hit.getHitbox(obj)
         Object.assign(this, hit)
+        const findPoint = (prop: string, isMin: boolean) => {
+            return this.hitbox.points.sort((a, b) => isMin ? a[prop] - b[prop] : b[prop] - a[prop])[0][prop]
+        }
+        if (this.type == HitType.Polygon) {
+            this.hitbox.minX = findPoint('x', true)
+            this.hitbox.maxX = findPoint('x', false)
+            this.hitbox.minY = findPoint('y', true)
+            this.hitbox.maxY = findPoint('y', false)
+        }
         this.positioning = obj.positioning
         this.fixEvent = obj.fixEvent
     }
@@ -221,6 +230,23 @@ export class RpgShape  {
     }
 
     getSizeBox(margin: number = 0): { minX: number, minY: number, maxX: number, maxY: number }  {
+        if (this.type == HitType.Circle) {
+            const radius = this.hitbox.r
+            return {
+                minX: this.x - radius - margin,
+                maxX: this.x + radius + margin,
+                minY: this.y - radius - margin,
+                maxY: this.y + radius + margin
+            }
+        }
+        if (this.type == HitType.Polygon) {
+            return {
+                minX: this.x + this.hitbox.minX - margin,
+                maxX: this.x + this.hitbox.maxX + margin,
+                minY: this.y + this.hitbox.minY - margin,
+                maxY: this.y + this.hitbox.maxY + margin
+            }
+        }
         return {
             minX: this.x - margin,
             maxX: this.x + this.width + margin,
