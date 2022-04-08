@@ -217,10 +217,10 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @method player.changeMap(mapId,positions)
      * @param {string} mapId
      * @param { {x: number, y: number, z?: number} | string } [positions]
-     * @returns {Promise<RpgMap>}
+     * @returns {Promise<RpgMap | null>} null if map not exists
      * @memberof Player
      */
-    changeMap(mapId: string, positions?: { x: number, y: number, z?: number} | string): Promise<RpgMap> {
+    changeMap(mapId: string, positions?: { x: number, y: number, z?: number} | string): Promise<RpgMap | null> {
         return this.server.sceneMap.changeMap(mapId, this, positions) 
     }
 

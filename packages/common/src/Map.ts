@@ -3,6 +3,7 @@ import { random, intersection, generateUID, isString } from './Utils'
 import { RpgShape } from './Shape'
 import { Hit } from './Hit'
 import { VirtualGrid } from './VirtualGrid'
+import { RpgCommonWorldMaps } from './WorldMaps'
 
 const buffer = new Map()
 const bufferClient = new Map()
@@ -85,6 +86,8 @@ export class RpgCommonMap {
     shapes: {
         [shapeName: string]: RpgShape
     } = {}
+
+    private worldMapParent: RpgCommonWorldMaps | null = null
 
     /**
      * Memorize the maps so you don't have to make a new request or open a file each time you load a map
@@ -440,4 +443,15 @@ export class RpgCommonMap {
         return tile
     }
 
+    setInWorldMaps(worldMap: RpgCommonWorldMaps) {
+        this.worldMapParent = worldMap
+    }
+
+    removeInWorldMaps() {
+        this.worldMapParent = null
+    }
+
+    getInWorldMaps(): RpgCommonWorldMaps | null {
+        return this.worldMapParent
+    }
 }

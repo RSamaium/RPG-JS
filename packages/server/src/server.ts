@@ -4,6 +4,7 @@ import { Query } from './Query'
 import { DAMAGE_SKILL, DAMAGE_PHYSIC, DAMAGE_CRITICAL, COEFFICIENT_ELEMENTS } from './presets'
 import { World, WorldClass } from '@rpgjs/sync-server'
 import { Utils, RpgPlugin, Scheduler, HookServer, RpgCommonGame } from '@rpgjs/common'
+import { WorldMap } from './Game/WorldMaps';
 
 export class RpgServerEngine {
 
@@ -43,6 +44,7 @@ export class RpgServerEngine {
     protected totalConnected: number = 0
     private scheduler: Scheduler
     private tick: number = 0
+
     world: WorldClass = World
     workers: any
 
@@ -72,10 +74,16 @@ export class RpgServerEngine {
         this.globalConfig = this.inputOptions.globalConfig
 
         if (!this.inputOptions.maps) this.inputOptions.maps = []
+        if (!this.inputOptions.worldMaps) this.inputOptions.worldMaps = []
 
         this.inputOptions.maps = [
             ...Utils.arrayFlat(await RpgPlugin.emit(HookServer.AddMap, this.inputOptions.maps)) || [],
             ...this.inputOptions.maps
+        ]
+
+        this.inputOptions.worldMaps = [
+            ...Utils.arrayFlat(await RpgPlugin.emit(HookServer.AddWorldMaps, this.inputOptions.worldMaps)) || [],
+            ...this.inputOptions.worldMaps
         ]
 
         if (!this.inputOptions.database) this.inputOptions.database = {}
@@ -210,7 +218,7 @@ export class RpgServerEngine {
     }
 
     private loadScenes() {
-        this.scenes.set(SceneMap.id, new SceneMap(this.inputOptions.maps, this))
+        this.scenes.set(SceneMap.id, new SceneMap(this.inputOptions.maps, this.inputOptions.worldMaps, this))
     }
 
     getScene<T>(name: string): T {

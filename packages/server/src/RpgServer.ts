@@ -3,10 +3,8 @@ import { RpgPlayer } from './Player/Player'
 import { RpgMap } from './Game/Map'
 import { RpgServerEngine } from './server'
 import { MapOptions } from './decorators/map'
-
-interface RpgClassMap<T> {
-    new (server: any): T,
-}
+import { RpgClassMap } from './Scenes/Map'
+import { TiledMap } from '@rpgjs/tiled'
 
 export interface RpgServerEngineHooks {
     /**
@@ -225,11 +223,23 @@ export interface RpgServer {
      * class RpgServerEngine { } 
      * ``` 
      * 
+     * Since version 3.0.0-beta.8, you can just pass the path to the file. The identifier will then be the name of the file
+     * 
+     *  ```ts
+     * @RpgModule<RpgServer>({
+     *      maps: [
+     *          require('./tmx/mymap.tmx') // id is "mymap"
+     *      ]
+     * })
+     * class RpgServerEngine { } 
+     * ``` 
      * 
      * @prop {RpgClassMap<RpgMap>[]} [maps]
      * @memberof RpgServer
      * */
-    maps?: RpgClassMap<RpgMap>[] | MapOptions[],
+    maps?: RpgClassMap<RpgMap>[] | MapOptions[] | string[] | TiledMap[],
+
+    worldMaps?: any[]
 
     
     /** 

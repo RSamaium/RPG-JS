@@ -229,6 +229,12 @@ export class RpgShape  {
         return this.fixEvent
     }
 
+    /**
+     * We get the rectangle of a shape (box, circle and polygon). We use in the grid system to recover a shape.
+     * Generally we add a margin (size of a tile) to detect if the player enters or leaves a shape
+     * @param margin 
+     * @returns { minX: number, minY: number, maxX: number, maxY: number }
+     */
     getSizeBox(margin: number = 0): { minX: number, minY: number, maxX: number, maxY: number }  {
         if (this.type == HitType.Circle) {
             const radius = this.hitbox.r
