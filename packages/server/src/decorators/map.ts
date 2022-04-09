@@ -1,3 +1,4 @@
+import { TiledMap } from '@rpgjs/tiled'
 import { RpgPlayer } from '../Player/Player'
 
 export interface MapOptions {
@@ -26,7 +27,7 @@ export interface MapOptions {
      * @prop {string} file
      * @memberof MapData
      * */
-    file: string,
+    file: string | TiledMap,
 
     /** 
      * The name of the map.

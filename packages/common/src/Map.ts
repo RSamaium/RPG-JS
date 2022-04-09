@@ -40,6 +40,13 @@ export interface LayerInfo {
 
 
 export class RpgCommonMap {
+    /** 
+     * @title map id
+     * @readonly
+     * @prop {string} [id]
+     * @memberof Map
+     * */
+     readonly id: string
 
     grid: VirtualGrid
     gridShapes: VirtualGrid
@@ -87,7 +94,15 @@ export class RpgCommonMap {
         [shapeName: string]: RpgShape
     } = {}
 
-    private worldMapParent: RpgCommonWorldMaps | null = null
+    private worldMapParent: RpgCommonWorldMaps | undefined
+
+    get worldX() {
+        return this.getInWorldMaps()?.getMapInfo(this.id)?.x || 0
+    }
+
+    get worldY() {
+        return this.getInWorldMaps()?.getMapInfo(this.id)?.y || 0
+    }
 
     /**
      * Memorize the maps so you don't have to make a new request or open a file each time you load a map
@@ -448,10 +463,10 @@ export class RpgCommonMap {
     }
 
     removeInWorldMaps() {
-        this.worldMapParent = null
+        this.worldMapParent = undefined
     }
 
-    getInWorldMaps(): RpgCommonWorldMaps | null {
+    getInWorldMaps(): RpgCommonWorldMaps | undefined {
         return this.worldMapParent
     }
 }

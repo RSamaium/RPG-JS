@@ -4,6 +4,7 @@ import { TiledObject } from './types/Objects'
 import { TiledLayer } from './types/Layer'
 import { TiledText } from './types/Text'
 import { TiledMap } from './types/Map'
+import { isTiledFormat } from './utils'
 
 export {
     TiledWorld,
@@ -12,5 +13,6 @@ export {
     TiledObject,
     TiledLayer,
     TiledText,
-    TiledMap
+    TiledMap,
+    isTiledFormat
 }

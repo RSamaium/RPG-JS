@@ -1,7 +1,7 @@
 
 import { RpgCommonMap, Utils } from '@rpgjs/common'
 import { World } from '@rpgjs/sync-server'
-import { TiledWorld } from '@rpgjs/tiled'
+import { isTiledFormat, TiledMap, TiledWorld } from '@rpgjs/tiled'
 import { MapOptions, MapData } from '../decorators/map'
 import { RpgMap } from '../Game/Map'
 import { RpgWorldMaps, WorldMap } from '../Game/WorldMaps'
@@ -119,7 +119,7 @@ export class SceneMap {
      * sceneMap.createDynamicMap(require('./tmx/mymap.tmx')) // id is "mymap"
      * ```
      */
-    createDynamicMap(mapData: MapOptions | string | RpgClassMap<RpgMap>, worldMap?: RpgWorldMaps): RpgClassMap<RpgMap> | never {
+    createDynamicMap(mapData: MapOptions | string | RpgClassMap<RpgMap> | TiledMap): RpgClassMap<RpgMap> | never {
         if (Utils.isString(mapData)) {
             const id = Utils.extractId(mapData as string)
             if (!id) {
@@ -130,6 +130,12 @@ export class SceneMap {
                 file: mapData
             } as MapOptions
         }
+        if (isTiledFormat(mapData)) {
+            const tiledData = (mapData as TiledMap)
+            mapData = {
+                file: { ...tiledData }
+            } as MapOptions
+        }
         if (!(mapData as MapOptions).id) (mapData as MapOptions).id = Utils.generateUID()   
         if (!Utils.isClass(mapData)) {
             @MapData(mapData as MapOptions)
@@ -137,9 +143,6 @@ export class SceneMap {
             mapData = DynamicMap
         }
         const map: RpgClassMap<RpgMap> = mapData as any
-        if (worldMap) {
-            map.prototype.worldMapParent = worldMap
-        }
         this.mapsById[map.id as string] = map
         return map
     }

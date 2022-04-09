@@ -49,13 +49,6 @@ class AutoEvent extends RpgEvent {
 export class RpgMap extends RpgCommonMap {
 
     public _events: EventOption[]
-     /** 
-     * @title map id
-     * @readonly
-     * @prop {string} [id]
-     * @memberof Map
-     * */
-    readonly id: string
     public file: any 
      /** 
      * @title event list
