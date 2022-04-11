@@ -1,6 +1,6 @@
 import WORLD from './fixtures/maps/world'
 import {_beforeEach} from './beforeEach'
-import { RpgModule, RpgMap, RpgPlayer, RpgPlugin, RpgServer, RpgServerEngine, RpgSceneMap, RpgWorldMaps, Direction } from '@rpgjs/server'
+import { RpgModule, RpgMap, RpgPlayer, RpgPlugin, RpgServer, RpgServerEngine, RpgSceneMap, RpgWorldMaps, Direction, Move } from '@rpgjs/server'
 import { RpgClientEngine } from '@rpgjs/client'
 import { clear } from '@rpgjs/testing'
 
@@ -32,7 +32,9 @@ beforeEach(async () => {
 
     const ret = await _beforeEach([{
         server: RpgServerModule
-    }])
+    }], {}, {
+        drawMap: false
+    })
 
     client = ret.client
     player = ret.player
@@ -86,6 +88,7 @@ describe('Go to Map in world', () => {
         expect(info?.y).toBe(WORLD.maps[0].y)
     })
 
+    
     test('Maps have world parent', async () => {
         await player.changeMap(mapWorld.id)
         const map = player.getCurrentMap()
@@ -102,14 +105,124 @@ describe('Go to Map in world', () => {
         expect(map.worldY).toBe(WORLD.maps[0].y)
     })
 
-    test('Find the map above', async () => {
-        await player.changeMap(mapWorld.id)
+    test('Find the positions of the player in the world', async () => {
+        await player.changeMap(mapWorld.id, {
+            x: 50,
+            y: 60
+        })
         const map = player.getCurrentMap()
-        const maps = world.getAdjacentMaps(map, Direction.Up)
-        expect(maps).toHaveLength(2)
-        expect(maps[0].id).toBe('2')
-        expect(maps[1].id).toBe('3')
+        expect(player.worldPositionX).toBe(WORLD.maps[0].x + 50)
+        expect(player.worldPositionY).toBe(WORLD.maps[0].y + 60)
     })
+
+    describe('Find map by direction and position', () => {
+        const getAdjacentMaps = async (direction) => {
+            await player.changeMap(mapWorld.id)
+            const map = player.getCurrentMap()
+            const maps = world.getAdjacentMaps(map, direction)
+            return maps
+        }
+
+        test('Up', async () => {
+            const maps = await getAdjacentMaps(Direction.Up)
+            expect(maps).toHaveLength(2)
+            expect(maps[0].id).toBe('2')
+            expect(maps[1].id).toBe('3')
+        })
+
+        test('Right', async () => {
+            const maps = await getAdjacentMaps(Direction.Right)
+            expect(maps).toHaveLength(1)
+            expect(maps[0].id).toBe('7')
+        })
+
+        test('Down', async () => {
+            const maps = await getAdjacentMaps(Direction.Down)
+            expect(maps).toHaveLength(2)
+            expect(maps[0].id).toBe('5')
+            expect(maps[1].id).toBe('6')
+        })
+
+        test('Left', async () => {
+            const maps = await getAdjacentMaps(Direction.Left)
+            expect(maps).toHaveLength(1)
+            expect(maps[0].id).toBe('4')
+        })
+
+        test('Get By Position (box)', async () => {
+            const maps = await getAdjacentMaps({ minX: 400, maxX: 401, minY: 1280, maxY: 1279 })
+            expect(maps).toHaveLength(1)
+            expect(maps[0].id).toBe('3')
+        })
+
+        test('Get By Position (point)', async () => {
+            const maps = await getAdjacentMaps({ x: 401, y: 1279 })
+            expect(maps).toHaveLength(1)
+            expect(maps[0].id).toBe('3')
+        })
+    })
+
+    describe('Auto Change Map', () => {
+        test('Left', async () => {
+            await player.changeMap(mapWorld.id, {
+                x: 18,
+                y: 30
+            })
+            await player.moveRoutes([ Move.left() ])
+            expect(player.map).toBe('4')
+            expect(player.position.x).toBe(WORLD.maps[3].width - player.hitbox.w - map.tileWidth / 2)
+            expect(player.position.y).toBe(30)
+        })
+
+        test('Up', async () => {
+            await player.changeMap(mapWorld.id, {
+                x: 105,
+                y: 18
+            })
+            await player.moveRoutes([ Move.up() ])
+            expect(player.map).toBe('2')
+            expect(player.position.x).toBe(105 - 32 * 3)
+            expect(player.position.y).toBe(WORLD.maps[1].height - player.hitbox.h - map.tileHeight / 2)
+        })
+
+        test('Right', async () => {
+            const info = world.getMapInfo(mapWorld.id)
+            await player.changeMap(mapWorld.id, {
+                x: (info?.width || 0) - player.hitbox.w - map.tileWidth / 2 - 2,
+                y: 384
+            })
+            await player.moveRoutes([ Move.right() ])
+            expect(player.map).toBe('7')
+            expect(player.position.x).toBe(16)
+            expect(player.position.y).toBe(64)
+        })
+
+        test('Down (1)', async () => {
+            const info = world.getMapInfo(mapWorld.id)
+            await player.changeMap(mapWorld.id, {
+                x: 0,
+                y: (info?.height || 0) - player.hitbox.h - map.tileHeight / 2 - 2
+            })
+            await player.moveRoutes([ Move.down() ])
+            expect(player.map).toBe('5')
+            expect(player.position.x).toBe(5 * 32)
+            expect(player.position.y).toBe(16)
+        })
+
+        test('Down (2)', async () => {
+            const info = world.getMapInfo(mapWorld.id)
+            await player.changeMap(mapWorld.id, {
+                x: 800,
+                y: (info?.height || 0) - player.hitbox.h - map.tileHeight / 2 - 2
+            })
+            await player.moveRoutes([ Move.down() ])
+            expect(player.map).toBe('6')
+            expect(player.position.x).toBe(0)
+            expect(player.position.y).toBe(16)
+        })
+        
+    })
+    
 })
 
 afterEach(() => {

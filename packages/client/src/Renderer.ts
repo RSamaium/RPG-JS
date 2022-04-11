@@ -142,7 +142,8 @@ export class RpgRenderer  {
                 const sceneClass = scenes[PresetScene.Map] || SceneMap
                 this.scene = new sceneClass(this.gameEngine, {
                     screenWidth: this.renderer.screen.width,
-                    screenHeight: this.renderer.screen.height
+                    screenHeight: this.renderer.screen.height,
+                    drawMap:  this.options.drawMap
                 })
                 break;
         }

@@ -39,8 +39,9 @@ export class RpgCommonWorldMaps {
         return this.maps.get(id)
     }
 
-    getAdjacentMaps(map: RpgCommonMap, search: PositionBox | Direction): RpgClassMap<RpgCommonMap>[] {
+    getAdjacentMaps(map: RpgCommonMap, search: PositionBox | Direction | { x: number, y: number }): RpgClassMap<RpgCommonMap>[] {
         let position: PositionBox = {} as PositionBox
+        const point = search as { x: number, y: number }
         if (typeof search == 'number') {
             const padding = 1
             switch (search) {
@@ -52,21 +53,43 @@ export class RpgCommonWorldMaps {
                         maxY: map.worldY - padding 
                     }
                     break;
-                // case Direction.Up:
-                //     position = {
-                //         minX: map.worldX,
-                //         maxX: map.worldX + map.width,
-                //         minY: map.worldY,
-                //         maxY: map.worldY + map.height
-                //     }
-                //     break;
-                default:
+                case Direction.Right:
+                    position = {
+                        minX: map.worldX + map.widthPx + padding,
+                        maxX: map.worldX + map.widthPx + padding + 1,
+                        minY: map.worldY + padding,
+                        maxY: map.worldY + map.heightPx - padding
+                    }
+                    break;
+                case Direction.Down:
+                    position = {
+                        minX: map.worldX + padding,
+                        maxX: map.worldX + map.widthPx - padding,
+                        minY: map.worldY + map.heightPx + padding,
+                        maxY: map.worldY + map.heightPx + padding + 1
+                    }
+                    break;
+                case Direction.Left:
+                    position = {
+                        minX: map.worldX - padding,
+                        maxX: map.worldX - padding - 1,
+                        minY: map.worldY + padding,
+                        maxY: map.worldY + map.heightPx - padding
+                    }
                     break;
             }
             
         }
+        else if (point.x) {
+            position = {
+                minX: point.x,
+                maxX: point.x,
+                minY: point.y,
+                maxY: point.y
+            }
+        }
         else {
-            position = search
+            position = search as PositionBox
         }
         const result = this.mapsTree.search(position)
         return result.map(ret => ret.map)

@@ -150,7 +150,7 @@ export default class TileMap extends PIXI.Container {
     }
 
     /** @internal */
-    load() {
+    load(options?: { drawTiles: boolean | undefined }) {
         this.defaultLayer = null
         this.tilesLayer.removeChildren()
         
@@ -161,7 +161,7 @@ export default class TileMap extends PIXI.Container {
             switch (layerData.type) {
                 case 'tile': {
                     const tileLayer = new TileLayer(layerData, this.tileSets)
-                    tileLayer.create()
+                    if (options?.drawTiles) tileLayer.create()
                     this.layers[layerData.name] = tileLayer
                     this.tilesLayer.addChild(tileLayer)
                     break;

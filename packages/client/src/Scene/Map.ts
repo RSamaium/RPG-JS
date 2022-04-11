@@ -36,8 +36,9 @@ export class SceneMap extends Scene {
 
     constructor(
             protected game: any, 
-            private options: { screenWidth?: number, screenHeight?: number } = {}) {
+            private options: { screenWidth?: number, screenHeight?: number, drawMap?: boolean } = {}) {
         super(game)
+        if (options.drawMap === undefined) this.options.drawMap = true
         this.onInit()
     }
 
@@ -101,7 +102,9 @@ export class SceneMap extends Scene {
 
         return new Promise((resolve, reject) => {
             const complete = () => {
-                this.tilemap.load()
+                this.tilemap.load({
+                    drawTiles: this.options.drawMap
+                })
                 this.viewport = new Viewport({
                     screenWidth: this.options.screenWidth,
                     screenHeight: this.options.screenHeight,

@@ -1,4 +1,4 @@
-import { RpgCommonPlayer, Utils, RpgPlugin, RpgCommonGame, RpgCommonMap }  from '@rpgjs/common'
+import { RpgCommonPlayer, Utils, RpgPlugin, RpgCommonGame, RpgCommonMap, Direction }  from '@rpgjs/common'
 import { RpgMap, EventPosOption } from '../Game/Map'
 import { Query } from '../Query'
 import merge from 'lodash.merge'
@@ -30,6 +30,8 @@ import {
     AGI_CURVE
 } from '../presets'
 import { RpgServerEngine } from '../server'
+import { RpgClassMap } from '../Scenes/Map'
+import { RpgTiledWorldMap } from '../Game/WorldMaps'
 
 const { 
     isPromise, 
@@ -222,6 +224,73 @@ export class RpgPlayer extends RpgCommonPlayer {
      */
     changeMap(mapId: string, positions?: { x: number, y: number, z?: number} | string): Promise<RpgMap | null> {
         return this.server.sceneMap.changeMap(mapId, this, positions) 
+    }
+
+    async autoChangeMap(nextPosition: Position): Promise<boolean> {
+        const map = this.getCurrentMap()
+        const worldMaps = map.getInWorldMaps()
+        if (worldMaps) {
+            const direction = this.getDirection()
+            const marginLeftRight = map.tileWidth / 2
+            const marginTopDown = map.tileHeight / 2
+            if (nextPosition.x < marginLeftRight && direction == Direction.Left) {
+                const [nextMap] = worldMaps.getAdjacentMaps(map, {
+                    x: map.worldX - 1,
+                    y: this.worldPositionY + 1
+                }) as RpgClassMap<RpgMap>[]
+                if (!nextMap) return false
+                const id = nextMap.id as string
+                const nextMapInfo = worldMaps.getMapInfo(id) as RpgTiledWorldMap
+                await this.changeMap(id, {
+                    x: (nextMapInfo.width) - this.wHitbox - marginLeftRight,
+                    y: map.worldY - nextMapInfo.y + nextPosition.y
+                })
+                return true
+            }
+            if (nextPosition.x > map.widthPx - this.wHitbox - marginLeftRight && direction == Direction.Right) {
+                const [nextMap] = worldMaps.getAdjacentMaps(map, {
+                    x: map.worldX + map.widthPx + 1,
+                    y: this.worldPositionY + 1
+                }) as RpgClassMap<RpgMap>[]
+                if (!nextMap) return false
+                const id = nextMap.id as string
+                const nextMapInfo = worldMaps.getMapInfo(id) as RpgTiledWorldMap
+                await this.changeMap(id, {
+                    x: marginLeftRight,
+                    y: map.worldY - nextMapInfo.y + nextPosition.y
+                })
+                return true
+            }
+            if (nextPosition.y < marginTopDown && direction == Direction.Up) {
+                const [nextMap] = worldMaps.getAdjacentMaps(map, {
+                    x: this.worldPositionX + 1,
+                    y: map.worldY - 1
+                }) as RpgClassMap<RpgMap>[]
+                if (!nextMap) return false
+                const id = nextMap.id as string
+                const nextMapInfo = worldMaps.getMapInfo(id) as RpgTiledWorldMap
+                await this.changeMap(id, {
+                    x: map.worldX - nextMapInfo.x + nextPosition.x,
+                    y: (nextMapInfo.height) - this.hHitbox - marginTopDown,
+                })
+                return true
+            }
+            if (nextPosition.y > map.heightPx - this.hHitbox - marginTopDown && direction == Direction.Down) {
+                const [nextMap] = worldMaps.getAdjacentMaps(map, {
+                    x: this.worldPositionX + 1,
+                    y: map.worldY + map.heightPx + 1
+                }) as RpgClassMap<RpgMap>[]
+                if (!nextMap) return false
+                const id = nextMap.id as string
+                const nextMapInfo = worldMaps.getMapInfo(id) as RpgTiledWorldMap
+                await this.changeMap(id, {
+                    x: map.worldX - nextMapInfo.x + nextPosition.x,
+                    y: marginTopDown,
+                })
+                return true
+            }
+        }
+        return false
     }
 
     /**

@@ -123,6 +123,22 @@ export class RpgCommonPlayer {
         return this._position
     }
 
+    get worldPositionX(): number {
+        let x = this.position.x
+        if (this.mapInstance) {
+            x += this.mapInstance.worldX
+        }
+        return x
+    }
+
+    get worldPositionY(): number {
+        let y = this.position.y
+        if (this.mapInstance) {
+            y += this.mapInstance.worldY
+        }
+        return y
+    }
+
     set posX(val) {
         this.position.x = val
     }
@@ -397,6 +413,13 @@ export class RpgCommonPlayer {
             tileCollision(nextPosition.x + this.hitbox.w, nextPosition.y + this.hitbox.h)
         ) {
             return true
+        }
+
+        if (this.autoChangeMap) {
+            const changeMap = await this.autoChangeMap(nextPosition)
+            if (changeMap) {
+                return true
+            }
         }
 
         const playerSizeBox = this.getSizeMaxShape(nextPosition.x, nextPosition.y)
@@ -681,6 +704,6 @@ export interface RpgCommonPlayer {
     readonly type: string
     through: boolean
     throughOtherPlayer: boolean
-    getVector3D(x, y, z): any
+    autoChangeMap?(nextPosition: Position): Promise<boolean>
     execMethod(methodName: string, methodData?, instance?)
 }
