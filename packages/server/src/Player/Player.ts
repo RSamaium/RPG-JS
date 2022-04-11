@@ -390,17 +390,17 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @title Teleport on the map
      * @method player.teleport(positions)
      * @param { {x: number, y: number, z?: number} | string } [positions]
-     * @returns { {x: number, y: number, z: number} }
+     * @returns {Promise<{ {x: number, y: number, z: number} }>}
      * @memberof Player
      */
-    teleport(positions?: {x: number, y: number, z?: number} | string): Position {
+    async teleport(positions?: {x: number, y: number, z?: number} | string): Promise<Position> {
         if (isString(positions)) positions = <Position>this.getCurrentMap().getPositionByShape(shape => shape.name == positions || shape.type == positions)
         if (!positions) positions = { x: 0, y: 0, z: 0 }
         if (!(positions as Position).z) (positions as Position).z = 0
         this.teleported++
         this.position = positions as Position
         // force interaction with event or shape
-        this.isCollided(this.position)
+        await this.isCollided(this.position)
         return (positions as Position)
     }
 
