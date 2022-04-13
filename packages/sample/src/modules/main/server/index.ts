@@ -27,14 +27,14 @@ let last
             id: 'myworld',
             "maps": [
                 {
-                    "fileName": require("cave.tmx"),
+                    "fileName": require("./tmx/cave.tmx"),
                     "height": 6400,
                     "width": 6400,
                     "x": 352,
                     "y": 1248
                 },
                 {
-                    "fileName": require("samplemap.tmx"),
+                    "fileName": require("./tmx/samplemap.tmx"),
                     "height": 1920,
                     "width": 1920,
                     "x": 448,

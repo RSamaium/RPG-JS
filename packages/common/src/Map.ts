@@ -96,10 +96,28 @@ export class RpgCommonMap {
 
     private worldMapParent: RpgCommonWorldMaps | undefined
 
+    /** 
+     * Retrieves the X position of the map in the world (0 if no world assigned)
+     * 
+     * @title World X Position
+     * @prop {number} [worldX]
+     * @readonly
+     * @since 3.0.0-beta.8
+     * @memberof Map
+     * */
     get worldX() {
         return this.getInWorldMaps()?.getMapInfo(this.id)?.x || 0
     }
 
+    /** 
+     * Retrieves the Y position of the map in the world (0 if no world assigned)
+     * 
+     * @title World Y Position
+     * @prop {number} [worldY]
+     * @readonly
+     * @since 3.0.0-beta.8
+     * @memberof Map
+     * */
     get worldY() {
         return this.getInWorldMaps()?.getMapInfo(this.id)?.y || 0
     }
@@ -458,14 +476,40 @@ export class RpgCommonMap {
         return tile
     }
 
+    /**
+     * Assign the map to a world
+
+     * @title Assign the map to a world
+     * @method map.setInWorldMaps(name)
+     * @param {RpgWorldMaps} worldMap world maps
+     * @since 3.0.0-beta.8
+     * @memberof Map
+     */
     setInWorldMaps(worldMap: RpgCommonWorldMaps) {
         this.worldMapParent = worldMap
     }
 
-    removeInWorldMaps() {
+    /**
+     * Remove this map from the world
+
+     * @title Remove this map from the world
+     * @method map.removeFromWorldMaps(name)
+     * @since 3.0.0-beta.8
+     * @memberof Map
+     */
+    removeFromWorldMaps() {
         this.worldMapParent = undefined
     }
 
+     /**
+     * Recover the world attached to this map (`undefined` if no world attached)
+
+     * @title Get attached World
+     * @method map.getInWorldMaps()
+     * @return {RpgCommonWorldMaps | undefined}
+     * @since 3.0.0-beta.8
+     * @memberof Map
+     */
     getInWorldMaps(): RpgCommonWorldMaps | undefined {
         return this.worldMapParent
     }

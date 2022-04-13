@@ -19,8 +19,7 @@ let engine
     scenes: {
         map: {
             onAfterLoading(scene: RpgSceneMap) {
-                let mousedown = false
-                
+                scene.viewport?.setZoom(2)
             }
         }
     },
