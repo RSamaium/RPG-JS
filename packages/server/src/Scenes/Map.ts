@@ -71,6 +71,34 @@ export class SceneMap {
         return mapInstance
     }
 
+     /**
+     * Loads the content of a `.world` file from Tiled Map Editor into the map scene
+     * 
+     * > Note, that if the map already exists (i.e. you have already defined an RpgMap), the world will retrieve the already existing map. Otherwise it will create a new map
+     * 
+     * @title Create worlds dynamically
+     * @method sceneMap.createDynamicWorldMaps(world)
+     * @param {object} world 
+     * object is 
+     * ```ts
+     * {
+     *  id?: string
+     *  maps: {
+     *      id?: string
+     *      properties?: object
+     *      fileName: string;
+            height: number;
+            width: number;
+            x: number;
+            y: number;
+     *  }[],
+        onlyShowAdjacentMaps: boolean, // only for Tiled Map Editor
+        type: 'world' // only for Tiled Map Editor
+     * }
+     * ```
+     * @since 3.0.0-beta.8
+     * @memberof SceneMap
+     */
     createDynamicWorldMaps(world: WorldMap): RpgWorldMaps {
         world.id = world.id || Utils.generateUID()
         const worldMap = new RpgWorldMaps(world.id).load(world, this)
@@ -78,10 +106,29 @@ export class SceneMap {
         return worldMap
     }
 
+    /**
+     * Recover a world
+     * 
+     * @title Recover a world
+     * @method sceneMap.getWorldMaps(id)
+     * @param {string} id world id 
+     * @return { RpgWorldMaps | undefined }
+     * @since 3.0.0-beta.8
+     * @memberof SceneMap
+     */
     getWorldMaps(id: string): RpgWorldMaps | undefined {
         return this.worldMaps.get(id)
     }
 
+     /**
+     * Delete a world
+     * 
+     * @title Delete a world
+     * @method sceneMap.deleteWorldMaps(id)
+     * @param {string} id world id 
+     * @since 3.0.0-beta.8
+     * @memberof SceneMap
+     */
     deleteWorldMaps(id: string): void {
         this.worldMaps.delete(id)
     }
