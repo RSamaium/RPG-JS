@@ -78,6 +78,7 @@ export class RpgClientEngine {
         frame: 0
     })
     public keyChange: Subject<string> = new Subject()
+    public roomJoin: Subject<string> = new Subject()
     private hasBeenDisconnected: boolean = false
     private isTeleported: boolean = false
     // TODO, public or private
@@ -343,6 +344,10 @@ export class RpgClientEngine {
             RpgPlugin.emit(HookClient.ConnectedError, [this, err, this.socket], true)
         })
 
+        this.socket.on('preLoadScene', (name: string) => {
+            this.renderer.transitionScene(name)
+        })
+
         this.socket.on('loadScene', ({ name, data }) => {
             this.renderer.loadScene(name, data)
         })
@@ -432,6 +437,11 @@ export class RpgClientEngine {
                         paramsChanged
                     })
                 }
+            }
+
+            if (partialRoom.join) {
+                this.roomJoin.next(partialRoom)
+                this.roomJoin.complete()
             }
 
             change('users')

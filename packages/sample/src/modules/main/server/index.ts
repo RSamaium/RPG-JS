@@ -22,7 +22,7 @@ let last
     //     CaveMap,
     //     SampleMap
     // ],
-    worldMaps: [
+    worldMaps: [ 
         {
             id: 'myworld',
             "maps": [

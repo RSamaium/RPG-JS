@@ -1,12 +1,12 @@
 import { RpgCommonMap, RpgPlugin, HookClient, RpgShape } from '@rpgjs/common'
 import TileMap from '../Tilemap'
 import { Viewport } from 'pixi-viewport'
-import { IScene } from '../Interfaces/Scene'
 import { Scene, SceneObservableData, SceneSpriteLogic } from './Scene'
 import { spritesheets } from '../Sprite/Spritesheets'
 import Character from '../Sprite/Character'
 import { RpgSound } from '../Sound/RpgSound'
 import { RpgSprite } from '../Sprite/Player'
+import { GameEngineClient } from '../GameEngine'
 
 export class SceneMap extends Scene {
     /** 
@@ -30,12 +30,12 @@ export class SceneMap extends Scene {
     public viewport: Viewport | undefined
     private players: object = {}
     private isLoaded: boolean = false
-    private gameMap: RpgCommonMap
+    private gameMap: RpgCommonMap | undefined
 
     shapes = {}
 
     constructor(
-            protected game: any, 
+            protected game: GameEngineClient, 
             private options: { screenWidth?: number, screenHeight?: number, drawMap?: boolean } = {}) {
         super(game)
         if (options.drawMap === undefined) this.options.drawMap = true
@@ -51,7 +51,7 @@ export class SceneMap extends Scene {
             'getShapes',
             'getShape',
             'getLayerByName'
-        ].forEach(method => this[method] = this.gameMap[method].bind(this.gameMap));
+        ].forEach(method => this[method] = (this.gameMap as any)[method].bind(this.gameMap));
         [
             'heightPx',
             'widthPx',
@@ -60,7 +60,7 @@ export class SceneMap extends Scene {
             'tileWidth',
             'data',
             'layers'
-        ].forEach(prop => this[prop] = this.gameMap[prop])
+        ].forEach(prop => this[prop] = (this.gameMap as any)[prop])
         
     }
 
@@ -137,7 +137,7 @@ export class SceneMap extends Scene {
     }) {
         for (let layerName in layers) {
             const layerInfo = layers[layerName]
-            this.gameMap.setTile(x, y, layerName, layerInfo)
+            this.gameMap?.setTile(x, y, layerName, layerInfo)
             this.tilemap.changeTile(x, y, layerName)
         }
     }
@@ -153,6 +153,7 @@ export class SceneMap extends Scene {
 
     onUpdateObject(logic: SceneSpriteLogic, sprite: Character, moving: boolean): Character {
         const { paramsChanged } = logic
+        if (!this.gameMap) return sprite
         if (moving || (paramsChanged && (paramsChanged.width || paramsChanged.height))) {
             const { tileWidth, tileHeight } = this.gameMap
             const { tilesOverlay }: any = sprite
@@ -188,6 +189,8 @@ export class SceneMap extends Scene {
     updateScene(obj: SceneObservableData) {
         const shapes = obj.partial.shapes
         const fullShapesObj = obj.data.shapes
+
+        if (!this.gameMap) return
 
         const createShapeContainer = (instanceShape, shape) => {
             instanceShape.clientContainer = new PIXI.Container()
@@ -235,7 +238,7 @@ export class SceneMap extends Scene {
         }
     }
 
-    addObject(obj, id: string): Character {
+    addObject(obj, id: string): Character { 
         const wrapper = new PIXI.Container()
         const inner = new PIXI.Container()
         const tilesOverlay = new PIXI.Container()

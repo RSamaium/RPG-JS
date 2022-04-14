@@ -234,7 +234,9 @@ export class RpgCommonMap {
         obj.properties = obj.properties || {}
         const shape = new RpgShape(obj)
         this.shapes[id] = shape
-        this.gridShapes.insertInCells(id, shape.getSizeBox(this.tileWidth))
+        if (!shape.isShapePosition()) {
+            this.gridShapes.insertInCells(id, shape.getSizeBox(this.tileWidth))
+        }
         // trick to sync with client
         return this.shapes[id]
     }

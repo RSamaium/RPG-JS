@@ -223,6 +223,7 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @memberof Player
      */
     changeMap(mapId: string, positions?: { x: number, y: number, z?: number} | string): Promise<RpgMap | null> {
+        this.emit('preLoadScene', mapId)
         return this.server.sceneMap.changeMap(mapId, this, positions) 
     }
 
@@ -655,7 +656,6 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @memberof Player
      */
     public once(key: string, cb: Function) {
-        this.on('mm', () => {})
         if (this._socket) this._socket.once(key, cb) 
     }
 
