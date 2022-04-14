@@ -11,6 +11,11 @@ import { TransitionScene } from './Effects/TransitionScene'
 import { Subject, forkJoin, Observable } from 'rxjs'
 import { GameEngineClient } from './GameEngine'
 
+export enum TransitionMode {
+    None,
+    Fading
+}
+
 export class RpgRenderer  {
     public vm: ComponentPublicInstance
     public app: App
@@ -32,6 +37,7 @@ export class RpgRenderer  {
         transitionOut: new Subject()
     }
     private freeze: boolean = false
+    public transitionMode: TransitionMode = TransitionMode.Fading
 
     constructor(private clientEngine: RpgClientEngine) {
         this.clientEngine.tick.subscribe(({ timestamp, deltaTime, frame }) => {
@@ -159,14 +165,20 @@ export class RpgRenderer  {
         RpgPlugin.emit(HookClient.BeforeSceneLoading, {
             name
         })
-        new TransitionScene(this.clientEngine, this.fadeContainer)
+        const finish = () => {
+            this.clearScene()
+            this.loadingScene.transitionOut.next(name)
+            this.loadingScene.transitionOut.complete()
+        }
+        if (this.transitionMode == TransitionMode.Fading) {
+            new TransitionScene(this.clientEngine, this.fadeContainer)
             .addFadeOut()
-            .onComplete(() => {
-                this.clearScene()
-                this.loadingScene.transitionOut.next(name)
-                this.loadingScene.transitionOut.complete()
-            })
+            .onComplete(finish)
             .start()
+        }
+        else {
+            finish()
+        }
     }
 
     /** @internal */
@@ -199,14 +211,20 @@ export class RpgRenderer  {
             }
             this.scene?.update()
             this.freeze = false
-            new TransitionScene(this.clientEngine, this.fadeContainer)
-                .addFadeIn()
-                .onComplete(() => {
-                    RpgPlugin.emit(HookClient.AfterSceneLoading, this.scene)
+            const finish = () => {
+                RpgPlugin.emit(HookClient.AfterSceneLoading, this.scene)
                     this.fadeContainer.visible = false
                     this.transitionCompleted()
-                })
-                .start()  
+            }
+            if (this.transitionMode == TransitionMode.Fading) {
+                new TransitionScene(this.clientEngine, this.fadeContainer)
+                    .addFadeIn()
+                    .onComplete(finish)
+                    .start()  
+            }
+            else {
+                finish()
+            }
         })
     }
 

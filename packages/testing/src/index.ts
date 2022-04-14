@@ -37,6 +37,7 @@ export function testing(modules, optionsServer: any = {}, optionsClient: any = {
                 renderLoop: false
             })
             clients.push(client)
+            client.renderer.transitionMode = 0
             return {
                 client,
                 socket: client.socket,

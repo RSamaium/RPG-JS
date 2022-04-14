@@ -25,7 +25,7 @@ beforeEach(async () => {
 
     @RpgModule<RpgServer>({
         worldMaps: [
-            fixtureWorld
+            (fixtureWorld as any)
         ]
     })
     class RpgServerModule {}
