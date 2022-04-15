@@ -20,7 +20,8 @@ export enum HookServer {
     PlayerDead = 'Server.onDead',
     PlayerInShape = 'Server.onInShape',
     PlayerOutShape = 'Server.onOutShape',
-    PlayerMove = 'Server.PlayerMove'
+    PlayerMove = 'Server.PlayerMove',
+    PlayerCanChangeMap = 'Server.PlayerCanChangeMap'
 }
 
 export enum HookClient {

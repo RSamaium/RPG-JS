@@ -110,6 +110,15 @@ export interface RpgPlayerHooks {
      * @memberof RpgPlayerHooks
      */
      onMove?: (player: RpgPlayer) => any
+
+     /**
+     * Allow or not the player to switch maps. `nexMap` parameter is the retrieved RpgMap class and not the instance
+     * 
+     * @prop { (player: RpgPlayer, nextMap: RpgClassMap<RpgMap>) =>  boolean | Promise<boolean> } [canChangeMap]
+     * @since 3.0.0-beta.8
+     * @memberof RpgPlayerHooks
+     */
+     canChangeMap?: (player: RpgPlayer, nextMap: RpgClassMap<RpgMap>) => boolean | Promise<boolean>
 }
 
 export interface RpgServer { 

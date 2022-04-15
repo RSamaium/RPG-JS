@@ -113,6 +113,7 @@ export class GameEngineClient extends RpgCommonGame {
             if (paramsChanged.teleported) {
                 teleported = true
                 logic.position = { ...params.position } // clone
+                logic.direction = params.direction
             }
             if (!logic.paramsChanged) logic.paramsChanged = {}
             logic.paramsChanged = merge(paramsChanged, logic.paramsChanged)

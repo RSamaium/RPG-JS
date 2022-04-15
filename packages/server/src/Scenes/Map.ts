@@ -1,5 +1,5 @@
 
-import { RpgCommonMap, Utils } from '@rpgjs/common'
+import { HookServer, RpgCommonMap, RpgPlugin, Utils } from '@rpgjs/common'
 import { World } from '@rpgjs/sync-server'
 import { isTiledFormat, TiledMap, TiledWorld } from '@rpgjs/tiled'
 import { MapOptions, MapData } from '../decorators/map'
@@ -199,6 +199,15 @@ export class SceneMap {
         player: RpgPlayer, 
         positions?: { x: number, y: number, z?: number } | string
     ): Promise<RpgMap | null> {
+
+        const boolArray: boolean[] = await RpgPlugin.emit(HookServer.PlayerCanChangeMap, [player,  this.getMapBydId(mapId)], true)
+       
+        if (boolArray.some(el => el === false)) {
+            return null
+        }
+
+        player.emit('preLoadScene', mapId)
+
         player.prevMap = player.map
         
         if (player.prevMap) {

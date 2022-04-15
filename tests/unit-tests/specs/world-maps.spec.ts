@@ -115,6 +115,47 @@ describe('Go to Map in world', () => {
         expect(player.worldPositionY).toBe(WORLD.maps[0].y + 60)
     })
 
+    describe('Test canChangeMap Hook', () => {
+        test('(true)', async () => {
+            @RpgModule<RpgServer>({
+                player: {
+                    canChangeMap(player: RpgPlayer, NextMap: any) {
+                        expect(player).toBeDefined()
+                        expect(NextMap.id).toBeDefined()
+                        return true
+                    }
+                }
+            })
+            class RpgServerModule {}
+    
+            await _beforeEach([{
+                server: RpgServerModule
+            }])
+        })
+
+        test('(false)', async () => {
+            let i=0
+            @RpgModule<RpgServer>({
+                player: {
+                    canChangeMap() {
+                        i++
+                        if (i==1) return true
+                        return false
+                    }
+                }
+            })
+            class RpgServerModule {}
+    
+            const { player } = await _beforeEach([{
+                server: RpgServerModule
+            }])
+
+            await player.changeMap(mapWorld.id)
+            const map = player.getCurrentMap()
+            expect(map.id).toBe('map')
+        })
+    })
+
     describe('Find map by direction and position', () => {
         const getAdjacentMaps = async (direction) => {
             await player.changeMap(mapWorld.id)

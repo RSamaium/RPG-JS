@@ -111,6 +111,7 @@ export class RpgPlayer extends RpgCommonPlayer {
     public prevMap: string = ''
     /** @internal */
     public server: RpgServerEngine
+    private touchSide: boolean = false
 
     _lastFrame: number = 0
 
@@ -223,75 +224,71 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @memberof Player
      */
     changeMap(mapId: string, positions?: { x: number, y: number, z?: number} | string): Promise<RpgMap | null> {
-        this.emit('preLoadScene', mapId)
         return this.server.sceneMap.changeMap(mapId, this, positions) 
     }
 
     async autoChangeMap(nextPosition: Position): Promise<boolean> {
         const map = this.getCurrentMap()
-        const worldMaps = map.getInWorldMaps()
-        if (worldMaps) {
+        const worldMaps = map?.getInWorldMaps()
+        let ret: boolean = false
+        if (worldMaps && map) {
             const direction = this.getDirection()
             const marginLeftRight = map.tileWidth / 2
             const marginTopDown = map.tileHeight / 2
+
+            const changeMap = async (adjacent, to) => {
+                if (this.touchSide) {
+                    return false
+                }
+                this.touchSide = true
+                const [nextMap] = worldMaps.getAdjacentMaps(map, adjacent) as RpgClassMap<RpgMap>[]
+                if (!nextMap) return false
+                const id = nextMap.id as string
+                const nextMapInfo = worldMaps.getMapInfo(id) as RpgTiledWorldMap
+                return !! (await this.changeMap(id, to(nextMapInfo)))
+            }
+
             if (nextPosition.x < marginLeftRight && direction == Direction.Left) {
-                const [nextMap] = worldMaps.getAdjacentMaps(map, {
+                ret = await changeMap({
                     x: map.worldX - 1,
                     y: this.worldPositionY + 1
-                }) as RpgClassMap<RpgMap>[]
-                if (!nextMap) return false
-                const id = nextMap.id as string
-                const nextMapInfo = worldMaps.getMapInfo(id) as RpgTiledWorldMap
-                await this.changeMap(id, {
+                }, nextMapInfo => ({
                     x: (nextMapInfo.width) - this.wHitbox - marginLeftRight,
                     y: map.worldY - nextMapInfo.y + nextPosition.y
-                })
-                return true
+                }))
             }
-            if (nextPosition.x > map.widthPx - this.wHitbox - marginLeftRight && direction == Direction.Right) {
-                const [nextMap] = worldMaps.getAdjacentMaps(map, {
+            else if (nextPosition.x > map.widthPx - this.wHitbox - marginLeftRight && direction == Direction.Right) {
+                ret = await changeMap({
                     x: map.worldX + map.widthPx + 1,
                     y: this.worldPositionY + 1
-                }) as RpgClassMap<RpgMap>[]
-                if (!nextMap) return false
-                const id = nextMap.id as string
-                const nextMapInfo = worldMaps.getMapInfo(id) as RpgTiledWorldMap
-                await this.changeMap(id, {
+                }, nextMapInfo => ({
                     x: marginLeftRight,
                     y: map.worldY - nextMapInfo.y + nextPosition.y
-                })
-                return true
+                }))
             }
-            if (nextPosition.y < marginTopDown && direction == Direction.Up) {
-                const [nextMap] = worldMaps.getAdjacentMaps(map, {
+            else if (nextPosition.y < marginTopDown && direction == Direction.Up) {
+                ret = await changeMap({
                     x: this.worldPositionX + 1,
                     y: map.worldY - 1
-                }) as RpgClassMap<RpgMap>[]
-                if (!nextMap) return false
-                const id = nextMap.id as string
-                const nextMapInfo = worldMaps.getMapInfo(id) as RpgTiledWorldMap
-                await this.changeMap(id, {
+                }, nextMapInfo => ({
                     x: map.worldX - nextMapInfo.x + nextPosition.x,
                     y: (nextMapInfo.height) - this.hHitbox - marginTopDown,
-                })
-                return true
+                }))
             }
-            if (nextPosition.y > map.heightPx - this.hHitbox - marginTopDown && direction == Direction.Down) {
-                const [nextMap] = worldMaps.getAdjacentMaps(map, {
+            else if (nextPosition.y > map.heightPx - this.hHitbox - marginTopDown && direction == Direction.Down) {
+                ret = await changeMap({
                     x: this.worldPositionX + 1,
                     y: map.worldY + map.heightPx + 1
-                }) as RpgClassMap<RpgMap>[]
-                if (!nextMap) return false
-                const id = nextMap.id as string
-                const nextMapInfo = worldMaps.getMapInfo(id) as RpgTiledWorldMap
-                await this.changeMap(id, {
+                }, nextMapInfo => ({
                     x: map.worldX - nextMapInfo.x + nextPosition.x,
                     y: marginTopDown,
-                })
-                return true
+                }))
+            }
+            else {
+                this.touchSide = false
             }
         }
-        return false
+        return ret
     }
 
     /**
@@ -395,7 +392,7 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @memberof Player
      */
     async teleport(positions?: {x: number, y: number, z?: number} | string): Promise<Position> {
-        if (isString(positions)) positions = <Position>this.getCurrentMap().getPositionByShape(shape => shape.name == positions || shape.type == positions)
+        if (isString(positions)) positions = <Position>this.getCurrentMap()?.getPositionByShape(shape => shape.name == positions || shape.type == positions)
         if (!positions) positions = { x: 0, y: 0, z: 0 }
         if (!(positions as Position).z) (positions as Position).z = 0
         this.teleported++
@@ -544,12 +541,14 @@ export class RpgPlayer extends RpgCommonPlayer {
     /**
      * Retrieves data from the current map
      * 
+     * returns null if the player is not assigned to a map
+     * 
      * @title Get Current Map
      * @method player.getCurrentMap()
-     * @returns {RpgMap}
+     * @returns {RpgMap | null}
      * @memberof Player
      */
-    getCurrentMap<T extends RpgMap = RpgMap>(): T {
+    getCurrentMap<T extends RpgMap = RpgMap>(): T | null {
         return this._getMap(this.map)
     }
 

@@ -124,6 +124,40 @@ test('Listen / Stop Controls', async () => {
     expect(fn).toHaveBeenCalledTimes(2)
 })
 
+test('Move', async () => {
+    const fn = jest.fn()
+    client.controls.setInputs({
+        [Control.Right]: {
+            bind: Input.Right,
+            repeat: true,
+            method: fn
+        }
+    })
+    client.controls.applyControl(Control.Right, true)
+    client.nextFrame(0)
+    client.nextFrame(0)
+    client.controls.applyControl(Control.Right, false)
+    expect(fn).toHaveBeenCalledTimes(2)
+})
+
+test('Move but stop Inputs', async () => {
+    const fn = jest.fn()
+    client.controls.setInputs({
+        [Control.Right]: {
+            bind: Input.Right,
+            repeat: true,
+            method: fn
+        }
+    })
+    client.controls.applyControl(Control.Right, true)
+    client.nextFrame(0)
+    client.controls.stopInputs()
+    client.nextFrame(0)
+    client.controls.applyControl(Control.Right, false)
+    expect(fn).toHaveBeenCalledTimes(1)
+})
+
+
 afterEach(() => {
     clear()
 })

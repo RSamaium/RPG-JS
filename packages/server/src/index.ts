@@ -21,7 +21,7 @@ import Monitor from './Monitor'
 import * as Presets from './presets'
 import { Move, Frequency, Speed } from './Player/MoveManager'
 import { RpgServerEngine } from './server'
-import { SceneMap as RpgSceneMap } from './Scenes/Map'
+import { SceneMap as RpgSceneMap, RpgClassMap } from './Scenes/Map'
 
 export {
     RpgServer,
@@ -52,5 +52,6 @@ export {
     ShapePositioning,
     Frequency,
     Speed,
-    RpgWorldMaps
+    RpgWorldMaps,
+    RpgClassMap
 }

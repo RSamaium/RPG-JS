@@ -391,6 +391,8 @@ export class RpgClientEngine {
             const partialRoom = val.partial
 
             if (val.roomId != lastRoomId) {
+                this.clientFrames.clear()
+                this.serverFrames.clear()
                 this.gameEngine.resetObjects()
                 lastRoomId = val.roomId
                 this.isTeleported = false

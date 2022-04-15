@@ -12,7 +12,7 @@ class MyEvent extends RpgEvent {
     }
     onAction(player: RpgPlayer) {
         const map = player.getCurrentMap<RpgMap>()
-        map.removeEvent(this.id)
+        map?.removeEvent(this.id)
     }
 } 
 

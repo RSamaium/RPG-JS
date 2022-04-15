@@ -165,6 +165,7 @@ export class RpgRenderer  {
         RpgPlugin.emit(HookClient.BeforeSceneLoading, {
             name
         })
+        this.clientEngine.controls.stopInputs()
         const finish = () => {
             this.clearScene()
             this.loadingScene.transitionOut.next(name)
@@ -213,6 +214,7 @@ export class RpgRenderer  {
             this.freeze = false
             const finish = () => {
                 RpgPlugin.emit(HookClient.AfterSceneLoading, this.scene)
+                    this.clientEngine.controls.listenInputs()
                     this.fadeContainer.visible = false
                     this.transitionCompleted()
             }

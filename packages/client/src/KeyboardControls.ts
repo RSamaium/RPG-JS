@@ -222,6 +222,7 @@ export class KeyboardControls {
      /** @internal */
     preStep() {
         //this.directionToAngle()
+        if (this.stop) return
         const boundKeys = Object.keys(this.boundKeys)
         const applyInput = (keyName) => {
             if (this.keyState[keyName]?.isDown) {
@@ -317,11 +318,8 @@ export class KeyboardControls {
         e = e || window.event;
 
         const keyName: string = keyCodeTable[e.keyCode];
-        const isStopped = this.stop
-
+ 
         if (isDown) this.clientEngine.keyChange.next(keyName)
-        
-        if (isStopped) return
         
         if (keyName && this.boundKeys[keyName]) {
             if (this.keyState[keyName] == null) {
@@ -337,7 +335,6 @@ export class KeyboardControls {
 
             // keep reference to the last key pressed to avoid duplicates
             this.lastKeyPressed = isDown ? e.keyCode : null;
-            // this.renderer.onKeyChange({ keyName, isDown });
             e.preventDefault();
         }
     }
