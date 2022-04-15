@@ -41,7 +41,7 @@ beforeEach(async () => {
     fixture = ret.fixture
     server = ret.server
     playerId = ret.playerId
-    map = player.getCurrentMap()
+    map = player.getCurrentMap() as RpgMap
     sceneMap = server.sceneMap as RpgSceneMap
     world = sceneMap?.getWorldMaps(WORLD_ID) as RpgWorldMaps
 })

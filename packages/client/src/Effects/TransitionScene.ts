@@ -4,10 +4,10 @@ import { FrameOptions } from "../Sprite/Spritesheet";
 import { Timeline } from "./Timeline";
 
 export class TransitionScene {
-    frameIndex: number = 0
-    animations: FrameOptions[][] = []
-    updateSubscription: Subscription
-    complete: Function = () => {}
+    private frameIndex: number = 0
+    private animations: FrameOptions[][] = []
+    private updateSubscription: Subscription
+    private complete: Function = () => {}
     
     constructor(private clientEngine: RpgClientEngine, private container: PIXI.Container) { }
 

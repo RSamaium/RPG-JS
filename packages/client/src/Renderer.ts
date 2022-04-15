@@ -10,6 +10,7 @@ import { App, ComponentPublicInstance } from 'vue'
 import { TransitionScene } from './Effects/TransitionScene'
 import { Subject, forkJoin, Observable } from 'rxjs'
 import { GameEngineClient } from './GameEngine'
+import { SpinnerGraphic } from './Effects/Spinner'
 
 export enum TransitionMode {
     None,
@@ -22,6 +23,7 @@ export class RpgRenderer  {
     public readonly stage: PIXI.Container = new PIXI.Container()
     private readonly sceneContainer: PIXI.Container = new PIXI.Container()
     private readonly fadeContainer: PIXI.Graphics = new PIXI.Graphics()
+    private readonly spinner: SpinnerGraphic = new SpinnerGraphic(this.clientEngine)
     public options: any = {}
     public guiEl: HTMLDivElement
 
@@ -69,6 +71,8 @@ export class RpgRenderer  {
         this.fadeContainer.beginFill(0x00000)
         this.fadeContainer.drawRect(0, 0, w, h)
         this.fadeContainer.endFill()
+        this.spinner.x = w * 0.5
+        this.spinner.y = h * 0.5
     }
 
     get canvas(): HTMLCanvasElement {
@@ -120,6 +124,7 @@ export class RpgRenderer  {
 
         this.stage.addChild(this.sceneContainer)
         this.stage.addChild(this.fadeContainer)
+        this.fadeContainer.addChild(this.spinner)
 
         this.fadeContainer.visible = false
         this.fadeContainer.alpha = 0

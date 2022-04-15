@@ -112,7 +112,7 @@ test('Create Shape', () => {
 
  describe('Get Size Box', () => {
     function getSizeBox(obj) {
-        map = player.getCurrentMap()
+        map = player.getCurrentMap() as RpgMap
         const shape = map.createShape(obj)
         return shape.getSizeBox(10)
     }
