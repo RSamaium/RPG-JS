@@ -71,11 +71,11 @@ module.exports = function(dirname, extend = {}) {
             minimize: false
         },
         plugins: [
-            new CleanWebpackPlugin(),
             new FriendlyErrorsWebpackPlugin(),
             new WatchExternalFilesPlugin({
                 files: [
                   './src/**/*.tmx',
+                  './src/**/*.tsx'
                 ]
             }),
             new NodemonPlugin({

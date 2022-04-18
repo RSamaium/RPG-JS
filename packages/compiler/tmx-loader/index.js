@@ -35,6 +35,8 @@ module.exports = function loader(text, map, meta) {
     })
 }
 
+module.exports.parse = parse
+
 module.exports.process = function (text, filepath) {
     let result
     parse(text, filepath, (err, ret) => {

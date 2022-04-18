@@ -15,12 +15,10 @@ module.exports = function (dirname) {
         }, {
             loader: path.resolve(__dirname, 'tmx-loader', 'index.js')
         }]
-    }, /*{
+    }, {
         test: /\.world$/i,
         use: [{
             loader: path.resolve(__dirname, 'tmx-loader', 'world-loader.js')
-        }, {
-            loader: require.resolve('ts-loader')
         }]
-    }*/]
+    }]
 }

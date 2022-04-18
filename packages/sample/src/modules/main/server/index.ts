@@ -2,9 +2,9 @@ import { RpgServer, RpgModule } from '@rpgjs/server'
 import { CaveMap, SampleMap } from './cave'
 import { player } from './player'
 
-//import WorldMap from './tmx/world.world'
+import WorldMap from './tmx/world.world'
 
-//console.log(WorldMap)
+console.log(WorldMap)
 
 let last
 @RpgModule<RpgServer>({ 
@@ -23,27 +23,7 @@ let last
     //     SampleMap
     // ],
     worldMaps: [ 
-        {
-            id: 'myworld',
-            "maps": [
-                {
-                    "fileName": require("./tmx/cave.tmx"),
-                    "height": 6400,
-                    "width": 6400,
-                    "x": 352,
-                    "y": 1248
-                },
-                {
-                    "fileName": require("./tmx/samplemap.tmx"),
-                    "height": 1920,
-                    "width": 1920,
-                    "x": 448,
-                    "y": -672
-                }
-            ],
-            "onlyShowAdjacentMaps": false,
-            "type": "world"
-        }
+        WorldMap
     ]
 })
 export default class RpgServerEngine {}

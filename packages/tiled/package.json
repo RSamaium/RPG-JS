@@ -19,5 +19,8 @@
   "license": "ISC",
   "devDependencies": {
     "typescript": "^4.6.3"
+  },
+  "dependencies": {
+    "xmlbuilder": "^15.1.1"
   }
 }
