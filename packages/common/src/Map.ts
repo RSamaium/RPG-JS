@@ -493,14 +493,14 @@ export class RpgCommonMap {
 
     /**
      * Remove this map from the world
-
      * @title Remove this map from the world
-     * @method map.removeFromWorldMaps(name)
+     * @method map.removeFromWorldMaps()
+     * @returns {boolean | undefined}
      * @since 3.0.0-beta.8
      * @memberof Map
      */
-    removeFromWorldMaps() {
-        this.worldMapParent = undefined
+    removeFromWorldMaps(): boolean | undefined {
+        return this.worldMapParent?.removeMap(this.id)
     }
 
      /**

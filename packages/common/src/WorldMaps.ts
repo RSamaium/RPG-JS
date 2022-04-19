@@ -15,6 +15,7 @@ export interface RpgTiledWorldMap extends TiledWorldMap{
 }
 
 type PositionBox = { minX: number, minY: number, maxX: number, maxY: number }
+type MapTree = { map: RpgClassMap<RpgCommonMap> } & PositionBox
 
 export class RpgCommonWorldMaps {
     private mapsTree: RBush = new RBush(500)
@@ -28,7 +29,7 @@ export class RpgCommonWorldMaps {
      * > Maximum maps in world: 500
      * 
      * @title Add Map in world
-     * @method wold.addMap(wordMapInfo,map)
+     * @method world.addMap(wordMapInfo,map)
      * @param {object} wordMapInfo 
      * Object file:
      * ```ts
@@ -49,7 +50,7 @@ export class RpgCommonWorldMaps {
         const { x, y, height, width } = wordMapInfo
         map.prototype.worldMapParent = this
         this.maps.set(map.id as string, wordMapInfo)
-        this.mapsTree.insert({
+        this.mapsTree.insert<MapTree>({
             minX: x,
             minY: y,
             maxX: x + width,
@@ -59,10 +60,32 @@ export class RpgCommonWorldMaps {
     }
 
     /**
+     * Remove map of the world
+     * @title Remove map of the world
+     * @method world.removeMap(mapId)
+     * @param {string} mapId 
+     * @returns {boolean}
+     * @since 3.0.0-beta.8
+     * @memberof RpgWorldMaps
+     */
+    removeMap(mapId: string): boolean {
+        const map = this.maps.get(mapId)
+        if (map) {
+            const item = (this.mapsTree.all() as MapTree[]).find(item => item.map.id == mapId)
+            if (!item) return false
+            this.maps.delete(mapId)
+            item.map.prototype.worldMapParent = undefined
+            this.mapsTree.remove(item)
+            return true
+        }
+        return false
+    }
+
+    /**
      * Retrieve information from the world
      * 
      * @title Retrieve information from the world
-     * @method wold.getMapInfo(id)
+     * @method world.getMapInfo(id)
      * @param {string} id map id
      * @return {RpgTiledWorldMap | undefined}
      * {
@@ -85,7 +108,7 @@ export class RpgCommonWorldMaps {
      * Retrieves neighboring maps according to positions or direction
      * 
      * @title Retrieves neighboring maps
-     * @method wold.getAdjacentMaps(map,search)
+     * @method world.getAdjacentMaps(map,search)
      * @param {RpgMap} map The source map. We want to find the neighboring maps of the source map
      * @param { PositionBox | Direction | { x: number, y: number } } search Research method
      *  * PositionBox. An object of the following form:

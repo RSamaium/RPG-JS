@@ -91,8 +91,13 @@ export class Autotile extends Tileset {
         for (let i=0 ; i < this.nbTilesHeight ; i++) {
             for (let j=0 ; j < this.nbTilesWidth ; j++) {
                 const tileId = this.getIndex(j, i)
+                const nbProp = Object.keys(attr.tile).length
+                const hasAnimation = this.hasAnimation && j < Autotile.WIDTH_TILES
+                if (nbProp == 0 && !hasAnimation) {
+                    continue
+                }
                 const xmlTile = this.createTile(tileId, attr.tile)
-                if (this.hasAnimation && j < Autotile.WIDTH_TILES) {
+                if (hasAnimation) {
                     const xmlAnimation = this.generateAnimationTile(tileId)
                     xmlTile.importDocument(xmlAnimation)
                 }
@@ -141,22 +146,21 @@ export class Autotile extends Tileset {
         return xml
     }
 }
-const str = new Autotile(1, 8, 8).generate({
+/*
+const str = new Autotile(1, 2).generate({
     root: {
         version: '1.8',
         tiledversion: "1.8.2",
-        name: "[A]Water_pipo",
+        name: "[A]Wall-Up_pipo",
         tilewidth: "32",
         tileheight: "32"
     },
     image: {
-        source: '../../../client/maps/assets/[A]Water_pipo.png',
-        width: "2048",
-        height: "1536"
+        source: '../../../client/maps/assets/[A]Wall-Up_pipo.png',
+        width: "256",
+        height: "384"
     },
-    tile: {
-      collision: true
-    }
+    tile: {}
  }).end({ pretty: true })
 console.log(str)
- 
+*/

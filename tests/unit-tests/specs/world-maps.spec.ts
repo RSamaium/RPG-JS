@@ -1,6 +1,6 @@
 import WORLD from './fixtures/maps/world'
 import {_beforeEach} from './beforeEach'
-import { RpgModule, RpgMap, RpgPlayer, RpgPlugin, RpgServer, RpgServerEngine, RpgSceneMap, RpgWorldMaps, Direction, Move } from '@rpgjs/server'
+import { RpgModule, RpgMap, RpgPlayer, RpgPlugin, RpgServer, RpgServerEngine, RpgSceneMap, RpgWorldMaps, Direction, Move, MapData } from '@rpgjs/server'
 import { RpgClientEngine } from '@rpgjs/client'
 import { clear } from '@rpgjs/testing'
 
@@ -63,6 +63,39 @@ test('Maps is created', () => {
     }
 })
 
+test('Get already map', async () => {
+    clear()
+
+    @MapData({
+        file: require('./fixtures/maps/map.tmx'),
+        id: '1'
+    })
+    class MyMap extends RpgMap{
+        static proof = true
+    }
+
+    @RpgModule<RpgServer>({
+        maps: [
+            MyMap
+        ],
+        worldMaps: [
+            (fixtureWorld as any)
+        ]
+    })
+    class RpgServerModule {}
+
+    const { server } = await _beforeEach([{
+        server: RpgServerModule
+    }], {}, {
+        drawMap: false
+    })
+
+    const sceneMap = server.sceneMap as RpgSceneMap
+    const world = sceneMap?.getWorldMaps(WORLD_ID) as RpgWorldMaps
+    const [firstWorldMap] = world['mapsTree'].data.children
+    expect(firstWorldMap.map.proof).toBeDefined()
+})
+
 test('World Map have two maps', () => {
     expect(world['mapsTree'].data.children).toHaveLength(NB_MAPS)
     expect(world['maps'].size).toBe(NB_MAPS)
@@ -79,7 +112,7 @@ describe('Go to Map in world', () => {
 
     test('get custom id', () => {
         expect(mapWorld.id).toBe('1')
-    })
+    }) 
 
     test('Find the information on the map', () => {
         const info = world.getMapInfo(mapWorld.id)
@@ -88,12 +121,21 @@ describe('Go to Map in world', () => {
         expect(info?.y).toBe(WORLD.maps[0].y)
     })
 
+    test('Remove map of World map', async () => {
+        await player.changeMap(mapWorld.id)
+        const map = player.getCurrentMap()
+        map?.removeFromWorldMaps()
+        const worldMaps = map?.getInWorldMaps()
+        expect(worldMaps).toBeUndefined()
+        expect(world['mapsTree'].data.children).toHaveLength(NB_MAPS-1)
+        expect(world['maps'].size).toBe(NB_MAPS-1)
+    })
     
     test('Maps have world parent', async () => {
         await player.changeMap(mapWorld.id)
         const map = player.getCurrentMap()
-        expect(map.id).toBe(mapWorld.id)
-        const worldMaps = map.getInWorldMaps()
+        expect(map?.id).toBe(mapWorld.id)
+        const worldMaps = map?.getInWorldMaps()
         expect(worldMaps).toBeTruthy()
         expect(worldMaps?.id).toBe(WORLD_ID)
     })
@@ -101,8 +143,8 @@ describe('Go to Map in world', () => {
     test('Find the positions of the map in the world', async () => {
         await player.changeMap(mapWorld.id)
         const map = player.getCurrentMap()
-        expect(map.worldX).toBe(WORLD.maps[0].x)
-        expect(map.worldY).toBe(WORLD.maps[0].y)
+        expect(map?.worldX).toBe(WORLD.maps[0].x)
+        expect(map?.worldY).toBe(WORLD.maps[0].y)
     })
 
     test('Find the positions of the player in the world', async () => {
@@ -160,7 +202,7 @@ describe('Go to Map in world', () => {
         const getAdjacentMaps = async (direction) => {
             await player.changeMap(mapWorld.id)
             const map = player.getCurrentMap()
-            const maps = world.getAdjacentMaps(map, direction)
+            const maps = world.getAdjacentMaps(map as RpgMap, direction)
             return maps
         }
 
