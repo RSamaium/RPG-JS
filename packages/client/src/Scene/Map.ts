@@ -1,4 +1,4 @@
-import { RpgCommonMap, RpgPlugin, HookClient, RpgShape } from '@rpgjs/common'
+import { RpgCommonMap, RpgPlugin, HookClient, RpgShape, Utils } from '@rpgjs/common'
 import TileMap from '../Tilemap'
 import { Viewport } from 'pixi-viewport'
 import { Scene, SceneObservableData, SceneSpriteLogic } from './Scene'
@@ -7,6 +7,15 @@ import Character from '../Sprite/Character'
 import { RpgSound } from '../Sound/RpgSound'
 import { RpgSprite } from '../Sprite/Player'
 import { GameEngineClient } from '../GameEngine'
+
+interface MapObject {
+    id: number
+    sounds: string | string[] | undefined
+    width: number
+    height: number
+    tileWidth: number
+    tileHeight: number
+}
 
 export class SceneMap extends Scene {
     /** 
@@ -65,7 +74,13 @@ export class SceneMap extends Scene {
     }
 
     /** @internal */
-    load(obj): Promise<Viewport> {
+    load(obj: MapObject, prevObj: MapObject): Promise<Viewport> {
+        let { sounds } = obj
+        
+        if (sounds) {
+            if (!Utils.isArray(sounds)) sounds  = obj.sounds = [sounds]
+        }
+        
         this.gameMap = new RpgCommonMap()
         this.gameMap.load(obj)
         this.constructMethods()
@@ -96,12 +111,11 @@ export class SceneMap extends Scene {
             }
         })
 
-        RpgSound.global.stop()
-
         RpgPlugin.emit(HookClient.SceneMapLoading, loader)
 
         return new Promise((resolve, reject) => {
             const complete = () => {
+                let { sounds } = obj
                 this.tilemap.load({
                     drawTiles: this.options.drawMap
                 })
@@ -115,11 +129,15 @@ export class SceneMap extends Scene {
                 this.viewport.clamp({ direction: 'all' })
                 this.viewport.addChild(this.tilemap)
                 this.isLoaded = true
-                if (obj.sounds) {
-                    obj.sounds.forEach(soundId => RpgSound.get(soundId).play())
+                if (prevObj.sounds && prevObj.sounds instanceof Array) {
+                    prevObj.sounds.forEach(soundId => {
+                        const continueSound = (<string[]>obj.sounds || []).find(id => id == soundId)
+                        if (!continueSound) RpgSound.get(soundId).stop() 
+                    })
                 }
+                if (sounds) (<string[]>sounds).forEach(soundId => RpgSound.play(soundId))
                 resolve(this.viewport)
-                if  (this.onLoad) this.onLoad()
+                if (this.onLoad) this.onLoad()
             }
             loader.onError.add(() => {
                 reject()

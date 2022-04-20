@@ -40,8 +40,9 @@ export class RpgCommonWorldMaps {
         x: number;
         y: number;
      * }
-        fileName represents a file to the JSON file (TMX transformed) or directly the Tiled Map Editor object
-     * ```
+        ```
+        `fileName` represents a file to the JSON file (TMX transformed) or directly the Tiled Map Editor object
+     * 
      * @param {class of RpgMap} map 
      * @since 3.0.0-beta.8
      * @memberof RpgWorldMaps

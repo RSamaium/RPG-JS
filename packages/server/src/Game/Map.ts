@@ -67,8 +67,9 @@ export class RpgMap extends RpgCommonMap {
         if (RpgCommonMap.buffer.has(this.id)) {
             return 
         }
-        const data = await this.parseFile() 
+        const data = await this.parseFile()
         super.load(data) 
+        this.loadProperties(data.properties)
         this._server.workers?.call('loadMap', {
             id: this.id,
             data
@@ -76,6 +77,14 @@ export class RpgMap extends RpgCommonMap {
         RpgCommonMap.buffer.set(this.id, this)
         this.createDynamicEvent(this._events as EventPosOption[])
         this.onLoad()
+    }
+
+    private loadProperties(properties: { 
+        [key: string]: any
+    }) {
+        for (let key in properties) {
+            this[key] = properties[key]
+        }
     }
 
     get game(): RpgCommonGame {

@@ -39,6 +39,7 @@ export class RpgRenderer  {
         transitionOut: new Subject()
     }
     private freeze: boolean = false
+    private prevObjectScene: any = {}
     public transitionMode: TransitionMode = TransitionMode.Fading
 
     constructor(private clientEngine: RpgClientEngine) {
@@ -211,7 +212,8 @@ export class RpgRenderer  {
                     })
                     break;
             }
-            const container = await this.getScene<SceneMap>()?.load(obj)
+            const container = await this.getScene<SceneMap>()?.load(obj, this.prevObjectScene)
+            this.prevObjectScene = {...obj}
             if (container) {
                 this.sceneContainer.addChild(container) 
             }
