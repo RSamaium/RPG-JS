@@ -4,7 +4,6 @@ import { Paralyze } from './states/paralyze'
 import { Hero } from './actors/hero'
 import { Sword } from './weapons/sword'
 import { Shield } from './armors/shield'
-import { Monster } from './enemies/monster'
 
 export default {
     Potion,
@@ -12,6 +11,5 @@ export default {
     Hero,
     Key,
     Sword,
-    Shield,
-    Monster
+    Shield
 }

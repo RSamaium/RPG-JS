@@ -11,9 +11,9 @@ module.exports = async function worldLoader(text, sourcemap, meta) {
     const json = JSON.parse(text)
     const p = []
     const rootDir = process.cwd()
-    const mapsDir = `${rootDir}/dist/${type}/maps`
+    const mapsDir = path.normalize(`${rootDir}/dist/${type}/maps`)
     if (!fs.existsSync(mapsDir)) {
-        fs.mkdirSync(mapsDir)
+        fs.mkdirSync(mapsDir, { recursive: true })
     }
     for (let map of json.maps) {
         const { fileName } = map
@@ -26,7 +26,7 @@ module.exports = async function worldLoader(text, sourcemap, meta) {
                 if (err) return reject(err)
                 const name = path.parse(target).name
                 const urlName = `maps/${hash}.${name}.json`
-                fs.writeFileSync(`${rootDir}/dist/${type}/${urlName}`, JSON.stringify(result), 'utf-8')
+                fs.writeFileSync(path.normalize(`${rootDir}/dist/${type}/${urlName}`), JSON.stringify(result), 'utf-8')
                 map.id = name
                 map.fileName = urlName
                 map.properties = result.properties
