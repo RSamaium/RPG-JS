@@ -319,8 +319,6 @@ export class KeyboardControls {
 
         const keyName: string = keyCodeTable[e.keyCode];
  
-        if (isDown) this.clientEngine.keyChange.next(keyName)
-        
         if (keyName && this.boundKeys[keyName]) {
             if (this.keyState[keyName] == null) {
                 this.keyState[keyName] = {
@@ -337,6 +335,8 @@ export class KeyboardControls {
             this.lastKeyPressed = isDown ? e.keyCode : null;
             e.preventDefault();
         }
+
+        if (isDown) this.clientEngine.keyChange.next(keyName)
     }
 
     /**
@@ -424,6 +424,7 @@ export class KeyboardControls {
      */
     listenInputs() {
         this.stop = false
+        this.keyState = {}
     }
 
     /**

@@ -27,7 +27,7 @@ export const player: RpgPlayerHooks = {
     },
     onInput(player: RpgPlayer, { input, moving }) {
         if (input == Control.Back) {
-            
+            player.callMainMenu()
         }
     },
     async onInShape(player: RpgPlayer, shape: RpgShape) {

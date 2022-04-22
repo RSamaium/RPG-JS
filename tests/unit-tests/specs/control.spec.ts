@@ -114,8 +114,8 @@ test('Listen / Stop Controls', async () => {
     client.controls.stopInputs()
     client.nextFrame(0)
     client.controls.applyControl('mycustom', false)
-    client.controls.applyControl('mycustom', true)
     client.controls.listenInputs()
+    client.controls.applyControl('mycustom', true)
     client.nextFrame(0)
     client.controls.applyControl('mycustom', false)
     client.controls.applyControl('mycustom', true)
@@ -156,6 +156,7 @@ test('Move but stop Inputs', async () => {
     client.controls.applyControl(Control.Right, false)
     expect(fn).toHaveBeenCalledTimes(1)
 })
+
 
 
 afterEach(() => {
