@@ -14,4 +14,20 @@ Object.defineProperty(global.Image.prototype, 'src', {
     },
 });
 
+Object.defineProperty(global.window.HTMLMediaElement.prototype, 'play', {
+    configurable: true,
+    get () {
+      setTimeout(() => (this.onloadeddata && this.onloadeddata()))
+      return () => {}
+    }
+})
+
+Object.defineProperty(global.window.HTMLMediaElement.prototype, 'load', {
+    configurable: true,
+    get () {
+      setTimeout(() => (this.onloadeddata && this.onloadeddata()))
+      return () => {}
+    }
+})
+
 window.document.body.innerHTML = `<div id="rpg"></div>`

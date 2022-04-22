@@ -78,7 +78,7 @@ export class SceneMap extends Scene {
         let { sounds } = obj
         
         if (sounds) {
-            if (!Utils.isArray(sounds)) sounds  = obj.sounds = [sounds]
+            if (!Utils.isArray(sounds)) sounds  = obj.sounds = <string[]>[sounds]
         }
         
         this.gameMap = new RpgCommonMap()
@@ -104,13 +104,15 @@ export class SceneMap extends Scene {
             nbLoad++
         }
 
-        loader.load((loader, resources) => {
-            for (let tileset of this.tilemap.tileSets) {
-                const spritesheet = spritesheets.get(tileset.name)
-                if (resources[tileset.name]) spritesheet.resource = resources[tileset.name]  
-            }
-        })
-
+        if (nbLoad > 0) {
+            loader.load((loader, resources) => {
+                for (let tileset of this.tilemap.tileSets) {
+                    const spritesheet = spritesheets.get(tileset.name)
+                    if (resources[tileset.name]) spritesheet.resource = resources[tileset.name]  
+                }
+            })
+        }
+        
         RpgPlugin.emit(HookClient.SceneMapLoading, loader)
 
         return new Promise((resolve, reject) => {
@@ -132,17 +134,17 @@ export class SceneMap extends Scene {
                 if (prevObj.sounds && prevObj.sounds instanceof Array) {
                     prevObj.sounds.forEach(soundId => {
                         const continueSound = (<string[]>obj.sounds || []).find(id => id == soundId)
-                        if (!continueSound) RpgSound.get(soundId).stop() 
+                        if (!continueSound) RpgSound.stop(soundId) 
                     })
                 }
                 if (sounds) (<string[]>sounds).forEach(soundId => RpgSound.play(soundId))
                 resolve(this.viewport)
                 if (this.onLoad) this.onLoad()
             }
-            loader.onError.add(() => {
+            loader.onError.once(() => {
                 reject()
             })
-            loader.onComplete.add(complete)
+            loader.onComplete.once(complete)
             if (nbLoad == 0) {
                 complete()
             }

@@ -220,10 +220,10 @@ export class RpgRenderer  {
             this.scene?.update()
             this.freeze = false
             const finish = () => {
+                this.clientEngine.controls.listenInputs()
+                this.fadeContainer.visible = false
+                this.transitionCompleted()
                 RpgPlugin.emit(HookClient.AfterSceneLoading, this.scene)
-                    this.clientEngine.controls.listenInputs()
-                    this.fadeContainer.visible = false
-                    this.transitionCompleted()
             }
             if (this.transitionMode == TransitionMode.Fading) {
                 new TransitionScene(this.clientEngine, this.fadeContainer)

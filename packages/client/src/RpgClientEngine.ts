@@ -371,7 +371,7 @@ export class RpgClientEngine {
                     })
                 break
                 case 'playSound':
-                    RpgSound.get(params[0]).play()
+                    RpgSound.play(params[0])
                 break
             }
         })
@@ -527,6 +527,10 @@ export class RpgClientEngine {
         return PIXI
     }
 
+    get playerId(): string {
+        return this.gameEngine.playerId
+    }
+
     reset() {
         this.subscriptionWorld.unsubscribe()
         this.world.reset()
@@ -536,5 +540,6 @@ export class RpgClientEngine {
         PIXI.utils.clearTextureCache()
         RpgGui.clear()
         RpgCommonMap.bufferClient.clear()
+        RpgSound.clear()
     }
 }

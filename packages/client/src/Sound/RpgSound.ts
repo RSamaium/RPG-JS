@@ -24,11 +24,22 @@ class RpgSoundClass {
         return howl
     }
 
-    play(id: string) {
+    stop(id: string) {
+        this.get(id).stop()
+    }
+
+    play(id: string): boolean {
         const sound = this.get(id)
         if (!sound.playing()) {
             sound.play()
+            return true
         }
+        return false
+    }
+
+    clear() {
+        this.sounds.clear()
+        this.global.stop()
     }
 
     get global(): typeof Howler {
