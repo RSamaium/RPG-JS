@@ -3,6 +3,11 @@ declare module "*.vue" {
     export default Vue
 }
 
+declare module "*.world" {
+    const value: any;
+    export default value;
+}
+
 declare module "server!*" {
     const value: any;
     export default value;

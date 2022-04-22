@@ -1,5 +1,5 @@
 import { HookClient, HookServer, MockIo, RpgPlugin } from '@rpgjs/common'
-import { entryPoint, RpgServerEngine, RpgMap } from '@rpgjs/server'
+import { entryPoint, RpgServerEngine, RpgMap, RpgWorld } from '@rpgjs/server'
 import { entryPoint as entryPointClient, RpgClientEngine } from '@rpgjs/client'
 
 const { serverIo, ClientIo } = MockIo
@@ -11,10 +11,27 @@ interface Testing {
         playerId: string
     }>,
     server: RpgServerEngine
+    changeMap(client: RpgClientEngine, mapId: string): Promise<void>
 }
 
 let server: RpgServerEngine
 let clients: RpgClientEngine[]
+
+function changeMap(client: RpgClientEngine, server: RpgServerEngine, mapId: string): Promise<void>{
+    return new Promise(async (resolve: any) => {
+        let player = RpgWorld.getPlayer(client.playerId)
+        RpgPlugin.off(HookClient.BeforeSceneLoading)
+        RpgPlugin.off(HookClient.AfterSceneLoading)
+        RpgPlugin.on(HookClient.BeforeSceneLoading, () => {
+            PIXI.utils.clearTextureCache()
+        })
+        RpgPlugin.on(HookClient.AfterSceneLoading, () => {
+            client.nextFrame(0) // render scene
+            resolve()
+        })
+        await player.changeMap(mapId)
+    })
+}
 
 export function testing(modules, optionsServer: any = {}, optionsClient: any = {}): Testing {
     RpgPlugin.clear()
@@ -37,13 +54,17 @@ export function testing(modules, optionsServer: any = {}, optionsClient: any = {
                 renderLoop: false
             })
             clients.push(client)
+            client.renderer.transitionMode = 0
             return {
                 client,
                 socket: client.socket,
                 playerId: client['gameEngine'].playerId
             }
         },
-        server: engine
+        server: engine,
+        changeMap(client: RpgClientEngine, mapId: string) {
+            return changeMap(client, server, mapId)
+        }
     }
 }
 
@@ -51,6 +72,7 @@ export function clear() {
     server.world.clear()
     clients.forEach(client => client.reset())
     RpgMap.buffer.clear()
+    RpgPlugin.clear()
     for (let textureUrl in PIXI.utils.BaseTextureCache) {
         delete PIXI.utils.BaseTextureCache[textureUrl]
     }

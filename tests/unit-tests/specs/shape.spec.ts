@@ -110,6 +110,29 @@ test('Create Shape', () => {
     })
  }) 
 
+ describe('Get Size Box', () => {
+    function getSizeBox(obj) {
+        map = player.getCurrentMap() as RpgMap
+        const shape = map.createShape(obj)
+        return shape.getSizeBox(10)
+    }
+
+    test('Box', async () => {
+        const obj = getSizeBox(box)
+        expect(obj).toMatchObject({ minX: -10, maxX: 110, minY: -10, maxY: 110 })
+    })
+
+    test('Circle', async () => {
+        const obj = getSizeBox(circle)
+        expect(obj).toMatchObject({ minX: -10, maxX: 110, minY: -10, maxY: 110 })
+    })
+
+    test('Polygon', async () => {
+        const obj = getSizeBox(polygon)
+        expect(obj).toMatchObject({ minX: -10, maxX: 265, minY: -19, maxY: 283 })
+    })
+ }) 
+
  test('Shape In - change map - verify position client side', () => {
     return new Promise(async (resolve: any) => {
         clear()

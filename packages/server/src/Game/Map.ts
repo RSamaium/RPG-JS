@@ -49,13 +49,6 @@ class AutoEvent extends RpgEvent {
 export class RpgMap extends RpgCommonMap {
 
     public _events: EventOption[]
-     /** 
-     * @title map id
-     * @readonly
-     * @prop {string} [id]
-     * @memberof Map
-     * */
-    readonly id: string
     public file: any 
      /** 
      * @title event list
@@ -74,8 +67,9 @@ export class RpgMap extends RpgCommonMap {
         if (RpgCommonMap.buffer.has(this.id)) {
             return 
         }
-        const data = await this.parseFile() 
+        const data = await this.parseFile()
         super.load(data) 
+        this.loadProperties(data.properties as any)
         this._server.workers?.call('loadMap', {
             id: this.id,
             data
@@ -83,6 +77,14 @@ export class RpgMap extends RpgCommonMap {
         RpgCommonMap.buffer.set(this.id, this)
         this.createDynamicEvent(this._events as EventPosOption[])
         this.onLoad()
+    }
+
+    private loadProperties(properties: { 
+        [key: string]: any
+    }) {
+        for (let key in properties) {
+            this[key] = properties[key]
+        }
     }
 
     get game(): RpgCommonGame {

@@ -86,7 +86,11 @@ export abstract class Scene {
     }
 
      /** @internal */
-    update(obj: SceneObservableData) {
+    update(obj?: SceneObservableData) {
+        if (!obj) {
+            this.updateScene(this._data.value)
+            return
+        }
         this.updateScene(obj)
         RpgPlugin.emit(HookClient.SceneOnChanges, [this, obj], true)
         this._data.next(obj)

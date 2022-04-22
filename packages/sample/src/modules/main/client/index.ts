@@ -4,6 +4,7 @@ import { MedievalTilesets } from './maps/medieval'
 import { sprite } from './sprite'
 import hpGui from './gui/hp.vue'
 import myTooltip from './gui/tooltip.vue'
+import { Musics } from './sounds'
 
 let engine
 
@@ -19,7 +20,6 @@ let engine
     scenes: {
         map: {
             onAfterLoading(scene: RpgSceneMap) {
-                let mousedown = false
                 
             }
         }
@@ -27,6 +27,9 @@ let engine
     gui: [
         hpGui,
         myTooltip
+    ],
+    sounds: [
+        Musics
     ]
 })
 export default class RpgClientModuleEngine {} 

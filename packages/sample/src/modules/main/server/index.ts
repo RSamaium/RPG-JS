@@ -2,6 +2,10 @@ import { RpgServer, RpgModule } from '@rpgjs/server'
 import { CaveMap, SampleMap } from './cave'
 import { player } from './player'
 
+import WorldMap from './tmx/world.world'
+
+console.log(WorldMap)
+
 let last
 @RpgModule<RpgServer>({ 
     player,
@@ -14,9 +18,12 @@ let last
             last = Date.now()
         }
     },
-    maps: [
-        CaveMap,
-        SampleMap
+    // maps: [
+    //     CaveMap,
+    //     SampleMap
+    // ],
+    worldMaps: [ 
+        WorldMap
     ]
 })
 export default class RpgServerEngine {}

@@ -52,12 +52,15 @@ export function loadModules(modules, obj) {
         else {
             mod = moduleClass
         }
-        const { imports, maps, spritesheets, sounds, gui, scenes, engine, database } = mod
+        const { imports, maps, spritesheets, sounds, gui, scenes, engine, database, worldMaps } = mod
         if (imports) {
             loadModules(imports, obj)
         }
         if (maps) {
             RpgPlugin.on(HookServer.AddMap, () => maps)
+        }
+        if (worldMaps) {
+            RpgPlugin.on(HookServer.AddWorldMaps, () => worldMaps)
         }
         if (database) {
             RpgPlugin.on(HookServer.AddDatabase, () => database)

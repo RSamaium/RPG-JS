@@ -1,5 +1,5 @@
 import workerpool from 'workerpool'
-import RpgMap from '../Map'
+import { RpgCommonMap } from '../Map'
 import { RpgCommonGame, GameSide } from '../Game'
 import { RpgCommonPlayer } from '../Player'
 
@@ -30,9 +30,9 @@ gameEngine.start({
 let i=0
 
 function loadMap(data) {
-  const map = new RpgMap()
+  const map = new RpgCommonMap()
   map.load(data.data)
-  RpgMap.buffer.set(data.id, map)
+  RpgCommonMap.buffer.set(data.id, map)
 }
 
 async function movePlayers(data) {

@@ -1,6 +1,6 @@
 import { Direction, LiteralDirection, RpgCommonPlayer, PlayerType } from './Player'
-import {RpgCommonEvent } from './Event'
-import RpgCommonMap from './Map'
+import { RpgCommonEvent } from './Event'
+import { RpgCommonMap } from './Map'
 import { RpgCommonGame, GameSide } from './Game'
 import { EventEmitter } from './EventEmitter'
 import { PrebuiltGui } from './gui/PrebuiltGui'
@@ -15,6 +15,7 @@ import * as MockIo from './transports/io'
 import * as Logger from './Logger';
 import { RpgShape, ShapePositioning } from './Shape'
 import { VirtualGrid } from './VirtualGrid'
+import { RpgCommonWorldMaps } from './WorldMaps'
 
 export {
     RpgCommonPlayer,
@@ -44,5 +45,6 @@ export {
     RpgShape,
     ShapePositioning,
     VirtualGrid,
-    GameSide
+    GameSide,
+    RpgCommonWorldMaps
 }

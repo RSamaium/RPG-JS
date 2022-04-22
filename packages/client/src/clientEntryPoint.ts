@@ -72,6 +72,8 @@ interface RpgClientEntryPointOptions {
      * @memberof RpgClientEntryPoint
      * */
     globalConfig?: any
+
+    drawMap?: boolean
 }
 
 export default (modules: ModuleType[], options: RpgClientEntryPointOptions): RpgClientEngine => {

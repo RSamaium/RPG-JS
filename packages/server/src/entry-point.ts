@@ -49,7 +49,8 @@ export default function(modules: ModuleType[], options: RpgServerEntryPointOptio
         onDisconnected: HookServer.PlayerDisconnected,
         onInShape: HookServer.PlayerInShape,
         onOutShape: HookServer.PlayerOutShape,
-        onMove: HookServer.PlayerMove
+        onMove: HookServer.PlayerMove,
+        canChangeMap: HookServer.PlayerCanChangeMap
     }
 
     const relationsEngine = {

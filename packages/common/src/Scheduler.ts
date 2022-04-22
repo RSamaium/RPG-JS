@@ -76,7 +76,7 @@ export class Scheduler extends EventEmitter {
 
     callTick() {
         if (this.delayCounter >= LOOP_SLOW_COUNT) {
-            console.warn('[RPGJS] Warning, Event Loop is slow !')
+            //console.warn('[RPGJS] Warning, Event Loop is slow !')
             this.delayCounter = 0;
         }
         this.options.tick(this.timestamp, this.deltaTime);

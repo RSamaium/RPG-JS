@@ -273,7 +273,7 @@ describe('Test Scenario Event', () => {
         })
      })
 
-    test('Test Collision with local event', () => {
+    test('Test Collision with local event', async () => {
         @EventData({
             name: 'test',
             mode: EventMode.Scenario
@@ -286,7 +286,7 @@ describe('Test Scenario Event', () => {
             event: MyEvent
         })
         player.setHitbox(1, 1)
-        player.teleport({ x: 0, y: 0 })
+        await player.teleport({ x: 0, y: 0 })
 
         expect(player.otherPlayersCollision).toHaveLength(1)
         const [event] = player.otherPlayersCollision

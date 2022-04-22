@@ -1,4 +1,4 @@
-import { RpgClient, RpgModule, RpgClientEngine, Direction, RpgGui } from '@rpgjs/client'
+import { RpgClient, RpgModule, RpgClientEngine, Direction, RpgGui, Control } from '@rpgjs/client'
 import 'joypad.js'
 import { GamePadSounds } from './sound'
 
@@ -46,11 +46,11 @@ const DIRECTIONS = [Direction.Left, Direction.Right, Direction.Up, Direction.Dow
                 const { buttonName } = e.detail;
                 switch (buttonName) {
                     case 'button_0':
-                        engine.controls.applyControl('action')
+                        engine.controls.applyControl(Control.Action)
                         break;
                     case 'button_1':
                     case 'button_9':
-                        engine.controls.applyControl('back')
+                        engine.controls.applyControl(Control.Back)
                         break;
                 }
             })
@@ -60,6 +60,8 @@ const DIRECTIONS = [Direction.Left, Direction.Right, Direction.Up, Direction.Dow
                 let direction = e.detail.directionOfMovement
                 if (direction == 'bottom') direction = Direction.Down
                 else if (direction == 'top') direction = Direction.Up
+                else if (direction == 'left') direction = Direction.Left
+                else if (direction == 'right') direction = Direction.Right
                 directions = {
                     [direction]: true
                 }

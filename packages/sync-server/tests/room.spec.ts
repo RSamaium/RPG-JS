@@ -16,6 +16,33 @@ test('Test Room properties', () => {
     expect(room.$schema.users[0].id).toBeDefined()
 })
 
+test('Get All after enter in room', async () => {
+    class Room { 
+        $schema = {
+            users: [
+                { 
+                    id: String,
+                    name: String
+                }
+            ]
+        }
+    }
+    const room =  World.addRoom('room', Room)
+    await testSend(room)
+    room.users['test'].private = 'key1'
+    const value = await testSend(room, 'test2')
+    room.users['test2'].private = 'key2'
+    const users: any = Object.values(value[2].users)
+
+    expect(users).toHaveLength(2)
+    expect(users[0]).toHaveProperty('name')
+    expect(users[0]).not.toHaveProperty('private')
+
+    expect(users[1]).toHaveProperty('name')
+    expect(users[1]).not.toHaveProperty('private')
+})
+
+
 test('Change properties', async () => {
     class Room { 
         $schema = {

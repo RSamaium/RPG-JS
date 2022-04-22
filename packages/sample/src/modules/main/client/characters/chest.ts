@@ -2,7 +2,7 @@ import { Spritesheet, Animation, Direction, RpgSprite } from '@rpgjs/client'
 
 @Spritesheet({
     id: 'chest',
-    image: require('./assets/chest.png'),
+    image: './assets/chest.png',
     width: 124,
     height: 61,
     framesHeight: 2,

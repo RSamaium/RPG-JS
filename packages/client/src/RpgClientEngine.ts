@@ -78,6 +78,7 @@ export class RpgClientEngine {
         frame: 0
     })
     public keyChange: Subject<string> = new Subject()
+    public roomJoin: Subject<string> = new Subject()
     private hasBeenDisconnected: boolean = false
     private isTeleported: boolean = false
     // TODO, public or private
@@ -343,6 +344,10 @@ export class RpgClientEngine {
             RpgPlugin.emit(HookClient.ConnectedError, [this, err, this.socket], true)
         })
 
+        this.socket.on('preLoadScene', (name: string) => {
+            this.renderer.transitionScene(name)
+        })
+
         this.socket.on('loadScene', ({ name, data }) => {
             this.renderer.loadScene(name, data)
         })
@@ -366,7 +371,7 @@ export class RpgClientEngine {
                     })
                 break
                 case 'playSound':
-                    RpgSound.get(params[0]).play()
+                    RpgSound.play(params[0])
                 break
             }
         })
@@ -386,6 +391,8 @@ export class RpgClientEngine {
             const partialRoom = val.partial
 
             if (val.roomId != lastRoomId) {
+                this.clientFrames.clear()
+                this.serverFrames.clear()
                 this.gameEngine.resetObjects()
                 lastRoomId = val.roomId
                 this.isTeleported = false
@@ -432,6 +439,11 @@ export class RpgClientEngine {
                         paramsChanged
                     })
                 }
+            }
+
+            if (partialRoom.join) {
+                this.roomJoin.next(partialRoom)
+                this.roomJoin.complete()
             }
 
             change('users')
@@ -515,6 +527,10 @@ export class RpgClientEngine {
         return PIXI
     }
 
+    get playerId(): string {
+        return this.gameEngine.playerId
+    }
+
     reset() {
         this.subscriptionWorld.unsubscribe()
         this.world.reset()
@@ -524,5 +540,6 @@ export class RpgClientEngine {
         PIXI.utils.clearTextureCache()
         RpgGui.clear()
         RpgCommonMap.bufferClient.clear()
+        RpgSound.clear()
     }
 }

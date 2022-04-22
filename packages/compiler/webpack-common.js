@@ -9,10 +9,16 @@ module.exports = function (dirname) {
                 outputPath(url) {
                     return `maps/${url.replace(/.tmx$/, '.json')}`
                 },
+                name: '[contenthash].[name].[ext]',
                 esModule: false
             }
         }, {
             loader: path.resolve(__dirname, 'tmx-loader', 'index.js')
+        }]
+    }, {
+        test: /\.world$/i,
+        use: [{
+            loader: path.resolve(__dirname, 'tmx-loader', 'world-loader.js')
         }]
     }]
 }

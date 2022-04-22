@@ -42,7 +42,7 @@ export default {
     },
     mounted() {
         this.obsCurrentPlayer = this.rpgCurrentPlayer.subscribe(({ object }) => {
-           this.items = Object.values(object.items)
+           this.items = Object.values(object.items || [])
         })
         this.obsKeyPress = this.rpgKeypress.subscribe(({ control }) => {
             if (!control) return

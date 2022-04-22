@@ -3,6 +3,7 @@ import { random, intersection, generateUID, isString } from './Utils'
 import { RpgShape } from './Shape'
 import { Hit } from './Hit'
 import { VirtualGrid } from './VirtualGrid'
+import { RpgCommonWorldMaps } from './WorldMaps'
 
 const buffer = new Map()
 const bufferClient = new Map()
@@ -38,9 +39,17 @@ export interface LayerInfo {
 }
 
 
-export default class RpgCommonMap {
+export class RpgCommonMap {
+    /** 
+     * @title map id
+     * @readonly
+     * @prop {string} [id]
+     * @memberof Map
+     * */
+     readonly id: string
 
     grid: VirtualGrid
+    gridShapes: VirtualGrid
 
     /** 
      * @title Data of map
@@ -79,7 +88,39 @@ export default class RpgCommonMap {
      * @memberof RpgSceneMap
      * */
     layers: LayerInfo[] = []
-    private shapes: RpgShape[] = []
+    
+    /** @internal */
+    shapes: {
+        [shapeName: string]: RpgShape
+    } = {}
+
+    private worldMapParent: RpgCommonWorldMaps | undefined
+
+    /** 
+     * Retrieves the X position of the map in the world (0 if no world assigned)
+     * 
+     * @title World X Position
+     * @prop {number} [worldX]
+     * @readonly
+     * @since 3.0.0-beta.8
+     * @memberof Map
+     * */
+    get worldX() {
+        return this.getInWorldMaps()?.getMapInfo(this.id)?.x || 0
+    }
+
+    /** 
+     * Retrieves the Y position of the map in the world (0 if no world assigned)
+     * 
+     * @title World Y Position
+     * @prop {number} [worldY]
+     * @readonly
+     * @since 3.0.0-beta.8
+     * @memberof Map
+     * */
+    get worldY() {
+        return this.getInWorldMaps()?.getMapInfo(this.id)?.y || 0
+    }
 
     /**
      * Memorize the maps so you don't have to make a new request or open a file each time you load a map
@@ -103,6 +144,7 @@ export default class RpgCommonMap {
         this.height = data.height
         this.layers = data.layers
         this.grid = new VirtualGrid(this.width, this.tileWidth, this.tileHeight).zoom(10)
+        this.gridShapes = new VirtualGrid(this.width, this.tileWidth, this.tileHeight).zoom(20)
         this._extractShapes()
     }
 
@@ -188,12 +230,15 @@ export default class RpgCommonMap {
      * @memberof Map
      */
     createShape(obj: HitObject): RpgShape {
-        obj.name = (obj.name || generateUID()) as string
+        const id = obj.name = (obj.name || generateUID()) as string
         obj.properties = obj.properties || {}
         const shape = new RpgShape(obj)
-        this.shapes.push(shape)
+        this.shapes[id] = shape
+        if (!shape.isShapePosition()) {
+            this.gridShapes.insertInCells(id, shape.getSizeBox(this.tileWidth))
+        }
         // trick to sync with client
-        return this.shapes[this.shapes.length-1]
+        return this.shapes[id]
     }
 
     /**
@@ -207,7 +252,8 @@ export default class RpgCommonMap {
      */
     removeShape(name: string) {
         // TODO: out players after delete shape
-        this.shapes = this.shapes.filter(shape => shape.name != name)
+        //this.shapes = this.shapes.filter(shape => shape.name != name)
+        delete this.shapes[name]
     }
 
     /**
@@ -220,7 +266,7 @@ export default class RpgCommonMap {
      * @memberof RpgSceneMap
      */
     getShapes(): RpgShape[] {
-        return this.shapes
+        return Object.values(this.shapes)
     }
 
     /**
@@ -234,7 +280,7 @@ export default class RpgCommonMap {
      * @memberof RpgSceneMap
      */
     getShape(name: string): RpgShape | undefined {
-        return this.shapes.find(shape => shape.name == name)
+        return this.getShapes().find(shape => shape.name == name)
     }
     
     getPositionByShape(filter: (shape: RpgShape) => {}): { x: number, y: number, z: number } | null {
@@ -432,4 +478,41 @@ export default class RpgCommonMap {
         return tile
     }
 
+    /**
+     * Assign the map to a world
+
+     * @title Assign the map to a world
+     * @method map.setInWorldMaps(name)
+     * @param {RpgWorldMaps} worldMap world maps
+     * @since 3.0.0-beta.8
+     * @memberof Map
+     */
+    setInWorldMaps(worldMap: RpgCommonWorldMaps) {
+        this.worldMapParent = worldMap
+    }
+
+    /**
+     * Remove this map from the world
+     * @title Remove this map from the world
+     * @method map.removeFromWorldMaps()
+     * @returns {boolean | undefined}
+     * @since 3.0.0-beta.8
+     * @memberof Map
+     */
+    removeFromWorldMaps(): boolean | undefined {
+        return this.worldMapParent?.removeMap(this.id)
+    }
+
+     /**
+     * Recover the world attached to this map (`undefined` if no world attached)
+
+     * @title Get attached World
+     * @method map.getInWorldMaps()
+     * @return {RpgCommonWorldMaps | undefined}
+     * @since 3.0.0-beta.8
+     * @memberof Map
+     */
+    getInWorldMaps(): RpgCommonWorldMaps | undefined {
+        return this.worldMapParent
+    }
 }

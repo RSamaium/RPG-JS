@@ -202,7 +202,7 @@ export default class Character extends PIXI.Sprite {
             obj.posY = obj.position.y
     
             this.direction = obj.direction
-
+            
             if (this._x > this.x) {
                 this.x += Math.min(speed, this._x - this.x)
                 moving = true

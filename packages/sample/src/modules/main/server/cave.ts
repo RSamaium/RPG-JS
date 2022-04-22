@@ -11,14 +11,14 @@ class MyEvent extends RpgEvent {
         this.infiniteMoveRoute([ Move.tileRandom() ])
     }
     onAction(player: RpgPlayer) {
-        const map = player.getCurrentMap()
-        map.removeEvent(this.id)
+        const map = player.getCurrentMap<RpgMap>()
+        map?.removeEvent(this.id)
     }
-}
+} 
 
 @MapData({
     id: 'cave',
-    file: require('./tmx/cave.tmx'),
+    file: require('./tmx/cave.tmx'), 
     //events: [MyEvent]
 })
 export class CaveMap extends RpgMap {
@@ -31,4 +31,4 @@ export class CaveMap extends RpgMap {
 })
 export class SampleMap extends RpgMap {
     
-}
+} 

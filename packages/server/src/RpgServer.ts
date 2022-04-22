@@ -3,10 +3,9 @@ import { RpgPlayer } from './Player/Player'
 import { RpgMap } from './Game/Map'
 import { RpgServerEngine } from './server'
 import { MapOptions } from './decorators/map'
-
-interface RpgClassMap<T> {
-    new (server: any): T,
-}
+import { RpgClassMap } from './Scenes/Map'
+import { TiledMap } from '@rpgjs/tiled'
+import { WorldMap } from './Game/WorldMaps'
 
 export interface RpgServerEngineHooks {
     /**
@@ -111,6 +110,15 @@ export interface RpgPlayerHooks {
      * @memberof RpgPlayerHooks
      */
      onMove?: (player: RpgPlayer) => any
+
+     /**
+     * Allow or not the player to switch maps. `nexMap` parameter is the retrieved RpgMap class and not the instance
+     * 
+     * @prop { (player: RpgPlayer, nextMap: RpgClassMap<RpgMap>) =>  boolean | Promise<boolean> } [canChangeMap]
+     * @since 3.0.0-beta.8
+     * @memberof RpgPlayerHooks
+     */
+     canChangeMap?: (player: RpgPlayer, nextMap: RpgClassMap<RpgMap>) => boolean | Promise<boolean>
 }
 
 export interface RpgServer { 
@@ -225,11 +233,61 @@ export interface RpgServer {
      * class RpgServerEngine { } 
      * ``` 
      * 
+     * Since version 3.0.0-beta.8, you can just pass the path to the file. The identifier will then be the name of the file
+     * 
+     *  ```ts
+     * @RpgModule<RpgServer>({
+     *      maps: [
+     *          require('./tmx/mymap.tmx') // id is "mymap"
+     *      ]
+     * })
+     * class RpgServerEngine { } 
+     * ``` 
      * 
      * @prop {RpgClassMap<RpgMap>[]} [maps]
      * @memberof RpgServer
      * */
-    maps?: RpgClassMap<RpgMap>[] | MapOptions[],
+    maps?: RpgClassMap<RpgMap>[] | MapOptions[] | string[] | TiledMap[],
+
+    /**
+     * Loads the content of a `.world` file from Tiled Map Editor into the map scene
+     * 
+     * > Note, that if the map already exists (i.e. you have already defined an RpgMap), the world will retrieve the already existing map. Otherwise it will create a new map
+     * 
+     * @prop {object[]} [worldMaps]
+     * object is 
+     * ```ts
+     * {
+     *  id?: string
+     *  maps: {
+     *      id?: string
+     *      properties?: object
+     *      fileName: string;
+            height: number;
+            width: number;
+            x: number;
+            y: number;
+     *  }[],
+        onlyShowAdjacentMaps: boolean, // only for Tiled Map Editor
+        type: 'world' // only for Tiled Map Editor
+     * }
+     * ```
+     * @param {RpgSceneMap} sceneMap
+     * @since 3.0.0-beta.8
+     * @example
+     * ```ts
+     * import myworld from 'myworld.world'
+     * 
+     * @RpgModule<RpgServer>({
+     *      worldMaps: [
+     *          myworld
+     *      ]
+     * })
+     * class RpgServerEngine { } 
+     * ```
+     * @memberof RpgServer
+     */
+    worldMaps?: WorldMap[]
 
     
     /** 

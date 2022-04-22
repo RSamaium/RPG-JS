@@ -3,7 +3,8 @@ module.exports = {
         "\\.ts$": "ts-jest",
         "\\.js$": "babel-jest",
         "\\.tmx$": "<rootDir>/node_modules/@rpgjs/compiler/tmx-loader/index.js",
-        "\\.(jpg|ico|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga|ogg)$": "<rootDir>/node_modules/@rpgjs/compiler/jest/image.js",
+        "\\.(jpg|ico|jpeg|png|gif|eot|otf|webp|svg)$": "<rootDir>/node_modules/@rpgjs/compiler/jest/image.js",
+        "\\.(mp4|webm|wav|mp3|m4a|aac|oga|ogg)$": "<rootDir>/node_modules/@rpgjs/compiler/jest/file.js",
         "\\.vue$": "@vue/vue3-jest"
     },
     transformIgnorePatterns: [

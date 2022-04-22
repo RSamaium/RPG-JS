@@ -50,6 +50,7 @@ declare module "howler" {
         onplay: IHowlCallback;
         constructor(properties: IHowlProperties);
         play(sprite?: string, callback?: (soundId: number) => void): Howl;
+        playing(): boolean
         pause(soundId?: number): Howl;
         stop(soundId?: number): Howl;
         mute(soundId?: number): Howl;

@@ -10,7 +10,8 @@ import { World } from './world'
 export class Room {
 
     private proxyRoom: RoomClass
-    private memoryObject: Object = {}
+    private memoryTotalObject: object = {}
+    private memoryObject: object = {}
 
     static readonly propNameUsers: string = 'users'
 
@@ -19,8 +20,10 @@ export class Room {
         user._rooms.push(room.id)
         if (!user.id) user.id = Utils.generateId() 
         if (room['onJoin']) room['onJoin'](user)
-        const object = this.extractObjectOfRoom(room, room.$schema)
-        const packet = new Packet(object, <string>room.id)
+        const packet = new Packet({
+            ...this.memoryTotalObject,
+            join: true
+        }, <string>room.id)
         Transmitter.emit(user, packet, room)
     }
 
@@ -127,7 +130,7 @@ export class Room {
                             return val
                         }
                         const { fullPath: p, infoDict, genericPath } = getInfoDict(path, key, dictPath)
-                        if (typeof val == 'object' && infoDict) {
+                          if (typeof val == 'object' && infoDict) {
                             val = deepProxy(val, p, genericPath)
                         }
                         return val
@@ -233,7 +236,10 @@ export class Room {
             }
         }
 
+        //console.time()
         set(this.memoryObject, path, obj)
+        set(this.memoryTotalObject, path, obj)
+        //console.timeEnd()
 
         if (this.proxyRoom['onChanges']) this.proxyRoom['onChanges'](this.memoryObject)
 
