@@ -1,5 +1,5 @@
 import { RpgPlugin, HookServer, HookClient } from './Plugin'
-import { isArray, isClass, isFunction } from './Utils'
+import { isArray, isClass, isFunction, isPromise } from './Utils'
 import { warning } from './Logger'
 
 enum Side {
@@ -25,7 +25,7 @@ export function RpgModule<T>(options: T) {
     }
 }
 
-export function loadModules(modules, obj) {
+export async function loadModules(modules, obj, middleware?: Function) {
     const { side, relations } = obj
     for (let module of modules) {
         if (!module) continue
@@ -52,7 +52,13 @@ export function loadModules(modules, obj) {
         else {
             mod = moduleClass
         }
-        const { imports, maps, spritesheets, sounds, gui, scenes, engine, database, worldMaps } = mod
+        if (middleware) {
+            mod = middleware(mod)
+            if (isPromise(mod)) {
+                mod = await mod
+            }
+        }
+        const { imports, maps, spritesheets, sounds, gui, scenes, engine, database, worldMaps, scalability } = mod
         if (imports) {
             loadModules(imports, obj)
         }
@@ -85,6 +91,7 @@ export function loadModules(modules, obj) {
         }
         loadRelations(player, 'player')
         loadRelations(engine, 'engine')
+        if (scalability) loadRelations(scalability.hooks, 'scalability')
         if (scenes) loadRelations(scenes.map, 'sceneMap')
     }
 }

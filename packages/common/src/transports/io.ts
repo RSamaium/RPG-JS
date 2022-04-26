@@ -21,6 +21,9 @@ class MockIo {
 
 class MockSocket {
     id: string
+    handshake: any = {
+        auth: {}
+    }
 
     constructor(private io: any) {
         this.id = ''+Math.random()
@@ -61,6 +64,10 @@ class MockClientIo extends MockIo {
     emit(name: string, data) {
         serverIo._trigger(name, data, this)
         return this
+    }
+
+    disconnect() {
+        this.emit('disconnect', undefined)
     }
 }
 

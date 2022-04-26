@@ -40,6 +40,9 @@ export class RpgServerEngine {
      * @memberof RpgServerEngine
      */
     public damageFormulas: any = {}
+
+    public serverId: string = process.env.SERVER_ID || Utils.generateUID()
+
     private scenes: Map<string, any> = new Map()
     protected totalConnected: number = 0
     private scheduler: Scheduler
@@ -156,7 +159,7 @@ export class RpgServerEngine {
             }
         })
         this.io.on('connection', this.onPlayerConnected.bind(this))
-        RpgPlugin.emit(HookServer.Start, this)
+        await RpgPlugin.emit(HookServer.Start, this)
     }
 
     /**
@@ -240,8 +243,12 @@ export class RpgServerEngine {
     }
 
     private onPlayerConnected(socket) {
+        const { token } = socket.handshake.auth
+
         const playerId = Utils.generateUID()
         const player: RpgPlayer = new RpgPlayer(this.gameEngine, playerId)
+        player.session = token
+
         socket.on('move', (data: { input: string[], frame: number }) => {
             for (let input of data.input) {
                 player.pendingMove.push({
@@ -252,16 +259,28 @@ export class RpgServerEngine {
         })
 
         socket.on('disconnect', () => {
+            console.log('dis')
             this.onPlayerDisconnected(socket.id, playerId)
         })
 
         this.world.setUser(player, socket)
 
-        socket.emit('playerJoined', { playerId })
-
         player.server = this
         player._init()
-        player.execMethod('onConnected')
+
+        if (!token) {
+            const newToken = Utils.generateUID() + '-' + Utils.generateUID() + '-' + Utils.generateUID()
+            player.session = newToken
+        }
+
+        socket.emit('playerJoined', { playerId, session: player.session })
+
+        if (!token) {
+            player.execMethod('onConnected')
+        }
+        else {
+            RpgPlugin.emit(HookServer.ScalabilityPlayerConnected, player)
+        }
     }
 
     /**

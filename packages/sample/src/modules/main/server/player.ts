@@ -27,6 +27,7 @@ export const player: RpgPlayerHooks = {
     },
     onInput(player: RpgPlayer, { input, moving }) {
         if (input == Control.Back) {
+            player.addItem(Shield)
             player.callMainMenu()
         }
     },

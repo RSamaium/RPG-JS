@@ -1,5 +1,7 @@
-import { RpgCommonGame, HookServer, loadModules, ModuleType, GameSide } from '@rpgjs/common'
+import { RpgCommonGame, HookServer, loadModules, ModuleType, GameSide, RpgPlugin } from '@rpgjs/common'
 import { RpgServerEngine } from './server'
+import { RpgPlayer } from './Player/Player'
+import { RpgMatchMaker } from './MatchMaker'
 
 interface RpgServerEntryPointOptions {
      /** 
@@ -62,8 +64,28 @@ export default function(modules: ModuleType[], options: RpgServerEntryPointOptio
         side: 'server',
         relations: {
             player: relations,
-            engine: relationsEngine
+            engine: relationsEngine,
+            scalability: {
+                onConnected: HookServer.ScalabilityPlayerConnected,
+                doChangeServer: HookServer.ScalabilityChangeServer
+            }
         }
+    }, (mod) => {
+        const { scalability } = mod
+        if (scalability) {
+            const { hooks, stateStore, matchMaker } = scalability
+            const matchMakerInstance = new RpgMatchMaker(matchMaker)
+            RpgPlugin.on(HookServer.Start, () => {
+                return stateStore.connect()
+            })
+            for (let hookName in hooks) {
+                let originalHook = mod.scalability.hooks[hookName]
+                mod.scalability.hooks[hookName] = function(player: RpgPlayer) {
+                    return originalHook(stateStore, matchMakerInstance, player)
+                }
+            }
+        }
+        return mod
     })
 
     const serverEngine = new RpgServerEngine(options.io, gameEngine, { 

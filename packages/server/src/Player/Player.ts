@@ -108,10 +108,13 @@ export class RpgPlayer extends RpgCommonPlayer {
     public events: any = {}
     public param: any 
     public _rooms = []
+    public session: string | null = null
     public prevMap: string = ''
     /** @internal */
     public server: RpgServerEngine
     private touchSide: boolean = false
+    /** @internal */
+    public tmpPositions: Position | string | null = null
 
     _lastFrame: number = 0
 
@@ -223,7 +226,7 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @returns {Promise<RpgMap | null>} null if map not exists
      * @memberof Player
      */
-    changeMap(mapId: string, positions?: { x: number, y: number, z?: number} | string): Promise<RpgMap | null> {
+    changeMap(mapId: string, positions?: { x: number, y: number, z?: number} | string): Promise<RpgMap | null | boolean> {
         return this.server.sceneMap.changeMap(mapId, this, positions) 
     }
 
@@ -438,7 +441,7 @@ export class RpgPlayer extends RpgCommonPlayer {
         this.position = json.position
         if (json.map) {
             this.map = ''
-            this.changeMap(json.map, json.position)
+            this.changeMap(json.map, json.tmpPositions || json.position)
         }
     }
 
@@ -510,7 +513,8 @@ export class RpgPlayer extends RpgCommonPlayer {
             'hHitbox',
             'direction',
             'initialLevel',
-            'finalLevel'
+            'finalLevel',
+            'tmpPositions'
         ]
         for (let prop of props) {
             obj[prop] = this[prop]
@@ -556,6 +560,13 @@ export class RpgPlayer extends RpgCommonPlayer {
         this.emit('loadScene', {
             name, 
             data
+        }) 
+    }
+
+    changeServer(url: string, port: number) {
+        this.emit('changeServer', {
+            url, 
+            port
         }) 
     }
 

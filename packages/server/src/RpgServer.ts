@@ -6,6 +6,7 @@ import { MapOptions } from './decorators/map'
 import { RpgClassMap } from './Scenes/Map'
 import { TiledMap } from '@rpgjs/tiled'
 import { WorldMap } from './Game/WorldMaps'
+import { RpgMatchMaker } from './MatchMaker'
 
 export interface RpgServerEngineHooks {
     /**
@@ -333,5 +334,18 @@ export interface RpgServer {
         damagePhysic?: (a, b) => number,
         damageCritical?: (damage, a, b) => number
         coefficientElements?: (a, b, bDef) => number
+    }
+
+    scalability?: {
+        matchMaker: {
+            endpoint?: string
+            headers?: any
+            callback?: Function
+        },
+        stateStore: any
+        hooks: {
+            onConnected(store, matchMaker: RpgMatchMaker, player: RpgPlayer): Promise<boolean> | boolean
+            doChangeServer(store, matchMaker: RpgMatchMaker, player: RpgPlayer): Promise<boolean> | boolean
+        }
     }
 }

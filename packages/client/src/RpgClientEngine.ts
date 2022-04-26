@@ -80,6 +80,7 @@ export class RpgClientEngine {
     public keyChange: Subject<string> = new Subject()
     public roomJoin: Subject<string> = new Subject()
     private hasBeenDisconnected: boolean = false
+    private serverChanging: boolean = false
     private isTeleported: boolean = false
     // TODO, public or private
     io
@@ -89,6 +90,10 @@ export class RpgClientEngine {
 
     private clientFrames: Map<number, FrameData> = new Map()
     private serverFrames: Map<number, FrameData> = new Map()
+
+    private session: string | null = null
+    private lastConnection: string = ''
+    private lastScene: string = ''
 
     /**
      * Read objects synchronized with the server
@@ -315,11 +320,15 @@ export class RpgClientEngine {
      * @returns {void}
      * @memberof RpgClientEngine
      */
-    connection() {
+    connection(uri?: string) {
         const { standalone } = this.gameEngine
 
         if (!standalone) {
-            this.socket = this.io()
+            this.socket = this.io(uri, {
+                auth: {
+                    token: this.session
+                }
+            })
         }
         else {
             this.socket = this.io
@@ -328,16 +337,12 @@ export class RpgClientEngine {
         this.socket.on('connect', () => {
             if (RpgGui.exists(PrebuiltGui.Disconnect)) RpgGui.hide(PrebuiltGui.Disconnect)
             RpgPlugin.emit(HookClient.Connected, [this, this.socket], true)
-            if (this.hasBeenDisconnected) {
-                // Todo
-                window.location.reload()
-                //entryPoint()
-            }
             this.hasBeenDisconnected = false
         })
 
         this.socket.on('playerJoined', (playerEvent) => {
             this.gameEngine.playerId = playerEvent.playerId
+            this.session = playerEvent.session
         })
 
         this.socket.on('connect_error', (err: any) => {
@@ -345,11 +350,30 @@ export class RpgClientEngine {
         })
 
         this.socket.on('preLoadScene', (name: string) => {
+            if (this.lastScene == name) {
+                return
+            }
+            this.lastScene = name
             this.renderer.transitionScene(name)
         })
 
         this.socket.on('loadScene', ({ name, data }) => {
             this.renderer.loadScene(name, data)
+        })
+
+        this.socket.on('changeServer', ({ url, port }) => {
+            const connection = url + ':' + port
+            console.log(this.lastConnection, connection)
+            if (this.lastConnection == connection) {
+                return
+            }
+            if (this.subscriptionWorld) {
+                this.subscriptionWorld.unsubscribe()
+            }
+            this.lastConnection = connection
+            this.serverChanging = true
+            this.socket.disconnect()
+            this.connection(connection)
         })
 
         this.socket.on('changeTile', ({ tiles, x, y }) => {
@@ -455,6 +479,9 @@ export class RpgClientEngine {
         })
 
         this.socket.on('disconnect', (reason: string) => {
+            if (this.serverChanging) {
+                return
+            }
             if (RpgGui.exists(PrebuiltGui.Disconnect)) RpgGui.display(PrebuiltGui.Disconnect)
             RpgPlugin.emit(HookClient.Disconnect, [this, reason, this.socket], true)
             this.hasBeenDisconnected = true
@@ -465,6 +492,8 @@ export class RpgClientEngine {
         if (standalone) {
             this.socket.connection()
         }
+
+        this.serverChanging = false
     }
 
     get world(): any {
