@@ -3,6 +3,11 @@ import axios from 'axios'
 import { Utils } from '@rpgjs/common'
 import { RpgPlayer } from './Player/Player'
 
+interface MatchMakerPayload {
+    playerId: string
+    mapName: starting
+}
+
 export interface MatchMakerResponse {
     url: string
     port: number
@@ -12,13 +17,13 @@ export interface MatchMakerResponse {
 export interface MatchMakerOption {
     endpoint?: string
     headers?: any
-    callback?: (player: RpgPlayer) => MatchMakerResponse
+    callback?: (payload: MatchMakerPayload) => MatchMakerResponse
 }
 
 export class RpgMatchMaker {
     private endpoint?: string
     private headers?: any
-    private callback?: (player: RpgPlayer) => MatchMakerResponse
+    private callback?: (payload: MatchMakerPayload) => MatchMakerResponse
 
     constructor(private options: MatchMakerOption) {
         this.endpoint = options.endpoint
@@ -28,19 +33,27 @@ export class RpgMatchMaker {
 
     async getServer(player: RpgPlayer): Promise<MatchMakerResponse | null> {
         const currentServerId = player.server.serverId
+        const payload: MatchMakerPayload = {
+            playerId: player.id,
+            mapName: player.map
+        }
         let res = {} as MatchMakerResponse
         if (this.callback) {
-            res = this.callback(player)
+            res = this.callback(payload)
             if (Utils.isPromise(res)) {
                 res = await res
             }
         }
         if (this.endpoint) {
-            res = await axios.post<MatchMakerResponse>(this.endpoint, {
-                playerId: player.id
-            }, {
-                headers: this.headers
-            }).then(res => res.data)
+            try {
+                res = await axios.post<MatchMakerResponse>(this.endpoint, payload, {
+                    headers: this.headers
+                }).then(res => res.data)
+            }
+            catch (err) {
+                console.log('There is a problem with the MatchMaker webservice.')        
+                throw err
+            }
         }
         if (currentServerId == res.serverId) {
             return null

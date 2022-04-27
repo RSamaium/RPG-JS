@@ -4,6 +4,7 @@ import { _initSpritesheet, spritesheets } from './Sprite/Spritesheets'
 import { _initSound, sounds } from './Sound/Sounds'
 import { World } from '@rpgjs/sync-client'
 import { BehaviorSubject, Observable, Subject, Subscription } from 'rxjs'
+import { ajax } from 'rxjs/ajax'
 import { RpgGui } from './RpgGui'
 import { 
     RpgCommonPlayer, 
@@ -12,7 +13,7 @@ import {
     Utils, 
     RpgPlugin, 
     HookClient,
-    RpgCommonMap, 
+    RpgCommonMap
 } from '@rpgjs/common'
 import { RpgSound } from './Sound/RpgSound'
 import { SceneMap } from './Scene/Map'
@@ -30,6 +31,11 @@ type Tick = {
 type FrameData = {
     time: number,
     data: any
+}
+
+type MatchMakerResponse = { 
+    url: string, 
+    port: string 
 }
 
 export class RpgClientEngine {
@@ -94,6 +100,7 @@ export class RpgClientEngine {
     private session: string | null = null
     private lastConnection: string = ''
     private lastScene: string = ''
+    private matchMakerService: string | (() => MatchMakerResponse) | null = null
 
     /**
      * Read objects synchronized with the server
@@ -143,7 +150,6 @@ export class RpgClientEngine {
 
         this.io = this.options.io
         this.globalConfig = this.options.globalConfig
-
         this.gameEngine.standalone = this.options.standalone
         this.gameEngine.renderer = this.renderer
         this.gameEngine.clientEngine = this
@@ -236,11 +242,23 @@ export class RpgClientEngine {
             }
             window.requestAnimationFrame(loop)
         }  
-        RpgPlugin.emit(HookClient.Start, this)
-            .then((ret: boolean[]) => {
-                const hasFalseValue = ret.findIndex(el => el === false) != - 1
-                if (!hasFalseValue) this.connection()
-            })
+        const ret: boolean[] = await RpgPlugin.emit(HookClient.Start, this)
+        this.matchMakerService = this.options.globalConfig.matchMakerService
+        const hasFalseValue = ret.findIndex(el => el === false) != - 1
+        if (!hasFalseValue) {
+            let serverUri = {} as MatchMakerResponse
+            if (this.matchMakerService) {
+                if (Utils.isFunction(this.matchMakerService)) {
+                    serverUri = (this.matchMakerService as Function)()
+                }
+                else {
+                    // todo: change toPromise (RXJS v7+)
+                    serverUri  = await ajax.getJSON<MatchMakerResponse>(this.matchMakerService as string).toPromise()
+                }
+                
+            }
+            this.connection(serverUri.url ? serverUri.url + ':' + serverUri.port : undefined)
+        }
     }
 
     /**

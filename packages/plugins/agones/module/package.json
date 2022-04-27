@@ -18,6 +18,7 @@
   "license": "MIT",
   "dependencies": {
     "@google-cloud/agones-sdk": "1.22.0",
+    "@rpgjs/client": "^3.0.0-beta.8",
     "@rpgjs/server": "^3.0.0-beta.8",
     "redis": "^4.0.6"
   }

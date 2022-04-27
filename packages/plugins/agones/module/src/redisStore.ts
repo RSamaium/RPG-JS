@@ -3,8 +3,10 @@ import { createClient, RedisClientType } from 'redis'
 export class RedisStore {
     private client: RedisClientType
 
-    async connect(options) {
-        this.client = createClient(options)
+    constructor(private options: { url: string | undefined }) {}
+
+    async connect() {
+        this.client = createClient(this.options)
         await this.client.connect()
     }
 

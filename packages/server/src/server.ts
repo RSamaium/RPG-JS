@@ -244,7 +244,6 @@ export class RpgServerEngine {
 
     private onPlayerConnected(socket) {
         const { token } = socket.handshake.auth
-
         const playerId = Utils.generateUID()
         const player: RpgPlayer = new RpgPlayer(this.gameEngine, playerId)
         player.session = token
@@ -259,7 +258,6 @@ export class RpgServerEngine {
         })
 
         socket.on('disconnect', () => {
-            console.log('dis')
             this.onPlayerDisconnected(socket.id, playerId)
         })
 

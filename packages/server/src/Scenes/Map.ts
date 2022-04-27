@@ -211,7 +211,7 @@ export class SceneMap {
         player.prevMap = player.map
         
         if (player.prevMap) {
-            player.execMethod('onLeaveMap', <any>[player.getCurrentMap()])
+            await player.execMethod('onLeaveMap', <any>[player.getCurrentMap()])
             World.leaveRoom(player.prevMap, player.id)    
         }
 

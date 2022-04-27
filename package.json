@@ -32,6 +32,7 @@
     "build:tiled": "cd packages/tiled && npm run build",
     "watch:sync-server": "cd packages/sync-server && npm run watch",
     "build:sync-client": "cd packages/sync-client && npm run build",
+    "build:agones-mm": "cd packages/plugins/agones/matchmaker && npm run build",
     "watch:sync-client": "cd packages/sync-client && npm run watch",
     "watch:common": "cd packages/common && npm run watch",
     "watch:client": "cd packages/client && npm run watch",
@@ -39,6 +40,7 @@
     "watch:testing": "cd packages/testing && npm run watch",
     "watch:database": "cd packages/database && npm run watch",
     "watch:tiled": "cd packages/tiled && npm run watch",
+    "watch:agones-mm": "cd packages/plugins/agones/matchmaker && npm run watch",
     "dev:watch": "concurrently -n rpgjs \"npm:watch:*\"",
     "dev": "concurrently -n rpgjs,sample \"npm:watch:*\" \"cd packages/sample && npm run dev\""
   },
