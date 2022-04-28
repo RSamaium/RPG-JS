@@ -20,7 +20,6 @@ if (!MATCH_MAKER_SECRET_TOKEN) {
     player: {
      async onDisconnected(player: RpgPlayer) {
         const players = RpgWorld.getPlayers()
-        console.log(players)
         if (players.length == 1) { // this player
             await agonesSDK.shutdown()
         }
@@ -31,7 +30,6 @@ if (!MATCH_MAKER_SECRET_TOKEN) {
      },
      async onLeaveMap(player: RpgPlayer, map: RpgMap) {
         const players = RpgWorld.getPlayersOfMap(map.id)
-        console.log(players)
         if (players.length == 1) { // this player
             await agonesSDK.setLabel('map-' + map.id, '0')
         }

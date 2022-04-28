@@ -30,7 +30,7 @@ test('Get All after enter in room', async () => {
     const room =  World.addRoom('room', Room)
     await testSend(room)
     room.users['test'].private = 'key1'
-    const value = await testSend(room, 'test2')
+    const value: any = await testSend(room, 'test2')
     room.users['test2'].private = 'key2'
     const users: any = Object.values(value[2].users)
 
@@ -59,7 +59,7 @@ test('Change properties', async () => {
     const room: any =  World.addRoom('room', Room)
     room.position.x = 5
 
-    const value = await testSend(room)
+    const value: any = await testSend(room)
     expect(value[2]).toMatchObject({ position: { x: 5 }})
 })
 
@@ -78,7 +78,7 @@ test('change root propertie in room', async () => {
     }
     const room: any =  World.addRoom('room', Room)
     room.position = { x: 5, y: 2 }
-    const value  = await testSend(room)
+    const value: any  = await testSend(room)
     expect(value[2]).toMatchObject({ position: { x: 5 }})
 })
 

@@ -20,6 +20,11 @@ export class Room {
         user._rooms.push(room.id)
         if (!user.id) user.id = Utils.generateId() 
         if (room['onJoin']) room['onJoin'](user)
+        //
+        if (this.getUsersLength(room) == 1) {
+            // If it's the first to arrive in the room, we save the default values of the room
+            this.memoryTotalObject = this.extractObjectOfRoom(room, room.$schema)
+        }
         const packet = new Packet({
             ...this.memoryTotalObject,
             join: true
@@ -31,6 +36,10 @@ export class Room {
         const index = user._rooms.findIndex(id => room.id == id)
         user._rooms.splice(index, 1)
         if (room['onLeave']) room['onLeave'](user)
+    }
+
+    private getUsersLength(room: RoomClass) {
+        return Object.keys(room.users).length
     }
 
     addInputs(room: RoomClass, obj: Object): void {

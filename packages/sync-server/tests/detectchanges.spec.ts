@@ -35,7 +35,7 @@ test('Test Array properties 1', async () => {
         public: 'p',
         secret: 's'
     }
-    const value  = await testSend(room)
+    const value: any  = await testSend(room)
     expect(value[2]).toMatchObject({ list: { '0': { public: 'p' } }})
 })
 
@@ -44,7 +44,7 @@ test('Test Array properties 2', async () => {
         public: 'p',
         secret: 's'
     }]
-    const value  = await testSend(room)
+    const value: any  = await testSend(room)
     expect(value[2]).toMatchObject({ list: { '0': { public: 'p' } }})
 })
 
@@ -53,18 +53,18 @@ test('Test Array properties 3', async () => {
         public: 'p',
         secret: 's'
     })
-    const value  = await testSend(room)
+    const value: any  = await testSend(room)
     expect(value[2]).toMatchObject({ list: { '0': { public: 'p' } }})
 })
 
 test('Test Array properties and next change', () => {
-   return new Promise(async (resolve) => {
+   return new Promise(async (resolve: any) => {
         room.list.push({
             public: 'p',
             secret: 's'
         })
         
-        const value  = await testSend(room)
+        const value: any  = await testSend(room)
         const user = room.users['test']
 
         expect(value[2]).toMatchObject({ list: { '0': { public: 'p' } }})
@@ -79,7 +79,7 @@ test('Test Array properties and next change', () => {
 })
 
 test('Test Deep Change', async () => {
-    return new Promise(async (resolve) => {
+    return new Promise(async (resolve: any) => {
         room.keys = { 
             a: {
                 public: 'test',
@@ -88,7 +88,7 @@ test('Test Deep Change', async () => {
             b: 18
         }
         
-        const value  = await testSend(room)
+        const value: any  = await testSend(room)
         const user = room.users['test']
         const secretKey = value[2].keys.a.secret
         expect(secretKey).toBeUndefined()

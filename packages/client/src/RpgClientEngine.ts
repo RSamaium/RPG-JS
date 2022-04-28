@@ -381,7 +381,6 @@ export class RpgClientEngine {
 
         this.socket.on('changeServer', ({ url, port }) => {
             const connection = url + ':' + port
-            console.log(this.lastConnection, connection)
             if (this.lastConnection == connection) {
                 return
             }

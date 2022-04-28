@@ -7,6 +7,7 @@ export class RedisStore {
 
     async connect() {
         this.client = createClient(this.options)
+        console.log(this.client)
         await this.client.connect()
     }
 

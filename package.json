@@ -9,17 +9,32 @@
     "concurrently": "^5.3.0",
     "msgpack-lite": "^0.1.26",
     "socket.io-client": "^4.4.1",
-    "yargs": "^17.3.1"
+    "yargs": "^17.3.1",
+    "@vue/cli-plugin-babel": "^5.0.4",
+    "canvas": "^2.8.0",
+    "core-js": "^3.21.1",
+    "jest": "^27.0.4",
+    "jest-webgl-canvas-mock": "^0.2.3",
+    "ts-jest": "^27.0.2",
+    "vue": "^3.2.31"
   },
   "devDependencies": {
     "artillery": "^1.6.1",
     "artillery-engine-socketio-v3": "^1.0.1",
     "jest": "^26.4.2",
-    "lerna": "^4.0.0"
+    "lerna": "^4.0.0",
+    "@babel/plugin-proposal-decorators": "^7.10.5",
+    "@babel/plugin-transform-runtime": "^7.11.5",
+    "@babel/preset-env": "^7.11.5",
+    "@babel/preset-typescript": "^7.10.4",
+    "@types/jest": "^26.0.24",
+    "@vue/compiler-sfc": "^3.0.4",
+    "@vue/vue3-jest": "^27.0.0-alpha.4",
+    "typescript": "^4.5.5"
   },
   "scripts": {
-    "postinstall": "lerna bootstrap --ci && npm run build:tiled && npm run build:common && npm run build:sync-client && npm run build:sync-server && npm run build:client && npm run build:database && npm run build:server && npm run build:testing && cd tests/unit-tests && npm i && cd ../.. && lerna link && cd packages/client && npm i vue@3 && cd ../.. && lerna link",
-    "test": "cd tests/unit-tests && npm test && cd ../../packages/sync-server && npm test",
+    "postinstall": "lerna bootstrap --ci && npm run build:tiled && npm run build:common && npm run build:sync-client && npm run build:sync-server && npm run build:client && npm run build:database && npm run build:server && npm run build:testing && lerna link && cd packages/client && npm i vue@3 && cd ../.. && lerna link",
+    "test": "jest",
     "lerna:publish": "lerna publish --ignore-prepublish --force-publish --no-private --no-push --no-git-tag-version",
     "lerna:ls": "lerna ls",
     "build": "concurrently -n build \"npm:build:*\"",

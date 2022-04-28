@@ -23,7 +23,7 @@ beforeEach(() => {
 })
 
 test('Test Generic Key 1',  () => {
-    return new Promise(async (resolve) => {
+    return new Promise(async (resolve: any) => {
         room.list = {}
         await testSend(room)
 
@@ -44,7 +44,7 @@ test('Test Generic Key 1',  () => {
 })
 
 test('Test Generic Key 2',  () => {
-    return new Promise(async (resolve) => {
+    return new Promise(async (resolve: any) => {
         await testSend(room)
 
         const user = room.users['test']
@@ -66,7 +66,7 @@ test('Test Generic Key 2',  () => {
 })
 
 test('Test Generic Key with array',  () => {
-    return new Promise(async (resolve) => {
+    return new Promise(async (resolve: any) => {
 
         class Room {
             $schema = {
