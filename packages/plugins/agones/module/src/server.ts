@@ -1,9 +1,8 @@
-import { RpgServer, RpgModule, RpgServerEngine, RpgPlayer, RpgMap, RpgWorld } from '@rpgjs/server'
+import { RpgServer, RpgModule, RpgServerEngine, RpgPlayer, RpgMap, RpgWorld, RpgMatchMaker } from '@rpgjs/server'
 import AgonesSDK from '@google-cloud/agones-sdk'
 import { RedisStore } from './redisStore'
 import { IAgones } from './interfaces/agones'
 
-const agonesSDK: IAgones = new AgonesSDK()
 const { MATCH_MAKER_URL, MATCH_MAKER_SECRET_TOKEN } = process.env
 
 if (!MATCH_MAKER_URL) {
@@ -16,24 +15,26 @@ if (!MATCH_MAKER_SECRET_TOKEN) {
     process.exit(0)
 }
 
+let agonesSDK: IAgones
+
 @RpgModule<RpgServer>({ 
     player: {
-     async onDisconnected(player: RpgPlayer) {
-        const players = RpgWorld.getPlayers()
-        if (players.length == 1) { // this player
-            await agonesSDK.shutdown()
+        async onDisconnected(player: RpgPlayer) {
+            const players = RpgWorld.getPlayers()
+            if (players.length == 1) { // this player
+                await agonesSDK.shutdown()
+            }
+        },
+        async onJoinMap(player: RpgPlayer, map: RpgMap) {
+            await agonesSDK.allocate()
+            await agonesSDK.setLabel('map-' + map.id, '1')
+        },
+        async onLeaveMap(player: RpgPlayer, map: RpgMap) {
+            const players = RpgWorld.getPlayersOfMap(map.id)
+            if (players.length == 1) { // this player
+                await agonesSDK.setLabel('map-' + map.id, '0')
+            }
         }
-     },
-     async onJoinMap(player: RpgPlayer, map: RpgMap) {
-        await agonesSDK.allocate()
-        await agonesSDK.setLabel('map-' + map.id, '1')
-     },
-     async onLeaveMap(player: RpgPlayer, map: RpgMap) {
-        const players = RpgWorld.getPlayersOfMap(map.id)
-        if (players.length == 1) { // this player
-            await agonesSDK.setLabel('map-' + map.id, '0')
-        }
-     }
     },
     engine: {
         async onStart(server: RpgServerEngine)  {
@@ -45,6 +46,7 @@ if (!MATCH_MAKER_SECRET_TOKEN) {
                 healthInterval = setInterval(() => {
                     agonesSDK.health()
                 }, 20000)
+                agonesSDK.health()
             }
             catch (error) {
                 console.log('Unable to connect to the Agones cluster')
@@ -65,12 +67,12 @@ if (!MATCH_MAKER_SECRET_TOKEN) {
             url: process.env.REDIS_URL
         }),
         hooks: {
-            async onConnected(redisStore: RedisStore, matchMaker, player: RpgPlayer) {
+            async onConnected(redisStore: RedisStore, matchMaker: RpgMatchMaker, player: RpgPlayer) {
                 const obj = await redisStore.get(player.session as string)
                 player.load(obj)
                 return true
             },
-            async doChangeServer(redisStore: RedisStore, matchMaker, player: RpgPlayer) {
+            async doChangeServer(redisStore: RedisStore, matchMaker: RpgMatchMaker, player: RpgPlayer) {
                 await redisStore.set(player.session as string, player.save())
                 const server = await matchMaker.getServer(player)
                 if (server) {
@@ -82,4 +84,8 @@ if (!MATCH_MAKER_SECRET_TOKEN) {
         }
     }
 })
-export default class RpgServerModule {}
+export default class RpgServerModule {
+    constructor() {
+        agonesSDK = new AgonesSDK()
+    }
+}

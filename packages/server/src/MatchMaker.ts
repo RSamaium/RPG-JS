@@ -5,7 +5,7 @@ import { RpgPlayer } from './Player/Player'
 
 interface MatchMakerPayload {
     playerId: string
-    mapName: starting
+    mapName: string
 }
 
 export interface MatchMakerResponse {

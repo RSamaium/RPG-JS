@@ -22,7 +22,5 @@
     "@rpgjs/server": "^3.0.0-beta.8",
     "redis": "^4.0.6"
   },
-  "devDependencies": {
-    "redis-mock": "^0.56.3"
-  }
+  "devDependencies": {}
 }

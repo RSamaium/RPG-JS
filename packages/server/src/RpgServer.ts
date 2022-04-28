@@ -6,7 +6,8 @@ import { MapOptions } from './decorators/map'
 import { RpgClassMap } from './Scenes/Map'
 import { TiledMap } from '@rpgjs/tiled'
 import { WorldMap } from './Game/WorldMaps'
-import { RpgMatchMaker } from './MatchMaker'
+import { MatchMakerOption, RpgMatchMaker } from './MatchMaker'
+import { IStoreState } from './Interfaces/StateStore'
 
 export interface RpgServerEngineHooks {
     /**
@@ -337,15 +338,11 @@ export interface RpgServer {
     }
 
     scalability?: {
-        matchMaker: {
-            endpoint?: string
-            headers?: any
-            callback?: Function
-        },
-        stateStore: any
+        matchMaker: MatchMakerOption,
+        stateStore: IStoreState
         hooks: {
-            onConnected(store, matchMaker: RpgMatchMaker, player: RpgPlayer): Promise<boolean> | boolean
-            doChangeServer(store, matchMaker: RpgMatchMaker, player: RpgPlayer): Promise<boolean> | boolean
+            onConnected(store: IStoreState, matchMaker: RpgMatchMaker, player: RpgPlayer): Promise<boolean> | boolean
+            doChangeServer(store: IStoreState, matchMaker: RpgMatchMaker, player: RpgPlayer): Promise<boolean> | boolean
         }
     }
 }

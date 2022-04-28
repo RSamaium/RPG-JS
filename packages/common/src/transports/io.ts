@@ -21,11 +21,8 @@ class MockIo {
 
 class MockSocket {
     id: string
-    handshake: any = {
-        auth: {}
-    }
 
-    constructor(private io: any) {
+    constructor(private io: any, public handshake) {
         this.id = ''+Math.random()
     }
     
@@ -55,8 +52,8 @@ class MockSocket {
 class MockClientIo extends MockIo {
     id: string = ''
 
-    connection() {
-        serverIo.connection(this)
+    connection(handshake: any) {
+        serverIo.connection(this, handshake)
         this._trigger('connect', undefined)
         return this
     }
@@ -74,8 +71,8 @@ class MockClientIo extends MockIo {
 class MockServerIo extends MockIo {
     private clients: Map<string, MockClientIo> = new Map()
 
-    connection(client) {
-        const socket = new MockSocket(this)
+    connection(client, handshake) {
+        const socket = new MockSocket(this, handshake)
         this.clients.set(socket.id, client)
         client.id = socket.id
         this._trigger('connection', socket)

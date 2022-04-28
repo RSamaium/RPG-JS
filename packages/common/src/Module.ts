@@ -60,7 +60,7 @@ export async function loadModules(modules, obj, middleware?: Function) {
         }
         const { imports, maps, spritesheets, sounds, gui, scenes, engine, database, worldMaps, scalability } = mod
         if (imports) {
-            loadModules(imports, obj)
+            await loadModules(imports, obj)
         }
         if (maps) {
             RpgPlugin.on(HookServer.AddMap, () => maps)
@@ -91,7 +91,7 @@ export async function loadModules(modules, obj, middleware?: Function) {
         }
         loadRelations(player, 'player')
         loadRelations(engine, 'engine')
-        if (scalability) loadRelations(scalability.hooks, 'scalability')
+        if (scalability) loadRelations(scalability._hooks, 'scalability')
         if (scenes) loadRelations(scenes.map, 'sceneMap')
     }
 }

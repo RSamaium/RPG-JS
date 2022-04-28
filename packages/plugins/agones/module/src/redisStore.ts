@@ -1,13 +1,13 @@
 import { createClient, RedisClientType } from 'redis'
+import { IStoreState } from '@rpgjs/server'
 
-export class RedisStore {
+export class RedisStore implements IStoreState {
     private client: RedisClientType
 
     constructor(private options: { url: string | undefined }) {}
 
     async connect() {
         this.client = createClient(this.options)
-        console.log(this.client)
         await this.client.connect()
     }
 

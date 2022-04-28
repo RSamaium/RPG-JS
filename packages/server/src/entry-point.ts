@@ -78,9 +78,10 @@ export default function(modules: ModuleType[], options: RpgServerEntryPointOptio
             RpgPlugin.on(HookServer.Start, () => {
                 return stateStore.connect()
             })
+            mod.scalability._hooks = {}
             for (let hookName in hooks) {
                 let originalHook = mod.scalability.hooks[hookName]
-                mod.scalability.hooks[hookName] = function(player: RpgPlayer) {
+                mod.scalability._hooks[hookName] = function(player: RpgPlayer) {
                     return originalHook(stateStore, matchMakerInstance, player)
                 }
             }

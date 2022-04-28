@@ -21,6 +21,7 @@ const commonModules = [
 ]
 
 export const _beforeEach: any = async (modules: any = [], serverOptions: any = {}, clientOptions: any = {}) => {
+    if (serverOptions.changeMap === undefined) serverOptions.changeMap = true
     const fixture = testing([
         ...commonModules,
         ...modules
@@ -31,7 +32,7 @@ export const _beforeEach: any = async (modules: any = [], serverOptions: any = {
     const clientFixture = await fixture.createClient()
     const client = clientFixture.client
     const playerId = clientFixture.playerId
-    await fixture.changeMap(client, 'map')
+    if (serverOptions.changeMap) await fixture.changeMap(client, 'map')
     const player = RpgWorld.getPlayer(playerId)
     return {
         fixture,

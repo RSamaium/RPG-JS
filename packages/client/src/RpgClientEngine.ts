@@ -507,7 +507,11 @@ export class RpgClientEngine {
         RpgGui._setSocket(this.socket)
 
         if (standalone) {
-            this.socket.connection()
+            this.socket.connection({
+                auth: {
+                    token: this.session
+                }
+            })
         }
 
         this.serverChanging = false
