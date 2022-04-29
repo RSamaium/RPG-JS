@@ -28,12 +28,4 @@ export class AgonesApi {
         return this.k8sAgones.listNamespacedCustomObject('agones.dev', 'v1', this.namespace, 'gameservers')
             .then(res => res.body['items'])
     }
-    
-    allocateServer(gameServerAllocation: any): Promise<any> {
-        return this.k8sAgones.createNamespacedCustomObject('allocation.agones.dev', 'v1', this.namespace, 'gameserverallocations', {
-                apiVersion: 'allocation.agones.dev/v1',
-                kind: 'GameServerAllocation',
-                ...gameServerAllocation,
-            }).then(res => res.body['body'])
-    }
 }
