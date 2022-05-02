@@ -316,5 +316,8 @@ export class RpgMap extends RpgCommonMap {
 
 export interface RpgMap {
     sounds: string[]
+    $schema: any
     $setSchema: (schema: any) => void
+    $patchSchema: (schema: any) => void
+    $snapshotUser: (userId: string) => any
 }

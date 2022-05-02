@@ -28,6 +28,10 @@ export interface RpgServerEngineHooks {
 }
 
 export interface RpgPlayerHooks {
+    props?: {
+        [key: string]: any
+    }
+
      /**
      *  When the player joins the map
      * 
@@ -344,9 +348,5 @@ export interface RpgServer {
             onConnected(store: IStoreState, matchMaker: RpgMatchMaker, player: RpgPlayer): Promise<boolean> | boolean
             doChangeServer(store: IStoreState, matchMaker: RpgMatchMaker, player: RpgPlayer): Promise<boolean> | boolean
         }
-    }
-
-    props?: {
-        [key: string]: any
     }
 }

@@ -209,6 +209,14 @@ export class Room {
             return this.setProxy(room)
         }
 
+        room.$patchSchema = (schema) => {
+            room.$schema = {
+                ...room.$schema,
+                ...schema
+            }
+            return this.setProxy(room)
+        }
+
         room.$snapshot = () => {
             return this.snapshot(room)
         }

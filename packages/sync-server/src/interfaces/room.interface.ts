@@ -32,6 +32,7 @@ export interface RoomClass {
     $currentState?: () => Object
     $clearCurrentState?: () => void
     $setSchema: (schema: any) => void
+    $patchSchema: (schema: any) => void
     $snapshot: () => any
     $snapshotUser: (userId: string) => {
         [key: string]: any

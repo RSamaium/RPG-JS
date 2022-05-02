@@ -37,7 +37,7 @@ test('Test Save', () => {
     player.setVariable('TEST', true)
     const json = player.save()
     const obj = JSON.parse(json)
-    expect(obj.items).toMatchObject([{"item":"potion","nb":1}])
+    expect(obj.items).toMatchObject({"0": {"item": {"id": "potion", "name": "Potion", "price": 100}, "nb": 1}})
     expect(obj.variables).toHaveLength(1)
 })
 
@@ -62,7 +62,41 @@ test('Test Load', () => {
     expect(player.equipments[0].equipped).toBeTruthy()
     expect(player).toHaveProperty('states.0.effects')
     expect(player).toHaveProperty('skills.0.power')
+    expect(player.statesEfficiency[0]).toHaveProperty('rate', 1)
+    expect(player.statesEfficiency[0].state).toHaveProperty('id', 'confuse')
     expect(player.getVariable('TEST')).toBe(true)
+})
+
+describe('Custom Save / Load', () => {
+    test('Prop', async () => {
+        clear()
+    
+        @RpgModule<RpgServer>({
+            player: {
+                props: {
+                    wood: true
+                }
+            }
+        })
+        class RpgServerCustomModule {}
+    
+        const { player } = await _beforeEach([
+            {
+                server: RpgServerCustomModule
+            }
+        ])
+
+        player.wood = 5
+
+        const json = player.save()
+        const obj = JSON.parse(json)
+        expect(obj).toHaveProperty('wood', 5)
+
+        player.wood = 15
+
+        player.load(json)
+        expect(player.wood).toBe(5)
+    })
 })
 
 afterEach(() => {

@@ -64,7 +64,14 @@ export class SceneMap {
             mapInstance = RpgCommonMap.buffer.get(id)
         }
         else {
-            mapInstance = World.addRoom(id, new mapClass(this.server))
+            const room =  new mapClass(this.server)
+            room.$schema.users = [
+                {
+                    ...RpgPlayer.schemas,
+                    ...this.server['playerProps']
+                }
+            ]
+            mapInstance = World.addRoom(id, room)
             await mapInstance.load()
         }
        

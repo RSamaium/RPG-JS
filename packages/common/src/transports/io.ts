@@ -81,6 +81,10 @@ class MockServerIo extends MockIo {
     emit(name: string, data, id) {
         this.clients.get(id)?._trigger(name, data)
     }
+
+    clear() {
+        this.clients.clear()
+    }
 }
 
 export const serverIo = new MockServerIo()

@@ -25,8 +25,9 @@ export function RpgModule<T>(options: T) {
     }
 }
 
-export async function loadModules(modules, obj, middleware?: Function) {
+export async function loadModules(modules, obj, middleware?: Function): Promise<{ playerProps: any }> {
     const { side, relations } = obj
+    let playerProps = {}
     for (let module of modules) {
         if (!module) continue
         let plug: any = []
@@ -90,8 +91,15 @@ export async function loadModules(modules, obj, middleware?: Function) {
             }
         }
         loadRelations(player, 'player')
+        if (player && player.props) {
+            playerProps = Object.assign(playerProps, player.props)
+        }
         loadRelations(engine, 'engine')
         if (scalability) loadRelations(scalability._hooks, 'scalability')
         if (scenes) loadRelations(scenes.map, 'sceneMap')
+    }
+
+    return {
+        playerProps
     }
 }

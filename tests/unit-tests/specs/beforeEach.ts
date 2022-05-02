@@ -22,7 +22,7 @@ const commonModules = [
 
 export const _beforeEach: any = async (modules: any = [], serverOptions: any = {}, clientOptions: any = {}) => {
     if (serverOptions.changeMap === undefined) serverOptions.changeMap = true
-    const fixture = testing([
+    const fixture = await testing([
         ...commonModules,
         ...modules
     ], {

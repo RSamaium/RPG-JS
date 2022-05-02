@@ -36,7 +36,7 @@ interface RpgServerEntryPointOptions {
     workers?: any
 }
 
-export default function(modules: ModuleType[], options: RpgServerEntryPointOptions): RpgServerEngine {
+export default async function(modules: ModuleType[], options: RpgServerEntryPointOptions): Promise<RpgServerEngine> {
     const gameEngine = new RpgCommonGame(GameSide.Server)
 
     if (!options.globalConfig) options.globalConfig = {}
@@ -60,7 +60,7 @@ export default function(modules: ModuleType[], options: RpgServerEntryPointOptio
         onStep: HookServer.Step
     }
 
-    loadModules(modules, {
+    const { playerProps } = await loadModules(modules, {
         side: 'server',
         relations: {
             player: relations,
@@ -95,6 +95,7 @@ export default function(modules: ModuleType[], options: RpgServerEntryPointOptio
         stepRate: 60,
         timeoutInterval: 0, 
         countConnections: false,
+        playerProps,
         ...options
     })
     return serverEngine

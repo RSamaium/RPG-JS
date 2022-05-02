@@ -47,6 +47,7 @@ export class RpgServerEngine {
     protected totalConnected: number = 0
     private scheduler: Scheduler
     private tick: number = 0
+    private playerProps: any
 
     world: WorldClass = World
     workers: any
@@ -78,6 +79,7 @@ export class RpgServerEngine {
 
         if (!this.inputOptions.maps) this.inputOptions.maps = []
         if (!this.inputOptions.worldMaps) this.inputOptions.worldMaps = []
+        this.playerProps = this.inputOptions.playerProps
 
         this.inputOptions.maps = [
             ...Utils.arrayFlat(await RpgPlugin.emit(HookServer.AddMap, this.inputOptions.maps)) || [],
