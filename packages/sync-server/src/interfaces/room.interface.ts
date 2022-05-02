@@ -32,6 +32,10 @@ export interface RoomClass {
     $currentState?: () => Object
     $clearCurrentState?: () => void
     $setSchema: (schema: any) => void
+    $snapshot: () => any
+    $snapshotUser: (userId: string) => {
+        [key: string]: any
+    } | null
 
     filterEmit?: (user: User, packet: Packet) => Packet | Promise<Packet>
 }

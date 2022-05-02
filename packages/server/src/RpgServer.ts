@@ -345,4 +345,8 @@ export interface RpgServer {
             doChangeServer(store: IStoreState, matchMaker: RpgMatchMaker, player: RpgPlayer): Promise<boolean> | boolean
         }
     }
+
+    props?: {
+        [key: string]: any
+    }
 }

@@ -1,3 +1,5 @@
+import { Room } from "./room";
+
 export const GENERIC_KEY_SCHEMA = '@'
 
 export class Utils {
@@ -16,15 +18,21 @@ export class Utils {
                     {
                         const [key] = array
                         const value: any = array[1]
+                        const extraProp = Room.hasExtraProp(value)
                         let fullPath = addDelimiter(head, key == '0' ? GENERIC_KEY_SCHEMA : key)
-                        if (key[0] != '_' && (Utils.isObject(value) || Array.isArray(value))) {
+                        if (extraProp) {
+                            if (!value.$syncWithClient) {
+                                return product
+                            }
+                        }
+                        if (key[0] != '_' && !extraProp && (Utils.isObject(value) || Array.isArray(value))) {
                             if (Object.keys(value).length == 0) {
                                 return product.concat(fullPath)
                             }
                             return product.concat(paths(value, fullPath))
                         }
                         else {
-                            return product.concat(fullPath)
+                             return product.concat(fullPath)
                         }
                     }, []);
         }
