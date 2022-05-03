@@ -1,4 +1,5 @@
 import { RpgCommonPlayer, Utils, RpgPlugin, RpgCommonGame, RpgCommonMap, Direction }  from '@rpgjs/common'
+import { Room } from '@rpgjs/sync-server'
 import { RpgMap, EventPosOption } from '../Game/Map'
 import { Query } from '../Query'
 import merge from 'lodash.merge'
@@ -194,6 +195,13 @@ export class RpgPlayer extends RpgCommonPlayer {
         this._socket.on('gui.exit', ({ guiId, data }) => {
             this.removeGui(guiId, data)
         })
+    }
+
+    private get schema() {
+        return {
+            ...RpgPlayer.schemas,
+            ...this.server['playerProps']
+        }
     }
 
     /** 
@@ -513,44 +521,8 @@ export class RpgPlayer extends RpgCommonPlayer {
     }
 
     toJSON() {
-        const obj: any = {}
-        const map = this.getCurrentMap()
-        if (!map) {
-            throw 'The player must be assigned to a room (= at least one card) to save the properties'
-        }
-        /*const props = [
-            'hp', 
-            'sp',
-            'gold', 
-            'level', 
-            'exp', 
-            'name', 
-            'position', 
-            'items', 
-            '_class', 
-            'equipments', 
-            'skills',
-            'states',
-            '_statesEfficiency',
-            'effects',
-            'graphic',
-            'map',
-            'speed',
-            'canMove',
-            'through',
-            'width',
-            'height',
-            'wHitbox',
-            'hHitbox',
-            'direction',
-            'initialLevel',
-            'finalLevel',
-            'tmpPositions'
-        ]
-        for (let prop of props) {
-            obj[prop] = this[prop]
-        }*/
-        const snapshot = map.$snapshotUser(this.id)
+        const { permanentObject } = Room.toDict(this.schema)
+        const snapshot = Room.extractObjectOfRoom(this, permanentObject)
         snapshot.variables = [...this.variables]
         return snapshot
     }

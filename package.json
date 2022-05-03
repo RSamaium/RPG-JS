@@ -10,10 +10,10 @@
     "msgpack-lite": "^0.1.26",
     "socket.io-client": "^4.4.1",
     "yargs": "^17.3.1",
-    "@vue/cli-plugin-babel": "^5.0.4",
+    "@vue/cli-plugin-babel": "5.0.4",
     "canvas": "^2.8.0",
-    "core-js": "^3.21.1",
-    "jest": "^27.0.4",
+    "core-js": "3.21.",
+    "jest": "27.0.4",
     "jest-webgl-canvas-mock": "^0.2.3",
     "ts-jest": "^27.0.2",
     "vue": "^3.2.31"
@@ -33,7 +33,7 @@
     "typescript": "^4.5.5"
   },
   "scripts": {
-    "postinstall": "lerna bootstrap --ci && npm run build:tiled && npm run build:common && npm run build:sync-client && npm run build:sync-server && npm run build:client && npm run build:database && npm run build:server && npm run build:testing && lerna link && cd packages/client && npm i vue@3 && lerna link && cd packages/plugins/agones/matchmaker && npm i",
+    "postinstall": "lerna bootstrap --ci && npm run build:tiled && npm run build:common && npm run build:sync-client && npm run build:sync-server && npm run build:client && npm run build:database && npm run build:server && npm run build:testing && lerna link && cd packages/client && npm i vue@3 && lerna link && cd ../../packages/plugins/agones/matchmaker && npm i",
     "test": "jest",
     "lerna:publish": "lerna publish --ignore-prepublish --force-publish --no-private --no-push --no-git-tag-version",
     "lerna:ls": "lerna ls",

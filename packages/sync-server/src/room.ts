@@ -20,6 +20,52 @@ export class Room {
         return obj.$default !== undefined || obj.$syncWithClient !== undefined || obj.$permanent !== undefined 
     }
 
+    static toDict(schema, room?) {
+        const dict = {}
+        const self = this
+        const permanentObject: string[] = []
+
+        function toDict(obj, path = '') {
+            for (let prop in obj) {
+                const val = obj[prop]
+                let p =  (path ? path + '.' : '') + prop
+                if (Array.isArray(val)) {
+                    dict[p] = GENERIC_KEY_SCHEMA
+                    p += '.' + GENERIC_KEY_SCHEMA
+                    dict[p] = val[0]
+                    toDict(val[0], p)
+                }
+                else if (Utils.isObject(val)) {
+                    if (Room.hasExtraProp(val)) {
+                        if (val.$permanent ?? true) permanentObject.push(p)
+                        if (room && val.$default !== undefined) {
+                            set(room, p, val.$default)
+                        }
+                        if (!val.$syncWithClient) {
+                            continue
+                        }
+                        dict[p] = val
+                    }
+                    else {
+                        dict[p] = val
+                        toDict(val, p)
+                    }
+                }
+                else {
+                    permanentObject.push(p)
+                    dict[p] = val
+                }
+            }
+        }
+
+        toDict(schema)
+
+        return {
+            dict,
+            permanentObject
+        }
+    }
+
     private join(user: User, room: RoomClass) {
         if (!user._rooms) user._rooms = []
         user._rooms.push(room.id)
@@ -28,7 +74,7 @@ export class Room {
         //
         if (this.getUsersLength(room) == 1) {
             // If it's the first to arrive in the room, we save the default values of the room
-            this.memoryTotalObject = this.extractObjectOfRoom(room, room.$schema)
+            this.memoryTotalObject = Room.extractObjectOfRoom(room, room.$schema)
         }
         const packet = new Packet({
             ...this.memoryTotalObject,
@@ -60,52 +106,18 @@ export class Room {
             .map(path => path.replace('users.@.', ''))
         const userObject = room.users[userId]
         if (!userObject) return null
-        return this.extractObjectOfRoom(userObject, userSchema)
+        return Room.extractObjectOfRoom(userObject, userSchema)
     }
 
     snapshot(room: RoomClass) {
-        return this.extractObjectOfRoom(room, this.permanentObject)
+        return Room.extractObjectOfRoom(room, this.permanentObject)
     }
 
     setProxy(room: RoomClass) {
-        const dict = {}
         const self = this
-        this.permanentObject = []
+        const { dict, permanentObject } = Room.toDict(room.$schema, room)
 
-        function toDict(obj, path = '') {
-            for (let prop in obj) {
-                const val = obj[prop]
-                let p =  (path ? path + '.' : '') + prop
-                if (Array.isArray(val)) {
-                    dict[p] = GENERIC_KEY_SCHEMA
-                    p += '.' + GENERIC_KEY_SCHEMA
-                    dict[p] = val[0]
-                    toDict(val[0], p)
-                }
-                else if (Utils.isObject(val)) {
-                    if (Room.hasExtraProp(val)) {
-                        if (val.$permanent ?? true) self.permanentObject.push(p)
-                        if (val.$default !== undefined) {
-                            set(room, p, val.$default)
-                        }
-                        if (!val.$syncWithClient) {
-                            continue
-                        }
-                        dict[p] = val
-                    }
-                    else {
-                        dict[p] = val
-                        toDict(val, p)
-                    }
-                }
-                else {
-                    self.permanentObject.push(p)
-                    dict[p] = val
-                }
-            }
-        }
-
-        toDict(room.$schema)
+        this.permanentObject = permanentObject
         room.$dict = dict
         
         const getInfoDict = (path, key, dictPath): { fullPath: string, genericPath: string, infoDict: any } => {
@@ -140,7 +152,7 @@ export class Room {
                     if (infoDict) {
                         let newObj
                         if (Utils.isObject(infoDict) && val != null) {
-                            newObj = self.extractObjectOfRoom(val, infoDict)
+                            newObj = Room.extractObjectOfRoom(val, infoDict)
                         }
                         else if (infoDict == GENERIC_KEY_SCHEMA) {
                             newObj = {}
@@ -152,7 +164,7 @@ export class Room {
                                     newObj[key] = item
                                     continue
                                 }
-                                newObj[key] = self.extractObjectOfRoom(item, dict[genericPath + '.' + GENERIC_KEY_SCHEMA])
+                                newObj[key] = Room.extractObjectOfRoom(item, dict[genericPath + '.' + GENERIC_KEY_SCHEMA])
                             }
                         }
                         else {
@@ -249,7 +261,7 @@ export class Room {
         return this.proxyRoom
     }
 
-    extractObjectOfRoom(room: Object, schema): any {
+    static extractObjectOfRoom(room: Object, schema): any {
         const newObj = {}
         const schemas: string[] = []
         const _schema = Array.isArray(schema) ? schema : Utils.propertiesToArray(schema)
