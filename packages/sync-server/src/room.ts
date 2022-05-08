@@ -22,7 +22,6 @@ export class Room {
 
     static toDict(schema, room?) {
         const dict = {}
-        const self = this
         const permanentObject: string[] = []
 
         function toDict(obj, path = '') {
@@ -41,7 +40,7 @@ export class Room {
                         if (room && val.$default !== undefined) {
                             set(room, p, val.$default)
                         }
-                        if (!val.$syncWithClient) {
+                        if (val.$syncWithClient === false) {
                             continue
                         }
                         dict[p] = val

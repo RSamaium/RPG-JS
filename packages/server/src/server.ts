@@ -6,12 +6,6 @@ import { World, WorldClass } from '@rpgjs/sync-server'
 import { Utils, RpgPlugin, Scheduler, HookServer, RpgCommonGame } from '@rpgjs/common'
 import { WorldMap } from './Game/WorldMaps';
 
-class RoomLobby {
-    $schema = {
-        users: [RpgPlayer.schemas]
-    }
-}
-
 export class RpgServerEngine {
 
      /**

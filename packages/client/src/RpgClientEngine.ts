@@ -472,7 +472,6 @@ export class RpgClientEngine {
                             })
                         }
                     }
-                    
                     this.gameEngine.updateObject({
                         playerId: key,
                         params: obj,
