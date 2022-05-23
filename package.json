@@ -12,7 +12,7 @@
     "yargs": "^17.3.1",
     "@vue/cli-plugin-babel": "5.0.4",
     "canvas": "^2.8.0",
-    "core-js": "3.21.",
+    "core-js": "3.21.1",
     "jest": "27.0.4",
     "jest-webgl-canvas-mock": "^0.2.3",
     "ts-jest": "^27.0.2",
