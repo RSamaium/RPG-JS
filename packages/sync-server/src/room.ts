@@ -43,7 +43,8 @@ export class Room {
                         if (val.$syncWithClient === false) {
                             continue
                         }
-                        dict[p] = val
+                        // Force to take a type (number here - not important) and not object. Otherwise, Proxy will traverse this object from 
+                        dict[p] = Number
                     }
                     else {
                         dict[p] = val
@@ -118,7 +119,7 @@ export class Room {
 
         this.permanentObject = permanentObject
         room.$dict = dict
-        
+
         const getInfoDict = (path, key, dictPath): { fullPath: string, genericPath: string, infoDict: any } => {
             const basePath = dict[dictPath]
             const p: string = (path ? path + '.' : '') + key as string   

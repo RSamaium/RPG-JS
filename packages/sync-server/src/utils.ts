@@ -21,7 +21,7 @@ export class Utils {
                         const extraProp = Room.hasExtraProp(value)
                         let fullPath = addDelimiter(head, key == '0' ? GENERIC_KEY_SCHEMA : key)
                         if (extraProp) {
-                            if (!value.$syncWithClient) {
+                            if (value.$syncWithClient === false) {
                                 return product
                             }
                         }
@@ -32,7 +32,7 @@ export class Utils {
                             return product.concat(paths(value, fullPath))
                         }
                         else {
-                             return product.concat(fullPath)
+                            return product.concat(fullPath)
                         }
                     }, []);
         }
