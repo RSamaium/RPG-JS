@@ -2,7 +2,7 @@ import request from 'supertest'
 import * as k8s from '@kubernetes/client-node'
 
 const SECRET_TOKEN = process.env.SECRET_TOKEN = 'test'
-process.env.KUBECONFIG = '{ "apiVersion": "1" }'
+process.env.KUBECONFIG = '{ "apiVersion": "1", "clusters": [ { "cluster": {} } ], "users": [ { "user": {} } ] }'
 
 import * as AgonesApi from '../src/agones-api'
 import { MatchMakerService, State } from '../src/service'
@@ -12,7 +12,7 @@ jest.mock('@kubernetes/client-node')
 
 let k8sMock, app
 let loadFromFile = jest.fn()
-let loadFromOptions = jest.fn()
+let loadFromClusterAndUser = jest.fn()
 let listNamespacedCustomObject = jest.fn()
 
 function getItem(serverId, address, port, state, labels = {}) {
@@ -40,7 +40,7 @@ beforeAll(() => {
     k8sMock = jest.spyOn(k8s, 'KubeConfig').mockImplementation((): any => {
         return {
             loadFromFile,
-            loadFromOptions,
+            loadFromClusterAndUser,
             makeApiClient() {
                 return {
                     listNamespacedCustomObject
@@ -53,8 +53,7 @@ beforeAll(() => {
 })
 
 test('KubeConfig Options is loaded', async () => {
-    expect(loadFromOptions).toHaveBeenCalled()
-    expect(loadFromOptions).toHaveBeenCalledWith({ apiVersion: '1' })
+    expect(loadFromClusterAndUser).toHaveBeenCalled()
 })
 
 test('GET /health', async () => {
