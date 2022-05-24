@@ -18,7 +18,30 @@ export class AgonesApi {
             kc.loadFromFile(KUBECONFIG)
         }
         else {
-            kc.loadFromOptions(JSON.parse(process.env.KUBECONFIG as any))
+            const config = JSON.parse(KUBECONFIG as any)
+            const { clusters, users } = config
+            const { cluster } = clusters[0]
+            const { user } = users[0]
+            const clusterConfig = {
+                caData: cluster['certificate-authority-data'],
+                caFile: cluster['certificate-authority'],
+                name: clusters[0].name,
+                server: cluster.server,
+                skipTLSVerify: false
+              }
+            const userConfig = {
+                keyData: user['client-key-data'],
+                keyFile: user['client-key'],
+                certData: user['client-certificate-data'],
+                certFile: user['client-certificate'],
+                name: users[0].name,
+                token: user.token,
+                username: user.username,
+                password: user.password,
+                exec: user.exec,
+                authProvider: user['auth-provider']
+            }
+            kc.loadFromClusterAndUser(clusterConfig, userConfig)
         }
         this.k8sAgones = kc.makeApiClient(k8s.CustomObjectsApi)
         this.k8sApi = kc.makeApiClient(k8s.CoreV1Api);

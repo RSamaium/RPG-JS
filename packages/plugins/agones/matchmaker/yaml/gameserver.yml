@@ -1,0 +1,24 @@
+apiVersion: "agones.dev/v1"
+kind: GameServer
+metadata:
+  generateName: rpg-
+spec:
+  ports:
+    - name: default
+      portPolicy: Dynamic
+      containerPort: 3000
+  health:
+    initialDelaySeconds: 30
+    periodSeconds: 25
+  template:
+    spec:
+      containers:
+      - name: rpg
+        image: $(IMAGE)
+        env:
+          - name: MATCH_MAKER_URL
+            value: "$(URL)"
+          - name: MATCH_MAKER_SECRET_TOKEN
+            value: "$(SECRET_TOKEN)"
+          - name: REDIS_URL
+            value: "$(REDIS_URL)"
