@@ -5,5 +5,11 @@ export default {
     inputs,
     screenTitle: {
         title: rpgConfig.name
+    },
+    matchMakerService() {
+        return {
+            url: 'http://localhost',
+            port: 3000
+        }
     }
 }

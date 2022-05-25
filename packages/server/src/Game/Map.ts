@@ -69,7 +69,7 @@ export class RpgMap extends RpgCommonMap {
         }
         const data = await this.parseFile()
         super.load(data) 
-        this.loadProperties(data.properties as any)
+        this.loadProperties((data as any).properties)
         this._server.workers?.call('loadMap', {
             id: this.id,
             data
@@ -316,5 +316,8 @@ export class RpgMap extends RpgCommonMap {
 
 export interface RpgMap {
     sounds: string[]
+    $schema: any
     $setSchema: (schema: any) => void
+    $patchSchema: (schema: any) => void
+    $snapshotUser: (userId: string) => any
 }

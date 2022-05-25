@@ -4,6 +4,7 @@ import { _initSpritesheet, spritesheets } from './Sprite/Spritesheets'
 import { _initSound, sounds } from './Sound/Sounds'
 import { World } from '@rpgjs/sync-client'
 import { BehaviorSubject, Observable, Subject, Subscription } from 'rxjs'
+import { ajax } from 'rxjs/ajax'
 import { RpgGui } from './RpgGui'
 import { 
     RpgCommonPlayer, 
@@ -12,7 +13,7 @@ import {
     Utils, 
     RpgPlugin, 
     HookClient,
-    RpgCommonMap, 
+    RpgCommonMap
 } from '@rpgjs/common'
 import { RpgSound } from './Sound/RpgSound'
 import { SceneMap } from './Scene/Map'
@@ -30,6 +31,11 @@ type Tick = {
 type FrameData = {
     time: number,
     data: any
+}
+
+type MatchMakerResponse = { 
+    url: string, 
+    port: string 
 }
 
 export class RpgClientEngine {
@@ -80,6 +86,7 @@ export class RpgClientEngine {
     public keyChange: Subject<string> = new Subject()
     public roomJoin: Subject<string> = new Subject()
     private hasBeenDisconnected: boolean = false
+    private serverChanging: boolean = false
     private isTeleported: boolean = false
     // TODO, public or private
     io
@@ -89,6 +96,11 @@ export class RpgClientEngine {
 
     private clientFrames: Map<number, FrameData> = new Map()
     private serverFrames: Map<number, FrameData> = new Map()
+
+    private session: string | null = null
+    private lastConnection: string = ''
+    private lastScene: string = ''
+    private matchMakerService: string | (() => MatchMakerResponse) | null = null
 
     /**
      * Read objects synchronized with the server
@@ -138,7 +150,6 @@ export class RpgClientEngine {
 
         this.io = this.options.io
         this.globalConfig = this.options.globalConfig
-
         this.gameEngine.standalone = this.options.standalone
         this.gameEngine.renderer = this.renderer
         this.gameEngine.clientEngine = this
@@ -231,11 +242,23 @@ export class RpgClientEngine {
             }
             window.requestAnimationFrame(loop)
         }  
-        RpgPlugin.emit(HookClient.Start, this)
-            .then((ret: boolean[]) => {
-                const hasFalseValue = ret.findIndex(el => el === false) != - 1
-                if (!hasFalseValue) this.connection()
-            })
+        const ret: boolean[] = await RpgPlugin.emit(HookClient.Start, this)
+        this.matchMakerService = this.options.globalConfig.matchMakerService
+        const hasFalseValue = ret.findIndex(el => el === false) != - 1
+        if (!hasFalseValue) {
+            let serverUri = {} as MatchMakerResponse
+            if (this.matchMakerService) {
+                if (Utils.isFunction(this.matchMakerService)) {
+                    serverUri = (this.matchMakerService as Function)()
+                }
+                else {
+                    // todo: change toPromise (RXJS v7+)
+                    serverUri  = await ajax.getJSON<MatchMakerResponse>(this.matchMakerService as string).toPromise()
+                }
+                
+            }
+            this.connection(serverUri.url ? serverUri.url + ':' + serverUri.port : undefined)
+        }
     }
 
     /**
@@ -315,11 +338,15 @@ export class RpgClientEngine {
      * @returns {void}
      * @memberof RpgClientEngine
      */
-    connection() {
+    connection(uri?: string) {
         const { standalone } = this.gameEngine
 
         if (!standalone) {
-            this.socket = this.io()
+            this.socket = this.io(uri, {
+                auth: {
+                    token: this.session
+                }
+            })
         }
         else {
             this.socket = this.io
@@ -328,16 +355,12 @@ export class RpgClientEngine {
         this.socket.on('connect', () => {
             if (RpgGui.exists(PrebuiltGui.Disconnect)) RpgGui.hide(PrebuiltGui.Disconnect)
             RpgPlugin.emit(HookClient.Connected, [this, this.socket], true)
-            if (this.hasBeenDisconnected) {
-                // Todo
-                window.location.reload()
-                //entryPoint()
-            }
             this.hasBeenDisconnected = false
         })
 
         this.socket.on('playerJoined', (playerEvent) => {
             this.gameEngine.playerId = playerEvent.playerId
+            this.session = playerEvent.session
         })
 
         this.socket.on('connect_error', (err: any) => {
@@ -345,11 +368,29 @@ export class RpgClientEngine {
         })
 
         this.socket.on('preLoadScene', (name: string) => {
+            if (this.lastScene == name) {
+                return
+            }
+            this.lastScene = name
             this.renderer.transitionScene(name)
         })
 
         this.socket.on('loadScene', ({ name, data }) => {
             this.renderer.loadScene(name, data)
+        })
+
+        this.socket.on('changeServer', ({ url, port }) => {
+            const connection = url + ':' + port
+            if (this.lastConnection == connection) {
+                return
+            }
+            if (this.subscriptionWorld) {
+                this.subscriptionWorld.unsubscribe()
+            }
+            this.lastConnection = connection
+            this.serverChanging = true
+            this.socket.disconnect()
+            this.connection(connection)
         })
 
         this.socket.on('changeTile', ({ tiles, x, y }) => {
@@ -431,7 +472,6 @@ export class RpgClientEngine {
                             })
                         }
                     }
-                    
                     this.gameEngine.updateObject({
                         playerId: key,
                         params: obj,
@@ -455,6 +495,9 @@ export class RpgClientEngine {
         })
 
         this.socket.on('disconnect', (reason: string) => {
+            if (this.serverChanging) {
+                return
+            }
             if (RpgGui.exists(PrebuiltGui.Disconnect)) RpgGui.display(PrebuiltGui.Disconnect)
             RpgPlugin.emit(HookClient.Disconnect, [this, reason, this.socket], true)
             this.hasBeenDisconnected = true
@@ -463,8 +506,14 @@ export class RpgClientEngine {
         RpgGui._setSocket(this.socket)
 
         if (standalone) {
-            this.socket.connection()
+            this.socket.connection({
+                auth: {
+                    token: this.session
+                }
+            })
         }
+
+        this.serverChanging = false
     }
 
     get world(): any {

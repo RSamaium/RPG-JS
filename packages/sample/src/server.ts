@@ -38,7 +38,7 @@ server.listen(PORT, () =>  {
     console.log(`
         ===> MMORPG is running on http://localhost:${PORT} <===
     `) 
-})  
+}) 
 
 process.on('uncaughtException', function(error){
     console.log(pe.render(error))
@@ -46,4 +46,4 @@ process.on('uncaughtException', function(error){
 
 process.on('unhandledRejection', function(reason: any){
     console.log(pe.render(reason)) 
-}) 
+})

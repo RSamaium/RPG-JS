@@ -6,6 +6,8 @@ import { MapOptions } from './decorators/map'
 import { RpgClassMap } from './Scenes/Map'
 import { TiledMap } from '@rpgjs/tiled'
 import { WorldMap } from './Game/WorldMaps'
+import { MatchMakerOption, RpgMatchMaker } from './MatchMaker'
+import { IStoreState } from './Interfaces/StateStore'
 
 export interface RpgServerEngineHooks {
     /**
@@ -26,6 +28,78 @@ export interface RpgServerEngineHooks {
 }
 
 export interface RpgPlayerHooks {
+    /**
+     *  Set custom properties on the player. Several interests:
+     * 1. The property is shared with the client
+     * 2. If you save with `player.save()`, the property will be saved to be reloaded later
+     * 3. If you use horizontal scaling, the property will be kept in memory if the player changes the map and this map is on another server
+     * 
+     * Example:
+     * 
+     * ```ts
+     * import { RpgPlayerHooks } from '@rpgjs/server'
+     * 
+     * declare module '@rpgjs/server' {
+     *  export interface RpgPlayer {
+     *      nbWood: number
+     *  }
+     * }
+     * 
+     * export const player: RpgPlayerHooks = {
+     *  props: {
+     *      nbWood: Number
+     *  }
+     * }
+     * ```
+     * 
+     * This is a simple example. Let's say that the player can have a number of harvested woods, then 
+     * 1. you must specify the type for Typescript
+     * 2. Add the property in props
+     * 
+     * You can also set up with this object:
+     * 
+     * ```
+     *  {
+            $default: <any> (undefined by default), 
+            $syncWithClient: <boolean> (true by default),
+            $permanent: <boolean> (true by default)
+        }
+        ```
+     * 
+     * - Indicate if the property should be shared with the client
+     * 
+     * Example:
+     * 
+     * ```ts
+     * export const player: RpgPlayerHooks = {
+     *  props: {
+     *      secretProp: {
+     *          $syncWithClient: false
+     *      }
+     *  }
+     * }
+     * ```
+     * 
+     * - Indicate if the property should be registered in a database. If the data is just temporary to use on the current map:
+     * 
+     * ```ts
+     * export const player: RpgPlayerHooks = {
+     *  props: {
+     *      tmpProp: {
+     *          $permanent: false
+     *      }
+     *  }
+     * }
+     * ```
+     * 
+     * @prop {object} [props]
+     * @since 3.0.0-beta.9
+     * @memberof RpgPlayerHooks
+     */
+    props?: {
+        [key: string]: any
+    }
+
      /**
      *  When the player joins the map
      * 
@@ -333,5 +407,14 @@ export interface RpgServer {
         damagePhysic?: (a, b) => number,
         damageCritical?: (damage, a, b) => number
         coefficientElements?: (a, b, bDef) => number
+    }
+
+    scalability?: {
+        matchMaker: MatchMakerOption,
+        stateStore: IStoreState
+        hooks: {
+            onConnected(store: IStoreState, matchMaker: RpgMatchMaker, player: RpgPlayer): Promise<boolean> | boolean
+            doChangeServer(store: IStoreState, matchMaker: RpgMatchMaker, player: RpgPlayer): Promise<boolean> | boolean
+        }
     }
 }

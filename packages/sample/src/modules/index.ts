@@ -7,6 +7,7 @@ import starterKit from '@rpgjs/starter-kit'
 import emotionBubblesPlugin from '@rpgjs/plugin-emotion-bubbles'
 //import title from '@rpgjs/title-screen'
 import chat from '@rpgjs/chat'
+import agones from '@rpgjs/agones'
 
 export default [
     main,
@@ -16,6 +17,7 @@ export default [
     //mobileGui,
     emotionBubblesPlugin,
     monitoring, 
+    agones
     //chat,
     //title
 ]

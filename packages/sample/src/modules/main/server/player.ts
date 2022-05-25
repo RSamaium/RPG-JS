@@ -16,7 +16,20 @@ function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+declare module '@rpgjs/server' {
+    export interface RpgPlayer {
+        woold: number
+    }
+}
+
 export const player: RpgPlayerHooks = {
+    props: {
+        woold: {
+            $default: 0, 
+            $syncWithClient: true,
+            $permanent: false
+        }
+    },
     onConnected(player: RpgPlayer) {
         player.setHitbox(32, 16)
         player.setGraphic('male1_2')
@@ -27,6 +40,7 @@ export const player: RpgPlayerHooks = {
     },
     onInput(player: RpgPlayer, { input, moving }) {
         if (input == Control.Back) {
+            player.addItem(Shield)
             player.callMainMenu()
         }
     },

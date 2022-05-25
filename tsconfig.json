@@ -20,10 +20,20 @@
         "noImplicitAny": false,
         "noImplicitReturns": false,
         "declaration": true,
-        "allowJs": true
+        "paths": {
+            "server!*": ["*"],
+            "client!*": ["*"],
+            "rpg!*": ["*"],
+            "mmorpg!*": ["*"],
+            "development!*": ["*"],
+            "production!*": ["*"],
+            "@rpgjs/*": ["./packages/*"]
+         }
     },
     "include": [
         "specs/*.ts",
-        "index.d.ts"
+        "specs/plugins/*.ts",
+        "index.d.ts",
+        "packages/compiler/types/*.d.ts"
     ] 
 }

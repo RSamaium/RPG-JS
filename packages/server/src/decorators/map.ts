@@ -135,8 +135,10 @@ export interface MapOptions {
      * import { MapData, RpgMap, RpgPlayer } from '@rpgjs/server'
      * 
      * 
-     * export class Player extends RpgPlayer {
-     *    customProp: string = 'test'
+     * declare module '@rpgjs/server' {
+     *  export interface RpgPlayer {
+     *      customProp: string
+     *  }
      * }
      * 
      * @MapData({

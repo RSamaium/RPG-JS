@@ -1,14 +1,16 @@
-import { RpgServer, RpgModule } from '@rpgjs/server'
+import { RpgServer, RpgModule, RpgPlayer } from '@rpgjs/server'
 import { CaveMap, SampleMap } from './cave'
-import { player } from './player'
+import { player, Shield } from './player'
+import { RedisStore } from '@rpgjs/agones/src/redisStore'
 
 import WorldMap from './tmx/world.world'
-
-console.log(WorldMap)
 
 let last
 @RpgModule<RpgServer>({ 
     player,
+    database: {
+        Shield
+    },
     engine: {
         onStep() {
             if (last) {

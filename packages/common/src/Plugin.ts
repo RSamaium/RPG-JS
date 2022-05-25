@@ -21,7 +21,9 @@ export enum HookServer {
     PlayerInShape = 'Server.onInShape',
     PlayerOutShape = 'Server.onOutShape',
     PlayerMove = 'Server.PlayerMove',
-    PlayerCanChangeMap = 'Server.PlayerCanChangeMap'
+    PlayerCanChangeMap = 'Server.PlayerCanChangeMap',
+    ScalabilityPlayerConnected = 'Server.ScalabilityPlayerConnected',
+    ScalabilityChangeServer = 'Server.ScalabilityChangeServer'
 }
 
 export enum HookClient {

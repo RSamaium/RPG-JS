@@ -21,10 +21,10 @@ beforeEach(() => {
     Transmitter.encode = false
 })
 
-/*test('Test User in World', () => {
+test('Test User in World', () => {
     const user = World.getUser(CLIENT_ID)
     expect(user).toBeDefined()
-    expect(user._rooms).toHaveLength(0)
+    expect(user?._rooms).toHaveLength(0)
 })
 
 test('Test Room properties', () => {
@@ -42,7 +42,7 @@ test('Test Room properties', () => {
 })
 
 test('Getall data of room', () => {
-    return new Promise((resolve) => {
+    return new Promise((resolve: any) => {
         class Room {
             $schema = {
                 users: [{
@@ -70,7 +70,7 @@ test('Getall data of room', () => {
 })
 
 test('Change Schema', () => {
-    return new Promise((resolve) => {
+    return new Promise((resolve: any) => {
         let send = 0
         class Room {
             $schema = {
@@ -84,7 +84,7 @@ test('Change Schema', () => {
             send++
             switch (send) {
                 case 1:
-                    expect(value).toMatchObject({ count: 0 })
+                    expect(value.count).toBe(0)
                     break;
                 case 3:
                     expect(value.countAsync).toEqual(1)
@@ -103,10 +103,10 @@ test('Change Schema', () => {
         room.countAsync++
         World.send()
     })
-})*/
+})
 
 test('Change Room', () => {
-    return new Promise((resolve) => {
+    return new Promise((resolve: any) => {
         let send = 0
         
         class Room {

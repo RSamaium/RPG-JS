@@ -64,7 +64,14 @@ export class SceneMap {
             mapInstance = RpgCommonMap.buffer.get(id)
         }
         else {
-            mapInstance = World.addRoom(id, new mapClass(this.server))
+            const room =  new mapClass(this.server)
+            room.$schema.users = [
+                {
+                    ...RpgPlayer.schemas,
+                    ...this.server['playerProps']
+                }
+            ]
+            mapInstance = World.addRoom(id, room)
             await mapInstance.load()
         }
        
@@ -198,7 +205,7 @@ export class SceneMap {
         mapId: string, 
         player: RpgPlayer, 
         positions?: { x: number, y: number, z?: number } | string
-    ): Promise<RpgMap | null> {
+    ): Promise<RpgMap | null | boolean> {
 
         const boolArray: boolean[] = await RpgPlugin.emit(HookServer.PlayerCanChangeMap, [player,  this.getMapBydId(mapId)], true)
        
@@ -211,12 +218,21 @@ export class SceneMap {
         player.prevMap = player.map
         
         if (player.prevMap) {
-            player.execMethod('onLeaveMap', <any>[player.getCurrentMap()])
+            await player.execMethod('onLeaveMap', <any>[player.getCurrentMap()])
             World.leaveRoom(player.prevMap, player.id)    
         }
 
         player.map = mapId
         player.events = {}
+        player.tmpPositions = positions as any
+
+        const scalabilityArray: boolean[] = await RpgPlugin.emit(HookServer.ScalabilityChangeServer, player)
+
+        if (scalabilityArray.some(el => el === true)) {
+            return true
+        }
+
+        player.tmpPositions = null
 
         const mapInstance = await this.loadMap(mapId)
 

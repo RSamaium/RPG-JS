@@ -1,5 +1,7 @@
-import { RpgCommonGame, HookServer, loadModules, ModuleType, GameSide } from '@rpgjs/common'
+import { RpgCommonGame, HookServer, loadModules, ModuleType, GameSide, RpgPlugin } from '@rpgjs/common'
 import { RpgServerEngine } from './server'
+import { RpgPlayer } from './Player/Player'
+import { RpgMatchMaker } from './MatchMaker'
 
 interface RpgServerEntryPointOptions {
      /** 
@@ -34,7 +36,7 @@ interface RpgServerEntryPointOptions {
     workers?: any
 }
 
-export default function(modules: ModuleType[], options: RpgServerEntryPointOptions): RpgServerEngine {
+export default async function(modules: ModuleType[], options: RpgServerEntryPointOptions): Promise<RpgServerEngine> {
     const gameEngine = new RpgCommonGame(GameSide.Server)
 
     if (!options.globalConfig) options.globalConfig = {}
@@ -58,12 +60,33 @@ export default function(modules: ModuleType[], options: RpgServerEntryPointOptio
         onStep: HookServer.Step
     }
 
-    loadModules(modules, {
+    const { playerProps } = await loadModules(modules, {
         side: 'server',
         relations: {
             player: relations,
-            engine: relationsEngine
+            engine: relationsEngine,
+            scalability: {
+                onConnected: HookServer.ScalabilityPlayerConnected,
+                doChangeServer: HookServer.ScalabilityChangeServer
+            }
         }
+    }, (mod) => {
+        const { scalability } = mod
+        if (scalability) {
+            const { hooks, stateStore, matchMaker } = scalability
+            const matchMakerInstance = new RpgMatchMaker(matchMaker)
+            RpgPlugin.on(HookServer.Start, () => {
+                return stateStore.connect()
+            })
+            mod.scalability._hooks = {}
+            for (let hookName in hooks) {
+                let originalHook = mod.scalability.hooks[hookName]
+                mod.scalability._hooks[hookName] = function(player: RpgPlayer) {
+                    return originalHook(stateStore, matchMakerInstance, player)
+                }
+            }
+        }
+        return mod
     })
 
     const serverEngine = new RpgServerEngine(options.io, gameEngine, { 
@@ -72,6 +95,7 @@ export default function(modules: ModuleType[], options: RpgServerEntryPointOptio
         stepRate: 60,
         timeoutInterval: 0, 
         countConnections: false,
+        playerProps,
         ...options
     })
     return serverEngine

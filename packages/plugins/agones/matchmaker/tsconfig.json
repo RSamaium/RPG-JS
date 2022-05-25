@@ -1,0 +1,28 @@
+{
+    "compilerOptions": {
+      "target": "es6",
+      "lib": ["dom", "esnext"],
+      "module": "commonjs",
+      "outDir": "./dist",
+      "rootDir": "./src",
+      "strict": true,
+      "sourceMap": true,
+      "strictNullChecks": true,
+      "strictPropertyInitialization": false,
+      "moduleResolution": "node",
+      "esModuleInterop": true,
+      "removeComments": false,
+      "noUnusedParameters": false,
+      "noUnusedLocals": false,
+      "noImplicitThis": false,
+      "noImplicitAny": false,
+      "noImplicitReturns": false,
+      "declaration": true,
+      "experimentalDecorators": true, 
+      "emitDecoratorMetadata": true,
+      "stripInternal": true
+    },
+    "include": [
+        "src"
+    ]
+  }

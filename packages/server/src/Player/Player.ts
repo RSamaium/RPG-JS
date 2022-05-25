@@ -1,4 +1,5 @@
 import { RpgCommonPlayer, Utils, RpgPlugin, RpgCommonGame, RpgCommonMap, Direction }  from '@rpgjs/common'
+import { Room } from '@rpgjs/sync-server'
 import { RpgMap, EventPosOption } from '../Game/Map'
 import { Query } from '../Query'
 import merge from 'lodash.merge'
@@ -56,15 +57,9 @@ const playerSchemas = {
         z: Number
     },
     direction: Number,
-    teleported: Number,
-
-    vision: {
-        ellipse: Boolean,
-        height: Number,
-        width: Number,
-        type: String
+    teleported: {
+        $permanent: false
     },
-
     param: Object,
     hp: Number,
     sp: Number,
@@ -85,6 +80,7 @@ const playerSchemas = {
     map: String,
 
     speed: Number,
+    frequency: Number,
     canMove: Boolean,
     through: Boolean, 
     throughOtherPlayer: Boolean,
@@ -92,7 +88,27 @@ const playerSchemas = {
     width: Number,
     height: Number,
     wHitbox: Number,
-    hHitbox: Number
+    hHitbox: Number,
+
+    // only for server
+
+    _statesEfficiency: [{
+        rate: {
+            $syncWithClient: false
+        },
+        state: {
+            $syncWithClient: false
+        }
+    }],
+    tmpPositions: {
+        $syncWithClient: false
+    },
+    initialLevel: {
+        $syncWithClient: false
+    },
+    finalLevel: {
+        $syncWithClient: false
+    },
 }
 
 export class RpgPlayer extends RpgCommonPlayer {
@@ -108,10 +124,13 @@ export class RpgPlayer extends RpgCommonPlayer {
     public events: any = {}
     public param: any 
     public _rooms = []
+    public session: string | null = null
     public prevMap: string = ''
     /** @internal */
     public server: RpgServerEngine
     private touchSide: boolean = false
+    /** @internal */
+    public tmpPositions: Position | string | null = null
 
     _lastFrame: number = 0
 
@@ -178,6 +197,13 @@ export class RpgPlayer extends RpgCommonPlayer {
         })
     }
 
+    private get schema() {
+        return {
+            ...RpgPlayer.schemas,
+            ...this.server['playerProps']
+        }
+    }
+
     /** 
      * ```ts
      * player.name = 'Link'
@@ -223,7 +249,7 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @returns {Promise<RpgMap | null>} null if map not exists
      * @memberof Player
      */
-    changeMap(mapId: string, positions?: { x: number, y: number, z?: number} | string): Promise<RpgMap | null> {
+    changeMap(mapId: string, positions?: { x: number, y: number, z?: number} | string): Promise<RpgMap | null | boolean> {
         return this.server.sceneMap.changeMap(mapId, this, positions) 
     }
 
@@ -422,23 +448,35 @@ export class RpgPlayer extends RpgCommonPlayer {
 
         const getData = (id) => new (this.databaseById(id))() 
 
-        const items = {}
-        for (let it of json.items) {
-            items[it.item] = getData(it.item)
+        for (let key in json) {
+            const val = json[key]
+            if (Utils.isObject(val) && val.hasOwnProperty('0')) {
+                json[key] = Object.values(val)
+            }
         }
-        json.items = json.items.map(it => ({ nb: it.nb, item: items[it.item] }))
-        json.equipments = json.equipments.map(it => {
-            items[it].equipped = true
-            return items[it]
-        })
-        json.states = json.states.map(id => getData(id))
-        json.skills = json.skills.map(id => getData(id))
-        json.variables = new Map(json.variables)
+
+        const items = {}
+
+        if (json.items) {
+            for (let it of json.items) {
+                items[it.item.id] = getData(it.item.id)
+            }
+            json.items = json.items.map(it => ({ nb: it.nb, item: items[it.item.id] }))
+            json.equipments = json.equipments.map(it => {
+                items[it.id].equipped = true
+                return items[it.id]
+            })
+        }
+        if (json.states) json.states = json.states.map(state => getData(state.id))
+        if (json.skills) json.skills = json.skills.map(skill => getData(skill.id))
+        if (json.variables) json.variables = new Map(json.variables)
+
         merge(this, json)
+
         this.position = json.position
         if (json.map) {
             this.map = ''
-            this.changeMap(json.map, json.position)
+            this.changeMap(json.map, json.tmpPositions || json.position)
         }
     }
 
@@ -483,40 +521,10 @@ export class RpgPlayer extends RpgCommonPlayer {
     }
 
     toJSON() {
-        const obj: any = {}
-        const props = [
-            'hp', 
-            'sp',
-            'gold', 
-            'level', 
-            'exp', 
-            'name', 
-            'position', 
-            'items', 
-            '_class', 
-            'equipments', 
-            'skills',
-            'states',
-            '_statesEfficiency',
-            'effects',
-            'graphic',
-            'map',
-            'speed',
-            'canMove',
-            'through',
-            'width',
-            'height',
-            'wHitbox',
-            'hHitbox',
-            'direction',
-            'initialLevel',
-            'finalLevel'
-        ]
-        for (let prop of props) {
-            obj[prop] = this[prop]
-        }
-        obj.variables = [...this.variables]
-        return obj
+        const { permanentObject } = Room.toDict(this.schema)
+        const snapshot = Room.extractObjectOfRoom(this, permanentObject)
+        snapshot.variables = [...this.variables]
+        return snapshot
     }
     
     /**
@@ -556,6 +564,13 @@ export class RpgPlayer extends RpgCommonPlayer {
         this.emit('loadScene', {
             name, 
             data
+        }) 
+    }
+
+    changeServer(url: string, port: number) {
+        this.emit('changeServer', {
+            url, 
+            port
         }) 
     }
 

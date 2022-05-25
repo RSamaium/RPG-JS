@@ -33,14 +33,14 @@ function changeMap(client: RpgClientEngine, server: RpgServerEngine, mapId: stri
     })
 }
 
-export function testing(modules, optionsServer: any = {}, optionsClient: any = {}): Testing {
+export async function testing(modules, optionsServer: any = {}, optionsClient: any = {}): Promise<Testing> {
     RpgPlugin.clear()
-    const engine = entryPoint(modules, { 
+    const engine = await entryPoint(modules, { 
         io: serverIo,
         standalone: true,
         ...optionsServer
     })
-    engine.start({}, false)
+    engine.start(null, false)
     server = engine
     clients = []
     return {
@@ -73,6 +73,7 @@ export function clear() {
     clients.forEach(client => client.reset())
     RpgMap.buffer.clear()
     RpgPlugin.clear()
+    serverIo.clear()
     for (let textureUrl in PIXI.utils.BaseTextureCache) {
         delete PIXI.utils.BaseTextureCache[textureUrl]
     }

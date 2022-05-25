@@ -22,6 +22,8 @@ import * as Presets from './presets'
 import { Move, Frequency, Speed } from './Player/MoveManager'
 import { RpgServerEngine } from './server'
 import { SceneMap as RpgSceneMap, RpgClassMap } from './Scenes/Map'
+import { RpgMatchMaker } from './MatchMaker'
+import { IStoreState } from './Interfaces/StateStore'
 
 export {
     RpgServer,
@@ -53,5 +55,7 @@ export {
     Frequency,
     Speed,
     RpgWorldMaps,
-    RpgClassMap
+    RpgClassMap,
+    IStoreState,
+    RpgMatchMaker
 }
