@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/save",
-  "version": "3.0.0-beta.8",
+  "version": "3.0.0-beta.9",
   "description": "",
   "main": "src/index.ts",
   "types": "index.d.ts",
@@ -11,8 +11,8 @@
   "author": "Samuel Ronce",
   "license": "MIT",
   "dependencies": {
-    "@rpgjs/client": "^3.0.0-beta.8",
-    "@rpgjs/server": "^3.0.0-beta.8"
+    "@rpgjs/client": "^3.0.0-beta.9",
+    "@rpgjs/server": "^3.0.0-beta.9"
   },
   "gitHead": "7bb0326cc3216764a4bfc86f53e7b24464a2040f"
 }
