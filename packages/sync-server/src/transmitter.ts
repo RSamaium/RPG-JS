@@ -40,6 +40,7 @@ class TransmitterClass {
     emit(user: User, packet: Packet, room: RoomClass): void {
         const send = (packet) => {
             const data = { frame: user['_lastFrame'] }
+            console.log(user)
             user._socket.emit('w', this.encode ? packet.encode(data) : packet.message(data))
         }
         if (room.filterEmit) {
