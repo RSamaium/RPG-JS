@@ -1,6 +1,0 @@
-global:
-  scrape_interval: 5s
-scrape_configs:
-  - job_name: "game-app"
-    static_configs:
-      - targets: ["localhost:3000"]

@@ -24,7 +24,6 @@
     "@rpgjs/fx": "^3.0.0-beta.9",
     "@rpgjs/gamepad": "^3.0.0-beta.9",
     "@rpgjs/mobile-gui": "^3.0.0-beta.9",
-    "@rpgjs/monitoring": "^3.0.0-beta.9",
     "@rpgjs/plugin-emotion-bubbles": "^3.0.0-beta.9",
     "@rpgjs/save": "^3.0.0-beta.9",
     "@rpgjs/server": "^3.0.0-beta.9",
