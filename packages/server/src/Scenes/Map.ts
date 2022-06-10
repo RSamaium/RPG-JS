@@ -103,6 +103,7 @@ export class SceneMap {
         type: 'world' // only for Tiled Map Editor
      * }
      * ```
+     * 
      * @since 3.0.0-beta.8
      * @memberof SceneMap
      */

@@ -66,8 +66,8 @@ RpgPlayer.prototype.save = function(): string {
                     const user = await login(req.body)
                     res.json(user)
                 }
-                catch (err) {
-                    res.status(err.status || 500).json(err)
+                catch (err : any) {
+                    res.status((err).status || 500).json(err)
                 }
             })
             app.post('/user/exists', async (req, res, next) => {
@@ -102,6 +102,11 @@ RpgPlayer.prototype.save = function(): string {
         }
     },
     player: {
+        props: {
+            mongoId: {
+                $syncWithClient: false
+            }
+        },
         onConnected(player: RpgPlayer) {
             const { startMap } = player.server.globalConfig
             const gui = player.gui('rpg-title-screen')
@@ -123,7 +128,7 @@ RpgPlayer.prototype.save = function(): string {
                     }
                     gui.close()
                 }
-                catch (err) {
+                catch (err: any) {
                     let error = {}
                     if (err.status == 401) {
                         error = {

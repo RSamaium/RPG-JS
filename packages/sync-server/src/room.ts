@@ -38,7 +38,8 @@ export class Room {
                     if (Room.hasExtraProp(val)) {
                         if (val.$permanent ?? true) permanentObject.push(p)
                         if (room && val.$default !== undefined) {
-                            set(room, p, val.$default)
+                            // TODO
+                            //set(room, p, val.$default)
                         }
                         if (val.$syncWithClient === false) {
                             continue

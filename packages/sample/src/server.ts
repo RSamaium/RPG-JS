@@ -21,10 +21,7 @@ const io = new Server(server, {
     }
 })
 
-app.use(bodyParser.json())
-
-const rpgGame = entryPoint(modules, { io, basePath: __dirname, globalConfig })
-rpgGame.app = app
+app.use(bodyParser.json()) 
 
 /*app.use('/metrics', async (req, res) => {
     res.setHeader('Content-Type', register.contentType)
@@ -33,7 +30,9 @@ rpgGame.app = app
 
 app.use('/', express.static(__dirname + '/../client'))
 
-server.listen(PORT, () =>  {
+server.listen(PORT, async () =>  {
+    const rpgGame = await entryPoint(modules, { io, basePath: __dirname, globalConfig })
+    rpgGame.app = app
     rpgGame.start()
     console.log(`
         ===> MMORPG is running on http://localhost:${PORT} <===

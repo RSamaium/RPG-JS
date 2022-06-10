@@ -1,20 +1,20 @@
 import { MockIo, Utils } from '@rpgjs/common'
-import { entryPoint as entryPointServer } from '@rpgjs/server'
-import { entryPoint as entryPointClient } from '@rpgjs/client'
+import { entryPoint as entryPointServer, RpgServerEngine } from '@rpgjs/server'
+import { entryPoint as entryPointClient, RpgClientEngine } from '@rpgjs/client'
 
 const { ClientIo, serverIo } = MockIo
 
-export function entryPoint(modules, options: any = {}) {
+export function entryPoint(modules: any[], options: any = {}) {
     const io = new ClientIo()
 
     class Module {}
 
     class StandaloneGame {
-        server: any
-        client: any
+        server: RpgServerEngine
+        client: RpgClientEngine
 
         async start() {
-            this.server = entryPointServer(modules, {
+            this.server = await entryPointServer(modules, {
                 io: serverIo,
                 standalone: true,
                 basePath: '',
@@ -29,6 +29,7 @@ export function entryPoint(modules, options: any = {}) {
             })
             await this.server.start()
             await this.client.start()
+            return this
         }
 
         private setHooks(hooks, side: string) {
