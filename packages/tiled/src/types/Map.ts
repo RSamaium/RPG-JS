@@ -28,7 +28,7 @@ export interface TiledMap {
     /**
      *	Hex-formatted color (#RRGGBB or #AARRGGBB) (optional)
      */
-    backgroundcolor?: string;
+    backgroundcolor: string;
     /**
      * The compression level to use for tile layer data (defaults to -1, which means to use the algorithm default)
      */

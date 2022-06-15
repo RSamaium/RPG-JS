@@ -21,6 +21,7 @@
     "typescript": "^4.6.3"
   },
   "dependencies": {
+    "xml-js": "^1.6.11",
     "xmlbuilder": "^15.1.1"
   }
 }

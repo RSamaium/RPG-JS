@@ -100,4 +100,8 @@ export interface TiledLayer {
      * Array of objects. objectgroup only.
      */
     objects: TiledObject[];
+
+    isGroup: boolean
+
+    layers: TiledLayer[]
  }
