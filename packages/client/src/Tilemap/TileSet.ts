@@ -16,7 +16,7 @@ export default class TileSet {
     name: string = ''
     private baseTexture: PIXI.BaseTexture
     spritesheet
-    private textures: PIXI.Texture[] = []
+    public textures: PIXI.Texture[] = []
 
     constructor(tileSet: TiledTileset) {
         Object.assign(this, tileSet)

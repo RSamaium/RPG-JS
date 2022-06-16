@@ -45,4 +45,4 @@ process.on('uncaughtException', function(error){
 
 process.on('unhandledRejection', function(reason: any){
     console.log(pe.render(reason)) 
-})
+})  

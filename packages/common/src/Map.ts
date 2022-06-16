@@ -4,17 +4,17 @@ import { RpgShape } from './Shape'
 import { Hit } from './Hit'
 import { VirtualGrid } from './VirtualGrid'
 import { RpgCommonWorldMaps } from './WorldMaps'
-import { TiledLayer, TiledLayerType, TiledMap, Layer, Tileset, Tile } from '@rpgjs/tiled'
+import { TiledLayer, TiledLayerType, TiledMap, Layer, Tileset, Tile, TiledObject, TiledObjectClass } from '@rpgjs/tiled'
 
 const buffer = new Map()
 const bufferClient = new Map()
 
 export interface TileInfo {
     tiles: Tile[]
-    hasCollision: boolean | null
-    isClimbable?: boolean | null
-    isOverlay: boolean | null
-    objectGroups: HitObject[],
+    hasCollision: boolean | undefined
+    isClimbable?: boolean | undefined
+    isOverlay: boolean | undefined
+    objectGroups: TiledObjectClass[],
     tileIndex: number
 }
 
@@ -128,7 +128,6 @@ export class RpgCommonMap {
 
     load(data: TiledMap) {
         this.data = data
-        console.log(data)
         this.width = data.width
         this.tileWidth = data.tilewidth 
         this.tileHeight = data.tileheight
@@ -138,6 +137,13 @@ export class RpgCommonMap {
         this.grid = new VirtualGrid(this.width, this.tileWidth, this.tileHeight).zoom(10)
         this.gridShapes = new VirtualGrid(this.width, this.tileWidth, this.tileHeight).zoom(20)
         this._extractShapes()
+    }
+
+    getData() {
+        return {
+            ...this.data,
+            layers: this.layers
+        }
     }
 
     /** 
@@ -175,9 +181,9 @@ export class RpgCommonMap {
 
     _extractShapes() {
         for (let layer of this.layers) {
-            if (layer.type != TiledLayerType.Tile) continue
+            if (!layer.objects) continue
             for (let obj of layer.objects) {
-                this.createShape(obj)
+                this.createShape(new TiledObjectClass(obj))
             }
         }
     }
@@ -221,9 +227,8 @@ export class RpgCommonMap {
      * @returns {RpgShape}
      * @memberof Map
      */
-    createShape(obj: HitObject): RpgShape {
+    createShape(obj: TiledObjectClass): RpgShape {
         const id = obj.name = (obj.name || generateUID()) as string
-        obj.properties = obj.properties || {}
         const shape = new RpgShape(obj)
         this.shapes[id] = shape
         if (!shape.isShapePosition()) {
@@ -279,7 +284,7 @@ export class RpgCommonMap {
         const startsFind = this.getShapes().filter(filter)
         if (startsFind.length) {
             const start = startsFind[random(0, startsFind.length-1)]
-            return { x: start.hitbox.x, y: start.hitbox.y, z: start.properties.z * this.zTileHeight || 0 }
+            return { x: start.hitbox.x, y: start.hitbox.y, z: start.getProperty<number, number>('z', 0) * this.zTileHeight || 0 }
         }
         return null
     }
@@ -357,7 +362,7 @@ export class RpgCommonMap {
             const zTile = _tile.getProperty<number>('z')
             let z, zIntersection
             if (zLayer !== undefined) {
-                z = zLayer + (zTile !== null ? zTile : 0)
+                z = zLayer + (zTile !== undefined ? zTile : 0)
             }
             else if (zTile !== undefined) {
                 z = zTile
@@ -386,7 +391,7 @@ export class RpgCommonMap {
         const hasCollision = getLastTile.getProperty<boolean>('collision')
         const isOverlay = getLastTile.getProperty<boolean>('overlay')
         const isClimbable = getLastTile.getProperty<boolean>('climb')
-        const objectGroups = getLastTile.objects
+        const objectGroups = getLastTile.objects as TiledObjectClass[]
         return {
             tiles,
             hasCollision,

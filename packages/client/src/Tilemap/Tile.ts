@@ -1,16 +1,18 @@
 import { Texture } from "pixi.js";
 import { RpgRectTileLayer } from "./TileLayer";
+import TileSet from "./TileSet";
+import { Tile as TiledTileClass } from '@rpgjs/tiled'
 
 export default class Tile extends PIXI.AnimatedSprite {
-    static getTextures(tile, tileSet) {
+    static getTextures(tile: TiledTileClass, tileSet: TileSet) {
         const textures: Texture[] = [];
 
-        if (tile.animations && tile.animations.length) {
-            tile.animations.forEach(frame => {
-                textures.push(tileSet.textures[frame.tileId]);
+        if (tile.animation && tile.animation.length) {
+            tile.animation.forEach(frame => {
+                textures.push(tileSet.textures[frame.tileid]);
             });
         } else {
-            textures.push(tileSet.textures[tile.gid - tileSet.firstGid]);
+            textures.push(tileSet.textures[tile.id - tileSet.firstgid]);
         }
 
         return textures;
@@ -24,11 +26,11 @@ export default class Tile extends PIXI.AnimatedSprite {
     properties: any = {}
 
     constructor(
-        private tile,
-        private tileSet,
-        private horizontalFlip,
-        private verticalFlip,
-        private diagonalFlip
+        private tile: TiledTileClass,
+        private tileSet: TileSet,
+        private horizontalFlip: boolean,
+        private verticalFlip: boolean,
+        private diagonalFlip: boolean
     ) {
         super(Tile.getTextures(tile, tileSet));
 

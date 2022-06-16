@@ -1,6 +1,6 @@
 import Tile from './Tile';
 import { CompositeRectTileLayer, pixi_tilemap, POINT_STRUCT_SIZE } from 'pixi-tilemap'
-import { TiledLayer, TiledTileset } from '@rpgjs/tiled';
+import { Layer, TiledLayer, TiledTileset } from '@rpgjs/tiled';
 import TileSet from './TileSet';
 import TileMap from '.';
 
@@ -30,7 +30,7 @@ export default class TileLayer extends PIXI.Container {
         return tileset;
     }
 
-    constructor(private layer: TiledLayer, private tileSets: TileSet[], private map: TileMap) {
+    constructor(private layer: Layer, private tileSets: TileSet[], private map: TileMap) {
         super();
         this.alpha = layer.opacity;
         Object.assign(this, layer);
@@ -45,22 +45,21 @@ export default class TileLayer extends PIXI.Container {
             y = Math.floor(y / tileheight)
         }
         const i = x + y * width;
-        const gid = this.layer.data[i] as number
+        const tiledTile = this.layer.tiles[i]
         if (!(
-            gid &&
-            gid &&
-            gid !== 0
+            tiledTile &&
+            tiledTile.id !== 0
         ))  return
 
         const tileset = TileLayer.findTileSet(
-            gid,
+            tiledTile.id,
             this.tileSets
         )
             
         if (!tileset) return 
 
         const tile = new Tile(
-            gid,
+            tiledTile,
             tileset,
             false,
             false,
@@ -138,14 +137,14 @@ export default class TileLayer extends PIXI.Container {
     create() {
         this.tilemap = new pixi_tilemap.CompositeRectTileLayer() as RpgRectTileLayer
         const { width, height } = this.map.getData()
-        /*for (let y = 0; y < height; y++) {
+        for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) { 
                 const tile = this.createTile(x, y)
                 if (tile) {
                     this.addFrame(tile, x, y)
                 }
             }
-        }*/
+        }
         this.addChild(this.tilemap as any)
     }
 }

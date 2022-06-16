@@ -4,12 +4,16 @@ import TileLayer from './TileLayer'
 import TileSet from './TileSet'
 import Tile from './Tile'
 import { log } from '../Logger'
-import { TiledMap, TiledLayerType } from '@rpgjs/tiled'
+import { TiledMap, TiledLayerType, Layer } from '@rpgjs/tiled'
 import { RpgRenderer } from '../Renderer'
 
 const { intersection } = Utils
 
 PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
+
+export interface MapInfo extends TiledMap {
+    layers: Layer[]
+}
 
 export default class TileMap extends PIXI.Container {
     background: PIXI.Graphics = new PIXI.Graphics()
@@ -30,11 +34,10 @@ export default class TileMap extends PIXI.Container {
     private tilesLayer: PIXI.Container = new PIXI.Container()
     private frameTile: number = 0
 
-    constructor(private data: TiledMap, private renderer: RpgRenderer) {
+    constructor(private data: MapInfo, private renderer: RpgRenderer) {
         super()
         this.x = 0
         this.y = 0
-        console.log(data)
         this.create(data)
     }
 
@@ -57,7 +60,7 @@ export default class TileMap extends PIXI.Container {
         return container
     }
 
-    getData(): TiledMap {
+    getData(): MapInfo {
         return this.data
     }
 
@@ -73,7 +76,7 @@ export default class TileMap extends PIXI.Container {
         this.background.endFill()
     }
 
-    private create(data: TiledMap) {
+    private create(data: MapInfo) {
         this.data = data
         Object.assign(this, data)
         this.setBackgroundColor(this.data.backgroundcolor)
@@ -163,9 +166,7 @@ export default class TileMap extends PIXI.Container {
     load(options?: { drawTiles: boolean | undefined }) {
         this.defaultLayer = null
         this.tilesLayer.removeChildren()
-        
         this.tilesets.forEach(tileset => tileset.load())
-
         this.data.layers.forEach((layerData) => {
             switch (layerData.type) {
                 case TiledLayerType.Tile: {

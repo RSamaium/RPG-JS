@@ -170,7 +170,11 @@
   </layer>
   <group id="9" name="Group 2">
    <objectgroup id="11" name="Object Layer 3">
-    <object id="18" x="575" y="414" width="151" height="85"/>
+    <object id="18" x="575" y="413" width="151" height="85">
+     <properties>
+      <property name="asassa" type="int" value="0"/>
+     </properties>
+    </object>
     <object id="19" x="769" y="482" width="118" height="81">
      <ellipse/>
     </object>

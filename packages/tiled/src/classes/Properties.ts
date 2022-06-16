@@ -3,8 +3,8 @@ import { TiledProperty } from "../types/Types"
 export class TiledProperties {
     private _properties: Map<string, {
         name: string
-        value: string
-        type: string
+        value: any
+        type?: string
     }> = new Map()
 
     constructor(data: any) {
@@ -16,7 +16,7 @@ export class TiledProperties {
         }
     }
 
-    getProperty<P>(name: string): P | null {
+    getProperty<P, D = undefined>(name: string, defaultValue?: D): P | D {
         const prop = this._properties.get(name)
         if (prop) {
             switch (prop.type) {
@@ -26,6 +26,21 @@ export class TiledProperties {
                     return prop.value == 'true' ? true : false as any
             }
         }
-        return null
+        return defaultValue as D
+    }
+
+    getProperties() {
+        const obj = {}
+        this._properties.forEach(( { value, name }: any) => {
+            obj[name] = value
+        })
+        return obj
+    }
+
+    setProperty<T>(name: string, value: T) {
+        this._properties.set(name, {
+            value,
+            name
+        })
     }
  }

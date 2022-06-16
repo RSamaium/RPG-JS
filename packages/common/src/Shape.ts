@@ -2,20 +2,21 @@ import { RpgCommonPlayer } from './Player'
 import { Hit, HitObject, HitType } from './Hit'
 import { isInstanceOf } from './Utils'
 import SAT from 'sat'
+import { TiledObjectClass, TiledProperties } from '@rpgjs/tiled'
 
 export enum ShapePositioning {
     Default = 'default',
     Center = 'center'
 }
 
-type ShapeObject = HitObject & {
+type ShapeObject = TiledObjectClass & {
     onIn?(player: RpgCommonPlayer)
     onOut?(player: RpgCommonPlayer)
     fixEvent?: RpgCommonPlayer,
     positioning?: ShapePositioning
 }
 
-export class RpgShape  {
+export class RpgShape {
     _hitbox: any
     private _properties: any = {}
     type: string = HitType.Box
@@ -42,7 +43,7 @@ export class RpgShape  {
     */
     positioning?: ShapePositioning = ShapePositioning.Default
     
-    constructor(obj: ShapeObject) {
+    constructor(private obj: ShapeObject) {
         this.set(obj)
     }
 
@@ -136,21 +137,34 @@ export class RpgShape  {
         this.setPos('y', val)
     }
 
+    getProperty<P, D = undefined>(name: string, defaultValue?: D): P | D {
+        if (this.fixEvent && name == 'z') {
+            return this.fixEvent.position.z as any
+        }
+        return this.obj.getProperty<P, D>(name, defaultValue) as P | D
+    }
+
+    setProperty<T>(name: string, value: T) {
+        return this.obj.setProperty(name, value)
+    }
+
     /**
     * Get/Set properties
 
     * @title Properties
     * @prop { object } Properties
+    * @deprecated
     * @memberof Shape
     */
-    get properties() {
+    get properties(): any {
+        const properties = this.obj.getProperties()
         if (this.fixEvent) {
             return { 
                 z : this.fixEvent.position.z,
-                ...(this._properties || {})
+                ...(properties || {})
             }
         }
-        return this._properties
+        return properties
     }
     
     set properties(val) {

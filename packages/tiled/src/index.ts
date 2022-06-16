@@ -10,6 +10,7 @@ import { TiledProperties } from './classes/Properties'
 import { Tile } from './classes/Tile'
 import { Layer } from './classes/Layer'
 import { Tileset } from './classes/Tileset'
+import { TiledObjectClass } from './classes/Object'
 
 export {
     TiledWorld,
@@ -25,5 +26,6 @@ export {
     TiledProperties,
     Tile,
     Layer,
-    Tileset
+    Tileset,
+    TiledObjectClass
 }

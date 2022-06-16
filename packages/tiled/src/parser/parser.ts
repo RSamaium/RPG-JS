@@ -52,7 +52,7 @@ export class TiledParser {
       if (!obj) return
       const attr = obj.attributes || obj._attributes
       if (!attr) return obj
-      const newObj = {
+      let newObj = {
           ...obj,
           ...attr,
           ...TiledParser.propToNumber(attr, [
@@ -99,7 +99,7 @@ export class TiledParser {
         newObj.polyline = TiledParser.transform(newObj.polyline)
       }
       if (newObj.points) {
-        newObj.points = newObj.points.split(' ').map(point => {
+        newObj = newObj.points.split(' ').map(point => {
           const pos = point.split(',')
           return { x: +pos[0], y: +pos[1] }
         })
@@ -181,7 +181,6 @@ export class TiledParser {
               data: data ? data.elements[0].text : undefined,
               type: name == 'layer' ? 'tilelayer' : name
             }
-            delete obj.type
             delete obj.elements
             if (obj.data) obj.data = TiledParser.decode(obj)
             array.push(obj)

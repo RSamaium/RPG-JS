@@ -84,7 +84,7 @@ export class SceneMap extends Scene {
 
         RpgCommonMap.bufferClient.set(obj.id, this.gameMap)
 
-        this.tilemap = new TileMap(obj, this.game.renderer)
+        this.tilemap = new TileMap(this.gameMap.getData(), this.game.renderer)
 
         const loader = PIXI.Loader.shared
         let nbLoad = 0

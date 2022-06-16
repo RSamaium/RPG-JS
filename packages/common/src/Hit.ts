@@ -1,3 +1,4 @@
+import { TiledObjectClass } from '@rpgjs/tiled'
 import SAT from 'sat'
 import { isInstanceOf } from './Utils'
 
@@ -31,7 +32,7 @@ class HitClass {
         return new SAT.Box(new SAT.Vector(x, y - z), w, h)
     }
     
-    getHitbox(obj: HitObject, offset?: { x: number, y: number }): {
+    getHitbox(obj: TiledObjectClass, offset?: { x: number, y: number }): {
         properties: {
             [key: string]: any
         } | undefined,
