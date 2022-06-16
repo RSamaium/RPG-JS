@@ -7,6 +7,9 @@ import { TiledMap } from './types/Map'
 import { isTiledFormat } from './utils'
 import { TiledParser } from './parser/parser'
 import { TiledProperties } from './classes/Properties'
+import { Tile } from './classes/Tile'
+import { Layer } from './classes/Layer'
+import { Tileset } from './classes/Tileset'
 
 export {
     TiledWorld,
@@ -19,5 +22,8 @@ export {
     isTiledFormat,
     TiledParser,
     TiledLayerType,
-    TiledProperties
+    TiledProperties,
+    Tile,
+    Layer,
+    Tileset
 }

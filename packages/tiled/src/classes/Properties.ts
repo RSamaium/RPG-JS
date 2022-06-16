@@ -1,20 +1,23 @@
 import { TiledProperty } from "../types/Types"
 
-export class TiledProperties<T extends { properties: TiledProperty<any>[] }> {
-    properties: Map<string, {
+export class TiledProperties {
+    private _properties: Map<string, {
         name: string
         value: string
         type: string
     }> = new Map()
 
-    constructor(data: T) {
-        for (let prop of data.properties) {
-            this.properties.set(prop.name, prop)
+    constructor(data: any) {
+        if (data.properties) {
+            for (let prop of data.properties) {
+                if (!prop) continue
+                this._properties.set(prop.name, prop)
+            }
         }
     }
 
     getProperty<P>(name: string): P | null {
-        const prop = this.properties.get(name)
+        const prop = this._properties.get(name)
         if (prop) {
             switch (prop.type) {
                 case 'int':

@@ -1,4 +1,5 @@
 import { TiledLayer } from "./Layer";
+import { TiledObject } from "./Objects";
 import { TiledFrame, TiledProperty } from "./Types";
 
 export interface TilesetTile {
@@ -10,6 +11,6 @@ export interface TilesetTile {
     animation: TiledFrame[];
     properties: TiledProperty[];
     terrain: number[];
-    objectgroup: TiledLayer;
+    objects: TiledObject[];
     probability: number;
  }

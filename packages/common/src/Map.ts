@@ -4,27 +4,16 @@ import { RpgShape } from './Shape'
 import { Hit } from './Hit'
 import { VirtualGrid } from './VirtualGrid'
 import { RpgCommonWorldMaps } from './WorldMaps'
-import { TiledLayer, TiledLayerType, TiledMap } from '@rpgjs/tiled'
+import { TiledLayer, TiledLayerType, TiledMap, Layer, Tileset, Tile } from '@rpgjs/tiled'
 
 const buffer = new Map()
 const bufferClient = new Map()
 
-export interface Tile {
-    id: number,
-    terrain: any[],
-    probability: any,
-    properties: any,
-    animations:  any[],
-    objectGroups: any[],
-    image: any,
-    gid: number
-}
-
 export interface TileInfo {
     tiles: Tile[]
-    hasCollision: boolean
-    isClimbable?: boolean
-    isOverlay: boolean
+    hasCollision: boolean | null
+    isClimbable?: boolean | null
+    isOverlay: boolean | null
     objectGroups: HitObject[],
     tileIndex: number
 }
@@ -88,7 +77,7 @@ export class RpgCommonMap {
      * @memberof Map
      * @memberof RpgSceneMap
      * */
-    layers: TiledLayer[] = []
+    layers: Layer[] = []
     
     /** @internal */
     shapes: {
@@ -139,11 +128,13 @@ export class RpgCommonMap {
 
     load(data: TiledMap) {
         this.data = data
+        console.log(data)
         this.width = data.width
         this.tileWidth = data.tilewidth 
         this.tileHeight = data.tileheight
         this.height = data.height
-        this.layers = data.layers
+        const tilesets = data.tilesets.map(tileset => new Tileset(tileset))
+        this.layers = data.layers.map(layer => new Layer(layer, tilesets))
         this.grid = new VirtualGrid(this.width, this.tileWidth, this.tileHeight).zoom(10)
         this.gridShapes = new VirtualGrid(this.width, this.tileWidth, this.tileHeight).zoom(20)
         this._extractShapes()
@@ -311,8 +302,9 @@ export class RpgCommonMap {
         }
         for (let layer of this.layers) {
             if (!fnFilter(layer)) continue
+            const data = layer.data as number[]
             tilesEdited[layer.name] = tileInfo
-            layer.data[tileIndex] = tilesEdited[layer.name]
+            data[tileIndex] = tilesEdited[layer.name]
         }
         return {
             x,
@@ -352,21 +344,20 @@ export class RpgCommonMap {
      * @memberof RpgSceneMap
      */
     getTileByIndex(tileIndex: number, zPlayer: [number, number] = [0, 0]): TileInfo {
-        const tiles: any[] = []
+        const tiles: Tile[] = []
         for (let layer of this.layers) {
             if (layer.type != TiledLayerType.Tile) {
                 continue
             }
-            const _tiles = layer.data[tileIndex]
-            if (!_tiles) {
+            const _tile: Tile | undefined = layer.getTileByIndex(tileIndex)
+            if (!_tile) {
                 continue
             }
-            if (!_tiles.properties) _tiles.properties = {}
-            const zLayer = layer.properties ? layer.properties. : 0
-            const zTile = _tiles.properties.z
+            const zLayer = layer.getProperty<number>('z') || 0
+            const zTile = _tile.getProperty<number>('z')
             let z, zIntersection
             if (zLayer !== undefined) {
-                z = zLayer + (zTile !== undefined ? zTile : 0)
+                z = zLayer + (zTile !== null ? zTile : 0)
             }
             else if (zTile !== undefined) {
                 z = zTile
@@ -376,10 +367,10 @@ export class RpgCommonMap {
                 zIntersection = intersection(zPlayer, [realZ, realZ + this.tileHeight])
             }
             if (zIntersection !== undefined) {
-                if (zIntersection) tiles.push(_tiles)
+                if (zIntersection) tiles.push(_tile)
             }
             else {
-                tiles.push(_tiles)
+                tiles.push(_tile)
             }
         }
         const getLastTile = tiles[tiles.length-1]
@@ -392,10 +383,10 @@ export class RpgCommonMap {
                 tileIndex
             }
         }
-        const hasCollision = getLastTile.properties.collision
-        const isOverlay = getLastTile.properties.overlay
-        const isClimbable = getLastTile.properties.climb
-        const objectGroups = getLastTile.objectGroups
+        const hasCollision = getLastTile.getProperty<boolean>('collision')
+        const isOverlay = getLastTile.getProperty<boolean>('overlay')
+        const isClimbable = getLastTile.getProperty<boolean>('climb')
+        const objectGroups = getLastTile.objects
         return {
             tiles,
             hasCollision,

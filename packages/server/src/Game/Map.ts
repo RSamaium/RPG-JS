@@ -315,10 +315,10 @@ export class RpgMap extends RpgCommonMap {
         const parser = new TiledParser(content)
         
         if (file.endsWith('tmx')) {
-            return parser.parseMap()
+            return parser.parseMap() as any 
         }
         else if (file.endsWith('tsx')) {
-            return parser.parseTileset()
+            return parser.parseTileset() as any
         }
 
         return JSON.parse(content)
