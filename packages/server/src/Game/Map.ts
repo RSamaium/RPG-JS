@@ -1,5 +1,7 @@
 import { RpgCommonMap, Utils, RpgShape, RpgCommonGame }  from '@rpgjs/common'
+import { TiledMap, TiledParser, TiledTileset } from '@rpgjs/tiled'
 import fs from 'fs'
+import axios from 'axios'
 import { EventOptions } from '../decorators/event'
 import { RpgPlayer, EventMode, RpgEvent } from '../Player/Player'
 import { Move } from '../Player/MoveManager'
@@ -49,7 +51,7 @@ class AutoEvent extends RpgEvent {
 export class RpgMap extends RpgCommonMap {
 
     public _events: EventOption[]
-    public file: any 
+    public file: any
      /** 
      * @title event list
      * @prop { { [eventId: string]: RpgEvent } } [events]
@@ -289,24 +291,56 @@ export class RpgMap extends RpgCommonMap {
         return events
     }
 
-    parseFile() {   
-        if (this.file.version) {
-            return Promise.resolve(this.file)
+    private async _parseFile<T>(file: string, type: string): Promise<T> {
+        if (file['version']) {
+            return file as any
         }
 
-        if (Utils.isBrowser()) {
-            return fetch(this.file)
-                .then(res => res.json())
-        }
+        let content
 
-        const filepath = this._server.inputOptions.basePath + '/' + this.file
-        
-        return new Promise((resolve, reject) => {
-            fs.readFile(filepath, 'utf-8', (err, data) => {
-                if (err) return reject(err)
-                resolve(JSON.parse(data))
+        if (file.startsWith('http') || Utils.isBrowser()) {
+            content = await axios.get(file).then(res => res.data)
+        }
+        else {
+            const filepath = this._server.inputOptions.basePath 
+                + '/' + (type == 'map' ? '' : 'tilesets/') + file
+            content = await new Promise((resolve, reject) => {
+                fs.readFile(filepath, 'utf-8', (err, data) => {
+                    if (err) return reject(err)
+                    resolve(data)
+                })
             })
-        })
+        }
+
+        const parser = new TiledParser(content)
+        
+        if (file.endsWith('tmx')) {
+            return parser.parseMap()
+        }
+        else if (file.endsWith('tsx')) {
+            return parser.parseTileset()
+        }
+
+        return JSON.parse(content)
+    }
+
+    async parseFile(): Promise<TiledMap> {   
+        let map = await this._parseFile<TiledMap>(this.file, 'map')
+        if (map.tilesets) {
+            const parseTileset: TiledTileset[] = []
+            for (let tileset of map.tilesets) {
+                if (!tileset.source) {
+                    parseTileset.push(tileset)
+                    continue
+                }
+                parseTileset.push({
+                    ...(await this._parseFile<TiledTileset>(tileset.source, 'tileset')),
+                    firstgid: tileset.firstgid
+                })
+            }
+            map.tilesets = parseTileset
+        }
+        return map
     }
 
     setSync(schema: any) {

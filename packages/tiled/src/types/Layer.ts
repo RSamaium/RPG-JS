@@ -1,6 +1,13 @@
 import { TiledObject } from "./Objects";
 import { TiledChunk, TiledCompression, TiledEncoding, TiledProperty } from "./Types";
 
+export enum TiledLayerType {
+    Tile = 'tilelayer',
+    ObjectGroup = 'objectgroup',
+    Image = 'image',
+    Group = 'group'
+}
+
 export interface TiledLayer {
     /**
      * Incremental ID - unique across all layers
@@ -47,7 +54,7 @@ export interface TiledLayer {
     /**
      * Type of layer (tilelayer, objectgroup)
      */
-    type: 'tilelayer' | 'objectgroup' | 'imagelayer' | 'group';
+    type: TiledLayerType;
     /**
      * Whether layer is shown or hidden in editor
      */
@@ -100,8 +107,6 @@ export interface TiledLayer {
      * Array of objects. objectgroup only.
      */
     objects: TiledObject[];
-
-    isGroup: boolean
 
     layers: TiledLayer[]
  }

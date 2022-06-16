@@ -1,6 +1,8 @@
 import Tile from './Tile';
-
 import { CompositeRectTileLayer, pixi_tilemap, POINT_STRUCT_SIZE } from 'pixi-tilemap'
+import { TiledLayer, TiledTileset } from '@rpgjs/tiled';
+import TileSet from './TileSet';
+import TileMap from '.';
 
 pixi_tilemap.Constant.maxTextures = 4
 pixi_tilemap.Constant.use32bitIndex = true
@@ -13,23 +15,22 @@ export interface RpgRectTileLayer extends CompositeRectTileLayer {
 }
 
 export default class TileLayer extends PIXI.Container {
-
     private tilemap: RpgRectTileLayer
     properties: any
     private tiles: any = {}
 
-    static findTileSet(gid, tileSets) {
-        let tileset;
+    static findTileSet(gid: number, tileSets: TileSet[]) {
+        let tileset: TileSet | undefined
         for (let i = tileSets.length - 1; i >= 0; i--) {
-            tileset = tileSets[i];
-            if (tileset.firstGid && tileset.firstGid <= gid) {
+            tileset = tileSets[i]
+            if (tileset.firstgid && tileset.firstgid <= gid) {
                 break;
             }
         }
         return tileset;
     }
 
-    constructor(private layer, private tileSets) {
+    constructor(private layer: TiledLayer, private tileSets: TileSet[], private map: TileMap) {
         super();
         this.alpha = layer.opacity;
         Object.assign(this, layer);
@@ -38,46 +39,46 @@ export default class TileLayer extends PIXI.Container {
     /** @internal */
     createTile(x: number, y: number, options: any = {}): Tile | undefined {
         const { real, filter } = options
-        const { width, tileWidth, tileHeight } = this.layer.map.data
+        const { width, tilewidth, tileheight } = this.map.getData()
         if (real) {
-            x = Math.floor(x / tileWidth)
-            y = Math.floor(y / tileHeight)
+            x = Math.floor(x / tilewidth)
+            y = Math.floor(y / tileheight)
         }
         const i = x + y * width;
-        const tileLayer = this.layer.tiles[i]
+        const gid = this.layer.data[i] as number
         if (!(
-            tileLayer &&
-            tileLayer.gid &&
-            tileLayer.gid !== 0
+            gid &&
+            gid &&
+            gid !== 0
         ))  return
 
         const tileset = TileLayer.findTileSet(
-            tileLayer.gid,
+            gid,
             this.tileSets
         )
             
         if (!tileset) return 
 
         const tile = new Tile(
-            tileLayer,
+            gid,
             tileset,
-            this.layer.horizontalFlips[i],
-            this.layer.verticalFlips[i],
-            this.layer.diagonalFlips[i]
+            false,
+            false,
+            false
         )
 
-        tile.x = x * tileWidth;
+        tile.x = x * tilewidth;
         tile.y =
-            y * tileHeight +
-            (tileHeight -
+            y * tileheight +
+            (tileheight -
                 tile.texture.height);
 
         tile._x = x;
         tile._y = y;
 
-        if (tileset.tileOffset) {
-            tile.x += tileset.tileOffset.x;
-            tile.y += tileset.tileOffset.y;
+        if (tileset.tileoffset) {
+            tile.x += tileset.tileoffset.x;
+            tile.y += tileset.tileoffset.y;
         }
 
         if (filter) {
@@ -89,9 +90,9 @@ export default class TileLayer extends PIXI.Container {
 
     /** @internal */
     changeTile(x: number, y: number) {
-        const { tileWidth, tileHeight } = this.layer.map.data
-        x = Math.floor(x / tileWidth)
-        y = Math.floor(y / tileHeight)
+        const { tilewidth, tileheight } = this.map.getData()
+        x = Math.floor(x / tilewidth)
+        y = Math.floor(y / tileheight)
         const oldTile: Tile = this.tiles[x + ';' + y]
         const newTile = this.createTile(x, y)
         if (!oldTile && newTile) {
@@ -136,15 +137,15 @@ export default class TileLayer extends PIXI.Container {
     /** @internal */
     create() {
         this.tilemap = new pixi_tilemap.CompositeRectTileLayer() as RpgRectTileLayer
-        const { width, height } = this.layer.map.data
-        for (let y = 0; y < height; y++) {
+        const { width, height } = this.map.getData()
+        /*for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) { 
                 const tile = this.createTile(x, y)
                 if (tile) {
                     this.addFrame(tile, x, y)
                 }
             }
-        }
+        }*/
         this.addChild(this.tilemap as any)
     }
 }

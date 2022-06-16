@@ -8,7 +8,7 @@ export interface TilesetTile {
     imageheight: number;
     imagewidth: number;
     animation: TiledFrame[];
-    properites: TiledProperty[];
+    properties: TiledProperty[];
     terrain: number[];
     objectgroup: TiledLayer;
     probability: number;

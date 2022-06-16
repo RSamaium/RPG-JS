@@ -4,6 +4,7 @@ import { RpgShape } from './Shape'
 import { Hit } from './Hit'
 import { VirtualGrid } from './VirtualGrid'
 import { RpgCommonWorldMaps } from './WorldMaps'
+import { TiledLayer, TiledLayerType, TiledMap } from '@rpgjs/tiled'
 
 const buffer = new Map()
 const bufferClient = new Map()
@@ -58,7 +59,7 @@ export class RpgCommonMap {
      * @memberof Map
      * @memberof RpgSceneMap
      * */
-    data: any
+    data: TiledMap
     width: number = 0
     height: number = 0
 
@@ -87,7 +88,7 @@ export class RpgCommonMap {
      * @memberof Map
      * @memberof RpgSceneMap
      * */
-    layers: LayerInfo[] = []
+    layers: TiledLayer[] = []
     
     /** @internal */
     shapes: {
@@ -136,11 +137,11 @@ export class RpgCommonMap {
         return bufferClient
     }
 
-    load(data) {
+    load(data: TiledMap) {
         this.data = data
         this.width = data.width
-        this.tileWidth = data.tileWidth 
-        this.tileHeight = data.tileHeight
+        this.tileWidth = data.tilewidth 
+        this.tileHeight = data.tileheight
         this.height = data.height
         this.layers = data.layers
         this.grid = new VirtualGrid(this.width, this.tileWidth, this.tileHeight).zoom(10)
@@ -183,7 +184,7 @@ export class RpgCommonMap {
 
     _extractShapes() {
         for (let layer of this.layers) {
-            if (layer.type != 'object') continue
+            if (layer.type != TiledLayerType.Tile) continue
             for (let obj of layer.objects) {
                 this.createShape(obj)
             }
@@ -204,7 +205,7 @@ export class RpgCommonMap {
      * @memberof Map
      * @memberof RpgSceneMap
      */
-    getLayerByName(name: string): LayerInfo | undefined {
+    getLayerByName(name: string): TiledLayer | undefined {
         return this.layers.find(layer => layer.name == name)
     }
 
@@ -311,7 +312,7 @@ export class RpgCommonMap {
         for (let layer of this.layers) {
             if (!fnFilter(layer)) continue
             tilesEdited[layer.name] = tileInfo
-            layer.tiles[tileIndex] = tilesEdited[layer.name]
+            layer.data[tileIndex] = tilesEdited[layer.name]
         }
         return {
             x,
@@ -353,15 +354,15 @@ export class RpgCommonMap {
     getTileByIndex(tileIndex: number, zPlayer: [number, number] = [0, 0]): TileInfo {
         const tiles: any[] = []
         for (let layer of this.layers) {
-            if (layer.type != 'tile') {
+            if (layer.type != TiledLayerType.Tile) {
                 continue
             }
-            const _tiles = layer.tiles[tileIndex]
+            const _tiles = layer.data[tileIndex]
             if (!_tiles) {
                 continue
             }
             if (!_tiles.properties) _tiles.properties = {}
-            const zLayer = layer.properties ? layer.properties.z : 0
+            const zLayer = layer.properties ? layer.properties. : 0
             const zTile = _tiles.properties.z
             let z, zIntersection
             if (zLayer !== undefined) {

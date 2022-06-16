@@ -20,12 +20,12 @@ let last
             last = Date.now()
         }
     },
-    // maps: [
-    //     CaveMap,
-    //     SampleMap
-    // ],
+    maps: [
+        CaveMap,
+        SampleMap
+    ],
     worldMaps: [ 
         WorldMap
-    ]
+    ] 
 })
 export default class RpgServerEngine {}

@@ -7,14 +7,11 @@ import Character from '../Sprite/Character'
 import { RpgSound } from '../Sound/RpgSound'
 import { RpgSprite } from '../Sprite/Player'
 import { GameEngineClient } from '../GameEngine'
+import { TiledMap } from '@rpgjs/tiled'
 
-interface MapObject {
+interface MapObject extends TiledMap {
     id: number
     sounds: string | string[] | undefined
-    width: number
-    height: number
-    tileWidth: number
-    tileHeight: number
 }
 
 export class SceneMap extends Scene {
@@ -98,7 +95,7 @@ export class SceneMap extends Scene {
 
         loader.reset()
 
-        for (let tileset of this.tilemap.tileSets) {
+        for (let tileset of this.tilemap.tilesets) {
             if (tileset.spritesheet.resource) continue
             loader.add(tileset.name, tileset.spritesheet.image)
             nbLoad++
@@ -106,7 +103,7 @@ export class SceneMap extends Scene {
 
         if (nbLoad > 0) {
             loader.load((loader, resources) => {
-                for (let tileset of this.tilemap.tileSets) {
+                for (let tileset of this.tilemap.tilesets) {
                     const spritesheet = spritesheets.get(tileset.name)
                     if (resources[tileset.name]) spritesheet.resource = resources[tileset.name]  
                 }
@@ -124,8 +121,8 @@ export class SceneMap extends Scene {
                 this.viewport = new Viewport({
                     screenWidth: this.options.screenWidth,
                     screenHeight: this.options.screenHeight,
-                    worldWidth: obj.width * obj.tileWidth,
-                    worldHeight: obj.height * obj.tileHeight
+                    worldWidth: obj.width * obj.tilewidth,
+                    worldHeight: obj.height * obj.tileheight
                 })
                 this.tilemap.addChild(this.animationLayer)
                 this.viewport.clamp({ direction: 'all' })

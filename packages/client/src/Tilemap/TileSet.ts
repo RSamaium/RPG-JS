@@ -1,24 +1,24 @@
 import { spritesheets } from '../Sprite/Spritesheets'
 import { log } from '../Logger'
+import { TiledTileset } from '@rpgjs/tiled'
 
 export default class TileSet {
-
-    firstGid: number = 0
+    firstgid: number = 0
     margin: number = 0
     spacing: number= 0
-    tileHeight: number = 0
-    tileWidth: number= 0
+    tileheight: number = 0
+    tilewidth: number= 0
     image: {
         width: number,
         height: number
     }
-    tileOffset: any = {}
+    tileoffset: any = {}
     name: string = ''
     private baseTexture: PIXI.BaseTexture
     spritesheet
     private textures: PIXI.Texture[] = []
 
-    constructor(tileSet) {
+    constructor(tileSet: TiledTileset) {
         Object.assign(this, tileSet)
         const spritesheet = spritesheets.get(this.name)
         if (!spritesheet) {
@@ -34,17 +34,17 @@ export default class TileSet {
         for (
             let y = this.margin;
             y < this.image.height;
-            y += this.tileHeight + this.spacing
+            y += this.tileheight + this.spacing
         ) {
             for (
                 let x = this.margin;
                 x < this.image.width;
-                x += this.tileWidth + this.spacing
+                x += this.tilewidth + this.spacing
             ) {
                 this.textures.push(
                     new PIXI.Texture(
                         this.baseTexture,
-                        new PIXI.Rectangle(+x, +y, +this.tileWidth, +this.tileHeight)
+                        new PIXI.Rectangle(+x, +y, +this.tilewidth, +this.tileheight)
                     )
                 )
             }
