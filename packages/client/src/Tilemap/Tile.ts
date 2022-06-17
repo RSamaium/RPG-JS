@@ -7,18 +7,18 @@ export default class Tile extends PIXI.AnimatedSprite {
     static getTextures(tile: TiledTileClass, tileSet: TileSet) {
         const textures: Texture[] = [];
 
-        if (tile.animation && tile.animation.length) {
-            tile.animation.forEach(frame => {
+        if (tile.animations && tile.animations.length) {
+            tile.animations.forEach(frame => {
                 textures.push(tileSet.textures[frame.tileid]);
             });
         } else {
-            textures.push(tileSet.textures[tile.id - tileSet.firstgid]);
+            textures.push(tileSet.textures[tile.gid - tileSet.firstgid]);
         }
 
         return textures;
     }
 
-    animations: { tileId: number, duration: number }[] = []
+    animations: { tileid: number, duration: number }[] = []
     _x: number = 0 
     _y: number = 0
     gid: number = 0
@@ -50,7 +50,7 @@ export default class Tile extends PIXI.AnimatedSprite {
     setAnimation(frame: RpgRectTileLayer) {
         const size = this.animations.length
         if (size > 1) {
-            const offest = (this.animations[1].tileId - this.animations[0].tileId) * this.width
+            const offest = (this.animations[1].tileid - this.animations[0].tileid) * this.width
             frame.tileAnimX(offest, size)
         }
     }

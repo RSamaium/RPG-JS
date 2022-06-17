@@ -530,8 +530,7 @@ export class RpgCommonPlayer {
 
     /** @internal */
     async collisionWithShape(shape: RpgShape, player: RpgCommonPlayer, nextPosition?: Position): Promise<boolean> {
-        const collision = shape.getProperty<boolean>('collision')
-        const z = shape.getProperty<number>('z')
+        const { collision, z } = shape.properties
         if (shape.isShapePosition()) return false
         if (z !== undefined && !this.zCollision({
             position: { z },

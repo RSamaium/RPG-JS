@@ -42,7 +42,7 @@ const testMap = function(side) {
         expect(map?.heightPx).toEqual(TILE_SIZE*10)
         expect(map?.zTileHeight).toEqual(TILE_SIZE)
         expect(map?.getLayerByName(LAYER_NAME)).toMatchObject({
-            type: 'tile',
+            type: 'tilelayer',
             name: LAYER_NAME
         })
     })

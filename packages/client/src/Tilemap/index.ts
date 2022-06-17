@@ -44,8 +44,8 @@ export default class TileMap extends PIXI.Container {
     /** @internal */
     drawAnimateTile(frame: number) {
         if (frame % this.frameRateAnimation == 0) {
-            this.renderer['renderer'].plugins.tilemap.tileAnim[0] = this.frameTile
-            this.frameTile++
+           this.renderer['renderer'].plugins.tilemap.tileAnim[0] = this.frameTile
+           this.frameTile++
         }
     }
 
@@ -79,7 +79,7 @@ export default class TileMap extends PIXI.Container {
     private create(data: MapInfo) {
         this.data = data
         Object.assign(this, data)
-        this.setBackgroundColor(this.data.backgroundcolor)
+        if (this.data.backgroundcolor) this.setBackgroundColor(this.data.backgroundcolor)
         this.addChild(this.background);
         this.tilesets = this.data.tilesets.map((tileSet) => {
             return new TileSet(tileSet)

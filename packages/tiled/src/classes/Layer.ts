@@ -3,31 +3,41 @@ import { TiledProperties } from "./Properties";
 import { Tile } from "./Tile";
 import { Tileset } from "./Tileset";
 
-interface TileInfo {
-    id: number
-}
-
 export class Layer extends TiledProperties {
-    tiles: Tile[] = []
+    tiles: (Tile | undefined)[] = []
 
-    constructor(private layer: TiledLayer, private tilesets: Tileset[]) {
+    constructor(layer: TiledLayer, private tilesets: Tileset[]) {
         super(layer)
         Object.assign(this, layer)
         this.propertiesTiles()
+    }
+
+    createTile(gid: number): Tile | undefined{
+        const tileset = Layer.findTileSet(gid, this.tilesets)
+        if (!tileset) {
+            return undefined
+        }
+        const tile = tileset.getTile(gid - tileset.firstgid)
+        if (tile) {
+            return new Tile({
+                ...tile.tile,
+                gid
+            })
+        }
+        return new Tile({
+            gid
+        })
     }
 
     private propertiesTiles() {
         if (!this.data) return
         const data = this.data as number[]
         for (let id of data) {
-            const tileset = Layer.findTileSet(id, this.tilesets)
-            if (!tileset) continue
-            const tile = tileset.getTile(id - tileset.firstgid)
-            if (tile) this.tiles.push(tile)
+            this.tiles.push(this.createTile(id))
         }
     }
 
-    getTileByIndex(tileIndex: number): Tile {
+    getTileByIndex(tileIndex: number): Tile | undefined {
         return this.tiles[tileIndex]
     }
 

@@ -1,11 +1,11 @@
-const tmx = require('tmx-parser')
+const { TiledParserFile } = require('@rpgjs/tiled')
 const fs = require('fs')
 const deasync = require('deasync')
 const crypto = require('crypto')
 const path = require("path")
 
 function parse(text, filepath, callback) {
-    const type = process.env.RPG_TYPE == 'rpg' ? 'standalone' : 'client'
+    /*const type = process.env.RPG_TYPE == 'rpg' ? 'standalone' : 'client'
     tmx.parse(text, filepath, (err, result) => {
         if (err) return callback(err)
         for (let layer of result.layers) {
@@ -22,6 +22,11 @@ function parse(text, filepath, callback) {
             }
             delete layer.map
         }
+        callback(null, result)
+    })*/
+    const parser = new TiledParserFile(text, path.dirname(filepath))
+    parser.parseFile((result) => {
+        console.log(result)
         callback(null, result)
     })
 }

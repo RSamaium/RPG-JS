@@ -11,6 +11,7 @@ import { Tile } from './classes/Tile'
 import { Layer } from './classes/Layer'
 import { Tileset } from './classes/Tileset'
 import { TiledObjectClass } from './classes/Object'
+import { TiledParserFile } from './parser/open-file'
 
 export {
     TiledWorld,
@@ -27,5 +28,6 @@ export {
     Tile,
     Layer,
     Tileset,
-    TiledObjectClass
+    TiledObjectClass,
+    TiledParserFile
 }

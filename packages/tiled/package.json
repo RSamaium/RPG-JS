@@ -21,6 +21,8 @@
     "typescript": "^4.6.3"
   },
   "dependencies": {
+    "axios": "^0.27.2",
+    "buffer": "^6.0.3",
     "xml-js": "^1.6.11",
     "xmlbuilder": "^15.1.1"
   }

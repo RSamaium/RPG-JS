@@ -4,9 +4,11 @@ import { TiledMap } from '../types/Map'
 import { TilesetTile } from '../types/Tile'
 import { TiledTileset } from '../types/Tileset'
 import { TiledProperty } from '../types/Types'
+import { Buffer } from 'buffer/'
 
 export class TiledParser {
     private objectgroups: Map<number, any> = new Map()
+    private layers: Map<number, any> = new Map()
 
     constructor(private xml: string) {}
 
@@ -80,7 +82,9 @@ export class TiledParser {
             'rows',
             'tilecount',
             'rotation',
-            'gid'
+            'gid',
+            'tileid',
+            'duration'
           ]),
           ...TiledParser.propToBool(attr, [
             'visible',
@@ -88,9 +92,25 @@ export class TiledParser {
           ])
       }
       if (newObj.properties) {
-        newObj.properties = TiledParser.toArray(newObj.properties).map((prop: any) => {
-          return prop.property._attributes
-        })
+        const properties: any = TiledParser.toArray(newObj.properties.property)
+        const propObj = {}
+        for (let prop of properties) {
+          const attr = prop._attributes
+          if (!attr) continue
+          let val
+          switch (attr.type) {
+            case 'int':
+                val = +attr.value
+                break
+            case 'bool':
+                val = attr.value == 'true' ? true : false
+                break
+            default:
+                val = attr.value
+          }
+          propObj[attr.name] = val
+        }
+        newObj.properties = propObj
       }
       if (newObj.polygon) {
         newObj.polygon = TiledParser.transform(newObj.polygon)
@@ -110,8 +130,9 @@ export class TiledParser {
       if (newObj.ellipse) {
         newObj.ellipse = true
       }
-      if (newObj.object) {
-        newObj.objects = TiledParser.toArray(newObj.object).map((object: any) => {
+      const objectgroup = newObj.object || newObj.objectgroup?.object
+      if (objectgroup) {
+        newObj.objects = TiledParser.toArray(objectgroup).map((object: any) => {
           return TiledParser.transform(object)
         })
       }
@@ -122,22 +143,25 @@ export class TiledParser {
       return newObj
     }
 
-    static decode(obj: { encoding: string, data: string }) {
-      /*function unpackTileBytes(buf) {
-        var expectedCount = map.width * map.height * 4;
-        if (buf.length !== expectedCount) {
-          error(new Error("Expected " + expectedCount +
-                " bytes of tile data; received " + buf.length));
-          return;
-        }
-        tileIndex = 0;
-        for (var i = 0; i < expectedCount; i += 4) {
-          saveTile(buf.readUInt32LE(i));
-        }
-      }*/
+    static unpackTileBytes(buffer: Buffer, size: number): number[] | never {
+      const expectedCount = size * 4
+      if (buffer.length !== expectedCount) {
+        throw new Error("Expected " + expectedCount +
+        " bytes of tile data; received " + buffer.length)
+      }
+      let tileIndex = 0
+      const array: number[] = []
+      for (let i = 0; i < expectedCount; i += 4) {
+          array[tileIndex] = buffer.readUInt32LE(i)
+          tileIndex++
+      }
+      return array
+    }
+
+    static decode(obj: { encoding: string, data: string }, size: number) {
       const { encoding, data } = obj
       if (encoding == 'base64') {
-         return Buffer.from(data.trim(), 'base64')
+         return TiledParser.unpackTileBytes(Buffer.from(data.trim(), 'base64'), size)
       }
       else if (encoding == 'csv') {
         return data.trim().split(',').map(x => +x)
@@ -153,9 +177,16 @@ export class TiledParser {
         const group = json.map.group
 
         const recursiveObjectGroup = (obj) => {
-          const { objectgroup, group } = obj
+          const { objectgroup, group, layer } = obj
           if (objectgroup) {
-            this.objectgroups.set(+objectgroup._attributes.id, objectgroup)
+            TiledParser.toArray(objectgroup).forEach((val: any) => {
+              this.objectgroups.set(+val._attributes.id, val)
+            })   
+          }
+          if (layer) {
+            TiledParser.toArray(layer).forEach((val: any) => {
+              this.layers.set(+val._attributes.id, val)
+            })
           }
           if (group) {
             recursiveObjectGroup(group)
@@ -169,20 +200,24 @@ export class TiledParser {
           for (let element of elements) {
             const { name } = element
             if (!['layer', 'group', 'imagelayer', 'objectgroup'].includes(name)) continue
-            const firstElement = element.elements?.[0]
-            const data = firstElement?.name == 'data' ? firstElement : undefined
+            const data = element.elements?.find(el => el.name == 'data')
             if (name == 'objectgroup') {
               element.object = this.objectgroups.get(+element.attributes.id)?.object
+            }
+            if (name == 'layer') {
+              element.layer = this.layers.get(+element.attributes.id)
             }
             const obj = {
               ...(TiledParser.transform(data) ?? {}),
               ...TiledParser.transform(element),
+              ...TiledParser.transform(element.layer),
               layers: recursiveLayer(element.elements),
               data: data ? data.elements[0].text : undefined,
               type: name == 'layer' ? 'tilelayer' : name
             }
             delete obj.elements
-            if (obj.data) obj.data = TiledParser.decode(obj)
+            delete obj.layer
+            if (obj.data) obj.data = TiledParser.decode(obj, obj.width * obj.height)
             array.push(obj)
           }
           return array
@@ -215,9 +250,13 @@ export class TiledParser {
       const ret = {
         ...TiledParser.transform(tileset),
         image: TiledParser.transform(tileset.image),
-        tiles: TiledParser.toArray<TilesetTile>(tileset.tile).map(tile => {
-          const obj = TiledParser.transform(tile)
-          return obj
+        tiles: TiledParser.toArray<TilesetTile>(tileset.tile).map((tile: any) => {
+          const ret = TiledParser.transform(tile)
+          if (tile.animation) {
+            ret.animations = TiledParser.toArray(tile.animation.frame).map(TiledParser.transform)
+          }
+          delete ret.animation
+          return ret
         })
       } 
 

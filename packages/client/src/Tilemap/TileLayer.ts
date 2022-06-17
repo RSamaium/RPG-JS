@@ -1,6 +1,6 @@
 import Tile from './Tile';
 import { CompositeRectTileLayer, pixi_tilemap, POINT_STRUCT_SIZE } from 'pixi-tilemap'
-import { Layer, TiledLayer, TiledTileset } from '@rpgjs/tiled';
+import { Layer, TiledLayer, TiledTileset, Tile as TileClass } from '@rpgjs/tiled';
 import TileSet from './TileSet';
 import TileMap from '.';
 
@@ -16,8 +16,9 @@ export interface RpgRectTileLayer extends CompositeRectTileLayer {
 
 export default class TileLayer extends PIXI.Container {
     private tilemap: RpgRectTileLayer
-    properties: any
-    private tiles: any = {}
+    properties: any = {}
+    private _tiles: any = {}
+    tiles: (TileClass | null)[]
 
     static findTileSet(gid: number, tileSets: TileSet[]) {
         let tileset: TileSet | undefined
@@ -32,8 +33,7 @@ export default class TileLayer extends PIXI.Container {
 
     constructor(private layer: Layer, private tileSets: TileSet[], private map: TileMap) {
         super();
-        this.alpha = layer.opacity;
-        Object.assign(this, layer);
+       // this.alpha = layer.opacity;
     }
 
     /** @internal */
@@ -46,13 +46,11 @@ export default class TileLayer extends PIXI.Container {
         }
         const i = x + y * width;
         const tiledTile = this.layer.tiles[i]
-        if (!(
-            tiledTile &&
-            tiledTile.id !== 0
-        ))  return
+        
+        if (!tiledTile || (tiledTile && tiledTile.gid == 0)) return
 
         const tileset = TileLayer.findTileSet(
-            tiledTile.id,
+            tiledTile.gid,
             this.tileSets
         )
             
@@ -76,8 +74,8 @@ export default class TileLayer extends PIXI.Container {
         tile._y = y;
 
         if (tileset.tileoffset) {
-            tile.x += tileset.tileoffset.x;
-            tile.y += tileset.tileoffset.y;
+            tile.x += tileset.tileoffset.x ?? 0;
+            tile.y += tileset.tileoffset.y ?? 0;
         }
 
         if (filter) {
@@ -92,7 +90,7 @@ export default class TileLayer extends PIXI.Container {
         const { tilewidth, tileheight } = this.map.getData()
         x = Math.floor(x / tilewidth)
         y = Math.floor(y / tileheight)
-        const oldTile: Tile = this.tiles[x + ';' + y]
+        const oldTile: Tile = this._tiles[x + ';' + y]
         const newTile = this.createTile(x, y)
         if (!oldTile && newTile) {
             this.addFrame(newTile, x, y)
@@ -102,7 +100,7 @@ export default class TileLayer extends PIXI.Container {
                 const bufComposite: RpgRectTileLayer = new pixi_tilemap.CompositeRectTileLayer() as RpgRectTileLayer
                 const frame = bufComposite.addFrame(newTile.texture, newTile.x, newTile.y)
                 newTile.setAnimation(frame)
-                this.tiles[x + ';' + y] = newTile
+                this._tiles[x + ';' + y] = newTile
                 const pointsBufComposite = bufComposite.children[0].pointsBuf
                 // Change Texture (=0, 1 and 7, rotate (=4), animX (=5), animY (=6))
                 ;[0, 1, 4, 5, 6, 7].forEach((i) => {
@@ -111,7 +109,7 @@ export default class TileLayer extends PIXI.Container {
                 this.tilemap.children[0].modificationMarker = 0
             }
             else {
-                delete this.tiles[x + ';' + y]
+                delete this._tiles[x + ';' + y]
                 if (this.pointsBuf) this.pointsBuf.splice(oldTile.pointsBufIndex, POINT_STRUCT_SIZE)
             }
         }
@@ -130,7 +128,7 @@ export default class TileLayer extends PIXI.Container {
         if (!pb) return null
         tile.pointsBufIndex = pb.length - POINT_STRUCT_SIZE
         tile.setAnimation(frame)
-        this.tiles[x + ';' + y] = tile
+        this._tiles[x + ';' + y] = tile
     }
 
     /** @internal */

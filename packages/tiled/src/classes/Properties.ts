@@ -9,38 +9,29 @@ export class TiledProperties {
 
     constructor(data: any) {
         if (data.properties) {
-            for (let prop of data.properties) {
-                if (!prop) continue
-                this._properties.set(prop.name, prop)
+            for (let key in data.properties) {
+                this._properties.set(key, data.properties[key])
             }
         }
     }
 
     getProperty<P, D = undefined>(name: string, defaultValue?: D): P | D {
-        const prop = this._properties.get(name)
-        if (prop) {
-            switch (prop.type) {
-                case 'int':
-                    return +prop.value as any
-                case 'bool':
-                    return prop.value == 'true' ? true : false as any
-            }
+        const val = this._properties.get(name)
+        if (val === undefined) {
+            return defaultValue as D
         }
-        return defaultValue as D
+        return val as any
     }
 
     getProperties() {
         const obj = {}
-        this._properties.forEach(( { value, name }: any) => {
+        this._properties.forEach(( value: any, name: string) => {
             obj[name] = value
         })
         return obj
     }
 
     setProperty<T>(name: string, value: T) {
-        this._properties.set(name, {
-            value,
-            name
-        })
+        this._properties.set(name, value as any)
     }
  }

@@ -33,6 +33,8 @@ export class RpgServerEngine {
      * */
     public globalConfig: any = {}
 
+    public assetsPath: string = 'assets'
+
     /**
      * Combat formulas
      * 
@@ -76,6 +78,7 @@ export class RpgServerEngine {
         }
 
         this.globalConfig = this.inputOptions.globalConfig
+        if (this.globalConfig.assetsPath) this.assetsPath = this.globalConfig.assetsPath
 
         if (!this.inputOptions.maps) this.inputOptions.maps = []
         if (!this.inputOptions.worldMaps) this.inputOptions.worldMaps = []

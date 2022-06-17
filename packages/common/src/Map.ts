@@ -85,6 +85,7 @@ export class RpgCommonMap {
     } = {}
 
     private worldMapParent: RpgCommonWorldMaps | undefined
+    private tilesets: Tileset[] = []
 
     /** 
      * Retrieves the X position of the map in the world (0 if no world assigned)
@@ -132,11 +133,20 @@ export class RpgCommonMap {
         this.tileWidth = data.tilewidth 
         this.tileHeight = data.tileheight
         this.height = data.height
-        const tilesets = data.tilesets.map(tileset => new Tileset(tileset))
-        this.layers = data.layers.map(layer => new Layer(layer, tilesets))
+        this.tilesets = data.tilesets.map(tileset => new Tileset(tileset))
+        this.mapLayers(data.layers)
         this.grid = new VirtualGrid(this.width, this.tileWidth, this.tileHeight).zoom(10)
         this.gridShapes = new VirtualGrid(this.width, this.tileWidth, this.tileHeight).zoom(20)
         this._extractShapes()
+    }
+
+    private mapLayers(layers: TiledLayer[]) {
+        for (let layer of layers) {
+            this.layers.push(new Layer(layer, this.tilesets))
+            if (layer.layers) {
+                this.mapLayers(layer.layers)
+            }
+        }
     }
 
     getData() {
@@ -227,9 +237,9 @@ export class RpgCommonMap {
      * @returns {RpgShape}
      * @memberof Map
      */
-    createShape(obj: TiledObjectClass): RpgShape {
+    createShape(obj: HitObject): RpgShape {
         const id = obj.name = (obj.name || generateUID()) as string
-        const shape = new RpgShape(obj)
+        const shape = new RpgShape(obj as TiledObjectClass)
         this.shapes[id] = shape
         if (!shape.isShapePosition()) {
             this.gridShapes.insertInCells(id, shape.getSizeBox(this.tileWidth))
@@ -284,7 +294,7 @@ export class RpgCommonMap {
         const startsFind = this.getShapes().filter(filter)
         if (startsFind.length) {
             const start = startsFind[random(0, startsFind.length-1)]
-            return { x: start.hitbox.x, y: start.hitbox.y, z: start.getProperty<number, number>('z', 0) * this.zTileHeight || 0 }
+            return { x: start.hitbox.x, y: start.hitbox.y, z: start.properties.z * this.zTileHeight || 0 }
         }
         return null
     }
@@ -293,7 +303,7 @@ export class RpgCommonMap {
         x: number,
         y: number,
         tiles: {
-            [tileIndex: number]: object
+            [tileIndex: number]: Tile
         }
     } {
         const tileIndex = this.getTileIndex(x, y)
@@ -307,8 +317,16 @@ export class RpgCommonMap {
         }
         for (let layer of this.layers) {
             if (!fnFilter(layer)) continue
-            const data = layer.data as number[]
-            tilesEdited[layer.name] = tileInfo
+            const data = layer.tiles
+            let tile
+            if (tileInfo.gid) {
+                tile = layer.createTile(tileInfo.gid)
+            }
+            for (let key in tileInfo) {
+                if (key == 'gid') continue
+                tile[key] = tileInfo[key]
+            }
+            tilesEdited[layer.name] = tile
             data[tileIndex] = tilesEdited[layer.name]
         }
         return {
@@ -355,7 +373,7 @@ export class RpgCommonMap {
                 continue
             }
             const _tile: Tile | undefined = layer.getTileByIndex(tileIndex)
-            if (!_tile) {
+            if ((!_tile) || (_tile && _tile.gid == 0)) {
                 continue
             }
             const zLayer = layer.getProperty<number>('z') || 0
@@ -391,7 +409,7 @@ export class RpgCommonMap {
         const hasCollision = getLastTile.getProperty<boolean>('collision')
         const isOverlay = getLastTile.getProperty<boolean>('overlay')
         const isClimbable = getLastTile.getProperty<boolean>('climb')
-        const objectGroups = getLastTile.objects as TiledObjectClass[]
+        const objectGroups = getLastTile.objects as TiledObjectClass[] ?? []
         return {
             tiles,
             hasCollision,
