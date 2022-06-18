@@ -1,10 +1,10 @@
 import { TiledObject } from "./Objects";
-import { TiledChunk, TiledCompression, TiledEncoding, TiledProperty } from "./Types";
+import { TiledChunk, TiledCompression, TiledEncoding, TiledImage, TiledProperty } from "./Types";
 
 export enum TiledLayerType {
     Tile = 'tilelayer',
     ObjectGroup = 'objectgroup',
-    Image = 'image',
+    Image = 'imagelayer',
     Group = 'group'
 }
 
@@ -16,7 +16,7 @@ export interface TiledLayer {
     /**
      * Image used by this layer. imagelayer only.
      */
-    image: string;
+    image: TiledImage;
     /**
      * Array of unsigned int (GIDs) or base64-encoded data. tilelayer only.
      */
@@ -109,4 +109,11 @@ export interface TiledLayer {
     objects: TiledObject[];
 
     layers: TiledLayer[]
+
+    parallaxx: number
+    parallaxy: number
+    repeatx: number
+    repeaty: number
+    locked: boolean
+    color: string
  }

@@ -1,15 +1,18 @@
 import { TiledLayer } from "../types/Layer";
+import { TiledObjectClass } from "./Object";
 import { TiledProperties } from "./Properties";
 import { Tile } from "./Tile";
 import { Tileset } from "./Tileset";
 
 export class Layer extends TiledProperties {
     tiles: (Tile | undefined)[] = []
+    objects: TiledObjectClass[]
 
     constructor(layer: TiledLayer, private tilesets: Tileset[]) {
         super(layer)
         Object.assign(this, layer)
         this.propertiesTiles()
+        this.mapObjects()
     }
 
     createTile(gid: number): Tile | undefined{
@@ -37,6 +40,12 @@ export class Layer extends TiledProperties {
         }
     }
 
+    private mapObjects() {
+        if (this.objects) {
+            this.objects = this.objects.map(object => new TiledObjectClass(object))
+        }
+    }
+
     getTileByIndex(tileIndex: number): Tile | undefined {
         return this.tiles[tileIndex]
     }
@@ -53,4 +62,6 @@ export class Layer extends TiledProperties {
     }
 }
 
-export interface Layer extends TiledLayer {}
+export interface Layer extends TiledLayer {
+    objects: TiledObjectClass[]
+}

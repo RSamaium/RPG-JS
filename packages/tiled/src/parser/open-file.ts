@@ -46,7 +46,7 @@ export class TiledParserFile {
         else {
             const filepath = this.basePath + '/' + file
             fs.readFile(filepath, 'utf-8', (err, data) => {
-                if (err) return loadContent(null)
+                if (err) return cb(null, err)
                 loadContent(data)
             })
             return
@@ -56,13 +56,14 @@ export class TiledParserFile {
     }
 
     parseFile(cb: Function) {   
-        this._parseFile<TiledMap>(this.file, 'map', (map) => {
-            if (!map) return cb(null)
+        this._parseFile<TiledMap>(this.file, 'map', (map, err) => {
+            let hasError = false
+            if (err) return cb(null, err)
             if (map.tilesets) {
                 const parseTileset: TiledTileset[] = []
                 const finish = () => {
                     loadAll++
-                    if (loadAll == map.tilesets.length) {
+                    if (loadAll == map.tilesets.length && !hasError) {
                         map.tilesets = parseTileset
                         cb(map)
                     }
@@ -75,7 +76,11 @@ export class TiledParserFile {
                         finish()
                         continue
                     }
-                    this._parseFile<TiledTileset>(tileset.source, 'tileset', (result) => {
+                    this._parseFile<TiledTileset>(tileset.source, 'tileset', (result, err) => {
+                        if (err) {
+                            hasError = true
+                            return cb(null, err)
+                        }
                         parseTileset[i] = {
                             ...result,
                             firstgid: tileset.firstgid
@@ -90,9 +95,9 @@ export class TiledParserFile {
 
     parseFilePromise(): Promise<TiledMap> {
         return new Promise((resolve, reject) => {
-            this.parseFile((ret) => {
+            this.parseFile((ret, err) => {
                 if (ret) resolve(ret)
-                else reject()
+                else reject(err)
             })
         })
     }

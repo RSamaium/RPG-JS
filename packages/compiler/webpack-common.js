@@ -6,7 +6,10 @@ module.exports = function (dirname) {
         use: [{
             loader: require.resolve('file-loader'),
             options: {
-                outputPath: 'maps',
+                outputPath: 'assets',
+                publicPath(url) {
+                    return url.replace('assets/', '')
+                },
                 name: '[contenthash].[name].[ext]',
                 esModule: false
             }

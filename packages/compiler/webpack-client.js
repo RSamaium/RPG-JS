@@ -130,7 +130,7 @@ module.exports = function(dirname, extend = {}, envsClient = null) {
                 test: /\.(png|jpe?g|gif)$/i,
                 loader: require.resolve('file-loader'),
                 options: {
-                    outputPath: 'images',
+                    outputPath: 'assets',
                     esModule: false
                 }
             },
@@ -138,7 +138,7 @@ module.exports = function(dirname, extend = {}, envsClient = null) {
                 test: /\.(woff(2)?|ttf|eot|svg)$/i,
                 loader: require.resolve('file-loader'),
                 options: {
-                    outputPath: 'fonts',
+                    outputPath: 'assets',
                     esModule: false
                 }
             },
@@ -146,7 +146,7 @@ module.exports = function(dirname, extend = {}, envsClient = null) {
                 test: /\.zip$/i,
                 loader: require.resolve('file-loader'),
                 options: {
-                    outputPath: 'bundles',
+                    outputPath: 'assets',
                     esModule: false
                 }
             },
@@ -154,7 +154,7 @@ module.exports = function(dirname, extend = {}, envsClient = null) {
                 test: /\.(wav|mp3|mpeg|opus|ogg|oga|aac|caf|m4a|m4b|mp4|weba|webm|dolby|flac)$/i,
                 loader: require.resolve('file-loader'),
                 options: {
-                    outputPath: 'sounds',
+                    outputPath: 'assets',
                     esModule: false
                 }
             },

@@ -1,7 +1,7 @@
 import { TiledObject } from "../types/Objects";
-import { TiledProperties } from "./Properties";
+import { TileGid } from "./Gid";
 
-export class TiledObjectClass extends TiledProperties {
+export class TiledObjectClass extends TileGid {
     constructor(object: TiledObject) {
         super(object)
         Object.assign(this, object)

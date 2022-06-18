@@ -6,8 +6,10 @@ const generateModule = require('./module')
 const webpack = require('webpack')
 const webpackDefaultConfig = require('../../index')
 const fs = require('fs')
+const chokidar = require('chokidar')
+const path = require('path')
 
-const openWebpackConfigFile = () => {
+const openWebpackConfigFile = async () => {
   const cwd = process.cwd()
   let webpackConfig
   try {
@@ -17,6 +19,32 @@ const openWebpackConfigFile = () => {
   } catch (err) {
     if (err.code != 'ENOENT') console.log(err)
   }
+
+  await fs.promises.mkdir(`${cwd}/dist/server/assets`, { recursive: true })
+  await fs.promises.mkdir(`${cwd}/dist/client/assets`, { recursive: true })
+
+  const watcher = chokidar.watch(cwd, {
+    ignored: (path) => {
+      return path.includes('node_modules') || path.includes('dist')
+    }
+  });
+
+  const toAssetsDirectory = (srcPath, side) => {
+    fs.promises.copyFile(srcPath, `${cwd}/dist/${side}/assets/${path.basename(srcPath)}`)
+  }
+  
+  watcher.on('all', (event, _path) => {
+    if (event == 'add' || event == 'change') {
+        const ext = path.extname(_path)
+        if (['.png', '.ogg', '.jpg', '.jpeg', '.gif', '.mp3'].includes(ext))  {
+          toAssetsDirectory(_path, 'client')
+        }
+        if (['.tsx', '.tmx'].includes(ext))  {
+          toAssetsDirectory(_path, 'server')
+        }
+    }
+  })
+
   return webpackConfig || webpackDefaultConfig(cwd)
 }
 
@@ -41,9 +69,9 @@ yargs(hideBin(process.argv))
     }
     generateModule(directory)
   })
-  .command('dev', 'Run webpack in local development', (yargs) => {
+  .command('dev', 'Run webpack in local development', async (yargs) => {
     console.log('Webpack starting...')
-    const compiler = webpack(openWebpackConfigFile())
+    const compiler = webpack(await openWebpackConfigFile())
     compiler.watch({
       aggregateTimeout: 300,
       poll: undefined
@@ -54,9 +82,9 @@ yargs(hideBin(process.argv))
       }
     })
   })
-  .command('build', 'Build for production', (yargs) => {
+  .command('build', 'Build for production', async (yargs) => {
     console.log('Webpack building...')
-    const compiler = webpack(openWebpackConfigFile())
+    const compiler = webpack(await openWebpackConfigFile())
     compiler.run((err) => {
       if (err) {
         console.error(err)

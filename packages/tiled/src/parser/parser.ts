@@ -7,7 +7,6 @@ import { TiledProperty } from '../types/Types'
 import { Buffer } from 'buffer/'
 
 export class TiledParser {
-    private objectgroups: Map<number, any> = new Map()
     private layers: Map<number, any> = new Map()
 
     constructor(private xml: string) {}
@@ -34,20 +33,6 @@ export class TiledParser {
       if (!prop) return []
       if (!Array.isArray(prop)) return [prop]
       return prop
-    }
-
-    static flatElements(obj, attr = {}) {
-      const { elements } = obj
-      if (elements) {
-        for (let element of elements) {
-          attr = {
-            ...attr,
-            [element.name]: TiledParser.transform(element),
-            ...TiledParser.flatElements(element, attr)
-          }
-        }
-      }
-      return attr
     }
 
     static transform = (obj) => {
@@ -84,11 +69,16 @@ export class TiledParser {
             'rotation',
             'gid',
             'tileid',
-            'duration'
+            'duration',
+            'parallaxx',
+            'parallaxy',
+            'repeatx',
+            'repeaty'
           ]),
           ...TiledParser.propToBool(attr, [
             'visible',
-            'infinite'
+            'infinite',
+            'locked'
           ])
       }
       if (newObj.properties) {
@@ -129,6 +119,9 @@ export class TiledParser {
       }
       if (newObj.ellipse) {
         newObj.ellipse = true
+      }
+      if (newObj.image) {
+        newObj.image = TiledParser.transform(newObj.image)
       }
       const objectgroup = newObj.object || newObj.objectgroup?.object
       if (objectgroup) {
@@ -177,17 +170,17 @@ export class TiledParser {
         const group = json.map.group
 
         const recursiveObjectGroup = (obj) => {
-          const { objectgroup, group, layer } = obj
-          if (objectgroup) {
-            TiledParser.toArray(objectgroup).forEach((val: any) => {
-              this.objectgroups.set(+val._attributes.id, val)
-            })   
-          }
-          if (layer) {
-            TiledParser.toArray(layer).forEach((val: any) => {
+          const { objectgroup, group, layer, imagelayer } = obj
+          const setLayer = (type) => {
+            if (!type) return
+            TiledParser.toArray(type).forEach((val: any) => {
               this.layers.set(+val._attributes.id, val)
             })
           }
+          setLayer(objectgroup)
+          setLayer(layer)
+          setLayer(group)
+          setLayer(imagelayer)
           if (group) {
             recursiveObjectGroup(group)
           }
@@ -201,12 +194,7 @@ export class TiledParser {
             const { name } = element
             if (!['layer', 'group', 'imagelayer', 'objectgroup'].includes(name)) continue
             const data = element.elements?.find(el => el.name == 'data')
-            if (name == 'objectgroup') {
-              element.object = this.objectgroups.get(+element.attributes.id)?.object
-            }
-            if (name == 'layer') {
-              element.layer = this.layers.get(+element.attributes.id)
-            }
+            element.layer = this.layers.get(+element.attributes.id)
             const obj = {
               ...(TiledParser.transform(data) ?? {}),
               ...TiledParser.transform(element),
@@ -239,6 +227,7 @@ export class TiledParser {
         delete ret.layer
         delete ret.tileset
         delete ret.group
+        delete ret.imagelayer
 
         return ret
     }

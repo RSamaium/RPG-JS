@@ -7,6 +7,7 @@ const NodemonPlugin = require('nodemon-webpack-plugin')
 const resolveLoader = require('./loaders/resolve')
 const FriendlyErrorsWebpackPlugin = require('friendly-errors-webpack-plugin')
 const { default: WatchExternalFilesPlugin } = require('webpack-watch-files-plugin')
+const CopyWebpackPlugin = require('copy-webpack-plugin')
 
 const mode = process.env.NODE_ENV || 'development'
 const prod = mode === 'production'
@@ -72,12 +73,6 @@ module.exports = function(dirname, extend = {}) {
         },
         plugins: [
             new FriendlyErrorsWebpackPlugin(),
-            new WatchExternalFilesPlugin({
-                files: [
-                  './src/**/*.tmx',
-                  './src/**/*.tsx'
-                ]
-            }),
             new NodemonPlugin({
                 script: './dist/server/index.js',
                 watch: path.resolve('./dist/server')

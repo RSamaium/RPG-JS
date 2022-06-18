@@ -1,6 +1,7 @@
 import { TiledWorld, TiledWorldMap } from './types/WorldMaps'
 import { TiledTileset } from './types/Tileset'
 import { TiledObject } from './types/Objects'
+import { TiledImage } from './types/Types'
 import { TiledLayer, TiledLayerType } from './types/Layer'
 import { TiledText } from './types/Text'
 import { TiledMap } from './types/Map'
@@ -29,5 +30,6 @@ export {
     Layer,
     Tileset,
     TiledObjectClass,
-    TiledParserFile
+    TiledParserFile,
+    TiledImage
 }
