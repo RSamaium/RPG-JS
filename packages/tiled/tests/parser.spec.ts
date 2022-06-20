@@ -1,6 +1,6 @@
 import { TiledParser } from '../src/parser/parser'
 import { TiledLayerType } from '../src/types/Layer'
-import { xml, xmlGroup, xmlImage, xmlObject, xmlProperties, xmlTile } from './data'
+import { xml, xmlDeepProperties, xmlGroup, xmlImage, xmlObject, xmlProperties, xmlText, xmlTile } from './data'
 
 
 test('propToNumber() method', () => {
@@ -65,6 +65,15 @@ test('parseMap() method - test properties', () => {
     expect(layer.objects[0].properties).toMatchObject({ objectprop: 0 })
 })
 
+test('parseMap() method - test properties', () => {
+    const parser = new TiledParser(xmlDeepProperties)
+    const map = parser.parseMap()
+    const properties: any = map.properties
+    expect(properties.test).toHaveProperty('hp', 5)
+    expect(properties.test).toHaveProperty('mode', 'scenario')
+    expect(properties.test).toHaveProperty('_classname', 'Event')
+})
+
 test('parseMap() method - test group', () => {
     const parser = new TiledParser(xmlGroup)
     const map = parser.parseMap()
@@ -93,8 +102,11 @@ test('parseMap() method - test tileset', () => {
     expect(tileset).toHaveProperty('source', '[Base]BaseChip_pipo.tsx')
 })
 
-test('parseMap() method - test tile flip', () => {
-    const parser = new TiledParser(xmlTile)
+test('parseMap() method - test text object', () => {
+    const parser = new TiledParser(xmlText)
     const map = parser.parseMap()
-    const layer = map.layers[0]
+    const layer = map.layers[0].objects[0]
+    expect(layer).toHaveProperty('text')
+    expect(layer.text).toHaveProperty('text', 'Hello World')
+    expect(layer.text).toHaveProperty('wrap', true)
 })

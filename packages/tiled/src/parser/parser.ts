@@ -73,12 +73,19 @@ export class TiledParser {
             'parallaxx',
             'parallaxy',
             'repeatx',
-            'repeaty'
+            'repeaty',
+            'pixelsize'
           ]),
           ...TiledParser.propToBool(attr, [
             'visible',
             'infinite',
-            'locked'
+            'locked',
+            'bold',
+            'italic',
+            'kerning',
+            'strikeout',
+            'underline',
+            'wrap'
           ])
       }
       if (newObj.properties) {
@@ -89,12 +96,20 @@ export class TiledParser {
           if (!attr) continue
           let val
           switch (attr.type) {
+            case 'object':
+            case 'float':
             case 'int':
                 val = +attr.value
                 break
             case 'bool':
                 val = attr.value == 'true' ? true : false
                 break
+            case 'class':
+                val =  {
+                  ...(TiledParser.transform(prop)?.properties ?? {}),
+                  _classname: attr.propertytype
+                }
+              break
             default:
                 val = attr.value
           }
@@ -119,6 +134,13 @@ export class TiledParser {
       }
       if (newObj.ellipse) {
         newObj.ellipse = true
+      }
+      if (newObj.text) {
+        newObj.text = {
+          text: newObj.text._text,
+          ...TiledParser.transform(newObj.text)
+        }
+        delete newObj.text._text
       }
       if (newObj.image) {
         newObj.image = TiledParser.transform(newObj.image)

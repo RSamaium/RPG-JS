@@ -4,7 +4,7 @@ import { RpgShape } from './Shape'
 import { Hit } from './Hit'
 import { VirtualGrid } from './VirtualGrid'
 import { RpgCommonWorldMaps } from './WorldMaps'
-import { TiledLayer, TiledLayerType, TiledMap, Layer, Tileset, Tile, TiledObject, TiledObjectClass } from '@rpgjs/tiled'
+import { TiledLayer, TiledLayerType, TiledMap, Layer, Tileset, Tile, TiledObject, TiledObjectClass, MapClass } from '@rpgjs/tiled'
 
 const buffer = new Map()
 const bufferClient = new Map()
@@ -29,7 +29,7 @@ export interface LayerInfo {
 }
 
 
-export class RpgCommonMap {
+export class RpgCommonMap extends MapClass {
     /** 
      * @title map id
      * @readonly
@@ -77,7 +77,6 @@ export class RpgCommonMap {
      * @memberof Map
      * @memberof RpgSceneMap
      * */
-    layers: Layer[] = []
     
     /** @internal */
     shapes: {
@@ -85,7 +84,6 @@ export class RpgCommonMap {
     } = {}
 
     private worldMapParent: RpgCommonWorldMaps | undefined
-    private tilesets: Tileset[] = []
 
     /** 
      * Retrieves the X position of the map in the world (0 if no world assigned)
@@ -128,25 +126,13 @@ export class RpgCommonMap {
     }
 
     load(data: TiledMap) {
+        super.load(data)
         this.data = data
-        this.width = data.width
         this.tileWidth = data.tilewidth 
         this.tileHeight = data.tileheight
-        this.height = data.height
-        this.tilesets = data.tilesets.map(tileset => new Tileset(tileset))
-        this.mapLayers(data.layers)
         this.grid = new VirtualGrid(this.width, this.tileWidth, this.tileHeight).zoom(10)
         this.gridShapes = new VirtualGrid(this.width, this.tileWidth, this.tileHeight).zoom(20)
-        this._extractShapes()
-    }
-
-    private mapLayers(layers: TiledLayer[]) {
-        for (let layer of layers) {
-            this.layers.push(new Layer(layer, this.tilesets))
-            if (layer.layers) {
-                this.mapLayers(layer.layers)
-            }
-        }
+        this.getAllObjects().forEach(this.createShape.bind(this))
     }
 
     getData() {
@@ -163,9 +149,6 @@ export class RpgCommonMap {
      * @memberof Map
      * @memberof RpgSceneMap
      * */
-    get widthPx(): number {
-        return this.width * this.tileWidth
-    }
 
     /** 
      * @title Height of the map in pixels
@@ -174,9 +157,6 @@ export class RpgCommonMap {
      * @memberof Map
      * @memberof RpgSceneMap
      * */
-    get heightPx(): number {
-        return this.height * this.tileHeight
-    }
 
     /** 
      * @title The depth of the map in pixels (this is the height of a tile ;))
@@ -187,15 +167,6 @@ export class RpgCommonMap {
      * */
     get zTileHeight(): number {
         return this.tileHeight
-    }
-
-    _extractShapes() {
-        for (let layer of this.layers) {
-            if (!layer.objects) continue
-            for (let obj of layer.objects) {
-                this.createShape(new TiledObjectClass(obj))
-            }
-        }
     }
 
     /**
@@ -212,9 +183,7 @@ export class RpgCommonMap {
      * @memberof Map
      * @memberof RpgSceneMap
      */
-    getLayerByName(name: string): TiledLayer | undefined {
-        return this.layers.find(layer => layer.name == name)
-    }
+    
 
     /**
      * Create a shape dynamically on the map
@@ -347,9 +316,7 @@ export class RpgCommonMap {
      * @memberof Map
      * @memberof RpgSceneMap
      */
-    getTileIndex(x: number, y: number, [z] = [0]): number {
-        return this.width * Math.floor((y - z) / this.tileHeight) + Math.floor(x / this.tileWidth)
-    }
+    
 
     /**
      * Retrieves tiles according to its index
@@ -437,15 +404,7 @@ export class RpgCommonMap {
      * @memberof Map
      * @memberof RpgSceneMap
      */
-    getTileOriginPosition(x: number, y: number): {
-        x: number
-        y: number
-    } {
-        return { 
-            x: Math.floor(x / this.tileWidth) * this.tileWidth,
-            y: Math.floor(y / this.tileHeight) * this.tileHeight
-        }
-    }
+    
 
     /**
      * Recover tiles according to a position

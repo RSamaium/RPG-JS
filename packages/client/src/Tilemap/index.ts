@@ -38,6 +38,7 @@ export default class TileMap extends PIXI.Container {
         super()
         this.x = 0
         this.y = 0
+        console.log(data)
         this.create(data)
     }
 
@@ -183,6 +184,11 @@ export default class TileMap extends PIXI.Container {
                     break;
                 }
                 case TiledLayerType.ObjectGroup: {
+                    for (let object of layerData.objects) {
+                        if (object.gid) {
+                            console.log(object.gid)
+                        }
+                    }
                    // this.defaultLayer = this.createEventLayer(layerData.name)
                     break;
                 }

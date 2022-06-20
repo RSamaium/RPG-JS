@@ -5394,11 +5394,36 @@ const tileset = `<?xml version="1.0" encoding="UTF-8"?>
 
 const xmlObjectImage = `<?xml version="1.0" encoding="UTF-8"?>
 <map version="1.8" tiledversion="1.8.2" orientation="orthogonal" renderorder="right-down" width="10" height="10" tilewidth="32" tileheight="32" infinite="0" nextlayerid="11" nextobjectid="4">
- <tileset firstgid="1" source="RPGJS/packages/sample/src/modules/main/server/tmx/[Base]BaseChip_pipo.tsx"/>
+ <tileset firstgid="1" source="[Base]BaseChip_pipo.tsx"/>
  <objectgroup id="10" name="Object Layer 1">
   <object id="3" gid="2147483649" x="134.631" y="85.2599" width="32" height="32" rotation="296.503"/>
  </objectgroup>
 </map>
+`
+
+const xmlText= `<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.8" tiledversion="1.8.2" orientation="orthogonal" renderorder="right-down" width="10" height="10" tilewidth="32" tileheight="32" infinite="0" nextlayerid="12" nextobjectid="5">
+ <objectgroup id="11" name="Object Layer 1">
+  <object id="4" x="109.781" y="133.5" width="91.4375" height="19">
+   <text wrap="1">Hello World</text>
+  </object>
+ </objectgroup>
+</map>
+`
+
+const xmlDeepProperties = `
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.8" tiledversion="1.8.2" orientation="orthogonal" renderorder="right-down" width="10" height="10" tilewidth="32" tileheight="32" infinite="0" nextlayerid="13" nextobjectid="5">
+ <properties>
+   <property name="test" type="class" propertytype="Event">
+    <properties>
+     <property name="hp" type="int" value="5"/>
+     <property name="mode" propertytype="Enum0" value="scenario"/>
+    </properties>
+   </property>
+  </properties>
+</map>
+
 `
 
 export {
@@ -5409,5 +5434,7 @@ export {
     xmlGroup,
     xmlImage,
     xmlTile,
-    tileset
+    tileset,
+    xmlText,
+    xmlDeepProperties
 }

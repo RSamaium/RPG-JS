@@ -27,10 +27,7 @@ export default class Tile extends PIXI.AnimatedSprite {
 
     constructor(
         private tile: TiledTileClass,
-        private tileSet: TileSet,
-        private horizontalFlip: boolean,
-        private verticalFlip: boolean,
-        private diagonalFlip: boolean
+        private tileSet: TileSet
     ) {
         super(Tile.getTextures(tile, tileSet));
 
@@ -56,18 +53,18 @@ export default class Tile extends PIXI.AnimatedSprite {
     }
 
     flip() {
-        if (this.horizontalFlip) {
+        if (this.tile.horizontalFlip) {
             this.anchor.x = 1;
             this.scale.x = -1;
         }
 
-        if (this.verticalFlip) {
+        if (this.tile.verticalFlip) {
             this.anchor.y = 1;
             this.scale.y = -1;
         }
 
-        if (this.diagonalFlip) {
-            if (this.horizontalFlip) {
+        if (this.tile.diagonalFlip) {
+            if (this.tile.horizontalFlip) {
                 this.anchor.x = 0;
                 this.scale.x = 1;
                 this.anchor.y = 1;
@@ -75,7 +72,7 @@ export default class Tile extends PIXI.AnimatedSprite {
 
                 this.rotation = PIXI.DEG_TO_RAD * 90;
             }
-            if (this.verticalFlip) {
+            if (this.tile.verticalFlip) {
                 this.anchor.x = 1;
                 this.scale.x = 1;
                 this.anchor.y = 0;
