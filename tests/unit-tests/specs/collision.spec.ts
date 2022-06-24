@@ -44,7 +44,7 @@ test('Get Tile collision (tilesCollision property)', async () => {
     await player.moveRoutes([ Move.right() ])
     expect(player.tilesCollision).toHaveLength(1)
     expect(player.tilesCollision[0].tileIndex).toBe(44)
-    expect(player.tilesCollision[0].tiles).toHaveLength(2)
+    expect(player.tilesCollision[0].tiles).toHaveLength(1)
 })
 
 test('Tile collision (position not changed)', async () => {

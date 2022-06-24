@@ -71,12 +71,18 @@ class HitClass {
 
     testPolyCollision(type: string, hit1: SAT, hit2: SAT): boolean {
         let collided = false
+        if (type == HitType.Box) {
+            if (hit1.pos.x < hit2.pos.x + hit2.w &&
+                hit1.pos.x + hit1.w > hit2.pos.x &&
+                hit1.pos.y < hit2.pos.y + hit2.h &&
+                hit1.h + hit1.pos.y > hit2.pos.y) {
+                return true
+             }
+            return false
+        }
         if (isInstanceOf(hit1, SAT.Box)) hit1 = hit1.toPolygon()
         if (isInstanceOf(hit2, SAT.Box)) hit2 = hit2.toPolygon()
         switch (type) {
-            case HitType.Box:
-                collided = SAT.testPolygonPolygon(hit1, hit2)
-            break
             case HitType.Circle:
                 collided = SAT.testPolygonCircle(hit1, hit2)
             break

@@ -177,7 +177,7 @@ export default class TileMap extends PIXI.Container {
                     break;
                 }
                 case TiledLayerType.Image: {
-                    const imageLayer = new ImageLayer(layerData)
+                    const imageLayer = new ImageLayer(layerData, this)
                     this.layers[layerData.name] = imageLayer
                     this.tilesLayer.addChild(imageLayer)
                     break;

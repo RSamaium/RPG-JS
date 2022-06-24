@@ -6,7 +6,7 @@ export class TiledProperties {
     } = {}
 
     constructor(data: any) {
-        this.properties = data.properties
+        this.properties = data.properties || {}
     }
 
     getProperty<P, D = undefined>(name: string, defaultValue?: D): P | D {

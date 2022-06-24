@@ -3,6 +3,7 @@ import { CompositeRectTileLayer, pixi_tilemap, POINT_STRUCT_SIZE } from 'pixi-ti
 import { Layer, TiledLayer, TiledTileset, Tile as TileClass } from '@rpgjs/tiled';
 import TileSet from './TileSet';
 import TileMap from '.';
+import { CommonLayer } from './CommonLayer';
 
 pixi_tilemap.Constant.maxTextures = 4
 pixi_tilemap.Constant.use32bitIndex = true
@@ -14,7 +15,7 @@ export interface RpgRectTileLayer extends CompositeRectTileLayer {
     }[]
 }
 
-export default class TileLayer extends PIXI.Container {
+export default class TileLayer extends CommonLayer {
     private tilemap: RpgRectTileLayer
     properties: any = {}
     private _tiles: any = {}
@@ -31,9 +32,8 @@ export default class TileLayer extends PIXI.Container {
         return tileset;
     }
 
-    constructor(private layer: Layer, private tileSets: TileSet[], private map: TileMap) {
-        super();
-       // this.alpha = layer.opacity;
+    constructor(layer: Layer, private tileSets: TileSet[], map: TileMap) {
+        super(layer, map)
     }
 
     /** @internal */

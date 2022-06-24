@@ -348,7 +348,7 @@ const tileset = `<?xml version="1.0" encoding="UTF-8"?>
  </tile>
  <tile id="40">
   <properties>
-   <property name="collision" type="bool" value="false"/>
+   <property name="collision" type="bool" value="true"/>
    <property name="z" type="int" value="0"/>
   </properties>
   <objectgroup draworder="index" id="2">

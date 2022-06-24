@@ -20,6 +20,15 @@ export interface TileInfo {
 }
 
 export class MapClass extends TiledProperties {
+    /** 
+     * @title Data of map
+     * @prop {object} [data]
+     * @readonly
+     * @memberof Map
+     * @memberof RpgSceneMap
+     * */
+     data: TiledMap
+
     tilesets: Tileset[] = []
     layers: Layer[] = []
     private tmpLayers: Layer[] = [] 
@@ -37,24 +46,94 @@ export class MapClass extends TiledProperties {
         this.layers = this.tmpLayers
         Reflect.deleteProperty(this, 'tmpLayers')
         this.setTilesIndex()
+        this.data = map
     }
+
+    /** 
+     * @title Width of the map in pixels
+     * @prop {number} [widthPx]
+     * @readonly
+     * @memberof Map
+     * @memberof RpgSceneMap
+     * */
 
     get widthPx(): number {
         return this.width * this.tilewidth
     }
 
+     /** 
+     * @title Height of the map in pixels
+     * @prop {number} [heightPx]
+     * @readonly
+     * @memberof Map
+     * @memberof RpgSceneMap
+     * */
     get heightPx(): number {
         return this.height * this.tileheight
     }
 
+    /** 
+     * @title The depth of the map in pixels (this is the height of a tile ;))
+     * @prop {number} map.zTileHeight
+     * @readonly
+     * @memberof Map
+     * @memberof RpgSceneMap
+     * */
+     get zTileHeight(): number {
+        return this.tileheight
+    }
+
+    /**
+     * Find a layer by name. Returns `undefined` is the layer is not found
+
+     * @title Get Layer by name
+     * @method map.getLayerByName(name)
+     * @param {string} name layer name
+     * @returns {LayerInfo | undefined}
+     * @example
+     *  ```ts
+     *  const tiles = map.getLayerByName(0, 0)
+     *  ```
+     * @memberof Map
+     * @memberof RpgSceneMap
+     */
     getLayerByName(name: string): TiledLayer | undefined {
         return this.layers.find(layer => layer.name == name)
     }
 
+     /**
+     * Get the tile index on the tileset
+     * 
+     * @title Get index of tile
+     * @method map.getTileIndex(x,y)
+     * @param {number} x Position X
+     * @param {number} x Position Y
+     * @returns {number}
+     * @memberof Map
+     * @memberof RpgSceneMap
+     */
     getTileIndex(x: number, y: number, [z] = [0]): number {
         return this.width * Math.floor((y - z) / this.tileheight) + Math.floor(x / this.tilewidth)
     }
 
+    /**
+     * Find the point of origin (top left) of a tile. Of course, its position depends on the size of the tile
+
+     * @title Get origin position of tile
+     * @method map.getTileOriginPosition(x,y)
+     * @param {number} x Position X
+     * @param {number} x Position Y
+     * @returns { {x: number, y: number }}
+     * @example
+     *  ```ts
+     *  // If the size of a tile is 32x32px
+     *  const position = map.getTileOriginPosition(35, 12)
+     *  console.log(position) // { x: 32, y: 0 }
+     *  ```
+     * @memberof Map
+     * @memberof RpgSceneMap
+     */
+    
     getTileOriginPosition(x: number, y: number): {
         x: number
         y: number
@@ -65,58 +144,47 @@ export class MapClass extends TiledProperties {
         }
     }
 
-   /* getTileByIndex(tileIndex: number, zPlayer: [number, number] = [0, 0]): TileInfo {
-        const tiles: Tile[] = []
-        for (let layer of this.layers) {
-            if (layer.type != TiledLayerType.Tile) {
-                continue
-            }
-            const _tile: Tile | undefined = layer.getTileByIndex(tileIndex)
-            if ((!_tile) || (_tile && _tile.gid == 0)) {
-                continue
-            }
-            const zLayer = layer.getProperty<number, number>('z', 0)
-            const zTile = _tile.getProperty<number, number>('z', 0)
-            let z = zLayer + zTile
-            let zIntersection
-            if (z !== undefined) {
-                const realZ = z * this.tileheight
-                zIntersection = intersection(zPlayer, [realZ, realZ + this.tileheight])
-            }
-            if (zIntersection !== undefined) {
-                if (zIntersection) tiles.push(_tile)
-            }
-            else {
-                tiles.push(_tile)
-            }
-        }
-        const getLastTile = tiles[tiles.length-1]
-        if (!getLastTile) {
-            return {
-                tiles,
-                hasCollision: true,
-                isOverlay: false,
-                objectGroups: [],
-                tileIndex
-            }
-        }
-        const hasCollision = getLastTile.getProperty<boolean>('collision')
-        const isOverlay = getLastTile.getProperty<boolean>('overlay')
-        const isClimbable = getLastTile.getProperty<boolean>('climb')
-        const objectGroups = getLastTile.objects as TiledObjectClass[] ?? []
-        return {
-            tiles,
-            hasCollision,
-            isOverlay,
-            objectGroups,
-            isClimbable,
-            tileIndex
-        }
-    }*/
+     /**
+     * Recover tiles according to a position
+
+     * @title Get tile by position
+     * @method map.getTileByPosition(x,y)
+     * @param {number} x Position X
+     * @param {number} x Position Y
+     * @returns {TileInfo}
+     * @example
+     *  ```ts
+     *  const tiles = map.getTileByPosition(0, 0)
+     *  ```
+     * @memberof Map
+     * @memberof RpgSceneMap
+     */
+      getTileByPosition(x: number, y: number, z: [number, number] = [0, 0]): TileInfo {
+        const tileIndex = this.getTileIndex(x, y, [z[0]])
+        return this.getTileByIndex(tileIndex, z)
+    }
+
+
+  
+    /**
+     * Retrieves tiles according to its index
+
+     * @title Get tile by index
+     * @method map.getTileByIndex(tileIndex)
+     * @param {number} tileIndex tile index
+     * @returns {TileInfo}
+     * @example
+     *  ```ts
+     *  const index = map.getTileIndex(0, 0)
+     *  const tiles = map.getTileByIndex(index)
+     *  ```
+     * @memberof Map
+     * @memberof RpgSceneMap
+     */
 
     getTileByIndex(tileIndex: number, zPlayer: [number, number] = [0, 0]): TileInfo {
-        const zA = Math.floor(zPlayer[0] / this.tileheight)
-        const zB = Math.floor(zPlayer[1] / this.tileheight)
+        const zA = Math.floor(zPlayer[0] / this.zTileHeight)
+        const zB = Math.floor(zPlayer[1] / this.zTileHeight)
         const indexInfo = this.tilesIndex.get(tileIndex)
         const defaultObject = {
             tiles: [],
@@ -140,6 +208,13 @@ export class MapClass extends TiledProperties {
             if (!current.objects) return prev
             return prev.concat(...current.objects)
         }, [])
+    }
+
+    getData() {
+        return {
+            ...this.data,
+            layers: this.layers
+        }
     }
 
     setTile(x: number, y: number, layerFilter: string | ((layer: any) => boolean), tileInfo: any): {

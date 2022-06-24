@@ -101,6 +101,7 @@ export class RpgClientEngine {
     private lastConnection: string = ''
     private lastScene: string = ''
     private matchMakerService: string | (() => MatchMakerResponse) | null = null
+    private assetsPath: string = 'assets'
 
     /**
      * Read objects synchronized with the server
@@ -150,6 +151,7 @@ export class RpgClientEngine {
 
         this.io = this.options.io
         this.globalConfig = this.options.globalConfig
+        if (this.globalConfig.assetsPath) this.assetsPath = this.globalConfig.assetsPath
         this.gameEngine.standalone = this.options.standalone
         this.gameEngine.renderer = this.renderer
         this.gameEngine.clientEngine = this
@@ -219,6 +221,10 @@ export class RpgClientEngine {
      */
     addSound(soundClass) {
         this.addResource(soundClass, _initSound)
+    }
+
+    getResourceUrl(source: string): string {
+        return this.assetsPath + '/' + Utils.basename(source)
     }
 
     /**

@@ -168,4 +168,24 @@ describe('Test Tiles Index', () => {
         expect(tileInfo.tiles).toHaveLength(1)
         expect(tileInfo.hasCollision).toBe(false)
     })
+
+    const xmlFlipTiled = `<?xml version="1.0" encoding="UTF-8"?>
+    <map version="1.8" tiledversion="1.8.6" orientation="orthogonal" renderorder="right-down" width="10" height="10" tilewidth="32" tileheight="32" infinite="0" nextlayerid="14" nextobjectid="8">
+     <tileset firstgid="1" source="[Base]BaseChip_pipo.tsx"/>
+     <layer id="12" name="Tile Layer 1" width="10" height="10">
+     <data encoding="base64">
+     KQAAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+    </data>
+    </layer>
+    </map>
+    `
+
+    test('Get Flip Tile', () => {
+        const map = getMap(xmlFlipTiled)
+        const tileInfo = map.getTileByIndex(0)
+        const tile = tileInfo.tiles[0]
+        expect(tile['_gid']).toBe(3221225513)
+        expect(tile.gid).toBe(41)
+        expect(tileInfo.hasCollision).toBe(true)
+    })
 })

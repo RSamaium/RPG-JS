@@ -1,4 +1,5 @@
 import { TiledLayer } from "../types/Layer";
+import { TileGid } from "./Gid";
 import { TiledObjectClass } from "./Object";
 import { TiledProperties } from "./Properties";
 import { Tile } from "./Tile";
@@ -17,11 +18,12 @@ export class Layer extends TiledProperties {
     }
 
     createTile(gid: number, tileIndex: number): Tile | undefined{
-        const tileset = Layer.findTileSet(gid, this.tilesets)
+        const realGid = TileGid.getRealGid(gid)
+        const tileset = Layer.findTileSet(realGid, this.tilesets)
         if (!tileset) {
             return undefined
         }
-        const tile = tileset.getTile(gid - tileset.firstgid)
+        const tile = tileset.getTile(realGid - tileset.firstgid)
         if (tile) {
             return new Tile({
                 ...tile.tile,

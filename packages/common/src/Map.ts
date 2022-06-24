@@ -41,34 +41,13 @@ export class RpgCommonMap extends MapClass {
     grid: VirtualGrid
     gridShapes: VirtualGrid
 
-    /** 
-     * @title Data of map
-     * @prop {object} [data]
-     * @readonly
-     * @memberof Map
-     * @memberof RpgSceneMap
-     * */
-    data: TiledMap
-    width: number = 0
-    height: number = 0
+    get tileWidth() {
+        return this.tilewidth
+    }
 
-    /** 
-     * @title Width of a tile
-     * @prop {number} [tileWidth]
-     * @readonly
-     * @memberof Map
-     * @memberof RpgSceneMap
-     * */
-    tileWidth: number = 0
-
-     /** 
-     * @title Height of a tile
-     * @prop {number} [tileHeight]
-     * @readonly
-     * @memberof Map
-     * @memberof RpgSceneMap
-     * */
-    tileHeight: number = 0
+    get tileHeight() {
+        return this.tileheight
+    }
     
     /** 
      * @title Layers of map
@@ -127,63 +106,10 @@ export class RpgCommonMap extends MapClass {
 
     load(data: TiledMap) {
         super.load(data)
-        this.data = data
-        this.tileWidth = data.tilewidth 
-        this.tileHeight = data.tileheight
         this.grid = new VirtualGrid(this.width, this.tileWidth, this.tileHeight).zoom(10)
         this.gridShapes = new VirtualGrid(this.width, this.tileWidth, this.tileHeight).zoom(20)
         this.getAllObjects().forEach(this.createShape.bind(this))
     }
-
-    getData() {
-        return {
-            ...this.data,
-            layers: this.layers
-        }
-    }
-
-    /** 
-     * @title Width of the map in pixels
-     * @prop {number} [widthPx]
-     * @readonly
-     * @memberof Map
-     * @memberof RpgSceneMap
-     * */
-
-    /** 
-     * @title Height of the map in pixels
-     * @prop {number} [heightPx]
-     * @readonly
-     * @memberof Map
-     * @memberof RpgSceneMap
-     * */
-
-    /** 
-     * @title The depth of the map in pixels (this is the height of a tile ;))
-     * @prop {number} map.zTileHeight
-     * @readonly
-     * @memberof Map
-     * @memberof RpgSceneMap
-     * */
-    get zTileHeight(): number {
-        return this.tileHeight
-    }
-
-    /**
-     * Find a layer by name. Returns `undefined` is the layer is not found
-
-     * @title Get Layer by name
-     * @method map.getLayerByName(name)
-     * @param {string} name layer name
-     * @returns {LayerInfo | undefined}
-     * @example
-     *  ```ts
-     *  const tiles = map.getLayerByName(0, 0)
-     *  ```
-     * @memberof Map
-     * @memberof RpgSceneMap
-     */
-    
 
     /**
      * Create a shape dynamically on the map
@@ -268,76 +194,6 @@ export class RpgCommonMap extends MapClass {
         return null
     }
 
-
-    /**
-     * Get the tile index on the tileset
-     * 
-     * @title Get index of tile
-     * @method map.getTileIndex(x,y)
-     * @param {number} x Position X
-     * @param {number} x Position Y
-     * @returns {number}
-     * @memberof Map
-     * @memberof RpgSceneMap
-     */
-    
-
-    /**
-     * Retrieves tiles according to its index
-
-     * @title Get tile by index
-     * @method map.getTileByIndex(tileIndex)
-     * @param {number} tileIndex tile index
-     * @returns {TileInfo}
-     * @example
-     *  ```ts
-     *  const index = map.getTileIndex(0, 0)
-     *  const tiles = map.getTileByIndex(index)
-     *  ```
-     * @memberof Map
-     * @memberof RpgSceneMap
-     */
-    
-
-    /**
-     * Find the point of origin (top left) of a tile. Of course, its position depends on the size of the tile
-
-     * @title Get origin position of tile
-     * @method map.getTileOriginPosition(x,y)
-     * @param {number} x Position X
-     * @param {number} x Position Y
-     * @returns { {x: number, y: number }}
-     * @example
-     *  ```ts
-     *  // If the size of a tile is 32x32px
-     *  const position = map.getTileOriginPosition(35, 12)
-     *  console.log(position) // { x: 32, y: 0 }
-     *  ```
-     * @memberof Map
-     * @memberof RpgSceneMap
-     */
-    
-
-    /**
-     * Recover tiles according to a position
-
-     * @title Get tile by position
-     * @method map.getTileByPosition(x,y)
-     * @param {number} x Position X
-     * @param {number} x Position Y
-     * @returns {TileInfo}
-     * @example
-     *  ```ts
-     *  const tiles = map.getTileByPosition(0, 0)
-     *  ```
-     * @memberof Map
-     * @memberof RpgSceneMap
-     */
-    getTileByPosition(x: number, y: number, z: [number, number] = [0, 0]): TileInfo {
-        const tileIndex = this.getTileIndex(x, y, [z[0]])
-        return this.getTileByIndex(tileIndex, z)
-    }
-
     /**
      * Get tile and verify collision with hitbox
      * @param hitbox 
@@ -347,7 +203,7 @@ export class RpgCommonMap extends MapClass {
      * @returns TileInfo
      */
     getTile(hitbox, x: number, y: number, z: [number, number] = [0, 0]): TileInfo {
-        const tile = this.getTileByPosition(x, y, z)
+        const tile = {...this.getTileByPosition(x, y, z)}
         const tilePos = this.getTileOriginPosition(x, y)
         if (tile.objectGroups) {        
             for (let object of tile.objectGroups) {

@@ -9,10 +9,10 @@ export default class Tile extends PIXI.AnimatedSprite {
 
         if (tile.animations && tile.animations.length) {
             tile.animations.forEach(frame => {
-                textures.push(tileSet.textures[frame.tileid]);
+                textures.push(tileSet.textures[frame.tileid].clone())
             });
         } else {
-            textures.push(tileSet.textures[tile.gid - tileSet.firstgid]);
+            textures.push(tileSet.textures[tile.gid - tileSet.firstgid].clone())
         }
 
         return textures;
@@ -21,7 +21,6 @@ export default class Tile extends PIXI.AnimatedSprite {
     animations: { tileid: number, duration: number }[] = []
     _x: number = 0 
     _y: number = 0
-    gid: number = 0
     pointsBufIndex: number
     properties: any = {}
 
@@ -30,18 +29,15 @@ export default class Tile extends PIXI.AnimatedSprite {
         private tileSet: TileSet
     ) {
         super(Tile.getTextures(tile, tileSet));
-
-        this._x = 0
-        this._y = 0
-        this.gid = 0
-        this.animations = []
-
-        this.textures = Tile.getTextures(tile, tileSet);
+        this.animations = tile.animations || []
+        this.properties = tile.properties
+        this.textures = Tile.getTextures(tile, tileSet)
         this.texture = this.textures[0] as Texture
-        
-        Object.assign(this, tile);
-
         this.flip()
+    }
+
+    get gid() {
+        return this.tile.gid
     }
 
     setAnimation(frame: RpgRectTileLayer) {
@@ -53,33 +49,32 @@ export default class Tile extends PIXI.AnimatedSprite {
     }
 
     flip() {
+        let symmetry
+        let i=0
+        const add = (symmetrySecond) => {
+            i++
+            if (symmetry) symmetry = PIXI.groupD8.add(symmetry, symmetrySecond)
+            else symmetry = symmetrySecond    
+        }
+
         if (this.tile.horizontalFlip) {
-            this.anchor.x = 1;
-            this.scale.x = -1;
+            add(PIXI.groupD8.MIRROR_HORIZONTAL)
         }
 
         if (this.tile.verticalFlip) {
-            this.anchor.y = 1;
-            this.scale.y = -1;
+            add(PIXI.groupD8.MIRROR_VERTICAL)
         }
 
         if (this.tile.diagonalFlip) {
-            if (this.tile.horizontalFlip) {
-                this.anchor.x = 0;
-                this.scale.x = 1;
-                this.anchor.y = 1;
-                this.scale.y = 1;
-
-                this.rotation = PIXI.DEG_TO_RAD * 90;
+            if (i % 2 == 0) {
+                add(PIXI.groupD8.MAIN_DIAGONAL)
             }
-            if (this.tile.verticalFlip) {
-                this.anchor.x = 1;
-                this.scale.x = 1;
-                this.anchor.y = 0;
-                this.scale.y = 1;
-
-                this.rotation = PIXI.DEG_TO_RAD * -90;
+            else {
+                add(PIXI.groupD8.REVERSE_DIAGONAL)
             }
         }
+
+        if (symmetry) this.texture.rotate = symmetry
+        
     }
 }

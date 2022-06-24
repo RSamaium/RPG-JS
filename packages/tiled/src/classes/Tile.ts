@@ -8,6 +8,7 @@ export class Tile extends TileGid {
 
     constructor(public tile: TileInfo | { gid: number }) {
         super(tile)
+        Reflect.deleteProperty(tile, 'gid')
         Object.assign(this, tile)
     }
 }

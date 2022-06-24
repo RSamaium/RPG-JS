@@ -397,7 +397,7 @@ export class RpgCommonPlayer {
             return true
         }
 
-        const tileCollision = (x, y): boolean => {
+        const tileCollision = (x: number, y: number): boolean => {
             const tile = this.getTile(x, y, nextPosition.z, hitbox)
             if (tile.hasCollision) {
                 this._collisionWithTiles.push(tile)
