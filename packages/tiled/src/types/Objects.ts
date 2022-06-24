@@ -14,7 +14,9 @@ export interface TiledObject {
     point: boolean;
     height: number;
     name: string;
-    properties: TiledProperty[];
+    properties: {
+        [key: string]: any
+    }
     /**
      * Angle in degrees clockwise
      */

@@ -8,14 +8,15 @@ export class Layer extends TiledProperties {
     tiles: (Tile | undefined)[] = []
     objects: TiledObjectClass[]
 
-    constructor(layer: TiledLayer, private tilesets: Tileset[]) {
+    constructor(layer: TiledLayer, private tilesets: Tileset[], private parent?: Layer) {
         super(layer)
         Object.assign(this, layer)
         this.propertiesTiles()
         this.mapObjects()
+        this.mergePropertiesWithParent()
     }
 
-    createTile(gid: number): Tile | undefined{
+    createTile(gid: number, tileIndex: number): Tile | undefined{
         const tileset = Layer.findTileSet(gid, this.tilesets)
         if (!tileset) {
             return undefined
@@ -24,19 +25,47 @@ export class Layer extends TiledProperties {
         if (tile) {
             return new Tile({
                 ...tile.tile,
-                gid
+                gid,
+                index: tileIndex
             })
         }
         return new Tile({
-            gid
+            gid,
+            index: tileIndex
         })
+    }
+
+    private mergePropertiesWithParent() {
+        const parent = this.getLayerParent()
+        if (!this.properties) this.properties = {}
+        if (!parent) return
+        for (let key in parent.properties) {
+            const val = parent.properties[key]
+            const valChild = this.properties[key]
+            if (valChild === undefined) {
+                this.properties[key] = val
+            }
+            else {
+                if (key == 'z') {
+                    this.properties[key] += val
+                }
+                else {
+                    continue
+                }     
+            } 
+        }
+        this.opacity = Math.round((parent.opacity ?? 1) * (this.opacity ?? 1) * 100) / 100
+        this.offsetx = (parent.offsetx ?? 0) + (this.offsetx ?? 0)
+        this.offsety = (parent.offsety ?? 0) + (this.offsety ?? 0)
+        this.locked = parent.locked ?? false
     }
 
     private propertiesTiles() {
         if (!this.data) return
         const data = this.data as number[]
-        for (let id of data) {
-            this.tiles.push(this.createTile(id))
+        for (let i=0 ; i < data.length ; i++) {
+            const id = data[i]
+            this.tiles.push(this.createTile(id, i))
         }
     }
 
@@ -59,6 +88,16 @@ export class Layer extends TiledProperties {
             }
         }
         return tileset;
+    }
+
+    getLayerParent(): Layer | undefined {
+        return this.parent
+    }
+
+    tilesForEach(cb: (tile: Tile, index: number) => void) {
+        for (let i=0 ; i < this.tiles.length ; i++) {
+            cb(this.tiles[i] as Tile, i)
+        }
     }
 }
 

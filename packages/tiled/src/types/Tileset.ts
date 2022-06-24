@@ -59,7 +59,9 @@ export interface TiledTileset {
     tiles: TilesetTile[];
  
     name: string;
-    properties: TiledProperty[];
+    properties: {
+        [key: string]: any
+    }
     /**
      * The number of tiles in this tileset
      */

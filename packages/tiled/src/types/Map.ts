@@ -52,7 +52,9 @@ export interface TiledMap {
     orientation: 'orthogonal' | 'isometric' | 'staggered' | 'hexagonal';
  
     layers: TiledLayer[];
-    properties: TiledProperty[];
+    properties: {
+        [key: string]: any
+    }
     tilesets: TiledTileset[];
  
     /**

@@ -10,7 +10,9 @@ export interface TilesetTile {
     imageheight: number;
     imagewidth: number;
     animations: TiledFrame[];
-    properties: TiledProperty[];
+    properties: {
+        [key: string]: any
+    }
     terrain: number[];
     objects: TiledObject[];
     probability: number;

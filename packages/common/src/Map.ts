@@ -268,42 +268,6 @@ export class RpgCommonMap extends MapClass {
         return null
     }
 
-    setTile(x: number, y: number, layerFilter: string | ((layer: any) => boolean), tileInfo: any): {
-        x: number,
-        y: number,
-        tiles: {
-            [tileIndex: number]: Tile
-        }
-    } {
-        const tileIndex = this.getTileIndex(x, y)
-        let fnFilter
-        let tilesEdited = {}
-        if (isString(layerFilter)) {
-            fnFilter = (layer) => layer.name == layerFilter
-        }
-        else {
-            fnFilter = layerFilter
-        }
-        for (let layer of this.layers) {
-            if (!fnFilter(layer)) continue
-            const data = layer.tiles
-            let tile
-            if (tileInfo.gid) {
-                tile = layer.createTile(tileInfo.gid)
-            }
-            for (let key in tileInfo) {
-                if (key == 'gid') continue
-                tile[key] = tileInfo[key]
-            }
-            tilesEdited[layer.name] = tile
-            data[tileIndex] = tilesEdited[layer.name]
-        }
-        return {
-            x,
-            y,
-            tiles: tilesEdited
-        }
-    } 
 
     /**
      * Get the tile index on the tileset
@@ -333,59 +297,7 @@ export class RpgCommonMap extends MapClass {
      * @memberof Map
      * @memberof RpgSceneMap
      */
-    getTileByIndex(tileIndex: number, zPlayer: [number, number] = [0, 0]): TileInfo {
-        const tiles: Tile[] = []
-        for (let layer of this.layers) {
-            if (layer.type != TiledLayerType.Tile) {
-                continue
-            }
-            const _tile: Tile | undefined = layer.getTileByIndex(tileIndex)
-            if ((!_tile) || (_tile && _tile.gid == 0)) {
-                continue
-            }
-            const zLayer = layer.getProperty<number>('z') || 0
-            const zTile = _tile.getProperty<number>('z')
-            let z, zIntersection
-            if (zLayer !== undefined) {
-                z = zLayer + (zTile !== undefined ? zTile : 0)
-            }
-            else if (zTile !== undefined) {
-                z = zTile
-            }
-            if (z !== undefined) {
-                const realZ = z * this.tileHeight
-                zIntersection = intersection(zPlayer, [realZ, realZ + this.tileHeight])
-            }
-            if (zIntersection !== undefined) {
-                if (zIntersection) tiles.push(_tile)
-            }
-            else {
-                tiles.push(_tile)
-            }
-        }
-        const getLastTile = tiles[tiles.length-1]
-        if (!getLastTile) {
-            return {
-                tiles,
-                hasCollision: true,
-                isOverlay: false,
-                objectGroups: [],
-                tileIndex
-            }
-        }
-        const hasCollision = getLastTile.getProperty<boolean>('collision')
-        const isOverlay = getLastTile.getProperty<boolean>('overlay')
-        const isClimbable = getLastTile.getProperty<boolean>('climb')
-        const objectGroups = getLastTile.objects as TiledObjectClass[] ?? []
-        return {
-            tiles,
-            hasCollision,
-            isOverlay,
-            objectGroups,
-            isClimbable,
-            tileIndex
-        }
-    }
+    
 
     /**
      * Find the point of origin (top left) of a tile. Of course, its position depends on the size of the tile

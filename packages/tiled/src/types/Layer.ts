@@ -41,7 +41,9 @@ export interface TiledLayer {
      * From [0, 1]
      */
     opacity: number;
-    properties: TiledProperty[];
+    properties: {
+        [key: string]: any
+    }
     /**
      * csv (default) or base64. tilelayer only.
      */
