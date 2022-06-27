@@ -50,6 +50,8 @@ const itemSchemas = {
     id: String
 }
 
+export const componentSchema = { id: String, value: String }
+
 const playerSchemas = {
     position: {
         x: Number, 
@@ -75,7 +77,7 @@ const playerSchemas = {
     states: [{ name: String, description: String, id: String }],
     effects: [String],
 
-    graphic: String,
+    components: [componentSchema],
     action: Number,
     map: String,
 
@@ -231,8 +233,9 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @returns {void}
      * @memberof Player
      */
-    setGraphic(graphic: string) {
-        this.graphic = graphic
+    setGraphic(graphic: string | string[]) {
+        const components = (Utils.isArray(graphic) ? graphic: [graphic]) as string[]
+        this.components = components.map(value => ({ id: 'graphic', value }))
     }
 
     /**
@@ -621,7 +624,7 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @returns {void}
      * @memberof Player
      */
-    showAnimation(graphic: string, animationName: string, replaceGraphic: boolean = false) {
+    showAnimation(graphic: string | string[], animationName: string, replaceGraphic: boolean = false) {
         this.emitToMap('callMethod', { 
             objectId: this.playerId,
             name: 'showAnimation',

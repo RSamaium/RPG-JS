@@ -42,6 +42,7 @@ export class RpgShape {
     * @memberof Shape
     */
     positioning?: ShapePositioning = ShapePositioning.Default
+    components: any[] = []
     
     constructor(private obj: ShapeObject) {
         this.set(obj)
@@ -157,6 +158,9 @@ export class RpgShape {
     
     set properties(val) {
         this._properties = val
+        if (this._properties?.color) {
+            this.components = [{ id: 'color', value: this._properties.color }]
+        }
     }
 
     isEvent(): boolean {

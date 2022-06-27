@@ -1,13 +1,12 @@
-import { RpgCommonMap, RpgPlugin, HookClient, RpgShape, Utils } from '@rpgjs/common'
+import { RpgCommonMap, RpgPlugin, HookClient, RpgShape, Utils, RpgCommonPlayer } from '@rpgjs/common'
 import TileMap from '../Tilemap'
 import { Viewport } from 'pixi-viewport'
 import { Scene, SceneObservableData, SceneSpriteLogic } from './Scene'
 import { spritesheets } from '../Sprite/Spritesheets'
-import Character from '../Sprite/Character'
 import { RpgSound } from '../Sound/RpgSound'
-import { RpgSprite } from '../Sprite/Player'
 import { GameEngineClient } from '../GameEngine'
 import { TiledMap } from '@rpgjs/tiled'
+import { RpgComponent } from '../Components/Component'
 
 interface MapObject extends TiledMap {
     id: number
@@ -41,7 +40,7 @@ export class SceneMap extends Scene {
     shapes = {}
 
     constructor(
-            protected game: GameEngineClient, 
+            public game: GameEngineClient, 
             private options: { screenWidth?: number, screenHeight?: number, drawMap?: boolean } = {}) {
         super(game)
         if (options.drawMap === undefined) this.options.drawMap = true
@@ -89,8 +88,8 @@ export class SceneMap extends Scene {
         const loader = PIXI.Loader.shared
         let nbLoad = 0
 
-        this.objects.forEach((object: Character) => {
-            object.logic.updateInVirtualGrid()
+        this.objects.forEach((object: RpgComponent) => {
+            object.logic?.updateInVirtualGrid()
         })
 
         loader.reset()
@@ -168,7 +167,7 @@ export class SceneMap extends Scene {
         this.tilemap.drawAnimateTile(frame)
     }
 
-    onUpdateObject(logic: SceneSpriteLogic, sprite: Character, moving: boolean): Character {
+    onUpdateObject(logic: SceneSpriteLogic, sprite: RpgComponent, moving: boolean): RpgComponent {
         const { paramsChanged } = logic
         if (!this.gameMap) return sprite
         if (moving || (paramsChanged && (paramsChanged.width || paramsChanged.height))) {
@@ -203,77 +202,25 @@ export class SceneMap extends Scene {
     }
 
     /** @internal */
-    updateScene(obj: SceneObservableData) {
-        const shapes = obj.partial.shapes
-        const fullShapesObj = obj.data.shapes
+    updateScene(obj: SceneObservableData) {}
 
-        if (!this.gameMap) return
-
-        const createShapeContainer = (instanceShape, shape) => {
-            instanceShape.clientContainer = new PIXI.Container()
-            if (shape.properties.color) {
-                const graphics = new PIXI.Graphics()
-                graphics.beginFill(shape.properties.color);
-                graphics.drawRect(0, 0, shape.width, shape.height)
-                graphics.endFill()
-                instanceShape.clientContainer.addChild(graphics)
-            }
-            instanceShape.clientContainer.x = shape.x
-            instanceShape.clientContainer.y = shape.y
-            this.tilemap.shapeLayer.addChild(instanceShape.clientContainer)
-            this.shapes[shape.name] = instanceShape.clientContainer
-        }
-
-        if (shapes) {
-            for (let i in shapes) {
-                let shape = fullShapesObj[i]
-                const { name } = shape
-                const shapeMap = this.gameMap.getShape(name)
-                if (shape == null) {
-                    this.gameMap.removeShape(name)
-                    continue
-                }
-                shape = {
-                    ...shape,
-                    x: shape.hitbox.pos.x,
-                    y: shape.hitbox.pos.y,
-                    width: shape.hitbox.w,
-                    height: shape.hitbox.h,
-                    properties: shape.properties
-                }
-                if (shapeMap) {
-                    if (!shapeMap.clientContainer) {
-                        createShapeContainer(shapeMap, shape)
-                    }
-                    shapeMap.set(shape)
-                }
-                if (!this.shapes[name]) {
-                    const instanceShape  = this.gameMap.createShape(shape)
-                    createShapeContainer(instanceShape, shape)
-                }     
-            }
-        }
-    }
-
-    addObject(obj, id: string): Character { 
+    addObject(obj: RpgCommonPlayer, id: string): RpgComponent { 
         const wrapper = new PIXI.Container()
         const inner = new PIXI.Container()
         const tilesOverlay = new PIXI.Container()
-        const sprite = new RpgSprite(obj, this)
+        const component = new RpgComponent(obj, this)
  
-        sprite.tilesOverlay = tilesOverlay
-        inner.addChild(sprite)
+        component.tilesOverlay = tilesOverlay
+        inner.addChild(component)
         wrapper.addChild(inner, tilesOverlay)
 
-        this.objects.set(id, sprite)
+        this.objects.set(id, component)
         this.tilemap.getEventLayer()?.addChild(wrapper)
-
-        if (sprite.isCurrentPlayer) this.viewport?.follow(sprite)
-        sprite.onInit()
-
-        RpgPlugin.emit(HookClient.SceneAddSprite, [this, sprite], true)
-        RpgPlugin.emit(HookClient.AddSprite, sprite)
-        return sprite
+        if (component.isCurrentPlayer) this.viewport?.follow(component)
+        component.onInit()
+        RpgPlugin.emit(HookClient.SceneAddSprite, [this, component], true)
+        RpgPlugin.emit(HookClient.AddSprite, component)
+        return component
     }
 
     removeObject(id: string) {

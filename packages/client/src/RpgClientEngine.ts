@@ -224,6 +224,9 @@ export class RpgClientEngine {
     }
 
     getResourceUrl(source: string): string {
+        if (source.startsWith('data:')) {
+            return source
+        }
         return this.assetsPath + '/' + Utils.basename(source)
     }
 
@@ -448,14 +451,18 @@ export class RpgClientEngine {
             const change = (prop, root = val, localEvent = false) => {
                 const list = root.data[prop]
                 const partial = val.partial[prop]
-                for (let key in list) {
+                for (let key in partial) {
                     const obj = list[key]
                     const paramsChanged = partial ? partial[key] : undefined
                     if (obj == null) {
                         this.gameEngine.removeObject(key)
                     }
                     if (!obj) continue
-                    obj.type = prop == 'users' ? PlayerType.Player : PlayerType.Event
+                    obj.type = {
+                        users: PlayerType.Player,
+                        events: PlayerType.Event,
+                        shapes: PlayerType.Shape
+                    }[prop]
                     if (prop == 'users' && this.gameEngine.playerId == key) {
                         if (obj.events) {
                             const nbEvents = Object.values(obj.events)
@@ -494,6 +501,7 @@ export class RpgClientEngine {
 
             change('users')
             change('events')
+            change('shapes')
 
             if (scene) {
                 scene.update(val)

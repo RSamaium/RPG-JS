@@ -72,10 +72,10 @@ class HitClass {
     testPolyCollision(type: string, hit1: SAT, hit2: SAT): boolean {
         let collided = false
         if (type == HitType.Box) {
-            if (hit1.pos.x < hit2.pos.x + hit2.w &&
-                hit1.pos.x + hit1.w > hit2.pos.x &&
-                hit1.pos.y < hit2.pos.y + hit2.h &&
-                hit1.h + hit1.pos.y > hit2.pos.y) {
+            if (hit1.pos.x <= hit2.pos.x + hit2.w &&
+                hit1.pos.x + hit1.w >= hit2.pos.x &&
+                hit1.pos.y <= hit2.pos.y + hit2.h &&
+                hit1.h + hit1.pos.y >= hit2.pos.y) {
                 return true
              }
             return false

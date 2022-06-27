@@ -17,6 +17,7 @@ import { RpgGui } from './RpgGui';
 import { Timeline, Ease } from './Effects/Timeline';
 import { spritesheets } from './Sprite/Spritesheets'
 import { sounds } from './Sound/Sounds'
+import { RpgComponent } from './Components/Component'
 
 const RpgResource = {
     spritesheets,
@@ -54,5 +55,6 @@ export {
     RpgClientEngine,
     RpgPlugin,
     RpgScene,
-    RpgSpriteLogic
+    RpgSpriteLogic,
+    RpgComponent
 }

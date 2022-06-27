@@ -1,5 +1,5 @@
 import { intersection, generateUID, toRadians } from './Utils'
-import { Hit } from './Hit'
+import { Hit, HitType } from './Hit'
 import { RpgShape } from './Shape'
 import SAT from 'sat'
 import { TileInfo, RpgCommonMap } from './Map'
@@ -30,12 +30,13 @@ export const LiteralDirection =  {
 
 export enum PlayerType {
     Player = 'player',
-    Event = 'event'
+    Event = 'event',
+    Shape = 'shape'
 }
 
 export class RpgCommonPlayer {
     map: string = ''
-    graphic: string = ''
+    components: any[] = []
     height: number = 0
     width: number = 0
     canMove: boolean
@@ -432,8 +433,8 @@ export class RpgCommonPlayer {
             const event = events[objectId]['object'] || events[objectId] 
             if (event.id == this.id) continue
             if (!this.zCollision(event)) continue
-            const collided = Hit.testPolyCollision('box', hitbox, event.hitbox)
-            
+            const collided = Hit.testPolyCollision(HitType.Box, hitbox, event.hitbox)
+ 
             for (let shape of this.shapes) {
                 await this.collisionWithShape(shape, event)
             }

@@ -1,9 +1,9 @@
 import { Utils } from '@rpgjs/common'
 import { spritesheets } from '../Sprite/Spritesheets'
 import { SpritesheetOptions, TextureOptions, AnimationFrames, FrameOptions } from '../Sprite/Spritesheet'
-import RpgSprite from '../Sprite/Character'
 import { log } from '../Logger'
 import { RpgSound } from '../Sound/RpgSound'
+import { RpgComponent } from '../Components/Component'
 
 const { isFunction, arrayEquals } = Utils
 
@@ -22,7 +22,7 @@ type AnimationDataFrames = {
 
 export class Animation extends PIXI.Sprite {
 
-    public attachTo: RpgSprite
+    public attachTo: RpgComponent
     public hitbox: { w: number, h: number }
     public applyTransform: Function
     private frames: PIXI.Texture[][] = []

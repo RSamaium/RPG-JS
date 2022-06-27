@@ -1,5 +1,5 @@
 import { TiledMap } from '@rpgjs/tiled'
-import { RpgPlayer } from '../Player/Player'
+import { componentSchema, RpgPlayer } from '../Player/Player'
 
 export interface MapOptions {
     /** 
@@ -193,9 +193,9 @@ export function MapData(options: MapOptions) {
                         h: Number
                     },
                     properties: {
-                        collision: Boolean,
-                        color: String
-                    }
+                        collision: Boolean
+                    },
+                    components: [componentSchema]
                 }
             ]
         }

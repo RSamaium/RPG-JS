@@ -1,4 +1,4 @@
-import { RpgCommonGame, RpgCommonPlayer, GameSide } from "@rpgjs/common";
+import { RpgCommonGame, RpgCommonPlayer, GameSide, PlayerType } from "@rpgjs/common";
 import { BehaviorSubject, Observable } from "rxjs";
 import { RpgRenderer } from "./Renderer";
 import { RpgClientEngine } from "./RpgClientEngine";
@@ -72,6 +72,10 @@ export class GameEngineClient extends RpgCommonGame {
         return false
     }
 
+    static toArray(obj: any, prop: string) {
+        if (obj[prop]) obj[prop] = Object.values(obj[prop])
+    }
+
     updateObject(obj) {
         const {
             playerId: id,
@@ -79,6 +83,7 @@ export class GameEngineClient extends RpgCommonGame {
             localEvent,
             paramsChanged
         } = obj
+        GameEngineClient.toArray(params, 'components')
         const isMe = () => id == this.playerId
         let logic
         let teleported = false
@@ -110,6 +115,7 @@ export class GameEngineClient extends RpgCommonGame {
             logic[key] = params[key]
         }
         if (paramsChanged) {
+            GameEngineClient.toArray(paramsChanged, 'components')
             if (paramsChanged.teleported) {
                 teleported = true
                 logic.position = { ...params.position } // clone
@@ -118,6 +124,7 @@ export class GameEngineClient extends RpgCommonGame {
             if (!logic.paramsChanged) logic.paramsChanged = {}
             logic.paramsChanged = merge(paramsChanged, logic.paramsChanged)
         }
+
         this._objects.next({
             ...this._objects.value,
             ...{
@@ -127,9 +134,6 @@ export class GameEngineClient extends RpgCommonGame {
                 }
             }
         })
-        if (teleported && isMe()) {
-            //this.isTeleported = true
-        }
         return logic
     }
 }
