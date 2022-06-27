@@ -1,9 +1,8 @@
-import { TiledProperty } from "../types/Types"
-
 export class TiledProperties {
     properties: {
         [key: string]: any
     } = {}
+    class: string
 
     constructor(data: any) {
         this.properties = data.properties || {}
@@ -19,5 +18,9 @@ export class TiledProperties {
 
     setProperty<T>(name: string, value: T) {
         this.properties[name] = value
+    }
+
+    getType(): string {
+        return this.class || this['type']
     }
  }

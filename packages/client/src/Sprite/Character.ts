@@ -53,7 +53,7 @@ export default class Character extends PIXI.Sprite {
      * @returns { x: number, y: number }
      * @memberof RpgSprite
      */
-    getPositionsOfGraphic(align?: string): { x: number, y: number } {
+     getPositionsOfGraphic(align?: string): { x: number, y: number } {
         const isMiddle = align == 'middle'
         return {
             x: this.x - this.w * this.anchor.x + (isMiddle ? this.w / 2 : 0),

@@ -4,6 +4,7 @@ import { SpritesheetOptions, TextureOptions, AnimationFrames, FrameOptions } fro
 import { log } from '../Logger'
 import { RpgSound } from '../Sound/RpgSound'
 import { RpgComponent } from '../Components/Component'
+import { RpgSprite } from '../Sprite/Player'
 
 const { isFunction, arrayEquals } = Utils
 
@@ -163,9 +164,12 @@ export class Animation extends PIXI.Sprite {
         const { frames, container, sprites, data } = this.currentAnimation
 
         if (this.attachTo) {
-            const { x, y } = this.attachTo.getPositionsOfGraphic('middle')
-            container.x = x
-            container.y = y
+            const sprite = this.attachTo.getChildAt(0) as RpgSprite | undefined
+            const pos = sprite?.getPositionsOfGraphic('middle')
+            if (pos) {
+                container.x = pos.x
+                container.y = pos.y
+            }
         }
 
         for (let _sprite of container.children) {

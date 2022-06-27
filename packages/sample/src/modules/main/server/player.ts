@@ -1,6 +1,5 @@
 import { RpgPlayer, RpgMap, RpgPlayerHooks, Direction, Move, RpgShape, ShapePositioning, Control, RpgEvent, EventData, RpgWorld } from '@rpgjs/server'
 import { Armor } from '@rpgjs/database'
-import { defineComponent } from 'vue';
 
 let i=0
 

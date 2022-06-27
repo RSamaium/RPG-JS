@@ -22,6 +22,10 @@ export interface TiledObject {
      */
     rotation: number;
     type: string;
+    /**
+     * @since 1.9
+     */
+    class: string 
     visible: boolean;
     width: number;
     /**

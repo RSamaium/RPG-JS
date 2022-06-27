@@ -1,4 +1,4 @@
-import { RpgCommonPlayer } from './Player'
+import { PlayerType, RpgCommonPlayer } from './Player'
 import { Hit, HitObject, HitType } from './Hit'
 import { isInstanceOf } from './Utils'
 import SAT from 'sat'
@@ -20,6 +20,7 @@ export class RpgShape {
     _hitbox: any
     private _properties: any = {}
     type: string = HitType.Box
+    class: string = ''
     /**
     * Get/Set name
     * @title name
@@ -164,7 +165,7 @@ export class RpgShape {
     }
 
     isEvent(): boolean {
-        return this.type == 'event'
+        return this.type == PlayerType.Event
     }
 
     set(obj: ShapeObject) {
@@ -181,6 +182,10 @@ export class RpgShape {
         }
         this.positioning = obj.positioning
         this.fixEvent = obj.fixEvent
+    }
+
+    getType() {
+        return this.class || this.type
     }
 
     async in(player: RpgCommonPlayer): Promise<boolean> {

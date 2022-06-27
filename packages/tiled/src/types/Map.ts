@@ -76,4 +76,8 @@ export interface TiledMap {
      */
     tiledversion: string;
  
+    /**
+     * @since 1.9
+     */
+     class: string
  }

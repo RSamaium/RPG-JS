@@ -11,7 +11,7 @@ export interface IComponent {
     value: any
 }
 
-export class RpgComponent extends PIXI.Container {
+export class RpgComponent<T = any> extends PIXI.Container {
     /** @internal */
     tilesOverlay: any
     /** @internal */

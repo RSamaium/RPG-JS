@@ -57,6 +57,12 @@ export interface TiledLayer {
      * Type of layer (tilelayer, objectgroup)
      */
     type: TiledLayerType;
+
+    /**
+     * @since 1.9
+     */
+    class: string
+
     /**
      * Whether layer is shown or hidden in editor
      */

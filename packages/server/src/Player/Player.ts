@@ -421,7 +421,7 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @memberof Player
      */
     async teleport(positions?: {x: number, y: number, z?: number} | string): Promise<Position> {
-        if (isString(positions)) positions = <Position>this.getCurrentMap()?.getPositionByShape(shape => shape.name == positions || shape.type == positions)
+        if (isString(positions)) positions = <Position>this.getCurrentMap()?.getPositionByShape(shape => shape.name == positions || shape.getType() == positions)
         if (!positions) positions = { x: 0, y: 0, z: 0 }
         if (!(positions as Position).z) (positions as Position).z = 0
         this.teleported++

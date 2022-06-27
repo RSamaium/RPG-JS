@@ -2,6 +2,7 @@ import { RpgSprite } from './Sprite/Player'
 import { ModuleType } from '@rpgjs/common'
 import { SceneMap } from './Scene/Map'
 import { RpgClientEngine } from './RpgClientEngine'
+import { RpgComponent } from './Components/Component'
 
 type RpgClass<T = any> = new (...args: any[]) => T
 
@@ -71,7 +72,7 @@ export interface RpgSpriteHooks {
      * @prop { (sprite: RpgSprite) => any } [onInit]
      * @memberof RpgSpriteHooks
      */
-    onInit?: (sprite: RpgSprite) => any
+    onInit?: (sprite: RpgComponent<RpgSprite>) => any
 
     /**
      * Called when the sprite is deleted
@@ -79,7 +80,7 @@ export interface RpgSpriteHooks {
      * @prop { (sprite: RpgSprite) => any } [onDestroy]
      * @memberof RpgSpriteHooks
      */
-    onDestroy?: (sprite: RpgSprite) => any
+    onDestroy?: (sprite: RpgComponent<RpgSprite>) => any
 
     /**
      * As soon as a data is changed on the server side (the name for example), you are able to know the new data but also the old data.
@@ -87,7 +88,7 @@ export interface RpgSpriteHooks {
      * @prop { (sprite: RpgSprite, data: any, old: any) => any } [onChanges]
      * @memberof RpgSpriteHooks
      */
-    onChanges?: (sprite: RpgSprite, data: any, old: any) => any
+    onChanges?: (sprite: RpgComponent<RpgSprite>, data: any, old: any) => any
 
     /**
      * At each tick, the method is called
@@ -95,7 +96,7 @@ export interface RpgSpriteHooks {
      * @prop { (sprite: RpgSprite, obj: any) => any } [onUpdate]
      * @memberof RpgSpriteHooks
      */
-    onUpdate?: (sprite: RpgSprite, obj: any) => any
+    onUpdate?: (sprite: RpgComponent<RpgSprite>, obj: any) => any
 
     /**
      * When the x, y positions change
@@ -104,7 +105,7 @@ export interface RpgSpriteHooks {
      * @since 3.0.0-beta.4
      * @memberof RpgSpriteHooks
      */
-    onMove?: (sprite: RpgSprite) => any
+    onMove?: (sprite: RpgComponent<RpgSprite>) => any
 }
 
 export interface RpgSceneHooks<Scene> {
@@ -114,7 +115,7 @@ export interface RpgSceneHooks<Scene> {
      * @prop { (scene: RpgScene, sprite: RpgSprite) => any } [onAddSprite]
      * @memberof RpgSceneHooks
      */
-    onAddSprite?: (scene: Scene, sprite: RpgSprite) => any
+    onAddSprite?: (scene: Scene, sprite: RpgComponent<RpgSprite>) => any
 
      /**
      * a sprite has been removed on the scene
@@ -122,7 +123,7 @@ export interface RpgSceneHooks<Scene> {
      * @prop { (scene: RpgScene, sprite: RpgSprite) => any } [onRemoveSprite]
      * @memberof RpgSceneHooks
      */
-    onRemoveSprite?: (scene: Scene, sprite: RpgSprite) => any
+    onRemoveSprite?: (scene: Scene, sprite: RpgComponent<RpgSprite>) => any
 
      /**
      * Before the scene is loaded
