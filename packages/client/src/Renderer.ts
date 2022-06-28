@@ -100,8 +100,8 @@ export class RpgRenderer  {
     onDOMLoaded() {
         let options = {
             antialias: true,
-            autoResize: true,
-            resolution: window.devicePixelRatio || 1,
+            // autoResize: true,
+            // resolution: window.devicePixelRatio || 1,
             ...this.options.canvas
         };
         this.renderer = PIXI.autoDetectRenderer(options)
