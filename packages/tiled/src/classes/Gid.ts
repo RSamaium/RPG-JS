@@ -8,9 +8,9 @@ const ROTATED_HEXAGONAL_120_FLAG = 0x10000000
 export class TileGid extends TiledProperties {
     private _gid: number 
 
-    constructor(public obj) {
+    constructor(public obj?) {
         super(obj)
-        this._gid = obj.gid
+        this._gid = obj?.gid
     }
 
     static getRealGid(gid: number): number {

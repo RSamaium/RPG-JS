@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.9" tiledversion="1.9.0" orientation="orthogonal" renderorder="right-down" width="50" height="50" tilewidth="32" tileheight="32" infinite="0" backgroundcolor="#1a767e" nextlayerid="13" nextobjectid="25">
+<map version="1.9" tiledversion="1.9.0" orientation="orthogonal" renderorder="right-down" width="50" height="50" tilewidth="32" tileheight="32" infinite="0" backgroundcolor="#1a767e" nextlayerid="13" nextobjectid="34">
  <properties>
   <property name="sounds" value="town"/>
  </properties>
  <tileset firstgid="1" source="[Base]BaseChip_pipo.tsx"/>
+ <tileset firstgid="1001" source="[A]Water_pipo.tsx"/>
  <layer id="1" name="Tile Layer 1" width="50" height="50">
   <data encoding="csv">
 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
@@ -68,20 +69,32 @@
    </properties>
    <point/>
   </object>
-  <object id="20" name="block" gid="6" x="294.083" y="83.5837" width="32" height="32">
+  <object id="20" name="block" gid="6" x="47.3333" y="104.25" width="79.1364" height="86.6364">
    <properties>
     <property name="collision" type="bool" value="true"/>
    </properties>
   </object>
-  <object id="23" x="331" y="170" width="108.438" height="26.3333">
+  <object id="23" name="text" x="588.632" y="11.03" width="93.6214" height="46.9254">
    <text wrap="1">Hello World</text>
   </object>
-  <object id="24" name="yo" x="618" y="175.5" width="147.5" height="111.5">
+  <object id="24" name="yo" x="512" y="64.5" width="147.5" height="111.5">
    <properties>
-    <property name="collision" type="bool" value="false"/>
+    <property name="collision" type="bool" value="true"/>
     <property name="color" type="color" value="#ffc61ba1"/>
    </properties>
   </object>
+  <object id="26" gid="1390" x="704.727" y="32.1667" width="32" height="32"/>
+  <object id="27" gid="2147483658" x="128" y="32" width="32" height="32">
+   <properties>
+    <property name="collision" type="bool" value="false"/>
+   </properties>
+  </object>
+  <object id="28" x="656.667" y="57.6667" width="56.5" height="61">
+   <properties>
+    <property name="color" type="color" value="#ff2d9a15"/>
+   </properties>
+  </object>
+  <object id="31" gid="11" x="0" y="32" width="32" height="32"/>
  </objectgroup>
  <imagelayer id="12" name="Image Layer 1" offsetx="50" offsety="300">
   <image source="../../client/assets/sky.png" width="841" height="562"/>
@@ -91,9 +104,9 @@
    <property name="aaa" type="int" value="0"/>
   </properties>
   <data encoding="csv">
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,1390,1391,1392,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,1454,1455,1456,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,1518,1519,1520,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,41,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,9,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,

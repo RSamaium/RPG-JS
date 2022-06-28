@@ -195,6 +195,7 @@ export function MapData(options: MapOptions) {
                     properties: {
                         collision: Boolean
                     },
+                    rotation: Number,
                     components: [componentSchema]
                 }
             ]

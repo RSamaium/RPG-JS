@@ -17,7 +17,7 @@ type ShapeObject = TiledObjectClass & {
     positioning?: ShapePositioning
 }
 
-export class RpgShape {
+export class RpgShape extends TiledObjectClass {
     _hitbox: any
     private _properties: any = {}
     type: string = HitType.Box
@@ -46,7 +46,9 @@ export class RpgShape {
     positioning?: ShapePositioning = ShapePositioning.Default
     components: any[] = []
     
-    constructor(private obj: ShapeObject) {
+    constructor(obj: ShapeObject) {
+        Reflect.deleteProperty(obj, 'id')
+        super()
         this.set(obj)
     }
 
@@ -57,15 +59,10 @@ export class RpgShape {
         else {
             this.hitbox.pos[type] = val
         }
-        if (this.clientContainer) {
-            if (type == 'w') type = 'width'
-            else if (type == 'h') type = 'height'
-            this.clientContainer[type] = val
-        }
     }
 
     // alias
-    get id(): string {
+    get id(): any {
         return this.name
     }
 
@@ -160,23 +157,6 @@ export class RpgShape {
     * @prop { object } Properties
     * @memberof Shape
     */
-    get properties(): any {
-        const properties = this._properties
-        if (this.fixEvent) {
-            return { 
-                z : this.fixEvent.position.z,
-                ...(properties || {})
-            }
-        }
-        return properties ?? {}
-    }
-    
-    set properties(val) {
-        this._properties = val
-        if (this._properties?.color) {
-            this.components = [{ id: 'color', value: this._properties.color }]
-        }
-    }
 
     isEvent(): boolean {
         return this.type == PlayerType.Event
@@ -185,6 +165,7 @@ export class RpgShape {
     set(obj: ShapeObject) {
         const hit = Hit.getHitbox(obj)
         Object.assign(this, hit)
+        Object.assign(this, obj)
         const findPoint = (prop: string, isMin: boolean) => {
             return this.hitbox.points.sort((a, b) => isMin ? a[prop] - b[prop] : b[prop] - a[prop])[0][prop]
         }
@@ -196,6 +177,23 @@ export class RpgShape {
         }
         this.positioning = obj.positioning
         this.fixEvent = obj.fixEvent
+        this.setComponent()
+    }
+
+    setComponent() {
+        const color = this.getProperty<string>('color')
+        if (color) {
+            this.components = [{ id: 'color', value: color }]
+            return
+        }
+        if (this.text) {
+            this.components = [{ id: 'text', value: this.text.text }]
+            return
+        }
+        if (this.gid) {
+            this.components = [{ id: 'tile', value: this.gid }]
+            return
+        }
     }
 
     getType() {
@@ -240,7 +238,7 @@ export class RpgShape {
         /*return !isInstanceOf(this.hitbox, SAT.Polygon) 
             && !isInstanceOf(this.hitbox, SAT.Circle)
             && !isInstanceOf(this.hitbox, SAT.Box)*/
-        return this.hitbox.type != null
+        return !this.type
     }
 
    /**

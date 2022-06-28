@@ -5,6 +5,7 @@ import { Scene } from "../Scene/Scene"
 import { RpgSprite } from "../Sprite/Player"
 import { ColorComponent } from "./ColorComponent"
 import { TextComponent } from "./TextComponent"
+import { TileComponent } from "./TileComponent"
 
 export interface IComponent {
     id: string,
@@ -20,6 +21,7 @@ export class RpgComponent<T = any> extends PIXI.Container {
     w: number = 1
     protected _x: number = 0
     protected _y: number = 0
+    private _rotation: number = 0
     protected teleported: number = 0
     protected map: string = ''
     protected z: number = 0
@@ -27,12 +29,13 @@ export class RpgComponent<T = any> extends PIXI.Container {
     private components: IComponent[] = []
     private registerComponents: Map<string, any> = new Map()
 
-    constructor(private data: RpgCommonPlayer | RpgShape, protected scene: Scene) {
+    constructor(private data: RpgCommonPlayer | RpgShape, private scene: Scene) {
         super()
         this.setPosition(false)
         this.registerComponents.set(RpgSprite.id, RpgSprite)
         this.registerComponents.set(TextComponent.id, TextComponent)
         this.registerComponents.set(ColorComponent.id, ColorComponent)
+        this.registerComponents.set(TileComponent.id, TileComponent)
         this.scene.game.all
             .pipe(
                 map(object => object[data.id]?.paramsChanged),
@@ -125,16 +128,22 @@ export class RpgComponent<T = any> extends PIXI.Container {
             this._y =  Math.floor(position?.y ?? 0)
             this.z =  Math.floor(position?.z ?? 0)
         }
+        this._rotation = this.data['rotation'] ?? 0
         if (!smooth) {
             this.x = this._x
             this.y = this._y
+            this.angle = this._rotation
         }
     }
 
     update(obj: any): { moving: boolean } {
-        const { speed, teleported, map, fixed } = obj
+        const { speed, teleported, map, fixed, rotation } = obj
         this.data = obj
-        this.setPosition()
+        this.setPosition() 
+
+        if (this._rotation != this.angle) {
+            this.angle += Math.min(speed, this._rotation - this.angle)
+        }
 
         let moving = false
 
@@ -201,6 +210,10 @@ export class RpgComponent<T = any> extends PIXI.Container {
             this.addChild(new compClass(this, component.value))
         }
         this.components = components
+    }
+
+    getScene<T>(): T {
+        return this.scene as any
     }
 
     // Hooks
