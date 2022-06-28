@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.9" tiledversion="1.9.0" orientation="orthogonal" renderorder="right-down" width="50" height="50" tilewidth="32" tileheight="32" infinite="0" backgroundcolor="#1a767e" nextlayerid="13" nextobjectid="34">
+<map version="1.9" tiledversion="1.9.0" orientation="orthogonal" renderorder="right-down" width="50" height="50" tilewidth="32" tileheight="32" infinite="0" backgroundcolor="#1a767e" nextlayerid="13" nextobjectid="35">
  <properties>
   <property name="sounds" value="town"/>
  </properties>
@@ -60,6 +60,9 @@
 </data>
  </layer>
  <objectgroup id="3" name="Object Layer 1" offsetx="1" offsety="0">
+  <properties>
+   <property name="image" type="file" value="../../client/characters/assets/Male 17-2.png"/>
+  </properties>
   <object id="1" name="start" class="start" x="148.818" y="100.045">
    <point/>
   </object>
@@ -95,6 +98,11 @@
    </properties>
   </object>
   <object id="31" gid="11" x="0" y="32" width="32" height="32"/>
+  <object id="34" x="684" y="161" width="121" height="118">
+   <properties>
+    <property name="image" type="file" value="../../client/characters/assets/chest.png"/>
+   </properties>
+  </object>
  </objectgroup>
  <imagelayer id="12" name="Image Layer 1" offsetx="50" offsety="300">
   <image source="../../client/assets/sky.png" width="841" height="562"/>

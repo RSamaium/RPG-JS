@@ -4,6 +4,7 @@ import { log } from "../Logger"
 import { Scene } from "../Scene/Scene"
 import { RpgSprite } from "../Sprite/Player"
 import { ColorComponent } from "./ColorComponent"
+import { ImageComponent } from "./ImageComponent"
 import { TextComponent } from "./TextComponent"
 import { TileComponent } from "./TileComponent"
 
@@ -36,6 +37,7 @@ export class RpgComponent<T = any> extends PIXI.Container {
         this.registerComponents.set(TextComponent.id, TextComponent)
         this.registerComponents.set(ColorComponent.id, ColorComponent)
         this.registerComponents.set(TileComponent.id, TileComponent)
+        this.registerComponents.set(ImageComponent.id, ImageComponent)
         this.scene.game.all
             .pipe(
                 map(object => object[data.id]?.paramsChanged),

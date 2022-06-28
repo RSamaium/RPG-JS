@@ -182,8 +182,13 @@ export class RpgShape extends TiledObjectClass {
 
     setComponent() {
         const color = this.getProperty<string>('color')
+        const image = this.getProperty<string>('image')
         if (color) {
             this.components = [{ id: 'color', value: color }]
+            return
+        }
+        if (image) {
+            this.components = [{ id: 'image', value: image }]
             return
         }
         if (this.text) {
