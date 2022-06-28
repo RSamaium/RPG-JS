@@ -73,6 +73,7 @@ export class RpgMap extends RpgCommonMap {
         )
         const data = await parser.parseFilePromise()
         super.load(data) 
+        this.getAllObjects().forEach(this.createShape.bind(this))
         this.loadProperties((data as any).properties)
         this._server.workers?.call('loadMap', {
             id: this.id,

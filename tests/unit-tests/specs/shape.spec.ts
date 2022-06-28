@@ -42,13 +42,11 @@ test('Create Shape', () => {
          expect(mapShape).toBeDefined()
 
          RpgPlugin.on(HookClient.SceneOnChanges, (scene) => {
-            // TODO !!!
              const mapShape = scene.getShape('test')
-             console.log(scene.getShapes())
-             /*expect(mapShape).toBeDefined()
+             expect(mapShape).toBeDefined()
              expect(mapShape.x).toEqual(0)
-             expect(mapShape.y).toEqual(0)*/
-             resolve()
+             expect(mapShape.y).toEqual(0)
+             resolve() 
          })
          nextTick(client)
     })

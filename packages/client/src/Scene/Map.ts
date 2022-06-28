@@ -53,8 +53,6 @@ export class SceneMap extends Scene {
             'getTileByIndex',
             'getTileOriginPosition',
             'getTileByPosition',
-            'getShapes',
-            'getShape',
             'getLayerByName'
         ].forEach(method => this[method] = (this.gameMap as any)[method].bind(this.gameMap));
         [
@@ -231,6 +229,15 @@ export class SceneMap extends Scene {
             RpgPlugin.emit(HookClient.RemoveSprite, sprite)
             sprite.destroy()
         }
+    }
+
+    getShape(name: string): RpgShape | undefined {
+        return this.game.getShape(name)?.object
+    }
+
+    getShapes(): RpgShape[] {
+        const shapes = Object.values(this.game.getShapes())
+        return shapes.map(shape => shape.object)
     }
 
     /**

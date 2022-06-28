@@ -3,6 +3,7 @@ import { Hit, HitObject, HitType } from './Hit'
 import { isInstanceOf } from './Utils'
 import SAT from 'sat'
 import { TiledObjectClass, TiledProperties } from '@rpgjs/tiled'
+import { RpgCommonMap } from './Map'
 
 export enum ShapePositioning {
     Default = 'default',
@@ -61,6 +62,11 @@ export class RpgShape {
             else if (type == 'h') type = 'height'
             this.clientContainer[type] = val
         }
+    }
+
+    // alias
+    get id(): string {
+        return this.name
     }
 
     get hitbox() {
@@ -223,9 +229,10 @@ export class RpgShape {
     }
 
     isShapePosition(): boolean {
-        return !isInstanceOf(this.hitbox, SAT.Polygon) 
+        /*return !isInstanceOf(this.hitbox, SAT.Polygon) 
             && !isInstanceOf(this.hitbox, SAT.Circle)
-            && !isInstanceOf(this.hitbox, SAT.Box)
+            && !isInstanceOf(this.hitbox, SAT.Box)*/
+        return this.hitbox.type != null
     }
 
    /**

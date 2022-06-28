@@ -459,11 +459,13 @@ export class RpgCommonPlayer {
             }
         }
 
-        const shapes = map.shapes
-        const shapesInGrid = map.gridShapes.getObjectsByBox(playerSizeBox)
+        const shapes: { [id: string]: RpgShape } = this.gameEngine.world.getShapesOfGroup(this.map)
+        const shapesInGrid = this.gameEngine.side == GameSide.Client 
+            ? new Set(Object.keys(shapes)) 
+            : map.gridShapes.getObjectsByBox(playerSizeBox)
 
         for (let shapeId of shapesInGrid) {
-            const shape = shapes[shapeId]
+            const shape = shapes[shapeId]['object'] || shapes[shapeId]
             const bool = await this.collisionWithShape(shape, this, nextPosition)
             if (bool) return true
         }
@@ -535,7 +537,7 @@ export class RpgCommonPlayer {
         if (shape.isShapePosition()) return false
         if (z !== undefined && !this.zCollision({
             position: { z },
-            height: this.mapInstance.tileHeight
+            height: this.mapInstance.zTileHeight
         })) {
             return false
         }

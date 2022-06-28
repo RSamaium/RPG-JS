@@ -4,6 +4,9 @@ import { RpgCommonPlayer, Direction } from './Player'
 import { Control } from './Input'
 import { RpgPlugin } from './Plugin'
 import { GameWorker } from './Worker'
+import { HitObject } from './Hit'
+import { RpgShape } from './Shape'
+import { TiledObjectClass } from '@rpgjs/tiled'
 
 export enum GameSide {
     Server = 'server',
@@ -53,6 +56,13 @@ export class RpgCommonGame extends EventEmitter {
     addEvent(eventClass, eventId?: string) {
         const event = this.addObject(eventClass, eventId)
         return event
+    }
+
+    addShape(obj: HitObject): RpgShape {
+        const id = obj.name = (obj.name || generateUID()) as string
+        const shape = new RpgShape(obj as TiledObjectClass)
+        shape.name = id
+        return shape
     }
 
     async processInput<RpgPlayer extends RpgCommonPlayer>(playerId: string): Promise<RpgPlayer> {

@@ -28,7 +28,7 @@ export const player: RpgPlayerHooks = {
     },
     onConnected(player: RpgPlayer) {
         player.setHitbox(16, 16)
-        player.setGraphic(['light', 'shield'])
+        player.setGraphic('male1_2')
         player.changeMap('cave')
     },
     onJoinMap(player: RpgPlayer, map: RpgMap) { 
@@ -36,7 +36,7 @@ export const player: RpgPlayerHooks = {
     },
     onInput(player: RpgPlayer, { input, moving }) {
         if (input == Control.Back) {
-            player.showAnimation(['light', 'shield'], 'attack', true)
+            //player.showAnimation(['light', 'shield'], 'attack', true)
         } 
     },
     async onInShape(player: RpgPlayer, shape: RpgShape) {

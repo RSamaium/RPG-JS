@@ -1,4 +1,4 @@
-import { Direction, PlayerType, RpgCommonPlayer } from "@rpgjs/common"
+import { Direction, PlayerType, RpgCommonPlayer, RpgShape, Utils } from "@rpgjs/common"
 import { map, filter } from "rxjs/operators"
 import { log } from "../Logger"
 import { Scene } from "../Scene/Scene"
@@ -27,13 +27,13 @@ export class RpgComponent<T = any> extends PIXI.Container {
     private components: IComponent[] = []
     private registerComponents: Map<string, any> = new Map()
 
-    constructor(private data: any, protected scene: Scene) {
+    constructor(private data: RpgCommonPlayer | RpgShape, protected scene: Scene) {
         super()
         this.setPosition(false)
         this.registerComponents.set(RpgSprite.id, RpgSprite)
         this.registerComponents.set(TextComponent.id, TextComponent)
         this.registerComponents.set(ColorComponent.id, ColorComponent)
-        this.scene.game.objects
+        this.scene.game.all
             .pipe(
                 map(object => object[data.id]?.paramsChanged),
                 filter(object => {
@@ -77,7 +77,7 @@ export class RpgComponent<T = any> extends PIXI.Container {
      * @memberof RpgSprite
      * */
      get isShape(): boolean {
-        return this.data.type == PlayerType.Shape
+        return Utils.isInstanceOf(this.data, RpgShape)
     }
 
     /** 
@@ -88,7 +88,7 @@ export class RpgComponent<T = any> extends PIXI.Container {
      * @memberof RpgSprite
      * */
     get isCurrentPlayer(): boolean {
-        return this.data.playerId === this.scene.game.playerId
+        return this.data.id === this.scene.game.playerId
     }
 
     /** 
@@ -99,8 +99,8 @@ export class RpgComponent<T = any> extends PIXI.Container {
      * @since 3.0.0-beta.4
      * @memberof RpgSprite
      * */
-    get logic(): RpgCommonPlayer | null {
-        return this.scene.game.world.getObject(this.data.playerId)
+    get logic(): RpgCommonPlayer | RpgShape | null {
+        return this.scene.game.world.getAll(this.data.id)
     }
     
     get guiDisplay(): boolean {
@@ -112,14 +112,15 @@ export class RpgComponent<T = any> extends PIXI.Container {
     }
 
     setPosition(smooth: boolean = true) {
-        const { position, hitbox } = this.data
         if (this.isShape) {
-            this.w = hitbox?.w
-            this.h = hitbox?.h 
-            this._x = Math.floor(hitbox.pos.x)
-            this._y = Math.floor(hitbox.pos.y)
+            const { width, height, x, y } = this.data as RpgShape
+            this.w = width
+            this.h = height
+            this._x = Math.floor(x)
+            this._y = Math.floor(y)
         }
         else {
+            const { position } = this.data as RpgCommonPlayer
             this._x =  Math.floor(position?.x ?? 0)
             this._y =  Math.floor(position?.y ?? 0)
             this.z =  Math.floor(position?.z ?? 0)

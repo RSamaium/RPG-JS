@@ -108,7 +108,6 @@ export class RpgCommonMap extends MapClass {
         super.load(data)
         this.grid = new VirtualGrid(this.width, this.tileWidth, this.tileHeight).zoom(10)
         this.gridShapes = new VirtualGrid(this.width, this.tileWidth, this.tileHeight).zoom(20)
-        this.getAllObjects().forEach(this.createShape.bind(this))
     }
 
     /**

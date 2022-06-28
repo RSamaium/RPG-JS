@@ -455,14 +455,16 @@ export class RpgClientEngine {
                     const obj = list[key]
                     const paramsChanged = partial ? partial[key] : undefined
                     if (obj == null) {
-                        this.gameEngine.removeObject(key)
+                        this.gameEngine.removeObjectAndShape(key)
                     }
                     if (!obj) continue
-                    obj.type = {
-                        users: PlayerType.Player,
-                        events: PlayerType.Event,
-                        shapes: PlayerType.Shape
-                    }[prop]
+                    const isShape = prop == 'shapes'
+                    if (!isShape) {
+                        obj.type = {
+                            users: PlayerType.Player,
+                            events: PlayerType.Event
+                        }[prop]
+                    }
                     if (prop == 'users' && this.gameEngine.playerId == key) {
                         if (obj.events) {
                             const nbEvents = Object.values(obj.events)
@@ -489,7 +491,8 @@ export class RpgClientEngine {
                         playerId: key,
                         params: obj,
                         localEvent,
-                        paramsChanged
+                        paramsChanged,
+                        isShape
                     })
                 }
             }

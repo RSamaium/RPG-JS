@@ -99,7 +99,11 @@ export abstract class Scene {
 
      /** @internal */
     draw(t: number, dt: number, frame: number) {
-        const logicObjects = { ...this.game.world.getObjects(), ...this.game.events }
+        const logicObjects = { 
+            ...this.game.world.getObjects(), 
+            ...this.game.events,
+            ...this.game.getShapes()
+        }
         const renderObjects = this.objects
         const sizeLogic = Object.values(logicObjects).length
         for (let key in logicObjects) {

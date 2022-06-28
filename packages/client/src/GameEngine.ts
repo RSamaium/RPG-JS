@@ -1,8 +1,9 @@
-import { RpgCommonGame, RpgCommonPlayer, GameSide, PlayerType } from "@rpgjs/common";
-import { BehaviorSubject, Observable } from "rxjs";
+import { RpgCommonGame, RpgCommonPlayer, GameSide, PlayerType, RpgShape } from "@rpgjs/common";
+import { BehaviorSubject, combineLatest, Observable } from "rxjs";
 import { RpgRenderer } from "./Renderer";
 import { RpgClientEngine } from "./RpgClientEngine";
 import merge from 'lodash.merge'
+import { map } from "rxjs/operators";
 
 export type ObjectFixture = {
     object: any,
@@ -18,11 +19,19 @@ export class GameEngineClient extends RpgCommonGame {
     private _objects: BehaviorSubject<{
         [playerId: string]: ObjectFixture
     }> = new BehaviorSubject({})
+    private _shapes: BehaviorSubject<{
+        [shapeId: string]: ObjectFixture
+    }> = new BehaviorSubject({})
 
     world = {
         getObjects: this.getObjects.bind(this),
         getObject: (id: string): RpgCommonPlayer | null => {
             const obj = this.getObject(id)
+            if (!obj) return null
+            return obj.object
+        },
+        getAll: (id: string): RpgCommonPlayer | RpgShape | null => {
+            const obj = this.getObjectAndShape(id)
             if (!obj) return null
             return obj.object
         },
@@ -32,6 +41,9 @@ export class GameEngineClient extends RpgCommonGame {
                 ...this.getObjects(),
                 ...this.events
             }
+        },
+        getShapesOfGroup: () => {
+            return this.getShapes()
         }
     }
 
@@ -39,8 +51,37 @@ export class GameEngineClient extends RpgCommonGame {
         super(GameSide.Client)
     }
 
+    private _get(prop: '_objects' | '_shapes', id: string): ObjectFixture | null {
+        const objects = this[prop].value
+        const val = objects[id]
+        if (!val) return null
+        return val
+    }
+
     get objects(): Observable<{ [id: string]: ObjectFixture }> {
         return this._objects.asObservable()
+    }
+
+    get shapes(): Observable<{ [id: string]: ObjectFixture }> {
+        return this._shapes.asObservable()
+    }
+
+    get all(): Observable<{ [id: string]: ObjectFixture }> {
+        return combineLatest([
+            this.objects,
+            this.shapes
+        ]).pipe(
+            map(([objects, shapes]) => {
+                return {
+                    ...objects,
+                    ...shapes
+                }
+            })
+        )
+    }
+
+    getShapes(): { [id: string]: ObjectFixture } {
+        return this._shapes.value
     }
 
     getObjects(): { [id: string]: ObjectFixture } {
@@ -48,28 +89,48 @@ export class GameEngineClient extends RpgCommonGame {
     }
 
     getObject(id: string): ObjectFixture | null {
-        const objects = this._objects.value
-        const val = objects[id]
-        if (!val) return null
-        return val
+        return this._get('_objects', id)
+    }
+
+    getShape(id: string): ObjectFixture | null {
+        return this._get('_shapes', id)
+    }
+
+    getObjectAndShape(id: string): ObjectFixture | null {
+        let obj = this.getObject(id)
+        if (!obj) obj = this.getShape(id)
+        return obj
     }
 
     resetObjects() {
         this._objects.next({})
+        this._shapes.next({})
     }
 
-    removeObject(id: any): boolean {
-        const logic = this.getObject(id)
-        if (this.events[id]) {
-            delete this.events[id]
-        }
+    private _remove(prop: '_objects' | '_shapes', id: string) {
+        const logic = prop == '_objects' ? this.getObject(id) : this.getShape(id)
         if (logic) {
-            const objects = { ...this._objects.value } // clone
+            const objects = { ...this[prop].value } // clone
             delete objects[id]
-            this._objects.next(objects)
+            this[prop].next(objects)
             return true
         }
         return false
+    }
+
+    removeObject(id: any): boolean {
+        if (this.events[id]) {
+            delete this.events[id]
+        }
+        return this._remove('_objects', id)
+    }
+
+    removeShape(id: any): boolean {
+        return this._remove('_shapes', id)
+    }
+
+    removeObjectAndShape(id: string): boolean {
+        return this.removeObject(id) && this.removeShape(id)
     }
 
     static toArray(obj: any, prop: string) {
@@ -81,29 +142,40 @@ export class GameEngineClient extends RpgCommonGame {
             playerId: id,
             params,
             localEvent,
-            paramsChanged
+            paramsChanged,
+            isShape
         } = obj
         GameEngineClient.toArray(params, 'components')
         const isMe = () => id == this.playerId
         let logic
         let teleported = false
-        if (localEvent) {
-            logic = this.events[id]
+        let propName = '_objects'
+        if (isShape) {
+            propName = '_shapes'
+            logic = this.getShape(id)
             if (!logic) {
-                logic = this.addEvent(RpgCommonPlayer, id)
-                this.events[id] = {
-                    object: logic
-                }
-            }
-            else {
-                logic = logic.object
+                logic = this.addShape(obj)
             }
         }
         else {
-            logic = this.world.getObject(id)
-        }
-        if (!logic) {
-            logic = this.addPlayer(RpgCommonPlayer, id)
+            if (localEvent) {
+                logic = this.events[id]
+                if (!logic) {
+                    logic = this.addEvent(RpgCommonPlayer, id)
+                    this.events[id] = {
+                        object: logic
+                    }
+                }
+                else {
+                    logic = logic.object
+                }
+            }
+            else {
+                logic = this.world.getObject(id)
+            }
+            if (!logic) {
+                logic = this.addPlayer(RpgCommonPlayer, id)
+            }
         }
         logic.prevParamsChanged = Object.assign({}, logic)
         for (let key in params) {
@@ -125,8 +197,8 @@ export class GameEngineClient extends RpgCommonGame {
             logic.paramsChanged = merge(paramsChanged, logic.paramsChanged)
         }
 
-        this._objects.next({
-            ...this._objects.value,
+        this[propName].next({
+            ...this[propName].value,
             ...{
                 [id]: {
                     object: logic,
