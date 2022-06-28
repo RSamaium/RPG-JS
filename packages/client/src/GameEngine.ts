@@ -154,7 +154,7 @@ export class GameEngineClient extends RpgCommonGame {
             propName = '_shapes'
             logic = this.getShape(id)
             if (!logic) {
-                logic = this.addShape(obj)
+                logic = this.addShape(obj.params)
             }
         }
         else {

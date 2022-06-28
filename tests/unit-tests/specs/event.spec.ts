@@ -251,7 +251,6 @@ test('Test onChanges Hook [syncChanges method)', () => {
  })
 
 describe('Test Scenario Event', () => {
-
     test('onInit Hook', () => {
         return new Promise(async (resolve: any) => {
             @EventData({
@@ -321,6 +320,7 @@ describe('Test Scenario Event', () => {
         }
      })
 
+     
      test('Clear Map Events after leave map', async () => {
         @EventData({
             name: 'test',
@@ -361,6 +361,7 @@ describe('Test Scenario Event', () => {
         expect(Object.keys(events)).toHaveLength(1)
         expect(Object.keys(client.gameEngine.events)).toHaveLength(0)
      })
+     
 })
 
 afterEach(() => {

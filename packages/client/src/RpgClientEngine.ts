@@ -450,7 +450,7 @@ export class RpgClientEngine {
 
             const change = (prop, root = val, localEvent = false) => {
                 const list = root.data[prop]
-                const partial = val.partial[prop]
+                const partial = root.partial[prop]
                 for (let key in partial) {
                     const obj = list[key]
                     const paramsChanged = partial ? partial[key] : undefined
