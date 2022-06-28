@@ -37,11 +37,13 @@ export class TiledParserFile {
             return cb(file)
         }
 
+        const isHttp = file.startsWith('http')
         if (isXml(file)) {
             loadContent(file)
         }
-        else if (file.startsWith('http') || (TiledParserFile.isBrowser() && process.env.NODE_ENV != 'test')) {
-            axios.get(file).then(res => res.data).then(loadContent)
+        else if (isHttp || (TiledParserFile.isBrowser() && process.env.NODE_ENV != 'test')) {
+            const url = isHttp ? file : this.basePath + '/' + file
+            axios.get(url).then(res => res.data).then(loadContent)
         }
         else {
             const filepath = this.basePath + '/' + file

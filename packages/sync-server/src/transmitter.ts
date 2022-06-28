@@ -39,7 +39,17 @@ class TransmitterClass {
 
     emit(user: User, packet: Packet, room: RoomClass): void {
         const send = (packet) => {
-            const data = { frame: user['_lastFrame'] }
+            const lastFramePositions: Map<any, any> = user['_lastFramePositions']
+            const lastFrame = user['_lastFrame']
+            let pos
+            if (lastFramePositions) {
+                const positionByFrame = lastFramePositions.get(lastFrame)
+                if (positionByFrame) {
+                    pos = positionByFrame
+                    lastFramePositions.delete(lastFrame)
+                }
+            }
+            const data = { frame: lastFrame, pos }
             user._socket.emit('w', this.encode ? packet.encode(data) : packet.message(data))
         }
         if (room.filterEmit) {

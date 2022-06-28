@@ -9,6 +9,8 @@ const fs = require('fs')
 const chokidar = require('chokidar')
 const path = require('path')
 
+const type = process.env.RPG_TYPE || 'mmorpg'
+
 const openWebpackConfigFile = async () => {
   const cwd = process.cwd()
   let webpackConfig
@@ -20,8 +22,8 @@ const openWebpackConfigFile = async () => {
     if (err.code != 'ENOENT') console.log(err)
   }
 
-  await fs.promises.mkdir(`${cwd}/dist/server/assets`, { recursive: true })
-  await fs.promises.mkdir(`${cwd}/dist/client/assets`, { recursive: true })
+  await fs.promises.mkdir(`${cwd}/dist/${type == 'mmorpg' ? 'server' : 'standalone'}/assets`, { recursive: true })
+  await fs.promises.mkdir(`${cwd}/dist/${type == 'mmorpg' ? 'client' : 'standalone'}/assets`, { recursive: true })
 
   const watcher = chokidar.watch(cwd, {
     ignored: (path) => {
@@ -30,7 +32,7 @@ const openWebpackConfigFile = async () => {
   });
 
   const toAssetsDirectory = (srcPath, side) => {
-    fs.promises.copyFile(srcPath, `${cwd}/dist/${side}/assets/${path.basename(srcPath)}`)
+    fs.promises.copyFile(srcPath, `${cwd}/dist/${type == 'mmorpg' ? side : 'standalone'}/assets/${path.basename(srcPath)}`)
   }
   
   watcher.on('all', (event, _path) => {

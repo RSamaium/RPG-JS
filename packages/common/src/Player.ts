@@ -282,9 +282,9 @@ export class RpgCommonPlayer {
                 * (Math.round(Math[prop == 'x' ? 'cos' : 'sin'](angle) * 100) / 100)
         }
         return {
-            x: computePosition('x'),
-            y: computePosition('y'),
-            z: this.position.z
+            x: ~~computePosition('x'),
+            y: ~~computePosition('y'),
+            z: ~~this.position.z
         }
     }
 

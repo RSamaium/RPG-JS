@@ -30,6 +30,11 @@ export class GameEngineClient extends RpgCommonGame {
             if (!obj) return null
             return obj.object
         },
+        getShape: (id: string): RpgShape | null => {
+            const obj = this.getShape(id)
+            if (!obj) return null
+            return obj.object
+        },
         getAll: (id: string): RpgCommonPlayer | RpgShape | null => {
             const obj = this.getObjectAndShape(id)
             if (!obj) return null
@@ -152,9 +157,9 @@ export class GameEngineClient extends RpgCommonGame {
         let propName = '_objects'
         if (isShape) {
             propName = '_shapes'
-            logic = this.getShape(id)
+            logic = this.world.getShape(id)
             if (!logic) {
-                logic = this.addShape(obj.params)
+                logic = this.addShape(params)
             }
         }
         else {

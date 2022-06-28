@@ -87,7 +87,9 @@ export class SceneMap extends Scene {
         let nbLoad = 0
 
         this.objects.forEach((object: RpgComponent) => {
-            object.logic?.updateInVirtualGrid()
+            if (Utils.isInstanceOf(object.logic, RpgCommonPlayer) && object.logic) {
+               (object.logic as RpgCommonPlayer).updateInVirtualGrid()
+            }
         })
 
         loader.reset()

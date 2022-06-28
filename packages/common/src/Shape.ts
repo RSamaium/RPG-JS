@@ -145,6 +145,14 @@ export class RpgShape {
         this.setPos('y', val)
     }
 
+    // alias
+    get position() {
+        return {
+            x: this.x,
+            y: this.y
+        }
+    }
+
     /**
     * Get/Set properties
 

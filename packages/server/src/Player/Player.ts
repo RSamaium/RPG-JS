@@ -135,6 +135,7 @@ export class RpgPlayer extends RpgCommonPlayer {
     public tmpPositions: Position | string | null = null
 
     _lastFrame: number = 0
+    _lastFramePositions: Map<number, Position> = new Map()
 
     constructor(gameEngine: RpgCommonGame, playerId: string) {
         super(gameEngine, playerId)

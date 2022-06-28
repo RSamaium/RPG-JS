@@ -196,6 +196,7 @@ export class RpgServerEngine {
                     p.push(this.gameEngine.processInput(playerId).then(() => {
                         player.pendingMove = []
                         player._lastFrame = lastFrame.frame
+                        player._lastFramePositions.set(lastFrame.frame, {...player.position})
                     }))
                 }
             }

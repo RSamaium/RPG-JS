@@ -480,9 +480,9 @@ export class RpgClientEngine {
                                 }, true)
                             }
                         }
-                        if (paramsChanged?.position && partialRoom?.frame) {
+                        if (partialRoom?.pos && partialRoom?.frame) {
                             this.serverFrames.set(partialRoom.frame, {
-                                data: paramsChanged.position,
+                                data: partialRoom.pos,
                                 time: Date.now()
                             })
                         }

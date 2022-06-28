@@ -28,7 +28,7 @@ export const player: RpgPlayerHooks = {
     },
     onConnected(player: RpgPlayer) {
         player.setHitbox(16, 16)
-        player.setGraphic('male1_2')
+        player.setGraphic(['light', 'shield'])
         player.changeMap('cave')
     },
     onJoinMap(player: RpgPlayer, map: RpgMap) { 
