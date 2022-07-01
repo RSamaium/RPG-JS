@@ -1,29 +1,19 @@
 import { spritesheets } from '../Sprite/Spritesheets'
 import { log } from '../Logger'
-import { TiledTileset } from '@rpgjs/tiled'
+import { TiledTileset, Tileset as TiledTilesetClass } from '@rpgjs/tiled'
 
-export default class TileSet {
-    firstgid: number = 0
-    margin: number = 0
-    spacing: number= 0
-    tileheight: number = 0
-    tilewidth: number= 0
-    image: {
-        width: number,
-        height: number
-    }
-    tileoffset: any = {}
-    name: string = ''
+export default class TileSet extends TiledTilesetClass {
     private baseTexture: PIXI.BaseTexture
     spritesheet
     public textures: PIXI.Texture[] = []
 
     constructor(tileSet: TiledTileset) {
-        Object.assign(this, tileSet)
+        super(tileSet)
+        
+    }
+
+    prepareImage() {
         const spritesheet = spritesheets.get(this.name)
-        if (!spritesheet) {
-            throw log(`There are no tilesets for ${this.name}`)
-        }
         this.spritesheet = spritesheet
     }
 

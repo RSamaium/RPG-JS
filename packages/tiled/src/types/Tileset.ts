@@ -15,7 +15,11 @@ export interface TiledTileset {
     /**
      * Image used for tiles in this set
      */
-    image: string;
+    image: {
+        source: string
+        height: number
+        width: number
+    }
     /**
      * Height of source image in pixels
      */

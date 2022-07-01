@@ -9,7 +9,7 @@ import { Musics } from './sounds'
 let engine
 
 @RpgModule<RpgClient>({ 
-    spritesheets: [MedievalTilesets, ...Characters],
+    spritesheets: [...Characters],
     sprite,
     engine: {
         onConnected(rpgEngine: RpgClientEngine, socket: any) {

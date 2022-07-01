@@ -19,6 +19,7 @@ import { RpgSound } from './Sound/RpgSound'
 import { SceneMap } from './Scene/Map'
 import { GameEngineClient, ObjectFixture } from './GameEngine'
 import { Scene } from './Scene/Scene'
+import { Spritesheet } from './Sprite/Spritesheet'
 
 declare var __RPGJS_PRODUCTION__: boolean;
 
@@ -206,7 +207,15 @@ export class RpgClientEngine {
      * @since 3.0.0-beta.3
      * @memberof RpgClientEngine
      */
-    addSpriteSheet(spritesheetClass) {
+    addSpriteSheet(spritesheetClass, id?: string) {
+        if (Utils.isString(spritesheetClass)) {
+            @Spritesheet({
+                id,
+                image: this.getResourceUrl(spritesheetClass)
+            })
+            class AutoSpritesheet {}
+            spritesheetClass = AutoSpritesheet
+        }
         this.addResource(spritesheetClass, _initSpritesheet)
     }
 

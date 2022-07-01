@@ -70,6 +70,7 @@ export class SceneMap extends Scene {
     /** @internal */
     load(obj: MapObject, prevObj: MapObject): Promise<Viewport> {
         let { sounds } = obj
+        const { clientEngine } = this.game
         
         if (sounds) {
             if (!Utils.isArray(sounds)) sounds  = obj.sounds = <string[]>[sounds]
@@ -95,7 +96,15 @@ export class SceneMap extends Scene {
         loader.reset()
 
         for (let tileset of this.tilemap.tilesets) {
-            if (tileset.spritesheet.resource) continue
+            if (!tileset.spritesheet) {
+                clientEngine.addSpriteSheet(tileset.image.source, tileset.name)
+            }
+            if (tileset.spritesheet?.resource) {
+                continue
+            }
+            else {
+                tileset.prepareImage()
+            }
             loader.add(tileset.name, tileset.spritesheet.image)
             nbLoad++
         }

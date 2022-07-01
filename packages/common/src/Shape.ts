@@ -47,8 +47,8 @@ export class RpgShape extends TiledObjectClass {
     components: any[] = []
     
     constructor(obj: ShapeObject) {
-        Reflect.deleteProperty(obj, 'id')
         super()
+        Reflect.deleteProperty(obj, 'id')
         this.set(obj)
     }
 
