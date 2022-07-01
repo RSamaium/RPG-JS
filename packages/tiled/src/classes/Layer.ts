@@ -73,7 +73,11 @@ export class Layer extends TiledProperties {
 
     private mapObjects() {
         if (this.objects) {
-            this.objects = this.objects.map(object => new TiledObjectClass(object))
+            this.objects = this.objects.map(object => {
+                const obj = new TiledObjectClass(object)
+                obj.layerName = this.name
+                return obj
+            })
         }
     }
 

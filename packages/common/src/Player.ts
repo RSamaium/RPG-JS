@@ -5,6 +5,7 @@ import SAT from 'sat'
 import { TileInfo, RpgCommonMap } from './Map'
 import { RpgPlugin, HookServer } from './Plugin'
 import { GameSide, RpgCommonGame } from './Game'
+import { TiledObjectClass } from '@rpgjs/tiled'
 
 const ACTIONS = { IDLE: 0, RUN: 1, ACTION: 2 }
 
@@ -36,6 +37,7 @@ export enum PlayerType {
 
 export class RpgCommonPlayer {
     map: string = ''
+    layerName: string = ''
     components: any[] = []
     height: number = 0
     width: number = 0

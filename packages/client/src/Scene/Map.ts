@@ -213,7 +213,7 @@ export class SceneMap extends Scene {
     /** @internal */
     updateScene(obj: SceneObservableData) {}
 
-    addObject(obj: RpgCommonPlayer, id: string): RpgComponent { 
+    addObject(obj: RpgCommonPlayer | RpgShape, id: string): RpgComponent { 
         const wrapper = new PIXI.Container()
         const inner = new PIXI.Container()
         const tilesOverlay = new PIXI.Container()
@@ -224,7 +224,7 @@ export class SceneMap extends Scene {
         wrapper.addChild(inner, tilesOverlay)
 
         this.objects.set(id, component)
-        this.tilemap.getEventLayer()?.addChild(wrapper)
+        this.tilemap.getEventLayer(obj.id)?.addChild(wrapper)
         if (component.isCurrentPlayer) this.viewport?.follow(component)
         component.onInit()
         RpgPlugin.emit(HookClient.SceneAddSprite, [this, component], true)
