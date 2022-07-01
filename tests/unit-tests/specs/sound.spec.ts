@@ -75,6 +75,7 @@ test('Sound is playing in map', async () => {
     spy.mockRestore()
 })
 
+
 test('Sound is stopped after change map', async () => {
     await player.changeMap('map1')
     const spyPlay = jest.spyOn(RpgSound, 'stop')

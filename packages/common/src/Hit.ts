@@ -33,9 +33,6 @@ class HitClass {
     }
     
     getHitbox(obj: HitObject, offset?: { x: number, y: number }): {
-        properties: {
-            [key: string]: any
-        } | undefined,
         hitbox: SAT,
         type: string,
         name: string | undefined
@@ -62,7 +59,6 @@ class HitClass {
             type = obj.type
         }
         return { 
-            properties: obj.properties,
             hitbox,
             type,
             name: obj.name

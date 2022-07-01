@@ -20,6 +20,8 @@ import { SceneMap } from './Scene/Map'
 import { GameEngineClient, ObjectFixture } from './GameEngine'
 import { Scene } from './Scene/Scene'
 import { Spritesheet } from './Sprite/Spritesheet'
+import { log } from './Logger'
+import { Sound } from './Sound/Sound'
 
 declare var __RPGJS_PRODUCTION__: boolean;
 
@@ -209,6 +211,9 @@ export class RpgClientEngine {
      */
     addSpriteSheet(spritesheetClass, id?: string) {
         if (Utils.isString(spritesheetClass)) {
+            if (!id) {
+                throw log('Please, specify the resource ID (second parameter)')
+            }
             @Spritesheet({
                 id,
                 image: this.getResourceUrl(spritesheetClass)
@@ -217,6 +222,7 @@ export class RpgClientEngine {
             spritesheetClass = AutoSpritesheet
         }
         this.addResource(spritesheetClass, _initSpritesheet)
+        return spritesheetClass
     }
 
     /**
@@ -228,8 +234,20 @@ export class RpgClientEngine {
      * @since 3.0.0-beta.3
      * @memberof RpgClientEngine
      */
-    addSound(soundClass) {
+    addSound(soundClass, id?: string) {
+        if (Utils.isString(soundClass)) {
+            if (!id) {
+                throw log('Please, specify the resource ID (second parameter)')
+            }
+            @Sound({
+                id,
+                sound: this.getResourceUrl(soundClass)
+            })
+            class AutoSound {}
+            soundClass = AutoSound
+        }
         this.addResource(soundClass, _initSound)
+        return soundClass
     }
 
     getResourceUrl(source: string): string {

@@ -234,9 +234,9 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @returns {void}
      * @memberof Player
      */
-    setGraphic(graphic: string | string[]) {
+    setGraphic(graphic: string | number | (string | number)[]) {
         const components = (Utils.isArray(graphic) ? graphic: [graphic]) as string[]
-        this.components = components.map(value => ({ id: 'graphic', value }))
+        this.components = components.map(value => ({ id: Utils.isString(value) ? 'graphic' : 'tile', value }))
     }
 
     /**

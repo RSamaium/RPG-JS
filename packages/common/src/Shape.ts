@@ -1,9 +1,8 @@
 import { PlayerType, RpgCommonPlayer } from './Player'
-import { Hit, HitObject, HitType } from './Hit'
+import { Hit, HitType } from './Hit'
 import { isInstanceOf } from './Utils'
 import SAT from 'sat'
-import { TiledObjectClass, TiledProperties } from '@rpgjs/tiled'
-import { RpgCommonMap } from './Map'
+import { TiledObjectClass } from '@rpgjs/tiled'
 
 export enum ShapePositioning {
     Default = 'default',
@@ -19,7 +18,6 @@ type ShapeObject = TiledObjectClass & {
 
 export class RpgShape extends TiledObjectClass {
     _hitbox: any
-    private _properties: any = {}
     type: string = HitType.Box
     class: string = ''
     /**
@@ -53,6 +51,7 @@ export class RpgShape extends TiledObjectClass {
     }
 
     private setPos(type: string, val: number) {
+        if (!this.hitbox.pos) return
         if (this.isShapePosition()) {
             this.hitbox[type] = val
         }
@@ -165,7 +164,10 @@ export class RpgShape extends TiledObjectClass {
     set(obj: ShapeObject) {
         const hit = Hit.getHitbox(obj)
         Object.assign(this, hit)
-        Object.assign(this, obj)
+        const objClone = { ...obj };
+        // Delete dimension and position because already managed and given by the hitbox above
+        ['width', 'height', 'x', 'y'].forEach((prop) => Reflect.deleteProperty(objClone, prop))
+        Object.assign(this, objClone)
         const findPoint = (prop: string, isMin: boolean) => {
             return this.hitbox.points.sort((a, b) => isMin ? a[prop] - b[prop] : b[prop] - a[prop])[0][prop]
         }
@@ -240,10 +242,9 @@ export class RpgShape extends TiledObjectClass {
     }
 
     isShapePosition(): boolean {
-        /*return !isInstanceOf(this.hitbox, SAT.Polygon) 
+        return !isInstanceOf(this.hitbox, SAT.Polygon) 
             && !isInstanceOf(this.hitbox, SAT.Circle)
-            && !isInstanceOf(this.hitbox, SAT.Box)*/
-        return !this.type
+            && !isInstanceOf(this.hitbox, SAT.Box)
     }
 
    /**

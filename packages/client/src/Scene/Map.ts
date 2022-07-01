@@ -71,7 +71,7 @@ export class SceneMap extends Scene {
     load(obj: MapObject, prevObj: MapObject): Promise<Viewport> {
         let { sounds } = obj
         const { clientEngine } = this.game
-        
+
         if (sounds) {
             if (!Utils.isArray(sounds)) sounds  = obj.sounds = <string[]>[sounds]
         }
@@ -84,7 +84,7 @@ export class SceneMap extends Scene {
 
         this.tilemap = new TileMap(this.gameMap.getData(), this.game.renderer)
 
-        const loader = PIXI.Loader.shared
+        const loader = new PIXI.Loader()
         let nbLoad = 0
 
         this.objects.forEach((object: RpgComponent) => {
@@ -96,16 +96,15 @@ export class SceneMap extends Scene {
         loader.reset()
 
         for (let tileset of this.tilemap.tilesets) {
-            if (!tileset.spritesheet) {
+            let spritesheet = spritesheets.get(tileset.name)
+            if (!spritesheet) {
                 clientEngine.addSpriteSheet(tileset.image.source, tileset.name)
+                spritesheet = spritesheets.get(tileset.name)
             }
-            if (tileset.spritesheet?.resource) {
+            if (spritesheet?.resource) {
                 continue
             }
-            else {
-                tileset.prepareImage()
-            }
-            loader.add(tileset.name, tileset.spritesheet.image)
+            loader.add(tileset.name, spritesheet.image)
             nbLoad++
         }
 
@@ -117,7 +116,7 @@ export class SceneMap extends Scene {
                 }
             })
         }
-        
+
         RpgPlugin.emit(HookClient.SceneMapLoading, loader)
 
         return new Promise((resolve, reject) => {

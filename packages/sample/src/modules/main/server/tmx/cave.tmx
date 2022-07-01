@@ -167,7 +167,4 @@
   </properties>
   <object id="36" name="chest" gid="863" x="257" y="191" width="32" height="32"/>
  </objectgroup>
- <imagelayer id="12" name="Image Layer 1" offsetx="50" offsety="300">
-  <image source="../../client/assets/sky.png" width="841" height="562"/>
- </imagelayer>
 </map>
