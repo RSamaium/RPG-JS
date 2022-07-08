@@ -13,7 +13,6 @@ export default class Character extends PIXI.Sprite {
     private playStandardAnimation: boolean = true
     public animation: Animation
     private objSaved: object = {}
-    private direction: number = 0
     private data: any = {}
     
      /** @internal */
@@ -23,17 +22,6 @@ export default class Character extends PIXI.Sprite {
     
     /** @internal */
     anim: Animation
-
-    /** 
-     * the direction of the sprite
-     * 
-     * @prop {Direction} dir
-     * @readonly
-     * @memberof RpgSprite
-     * */
-     get dir(): Direction {
-        return this.direction
-    }
 
     constructor(private component: RpgComponent, private graphic: string) {
         super()
@@ -126,7 +114,6 @@ export default class Character extends PIXI.Sprite {
         const { graphic, direction } = obj
         const { moving } = options
         this.data = obj
-        this.direction = direction
         if (this.anim) this.anim.update()
         if (this.animation) this.animation.update()
 
@@ -156,7 +143,7 @@ export default class Character extends PIXI.Sprite {
             this.spritesheet[hook](this)
         }
         else if (this.animation.has(name)) {
-            this.animation.play(name, [this.dir])
+            this.animation.play(name, [this.data.direction])
         }
     }
 

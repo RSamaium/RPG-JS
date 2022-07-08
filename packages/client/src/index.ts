@@ -3,7 +3,6 @@ import entryPoint from './clientEntryPoint'
 import { RpgClient, RpgSceneHooks, RpgSceneMapHooks, RpgSpriteHooks, RpgClientEngineHooks } from './RpgClient'
 import { Scene as RpgScene } from './Scene/Scene'
 import { RpgClientEngine } from './RpgClientEngine'
-import { RpgSprite } from './Sprite/Player'
 import { Spritesheet } from './Sprite/Spritesheet'
 import { Sound } from './Sound/Sound'
 import { Howler as RpgGlobalSound }  from 'howler'
@@ -28,7 +27,7 @@ export {
     RpgClient,
     entryPoint,
     Spritesheet,
-    RpgSprite,
+    RpgComponent as RpgSprite,
     Sound,
     RpgGlobalSound,
     RpgSound,
@@ -55,6 +54,5 @@ export {
     RpgClientEngine,
     RpgPlugin,
     RpgScene,
-    RpgSpriteLogic,
-    RpgComponent
+    RpgSpriteLogic
 }

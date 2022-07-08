@@ -28,6 +28,7 @@ export class RpgComponent<T = any> extends PIXI.Container {
     protected z: number = 0
     protected fixed: boolean = false
     private components: IComponent[] = []
+    private direction: number = 0
     private registerComponents: Map<string, any> = new Map()
 
     constructor(private data: RpgCommonPlayer | RpgShape, private scene: Scene) {
@@ -49,6 +50,17 @@ export class RpgComponent<T = any> extends PIXI.Container {
                 this.updateComponents(val)
             })
 
+    }
+
+    /** 
+     * the direction of the sprite
+     * 
+     * @prop {Direction} dir
+     * @readonly
+     * @memberof RpgSprite
+     * */
+     get dir(): Direction {
+        return this.direction
     }
 
      /** 
@@ -125,10 +137,11 @@ export class RpgComponent<T = any> extends PIXI.Container {
             this._y = Math.floor(y)
         }
         else {
-            const { position } = this.data as RpgCommonPlayer
+            const { position, direction } = this.data as RpgCommonPlayer
             this._x =  Math.floor(position?.x ?? 0)
             this._y =  Math.floor(position?.y ?? 0)
             this.z =  Math.floor(position?.z ?? 0)
+            this.direction = direction
         }
         this._rotation = this.data['rotation'] ?? 0
         if (!smooth) {
@@ -193,6 +206,10 @@ export class RpgComponent<T = any> extends PIXI.Container {
 
     showAnimation(graphic: string | string[], animationName: string) {
         return this.callMethodInComponents('showAnimation', [graphic, animationName])
+    }
+
+    getPositionsOfGraphic(...params) {
+        return (this.getChildAt(0) as RpgSprite).getPositionsOfGraphic(...params)
     }
 
     private callMethodInComponents(name: string, params: any[]) {

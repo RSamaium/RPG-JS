@@ -164,7 +164,7 @@ export class Animation extends PIXI.Sprite {
         const { frames, container, sprites, data } = this.currentAnimation
 
         if (this.attachTo) {
-            const sprite = this.attachTo.getChildAt(0) as RpgSprite | undefined
+            const sprite = this.attachTo
             const pos = sprite?.getPositionsOfGraphic('middle')
             if (pos) {
                 container.x = pos.x
