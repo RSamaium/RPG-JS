@@ -32,6 +32,6 @@
   },
   "gitHead": "7bb0326cc3216764a4bfc86f53e7b24464a2040f",
   "devDependencies": {
-    "typescript": "^4.3.5"
+    "typescript": "^4.7.4"
   }
 }
