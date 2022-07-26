@@ -24,6 +24,7 @@ beforeEach(async () => {
     sceneMap = client.getScene<RpgSceneMap>()
 })
 
+/*
 test('Create Dynamic Event', () => {
     @EventData({
         name: 'test'
@@ -157,7 +158,50 @@ test('Test onAction', () => {
          
     })
  })
+*/
 
+ test('Test onTouch', () => {
+    return new Promise((resolve: any) => {
+         @EventData({
+             name: 'test',
+             hitbox: {
+                width: 5,
+                height: 5
+             }
+         })
+         class MyEvent extends RpgEvent {
+             onPlayerTouch(_player: RpgPlayer) {
+                expect(_player).toBeDefined()
+                expect(_player.id).toEqual(player.id)
+                resolve()
+             }
+         }
+        
+         map.createDynamicEvent({
+             x: 6,
+             y: 0,
+             event: MyEvent
+         })
+         player.setHitbox(5, 5)
+         player.teleport({ x: 0, y: 0 })
+
+         client.controls.setInputs({
+            [Control.Right]: {
+                bind: Input.Right
+            }
+         })
+         client.controls.applyControl(Control.Right)
+
+         RpgPlugin.on(HookClient.SendInput, () => {
+            nextTick(client)
+         }) 
+
+         client.nextFrame(0)
+         
+    })
+ })
+
+ /*
 test('Test onChanges Hook [syncChanges method)', () => {
     return new Promise((resolve: any) => {
          @EventData({
@@ -363,6 +407,7 @@ describe('Test Scenario Event', () => {
      })
      
 })
+*/
 
 afterEach(() => {
     clear()
