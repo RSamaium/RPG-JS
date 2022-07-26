@@ -54,5 +54,6 @@ export {
     RpgClientEngine,
     RpgPlugin,
     RpgScene,
-    RpgSpriteLogic
+    RpgSpriteLogic,
+    RpgComponent
 }

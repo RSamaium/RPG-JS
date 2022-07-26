@@ -1,16 +1,16 @@
 ![Header icon](/docs/header.png)
 
-# RPG JS v3-beta. Create RPG and MMORPG in your browser
+
+# RPG JS v3. Create RPG and MMORPG in your browser
 
 RPG JS is a framework for creating RPGs and MMORPGs.The code remains the same depending on the type of game!
 
-> **Don't hesitate to propose your ideas, your remarks and feedbacks on bugs, that will allow us to progress faster on the project!**
 
 [rpgjs.dev](https://rpgjs.dev)
 
 ## Important Note
 
-> It only works on NodeJS version 14. You can help with the development to make it work on version 16 (you will have to update Webpack and Node SASS in packages/compiler)
+> It only works on NodeJS version 14.
 
 ## Community
 
@@ -20,7 +20,6 @@ I am pleased to announce the opening of the RPGJS discussion forum. Do you need 
 
 * [Features](#features)
 * [Demo](#demo)
-* [Why Alpha Version](#why-alpha-version-)
 * [Documentation](#documentation)
 * [Installation](#installation)
 * [Production](#production)
@@ -30,8 +29,11 @@ I am pleased to announce the opening of the RPGJS discussion forum. Do you need 
 
 ## Features
 
-* **Create events** Shared/Scenario mode
-* **Tiled Map Editor** Map creation with Tiled Map Editor. You can have as many scenery layers and event layers as you want
+* **Create events** The event can be an NPC, a monster or anything else that builds the game scenario
+    - In "shared" mode, all players see the same event (the positions or the graphics of a monster)
+    - In "scenario" mode, only the player sees the event allowing to make a quest to be accomplished by player
+* **Tiled Map Editor** 
+    - ![tiled world](https://docs.rpgjs.dev/assets/tiled-world-2.png)
 * **Collisions by tile or precise**
 * **WebGL Rendering** Game rendering uses WebGL rendering (with PixiJS) for better rendering performance
 * **Precise movement, pixel by pixel**
@@ -110,10 +112,6 @@ npm run dev
 
 The game can be found in `@rpgjs/sample` package.
 
-
-## Old Version
-
-[RPGJS Version 2](https://v2.rpgjs.dev)
 
 ## License
 

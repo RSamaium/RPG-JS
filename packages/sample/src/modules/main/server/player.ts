@@ -29,13 +29,14 @@ export const player: RpgPlayerHooks = {
     onConnected(player: RpgPlayer) {
         player.setHitbox(16, 16)
         player.setGraphic(['light', 'shield'])
-        player.changeMap('cave')
+       // player.changeMap('cave')
     },
     onJoinMap(player: RpgPlayer, map: RpgMap) { 
         
     },
     onInput(player: RpgPlayer, { input, moving }) {
         if (input == Control.Back) {
+            player.changeMap('samplemap')
             //player.showAnimation(['light', 'shield'], 'attack', true)
         } 
     },

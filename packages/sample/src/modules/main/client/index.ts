@@ -14,7 +14,6 @@ let engine
     engine: {
         onConnected(rpgEngine: RpgClientEngine, socket: any) {
             engine = rpgEngine
-            RpgGui.display('my-tooltip')
         }
     },
     scenes: {

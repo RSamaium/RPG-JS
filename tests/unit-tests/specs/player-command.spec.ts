@@ -1,7 +1,7 @@
 import {_beforeEach} from './beforeEach'
 import { RpgPlayer } from '@rpgjs/server'
 import { RpgClientEngine } from '@rpgjs/client'
-import { clear } from '@rpgjs/testing'
+import { clear, nextTick } from '@rpgjs/testing'
 
 let  client: RpgClientEngine, 
 player: RpgPlayer
@@ -53,14 +53,6 @@ test('player.off() test', () => {
     client.socket.emit('test', 'foo')
     expect(fn).toHaveBeenCalledTimes(0)
 })
-
-test('player.graphic() test', () => {
-    return new Promise((resolve: any) => {
-        player.setGraphic('mygraphic')
-        resolve()
-    })
-})
-
 
 afterEach(() => {
     clear()
