@@ -107,6 +107,10 @@ export function extractId(path: string): string | null {
     return id[1]
 }
 
+export function basename(path: string): string {
+    return path.substring(path.lastIndexOf('/') + 1)
+}
+
 export default {
     random,
     isBrowser,
@@ -127,5 +131,6 @@ export default {
     generateUID,
     createConstructor,
     toRadians,
-    extractId
+    extractId,
+    basename
 }

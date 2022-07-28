@@ -41,6 +41,7 @@ test('Test Save', () => {
     expect(obj.variables).toHaveLength(1)
 })
 
+
 test('Test Load', () => {
     player.addItem(Potion)
     player.addItem(Sword)
@@ -98,6 +99,7 @@ describe('Custom Save / Load', () => {
         expect(player.wood).toBe(5)
     })
 })
+
 
 afterEach(() => {
     clear()

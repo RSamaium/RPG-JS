@@ -4,7 +4,7 @@ const crypto = require('crypto')
 const fs = require('fs')
 
 module.exports = async function worldLoader(text, sourcemap, meta) {
-    const type = process.env.RPG_TYPE == 'rpg' ? 'standalone' : 'server'
+   /* const type = process.env.RPG_TYPE == 'rpg' ? 'standalone' : 'server'
     const filepath = this.resourcePath
     this.cacheable()
     const callback = this.async()
@@ -36,5 +36,9 @@ module.exports = async function worldLoader(text, sourcemap, meta) {
     }
     await Promise.all(p)
     const js = `module.exports = ${JSON.stringify(json)}`
+    callback(null, js, sourcemap, meta)*/
+    this.cacheable()
+    const callback = this.async()
+    const js = `module.exports = ${text}`
     callback(null, js, sourcemap, meta)
 }

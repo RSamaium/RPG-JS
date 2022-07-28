@@ -1,24 +1,25 @@
-import { RpgCommonPlayer } from './Player'
-import { Hit, HitObject, HitType } from './Hit'
+import { PlayerType, RpgCommonPlayer } from './Player'
+import { Hit, HitType } from './Hit'
 import { isInstanceOf } from './Utils'
 import SAT from 'sat'
+import { TiledObjectClass } from '@rpgjs/tiled'
 
 export enum ShapePositioning {
     Default = 'default',
     Center = 'center'
 }
 
-type ShapeObject = HitObject & {
+type ShapeObject = TiledObjectClass & {
     onIn?(player: RpgCommonPlayer)
     onOut?(player: RpgCommonPlayer)
     fixEvent?: RpgCommonPlayer,
     positioning?: ShapePositioning
 }
 
-export class RpgShape  {
+export class RpgShape extends TiledObjectClass {
     _hitbox: any
-    private _properties: any = {}
     type: string = HitType.Box
+    class: string = ''
     /**
     * Get/Set name
     * @title name
@@ -41,23 +42,27 @@ export class RpgShape  {
     * @memberof Shape
     */
     positioning?: ShapePositioning = ShapePositioning.Default
+    components: any[] = []
     
     constructor(obj: ShapeObject) {
+        super()
+        Reflect.deleteProperty(obj, 'id')
         this.set(obj)
     }
 
     private setPos(type: string, val: number) {
+        if (!this.hitbox.pos) return
         if (this.isShapePosition()) {
             this.hitbox[type] = val
         }
         else {
             this.hitbox.pos[type] = val
         }
-        if (this.clientContainer) {
-            if (type == 'w') type = 'width'
-            else if (type == 'h') type = 'height'
-            this.clientContainer[type] = val
-        }
+    }
+
+    // alias
+    get id(): any {
+        return this.name
     }
 
     get hitbox() {
@@ -136,6 +141,14 @@ export class RpgShape  {
         this.setPos('y', val)
     }
 
+    // alias
+    get position() {
+        return {
+            x: this.x,
+            y: this.y
+        }
+    }
+
     /**
     * Get/Set properties
 
@@ -143,27 +156,18 @@ export class RpgShape  {
     * @prop { object } Properties
     * @memberof Shape
     */
-    get properties() {
-        if (this.fixEvent) {
-            return { 
-                z : this.fixEvent.position.z,
-                ...(this._properties || {})
-            }
-        }
-        return this._properties
-    }
-    
-    set properties(val) {
-        this._properties = val
-    }
 
     isEvent(): boolean {
-        return this.type == 'event'
+        return this.type == PlayerType.Event
     }
 
     set(obj: ShapeObject) {
         const hit = Hit.getHitbox(obj)
         Object.assign(this, hit)
+        const objClone = { ...obj };
+        // Delete dimension and position because already managed and given by the hitbox above
+        ['width', 'height', 'x', 'y'].forEach((prop) => Reflect.deleteProperty(objClone, prop))
+        Object.assign(this, objClone)
         const findPoint = (prop: string, isMin: boolean) => {
             return this.hitbox.points.sort((a, b) => isMin ? a[prop] - b[prop] : b[prop] - a[prop])[0][prop]
         }
@@ -175,6 +179,32 @@ export class RpgShape  {
         }
         this.positioning = obj.positioning
         this.fixEvent = obj.fixEvent
+        this.setComponent()
+    }
+
+    setComponent() {
+        const color = this.getProperty<string>('color')
+        const image = this.getProperty<string>('image')
+        if (color) {
+            this.components = [{ id: 'color', value: color }]
+            return
+        }
+        if (image) {
+            this.components = [{ id: 'image', value: image }]
+            return
+        }
+        if (this.text) {
+            this.components = [{ id: 'text', value: this.text.text }]
+            return
+        }
+        if (this.gid) {
+            this.components = [{ id: 'tile', value: this.gid }]
+            return
+        }
+    }
+
+    getType() {
+        return this.class || this.type
     }
 
     async in(player: RpgCommonPlayer): Promise<boolean> {

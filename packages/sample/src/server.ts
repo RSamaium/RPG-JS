@@ -41,8 +41,8 @@ server.listen(PORT, async () =>  {
 
 process.on('uncaughtException', function(error){
     console.log(pe.render(error))
-}) 
+})   
 
 process.on('unhandledRejection', function(reason: any){
     console.log(pe.render(reason)) 
-})
+})   

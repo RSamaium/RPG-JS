@@ -1,27 +1,12 @@
-const tmx = require('tmx-parser')
+const { TiledParserFile } = require('@rpgjs/tiled')
 const fs = require('fs')
 const deasync = require('deasync')
 const crypto = require('crypto')
 const path = require("path")
 
 function parse(text, filepath, callback) {
-    const type = process.env.RPG_TYPE == 'rpg' ? 'standalone' : 'client'
-    tmx.parse(text, filepath, (err, result) => {
-        if (err) return callback(err)
-        for (let layer of result.layers) {
-            if (layer.image) {
-                const source = layer.image.source
-                const hash = crypto.createHash('md5').update(source).digest("hex")
-                const ext = path.extname(source)
-                const urlName = `/images/${hash}${ext}`
-                const target = path.join(path.dirname(filepath), source);
-                const imageContent = fs.readFileSync(target)
-                const rootDir = process.cwd()
-                fs.writeFileSync(`${rootDir}/dist/${type}` + urlName, imageContent)
-                layer.image.source = urlName
-            }
-            delete layer.map
-        }
+    const parser = new TiledParserFile(text, path.dirname(filepath))
+    parser.parseFile((result) => {
         callback(null, result)
     })
 }

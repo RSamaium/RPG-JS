@@ -50,6 +50,8 @@ const itemSchemas = {
     id: String
 }
 
+export const componentSchema = { id: String, value: String }
+
 const playerSchemas = {
     position: {
         x: Number, 
@@ -75,7 +77,7 @@ const playerSchemas = {
     states: [{ name: String, description: String, id: String }],
     effects: [String],
 
-    graphic: String,
+    components: [componentSchema],
     action: Number,
     map: String,
 
@@ -133,6 +135,7 @@ export class RpgPlayer extends RpgCommonPlayer {
     public tmpPositions: Position | string | null = null
 
     _lastFrame: number = 0
+    _lastFramePositions: Map<number, Position> = new Map()
 
     constructor(gameEngine: RpgCommonGame, playerId: string) {
         super(gameEngine, playerId)
@@ -223,16 +226,29 @@ export class RpgPlayer extends RpgCommonPlayer {
     /**
      * Give the spritesheet identifier
      * 
+     * Since version 3.0.0-rc, you can define several graphic elements. If you put a number, it represents the tile ID in the tileset
+     * 
+     * Example 1:
+     * ```ts
+     * player.setGraphic(['body', 'shield'])
+     * ```
+     * 
+     * Example 2:
+     * ```ts
+     * player.setGraphic(3) // Use tile #3
+     * ```
+     * 
      * > You must, on the client side, create the spritesheet in question. Guide: [Create Sprite](/guide/create-sprite.html)
      * 
      * @title Set Graphic
      * @method player.setGraphic(graphic)
-     * @param {string} graphic
+     * @param {string | number | (string | number)[]} graphic
      * @returns {void}
      * @memberof Player
      */
-    setGraphic(graphic: string) {
-        this.graphic = graphic
+    setGraphic(graphic: string | number | (string | number)[]) {
+        const components = (Utils.isArray(graphic) ? graphic: [graphic]) as string[]
+        this.components = components.map(value => ({ id: Utils.isString(value) ? 'graphic' : 'tile', value }))
     }
 
     /**
@@ -418,7 +434,7 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @memberof Player
      */
     async teleport(positions?: {x: number, y: number, z?: number} | string): Promise<Position> {
-        if (isString(positions)) positions = <Position>this.getCurrentMap()?.getPositionByShape(shape => shape.name == positions || shape.type == positions)
+        if (isString(positions)) positions = <Position>this.getCurrentMap()?.getPositionByShape(shape => shape.name == positions || shape.getType() == positions)
         if (!positions) positions = { x: 0, y: 0, z: 0 }
         if (!(positions as Position).z) (positions as Position).z = 0
         this.teleported++
@@ -613,15 +629,21 @@ export class RpgPlayer extends RpgCommonPlayer {
      * player.showAnimation('sword_stroke', 'default', true)
      * ```
      * 
+     * Since version 3.0.0-rc, you can define several graphic elements. This allows you to animate them all at once
+     * 
+     * ```ts
+     * player.showAnimation(['body', 'sword_stroke'], 'default', true)
+     * ```
+     * 
      * @title Show Animation
      * @method player.showAnimation(graphic,animationName,replaceGraphic=false)
-     * @param {string} graphic spritesheet identifier
+     * @param {string | string[]} graphic spritesheet identifier
      * @param {string} animationName Name of the animation in the spritesheet
      * @param {boolean} [replaceGraphic] Replace the event graphic with the animation. After the end of the animation, the original graphic is reapplied
      * @returns {void}
      * @memberof Player
      */
-    showAnimation(graphic: string, animationName: string, replaceGraphic: boolean = false) {
+    showAnimation(graphic: string | string[], animationName: string, replaceGraphic: boolean = false) {
         this.emitToMap('callMethod', { 
             objectId: this.playerId,
             name: 'showAnimation',

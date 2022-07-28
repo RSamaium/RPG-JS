@@ -1,9 +1,10 @@
 import { Utils } from '@rpgjs/common'
 import { spritesheets } from '../Sprite/Spritesheets'
 import { SpritesheetOptions, TextureOptions, AnimationFrames, FrameOptions } from '../Sprite/Spritesheet'
-import RpgSprite from '../Sprite/Character'
 import { log } from '../Logger'
 import { RpgSound } from '../Sound/RpgSound'
+import { RpgComponent } from '../Components/Component'
+import { RpgSprite } from '../Sprite/Player'
 
 const { isFunction, arrayEquals } = Utils
 
@@ -22,7 +23,7 @@ type AnimationDataFrames = {
 
 export class Animation extends PIXI.Sprite {
 
-    public attachTo: RpgSprite
+    public attachTo: RpgComponent
     public hitbox: { w: number, h: number }
     public applyTransform: Function
     private frames: PIXI.Texture[][] = []
@@ -163,9 +164,12 @@ export class Animation extends PIXI.Sprite {
         const { frames, container, sprites, data } = this.currentAnimation
 
         if (this.attachTo) {
-            const { x, y } = this.attachTo.getPositionsOfGraphic('middle')
-            container.x = x
-            container.y = y
+            const sprite = this.attachTo
+            const pos = sprite?.getPositionsOfGraphic('middle')
+            if (pos) {
+                container.x = pos.x
+                container.y = pos.y
+            }
         }
 
         for (let _sprite of container.children) {

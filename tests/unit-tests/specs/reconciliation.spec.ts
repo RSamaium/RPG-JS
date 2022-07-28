@@ -36,6 +36,7 @@ test('Test reconciliation', async () => {
    })
 })
 
+
 test('Multi input', async () => {
     return new Promise(async (resolve: any) => {
         RpgPlugin.on(HookClient.SendInput, async (client, name) => {

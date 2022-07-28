@@ -4,32 +4,38 @@ import TileLayer from './TileLayer'
 import TileSet from './TileSet'
 import Tile from './Tile'
 import { log } from '../Logger'
+import { TiledMap, TiledLayerType, Layer } from '@rpgjs/tiled'
+import { RpgRenderer } from '../Renderer'
 
 const { intersection } = Utils
 
 PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
+
+export interface MapInfo extends TiledMap {
+    layers: Layer[]
+}
 
 export default class TileMap extends PIXI.Container {
     background: PIXI.Graphics = new PIXI.Graphics()
     eventsLayers: {
         [eventLayerName: string]: PIXI.Container
     } = {}
-    defaultLayer: PIXI.Container | null = null
-    data
+    defaultLayer: PIXI.Container
     private _width: number = 0
     private _height: number = 0
-    tileWidth: number = 0 
-    tileHeight: number = 0
+    tilewidth: number = 0 
+    tileheight: number = 0
     private frameRateAnimation: number = 10
-    tileSets: TileSet[] = []
+    tilesets: TileSet[] = []
     layers: {
         [layerName: string]: TileLayer | ImageLayer
     } = {}
-    shapeLayer: PIXI.Container = new PIXI.Container()
     private tilesLayer: PIXI.Container = new PIXI.Container()
     private frameTile: number = 0
 
-    constructor(data, private renderer) {
+    static readonly EVENTS_LAYER_DEFAULT : string = 'events-layer-default'
+
+    constructor(private data: MapInfo, private renderer: RpgRenderer) {
         super()
         this.x = 0
         this.y = 0
@@ -39,36 +45,54 @@ export default class TileMap extends PIXI.Container {
     /** @internal */
     drawAnimateTile(frame: number) {
         if (frame % this.frameRateAnimation == 0) {
-            this.renderer.renderer.plugins.tilemap.tileAnim[0] = this.frameTile
-            this.frameTile++
+           this.renderer['renderer'].plugins.tilemap.tileAnim[0] = this.frameTile
+           this.frameTile++
         }
     }
 
-    getEventLayer(name?: string) {
-        return name ? this.eventsLayers[name] : this.defaultLayer
+    getEventLayer(objectName?: string): PIXI.Container {
+        for (let layerData of this.data.layers) {
+            if (layerData.type != TiledLayerType.ObjectGroup) {
+                continue
+            }
+            for (let object of layerData.objects) {
+                if (object.name == objectName) {
+                    return this.eventsLayers[layerData.name]
+                }
+            }
+        }
+        return this.defaultLayer
     }
 
-    createEventLayer(name) {
+    createEventLayer(name: string): PIXI.Container {
         const container = this.eventsLayers[name] = new PIXI.Container()
         container.sortableChildren = true
-        this.addChild(container)
+        this.tilesLayer.addChild(container)
         return container
     }
 
-    private create(data) {
-        this.data = data
-        Object.assign(this, data)
-        this.background.beginFill(0x00000);
+    getData(): MapInfo {
+        return this.data
+    }
+
+    setBackgroundColor(color: string) {
+        color = color.replace('#', '')
+        this.background.beginFill(parseInt(color, 16))
         this.background.drawRect(
             0,
             0,
-            (this._width || 0) * (this.tileWidth || 0),
-            (this._height || 0) * (this.tileHeight || 0)
+            (this._width || 0) * (this.tilewidth || 0),
+            (this._height || 0) * (this.tileheight || 0)
         );
-        this.background.endFill();
-        this.addChild(this.background);
+        this.background.endFill()
+    }
 
-        this.tileSets = this.tileSets.map((tileSet) => {
+    private create(data: MapInfo) {
+        this.data = data
+        Object.assign(this, data)
+        if (this.data.backgroundcolor) this.setBackgroundColor(this.data.backgroundcolor)
+        this.addChild(this.background);
+        this.tilesets = this.data.tilesets.map((tileSet) => {
             return new TileSet(tileSet)
         })
     }
@@ -78,8 +102,8 @@ export default class TileMap extends PIXI.Container {
         const tilesLayer: any = []
         this.data.layers.forEach((layerData) => {
             switch (layerData.type) {
-                case 'tile': {
-                    const tileLayer = new TileLayer(layerData, this.tileSets)
+                case TiledLayerType.Tile: {
+                    const tileLayer = new TileLayer(layerData, this.tilesets, this)
                     const tile = tileLayer.createTile(x, y, {
                         real: true,
                         filter: (tile: Tile) => {
@@ -151,29 +175,28 @@ export default class TileMap extends PIXI.Container {
 
     /** @internal */
     load(options?: { drawTiles: boolean | undefined }) {
-        this.defaultLayer = null
         this.tilesLayer.removeChildren()
-        
-        this.tileSets.forEach(tileset => tileset.load())
-
+        this.tilesets.forEach(tileset => tileset.load())
         this.data.layers.forEach((layerData) => {
-            layerData.map = this
             switch (layerData.type) {
-                case 'tile': {
-                    const tileLayer = new TileLayer(layerData, this.tileSets)
+                case TiledLayerType.Tile: {
+                    const tileLayer = new TileLayer(layerData, this.tilesets, this)
                     if (options?.drawTiles) tileLayer.create()
                     this.layers[layerData.name] = tileLayer
                     this.tilesLayer.addChild(tileLayer)
                     break;
                 }
-                case 'image': {
-                    const imageLayer = new ImageLayer(layerData)
+                case TiledLayerType.Image: {
+                    const imageLayer = new ImageLayer(layerData, this)
                     this.layers[layerData.name] = imageLayer
                     this.tilesLayer.addChild(imageLayer)
                     break;
                 }
-                case 'object': {
-                   // this.defaultLayer = this.createEventLayer(layerData.name)
+                case TiledLayerType.ObjectGroup: {
+                    const layer = this.createEventLayer(layerData.name)
+                    if (layerData.properties[TileMap.EVENTS_LAYER_DEFAULT]) {
+                        this.defaultLayer = layer
+                    }
                     break;
                 }
             }
@@ -181,8 +204,7 @@ export default class TileMap extends PIXI.Container {
 
         this.addChild(this.tilesLayer)
         if (!this.defaultLayer) {
-            this.defaultLayer = this.createEventLayer('event-layer')
+            this.defaultLayer = this.createEventLayer(TileMap.EVENTS_LAYER_DEFAULT)
         }
-        this.addChild(this.shapeLayer)
     }
 }

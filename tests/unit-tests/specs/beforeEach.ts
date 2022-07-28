@@ -27,6 +27,9 @@ export const _beforeEach: any = async (modules: any = [], serverOptions: any = {
         ...modules
     ], {
         basePath: __dirname,
+        globalConfig: {
+            assetsPath: 'fixtures/maps'
+        },
         ...serverOptions
     }, clientOptions)
     const clientFixture = await fixture.createClient()

@@ -4,6 +4,8 @@ import RpgSprite from '../Sprite/Character'
 import { Animation } from '../Effects/Animation'
 import { BehaviorSubject, Observable } from 'rxjs'
 import { RpgGui } from '../RpgGui'
+import { GameEngineClient, ObjectFixture } from '../GameEngine'
+import { RpgComponent } from '../Components/Component'
 
 export type SceneObservableData = { 
     data: {
@@ -22,7 +24,6 @@ export interface SceneSpriteLogic {
 }
 
 export abstract class Scene {
-   
     protected objects: Map<string, any> = new Map()
     protected loader = PIXI.Loader.shared
     protected animationLayer: PIXI.Container = new PIXI.Container()
@@ -35,7 +36,7 @@ export abstract class Scene {
         partial: {}
     })
 
-    constructor(protected game: any) {
+    constructor(public game: GameEngineClient) {
         const { globalConfig } = this.game.clientEngine
         this.controls = this.game.clientEngine.controls
         this.controls.setInputs(this.inputs || globalConfig.inputs)
@@ -75,7 +76,7 @@ export abstract class Scene {
         return this._data.asObservable() 
     }
 
-    private triggerSpriteChanges(logic: SceneSpriteLogic, sprite: RpgSprite, moving: boolean) {
+    private triggerSpriteChanges(logic: SceneSpriteLogic, sprite: RpgComponent, moving: boolean) {
         if (this.onUpdateObject) this.onUpdateObject(logic, sprite, moving)
         RpgPlugin.emit(HookClient.UpdateSprite, [sprite, logic], true)
         if (logic.paramsChanged) {
@@ -98,11 +99,16 @@ export abstract class Scene {
 
      /** @internal */
     draw(t: number, dt: number, frame: number) {
-        const logicObjects = { ...this.game.world.getObjects(), ...this.game.events }
+        const logicObjects = { 
+            ...this.game.world.getObjects(), 
+            ...this.game.events,
+            ...this.game.getShapes()
+        }
         const renderObjects = this.objects
         const sizeLogic = Object.values(logicObjects).length
         for (let key in logicObjects) {
-            const val = logicObjects[key].object
+            const val: SceneSpriteLogic = logicObjects[key].object
+            const valueChanged = logicObjects[key].paramsChanged
             if (!renderObjects.has(key)) {
                 const sprite: any = this.addObject(val, key)
                 this.triggerSpriteChanges(val, sprite, true)
@@ -110,7 +116,7 @@ export abstract class Scene {
             else {
                 const object = renderObjects.get(key)
                 if (!object.update) return
-                const ret = object.update(val, t)
+                const ret = object.update(val, valueChanged, t)
                 this.triggerSpriteChanges(val, object, ret.moving)
             }
         }
@@ -129,7 +135,7 @@ export abstract class Scene {
         RpgPlugin.emit(HookClient.SceneDraw, this)
     }
 
-    abstract onUpdateObject(logic: SceneSpriteLogic, sprite: RpgSprite, moving: boolean): void
+    abstract onUpdateObject(logic: SceneSpriteLogic, sprite: RpgComponent, moving: boolean): void
     abstract addObject(obj, id: string)
     abstract removeObject(id: string)
 
@@ -194,14 +200,15 @@ export abstract class Scene {
     }: { 
         graphic: string, 
         animationName: string, 
-        attachTo?: RpgSprite, 
+        attachTo?: RpgComponent, 
         x?: number, 
         y?: number,
         loop?: boolean,
         replaceGraphic?: boolean
-    }): Animation {
+    }): Animation | undefined {
         if (replaceGraphic && attachTo) {
-            return attachTo.showAnimation(graphic, animationName)
+            attachTo.showAnimation(graphic, animationName)
+            return
         }
         const animation = new Animation(graphic)
         this.animationLayer.addChild(animation)
@@ -232,7 +239,7 @@ export abstract class Scene {
      * @memberof RpgScene
      */
     getSprite(id: string) { return this.getPlayer(id) }
-    getPlayer(id: string): RpgSprite | undefined {
+    getPlayer(id: string): RpgComponent | undefined {
         return this.objects.get(id)
     }
 

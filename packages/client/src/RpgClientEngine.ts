@@ -19,6 +19,9 @@ import { RpgSound } from './Sound/RpgSound'
 import { SceneMap } from './Scene/Map'
 import { GameEngineClient, ObjectFixture } from './GameEngine'
 import { Scene } from './Scene/Scene'
+import { Spritesheet } from './Sprite/Spritesheet'
+import { log } from './Logger'
+import { Sound } from './Sound/Sound'
 
 declare var __RPGJS_PRODUCTION__: boolean;
 
@@ -101,6 +104,7 @@ export class RpgClientEngine {
     private lastConnection: string = ''
     private lastScene: string = ''
     private matchMakerService: string | (() => MatchMakerResponse) | null = null
+    private assetsPath: string = 'assets'
 
     /**
      * Read objects synchronized with the server
@@ -150,6 +154,7 @@ export class RpgClientEngine {
 
         this.io = this.options.io
         this.globalConfig = this.options.globalConfig
+        if (this.globalConfig.assetsPath) this.assetsPath = this.globalConfig.assetsPath
         this.gameEngine.standalone = this.options.standalone
         this.gameEngine.renderer = this.renderer
         this.gameEngine.clientEngine = this
@@ -204,8 +209,20 @@ export class RpgClientEngine {
      * @since 3.0.0-beta.3
      * @memberof RpgClientEngine
      */
-    addSpriteSheet(spritesheetClass) {
+    addSpriteSheet(spritesheetClass, id?: string) {
+        if (Utils.isString(spritesheetClass)) {
+            if (!id) {
+                throw log('Please, specify the resource ID (second parameter)')
+            }
+            @Spritesheet({
+                id,
+                image: this.getResourceUrl(spritesheetClass)
+            })
+            class AutoSpritesheet {}
+            spritesheetClass = AutoSpritesheet
+        }
         this.addResource(spritesheetClass, _initSpritesheet)
+        return spritesheetClass
     }
 
     /**
@@ -217,8 +234,27 @@ export class RpgClientEngine {
      * @since 3.0.0-beta.3
      * @memberof RpgClientEngine
      */
-    addSound(soundClass) {
+    addSound(soundClass, id?: string) {
+        if (Utils.isString(soundClass)) {
+            if (!id) {
+                throw log('Please, specify the resource ID (second parameter)')
+            }
+            @Sound({
+                id,
+                sound: this.getResourceUrl(soundClass)
+            })
+            class AutoSound {}
+            soundClass = AutoSound
+        }
         this.addResource(soundClass, _initSound)
+        return soundClass
+    }
+
+    getResourceUrl(source: string): string {
+        if (source.startsWith('data:')) {
+            return source
+        }
+        return this.assetsPath + '/' + Utils.basename(source)
     }
 
     /**
@@ -441,15 +477,21 @@ export class RpgClientEngine {
 
             const change = (prop, root = val, localEvent = false) => {
                 const list = root.data[prop]
-                const partial = val.partial[prop]
-                for (let key in list) {
+                const partial = root.partial[prop]
+                for (let key in partial) {
                     const obj = list[key]
                     const paramsChanged = partial ? partial[key] : undefined
                     if (obj == null) {
-                        this.gameEngine.removeObject(key)
+                        this.gameEngine.removeObjectAndShape(key)
                     }
                     if (!obj) continue
-                    obj.type = prop == 'users' ? PlayerType.Player : PlayerType.Event
+                    const isShape = prop == 'shapes'
+                    if (!isShape) {
+                        obj.type = {
+                            users: PlayerType.Player,
+                            events: PlayerType.Event
+                        }[prop]
+                    }
                     if (prop == 'users' && this.gameEngine.playerId == key) {
                         if (obj.events) {
                             const nbEvents = Object.values(obj.events)
@@ -465,9 +507,9 @@ export class RpgClientEngine {
                                 }, true)
                             }
                         }
-                        if (paramsChanged?.position && partialRoom?.frame) {
+                        if (partialRoom?.pos && partialRoom?.frame) {
                             this.serverFrames.set(partialRoom.frame, {
-                                data: paramsChanged.position,
+                                data: partialRoom.pos,
                                 time: Date.now()
                             })
                         }
@@ -476,7 +518,8 @@ export class RpgClientEngine {
                         playerId: key,
                         params: obj,
                         localEvent,
-                        paramsChanged
+                        paramsChanged,
+                        isShape
                     })
                 }
             }
@@ -488,6 +531,7 @@ export class RpgClientEngine {
 
             change('users')
             change('events')
+            change('shapes')
 
             if (scene) {
                 scene.update(val)

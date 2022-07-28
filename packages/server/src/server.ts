@@ -33,6 +33,8 @@ export class RpgServerEngine {
      * */
     public globalConfig: any = {}
 
+    public assetsPath: string = 'assets'
+
     /**
      * Combat formulas
      * 
@@ -76,6 +78,7 @@ export class RpgServerEngine {
         }
 
         this.globalConfig = this.inputOptions.globalConfig
+        if (this.globalConfig.assetsPath) this.assetsPath = this.globalConfig.assetsPath
 
         if (!this.inputOptions.maps) this.inputOptions.maps = []
         if (!this.inputOptions.worldMaps) this.inputOptions.worldMaps = []
@@ -158,6 +161,9 @@ export class RpgServerEngine {
             },
             getObjectsOfGroup(groupId: string, player: RpgPlayer) {
                 return Query._getObjectsOfMap(groupId, player)
+            },
+            getShapesOfGroup(map: string) {
+                return Query._getShapesOfGroup(map)
             }
         })
         this.io.on('connection', this.onPlayerConnected.bind(this))
@@ -190,6 +196,7 @@ export class RpgServerEngine {
                     p.push(this.gameEngine.processInput(playerId).then(() => {
                         player.pendingMove = []
                         player._lastFrame = lastFrame.frame
+                        player._lastFramePositions.set(lastFrame.frame, {...player.position})
                     }))
                 }
             }

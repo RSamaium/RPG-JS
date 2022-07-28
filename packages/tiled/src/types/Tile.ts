@@ -1,15 +1,19 @@
 import { TiledLayer } from "./Layer";
+import { TiledObject } from "./Objects";
 import { TiledFrame, TiledProperty } from "./Types";
 
 export interface TilesetTile {
+    gid: number
     id: number;
     type: string;
     image: string;
     imageheight: number;
     imagewidth: number;
-    animation: TiledFrame[];
-    properites: TiledProperty[];
+    animations: TiledFrame[];
+    properties: {
+        [key: string]: any
+    }
     terrain: number[];
-    objectgroup: TiledLayer;
+    objects: TiledObject[];
     probability: number;
  }

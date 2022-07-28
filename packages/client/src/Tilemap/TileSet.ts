@@ -1,50 +1,37 @@
 import { spritesheets } from '../Sprite/Spritesheets'
+import { TiledTileset, Tileset as TiledTilesetClass } from '@rpgjs/tiled'
 import { log } from '../Logger'
 
-export default class TileSet {
-
-    firstGid: number = 0
-    margin: number = 0
-    spacing: number= 0
-    tileHeight: number = 0
-    tileWidth: number= 0
-    image: {
-        width: number,
-        height: number
-    }
-    tileOffset: any = {}
-    name: string = ''
+export default class TileSet extends TiledTilesetClass {
     private baseTexture: PIXI.BaseTexture
-    spritesheet
-    private textures: PIXI.Texture[] = []
+    public textures: PIXI.Texture[] = []
 
-    constructor(tileSet) {
-        Object.assign(this, tileSet)
-        const spritesheet = spritesheets.get(this.name)
-        if (!spritesheet) {
-            throw log(`There are no tilesets for ${this.name}`)
-        }
-        this.spritesheet = spritesheet
+    constructor(tileSet: TiledTileset) {
+        super(tileSet)
     }
 
     /** @internal */
     load() {
-        const { texture } = this.spritesheet.resource
+        const spritesheet = spritesheets.get(this.name)
+        if (!spritesheet) {
+            throw log(`Impossible to find ${this.name} tileset`)
+        }
+        const { texture } = spritesheet.resource
         this.baseTexture = texture.baseTexture
         for (
             let y = this.margin;
             y < this.image.height;
-            y += this.tileHeight + this.spacing
+            y += this.tileheight + this.spacing
         ) {
             for (
                 let x = this.margin;
                 x < this.image.width;
-                x += this.tileWidth + this.spacing
+                x += this.tilewidth + this.spacing
             ) {
                 this.textures.push(
                     new PIXI.Texture(
                         this.baseTexture,
-                        new PIXI.Rectangle(+x, +y, +this.tileWidth, +this.tileHeight)
+                        new PIXI.Rectangle(+x, +y, +this.tilewidth, +this.tileheight)
                     )
                 )
             }

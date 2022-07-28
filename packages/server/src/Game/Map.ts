@@ -1,5 +1,5 @@
 import { RpgCommonMap, Utils, RpgShape, RpgCommonGame }  from '@rpgjs/common'
-import fs from 'fs'
+import { TiledParserFile } from '@rpgjs/tiled'
 import { EventOptions } from '../decorators/event'
 import { RpgPlayer, EventMode, RpgEvent } from '../Player/Player'
 import { Move } from '../Player/MoveManager'
@@ -49,7 +49,7 @@ class AutoEvent extends RpgEvent {
 export class RpgMap extends RpgCommonMap {
 
     public _events: EventOption[]
-    public file: any 
+    public file: any
      /** 
      * @title event list
      * @prop { { [eventId: string]: RpgEvent } } [events]
@@ -67,8 +67,13 @@ export class RpgMap extends RpgCommonMap {
         if (RpgCommonMap.buffer.has(this.id)) {
             return 
         }
-        const data = await this.parseFile()
+        const parser = new TiledParserFile(
+            this.file, 
+            this._server.inputOptions.basePath + '/' + this._server.assetsPath
+        )
+        const data = await parser.parseFilePromise()
         super.load(data) 
+        this.getAllObjects().forEach(this.createShape.bind(this))
         this.loadProperties((data as any).properties)
         this._server.workers?.call('loadMap', {
             id: this.id,
@@ -287,26 +292,6 @@ export class RpgMap extends RpgCommonMap {
         }
 
         return events
-    }
-
-    parseFile() {   
-        if (this.file.version) {
-            return Promise.resolve(this.file)
-        }
-
-        if (Utils.isBrowser()) {
-            return fetch(this.file)
-                .then(res => res.json())
-        }
-
-        const filepath = this._server.inputOptions.basePath + '/' + this.file
-        
-        return new Promise((resolve, reject) => {
-            fs.readFile(filepath, 'utf-8', (err, data) => {
-                if (err) return reject(err)
-                resolve(JSON.parse(data))
-            })
-        })
     }
 
     setSync(schema: any) {

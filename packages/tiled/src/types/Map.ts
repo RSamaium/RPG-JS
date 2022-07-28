@@ -28,7 +28,7 @@ export interface TiledMap {
     /**
      *	Hex-formatted color (#RRGGBB or #AARRGGBB) (optional)
      */
-    backgroundcolor?: string;
+    backgroundcolor: string;
     /**
      * The compression level to use for tile layer data (defaults to -1, which means to use the algorithm default)
      */
@@ -52,7 +52,9 @@ export interface TiledMap {
     orientation: 'orthogonal' | 'isometric' | 'staggered' | 'hexagonal';
  
     layers: TiledLayer[];
-    properties: TiledProperty[];
+    properties: {
+        [key: string]: any
+    }
     tilesets: TiledTileset[];
  
     /**
@@ -74,4 +76,8 @@ export interface TiledMap {
      */
     tiledversion: string;
  
+    /**
+     * @since 1.9
+     */
+     class: string
  }

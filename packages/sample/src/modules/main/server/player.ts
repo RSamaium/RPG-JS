@@ -24,15 +24,11 @@ declare module '@rpgjs/server' {
 
 export const player: RpgPlayerHooks = {
     props: {
-        woold: {
-            $default: 0, 
-            $syncWithClient: true,
-            $permanent: false
-        }
+        color: String
     },
     onConnected(player: RpgPlayer) {
-        player.setHitbox(32, 16)
-        player.setGraphic('male1_2')
+        player.setHitbox(16, 16)
+        player.setGraphic('light')
         player.changeMap('cave')
     },
     onJoinMap(player: RpgPlayer, map: RpgMap) { 
@@ -40,9 +36,9 @@ export const player: RpgPlayerHooks = {
     },
     onInput(player: RpgPlayer, { input, moving }) {
         if (input == Control.Back) {
-            player.addItem(Shield)
-            player.callMainMenu()
-        }
+            const map = player.getCurrentMap()
+            player?.showAnimation('shield', 'test')
+        } 
     },
     async onInShape(player: RpgPlayer, shape: RpgShape) {
         console.log('in', player.name, shape.name)

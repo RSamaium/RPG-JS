@@ -4,27 +4,17 @@ import { RpgShape } from './Shape'
 import { Hit } from './Hit'
 import { VirtualGrid } from './VirtualGrid'
 import { RpgCommonWorldMaps } from './WorldMaps'
+import { TiledLayer, TiledLayerType, TiledMap, Layer, Tileset, Tile, TiledObject, TiledObjectClass, MapClass } from '@rpgjs/tiled'
 
 const buffer = new Map()
 const bufferClient = new Map()
 
-export interface Tile {
-    id: number,
-    terrain: any[],
-    probability: any,
-    properties: any,
-    animations:  any[],
-    objectGroups: any[],
-    image: any,
-    gid: number
-}
-
 export interface TileInfo {
     tiles: Tile[]
-    hasCollision: boolean
-    isClimbable?: boolean
-    isOverlay: boolean
-    objectGroups: HitObject[],
+    hasCollision: boolean | undefined
+    isClimbable?: boolean | undefined
+    isOverlay: boolean | undefined
+    objectGroups: TiledObjectClass[],
     tileIndex: number
 }
 
@@ -39,7 +29,7 @@ export interface LayerInfo {
 }
 
 
-export class RpgCommonMap {
+export class RpgCommonMap extends MapClass {
     /** 
      * @title map id
      * @readonly
@@ -51,34 +41,13 @@ export class RpgCommonMap {
     grid: VirtualGrid
     gridShapes: VirtualGrid
 
-    /** 
-     * @title Data of map
-     * @prop {object} [data]
-     * @readonly
-     * @memberof Map
-     * @memberof RpgSceneMap
-     * */
-    data: any
-    width: number = 0
-    height: number = 0
+    get tileWidth() {
+        return this.tilewidth
+    }
 
-    /** 
-     * @title Width of a tile
-     * @prop {number} [tileWidth]
-     * @readonly
-     * @memberof Map
-     * @memberof RpgSceneMap
-     * */
-    tileWidth: number = 0
-
-     /** 
-     * @title Height of a tile
-     * @prop {number} [tileHeight]
-     * @readonly
-     * @memberof Map
-     * @memberof RpgSceneMap
-     * */
-    tileHeight: number = 0
+    get tileHeight() {
+        return this.tileheight
+    }
     
     /** 
      * @title Layers of map
@@ -87,7 +56,6 @@ export class RpgCommonMap {
      * @memberof Map
      * @memberof RpgSceneMap
      * */
-    layers: LayerInfo[] = []
     
     /** @internal */
     shapes: {
@@ -136,76 +104,10 @@ export class RpgCommonMap {
         return bufferClient
     }
 
-    load(data) {
-        this.data = data
-        this.width = data.width
-        this.tileWidth = data.tileWidth 
-        this.tileHeight = data.tileHeight
-        this.height = data.height
-        this.layers = data.layers
+    load(data: TiledMap) {
+        super.load(data)
         this.grid = new VirtualGrid(this.width, this.tileWidth, this.tileHeight).zoom(10)
         this.gridShapes = new VirtualGrid(this.width, this.tileWidth, this.tileHeight).zoom(20)
-        this._extractShapes()
-    }
-
-    /** 
-     * @title Width of the map in pixels
-     * @prop {number} [widthPx]
-     * @readonly
-     * @memberof Map
-     * @memberof RpgSceneMap
-     * */
-    get widthPx(): number {
-        return this.width * this.tileWidth
-    }
-
-    /** 
-     * @title Height of the map in pixels
-     * @prop {number} [heightPx]
-     * @readonly
-     * @memberof Map
-     * @memberof RpgSceneMap
-     * */
-    get heightPx(): number {
-        return this.height * this.tileHeight
-    }
-
-    /** 
-     * @title The depth of the map in pixels (this is the height of a tile ;))
-     * @prop {number} map.zTileHeight
-     * @readonly
-     * @memberof Map
-     * @memberof RpgSceneMap
-     * */
-    get zTileHeight(): number {
-        return this.tileHeight
-    }
-
-    _extractShapes() {
-        for (let layer of this.layers) {
-            if (layer.type != 'object') continue
-            for (let obj of layer.objects) {
-                this.createShape(obj)
-            }
-        }
-    }
-
-    /**
-     * Find a layer by name. Returns `undefined` is the layer is not found
-
-     * @title Get Layer by name
-     * @method map.getLayerByName(name)
-     * @param {string} name layer name
-     * @returns {LayerInfo | undefined}
-     * @example
-     *  ```ts
-     *  const tiles = map.getLayerByName(0, 0)
-     *  ```
-     * @memberof Map
-     * @memberof RpgSceneMap
-     */
-    getLayerByName(name: string): LayerInfo | undefined {
-        return this.layers.find(layer => layer.name == name)
     }
 
     /**
@@ -231,8 +133,7 @@ export class RpgCommonMap {
      */
     createShape(obj: HitObject): RpgShape {
         const id = obj.name = (obj.name || generateUID()) as string
-        obj.properties = obj.properties || {}
-        const shape = new RpgShape(obj)
+        const shape = new RpgShape(obj as TiledObjectClass)
         this.shapes[id] = shape
         if (!shape.isShapePosition()) {
             this.gridShapes.insertInCells(id, shape.getSizeBox(this.tileWidth))
@@ -292,166 +193,6 @@ export class RpgCommonMap {
         return null
     }
 
-    setTile(x: number, y: number, layerFilter: string | ((layer: any) => boolean), tileInfo: any): {
-        x: number,
-        y: number,
-        tiles: {
-            [tileIndex: number]: object
-        }
-    } {
-        const tileIndex = this.getTileIndex(x, y)
-        let fnFilter
-        let tilesEdited = {}
-        if (isString(layerFilter)) {
-            fnFilter = (layer) => layer.name == layerFilter
-        }
-        else {
-            fnFilter = layerFilter
-        }
-        for (let layer of this.layers) {
-            if (!fnFilter(layer)) continue
-            tilesEdited[layer.name] = tileInfo
-            layer.tiles[tileIndex] = tilesEdited[layer.name]
-        }
-        return {
-            x,
-            y,
-            tiles: tilesEdited
-        }
-    } 
-
-    /**
-     * Get the tile index on the tileset
-     * 
-     * @title Get index of tile
-     * @method map.getTileIndex(x,y)
-     * @param {number} x Position X
-     * @param {number} x Position Y
-     * @returns {number}
-     * @memberof Map
-     * @memberof RpgSceneMap
-     */
-    getTileIndex(x: number, y: number, [z] = [0]): number {
-        return this.width * Math.floor((y - z) / this.tileHeight) + Math.floor(x / this.tileWidth)
-    }
-
-    /**
-     * Retrieves tiles according to its index
-
-     * @title Get tile by index
-     * @method map.getTileByIndex(tileIndex)
-     * @param {number} tileIndex tile index
-     * @returns {TileInfo}
-     * @example
-     *  ```ts
-     *  const index = map.getTileIndex(0, 0)
-     *  const tiles = map.getTileByIndex(index)
-     *  ```
-     * @memberof Map
-     * @memberof RpgSceneMap
-     */
-    getTileByIndex(tileIndex: number, zPlayer: [number, number] = [0, 0]): TileInfo {
-        const tiles: any[] = []
-        for (let layer of this.layers) {
-            if (layer.type != 'tile') {
-                continue
-            }
-            const _tiles = layer.tiles[tileIndex]
-            if (!_tiles) {
-                continue
-            }
-            if (!_tiles.properties) _tiles.properties = {}
-            const zLayer = layer.properties ? layer.properties.z : 0
-            const zTile = _tiles.properties.z
-            let z, zIntersection
-            if (zLayer !== undefined) {
-                z = zLayer + (zTile !== undefined ? zTile : 0)
-            }
-            else if (zTile !== undefined) {
-                z = zTile
-            }
-            if (z !== undefined) {
-                const realZ = z * this.tileHeight
-                zIntersection = intersection(zPlayer, [realZ, realZ + this.tileHeight])
-            }
-            if (zIntersection !== undefined) {
-                if (zIntersection) tiles.push(_tiles)
-            }
-            else {
-                tiles.push(_tiles)
-            }
-        }
-        const getLastTile = tiles[tiles.length-1]
-        if (!getLastTile) {
-            return {
-                tiles,
-                hasCollision: true,
-                isOverlay: false,
-                objectGroups: [],
-                tileIndex
-            }
-        }
-        const hasCollision = getLastTile.properties.collision
-        const isOverlay = getLastTile.properties.overlay
-        const isClimbable = getLastTile.properties.climb
-        const objectGroups = getLastTile.objectGroups
-        return {
-            tiles,
-            hasCollision,
-            isOverlay,
-            objectGroups,
-            isClimbable,
-            tileIndex
-        }
-    }
-
-    /**
-     * Find the point of origin (top left) of a tile. Of course, its position depends on the size of the tile
-
-     * @title Get origin position of tile
-     * @method map.getTileOriginPosition(x,y)
-     * @param {number} x Position X
-     * @param {number} x Position Y
-     * @returns { {x: number, y: number }}
-     * @example
-     *  ```ts
-     *  // If the size of a tile is 32x32px
-     *  const position = map.getTileOriginPosition(35, 12)
-     *  console.log(position) // { x: 32, y: 0 }
-     *  ```
-     * @memberof Map
-     * @memberof RpgSceneMap
-     */
-    getTileOriginPosition(x: number, y: number): {
-        x: number
-        y: number
-    } {
-        return { 
-            x: Math.floor(x / this.tileWidth) * this.tileWidth,
-            y: Math.floor(y / this.tileHeight) * this.tileHeight
-        }
-    }
-
-    /**
-     * Recover tiles according to a position
-
-     * @title Get tile by position
-     * @method map.getTileByPosition(x,y)
-     * @param {number} x Position X
-     * @param {number} x Position Y
-     * @returns {TileInfo}
-     * @example
-     *  ```ts
-     *  const tiles = map.getTileByPosition(0, 0)
-     *  ```
-     * @memberof Map
-     * @memberof RpgSceneMap
-     */
-    getTileByPosition(x: number, y: number, z: [number, number] = [0, 0]): TileInfo {
-        const tileIndex = this.getTileIndex(x, y, [z[0]])
-        return this.getTileByIndex(tileIndex, z)
-    }
-
     /**
      * Get tile and verify collision with hitbox
      * @param hitbox 
@@ -461,7 +202,7 @@ export class RpgCommonMap {
      * @returns TileInfo
      */
     getTile(hitbox, x: number, y: number, z: [number, number] = [0, 0]): TileInfo {
-        const tile = this.getTileByPosition(x, y, z)
+        const tile = {...this.getTileByPosition(x, y, z)}
         const tilePos = this.getTileOriginPosition(x, y)
         if (tile.objectGroups) {        
             for (let object of tile.objectGroups) {

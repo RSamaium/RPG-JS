@@ -34,7 +34,7 @@
   },
   "scripts": {
     "postinstall": "lerna bootstrap --ci && npm run build:tiled && npm run build:common && npm run build:sync-client && npm run build:sync-server && npm run build:client && npm run build:database && npm run build:server && npm run build:testing && lerna link && cd packages/client && npm i vue@3 && lerna link && cd ../../packages/plugins/agones/matchmaker && npm i",
-    "test": "jest",
+    "test": "NODE_ENV=test jest",
     "lerna:publish": "lerna publish --ignore-prepublish --force-publish --no-private --no-push --no-git-tag-version",
     "lerna:ls": "lerna ls",
     "build": "concurrently -n build \"npm:build:*\"",

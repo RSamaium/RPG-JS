@@ -1,4 +1,5 @@
 import { RpgClientEngine } from "./RpgClientEngine"
+import { Utils } from '@rpgjs/common'
 
 /**
 * Get/Set images in resources
@@ -26,13 +27,13 @@ export function _initResource(memory: Map<string, any>, _resources, prop: string
         if (resource[pluralProp]) {
             for (let key in resource[pluralProp]) {
                 const instance = new resource()
-                instance[prop] = resource[pluralProp][key]
+                instance[prop] = engine.getResourceUrl(resource[pluralProp][key])
                 memory.set(key, instance)
             }
         }
         else {
             const instance = new resource(engine)
-            instance[prop] = instance[prop]
+            instance[prop] = engine.getResourceUrl(instance[prop])
             memory.set(resource.id, instance)
         }
     }

@@ -14,12 +14,18 @@ export interface TiledObject {
     point: boolean;
     height: number;
     name: string;
-    properties: TiledProperty[];
+    properties: {
+        [key: string]: any
+    }
     /**
      * Angle in degrees clockwise
      */
     rotation: number;
     type: string;
+    /**
+     * @since 1.9
+     */
+    class: string 
     visible: boolean;
     width: number;
     /**

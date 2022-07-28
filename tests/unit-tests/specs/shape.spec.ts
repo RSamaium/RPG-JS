@@ -46,7 +46,7 @@ test('Create Shape', () => {
              expect(mapShape).toBeDefined()
              expect(mapShape.x).toEqual(0)
              expect(mapShape.y).toEqual(0)
-             resolve()
+             resolve() 
          })
          nextTick(client)
     })

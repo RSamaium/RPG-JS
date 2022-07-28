@@ -1,10 +1,11 @@
 import { intersection, generateUID, toRadians } from './Utils'
-import { Hit } from './Hit'
+import { Hit, HitType } from './Hit'
 import { RpgShape } from './Shape'
 import SAT from 'sat'
 import { TileInfo, RpgCommonMap } from './Map'
 import { RpgPlugin, HookServer } from './Plugin'
 import { GameSide, RpgCommonGame } from './Game'
+import { TiledObjectClass } from '@rpgjs/tiled'
 
 const ACTIONS = { IDLE: 0, RUN: 1, ACTION: 2 }
 
@@ -30,12 +31,14 @@ export const LiteralDirection =  {
 
 export enum PlayerType {
     Player = 'player',
-    Event = 'event'
+    Event = 'event',
+    Shape = 'shape'
 }
 
 export class RpgCommonPlayer {
     map: string = ''
-    graphic: string = ''
+    layerName: string = ''
+    components: any[] = []
     height: number = 0
     width: number = 0
     canMove: boolean
@@ -281,9 +284,9 @@ export class RpgCommonPlayer {
                 * (Math.round(Math[prop == 'x' ? 'cos' : 'sin'](angle) * 100) / 100)
         }
         return {
-            x: computePosition('x'),
-            y: computePosition('y'),
-            z: this.position.z
+            x: ~~computePosition('x'),
+            y: ~~computePosition('y'),
+            z: ~~this.position.z
         }
     }
 
@@ -397,7 +400,7 @@ export class RpgCommonPlayer {
             return true
         }
 
-        const tileCollision = (x, y): boolean => {
+        const tileCollision = (x: number, y: number): boolean => {
             const tile = this.getTile(x, y, nextPosition.z, hitbox)
             if (tile.hasCollision) {
                 this._collisionWithTiles.push(tile)
@@ -432,8 +435,8 @@ export class RpgCommonPlayer {
             const event = events[objectId]['object'] || events[objectId] 
             if (event.id == this.id) continue
             if (!this.zCollision(event)) continue
-            const collided = Hit.testPolyCollision('box', hitbox, event.hitbox)
-            
+            const collided = Hit.testPolyCollision(HitType.Box, hitbox, event.hitbox)
+ 
             for (let shape of this.shapes) {
                 await this.collisionWithShape(shape, event)
             }
@@ -458,11 +461,13 @@ export class RpgCommonPlayer {
             }
         }
 
-        const shapes = map.shapes
-        const shapesInGrid = map.gridShapes.getObjectsByBox(playerSizeBox)
+        const shapes: { [id: string]: RpgShape } = this.gameEngine.world.getShapesOfGroup(this.map)
+        const shapesInGrid = this.gameEngine.side == GameSide.Client 
+            ? new Set(Object.keys(shapes)) 
+            : map.gridShapes.getObjectsByBox(playerSizeBox)
 
         for (let shapeId of shapesInGrid) {
-            const shape = shapes[shapeId]
+            const shape = shapes[shapeId]['object'] || shapes[shapeId]
             const bool = await this.collisionWithShape(shape, this, nextPosition)
             if (bool) return true
         }
@@ -534,7 +539,7 @@ export class RpgCommonPlayer {
         if (shape.isShapePosition()) return false
         if (z !== undefined && !this.zCollision({
             position: { z },
-            height: this.mapInstance.tileHeight
+            height: this.mapInstance.zTileHeight
         })) {
             return false
         }

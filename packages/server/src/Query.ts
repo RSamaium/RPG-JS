@@ -1,5 +1,5 @@
 import { World } from '@rpgjs/sync-server'
-import { Utils } from '@rpgjs/common'
+import { RpgShape, Utils } from '@rpgjs/common'
 import { RpgPlayer } from './Player/Player'
 
 const { isString } = Utils
@@ -112,6 +112,15 @@ class QueryClass {
             ...room.events,
             ...(player ? player.events : {})
         }
+    }
+
+    getShapesOfGroup(map: string): RpgShape[] {
+        return Object.values(this._getShapesOfGroup(map))
+    }
+
+    _getShapesOfGroup(map: string): { [id: string]: RpgShape } {
+        const room: any = World.getRoom(map)
+        return room.shapes
     }
 
     // TODO

@@ -6,14 +6,13 @@ module.exports = function (dirname) {
         use: [{
             loader: require.resolve('file-loader'),
             options: {
-                outputPath(url) {
-                    return `maps/${url.replace(/.tmx$/, '.json')}`
+                outputPath: 'assets',
+                publicPath(url) {
+                    return url.replace('assets/', '')
                 },
                 name: '[contenthash].[name].[ext]',
                 esModule: false
             }
-        }, {
-            loader: path.resolve(__dirname, 'tmx-loader', 'index.js')
         }]
     }, {
         test: /\.world$/i,

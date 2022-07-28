@@ -148,3 +148,10 @@ export interface TiledProperty<T = unknown> {
     x: number;
     y: number;
  }
+
+ export interface TiledImage {
+   source: string,
+   width: number, 
+   height: number
+   trans?: string
+ }
