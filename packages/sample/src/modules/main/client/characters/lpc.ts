@@ -39,6 +39,13 @@ function getDirection(direction: Direction, offset: number = 0) {
                     return { time: i*5, frameX: i, frameY: getDirection(direction, 4) }
                 })
             ]
+        },
+        test: {
+            animations: [
+                new Array(6).fill(0).map((_, i) => {
+                    return { time: i*5, frameX: i, frameY: getDirection(Direction.Left, 4) }
+                })
+            ]
         }
     }
 })

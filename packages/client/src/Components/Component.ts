@@ -208,8 +208,25 @@ export class RpgComponent<T = any> extends PIXI.Container {
         return this.callMethodInComponents('showAnimation', [graphic, animationName])
     }
 
-    getPositionsOfGraphic(...params) {
-        return (this.getChildAt(0) as RpgSprite).getPositionsOfGraphic(...params)
+     /**
+     * Recover the position according to the graphic
+     * Normally, the position is that of the hitbox but, we retrieve the top left corner of the graphic
+     * 
+     * You can also pass the `middle` value as first parameter to retrieve the positions from the middle of the sprite
+     * 
+     * @title Get Positions of Graphic
+     * @method sprite.getPositionsOfGraphic(align)
+     * @param {string} [align] middle
+     * @returns { x: number, y: number }
+     * @memberof RpgSprite
+     */
+    getPositionsOfGraphic(align: string) {
+        const sprite = this.getChildAt(0) as RpgSprite
+        const isMiddle = align == 'middle'
+        return {
+            x: this.x - this.w * sprite.anchor.x + (isMiddle ? this.w / 2 : 0),
+            y: this.y - this.h * sprite.anchor.y + (isMiddle ? this.h / 2 : 0)
+        }
     }
 
     private callMethodInComponents(name: string, params: any[]) {

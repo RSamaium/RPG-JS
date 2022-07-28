@@ -29,26 +29,6 @@ export default class Character extends PIXI.Sprite {
         this.setGraphic(graphic)
     }
 
-    /**
-     * Recover the position according to the graphic
-     * Normally, the position is that of the hitbox but, we retrieve the top left corner of the graphic
-     * 
-     * You can also pass the `middle` value as first parameter to retrieve the positions from the middle of the sprite
-     * 
-     * @title Get Positions of Graphic
-     * @method sprite.getPositionsOfGraphic(align)
-     * @param {string} [align] middle
-     * @returns { x: number, y: number }
-     * @memberof RpgSprite
-     */
-     getPositionsOfGraphic(align?: string): { x: number, y: number } {
-        const isMiddle = align == 'middle'
-        return {
-            x: this.x - this.w * this.anchor.x + (isMiddle ? this.w / 2 : 0),
-            y: this.y - this.h * this.anchor.y + (isMiddle ? this.h / 2 : 0)
-        }
-    }
-
     /** @internal */
     showAnimation(graphic: string | string[], animationName: string) {
         const refreshAnimation = (graphic: string) => {
