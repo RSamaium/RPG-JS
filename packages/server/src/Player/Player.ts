@@ -226,11 +226,23 @@ export class RpgPlayer extends RpgCommonPlayer {
     /**
      * Give the spritesheet identifier
      * 
+     * Since version 3.0.0-rc, you can define several graphic elements. If you put a number, it represents the tile ID in the tileset
+     * 
+     * Example 1:
+     * ```ts
+     * player.setGraphic(['body', 'shield'])
+     * ```
+     * 
+     * Example 2:
+     * ```ts
+     * player.setGraphic(3) // Use tile #3
+     * ```
+     * 
      * > You must, on the client side, create the spritesheet in question. Guide: [Create Sprite](/guide/create-sprite.html)
      * 
      * @title Set Graphic
      * @method player.setGraphic(graphic)
-     * @param {string} graphic
+     * @param {string | number | (string | number)[]} graphic
      * @returns {void}
      * @memberof Player
      */
@@ -617,9 +629,15 @@ export class RpgPlayer extends RpgCommonPlayer {
      * player.showAnimation('sword_stroke', 'default', true)
      * ```
      * 
+     * Since version 3.0.0-rc, you can define several graphic elements. This allows you to animate them all at once
+     * 
+     * ```ts
+     * player.showAnimation(['body', 'sword_stroke'], 'default', true)
+     * ```
+     * 
      * @title Show Animation
      * @method player.showAnimation(graphic,animationName,replaceGraphic=false)
-     * @param {string} graphic spritesheet identifier
+     * @param {string | string[]} graphic spritesheet identifier
      * @param {string} animationName Name of the animation in the spritesheet
      * @param {boolean} [replaceGraphic] Replace the event graphic with the animation. After the end of the animation, the original graphic is reapplied
      * @returns {void}
