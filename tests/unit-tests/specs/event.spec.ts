@@ -24,7 +24,6 @@ beforeEach(async () => {
     sceneMap = client.getScene<RpgSceneMap>()
 })
 
-/*
 test('Create Dynamic Event', () => {
     @EventData({
         name: 'test'
@@ -158,7 +157,7 @@ test('Test onAction', () => {
          
     })
  })
-*/
+
 
  test('Test onTouch', () => {
     return new Promise((resolve: any) => {
@@ -201,7 +200,6 @@ test('Test onAction', () => {
     })
  })
 
- /*
 test('Test onChanges Hook [syncChanges method)', () => {
     return new Promise((resolve: any) => {
          @EventData({
@@ -407,7 +405,7 @@ describe('Test Scenario Event', () => {
      })
      
 })
-*/
+
 
 afterEach(() => {
     clear()

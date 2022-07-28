@@ -1,6 +1,5 @@
 import { RpgClient, RpgModule, Spritesheet, RpgSceneMap, RpgSprite, RpgClientEngine, RpgGui } from '@rpgjs/client'
 import Characters from './characters'
-import { MedievalTilesets } from './maps/medieval'
 import { sprite } from './sprite'
 import hpGui from './gui/hp.vue'
 import myTooltip from './gui/tooltip.vue'

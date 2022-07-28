@@ -1,7 +1,7 @@
-import { RpgSprite, RpgSpriteHooks, RpgComponent } from '@rpgjs/client'
+import { RpgSprite, RpgSpriteHooks } from '@rpgjs/client'
 
 export const sprite: RpgSpriteHooks = {
-    onInit(sprite: RpgComponent) {
+    onInit(sprite: RpgSprite) {
         sprite.interactive = true
         sprite.on('click', () => {
             sprite.guiDisplay = !sprite.guiDisplay
