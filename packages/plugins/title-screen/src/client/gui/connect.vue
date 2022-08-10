@@ -2,7 +2,7 @@
    <rpg-window width="300px" position="bottom-middle" v-if="page == 'login'">
          <p>Connect to server with your account</p>
          <form @submit.prevent="login">
-             <input type="text" placeholder="Nickname" v-model="user.nickname">
+             <input type="text" placeholder="Email" v-model="user.email">
              <input type="password" placeholder="Password" v-model="user.password">
              <button class="btn-success login">Login</button>
              <button class="css-button-3d--grey" type="button" @click="page = 'create'">Create account</button>
@@ -45,8 +45,8 @@ export default {
     },
     methods: {
         login() {
-            if (!this.user.nickname) {
-                return this.notificationError('Please enter a nickname')
+            if (!this.user.email) {
+                return this.notificationError('Please enter an email')
             }
             if (!this.user.password) {
                 return this.notificationError('Please enter a password')

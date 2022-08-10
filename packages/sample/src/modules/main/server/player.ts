@@ -29,15 +29,14 @@ export const player: RpgPlayerHooks = {
     onConnected(player: RpgPlayer) {
         player.setHitbox(16, 16)
         player.setGraphic('light')
-        player.changeMap('cave')
     },
     onJoinMap(player: RpgPlayer, map: RpgMap) { 
         
     },
     onInput(player: RpgPlayer, { input, moving }) {
         if (input == Control.Back) {
-            const map = player.getCurrentMap()
-            player?.showAnimation('shield', 'test')
+            player.setVariable('PLOP', true)
+            player.save()
         } 
     },
     async onInShape(player: RpgPlayer, shape: RpgShape) {

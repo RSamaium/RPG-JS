@@ -7,19 +7,19 @@ class MyEvent extends RpgEvent {
     onInit() {
         this.setGraphic('female13')
         this.setHitbox(32, 16)
-        this.frequency = 150  
-        this.infiniteMoveRoute([ Move.tileRandom() ])
+    }
+    onChanges(player: RpgPlayer) {
+       
     }
     onAction(player: RpgPlayer) {
-        const map = player.getCurrentMap<RpgMap>()
-        map?.removeEvent(this.id)
+        player.gold += 10
     }
 } 
 
 @MapData({
     id: 'cave',
     file: require('./tmx/cave.tmx'), 
-    //events: [MyEvent]
+    events: [MyEvent]
 })
 export class CaveMap extends RpgMap {
     

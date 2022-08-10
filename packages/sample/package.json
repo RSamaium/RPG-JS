@@ -16,6 +16,7 @@
   "license": "MIT",
   "dependencies": {
     "@rpgjs/agones": "^3.0.0-rc",
+    "@rpgjs/api": "^1.0.0",
     "@rpgjs/chat": "^3.0.0-rc",
     "@rpgjs/client": "^3.0.0-rc",
     "@rpgjs/compiler": "^3.0.0-rc",

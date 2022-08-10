@@ -1,6 +1,14 @@
 import mongoose from 'mongoose'
 import { RpgServer, RpgModule, RpgServerEngine, RpgPlayer, RpgWorld } from '@rpgjs/server'
 import Player from './model'
+import axios from 'axios'
+import { UserAuth } from './interfaces'
+
+export interface AdminConfig {
+    url: string,
+    secretKey: string,
+    publicKey: string
+}
 
 declare module '@rpgjs/server' {
     export interface RpgPlayer {
@@ -12,35 +20,42 @@ function mongoLog(msg, ...more) {
     console.log(`RPGJS MongoDB => ${msg}`, ...more)
 }
 
-function Error401() {
-    const error = new Error()
-    error['status'] = 401
-    return error
+function login(config: AdminConfig, body): Promise<UserAuth> {
+    return axios.post(config.url + '/api/players/login', {
+        ...body,
+        game: {
+            value: config.publicKey
+        }
+    }, {
+        headers: {
+            'Authorization': 'user API-Key ' + config.secretKey
+        }
+    }).then(res => res.data)
 }
 
-async function login(body) {
-    const { nickname, password } = body
-    const player = await Player.findOne({
-        nickname
-    }) as any
-    if (!player) {
-        throw Error401()
-    }
-    const valid = await player.verifyPassword(password)
-    if (!valid) {
-        throw Error401()
-    }
-    return {
-        nickname: player.nickname,
-        _id: player._id,
-        data: player.data
-    }
+function saveData(config: AdminConfig, mongoId, body): Promise<UserAuth> {
+    return axios.put(config.url + '/api/players/' + mongoId, {
+        ...body,
+        game: {
+            value: config.publicKey
+        }
+    }, {
+        headers: {
+            'Authorization': 'user API-Key ' + config.secretKey
+        }
+    }).then(res => res.data)
 }
+
+
 const originalSaveMethod = RpgPlayer.prototype.save
 RpgPlayer.prototype.save = function(): string {
     const json = originalSaveMethod.apply(this)
-    Player.findByIdAndUpdate(this.mongoId.toString(), { data: json }).catch(err => {
-        console.log(err)
+    const { admin } = this.server.globalConfig
+    const data = JSON.parse(json)
+    saveData(admin, this.mongoId, {
+        data: json,
+        variables: data.variables.map(([key, value]) => ({ key, value: ''+value })),
+        nickname: this.name
     })
     return json
 }
@@ -49,19 +64,13 @@ RpgPlayer.prototype.save = function(): string {
     engine: {
         onStart(engine: RpgServerEngine) {
             const app = engine.app
-            const { mongodb } = engine.globalConfig
-            if (!mongodb) {
-                mongoLog('Please note that you have not specified the link to mongodb. The connection, uploading and saving will not work')
+            const { admin } = engine.globalConfig
+            if (!admin) {
+                mongoLog('Add the admin parameter to globalConfig')
+                return false
             }
-            else {
-                mongoLog('Waiting for connection to MongoDB...')
-                mongoose.connect(mongodb).then(() => {
-                    mongoLog('Super, your Game is connected with MongoDB')
-                }).catch(err => {
-                    mongoLog('A problem occurred when connecting to MongoDB', err)
-                })
-            }
-            app.post('/login', async (req, res, next) => {
+            const { url } = admin
+           /* app.post('/login', async (req, res, next) => {
                 try {
                     const user = await login(req.body)
                     res.json(user)
@@ -98,7 +107,7 @@ RpgPlayer.prototype.save = function(): string {
                 catch (err) {
                     res.status(500).json(err)
                 }
-            })
+            })*/
         }
     },
     player: {
@@ -108,29 +117,29 @@ RpgPlayer.prototype.save = function(): string {
             }
         },
         onConnected(player: RpgPlayer) {
-            const { startMap } = player.server.globalConfig
+            const { startMap, admin } = player.server.globalConfig
             const gui = player.gui('rpg-title-screen')
             gui.on('login', async (body) => {
                 try {
-                    const user = await login(body)
+                    const { user, token } = await login(admin, body)
                     const playerIsAlreadyInGame = !!RpgWorld.getPlayers().find(p => !!p.mongoId)
                     if (playerIsAlreadyInGame) {
                         throw new Error('PLAYER_IN_GAME')
                     }
-                    player.mongoId = user._id
+                    player.mongoId = user.id
                     if (!user.data) {
-                        player.name = user.nickname
+                        if (user.nickname) player.name = user.nickname
                         player.changeMap(startMap)
                     }
                     else {
                         player.load(user.data)
-                        player.canMove = true
                     }
-                    gui.close()
+                    player.canMove = true
+                    gui.close(token)
                 }
                 catch (err: any) {
                     let error = {}
-                    if (err.status == 401) {
+                    if (err.response?.status == 401) {
                         error = {
                             message: 'LOGIN_FAIL'
                         }
