@@ -32,7 +32,7 @@ export const player: RpgPlayerHooks = {
         player.changeMap('cave')
     },
     onJoinMap(player: RpgPlayer, map: RpgMap) { 
-        
+        //player.position.z = 2 * 32
     },
     onInput(player: RpgPlayer, { input, moving }) {
         if (input == Control.Back) {
