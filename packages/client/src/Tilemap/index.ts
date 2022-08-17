@@ -98,7 +98,7 @@ export default class TileMap extends PIXI.Container {
     }
 
     /** @internal */
-    createOverlayTiles(x, y, instance) {
+    createOverlayTiles(x: number, y: number, instance) {
         const tilesLayer: any = []
         this.data.layers.forEach((layerData) => {
             switch (layerData.type) {
@@ -109,7 +109,7 @@ export default class TileMap extends PIXI.Container {
                         filter: (tile: Tile) => {
                             const { data, y: yObject, z: zObject } = instance
                             const { hHitbox, height } = data
-                            const zLayer = tileLayer.properties.z
+                            const zLayer = tileLayer.z
                             const tileHasZ = tile.properties.z !== undefined
                             let { z } = tile.properties
 
