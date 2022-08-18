@@ -87,11 +87,13 @@ export class SceneMap extends Scene {
         const loader = new PIXI.Loader()
         let nbLoad = 0
 
-        this.objects.forEach((object: RpgComponent) => {
-            if (Utils.isInstanceOf(object.logic, RpgCommonPlayer) && object.logic) {
-               (object.logic as RpgCommonPlayer).updateInVirtualGrid()
-            }
-        })
+        const objects = this.game.world.getObjectsOfGroup()
+
+        for (let { object } of Object.values(objects) as any[]) {
+            if (Utils.isInstanceOf(object, RpgCommonPlayer) && object) {
+                (object as RpgCommonPlayer).updateInVirtualGrid()
+             }
+        }
 
         loader.reset()
 
