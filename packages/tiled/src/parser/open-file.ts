@@ -4,6 +4,8 @@ import fs from 'fs'
 import { TiledMap } from "../types/Map"
 import { TiledTileset } from "../types/Tileset"
 
+type ParseOptions = { getOnlyBasename?: boolean }
+
 export class TiledParserFile {
     constructor(private file: string, private basePath: string) { }
 
@@ -11,8 +13,25 @@ export class TiledParserFile {
         return typeof window !== 'undefined'
     }
 
+    static typeOfFile(file: string): {
+        isXml: boolean
+        isObject: boolean
+        isHttp: boolean
+        isPath: boolean
+    } {
+        const info = {
+            isXml: file.startsWith('<?xml'),
+            isObject: !!file['version'],
+            isHttp: file.startsWith('http')
+        }
+        return  {
+            ...info,
+            isPath: !info.isXml && !info.isObject && !info.isHttp
+        }
+    }
+
     private _parseFile<T>(file: string, type: string, cb: Function) {
-        const isXml = content => content.startsWith('<?xml')
+        const isXml = content => TiledParserFile.typeOfFile(content).isXml
 
         const loadContent = (content) => {
             if (!content) {
@@ -33,11 +52,11 @@ export class TiledParserFile {
             return cb(JSON.parse(content))
         }
 
-        if (file['version']) {
+        if (TiledParserFile.typeOfFile(file).isObject) {
             return cb(file)
         }
 
-        const isHttp = file.startsWith('http')
+        const { isHttp } = TiledParserFile.typeOfFile(file)
         if (isXml(file)) {
             loadContent(file)
         }
@@ -52,12 +71,17 @@ export class TiledParserFile {
                 loadContent(data)
             })
             return
-        }
-
-        
+        }   
     }
 
-    parseFile(cb: Function) {   
+    parseFile(cb: Function, options: ParseOptions = {}) {
+        const { getOnlyBasename } = options
+        const basename = path => path.substring(path.lastIndexOf('/') + 1)
+        if (getOnlyBasename) {
+            if (TiledParserFile.typeOfFile(this.file).isPath) {
+                this.file = basename(this.file)
+            }
+        }
         this._parseFile<TiledMap>(this.file, 'map', (map, err) => {
             let hasError = false
             if (err) return cb(null, err)
@@ -78,6 +102,11 @@ export class TiledParserFile {
                         finish()
                         continue
                     }
+                    if (getOnlyBasename) {
+                        if (TiledParserFile.typeOfFile(tileset.source).isPath) {
+                            tileset.source = basename(tileset.source)
+                        }
+                    }
                     this._parseFile<TiledTileset>(tileset.source, 'tileset', (result, err) => {
                         if (err) {
                             hasError = true
@@ -95,12 +124,12 @@ export class TiledParserFile {
         })
     }
 
-    parseFilePromise(): Promise<TiledMap> {
+    parseFilePromise(options: ParseOptions = {}): Promise<TiledMap> {
         return new Promise((resolve, reject) => {
             this.parseFile((ret, err) => {
                 if (ret) resolve(ret)
                 else reject(err)
-            })
+            }, options)
         })
     }
 }
