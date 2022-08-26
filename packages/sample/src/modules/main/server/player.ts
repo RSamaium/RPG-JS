@@ -28,8 +28,7 @@ export const player: RpgPlayerHooks = {
     },
     onConnected(player: RpgPlayer) {
         player.setHitbox(16, 16)
-        player.setGraphic('light')
-        player.changeMap('cave')
+        player.setGraphic('light') 
     },
     onJoinMap(player: RpgPlayer, map: RpgMap) { 
         //player.position.z = 2 * 32
