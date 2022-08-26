@@ -1,7 +1,7 @@
 {
     "maps": [
         {
-            "fileName": "cave.tmx",
+            "fileName": "./map/cave.tmx",
             "height": 1600,
             "width": 1600,
             "x": 352,

@@ -1,5 +1,5 @@
 import { RpgServer, RpgModule, RpgPlayer } from '@rpgjs/server'
-import { CaveMap, SampleMap } from './cave'
+import { SampleMap } from './cave'
 import { player, Shield } from './player'
 import { RedisStore } from '@rpgjs/agones/src/redisStore'
 
@@ -21,11 +21,10 @@ let last
         }
     },
     maps: [
-        CaveMap,
         SampleMap
     ],
     worldMaps: [ 
         WorldMap
     ] 
 })
-export default class RpgServerEngine {}
+export default class RpgServerEngine {}  
