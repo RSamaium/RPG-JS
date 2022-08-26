@@ -19,10 +19,11 @@ export class TiledParserFile {
         isHttp: boolean
         isPath: boolean
     } {
+        const isString = typeof file == 'string'
         const info = {
-            isXml: file.startsWith('<?xml'),
+            isXml: isString && file.startsWith('<?xml'),
             isObject: !!file['version'],
-            isHttp: file.startsWith('http')
+            isHttp: isString && file.startsWith('http')
         }
         return  {
             ...info,
