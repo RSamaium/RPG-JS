@@ -17,7 +17,6 @@ export interface RpgRectTileLayer extends CompositeRectTileLayer {
 
 export default class TileLayer extends CommonLayer {
     private tilemap: RpgRectTileLayer
-    properties: any = {}
     private _tiles: any = {}
     tiles: (TileClass | null)[]
 
