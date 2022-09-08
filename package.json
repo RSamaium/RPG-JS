@@ -43,7 +43,7 @@
     "build:client": "cd packages/client && npm run build",
     "build:database": "cd packages/database && npm run build",
     "build:testing": "cd packages/testing && npm run build",
-    "build:tiled": "cd packages/tiled && npm run build",,
+    "build:tiled": "cd packages/tiled && npm run build",
     "build:agones-mm": "cd packages/plugins/agones/matchmaker && npm run build",
     "watch:common": "cd packages/common && npm run watch",
     "watch:client": "cd packages/client && npm run watch",
