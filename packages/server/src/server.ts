@@ -2,7 +2,7 @@ import { SceneMap } from './Scenes/Map';
 import { RpgPlayer } from './Player/Player'
 import { Query } from './Query'
 import { DAMAGE_SKILL, DAMAGE_PHYSIC, DAMAGE_CRITICAL, COEFFICIENT_ELEMENTS } from './presets'
-import { World, WorldClass } from '@rpgjs/sync-server'
+import { World, WorldClass } from 'simple-room'
 import { Utils, RpgPlugin, Scheduler, HookServer, RpgCommonGame } from '@rpgjs/common'
 import { WorldMap } from './Game/WorldMaps';
 

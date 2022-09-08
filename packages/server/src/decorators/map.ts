@@ -156,7 +156,7 @@ export interface MapOptions {
      * export class TownMap extends RpgMap {}
      * ```
      * 
-     * The properties are called `users` and `events`. Their scheme is identical and defined in `RpgPlayer.schemas`. To write schematics, refer to the [documentation of the @rpgjs/sync-server](https://github.com/RSamaium/RPG-JS/tree/v3/packages/sync-server#define-schema) module
+     * The properties are called `users` and `events`. Their scheme is identical and defined in `RpgPlayer.schemas`. To write schematics, refer to the [documentation of the simple-room](https://github.com/RSamaium/simple-room) module
      * 
      * @prop {object} [syncSchema]
      * @memberof MapData

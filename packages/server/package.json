@@ -20,13 +20,13 @@
   "dependencies": {
     "@rpgjs/common": "^3.0.0-rc",
     "@rpgjs/database": "^3.0.0-rc",
-    "@rpgjs/sync-server": "^3.0.0-rc",
     "@rpgjs/tiled": "^3.0.0-rc",
     "axios": "^0.27.1",
     "lodash.merge": "^4.6.2",
     "pathfinding": "^0.4.18",
     "rxjs": "^7.5.5",
-    "sat": "^0.8.0"
+    "sat": "^0.8.0",
+    "simple-room": "^1.0.0"
   },
   "gitHead": "7bb0326cc3216764a4bfc86f53e7b24464a2040f",
   "devDependencies": {
