@@ -33,7 +33,7 @@
     "typescript": "^4.5.5"
   },
   "scripts": {
-    "postinstall": "lerna bootstrap --ci && npm run build:tiled && npm run build:common && npm run build:sync-client && npm run build:sync-server && npm run build:client && npm run build:database && npm run build:server && npm run build:testing && lerna link && cd packages/client && npm i vue@3 && lerna link && cd ../../packages/plugins/agones/matchmaker && npm i",
+    "postinstall": "lerna bootstrap --ci && npm run build:tiled && npm run build:common && npm run build:client && npm run build:database && npm run build:server && npm run build:testing && lerna link && cd packages/client && npm i vue@3 && lerna link && cd ../../packages/plugins/agones/matchmaker && npm i",
     "test": "NODE_ENV=test jest",
     "lerna:publish": "lerna publish --ignore-prepublish --force-publish --no-private --no-push --no-git-tag-version",
     "lerna:ls": "lerna ls",
@@ -43,12 +43,8 @@
     "build:client": "cd packages/client && npm run build",
     "build:database": "cd packages/database && npm run build",
     "build:testing": "cd packages/testing && npm run build",
-    "build:sync-server": "cd packages/sync-server && npm run build",
-    "build:tiled": "cd packages/tiled && npm run build",
-    "watch:sync-server": "cd packages/sync-server && npm run watch",
-    "build:sync-client": "cd packages/sync-client && npm run build",
+    "build:tiled": "cd packages/tiled && npm run build",,
     "build:agones-mm": "cd packages/plugins/agones/matchmaker && npm run build",
-    "watch:sync-client": "cd packages/sync-client && npm run watch",
     "watch:common": "cd packages/common && npm run watch",
     "watch:client": "cd packages/client && npm run watch",
     "watch:server": "cd packages/server && npm run watch",
