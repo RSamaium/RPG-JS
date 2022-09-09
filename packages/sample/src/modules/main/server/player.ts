@@ -29,7 +29,8 @@ export const player: RpgPlayerHooks = {
     },
     onConnected(player: RpgPlayer) {
         player.setHitbox(16, 16)
-        player.setGraphic('light') 
+        player.setGraphic('light')
+        player.changeMap('cave')
     },
     onJoinMap(player: RpgPlayer, map: RpgMap) { 
         player.name = ''+Math.random()
@@ -37,8 +38,7 @@ export const player: RpgPlayerHooks = {
     },
     onInput(player: RpgPlayer, { input, moving }) {
         if (input == Control.Back) {
-            const map = player.getCurrentMap()
-            player?.showAnimation('shield', 'test')
+            player.setGraphic(['light', 'shield'])
         } 
     },
     async onInShape(player: RpgPlayer, shape: RpgShape) {

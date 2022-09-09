@@ -13,5 +13,5 @@ export default [
     //mobileGui,
     emotionBubblesPlugin,
     //chat,
-    title
+    //title
 ]

@@ -52,11 +52,15 @@ export class RpgComponent<T = any> extends PIXI.Container {
                     RpgPlugin.emit(HookClient.ChangesSprite, [this, this.logic?.['paramsChanged'], this.logic?.['prevParamsChanged']], true)
                 }),
                 filter(object => {
-                    return object && object.components && object.components.length
+                    const componentChanged = this.logic?.['componentChanged']
+                    return componentChanged && componentChanged.length
                 })
             )
             .subscribe((val) => {
-                this.updateComponents(val)
+                if (this.logic) {
+                    this.updateComponents(this.logic?.['componentChanged'])
+                    this.logic['componentChanged'] = undefined
+                }
             })
 
     }
@@ -230,7 +234,7 @@ export class RpgComponent<T = any> extends PIXI.Container {
      * @memberof RpgSprite
      */
     getPositionsOfGraphic(align: string) {
-        const sprite = this.getChildAt(0) as RpgSprite
+        const sprite = this.container.getChildAt(0) as RpgSprite
         const isMiddle = align == 'middle'
         return {
             x: this.x - this.w * sprite.anchor.x + (isMiddle ? this.w / 2 : 0),
@@ -244,8 +248,7 @@ export class RpgComponent<T = any> extends PIXI.Container {
         }
     }
 
-    private updateComponents(object: any) {
-        const components: IComponent[] = object.components
+    private updateComponents(components: IComponent[]) {
         this.container.removeChildren()
         for (let component of components) {
             const compClass = this.registerComponents.get(component.id)

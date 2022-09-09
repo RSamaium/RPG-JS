@@ -8,7 +8,7 @@ class MyEvent extends RpgEvent {
         this.setGraphic('female13')
         this.setHitbox(32, 16)
         this.frequency = 150  
-       // this.infiniteMoveRoute([ Move.tileRandom() ])
+        this.infiniteMoveRoute([ Move.tileRandom() ])
     }
     onAction(player: RpgPlayer) {
         

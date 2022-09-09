@@ -220,6 +220,7 @@ export class GameEngineClient extends RpgCommonGame {
         }
         if (paramsChanged) {
             GameEngineClient.toArray(paramsChanged, 'components')
+            if (paramsChanged.components) logic.componentChanged = paramsChanged.components
             if (paramsChanged.teleported) {
                 teleported = true
                 logic.position = { ...params.position } // clone
