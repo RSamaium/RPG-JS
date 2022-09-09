@@ -1,5 +1,5 @@
 import { RpgCommonPlayer, Utils, RpgPlugin, RpgCommonGame, RpgCommonMap, Direction }  from '@rpgjs/common'
-import { Room } from '@rpgjs/sync-server'
+import { Room } from 'simple-room'
 import { RpgMap, EventPosOption } from '../Game/Map'
 import { Query } from '../Query'
 import merge from 'lodash.merge'
