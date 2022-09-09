@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/agones",
-  "version": "3.0.0-rc",
+  "version": "3.0.0",
   "description": "",
   "main": "src/index.ts",
   "scripts": {
@@ -18,8 +18,8 @@
   "license": "MIT",
   "dependencies": {
     "@google-cloud/agones-sdk": "1.22.0",
-    "@rpgjs/client": "^3.0.0-rc",
-    "@rpgjs/server": "^3.0.0-rc",
+    "@rpgjs/client": "^3.0.0",
+    "@rpgjs/server": "^3.0.0",
     "redis": "^4.0.6"
   }
 }
