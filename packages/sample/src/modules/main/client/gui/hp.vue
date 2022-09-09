@@ -1,5 +1,9 @@
 <template>
-  
+<div id="menu">
+    <rpg-window position="middle">
+        Hello !
+    </rpg-window>
+</div>
 </template>
 
 <script>
@@ -15,5 +19,9 @@ export default {
 </script>
 
 <style>
-
+#menu {
+    position: absolute;
+    height: 100%;
+    width: 100%;
+}
 </style>

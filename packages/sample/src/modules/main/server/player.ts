@@ -1,5 +1,6 @@
 import { RpgPlayer, RpgMap, RpgPlayerHooks, Direction, Move, RpgShape, ShapePositioning, Control, RpgEvent, EventData, RpgWorld } from '@rpgjs/server'
 import { Armor } from '@rpgjs/database'
+import { DialogPosition } from '@rpgjs/server/lib/Gui/DialogGui';
 
 let i=0
 
@@ -28,9 +29,15 @@ export const player: RpgPlayerHooks = {
     },
     onConnected(player: RpgPlayer) {
         player.setHitbox(16, 16)
-        player.setGraphic('light') 
+        player.setGraphic('light')
+        player.changeMap('cave', {
+            x: 32,
+            y: 64
+        })
+
     },
     onJoinMap(player: RpgPlayer, map: RpgMap) { 
+        player.name = ''+Math.random()
         //player.position.z = 2 * 32
     },
     onInput(player: RpgPlayer, { input, moving }) {
@@ -46,4 +53,4 @@ export const player: RpgPlayerHooks = {
     onOutShape(player: RpgPlayer, shape: RpgShape) {
         console.log('out', player.name, shape.name)
     }
-}
+} 

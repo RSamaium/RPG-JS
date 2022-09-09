@@ -475,6 +475,8 @@ export class RpgClientEngine {
                 this.isTeleported = false
             }
 
+            const objectsChanged = {}
+
             const change = (prop, root = val, localEvent = false) => {
                 const list = root.data[prop]
                 const partial = root.partial[prop]
@@ -514,7 +516,7 @@ export class RpgClientEngine {
                             })
                         }
                     }
-                    this.gameEngine.updateObject({
+                    objectsChanged[key] = this.gameEngine.updateObject({
                         playerId: key,
                         params: obj,
                         localEvent,
@@ -532,6 +534,8 @@ export class RpgClientEngine {
             change('users')
             change('events')
             change('shapes')
+            
+            this.gameEngine.setObjectsChanged(objectsChanged)
 
             if (scene) {
                 scene.update(val)

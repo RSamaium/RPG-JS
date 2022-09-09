@@ -333,7 +333,6 @@ export class KeyboardControls {
 
             // keep reference to the last key pressed to avoid duplicates
             this.lastKeyPressed = isDown ? e.keyCode : null;
-            e.preventDefault();
         }
 
         if (isDown) this.clientEngine.keyChange.next(keyName)
