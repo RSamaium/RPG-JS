@@ -71,7 +71,9 @@ export class RpgMap extends RpgCommonMap {
             this.file, 
             this._server.inputOptions.basePath + '/' + this._server.assetsPath
         )
-        const data = await parser.parseFilePromise()
+        const data = await parser.parseFilePromise({
+            getOnlyBasename: true
+        })
         super.load(data) 
         this.getAllObjects().forEach(this.createShape.bind(this))
         this.loadProperties((data as any).properties)

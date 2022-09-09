@@ -4,7 +4,7 @@ import mobileGui from '@rpgjs/mobile-gui'
 import gamepad from '@rpgjs/gamepad'
 import emotionBubblesPlugin from '@rpgjs/plugin-emotion-bubbles'
 import title from '@rpgjs/title-screen'
-import chat from '@rpgjs/chat'
+
 
 export default [
     main,
@@ -12,7 +12,6 @@ export default [
     //starterKit,
     defaultGui,
     //mobileGui,
-    emotionBubblesPlugin,
-    chat,
-   // title
-] 
+    emotionBubblesPlugin
+]
+

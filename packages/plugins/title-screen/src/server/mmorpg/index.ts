@@ -39,7 +39,7 @@ async function login(body) {
 const originalSaveMethod = RpgPlayer.prototype.save
 RpgPlayer.prototype.save = function(): string {
     const json = originalSaveMethod.apply(this)
-    Player.findByIdAndUpdate(this.mongoId.toString(), { data: json }).catch(err => {
+    Player.findByIdAndUpdate(this.mongoId, { data: json }).catch(err => {
         console.log(err)
     })
     return json
@@ -113,11 +113,14 @@ RpgPlayer.prototype.save = function(): string {
             gui.on('login', async (body) => {
                 try {
                     const user = await login(body)
-                    const playerIsAlreadyInGame = !!RpgWorld.getPlayers().find(p => !!p.mongoId)
+                    const mongoId = user._id.toString()
+                    const playerIsAlreadyInGame = !!RpgWorld.getPlayers().find(p => {
+                        return p.mongoId == mongoId
+                    })
                     if (playerIsAlreadyInGame) {
                         throw new Error('PLAYER_IN_GAME')
                     }
-                    player.mongoId = user._id
+                    player.mongoId = mongoId
                     if (!user.data) {
                         player.name = user.nickname
                         player.changeMap(startMap)

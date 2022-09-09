@@ -4,7 +4,6 @@ import { Query } from './Query'
 import { DAMAGE_SKILL, DAMAGE_PHYSIC, DAMAGE_CRITICAL, COEFFICIENT_ELEMENTS } from './presets'
 import { World, WorldClass } from 'simple-room'
 import { Utils, RpgPlugin, Scheduler, HookServer, RpgCommonGame } from '@rpgjs/common'
-import { WorldMap } from './Game/WorldMaps';
 
 export class RpgServerEngine {
 

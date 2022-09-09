@@ -34,6 +34,7 @@ export const player: RpgPlayerHooks = {
             x: 32,
             y: 64
         })
+
     },
     onJoinMap(player: RpgPlayer, map: RpgMap) { 
         player.name = ''+Math.random()
