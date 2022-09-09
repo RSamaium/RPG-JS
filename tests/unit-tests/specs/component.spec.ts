@@ -110,7 +110,7 @@ describe('Graphic Component', () => {
                 { id: 'graphic', value: 'mygraphic2' } 
             ]
         )
-        expect(component.children).toHaveLength(2)
+        expect(component['container'].children).toHaveLength(2)
     })
 
     describe('Test Component type', () => {
@@ -118,7 +118,7 @@ describe('Graphic Component', () => {
             player.setGraphic('mygraphic1')
             await nextTick(client)
             setComponent()
-            const comp = component.getChildAt(0)
+            const comp = component['container'].getChildAt(0)
             expect(comp).toHaveProperty('setGraphic')
         })
 
@@ -126,7 +126,7 @@ describe('Graphic Component', () => {
             player.components = [ { id: 'color', value: '#ffffff' } ]
             await nextTick(client)
             setComponent()
-            const comp = component.getChildAt(0) as ColorComponent
+            const comp = component['container'].getChildAt(0) as ColorComponent
             expect(comp).toHaveProperty('setBackgroundColor')
             expect(comp.color).toBe('#ffffff')
         })
@@ -135,7 +135,7 @@ describe('Graphic Component', () => {
             player.components = [ { id: 'image', value: 'test.png' } ]
             await nextTick(client)
             setComponent()
-            const comp = component.getChildAt(0)
+            const comp = component['container'].getChildAt(0)
             expect(comp).toHaveProperty('setImage')
             expect(comp['source']).toBe('test.png')
         })
@@ -144,7 +144,7 @@ describe('Graphic Component', () => {
             player.components = [ { id: 'text', value: 'hello' } ]
             await nextTick(client)
             setComponent()
-            const comp = component.getChildAt(0) as any
+            const comp = component['container'].getChildAt(0) as any
             expect(comp.text).toBe('hello')
         })
 
@@ -152,7 +152,7 @@ describe('Graphic Component', () => {
             player.components = [ { id: 'tile', value: 1 } ]
             await nextTick(client)
             setComponent()
-            const comp = component.getChildAt(0) as any
+            const comp = component['container'].getChildAt(0) as any
             expect(comp).toHaveProperty('setTile')
             expect(comp.getChildAt(0)).toHaveProperty('tile', { gid: 1 })
         })

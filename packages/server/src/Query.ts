@@ -1,4 +1,4 @@
-import { World } from '@rpgjs/sync-server'
+import { World } from 'simple-room'
 import { RpgShape, Utils } from '@rpgjs/common'
 import { RpgPlayer } from './Player/Player'
 

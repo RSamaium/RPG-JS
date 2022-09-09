@@ -1,5 +1,5 @@
-import { Direction, PlayerType, RpgCommonPlayer, RpgShape, Utils } from "@rpgjs/common"
-import { map, filter } from "rxjs/operators"
+import { Direction, HookClient, PlayerType, RpgCommonPlayer, RpgPlugin, RpgShape, Utils } from "@rpgjs/common"
+import { map, filter, tap } from "rxjs/operators"
 import { log } from "../Logger"
 import { Scene } from "../Scene/Scene"
 import { RpgSprite } from "../Sprite/Player"
@@ -7,6 +7,8 @@ import { ColorComponent } from "./ColorComponent"
 import { ImageComponent } from "./ImageComponent"
 import { TextComponent } from "./TextComponent"
 import { TileComponent } from "./TileComponent"
+
+type PIXIComponent = PIXI.Container | PIXI.Graphics | PIXI.Text
 
 export interface IComponent {
     id: string,
@@ -29,6 +31,7 @@ export class RpgComponent<T = any> extends PIXI.Container {
     protected fixed: boolean = false
     private components: IComponent[] = []
     private direction: number = 0
+    private container: PIXI.Container = new PIXI.Container()
     private registerComponents: Map<string, any> = new Map()
 
     constructor(private data: RpgCommonPlayer | RpgShape, private scene: Scene) {
@@ -39,9 +42,15 @@ export class RpgComponent<T = any> extends PIXI.Container {
         this.registerComponents.set(ColorComponent.id, ColorComponent)
         this.registerComponents.set(TileComponent.id, TileComponent)
         this.registerComponents.set(ImageComponent.id, ImageComponent)
-        this.scene.game.all
+        this.addChild(this.container)
+        RpgPlugin.emit(HookClient.AddSprite, this)
+        RpgPlugin.emit(HookClient.SceneAddSprite, [this.scene, this], true)
+        this.scene.game.listenObject(data.id)
             .pipe(
-                map(object => object[data.id]?.paramsChanged),
+                map(object => object?.paramsChanged),
+                tap(() => {
+                    RpgPlugin.emit(HookClient.ChangesSprite, [this, this.logic?.['paramsChanged'], this.logic?.['prevParamsChanged']], true)
+                }),
                 filter(object => {
                     return object && object.components && object.components.length
                 })
@@ -230,20 +239,21 @@ export class RpgComponent<T = any> extends PIXI.Container {
     }
 
     private callMethodInComponents(name: string, params: any[]) {
-        for (let component of this.children) {
+        for (let component of this.container.children) {
             if (component[name]) component[name](...params)
         }
     }
 
     private updateComponents(object: any) {
         const components: IComponent[] = object.components
-        this.removeChildren()
+        this.container.removeChildren()
         for (let component of components) {
             const compClass = this.registerComponents.get(component.id)
             if (!compClass) {
                 throw log(`Impossible to find ${component.id} component`)
             }
-            this.addChild(new compClass(this, component.value))
+            const instance = new compClass(this, component.value)
+            this.container.addChild(instance)
         }
         this.components = components
     }

@@ -227,9 +227,7 @@ export class SceneMap extends Scene {
         this.objects.set(id, component)
         this.tilemap.getEventLayer(obj.id)?.addChild(wrapper)
         if (component.isCurrentPlayer) this.viewport?.follow(component)
-        component.onInit()
-        RpgPlugin.emit(HookClient.SceneAddSprite, [this, component], true)
-        RpgPlugin.emit(HookClient.AddSprite, component)
+        component.onInit()  
         return component
     }
 

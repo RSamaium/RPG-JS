@@ -19,8 +19,14 @@ export class GameEngineClient extends RpgCommonGame {
     private _objects: BehaviorSubject<{
         [playerId: string]: ObjectFixture
     }> = new BehaviorSubject({})
+    private _obsObjects: {
+        [id: string]: BehaviorSubject<ObjectFixture>
+    } = {}
     private _shapes: BehaviorSubject<{
         [shapeId: string]: ObjectFixture
+    }> = new BehaviorSubject({})
+    private _objectsChanged: BehaviorSubject<{
+        [playerId: string]: ObjectFixture
     }> = new BehaviorSubject({})
 
     world = {
@@ -61,6 +67,20 @@ export class GameEngineClient extends RpgCommonGame {
         const val = objects[id]
         if (!val) return null
         return val
+    }
+
+    get objectsChanged(): Observable<{ [id: string]: ObjectFixture }> {
+        return this._objectsChanged.asObservable()
+    }
+
+    setObjectsChanged(val: {
+        [playerId: string]: ObjectFixture
+    }) {
+        this._objectsChanged.next(val)
+    }
+
+    listenObject(id: string): Observable<ObjectFixture> {
+        return this._obsObjects[id].asObservable()
     }
 
     get objects(): Observable<{ [id: string]: ObjectFixture }> {
@@ -117,6 +137,7 @@ export class GameEngineClient extends RpgCommonGame {
         if (logic) {
             const objects = { ...this[prop].value } // clone
             delete objects[id]
+            delete this._obsObjects[id]
             this[prop].next(objects)
             return true
         }
@@ -155,11 +176,15 @@ export class GameEngineClient extends RpgCommonGame {
         let logic
         let teleported = false
         let propName = '_objects'
+
+        const createObsForObject = (data) => this._obsObjects[id] = new BehaviorSubject(data)
+
         if (isShape) {
             propName = '_shapes'
             logic = this.world.getShape(id)
             if (!logic) {
                 logic = this.addShape(params)
+                createObsForObject({ logic })
             }
         }
         else {
@@ -167,6 +192,7 @@ export class GameEngineClient extends RpgCommonGame {
                 logic = this.events[id]
                 if (!logic) {
                     logic = this.addEvent(RpgCommonPlayer, id)
+                    createObsForObject({ logic })
                     this.events[id] = {
                         object: logic
                     }
@@ -180,6 +206,7 @@ export class GameEngineClient extends RpgCommonGame {
             }
             if (!logic) {
                 logic = this.addPlayer(RpgCommonPlayer, id)
+                createObsForObject({ logic })
             }
         }
         logic.prevParamsChanged = Object.assign({}, logic)
@@ -199,18 +226,23 @@ export class GameEngineClient extends RpgCommonGame {
                 logic.direction = params.direction
             }
             if (!logic.paramsChanged) logic.paramsChanged = {}
-            logic.paramsChanged = merge(paramsChanged, logic.paramsChanged)
+            logic.paramsChanged = paramsChanged
         }
 
-        this[propName].next({
+        const newObject = {
+            object: logic,
+            paramsChanged
+        }
+
+        this[propName].next({ 
             ...this[propName].value,
             ...{
-                [id]: {
-                    object: logic,
-                    paramsChanged
-                }
+                [id]: newObject
             }
         })
-        return logic
+
+        this._obsObjects[id].next(newObject)
+
+        return newObject
     }
 }

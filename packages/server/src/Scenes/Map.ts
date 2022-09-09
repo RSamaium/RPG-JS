@@ -1,6 +1,6 @@
 
 import { HookServer, RpgCommonMap, RpgPlugin, Utils } from '@rpgjs/common'
-import { World } from '@rpgjs/sync-server'
+import { World } from 'simple-room'
 import { isTiledFormat, TiledMap, TiledWorld } from '@rpgjs/tiled'
 import { MapOptions, MapData } from '../decorators/map'
 import { RpgMap } from '../Game/Map'
