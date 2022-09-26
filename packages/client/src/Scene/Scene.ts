@@ -24,7 +24,7 @@ export interface SceneSpriteLogic {
 }
 
 export abstract class Scene {
-    protected objects: Map<string, any> = new Map()
+    protected objects: Map<string, RpgComponent> = new Map()
     protected loader = PIXI.Loader.shared
     protected animationLayer: PIXI.Container = new PIXI.Container()
 
@@ -98,7 +98,7 @@ export abstract class Scene {
     }
 
      /** @internal */
-    draw(t: number, dt: number, frame: number) {
+    draw(t: number, deltaTime: number, deltaRatio: number, frame: number) {
         const logicObjects = { 
             ...this.game.world.getObjects(), 
             ...this.game.events,
@@ -110,13 +110,13 @@ export abstract class Scene {
             const val: SceneSpriteLogic = logicObjects[key].object
             const valueChanged = logicObjects[key].paramsChanged
             if (!renderObjects.has(key)) {
-                const sprite: any = this.addObject(val, key)
+                const sprite = this.addObject(val, key)
                 this.triggerSpriteChanges(val, sprite, true)
             }
             else {
                 const object = renderObjects.get(key)
-                if (!object.update) return
-                const ret = object.update(val, valueChanged, t)
+                if (!object?.update) return
+                const ret = object.update(val, valueChanged, t, deltaRatio)
                 this.triggerSpriteChanges(val, object, ret.moving)
             }
         }
@@ -128,7 +128,7 @@ export abstract class Scene {
             })
         }
         for (let animation of this.animations) {
-            animation.update()
+            animation.update(deltaRatio)
         }
         this.onDraw(t)
         RpgGui.update(logicObjects)
@@ -136,7 +136,7 @@ export abstract class Scene {
     }
 
     abstract onUpdateObject(logic: SceneSpriteLogic, sprite: RpgComponent, moving: boolean): void
-    abstract addObject(obj, id: string)
+    abstract addObject(obj, id: string): RpgComponent
     abstract removeObject(id: string)
 
     /**
@@ -251,7 +251,7 @@ export abstract class Scene {
      * @returns {RpgSprite | undefined}
      * @memberof RpgScene
      */
-    getCurrentPlayer(): RpgSprite | undefined {
+    getCurrentPlayer(): RpgSprite | RpgComponent | undefined {
         return this.objects.get(this.game.playerId)
     }
 

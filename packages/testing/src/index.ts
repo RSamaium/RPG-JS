@@ -88,6 +88,7 @@ export function nextTick(client: RpgClientEngine, timestamp = 0) {
     server.send()
     return new Promise((resolve: any) => {
         client.objects.subscribe(async (objects) => {
+            client.processInput()
             client.nextFrame(timestamp)
             await client.vueInstance.$nextTick()
             resolve(objects)

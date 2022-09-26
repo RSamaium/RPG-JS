@@ -90,17 +90,19 @@ export default class Character extends PIXI.Sprite {
     }
 
     /** @internal */
-    update(obj, options: any = {}): any {
-        const { graphic, direction } = obj
+    update(obj, options: any = {}, deltaRatio: number = 1): {
+        moving: boolean
+        instance: Character
+    } {
         const { moving } = options
         this.data = obj
-        if (this.anim) this.anim.update()
-        if (this.animation) this.animation.update()
+        if (this.anim) this.anim.update(deltaRatio)
+        if (this.animation) this.animation.update(deltaRatio)
 
         if (this.playStandardAnimation) {
             if (moving) {
-                RpgPlugin.emit(HookClient.SpriteMove, this)
-                this.playAnimation(AnimationEnum.Walk)
+               RpgPlugin.emit(HookClient.SpriteMove, this)
+               this.playAnimation(AnimationEnum.Walk)
             }
             else {
                 this.playAnimation(AnimationEnum.Stand)

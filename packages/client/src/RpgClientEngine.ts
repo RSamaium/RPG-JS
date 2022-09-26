@@ -28,7 +28,8 @@ declare var __RPGJS_PRODUCTION__: boolean;
 type Tick = {
     timestamp: number
     deltaTime: number
-    frame: number
+    frame: number,
+    deltaRatio: number
 }
 
 type FrameData = {
@@ -84,7 +85,8 @@ export class RpgClientEngine {
     private _tick: BehaviorSubject<Tick> = new BehaviorSubject({
         timestamp: -1,
         deltaTime: 0,
-        frame: 0
+        frame: 0,
+        deltaRatio: 1
     })
     public keyChange: Subject<string> = new Subject()
     public roomJoin: Subject<string> = new Subject()
@@ -105,6 +107,7 @@ export class RpgClientEngine {
     private lastScene: string = ''
     private matchMakerService: string | (() => MatchMakerResponse) | null = null
     private assetsPath: string = 'assets'
+    private serverFps: number = 60
 
     /**
      * Read objects synchronized with the server
@@ -153,6 +156,7 @@ export class RpgClientEngine {
         }
 
         this.io = this.options.io
+        if (this.options.serverFps) this.serverFps = this.options.serverFps
         this.globalConfig = this.options.globalConfig
         if (this.globalConfig.assetsPath) this.assetsPath = this.globalConfig.assetsPath
         this.gameEngine.standalone = this.options.standalone
@@ -271,12 +275,34 @@ export class RpgClientEngine {
         PIXI.utils.skipHello()
         await this._init()
         await this.renderer.init()
+        const { maxFps } = this.options
         if (options.renderLoop) {
-            const loop = (timestamp) => {
-                this.nextFrame(timestamp)
+            if (!maxFps) {
+                const loop = (timestamp) => {
+                    window.requestAnimationFrame(loop)
+                    this.nextFrame(timestamp)
+                }
                 window.requestAnimationFrame(loop)
             }
-            window.requestAnimationFrame(loop)
+            else {
+                const msInterval = Utils.fps2ms(maxFps)
+                let now = Utils.preciseNow()
+                let then = Utils.preciseNow()
+                const loop = (timestamp) => {
+                    window.requestAnimationFrame(loop)
+                    now = Utils.preciseNow()
+                    const elapsed = now - then
+                    if (elapsed > msInterval) {
+                        then = now - (elapsed % msInterval)
+                        this.nextFrame(timestamp)
+                    }
+                }
+                window.requestAnimationFrame(loop)
+            }
+            // The processing is outside the rendering loop because if the FPS are lower (or higher) then the sending to the server would be slower or faster. Here it is constant
+            setInterval(() => {
+                this.processInput()
+            }, Utils.fps2ms(this.serverFps))
         }  
         const ret: boolean[] = await RpgPlugin.emit(HookClient.Start, this)
         this.matchMakerService = this.options.globalConfig.matchMakerService
@@ -308,10 +334,12 @@ export class RpgClientEngine {
      */
     nextFrame(timestamp: number) {
         this.lastTimestamp = this.lastTimestamp || timestamp
+        const deltaTime = timestamp - this.lastTimestamp
         this._tick.next({
             timestamp, 
-            deltaTime: timestamp - this.lastTimestamp,
-            frame: this.frame
+            deltaTime,
+            frame: this.frame,
+            deltaRatio: ~~deltaTime / ~~Utils.fps2ms(this.serverFps)
         })
         this.lastTimestamp = timestamp
         this.frame++
@@ -345,6 +373,11 @@ export class RpgClientEngine {
       }
 
     private async step(t: number, dt: number) {
+        
+        RpgPlugin.emit(HookClient.Step, [this, t, dt], true) 
+    }
+
+    async processInput() {
         const { playerId } = this.gameEngine
         const player = this.gameEngine.world.getObject(playerId)
         this.controls.preStep()
@@ -363,7 +396,6 @@ export class RpgClientEngine {
             }  
             this.serverReconciliation(player)
         }
-        RpgPlugin.emit(HookClient.Step, [this, t, dt], true) 
     }
 
     /**

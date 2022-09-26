@@ -43,8 +43,8 @@ export class RpgRenderer  {
     public transitionMode: TransitionMode = TransitionMode.Fading
 
     constructor(private clientEngine: RpgClientEngine) {
-        this.clientEngine.tick.subscribe(({ timestamp, deltaTime, frame }) => {
-            this.draw(timestamp, deltaTime, frame)
+        this.clientEngine.tick.subscribe(({ timestamp, deltaRatio, frame, deltaTime }) => {
+            this.draw(timestamp, deltaTime, deltaRatio, frame)
         })
         this.transitionCompleted()
     }
@@ -150,9 +150,9 @@ export class RpgRenderer  {
     }
     
      /** @internal */
-    draw(t: number, dt: number, frame: number) {
+    draw(t: number, deltaTime: number, deltaRatio: number, frame: number) {
         if (!this.renderer) return
-        if (this.scene && !this.freeze) this.scene.draw(t, dt, frame)
+        if (this.scene && !this.freeze) this.scene.draw(t, deltaTime, deltaRatio, frame)
         this.renderer.render(this.stage)
     }
 

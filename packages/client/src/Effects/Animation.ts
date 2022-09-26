@@ -4,16 +4,12 @@ import { SpritesheetOptions, TextureOptions, AnimationFrames, FrameOptions } fro
 import { log } from '../Logger'
 import { RpgSound } from '../Sound/RpgSound'
 import { RpgComponent } from '../Components/Component'
-import { RpgSprite } from '../Sprite/Player'
 
 const { isFunction, arrayEquals } = Utils
 
 type AnimationDataFrames = {
     container: PIXI.Container,
-    sprites: {
-        [time: number]: FrameOptions
-    },
-    maxTime: number,
+    sprites: FrameOptions[],
     frames: PIXI.Texture[][],
     name: string,
     animations: AnimationFrames,
@@ -30,6 +26,7 @@ export class Animation extends PIXI.Sprite {
     private spritesheet: SpritesheetOptions
     private currentAnimation: AnimationDataFrames | null = null
     private time: number = 0
+    private frameIndex: number = 0
     private animations: Map<string, AnimationDataFrames> = new Map()
 
     onFinish: () => void
@@ -84,13 +81,12 @@ export class Animation extends PIXI.Sprite {
             optionsTextures.spriteHeight = rectHeight ? rectHeight : height / framesHeight
             this.animations.set(animationName, {
                 container: new PIXI.Sprite(),
-                maxTime: 0,
                 frames: this.createTextures(optionsTextures),
                 name: animationName,
                 animations: textures[animationName].animations,
                 params: [],
                 data: optionsTextures,
-                sprites: {}
+                sprites: []
             })
         }
     }
@@ -115,11 +111,10 @@ export class Animation extends PIXI.Sprite {
     }
 
     play(name: string, params: any[] = []) {
-
         const animParams = this.currentAnimation?.params
 
         if (this.isPlaying(name) && arrayEquals(params, animParams || [])) return
-       
+
         const animation = this.get(name)
 
         if (!animation) {
@@ -127,10 +122,11 @@ export class Animation extends PIXI.Sprite {
         }
 
         this.removeChildren()
-        animation.sprites = {}
+        animation.sprites = []
         this.currentAnimation = animation
         this.currentAnimation.params = params
         this.time = 0
+        this.frameIndex = 0
 
         let animations: any = animation.animations;
         animations = isFunction(animations) ? (animations as Function)(...params) : animations
@@ -140,8 +136,7 @@ export class Animation extends PIXI.Sprite {
         for (let container of (animations as FrameOptions[][])) {
             const sprite = new PIXI.Sprite()
             for (let frame of container) {
-                this.currentAnimation.sprites[frame.time] = frame
-                this.currentAnimation.maxTime = Math.max(this.currentAnimation.maxTime, frame.time)
+                this.currentAnimation.sprites.push(frame)
             }
            this.currentAnimation.container.addChild(sprite)
         }
@@ -154,14 +149,16 @@ export class Animation extends PIXI.Sprite {
 
         this.addChild(this.currentAnimation.container)
         // Updates immediately to avoid flickering
-        this.update()
+        this.update(1)
     }
 
      /** @internal */
-    update() {
+    update(deltaRatio: number) {
         if (!this.isPlaying() || !this.currentAnimation) return  
 
         const { frames, container, sprites, data } = this.currentAnimation
+        let frame = sprites[this.frameIndex]
+        const nextFrame = sprites[this.frameIndex+1]
 
         if (this.attachTo) {
             const sprite = this.attachTo
@@ -174,10 +171,11 @@ export class Animation extends PIXI.Sprite {
 
         for (let _sprite of container.children) {
             const sprite = _sprite as PIXI.Sprite
-            let frame = sprites[this.time]
+            
             if (!frame || frame.frameY == undefined || frame.frameX == undefined) {
                 continue
             }
+
             sprite.texture = frames[frame.frameY][frame.frameX]
             
             const getVal = (prop) => frame[prop] || data[prop] || this.spritesheet[prop]
@@ -232,10 +230,18 @@ export class Animation extends PIXI.Sprite {
             applyTransformValue('rotation')
             applyTransformValue('visible')
         }
-        this.time++
-        if (this.time > this.currentAnimation.maxTime) {
+
+        if (!nextFrame) {
             this.time = 0
+            this.frameIndex = 0
             if (this.onFinish) this.onFinish()
+            return
+        }
+       
+        this.time += deltaRatio
+
+        if (this.time >= nextFrame.time) {
+            this.frameIndex++
         }
     }
 }

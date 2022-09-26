@@ -38,7 +38,7 @@ export const player: RpgPlayerHooks = {
     },
     onInput(player: RpgPlayer, { input, moving }) {
         if (input == Control.Back) {
-            player.setGraphic(['light', 'shield'])
+           player.setGraphic(['light', 'shield'])
         } 
     },
     async onInShape(player: RpgPlayer, shape: RpgShape) {

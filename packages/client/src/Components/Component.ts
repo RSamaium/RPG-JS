@@ -164,13 +164,13 @@ export class RpgComponent<T = any> extends PIXI.Container {
         }
     }
 
-    update(obj: any): { moving: boolean } {
+    update(obj: any, objChanged: any, time: number, deltaRatio: number): { moving: boolean } {
         const { speed, teleported, map, fixed, rotation } = obj
         this.data = obj
         this.setPosition() 
-
+        const renderSpeed = speed * deltaRatio
         if (this._rotation != this.angle) {
-            this.angle += Math.min(speed, this._rotation - this.angle)
+            this.angle += Math.min(renderSpeed, this._rotation - this.angle)
         }
 
         let moving = false
@@ -189,27 +189,27 @@ export class RpgComponent<T = any> extends PIXI.Container {
             obj.posY = this._y
     
             if (this._x > this.x) {
-                this.x += Math.min(speed, this._x - this.x)
+                this.x += Math.min(renderSpeed, this._x - this.x)
                 moving = true
             }
     
             if (this._x < this.x) {
-                this.x -= Math.min(speed, this.x - this._x)
+                this.x -= Math.min(renderSpeed, this.x - this._x)
                 moving = true
             }
     
             if (this._y > this.y) {
-                this.y += Math.min(speed, this._y - this.y)
+                this.y += Math.min(renderSpeed, this._y - this.y)
                 moving = true
             }
     
             if (this._y < this.y) {
-                this.y -= Math.min(speed, this.y - this._y)
+                this.y -= Math.min(renderSpeed, this.y - this._y)
                 moving = true
             }
         }
 
-        this.callMethodInComponents('update', [obj, { moving }])
+        this.callMethodInComponents('update', [obj, { moving }, deltaRatio])
         this.onUpdate(obj)
 
         return {

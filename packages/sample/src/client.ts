@@ -6,6 +6,7 @@ import modules from './modules'
 document.addEventListener('DOMContentLoaded', function(e) { 
     entryPoint(modules, { 
         io,
-        globalConfig
+        globalConfig,
+        maxFps: 60
     }).start()
 })

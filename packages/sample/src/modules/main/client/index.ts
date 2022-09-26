@@ -4,11 +4,12 @@ import { sprite } from './sprite'
 import hpGui from './gui/hp.vue'
 import myTooltip from './gui/tooltip.vue'
 import { Musics } from './sounds'
+import { ShieldAnimations } from './animation'
 
 let engine
 
 @RpgModule<RpgClient>({ 
-    spritesheets: [...Characters],
+    spritesheets: [...Characters, ShieldAnimations],
     sprite,
     engine: {
         onConnected(rpgEngine: RpgClientEngine, socket: any) {

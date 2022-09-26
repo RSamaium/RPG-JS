@@ -153,7 +153,7 @@ test('Test onAction', () => {
             nextTick(client)
          }) 
 
-         client.nextFrame(0)
+         client.processInput()
          
     })
  })
@@ -195,7 +195,7 @@ test('Test onAction', () => {
             nextTick(client)
          }) 
 
-         client.nextFrame(0)
+         client.processInput()
          
     })
  })

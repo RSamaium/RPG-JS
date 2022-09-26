@@ -173,7 +173,7 @@ test('Create Shape', () => {
         })
         client.controls.setInputs(inputs)
         client.controls.applyControl(Control.Right, true)
-        client.nextFrame(0)
+        client.processInput()
         RpgPlugin.on(HookClient.SendInput, () => {
             server.step()
             client.controls.applyControl(Control.Right, false)

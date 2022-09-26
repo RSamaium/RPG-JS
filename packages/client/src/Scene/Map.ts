@@ -131,7 +131,8 @@ export class SceneMap extends Scene {
                     screenWidth: this.options.screenWidth,
                     screenHeight: this.options.screenHeight,
                     worldWidth: obj.width * obj.tilewidth,
-                    worldHeight: obj.height * obj.tileheight
+                    worldHeight: obj.height * obj.tileheight,
+                    noTicker: true
                 })
                 this.tilemap.addChild(this.animationLayer)
                 this.viewport.clamp({ direction: 'all' })
@@ -169,12 +170,13 @@ export class SceneMap extends Scene {
     }
 
     /** @internal */
-    draw(t: number, dt: number, frame: number) {
+    draw(t: number, deltaTime: number, deltaRatio: number, frame: number) {
         if (!this.isLoaded) {
             return
         }
-        super.draw(t, dt, frame)
+        super.draw(t, deltaTime, deltaRatio, frame)
         this.tilemap.drawAnimateTile(frame)
+        this.viewport?.update(deltaTime)
     }
 
     onUpdateObject(logic: SceneSpriteLogic, sprite: RpgComponent, moving: boolean): RpgComponent {

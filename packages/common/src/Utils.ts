@@ -111,6 +111,14 @@ export function basename(path: string): string {
     return path.substring(path.lastIndexOf('/') + 1)
 }
 
+export function fps2ms(fps: number): number {
+    return 1000 / fps
+}
+
+export function preciseNow(): number {
+    return typeof performance !== 'undefined' ? performance.now() : Date.now()
+}
+
 export default {
     random,
     isBrowser,
@@ -132,5 +140,7 @@ export default {
     createConstructor,
     toRadians,
     extractId,
-    basename
+    basename,
+    fps2ms,
+    preciseNow
 }

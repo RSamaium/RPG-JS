@@ -74,6 +74,24 @@ interface RpgClientEntryPointOptions {
     globalConfig?: any
 
     drawMap?: boolean
+
+    /** 
+     * The maximum number of fps for the rendering
+     * 
+     * @prop {object} [maxFps]
+     * @since 3.0.2
+     * @memberof RpgClientEntryPoint
+     * */
+    maxFps?: number
+
+    /** 
+     * Put the number of FPS that the server processes. It allows to synchronize the client rendering with the server. The default value is 60
+     * 
+     * @prop {object} [serverFps]
+     * @since 3.0.2
+     * @memberof RpgClientEntryPoint
+     * */
+    serverFps?: number
 }
 
 export default (modules: ModuleType[], options: RpgClientEntryPointOptions): RpgClientEngine => {
