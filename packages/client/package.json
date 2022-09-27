@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/client",
-  "version": "3.0.2",
+  "version": "3.0.3",
   "description": "",
   "main": "lib/index.js",
   "types": "./lib/index.d.ts",
@@ -18,7 +18,7 @@
   "author": "Samuel Ronce",
   "license": "MIT",
   "dependencies": {
-    "@rpgjs/common": "^3.0.0",
+    "@rpgjs/common": "^3.0.1",
     "@rpgjs/tiled": "^3.0.0",
     "@types/howler": "2.2.1",
     "howler": "2.2.1",
