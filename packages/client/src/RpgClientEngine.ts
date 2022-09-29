@@ -13,7 +13,9 @@ import {
     Utils, 
     RpgPlugin, 
     HookClient,
-    RpgCommonMap
+    RpgCommonMap,
+    SocketMethods,
+    SocketEvents
 } from '@rpgjs/common'
 import { RpgSound } from './Sound/RpgSound'
 import { SceneMap } from './Scene/Map'
@@ -466,12 +468,12 @@ export class RpgClientEngine {
             scene?.changeTile(x, y, tiles)
         })
         
-        this.socket.on('callMethod', ({ objectId, params, name }) => {
+        this.socket.on(SocketEvents.CallMethod, ({ objectId, params, name }) => {
             const scene = this.renderer.getScene<SceneMap>()
             const sprite = scene?.getPlayer(objectId)
             if (!sprite) return
             switch (name) {
-                case 'showAnimation':
+                case SocketMethods.ShowAnimation:
                     scene?.showAnimation({ 
                         attachTo: sprite,
                         graphic: params[0],
@@ -479,7 +481,11 @@ export class RpgClientEngine {
                         replaceGraphic: params[2]
                     })
                 break
-                case 'playSound':
+                case SocketMethods.CameraFollow:
+                    const [spriteId, options] = params
+                    scene?.cameraFollowSprite(spriteId, options)
+                break
+                case SocketMethods.PlaySound:
                     RpgSound.play(params[0])
                 break
             }

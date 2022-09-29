@@ -252,6 +252,28 @@ export class SceneMap extends Scene {
         return shapes.map(shape => shape.object)
     }
 
+    cameraFollowSprite(id: string, options: any = {}) {
+        const sprite = this.getSprite(id)
+        const follow = () => {
+            if (sprite) this.viewport?.follow(sprite)
+        }
+        if (options.smoothMove) {
+            this.viewport?.plugins.remove('follow')
+            let moreOptions = {}
+            if (typeof options.smoothMove != 'boolean') {
+                moreOptions = options.smoothMove
+            }
+            this.viewport?.animate({
+                position: new PIXI.Point (sprite?.x, sprite?.y),
+                ...moreOptions,
+                callbackOnComplete: follow
+            })
+        }
+        else {
+            follow()
+        }
+    }
+
     /**
      * Listen to the events of the smile on the stage
      *

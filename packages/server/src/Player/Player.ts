@@ -1,4 +1,4 @@
-import { RpgCommonPlayer, Utils, RpgPlugin, RpgCommonGame, RpgCommonMap, Direction }  from '@rpgjs/common'
+import { RpgCommonPlayer, Utils, RpgPlugin, RpgCommonGame, RpgCommonMap, Direction, SocketMethods, SocketEvents } from '@rpgjs/common'
 import { Room } from 'simple-room'
 import { RpgMap, EventPosOption } from '../Game/Map'
 import { Query } from '../Query'
@@ -16,14 +16,14 @@ import { VariableManager } from './VariableManager'
 import { Frequency, MoveManager, Speed } from './MoveManager'
 import { BattleManager } from './BattleManager'
 
-import { 
-    MAXHP, 
+import {
+    MAXHP,
     MAXSP,
     STR,
     INT,
     DEX,
     AGI,
-    MAXHP_CURVE, 
+    MAXHP_CURVE,
     MAXSP_CURVE,
     STR_CURVE,
     INT_CURVE,
@@ -34,15 +34,24 @@ import { RpgServerEngine } from '../server'
 import { RpgClassMap } from '../Scenes/Map'
 import { RpgTiledWorldMap } from '../Game/WorldMaps'
 
-const { 
-    isPromise, 
+const {
+    isPromise,
     applyMixins,
     isString
 } = Utils
 
 export interface Position { x: number, y: number, z: number }
+export interface CameraOptions {
+    speed?: number
+    acceleration?: number,
+    smoothMove?: {
+        time?: number,
+        // https://easings.net
+        ease?: 'easeInSine' | 'easeOutSine' | 'easeInOutSine' | 'easeInQuad' | 'easeOutQuad' | 'easeInOutQuad' | 'easeInCubic' | 'easeOutCubic' | 'easeInOutCubic' | 'easeInQuart' | 'easeOutQuart' | 'easeInOutQuart' | 'easeInQuint' | 'easeOutQuint' | 'easeInOutQuint' | 'easeInExpo' | 'easeOutExpo' | 'easeInOutExpo' | 'easeInCirc' | 'easeOutCirc' | 'easeInOutCirc' | 'easeInBack' | 'easeOutBack' | 'easeInOutBack' | 'easeInElastic' | 'easeOutElastic' | 'easeInOutElastic' | 'easeInBounce' | 'easeOutBounce' | 'easeInOutBounce' | 'linear'
+    } | boolean
+}
 
-const itemSchemas = { 
+const itemSchemas = {
     name: String,
     description: String,
     price: Number,
@@ -54,7 +63,7 @@ export const componentSchema = { id: String, value: String }
 
 const playerSchemas = {
     position: {
-        x: Number, 
+        x: Number,
         y: Number,
         z: Number
     },
@@ -66,9 +75,9 @@ const playerSchemas = {
     hp: Number,
     sp: Number,
     gold: Number,
-    level: Number, 
-    exp: Number, 
-    name: String, 
+    level: Number,
+    exp: Number,
+    name: String,
     expForNextlevel: Number,
     items: [{ nb: Number, item: itemSchemas }],
     _class: { name: String, description: String, id: String },
@@ -84,7 +93,7 @@ const playerSchemas = {
     speed: Number,
     frequency: Number,
     canMove: Boolean,
-    through: Boolean, 
+    through: Boolean,
     throughOtherPlayer: Boolean,
 
     width: Number,
@@ -118,13 +127,13 @@ export class RpgPlayer extends RpgCommonPlayer {
     public readonly type: string = 'player'
 
     static schemas = {
-       ...playerSchemas,
+        ...playerSchemas,
         events: [playerSchemas]
     }
 
     private _name
     public events: any = {}
-    public param: any 
+    public param: any
     public _rooms = []
     public session: string | null = null
     public prevMap: string = ''
@@ -152,7 +161,7 @@ export class RpgPlayer extends RpgCommonPlayer {
 
     /** @internal */
     initialize() {
-        this.expCurve =  {
+        this.expCurve = {
             basis: 30,
             extra: 20,
             accelerationA: 30,
@@ -247,7 +256,7 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @memberof Player
      */
     setGraphic(graphic: string | number | (string | number)[]) {
-        const components = (Utils.isArray(graphic) ? graphic: [graphic]) as string[]
+        const components = (Utils.isArray(graphic) ? graphic : [graphic]) as string[]
         this.components = components.map(value => ({ id: Utils.isString(value) ? 'graphic' : 'tile', value }))
     }
 
@@ -265,8 +274,8 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @returns {Promise<RpgMap | null>} null if map not exists
      * @memberof Player
      */
-    changeMap(mapId: string, positions?: { x: number, y: number, z?: number} | string): Promise<RpgMap | null | boolean> {
-        return this.server.sceneMap.changeMap(mapId, this, positions) 
+    changeMap(mapId: string, positions?: { x: number, y: number, z?: number } | string): Promise<RpgMap | null | boolean> {
+        return this.server.sceneMap.changeMap(mapId, this, positions)
     }
 
     async autoChangeMap(nextPosition: Position): Promise<boolean> {
@@ -287,7 +296,7 @@ export class RpgPlayer extends RpgCommonPlayer {
                 if (!nextMap) return false
                 const id = nextMap.id as string
                 const nextMapInfo = worldMaps.getMapInfo(id) as RpgTiledWorldMap
-                return !! (await this.changeMap(id, to(nextMapInfo)))
+                return !!(await this.changeMap(id, to(nextMapInfo)))
             }
 
             if (nextPosition.x < marginLeftRight && direction == Direction.Left) {
@@ -362,10 +371,10 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @returns { { [eventId: string]: RpgEvent } }
      * @memberof Player
      */
-    createDynamicEvent(eventsList: EventPosOption | EventPosOption[], forceMode: boolean = true): { 
+    createDynamicEvent(eventsList: EventPosOption | EventPosOption[], forceMode: boolean = true): {
         [eventId: string]: RpgEvent
     } {
-        if (!eventsList) return  {}
+        if (!eventsList) return {}
         const mapInstance = this.getCurrentMap<RpgMap>()
         if (!mapInstance) {
             throw 'The player is not assigned to any map'
@@ -433,7 +442,7 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @returns {Promise<{ {x: number, y: number, z: number} }>}
      * @memberof Player
      */
-    async teleport(positions?: {x: number, y: number, z?: number} | string): Promise<Position> {
+    async teleport(positions?: { x: number, y: number, z?: number } | string): Promise<Position> {
         if (isString(positions)) positions = <Position>this.getCurrentMap()?.getPositionByShape(shape => shape.name == positions || shape.getType() == positions)
         if (!positions) positions = { x: 0, y: 0, z: 0 }
         if (!(positions as Position).z) (positions as Position).z = 0
@@ -462,7 +471,7 @@ export class RpgPlayer extends RpgCommonPlayer {
     load(json: any) {
         if (isString(json)) json = JSON.parse(json)
 
-        const getData = (id) => new (this.databaseById(id))() 
+        const getData = (id) => new (this.databaseById(id))()
 
         for (let key in json) {
             const val = json[key]
@@ -542,7 +551,7 @@ export class RpgPlayer extends RpgCommonPlayer {
         snapshot.variables = [...this.variables]
         return snapshot
     }
-    
+
     /**
      * Run the change detection cycle. Normally, as soon as a hook is called in a class, the cycle is started. But you can start it manually
      * The method calls the `onChanges` method on events and synchronizes all map data with the client.
@@ -578,16 +587,16 @@ export class RpgPlayer extends RpgCommonPlayer {
 
     loadScene(name: string, data: any): void {
         this.emit('loadScene', {
-            name, 
+            name,
             data
-        }) 
+        })
     }
 
     changeServer(url: string, port: number) {
         this.emit('changeServer', {
-            url, 
+            url,
             port
-        }) 
+        })
     }
 
     private _getMap(id) {
@@ -644,10 +653,39 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @memberof Player
      */
     showAnimation(graphic: string | string[], animationName: string, replaceGraphic: boolean = false) {
-        this.emitToMap('callMethod', { 
+        this.emitToMap(SocketEvents.CallMethod, {
             objectId: this.playerId,
-            name: 'showAnimation',
+            name: SocketMethods.ShowAnimation,
             params: [graphic, animationName, replaceGraphic]
+        })
+    }
+
+    takePossessionOf(otherPlayer: RpgPlayer | RpgEvent) {
+
+    }
+
+    /**
+     * Sends the client which event or player the camera should follow. You can set options to perform a motion animation
+     * 
+     * @title Camera Follow
+     * @method player.cameraFollow(otherPlayer,options)
+     * @param {RpgPlayer | RpgEvent} otherPlayer
+     * @param {options} options
+     * @param {number} [options.time=1000] - time to animate
+     * @param {number} [options.speed=0] - to follow in pixels/frame (0=teleport to location)
+     * @param {number} [options.acceleration] - set acceleration to accelerate and decelerate at this rate; speed
+     * @param {object | boolean} [options.smoothMove] - animate. Set a boolean to use default parameters
+     * @param {number} [options.smoothMove.time=1000] - time to animate
+     * @param {string} [options.smoothMove.ease=linear] - easing to use. Go to https://easings.net to get function name
+     * @returns {void}
+     * @since 3.1.0
+     * @memberof Player
+     */
+    cameraFollow(otherPlayer: RpgPlayer | RpgEvent, options: CameraOptions = {}) {
+        this.emitToMap(SocketEvents.CallMethod, {
+            objectId: this.playerId,
+            name: SocketMethods.CameraFollow,
+            params: [otherPlayer.id, options]
         })
     }
 
@@ -662,10 +700,10 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @memberof Player
      */
     public emit(key: string, value: any): void {
-        if (this._socket) this._socket.emit(key, value) 
+        if (this._socket) this._socket.emit(key, value)
     }
 
-  
+
     /**
      * Listen to the data (socket) sent by the client
      * 
@@ -677,7 +715,7 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @memberof Player
      */
     public on(key: string, cb: Function) {
-        if (this._socket) this._socket.on(key, cb) 
+        if (this._socket) this._socket.on(key, cb)
     }
 
     /**
@@ -692,7 +730,7 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @memberof Player
      */
     public once(key: string, cb: Function) {
-        if (this._socket) this._socket.once(key, cb) 
+        if (this._socket) this._socket.once(key, cb)
     }
 
     /**
@@ -706,7 +744,7 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @memberof Player
      */
     public off(key: string) {
-        if (this._socket) this._socket.removeAllListeners(key) 
+        if (this._socket) this._socket.removeAllListeners(key)
     }
 
     emitToMap(key: string, value: any) {
@@ -766,28 +804,27 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @param {string} soundId Sound identifier, defined on the client side
      * @param {boolean} [allMap] Indicate if the sound is heard by the players on the map
      * @since 3.0.0-alpha.9
-     * @stability 1
      * @returns {void}
      * @memberof Player
      */
     playSound(soundId: string, allMap: boolean = false) {
-        const obj = { 
+        const obj = {
             objectId: this.playerId,
-            name: 'playSound',
+            name: SocketMethods.PlaySound,
             params: [soundId]
         }
         if (!allMap) {
-            this.emit('callMethod', obj)
+            this.emit(SocketEvents.CallMethod, obj)
             return
         }
-        this.emitToMap('callMethod', obj)
+        this.emitToMap(SocketEvents.CallMethod, obj)
     }
 }
 
-export interface RpgPlayer extends 
-    ItemManager, 
-    GoldManager, 
-    StateManager, 
+export interface RpgPlayer extends
+    ItemManager,
+    GoldManager,
+    StateManager,
     SkillManager,
     ParameterManager,
     EffectManager,
@@ -796,16 +833,15 @@ export interface RpgPlayer extends
     GuiManager,
     VariableManager,
     MoveManager,
-    BattleManager
-{
-    _socket: any 
+    BattleManager {
+    _socket: any
     vision,
     attachShape: any
 }
 
 applyMixins(RpgPlayer, [
-    ItemManager, 
-    GoldManager, 
+    ItemManager,
+    GoldManager,
     StateManager,
     SkillManager,
     ParameterManager,
@@ -823,7 +859,7 @@ export enum EventMode {
     Scenario = 'scenario'
 }
 
-export class RpgEvent extends RpgPlayer  {
+export class RpgEvent extends RpgPlayer {
 
     public readonly type: string = 'event'
     properties: any = {}

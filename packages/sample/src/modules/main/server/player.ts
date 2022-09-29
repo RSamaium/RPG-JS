@@ -38,7 +38,9 @@ export const player: RpgPlayerHooks = {
     },
     onInput(player: RpgPlayer, { input, moving }) {
         if (input == Control.Back) {
-           player.setGraphic(['light', 'shield'])
+            const map = player.getCurrentMap()
+            const [event] = Object.values(map?.events ?? {})
+            if (event) player.cameraFollow(event)  
         } 
     },
     async onInShape(player: RpgPlayer, shape: RpgShape) {

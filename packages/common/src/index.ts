@@ -16,6 +16,7 @@ import * as Logger from './Logger';
 import { RpgShape, ShapePositioning } from './Shape'
 import { VirtualGrid } from './VirtualGrid'
 import { RpgCommonWorldMaps } from './WorldMaps'
+import { SocketMethods, SocketEvents } from './SocketEvents'
 
 export {
     RpgCommonPlayer,
@@ -46,5 +47,7 @@ export {
     ShapePositioning,
     VirtualGrid,
     GameSide,
-    RpgCommonWorldMaps
+    RpgCommonWorldMaps,
+    SocketMethods,
+    SocketEvents
 }
