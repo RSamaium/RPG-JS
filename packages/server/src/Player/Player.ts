@@ -142,6 +142,7 @@ export class RpgPlayer extends RpgCommonPlayer {
     private touchSide: boolean = false
     /** @internal */
     public tmpPositions: Position | string | null = null
+    public otherPossessedPlayer: RpgPlayer | RpgEvent | null = null
 
     _lastFrame: number = 0
     _lastFramePositions: Map<number, Position> = new Map()
@@ -660,8 +661,17 @@ export class RpgPlayer extends RpgCommonPlayer {
         })
     }
 
+    /**
+     * TODO:
+     * 1. It is necessary, on the client side, to make the character move even if controlled by someone else (problem: same playerId so, one will not move because of the client side prediction. Solution: create a new Id ? like session Id ?
+     * 2. You would need several sockets per character. If the character changes map or changes server, all players controlling the character must be able to see it
+     * 3. If the player regains control, what happens, do we return to the previous map?
+     * 4. If it's an event, you must be able to get the event by id in GameEngine
+     */
     takePossessionOf(otherPlayer: RpgPlayer | RpgEvent) {
-
+        this.otherPossessedPlayer = otherPlayer
+        this._socket.emit('playerJoined', { playerId: otherPlayer.id, session: this.session })
+        this.cameraFollow(otherPlayer)
     }
 
     /**
