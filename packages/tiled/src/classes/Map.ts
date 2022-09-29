@@ -5,6 +5,7 @@ import { TiledObjectClass } from "./Object";
 import { TiledProperties } from "./Properties";
 import { Tile } from "./Tile";
 import { Tileset } from "./Tileset";
+var process = require('process')
 
 function intersection([start1, end1]: [number, number], [start2, end2]: [number, number]): boolean {
     return (start1 >= start2 && start1 <= end2) || (start2 >= start1 && start2 < end1)
@@ -40,13 +41,17 @@ export class MapClass extends TiledProperties {
     }
 
     load(map: TiledMap) {
+        let a, b
+        if (typeof process != 'undefined') a = process.memoryUsage?.()
         Object.assign(this, map)
         this.mapTilesets()
         this.mapLayers(this.layers)
-        this.layers = this.tmpLayers
+        this.layers = [...this.tmpLayers]
         Reflect.deleteProperty(this, 'tmpLayers')
         this.setTilesIndex()
         this.data = map
+        if (typeof process != 'undefined') b = process.memoryUsage?.()
+        if (a) console.log((b.heapUsed - a.heapUsed) / 1024 / 1024)
     }
 
     /** 

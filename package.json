@@ -6,17 +6,18 @@
   },
   "description": "RPG JS is a framework for creating RPGs and MMORPG",
   "dependencies": {
-    "concurrently": "^5.3.0",
-    "msgpack-lite": "^0.1.26",
-    "socket.io-client": "^4.4.1",
-    "yargs": "^17.3.1",
     "@vue/cli-plugin-babel": "5.0.4",
     "canvas": "^2.8.0",
+    "concurrently": "^5.3.0",
     "core-js": "3.21.1",
     "jest": "27.0.4",
     "jest-webgl-canvas-mock": "^0.2.3",
+    "log-with-statusbar": "^1.2.0",
+    "msgpack-lite": "^0.1.26",
+    "socket.io-client": "^4.4.1",
     "ts-jest": "^27.0.2",
-    "vue": "^3.2.31"
+    "vue": "^3.2.31",
+    "yargs": "^17.3.1"
   },
   "devDependencies": {
     "artillery": "^1.6.1",

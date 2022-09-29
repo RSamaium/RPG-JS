@@ -1,4 +1,4 @@
-import { RpgCommonMap, Utils, RpgShape, RpgCommonGame }  from '@rpgjs/common'
+import { RpgCommonMap, Utils, RpgShape, RpgCommonGame } from '@rpgjs/common'
 import { TiledParserFile } from '@rpgjs/tiled'
 import { EventOptions } from '../decorators/event'
 import { RpgPlayer, EventMode, RpgEvent } from '../Player/Player'
@@ -12,6 +12,14 @@ export type EventPosOption = {
     event: EventOptions
 }
 export type EventOption = EventPosOption | EventOptions
+
+export type PlayersList = {
+    [eventId: string]: RpgEvent
+}
+
+export type EventsList = {
+    [playerId: string]: RpgPlayer
+}
 
 class AutoEvent extends RpgEvent {
     static mode: EventMode
@@ -32,7 +40,7 @@ class AutoEvent extends RpgEvent {
             this.frequency = frequency
         }
         if (move == 'random') {
-            this.infiniteMoveRoute([ Move.tileRandom() ])
+            this.infiniteMoveRoute([Move.tileRandom()])
         }
     }
 
@@ -45,36 +53,43 @@ class AutoEvent extends RpgEvent {
         }
     }
 }
- 
+
 export class RpgMap extends RpgCommonMap {
 
     public _events: EventOption[]
     public file: any
-     /** 
-     * @title event list
-     * @prop { { [eventId: string]: RpgEvent } } [events]
-     * @memberof Map
-     * */
-    public events: { 
-        [eventId: string]: RpgEvent
-    } = {}
+    /** 
+    * @title event list
+    * @prop { { [eventId: string]: RpgEvent } } [events]
+    * @memberof Map
+    * */
+    public events: EventsList = {}
 
     constructor(private _server: RpgServerEngine) {
         super()
     }
 
+    // alias of users property in simple-room package
+    get players(): PlayersList {
+        return this['users']
+    }
+
+    get nbPlayers(): number {
+        return Object.keys(this.players).length
+    }
+
     async load() {
         if (RpgCommonMap.buffer.has(this.id)) {
-            return 
+            return
         }
         const parser = new TiledParserFile(
-            this.file, 
+            this.file,
             this._server.inputOptions.basePath + '/' + this._server.assetsPath
         )
         const data = await parser.parseFilePromise({
             getOnlyBasename: true
         })
-        super.load(data) 
+        super.load(data)
         this.getAllObjects().forEach(this.createShape.bind(this))
         this.loadProperties((data as any).properties)
         this._server.workers?.call('loadMap', {
@@ -83,10 +98,10 @@ export class RpgMap extends RpgCommonMap {
         })
         RpgCommonMap.buffer.set(this.id, this)
         this.createDynamicEvent(this._events as EventPosOption[])
-        this.onLoad()
+        if (this.onLoad) this.onLoad()
     }
 
-    private loadProperties(properties: { 
+    private loadProperties(properties: {
         [key: string]: any
     }) {
         for (let key in properties) {
@@ -96,14 +111,9 @@ export class RpgMap extends RpgCommonMap {
 
     get game(): RpgCommonGame {
         return this._server.gameEngine
-    }
+    } 
 
-    onLoad() {}
-
-    onJoin(player: RpgPlayer) {
-        
-    }
-
+    // Hook: called by simple-room package
     onLeave(player: RpgPlayer) {
         this.getShapes().forEach(shape => shape.out(player))
         const events: RpgPlayer[] = Object.values(this.game.world.getObjectsOfGroup(this.id, player))
@@ -112,8 +122,14 @@ export class RpgMap extends RpgCommonMap {
             event.getShapes().forEach(shape => shape.out(player))
         }
         this.grid.clearObjectInCells(player.id)
+        // last player before removed of this map 
+        if (this.nbPlayers === 1) {
+            // clear cache for this map
+            RpgCommonMap.buffer.delete(this.id)
+        }
     }
 
+    // TODO
     autoLoadEvent() {
         this.getShapes().forEach(shape => {
             const { properties } = shape
@@ -168,7 +184,6 @@ export class RpgMap extends RpgCommonMap {
         return tiles
     }
 
-    // TODO: return type
     getEventShape(eventName: string): RpgShape | undefined {
         return this.getShapes().find(shape => shape.name == eventName)
     }
@@ -202,10 +217,10 @@ export class RpgMap extends RpgCommonMap {
      * @returns { { [eventId: string]: RpgEvent } }
      * @memberof Map
      */
-    createDynamicEvent(eventsList: EventPosOption | EventPosOption[]): { 
+    createDynamicEvent(eventsList: EventPosOption | EventPosOption[]): {
         [eventId: string]: RpgEvent
     } {
-        if (!eventsList) return  {}
+        if (!eventsList) return {}
         if (!Utils.isArray(eventsList)) {
             eventsList = [eventsList as EventPosOption]
         }
@@ -250,7 +265,7 @@ export class RpgMap extends RpgCommonMap {
 
     createEvent(obj: EventPosOption, mode: EventMode, shape?: any): RpgEvent | null {
         let event: any, position
-        
+
         // We retrieve the information of the event ([Event] or [{event: Event, x: number, y: number}])
         if (obj.x === undefined) {
             event = obj
@@ -279,10 +294,8 @@ export class RpgMap extends RpgCommonMap {
         return ev
     }
 
-    createEvents(eventsList: EventOption[], mode: EventMode): { 
-        [eventId: string]: RpgEvent
-    } {
-        const events  = {}
+    createEvents(eventsList: EventOption[], mode: EventMode): EventsList {
+        const events = {}
 
         if (!eventsList) return events
 
@@ -307,4 +320,5 @@ export interface RpgMap {
     $setSchema: (schema: any) => void
     $patchSchema: (schema: any) => void
     $snapshotUser: (userId: string) => any
+    onLoad()
 }
