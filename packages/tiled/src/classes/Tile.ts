@@ -10,7 +10,7 @@ export class Tile extends TileGid {
         super(tile)
         Reflect.deleteProperty(tile, 'gid')
         Object.assign(this, tile)
-    }
+    } 
 }
 
 export interface Tile extends TileInfo {}

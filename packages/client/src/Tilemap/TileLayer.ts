@@ -44,7 +44,7 @@ export default class TileLayer extends CommonLayer {
             y = Math.floor(y / tileheight)
         }
         const i = x + y * width;
-        const tiledTile = this.layer.tiles[i]
+        const tiledTile = this.layer.getTileByIndex(i)
         
         if (!tiledTile || (tiledTile && tiledTile.gid == 0)) return
 

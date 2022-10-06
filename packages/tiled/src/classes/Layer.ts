@@ -6,18 +6,24 @@ import { Tile } from "./Tile";
 import { Tileset } from "./Tileset";
 
 export class Layer extends TiledProperties {
+    cacheTiles: boolean = false
     tiles: (Tile | undefined)[] = []
     objects: TiledObjectClass[]
 
     constructor(layer: TiledLayer, private tilesets: Tileset[], private parent?: Layer) {
         super(layer)
         Object.assign(this, layer)
-        this.propertiesTiles()
         this.mapObjects()
         this.mergePropertiesWithParent()
+        // Caching tiles saves CPU but consumes RAM for large maps
+        this.cacheTiles = this.getProperty<boolean, boolean>('cache-tiles', false)
+        if (this.cacheTiles) this.propertiesTiles()
     }
 
-    createTile(gid: number, tileIndex: number): Tile | undefined{
+    createTile(gid: number, tileIndex: number): Tile | undefined {
+        if (gid == 0) {
+            return
+        }
         const realGid = TileGid.getRealGid(gid)
         const tileset = Layer.findTileSet(realGid, this.tilesets)
         if (!tileset) {
@@ -53,8 +59,8 @@ export class Layer extends TiledProperties {
                 }
                 else {
                     continue
-                }     
-            } 
+                }
+            }
         }
         this.opacity = Math.round((parent.opacity ?? 1) * (this.opacity ?? 1) * 100) / 100
         this.offsetx = (parent.offsetx ?? 0) + (this.offsetx ?? 0)
@@ -65,7 +71,7 @@ export class Layer extends TiledProperties {
     private propertiesTiles() {
         if (!this.data) return
         const data = this.data as number[]
-        for (let i=0 ; i < data.length ; i++) {
+        for (let i = 0; i < data.length; i++) {
             const id = data[i]
             this.tiles.push(this.createTile(id, i))
         }
@@ -82,7 +88,10 @@ export class Layer extends TiledProperties {
     }
 
     getTileByIndex(tileIndex: number): Tile | undefined {
-        return this.tiles[tileIndex]
+        if (this.cacheTiles) {
+            return this.tiles[tileIndex]
+        }
+        return this.createTile(this.data[tileIndex] as number, tileIndex)
     }
 
     static findTileSet(gid: number, tileSets: Tileset[]): Tileset | undefined {
@@ -100,9 +109,13 @@ export class Layer extends TiledProperties {
         return this.parent
     }
 
-    tilesForEach(cb: (tile: Tile, index: number) => void) {
-        for (let i=0 ; i < this.tiles.length ; i++) {
-            cb(this.tiles[i] as Tile, i)
+    tilesForEach(cb: (tile: Tile | undefined, index: number) => void) {
+        for (let i = 0; i < this.data.length; i++) {
+            if (this.cacheTiles) {
+                cb(this.tiles[i], i)
+                continue
+            }
+            cb(this.createTile(this.data[i] as number, i) as Tile, i)
         }
     }
 }

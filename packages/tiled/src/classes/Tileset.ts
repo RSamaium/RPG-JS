@@ -14,6 +14,7 @@ export class Tileset extends TiledProperties {
         for (let tile of tileset.tiles) {
             this.addTile(tile)
         }
+        Reflect.deleteProperty(this, 'tiles')
     }
 
     addTile(tileObj: TilesetTile): Tile {

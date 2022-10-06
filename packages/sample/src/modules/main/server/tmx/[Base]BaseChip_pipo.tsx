@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<tileset version="1.9" tiledversion="1.9.0" name="[Base]BaseChip_pipo" tilewidth="32" tileheight="32" tilecount="1000" columns="8">
+<tileset version="1.8" tiledversion="1.8.6" name="[Base]BaseChip_pipo" tilewidth="32" tileheight="32" tilecount="1000" columns="8">
  <image source="../../client/maps/assets/[Base]BaseChip_pipo.png" width="256" height="4000"/>
  <tile id="0">
   <properties>
@@ -417,12 +417,12 @@
  </tile>
  <tile id="72">
   <properties>
-   <property name="collision" type="bool" value="false"/>
+   <property name="collision" type="bool" value="true"/>
   </properties>
  </tile>
  <tile id="73">
   <properties>
-   <property name="collision" type="bool" value="false"/>
+   <property name="collision" type="bool" value="true"/>
   </properties>
   <objectgroup draworder="index" id="2">
    <object id="1" x="-0.0869565" y="0.0434783" width="32.087" height="1.86957"/>
@@ -430,7 +430,7 @@
  </tile>
  <tile id="74">
   <properties>
-   <property name="collision" type="bool" value="false"/>
+   <property name="collision" type="bool" value="true"/>
   </properties>
   <objectgroup draworder="index" id="2">
    <object id="1" x="0" y="0.0434783">
@@ -465,11 +465,8 @@
  </tile>
  <tile id="80">
   <properties>
-   <property name="collision" type="bool" value="false"/>
+   <property name="collision" type="bool" value="true"/>
   </properties>
-  <objectgroup draworder="index" id="2">
-   <object id="1" x="0.196409" y="0.589228" width="3.63357" height="31.2291"/>
-  </objectgroup>
  </tile>
  <tile id="81">
   <properties>
@@ -478,7 +475,7 @@
  </tile>
  <tile id="82">
   <properties>
-   <property name="collision" type="bool" value="false"/>
+   <property name="collision" type="bool" value="true"/>
   </properties>
  </tile>
  <tile id="83">
@@ -508,17 +505,17 @@
  </tile>
  <tile id="88">
   <properties>
-   <property name="collision" type="bool" value="false"/>
+   <property name="collision" type="bool" value="true"/>
   </properties>
  </tile>
  <tile id="89">
   <properties>
-   <property name="collision" type="bool" value="false"/>
+   <property name="collision" type="bool" value="true"/>
   </properties>
  </tile>
  <tile id="90">
   <properties>
-   <property name="collision" type="bool" value="false"/>
+   <property name="collision" type="bool" value="true"/>
   </properties>
  </tile>
  <tile id="91">
@@ -3059,6 +3056,7 @@
  <tile id="567">
   <properties>
    <property name="collision" type="bool" value="false"/>
+   <property name="z" type="int" value="2"/>
   </properties>
  </tile>
  <tile id="568">
@@ -3106,6 +3104,7 @@
  <tile id="575">
   <properties>
    <property name="collision" type="bool" value="false"/>
+   <property name="z" type="int" value="2"/>
   </properties>
  </tile>
  <tile id="576">
@@ -3146,6 +3145,7 @@
  <tile id="583">
   <properties>
    <property name="collision" type="bool" value="false"/>
+   <property name="z" type="int" value="2"/>
   </properties>
  </tile>
  <tile id="584">
@@ -5285,4 +5285,38 @@
    <property name="collision" type="bool" value="false"/>
   </properties>
  </tile>
+ <wangsets>
+  <wangset name="Base" type="corner" tile="-1">
+   <wangcolor name="" color="#ff0000" tile="89" probability="1"/>
+   <wangcolor name="" color="#00ff00" tile="129" probability="1"/>
+   <wangtile tileid="0" wangid="0,1,0,1,0,1,0,1"/>
+   <wangtile tileid="5" wangid="0,2,0,2,0,2,0,2"/>
+   <wangtile tileid="72" wangid="0,0,0,1,0,0,0,0"/>
+   <wangtile tileid="73" wangid="0,0,0,1,0,1,0,0"/>
+   <wangtile tileid="74" wangid="0,0,0,0,0,1,0,0"/>
+   <wangtile tileid="75" wangid="0,1,0,0,0,1,0,1"/>
+   <wangtile tileid="76" wangid="0,1,0,1,0,0,0,1"/>
+   <wangtile tileid="80" wangid="0,1,0,1,0,0,0,0"/>
+   <wangtile tileid="82" wangid="0,0,0,0,0,1,0,1"/>
+   <wangtile tileid="83" wangid="0,0,0,1,0,1,0,1"/>
+   <wangtile tileid="84" wangid="0,1,0,1,0,1,0,0"/>
+   <wangtile tileid="86" wangid="0,1,0,0,0,1,0,0"/>
+   <wangtile tileid="88" wangid="0,1,0,0,0,0,0,0"/>
+   <wangtile tileid="89" wangid="0,1,0,0,0,0,0,1"/>
+   <wangtile tileid="90" wangid="0,0,0,0,0,0,0,1"/>
+   <wangtile tileid="112" wangid="0,0,0,2,0,0,0,0"/>
+   <wangtile tileid="113" wangid="0,0,0,2,0,2,0,0"/>
+   <wangtile tileid="114" wangid="0,0,0,0,0,2,0,0"/>
+   <wangtile tileid="115" wangid="0,2,0,0,0,2,0,2"/>
+   <wangtile tileid="116" wangid="0,2,0,2,0,0,0,2"/>
+   <wangtile tileid="118" wangid="0,2,0,0,0,2,0,0"/>
+   <wangtile tileid="120" wangid="0,2,0,2,0,0,0,0"/>
+   <wangtile tileid="122" wangid="0,0,0,0,0,2,0,2"/>
+   <wangtile tileid="123" wangid="0,0,0,2,0,2,0,2"/>
+   <wangtile tileid="124" wangid="0,2,0,2,0,2,0,0"/>
+   <wangtile tileid="128" wangid="0,2,0,0,0,0,0,0"/>
+   <wangtile tileid="129" wangid="0,2,0,0,0,0,0,2"/>
+   <wangtile tileid="130" wangid="0,0,0,0,0,0,0,2"/>
+  </wangset>
+ </wangsets>
 </tileset>

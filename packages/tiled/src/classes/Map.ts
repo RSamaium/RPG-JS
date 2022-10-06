@@ -5,7 +5,6 @@ import { TiledObjectClass } from "./Object";
 import { TiledProperties } from "./Properties";
 import { Tile } from "./Tile";
 import { Tileset } from "./Tileset";
-var process = require('process')
 
 function intersection([start1, end1]: [number, number], [start2, end2]: [number, number]): boolean {
     return (start1 >= start2 && start1 <= end2) || (start2 >= start1 && start2 < end1)
@@ -20,6 +19,9 @@ export interface TileInfo {
     tileIndex: number
 }
 
+// Allows you to cache tilesets. Avoid rebuilding for other maps
+export const bufferTilesets = {}
+
 export class MapClass extends TiledProperties {
     /** 
      * @title Data of map
@@ -33,7 +35,11 @@ export class MapClass extends TiledProperties {
     tilesets: Tileset[] = []
     layers: Layer[] = []
     private tmpLayers: Layer[] = [] 
-    private tilesIndex: Map<number, Map<number, TileInfo>> = new Map()
+    private tilesIndex: {
+        [tileIndex: number]: {
+            [zIndex: number]: TileInfo
+        }
+    } = {}
 
     constructor(map?: TiledMap) {
         super(map ?? {})
@@ -41,8 +47,6 @@ export class MapClass extends TiledProperties {
     }
 
     load(map: TiledMap) {
-        let a, b
-        if (typeof process != 'undefined') a = process.memoryUsage?.()
         Object.assign(this, map)
         this.mapTilesets()
         this.mapLayers(this.layers)
@@ -50,8 +54,6 @@ export class MapClass extends TiledProperties {
         Reflect.deleteProperty(this, 'tmpLayers')
         this.setTilesIndex()
         this.data = map
-        if (typeof process != 'undefined') b = process.memoryUsage?.()
-        if (a) console.log((b.heapUsed - a.heapUsed) / 1024 / 1024)
     }
 
     /** 
@@ -168,8 +170,6 @@ export class MapClass extends TiledProperties {
         const tileIndex = this.getTileIndex(x, y, [z[0]])
         return this.getTileByIndex(tileIndex, z)
     }
-
-
   
     /**
      * Retrieves tiles according to its index
@@ -190,7 +190,7 @@ export class MapClass extends TiledProperties {
     getTileByIndex(tileIndex: number, zPlayer: [number, number] = [0, 0]): TileInfo {
         const zA = Math.floor(zPlayer[0] / this.zTileHeight)
         const zB = Math.floor(zPlayer[1] / this.zTileHeight)
-        const indexInfo = this.tilesIndex.get(tileIndex)
+        const indexInfo = this.tilesIndex[tileIndex]
         const defaultObject = {
             tiles: [],
             hasCollision: true,
@@ -201,7 +201,7 @@ export class MapClass extends TiledProperties {
         if (!indexInfo) {
             return defaultObject
         }
-        const level = indexInfo.get(zA)
+        const level = indexInfo[zA]
         if (!level) {
             return defaultObject
         }
@@ -240,7 +240,6 @@ export class MapClass extends TiledProperties {
         }
         for (let layer of this.layers) {
             if (!fnFilter(layer)) continue
-            const data = layer.tiles
             let tile
             if (tileInfo.gid) {
                 tile = layer.createTile(tileInfo.gid, tileIndex)
@@ -250,7 +249,6 @@ export class MapClass extends TiledProperties {
                 tile[key] = tileInfo[key]
             }
             tilesEdited[layer.name] = tile
-            data[tileIndex] = tilesEdited[layer.name]
             this.setTileIndex(layer, tile, tileIndex)
         }
         return {
@@ -261,7 +259,14 @@ export class MapClass extends TiledProperties {
     } 
 
     private mapTilesets() {
-        this.tilesets = this.tilesets.map(tileset => new Tileset(tileset))
+        this.tilesets = this.tilesets.map(tileset => {
+            if (bufferTilesets[tileset.name]) {
+                return bufferTilesets[tileset.name]
+            }
+            const _tileset = new Tileset(tileset)
+            bufferTilesets[_tileset.name] = _tileset
+            return _tileset
+        })
     }
 
     private mapLayers(layers: TiledLayer[] = [], parent?: Layer) {
@@ -274,36 +279,33 @@ export class MapClass extends TiledProperties {
         }
     }
 
-    private setTileIndex(layer: Layer, tile: Tile, index: number) {
+    private setTileIndex(layer: Layer, tile: Tile | undefined, index: number) {
         if ((!tile) || (tile && tile.gid == 0)) {
             return
         }
         const zLayer = layer.getProperty<number, number>('z', 0)
         const zTile = tile.getProperty<number, number>('z', 0)
         let z = zLayer + zTile
-        if (!this.tilesIndex.has(index)) this.tilesIndex.set(index, new Map())
-        const zMap = this.tilesIndex.get(index)
-        if (!zMap?.has(z)) zMap?.set(z, {
+        if (!this.tilesIndex[index]) this.tilesIndex[index] = {}
+        const obj: TileInfo = this.tilesIndex[index][z] ?? {
             tiles: [],
             hasCollision: true,
             isOverlay: false,
             objectGroups: [],
             tileIndex: index
-        })
-        const obj = zMap?.get(z)
-        if (obj) {
-            const tileExist = obj.tiles.findIndex(tile => tile.index == index)
-            if (tileExist == -1) {
-                obj.tiles.push(tile) 
-            }
-            else {
-                obj.tiles[tileExist] = tile
-            }
-            if (tileExist == -1 || tileExist == obj.tiles.length-1) {
-                obj.hasCollision = tile.getProperty<boolean, boolean>('collision', false)
-                obj.objectGroups = tile.objects as TiledObjectClass[] ?? []
-            }
         }
+        const tileExist = obj.tiles.findIndex(tile => tile.index == index)
+        if (tileExist == -1) {
+            obj.tiles.push(tile)
+        }
+        else {
+            obj.tiles[tileExist] = tile
+        }
+        if (tileExist == -1 || tileExist == obj.tiles.length-1) {
+            obj.hasCollision = tile.getProperty<boolean, boolean>('collision', false)
+            obj.objectGroups = tile.objects as TiledObjectClass[] ?? []
+        }
+        this.tilesIndex[index][z] = obj
     }
     
     private setTilesIndex() {

@@ -30,7 +30,7 @@ export const player: RpgPlayerHooks = {
     onConnected(player: RpgPlayer) {
         player.setHitbox(16, 16)
         player.setGraphic('light')
-        player.changeMap('cave')
+        player.changeMap('samplemap')
     },
     onJoinMap(player: RpgPlayer, map: RpgMap) { 
         player.name = ''+Math.random()

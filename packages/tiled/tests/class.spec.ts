@@ -11,6 +11,8 @@ function setLayer(xml) {
     const parserTileset = new TiledParser(tileset)
     const tilesetData = parserTileset.parseTileset()
     const tilesetInstance = new Tileset(tilesetData)
+    map.layers[0].properties = {}
+    map.layers[0].properties['cache-tiles'] = true
     layer = new Layer(map.layers[0], [tilesetInstance])
 }
 
