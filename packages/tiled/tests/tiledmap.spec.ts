@@ -184,7 +184,6 @@ describe('Test Tiles Index', () => {
         const map = getMap(xmlFlipTiled)
         const tileInfo = map.getTileByIndex(0)
         const tile = tileInfo.tiles[0]
-        expect(tile['_gid']).toBe(3221225513)
         expect(tile.gid).toBe(41)
         expect(tileInfo.hasCollision).toBe(true)
     })

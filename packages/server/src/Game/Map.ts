@@ -58,6 +58,7 @@ export class RpgMap extends RpgCommonMap {
 
     public _events: EventOption[]
     public file: any
+
     /** 
     * @title event list
     * @prop { { [eventId: string]: RpgEvent } } [events]

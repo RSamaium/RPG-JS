@@ -16,6 +16,10 @@ export class TiledProperties {
         return val as any
     }
 
+    hasProperty(name: string): boolean {
+        return !!this.properties[name]
+    }
+
     setProperty<T>(name: string, value: T) {
         this.properties[name] = value
     }

@@ -10,6 +10,10 @@ export class Layer extends TiledProperties {
     tiles: (Tile | undefined)[] = []
     objects: TiledObjectClass[]
 
+    get size(): number {
+        return this.data.length
+    }
+
     constructor(layer: TiledLayer, private tilesets: Tileset[], private parent?: Layer) {
         super(layer)
         Object.assign(this, layer)
@@ -117,6 +121,10 @@ export class Layer extends TiledProperties {
             }
             cb(this.createTile(this.data[i] as number, i) as Tile, i)
         }
+    }
+
+    setData() {
+        // TODO
     }
 }
 

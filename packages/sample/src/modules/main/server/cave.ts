@@ -26,7 +26,7 @@ export class CaveMap extends RpgMap {
 
 @MapData({
     id: 'samplemap',
-    file: require('./tmx/samplemap.tmx')
+    file: require('./tmx/map/cave.tmx')
 })
 export class SampleMap extends RpgMap {
     
