@@ -212,15 +212,16 @@ export class MapClass extends TiledProperties {
         }
         const [layer] = this.layers
         const getTileByPointer = (pointer = 0) => {
-            const gid = level[tileIndex * this.allocateMemory + pointer]
+            const pos = tileIndex * this.realAllocateMemory + pointer
+            const gid = level[pos]
             if (gid === 0) {
                 return obj
             }
-            const tile = layer.createTile(gid, tileIndex)
+            const tile = layer.createTile(gid, tileIndex, level[pos+1])
             if (tile) obj.tiles.push(tile)
         }
         if (options.populateTiles) {
-            for (let i=0 ; i < this.allocateMemory ; i += 2) {
+            for (let i=0 ; i < this.realAllocateMemory ; i += 2) {
                 getTileByPointer(i)
             }
         }
@@ -316,21 +317,25 @@ export class MapClass extends TiledProperties {
     }
 
     private setTileIndex(layer: Layer, oldTile: Tile, newTile: Tile, tileIndex: number, layerIndex: number) {
-        const startPos = tileIndex * this.allocateMemory
-        let pointer = startPos + this.allocateMemory - 2
+        const startPos = tileIndex * this.realAllocateMemory
+        let pointer = startPos + this.realAllocateMemory - 2
         const zLayer = layer.getProperty<number, number>('z', 0)
         const zTile = oldTile.getProperty<number, number>('z', 0)
         let z = zLayer + zTile
-        while (pointer > startPos) {
-            pointer -= 2
+        while (pointer >= startPos) {
             const zlayer = this.tilesIndex[z]
             if (zlayer[pointer] === oldTile.gid && zlayer[pointer+1] === layerIndex) {
                 this.tilesIndex[z][pointer] = newTile.gid
             }
+            pointer -= 2
         }
     }
 
-    private addTileIndex(layer: Layer, tile: Tile | undefined, index: number, layerIndex: number) {
+    private get realAllocateMemory() {
+        return this.allocateMemory * 2
+    }
+
+    private addTileIndex(layer: Layer, tile: Tile | undefined, tileIndex: number, layerIndex: number) {
         if ((!tile) || (tile && tile.gid == 0)) {
             return
         }
@@ -338,11 +343,11 @@ export class MapClass extends TiledProperties {
         const zTile = tile.getProperty<number, number>('z', 0)
         let z = zLayer + zTile
         if (!this.tilesIndex[z]) {
-            const buffer = new ArrayBuffer(layer.size * this.allocateMemory * 2 * 2)
+            const buffer = new ArrayBuffer(layer.size * this.realAllocateMemory * 2)
             this.tilesIndex[z] = new Uint16Array(buffer)
         }
-        const startPos = index * this.allocateMemory
-        let pointer = startPos + this.allocateMemory - 2
+        const startPos = tileIndex * this.realAllocateMemory
+        let pointer = startPos + this.realAllocateMemory - 2
 
         while (this.tilesIndex[z][pointer] !== 0 && pointer > startPos) {
             pointer -= 2

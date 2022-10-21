@@ -24,7 +24,7 @@ export class Layer extends TiledProperties {
         if (this.cacheTiles) this.propertiesTiles()
     }
 
-    createTile(gid: number, tileIndex: number): Tile | undefined {
+    createTile(gid: number, tileIndex: number, layerIndex?: number): Tile | undefined {
         if (gid == 0) {
             return
         }
@@ -38,12 +38,14 @@ export class Layer extends TiledProperties {
             return new Tile({
                 ...tile.tile,
                 gid,
-                index: tileIndex
+                index: tileIndex,
+                layerIndex
             })
         }
         return new Tile({
             gid,
-            index: tileIndex
+            index: tileIndex,
+            layerIndex
         })
     }
 

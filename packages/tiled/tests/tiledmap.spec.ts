@@ -156,7 +156,7 @@ describe('Test Tiles Index', () => {
     test('Tiles Index', () => {
         const map = getMap(xml)
         const tileInfo = map.getTileByIndex(0)
-        expect(tileInfo.tiles).toHaveLength(1)
+        expect(tileInfo.tiles).toHaveLength(2)
         expect(tileInfo.hasCollision).toBe(false)
     })
 
@@ -170,14 +170,14 @@ describe('Test Tiles Index', () => {
     test('Tiles Index, Z=1', () => {
         const map = getMap(xmlZ)
         const tileInfo = map.getTileByIndex(0, [32, 64])
-        expect(tileInfo.tiles).toHaveLength(1)
+        expect(tileInfo.tiles).toHaveLength(2)
         expect(tileInfo.hasCollision).toBe(false)
     })
 
     test('Tiles Index, Z=2', () => {
         const map = getMap(xmlZ)
         const tileInfo = map.getTileByIndex(0, [64, 64+32])
-        expect(tileInfo.tiles).toHaveLength(1)
+        expect(tileInfo.tiles).toHaveLength(2)
         expect(tileInfo.hasCollision).toBe(false)
     })
 

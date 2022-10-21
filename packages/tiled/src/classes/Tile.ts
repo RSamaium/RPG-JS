@@ -1,7 +1,7 @@
 import { TilesetTile } from "../types/Tile";
 import { TileGid } from "./Gid";
 
-type TileInfo = TilesetTile & { gid?: number, index: number }
+type TileInfo = TilesetTile & { gid?: number, index: number, layerIndex?: number }
 
 export class Tile extends TileGid {
     index: number

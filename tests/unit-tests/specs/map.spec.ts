@@ -95,6 +95,10 @@ describe('Server Side', () => {
             gid: 2
         })
         expect(tile).toMatchObject({ x: 0, y: 0, tiles: { [LAYER_NAME]: { gid: 2 } } })
+        
+        const layer = map.getLayerByName(LAYER_NAME)
+        expect(layer?.data[0]).toEqual(2)
+        
         const tileInfo = map.getTileByPosition(0, 0)
         expect(tileInfo.tiles[0].gid).toEqual(2)
 
