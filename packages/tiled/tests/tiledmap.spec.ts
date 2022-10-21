@@ -25,6 +25,12 @@ test('Map is loaded', () => {
     expect(map.layers[0]).toBeInstanceOf(Layer)
 })
 
+test('Map Tile Size', () => {
+    const map = getMap(xml)
+    expect(map.tileheight).toBe(32)
+    expect(map.tilewidth).toBe(32)
+})
+
 test('Layers', () => {
     const map = getMap(xmlGroup)
     expect(map.layers).toHaveLength(4)
@@ -140,6 +146,12 @@ describe('Test Tiles Index', () => {
      </layer>
     </map>
     `
+
+    test('getTileIndex()', () => {
+        const map = getMap(xml)
+        const { width } = map
+        expect(map.getTileIndex(32, 32)).toEqual(width + 1)
+    })
 
     test('Tiles Index', () => {
         const map = getMap(xml)

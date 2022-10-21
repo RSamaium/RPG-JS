@@ -283,6 +283,7 @@ export class MapClass extends TiledProperties {
                 properties: tile.properties
             }
             this.setTileIndex(layer, oldTile.tiles[0], tile, tileIndex, i)
+            layer.setData(tileIndex, tile.gid)
         }
         return {
             x,

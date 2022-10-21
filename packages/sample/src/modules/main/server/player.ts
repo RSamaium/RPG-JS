@@ -39,7 +39,7 @@ export const player: RpgPlayerHooks = {
     onInput(player: RpgPlayer, { input, moving }) {
         if (input == Control.Back) {
             const map = player.getCurrentMap()
-            map?.setTile(10, 10, 'Tile Layer 1', { gid: 20 })
+            map?.setTile(320, 320, 'Tile Layer 1', { gid: 20 })
            player.setGraphic(['light', 'shield'])
         } 
     },

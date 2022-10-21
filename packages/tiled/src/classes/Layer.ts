@@ -123,8 +123,8 @@ export class Layer extends TiledProperties {
         }
     }
 
-    setData() {
-        // TODO
+    setData(tileIndex: number, gid: number): void {
+        (this.data as number[])[tileIndex] = gid
     }
 }
 
