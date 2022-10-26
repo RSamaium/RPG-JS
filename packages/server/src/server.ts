@@ -185,7 +185,6 @@ export class RpgServerEngine {
         const players = this.world.getUsers() 
         const obj: any = []
         let p: Promise<any>[] = []
-        let id = Math.random()
         for (let playerId in players) {
             const player = players[playerId] as RpgPlayer
             if (player.pendingMove.length > 0) {
@@ -194,8 +193,10 @@ export class RpgServerEngine {
                 else {
                     p.push(this.gameEngine.processInput(playerId).then(() => {
                         player.pendingMove = []
-                        player._lastFrame = lastFrame.frame
-                        player._lastFramePositions.set(lastFrame.frame, {...player.position})
+                        player._lastFramePositions = {
+                            frame: lastFrame.frame,
+                            position:  {...player.position}
+                        }
                     }))
                 }
             }

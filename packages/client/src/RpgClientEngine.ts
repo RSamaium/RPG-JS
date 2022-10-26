@@ -363,10 +363,6 @@ export class RpgClientEngine {
                 if (serverPos.x) player.position.x = serverPos.x
                 if (serverPos.y) player.position.y = serverPos.y
             }
-            // if (client) {
-            //     const { time: clientTime } = client
-            //     console.log(serverTime - clientTime)
-            // }
             this.serverFrames.delete(frame)
             this.clientFrames.delete(frame)
         })

@@ -34,11 +34,20 @@ export class MapClass extends TiledProperties {
 
     tilesets: Tileset[] = []
     layers: Layer[] = []
+
     private tmpLayers: Layer[] = []
     private tilesIndex: {
         [zIndex: number]: Uint16Array
     } = {}
+
+    /**
+     * Allows to define the size of ArrayBuffer to keep in memory the tiles of the map
+     */
     private allocateMemory: number = 0
+
+    /**
+     * If set to true, the memory allocation will take only one tile (the tile of the last layer)
+     */
     private lowMemory: boolean = false
 
     constructor(map?: TiledMap) {
@@ -331,10 +340,47 @@ export class MapClass extends TiledProperties {
         }
     }
 
+    /**
+     * We multiply by 2 because 2 entries are stored for a tile: its GID and the Layer Index
+     * 
+     * Example If I have 3 layers, The array will have the following form 
+     * 
+     * [
+     *  GID of Layer 3, 
+     *  Layer Index of Layer 3, 
+     *  GID of Layer 2, 
+     *  Layer Index of Layer 2, 
+     *  GID of Layer 1, 
+     *  Layer Index of Layer 1,
+     * ... others tiles
+     * ]
+     * 
+     * The size in memory of the map is therefore:
+     * 
+     * `(map width * map height * number of layers * 4) bytes`
+     * 
+     * > We multiply by 4, because an element takes 2 bytes and has 2 elements for a tile is 4 bytes in all
+     * 
+     * Example (a 100x100 map with 5 layers)
+     * 
+     * `100 * 100 * 5 * 4 = 200000 bytes = ~195 Kb`
+     * 
+     * If we define on lowMemory then the calculation is the following
+     * 
+     * `(map width * map height * 4) bytes`
+     * 
+     * Example
+     * 
+     * `100 * 100 * 4 = 40000 bytes = ~39 Kb`
+     */
     private get realAllocateMemory() {
         return this.allocateMemory * 2
     }
 
+    /**
+     * We keep each tile in memory classified by z value. The values are ordered from the end to the beginning so that the first element of the array (when retrieved with getTileByIndex() is the tile on the highest layer. This way, the tile search is very fast for collisions 
+     * 
+     */
     private addTileIndex(layer: Layer, tile: Tile | undefined, tileIndex: number, layerIndex: number) {
         if ((!tile) || (tile && tile.gid == 0)) {
             return

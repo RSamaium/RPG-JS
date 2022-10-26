@@ -242,9 +242,7 @@ export class RpgShape extends TiledObjectClass {
     }
 
     isShapePosition(): boolean {
-        return !isInstanceOf(this.hitbox, SAT.Polygon) 
-            && !isInstanceOf(this.hitbox, SAT.Circle)
-            && !isInstanceOf(this.hitbox, SAT.Box)
+        return !this.hitbox.w && !this.hitbox.h
     }
 
    /**
