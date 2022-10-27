@@ -10,18 +10,17 @@ import { RpgServerEngine } from '../server'
 
 export interface RpgClassMap<T> {
     id?: string
-    new (server: any): T,
+    new(server: any): T,
 }
 
 export class SceneMap {
-
     static readonly id: string = 'map'
 
     private mapsById: {
         [mapId: string]: RpgClassMap<RpgMap>
     } = {}
     private worldMaps: Map<string, RpgWorldMaps> = new Map()
-    
+
     constructor(private maps: any[], worldMaps: WorldMap[], private server: RpgServerEngine) {
         this.mapsById = {}
         RpgCommonMap.buffer.clear()
@@ -53,9 +52,9 @@ export class SceneMap {
             console.log(`Map ${id} not exists`)
             return
         }
-        
+
         let mapInstance
-        
+
         if (mapClass['buffer'].has(id)) {
             return mapClass['buffer'].get(id)
         }
@@ -64,7 +63,7 @@ export class SceneMap {
             mapInstance = RpgCommonMap.buffer.get(id)
         }
         else {
-            const room =  new mapClass(this.server)
+            const room = new mapClass(this.server)
             room.$schema.users = [
                 {
                     ...RpgPlayer.schemas,
@@ -74,39 +73,39 @@ export class SceneMap {
             mapInstance = World.addRoom(id, room)
             await mapInstance.load()
         }
-       
+
         return mapInstance
     }
 
-     /**
-     * Loads the content of a `.world` file from Tiled Map Editor into the map scene
-     * 
-     * > Note, that if the map already exists (i.e. you have already defined an RpgMap), the world will retrieve the already existing map. Otherwise it will create a new map
-     * 
-     * @title Create worlds dynamically
-     * @method sceneMap.createDynamicWorldMaps(world)
-     * @param {object} world 
-     * object is 
-     * ```ts
-     * {
-     *  id?: string
-     *  maps: {
-     *      id?: string
-     *      properties?: object
-     *      fileName: string;
-            height: number;
-            width: number;
-            x: number;
-            y: number;
-     *  }[],
-        onlyShowAdjacentMaps: boolean, // only for Tiled Map Editor
-        type: 'world' // only for Tiled Map Editor
-     * }
-     * ```
-     * 
-     * @since 3.0.0-beta.8
-     * @memberof SceneMap
-     */
+    /**
+    * Loads the content of a `.world` file from Tiled Map Editor into the map scene
+    * 
+    * > Note, that if the map already exists (i.e. you have already defined an RpgMap), the world will retrieve the already existing map. Otherwise it will create a new map
+    * 
+    * @title Create worlds dynamically
+    * @method sceneMap.createDynamicWorldMaps(world)
+    * @param {object} world 
+    * object is 
+    * ```ts
+    * {
+    *  id?: string
+    *  maps: {
+    *      id?: string
+    *      properties?: object
+    *      fileName: string;
+           height: number;
+           width: number;
+           x: number;
+           y: number;
+    *  }[],
+       onlyShowAdjacentMaps: boolean, // only for Tiled Map Editor
+       type: 'world' // only for Tiled Map Editor
+    * }
+    * ```
+    * 
+    * @since 3.0.0-beta.8
+    * @memberof SceneMap
+    */
     createDynamicWorldMaps(world: WorldMap): RpgWorldMaps {
         world.id = world.id || Utils.generateUID()
         const worldMap = new RpgWorldMaps(world.id).load(world, this)
@@ -128,15 +127,15 @@ export class SceneMap {
         return this.worldMaps.get(id)
     }
 
-     /**
-     * Delete a world
-     * 
-     * @title Delete a world
-     * @method sceneMap.deleteWorldMaps(id)
-     * @param {string} id world id 
-     * @since 3.0.0-beta.8
-     * @memberof SceneMap
-     */
+    /**
+    * Delete a world
+    * 
+    * @title Delete a world
+    * @method sceneMap.deleteWorldMaps(id)
+    * @param {string} id world id 
+    * @since 3.0.0-beta.8
+    * @memberof SceneMap
+    */
     deleteWorldMaps(id: string): void {
         this.worldMaps.delete(id)
     }
@@ -191,10 +190,10 @@ export class SceneMap {
                 file: { ...tiledData }
             } as MapOptions
         }
-        if (!(mapData as MapOptions).id) (mapData as MapOptions).id = Utils.generateUID()   
+        if (!(mapData as MapOptions).id) (mapData as MapOptions).id = Utils.generateUID()
         if (!Utils.isClass(mapData)) {
             @MapData(mapData as MapOptions)
-            class DynamicMap extends RpgMap {}
+            class DynamicMap extends RpgMap { }
             mapData = DynamicMap
         }
         const map: RpgClassMap<RpgMap> = mapData as any
@@ -203,13 +202,13 @@ export class SceneMap {
     }
 
     async changeMap(
-        mapId: string, 
-        player: RpgPlayer, 
+        mapId: string,
+        player: RpgPlayer,
         positions?: { x: number, y: number, z?: number } | string
     ): Promise<RpgMap | null | boolean> {
 
-        const boolArray: boolean[] = await RpgPlugin.emit(HookServer.PlayerCanChangeMap, [player,  this.getMapBydId(mapId)], true)
-       
+        const boolArray: boolean[] = await RpgPlugin.emit(HookServer.PlayerCanChangeMap, [player, this.getMapBydId(mapId)], true)
+
         if (boolArray.some(el => el === false)) {
             return null
         }
@@ -217,10 +216,10 @@ export class SceneMap {
         player.emit('preLoadScene', mapId)
 
         player.prevMap = player.map
-        
+
         if (player.prevMap) {
             await player.execMethod('onLeaveMap', <any>[player.getCurrentMap()])
-            World.leaveRoom(player.prevMap, player.id)    
+            World.leaveRoom(player.prevMap, player.id)
         }
 
         player.map = mapId
@@ -245,7 +244,7 @@ export class SceneMap {
         if (!player.hitbox.w) player.hitbox.w = mapInstance.tileWidth
 
         let { data: serializeMap } = Object.assign({}, RpgCommonMap.buffer.get(mapId))
-        delete serializeMap.shapes 
+        delete serializeMap.shapes
         delete serializeMap.events
         delete serializeMap._events
 
@@ -260,7 +259,7 @@ export class SceneMap {
         })
 
         player.teleport(positions || 'start')
-  
+
         World.joinRoom(mapId, player.id)
 
         player = World.getUser(player.id) as RpgPlayer

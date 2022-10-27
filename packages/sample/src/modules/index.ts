@@ -8,7 +8,6 @@ import title from '@rpgjs/title-screen'
 export default [
     main,
     gamepad,
-    //starterKit,
     defaultGui,
     //mobileGui,
     emotionBubblesPlugin,

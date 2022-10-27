@@ -1,16 +1,16 @@
-export function random(min, max) {
+export function random(min: number, max: number): number {
     return Math.floor(Math.random() * (max - min + 1) + min)
 }
 
-export function isBrowser() {
+export function isBrowser(): boolean {
     return typeof window !== 'undefined'
 }
 
-export function isFunction(val) {
+export function isFunction(val: unknown): boolean {
     return {}.toString.call(val) === '[object Function]'
 }
 
-export function isClass(func) {
+export function isClass(func: unknown): boolean {
     return typeof func === 'function'
         && /^class\s/.test(Function.prototype.toString.call(func));
 }
@@ -23,11 +23,11 @@ export function isArray(val) {
     return isInstanceOf(val, Array)
 }
 
-export function isObject(val) {
+export function isObject(val: unknown): boolean {
     return typeof val == 'object' && val != null && !isArray(val)
 }
 
-export function isString(val) {
+export function isString(val: unknown): boolean {
     return typeof val == 'string'
 }
 
@@ -47,12 +47,12 @@ export function intersection([start1, end1]: [number, number], [start2, end2]: [
     return (start1 >= start2 && start1 <= end2) || (start2 >= start1 && start2 < end1)
 }
 
-export function capitalize(s) {
+export function capitalize(s: unknown): string {
     if (typeof s !== 'string') return ''
     return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
-export function arrayEquals(a, b) {
+export function arrayEquals(a: any[], b: any[]): boolean {
   return a.length === b.length && a.every((v, i) => v === b[i])
 }
 

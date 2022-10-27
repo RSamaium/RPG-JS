@@ -8,6 +8,7 @@ import globalConfig from './config/server'
 import modules from './modules' 
 import PrettyError from 'pretty-error'
 
+
 const PORT = process.env.PORT || 3000
 
 const pe = new PrettyError()
@@ -44,5 +45,5 @@ process.on('uncaughtException', function(error){
 })   
 
 process.on('unhandledRejection', function(reason: any){
-    console.log(pe.render(reason)) 
+    console.log(pe.render(reason))  
 }) 

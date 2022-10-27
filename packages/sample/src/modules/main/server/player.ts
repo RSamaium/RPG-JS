@@ -28,8 +28,8 @@ export const player: RpgPlayerHooks = {
     },
     onConnected(player: RpgPlayer) {
         player.setHitbox(16, 16)
-        player.setGraphic(RpgWorld.getPlayers().length == 1 ? 'light' : ['light', 'shield'])
-        player.changeMap('cave')
+        player.setGraphic('light')
+        player.changeMap('samplemap')
     },
     onJoinMap(player: RpgPlayer, map: RpgMap) { 
         player.name = ''+Math.random()
@@ -38,11 +38,8 @@ export const player: RpgPlayerHooks = {
     onInput(player: RpgPlayer, { input, moving }) {
         if (input == Control.Back) {
             const map = player.getCurrentMap()
-            //const [event] = Object.values(map?.events ?? {})
-            const [,players] = RpgWorld.getObjectsOfMap(map?.id)
-            if (players) {
-                player.takePossessionOf(players)  
-            }
+            map?.setTile(320, 320, 'Tile Layer 1', { gid: 20 })
+           player.setGraphic(['light', 'shield'])
         } 
     },
     async onInShape(player: RpgPlayer, shape: RpgShape) {

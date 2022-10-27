@@ -1,9 +1,7 @@
 import { xml2js } from 'xml-js'
-import { TiledLayer } from '../types/Layer'
 import { TiledMap } from '../types/Map'
 import { TilesetTile } from '../types/Tile'
 import { TiledTileset } from '../types/Tileset'
-import { TiledProperty } from '../types/Types'
 import { Buffer } from 'buffer/'
 
 export class TiledParser {

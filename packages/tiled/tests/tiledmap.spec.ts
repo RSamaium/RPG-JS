@@ -25,6 +25,12 @@ test('Map is loaded', () => {
     expect(map.layers[0]).toBeInstanceOf(Layer)
 })
 
+test('Map Tile Size', () => {
+    const map = getMap(xml)
+    expect(map.tileheight).toBe(32)
+    expect(map.tilewidth).toBe(32)
+})
+
 test('Layers', () => {
     const map = getMap(xmlGroup)
     expect(map.layers).toHaveLength(4)
@@ -141,10 +147,16 @@ describe('Test Tiles Index', () => {
     </map>
     `
 
+    test('getTileIndex()', () => {
+        const map = getMap(xml)
+        const { width } = map
+        expect(map.getTileIndex(32, 32)).toEqual(width + 1)
+    })
+
     test('Tiles Index', () => {
         const map = getMap(xml)
         const tileInfo = map.getTileByIndex(0)
-        expect(tileInfo.tiles).toHaveLength(1)
+        expect(tileInfo.tiles).toHaveLength(2)
         expect(tileInfo.hasCollision).toBe(false)
     })
 
@@ -158,14 +170,14 @@ describe('Test Tiles Index', () => {
     test('Tiles Index, Z=1', () => {
         const map = getMap(xmlZ)
         const tileInfo = map.getTileByIndex(0, [32, 64])
-        expect(tileInfo.tiles).toHaveLength(1)
+        expect(tileInfo.tiles).toHaveLength(2)
         expect(tileInfo.hasCollision).toBe(false)
     })
 
     test('Tiles Index, Z=2', () => {
         const map = getMap(xmlZ)
         const tileInfo = map.getTileByIndex(0, [64, 64+32])
-        expect(tileInfo.tiles).toHaveLength(1)
+        expect(tileInfo.tiles).toHaveLength(2)
         expect(tileInfo.hasCollision).toBe(false)
     })
 
@@ -184,7 +196,6 @@ describe('Test Tiles Index', () => {
         const map = getMap(xmlFlipTiled)
         const tileInfo = map.getTileByIndex(0)
         const tile = tileInfo.tiles[0]
-        expect(tile['_gid']).toBe(3221225513)
         expect(tile.gid).toBe(41)
         expect(tileInfo.hasCollision).toBe(true)
     })

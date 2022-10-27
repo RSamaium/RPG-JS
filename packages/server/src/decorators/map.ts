@@ -10,23 +10,23 @@ export interface MapOptions {
      * */
     id?: string,
 
-     /** 
-     * the path to the .tmx file (Tiled Map Editor)
-     * 
-     * Remember to use `require()` function
-     * 
-     * ```ts
-     * import { MapData, RpgMap } from '@rpgjs/server'
-     * 
-     * @MapData({
-     *      id: 'town',
-     *      file: require('./tmx/town.tmx')
-     * })
-     * class TownMap extends RpgMap { } 
-     * ``` 
-     * @prop {string} file
-     * @memberof MapData
-     * */
+    /** 
+    * the path to the .tmx file (Tiled Map Editor)
+    * 
+    * Remember to use `require()` function
+    * 
+    * ```ts
+    * import { MapData, RpgMap } from '@rpgjs/server'
+    * 
+    * @MapData({
+    *      id: 'town',
+    *      file: require('./tmx/town.tmx')
+    * })
+    * class TownMap extends RpgMap { } 
+    * ``` 
+    * @prop {string} file
+    * @memberof MapData
+    * */
     file: string | TiledMap,
 
     /** 
@@ -36,37 +36,37 @@ export interface MapOptions {
      * */
     name?: string,
 
-     /** 
-     * Map events. This is an array containing `RpgEvent` classes. 
-     * You can also give an object that will indicate the positions of the event on the map.
-     * 
-     * ```ts
-     * import { MapData, RpgMap, EventData, RpgEvent } from '@rpgjs/server'
-     * 
-     * @EventData({
-     *      name: 'Ev-1'
-     * })
-     * class NpcEvent extends RpgEvent { }
-     * 
-     * @MapData({
-     *      id: 'medieval',
-     *      file: require('./tmx/town.tmx'),
-     *      events: [NpcEvent]
-     * })
-     * class TownMap extends RpgMap {}
-     * ```
-     * 
-     * If the positions are not defined, the event will be placed on a Tiled Map Editor shape ([/guide/create-event.html#position-the-event-on-the-map](Guide)). Otherwise, it will be placed at {x:0, y:0 }
-     * 
-     * You can give positions:
-     * 
-     * ```ts
-     * events: [{ event: NpcEvent, x: 10, y: 30 }]
-     * ```
-     * 
-     * @prop {Class of RpgEvent[] | { event: Class RpgEvent, x: number, y: number }} [events]
-     * @memberof MapData
-     * */
+    /** 
+    * Map events. This is an array containing `RpgEvent` classes. 
+    * You can also give an object that will indicate the positions of the event on the map.
+    * 
+    * ```ts
+    * import { MapData, RpgMap, EventData, RpgEvent } from '@rpgjs/server'
+    * 
+    * @EventData({
+    *      name: 'Ev-1'
+    * })
+    * class NpcEvent extends RpgEvent { }
+    * 
+    * @MapData({
+    *      id: 'medieval',
+    *      file: require('./tmx/town.tmx'),
+    *      events: [NpcEvent]
+    * })
+    * class TownMap extends RpgMap {}
+    * ```
+    * 
+    * If the positions are not defined, the event will be placed on a Tiled Map Editor shape ([/guide/create-event.html#position-the-event-on-the-map](Guide)). Otherwise, it will be placed at {x:0, y:0 }
+    * 
+    * You can give positions:
+    * 
+    * ```ts
+    * events: [{ event: NpcEvent, x: 10, y: 30 }]
+    * ```
+    * 
+    * @prop {Class of RpgEvent[] | { event: Class RpgEvent, x: number, y: number }} [events]
+    * @memberof MapData
+    * */
     events?: { event: any, x: number, y: number }[] | any[],
 
     /** 
@@ -162,6 +162,19 @@ export interface MapOptions {
      * @memberof MapData
      * */
     syncSchema?: any
+
+    /** 
+     * Decreases the RAM of the map. In this case, some instructions will be different.
+     * 
+     * `map.getTileByIndex()` will not return all tiles of an index but only the tile of the highest layer
+     * 
+     * > You can also use the `low-memory` property in Tiled maps
+     * 
+     * @prop {boolean} [lowMemory=false]
+     * @since 3.1.0
+     * @memberof MapData
+     * */
+    lowMemory?: boolean
 }
 
 export function MapData(options: MapOptions) {
@@ -173,9 +186,10 @@ export function MapData(options: MapOptions) {
         target.prototype.file = options.file
         target.prototype.id = options.id
         target.prototype.sounds = options.sounds
+        target.prototype.lowMemory = options.lowMemory
 
         target.prototype.$schema = {}
-        
+
         if (options.syncSchema) {
             target.prototype.$schema = options.syncSchema
         }
@@ -206,7 +220,7 @@ export function MapData(options: MapOptions) {
         if (!target.prototype.$schema.events) {
             target.prototype.$schema.events = [RpgPlayer.schemas]
         }
-    
+
         target.prototype._events = options.events
     }
 }
