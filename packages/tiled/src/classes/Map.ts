@@ -265,7 +265,10 @@ export class MapClass extends TiledProperties {
         tiles: {
             [tileIndex: number]: Tile
         }
-    } {
+    } | never {
+        if (this.lowMemory) {
+            throw 'Impossible to change a tile with the lowMemory option'
+        }
         const tileIndex = this.getTileIndex(x, y)
         let fnFilter
         let tilesEdited = {}
