@@ -206,8 +206,6 @@ test('Player Teleport in map by shape', () => {
     map.createShape({
         x: 100,
         y: 200,
-        width: 0,
-        height: 0,
         name: 'start'
     })
     player.teleport('start')

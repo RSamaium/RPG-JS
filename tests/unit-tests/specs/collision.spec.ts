@@ -73,7 +73,8 @@ test('Test Collision with shape (position not changed)', async () => {
         height: 100,
         properties: {
             collision: true
-        }
+        },
+        name: 'test'
     })
     await player.moveRoutes([ Move.right() ])
     expect(player.position.x).toBe(0)
