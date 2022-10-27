@@ -1,4 +1,4 @@
-import { RpgCommonPlayer, Utils, RpgPlugin, RpgCommonGame, RpgCommonMap, Direction, SocketMethods, SocketEvents } from '@rpgjs/common'
+import { RpgCommonPlayer, Utils, RpgPlugin, RpgCommonGame, RpgCommonMap, Direction, SocketMethods, SocketEvents, CameraOptions } from '@rpgjs/common'
 import { Room } from 'simple-room'
 import { RpgMap, EventPosOption } from '../Game/Map'
 import { Query } from '../Query'
@@ -41,15 +41,6 @@ const {
 } = Utils
 
 export interface Position { x: number, y: number, z: number }
-export interface CameraOptions {
-    speed?: number
-    acceleration?: number,
-    smoothMove?: {
-        time?: number,
-        // https://easings.net
-        ease?: 'easeInSine' | 'easeOutSine' | 'easeInOutSine' | 'easeInQuad' | 'easeOutQuad' | 'easeInOutQuad' | 'easeInCubic' | 'easeOutCubic' | 'easeInOutCubic' | 'easeInQuart' | 'easeOutQuart' | 'easeInOutQuart' | 'easeInQuint' | 'easeOutQuint' | 'easeInOutQuint' | 'easeInExpo' | 'easeOutExpo' | 'easeInOutExpo' | 'easeInCirc' | 'easeOutCirc' | 'easeInOutCirc' | 'easeInBack' | 'easeOutBack' | 'easeInOutBack' | 'easeInElastic' | 'easeOutElastic' | 'easeInOutElastic' | 'easeInBounce' | 'easeOutBounce' | 'easeInOutBounce' | 'linear'
-    } | boolean
-}
 
 const itemSchemas = {
     name: String,
@@ -681,9 +672,6 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @method player.cameraFollow(otherPlayer,options)
      * @param {RpgPlayer | RpgEvent} otherPlayer
      * @param {options} options
-     * @param {number} [options.time=1000] - time to animate
-     * @param {number} [options.speed=0] - to follow in pixels/frame (0=teleport to location)
-     * @param {number} [options.acceleration] - set acceleration to accelerate and decelerate at this rate; speed
      * @param {object | boolean} [options.smoothMove] - animate. Set a boolean to use default parameters
      * @param {number} [options.smoothMove.time=1000] - time to animate
      * @param {string} [options.smoothMove.ease=linear] - easing to use. Go to https://easings.net to get function name

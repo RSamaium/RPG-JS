@@ -17,6 +17,7 @@ import { RpgShape, ShapePositioning } from './Shape'
 import { VirtualGrid } from './VirtualGrid'
 import { RpgCommonWorldMaps } from './WorldMaps'
 import { SocketMethods, SocketEvents } from './SocketEvents'
+import { CameraOptions } from './types/Player'
 
 export {
     RpgCommonPlayer,
@@ -49,5 +50,6 @@ export {
     GameSide,
     RpgCommonWorldMaps,
     SocketMethods,
-    SocketEvents
+    SocketEvents,
+    CameraOptions
 }
