@@ -134,6 +134,7 @@ export class RpgPlayer extends RpgCommonPlayer {
     /** @internal */
     public tmpPositions: Position | string | null = null
     public otherPossessedPlayer: RpgPlayer | RpgEvent | null = null
+    public following: RpgPlayer | RpgEvent | null = null
 
     _lastFramePositions: {
         frame: number
@@ -682,7 +683,13 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @memberof Player
      */
     cameraFollow(otherPlayer: RpgPlayer | RpgEvent, options: CameraOptions = {}) {
-        this.emitToMap(SocketEvents.CallMethod, {
+        if (otherPlayer.id == this.id) {
+            this.following = null
+        }
+        else {
+            this.following = otherPlayer
+        }
+        this.emit(SocketEvents.CallMethod, {
             objectId: this.playerId,
             name: SocketMethods.CameraFollow,
             params: [otherPlayer.id, options]

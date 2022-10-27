@@ -113,21 +113,32 @@ export class RpgMap extends RpgCommonMap {
     get game(): RpgCommonGame {
         return this._server.gameEngine
     } 
-
-    // Hook: called by simple-room package
-    onLeave(player: RpgPlayer) {
-        this.getShapes().forEach(shape => shape.out(player))
-        const events: RpgPlayer[] = Object.values(this.game.world.getObjectsOfGroup(this.id, player))
+    
+    private removeObject(object: RpgPlayer | RpgEvent) {
+        this.getShapes().forEach(shape => shape.out(object))
+        const events: RpgPlayer[] = Object.values(this.game.world.getObjectsOfGroup(this.id, object))
         for (let event of events) {
-            player.getShapes().forEach(shape => shape.out(event))
-            event.getShapes().forEach(shape => shape.out(player))
+            object.getShapes().forEach(shape => shape.out(event))
+            event.getShapes().forEach(shape => shape.out(object))
         }
-        this.grid.clearObjectInCells(player.id)
+        this.grid.clearObjectInCells(object.id)
+        for (let playerId in this.players) {
+            if (object.id == playerId) continue
+            const otherPlayer = this.players[playerId]
+            if (otherPlayer.following?.id == object.id) {
+                otherPlayer.cameraFollow(otherPlayer)
+            }
+        }
         // last player before removed of this map 
         if (this.nbPlayers === 1) {
             // clear cache for this map
             RpgCommonMap.buffer.delete(this.id)
         }
+    }
+
+    // Hook: called by simple-room package
+    onLeave(player: RpgPlayer) {
+        this.removeObject(player)
     }
 
     // TODO
@@ -260,6 +271,7 @@ export class RpgMap extends RpgCommonMap {
      */
     removeEvent(eventId: string): boolean {
         if (!this.events[eventId]) return false
+        this.removeObject(this.events[eventId])
         delete this.events[eventId]
         return true
     }

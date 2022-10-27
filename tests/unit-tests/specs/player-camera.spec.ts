@@ -6,7 +6,9 @@ import { clear, nextTick } from '@rpgjs/testing'
 
 let client: RpgClientEngine, 
 player: RpgPlayer,
-secondPlayer: RpgPlayer
+secondPlayer: RpgPlayer,
+secondClient: RpgClientEngine
+
 
 function getEmitParams(options = {}) {
     return [SocketEvents.CallMethod, {
@@ -21,7 +23,8 @@ beforeEach(async () => {
     client = ret.client
     player = ret.player
     const clientFixture = await ret.fixture.createClient()
-    await ret.fixture.changeMap(clientFixture.client, 'map')
+    secondClient = clientFixture.client
+    await ret.fixture.changeMap(secondClient, 'map')
     const secondPlayerId = clientFixture.playerId
     secondPlayer = RpgWorld.getPlayer(secondPlayerId)
     await nextTick(client)
@@ -31,7 +34,7 @@ describe('Spy emitToMap', () => {
     let spy
 
     beforeEach(() => {
-        spy = jest.spyOn(player, 'emitToMap');
+        spy = jest.spyOn(player, 'emit');
     })
 
     test('player.cameraFollow() test', () => {
@@ -48,6 +51,17 @@ describe('Spy emitToMap', () => {
         }
         player.cameraFollow(secondPlayer, options)
         expect(spy).toHaveBeenCalledWith(...getEmitParams(options))
+    })
+    
+    test('following property', async () => {
+        player.cameraFollow(secondPlayer)
+        expect(player.following?.id).toBe(secondPlayer.id)
+    })
+
+    test('follow and, next,  client exit', async () => {
+        player.cameraFollow(secondPlayer)
+        secondClient.socket.disconnect()
+        expect(player.following).toBe(null)
     })
 })
 
@@ -98,6 +112,14 @@ describe('Client Apply', () => {
                 ease: 'easeInOutCubic'
             })
         )
+    })
+
+    test('viewport applied twice', () => {
+        const viewport = client.getScene<RpgSceneMap>()?.viewport as any
+        const spy = jest.spyOn(viewport as any, 'follow');
+        player.cameraFollow(secondPlayer)
+        secondClient.socket.disconnect()
+        expect(spy).toHaveBeenCalledTimes(2)
     })
 })
 
