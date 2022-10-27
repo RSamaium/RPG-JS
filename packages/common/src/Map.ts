@@ -210,9 +210,11 @@ export class RpgCommonMap extends MapClass {
                     x: tilePos.x,
                     y: tilePos.y
                 })
-                const collided = Hit.testPolyCollision(hit.type, hit.hitbox, hitbox)
-                if (collided) {
-                    tile.hasCollision = true
+                if (hit.type) {
+                    const collided = Hit.testPolyCollision(hit.type, hit.hitbox, hitbox)
+                    if (collided) {
+                        tile.hasCollision = true
+                    }
                 }
             }
         }

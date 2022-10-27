@@ -280,7 +280,7 @@
    <property name="events-layer-default" type="bool" value="true"/>
   </properties>
   <object id="36" name="chest" gid="863" x="257" y="191" width="32" height="32"/>
-  <object id="37" x="641" y="358" width="163" height="98">
+  <object id="37" x="594" y="401" width="163" height="98">
    <ellipse/>
   </object>
   <object id="38" x="945" y="252">

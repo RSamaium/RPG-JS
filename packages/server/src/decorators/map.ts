@@ -198,17 +198,14 @@ export function MapData(options: MapOptions) {
                 {
                     type: String,
                     name: String,
-                    hitbox: {
-                        pos: {
-                            x: Number,
-                            y: Number
-                        },
-                        w: Number,
-                        h: Number
-                    },
+                    x: Number,
+                    y: Number,
+                    width: Number,
+                    height: Number,
                     properties: {
                         collision: Boolean
                     },
+                    polygon: [{ x: Number, y: Number }],
                     rotation: Number,
                     components: [componentSchema]
                 }

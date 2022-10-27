@@ -181,6 +181,51 @@ test('Create Shape', () => {
     })
 })
 
+describe('Test Data Shape are send to client',  () => {
+    async function getShape(options) {
+        map = player.getCurrentMap() as RpgMap
+        map.createShape({
+            x: 0,
+            y: 0,
+            name: 'test',
+            ...options
+        })
+        await nextTick(client)
+        const fixture = client.gameEngine.getShape('test')
+        const shape = fixture?.object
+        const data = fixture?.paramsChanged
+        expect(shape).toBeInstanceOf(RpgShape)
+        return  { data, shape }
+    }
+
+    test('Box', async () => {
+        const { data } = await getShape({
+            width: 100,
+            height: 100
+        })
+        expect(data).toMatchObject({ x: 0, y: 0, width: 100, height: 100, type: 'box' })
+        expect(data.properties).toMatchObject({ collision: null })
+    })
+
+    test('Polygon', async () => {
+        const { shape, data } = await getShape({
+            polygon: [{ x: 0, y: 0 }, { x: -59, y: 68 }, { x: 13, y: 109 }, { x: 50, y: 79 }]
+        })
+        expect(data).toMatchObject({ x: 0, y: 0, type: 'polygon' })
+        expect(data).toHaveProperty('polygon')
+        expect(shape.polygon).toHaveLength(4)
+    })
+
+    test('Circle', async () => {
+        const { data } = await getShape({
+            ellipse: true,
+            width: 100,
+            height: 100
+        })
+        expect(data).toMatchObject({ x: 50, y: 50, width: 0, height: 0, type: 'circle' })
+    })
+})
+
 test('Attach Shape in player', () => {
     player.position.x = 50
     player.position.y = 50

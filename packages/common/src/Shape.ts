@@ -1,8 +1,7 @@
 import { PlayerType, RpgCommonPlayer } from './Player'
 import { Hit, HitType } from './Hit'
-import { isInstanceOf } from './Utils'
-import SAT from 'sat'
 import { TiledObjectClass } from '@rpgjs/tiled'
+import { TiledPoint } from '@rpgjs/tiled/lib/types/Types'
 
 export enum ShapePositioning {
     Default = 'default',

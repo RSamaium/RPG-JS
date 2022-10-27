@@ -2,14 +2,16 @@ export const box = {
     x: 0,
     y: 0,
     width: 100,
-    height: 100
+    height: 100,
+    name: 'test'
 }
 export const circle = {
     ellipse: true,
     x: 0,
     y: 0,
     width: 100,
-    height: 100
+    height: 100,
+    name: 'test'
 }
 export const polygon = {
     polygon: [{
@@ -32,5 +34,6 @@ export const polygon = {
     x: 0,
     y: 0,
     width: 0,
-    height: 0
+    height: 0,
+    name: 'test'
 }

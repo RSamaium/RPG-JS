@@ -2,29 +2,44 @@ import { TiledObjectClass } from '@rpgjs/tiled'
 import SAT from 'sat'
 import { isInstanceOf } from './Utils'
 
-export interface HitObject {
-    ellipse?: boolean
-    gid?: number
-    height: number
-    polygon?: { x: number, y: number }[]
-    polyline?: any[]
-    properties?: {
-        [key: string]: any
-    }
-    rotation?: number
-    visible?: boolean
-    width: number
-    x: number
-    y: number
-    type?: string
-    name?: string
-}
-
 export enum HitType {
     Box = 'box',
     Circle = 'circle',
     Polygon = 'polygon'
 }
+
+type HitCommon = {
+    x: number
+    y: number
+    properties?: {
+        [key: string]: any
+    }
+    name: string
+    type?: string
+    visible?: boolean
+    gid?: number
+}
+
+type HitEllipse = {
+    ellipse: boolean
+    width: number
+    height: number
+    type?: 'ellipse' | HitType.Circle
+    rotation?: number
+} & HitCommon
+
+type HitPolygon = {
+    polygon: { x: number, y: number }[]
+    type?: HitType.Polygon
+} & HitCommon
+
+type HitBox = {
+    width: number
+    height: number
+    type?: HitType.Box
+} & HitCommon
+
+export type HitObject = HitBox | HitEllipse | HitPolygon | HitCommon
 
 class HitClass {
 
@@ -34,23 +49,23 @@ class HitClass {
     
     getHitbox(obj: HitObject, offset?: { x: number, y: number }): {
         hitbox: SAT,
-        type: string,
-        name: string | undefined
+        type?: string,
+        name?: string
     } {
-        let hitbox, type
+        let hitbox: SAT, type: string | undefined
         if (!offset) offset = { x: 0, y: 0 }
         const x = obj.x + offset.x
         const y = obj.y + offset.y
-        if (obj.ellipse) {
+        if ('ellipse' in obj || obj.type == HitType.Circle) {
             type = HitType.Circle
-            const radius = obj.width / 2
+            const radius = (<HitEllipse>obj).width / 2
             hitbox = new SAT.Circle(new SAT.Vector(x + radius, y + radius), radius)
         }
-        else if (obj.polygon) {
+        else if ('polygon' in obj) {
             type = HitType.Polygon
             hitbox = new SAT.Polygon(new SAT.Vector(x, y), obj.polygon.map(pos => new SAT.Vector(+pos.x, +pos.y)))
         }
-        else if (!obj.polygon && obj.width > 0 && obj.height > 0) {
+        else if (!('polygon' in obj) && ('width' in obj) && ('height' in obj)) {
             type = HitType.Box
             hitbox = new SAT.Box(new SAT.Vector(x, y), obj.width, obj.height)
         }

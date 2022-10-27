@@ -172,6 +172,7 @@ export class GameEngineClient extends RpgCommonGame {
             isShape
         } = obj
         GameEngineClient.toArray(params, 'components')
+        GameEngineClient.toArray(params, 'polygon')
         const isMe = () => id == this.playerId
         let logic
         let teleported = false
