@@ -1,4 +1,4 @@
-import { RpgCommonMap, RpgPlugin, HookClient, RpgShape, Utils, RpgCommonPlayer } from '@rpgjs/common'
+import { RpgCommonMap, RpgPlugin, HookClient, RpgShape, Utils, RpgCommonPlayer, CameraOptions } from '@rpgjs/common'
 import TileMap from '../Tilemap'
 import { Viewport } from 'pixi-viewport'
 import { Scene, SceneObservableData, SceneSpriteLogic } from './Scene'
@@ -250,6 +250,28 @@ export class SceneMap extends Scene {
     getShapes(): RpgShape[] {
         const shapes = Object.values(this.game.getShapes())
         return shapes.map(shape => shape.object)
+    }
+
+    cameraFollowSprite(id: string, options: CameraOptions = {}) {
+        const sprite = this.getSprite(id)
+        const follow = () => {
+            if (sprite) this.viewport?.follow(sprite)
+        }
+        if (options.smoothMove) {
+            this.viewport?.plugins.remove('follow')
+            let moreOptions = {}
+            if (typeof options.smoothMove != 'boolean') {
+                moreOptions = options.smoothMove
+            }
+            this.viewport?.animate({
+                position: new PIXI.Point (sprite?.x, sprite?.y),
+                ...moreOptions,
+                callbackOnComplete: follow
+            })
+        }
+        else {
+            follow()
+        }
     }
 
     /**

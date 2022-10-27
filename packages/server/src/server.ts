@@ -185,14 +185,14 @@ export class RpgServerEngine {
         const players = this.world.getUsers() 
         const obj: any = []
         let p: Promise<any>[] = []
-        let id = Math.random()
         for (let playerId in players) {
-            const player = players[playerId] as RpgPlayer
+            const playerInstance = players[playerId] as RpgPlayer
+            const player = playerInstance.otherPossessedPlayer ?? playerInstance
             if (player.pendingMove.length > 0) {
                 const lastFrame = player.pendingMove[player.pendingMove.length-1]
                 if (this.inputOptions.workers) obj.push(player.toObject())
                 else {
-                    p.push(this.gameEngine.processInput(playerId).then(() => {
+                    p.push(this.gameEngine.processInput(player.playerId).then(() => {
                         player.pendingMove = []
                         player._lastFrame = lastFrame.frame
                         player._lastFramePositions.set(lastFrame.frame, {...player.position})
@@ -200,6 +200,7 @@ export class RpgServerEngine {
                 }
             }
         }
+        // TODO
         if (this.inputOptions.workers) {
             this.workers.call('movePlayers', obj).then((players) => {
                 for (let playerId in players) {
@@ -257,8 +258,9 @@ export class RpgServerEngine {
         player.session = token
 
         socket.on('move', (data: { input: string[], frame: number }) => {
-            for (let input of data.input) {
-                player.pendingMove.push({
+            const controlPlayer = player.otherPossessedPlayer ?? player
+             for (let input of data.input) {
+                controlPlayer.pendingMove.push({
                     input,
                     frame: data.frame
                 })
