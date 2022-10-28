@@ -1,4 +1,4 @@
-import { intersection, generateUID, toRadians } from './Utils'
+import { intersection, generateUID, toRadians, isInstanceOf } from './Utils'
 import { Hit, HitType } from './Hit'
 import { RpgShape } from './Shape'
 import SAT from 'sat'
@@ -6,6 +6,8 @@ import { TileInfo, RpgCommonMap } from './Map'
 import { RpgPlugin, HookServer } from './Plugin'
 import { GameSide, RpgCommonGame } from './Game'
 import { TiledObjectClass } from '@rpgjs/tiled'
+import { Vector2d, Vector2dZero } from './Vector2d'
+import { Box } from './VirtualGrid'
 
 const ACTIONS = { IDLE: 0, RUN: 1, ACTION: 2 }
 
@@ -68,7 +70,7 @@ export class RpgCommonPlayer {
 
     private shapes: RpgShape[] = []
 
-    private _position: any
+    private _position: Vector2d
     private _hitboxPos: any
 
     static get ACTIONS() {
@@ -79,6 +81,12 @@ export class RpgCommonPlayer {
         this._hitboxPos = new SAT.Vector(0, 0)
         this.setHitbox(this.width, this.height)
         this.position = { x: 0, y: 0, z: 0 }
+        /*let vec = new Vector2dZero()
+        this.speed = 3
+        setInterval(() => {
+            this.computeNextPositionByTarget(vec, new Vector2d(10, 10))
+            console.log(vec)
+        }, 100)*/
     }
 
     get id() {
@@ -105,14 +113,16 @@ export class RpgCommonPlayer {
      * @prop { { x: number, y: number, z: number } } position
      * @memberof Player
      */
-    set position(val: Position) {
+    set position(val: Position | Vector2d) {
         const { x, y, z } = val
+        if (!isInstanceOf(val, Vector2d)) {
+            val = new Vector2d(x, y, z)
+        }
         this._hitboxPos.x = x
         this._hitboxPos.y = y
         this._hitboxPos.z = z
-        this._position = val
         this.updateInVirtualGrid()
-        this._position = new Proxy(val, {
+        this._position = new Proxy<Vector2d>(val as Vector2d, {
             get: (target, prop: string) => target[prop], 
             set: (target, prop, value) => {
                 this._hitboxPos[prop] = value
@@ -122,7 +132,7 @@ export class RpgCommonPlayer {
         })
     }
 
-    get position() {
+    get position(): Vector2d {
         return this._position
     }
 
@@ -277,17 +287,13 @@ export class RpgCommonPlayer {
     }
     
     /** @internal */
-    defineNextPosition(direction: number, deltaTimeInt: number): Position {
+    defineNextPosition(direction: number, deltaTimeInt: number): Vector2d {
         const angle = this.directionToAngle(direction)
         const computePosition = (prop: string) => {
             return this.position[prop] + this.speed * deltaTimeInt 
                 * (Math.round(Math[prop == 'x' ? 'cos' : 'sin'](angle) * 100) / 100)
         }
-        return {
-            x: ~~computePosition('x'),
-            y: ~~computePosition('y'),
-            z: ~~this.position.z
-        }
+        return new Vector2d(~~computePosition('x'), ~~computePosition('y'), ~~this.position.z)
     }
 
     /** @internal */
@@ -373,33 +379,94 @@ export class RpgCommonPlayer {
         return map.getTile(hitbox || this.hitbox, x, y, [z, this.height])
     }
 
-    async isCollided(nextPosition: Position): Promise<boolean> {
+    private boundingMap(nextPosition: Vector2d): { bounding: boolean, nextPosition: Vector2d } | null {
+        const map = this.mapInstance 
+        let bounding = false
+        if (!map) {
+            return null
+        }
+        else if (nextPosition.x < 0) {
+            nextPosition.x = 0
+            bounding = true
+        }
+        else if (nextPosition.y < 0) {
+            nextPosition.y = 0
+            bounding = true
+        }
+        else if (nextPosition.x > map.widthPx - this.hitbox.w) {
+            nextPosition.x = map.widthPx - this.hitbox.w
+            bounding = true
+        }
+        else if (nextPosition.y > map.heightPx - this.hitbox.h) {
+            nextPosition.y = map.heightPx - this.hitbox.h
+            bounding = true
+        }
+        return {
+            bounding,
+            nextPosition
+        }
+    }
+
+    test(player) {
+        setInterval(() => {
+            this.computeNextPositionByTarget(this.position, player.position)
+        }, 16)
+    }
+
+    computeNextPositionByTarget(nextPosition: Vector2d, target: Vector2d): Vector2d {
+        const pullDistance = target.distanceWith(nextPosition)
+        if (pullDistance <= this.speed) {
+            return nextPosition.set(target)
+        }
+        const pull = (target.copy().subtract(nextPosition)).multiply((1 / pullDistance))
+        const totalPush = new Vector2dZero()
+        let contenders = 0
+        const area = this.mapInstance.tileheight * 2
+        this.mapInstance.gridTiles.getCells({
+            minX: nextPosition.x - area,
+            maxX: nextPosition.x + area,
+            minY: nextPosition.y - area,
+            maxY: nextPosition.y + area
+        }, (index) => {
+            if (index < 0) return
+            const pos = this.mapInstance.getTilePosition(index)
+            const hitbox = Hit.createObjectHitbox(pos.x, pos.y, nextPosition.z, this.hitbox.w, this.hitbox.h)
+            const tile = this.getTile(pos.x, pos.y, nextPosition.z, hitbox)
+              if (tile.hasCollision) {
+                const obstacle = new Vector2d(pos.x, pos.y)
+                let push = nextPosition.copy().subtract(obstacle)
+                let distance = (nextPosition.distanceWith(obstacle) - 16) - 16;
+                if (distance < 32 * 10) {
+                    ++contenders;
+                    if (distance < 0.0001) distance = 0.0001;
+                    let weight = 1 / distance;
+                    totalPush.add(push.multiply(weight));
+                }
+            }
+        })
+
+        pull
+            .multiply(Math.max(1, 4 * contenders))
+            .add(totalPush)
+            .normalize()
+
+        return nextPosition.add(pull.multiply(this.speed))
+    }
+
+    async isCollided(nextPosition: Vector2d): Promise<boolean> {
         this.collisionWith = [] 
         this._collisionWithTiles = []
         const map = this.mapInstance 
         const prevMapId = this.map
         const hitbox = Hit.createObjectHitbox(nextPosition.x, nextPosition.y, 0, this.hitbox.w, this.hitbox.h)
 
-        if (!map) {
-            return true
-        }
-        if (nextPosition.x < 0) {
-            this.posX = 0 
-            return true
-        }
-        if (nextPosition.y < 0) {
-            this.posY = 0 
-            return true
-        }
-        if (nextPosition.x > map.widthPx - this.hitbox.w) {
-            this.posX = map.widthPx - this.hitbox.w
-            return true
-        }
-        if (nextPosition.y > map.heightPx - this.hitbox.h) {
-            this.posY = map.heightPx - this.hitbox.h
-            return true
-        }
+        const boundingMap = this.boundingMap(nextPosition)
 
+        if (boundingMap?.bounding) {
+            this.position.set(nextPosition)
+            return true
+        }
+        
         const tileCollision = (x: number, y: number): boolean => {
             const tile = this.getTile(x, y, nextPosition.z, hitbox)
             if (tile.hasCollision) {
@@ -534,7 +601,7 @@ export class RpgCommonPlayer {
     }
 
     /** @internal */
-    async collisionWithShape(shape: RpgShape, player: RpgCommonPlayer, nextPosition?: Position): Promise<boolean> {
+    async collisionWithShape(shape: RpgShape, player: RpgCommonPlayer, nextPosition?: Vector2d): Promise<boolean> {
         const { collision, z } = shape.properties
         if (shape.isShapePosition()) return false
         if (z !== undefined && !this.zCollision({
@@ -544,7 +611,7 @@ export class RpgCommonPlayer {
             return false
         }
         let { position, hitbox } = player
-        if (nextPosition) position = nextPosition
+        if (nextPosition) position.set(nextPosition)
         const hitboxObj = Hit.createObjectHitbox(
             position.x, 
             position.y, 
@@ -568,7 +635,7 @@ export class RpgCommonPlayer {
     }
 
     /** @internal */
-    async move(nextPosition: Position, testCollision:  boolean = true): Promise<boolean> {
+    async move(nextPosition: Vector2d, testCollision:  boolean = true): Promise<boolean> {
         {
             const { x, y } = this.position
             const { x: nx, y: ny } = nextPosition
@@ -594,7 +661,7 @@ export class RpgCommonPlayer {
         const collided = testCollision && !(await this.isCollided(nextPosition))
 
         if (collided) {
-            this.position = nextPosition
+            this.position = nextPosition.copy()
             await RpgPlugin.emit(HookServer.PlayerMove, this)
         }
 

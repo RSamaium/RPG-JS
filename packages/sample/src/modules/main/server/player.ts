@@ -33,14 +33,16 @@ export const player: RpgPlayerHooks = {
     },
     onJoinMap(player: RpgPlayer, map: RpgMap) { 
         player.name = ''+Math.random()
+        
         //player.position.z = 2 * 32
     },
     onInput(player: RpgPlayer, { input, moving }) {
         if (input == Control.Back) {
-        const players = RpgWorld.getPlayersOfMap(player.map)
-           player.cameraFollow(players[players.length-1])
-        } 
-    },
+            const map = player.getCurrentMap()
+            const [event] = Object.values(map?.events as any);
+            (event as any).test(player)   
+        }   
+    },      
     async onInShape(player: RpgPlayer, shape: RpgShape) {
         console.log('in', player.name, shape.name)
         // await player.changeMap('samplemap')

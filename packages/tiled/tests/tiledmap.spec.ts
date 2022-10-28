@@ -153,6 +153,26 @@ describe('Test Tiles Index', () => {
         expect(map.getTileIndex(32, 32)).toEqual(width + 1)
     })
 
+    test('getTilePosition() #1', () => {
+        const map = getMap(xml)
+        expect(map.getTilePosition(85)).toMatchObject({
+            x: 5 * 32,
+            y: 8 * 32
+        })
+        expect(map.getTilePosition(11)).toMatchObject({
+            x: 1 * 32,
+            y: 1 * 32
+        })
+        expect(map.getTilePosition(9)).toMatchObject({
+            x: 9 * 32,
+            y: 0 * 32
+        })
+        expect(map.getTilePosition(99)).toMatchObject({
+            x: 9 * 32,
+            y: 9 * 32
+        })
+    })
+
     test('Tiles Index', () => {
         const map = getMap(xml)
         const tileInfo = map.getTileByIndex(0)

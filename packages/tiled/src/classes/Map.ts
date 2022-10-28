@@ -135,6 +135,13 @@ export class MapClass extends TiledProperties {
         return this.width * Math.floor((y - z) / this.tileheight) + Math.floor(x / this.tilewidth)
     }
 
+    getTilePosition(index: number): { x: number, y: number } {
+        return {
+            y: Math.floor(index / this.width) * this.tileheight,
+            x: index % (this.width) * this.tilewidth
+        }
+    }
+
     /**
      * Find the point of origin (top left) of a tile. Of course, its position depends on the size of the tile
 

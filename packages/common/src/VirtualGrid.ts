@@ -1,4 +1,4 @@
-type Box = { minX: number, minY: number, maxX: number, maxY: number }
+export type Box = { minX: number, minY: number, maxX: number, maxY: number }
 
 export class VirtualGrid {
     private cells: Map<number, Set<string>> = new Map()
@@ -17,7 +17,7 @@ export class VirtualGrid {
         return this.nbCellWidth * Math.floor(y / this.cellHeight) + Math.floor(x / this.cellWidth) 
     }
 
-    private getCells(box: Box, cb: (index: number) => void) {
+    getCells(box: Box, cb: (index: number) => void) {
         const {
             minX,
             minY,
@@ -29,7 +29,7 @@ export class VirtualGrid {
         const bottomLeft = this.getCellIndex(minX, maxY)
         const nbLines = (bottomLeft - topLeft) / this.nbCellWidth + 1
         for (let j=0 ; j < nbLines ; j++) {
-            for (let i =topLeft ; i <= topRight ; i++) {
+            for (let i = topLeft ; i <= topRight ; i++) {
                 const index = i + (j * this.nbCellWidth)
                 cb(index)
             }

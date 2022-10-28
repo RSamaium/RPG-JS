@@ -40,6 +40,7 @@ export class RpgCommonMap extends MapClass {
 
     grid: VirtualGrid
     gridShapes: VirtualGrid
+    gridTiles: VirtualGrid
 
     get tileWidth() {
         return this.tilewidth
@@ -106,6 +107,7 @@ export class RpgCommonMap extends MapClass {
 
     load(data: TiledMap) {
         super.load(data)
+        this.gridTiles = new VirtualGrid(this.width, this.tileWidth, this.tileHeight)
         this.grid = new VirtualGrid(this.width, this.tileWidth, this.tileHeight).zoom(10)
         this.gridShapes = new VirtualGrid(this.width, this.tileWidth, this.tileHeight).zoom(20)
     }

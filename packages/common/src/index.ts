@@ -18,6 +18,7 @@ import { VirtualGrid } from './VirtualGrid'
 import { RpgCommonWorldMaps } from './WorldMaps'
 import { SocketMethods, SocketEvents } from './SocketEvents'
 import { CameraOptions } from './types/Player'
+import { Vector2d } from './Vector2d'
 
 export {
     RpgCommonPlayer,
@@ -51,5 +52,6 @@ export {
     RpgCommonWorldMaps,
     SocketMethods,
     SocketEvents,
-    CameraOptions
+    CameraOptions,
+    Vector2d
 }
