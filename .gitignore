@@ -3,3 +3,4 @@ dist
 lib
 lerna-debug.log
 coverage
+packages/common/types

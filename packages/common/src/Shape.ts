@@ -1,7 +1,7 @@
-import { PlayerType, RpgCommonPlayer } from './Player'
+import { RpgCommonPlayer } from './Player'
 import { Hit, HitType } from './Hit'
 import { TiledObjectClass } from '@rpgjs/tiled'
-import { TiledPoint } from '@rpgjs/tiled/lib/types/Types'
+import { PlayerType } from '@rpgjs/types'
 
 export enum ShapePositioning {
     Default = 'default',
@@ -57,6 +57,10 @@ export class RpgShape extends TiledObjectClass {
         else {
             this.hitbox.pos[type] = val
         }
+    }
+
+    get hasCollision(): boolean {
+        return this.getProperty<boolean, boolean>('collision', false)
     }
 
     // alias
@@ -124,6 +128,10 @@ export class RpgShape extends TiledObjectClass {
 
     set x(val: number) {
         this.setPos('x', val)
+    }
+
+    get z(): number | undefined {
+        return this.getProperty<number>('z')
     }
 
     /**

@@ -1,7 +1,8 @@
 export enum SocketMethods {
     CameraFollow = 'cameraFollow',
     ShowAnimation = 'showAnimation',
-    PlaySound = 'playSound'
+    PlaySound = 'playSound',
+    ModeMove = 'modeMove'
 }
 
 export enum SocketEvents {

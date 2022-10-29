@@ -1,4 +1,5 @@
-import { Direction, HookClient, PlayerType, RpgCommonPlayer, RpgPlugin, RpgShape, Utils } from "@rpgjs/common"
+import { Direction, HookClient, RpgCommonPlayer, RpgPlugin, RpgShape, Utils } from "@rpgjs/common"
+import { PlayerType } from "@rpgjs/types"
 import { map, filter, tap } from "rxjs/operators"
 import { log } from "../Logger"
 import { Scene } from "../Scene/Scene"
@@ -33,6 +34,10 @@ export class RpgComponent<T = any> extends PIXI.Container {
     private direction: number = 0
     private container: PIXI.Container = new PIXI.Container()
     private registerComponents: Map<string, any> = new Map()
+    private dragMode?: {
+        data: any,
+        dragging: boolean
+    }
 
     constructor(private data: RpgCommonPlayer | RpgShape, private scene: Scene) {
         super()
@@ -164,7 +169,39 @@ export class RpgComponent<T = any> extends PIXI.Container {
         }
     }
 
+    drag() {
+        this.interactive = true
+        const filter = new PIXI.filters.ColorMatrixFilter();
+
+        const onDragEnd = () => {
+            if (!this.dragMode) return
+            this.dragMode.dragging = false
+            this.dragMode.data = null
+        }
+
+        this
+            .on('pointerdown', (event) => {
+                this.dragMode = {
+                    data: event.data,
+                    dragging: true
+                }
+            })
+            .on('pointerup', onDragEnd)
+            .on('pointerupoutside', onDragEnd)
+            .on('pointermove', () => {
+                if (!this.dragMode) return
+                const { dragging, data } = this.dragMode
+                if (dragging) {
+                    const newPosition = data.getLocalPosition(this.parent)
+                    this.x = newPosition.x
+                    this.y = newPosition.y
+                }
+            })
+    }
+
     update(obj: any, objChanged: any, time: number, deltaRatio: number): { moving: boolean } {
+        if (this.dragMode?.dragging) return { moving :true }
+
         const { speed, teleported, map, fixed, rotation } = obj
         this.data = obj
         this.setPosition() 

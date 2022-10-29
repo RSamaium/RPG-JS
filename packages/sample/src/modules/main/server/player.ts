@@ -30,6 +30,15 @@ export const player: RpgPlayerHooks = {
         player.setHitbox(16, 16)
         player.setGraphic('light')
         player.changeMap('samplemap')
+        // player.setMoveMode({
+        //     collision: true,
+        //     clientMode: {
+        //         drag: {
+        //             area: [0, 0, 5, 5]
+        //         }
+        //     },
+        //     behavior: 'direction'
+        // })
     },
     onJoinMap(player: RpgPlayer, map: RpgMap) { 
         player.name = ''+Math.random()
@@ -39,9 +48,10 @@ export const player: RpgPlayerHooks = {
     onInput(player: RpgPlayer, { input, moving }) {
         if (input == Control.Back) {
             const map = player.getCurrentMap()
-            const [event] = Object.values(map?.events as any);
-            (event as any).test(player)   
-        }   
+            player.setMoveMode({
+                checkCollision: false
+            })
+        }
     },      
     async onInShape(player: RpgPlayer, shape: RpgShape) {
         console.log('in', player.name, shape.name)
@@ -49,5 +59,5 @@ export const player: RpgPlayerHooks = {
     },
     onOutShape(player: RpgPlayer, shape: RpgShape) {
         console.log('out', player.name, shape.name)
-    }
-}  
+    }  
+} 

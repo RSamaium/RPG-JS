@@ -9,13 +9,11 @@ import { RpgGui } from './RpgGui'
 import { 
     RpgCommonPlayer, 
     PrebuiltGui, 
-    PlayerType, 
     Utils, 
     RpgPlugin, 
     HookClient,
     RpgCommonMap,
-    SocketMethods,
-    SocketEvents
+    Scheduler,
 } from '@rpgjs/common'
 import { RpgSound } from './Sound/RpgSound'
 import { SceneMap } from './Scene/Map'
@@ -24,15 +22,9 @@ import { Scene } from './Scene/Scene'
 import { Spritesheet } from './Sprite/Spritesheet'
 import { log } from './Logger'
 import { Sound } from './Sound/Sound'
+import { MoveClientMode, PlayerType, SocketEvents, SocketMethods, Tick } from '@rpgjs/types'
 
 declare var __RPGJS_PRODUCTION__: boolean;
-
-type Tick = {
-    timestamp: number
-    deltaTime: number
-    frame: number,
-    deltaRatio: number
-}
 
 type FrameData = {
     time: number,
@@ -110,6 +102,7 @@ export class RpgClientEngine {
     private matchMakerService: string | (() => MatchMakerResponse) | null = null
     private assetsPath: string = 'assets'
     private serverFps: number = 60
+    private scheduler: Scheduler = new Scheduler()
 
     /**
      * Read objects synchronized with the server
@@ -203,7 +196,7 @@ export class RpgClientEngine {
      * ```
      * */
     get tick(): Observable<Tick> {
-        return this._tick.asObservable()
+        return this.scheduler.tick
     }
 
     /**
@@ -278,29 +271,11 @@ export class RpgClientEngine {
         await this._init()
         await this.renderer.init()
         const { maxFps } = this.options
+        
         if (options.renderLoop) {
-            if (!maxFps) {
-                const loop = (timestamp) => {
-                    window.requestAnimationFrame(loop)
-                    this.nextFrame(timestamp)
-                }
-                window.requestAnimationFrame(loop)
-            }
-            else {
-                const msInterval = Utils.fps2ms(maxFps)
-                let now = Utils.preciseNow()
-                let then = Utils.preciseNow()
-                const loop = (timestamp) => {
-                    window.requestAnimationFrame(loop)
-                    now = Utils.preciseNow()
-                    const elapsed = now - then
-                    if (elapsed > msInterval) {
-                        then = now - (elapsed % msInterval)
-                        this.nextFrame(timestamp)
-                    }
-                }
-                window.requestAnimationFrame(loop)
-            }
+            this.scheduler.start({
+                maxFps
+            })
             // The processing is outside the rendering loop because if the FPS are lower (or higher) then the sending to the server would be slower or faster. Here it is constant
             setInterval(() => {
                 this.processInput()
@@ -334,27 +309,24 @@ export class RpgClientEngine {
      * @method nextFrame()
      * @memberof RpgClientEngine
      */
-    nextFrame(timestamp: number) {
-        this.lastTimestamp = this.lastTimestamp || timestamp
-        const deltaTime = timestamp - this.lastTimestamp
-        this._tick.next({
-            timestamp, 
-            deltaTime,
-            frame: this.frame,
-            deltaRatio: ~~deltaTime / ~~Utils.fps2ms(this.serverFps)
-        })
-        this.lastTimestamp = timestamp
-        this.frame++
+    nextFrame(timestamp: number): void {
+        this.scheduler.nextTick(timestamp)
     } 
 
      /** @internal */
     async sendInput(actionName: string) {
-        const player = this.gameEngine.world.getObject(this.gameEngine.playerId)
+        const player = this.player
         if (!player) return
-        player.pendingMove.push({
-            input: actionName,
-            frame: this.frame
-        })
+        if (player.canMove) {
+            player.pendingMove.push({
+                input: actionName,
+                frame: this.frame
+            })
+        }
+    }
+
+    get player(): RpgCommonPlayer | null {
+        return this.gameEngine.world.getObject(this.gameEngine.playerId)
     }
 
     private serverReconciliation(player: RpgCommonPlayer)  {
@@ -371,13 +343,11 @@ export class RpgClientEngine {
       }
 
     private async step(t: number, dt: number) {
-        
         RpgPlugin.emit(HookClient.Step, [this, t, dt], true) 
     }
 
     async processInput() {
-        const { playerId } = this.gameEngine
-        const player = this.gameEngine.world.getObject(playerId)
+        const player = this.player
         this.controls.preStep()
         if (player) {
             if (player.pendingMove.length > 0) {
@@ -392,7 +362,7 @@ export class RpgClientEngine {
                 }
                 RpgPlugin.emit(HookClient.SendInput, [this, inputEvent], true)
             }  
-            this.serverReconciliation(player)
+            if (player.canMove) this.serverReconciliation(player)
         }
     }
 
@@ -483,6 +453,13 @@ export class RpgClientEngine {
                 break
                 case SocketMethods.PlaySound:
                     RpgSound.play(params[0])
+                break
+                case SocketMethods.ModeMove:
+                    const player = this.player
+                    const { checkCollision } = params[0]
+                    if (player) {
+                        player.checkCollision = checkCollision
+                    }              
                 break
             }
         })

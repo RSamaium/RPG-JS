@@ -5,9 +5,9 @@ import SAT from 'sat'
 import { TileInfo, RpgCommonMap } from './Map'
 import { RpgPlugin, HookServer } from './Plugin'
 import { GameSide, RpgCommonGame } from './Game'
-import { TiledObjectClass } from '@rpgjs/tiled'
 import { Vector2d, Vector2dZero } from './Vector2d'
 import { Box } from './VirtualGrid'
+import { Behavior, ClientMode, MoveClientMode, PlayerType } from '@rpgjs/types'
 
 const ACTIONS = { IDLE: 0, RUN: 1, ACTION: 2 }
 
@@ -31,29 +31,32 @@ export const LiteralDirection =  {
     4: 'left'
 }
 
-export enum PlayerType {
-    Player = 'player',
-    Event = 'event',
-    Shape = 'shape'
-}
-
 export class RpgCommonPlayer {
     map: string = ''
     layerName: string = ''
     components: any[] = []
     height: number = 0
     width: number = 0
-    canMove: boolean
     speed: number
     events: any[] = []
     direction: number = 3
-    private collisionWith: any[] = []
+    private collisionWith: RpgCommonPlayer[] = []
     private _collisionWithTiles: TileInfo[] = []
+    private _collisionWithShapes: RpgShape[] = []
+    
+    /*
+        Properties for move mode
+    */
+    checkCollision: boolean = true
+    clientModeMove: ClientMode = MoveClientMode.ByDirection
+    behavior: Behavior = Behavior.Direction
+
 
     /** @internal */
     data: any = {}
     hitbox: SAT.Box
     pendingMove: { input: string, frame: number }[] = []
+    //modeMove: ModeMove = ModeMove.Direction
     
      /** 
      * Display/Hide the GUI attached to this sprite
@@ -81,12 +84,6 @@ export class RpgCommonPlayer {
         this._hitboxPos = new SAT.Vector(0, 0)
         this.setHitbox(this.width, this.height)
         this.position = { x: 0, y: 0, z: 0 }
-        /*let vec = new Vector2dZero()
-        this.speed = 3
-        setInterval(() => {
-            this.computeNextPositionByTarget(vec, new Vector2d(10, 10))
-            console.log(vec)
-        }, 100)*/
     }
 
     get id() {
@@ -102,6 +99,14 @@ export class RpgCommonPlayer {
         if (map /*&& this.gameEngine.isWorker TODO */) {
             map.grid.insertInCells(this.id, this.getSizeMaxShape())
         }
+    }
+
+    get canMove(): boolean {
+        return this.clientModeMove == MoveClientMode.ByDirection
+    }
+
+    set canMove(val: boolean) {
+        this.clientModeMove = val ? MoveClientMode.ByDirection : MoveClientMode.Disabled
     }
 
     /**
@@ -308,13 +313,15 @@ export class RpgCommonPlayer {
     /** @internal */
     triggerCollisionWith(type?: number) {
         for (let collisionWith of this.collisionWith) {
-            const { properties } = collisionWith
-            if (type == RpgCommonPlayer.ACTIONS.ACTION) {
-                if (collisionWith.onAction) collisionWith.execMethod('onAction', [this])
+            if (collisionWith instanceof RpgShape) {
+                const goMap = collisionWith.getProperty<string>('go-map')
+                if (goMap && 'changeMap' in this) this.changeMap(goMap)
             }
-            else if (collisionWith.onPlayerTouch) collisionWith.execMethod('onPlayerTouch', [this])
-            else if (properties) {
-                if (properties['go-map'] && this['changeMap']) this['changeMap'](properties['go-map'])
+            else {
+                if (type == RpgCommonPlayer.ACTIONS.ACTION) {
+                    if ('onAction' in collisionWith) collisionWith.execMethod('onAction', [this])
+                }
+                else if ('onPlayerTouch' in collisionWith) collisionWith.execMethod('onPlayerTouch', [this])
             }
         }
     }
@@ -407,13 +414,96 @@ export class RpgCommonPlayer {
         }
     }
 
-    test(player) {
-        setInterval(() => {
-            this.computeNextPositionByTarget(this.position, player.position)
-        }, 16)
+    private async collisionObjects(
+        playerSizeBox: Box, 
+        hitbox: SAT.Box, 
+        triggers?: {
+            collision?: (event: RpgCommonPlayer) => void
+            near?: (event: RpgCommonPlayer) => void,
+            allSearch?: boolean
+        }
+    ): Promise<boolean> {
+        const map = this.mapInstance
+
+        if (!map) return true
+
+        const events: { [id: string]: RpgCommonPlayer } = this.gameEngine.world.getObjectsOfGroup(this.map, this)
+        const objects = map.grid.getObjectsByBox(playerSizeBox)
+        let boolFound = false
+
+        for (let objectId of objects) {
+            // client side: read "object" propertie
+            if (!events[objectId]) continue
+            const event = events[objectId]['object'] || events[objectId] 
+
+            if (event.id == this.id) continue
+            if (!this.zCollision(event)) continue
+
+            const collided = Hit.testPolyCollision(HitType.Box, hitbox, event.hitbox)
+ 
+            for (let shape of this.shapes) {
+                await this.collisionWithShape(shape, event)
+            }
+
+            for (let shape of event.shapes) {
+                await event.collisionWithShape(shape, this)
+            }
+
+            if (triggers?.near) triggers.near(event)
+            
+            if (collided) { 
+                this.collisionWith.push(event)
+                this.triggerCollisionWith()
+                let throughOtherPlayer = false
+                if (event.type == PlayerType.Player && this.type == PlayerType.Player) {
+                    if (!(event.throughOtherPlayer || this.throughOtherPlayer)) {
+                        boolFound = true
+                        if (!triggers?.allSearch) return true
+                    }
+                    else {
+                        throughOtherPlayer = true
+                    }
+                }
+                if (!throughOtherPlayer && (!(event.through || this.through))) {
+                    boolFound = true
+                    if (!triggers?.allSearch) return true
+                }
+            }
+
+            if (boolFound) {
+                if (triggers?.collision) triggers.collision(event)
+            }
+        }
+
+        return boolFound
     }
 
-    computeNextPositionByTarget(nextPosition: Vector2d, target: Vector2d): Vector2d {
+    private async collisionShapes(playerSizeBox: Box, nextPosition?: Vector2d, triggers?: {
+        collision?: (shape: RpgShape) => void
+        near?: (shape: RpgShape) => void
+        allSearch?: boolean
+    }): Promise<boolean> {
+        const map = this.mapInstance
+        const shapes: { [id: string]: RpgShape } = this.gameEngine.world.getShapesOfGroup(this.map)
+        const shapesInGrid = this.gameEngine.side == GameSide.Client 
+            ? new Set(Object.keys(shapes)) 
+            : map.gridShapes.getObjectsByBox(playerSizeBox)
+        let boolFound = false
+
+        for (let shapeId of shapesInGrid) {
+            const shape = shapes[shapeId]['object'] || shapes[shapeId]
+            if (triggers?.near) triggers.near(shape)
+            const bool = await this.collisionWithShape(shape, this, nextPosition)
+            if (bool) {
+                if (triggers?.collision) triggers.collision(shape)
+                boolFound = true
+                if (!triggers?.allSearch) return true
+            }
+        }
+        return boolFound
+    }
+
+    async computeNextPositionByTarget(nextPosition: Vector2d, target: Vector2d): Promise<Vector2d> {
         const pullDistance = target.distanceWith(nextPosition)
         if (pullDistance <= this.speed) {
             return nextPosition.set(target)
@@ -421,6 +511,21 @@ export class RpgCommonPlayer {
         const pull = (target.copy().subtract(nextPosition)).multiply((1 / pullDistance))
         const totalPush = new Vector2dZero()
         let contenders = 0
+        const hitbox = Hit.createObjectHitbox(nextPosition.x, nextPosition.y, nextPosition.z, this.hitbox.w, this.hitbox.h)
+
+        const createObstacle = function(x: number, y: number, radius: number): Vector2d {
+            const obstacle = new Vector2d(x, y)
+            let push = nextPosition.copy().subtract(obstacle)
+            let distance = (nextPosition.distanceWith(obstacle) - radius) - radius;
+            if (distance < radius * 2 * 10) {
+                ++contenders
+                if (distance < 0.0001) distance = 0.0001 // avoid div by 0
+                let weight = 1 / distance;
+                totalPush.add(push.multiply(weight))
+            }
+            return obstacle
+        }
+
         const area = this.mapInstance.tileheight * 2
         this.mapInstance.gridTiles.getCells({
             minX: nextPosition.x - area,
@@ -431,18 +536,29 @@ export class RpgCommonPlayer {
             if (index < 0) return
             const pos = this.mapInstance.getTilePosition(index)
             const hitbox = Hit.createObjectHitbox(pos.x, pos.y, nextPosition.z, this.hitbox.w, this.hitbox.h)
+            const radius = this.mapInstance.tilewidth / 2
             const tile = this.getTile(pos.x, pos.y, nextPosition.z, hitbox)
               if (tile.hasCollision) {
-                const obstacle = new Vector2d(pos.x, pos.y)
-                let push = nextPosition.copy().subtract(obstacle)
-                let distance = (nextPosition.distanceWith(obstacle) - 16) - 16;
-                if (distance < 32 * 10) {
-                    ++contenders;
-                    if (distance < 0.0001) distance = 0.0001;
-                    let weight = 1 / distance;
-                    totalPush.add(push.multiply(weight));
-                }
+                createObstacle(pos.x, pos.y, radius)
             }
+        })
+
+        const playerSizeBox = this.getSizeMaxShape(nextPosition.x, nextPosition.y)
+
+        await this.collisionObjects(playerSizeBox, hitbox, {
+            collision: (event: RpgCommonPlayer) => {
+                const { x, y } = event.position
+                createObstacle(x, y, event.hitbox.w)
+            },
+            allSearch: true
+        })
+
+        await this.collisionShapes(playerSizeBox, nextPosition, {
+            collision: (shape) => {
+                const { x, y } = shape.position
+                createObstacle(x, y, shape.hitbox.w)
+            },
+            allSearch: true
         })
 
         pull
@@ -456,10 +572,8 @@ export class RpgCommonPlayer {
     async isCollided(nextPosition: Vector2d): Promise<boolean> {
         this.collisionWith = [] 
         this._collisionWithTiles = []
-        const map = this.mapInstance 
         const prevMapId = this.map
         const hitbox = Hit.createObjectHitbox(nextPosition.x, nextPosition.y, 0, this.hitbox.w, this.hitbox.h)
-
         const boundingMap = this.boundingMap(nextPosition)
 
         if (boundingMap?.bounding) {
@@ -493,51 +607,9 @@ export class RpgCommonPlayer {
         }
 
         const playerSizeBox = this.getSizeMaxShape(nextPosition.x, nextPosition.y)
-        const events: { [id: string]: RpgCommonPlayer } = this.gameEngine.world.getObjectsOfGroup(this.map, this)
-        const objects = map.grid.getObjectsByBox(playerSizeBox)
-
-        for (let objectId of objects) {
-            // client side: read "object" propertie
-            if (!events[objectId]) continue
-            const event = events[objectId]['object'] || events[objectId] 
-            if (event.id == this.id) continue
-            if (!this.zCollision(event)) continue
-            const collided = Hit.testPolyCollision(HitType.Box, hitbox, event.hitbox)
- 
-            for (let shape of this.shapes) {
-                await this.collisionWithShape(shape, event)
-            }
-
-            for (let shape of event.shapes) {
-                await event.collisionWithShape(shape, this)
-            }
-            
-            if (collided) {
-                this.collisionWith.push(event)
-                this.triggerCollisionWith()
-                let throughOtherPlayer = false
-                if (event.type == PlayerType.Player && this.type == PlayerType.Player) {
-                    if (!(event.throughOtherPlayer || this.throughOtherPlayer)) {
-                        return true
-                    }
-                    else {
-                        throughOtherPlayer = true
-                    }
-                }
-                if (!throughOtherPlayer && (!(event.through || this.through))) return true 
-            }
-        }
-
-        const shapes: { [id: string]: RpgShape } = this.gameEngine.world.getShapesOfGroup(this.map)
-        const shapesInGrid = this.gameEngine.side == GameSide.Client 
-            ? new Set(Object.keys(shapes)) 
-            : map.gridShapes.getObjectsByBox(playerSizeBox)
-
-        for (let shapeId of shapesInGrid) {
-            const shape = shapes[shapeId]['object'] || shapes[shapeId]
-            const bool = await this.collisionWithShape(shape, this, nextPosition)
-            if (bool) return true
-        }
+        
+        if (await this.collisionObjects(playerSizeBox, hitbox)) return true
+        if (await this.collisionShapes(playerSizeBox, nextPosition)) return true
 
         // if there is a change of map after a move, the moves are not changed
         if (prevMapId != this.map) {
@@ -601,8 +673,9 @@ export class RpgCommonPlayer {
     }
 
     /** @internal */
-    async collisionWithShape(shape: RpgShape, player: RpgCommonPlayer, nextPosition?: Vector2d): Promise<boolean> {
-        const { collision, z } = shape.properties
+    private async collisionWithShape(shape: RpgShape, player: RpgCommonPlayer, nextPosition?: Vector2d): Promise<boolean> {
+        const collision = shape.hasCollision
+        const z = shape.z
         if (shape.isShapePosition()) return false
         if (z !== undefined && !this.zCollision({
             position: { z },
@@ -610,8 +683,14 @@ export class RpgCommonPlayer {
         })) {
             return false
         }
-        let { position, hitbox } = player
-        if (nextPosition) position.set(nextPosition)
+        let position: Vector2d
+        let { hitbox } = player
+        if (nextPosition) {
+            position = nextPosition.copy()
+        }
+        else {
+            position = player.position.copy()
+        }
         const hitboxObj = Hit.createObjectHitbox(
             position.x, 
             position.y, 
@@ -621,7 +700,7 @@ export class RpgCommonPlayer {
         )
         let collided = Hit.testPolyCollision(shape.type, hitboxObj, shape.hitbox)
         if (collided) {
-            this.collisionWith.push(shape)
+            this._collisionWithShapes.push(shape)
             // TODO: in shape after map load
             if (!collision) await shape.in(this)
             this.triggerCollisionWith()
@@ -635,7 +714,7 @@ export class RpgCommonPlayer {
     }
 
     /** @internal */
-    async move(nextPosition: Vector2d, testCollision:  boolean = true): Promise<boolean> {
+    async move(nextPosition: Vector2d): Promise<boolean> {
         {
             const { x, y } = this.position
             const { x: nx, y: ny } = nextPosition
@@ -658,9 +737,9 @@ export class RpgCommonPlayer {
             }
         }
 
-        const collided = testCollision && !(await this.isCollided(nextPosition))
+        const notCollided = !(await this.isCollided(nextPosition))
 
-        if (collided) {
+        if (notCollided || !this.checkCollision) {
             this.position = nextPosition.copy()
             await RpgPlugin.emit(HookServer.PlayerMove, this)
         }
@@ -770,6 +849,10 @@ export class RpgCommonPlayer {
 
     /** @internal */
     async execMethod(methodName: string, methodData?, instance?) {}
+    /** @internal */
+    onAction() {}
+    /** @internal */
+    onPlayerTouch() {}
 }
 
 export interface RpgCommonPlayer {
@@ -778,4 +861,5 @@ export interface RpgCommonPlayer {
     throughOtherPlayer: boolean
     autoChangeMap?(nextPosition: Position): Promise<boolean>
     execMethod(methodName: string, methodData?, instance?)
+    changeMap(mapName: string)
 }

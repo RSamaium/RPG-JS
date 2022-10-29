@@ -14,6 +14,7 @@ export default class Character extends PIXI.Sprite {
     public animation: Animation
     private objSaved: object = {}
     private data: any = {}
+    private _hue: PIXI.filters.ColorMatrixFilter
     
      /** @internal */
      h: number = 1
@@ -70,6 +71,7 @@ export default class Character extends PIXI.Sprite {
         this.graphic = graphic
         this.spritesheet = spritesheets.get(this.graphic)
         this.animation = new Animation(this.graphic)
+        this.animation.tint = 0xff0000
         this.addChild(this.animation)
         this.setAnimationAnchor()
     }

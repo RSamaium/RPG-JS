@@ -79,11 +79,6 @@ export abstract class Scene {
     private triggerSpriteChanges(logic: SceneSpriteLogic, sprite: RpgComponent, moving: boolean) {
         if (this.onUpdateObject) this.onUpdateObject(logic, sprite, moving)
         RpgPlugin.emit(HookClient.UpdateSprite, [sprite, logic], true)
-        /*if (logic.paramsChanged) {
-            sprite.onChanges(logic.paramsChanged, logic.prevParamsChanged)
-            
-            logic.paramsChanged = null
-        }*/
     }
 
      /** @internal */

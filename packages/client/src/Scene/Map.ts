@@ -1,4 +1,4 @@
-import { RpgCommonMap, RpgPlugin, HookClient, RpgShape, Utils, RpgCommonPlayer, CameraOptions } from '@rpgjs/common'
+import { RpgCommonMap, RpgPlugin, HookClient, RpgShape, Utils, RpgCommonPlayer } from '@rpgjs/common'
 import TileMap from '../Tilemap'
 import { Viewport } from 'pixi-viewport'
 import { Scene, SceneObservableData, SceneSpriteLogic } from './Scene'
@@ -7,6 +7,7 @@ import { RpgSound } from '../Sound/RpgSound'
 import { GameEngineClient } from '../GameEngine'
 import { TiledMap } from '@rpgjs/tiled'
 import { RpgComponent } from '../Components/Component'
+import { CameraOptions } from '@rpgjs/types'
 
 interface MapObject extends TiledMap {
     id: number

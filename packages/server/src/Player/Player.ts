@@ -1,4 +1,4 @@
-import { RpgCommonPlayer, Utils, RpgPlugin, RpgCommonGame, RpgCommonMap, Direction, SocketMethods, SocketEvents, CameraOptions } from '@rpgjs/common'
+import { RpgCommonPlayer, Utils, RpgPlugin, RpgCommonGame, RpgCommonMap, Direction } from '@rpgjs/common'
 import { Room } from 'simple-room'
 import { RpgMap, EventPosOption } from '../Game/Map'
 import { Query } from '../Query'
@@ -33,6 +33,7 @@ import {
 import { RpgServerEngine } from '../server'
 import { RpgClassMap } from '../Scenes/Map'
 import { RpgTiledWorldMap } from '../Game/WorldMaps'
+import { CameraOptions, SocketEvents, SocketMethods } from '@rpgjs/types'
 
 const { 
     isPromise, 

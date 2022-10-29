@@ -1,4 +1,4 @@
-import { RpgCommonGame, RpgCommonPlayer, GameSide, PlayerType, RpgShape } from "@rpgjs/common";
+import { RpgCommonGame, RpgCommonPlayer, GameSide, RpgShape } from "@rpgjs/common";
 import { BehaviorSubject, combineLatest, Observable } from "rxjs";
 import { RpgRenderer } from "./Renderer";
 import { RpgClientEngine } from "./RpgClientEngine";
@@ -215,7 +215,7 @@ export class GameEngineClient extends RpgCommonGame {
             if (!localEvent && 
                 (key == 'position' ||
                 (key == 'direction' && paramsChanged && paramsChanged.position))) {
-                if (isMe()) continue
+                if (isMe() && logic.canMove) continue
             }
             logic[key] = params[key]
         }

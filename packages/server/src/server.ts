@@ -7,12 +7,12 @@ import { Utils, RpgPlugin, Scheduler, HookServer, RpgCommonGame } from '@rpgjs/c
 
 export class RpgServerEngine {
 
-     /**
-     * Express App Instance. If you have assigned this variable before starting the game, you can get the instance of Express
-     * 
-     * @prop {Express App} [app]
-     * @memberof RpgServerEngine
-     */
+    /**
+    * Express App Instance. If you have assigned this variable before starting the game, you can get the instance of Express
+    * 
+    * @prop {Express App} [app]
+    * @memberof RpgServerEngine
+    */
     app
 
     /**
@@ -46,7 +46,7 @@ export class RpgServerEngine {
 
     private scenes: Map<string, any> = new Map()
     protected totalConnected: number = 0
-    private scheduler: Scheduler
+    private scheduler: Scheduler =  new Scheduler()
     private tick: number = 0
     private playerProps: any
 
@@ -94,9 +94,9 @@ export class RpgServerEngine {
         ]
 
         if (!this.inputOptions.database) this.inputOptions.database = {}
-       
+
         const datas = await RpgPlugin.emit(HookServer.AddDatabase, this.inputOptions.database) || []
-        
+
         for (let plug of datas) {
             this.inputOptions.database = {
                 ...plug,
@@ -137,26 +137,26 @@ export class RpgServerEngine {
         this.database[id] = dataClass
     }
 
-     /**
-     * Start the RPG server
-     * 
-     * @method server.start()
-     * @title Start Server
-     * @returns {void}
-     * @memberof RpgServerEngine
-     */
+    /**
+    * Start the RPG server
+    * 
+    * @method server.start()
+    * @title Start Server
+    * @returns {void}
+    * @memberof RpgServerEngine
+    */
     async start(inputOptions?, scheduler = true) {
         if (inputOptions) this.inputOptions = inputOptions
         await this._init()
-        this.scheduler = new Scheduler({
-            tick: this.step.bind(this),
-            period: 1000 / this.inputOptions.stepRate,
-            delay: 4
+        this.scheduler.tick.subscribe(({ timestamp, deltaTime }) => {
+            this.step(timestamp, deltaTime)
         })
-        if (scheduler) this.scheduler.start()
+        if (scheduler) this.scheduler.start({
+            fps: inputOptions?.fps || 60
+        })
         this.gameEngine.start({
             getObject(id) {
-                return Query.getPlayer(id) 
+                return Query.getPlayer(id)
             },
             getObjectsOfGroup(groupId: string, player: RpgPlayer) {
                 return Query._getObjectsOfMap(groupId, player)
@@ -182,21 +182,22 @@ export class RpgServerEngine {
     }
 
     private updatePlayersMove(deltaTimeInt: number) {
-        const players = this.world.getUsers() 
+        const players = this.world.getUsers()
         const obj: any = []
         let p: Promise<any>[] = []
         for (let playerId in players) {
-            const playerInstance = players[playerId] as RpgPlayer
+            const playerInstance = players[playerId]['proxy'] as RpgPlayer
+            if (!playerInstance) continue
             const player = playerInstance.otherPossessedPlayer ?? playerInstance
             if (player.pendingMove.length > 0) {
-                const lastFrame = player.pendingMove[player.pendingMove.length-1]
+                const lastFrame = player.pendingMove[player.pendingMove.length - 1]
                 if (this.inputOptions.workers) obj.push(player.toObject())
                 else {
                     p.push(this.gameEngine.processInput(player.playerId).then(() => {
                         player.pendingMove = []
                         player._lastFramePositions = {
                             frame: lastFrame.frame,
-                            position:  {...player.position}
+                            position: { ...player.position }
                         }
                     }))
                 }
@@ -224,9 +225,9 @@ export class RpgServerEngine {
 
     step(t: number, dt: number) {
         this.tick++
-        this.updatePlayersMove(1) 
+        this.updatePlayersMove(1)
         if (this.tick % 4 === 0) {
-            this.send() 
+            this.send()
         }
         RpgPlugin.emit(HookServer.Step, this)
     }
@@ -261,7 +262,10 @@ export class RpgServerEngine {
 
         socket.on('move', (data: { input: string[], frame: number }) => {
             const controlPlayer = player.otherPossessedPlayer ?? player
-             for (let input of data.input) {
+            if (!controlPlayer.canMove) {
+                return
+            }
+            for (let input of data.input) {
                 controlPlayer.pendingMove.push({
                     input,
                     frame: data.frame
@@ -298,7 +302,7 @@ export class RpgServerEngine {
      * @param {string} socketId - The socketId of the player that disconnected
      * @param {string} playerId - The playerId of the player that disconnected 
      */
-    private onPlayerDisconnected(socketId, playerId: string) { 
+    private onPlayerDisconnected(socketId, playerId: string) {
         const player: RpgPlayer = World.getUser(playerId) as RpgPlayer
         player.execMethod('onDisconnected')
         this.world.disconnectUser(playerId)

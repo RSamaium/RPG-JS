@@ -1,6 +1,7 @@
 import { Direction, LiteralDirection } from '@rpgjs/common'
 import { Utils } from '@rpgjs/common'
-import { RpgPlayer } from './Player';
+import { Behavior, ClientMode, MoveMode, Position, SocketEvents, SocketMethods } from '@rpgjs/types'
+import { RpgPlayer } from './Player'
 
 const {
     arrayFlat,
@@ -39,35 +40,35 @@ export enum Speed {
     Fastest = 10
 }
 
- /** 
- * @title Move
- * @enum {Object}
- * 
- * Move.right(repeat=1) | Movement of a number of pixels on the right
- * Move.left(repeat=1) | Movement of a number of pixels on the left 
- * Move.up(repeat=1) | Movement of a number of pixels on the up
- * Move.down(repeat=1) | Movement of a number of pixels on the down
- * Move.random(repeat=1) | Movement of a number of pixels in a random direction
- * Move.towardPlayer(player, repeat=1) | Moves a number of pixels in the direction of the designated player
- * Move.awayFromPlayer(player, repeat=1) | Moves a number of pixels in the opposite direction of the designated player
- * Move.tileRight(repeat=1) | Movement of a number of tiles on the right
- * Move.tileLeft(repeat=1) | Movement of a number of tiles on the left
- * Move.tileUp(repeat=1) | Movement of a number of tiles on the up
- * Move.tileDown(repeat=1) | Movement of a number of tiles on the down
- * Move.tileRandom(repeat=1) | Movement of a number of tiles in a random direction
- * Move.tileTowardPlayer(player, repeat=1) | Moves a number of tiles in the direction of the designated player
- * Move.tileAwayFromPlayer(player, repeat=1) | Moves a number of tiles in the opposite direction of the designated player
- * Move.turnRight() | Turn to the right
- * Move.turnLeft() | Turn to the left
- * Move.turnUp() | Turn to the up
- * Move.turnDown() | Turn to the down
- * Move.turnRandom() | Turn to random direction
- * Move.turnAwayFromPlayer(player) | Turns in the opposite direction of the designated player
- * Move.turnTowardPlayer(player) | Turns in the direction of the designated player
- * @memberof Move
- * */
+/** 
+* @title Move
+* @enum {Object}
+* 
+* Move.right(repeat=1) | Movement of a number of pixels on the right
+* Move.left(repeat=1) | Movement of a number of pixels on the left 
+* Move.up(repeat=1) | Movement of a number of pixels on the up
+* Move.down(repeat=1) | Movement of a number of pixels on the down
+* Move.random(repeat=1) | Movement of a number of pixels in a random direction
+* Move.towardPlayer(player, repeat=1) | Moves a number of pixels in the direction of the designated player
+* Move.awayFromPlayer(player, repeat=1) | Moves a number of pixels in the opposite direction of the designated player
+* Move.tileRight(repeat=1) | Movement of a number of tiles on the right
+* Move.tileLeft(repeat=1) | Movement of a number of tiles on the left
+* Move.tileUp(repeat=1) | Movement of a number of tiles on the up
+* Move.tileDown(repeat=1) | Movement of a number of tiles on the down
+* Move.tileRandom(repeat=1) | Movement of a number of tiles in a random direction
+* Move.tileTowardPlayer(player, repeat=1) | Moves a number of tiles in the direction of the designated player
+* Move.tileAwayFromPlayer(player, repeat=1) | Moves a number of tiles in the opposite direction of the designated player
+* Move.turnRight() | Turn to the right
+* Move.turnLeft() | Turn to the left
+* Move.turnUp() | Turn to the up
+* Move.turnDown() | Turn to the down
+* Move.turnRandom() | Turn to random direction
+* Move.turnAwayFromPlayer(player) | Turns in the opposite direction of the designated player
+* Move.turnTowardPlayer(player) | Turns in the direction of the designated player
+* @memberof Move
+* */
 class MoveList {
-    
+
     repeatMove(direction: Direction, repeat: number): Direction[] {
         return new Array(repeat).fill(direction)
     }
@@ -127,7 +128,7 @@ class MoveList {
     tileRandom(repeat: number = 1): CallbackTileMove {
         return (player: RpgPlayer, map): Direction[] => {
             let directions: Direction[] = []
-            for (let i=0 ; i < repeat ; i++) {
+            for (let i = 0; i < repeat; i++) {
                 const randFn: CallbackTileMove = [
                     this.tileRight(),
                     this.tileLeft(),
@@ -165,8 +166,8 @@ class MoveList {
                     newDirection = Direction.Down
                 }
                 break
-        }  
-        return newDirection     
+        }
+        return newDirection
     }
 
     private _towardPlayerDirection(player: RpgPlayer, otherPlayer: RpgPlayer): number {
@@ -191,11 +192,11 @@ class MoveList {
                     newDirection = Direction.Up
                 }
                 break
-        }  
-        return newDirection     
+        }
+        return newDirection
     }
 
-    private _awayFromPlayer({ isTile, typeMov }: { isTile: boolean, typeMov: string}, otherPlayer: RpgPlayer, repeat: number = 1) {
+    private _awayFromPlayer({ isTile, typeMov }: { isTile: boolean, typeMov: string }, otherPlayer: RpgPlayer, repeat: number = 1) {
         const method = (dir: number) => {
             const direction: string = LiteralDirection[dir]
             return this[isTile ? 'tile' + capitalize(direction) : direction](repeat)
@@ -232,7 +233,7 @@ class MoveList {
 
     tileAwayFromPlayer(player: RpgPlayer, repeat: number = 1): CallbackTileMove {
         return this._awayFromPlayer({ isTile: true, typeMov: 'away' }, player, repeat)
-    } 
+    }
 
     turnLeft(): string {
         return 'turn-' + Direction.Left
@@ -277,7 +278,7 @@ class MoveList {
 export const Move = new MoveList()
 
 export class MoveManager {
-    
+
     private movingInterval
     private _infiniteRoutes: Routes
     private _finishRoute: Function
@@ -326,18 +327,18 @@ export class MoveManager {
      * */
     canMove: boolean
 
-     /** 
-     * The player passes through the other players (or vice versa). But the player does not go through the events.
-     * 
-     * ```ts
-     * player.throughOtherPlayer = true
-     * ```
-     * 
-     * @title Go through to other player
-     * @prop {boolean} player.throughOtherPlayer
-     * @default true
-     * @memberof MoveManager
-     * */
+    /** 
+    * The player passes through the other players (or vice versa). But the player does not go through the events.
+    * 
+    * ```ts
+    * player.throughOtherPlayer = true
+    * ```
+    * 
+    * @title Go through to other player
+    * @prop {boolean} player.throughOtherPlayer
+    * @default true
+    * @memberof MoveManager
+    * */
     throughOtherPlayer: boolean
 
     /** 
@@ -384,7 +385,7 @@ export class MoveManager {
      * @memberof MoveManager
      * */
     frequency: number
-    
+
     /**
      * Gives an itinerary. 
      * 
@@ -434,7 +435,7 @@ export class MoveManager {
      * // The path is over when the promise is resolved
      * ```
      */
-    moveRoutes(routes: Routes) : Promise<boolean> {
+    moveRoutes(routes: Routes): Promise<boolean> {
         let count = 0
         let frequence = 0
         this.breakRoutes() // break previous route
@@ -454,7 +455,7 @@ export class MoveManager {
                         return
                     }
                 }
-                
+
                 frequence = 0
                 count++
 
@@ -464,7 +465,7 @@ export class MoveManager {
                     this.breakRoutes()
                     return
                 }
-                
+
                 switch (route) {
                     case Direction.Left:
                     case Direction.Down:
@@ -479,7 +480,7 @@ export class MoveManager {
                         this.changeDirection(Direction.Right)
                         break
                     case 'turn-' + Direction.Up:
-                         this.changeDirection(Direction.Up)
+                        this.changeDirection(Direction.Up)
                         break
                     case 'turn-' + Direction.Down:
                         this.changeDirection(Direction.Down)
@@ -566,10 +567,30 @@ export class MoveManager {
     replayRoutes(): void {
         if (this._infiniteRoutes) this.infiniteMoveRoute(this._infiniteRoutes)
     }
+
+    goToTarget(playerOrPosition: RpgPlayer | Position) {
+        
+    }
+
+    setMoveMode(mode: MoveMode): void {
+        if (mode.checkCollision) this.checkCollision = mode.checkCollision
+        if (mode.clientMode) this.clientModeMove = mode.clientMode
+        if (mode.behavior) this.behavior = mode.behavior
+        this.emit(SocketEvents.CallMethod, {
+            objectId: this.id,
+            name: SocketMethods.ModeMove,
+            params: [mode]
+        })
+    }
 }
 
-export interface MoveManager{ 
+export interface MoveManager {
     moveByDirection: (direction: Direction, deltaTimeInt: number) => boolean
     changeDirection: (direction: Direction) => boolean
     getCurrentMap: any
+    checkCollision: boolean
+    clientModeMove: ClientMode
+    behavior: Behavior
+    emit(name: SocketEvents, params: any)
+    id: string
 }

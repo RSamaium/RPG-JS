@@ -69,11 +69,7 @@ export class RpgCommonGame extends EventEmitter {
         const player: RpgPlayer = this.world.getObject(playerId)
 
         if (!player) return player
-        if (!player.canMove) {
-            player.pendingMove = []
-            return player
-        }
-
+        
         const routesMove: any = []
 
         while (player.pendingMove.length > 0) {

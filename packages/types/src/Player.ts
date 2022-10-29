@@ -7,3 +7,32 @@ export interface CameraOptions {
         ease?: Ease
     } | boolean
 }
+
+export enum MoveClientMode {
+    Disabled,
+    ByDirection,
+    Drag
+}
+
+export enum Behavior {
+    Direction,
+    Target
+}
+
+export type ClientMode =  MoveClientMode | { 
+    drag: boolean | { area: number[] }
+}
+
+export interface MoveMode {
+    checkCollision?: boolean,
+    clientMode?: ClientMode,
+    behavior?: Behavior
+}
+
+export enum PlayerType {
+    Player = 'player',
+    Event = 'event',
+    Shape = 'shape'
+}
+
+export type Position = { x: number, y: number, z: number }
