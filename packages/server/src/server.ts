@@ -4,6 +4,8 @@ import { Query } from './Query'
 import { DAMAGE_SKILL, DAMAGE_PHYSIC, DAMAGE_CRITICAL, COEFFICIENT_ELEMENTS } from './presets'
 import { World, WorldClass } from 'simple-room'
 import { Utils, RpgPlugin, Scheduler, HookServer, RpgCommonGame } from '@rpgjs/common'
+import { Observable } from 'rxjs';
+import { Tick } from '@rpgjs/types';
 
 export class RpgServerEngine {
 
@@ -47,7 +49,6 @@ export class RpgServerEngine {
     private scenes: Map<string, any> = new Map()
     protected totalConnected: number = 0
     private scheduler: Scheduler =  new Scheduler()
-    private tick: number = 0
     private playerProps: any
 
     world: WorldClass = World
@@ -148,7 +149,7 @@ export class RpgServerEngine {
     async start(inputOptions?, scheduler = true) {
         if (inputOptions) this.inputOptions = inputOptions
         await this._init()
-        this.scheduler.tick.subscribe(({ timestamp, deltaTime }) => {
+        this.tick.subscribe(({ timestamp, deltaTime }) => {
             this.step(timestamp, deltaTime)
         })
         if (scheduler) this.scheduler.start({
@@ -167,6 +168,10 @@ export class RpgServerEngine {
         })
         this.io.on('connection', this.onPlayerConnected.bind(this))
         await RpgPlugin.emit(HookServer.Start, this)
+    }
+
+    get tick(): Observable<Tick> {
+        return this.scheduler.tick as any
     }
 
     /**
@@ -223,10 +228,13 @@ export class RpgServerEngine {
         return Promise.all(p)
     }
 
+    nextTick(timestamp: number) {
+        this.scheduler.nextTick(timestamp)
+    }
+
     step(t: number, dt: number) {
-        this.tick++
         this.updatePlayersMove(1)
-        if (this.tick % 4 === 0) {
+        if (this.scheduler.frame % 4 === 0) {
             this.send()
         }
         RpgPlugin.emit(HookServer.Step, this)

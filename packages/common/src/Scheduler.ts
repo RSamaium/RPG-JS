@@ -7,7 +7,7 @@ export class Scheduler extends EventEmitter {
     private maxFps?: number
     private fps: number = 60
     private deltaTime: number = 0
-    private frame: number = 0
+    public frame: number = 0
     private timestamp: number = 0
     private requestedDelay: number = 0
     private lastTimestamp: number = 0

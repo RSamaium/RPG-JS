@@ -9,6 +9,7 @@ import {
 import { Effect } from '@rpgjs/database'
 import { ElementManager } from './ElementManager';
 import { EffectManager } from './EffectManager';
+import { RpgServerEngine } from '../server'
 
 const { 
     applyMixins
@@ -118,5 +119,5 @@ applyMixins(BattleManager, [ParameterManager, ElementManager, EffectManager])
 
 export interface BattleManager extends ParameterManager, ElementManager, EffectManager {
     name: string,
-    server: any
+    server: RpgServerEngine
  }

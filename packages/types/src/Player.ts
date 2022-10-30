@@ -1,3 +1,5 @@
+import { Control } from "./Input"
+
 type Ease = 'easeInSine' | 'easeOutSine' | 'easeInOutSine' | 'easeInQuad' | 'easeOutQuad' | 'easeInOutQuad' | 'easeInCubic' | 'easeOutCubic' | 'easeInOutCubic' | 'easeInQuart' | 'easeOutQuart' | 'easeInOutQuart' | 'easeInQuint' | 'easeOutQuint' | 'easeInOutQuint' | 'easeInExpo' | 'easeOutExpo' | 'easeInOutExpo' | 'easeInCirc' | 'easeOutCirc' | 'easeInOutCirc' | 'easeInBack' | 'easeOutBack' | 'easeInOutBack' | 'easeInElastic' | 'easeOutElastic' | 'easeInOutElastic' | 'easeInBounce' | 'easeOutBounce' | 'easeInOutBounce' | 'linear'
 
 export interface CameraOptions {
@@ -19,6 +21,17 @@ export enum Behavior {
     Target
 }
 
+export enum Direction { 
+    Up = 1,
+    Down = 3,
+    Left = 4,
+    Right = 2,
+    UpRight = 1.5,
+    DownRight = 2.5,
+    DownLeft = 3.5,
+    UpLeft =  2.5
+}
+
 export type ClientMode =  MoveClientMode | { 
     drag: boolean | { area: number[] }
 }
@@ -36,3 +49,4 @@ export enum PlayerType {
 }
 
 export type Position = { x: number, y: number, z: number }
+export type PendingMove = { input: string | Control, frame: number }[]

@@ -1,6 +1,6 @@
 import {_beforeEach} from './beforeEach'
-import { EventData, Input, RpgEvent, RpgMap, RpgModule, RpgPlayer, RpgServer, RpgServerEngine } from '@rpgjs/server'
-import { RpgClientEngine, RpgSceneMap, Control } from '@rpgjs/client'
+import {  Input, RpgModule, RpgPlayer, RpgServer } from '@rpgjs/server'
+import { RpgClientEngine, Control } from '@rpgjs/client'
 import { clear, nextTick } from '@rpgjs/testing'
 import { inputs } from './fixtures/control'
 
@@ -40,6 +40,14 @@ test('Apply Custom Controls (Client Side)', () => {
 
         client.processInput()
    })
+})
+
+test('sendInput() client, is called', async () => {
+    const spy = jest.spyOn(client, 'sendInput')
+    client.controls.setInputs(inputs)
+    client.controls.applyControl(Control.Right, true)
+    client.processInput()
+    expect(spy).toHaveBeenCalled()
 })
 
 test('Apply Controls - Action (Server Side)', () => {

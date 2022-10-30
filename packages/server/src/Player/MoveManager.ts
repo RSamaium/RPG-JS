@@ -1,6 +1,8 @@
-import { Direction, LiteralDirection } from '@rpgjs/common'
+import { Direction, LiteralDirection, Vector2d } from '@rpgjs/common'
 import { Utils } from '@rpgjs/common'
 import { Behavior, ClientMode, MoveMode, Position, SocketEvents, SocketMethods } from '@rpgjs/types'
+import { bufferCount, map, Subscription, tap } from 'rxjs'
+import { RpgServerEngine } from '../server'
 import { RpgPlayer } from './Player'
 
 const {
@@ -279,6 +281,7 @@ export const Move = new MoveList()
 
 export class MoveManager {
 
+    public movingSubscription?: Subscription
     private movingInterval
     private _infiniteRoutes: Routes
     private _finishRoute: Function
@@ -568,8 +571,20 @@ export class MoveManager {
         if (this._infiniteRoutes) this.infiniteMoveRoute(this._infiniteRoutes)
     }
 
-    goToTarget(playerOrPosition: RpgPlayer | Position) {
+    goToTarget(playerOrPosition: RpgPlayer) {
+        /*this.movingSubscription = this.server.tick
+            .pipe(
+                map(() => {
+                    
+                }),
+                bufferCount(3)
+            ) 
+            .subscribe((pos) => {
+                
+            })*/
         
+        this.computeNextPositionByTarget(this.position, playerOrPosition.position)
+       
     }
 
     setMoveMode(mode: MoveMode): void {
@@ -593,4 +608,7 @@ export interface MoveManager {
     behavior: Behavior
     emit(name: SocketEvents, params: any)
     id: string
+    server: RpgServerEngine
+    position: Vector2d
+    computeNextPositionByTarget(nextPosition: Vector2d, target: Vector2d): Promise<Vector2d>
 }

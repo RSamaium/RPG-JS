@@ -121,6 +121,7 @@ export class RpgMap extends RpgCommonMap {
             object.getShapes().forEach(shape => shape.out(event))
             event.getShapes().forEach(shape => shape.out(object))
         }
+        object.movingSubscription?.unsubscribe()
         this.grid.clearObjectInCells(object.id)
         for (let playerId in this.players) {
             if (object.id == playerId) continue

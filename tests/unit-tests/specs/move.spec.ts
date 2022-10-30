@@ -1,8 +1,10 @@
-import { Move, ShapePositioning, Direction, EventData, EventMode, RpgEvent } from '@rpgjs/server'
+import { Move, ShapePositioning, Direction, EventData, EventMode, RpgEvent, RpgPlayer } from '@rpgjs/server'
+import { Control, RpgClientEngine } from '@rpgjs/client'
 import {_beforeEach} from './beforeEach'
 import { clear, nextTick } from '@rpgjs/testing'
+import { inputs } from './fixtures/control'
 
-let  client, player, fixture, playerId
+let  client: RpgClientEngine, player, fixture, playerId
 
 const INITIAL_SPEED = 3
 const INITIAL_DIRECTION = 3
@@ -91,13 +93,50 @@ describe('Change Direction', () => {
     })
 })
 
+describe('pendingMove & canMove test', () => {
+    test('canMove property (true by default)', () => {
+        expect(player.canMove).toBe(true)
+    })
+
+    test('(client)', () => {
+        client.sendInput(Control.Right)
+        const pendingMove = client.player?.pendingMove
+        expect(pendingMove).not.toHaveLength(0)
+        expect(pendingMove?.[0]).toMatchObject({ frame: 0, input: Control.Right })
+    })
+
+    test('(server)', async () => {
+        client.sendInput(Control.Right)
+        await client.processInput()
+        const pendingMove = player?.pendingMove
+        expect(pendingMove).not.toHaveLength(0)
+    })
+
+    describe('Block Move', () => {
+        beforeEach(async () => {
+            player.canMove = false
+            await nextTick(client)
+        })
+    
+        test('canMove property, client side test', async () => {
+            expect(client.player?.canMove).toBe(false)
+        })
+    
+        test('canMove property, client do not press input', async () => {
+            client.sendInput(Control.Right)
+            await client.processInput()
+            expect(player?.pendingMove).toHaveLength(0)
+        })
+    })
+})
+
+
 test('Move but limit of the map', async () => {
     player.position.x = 1
     await player.moveRoutes([ Move.left() ])
     expect(player.position).toMatchObject({ x: 0, y: 0, z: 0 })
-    nextTick(client)
-    const logic = client.gameEngine.world.getObject(playerId)
-    expect(logic.position).toMatchObject({ x: 0, y: 0, z: 0 })
+    await nextTick(client)
+    expect(client.player?.position).toMatchObject({ x: 0, y: 0, z: 0 })
 })
 
 describe('Size Max Shape of Player', () => {

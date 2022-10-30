@@ -7,7 +7,7 @@ import { RpgPlugin, HookServer } from './Plugin'
 import { GameSide, RpgCommonGame } from './Game'
 import { Vector2d, Vector2dZero } from './Vector2d'
 import { Box } from './VirtualGrid'
-import { Behavior, ClientMode, MoveClientMode, PlayerType } from '@rpgjs/types'
+import { Behavior, ClientMode, MoveClientMode, PendingMove, PlayerType } from '@rpgjs/types'
 
 const ACTIONS = { IDLE: 0, RUN: 1, ACTION: 2 }
 
@@ -55,7 +55,7 @@ export class RpgCommonPlayer {
     /** @internal */
     data: any = {}
     hitbox: SAT.Box
-    pendingMove: { input: string, frame: number }[] = []
+    pendingMove: PendingMove = []
     //modeMove: ModeMove = ModeMove.Direction
     
      /** 
@@ -484,6 +484,7 @@ export class RpgCommonPlayer {
         allSearch?: boolean
     }): Promise<boolean> {
         const map = this.mapInstance
+        if (!map) return false
         const shapes: { [id: string]: RpgShape } = this.gameEngine.world.getShapesOfGroup(this.map)
         const shapesInGrid = this.gameEngine.side == GameSide.Client 
             ? new Set(Object.keys(shapes)) 
@@ -542,6 +543,7 @@ export class RpgCommonPlayer {
                 createObstacle(pos.x, pos.y, radius)
             }
         })
+        
 
         const playerSizeBox = this.getSizeMaxShape(nextPosition.x, nextPosition.y)
 
@@ -615,7 +617,6 @@ export class RpgCommonPlayer {
         if (prevMapId != this.map) {
             return true
         }
-
         return false
     }
 

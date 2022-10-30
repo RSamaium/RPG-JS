@@ -48,10 +48,9 @@ export const player: RpgPlayerHooks = {
     onInput(player: RpgPlayer, { input, moving }) {
         if (input == Control.Back) {
             const map = player.getCurrentMap()
-            player.setMoveMode({
-                checkCollision: false
-            })
-        }
+            const [event] = Object.values(map?.events as any);
+            (event as any).goToTarget(player)
+        }    
     },      
     async onInShape(player: RpgPlayer, shape: RpgShape) {
         console.log('in', player.name, shape.name)
@@ -59,5 +58,5 @@ export const player: RpgPlayerHooks = {
     },
     onOutShape(player: RpgPlayer, shape: RpgShape) {
         console.log('out', player.name, shape.name)
-    }  
+    }
 } 

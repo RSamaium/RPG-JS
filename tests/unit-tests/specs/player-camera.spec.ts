@@ -1,6 +1,6 @@
 import {_beforeEach} from './beforeEach'
 import { RpgPlayer, RpgWorld } from '@rpgjs/server'
-import { SocketMethods, SocketEvents } from '@rpgjs/common'
+import { SocketMethods, SocketEvents } from '@rpgjs/types'
 import { RpgClientEngine, RpgSceneMap } from '@rpgjs/client'
 import { clear, nextTick } from '@rpgjs/testing'
 

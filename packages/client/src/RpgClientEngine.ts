@@ -14,6 +14,7 @@ import {
     HookClient,
     RpgCommonMap,
     Scheduler,
+    Control,
 } from '@rpgjs/common'
 import { RpgSound } from './Sound/RpgSound'
 import { SceneMap } from './Scene/Map'
@@ -196,7 +197,7 @@ export class RpgClientEngine {
      * ```
      * */
     get tick(): Observable<Tick> {
-        return this.scheduler.tick
+        return this.scheduler.tick as any
     }
 
     /**
@@ -313,8 +314,7 @@ export class RpgClientEngine {
         this.scheduler.nextTick(timestamp)
     } 
 
-     /** @internal */
-    async sendInput(actionName: string) {
+    async sendInput(actionName: string | Control) {
         const player = this.player
         if (!player) return
         if (player.canMove) {
@@ -520,7 +520,7 @@ export class RpgClientEngine {
                                 }, true)
                             }
                         }
-                        if (partialRoom?.pos && partialRoom?.frame) {
+                        if (partialRoom?.pos && partialRoom?.frame !== undefined) {
                             this.serverFrames.set(partialRoom.frame, {
                                 data: partialRoom.pos,
                                 time: Date.now()

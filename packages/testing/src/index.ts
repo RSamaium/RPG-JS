@@ -84,7 +84,7 @@ export function clear() {
 }
 
 export function nextTick(client: RpgClientEngine, timestamp = 0) {
-    server.step(timestamp, 0)
+    server.nextTick(timestamp)
     server.send()
     return new Promise((resolve: any) => {
         client.objects.subscribe(async (objects) => {
