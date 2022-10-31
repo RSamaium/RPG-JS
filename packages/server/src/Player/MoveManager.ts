@@ -1,9 +1,9 @@
-import { Direction, LiteralDirection, Vector2d } from '@rpgjs/common'
+import { Direction, LiteralDirection, RpgCommonPlayer, RpgShape, Vector2d } from '@rpgjs/common'
 import { Utils } from '@rpgjs/common'
-import { Behavior, ClientMode, MoveMode, Position, SocketEvents, SocketMethods } from '@rpgjs/types'
-import { bufferCount, map, Subscription, tap } from 'rxjs'
+import { Behavior, ClientMode, MoveMode, MoveTo, Position, PositionXY, SocketEvents, SocketMethods, Tick } from '@rpgjs/types'
+import { Observable, Subscription } from 'rxjs'
 import { RpgServerEngine } from '../server'
-import { RpgPlayer } from './Player'
+import { RpgEvent, RpgPlayer } from './Player'
 
 const {
     arrayFlat,
@@ -280,8 +280,6 @@ class MoveList {
 export const Move = new MoveList()
 
 export class MoveManager {
-
-    public movingSubscription?: Subscription
     private movingInterval
     private _infiniteRoutes: Routes
     private _finishRoute: Function
@@ -571,22 +569,37 @@ export class MoveManager {
         if (this._infiniteRoutes) this.infiniteMoveRoute(this._infiniteRoutes)
     }
 
-    goToTarget(playerOrPosition: RpgPlayer) {
-        /*this.movingSubscription = this.server.tick
-            .pipe(
-                map(() => {
-                    
-                }),
-                bufferCount(3)
-            ) 
-            .subscribe((pos) => {
-                
-            })*/
-        
-        this.computeNextPositionByTarget(this.position, playerOrPosition.position)
-       
+    /**
+     * Move the event to another event, a player, a shape or a specific position.
+     * The event will avoid obstacles, but you can tell if it is stuck or has completed its path
+     * 
+     * @title Move To
+     * @method player.moveTo()
+     * @param {RpgPlayer|RpgEvent|RpgShape|Position} target the target
+     * @param {object} [options] - animate. Set a boolean to use default parameters
+     * @param {boolean} [options.infinite=false] - moves infinitely towards the target, you have to stop its movement manually with the method `stopMoveTo()`
+     * @param {() => void} [options.onComplete] - Callback when the event arrives at the destination
+     * @param {(duration:number) => void} [options.onStuck] - callback when the event is blocked against a wall. Duration gives you the duration (in frames) of the blocking time
+     * @returns {void}
+     * @since 3.2.0
+     * @memberof MoveManager
+     * @example 
+     * 
+     * ```ts
+     * import { Move } from '@rpgjs/server'
+     * 
+     * player.moveTo(otherPlayer)
+     * ```
+     */
+    moveTo(event: RpgEvent, options?: MoveTo);
+    moveTo(player: RpgPlayer, options?: MoveTo);
+    moveTo(position: PositionXY, options?: MoveTo);
+    moveTo(shape: RpgShape, options?: MoveTo);
+    moveTo(position: RpgPlayer | RpgShape | PositionXY, options?: MoveTo) {
+        this['movingSubscription'] = this['_moveTo'](this.server.tick, position, options).subscribe()
     }
 
+    // TODO
     setMoveMode(mode: MoveMode): void {
         if (mode.checkCollision) this.checkCollision = mode.checkCollision
         if (mode.clientMode) this.clientModeMove = mode.clientMode
@@ -610,5 +623,4 @@ export interface MoveManager {
     id: string
     server: RpgServerEngine
     position: Vector2d
-    computeNextPositionByTarget(nextPosition: Vector2d, target: Vector2d): Promise<Vector2d>
 }

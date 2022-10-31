@@ -1,10 +1,11 @@
-import { Move, ShapePositioning, Direction, EventData, EventMode, RpgEvent, RpgPlayer } from '@rpgjs/server'
+import { Move, ShapePositioning, Direction, EventData, EventMode, RpgEvent, RpgPlayer, RpgServerEngine } from '@rpgjs/server'
 import { Control, RpgClientEngine } from '@rpgjs/client'
 import {_beforeEach} from './beforeEach'
 import { clear, nextTick } from '@rpgjs/testing'
 import { inputs } from './fixtures/control'
 
-let  client: RpgClientEngine, player, fixture, playerId
+let  client: RpgClientEngine, player: RpgPlayer, fixture, playerId
+let server: RpgServerEngine
 
 const INITIAL_SPEED = 3
 const INITIAL_DIRECTION = 3
@@ -15,6 +16,7 @@ beforeEach(async () => {
     player = ret.player
     fixture = ret.fixture
     playerId = ret.playerId
+    server = ret.server
 })
 
 test('Default Speed', async () => {
@@ -130,7 +132,6 @@ describe('pendingMove & canMove test', () => {
     })
 })
 
-
 test('Move but limit of the map', async () => {
     player.position.x = 1
     await player.moveRoutes([ Move.left() ])
@@ -188,6 +189,14 @@ describe('Size Max Shape of Player', () => {
         })
         const maxShape = player.getSizeMaxShape()
         expect(maxShape).toMatchObject({ minX: 155, minY: 105, maxX: 255, maxY: 305 })
+    })
+})
+
+describe('Move To', () => {
+    test('To Position', () => {
+        player.moveTo({ x: 10, y: 10 })
+        server.nextTick(0)
+        //console.log(player.position)
     })
 })
  

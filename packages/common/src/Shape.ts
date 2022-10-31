@@ -2,6 +2,7 @@ import { RpgCommonPlayer } from './Player'
 import { Hit, HitType } from './Hit'
 import { TiledObjectClass } from '@rpgjs/tiled'
 import { PlayerType } from '@rpgjs/types'
+import { Vector2d } from './Vector2d'
 
 export enum ShapePositioning {
     Default = 'default',
@@ -148,12 +149,8 @@ export class RpgShape extends TiledObjectClass {
         this.setPos('y', val)
     }
 
-    // alias
-    get position() {
-        return {
-            x: this.x,
-            y: this.y
-        }
+    get position(): Vector2d {
+        return new Vector2d(this.x, this.y, this.z)
     }
 
     /**

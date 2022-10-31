@@ -7,13 +7,14 @@ import { RpgPlugin, HookServer } from './Plugin'
 import { GameSide, RpgCommonGame } from './Game'
 import { Vector2d, Vector2dZero } from './Vector2d'
 import { Box } from './VirtualGrid'
-import { Behavior, ClientMode, MoveClientMode, PendingMove, PlayerType } from '@rpgjs/types'
+import { Behavior, ClientMode, MoveClientMode, MoveTo, PendingMove, PlayerType, PositionXY, Tick } from '@rpgjs/types'
+import { from, map, mergeMap, Observable, Subscription, tap } from 'rxjs'
 
 const ACTIONS = { IDLE: 0, RUN: 1, ACTION: 2 }
 
 export type Position = { x: number, y: number, z: number }
 
-export enum Direction { 
+export enum Direction {
     Up = 1,
     Down = 3,
     Left = 4,
@@ -21,10 +22,10 @@ export enum Direction {
     UpRight = 1.5,
     DownRight = 2.5,
     DownLeft = 3.5,
-    UpLeft =  2.5
+    UpLeft = 2.5
 }
 
-export const LiteralDirection =  {
+export const LiteralDirection = {
     1: 'up',
     2: 'right',
     3: 'down',
@@ -43,7 +44,8 @@ export class RpgCommonPlayer {
     private collisionWith: RpgCommonPlayer[] = []
     private _collisionWithTiles: TileInfo[] = []
     private _collisionWithShapes: RpgShape[] = []
-    
+    public movingSubscription?: Subscription
+
     /*
         Properties for move mode
     */
@@ -57,16 +59,16 @@ export class RpgCommonPlayer {
     hitbox: SAT.Box
     pendingMove: PendingMove = []
     //modeMove: ModeMove = ModeMove.Direction
-    
-     /** 
-     * Display/Hide the GUI attached to this sprite
-     * 
-     * @prop {boolean} guiDisplay
-     * @since 3.0.0-beta.5
-     * @memberof RpgSprite
-     * */
+
+    /** 
+    * Display/Hide the GUI attached to this sprite
+    * 
+    * @prop {boolean} guiDisplay
+    * @since 3.0.0-beta.5
+    * @memberof RpgSprite
+    * */
     guiDisplay: boolean
-    
+
     inShapes: {
         [shapeId: string]: RpgShape
     } = {}
@@ -128,7 +130,7 @@ export class RpgCommonPlayer {
         this._hitboxPos.z = z
         this.updateInVirtualGrid()
         this._position = new Proxy<Vector2d>(val as Vector2d, {
-            get: (target, prop: string) => target[prop], 
+            get: (target, prop: string) => target[prop],
             set: (target, prop, value) => {
                 this._hitboxPos[prop] = value
                 target[prop] = value
@@ -177,17 +179,17 @@ export class RpgCommonPlayer {
         return RpgCommonMap.buffer.get(this.map)
     }
 
-     /**
-     * 
-     * Recovers all the colliding tiles of the current player 
-     * 
-     * @title Get Collision of tiles
-     * @since 3.0.0-beta.4
-     * @readonly
-     * @prop { TileInfo[] } tiles
-     * @memberof Player
-     * @memberof RpgSpriteLogic
-     */
+    /**
+    * 
+    * Recovers all the colliding tiles of the current player 
+    * 
+    * @title Get Collision of tiles
+    * @since 3.0.0-beta.4
+    * @readonly
+    * @prop { TileInfo[] } tiles
+    * @memberof Player
+    * @memberof RpgSpriteLogic
+    */
     get tilesCollision(): TileInfo[] {
         return this._collisionWithTiles
     }
@@ -238,7 +240,7 @@ export class RpgCommonPlayer {
      * @memberof Player
      */
     setSizes(obj: { width: number, height: number, hitbox?: { width: number, height: number } }): void {
-        this.width = obj.width 
+        this.width = obj.width
         this.height = obj.height
         if (obj.hitbox) {
             this.hitbox = new SAT.Box(this._hitboxPos, obj.hitbox.width, obj.hitbox.height)
@@ -262,7 +264,7 @@ export class RpgCommonPlayer {
     setHitbox(width: number, height: number): void {
         const map = this.mapInstance
         if (map) {
-            this.width = map.tileWidth 
+            this.width = map.tileWidth
             this.height = map.tileHeight
         }
         this.hitbox = new SAT.Box(this._hitboxPos, width, height)
@@ -290,12 +292,12 @@ export class RpgCommonPlayer {
         const angle = (direction < 2 ? +direction + 2 : direction - 2) * 90
         return toRadians(angle)
     }
-    
+
     /** @internal */
     defineNextPosition(direction: number, deltaTimeInt: number): Vector2d {
         const angle = this.directionToAngle(direction)
         const computePosition = (prop: string) => {
-            return this.position[prop] + this.speed * deltaTimeInt 
+            return this.position[prop] + this.speed * deltaTimeInt
                 * (Math.round(Math[prop == 'x' ? 'cos' : 'sin'](angle) * 100) / 100)
         }
         return new Vector2d(~~computePosition('x'), ~~computePosition('y'), ~~this.position.z)
@@ -304,8 +306,8 @@ export class RpgCommonPlayer {
     /** @internal */
     setPosition({ x, y, tileX, tileY }, move = true) {
         const { tileWidth, tileHeight } = this.mapInstance
-        if (x !== undefined) this.posX = x 
-        if (y !== undefined) this.posY = y 
+        if (x !== undefined) this.posX = x
+        if (y !== undefined) this.posY = y
         if (tileX !== undefined) this.posX = tileX * tileWidth
         if (tileY !== undefined) this.posY = tileY * tileHeight
     }
@@ -387,7 +389,7 @@ export class RpgCommonPlayer {
     }
 
     private boundingMap(nextPosition: Vector2d): { bounding: boolean, nextPosition: Vector2d } | null {
-        const map = this.mapInstance 
+        const map = this.mapInstance
         let bounding = false
         if (!map) {
             return null
@@ -415,8 +417,8 @@ export class RpgCommonPlayer {
     }
 
     private async collisionObjects(
-        playerSizeBox: Box, 
-        hitbox: SAT.Box, 
+        playerSizeBox: Box,
+        hitbox: SAT.Box,
         triggers?: {
             collision?: (event: RpgCommonPlayer) => void
             near?: (event: RpgCommonPlayer) => void,
@@ -434,13 +436,13 @@ export class RpgCommonPlayer {
         for (let objectId of objects) {
             // client side: read "object" propertie
             if (!events[objectId]) continue
-            const event = events[objectId]['object'] || events[objectId] 
+            const event = events[objectId]['object'] || events[objectId]
 
             if (event.id == this.id) continue
             if (!this.zCollision(event)) continue
 
             const collided = Hit.testPolyCollision(HitType.Box, hitbox, event.hitbox)
- 
+
             for (let shape of this.shapes) {
                 await this.collisionWithShape(shape, event)
             }
@@ -450,8 +452,8 @@ export class RpgCommonPlayer {
             }
 
             if (triggers?.near) triggers.near(event)
-            
-            if (collided) { 
+
+            if (collided) {
                 this.collisionWith.push(event)
                 this.triggerCollisionWith()
                 let throughOtherPlayer = false
@@ -486,8 +488,8 @@ export class RpgCommonPlayer {
         const map = this.mapInstance
         if (!map) return false
         const shapes: { [id: string]: RpgShape } = this.gameEngine.world.getShapesOfGroup(this.map)
-        const shapesInGrid = this.gameEngine.side == GameSide.Client 
-            ? new Set(Object.keys(shapes)) 
+        const shapesInGrid = this.gameEngine.side == GameSide.Client
+            ? new Set(Object.keys(shapes))
             : map.gridShapes.getObjectsByBox(playerSizeBox)
         let boolFound = false
 
@@ -514,7 +516,7 @@ export class RpgCommonPlayer {
         let contenders = 0
         const hitbox = Hit.createObjectHitbox(nextPosition.x, nextPosition.y, nextPosition.z, this.hitbox.w, this.hitbox.h)
 
-        const createObstacle = function(x: number, y: number, radius: number): Vector2d {
+        const createObstacle = function (x: number, y: number, radius: number): Vector2d {
             const obstacle = new Vector2d(x, y)
             let push = nextPosition.copy().subtract(obstacle)
             let distance = (nextPosition.distanceWith(obstacle) - radius) - radius;
@@ -539,11 +541,11 @@ export class RpgCommonPlayer {
             const hitbox = Hit.createObjectHitbox(pos.x, pos.y, nextPosition.z, this.hitbox.w, this.hitbox.h)
             const radius = this.mapInstance.tilewidth / 2
             const tile = this.getTile(pos.x, pos.y, nextPosition.z, hitbox)
-              if (tile.hasCollision) {
+            if (tile.hasCollision) {
                 createObstacle(pos.x, pos.y, radius)
             }
         })
-        
+
 
         const playerSizeBox = this.getSizeMaxShape(nextPosition.x, nextPosition.y)
 
@@ -572,7 +574,7 @@ export class RpgCommonPlayer {
     }
 
     async isCollided(nextPosition: Vector2d): Promise<boolean> {
-        this.collisionWith = [] 
+        this.collisionWith = []
         this._collisionWithTiles = []
         const prevMapId = this.map
         const hitbox = Hit.createObjectHitbox(nextPosition.x, nextPosition.y, 0, this.hitbox.w, this.hitbox.h)
@@ -582,7 +584,7 @@ export class RpgCommonPlayer {
             this.position.set(nextPosition)
             return true
         }
-        
+
         const tileCollision = (x: number, y: number): boolean => {
             const tile = this.getTile(x, y, nextPosition.z, hitbox)
             if (tile.hasCollision) {
@@ -593,9 +595,9 @@ export class RpgCommonPlayer {
         }
 
         if (
-            tileCollision(nextPosition.x, nextPosition.y) || 
-            tileCollision(nextPosition.x + this.hitbox.w, nextPosition.y) || 
-            tileCollision(nextPosition.x, nextPosition.y + this.hitbox.h) || 
+            tileCollision(nextPosition.x, nextPosition.y) ||
+            tileCollision(nextPosition.x + this.hitbox.w, nextPosition.y) ||
+            tileCollision(nextPosition.x, nextPosition.y + this.hitbox.h) ||
             tileCollision(nextPosition.x + this.hitbox.w, nextPosition.y + this.hitbox.h)
         ) {
             return true
@@ -609,7 +611,7 @@ export class RpgCommonPlayer {
         }
 
         const playerSizeBox = this.getSizeMaxShape(nextPosition.x, nextPosition.y)
-        
+
         if (await this.collisionObjects(playerSizeBox, hitbox)) return true
         if (await this.collisionShapes(playerSizeBox, nextPosition)) return true
 
@@ -643,9 +645,9 @@ export class RpgCommonPlayer {
      * @returns {RpgShape}
      * @memberof Player
      */
-    attachShape(obj: { 
-        width: number, 
-        height: number 
+    attachShape(obj: {
+        width: number,
+        height: number
         positioning?: string
         name?: string
         properties?: object
@@ -693,10 +695,10 @@ export class RpgCommonPlayer {
             position = player.position.copy()
         }
         const hitboxObj = Hit.createObjectHitbox(
-            position.x, 
-            position.y, 
-            position.z, 
-            hitbox.w, 
+            position.x,
+            position.y,
+            position.z,
+            hitbox.w,
             hitbox.h
         )
         let collided = Hit.testPolyCollision(shape.type, hitboxObj, shape.hitbox)
@@ -714,29 +716,94 @@ export class RpgCommonPlayer {
         return false
     }
 
-    /** @internal */
-    async move(nextPosition: Vector2d): Promise<boolean> {
-        {
-            const { x, y } = this.position
-            const { x: nx, y: ny } = nextPosition
-            const diff = Math.abs(x - nx) > Math.abs(y - ny)
-            if (diff) {
-                if (nx > x) {
-                    this.changeDirection(Direction.Right)
-                }
-                else {
-                    this.changeDirection(Direction.Left)
-                }
+    private autoChangeDirection(nextPosition: Vector2d) {
+        const { x, y } = this.position
+        const { x: nx, y: ny } = nextPosition
+        const diff = Math.abs(x - nx) > Math.abs(y - ny)
+        if (diff) {
+            if (nx > x) {
+                this.changeDirection(Direction.Right)
             }
             else {
-                if (ny > y) {
-                    this.changeDirection(Direction.Down)
-                }
-                else {
-                    this.changeDirection(Direction.Up)
-                }
+                this.changeDirection(Direction.Left)
             }
         }
+        else {
+            if (ny > y) {
+                this.changeDirection(Direction.Down)
+            }
+            else {
+                this.changeDirection(Direction.Up)
+            }
+        }
+    }
+
+     /**
+     * Stops the movement of the player who moves towards his target
+     * 
+     * @title Stop Move To
+     * @method player.stopMoveTo()
+     * @returns {void}
+     * @since 3.2.0
+     * @memberof MoveManager
+     */
+    stopMoveTo() {
+        if (this.movingSubscription) {
+            this.movingSubscription.unsubscribe()
+        }
+    }
+
+    _moveTo(tick$: Observable<Tick>, positionTarget: RpgCommonPlayer | RpgShape | PositionXY, options: MoveTo = {}): Observable<Vector2d>  {
+        let i = 0
+        let count = 0
+        const lastPositions: Vector2d[] = []
+        this.stopMoveTo()
+        const { infinite, onStuck, onComplete } = options
+        const getPosition = (): Vector2d => {
+            let pos
+            if ('x' in positionTarget) {
+                pos = new Vector2d(positionTarget.x, positionTarget.y)
+            }
+            else {
+                pos = positionTarget.position
+            }
+            return pos
+        }
+        return tick$
+            .pipe(
+                mergeMap(() => from(this.computeNextPositionByTarget(this.position.copy(), getPosition()))),
+                map((position) => {
+                    this.autoChangeDirection(position)
+                    return this.position.set(position)
+                }),
+                tap((position: Vector2d) => {
+                    lastPositions[i] = position.copy()
+                    i++
+                    count++
+                    if (i >= 3) {
+                        i=0
+                    }
+                    if (
+                        lastPositions[2] && lastPositions[0].isEqual(lastPositions[2])
+                    ) {
+                        onStuck?.(count)
+                    }
+                    else if (this.position.isEqual(getPosition())) {
+                        onComplete?.()
+                        if (!infinite) {
+                            this.stopMoveTo()
+                        }
+                    }
+                    else {
+                        count = 0
+                    }
+                })
+            )
+    }
+
+    /** @internal */
+    async move(nextPosition: Vector2d): Promise<boolean> {
+        this.autoChangeDirection(nextPosition)
 
         const notCollided = !(await this.isCollided(nextPosition))
 
@@ -761,43 +828,43 @@ export class RpgCommonPlayer {
         return Object.values(this.inShapes)
     }
 
-     /**
-     * Get the current direction.
-     * 
-     * ```ts
-     * player.getDirection()
-     * ```
-     * 
-     * @title Get Direction
-     * @method player.getDirection()
-     * @returns {Direction | number} direction
-     * @memberof Player
-     */
+    /**
+    * Get the current direction.
+    * 
+    * ```ts
+    * player.getDirection()
+    * ```
+    * 
+    * @title Get Direction
+    * @method player.getDirection()
+    * @returns {Direction | number} direction
+    * @memberof Player
+    */
     getDirection(direction?: Direction | number): string | number {
         return direction || this.direction
     }
 
-     /**
-     * Changes the player's direction
-     * 
-     * ```ts
-     * import { Direction } from '@rpgjs/server'
-     * 
-     * player.changeDirection(Direction.Left)
-     * ```
-     * 
-     * @title Change direction
-     * @method player.changeDirection(direction)
-     * @param {Direction} direction
-     * @enum {string}
-     * 
-     * Direction.Left | left
-     * Direction.Right | right
-     * Direction.Up | up
-     * Direction.Down | down
-     * @returns {boolean} the direction has changed
-     * @memberof Player
-     */
+    /**
+    * Changes the player's direction
+    * 
+    * ```ts
+    * import { Direction } from '@rpgjs/server'
+    * 
+    * player.changeDirection(Direction.Left)
+    * ```
+    * 
+    * @title Change direction
+    * @method player.changeDirection(direction)
+    * @param {Direction} direction
+    * @enum {string}
+    * 
+    * Direction.Left | left
+    * Direction.Right | right
+    * Direction.Up | up
+    * Direction.Down | down
+    * @returns {boolean} the direction has changed
+    * @memberof Player
+    */
     changeDirection(direction: Direction): boolean {
         const dir = +this.getDirection(direction)
         if (dir === undefined) return false
@@ -818,12 +885,11 @@ export class RpgCommonPlayer {
             case Direction.Left:
             case Direction.Right:
                 return Math.floor(this.mapInstance.tileWidth / this.speed)
-            default: 
+            default:
                 return NaN
         }
     }
 
-    /** @internal */
     getSizeMaxShape(x?: number, y?: number): { minX: number, minY: number, maxX: number, maxY: number } {
         const _x = x || this.position.x
         const _y = y || this.position.y
@@ -849,11 +915,11 @@ export class RpgCommonPlayer {
     }
 
     /** @internal */
-    async execMethod(methodName: string, methodData?, instance?) {}
+    async execMethod(methodName: string, methodData?, instance?) { }
     /** @internal */
-    onAction() {}
+    onAction() { }
     /** @internal */
-    onPlayerTouch() {}
+    onPlayerTouch() { }
 }
 
 export interface RpgCommonPlayer {

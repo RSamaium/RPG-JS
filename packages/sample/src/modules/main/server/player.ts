@@ -49,7 +49,7 @@ export const player: RpgPlayerHooks = {
         if (input == Control.Back) {
             const map = player.getCurrentMap()
             const [event] = Object.values(map?.events as any);
-            (event as any).goToTarget(player)
+            (event as any).goToTarget(player) 
         }    
     },      
     async onInShape(player: RpgPlayer, shape: RpgShape) {
@@ -58,5 +58,5 @@ export const player: RpgPlayerHooks = {
     },
     onOutShape(player: RpgPlayer, shape: RpgShape) {
         console.log('out', player.name, shape.name)
-    }
+    }  
 } 

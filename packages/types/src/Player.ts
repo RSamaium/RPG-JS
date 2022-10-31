@@ -49,4 +49,10 @@ export enum PlayerType {
 }
 
 export type Position = { x: number, y: number, z: number }
+export type PositionXY = Pick<Position, 'x' | 'y'>
 export type PendingMove = { input: string | Control, frame: number }[]
+export type MoveTo = {
+    onStuck?: (duration: number) => void
+    onComplete?: () => void
+    infinite?: boolean
+}

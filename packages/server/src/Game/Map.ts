@@ -121,7 +121,7 @@ export class RpgMap extends RpgCommonMap {
             object.getShapes().forEach(shape => shape.out(event))
             event.getShapes().forEach(shape => shape.out(object))
         }
-        object.movingSubscription?.unsubscribe()
+        object.stopMoveTo()
         this.grid.clearObjectInCells(object.id)
         for (let playerId in this.players) {
             if (object.id == playerId) continue
@@ -133,7 +133,7 @@ export class RpgMap extends RpgCommonMap {
         // last player before removed of this map 
         if (this.nbPlayers === 1) {
             // clear cache for this map
-            RpgCommonMap.buffer.delete(this.id)
+            this._server.sceneMap.removeMap(this.id)
         }
     }
 

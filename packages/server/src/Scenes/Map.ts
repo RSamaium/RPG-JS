@@ -7,6 +7,7 @@ import { RpgMap } from '../Game/Map'
 import { RpgWorldMaps, WorldMap } from '../Game/WorldMaps'
 import { RpgPlayer } from '../Player/Player'
 import { RpgServerEngine } from '../server'
+import { Query } from '../Query'
 
 export interface RpgClassMap<T> {
     id?: string
@@ -75,6 +76,16 @@ export class SceneMap {
         }
 
         return mapInstance
+    }
+
+    // TODO
+    removeMap(id: string) {
+        //const mapInstance = RpgCommonMap.buffer.get(id)
+        const objects = Query.getObjectsOfMap(id)
+        for (let object of objects) {
+            object.stopMoveTo()
+        }
+        RpgCommonMap.buffer.delete(id)
     }
 
     /**

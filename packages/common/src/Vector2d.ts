@@ -4,6 +4,7 @@ export class Vector2d {
     set(vector: Vector2d) {
         this.x = vector.x
         this.y = vector.y
+        this.z = vector.z
         return this
     }
     
@@ -42,11 +43,17 @@ export class Vector2d {
     }
 
     copy(): Vector2d {
-        return new Vector2d(this.x, this.y)
+        return new Vector2d(this.x, this.y, this.z)
     }
 
     normalize() {
         return this.divide(this.magnitude())
+    }
+
+    isEqual(vector: Vector2d): boolean {
+        return this.x === vector.x && 
+        this.y === vector.y &&
+        this.z === vector.z
     }
 }
 
