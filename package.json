@@ -14,6 +14,7 @@
     "jest-webgl-canvas-mock": "^0.2.3",
     "log-with-statusbar": "^1.2.0",
     "msgpack-lite": "^0.1.26",
+    "rxjs": "^7.5.7",
     "socket.io-client": "^4.4.1",
     "ts-jest": "^27.0.2",
     "vue": "^3.2.31",

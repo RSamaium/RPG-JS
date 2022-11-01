@@ -19,7 +19,8 @@
   "dependencies": {
     "@rpgjs/client": "^3.1.0",
     "@rpgjs/common": "^3.1.0",
-    "@rpgjs/server": "^3.1.0"
+    "@rpgjs/server": "^3.1.0",
+    "@rpgjs/types": "^3.1.0"
   },
   "gitHead": "7bb0326cc3216764a4bfc86f53e7b24464a2040f",
   "devDependencies": {

@@ -595,8 +595,8 @@ export class MoveManager {
     moveTo(player: RpgPlayer, options?: MoveTo);
     moveTo(position: PositionXY, options?: MoveTo);
     moveTo(shape: RpgShape, options?: MoveTo);
-    moveTo(position: RpgPlayer | RpgShape | PositionXY, options?: MoveTo) {
-        this['movingSubscription'] = this['_moveTo'](this.server.tick, position, options).subscribe()
+    moveTo(position: RpgPlayer | RpgShape | PositionXY, options?: MoveTo): Observable<void> {
+        return this['_moveTo'](this.server.tick, position, options)
     }
 
     // TODO

@@ -212,6 +212,8 @@ test('Player Teleport in map by shape', () => {
     expect(player.position).toMatchObject({ x: 100, y: 200, z: 0 })
 })
 
+// TODO: test remove map
+
 afterEach(() => {
     clear()
 })

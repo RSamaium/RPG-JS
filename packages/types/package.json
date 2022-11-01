@@ -19,5 +19,8 @@
   "license": "MIT",
   "devDependencies": {
     "typescript": "^4.3.5"
+  },
+  "dependencies": {
+    "rxjs": "^7.5.7"
   }
 }

@@ -8,7 +8,7 @@ import { GameSide, RpgCommonGame } from './Game'
 import { Vector2d, Vector2dZero } from './Vector2d'
 import { Box } from './VirtualGrid'
 import { Behavior, ClientMode, MoveClientMode, MoveTo, PendingMove, PlayerType, PositionXY, Tick } from '@rpgjs/types'
-import { from, map, mergeMap, Observable, Subscription, tap } from 'rxjs'
+import { from, map, mergeMap, Observable, Subject, tap, takeUntil } from 'rxjs'
 
 const ACTIONS = { IDLE: 0, RUN: 1, ACTION: 2 }
 
@@ -44,7 +44,7 @@ export class RpgCommonPlayer {
     private collisionWith: RpgCommonPlayer[] = []
     private _collisionWithTiles: TileInfo[] = []
     private _collisionWithShapes: RpgShape[] = []
-    public movingSubscription?: Subscription
+    private destroyMove$: Subject<boolean> = new Subject<boolean>()
 
     /*
         Properties for move mode
@@ -748,9 +748,9 @@ export class RpgCommonPlayer {
      * @memberof MoveManager
      */
     stopMoveTo() {
-        if (this.movingSubscription) {
-            this.movingSubscription.unsubscribe()
-        }
+        if (this.destroyMove$.closed) return
+        this.destroyMove$.next(true)
+        this.destroyMove$.unsubscribe()
     }
 
     _moveTo(tick$: Observable<Tick>, positionTarget: RpgCommonPlayer | RpgShape | PositionXY, options: MoveTo = {}): Observable<Vector2d>  {
@@ -758,6 +758,7 @@ export class RpgCommonPlayer {
         let count = 0
         const lastPositions: Vector2d[] = []
         this.stopMoveTo()
+        this.destroyMove$ = new Subject()
         const { infinite, onStuck, onComplete } = options
         const getPosition = (): Vector2d => {
             let pos
@@ -771,6 +772,7 @@ export class RpgCommonPlayer {
         }
         return tick$
             .pipe(
+                takeUntil(this.destroyMove$),
                 mergeMap(() => from(this.computeNextPositionByTarget(this.position.copy(), getPosition()))),
                 map((position) => {
                     this.autoChangeDirection(position)

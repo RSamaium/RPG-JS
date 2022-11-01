@@ -1,10 +1,11 @@
 import { Move, ShapePositioning, Direction, EventData, EventMode, RpgEvent, RpgPlayer, RpgServerEngine } from '@rpgjs/server'
 import { Control, RpgClientEngine } from '@rpgjs/client'
-import {_beforeEach} from './beforeEach'
+import { _beforeEach } from './beforeEach'
 import { clear, nextTick } from '@rpgjs/testing'
 import { inputs } from './fixtures/control'
+import { filter, lastValueFrom, map, Subscription } from 'rxjs'
 
-let  client: RpgClientEngine, player: RpgPlayer, fixture, playerId
+let client: RpgClientEngine, player: RpgPlayer, fixture, playerId
 let server: RpgServerEngine
 
 const INITIAL_SPEED = 3
@@ -24,38 +25,38 @@ test('Default Speed', async () => {
 })
 
 test('Move Route', async () => {
-   await player.moveRoutes([ Move.right() ])
-   expect(player.position).toMatchObject({ x: INITIAL_SPEED, y: 0, z: 0 })
+    await player.moveRoutes([Move.right()])
+    expect(player.position).toMatchObject({ x: INITIAL_SPEED, y: 0, z: 0 })
 })
 
 test('Repeat Move Route', async () => {
-    await player.moveRoutes([ Move.repeatMove(Direction.Right, 2) ])
+    await player.moveRoutes([Move.repeatMove(Direction.Right, 2)])
     expect(player.position).toMatchObject({ x: INITIAL_SPEED * 2, y: 0, z: 0 })
 })
 
 test('Repeat Tile Move Route', async () => {
-    await player.moveRoutes([ Move.tileRight(2) ])
+    await player.moveRoutes([Move.tileRight(2)])
     expect(player.position).toMatchObject({ x: 60, y: 0, z: 0 })
 })
 
 describe('Change Direction', () => {
     test('Change Direction [Right]', async () => {
-        await player.moveRoutes([ Move.turnRight() ])
+        await player.moveRoutes([Move.turnRight()])
         expect(player.direction).toBe(2)
     })
 
     test('Change Direction [Left]', async () => {
-        await player.moveRoutes([ Move.turnLeft() ])
+        await player.moveRoutes([Move.turnLeft()])
         expect(player.direction).toBe(4)
     })
 
     test('Change Direction [Up]', async () => {
-        await player.moveRoutes([ Move.turnUp() ])
+        await player.moveRoutes([Move.turnUp()])
         expect(player.direction).toBe(1)
     })
 
     test('Change Direction [Down]', async () => {
-        await player.moveRoutes([ Move.turnDown() ])
+        await player.moveRoutes([Move.turnDown()])
         expect(player.direction).toBe(3)
     })
 
@@ -66,7 +67,7 @@ describe('Change Direction', () => {
                 name: 'test',
                 mode: EventMode.Scenario
             })
-            class MyEvent extends RpgEvent {}
+            class MyEvent extends RpgEvent { }
             const events = player.createDynamicEvent({
                 x: 0,
                 y: 0,
@@ -77,20 +78,20 @@ describe('Change Direction', () => {
 
         test('Turn Direction Toward Player', async () => {
             event.position.y = 50
-            await event.moveRoutes([ Move.turnTowardPlayer(player) ])
+            await event.moveRoutes([Move.turnTowardPlayer(player)])
             expect(event.direction).toBe(1)
         })
-    
+
         test('Away From Player', async () => {
             event.position.y = 50
-            await event.moveRoutes([ Move.awayFromPlayer(player) ])
-            expect(event.position).toMatchObject({ x:0, y: 50 + INITIAL_SPEED, z: 0 })
+            await event.moveRoutes([Move.awayFromPlayer(player)])
+            expect(event.position).toMatchObject({ x: 0, y: 50 + INITIAL_SPEED, z: 0 })
         })
 
         test('Toward Player', async () => {
             event.position.y = 50
-            await event.moveRoutes([ Move.towardPlayer(player) ])
-            expect(event.position).toMatchObject({ x:0, y: 50 - INITIAL_SPEED, z: 0 })
+            await event.moveRoutes([Move.towardPlayer(player)])
+            expect(event.position).toMatchObject({ x: 0, y: 50 - INITIAL_SPEED, z: 0 })
         })
     })
 })
@@ -119,11 +120,11 @@ describe('pendingMove & canMove test', () => {
             player.canMove = false
             await nextTick(client)
         })
-    
+
         test('canMove property, client side test', async () => {
             expect(client.player?.canMove).toBe(false)
         })
-    
+
         test('canMove property, client do not press input', async () => {
             client.sendInput(Control.Right)
             await client.processInput()
@@ -134,7 +135,7 @@ describe('pendingMove & canMove test', () => {
 
 test('Move but limit of the map', async () => {
     player.position.x = 1
-    await player.moveRoutes([ Move.left() ])
+    await player.moveRoutes([Move.left()])
     expect(player.position).toMatchObject({ x: 0, y: 0, z: 0 })
     await nextTick(client)
     expect(client.player?.position).toMatchObject({ x: 0, y: 0, z: 0 })
@@ -193,13 +194,102 @@ describe('Size Max Shape of Player', () => {
 })
 
 describe('Move To', () => {
-    test('To Position', () => {
+    let secondPlayer
+
+    beforeEach(async () => {
+        const otherClient = await fixture.addOtherClientInMap(client, 'map', {
+            x: 50,
+            y: 50
+        })
+        secondPlayer = otherClient.player
+    })
+
+    test('To Position', done => {
+        player.moveTo({ x: 10, y: 10 }).subscribe(() => {
+            expect(player.position.x).toBeGreaterThan(0)
+            expect(player.position.y).toBeGreaterThan(0)
+            done()
+        })
+    })
+
+    test('To Player', done => {
+        player.moveTo(secondPlayer).subscribe(() => {
+            expect(player.position.x).toBeGreaterThan(0)
+            expect(player.position.y).toBeGreaterThan(0)
+            done()
+        })
+    })
+
+    test('To Position, complete Destination', done => {
+        let i = 0
         player.moveTo({ x: 10, y: 10 })
-        server.nextTick(0)
-        //console.log(player.position)
+            .subscribe({
+                next() {
+                    i++
+                    server.nextTick(i)
+                },
+                complete() {
+                    expect(i).toBe(5)
+                    done()
+                }
+            })
+    })
+
+    test('Is Stuck', done => {
+        let i = 0
+        const subscription: Subscription = player.moveTo({ x: 6 * 32, y: 6 * 32 }, {
+            onStuck(count) {
+                expect(count).toBe(1)
+                done()
+                subscription.unsubscribe()
+            }
+        }).subscribe({
+            next() {
+                i++
+                server.nextTick(i)
+            }
+        })
+    })
+
+    test('Stop Move (stopMoveTo())', done => {
+        let i = 0
+        player.moveTo({ x: 10, y: 10 })
+            .subscribe({
+                next() {
+                    i++
+                    if (i == 2) {
+                        player.stopMoveTo()
+                    }
+                    server.nextTick(i)
+                },
+                complete() {
+                    expect(i).toBe(2)
+                    done()
+                }
+            })
+    })
+
+    test('To Player, follow', done => {
+        let i = 0
+        player.moveTo(secondPlayer, {
+            infinite: true
+        })
+            .subscribe({
+                next() {
+                    i++
+                    server.nextTick(i)
+                    if (i > 30) {
+                        player.stopMoveTo()
+                    }
+                },
+                complete() {
+                    expect(i).toBeGreaterThan(24)
+                    done()
+                }
+            })
     })
 })
- 
+
 afterEach(() => {
     clear()
 })
