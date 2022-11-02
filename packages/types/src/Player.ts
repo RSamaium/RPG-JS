@@ -51,6 +51,7 @@ export enum PlayerType {
 
 export type Position = { x: number, y: number, z: number }
 export type PositionXY = Pick<Position, 'x' | 'y'>
+export type PositionXY_OptionalZ = Pick<Position, 'x' | 'y'> & { z?: Position['z'] }
 export type PendingMove = { input: string | Control, frame: number }[]
 export type MoveTo = {
     onStuck?: (duration: number) => void

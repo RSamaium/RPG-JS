@@ -1,7 +1,7 @@
 import RBush from 'rbush'
 import { TiledWorldMap } from '@rpgjs/tiled'
 import { RpgCommonMap } from './Map'
-import { Direction } from './Player'
+import { Direction } from '@rpgjs/types'
 
 export interface RpgClassMap<T> {
     id?: string

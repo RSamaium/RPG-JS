@@ -1,3 +1,9 @@
+export enum HitType {
+    Box = 'box',
+    Circle = 'circle',
+    Polygon = 'polygon'
+}
+
 type HitCommon = {
     x: number
     y: number
@@ -5,19 +11,32 @@ type HitCommon = {
         [key: string]: any
     }
     name: string
+    type?: string
+    visible?: boolean
+    gid?: number
 }
 
 export type HitEllipse = {
     ellipse: boolean
     width: number
     height: number
-    type: 'ellipse'
+    type?: 'ellipse' | HitType.Circle
     rotation?: number
 } & HitCommon
 
 export type HitPolygon = {
     polygon: { x: number, y: number }[]
-    type: 'polygon'
+    type?: HitType.Polygon
 } & HitCommon
 
-export type HitObject = HitEllipse | HitPolygon
+export type HitBox = {
+    width: number
+    height: number
+    type?: HitType.Box
+} & HitCommon
+
+export type HitObject = HitBox | HitEllipse | HitPolygon | HitCommon
+
+export type MovingHitbox = {
+    speed?: number
+}

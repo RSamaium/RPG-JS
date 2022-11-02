@@ -33,7 +33,7 @@ import {
 import { RpgServerEngine } from '../server'
 import { RpgClassMap } from '../Scenes/Map'
 import { RpgTiledWorldMap } from '../Game/WorldMaps'
-import { CameraOptions, SocketEvents, SocketMethods } from '@rpgjs/types'
+import { CameraOptions, PositionXY_OptionalZ, SocketEvents, SocketMethods } from '@rpgjs/types'
 
 const { 
     isPromise, 
@@ -438,7 +438,7 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @returns {Promise<{ {x: number, y: number, z: number} }>}
      * @memberof Player
      */
-    async teleport(positions?: {x: number, y: number, z?: number} | string): Promise<Position> {
+    async teleport(positions?: PositionXY_OptionalZ | string): Promise<Position> {
         if (isString(positions)) positions = <Position>this.getCurrentMap()?.getPositionByShape(shape => shape.name == positions || shape.getType() == positions)
         if (!positions) positions = { x: 0, y: 0, z: 0 }
         if (!(positions as Position).z) (positions as Position).z = 0

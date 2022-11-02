@@ -1,9 +1,11 @@
-import { RpgCommonMap, Utils, RpgShape, RpgCommonGame } from '@rpgjs/common'
+import { RpgCommonMap, Utils, RpgShape, RpgCommonGame, AbstractObject } from '@rpgjs/common'
 import { TiledParserFile } from '@rpgjs/tiled'
 import { EventOptions } from '../decorators/event'
 import { RpgPlayer, EventMode, RpgEvent } from '../Player/Player'
 import { Move } from '../Player/MoveManager'
 import { RpgServerEngine } from '../server'
+import { Observable } from 'rxjs'
+import { constructor, HitBox, MovingHitbox, Position, Tick } from '@rpgjs/types'
 
 export type EventPosOption = {
     x: number,
@@ -241,6 +243,7 @@ export class RpgMap extends RpgCommonMap {
         let ret = {}
         for (let key in events) {
             this.events[key] = events[key]
+            this.events[key].updateInVirtualGrid()
             this.events[key].execMethod('onInit')
             // force to get Proxy object to sync with client
             ret = { ...ret, [key]: this.events[key] }
@@ -277,8 +280,8 @@ export class RpgMap extends RpgCommonMap {
         return true
     }
 
-    createEvent(obj: EventPosOption, mode: EventMode, shape?: any): RpgEvent | null {
-        let event: any, position
+    createEvent(obj: EventPosOption, mode: EventMode, shape?: RpgShape): RpgEvent | null {
+        let event: any, position: Position | undefined
 
         // We retrieve the information of the event ([Event] or [{event: Event, x: number, y: number}])
         if (obj.x === undefined) {
@@ -295,16 +298,15 @@ export class RpgMap extends RpgCommonMap {
         }
 
         // Create an instance of RpgEvent and assign its options
-        const ev = this.game.addEvent(event)
+        const ev = this.game.addEvent<RpgEvent>(event)
         const _shape = shape || this.getEventShape(ev.name)
-
+        ev.map = this.id
+        ev.server = this._server
         ev.width = event.width || this.tileWidth
         ev.height = event.height || this.tileHeight
         if (_shape && _shape.properties) ev.properties = _shape.properties
         if (event.hitbox) ev.setHitbox(event.hitbox.width, event.hitbox.height)
-        ev.map = this.id
         ev.teleport(position || ev.name)
-        ev.server = this._server
         return ev
     }
 
@@ -321,6 +323,17 @@ export class RpgMap extends RpgCommonMap {
         }
 
         return events
+    }
+
+    createMovingHitbox(
+        hitboxes: Pick<HitBox, 'width' | 'height' | 'x' | 'y'>[],
+        options: MovingHitbox = {}): Observable<AbstractObject> {
+        return this._createMovingHitbox<RpgCommonGame>(
+            this.game, 
+            this._server.tick as any, 
+            this.id, 
+            hitboxes,
+            options) as any
     }
 
     setSync(schema: any) {

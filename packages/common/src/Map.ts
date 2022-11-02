@@ -1,10 +1,16 @@
 import { HitObject } from './Hit'
-import { random, intersection, generateUID, isString } from './Utils'
+import SAT from 'sat'
+import Utils, { random, intersection, generateUID, isString } from './Utils'
 import { RpgShape } from './Shape'
 import { Hit } from './Hit'
 import { VirtualGrid } from './VirtualGrid'
 import { RpgCommonWorldMaps } from './WorldMaps'
 import { TiledLayer, TiledLayerType, TiledMap, Layer, Tileset, Tile, TiledObject, TiledObjectClass, MapClass } from '@rpgjs/tiled'
+import { Vector2d } from './Vector2d'
+import { AbstractObject } from './AbstractObject'
+import { RpgCommonGame } from './Game'
+import { Observable, map, Subject, takeUntil, mergeMap, from, filter } from 'rxjs'
+import { HitBox, MovingHitbox, Tick } from '@rpgjs/types'
 
 const buffer = new Map()
 const bufferClient = new Map()
@@ -259,5 +265,67 @@ export class RpgCommonMap extends MapClass {
      */
     getInWorldMaps(): RpgCommonWorldMaps | undefined {
         return this.worldMapParent
+    }
+
+    boundingMap(nextPosition: Vector2d, hitbox: SAT): { bounding: boolean, nextPosition: Vector2d } | null {
+        let bounding = false
+        if (nextPosition.x < 0) {
+            nextPosition.x = 0
+            bounding = true
+        }
+        else if (nextPosition.y < 0) {
+            nextPosition.y = 0
+            bounding = true
+        }
+        else if (nextPosition.x > this.widthPx - hitbox.w) {
+            nextPosition.x = this.widthPx - hitbox.w
+            bounding = true
+        }
+        else if (nextPosition.y > this.heightPx - hitbox.h) {
+            nextPosition.y = this.heightPx - hitbox.h
+            bounding = true
+        }
+        return {
+            bounding,
+            nextPosition
+        }
+    }
+
+    _createMovingHitbox<T extends RpgCommonGame>(
+        gameEngine: T,
+        tick$: Observable<Tick>,
+        mapId: string,
+        hitboxes: Pick<HitBox, 'width' | 'height' | 'x' | 'y'>[],
+        options: MovingHitbox = {}
+    ): Observable<AbstractObject> {
+        const object = new AbstractObject(gameEngine, Utils.generateUID())
+        object.disableVirtualGrid = true
+        object.map = mapId
+        object.speed = options.speed ?? 1
+        let i = 0
+        let frame = 0
+        const destroyHitbox$ = new Subject<void>()
+        return tick$.pipe(
+            takeUntil(destroyHitbox$),
+            filter(() => {
+                frame++
+                return frame % object.speed == 0
+            }),
+            map(() => {
+                const hitbox = hitboxes[i]
+                if (!hitbox) {
+                    destroyHitbox$.next()
+                    destroyHitbox$.unsubscribe()
+                    return object
+                }
+                object.position.x = hitbox.x
+                object.position.y = hitbox.y
+                object.setHitbox(hitbox.width, hitbox.height)
+                i++
+                return object
+            }),
+            mergeMap((object) => from(object.isCollided(object.position))),
+            map(() => object)
+        )
     }
 }

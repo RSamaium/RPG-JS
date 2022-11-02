@@ -1,45 +1,7 @@
-import { TiledObjectClass } from '@rpgjs/tiled'
+import { HitEllipse, HitObject, HitType } from '@rpgjs/types'
 import SAT from 'sat'
 import { isInstanceOf } from './Utils'
-
-export enum HitType {
-    Box = 'box',
-    Circle = 'circle',
-    Polygon = 'polygon'
-}
-
-type HitCommon = {
-    x: number
-    y: number
-    properties?: {
-        [key: string]: any
-    }
-    name: string
-    type?: string
-    visible?: boolean
-    gid?: number
-}
-
-type HitEllipse = {
-    ellipse: boolean
-    width: number
-    height: number
-    type?: 'ellipse' | HitType.Circle
-    rotation?: number
-} & HitCommon
-
-type HitPolygon = {
-    polygon: { x: number, y: number }[]
-    type?: HitType.Polygon
-} & HitCommon
-
-type HitBox = {
-    width: number
-    height: number
-    type?: HitType.Box
-} & HitCommon
-
-export type HitObject = HitBox | HitEllipse | HitPolygon | HitCommon
+export { HitType, HitObject } from '@rpgjs/types'
 
 class HitClass {
 

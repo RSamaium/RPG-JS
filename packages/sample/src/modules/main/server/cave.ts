@@ -1,12 +1,15 @@
 import { RpgMap, MapData, EventData, RpgEvent, Move, EventMode, RpgPlayer } from '@rpgjs/server'
 
 @EventData({
-    name: 'EV-1'
+    name: 'EV-1',
+    hitbox: {
+        width: 32,
+        height: 16
+    }
 })
 class MyEvent extends RpgEvent {
     onInit() {
         this.setGraphic('female13')
-        this.setHitbox(32, 16)
     }
     onAction(player: RpgPlayer) {
         
@@ -33,4 +36,4 @@ export class CaveMap extends RpgMap {
 })
 export class SampleMap extends RpgMap {
     
-}  
+}

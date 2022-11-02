@@ -48,8 +48,14 @@ export const player: RpgPlayerHooks = {
     onInput(player: RpgPlayer, { input, moving }) {
         if (input == Control.Back) {
             const map = player.getCurrentMap()
-            const [event] = Object.values(map?.events as any);
-            (event as any).goToTarget(player) 
+            map?.createMovingHitbox([
+                { x: player.position.x, y: player.position.y, width: 10, height: 10 },
+                { x: player.position.x, y: player.position.y, width: 10, height: 10 }
+            ]).subscribe({
+                // complete(hitbox) {
+                //     console.log(hitbox.shapesCollision.length) 
+                // }
+            })
         }    
     },      
     async onInShape(player: RpgPlayer, shape: RpgShape) {

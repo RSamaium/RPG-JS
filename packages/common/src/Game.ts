@@ -1,7 +1,7 @@
 import { generateUID, isClass } from './Utils'
 import { EventEmitter } from './EventEmitter'
-import { RpgCommonPlayer, Direction } from './Player'
-import { Control } from '@rpgjs/types'
+import { RpgCommonPlayer } from './Player'
+import { constructor, Control, Direction } from '@rpgjs/types'
 import { RpgPlugin } from './Plugin'
 import { GameWorker } from './Worker'
 import { HitObject } from './Hit'
@@ -53,7 +53,7 @@ export class RpgCommonGame extends EventEmitter {
         return player
     }
 
-    addEvent(eventClass, eventId?: string) {
+    addEvent<T>(eventClass: constructor<T>, eventId?: string): T {
         const event = this.addObject(eventClass, eventId)
         return event
     }

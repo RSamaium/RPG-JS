@@ -3,6 +3,7 @@ import { Hit, HitType } from './Hit'
 import { TiledObjectClass } from '@rpgjs/tiled'
 import { PlayerType } from '@rpgjs/types'
 import { Vector2d } from './Vector2d'
+import { AbstractObject } from './AbstractObject'
 
 export enum ShapePositioning {
     Default = 'default',
@@ -211,7 +212,7 @@ export class RpgShape extends TiledObjectClass {
         return this.class || this.type
     }
 
-    async in(player: RpgCommonPlayer): Promise<boolean> {
+    async in(player: AbstractObject): Promise<boolean> {
         if (!this.playerIsIn(player)) {
             this.playersIn[player.id] = true
             player.inShapes[this.name] = this
@@ -222,7 +223,7 @@ export class RpgShape extends TiledObjectClass {
         return false
     }
 
-    async out(player: RpgCommonPlayer): Promise<boolean> {
+    async out(player: AbstractObject): Promise<boolean> {
         if (this.playerIsIn(player)) {
             delete this.playersIn[player.id]
             delete player.inShapes[this.name]
@@ -241,7 +242,7 @@ export class RpgShape extends TiledObjectClass {
      * @returns {boolean}
      * @memberof Shape
      */
-    playerIsIn(player: RpgCommonPlayer): boolean {
+    playerIsIn(player: AbstractObject): boolean {
         return !!this.playersIn[player.id]
     }
 
