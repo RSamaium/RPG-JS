@@ -12,7 +12,8 @@ function getDirection(direction: Direction, offset: number = 0) {
 @Spritesheet({
     images: {
         light: 'light.png',
-        shield: 'kite_blue_blue.png'
+        shield: 'kite_blue_blue.png',
+        jedi: 'Jedi.png'
     },
     width: 832,
     height: 1344,
@@ -28,25 +29,32 @@ function getDirection(direction: Direction, offset: number = 0) {
         },
         [Animation.Walk]: {
             animations: direction => [
-                new Array(9).fill(0).map((_, i) => {
-                    return { time: i*5, frameX: i, frameY: getDirection(direction) }
+                new Array(8).fill(0).map((_, i) => {
+                    return { time: i*5, frameX: i+1, frameY: getDirection(direction) }
                 })
             ]
         },
         attack: {
+            width: 1536,
+            height: 2112,
+            rectWidth: 192,
+            rectHeight: 192,
+            framesWidth: 6,
+            framesHeight: 4,
+            offset: {x: 0, y: 1344},
+            spriteRealSize: 64, 
             animations: direction => [
-                new Array(6).fill(0).map((_, i) => {
-                    return { time: i*5, frameX: i, frameY: getDirection(direction, 4) }
-                })
-            ]
-        },
-        test: {
-            animations: [
-                new Array(6).fill(0).map((_, i) => {
-                    return { time: i*5, frameX: i, frameY: getDirection(Direction.Left, 4) }
+                new Array(7).fill(0).map((_, i) => {
+                    const mapDirection = {
+                        [Direction.Up]: 0,
+                        [Direction.Left]: 1,
+                        [Direction.Down]: 2,
+                        [Direction.Right]: 3,          
+                    }[direction]
+                    return { time: i*5, frameX: i, frameY: mapDirection }
                 })
             ]
         }
     }
 })
-export class LPC { }
+export class LPC { } 

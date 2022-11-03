@@ -3,6 +3,7 @@ import { spritesheets } from './Spritesheets'
 import { Animation } from '../Effects/Animation'
 import { Animation as AnimationEnum } from '../Effects/AnimationCharacter'
 import { RpgComponent } from '../Components/Component'
+import { TransformOptions } from './Spritesheet'
 
 const { capitalize } = Utils
 
@@ -76,17 +77,20 @@ export default class Character extends PIXI.Sprite {
         this.setAnimationAnchor()
     }
 
-    private setAnimationAnchor() {
+    private setAnimationAnchor(): void {
         this.animation.hitbox = { h: this.data.hHitbox, w: this.data.wHitbox }
         this.animation.applyTransform = (frame, animation, spritesheet) => {
             const { spriteWidth, spriteHeight } = animation
-            const prop = 'anchorBySize'
-            const currentAnchor = frame[prop] || animation[prop] || spritesheet[prop]
+            const prop: keyof TransformOptions = 'spriteRealSize'
+            const currentAnchor = frame['prop'] || animation[prop] || spritesheet[prop]
             if (currentAnchor) {
                 return {}
             }
             return {
-                anchorBySize: [spriteWidth, spriteHeight]
+                spriteRealSize: {
+                    width: spriteWidth,
+                    height: spriteHeight
+                }
             }
         }
     }

@@ -304,7 +304,7 @@ export class RpgCommonMap extends MapClass {
         object.speed = options.speed ?? 1
         let i = 0
         let frame = 0
-        const destroyHitbox$ = new Subject<void>()
+        const destroyHitbox$ = new Subject<AbstractObject>()
         return tick$.pipe(
             takeUntil(destroyHitbox$),
             filter(() => {
@@ -314,8 +314,8 @@ export class RpgCommonMap extends MapClass {
             map(() => {
                 const hitbox = hitboxes[i]
                 if (!hitbox) {
-                    destroyHitbox$.next()
-                    destroyHitbox$.unsubscribe()
+                    destroyHitbox$.next(object)
+                    destroyHitbox$.complete()
                     return object
                 }
                 object.position.x = hitbox.x
@@ -324,7 +324,7 @@ export class RpgCommonMap extends MapClass {
                 i++
                 return object
             }),
-            mergeMap((object) => from(object.isCollided(object.position))),
+            mergeMap((object) => from(object.isCollided(object.position, { allSearch: true }))),
             map(() => object)
         )
     }

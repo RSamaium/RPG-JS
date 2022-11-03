@@ -1,4 +1,5 @@
-import { log } from "../Logger"
+import { constructor } from "@rpgjs/types"
+import { ClassDeclaration } from "typescript"
 
 export interface TransformOptions {
     /** 
@@ -40,7 +41,17 @@ export interface TransformOptions {
      * */
     anchor?: number[]
 
-    anchorBySize?: number[]
+    /** 
+     * Defines the actual size of the sprite that is inside a larger rectangle.
+     * For example, if the texture rectangle is 192x192 while the character, which is in the center, is only 64x64 then set `spriteRealSize: 64`. This way the character will be well positioned in relation to the animations that have a different rectangle
+     * 
+     * > You can also put `spriteRealSize: { width: 64, height: 64 }` but be aware that the width is not concerned because it will always be centered while the height depends on the hitbox
+     * 
+     * @prop {{ width: number, height: number } | number} [spriteRealSize]
+     * @since 3.2.0
+     * @memberof Spritesheet
+     * */
+    spriteRealSize?: { width: number, height: number } | number
 
     /** 
      * The global value of rotation
@@ -135,58 +146,74 @@ export interface FrameOptions extends TransformOptions {
     frameY?: number
 }
 
+/** 
+ * The link to the image
+ * 
+ * > Do not use the `images` property
+ * > Remember to wrap the link to the image with the `require` function.
+ * 
+ * ```ts
+ * image: require('./assets/hero.png')
+ * ```
+ * 
+ * @prop {string} [image]
+ * @memberof Spritesheet
+ * */
 export interface TextureOptions {
-
-    /** 
-     * The link to the image
-     * 
-     * > Do not use the `images` property
-     * > Remember to wrap the link to the image with the `require` function.
-     * 
-     * ```ts
-     * image: require('./assets/hero.png')
-     * ```
-     * 
-     * @prop {string} [image]
-     * @memberof Spritesheet
-     * */
-    image?: string,
-
      /** 
      * The number of frames on the width
      * 
-     * @prop {number} [framesWidth]
+     * @prop {number} framesWidth
      * @memberof Spritesheet
      * */
-    framesWidth?: number,
+    framesWidth: number,
 
     /** 
      * The number of frames on the height
      * 
-     * @prop {number} [framesHeight]
+     * @prop {number} framesHeight
      * @memberof Spritesheet
      * */
-    framesHeight?: number,
+    framesHeight: number,
 
      /** 
      * The width of the image (in pixels)
      * 
-     * @prop {number} [width]
+     * @prop {number} width
      * @memberof Spritesheet
      * */
-    width?: number,
+    width: number,
 
     /** 
      * The height of the image (in pixels)
      * 
-     * @prop {number} [height]
+     * @prop {number} height
      * @memberof Spritesheet
      * */
-    height?: number
+    height: number
 
+     /** 
+     * Takes a width of a rectangle in the image. Equivalent to `width / framesWidth`
+     * 
+     * @prop {number} [rectWidth]
+     * @memberof Spritesheet
+     * */
     rectWidth?: number,
+
+     /** 
+     * Takes a height of a rectangle in the image. Equivalent to `height / framesHeight`
+     * 
+     * @prop {number} [rectHeight]
+     * @memberof Spritesheet
+     * */
     rectHeight?: number,
 
+     /** 
+     * To take the texture, start at a well defined X and Y position. Otherwise, it starts at 0,0
+     * 
+     * @prop {number} [offset]
+     * @memberof Spritesheet
+     * */
     offset?: { x: number, y: number }
 }
 
@@ -212,9 +239,11 @@ export interface SpritesheetOptions extends TransformOptions, TextureOptions {
      * @prop { { [id: string]: string } } [images]
      * @memberof Spritesheet
      * */
-    images?: {
-        [id: string]: string
-    }
+    // images?: {
+    //     [id: string]: string
+    // }
+
+    // image?: string
 
     /** 
      * Spritesheet identifier.
@@ -345,15 +374,20 @@ export interface SpritesheetOptions extends TransformOptions, TextureOptions {
      * @prop { { [animName: string]: { animations: Array<Array<FrameOptions>> | Function, ...other } } } [textures]
      * @memberof Spritesheet
      * */
-    textures?: {
-        [animationName: string]: TexturesOptions
+    textures: {
+        [animationName: string]: Partial<TexturesOptions> & Pick<TexturesOptions, 'animations'>
     }
 }
 
-export function Spritesheet(options: SpritesheetOptions) {
-    return (target) => {
-        target.images = options.images
-        target.id = options.id
+type SpritesheetImageOptions = SpritesheetOptions & { image: string }
+type SpritesheetImagesOptions = SpritesheetOptions & { images: { [id: string]: string } }
+
+export function Spritesheet(options: SpritesheetImageOptions)
+export function Spritesheet(options: SpritesheetImagesOptions)
+export function Spritesheet(options: SpritesheetImageOptions | SpritesheetImagesOptions) {
+    return (target: Function) => {
+        if ('images' in options) target['images'] = options.images
+        target['id'] = options.id
         for (let key in options) {
             target.prototype[key] = options[key]
         }

@@ -22,5 +22,8 @@ export const inputs = {
     },
     [Control.Back]: {
         bind: Input.Escape
+    },
+    attack: {
+        bind: Input.A
     }
-}
+} 

@@ -12,6 +12,12 @@ import { from, map, mergeMap, Observable, Subject, tap, takeUntil } from 'rxjs'
 
 const ACTIONS = { IDLE: 0, RUN: 1, ACTION: 2 }
 
+type CollisionOptions = {
+    collision?: (event: AbstractObject) => void
+    near?: (event: AbstractObject) => void,
+    allSearch?: boolean
+}
+
 export class AbstractObject {
     map: string = ''
     height: number = 0
@@ -371,11 +377,7 @@ export class AbstractObject {
     private async collisionObjects(
         playerSizeBox: Box,
         hitbox: SAT.Box,
-        triggers?: {
-            collision?: (event: AbstractObject) => void
-            near?: (event: AbstractObject) => void,
-            allSearch?: boolean
-        }
+        triggers?: CollisionOptions
     ): Promise<boolean> {
         const map = this.mapInstance
 
@@ -473,11 +475,7 @@ export class AbstractObject {
         return false
     }
 
-    private async collisionShapes(playerSizeBox: Box, nextPosition?: Vector2d, triggers?: {
-        collision?: (shape: RpgShape) => void
-        near?: (shape: RpgShape) => void
-        allSearch?: boolean
-    }): Promise<boolean> {
+    private async collisionShapes(playerSizeBox: Box, nextPosition?: Vector2d, triggers?: CollisionOptions): Promise<boolean> {
         const map = this.mapInstance
         if (!map) return false
         const shapes: { [id: string]: RpgShape } = this.gameEngine.world.getShapesOfGroup(this.map)
@@ -566,16 +564,18 @@ export class AbstractObject {
         return nextPosition.add(pull.multiply(this.speed))
     }
 
-    async isCollided(nextPosition: Vector2d): Promise<boolean> {
+    async isCollided(nextPosition: Vector2d, options: CollisionOptions = {}): Promise<boolean> {
         this.collisionWith = []
         this._collisionWithTiles = []
         const prevMapId = this.map
         const hitbox = Hit.createObjectHitbox(nextPosition.x, nextPosition.y, 0, this.hitbox.w, this.hitbox.h)
         const boundingMap = this.mapInstance.boundingMap(nextPosition, this.hitbox)
+        let collided = false
 
         if (boundingMap?.bounding) {
             this.position.set(nextPosition)
-            return true
+            if (!options.allSearch) return true
+            else collided = true
         }
 
         const tileCollision = (x: number, y: number): boolean => {
@@ -593,7 +593,8 @@ export class AbstractObject {
             tileCollision(nextPosition.x, nextPosition.y + this.hitbox.h) ||
             tileCollision(nextPosition.x + this.hitbox.w, nextPosition.y + this.hitbox.h)
         ) {
-            return true
+            if (!options.allSearch) return true
+            else collided = true
         }
 
         if (this.autoChangeMap) {
@@ -605,14 +606,22 @@ export class AbstractObject {
 
         const playerSizeBox = this.getSizeMaxShape(nextPosition.x, nextPosition.y)
 
-        if (await this.collisionObjects(playerSizeBox, hitbox)) return true
-        if (await this.collisionShapes(playerSizeBox, nextPosition)) return true
+        if (await this.collisionObjects(playerSizeBox, hitbox, options)) {
+           if (!options.allSearch) return true
+           else collided = true
+        }
+
+        if (await this.collisionShapes(playerSizeBox, nextPosition, options)) {
+            if (!options.allSearch) return true
+            else collided = true
+        }
 
         // if there is a change of map after a move, the moves are not changed
         if (prevMapId != this.map) {
             return true
         }
-        return false
+
+        return collided
     }
 
     /**

@@ -1,4 +1,4 @@
-import { RpgPlayer, RpgMap, RpgPlayerHooks, Direction, Move, RpgShape, ShapePositioning, Control, RpgEvent, EventData, RpgWorld } from '@rpgjs/server'
+import { RpgPlayer, RpgMap, RpgPlayerHooks, Direction, Move, RpgShape, ShapePositioning, Control, RpgEvent, EventData, RpgWorld, AbstractObject } from '@rpgjs/server'
 import { Armor } from '@rpgjs/database'
 
 let i=0
@@ -28,7 +28,7 @@ export const player: RpgPlayerHooks = {
     },
     onConnected(player: RpgPlayer) {
         player.setHitbox(16, 16)
-        player.setGraphic('light')
+        player.setGraphic('jedi')
         player.changeMap('samplemap')
         // player.setMoveMode({
         //     collision: true,
@@ -46,17 +46,18 @@ export const player: RpgPlayerHooks = {
         //player.position.z = 2 * 32
     },
     onInput(player: RpgPlayer, { input, moving }) {
-        if (input == Control.Back) {
+        if (input == 'attack') {
+            player.showAnimation('jedi', 'attack', true)
             const map = player.getCurrentMap()
             map?.createMovingHitbox([
-                { x: player.position.x, y: player.position.y, width: 10, height: 10 },
-                { x: player.position.x, y: player.position.y, width: 10, height: 10 }
+                { x: player.position.x + 50, y: player.position.y, width: 10, height: 10 }
             ]).subscribe({
-                // complete(hitbox) {
-                //     console.log(hitbox.shapesCollision.length) 
-                // }
+                next(hitbox: AbstractObject): void {
+                    console.log(hitbox.otherPlayersCollision)
+
+                }
             })
-        }    
+        }
     },      
     async onInShape(player: RpgPlayer, shape: RpgShape) {
         console.log('in', player.name, shape.name)
@@ -64,5 +65,5 @@ export const player: RpgPlayerHooks = {
     },
     onOutShape(player: RpgPlayer, shape: RpgShape) {
         console.log('out', player.name, shape.name)
-    }  
+    }
 } 
