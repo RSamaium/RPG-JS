@@ -54,7 +54,7 @@ export class Animation extends PIXI.Sprite {
         this.createAnimations()
     }
 
-    private createTextures(options: TextureOptionsMerging): PIXI.Texture[][] {
+    private createTextures(options: Required<TextureOptionsMerging>): PIXI.Texture[][] {
         const { width, height, framesHeight, framesWidth, image, offset } = options
         const { baseTexture } = PIXI.Texture.from(image)
         const spriteWidth = options.spriteWidth
@@ -83,19 +83,23 @@ export class Animation extends PIXI.Sprite {
 
      private createAnimations() {
         const { textures } = this.spritesheet
+        if (!textures) {
+            return
+        }
         for (let animationName in textures) {
-            const parentObj = ['width', 'height', 'framesHeight', 'framesWidth', 'rectWidth', 'rectHeight', 'offset', 'image', 'sound']
+            const props: (keyof TextureOptionsMerging)[] = ['width', 'height', 'framesHeight', 'framesWidth', 'rectWidth', 'rectHeight', 'offset', 'image', 'sound']
+            const parentObj = props
                 .reduce((prev, val) => ({ ...prev, [val]: this.spritesheet[val] }), {})
             const optionsTextures: TextureOptionsMerging = {
                 ...parentObj,
                 ...textures[animationName]
             } as any
-            const { rectWidth, width, framesWidth, rectHeight, height, framesHeight } = optionsTextures
+            const { rectWidth, width = 0, framesWidth = 1, rectHeight, height = 0, framesHeight = 1 } = optionsTextures
             optionsTextures.spriteWidth = rectWidth ? rectWidth : width / framesWidth
             optionsTextures.spriteHeight = rectHeight ? rectHeight : height / framesHeight
             this.animations.set(animationName, {
                 container: new PIXI.Sprite(),
-                frames: this.createTextures(optionsTextures),
+                frames: this.createTextures(optionsTextures as Required<TextureOptionsMerging>),
                 name: animationName,
                 animations: textures[animationName].animations,
                 params: [],
@@ -198,7 +202,7 @@ export class Animation extends PIXI.Sprite {
             const applyTransform = <T extends keyof TransformOptionsAsArray>(prop: T): void => {
                 const val = getVal<T>(prop)
                 if (val) {
-                    sprite[prop as string].set(...val)
+                    sprite[prop as string].set(...val!)
                 }
             }
 

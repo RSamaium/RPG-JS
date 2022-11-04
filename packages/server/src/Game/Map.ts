@@ -114,8 +114,8 @@ export class RpgMap extends RpgCommonMap {
 
     get game(): RpgCommonGame {
         return this._server.gameEngine
-    } 
-    
+    }
+
     private removeObject(object: RpgPlayer | RpgEvent) {
         this.getShapes().forEach(shape => shape.out(object))
         const events: RpgPlayer[] = Object.values(this.game.world.getObjectsOfGroup(this.id, object))
@@ -325,13 +325,43 @@ export class RpgMap extends RpgCommonMap {
         return events
     }
 
+    /**
+     * Allows to create a temporary hitbox on the map that can have a movement
+For example, you can use it to explode a bomb and find all the affected players, or during a sword strike, you can create a moving hitbox and find the affected players again
+     * @title Create a temporary and moving hitbox
+     * @since 3.2.0
+     * @method map.createMovingHitbox(hitboxes,options)
+     * @param {Array<{ width: number, height: number, x: number, y: number }>} hitboxes Create several hitboxes that will give an effect of movement
+     * @param {object} [options]
+     * @param {speed} [options.speed=1] speed of movement (in frames)
+     * @returns {Observable<AbstractObject>} You find the methods of position and movement of an event
+     * @memberof Map
+     * @example
+     * 
+     * ```ts
+     * // Two hitboxes that will be done very quickly
+     * map.createMovingHitbox(
+     *   [ 
+     *      { x: 0, y: 0, width: 100, height: 100 },
+     *      { x: 20, y: 0, width: 100, height: 100 } 
+     *   ]
+     * ).subscribe({
+     *      next(hitbox) {
+     *          console.log(hitbox.otherPlayersCollision)
+     *      },
+     *      complete() {
+     *          console.log('finish')
+     *      }
+     * })
+     * ```
+     */
     createMovingHitbox(
         hitboxes: Pick<HitBox, 'width' | 'height' | 'x' | 'y'>[],
         options: MovingHitbox = {}): Observable<AbstractObject> {
         return this._createMovingHitbox<RpgCommonGame>(
-            this.game, 
-            this._server.tick as any, 
-            this.id, 
+            this.game,
+            this._server.tick as any,
+            this.id,
             hitboxes,
             options) as any
     }

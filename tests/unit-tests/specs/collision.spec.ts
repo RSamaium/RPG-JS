@@ -1,4 +1,4 @@
-import { EventData, Move, RpgEvent, RpgMap, RpgPlayer } from '@rpgjs/server'
+import { EventData, Move, RpgEvent, RpgMap, RpgPlayer, RpgShape, RpgWorld } from '@rpgjs/server'
 import { Hit } from '@rpgjs/common'
 import {_beforeEach} from './beforeEach'
 import { clear, nextTick } from '@rpgjs/testing'
@@ -24,60 +24,88 @@ beforeEach(async () => {
     player = ret.player
     fixture = ret.fixture
     playerId = ret.playerId
-
     map = player.getCurrentMap() as RpgMap
-    event = Object.values(map.createDynamicEvent({
-        x: 0,
-        y: 0,
-        event: MyEvent
-    }))[0]
 })
 
-test('Get Events collision (otherPlayersCollision property)', async () => {
-    await player.moveRoutes([ Move.right() ])
-    expect(player.otherPlayersCollision).toHaveLength(1)
-    expect(player.otherPlayersCollision[0]).toBeInstanceOf(MyEvent)
-})
-
-test('Get Tile collision (tilesCollision property)', async () => {
-    player.teleport({ x: 4 * TILE_SIZE, y: 4 * TILE_SIZE })
-    await player.moveRoutes([ Move.right() ])
-    expect(player.tilesCollision).toHaveLength(1)
-    expect(player.tilesCollision[0].tileIndex).toBe(44)
-    expect(player.tilesCollision[0].tiles).toHaveLength(1)
-})
-
-test('Tile collision (position not changed)', async () => {
-    player.teleport({ x: 4 * TILE_SIZE, y: 4 * TILE_SIZE })
-    expect(player.position.x).toBe(4 * TILE_SIZE)
-    await player.moveRoutes([ Move.right() ])
-    expect(player.position.x).toBe(4 * TILE_SIZE)
-})
-
-test('Test Collision with event (position not changed)', async () => {
-    await player.moveRoutes([ Move.right() ])
-    expect(player.position.x).toBe(0)
-})
-
-test('Test Collision with event (position changed because through property)', async () => {
-    event.through = true
-    await player.moveRoutes([ Move.right() ])
-    expect(player.position.x).not.toBe(0)
-})
-
-test('Test Collision with shape (position not changed)', async () => {
-    map.createShape({
-        x: 0,
-        y: 0,
-        width: 100,
-        height: 100,
-        properties: {
-            collision: true
-        },
-        name: 'test'
+describe('Collision with Event', () => {
+    beforeEach(() => {
+        event = Object.values(map.createDynamicEvent({
+            x: 0,
+            y: 0,
+            event: MyEvent
+        }))[0]
     })
-    await player.moveRoutes([ Move.right() ])
-    expect(player.position.x).toBe(0)
+
+    test('Get Events collision (otherPlayersCollision property)', async () => {
+        await player.moveRoutes([ Move.right() ])
+        expect(player.otherPlayersCollision).toHaveLength(1)
+        expect(player.otherPlayersCollision[0]).toBeInstanceOf(MyEvent)
+    })
+    
+    test('Get Tile collision (tilesCollision property)', async () => {
+        player.teleport({ x: 4 * TILE_SIZE, y: 4 * TILE_SIZE })
+        await player.moveRoutes([ Move.right() ])
+        expect(player.tilesCollision).toHaveLength(1)
+        expect(player.tilesCollision[0].tileIndex).toBe(44)
+        expect(player.tilesCollision[0].tiles).toHaveLength(1)
+    })
+    
+    test('Tile collision (position not changed)', async () => {
+        player.teleport({ x: 4 * TILE_SIZE, y: 4 * TILE_SIZE })
+        expect(player.position.x).toBe(4 * TILE_SIZE)
+        await player.moveRoutes([ Move.right() ])
+        expect(player.position.x).toBe(4 * TILE_SIZE)
+    })
+    
+    test('Test Collision with event (position not changed)', async () => {
+        await player.moveRoutes([ Move.right() ])
+        expect(player.position.x).toBe(0)
+    })
+    
+    test('Test Collision with event (position changed because through property)', async () => {
+        event.through = true
+        await player.moveRoutes([ Move.right() ])
+        expect(player.position.x).not.toBe(0)
+    })
+})
+
+describe('Collision with Shape', () => {
+    let spy
+
+    beforeEach(() => {
+        spy = jest.spyOn(map.gridShapes, 'insertInCells')
+        map.createShape({
+            x: 0,
+            y: 0,
+            width: 100,
+            height: 100,
+            properties: {
+                collision: true
+            },
+            name: 'test'
+        })
+    })
+
+    test('Shape is inserted in virtual grid', async () => {
+        expect(spy).toHaveBeenCalled() 
+        expect(spy).toHaveBeenCalledWith('test', { 
+            minX: 0 - map.tilewidth,
+            maxX: 100 + map.tilewidth,
+            minY: 0 - map.tilewidth,
+            maxY: 100 + map.tilewidth
+        })
+    })
+    
+    test('Test Collision with shape (position not changed)', async () => {
+        await player.moveRoutes([ Move.right() ])
+        expect(player.position.x).toBe(0)
+    })
+    
+    test('Test Collision with shape (shapesCollision.length > 0) ', async () => {
+        await player.moveRoutes([ Move.right() ])
+        expect(player.shapesCollision).toHaveLength(1)
+        expect(player.shapesCollision[0]).toBeInstanceOf(RpgShape)
+    })
 })
 
 describe('Hit tests', () => {

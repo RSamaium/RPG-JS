@@ -166,7 +166,7 @@ export interface TextureOptions {
      * @prop {number} framesWidth
      * @memberof Spritesheet
      * */
-    framesWidth: number,
+    framesWidth?: number,
 
     /** 
      * The number of frames on the height
@@ -174,7 +174,7 @@ export interface TextureOptions {
      * @prop {number} framesHeight
      * @memberof Spritesheet
      * */
-    framesHeight: number,
+    framesHeight?: number,
 
      /** 
      * The width of the image (in pixels)
@@ -182,7 +182,7 @@ export interface TextureOptions {
      * @prop {number} width
      * @memberof Spritesheet
      * */
-    width: number,
+    width?: number,
 
     /** 
      * The height of the image (in pixels)
@@ -190,7 +190,7 @@ export interface TextureOptions {
      * @prop {number} height
      * @memberof Spritesheet
      * */
-    height: number
+    height?: number
 
      /** 
      * Takes a width of a rectangle in the image. Equivalent to `width / framesWidth`
@@ -374,7 +374,7 @@ export interface SpritesheetOptions extends TransformOptions, TextureOptions {
      * @prop { { [animName: string]: { animations: Array<Array<FrameOptions>> | Function, ...other } } } [textures]
      * @memberof Spritesheet
      * */
-    textures: {
+    textures?: {
         [animationName: string]: Partial<TexturesOptions> & Pick<TexturesOptions, 'animations'>
     }
 }

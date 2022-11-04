@@ -607,8 +607,8 @@ export class AbstractObject {
         const playerSizeBox = this.getSizeMaxShape(nextPosition.x, nextPosition.y)
 
         if (await this.collisionObjects(playerSizeBox, hitbox, options)) {
-           if (!options.allSearch) return true
-           else collided = true
+            if (!options.allSearch) return true
+            else collided = true
         }
 
         if (await this.collisionShapes(playerSizeBox, nextPosition, options)) {
@@ -676,8 +676,6 @@ export class AbstractObject {
     getShapes(): RpgShape[] {
         return this.shapes
     }
-
-
 
     private autoChangeDirection(nextPosition: Vector2d) {
         const { x, y } = this.position

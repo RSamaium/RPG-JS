@@ -163,7 +163,7 @@ export class RpgServerEngine {
                 return Query._getObjectsOfMap(groupId, player)
             },
             getShapesOfGroup(map: string) {
-                return Query._getShapesOfGroup(map)
+                return Query._getShapesOfMap(map)
             }
         })
         this.io.on('connection', this.onPlayerConnected.bind(this))

@@ -2,7 +2,6 @@ import { RpgCommonGame, RpgCommonPlayer, GameSide, RpgShape } from "@rpgjs/commo
 import { BehaviorSubject, combineLatest, Observable } from "rxjs";
 import { RpgRenderer } from "./Renderer";
 import { RpgClientEngine } from "./RpgClientEngine";
-import merge from 'lodash.merge'
 import { map } from "rxjs/operators";
 
 export type ObjectFixture = {
@@ -144,14 +143,14 @@ export class GameEngineClient extends RpgCommonGame {
         return false
     }
 
-    removeObject(id: any): boolean {
+    removeObject(id: string): boolean {
         if (this.events[id]) {
             delete this.events[id]
         }
         return this._remove('_objects', id)
     }
 
-    removeShape(id: any): boolean {
+    removeShape(id: string): boolean {
         return this._remove('_shapes', id)
     }
 

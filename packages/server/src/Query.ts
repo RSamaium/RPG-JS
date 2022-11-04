@@ -1,11 +1,11 @@
 import { World } from 'simple-room'
 import { RpgShape, Utils } from '@rpgjs/common'
 import { RpgPlayer } from './Player/Player'
+import { Observable } from 'rxjs'
 
 const { isString } = Utils
 
 class QueryClass {
-
     /** 
      * Listen to the changes on all the rooms
      * 
@@ -27,8 +27,8 @@ class QueryClass {
      * @prop {Observable} RpgWorld.changes
      * @memberof RpgWorld
      * */
-    get changes(): any {
-        return World.changes.asObservable()
+    get changes(): Observable<any> {
+        return World.changes.asObservable() as any
     }
 
     /**
@@ -47,7 +47,7 @@ class QueryClass {
      * @memberof RpgWorld
      */
     getPlayer(player: RpgPlayer | string): RpgPlayer {
-        const id: any = isString(player) ? player : ''+(player as RpgPlayer).id
+        const id: any = isString(player) ? player : '' + (player as RpgPlayer).id
         const _player: any = World.getUser(id)
         return _player as RpgPlayer
     }
@@ -67,7 +67,7 @@ class QueryClass {
      * @memberof RpgWorld
      */
     getPlayers(): RpgPlayer[] {
-        const users: any = World.getUsers() 
+        const users: any = World.getUsers()
         const array = Object.values(users) as RpgPlayer[]
         return array.map((user: RpgPlayer) => this.getPlayer(user))
     }
@@ -114,11 +114,27 @@ class QueryClass {
         }
     }
 
-    getShapesOfGroup(map: string): RpgShape[] {
-        return Object.values(this._getShapesOfGroup(map))
+    /**
+     * Find all the shapes of the map
+     * 
+     * ```ts
+     * import { RpgWorld } from '@rpgjs/server'
+     * 
+     * const shapes = RpgWorld.getShapesOfMap('mapname')
+     * console.log(shapes)
+     * ```
+     * 
+     * @title Get all shapes of map
+     * @method RpgWorld.getShapesOfMap(map)
+     * @param {string} map Map Name
+     * @returns {Array<RpgShape>}
+     * @memberof RpgWorld
+     */
+    getShapesOfMap(map: string): RpgShape[] {
+        return Object.values(this._getShapesOfMap(map))
     }
 
-    _getShapesOfGroup(map: string): { [id: string]: RpgShape } {
+    _getShapesOfMap(map: string): { [id: string]: RpgShape } {
         const room: any = World.getRoom(map)
         return room.shapes
     }
