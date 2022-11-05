@@ -125,7 +125,7 @@ export class Animation extends PIXI.Sprite {
 
     stop() {
         this.currentAnimation = null
-        this.parent.removeChild(this)
+        this.parent?.removeChild(this)
     }
 
     play(name: string, params: any[] = []) {
@@ -170,7 +170,6 @@ export class Animation extends PIXI.Sprite {
         this.update(1)
     }
 
-     /** @internal */
     update(deltaRatio: number) {
         if (!this.isPlaying() || !this.currentAnimation) return  
 

@@ -1,5 +1,5 @@
 import { Direction, HookClient, RpgCommonPlayer, RpgPlugin, RpgShape, Utils } from "@rpgjs/common"
-import { PlayerType } from "@rpgjs/types"
+import { PlayerType, PositionXY } from "@rpgjs/types"
 import { map, filter, tap } from "rxjs/operators"
 import { log } from "../Logger"
 import { Scene } from "../Scene/Scene"
@@ -9,7 +9,7 @@ import { ImageComponent } from "./ImageComponent"
 import { TextComponent } from "./TextComponent"
 import { TileComponent } from "./TileComponent"
 
-type PIXIComponent = PIXI.Container | PIXI.Graphics | PIXI.Text
+type PIXIComponent = PIXI.Container | PIXI.Graphics | PIXI.Text
 
 export interface IComponent {
     id: string,
@@ -77,17 +77,17 @@ export class RpgComponent<T = any> extends PIXI.Container {
      * @readonly
      * @memberof RpgSprite
      * */
-     get dir(): Direction {
+    get dir(): Direction {
         return this.direction
     }
 
-     /** 
-     * To know if the sprite is a player
-     * 
-     * @prop {boolean} isPlayer
-     * @readonly
-     * @memberof RpgSprite
-     * */
+    /** 
+    * To know if the sprite is a player
+    * 
+    * @prop {boolean} isPlayer
+    * @readonly
+    * @memberof RpgSprite
+    * */
     get isPlayer(): boolean {
         return this.data.type == PlayerType.Player
     }
@@ -111,7 +111,7 @@ export class RpgComponent<T = any> extends PIXI.Container {
      * @readonly
      * @memberof RpgSprite
      * */
-     get isShape(): boolean {
+    get isShape(): boolean {
         return Utils.isInstanceOf(this.data, RpgShape)
     }
 
@@ -137,7 +137,7 @@ export class RpgComponent<T = any> extends PIXI.Container {
     get logic(): RpgCommonPlayer | RpgShape | null {
         return this.scene.game.world.getAll(this.data.id)
     }
-    
+
     get guiDisplay(): boolean {
         return (this.logic as RpgCommonPlayer).guiDisplay
     }
@@ -156,9 +156,9 @@ export class RpgComponent<T = any> extends PIXI.Container {
         }
         else {
             const { position, direction } = this.data as RpgCommonPlayer
-            this._x =  Math.floor(position?.x ?? 0)
-            this._y =  Math.floor(position?.y ?? 0)
-            this.z =  Math.floor(position?.z ?? 0)
+            this._x = Math.floor(position?.x ?? 0)
+            this._y = Math.floor(position?.y ?? 0)
+            this.z = Math.floor(position?.z ?? 0)
             this.direction = direction
         }
         this._rotation = this.data['rotation'] ?? 0
@@ -200,11 +200,11 @@ export class RpgComponent<T = any> extends PIXI.Container {
     }
 
     update(obj: any, objChanged: any, time: number, deltaRatio: number): { moving: boolean } {
-        if (this.dragMode?.dragging) return { moving :true }
+        if (this.dragMode?.dragging) return { moving: true }
 
         const { speed, teleported, map, fixed, rotation } = obj
         this.data = obj
-        this.setPosition() 
+        this.setPosition()
         const renderSpeed = speed * deltaRatio
         if (this._rotation != this.angle) {
             this.angle += Math.min(renderSpeed, this._rotation - this.angle)
@@ -221,25 +221,25 @@ export class RpgComponent<T = any> extends PIXI.Container {
             }
 
             this.parent.parent.zIndex = this._y
-     
+
             obj.posX = this._x
             obj.posY = this._y
-    
+
             if (this._x > this.x) {
                 this.x += Math.min(renderSpeed, this._x - this.x)
                 moving = true
             }
-    
+
             if (this._x < this.x) {
                 this.x -= Math.min(renderSpeed, this.x - this._x)
                 moving = true
             }
-    
+
             if (this._y > this.y) {
                 this.y += Math.min(renderSpeed, this._y - this.y)
                 moving = true
             }
-    
+
             if (this._y < this.y) {
                 this.y -= Math.min(renderSpeed, this.y - this._y)
                 moving = true
@@ -258,28 +258,32 @@ export class RpgComponent<T = any> extends PIXI.Container {
         return this.callMethodInComponents('showAnimation', [graphic, animationName])
     }
 
-     /**
-     * Recover the position according to the graphic
-     * Normally, the position is that of the hitbox but, we retrieve the top left corner of the graphic
-     * 
-     * You can also pass the `middle` value as first parameter to retrieve the positions from the middle of the sprite
-     * 
-     * @title Get Positions of Graphic
-     * @method sprite.getPositionsOfGraphic(align)
-     * @param {string} [align] middle
-     * @returns { x: number, y: number }
-     * @memberof RpgSprite
-     */
-    getPositionsOfGraphic(align: string) {
-        const sprite = this.container.getChildAt(0) as RpgSprite
+    /**
+    * Recover the position according to the graphic
+    * Normally, the position is that of the hitbox but, we retrieve the top left corner of the graphic
+    * 
+    * You can also pass the `middle` value as first parameter to retrieve the positions from the middle of the sprite
+    * 
+    * @title Get Positions of Graphic
+    * @method sprite.getPositionsOfGraphic(align)
+    * @param {string} [align] middle
+    * @returns { x: number, y: number }
+    * @memberof RpgSprite
+    */
+    getPositionsOfGraphic(align: string): PositionXY {
+        let sprite: RpgSprite | undefined
+        // if no component (no graphic for example)
+        if (this.components.length !== 0) {
+            sprite = this.container.getChildAt(0) as RpgSprite
+        }
         const isMiddle = align == 'middle'
         return {
-            x: this.x - this.w * sprite.anchor.x + (isMiddle ? this.w / 2 : 0),
-            y: this.y - this.h * sprite.anchor.y + (isMiddle ? this.h / 2 : 0)
+            x: this.x - this.w * (sprite?.anchor.x ?? 1) + (isMiddle ? this.w / 2 : 0),
+            y: this.y - this.h * (sprite?.anchor.y ?? 1) + (isMiddle ? this.h / 2 : 0)
         }
     }
 
-    private callMethodInComponents(name: string, params: any[]) {
+    private callMethodInComponents(name: string, params: unknown[]) {
         for (let component of this.container.children) {
             if (component[name]) component[name](...params)
         }
@@ -303,8 +307,8 @@ export class RpgComponent<T = any> extends PIXI.Container {
     }
 
     // Hooks
-    onInit() {}
-    onUpdate(obj) {}
-    onMove() {}
+    onInit() { }
+    onUpdate(obj) { }
+    onMove() { }
     onChanges(data, old) { }
 }

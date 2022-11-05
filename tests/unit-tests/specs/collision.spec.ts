@@ -1,4 +1,4 @@
-import { EventData, Move, RpgEvent, RpgMap, RpgPlayer, RpgShape, RpgWorld } from '@rpgjs/server'
+import { EventData, Move, RpgEvent, RpgMap, RpgPlayer, RpgShape, RpgServerEngine } from '@rpgjs/server'
 import { Hit } from '@rpgjs/common'
 import {_beforeEach} from './beforeEach'
 import { clear, nextTick } from '@rpgjs/testing'
@@ -6,6 +6,7 @@ import { box, circle, polygon } from './fixtures/shape'
 
 let client, player: RpgPlayer, fixture, playerId
 let event, map: RpgMap
+let server: RpgServerEngine
 
 const TILE_SIZE = 32
 
@@ -24,6 +25,7 @@ beforeEach(async () => {
     player = ret.player
     fixture = ret.fixture
     playerId = ret.playerId
+    server = ret.server
     map = player.getCurrentMap() as RpgMap
 })
 
@@ -151,6 +153,71 @@ describe('Hit tests', () => {
         const hit2 = Hit.getHitbox(polygon)
         const ret = Hit.testPolyCollision('polygon', hit2.hitbox, hit1.hitbox)
         expect(ret).toBeTruthy()
+    })
+})
+
+describe('Test Moving Hitbox: createMovingHitbox()', () => {
+    test('Create', (done) => {
+        map.createMovingHitbox([
+            { x: 0, y: 0, width: 100, height: 100 } 
+        ]).subscribe((hitbox) => {
+            expect(hitbox).toHaveProperty('id')
+            expect(hitbox).toHaveProperty('map', 'map')
+            const { pos, w, h } = hitbox.hitbox
+            expect(pos.x).toBe(0)
+            expect(pos.y).toBe(0)
+            expect(w).toBe(100)
+            expect(h).toBe(100)
+            done()
+        })
+    })
+
+    test('Collision with player', (done) => {
+        map.createMovingHitbox([
+            { x: 0, y: 0, width: 100, height: 100 } 
+        ]).subscribe((hitbox) => {
+            expect(hitbox.otherPlayersCollision).toHaveLength(1)
+            expect(hitbox.otherPlayersCollision[0]).toBeInstanceOf(RpgPlayer)
+            done()
+        })
+    })
+
+    test('multi hitboxes', (done) => {
+        let i=0
+        map.createMovingHitbox([
+            { x: 0, y: 0, width: 100, height: 100 },
+            { x: 20, y: 20, width: 100, height: 100 } 
+        ]).subscribe({
+            next() {
+                i++
+                server.nextTick(i)
+            },
+            complete() {
+                expect(i).toBe(2)
+                done()
+            }
+        })
+    })
+
+    test('multi hitboxes, speed = 3 frames', (done) => {
+        let i=0
+        map.createMovingHitbox([
+            { x: 0, y: 0, width: 100, height: 100 },
+            { x: 20, y: 20, width: 100, height: 100 } 
+        ], {
+            speed: 3
+        }).subscribe({
+            next() {
+                i++
+            },
+            complete() {
+                expect(i).toBe(2)
+                done()
+            }
+        })
+        for (let i=0 ; i <= 9 ; i++) {
+            server.nextTick(i)
+        }
     })
 })
 

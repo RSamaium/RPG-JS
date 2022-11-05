@@ -6,11 +6,11 @@ import { World } from 'simple-room-client'
 import { BehaviorSubject, Observable, Subject, Subscription } from 'rxjs'
 import { ajax } from 'rxjs/ajax'
 import { RpgGui } from './RpgGui'
-import { 
-    RpgCommonPlayer, 
-    PrebuiltGui, 
-    Utils, 
-    RpgPlugin, 
+import {
+    RpgCommonPlayer,
+    PrebuiltGui,
+    Utils,
+    RpgPlugin,
     HookClient,
     RpgCommonMap,
     Scheduler,
@@ -23,7 +23,7 @@ import { Scene } from './Scene/Scene'
 import { Spritesheet } from './Sprite/Spritesheet'
 import { log } from './Logger'
 import { Sound } from './Sound/Sound'
-import { MoveClientMode, PlayerType, SocketEvents, SocketMethods, Tick } from '@rpgjs/types'
+import { constructor, MoveClientMode, PlayerType, SocketEvents, SocketMethods, Tick } from '@rpgjs/types'
 
 declare var __RPGJS_PRODUCTION__: boolean;
 
@@ -32,9 +32,9 @@ type FrameData = {
     data: any
 }
 
-type MatchMakerResponse = { 
-    url: string, 
-    port: string 
+type MatchMakerResponse = {
+    url: string,
+    port: string
 }
 
 export class RpgClientEngine {
@@ -57,13 +57,13 @@ export class RpgClientEngine {
      * */
     public socket: any
 
-     /** 
-     * retrieve the global configurations assigned at the entry point
-     * 
-     * @prop {object} [globalConfig]
-     * @readonly
-     * @memberof RpgClientEngine
-     * */
+    /** 
+    * retrieve the global configurations assigned at the entry point
+    * 
+    * @prop {object} [globalConfig]
+    * @readonly
+    * @memberof RpgClientEngine
+    * */
     public globalConfig: any = {}
 
     /** 
@@ -76,7 +76,7 @@ export class RpgClientEngine {
     public controls: KeyboardControls
 
     public _options: any
-    
+
     private _tick: BehaviorSubject<Tick> = new BehaviorSubject({
         timestamp: -1,
         deltaTime: 0,
@@ -119,7 +119,7 @@ export class RpgClientEngine {
      */
     objects: Observable<{ [id: string]: ObjectFixture }> = this.gameEngine.objects
 
-    constructor(public gameEngine: GameEngineClient, private options) { 
+    constructor(public gameEngine: GameEngineClient, private options) {
         this.tick.subscribe(({ timestamp, deltaTime }) => {
             if (timestamp != -1) this.step(timestamp, deltaTime)
         })
@@ -170,7 +170,7 @@ export class RpgClientEngine {
             }
         }
 
-        this.controls = new KeyboardControls(this) 
+        this.controls = new KeyboardControls(this)
     }
 
     private addResource(resourceClass, cb) {
@@ -205,12 +205,18 @@ export class RpgClientEngine {
      *
      * @title Add Spritesheet
      * @method addSpriteSheet(spritesheetClass|spritesheetClass[])
-     * @returns {void}
+     * @param { Class|Class[] } spritesheetClass
+     * @method addSpriteSheet(url,id)
+     * @param {string} url Define the url of the resource
+     * @param {string} id Define a resource identifier
+     * @returns {Class}
      * @since 3.0.0-beta.3
      * @memberof RpgClientEngine
      */
-    addSpriteSheet(spritesheetClass, id?: string) {
-        if (Utils.isString(spritesheetClass)) {
+    addSpriteSheet(spritesheetClass: constructor<any>)
+    addSpriteSheet(url: string, id: string)
+    addSpriteSheet<T = any>(spritesheetClass: constructor<T> | string, id?: string): constructor<T> {
+        if (typeof spritesheetClass === 'string') {
             if (!id) {
                 throw log('Please, specify the resource ID (second parameter)')
             }
@@ -218,24 +224,30 @@ export class RpgClientEngine {
                 id,
                 image: this.getResourceUrl(spritesheetClass)
             })
-            class AutoSpritesheet {}
-            spritesheetClass = AutoSpritesheet
+            class AutoSpritesheet { }
+            spritesheetClass = AutoSpritesheet as any
         }
         this.addResource(spritesheetClass, _initSpritesheet)
-        return spritesheetClass
+        return spritesheetClass as any
     }
 
     /**
      * Adds Sound classes
      *
      * @title Add Sound
-     * @method addSpriteSheet(soundClass|soundClass[])
-     * @returns {void}
+     * @method addSound(soundClass|soundClass[])
+     * @param { Class|Class[] } soundClass
+     * @method addSound(url,id)
+     * @param {string} url Define the url of the resource
+     * @param {string} id Define a resource identifier
+     * @returns {Class}
      * @since 3.0.0-beta.3
      * @memberof RpgClientEngine
      */
-    addSound(soundClass, id?: string) {
-        if (Utils.isString(soundClass)) {
+    addSound(soundClass: constructor<any>)
+    addSound(url: string, id: string)
+    addSound<T = any>(soundClass: constructor<T> | string, id?: string): constructor<T> {
+        if (typeof soundClass === 'string') {
             if (!id) {
                 throw log('Please, specify the resource ID (second parameter)')
             }
@@ -243,11 +255,11 @@ export class RpgClientEngine {
                 id,
                 sound: this.getResourceUrl(soundClass)
             })
-            class AutoSound {}
-            soundClass = AutoSound
+            class AutoSound { }
+            soundClass = AutoSound as any
         }
         this.addResource(soundClass, _initSound)
-        return soundClass
+        return soundClass as any
     }
 
     getResourceUrl(source: string): string {
@@ -272,7 +284,7 @@ export class RpgClientEngine {
         await this._init()
         await this.renderer.init()
         const { maxFps } = this.options
-        
+
         if (options.renderLoop) {
             this.scheduler.start({
                 maxFps
@@ -281,7 +293,7 @@ export class RpgClientEngine {
             setInterval(() => {
                 this.processInput()
             }, Utils.fps2ms(this.serverFps))
-        }  
+        }
         const ret: boolean[] = await RpgPlugin.emit(HookClient.Start, this)
         this.matchMakerService = this.options.globalConfig.matchMakerService
         const hasFalseValue = ret.findIndex(el => el === false) != - 1
@@ -293,9 +305,9 @@ export class RpgClientEngine {
                 }
                 else {
                     // todo: change toPromise (RXJS v7+)
-                    serverUri  = await ajax.getJSON<MatchMakerResponse>(this.matchMakerService as string).toPromise()
+                    serverUri = await ajax.getJSON<MatchMakerResponse>(this.matchMakerService as string).toPromise()
                 }
-                
+
             }
             this.connection(serverUri.url ? serverUri.url + ':' + serverUri.port : undefined)
         }
@@ -312,7 +324,7 @@ export class RpgClientEngine {
      */
     nextFrame(timestamp: number): void {
         this.scheduler.nextTick(timestamp)
-    } 
+    }
 
     async sendInput(actionName: string | Control) {
         const player = this.player
@@ -329,7 +341,7 @@ export class RpgClientEngine {
         return this.gameEngine.world.getObject(this.gameEngine.playerId)
     }
 
-    private serverReconciliation(player: RpgCommonPlayer)  {
+    private serverReconciliation(player: RpgCommonPlayer) {
         this.serverFrames.forEach((serverData, frame) => {
             const { data: serverPos, time: serverTime } = serverData
             const client = this.clientFrames.get(frame)
@@ -340,10 +352,10 @@ export class RpgClientEngine {
             this.serverFrames.delete(frame)
             this.clientFrames.delete(frame)
         })
-      }
+    }
 
     private async step(t: number, dt: number) {
-        RpgPlugin.emit(HookClient.Step, [this, t, dt], true) 
+        RpgPlugin.emit(HookClient.Step, [this, t, dt], true)
     }
 
     async processInput() {
@@ -361,7 +373,7 @@ export class RpgClientEngine {
                     this.socket.emit('move', { input: inputEvent.input, frame: this.frame })
                 }
                 RpgPlugin.emit(HookClient.SendInput, [this, inputEvent], true)
-            }  
+            }
             if (player.canMove) this.serverReconciliation(player)
         }
     }
@@ -433,34 +445,34 @@ export class RpgClientEngine {
             const scene = this.renderer.getScene<SceneMap>()
             scene?.changeTile(x, y, tiles)
         })
-        
+
         this.socket.on(SocketEvents.CallMethod, ({ objectId, params, name }) => {
             const scene = this.renderer.getScene<SceneMap>()
             const sprite = scene?.getPlayer(objectId)
             if (!sprite) return
             switch (name) {
                 case SocketMethods.ShowAnimation:
-                    scene?.showAnimation({ 
+                    scene?.showAnimation({
                         attachTo: sprite,
                         graphic: params[0],
                         animationName: params[1],
                         replaceGraphic: params[2]
                     })
-                break
+                    break
                 case SocketMethods.CameraFollow:
                     const [spriteId, options] = params
                     scene?.cameraFollowSprite(spriteId, options)
-                break
+                    break
                 case SocketMethods.PlaySound:
                     RpgSound.play(params[0])
-                break
+                    break
                 case SocketMethods.ModeMove:
                     const player = this.player
                     const { checkCollision } = params[0]
                     if (player) {
                         player.checkCollision = checkCollision
-                    }              
-                break
+                    }
+                    break
             }
         })
 
@@ -470,88 +482,88 @@ export class RpgClientEngine {
             .value
             .subscribe((val: { data: any, partial: any, time: number, roomId: string }) => {
 
-            const scene = this.renderer.getScene<SceneMap>()
+                const scene = this.renderer.getScene<SceneMap>()
 
-            if (!val.data) {
-                return
-            }
-
-            const partialRoom = val.partial
-
-            if (val.roomId != lastRoomId) {
-                this.clientFrames.clear()
-                this.serverFrames.clear()
-                this.gameEngine.resetObjects()
-                lastRoomId = val.roomId
-                this.isTeleported = false
-            }
-
-            const objectsChanged = {}
-
-            const change = (prop, root = val, localEvent = false) => {
-                const list = root.data[prop]
-                const partial = root.partial[prop]
-                for (let key in partial) {
-                    const obj = list[key]
-                    const paramsChanged = partial ? partial[key] : undefined
-                    if (obj == null) {
-                        this.gameEngine.removeObjectAndShape(key)
-                    }
-                    if (!obj) continue
-                    const isShape = prop == 'shapes'
-                    if (!isShape) {
-                        obj.type = {
-                            users: PlayerType.Player,
-                            events: PlayerType.Event
-                        }[prop]
-                    }
-                    if (prop == 'users' && this.gameEngine.playerId == key) {
-                        if (obj.events) {
-                            const nbEvents = Object.values(obj.events)
-                            if (nbEvents.length == 0) {
-                                this.gameEngine.events = {}
-                            }
-                            else {
-                                change('events', {
-                                    data: obj,
-                                    partial: paramsChanged,
-                                    time: val.time,
-                                    roomId: val.roomId
-                                }, true)
-                            }
-                        }
-                        if (partialRoom?.pos && partialRoom?.frame !== undefined) {
-                            this.serverFrames.set(partialRoom.frame, {
-                                data: partialRoom.pos,
-                                time: Date.now()
-                            })
-                        }
-                    }
-                    objectsChanged[key] = this.gameEngine.updateObject({
-                        playerId: key,
-                        params: obj,
-                        localEvent,
-                        paramsChanged,
-                        isShape
-                    })
+                if (!val.data) {
+                    return
                 }
-            }
 
-            if (partialRoom.join) {
-                this.roomJoin.next(partialRoom)
-                this.roomJoin.complete()
-            }
+                const partialRoom = val.partial
 
-            change('users')
-            change('events')
-            change('shapes')
-            
-            this.gameEngine.setObjectsChanged(objectsChanged)
+                if (val.roomId != lastRoomId) {
+                    this.clientFrames.clear()
+                    this.serverFrames.clear()
+                    this.gameEngine.resetObjects()
+                    lastRoomId = val.roomId
+                    this.isTeleported = false
+                }
 
-            if (scene) {
-                scene.update(val)
-            }
-        })
+                const objectsChanged = {}
+
+                const change = (prop, root = val, localEvent = false) => {
+                    const list = root.data[prop]
+                    const partial = root.partial[prop]
+                    for (let key in partial) {
+                        const obj = list[key]
+                        const paramsChanged = partial ? partial[key] : undefined
+                        if (obj == null) {
+                            this.gameEngine.removeObjectAndShape(key)
+                        }
+                        if (!obj) continue
+                        const isShape = prop == 'shapes'
+                        if (!isShape) {
+                            obj.type = {
+                                users: PlayerType.Player,
+                                events: PlayerType.Event
+                            }[prop]
+                        }
+                        if (prop == 'users' && this.gameEngine.playerId == key) {
+                            if (obj.events) {
+                                const nbEvents = Object.values(obj.events)
+                                if (nbEvents.length == 0) {
+                                    this.gameEngine.events = {}
+                                }
+                                else {
+                                    change('events', {
+                                        data: obj,
+                                        partial: paramsChanged,
+                                        time: val.time,
+                                        roomId: val.roomId
+                                    }, true)
+                                }
+                            }
+                            if (partialRoom?.pos && partialRoom?.frame !== undefined) {
+                                this.serverFrames.set(partialRoom.frame, {
+                                    data: partialRoom.pos,
+                                    time: Date.now()
+                                })
+                            }
+                        }
+                        objectsChanged[key] = this.gameEngine.updateObject({
+                            playerId: key,
+                            params: obj,
+                            localEvent,
+                            paramsChanged,
+                            isShape
+                        })
+                    }
+                }
+
+                if (partialRoom.join) {
+                    this.roomJoin.next(partialRoom)
+                    this.roomJoin.complete()
+                }
+
+                change('users')
+                change('events')
+                change('shapes')
+
+                this.gameEngine.setObjectsChanged(objectsChanged)
+
+                if (scene) {
+                    scene.update(val)
+                }
+            })
 
         this.socket.on('disconnect', (reason: string) => {
             if (this.serverChanging) {
@@ -579,17 +591,17 @@ export class RpgClientEngine {
         return World
     }
 
-     // shortcuts
+    // shortcuts
 
-     /** 
-     * VueJS Application instance
-     * 
-     * [https://v3.vuejs.org/api/application-api.html](https://v3.vuejs.org/api/application-api.html)
-     * 
-     * @prop {Vue} [vueApp]
-     * @readonly
-     * @memberof RpgClientEngine
-     * */
+    /** 
+    * VueJS Application instance
+    * 
+    * [https://v3.vuejs.org/api/application-api.html](https://v3.vuejs.org/api/application-api.html)
+    * 
+    * @prop {Vue} [vueApp]
+    * @readonly
+    * @memberof RpgClientEngine
+    * */
     get vueApp() {
         return this.renderer.app
     }
