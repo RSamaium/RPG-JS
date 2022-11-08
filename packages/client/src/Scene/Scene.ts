@@ -1,11 +1,12 @@
 import { RpgPlugin, HookClient } from '@rpgjs/common'
-import { KeyboardControls, Controls } from '../KeyboardControls'
+import { KeyboardControls } from '../KeyboardControls'
 import RpgSprite from '../Sprite/Character'
 import { Animation } from '../Effects/Animation'
 import { BehaviorSubject, Observable } from 'rxjs'
 import { RpgGui } from '../RpgGui'
 import { GameEngineClient, ObjectFixture } from '../GameEngine'
 import { RpgComponent } from '../Components/Component'
+import { Controls } from '@rpgjs/types'
 
 export type SceneObservableData = { 
     data: {

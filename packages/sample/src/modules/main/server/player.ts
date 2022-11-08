@@ -47,7 +47,7 @@ export const player: RpgPlayerHooks = {
     },
     onInput(player: RpgPlayer, { input, moving }) {
         if (input == 'attack') {
-            player.showAnimation('shield-b', 'default')
+            player.showAnimation('jedi', 'attack', true)
             const map = player.getCurrentMap()
             map?.createMovingHitbox([
                 { x: player.position.x + 50, y: player.position.y, width: 10, height: 10 }

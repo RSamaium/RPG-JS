@@ -1,5 +1,5 @@
 import { EventData, Move, RpgEvent, RpgMap, RpgPlayer, RpgShape, RpgServerEngine } from '@rpgjs/server'
-import { Spritesheet, RpgSceneMap, RpgComponent, AnimationClass as Animation  } from '@rpgjs/client'
+import { Spritesheet, RpgSceneMap, RpgComponent, AnimationClass as Animation, Animation as AnimationEnum  } from '@rpgjs/client'
 import { _beforeEach } from './beforeEach'
 import { clear, nextTick } from '@rpgjs/testing'
 import { SocketMethods, SocketEvents } from '@rpgjs/types'
@@ -165,6 +165,47 @@ describe('scene.showAnimation()', () => {
     })
 })
 
+describe('character.showAnimation()', () => {
+    let scene: RpgSceneMap
+    let sprite
+
+    beforeEach(async () => {
+        @Spritesheet({
+            id: 'mygraphic',
+            image: require('./fixtures/spritesheets/sample.png')
+        })
+        class Images {}
+        client.addSpriteSheet(createSprite())
+        client.addSpriteSheet(Images)
+        scene = client.getScene()
+        player.setGraphic('mygraphic')
+        await nextTick(client)
+        scene.showAnimation({ 
+            graphic: 'shield',
+            animationName: 'default',
+            attachTo: scene.getPlayer(playerId),
+            replaceGraphic: true
+        })
+        sprite = scene.getPlayer(playerId)?.['container'].getChildAt(0)
+    })
+
+    test('Graphic is replaced', () => {
+        expect(sprite.animation.id).toBe('shield')
+    })
+
+    test('Animation is played', () => {
+        expect(sprite.animation.isPlaying()).toBe(true)
+    })
+
+    test('original graphic when the animation is finished', () => {
+        for (let i=0 ; i < 5 ; i++) {
+            client.nextFrame(1)
+        }
+        expect(sprite.animation.id).toBe('mygraphic')
+    })
+})
+
+
 describe('Test Animation instance', () => {
     let animation: Animation
 
@@ -306,6 +347,20 @@ describe('Test Animation instance', () => {
         expectTransform('anchor', [5], [10])
         expectTransform('skew', [5], [10])
         expectTransform('pivot', [5], [10])
+
+        test('spriteRealSize', () => {
+            client.addSpriteSheet(createSprite({
+                animation: {
+                    spriteRealSize: 32
+                }
+            }))
+            const animation = new Animation('shield')
+            animation.hitbox = { h: 16, w: 16 }
+            animation.play('default')
+            expect(getContainer(animation).anchor.x).toBe(((192 - 16) / 2) / 192)
+            const gap = (192 -  32) / 2
+            expect(getContainer(animation).anchor.y).toBe((192 - 16 - gap) / 192)
+        })
     })
 })
 

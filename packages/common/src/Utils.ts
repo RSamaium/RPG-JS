@@ -1,3 +1,5 @@
+import { constructor } from "@rpgjs/types";
+
 export function random(min: number, max: number): number {
     return Math.floor(Math.random() * (max - min + 1) + min)
 }
@@ -15,12 +17,12 @@ export function isClass(func: unknown): boolean {
         && /^class\s/.test(Function.prototype.toString.call(func));
 }
 
-export function isPromise(val) {
-    return isInstanceOf(val, Promise)
+export function isPromise(val: unknown) {
+    return isInstanceOf<Promise<unknown>>(val, Promise)
 }
 
-export function isArray(val) {
-    return isInstanceOf(val, Array)
+export function isArray(val: unknown) {
+    return isInstanceOf<Array<unknown>>(val, Array)
 }
 
 export function isObject(val: unknown): boolean {
@@ -31,7 +33,7 @@ export function isString(val: unknown): boolean {
     return typeof val == 'string'
 }
 
-export function isInstanceOf(val, _class) {
+export function isInstanceOf<T = any>(val: unknown, _class: any) {
     return val instanceof _class
 }
 
@@ -56,7 +58,7 @@ export function arrayEquals(a: any[], b: any[]): boolean {
   return a.length === b.length && a.every((v, i) => v === b[i])
 }
 
-export function applyMixins(derivedCtor: any, baseCtors: any[]) {
+export function applyMixins(derivedCtor: constructor<any>, baseCtors: constructor<any>[]) {
     baseCtors.forEach((baseCtor) => {
         Object.getOwnPropertyNames(baseCtor.prototype).forEach((name) => {
         const baseCtorName = Object.getOwnPropertyDescriptor(baseCtor.prototype, name)
@@ -76,7 +78,7 @@ export function generateUID(): string {
     return firstPart + secondPart
 }
 
-export function createConstructor<T>(...propNames): T {
+export function createConstructor<T>(...propNames: any[]): T {
     return class {
         constructor(...propValues){
             propNames.forEach((name, idx) => {

@@ -1,7 +1,7 @@
-import { generateUID, isClass } from './Utils'
+import Utils, { generateUID, isClass } from './Utils'
 import { EventEmitter } from './EventEmitter'
 import { RpgCommonPlayer } from './Player'
-import { constructor, Control, Direction } from '@rpgjs/types'
+import { constructor, Control, Controls, Direction } from '@rpgjs/types'
 import { RpgPlugin } from './Plugin'
 import { GameWorker } from './Worker'
 import { HitObject } from './Hit'
@@ -15,10 +15,9 @@ export enum GameSide {
 }
 
 export class RpgCommonGame extends EventEmitter {
-
     events: any
     world: any
-    
+
     constructor(public side: GameSide) {
         super()
         this.events = {} // events for all player in map
@@ -35,7 +34,7 @@ export class RpgCommonGame extends EventEmitter {
     createWorkers(options: any) {
         return new GameWorker(options)
     }
-    
+
     addObject(_class, playerId?: string) {
         let event
         if (!playerId) playerId = generateUID()
@@ -65,24 +64,64 @@ export class RpgCommonGame extends EventEmitter {
         return shape
     }
 
-    async processInput<RpgPlayer extends RpgCommonPlayer>(playerId: string): Promise<RpgPlayer> {
+    async processInput<RpgPlayer extends RpgCommonPlayer>(playerId: string, controls?: Controls): Promise<{
+        player: RpgPlayer,
+        inputs: string[]
+    }> {
         const player: RpgPlayer = this.world.getObject(playerId)
+        const inputs: string[] = []
 
-        if (!player) return player
-        
+        if (!player) return {
+            player,
+            inputs
+        }
+
         const routesMove: any = []
-
+        
         while (player.pendingMove.length > 0) {
             const inputData = player.pendingMove.shift()
+            
             let { input, deltaTimeInt } = inputData as any
             let moving = false
+
+            if (controls) {
+                const control = controls[input]
+                const now = Date.now()
+                const inputTime = player.inputsTimestamp[input] || 0
+
+                if (inputTime >= now) {
+                    continue
+                }
+
+                if (control.delay) {
+                    let duration: number
+                    let otherControls: (string | Control)[] = []
+
+                    if (typeof control.delay == 'number') {
+                        duration = control.delay
+                    }
+                    else {
+                        duration  = control.delay.duration
+                        if (control.delay.otherControls) {
+                            otherControls = control.delay.otherControls
+                        }
+                    }
+
+                    player.inputsTimestamp[input] = now + duration
+
+                    for (let control of otherControls) {
+                        player.inputsTimestamp[control] = now + duration
+                    }
+                }                
+            }
+            
             if (input == Control.Action) {
                 player.triggerCollisionWith(RpgCommonPlayer.ACTIONS.ACTION)
             }
             else if (
-                input == Direction.Left || 
-                input == Direction.Right || 
-                input == Direction.Up || 
+                input == Direction.Left ||
+                input == Direction.Right ||
+                input == Direction.Up ||
                 input == Direction.Down
             ) {
                 moving = true
@@ -90,14 +129,19 @@ export class RpgCommonGame extends EventEmitter {
                 if (isMove) {
                     routesMove.push(inputData)
                 }
-            } 
+            }
             // TODO, is Worker
             RpgPlugin.emit('Server.onInput', [player, {
                 ...inputData,
                 moving
             }], true)
 
+            inputs.push(input)
         }
-        return player
+
+        return {
+            player,
+            inputs
+        }
     }
 }

@@ -2,5 +2,5 @@ export { HitEllipse, HitPolygon, HitBox, HitObject, HitType, MovingHitbox } from
 export { CameraOptions, MoveClientMode, Behavior, MoveMode, PlayerType, ClientMode, Position, PositionXY, PendingMove, Direction, MoveTo,PositionXY_OptionalZ } from './Player'
 export { SocketMethods, SocketEvents } from './Socket'
 export { Tick } from './System'
-export { Control, Input } from './Input'
+export { Control, Input, Controls, ControlOptions } from './Input'
 export { constructor } from './Utils'

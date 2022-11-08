@@ -1,5 +1,8 @@
 export enum Control {
     Action = 'action',
+    Attack = 'attack',
+    Defense = 'defense',
+    Skill = 'skill',
     Back = 'back',
     Up = 1,
     Down = 3,
@@ -147,4 +150,18 @@ export enum Input {
     SingleQuote = 'single quote / ø',
     BackQuote = '`',
     Altgr = 'altgr'
+}
+
+export interface ControlOptions {
+    repeat?: boolean
+    bind: string | string[] | Input | Input[]
+    method?: Function
+    delay?: number | {
+        duration: number
+        otherControls?: (string | Control)[]
+    }
+}
+
+export interface Controls {
+    [controlName: string]: ControlOptions
 }

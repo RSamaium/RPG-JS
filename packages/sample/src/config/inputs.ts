@@ -1,6 +1,6 @@
-import { Input, Control } from '@rpgjs/client'
+import { Controls, Input, Control } from '@rpgjs/types'
 
-export const inputs = {
+export const inputs: Controls = {
     [Control.Up]: {
         repeat: true,
         bind: Input.Up
@@ -24,6 +24,10 @@ export const inputs = {
         bind: Input.Escape
     },
     attack: {
-        bind: Input.A
+        bind: Input.A,
+        delay: {
+            duration: 400,
+            otherControls: [Control.Up, Control.Down, Control.Right, Control.Left]
+        }
     }
 } 

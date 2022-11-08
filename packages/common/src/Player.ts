@@ -8,13 +8,16 @@ export const LiteralDirection = {
     4: 'left'
 }
 
-export class RpgCommonPlayer extends AbstractObject  {
+export class RpgCommonPlayer extends AbstractObject {
     events: any[] = []
     layerName: string = ''
     components: any[] = []
 
     data: any = {}
     pendingMove: PendingMove = []
+    inputsTimestamp: {
+        [inputName: string]: number
+    } = {}
 
     /** 
     * Display/Hide the GUI attached to this sprite
@@ -23,5 +26,5 @@ export class RpgCommonPlayer extends AbstractObject  {
     * @since 3.0.0-beta.5
     * @memberof RpgSprite
     * */
-     guiDisplay: boolean
+    guiDisplay: boolean
 }

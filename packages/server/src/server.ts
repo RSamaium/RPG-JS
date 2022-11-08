@@ -189,7 +189,7 @@ export class RpgServerEngine {
     private updatePlayersMove(deltaTimeInt: number) {
         const players = this.world.getUsers()
         const obj: any = []
-        let p: Promise<any>[] = []
+        let p: Promise<RpgPlayer>[] = []
         for (let playerId in players) {
             const playerInstance = players[playerId]['proxy'] as RpgPlayer
             if (!playerInstance) continue
@@ -198,12 +198,13 @@ export class RpgServerEngine {
                 const lastFrame = player.pendingMove[player.pendingMove.length - 1]
                 if (this.inputOptions.workers) obj.push(player.toObject())
                 else {
-                    p.push(this.gameEngine.processInput(player.playerId).then(() => {
+                    p.push(this.gameEngine.processInput(player.playerId, this.globalConfig.inputs).then(() => {
                         player.pendingMove = []
                         player._lastFramePositions = {
                             frame: lastFrame.frame,
                             position: { ...player.position }
                         }
+                        return player
                     }))
                 }
             }

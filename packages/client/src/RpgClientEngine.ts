@@ -363,14 +363,14 @@ export class RpgClientEngine {
         this.controls.preStep()
         if (player) {
             if (player.pendingMove.length > 0) {
-                const inputEvent = { input: player.pendingMove.map(input => input.input), playerId: this.gameEngine.playerId }
-                await this.gameEngine.processInput<RpgCommonPlayer>(this.gameEngine.playerId)
+                const { inputs: inputEvent } = await this.gameEngine.processInput<RpgCommonPlayer>(this.gameEngine.playerId, this.controls.options).then()
+                if (inputEvent.length == 0) return
                 this.clientFrames.set(this.frame, {
                     data: player.position,
                     time: Date.now()
                 })
                 if (this.socket) {
-                    this.socket.emit('move', { input: inputEvent.input, frame: this.frame })
+                    this.socket.emit('move', { input: inputEvent, frame: this.frame })
                 }
                 RpgPlugin.emit(HookClient.SendInput, [this, inputEvent], true)
             }

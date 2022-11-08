@@ -1,4 +1,4 @@
-import { Direction, Utils, RpgPlugin, HookClient, RpgCommonPlayer } from '@rpgjs/common'
+import { Utils, RpgPlugin, HookClient } from '@rpgjs/common'
 import { spritesheets } from './Spritesheets'
 import { Animation } from '../Effects/Animation'
 import { Animation as AnimationEnum } from '../Effects/AnimationCharacter'
@@ -15,7 +15,6 @@ export default class Character extends PIXI.Sprite {
     public animation: Animation
     private objSaved: object = {}
     private data: any = {}
-    private _hue: PIXI.filters.ColorMatrixFilter
     
      /** @internal */
      h: number = 1
@@ -32,7 +31,7 @@ export default class Character extends PIXI.Sprite {
     }
 
     /** @internal */
-    showAnimation(graphic: string | string[], animationName: string) {
+    showAnimation(graphic: string | string[], animationName: string): Animation {
         const refreshAnimation = (graphic: string) => {
             this.removeChild(this.animation)
             this.animation = new Animation(graphic)
@@ -63,7 +62,7 @@ export default class Character extends PIXI.Sprite {
     }
 
     /** @internal */
-    setGraphic(graphic) {
+    setGraphic(graphic: string) {
         (this.children as Animation[]).forEach((graphic: Animation, index: number) => {
             if (graphic.id == this.graphic) {
                 this.removeChildAt(index)
@@ -72,7 +71,6 @@ export default class Character extends PIXI.Sprite {
         this.graphic = graphic
         this.spritesheet = spritesheets.get(this.graphic)
         this.animation = new Animation(this.graphic)
-        this.animation.tint = 0xff0000
         this.addChild(this.animation)
         this.setAnimationAnchor()
     }
@@ -82,7 +80,7 @@ export default class Character extends PIXI.Sprite {
         this.animation.applyTransform = (frame, animation, spritesheet) => {
             const { spriteWidth, spriteHeight } = animation
             const prop: keyof TransformOptions = 'spriteRealSize'
-            const currentAnchor = frame['prop'] || animation[prop] || spritesheet[prop]
+            const currentAnchor = frame[prop] || animation[prop] || spritesheet[prop]
             if (currentAnchor) {
                 return {}
             }
