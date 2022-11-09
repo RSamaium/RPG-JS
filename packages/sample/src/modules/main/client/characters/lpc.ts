@@ -34,7 +34,7 @@ function getDirection(direction: Direction, offset: number = 0) {
                 })
             ]
         },
-        attack: {
+        [Animation.Attack]: {
             width: 1536,
             height: 2112,
             rectWidth: 192,

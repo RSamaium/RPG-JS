@@ -18,12 +18,12 @@ import {
 } from '@rpgjs/common'
 import { RpgSound } from './Sound/RpgSound'
 import { SceneMap } from './Scene/Map'
-import { GameEngineClient, ObjectFixture } from './GameEngine'
+import { GameEngineClient } from './GameEngine'
 import { Scene } from './Scene/Scene'
 import { Spritesheet } from './Sprite/Spritesheet'
 import { log } from './Logger'
 import { Sound } from './Sound/Sound'
-import { constructor, MoveClientMode, PlayerType, SocketEvents, SocketMethods, Tick } from '@rpgjs/types'
+import { constructor, MoveClientMode, ObjectFixtureList, PlayerType, SocketEvents, SocketMethods, Tick } from '@rpgjs/types'
 
 declare var __RPGJS_PRODUCTION__: boolean;
 
@@ -117,7 +117,7 @@ export class RpgClientEngine {
      * @readonly
      * @memberof RpgClientEngine
      */
-    objects: Observable<{ [id: string]: ObjectFixture }> = this.gameEngine.objects
+    objects: Observable<ObjectFixtureList> = this.gameEngine.objects
 
     constructor(public gameEngine: GameEngineClient, private options) {
         this.tick.subscribe(({ timestamp, deltaTime }) => {

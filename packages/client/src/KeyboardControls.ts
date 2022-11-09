@@ -431,6 +431,9 @@ export class KeyboardControls {
      *      * repeat {boolean} The key can be held down to repeat the action. (false by default)
      *      * bind {string | string[]} To which key is linked the control
      *      * method {Function} Function to be triggered. If you do not set this property, the name of the control is sent directly to the server.
+     *      * delay {object|number} (since v3.2.0) Indicates how long (in milliseconds) the player can press the key again to perform the action
+     *          * delay.duration
+     *          * delay.otherControls {string | string[]} Indicates the other controls that will also have the delay at the same time
      * 
      * ```ts 
      * import { Control, Input } from '@rpgjs/client'
@@ -470,6 +473,21 @@ export class KeyboardControls {
                 bind: Input.B,
                 method({ actionName }) {
                     console.log('cool', actionName)
+                }
+            },
+
+            // The player can redo the action after 400ms
+            mycustom3: {
+                bind: Input.C,
+                delay: 400 // ms
+            },
+
+            // The player can redo the action (mycustom4) and the directions after 400ms
+            mycustom4: {
+                bind: Input.C,
+                delay: {
+                    duration: 400,
+                    otherControls: [Control.Up, Control.Down, Control.Left, Control.Right]
                 }
             }
         })

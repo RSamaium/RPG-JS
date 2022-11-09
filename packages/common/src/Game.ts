@@ -84,7 +84,7 @@ export class RpgCommonGame extends EventEmitter {
             let { input, deltaTimeInt } = inputData as any
             let moving = false
 
-            if (controls) {
+            if (controls && controls[input]) {
                 const control = controls[input]
                 const now = Date.now()
                 const inputTime = player.inputsTimestamp[input] || 0

@@ -3,11 +3,7 @@ import { BehaviorSubject, combineLatest, Observable } from "rxjs";
 import { RpgRenderer } from "./Renderer";
 import { RpgClientEngine } from "./RpgClientEngine";
 import { map } from "rxjs/operators";
-
-export type ObjectFixture = {
-    object: any,
-    paramsChanged: any
-}
+import { ObjectFixture, ObjectFixtureList } from "@rpgjs/types";
 
 export class GameEngineClient extends RpgCommonGame {
     playerId: string
@@ -15,18 +11,12 @@ export class GameEngineClient extends RpgCommonGame {
     clientEngine: RpgClientEngine
     renderer: RpgRenderer
 
-    private _objects: BehaviorSubject<{
-        [playerId: string]: ObjectFixture
-    }> = new BehaviorSubject({})
+    private _objects: BehaviorSubject<ObjectFixtureList> = new BehaviorSubject({})
     private _obsObjects: {
         [id: string]: BehaviorSubject<ObjectFixture>
     } = {}
-    private _shapes: BehaviorSubject<{
-        [shapeId: string]: ObjectFixture
-    }> = new BehaviorSubject({})
-    private _objectsChanged: BehaviorSubject<{
-        [playerId: string]: ObjectFixture
-    }> = new BehaviorSubject({})
+    private _shapes: BehaviorSubject<ObjectFixtureList> = new BehaviorSubject({})
+    private _objectsChanged: BehaviorSubject<ObjectFixtureList> = new BehaviorSubject({})
 
     world = {
         getObjects: this.getObjects.bind(this),

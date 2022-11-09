@@ -40,7 +40,7 @@ async function movePlayers(data) {
   const ret = {}
   for (let object of data) {
     gameEngine.world.addObject(object.id, object)
-    const player = await gameEngine.processInput(object.id)
+    const { player } = await gameEngine.processInput(object.id)
     if (player) {
       ret[player.id] = {
         position: {

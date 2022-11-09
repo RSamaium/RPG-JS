@@ -166,6 +166,63 @@ test('Move but stop Inputs', async () => {
 })
 
 
+describe('Delay Action', () => {
+    function delayOtherControls(delay, calledTimes: number) {
+        const spy = jest.spyOn(client.player as any, 'moveByDirection')
+        client.controls.setInputs({
+            [Control.Action]: {
+                bind: Input.A,
+                ...delay
+            },
+            [Control.Right]: {
+                bind: Input.Right,
+            }
+        })
+        client.controls.applyControl(Control.Action, true)
+        client.processInput()
+        client.controls.applyControl(Control.Action, false)
+        client.controls.applyControl(Control.Right, true)
+        client.processInput()
+        expect(spy).toHaveBeenCalledTimes(calledTimes)
+    }
+
+    function delay(delay: number | undefined, calledTimes: number) {
+        const spy = jest.spyOn(client.player as any, 'triggerCollisionWith')
+        client.controls.setInputs({
+            [Control.Action]: {
+                bind: Input.A,
+                delay
+            }
+        })
+        client.controls.applyControl(Control.Action, true)
+        client.processInput()
+        client.controls.applyControl(Control.Action, false)
+        client.controls.applyControl(Control.Action, true)
+        client.processInput()
+        expect(spy).toHaveBeenCalledTimes(calledTimes)
+    }
+
+    test('Not Delay Action', async () => {
+        delay(undefined, 2)
+    })
+
+    test('Delay Action', async () => {
+        delay(2000, 1)
+    })
+
+    test('Not Delay Action, other controls', async () => {
+        delayOtherControls({}, 1)
+    })
+
+    test('Delay Action, other controls', async () => {
+        delayOtherControls({
+            delay: {
+                duration: 2000,
+                otherControls: [Control.Right]
+            }
+        }, 0)
+    })
+})
 
 afterEach(() => {
     clear()
