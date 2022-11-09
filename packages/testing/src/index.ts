@@ -20,7 +20,7 @@ interface Testing {
      * 
      * @title Create Client
      * @method createClient()
-     * @return {Promise<ClientTesting>}
+     * @returns {Promise<ClientTesting>}
      * @memberof FixtureTesting
      */
     createClient(): Promise<ClientTesting>,
@@ -33,7 +33,7 @@ interface Testing {
      * @param {RpgClientEngine} firstClient
      * @param {string} mapId
      * @param {Position | string} [position]
-     * @return {Promise<ClientTesting>}
+     * @returns {Promise<ClientTesting>}
      * @since 3.2.0
      * @memberof FixtureTesting
      */
@@ -55,7 +55,7 @@ interface Testing {
      * @param {RpgClientEngine} client
      * @param {string} mapId
      * @param {Position | string} [position]
-     * @return {Promise<void>}
+     * @returns {Promise<void>}
      * @memberof FixtureTesting
      */
     changeMap(client: RpgClientEngine, mapId: string, position?: PositionMap): Promise<void>
@@ -83,11 +83,12 @@ function changeMap(client: RpgClientEngine, server: RpgServerEngine, mapId: stri
 /**
  * Allows you to test modules
  * 
+ * @title Testing
  * @method testing(modules,optionsServer?,optionsClient?)
  * @param {ModuleType[]} modules
  * @param {object} [optionsServer]
  * @param {object} [optionsClient]
- * @return {Promise<Testing>}
+ * @returns {Promise<Testing>}
  * @memberof Testing
  */
 export async function testing(modules: ModuleType[], optionsServer: any = {}, optionsClient: any = {}): Promise<Testing> {
@@ -151,8 +152,9 @@ export async function testing(modules: ModuleType[], optionsServer: any = {}, op
  * })
  * ```
  * 
+ * @title Clear
  * @method clear()
- * @return {void}
+ * @returns {void}
  * @memberof Testing
  */
 export function clear(): void {
@@ -178,10 +180,11 @@ export function clear(): void {
  * 4. A tick is performed on the client
  * 5. A tick is performed on VueJS
  * 
+ * @title Next Tick
  * @method nextTick(client,timestamp?)
  * @param {RpgClientEngine} client
  * @param {number} [timestamp=0] A predefined timestamp
- * @return {Promise<ObjectFixtureList>}
+ * @returns {Promise<ObjectFixtureList>}
  * @memberof Testing
  */
 export function nextTick(client: RpgClientEngine, timestamp = 0): Promise<ObjectFixtureList> {
