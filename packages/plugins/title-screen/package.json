@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/title-screen",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "",
   "main": "src/index.ts",
   "types": "index.d.ts",
@@ -11,8 +11,8 @@
   "author": "Samuel Ronce",
   "license": "MIT",
   "dependencies": {
-    "@rpgjs/client": "^3.1.0",
-    "@rpgjs/server": "^3.1.0",
+    "@rpgjs/client": "^3.2.0",
+    "@rpgjs/server": "^3.2.0",
     "axios": "^0.21.1",
     "body-parser": "^1.19.0",
     "mongoose": "^6.0.3",
