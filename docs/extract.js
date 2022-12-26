@@ -3,8 +3,8 @@ const fs = require('fs')
 const compareVersions = require("compare-versions")
 
 const baseUrl = __dirname + '/../'
-const destination  = __dirname + '/../docs/api/'
-const changelog = __dirname + '/../docs/others/'
+const destination  = __dirname + '/api/'
+const changelog = __dirname + '/others/'
 
 const open = function(path) {
     return fs

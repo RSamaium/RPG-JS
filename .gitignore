@@ -4,5 +4,5 @@ lib
 lerna-debug.log
 coverage
 packages/common/types
-docs/api
-docs/others
+docs/api/*
+docs/others/*

@@ -25,7 +25,7 @@
     "axios": "^0.27.1",
     "lodash.merge": "^4.6.2",
     "pathfinding": "^0.4.18",
-    "rxjs": "^7.5.5",
+    "rxjs": "7.5.5",
     "sat": "^0.8.0",
     "simple-room": "^1.0.1"
   },
