@@ -134,6 +134,17 @@ npm run dev
 
 The game can be found in `@rpgjs/sample` package.
 
+### For documentation
+
+```sh
+cd docs 
+npm install
+npm run dev
+```
+
+> The `docs/extract.js` file allows you to get the comments in the code and transform it into mardown format
+> Use NodeJS 16
+
 ## License
 
 MIT. Free for commercial use.

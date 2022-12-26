@@ -1,0 +1,3 @@
+# RpgResource
+
+<ApiContent page="Resources" />

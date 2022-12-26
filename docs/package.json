@@ -1,0 +1,21 @@
+{
+  "name": "@rpgjs/documentation",
+  "version": "1.0.0",
+  "description": "Documentation for RPG JS v3",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vuepress dev .",
+    "build": "npm run generate && vuepress build .",
+    "generate": "node extract"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "vuepress": "^1.9.7"
+  },
+  "dependencies": {
+    "comment-parser": "^0.7.6",
+    "compare-versions": "^4.1.3"
+  }
+}
