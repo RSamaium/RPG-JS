@@ -580,7 +580,7 @@ export class MoveManager {
      * @param {boolean} [options.infinite=false] - moves infinitely towards the target, you have to stop its movement manually with the method `stopMoveTo()`
      * @param {() => void} [options.onComplete] - Callback when the event arrives at the destination
      * @param {(duration:number) => void} [options.onStuck] - callback when the event is blocked against a wall. Duration gives you the duration (in frames) of the blocking time
-     * @returns {void}
+     * @returns {Observable<void>}
      * @since 3.2.0
      * @memberof MoveManager
      * @example 
@@ -588,13 +588,13 @@ export class MoveManager {
      * ```ts
      * import { Move } from '@rpgjs/server'
      * 
-     * player.moveTo(otherPlayer)
+     * player.moveTo(otherPlayer).subscribe()
      * ```
      */
-    moveTo(event: RpgEvent, options?: MoveTo);
-    moveTo(player: RpgPlayer, options?: MoveTo);
-    moveTo(position: PositionXY, options?: MoveTo);
-    moveTo(shape: RpgShape, options?: MoveTo);
+    moveTo(event: RpgEvent, options?: MoveTo): Observable<void>
+    moveTo(player: RpgPlayer, options?: MoveTo): Observable<void>
+    moveTo(position: PositionXY, options?: MoveTo): Observable<void>
+    moveTo(shape: RpgShape, options?: MoveTo): Observable<void>
     moveTo(position: RpgPlayer | RpgShape | PositionXY, options?: MoveTo): Observable<void> {
         return this['_moveTo'](this.server.tick, position, options)
     }
