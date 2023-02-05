@@ -1,6 +1,6 @@
 import Tile from './Tile';
 import { CompositeRectTileLayer, pixi_tilemap, POINT_STRUCT_SIZE } from 'pixi-tilemap'
-import { Layer, TiledLayer, TiledTileset, Tile as TileClass } from '@rpgjs/tiled';
+import { Layer, Tile as TileClass } from '@rpgjs/tiled';
 import TileSet from './TileSet';
 import TileMap from '.';
 import { CommonLayer } from './CommonLayer';

@@ -6,6 +6,7 @@ import Tile from './Tile'
 import { log } from '../Logger'
 import { TiledMap, TiledLayerType, Layer } from '@rpgjs/tiled'
 import { RpgRenderer } from '../Renderer'
+import { Container, Graphics } from 'pixi.js'
 
 const { intersection } = Utils
 
@@ -16,11 +17,11 @@ export interface MapInfo extends TiledMap {
 }
 
 export default class TileMap extends PIXI.Container {
-    background: PIXI.Graphics = new PIXI.Graphics()
+    background: Graphics = new Graphics()
     eventsLayers: {
-        [eventLayerName: string]: PIXI.Container
+        [eventLayerName: string]: Container
     } = {}
-    defaultLayer: PIXI.Container
+    defaultLayer: Container
     private _width: number = 0
     private _height: number = 0
     tilewidth: number = 0 
@@ -30,7 +31,7 @@ export default class TileMap extends PIXI.Container {
     layers: {
         [layerName: string]: TileLayer | ImageLayer
     } = {}
-    private tilesLayer: PIXI.Container = new PIXI.Container()
+    private tilesLayer: Container = new Container()
     private frameTile: number = 0
 
     static readonly EVENTS_LAYER_DEFAULT : string = 'events-layer-default'
@@ -64,8 +65,8 @@ export default class TileMap extends PIXI.Container {
         return this.defaultLayer
     }
 
-    createEventLayer(name: string): PIXI.Container {
-        const container = this.eventsLayers[name] = new PIXI.Container()
+    createEventLayer(name: string): Container {
+        const container = this.eventsLayers[name] = new Container()
         container.sortableChildren = true
         this.tilesLayer.addChild(container)
         return container

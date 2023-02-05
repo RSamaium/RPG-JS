@@ -1,7 +1,8 @@
 import { Layer } from "@rpgjs/tiled"
 import TileMap from './index'
+import { Container } from "pixi.js"
 
-export class CommonLayer extends PIXI.Container {
+export class CommonLayer extends Container {
     z: number
 
     constructor(protected layer: Layer, protected map: TileMap) {

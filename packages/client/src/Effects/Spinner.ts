@@ -1,11 +1,12 @@
 import { RpgClientEngine } from "../RpgClientEngine";
+import { Graphics, Renderer } from "pixi.js";
 
-export class SpinnerGraphic extends PIXI.Graphics {
+export class SpinnerGraphic extends Graphics {
     constructor(private clientEngine: RpgClientEngine) {
         super()
     }
 
-    render(renderer: PIXI.Renderer) {
+    render(renderer: Renderer) {
         super.render(renderer)
         this.rotation += 0.12;
         const percent = Math.abs(Math.sin(Date.now() / 1000))

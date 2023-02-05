@@ -23,7 +23,7 @@ import { Scene } from './Scene/Scene'
 import { Spritesheet } from './Sprite/Spritesheet'
 import { log } from './Logger'
 import { Sound } from './Sound/Sound'
-import { constructor, MoveClientMode, ObjectFixtureList, PlayerType, SocketEvents, SocketMethods, Tick } from '@rpgjs/types'
+import { constructor, ObjectFixtureList, PlayerType, SocketEvents, SocketMethods, Tick } from '@rpgjs/types'
 
 declare var __RPGJS_PRODUCTION__: boolean;
 
@@ -101,7 +101,7 @@ export class RpgClientEngine {
     private lastConnection: string = ''
     private lastScene: string = ''
     private matchMakerService: string | (() => MatchMakerResponse) | null = null
-    private assetsPath: string = 'assets'
+    private assetsPath: string = ''
     private serverFps: number = 60
     private scheduler: Scheduler = new Scheduler()
 

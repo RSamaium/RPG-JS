@@ -4,6 +4,7 @@ import { SpritesheetOptions, TextureOptions, AnimationFrames, FrameOptions, Tran
 import { log } from '../Logger'
 import { RpgSound } from '../Sound/RpgSound'
 import { RpgComponent } from '../Components/Component'
+import { Sprite, Container, Texture, Rectangle } from 'pixi.js'
 
 const { isFunction, arrayEquals } = Utils
 
@@ -20,16 +21,16 @@ type SpritesheetOptionsMerging = TextureOptionsMerging & SpritesheetOptions
 type TransformOptionsAsArray = Pick<TransformOptions, 'anchor' | 'scale' | 'skew' | 'pivot'>
 
 type AnimationDataFrames = {
-    container: PIXI.Container,
+    container: Container,
     sprites: FrameOptionsMerging[],
-    frames: PIXI.Texture[][],
+    frames: Texture[][],
     name: string,
     animations: AnimationFrames,
     params: any[],
     data: TextureOptionsMerging
 } 
 
-export class Animation extends PIXI.Sprite {
+export class Animation extends Sprite {
     public attachTo: RpgComponent
     public hitbox: { w: number, h: number }
     public applyTransform: (
@@ -54,12 +55,12 @@ export class Animation extends PIXI.Sprite {
         this.createAnimations()
     }
 
-    private createTextures(options: Required<TextureOptionsMerging>): PIXI.Texture[][] {
+    private createTextures(options: Required<TextureOptionsMerging>): Texture[][] {
         const { width, height, framesHeight, framesWidth, image, offset } = options
-        const { baseTexture } = PIXI.Texture.from(image)
+        const { baseTexture } = Texture.from(image)
         const spriteWidth = options.spriteWidth
         const spriteHeight = options.spriteHeight
-        const frames: PIXI.Texture[][] = []
+        const frames: Texture[][] = []
         const offsetX = (offset && offset.x) || 0
         const offsetY = (offset && offset.y) || 0
         for (let i = 0; i < framesHeight ; i++) {
@@ -74,7 +75,7 @@ export class Animation extends PIXI.Sprite {
                     throw log(`Warning, there is a problem with the width of the "${this.id}" spritesheet. When cutting into frames, the frame exceeds the width of the image.`)
                 }
                 frames[i].push(
-                    new PIXI.Texture(baseTexture, new PIXI.Rectangle(rectX, rectY, spriteWidth, spriteHeight))
+                    new Texture(baseTexture, new Rectangle(rectX, rectY, spriteWidth, spriteHeight))
                 )
             }
         }
@@ -149,10 +150,10 @@ export class Animation extends PIXI.Sprite {
         let animations: any = animation.animations;
         animations = isFunction(animations) ? (animations as Function)(...params) : animations
 
-        this.currentAnimation.container = new PIXI.Container()
+        this.currentAnimation.container = new Container()
 
         for (let container of (animations as FrameOptionsMerging[][])) {
-            const sprite = new PIXI.Sprite()
+            const sprite = new Sprite()
             for (let frame of container) {
                 this.currentAnimation.sprites.push(frame)
             }
@@ -187,7 +188,7 @@ export class Animation extends PIXI.Sprite {
         }
 
         for (let _sprite of container.children) {
-            const sprite = _sprite as PIXI.Sprite
+            const sprite = _sprite as Sprite
             
             if (!frame || frame.frameY == undefined || frame.frameX == undefined) {
                 continue

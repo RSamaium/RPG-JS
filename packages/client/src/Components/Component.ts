@@ -8,15 +8,16 @@ import { ColorComponent } from "./ColorComponent"
 import { ImageComponent } from "./ImageComponent"
 import { TextComponent } from "./TextComponent"
 import { TileComponent } from "./TileComponent"
+import { Container, Graphics, Text, filters } from "pixi.js"
 
-type PIXIComponent = PIXI.Container | PIXI.Graphics | PIXI.Text
+type PIXIComponent = Container | Graphics | Text
 
 export interface IComponent {
     id: string,
     value: any
 }
 
-export class RpgComponent<T = any> extends PIXI.Container {
+export class RpgComponent<T = any> extends Container {
     /** @internal */
     tilesOverlay: any
     /** @internal */
@@ -32,7 +33,7 @@ export class RpgComponent<T = any> extends PIXI.Container {
     protected fixed: boolean = false
     private components: IComponent[] = []
     private direction: number = 0
-    private container: PIXI.Container = new PIXI.Container()
+    private container: Container = new Container()
     private registerComponents: Map<string, any> = new Map()
     private dragMode?: {
         data: any,
@@ -171,7 +172,7 @@ export class RpgComponent<T = any> extends PIXI.Container {
 
     drag() {
         this.interactive = true
-        const filter = new PIXI.filters.ColorMatrixFilter();
+        const filter = new filters.ColorMatrixFilter();
 
         const onDragEnd = () => {
             if (!this.dragMode) return

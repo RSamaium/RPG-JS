@@ -1,7 +1,8 @@
 import { SceneMap } from "../Scene/Map"
 import { RpgComponent } from "./Component"
+import { Container, Sprite } from "pixi.js"
 
-export class ImageComponent extends PIXI.Container {
+export class ImageComponent extends Container {
     static readonly id: string = 'image'
 
     constructor(private component: RpgComponent, private source: string) {
@@ -11,6 +12,6 @@ export class ImageComponent extends PIXI.Container {
 
     setImage() {
         const engine = this.component.getScene<SceneMap>().game.clientEngine
-        this.addChild(PIXI.Sprite.from(engine.getResourceUrl(this.source)))
+        this.addChild(Sprite.from(engine.getResourceUrl(this.source)))
     }
 }

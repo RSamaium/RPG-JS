@@ -31,4 +31,4 @@ let engine
         Musics
     ]
 })
-export default class RpgClientModuleEngine {} 
+export default class RpgClientModuleEngine {}

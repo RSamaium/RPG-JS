@@ -1,9 +1,9 @@
-import { Texture } from "pixi.js";
+import { Texture, AnimatedSprite } from "pixi.js";
 import { RpgRectTileLayer } from "./TileLayer";
 import TileSet from "./TileSet";
 import { Tile as TiledTileClass } from '@rpgjs/tiled'
 
-export default class Tile extends PIXI.AnimatedSprite {
+export default class Tile extends AnimatedSprite {
     static getTextures(tile: TiledTileClass, tileSet: TileSet) {
         const textures: Texture[] = [];
 

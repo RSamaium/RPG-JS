@@ -1,10 +1,11 @@
 import { spritesheets } from '../Sprite/Spritesheets'
 import { TiledTileset, Tileset as TiledTilesetClass } from '@rpgjs/tiled'
 import { log } from '../Logger'
+import { Texture, BaseTexture, Rectangle } from 'pixi.js'
 
 export default class TileSet extends TiledTilesetClass {
-    private baseTexture: PIXI.BaseTexture
-    public textures: PIXI.Texture[] = []
+    private baseTexture: BaseTexture
+    public textures: Texture[] = []
 
     constructor(tileSet: TiledTileset) {
         super(tileSet)
@@ -29,9 +30,9 @@ export default class TileSet extends TiledTilesetClass {
                 x += this.tilewidth + this.spacing
             ) {
                 this.textures.push(
-                    new PIXI.Texture(
+                    new Texture(
                         this.baseTexture,
-                        new PIXI.Rectangle(+x, +y, +this.tilewidth, +this.tileheight)
+                        new Rectangle(+x, +y, +this.tilewidth, +this.tileheight)
                     )
                 )
             }

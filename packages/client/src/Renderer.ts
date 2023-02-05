@@ -1,5 +1,3 @@
-window.PIXI = require('pixi.js')
-
 import { RpgPlugin, HookClient } from '@rpgjs/common'
 import { SceneMap } from './Scene/Map'
 import { Scene } from './Scene/Scene'
@@ -11,6 +9,7 @@ import { TransitionScene } from './Effects/TransitionScene'
 import { Subject, forkJoin, Observable } from 'rxjs'
 import { GameEngineClient } from './GameEngine'
 import { SpinnerGraphic } from './Effects/Spinner'
+import * as PIXI from 'pixi.js'
 
 export enum TransitionMode {
     None,

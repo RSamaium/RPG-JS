@@ -3,11 +3,10 @@ import http from 'http'
 import express from 'express'
 import bodyParser from 'body-parser'
 import { Server } from 'socket.io'
-import { entryPoint, RpgWorld, Direction, Move } from '@rpgjs/server'
+import { entryPoint } from '@rpgjs/server'
 import globalConfig from './config/server'
 import modules from './modules' 
 import PrettyError from 'pretty-error'
-
 
 const PORT = process.env.PORT || 3000
 
@@ -24,26 +23,32 @@ const io = new Server(server, {
 
 app.use(bodyParser.json()) 
 
-/*app.use('/metrics', async (req, res) => {
-    res.setHeader('Content-Type', register.contentType)
-    res.end(await register.metrics())
-})*/
+const __dirname = new URL('.', import.meta.url).pathname
 
-app.use('/', express.static(__dirname + '/../client'))
+app.use('/', express.static(__dirname + '/../dist/client'))
 
-server.listen(PORT, async () =>  {
-    const rpgGame = await entryPoint(modules, { io, basePath: __dirname, globalConfig })
-    rpgGame.app = app
-    rpgGame.start()
-    console.log(`
-        ===> MMORPG is running on http://localhost:${PORT} <===
-    `) 
+async function start() {
+        const rpgGame = await entryPoint(modules, { io, basePath: __dirname, globalConfig })
+        rpgGame.app = app
+        rpgGame.start()
+        console.log(`
+            ===> MMORPG is running on http://localhost:${PORT} <===
+        `) 
+    }
+
+server.listen(PORT, start) 
+
+process.on('uncaughtException', function (error) {
+    console.log(pe.render(error))
+})
+
+process.on('unhandledRejection', function (reason: any) {
+    console.log(pe.render(reason))
 }) 
 
-process.on('uncaughtException', function(error){
-    console.log(pe.render(error))
-})   
-
-process.on('unhandledRejection', function(reason: any){
-    console.log(pe.render(reason))  
-})
+if (import.meta.hot) {
+    import.meta.hot.on("vite:beforeFullReload", () => {
+        console.log("full reload");
+        server.close();
+    });
+}

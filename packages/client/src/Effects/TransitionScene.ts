@@ -2,6 +2,7 @@ import { Subscription } from "rxjs";
 import { RpgClientEngine } from "../RpgClientEngine";
 import { FrameOptions } from "../Sprite/Spritesheet";
 import { Timeline } from "./Timeline";
+import { Container } from "pixi.js"
 
 export class TransitionScene {
     private frameIndex: number = 0
@@ -9,7 +10,7 @@ export class TransitionScene {
     private updateSubscription: Subscription
     private complete: Function = () => {}
     
-    constructor(private clientEngine: RpgClientEngine, private container: PIXI.Container) { }
+    constructor(private clientEngine: RpgClientEngine, private container: Container) { }
 
     addFadeIn() {
         return this.addFading(1, 0)

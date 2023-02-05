@@ -8,6 +8,7 @@ import { GameEngineClient } from '../GameEngine'
 import { TiledMap } from '@rpgjs/tiled'
 import { RpgComponent } from '../Components/Component'
 import { CameraOptions } from '@rpgjs/types'
+import { Loader, Container, Point, InteractionEvent } from 'pixi.js'
 
 interface MapObject extends TiledMap {
     id: number
@@ -85,7 +86,7 @@ export class SceneMap extends Scene {
 
         this.tilemap = new TileMap(this.gameMap.getData(), this.game.renderer)
 
-        const loader = new PIXI.Loader()
+        const loader = new Loader()
         let nbLoad = 0
 
         const objects = this.game.world.getObjectsOfGroup()
@@ -218,9 +219,9 @@ export class SceneMap extends Scene {
     updateScene(obj: SceneObservableData) {}
 
     addObject(obj: RpgCommonPlayer | RpgShape, id: string): RpgComponent { 
-        const wrapper = new PIXI.Container()
-        const inner = new PIXI.Container()
-        const tilesOverlay = new PIXI.Container()
+        const wrapper = new Container()
+        const inner = new Container()
+        const tilesOverlay = new Container()
         const component = new RpgComponent(obj, this)
  
         component.tilesOverlay = tilesOverlay
@@ -265,7 +266,7 @@ export class SceneMap extends Scene {
                 moreOptions = options.smoothMove
             }
             this.viewport?.animate({
-                position: new PIXI.Point (sprite?.x, sprite?.y),
+                position: new Point (sprite?.x, sprite?.y),
                 ...moreOptions,
                 callbackOnComplete: follow
             })
@@ -300,7 +301,7 @@ export class SceneMap extends Scene {
      * @returns {void}
      * @memberof RpgSceneMap
      */
-    on(eventName: string, cb: (position: { x: number, y: number }, ev?: PIXI.InteractionEvent ) => any) {
+    on(eventName: string, cb: (position: { x: number, y: number }, ev?: InteractionEvent ) => any) {
         if (!this.tilemap) return
         this.tilemap.background.interactive = true
         this.tilemap.background.on(eventName, function(ev) {

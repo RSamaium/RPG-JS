@@ -30,15 +30,6 @@ export const player: RpgPlayerHooks = {
         player.setHitbox(16, 16)
         player.setGraphic('jedi')
         player.changeMap('samplemap')
-        // player.setMoveMode({
-        //     collision: true,
-        //     clientMode: {
-        //         drag: {
-        //             area: [0, 0, 5, 5]
-        //         }
-        //     },
-        //     behavior: 'direction'
-        // })
     },
     onJoinMap(player: RpgPlayer, map: RpgMap) { 
         player.name = ''+Math.random()

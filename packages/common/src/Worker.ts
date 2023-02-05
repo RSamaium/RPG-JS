@@ -4,7 +4,7 @@ export class GameWorker {
     pool: any
 
     constructor(private options = {}) {
-        this.pool = workerpool.pool(__dirname + '/workers/move.js', options)
+        //this.pool = workerpool.pool(__dirname + '/workers/move.js', options)
     }
 
     load() {

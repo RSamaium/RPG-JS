@@ -4,10 +4,11 @@ import { Animation } from '../Effects/Animation'
 import { Animation as AnimationEnum } from '../Effects/AnimationCharacter'
 import { RpgComponent } from '../Components/Component'
 import { TransformOptions } from './Spritesheet'
+import { Sprite } from 'pixi.js'
 
 const { capitalize } = Utils
 
-export default class Character extends PIXI.Sprite {
+export default class Character extends Sprite {
     static readonly id: string = 'graphic'
 
     private spritesheet: any

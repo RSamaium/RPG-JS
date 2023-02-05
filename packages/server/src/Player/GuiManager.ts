@@ -6,7 +6,7 @@ import { DialogOptions, Choice } from '../Gui/DialogGui'
 export class GuiManager {
 
     _gui: { [id: string]: Gui }
-    
+
     /**
      * Show a text. This is a graphical interface already built. Opens the GUI named `rpg-dialog`
      * 
@@ -303,6 +303,6 @@ export class GuiManager {
     }
 }
 
-export interface GuiManager{ 
+export interface GuiManager {
     emit: any
 }

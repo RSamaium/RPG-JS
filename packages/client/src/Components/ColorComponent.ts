@@ -1,6 +1,7 @@
 import { RpgComponent } from "./Component"
+import { Graphics } from "pixi.js"
 
-export class ColorComponent extends PIXI.Graphics {
+export class ColorComponent extends Graphics {
     static readonly id: string = 'color'
 
     constructor(private component: RpgComponent, public color: string) {

@@ -2,8 +2,9 @@ import { SceneMap } from "../Scene/Map"
 import Tile from "../Tilemap/Tile"
 import TileLayer from "../Tilemap/TileLayer"
 import { RpgComponent } from "./Component"
+import { Container } from "pixi.js"
 
-export class TileComponent extends PIXI.Container {
+export class TileComponent extends Container {
     static readonly id: string = 'tile'
 
     constructor(private component: RpgComponent, private gid: number) {
