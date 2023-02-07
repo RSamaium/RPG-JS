@@ -5,11 +5,12 @@ import hpGui from './gui/hp.vue'
 import myTooltip from './gui/tooltip.vue'
 import { Musics } from './sounds'
 import { ShieldAnimations } from './animation'
+import { MedievalTilesets } from './maps/medieval'
 
 let engine
 
 @RpgModule<RpgClient>({ 
-    spritesheets: [...Characters, ShieldAnimations],
+    spritesheets: [...Characters, ShieldAnimations, MedievalTilesets],
     sprite,
     engine: {
         onConnected(rpgEngine: RpgClientEngine, socket: any) {

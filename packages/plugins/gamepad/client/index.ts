@@ -1,6 +1,7 @@
 import { RpgClient, RpgModule, RpgClientEngine, Direction, RpgGui, Control } from '@rpgjs/client'
 import 'joypad.js'
 import { GamePadSounds } from './sound'
+import icon from './assets/gamepad.svg'
 
 const joypad = window['joypad']
 let moving = false
@@ -17,14 +18,14 @@ const DIRECTIONS = [Direction.Left, Direction.Right, Direction.Up, Direction.Dow
             const optionsConnect = {
                 message: 'Your gamepad is connected !',
                 time: 2000,
-                icon: require('./assets/gamepad.svg'),
+                icon,
                 sound: 'connect',
                 ...globalConfig.connect
             }
             const optionsDisconnect = {
                 message: 'Your gamepad is disconnected !',
                 time: 2000,
-                icon: require('./assets/gamepad.svg'),
+                icon,
                 sound: 'disconnect',
                 ...globalConfig.disconnect
             }

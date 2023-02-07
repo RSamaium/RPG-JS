@@ -2,7 +2,7 @@ import { xml2js } from 'xml-js'
 import { TiledMap } from '../types/Map'
 import { TilesetTile } from '../types/Tile'
 import { TiledTileset } from '../types/Tileset'
-import { Buffer } from 'buffer/'
+import { Buffer } from 'buffer'
 
 export class TiledParser {
     private layers: Map<number, any> = new Map()

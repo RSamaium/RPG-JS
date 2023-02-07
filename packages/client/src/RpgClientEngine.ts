@@ -101,7 +101,7 @@ export class RpgClientEngine {
     private lastConnection: string = ''
     private lastScene: string = ''
     private matchMakerService: string | (() => MatchMakerResponse) | null = null
-    private assetsPath: string = ''
+    private assetsPath: string = 'assets'
     private serverFps: number = 60
     private scheduler: Scheduler = new Scheduler()
 

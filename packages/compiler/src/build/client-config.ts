@@ -2,15 +2,16 @@ import { splitVendorChunkPlugin } from 'vite'
 import nodePolyfills from 'rollup-plugin-node-polyfills'
 import { NodeModulesPolyfillPlugin } from '@esbuild-plugins/node-modules-polyfill'
 import { resolve } from 'path'
-import vitePluginRequire from "vite-plugin-require";
+import requireTransform from 'vite-plugin-require-transform';
 import { flagTransform } from './vite-plugin-flag-transform.js';
 import vue from '@vitejs/plugin-vue'
 import { worldTransformPlugin } from './vite-plugin-world-transform.js';
 import fs from 'fs/promises'
 import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill';
+import { createRequire } from 'module';
+import { mapExtractPlugin } from './vite-plugin-map-extract.js';
 
-//const require = createRequire(import.meta.url);
-
+const require = createRequire(import.meta.url);
 
 interface ClientBuildConfigOptions {
     buildEnd?: () => void,
@@ -27,10 +28,9 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
 
     let plugins: any[] = [
         flagTransform(options.side || 'client'),
-        vitePluginRequire({
-            fileRegex: /.tmx$/,
-        }),
+        (requireTransform as any)(),
         worldTransformPlugin(),
+        mapExtractPlugin(),
         ...(options.plugins || [])
     ]
 
@@ -120,7 +120,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
                 //global: {},
             },
             publicDir: resolve(dirname, 'public'),
-            
+
         }
     }
     else {
@@ -139,7 +139,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         root: resolve(dirname, 'src'),
         configFile,
         resolve: {
-            mainFields: ['main'],
+            //mainFields: ['main'],
             alias: {
                 '@': 'src',
                 ...aliasTransform
@@ -163,15 +163,12 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
                 },
                 input: {
                     main: !isServer ?
-                    resolve(dirname, 'src/index.html') :
-                    resolve(dirname, 'src/server.ts')
+                        resolve(dirname, 'src/index.html') :
+                        resolve(dirname, 'src/server.ts')
                 },
                 plugins: [
                     !isServer ? nodePolyfills() as any : null
                 ]
-            },
-            commonjsOptions: {
-                transformMixedEsModules: true
             },
             ...moreBuildOptions
         },

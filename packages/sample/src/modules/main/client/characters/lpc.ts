@@ -11,9 +11,9 @@ function getDirection(direction: Direction, offset: number = 0) {
 
 @Spritesheet({
     images: {
-        light: 'light.png',
-        shield: 'kite_blue_blue.png',
-        jedi: 'Jedi.png'
+        light: require('./assets/light.png'),
+        shield: require('./assets/kite_blue_blue.png'),
+        jedi: require('./assets/Jedi.png')
     },
     width: 832,
     height: 1344,

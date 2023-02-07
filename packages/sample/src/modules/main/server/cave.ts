@@ -18,16 +18,18 @@ class MyEvent extends RpgEvent {
 
 @MapData({
     id: 'cave',
-    file: './tmx/map/cave.tmx', 
+    file: require('./tmx/cave.tmx'), 
     
 })
 export class CaveMap extends RpgMap {
     
 }
 
+console.log(require('./tmx/cave.tmx'))
+
 @MapData({
     id: 'samplemap',
-    file: './tmx/map/cave.tmx',
+    file: require('./tmx/cave.tmx'),
     events: [{
         event: MyEvent,
         x: 32 *20,
