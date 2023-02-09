@@ -75,6 +75,18 @@ export default class Character extends PIXI.Sprite {
         this.setAnimationAnchor()
     }
 
+    getGraphicHeight(): number {
+        return this.animation.getSpriteHeight()
+    }
+
+    getGraphicWidth(): number {
+        return this.animation.getSpriteWidth()
+    }
+
+    animationSprite() {
+        return this.animation.animation$
+    }
+
     private setAnimationAnchor(): void {
         this.animation.hitbox = { h: this.data.hHitbox, w: this.data.wHitbox }
         this.animation.applyTransform = (frame, animation, spritesheet) => {

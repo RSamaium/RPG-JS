@@ -1,14 +1,15 @@
 import { RpgPlayer, RpgMap, RpgPlayerHooks, Direction, Move, RpgShape, ShapePositioning, Control, RpgEvent, EventData, RpgWorld, AbstractObject } from '@rpgjs/server'
 import { Armor } from '@rpgjs/database'
+import { TextComponentObject } from '@rpgjs/types';
 
-let i=0
+let i = 0
 
-@Armor({  
+@Armor({
     name: 'Shield',
     description: 'Gives a little defense',
     price: 4000
 })
-export class Shield {}
+export class Shield { }
 
 function getRandomInt(min, max) {
     min = Math.ceil(min);
@@ -22,6 +23,38 @@ declare module '@rpgjs/server' {
     }
 }
 
+function TextComponent(value: string, style?: TextComponentObject['value']): TextComponentObject {
+    return {
+        id: 'text',
+        value: {
+            text: value,
+            style: {
+                fill: '#ffffff',
+                fontSize: 18,
+                fontWeight: 'bold',
+                align: 'center'
+            }
+        }
+    }
+}
+
+function BarComponent(current: string, max: string) {
+    return {
+        id: 'bar',
+        value: {
+            current,
+            max,
+            style: {
+                perPercent: {
+                    '50': {
+                        fillColor: '#ff0000'
+                    },
+                }
+            }
+        }
+    }
+}
+
 export const player: RpgPlayerHooks = {
     props: {
         color: String
@@ -30,6 +63,13 @@ export const player: RpgPlayerHooks = {
         player.setHitbox(16, 16)
         player.setGraphic('jedi')
         player.changeMap('samplemap')
+        player.name = 'Sam'
+        player.setComponentsTop<any>(
+            [
+                [TextComponent('X: {position.x}, Y: {position.y}')],
+                [BarComponent('hp', 'param.maxHp')],
+            ]
+        )
         // player.setMoveMode({
         //     collision: true,
         //     clientMode: {
@@ -40,25 +80,26 @@ export const player: RpgPlayerHooks = {
         //     behavior: 'direction'
         // })
     },
-    onJoinMap(player: RpgPlayer, map: RpgMap) { 
-        player.name = ''+Math.random()
-        
+    onJoinMap(player: RpgPlayer, map: RpgMap) {
+       
+
         //player.position.z = 2 * 32
     },
     onInput(player: RpgPlayer, { input, moving }) {
         if (input == 'attack') {
             player.showAnimation('jedi', 'attack', true)
             const map = player.getCurrentMap()
-            map?.createMovingHitbox([
+            /*map?.createMovingHitbox([
                 { x: player.position.x + 50, y: player.position.y, width: 10, height: 10 }
             ]).subscribe({
                 next(hitbox: AbstractObject): void {
                     console.log(hitbox.otherPlayersCollision)
 
                 }
-            })
+            })*/
+            player.hp -= 400
         }
-    },      
+    },
     async onInShape(player: RpgPlayer, shape: RpgShape) {
         console.log('in', player.name, shape.name)
         // await player.changeMap('samplemap')

@@ -1,15 +1,17 @@
 import { Direction, HookClient, RpgCommonPlayer, RpgPlugin, RpgShape, Utils } from "@rpgjs/common"
-import { PlayerType, PositionXY } from "@rpgjs/types"
-import { map, filter, tap } from "rxjs/operators"
+import { ComponentObject, LayoutObject, PlayerType, PositionXY } from "@rpgjs/types"
+import { map, filter, tap, distinctUntilKeyChanged, distinctUntilChanged } from "rxjs/operators"
 import { log } from "../Logger"
 import { Scene } from "../Scene/Scene"
 import { RpgSprite } from "../Sprite/Player"
+import { BarComponent } from "./BarComponent"
 import { ColorComponent } from "./ColorComponent"
 import { ImageComponent } from "./ImageComponent"
 import { TextComponent } from "./TextComponent"
 import { TileComponent } from "./TileComponent"
 
 type PIXIComponent = PIXI.Container | PIXI.Graphics | PIXI.Text
+type SpriteInfo = { width : number, height: number, x: number, y: number, anchor: { x: number, y: number } }
 
 export interface IComponent {
     id: string,
@@ -30,7 +32,13 @@ export class RpgComponent<T = any> extends PIXI.Container {
     protected map: string = ''
     protected z: number = 0
     protected fixed: boolean = false
-    private components: IComponent[] = []
+    private components: LayoutObject<any> = {
+        top: [],
+        bottom: [],
+        left: [],
+        right: [],
+        center: []
+    }
     private direction: number = 0
     private container: PIXI.Container = new PIXI.Container()
     private registerComponents: Map<string, any> = new Map()
@@ -38,6 +46,8 @@ export class RpgComponent<T = any> extends PIXI.Container {
         data: any,
         dragging: boolean
     }
+
+    readonly game = this.scene.game
 
     constructor(private data: RpgCommonPlayer | RpgShape, private scene: Scene) {
         super()
@@ -47,18 +57,18 @@ export class RpgComponent<T = any> extends PIXI.Container {
         this.registerComponents.set(ColorComponent.id, ColorComponent)
         this.registerComponents.set(TileComponent.id, TileComponent)
         this.registerComponents.set(ImageComponent.id, ImageComponent)
+        this.registerComponents.set(BarComponent.id, BarComponent)
         this.addChild(this.container)
         RpgPlugin.emit(HookClient.AddSprite, this)
         RpgPlugin.emit(HookClient.SceneAddSprite, [this.scene, this], true)
-        this.scene.game.listenObject(data.id)
+        this.game.listenObject(data.id)
             .pipe(
                 map(object => object?.paramsChanged),
                 tap(() => {
                     RpgPlugin.emit(HookClient.ChangesSprite, [this, this.logic?.['paramsChanged'], this.logic?.['prevParamsChanged']], true)
                 }),
                 filter(object => {
-                    const componentChanged = this.logic?.['componentChanged']
-                    return componentChanged && componentChanged.length
+                    return this.logic?.['componentChanged']
                 })
             )
             .subscribe((val) => {
@@ -273,7 +283,7 @@ export class RpgComponent<T = any> extends PIXI.Container {
     getPositionsOfGraphic(align: string): PositionXY {
         let sprite: RpgSprite | undefined
         // if no component (no graphic for example)
-        if (this.components.length !== 0) {
+        if (this.components.center.length !== 0) {
             sprite = this.container.getChildAt(0) as RpgSprite
         }
         const isMiddle = align == 'middle'
@@ -289,17 +299,105 @@ export class RpgComponent<T = any> extends PIXI.Container {
         }
     }
 
-    private updateComponents(components: IComponent[]) {
-        this.container.removeChildren()
-        for (let component of components) {
-            const compClass = this.registerComponents.get(component.id)
-            if (!compClass) {
-                throw log(`Impossible to find ${component.id} component`)
+    private createGrid(gridArray, sprite: SpriteInfo) {
+        const gridContainer = new PIXI.Container();
+        const { width, height } = sprite
+       
+        console.log(gridArray)
+        
+        const gridHeight = 32
+
+        // replace x and y gridContainer with sprite anchor
+        gridContainer.x = gridContainer.x - (width * sprite.anchor.x)
+        gridContainer.y = gridContainer.y - (height * sprite.anchor.y)
+
+        gridContainer.y -= height - gridHeight
+
+        // create function for get random color
+        const getRandomColor = () => {
+            const letters = '0123456789ABCDEF';
+            let color = '';
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
             }
-            const instance = new compClass(this, component.value)
-            this.container.addChild(instance)
+            return color;
+        }
+
+        for (let y = 0; y < gridArray.length; y++) {
+            const columns = gridArray[y].col.length;
+            const cellWidth = (width / columns);
+            for (let x = 0; x < columns; x++) {
+                const params: ComponentObject<any> = gridArray[y].col[x];
+                const gridCell = new PIXI.Graphics();
+                gridCell.x = (x * cellWidth);
+                gridCell.y = (y * gridHeight);
+                gridCell.width = cellWidth;
+                gridCell.beginFill(parseInt(getRandomColor(), 16));
+                gridCell.drawRect(0, 0, cellWidth, gridHeight);
+                gridCell.endFill();
+
+                const component = this.applyComponent(params) as any
+                component.onRender$.subscribe(() => {
+                    component.x = Math.round((x * cellWidth) + (cellWidth / 2) - (component.width / 2))
+                    component.y = Math.round((y * gridHeight) + (gridHeight / 2) - (component.height / 2))
+                })
+                component.onInit()
+                gridContainer.addChild(component)
+
+               
+                //gridContainer.addChild(gridCell)
+            }
+        }
+
+        return gridContainer;
+    }
+
+    private applyComponent(component: ComponentObject<any>): PIXI.Container {
+        const compClass = this.registerComponents.get(component.id)
+        if (!compClass) {
+            throw log(`Impossible to find ${component.id} component`)
+        }
+        return new compClass(this, component.value)
+    }
+
+    private createComponentCenter(components: LayoutObject<any>) {
+        this.container.removeChildren()
+        for (let { col } of components.center) {
+            for (let component of col) {
+                this.container.addChild(this.applyComponent(component))
+            }
         }
         this.components = components
+    }
+
+    private refreshComponents(components: LayoutObject<any>, sprite: PIXI.Sprite) {
+        if (components.top) {
+            this.container.addChild(
+                this.createGrid(components.top, sprite)
+            )
+        }
+    }
+
+    private updateComponents(components: LayoutObject<any>) {
+        // TODO: unsubscribe
+        this.createComponentCenter(components)
+        this.container.children[0].animationSprite()
+            .pipe(
+                filter((sprite: any) => sprite),
+                map((sprite: any) => ({
+                    width: sprite.width,
+                    height: sprite.height,
+                    anchor: sprite.anchor
+                })),
+                distinctUntilChanged((p: any, q: any) =>
+                    p.width === q.width &&
+                    p.height === q.height &&
+                    p.anchor.x === q.anchor.x &&
+                    p.anchor.y === q.anchor.y),
+            )
+            .subscribe((sprite) => {
+                this.refreshComponents(components, sprite)
+            })
     }
 
     getScene<T>(): T {

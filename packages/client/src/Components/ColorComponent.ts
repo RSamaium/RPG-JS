@@ -1,4 +1,5 @@
 import { RpgComponent } from "./Component"
+import { Utils } from "@rpgjs/common"
 
 export class ColorComponent extends PIXI.Graphics {
     static readonly id: string = 'color'
@@ -9,8 +10,7 @@ export class ColorComponent extends PIXI.Graphics {
     }
 
     setBackgroundColor() {
-        const color = this.color.replace('#', '')
-        this.beginFill(parseInt(color, 16))
+        this.beginFill(Utils.hexaToNumber(this.color))
         this.drawRect(
             0,
             0,
