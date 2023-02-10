@@ -7,17 +7,28 @@ import { GameEngineClient } from "../GameEngine"
 
 const REGEXP_VAR = /{([^\}]+)}/g
 
+export type CellInfo = { x: number, y: number, width: number, height: number }
+
 export abstract class AbstractComponent<
     TypeComponent extends ComponentObject<any>,
     ContainerType extends PIXI.Container | PIXI.Text | PIXI.Sprite | PIXI.Graphics
 > extends PIXI.Container {
-    private originValue: string
     private _onRender$: Subject<AbstractComponent<TypeComponent, ContainerType>> = new Subject()
     readonly onRender$ = this._onRender$.asObservable()
     protected readonly game: GameEngineClient = this.component.game
+    protected firstRender: boolean = true
+    private style = this.value.style
+    private cacheText: {
+        [key: string]: string
+    } = {}
+    protected cell?: CellInfo
 
     constructor(protected component: RpgComponent, protected value: TypeComponent['value']) {
         super()
+    }
+
+    getStyle<T>(): T {
+        return this.style || {}
     }
 
     protected parseTextAndCache(text: string): string[] {
@@ -31,7 +42,14 @@ export abstract class AbstractComponent<
     }
 
     protected replaceText(object: any, text: string): string {
-        return text.replace(REGEXP_VAR, (match, key) => get(object, key) || '')
+        return text.replace(REGEXP_VAR, (match, key) => {
+            const value = get(object, key)
+            if (value) {
+                this.cacheText[key] = value
+                return value ?? ''
+            }
+            return value ?? this.cacheText[key] ?? ''
+        })
     }
 
     private verifyParams(): void | never {
@@ -43,14 +61,18 @@ export abstract class AbstractComponent<
         }
     }
 
-    public onInit(): void {
+    public onInit(cell: CellInfo): void {
+        this.cell = cell
+
         this.verifyParams()
 
-        // first render for replace variable and remove {}
-        //this.updateRender({})
+        const opacity = this.getStyle<{ opacity: number | undefined }>().opacity
+
+        if (opacity !== undefined) {
+            this.alpha = opacity
+        }
 
         const objectId = this.component.logic?.id
-        let firstRender = true
 
         this.game.listenObject(objectId)
             .pipe(
@@ -64,8 +86,8 @@ export abstract class AbstractComponent<
                 })
             )
             .subscribe((val) => {
-                this.updateRender(val, firstRender)
-                firstRender = false
+                this.updateRender(val, this.firstRender)
+                this.firstRender = false
                 this._onRender$.next(this)
             })
     }

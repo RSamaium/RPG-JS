@@ -1,5 +1,5 @@
 import { Direction, HookClient, RpgCommonPlayer, RpgPlugin, RpgShape, Utils } from "@rpgjs/common"
-import { ComponentObject, LayoutObject, PlayerType, PositionXY } from "@rpgjs/types"
+import { ComponentObject, LayoutObject, LayoutOptions, PlayerType, PositionXY } from "@rpgjs/types"
 import { map, filter, tap, distinctUntilKeyChanged, distinctUntilChanged } from "rxjs/operators"
 import { log } from "../Logger"
 import { Scene } from "../Scene/Scene"
@@ -18,6 +18,10 @@ export interface IComponent {
     value: any
 }
 
+const layoutObject = {
+    lines: []
+}
+
 export class RpgComponent<T = any> extends PIXI.Container {
     /** @internal */
     tilesOverlay: any
@@ -33,11 +37,11 @@ export class RpgComponent<T = any> extends PIXI.Container {
     protected z: number = 0
     protected fixed: boolean = false
     private components: LayoutObject<any> = {
-        top: [],
-        bottom: [],
-        left: [],
-        right: [],
-        center: []
+        top: layoutObject,
+        bottom: layoutObject,
+        left: layoutObject,
+        right: layoutObject,
+        center: layoutObject
     }
     private direction: number = 0
     private container: PIXI.Container = new PIXI.Container()
@@ -283,7 +287,7 @@ export class RpgComponent<T = any> extends PIXI.Container {
     getPositionsOfGraphic(align: string): PositionXY {
         let sprite: RpgSprite | undefined
         // if no component (no graphic for example)
-        if (this.components.center.length !== 0) {
+        if (this.components.center.lines.length !== 0) {
             sprite = this.container.getChildAt(0) as RpgSprite
         }
         const isMiddle = align == 'middle'
@@ -299,53 +303,32 @@ export class RpgComponent<T = any> extends PIXI.Container {
         }
     }
 
-    private createGrid(gridArray, sprite: SpriteInfo) {
+    private createGrid(gridArray, options: LayoutOptions, sprite: SpriteInfo) {
         const gridContainer = new PIXI.Container();
-        const { width, height } = sprite
-       
-        console.log(gridArray)
-        
-        const gridHeight = 32
+        const { height } = sprite
+        const width = options.width ?? sprite.width
+        const gridHeight = options.height ?? 32
 
         // replace x and y gridContainer with sprite anchor
-        gridContainer.x = gridContainer.x - (width * sprite.anchor.x)
-        gridContainer.y = gridContainer.y - (height * sprite.anchor.y)
-
-        gridContainer.y -= height - gridHeight
-
-        // create function for get random color
-        const getRandomColor = () => {
-            const letters = '0123456789ABCDEF';
-            let color = '';
-            for (let i = 0; i < 6; i++) {
-                color += letters[Math.floor(Math.random() * 16)];
-            }
-            return color;
-        }
+        gridContainer.x = gridContainer.x - ((width) * sprite.anchor.x)
+        gridContainer.y = gridContainer.y - (height * sprite.anchor.y) - +(options.marginBottom ?? 0)
+        gridContainer.y -= (gridArray.length * gridHeight)
 
         for (let y = 0; y < gridArray.length; y++) {
             const columns = gridArray[y].col.length;
             const cellWidth = (width / columns);
             for (let x = 0; x < columns; x++) {
                 const params: ComponentObject<any> = gridArray[y].col[x];
-                const gridCell = new PIXI.Graphics();
-                gridCell.x = (x * cellWidth);
-                gridCell.y = (y * gridHeight);
-                gridCell.width = cellWidth;
-                gridCell.beginFill(parseInt(getRandomColor(), 16));
-                gridCell.drawRect(0, 0, cellWidth, gridHeight);
-                gridCell.endFill();
-
                 const component = this.applyComponent(params) as any
                 component.onRender$.subscribe(() => {
                     component.x = Math.round((x * cellWidth) + (cellWidth / 2) - (component.width / 2))
                     component.y = Math.round((y * gridHeight) + (gridHeight / 2) - (component.height / 2))
                 })
-                component.onInit()
+                component.onInit({
+                    width: cellWidth,
+                    height: gridHeight
+                })
                 gridContainer.addChild(component)
-
-               
-                //gridContainer.addChild(gridCell)
             }
         }
 
@@ -362,7 +345,7 @@ export class RpgComponent<T = any> extends PIXI.Container {
 
     private createComponentCenter(components: LayoutObject<any>) {
         this.container.removeChildren()
-        for (let { col } of components.center) {
+        for (let { col } of components.center.lines) {
             for (let component of col) {
                 this.container.addChild(this.applyComponent(component))
             }
@@ -371,9 +354,9 @@ export class RpgComponent<T = any> extends PIXI.Container {
     }
 
     private refreshComponents(components: LayoutObject<any>, sprite: PIXI.Sprite) {
-        if (components.top) {
+        if (components.top?.lines) {
             this.container.addChild(
-                this.createGrid(components.top, sprite)
+                this.createGrid(components.top.lines, components.top, sprite)
             )
         }
     }

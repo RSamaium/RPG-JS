@@ -3,7 +3,7 @@ import { BehaviorSubject, combineLatest, Observable, Subject } from "rxjs";
 import { RpgRenderer } from "./Renderer";
 import { RpgClientEngine } from "./RpgClientEngine";
 import { map } from "rxjs/operators";
-import { ObjectFixture, ObjectFixtureList } from "@rpgjs/types";
+import { LayoutObject, ObjectFixture, ObjectFixtureList } from "@rpgjs/types";
 
 export class GameEngineClient extends RpgCommonGame {
     playerId: string
@@ -171,11 +171,13 @@ export class GameEngineClient extends RpgCommonGame {
             isShape
         } = obj
         const layoutToArray = (params) => {
-            if (params.layout) {
+            const layout = params.layout as LayoutObject<any> | undefined
+            if (layout) {
                 ['center', 'top', 'right', 'bottom', 'left'].forEach((key) => {
-                    if (!params.layout[key]) return
-                    GameEngineClient.toArray(params.layout, key)
-                    params.layout[key].map(layout => {
+                    if (!layout[key]) return
+                    GameEngineClient.toArray(layout[key], 'lines')
+                    if (!layout[key].lines) return
+                    layout[key].lines.map(layout => {
                         GameEngineClient.toArray(layout, 'col')
                     })
                 })

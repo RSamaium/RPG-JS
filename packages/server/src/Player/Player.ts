@@ -53,9 +53,14 @@ const itemSchemas = {
 }
 
 export const componentSchema = { id: String, value: String }
-export const layoutSchema = [{
-    col: [componentSchema]
-}]
+export const layoutSchema = {
+    width: Number,
+    height: Number,
+    marginBottom: Number,
+    lines: [{
+        col: [componentSchema]
+    }]
+}
 
 const playerSchemas = {
     position: {
@@ -125,6 +130,10 @@ const playerSchemas = {
     },
 }
 
+const layoutObject = {
+    lines: []
+}
+
 export class RpgPlayer extends RpgCommonPlayer {
     public readonly type: string = 'player'
 
@@ -133,12 +142,12 @@ export class RpgPlayer extends RpgCommonPlayer {
         events: [playerSchemas]
     }
 
-    layout: LayoutObject = {
-        top: [],
-        bottom: [],
-        left: [],
-        right: [],
-        center: []
+    layout: LayoutObject<any> = {
+        top: layoutObject,
+        bottom: layoutObject,
+        left: layoutObject,
+        right: layoutObject,
+        center: layoutObject
     }
 
     private _name

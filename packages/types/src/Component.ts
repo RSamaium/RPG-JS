@@ -1,5 +1,14 @@
+export type LayoutOptions = {
+    width?: number,
+    height?: number,
+    marginBottom?: number,
+}
+
 export type ComponentObject<T> = { id: string, value: T }
-type LayoutPosition<T> = { col: ComponentObject<T>[] }[]
+
+type LayoutPosition<T> = {
+    lines: { col: ComponentObject<T>[] }[],
+} & LayoutOptions
 
 export type LayoutObject<T> = {
     top: LayoutPosition<T>,
@@ -9,6 +18,7 @@ export type LayoutObject<T> = {
     center: LayoutPosition<T>
 }
 
+
 export type TextComponentObject = {
     id: 'text',
     value: {
@@ -16,10 +26,10 @@ export type TextComponentObject = {
         margin?: number,
         height?: number,
         style?: {
+            opacity?: number,
             fill?: string,
             align?: 'left' | 'center' | 'right' | 'justify',
             wordWrap?: boolean,
-            wordWrapWidth?: number,
             fontSize?: number | string,
             fontFamily?: string | string[],
             stroke?: string,
@@ -35,6 +45,9 @@ type BarComponentStyle = {
     borderColor?: string,
     borderWidth?: number,
     height?: number,
+    width?: number,
+    borderRadius?: number,
+    opacity?: number
 }
 
 export type BarComponentObject = {
@@ -44,9 +57,10 @@ export type BarComponentObject = {
         max: string,
         style?: BarComponentStyle | {
             perPercent: {
-                [percent: string]: BarComponentStyle
-            },
-            height?: number
-        }
+                [percent: string]: {
+                    fillColor?: string
+                }
+            } 
+        } & BarComponentStyle
     }
 }

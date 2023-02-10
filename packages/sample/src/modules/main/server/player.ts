@@ -1,6 +1,6 @@
-import { RpgPlayer, RpgMap, RpgPlayerHooks, Direction, Move, RpgShape, ShapePositioning, Control, RpgEvent, EventData, RpgWorld, AbstractObject } from '@rpgjs/server'
+import { RpgPlayer, RpgMap, RpgPlayerHooks, Direction, Move, RpgShape, ShapePositioning, Control, RpgEvent, EventData, RpgWorld, AbstractObject, Component } from '@rpgjs/server'
 import { Armor } from '@rpgjs/database'
-import { TextComponentObject } from '@rpgjs/types';
+import { BarComponentObject, TextComponentObject } from '@rpgjs/types';
 
 let i = 0
 
@@ -23,21 +23,6 @@ declare module '@rpgjs/server' {
     }
 }
 
-function TextComponent(value: string, style?: TextComponentObject['value']): TextComponentObject {
-    return {
-        id: 'text',
-        value: {
-            text: value,
-            style: {
-                fill: '#ffffff',
-                fontSize: 18,
-                fontWeight: 'bold',
-                align: 'center'
-            }
-        }
-    }
-}
-
 function BarComponent(current: string, max: string) {
     return {
         id: 'bar',
@@ -46,10 +31,18 @@ function BarComponent(current: string, max: string) {
             max,
             style: {
                 perPercent: {
+                    '80': {
+                        fillColor: '#0000ff'
+                    },
                     '50': {
                         fillColor: '#ff0000'
                     },
-                }
+                },
+                fillColor: '#00ff00',
+                borderColor: '#000000',
+                borderWidth: 2,
+                bgColor: '#ffffff',
+                borderRadius: 5
             }
         }
     }
@@ -66,10 +59,14 @@ export const player: RpgPlayerHooks = {
         player.name = 'Sam'
         player.setComponentsTop<any>(
             [
-                [TextComponent('X: {position.x}, Y: {position.y}')],
-                [BarComponent('hp', 'param.maxHp')],
-            ]
-        )
+                [Component.text('{name}')],
+                [Component.hpBar()],
+            ],
+            {
+                height: 20,
+                marginBottom: -10
+            }
+        ) 
         // player.setMoveMode({
         //     collision: true,
         //     clientMode: {
@@ -97,8 +94,13 @@ export const player: RpgPlayerHooks = {
 
                 }
             })*/
-            player.hp -= 400
+            player.hp -= 100
         }
+        if (input == 'action') {
+            player.hp += 100
+        }
+
+        console.log(player.hp)
     },
     async onInShape(player: RpgPlayer, shape: RpgShape) {
         console.log('in', player.name, shape.name)
