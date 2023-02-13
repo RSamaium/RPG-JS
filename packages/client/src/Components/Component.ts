@@ -1,17 +1,18 @@
 import { Direction, HookClient, RpgCommonPlayer, RpgPlugin, RpgShape, Utils } from "@rpgjs/common"
-import { ComponentObject, LayoutObject, LayoutOptions, PlayerType, PositionXY } from "@rpgjs/types"
-import { map, filter, tap, distinctUntilKeyChanged, distinctUntilChanged } from "rxjs/operators"
+import { ComponentObject, LayoutObject, LayoutOptions, LayoutPositionEnum, PlayerType, PositionXY } from "@rpgjs/types"
+import { Subscription } from "rxjs"
+import { map, filter, tap, distinctUntilChanged, takeUntil } from "rxjs/operators"
 import { log } from "../Logger"
 import { Scene } from "../Scene/Scene"
 import { RpgSprite } from "../Sprite/Player"
+import { AbstractComponent } from "./AbstractComponent"
 import { BarComponent } from "./BarComponent"
 import { ColorComponent } from "./ColorComponent"
 import { ImageComponent } from "./ImageComponent"
 import { TextComponent } from "./TextComponent"
 import { TileComponent } from "./TileComponent"
 
-type PIXIComponent = PIXI.Container | PIXI.Graphics | PIXI.Text
-type SpriteInfo = { width : number, height: number, x: number, y: number, anchor: { x: number, y: number } }
+type SpriteInfo = { width: number, height: number, x: number, y: number, anchor: { x: number, y: number } }
 
 export interface IComponent {
     id: string,
@@ -21,6 +22,8 @@ export interface IComponent {
 const layoutObject = {
     lines: []
 }
+
+const layoutTypes: LayoutPositionEnum[] = ['top', 'bottom', 'left', 'right']
 
 export class RpgComponent<T = any> extends PIXI.Container {
     /** @internal */
@@ -45,6 +48,12 @@ export class RpgComponent<T = any> extends PIXI.Container {
     }
     private direction: number = 0
     private container: PIXI.Container = new PIXI.Container()
+
+    private containersLayout: {
+        [key in LayoutPositionEnum]: PIXI.Container
+    } = {} as any
+
+    private subscriptionGraphic: Subscription
     private registerComponents: Map<string, any> = new Map()
     private dragMode?: {
         data: any,
@@ -52,6 +61,7 @@ export class RpgComponent<T = any> extends PIXI.Container {
     }
 
     readonly game = this.scene.game
+    readonly id: string = this.data.id
 
     constructor(private data: RpgCommonPlayer | RpgShape, private scene: Scene) {
         super()
@@ -62,11 +72,20 @@ export class RpgComponent<T = any> extends PIXI.Container {
         this.registerComponents.set(TileComponent.id, TileComponent)
         this.registerComponents.set(ImageComponent.id, ImageComponent)
         this.registerComponents.set(BarComponent.id, BarComponent)
+
         this.addChild(this.container)
+
+        for (let layout of [...layoutTypes, 'center']) {
+            this.containersLayout[layout] = new PIXI.Container()
+            this.container.addChild(this.containersLayout[layout])
+        }
+
         RpgPlugin.emit(HookClient.AddSprite, this)
         RpgPlugin.emit(HookClient.SceneAddSprite, [this.scene, this], true)
+
         this.game.listenObject(data.id)
             .pipe(
+                takeUntil(this.game.getDeleteNotifier(data.id)),
                 map(object => object?.paramsChanged),
                 tap(() => {
                     RpgPlugin.emit(HookClient.ChangesSprite, [this, this.logic?.['paramsChanged'], this.logic?.['prevParamsChanged']], true)
@@ -287,8 +306,8 @@ export class RpgComponent<T = any> extends PIXI.Container {
     getPositionsOfGraphic(align: string): PositionXY {
         let sprite: RpgSprite | undefined
         // if no component (no graphic for example)
-        if (this.components.center.lines.length !== 0) {
-            sprite = this.container.getChildAt(0) as RpgSprite
+        if (this.components.center?.lines.length !== 0) {
+            sprite = this.containersLayout.center.getChildAt(0) as RpgSprite
         }
         const isMiddle = align == 'middle'
         return {
@@ -297,8 +316,33 @@ export class RpgComponent<T = any> extends PIXI.Container {
         }
     }
 
+    /**
+     * Get the container by position (center, left, right, top, bottom)
+     * 
+     * @param {LayoutPositionEnum} [position=center]
+     * @returns {PIXI.Container}
+     * 
+     * */
+    getLayoutContainer(position: LayoutPositionEnum = 'center'): PIXI.Container {
+        return this.containersLayout[position]
+    }
+
+    /**
+     * Get Current Scene. Scene is a map, battle, menu, etc.
+     * @returns {T}
+     */
+    getScene<T>(): T {
+        return this.scene as any
+    }
+
+    // Hooks
+    onInit() { }
+    onUpdate(obj) { }
+    onMove() { }
+    onChanges(data, old) { }
+
     private callMethodInComponents(name: string, params: unknown[]) {
-        for (let component of this.container.children) {
+        for (let component of this.getLayoutContainer().children) {
             if (component[name]) component[name](...params)
         }
     }
@@ -319,7 +363,7 @@ export class RpgComponent<T = any> extends PIXI.Container {
             const cellWidth = (width / columns);
             for (let x = 0; x < columns; x++) {
                 const params: ComponentObject<any> = gridArray[y].col[x];
-                const component = this.applyComponent(params) as any
+                const component = this.applyComponent(params)
                 component.onRender$.subscribe(() => {
                     component.x = Math.round((x * cellWidth) + (cellWidth / 2) - (component.width / 2))
                     component.y = Math.round((y * gridHeight) + (gridHeight / 2) - (component.height / 2))
@@ -335,7 +379,7 @@ export class RpgComponent<T = any> extends PIXI.Container {
         return gridContainer;
     }
 
-    private applyComponent(component: ComponentObject<any>): PIXI.Container {
+    private applyComponent(component: ComponentObject<any>): AbstractComponent<any, any> {
         const compClass = this.registerComponents.get(component.id)
         if (!compClass) {
             throw log(`Impossible to find ${component.id} component`)
@@ -344,52 +388,67 @@ export class RpgComponent<T = any> extends PIXI.Container {
     }
 
     private createComponentCenter(components: LayoutObject<any>) {
-        this.container.removeChildren()
-        for (let { col } of components.center.lines) {
+        const lines = components.center?.lines || []
+        this.getLayoutContainer().removeChildren()
+
+        for (let { col } of lines) {
             for (let component of col) {
-                this.container.addChild(this.applyComponent(component))
+                const instance = this.applyComponent(component)
+                if (instance.onInit) instance.onInit({
+                    width: this.width,
+                    height: this.height
+                })
+                this.getLayoutContainer().addChild(instance)
             }
         }
+
         this.components = components
     }
 
-    private refreshComponents(components: LayoutObject<any>, sprite: PIXI.Sprite) {
-        if (components.top?.lines) {
-            this.container.addChild(
-                this.createGrid(components.top.lines, components.top, sprite)
-            )
+    private refreshComponents(components: LayoutObject<any>, sprite: SpriteInfo) {
+        for (let type of layoutTypes) {
+            const layout = components[type]
+            if (layout?.lines) {
+                this.getLayoutContainer(type).removeChildren()
+                this.getLayoutContainer(type).addChild(this.createGrid(layout.lines, layout, sprite))
+            }
         }
     }
 
     private updateComponents(components: LayoutObject<any>) {
-        // TODO: unsubscribe
-        this.createComponentCenter(components)
-        this.container.children[0].animationSprite()
-            .pipe(
-                filter((sprite: any) => sprite),
-                map((sprite: any) => ({
-                    width: sprite.width,
-                    height: sprite.height,
-                    anchor: sprite.anchor
-                })),
-                distinctUntilChanged((p: any, q: any) =>
-                    p.width === q.width &&
-                    p.height === q.height &&
-                    p.anchor.x === q.anchor.x &&
-                    p.anchor.y === q.anchor.y),
-            )
-            .subscribe((sprite) => {
-                this.refreshComponents(components, sprite)
-            })
-    }
+        const graphicChanged: boolean = !!components.center?.lines
 
-    getScene<T>(): T {
-        return this.scene as any
-    }
+        if (graphicChanged) {
+            this.createComponentCenter(components)
 
-    // Hooks
-    onInit() { }
-    onUpdate(obj) { }
-    onMove() { }
-    onChanges(data, old) { }
+            if (this.subscriptionGraphic) this.subscriptionGraphic.unsubscribe()
+
+            const child = this.getLayoutContainer().children[0]
+            if (child instanceof RpgSprite) {
+                this.subscriptionGraphic = (child as RpgSprite).animationSprite()
+                    .pipe(
+                        takeUntil(this.game.getDeleteNotifier(this.id)),
+                        filter((sprite: any) => sprite),
+                        map((sprite: any) => ({
+                            width: sprite.width,
+                            height: sprite.height,
+                            anchor: sprite.anchor
+                        })),
+                        distinctUntilChanged((p: any, q: any) =>
+                            p.width === q.width &&
+                            p.height === q.height &&
+                            p.anchor.x === q.anchor.x &&
+                            p.anchor.y === q.anchor.y),
+                    )
+                    .subscribe((sprite) => {
+                        this.refreshComponents(components, sprite)
+                    })
+            }
+            else {
+                this.refreshComponents(components, child as any)
+            }
+        }
+
+
+    }
 }

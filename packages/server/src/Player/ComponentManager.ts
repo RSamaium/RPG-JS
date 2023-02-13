@@ -1,5 +1,5 @@
 import { Utils } from '@rpgjs/common'
-import { BarComponentObject, ComponentObject, LayoutObject, LayoutOptions, TextComponentObject } from '@rpgjs/types'
+import { BarComponentObject, ComponentObject, LayoutObject, LayoutOptions, TextComponentObject, LayoutPositionEnum } from '@rpgjs/types'
 
 const defaultStyle = (style: any) => ({
     borderColor: '#000000',
@@ -80,35 +80,12 @@ export class ComponentManager {
      */
     setGraphic(graphic: string | number | (string | number)[]) {
         const components = (Utils.isArray(graphic) ? graphic : [graphic]) as string[]
-        this.layout.center = {
-            lines: [{
-                col: components.map(value => ({ id: Utils.isString(value) ? 'graphic' : 'tile', value }))
-            }]
-        }
+        const col = components.map(value => ({ id: Utils.isString(value) ? 'graphic' : 'tile', value }))
+        this.setComponentsCenter(col)
     }
 
-    /*
-        Params:
-
-        [
-            {
-                col: [
-                    { id: 'graphic', value: 'body' },
-                    { id: 'graphic', value: 'body' }
-                ]
-            },
-            {
-                col: [
-                    { id: 'graphic', value: 'shield' }
-                ]
-            }
-        ]
-    */
-
-    setComponentsTop<T = any>(layout: ComponentObject<T>[][], options?: LayoutOptions)
-    setComponentsTop<T = any>(layout: ComponentObject<T>[], options?: LayoutOptions)
-    setComponentsTop<T = any>(layout: ComponentObject<T>[][] | ComponentObject<T>[], options: LayoutOptions = {}) {
-        this.layout.top = {
+    private setComponents<P extends LayoutPositionEnum, T = any>(position: P, layout: ComponentObject<T>[][] | ComponentObject<T>[], options: LayoutOptions = {}) {
+        this.layout[position] = {
             lines: layout.map(col => {
                 if (!Utils.isArray(col)) {
                     col = [col]
@@ -117,5 +94,35 @@ export class ComponentManager {
             }),
             ...options
         }
+    }
+
+    setComponentsCenter<T = any>(layout: ComponentObject<T>[][], options?: LayoutOptions)
+    setComponentsCenter<T = any>(layout: ComponentObject<T>[], options?: LayoutOptions)
+    setComponentsCenter<T = any>(layout: ComponentObject<T>[][] | ComponentObject<T>[], options: LayoutOptions = {}) {
+        this.setComponents<'center', T>('center', layout, options)
+    }
+
+    setComponentsTop<T = any>(layout: ComponentObject<T>[][], options?: LayoutOptions)
+    setComponentsTop<T = any>(layout: ComponentObject<T>[], options?: LayoutOptions)
+    setComponentsTop<T = any>(layout: ComponentObject<T>[][] | ComponentObject<T>[], options: LayoutOptions = {}) {
+        this.setComponents<'top', T>('top', layout, options)
+    }
+
+    setComponentsBottom<T = any>(layout: ComponentObject<T>[][], options?: LayoutOptions)
+    setComponentsBottom<T = any>(layout: ComponentObject<T>[], options?: LayoutOptions)
+    setComponentsBottom<T = any>(layout: ComponentObject<T>[][] | ComponentObject<T>[], options: LayoutOptions = {}) {
+        this.setComponents<'bottom', T>('bottom', layout, options)
+    }
+
+    setComponentsLeft<T = any>(layout: ComponentObject<T>[][], options?: LayoutOptions)
+    setComponentsLeft<T = any>(layout: ComponentObject<T>[], options?: LayoutOptions)
+    setComponentsLeft<T = any>(layout: ComponentObject<T>[][] | ComponentObject<T>[], options: LayoutOptions = {}) {
+        this.setComponents<'left', T>('left', layout, options)
+    }
+
+    setComponentsRight<T = any>(layout: ComponentObject<T>[][], options?: LayoutOptions)
+    setComponentsRight<T = any>(layout: ComponentObject<T>[], options?: LayoutOptions)
+    setComponentsRight<T = any>(layout: ComponentObject<T>[][] | ComponentObject<T>[], options: LayoutOptions = {}) {
+        this.setComponents<'right', T>('right', layout, options)
     }
 }

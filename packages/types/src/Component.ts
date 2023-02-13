@@ -10,14 +10,11 @@ type LayoutPosition<T> = {
     lines: { col: ComponentObject<T>[] }[],
 } & LayoutOptions
 
-export type LayoutObject<T> = {
-    top: LayoutPosition<T>,
-    bottom: LayoutPosition<T>,
-    left: LayoutPosition<T>,
-    right: LayoutPosition<T>
-    center: LayoutPosition<T>
-}
+export type LayoutPositionEnum = 'top' | 'bottom' | 'left' | 'right' | 'center'
 
+export type LayoutObject<T> = {
+   [position in LayoutPositionEnum]?: LayoutPosition<T>
+}
 
 export type TextComponentObject = {
     id: 'text',

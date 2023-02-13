@@ -3,7 +3,6 @@ import { Control, RpgClientEngine } from '@rpgjs/client'
 import { _beforeEach } from './beforeEach'
 import { clear, nextTick } from '@rpgjs/testing'
 import { inputs } from './fixtures/control'
-import { filter, lastValueFrom, map, Subscription } from 'rxjs'
 
 let client: RpgClientEngine, player: RpgPlayer, fixture, playerId
 let server: RpgServerEngine
@@ -237,7 +236,7 @@ describe('Move To', () => {
 
     test('Is Stuck', done => {
         let i = 0
-        const subscription: Subscription = player.moveTo({ x: 6 * 32, y: 6 * 32 }, {
+        const subscription = player.moveTo({ x: 6 * 32, y: 6 * 32 }, {
             onStuck(count) {
                 expect(count).toBe(1)
                 done()

@@ -1,6 +1,5 @@
 import { TextComponentObject } from "@rpgjs/types"
 import { AbstractComponent } from "./AbstractComponent"
-import { RpgComponent } from "./Component"
 
 export class TextComponent extends AbstractComponent<TextComponentObject, PIXI.Text> {
     static readonly id: string = 'text'
@@ -30,5 +29,4 @@ export class TextComponent extends AbstractComponent<TextComponentObject, PIXI.T
     updateRender(object: any) {
         this.container.text = this.replaceText(object, this.originValue)
     }
-
 }

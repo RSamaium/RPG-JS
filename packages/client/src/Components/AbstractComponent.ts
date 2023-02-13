@@ -7,7 +7,7 @@ import { GameEngineClient } from "../GameEngine"
 
 const REGEXP_VAR = /{([^\}]+)}/g
 
-export type CellInfo = { x: number, y: number, width: number, height: number }
+export type CellInfo = { x?: number, y?: number, width: number, height: number }
 
 export abstract class AbstractComponent<
     TypeComponent extends ComponentObject<any>,

@@ -80,23 +80,31 @@ describe('Graphic Component', () => {
         server = ret.server
     })
 
-    
+    // format of the components: [ { lines: [ { col: { id: 'graphic', value: 'mygraphic1' } } ] } ]
+
+    const formatMockComponent = (component: any) => {
+        if (!(component instanceof Array)) {
+            component = [component]
+        }
+        return { lines: component.map(c => ({ col: [c] })) }
+    }
+
     test('player.setGraphic() component', async () => {
         player.setGraphic('mygraphic1')
         await nextTick(client)
         const playerClient = client.gameEngine.getObject(player.id)?.object
-        expect(playerClient.components).toMatchObject([{ id: 'graphic', value: 'mygraphic1' } ])
+        expect(playerClient.layout.center).toMatchObject(formatMockComponent({ id: 'graphic', value: 'mygraphic1' }))
     })
     
     test('player.setGraphic() multi component', async () => {
         player.setGraphic(['mygraphic1', 'mygraphic2'])
         await nextTick(client)
         const playerClient = client.gameEngine.getObject(player.id)?.object
-        expect(playerClient.components).toMatchObject(
-            [
+        expect(playerClient.layout.center).toMatchObject(
+            formatMockComponent([
                 { id: 'graphic', value: 'mygraphic1' },
                 { id: 'graphic', value: 'mygraphic2' } 
-            ]
+            ])
         )
     })
 
@@ -104,55 +112,51 @@ describe('Graphic Component', () => {
         player.setGraphic(['mygraphic1', 'mygraphic2'])
         await nextTick(client)
         setComponent()
-        expect(component['components']).toMatchObject(
-            [
+        expect(component['components'].center).toMatchObject(
+            formatMockComponent([
                 { id: 'graphic', value: 'mygraphic1' },
                 { id: 'graphic', value: 'mygraphic2' } 
-            ]
+            ])
         )
-        expect(component['container'].children).toHaveLength(2)
+        expect(component.getLayoutContainer().children).toHaveLength(2)
     })
 
     describe('Test Component type', () => {
-        test('Graphic', async () => {
-            player.setGraphic('mygraphic1')
+
+        async function getComponent() {
             await nextTick(client)
             setComponent()
-            const comp = component['container'].getChildAt(0)
-            expect(comp).toHaveProperty('setGraphic')
+            return component.getLayoutContainer().getChildAt(0) as any
+        }
+
+        test('Graphic', async () => {
+            player.setGraphic('mygraphic1')
+            expect(await getComponent()).toHaveProperty('setGraphic')
         })
 
         test('Color', async () => {
-            player.components = [ { id: 'color', value: '#ffffff' } ]
-            await nextTick(client)
-            setComponent()
-            const comp = component['container'].getChildAt(0) as ColorComponent
+            player.setComponentsCenter([ { id: 'color', value: '#ffffff' } ])
+            const comp = await getComponent()
             expect(comp).toHaveProperty('setBackgroundColor')
             expect(comp.color).toBe('#ffffff')
         })
 
         test('Image', async () => {
-            player.components = [ { id: 'image', value: 'test.png' } ]
-            await nextTick(client)
-            setComponent()
-            const comp = component['container'].getChildAt(0)
+            player.setComponentsCenter([ { id: 'image', value: 'test.png' } ])
+            const comp = await getComponent()
             expect(comp).toHaveProperty('setImage')
             expect(comp['source']).toBe('test.png')
         })
 
         test('Text', async () => {
-            player.components = [ { id: 'text', value: 'hello' } ]
-            await nextTick(client)
-            setComponent()
-            const comp = component['container'].getChildAt(0) as any
-            expect(comp.text).toBe('hello')
+            player.setComponentsCenter([ { id: 'text', value: 'hello' } ])
+            const comp = await getComponent()
+            expect(comp.getChildAt(0).text).toBe('hello')
         })
 
         test('Tile', async () => {
-            player.components = [ { id: 'tile', value: 1 } ]
-            await nextTick(client)
-            setComponent()
-            const comp = component['container'].getChildAt(0) as any
+            player.setComponentsCenter([ { id: 'tile', value: 1 } ])
+            const comp = await getComponent()
             expect(comp).toHaveProperty('setTile')
             expect(comp.getChildAt(0)).toHaveProperty('tile', { gid: 1 })
         })
