@@ -1,6 +1,6 @@
 import { ComponentObject } from "@rpgjs/types"
 import { Subject } from "rxjs"
-import { filter, map } from "rxjs/operators"
+import { filter, map, takeUntil } from "rxjs/operators"
 import { RpgComponent } from "./Component"
 import get from 'lodash.get'
 import { GameEngineClient } from "../GameEngine"
@@ -14,6 +14,7 @@ export abstract class AbstractComponent<
     ContainerType extends PIXI.Container | PIXI.Text | PIXI.Sprite | PIXI.Graphics
 > extends PIXI.Container {
     private _onRender$: Subject<AbstractComponent<TypeComponent, ContainerType>> = new Subject()
+    private _onDestroy$: Subject<void> = new Subject()
     readonly onRender$ = this._onRender$.asObservable()
     protected readonly game: GameEngineClient = this.component.game
     protected firstRender: boolean = true
@@ -76,8 +77,9 @@ export abstract class AbstractComponent<
 
         this.game.listenObject(objectId)
             .pipe(
-                map(object => object?.paramsChanged),
-                filter(params => {
+                takeUntil(this._onDestroy$),
+                filter(object => {
+                    const params = object?.paramsChanged
                     if (!params) return false
                     for (const param of this.cacheParams) {
                         if (get(params, param)) return true
@@ -85,8 +87,8 @@ export abstract class AbstractComponent<
                     return false
                 })
             )
-            .subscribe((val) => {
-                this.updateRender(val, this.firstRender)
+            .subscribe(({ object }) => {
+                this.updateRender(object, this.firstRender)
                 this.firstRender = false
                 this._onRender$.next(this)
             })
@@ -94,4 +96,9 @@ export abstract class AbstractComponent<
 
     abstract updateRender(object: any, firstRender: boolean): void
     abstract cacheParams: string[]
+
+    onRemove() {
+        this._onDestroy$.next()
+        this._onDestroy$.complete()
+    }
 }

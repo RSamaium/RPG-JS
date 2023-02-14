@@ -239,10 +239,12 @@ export class Animation extends PIXI.Sprite {
 
             }
 
+            const realSize = getVal<'spriteRealSize'>('spriteRealSize')
+            const heightOfSprite = typeof realSize == 'number' ? realSize : realSize?.height
+            const widthOfSprite = typeof realSize == 'number' ? realSize : realSize?.width
+
             const applyAnchorBySize = () => {
-                const val = getVal<'spriteRealSize'>('spriteRealSize')
-                if (val && this.hitbox) {
-                    const heightOfSprite = typeof val == 'number' ? val : val.height
+                if (heightOfSprite && this.hitbox) {
                     const { spriteWidth, spriteHeight } = data
                     const w = ((spriteWidth - this.hitbox.w) / 2) / spriteWidth
                     const gap = (spriteHeight - heightOfSprite) / 2
@@ -269,7 +271,11 @@ export class Animation extends PIXI.Sprite {
             applyTransformValue('rotation')
             applyTransformValue('visible')
 
-            this._animation$.next(sprite)
+            this._animation$.next({
+                width: widthOfSprite || sprite.width,
+                height: heightOfSprite || sprite.height,
+                anchor: sprite.anchor,
+            } as PIXI.Sprite)
         }
 
         if (!nextFrame) {

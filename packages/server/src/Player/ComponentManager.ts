@@ -1,5 +1,5 @@
 import { Utils } from '@rpgjs/common'
-import { BarComponentObject, ComponentObject, LayoutObject, LayoutOptions, TextComponentObject, LayoutPositionEnum } from '@rpgjs/types'
+import { BarComponentObject, ComponentObject, LayoutObject, LayoutOptions, TextComponentObject, LayoutPositionEnum, ColorComponentObject, ImageComponentObject, TileComponentObject } from '@rpgjs/types'
 
 const defaultStyle = (style: any) => ({
     borderColor: '#000000',
@@ -20,7 +20,7 @@ const bar = (current: string, max: string, style?: BarComponentObject['value']['
     }
 }
 
-export const Component = {
+export const Components = {
     hpBar(style?: BarComponentObject['value']['style']): BarComponentObject {
         return bar('hp', 'param.maxHp', {
             ...defaultStyle({
@@ -48,6 +48,24 @@ export const Component = {
                     ...((style as any) || {})
                 }
             }
+        }
+    },
+    color(value: string): ColorComponentObject {
+        return {
+            id: 'color',
+            value
+        }
+    },
+    image(value: string): ImageComponentObject {
+        return {
+            id: 'image',
+            value
+        }
+    },
+    tile(value: number): TileComponentObject {
+        return {
+            id: 'tile',
+            value
         }
     }
 }

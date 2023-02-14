@@ -1,15 +1,28 @@
+import { ImageComponentObject } from "@rpgjs/types"
 import { SceneMap } from "../Scene/Map"
-import { RpgComponent } from "./Component"
+import { AbstractComponent, CellInfo } from "./AbstractComponent"
 
-export class ImageComponent extends PIXI.Container {
+export class ImageComponent extends AbstractComponent<ImageComponentObject, PIXI.Container> {
     static readonly id: string = 'image'
+    cacheParams: string[] = []
+    source: string = ''
 
-    constructor(private component: RpgComponent, private source: string) {
-        super()
+    onInit(cell: CellInfo) {
+        super.onInit(cell)
         this.setImage()
     }
 
-    setImage() {
+    private setImage() {
+        if (typeof this.value == 'string') {
+            this.source = this.value
+        } else  {
+            this.source = this.value.source
+        }
+        this.updateRender({})
+    }
+
+    updateRender(object: any) {
+        this.removeChildren()
         const engine = this.component.getScene<SceneMap>().game.clientEngine
         this.addChild(PIXI.Sprite.from(engine.getResourceUrl(this.source)))
     }

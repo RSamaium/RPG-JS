@@ -1,13 +1,13 @@
-import {_beforeEach} from './beforeEach'
+import { _beforeEach } from './beforeEach'
 import { RpgPlayer, RpgServerEngine } from '@rpgjs/server'
 import { RpgCommonPlayer } from '@rpgjs/common'
 import { RpgClientEngine, RpgSceneMap, RpgComponent, Spritesheet, RpgSprite } from '@rpgjs/client'
-import { ColorComponent } from '@rpgjs/client/src/Components/ColorComponent'
+import { Components } from '@rpgjs/server'
 import { clear, nextTick } from '@rpgjs/testing'
 
-let  client: RpgClientEngine, 
-player: RpgPlayer,
-server: RpgServerEngine
+let client: RpgClientEngine,
+    player: RpgPlayer,
+    server: RpgServerEngine
 
 let objects: any
 let component: RpgComponent
@@ -57,7 +57,7 @@ test('Get Scene', () => {
 describe('Graphic Component', () => {
     beforeEach(async () => {
         clear()
-        
+
         const url = require('./fixtures/spritesheets/sample.png')
 
         @Spritesheet({
@@ -66,7 +66,7 @@ describe('Graphic Component', () => {
                 mygraphic2: url
             }
         })
-        class Images {}
+        class Images { }
 
         const ret = await _beforeEach([
             {
@@ -95,7 +95,7 @@ describe('Graphic Component', () => {
         const playerClient = client.gameEngine.getObject(player.id)?.object
         expect(playerClient.layout.center).toMatchObject(formatMockComponent({ id: 'graphic', value: 'mygraphic1' }))
     })
-    
+
     test('player.setGraphic() multi component', async () => {
         player.setGraphic(['mygraphic1', 'mygraphic2'])
         await nextTick(client)
@@ -103,7 +103,7 @@ describe('Graphic Component', () => {
         expect(playerClient.layout.center).toMatchObject(
             formatMockComponent([
                 { id: 'graphic', value: 'mygraphic1' },
-                { id: 'graphic', value: 'mygraphic2' } 
+                { id: 'graphic', value: 'mygraphic2' }
             ])
         )
     })
@@ -115,52 +115,124 @@ describe('Graphic Component', () => {
         expect(component['components'].center).toMatchObject(
             formatMockComponent([
                 { id: 'graphic', value: 'mygraphic1' },
-                { id: 'graphic', value: 'mygraphic2' } 
+                { id: 'graphic', value: 'mygraphic2' }
             ])
         )
         expect(component.getLayoutContainer().children).toHaveLength(2)
     })
 
-    describe('Test Component type', () => {
-
-        async function getComponent() {
-            await nextTick(client)
-            setComponent()
-            return component.getLayoutContainer().getChildAt(0) as any
+    async function getComponent(position): Promise<{ layout: any, comp: any }> {
+        await nextTick(client)
+        setComponent()
+        const layout = component.getLayoutContainer(position).getChildAt(0) as any
+        if (position === 'center') {
+            return { layout, comp: layout }
         }
+        return { layout, comp: layout.getChildAt(0) }
+    }
 
-        test('Graphic', async () => {
-            player.setGraphic('mygraphic1')
-            expect(await getComponent()).toHaveProperty('setGraphic')
-        })
-
-        test('Color', async () => {
-            player.setComponentsCenter([ { id: 'color', value: '#ffffff' } ])
-            const comp = await getComponent()
-            expect(comp).toHaveProperty('setBackgroundColor')
-            expect(comp.color).toBe('#ffffff')
-        })
-
-        test('Image', async () => {
-            player.setComponentsCenter([ { id: 'image', value: 'test.png' } ])
-            const comp = await getComponent()
-            expect(comp).toHaveProperty('setImage')
-            expect(comp['source']).toBe('test.png')
-        })
-
-        test('Text', async () => {
-            player.setComponentsCenter([ { id: 'text', value: 'hello' } ])
-            const comp = await getComponent()
-            expect(comp.getChildAt(0).text).toBe('hello')
-        })
-
-        test('Tile', async () => {
-            player.setComponentsCenter([ { id: 'tile', value: 1 } ])
-            const comp = await getComponent()
-            expect(comp).toHaveProperty('setTile')
-            expect(comp.getChildAt(0)).toHaveProperty('tile', { gid: 1 })
-        })
+    test('Graphic', async () => {
+        player.setGraphic('mygraphic1')
+        expect((await getComponent('center')).comp).toHaveProperty('setGraphic')
     })
+
+    for (let position of ['center', 'left', 'right', 'top', 'bottom']) {
+        describe(`[${position}] Test Component type`, () => {
+
+            const playerSetComponentsMethod = 'setComponents' + position[0].toUpperCase() + position.slice(1)
+
+            const expectPosition = async (position: string, components: any[], width: number, height: number) => {
+                player[playerSetComponentsMethod](components)
+                const { layout } = await getComponent(position)
+                const playerClient = client.gameEngine.getObject(player.id)?.object
+                switch (position) {
+                    case 'center':
+                        expect(layout.x).toBe(0)
+                        expect(layout.y).toBe(0)
+                        break;
+                    case 'left':
+                        expect(layout.x).toBe(-width)
+                        expect(layout.y).toBe(0)
+                        break;
+                    case 'right':
+                        expect(layout.x).toBe(playerClient.width)
+                        expect(layout.y).toBe(0)
+                        break;
+                    case 'top':
+                        expect(layout.x).toBe(0)
+                        expect(layout.y).toBe(-height)
+                        break;
+                    case 'bottom':
+                        expect(layout.x).toBe(0)
+                        expect(layout.y).toBe(playerClient.height)
+                        break;
+
+                }
+            }
+
+            test('[One line] Position of layout', async () => {
+                await expectPosition(position, [
+                    Components.color('#ffffff'),
+                ], 32, 32)
+            })
+
+            test('[Two line] Position of layout', async () => {
+                await expectPosition(position, [
+                    Components.color('#ffffff'),
+                    Components.color('#ffffff'),
+                ], 32, 64)
+            })
+
+            test('Color', async () => {
+                player[playerSetComponentsMethod]([Components.color('#ffffff')])
+                const { comp } = await getComponent(position)
+                expect(comp.color).toBe('#ffffff')
+            })
+
+            test('Image', async () => {
+                player[playerSetComponentsMethod]([Components.image('test.png')])
+                const { comp } = await getComponent(position)
+                expect(comp['source']).toBe('test.png')
+            })
+
+            test('Text', async () => {
+                player[playerSetComponentsMethod]([Components.text('hello')])
+                const { comp } = await getComponent(position)
+                expect(comp.getChildAt(0).text).toBe('hello')
+            })
+
+            test('[First Render] Parse Variable in Text. {} format', async () => {
+                player[playerSetComponentsMethod]([Components.text('{hp}')])
+                const { comp } = await getComponent(position)
+                expect(comp.getChildAt(0).text).toBe(''+player.hp)
+            })
+
+            test('[Change Variable] Parse Variable in Text. {} format', async () => {
+                const initialHp = player.hp
+                player[playerSetComponentsMethod]([Components.text('{hp}')])
+                const { comp } = await getComponent(position)
+                player.hp -= 10
+                await nextTick(client)
+                const text = comp.getChildAt(0).text
+                expect(text).not.toBe(''+initialHp)
+                expect(text).toBe(''+player.hp)
+            })
+
+            test('Tile', async () => {
+                player[playerSetComponentsMethod]([Components.tile(1)])
+                const { comp } = await getComponent(position)
+                expect(comp.getChildAt(0)).toHaveProperty('tile', { gid: 1 })
+            })
+
+            test('Change Layout', async () => {
+                player[playerSetComponentsMethod]([Components.color('#ffffff')])
+                await getComponent(position)
+                player[playerSetComponentsMethod]([Components.image('test.png')])
+                const { comp } =  await getComponent(position)
+                expect(comp['source']).toBe('test.png')
+            })
+        })
+    }
 })
 
 afterEach(() => {

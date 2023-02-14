@@ -2,6 +2,9 @@ export type LayoutOptions = {
     width?: number,
     height?: number,
     marginBottom?: number,
+    marginTop?: number,
+    marginLeft?: number,
+    marginRight?: number
 }
 
 export type ComponentObject<T> = { id: string, value: T }
@@ -34,6 +37,27 @@ export type TextComponentObject = {
             fontWeight?: 'normal' | 'bold' | 'bolder' | 'lighter' | '100' | '200' | '300' | '400' | '500' | '600' | '700' | '800' | '900',
         }
     } | string
+}
+
+export type ImageComponentObject = {
+    id: 'image',
+    value: {
+        source: string
+    } | string
+}
+
+export type ColorComponentObject = {
+    id: 'color',
+    value: {
+        color: string
+    } | string
+}
+
+export type TileComponentObject = {
+    id: 'tile',
+    value: {
+        gid: number
+    } | number
 }
 
 type BarComponentStyle = {

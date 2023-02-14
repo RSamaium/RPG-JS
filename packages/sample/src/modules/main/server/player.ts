@@ -1,4 +1,4 @@
-import { RpgPlayer, RpgMap, RpgPlayerHooks, Direction, Move, RpgShape, ShapePositioning, Control, RpgEvent, EventData, RpgWorld, AbstractObject, Component } from '@rpgjs/server'
+import { RpgPlayer, RpgMap, RpgPlayerHooks, Direction, Move, RpgShape, ShapePositioning, Control, RpgEvent, EventData, RpgWorld, AbstractObject, Components } from '@rpgjs/server'
 import { Armor } from '@rpgjs/database'
 import { BarComponentObject, TextComponentObject } from '@rpgjs/types';
 
@@ -56,17 +56,22 @@ export const player: RpgPlayerHooks = {
         player.setHitbox(16, 16)
         player.setGraphic('jedi')
         player.changeMap('samplemap')
-        player.name = 'Sam'
+        player.name = 'SamUel'
         player.setComponentsTop<any>(
             [
-                [Component.text('{name}')],
-                [Component.hpBar()],
+                [Components.text('{name}')],
+                [Components.hpBar()],
             ],
             {
                 height: 20,
                 marginBottom: -10
             }
         ) 
+        // player.setComponentsLeft<any>(
+        //     [
+        //         [Components.text('{hp}')]
+        //     ]
+        // ) 
         // player.setMoveMode({
         //     collision: true,
         //     clientMode: {
@@ -95,12 +100,21 @@ export const player: RpgPlayerHooks = {
                 }
             })*/
             player.hp -= 100
+            player.setComponentsTop<any>(
+                [
+                    Components.text('{hp}'),
+                    Components.hpBar()
+                ],
+                {
+                    height: 20,
+                    marginBottom: -10
+                }
+            )
+            //player.setComponentsLeft([])
         }
         if (input == 'action') {
             player.hp += 100
         }
-
-        console.log(player.hp)
     },
     async onInShape(player: RpgPlayer, shape: RpgShape) {
         console.log('in', player.name, shape.name)

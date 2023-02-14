@@ -1,22 +1,33 @@
-import { RpgComponent } from "./Component"
 import { Utils } from "@rpgjs/common"
+import { AbstractComponent, CellInfo } from "./AbstractComponent"
+import { ColorComponentObject } from "@rpgjs/types"
 
-export class ColorComponent extends PIXI.Graphics {
+export class ColorComponent extends AbstractComponent<ColorComponentObject, PIXI.Graphics> {
     static readonly id: string = 'color'
+    color: string = '#000000'
+    cacheParams: string[] = []
+    private container: PIXI.Graphics = new PIXI.Graphics()
 
-    constructor(private component: RpgComponent, public color: string) {
-        super()
-        this.setBackgroundColor()
+    onInit(cell: CellInfo) {
+        if (typeof this.value == 'string') {
+            this.color = this.value
+        } else {
+            this.color = this.value.color
+        }
+        this.updateRender({})
+        this.addChild(this.container)
+        super.onInit(cell)
     }
 
-    setBackgroundColor() {
-        this.beginFill(Utils.hexaToNumber(this.color))
-        this.drawRect(
+    updateRender(object: any) {
+        this.container.clear()
+        this.container.beginFill(Utils.hexaToNumber(this.color))
+        this.container.drawRect(
             0,
             0,
-            this.component.w,
-            this.component.h
+            this.cell?.width ?? 0,
+            this.cell?.height ?? 0
         );
-        this.endFill()
+        this.container.endFill()
     }
 }

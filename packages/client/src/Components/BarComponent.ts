@@ -145,4 +145,10 @@ export class BarComponent extends AbstractComponent<BarComponentObject, PIXI.Con
                 }
             })
     }
+
+    onRemove() {
+        this.notifier.next()
+        this.notifier.complete()
+        super.onRemove()
+    }
 }

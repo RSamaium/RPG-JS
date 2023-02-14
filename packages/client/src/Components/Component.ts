@@ -1,7 +1,7 @@
 import { Direction, HookClient, RpgCommonPlayer, RpgPlugin, RpgShape, Utils } from "@rpgjs/common"
 import { ComponentObject, LayoutObject, LayoutOptions, LayoutPositionEnum, PlayerType, PositionXY } from "@rpgjs/types"
-import { Subscription } from "rxjs"
-import { map, filter, tap, distinctUntilChanged, takeUntil } from "rxjs/operators"
+import { Subject, Subscription } from "rxjs"
+import { map, filter, tap, distinctUntilChanged, takeUntil, finalize } from "rxjs/operators"
 import { log } from "../Logger"
 import { Scene } from "../Scene/Scene"
 import { RpgSprite } from "../Sprite/Player"
@@ -54,6 +54,13 @@ export class RpgComponent<T = any> extends PIXI.Container {
     } = {} as any
 
     private subscriptionGraphic: Subscription
+    private layoutNotifierClear: { [key in LayoutPositionEnum]: Subject<void> } = {
+        top: new Subject(),
+        bottom: new Subject(),
+        left: new Subject(),
+        right: new Subject(),
+        center: new Subject()
+    }
     private registerComponents: Map<string, any> = new Map()
     private dragMode?: {
         data: any,
@@ -347,16 +354,32 @@ export class RpgComponent<T = any> extends PIXI.Container {
         }
     }
 
-    private createGrid(gridArray, options: LayoutOptions, sprite: SpriteInfo) {
+    private createGrid(position: LayoutPositionEnum, gridArray: any, options: LayoutOptions, sprite: SpriteInfo): PIXI.Container {
         const gridContainer = new PIXI.Container();
         const { height } = sprite
         const width = options.width ?? sprite.width
         const gridHeight = options.height ?? 32
+        const posX = gridContainer.x - (width * sprite.anchor.x)
+        const posY = gridContainer.y - (height * sprite.anchor.y)
 
-        // replace x and y gridContainer with sprite anchor
-        gridContainer.x = gridContainer.x - ((width) * sprite.anchor.x)
-        gridContainer.y = gridContainer.y - (height * sprite.anchor.y) - +(options.marginBottom ?? 0)
-        gridContainer.y -= (gridArray.length * gridHeight)
+        switch (position) {
+            case 'top':
+                gridContainer.x = posX
+                gridContainer.y = posY - +(options.marginBottom ?? 0)
+                gridContainer.y -= (gridArray.length * gridHeight)
+                break;
+            case 'bottom':
+                gridContainer.x = posX
+                gridContainer.y = posY + height + (options.marginTop ?? 0)
+                break;
+            case 'left':
+                gridContainer.x = posX - width - (options.marginRight ?? 0)
+                gridContainer.y = posY
+                break;
+            case 'right':
+                gridContainer.x = posX + width + (options.marginLeft ?? 0)
+                gridContainer.y = gridContainer.y - (height * sprite.anchor.y)
+        }
 
         for (let y = 0; y < gridArray.length; y++) {
             const columns = gridArray[y].col.length;
@@ -364,10 +387,17 @@ export class RpgComponent<T = any> extends PIXI.Container {
             for (let x = 0; x < columns; x++) {
                 const params: ComponentObject<any> = gridArray[y].col[x];
                 const component = this.applyComponent(params)
-                component.onRender$.subscribe(() => {
-                    component.x = Math.round((x * cellWidth) + (cellWidth / 2) - (component.width / 2))
-                    component.y = Math.round((y * gridHeight) + (gridHeight / 2) - (component.height / 2))
-                })
+                component.onRender$
+                    .pipe(
+                        takeUntil(this.layoutNotifierClear[position]),
+                        finalize(() => {
+                            component.onRemove()
+                        })
+                    )
+                    .subscribe(() => {
+                        component.x = Math.round((x * cellWidth) + (cellWidth / 2) - (component.width / 2))
+                        component.y = Math.round((y * gridHeight) + (gridHeight / 2) - (component.height / 2))
+                    })
                 component.onInit({
                     width: cellWidth,
                     height: gridHeight
@@ -376,7 +406,7 @@ export class RpgComponent<T = any> extends PIXI.Container {
             }
         }
 
-        return gridContainer;
+        return gridContainer
     }
 
     private applyComponent(component: ComponentObject<any>): AbstractComponent<any, any> {
@@ -409,8 +439,10 @@ export class RpgComponent<T = any> extends PIXI.Container {
         for (let type of layoutTypes) {
             const layout = components[type]
             if (layout?.lines) {
-                this.getLayoutContainer(type).removeChildren()
-                this.getLayoutContainer(type).addChild(this.createGrid(layout.lines, layout, sprite))
+                const layoutContainer = this.getLayoutContainer(type)
+                layoutContainer.removeChildren()
+                this.layoutNotifierClear[type].next()
+                layoutContainer.addChild(this.createGrid(type, layout.lines, layout, sprite))
             }
         }
     }
@@ -420,35 +452,44 @@ export class RpgComponent<T = any> extends PIXI.Container {
 
         if (graphicChanged) {
             this.createComponentCenter(components)
-
-            if (this.subscriptionGraphic) this.subscriptionGraphic.unsubscribe()
-
-            const child = this.getLayoutContainer().children[0]
-            if (child instanceof RpgSprite) {
-                this.subscriptionGraphic = (child as RpgSprite).animationSprite()
-                    .pipe(
-                        takeUntil(this.game.getDeleteNotifier(this.id)),
-                        filter((sprite: any) => sprite),
-                        map((sprite: any) => ({
-                            width: sprite.width,
-                            height: sprite.height,
-                            anchor: sprite.anchor
-                        })),
-                        distinctUntilChanged((p: any, q: any) =>
-                            p.width === q.width &&
-                            p.height === q.height &&
-                            p.anchor.x === q.anchor.x &&
-                            p.anchor.y === q.anchor.y),
-                    )
-                    .subscribe((sprite) => {
-                        this.refreshComponents(components, sprite)
-                    })
-            }
-            else {
-                this.refreshComponents(components, child as any)
-            }
         }
 
+        if (this.subscriptionGraphic) this.subscriptionGraphic.unsubscribe()
+
+        const child = this.getLayoutContainer().children[0]
+
+        if (child instanceof RpgSprite) {
+            this.subscriptionGraphic = (child as RpgSprite).animationSprite()
+                .pipe(
+                    takeUntil(this.game.getDeleteNotifier(this.id)),
+                    filter((sprite: any) => sprite),
+                    map((sprite: any) => ({
+                        width: sprite.width,
+                        height: sprite.height,
+                        anchor: sprite.anchor
+                    })),
+                    distinctUntilChanged((p: any, q: any) =>
+                        p.width === q.width &&
+                        p.height === q.height &&
+                        p.anchor.x === q.anchor.x &&
+                        p.anchor.y === q.anchor.y),
+                )
+                .subscribe((sprite) => {
+                    this.refreshComponents(components, sprite)
+                })
+        }
+        else {
+            this.refreshComponents(components, {
+                width: this.data.width,
+                height: this.data.height,
+                anchor: {
+                    x: 0,
+                    y: 0
+                },
+                x: 0,
+                y: 0
+            })
+        }
 
     }
 }
