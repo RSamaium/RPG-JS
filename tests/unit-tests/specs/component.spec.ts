@@ -151,20 +151,20 @@ describe('Graphic Component', () => {
                         expect(layout.y).toBe(0)
                         break;
                     case 'left':
-                        expect(layout.x).toBe(-width)
-                        expect(layout.y).toBe(0)
+                        expect(layout.x).toBe(-playerClient.width)
+                        expect(layout.y).toBe(-height)
                         break;
                     case 'right':
-                        expect(layout.x).toBe(playerClient.width)
-                        expect(layout.y).toBe(0)
+                        expect(layout.x).toBe(32)
+                        expect(layout.y).toBe(-height)
                         break;
                     case 'top':
-                        expect(layout.x).toBe(0)
+                        expect(layout.x).toBe(-width / 2)
                         expect(layout.y).toBe(-height)
                         break;
                     case 'bottom':
-                        expect(layout.x).toBe(0)
-                        expect(layout.y).toBe(playerClient.height)
+                        expect(layout.x).toBe(width / 2)
+                        expect(layout.y).toBe(-height)
                         break;
 
                 }
@@ -173,14 +173,14 @@ describe('Graphic Component', () => {
             test('[One line] Position of layout', async () => {
                 await expectPosition(position, [
                     Components.color('#ffffff'),
-                ], 32, 32)
+                ], 32, 20)
             })
 
             test('[Two line] Position of layout', async () => {
                 await expectPosition(position, [
                     Components.color('#ffffff'),
                     Components.color('#ffffff'),
-                ], 32, 64)
+                ], 32, 40)
             })
 
             test('Color', async () => {

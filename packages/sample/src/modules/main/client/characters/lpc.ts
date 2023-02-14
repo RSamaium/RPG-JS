@@ -43,7 +43,6 @@ function getDirection(direction: Direction, offset: number = 0) {
             framesWidth: 6,
             framesHeight: 4,
             offset: {x: 0, y: 1344},
-            spriteRealSize: 64, 
             animations: direction => [
                 new Array(7).fill(0).map((_, i) => {
                     const mapDirection = {

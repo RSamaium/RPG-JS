@@ -272,10 +272,12 @@ export class Animation extends PIXI.Sprite {
             applyTransformValue('visible')
 
             this._animation$.next({
-                width: widthOfSprite || sprite.width,
-                height: heightOfSprite || sprite.height,
+                spriteWidth: widthOfSprite || sprite.width,
+                spriteHeight: heightOfSprite || sprite.height,
                 anchor: sprite.anchor,
-            } as PIXI.Sprite)
+                width: getVal<any>('spriteWidth'),
+                height: getVal<any>('spriteHeight')
+            } as any)
         }
 
         if (!nextFrame) {

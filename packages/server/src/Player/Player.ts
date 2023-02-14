@@ -57,6 +57,9 @@ export const layoutSchema = {
     width: Number,
     height: Number,
     marginBottom: Number,
+    marginTop: Number,
+    marginLeft: Number,
+    marginRight: Number,
     lines: [{
         col: [componentSchema]
     }]

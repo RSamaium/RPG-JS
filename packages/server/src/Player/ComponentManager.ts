@@ -1,5 +1,6 @@
 import { Utils } from '@rpgjs/common'
 import { BarComponentObject, ComponentObject, LayoutObject, LayoutOptions, TextComponentObject, LayoutPositionEnum, ColorComponentObject, ImageComponentObject, TileComponentObject } from '@rpgjs/types'
+import { DebugComponentObject } from '@rpgjs/types/lib/Component'
 
 const defaultStyle = (style: any) => ({
     borderColor: '#000000',
@@ -67,6 +68,12 @@ export const Components = {
             id: 'tile',
             value
         }
+    },
+    debug(value: string): DebugComponentObject {
+        return {
+            id: 'debug',
+            value
+        }
     }
 }
 
@@ -98,49 +105,74 @@ export class ComponentManager {
      */
     setGraphic(graphic: string | number | (string | number)[]) {
         const components = (Utils.isArray(graphic) ? graphic : [graphic]) as string[]
-        const col = components.map(value => ({ id: Utils.isString(value) ? 'graphic' : 'tile', value }))
-        this.setComponentsCenter(col)
+        const col = [...components.map(value => ({ id: Utils.isString(value) ? 'graphic' : 'tile', value }))]
+        this.removeComponentById('center', 'graphic')
+        this.mergeComponent('center', col)
+        console.log(this.layout.center)
     }
 
-    private setComponents<P extends LayoutPositionEnum, T = any>(position: P, layout: ComponentObject<T>[][] | ComponentObject<T>[], options: LayoutOptions = {}) {
+    private removeComponentById<P extends LayoutPositionEnum, T = any>(
+        position: P,
+        id: string
+    ) {
+        let lines = this.layout[position]?.lines || []
+        lines = lines.map(line => {
+            line.col = line.col.filter(c => c.id !== id)
+            return line
+        });
+        lines = lines.filter(line => line.col.length > 0);
+        (this.layout[position] as any).lines = lines
+    }
+
+    private mergeComponent<P extends LayoutPositionEnum, T = any>(
+        position: P,
+        layout: ComponentObject<T>[][] | ComponentObject<T>[] | ComponentObject<T>,
+        options: LayoutOptions = {}
+    ) {
+        if (!(layout instanceof Array)) {
+            layout = [layout]
+        }
+
         this.layout[position] = {
-            lines: layout.map(col => {
-                if (!Utils.isArray(col)) {
-                    col = [col]
-                }
-                return { col }
-            }),
+            lines: [
+                ...(this.layout[position]?.lines || []),
+                ...layout.map(col => {
+                    if (!Utils.isArray(col)) {
+                        col = [col]
+                    }
+                    return { col }
+                })
+            ],
             ...options
         }
     }
 
-    setComponentsCenter<T = any>(layout: ComponentObject<T>[][], options?: LayoutOptions)
-    setComponentsCenter<T = any>(layout: ComponentObject<T>[], options?: LayoutOptions)
-    setComponentsCenter<T = any>(layout: ComponentObject<T>[][] | ComponentObject<T>[], options: LayoutOptions = {}) {
+    private setComponents<P extends LayoutPositionEnum, T = any>(
+        position: P,
+        layout: ComponentObject<T>[][] | ComponentObject<T>[] | ComponentObject<T>,
+        options: LayoutOptions = {}
+    ) {
+        (this.layout[position] as any).lines = []
+        this.mergeComponent(position, layout, options)
+    }
+
+    setComponentsCenter<T = any>(layout: ComponentObject<T>[][] | ComponentObject<T>[] | ComponentObject<T>, options: LayoutOptions = {}) {
         this.setComponents<'center', T>('center', layout, options)
     }
 
-    setComponentsTop<T = any>(layout: ComponentObject<T>[][], options?: LayoutOptions)
-    setComponentsTop<T = any>(layout: ComponentObject<T>[], options?: LayoutOptions)
-    setComponentsTop<T = any>(layout: ComponentObject<T>[][] | ComponentObject<T>[], options: LayoutOptions = {}) {
+    setComponentsTop<T = any>(layout: ComponentObject<T>[][] | ComponentObject<T>[] | ComponentObject<T>, options: LayoutOptions = {}) {
         this.setComponents<'top', T>('top', layout, options)
     }
 
-    setComponentsBottom<T = any>(layout: ComponentObject<T>[][], options?: LayoutOptions)
-    setComponentsBottom<T = any>(layout: ComponentObject<T>[], options?: LayoutOptions)
-    setComponentsBottom<T = any>(layout: ComponentObject<T>[][] | ComponentObject<T>[], options: LayoutOptions = {}) {
+    setComponentsBottom<T = any>(layout: ComponentObject<T>[][] | ComponentObject<T>[] | ComponentObject<T>, options: LayoutOptions = {}) {
         this.setComponents<'bottom', T>('bottom', layout, options)
     }
 
-    setComponentsLeft<T = any>(layout: ComponentObject<T>[][], options?: LayoutOptions)
-    setComponentsLeft<T = any>(layout: ComponentObject<T>[], options?: LayoutOptions)
-    setComponentsLeft<T = any>(layout: ComponentObject<T>[][] | ComponentObject<T>[], options: LayoutOptions = {}) {
+    setComponentsLeft<T = any>(layout: ComponentObject<T>[][] | ComponentObject<T>[] | ComponentObject<T>, options: LayoutOptions = {}) {
         this.setComponents<'left', T>('left', layout, options)
     }
 
-    setComponentsRight<T = any>(layout: ComponentObject<T>[][], options?: LayoutOptions)
-    setComponentsRight<T = any>(layout: ComponentObject<T>[], options?: LayoutOptions)
-    setComponentsRight<T = any>(layout: ComponentObject<T>[][] | ComponentObject<T>[], options: LayoutOptions = {}) {
+    setComponentsRight<T = any>(layout: ComponentObject<T>[][] | ComponentObject<T>[] | ComponentObject<T>, options: LayoutOptions = {}) {
         this.setComponents<'right', T>('right', layout, options)
     }
 }

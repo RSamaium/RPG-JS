@@ -53,20 +53,12 @@ export const player: RpgPlayerHooks = {
         color: String
     },
     onConnected(player: RpgPlayer) {
-        player.setHitbox(16, 16)
-        player.setGraphic('jedi')
+        player.setHitbox(60, 16)
+        
         player.changeMap('samplemap')
         player.name = 'SamUel'
-        player.setComponentsTop<any>(
-            [
-                [Components.text('{name}')],
-                [Components.hpBar()],
-            ],
-            {
-                height: 20,
-                marginBottom: -10
-            }
-        ) 
+        player.setComponentsCenter(Components.debug('')) 
+        player.setGraphic('jedi')
         // player.setComponentsLeft<any>(
         //     [
         //         [Components.text('{hp}')]
@@ -89,7 +81,8 @@ export const player: RpgPlayerHooks = {
     },
     onInput(player: RpgPlayer, { input, moving }) {
         if (input == 'attack') {
-            player.showAnimation('jedi', 'attack', true)
+            //player.showAnimation('jedi', 'attack', true)
+            player.setGraphic('light')
             const map = player.getCurrentMap()
             /*map?.createMovingHitbox([
                 { x: player.position.x + 50, y: player.position.y, width: 10, height: 10 }
@@ -100,16 +93,6 @@ export const player: RpgPlayerHooks = {
                 }
             })*/
             player.hp -= 100
-            player.setComponentsTop<any>(
-                [
-                    Components.text('{hp}'),
-                    Components.hpBar()
-                ],
-                {
-                    height: 20,
-                    marginBottom: -10
-                }
-            )
             //player.setComponentsLeft([])
         }
         if (input == 'action') {

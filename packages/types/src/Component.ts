@@ -53,6 +53,13 @@ export type ColorComponentObject = {
     } | string
 }
 
+export type DebugComponentObject = {
+    id: 'debug',
+    value: {
+        text: string
+    } | string
+}
+
 export type TileComponentObject = {
     id: 'tile',
     value: {

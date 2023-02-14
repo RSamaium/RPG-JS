@@ -8,11 +8,20 @@ import { RpgSprite } from "../Sprite/Player"
 import { AbstractComponent } from "./AbstractComponent"
 import { BarComponent } from "./BarComponent"
 import { ColorComponent } from "./ColorComponent"
+import { DebugComponent } from "./DebugComponent"
 import { ImageComponent } from "./ImageComponent"
 import { TextComponent } from "./TextComponent"
 import { TileComponent } from "./TileComponent"
 
-type SpriteInfo = { width: number, height: number, x: number, y: number, anchor: { x: number, y: number } }
+type SpriteInfo = {
+    width: number,
+    height: number,
+    x: number,
+    y: number,
+    anchor: { x: number, y: number },
+    spriteWidth: number
+    spriteHeight: number
+}
 
 export interface IComponent {
     id: string,
@@ -79,6 +88,7 @@ export class RpgComponent<T = any> extends PIXI.Container {
         this.registerComponents.set(TileComponent.id, TileComponent)
         this.registerComponents.set(ImageComponent.id, ImageComponent)
         this.registerComponents.set(BarComponent.id, BarComponent)
+        this.registerComponents.set(DebugComponent.id, DebugComponent)
 
         this.addChild(this.container)
 
@@ -355,30 +365,30 @@ export class RpgComponent<T = any> extends PIXI.Container {
     }
 
     private createGrid(position: LayoutPositionEnum, gridArray: any, options: LayoutOptions, sprite: SpriteInfo): PIXI.Container {
-        const gridContainer = new PIXI.Container();
-        const { height } = sprite
-        const width = options.width ?? sprite.width
-        const gridHeight = options.height ?? 32
-        const posX = gridContainer.x - (width * sprite.anchor.x)
-        const posY = gridContainer.y - (height * sprite.anchor.y)
+        const gridContainer = new PIXI.Sprite();
+        const { height, spriteWidth, spriteHeight } = sprite
+        const width = options.width ?? spriteWidth ?? sprite.width
+        const gridHeight = options.height ?? 20
+        const posX = gridContainer.x - (this.logic?.hitbox.w ?? 0) + (options.marginLeft ?? 0) - (options.marginRight ?? 0)
+        const posY = gridContainer.y + (this.logic?.hitbox.h ?? 0) + (options.marginTop ?? 0) - (options.marginBottom ?? 0)
 
         switch (position) {
             case 'top':
-                gridContainer.x = posX
-                gridContainer.y = posY - +(options.marginBottom ?? 0)
+                gridContainer.x = posX / 2 
+                gridContainer.y = posY - spriteHeight
                 gridContainer.y -= (gridArray.length * gridHeight)
                 break;
             case 'bottom':
-                gridContainer.x = posX
-                gridContainer.y = posY + height + (options.marginTop ?? 0)
+                gridContainer.x = posX / 2
+                gridContainer.y = posY + (options.marginTop ?? 0)
                 break;
             case 'left':
-                gridContainer.x = posX - width - (options.marginRight ?? 0)
-                gridContainer.y = posY
+                gridContainer.x = posX - spriteWidth
+                gridContainer.y = posY - spriteHeight
                 break;
             case 'right':
-                gridContainer.x = posX + width + (options.marginLeft ?? 0)
-                gridContainer.y = gridContainer.y - (height * sprite.anchor.y)
+                gridContainer.x = posX + spriteWidth
+                gridContainer.y = posY - spriteHeight
         }
 
         for (let y = 0; y < gridArray.length; y++) {
@@ -419,6 +429,7 @@ export class RpgComponent<T = any> extends PIXI.Container {
 
     private createComponentCenter(components: LayoutObject<any>) {
         const lines = components.center?.lines || []
+
         this.getLayoutContainer().removeChildren()
 
         for (let { col } of lines) {
@@ -463,11 +474,6 @@ export class RpgComponent<T = any> extends PIXI.Container {
                 .pipe(
                     takeUntil(this.game.getDeleteNotifier(this.id)),
                     filter((sprite: any) => sprite),
-                    map((sprite: any) => ({
-                        width: sprite.width,
-                        height: sprite.height,
-                        anchor: sprite.anchor
-                    })),
                     distinctUntilChanged((p: any, q: any) =>
                         p.width === q.width &&
                         p.height === q.height &&
@@ -487,7 +493,9 @@ export class RpgComponent<T = any> extends PIXI.Container {
                     y: 0
                 },
                 x: 0,
-                y: 0
+                y: 0,
+                spriteHeight: this.data.height,
+                spriteWidth: this.data.width
             })
         }
 
