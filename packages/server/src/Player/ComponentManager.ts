@@ -10,34 +10,161 @@ const defaultStyle = (style: any) => ({
     ...style
 })
 
-const bar = (current: string, max: string, style?: BarComponentObject['value']['style']): BarComponentObject => {
+const bar = (current: string, max: string, style?: BarComponentObject['value']['style'], text?: string | null): BarComponentObject => {
     return {
         id: 'bar',
         value: {
             current,
             max,
+            text: text === null ? '' : text || '{$current}/{$max}',
             style
         }
     }
 }
 
 export const Components = {
-    hpBar(style?: BarComponentObject['value']['style']): BarComponentObject {
+    /**
+     * Displays a bar
+     * 
+     * Example:
+     * 
+     * ```ts
+     * import { Components } from '@rpgjs/server'
+     * Components.bar('hp', 'param.maxHp', {
+     *    bgColor: '#ab0606'
+     * })
+     * ```
+     * 
+     * For text, you can use the following variables:
+     * - {$current} current value
+     * - {$max} maximum value
+     * - {$percent} percentage
+     * 
+     * Example:
+     * 
+     * ```ts
+     * import { Components } from '@rpgjs/server'
+     * Components.bar('hp', 'param.maxHp', {
+     *   bgColor: '#ab0606'
+     * }, 'HP: {$current}/{$max}')
+     * ```
+     * 
+     * and you can also use the variables of player:
+     * 
+     * ```ts
+     * import { Components } from '@rpgjs/server'
+     * Components.bar('hp', 'param.maxHp', {
+     *  bgColor: '#ab0606'
+     * }, 'HP: {$current}/{$max} - {name}') // HP: 100/100 - John
+     * ```
+     * 
+     * @param {string} current Parameter that corresponds to the current value
+     * @param {string} max Parameter that corresponds to the maximum value
+     * @param {object} [style] style
+     * @param {string} [style.bgColor] background color. Hexadecimal format.
+     * @param {string} [style.fillColor] fill color. Hexadecimal format.
+     * @param {string} [style.borderColor] border color. Hexadecimal format.
+     * @param {number} [style.borderWidth] border width
+     * @param {number} [style.height] height
+     * @param {number} [style.width] width
+     * @param {number} [style.borderRadius] border radius
+     * @param {number} [style.opacity] opacity
+     * @param {string | null} [text] text above bar. if null, no text will be displayed. You can use the variables
+     * @returns {BarComponentObject}
+     * @memberof Components
+     * @since 3.3.0
+     */
+    bar,
+
+    /**
+     * Displays a life bar
+     * 
+     * @param {object} [style] style. See bar style (Components.bar())
+     * @param {string | null} [text] test above bar (Components.bar())
+     * @returns {BarComponentObject}
+     * @memberof Components
+     * @since 3.3.0
+     */
+    hpBar(style?: BarComponentObject['value']['style'], text?: string | null): BarComponentObject {
         return bar('hp', 'param.maxHp', {
             ...defaultStyle({
-                fillColor: '#00ff00'
+                fillColor: '#ab0606'
             }),
             ...((style as any) || {})
-        })
+        }, text)
     },
-    spBar(style?: BarComponentObject['value']['style']): BarComponentObject {
+
+     /**
+     * Displays a SP bar
+     * 
+     * @param {object} [style] style. See bar style (Components.bar())
+     * @param {string | null} [text] test above bar (Components.bar())
+     * @returns {BarComponentObject}
+     * @memberof Components
+     * @since 3.3.0
+     */
+    spBar(style?: BarComponentObject['value']['style'], text?: string | null): BarComponentObject {
         return bar('sp', 'param.maxSp', {
             ...defaultStyle({
-                fillColor: '#0000ff'
+                fillColor: '#0fa38c'
             }),
-            ...((style as any) || {})
-        })
+            ...((style as any) || {}),
+        }, text)
     },
+
+     /**
+     * Put on the text. You can read the content of a variable with {} format (see example below)
+     * 
+     * Example:
+     * 
+     * ```ts
+     * import { Components } from '@rpgjs/server'
+     * Components.text('Hello World')
+     * ```
+     * 
+     * Example with variable:
+     * 
+     * ```ts
+     * import { Components } from '@rpgjs/server'
+     * Components.text('{name}')
+     * ```
+     * 
+     * Other example with position:
+     * 
+     * ```ts
+     * import { Components } from '@rpgjs/server'
+     * Components.text('X: {position.x} Y: {position.y}')
+     * ```
+     * 
+     * With style:
+     * 
+     * ```ts
+     * import { Components } from '@rpgjs/server'
+     * Components.text('Hello World', {
+     *      fill: '#ffffff',
+     *      fontSize: 20,
+     *      fontFamily: 'Arial',
+     *      stroke: '#000000',
+     *      fontStyle: 'italic',
+     *      fontWeight: 'bold'
+     * })
+     * ```
+     * 
+     * @param {string} value source
+     * @param {object} [style] style
+     * @param {string} [style.fill] color. Hexadecimal format.
+     * @param {number} [style.fontSize] font size
+     * @param {string} [style.fontFamily] font family
+     * @param {string} [style.stroke] stroke color. Hexadecimal format.
+     * @param {'normal' | 'italic' | 'oblique'} [style.fontStyle] font style
+     * @param {'normal' | 'bold' | 'bolder' | 'lighter' | '100' | '200' | '300' | '400' | '500' | '600' | '700' | '800' | '900'} [style.fontWeight] font weight
+     * @param {number} [style.opacity] opacity. Between 0 and 1
+     * @param {boolean} [style.wordWrap] word wrap
+     * @param {'left' | 'center' | 'right' | 'justify'} [style.align] align
+     * @returns {TextComponentObject}
+     * @memberof Components
+     * @since 3.3.0
+     */
     text(value: string, style?: TextComponentObject['value']): TextComponentObject {
         return {
             id: 'text',
@@ -51,28 +178,76 @@ export const Components = {
             }
         }
     },
+
+    /**
+     * Put on the color. Hexadecimal format.
+     * 
+     * Example:
+     * 
+     * ```ts
+     * import { Components } from '@rpgjs/server'
+     * Components.color('#ffffff')
+     * ```
+     * 
+     * @param {string} value source
+     * @returns {ColorComponentObject}
+     * @memberof Components
+     * @since 3.3.0
+     */
     color(value: string): ColorComponentObject {
         return {
             id: 'color',
             value
         }
     },
+
+    /**
+     * Put the link to an image or the identifier of an image (if the spritesheet exists)
+     * 
+     * Example:
+     * 
+     * ```ts
+     * import { Components } from '@rpgjs/server'
+     * Components.image('mygraphic.png')
+     * ```
+     * 
+     * @param {string} value source
+     * @returns {ImageComponentObject}
+     * @memberof Components
+     * @since 3.3.0
+     */
     image(value: string): ImageComponentObject {
         return {
             id: 'image',
             value
         }
     },
+
+    /**
+     * Indicates the tile ID
+     * 
+     * Example:
+     * 
+     * ```ts
+     * import { Components } from '@rpgjs/server'
+     * Components.tile(3)
+     * ```
+     * 
+     * @param {number} value tile ID
+     * @returns {TileComponentObject}
+     * @memberof Components
+     * @since 3.3.0
+     */
     tile(value: number): TileComponentObject {
         return {
             id: 'tile',
             value
         }
     },
-    debug(value: string): DebugComponentObject {
+    debug(): DebugComponentObject {
         return {
             id: 'debug',
-            value
+            value: ''
         }
     }
 }
@@ -101,18 +276,35 @@ export class ComponentManager {
      * @method player.setGraphic(graphic)
      * @param {string | number | (string | number)[]} graphic
      * @returns {void}
-     * @memberof Player
+     * @memberof ComponentManager
      */
     setGraphic(graphic: string | number | (string | number)[]) {
         const components = (Utils.isArray(graphic) ? graphic : [graphic]) as string[]
         const col = [...components.map(value => ({ id: Utils.isString(value) ? 'graphic' : 'tile', value }))]
         this.removeComponentById('center', 'graphic')
         this.mergeComponent('center', col)
-        console.log(this.layout.center)
     }
 
-    private removeComponentById<P extends LayoutPositionEnum, T = any>(
-        position: P,
+    /**
+     * Delete components
+     * 
+     * @param {string} position Position of the components. Can be: `top`, `center`, `bottom`, `left`, `right`
+     * @memberof ComponentManager
+     * @since 3.3.0
+     */
+    removeComponents(position: LayoutPositionEnum) {
+        (this.layout[position] as any).lines = []
+    }
+
+    /**
+     * Delete components by id. 
+     * 
+     * @param {string} position Position of the components. Can be: `top`, `center`, `bottom`, `left`, `right`
+     * @param {string} id Id of the component
+     * @since 3.3.0
+     */
+    removeComponentById(
+        position: LayoutPositionEnum,
         id: string
     ) {
         let lines = this.layout[position]?.lines || []
@@ -124,8 +316,19 @@ export class ComponentManager {
         (this.layout[position] as any).lines = lines
     }
 
-    private mergeComponent<P extends LayoutPositionEnum, T = any>(
-        position: P,
+    /**
+     * Merges components with existing components
+     * 
+     * For use layout and options, see [setComponentsTop](/api/player.html#setcomponentstop)
+     * 
+     * @param {string} position Position of the components. Can be: `top`, `center`, `bottom`, `left`, `right`
+     * @param {Object} layout 
+     * @param {Object} options 
+     * @memberof ComponentManager
+     * @since 3.3.0
+     */
+    mergeComponent<T = any>(
+        position: LayoutPositionEnum,
         layout: ComponentObject<T>[][] | ComponentObject<T>[] | ComponentObject<T>,
         options: LayoutOptions = {}
     ) {
@@ -156,22 +359,138 @@ export class ComponentManager {
         this.mergeComponent(position, layout, options)
     }
 
+    /**
+     * Add components to the center of the graphic.
+     * 
+     * View [setComponentsTop](/api/player.html#setcomponentstop) for more information
+     * 
+     * > Be careful, because if you assign, it deletes the graphics and if the lines are superimposed (unlike the other locations)
+     * 
+     * @title Set Components Center
+     * @method player.setComponentsCenter(layout,options)
+     * @param {Object} layout 
+     * @param {Object} options 
+     * @memberof ComponentManager
+     * @since 3.3.0
+     */
     setComponentsCenter<T = any>(layout: ComponentObject<T>[][] | ComponentObject<T>[] | ComponentObject<T>, options: LayoutOptions = {}) {
         this.setComponents<'center', T>('center', layout, options)
     }
 
+    /**
+     * Add components to the top of the graphic. e.g. text, life bar etc. The block will be centred
+     * The first array corresponds to the rows, and the nested table to the array in the row
+     * 
+     * Example:
+     * 
+     * ```ts
+     * import { Components } from '@rpgjs/server'
+     * 
+     * player.setComponentsTop([
+     *      [Components.text('Hello World')],
+     *      [Components.hpBar()]
+     * ]) // 2 lines with 1 component each
+     * ```
+     * 
+     *  or
+     * 
+     * ```ts
+     * import { Components } from '@rpgjs/server'
+     * 
+     * player.setComponentsTop([
+     *      [Components.text('Hello World'), Components.hpBar()]
+     * ]) // 1 line with 2 components
+     * ```
+     * 
+     * You can be faster if you only have lines
+     * 
+     * ```ts
+     * player.setComponentsTop([
+     *      Components.text('Hello World'),
+     *      Components.hpBar()
+     * ]) // 2 lines with 1 component each
+     * ```
+     * 
+     * or one component:
+     * 
+     * ```ts
+     * player.setComponentsTop(Components.text('Hello World')) // 1 line with 1 component
+     * ```
+     * 
+     * You can add options to manage the style
+     * 
+     * ```ts
+     * player.setComponentsTop([
+     *      Components.text('Hello World'),
+     *      Components.hpBar()
+     * ], {
+     *      width: 100,
+     *      height: 20,
+     *      marginTop: 10,
+     * })
+     * ```
+     * 
+     * @title Set Components Top
+     * @method player.setComponentsTop(layout,options)
+     * @param {ComponentObject[][] | ComponentObject[] | ComponentObject} layout Components
+     * @param {Object} [options = {}] Options
+     * @param {number} [options.width] Width of the block
+     * @param {number} [options.height = 20] Height of the block
+     * @param {number} [options.marginTop] Margin top
+     * @param {number} [options.marginBottom] Margin bottom
+     * @param {number} [options.marginLeft] Margin left
+     * @param {number} [options.marginRight] Margin right
+     * @memberof ComponentManager
+     * @since 3.3.0
+     */
     setComponentsTop<T = any>(layout: ComponentObject<T>[][] | ComponentObject<T>[] | ComponentObject<T>, options: LayoutOptions = {}) {
         this.setComponents<'top', T>('top', layout, options)
     }
 
+    /**
+     * Add components to the bottom of the graphic.
+     * 
+     * View [setComponentsTop](/api/player.html#setcomponentstop) for more information
+     * 
+     * @title Set Components Bottom
+     * @method player.setComponentsBottom(layout,options)
+     * @param {Object} layout 
+     * @param {Object} options 
+     * @memberof ComponentManager
+     * @since 3.3.0
+     */
     setComponentsBottom<T = any>(layout: ComponentObject<T>[][] | ComponentObject<T>[] | ComponentObject<T>, options: LayoutOptions = {}) {
         this.setComponents<'bottom', T>('bottom', layout, options)
     }
 
+    /**
+     * Add components to the left of the graphic.
+     * 
+     * View [setComponentsTop](/api/player.html#setcomponentstop) for more information
+     * 
+     * @title Set Components Left
+     * @method player.setComponentsLeft(layout,options)
+     * @param {Object} layout 
+     * @param {Object} options 
+     * @memberof ComponentManager
+     * @since 3.3.0
+     */
     setComponentsLeft<T = any>(layout: ComponentObject<T>[][] | ComponentObject<T>[] | ComponentObject<T>, options: LayoutOptions = {}) {
         this.setComponents<'left', T>('left', layout, options)
     }
 
+    /**
+     * Add components to the right of the graphic.
+     * 
+     * View [setComponentsTop](/api/player.html#setcomponentstop) for more information
+     * 
+     * @title Set Components Right
+     * @method player.setComponentsRight(layout,options)
+     * @param {Object} layout 
+     * @param {Object} options 
+     * @memberof ComponentManager
+     * @since 3.3.0
+     */
     setComponentsRight<T = any>(layout: ComponentObject<T>[][] | ComponentObject<T>[] | ComponentObject<T>, options: LayoutOptions = {}) {
         this.setComponents<'right', T>('right', layout, options)
     }

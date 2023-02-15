@@ -369,25 +369,27 @@ export class RpgComponent<T = any> extends PIXI.Container {
         const { height, spriteWidth, spriteHeight } = sprite
         const width = options.width ?? spriteWidth ?? sprite.width
         const gridHeight = options.height ?? 20
-        const posX = gridContainer.x - (this.logic?.hitbox.w ?? 0) + (options.marginLeft ?? 0) - (options.marginRight ?? 0)
+        const hitBoxWidth = this.logic?.hitbox.w ?? 0
+        const middleWidth = hitBoxWidth / 2 - width / 2
+        const posX = gridContainer.x + (options.marginLeft ?? 0) - (options.marginRight ?? 0)
         const posY = gridContainer.y + (this.logic?.hitbox.h ?? 0) + (options.marginTop ?? 0) - (options.marginBottom ?? 0)
 
         switch (position) {
             case 'top':
-                gridContainer.x = posX / 2 
+                gridContainer.x = posX + middleWidth
                 gridContainer.y = posY - spriteHeight
                 gridContainer.y -= (gridArray.length * gridHeight)
                 break;
             case 'bottom':
-                gridContainer.x = posX / 2
-                gridContainer.y = posY + (options.marginTop ?? 0)
+                gridContainer.x = posX + middleWidth
+                gridContainer.y = posY
                 break;
             case 'left':
-                gridContainer.x = posX - spriteWidth
+                gridContainer.x = posX - width - (hitBoxWidth < spriteWidth ? hitBoxWidth / 2 : 0)
                 gridContainer.y = posY - spriteHeight
                 break;
             case 'right':
-                gridContainer.x = posX + spriteWidth
+                gridContainer.x = posX + width + (hitBoxWidth > spriteWidth ? hitBoxWidth / 2 : 0)
                 gridContainer.y = posY - spriteHeight
         }
 

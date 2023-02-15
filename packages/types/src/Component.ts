@@ -83,6 +83,7 @@ export type BarComponentObject = {
     value: {
         current: string,
         max: string,
+        text?: string,
         style?: BarComponentStyle | {
             perPercent: {
                 [percent: string]: {

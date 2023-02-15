@@ -145,6 +145,7 @@ describe('Graphic Component', () => {
                 player[playerSetComponentsMethod](components)
                 const { layout } = await getComponent(position)
                 const playerClient = client.gameEngine.getObject(player.id)?.object
+                const hitbox = player.hitbox
                 switch (position) {
                     case 'center':
                         expect(layout.x).toBe(0)
@@ -152,19 +153,19 @@ describe('Graphic Component', () => {
                         break;
                     case 'left':
                         expect(layout.x).toBe(-playerClient.width)
-                        expect(layout.y).toBe(-height)
+                        expect(layout.y).toBe(0)
                         break;
                     case 'right':
                         expect(layout.x).toBe(32)
-                        expect(layout.y).toBe(-height)
+                        expect(layout.y).toBe(0)
                         break;
                     case 'top':
-                        expect(layout.x).toBe(-width / 2)
+                        expect(layout.x).toBe(0)
                         expect(layout.y).toBe(-height)
                         break;
                     case 'bottom':
-                        expect(layout.x).toBe(width / 2)
-                        expect(layout.y).toBe(-height)
+                        expect(layout.x).toBe(0)
+                        expect(layout.y).toBe(hitbox.h)
                         break;
 
                 }

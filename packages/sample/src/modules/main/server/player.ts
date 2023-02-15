@@ -1,6 +1,7 @@
 import { RpgPlayer, RpgMap, RpgPlayerHooks, Direction, Move, RpgShape, ShapePositioning, Control, RpgEvent, EventData, RpgWorld, AbstractObject, Components } from '@rpgjs/server'
 import { Armor } from '@rpgjs/database'
 import { BarComponentObject, TextComponentObject } from '@rpgjs/types';
+import { Paralyse } from './paralyse';
 
 let i = 0
 
@@ -53,11 +54,13 @@ export const player: RpgPlayerHooks = {
         color: String
     },
     onConnected(player: RpgPlayer) {
-        player.setHitbox(60, 16)
+        player.setHitbox(20, 16)
         
         player.changeMap('samplemap')
         player.name = 'SamUel'
-        player.setComponentsCenter(Components.debug('')) 
+        player.setComponentsTop([
+            Components.hpBar()
+        ]), 
         player.setGraphic('jedi')
         // player.setComponentsLeft<any>(
         //     [
@@ -82,7 +85,7 @@ export const player: RpgPlayerHooks = {
     onInput(player: RpgPlayer, { input, moving }) {
         if (input == 'attack') {
             //player.showAnimation('jedi', 'attack', true)
-            player.setGraphic('light')
+            player.setGraphic(['jedi'])
             const map = player.getCurrentMap()
             /*map?.createMovingHitbox([
                 { x: player.position.x + 50, y: player.position.y, width: 10, height: 10 }
@@ -92,7 +95,7 @@ export const player: RpgPlayerHooks = {
 
                 }
             })*/
-            player.hp -= 100
+            player.addState(Paralyse)
             //player.setComponentsLeft([])
         }
         if (input == 'action') {

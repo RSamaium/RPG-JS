@@ -12,7 +12,9 @@ export class BarComponent extends AbstractComponent<BarComponentObject, PIXI.Con
     static readonly id: string = 'bar'
     private barContainer: PIXI.Graphics = new PIXI.Graphics();
     private barFill: PIXI.Graphics = new PIXI.Graphics();
+    private textContainer: PIXI.Text = new PIXI.Text('')
     private barHeight: number = this.value.style?.height || 7;
+    private text: string = this.value.text || ''
     private barStyle = this.getStyle<BarComponentObject['value']['style']>()
     private currentValue: number = 0;
     private maxValue: number = 0;
@@ -39,6 +41,14 @@ export class BarComponent extends AbstractComponent<BarComponentObject, PIXI.Con
             this.barContainer.drawRect(...paramsRect);
         }
         this.barContainer.endFill();
+        this.textContainer.style = {
+            fontSize: 10,
+            fill: '#ffffff',
+            fontWeight: 'bold'
+        }
+        // 5 is the padding
+        this.textContainer.y -= this.barHeight + this.textContainer.height - 5
+        if (this.text) this.addChild(this.textContainer)
         this.addChild(this.barContainer);
         this.barContainer.addChild(this.barFill);
         this.cacheParams = [this.value.current, this.value.max]
@@ -85,7 +95,9 @@ export class BarComponent extends AbstractComponent<BarComponentObject, PIXI.Con
         }
 
         const render = (up = false) => {
-            const currentValue = ~~this.currentValue
+            let currentValue = ~~this.currentValue
+            if (currentValue < 0) currentValue = 0
+            if (currentValue > this.maxValue) currentValue = this.maxValue
             const percentBetween = ~~Math.max(0, ((currentValue - this.nextValue) * 100) / this.nextValue)
             const colorIndex = Math.max(Math.floor((100 - percentBetween) / (100 / (colors.length - 1))), 0)
             let fillColor = colors[colorIndex]
@@ -102,6 +114,12 @@ export class BarComponent extends AbstractComponent<BarComponentObject, PIXI.Con
                     this.barFill.drawRect(...paramsRect)
                 }
             }
+            this.textContainer.text = this.replaceText({
+                ...object,
+                $current: currentValue,
+                $percent: Math.round(percent * 100),
+                $max: this.maxValue
+            }, this.text)
             this.barFill.endFill();
         }
 

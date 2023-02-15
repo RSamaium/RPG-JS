@@ -19,7 +19,6 @@ function getDirection(direction: Direction, offset: number = 0) {
     height: 1344,
     framesWidth: 13,
     framesHeight: 21,
-    spriteRealSize: 64,
     textures: {
         [Animation.Stand]: {
             animations: direction => [
