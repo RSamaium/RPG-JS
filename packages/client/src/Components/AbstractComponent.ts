@@ -53,6 +53,17 @@ export abstract class AbstractComponent<
         })
     }
 
+    protected getValue(object: any, expression: any): any {
+        if (typeof expression === 'string') {
+            const value = get(object, expression)
+            if (value !== undefined) {
+                if (this.cacheParams.indexOf(expression) === -1) this.cacheParams.push(expression)
+                return value
+            }
+        }
+        return expression
+    }
+
     private verifyParams(): void | never {
         const params = this.component.logic
         for (const param of this.cacheParams) {
@@ -67,11 +78,15 @@ export abstract class AbstractComponent<
 
         this.verifyParams()
 
-        const opacity = this.getStyle<{ opacity: number | undefined }>().opacity
+        const render= (object) => {
+            const opacity = this.getValue(object, this.getStyle<{ opacity: number | undefined }>().opacity || this.value.opacity)
 
-        if (opacity !== undefined) {
-            this.alpha = opacity
+            if (opacity !== undefined) {
+                this.alpha = Math.min(opacity, 1)
+            }
         }
+
+        render(this.component.logic)
 
         const objectId = this.component.logic?.id
 
@@ -89,6 +104,7 @@ export abstract class AbstractComponent<
             )
             .subscribe(({ object }) => {
                 this.updateRender(object, this.firstRender)
+                render(object)
                 this.firstRender = false
                 this._onRender$.next(this)
             })

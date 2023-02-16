@@ -7,7 +7,7 @@ import { Scene } from "../Scene/Scene"
 import { RpgSprite } from "../Sprite/Player"
 import { AbstractComponent } from "./AbstractComponent"
 import { BarComponent } from "./BarComponent"
-import { ColorComponent } from "./ColorComponent"
+import { ShapeComponent } from "./ShapeComponent"
 import { DebugComponent } from "./DebugComponent"
 import { ImageComponent } from "./ImageComponent"
 import { TextComponent } from "./TextComponent"
@@ -84,7 +84,7 @@ export class RpgComponent<T = any> extends PIXI.Container {
         this.setPosition(false)
         this.registerComponents.set(RpgSprite.id, RpgSprite)
         this.registerComponents.set(TextComponent.id, TextComponent)
-        this.registerComponents.set(ColorComponent.id, ColorComponent)
+        this.registerComponents.set(ShapeComponent.id, ShapeComponent)
         this.registerComponents.set(TileComponent.id, TileComponent)
         this.registerComponents.set(ImageComponent.id, ImageComponent)
         this.registerComponents.set(BarComponent.id, BarComponent)

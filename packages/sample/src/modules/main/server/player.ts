@@ -58,8 +58,14 @@ export const player: RpgPlayerHooks = {
         
         player.changeMap('samplemap')
         player.name = 'SamUel'
-        player.setComponentsTop([
-            Components.hpBar()
+        player.setComponentsBottom([
+            Components.shape({
+                type: 'ellipse',
+                fill: '#ff0000',
+                width: 50,
+                height: 50,
+                opacity: 'hp'
+            })
         ]), 
         player.setGraphic('jedi')
         // player.setComponentsLeft<any>(
@@ -96,6 +102,7 @@ export const player: RpgPlayerHooks = {
                 }
             })*/
             player.addState(Paralyse)
+            player.hp -= 100
             //player.setComponentsLeft([])
         }
         if (input == 'action') {

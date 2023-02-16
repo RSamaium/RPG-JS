@@ -1,5 +1,5 @@
 import { Utils } from '@rpgjs/common'
-import { BarComponentObject, ComponentObject, LayoutObject, LayoutOptions, TextComponentObject, LayoutPositionEnum, ColorComponentObject, ImageComponentObject, TileComponentObject } from '@rpgjs/types'
+import { BarComponentObject, ComponentObject, LayoutObject, LayoutOptions, TextComponentObject, LayoutPositionEnum, ShapeComponentObject, ImageComponentObject, TileComponentObject } from '@rpgjs/types'
 import { DebugComponentObject } from '@rpgjs/types/lib/Component'
 
 const defaultStyle = (style: any) => ({
@@ -180,23 +180,55 @@ export const Components = {
     },
 
     /**
-     * Put on the color. Hexadecimal format.
+     * Add a shape
      * 
      * Example:
      * 
      * ```ts
      * import { Components } from '@rpgjs/server'
-     * Components.color('#ffffff')
+     * Components.shape({
+     *      fill: '#ffffff',
+     *      type: 'circle',
+     *      radius: 10
+     * })
      * ```
      * 
-     * @param {string} value source
-     * @returns {ColorComponentObject}
+     * You can use parameters:
+     * 
+     * ```ts
+     * import { Components } from '@rpgjs/server'
+     * Components.shape({
+     *      fill: '#ffffff',
+     *      type: 'circle',
+     *      radius: 'hp'
+     * })
+     * ```
+     * 
+     * Here, the radius will be the same as the hp value
+     * 
+     * @param {object} value 
+     * @param {string} value.fill color. Hexadecimal format.
+     * @param {number | string} [value.opacity] opacity. Between 0 and 1
+     * @param {string} value.type type of shape. Can be 'circle' or 'rectangle', 'ellipse' or 'polygon', 'line' or 'rounded-rectangle'
+     * @param {number | string} [value.radius] if type is circle, radius of the circle
+     * @param {number | string} [value.width] if type is rectangle or ellipse, width of the rectangle
+     * @param {number | string} [value.height] if type is rectangle or ellipse, height of the rectangle
+     * @param {number | string} [value.x1] if type is line, x1 position of the line
+     * @param {number | string} [value.y1] if type is line, y1 position of the line
+     * @param {number | string} [value.x2] if type is line, x2 position of the line
+     * @param {number | string} [value.y2] if type is line, y2 position of the line
+     * @param {number[]} [value.points] if type is polygon, points of the polygon
+     * @param {object} [value.line] border style
+     * @param {string} [value.line.color] border color. Hexadecimal format.
+     * @param {number} [value.line.width] border width
+     * @param {number} [value.line.alpha] border opacity. Between 0 and 1
+     * @returns {ShapeComponentObject}
      * @memberof Components
      * @since 3.3.0
      */
-    color(value: string): ColorComponentObject {
+    shape(value: ShapeComponentObject['value']): ShapeComponentObject {
         return {
-            id: 'color',
+            id: 'shape',
             value
         }
     },

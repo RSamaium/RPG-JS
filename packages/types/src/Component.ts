@@ -46,11 +46,54 @@ export type ImageComponentObject = {
     } | string
 }
 
-export type ColorComponentObject = {
-    id: 'color',
+type ShapeCircle = {
+    type: 'circle',
+    radius: number | string
+}
+
+type ShapeRect = {
+    type: 'rect',
+    width?: number | string,
+    height?: number | string
+}
+
+type ShapeEllipse = {
+    type: 'ellipse',
+    width?: number | string,
+    height?: number | string
+}
+
+type ShapeLine = {
+    type: 'line',
+    x1: number | string,
+    y1: number | string,
+    x2: number | string,
+    y2: number | string
+}
+
+type ShapePolygon = {
+    type: 'polygon',
+    points: number[]
+}
+
+type ShapeRoundedRect = {
+    type: 'rounded-rect',
+    width?: number | string,
+    height?: number | string,
+    radius: number | string
+}
+
+export type ShapeComponentObject = {
+    id: 'shape',
     value: {
-        color: string
-    } | string
+        opacity?: number | string,
+        fill: string,
+        line?: {
+            color?: string,
+            width?: number | string,
+            alpha?: number | string
+        },
+    } & (ShapeCircle | ShapeRect | ShapeEllipse | ShapeLine | ShapePolygon | ShapeRoundedRect)
 }
 
 export type DebugComponentObject = {

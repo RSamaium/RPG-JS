@@ -184,10 +184,15 @@ describe('Graphic Component', () => {
                 ], 32, 40)
             })
 
-            test('Color', async () => {
-                player[playerSetComponentsMethod]([Components.color('#ffffff')])
+            test('Shape', async () => {
+                player[playerSetComponentsMethod]([Components.shape({
+                    fill: '#ffffff',
+                    type: 'circle',
+                    radius: 10
+                })])
+
                 const { comp } = await getComponent(position)
-                expect(comp.color).toBe('#ffffff')
+                expect(comp.value.type).toBe('circle')
             })
 
             test('Image', async () => {
@@ -205,7 +210,7 @@ describe('Graphic Component', () => {
             test('[First Render] Parse Variable in Text. {} format', async () => {
                 player[playerSetComponentsMethod]([Components.text('{hp}')])
                 const { comp } = await getComponent(position)
-                expect(comp.getChildAt(0).text).toBe(''+player.hp)
+                expect(comp.getChildAt(0).text).toBe('' + player.hp)
             })
 
             test('[Change Variable] Parse Variable in Text. {} format', async () => {
@@ -215,8 +220,8 @@ describe('Graphic Component', () => {
                 player.hp -= 10
                 await nextTick(client)
                 const text = comp.getChildAt(0).text
-                expect(text).not.toBe(''+initialHp)
-                expect(text).toBe(''+player.hp)
+                expect(text).not.toBe('' + initialHp)
+                expect(text).toBe('' + player.hp)
             })
 
             test('Tile', async () => {
@@ -229,7 +234,7 @@ describe('Graphic Component', () => {
                 player[playerSetComponentsMethod]([Components.color('#ffffff')])
                 await getComponent(position)
                 player[playerSetComponentsMethod]([Components.image('test.png')])
-                const { comp } =  await getComponent(position)
+                const { comp } = await getComponent(position)
                 expect(comp['source']).toBe('test.png')
             })
         })
