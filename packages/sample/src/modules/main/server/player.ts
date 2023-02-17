@@ -68,6 +68,7 @@ export const player: RpgPlayerHooks = {
             })
         ]), 
         player.setGraphic('jedi')
+
         // player.setComponentsLeft<any>(
         //     [
         //         [Components.text('{hp}')]

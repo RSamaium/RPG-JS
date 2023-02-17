@@ -1,6 +1,5 @@
 import { Utils } from '@rpgjs/common'
-import { BarComponentObject, ComponentObject, LayoutObject, LayoutOptions, TextComponentObject, LayoutPositionEnum, ShapeComponentObject, ImageComponentObject, TileComponentObject } from '@rpgjs/types'
-import { DebugComponentObject } from '@rpgjs/types/lib/Component'
+import { BarComponentObject, ComponentObject, LayoutObject, LayoutOptions, TextComponentObject, LayoutPositionEnum, ShapeComponentObject, ImageComponentObject, TileComponentObject, DebugComponentObject, TextComponentStyleObject } from '@rpgjs/types'
 
 const defaultStyle = (style: any) => ({
     borderColor: '#000000',
@@ -165,7 +164,7 @@ export const Components = {
      * @memberof Components
      * @since 3.3.0
      */
-    text(value: string, style?: TextComponentObject['value']): TextComponentObject {
+    text(value: string, style?: TextComponentStyleObject): TextComponentObject {
         return {
             id: 'text',
             value: {

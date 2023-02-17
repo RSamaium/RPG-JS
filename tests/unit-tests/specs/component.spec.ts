@@ -124,11 +124,12 @@ describe('Graphic Component', () => {
     async function getComponent(position): Promise<{ layout: any, comp: any }> {
         await nextTick(client)
         setComponent()
-        const layout = component.getLayoutContainer(position).getChildAt(0) as any
+        const layout = component.getLayoutContainer(position) as any
+        const child = layout.getChildAt(0)
         if (position === 'center') {
-            return { layout, comp: layout }
+            return { layout, comp: child }
         }
-        return { layout, comp: layout.getChildAt(0) }
+        return { layout: child, comp: child.getChildAt(0) }
     }
 
     test('Graphic', async () => {
@@ -173,14 +174,14 @@ describe('Graphic Component', () => {
 
             test('[One line] Position of layout', async () => {
                 await expectPosition(position, [
-                    Components.color('#ffffff'),
+                    Components.text('Hello'),
                 ], 32, 20)
             })
 
             test('[Two line] Position of layout', async () => {
                 await expectPosition(position, [
-                    Components.color('#ffffff'),
-                    Components.color('#ffffff'),
+                    Components.text('Hello'),
+                    Components.text('Hello'),
                 ], 32, 40)
             })
 
@@ -231,14 +232,161 @@ describe('Graphic Component', () => {
             })
 
             test('Change Layout', async () => {
-                player[playerSetComponentsMethod]([Components.color('#ffffff')])
+                player[playerSetComponentsMethod]([Components.text('Hello')])
                 await getComponent(position)
                 player[playerSetComponentsMethod]([Components.image('test.png')])
                 const { comp } = await getComponent(position)
                 expect(comp['source']).toBe('test.png')
             })
+
+            test('Remove Layout', async () => {
+                player[playerSetComponentsMethod]([Components.text('Hello')])
+                await getComponent(position)
+                player.removeComponents(position as any)
+                await nextTick(client)
+                setComponent()
+                const layout = component.getLayoutContainer(position as any) as any
+                if (position === 'center') {
+                    expect(layout.children.length).toBe(0)
+                } else {
+                    expect(layout.getChildAt(0).children.length).toBe(0)
+                }
+            })
+
+            test('Remove Layout By Id', async () => {
+                player[playerSetComponentsMethod](
+                    [Components.text('Hello'), Components.hpBar()]
+                )
+                await getComponent(position)
+                player.removeComponentById(position as any, 'text')
+                await nextTick(client)
+                setComponent()
+                const layout = component.getLayoutContainer(position as any) as any
+                if (position === 'center') {
+                    expect(layout.children.length).toBe(1)
+                }
+                else {
+                    expect(layout.getChildAt(0).children.length).toBe(1)
+                }
+            })
+
+            test('Merge Component', async () => {
+                player[playerSetComponentsMethod](
+                    [Components.text('Hello')]
+                )
+                await getComponent(position)
+                player.mergeComponent(position as any, Components.text('World'))
+                const { layout } = await getComponent(position)
+                expect(layout.children.length).toBe(2)
+            })
         })
     }
+})
+
+describe('Test Built-in Component', () => {
+    it('Component Text', () => {
+        const text = Components.text('Hello')
+        expect(text).toHaveProperty('id', 'text')
+        expect(text).toHaveProperty('value')
+        // test style by default, fill: #ffffff, fontSize: 15
+        const style = (text.value as any).style
+        expect(text.value).toHaveProperty('style')
+        expect(style).toHaveProperty('fill', '#ffffff')
+        expect(style).toHaveProperty('fontSize', 15)
+    })
+
+    it('Component Image', () => {
+        const image = Components.image('test.png')
+        expect(image).toHaveProperty('id', 'image')
+        expect(image).toHaveProperty('value')
+        expect(image.value).toBe('test.png')
+    })
+
+    it('Component Shape', () => {
+        const shape = Components.shape({
+            fill: '#ffffff',
+            type: 'circle',
+            radius: 10
+        })
+        expect(shape).toHaveProperty('id', 'shape')
+        expect(shape).toHaveProperty('value')
+        expect(shape.value).toHaveProperty('fill', '#ffffff')
+        expect(shape.value).toHaveProperty('type', 'circle')
+        expect(shape.value).toHaveProperty('radius', 10)
+    })
+
+    it('Component Tile', () => {
+        const tile = Components.tile(1)
+        expect(tile).toHaveProperty('id', 'tile')
+        expect(tile).toHaveProperty('value')
+        expect(tile.value).toBe(1)
+    })
+
+    it('Component HpBar', () => {
+        const hpBar = Components.hpBar()
+        expect(hpBar).toHaveProperty('id', 'bar')
+        expect(hpBar).toHaveProperty('value')
+        expect(hpBar.value).toHaveProperty('current', 'hp')
+        expect(hpBar.value).toHaveProperty('max', 'param.maxHp')
+        // default, fillColor: #ab0606
+        const style = (hpBar.value as any).style
+        expect(style).toHaveProperty('fillColor', '#ab0606')
+    })
+
+    it('Component SpBar', () => {
+        const spBar = Components.spBar()
+        expect(spBar).toHaveProperty('id', 'bar')
+        expect(spBar).toHaveProperty('value')
+        expect(spBar.value).toHaveProperty('current', 'sp')
+        expect(spBar.value).toHaveProperty('max', 'param.maxSp')
+        // default, fillColor: #ab0606
+        const style = (spBar.value as any).style
+        expect(style).toHaveProperty('fillColor', '#0fa38c')
+    })
+
+    it('Component generic bar', () => {
+        const bar = Components.bar('hp', 'param.maxHp')
+        expect(bar).toHaveProperty('id', 'bar')
+        expect(bar).toHaveProperty('value')
+        expect(bar.value).toHaveProperty('current', 'hp')
+        expect(bar.value).toHaveProperty('max', 'param.maxHp')
+    })
+
+    it('Component generic bar, style', () => {
+        const bar = Components.bar('hp', 'param.maxHp', {
+            fillColor: '#ffffff',
+            width: 100,
+            height: 10,
+            borderColor: '#000000',
+            borderWidth: 1,
+            borderRadius: 5
+        })
+        const style = (bar.value as any).style
+        expect(style).toHaveProperty('fillColor', '#ffffff')
+        expect(style).toHaveProperty('width', 100)
+        expect(style).toHaveProperty('height', 10)
+        expect(style).toHaveProperty('borderColor', '#000000')
+        expect(style).toHaveProperty('borderWidth', 1)
+        expect(style).toHaveProperty('borderRadius', 5)
+    })
+
+    it('Component generic bar, text above bar (default value)', () => {
+        const bar = Components.bar('hp', 'param.maxHp', {})
+        const text = (bar.value as any).text
+        expect(text).toBe('{$current}/{$max}')
+    })
+
+    it('Component generic bar, text above bar not displayed', () => {
+        const bar = Components.bar('hp', 'param.maxHp', {}, null)
+        const text = (bar.value as any).text
+        expect(text).toBe('')
+    })
+
+    it('Component generic bar, text above bar', () => {
+        const bar = Components.bar('hp', 'param.maxHp', {}, 'HP: {$current}/{$max}')
+        const text = (bar.value as any).text
+        expect(text).toBe('HP: {$current}/{$max}')
+    })
 })
 
 afterEach(() => {
