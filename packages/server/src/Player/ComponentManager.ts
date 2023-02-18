@@ -57,6 +57,7 @@ export const Components = {
      * }, 'HP: {$current}/{$max} - {name}') // HP: 100/100 - John
      * ```
      * 
+     * @title Bar Component
      * @param {string} current Parameter that corresponds to the current value
      * @param {string} max Parameter that corresponds to the maximum value
      * @param {object} [style] style
@@ -78,6 +79,7 @@ export const Components = {
     /**
      * Displays a life bar
      * 
+     * @title HP Bar Component
      * @param {object} [style] style. See bar style (Components.bar())
      * @param {string | null} [text] test above bar (Components.bar())
      * @returns {BarComponentObject}
@@ -96,6 +98,7 @@ export const Components = {
      /**
      * Displays a SP bar
      * 
+     * @title SP Bar Component
      * @param {object} [style] style. See bar style (Components.bar())
      * @param {string | null} [text] test above bar (Components.bar())
      * @returns {BarComponentObject}
@@ -149,6 +152,7 @@ export const Components = {
      * })
      * ```
      * 
+     * @title Text Component
      * @param {string} value source
      * @param {object} [style] style
      * @param {string} [style.fill] color. Hexadecimal format.
@@ -205,6 +209,7 @@ export const Components = {
      * 
      * Here, the radius will be the same as the hp value
      * 
+     * @title Shape Component
      * @param {object} value 
      * @param {string} value.fill color. Hexadecimal format.
      * @param {number | string} [value.opacity] opacity. Between 0 and 1
@@ -242,6 +247,7 @@ export const Components = {
      * Components.image('mygraphic.png')
      * ```
      * 
+     * @title Image Component
      * @param {string} value source
      * @returns {ImageComponentObject}
      * @memberof Components
@@ -264,6 +270,7 @@ export const Components = {
      * Components.tile(3)
      * ```
      * 
+     * @title Tile Component
      * @param {number} value tile ID
      * @returns {TileComponentObject}
      * @memberof Components
@@ -319,6 +326,7 @@ export class ComponentManager {
     /**
      * Delete components
      * 
+     * @title Remove Components
      * @param {string} position Position of the components. Can be: `top`, `center`, `bottom`, `left`, `right`
      * @memberof ComponentManager
      * @since 3.3.0
@@ -330,6 +338,7 @@ export class ComponentManager {
     /**
      * Delete components by id. 
      * 
+     * @title Remove Component By Id
      * @param {string} position Position of the components. Can be: `top`, `center`, `bottom`, `left`, `right`
      * @param {string} id Id of the component
      * @since 3.3.0
@@ -352,6 +361,7 @@ export class ComponentManager {
      * 
      * For use layout and options, see [setComponentsTop](/api/player.html#setcomponentstop)
      * 
+     * @title Merge Components
      * @param {string} position Position of the components. Can be: `top`, `center`, `bottom`, `left`, `right`
      * @param {Object} layout 
      * @param {Object} options 

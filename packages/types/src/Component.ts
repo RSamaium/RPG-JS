@@ -16,29 +16,29 @@ type LayoutPosition<T> = {
 export type LayoutPositionEnum = 'top' | 'bottom' | 'left' | 'right' | 'center'
 
 export type LayoutObject<T> = {
-   [position in LayoutPositionEnum]?: LayoutPosition<T>
+    [position in LayoutPositionEnum]?: LayoutPosition<T>
 }
 
 export type TextComponentStyleObject = {
-    text: string,
-    margin?: number,
-    height?: number,
-    style?: {
-        opacity?: number,
-        fill?: string,
-        align?: 'left' | 'center' | 'right' | 'justify',
-        wordWrap?: boolean,
-        fontSize?: number | string,
-        fontFamily?: string | string[],
-        stroke?: string,
-        fontStyle?: 'normal' | 'italic' | 'oblique',
-        fontWeight?: 'normal' | 'bold' | 'bolder' | 'lighter' | '100' | '200' | '300' | '400' | '500' | '600' | '700' | '800' | '900',
-    }
+    opacity?: number,
+    fill?: string,
+    align?: 'left' | 'center' | 'right' | 'justify',
+    wordWrap?: boolean,
+    fontSize?: number | string,
+    fontFamily?: string | string[],
+    stroke?: string,
+    fontStyle?: 'normal' | 'italic' | 'oblique',
+    fontWeight?: 'normal' | 'bold' | 'bolder' | 'lighter' | '100' | '200' | '300' | '400' | '500' | '600' | '700' | '800' | '900',
 }
 
 export type TextComponentObject = {
     id: 'text',
-    value: TextComponentStyleObject | string
+    value: {
+        text: string,
+        margin?: number,
+        height?: number,
+        style?: TextComponentStyleObject
+    } | string
 }
 
 export type ImageComponentObject = {
@@ -134,7 +134,7 @@ export type BarComponentObject = {
                 [percent: string]: {
                     fillColor?: string
                 }
-            } 
+            }
         } & BarComponentStyle
     }
 }

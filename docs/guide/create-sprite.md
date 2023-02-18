@@ -96,7 +96,6 @@ import { Tilesets } from './maps/medieval'
 
 @RpgModule<RpgClient>({
     spritesheets: [
-        Tilesets, // The tileset of the previous steps
         HeroCharacter // We add our spritesheet !
     ]
 })

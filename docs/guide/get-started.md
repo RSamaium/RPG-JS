@@ -17,6 +17,10 @@ RPGJS was created several years ago, with the aim of creating an RPG on the brow
 - VueJS v3 (for GUIs)
 - Jest v26 (for unit tests)
 
+> You should know that a version 4 is in preparation. It uses more recent versions, like PixiJS v7 or NodeJS version 18.
+There will be no break change on the codes (there may be some very slightly, but the goal of the development is to make a great compatibility with RPGJS version 3). Note that we will be switching from Webpack to ViteJS, if you manually configure the compiler in-game, this may be a major change to consider for the future
+
+
 ## Compatibility
 
 **Client-Side**

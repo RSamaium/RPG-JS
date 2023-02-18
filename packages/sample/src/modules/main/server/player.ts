@@ -20,7 +20,7 @@ function getRandomInt(min, max) {
 
 declare module '@rpgjs/server' {
     export interface RpgPlayer {
-        woold: number
+        wood: number
     }
 }
 
@@ -51,23 +51,19 @@ function BarComponent(current: string, max: string) {
 
 export const player: RpgPlayerHooks = {
     props: {
-        color: String
+      //  wood: Number
     },
     onConnected(player: RpgPlayer) {
         player.setHitbox(20, 16)
+        player.wood = 0
         
+        player.setGraphic('male1_1')
+        player.name = 'Sam'
+        player.setComponentsTop<any>(
+            Components.bar('exp', 'expForNextlevel')
+        )
+       
         player.changeMap('samplemap')
-        player.name = 'SamUel'
-        player.setComponentsBottom([
-            Components.shape({
-                type: 'ellipse',
-                fill: '#ff0000',
-                width: 50,
-                height: 50,
-                opacity: 'hp'
-            })
-        ]), 
-        player.setGraphic('jedi')
 
         // player.setComponentsLeft<any>(
         //     [
@@ -107,7 +103,7 @@ export const player: RpgPlayerHooks = {
             //player.setComponentsLeft([])
         }
         if (input == 'action') {
-            player.hp += 100
+            player.wood++
         }
     },
     async onInShape(player: RpgPlayer, shape: RpgShape) {

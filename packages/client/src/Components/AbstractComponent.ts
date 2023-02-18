@@ -45,7 +45,7 @@ export abstract class AbstractComponent<
     protected replaceText(object: any, text: string): string {
         return text.replace(REGEXP_VAR, (match, key) => {
             const value = get(object, key)
-            if (value) {
+            if (value !== undefined) {
                 this.cacheText[key] = value
                 return value ?? ''
             }
@@ -67,7 +67,7 @@ export abstract class AbstractComponent<
     private verifyParams(): void | never {
         const params = this.component.logic
         for (const param of this.cacheParams) {
-            if (!get(params, param)) {
+            if (get(params, param) === undefined) {
                 throw new Error(`Param ${param} not found in object ${this.component.logic?.id}`)
             }
         }

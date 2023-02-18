@@ -21,7 +21,7 @@ export class TextComponent extends AbstractComponent<TextComponentObject, PIXI.T
         this.parseTextAndCache(this.container.text)
         this.originValue = this.container.text
         // first render for replace variable and remove {}
-        this.updateRender({})
+        this.updateRender(this.component.logic)
         this.addChild(this.container)
         super.onInit(cell)
     }

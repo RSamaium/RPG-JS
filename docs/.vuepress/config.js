@@ -38,6 +38,7 @@ const apiMenu = [
     sidebarDepth: 2,
     children: [
       '/commands/common',
+      '/commands/components',
       '/commands/parameter',
       '/commands/class',
       '/commands/gold',
@@ -103,6 +104,7 @@ const guideMenu = [{
   children: [
     '/guide/create-module',
     '/guide/animation-tile',
+    '/guide/component',
     '/guide/create-shape',
     '/guide/unit-test',
     '/advanced/listen-param-client',

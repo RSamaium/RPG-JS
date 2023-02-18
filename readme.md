@@ -36,7 +36,7 @@ Do you need help? Go to [https://community.rpgjs.dev](https://community.rpgjs.de
 * **Tiled Map Editor** 
 
     Use the power of the software to create the maps. RPGJS supports several features:
-    - Create Worlds. Assemble the cards allowing the player to switch naturally from one to the other
+    - Create Worlds. Assemble the maps allowing the player to switch naturally from one to the other
     ![tiled world](https://docs.rpgjs.dev/assets/tiled-world-2.png)
     - Use shapes to perform interactions: who goes in, who comes out, etc.
     ![tiled shape](https://docs.rpgjs.dev/assets/add-shape.png)
