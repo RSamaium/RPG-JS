@@ -145,9 +145,8 @@ import { RpgPlayer, RpgPlayerHooks, Components } from '@rpgjs/server'
 
 export const player: RpgPlayerHooks = {
     onConnected(player: RpgPlayer) {
-        player.setComponentsTop([
-            Components.hpBar()
-        ], {
+        player.setComponentsTop(
+            Components.hpBar(), {
             width: 42
         })
     }
@@ -167,6 +166,35 @@ By calling `player.setComponentsTop()` with the array of the HP bar component an
 ::: tip
 You can use the bar and the text. See [Component.bar()](/commands/components.html#bar-component) options
 :::
+
+### Customise the text above the bar
+
+![hpbar3](/assets/hpbar3.png)
+
+```ts
+import { RpgPlayer, RpgPlayerHooks, Components } from '@rpgjs/server'
+
+export const player: RpgPlayerHooks = {
+    onConnected(player: RpgPlayer) {
+        player.setComponentsTop<any>(
+            Components.hpBar({}, '{$percent}%'), {
+                width: 42
+            }
+        )
+    }
+}
+```
+
+You can put any text, or read an existing property with the {} format. But there are a few more variables:
+
+- `{$current}` current value
+- `{$max}` maximum value
+- `{$percent}` percentage
+
+::: tip
+Set the value to `null` to not display any text
+:::
+
 
 ## Use other layout position
 
@@ -211,3 +239,56 @@ The second argument is an object with one property:
 ::: tip
 [View others positions](/commands/components.html#player-api)
 :::
+
+## Display a custom properties (bar, text, etc.)
+
+```ts
+import { RpgPlayer, RpgPlayerHooks, Components } from '@rpgjs/server'
+
+declare module '@rpgjs/server' {
+    export interface RpgPlayer {
+        wood: number
+    }
+}
+
+export const player: RpgPlayerHooks = {
+    props: {
+        wood: Number
+    },
+    onConnected(player: RpgPlayer) {
+        player.wood = 0
+        player.setComponentsTop(
+           Component.text('Wood: {wood}')
+        )
+    }
+}
+```
+
+Other example
+
+```ts
+import { RpgPlayer, RpgPlayerHooks, Components } from '@rpgjs/server'
+
+declare module '@rpgjs/server' {
+    export interface RpgPlayer {
+        wood: number
+    }
+}
+
+export const player: RpgPlayerHooks = {
+    props: {
+        wood: Number
+    },
+    onConnected(player: RpgPlayer) {
+        // This parameter allows you to set a maximum which changes according to the level of the player
+        player.addParameter('maxWood', {
+            start: 100, // level 1
+            end: 500 // final level
+        })
+        player.wood = player.param.maxWood
+        player.setComponentsTop(
+            Components.bar('wood', 'param.maxWood')
+        )
+    }
+}
+```

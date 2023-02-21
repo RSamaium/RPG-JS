@@ -51,16 +51,26 @@ function BarComponent(current: string, max: string) {
 
 export const player: RpgPlayerHooks = {
     props: {
-      //  wood: Number
+        wood: Number
     },
     onConnected(player: RpgPlayer) {
         player.setHitbox(20, 16)
-        player.wood = 0
         
         player.setGraphic('male1_1')
         player.name = 'Sam'
+
+        player.addParameter('maxWood', {
+            start: 100,
+            end: 500
+        })
+
+        player.wood = player.param.maxWood
+
         player.setComponentsTop<any>(
-            Components.bar('exp', 'expForNextlevel')
+            Components.hpBar({}, '{$percent}%'), 
+            {
+                width: 42
+            }
         )
        
         player.changeMap('samplemap')
@@ -103,7 +113,7 @@ export const player: RpgPlayerHooks = {
             //player.setComponentsLeft([])
         }
         if (input == 'action') {
-            player.wood++
+            player.wood -= 10
         }
     },
     async onInShape(player: RpgPlayer, shape: RpgShape) {

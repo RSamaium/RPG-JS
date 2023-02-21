@@ -27,6 +27,11 @@ export class BarComponent extends AbstractComponent<BarComponentObject, PIXI.Con
     }
 
     onInit(cell: CellInfo) {
+        if (!this.value.style) {
+            this.value.style = {
+                fillColor: '#ffffff',
+            }
+        }
         const { bgColor = DEFAULT_COLOR, borderColor = DEFAULT_COLOR, borderWidth = 1, borderRadius = 0 } = this.barStyle || {}
         this.cell = cell
         this.barContainer.beginFill(Utils.hexaToNumber(bgColor))
