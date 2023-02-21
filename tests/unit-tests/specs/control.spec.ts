@@ -77,7 +77,7 @@ test('Apply Controls - Action (Server Side)', () => {
         })
 
         client.controls.applyControl(Control.Action)
-        client.processInput()
+        await client.processInput()
         await nextTick(client)
     })
 })
@@ -105,8 +105,8 @@ test('Apply Controls - Move (Server Side)', () => {
         client.controls.setInputs(inputs)
         client.controls.applyControl(Control.Right, true)
 
-        client.processInput()
-        nextTick(client) 
+        await client.processInput()
+        await nextTick(client) 
     })
 })
 

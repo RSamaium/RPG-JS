@@ -132,7 +132,7 @@ export class RpgCommonGame extends EventEmitter {
             }
             // TODO, is Worker
             // verify if is server because, rpg mode causes a bug (see #184)
-            if (this.side == 'server') {
+            if (this.side == GameSide.Server) {
                 RpgPlugin.emit('Server.onInput', [player, {
                     ...inputData,
                     moving
