@@ -50,6 +50,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     }
 
     let moreBuildOptions = {}
+    let outputOptions = {}
 
     if (options.buildEnd) {
         plugins.push(options.buildEnd)
@@ -133,6 +134,11 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
             },
             ...moreBuildOptions,
         }
+        if (!options.serveMode) {
+            outputOptions = {
+                format: 'cjs',
+            }
+        }
     }
 
     const outputPath = resolve(dirname, 'dist', isServer ? 'server' : 'client')
@@ -162,6 +168,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
             rollupOptions: {
                 output: {
                     dir: outputPath,
+                    ...outputOptions
                 },
                 input: {
                     main: !isServer ?

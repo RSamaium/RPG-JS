@@ -1,7 +1,9 @@
 import { build } from 'vite'
+import { cleanDist } from './clean-dist.js'
 import { clientBuildConfig } from './client-config.js'
 
 export async function buildMode() {
+    cleanDist()
     const buildEnd = async () => {
       
     }
