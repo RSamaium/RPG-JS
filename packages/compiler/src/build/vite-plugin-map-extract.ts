@@ -1,43 +1,44 @@
-import path from 'path'
-import { transform } from 'typescript';
+import fs from 'fs';
+import path from 'path';
+import { parseStringPromise } from 'xml2js';
+import glob from 'glob';
+
+async function processTsxFile(tsxFile) {
+    const content = fs.readFileSync(tsxFile, 'utf-8');
+    const result = await parseStringPromise(content);
+    const imagePath = path.join(path.dirname(tsxFile), result.tileset.image[0].$.source);
+
+    const imageName = path.basename(imagePath);
+    const destPath = path.join('dist', 'client', 'assets', imageName);
+
+    if (!fs.existsSync(path.dirname(destPath))) {
+        fs.mkdirSync(path.dirname(destPath), { recursive: true });
+    }
+
+    fs.copyFileSync(imagePath, destPath);
+}
 
 export function mapExtractPlugin() {
     return {
         name: 'map-extract',
+        async buildStart() {
+            const tsxFiles = glob.sync('src/**/*.tsx');
 
+            // Traitez chaque fichier TSX
+            for (const tsxFile of tsxFiles) {
+                await processTsxFile(tsxFile);
+            }
+        },
         configureServer(server) {
-            const { root } = server.config
-            server.watcher.on('all', (event, _path) => {
-                console.log(_path)
-                const ext = path.extname(_path)
-                if (event == 'add' || event == 'change') {
-                    if (['.tsx', '.tmx'].includes(ext)) {
-                        //console.log(_path)
-                    }
+            // Ajoutez un watcher pour les fichiers TSX
+            server.watcher.add('src/**/*.tsx');
+
+            // Lorsqu'un fichier TSX est ajouté, traitez-le
+            server.watcher.on('add', async (file) => {
+                if (file.endsWith('.tsx')) {
+                    await processTsxFile(file);
                 }
-            })
+            });
         },
-
-        transform(code, id) {
-            const ext = path.extname(id)
-            if (['.tsx', '.tmx'].includes(ext)) {
-                //console.log(code)
-                //this.watchChange(id)
-            }
-            return null
-        },
-
-        load(id) {
-            const ext = path.extname(id)
-            if (['.tsx', '.tmx'].includes(ext)) {
-                //console.log(id)
-                //this.watchChange(id)
-            }
-            return null
-        },
-
-        watchChange(id) {
-           // console.log(id)
-        }
-    }
+    };
 }

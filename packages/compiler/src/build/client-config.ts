@@ -10,6 +10,7 @@ import fs from 'fs/promises'
 import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill';
 import { createRequire } from 'module';
 import { mapExtractPlugin } from './vite-plugin-map-extract.js';
+import { rpgjsAssetsLoader } from './vite-plugin-rpgjs-assets.js';
 
 const require = createRequire(import.meta.url);
 
@@ -30,6 +31,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         flagTransform(options.side || 'client'),
         (requireTransform as any)(),
         worldTransformPlugin(),
+        rpgjsAssetsLoader(),
         mapExtractPlugin(),
         ...(options.plugins || [])
     ]
@@ -156,7 +158,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         build: {
             manifest: true,
             outDir: outputPath,
-            emptyOutDir: true,
+            emptyOutDir: false,
             rollupOptions: {
                 output: {
                     dir: outputPath,

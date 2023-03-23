@@ -35,7 +35,6 @@
     "devDependencies": {
         "@rpgjs/compiler": "^4.0.0",
         "@types/jest": "26.0.23",
-        "canvas": "2.8.0",
         "jest": "27.0.4",
         "rimraf": "3.0.2",
         "ts-jest": "27.0.2",

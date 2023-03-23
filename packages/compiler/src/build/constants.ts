@@ -1,0 +1,1 @@
+export const OUPUT_DIR_CLIENT_ASSETS = 'dist/client/assets'

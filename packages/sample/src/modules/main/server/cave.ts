@@ -25,15 +25,13 @@ export class CaveMap extends RpgMap {
     
 }
 
-console.log(require('./tmx/cave.tmx'))
-
 @MapData({
     id: 'samplemap',
     file: require('./tmx/cave.tmx'),
     events: [{
         event: MyEvent,
         x: 32 *20,
-        y: 32 * 20
+        y: 32 * 20 
     }]
 })
 export class SampleMap extends RpgMap {
