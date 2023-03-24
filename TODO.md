@@ -9,3 +9,4 @@ MMORPG Mode
 
 Unit Test
 [] Test Not Works
+    --> Not implemented: HTMLCanvasElement.prototype.getContext

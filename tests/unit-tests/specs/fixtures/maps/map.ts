@@ -9,6 +9,6 @@ export class SampleMap extends RpgMap {}
 
 @Spritesheet({
     id: '[Base]BaseChip_pipo',
-    image: require('./[Base]BaseChip_pipo.png')
+    image: require('./BaseChip_pipo.png')
 })
 export class Tileset { }
