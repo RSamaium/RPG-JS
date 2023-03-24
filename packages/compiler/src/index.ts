@@ -4,6 +4,7 @@ import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { devMode } from "./serve/index.js";
 import { buildMode } from "./build/index.js";
+import { test } from "./test/index.js";
 
 yargs(hideBin(process.argv))
     .command('generate [type] [directory_name]', 'Generate', (yargs) => {
@@ -31,5 +32,8 @@ yargs(hideBin(process.argv))
     })
     .command('build', 'Build for production', async (yargs) => {
         await buildMode()
+    })
+    .command('test', 'Test', async (yargs) => {
+        await test()
     })
     .argv

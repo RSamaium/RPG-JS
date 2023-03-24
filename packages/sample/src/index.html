@@ -46,7 +46,10 @@
     <script>
         var global = global || window
     </script>
-    <script src="./client.ts" type="module"></script>
+    <script type="module">
+        import 'mmorpg!./client'
+        import 'rpg!./standalone'
+    </script>
 </head>
 
 <body>

@@ -11,6 +11,7 @@ import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfil
 import { createRequire } from 'module';
 import { mapExtractPlugin } from './vite-plugin-map-extract.js';
 import { rpgjsAssetsLoader } from './vite-plugin-rpgjs-assets.js';
+import { tsxXmlPlugin } from './vite-plugin-tsx-xml.js';
 
 const require = createRequire(import.meta.url);
 
@@ -20,19 +21,22 @@ interface ClientBuildConfigOptions {
     plugins?: any[],
     overrideOptions?: any,
     side?: 'client' | 'server',
-    mode?: 'development' | 'production',
+    mode?: 'development' | 'production' | 'test',
     type?: 'mmorpg' | 'rpg'
 }
 
 export async function clientBuildConfig(dirname: string, options: ClientBuildConfigOptions = {}) {
     const isServer = options.side === 'server'
+    const isRpg = options.type === 'rpg'
+    const dirOutputName = isRpg ? 'standalone' : 'client'
 
     let plugins: any[] = [
-        flagTransform(options.side || 'client'),
+        flagTransform(options),
         (requireTransform as any)(),
         worldTransformPlugin(),
-        rpgjsAssetsLoader(),
-        mapExtractPlugin(),
+        rpgjsAssetsLoader(dirOutputName),
+        tsxXmlPlugin(),
+        mapExtractPlugin(dirOutputName),
         ...(options.plugins || [])
     ]
 
@@ -118,12 +122,12 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         }
 
         options.overrideOptions = {
+            ...options.overrideOptions,
             define: {
                 'process.env': {},
                 //global: {},
             },
             publicDir: resolve(dirname, 'public'),
-
         }
     }
     else {
@@ -141,17 +145,19 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         }
     }
 
-    const outputPath = resolve(dirname, 'dist', isServer ? 'server' : 'client')
+    const outputPath = isRpg ? 
+        resolve(dirname, 'dist', dirOutputName) : 
+        resolve(dirname, 'dist', isServer ? 'server' : dirOutputName)
     return {
         mode: options.mode || 'development',
-        root: resolve(dirname, 'src'),
+        root: options.mode == 'test' ? '' : resolve(dirname, 'src'),
         configFile,
         resolve: {
-            //mainFields: ['main'],
             alias: {
                 '@': 'src',
                 ...aliasTransform
-            }
+            },
+            extensions: ['.ts', '.js', '.jsx', '.json', '.vue', '.css', '.scss', '.sass', '.html']
         },
         css: {
             preprocessorOptions: {
