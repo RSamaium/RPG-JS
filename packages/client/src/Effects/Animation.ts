@@ -5,6 +5,8 @@ import { log } from '../Logger'
 import { RpgSound } from '../Sound/RpgSound'
 import { RpgComponent } from '../Components/Component'
 import { Sprite, Container, Texture, Rectangle } from 'pixi.js'
+import { Animation as AnimationEnum } from './AnimationCharacter'
+import { BehaviorSubject, Observable } from 'rxjs'
 
 const { isFunction, arrayEquals } = Utils
 
@@ -28,14 +30,14 @@ type AnimationDataFrames = {
     animations: AnimationFrames,
     params: any[],
     data: TextureOptionsMerging
-} 
+}
 
 export class Animation extends Sprite {
     public attachTo: RpgComponent
     public hitbox: { w: number, h: number }
     public applyTransform: (
-        frame: FrameOptionsMerging, 
-        data: TextureOptionsMerging, 
+        frame: FrameOptionsMerging,
+        data: TextureOptionsMerging,
         spritesheet: SpritesheetOptionsMerging
     ) => Partial<FrameOptionsMerging>
     private spritesheet: SpritesheetOptionsMerging
@@ -43,6 +45,8 @@ export class Animation extends Sprite {
     private time: number = 0
     private frameIndex: number = 0
     private animations: Map<string, AnimationDataFrames> = new Map()
+    private _animation$: BehaviorSubject<PIXI.Sprite | null> = new BehaviorSubject(null as any)
+    readonly animation$: Observable<PIXI.Sprite | null> = this._animation$.asObservable()
 
     onFinish: () => void
 
@@ -63,7 +67,7 @@ export class Animation extends Sprite {
         const frames: Texture[][] = []
         const offsetX = (offset && offset.x) || 0
         const offsetY = (offset && offset.y) || 0
-        for (let i = 0; i < framesHeight ; i++) {
+        for (let i = 0; i < framesHeight; i++) {
             frames[i] = []
             for (let j = 0; j < framesWidth; j++) {
                 const rectX = j * spriteWidth + offsetX
@@ -82,7 +86,7 @@ export class Animation extends Sprite {
         return frames
     }
 
-     private createAnimations() {
+    private createAnimations() {
         const { textures } = this.spritesheet
         if (!textures) {
             return
@@ -108,6 +112,18 @@ export class Animation extends Sprite {
                 sprites: []
             })
         }
+    }
+
+    private getSpriteSize(name: 'spriteHeight' | 'spriteWidth'): number {
+        return this.animations.get(this.currentAnimation?.name || AnimationEnum.Stand)?.data[name] || 0
+    }
+
+    getSpriteHeight(): number {
+        return this.getSpriteSize('spriteHeight')
+    }
+
+    getSpriteWidth(): number {
+        return this.getSpriteSize('spriteWidth')
     }
 
     has(name: string): boolean {
@@ -157,7 +173,7 @@ export class Animation extends Sprite {
             for (let frame of container) {
                 this.currentAnimation.sprites.push(frame)
             }
-           this.currentAnimation.container.addChild(sprite)
+            this.currentAnimation.container.addChild(sprite)
         }
 
         const sound = this.currentAnimation.data.sound
@@ -172,11 +188,11 @@ export class Animation extends Sprite {
     }
 
     update(deltaRatio: number) {
-        if (!this.isPlaying() || !this.currentAnimation) return  
+        if (!this.isPlaying() || !this.currentAnimation) return
 
         const { frames, container, sprites, data } = this.currentAnimation
         let frame = sprites[this.frameIndex]
-        const nextFrame = sprites[this.frameIndex+1]
+        const nextFrame = sprites[this.frameIndex + 1]
 
         if (this.attachTo) {
             const sprite = this.attachTo
@@ -195,10 +211,10 @@ export class Animation extends Sprite {
             }
 
             sprite.texture = frames[frame.frameY][frame.frameX]
-            
-            const getVal = <T extends keyof TransformOptions>(prop: T): TransformOptions[T] | undefined => 
+
+            const getVal = <T extends keyof TransformOptions>(prop: T): TransformOptions[T] | undefined =>
                 frame[prop] || data[prop] || this.spritesheet[prop]
-            
+
             const applyTransform = <T extends keyof TransformOptionsAsArray>(prop: T): void => {
                 const val = getVal<T>(prop)
                 if (val) {
@@ -221,16 +237,18 @@ export class Animation extends Sprite {
                     ...frame,
                     ...this.applyTransform(frame, data, this.spritesheet)
                 }
-    
+
             }
 
+            const realSize = getVal<'spriteRealSize'>('spriteRealSize')
+            const heightOfSprite = typeof realSize == 'number' ? realSize : realSize?.height
+            const widthOfSprite = typeof realSize == 'number' ? realSize : realSize?.width
+
             const applyAnchorBySize = () => {
-                const val = getVal<'spriteRealSize'>('spriteRealSize')
-                if (val && this.hitbox) {
-                    const heightOfSprite = typeof val == 'number' ? val : val.height
+                if (heightOfSprite && this.hitbox) {
                     const { spriteWidth, spriteHeight } = data
                     const w = ((spriteWidth - this.hitbox.w) / 2) / spriteWidth
-                    const gap = (spriteHeight -  heightOfSprite) / 2
+                    const gap = (spriteHeight - heightOfSprite) / 2
                     const h = (spriteHeight - this.hitbox.h - gap) / spriteHeight
                     sprite.anchor.set(w, h)
                 }
@@ -253,6 +271,14 @@ export class Animation extends Sprite {
             applyTransformValue('angle')
             applyTransformValue('rotation')
             applyTransformValue('visible')
+
+            this._animation$.next({
+                spriteWidth: widthOfSprite || sprite.width,
+                spriteHeight: heightOfSprite || sprite.height,
+                anchor: sprite.anchor,
+                width: getVal<any>('spriteWidth'),
+                height: getVal<any>('spriteHeight')
+            } as any)
         }
 
         if (!nextFrame) {
@@ -261,7 +287,7 @@ export class Animation extends Sprite {
             if (this.onFinish) this.onFinish()
             return
         }
-       
+
         this.time += deltaRatio
 
         if (this.time >= nextFrame.time) {

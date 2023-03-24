@@ -1,21 +1,39 @@
 import { Direction, HookClient, RpgCommonPlayer, RpgPlugin, RpgShape, Utils } from "@rpgjs/common"
-import { PlayerType, PositionXY } from "@rpgjs/types"
-import { map, filter, tap } from "rxjs/operators"
+import { ComponentObject, LayoutObject, LayoutOptions, LayoutPositionEnum, PlayerType, PositionXY } from "@rpgjs/types"
+import { Subject, Subscription } from "rxjs"
+import { map, filter, tap, distinctUntilChanged, takeUntil, finalize } from "rxjs/operators"
 import { log } from "../Logger"
 import { Scene } from "../Scene/Scene"
 import { RpgSprite } from "../Sprite/Player"
-import { ColorComponent } from "./ColorComponent"
+import { AbstractComponent } from "./AbstractComponent"
+import { BarComponent } from "./BarComponent"
+import { ShapeComponent } from "./ShapeComponent"
+import { DebugComponent } from "./DebugComponent"
 import { ImageComponent } from "./ImageComponent"
 import { TextComponent } from "./TextComponent"
 import { TileComponent } from "./TileComponent"
 import { Container, Graphics, Text, filters } from "pixi.js"
 
-type PIXIComponent = Container | Graphics | Text
+type SpriteInfo = {
+    width: number,
+    height: number,
+    x: number,
+    y: number,
+    anchor: { x: number, y: number },
+    spriteWidth: number
+    spriteHeight: number
+}
 
 export interface IComponent {
     id: string,
     value: any
 }
+
+const layoutObject = {
+    lines: []
+}
+
+const layoutTypes: LayoutPositionEnum[] = ['top', 'bottom', 'left', 'right']
 
 export class RpgComponent<T = any> extends Container {
     /** @internal */
@@ -31,35 +49,67 @@ export class RpgComponent<T = any> extends Container {
     protected map: string = ''
     protected z: number = 0
     protected fixed: boolean = false
-    private components: IComponent[] = []
+    private components: LayoutObject<any> = {
+        top: layoutObject,
+        bottom: layoutObject,
+        left: layoutObject,
+        right: layoutObject,
+        center: layoutObject
+    }
     private direction: number = 0
     private container: Container = new Container()
+
+    private containersLayout: {
+        [key in LayoutPositionEnum]: Container
+    } = {} as any
+
+    private subscriptionGraphic: Subscription
+    private layoutNotifierClear: { [key in LayoutPositionEnum]: Subject<void> } = {
+        top: new Subject(),
+        bottom: new Subject(),
+        left: new Subject(),
+        right: new Subject(),
+        center: new Subject()
+    }
     private registerComponents: Map<string, any> = new Map()
     private dragMode?: {
         data: any,
         dragging: boolean
     }
 
+    readonly game = this.scene.game
+    readonly id: string = this.data.id
+
     constructor(private data: RpgCommonPlayer | RpgShape, private scene: Scene) {
         super()
         this.setPosition(false)
         this.registerComponents.set(RpgSprite.id, RpgSprite)
         this.registerComponents.set(TextComponent.id, TextComponent)
-        this.registerComponents.set(ColorComponent.id, ColorComponent)
+        this.registerComponents.set(ShapeComponent.id, ShapeComponent)
         this.registerComponents.set(TileComponent.id, TileComponent)
         this.registerComponents.set(ImageComponent.id, ImageComponent)
+        this.registerComponents.set(BarComponent.id, BarComponent)
+        this.registerComponents.set(DebugComponent.id, DebugComponent)
+
         this.addChild(this.container)
+
+        for (let layout of [...layoutTypes, 'center']) {
+            this.containersLayout[layout] = new PIXI.Container()
+            this.container.addChild(this.containersLayout[layout])
+        }
+
         RpgPlugin.emit(HookClient.AddSprite, this)
         RpgPlugin.emit(HookClient.SceneAddSprite, [this.scene, this], true)
-        this.scene.game.listenObject(data.id)
+
+        this.game.listenObject(data.id)
             .pipe(
+                takeUntil(this.game.getDeleteNotifier(data.id)),
                 map(object => object?.paramsChanged),
                 tap(() => {
                     RpgPlugin.emit(HookClient.ChangesSprite, [this, this.logic?.['paramsChanged'], this.logic?.['prevParamsChanged']], true)
                 }),
                 filter(object => {
-                    const componentChanged = this.logic?.['componentChanged']
-                    return componentChanged && componentChanged.length
+                    return this.logic?.['componentChanged']
                 })
             )
             .subscribe((val) => {
@@ -274,8 +324,8 @@ export class RpgComponent<T = any> extends Container {
     getPositionsOfGraphic(align: string): PositionXY {
         let sprite: RpgSprite | undefined
         // if no component (no graphic for example)
-        if (this.components.length !== 0) {
-            sprite = this.container.getChildAt(0) as RpgSprite
+        if (this.components.center?.lines.length !== 0) {
+            sprite = this.containersLayout.center.getChildAt(0) as RpgSprite
         }
         const isMiddle = align == 'middle'
         return {
@@ -284,25 +334,21 @@ export class RpgComponent<T = any> extends Container {
         }
     }
 
-    private callMethodInComponents(name: string, params: unknown[]) {
-        for (let component of this.container.children) {
-            if (component[name]) component[name](...params)
-        }
+    /**
+     * Get the container by position (center, left, right, top, bottom)
+     * 
+     * @param {LayoutPositionEnum} [position=center]
+     * @returns {PIXI.Container}
+     * 
+     * */
+    getLayoutContainer(position: LayoutPositionEnum = 'center'): PIXI.Container {
+        return this.containersLayout[position]
     }
 
-    private updateComponents(components: IComponent[]) {
-        this.container.removeChildren()
-        for (let component of components) {
-            const compClass = this.registerComponents.get(component.id)
-            if (!compClass) {
-                throw log(`Impossible to find ${component.id} component`)
-            }
-            const instance = new compClass(this, component.value)
-            this.container.addChild(instance)
-        }
-        this.components = components
-    }
-
+    /**
+     * Get Current Scene. Scene is a map, battle, menu, etc.
+     * @returns {T}
+     */
     getScene<T>(): T {
         return this.scene as any
     }
@@ -312,4 +358,149 @@ export class RpgComponent<T = any> extends Container {
     onUpdate(obj) { }
     onMove() { }
     onChanges(data, old) { }
+
+    private callMethodInComponents(name: string, params: unknown[]) {
+        for (let component of this.getLayoutContainer().children) {
+            if (component[name]) component[name](...params)
+        }
+    }
+
+    private createGrid(position: LayoutPositionEnum, gridArray: any, options: LayoutOptions, sprite: SpriteInfo): PIXI.Container {
+        const gridContainer = new PIXI.Sprite();
+        const { height, spriteWidth, spriteHeight } = sprite
+        const width = options.width ?? spriteWidth ?? sprite.width
+        const gridHeight = options.height ?? 20
+        const hitBoxWidth = this.logic?.hitbox.w ?? 0
+        const middleWidth = hitBoxWidth / 2 - width / 2
+        const posX = gridContainer.x + (options.marginLeft ?? 0) - (options.marginRight ?? 0)
+        const posY = gridContainer.y + (this.logic?.hitbox.h ?? 0) + (options.marginTop ?? 0) - (options.marginBottom ?? 0)
+
+        switch (position) {
+            case 'top':
+                gridContainer.x = posX + middleWidth
+                gridContainer.y = posY - spriteHeight
+                gridContainer.y -= (gridArray.length * gridHeight)
+                break;
+            case 'bottom':
+                gridContainer.x = posX + middleWidth
+                gridContainer.y = posY
+                break;
+            case 'left':
+                gridContainer.x = posX - width - (hitBoxWidth < spriteWidth ? hitBoxWidth / 2 : 0)
+                gridContainer.y = posY - spriteHeight
+                break;
+            case 'right':
+                gridContainer.x = posX + width + (hitBoxWidth > spriteWidth ? hitBoxWidth / 2 : 0)
+                gridContainer.y = posY - spriteHeight
+        }
+
+        for (let y = 0; y < gridArray.length; y++) {
+            const columns = gridArray[y].col.length;
+            const cellWidth = (width / columns);
+            for (let x = 0; x < columns; x++) {
+                const params: ComponentObject<any> = gridArray[y].col[x];
+                const component = this.applyComponent(params)
+                component.onRender$
+                    .pipe(
+                        takeUntil(this.layoutNotifierClear[position]),
+                        finalize(() => {
+                            component.onRemove()
+                        })
+                    )
+                    .subscribe(() => {
+                        component.x = Math.round((x * cellWidth) + (cellWidth / 2) - (component.width / 2))
+                        component.y = Math.round((y * gridHeight) + (gridHeight / 2) - (component.height / 2))
+                    })
+                component.onInit({
+                    width: cellWidth,
+                    height: gridHeight
+                })
+                gridContainer.addChild(component)
+            }
+        }
+
+        return gridContainer
+    }
+
+    private applyComponent(component: ComponentObject<any>): AbstractComponent<any, any> {
+        const compClass = this.registerComponents.get(component.id)
+        if (!compClass) {
+            throw log(`Impossible to find ${component.id} component`)
+        }
+        return new compClass(this, component.value)
+    }
+
+    private createComponentCenter(components: LayoutObject<any>) {
+        const lines = components.center?.lines || []
+
+        this.getLayoutContainer().removeChildren()
+
+        for (let { col } of lines) {
+            for (let component of col) {
+                const instance = this.applyComponent(component)
+                if (instance.onInit) instance.onInit({
+                    width: this.width,
+                    height: this.height
+                })
+                this.getLayoutContainer().addChild(instance)
+            }
+        }
+
+        this.components = components
+    }
+
+    private refreshComponents(components: LayoutObject<any>, sprite: SpriteInfo) {
+        for (let type of layoutTypes) {
+            const layout = components[type]
+            if (layout?.lines) {
+                const layoutContainer = this.getLayoutContainer(type)
+                layoutContainer.removeChildren()
+                this.layoutNotifierClear[type].next()
+                layoutContainer.addChild(this.createGrid(type, layout.lines, layout, sprite))
+            }
+        }
+    }
+
+    private updateComponents(components: LayoutObject<any>) {
+        const graphicChanged: boolean = !!components.center?.lines
+
+        if (graphicChanged) {
+            this.createComponentCenter(components)
+        }
+
+        if (this.subscriptionGraphic) this.subscriptionGraphic.unsubscribe()
+
+        const child = this.getLayoutContainer().children[0]
+
+        if (child instanceof RpgSprite) {
+            this.subscriptionGraphic = (child as RpgSprite).animationSprite()
+                .pipe(
+                    takeUntil(this.game.getDeleteNotifier(this.id)),
+                    filter((sprite: any) => sprite),
+                    distinctUntilChanged((p: any, q: any) =>
+                        p.width === q.width &&
+                        p.height === q.height &&
+                        p.anchor.x === q.anchor.x &&
+                        p.anchor.y === q.anchor.y),
+                )
+                .subscribe((sprite) => {
+                    this.refreshComponents(components, sprite)
+                })
+        }
+        else {
+            this.refreshComponents(components, {
+                width: this.data.width,
+                height: this.data.height,
+                anchor: {
+                    x: 0,
+                    y: 0
+                },
+                x: 0,
+                y: 0,
+                spriteHeight: this.data.height,
+                spriteWidth: this.data.width
+            })
+        }
+
+    }
 }

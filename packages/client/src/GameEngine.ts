@@ -1,9 +1,9 @@
 import { RpgCommonGame, RpgCommonPlayer, GameSide, RpgShape } from "@rpgjs/common";
-import { BehaviorSubject, combineLatest, Observable } from "rxjs";
+import { BehaviorSubject, combineLatest, Observable, Subject } from "rxjs";
 import { RpgRenderer } from "./Renderer";
 import { RpgClientEngine } from "./RpgClientEngine";
 import { map } from "rxjs/operators";
-import { ObjectFixture, ObjectFixtureList } from "@rpgjs/types";
+import { LayoutObject, ObjectFixture, ObjectFixtureList } from "@rpgjs/types";
 
 export class GameEngineClient extends RpgCommonGame {
     playerId: string
@@ -14,6 +14,9 @@ export class GameEngineClient extends RpgCommonGame {
     private _objects: BehaviorSubject<ObjectFixtureList> = new BehaviorSubject({})
     private _obsObjects: {
         [id: string]: BehaviorSubject<ObjectFixture>
+    } = {}
+    private _obsObjectsDeleteNotifier$: {
+        [id: string]: Subject<void>
     } = {}
     private _shapes: BehaviorSubject<ObjectFixtureList> = new BehaviorSubject({})
     private _objectsChanged: BehaviorSubject<ObjectFixtureList> = new BehaviorSubject({})
@@ -121,11 +124,18 @@ export class GameEngineClient extends RpgCommonGame {
         this._shapes.next({})
     }
 
+    getDeleteNotifier(id: string): Observable<void> {
+        return this._obsObjectsDeleteNotifier$[id].asObservable()
+    }
+
     private _remove(prop: '_objects' | '_shapes', id: string) {
         const logic = prop == '_objects' ? this.getObject(id) : this.getShape(id)
         if (logic) {
             const objects = { ...this[prop].value } // clone
             delete objects[id]
+            this._obsObjectsDeleteNotifier$[id].next()
+            this._obsObjectsDeleteNotifier$[id].complete()
+            this._obsObjects[id].complete()
             delete this._obsObjects[id]
             this[prop].next(objects)
             return true
@@ -160,14 +170,30 @@ export class GameEngineClient extends RpgCommonGame {
             paramsChanged,
             isShape
         } = obj
-        GameEngineClient.toArray(params, 'components')
+        const layoutToArray = (params) => {
+            const layout = params.layout as LayoutObject<any> | undefined
+            if (layout) {
+                ['center', 'top', 'right', 'bottom', 'left'].forEach((key) => {
+                    if (!layout[key]) return
+                    GameEngineClient.toArray(layout[key], 'lines')
+                    if (!layout[key].lines) return
+                    layout[key].lines.map(layout => {
+                        GameEngineClient.toArray(layout, 'col')
+                    })
+                })
+            }
+        }
+        layoutToArray(params)
         GameEngineClient.toArray(params, 'polygon')
         const isMe = () => id == this.playerId
         let logic
         let teleported = false
         let propName = '_objects'
 
-        const createObsForObject = (data) => this._obsObjects[id] = new BehaviorSubject(data)
+        const createObsForObject = (data) => {
+            this._obsObjectsDeleteNotifier$[id] = new Subject()
+            this._obsObjects[id] = new BehaviorSubject(data)
+        }
 
         if (isShape) {
             propName = '_shapes'
@@ -201,16 +227,16 @@ export class GameEngineClient extends RpgCommonGame {
         }
         logic.prevParamsChanged = Object.assign({}, logic)
         for (let key in params) {
-            if (!localEvent && 
+            if (!localEvent &&
                 (key == 'position' ||
-                (key == 'direction' && paramsChanged && paramsChanged.position))) {
+                    (key == 'direction' && paramsChanged && paramsChanged.position))) {
                 if (isMe() && logic.canMove) continue
             }
             logic[key] = params[key]
         }
         if (paramsChanged) {
-            GameEngineClient.toArray(paramsChanged, 'components')
-            if (paramsChanged.components) logic.componentChanged = paramsChanged.components
+            layoutToArray(paramsChanged)
+            if (paramsChanged.layout) logic.componentChanged = paramsChanged.layout
             if (paramsChanged.teleported) {
                 teleported = true
                 logic.position = { ...params.position } // clone
@@ -225,7 +251,7 @@ export class GameEngineClient extends RpgCommonGame {
             paramsChanged
         }
 
-        this[propName].next({ 
+        this[propName].next({
             ...this[propName].value,
             ...{
                 [id]: newObject

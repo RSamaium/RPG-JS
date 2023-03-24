@@ -33,7 +33,8 @@ import {
 import { RpgServerEngine } from '../server'
 import { RpgClassMap } from '../Scenes/Map'
 import { RpgTiledWorldMap } from '../Game/WorldMaps'
-import { CameraOptions, PositionXY_OptionalZ, SocketEvents, SocketMethods } from '@rpgjs/types'
+import { CameraOptions, PositionXY_OptionalZ, SocketEvents, SocketMethods, LayoutObject } from '@rpgjs/types'
+import { ComponentManager } from './ComponentManager'
 
 const { 
     isPromise, 
@@ -52,6 +53,17 @@ const itemSchemas = {
 }
 
 export const componentSchema = { id: String, value: String }
+export const layoutSchema = {
+    width: Number,
+    height: Number,
+    marginBottom: Number,
+    marginTop: Number,
+    marginLeft: Number,
+    marginRight: Number,
+    lines: [{
+        col: [componentSchema]
+    }]
+}
 
 const playerSchemas = {
     position: {
@@ -78,7 +90,14 @@ const playerSchemas = {
     states: [{ name: String, description: String, id: String }],
     effects: [String],
 
-    components: [componentSchema],
+    layout: {
+        top: layoutSchema,
+        bottom: layoutSchema,
+        left: layoutSchema,
+        right: layoutSchema,
+        center: layoutSchema
+    },
+
     action: Number,
     map: String,
 
@@ -114,13 +133,24 @@ const playerSchemas = {
     },
 }
 
-export class RpgPlayer extends RpgCommonPlayer {
+const layoutObject = {
+    lines: []
+}
 
+export class RpgPlayer extends RpgCommonPlayer {
     public readonly type: string = 'player'
 
     static schemas = {
        ...playerSchemas,
         events: [playerSchemas]
+    }
+
+    layout: LayoutObject<any> = {
+        top: layoutObject,
+        bottom: layoutObject,
+        left: layoutObject,
+        right: layoutObject,
+        center: layoutObject
     }
 
     private _name
@@ -226,34 +256,6 @@ export class RpgPlayer extends RpgCommonPlayer {
 
     set name(val: string) {
         this._name = val
-    }
-
-    /**
-     * Give the spritesheet identifier
-     * 
-     * Since version 3.0.0-rc, you can define several graphic elements. If you put a number, it represents the tile ID in the tileset
-     * 
-     * Example 1:
-     * ```ts
-     * player.setGraphic(['body', 'shield'])
-     * ```
-     * 
-     * Example 2:
-     * ```ts
-     * player.setGraphic(3) // Use tile #3
-     * ```
-     * 
-     * > You must, on the client side, create the spritesheet in question. Guide: [Create Sprite](/guide/create-sprite.html)
-     * 
-     * @title Set Graphic
-     * @method player.setGraphic(graphic)
-     * @param {string | number | (string | number)[]} graphic
-     * @returns {void}
-     * @memberof Player
-     */
-    setGraphic(graphic: string | number | (string | number)[]) {
-        const components = (Utils.isArray(graphic) ? graphic: [graphic]) as string[]
-        this.components = components.map(value => ({ id: Utils.isString(value) ? 'graphic' : 'tile', value }))
     }
 
     /**
@@ -841,7 +843,8 @@ export interface RpgPlayer extends
     GuiManager,
     VariableManager,
     MoveManager,
-    BattleManager
+    BattleManager,
+    ComponentManager
 {
     _socket: any 
     vision,
@@ -860,7 +863,8 @@ applyMixins(RpgPlayer, [
     GuiManager,
     VariableManager,
     MoveManager,
-    BattleManager
+    BattleManager,
+    ComponentManager
 ])
 
 export enum EventMode {

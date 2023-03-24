@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <map version="1.9" tiledversion="1.9.2" orientation="orthogonal" renderorder="right-down" width="50" height="50" tilewidth="32" tileheight="32" infinite="0" backgroundcolor="#1a767e" nextlayerid="16" nextobjectid="39">
  <properties>
-  <property name="sounds" value="town"/>
+  
  </properties>
  <tileset firstgid="1" source="../[Base]BaseChip_pipo.tsx"/>
  <tileset firstgid="1001" source="../[A]Water_pipo.tsx"/>

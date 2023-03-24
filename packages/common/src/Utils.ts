@@ -103,6 +103,10 @@ export function toRadians(angle: number) {
     return angle * (Math.PI / 180)
 }
 
+export function hexaToNumber(hexa: string): number {
+    return parseInt(hexa.replace('#', ''), 16)
+}
+
 export function extractId(path: string): string | null {
     const id = path.match(/([a-zA-Z0-9-_$!]+)\.[a-z]+$/i)
     if (!id) return null
@@ -144,5 +148,6 @@ export default {
     extractId,
     basename,
     fps2ms,
-    preciseNow
+    preciseNow,
+    hexaToNumber
 }

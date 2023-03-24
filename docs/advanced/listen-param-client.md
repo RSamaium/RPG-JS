@@ -1,4 +1,4 @@
-# Display the name above the sprite
+# Create your own display on the sprite
 
 ## Prerequisites
 

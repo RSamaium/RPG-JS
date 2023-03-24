@@ -57,7 +57,9 @@
     "watch:types": "cd packages/types && npm run watch",
     "watch:agones-mm": "cd packages/plugins/agones/matchmaker && npm run watch",
     "dev:watch": "concurrently -n rpgjs \"npm:watch:*\"",
-    "dev": "concurrently -n rpgjs,sample \"npm:watch:*\" \"cd packages/sample && npm run dev\""
+    "dev": "concurrently -n rpgjs,sample \"npm:watch:*\" \"cd packages/sample && npm run dev\"",
+    "dev:doc": "cd docs && npm run dev",
+    "doc:build": "cd docs && npm run build"
   },
   "repository": {
     "type": "git",

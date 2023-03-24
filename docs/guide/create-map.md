@@ -54,5 +54,5 @@ export default class RpgServerEngine { }
 1. Add the map created in the property `maps` in the `@RpgModule` decorator
 
 ::: tip
-Here you have referenced the cards in the game, but it does not display the card. To display the map on the client side, [you need to use `player.changeMap()`](/guide/player-start.html#start-position)
+Here you have referenced the maps in the game, but it does not display the map. To display the map on the client side, [you need to use `player.changeMap()`](/guide/player-start.html#start-position)
 :::

@@ -186,7 +186,7 @@ describe('character.showAnimation()', () => {
             attachTo: scene.getPlayer(playerId),
             replaceGraphic: true
         })
-        sprite = scene.getPlayer(playerId)?.['container'].getChildAt(0)
+        sprite = scene.getPlayer(playerId)?.getLayoutContainer().getChildAt(0)
     })
 
     test('Graphic is replaced', () => {

@@ -363,7 +363,7 @@ export class RpgClientEngine {
         this.controls.preStep()
         if (player) {
             if (player.pendingMove.length > 0) {
-                const { inputs: inputEvent } = await this.gameEngine.processInput<RpgCommonPlayer>(this.gameEngine.playerId, this.controls.options).then()
+                const { inputs: inputEvent } = await this.gameEngine.processInput<RpgCommonPlayer>(this.gameEngine.playerId, this.controls.options)
                 if (inputEvent.length == 0) return
                 this.clientFrames.set(this.frame, {
                     data: player.position,

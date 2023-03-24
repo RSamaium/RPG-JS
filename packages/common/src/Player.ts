@@ -11,8 +11,6 @@ export const LiteralDirection = {
 export class RpgCommonPlayer extends AbstractObject {
     events: any[] = []
     layerName: string = ''
-    components: any[] = []
-
     data: any = {}
     pendingMove: PendingMove = []
     inputsTimestamp: {
