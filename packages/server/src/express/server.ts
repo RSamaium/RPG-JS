@@ -1,4 +1,3 @@
-
 import http from 'http'
 import express from 'express'
 import { Server } from 'socket.io'
@@ -53,9 +52,8 @@ export function expressServer(modules: ModuleType[], options: ExpressServerOptio
             console.log(pe.render(reason))
         })
 
-        if (import.meta.hot) {
-            import.meta.hot.on("vite:beforeFullReload", () => {
-                console.log("full reload");
+        if (import.meta['hot']) {
+            import.meta['hot'].on("vite:beforeFullReload", () => {
                 server.close();
             });
         }
