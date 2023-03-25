@@ -1,4 +1,5 @@
 import { VirtualGrid } from '@rpgjs/common'
+import { beforeEach, test, afterEach, expect } from 'vitest'
 
 let grid
 const NB_CELLS_WIDTH = 10

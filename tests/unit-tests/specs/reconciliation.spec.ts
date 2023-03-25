@@ -3,6 +3,7 @@ import { RpgPlayer, RpgServerEngine, Move } from '@rpgjs/server'
 import { RpgClientEngine, Control, RpgPlugin, HookClient } from '@rpgjs/client'
 import { clear, nextTick } from '@rpgjs/testing'
 import { inputs } from './fixtures/control'
+import { beforeEach, test, afterEach, expect } from 'vitest'
 
 let client: RpgClientEngine,
     player: RpgPlayer,

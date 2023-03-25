@@ -3,10 +3,9 @@ import { SceneMap } from "../Scene/Map"
 import Tile from "../Tilemap/Tile"
 import TileLayer from "../Tilemap/TileLayer"
 import { AbstractComponent, CellInfo } from "./AbstractComponent"
-import { RpgComponent } from "./Component"
 import { Container } from "pixi.js"
 
-export class TileComponent extends AbstractComponent<TileComponentObject, PIXI.Container> {
+export class TileComponent extends AbstractComponent<TileComponentObject, Container> {
     static readonly id: string = 'tile'
     cacheParams: string[] = []
     gid: number = 0

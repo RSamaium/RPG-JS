@@ -2,6 +2,7 @@ import { ModuleType } from '@rpgjs/common'
 import { SceneMap } from './Scene/Map'
 import { RpgClientEngine } from './RpgClientEngine'
 import { RpgComponent } from './Components/Component'
+import { Loader } from 'pixi.js'
 
 type RpgClass<T = any> = new (...args: any[]) => T
 
@@ -164,7 +165,7 @@ export interface RpgSceneMapHooks extends RpgSceneHooks<SceneMap> {
      * @prop { (scene: RpgSceneMap, loader: PIXI.Loader) => any } [onMapLoading]
      * @memberof RpgSceneHooks
      */
-    onMapLoading?: (scene: SceneMap, loader: PIXI.Loader) => any
+    onMapLoading?: (scene: SceneMap, loader: Loader) => any
 }
 
 export interface RpgClient {

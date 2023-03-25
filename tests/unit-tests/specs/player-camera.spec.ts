@@ -3,6 +3,7 @@ import { RpgPlayer, RpgWorld } from '@rpgjs/server'
 import { SocketMethods, SocketEvents } from '@rpgjs/types'
 import { RpgClientEngine, RpgSceneMap } from '@rpgjs/client'
 import { clear, nextTick } from '@rpgjs/testing'
+import { beforeEach, test, afterEach, expect, vi, describe } from 'vitest'
 
 let client: RpgClientEngine, 
 player: RpgPlayer,
@@ -34,7 +35,7 @@ describe('Spy emitToMap', () => {
     let spy
 
     beforeEach(() => {
-        spy = jest.spyOn(player, 'emit');
+        spy = vi.spyOn(player, 'emit');
     })
 
     test('player.cameraFollow() test', () => {
@@ -68,16 +69,16 @@ describe('Spy emitToMap', () => {
 describe('Client Apply', () => {
     test('viewport follow called', () => {
         const scene = client.getScene<RpgSceneMap>()
-        const spy = jest.spyOn(scene?.viewport as any, 'follow');
+        const spy = vi.spyOn(scene?.viewport as any, 'follow');
         player.cameraFollow(secondPlayer)
         expect(spy).toHaveBeenCalled()
     })
 
     test('viewport animate called (without easing)', () => {
         const viewport = client.getScene<RpgSceneMap>()?.viewport as any
-        const spy = jest.spyOn(viewport, 'animate');
-        const spyFollow = jest.spyOn(viewport, 'follow');
-        const viewportPlugin = jest.spyOn(viewport?.plugins, 'remove');
+        const spy = vi.spyOn(viewport, 'animate');
+        const spyFollow = vi.spyOn(viewport, 'follow');
+        const viewportPlugin = vi.spyOn(viewport?.plugins, 'remove');
         player.cameraFollow(secondPlayer, {
             smoothMove: {
                 time: 3000
@@ -98,7 +99,7 @@ describe('Client Apply', () => {
     })
 
     test('viewport animate called (easing)', () => {
-        const spy = jest.spyOn(client.getScene<RpgSceneMap>()?.viewport as any, 'animate');
+        const spy = vi.spyOn(client.getScene<RpgSceneMap>()?.viewport as any, 'animate');
         player.cameraFollow(secondPlayer, {
             smoothMove: {
                 time: 3000,
@@ -116,11 +117,12 @@ describe('Client Apply', () => {
 
     test('viewport applied twice', () => {
         const viewport = client.getScene<RpgSceneMap>()?.viewport as any
-        const spy = jest.spyOn(viewport as any, 'follow');
+        const spy = vi.spyOn(viewport as any, 'follow');
         player.cameraFollow(secondPlayer)
         secondClient.socket.disconnect()
         expect(spy).toHaveBeenCalledTimes(2)
     })
+ 
 })
 
 afterEach(() => {

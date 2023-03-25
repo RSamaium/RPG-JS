@@ -2,7 +2,7 @@ import {_beforeEach} from './beforeEach'
 import { EventData, EventMode, Input, MapData, RpgEvent, RpgMap, RpgModule, RpgPlayer, RpgServer, RpgServerEngine } from '@rpgjs/server'
 import { RpgClientEngine, RpgSceneMap, Control, RpgPlugin, HookClient } from '@rpgjs/client'
 import { clear, nextTick } from '@rpgjs/testing'
-import { inputs } from './fixtures/control'
+import { beforeEach, test, afterEach, expect, describe } from 'vitest'
 
 let  client: RpgClientEngine, 
 player: RpgPlayer, 

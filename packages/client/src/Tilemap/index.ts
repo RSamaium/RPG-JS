@@ -10,20 +10,16 @@ import { Container, Graphics } from 'pixi.js'
 
 const { intersection } = Utils
 
-PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
-
 export interface MapInfo extends TiledMap {
     layers: Layer[]
 }
 
-export default class TileMap extends PIXI.Container {
+export default class TileMap extends Container {
     background: Graphics = new Graphics()
     eventsLayers: {
         [eventLayerName: string]: Container
     } = {}
     defaultLayer: Container
-    private _width: number = 0
-    private _height: number = 0
     tilewidth: number = 0 
     tileheight: number = 0
     private frameRateAnimation: number = 10
@@ -51,7 +47,7 @@ export default class TileMap extends PIXI.Container {
         }
     }
 
-    getEventLayer(objectName?: string): PIXI.Container {
+    getEventLayer(objectName?: string): Container {
         for (let layerData of this.data.layers) {
             if (layerData.type != TiledLayerType.ObjectGroup) {
                 continue
@@ -82,8 +78,8 @@ export default class TileMap extends PIXI.Container {
         this.background.drawRect(
             0,
             0,
-            (this._width || 0) * (this.tilewidth || 0),
-            (this._height || 0) * (this.tileheight || 0)
+            (this.width || 0) * (this.tilewidth || 0),
+            (this.height || 0) * (this.tileheight || 0)
         );
         this.background.endFill()
     }

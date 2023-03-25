@@ -5,7 +5,7 @@
         "types": ["node", "jest"],
         "module": "commonjs",
         "outDir": "./lib",
-        "rootDir": "./specs",
+        "rootDir": "./tests/unit-tests",
         "strict": true,
         "sourceMap": true,
         "strictNullChecks": true,
@@ -32,7 +32,7 @@
          }
     },
     "include": [
-        "specs/*.ts",
+        "tests/unit-tests/specs/*.ts",
         "specs/plugins/*.ts",
         "index.d.ts",
         "packages/compiler/types/*.d.ts"

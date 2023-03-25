@@ -4,6 +4,7 @@ import { filter, map, takeUntil } from "rxjs/operators"
 import { RpgComponent } from "./Component"
 import get from 'lodash.get'
 import { GameEngineClient } from "../GameEngine"
+import { Container, Graphics, Sprite } from "pixi.js"
 
 const REGEXP_VAR = /{([^\}]+)}/g
 
@@ -11,8 +12,8 @@ export type CellInfo = { x?: number, y?: number, width: number, height: number }
 
 export abstract class AbstractComponent<
     TypeComponent extends ComponentObject<any>,
-    ContainerType extends PIXI.Container | PIXI.Text | PIXI.Sprite | PIXI.Graphics
-> extends PIXI.Container {
+    ContainerType extends Container | Text | Sprite | Graphics
+> extends Container {
     private _onRender$: Subject<AbstractComponent<TypeComponent, ContainerType>> = new Subject()
     private _onDestroy$: Subject<void> = new Subject()
     readonly onRender$ = this._onRender$.asObservable()

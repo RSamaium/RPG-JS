@@ -2,6 +2,7 @@ import { TiledParser } from "../src/parser/parser"
 import { tileset, xml, xmlGroup, xmlObjectImage, xmlTile } from "./data"
 import { Tileset } from '../src/classes/Tileset'
 import { Layer, MapClass, Tile, TiledLayerType, TiledObjectClass } from '../src'
+import { test, expect, describe } from 'vitest'
 
 function getMap(xml) {
     const parser = new TiledParser(xml)

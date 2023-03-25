@@ -3,6 +3,7 @@ import { Spritesheet, RpgSceneMap, RpgComponent, AnimationClass as Animation, An
 import { _beforeEach } from './beforeEach'
 import { clear, nextTick } from '@rpgjs/testing'
 import { SocketMethods, SocketEvents } from '@rpgjs/types'
+import { beforeEach, test, afterEach, expect, describe, vi } from 'vitest'
 
 let client, player: RpgPlayer, fixture, playerId
 let event, map: RpgMap
@@ -59,14 +60,14 @@ describe('player.showAnimation()', () => {
     })
 
     test('Call Client ?', () => {
-        const spy = jest.spyOn(player, 'emitToMap')
+        const spy = vi.spyOn(player, 'emitToMap')
         player.showAnimation('shield', 'default')
         expect(spy).toHaveBeenCalled()
         expect(spy).toHaveBeenCalledWith(...getEmitParams('shield', 'default'))
     })
 
     test('Call Client, scene.showAnimation', () => {
-        const spy = jest.spyOn(client.getScene(), 'showAnimation')
+        const spy = vi.spyOn(client.getScene(), 'showAnimation')
         player.showAnimation('shield', 'default')
         expect(spy).toHaveBeenCalled()
     })
@@ -89,7 +90,7 @@ describe('scene.showAnimation()', () => {
     })
 
     test('animation is added in animation layer', () => {
-        const spy = jest.spyOn(scene['animationLayer'], 'addChild')
+        const spy = vi.spyOn(scene['animationLayer'], 'addChild')
         scene.showAnimation({ 
             graphic: 'shield',
             animationName: 'default'
@@ -113,7 +114,7 @@ describe('scene.showAnimation()', () => {
             graphic: 'shield',
             animationName: 'default'
         })
-        const spy = jest.spyOn(animation as any, 'update')
+        const spy = vi.spyOn(animation as any, 'update')
         client.nextFrame(0)
         expect(spy).toHaveBeenCalled()
     })
@@ -124,7 +125,7 @@ describe('scene.showAnimation()', () => {
             animationName: 'default',
             loop: val
         })
-        const spy = jest.spyOn(animation as any, 'stop')
+        const spy = vi.spyOn(animation as any, 'stop')
         client.nextFrame(0)
         client.nextFrame(1)
         return { animation, spy }
@@ -153,7 +154,7 @@ describe('scene.showAnimation()', () => {
 
     test('replaceGraphic', () => {
         const sprite = scene.getPlayer(playerId) as RpgComponent
-        const spy = jest.spyOn(sprite, 'showAnimation')
+        const spy = vi.spyOn(sprite, 'showAnimation')
         scene.showAnimation({ 
             graphic: 'shield',
             animationName: 'default',
@@ -249,7 +250,7 @@ describe('Test Animation instance', () => {
     })
 
     test('if play, not play twice', () => {
-        const spy = jest.spyOn(animation, 'update')
+        const spy = vi.spyOn(animation, 'update')
         animation.play('default')
         animation.play('default')
         expect(spy).toHaveBeenCalledTimes(1)

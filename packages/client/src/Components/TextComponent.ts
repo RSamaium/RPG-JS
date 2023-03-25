@@ -1,16 +1,17 @@
 import { TextComponentObject } from "@rpgjs/types"
+import { Graphics, Text } from "pixi.js"
 import { AbstractComponent } from "./AbstractComponent"
 
-export class TextComponent extends AbstractComponent<TextComponentObject, PIXI.Text> {
+export class TextComponent extends AbstractComponent<TextComponentObject, Text> {
     static readonly id: string = 'text'
     cacheParams: string[] = []
-    private container: PIXI.Text = new PIXI.Text('')
+    private container: Text = new Text('')
     private originValue: string = ''
 
-    onInit(cell: PIXI.Graphics) {
+    onInit(cell: Graphics) {
         if (typeof this.value == 'string') {
             this.container.text = this.value
-        } else  {
+        } else if (this.value.style) {
             this.container.style = this.value.style
             this.container.text = this.value.text
         }

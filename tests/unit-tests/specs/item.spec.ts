@@ -1,6 +1,7 @@
 import { Potion, Key } from './fixtures/item'
 import {_beforeEach} from './beforeEach'
 import { clear } from '@rpgjs/testing'
+import { beforeEach, test, afterEach, expect } from 'vitest'
 
 let  client, player, fixture, playerId, server
 

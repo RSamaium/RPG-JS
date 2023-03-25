@@ -3,6 +3,7 @@ import {  Input, RpgModule, RpgPlayer, RpgServer } from '@rpgjs/server'
 import { RpgClientEngine, Control } from '@rpgjs/client'
 import { clear, nextTick } from '@rpgjs/testing'
 import { inputs } from './fixtures/control'
+import { beforeEach, test, afterEach, expect, describe, vi } from 'vitest'
 
 let  client: RpgClientEngine, 
 player: RpgPlayer
@@ -43,7 +44,7 @@ test('Apply Custom Controls (Client Side)', () => {
 })
 
 test('sendInput() client, is called', async () => {
-    const spy = jest.spyOn(client, 'sendInput')
+    const spy = vi.spyOn(client, 'sendInput')
     client.controls.setInputs(inputs)
     client.controls.applyControl(Control.Right, true)
     client.processInput()
@@ -111,7 +112,7 @@ test('Apply Controls - Move (Server Side)', () => {
 })
 
 test('Listen / Stop Controls', async () => {
-    const fn = jest.fn()
+    const fn = vi.fn()
     client.controls.setInputs({
         mycustom: {
             bind: Input.Enter,
@@ -133,7 +134,7 @@ test('Listen / Stop Controls', async () => {
 })
 
 test('Move', async () => {
-    const fn = jest.fn()
+    const fn = vi.fn()
     client.controls.setInputs({
         [Control.Right]: {
             bind: Input.Right,
@@ -149,7 +150,7 @@ test('Move', async () => {
 })
 
 test('Move but stop Inputs', async () => {
-    const fn = jest.fn()
+    const fn = vi.fn()
     client.controls.setInputs({
         [Control.Right]: {
             bind: Input.Right,
@@ -168,7 +169,7 @@ test('Move but stop Inputs', async () => {
 
 describe('Delay Action', () => {
     function delayOtherControls(delay, calledTimes: number) {
-        const spy = jest.spyOn(client.player as any, 'moveByDirection')
+        const spy = vi.spyOn(client.player as any, 'moveByDirection')
         client.controls.setInputs({
             [Control.Action]: {
                 bind: Input.A,
@@ -187,7 +188,7 @@ describe('Delay Action', () => {
     }
 
     function delay(delay: number | undefined, calledTimes: number) {
-        const spy = jest.spyOn(client.player as any, 'triggerCollisionWith')
+        const spy = vi.spyOn(client.player as any, 'triggerCollisionWith')
         client.controls.setInputs({
             [Control.Action]: {
                 bind: Input.A,

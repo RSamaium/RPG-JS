@@ -5,6 +5,7 @@ import { Confuse } from './fixtures/state'
 import { Fire } from './fixtures/skill'
 import {_beforeEach} from './beforeEach'
 import { clear } from '@rpgjs/testing'
+import { beforeEach, test, afterEach, expect, describe } from 'vitest'
 
 let  client, player, fixture, playerId
 

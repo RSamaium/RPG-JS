@@ -1,4 +1,4 @@
-import { Texture, AnimatedSprite } from "pixi.js";
+import { Texture, AnimatedSprite, groupD8 } from "pixi.js";
 import { RpgRectTileLayer } from "./TileLayer";
 import TileSet from "./TileSet";
 import { Tile as TiledTileClass } from '@rpgjs/tiled'
@@ -53,24 +53,24 @@ export default class Tile extends AnimatedSprite {
         let i=0
         const add = (symmetrySecond) => {
             i++
-            if (symmetry) symmetry = PIXI.groupD8.add(symmetry, symmetrySecond)
+            if (symmetry) symmetry = groupD8.add(symmetry, symmetrySecond)
             else symmetry = symmetrySecond    
         }
 
         if (this.tile.horizontalFlip) {
-            add(PIXI.groupD8.MIRROR_HORIZONTAL)
+            add(groupD8.MIRROR_HORIZONTAL)
         }
 
         if (this.tile.verticalFlip) {
-            add(PIXI.groupD8.MIRROR_VERTICAL)
+            add(groupD8.MIRROR_VERTICAL)
         }
 
         if (this.tile.diagonalFlip) {
             if (i % 2 == 0) {
-                add(PIXI.groupD8.MAIN_DIAGONAL)
+                add(groupD8.MAIN_DIAGONAL)
             }
             else {
-                add(PIXI.groupD8.REVERSE_DIAGONAL)
+                add(groupD8.REVERSE_DIAGONAL)
             }
         }
 

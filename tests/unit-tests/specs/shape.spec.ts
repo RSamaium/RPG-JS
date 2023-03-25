@@ -4,6 +4,7 @@ import { RpgClientEngine, RpgSceneMap, RpgPlugin, Control } from '@rpgjs/client'
 import { clear, nextTick } from '@rpgjs/testing'
 import { inputs } from './fixtures/control'
 import { box, circle, polygon } from './fixtures/shape'
+import { beforeEach, test, afterEach, expect, describe } from 'vitest'
 
 let  client: RpgClientEngine, 
 player: RpgPlayer, 

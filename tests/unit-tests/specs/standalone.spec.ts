@@ -1,4 +1,5 @@
 import { entryPoint } from '@rpgjs/standalone'
+import { beforeEach, test, afterEach, expect } from 'vitest'
 
 let game, server, client
 

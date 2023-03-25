@@ -4,6 +4,7 @@ import { RpgClientEngine, RpgClient, RpgGui } from '@rpgjs/client'
 import { clear, nextTick } from '@rpgjs/testing'
 import menuGui from './fixtures/gui/menu.vue'
 import tooltipGui from './fixtures/gui/tooltip.vue'
+import { beforeEach, test, afterEach, expect } from 'vitest'
 
 let  client: RpgClientEngine, 
 player: RpgPlayer,

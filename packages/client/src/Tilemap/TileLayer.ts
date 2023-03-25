@@ -1,18 +1,17 @@
 import Tile from './Tile';
-import { CompositeRectTileLayer, pixi_tilemap, POINT_STRUCT_SIZE } from 'pixi-tilemap'
+import { CompositeTilemap, settings, POINT_STRUCT_SIZE } from '@pixi/tilemap'
 import { Layer, Tile as TileClass } from '@rpgjs/tiled';
 import TileSet from './TileSet';
 import TileMap from '.';
 import { CommonLayer } from './CommonLayer';
 
-pixi_tilemap.Constant.maxTextures = 4
-pixi_tilemap.Constant.use32bitIndex = true
+settings.use32bitIndex = true
 
-export interface RpgRectTileLayer extends CompositeRectTileLayer {
-    children: {
+export interface RpgRectTileLayer extends CompositeTilemap {
+   /* children: {
         pointsBuf: number[],
         modificationMarker: number
-    }[]
+    }[]*/
 }
 
 export default class TileLayer extends CommonLayer {
@@ -92,9 +91,9 @@ export default class TileLayer extends CommonLayer {
             this.addFrame(newTile, x, y)
         }
         else {
-            if (newTile) {
-                const bufComposite: RpgRectTileLayer = new pixi_tilemap.CompositeRectTileLayer() as RpgRectTileLayer
-                const frame = bufComposite.addFrame(newTile.texture, newTile.x, newTile.y)
+            /*if (newTile) {
+                const bufComposite: RpgRectTileLayer = new CompositeTilemap() as RpgRectTileLayer
+                const frame = bufComposite.tile(newTile.texture, newTile.x, newTile.y)
                 newTile.setAnimation(frame)
                 this._tiles[x + ';' + y] = newTile
                 const pointsBufComposite = bufComposite.children[0].pointsBuf
@@ -107,29 +106,29 @@ export default class TileLayer extends CommonLayer {
             else {
                 delete this._tiles[x + ';' + y]
                 if (this.pointsBuf) this.pointsBuf.splice(oldTile.pointsBufIndex, POINT_STRUCT_SIZE)
-            }
+            }*/
         }
     }
 
     /** @internal */
-    get pointsBuf(): number[] | null {
+    /*get pointsBuf(): number[] | null {
         const child = this.tilemap.children[0]
         if (!child) return null
         return child.pointsBuf 
-    }
+    }*/
 
     private addFrame(tile: Tile, x: number, y: number) {
-        const frame = this.tilemap.addFrame(tile.texture, tile.x, tile.y)
-        const pb = this.pointsBuf
+        const frame = this.tilemap.tile(tile.texture, tile.x, tile.y)
+       /* const pb = this.pointsBuf
         if (!pb) return null
-        tile.pointsBufIndex = pb.length - POINT_STRUCT_SIZE
+        tile.pointsBufIndex = pb.length - POINT_STRUCT_SIZE*/
         tile.setAnimation(frame)
         this._tiles[x + ';' + y] = tile
     }
 
     /** @internal */
     create() {
-        this.tilemap = new pixi_tilemap.CompositeRectTileLayer() as RpgRectTileLayer
+        this.tilemap = new CompositeTilemap() as RpgRectTileLayer
         const { width, height } = this.map.getData()
         for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) { 

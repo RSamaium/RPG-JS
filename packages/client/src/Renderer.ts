@@ -9,7 +9,7 @@ import { TransitionScene } from './Effects/TransitionScene'
 import { Subject, forkJoin, Observable } from 'rxjs'
 import { GameEngineClient } from './GameEngine'
 import { SpinnerGraphic } from './Effects/Spinner'
-import * as PIXI from 'pixi.js'
+import { autoDetectRenderer, Container, Graphics, ICanvas, IRenderer } from 'pixi.js'
 
 export enum TransitionMode {
     None,
@@ -19,15 +19,15 @@ export enum TransitionMode {
 export class RpgRenderer  {
     public vm: ComponentPublicInstance
     public app: App
-    public readonly stage: PIXI.Container = new PIXI.Container()
-    private readonly sceneContainer: PIXI.Container = new PIXI.Container()
-    private readonly fadeContainer: PIXI.Graphics = new PIXI.Graphics()
+    public readonly stage: Container = new Container()
+    private readonly sceneContainer: Container = new Container()
+    private readonly fadeContainer: Graphics = new Graphics()
     private readonly spinner: SpinnerGraphic = new SpinnerGraphic(this.clientEngine)
     public options: any = {}
     public guiEl: HTMLDivElement
 
     private scene: Scene | null = null
-    private renderer: PIXI.Renderer
+    private renderer: IRenderer
     private _width: number = 800
     private _height: number = 400 
     private canvasEl: HTMLElement
@@ -75,7 +75,7 @@ export class RpgRenderer  {
         this.spinner.y = h * 0.5
     }
 
-    get canvas(): HTMLCanvasElement {
+    get canvas(): ICanvas {
         return this.renderer.view
     }
 
@@ -101,7 +101,7 @@ export class RpgRenderer  {
             antialias: true,
             ...this.options.canvas
         };
-        this.renderer = PIXI.autoDetectRenderer(options)
+        this.renderer = autoDetectRenderer(options)
         this.selector = document.body.querySelector(this.options.selector)
         this.guiEl = this.selector.querySelector(this.options.selectorGui)
         this.canvasEl = this.selector.querySelector(this.options.selectorCanvas)
@@ -112,12 +112,12 @@ export class RpgRenderer  {
         }
 
         if (!this.canvasEl) {
-            this.selector.insertBefore(this.renderer.view, this.selector.firstChild)
+            this.selector.insertBefore(this.renderer.view as HTMLCanvasElement, this.selector.firstChild)
             const [canvas] = document.querySelector(this.options.selector).children
             canvas.style.position = 'absolute'
         }
         else {
-            this.canvasEl.appendChild(this.renderer.view)
+            this.canvasEl.appendChild(this.renderer.view as HTMLCanvasElement)
         }
 
         this.stage.addChild(this.sceneContainer)
@@ -202,7 +202,7 @@ export class RpgRenderer  {
             switch (name) {
                 case PresetScene.Map:
                     const sceneClass = scenes[PresetScene.Map] || SceneMap
-                    this.scene = new sceneClass(this.gameEngine, {
+                    this.scene = new sceneClass(this.gameEngine, this.renderer, {
                         screenWidth: this.renderer.screen.width,
                         screenHeight: this.renderer.screen.height,
                         drawMap:  this.options.drawMap

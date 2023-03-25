@@ -45,8 +45,8 @@ export class Animation extends Sprite {
     private time: number = 0
     private frameIndex: number = 0
     private animations: Map<string, AnimationDataFrames> = new Map()
-    private _animation$: BehaviorSubject<PIXI.Sprite | null> = new BehaviorSubject(null as any)
-    readonly animation$: Observable<PIXI.Sprite | null> = this._animation$.asObservable()
+    private _animation$: BehaviorSubject<Sprite | null> = new BehaviorSubject(null as any)
+    readonly animation$: Observable<Sprite | null> = this._animation$.asObservable()
 
     onFinish: () => void
 
@@ -103,7 +103,7 @@ export class Animation extends Sprite {
             optionsTextures.spriteWidth = rectWidth ? rectWidth : width / framesWidth
             optionsTextures.spriteHeight = rectHeight ? rectHeight : height / framesHeight
             this.animations.set(animationName, {
-                container: new PIXI.Sprite(),
+                container: new Sprite(),
                 frames: this.createTextures(optionsTextures as Required<TextureOptionsMerging>),
                 name: animationName,
                 animations: textures[animationName].animations,

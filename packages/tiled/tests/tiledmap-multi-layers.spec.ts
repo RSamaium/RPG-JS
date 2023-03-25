@@ -1,6 +1,7 @@
 import { TiledParser } from "../src/parser/parser"
 import { tileset } from "./data"
 import { MapClass } from '../src'
+import { test, expect, describe } from 'vitest'
 
 const getXmlMap = (properties = '') => `<?xml version="1.0" encoding="UTF-8"?>
 <map version="1.8" tiledversion="1.8.2" orientation="orthogonal" renderorder="right-down" width="10" height="10" tilewidth="32" tileheight="32" infinite="0" nextlayerid="5" nextobjectid="5">

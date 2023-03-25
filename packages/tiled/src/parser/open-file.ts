@@ -3,6 +3,7 @@ import axios from 'axios'
 import fs from 'fs'
 import { TiledMap } from "../types/Map"
 import { TiledTileset } from "../types/Tileset"
+import path from "path"
 
 type ParseOptions = { getOnlyBasename?: boolean }
 
@@ -66,8 +67,8 @@ export class TiledParserFile {
             axios.get(url).then(res => res.data).then(loadContent)
         }
         else {
-            const filepath = this.basePath + '/' + file
-            fs.readFile(filepath, 'utf-8', (err, data) => {
+            const filepath = (this.basePath ? this.basePath + '/' : '') + file
+            fs.readFile(path.normalize(filepath), 'utf-8', (err, data) => {
                 if (err) return cb(null, err)
                 loadContent(data)
             })
@@ -108,7 +109,8 @@ export class TiledParserFile {
                             tileset.source = basename(tileset.source)
                         }
                     }
-                    this._parseFile<TiledTileset>(tileset.source, 'tileset', (result, err) => {
+                    const basePath = this.basePath + '/' + this.file.substring(0, this.file.lastIndexOf('/'))
+                    this._parseFile<TiledTileset>(path.normalize(path.join(basePath, tileset.source)), 'tileset', (result, err) => {
                         if (err) {
                             hasError = true
                             return cb(null, err)

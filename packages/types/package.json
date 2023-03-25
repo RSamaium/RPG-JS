@@ -18,7 +18,7 @@
   "author": "Samuel Ronce",
   "license": "MIT",
   "devDependencies": {
-    "typescript": "^4.3.5"
+    "typescript": "^5.0.2"
   },
   "dependencies": {
     "rxjs": "^7.5.7"

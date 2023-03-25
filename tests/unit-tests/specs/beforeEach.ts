@@ -26,14 +26,18 @@ export const _beforeEach: any = async (modules: any = [], serverOptions: any = {
         ...commonModules,
         ...modules
     ], {
-        basePath: __dirname,
+        basePath: '.',
         globalConfig: {
-            assetsPath: 'fixtures/maps'
+            assetsPath: ''
         },
         ...serverOptions
     }, clientOptions)
     const clientFixture = await fixture.createClient()
     const client = clientFixture.client
+    client.PIXI.Assets.setPreferences({
+        preferWorkers: false,
+        preferCreateImageBitmap: false
+    })
     const playerId = clientFixture.playerId
     if (serverOptions.changeMap) await fixture.changeMap(client, 'map')
     const player = RpgWorld.getPlayer(playerId)

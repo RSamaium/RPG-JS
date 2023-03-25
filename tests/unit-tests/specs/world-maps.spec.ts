@@ -1,8 +1,9 @@
 import WORLD from './fixtures/maps/world'
 import {_beforeEach} from './beforeEach'
-import { RpgModule, RpgMap, RpgPlayer, RpgPlugin, RpgServer, RpgServerEngine, RpgSceneMap, RpgWorldMaps, Direction, Move, MapData } from '@rpgjs/server'
+import { RpgModule, RpgMap, RpgPlayer, RpgServer, RpgServerEngine, RpgSceneMap, RpgWorldMaps, Direction, Move, MapData } from '@rpgjs/server'
 import { RpgClientEngine } from '@rpgjs/client'
 import { clear } from '@rpgjs/testing'
+import { beforeEach, test, afterEach, expect, describe } from 'vitest'
 
 let  client: RpgClientEngine, 
 player: RpgPlayer, 

@@ -1,18 +1,18 @@
 import { BarComponentObject } from "@rpgjs/types"
 import { Utils, transitionColor } from "@rpgjs/common"
 import { AbstractComponent, CellInfo } from "./AbstractComponent"
-import { RpgComponent } from "./Component"
 import get from 'lodash.get'
 import { Subject } from "rxjs"
 import { takeUntil } from "rxjs/operators"
+import { Container, Graphics, Text } from "pixi.js"
 
 const DEFAULT_COLOR = '#000000'
 
-export class BarComponent extends AbstractComponent<BarComponentObject, PIXI.Container> {
+export class BarComponent extends AbstractComponent<BarComponentObject, Container> {
     static readonly id: string = 'bar'
-    private barContainer: PIXI.Graphics = new PIXI.Graphics();
-    private barFill: PIXI.Graphics = new PIXI.Graphics();
-    private textContainer: PIXI.Text = new PIXI.Text('')
+    private barContainer: Graphics = new Graphics();
+    private barFill: Graphics = new Graphics();
+    private textContainer: Text = new Text('')
     private barHeight: number = this.value.style?.height || 7;
     private text: string = this.value.text || ''
     private barStyle = this.getStyle<BarComponentObject['value']['style']>()

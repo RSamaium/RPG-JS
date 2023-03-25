@@ -1,7 +1,7 @@
 import { TiledParser } from '../src/parser/parser'
 import { TiledLayerType } from '../src/types/Layer'
 import { xml, xmlDeepProperties, xmlGroup, xmlImage, xmlObject, xmlProperties, xmlText, xmlTile } from './data'
-
+import { test, expect, describe } from 'vitest'
 
 test('propToNumber() method', () => {
     const ret = TiledParser.propToNumber({

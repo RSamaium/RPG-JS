@@ -3,6 +3,7 @@ import { Armor, Weapon, State } from '@rpgjs/database'
 import { HpUpValue } from './fixtures/armor'
 import {_beforeEach} from './beforeEach'
 import { clear } from '@rpgjs/testing'
+import { beforeEach, test, afterEach, expect } from 'vitest'
 
 const { MAXHP_CURVE, MAXSP_CURVE, MAXHP, ATK, PDEF, SDEF, MAXSP } = Presets
 

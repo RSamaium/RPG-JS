@@ -17,8 +17,7 @@ export default class TileSet extends TiledTilesetClass {
         if (!spritesheet) {
             throw log(`Impossible to find ${this.name} tileset`)
         }
-        const { texture } = spritesheet.resource
-        this.baseTexture = texture.baseTexture
+        this.baseTexture = spritesheet.resource
         for (
             let y = this.margin;
             y < this.image.height;

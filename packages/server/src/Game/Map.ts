@@ -5,6 +5,7 @@ import { RpgPlayer, EventMode, RpgEvent } from '../Player/Player'
 import { Move } from '../Player/MoveManager'
 import { RpgServerEngine } from '../server'
 import { Observable } from 'rxjs'
+import path from 'path'
 import { constructor, HitBox, MovingHitbox, Position, Tick } from '@rpgjs/types'
 
 export type EventPosOption = {
@@ -85,12 +86,13 @@ export class RpgMap extends RpgCommonMap {
         if (RpgCommonMap.buffer.has(this.id)) {
             return
         }
+        const hasAssetsPath = this._server.assetsPath
         const parser = new TiledParserFile(
             this.file,
             this._server.inputOptions.basePath + '/' + this._server.assetsPath
         )
         const data = await parser.parseFilePromise({
-            getOnlyBasename: true
+            getOnlyBasename: !!hasAssetsPath
         })
         super.load(data)
         this.getAllObjects().forEach(this.createShape.bind(this))

@@ -1,9 +1,9 @@
-import { Sprite } from "pixi.js"
+import { Container, Sprite } from "pixi.js"
 import { ImageComponentObject } from "@rpgjs/types"
 import { SceneMap } from "../Scene/Map"
 import { AbstractComponent, CellInfo } from "./AbstractComponent"
 
-export class ImageComponent extends AbstractComponent<ImageComponentObject, PIXI.Container> {
+export class ImageComponent extends AbstractComponent<ImageComponentObject, Container> {
     static readonly id: string = 'image'
     cacheParams: string[] = []
     source: string = ''

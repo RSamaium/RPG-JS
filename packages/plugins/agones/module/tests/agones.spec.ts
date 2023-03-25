@@ -1,37 +1,37 @@
 import { RpgServer, RpgModule, RpgServerEngine, RpgMatchMaker, RpgWorld } from '@rpgjs/server'
 import AgonesSDK from '@google-cloud/agones-sdk'
-import { RedisStore } from '../src/redisStore'
+import { beforeEach, vi, expect, afterEach, test, describe } from 'vitest'
 
 process.env.MATCH_MAKER_URL = 'test'
 process.env.MATCH_MAKER_SECRET_TOKEN = 'test'
 process.env.SERVER_ID = 'server1'
 
 import agones from '../src'
-import {_beforeEach} from '../../../../../tests/unit-tests/specs/beforeEach'
+import { _beforeEach } from '../../../../../tests/unit-tests/specs/beforeEach'
 // @ts-ignore
 import { clear } from '@rpgjs/testing'
 import { RpgClient, RpgClientEngine } from '@rpgjs/client'
 
-let client: RpgClientEngine 
+let client: RpgClientEngine
 let player, fixture, playerId, agonesSDK
 let server: RpgServerEngine
 let store
 let mockMatchmaker
 
-jest.mock('@google-cloud/agones-sdk')
+vi.mock('@google-cloud/agones-sdk')
 
-jest.mock('../src/redisStore', () => {
+vi.mock('../src/redisStore', () => {
     class RedisMockStore {
         private client: Map<string, any>
-    
+
         async connect() {
             this.client = new Map()
         }
-    
+
         async set(key: string, val: any): Promise<any> {
             return this.client.set(key, val)
         }
-    
+
         async get(key: string): Promise<string | null> {
             return this.client.get(key)
         }
@@ -55,9 +55,9 @@ const MATCH_MAKER_SERVICE = [
 ]
 
 beforeEach(async () => {
-    @RpgModule<RpgClient>({ 
+    @RpgModule<RpgClient>({
         engine: {
-            onStart(client: RpgClientEngine)  {
+            onStart(client: RpgClientEngine) {
                 client.globalConfig.matchMakerService = () => {
                     return MATCH_MAKER_SERVICE[0]
                 }
@@ -65,7 +65,7 @@ beforeEach(async () => {
         }
     })
     // @ts-ignore
-    class RpgClientMockModule {}
+    class RpgClientMockModule { }
 
     @RpgModule<RpgServer>({
         maps: [
@@ -75,16 +75,17 @@ beforeEach(async () => {
             }
         ]
     })
-    class RpgServerModule {}
+    // @ts-ignore
+    class RpgServerModule { }
 
-    mockMatchmaker = jest.fn(() => {
+    mockMatchmaker = vi.fn(() => {
         return MATCH_MAKER_SERVICE[0]
     })
 
     agones.server.prototype.scalability.matchMaker = {
         callback: mockMatchmaker
     }
-
+    
     const ret = await _beforeEach([
         agones,
         {
@@ -101,6 +102,7 @@ beforeEach(async () => {
     playerId = ret.playerId
     agonesSDK = AgonesSDK.mock.instances[0]
     store = agones.server.prototype.scalability.stateStore.client
+
 })
 
 test('Agones is connected', () => {
@@ -116,12 +118,12 @@ test('Get Server Id, set label Id and is ready', () => {
 
 test('Change Map, notice that the server is different', async () => {
     mockMatchmaker.mockReturnValue(MATCH_MAKER_SERVICE[1])
-    const spy = jest.spyOn(client, 'connection')
+    const spy = vi.spyOn(client, 'connection')
     await player.changeMap('map')
     expect(mockMatchmaker).toHaveBeenCalled()
     expect(mockMatchmaker).toHaveReturnedWith(MATCH_MAKER_SERVICE[1])
     expect(spy).toHaveBeenCalled()
-    const { url , port } = MATCH_MAKER_SERVICE[1]
+    const { url, port } = MATCH_MAKER_SERVICE[1]
     expect(spy).toHaveBeenCalledWith(url + ':' + port)
     spy.mockRestore()
 })
@@ -154,7 +156,7 @@ test('Change Server, state is shared', async () => {
 
 test('Change Server, not load map in current server', async () => {
     mockMatchmaker.mockReturnValue(MATCH_MAKER_SERVICE[1])
-    const spy = jest.spyOn(server.sceneMap, 'loadMap')
+    const spy = vi.spyOn(server.sceneMap, 'loadMap')
     await player.changeMap('map')
     expect(spy).not.toHaveBeenCalled()
     spy.mockRestore()
@@ -206,6 +208,7 @@ describe('Multi map', () => {
         expect(agonesSDK.setLabel).toBeCalledWith('map-map2', '0')
         expect(agonesSDK.setLabel).toBeCalledWith('map-map', '1')
     })
+    
 })
 
 afterEach(() => {

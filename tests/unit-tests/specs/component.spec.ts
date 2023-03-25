@@ -4,6 +4,7 @@ import { RpgCommonPlayer } from '@rpgjs/common'
 import { RpgClientEngine, RpgSceneMap, RpgComponent, Spritesheet, RpgSprite } from '@rpgjs/client'
 import { Components } from '@rpgjs/server'
 import { clear, nextTick } from '@rpgjs/testing'
+import { beforeEach, test, afterEach, expect, describe } from 'vitest'
 
 let client: RpgClientEngine,
     player: RpgPlayer,
@@ -23,9 +24,6 @@ beforeEach(async () => {
     client = ret.client
     player = ret.player
     server = ret.server
-})
-
-beforeEach(() => {
     setComponent()
 })
 
@@ -284,7 +282,7 @@ describe('Graphic Component', () => {
 })
 
 describe('Test Built-in Component', () => {
-    it('Component Text', () => {
+    test('Component Text', () => {
         const text = Components.text('Hello')
         expect(text).toHaveProperty('id', 'text')
         expect(text).toHaveProperty('value')
@@ -295,14 +293,14 @@ describe('Test Built-in Component', () => {
         expect(style).toHaveProperty('fontSize', 15)
     })
 
-    it('Component Image', () => {
+    test('Component Image', () => {
         const image = Components.image('test.png')
         expect(image).toHaveProperty('id', 'image')
         expect(image).toHaveProperty('value')
         expect(image.value).toBe('test.png')
     })
 
-    it('Component Shape', () => {
+    test('Component Shape', () => {
         const shape = Components.shape({
             fill: '#ffffff',
             type: 'circle',
@@ -315,14 +313,14 @@ describe('Test Built-in Component', () => {
         expect(shape.value).toHaveProperty('radius', 10)
     })
 
-    it('Component Tile', () => {
+    test('Component Tile', () => {
         const tile = Components.tile(1)
         expect(tile).toHaveProperty('id', 'tile')
         expect(tile).toHaveProperty('value')
         expect(tile.value).toBe(1)
     })
 
-    it('Component HpBar', () => {
+    test('Component HpBar', () => {
         const hpBar = Components.hpBar()
         expect(hpBar).toHaveProperty('id', 'bar')
         expect(hpBar).toHaveProperty('value')
@@ -333,7 +331,7 @@ describe('Test Built-in Component', () => {
         expect(style).toHaveProperty('fillColor', '#ab0606')
     })
 
-    it('Component SpBar', () => {
+    test('Component SpBar', () => {
         const spBar = Components.spBar()
         expect(spBar).toHaveProperty('id', 'bar')
         expect(spBar).toHaveProperty('value')
@@ -344,7 +342,7 @@ describe('Test Built-in Component', () => {
         expect(style).toHaveProperty('fillColor', '#0fa38c')
     })
 
-    it('Component generic bar', () => {
+    test('Component generic bar', () => {
         const bar = Components.bar('hp', 'param.maxHp')
         expect(bar).toHaveProperty('id', 'bar')
         expect(bar).toHaveProperty('value')
@@ -352,7 +350,7 @@ describe('Test Built-in Component', () => {
         expect(bar.value).toHaveProperty('max', 'param.maxHp')
     })
 
-    it('Component generic bar, style', () => {
+    test('Component generic bar, style', () => {
         const bar = Components.bar('hp', 'param.maxHp', {
             fillColor: '#ffffff',
             width: 100,
@@ -370,19 +368,19 @@ describe('Test Built-in Component', () => {
         expect(style).toHaveProperty('borderRadius', 5)
     })
 
-    it('Component generic bar, text above bar (default value)', () => {
+    test('Component generic bar, text above bar (default value)', () => {
         const bar = Components.bar('hp', 'param.maxHp', {})
         const text = (bar.value as any).text
         expect(text).toBe('{$current}/{$max}')
     })
 
-    it('Component generic bar, text above bar not displayed', () => {
+    test('Component generic bar, text above bar not displayed', () => {
         const bar = Components.bar('hp', 'param.maxHp', {}, null)
         const text = (bar.value as any).text
         expect(text).toBe('')
     })
 
-    it('Component generic bar, text above bar', () => {
+    test('Component generic bar, text above bar', () => {
         const bar = Components.bar('hp', 'param.maxHp', {}, 'HP: {$current}/{$max}')
         const text = (bar.value as any).text
         expect(text).toBe('HP: {$current}/{$max}')

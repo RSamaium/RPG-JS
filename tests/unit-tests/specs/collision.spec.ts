@@ -3,6 +3,7 @@ import { Hit } from '@rpgjs/common'
 import {_beforeEach} from './beforeEach'
 import { clear, nextTick } from '@rpgjs/testing'
 import { box, circle, polygon } from './fixtures/shape'
+import { beforeEach, test, afterEach, expect } from 'vitest'
 
 let client, player: RpgPlayer, fixture, playerId
 let event, map: RpgMap

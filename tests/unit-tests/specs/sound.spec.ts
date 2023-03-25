@@ -3,6 +3,7 @@ import { EventData, Input, MapData, RpgEvent, RpgMap, RpgModule, RpgPlayer, RpgS
 import { RpgClientEngine, RpgSceneMap, Control, Sound, RpgClient, RpgSound } from '@rpgjs/client'
 import { clear, nextTick } from '@rpgjs/testing'
 import { inputs } from './fixtures/control'
+import { beforeEach, test, afterEach, expect, vi } from 'vitest'
 
 let  client: RpgClientEngine, 
 player: RpgPlayer,
@@ -67,7 +68,7 @@ test('Sound is defined', () => {
 })
 
 test('Sound is playing in map', async () => {
-    const spy = jest.spyOn(RpgSound, 'play')
+    const spy = vi.spyOn(RpgSound, 'play')
     await player.changeMap('map1')
     expect(spy).toHaveBeenCalled()
     expect(spy).toHaveReturnedWith(true)
@@ -78,7 +79,7 @@ test('Sound is playing in map', async () => {
 
 test('Sound is stopped after change map', async () => {
     await player.changeMap('map1')
-    const spyPlay = jest.spyOn(RpgSound, 'stop')
+    const spyPlay = vi.spyOn(RpgSound, 'stop')
     await player.changeMap('map')
     expect(spyPlay).toHaveBeenCalled() 
     spyPlay.mockReset()
@@ -87,7 +88,7 @@ test('Sound is stopped after change map', async () => {
 
 test('Sound continue in map after change map', async () => {
     await fixture.changeMap(client, 'map1')
-    const spy = jest.spyOn(RpgSound, 'stop')
+    const spy = vi.spyOn(RpgSound, 'stop')
     await fixture.changeMap(client, 'map2')
     expect(spy).not.toHaveBeenCalled()
     spy.mockReset()
@@ -95,7 +96,7 @@ test('Sound continue in map after change map', async () => {
 })
 
 test('Player sound [server side]', () => {
-    const spy = jest.spyOn(RpgSound, 'play')
+    const spy = vi.spyOn(RpgSound, 'play')
     player.playSound('town')
     expect(spy).toHaveBeenCalled()
     spy.mockReset()
@@ -105,7 +106,7 @@ test('Player sound [server side]', () => {
 test('Player sound, broadcast [server side]', async () => {
     const clientFixture = await fixture.createClient()
     await fixture.changeMap(clientFixture.client, 'map')
-    const spy = jest.spyOn(RpgSound, 'play')
+    const spy = vi.spyOn(RpgSound, 'play')
     player.playSound('town', true)
     expect(spy).toHaveBeenCalledTimes(2)
     spy.mockReset()

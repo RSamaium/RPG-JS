@@ -1,11 +1,12 @@
 import { Utils } from "@rpgjs/common"
 import { AbstractComponent, CellInfo } from "./AbstractComponent"
 import { ShapeComponentObject } from "@rpgjs/types"
+import { Graphics } from "pixi.js"
 
-export class ShapeComponent extends AbstractComponent<ShapeComponentObject, PIXI.Graphics> {
+export class ShapeComponent extends AbstractComponent<ShapeComponentObject, Graphics> {
     static readonly id: string = 'shape'
     private type: ShapeComponentObject['value']['type'] = this.value.type
-    private container: PIXI.Graphics = new PIXI.Graphics()
+    private container: Graphics = new Graphics()
     cacheParams: string[] = []
 
     onInit(cell: CellInfo) {

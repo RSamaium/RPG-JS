@@ -24,6 +24,7 @@
   },
   "gitHead": "7bb0326cc3216764a4bfc86f53e7b24464a2040f",
   "devDependencies": {
-    "typescript": "^4.7.4"
+    "@types/css-font-loading-module": "^0.0.8",
+    "typescript": "^5.0.2"
   }
 }

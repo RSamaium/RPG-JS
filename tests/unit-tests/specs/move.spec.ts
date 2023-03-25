@@ -2,7 +2,7 @@ import { Move, ShapePositioning, Direction, EventData, EventMode, RpgEvent, RpgP
 import { Control, RpgClientEngine } from '@rpgjs/client'
 import { _beforeEach } from './beforeEach'
 import { clear, nextTick } from '@rpgjs/testing'
-import { inputs } from './fixtures/control'
+import { beforeEach, test, afterEach, expect } from 'vitest'
 
 let client: RpgClientEngine, player: RpgPlayer, fixture, playerId
 let server: RpgServerEngine

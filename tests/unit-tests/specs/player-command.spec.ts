@@ -2,6 +2,7 @@ import {_beforeEach} from './beforeEach'
 import { RpgPlayer } from '@rpgjs/server'
 import { RpgClientEngine } from '@rpgjs/client'
 import { clear, nextTick } from '@rpgjs/testing'
+import { beforeEach, test, afterEach, expect, vi } from 'vitest'
 
 let  client: RpgClientEngine, 
 player: RpgPlayer
@@ -47,7 +48,7 @@ test('player.once() test', () => {
 })
 
 test('player.off() test', () => {
-    const fn  = jest.fn()
+    const fn  = vi.fn()
     player.on('test', fn)
     player.off('test')
     client.socket.emit('test', 'foo')

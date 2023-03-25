@@ -24,6 +24,8 @@ import { Spritesheet } from './Sprite/Spritesheet'
 import { log } from './Logger'
 import { Sound } from './Sound/Sound'
 import { constructor, ObjectFixtureList, PlayerType, SocketEvents, SocketMethods, Tick } from '@rpgjs/types'
+import { Assets, utils } from 'pixi.js'
+import * as PIXI from 'pixi.js'
 
 declare var __RPGJS_PRODUCTION__: boolean;
 
@@ -280,7 +282,6 @@ export class RpgClientEngine {
     async start(options: { renderLoop: boolean } = {
         renderLoop: true
     }) {
-        PIXI.utils.skipHello()
         await this._init()
         await this.renderer.init()
         const { maxFps } = this.options
@@ -656,8 +657,14 @@ export class RpgClientEngine {
         this.world.reset()
         spritesheets.clear()
         sounds.clear()
-        PIXI.Loader.shared.reset()
-        PIXI.utils.clearTextureCache()
+        Assets.reset()
+        utils.clearTextureCache()
+        for (let textureUrl in utils.BaseTextureCache) {
+            delete utils.BaseTextureCache[textureUrl]
+        }
+        for (let textureUrl in utils.TextureCache) {
+            delete utils.TextureCache[textureUrl]
+        }
         RpgGui.clear()
         RpgCommonMap.bufferClient.clear()
         RpgSound.clear()

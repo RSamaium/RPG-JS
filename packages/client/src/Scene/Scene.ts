@@ -7,7 +7,7 @@ import { RpgGui } from '../RpgGui'
 import { GameEngineClient } from '../GameEngine'
 import { RpgComponent } from '../Components/Component'
 import { Controls } from '@rpgjs/types'
-import { Loader, Container } from 'pixi.js'
+import { Container } from 'pixi.js'
 
 export type SceneObservableData = { 
     data: {
@@ -27,7 +27,6 @@ export interface SceneSpriteLogic {
 
 export abstract class Scene {
     protected objects: Map<string, RpgComponent> = new Map()
-    protected loader = Loader.shared
     protected animationLayer: Container = new Container()
 
     private controls: KeyboardControls

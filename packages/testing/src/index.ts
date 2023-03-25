@@ -70,7 +70,7 @@ function changeMap(client: RpgClientEngine, server: RpgServerEngine, mapId: stri
         RpgPlugin.off(HookClient.BeforeSceneLoading)
         RpgPlugin.off(HookClient.AfterSceneLoading)
         RpgPlugin.on(HookClient.BeforeSceneLoading, () => {
-            PIXI.utils.clearTextureCache()
+           // PIXI.utils.clearTextureCache()
         })
         RpgPlugin.on(HookClient.AfterSceneLoading, () => {
             client.nextFrame(0) // render scene
@@ -163,12 +163,6 @@ export function clear(): void {
     RpgMap.buffer.clear()
     RpgPlugin.clear()
     serverIo.clear()
-    for (let textureUrl in PIXI.utils.BaseTextureCache) {
-        delete PIXI.utils.BaseTextureCache[textureUrl]
-    }
-    for (let textureUrl in PIXI.utils.TextureCache) {
-        delete PIXI.utils.TextureCache[textureUrl]
-    }
     window.document.body.innerHTML = `<div id="rpg"></div>`
 }
 

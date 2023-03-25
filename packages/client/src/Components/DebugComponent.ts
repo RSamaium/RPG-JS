@@ -1,12 +1,13 @@
 import { Utils } from "@rpgjs/common"
 import { AbstractComponent, CellInfo } from "./AbstractComponent"
 import { DebugComponentObject } from "@rpgjs/types"
+import { Graphics } from "pixi.js"
 
-export class DebugComponent extends AbstractComponent<DebugComponentObject, PIXI.Graphics> {
+export class DebugComponent extends AbstractComponent<DebugComponentObject, Graphics> {
     static readonly id: string = 'debug'
     color: string = '#ff0000'
     cacheParams: string[] = ['map', 'position.x', 'position.y']
-    private container: PIXI.Graphics = new PIXI.Graphics()
+    private container: Graphics = new Graphics()
 
     onInit(cell: CellInfo) {
         this.addChild(this.container)

@@ -12,7 +12,7 @@ import { DebugComponent } from "./DebugComponent"
 import { ImageComponent } from "./ImageComponent"
 import { TextComponent } from "./TextComponent"
 import { TileComponent } from "./TileComponent"
-import { Container, Graphics, Text, filters } from "pixi.js"
+import { Container, Graphics, Text, filters, Sprite } from "pixi.js"
 
 type SpriteInfo = {
     width: number,
@@ -94,7 +94,7 @@ export class RpgComponent<T = any> extends Container {
         this.addChild(this.container)
 
         for (let layout of [...layoutTypes, 'center']) {
-            this.containersLayout[layout] = new PIXI.Container()
+            this.containersLayout[layout] = new Container()
             this.container.addChild(this.containersLayout[layout])
         }
 
@@ -341,7 +341,7 @@ export class RpgComponent<T = any> extends Container {
      * @returns {PIXI.Container}
      * 
      * */
-    getLayoutContainer(position: LayoutPositionEnum = 'center'): PIXI.Container {
+    getLayoutContainer(position: LayoutPositionEnum = 'center'): Container {
         return this.containersLayout[position]
     }
 
@@ -365,8 +365,8 @@ export class RpgComponent<T = any> extends Container {
         }
     }
 
-    private createGrid(position: LayoutPositionEnum, gridArray: any, options: LayoutOptions, sprite: SpriteInfo): PIXI.Container {
-        const gridContainer = new PIXI.Sprite();
+    private createGrid(position: LayoutPositionEnum, gridArray: any, options: LayoutOptions, sprite: SpriteInfo): Container {
+        const gridContainer = new Sprite();
         const { height, spriteWidth, spriteHeight } = sprite
         const width = options.width ?? spriteWidth ?? sprite.width
         const gridHeight = options.height ?? 20

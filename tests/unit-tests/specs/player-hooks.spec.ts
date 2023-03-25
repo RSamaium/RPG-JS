@@ -1,17 +1,7 @@
 import {_beforeEach} from './beforeEach'
-import { EventData, Input, MapData, RpgEvent, RpgMap, RpgModule, RpgPlayer, RpgPlayerHooks, RpgServer, RpgServerEngine } from '@rpgjs/server'
-import { RpgClientEngine, RpgSceneMap, Control, RpgClient } from '@rpgjs/client'
+import { RpgMap, RpgModule, RpgPlayer, RpgServer } from '@rpgjs/server'
 import { clear } from '@rpgjs/testing'
-import { inputs } from './fixtures/control'
-import { Tileset } from './fixtures/maps/map'
-
-let  client: RpgClientEngine, 
-player: RpgPlayer, 
-fixture, 
-playerId, 
-server: RpgServerEngine, 
-map: RpgMap,
-sceneMap: RpgSceneMap
+import { test, afterEach, expect } from 'vitest'
 
 test('Test onConnected Hook', () => {
     return new Promise(async (resolve: any) => {

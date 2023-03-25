@@ -3,6 +3,7 @@ import { Confuse, HpPlus } from './fixtures/state';
 import { State, Armor } from '@rpgjs/database'
 import {_beforeEach} from './beforeEach'
 import { clear } from '@rpgjs/testing'
+import { beforeEach, test, afterEach, expect } from 'vitest'
 
 const { MAXHP_CURVE, MAXSP_CURVE, MAXHP, ATK, PDEF, SDEF, MAXSP } = Presets
 

@@ -8,7 +8,7 @@ import { GameEngineClient } from '../GameEngine'
 import { TiledMap } from '@rpgjs/tiled'
 import { RpgComponent } from '../Components/Component'
 import { CameraOptions } from '@rpgjs/types'
-import { Loader, Container, Point, InteractionEvent } from 'pixi.js'
+import { Assets, Container, Point, IRenderer, DisplayObjectEvents, utils } from 'pixi.js'
 
 interface MapObject extends TiledMap {
     id: number
@@ -43,6 +43,7 @@ export class SceneMap extends Scene {
 
     constructor(
             public game: GameEngineClient, 
+            private renderer: IRenderer,
             private options: { screenWidth?: number, screenHeight?: number, drawMap?: boolean } = {}) {
         super(game)
         if (options.drawMap === undefined) this.options.drawMap = true
@@ -70,7 +71,7 @@ export class SceneMap extends Scene {
     }
 
     /** @internal */
-    load(obj: MapObject, prevObj: MapObject): Promise<Viewport> {
+    async load(obj: MapObject, prevObj: MapObject): Promise<Viewport> {
         let { sounds } = obj
         const { clientEngine } = this.game
 
@@ -86,7 +87,9 @@ export class SceneMap extends Scene {
 
         this.tilemap = new TileMap(this.gameMap.getData(), this.game.renderer)
 
-        const loader = new Loader()
+        // TODO: Remove this
+        Assets.reset()
+
         let nbLoad = 0
 
         const objects = this.game.world.getObjectsOfGroup()
@@ -97,8 +100,7 @@ export class SceneMap extends Scene {
              }
         }
 
-        loader.reset()
-
+        const assets: string[] = []
         for (let tileset of this.tilemap.tilesets) {
             let spritesheet = spritesheets.get(tileset.name)
             if (!spritesheet) {
@@ -108,56 +110,46 @@ export class SceneMap extends Scene {
             if (spritesheet?.resource) {
                 continue
             }
-            loader.add(tileset.name, spritesheet.image)
+            Assets.add(tileset.name, spritesheet.image)
+            assets.push(tileset.name)
             nbLoad++
         }
 
         if (nbLoad > 0) {
-            loader.load((loader, resources) => {
-                for (let tileset of this.tilemap.tilesets) {
-                    const spritesheet = spritesheets.get(tileset.name)
-                    if (resources[tileset.name]) spritesheet.resource = resources[tileset.name]  
-                }
-            })
+            const assetsLoaded = await Assets.load(assets)
+            for (let assetName in assetsLoaded) {
+                const spritesheet = spritesheets.get(assetName)
+                if (spritesheet) spritesheet.resource = assetsLoaded[assetName]
+            }
         }
 
-        RpgPlugin.emit(HookClient.SceneMapLoading, loader)
-
-        return new Promise((resolve, reject) => {
-            const complete = () => {
-                let { sounds } = obj
-                this.tilemap.load({
-                    drawTiles: this.options.drawMap
-                })
-                this.viewport = new Viewport({
-                    screenWidth: this.options.screenWidth,
-                    screenHeight: this.options.screenHeight,
-                    worldWidth: obj.width * obj.tilewidth,
-                    worldHeight: obj.height * obj.tileheight,
-                    noTicker: true
-                })
-                this.tilemap.addChild(this.animationLayer)
-                this.viewport.clamp({ direction: 'all' })
-                this.viewport.addChild(this.tilemap)
-                this.isLoaded = true
-                if (prevObj.sounds && prevObj.sounds instanceof Array) {
-                    prevObj.sounds.forEach(soundId => {
-                        const continueSound = (<string[]>obj.sounds || []).find(id => id == soundId)
-                        if (!continueSound) RpgSound.stop(soundId) 
-                    })
-                }
-                if (sounds) (<string[]>sounds).forEach(soundId => RpgSound.play(soundId))
-                resolve(this.viewport)
-                if (this.onLoad) this.onLoad()
-            }
-            loader.onError.once(() => {
-                reject()
-            })
-            loader.onComplete.once(complete)
-            if (nbLoad == 0) {
-                complete()
-            }
+        RpgPlugin.emit(HookClient.SceneMapLoading, Assets)
+        
+        this.tilemap.load({
+            drawTiles: this.options.drawMap
         })
+        this.viewport = new Viewport({
+            screenWidth: this.options.screenWidth,
+            screenHeight: this.options.screenHeight,
+            worldWidth: obj.width * obj.tilewidth,
+            worldHeight: obj.height * obj.tileheight,
+            noTicker: true,
+            events: this.renderer.events
+        })
+        this.tilemap.addChild(this.animationLayer)
+        this.viewport.clamp({ direction: 'all' })
+        this.viewport.addChild(this.tilemap)
+        this.isLoaded = true
+        if (prevObj.sounds && prevObj.sounds instanceof Array) {
+            prevObj.sounds.forEach(soundId => {
+                const continueSound = (<string[]>obj.sounds || []).find(id => id == soundId)
+                if (!continueSound) RpgSound.stop(soundId) 
+            })
+        }
+        if (sounds) (<string[]>sounds).forEach(soundId => RpgSound.play(soundId))
+        if (this.onLoad) this.onLoad()
+
+        return this.viewport
     }
 
     /** @internal */
@@ -301,13 +293,14 @@ export class SceneMap extends Scene {
      * @returns {void}
      * @memberof RpgSceneMap
      */
-    on(eventName: string, cb: (position: { x: number, y: number }, ev?: InteractionEvent ) => any) {
+    on(eventName: keyof DisplayObjectEvents, cb: (position: { x: number, y: number }, ev?: any ) => any) {
         if (!this.tilemap) return
         this.tilemap.background.interactive = true
-        this.tilemap.background.on(eventName, function(ev) {
+        // TODO
+        /*this.tilemap.background.on(eventName, (ev: any) => {
             const pos = ev.data.getLocalPosition(this.parent)
             cb(pos, ev)
-        })
+        })*/
     }
 }
 

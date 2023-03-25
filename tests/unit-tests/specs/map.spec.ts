@@ -3,6 +3,7 @@ import {_beforeEach} from './beforeEach'
 import { EventData, HookClient, MapData, RpgEvent, RpgMap, RpgPlayer, RpgPlugin, RpgServerEngine } from '@rpgjs/server'
 import { RpgClientEngine, RpgSceneMap } from '@rpgjs/client'
 import { clear } from '@rpgjs/testing'
+import { beforeEach, test, afterEach, expect, describe } from 'vitest'
 
 let  client: RpgClientEngine, 
 player: RpgPlayer, 

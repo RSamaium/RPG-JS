@@ -7,13 +7,14 @@ process.env.KUBECONFIG = '{ "apiVersion": "1", "clusters": [ { "cluster": {} } ]
 import * as AgonesApi from '../src/agones-api'
 import { MatchMakerService, State } from '../src/service'
 import load from '../src/app'
+import { vi, beforeAll, test, afterEach, expect } from 'vitest'
 
-jest.mock('@kubernetes/client-node')
+vi.mock('@kubernetes/client-node')
 
 let k8sMock, app
-let loadFromFile = jest.fn()
-let loadFromClusterAndUser = jest.fn()
-let listNamespacedCustomObject = jest.fn()
+let loadFromFile = vi.fn()
+let loadFromClusterAndUser = vi.fn()
+let listNamespacedCustomObject = vi.fn()
 
 function getItem(serverId, address, port, state, labels = {}) {
     return {
@@ -37,7 +38,7 @@ function getItem(serverId, address, port, state, labels = {}) {
 }
 
 beforeAll(() => { 
-    k8sMock = jest.spyOn(k8s, 'KubeConfig').mockImplementation((): any => {
+    k8sMock = vi.spyOn(k8s, 'KubeConfig').mockImplementation((): any => {
         return {
             loadFromFile,
             loadFromClusterAndUser,
@@ -272,5 +273,5 @@ test('GET /get-gameserver, get same server', async () => {
 })
 
 afterEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
 })
