@@ -1,4 +1,5 @@
 import http from 'http'
+import path from 'path'
 import express from 'express'
 import { Server } from 'socket.io'
 import entryPoint from '../entry-point'
@@ -26,8 +27,14 @@ export function expressServer(modules: ModuleType[], options: ExpressServerOptio
         })
 
         app.use(express.json())
-        app.use('/', express.static(dirname + '/../dist/client'))
 
+        const hasStatic = !!process.env.STATIC_DIRECTORY_ENABLED === false ? true : !!process.env.STATIC_DIRECTORY_ENABLED
+        const staticDirectory = !!process.env.BUILT ? '' : 'dist'
+
+        if (hasStatic) {
+            app.use('/', express.static(path.join(dirname, '..', staticDirectory, 'client')))
+        }
+    
         async function start() {
             const rpgGame = await entryPoint(modules, { io, ...options })
             rpgGame.app = app

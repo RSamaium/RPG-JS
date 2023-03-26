@@ -12,6 +12,8 @@ import { createRequire } from 'module';
 import { mapExtractPlugin } from './vite-plugin-map-extract.js';
 import { rpgjsAssetsLoader } from './vite-plugin-rpgjs-assets.js';
 import { tsxXmlPlugin } from './vite-plugin-tsx-xml.js';
+import { tmxTsxMoverPlugin } from './vite-plugin-tmx-tsx-mover.js';
+import { envInjectorPlugin } from './vite-plugin-env-injector.js';
 
 const require = createRequire(import.meta.url);
 
@@ -34,9 +36,12 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         flagTransform(options),
         (requireTransform as any)(),
         worldTransformPlugin(),
-        rpgjsAssetsLoader(dirOutputName),
+        rpgjsAssetsLoader(dirOutputName, options.serveMode),
         tsxXmlPlugin(),
         mapExtractPlugin(dirOutputName),
+        ...(options.serveMode ? [] : [
+            envInjectorPlugin()
+        ]),
         ...(options.plugins || [])
     ]
 
@@ -52,6 +57,11 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
             splitVendorChunkPlugin()
         ]
     }
+    else {
+        plugins.push(
+            tmxTsxMoverPlugin()
+        )
+    }
 
     let moreBuildOptions = {}
     let outputOptions = {}
@@ -60,10 +70,12 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         plugins.push(options.buildEnd)
     }
 
-    if (options.serveMode && !isServer) {
-        moreBuildOptions = {
-            watch: {},
-            minify: false
+    if (options.serveMode) {
+        if (!isServer) {
+            moreBuildOptions = {
+                watch: {},
+                minify: false
+            }
         }
     }
 

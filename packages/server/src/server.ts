@@ -34,7 +34,7 @@ export class RpgServerEngine {
      * */
     public globalConfig: any = {}
 
-    public assetsPath?: string
+    public assetsPath: string = 'assets'
 
     /**
      * Combat formulas

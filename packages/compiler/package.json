@@ -22,6 +22,7 @@
     "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
     "@esbuild-plugins/node-modules-polyfill": "^0.2.2",
     "@vitejs/plugin-vue": "^4.0.0",
+    "fs-extra": "^11.1.1",
     "glob": "^9.3.2",
     "happy-dom": "^8.9.0",
     "rollup-plugin-node-polyfills": "^0.2.1",

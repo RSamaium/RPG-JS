@@ -10,7 +10,7 @@ export const tsxXmlPlugin = (): Plugin => {
         if (req.url && req.url.endsWith('.tsx')) {
           const publicPath = server.config.root;
           const filePath = path.join(publicPath, req.url);
-          
+
           if (fs.existsSync(filePath)) {
             const xmlContent = fs.readFileSync(filePath, 'utf-8');
             res.setHeader('Content-Type', 'application/xml');

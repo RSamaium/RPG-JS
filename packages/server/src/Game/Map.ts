@@ -86,14 +86,13 @@ export class RpgMap extends RpgCommonMap {
         if (RpgCommonMap.buffer.has(this.id)) {
             return
         }
-        const hasAssetsPath = this._server.assetsPath
+        const hasAssetsPath = !!process.env.BUILT
         const parser = new TiledParserFile(
             this.file,
-            './src'
-            //this._server.inputOptions.basePath + '/' + this._server.assetsPath
+            hasAssetsPath ? this._server.assetsPath : '.'
         )
         const data = await parser.parseFilePromise({
-            getOnlyBasename: false
+            getOnlyBasename: hasAssetsPath
         })
         super.load(data)
         this.getAllObjects().forEach(this.createShape.bind(this))

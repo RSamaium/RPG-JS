@@ -21,14 +21,13 @@ function replaceSrcWithDistPath(path: string): string {
 
 const EXT = ['png', 'jpg', 'jpeg', 'gif', 'mp3', 'ogg', 'wav', 'ttf', 'otf', 'woff', 'woff2', 'eot', 'svg']
 
-export function rpgjsAssetsLoader(output: string = 'client') {
+export function rpgjsAssetsLoader(output: string = 'client', isBuild: boolean = false) {
   return {
     name: 'rpgjs-assets-loader',
     async buildStart() {
       const nodeModulesPath = 'node_modules';
-      
-
       const rpgjsPluginFolders = glob.sync(`${nodeModulesPath}/rpgjs-plugin*`);
+     // const extensions: string[] = [...EXT, ...(isBuild ? ['tmx'] : [])]
 
       for (const folder of rpgjsPluginFolders) {
         const assetsPath = path.join(folder, output, 'assets');

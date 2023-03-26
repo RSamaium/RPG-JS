@@ -23,17 +23,12 @@ export function mapExtractPlugin(output: string = 'client') {
         name: 'map-extract',
         async buildStart() {
             const tsxFiles = glob.sync('src/**/*.tsx');
-
-            // Traitez chaque fichier TSX
             for (const tsxFile of tsxFiles) {
                 await processTsxFile(tsxFile, output);
             }
         },
         configureServer(server) {
-            // Ajoutez un watcher pour les fichiers TSX
             server.watcher.add('src/**/*.tsx');
-
-            // Lorsqu'un fichier TSX est ajouté, traitez-le
             server.watcher.on('add', async (file) => {
                 if (file.endsWith('.tsx')) {
                     await processTsxFile(file, output);
