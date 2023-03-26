@@ -280,7 +280,7 @@ class MoveList {
 export const Move = new MoveList()
 
 export class MoveManager {
-    private movingInterval
+    private movingSubscription: Subscription
     private _infiniteRoutes: Routes
     private _finishRoute: Function
 
@@ -440,7 +440,7 @@ export class MoveManager {
         let count = 0
         let frequence = 0
         this.breakRoutes() // break previous route
-        return new Promise((resolve) => {
+        return new Promise(async (resolve) => {
             this._finishRoute = resolve
             routes = routes.map((route: any) => {
                 if (isFunction(route)) {
@@ -449,7 +449,7 @@ export class MoveManager {
                 return route
             })
             routes = arrayFlat(routes)
-            const move = async () => {
+            const move = () => {
                 if (count >= this['nbPixelInTile']) {
                     if (frequence < this.frequency) {
                         frequence++
@@ -462,7 +462,7 @@ export class MoveManager {
 
                 const [route] = routes
 
-                if (!route) {
+                if (route === undefined) {
                     this.breakRoutes()
                     return
                 }
@@ -472,7 +472,7 @@ export class MoveManager {
                     case Direction.Down:
                     case Direction.Right:
                     case Direction.Up:
-                        await this.moveByDirection(route, 1)
+                        this.moveByDirection(route, 1)
                         break
                     case 'turn-' + Direction.Left:
                         this.changeDirection(Direction.Left)
@@ -487,10 +487,10 @@ export class MoveManager {
                         this.changeDirection(Direction.Down)
                         break
                 }
+
                 routes.shift()
             }
-            move()
-            this.movingInterval = setInterval(move, 16)
+            this.movingSubscription = this.server.tick.subscribe(move)
         })
     }
 
@@ -542,7 +542,7 @@ export class MoveManager {
      */
     breakRoutes(force: boolean = false): void {
         if (this._finishRoute) {
-            clearInterval(this.movingInterval)
+            this.movingSubscription.unsubscribe()
             this._finishRoute(force)
         }
     }
@@ -613,7 +613,7 @@ export class MoveManager {
 }
 
 export interface MoveManager {
-    moveByDirection: (direction: Direction, deltaTimeInt: number) => boolean
+    moveByDirection: (direction: Direction, deltaTimeInt: number) => Promise<boolean>
     changeDirection: (direction: Direction) => boolean
     getCurrentMap: any
     checkCollision: boolean

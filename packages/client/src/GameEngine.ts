@@ -120,6 +120,13 @@ export class GameEngineClient extends RpgCommonGame {
     }
 
     resetObjects() {
+        for (let id in this._obsObjectsDeleteNotifier$) {
+            this._obsObjectsDeleteNotifier$[id].next()
+            this._obsObjectsDeleteNotifier$[id].complete()
+            this._obsObjects[id].complete()
+        }
+        this._obsObjectsDeleteNotifier$ = {}
+        this._obsObjects = {}
         this._objects.next({})
         this._shapes.next({})
     }

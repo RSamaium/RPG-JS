@@ -2,20 +2,25 @@ name: RPG CI
 
 on:
   push:
+    branches:
+      - v4
   pull_request:
+    branches:
+      - v4
 
 jobs:
   tests:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [14.x]
+        node-version: [18.x]
     steps:
     - uses: actions/checkout@v2
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v2
       with:
         node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-    - run: npm i
-    - run: npm test
+        cache: 'pnpm'
+    - run: npm install --global pnpm
+    - run: pnpm install
+    - run: pnpm test

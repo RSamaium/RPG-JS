@@ -1,9 +1,9 @@
 import { EventData, Move, RpgEvent, RpgMap, RpgPlayer, RpgShape, RpgServerEngine } from '@rpgjs/server'
 import { Hit } from '@rpgjs/common'
-import {_beforeEach} from './beforeEach'
-import { clear, nextTick } from '@rpgjs/testing'
+import { _beforeEach } from './beforeEach'
+import { clear, nextTick, waitUntil } from '@rpgjs/testing'
 import { box, circle, polygon } from './fixtures/shape'
-import { beforeEach, test, afterEach, expect } from 'vitest'
+import { beforeEach, test, afterEach, expect, describe, vi } from 'vitest'
 
 let client, player: RpgPlayer, fixture, playerId
 let event, map: RpgMap
@@ -18,7 +18,7 @@ const TILE_SIZE = 32
         height: TILE_SIZE
     }
 })
-class MyEvent extends RpgEvent {}
+class MyEvent extends RpgEvent { }
 
 beforeEach(async () => {
     const ret = await _beforeEach()
@@ -40,34 +40,44 @@ describe('Collision with Event', () => {
     })
 
     test('Get Events collision (otherPlayersCollision property)', async () => {
-        await player.moveRoutes([ Move.right() ])
+        await waitUntil(
+            player.moveRoutes([Move.right()])
+        )
         expect(player.otherPlayersCollision).toHaveLength(1)
         expect(player.otherPlayersCollision[0]).toBeInstanceOf(MyEvent)
     })
-    
+
     test('Get Tile collision (tilesCollision property)', async () => {
         player.teleport({ x: 4 * TILE_SIZE, y: 4 * TILE_SIZE })
-        await player.moveRoutes([ Move.right() ])
+        await waitUntil(
+            player.moveRoutes([Move.right()])
+        )
         expect(player.tilesCollision).toHaveLength(1)
         expect(player.tilesCollision[0].tileIndex).toBe(44)
         expect(player.tilesCollision[0].tiles).toHaveLength(1)
     })
-    
+
     test('Tile collision (position not changed)', async () => {
         player.teleport({ x: 4 * TILE_SIZE, y: 4 * TILE_SIZE })
         expect(player.position.x).toBe(4 * TILE_SIZE)
-        await player.moveRoutes([ Move.right() ])
+        await waitUntil(
+            player.moveRoutes([Move.right()])
+        )
         expect(player.position.x).toBe(4 * TILE_SIZE)
     })
-    
+
     test('Test Collision with event (position not changed)', async () => {
-        await player.moveRoutes([ Move.right() ])
+        await waitUntil(
+            player.moveRoutes([Move.right()])
+        )
         expect(player.position.x).toBe(0)
     })
-    
+
     test('Test Collision with event (position changed because through property)', async () => {
         event.through = true
-        await player.moveRoutes([ Move.right() ])
+        await waitUntil(
+            player.moveRoutes([Move.right()])
+        )
         expect(player.position.x).not.toBe(0)
     })
 })
@@ -76,7 +86,7 @@ describe('Collision with Shape', () => {
     let spy
 
     beforeEach(() => {
-        spy = jest.spyOn(map.gridShapes, 'insertInCells')
+        spy = vi.spyOn(map.gridShapes, 'insertInCells')
         map.createShape({
             x: 0,
             y: 0,
@@ -90,22 +100,26 @@ describe('Collision with Shape', () => {
     })
 
     test('Shape is inserted in virtual grid', async () => {
-        expect(spy).toHaveBeenCalled() 
-        expect(spy).toHaveBeenCalledWith('test', { 
+        expect(spy).toHaveBeenCalled()
+        expect(spy).toHaveBeenCalledWith('test', {
             minX: 0 - map.tilewidth,
             maxX: 100 + map.tilewidth,
             minY: 0 - map.tilewidth,
             maxY: 100 + map.tilewidth
         })
     })
-    
+
     test('Test Collision with shape (position not changed)', async () => {
-        await player.moveRoutes([ Move.right() ])
+        await waitUntil(
+            player.moveRoutes([Move.right()])
+        )
         expect(player.position.x).toBe(0)
     })
-    
+
     test('Test Collision with shape (shapesCollision.length > 0) ', async () => {
-        await player.moveRoutes([ Move.right() ])
+        await waitUntil(
+            player.moveRoutes([Move.right()])
+        )
         expect(player.shapesCollision).toHaveLength(1)
         expect(player.shapesCollision[0]).toBeInstanceOf(RpgShape)
     })
@@ -158,67 +172,75 @@ describe('Hit tests', () => {
 })
 
 describe('Test Moving Hitbox: createMovingHitbox()', () => {
-    test('Create', (done) => {
-        map.createMovingHitbox([
-            { x: 0, y: 0, width: 100, height: 100 } 
-        ]).subscribe((hitbox) => {
-            expect(hitbox).toHaveProperty('id')
-            expect(hitbox).toHaveProperty('map', 'map')
-            const { pos, w, h } = hitbox.hitbox
-            expect(pos.x).toBe(0)
-            expect(pos.y).toBe(0)
-            expect(w).toBe(100)
-            expect(h).toBe(100)
-            done()
+    test('Create', () => {
+        return new Promise((resolve: any) => {
+            map.createMovingHitbox([
+                { x: 0, y: 0, width: 100, height: 100 }
+            ]).subscribe((hitbox) => {
+                expect(hitbox).toHaveProperty('id')
+                expect(hitbox).toHaveProperty('map', 'map')
+                const { pos, w, h } = hitbox.hitbox
+                expect(pos.x).toBe(0)
+                expect(pos.y).toBe(0)
+                expect(w).toBe(100)
+                expect(h).toBe(100)
+                resolve()
+            })
         })
     })
 
-    test('Collision with player', (done) => {
-        map.createMovingHitbox([
-            { x: 0, y: 0, width: 100, height: 100 } 
-        ]).subscribe((hitbox) => {
-            expect(hitbox.otherPlayersCollision).toHaveLength(1)
-            expect(hitbox.otherPlayersCollision[0]).toBeInstanceOf(RpgPlayer)
-            done()
+    test('Collision with player', () => {
+        return new Promise((resolve: any) => {
+            map.createMovingHitbox([
+                { x: 0, y: 0, width: 100, height: 100 }
+            ]).subscribe((hitbox) => {
+                expect(hitbox.otherPlayersCollision).toHaveLength(1)
+                expect(hitbox.otherPlayersCollision[0]).toBeInstanceOf(RpgPlayer)
+                resolve()
+            })
         })
     })
 
-    test('multi hitboxes', (done) => {
-        let i=0
-        map.createMovingHitbox([
-            { x: 0, y: 0, width: 100, height: 100 },
-            { x: 20, y: 20, width: 100, height: 100 } 
-        ]).subscribe({
-            next() {
-                i++
+    test('multi hitboxes', () => {
+        return new Promise((resolve: any) => {
+            let i = 0
+            map.createMovingHitbox([
+                { x: 0, y: 0, width: 100, height: 100 },
+                { x: 20, y: 20, width: 100, height: 100 }
+            ]).subscribe({
+                next() {
+                    i++
+                    server.nextTick(i)
+                },
+                complete() {
+                    expect(i).toBe(2)
+                    resolve()
+                }
+            })
+        })
+    })
+
+    test('multi hitboxes, speed = 3 frames', () => {
+        return new Promise((resolve: any) => {
+            let i = 0
+            map.createMovingHitbox([
+                { x: 0, y: 0, width: 100, height: 100 },
+                { x: 20, y: 20, width: 100, height: 100 }
+            ], {
+                speed: 3
+            }).subscribe({
+                next() {
+                    i++
+                },
+                complete() {
+                    expect(i).toBe(2)
+                    resolve()
+                }
+            })
+            for (let i = 0; i <= 9; i++) {
                 server.nextTick(i)
-            },
-            complete() {
-                expect(i).toBe(2)
-                done()
             }
         })
-    })
-
-    test('multi hitboxes, speed = 3 frames', (done) => {
-        let i=0
-        map.createMovingHitbox([
-            { x: 0, y: 0, width: 100, height: 100 },
-            { x: 20, y: 20, width: 100, height: 100 } 
-        ], {
-            speed: 3
-        }).subscribe({
-            next() {
-                i++
-            },
-            complete() {
-                expect(i).toBe(2)
-                done()
-            }
-        })
-        for (let i=0 ; i <= 9 ; i++) {
-            server.nextTick(i)
-        }
     })
 })
 

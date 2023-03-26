@@ -1,7 +1,7 @@
 import {_beforeEach} from './beforeEach'
 import { Move, RpgModule, RpgPlayer, RpgServerEngine } from '@rpgjs/server'
 import { RpgClientEngine, RpgClient, RpgGui } from '@rpgjs/client'
-import { clear, nextTick } from '@rpgjs/testing'
+import { clear, nextTick, waitUntil } from '@rpgjs/testing'
 import menuGui from './fixtures/gui/menu.vue'
 import tooltipGui from './fixtures/gui/tooltip.vue'
 import { beforeEach, test, afterEach, expect } from 'vitest'
@@ -64,8 +64,9 @@ test('display Tooltip and move', async () => {
     await nextTick(client)
     const tooltips1 = document.getElementById('tooltips')?.children
     expect(tooltips1?.length).toBe(1)
-    await player.moveRoutes([ Move.right() ])
-    await nextTick(client)
+    await waitUntil(
+        player.moveRoutes([ Move.right() ])
+    )
     const tooltips2 = document.getElementById('tooltips')?.children
     expect(tooltips2?.length).toBe(1)
 })

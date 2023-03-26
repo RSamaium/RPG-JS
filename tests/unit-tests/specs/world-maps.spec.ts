@@ -2,7 +2,7 @@ import WORLD from './fixtures/maps/world'
 import {_beforeEach} from './beforeEach'
 import { RpgModule, RpgMap, RpgPlayer, RpgServer, RpgServerEngine, RpgSceneMap, RpgWorldMaps, Direction, Move, MapData } from '@rpgjs/server'
 import { RpgClientEngine } from '@rpgjs/client'
-import { clear } from '@rpgjs/testing'
+import { clear, waitUntil } from '@rpgjs/testing'
 import { beforeEach, test, afterEach, expect, describe } from 'vitest'
 
 let  client: RpgClientEngine, 
@@ -252,7 +252,9 @@ describe('Go to Map in world', () => {
                 x: 18,
                 y: 30
             })
-            await player.moveRoutes([ Move.left() ])
+            await waitUntil(
+                player.moveRoutes([ Move.left() ])
+            )
             expect(player.map).toBe('4')
             expect(player.position.x).toBe(WORLD.maps[3].width - player.hitbox.w - map.tileWidth / 2)
             expect(player.position.y).toBe(30)
@@ -263,7 +265,9 @@ describe('Go to Map in world', () => {
                 x: 105,
                 y: 18
             })
-            await player.moveRoutes([ Move.up() ])
+            await waitUntil(
+                player.moveRoutes([ Move.up() ])
+            )
             expect(player.map).toBe('2')
             expect(player.position.x).toBe(105 - 32 * 3)
             expect(player.position.y).toBe(WORLD.maps[1].height - player.hitbox.h - map.tileHeight / 2)
@@ -275,7 +279,9 @@ describe('Go to Map in world', () => {
                 x: (info?.width || 0) - player.hitbox.w - map.tileWidth / 2 - 2,
                 y: 384
             })
-            await player.moveRoutes([ Move.right() ])
+            await waitUntil(
+                player.moveRoutes([ Move.right() ])
+            )
             expect(player.map).toBe('7')
             expect(player.position.x).toBe(16)
             expect(player.position.y).toBe(64)
@@ -287,7 +293,9 @@ describe('Go to Map in world', () => {
                 x: 0,
                 y: (info?.height || 0) - player.hitbox.h - map.tileHeight / 2 - 2
             })
-            await player.moveRoutes([ Move.down() ])
+            await waitUntil(
+                player.moveRoutes([ Move.down() ])
+            )
             expect(player.map).toBe('5')
             expect(player.position.x).toBe(5 * 32)
             expect(player.position.y).toBe(16)
@@ -299,7 +307,9 @@ describe('Go to Map in world', () => {
                 x: 800,
                 y: (info?.height || 0) - player.hitbox.h - map.tileHeight / 2 - 2
             })
-            await player.moveRoutes([ Move.down() ])
+            await waitUntil(
+                player.moveRoutes([ Move.down() ])
+            )
             expect(player.map).toBe('6')
             expect(player.position.x).toBe(0)
             expect(player.position.y).toBe(16)

@@ -77,5 +77,6 @@
     "framework"
   ],
   "author": "Samuel Ronce",
-  "license": "MIT"
+  "license": "MIT",
+  "type": "module"
 }

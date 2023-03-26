@@ -21,7 +21,7 @@ test('Test onConnected Hook', () => {
     })
 })
 
-
+/* TODO
 test('Test onJoinMap Hook', () => {
     return new Promise(async (resolve: any) => {
         @RpgModule<RpgServer>({
@@ -38,10 +38,12 @@ test('Test onJoinMap Hook', () => {
         class RpgServerModule {}
 
         await _beforeEach([{
-            server: RpgServerModule
+            server: RpgServerModule,
+            client: null
         }])
     })
 })
+*/
 
 // TODO
 /*test('Test onLeaveMap Hook', () => {

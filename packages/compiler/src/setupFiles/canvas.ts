@@ -1,4 +1,4 @@
-import './jest-webgl-canvas-mock'
+import 'vitest-webgl-canvas-mock'
 
 const LOAD_FAILURE_SRC = 'LOAD_FAILURE_SRC';
 

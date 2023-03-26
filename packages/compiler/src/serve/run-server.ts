@@ -9,6 +9,7 @@ export async function runServer() {
 
     const config = await clientBuildConfig(process.cwd(), {
         serveMode: false,
+        type: 'mmorpg',
         side: 'server',
         plugins: [
             viteNodeHmrPlugin()

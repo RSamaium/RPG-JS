@@ -114,7 +114,12 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
             zlib: 'rollup-plugin-node-polyfills/polyfills/zlib',
             tty: 'rollup-plugin-node-polyfills/polyfills/tty',
             domain: 'rollup-plugin-node-polyfills/polyfills/domain',
-            process: 'rollup-plugin-node-polyfills/polyfills/process-es6'
+            process: 'rollup-plugin-node-polyfills/polyfills/process-es6',
+            ...(
+                options.mode != 'test' ? {
+                    buffer: 'rollup-plugin-node-polyfills/polyfills/buffer-es6'
+                }: {}
+            )
         }
 
         for (const [key, value] of Object.entries(aliasPolyfills)) {

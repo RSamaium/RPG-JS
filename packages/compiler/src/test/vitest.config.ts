@@ -20,15 +20,15 @@ export default defineConfig(async () => {
             alias: {
                 ...config.resolve.alias,
                 ...configResolveAlias
-            }
+            },
+            mainFields: [], 
         }
     }
     return {
         ...config,
         test: {
-            threads: false,
-            maxThreads: 1,
             environment: 'jsdom',
+            threads: false,
             setupFiles: [
                 'packages/compiler/src/setupFiles/canvas.ts'
             ]

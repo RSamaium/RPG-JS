@@ -70,7 +70,7 @@ function changeMap(client: RpgClientEngine, server: RpgServerEngine, mapId: stri
         RpgPlugin.off(HookClient.BeforeSceneLoading)
         RpgPlugin.off(HookClient.AfterSceneLoading)
         RpgPlugin.on(HookClient.BeforeSceneLoading, () => {
-           // PIXI.utils.clearTextureCache()
+           client.PIXI.utils.clearTextureCache()
         })
         RpgPlugin.on(HookClient.AfterSceneLoading, () => {
             client.nextFrame(0) // render scene
@@ -191,5 +191,26 @@ export function nextTick(client: RpgClientEngine, timestamp = 0): Promise<Object
             await client.vueInstance.$nextTick()
             resolve(objects)
         })
+    })
+}
+
+export function waitUntil(promise: Promise<any>): Promise<any> {
+    let tick = 0
+    let finish = false
+    return new Promise((resolve: any, reject: any) => {
+        promise.then(() => {
+            finish = true
+            resolve()
+        }).catch(reject)
+        const timeout = () => {
+            setTimeout(() => {
+                if (!finish) {
+                    tick++
+                    server.nextTick(tick)
+                    timeout()
+                }
+            }, 10)
+        }
+        timeout()
     })
 }

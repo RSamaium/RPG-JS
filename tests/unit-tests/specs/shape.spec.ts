@@ -53,6 +53,7 @@ test('Create Shape', () => {
     })
  })
 
+
  test('Create Shape (circle)', () => {
     const shape = map.createShape(circle)
     expect(shape.type).toEqual('circle')
@@ -109,6 +110,7 @@ test('Create Shape', () => {
         const shape = await onInShape(polygon)
         expect(shape.type).toBe('polygon')
     })
+
  }) 
 
  describe('Get Size Box', () => {
