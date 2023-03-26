@@ -89,10 +89,11 @@ export class RpgMap extends RpgCommonMap {
         const hasAssetsPath = this._server.assetsPath
         const parser = new TiledParserFile(
             this.file,
-            this._server.inputOptions.basePath + '/' + this._server.assetsPath
+            './src'
+            //this._server.inputOptions.basePath + '/' + this._server.assetsPath
         )
         const data = await parser.parseFilePromise({
-            getOnlyBasename: !!hasAssetsPath
+            getOnlyBasename: false
         })
         super.load(data)
         this.getAllObjects().forEach(this.createShape.bind(this))

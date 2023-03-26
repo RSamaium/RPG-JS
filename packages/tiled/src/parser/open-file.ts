@@ -67,7 +67,10 @@ export class TiledParserFile {
             axios.get(url).then(res => res.data).then(loadContent)
         }
         else {
-            const filepath = (this.basePath ? this.basePath + '/' : '') + file
+            let filepath = file
+            if (file.startsWith('/')) {
+                filepath = (this.basePath ? this.basePath + '/' : '') + file
+            }
             fs.readFile(path.normalize(filepath), 'utf-8', (err, data) => {
                 if (err) return cb(null, err)
                 loadContent(data)

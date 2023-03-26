@@ -3,8 +3,8 @@
  <properties>
   
  </properties>
- <tileset firstgid="1" source="../[Base]BaseChip_pipo.tsx"/>
- <tileset firstgid="1001" source="../[A]Water_pipo.tsx"/>
+ <tileset firstgid="1" source="[Base]BaseChip_pipo.tsx"/>
+ <tileset firstgid="1001" source="[A]Water_pipo.tsx"/>
  <layer id="1" name="Tile Layer 1" width="50" height="50">
   <data encoding="csv">
 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
