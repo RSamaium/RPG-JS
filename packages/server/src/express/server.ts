@@ -29,11 +29,13 @@ export function expressServer(modules: ModuleType[], options: ExpressServerOptio
         app.use(express.json())
 
         // @ts-ignore
-        const hasStatic = !!process.env.STATIC_DIRECTORY_ENABLED
+        const hasStatic = process.env.STATIC_DIRECTORY_ENABLED 
         // @ts-ignore
         const staticDirectory = !!import.meta.env.VITE_BUILT ? '' : 'dist'
+        // @ts-ignore
+        const staticEnabled = (!!import.meta.env.VITE_BUILT && hasStatic === undefined) || hasStatic === 'true'
 
-        if (hasStatic) {
+        if (staticEnabled) {
             app.use('/', express.static(path.join(dirname, '..', staticDirectory, 'client')))
         }
     

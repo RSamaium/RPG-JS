@@ -49,7 +49,6 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         worldTransformPlugin(),
         rpgjsAssetsLoader(dirOutputName, options.serveMode),
         tsxXmlPlugin(),
-       // mapExtractPlugin(dirOutputName),
         ...(options.plugins || [])
     ]
 
@@ -68,7 +67,8 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
 
     if (isBuild) {
         plugins.push(
-            tmxTsxMoverPlugin(isRpg ? 'standalone' : 'server')
+            tmxTsxMoverPlugin(isRpg ? 'standalone' : 'server'),
+            mapExtractPlugin(dirOutputName)
         )
     }
 
@@ -172,7 +172,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     }
  
     // TODO, minify is rpg mode but currently not working
-    if (isRpg && isBuild) {
+    if (isBuild) {
         moreBuildOptions = {
             minify: false,
             ...moreBuildOptions,
@@ -184,7 +184,6 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         resolve(dirname, 'dist', isServer ? 'server' : dirOutputName)
     return {
         mode: options.mode || 'development',
-        //root: !isServer ? resolve(dirname, 'src') : '',
         root: '.',
         configFile,
         resolve: {
@@ -225,7 +224,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
                 },
                 input: {
                     main: !isServer ?
-                        resolve(dirname, 'src/index.html') :
+                        resolve(dirname, 'index.html') :
                         resolve(dirname, 'src/server.ts')
                 },
                 plugins: [
