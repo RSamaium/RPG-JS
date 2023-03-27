@@ -25,9 +25,9 @@ export const inputs: Controls = {
     },
     attack: {
         bind: Input.A,
-        delay: {
+        /*delay: {
             duration: 400,
             otherControls: [Control.Up, Control.Down, Control.Right, Control.Left]
-        }
+        }*/
     }
 } 

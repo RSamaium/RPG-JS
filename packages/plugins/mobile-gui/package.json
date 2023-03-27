@@ -17,8 +17,8 @@
   "license": "MIT",
   "dependencies": {
     "@rpgjs/client": "^3.3.0",
-    "nipplejs": "^0.9.0",
-    "vue": "^3.0.11"
+    "nipplejs": "^0.10.1",
+    "vue": "^3.2.47"
   },
   "gitHead": "7bb0326cc3216764a4bfc86f53e7b24464a2040f"
 }

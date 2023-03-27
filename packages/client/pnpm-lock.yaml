@@ -8,7 +8,7 @@ specifiers:
   '@types/css-font-loading-module': ^0.0.8
   '@types/howler': 2.2.1
   '@types/node': ^18.15.9
-  howler: 2.2.1
+  howler: 2.2.3
   lodash.get: ^4.4.2
   lodash.merge: 4.6.2
   pixi-viewport: 5.0.1
@@ -16,7 +16,7 @@ specifiers:
   rxjs: 7.8.0
   simple-room-client: ^1.0.0
   typescript: ^5.0.2
-  vue: ^3.2.39
+  vue: ^3.2.47
 
 dependencies:
   '@pixi/tilemap': 4.0.0
@@ -24,7 +24,7 @@ dependencies:
   '@rpgjs/tiled': 3.3.0
   '@rpgjs/types': 3.3.0
   '@types/howler': 2.2.1
-  howler: 2.2.1
+  howler: 2.2.3
   lodash.get: 4.4.2
   lodash.merge: 4.6.2
   pixi-viewport: 5.0.1
@@ -638,8 +638,8 @@ packages:
       mime-types: 2.1.35
     dev: false
 
-  /howler/2.2.1:
-    resolution: {integrity: sha512-0iIXvuBO/81CcrQ/HSSweYmbT50fT2mIc9XMFb+kxIfk2pW/iKzDbX1n3fZmDXMEIpYvyyfrB+gXwPYSDqUxIQ==}
+  /howler/2.2.3:
+    resolution: {integrity: sha512-QM0FFkw0LRX1PR8pNzJVAY25JhIWvbKMBFM4gqk+QdV+kPXOhleWGCB6AiAF/goGjIHK2e/nIElplvjQwhr0jg==}
     dev: false
 
   /ieee754/1.2.1:

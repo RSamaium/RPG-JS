@@ -113,7 +113,7 @@ export const player: RpgPlayerHooks = {
             //player.setComponentsLeft([])
         }
         if (input == 'action') {
-            player.wood -= 10
+            player.callMainMenu()
         }
     },
     async onInShape(player: RpgPlayer, shape: RpgShape) {

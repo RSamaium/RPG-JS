@@ -18,7 +18,7 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "@types/node": "^18.15.9",
+    "@types/node": "^18.15.10",
     "typescript": "^5.0.2"
   },
   "dependencies": {

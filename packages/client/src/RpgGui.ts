@@ -1,6 +1,6 @@
-import { App, ComponentPublicInstance, createApp } from 'vue'
+import type { App, ComponentPublicInstance } from 'vue'
 import { RpgCommonPlayer } from '@rpgjs/common'
-import { map } from 'rxjs/operators'
+import { map } from 'rxjs'
 import { RpgSound } from './Sound/RpgSound'
 import { RpgClientEngine, RpgResource } from './index'
 import { RpgRenderer } from './Renderer'
@@ -43,8 +43,8 @@ class Gui {
         const { gui } = this.renderer.options
         const selectorGui = this.renderer.guiEl
 
-        this.app = createApp({
-            template: `
+        const obj = {
+           /* template: `
                 <div 
                     @pointerdown="propagate('pointerdown', $event)"
                     @pointermove="propagate('pointermove', $event)"
@@ -66,7 +66,8 @@ class Gui {
                         </template>
                     </div>
                 </div>
-            `,
+            `,*/
+            render: null,
             data() {
                 return {
                     gui,
@@ -384,7 +385,9 @@ class Gui {
                     return sprites.filter(tooltip => tooltip.guiDisplay)
                 }
             }
-        })
+        }
+
+        //this.app = createApp(obj)
 
         for (let ui of gui) {
             this.app.component(ui.name, ui)

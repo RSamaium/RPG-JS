@@ -1,6 +1,5 @@
 import { ComponentObject } from "@rpgjs/types"
-import { Subject } from "rxjs"
-import { filter, map, takeUntil } from "rxjs/operators"
+import { Subject, filter, takeUntil } from "rxjs"
 import { RpgComponent } from "./Component"
 import get from 'lodash.get'
 import { GameEngineClient } from "../GameEngine"

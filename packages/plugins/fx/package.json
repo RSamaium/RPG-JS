@@ -20,7 +20,7 @@
   "license": "MIT",
   "dependencies": {
     "@rpgjs/client": "^3.3.0",
-    "jszip": "3.7.1",
-    "revolt-fx": "1.1.0"
+    "jszip": "3.10.1",
+    "revolt-fx": "1.1.1"
   }
 }

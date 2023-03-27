@@ -1,8 +1,7 @@
 import { RpgCommonGame, RpgCommonPlayer, GameSide, RpgShape } from "@rpgjs/common";
-import { BehaviorSubject, combineLatest, Observable, Subject } from "rxjs";
+import { BehaviorSubject, combineLatest, Observable, Subject, map } from "rxjs";
 import { RpgRenderer } from "./Renderer";
 import { RpgClientEngine } from "./RpgClientEngine";
-import { map } from "rxjs/operators";
 import { LayoutObject, ObjectFixture, ObjectFixtureList } from "@rpgjs/types";
 
 export class GameEngineClient extends RpgCommonGame {

@@ -2,7 +2,7 @@ lockfileVersion: 5.4
 
 specifiers:
   '@kubernetes/client-node': ^0.18.1
-  '@types/node': ^18.15.9
+  '@types/node': ^18.15.10
   cors: ^2.8.5
   express: ^4.18.2
   nodemon: ^2.0.22
@@ -15,7 +15,7 @@ dependencies:
   express: 4.18.2
 
 devDependencies:
-  '@types/node': 18.15.9
+  '@types/node': 18.15.10
   nodemon: 2.0.22
   supertest: 6.3.3
   typescript: 5.0.2
@@ -26,7 +26,7 @@ packages:
     resolution: {integrity: sha512-F3JiK9iZnbh81O/da1tD0h8fQMi/MDttWc/JydyUVnjPEom55wVfnpl4zQ/sWD4uKB8FlxYRPiLwV2ZXB+xPKw==}
     dependencies:
       '@types/js-yaml': 4.0.5
-      '@types/node': 18.15.9
+      '@types/node': 18.15.10
       '@types/request': 2.48.8
       '@types/ws': 8.5.4
       byline: 5.0.0
@@ -56,14 +56,14 @@ packages:
     resolution: {integrity: sha512-FhpRzf927MNQdRZP0J5DLIdTXhjLYzeUTmLAu69mnVksLH9CJY3IuSeEgbKUki7GQZm0WqDkGzyxju2EZGD2wA==}
     dev: false
 
-  /@types/node/18.15.9:
-    resolution: {integrity: sha512-dUxhiNzBLr6IqlZXz6e/rN2YQXlFgOei/Dxy+e3cyXTJ4txSUbGT2/fmnD6zd/75jDMeW5bDee+YXxlFKHoV0A==}
+  /@types/node/18.15.10:
+    resolution: {integrity: sha512-9avDaQJczATcXgfmMAW3MIWArOO7A+m90vuCFLr8AotWf8igO/mRoYukrk2cqZVtv38tHs33retzHEilM7FpeQ==}
 
   /@types/request/2.48.8:
     resolution: {integrity: sha512-whjk1EDJPcAR2kYHRbFl/lKeeKYTi05A15K9bnLInCVroNDCtXce57xKdI0/rQaA3K+6q0eFyUBPmqfSndUZdQ==}
     dependencies:
       '@types/caseless': 0.12.2
-      '@types/node': 18.15.9
+      '@types/node': 18.15.10
       '@types/tough-cookie': 4.0.2
       form-data: 2.5.1
     dev: false
@@ -75,7 +75,7 @@ packages:
   /@types/ws/8.5.4:
     resolution: {integrity: sha512-zdQDHKUgcX/zBc4GrwsE/7dVdAD8JR4EuiAXiiUhhfyIJXXb2+PrGshFyeXWQPMmmZ2XxgaqclgpIC7eTXc1mg==}
     dependencies:
-      '@types/node': 18.15.9
+      '@types/node': 18.15.10
     dev: false
 
   /abbrev/1.1.1:

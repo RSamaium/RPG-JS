@@ -2,8 +2,7 @@ import { BarComponentObject } from "@rpgjs/types"
 import { Utils, transitionColor } from "@rpgjs/common"
 import { AbstractComponent, CellInfo } from "./AbstractComponent"
 import get from 'lodash.get'
-import { Subject } from "rxjs"
-import { takeUntil } from "rxjs/operators"
+import { Subject, takeUntil } from "rxjs"
 import { Container, Graphics, Text } from "pixi.js"
 
 const DEFAULT_COLOR = '#000000'

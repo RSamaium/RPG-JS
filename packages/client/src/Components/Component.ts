@@ -1,7 +1,6 @@
 import { Direction, HookClient, RpgCommonPlayer, RpgPlugin, RpgShape, Utils } from "@rpgjs/common"
 import { ComponentObject, LayoutObject, LayoutOptions, LayoutPositionEnum, PlayerType, PositionXY } from "@rpgjs/types"
-import { Subject, Subscription } from "rxjs"
-import { map, filter, tap, distinctUntilChanged, takeUntil, finalize } from "rxjs/operators"
+import { Subject, Subscription, map, filter, tap, distinctUntilChanged, takeUntil, finalize  } from "rxjs"
 import { log } from "../Logger"
 import { Scene } from "../Scene/Scene"
 import { RpgSprite } from "../Sprite/Player"

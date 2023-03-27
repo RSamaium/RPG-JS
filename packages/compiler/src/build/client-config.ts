@@ -61,7 +61,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
                 process: true,
                 buffer: true,
             }),
-            splitVendorChunkPlugin()
+           // splitVendorChunkPlugin(),
         ]
     }
 
@@ -170,7 +170,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
             }
         }
     }
- 
+
     // TODO, minify is rpg mode but currently not working
     if (isBuild) {
         moreBuildOptions = {
@@ -219,6 +219,17 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
                             return `assets/[name][extname]`;
                         }
                         return `assets/[name]-[hash][extname]`;
+                    },
+                    manualChunks: (id) => {
+                        if (id.includes("rxjs")) {
+                            return "rxjs";
+                        }
+                        if (id.includes("pixi")) {
+                            return "pixi";
+                        }
+                        if (id.includes("node_modules")) {
+                            return "vendor";
+                        }
                     },
                     ...outputOptions
                 },
