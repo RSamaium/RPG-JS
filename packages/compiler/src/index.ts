@@ -2,7 +2,7 @@
 
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
-import { devMode } from "./serve/index.js";
+import { devMode, DevOptions } from "./serve/index.js";
 import { buildMode } from "./build/index.js";
 import { test } from "./test/index.js";
 
@@ -27,8 +27,38 @@ yargs(hideBin(process.argv))
         }
 
     })
-    .command('dev', 'Run Vite in local development', async (yargs) => {
-        await devMode()
+    .command('dev', 'Run Vite in local development', (yargs) => {
+        return yargs
+            .option('host', {
+                alias: 'h',
+                describe: 'The hostname or IP address to bind the server to',
+            })
+            .option('port', {
+                alias: 'p',
+                describe: 'The port to listen on',
+            })
+            .option('open', {
+                alias: 'o',
+                describe: 'Open the browser on server start',
+                type: 'boolean'
+            })
+            .option('debug', {
+                describe: 'Enable debug mode',
+                default: false,
+                type: 'boolean'
+            })
+            .option('loglevel', {
+                describe: 'The level of logging',
+                default: 'info',
+                choices: ['silent', 'error', 'warn', 'info', 'debug', 'trace']
+            })
+            .option('cors', {
+                describe: 'Enable CORS support',
+                default: false,
+                type: 'boolean'
+            })
+    }, async (argv: DevOptions) => {
+        await devMode(argv)
     })
     .command('build', 'Build for production', async (yargs) => {
         await buildMode()

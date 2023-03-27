@@ -13,6 +13,7 @@ import { mapExtractPlugin } from './vite-plugin-map-extract.js';
 import { rpgjsAssetsLoader } from './vite-plugin-rpgjs-assets.js';
 import { tsxXmlPlugin } from './vite-plugin-tsx-xml.js';
 import { tmxTsxMoverPlugin } from './vite-plugin-tmx-tsx-mover.js';
+import { DevOptions } from '../serve/index.js';
 
 const require = createRequire(import.meta.url);
 
@@ -23,7 +24,8 @@ interface ClientBuildConfigOptions {
     overrideOptions?: any,
     side?: 'client' | 'server',
     mode?: 'development' | 'production' | 'test',
-    type?: 'mmorpg' | 'rpg'
+    type?: 'mmorpg' | 'rpg',
+    server?: DevOptions
 }
 
 export async function clientBuildConfig(dirname: string, options: ClientBuildConfigOptions = {}) {
@@ -31,6 +33,11 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     const isRpg = options.type === 'rpg'
     const isBuild = options.serveMode === false
     const dirOutputName = isRpg ? 'standalone' : 'client'
+
+    const envType = process.env.RPG_TYPE
+    if (envType && !['rpg', 'mmorpg'].includes(envType)) {
+        throw new Error('Invalid type. Choice between rpg or mmorpg')
+    }
 
     if (isBuild) {
         process.env.VITE_BUILT = '1'
@@ -195,9 +202,9 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
             }
         },
         assetsInclude: ['**/*.tmx', '**/*.tsx'],
-        server: {
-            index: 'src/index.html'
-        },
+        server: options.server,
+        logLevel: options.server?.loglevel,
+        debug: options.server?.debug,
         build: {
             manifest: true,
             outDir: outputPath,
