@@ -86,7 +86,8 @@ export class RpgMap extends RpgCommonMap {
         if (RpgCommonMap.buffer.has(this.id)) {
             return
         }
-        const hasAssetsPath = !!process.env.BUILT
+        // @ts-ignore
+        const hasAssetsPath = !!import.meta.env.VITE_BUILT
         const parser = new TiledParserFile(
             this.file,
             {

@@ -5,6 +5,7 @@ import { Server } from 'socket.io'
 import entryPoint from '../entry-point'
 import PrettyError from 'pretty-error'
 import { ModuleType } from '@rpgjs/common'
+import { createProxyMiddleware } from 'http-proxy-middleware';
 
 type ExpressServerOptions = {
     basePath: string,
@@ -28,11 +29,14 @@ export function expressServer(modules: ModuleType[], options: ExpressServerOptio
 
         app.use(express.json())
 
-        const hasStatic = !!process.env.STATIC_DIRECTORY_ENABLED === false ? true : !!process.env.STATIC_DIRECTORY_ENABLED
-        const staticDirectory = !!process.env.BUILT ? '' : 'dist'
+        // @ts-ignore
+        const hasStatic = !!import.meta.env.STATIC_DIRECTORY_ENABLED === false ? true : !!import.meta.env.STATIC_DIRECTORY_ENABLED
+        // @ts-ignore
+        const staticDirectory = !!import.meta.env.VITE_BUILT ? '' : 'dist'
 
         if (hasStatic) {
-            app.use('/', express.static(path.join(dirname, '..', staticDirectory, 'client')))
+            //app.use('/', express.static(path.join(dirname, '..', staticDirectory, 'client')))
+            //app.use('/', createProxyMiddleware({ target: 'http://localhost:5173', changeOrigin: true }));
         }
     
         async function start() {

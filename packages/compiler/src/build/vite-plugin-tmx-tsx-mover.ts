@@ -5,10 +5,10 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 
 const moveTMXTSXFiles = async (outputDir: string): Promise<void> => {
-  const assetDir = path.join(outputDir, 'assets');
+  const assetDir = path.join('dist', outputDir, 'assets');
   await fs.ensureDir(assetDir);
 
-  const files = glob.sync('**/*.@(tmx|tsx)', { nodir: true });
+  const files = glob.sync('src/**/*.@(tmx|tsx)', { nodir: true });
 
   for (const file of files) {
     const target = path.join(assetDir, path.basename(file));
@@ -16,11 +16,10 @@ const moveTMXTSXFiles = async (outputDir: string): Promise<void> => {
   }
 };
 
-export function tmxTsxMoverPlugin(): Plugin {
+export function tmxTsxMoverPlugin(outputDir: string): Plugin {
   return {
     name: 'vite-plugin-tmx-tsx-mover',
-    writeBundle: async (options) => {
-      const outputDir = options.dir || 'dist';
+    writeBundle: async () => {
       await moveTMXTSXFiles(outputDir);
     },
   };

@@ -13,7 +13,6 @@ import { mapExtractPlugin } from './vite-plugin-map-extract.js';
 import { rpgjsAssetsLoader } from './vite-plugin-rpgjs-assets.js';
 import { tsxXmlPlugin } from './vite-plugin-tsx-xml.js';
 import { tmxTsxMoverPlugin } from './vite-plugin-tmx-tsx-mover.js';
-import { envInjectorPlugin } from './vite-plugin-env-injector.js';
 
 const require = createRequire(import.meta.url);
 
@@ -30,7 +29,12 @@ interface ClientBuildConfigOptions {
 export async function clientBuildConfig(dirname: string, options: ClientBuildConfigOptions = {}) {
     const isServer = options.side === 'server'
     const isRpg = options.type === 'rpg'
+    const isBuild = options.serveMode === false
     const dirOutputName = isRpg ? 'standalone' : 'client'
+
+    if (isBuild) {
+        process.env.VITE_BUILT = '1'
+    }
 
     let plugins: any[] = [
         flagTransform(options),
@@ -38,10 +42,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         worldTransformPlugin(),
         rpgjsAssetsLoader(dirOutputName, options.serveMode),
         tsxXmlPlugin(),
-        mapExtractPlugin(dirOutputName),
-        ...(options.serveMode ? [] : [
-            envInjectorPlugin()
-        ]),
+       // mapExtractPlugin(dirOutputName),
         ...(options.plugins || [])
     ]
 
@@ -57,9 +58,10 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
             splitVendorChunkPlugin()
         ]
     }
-    else {
+
+    if (isBuild) {
         plugins.push(
-            tmxTsxMoverPlugin()
+            tmxTsxMoverPlugin(isRpg ? 'standalone' : 'server')
         )
     }
 
@@ -161,13 +163,22 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
             }
         }
     }
+ 
+    // TODO, minify is rpg mode but currently not working
+    if (isRpg && isBuild) {
+        moreBuildOptions = {
+            minify: false,
+            ...moreBuildOptions,
+        }
+    }
 
     const outputPath = isRpg ?
         resolve(dirname, 'dist', dirOutputName) :
         resolve(dirname, 'dist', isServer ? 'server' : dirOutputName)
     return {
         mode: options.mode || 'development',
-        root: options.mode == 'test' ? '' : resolve(dirname, 'src'),
+        //root: !isServer ? resolve(dirname, 'src') : '',
+        root: '.',
         configFile,
         resolve: {
             alias: {
@@ -184,6 +195,9 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
             }
         },
         assetsInclude: ['**/*.tmx', '**/*.tsx'],
+        server: {
+            index: 'src/index.html'
+        },
         build: {
             manifest: true,
             outDir: outputPath,

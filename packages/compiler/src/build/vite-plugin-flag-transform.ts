@@ -63,7 +63,7 @@ export function flagTransform(options: any = {}) {
       (id.endsWith('?mmorpg') && type !== 'mmorpg')) {
       code = 'export default null;';
     }
-
+    
     return {
       code,
       map: null

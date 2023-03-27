@@ -55,7 +55,9 @@ export class TiledParserFile {
                     return cb(json)
                 }
                 else if (type == 'tileset') {
-                    const json = parser.parseTileset() as any
+                    const json = parser.parseTileset({
+                        tsxFilePath: this.staticDir ? '' : file
+                    }) as any
                     return cb(json)
                 }
             }
@@ -72,7 +74,7 @@ export class TiledParserFile {
             loadContent(file)
         }
         else if (isHttp || (TiledParserFile.isBrowser() && process.env.NODE_ENV != 'test')) {
-            const url = isHttp ? file : this.basePath + '/' + file
+            const url = isHttp ? file : path.join(this.basePath, this.staticDir, file)
             axios.get(url).then(res => res.data).then(loadContent)
         }
         else {

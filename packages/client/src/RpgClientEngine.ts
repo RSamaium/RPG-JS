@@ -1,3 +1,4 @@
+import path from 'path'
 import { KeyboardControls } from './KeyboardControls'
 import { RpgRenderer } from './Renderer'
 import { _initSpritesheet, spritesheets } from './Sprite/Spritesheets'
@@ -268,7 +269,15 @@ export class RpgClientEngine {
         if (source.startsWith('data:')) {
             return source
         }
-        return this.assetsPath + '/' + Utils.basename(source)
+
+        // @ts-ignore
+        const staticDir = import.meta.env.VITE_BUILT
+
+        if (staticDir) {
+            return this.assetsPath + '/' + Utils.basename(source)
+        }
+
+        return source
     }
 
     /**

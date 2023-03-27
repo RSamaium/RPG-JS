@@ -28,7 +28,7 @@
     "lodash.merge": "4.6.2",
     "pixi-viewport": "5.0.1",
     "pixi.js": "7.2.2",
-    "rxjs": "6.6.3",
+    "rxjs": "7.8.0",
     "simple-room-client": "^1.0.0",
     "vue": "^3.2.39"
   },

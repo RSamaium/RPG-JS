@@ -34,6 +34,6 @@ export function mapExtractPlugin(output: string = 'client') {
                     await processTsxFile(file, output);
                 }
             });
-        },
+        }
     };
 }

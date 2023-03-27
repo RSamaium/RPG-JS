@@ -7,8 +7,6 @@ export async function devMode() {
     const isRpg = process.env.RPG_TYPE == 'rpg'
     const cwd = process.cwd()
 
-    cleanDist()
-
     if (isRpg) {
         const config = await clientBuildConfig(cwd, {
             type: 'rpg',
@@ -29,6 +27,13 @@ export async function devMode() {
     const buildEnd = async () => {
         await runServer()
     }
-    const config = await clientBuildConfig(cwd, { serveMode: true, buildEnd })
-    await build(config)
+    //const config = await clientBuildConfig(cwd, { serveMode: true, buildEnd })
+
+    const config = await clientBuildConfig(cwd, {
+        serveMode: true,
+        buildEnd
+    })
+
+    const server = await createServer(config)
+    await server.listen()
 }

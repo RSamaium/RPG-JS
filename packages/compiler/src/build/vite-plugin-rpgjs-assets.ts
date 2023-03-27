@@ -39,23 +39,6 @@ export function rpgjsAssetsLoader(output: string = 'client', isBuild: boolean = 
           }
         }
       }
-    },
-    configureServer(server) {
-      server.middlewares.use((req, res, next) => {
-        // extension of url is in EXT
-        if (req.url && EXT.some(e => req.url.endsWith(e))) {
-          const standalonePath = path.join(replaceSrcWithDistPath(server.config.root), 'standalone');
-          const filePath = path.join(standalonePath, req.url);
-          if (fs.existsSync(filePath)) {
-              // res with content-type
-              res.setHeader('Content-Type', `image/${req.url.split('.').pop()}`);
-              // res with content
-              res.end(fs.readFileSync(filePath));
-              return
-          }
-        }
-        next();
-      });
-    },
+    }
   };
 }

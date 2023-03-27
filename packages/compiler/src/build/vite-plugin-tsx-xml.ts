@@ -9,7 +9,7 @@ export const tsxXmlPlugin = (): Plugin => {
 
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        if (req.url && req.url.endsWith('.tsx')) {
+        if (req.url && (req.url.endsWith('.tsx'))) {
           const publicPath = server.config.root;
           const filePath = path.join(publicPath, req.url);
 

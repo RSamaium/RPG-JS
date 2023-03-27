@@ -47,7 +47,10 @@ export async function runServer() {
         // and pass to this function
         fetchModule(id) {
             if (id.endsWith('.tmx')) {
-                return node.fetchModule(path.join(server.config.root, id))
+                return node.fetchModule(id).then((res: any) => {
+                    res.code = res.code.replace(/\/src/g, 'src') 
+                    return res
+                })
             }
             return node.fetchModule(id)
         },
@@ -58,7 +61,6 @@ export async function runServer() {
             return createHotContext(runner, server.emitter, files, url)
         }
     })
-
 
     // execute the file
     await runner.executeFile(files[0])

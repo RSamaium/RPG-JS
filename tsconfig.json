@@ -35,6 +35,6 @@
         "tests/unit-tests/specs/*.ts",
         "specs/plugins/*.ts",
         "index.d.ts",
-        "packages/compiler/types/*.d.ts"
+        "packages/compiler/types/*.d.ts",
     ] 
 }
