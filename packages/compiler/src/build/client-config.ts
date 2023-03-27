@@ -130,7 +130,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
             ...(
                 options.mode != 'test' ? {
                     buffer: 'rollup-plugin-node-polyfills/polyfills/buffer-es6'
-                }: {}
+                } : {}
             )
         }
 
@@ -162,8 +162,8 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         }
     }
 
-    const outputPath = isRpg ? 
-        resolve(dirname, 'dist', dirOutputName) : 
+    const outputPath = isRpg ?
+        resolve(dirname, 'dist', dirOutputName) :
         resolve(dirname, 'dist', isServer ? 'server' : dirOutputName)
     return {
         mode: options.mode || 'development',
@@ -174,7 +174,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
                 '@': 'src',
                 ...aliasTransform
             },
-            extensions: ['.ts', '.js', '.jsx', '.json', '.vue', '.css', '.scss', '.sass', '.html']
+            extensions: ['.ts', '.js', '.jsx', '.json', '.vue', '.css', '.scss', '.sass', '.html', 'tmx', 'tsx'],
         },
         css: {
             preprocessorOptions: {
@@ -183,14 +183,23 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
                 }
             }
         },
-        assetsInclude: ['**/*.tmx'],
+        assetsInclude: ['**/*.tmx', '**/*.tsx'],
         build: {
             manifest: true,
             outDir: outputPath,
+            chunkSizeWarningLimit: 10000,
+            assetsInlineLimit: 0,
             emptyOutDir: false,
             rollupOptions: {
                 output: {
                     dir: outputPath,
+                    assetFileNames: (assetInfo) => {
+                        let extType = assetInfo.name.split('.').at(1);
+                        if (/tmx|tsx/i.test(extType)) {
+                            return `assets/[name][extname]`;
+                        }
+                        return `assets/[name]-[hash][extname]`;
+                    },
                     ...outputOptions
                 },
                 input: {

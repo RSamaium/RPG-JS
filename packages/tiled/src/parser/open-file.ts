@@ -8,7 +8,16 @@ import path from "path"
 type ParseOptions = { getOnlyBasename?: boolean }
 
 export class TiledParserFile {
-    constructor(private file: string, private basePath: string) { }
+    private basePath: string
+    private staticDir: string
+
+    constructor(private file: string, {
+        basePath = '',
+        staticDir = ''
+    } = {}) {
+        this.basePath = basePath
+        this.staticDir = staticDir
+    }
 
     static isBrowser() {
         return typeof window !== 'undefined'
@@ -69,7 +78,10 @@ export class TiledParserFile {
         else {
             let filepath = file
             if (file.startsWith('/')) {
-                filepath = (this.basePath ? this.basePath + '/' : '') + file
+                filepath = path.join(this.basePath ? this.basePath: '', file)
+            }
+            if (this.staticDir) {
+                filepath = path.join(this.staticDir, file)
             }
             fs.readFile(path.normalize(filepath), 'utf-8', (err, data) => {
                 if (err) return cb(null, err)
@@ -112,8 +124,20 @@ export class TiledParserFile {
                             tileset.source = basename(tileset.source)
                         }
                     }
-                    const basePath = this.basePath + '/' + this.file.substring(0, this.file.lastIndexOf('/'))
-                    this._parseFile<TiledTileset>(path.normalize(path.join(basePath, tileset.source)), 'tileset', (result, err) => {
+                    let pathFile
+                    if (this.staticDir) {
+                        pathFile = tileset.source
+                    }
+                    else {
+                        pathFile = path.normalize(
+                            path.join(
+                                this.basePath, 
+                                this.file.substring(0, this.file.lastIndexOf('/')), 
+                                tileset.source
+                            )
+                        )
+                    }
+                    this._parseFile<TiledTileset>(pathFile, 'tileset', (result, err) => {
                         if (err) {
                             hasError = true
                             return cb(null, err)

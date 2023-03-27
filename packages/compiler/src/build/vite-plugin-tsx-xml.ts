@@ -5,6 +5,8 @@ import path from 'path';
 export const tsxXmlPlugin = (): Plugin => {
   return {
     name: 'tsx-xml-loader',
+    enforce: 'pre',
+
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         if (req.url && req.url.endsWith('.tsx')) {

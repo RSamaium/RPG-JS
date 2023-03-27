@@ -4,11 +4,12 @@ import { ViteNodeRunner } from 'vite-node/client'
 import { createHotContext, handleMessage, viteNodeHmrPlugin } from 'vite-node/hmr'
 import { installSourcemapsSupport } from 'vite-node/source-map'
 import { clientBuildConfig } from "../build/client-config.js"
+import path from 'path'
 
 export async function runServer() {
 
     const config = await clientBuildConfig(process.cwd(), {
-        serveMode: false,
+        serveMode: true,
         type: 'mmorpg',
         side: 'server',
         plugins: [
@@ -39,12 +40,15 @@ export async function runServer() {
 
     // create vite-node runner
     const runner = new ViteNodeRunner({
-        root: server.config.root,
+        root: path.join(server.config.root, '..') ,
         base: server.config.base,
         // when having the server and runner in a different context,
         // you will need to handle the communication between them
         // and pass to this function
         fetchModule(id) {
+            if (id.endsWith('.tmx')) {
+                return node.fetchModule(path.join(server.config.root, id))
+            }
             return node.fetchModule(id)
         },
         resolveId(id, importer) {
