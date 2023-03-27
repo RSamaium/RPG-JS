@@ -6,10 +6,10 @@ export default {
     screenTitle: {
         title: rpgConfig.name
     },
-    matchMakerService() {
-        return {
-            url: 'http://localhost',
-            port: 3000
-        }
-    }
+    // matchMakerService() {
+    //     return {
+    //         url: 'http://localhost',
+    //         port: 3000
+    //     }
+    // }
 }

@@ -5,7 +5,6 @@ import { Server } from 'socket.io'
 import entryPoint from '../entry-point'
 import PrettyError from 'pretty-error'
 import { ModuleType } from '@rpgjs/common'
-import { createProxyMiddleware } from 'http-proxy-middleware';
 
 type ExpressServerOptions = {
     basePath: string,
@@ -30,22 +29,18 @@ export function expressServer(modules: ModuleType[], options: ExpressServerOptio
         app.use(express.json())
 
         // @ts-ignore
-        const hasStatic = !!import.meta.env.STATIC_DIRECTORY_ENABLED === false ? true : !!import.meta.env.STATIC_DIRECTORY_ENABLED
+        const hasStatic = !!process.env.STATIC_DIRECTORY_ENABLED
         // @ts-ignore
         const staticDirectory = !!import.meta.env.VITE_BUILT ? '' : 'dist'
 
         if (hasStatic) {
-            //app.use('/', express.static(path.join(dirname, '..', staticDirectory, 'client')))
-            //app.use('/', createProxyMiddleware({ target: 'http://localhost:5173', changeOrigin: true }));
+            app.use('/', express.static(path.join(dirname, '..', staticDirectory, 'client')))
         }
     
         async function start() {
             const rpgGame = await entryPoint(modules, { io, ...options })
             rpgGame.app = app
             rpgGame.start()
-            console.log(`
-                ===> MMORPG is running on http://localhost:${PORT} <===
-            `)
             resolve({
                 app,
                 server,
@@ -53,7 +48,9 @@ export function expressServer(modules: ModuleType[], options: ExpressServerOptio
             })
         }
 
-        server.listen(PORT, start)
+        // @ts-ignore
+        const serverPort = (import.meta.env.VITE_SERVER_URL || '').split(':')[1] || PORT
+        server.listen(serverPort, start)
 
         process.on('uncaughtException', function (error) {
             console.log(pe.render(error))

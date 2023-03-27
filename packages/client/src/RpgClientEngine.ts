@@ -4,7 +4,7 @@ import { RpgRenderer } from './Renderer'
 import { _initSpritesheet, spritesheets } from './Sprite/Spritesheets'
 import { _initSound, sounds } from './Sound/Sounds'
 import { World } from 'simple-room-client'
-import { BehaviorSubject, Observable, Subject, Subscription } from 'rxjs'
+import { BehaviorSubject, Observable, Subject, Subscription, lastValueFrom } from 'rxjs'
 import { ajax } from 'rxjs/ajax'
 import { RpgGui } from './RpgGui'
 import {
@@ -314,12 +314,16 @@ export class RpgClientEngine {
                     serverUri = (this.matchMakerService as Function)()
                 }
                 else {
-                    // todo: change toPromise (RXJS v7+)
-                    serverUri = await ajax.getJSON<MatchMakerResponse>(this.matchMakerService as string).toPromise()
+                    serverUri = await lastValueFrom(ajax.getJSON<MatchMakerResponse>(this.matchMakerService as string))
                 }
 
             }
-            this.connection(serverUri.url ? serverUri.url + ':' + serverUri.port : undefined)
+            // @ts-ignore
+            const envUrl = import.meta.env.VITE_SERVER_URL
+            this.connection(
+                    serverUri.url ? serverUri.url + ':' + serverUri.port : 
+                    envUrl ? envUrl : undefined
+            )
         }
     }
 

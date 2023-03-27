@@ -24,7 +24,6 @@
     "@rpgjs/types": "^3.3.0",
     "axios": "^0.27.1",
     "express": "^4.18.2",
-    "http-proxy-middleware": "^2.0.6",
     "lodash.merge": "^4.6.2",
     "pathfinding": "^0.4.18",
     "pretty-error": "^4.0.0",
