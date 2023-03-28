@@ -14,6 +14,7 @@ import { rpgjsAssetsLoader } from './vite-plugin-rpgjs-assets.js';
 import { tsxXmlPlugin } from './vite-plugin-tsx-xml.js';
 import { tmxTsxMoverPlugin } from './vite-plugin-tmx-tsx-mover.js';
 import { DevOptions } from '../serve/index.js';
+import { codeInjectorPlugin } from './vite-plugin-code-injector.js';
 
 const require = createRequire(import.meta.url);
 
@@ -52,6 +53,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         plugins = [
             ...plugins,
             vue(),
+            codeInjectorPlugin(),
             NodeModulesPolyfillPlugin(),
             NodeGlobalsPolyfillPlugin({
                 process: true,
