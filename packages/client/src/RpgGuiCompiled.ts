@@ -5,7 +5,7 @@ const _hoisted_1 = {
     id: "tooltips",
     style: {"position":"absolute","top":"0","left":"0"}
   }
-  function render(_ctx, _cache) {
+export default function render(_ctx, _cache) {
     return (_openBlock(), _createElementBlock("div", {
       onPointerdown: _cache[0] || (_cache[0] = $event => (_ctx.propagate('pointerdown', $event))),
       onPointermove: _cache[1] || (_cache[1] = $event => (_ctx.propagate('pointermove', $event))),

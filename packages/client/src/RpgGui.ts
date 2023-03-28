@@ -1,4 +1,6 @@
 import type { App, ComponentPublicInstance } from 'vue'
+import RpgGuiCompiled from './RpgGuiCompiled'
+import { createApp } from 'vue'
 import { RpgCommonPlayer } from '@rpgjs/common'
 import { map } from 'rxjs'
 import { RpgSound } from './Sound/RpgSound'
@@ -67,7 +69,7 @@ class Gui {
                     </div>
                 </div>
             `,*/
-            render: null,
+            render: RpgGuiCompiled,
             data() {
                 return {
                     gui,
@@ -387,7 +389,7 @@ class Gui {
             }
         }
 
-        //this.app = createApp(obj)
+        this.app = createApp(obj)
 
         for (let ui of gui) {
             this.app.component(ui.name, ui)

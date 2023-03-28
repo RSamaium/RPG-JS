@@ -1,45 +1,20 @@
 {
   "name": "rpgjs",
-  "version": "3.0.0-beta",
+  "version": "4.0.0",
   "engines": {
     "node": ">=11.0.0"
   },
   "description": "RPG JS is a framework for creating RPGs and MMORPG",
   "dependencies": {
-    "@vue/cli-plugin-babel": "5.0.4",
-    "canvas": "^2.11.0",
-    "concurrently": "^5.3.0",
-    "core-js": "3.21.1",
-    "jest": "27.0.4",
-    "jest-webgl-canvas-mock": "^0.2.3",
-    "log-with-statusbar": "^1.2.0",
-    "msgpack-lite": "^0.1.26",
-    "rxjs": "^7.5.7",
-    "socket.io-client": "^4.4.1",
-    "ts-jest": "^27.0.2",
-    "vue": "^3.2.31",
-    "yargs": "^17.3.1"
+    "canvas": "^2.11.0"
   },
   "devDependencies": {
-    "@babel/plugin-proposal-decorators": "^7.10.5",
-    "@babel/plugin-transform-runtime": "^7.11.5",
-    "@babel/preset-env": "^7.11.5",
-    "@babel/preset-typescript": "^7.10.4",
-    "@types/jest": "^26.0.24",
-    "@vitest/browser": "^0.29.7",
-    "@vue/compiler-sfc": "^3.0.4",
-    "@vue/vue3-jest": "^27.0.0-alpha.4",
-    "artillery": "^1.6.1",
-    "artillery-engine-socketio-v3": "^1.0.1",
-    "happy-dom": "^8.9.0",
-    "jest": "^26.4.2",
-    "lerna": "^4.0.0",
-    "typescript": "^4.5.5",
-    "vitest": "^0.29.7",
-    "webdriverio": "^8.6.8"
+    "lerna": "^6.6.1",
+    "typescript": "^5.0.2",
+    "vitest": "^0.29.7"
   },
   "scripts": {
-    "postinstall": "lerna bootstrap --ci && npm run build:types && npm run build:tiled && npm run build:common && npm run build:client && npm run build:database && npm run build:server && npm run build:testing && lerna link && cd packages/client && npm i vue@3 && lerna link && cd ../../packages/plugins/agones/matchmaker && npm i",
+    "postinstall": "lerna bootstrap && npm run build:types && npm run build:tiled && npm run build:common && npm run build:client && npm run build:database && npm run build:server && npm run build:testing && npm run build:compiler && cd packages/client && cd ../../packages/plugins/agones/matchmaker",
     "test": "NODE_ENV=test vitest --config ./packages/compiler/src/test/vitest.config.ts",
     "lerna:publish": "lerna publish --ignore-prepublish --force-publish --no-private --no-push --no-git-tag-version",
     "lerna:ls": "lerna ls",

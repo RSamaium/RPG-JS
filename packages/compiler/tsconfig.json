@@ -19,7 +19,8 @@
     "declaration": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "stripInternal": true
+    "stripInternal": true,
+    "skipLibCheck": true
   },
   "include": [
     "src"

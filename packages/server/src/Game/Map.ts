@@ -6,7 +6,7 @@ import { Move } from '../Player/MoveManager'
 import { RpgServerEngine } from '../server'
 import { Observable } from 'rxjs'
 import path from 'path'
-import { HitBox, MovingHitbox, Position, Tick } from '@rpgjs/types'
+import { HitBox, MovingHitbox, Position } from '@rpgjs/types'
 
 export type EventPosOption = {
     x: number,
