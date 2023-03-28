@@ -2,7 +2,7 @@ import { splitVendorChunkPlugin } from 'vite'
 import nodePolyfills from 'rollup-plugin-node-polyfills'
 import { NodeModulesPolyfillPlugin } from '@esbuild-plugins/node-modules-polyfill'
 import { resolve } from 'path'
-import requireTransform from 'vite-plugin-require-transform';
+import requireTransform from './vite-plugin-require.js';
 import { flagTransform } from './vite-plugin-flag-transform.js';
 import vue from '@vitejs/plugin-vue'
 import { worldTransformPlugin } from './vite-plugin-world-transform.js';

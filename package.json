@@ -6,15 +6,17 @@
   },
   "description": "RPG JS is a framework for creating RPGs and MMORPG",
   "dependencies": {
-    "canvas": "^2.11.0"
+    "canvas": "^2.11.0",
+    "concurrently": "^7.6.0"
   },
   "devDependencies": {
+    "jsdom": "^21.1.1",
     "lerna": "^6.6.1",
     "typescript": "^5.0.2",
     "vitest": "^0.29.7"
   },
   "scripts": {
-    "postinstall": "lerna bootstrap && npm run build:types && npm run build:tiled && npm run build:common && npm run build:client && npm run build:database && npm run build:server && npm run build:testing && npm run build:compiler && cd packages/client && cd ../../packages/plugins/agones/matchmaker",
+    "postinstall": "lerna bootstrap && npm run build:types && npm run build:tiled && npm run build:common && npm run build:client && npm run build:database && npm run build:server && npm run build:testing && npm run build:compiler && cd packages/client && cd ../../packages/plugins/agones/matchmaker && npm i",
     "test": "NODE_ENV=test vitest --config ./packages/compiler/src/test/vitest.config.ts",
     "lerna:publish": "lerna publish --ignore-prepublish --force-publish --no-private --no-push --no-git-tag-version",
     "lerna:ls": "lerna ls",
