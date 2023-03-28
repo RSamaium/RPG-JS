@@ -38,11 +38,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     if (envType && !['rpg', 'mmorpg'].includes(envType)) {
         throw new Error('Invalid type. Choice between rpg or mmorpg')
     }
-
-    if (isBuild) {
-        process.env.VITE_BUILT = '1'
-    }
-
+    
     let plugins: any[] = [
         flagTransform(options),
         (requireTransform as any)(),

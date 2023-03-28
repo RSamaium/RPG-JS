@@ -1,6 +1,5 @@
-import type { App, ComponentPublicInstance } from 'vue'
 import RpgGuiCompiled from './RpgGuiCompiled'
-import { createApp } from 'vue'
+import { App, ComponentPublicInstance, createApp } from 'vue'
 import { RpgCommonPlayer } from '@rpgjs/common'
 import { map } from 'rxjs'
 import { RpgSound } from './Sound/RpgSound'

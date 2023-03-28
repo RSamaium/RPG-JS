@@ -91,7 +91,7 @@ export class RpgMap extends RpgCommonMap {
         const parser = new TiledParserFile(
             this.file,
             {
-                basePath: '',
+                basePath: process.env.NODE_ENV == 'test' ?  '.' : '',
                 staticDir: hasAssetsPath ? path.join(this._server.inputOptions.basePath, this._server.assetsPath) : ''
             }
         )

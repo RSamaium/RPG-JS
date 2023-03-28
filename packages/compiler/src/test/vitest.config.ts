@@ -4,6 +4,8 @@ import { clientBuildConfig } from '../build/client-config.js'
 import path from 'path'
 
 export default defineConfig(async () => {
+    process.env.NODE_ENV = 'test'
+
     let config = await clientBuildConfig(process.cwd(), {
         mode: 'test',
         serveMode: false,

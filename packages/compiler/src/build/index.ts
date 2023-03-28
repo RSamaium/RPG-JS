@@ -5,6 +5,8 @@ import { clientBuildConfig } from './client-config.js'
 export async function buildMode() {
     cleanDist()
 
+    process.env.VITE_BUILT = '1'
+
     const isRpg = process.env.RPG_TYPE == 'rpg'
     const mode: any = process.env.NODE_ENV || 'development'
     

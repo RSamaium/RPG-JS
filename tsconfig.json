@@ -2,7 +2,7 @@
     "compilerOptions": {
         "target": "es2020",
         "baseUrl": "./",
-        "types": ["node", "jest"],
+        "types": ["node"],
         "module": "commonjs",
         "outDir": "./lib",
         "rootDir": "./tests/unit-tests",
