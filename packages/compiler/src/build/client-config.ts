@@ -1,4 +1,5 @@
 import { splitVendorChunkPlugin } from 'vite'
+import { VitePWA } from 'vite-plugin-pwa'
 import nodePolyfills from 'rollup-plugin-node-polyfills'
 import { NodeModulesPolyfillPlugin } from '@esbuild-plugins/node-modules-polyfill'
 import { resolve } from 'path'
@@ -53,6 +54,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         plugins = [
             ...plugins,
             vue(),
+            VitePWA(),
             codeInjectorPlugin(),
             NodeModulesPolyfillPlugin(),
             NodeGlobalsPolyfillPlugin({
