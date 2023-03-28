@@ -1,15 +1,11 @@
 ![Header icon](/docs/header.png)
 
 
-# RPG JS v3. Create RPG and MMORPG in your browser
+# RPG JS v4 Create RPG and MMORPG in your browser
 
 RPG JS is a framework for creating RPGs and MMORPGs.The code remains the same depending on the type of game!
 
 [rpgjs.dev](https://rpgjs.dev)
-
-## Important Note
-
-> It only works on NodeJS version 14.
 
 ## Community
 
@@ -104,7 +100,7 @@ To put into production:
 `NODE_ENV=production npm run build`
 
 1. Put the folders `dist/server` and `dist/client` on a server
-2. Starting the server in `dist/server/index.js`.
+2. Starting the server in `dist/server/index.cjs`.
 
 Example 1:
 
@@ -112,7 +108,7 @@ Example 1:
 
 Example 2: (with [PM2](https://pm2.keymetrics.io))
 
-`pm2 start dist/server/index.js`
+`pm2 start dist/server/index.cjs`
 
 **RPG**
 
