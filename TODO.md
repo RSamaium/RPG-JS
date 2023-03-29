@@ -16,7 +16,7 @@ Unit Test
 
 [] Units Tests for agones not works
 [] Verify extract image and tmx for plugins
-[] Bug for tile rotation
-[] Fix filters for PIXI
+[X] Bug for tile rotation
+[X] Fix filters for PIXI
 [X] Bug __RPGJS_MMORPG__ variable
 [] Verify and fix setTile()

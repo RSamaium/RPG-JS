@@ -118,7 +118,9 @@ export default class TileLayer extends CommonLayer {
     }*/
 
     private addFrame(tile: Tile, x: number, y: number) {
-        const frame = this.tilemap.tile(tile.texture, tile.x, tile.y)
+        const frame = this.tilemap.tile(tile.texture, tile.x, tile.y, {
+           rotate: tile.texture.rotate
+        })
        /* const pb = this.pointsBuf
         if (!pb) return null
         tile.pointsBufIndex = pb.length - POINT_STRUCT_SIZE*/
