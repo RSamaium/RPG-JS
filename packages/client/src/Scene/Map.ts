@@ -8,7 +8,7 @@ import { GameEngineClient } from '../GameEngine'
 import { TiledMap } from '@rpgjs/tiled'
 import { RpgComponent } from '../Components/Component'
 import { CameraOptions } from '@rpgjs/types'
-import { Assets, Container, Point, IRenderer, DisplayObjectEvents, utils } from 'pixi.js'
+import { Assets, Container, Point, IRenderer, DisplayObjectEvents, utils, FederatedPointerEvent } from 'pixi.js'
 
 interface MapObject extends TiledMap {
     id: number
@@ -295,13 +295,13 @@ export class SceneMap extends Scene {
      * @memberof RpgSceneMap
      */
     on(eventName: keyof DisplayObjectEvents, cb: (position: { x: number, y: number }, ev?: any ) => any) {
-        if (!this.tilemap) return
-        this.tilemap.background.interactive = true
-        // TODO
-        /*this.tilemap.background.on(eventName, (ev: any) => {
-            const pos = ev.data.getLocalPosition(this.parent)
+        if (!this.viewport) return
+        this.viewport.eventMode = 'static'
+        this.viewport.on(eventName, (...args) => {
+            const ev: FederatedPointerEvent = args[0] as any
+            const pos = ev.getLocalPosition(this.viewport as Viewport)
             cb(pos, ev)
-        })*/
+        })
     }
 }
 

@@ -19,7 +19,9 @@ let engine
     scenes: {
         map: {
             onAfterLoading(scene: RpgSceneMap) {
-                RpgGui.display('hp')
+                scene.on('pointerdown', (pos) => {
+                    console.log(pos)
+                })
             }
         }
     },

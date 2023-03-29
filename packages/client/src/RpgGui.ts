@@ -102,7 +102,7 @@ class Gui {
                      * export default {
                      *      inject: ['rpgStage'],
                      *      mounted() {
-                     *          const blur = new PIXI.filters.BlurFilter()
+                     *          const blur = new PIXI.BlurFilter()
                                 this.rpgStage.filters = [blur]
                      *      }
                      * }

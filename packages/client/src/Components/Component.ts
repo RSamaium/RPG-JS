@@ -219,7 +219,8 @@ export class RpgComponent<T = any> extends Container {
         }
     }
 
-    drag() {
+    // TODO
+    /*drag() {
         this.interactive = true
         const filter = new filters.ColorMatrixFilter();
 
@@ -247,7 +248,7 @@ export class RpgComponent<T = any> extends Container {
                     this.y = newPosition.y
                 }
             })
-    }
+    }*/
 
     update(obj: any, objChanged: any, time: number, deltaRatio: number): { moving: boolean } {
         if (this.dragMode?.dragging) return { moving: true }

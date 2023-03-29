@@ -12,7 +12,7 @@ export class DebugComponent extends AbstractComponent<DebugComponentObject, Grap
     onInit(cell: CellInfo) {
         this.addChild(this.container)
         this.updateRender(this.component.logic)
-        this.interactive = true
+        this.eventMode = 'static'
         this.on('pointerdown', () => {
             console.log(this.component.logic)
         })
