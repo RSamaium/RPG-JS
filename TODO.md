@@ -15,8 +15,8 @@ Unit Test
     --> Not implemented: HTMLCanvasElement.prototype.getContext
 
 [] Units Tests for agones not works
-[] Verify extract image et tmx for plugins
+[] Verify extract image and tmx for plugins
 [] Bug for tile rotation
 [] Fix filters for PIXI
-[] Bug __RPGJS_MMORPG__ variable
+[X] Bug __RPGJS_MMORPG__ variable
 [] Verify and fix setTile()

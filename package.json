@@ -17,7 +17,7 @@
     "vitest": "^0.29.7"
   },
   "scripts": {
-    "postinstall": "lerna bootstrap && npm run build:types && npm run build:tiled && npm run build:common && npm run build:client && npm run build:database && npm run build:server && npm run build:testing && npm run build:compiler && cd packages/client && cd ../../packages/plugins/agones/matchmaker && npm i",
+    "postinstall": "lerna bootstrap --ci && npm run build:types && npm run build:tiled && npm run build:common && npm run build:client && npm run build:database && npm run build:server && npm run build:testing && npm run build:compiler && cd packages/client && cd ../../packages/plugins/agones/matchmaker && npm i",
     "test": "vitest --config ./packages/compiler/src/test/vitest.config.ts",
     "lerna:publish": "lerna publish --ignore-prepublish --force-publish --no-private --no-push --no-git-tag-version",
     "lerna:ls": "lerna ls",

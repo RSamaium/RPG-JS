@@ -19,6 +19,8 @@
 <script>
 import Hero from '../../components/hero.vue'
 
+const isMMORPG = import.meta.env.VITE_RPG_TYPE == 'mmorpg'
+
 export default {
     props: {
         goldName: {
@@ -46,7 +48,7 @@ export default {
             value: 'status',
             layout: 'StatusLayout'
         } */]
-        if (!__RPGJS_MMORPG__ && this.rpgGui.exists('rpg-save')) {
+        if (!isMMORPG && this.rpgGui.exists('rpg-save')) {
             menu.push({
                 text: 'Save',
                 value: 'save',

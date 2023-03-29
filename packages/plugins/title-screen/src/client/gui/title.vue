@@ -21,7 +21,8 @@
 <script lang="ts">
 import { Control } from '@rpgjs/client'
 
-declare var __RPGJS_MMORPG__: boolean
+// @ts-ignore
+const isMMORPG = import.meta.env.VITE_RPG_TYPE == 'mmorpg'
 
 const name = 'rpg-title-screen'
 
@@ -87,7 +88,7 @@ export default {
             })
         },
         isMMO() {
-            return __RPGJS_MMORPG__
+            return isMMORPG
         }
     }
 }
