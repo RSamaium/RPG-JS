@@ -19,4 +19,5 @@ Unit Test
 [X] Bug for tile rotation
 [X] Fix filters for PIXI
 [X] Bug __RPGJS_MMORPG__ variable
-[] Verify and fix setTile()
+[X] Verify and fix setTile()
+[] Verify Components displayed

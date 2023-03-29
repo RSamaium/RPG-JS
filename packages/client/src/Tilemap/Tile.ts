@@ -1,7 +1,7 @@
 import { Texture, AnimatedSprite, groupD8 } from "pixi.js";
-import { RpgRectTileLayer } from "./TileLayer";
 import TileSet from "./TileSet";
 import { Tile as TiledTileClass } from '@rpgjs/tiled'
+import { CompositeTilemap } from "@pixi/tilemap";
 
 export default class Tile extends AnimatedSprite {
     static getTextures(tile: TiledTileClass, tileSet: TileSet) {
@@ -40,7 +40,7 @@ export default class Tile extends AnimatedSprite {
         return this.tile.gid
     }
 
-    setAnimation(frame: RpgRectTileLayer) {
+    setAnimation(frame: CompositeTilemap) {
         const size = this.animations.length
         if (size > 1) {
             const offest = (this.animations[1].tileid - this.animations[0].tileid) * this.width

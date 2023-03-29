@@ -1,5 +1,5 @@
 import Tile from './Tile';
-import { CompositeTilemap, settings, POINT_STRUCT_SIZE } from '@pixi/tilemap'
+import { CompositeTilemap, settings, POINT_STRUCT_SIZE, Tilemap } from '@pixi/tilemap'
 import { Layer, Tile as TileClass } from '@rpgjs/tiled';
 import TileSet from './TileSet';
 import TileMap from '.';
@@ -7,15 +7,8 @@ import { CommonLayer } from './CommonLayer';
 
 settings.use32bitIndex = true
 
-export interface RpgRectTileLayer extends CompositeTilemap {
-   /* children: {
-        pointsBuf: number[],
-        modificationMarker: number
-    }[]*/
-}
-
 export default class TileLayer extends CommonLayer {
-    private tilemap: RpgRectTileLayer
+    private tilemap: CompositeTilemap
     private _tiles: any = {}
     tiles: (TileClass | null)[]
 
@@ -44,15 +37,15 @@ export default class TileLayer extends CommonLayer {
         }
         const i = x + y * width;
         const tiledTile = this.layer.getTileByIndex(i)
-        
+
         if (!tiledTile || (tiledTile && tiledTile.gid == 0)) return
 
         const tileset = TileLayer.findTileSet(
             tiledTile.gid,
             this.tileSets
         )
-            
-        if (!tileset) return 
+
+        if (!tileset) return
 
         const tile = new Tile(
             tiledTile,
@@ -91,49 +84,53 @@ export default class TileLayer extends CommonLayer {
             this.addFrame(newTile, x, y)
         }
         else {
-            /*if (newTile) {
-                const bufComposite: RpgRectTileLayer = new CompositeTilemap() as RpgRectTileLayer
+            if (newTile) {
+                const bufComposite: CompositeTilemap = new CompositeTilemap()
                 const frame = bufComposite.tile(newTile.texture, newTile.x, newTile.y)
                 newTile.setAnimation(frame)
                 this._tiles[x + ';' + y] = newTile
-                const pointsBufComposite = bufComposite.children[0].pointsBuf
-                // Change Texture (=0, 1 and 7, rotate (=4), animX (=5), animY (=6))
-                ;[0, 1, 4, 5, 6, 7].forEach((i) => {
-                    if (this.pointsBuf) this.pointsBuf[oldTile.pointsBufIndex+i] = pointsBufComposite[i]
-                })
+                // @ts-ignore
+                const pointsBufComposite = (bufComposite.children[0]  as Tilemap).pointsBuf
+                    // Change Texture (=0, 1 and 7, rotate (=4), animX (=5), animY (=6))
+                    ;[0, 1, 4, 6, 7, 8].forEach((i) => {
+                        if (this.pointsBuf) this.pointsBuf[oldTile.pointsBufIndex + i] = pointsBufComposite[i]
+                    })
+                // @ts-ignore
                 this.tilemap.children[0].modificationMarker = 0
+                this.addFrame(newTile, x, y)
+                this['modificationMarker'] = 0
             }
             else {
                 delete this._tiles[x + ';' + y]
                 if (this.pointsBuf) this.pointsBuf.splice(oldTile.pointsBufIndex, POINT_STRUCT_SIZE)
-            }*/
+            }
         }
     }
 
     /** @internal */
-    /*get pointsBuf(): number[] | null {
-        const child = this.tilemap.children[0]
+    get pointsBuf(): number[] | null {
+        const child = this.tilemap.children[0] as Tilemap
         if (!child) return null
-        return child.pointsBuf 
-    }*/
+        return child['pointsBuf']
+    }
 
     private addFrame(tile: Tile, x: number, y: number) {
         const frame = this.tilemap.tile(tile.texture, tile.x, tile.y, {
-           rotate: tile.texture.rotate
+            rotate: tile.texture.rotate
         })
-       /* const pb = this.pointsBuf
+        const pb = this.pointsBuf
         if (!pb) return null
-        tile.pointsBufIndex = pb.length - POINT_STRUCT_SIZE*/
+        tile.pointsBufIndex = pb.length - POINT_STRUCT_SIZE
         tile.setAnimation(frame)
         this._tiles[x + ';' + y] = tile
     }
 
     /** @internal */
     create() {
-        this.tilemap = new CompositeTilemap() as RpgRectTileLayer
+        this.tilemap = new CompositeTilemap()
         const { width, height } = this.map.getData()
         for (let y = 0; y < height; y++) {
-            for (let x = 0; x < width; x++) { 
+            for (let x = 0; x < width; x++) {
                 const tile = this.createTile(x, y)
                 if (tile) {
                     this.addFrame(tile, x, y)

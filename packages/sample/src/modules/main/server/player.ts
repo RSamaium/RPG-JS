@@ -99,7 +99,7 @@ export const player: RpgPlayerHooks = {
         if (input == 'attack') {
             //player.showAnimation('jedi', 'attack', true)
             player.setGraphic(['jedi'])
-            const map = player.getCurrentMap()
+            
             /*map?.createMovingHitbox([
                 { x: player.position.x + 50, y: player.position.y, width: 10, height: 10 }
             ]).subscribe({
@@ -113,7 +113,10 @@ export const player: RpgPlayerHooks = {
             //player.setComponentsLeft([])
         }
         if (input == 'action') {
-            player.callMainMenu()
+            const map = player.getCurrentMap()
+            map?.setTile(2*32, 2*32, 'Tile Layer 1', {
+                gid: 5
+            }) 
         }
     },
     async onInShape(player: RpgPlayer, shape: RpgShape) {
