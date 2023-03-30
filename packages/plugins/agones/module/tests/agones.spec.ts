@@ -1,4 +1,4 @@
-import { RpgServer, RpgModule, RpgServerEngine, RpgMatchMaker, RpgWorld } from '@rpgjs/server'
+import { RpgServer, RpgModule, RpgServerEngine, RpgWorld } from '@rpgjs/server'
 import AgonesSDK from '@google-cloud/agones-sdk'
 import { beforeEach, vi, expect, afterEach, test, describe } from 'vitest'
 
@@ -163,22 +163,22 @@ test('Change Server, not load map in current server', async () => {
 })
 
 test('Join Map, allocate server', async () => {
-    await player.changeMap('map')
+    await fixture.changeMap(client, 'map')
     expect(agonesSDK.setLabel).toBeCalledWith('map-map', '1')
     expect(agonesSDK.allocate).toHaveBeenCalled()
 })
 
+
 test('Disconnect, shutdown server if last player', async () => {
-    await player.changeMap('map')
+    await fixture.changeMap(client, 'map')
     client.socket.disconnect()
     expect(agonesSDK.shutdown).toHaveBeenCalled()
 })
 
 test('Disconnect, not shutdown server because is not last player', async () => {
-    await player.changeMap('map')
-    const { playerId: secondId } = await fixture.createClient()
-    const secondPlayer = RpgWorld.getPlayer(secondId)
-    await secondPlayer.changeMap('map')
+    await fixture.changeMap(client, 'map')
+    const { client: secondClient } = await fixture.createClient()
+    await fixture.changeMap(secondClient, 'map')
     client.socket.disconnect()
     expect(agonesSDK.shutdown).not.toHaveBeenCalled()
 })
@@ -187,32 +187,33 @@ describe('Multi map', () => {
     let secondPlayer
 
     beforeEach(async () => {
-        const { playerId: secondId } = await fixture.createClient()
+        const { playerId: secondId, client: secondClient } = await fixture.createClient()
         secondPlayer = RpgWorld.getPlayer(secondId)
-        await secondPlayer.changeMap('map')
+        await fixture.changeMap(secondClient, 'map')
     })
 
     test('Leave Map, change map label to 0', async () => {
-        await player.changeMap('map2')
+        await fixture.changeMap(client, 'map2')
         expect(agonesSDK.setLabel).toBeCalledWith('map-map2', '1')
         expect(agonesSDK.shutdown).not.toHaveBeenCalled()
 
-        await player.changeMap('map')
+        await fixture.changeMap(client, 'map')
         expect(agonesSDK.setLabel).toBeCalledWith('map-map2', '0')
         expect(agonesSDK.shutdown).not.toHaveBeenCalled()
     })
 
     test('Leave Map, not change label map because have second player in map', async () => {
-        await player.changeMap('map2')
-        await player.changeMap('map')
+        await fixture.changeMap(client, 'map2')
+        await fixture.changeMap(client, 'map')
         expect(agonesSDK.setLabel).toBeCalledWith('map-map2', '0')
         expect(agonesSDK.setLabel).toBeCalledWith('map-map', '1')
     })
     
 })
 
+
 afterEach(() => {
     agones.server.prototype.scalability.stateStore.client = new Map()
-    AgonesSDK.mockClear()
+    vi.resetAllMocks()
     clear()
 })

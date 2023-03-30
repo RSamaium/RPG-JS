@@ -1,5 +1,5 @@
-import { RpgMap, RpgModule, RpgServer, RpgWorld } from '@rpgjs/server'
-import { RpgPlugin, HookClient, RpgClient } from '@rpgjs/client'
+import { RpgModule, RpgServer, RpgWorld } from '@rpgjs/server'
+import { RpgClient } from '@rpgjs/client'
 import { SampleMap, Tileset } from './fixtures/maps/map'
 import { testing } from '@rpgjs/testing'
 

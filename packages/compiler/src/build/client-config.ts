@@ -42,13 +42,15 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         throw new Error('Invalid type. Choice between rpg or mmorpg')
     }
 
-    // if index.html is not found, display an error
-    try {
-        const index = await fs.stat(resolve(dirname, 'index.html'))
-    }
-    catch (e: any) {
-        error(e, ErrorCodes.IndexNotFound)
-        return
+    if (options.mode != 'test') {
+        // if index.html is not found, display an error
+        try {
+            await fs.stat(resolve(dirname, 'index.html'))
+        }
+        catch (e: any) {
+            error(e, ErrorCodes.IndexNotFound)
+            return
+        }
     }
 
     // alias for client

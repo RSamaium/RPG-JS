@@ -2,7 +2,7 @@ import { TiledParser } from "../src/parser/parser"
 import { tileset, xmlObjectImage, xmlTile } from "./data"
 import { Tileset } from '../src/classes/Tileset'
 import { Layer, Tile, TiledLayerType, TiledObjectClass } from '../src'
-import { test, expect, describe } from 'vitest'
+import { test, expect, describe, beforeEach } from 'vitest'
 
 let layer: Layer
 

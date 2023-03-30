@@ -8,7 +8,7 @@ import path from 'path'
 export class TiledParser {
   private layers: Map<number, any> = new Map()
 
-  constructor(private xml: string, private filePath: string) { }
+  constructor(private xml: string, private filePath: string = '') { }
 
   static propToNumber = (obj, props: string[]) => {
     for (let key of props) {

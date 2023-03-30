@@ -14,7 +14,7 @@ Unit Test
 [X] Test Not Works
     --> Not implemented: HTMLCanvasElement.prototype.getContext
 
-[] Units Tests for agones not works
+[X] Units Tests for agones not works
 [X] Verify extract image and tmx for plugins
 [X] Bug for tile rotation
 [X] Fix filters for PIXI
