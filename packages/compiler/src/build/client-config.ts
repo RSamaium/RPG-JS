@@ -43,7 +43,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
 
     // alias for client
     process.env.VITE_RPG_TYPE = envType
-    
+
     let plugins: any[] = [
         flagTransform(options),
         (requireTransform as any)(),
@@ -57,7 +57,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         plugins = [
             ...plugins,
             vue(),
-            VitePWA(),
+            //VitePWA(),
             codeInjectorPlugin(),
             NodeModulesPolyfillPlugin(),
             NodeGlobalsPolyfillPlugin({

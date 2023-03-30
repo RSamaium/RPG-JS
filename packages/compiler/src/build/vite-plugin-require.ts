@@ -19,7 +19,7 @@ export default function vitePluginRequire(opts?: {
 		name: "vite-plugin-require",
 		async transform(code: string, id: string) {
 			let newCode = code;
-			if (fileRegex.test(id)) {
+			if (fileRegex.test(id) && !id.includes('node_modules')) {
 				const ast = parser.parse(code, {
 					sourceType: "module",
 					plugins: [] as any,
@@ -29,8 +29,6 @@ export default function vitePluginRequire(opts?: {
 					enter(path) {
 						if (path.isIdentifier({ name: "require" })) {
 							const arg = (path.container as Record<string, any>)?.arguments?.[0];
-
-                           
 							if (arg) {
 								let stringVal: string = "";
 								switch (arg?.type) {

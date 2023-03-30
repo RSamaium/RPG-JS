@@ -8,7 +8,7 @@ import path from 'path'
 export class TiledParser {
   private layers: Map<number, any> = new Map()
 
-  constructor(private xml: string) { }
+  constructor(private xml: string, private filePath: string) { }
 
   static propToNumber = (obj, props: string[]) => {
     for (let key of props) {
@@ -34,7 +34,11 @@ export class TiledParser {
     return prop
   }
 
-  static transform = (obj) => {
+  getImagePath(image: string) {
+    return path.join(path.dirname(this.filePath), image)
+  }
+
+  transform = (obj) => {
     if (!obj) return
     const attr = obj.attributes || obj._attributes
     if (!attr) return obj
@@ -95,6 +99,9 @@ export class TiledParser {
         if (!attr) continue
         let val
         switch (attr.type) {
+          case 'file':
+            val = this.getImagePath(attr.value)
+            break
           case 'object':
           case 'float':
           case 'int':
@@ -105,7 +112,7 @@ export class TiledParser {
             break
           case 'class':
             val = {
-              ...(TiledParser.transform(prop)?.properties ?? {}),
+              ...(this.transform(prop)?.properties ?? {}),
               _classname: attr.propertytype
             }
             break
@@ -117,10 +124,10 @@ export class TiledParser {
       newObj.properties = propObj
     }
     if (newObj.polygon) {
-      newObj.polygon = TiledParser.transform(newObj.polygon)
+      newObj.polygon = this.transform(newObj.polygon)
     }
     if (newObj.polyline) {
-      newObj.polyline = TiledParser.transform(newObj.polyline)
+      newObj.polyline = this.transform(newObj.polyline)
     }
     if (newObj.points) {
       newObj = newObj.points.split(' ').map(point => {
@@ -137,17 +144,20 @@ export class TiledParser {
     if (newObj.text) {
       newObj.text = {
         text: newObj.text._text,
-        ...TiledParser.transform(newObj.text)
+        ...this.transform(newObj.text)
       }
       delete newObj.text._text
     }
     if (newObj.image) {
-      newObj.image = TiledParser.transform(newObj.image)
+      newObj.image = this.transform(newObj.image)
+    }
+    if (newObj.source) {
+      newObj.source = this.getImagePath(newObj.source)
     }
     const objectgroup = newObj.object || newObj.objectgroup?.object
     if (objectgroup) {
       newObj.objects = TiledParser.toArray(objectgroup).map((object: any) => {
-        return TiledParser.transform(object)
+        return this.transform(object)
       })
     }
     delete newObj._attributes
@@ -217,9 +227,9 @@ export class TiledParser {
         const data = element.elements?.find(el => el.name == 'data')
         element.layer = this.layers.get(+element.attributes.id)
         const obj = {
-          ...(TiledParser.transform(data) ?? {}),
-          ...TiledParser.transform(element),
-          ...TiledParser.transform(element.layer),
+          ...(this.transform(data) ?? {}),
+          ...this.transform(element),
+          ...this.transform(element.layer),
           layers: recursiveLayer(element.elements),
           data: data ? data.elements[0].text : undefined,
           type: name == 'layer' ? 'tilelayer' : name
@@ -235,12 +245,12 @@ export class TiledParser {
     const layers = recursiveLayer(jsonNoCompact.elements[0].elements)
 
     const tilesets = TiledParser.toArray<TiledTileset>(tileset).map(tileset => {
-      const obj = TiledParser.transform(tileset)
+      const obj = this.transform(tileset)
       return obj
     })
 
     const ret = {
-      ...TiledParser.transform(json.map),
+      ...this.transform(json.map),
       layers,
       tilesets
     }
@@ -253,31 +263,21 @@ export class TiledParser {
     return ret
   }
 
-  parseTileset({
-    tsxFilePath = ''
-  }: { tsxFilePath?: string } = {}
-  ): TiledTileset {
+  parseTileset(): TiledTileset {
     const json: any = xml2js(this.xml, { compact: true })
     const { tileset } = json
 
     const ret = {
-      ...TiledParser.transform(tileset),
-      image: TiledParser.transform(tileset.image),
+      ...this.transform(tileset),
+      image: this.transform(tileset.image),
       tiles: TiledParser.toArray<TilesetTile>(tileset.tile).map((tile: any) => {
-        const ret = TiledParser.transform(tile)
+        const ret = this.transform(tile)
         if (tile.animation) {
-          ret.animations = TiledParser.toArray(tile.animation.frame).map(TiledParser.transform)
+          ret.animations = TiledParser.toArray(tile.animation.frame).map(this.transform)
         }
         delete ret.animation
         return ret
       })
-    }
-
-    if (tsxFilePath) {
-      const { image } = ret
-      const { source } = image
-      // transform image path to absolute path. use tmxFilePath to compute the absolute path
-      image.source = path.join(path.dirname(tsxFilePath), source)
     }
 
     delete ret.tile

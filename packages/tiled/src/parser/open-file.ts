@@ -49,15 +49,13 @@ export class TiledParserFile {
                 return cb(null)
             }
             if (isXml(content)) {
-                const parser = new TiledParser(content)
+                const parser = new TiledParser(content, this.staticDir ? '' : file)
                 if (type == 'map') {
                     const json = parser.parseMap() as any 
                     return cb(json)
                 }
                 else if (type == 'tileset') {
-                    const json = parser.parseTileset({
-                        tsxFilePath: this.staticDir ? '' : file
-                    }) as any
+                    const json = parser.parseTileset() as any
                     return cb(json)
                 }
             }
@@ -126,20 +124,7 @@ export class TiledParserFile {
                             tileset.source = basename(tileset.source)
                         }
                     }
-                    let pathFile
-                    if (this.staticDir) {
-                        pathFile = tileset.source
-                    }
-                    else {
-                        pathFile = path.normalize(
-                            path.join(
-                                this.basePath, 
-                                this.file.substring(0, this.file.lastIndexOf('/')), 
-                                tileset.source
-                            )
-                        )
-                    }
-                    this._parseFile<TiledTileset>(pathFile, 'tileset', (result, err) => {
+                    this._parseFile<TiledTileset>(tileset.source, 'tileset', (result, err) => {
                         if (err) {
                             hasError = true
                             return cb(null, err)
