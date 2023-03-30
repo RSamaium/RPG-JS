@@ -16,6 +16,7 @@ import { tsxXmlPlugin } from './vite-plugin-tsx-xml.js';
 import { tmxTsxMoverPlugin } from './vite-plugin-tmx-tsx-mover.js';
 import { DevOptions } from '../serve/index.js';
 import { codeInjectorPlugin } from './vite-plugin-code-injector.js';
+import { error, ErrorCodes } from '../utils/log.js';
 
 const require = createRequire(import.meta.url);
 
@@ -39,6 +40,15 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     const envType = process.env.RPG_TYPE
     if (envType && !['rpg', 'mmorpg'].includes(envType)) {
         throw new Error('Invalid type. Choice between rpg or mmorpg')
+    }
+
+    // if index.html is not found, display an error
+    try {
+        const index = await fs.stat(resolve(dirname, 'index.html'))
+    }
+    catch (e: any) {
+        error(e, ErrorCodes.IndexNotFound)
+        return
     }
 
     // alias for client

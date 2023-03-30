@@ -40,7 +40,7 @@ export async function runServer() {
 
     // create vite-node runner
     const runner = new ViteNodeRunner({
-        root: path.join(server.config.root, '..') ,
+        root: path.join(server.config.root, '..'),
         base: server.config.base,
         // when having the server and runner in a different context,
         // you will need to handle the communication between them
@@ -48,7 +48,13 @@ export async function runServer() {
         fetchModule(id) {
             if (id.endsWith('.tmx')) {
                 return node.fetchModule(id).then((res: any) => {
-                    res.code = res.code.replace(/\/src/g, 'src') 
+                    // res.code contains /@fs/, so replace it by ""
+                    if (res.code.includes('/@fs/')) {
+                        res.code = res.code.replace(/\/@fs\//g, '/')
+                    }
+                    else {
+                        res.code = res.code.replace(/\/src/g, 'src')
+                    }
                     return res
                 })
             }
