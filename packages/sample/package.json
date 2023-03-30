@@ -19,7 +19,7 @@
     "@rpgjs/chat": "^3.3.0",
     "@rpgjs/client": "^3.3.0",
     "@rpgjs/compiler": "^4.0.0",
-    "@rpgjs/database": "^3.1.0",
+    "@rpgjs/database": "^3.3.0",
     "@rpgjs/default-gui": "^3.3.0",
     "@rpgjs/fx": "^3.3.0",
     "@rpgjs/gamepad": "^3.3.0",
