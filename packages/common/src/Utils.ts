@@ -103,8 +103,23 @@ export function toRadians(angle: number) {
     return angle * (Math.PI / 180)
 }
 
-export function hexaToNumber(hexa: string): number {
-    return parseInt(hexa.replace('#', ''), 16)
+export function hexaToNumber(hexa: string): {
+    value: number,
+    alpha: number
+} {
+    let val = hexa.replace('#', '')
+    let alpha = 1
+    if (val.length === 3) {
+        val = val.split('').map((v) => v + v).join('')
+    }
+    if (val.length === 8) {
+        alpha = parseInt(val.substring(0, 2), 16) / 255
+        val = val.substring(2)
+    }
+    return {
+        value: parseInt(val, 16),
+        alpha
+    }
 }
 
 export function extractId(path: string): string | null {

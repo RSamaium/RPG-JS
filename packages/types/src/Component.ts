@@ -108,7 +108,9 @@ export type DebugComponentObject = {
 export type TileComponentObject = {
     id: 'tile',
     value: {
-        gid: number
+        gid: number,
+        height?: number
+        width?: number
     } | number
 }
 

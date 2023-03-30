@@ -1,8 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <map version="1.9" tiledversion="1.9.2" orientation="orthogonal" renderorder="right-down" width="50" height="50" tilewidth="32" tileheight="32" infinite="0" backgroundcolor="#1a767e" nextlayerid="16" nextobjectid="39">
- <properties>
-  
- </properties>
  <tileset firstgid="1" source="[Base]BaseChip_pipo.tsx"/>
  <tileset firstgid="1001" source="[A]Water_pipo.tsx"/>
  <layer id="1" name="Tile Layer 1" width="50" height="50">
@@ -254,7 +251,7 @@
   <object id="24" name="yo" x="512" y="64.5" width="147.5" height="111.5">
    <properties>
     <property name="collision" type="bool" value="true"/>
-    <property name="color" type="color" value="#ffc61ba1"/>
+    <property name="color" type="color" value="#64c61ba1"/>
    </properties>
   </object>
   <object id="26" gid="1390" x="704.727" y="32.1667" width="32" height="32"/>

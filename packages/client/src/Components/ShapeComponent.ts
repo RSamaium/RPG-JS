@@ -10,6 +10,7 @@ export class ShapeComponent extends AbstractComponent<ShapeComponentObject, Grap
     cacheParams: string[] = []
 
     onInit(cell: CellInfo) {
+        this.cell = cell
         this.updateRender(this.component.logic)
         this.addChild(this.container)
         super.onInit(cell)
@@ -21,13 +22,15 @@ export class ShapeComponent extends AbstractComponent<ShapeComponentObject, Grap
         const width = this.getValue(object, value.width) ?? this.cell?.width ?? 0
 
         this.container.clear()
-        this.container.beginFill(Utils.hexaToNumber(this.value.fill))
+        const { value: color, alpha } = Utils.hexaToNumber(this.value.fill)
+        this.container.beginFill(color, alpha)
        
         if (value.line) {
+            const { value: color, alpha } = Utils.hexaToNumber(value.line.color ?? this.value.fill)
             this.container.lineStyle(
                 this.getValue(object, value.line.width) ?? 1,
-                Utils.hexaToNumber(value.line.color ?? this.value.fill),
-                this.getValue(object, value.line.alpha) ?? 1
+                color,
+                this.getValue(object, value.line.alpha) ?? alpha
             )
         }
 
@@ -40,7 +43,7 @@ export class ShapeComponent extends AbstractComponent<ShapeComponentObject, Grap
                 break;
             case 'line':
                 if  (!value.line) {
-                    this.container.lineStyle(1, Utils.hexaToNumber(this.value.fill))
+                    this.container.lineStyle(1, color, alpha)
                 }
                 this.container.moveTo(this.getValue(object, value.x1), this.getValue(object, value.y1))
                 this.container.lineTo(this.getValue(object, value.x2), this.getValue(object, value.y2))

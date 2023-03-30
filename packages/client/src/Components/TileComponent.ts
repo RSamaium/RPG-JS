@@ -11,6 +11,7 @@ export class TileComponent extends AbstractComponent<TileComponentObject, Contai
     gid: number = 0
 
     onInit(cell: CellInfo) {
+        this.cell = cell
         if (typeof this.value == 'number') {
             this.gid = this.value
         } else {
@@ -22,6 +23,8 @@ export class TileComponent extends AbstractComponent<TileComponentObject, Contai
 
     updateRender(object: any) {
         this.removeChildren()
+        const height = typeof this.value != 'number' ? this.getValue(object, this.value.height) : null ?? this.cell?.height ?? 0
+        const width =  typeof this.value != 'number' ?  this.getValue(object, this.value.width) : null ?? this.cell?.width ?? 0
         const scene = this.component.getScene<SceneMap>()
         const tilemap = scene.tilemap
         const tileset = TileLayer.findTileSet(
@@ -32,8 +35,8 @@ export class TileComponent extends AbstractComponent<TileComponentObject, Contai
             const tile = new Tile({
                 gid: this.gid
             } as any, tileset)
-            tile.width = this.cell?.width ?? 0
-            tile.height = this.cell?.height ?? 0
+            tile.width = width ?? 0
+            tile.height = height ?? 0
             this.addChild(tile)
         }
     }

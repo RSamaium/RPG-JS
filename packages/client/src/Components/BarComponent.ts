@@ -33,10 +33,12 @@ export class BarComponent extends AbstractComponent<BarComponentObject, Containe
         }
         const { bgColor = DEFAULT_COLOR, borderColor = DEFAULT_COLOR, borderWidth = 1, borderRadius = 0 } = this.barStyle || {}
         this.cell = cell
-        this.barContainer.beginFill(Utils.hexaToNumber(bgColor))
+        const { value: color, alpha } = Utils.hexaToNumber(bgColor)
+        this.barContainer.beginFill(color, alpha)
         const paramsRect: [number, number, number, number] = [0, 0, this.barWidth, this.barHeight]
         if (borderWidth) {
-            this.barContainer.lineStyle(borderWidth, Utils.hexaToNumber(borderColor), borderWidth);
+            const { value: color, alpha } = Utils.hexaToNumber(borderColor)
+            this.barContainer.lineStyle(borderWidth, color, alpha);
         }
         if (borderRadius) {
             this.barContainer.drawRoundedRect(...paramsRect, borderRadius);
@@ -106,7 +108,8 @@ export class BarComponent extends AbstractComponent<BarComponentObject, Containe
             const colorIndex = Math.max(Math.floor((100 - percentBetween) / (100 / (colors.length - 1))), 0)
             let fillColor = colors[colorIndex]
             this.barFill.clear()
-            this.barFill.beginFill(Utils.hexaToNumber(fillColor ?? DEFAULT_COLOR))
+            const { value: color, alpha } = Utils.hexaToNumber(fillColor ?? DEFAULT_COLOR)
+            this.barFill.beginFill(color, alpha)
             const percent = Math.max(0, (currentValue / this.maxValue))
             const bWidth = borderWidth / 4
             const paramsRect: [number, number, number, number] = [bWidth, bWidth, percent * this.barWidth - bWidth, this.barHeight - bWidth]

@@ -176,6 +176,17 @@ export class GameEngineClient extends RpgCommonGame {
             paramsChanged,
             isShape
         } = obj
+        if (paramsChanged.components) {
+            paramsChanged.layout = {
+                center: {
+                    lines: [
+                        {
+                            col: paramsChanged.components
+                        }
+                    ]
+                }
+            }
+        }
         const layoutToArray = (params) => {
             const layout = params.layout as LayoutObject<any> | undefined
             if (layout) {

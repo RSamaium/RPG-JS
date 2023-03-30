@@ -11,7 +11,7 @@ import { DebugComponent } from "./DebugComponent"
 import { ImageComponent } from "./ImageComponent"
 import { TextComponent } from "./TextComponent"
 import { TileComponent } from "./TileComponent"
-import { Container, Graphics, Text, filters, Sprite } from "pixi.js"
+import { Container, Sprite } from "pixi.js"
 
 type SpriteInfo = {
     width: number,
@@ -439,8 +439,8 @@ export class RpgComponent<T = any> extends Container {
             for (let component of col) {
                 const instance = this.applyComponent(component)
                 if (instance.onInit) instance.onInit({
-                    width: this.width,
-                    height: this.height
+                    width: this.logic?.width ?? this.width,
+                    height: this.logic?.height ?? this.height
                 })
                 this.getLayoutContainer().addChild(instance)
             }

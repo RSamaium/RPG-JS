@@ -44,7 +44,7 @@ export class RpgShape extends TiledObjectClass {
     */
     positioning?: ShapePositioning = ShapePositioning.Default
     components: any[] = []
-    
+
     constructor(obj: ShapeObject) {
         super()
         Reflect.deleteProperty(obj, 'id')
@@ -73,7 +73,7 @@ export class RpgShape extends TiledObjectClass {
     get hitbox() {
         if (this.fixEvent) {
             this._hitbox.pos.x = this.fixEvent.position.x
-            this._hitbox.pos.y = this.fixEvent.position.y 
+            this._hitbox.pos.y = this.fixEvent.position.y
             switch (this.positioning) {
                 case ShapePositioning.Center:
                     this._hitbox.pos.x -= this._hitbox.w / 2 - this.fixEvent.hitbox.w / 2
@@ -96,7 +96,7 @@ export class RpgShape extends TiledObjectClass {
     * @memberof Shape
     */
     get width(): number {
-        return this.hitbox.w || 0
+        return this.hitbox.w || 0
     }
 
     set width(val: number) {
@@ -111,7 +111,7 @@ export class RpgShape extends TiledObjectClass {
     * @memberof Shape
     */
     get height(): number {
-        return this.hitbox.h || 0
+        return this.hitbox.h || 0
     }
 
     set height(val: number) {
@@ -125,7 +125,7 @@ export class RpgShape extends TiledObjectClass {
     * @memberof Shape
     */
     get x(): number {
-        return this.hitbox.x || this.hitbox.pos.x
+        return this.hitbox.x || this.hitbox.pos.x
     }
 
     set x(val: number) {
@@ -143,7 +143,7 @@ export class RpgShape extends TiledObjectClass {
     * @memberof Shape
     */
     get y(): number {
-        return this.hitbox.y || this.hitbox.pos.y
+        return this.hitbox.y || this.hitbox.pos.y
     }
 
     set y(val: number) {
@@ -191,7 +191,11 @@ export class RpgShape extends TiledObjectClass {
         const color = this.getProperty<string>('color')
         const image = this.getProperty<string>('image')
         if (color) {
-            this.components = [{ id: 'color', value: color }]
+            this.components = [{
+                id: 'shape', value: {
+                    fill: color
+                }
+            }]
             return
         }
         if (image) {
@@ -250,14 +254,14 @@ export class RpgShape extends TiledObjectClass {
         return this.type !== HitType.Box && this.type !== HitType.Circle && this.type !== HitType.Polygon
     }
 
-   /**
-     * Recover the player with the shape. You must have used the `attachShape()` method on the player
-     * 
-     * @title Get Player Owner
-     * @method shape.getPlayerOwner()
-     * @returns {RpgPlayer | undefined}
-     * @memberof Shape
-     */
+    /**
+      * Recover the player with the shape. You must have used the `attachShape()` method on the player
+      * 
+      * @title Get Player Owner
+      * @method shape.getPlayerOwner()
+      * @returns {RpgPlayer | undefined}
+      * @memberof Shape
+      */
     getPlayerOwner(): RpgCommonPlayer | undefined {
         return this.fixEvent
     }
@@ -268,7 +272,7 @@ export class RpgShape extends TiledObjectClass {
      * @param margin 
      * @returns { minX: number, minY: number, maxX: number, maxY: number }
      */
-    getSizeBox(margin: number = 0): { minX: number, minY: number, maxX: number, maxY: number }  {
+    getSizeBox(margin: number = 0): { minX: number, minY: number, maxX: number, maxY: number } {
         if (this.type == HitType.Circle) {
             const radius = this.hitbox.r
             return {

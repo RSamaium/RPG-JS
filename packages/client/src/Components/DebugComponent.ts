@@ -23,7 +23,8 @@ export class DebugComponent extends AbstractComponent<DebugComponentObject, Grap
         const hitbox = object.hitbox
         const { pos, w, h } = hitbox
         this.container.clear()
-        this.container.beginFill(Utils.hexaToNumber(this.color))
+        const { value: color, alpha } = Utils.hexaToNumber(this.color)
+        this.container.beginFill(color, alpha)
         this.container.drawRect(
             0,
             0,
