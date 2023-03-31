@@ -28,7 +28,10 @@ interface ClientBuildConfigOptions {
     side?: 'client' | 'server',
     mode?: 'development' | 'production' | 'test',
     type?: 'mmorpg' | 'rpg',
-    server?: DevOptions
+    server?: DevOptions,
+    plugin?: {
+        entry: string,
+    }
 }
 
 export async function clientBuildConfig(dirname: string, options: ClientBuildConfigOptions = {}) {
@@ -36,13 +39,14 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     const isRpg = options.type === 'rpg'
     const isBuild = options.serveMode === false
     const dirOutputName = isRpg ? 'standalone' : 'client'
+    const plugin = options.plugin
 
     const envType = process.env.RPG_TYPE
     if (envType && !['rpg', 'mmorpg'].includes(envType)) {
         throw new Error('Invalid type. Choice between rpg or mmorpg')
     }
 
-    if (options.mode != 'test') {
+    if (options.mode != 'test' && !plugin) {
         // if index.html is not found, display an error
         try {
             await fs.stat(resolve(dirname, 'index.html'))
@@ -57,10 +61,10 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     process.env.VITE_RPG_TYPE = envType
 
     let plugins: any[] = [
+        rpgjsAssetsLoader(dirOutputName, options.serveMode),
         flagTransform(options),
         (requireTransform as any)(),
         worldTransformPlugin(),
-        rpgjsAssetsLoader(dirOutputName, options.serveMode),
         tsxXmlPlugin(),
         ...(options.plugins || [])
     ]
@@ -238,9 +242,10 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
                     ...outputOptions
                 },
                 input: {
-                    main: !isServer ?
-                        resolve(dirname, 'index.html') :
-                        resolve(dirname, 'src/server.ts')
+                    main: plugin ? plugin.entry :
+                        !isServer ?
+                            resolve(dirname, 'index.html') :
+                            resolve(dirname, 'src/server.ts')
                 },
                 plugins: [
                     !isServer ? nodePolyfills() as any : null

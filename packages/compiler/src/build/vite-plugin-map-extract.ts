@@ -16,13 +16,13 @@ async function processTsxFile(tsxFile: string, output: string) {
 async function processTmxFile(tmxFile: string, output: string) {
     const content = fs.readFileSync(tmxFile, 'utf-8');
     const result = await parseStringPromise(content);
-    
+
     // Copy an image from a given source path to the output directory
     const processImageSource = (source: string) => {
         const imagePath = path.join(path.dirname(tmxFile), source);
         copyImageToOutput(imagePath, output);
     };
-    
+
     // Process image layers
     if (result.map.imagelayer) {
         for (const imagelayer of result.map.imagelayer) {
@@ -53,7 +53,14 @@ function copyImageToOutput(imagePath: string, output: string) {
         fs.mkdirSync(path.dirname(destPath), { recursive: true });
     }
 
-    fs.copyFileSync(imagePath, destPath);
+    try {
+        fs.copyFileSync(imagePath, destPath);
+    }
+    catch (err) {
+        // TODO  - display module
+        console.error(`Error copying image ${imagePath} to ${destPath}: ${err}`);
+        throw err
+    }
 }
 
 // Export the map extract plugin
@@ -61,12 +68,17 @@ export function mapExtractPlugin(output: string = 'client') {
     return {
         name: 'map-extract',
         async buildStart() {
-            const tsxFiles = glob.sync('src/**/*.tsx');
-            const tmxFiles = glob.sync('src/**/*.tmx');
-            for (const tsxFile of tsxFiles) {
+            const getFiles = (ext: string) => {
+                return [
+                    ...glob.sync('src/**/*.' + ext),
+                    ...glob.sync('node_modules/rpgjs-*/*.' + ext),
+                    ...glob.sync('node_modules/@rpgjs/**/*.' + ext)
+                ];
+            }
+            for (const tsxFile of getFiles('tsx')) {
                 await processTsxFile(tsxFile, output);
             }
-            for (const tmxFile of tmxFiles) {
+            for (const tmxFile of getFiles('tmx')) {
                 await processTmxFile(tmxFile, output);
             }
         },

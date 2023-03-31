@@ -19,7 +19,9 @@ export default function vitePluginRequire(opts?: {
 		name: "vite-plugin-require",
 		async transform(code: string, id: string) {
 			let newCode = code;
-			if (fileRegex.test(id) && !id.includes('node_modules')) {
+			// if module name begins by rpgjs- or @rpgjs, so traverse it. Else, ignore node_modules
+			const regex = /^(?!.*node_modules(?:\/|\\)(?!rpgjs-|@rpgjs)).*$/;
+			if (fileRegex.test(id) && regex.test(id)) {
 				const ast = parser.parse(code, {
 					sourceType: "module",
 					plugins: [] as any,

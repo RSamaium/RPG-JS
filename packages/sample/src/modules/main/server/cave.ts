@@ -1,4 +1,7 @@
 import { RpgMap, MapData, EventData, RpgEvent, Move, EventMode, RpgPlayer } from '@rpgjs/server'
+import mymap from 'rpgjs-test'
+
+console.log(mymap)
 
 @EventData({
     name: 'EV-1',
@@ -27,7 +30,7 @@ export class CaveMap extends RpgMap {
 
 @MapData({
     id: 'samplemap',
-    file: require('./tmx/cave.tmx'),
+    file: mymap,
     events: [{
         event: MyEvent,
         x: 32 *20,

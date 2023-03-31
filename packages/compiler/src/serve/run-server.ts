@@ -53,7 +53,7 @@ export async function runServer() {
                         res.code = res.code.replace(/\/@fs\//g, '/')
                     }
                     else {
-                        res.code = res.code.replace(/\/src/g, 'src')
+                       res.code = res.code.replace('__vite_ssr_exports__.default = "/', '__vite_ssr_exports__.default = "')
                     }
                     return res
                 })

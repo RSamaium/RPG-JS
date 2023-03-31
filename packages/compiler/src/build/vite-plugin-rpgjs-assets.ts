@@ -24,7 +24,7 @@ const EXT = ['png', 'jpg', 'jpeg', 'gif', 'mp3', 'ogg', 'wav', 'ttf', 'otf', 'wo
 export function rpgjsAssetsLoader(output: string = 'client', isBuild: boolean = false) {
   return {
     name: 'rpgjs-assets-loader',
-    async buildStart() {
+    /*async buildStart() {
       const nodeModulesPath = 'node_modules';
       const rpgjsPluginFolders = glob.sync(`${nodeModulesPath}/rpgjs-plugin*`);
      // const extensions: string[] = [...EXT, ...(isBuild ? ['tmx'] : [])]
@@ -38,6 +38,18 @@ export function rpgjsAssetsLoader(output: string = 'client', isBuild: boolean = 
             copyFilesWithExtension(assetsPath, destPath, e);
           }
         }
+      }
+    }*/
+
+    enforce: 'pre',
+
+    transform:  async (code, id: string) => {
+      const regex = /^(?!.*node_modules(?:\/|\\)(?!rpgjs-|@rpgjs)).*$/;
+      if (regex.test(id) && id.endsWith('.ts')) {
+        return {
+          code: `import '${id}';\n${code}`,
+          map: null
+        };
       }
     }
   };
