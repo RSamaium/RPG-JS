@@ -113,10 +113,7 @@ export const player: RpgPlayerHooks = {
             //player.setComponentsLeft([])
         }
         if (input == 'action') {
-            const map = player.getCurrentMap()
-            map?.setTile(2*32, 2*32, 'Tile Layer 1', {
-                gid: 5
-            }) 
+            player.callMainMenu()
         }
     },
     async onInShape(player: RpgPlayer, shape: RpgShape) {

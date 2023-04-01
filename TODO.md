@@ -21,4 +21,4 @@ Unit Test
 [X] Bug __RPGJS_MMORPG__ variable
 [X] Verify and fix setTile()
 [X] Verify Components displayed
-[] Verify, read and build RPGJS Plugin
+[X] Verify, read and build RPGJS Plugin
