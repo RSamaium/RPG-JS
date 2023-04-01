@@ -5,13 +5,18 @@ import { Server } from 'socket.io'
 import entryPoint from '../entry-point'
 import PrettyError from 'pretty-error'
 import { ModuleType } from '@rpgjs/common'
+import { RpgServerEngine } from '../server'
 
 type ExpressServerOptions = {
     basePath: string,
     globalConfig?: any,
 }
 
-export function expressServer(modules: ModuleType[], options: ExpressServerOptions) {
+export function expressServer(modules: ModuleType[], options: ExpressServerOptions): Promise<{
+    app: express.Express,
+    server: http.Server,
+    game: RpgServerEngine
+}> {
     return new Promise((resolve, reject) => {
         const dirname = options.basePath
         const PORT = process.env.PORT || 3000

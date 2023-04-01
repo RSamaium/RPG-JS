@@ -56,9 +56,6 @@
 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
 </data>
  </layer>
- <imagelayer id="16" name="Calque d'Images 1">
-  <image source="../../client/assets/sky.png" width="841" height="562"/>
- </imagelayer>
  <layer id="2" name="Tile Layer 2" width="50" height="50">
   <properties>
    <property name="aaa" type="int" value="0"/>

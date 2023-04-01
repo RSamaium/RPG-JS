@@ -78,6 +78,13 @@ export class SceneMap {
         return mapInstance
     }
 
+    updateMap(id: string) {
+        const mapInstance = RpgCommonMap.buffer.get(id)
+        if (mapInstance) {
+            mapInstance.update()
+        }
+    }
+
     // TODO
     removeMap(id: string) {
         //const mapInstance = RpgCommonMap.buffer.get(id)

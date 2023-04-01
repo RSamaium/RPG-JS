@@ -4,12 +4,12 @@ import { RpgPlayer } from './Player/Player'
 import { RpgMatchMaker } from './MatchMaker'
 
 interface RpgServerEntryPointOptions {
-     /** 
-     * Represents socket io but you can put something else (which is of the same scheme as socket io)
-     * 
-     * @prop {SocketIO or other} io
-     * @memberof RpgServerEntryPoint
-     * */
+    /** 
+    * Represents socket io but you can put something else (which is of the same scheme as socket io)
+    * 
+    * @prop {SocketIO or other} io
+    * @memberof RpgServerEntryPoint
+    * */
     io: any,
     /** 
      * It allows you to know where the maps are located. Usually put `__dirname` for the current directory.
@@ -21,22 +21,22 @@ interface RpgServerEntryPointOptions {
      * @prop {string} basePath
      * @memberof RpgServerEntryPoint
      * */
-     basePath: string
+    basePath: string
 
-     standalone?: boolean
+    standalone?: boolean
 
-      /** 
-     * The general configurations of the game.
-     * 
-     * @prop {object} [globalConfig]
-     * @memberof RpgServerEntryPoint
-     * */
+    /** 
+   * The general configurations of the game.
+   * 
+   * @prop {object} [globalConfig]
+   * @memberof RpgServerEntryPoint
+   * */
     globalConfig?: any
 
     workers?: any
 }
 
-export default async function(modules: ModuleType[], options: RpgServerEntryPointOptions): Promise<RpgServerEngine> {
+export default async function (modules: ModuleType[], options: RpgServerEntryPointOptions): Promise<RpgServerEngine> {
     const gameEngine = new RpgCommonGame(GameSide.Server)
 
     if (!options.globalConfig) options.globalConfig = {}
@@ -81,7 +81,7 @@ export default async function(modules: ModuleType[], options: RpgServerEntryPoin
             mod.scalability._hooks = {}
             for (let hookName in hooks) {
                 let originalHook = mod.scalability.hooks[hookName]
-                mod.scalability._hooks[hookName] = function(player: RpgPlayer) {
+                mod.scalability._hooks[hookName] = function (player: RpgPlayer) {
                     return originalHook(stateStore, matchMakerInstance, player)
                 }
             }
@@ -89,11 +89,11 @@ export default async function(modules: ModuleType[], options: RpgServerEntryPoin
         return mod
     })
 
-    const serverEngine = new RpgServerEngine(options.io, gameEngine, { 
-        debug: {}, 
-        updateRate: 10, 
+    const serverEngine = new RpgServerEngine(options.io, gameEngine, {
+        debug: {},
+        updateRate: 10,
         stepRate: 60,
-        timeoutInterval: 0, 
+        timeoutInterval: 0,
         countConnections: false,
         playerProps,
         ...options

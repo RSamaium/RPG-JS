@@ -1,4 +1,4 @@
-import { expressServer } from '@rpgjs/server/lib/express/server' // Todo
+import { expressServer } from '@rpgjs/server/express'
 import modules from './modules'
 import globalConfig from './config/server'
 

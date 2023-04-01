@@ -37,3 +37,12 @@ declare module "mmorpg!*" {
     const value: any;
     export default value;
 }
+
+declare module '@rpgjs/server/express' {
+    import { ModuleType } from '@rpgjs/common'
+    type ExpressServerOptions = {
+        basePath: string,
+        globalConfig?: any,
+    }
+    export function expressServer(modules: ModuleType[], options: ExpressServerOptions): Promise<any>
+}
