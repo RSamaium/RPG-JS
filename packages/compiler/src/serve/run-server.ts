@@ -31,7 +31,8 @@ export async function runServer() {
     // create vite-node server
     const node = new ViteNodeServer(server, {})
 
-    const files = ['./src/server.ts']
+   // const files = ['./src/server']
+   const files = ['virtual-server.ts']
 
     // fixes stacktraces in Errors
     installSourcemapsSupport({

@@ -1,0 +1,14 @@
+title = 'My Game'
+startMap = 'map'
+
+modules = [
+     './main',
+    '@rpgjs/gamepad'
+]
+
+[main.spritesheet]
+    directory = 'characters'
+    schema = 'https://github.com/rpgjs/spritesheet-schema/blob/master/spritesheet.json'
+
+[module.default-gui]
+    apiKey = '$ENV:API_KEY'

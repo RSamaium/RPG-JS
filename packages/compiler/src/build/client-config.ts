@@ -17,6 +17,7 @@ import { tmxTsxMoverPlugin } from './vite-plugin-tmx-tsx-mover.js';
 import { DevOptions } from '../serve/index.js';
 import { codeInjectorPlugin } from './vite-plugin-code-injector.js';
 import { error, ErrorCodes } from '../utils/log.js';
+import configTomlPlugin from './vite-plugin-config.toml.js'
 
 const require = createRequire(import.meta.url);
 
@@ -63,6 +64,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     let plugins: any[] = [
         rpgjsAssetsLoader(dirOutputName, options.serveMode),
         flagTransform(options),
+        configTomlPlugin(), // after flagTransform
         (requireTransform as any)(),
         worldTransformPlugin(),
         tsxXmlPlugin(),
@@ -210,7 +212,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
                 '@': 'src',
                 ...aliasTransform
             },
-            extensions: ['.ts', '.js', '.jsx', '.json', '.vue', '.css', '.scss', '.sass', '.html', 'tmx', 'tsx'],
+            extensions: ['.ts', '.js', '.jsx', '.json', '.vue', '.css', '.scss', '.sass', '.html', 'tmx', 'tsx', '.toml'],
         },
         css: {
             preprocessorOptions: {
