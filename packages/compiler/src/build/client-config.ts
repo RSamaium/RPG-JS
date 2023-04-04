@@ -18,10 +18,11 @@ import { DevOptions } from '../serve/index.js';
 import { codeInjectorPlugin } from './vite-plugin-code-injector.js';
 import { error, ErrorCodes } from '../utils/log.js';
 import configTomlPlugin from './vite-plugin-config.toml.js'
+import { entryPointServer } from './utils.js'
 
 const require = createRequire(import.meta.url);
 
-interface ClientBuildConfigOptions {
+export interface ClientBuildConfigOptions {
     buildEnd?: () => void,
     serveMode?: boolean,
     plugins?: any[],
@@ -64,7 +65,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     let plugins: any[] = [
         rpgjsAssetsLoader(dirOutputName, options.serveMode),
         flagTransform(options),
-        configTomlPlugin(), // after flagTransform
+        configTomlPlugin(options), // after flagTransform
         (requireTransform as any)(),
         worldTransformPlugin(),
         tsxXmlPlugin(),
@@ -247,7 +248,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
                     main: plugin ? plugin.entry :
                         !isServer ?
                             resolve(dirname, 'index.html') :
-                            resolve(dirname, 'src/server.ts')
+                            entryPointServer()
                 },
                 plugins: [
                     !isServer ? nodePolyfills() as any : null

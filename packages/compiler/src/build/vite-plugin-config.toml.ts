@@ -2,15 +2,16 @@ import toml from '@iarna/toml';
 import fs from 'fs';
 import path from 'path';
 import { Plugin } from 'vite';
+import { ClientBuildConfigOptions } from './client-config';
 
 interface Config {
     modules?: string[]
     startMap?: string
 }
 
-const MODULE_NAME = 'modules'
+const MODULE_NAME = 'virtual-modules'
 
-export default function configTomlPlugin(options = {}): Plugin {
+export default function configTomlPlugin(options: ClientBuildConfigOptions = {}): Plugin {
     let config: Config = {}
     let modules: string[] = []
 
@@ -156,21 +157,37 @@ export default function configTomlPlugin(options = {}): Plugin {
         transformIndexHtml: {
             enforce: 'pre',
             transform(html) {
+                // if find src/client.ts, import src/client.ts else mmorpg!virtual-client.ts
+                const clientFile = path.resolve(process.cwd(), 'src', 'client.ts')
+                const importStr = fs.existsSync(clientFile) ? 'mmorpg!./src/client.ts' : 'mmorpg!virtual-client.ts'
+                
+                // if find src/standalone.ts, import src/standalone.ts else mmorpg!virtual-standalone.ts
+                const standaloneFile = path.resolve(process.cwd(), 'src', 'standalone.ts')
+                const importStrStandalone = fs.existsSync(standaloneFile) ? 'rpg!./src/standalone.ts' : 'rpg!virtual-standalone.ts'
+                
                 return html.replace('<head>', `
                 <head>
                 <script type="module">
-                    import 'mmorpg!virtual-client.ts'
-                    import 'rpg!virtual-standalone.ts'
+                    import '${importStr}'
+                    import '${importStrStandalone}'
                 </script>`);
             }
         },
         config() {
-            config = toml.parse(fs.readFileSync(path.resolve(process.cwd(), 'rpg.toml'), 'utf8'));
+            const tomlFile = path.resolve(process.cwd(), 'rpg.toml')
+            const jsonFile = path.resolve(process.cwd(), 'rpg.json')
+            // if file exists
+            if (fs.existsSync(tomlFile)) {
+                config = toml.parse(fs.readFileSync(tomlFile, 'utf8'));
+            }
+            else if (fs.existsSync(jsonFile)) {
+                config = JSON.parse(fs.readFileSync(jsonFile, 'utf8'));
+            }
             if (config.modules) {
                 modules = config.modules;
             }
         },
-        async resolveId(source, importer, options) {
+        async resolveId(source) {
             if (source.endsWith(MODULE_NAME)) {
                 return source;
             }
@@ -179,7 +196,10 @@ export default function configTomlPlugin(options = {}): Plugin {
                     return source
                 }
             }
-            if (source.includes('virtual') && !source.endsWith('virtual-server.ts')) {
+            if (
+                (source.includes('virtual') && (!source.endsWith('virtual-server.ts') && options.serveMode)) ||
+                (source.includes('virtual') && !options.serveMode)
+            ) {
                 return source;
             }
         },
@@ -206,8 +226,7 @@ export default function configTomlPlugin(options = {}): Plugin {
 
                 document.addEventListener('DOMContentLoaded', function(e) { 
                     entryPoint(modules, { 
-                        io,
-                        maxFps: 60
+                        io
                     }).start()
                 });
               `;

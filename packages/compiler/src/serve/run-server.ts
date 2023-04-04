@@ -5,6 +5,7 @@ import { createHotContext, handleMessage, viteNodeHmrPlugin } from 'vite-node/hm
 import { installSourcemapsSupport } from 'vite-node/source-map'
 import { clientBuildConfig } from "../build/client-config.js"
 import path from 'path'
+import { entryPointServer } from "../build/utils.js"
 
 export async function runServer() {
 
@@ -31,8 +32,7 @@ export async function runServer() {
     // create vite-node server
     const node = new ViteNodeServer(server, {})
 
-   // const files = ['./src/server']
-   const files = ['virtual-server.ts']
+   const files = [entryPointServer()]
 
     // fixes stacktraces in Errors
     installSourcemapsSupport({
