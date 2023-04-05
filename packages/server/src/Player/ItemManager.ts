@@ -1,5 +1,5 @@
 import { Utils }  from '@rpgjs/common'
-import { Effect } from '@rpgjs/database'
+import { Effect, ItemOptions } from '@rpgjs/database'
 import { ItemLog } from '../logs'
 import { ItemModel } from '../models/Item'
 import { EffectManager } from './EffectManager'
@@ -93,13 +93,14 @@ export class ItemManager {
      * player.addItem(Potion, 5)
      *  ```
      */
-    addItem(itemClass: ItemClass, nb: number = 1): Inventory {
+    addItem(itemClass: ItemClass | string, nb: number = 1): Inventory {
+        if (isString(itemClass)) itemClass = this.databaseById(itemClass)
         let itemIndex: number = this._getItemIndex(itemClass)
         if (itemIndex != -1) {
             this.items[itemIndex].nb += nb
         }
         else {
-            const instance = new itemClass()
+            const instance = new (itemClass as ItemClass)()
             this.items.push({
                 item: instance,
                 nb

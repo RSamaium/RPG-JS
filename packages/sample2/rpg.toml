@@ -1,14 +1,16 @@
 title = 'My Game'
-startMap = 'map'
+startMap = './main/maps/map'
 
 modules = [
      './main',
-    '@rpgjs/gamepad'
+    '@rpgjs/gamepad',
+    '@rpgjs/title-screen'
 ]
 
-[main.spritesheet]
-    directory = 'characters'
-    schema = 'https://github.com/rpgjs/spritesheet-schema/blob/master/spritesheet.json'
+[controls]
+    [controls.up]
+        repeat = true
+        bind = 'up'
 
-[module.default-gui]
-    apiKey = '$ENV:API_KEY'
+mongoDb = 'mongodb://localhost:27017/test'
+    

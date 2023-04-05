@@ -1,5 +1,6 @@
 import { splitVendorChunkPlugin } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import toml from '@iarna/toml';
 import nodePolyfills from 'rollup-plugin-node-polyfills'
 import { NodeModulesPolyfillPlugin } from '@esbuild-plugins/node-modules-polyfill'
 import { resolve } from 'path'
@@ -8,6 +9,7 @@ import { flagTransform } from './vite-plugin-flag-transform.js';
 import vue from '@vitejs/plugin-vue'
 import { worldTransformPlugin } from './vite-plugin-world-transform.js';
 import fs from 'fs/promises'
+import _fs from 'fs'
 import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill';
 import { createRequire } from 'module';
 import { mapExtractPlugin } from './vite-plugin-map-extract.js';
@@ -19,8 +21,24 @@ import { codeInjectorPlugin } from './vite-plugin-code-injector.js';
 import { error, ErrorCodes } from '../utils/log.js';
 import configTomlPlugin from './vite-plugin-config.toml.js'
 import { entryPointServer } from './utils.js'
+import cssPlugin from './vite-plugin-css.js';
 
 const require = createRequire(import.meta.url);
+
+export interface Config {
+    modules?: string[]
+    startMap?: string
+    name?: string
+    shortName?: string,
+    description?: string,
+    themeColor?: string,
+    icons?: {
+        src: string,
+        sizes: string,
+        type: string
+    }[]
+    themeCss?: string
+}
 
 export interface ClientBuildConfigOptions {
     buildEnd?: () => void,
@@ -42,10 +60,21 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     const isBuild = options.serveMode === false
     const dirOutputName = isRpg ? 'standalone' : 'client'
     const plugin = options.plugin
+    let config: Config = {}
 
     const envType = process.env.RPG_TYPE
     if (envType && !['rpg', 'mmorpg'].includes(envType)) {
         throw new Error('Invalid type. Choice between rpg or mmorpg')
+    }
+
+    const tomlFile = resolve(process.cwd(), 'rpg.toml')
+    const jsonFile = resolve(process.cwd(), 'rpg.json')
+    // if file exists
+    if (_fs.existsSync(tomlFile)) {
+        config = toml.parse(await fs.readFile(tomlFile, 'utf8'));
+    }
+    else if (_fs.existsSync(jsonFile)) {
+        config = JSON.parse(await fs.readFile(jsonFile, 'utf8'));
     }
 
     if (options.mode != 'test' && !plugin) {
@@ -65,7 +94,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     let plugins: any[] = [
         rpgjsAssetsLoader(dirOutputName, options.serveMode),
         flagTransform(options),
-        configTomlPlugin(options), // after flagTransform
+        configTomlPlugin(options, config), // after flagTransform
         (requireTransform as any)(),
         worldTransformPlugin(),
         tsxXmlPlugin(),
@@ -76,7 +105,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         plugins = [
             ...plugins,
             vue(),
-            //VitePWA(),
+            cssPlugin(config),
             codeInjectorPlugin(),
             NodeModulesPolyfillPlugin(),
             NodeGlobalsPolyfillPlugin({
@@ -85,6 +114,19 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
             }),
             splitVendorChunkPlugin(),
         ]
+        if (isBuild) {
+            plugins.push(
+                VitePWA({
+                    manifest: {
+                        name: config.name,
+                        short_name: config.shortName,
+                        description: config.description,
+                        theme_color: config.themeColor,
+                        icons: config.icons
+                    }
+                })
+            )
+        }
     }
 
     if (isBuild) {
@@ -214,13 +256,6 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
                 ...aliasTransform
             },
             extensions: ['.ts', '.js', '.jsx', '.json', '.vue', '.css', '.scss', '.sass', '.html', 'tmx', 'tsx', '.toml'],
-        },
-        css: {
-            preprocessorOptions: {
-                scss: {
-                    additionalData: `@import '@/config/client/theme.scss';`
-                }
-            }
         },
         assetsInclude: ['**/*.tmx', '**/*.tsx'],
         server: options.server,

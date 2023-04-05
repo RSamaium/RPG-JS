@@ -8,6 +8,7 @@ import { Armor } from './armor'
 import { Enemy } from './enemy'
 import { Effect } from './effect'
 import { Efficiency } from './interfaces/efficiency';
+import { DatabaseTypes } from './interfaces/types';
 
 export { 
     Item, ItemOptions,
@@ -19,5 +20,6 @@ export {
     Weapon,
     Armor,
     Enemy,
-    Efficiency
+    Efficiency,
+    DatabaseTypes
 }

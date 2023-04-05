@@ -1,3 +1,5 @@
+import { DatabaseTypes } from "./interfaces/types"
+
 export interface Data {
      /** 
      * The id of the item. The identifier makes it possible to find an object in the database. By default, the identifier is the name of the class
@@ -40,7 +42,7 @@ export interface Data {
     description?: string
 }
 
-export function merge(options, type, _static = {}) {
+export function merge(options, type: DatabaseTypes, _static = {}) {
     
     const transformToRate = (optionName: string, propName: string) => {
         if (options[optionName]) {

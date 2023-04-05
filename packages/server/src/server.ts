@@ -6,6 +6,7 @@ import { World, WorldClass } from 'simple-room'
 import { Utils, RpgPlugin, Scheduler, HookServer, RpgCommonGame } from '@rpgjs/common'
 import { Observable } from 'rxjs';
 import { Tick } from '@rpgjs/types';
+import { Actor, Armor, Class, DatabaseTypes, Item, Skill, State, Weapon } from '@rpgjs/database';
 
 export class RpgServerEngine {
 
@@ -116,10 +117,21 @@ export class RpgServerEngine {
     /**
      * Adds data to the server's database (in RAM) for later use
      * 
+     * 
      * @method server.addInDatabase(id,data)
      * @title Add in database
      * @param {number} id resource id
-     * @param {class} dataClass A class representing the data
+     * @param {class | object} dataClass A class representing the data. You can just add a object if you specify the type
+     * @enum {string} [type] The type of data
+     * 
+     * item
+     * weapon
+     * armor
+     * skill
+     * class
+     * state
+     * actor
+     * 
      * @since 3.0.0-beta.4
      * @example
      * ```ts
@@ -131,11 +143,56 @@ export class RpgServerEngine {
      * 
      * server.addInDatabase('dynamic_item', MyItem)
      * ```
+     * 
+     * or with an object
+     * 
+     * ```ts
+     * server.addInDatabase('dynamic_item', {
+     *      name: 'Potion',
+     *      description: 'Gives 100 HP',
+     * }, 'item')
+     * 
      * @returns {void}
      * @memberof RpgServerEngine
      */
-    addInDatabase(id: string, dataClass: any) {
-        this.database[id] = dataClass
+    addInDatabase(id: string, dataClass: any, type?: DatabaseTypes) {
+        if (Utils.isClass(dataClass)) {
+            this.database[id] = dataClass
+            return
+        }
+        if (!type) {
+            throw new Error(`You must specify a type for the database ${id}`)
+        }
+        switch (type) {
+            case 'item':
+                @Item(dataClass) class ItemClass {}
+                this.database[id] = ItemClass
+                break;
+            case 'weapon':
+                @Weapon(dataClass) class WeaponClass {}
+                this.database[id] = WeaponClass
+                break;
+            case 'armor':
+                @Armor(dataClass) class ArmorClass {}
+                this.database[id] = ArmorClass
+                break;
+            case 'skill':
+                @Skill(dataClass) class SkillClass {}
+                this.database[id] = SkillClass
+                break;
+            case 'class':
+                @Class(dataClass) class ClassClass {}
+                this.database[id] = ClassClass
+                break;
+            case 'state':
+                @State(dataClass) class StateClass {}
+                this.database[id] = StateClass
+                break;
+            case 'actor':
+                @Actor(dataClass) class ActorClass {}
+                this.database[id] = ActorClass
+                break;
+        }
     }
 
     /**

@@ -1,24 +1,41 @@
-import toml from '@iarna/toml';
 import fs from 'fs';
 import path from 'path';
 import { Plugin } from 'vite';
-import { ClientBuildConfigOptions } from './client-config';
-
-interface Config {
-    modules?: string[]
-    startMap?: string
-}
+import { ClientBuildConfigOptions, Config } from './client-config';
 
 const MODULE_NAME = 'virtual-modules'
+const GLOBAL_CONFIG_CLIENT = 'virtual-config-client'
+const GLOBAL_CONFIG_SERVER = 'virtual-config-server'
 
-export default function configTomlPlugin(options: ClientBuildConfigOptions = {}): Plugin {
-    let config: Config = {}
+export default function configTomlPlugin(options: ClientBuildConfigOptions = {}, config: Config): Plugin {
     let modules: string[] = []
+
+    if (config.modules) {
+        modules = config.modules;
+    }
 
     function formatVariableName(packageName: string): string {
         packageName = packageName.replace('.', '')
         return packageName.replace(/[.@\/ -]/g, '_');
     }
+
+    function getAllFiles(dirPath: string): string[] {
+        const files: string[] = [];
+      
+        const dirents = fs.readdirSync(dirPath, { withFileTypes: true });
+      
+        for (const dirent of dirents) {
+          const fullPath = path.join(dirPath, dirent.name);
+          if (dirent.isDirectory()) {
+            const nestedFiles = getAllFiles(fullPath);
+            files.push(...nestedFiles);
+          } else {
+            files.push(fullPath);
+          }
+        }
+      
+        return files;
+      }
 
     function searchFolderAndTransformToImportString(
         folderPath: string,
@@ -30,8 +47,10 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {})
         variablesString: string
     } {
         let importString = ''
-        if (fs.existsSync(path.resolve(process.cwd(), modulePath, folderPath))) {
-            const files = fs.readdirSync(path.resolve(process.cwd(), modulePath, folderPath))
+        const folder = path.resolve(modulePath, folderPath)
+        if (fs.existsSync(folder)) {
+            // read recursive folder and get all the files (flat array)
+            const files = getAllFiles(folder)
             return {
                 variablesString: files
                     .filter(file => {
@@ -43,9 +62,10 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {})
                         }
                     })
                     .map(file => {
-                        const variableName = formatVariableName(modulePath + ' ' + file)
-                        importString = importString + `\nimport ${variableName} from '${modulePath}/${folderPath}/${file}'`
-                        return returnCb ? returnCb(file, variableName) : variableName
+                        const relativePath = file.replace(process.cwd(), '.')
+                        const variableName = formatVariableName(relativePath)
+                        importString = importString + `\nimport ${variableName} from '${relativePath}'`
+                        return returnCb ? returnCb(relativePath, variableName) : variableName
                     }).join(','),
                 importString
             }
@@ -56,13 +76,18 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {})
         }
     }
 
-    function loadServerFiles(modulePath: string) {
-        // if player.ts file exists in the module path
-        const playerFile = path.resolve(process.cwd(), modulePath, 'player.ts')
+    function importString(modulePath: string, fileName: string, variableName?: string) {
+        const playerFile = path.resolve(process.cwd(), modulePath, fileName + '.ts')
         let importString = ''
         if (fs.existsSync(playerFile)) {
-            importString = `import player from '${modulePath}/player.ts'`
+            importString = `import ${variableName || fileName} from '${modulePath}/${fileName}.ts'`
         }
+        return importString
+    }
+
+    function loadServerFiles(modulePath: string) {
+        const importPlayer = importString(modulePath, 'player')
+        const importEngine = importString(modulePath, 'engine')
 
         // read maps folder and get all the map files
 
@@ -75,10 +100,16 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {})
             `
         })
 
+        const worldFilesString = searchFolderAndTransformToImportString('worlds', modulePath, '.world')
+        const databaseFilesString = searchFolderAndTransformToImportString('database', modulePath, '.ts')
+       
         return `
             import { RpgServer, RpgModule } from '@rpgjs/server'
             ${mapFilesString?.importString}
-            ${importString ? importString : 'const player = {}'}
+            ${worldFilesString?.importString}
+            ${importPlayer ? importPlayer : 'const player = {}'}
+            ${databaseFilesString?.importString}
+            ${importEngine}
             
             ${config.startMap ? `
                 const _lastConnectedCb = player.onConnected
@@ -89,38 +120,34 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {})
             ` : ''}
             @RpgModule<RpgServer>({ 
                 player,
-                database: {},
+                ${importEngine ? 'engine,' : ''}
+                database: [${databaseFilesString?.variablesString}],
                 maps: [${mapFilesString?.variablesString}],
-                worldMaps: [] 
+                worldMaps: [${worldFilesString?.variablesString}] 
             })
             export default class RpgServerModuleEngine {} 
         `
     }
 
     function loadClientFiles(modulePath: string) {
-        const playerFile = path.resolve(process.cwd(), modulePath, 'sprite.ts')
-        let importString = ''
-        let importSceneMapString = ''
-        if (fs.existsSync(playerFile)) {
-            importString = `import sprite from '${modulePath}/sprite.ts'`
-        }
-        if (fs.existsSync(path.resolve(process.cwd(), modulePath, 'scene-map.ts'))) {
-            importSceneMapString = `import sceneMap from '${modulePath}/scene-map.ts'`
-        }
+        const importSceneMapString = importString(modulePath, 'scene-map', 'sceneMap')
+        const importSpriteString = importString(modulePath, 'sprite')
+        const importEngine = importString(modulePath, 'engine')
 
         const guiFilesString = searchFolderAndTransformToImportString('gui', modulePath, '.vue')
-        const soundFilesString = searchFolderAndTransformToImportString('sounds', modulePath, ['.mp3', '.ogg']])
+        const soundFilesString = searchFolderAndTransformToImportString('sounds', modulePath, ['.mp3', '.ogg'])
 
         return `
             import { RpgClient, RpgModule } from '@rpgjs/client'
-            ${importString}
+            ${importSpriteString}
             ${importSceneMapString}
             ${guiFilesString?.importString}
             ${soundFilesString?.importString}
             
             @RpgModule<RpgClient>({ 
                 spritesheets: [],
-                sprite: ${importString ? 'sprite' : '{}'},
+                sprite: ${importSpriteString ? 'sprite' : '{}'},
+                ${importEngine ? 'engine,' : ''}
                 scenes: {
                     ${importSceneMapString ? 'map: sceneMap' : ''}
                 },
@@ -173,21 +200,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {})
                 </script>`);
             }
         },
-        config() {
-            const tomlFile = path.resolve(process.cwd(), 'rpg.toml')
-            const jsonFile = path.resolve(process.cwd(), 'rpg.json')
-            // if file exists
-            if (fs.existsSync(tomlFile)) {
-                config = toml.parse(fs.readFileSync(tomlFile, 'utf8'));
-            }
-            else if (fs.existsSync(jsonFile)) {
-                config = JSON.parse(fs.readFileSync(jsonFile, 'utf8'));
-            }
-            if (config.modules) {
-                modules = config.modules;
-            }
-        },
-        async resolveId(source) {
+        async resolveId(source: string) {
             if (source.endsWith(MODULE_NAME)) {
                 return source;
             }
@@ -223,6 +236,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {})
                 import { entryPoint } from '@rpgjs/client'
                 import io from 'socket.io-client'
                 import modules from './${MODULE_NAME}'
+                import globalConfig from './${GLOBAL_CONFIG_CLIENT}'
 
                 document.addEventListener('DOMContentLoaded', function(e) { 
                     entryPoint(modules, { 
@@ -235,10 +249,14 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {})
             else if (id.endsWith('virtual-standalone.ts?rpg')) {
                 const codeToTransform = `
                 import { entryPoint } from '@rpgjs/standalone'
+                import globalConfigClient from './${GLOBAL_CONFIG_CLIENT}'
+                import globalConfigServer from './${GLOBAL_CONFIG_SERVER}'
                 import modules from './${MODULE_NAME}'
 
                 document.addEventListener('DOMContentLoaded', function() { 
-                    entryPoint(modules, { 
+                    entryPoint(modules, {
+                        globalConfigClient,
+                        globalConfigServer
                     }).start() 
                 })
               `;
@@ -248,12 +266,30 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {})
                 const codeToTransform = `
                 import { expressServer } from '@rpgjs/server/express'
                 import modules from './${MODULE_NAME}'
+                import globalConfig from './${GLOBAL_CONFIG_SERVER}'
 
                 expressServer(modules, {
+                    globalConfig,
                     basePath: __dirname
                 })
               `;
                 return codeToTransform
+            }
+            else if (id.endsWith(GLOBAL_CONFIG_CLIENT)) {
+                return `
+                    export default {}
+                `
+            }
+            else if (id.endsWith(GLOBAL_CONFIG_SERVER)) {
+                return `
+                    export default {}
+                `
+            }
+            else if (id.endsWith('theme.scss')) {
+                console.log(id)
+                return `
+                   
+                `
             }
 
             for (let module of modules) {
