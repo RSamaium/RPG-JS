@@ -3,7 +3,9 @@ import { clientBuildConfig } from '../build/client-config.js'
 import { runServer } from './run-server.js'
 import portfinder from 'portfinder'
 import colors from 'picocolors'
+import { handleMessage } from 'vite-node/hmr'
 import Joi from 'joi'
+import path from 'path'
 
 export interface DevOptions {
     host?: string;
@@ -21,6 +23,19 @@ export async function devMode(options: DevOptions = {}) {
     const colorUrl = (url: string) =>
         colors.cyan(url.replace(/:(\d+)\//, (_, port) => `:${colors.bold(port)}/`))
 
+    async function restartViteServer(server, close?: () => Promise<void>) {
+        server.watcher.add(path.resolve(process.cwd(), 'rpg.toml'))
+
+        server.watcher.on('change', async (file: string) => {
+            if (file.endsWith('rpg.toml')) {
+                console.log(`  ${colors.green('➜')}  ${colors.bold('rpg.toml changed. Restarting')} server...`)
+                await server.close()
+                if (close) await close()
+                //await devMode(options)
+            }
+        });
+    }
+
     if (isRpg) {
         const config = await clientBuildConfig(cwd, {
             type: 'rpg',
@@ -37,16 +52,23 @@ export async function devMode(options: DevOptions = {}) {
         await server.listen()
         console.log(`  ${colors.green('➜')}  ${colors.bold('Mode')}:    ${colorUrl('RPG')}`)
         server.printUrls()
+        restartViteServer(server)
         return
     }
 
     let server
 
     const buildEnd = async () => {
-        await runServer()
+        const { runner, server: serverSide, files } = await runServer()
         console.log(`  ${colors.green('➜')}  ${colors.bold('Mode')}:    ${colorUrl('MMORPG')}`)
         server.printUrls()
         console.log(`  ${colors.dim('➜')}  ${colors.dim('Server')}:  ${colors.dim(`http://localhost:${serverPort}/`)}`)
+        restartViteServer(server, async () => {
+            await handleMessage(runner, serverSide.emitter, files, {
+                type: 'full-reload',
+            })
+            await serverSide.close()
+        })
     }
     const serverPort = await portfinder.getPortPromise()
     process.env.VITE_SERVER_URL = 'localhost:' + serverPort

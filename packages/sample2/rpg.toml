@@ -4,13 +4,13 @@ startMap = './main/maps/map'
 modules = [
      './main',
     '@rpgjs/gamepad',
-    '@rpgjs/title-screen'
+    '@rpgjs/default-gui'
 ]
 
-[controls]
-    [controls.up]
-        repeat = true
-        bind = 'up'
+[inputs]
+    [inputs.action]
+        repeat = false
+        bind = 'up' 
 
 mongoDb = 'mongodb://localhost:27017/test'
     

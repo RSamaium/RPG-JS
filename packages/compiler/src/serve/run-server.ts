@@ -75,4 +75,6 @@ export async function runServer() {
     server.emitter?.on('message', (payload) => {
         handleMessage(runner, server.emitter, files, payload)
     })
+
+    return { server, node, runner, files }
 }

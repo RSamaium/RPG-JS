@@ -3,7 +3,7 @@ import { RpgPlayer } from './Player/Player'
 import { Query } from './Query'
 import { DAMAGE_SKILL, DAMAGE_PHYSIC, DAMAGE_CRITICAL, COEFFICIENT_ELEMENTS } from './presets'
 import { World, WorldClass } from 'simple-room'
-import { Utils, RpgPlugin, Scheduler, HookServer, RpgCommonGame } from '@rpgjs/common'
+import { Utils, RpgPlugin, Scheduler, HookServer, RpgCommonGame, DefaultInput } from '@rpgjs/common'
 import { Observable } from 'rxjs';
 import { Tick } from '@rpgjs/types';
 import { Actor, Armor, Class, DatabaseTypes, Item, Skill, State, Weapon } from '@rpgjs/database';
@@ -49,7 +49,7 @@ export class RpgServerEngine {
 
     private scenes: Map<string, any> = new Map()
     protected totalConnected: number = 0
-    private scheduler: Scheduler =  new Scheduler()
+    private scheduler: Scheduler = new Scheduler()
     private playerProps: any
 
     world: WorldClass = World
@@ -94,6 +94,11 @@ export class RpgServerEngine {
             ...Utils.arrayFlat(await RpgPlugin.emit(HookServer.AddWorldMaps, this.inputOptions.worldMaps)) || [],
             ...this.inputOptions.worldMaps
         ]
+
+        this.globalConfig.inputs = {
+            ...DefaultInput,
+            ...(this.globalConfig.inputs || {})
+        }
 
         if (!this.inputOptions.database) this.inputOptions.database = {}
 
@@ -165,31 +170,31 @@ export class RpgServerEngine {
         }
         switch (type) {
             case 'item':
-                @Item(dataClass) class ItemClass {}
+                @Item(dataClass) class ItemClass { }
                 this.database[id] = ItemClass
                 break;
             case 'weapon':
-                @Weapon(dataClass) class WeaponClass {}
+                @Weapon(dataClass) class WeaponClass { }
                 this.database[id] = WeaponClass
                 break;
             case 'armor':
-                @Armor(dataClass) class ArmorClass {}
+                @Armor(dataClass) class ArmorClass { }
                 this.database[id] = ArmorClass
                 break;
             case 'skill':
-                @Skill(dataClass) class SkillClass {}
+                @Skill(dataClass) class SkillClass { }
                 this.database[id] = SkillClass
                 break;
             case 'class':
-                @Class(dataClass) class ClassClass {}
+                @Class(dataClass) class ClassClass { }
                 this.database[id] = ClassClass
                 break;
             case 'state':
-                @State(dataClass) class StateClass {}
+                @State(dataClass) class StateClass { }
                 this.database[id] = StateClass
                 break;
             case 'actor':
-                @Actor(dataClass) class ActorClass {}
+                @Actor(dataClass) class ActorClass { }
                 this.database[id] = ActorClass
                 break;
         }

@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { Plugin } from 'vite';
+import { createServer, Plugin } from 'vite';
 import { ClientBuildConfigOptions, Config } from './client-config';
 
 const MODULE_NAME = 'virtual-modules'
@@ -21,21 +21,21 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
 
     function getAllFiles(dirPath: string): string[] {
         const files: string[] = [];
-      
+
         const dirents = fs.readdirSync(dirPath, { withFileTypes: true });
-      
+
         for (const dirent of dirents) {
-          const fullPath = path.join(dirPath, dirent.name);
-          if (dirent.isDirectory()) {
-            const nestedFiles = getAllFiles(fullPath);
-            files.push(...nestedFiles);
-          } else {
-            files.push(fullPath);
-          }
+            const fullPath = path.join(dirPath, dirent.name);
+            if (dirent.isDirectory()) {
+                const nestedFiles = getAllFiles(fullPath);
+                files.push(...nestedFiles);
+            } else {
+                files.push(fullPath);
+            }
         }
-      
+
         return files;
-      }
+    }
 
     function searchFolderAndTransformToImportString(
         folderPath: string,
@@ -102,7 +102,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
 
         const worldFilesString = searchFolderAndTransformToImportString('worlds', modulePath, '.world')
         const databaseFilesString = searchFolderAndTransformToImportString('database', modulePath, '.ts')
-       
+
         return `
             import { RpgServer, RpgModule } from '@rpgjs/server'
             ${mapFilesString?.importString}
@@ -179,6 +179,25 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
         `
     }
 
+    function createConfigFiles(id: string): string | null {
+        const inputsString = config.inputs ? `inputs: ${JSON.stringify(config.inputs)},` : ''
+        if (id.endsWith(GLOBAL_CONFIG_SERVER)) {
+            return `
+                export default {
+                    ${inputsString}
+                }
+            `
+        }
+        if (id.endsWith(GLOBAL_CONFIG_CLIENT)) {
+            return `
+                export default {
+                    ${inputsString}
+                }
+            `
+        }
+        return null
+    }
+
     return {
         name: 'vite-plugin-config-toml',
         transformIndexHtml: {
@@ -187,11 +206,11 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
                 // if find src/client.ts, import src/client.ts else mmorpg!virtual-client.ts
                 const clientFile = path.resolve(process.cwd(), 'src', 'client.ts')
                 const importStr = fs.existsSync(clientFile) ? 'mmorpg!./src/client.ts' : 'mmorpg!virtual-client.ts'
-                
+
                 // if find src/standalone.ts, import src/standalone.ts else mmorpg!virtual-standalone.ts
                 const standaloneFile = path.resolve(process.cwd(), 'src', 'standalone.ts')
                 const importStrStandalone = fs.existsSync(standaloneFile) ? 'rpg!./src/standalone.ts' : 'rpg!virtual-standalone.ts'
-                
+
                 return html.replace('<head>', `
                 <head>
                 <script type="module">
@@ -201,7 +220,10 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
             }
         },
         async resolveId(source: string) {
-            if (source.endsWith(MODULE_NAME)) {
+            if (source.endsWith(MODULE_NAME) ||
+                source.endsWith(GLOBAL_CONFIG_CLIENT) ||
+                source.endsWith(GLOBAL_CONFIG_SERVER)
+            ) {
                 return source;
             }
             for (let module of modules) {
@@ -240,7 +262,8 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
 
                 document.addEventListener('DOMContentLoaded', function(e) { 
                     entryPoint(modules, { 
-                        io
+                        io,
+                        globalConfig
                     }).start()
                 });
               `;
@@ -275,22 +298,9 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
               `;
                 return codeToTransform
             }
-            else if (id.endsWith(GLOBAL_CONFIG_CLIENT)) {
-                return `
-                    export default {}
-                `
-            }
-            else if (id.endsWith(GLOBAL_CONFIG_SERVER)) {
-                return `
-                    export default {}
-                `
-            }
-            else if (id.endsWith('theme.scss')) {
-                console.log(id)
-                return `
-                   
-                `
-            }
+
+            const str = createConfigFiles(id)
+            if (str) return str
 
             for (let module of modules) {
                 let moduleName = module.replace(/^\./, '')

@@ -1,4 +1,4 @@
-import { Direction, Input, Utils } from '@rpgjs/common'
+import { DefaultInput, Direction, Input, Utils } from '@rpgjs/common'
 import { ControlOptions, Controls } from '@rpgjs/types';
 import { RpgClientEngine } from './RpgClientEngine';
 
@@ -207,7 +207,15 @@ export class KeyboardControls {
     constructor(private clientEngine: RpgClientEngine) {
         const { globalConfig } = clientEngine
         this.setupListeners();
-        if (globalConfig.inputs) this.setInputs(globalConfig.inputs)
+        this.setInputs({
+            ...DefaultInput,
+            ...(globalConfig.inputs || {})
+        })
+
+        console.log({
+            ...DefaultInput,
+            ...(globalConfig.inputs || {})
+        })
     }
 
     /** @internal */

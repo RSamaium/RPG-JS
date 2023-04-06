@@ -13,6 +13,8 @@ const DEFAULT_THEME = `
     $window-font-family: 'Arial';
     $cursor-background: #7782ab;
     $cursor-border: 1px solid #9db0c6;
+
+    @mixin window-content {}
 `
 
 export default function cssPlugin(config: Config): Plugin {

@@ -38,6 +38,7 @@ export interface Config {
         type: string
     }[]
     themeCss?: string
+    inputs?: any
 }
 
 export interface ClientBuildConfigOptions {

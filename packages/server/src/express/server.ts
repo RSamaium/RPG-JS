@@ -69,6 +69,7 @@ export function expressServer(modules: ModuleType[], options: ExpressServerOptio
 
         if (import.meta['hot']) {
             import.meta['hot'].on("vite:beforeFullReload", () => {
+                console.log('pppp')
                 server.close();
             });
         }

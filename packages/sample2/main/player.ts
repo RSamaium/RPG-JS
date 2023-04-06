@@ -2,7 +2,10 @@ import { RpgPlayerHooks, RpgPlayer } from '@rpgjs/server'
 
 const player: RpgPlayerHooks = {
     onConnected(player: RpgPlayer) {
-       player.addItem('potion', 1)
+       
+    },
+    onInput(player: RpgPlayer, { input }) {
+        if (input == 'action') player.callMainMenu()
     }
 }
 
