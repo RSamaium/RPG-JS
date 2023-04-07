@@ -461,15 +461,30 @@ export class AbstractObject {
             hitbox.h
         )
         let collided = Hit.testPolyCollision(shape.type, hitboxObj, shape.hitbox)
+        const playerPositionSaved = player.position.copy()
+
+        // Position can changed after enter or exit shape. So, we need to verify if position changed and update if z is changed
+        // If X or Y changed, we need to return true, it means that stop the current movement, and apply the new position
+        const verifyIfPositionChanged = (): boolean | undefined => {
+            if (this.position.z != playerPositionSaved.z && nextPosition) {
+                nextPosition.z = this.position.z
+            }
+            if (this.position.x != playerPositionSaved.x || this.position.y != playerPositionSaved.y) {
+                return true
+            }
+        }
+
         if (collided) {
             this._collisionWithShapes.push(shape)
             // TODO: in shape after map load
             if (!collision) await shape.in(this)
+            if (verifyIfPositionChanged() === true) return true
             this.triggerCollisionWith()
             if (collision) return true
         }
         else {
             await shape.out(this)
+            if (verifyIfPositionChanged() === true) return true
         }
 
         return false

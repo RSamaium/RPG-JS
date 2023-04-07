@@ -55,6 +55,12 @@ export class Vector2d {
         this.y === vector.y &&
         this.z === vector.z
     }
+
+    hasDifferentValues(vector: Vector2d): boolean {
+        return this.x !== vector.x || 
+        this.y !== vector.y ||
+        this.z !== vector.z
+    }
 }
 
 export class Vector2dZero extends Vector2d {
