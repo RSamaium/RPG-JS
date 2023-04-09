@@ -1,4 +1,4 @@
-title = 'My Game'
+name = 'My Game'
 startMap = './main/maps/map'
 
 modules = [
@@ -10,7 +10,7 @@ modules = [
 [inputs]
     [inputs.action]
         repeat = true
-        bind = 'down' 
+        bind = 'down'
 
-mongoDb = 'mongodb://localhost:27017/test'
-    
+[titleScreen]
+    mongoDb = 'mongodb://localhost:27017/test'

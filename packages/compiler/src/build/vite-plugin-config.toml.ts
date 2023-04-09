@@ -1,7 +1,10 @@
 import fs from 'fs';
 import path from 'path';
-import { createServer, Plugin } from 'vite';
+import { Plugin } from 'vite';
 import { ClientBuildConfigOptions, Config } from './client-config';
+import { parseJsonSchema } from '../utils/json-schema.js';
+import colors from 'picocolors'
+import defaultConfig from './default-config.js'
 
 const MODULE_NAME = 'virtual-modules'
 const GLOBAL_CONFIG_CLIENT = 'virtual-config-client'
@@ -12,6 +15,68 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
 
     if (config.modules) {
         modules = config.modules;
+    }
+
+    let configClient = {}
+    let configServer = {}
+    let allExtraProps: string[] = []
+
+    const parseSchema = (configFile, moduleName?) => {
+        try {
+            const value = parseJsonSchema(configFile, config as any)
+            if (value.server) {
+                configServer = { ...configServer, ...value.server }
+            }
+            if (value.client) {
+                configClient = { ...configClient, ...value.client }
+            }
+            if (value.extraProps) {
+                allExtraProps = [...allExtraProps, ...value.extraProps]
+            }
+        }
+        catch (err: any) {
+            let message = colors.red(`Invalidate "${moduleName}" module: ${err.message}`)
+            if (!err.missingProperty) {
+                throw err
+            }
+            let helpMessage = `[${err.namespace}]\n  ${err.missingProperty} = YOUR_VALUE`
+            if (!moduleName) {
+                message = colors.red(`Invalidate config: ${err.message}`)
+                helpMessage = `${err.missingProperty} = YOUR_VALUE`
+            }
+            console.log('----------')
+            console.log(message)
+            console.log(`${colors.dim('➜')} ${colors.dim(`you need to put the following configuration in rpg.toml:\n\n${helpMessage}`)}`)
+            console.log('----------')
+        }
+    }
+
+    parseSchema(defaultConfig)
+
+    let namespaces: string[] = []
+    for (let module of modules) {
+        // if module not begins by ., search in node_modules
+        if (module[0] != '.') {
+            module = path.join('node_modules', module)
+        }
+        const configPath = path.resolve(process.cwd(), module, 'config.json')
+        if (fs.existsSync(configPath)) {
+            const configFile: any = fs.readFileSync(configPath, 'utf-8')
+            const jsonFile = JSON.parse(configFile)
+            if (jsonFile.namespace) namespaces.push(jsonFile.namespace)
+            parseSchema(jsonFile, module)
+        }
+    }
+
+    if (options.side == 'server') { // display one time
+        const filterExtraProps = allExtraProps.filter(prop => namespaces.indexOf(prop) == -1)
+
+        if (filterExtraProps.length > 0) {
+            console.log(`${colors.yellow(`⚠️  Warning - In rpg.toml, you put the following properties, but they are not used by the modules. Check the names of the properties.`)}`)
+            for (let extraProp of filterExtraProps) {
+                console.log(`  - ${colors.yellow(extraProp)}`)
+            }
+        }
     }
 
     function formatVariableName(packageName: string): string {
@@ -180,19 +245,14 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
     }
 
     function createConfigFiles(id: string): string | null {
-        const inputsString = config.inputs ? `inputs: ${JSON.stringify(config.inputs)},` : ''
         if (id.endsWith(GLOBAL_CONFIG_SERVER)) {
             return `
-                export default {
-                    ${inputsString}
-                }
+                export default ${JSON.stringify(configServer)}
             `
         }
         if (id.endsWith(GLOBAL_CONFIG_CLIENT)) {
             return `
-                export default {
-                    ${inputsString}
-                }
+                export default ${JSON.stringify(configClient)}
             `
         }
         return null
@@ -245,6 +305,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
                     acc[variableName] = module;
                     return acc;
                 }, {} as Record<string, string>);
+
                 return `
                 ${Object.keys(modulesToImport).map((variableName) => `import ${variableName} from '${modulesToImport[variableName]}'`).join('\n')}
 

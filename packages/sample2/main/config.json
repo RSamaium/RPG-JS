@@ -1,0 +1,16 @@
+{
+    "namespace": "titleScreen",
+    "server": {
+        "type": "object",
+        "properties": {
+            "mongoDb": {
+                "type": "string"
+            }
+        },
+        "required": [
+            "mongoDb"
+        ]
+    },
+    "client": {},
+    "*": {}
+}
