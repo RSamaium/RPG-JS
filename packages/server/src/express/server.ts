@@ -34,7 +34,7 @@ export function expressServer(modules: ModuleType[], options: ExpressServerOptio
         app.use(express.json())
 
         // @ts-ignore
-        const hasStatic = process.env.STATIC_DIRECTORY_ENABLED 
+        const hasStatic = process.env.STATIC_DIRECTORY_ENABLED
         // @ts-ignore
         const staticDirectory = !!import.meta.env.VITE_BUILT ? '' : 'dist'
         // @ts-ignore
@@ -43,7 +43,7 @@ export function expressServer(modules: ModuleType[], options: ExpressServerOptio
         if (staticEnabled) {
             app.use('/', express.static(path.join(dirname, '..', staticDirectory, 'client')))
         }
-    
+
         async function start() {
             const rpgGame = await entryPoint(modules, { io, ...options })
             rpgGame.app = app
@@ -69,8 +69,7 @@ export function expressServer(modules: ModuleType[], options: ExpressServerOptio
 
         if (import.meta['hot']) {
             import.meta['hot'].on("vite:beforeFullReload", () => {
-                console.log('pppp')
-                server.close();
+                server.close()
             });
         }
     })

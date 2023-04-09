@@ -9,8 +9,8 @@ modules = [
 
 [inputs]
     [inputs.action]
-        repeat = false
-        bind = 'up' 
+        repeat = true
+        bind = 'down' 
 
 mongoDb = 'mongodb://localhost:27017/test'
     

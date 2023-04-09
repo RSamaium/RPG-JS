@@ -13,7 +13,6 @@ import _fs from 'fs'
 import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill';
 import { createRequire } from 'module';
 import { mapExtractPlugin } from './vite-plugin-map-extract.js';
-import { rpgjsAssetsLoader } from './vite-plugin-rpgjs-assets.js';
 import { tsxXmlPlugin } from './vite-plugin-tsx-xml.js';
 import { tmxTsxMoverPlugin } from './vite-plugin-tmx-tsx-mover.js';
 import { DevOptions } from '../serve/index.js';
@@ -22,6 +21,7 @@ import { error, ErrorCodes } from '../utils/log.js';
 import configTomlPlugin from './vite-plugin-config.toml.js'
 import { entryPointServer } from './utils.js'
 import cssPlugin from './vite-plugin-css.js';
+import { rpgjsPluginLoader } from './vite-plugin-rpgjs-loader.js';
 
 const require = createRequire(import.meta.url);
 
@@ -93,7 +93,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     process.env.VITE_RPG_TYPE = envType
 
     let plugins: any[] = [
-        rpgjsAssetsLoader(dirOutputName, options.serveMode),
+        rpgjsPluginLoader(dirOutputName, options.serveMode),
         flagTransform(options),
         configTomlPlugin(options, config), // after flagTransform
         (requireTransform as any)(),

@@ -3,7 +3,7 @@ import { clientBuildConfig } from '../build/client-config.js'
 import { runServer } from './run-server.js'
 import portfinder from 'portfinder'
 import colors from 'picocolors'
-import { handleMessage } from 'vite-node/hmr'
+import * as hmr from 'vite-node/hmr'
 import Joi from 'joi'
 import path from 'path'
 
@@ -31,7 +31,7 @@ export async function devMode(options: DevOptions = {}) {
                 console.log(`  ${colors.green('➜')}  ${colors.bold('rpg.toml changed. Restarting')} server...`)
                 await server.close()
                 if (close) await close()
-                //await devMode(options)
+                await devMode(options)
             }
         });
     }
@@ -59,15 +59,15 @@ export async function devMode(options: DevOptions = {}) {
     let server
 
     const buildEnd = async () => {
-        const { runner, server: serverSide, files } = await runServer()
+        const { runner, server: serverSide, files, node } = await runServer()
         console.log(`  ${colors.green('➜')}  ${colors.bold('Mode')}:    ${colorUrl('MMORPG')}`)
         server.printUrls()
         console.log(`  ${colors.dim('➜')}  ${colors.dim('Server')}:  ${colors.dim(`http://localhost:${serverPort}/`)}`)
         restartViteServer(server, async () => {
-            await handleMessage(runner, serverSide.emitter, files, {
+            await hmr.handleMessage(runner, serverSide.emitter, [], {
                 type: 'full-reload',
             })
-            await serverSide.close()
+            serverSide.emitter.removeAllListeners()
         })
     }
     const serverPort = await portfinder.getPortPromise()

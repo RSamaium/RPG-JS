@@ -6,9 +6,9 @@ import { installSourcemapsSupport } from 'vite-node/source-map'
 import { clientBuildConfig } from "../build/client-config.js"
 import path from 'path'
 import { entryPointServer } from "../build/utils.js"
+import { HotContext } from "vite-node/index.js"
 
 export async function runServer() {
-
     const config = await clientBuildConfig(process.cwd(), {
         serveMode: true,
         type: 'mmorpg',
@@ -32,13 +32,13 @@ export async function runServer() {
     // create vite-node server
     const node = new ViteNodeServer(server, {})
 
-   const files = [entryPointServer()]
+    const files = [entryPointServer()]
 
     // fixes stacktraces in Errors
     installSourcemapsSupport({
         getSourceMap: source => node.getSourceMap(source),
     })
-
+    
     // create vite-node runner
     const runner = new ViteNodeRunner({
         root: path.join(server.config.root, '..'),
@@ -54,7 +54,7 @@ export async function runServer() {
                         res.code = res.code.replace(/\/@fs\//g, '/')
                     }
                     else {
-                       res.code = res.code.replace('__vite_ssr_exports__.default = "/', '__vite_ssr_exports__.default = "')
+                        res.code = res.code.replace('__vite_ssr_exports__.default = "/', '__vite_ssr_exports__.default = "')
                     }
                     return res
                 })
