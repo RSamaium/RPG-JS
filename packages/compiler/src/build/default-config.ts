@@ -7,7 +7,40 @@ export default {
             }
         }
     },
-    "client": {},
+    "client": {
+        "type": "object",
+        "properties": {
+            "shortName": {
+                "type": "string"
+            },
+            "description": {
+                "type": "string"
+            },
+            "themeColor": {
+                "type": "string"
+            },
+            "icons": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "src": {
+                            "type": "string"
+                        },
+                        "sizes": {
+                            "type": "string"
+                        },
+                        "type": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "themeCss": {
+                "type": "string"
+            }
+        }
+    },
     "*": {
         "type": "object",
         "properties": {
@@ -25,12 +58,6 @@ export default {
                                 "type": [
                                     "string",
                                     "array"
-                                ],
-                                "enum": [
-                                    "up",
-                                    "down",
-                                    "left",
-                                    "right"
                                 ]
                             },
                             "delay": {
@@ -53,7 +80,6 @@ export default {
                             }
                         },
                         "required": [
-                            "repeat",
                             "bind"
                         ]
                     }

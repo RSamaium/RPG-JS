@@ -211,11 +211,6 @@ export class KeyboardControls {
             ...DefaultInput,
             ...(globalConfig.inputs || {})
         })
-
-        console.log({
-            ...DefaultInput,
-            ...(globalConfig.inputs || {})
-        })
     }
 
     /** @internal */

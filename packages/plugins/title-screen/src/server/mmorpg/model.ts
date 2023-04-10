@@ -1,4 +1,4 @@
-import { Schema, model } from 'mongoose'
+import { Schema, model, models } from 'mongoose'
 import bcryptPlugin from 'mongoose-bcrypt'
 
 const schema = new Schema({ 
@@ -14,4 +14,4 @@ const schema = new Schema({
 
 schema.plugin(bcryptPlugin)
 
-export default model('Player', schema);
+export default models.Player || model('Player', schema);

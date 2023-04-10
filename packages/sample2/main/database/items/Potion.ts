@@ -1,4 +1,3 @@
-import { RpgPlayer } from '@rpgjs/server'
 import { Item } from '@rpgjs/database'
 
 @Item({

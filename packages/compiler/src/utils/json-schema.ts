@@ -47,6 +47,10 @@ export function parseJsonSchema(jsonSchema: JsonSchema, inputData: InputData): P
     return inputData[namespace] || inputData
   }
 
+  function toPathAsObject(instancePath) {
+    return instancePath.replace(/^\//, '').replace(/\//g, '.')
+  }
+
   const validate = (jsonSchema, side: string) => {
     const ajv = new Ajv({ allErrors: true, allowUnionTypes: true });
     addFormats(ajv);
@@ -57,8 +61,11 @@ export function parseJsonSchema(jsonSchema: JsonSchema, inputData: InputData): P
       if (!errors) {
         throw new Error('Unknown error')
       }
-      const error: any = new Error(errors[0].message);
-      error.missingProperty = errors[0].params.missingProperty;
+      const firstError = errors[0];
+      const error: any = new Error(firstError.message);
+      error.namespace = namespace;
+      error.params = firstError.params;
+      error.property = firstError.params.missingProperty ?? toPathAsObject(firstError.instancePath)
       throw error
     }
   }
@@ -139,7 +146,7 @@ export function parseJsonSchema(jsonSchema: JsonSchema, inputData: InputData): P
       const extraProps: string[] = [];
       validate.errors?.forEach((error) => {
         if (error.keyword === "additionalProperties") {
-          const root = error.instancePath.replace(/^\//, '').replace('/', '.')
+          const root = toPathAsObject(error.instancePath)
           const propPath = root + (root ? '.' : '') + error.params?.additionalProperty;
           extraProps.push(propPath);
         }
