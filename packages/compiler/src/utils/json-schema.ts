@@ -43,7 +43,7 @@ export function parseJsonSchema(jsonSchema: JsonSchema, inputData: InputData): P
   let client: any = {};
 
   const namespace = jsonSchema.namespace || '';
-  const getObjectByNamespace = () => {
+  const getObjectByNamespace = (): any => {
     return inputData[namespace] || inputData
   }
 
@@ -77,7 +77,7 @@ export function parseJsonSchema(jsonSchema: JsonSchema, inputData: InputData): P
     catch (e) {
       throw e
     }
-    const object = parseNamespace(inputData, jsonSchema.server.properties);
+    const object = parseNamespace(getObjectByNamespace(), jsonSchema.server.properties);
     if (namespace) {
       server[namespace] = object
     }
@@ -93,7 +93,7 @@ export function parseJsonSchema(jsonSchema: JsonSchema, inputData: InputData): P
     catch (e) {
       throw e
     }
-    const object = parseNamespace(inputData, jsonSchema.client.properties);
+    const object = parseNamespace(getObjectByNamespace(), jsonSchema.client.properties);
     if (namespace) {
       client[namespace] = object
     }
@@ -103,7 +103,7 @@ export function parseJsonSchema(jsonSchema: JsonSchema, inputData: InputData): P
   }
 
   if (jsonSchema['*'] && Object.keys(jsonSchema['*']).length > 0) {
-    const commonData = parseNamespace(inputData, jsonSchema['*'].properties);
+    const commonData = parseNamespace(getObjectByNamespace(), jsonSchema['*'].properties);
     try {
       validate(jsonSchema['*'], 'both');
     }

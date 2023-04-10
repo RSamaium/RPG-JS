@@ -17,7 +17,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
 
     let ret
     try {
-        ret = loadGlobalConfig(modules, config, options.side == 'server')
+        ret = loadGlobalConfig(modules, config, options)
     }
     catch (err) {
         if (options.side == 'server') process.exit()

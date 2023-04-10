@@ -16,4 +16,4 @@ modules = [
         bind = 'up'
 
 [titleScreen]
-    mongoDb = 'mongodb://localhost:27017'
+    mongodb = '$ENV:VITE_MONGO_URI'

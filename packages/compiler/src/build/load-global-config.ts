@@ -3,15 +3,18 @@ import colors from 'picocolors'
 import defaultConfig from './default-config.js'
 import fs from 'fs';
 import path from 'path';
-import { Config } from './client-config';
+import { ClientBuildConfigOptions, Config } from './client-config';
+import { loadEnv } from 'vite';
 
-export function loadGlobalConfig(modules: string[], config: Config, displayError = true): {
+export function loadGlobalConfig(modules: string[], config: Config, options: ClientBuildConfigOptions): {
     configClient: any;
     configServer: any;
 } | false {
     let configClient = {}
     let configServer = {}
     let allExtraProps: string[] = []
+    const displayError = options.side == 'server'
+    const mode = options.mode || 'development'
 
     const parseSchema = (configFile, moduleName?) => {
         try {
@@ -80,8 +83,31 @@ export function loadGlobalConfig(modules: string[], config: Config, displayError
         }
     }
 
+    function replaceEnvVars(obj, envs) {
+        if (obj === null || typeof obj !== 'object') {
+            return obj;
+        }
+
+        if (Array.isArray(obj)) {
+            return obj.map(replaceEnvVars);
+        }
+
+        return Object.entries(obj).reduce((acc, [key, value]) => {
+            if (value !== null && typeof value === 'object') {
+                value = replaceEnvVars(value, envs);
+            } else if (typeof value === 'string' && value.startsWith('$ENV:')) {
+                const envVar = value.slice(5);
+                value = envs[envVar]
+            }
+            acc[key] = value;
+            return acc;
+        }, {});
+    }
+
+    const envs = loadEnv(mode, process.cwd())
+
     return {
-        configClient,
-        configServer
+        configClient: replaceEnvVars(configClient, envs),
+        configServer: replaceEnvVars(configServer, envs)
     }
 }

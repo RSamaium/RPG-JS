@@ -3,12 +3,12 @@
     "server": {
         "type": "object",
         "properties": {
-            "mongoDb": {
+            "mongodb": {
                 "type": "string"
             }
         },
         "required": [
-            "mongoDb"
+            "mongodb"
         ]
     },
     "client": {},

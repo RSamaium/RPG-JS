@@ -49,7 +49,7 @@ RpgPlayer.prototype.save = function(): string {
     engine: {
         onStart(engine: RpgServerEngine) {
             const app = engine.app
-            const { mongodb } = engine.globalConfig
+            const { mongodb } = engine.globalConfig.titleScreen || engine.globalConfig
             if (!mongodb) {
                 mongoLog('Please note that you have not specified the link to mongodb. The connection, uploading and saving will not work')
             }
