@@ -118,6 +118,7 @@ export const player: RpgPlayerHooks = {
     },
     async onInShape(player: RpgPlayer, shape: RpgShape) {
         console.log('in', player.name, shape.name)
+        player.position.z = 2 * 32  
         // await player.changeMap('samplemap')
     },
     onOutShape(player: RpgPlayer, shape: RpgShape) {

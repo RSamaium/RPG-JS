@@ -363,6 +363,7 @@ export class RpgClientEngine {
                 if (serverPos.x) player.position.x = serverPos.x
                 if (serverPos.y) player.position.y = serverPos.y
             }
+            player.position.z = serverPos.z
             this.serverFrames.delete(frame)
             this.clientFrames.delete(frame)
         })
