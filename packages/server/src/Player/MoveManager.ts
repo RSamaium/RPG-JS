@@ -450,6 +450,10 @@ export class MoveManager {
             })
             routes = arrayFlat(routes)
             const move = () => {
+                // If movement continues while the player no longer exists or is no longer on the map
+                if (!this) {
+                    return
+                }
                 if (count >= this['nbPixelInTile']) {
                     if (frequence < this.frequency) {
                         frequence++
