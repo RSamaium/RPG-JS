@@ -218,15 +218,15 @@ export class SceneMap {
         positions?: { x: number, y: number, z?: number } | string
     ): Promise<RpgMap | null | boolean> {
 
-        // if just teleport, not change map
-        if (player.map === mapId) {
-            await player.teleport(positions || 'start')
-            return null
-        }
-
         const boolArray: boolean[] = await RpgPlugin.emit(HookServer.PlayerCanChangeMap, [player, this.getMapBydId(mapId)], true)
 
         if (boolArray.some(el => el === false)) {
+            return null
+        }
+
+        // if just teleport, not change map
+        if (player.map === mapId) {
+            await player.teleport(positions || 'start')
             return null
         }
 

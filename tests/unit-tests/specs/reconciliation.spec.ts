@@ -24,9 +24,10 @@ test('Test reconciliation', async () => {
             const pos = { x: 3, y: 0, z: 0 }
             expect(player.position).toMatchObject(pos)
             const { serverFrames, clientFrames } = client
-            const frame = 0
             expect(serverFrames.size).toBe(1)
             expect(clientFrames.size).toBe(1)
+            // get first key of Map serverFrames
+            const [frame] = [ ...serverFrames.keys()]
             expect(serverFrames.get(frame).data).toMatchObject(clientFrames.get(frame).data)
             resolve()
         })
@@ -42,8 +43,8 @@ test('Multi input', async () => {
         RpgPlugin.on(HookClient.SendInput, async (client, name) => {
             await server['updatePlayersMove'](1)
             server.send()
-            const frame = 0
             const { serverFrames, clientFrames } = client
+            const [frame] = [ ...serverFrames.keys()]
             expect(serverFrames.get(frame).data).toMatchObject(clientFrames.get(frame).data)
             resolve()
         })

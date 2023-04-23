@@ -170,6 +170,8 @@ describe('Go to Map in world', () => {
             })
             class RpgServerModule {}
     
+            clear()
+
             await _beforeEach([{
                 server: RpgServerModule
             }])
@@ -187,6 +189,8 @@ describe('Go to Map in world', () => {
                 }
             })
             class RpgServerModule {}
+
+            clear()
     
             const { player } = await _beforeEach([{
                 server: RpgServerModule
