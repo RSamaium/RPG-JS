@@ -73,7 +73,7 @@ export const player: RpgPlayerHooks = {
             }
         )
        
-        player.changeMap('samplemap')
+        player.changeMap('cave')
 
         // player.setComponentsLeft<any>(
         //     [
@@ -95,7 +95,7 @@ export const player: RpgPlayerHooks = {
 
         //player.position.z = 2 * 32
     },
-    onInput(player: RpgPlayer, { input, moving }) {
+    async onInput(player: RpgPlayer, { input, moving }) {
         if (input == 'attack') {
             //player.showAnimation('jedi', 'attack', true)
             player.setGraphic(['jedi'])
@@ -115,11 +115,9 @@ export const player: RpgPlayerHooks = {
         if (input == 'action') {
             player.callMainMenu()
         }
-    },
+    }, 
     async onInShape(player: RpgPlayer, shape: RpgShape) {
         console.log('in', player.name, shape.name)
-        player.position.z = 2 * 32  
-        // await player.changeMap('samplemap')
     },
     onOutShape(player: RpgPlayer, shape: RpgShape) {
         console.log('out', player.name, shape.name)

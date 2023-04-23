@@ -28,7 +28,7 @@ import { constructor, ObjectFixtureList, PlayerType, SocketEvents, SocketMethods
 import { Assets, utils } from 'pixi.js'
 import * as PIXI from 'pixi.js'
 
-declare var __RPGJS_PRODUCTION__: boolean;
+declare var __RPGJS_PRODUCTION__: boolean;  
 
 type FrameData = {
     time: number,
@@ -94,7 +94,6 @@ export class RpgClientEngine {
     // TODO, public or private
     io
     private lastTimestamp: number = 0
-    private frame: number = 0
     private subscriptionWorld: Subscription
 
     private clientFrames: Map<number, FrameData> = new Map()
@@ -346,7 +345,7 @@ export class RpgClientEngine {
         if (player.canMove) {
             player.pendingMove.push({
                 input: actionName,
-                frame: this.frame
+                frame: this.scheduler.frame
             })
         }
     }
@@ -356,6 +355,7 @@ export class RpgClientEngine {
     }
 
     private serverReconciliation(player: RpgCommonPlayer) {
+        let garbage: number[] = []
         this.serverFrames.forEach((serverData, frame) => {
             const { data: serverPos, time: serverTime } = serverData
             const client = this.clientFrames.get(frame)
@@ -364,9 +364,13 @@ export class RpgClientEngine {
                 if (serverPos.y) player.position.y = serverPos.y
             }
             player.position.z = serverPos.z
+            garbage.push(frame)
+        })
+        garbage.forEach(frame => {
             this.serverFrames.delete(frame)
             this.clientFrames.delete(frame)
         })
+        garbage = []
     }
 
     private async step(t: number, dt: number) {
@@ -380,12 +384,13 @@ export class RpgClientEngine {
             if (player.pendingMove.length > 0) {
                 const { inputs: inputEvent } = await this.gameEngine.processInput<RpgCommonPlayer>(this.gameEngine.playerId, this.controls.options)
                 if (inputEvent.length == 0) return
-                this.clientFrames.set(this.frame, {
-                    data: player.position,
-                    time: Date.now()
+                const frame = Date.now()
+                this.clientFrames.set(frame, {
+                    data: player.position.copy(),
+                    time: frame
                 })
                 if (this.socket) {
-                    this.socket.emit('move', { input: inputEvent, frame: this.frame })
+                    this.socket.emit('move', { input: inputEvent, frame })
                 }
                 RpgPlugin.emit(HookClient.SendInput, [this, inputEvent], true)
             }
@@ -495,7 +500,7 @@ export class RpgClientEngine {
 
         this.subscriptionWorld = World.listen(this.socket)
             .value
-            .subscribe((val: { data: any, partial: any, time: number, roomId: string }) => {
+            .subscribe(async (val: { data: any, partial: any, time: number, roomId: string }) => {
 
                 const scene = this.renderer.getScene<SceneMap>()
 

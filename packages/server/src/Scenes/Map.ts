@@ -231,6 +231,12 @@ export class SceneMap {
             return null
         }
 
+        // if just teleport, not change map
+        if (player.map === mapId) {
+            await player.teleport(positions || 'start')
+            return null
+        }
+
         player.emit('preLoadScene', mapId)
 
         player.prevMap = player.map
@@ -251,7 +257,7 @@ export class SceneMap {
         }
 
         player.tmpPositions = null
-
+        
         const mapInstance = await this.loadMap(mapId)
 
         if (!mapInstance) return null
@@ -284,7 +290,7 @@ export class SceneMap {
 
         if (player) {
             player.createDynamicEvent(<any>mapInstance._events, false)
-            player.execMethod('onJoinMap', <any>[mapInstance])
+            await player.execMethod('onJoinMap', <any>[mapInstance])
         }
 
         return mapInstance

@@ -253,6 +253,8 @@ test('Test onChanges Hook [syncChanges method)', () => {
         })
         class RpgServerModule {}
 
+        clear()
+
         const { player } = await _beforeEach([{
             server: RpgServerModule
         }])
@@ -382,6 +384,8 @@ describe('Test Scenario Event', () => {
             ]
         })
         class RpgServerModule {}
+
+        clear()
 
         const { player } = await _beforeEach([{
             server: RpgServerModule

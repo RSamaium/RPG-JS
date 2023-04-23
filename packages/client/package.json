@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/client",
-  "version": "3.3.0",
+  "version": "3.3.1",
   "description": "",
   "main": "lib/index.js",
   "types": "./lib/index.d.ts",
@@ -19,7 +19,7 @@
   "license": "MIT",
   "dependencies": {
     "@pixi/tilemap": "^4.0.0",
-    "@rpgjs/common": "^3.3.0",
+    "@rpgjs/common": "^3.3.1",
     "@rpgjs/tiled": "^3.2.0",
     "@rpgjs/types": "^3.3.0",
     "@types/howler": "2.2.1",
@@ -29,7 +29,7 @@
     "pixi-viewport": "5.0.1",
     "pixi.js": "7.2.2",
     "rxjs": "7.8.0",
-    "simple-room-client": "^1.0.0",
+    "simple-room-client": "^1.0.1",
     "vue": "^3.2.47"
   },
   "gitHead": "7bb0326cc3216764a4bfc86f53e7b24464a2040f",

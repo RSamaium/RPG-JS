@@ -128,7 +128,7 @@ describe('pendingMove & canMove test', () => {
         client.sendInput(Control.Right)
         const pendingMove = client.player?.pendingMove
         expect(pendingMove).not.toHaveLength(0)
-        expect(pendingMove?.[0]).toMatchObject({ frame: 0, input: Control.Right })
+        expect(pendingMove?.[0]).toMatchObject({ frame: 1, input: Control.Right })
     })
 
     test('(server)', async () => {

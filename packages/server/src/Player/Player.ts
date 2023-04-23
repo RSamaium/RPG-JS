@@ -170,7 +170,7 @@ export class RpgPlayer extends RpgCommonPlayer {
     _lastFramePositions: {
         frame: number
         position: Position
-    }
+    } | undefined
 
     constructor(gameEngine: RpgCommonGame, playerId: string) {
         super(gameEngine, playerId)
@@ -446,6 +446,8 @@ export class RpgPlayer extends RpgCommonPlayer {
         if (!(positions as Position).z) (positions as Position).z = 0
         this.teleported++
         this.position = positions as Position
+        // delete last frame positions because when the character is teleported, no server reconciliation is needed on the client side
+        this._lastFramePositions = undefined
         // force interaction with event or shape
         await this.isCollided(this.position)
         return (positions as Position)
