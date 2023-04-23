@@ -299,17 +299,17 @@ export class AbstractObject {
     }
 
     /** @internal */
-    triggerCollisionWith(type?: number) {
+    async triggerCollisionWith(type?: number) {
         for (let collisionWith of this.collisionWith) {
             if (collisionWith instanceof RpgShape) {
                 const goMap = collisionWith.getProperty<string>('go-map')
-                if (goMap && 'changeMap' in this) this.changeMap(goMap)
+                if (goMap && 'changeMap' in this) await this.changeMap(goMap)
             }
             else {
                 if (type == AbstractObject.ACTIONS.ACTION) {
-                    if ('onAction' in collisionWith) collisionWith.execMethod('onAction', [this])
+                    if ('onAction' in collisionWith) await collisionWith.execMethod('onAction', [this])
                 }
-                else if ('onPlayerTouch' in collisionWith) collisionWith.execMethod('onPlayerTouch', [this])
+                else if ('onPlayerTouch' in collisionWith) await collisionWith.execMethod('onPlayerTouch', [this])
             }
         }
     }

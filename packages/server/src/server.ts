@@ -186,7 +186,7 @@ export class RpgServerEngine {
         this.world.send()
     }
 
-    private updatePlayersMove(deltaTimeInt: number) {
+    private async updatePlayersMove(deltaTimeInt: number) {
         const players = this.world.getUsers()
         const obj: any = []
         let p: Promise<RpgPlayer>[] = []
@@ -198,7 +198,7 @@ export class RpgServerEngine {
                 const lastFrame = player.pendingMove[player.pendingMove.length - 1]
                 if (this.inputOptions.workers) obj.push(player.toObject())
                 else {
-                    p.push(this.gameEngine.processInput(player.playerId, this.globalConfig.inputs).then(() => {
+                    p.push(this.gameEngine.processInput(player.playerId, this.globalConfig.inputs).then((val) => {
                         player.pendingMove = []
                         player._lastFramePositions = {
                             frame: lastFrame.frame,

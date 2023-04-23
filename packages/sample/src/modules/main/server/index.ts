@@ -9,8 +9,8 @@ import WorldMap from './tmx/world.world'
         Shield
     },
     maps: [
-        SampleMap,
-        CaveMap
+        // SampleMap,
+        // CaveMap
     ],
     worldMaps: [ 
         WorldMap

@@ -218,6 +218,12 @@ export class SceneMap {
         positions?: { x: number, y: number, z?: number } | string
     ): Promise<RpgMap | null | boolean> {
 
+        // if just teleport, not change map
+        if (player.map === mapId) {
+            await player.teleport(positions || 'start')
+            return null
+        }
+
         const boolArray: boolean[] = await RpgPlugin.emit(HookServer.PlayerCanChangeMap, [player, this.getMapBydId(mapId)], true)
 
         if (boolArray.some(el => el === false)) {
@@ -244,7 +250,7 @@ export class SceneMap {
         }
 
         player.tmpPositions = null
-
+        
         const mapInstance = await this.loadMap(mapId)
 
         if (!mapInstance) return null
@@ -277,7 +283,7 @@ export class SceneMap {
 
         if (player) {
             player.createDynamicEvent(<any>mapInstance._events, false)
-            player.execMethod('onJoinMap', <any>[mapInstance])
+            await player.execMethod('onJoinMap', <any>[mapInstance])
         }
 
         return mapInstance
