@@ -4,6 +4,17 @@ export default {
         "properties": {
             "startMap": {
                 "type": "string"
+            },
+            "start": {
+                "type": "object",
+                "properties": {
+                    "map": {
+                        "type": "string"
+                    },
+                    "graphic": {
+                        "type": "string"
+                    }
+                }
             }
         }
     },

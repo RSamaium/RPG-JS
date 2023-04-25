@@ -375,7 +375,7 @@ type SpritesheetImagesOptions = SpritesheetOptions & {
      * @prop { { [id: string]: string } } [images]
      * @memberof Spritesheet
      * */
-    images: { [id: string]: string }
+    images?: { [id: string]: string }
 }
 
 export function Spritesheet(options: SpritesheetImageOptions)

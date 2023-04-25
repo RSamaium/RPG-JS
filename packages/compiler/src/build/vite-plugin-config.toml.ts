@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { Plugin } from 'vite';
+import sizeOf from 'image-size';
 import { ClientBuildConfigOptions, Config } from './client-config';
 import { loadGlobalConfig } from './load-global-config.js';
 
@@ -14,6 +15,8 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
     if (config.modules) {
         modules = config.modules;
     }
+
+    config.startMap = config.startMap || config.start?.map
 
     let ret
     try {
@@ -57,7 +60,8 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
         returnCb?: (file: string, variableName: string) => string
     ): {
         importString: string,
-        variablesString: string
+        variablesString: string,
+        folder: string
     } {
         let importString = ''
         const folder = path.resolve(modulePath, folderPath)
@@ -80,12 +84,14 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
                         importString = importString + `\nimport ${variableName} from '${relativePath}'`
                         return returnCb ? returnCb(relativePath, variableName) : variableName
                     }).join(','),
-                importString
+                importString,
+                folder
             }
         }
         return {
             variablesString: '',
-            importString: ''
+            importString: '',
+            folder: ''
         }
     }
 
@@ -123,14 +129,14 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
             ${importPlayer ? importPlayer : 'const player = {}'}
             ${databaseFilesString?.importString}
             ${importEngine}
+
+            const _lastConnectedCb = player.onConnected
+            player.onConnected = async (player) => {
+                if (_lastConnectedCb) await _lastConnectedCb(player)
+                ${config.start?.graphic ? `player.setGraphic('${config.start?.graphic}')`: ''}
+                ${config.startMap ? `await player.changeMap('${config.startMap}')`: ''}
+            }
             
-            ${config.startMap ? `
-                const _lastConnectedCb = player.onConnected
-                player.onConnected = async (player) => {
-                    if (_lastConnectedCb) await _lastConnectedCb(player)
-                    await player.changeMap('${config.startMap}')
-                }
-            ` : ''}
             @RpgModule<RpgServer>({ 
                 player,
                 ${importEngine ? 'engine,' : ''}
@@ -146,6 +152,35 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
         const importSceneMapString = importString(modulePath, 'scene-map', 'sceneMap')
         const importSpriteString = importString(modulePath, 'sprite')
         const importEngine = importString(modulePath, 'engine')
+        const importCharacters = searchFolderAndTransformToImportString('characters', modulePath, '.ts')
+
+        let propImagesString = ''
+        if (importCharacters?.importString) {
+            const folder = importCharacters.folder
+            let objectString = ''
+            // get all images in the folder
+            let lastImagePath = ''
+            const projectPath = folder.replace(process.cwd(), '/')
+            //console.log(modulePath, folder)
+            getAllFiles(folder).filter(file => {
+                const ext = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.svg']
+                return ext.some(e => file.toLowerCase().endsWith(e))
+            }).forEach(file => {
+                // get basename without extension
+                const filename = path.basename(file)
+                const basename = filename.replace(path.extname(file), '')
+                lastImagePath = file
+                objectString += `"${basename}": "${path.join(projectPath, filename)}",\n`
+            })
+            const dimensions = sizeOf(lastImagePath)
+            propImagesString = `
+                ${importCharacters?.variablesString}.images = {
+                    ${objectString}
+                }
+                ${importCharacters?.variablesString}.prototype.width = ${dimensions.width}
+                ${importCharacters?.variablesString}.prototype.height = ${dimensions.height}
+            `
+        }
 
         const guiFilesString = searchFolderAndTransformToImportString('gui', modulePath, '.vue')
         const soundFilesString = searchFolderAndTransformToImportString('sounds', modulePath, ['.mp3', '.ogg'])
@@ -154,11 +189,16 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
             import { RpgClient, RpgModule } from '@rpgjs/client'
             ${importSpriteString}
             ${importSceneMapString}
+            ${importCharacters?.importString}
             ${guiFilesString?.importString}
             ${soundFilesString?.importString}
+
+            ${propImagesString ? propImagesString : ''}
             
             @RpgModule<RpgClient>({ 
-                spritesheets: [],
+                spritesheets: [
+                    ${importCharacters?.variablesString}
+                ],
                 sprite: ${importSpriteString ? 'sprite' : '{}'},
                 ${importEngine ? 'engine,' : ''}
                 scenes: {

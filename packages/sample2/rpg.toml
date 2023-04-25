@@ -1,19 +1,17 @@
 name = 'My Game'
 description = 'My first game with RPGJS'
 
-startMap = './main/maps/map'
-
 modules = [
      './main',
     '@rpgjs/gamepad',
-    '@rpgjs/default-gui',
-    '@rpgjs/title-screen'
+    '@rpgjs/default-gui'
 ]
+
+[start]
+    map = './main/maps/map'
+    graphic = 'male'
 
 [inputs]
     [inputs.action]
         repeat = true
         bind = 'up'
-
-[titleScreen]
-    mongodb = '$ENV:VITE_MONGO_URI'

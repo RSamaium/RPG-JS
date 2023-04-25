@@ -39,6 +39,11 @@ export interface Config {
     }[]
     themeCss?: string
     inputs?: any
+    start?: {
+        map?: string,
+        graphic?: string
+        hitbox?: [number, number]
+    }
 }
 
 export interface ClientBuildConfigOptions {
