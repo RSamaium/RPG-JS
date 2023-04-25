@@ -5,6 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import { ClientBuildConfigOptions, Config } from './client-config';
 import { loadEnv } from 'vite';
+import { warn } from '../logs/warning.js';
 
 export function loadGlobalConfig(modules: string[], config: Config, options: ClientBuildConfigOptions): {
     configClient: any;
@@ -76,7 +77,7 @@ export function loadGlobalConfig(modules: string[], config: Config, options: Cli
         const filterExtraProps = allExtraProps.filter(prop => namespaces.indexOf(prop) == -1)
 
         if (filterExtraProps.length > 0) {
-            console.log(`${colors.yellow(`⚠️  Warning - In rpg.toml, you put the following properties, but they are not used by the modules. Check the names of the properties.`)}`)
+            warn('In rpg.toml, you put the following properties, but they are not used by the modules. Check the names of the properties.')
             for (let extraProp of filterExtraProps) {
                 console.log(`  - ${colors.yellow(extraProp)}`)
             }

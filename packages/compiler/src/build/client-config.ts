@@ -44,6 +44,7 @@ export interface Config {
         graphic?: string
         hitbox?: [number, number]
     }
+    spritesheetDirectories?: string[]
 }
 
 export interface ClientBuildConfigOptions {

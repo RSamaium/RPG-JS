@@ -15,6 +15,12 @@ export default {
                         "type": "string"
                     }
                 }
+            },
+            "spritesheetDirectories": {
+                "type": "array",
+                "items": {
+                    "type": "string"
+                }
             }
         }
     },

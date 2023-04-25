@@ -4,10 +4,19 @@ import { Plugin } from 'vite';
 import sizeOf from 'image-size';
 import { ClientBuildConfigOptions, Config } from './client-config';
 import { loadGlobalConfig } from './load-global-config.js';
+import { warn } from '../logs/warning.js';
 
 const MODULE_NAME = 'virtual-modules'
 const GLOBAL_CONFIG_CLIENT = 'virtual-config-client'
 const GLOBAL_CONFIG_SERVER = 'virtual-config-server'
+
+type ImportObject = {
+    importString: string,
+    variablesString: string,
+    folder: string
+}
+
+type ImportImageObject = ImportObject & { propImagesString: string }
 
 export default function configTomlPlugin(options: ClientBuildConfigOptions = {}, config: Config): Plugin | undefined {
     let modules: string[] = []
@@ -58,11 +67,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
         modulePath: string,
         extensionFilter: string | string[],
         returnCb?: (file: string, variableName: string) => string
-    ): {
-        importString: string,
-        variablesString: string,
-        folder: string
-    } {
+    ): ImportObject {
         let importString = ''
         const folder = path.resolve(modulePath, folderPath)
         if (fs.existsSync(folder)) {
@@ -148,15 +153,11 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
         `
     }
 
-    function loadClientFiles(modulePath: string) {
-        const importSceneMapString = importString(modulePath, 'scene-map', 'sceneMap')
-        const importSpriteString = importString(modulePath, 'sprite')
-        const importEngine = importString(modulePath, 'engine')
-        const importCharacters = searchFolderAndTransformToImportString('characters', modulePath, '.ts')
-
+    function loadSpriteSheet(directoryName: string, modulePath: string, warning = true): ImportImageObject  {
+        const importSprites = searchFolderAndTransformToImportString(directoryName, modulePath, '.ts')
         let propImagesString = ''
-        if (importCharacters?.importString) {
-            const folder = importCharacters.folder
+        if (importSprites?.importString) {
+            const folder = importSprites.folder
             let objectString = ''
             // get all images in the folder
             let lastImagePath = ''
@@ -174,30 +175,56 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
             })
             const dimensions = sizeOf(lastImagePath)
             propImagesString = `
-                ${importCharacters?.variablesString}.images = {
+                ${importSprites?.variablesString}.images = {
                     ${objectString}
                 }
-                ${importCharacters?.variablesString}.prototype.width = ${dimensions.width}
-                ${importCharacters?.variablesString}.prototype.height = ${dimensions.height}
+                ${importSprites?.variablesString}.prototype.width = ${dimensions.width}
+                ${importSprites?.variablesString}.prototype.height = ${dimensions.height}
             `
         }
+        else if (warning) {
+            warn(`No spritesheet folder found in ${directoryName} folder`)
+        }
+        return {
+            ...importSprites,
+            propImagesString
+        }
+    }
 
+    function loadClientFiles(modulePath: string) {
+        const importSceneMapString = importString(modulePath, 'scene-map', 'sceneMap')
+        const importSpriteString = importString(modulePath, 'sprite')
+        const importEngine = importString(modulePath, 'engine')
         const guiFilesString = searchFolderAndTransformToImportString('gui', modulePath, '.vue')
         const soundFilesString = searchFolderAndTransformToImportString('sounds', modulePath, ['.mp3', '.ogg'])
+        let importSpritesheets: ImportImageObject[] = []
 
+        if (config.spritesheetDirectories) {
+            importSpritesheets = config.spritesheetDirectories.map(directory => loadSpriteSheet(directory, modulePath))
+        }
+ 
+        if (!(config.spritesheetDirectories ?? []).some(dir => dir === 'characters')) {
+            importSpritesheets.push(loadSpriteSheet('characters', modulePath, false))
+        }
+
+        // remove directory not found
+        importSpritesheets = importSpritesheets.filter(importSpritesheet => importSpritesheet.importString)
+            
         return `
             import { RpgClient, RpgModule } from '@rpgjs/client'
             ${importSpriteString}
             ${importSceneMapString}
-            ${importCharacters?.importString}
+            ${
+                importSpritesheets.map(importSpritesheet => importSpritesheet.importString).join('\n')
+            }
             ${guiFilesString?.importString}
             ${soundFilesString?.importString}
 
-            ${propImagesString ? propImagesString : ''}
+            ${importSpritesheets.map(importSpritesheet => importSpritesheet.propImagesString).join('\n')}
             
             @RpgModule<RpgClient>({ 
                 spritesheets: [
-                    ${importCharacters?.variablesString}
+                    ${importSpritesheets.map(importSpritesheet => importSpritesheet.variablesString).join(',\n')}
                 ],
                 sprite: ${importSpriteString ? 'sprite' : '{}'},
                 ${importEngine ? 'engine,' : ''}
