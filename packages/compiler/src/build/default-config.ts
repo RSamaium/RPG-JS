@@ -63,43 +63,45 @@ export default {
         "properties": {
             "inputs": {
                 "type": "object",
-                "properties": {
-                    "action": {
-                        "type": "object",
-                        "properties": {
-                            "repeat": {
-                                "type": "boolean",
-                                "default": false
-                            },
-                            "bind": {
-                                "type": [
-                                    "string",
-                                    "array"
-                                ]
-                            },
-                            "delay": {
-                                "type": "object",
-                                "properties": {
-                                    "duration": {
-                                        "type": "number",
-                                        "minimum": 0
-                                    },
-                                    "otherControls": {
-                                        "type": "array",
-                                        "items": {
-                                            "type": "string"
-                                        }
-                                    }
+                "additionalProperties": {
+                    "oneOf": [
+                        {
+                            "type": "object",
+                            "properties": {
+                                "repeat": {
+                                    "type": "boolean",
+                                    "default": false
                                 },
-                                "required": [
-                                    "duration"
-                                ]
-                            }
-                        },
-                        "required": [
-                            "bind"
-                        ]
-                    }
+                                "bind": {
+                                    "type": [
+                                        "string",
+                                        "array"
+                                    ]
+                                },
+                                "delay": {
+                                    "type": "object",
+                                    "properties": {
+                                        "duration": {
+                                            "type": "number",
+                                            "minimum": 0
+                                        },
+                                        "otherControls": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "duration"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "bind"
+                            ]
+                        }
+                    ]
                 }
             },
             "name": {

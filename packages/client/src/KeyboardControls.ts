@@ -512,8 +512,15 @@ export class KeyboardControls {
     setInputs(inputs: Controls) {
         if (!inputs) return
         this.boundKeys = {}
+        let inputsTransformed: any = {}
         for (let control in inputs) {
-            const option = inputs[control]
+            inputsTransformed[this.transformDirectionInNumber(control)] = {
+                ...inputs[control],
+                bind: this.transformDirectionInNumber(inputs[control].bind)
+            }
+        }
+        for (let control in inputsTransformed) {
+            const option = inputsTransformed[control]
             const { method, bind } = option
             if (method) {
                 option.method = method
@@ -526,10 +533,20 @@ export class KeyboardControls {
                 this.bindKey(input, control, option)
             }
         }
-        this._controlsOptions = inputs
+        this._controlsOptions = inputsTransformed
     }
 
     get options(): Controls {
         return this._controlsOptions
+    }
+
+    private transformDirectionInNumber(direction: any): any {
+        switch (direction) {
+            case 'up': return 1
+            case 'down': return 3
+            case 'left': return 4
+            case 'right': return 2
+        }
+        return direction
     }
 }

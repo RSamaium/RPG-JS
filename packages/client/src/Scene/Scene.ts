@@ -1,4 +1,4 @@
-import { RpgPlugin, HookClient } from '@rpgjs/common'
+import { RpgPlugin, HookClient, DefaultInput } from '@rpgjs/common'
 import { KeyboardControls } from '../KeyboardControls'
 import RpgSprite from '../Sprite/Character'
 import { Animation } from '../Effects/Animation'
@@ -40,7 +40,11 @@ export abstract class Scene {
     constructor(public game: GameEngineClient) {
         const { globalConfig } = this.game.clientEngine
         this.controls = this.game.clientEngine.controls
-        this.controls.setInputs(this.inputs || globalConfig.inputs)
+        const mergeInputs = {
+            ...DefaultInput,
+            ...(globalConfig.inputs || {})
+        }
+        this.controls.setInputs(this.inputs || mergeInputs)
     }
 
     /**

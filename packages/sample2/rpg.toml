@@ -10,8 +10,3 @@ modules = [
 [start]
     map = './main/maps/map'
     graphic = 'male'
-
-[inputs]
-    [inputs.action]
-        repeat = true
-        bind = 'up'
