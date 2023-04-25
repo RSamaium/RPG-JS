@@ -13,6 +13,16 @@ export default {
                     },
                     "graphic": {
                         "type": "string"
+                    },
+                    "hitbox": {
+                        "type": "array",
+                        "items": [
+                            { "type": "integer" },
+                            { "type": "integer" }
+                        ],
+                        "additionalItems": false,
+                        "minItems": 2,
+                        "maxItems": 2
                     }
                 }
             },

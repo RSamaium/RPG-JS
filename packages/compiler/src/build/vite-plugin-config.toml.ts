@@ -139,6 +139,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
             player.onConnected = async (player) => {
                 if (_lastConnectedCb) await _lastConnectedCb(player)
                 ${config.start?.graphic ? `player.setGraphic('${config.start?.graphic}')`: ''}
+                ${config.start?.hitbox ? `player.setHitbox(${config.start?.hitbox})`: ''}
                 ${config.startMap ? `await player.changeMap('${config.startMap}')`: ''}
             }
             

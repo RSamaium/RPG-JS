@@ -10,3 +10,4 @@ modules = [
 [start]
     map = './main/maps/map'
     graphic = 'male'
+    hitbox = [16, 16]
