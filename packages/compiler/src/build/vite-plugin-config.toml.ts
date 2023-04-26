@@ -274,6 +274,10 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
         return null
     }
 
+    function resolveModule(name: string) {
+        return name.replace(/^.\//, '')
+    }
+
     return {
         name: 'vite-plugin-config-toml',
         transformIndexHtml: {
@@ -303,7 +307,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
                 return source;
             }
             for (let module of modules) {
-                if (source === module) {
+                if (source === resolveModule(module)) {
                     return source
                 }
             }
@@ -323,7 +327,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
                 }, {} as Record<string, string>);
 
                 return `
-                ${Object.keys(modulesToImport).map((variableName) => `import ${variableName} from '${modulesToImport[variableName]}'`).join('\n')}
+                ${Object.keys(modulesToImport).map((variableName) => `import ${variableName} from '${resolveModule(modulesToImport[variableName])}'`).join('\n')}
 
                 export default [
                    ${Object.keys(modulesToImport).join(',\n')}
@@ -380,9 +384,9 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
             if (str) return str
 
             for (let module of modules) {
-                let moduleName = module.replace(/^\./, '')
+                let moduleName = resolveModule(module)
                 let variableName = formatVariableName(moduleName);
-                if (id.endsWith(moduleName) || id.includes(variableName)) {
+                if (id.endsWith(moduleName) || id.includes('virtual-' + variableName)) {
                     return createModuleLoad(id, variableName, module);
                 }
             }

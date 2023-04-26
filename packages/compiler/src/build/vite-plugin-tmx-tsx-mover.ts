@@ -1,18 +1,13 @@
-// vite-plugin-tmx-tsx-mover.ts
 import { Plugin } from 'vite';
-import * as glob from 'glob';
 import * as fs from 'fs-extra';
 import * as path from 'path';
+import { globFiles } from './utils.js';
 
 const moveTMXTSXFiles = async (outputDir: string): Promise<void> => {
   const assetDir = path.join('dist', outputDir, 'assets');
   await fs.ensureDir(assetDir);
 
-  const files = [
-    ...glob.sync('src/**/*.@(tmx|tsx)',  { nodir: true }),
-    ...glob.sync('node_modules/rpgjs-*/*.@(tmx|tsx)',  { nodir: true }),
-    ...glob.sync('node_modules/@rpgjs/**/*.@(tmx|tsx)',  { nodir: true })
-  ]
+  const files = globFiles('@(tmx|tsx)')
 
   for (const file of files) {
     const target = path.join(assetDir, path.basename(file));
@@ -25,6 +20,6 @@ export function tmxTsxMoverPlugin(outputDir: string): Plugin {
     name: 'vite-plugin-tmx-tsx-mover',
     writeBundle: async () => {
       await moveTMXTSXFiles(outputDir);
-    },
+    }
   };
 }

@@ -269,7 +269,7 @@ export interface RpgServer {
      * @prop { { [dataName]: data } } [database]
      * @memberof RpgServer
      * */
-    database?: object,
+    database?: object | any[],
 
     /** 
      * Array of all maps. Each element is an `RpgMap` class

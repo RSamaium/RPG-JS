@@ -16,7 +16,11 @@ export enum TransitionMode {
     Fading
 }
 
-export class RpgRenderer  {
+enum ContainerName {
+    Map = 'map'
+}
+
+export class RpgRenderer {
     public vm: ComponentPublicInstance
     public app: App
     public readonly stage: Container = new Container()
@@ -29,7 +33,7 @@ export class RpgRenderer  {
     private scene: Scene | null = null
     private renderer: IRenderer
     private _width: number = 800
-    private _height: number = 400 
+    private _height: number = 400
     private canvasEl: HTMLElement
     private selector: HTMLElement
     private gameEngine: GameEngineClient = this.clientEngine.gameEngine
@@ -48,12 +52,12 @@ export class RpgRenderer  {
         this.transitionCompleted()
     }
 
-     /** @internal */
+    /** @internal */
     async init() {
         this.onDOMLoaded()
     }
 
-     /** @internal */
+    /** @internal */
     _resize(w: number, h: number) {
         if (!w) w = this.options.canvas.width
         if (!h) h = this.options.canvas.height
@@ -84,7 +88,7 @@ export class RpgRenderer  {
     }
 
     set height(val: number) {
-       this._resize(this._width, val)
+        this._resize(this._width, val)
     }
 
     get width(): number {
@@ -95,7 +99,7 @@ export class RpgRenderer  {
         this._resize(val, this.height)
     }
 
-     /** @internal */
+    /** @internal */
     onDOMLoaded() {
         let options = {
             antialias: true,
@@ -132,7 +136,7 @@ export class RpgRenderer  {
         this.resize()
     }
 
-     /** @internal */
+    /** @internal */
     resize() {
         const size = () => {
             const { offsetWidth, offsetHeight } = this.canvasEl || this.selector
@@ -143,25 +147,46 @@ export class RpgRenderer  {
         size()
     }
 
-     /** @internal */
+    /** @internal */
     getScene<T = Scene>(): T | null {
         return this.scene as any
     }
-    
-     /** @internal */
+
+    /** @internal */
     draw(t: number, deltaTime: number, deltaRatio: number, frame: number) {
         if (!this.renderer) return
         if (this.scene && !this.freeze) this.scene.draw(t, deltaTime, deltaRatio, frame)
         this.renderer.render(this.stage)
     }
 
-     /** @internal */
-    loadScene(name: string, obj) {
+    /** @internal */
+    async loadScene(name: string, obj) {
+        const scene = this.getScene<SceneMap | null>()
+        if (scene && scene.data.id == obj.id) {
+            const container = await scene.load(obj, this.prevObjectScene, true)
+            this.sceneContainer.removeChildren()
+            this.sceneContainer.addChild(container)
+            this.scene?.update()
+            return
+        }
         this.loadingScene.transitionIn.next({ name, obj })
         this.loadingScene.transitionIn.complete()
     }
 
-     /** @internal */
+    private async createScene(name: string, obj) {
+        const container = await this.getScene<SceneMap>()?.load(obj, this.prevObjectScene)
+        this.prevObjectScene = { ...obj }
+        this.sceneContainer.children.forEach(child => {
+            if (child.name === ContainerName.Map) this.sceneContainer.removeChild(child)
+        })
+        if (container) {
+            container.name = ContainerName.Map
+            this.sceneContainer.addChild(container)
+        }
+        this.scene?.update()
+    }
+
+    /** @internal */
     transitionScene(name: string) {
         this.freeze = true
         this.fadeContainer.visible = true
@@ -176,9 +201,9 @@ export class RpgRenderer  {
         }
         if (this.transitionMode == TransitionMode.Fading) {
             new TransitionScene(this.clientEngine, this.fadeContainer)
-            .addFadeOut()
-            .onComplete(finish)
-            .start()
+                .addFadeOut()
+                .onComplete(finish)
+                .start()
         }
         else {
             finish()
@@ -205,16 +230,11 @@ export class RpgRenderer  {
                     this.scene = new sceneClass(this.gameEngine, this.renderer, {
                         screenWidth: this.renderer.screen.width,
                         screenHeight: this.renderer.screen.height,
-                        drawMap:  this.options.drawMap
+                        drawMap: this.options.drawMap
                     })
                     break;
             }
-            const container = await this.getScene<SceneMap>()?.load(obj, this.prevObjectScene)
-            this.prevObjectScene = {...obj}
-            if (container) {
-                this.sceneContainer.addChild(container) 
-            }
-            this.scene?.update()
+            await this.createScene(name, obj)
             this.freeze = false
             const finish = () => {
                 this.clientEngine.controls.listenInputs()
@@ -226,7 +246,7 @@ export class RpgRenderer  {
                 new TransitionScene(this.clientEngine, this.fadeContainer)
                     .addFadeIn()
                     .onComplete(finish)
-                    .start()  
+                    .start()
             }
             else {
                 finish()

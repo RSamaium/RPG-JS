@@ -5,8 +5,8 @@ const player: RpgPlayerHooks = {
        
     },
     onInput(player: RpgPlayer, { input }) {
-        if (input == 'action') player.callMainMenu()
+       
     }
 }
 
-export default player
+export default player 

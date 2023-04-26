@@ -10,13 +10,16 @@ type ParseOptions = { getOnlyBasename?: boolean }
 export class TiledParserFile {
     private basePath: string
     private staticDir: string
+    private relativePath: string
 
     constructor(private file: string, {
         basePath = '',
-        staticDir = ''
+        staticDir = '',
+        relativePath = ''
     } = {}) {
         this.basePath = basePath
         this.staticDir = staticDir
+        this.relativePath = relativePath
     }
 
     static isBrowser() {
@@ -49,9 +52,9 @@ export class TiledParserFile {
                 return cb(null)
             }
             if (isXml(content)) {
-                const parser = new TiledParser(content, this.staticDir ? '' : file)
+                const parser = new TiledParser(content, this.staticDir ? '' : isXml(file) ? this.relativePath : file)
                 if (type == 'map') {
-                    const json = parser.parseMap() as any 
+                    const json = parser.parseMap() as any
                     return cb(json)
                 }
                 else if (type == 'tileset') {

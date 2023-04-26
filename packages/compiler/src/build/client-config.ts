@@ -22,6 +22,7 @@ import configTomlPlugin from './vite-plugin-config.toml.js'
 import { entryPointServer } from './utils.js'
 import cssPlugin from './vite-plugin-css.js';
 import { rpgjsPluginLoader } from './vite-plugin-rpgjs-loader.js';
+import { mapUpdatePlugin } from './vite-plugin-map-update.js';
 
 const require = createRequire(import.meta.url);
 
@@ -67,6 +68,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     const isBuild = options.serveMode === false
     const dirOutputName = isRpg ? 'standalone' : 'client'
     const plugin = options.plugin
+    const serverUrl = 'http://' + process.env.VITE_SERVER_URL
     let config: Config = {}
 
     const envType = process.env.RPG_TYPE
@@ -132,6 +134,13 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
                         icons: config.icons
                     }
                 })
+            )
+        }
+    }
+    else {
+        if (!isBuild) {
+            plugins.push(
+                mapUpdatePlugin(serverUrl)
             )
         }
     }

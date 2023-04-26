@@ -16,10 +16,6 @@ export interface MapInfo extends TiledMap {
 
 export default class TileMap extends Container {
     background: Graphics = new Graphics()
-    eventsLayers: {
-        [eventLayerName: string]: Container
-    } = {}
-    defaultLayer: Container
     tilewidth: number = 0 
     tileheight: number = 0
     private frameRateAnimation: number = 10
@@ -30,7 +26,6 @@ export default class TileMap extends Container {
     private tilesLayer: Container = new Container()
     private frameTile: number = 0
 
-    static readonly EVENTS_LAYER_DEFAULT : string = 'events-layer-default'
 
     constructor(private data: MapInfo, private renderer: RpgRenderer) {
         super()
@@ -45,27 +40,6 @@ export default class TileMap extends Container {
            this.renderer['renderer'].plugins.tilemap.tileAnim[0] = this.frameTile
            this.frameTile++
         }
-    }
-
-    getEventLayer(objectName?: string): Container {
-        for (let layerData of this.data.layers) {
-            if (layerData.type != TiledLayerType.ObjectGroup) {
-                continue
-            }
-            for (let object of layerData.objects) {
-                if (object.name == objectName) {
-                    return this.eventsLayers[layerData.name]
-                }
-            }
-        }
-        return this.defaultLayer
-    }
-
-    createEventLayer(name: string): Container {
-        const container = this.eventsLayers[name] = new Container()
-        container.sortableChildren = true
-        this.tilesLayer.addChild(container)
-        return container
     }
 
     getData(): MapInfo {
@@ -171,9 +145,11 @@ export default class TileMap extends Container {
     }
 
     /** @internal */
-    load(options?: { drawTiles: boolean | undefined }) {
+    load(options?: { drawTiles: boolean | undefined, isUpdate?: boolean }) {
         this.tilesLayer.removeChildren()
+
         this.tilesets.forEach(tileset => tileset.load())
+       
         this.data.layers.forEach((layerData) => {
             switch (layerData.type) {
                 case TiledLayerType.Tile: {
@@ -189,19 +165,9 @@ export default class TileMap extends Container {
                     this.tilesLayer.addChild(imageLayer)
                     break;
                 }
-                case TiledLayerType.ObjectGroup: {
-                    const layer = this.createEventLayer(layerData.name)
-                    if (layerData.properties[TileMap.EVENTS_LAYER_DEFAULT]) {
-                        this.defaultLayer = layer
-                    }
-                    break;
-                }
             }
         })
 
         this.addChild(this.tilesLayer)
-        if (!this.defaultLayer) {
-            this.defaultLayer = this.createEventLayer(TileMap.EVENTS_LAYER_DEFAULT)
-        }
     }
 }

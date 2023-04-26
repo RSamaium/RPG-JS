@@ -144,6 +144,10 @@ class QueryClass {
         return World.getRooms()
     }
 
+    getRoom<T>(name: string): T {
+        return World.getRoom(name) as T
+    }
+
     /**
      * Recover all the players of a map
      * 

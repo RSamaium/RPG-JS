@@ -60,6 +60,7 @@ export class MapClass extends TiledProperties {
         if (this.hasProperty('low-memory')) {
             this.lowMemory = this.getProperty<boolean, boolean>('low-memory', false)
         }
+        this.tmpLayers = []
         this.mapTilesets()
         this.mapLayers(this.layers)
         this.layers = [...this.tmpLayers]

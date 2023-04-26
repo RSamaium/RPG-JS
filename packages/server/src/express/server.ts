@@ -6,6 +6,7 @@ import entryPoint from '../entry-point'
 import PrettyError from 'pretty-error'
 import { ModuleType } from '@rpgjs/common'
 import { RpgServerEngine } from '../server'
+import { api } from './api'
 
 type ExpressServerOptions = {
     basePath: string,
@@ -31,8 +32,11 @@ export function expressServer(modules: ModuleType[], options: ExpressServerOptio
             }
         })
 
-        app.use(express.json())
-
+        app.use(express.json({
+            // TODO
+            limit: '50mb'
+        }))
+        
         // @ts-ignore
         const hasStatic = process.env.STATIC_DIRECTORY_ENABLED
         // @ts-ignore
@@ -48,6 +52,7 @@ export function expressServer(modules: ModuleType[], options: ExpressServerOptio
             const rpgGame = await entryPoint(modules, { io, ...options })
             rpgGame.app = app
             rpgGame.start()
+            app.use('/api', api(rpgGame))
             resolve({
                 app,
                 server,

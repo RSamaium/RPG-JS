@@ -5,10 +5,11 @@ import { Scene, SceneObservableData, SceneSpriteLogic } from './Scene'
 import { spritesheets } from '../Sprite/Spritesheets'
 import { RpgSound } from '../Sound/RpgSound'
 import { GameEngineClient } from '../GameEngine'
-import { TiledMap } from '@rpgjs/tiled'
+import { TiledLayerType, TiledMap } from '@rpgjs/tiled'
 import { RpgComponent } from '../Components/Component'
 import { CameraOptions } from '@rpgjs/types'
 import { Assets, Container, Point, IRenderer, DisplayObjectEvents, utils, FederatedPointerEvent } from 'pixi.js'
+import { EventLayer } from './EventLayer'
 
 interface MapObject extends TiledMap {
     id: number
@@ -38,6 +39,10 @@ export class SceneMap extends Scene {
     private players: object = {}
     private isLoaded: boolean = false
     private gameMap: RpgCommonMap | undefined
+    private eventsLayers: {
+        [eventLayerName: string]: Container
+    } = {}
+    private defaultLayer: Container
 
     shapes = {}
 
@@ -71,7 +76,7 @@ export class SceneMap extends Scene {
     }
 
     /** @internal */
-    async load(obj: MapObject, prevObj: MapObject): Promise<Viewport> {
+    async load(obj: MapObject, prevObj: MapObject, isUpdate = false): Promise<Viewport> {
         let { sounds } = obj
         const { clientEngine } = this.game
 
@@ -127,7 +132,8 @@ export class SceneMap extends Scene {
         RpgPlugin.emit(HookClient.SceneMapLoading, Assets)
         
         this.tilemap.load({
-            drawTiles: this.options.drawMap
+            drawTiles: this.options.drawMap,
+            isUpdate
         })
         this.viewport = new Viewport({
             screenWidth: this.options.screenWidth,
@@ -139,7 +145,7 @@ export class SceneMap extends Scene {
         })
         this.tilemap.addChild(this.animationLayer)
         this.viewport.clamp({ direction: 'all' })
-        this.viewport.addChild(this.tilemap)
+        this.viewport.addChild(this.tilemap, ...this.createEventLayers(obj))
         this.isLoaded = true
         if (prevObj.sounds && prevObj.sounds instanceof Array) {
             prevObj.sounds.forEach(soundId => {
@@ -151,6 +157,39 @@ export class SceneMap extends Scene {
         if (this.onLoad) this.onLoad()
 
         return this.viewport
+    }
+
+    createEventLayers(map: MapObject): Container[] {
+        const containers: Container[] = []
+        map.layers.forEach((layerData) => {
+            if (layerData.type !== TiledLayerType.ObjectGroup) return
+            if (this.eventsLayers[layerData.name]) {
+                containers.push(this.eventsLayers[layerData.name])
+                return
+            }
+            const layer = new EventLayer(layerData)
+            this.defaultLayer = this.eventsLayers[layerData.name] = layer
+            containers.push(layer)
+        })
+        this.cameraFollowSprite(this.game.playerId)
+        return containers
+    }
+
+    getEventLayer(objectName?: string): Container {
+        for (let layerData of this.data.layers) {
+            if (layerData.type != TiledLayerType.ObjectGroup) {
+                continue
+            }
+            if (!layerData.objects) {
+                continue
+            }
+            for (let object of layerData.objects) {
+                if (object.name == objectName) {
+                    return this.eventsLayers[layerData.name]
+                }
+            }
+        }
+        return this.defaultLayer
     }
 
     /** @internal */
@@ -216,14 +255,14 @@ export class SceneMap extends Scene {
         const inner = new Container()
         const tilesOverlay = new Container()
         const component = new RpgComponent(obj, this)
- 
+
         component.tilesOverlay = tilesOverlay
         inner.addChild(component)
         wrapper.addChild(inner, tilesOverlay)
 
         this.objects.set(id, component)
-        this.tilemap.getEventLayer(obj.id)?.addChild(wrapper)
-        if (component.isCurrentPlayer) this.viewport?.follow(component)
+        this.getEventLayer(obj.id)?.addChild(wrapper)
+        if (component.isCurrentPlayer) this.cameraFollowSprite(id)
         component.onInit()  
         return component
     }

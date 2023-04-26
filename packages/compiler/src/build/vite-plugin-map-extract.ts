@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { parseStringPromise } from 'xml2js';
-import glob from 'glob';
+import { globFiles } from './utils.js';
 
 // Process a TSX file and copy its image to the output directory
 async function processTsxFile(tsxFile: string, output: string) {
@@ -68,17 +68,10 @@ export function mapExtractPlugin(output: string = 'client') {
     return {
         name: 'map-extract',
         async buildStart() {
-            const getFiles = (ext: string) => {
-                return [
-                    ...glob.sync('src/**/*.' + ext),
-                    ...glob.sync('node_modules/rpgjs-*/*.' + ext),
-                    ...glob.sync('node_modules/@rpgjs/**/*.' + ext)
-                ];
-            }
-            for (const tsxFile of getFiles('tsx')) {
+            for (const tsxFile of globFiles('tsx')) {
                 await processTsxFile(tsxFile, output);
             }
-            for (const tmxFile of getFiles('tmx')) {
+            for (const tmxFile of globFiles('tmx')) {
                 await processTmxFile(tmxFile, output);
             }
         },

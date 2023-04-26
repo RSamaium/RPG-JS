@@ -86,18 +86,7 @@ export class RpgMap extends RpgCommonMap {
         if (RpgCommonMap.buffer.has(this.id)) {
             return
         }
-        // @ts-ignore
-        const hasAssetsPath = !!import.meta.env.VITE_BUILT
-        const parser = new TiledParserFile(
-            this.file,
-            {
-                basePath: process.env.NODE_ENV == 'test' ?  '.' : '',
-                staticDir: hasAssetsPath ? path.join(this._server.inputOptions.basePath, this._server.assetsPath) : ''
-            }
-        )
-        const data = await parser.parseFilePromise({
-            getOnlyBasename: hasAssetsPath
-        })
+        const data = await this.parseTmx(this.file)
         super.load(data)
         this.getAllObjects().forEach(this.createShape.bind(this))
         this.loadProperties((data as any).properties)
@@ -110,6 +99,41 @@ export class RpgMap extends RpgCommonMap {
         if (this.onLoad) this.onLoad()
     }
 
+    async update(data: object | string) {
+        let objectData
+        // Data is XML (TMX content)
+        if (typeof data == 'string') {
+            objectData = await this.parseTmx(data, this.file)
+        }
+        else {
+            objectData = data
+        }
+        super.load(objectData)
+        RpgCommonMap.buffer.set(this.id, this)
+        for (let playerId in this.players) {
+            const player = this.players[playerId]
+            player.emitSceneMap()
+        }
+    }
+
+    private async parseTmx(file: string, relativePath: string = '') {
+        // @ts-ignore
+        const hasAssetsPath = !!import.meta.env.VITE_BUILT
+        const parser = new TiledParserFile(
+            file,
+            {
+                basePath: process.env.NODE_ENV == 'test' ? '.' : '',
+                staticDir: hasAssetsPath ? path.join(this._server.inputOptions.basePath, this._server.assetsPath) : '',
+                relativePath
+            }
+        )
+        const data = await parser.parseFilePromise({
+            getOnlyBasename: hasAssetsPath
+        })
+
+        return data
+    }
+
     private loadProperties(properties: {
         [key: string]: any
     }) {
@@ -120,29 +144,6 @@ export class RpgMap extends RpgCommonMap {
 
     get game(): RpgCommonGame {
         return this._server.gameEngine
-    }
-
-    private removeObject(object: RpgPlayer | RpgEvent) {
-        this.getShapes().forEach(shape => shape.out(object))
-        const events: RpgPlayer[] = Object.values(this.game.world.getObjectsOfGroup(this.id, object))
-        for (let event of events) {
-            object.getShapes().forEach(shape => shape.out(event))
-            event.getShapes().forEach(shape => shape.out(object))
-        }
-        object.stopMoveTo()
-        this.grid.clearObjectInCells(object.id)
-        for (let playerId in this.players) {
-            if (object.id == playerId) continue
-            const otherPlayer = this.players[playerId]
-            if (otherPlayer.following?.id == object.id) {
-                otherPlayer.cameraFollow(otherPlayer)
-            }
-        }
-        // last player before removed of this map 
-        if (this.nbPlayers === 1) {
-            // clear cache for this map
-            this._server.sceneMap.removeMap(this.id)
-        }
     }
 
     // Hook: called by simple-room package
@@ -329,6 +330,29 @@ export class RpgMap extends RpgCommonMap {
         }
 
         return events
+    }
+
+    private removeObject(object: RpgPlayer | RpgEvent) {
+        this.getShapes().forEach(shape => shape.out(object))
+        const events: RpgPlayer[] = Object.values(this.game.world.getObjectsOfGroup(this.id, object))
+        for (let event of events) {
+            object.getShapes().forEach(shape => shape.out(event))
+            event.getShapes().forEach(shape => shape.out(object))
+        }
+        object.stopMoveTo()
+        this.grid.clearObjectInCells(object.id)
+        for (let playerId in this.players) {
+            if (object.id == playerId) continue
+            const otherPlayer = this.players[playerId]
+            if (otherPlayer.following?.id == object.id) {
+                otherPlayer.cameraFollow(otherPlayer)
+            }
+        }
+        // last player before removed of this map 
+        if (this.nbPlayers === 1) {
+            // clear cache for this map
+            this._server.sceneMap.removeMap(this.id)
+        }
     }
 
     /**

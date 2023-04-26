@@ -11,6 +11,7 @@ import { Query } from '../Query'
 
 export interface RpgClassMap<T> {
     id?: string
+    file?: string
     new(server: any): T,
 }
 
@@ -35,6 +36,25 @@ export class SceneMap {
                 this.createDynamicWorldMaps(worldMap)
             }
         }
+    }
+
+    /**
+     * Returns an array of RpgClassMap objects that represent maps with static properties.
+     * @returns {RpgClassMap<RpgMap>[]} Array of RpgClassMap objects.
+     * @since 4.0.0
+     * @example
+     * ``typescript
+     * const maps = scene.getMaps();
+     * console.log(maps);
+     * // Output: [
+     * // { file: 'maps/level1.tmx', id: 'level1', type: 'map' },
+     * // { file: 'maps/level2.tmx', id: 'level1', type: 'map' },
+     * // { file: 'maps/level3.tmx', id: 'level1', type: 'map' }
+     * // ]
+     * ```
+     */
+    getMaps(): RpgClassMap<RpgMap>[] {
+        return Object.values(this.mapsById)
     }
 
     getMapBydId(id: string): RpgClassMap<RpgMap> | null {
@@ -76,13 +96,6 @@ export class SceneMap {
         }
 
         return mapInstance
-    }
-
-    updateMap(id: string) {
-        const mapInstance = RpgCommonMap.buffer.get(id)
-        if (mapInstance) {
-            mapInstance.update()
-        }
     }
 
     // TODO
@@ -257,7 +270,7 @@ export class SceneMap {
         }
 
         player.tmpPositions = null
-        
+
         const mapInstance = await this.loadMap(mapId)
 
         if (!mapInstance) return null
@@ -267,21 +280,7 @@ export class SceneMap {
         if (!player.hitbox.h) player.hitbox.h = mapInstance.tileHeight
         if (!player.hitbox.w) player.hitbox.w = mapInstance.tileWidth
 
-        let { data: serializeMap } = Object.assign({}, RpgCommonMap.buffer.get(mapId))
-        delete serializeMap.shapes
-        delete serializeMap.events
-        delete serializeMap._events
-
-        for (let layer of serializeMap.layers) {
-            delete layer.map
-        }
-
-        player.loadScene('map', {
-            id: mapId,
-            sounds: mapInstance.sounds,
-            ...serializeMap
-        })
-
+        player.emitSceneMap()
         player.teleport(positions || 'start')
 
         World.joinRoom(mapId, player.id)
