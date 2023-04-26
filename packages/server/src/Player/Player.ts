@@ -35,6 +35,7 @@ import { RpgClassMap } from '../Scenes/Map'
 import { RpgTiledWorldMap } from '../Game/WorldMaps'
 import { CameraOptions, PositionXY_OptionalZ, SocketEvents, SocketMethods, LayoutObject } from '@rpgjs/types'
 import { ComponentManager } from './ComponentManager'
+import { Subject } from 'rxjs'
 
 const {
     isPromise,
@@ -139,6 +140,8 @@ const layoutObject = {
 
 export class RpgPlayer extends RpgCommonPlayer {
     public readonly type: string = 'player'
+    // notifier for destroy
+    _destroy$: Subject<void> = new Subject()
 
     static schemas = {
         ...playerSchemas,
@@ -852,6 +855,7 @@ export class RpgPlayer extends RpgCommonPlayer {
         }
         this.emitToMap(SocketEvents.CallMethod, obj)
     }
+
 }
 
 export interface RpgPlayer extends

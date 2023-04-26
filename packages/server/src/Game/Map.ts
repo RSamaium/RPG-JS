@@ -74,10 +74,22 @@ export class RpgMap extends RpgCommonMap {
     }
 
     // alias of users property in simple-room package
+    /**
+     * @title Players list
+     * @prop { { [playerId: string]: RpgPlayer } } [players]
+     * @readonly
+     * @memberof Map
+     */
     get players(): PlayersList {
         return this['users']
     }
 
+    /**
+     * @title Number of players
+     * @prop {number} [nbPlayers]
+     * @readonly
+     * @memberof Map
+     */
     get nbPlayers(): number {
         return Object.keys(this.players).length
     }
@@ -99,7 +111,18 @@ export class RpgMap extends RpgCommonMap {
         if (this.onLoad) this.onLoad()
     }
 
-    async update(data: object | string) {
+    /**
+     * Update the map with new data. Data can be a string (TMX content) or an object (parsed TMX content)
+     * New Map data will be sent to all players on the map
+     *
+     * @title Update map
+     * @method map.update(data)
+     * @since 4.0.0
+     * @returns {Promise<void>}
+     * @param {object | string} data
+     * @memberof Map
+     */
+    async update(data: object | string): Promise<void> {
         let objectData
         // Data is XML (TMX content)
         if (typeof data == 'string') {
@@ -114,6 +137,28 @@ export class RpgMap extends RpgCommonMap {
             const player = this.players[playerId]
             player.emitSceneMap()
         }
+    }
+
+    /**
+     * Remove the map from the server. If there are still players on the map, an error will be thrown
+     * Not delete the map file, only in memory
+     * 
+     * @title Remove map
+     * @method map.remove()
+     * @since 4.0.0
+     * @returns {void}
+     * @throws {Error} If there are still players on the map
+     * @memberof Map
+     * */
+    remove(): never | void {
+        const players = Object.values(this.players)
+        if (players.length > 0) {
+            throw new Error(`Cannot remove map ${this.id} because there are still players on it`)
+        }
+        for (let eventId in this.events) {
+            this.removeEvent(eventId)
+        }
+        RpgCommonMap.buffer.delete(this.id)
     }
 
     private async parseTmx(file: string, relativePath: string = '') {
@@ -339,7 +384,10 @@ export class RpgMap extends RpgCommonMap {
             object.getShapes().forEach(shape => shape.out(event))
             event.getShapes().forEach(shape => shape.out(object))
         }
+        object.breakRoutes()
         object.stopMoveTo()
+        object._destroy$.next()
+        object._destroy$.complete()
         this.grid.clearObjectInCells(object.id)
         for (let playerId in this.players) {
             if (object.id == playerId) continue

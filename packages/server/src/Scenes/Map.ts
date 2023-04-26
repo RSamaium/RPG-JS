@@ -43,7 +43,7 @@ export class SceneMap {
      * @returns {RpgClassMap<RpgMap>[]} Array of RpgClassMap objects.
      * @since 4.0.0
      * @example
-     * ``typescript
+     * ```typescript
      * const maps = scene.getMaps();
      * console.log(maps);
      * // Output: [
@@ -52,6 +52,7 @@ export class SceneMap {
      * // { file: 'maps/level3.tmx', id: 'level1', type: 'map' }
      * // ]
      * ```
+     * @memberof SceneMap
      */
     getMaps(): RpgClassMap<RpgMap>[] {
         return Object.values(this.mapsById)
@@ -96,16 +97,6 @@ export class SceneMap {
         }
 
         return mapInstance
-    }
-
-    // TODO
-    removeMap(id: string) {
-        //const mapInstance = RpgCommonMap.buffer.get(id)
-        const objects = Query.getObjectsOfMap(id)
-        for (let object of objects) {
-            object.stopMoveTo()
-        }
-        RpgCommonMap.buffer.delete(id)
     }
 
     /**
