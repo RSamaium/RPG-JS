@@ -165,6 +165,10 @@ export class RpgCommonMap extends MapClass {
         delete this.shapes[name]
     }
 
+    clearShapes() {
+        this.shapes = {}
+    }
+
     /**
      * Return all shapes on the map
      * 

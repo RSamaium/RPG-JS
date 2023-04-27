@@ -133,6 +133,8 @@ export class RpgMap extends RpgCommonMap {
         }
         super.load(objectData)
         RpgCommonMap.buffer.set(this.id, this)
+        this.clearShapes()
+        this.getAllObjects().forEach(this.createShape.bind(this))
         for (let playerId in this.players) {
             const player = this.players[playerId]
             player.emitSceneMap()
@@ -150,9 +152,9 @@ export class RpgMap extends RpgCommonMap {
      * @throws {Error} If there are still players on the map
      * @memberof Map
      * */
-    remove(): never | void {
+    remove(ignorePlayers = false): never | void {
         const players = Object.values(this.players)
-        if (players.length > 0) {
+        if (players.length > 0 && !ignorePlayers) {
             throw new Error(`Cannot remove map ${this.id} because there are still players on it`)
         }
         for (let eventId in this.events) {
@@ -399,7 +401,7 @@ export class RpgMap extends RpgCommonMap {
         // last player before removed of this map 
         if (this.nbPlayers === 1) {
             // clear cache for this map
-            this._server.sceneMap.removeMap(this.id)
+            this.remove(true)
         }
     }
 

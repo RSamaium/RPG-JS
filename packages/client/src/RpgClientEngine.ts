@@ -500,7 +500,7 @@ export class RpgClientEngine {
 
         this.subscriptionWorld = World.listen(this.socket)
             .value
-            .subscribe(async (val: { data: any, partial: any, time: number, roomId: string }) => {
+            .subscribe(async (val: { data: any, partial: any, time: number, roomId: string, resetProps: string[] }) => {
 
                 const scene = this.renderer.getScene<SceneMap>()
 
@@ -523,6 +523,19 @@ export class RpgClientEngine {
                 const change = (prop, root = val, localEvent = false) => {
                     const list = root.data[prop]
                     const partial = root.partial[prop]
+                    const isShape = prop == 'shapes'
+                    if (!partial) {
+                        return
+                    }
+                    if (val.resetProps.indexOf(prop) != -1) {
+                        const objects = isShape ? this.gameEngine.getShapes() : this.gameEngine.getObjects()
+                        for (let key in objects) {
+                            const obj = objects[key]
+                            if (obj) {
+                                this.gameEngine.removeObjectAndShape(key)
+                            }
+                        }
+                    }
                     for (let key in partial) {
                         const obj = list[key]
                         const paramsChanged = partial ? partial[key] : undefined
@@ -530,7 +543,7 @@ export class RpgClientEngine {
                             this.gameEngine.removeObjectAndShape(key)
                         }
                         if (!obj) continue
-                        const isShape = prop == 'shapes'
+                        
                         if (!isShape) {
                             obj.type = {
                                 users: PlayerType.Player,
@@ -548,7 +561,8 @@ export class RpgClientEngine {
                                         data: obj,
                                         partial: paramsChanged,
                                         time: val.time,
-                                        roomId: val.roomId
+                                        roomId: val.roomId,
+                                        resetProps: val.resetProps
                                     }, true)
                                 }
                             }

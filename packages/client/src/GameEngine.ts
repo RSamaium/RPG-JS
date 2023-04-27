@@ -161,7 +161,9 @@ export class GameEngineClient extends RpgCommonGame {
     }
 
     removeObjectAndShape(id: string): boolean {
-        return this.removeObject(id) && this.removeShape(id)
+        let bool = this.removeObject(id)
+        if (!bool) bool = this.removeShape(id)
+        return bool
     }
 
     static toArray(obj: any, prop: string) {
