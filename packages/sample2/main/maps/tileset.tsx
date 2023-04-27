@@ -100,7 +100,7 @@
  </tile>
  <tile id="17">
   <properties>
-   <property name="collision" type="bool" value="false"/>
+   <property name="collision" type="bool" value="true"/>
    <property name="z" type="int" value="0"/>
   </properties>
   <objectgroup draworder="index" id="2">

@@ -1,13 +1,8 @@
-name = 'My Game'
-description = 'My first game with RPGJS'
-
 modules = [
-     './main',
-    '@rpgjs/gamepad',
+    './main',
     '@rpgjs/default-gui'
 ]
 
 [start]
     map = './main/maps/map'
     graphic = 'male'
-    hitbox = [16, 16]

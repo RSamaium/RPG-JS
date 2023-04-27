@@ -64,6 +64,7 @@ export interface ClientBuildConfigOptions {
 
 export async function clientBuildConfig(dirname: string, options: ClientBuildConfigOptions = {}) {
     const isServer = options.side === 'server'
+    const isTest = options.mode === 'test'
     const isRpg = options.type === 'rpg'
     const isBuild = options.serveMode === false
     const dirOutputName = isRpg ? 'standalone' : 'client'
@@ -145,7 +146,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         }
     }
 
-    if (isBuild) {
+    if (isBuild && !isTest) {
         plugins.push(
             tmxTsxMoverPlugin(isRpg ? 'standalone' : 'server'),
             mapExtractPlugin(dirOutputName)
