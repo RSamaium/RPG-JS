@@ -399,7 +399,7 @@ export class RpgMap extends RpgCommonMap {
             }
         }
         // last player before removed of this map 
-        if (this.nbPlayers === 1) {
+        if (this.nbPlayers === 1 && object.type === 'player') {
             // clear cache for this map
             this.remove(true)
         }
