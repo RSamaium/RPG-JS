@@ -17,6 +17,8 @@ interface MapObject extends TiledMap {
 }
 
 export class SceneMap extends Scene {
+    static readonly EVENTS_LAYER_DEFAULT : string = 'events-layer-default'
+
     /** 
      * Get the tilemap
      * 
@@ -42,7 +44,7 @@ export class SceneMap extends Scene {
     private eventsLayers: {
         [eventLayerName: string]: Container
     } = {}
-    private defaultLayer: Container
+    private defaultLayer: Container | undefined
 
     shapes = {}
 
@@ -167,15 +169,21 @@ export class SceneMap extends Scene {
                 containers.push(this.eventsLayers[layerData.name])
                 return
             }
-            const layer = new EventLayer(layerData)
+            const layer = new EventLayer()
             this.defaultLayer = this.eventsLayers[layerData.name] = layer
             containers.push(layer)
         })
+        if (containers.length == 0) {
+            if (!this.defaultLayer) {
+                this.defaultLayer = new EventLayer()
+            }
+            containers.push(this.defaultLayer)
+        }
         this.cameraFollowSprite(this.game.playerId)
         return containers
     }
 
-    getEventLayer(objectName?: string): Container {
+    getEventLayer(objectName?: string): Container | undefined {
         for (let layerData of this.data.layers) {
             if (layerData.type != TiledLayerType.ObjectGroup) {
                 continue

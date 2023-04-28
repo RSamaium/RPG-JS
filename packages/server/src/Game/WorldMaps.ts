@@ -13,7 +13,8 @@ export type RpgTiledWorld  = {
 } & TiledWorld
 
 export interface WorldMap extends RpgTiledWorld {
-    id?: string
+    id?: string,
+    basePath?: string
 }
 
 export class RpgWorldMaps extends RpgCommonWorldMaps {
@@ -29,7 +30,7 @@ export class RpgWorldMaps extends RpgCommonWorldMaps {
             }
             const create = () => sceneMap.createDynamicMap({
                 id,
-                file: fileName
+                file: world.basePath ? `${world.basePath}/${fileName}` : fileName
             })
             if (!id) {
                 map = create()

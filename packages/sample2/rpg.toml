@@ -4,5 +4,5 @@ modules = [
 ]
 
 [start]
-    map = './main/maps/map'
+    map = 'map'
     graphic = 'male'
