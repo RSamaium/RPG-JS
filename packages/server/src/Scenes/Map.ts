@@ -1,13 +1,12 @@
 
 import { HookServer, RpgCommonMap, RpgPlugin, Utils } from '@rpgjs/common'
 import { World } from 'simple-room'
-import { isTiledFormat, TiledMap, TiledWorld } from '@rpgjs/tiled'
+import { isTiledFormat, TiledMap } from '@rpgjs/tiled'
 import { MapOptions, MapData } from '../decorators/map'
 import { RpgMap } from '../Game/Map'
-import { RpgWorldMaps, WorldMap } from '../Game/WorldMaps'
+import { RpgTiledWorldMap, RpgWorldMaps, WorldMap } from '../Game/WorldMaps'
 import { RpgPlayer } from '../Player/Player'
 import { RpgServerEngine } from '../server'
-import { Query } from '../Query'
 
 export interface RpgClassMap<T> {
     id?: string

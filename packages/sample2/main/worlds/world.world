@@ -11,8 +11,8 @@
             "fileName": "maps/map2.tmx",
             "height": 640,
             "width": 640,
-            "x": 640,
-            "y": 1
+            "x": 192,
+            "y": 641
         }
     ],
     "onlyShowAdjacentMaps": false,

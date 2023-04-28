@@ -15,7 +15,7 @@ export function mapUpdatePlugin(serverUrl: string): Plugin {
           info(`File ${file} changed, updating map...`)
           // open file
           const data = await fs.readFile(file, 'utf-8');
-          axios.post(serverUrl + '/api/map/update', {
+          axios.post(serverUrl + '/api/maps/update', {
             mapFile: file,
             data
           })

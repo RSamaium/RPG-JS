@@ -11,7 +11,7 @@ export function api(rpgServer: RpgServerEngine): Router {
         res.json(players)
     })
 
-    router.post('/map/update', (req, res) => {
+    router.post('/maps/update', (req, res) => {
         const { mapId, data, mapFile } = req.body
         const findMap = rpgServer.sceneMap.getMaps().find(map => {
             if (mapId) {
@@ -28,6 +28,20 @@ export function api(rpgServer: RpgServerEngine): Router {
         }   
         else {
             res.status(404).json({ error: 'Map not found' })
+        }
+    })
+
+    router.post('/worlds/update', (req, res) => {
+        const { worldId, data } = req.body
+        const sceneMap = rpgServer.sceneMap
+        const world = sceneMap.getWorldMaps(worldId)
+        if (world) {
+            sceneMap.deleteWorldMaps(worldId)
+            sceneMap.createDynamicWorldMaps(data)
+            res.json({ success: true })
+        }
+        else {
+            res.status(404).json({ error: 'World not found' })
         }
     })
 

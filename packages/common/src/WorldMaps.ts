@@ -60,6 +60,22 @@ export class RpgCommonWorldMaps {
         })
     }
 
+    updateMap(mapId: string, wordMapInfo: RpgTiledWorldMap): boolean {
+        const map = this.maps.get(mapId)
+        if (map) {
+            const item = (this.mapsTree.all() as MapTree[]).find(item => item.map.id == mapId)
+            if (!item) return false
+            this.maps.set(mapId, wordMapInfo)
+            item.map.prototype.worldMapParent = this
+            item.minX = wordMapInfo.x
+            item.minY = wordMapInfo.y
+            item.maxX = wordMapInfo.x + wordMapInfo.width
+            item.maxY = wordMapInfo.y + wordMapInfo.height
+            return true
+        }
+        return false
+    }
+
     /**
      * Remove map of the world
      * @title Remove map of the world
@@ -80,6 +96,12 @@ export class RpgCommonWorldMaps {
             return true
         }
         return false
+    }
+
+    removeAllMaps() {
+        this.maps.forEach((map, id) => {
+            this.removeMap(id)
+        })
     }
 
     /**

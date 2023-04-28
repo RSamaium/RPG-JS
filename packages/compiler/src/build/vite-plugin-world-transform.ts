@@ -1,15 +1,26 @@
 import path from 'path'
 import { globFiles } from './utils.js'
+import crypto from 'crypto'
 import { info } from '../logs/warning.js'
+import fs from 'fs-extra';
+import axios from 'axios';
 
-export function worldTransformPlugin() {
+export function worldTransformPlugin(serverUrl: string) {
+
+    function extendsWorld(world, filePath: string) {
+        const relativePath = filePath.replace(process.cwd() + '/', '')
+        const directory = path.dirname(relativePath)
+        const worldId = crypto.createHash('md5').update(relativePath).digest('hex')
+        world.basePath = directory
+        world.id = worldId
+        return world
+    }
+
     return {
         name: 'transform-world',
         transform(source, id) {
             if (id.endsWith('.world')) {
-                const directory = path.dirname(id).replace(process.cwd() + '/', '')
-                const world = JSON.parse(source)
-                world.basePath = directory
+                const world = extendsWorld(JSON.parse(source), id)
                 return {
                     code: `export default ${JSON.stringify(world)}`,
                     map: null
@@ -22,13 +33,12 @@ export function worldTransformPlugin() {
             server.watcher.on('change', async (file: string) => {
                 if (file.endsWith('world')) {
                     info(`File ${file} changed, updating world...`)
-                    /* open file
                     const data = await fs.readFile(file, 'utf-8');
-                    axios.post(serverUrl + '/api/map/update', {
-                        mapFile: file,
-                        data
+                    const world = extendsWorld(JSON.parse(data), file)
+                    axios.post(serverUrl + '/api/worlds/update', {
+                        worldId: world.id,
+                        data: world
                     })
-                    */
                 }
             })
         }

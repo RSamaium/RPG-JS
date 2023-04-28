@@ -106,7 +106,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         flagTransform(options),
         configTomlPlugin(options, config), // after flagTransform
         (requireTransform as any)(),
-        worldTransformPlugin(),
+        worldTransformPlugin(serverUrl),
         tsxXmlPlugin(),
         ...(options.plugins || [])
     ]
