@@ -166,6 +166,7 @@ export class RpgRenderer {
             const container = await scene.load(obj, this.prevObjectScene, true)
             this.sceneContainer.removeChildren()
             this.sceneContainer.addChild(container)
+            scene.updateTilesOverlayAllSprites()
             this.scene?.update()
             return
         }

@@ -17,7 +17,7 @@ interface MapObject extends TiledMap {
 }
 
 export class SceneMap extends Scene {
-    static readonly EVENTS_LAYER_DEFAULT : string = 'events-layer-default'
+    static readonly EVENTS_LAYER_DEFAULT: string = 'events-layer-default'
 
     /** 
      * Get the tilemap
@@ -49,9 +49,9 @@ export class SceneMap extends Scene {
     shapes = {}
 
     constructor(
-            public game: GameEngineClient, 
-            private renderer: IRenderer,
-            private options: { screenWidth?: number, screenHeight?: number, drawMap?: boolean } = {}) {
+        public game: GameEngineClient,
+        private renderer: IRenderer,
+        private options: { screenWidth?: number, screenHeight?: number, drawMap?: boolean } = {}) {
         super(game)
         if (options.drawMap === undefined) this.options.drawMap = true
         this.onInit()
@@ -74,7 +74,7 @@ export class SceneMap extends Scene {
             'data',
             'layers'
         ].forEach(prop => this[prop] = (this.gameMap as any)[prop])
-        
+
     }
 
     /** @internal */
@@ -83,9 +83,9 @@ export class SceneMap extends Scene {
         const { clientEngine } = this.game
 
         if (sounds) {
-            if (!Utils.isArray(sounds)) sounds  = obj.sounds = <string[]>[sounds]
+            if (!Utils.isArray(sounds)) sounds = obj.sounds = <string[]>[sounds]
         }
-        
+
         this.gameMap = new RpgCommonMap()
         this.gameMap.load(obj)
         this.constructMethods()
@@ -104,7 +104,7 @@ export class SceneMap extends Scene {
         for (let { object } of Object.values(objects) as any[]) {
             if (Utils.isInstanceOf(object, RpgCommonPlayer) && object) {
                 (object as RpgCommonPlayer).updateInVirtualGrid()
-             }
+            }
         }
 
         const assets: string[] = []
@@ -132,7 +132,7 @@ export class SceneMap extends Scene {
         }
 
         RpgPlugin.emit(HookClient.SceneMapLoading, Assets)
-        
+
         this.tilemap.load({
             drawTiles: this.options.drawMap,
             isUpdate
@@ -152,7 +152,7 @@ export class SceneMap extends Scene {
         if (prevObj.sounds && prevObj.sounds instanceof Array) {
             prevObj.sounds.forEach(soundId => {
                 const continueSound = (<string[]>obj.sounds || []).find(id => id == soundId)
-                if (!continueSound) RpgSound.stop(soundId) 
+                if (!continueSound) RpgSound.stop(soundId)
             })
         }
         if (sounds) (<string[]>sounds).forEach(soundId => RpgSound.play(soundId))
@@ -221,30 +221,44 @@ export class SceneMap extends Scene {
         this.viewport?.update(deltaTime)
     }
 
+    // @internal
+    updateTilesOverlayAllSprites() {
+        const objects = this.objects
+        for (let [id, sprite] of objects) {
+            this.updateTilesOverlay(sprite)
+        }
+    }
+
+    private updateTilesOverlay(sprite: RpgComponent) {
+        if (!this.gameMap) return sprite
+        const { tileWidth, tileHeight } = this.gameMap
+        const { tilesOverlay }: any = sprite
+        const bounds = sprite.parent.getLocalBounds()
+        const width = Math.ceil(bounds.width / tileWidth) * tileWidth
+        const height = Math.ceil(bounds.height / tileHeight) * tileHeight
+        const _x = bounds.x
+        const _y = bounds.y
+
+        const addTile = (x, y) => {
+            const tiles = this.tilemap.createOverlayTiles(x, y, sprite)
+            if (tiles.length) tilesOverlay.addChild(...tiles)
+        }
+
+        tilesOverlay.removeChildren()
+
+        for (let i = _x; i <= _x + width; i += tileWidth) {
+            for (let j = _y; j <= _y + height; j += tileHeight) {
+                addTile(i, j)
+            }
+        }
+        return sprite
+    }
+
     onUpdateObject(logic: SceneSpriteLogic, sprite: RpgComponent, moving: boolean): RpgComponent {
         const { paramsChanged } = logic
         if (!this.gameMap) return sprite
         if (moving || (paramsChanged && (paramsChanged.width || paramsChanged.height))) {
-            const { tileWidth, tileHeight } = this.gameMap
-            const { tilesOverlay }: any = sprite
-            const bounds = sprite.parent.getLocalBounds()
-            const width = Math.ceil(bounds.width / tileWidth) * tileWidth
-            const height = Math.ceil(bounds.height / tileHeight) * tileHeight
-            const _x = bounds.x
-            const _y = bounds.y
-
-            const addTile = (x, y) => {
-                const tiles = this.tilemap.createOverlayTiles(x, y, sprite)
-                if (tiles.length) tilesOverlay.addChild(...tiles)
-            }
-
-            tilesOverlay.removeChildren()
-
-            for (let i = _x ; i <= _x + width ; i += tileWidth) {
-                for (let j = _y ; j <= _y + height ; j += tileHeight) {
-                    addTile(i, j)
-                }
-            }
+            this.updateTilesOverlay(sprite)
         }
         return sprite
     }
@@ -256,9 +270,9 @@ export class SceneMap extends Scene {
     }
 
     /** @internal */
-    updateScene(obj: SceneObservableData) {}
+    updateScene(obj: SceneObservableData) { }
 
-    addObject(obj: RpgCommonPlayer | RpgShape, id: string): RpgComponent { 
+    addObject(obj: RpgCommonPlayer | RpgShape, id: string): RpgComponent {
         const wrapper = new Container()
         const inner = new Container()
         const tilesOverlay = new Container()
@@ -271,12 +285,12 @@ export class SceneMap extends Scene {
         this.objects.set(id, component)
         this.getEventLayer(obj.id)?.addChild(wrapper)
         if (component.isCurrentPlayer) this.cameraFollowSprite(id)
-        component.onInit()  
+        component.onInit()
         return component
     }
 
     removeObject(id: string) {
-        let sprite =  this.objects.get(id)
+        let sprite = this.objects.get(id)
         if (sprite) {
             this.objects.delete(id)
             RpgPlugin.emit(HookClient.SceneRemoveSprite, [this, sprite], true)
@@ -306,7 +320,7 @@ export class SceneMap extends Scene {
                 moreOptions = options.smoothMove
             }
             this.viewport?.animate({
-                position: new Point (sprite?.x, sprite?.y),
+                position: new Point(sprite?.x, sprite?.y),
                 ...moreOptions,
                 callbackOnComplete: follow
             })
@@ -341,7 +355,7 @@ export class SceneMap extends Scene {
      * @returns {void}
      * @memberof RpgSceneMap
      */
-    on(eventName: keyof DisplayObjectEvents, cb: (position: { x: number, y: number }, ev?: any ) => any) {
+    on(eventName: keyof DisplayObjectEvents, cb: (position: { x: number, y: number }, ev?: any) => any) {
         if (!this.viewport) return
         this.viewport.eventMode = 'static'
         this.viewport.on(eventName, (...args) => {
@@ -353,26 +367,26 @@ export class SceneMap extends Scene {
 }
 
 export interface SceneMap {
-     data: any;
-     tileWidth: number;
-     tileHeight: number;
-     layers: any[];
-     widthPx: number;
-     heightPx: number;
-     zTileHeight: number
-     getShapes(): RpgShape[];
-     getShape(name: string): RpgShape | undefined;
-     getPositionByShape(filter: (shape: RpgShape) => {}): {
-         x: number;
-         y: number;
-         z: number;
-     } | null;
-     getTileIndex(x: number, y: number, [z]?: [number]): number;  
-     getTileByIndex(tileIndex: number, zPlayer?: [number, number]): any;
-     getTileOriginPosition(x: number, y: number): {
-         x: number;
-         y: number;
-     };
-     getTileByPosition(x: number, y: number, z?: [number, number]): any;
-     getLayerByName(name: string): any
+    data: any;
+    tileWidth: number;
+    tileHeight: number;
+    layers: any[];
+    widthPx: number;
+    heightPx: number;
+    zTileHeight: number
+    getShapes(): RpgShape[];
+    getShape(name: string): RpgShape | undefined;
+    getPositionByShape(filter: (shape: RpgShape) => {}): {
+        x: number;
+        y: number;
+        z: number;
+    } | null;
+    getTileIndex(x: number, y: number, [z]?: [number]): number;
+    getTileByIndex(tileIndex: number, zPlayer?: [number, number]): any;
+    getTileOriginPosition(x: number, y: number): {
+        x: number;
+        y: number;
+    };
+    getTileByPosition(x: number, y: number, z?: [number, number]): any;
+    getLayerByName(name: string): any
 }
