@@ -140,9 +140,6 @@ const layoutObject = {
 
 export class RpgPlayer extends RpgCommonPlayer {
     public readonly type: string = 'player'
-    // notifier for destroy
-    _destroy$: Subject<void> = new Subject()
-
     static schemas = {
         ...playerSchemas,
         events: [playerSchemas]

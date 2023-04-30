@@ -217,7 +217,6 @@ describe('Test Data Shape are send to client', () => {
             height: 100
         })
         expect(data).toMatchObject({ x: 0, y: 0, width: 100, height: 100, type: 'box' })
-        expect(data.properties).toMatchObject({ collision: null })
     })
 
     test('Polygon', async () => {

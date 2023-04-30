@@ -386,8 +386,6 @@ export class RpgMap extends RpgCommonMap {
             object.getShapes().forEach(shape => shape.out(event))
             event.getShapes().forEach(shape => shape.out(object))
         }
-        object.breakRoutes()
-        object.stopMoveTo()
         object._destroy$.next()
         object._destroy$.complete()
         this.grid.clearObjectInCells(object.id)

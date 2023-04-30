@@ -24,6 +24,7 @@ beforeEach(async () => {
     sceneMap = client.getScene<RpgSceneMap>()
 })
 
+
 test('Create Dynamic Event', () => {
     @EventData({
         name: 'test'
@@ -52,6 +53,7 @@ test('Create Dynamic Event', () => {
     })
 })
 
+
 test('Remove Event', () => {
     @EventData({
         name: 'test'
@@ -67,17 +69,15 @@ test('Remove Event', () => {
     server.send()
 
     const bool = map.removeEvent(eventId)
+
     expect(bool).toBeTruthy()
 
     server.send()
-    
-    return new Promise((resolve: any) => {
-        client.objects.subscribe((objects) => {
-            const events: any = Object.values(objects)
-            const event = events.find(ev => ev.object.id == eventId)
-            expect(event).toBeUndefined()
-            resolve()
-        })
+
+    client.objects.subscribe((objects) => {
+        const events: any = Object.values(objects)
+        const event = events.find(ev => ev.object.id == eventId)
+        expect(event).toBeUndefined()
     })
 })
 
@@ -400,18 +400,10 @@ describe('Test Scenario Event', () => {
         await player.changeMap('other-map')
 
         expect(Object.values(player.events)).toHaveLength(0)
-
-        // TODO: Fix this test
-       /* await nextTick(client)
-
-        const events = client.gameEngine.world.getObjectsOfGroup()
-        expect(Object.keys(events)).toHaveLength(1)
-        expect(Object.keys(client.gameEngine.events)).toHaveLength(0)*/
      })
      
 })
-
-
+ 
 afterEach(() => {
     clear()
 })

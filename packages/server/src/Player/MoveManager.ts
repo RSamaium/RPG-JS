@@ -1,7 +1,7 @@
-import { Direction, LiteralDirection, RpgCommonPlayer, RpgShape, Vector2d } from '@rpgjs/common'
+import { Direction, LiteralDirection, RpgShape, Vector2d } from '@rpgjs/common'
 import { Utils } from '@rpgjs/common'
-import { Behavior, ClientMode, MoveMode, MoveTo, Position, PositionXY, SocketEvents, SocketMethods, Tick } from '@rpgjs/types'
-import { Observable, Subscription } from 'rxjs'
+import { Behavior, ClientMode, MoveMode, MoveTo, PositionXY, SocketEvents, SocketMethods, Tick } from '@rpgjs/types'
+import { Observable, Subscription, takeUntil, Subject } from 'rxjs'
 import { RpgServerEngine } from '../server'
 import { RpgEvent, RpgPlayer } from './Player'
 
@@ -494,7 +494,11 @@ export class MoveManager {
 
                 routes.shift()
             }
-            this.movingSubscription = this.server.tick.subscribe(move)
+            this.movingSubscription = this.server.tick
+                .pipe(
+                    takeUntil(this._destroy$)
+                )
+                .subscribe(move)
         })
     }
 
@@ -627,4 +631,5 @@ export interface MoveManager {
     id: string
     server: RpgServerEngine
     position: Vector2d
+    _destroy$: Subject<void>
 }

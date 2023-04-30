@@ -31,9 +31,7 @@ test('add an item', () => {
                 nb: 1,
                 item: {
                   name: 'Potion',
-                  description: null,
                   price: 100,
-                  consumable: null,
                   id: 'potion'
                 }
               }

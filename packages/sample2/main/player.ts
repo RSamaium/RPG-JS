@@ -1,4 +1,4 @@
-import { RpgPlayerHooks, RpgPlayer, EventData, RpgEvent } from '@rpgjs/server'
+import { RpgPlayerHooks, RpgPlayer, EventData, RpgEvent, Move } from '@rpgjs/server'
 
 @EventData({
    name: 'EV-1'
@@ -20,9 +20,11 @@ const player: RpgPlayerHooks = {
       })
      
    },
-   onInput(player: RpgPlayer) {
-      const map = player.getCurrentMap()
-      console.log(map.events)
+   onInput(player: RpgPlayer, { input }) {
+      if (input == 'action') {
+         console.log('right')
+         player.moveRoutes([ Move.tileRight(), Move.tileRight(), Move.tileRight() ])
+      }
    }
 }
 

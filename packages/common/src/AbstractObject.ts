@@ -46,7 +46,11 @@ export class AbstractObject {
     private collisionWith: AbstractObject[] = []
     private _collisionWithTiles: TileInfo[] = []
     private _collisionWithShapes: RpgShape[] = []
+    
     private destroyMove$: Subject<boolean> = new Subject<boolean>()
+     // notifier for destroy
+     _destroy$: Subject<void> = new Subject()
+
 
     static get ACTIONS() {
         return ACTIONS
@@ -749,6 +753,7 @@ export class AbstractObject {
         return tick$
             .pipe(
                 takeUntil(this.destroyMove$),
+                takeUntil(this._destroy$),
                 mergeMap(() => from(this.computeNextPositionByTarget(this.position.copy(), getPosition()))),
                 map((position) => {
                     this.autoChangeDirection(position)
