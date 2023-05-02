@@ -88,6 +88,7 @@ export class SceneMap extends Scene {
 
         this.gameMap = new RpgCommonMap()
         this.gameMap.load(obj)
+        this.gameMap.clearCacheTilesets()
         this.constructMethods()
 
         RpgCommonMap.bufferClient.set(obj.id, this.gameMap)

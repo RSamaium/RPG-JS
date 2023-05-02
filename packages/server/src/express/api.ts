@@ -11,9 +11,10 @@ export function api(rpgServer: RpgServerEngine): Router {
         res.json(players)
     })
 
-    router.post('/maps/update', (req, res) => {
+    router.put('/maps', (req, res) => {
         const { mapId, data, mapFile } = req.body
-        const findMap = rpgServer.sceneMap.getMaps().find(map => {
+        const maps = rpgServer.sceneMap.getMaps()
+        const findMap = maps.find(map => {
             if (mapId) {
                 return map.id === mapId
             }
@@ -31,7 +32,19 @@ export function api(rpgServer: RpgServerEngine): Router {
         }
     })
 
-    router.post('/worlds/update', (req, res) => {
+    router.put('/tilesets', async (req, res) => {
+        const { data, tilesetId } = req.body
+        const maps = Query.getRooms<RpgMap>()
+        for (let [id, map] of maps) {
+            const findTileset = map.tilesets.find(tileset => tileset.name === tilesetId)
+            if (findTileset) {
+                await map.updateTileset(data)
+            }
+        }
+        res.json({ success: true })
+    })
+
+    router.put('/worlds', (req, res) => {
         const { worldId, data } = req.body
         const sceneMap = rpgServer.sceneMap
         const world = sceneMap.getWorldMaps(worldId)

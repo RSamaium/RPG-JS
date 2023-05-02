@@ -91,7 +91,7 @@
  </tile>
  <tile id="16">
   <properties>
-   <property name="collision" type="bool" value="true"/>
+   <property name="collision" type="bool" value="false"/>
    <property name="z" type="int" value="0"/>
   </properties>
   <objectgroup draworder="index" id="2">

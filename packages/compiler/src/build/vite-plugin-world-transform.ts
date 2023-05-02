@@ -35,7 +35,7 @@ export function worldTransformPlugin(serverUrl: string) {
                     info(`File ${file} changed, updating world...`)
                     const data = await fs.readFile(file, 'utf-8');
                     const world = extendsWorld(JSON.parse(data), file)
-                    axios.post(serverUrl + '/api/worlds/update', {
+                    axios.put(serverUrl + '/api/worlds', {
                         worldId: world.id,
                         data: world
                     })

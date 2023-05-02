@@ -443,11 +443,15 @@ export class RpgClientEngine {
             this.renderer.transitionScene(name)
         })
 
-        this.socket.on('loadScene', ({ name, data }) => {
+        this.socket.on(SocketEvents.GameReload, () => {
+            window.location.reload()
+        })
+
+        this.socket.on(SocketEvents.LoadScene, ({ name, data }) => {
             this.renderer.loadScene(name, data)
         })
 
-        this.socket.on('changeServer', ({ url, port }) => {
+        this.socket.on(SocketEvents.ChangeServer, ({ url, port }) => {
             const connection = url + ':' + port
             if (this.lastConnection == connection) {
                 return

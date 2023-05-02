@@ -7,6 +7,7 @@ import PrettyError from 'pretty-error'
 import { ModuleType } from '@rpgjs/common'
 import { RpgServerEngine } from '../server'
 import { api } from './api'
+import { Query } from '../Query'
 
 type ExpressServerOptions = {
     basePath: string,
@@ -36,7 +37,7 @@ export function expressServer(modules: ModuleType[], options: ExpressServerOptio
             // TODO
             limit: '50mb'
         }))
-        
+
         // @ts-ignore
         const hasStatic = process.env.STATIC_DIRECTORY_ENABLED
         // @ts-ignore
@@ -75,6 +76,9 @@ export function expressServer(modules: ModuleType[], options: ExpressServerOptio
         if (import.meta['hot']) {
             import.meta['hot'].on("vite:beforeFullReload", () => {
                 server.close()
+                Query.getPlayers().forEach(player => {
+                    player.gameReload()
+                })
             });
         }
     })

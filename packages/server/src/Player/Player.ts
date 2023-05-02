@@ -586,7 +586,7 @@ export class RpgPlayer extends RpgCommonPlayer {
     }
 
     loadScene(name: string, data: any): void {
-        this.emit('loadScene', {
+        this.emit(SocketEvents.LoadScene, {
             name,
             data
         })
@@ -613,8 +613,12 @@ export class RpgPlayer extends RpgCommonPlayer {
         })
     }
 
+    gameReload() {
+        this.emit(SocketEvents.GameReload)
+    }
+
     changeServer(url: string, port: number) {
-        this.emit('changeServer', {
+        this.emit(SocketEvents.ChangeServer, {
             url,
             port
         })
@@ -732,7 +736,7 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @returns {void}
      * @memberof Player
      */
-    public emit(key: string, value: any): void {
+    public emit(key: string, value?: any): void {
         if (this._socket) this._socket.emit(key, value)
     }
 

@@ -1,5 +1,5 @@
 import { RpgCommonMap, Utils, RpgShape, RpgCommonGame, AbstractObject } from '@rpgjs/common'
-import { TiledParserFile } from '@rpgjs/tiled'
+import { TiledParserFile, TiledParser, TiledTileset } from '@rpgjs/tiled'
 import { EventOptions } from '../decorators/event'
 import { RpgPlayer, EventMode, RpgEvent } from '../Player/Player'
 import { Move } from '../Player/MoveManager'
@@ -7,6 +7,7 @@ import { RpgServerEngine } from '../server'
 import { Observable } from 'rxjs'
 import path from 'path'
 import { HitBox, MovingHitbox, Position } from '@rpgjs/types'
+import { World } from 'simple-room'
 
 export type EventPosOption = {
     x: number,
@@ -141,6 +142,29 @@ export class RpgMap extends RpgCommonMap {
         }
     }
 
+    async updateTileset(data: TiledTileset | string): Promise<void> {
+        let objectData: TiledTileset
+        // Data is XML (TMX content)
+        if (typeof data == 'string') {
+            const parser = new TiledParser(data, this.file)
+            objectData = parser.parseTileset()
+        }
+        else {
+            objectData = data
+        }
+        this.removeCacheTileset(objectData.name)
+        this.update({
+            ...this.data,
+            tilesets: this.data.tilesets.map((tileset: any) => {
+                if (tileset.name == objectData.name) {
+                    objectData.firstgid = tileset.firstgid
+                    return objectData
+                }
+                return tileset
+            })
+        })
+    }
+
     /**
      * Remove the map from the server. If there are still players on the map, an error will be thrown
      * Not delete the map file, only in memory
@@ -161,6 +185,7 @@ export class RpgMap extends RpgCommonMap {
             this.removeEvent(eventId)
         }
         RpgCommonMap.buffer.delete(this.id)
+        World.removeRoom(this.id)
     }
 
     private async parseTmx(file: string, relativePath: string = '') {

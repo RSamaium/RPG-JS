@@ -5,9 +5,9 @@
 <script>
 export default {
     name: 'rpg-disconnect',
-    inject: ['rpgStage'],
+    inject: ['rpgStage', 'rpgEngine'],
     mounted() {
-        const blur = new PIXI.BlurFilter()
+        const blur = new this.rpgEngine.PIXI.BlurFilter()
         this.rpgStage.filters = [blur]
     },
     unmounted() {

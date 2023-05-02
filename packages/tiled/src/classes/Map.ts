@@ -1,5 +1,6 @@
 import { TiledLayer, TiledLayerType } from "../types/Layer";
 import { TiledMap } from "../types/Map";
+import { TiledTileset } from "../types/Tileset";
 import { Layer } from "./Layer";
 import { TiledObjectClass } from "./Object";
 import { TiledProperties } from "./Properties";
@@ -20,7 +21,7 @@ export interface GetTileOptions {
 }
 
 // Allows you to cache tilesets. Avoid rebuilding for other maps
-export const bufferTilesets = {}
+export let bufferTilesets = {}
 
 export class MapClass extends TiledProperties {
     /** 
@@ -311,6 +312,14 @@ export class MapClass extends TiledProperties {
             y,
             tiles: tilesEdited
         }
+    }
+
+    removeCacheTileset(name: string) {
+        delete bufferTilesets[name]
+    }
+
+    clearCacheTilesets() {
+        bufferTilesets = {}
     }
 
     private mapTilesets() {

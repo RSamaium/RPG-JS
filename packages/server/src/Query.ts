@@ -140,8 +140,8 @@ class QueryClass {
     }
 
     // TODO
-    getRooms() {
-        return World.getRooms()
+    getRooms<T>(): Map<string, T> {
+        return World.getRooms() as Map<string, T>
     }
 
     getRoom<T>(name: string): T {

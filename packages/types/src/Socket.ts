@@ -6,5 +6,8 @@ export enum SocketMethods {
 }
 
 export enum SocketEvents {
-    CallMethod = 'callMethod'
+    CallMethod = 'callMethod',
+    GameReload = 'gameReload',
+    ChangeServer = 'changeServer',
+    LoadScene = 'loadScene',
 }
