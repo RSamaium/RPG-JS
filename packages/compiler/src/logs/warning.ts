@@ -8,6 +8,10 @@ export function info(message: string) {
     console.log(colors.blue(`ℹ️  Info - ${message}`))
 }
 
+export function error(message: string) {
+    console.log(colors.red(`❌  Error - ${message}`))
+}
+
 export const errorApi = (err) => {
-    console.log(colors.red(`❌  Error ${err.response.status} - ${err.response.data.error}`))
+    error(`${err.response.status} - ${err.response.data.error}`)
 }

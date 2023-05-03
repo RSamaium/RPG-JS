@@ -5,6 +5,9 @@ import { hideBin } from "yargs/helpers";
 import { devMode, DevOptions } from "./serve/index.js";
 import { buildMode } from "./build/index.js";
 import { test } from "./test/index.js";
+import { generate } from "./generate/index.js";
+import { warn } from "./logs/warning.js";
+import { add } from "./add/index.js";
 
 yargs(hideBin(process.argv))
     .command('generate [type] [directory_name]', 'Generate', (yargs) => {
@@ -18,14 +21,32 @@ yargs(hideBin(process.argv))
     }, (argv) => {
         const { directory_name: directory, type } = argv
         if (!type) {
-            console.log('Specify the type of file to generate (example: module)')
+            warn('Specify the type of file to generate (example: module)')
             return
         }
         if (!directory) {
-            console.log('Give the name of the directory to generate (example: my-system)')
+            warn('Give the name of the directory to generate (example: my-system)')
             return
         }
-
+        generate(type, directory)
+    })
+    .command('add [module]', 'Add Module', (yargs) => {
+        return yargs
+            .positional('module', {
+                describe: 'Define the name of the module to add'
+            })
+    }, (argv) => {
+        const { module: moduleName } = argv
+        if (!moduleName) {
+            warn('Specify the name of the module to add (example: @rpgjs/default-gui)')
+            return
+        }
+        // module name must starts with @rpgjs or rpgjs
+        if (!moduleName.startsWith('@rpgjs') && !moduleName.startsWith('rpgjs')) {
+            warn('The module name must start with @rpgjs or rpgjs')
+            return
+        }
+        add(moduleName)
     })
     .command('dev', 'Run Vite in local development', (yargs) => {
         return yargs
