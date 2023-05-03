@@ -31,6 +31,18 @@ export default {
                 "items": {
                     "type": "string"
                 }
+            },
+            "api": {
+                "type": "object",
+                "properties": {
+                    "enabled": {
+                        "type": "boolean"
+                    },
+                    "authSecret": {
+                        "type": "string"
+                    }
+                },
+                "required": ["enabled", "authSecret"]
             }
         }
     },

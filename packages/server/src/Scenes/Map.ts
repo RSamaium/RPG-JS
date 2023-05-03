@@ -271,6 +271,12 @@ export class SceneMap {
         if (!player.hitbox.w) player.hitbox.w = mapInstance.tileWidth
 
         player.emitSceneMap()
+
+        // if room is removed after load map (for unit tests)
+        if (!World.getRoom(mapId)) {
+            return null
+        }
+
         player.teleport(positions || 'start')
 
         World.joinRoom(mapId, player.id)

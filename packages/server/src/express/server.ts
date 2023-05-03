@@ -54,6 +54,10 @@ export function expressServer(modules: ModuleType[], options: ExpressServerOptio
             rpgGame.app = app
             rpgGame.start()
             app.use('/api', api(rpgGame))
+            app.use((err: any, req: any, res: any, next: any) => {
+                const status = err.status || 500
+                res.status(status).json({ error: err.message })
+            })
             resolve({
                 app,
                 server,

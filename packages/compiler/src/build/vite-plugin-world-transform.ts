@@ -1,9 +1,9 @@
 import path from 'path'
 import { globFiles } from './utils.js'
 import crypto from 'crypto'
-import { info } from '../logs/warning.js'
+import { errorApi, info } from '../logs/warning.js'
 import fs from 'fs-extra';
-import axios from 'axios';
+import axios from '../serve/api.js';
 
 export function worldTransformPlugin(serverUrl: string) {
 
@@ -38,7 +38,7 @@ export function worldTransformPlugin(serverUrl: string) {
                     axios.put(serverUrl + '/api/worlds', {
                         worldId: world.id,
                         data: world
-                    })
+                    }).catch(errorApi)
                 }
             })
         }

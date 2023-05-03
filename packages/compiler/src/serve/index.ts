@@ -18,6 +18,7 @@ export interface DevOptions {
 
 export async function devMode(options: DevOptions = {}) {
     const isRpg = process.env.RPG_TYPE == 'rpg'
+    process.env.NODE_ENV = 'development'
     const cwd = process.cwd()
 
     const colorUrl = (url: string) =>

@@ -1,9 +1,9 @@
 import { Plugin } from 'vite';
 import { globFiles } from './utils.js';
-import { info } from '../logs/warning.js';
+import { errorApi, info } from '../logs/warning.js';
 import fs from 'fs-extra';
 import xml2js from 'xml2js';
-import axios from 'axios';
+import axios from '../serve/api.js';
 
 export function mapUpdatePlugin(serverUrl: string): Plugin {
   return {
@@ -19,7 +19,7 @@ export function mapUpdatePlugin(serverUrl: string): Plugin {
           axios.put(serverUrl + '/api/maps', {
             mapFile: file,
             data
-          })
+          }).catch(errorApi)
         }
         else if (file.endsWith('tsx')) {
           info(`File ${file} changed, updating tileset...`)
@@ -30,7 +30,7 @@ export function mapUpdatePlugin(serverUrl: string): Plugin {
           axios.put(serverUrl + '/api/tilesets', {
             tilesetId: result.tileset.$.name,
             data
-          })
+          }).catch(errorApi)
         }
       })
     }
