@@ -5,10 +5,12 @@ import fs from 'fs-extra';
 import xml2js from 'xml2js';
 import axios from '../serve/api.js';
 
-export function mapUpdatePlugin(serverUrl: string): Plugin {
+export function mapUpdatePlugin(_serverUrl?: string): Plugin {
   return {
     name: 'vite-plugin-map-update',
     configureServer(server) {
+      const serverUrl = _serverUrl || (server.httpServer?.address() as any).port
+
       server.watcher.add(globFiles('@(tmx|tsx)'));
 
       server.watcher.on('change', async (file: string) => {

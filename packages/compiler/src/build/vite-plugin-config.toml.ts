@@ -5,6 +5,7 @@ import sizeOf from 'image-size';
 import { ClientBuildConfigOptions, Config } from './client-config';
 import { loadGlobalConfig } from './load-global-config.js';
 import { warn } from '../logs/warning.js';
+import { OUPUT_DIR_CLIENT_ASSETS, assetsFolder, createDistFolder } from './utils.js';
 
 const MODULE_NAME = 'virtual-modules'
 const GLOBAL_CONFIG_CLIENT = 'virtual-config-client'
@@ -167,10 +168,15 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
             getAllFiles(folder).filter(file => {
                 const ext = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.svg']
                 return ext.some(e => file.toLowerCase().endsWith(e))
-            }).forEach(file => {
+            }).forEach(async file => {
                 // get basename without extension
                 const filename = path.basename(file)
                 const basename = filename.replace(path.extname(file), '')
+                // move image to assets folder, if build
+                if (options.serveMode === false) {
+                    const dest = path.join(assetsFolder(options.type === 'rpg' ? 'standalone' : 'client'), filename)
+                    fs.copyFileSync(file, dest)
+                }
                 lastImagePath = file
                 objectString += `"${basename}": "${path.join(projectPath, filename)}",\n`
             })

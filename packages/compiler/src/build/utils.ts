@@ -1,5 +1,5 @@
 import path from 'path'
-import fs from 'fs'
+import fs from 'fs';
 import * as glob from 'glob'
 
 export const OUPUT_DIR_CLIENT_ASSETS = 'dist/client/assets'
@@ -19,4 +19,14 @@ export const globFiles = (extension: string): string[] => {
         ...glob.sync('node_modules/rpgjs-*/*.' + extension, { nodir: true }),
         ...glob.sync('node_modules/@rpgjs/**/*.' + extension, { nodir: true })
     ]
+}
+
+export const assetsFolder = (outputDir: string): string => {
+    return path.join('dist', outputDir, 'assets')
+}
+
+export const createDistFolder = async  (outputDir: string): Promise<string> => {
+    const assetDir = assetsFolder(outputDir)
+    fs.mkdirSync(assetDir, { recursive: true })
+    return assetDir
 }

@@ -1,11 +1,10 @@
 import { Plugin } from 'vite';
 import * as fs from 'fs-extra';
 import * as path from 'path';
-import { globFiles } from './utils.js';
+import { createDistFolder, globFiles } from './utils.js';
 
 const moveTMXTSXFiles = async (outputDir: string): Promise<void> => {
-  const assetDir = path.join('dist', outputDir, 'assets');
-  await fs.ensureDir(assetDir);
+  const assetDir = await createDistFolder(outputDir);
 
   const files = globFiles('@(tmx|tsx)')
 

@@ -19,7 +19,7 @@ import { DevOptions } from '../serve/index.js';
 import { codeInjectorPlugin } from './vite-plugin-code-injector.js';
 import { error, ErrorCodes } from '../utils/log.js';
 import configTomlPlugin from './vite-plugin-config.toml.js'
-import { entryPointServer } from './utils.js'
+import { createDistFolder, entryPointServer } from './utils.js'
 import cssPlugin from './vite-plugin-css.js';
 import { rpgjsPluginLoader } from './vite-plugin-rpgjs-loader.js';
 import { mapUpdatePlugin } from './vite-plugin-map-update.js';
@@ -101,12 +101,14 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     // alias for client
     process.env.VITE_RPG_TYPE = envType
 
+    await createDistFolder(dirOutputName)
+
     let plugins: any[] = [
         rpgjsPluginLoader(dirOutputName, options.serveMode),
         flagTransform(options),
         configTomlPlugin(options, config), // after flagTransform
         (requireTransform as any)(),
-        worldTransformPlugin(serverUrl),
+        worldTransformPlugin(isRpg ? undefined : serverUrl),
         tsxXmlPlugin(),
         ...(options.plugins || [])
     ]
@@ -141,7 +143,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     else {
         if (!isBuild) {
             plugins.push(
-                mapUpdatePlugin(serverUrl)
+                mapUpdatePlugin(isRpg ? undefined : serverUrl)
             )
         }
     }

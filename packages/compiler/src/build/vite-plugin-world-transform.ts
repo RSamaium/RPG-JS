@@ -5,7 +5,7 @@ import { errorApi, info } from '../logs/warning.js'
 import fs from 'fs-extra';
 import axios from '../serve/api.js';
 
-export function worldTransformPlugin(serverUrl: string) {
+export function worldTransformPlugin(serverUrl?: string) {
 
     function extendsWorld(world, filePath: string) {
         const relativePath = filePath.replace(process.cwd() + '/', '')
