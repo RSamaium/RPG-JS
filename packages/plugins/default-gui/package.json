@@ -11,7 +11,7 @@
   "author": "Samuel Ronce",
   "license": "MIT",
   "dependencies": {
-    "@rpgjs/client": "^3.3.0",
+    "@rpgjs/client": "^3.3.2",
     "rxjs": "^7.8.0",
     "typescript": "^5.0.2",
     "vue": "^3.2.47"

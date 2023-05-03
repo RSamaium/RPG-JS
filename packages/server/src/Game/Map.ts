@@ -142,7 +142,20 @@ export class RpgMap extends RpgCommonMap {
         }
     }
 
-    async updateTileset(data: TiledTileset | string): Promise<void> {
+    /**
+     * Update tileset with new data. Data can be a string (TSX content) or an object (TiledTileset)
+     * Cache will be removed for this tileset
+     * New tileset data will be sent to all players on the map
+     * Warning: tileset is not updated for all maps, only for the current map
+     * 
+     * @title Update tileset
+     * @method map.updateTileset(data)
+     * @since 4.0.0
+     * @returns {<void>}
+     * @param {TiledTileset | string} data
+     * @memberof Map
+     */
+    updateTileset(data: TiledTileset | string) {
         let objectData: TiledTileset
         // Data is XML (TMX content)
         if (typeof data == 'string') {
