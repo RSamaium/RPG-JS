@@ -80,21 +80,19 @@ const apiMenu = [
 ]
 
 const guideMenu = [{
-  title: 'Guide',
-  collapsable: false,
-  sidebarDepth: 1,
-  children: [
-    '/guide/get-started',
-    '/guide/create-tileset',
-    '/guide/create-map',
-    '/guide/create-world-maps',
-    '/guide/create-sprite',
-    '/guide/player-start',
-    '/guide/create-event',
-    '/guide/create-sound',
-    '/guide/create-database',
-    '/guide/save',
-    '/guide/production',
+  text: 'Quick Start',
+  collapsed: false,
+  items: [
+    { text: "Getting Started", link: "/guide/get-started" },
+    { text: "Create your first map", link: "/guide/create-map" },
+    { text: "Create hero in map", link: "/guide/create-sprite" }
+  ]
+},
+{
+  text: 'Go further',
+  collapsed: false,
+  items: [
+    { text: "Create Event (NPC)", link: "/guide/create-event" }
   ]
 },
 {

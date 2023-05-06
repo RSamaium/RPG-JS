@@ -1,4 +1,4 @@
-# Step 7. Create an in-game event
+# Create an in-game event
 
 ## Prerequisites
 
@@ -14,7 +14,7 @@
 
 ## Create a character. Shared mode
 
-First of all, add a file in <PathTo to="serverDir" file="chara.ts" />
+First of all, add a file in <PathTo to="eventDir" file="chara.ts" />
 
 ```ts 
 import { RpgEvent, EventData, RpgPlayer } from '@rpgjs/server'

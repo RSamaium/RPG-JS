@@ -1,4 +1,4 @@
-# Step 4. Create a sprite
+# Create hero
 
 ## Prerequisites
 
@@ -14,8 +14,8 @@ Here is the spritesheet we will use:
 
 ![hero](/assets/chara.png)
 
-1. Place the image in <PathTo to="clientDir" file="characters/assets" />
-2. Then create the following file in <PathTo to="clientDir" file="characters/hero.ts" />
+1. Place the image in <PathTo to="clientDir" file="characters/hero.png" /> (create folder)
+2. Then create the following file in <PathTo to="clientDir" file="characters/spritesheet.ts" />
 
 ```ts
 import { Spritesheet, Animation, Direction } from '@rpgjs/client'
@@ -30,12 +30,8 @@ const frameY = direction => {
 }
 
 @Spritesheet({
-    id: 'hero', // id (mandatory)
-    image: require('./assets/chara.png'), // relative path of image
     framesWidth: 4, // number of frames of the image across the width
     framesHeight: 4, // number of frames of the image across the height
-    width: 128, // width of image
-    height: 192, // height of image
     textures: {
         [Animation.Stand]: {
             animations: direction => [
@@ -53,7 +49,7 @@ const frameY = direction => {
          }
     }
 })
-export class HeroCharacter {}
+export default class Characters {}
 ```
 
 Follow the information in the comments
@@ -70,11 +66,7 @@ import { Spritesheet, Presets } from '@rpgjs/client'
 const { RMSpritesheet } = Presets
 
 @Spritesheet({
-    id: 'hero',
-    image: require('./assets/chara.png'),
-    width: 128,
-    height: 192,
-    ...RMSpritesheet(4, 4, 0)
+    ...RMSpritesheet(3, 4)
    
 })
 export class HeroCharacter {}
@@ -83,25 +75,17 @@ export class HeroCharacter {}
 Parameters:
 1. framesWidth
 2. framesHeight
-3. Frame for stand animation (1 by default)
 
-## 2. Add the spritesheet in the module
+## 2. Indicate which map to start with and the graphic to use
 
-Then go to <PathTo to="clientIndex" />, and add the spritesheet in the appropriate property
+Open the file `rpg.toml` and add this:
 
-```ts
-import { RpgClient, RpgModule } from '@rpgjs/client'
-import { HeroCharacter } from './characters/hero'
-import { Tilesets } from './maps/medieval'
+```toml
+modules = [
+    './main' # folder to load
+]
 
-@RpgModule<RpgClient>({
-    spritesheets: [
-        HeroCharacter // We add our spritesheet !
-    ]
-})
-export default class RpgClientModuleEngine {}
+[start]
+    map = './main/medieval'
+    graphic = 'hero' # filename (without extension)
 ```
-
-- - -
-
-[Character Credit Link](https://untamed.wild-refuge.net/rpgxp.php)

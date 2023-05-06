@@ -1,8 +1,7 @@
 modules = [
     './main',
     '@rpgjs/default-gui',
-    '@rpgjs/save',
-    'rpgjs-helloworld'
+    '@rpgjs/save'
 ]
 
 [start]

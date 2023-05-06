@@ -6,24 +6,22 @@
 
 const configDir = 'src/config'
 const modDir = 'src/modules'
-const baseModule = modDir + '/main'
-const serverDir = baseModule + '/server'
-const clientDir = baseModule + '/client'
+const baseModule = 'main'
 const paths = {
     clientIndex: baseModule + '/client/index.ts',
     serverIndex: baseModule + '/server/index.ts',
     baseModule,
-    serverDir,
-    clientDir,
-    tmxDir: serverDir + '/maps/tmx',
-    mapDir: serverDir + '/maps',
-    eventDir: serverDir + '/events',
-    databaseDir: serverDir + '/database',
+    serverDir: baseModule,
+    clientDir: baseModule,
+    tmxDir: baseModule + '/maps',
+    mapDir: baseModule + '/maps',
+    eventDir: baseModule + '/events',
+    databaseDir: baseModule + '/database',
     moduleIndex: modDir + '/index.ts',
     modIndex: modDir + '/index.ts',
     modDir,
     configDir,
-    playerFile: serverDir + '/player.ts',
+    playerFile: baseModule + '/player.ts',
     themeFile: configDir + '/theme.scss'
 }
 
