@@ -17,6 +17,12 @@ export interface DevOptions {
 }
 
 export async function devMode(options: DevOptions = {}) {
+    options.port = process.env.PORT ? parseInt(process.env.PORT) : options.port
+    if (!options.port) {
+        options.port = await portfinder.getPortPromise({
+            port: 3000
+        })
+    }
     const isRpg = process.env.RPG_TYPE == 'rpg'
     process.env.NODE_ENV = 'development'
     const cwd = process.cwd()
@@ -42,11 +48,9 @@ export async function devMode(options: DevOptions = {}) {
             type: 'rpg',
             serveMode: true,
             overrideOptions: {
-                jsx: 'preserve',
-                optimizeDeps: {
-                    exclude: ['*.tsx']
-                }
+                jsx: 'preserve'
             },
+            optimizeDepsExclude: ['*.tsx'],
             server: options
         })
         const server = await createServer(config)

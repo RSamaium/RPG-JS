@@ -59,7 +59,8 @@ export interface ClientBuildConfigOptions {
     server?: DevOptions,
     plugin?: {
         entry: string,
-    }
+    },
+    optimizeDepsExclude?: string[]
 }
 
 export async function clientBuildConfig(dirname: string, options: ClientBuildConfigOptions = {}) {
@@ -265,7 +266,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     const outputPath = isRpg ?
         resolve(dirname, 'dist', dirOutputName) :
         resolve(dirname, 'dist', isServer ? 'server' : dirOutputName)
-    return {
+    const viteConfig = {
         mode: options.mode || 'development',
         root: '.',
         configFile,
@@ -311,6 +312,15 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
             ...moreBuildOptions
         },
         plugins,
-        ...(options.overrideOptions || {})
+        ...(options.overrideOptions || {}),
     }
+
+    viteConfig.optimizeDeps = {
+        ...viteConfig.optimizeDeps,
+        exclude: [
+            ...(options.optimizeDepsExclude || [])
+        ],
+    }
+
+    return viteConfig
 }

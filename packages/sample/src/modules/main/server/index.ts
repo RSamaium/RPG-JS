@@ -13,7 +13,7 @@ import WorldMap from './tmx/world.world'
         // CaveMap
     ],
     worldMaps: [ 
-        //WorldMap
+        WorldMap
     ] 
 })
 export default class RpgServerEngine {} 

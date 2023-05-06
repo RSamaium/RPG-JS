@@ -21,6 +21,7 @@ type ImportImageObject = ImportObject & { propImagesString: string }
 
 export default function configTomlPlugin(options: ClientBuildConfigOptions = {}, config: Config): Plugin | undefined {
     let modules: string[] = []
+    let onceCreatePlayerCommand = false
 
     if (config.modules) {
         modules = config.modules;
@@ -43,6 +44,13 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
     function formatVariableName(packageName: string): string {
         packageName = packageName.replace('.', '')
         return packageName.replace(/[.@\/ -]/g, '_');
+    }
+
+    function transformPathIfModule(moduleName) {
+        if (moduleName.startsWith('@rpgjs') || moduleName.startsWith('rpgjs')) {
+            return 'node_modules/' + moduleName
+        }
+        return moduleName
     }
 
     function getAllFiles(dirPath: string): string[] {
@@ -102,7 +110,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
     }
 
     function importString(modulePath: string, fileName: string, variableName?: string) {
-        const playerFile = path.resolve(process.cwd(), modulePath, fileName + '.ts')
+        const playerFile = path.resolve(process.cwd(), transformPathIfModule(modulePath), fileName + '.ts')
         let importString = ''
         if (fs.existsSync(playerFile)) {
             importString = `import ${variableName || fileName} from '${modulePath}/${fileName}.ts'`
@@ -128,7 +136,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
         const worldFilesString = searchFolderAndTransformToImportString('worlds', modulePath, '.world')
         const databaseFilesString = searchFolderAndTransformToImportString('database', modulePath, '.ts')
 
-        return `
+        const code =  `
             import { RpgServer, RpgModule } from '@rpgjs/server'
             ${mapFilesString?.importString}
             ${worldFilesString?.importString}
@@ -136,14 +144,16 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
             ${databaseFilesString?.importString}
             ${importEngine}
 
-            const _lastConnectedCb = player.onConnected
-            player.onConnected = async (player) => {
-                if (_lastConnectedCb) await _lastConnectedCb(player)
-                ${config.start?.graphic ? `player.setGraphic('${config.start?.graphic}')`: ''}
-                ${config.start?.hitbox ? `player.setHitbox(${config.start?.hitbox})`: ''}
-                ${config.startMap ? `await player.changeMap('${config.startMap}')`: ''}
+            ${onceCreatePlayerCommand? '' : 
+            `const _lastConnectedCb = player.onConnected
+                player.onConnected = async (player) => {
+                    if (_lastConnectedCb) await _lastConnectedCb(player)
+                    ${config.start?.graphic ? `player.setGraphic('${config.start?.graphic}')`: ''}
+                    ${config.start?.hitbox ? `player.setHitbox(${config.start?.hitbox})`: ''}
+                    ${config.startMap ? `await player.changeMap('${config.startMap}')`: ''}
+            }`
             }
-            
+               
             @RpgModule<RpgServer>({ 
                 player,
                 ${importEngine ? 'engine,' : ''}
@@ -153,6 +163,9 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
             })
             export default class RpgServerModuleEngine {} 
         `
+
+        onceCreatePlayerCommand = true
+        return code
     }
 
     function loadSpriteSheet(directoryName: string, modulePath: string, warning = true): ImportImageObject  {
@@ -255,6 +268,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
         else if (id.endsWith(clientFile + '?client')) {
             return loadClientFiles(modulePath)
         }
+
         return `
             import client from 'client!./${clientFile}'
             import server from 'server!./${serverFile}'
@@ -305,7 +319,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
                 </script>`);
             }
         },
-        async resolveId(source: string) {
+        async resolveId(source: string, importer) {
             if (source.endsWith(MODULE_NAME) ||
                 source.endsWith(GLOBAL_CONFIG_CLIENT) ||
                 source.endsWith(GLOBAL_CONFIG_SERVER)
@@ -392,7 +406,10 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
             for (let module of modules) {
                 let moduleName = resolveModule(module)
                 let variableName = formatVariableName(moduleName);
-                if (id.endsWith(moduleName) || id.includes('virtual-' + variableName)) {
+                if (
+                        id.endsWith(moduleName) || id.includes('virtual-' + variableName) ||
+                        id.includes('node_modules/' + moduleName)
+                    ) {
                     return createModuleLoad(id, variableName, module);
                 }
             }

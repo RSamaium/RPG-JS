@@ -17,9 +17,11 @@
     "@rpgjs/default-gui": "^4.0.0-beta.1",
     "@rpgjs/gamepad": "^4.0.0-beta.1",
     "@rpgjs/mobile-gui": "^4.0.0-beta.1",
+    "@rpgjs/save": "^4.0.0-beta.1",
     "@rpgjs/server": "^4.0.0-beta.1",
     "@rpgjs/standalone": "^4.0.0-beta.1",
     "@rpgjs/title-screen": "^4.0.0-beta.1",
+    "rpgjs-helloworld": "^0.0.1",
     "socket.io-client": "^4.6.1"
   }
 }
