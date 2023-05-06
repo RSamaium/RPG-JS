@@ -5,16 +5,7 @@
 You must have a menu installed on your project (or you must create it yourself)
 To install default menu: 
 
-1. `npm install @rpgjs/default-gui`
-2. In <PathTo to="modIndex" /> file, add: 
-
-```ts
-import defaultGui from '@rpgjs/default-gui' 
-
-export default [
-    defaultGui
-]
-```
+`npx rpgjs add @rpgjs/default-gui`
 
 ## Use Notification
 

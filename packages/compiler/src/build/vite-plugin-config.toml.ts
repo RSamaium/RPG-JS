@@ -120,7 +120,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
 
     function loadServerFiles(modulePath: string) {
         const importPlayer = importString(modulePath, 'player')
-        const importEngine = importString(modulePath, 'engine')
+        const importEngine = importString(modulePath, 'server')
 
         // read maps folder and get all the map files
 

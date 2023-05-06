@@ -10,16 +10,4 @@ For an MMORPG, the title screen plugin is enough
 
 ## Installation
 
-1. `npm install @rpgjs/default-gui @rpgjs/save`
-2. In <PathTo to="modIndex" /> file, add:
-
-```ts
-import defaultGui from '@rpgjs/default-gui'
-import save from '@rpgjs/save'
-
-export default [
-    defaultGui,
-    save
-    // more modules here
-]
-```
+`npx rpgjs add @rpgjs/save`

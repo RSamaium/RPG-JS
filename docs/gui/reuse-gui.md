@@ -10,16 +10,7 @@ You should know that you can reuse GUI elements:
 You must have a menu installed on your project (or you must create it yourself)
 To install default menu: 
 
-1. `npm install @rpgjs/default-gui`
-2. In <PathTo to="modIndex" /> file, add: 
-
-```ts
-import defaultGui from '@rpgjs/default-gui' 
-
-export default [
-    defaultGui
-]
-```
+1. `npx rpgjs add @rpgjs/default-gui`
 
 ## The windows
 

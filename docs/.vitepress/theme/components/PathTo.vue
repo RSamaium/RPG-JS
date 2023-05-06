@@ -20,6 +20,7 @@ const paths = {
     moduleIndex: modDir + '/index.ts',
     modIndex: modDir + '/index.ts',
     modDir,
+    guiDir: baseModule + '/gui',
     configDir,
     playerFile: baseModule + '/player.ts',
     themeFile: configDir + '/theme.scss'

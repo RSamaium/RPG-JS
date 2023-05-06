@@ -1,4 +1,4 @@
-# Start Guide. Create a HP bar
+# Create a HP bar
 
 ## Prerequisites
 
@@ -17,6 +17,8 @@ We want to create a life bar. It will remain in hauy on the left side of the scr
 
 
 ## Component
+
+Create file <PathTo to="guiDir" file="hud.vue" />
 
 ```vue
 <template>
@@ -116,26 +118,6 @@ export default {
 2. This service is an [Observable](https://github.com/ReactiveX/rxjs). Subscribe to it to read the last value. In the parameter, you get an object representing the current player
 3. Remember to unsubscribe to the observable to avoid memory leaks
 
-## Add HUD to your game
-
-### Client Side
-
-1. Client Side (in <PathTo to="clientIndex" />)
-
-```ts{5-7}
-import { RpgClient, RpgClientEngine } from '@rpgjs/client'
-import hud from './gui/hud.vue'
-
-@RpgModule<RpgClient>({
-    gui: [
-       hud
-    ]
-})
-export default RpgClientEngine { }
-```
-
-2. Add in the `gui` property, a new element: your VueJS component.
-
 ### Server Side
 
 On the server side, you can call the menu at any time:
@@ -145,15 +127,11 @@ In <PathTo to="serverDir" file="player.ts" />:
 ```ts{8}
 import { RpgPlayer, RpgPlayerHooks } from '@rpgjs/server'
 
-export const player: RpgPlayerHooks = {
-    async onConnected(player: RpgPlayer) {
-        player.setHitbox(20, 16)
-        player.setGraphic('male1_2')
-        await player.changeMap('medieval')
-    }
-
+const player: RpgPlayerHooks = {
     onJoinMap(player: RpgPlayer) {
         player.gui('my-hud').open() // Here, open the HUD after loading the map
     }
 }
+
+export default player
 ```

@@ -2,8 +2,7 @@
 
 ## Prerequisites
 
-1. You must have created a map and added in your game
-2. Have RPGJS version >=3.beta.3
+You must have created a map and added in your game
 
 ## Why ?
 
@@ -37,7 +36,7 @@ You should know that
 ```ts
 import { RpgPlayer, RpgShape, RpgPlayerHooks } from '@rpgjs/server'
 
-export const player: RpgPlayerHooks = {
+const player: RpgPlayerHooks = {
     onInShape(player: RpgPlayer, shape: RpgShape) {
         console.log('in', player.name, shape.name)
     },
@@ -45,6 +44,8 @@ export const player: RpgPlayerHooks = {
         console.log('out', player.name, shape.name)
     }
 }
+
+export default player
 ```
 
 This way, you can know who is entering or leaving the shape
@@ -54,7 +55,7 @@ This way, you can know who is entering or leaving the shape
 ```ts
 import { RpgPlayer, RpgMap, RpgPlayerHooks, RpgShape } from '@rpgjs/server'
 
-export const player: RpgPlayerHooks = {
+const player: RpgPlayerHooks = {
     onJoinMap(player: RpgPlayer, map: RpgMap) {
         const shape: RpgShape = map.createShape({ 
             x: 10,
@@ -73,6 +74,8 @@ export const player: RpgPlayerHooks = {
         console.log('out', player.name, shape.name)
     }
 }
+
+export default player
 ```
 
 Use the createShape method on the map. Here the shape is shared with the client. So, we can set a colour to see it on the client side
@@ -90,7 +93,7 @@ In <PathTo to="playerFile" />
 ```ts
 import { RpgPlayer, RpgMap, RpgPlayerHooks, RpgShape, ShapePositioning } from '@rpgjs/server'
 
-export const player: RpgPlayerHooks = {
+const player: RpgPlayerHooks = {
     onJoinMap(player: RpgPlayer, map: RpgMap) {
         player.attachShape({
             height: 100,
@@ -105,6 +108,8 @@ export const player: RpgPlayerHooks = {
         console.log('out', player.name, shape.name)
     }
 }
+
+export default player
 ```
 
 Here we position a shape of 100px width and height on the player

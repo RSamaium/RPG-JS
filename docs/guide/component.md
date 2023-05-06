@@ -15,7 +15,7 @@ In <PathTo to="serverDir" file="player.ts" />
 ```ts
 import { RpgPlayer, RpgPlayerHooks, Components } from '@rpgjs/server'
 
-export const player: RpgPlayerHooks = {
+const player: RpgPlayerHooks = {
     onConnected(player: RpgPlayer) {
         player.hitbox(16, 16)
         player.setGraphic('hero')
@@ -23,6 +23,8 @@ export const player: RpgPlayerHooks = {
         player.setComponentsTop(Components.text('{name}'))
     }
 }
+
+export default player
 ```
 
 The line of code `player.setComponentsTop(Components.text('{name}'))` is setting a text component on top of the player's graphic, using the RpgPlayer's method `setComponentsTop()`.
@@ -48,7 +50,7 @@ Why? Because if the player's name changes, the entire component structure is sen
 ```ts
 import { RpgPlayer, RpgPlayerHooks, Components } from '@rpgjs/server'
 
-export const player: RpgPlayerHooks = {
+const player: RpgPlayerHooks = {
     onConnected(player: RpgPlayer) {
         player.name = 'Sam'
         player.setComponentsTop(Components.text('{name}', {
@@ -57,6 +59,8 @@ export const player: RpgPlayerHooks = {
         }))
     }
 }
+
+export default player
 ```
 
 In addition to the text, an options object is being passed as a second argument to `Components.text()`, with the properties `fill` and `fontSize`. The `fill` property specifies the color of the text, which in this case is black (`'#000000'`), and the `fontSize` property sets the size of the text to 20 pixels.
@@ -70,7 +74,7 @@ By calling `player.setComponentsTop()` and passing in the text component with th
 ```ts
 import { RpgPlayer, RpgPlayerHooks, Components } from '@rpgjs/server'
 
-export const player: RpgPlayerHooks = {
+const player: RpgPlayerHooks = {
     onConnected(player: RpgPlayer) {
         player.name = 'Sam'
         player.setComponentsTop([
@@ -79,6 +83,8 @@ export const player: RpgPlayerHooks = {
         ])
     }
 }
+
+export default player
 ```
 
 The argument being passed to `setComponentsTop()` is an array of two text components. The first component displays the player's current HP, using the placeholder `{hp}` in the text string. The second component displays the player's name, using the `{name}` placeholder in the text string.
@@ -89,7 +95,7 @@ The argument being passed to `setComponentsTop()` is an array of two text compon
 ```ts
 import { RpgPlayer, RpgPlayerHooks, Components } from '@rpgjs/server'
 
-export const player: RpgPlayerHooks = {
+const player: RpgPlayerHooks = {
     onConnected(player: RpgPlayer) {
         player.name = 'Sam'
         player.setComponentsTop([
@@ -97,6 +103,8 @@ export const player: RpgPlayerHooks = {
         ])
     }
 }
+
+export default player
 ```
 
 The `setComponentsTop()` method is being called with an argument that is an array of arrays, which represents a table with a single row and two columns. The first column contains the HP component and the second column contains the name component.
@@ -106,7 +114,7 @@ The `setComponentsTop()` method is being called with an argument that is an arra
 ```ts
 import { RpgPlayer, RpgPlayerHooks, Components } from '@rpgjs/server'
 
-export const player: RpgPlayerHooks = {
+const player: RpgPlayerHooks = {
     onConnected(player: RpgPlayer) {
         player.name = 'Sam'
         player.setComponentsTop([
@@ -119,6 +127,8 @@ export const player: RpgPlayerHooks = {
         })
     }
 }
+
+export default player
 ```
 
 The `setComponentsTop()` method takes two arguments: the first argument is the array of components to be rendered, and the second argument is an options object that specifies the layout of the block of components.
@@ -143,7 +153,7 @@ By calling `player.setComponentsTop()` with the array of text components and the
 ```ts
 import { RpgPlayer, RpgPlayerHooks, Components } from '@rpgjs/server'
 
-export const player: RpgPlayerHooks = {
+const player: RpgPlayerHooks = {
     onConnected(player: RpgPlayer) {
         player.setComponentsTop(
             Components.hpBar(), {
@@ -151,6 +161,8 @@ export const player: RpgPlayerHooks = {
         })
     }
 }
+
+export default player
 ```
 
 In this case, the first argument is an array containing a single component: the HP bar component created using `Components.hpBar()`.
@@ -174,7 +186,7 @@ You can use the bar and the text. See [Component.bar()](/commands/components.htm
 ```ts
 import { RpgPlayer, RpgPlayerHooks, Components } from '@rpgjs/server'
 
-export const player: RpgPlayerHooks = {
+const player: RpgPlayerHooks = {
     onConnected(player: RpgPlayer) {
         player.setComponentsTop<any>(
             Components.hpBar({}, '{$percent}%'), {
@@ -183,6 +195,8 @@ export const player: RpgPlayerHooks = {
         )
     }
 }
+
+export default player
 ```
 
 You can put any text, or read an existing property with the {} format. But there are a few more variables:
@@ -204,7 +218,7 @@ Set the value to `null` to not display any text
 ```ts
 import { RpgPlayer, RpgPlayerHooks, Components } from '@rpgjs/server'
 
-export const player: RpgPlayerHooks = {
+const player: RpgPlayerHooks = {
     onConnected(player: RpgPlayer) {
         player.setComponentsBottom(
             Components.shape({
@@ -220,6 +234,8 @@ export const player: RpgPlayerHooks = {
         )
     }
 }
+
+export default player
 ```
 
 The `setComponentsBottom()` method takes two arguments: the first argument is the component to be rendered, and the second argument is an options object that specifies the layout of the block of components.
@@ -251,7 +267,7 @@ declare module '@rpgjs/server' {
     }
 }
 
-export const player: RpgPlayerHooks = {
+const player: RpgPlayerHooks = {
     props: {
         wood: Number
     },
@@ -262,6 +278,8 @@ export const player: RpgPlayerHooks = {
         )
     }
 }
+
+export default player
 ```
 
 Other example
@@ -275,7 +293,7 @@ declare module '@rpgjs/server' {
     }
 }
 
-export const player: RpgPlayerHooks = {
+const player: RpgPlayerHooks = {
     props: {
         wood: Number
     },
@@ -291,4 +309,6 @@ export const player: RpgPlayerHooks = {
         )
     }
 }
+
+export default player
 ```

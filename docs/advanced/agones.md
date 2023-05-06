@@ -72,24 +72,12 @@ In production, the command is different, you do not use the network mode in host
 
 Set up in your game:
 
-1. `npm install @rpgjs/agones`
-2. In <PathTo to="modIndex" /> file, add:
+`npx rpgjs add @rpgjs/agones`
+
+Next, add in `rpg.toml`
 
 ```ts
-import agones from '@rpgjs/agones'
-
-export default [
-   agones
-   // more modules here
-]
-```
-
-Next, add in <PathTo to="configDir" file="client/index.ts" />
-
-```ts
-export default {
-  matchMakerService: '<URL TO MATCHMAKER SERVICE>'
-}
+matchMakerService = '<URL TO MATCHMAKER SERVICE>'
 ```
 
 > From now on, if you launch the game locally, you must indicate the secret token and the url of match maker service

@@ -1,14 +1,24 @@
 <template>
     <Content :page-key="key"/>
-</template>
-
-<script>
-export default {
+  </template>
+  
+  <script>
+  import { ref, computed, defineComponent } from 'vue'
+  import { useData } from 'vitepress'
+  
+  export default defineComponent({
     props: ['page'],
-    computed: {
-        key() {
-            return this.$site.pages.find(p => p.path === '/api/' + this.page + '.html').key
-        }
+    setup(props) {
+      const data = useData()
+
+      console.log(data)
+  
+      const key = computed(() => {
+        return site.pages.value.find(p => p.path === '/api/' + props.page + '.html').key
+      })
+  
+      return { key }
     }
-}
-</script>
+  })
+  </script>
+  

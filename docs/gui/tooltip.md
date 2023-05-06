@@ -4,7 +4,6 @@
 
 - Know how to create a GUI and add it in the module
 - Be comfortable with VueJS
-- Have version 3.0.0-beta.5+
 
 ## Goal
 
@@ -13,6 +12,8 @@ This is very useful to make more advanced interactions on a sprite. For example,
 <Video src="/assets/rpgjs_gui.mp4" /> 
 
 ## The Full GUI
+
+<PathTo to="guiDir" file="tooltip.vue" />
 
 ```vue
 <template>

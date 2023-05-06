@@ -8,17 +8,7 @@ Display a bubble with an emotion
 
 ## Installation
 
-1. `npm install @rpgjs/plugin-emotion-bubbles`
-2. In <PathTo to="modIndex" /> file, add:
-
-```ts
-import emotionBubblesPlugin from '@rpgjs/plugin-emotion-bubbles'
-
-export default [
-   emotionBubblesPlugin
-   // more modules here
-]
-```
+`npx rpgjs add @rpgjs/plugin-emotion-bubbles`
 
 ## Usage
 
@@ -44,26 +34,22 @@ export class MyEvent extends RpgEvent {
 
 ## Personalization
 
-Add the following configuration (in <Path to="configDir" file="client/index.ts" />):
+Add the following configuration (in `rpg.toml`):
 
-```ts
-export default {
-    // ... others configs
-    emotionBubble: {
-        image: require('./assets/my-icons.png'),
-        width: 192,
-        height: 190,
-        framesHeight: 5,
-        framesWidth:6,
-        anchor: [0.5],
-        y: -40,
-        x: 10,
-        textures: {
-            like: [0, 0],
-            otherid: [0, 1]
-        }
-    }
-}
+```toml
+[emotionBubble]
+    image = "./assets/my-icons.png"
+    width = 192
+    height = 190
+    framesHeight = 5
+    framesWidth = 6
+    anchor = [0.5]
+    y = -40
+    x = 10
+
+[emotionBubble.textures]
+    like = [0, 0]
+    otherid = [0, 1]
 ```
 
 (The options are the same as spritesheet decorator)[/classes/spritesheet.html#example-spritesheet], but a small difference in the textures: put the name of the emotion and its position in the image `[line, column]`

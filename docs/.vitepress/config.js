@@ -1,81 +1,85 @@
 const apiMenu = [
   {
-    title: 'Classes Server-Side',
-    collapsable: false,
+    text: 'Classes Server-Side',
+    collapsed: false,
     sidebarDepth: 2,
-    children: [
-      '/classes/server-engine',
-      '/classes/server',
-      '/classes/player',
-      '/classes/scene-map-server',
-      '/classes/map',
-      '/classes/world-maps',
-      '/classes/event',
-      '/classes/shape',
-      '/classes/world'
+    items: [
+      { text: "Server Engine Class", link: "/classes/server-engine" },
+      { text: "Server Class", link: "/classes/server" },
+      { text: "Player Class", link: "/classes/player" },
+      { text: "Scene Map Server Class", link: "/classes/scene-map-server" },
+      { text: "Map Class", link: "/classes/map" },
+      { text: "World Maps Class", link: "/classes/world-maps" },
+      { text: "Event Class", link: "/classes/event" },
+      { text: "Shape Class", link: "/classes/shape" },
+      { text: "World Class", link: "/classes/world" }
     ]
+    
   },
   {
-    title: 'Classes Client-Side',
-    collapsable: false,
+    text: 'Classes Client-Side',
+    collapsed: false,
     sidebarDepth: 2,
-    children: [
-      '/classes/client',
-      '/classes/client-engine',
-      '/classes/sprite',
-      '/classes/spritesheet',
-      '/classes/scene-map',
-      '/classes/gui',
-      '/classes/sound',
-      '/classes/resource',
-      '/classes/keyboard',
-      '/classes/vue-inject'
+    items: [
+      { text: "Client Class", link: "/classes/client" },
+      { text: "Client Engine Class", link: "/classes/client-engine" },
+      { text: "Sprite Class", link: "/classes/sprite" },
+      { text: "Spritesheet Class", link: "/classes/spritesheet" },
+      { text: "Scene Map Class", link: "/classes/scene-map" },
+      { text: "GUI Class", link: "/classes/gui" },
+      { text: "Sound Class", link: "/classes/sound" },
+      { text: "Resource Class", link: "/classes/resource" },
+      { text: "Keyboard Class", link: "/classes/keyboard" },
+      { text: "Vue Inject Class", link: "/classes/vue-inject" }
     ]
+    
   },
   {
-    title: 'Player Commands Server-Side',
-    collapsable: false,
+    text: 'Player Commands Server-Side',
+    collapsed: false,
     sidebarDepth: 2,
-    children: [
-      '/commands/common',
-      '/commands/components',
-      '/commands/parameter',
-      '/commands/class',
-      '/commands/gold',
-      '/commands/state',
-      '/commands/element',
-      '/commands/item',
-      '/commands/skill',
-      '/commands/variable',
-      '/commands/move',
-      '/commands/gui',
-      '/commands/effect',
-      '/commands/battle'
+    items: [
+      { text: "Common Commands", link: "/commands/common" },
+      { text: "Working with Components", link: "/commands/components" },
+      { text: "Parameter Commands", link: "/commands/parameter" },
+      { text: "Class Commands", link: "/commands/class" },
+      { text: "Gold Commands", link: "/commands/gold" },
+      { text: "State Commands", link: "/commands/state" },
+      { text: "Element Commands", link: "/commands/element" },
+      { text: "Item Commands", link: "/commands/item" },
+      { text: "Skill Commands", link: "/commands/skill" },
+      { text: "Variable Commands", link: "/commands/variable" },
+      { text: "Move Commands", link: "/commands/move" },
+      { text: "GUI Commands", link: "/commands/gui" },
+      { text: "Effect Commands", link: "/commands/effect" },
+      { text: "Battle Commands", link: "/commands/battle" }
     ]
+    
   },
   {
-    title: 'RPG Database',
-    collapsable: false,
+    text: 'RPG Database',
+    collapsed: false,
     sidebarDepth: 2,
-    children: [
-      '/database/item',
-      '/database/weapon',
-      '/database/armor',
-      '/database/actor',
-      '/database/class',
-      '/database/skill',
-      '/database/state',
-      '/database/element',
-      '/database/effect'
+    items: [
+      { text: "Item Database", link: "/database/item" },
+      { text: "Weapon Database", link: "/database/weapon" },
+      { text: "Armor Database", link: "/database/armor" },
+      { text: "Actor Database", link: "/database/actor" },
+      { text: "Class Database", link: "/database/class" },
+      { text: "Skill Database", link: "/database/skill" },
+      { text: "State Database", link: "/database/state" },
+      { text: "Element Database", link: "/database/element" },
+      { text: "Effect Database", link: "/database/effect" }
     ]
+    
   },
   {
-    title: 'Testing',
-    collapsable: false,
+    text: 'Testing',
+    collapsed: false,
     sidebarDepth: 2,
-    children: [
-      '/classes/tests'
-    ]
+    items: [
+      { text: "Unit Testing Class", link: "/classes/tests" }
+    ]    
   }
 ]
 
@@ -92,72 +96,60 @@ const guideMenu = [{
   text: 'Go further',
   collapsed: false,
   items: [
-    { text: "Create Event (NPC)", link: "/guide/create-event" }
+    { text: "Add life bar, text or other above the player", link: "/guide/component"},
+    { text: "Create event (NPC)", link: "/guide/create-event" },
+    { text: "Create items", link: "/guide/create-database" },
+    { text: "Create shape", link: "/guide/create-shape" },
+    { text: "Create animated tile", link: "/guide/animation-tile" },
+    { text: "Save the player's progress", link: "/guide/save" },
+    { text: "Production", link: "/guide/production" },
   ]
 },
 {
-  title: 'Guide (advanced)',
-  collapsable: false,
-  sidebarDepth: 1,
-  children: [
-    '/guide/create-module',
-    '/guide/animation-tile',
-    '/guide/component',
-    '/guide/create-shape',
-    '/guide/unit-test',
-    '/advanced/listen-param-client',
-    '/advanced/event-changes',
-    '/advanced/agones',
-    '/guide/performance',
-  ]
-}, 
-{
-  title: 'GUI Creation',
-  collapsable: false,
-  sidebarDepth: 2,
-  children: [
-    '/gui/theme',
-    '/gui/reuse-gui',
-    '/gui/notification-gui',
-    '/guide/create-gui',
-    '/gui/tooltip'
+  text: 'GUI Creation',
+  collapsed: false,
+  items: [
+    { text: "Customizing Your Theme", link: "/gui/theme" },
+    { text: "Reusing GUI Components", link: "/gui/reuse-gui" },
+    { text: "Creating Notifications in Your GUI", link: "/gui/notification-gui" },
+    { text: "Creating Your Own GUI", link: "/guide/create-gui" },
+    { text: "Adding Tooltips to Your GUI", link: "/gui/tooltip" }
   ]
 },
 {
-  title: 'Technical',
-  collapsable: false,
-  sidebarDepth: 2,
-  children: [
-    '/guide/inputs',
-    '/guide/gamepad',
-    '/guide/responsive-design',
-    '/guide/webpack',
+  text: 'Technical',
+  collapsed: false,
+  items: [
+    { text: "Working with User Inputs", link: "/guide/inputs" },
+    { text: "Supporting Gamepad Input", link: "/guide/gamepad" },
+    { text: "Creating Responsive Game Design", link: "/guide/responsive-design" }
   ]
-}
-/*{
-  title: 'Advanced',
-  collapsable: false,
-  sidebarDepth: 2,
-  children: [
-    '/advanced/spritesheet',
+  
+},
+{
+  text: 'Advanced',
+  collapsed: false,
+  items: [
+    { text: "Creating a Module", link: "/guide/create-module" },
+    { text: "Using Agones for Game Server Hosting", link: "/advanced/agones" },
+    { text: "Optimizing Performance", link: "/guide/performance" }
   ]
-} */]
+}]
 
 const pluginMenu = [{
-  title: 'Plugins',
-  collapsable: false,
-  sidebarDepth: 1,
-  children: [
-    '/plugins/chat',
-    '/plugins/save',
-    '/plugins/title-screen',
-    '/plugins/emotion-bubble'
+  text: 'Plugins',
+  collapsed: false,
+  items: [
+    { text: "Adding Chat Functionality", link: "/plugins/chat" },
+    { text: "Saving and Loading Game Data", link: "/plugins/save" },
+    { text: "Creating a Title Screen Plugin", link: "/plugins/title-screen" },
+    { text: "Displaying Emotion Bubbles for Characters", link: "/plugins/emotion-bubble" }
   ]
 }]
 
 
 module.exports = {
-    title: 'RPGJS v3 Documentation',
+    title: 'RPGJS v4 Documentation',
     description: 'Create your RPG or MMORPG in Javascript',
     themeConfig: {
       repo: 'https://github.com/RSamaium/RPG-JS',

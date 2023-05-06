@@ -4,38 +4,24 @@
 
 You must have a gamepad module installed on your project:
 
-1. `npm install @rpgjs/gamepad`
-2. In <PathTo to="modIndex" /> file, add: 
-
-```ts
-import gamepad from '@rpgjs/gamepad' 
-
-export default [
-    gamepad
-]
-```
+`npx rpgjs add @rpgjs/gamepad`
 
 ## Customize the gamepad notification
 
-Put `gamepad` property in the configuration object in <PathTo to="configDir" file="index.ts" />:
+Put `gamepad` property in the configuration object in `rpg.toml`:
 
-```ts
-export default {
-    gamepad: {
-        connect: {
-            message: 'Your gamepad is connected !',
-            time: 2000,
-            icon: 'icon_id',
-            sound: 'sound_id'
-        },
-        disconnect: {
-            message: 'Your gamepad is disconnected !',
-            time: 2000,
-            icon: 'icon_id',
-            sound: 'sound_id'
-        }
-    }
-}
+```toml
+[gamepad.connect]
+    message = "Your gamepad is connected !"
+    time = 2000
+    icon = "icon_id"
+    sound = "sound_id"
+
+[gamepad.disconnect]
+    message = "Your gamepad is disconnected !"
+    time = 2000
+    icon = "icon_id"
+    sound = "sound_id"
 ```
 
 1. The class has two static methods, connect and disconnect.

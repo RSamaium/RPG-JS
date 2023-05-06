@@ -1,4 +1,4 @@
-# step 11. Production
+# Production
 
 To put into production:
 
@@ -28,14 +28,14 @@ Put the files in the `dist/standalone` folder on a static server (as [Vercel](ht
 Create a `Dockerfile` in the root and put the following code:
 
 ```dockerfile
-FROM node:14 as build
+FROM node:18 as build
 WORKDIR /build
 ADD . /build
 RUN npm i
 ENV NODE_ENV=production
 RUN npm run build
 
-FROM node:14-alpine
+FROM node:18-alpine
 WORKDIR /game
 COPY --from=build /build/dist ./
 COPY --from=build /build/package*.json ./
