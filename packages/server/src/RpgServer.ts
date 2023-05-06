@@ -1,5 +1,5 @@
 import { ModuleType, RpgShape, Direction, Control } from '@rpgjs/common'
-import { RpgPlayer } from './Player/Player'
+import { RpgClassEvent, RpgEvent, RpgPlayer } from './Player/Player'
 import { RpgMap } from './Game/Map'
 import { RpgServerEngine } from './server'
 import { MapOptions } from './decorators/map'
@@ -24,7 +24,7 @@ export interface RpgServerEngineHooks {
      * @prop { (engine: RpgServerEngine) => any } [onStep]
      * @memberof RpgServerEngineHooks
      */
-     onStep?: (server: RpgServerEngine) => any
+    onStep?: (server: RpgServerEngine) => any
 }
 
 export interface RpgPlayerHooks {
@@ -100,71 +100,71 @@ export interface RpgPlayerHooks {
         [key: string]: any
     }
 
-     /**
-     *  When the player joins the map
-     * 
-     * @prop { (player: RpgPlayer, map: RpgMap) => any } [onJoinMap]
-     * @memberof RpgPlayerHooks
-     */
+    /**
+    *  When the player joins the map
+    * 
+    * @prop { (player: RpgPlayer, map: RpgMap) => any } [onJoinMap]
+    * @memberof RpgPlayerHooks
+    */
     onJoinMap?: (player: RpgPlayer, map: RpgMap) => any
 
-     /**
-     *  When the player is connected to the server
-     * 
-     * @prop { (player: RpgPlayer) => any } [onConnected]
-     * @memberof RpgPlayerHooks
-     */
+    /**
+    *  When the player is connected to the server
+    * 
+    * @prop { (player: RpgPlayer) => any } [onConnected]
+    * @memberof RpgPlayerHooks
+    */
     onConnected?: (player: RpgPlayer) => any
 
-     /**
-     *  When the player presses a key on the client side
-     * 
-     * @prop { (player: RpgPlayer, data: { input: Direction | Control | string, moving: boolean }) => any } [onInput]
-     * @memberof RpgPlayerHooks
-     */
+    /**
+    *  When the player presses a key on the client side
+    * 
+    * @prop { (player: RpgPlayer, data: { input: Direction | Control | string, moving: boolean }) => any } [onInput]
+    * @memberof RpgPlayerHooks
+    */
     onInput?: (player: RpgPlayer, data: { input: Direction | Control | string, moving: boolean }) => any
 
-     /**
-     *  When the player leaves the map
-     * 
-     * @prop { (player: RpgPlayer, map: RpgMap) => any } [onLeaveMap]
-     * @memberof RpgPlayerHooks
-     */
+    /**
+    *  When the player leaves the map
+    * 
+    * @prop { (player: RpgPlayer, map: RpgMap) => any } [onLeaveMap]
+    * @memberof RpgPlayerHooks
+    */
     onLeaveMap?: (player: RpgPlayer, map: RpgMap) => any
 
-     /**
-     *  When the player increases one level
-     * 
-     * @prop { (player: RpgPlayer, nbLevel: number) => any } [onLevelUp]
-     * @stability 1
-     * @memberof RpgPlayerHooks
-     */
+    /**
+    *  When the player increases one level
+    * 
+    * @prop { (player: RpgPlayer, nbLevel: number) => any } [onLevelUp]
+    * @stability 1
+    * @memberof RpgPlayerHooks
+    */
     onLevelUp?: (player: RpgPlayer, nbLevel: number) => any
 
-     /**
-     *  When the player's HP drops to 0
-     * 
-     * @prop { (player: RpgPlayer) => any } [onDead]
-     * @stability 1
-     * @memberof RpgPlayerHooks
-     */
+    /**
+    *  When the player's HP drops to 0
+    * 
+    * @prop { (player: RpgPlayer) => any } [onDead]
+    * @stability 1
+    * @memberof RpgPlayerHooks
+    */
     onDead?: (player: RpgPlayer) => any,
 
-     /**
-     *  When the player leaves the server
-     * 
-     * @prop { (player: RpgPlayer) => any } [onDisconnected]
-     * @memberof RpgPlayerHooks
-     */
+    /**
+    *  When the player leaves the server
+    * 
+    * @prop { (player: RpgPlayer) => any } [onDisconnected]
+    * @memberof RpgPlayerHooks
+    */
     onDisconnected?: (player: RpgPlayer) => any
 
-     /**
-     *  When the player enters the shape
-     * 
-     * @prop { (player: RpgPlayer, shape: RpgShape) => any } [onInShape]
-     * 3.0.0-beta.3
-     * @memberof RpgPlayerHooks
-     */
+    /**
+    *  When the player enters the shape
+    * 
+    * @prop { (player: RpgPlayer, shape: RpgShape) => any } [onInShape]
+    * 3.0.0-beta.3
+    * @memberof RpgPlayerHooks
+    */
     onInShape?: (player: RpgPlayer, shape: RpgShape) => any
 
     /**
@@ -174,28 +174,28 @@ export interface RpgPlayerHooks {
      * 3.0.0-beta.3
      * @memberof RpgPlayerHooks
      */
-     onOutShape?: (player: RpgPlayer, shape: RpgShape) => any
+    onOutShape?: (player: RpgPlayer, shape: RpgShape) => any
 
-     /**
-     * When the x, y positions change
-     * 
-     * @prop { (player: RpgPlayer) => any } [onMove]
-     * @since 3.0.0-beta.4
-     * @memberof RpgPlayerHooks
-     */
-     onMove?: (player: RpgPlayer) => any
+    /**
+    * When the x, y positions change
+    * 
+    * @prop { (player: RpgPlayer) => any } [onMove]
+    * @since 3.0.0-beta.4
+    * @memberof RpgPlayerHooks
+    */
+    onMove?: (player: RpgPlayer) => any
 
-     /**
-     * Allow or not the player to switch maps. `nexMap` parameter is the retrieved RpgMap class and not the instance
-     * 
-     * @prop { (player: RpgPlayer, nextMap: RpgClassMap<RpgMap>) =>  boolean | Promise<boolean> } [canChangeMap]
-     * @since 3.0.0-beta.8
-     * @memberof RpgPlayerHooks
-     */
-     canChangeMap?: (player: RpgPlayer, nextMap: RpgClassMap<RpgMap>) => boolean | Promise<boolean>
+    /**
+    * Allow or not the player to switch maps. `nexMap` parameter is the retrieved RpgMap class and not the instance
+    * 
+    * @prop { (player: RpgPlayer, nextMap: RpgClassMap<RpgMap>) =>  boolean | Promise<boolean> } [canChangeMap]
+    * @since 3.0.0-beta.8
+    * @memberof RpgPlayerHooks
+    */
+    canChangeMap?: (player: RpgPlayer, nextMap: RpgClassMap<RpgMap>) => boolean | Promise<boolean>
 }
 
-export interface RpgServer { 
+export interface RpgServer {
 
     /**
      * Adding sub-modules
@@ -323,6 +323,8 @@ export interface RpgServer {
      * */
     maps?: RpgClassMap<RpgMap>[] | MapOptions[] | string[] | TiledMap[],
 
+    events?: RpgClassEvent<RpgEvent>[]
+
     /**
      * Loads the content of a `.world` file from Tiled Map Editor into the map scene
      * 
@@ -363,7 +365,7 @@ export interface RpgServer {
      */
     worldMaps?: WorldMap[]
 
-    
+
     /** 
      * Combat formula used in the method player.applyDamage(). There are already formulas in the RPGJS engine but you can customize them
      *  

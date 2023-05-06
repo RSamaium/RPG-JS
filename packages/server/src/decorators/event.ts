@@ -51,6 +51,7 @@ export function EventData(options: EventOptions) {
         target.width = options.width
         target.height = options.height
         target.hitbox = options.hitbox
+        target._name = options.name
         target.prototype._name = options.name
     }
 }

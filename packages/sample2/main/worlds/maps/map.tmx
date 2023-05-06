@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.9" tiledversion="1.9.2" orientation="orthogonal" renderorder="right-down" width="20" height="20" tilewidth="32" tileheight="32" infinite="0" nextlayerid="11" nextobjectid="32">
+<map version="1.9" tiledversion="1.9.2" orientation="orthogonal" renderorder="right-down" width="20" height="20" tilewidth="32" tileheight="32" infinite="0" nextlayerid="11" nextobjectid="33">
  <tileset firstgid="1" source="tileset.tsx"/>
  <layer id="8" name="Tile Layer 1" width="20" height="20">
   <data encoding="base64">
@@ -15,7 +15,10 @@
   <object id="30" name="start" x="156" y="220">
    <point/>
   </object>
-  <object id="31" name="EV-1" x="247" y="360">
+  <object id="31" name="EV-1" x="523" y="376">
+   <point/>
+  </object>
+  <object id="32" name="EV-2" x="227" y="388">
    <point/>
   </object>
  </objectgroup>

@@ -595,7 +595,7 @@ export class RpgPlayer extends RpgCommonPlayer {
     emitSceneMap() {
         const mapInstance = this.getCurrentMap<RpgMap>()
         if (!mapInstance) {
-            throw 'The player is not assigned to any map'
+            throw '[Emit] The player is not assigned to any map'
         }
         let { data: serializeMap } = Object.assign({}, mapInstance) as any
         delete serializeMap.shapes
@@ -897,6 +897,11 @@ applyMixins(RpgPlayer, [
 export enum EventMode {
     Shared = 'shared',
     Scenario = 'scenario'
+}
+
+export interface RpgClassEvent<T> {
+    _name: string
+    new(): T,
 }
 
 export class RpgEvent extends RpgPlayer {

@@ -135,12 +135,14 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
 
         const worldFilesString = searchFolderAndTransformToImportString('worlds', modulePath, '.world')
         const databaseFilesString = searchFolderAndTransformToImportString('database', modulePath, '.ts')
-
+        const eventsFilesString = searchFolderAndTransformToImportString('events', modulePath, '.ts')
+        
         const code =  `
             import { RpgServer, RpgModule } from '@rpgjs/server'
             ${mapFilesString?.importString}
             ${worldFilesString?.importString}
             ${importPlayer ? importPlayer : 'const player = {}'}
+            ${eventsFilesString?.importString}
             ${databaseFilesString?.importString}
             ${importEngine}
 
@@ -156,6 +158,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
                
             @RpgModule<RpgServer>({ 
                 player,
+                events: [${eventsFilesString?.variablesString}],
                 ${importEngine ? 'engine,' : ''}
                 database: [${databaseFilesString?.variablesString}],
                 maps: [${mapFilesString?.variablesString}],

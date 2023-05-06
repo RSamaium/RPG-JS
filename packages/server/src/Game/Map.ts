@@ -1,7 +1,7 @@
 import { RpgCommonMap, Utils, RpgShape, RpgCommonGame, AbstractObject } from '@rpgjs/common'
 import { TiledParserFile, TiledParser, TiledTileset } from '@rpgjs/tiled'
 import { EventOptions } from '../decorators/event'
-import { RpgPlayer, EventMode, RpgEvent } from '../Player/Player'
+import { RpgPlayer, EventMode, RpgEvent, RpgClassEvent } from '../Player/Player'
 import { Move } from '../Player/MoveManager'
 import { RpgServerEngine } from '../server'
 import { Observable } from 'rxjs'
@@ -108,6 +108,7 @@ export class RpgMap extends RpgCommonMap {
             data
         })
         RpgCommonMap.buffer.set(this.id, this)
+        this.loadCommonEvents(this._server.inputOptions.events)
         this.createDynamicEvent(this._events as EventPosOption[])
         if (this.onLoad) this.onLoad()
     }
@@ -234,6 +235,21 @@ export class RpgMap extends RpgCommonMap {
     // Hook: called by simple-room package
     onLeave(player: RpgPlayer) {
         this.removeObject(player)
+    }
+
+    private loadCommonEvents(commonEvents: RpgClassEvent<RpgEvent>[]) {
+        let events: EventPosOption[] = []
+        this.getShapes().forEach(shape => {
+            const findEvent = commonEvents.find(event => event._name == shape.name)
+            if (!findEvent) return
+            const { x, y, } = shape.hitbox
+            events.push({
+                x,
+                y,
+                event: findEvent
+            })
+        })
+        this.createDynamicEvent(events)
     }
 
     // TODO

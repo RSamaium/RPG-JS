@@ -11,6 +11,7 @@ export enum HookServer {
     PlayerConnected = 'Server.onConnected',
     PlayerDisconnected = 'Server.onDisconnected',
     AddMap = 'Server.AddMap',
+    AddEvent = 'Server.AddEvent',
     AddWorldMaps = 'Server.AddWorldMaps',
     AddDatabase = 'Server.AddDatabase',
     PlayerInput = 'Server.onInput',

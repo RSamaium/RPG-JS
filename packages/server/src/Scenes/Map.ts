@@ -4,8 +4,8 @@ import { World } from 'simple-room'
 import { isTiledFormat, TiledMap } from '@rpgjs/tiled'
 import { MapOptions, MapData } from '../decorators/map'
 import { RpgMap } from '../Game/Map'
-import { RpgTiledWorldMap, RpgWorldMaps, WorldMap } from '../Game/WorldMaps'
-import { RpgPlayer } from '../Player/Player'
+import { RpgWorldMaps, WorldMap } from '../Game/WorldMaps'
+import { RpgEvent, RpgPlayer } from '../Player/Player'
 import { RpgServerEngine } from '../server'
 
 export interface RpgClassMap<T> {
@@ -14,15 +14,24 @@ export interface RpgClassMap<T> {
     new(server: any): T,
 }
 
+type SceneMapObject = {
+    maps: any[],
+    worldMaps: WorldMap[]
+    events: RpgEvent[]
+}
+
 export class SceneMap {
     static readonly id: string = 'map'
 
+    private maps: any[] = []
     private mapsById: {
         [mapId: string]: RpgClassMap<RpgMap>
     } = {}
     private worldMaps: Map<string, RpgWorldMaps> = new Map()
 
-    constructor(private maps: any[], worldMaps: WorldMap[], private server: RpgServerEngine) {
+    constructor(sceneMapObject: SceneMapObject, private server: RpgServerEngine) {
+        const { maps, worldMaps, events } = sceneMapObject
+        this.maps = maps
         this.mapsById = {}
         RpgCommonMap.buffer.clear()
         if (this.maps) {
@@ -30,7 +39,7 @@ export class SceneMap {
                 this.createDynamicMap(map)
             }
         }
-        if (this.worldMaps) {
+        if (worldMaps) {
             for (let worldMap of worldMaps) {
                 this.createDynamicWorldMaps(worldMap)
             }

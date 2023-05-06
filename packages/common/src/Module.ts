@@ -59,12 +59,15 @@ export async function loadModules(modules, obj, middleware?: Function): Promise<
                 mod = await mod
             }
         }
-        const { imports, maps, spritesheets, sounds, gui, scenes, engine, database, worldMaps, scalability } = mod
+        const { imports, maps, spritesheets, sounds, gui, scenes, engine, database, worldMaps, scalability, events } = mod
         if (imports) {
             await loadModules(imports, obj)
         }
         if (maps) {
             RpgPlugin.on(HookServer.AddMap, () => maps)
+        }
+        if (events) {
+            RpgPlugin.on(HookServer.AddEvent, () => events)
         }
         if (worldMaps) {
             RpgPlugin.on(HookServer.AddWorldMaps, () => worldMaps)

@@ -82,12 +82,18 @@ export class RpgServerEngine {
         if (this.globalConfig.assetsPath !== undefined) this.assetsPath = this.globalConfig.assetsPath
 
         if (!this.inputOptions.maps) this.inputOptions.maps = []
+        if (!this.inputOptions.events) this.inputOptions.events = []
         if (!this.inputOptions.worldMaps) this.inputOptions.worldMaps = []
         this.playerProps = this.inputOptions.playerProps
 
         this.inputOptions.maps = [
             ...Utils.arrayFlat(await RpgPlugin.emit(HookServer.AddMap, this.inputOptions.maps)) || [],
             ...this.inputOptions.maps
+        ]
+
+        this.inputOptions.events = [
+            ...Utils.arrayFlat(await RpgPlugin.emit(HookServer.AddEvent, this.inputOptions.events)) || [],
+            ...this.inputOptions.events
         ]
 
         this.inputOptions.worldMaps = [
@@ -304,7 +310,14 @@ export class RpgServerEngine {
     }
 
     private loadScenes() {
-        this.scenes.set(SceneMap.id, new SceneMap(this.inputOptions.maps, this.inputOptions.worldMaps, this))
+        this.scenes.set(SceneMap.id, new SceneMap(
+            {
+                maps: this.inputOptions.maps,
+                events: this.inputOptions.events,
+                worldMaps: this.inputOptions.worldMaps
+            },
+            this
+        ))
     }
 
     getScene<T>(name: string): T {
