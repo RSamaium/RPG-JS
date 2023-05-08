@@ -12,8 +12,8 @@ const engine: RpgClientEngineHooks = {
 }
 ```
 
-<ApiContent page="RpgEngineHooks" />
+<!--@include: ../api/RpgEngineHooks.md-->
 
 ## RpgClientEngine
 
-<ApiContent page="RpgClientEngine" />
+<!--@include: ../api/RpgClientEngine.md-->

@@ -40,7 +40,7 @@ const apiMenu = [
     sidebarDepth: 2,
     items: [
       { text: "Common Commands", link: "/commands/common" },
-      { text: "Working with Components", link: "/commands/components" },
+      { text: "Components", link: "/commands/components" },
       { text: "Parameter Commands", link: "/commands/parameter" },
       { text: "Class Commands", link: "/commands/class" },
       { text: "Gold Commands", link: "/commands/gold" },
@@ -152,6 +152,9 @@ module.exports = {
     title: 'RPGJS v4 Documentation',
     description: 'Create your RPG or MMORPG in Javascript',
     themeConfig: {
+      search: {
+        provider: 'local'
+      },
       repo: 'https://github.com/RSamaium/RPG-JS',
       nav: [{
           text: 'Home',

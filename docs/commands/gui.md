@@ -1,3 +1,3 @@
 # Prebuilt GUI
 
-<ApiContent page="GuiManager" />
+<!--@include: ../api/GuiManager.md-->

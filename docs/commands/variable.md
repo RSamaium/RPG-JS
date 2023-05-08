@@ -1,3 +1,3 @@
 # Variable Commands
 
-<ApiContent page="VariableManager" />
+<!--@include: ../api/VariableManager.md-->

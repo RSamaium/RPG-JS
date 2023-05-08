@@ -20,8 +20,8 @@ rpgGame.start()
 
 ## Entry Point properties
 
-<ApiContent page="RpgServerEntryPoint" />
+<!--@include: ../api/RpgServerEntryPoint.md-->
 
 ## @RpgModule< RpgServer > decorator
 
-<ApiContent page="RpgServer" />
+<!--@include: ../api/RpgServer.md-->

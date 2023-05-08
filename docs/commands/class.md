@@ -1,3 +1,3 @@
 # Class/Actor Commands
 
-<ApiContent page="ClassManager" />
+<!--@include: ../api/ClassManager.md-->

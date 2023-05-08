@@ -1,3 +1,3 @@
 # Battle Commands
 
-<ApiContent page="BattleManager" />
+<!--@include: ../api/BattleManager.md-->

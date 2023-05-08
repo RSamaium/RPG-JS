@@ -30,8 +30,8 @@ The `setComponentsTop `method is used to set the components that are displayed a
 
 ## Player API
 
-<ApiContent page="ComponentManager" />
+<!--@include: ../api/ComponentManager.md-->
 
 ## Built-in Components
 
-<ApiContent page="Components" />
+<!--@include: ../api/Components.md-->

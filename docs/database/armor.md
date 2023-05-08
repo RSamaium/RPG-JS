@@ -1,6 +1,6 @@
 # Armors
 
-<Partial page="prerequisites-data" />
+<!--@include: ../partials/prerequisites-data.md-->
 
 ## Full Armor
 
@@ -40,4 +40,4 @@ export class Shield {
 
 ## API 
 
-<ApiContent page="Armor" />
+<!--@include: ../api/Armor.md-->

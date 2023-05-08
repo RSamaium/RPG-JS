@@ -1,6 +1,6 @@
 # Weapons
 
-<Partial page="prerequisites-data" />
+<!--@include: ../partials/prerequisites-data.md-->
 
 ## Example of full weapon:
 
@@ -45,4 +45,4 @@ export class Sword {
 
 ## API
 
-<ApiContent page="Weapon" />
+<!--@include: ../api/Weapon.md-->

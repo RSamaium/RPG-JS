@@ -1,3 +1,3 @@
 # States Commands
 
-<ApiContent page="StateManager" />
+<!--@include: ../api/StateManager.md-->

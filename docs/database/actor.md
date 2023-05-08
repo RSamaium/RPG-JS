@@ -1,6 +1,6 @@
 # Actors
 
-<Partial page="prerequisites-data" />
+<!--@include: ../partials/prerequisites-data.md-->
 
 ## Full Actor 
 
@@ -40,4 +40,4 @@ export class Hero {
 
 ## API 
 
-<ApiContent page="Actor" />
+<!--@include: ../api/Actor.md-->

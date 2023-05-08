@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-<Partial page="prerequisites-data" />
+<!--@include: ../partials/prerequisites-data.md-->
 
 ## Example of full state:
 
@@ -25,4 +25,4 @@ export class Paralyse {
 
 ## API
 
-<ApiContent page="State" />
+<!--@include: ../api/State.md-->

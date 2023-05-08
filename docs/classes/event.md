@@ -2,7 +2,7 @@
 
 ## @EventData decorator
 
-<ApiContent page="EventData" />
+<!--@include: ../api/EventData.md-->
 
 ## RpgEvent Hooks
 

@@ -16,13 +16,13 @@ const sceneMap: RpgSceneMapHooks = {
 }
 ```
 
-<ApiContent page="RpgSceneHooks" />
+<!--@include: ../api/RpgSceneHooks.md-->
 
 ## RpgScene
 
-<ApiContent page="RpgScene" />
+<!--@include: ../api/RpgScene.md-->
 
 ## RpgSceneMap
 
-<ApiContent page="RpgSceneMap" />
+<!--@include: ../api/RpgSceneMap.md-->
 

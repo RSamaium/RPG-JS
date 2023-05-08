@@ -1,6 +1,6 @@
 # Classes
 
-<Partial page="prerequisites-data" />
+<!--@include: ../partials/prerequisites-data.md-->
 
 ## Full Class 
 
@@ -25,4 +25,4 @@ export class Fighter {
 
 ## API 
 
-<ApiContent page="Class" />
+<!--@include: ../api/Class.md-->

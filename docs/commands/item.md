@@ -1,3 +1,3 @@
 # Items Commands
 
-<ApiContent page="ItemManager" />
+<!--@include: ../api/ItemManager.md-->

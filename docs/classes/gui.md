@@ -2,8 +2,8 @@
 
 ## List of Prebuilt GUI 
 
-<ApiContent page="PrebuiltGui" />
+<!--@include: ../api/PrebuiltGui.md-->
 
 ## RpgGui API
 
-<ApiContent page="RpgGui" />
+<!--@include: ../api/RpgGui.md-->

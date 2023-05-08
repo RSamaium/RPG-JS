@@ -1,3 +1,3 @@
 # Effect Commands
 
-<ApiContent page="EffectManager" />
+<!--@include: ../api/EffectManager.md-->

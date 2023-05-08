@@ -1,3 +1,3 @@
 # RpgResource
 
-<ApiContent page="Resources" />
+<!--@include: ../api/Resources.md-->

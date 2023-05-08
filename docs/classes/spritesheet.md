@@ -83,8 +83,8 @@ it will display the animation on the player and will be visible to all other pla
 
 ## Properties
 
-<ApiContent page="Spritesheet" />
+<!--@include: ../api/Spritesheet.md-->
 
 ## Create Animation with Timeline system
 
-<ApiContent page="Timeline" />
+<!--@include: ../api/Timeline.md-->

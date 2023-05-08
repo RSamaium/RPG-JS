@@ -18,13 +18,13 @@ const sprite: RpgSpriteHooks = {
 }
 ```
 
-<ApiContent page="RpgSpriteHooks" />
+<!--@include: ../api/RpgSpriteHooks.md-->
 
 ## RpgSprite
 
-<ApiContent page="RpgSprite" />
+<!--@include: ../api/RpgSprite.md-->
 
 ## RpgSpriteLogic
 
-<ApiContent page="RpgSpriteLogic" />
+<!--@include: ../api/RpgSpriteLogic.md-->
 

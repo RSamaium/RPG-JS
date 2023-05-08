@@ -1,6 +1,6 @@
 # Items
 
-<Partial page="prerequisites-data" />
+<!--@include: ../partials/prerequisites-data.md-->
 
 ## Example of full item:
 
@@ -42,4 +42,4 @@ export class Potion {
 
 ## API
 
-<ApiContent page="Item" />
+<!--@include: ../api/Item.md-->

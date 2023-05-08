@@ -40,4 +40,4 @@ export class CharaEvent extends RpgEvent {
 
 ## API
 
-<ApiContent page="RpgWorld" />
+<!--@include: ../api/RpgWorld.md-->

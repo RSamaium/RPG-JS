@@ -1,3 +1,3 @@
 # Common Commands
  
-<ApiContent page="Player" />
+<!--@include: ../api/Player.md-->

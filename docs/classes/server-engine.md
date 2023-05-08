@@ -18,8 +18,8 @@ export default class RpgServerModuleEngine {}
 
 ## RpgServerEngineHooks
 
-<ApiContent page="RpgServerEngineHooks" />
+<!--@include: ../api/RpgServerEngineHooks.md-->
 
 ## RpgServerEngine
 
-<ApiContent page="RpgServerEngine" />
+<!--@include: ../api/RpgServerEngine.md-->

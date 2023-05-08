@@ -8,4 +8,4 @@ Read the guide "[Create GUI](/guide/create-gui.html)" to learn more about the us
 
 ## Services
 
-<ApiContent page="VueInject" />
+<!--@include: ../api/VueInject.md-->

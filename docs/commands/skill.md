@@ -1,3 +1,3 @@
 # Skills Commands
 
-<ApiContent page="SkillManager" />
+<!--@include: ../api/SkillManager.md-->

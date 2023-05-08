@@ -35,8 +35,8 @@ afterEach(() => {
 
 # Testing API
 
-<ApiContent page="Testing" />
+<!--@include: ../api/Testing.md-->
 
 ## Fixture API
 
-<ApiContent page="FixtureTesting" />
+<!--@include: ../api/FixtureTesting.md-->

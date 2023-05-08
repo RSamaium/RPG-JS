@@ -21,7 +21,7 @@ export class TownMusic {}
 
 ### Properties 
 
-<ApiContent page="Sound" />
+<!--@include: ../api/Sound.md-->
 
 ## Use RpgSound
 

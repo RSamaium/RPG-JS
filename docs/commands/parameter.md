@@ -1,3 +1,3 @@
 # Parameters Commands
 
-<ApiContent page="ParameterManager" />
+<!--@include: ../api/ParameterManager.md-->

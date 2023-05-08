@@ -14,4 +14,4 @@ export const player: RpgPlayerHooks = {
 
 [Then put the class in the RpgServer decorator.](/classes/server.html#playerclass)
 
-<ApiContent page="RpgPlayerHooks" />
+<!--@include: ../api/RpgPlayerHooks.md-->

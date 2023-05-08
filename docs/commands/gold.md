@@ -1,3 +1,3 @@
 # Gold Commands
 
-<ApiContent page="GoldManager" />
+<!--@include: ../api/GoldManager.md-->

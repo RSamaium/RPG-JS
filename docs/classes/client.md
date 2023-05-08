@@ -16,8 +16,8 @@ document.addEventListener('DOMContentLoaded', () => {
 1. Use `entryPoint` to create an instance of `RpgClientEngine`. 
 2. Be sure to start the client part when the DOM is loaded.
 
-<ApiContent page="RpgClientEntryPoint" />
+<!--@include: ../api/RpgClientEntryPoint.md-->
 
 ## @RpgClient decorator
 
-<ApiContent page="RpgClient" />
+<!--@include: ../api/RpgClient.md-->

@@ -2,7 +2,7 @@
 
 ## @MapData decorator
 
-<ApiContent page="MapData" />
+<!--@include: ../api/MapData.md-->
 
 ## RpgMap Hooks
 
@@ -26,4 +26,4 @@ class TownMap extends RpgMap {
 
 ## RpgMap methods
 
-<ApiContent page="Map" />
+<!--@include: ../api/Map.md-->

@@ -21,4 +21,4 @@ export default class RpgServerModuleEngine {}
 
 ## API
 
-<ApiContent page="SceneMap" />
+<!--@include: ../api/SceneMap.md-->

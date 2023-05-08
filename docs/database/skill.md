@@ -1,6 +1,6 @@
 # Skills
 
-<Partial page="prerequisites-data" />
+<!--@include: ../partials/prerequisites-data.md-->
 
 ## Full Skill
 
@@ -37,4 +37,4 @@ export class Fire {
 
 ## API 
 
-<ApiContent page="Skill" />
+<!--@include: ../api/Skill.md-->

@@ -1,3 +1,3 @@
 # Elements Commands
 
-<ApiContent page="ElementManager" />
+<!--@include: ../api/ElementManager.md-->

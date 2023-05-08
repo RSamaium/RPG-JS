@@ -1,3 +1,3 @@
 # RpgWorldMaps
 
-<ApiContent page="RpgWorldMaps" />
+<!--@include: ../api/RpgWorldMaps.md-->
