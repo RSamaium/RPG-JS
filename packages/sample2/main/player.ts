@@ -21,11 +21,7 @@ const player: RpgPlayerHooks = {
      
    },
    async onInput(player: RpgPlayer, { input }) {
-      if (input == 'action') {
-         console.log('right')
-        // player.moveRoutes([ Move.tileRight(), Move.tileRight(), Move.tileRight() ])
-        player.showText('Hello world')
-      }
+     
    }
 }
 

@@ -89,9 +89,9 @@ To do this, create an `rpg.toml` file at the root of your project.
 Example:
 ```toml
 name = "My Game"
-short_name = "Game"
+shortName = "Game"
 description = "Beautiful Game"
-background_color = "#ffffff"
+backgroundColor = "#ffffff"
 
 [[icons]]
     src = "icon.png"

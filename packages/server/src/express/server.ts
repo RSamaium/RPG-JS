@@ -33,18 +33,22 @@ export function expressServer(modules: ModuleType[], options: ExpressServerOptio
             }
         })
 
-        app.use(express.json({
-            // TODO
-            limit: '50mb'
-        }))
-
+        // @ts-ignore
+        const isBuilt = !!import.meta.env.VITE_BUILT
+        
         // @ts-ignore
         const hasStatic = process.env.STATIC_DIRECTORY_ENABLED
+        const staticDirectory = isBuilt ? '' : 'dist'
         // @ts-ignore
-        const staticDirectory = !!import.meta.env.VITE_BUILT ? '' : 'dist'
-        // @ts-ignore
-        const staticEnabled = (!!import.meta.env.VITE_BUILT && hasStatic === undefined) || hasStatic === 'true'
+        const staticEnabled = (isBuilt && hasStatic === undefined) || hasStatic === 'true'
 
+        if (!isBuilt) {
+            app.use(express.json({
+                // TODO
+                limit: '50mb'
+            }))
+        }
+       
         if (staticEnabled) {
             app.use('/', express.static(path.join(dirname, '..', staticDirectory, 'client')))
         }

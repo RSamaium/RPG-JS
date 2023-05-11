@@ -23,7 +23,7 @@ In MMORPG, the player must create an account and log in with his account to star
 4. In `rpg.toml` file, add the configurations:
 
 ```toml
-[screenTitle]
+[titleScreen]
     mongodb = "mongodb://localhost:27017/test"
 
 [start]
@@ -52,7 +52,7 @@ $title-screen-background: url('@/config/client/assets/my-bg.png');
 In `rpg.toml`:
 
 ```toml
-[screenTitle]
+[titleScreen]
     title = rpgConfig.name,
     music = '<sound id>'*
 ```

@@ -23,7 +23,7 @@ const paths = {
     guiDir: baseModule + '/gui',
     configDir,
     playerFile: baseModule + '/player.ts',
-    themeFile: configDir + '/theme.scss'
+    themeFile: 'theme.scss'
 }
 
 export default {

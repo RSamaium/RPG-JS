@@ -14,7 +14,7 @@ const apiMenu = [
       { text: "Shape Class", link: "/classes/shape" },
       { text: "World Class", link: "/classes/world" }
     ]
-    
+
   },
   {
     text: 'Classes Client-Side',
@@ -32,7 +32,7 @@ const apiMenu = [
       { text: "Keyboard Class", link: "/classes/keyboard" },
       { text: "Vue Inject Class", link: "/classes/vue-inject" }
     ]
-    
+
   },
   {
     text: 'Player Commands Server-Side',
@@ -54,7 +54,7 @@ const apiMenu = [
       { text: "Effect Commands", link: "/commands/effect" },
       { text: "Battle Commands", link: "/commands/battle" }
     ]
-    
+
   },
   {
     text: 'RPG Database',
@@ -71,23 +71,33 @@ const apiMenu = [
       { text: "Element Database", link: "/database/element" },
       { text: "Effect Database", link: "/database/effect" }
     ]
-    
+
   },
-  {
+  /*{
     text: 'Testing',
     collapsed: false,
     sidebarDepth: 2,
     items: [
       { text: "Unit Testing Class", link: "/classes/tests" }
     ]    
-  }
+  }*/
 ]
+
+const migrationMenu = [{
+  text: 'Migration',
+  collapsed: false,
+  items: [
+    { text: "v3 to v4", link: "/migration/to-v4" }
+  ]
+}]
+
 
 const guideMenu = [{
   text: 'Quick Start',
   collapsed: false,
   items: [
     { text: "Getting Started", link: "/guide/get-started" },
+    { text: "Structure", link: "/guide/autoload" },
     { text: "Create your first map", link: "/guide/create-map" },
     { text: "Create hero in map", link: "/guide/create-sprite" }
   ]
@@ -96,7 +106,7 @@ const guideMenu = [{
   text: 'Go further',
   collapsed: false,
   items: [
-    { text: "Add life bar, text or other above the player", link: "/guide/component"},
+    { text: "Add life bar, text or other above the player", link: "/guide/component" },
     { text: "Create event (NPC)", link: "/guide/create-event" },
     { text: "Create items", link: "/guide/create-database" },
     { text: "Create shape", link: "/guide/create-shape" },
@@ -124,7 +134,7 @@ const guideMenu = [{
     { text: "Supporting Gamepad Input", link: "/guide/gamepad" },
     { text: "Creating Responsive Game Design", link: "/guide/responsive-design" }
   ]
-  
+
 },
 {
   text: 'Advanced',
@@ -134,7 +144,9 @@ const guideMenu = [{
     { text: "Using Agones for Game Server Hosting", link: "/advanced/agones" },
     { text: "Optimizing Performance", link: "/guide/performance" }
   ]
-}]
+},
+  ...migrationMenu
+]
 
 const pluginMenu = [{
   text: 'Plugins',
@@ -149,50 +161,51 @@ const pluginMenu = [{
 
 
 module.exports = {
-    title: 'RPGJS v4 Documentation',
-    description: 'Create your RPG or MMORPG in Javascript',
-    themeConfig: {
-      search: {
-        provider: 'local'
-      },
-      repo: 'https://github.com/RSamaium/RPG-JS',
-      nav: [{
-          text: 'Home',
-          link: 'https://rpgjs.dev'
-        },
-        {
-          text: 'Guide',
-          link: '/guide/get-started'
-        }, 
-        {
-          text: 'API',
-          link: '/commands/common'
-        },
-        {
-          text: 'Plugins',
-          link: '/plugins/chat'
-        },
-        {
-          text: 'Lean more',
-          items: [
-            { text: 'Change Log', link: '/others/changelog' }
-          ]
-        },
-        {
-          text: 'Community',
-          link: 'https://community.rpgjs.dev'
-        }
-      ],
-      sidebar:  {
-        '/classes/': apiMenu,
-        '/commands/': apiMenu,
-        '/database/': apiMenu,
-        '/api/': apiMenu,
-        '/guide/': guideMenu,
-        '/gui/': guideMenu,
-        '/advanced/': guideMenu,
-        '/plugins/': pluginMenu
-      },
+  title: 'RPGJS v4 Documentation',
+  description: 'Create your RPG or MMORPG in Javascript',
+  themeConfig: {
+    search: {
+      provider: 'local'
+    },
+    repo: 'https://github.com/RSamaium/RPG-JS',
+    nav: [{
+      text: 'Home',
+      link: 'https://rpgjs.dev'
+    },
+    {
+      text: 'Guide',
+      link: '/guide/get-started'
+    },
+    {
+      text: 'API',
+      link: '/commands/common'
+    },
+    {
+      text: 'Plugins',
+      link: '/plugins/chat'
+    },
+    {
+      text: 'Lean more',
+      items: [
+        { text: 'Change Log', link: '/others/changelog' }
+      ]
+    },
+    {
+      text: 'Community',
+      link: 'https://community.rpgjs.dev'
+    }
+    ],
+    sidebar: {
+      '/classes/': apiMenu,
+      '/commands/': apiMenu,
+      '/database/': apiMenu,
+      '/api/': apiMenu,
+      '/guide/': guideMenu,
+      '/gui/': guideMenu,
+      '/advanced/': guideMenu,
+      '/plugins/': pluginMenu,
+      '/migration/': guideMenu,
+    },
     plugins: ['@vuepress/active-header-links']
   }
 }

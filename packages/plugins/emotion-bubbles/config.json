@@ -1,0 +1,48 @@
+{
+    "namespace": "emotionBubble",
+    "client": {
+        "type": "object",
+        "properties": {
+            "image": {
+                "type": "string"
+            },
+            "width": {
+                "type": "integer"
+            },
+            "height": {
+                "type": "integer"
+            },
+            "framesHeight": {
+                "type": "integer"
+            },
+            "framesWidth": {
+                "type": "integer"
+            },
+            "anchor": {
+                "type": "array",
+                "items": {
+                    "type": "number"
+                }
+            },
+            "y": {
+                "type": "integer"
+            },
+            "x": {
+                "type": "integer"
+            },
+            "textures": {
+                "type": "object",
+                "additionalProperties": {
+                    "oneOf": [
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "integer"
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}

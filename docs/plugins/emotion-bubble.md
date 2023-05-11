@@ -23,7 +23,7 @@ import { EmotionBubble } from '@rpgjs/plugin-emotion-bubbles'
 @EventData({
     name: 'EV-1'
 })
-export class MyEvent extends RpgEvent {
+export default class MyEvent extends RpgEvent {
     onAction(player: RpgPlayer) {
         player.showEmotionBubble(EmotionBubble.Like)
     }

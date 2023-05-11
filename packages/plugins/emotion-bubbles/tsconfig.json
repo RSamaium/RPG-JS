@@ -1,7 +1,7 @@
 {
     "compilerOptions": {
-      "target": "es6",
-      "module": "commonjs",
+      "target": "es2020",
+      "module": "es2020",
       "outDir": "dist",
       "strict": true,
       "sourceMap": true,
@@ -18,12 +18,12 @@
       "declaration": false,
       "experimentalDecorators": true, 
       "emitDecoratorMetadata": true,
-      "types": ["node", "jest"]
+      "types": ["node"]
     },
     "include": [
         "src", 
         "index.d.ts", 
         "tests", 
-        "node_modules/@rpgjs/compiler/types/*.d.ts"
+        "node_modules/@rpgjs/compiler/*.d.ts"
     ]
   }

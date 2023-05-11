@@ -56,7 +56,7 @@ export interface MapOptions {
     * class TownMap extends RpgMap {}
     * ```
     * 
-    * If the positions are not defined, the event will be placed on a Tiled Map Editor shape ([/guide/create-event.html#position-the-event-on-the-map](Guide)). Otherwise, it will be placed at {x:0, y:0 }
+    * If the positions are not defined, the event will be placed on a Tiled Map Editor shape ([/guide/create-event.html#position-the-event-on-the-map](Guide)). Otherwise, it will be placed at `{x:0, y:0 }`
     * 
     * You can give positions:
     * 

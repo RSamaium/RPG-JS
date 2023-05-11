@@ -323,6 +323,14 @@ export interface RpgServer {
      * */
     maps?: RpgClassMap<RpgMap>[] | MapOptions[] | string[] | TiledMap[],
 
+    /**
+     * Array of all events. Each element is an `RpgEvent` class
+     * Events can be used by placing a shape with the name of the event on Tiled Map Editor
+     * 
+     * @prop {RpgClassEvent<RpgEvent>[]} [events]
+     * @since 4.0.0
+     * @memberof RpgServer
+     */
     events?: RpgClassEvent<RpgEvent>[]
 
     /**
@@ -348,7 +356,6 @@ export interface RpgServer {
         type: 'world' // only for Tiled Map Editor
      * }
      * ```
-     * @param {RpgSceneMap} sceneMap
      * @since 3.0.0-beta.8
      * @example
      * ```ts
