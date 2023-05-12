@@ -11,9 +11,6 @@
     "build": "tsc",
     "watch": "tsc -w"
   },
-  "files": [
-    "lib"
-  ],
   "keywords": [],
   "author": "",
   "license": "MIT",
@@ -26,5 +23,6 @@
     "buffer": "^6.0.3",
     "xml-js": "^1.6.11",
     "xmlbuilder": "^15.1.1"
-  }
+  },
+  "type": "module"
 }

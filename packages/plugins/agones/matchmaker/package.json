@@ -11,9 +11,6 @@
     "watch": "tsc -w",
     "dev": "nodemon dist/server.js"
   },
-  "files": [
-    "lib"
-  ],
   "keywords": [],
   "author": "",
   "license": "MIT",
@@ -27,5 +24,6 @@
     "nodemon": "^2.0.22",
     "supertest": "^6.3.3",
     "typescript": "^5.0.2"
-  }
+  },
+  "type": "module"
 }

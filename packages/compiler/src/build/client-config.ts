@@ -319,7 +319,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         ...viteConfig.optimizeDeps,
         exclude: [
             ...(options.optimizeDepsExclude || [])
-        ],
+        ]
     }
 
     return viteConfig

@@ -11,9 +11,6 @@
     "build": "tsc",
     "watch": "tsc -w"
   },
-  "files": [
-    "lib"
-  ],
   "keywords": [],
   "author": "Samuel Ronce",
   "license": "MIT",
@@ -37,5 +34,6 @@
     "@types/css-font-loading-module": "^0.0.8",
     "@types/node": "^18.16.0",
     "typescript": "^5.0.4"
-  }
+  },
+  "type": "module"
 }

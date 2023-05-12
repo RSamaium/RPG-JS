@@ -15,9 +15,6 @@
     ".": "./lib/index.js",
     "./express": "./lib/express/server.js"
   },
-  "files": [
-    "lib"
-  ],
   "keywords": [],
   "author": "Samuel Ronce",
   "license": "MIT",
@@ -42,5 +39,6 @@
   },
   "alias": {
     "express": "./lib/express/server"
-  }
+  },
+  "type": "module"
 }

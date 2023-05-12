@@ -9,10 +9,6 @@
   "publishConfig": {
     "access": "public"
   },
-  "files": [
-    "src",
-    "index.d.ts"
-  ],
   "keywords": [],
   "author": "Samuel Ronce",
   "license": "MIT",

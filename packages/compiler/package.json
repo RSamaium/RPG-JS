@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/compiler",
-  "version": "4.0.0-beta.1",
+  "version": "4.0.0-beta.2",
   "description": "",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
@@ -11,9 +11,6 @@
     "build": "tsc",
     "watch": "tsc -w"
   },
-  "files": [
-    "lib"
-  ],
   "keywords": [],
   "author": "Samuel Ronce",
   "license": "MIT",
@@ -41,6 +38,7 @@
     "sass": "^1.62.1",
     "vite": "^4.3.2",
     "vite-node": "^0.30.1",
+    "vite-plugin-pwa": "^0.14.7",
     "vite-plugin-require-transform": "^1.0.12",
     "vitest": "^0.30.1",
     "vitest-webgl-canvas-mock": "^1.1.0",
@@ -51,8 +49,7 @@
     "rpgjs": "./lib/index.js"
   },
   "devDependencies": {
-    "typescript": "^5.0.4",
-    "vite-plugin-pwa": "^0.14.7"
+    "typescript": "^5.0.4"
   },
   "type": "module"
 }

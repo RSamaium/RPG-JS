@@ -2,7 +2,7 @@
     "compilerOptions": {
       "target": "es2020",
       "lib": ["dom", "esnext"],
-      "module": "commonjs",
+      "module": "ES2020",
       "outDir": "./lib",
       "rootDir": "./src",
       "strict": true,
