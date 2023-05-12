@@ -8,6 +8,7 @@
   "dependencies": {
     "canvas": "^2.11.0",
     "concurrently": "^7.6.0",
+    "tsc-esm-fix": "^2.20.14",
     "vue": "^3.2.47"
   },
   "devDependencies": {
@@ -21,7 +22,7 @@
     "test": "vitest --config ./packages/compiler/src/test/vitest.config.ts",
     "lerna:publish": "lerna publish --ignore-prepublish --force-publish --no-private --no-push --no-git-tag-version",
     "lerna:ls": "lerna ls",
-    "build": "concurrently -n build \"npm:build:*\"",
+    "build": "concurrently -n build \"npm:build:*\" && npm run fix-esm",
     "build:common": "cd packages/common && npm run build",
     "build:server": "cd packages/server && npm run build",
     "build:client": "cd packages/client && npm run build",
@@ -43,7 +44,8 @@
     "dev:watch": "concurrently -n rpgjs \"npm:watch:*\"",
     "dev": "concurrently -n rpgjs,sample \"npm:watch:*\" \"cd packages/sample && npm run dev\"",
     "dev:doc": "cd docs && npm run dev",
-    "doc:build": "cd docs && npm run build"
+    "doc:build": "cd docs && npm run build",
+    "fix-esm": "tsc-esm-fix  --target='packages/*/lib/**/*.js' && tsc-esm-fix  --target='packages/plugins/agones/matchmaker/lib/*.js'"
   },
   "repository": {
     "type": "git",
