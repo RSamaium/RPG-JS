@@ -45,7 +45,7 @@
     "dev": "concurrently -n rpgjs,sample \"npm:watch:*\" \"cd packages/sample && npm run dev\"",
     "dev:doc": "cd docs && npm run dev",
     "doc:build": "cd docs && npm run build",
-    "fix-esm": "tsc-esm-fix  --target='packages/*/lib/**/*.js --dirnameVar=false' && tsc-esm-fix  --target='packages/plugins/agones/matchmaker/lib/*.js'"
+    "fix-esm": "tsc-esm-fix  --target='packages/*/lib/**/*.js' --dirnameVar=false && tsc-esm-fix  --target='packages/plugins/agones/matchmaker/lib/*.js'"
   },
   "repository": {
     "type": "git",
