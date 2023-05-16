@@ -54,6 +54,7 @@ export class RpgServerEngine {
 
     world: WorldClass = World
     workers: any
+    envs: any = {}
 
     /**
      * Combat formulas
@@ -62,6 +63,7 @@ export class RpgServerEngine {
      * @memberof RpgServerEngine
      */
     constructor(public io, public gameEngine: RpgCommonGame, public inputOptions) {
+        this.envs = inputOptions.envs || {}
         if (this.inputOptions.workers) {
             console.log('workers enabled')
             this.workers = this.gameEngine.createWorkers(this.inputOptions.workers).load()

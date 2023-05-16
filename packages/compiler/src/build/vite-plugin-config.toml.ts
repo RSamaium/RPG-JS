@@ -367,7 +367,11 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
                 document.addEventListener('DOMContentLoaded', function(e) { 
                     entryPoint(modules, { 
                         io,
-                        globalConfig
+                        globalConfig,
+                        envs: {
+                            VITE_BUILT: ${process.env.VITE_BUILT},
+                            VITE_SERVER_URL: "${process.env.VITE_SERVER_URL}"
+                        }
                     }).start()
                 });
               `;
@@ -397,7 +401,11 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
 
                 expressServer(modules, {
                     globalConfig,
-                    basePath: __dirname
+                    basePath: __dirname,
+                    envs: {
+                        VITE_BUILT: ${process.env.VITE_BUILT},
+                        VITE_SERVER_URL: "${process.env.VITE_SERVER_URL}"
+                    }
                 })
               `;
                 return codeToTransform

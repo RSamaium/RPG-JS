@@ -204,7 +204,7 @@ export class RpgMap extends RpgCommonMap {
 
     private async parseTmx(file: string, relativePath: string = '') {
         // @ts-ignore
-        const hasAssetsPath = !!import.meta.env.VITE_BUILT
+        const hasAssetsPath = !!this._server.envs.VITE_BUILT
         const parser = new TiledParserFile(
             file,
             {

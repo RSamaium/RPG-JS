@@ -34,6 +34,8 @@ interface RpgServerEntryPointOptions {
     globalConfig?: any
 
     workers?: any
+
+    envs?: object
 }
 
 export default async function (modules: ModuleType[], options: RpgServerEntryPointOptions): Promise<RpgServerEngine> {

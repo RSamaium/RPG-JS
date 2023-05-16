@@ -92,6 +92,8 @@ interface RpgClientEntryPointOptions {
      * @memberof RpgClientEntryPoint
      * */
     serverFps?: number
+
+    envs?: object
 }
 
 export default (modules: ModuleType[], options: RpgClientEntryPointOptions): RpgClientEngine => {

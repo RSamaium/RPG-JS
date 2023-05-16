@@ -121,7 +121,10 @@ export class RpgClientEngine {
      */
     objects: Observable<ObjectFixtureList> = this.gameEngine.objects
 
+    envs?: object = {}
+
     constructor(public gameEngine: GameEngineClient, private options) {
+        this.envs = options.envs || {}
         this.tick.subscribe(({ timestamp, deltaTime }) => {
             if (timestamp != -1) this.step(timestamp, deltaTime)
         })
@@ -270,7 +273,7 @@ export class RpgClientEngine {
         }
 
         // @ts-ignore
-        const staticDir = import.meta.env.VITE_BUILT
+        const staticDir = this.envs.VITE_BUILT
 
         if (staticDir) {
             return this.assetsPath + '/' + Utils.basename(source)
@@ -318,7 +321,7 @@ export class RpgClientEngine {
 
             }
             // @ts-ignore
-            const envUrl = import.meta.env.VITE_SERVER_URL
+            const envUrl = this.envs.VITE_SERVER_URL
             this.connection(
                     serverUri.url ? serverUri.url + ':' + serverUri.port : 
                     envUrl ? envUrl : undefined

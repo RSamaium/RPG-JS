@@ -26,7 +26,7 @@
     "pixi-viewport": "5.0.1",
     "pixi.js": "7.2.4",
     "rxjs": "7.8.0",
-    "simple-room-client": "^2.0.3",
+    "simple-room-client": "^2.0.5",
     "vue": "^3.2.47"
   },
   "gitHead": "7bb0326cc3216764a4bfc86f53e7b24464a2040f",

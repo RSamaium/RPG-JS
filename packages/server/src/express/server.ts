@@ -12,6 +12,7 @@ import { Query } from '../Query'
 type ExpressServerOptions = {
     basePath: string,
     globalConfig?: any,
+    envs?: object
 }
 
 export function expressServer(modules: ModuleType[], options: ExpressServerOptions): Promise<{
@@ -20,6 +21,7 @@ export function expressServer(modules: ModuleType[], options: ExpressServerOptio
     game: RpgServerEngine
 }> {
     return new Promise((resolve, reject) => {
+        const envs = options.envs || {}
         const dirname = options.basePath
         const PORT = process.env.PORT || 3000
         const pe = new PrettyError()
@@ -34,7 +36,7 @@ export function expressServer(modules: ModuleType[], options: ExpressServerOptio
         })
 
         // @ts-ignore
-        const isBuilt = !!import.meta.env.VITE_BUILT
+        const isBuilt = !!envs.VITE_BUILT
         
         // @ts-ignore
         const hasStatic = process.env.STATIC_DIRECTORY_ENABLED
@@ -70,7 +72,7 @@ export function expressServer(modules: ModuleType[], options: ExpressServerOptio
         }
 
         // @ts-ignore
-        const serverPort = (import.meta.env.VITE_SERVER_URL || '').split(':')[1] || PORT
+        const serverPort = (envs.VITE_SERVER_URL || '').split(':')[1] || PORT
         server.listen(serverPort, start)
 
         process.on('uncaughtException', function (error) {

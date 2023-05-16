@@ -244,13 +244,13 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         moreBuildOptions = {
             minify: false,
             ssr: {
-                format: 'cjs'
+              //  format: 'cjs'
             },
             ...moreBuildOptions,
         }
         if (!options.serveMode) {
             outputOptions = {
-                format: 'cjs',
+               // format: 'cjs',
             }
         }
     }
