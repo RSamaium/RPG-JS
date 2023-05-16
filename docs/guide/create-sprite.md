@@ -86,6 +86,6 @@ modules = [
 ]
 
 [start]
-    map = './main/medieval'
+    map = './main/maps/medieval'
     graphic = 'hero' # filename (without extension)
 ```

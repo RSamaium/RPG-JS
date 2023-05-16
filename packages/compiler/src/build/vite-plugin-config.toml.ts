@@ -398,8 +398,11 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
             else if (id.endsWith('virtual-server.ts')) {
                 const codeToTransform = `
                 import { expressServer } from '@rpgjs/server/express'
+                import * as url from 'url'
                 import modules from './${MODULE_NAME}'
                 import globalConfig from './${GLOBAL_CONFIG_SERVER}'
+
+                const __dirname = url.fileURLToPath(new URL('.', import.meta.url))
 
                 expressServer(modules, {
                     globalConfig,
