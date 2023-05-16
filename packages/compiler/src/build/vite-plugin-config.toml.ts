@@ -342,6 +342,10 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
             }
         },
         async load(id: string) {
+            const envsString = `{
+                VITE_BUILT: ${process.env.VITE_BUILT},
+                VITE_SERVER_URL: "${process.env.VITE_SERVER_URL}"
+            }`
             if (id.endsWith(MODULE_NAME)) {
                 const modulesToImport = modules.reduce((acc, module) => {
                     const variableName = formatVariableName(module);
@@ -368,10 +372,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
                     entryPoint(modules, { 
                         io,
                         globalConfig,
-                        envs: {
-                            VITE_BUILT: ${process.env.VITE_BUILT},
-                            VITE_SERVER_URL: "${process.env.VITE_SERVER_URL}"
-                        }
+                        envs: ${envsString}
                     }).start()
                 });
               `;
@@ -387,7 +388,8 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
                 document.addEventListener('DOMContentLoaded', function() { 
                     entryPoint(modules, {
                         globalConfigClient,
-                        globalConfigServer
+                        globalConfigServer,
+                        envs: ${envsString}
                     }).start() 
                 })
               `;
@@ -402,10 +404,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
                 expressServer(modules, {
                     globalConfig,
                     basePath: __dirname,
-                    envs: {
-                        VITE_BUILT: ${process.env.VITE_BUILT},
-                        VITE_SERVER_URL: "${process.env.VITE_SERVER_URL}"
-                    }
+                    envs: ${envsString}
                 })
               `;
                 return codeToTransform
