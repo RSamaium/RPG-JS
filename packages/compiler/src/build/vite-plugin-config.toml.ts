@@ -342,9 +342,10 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
             }
         },
         async load(id: string) {
+            const serverUrl = process.env.VITE_SERVER_URL
             const envsString = `{
                 VITE_BUILT: ${process.env.VITE_BUILT},
-                VITE_SERVER_URL: "${process.env.VITE_SERVER_URL}"
+                VITE_SERVER_URL: ${serverUrl ? "'" + serverUrl + "'" : 'undefined'}
             }`
             if (id.endsWith(MODULE_NAME)) {
                 const modulesToImport = modules.reduce((acc, module) => {
