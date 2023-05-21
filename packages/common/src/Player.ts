@@ -27,4 +27,4 @@ export class RpgCommonPlayer extends AbstractObject {
     guiDisplay: boolean
 }
 
-export const _AbstractObject = AbstractObject;
+export default AbstractObject

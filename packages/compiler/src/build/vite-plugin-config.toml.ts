@@ -421,8 +421,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
                 let moduleName = resolveModule(module)
                 let variableName = formatVariableName(moduleName);
                 if (
-                        id.endsWith(moduleName) || id.includes('virtual-' + variableName) ||
-                        id.includes('node_modules/' + moduleName)
+                        id.endsWith(moduleName) || id.includes('virtual-' + variableName)
                     ) {
                     return createModuleLoad(id, variableName, module);
                 }

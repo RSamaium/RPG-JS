@@ -315,10 +315,22 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         ...(options.overrideOptions || {}),
     }
 
+    const packageJSON = JSON.parse(await fs.readFile(resolve(process.cwd(), 'package.json'), 'utf8'));
+    const dependencies = Object.keys(packageJSON.dependencies || {});
+    const excludeDependencies: string[] = []
+    const except = ['@rpgjs/server', '@rpgjs/client', '@rpgjs/common', '@rpgjs/database', '@rpgjs/tiled', '@rpgjs/types']
+    for (const dep of dependencies) {
+        if (except.includes(dep)) continue
+        if (dep.startsWith('@rpgjs' || dep.startsWith('rpgjs-'))) {
+            excludeDependencies.push(dep)
+        }
+    }
+    
     viteConfig.optimizeDeps = {
         ...viteConfig.optimizeDeps,
         exclude: [
-            ...(options.optimizeDepsExclude || [])
+            ...(options.optimizeDepsExclude || []),
+            ...excludeDependencies
         ]
     }
 

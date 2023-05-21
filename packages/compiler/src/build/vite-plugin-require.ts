@@ -14,7 +14,7 @@ export default function vitePluginRequire(opts?: {
 	log?: (...arg: any[]) => void;
 	translateType?: "importMetaUrl" | "import";
 }): Plugin {
-	const { fileRegex = /(.jsx?|.tsx?)$/, log, translateType = "import" } = opts || {};
+	const { fileRegex = /(.jsx?|.tsx?)(\?v=[0-9a-f]+)?$/, log, translateType = "import" } = opts || {};
 	return {
 		name: "vite-plugin-require",
 		async transform(code: string, id: string) {
