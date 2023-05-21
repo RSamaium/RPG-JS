@@ -188,6 +188,10 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
 
     let aliasTransform = {}
 
+    if (!isBuild) {
+        aliasTransform['vue'] = 'vue/dist/vue.esm-bundler.js'
+    }
+
     if (!isServer) {
         const aliasPolyfills = {
             util: 'rollup-plugin-node-polyfills/polyfills/util',
@@ -320,7 +324,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     const packageJSON = JSON.parse(await fs.readFile(resolve(process.cwd(), 'package.json'), 'utf8'));
     const dependencies = Object.keys(packageJSON.dependencies || {});
     const excludeDependencies: string[] = []
-    const except = ['@rpgjs/server', '@rpgjs/client', '@rpgjs/common', '@rpgjs/database', '@rpgjs/tiled', '@rpgjs/types']
+    const except = ['@rpgjs/server', '@rpgjs/client', '@rpgjs/common', '@rpgjs/database', '@rpgjs/tiled', '@rpgjs/types', '@rpgjs/standalone']
     for (const dep of dependencies) {
         if (except.includes(dep)) continue
         if (dep.startsWith('@rpgjs' || dep.startsWith('rpgjs-'))) {
