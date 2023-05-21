@@ -1,4 +1,6 @@
-export { LiteralDirection, RpgCommonPlayer, _AbstractObject as AbstractObject } from './Player'
+import AbstractObject from './Player';
+export { LiteralDirection, RpgCommonPlayer } from './Player'
+export { AbstractObject }
 export { RpgCommonEvent } from './Event'
 export { RpgCommonMap } from './Map'
 export { RpgCommonGame, GameSide } from './Game'

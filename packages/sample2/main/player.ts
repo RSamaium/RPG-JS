@@ -21,7 +21,7 @@ const player: RpgPlayerHooks = {
      
    },
    async onInput(player: RpgPlayer, { input }) {
-     
+      player.callMainMenu()
    }
 }
 

@@ -102,7 +102,9 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     // alias for client
     process.env.VITE_RPG_TYPE = envType
 
-    await createDistFolder(dirOutputName)
+    if (isBuild && !isTest) {
+        await createDistFolder(dirOutputName)
+    }
 
     let plugins: any[] = [
         rpgjsPluginLoader(dirOutputName, options.serveMode),
