@@ -77,6 +77,9 @@ export default {
             },
             "themeCss": {
                 "type": "string"
+            },
+            "matchMakerService": {
+                "type": "string"
             }
         }
     },

@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', function(e) {
     entryPoint(modules, { 
         io,
         globalConfig,
-        maxFps: 60
+        maxFps: 60,
+        envs: import.meta.env
     }).start()
 })

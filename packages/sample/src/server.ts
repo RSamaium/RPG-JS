@@ -4,5 +4,6 @@ import globalConfig from './config/server'
 
 expressServer(modules, {
     globalConfig,
-    basePath: __dirname
+    basePath: __dirname,
+    envs: import.meta.env
 })

@@ -6,6 +6,7 @@ import modules from './modules'
 document.addEventListener('DOMContentLoaded', function() { 
     entryPoint(modules, { 
         globalConfigClient,
-        globalConfigServer
+        globalConfigServer,
+        envs: import.meta.env
     }).start() 
 })

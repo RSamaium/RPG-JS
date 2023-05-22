@@ -3,7 +3,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 import toml from '@iarna/toml';
 import nodePolyfills from 'rollup-plugin-node-polyfills'
 import { NodeModulesPolyfillPlugin } from '@esbuild-plugins/node-modules-polyfill'
-import { resolve } from 'path'
+import { resolve, join } from 'path'
 import requireTransform from './vite-plugin-require.js';
 import { flagTransform } from './vite-plugin-flag-transform.js';
 import vue from '@vitejs/plugin-vue'
@@ -278,7 +278,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         configFile,
         resolve: {
             alias: {
-                '@': 'src',
+                '@': join(process.cwd(), 'src'),
                 ...aliasTransform
             },
             extensions: ['.ts', '.js', '.jsx', '.json', '.vue', '.css', '.scss', '.sass', '.html', 'tmx', 'tsx', '.toml'],

@@ -26,10 +26,10 @@ export default function cssPlugin(config: Config): Plugin {
             const themeCss = resolve(process.cwd(), 'src/config/client/theme.scss')
             const themeCssRoot = resolve(process.cwd(), 'theme.scss')
             if (fs.existsSync(themeCss)) {
-                additionalData += `@import "@/${themeCss}";`
+                additionalData += `@import "${themeCss}";`
             }
             else if (fs.existsSync(themeCssRoot)) {
-                additionalData += `@import "@/${themeCssRoot}";`
+                additionalData += `@import "${themeCssRoot}";`
             }
             else if (config.themeCss) {
                 // exception if not find file

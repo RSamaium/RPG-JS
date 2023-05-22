@@ -11,6 +11,11 @@
     "build": "tsc",
     "watch": "tsc -w"
   },
+  "typesVersions": {
+    "*": {
+      "express": ["lib/express/server.d.ts"]
+    }
+  },
   "exports": {
     ".": "./lib/index.js",
     "./express": "./lib/express/server.js"
