@@ -67,7 +67,11 @@ export default {
                             "type": "string"
                         },
                         "sizes": {
-                            "type": "string"
+                            "type": "array",
+                            "items": {
+                                "type": "number",
+                                "minimum": 0
+                            }
                         },
                         "type": {
                             "type": "string"

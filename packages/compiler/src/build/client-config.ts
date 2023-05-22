@@ -31,11 +31,13 @@ export interface Config {
     startMap?: string
     name?: string
     shortName?: string,
+    short_name?: string // old value
     description?: string,
     themeColor?: string,
+    background_color?: string // old value
     icons?: {
         src: string,
-        sizes: string,
+        sizes: number[],
         type: string
     }[]
     themeCss?: string
@@ -134,9 +136,9 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
                 VitePWA({
                     manifest: {
                         name: config.name,
-                        short_name: config.shortName,
+                        short_name: config.shortName || config.short_name,
                         description: config.description,
-                        theme_color: config.themeColor,
+                        theme_color: config.themeColor || config.background_color,
                         icons: config.icons
                     }
                 })
