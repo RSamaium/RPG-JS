@@ -29,7 +29,8 @@ If you want to recover the express server, it is possible:
 ```ts
 const { app, server, game } = await expressServer(modules, {
     globalConfig,
-    basePath: __dirname
+    basePath: __dirname,
+    envs: import.meta.env
 })
 ```
 
@@ -75,6 +76,33 @@ document.addEventListener('DOMContentLoaded', function() {
 })
 ```
 
+ ## package.json
+
+```ts
+{
+    "name": "my-game",
+    "scripts": {
+        "build": "rpgjs build",
+        "dev": "rpgjs dev",
+        "start": "node dist/server/main.js"
+    },
+    "engines": {
+        "node": ">=18"
+    },
+    "dependencies": {
+        "@rpgjs/client": "*",
+        "@rpgjs/server": "*",
+        "@rpgjs/standalone": "*",
+        "@rpgjs/types": "*",
+        "socket.io-client": "4.6.1"
+    },
+    "devDependencies": {
+        "@rpgjs/compiler": "*",
+        "typescript": "5.0.4"
+    }
+}
+```
+
 ## tsconfig.json
 
 ```json
@@ -108,30 +136,3 @@ document.addEventListener('DOMContentLoaded', function() {
     ]
  }
  ```
-
- ## package.json
-
-```ts
-{
-    "name": "my-game",
-    "scripts": {
-        "build": "rpgjs build",
-        "dev": "rpgjs dev",
-        "start": "node dist/server/main.js"
-    },
-    "engines": {
-        "node": ">=18"
-    },
-    "dependencies": {
-        "@rpgjs/client": "*",
-        "@rpgjs/server": "*",
-        "@rpgjs/standalone": "**",
-        "@rpgjs/types": "**",
-        "socket.io-client": "4.6.1"
-    },
-    "devDependencies": {
-        "@rpgjs/compiler": "*",
-        "typescript": "5.0.4"
-    }
-}
-```

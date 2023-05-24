@@ -3,7 +3,7 @@
   "version": "4.0.0-beta.8",
   "description": "",
   "main": "./lib/index.js",
-  "types": "./lib/express/index.d.ts",
+  "types": "./lib/index.d.ts",
   "publishConfig": {
     "access": "public"
   },
