@@ -1,37 +1,40 @@
 {
     "namespace": "gamepad",
     "client": {
-        "connect": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string"
-                },
-                "time": {
-                    "type": "integer"
-                },
-                "icon": {
-                    "type": "string"
-                },
-                "sound": {
-                    "type": "string"
+        "type": "object",
+        "properties": {
+            "connect": {
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "type": "string"
+                    },
+                    "time": {
+                        "type": "integer"
+                    },
+                    "icon": {
+                        "type": "string"
+                    },
+                    "sound": {
+                        "type": "string"
+                    }
                 }
-            }
-        },
-        "disconnect": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string"
-                },
-                "time": {
-                    "type": "integer"
-                },
-                "icon": {
-                    "type": "string"
-                },
-                "sound": {
-                    "type": "string"
+            },
+            "disconnect": {
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "type": "string"
+                    },
+                    "time": {
+                        "type": "integer"
+                    },
+                    "icon": {
+                        "type": "string"
+                    },
+                    "sound": {
+                        "type": "string"
+                    }
                 }
             }
         }
