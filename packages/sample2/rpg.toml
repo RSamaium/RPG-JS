@@ -1,7 +1,8 @@
 modules = [
     './main',
     '@rpgjs/default-gui',
-    '@rpgjs/plugin-emotion-bubbles'
+    '@rpgjs/plugin-emotion-bubbles',
+    '@rpgjs/gamepad'
 ]
 
 [start]

@@ -44,7 +44,7 @@ export function parseJsonSchema(jsonSchema: JsonSchema, inputData: InputData): P
 
   const namespace = jsonSchema.namespace || '';
   const getObjectByNamespace = (): any => {
-    return inputData[namespace] || inputData
+    return namespace ? (inputData[namespace] || {}) : inputData
   }
 
   function toPathAsObject(instancePath) {
