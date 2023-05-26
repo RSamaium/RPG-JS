@@ -37,7 +37,7 @@ export function expressServer(modules: ModuleType[], options: ExpressServerOptio
 
         // @ts-ignore
         const isBuilt = !!envs.VITE_BUILT
-        
+
         // @ts-ignore
         const hasStatic = process.env.STATIC_DIRECTORY_ENABLED
         const staticDirectory = isBuilt ? '' : 'dist'
@@ -50,7 +50,7 @@ export function expressServer(modules: ModuleType[], options: ExpressServerOptio
                 limit: '50mb'
             }))
         }
-       
+
         if (staticEnabled) {
             app.use('/', express.static(path.join(dirname, '..', staticDirectory, 'client')))
         }

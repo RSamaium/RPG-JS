@@ -345,7 +345,7 @@ export class RpgServerEngine {
         const playerId = Utils.generateUID()
         const player: RpgPlayer = new RpgPlayer(this.gameEngine, playerId)
         player.session = token
-
+        
         socket.on('move', (data: { input: string[], frame: number }) => {
             const controlPlayer = player.otherPossessedPlayer ?? player
             if (!controlPlayer.canMove) {

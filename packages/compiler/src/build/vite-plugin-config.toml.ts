@@ -6,6 +6,7 @@ import { ClientBuildConfigOptions, Config } from './client-config';
 import { loadGlobalConfig } from './load-global-config.js';
 import { warn } from '../logs/warning.js';
 import { OUPUT_DIR_CLIENT_ASSETS, assetsFolder, createDistFolder } from './utils.js';
+import * as hmr from 'vite-node/hmr'
 
 const MODULE_NAME = 'virtual-modules'
 const GLOBAL_CONFIG_CLIENT = 'virtual-config-client'
@@ -136,8 +137,8 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
         const worldFilesString = searchFolderAndTransformToImportString('worlds', modulePath, '.world')
         const databaseFilesString = searchFolderAndTransformToImportString('database', modulePath, '.ts')
         const eventsFilesString = searchFolderAndTransformToImportString('events', modulePath, '.ts')
-        
-        const code =  `
+
+        const code = `
             import { RpgServer, RpgModule } from '@rpgjs/server'
             ${mapFilesString?.importString}
             ${worldFilesString?.importString}
@@ -146,13 +147,13 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
             ${databaseFilesString?.importString}
             ${importEngine}
 
-            ${onceCreatePlayerCommand? '' : 
-            `const _lastConnectedCb = player.onConnected
+            ${onceCreatePlayerCommand ? '' :
+                `const _lastConnectedCb = player.onConnected
                 player.onConnected = async (player) => {
                     if (_lastConnectedCb) await _lastConnectedCb(player)
-                    ${config.start?.graphic ? `player.setGraphic('${config.start?.graphic}')`: ''}
-                    ${config.start?.hitbox ? `player.setHitbox(${config.start?.hitbox})`: ''}
-                    ${config.startMap ? `await player.changeMap('${config.startMap}')`: ''}
+                    ${config.start?.graphic ? `player.setGraphic('${config.start?.graphic}')` : ''}
+                    ${config.start?.hitbox ? `player.setHitbox(${config.start?.hitbox})` : ''}
+                    ${config.startMap ? `await player.changeMap('${config.startMap}')` : ''}
             }`
             }
                
@@ -171,7 +172,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
         return code
     }
 
-    function loadSpriteSheet(directoryName: string, modulePath: string, warning = true): ImportImageObject  {
+    function loadSpriteSheet(directoryName: string, modulePath: string, warning = true): ImportImageObject {
         const importSprites = searchFolderAndTransformToImportString(directoryName, modulePath, '.ts')
         let propImagesString = ''
         if (importSprites?.importString) {
@@ -225,20 +226,19 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
         if (config.spritesheetDirectories) {
             importSpritesheets = config.spritesheetDirectories.map(directory => loadSpriteSheet(directory, modulePath))
         }
- 
+
         if (!(config.spritesheetDirectories ?? []).some(dir => dir === 'characters')) {
             importSpritesheets.push(loadSpriteSheet('characters', modulePath, false))
         }
 
         // remove directory not found
         importSpritesheets = importSpritesheets.filter(importSpritesheet => importSpritesheet.importString)
-            
+
         return `
             import { RpgClient, RpgModule } from '@rpgjs/client'
             ${importSpriteString}
             ${importSceneMapString}
-            ${
-                importSpritesheets.map(importSpritesheet => importSpritesheet.importString).join('\n')
+            ${importSpritesheets.map(importSpritesheet => importSpritesheet.importString).join('\n')
             }
             ${guiFilesString?.importString}
             ${soundFilesString?.importString}
@@ -321,6 +321,9 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
                     import '${importStrStandalone}'
                 </script>`);
             }
+        },
+        handleHotUpdate() {
+            onceCreatePlayerCommand = false
         },
         async resolveId(source: string, importer) {
             if (source.endsWith(MODULE_NAME) ||
@@ -421,8 +424,8 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
                 let moduleName = resolveModule(module)
                 let variableName = formatVariableName(moduleName);
                 if (
-                        id.endsWith(moduleName) || id.includes('virtual-' + variableName)
-                    ) {
+                    id.endsWith(moduleName) || id.includes('virtual-' + variableName)
+                ) {
                     return createModuleLoad(id, variableName, module);
                 }
             }
