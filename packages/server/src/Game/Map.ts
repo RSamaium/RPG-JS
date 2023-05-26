@@ -237,7 +237,16 @@ export class RpgMap extends RpgCommonMap {
         this.removeObject(player)
     }
 
-    private loadCommonEvents(commonEvents: RpgClassEvent<RpgEvent>[]) {
+    /**
+     * Loads common events onto the game map.
+     *
+     * @private
+     * @param {RpgClassEvent<RpgEvent>[]} commonEvents - An array of common events to load.
+     * @param {RpgPlayer} [player] - The player instance on which to create the dynamic events. If not provided, the function will use the current instance.
+     * @returns {void}
+     */
+    // @internal
+    loadCommonEvents(commonEvents: RpgClassEvent<RpgEvent>[], player?: RpgPlayer) {
         let events: EventPosOption[] = []
         this.getShapes().forEach(shape => {
             const findEvent = commonEvents.find(event => event._name == shape.name)
@@ -248,8 +257,14 @@ export class RpgMap extends RpgCommonMap {
                 y,
                 event: findEvent
             })
-        })
-        this.createDynamicEvent(events)
+        });
+        if (player) {
+            player.createDynamicEvent(events, false)
+        }
+        else { 
+            this.createDynamicEvent(events)
+        }
+        
     }
 
     // TODO

@@ -293,6 +293,7 @@ export class SceneMap {
         player = World.getUser(player.id) as RpgPlayer
 
         if (player) {
+            mapInstance.loadCommonEvents(this.server.inputOptions.events, player)
             player.createDynamicEvent(<any>mapInstance._events, false)
             await player.execMethod('onJoinMap', <any>[mapInstance])
         }

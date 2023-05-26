@@ -1,7 +1,8 @@
-import { RpgEvent, EventData, RpgPlayer } from '@rpgjs/server'
+import { RpgEvent, EventData, RpgPlayer, EventMode } from '@rpgjs/server'
  
 @EventData({
-    name: 'EV-1'
+    name: 'EV-1',
+    //mode: EventMode.Scenario
 })
 export default class CharaEvent extends RpgEvent {
     onInit() {
@@ -9,6 +10,8 @@ export default class CharaEvent extends RpgEvent {
         this.setHitbox(32, 32)
     }
     async onAction(player: RpgPlayer) {
-       player.showText('Hello ')
+       await player.showText('Hello ', {
+            talkWith: this
+       })
     }
 }
