@@ -218,7 +218,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
     function loadClientFiles(modulePath: string) {
         const importSceneMapString = importString(modulePath, 'scene-map', 'sceneMap')
         const importSpriteString = importString(modulePath, 'sprite')
-        const importEngine = importString(modulePath, 'engine')
+        const importEngine = importString(modulePath, 'client', 'engine')
         const guiFilesString = searchFolderAndTransformToImportString('gui', modulePath, '.vue')
         const soundFilesString = searchFolderAndTransformToImportString('sounds', modulePath, ['.mp3', '.ogg'])
         let importSpritesheets: ImportImageObject[] = []
@@ -238,6 +238,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
             import { RpgClient, RpgModule } from '@rpgjs/client'
             ${importSpriteString}
             ${importSceneMapString}
+            ${importEngine}
             ${importSpritesheets.map(importSpritesheet => importSpritesheet.importString).join('\n')
             }
             ${guiFilesString?.importString}
@@ -250,7 +251,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
                     ${importSpritesheets.map(importSpritesheet => importSpritesheet.variablesString).join(',\n')}
                 ],
                 sprite: ${importSpriteString ? 'sprite' : '{}'},
-                ${importEngine ? 'engine,' : ''}
+                ${importEngine ? `engine,` : ''}
                 scenes: {
                     ${importSceneMapString ? 'map: sceneMap' : ''}
                 },
