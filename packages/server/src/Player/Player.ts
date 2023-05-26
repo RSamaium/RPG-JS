@@ -784,6 +784,10 @@ export class RpgPlayer extends RpgCommonPlayer {
         if (this._socket) this._socket.removeAllListeners(key)
     }
 
+    disconnect() {
+        if (this._socket) this._socket.disconnect()
+    }
+
     emitToMap(key: string, value: any) {
         Query.getPlayersOfMap(this.map).forEach(player => player.emit(key, value))
     }

@@ -1,5 +1,7 @@
 import { RpgPlayerHooks, RpgPlayer, EventData, RpgEvent, Move, RpgWorld } from '@rpgjs/server'
 
+const rand = Math.random()
+
 @EventData({
    name: 'EV-1'
   })
@@ -18,8 +20,11 @@ const player: RpgPlayerHooks = {
          y: 100,
          event: MyEvent
       })
-     
+   },
+   onInput(player: RpgPlayer) {
+      //const event = player.getCurrentMap()?.getEventByName('EV-1')
+      console.log(rand)
    }
 }
 
-export default player 
+export default player

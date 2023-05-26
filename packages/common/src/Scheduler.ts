@@ -17,6 +17,7 @@ export class Scheduler extends EventEmitter {
         frame: 0,
         deltaRatio: 0
     })
+    private _stop: boolean = false
 
     get tick(): Observable<Tick> {
         return this._tick.asObservable()
@@ -72,6 +73,7 @@ export class Scheduler extends EventEmitter {
             let now = Utils.preciseNow()
             let then = Utils.preciseNow()
             const loop = (timestamp: number) => {
+                if (this._stop) return
                 requestAnimationFrame(loop)
                 now = Utils.preciseNow()
                 const elapsed = now - then
@@ -84,5 +86,10 @@ export class Scheduler extends EventEmitter {
         }
 
         return this;
+    }
+
+    stop() {
+        this._stop = true
+        this._tick.complete()
     }
 }

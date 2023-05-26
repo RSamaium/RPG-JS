@@ -55,8 +55,10 @@ export function expressServer(modules: ModuleType[], options: ExpressServerOptio
             app.use('/', express.static(path.join(dirname, '..', staticDirectory, 'client')))
         }
 
+        let rpgGame: RpgServerEngine
+
         async function start() {
-            const rpgGame = await entryPoint(modules, { io, ...options })
+            rpgGame = await entryPoint(modules, { io, ...options })
             rpgGame.app = app
             rpgGame.start()
             app.use('/api', api(rpgGame))
@@ -89,6 +91,7 @@ export function expressServer(modules: ModuleType[], options: ExpressServerOptio
                 Query.getPlayers().forEach(player => {
                     player.gameReload()
                 })
+                rpgGame.stop()
             });
         }
     })

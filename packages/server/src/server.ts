@@ -7,6 +7,7 @@ import { Utils, RpgPlugin, Scheduler, HookServer, RpgCommonGame, DefaultInput } 
 import { Observable } from 'rxjs';
 import { Tick } from '@rpgjs/types';
 import { Actor, Armor, Class, DatabaseTypes, Item, Skill, State, Weapon } from '@rpgjs/database';
+import { RpgMap } from './Game/Map';
 
 export class RpgServerEngine {
 
@@ -345,7 +346,7 @@ export class RpgServerEngine {
         const playerId = Utils.generateUID()
         const player: RpgPlayer = new RpgPlayer(this.gameEngine, playerId)
         player.session = token
-        
+
         socket.on('move', (data: { input: string[], frame: number }) => {
             const controlPlayer = player.otherPossessedPlayer ?? player
             if (!controlPlayer.canMove) {
@@ -360,7 +361,7 @@ export class RpgServerEngine {
         })
 
         socket.on('disconnect', () => {
-            this.onPlayerDisconnected(socket.id, playerId)
+            this.onPlayerDisconnected(playerId)
         })
 
         this.world.setUser(player, socket)
@@ -383,14 +384,17 @@ export class RpgServerEngine {
         }
     }
 
-    /**
-     * 
-     * @param {string} socketId - The socketId of the player that disconnected
-     * @param {string} playerId - The playerId of the player that disconnected 
-     */
-    private onPlayerDisconnected(socketId, playerId: string) {
+    private onPlayerDisconnected(playerId: string) {
         const player: RpgPlayer = World.getUser(playerId) as RpgPlayer
         player.execMethod('onDisconnected')
         this.world.disconnectUser(playerId)
+    }
+
+    stop() {
+        this.scheduler.stop()
+        Query.getRooms<RpgMap>().forEach((map) => {
+            map.remove(true)
+        })
+        RpgPlugin.clear()
     }
 }

@@ -387,6 +387,13 @@ export class RpgMap extends RpgCommonMap {
         return this.events[eventId] as T
     }
 
+    getEventByName<T extends RpgEvent>(eventName: string): T | undefined {
+        const events = Object.keys(this.events)
+        const key = events.find(key => this.events[key].name == eventName)
+        if (!key) return
+        return this.events[key] as T
+    }
+
     /**
      * Removes an event from the map. Returns false if the event is not found
      * @title Remove Event
