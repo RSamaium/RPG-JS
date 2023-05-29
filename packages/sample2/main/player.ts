@@ -3,27 +3,28 @@ import { RpgPlayerHooks, RpgPlayer, EventData, RpgEvent, Move, RpgWorld } from '
 const rand = Math.random()
 
 @EventData({
-   name: 'EV-1'
-  })
-  class MyEvent extends RpgEvent {
-   onAction() {
-       
+   name: 'EV-5'
+})
+class MyEvent extends RpgEvent {
+   onInit() {
+      this.setGraphic('male')
+      this.setHitbox(32, 32)
    }
-  } 
-  
+   onAction() {
+      const map = this.getCurrentMap()
+      map?.removeEvent(this.id)
+   }
+}
+
 
 const player: RpgPlayerHooks = {
    onJoinMap(player: RpgPlayer) {
-     const map = player.getCurrentMap()
-     map?.createDynamicEvent({
-         x: 100,
-         y: 100,
+      const map = player.getCurrentMap()
+      map?.createDynamicEvent({
+         x: 200,
+         y: 200,
          event: MyEvent
       })
-   },
-   onInput(player: RpgPlayer) {
-      //const event = player.getCurrentMap()?.getEventByName('EV-1')
-      console.log(rand)
    }
 }
 

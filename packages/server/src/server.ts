@@ -392,9 +392,5 @@ export class RpgServerEngine {
 
     stop() {
         this.scheduler.stop()
-        Query.getRooms<RpgMap>().forEach((map) => {
-            map.remove(true)
-        })
-        RpgPlugin.clear()
     }
 }
