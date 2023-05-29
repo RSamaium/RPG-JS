@@ -1,5 +1,5 @@
 import path from 'path'
-import { globFiles } from './utils.js'
+import { globFiles, toPosix } from './utils.js'
 import crypto from 'crypto'
 import { errorApi, info } from '../logs/warning.js'
 import fs from 'fs-extra';
@@ -8,7 +8,7 @@ import axios from '../serve/api.js';
 export function worldTransformPlugin(serverUrl?: string) {
 
     function extendsWorld(world, filePath: string) {
-        const relativePath = filePath.replace(process.cwd() + '/', '')
+        const relativePath = toPosix(filePath).replace(toPosix(process.cwd()) + '/', '')
         const directory = path.dirname(relativePath)
         const worldId = crypto.createHash('md5').update(relativePath).digest('hex')
         world.basePath = directory

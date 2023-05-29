@@ -30,3 +30,7 @@ export const createDistFolder = async  (outputDir: string): Promise<string> => {
     fs.mkdirSync(assetDir, { recursive: true })
     return assetDir
 }
+
+export function toPosix(path: string) {
+    return path.replace(/\\/g, '/')
+}

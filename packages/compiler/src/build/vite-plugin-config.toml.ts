@@ -5,8 +5,7 @@ import sizeOf from 'image-size';
 import { ClientBuildConfigOptions, Config } from './client-config';
 import { loadGlobalConfig } from './load-global-config.js';
 import { warn } from '../logs/warning.js';
-import { OUPUT_DIR_CLIENT_ASSETS, assetsFolder, createDistFolder } from './utils.js';
-import * as hmr from 'vite-node/hmr'
+import { assetsFolder, toPosix } from './utils.js';
 
 const MODULE_NAME = 'virtual-modules'
 const GLOBAL_CONFIG_CLIENT = 'virtual-config-client'
@@ -94,7 +93,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
                         }
                     })
                     .map(file => {
-                        const relativePath = file.replace(process.cwd(), '.')
+                        const relativePath = toPosix(file.replace(process.cwd(), '.'))
                         const variableName = formatVariableName(relativePath)
                         importString = importString + `\nimport ${variableName} from '${relativePath}'`
                         return returnCb ? returnCb(relativePath, variableName) : variableName
@@ -195,7 +194,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
                     fs.copyFileSync(file, dest)
                 }
                 lastImagePath = file
-                objectString += `"${basename}": "${path.join(projectPath, filename)}",\n`
+                objectString += `"${basename}": "${toPosix(path.join(projectPath, filename)).replace(/^\/+/, '')}",\n`
             })
             const dimensions = sizeOf(lastImagePath)
             propImagesString = `

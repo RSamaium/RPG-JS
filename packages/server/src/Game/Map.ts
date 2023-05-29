@@ -261,10 +261,10 @@ export class RpgMap extends RpgCommonMap {
         if (player) {
             player.createDynamicEvent(events, false)
         }
-        else { 
+        else {
             this.createDynamicEvent(events)
         }
-        
+
     }
 
     // TODO
@@ -387,6 +387,15 @@ export class RpgMap extends RpgCommonMap {
         return this.events[eventId] as T
     }
 
+    /**
+     * Get Event in current map by name
+     * @title Get Event By Name
+     * @since 4.0.0
+     * @method map.getEventByName(eventName)
+     * @param {string} eventName Event Name
+     * @returns {RpgEvent | undefined}
+     * @memberof Map
+    */
     getEventByName<T extends RpgEvent>(eventName: string): T | undefined {
         const events = Object.keys(this.events)
         const key = events.find(key => this.events[key].name == eventName)
