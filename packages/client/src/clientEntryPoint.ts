@@ -100,6 +100,11 @@ export default (modules: ModuleType[], options: RpgClientEntryPointOptions): Rpg
 
     if (!options.globalConfig) options.globalConfig = {}
 
+    options = {
+        ...options.globalConfig,
+        ...options
+    }
+
     const relations = {
         onInit: HookClient.AddSprite,
         onDestroy: HookClient.RemoveSprite,
