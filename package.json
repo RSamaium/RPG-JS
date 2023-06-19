@@ -19,7 +19,7 @@
   },
   "scripts": {
     "postinstall": "lerna bootstrap --ci && npm run build:types && npm run build:tiled && npm run build:common && npm run build:client && npm run build:database && npm run build:server && npm run build:testing && npm run build:compiler && cd packages/client && cd ../../packages/plugins/agones/matchmaker && npm i",
-    "test": "vitest --config ./packages/compiler/src/test/vitest.config.ts",
+    "test": "vitest --config ./packages/compiler/src/test/vitest.config.ts && cd ./packages/compiler && npm test",
     "lerna:publish": "lerna publish --ignore-prepublish --force-publish --no-private --no-push --no-git-tag-version",
     "lerna:ls": "lerna ls",
     "build": "concurrently -n build \"npm:build:*\" && npm run fix-esm",

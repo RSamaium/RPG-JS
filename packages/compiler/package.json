@@ -9,7 +9,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "watch": "tsc -w"
+    "watch": "tsc -w",
+    "test": "vitest"
   },
   "keywords": [],
   "author": "Samuel Ronce",
@@ -49,6 +50,7 @@
     "rpgjs": "./lib/index.js"
   },
   "devDependencies": {
+    "mock-fs": "^5.2.0",
     "typescript": "^5.0.4"
   },
   "type": "module"

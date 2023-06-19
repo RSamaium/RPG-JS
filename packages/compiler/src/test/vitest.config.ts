@@ -1,6 +1,7 @@
 /// <reference types="vitest" />
 import { defineConfig } from 'vite'
 import { clientBuildConfig } from '../build/client-config.js'
+import { configDefaults } from 'vitest/config'
 import path from 'path'
 
 export default defineConfig(async () => {
@@ -33,6 +34,10 @@ export default defineConfig(async () => {
             threads: false,
             setupFiles: [
                 'packages/compiler/src/setupFiles/canvas.ts'
+            ],
+            exclude: [
+                ...configDefaults.exclude, 
+                'packages/compiler/**/*'
             ]
         }
     }
