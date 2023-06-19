@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@rpgjs/chat": "^4.0.0-beta.8",
     "@rpgjs/client": "^4.0.0-beta.8",
     "@rpgjs/compiler": "^4.0.0-beta.8",
     "@rpgjs/database": "^4.0.0-beta.8",
