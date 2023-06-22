@@ -56,5 +56,9 @@ export default (formatMessage): Block => ({
     async execute(player: RpgPlayer, dataBlock: Choice) {
         const { text, choices } = dataBlock
         const value = await player.showChoices(text, choices.map((choice, index) => ({ text: choice, value: index })))
+        if (value === null) {
+            throw new Error('Choice not selected')
+        }
+        return 'choices.' + value.value
     }
 })

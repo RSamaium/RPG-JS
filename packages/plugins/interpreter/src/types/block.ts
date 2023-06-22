@@ -2,6 +2,9 @@ import type { RpgPlayer } from "@rpgjs/server";
 import { Group } from "./group";
 import { Observable } from "rxjs";
 
+export type BlockExecuteReturn = string | undefined | never;
+export type BlockExecute = Observable<BlockExecuteReturn> | Promise<BlockExecuteReturn> | BlockExecuteReturn;
+
 export interface Block {
     id: string;
     group: Group;
@@ -9,7 +12,7 @@ export interface Block {
     description: string;
     display: Array<string | DisplayItem>;
     schema: SchemaInterface;
-    execute: (player: RpgPlayer, dataBlock: any) => Observable<any> | Promise<any> | void;
+    execute: (player: RpgPlayer, dataBlock: any) => BlockExecute;
 }
 
 interface DisplayItem {

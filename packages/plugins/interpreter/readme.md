@@ -47,7 +47,12 @@ const blocks = {
 const edges = {
     'block1': 'block2',
     'block2': 'block3',
-    'block3': ['block5', 'block4']
+    'block3': {
+        blocks: [{
+            blockId: 'block5',
+            handle: 'choices.0'
+        }]
+    }
 }
 
 const interpreter = new Interpreter(blocks, edges)
