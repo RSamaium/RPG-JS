@@ -1,7 +1,7 @@
 import { Direction, LiteralDirection, RpgShape, Vector2d } from '@rpgjs/common'
 import { Utils } from '@rpgjs/common'
 import { Behavior, ClientMode, MoveMode, MoveTo, PositionXY, SocketEvents, SocketMethods, Tick } from '@rpgjs/types'
-import { Observable, Subscription, takeUntil, Subject } from 'rxjs'
+import { Observable, Subscription, takeUntil, Subject, tap, switchMap, of, from, debounceTime } from 'rxjs'
 import { RpgServerEngine } from '../server'
 import { RpgEvent, RpgPlayer } from './Player'
 
@@ -449,15 +449,15 @@ export class MoveManager {
                 return route
             })
             routes = arrayFlat(routes)
-            const move = () => {
+            const move = (): Observable<any> => {
                 // If movement continues while the player no longer exists or is no longer on the map
                 if (!this) {
-                    return
+                    return of(null)
                 }
                 if (count >= this['nbPixelInTile']) {
                     if (frequence < this.frequency) {
                         frequence++
-                        return
+                        return of(null)
                     }
                 }
 
@@ -468,15 +468,17 @@ export class MoveManager {
 
                 if (route === undefined) {
                     this.breakRoutes()
-                    return
+                    return of(null)
                 }
+
+                let ob$ = new Observable()
 
                 switch (route) {
                     case Direction.Left:
                     case Direction.Down:
                     case Direction.Right:
                     case Direction.Up:
-                        this.moveByDirection(route, 1)
+                        ob$ = from(this.moveByDirection(route, 1))
                         break
                     case 'turn-' + Direction.Left:
                         this.changeDirection(Direction.Left)
@@ -492,13 +494,22 @@ export class MoveManager {
                         break
                 }
 
-                routes.shift()
+                return ob$.pipe(
+                    tap(() => {
+                        routes.shift()
+                    })
+                )
             }
             this.movingSubscription = this.server.tick
                 .pipe(
-                    takeUntil(this._destroy$)
+                    takeUntil(this._destroy$.pipe(
+                        tap(() => {
+                            this.breakRoutes(true)
+                        })
+                    )),
+                    switchMap(move)
                 )
-                .subscribe(move)
+                .subscribe()
         })
     }
 

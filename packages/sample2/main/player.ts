@@ -16,13 +16,12 @@ class MyEvent extends RpgEvent {
    }
 }
 
-
 const player: RpgPlayerHooks = {
    onJoinMap(player: RpgPlayer) {
       const map = player.getCurrentMap()
-      map?.createDynamicEvent({
-         x: 200,
-         y: 200,
+      const events = map?.createDynamicEvent({
+         x: 400,
+         y: 400,
          event: MyEvent
       })
    }

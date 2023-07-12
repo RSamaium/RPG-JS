@@ -8,7 +8,7 @@ import { GameSide, RpgCommonGame } from './Game'
 import { Vector2d, Vector2dZero } from './Vector2d'
 import { Box } from './VirtualGrid'
 import { Behavior, ClientMode, Direction, MoveClientMode, MoveTo, PlayerType, Position, PositionXY, Tick } from '@rpgjs/types'
-import { from, map, mergeMap, Observable, Subject, tap, takeUntil } from 'rxjs'
+import { from, map, mergeMap, Observable, Subject, tap, takeUntil, filter } from 'rxjs'
 
 const ACTIONS = { IDLE: 0, RUN: 1, ACTION: 2 }
 
@@ -46,10 +46,10 @@ export class AbstractObject {
     private collisionWith: AbstractObject[] = []
     private _collisionWithTiles: TileInfo[] = []
     private _collisionWithShapes: RpgShape[] = []
-    
+
     private destroyMove$: Subject<boolean> = new Subject<boolean>()
-     // notifier for destroy
-     _destroy$: Subject<void> = new Subject()
+    // notifier for destroy
+    _destroy$: Subject<void> = new Subject()
 
 
     static get ACTIONS() {
@@ -305,6 +305,7 @@ export class AbstractObject {
     /** @internal */
     async triggerCollisionWith(type?: number) {
         for (let collisionWith of this.collisionWith) {
+            if (collisionWith.isDestroyed) continue
             if (collisionWith instanceof RpgShape) {
                 const goMap = collisionWith.getProperty<string>('go-map')
                 if (goMap && 'changeMap' in this) await this.changeMap(goMap)
@@ -718,6 +719,11 @@ export class AbstractObject {
         }
     }
 
+    // @internal
+    get isDestroyed(): boolean {
+        return this._destroy$.closed
+    }
+
     /**
     * Stops the movement of the player who moves towards his target
     * 
@@ -755,6 +761,9 @@ export class AbstractObject {
                 takeUntil(this.destroyMove$),
                 takeUntil(this._destroy$),
                 mergeMap(() => from(this.computeNextPositionByTarget(this.position.copy(), getPosition()))),
+                filter(() => {
+                    return this.isDestroyed === false
+                }),
                 map((position) => {
                     this.autoChangeDirection(position)
                     return this.position.set(position)
@@ -790,7 +799,7 @@ export class AbstractObject {
 
         const notCollided = !(await this.isCollided(nextPosition))
 
-        if (notCollided || !this.checkCollision) {
+        if ((notCollided || !this.checkCollision) && !this.isDestroyed) {
             this.position = nextPosition.copy()
             await RpgPlugin.emit(HookServer.PlayerMove, this)
         }

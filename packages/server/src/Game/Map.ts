@@ -473,6 +473,7 @@ export class RpgMap extends RpgCommonMap {
         }
         object._destroy$.next()
         object._destroy$.complete()
+        object._destroy$.unsubscribe()
         this.grid.clearObjectInCells(object.id)
         for (let playerId in this.players) {
             if (object.id == playerId) continue
