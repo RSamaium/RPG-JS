@@ -53,7 +53,10 @@ export function searchFolderAndTransformToImportString(
     folderPath: string,
     modulePath: string,
     extensionFilter: string | string[],
-    returnCb?: (file: string, variableName: string) => string
+    returnCb?: (file: string, variableName: string) => string,
+    options?: {
+        customFilter?: (file: string) => boolean
+    }
 ): ImportObject {
     let importString = ''
     const folder = path.resolve(modulePath, folderPath)
@@ -69,6 +72,12 @@ export function searchFolderAndTransformToImportString(
                     else {
                         return extensionFilter.some(ext => file.endsWith(ext))
                     }
+                })
+                .filter(file => {
+                    if (options?.customFilter) {
+                        return options.customFilter(file)
+                    }
+                    return true
                 })
                 .map(file => {
                     const relativePath = toPosix(file.replace(process.cwd(), '.'))
@@ -103,6 +112,7 @@ export function loadServerFiles(modulePath: string, options, config) {
 
     // read maps folder and get all the map files
 
+    const mapStandaloneFilesString = searchFolderAndTransformToImportString('maps', modulePath, '.ts')
     const mapFilesString = searchFolderAndTransformToImportString('maps', modulePath, '.tmx', (file, variableName) => {
         return `
             {
@@ -110,7 +120,17 @@ export function loadServerFiles(modulePath: string, options, config) {
                 file: ${variableName}
             }
         `
+    }, {
+        customFilter: (file) => {
+            // if .ts exists with same name, do not import the .tmx
+            const tsFile = file.replace('.tmx', '.ts')
+            if (fs.existsSync(tsFile)) {
+                return false
+            }
+            return true
+        }
     })
+    const hasMaps = !!mapFilesString?.variablesString
 
     const worldFilesString = searchFolderAndTransformToImportString('worlds', modulePath, '.world')
     const databaseFilesString = searchFolderAndTransformToImportString('database', modulePath, '.ts')
@@ -119,6 +139,7 @@ export function loadServerFiles(modulePath: string, options, config) {
     const code = `
         import { RpgServer, RpgModule } from '@rpgjs/server'
         ${mapFilesString?.importString}
+        ${mapStandaloneFilesString?.importString}
         ${worldFilesString?.importString}
         ${importPlayer ? importPlayer : 'const player = {}'}
         ${eventsFilesString?.importString}
@@ -140,7 +161,7 @@ export function loadServerFiles(modulePath: string, options, config) {
             events: [${eventsFilesString?.variablesString}],
             ${importEngine ? `engine: server,` : ''}
             database: [${databaseFilesString?.variablesString}],
-            maps: [${mapFilesString?.variablesString}],
+            maps: [${mapFilesString?.variablesString}${hasMaps ? ',' : ''}${mapStandaloneFilesString?.variablesString}],
             worldMaps: [${worldFilesString?.variablesString}] 
         })
         export default class RpgServerModuleEngine {} 
