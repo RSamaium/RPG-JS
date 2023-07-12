@@ -4,9 +4,7 @@ import type { Choice } from './choice'
 import type { Text } from './text'
 
 export type Flow = {
-    [blockId: string]: {
-        id: string
-    } & (Choice | Text)
+    [blockId: string]: Choice | Text
 }
 
 export default [

@@ -3,6 +3,7 @@ import type { Block } from "../types/block";
 import { Group } from "../types/group";
 
 export type Choice = {
+    id: 'choice'
     text: string,
     choices: string[]
 }
