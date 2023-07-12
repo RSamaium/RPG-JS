@@ -9,6 +9,7 @@ class MyEvent extends RpgEvent {
    onInit() {
       this.setGraphic('male')
       this.setHitbox(32, 32)
+      this.infiniteMoveRoute([ Move.tileDown()])
    }
    onAction() {
       const map = this.getCurrentMap()

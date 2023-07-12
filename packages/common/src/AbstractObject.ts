@@ -617,7 +617,7 @@ export class AbstractObject {
             else collided = true
         }
 
-        if (this.autoChangeMap) {
+        if (this.autoChangeMap && this.type == PlayerType.Player) {
             const changeMap = await this.autoChangeMap(nextPosition)
             if (changeMap) {
                 return true
