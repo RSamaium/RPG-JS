@@ -138,7 +138,7 @@ export function loadServerFiles(modulePath: string, options, config) {
         @RpgModule<RpgServer>({ 
             player,
             events: [${eventsFilesString?.variablesString}],
-            ${importEngine ? 'engine,' : ''}
+            ${importEngine ? `engine: server,` : ''}
             database: [${databaseFilesString?.variablesString}],
             maps: [${mapFilesString?.variablesString}],
             worldMaps: [${worldFilesString?.variablesString}] 
