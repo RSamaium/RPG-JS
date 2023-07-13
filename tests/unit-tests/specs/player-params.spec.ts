@@ -1,20 +1,21 @@
-import { Presets } from '@rpgjs/server'
+import { Presets, RpgModule, RpgPlayer, RpgServer } from '@rpgjs/server'
 import { Armor, Weapon, State } from '@rpgjs/database'
 import { HpUpValue } from './fixtures/armor'
-import {_beforeEach} from './beforeEach'
+import { _beforeEach } from './beforeEach'
 import { clear } from '@rpgjs/testing'
-import { beforeEach, test, afterEach, expect } from 'vitest'
+import { beforeEach, test, afterEach, expect, describe, vitest } from 'vitest'
 
 const { MAXHP_CURVE, MAXSP_CURVE, MAXHP, ATK, PDEF, SDEF, MAXSP } = Presets
 
-let  client, player, fixture, playerId
+let client, player, fixture, playerId, server
 
 beforeEach(async () => {
-    const ret = await _beforeEach()
-    client = ret.client
-    player = ret.player
-    fixture = ret.fixture
-    playerId = ret.playerId
+   const ret = await _beforeEach()
+   client = ret.client
+   player = ret.player
+   server = ret.server
+   fixture = ret.fixture
+   playerId = ret.playerId
 })
 
 test('Test HP', () => {
@@ -39,7 +40,7 @@ test('Test Atk', () => {
       name: 'Weapon',
       [ATK]: 100
    })
-   class Weapon1 {}
+   class Weapon1 { }
 
    player.addItem(Weapon1)
    player.equip(Weapon1)
@@ -54,13 +55,13 @@ test('Test Pdef/Sdef', () => {
       [PDEF]: 100,
       [SDEF]: 150
    })
-   class Armor1 {}
+   class Armor1 { }
 
    @Armor({
       name: 'Armor2',
       [PDEF]: 100
    })
-   class Armor2 {}
+   class Armor2 { }
 
    player.addItem(Armor1)
    player.addItem(Armor2)
@@ -84,12 +85,12 @@ test('Test MaxHP Modifier Rate', () => {
    @Armor({
       name: 'HpUpRate',
       paramsModifier: {
-            [MAXHP]: {
-               rate: 1.5
-            }
+         [MAXHP]: {
+            rate: 1.5
+         }
       }
    })
-   class HpUpRate {}
+   class HpUpRate { }
 
    player.addItem(HpUpRate)
    player.equip(HpUpRate)
@@ -103,23 +104,23 @@ test('Test MaxHP Multi Modifier Value', () => {
    @Armor({
       name: 'HpUpValue1',
       paramsModifier: {
-            [MAXHP]: {
-               value: 100
-            }
+         [MAXHP]: {
+            value: 100
+         }
       }
    })
-   class HpUpValue1 {}
+   class HpUpValue1 { }
 
    @Armor({
       name: 'HpUpValue2',
       paramsModifier: {
-            [MAXHP]: {
-               value: 150
-            }
+         [MAXHP]: {
+            value: 150
+         }
       }
    })
-   class HpUpValue2 {}
-   
+   class HpUpValue2 { }
+
    player.addItem(HpUpValue1)
    player.addItem(HpUpValue2)
    player.equip(HpUpValue1)
@@ -132,23 +133,23 @@ test('Test MaxHP Multi Modifier Rate', () => {
    @Armor({
       name: 'HpUpValue1',
       paramsModifier: {
-            [MAXHP]: {
-               rate: 1.5
-            }
+         [MAXHP]: {
+            rate: 1.5
+         }
       }
    })
-   class HpUpRate1 {}
+   class HpUpRate1 { }
 
    @Armor({
       name: 'HpUpValue2',
       paramsModifier: {
-            [MAXHP]: {
-               rate: 0.5
-            }
+         [MAXHP]: {
+            rate: 0.5
+         }
       }
    })
-   class HpUpRate2 {}
-   
+   class HpUpRate2 { }
+
    player.addItem(HpUpRate1)
    player.addItem(HpUpRate2)
    player.equip(HpUpRate1)
@@ -162,7 +163,7 @@ test('Test Atk Multi Modifier Rate', () => {
       name: 'Weapon',
       [ATK]: 100
    })
-   class Weapon1 {}
+   class Weapon1 { }
 
    @State({
       name: 'State',
@@ -172,13 +173,110 @@ test('Test Atk Multi Modifier Rate', () => {
          }
       }
    })
-   class State1 {}
-   
+   class State1 { }
+
    player.addItem(Weapon1)
    player.equip(Weapon1)
    player.addState(State1)
 
    expect(player[ATK]).toBe(200)
+})
+
+describe('Test Level', () => {
+   beforeEach(() => {
+      player.initialLevel = 1
+      player.finalLevel = 99
+      player.expCurve = {
+         basis: 30,
+         extra: 20,
+         accelerationA: 30,
+         accelerationB: 30
+      }
+      server.addInDatabase('heal', {
+         name: 'Heal'
+      }, 'skill')
+   })
+
+   // Test for initial exp value
+   test('should start with 0 experience', () => {
+      expect(player.exp).toBe(0)
+   })
+
+   // Test for changing exp value
+   test('should change exp value when set', () => {
+      player.exp = 100
+      expect(player.exp).toBe(100)
+   })
+
+   // Test for leveling up when exp reaches the threshold
+   test('should level up when exp reaches threshold', () => {
+      player.exp = 160
+      expect(player.level).toBe(2)
+   })
+
+   // Test for experience needed for the next level
+   test('should calculate the exp needed for next level correctly', () => {
+      expect(player.expForNextlevel).toBeGreaterThan(player.exp)
+   })
+
+   // Test for exp reset when level changes
+   test('should reset exp to zero when level changes', () => {
+      player.level = 2
+      expect(player.exp).toBe(0)
+   })
+
+   // Test for level initialization
+   test('should initialize level at 1', () => {
+      expect(player.level).toBe(1);
+   });
+
+   // Test for level increment
+   test('should increment level when set to a higher value', () => {
+      player.level = 5;
+      expect(player.level).toBe(5);
+   });
+
+   // Test for maximum level value
+   test('should not exceed final level', () => {
+      player.finalLevel = 99;
+      player.level = 100;
+      expect(player.level).toBe(99);
+   });
+
+   // Test for learning skills when level increases
+   test('should learn new skills when level increases', () => {
+      const mockSkill = { level: 2, skill: 'heal' };
+      player._class = { skillsToLearn: [mockSkill] };
+      player.level = 2;
+      expect(player.getSkill('heal')).toBeDefined()
+   });
+})
+
+describe('Test Hooks', () => {
+   beforeEach(() => {
+      clear()
+   })
+
+   test('Test onLevelUp Hook', () => {
+      return new Promise(async (resolve: any) => {
+         @RpgModule<RpgServer>({
+            player: {
+               onLevelUp: (player: RpgPlayer, incLevel: number) => {
+                  expect(player).toBeDefined()
+                  expect(incLevel).toBe(1)
+                  resolve()
+               }
+            }
+         })
+         class RpgServerModule { }
+
+         const { player } = await _beforeEach([{
+            server: RpgServerModule
+         }])
+
+         player.level = 2
+      })
+   })
 })
 
 afterEach(() => {

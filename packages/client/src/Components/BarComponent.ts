@@ -58,6 +58,8 @@ export class BarComponent extends AbstractComponent<BarComponentObject, Containe
         this.addChild(this.barContainer);
         this.barContainer.addChild(this.barFill);
         this.cacheParams = [this.value.current, this.value.max]
+        this.updateRender(this.component.logic, true)
+        this.firstRender = false
         super.onInit(cell)
     }
 

@@ -17,14 +17,19 @@ const {
     applyMixins
 } = Utils
 
+type SkillClass = { new(...args: any[]) }
+
 export class SkillManager {
 
     skills: any[]
 
-    private _getSkillIndex(skillClass) {
+    private _getSkillIndex(skillClass: SkillClass | string) {
         return this.skills.findIndex(skill => {
             if (isString(skill)) {
                 return skill.id == skillClass
+            }
+            if (isString(skillClass)) {
+                return skillClass == skill.id || skill
             }
             return isInstanceOf(skill, skillClass)
         })
@@ -40,11 +45,11 @@ export class SkillManager {
      * 
      * @title Get Skill
      * @method player.getSkill(skillClass)
-     * @param {SkillClass} skillClass 
+     * @param {SkillClass | string} skillClass or data id
      * @returns {instance of SkillClass | null}
      * @memberof SkillManager
      */
-    getSkill(skillClass) {
+    getSkill(skillClass: SkillClass | string) {
         const index = this._getSkillIndex(skillClass)
         return this.skills[index]
     }
@@ -62,12 +67,13 @@ export class SkillManager {
      * 
      * @title Learn Skill
      * @method player.learnSkill(skillClass)
-     * @param {SkillClass} skillClass 
+     * @param {SkillClass | string} skillClass or data id
      * @returns {instance of SkillClass}
      * @memberof SkillManager
      */
-    learnSkill(skillClass) {
-        const instance = new skillClass()
+    learnSkill(skillClass: SkillClass | string) {
+        if (isString(skillClass)) skillClass = this.databaseById(skillClass)
+        const instance = new (skillClass as SkillClass)()
         if (!instance.coefficient) instance.coefficient = {
             [INT]: 1
         }
@@ -94,7 +100,7 @@ export class SkillManager {
      * 
      * @title Forget Skill
      * @method player.learnSkill(skillClass)
-     * @param {SkillClass} skillClass 
+     * @param {SkillClass | string} skillClass or data id
      * @throws {SkillLog} notLearned 
      * If trying to forget a skill not learned
      *  ```
@@ -106,7 +112,8 @@ export class SkillManager {
      * @returns {instance of SkillClass}
      * @memberof SkillManager
      */
-    forgetSkill(skillClass) {
+    forgetSkill(skillClass: SkillClass | string) {
+        if (isString(skillClass)) skillClass = this.databaseById(skillClass)
         const index = this._getSkillIndex(skillClass)
         if (index == -1) {
             throw SkillLog.notLearned(skillClass)
@@ -151,7 +158,7 @@ export class SkillManager {
      * 
      * @title Use Skill
      * @method player.useSkill(skillClass,otherPlayer)
-     * @param {SkillClass} skillClass
+     * @param {SkillClass | string} skillClass or data id
      * @param {Array<RpgPlayer> | RpgPlayer} [otherPlayer] 
      * @throws {SkillLog} restriction 
      * If the player has the `Effect.CAN_NOT_SKILL` effect 
@@ -192,7 +199,7 @@ export class SkillManager {
      * @memberof SkillManager
      * @todo
      */
-    useSkill(skillClass, otherPlayer?: RpgPlayer | RpgPlayer[]) {
+    useSkill(skillClass: SkillClass | string, otherPlayer?: RpgPlayer | RpgPlayer[]) {
         const skill = this.getSkill(skillClass)
         if (this.hasEffect(Effect.CAN_NOT_SKILL)) {
             throw SkillLog.restriction(skillClass)
@@ -226,4 +233,6 @@ export class SkillManager {
 
 applyMixins(SkillManager, [ParameterManager, StateManager, EffectManager])
 
-export interface SkillManager extends ParameterManager, StateManager, EffectManager { }
+export interface SkillManager extends ParameterManager, StateManager, EffectManager { 
+    databaseById(skillClass: any),
+}

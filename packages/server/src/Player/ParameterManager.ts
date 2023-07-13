@@ -187,7 +187,7 @@ export class ParameterManager {
      * */
     set level(val: number) {
         const lastLevel = this._level
-        if (this.finalLevel && this._level > this.finalLevel) {
+        if (this.finalLevel && val > this.finalLevel) {
             val = this.finalLevel
         }
         if (this._class) {
@@ -200,7 +200,9 @@ export class ParameterManager {
             }
         }
         const hasNewLevel = val - lastLevel
-        if (hasNewLevel > 0) this['_triggerHook']('onLevelUp', hasNewLevel)
+        if (hasNewLevel > 0) {
+            this['execMethod']('onLevelUp', <any>[hasNewLevel])   
+        }
         this._level = val
     }
 
