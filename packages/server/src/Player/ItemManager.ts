@@ -381,7 +381,7 @@ export class ItemManager {
         if (item.consumable === false) {
             throw ItemLog.notUseItem(itemClass)
         }
-        const hitRate = item.hitRate || 1
+        const hitRate = item.hitRate ?? 1
         if (Math.random() > hitRate) {
             this.removeItem(itemClass)
             this['execMethod']('onUseFailed', [this], item)

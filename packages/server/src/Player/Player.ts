@@ -797,8 +797,15 @@ export class RpgPlayer extends RpgCommonPlayer {
         Query.getPlayersOfMap(this.map).forEach(player => player.emit(key, value))
     }
 
-    async execMethod(methodName: string, methodData = []) {
-        const ret = await RpgPlugin.emit(`Server.${methodName}`, [this, ...methodData], true)
+    async execMethod(methodName: string, methodData = [], target?: any) {
+        let ret
+        if (target && target[methodName]) {
+            ret = target[methodName](...methodData)
+            if (isPromise(ret)) await ret
+        }
+        else {
+            ret = await RpgPlugin.emit(`Server.${methodName}`, [this, ...methodData], true)
+        }
         this.syncChanges()
         return ret
     }
