@@ -18,7 +18,6 @@ class MyEvent extends RpgEvent {
          end: 200
       })
       this.recovery({ hp: 1 })
-      console.log(this.param)
       //this.infiniteMoveRoute([ Move.tileRandom()])
    }
    onAction() {

@@ -107,6 +107,8 @@ export function importString(modulePath: string, fileName: string, variableName?
 
 export function loadServerFiles(modulePath: string, options, config) {
     let onceCreatePlayerCommand = false
+    const { modulesCreated } = options
+    if (!modulesCreated.includes(modulePath)) modulesCreated.push(modulePath)
     const importPlayer = importString(modulePath, 'player')
     const importEngine = importString(modulePath, 'server')
 
@@ -146,7 +148,7 @@ export function loadServerFiles(modulePath: string, options, config) {
         ${databaseFilesString?.importString}
         ${importEngine}
 
-        ${onceCreatePlayerCommand ? '' :
+        ${modulesCreated.length == 1 ? '' :
             `const _lastConnectedCb = player.onConnected
             player.onConnected = async (player) => {
                 if (_lastConnectedCb) await _lastConnectedCb(player)
@@ -166,8 +168,6 @@ export function loadServerFiles(modulePath: string, options, config) {
         })
         export default class RpgServerModuleEngine {} 
     `
-
-    onceCreatePlayerCommand = true
     return code
 }
 
@@ -299,7 +299,7 @@ function resolveModule(name: string) {
 
 export default function configTomlPlugin(options: ClientBuildConfigOptions = {}, config: Config): Plugin | undefined {
     let modules: string[] = []
-    let onceCreatePlayerCommand = false
+    let modulesCreated = []
 
     if (config.modules) {
         modules = config.modules;
@@ -341,7 +341,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
             }
         },
         handleHotUpdate() {
-            onceCreatePlayerCommand = false
+            modulesCreated = []
         },
         async resolveId(source: string, importer) {
             if (source.endsWith(MODULE_NAME) ||
@@ -444,7 +444,10 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
                 if (
                     id.endsWith(moduleName) || id.includes('virtual-' + variableName)
                 ) {
-                    return createModuleLoad(id, variableName, module, options, config);
+                    return createModuleLoad(id, variableName, module, {
+                        ...options,
+                        modulesCreated
+                    }, config);
                 }
             }
         }

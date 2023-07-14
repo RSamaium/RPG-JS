@@ -1,4 +1,4 @@
-import configTomlPlugin, { formatVariableName, getAllFiles, importString, transformPathIfModule, searchFolderAndTransformToImportString, loadSpriteSheet, loadClientFiles, }  from '../src/build/vite-plugin-config.toml'
+import configTomlPlugin, { formatVariableName, getAllFiles, importString, transformPathIfModule, searchFolderAndTransformToImportString, loadSpriteSheet, loadClientFiles, } from '../src/build/vite-plugin-config.toml'
 import Vi, { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest'
 import * as path from 'path'
 import mockFs from 'mock-fs'
@@ -7,12 +7,6 @@ import { ClientBuildConfigOptions, Config } from '../src/build/client-config'
 import { loadGlobalConfig } from '../src/build/load-global-config.js';
 
 vi.mock('image-size')
-vi.mock('../src/build/load-global-config.js', () => {
-    return {
-        configClient: {},
-        configServer: {}
-    };
-})
 
 describe('TOML Configuration test', () => {
     test('should return path with "node_modules/" when module starts with "@rpgjs" or "rpgjs"', () => {
@@ -281,28 +275,28 @@ describe('TOML Configuration test', () => {
     describe("configTomlPlugin", () => {
         let config: Config;
         let options: ClientBuildConfigOptions;
-        
+
         beforeEach(() => {
-          // Set default configuration before each test
-          options = {}; 
-          config = {}; 
+            // Set default configuration before each test
+            options = {};
+            config = {};
         });
-      
+
         afterEach(() => {
-          // Reset configuration after each test
-          options = {};
-          config = {};
+            // Reset configuration after each test
+            options = {};
+            config = {};
         });
 
         test("should correctly set startMap from config.start.map if it exists", () => {
-          config.start = { map: 'testMap' };
-          configTomlPlugin(options, config);
-          expect(config.startMap).toEqual('testMap');
+            config.start = { map: 'testMap' };
+            configTomlPlugin(options, config);
+            expect(config.startMap).toEqual('testMap');
         });
-      
+
         test("should return Plugin object when global config loads successfully", () => {
             // Simulate successful loading of global config
-      
+
             const result = configTomlPlugin(options, config);
             expect(result).toBeDefined();
             expect(result).toHaveProperty("name", "vite-plugin-config-toml");
@@ -310,11 +304,11 @@ describe('TOML Configuration test', () => {
             expect(result).toHaveProperty("handleHotUpdate");
             expect(result).toHaveProperty("resolveId");
             expect(result).toHaveProperty("load");
-    
+
             // Restore the original functions
             vi.restoreAllMocks();
         });
-      });
+    });
 
     afterEach(() => {
         mockFs.restore();
