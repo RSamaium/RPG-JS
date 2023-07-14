@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/agones",
-  "version": "4.0.0-beta.13",
+  "version": "4.0.0-beta.15",
   "description": "",
   "main": "src/index.ts",
   "scripts": {
@@ -14,8 +14,9 @@
   "license": "MIT",
   "dependencies": {
     "@google-cloud/agones-sdk": "1.30.0",
-    "@rpgjs/client": "^4.0.0-beta.13",
-    "@rpgjs/server": "^4.0.0-beta.13",
+    "@rpgjs/client": "^4.0.0-beta.15",
+    "@rpgjs/server": "^4.0.0-beta.15",
     "redis": "^4.6.5"
-  }
+  },
+  "gitHead": "76d1d8a1250e20b01fc4557e129d01c0f15632f0"
 }

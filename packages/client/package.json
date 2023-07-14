@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/client",
-  "version": "4.0.0-beta.13",
+  "version": "4.0.0-beta.15",
   "description": "",
   "main": "lib/index.js",
   "types": "./lib/index.d.ts",
@@ -16,9 +16,9 @@
   "license": "MIT",
   "dependencies": {
     "@pixi/tilemap": "^4.0.0",
-    "@rpgjs/common": "^4.0.0-beta.13",
-    "@rpgjs/tiled": "^4.0.0-beta.13",
-    "@rpgjs/types": "^4.0.0-beta.13",
+    "@rpgjs/common": "^4.0.0-beta.15",
+    "@rpgjs/tiled": "^4.0.0-beta.15",
+    "@rpgjs/types": "^4.0.0-beta.15",
     "@types/howler": "2.2.7",
     "howler": "2.2.3",
     "lodash.get": "^4.4.2",
@@ -29,7 +29,7 @@
     "simple-room-client": "^2.0.5",
     "vue": "^3.2.47"
   },
-  "gitHead": "7bb0326cc3216764a4bfc86f53e7b24464a2040f",
+  "gitHead": "76d1d8a1250e20b01fc4557e129d01c0f15632f0",
   "devDependencies": {
     "@types/css-font-loading-module": "^0.0.8",
     "@types/node": "^18.16.0",

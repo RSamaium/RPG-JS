@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/compiler",
-  "version": "4.0.0-beta.13",
+  "version": "4.0.0-beta.15",
   "description": "",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
@@ -24,7 +24,7 @@
     "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
     "@esbuild-plugins/node-modules-polyfill": "^0.2.2",
     "@iarna/toml": "^2.2.5",
-    "@rpgjs/common": "^4.0.0-beta.13",
+    "@rpgjs/common": "^4.0.0-beta.15",
     "@vitejs/plugin-vue": "^4.2.1",
     "ajv": "^8.12.0",
     "ajv-formats": "^2.1.1",
@@ -53,5 +53,6 @@
     "mock-fs": "^5.2.0",
     "typescript": "^5.0.4"
   },
-  "type": "module"
+  "type": "module",
+  "gitHead": "76d1d8a1250e20b01fc4557e129d01c0f15632f0"
 }
