@@ -95,6 +95,7 @@ export class AbstractObject {
      * @memberof Player
      */
     set position(val: Position | Vector2d) {
+        if (this.isDestroyed) return
         const { x, y, z } = val
         if (!isInstanceOf(val, Vector2d)) {
             val = new Vector2d(x, y, z)
@@ -721,7 +722,7 @@ export class AbstractObject {
 
     // @internal
     get isDestroyed(): boolean {
-        return this._destroy$.closed
+        return !!this._destroy$['_closed']
     }
 
     /**

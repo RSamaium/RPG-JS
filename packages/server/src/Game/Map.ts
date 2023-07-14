@@ -473,7 +473,8 @@ export class RpgMap extends RpgCommonMap {
         }
         object._destroy$.next()
         object._destroy$.complete()
-        object._destroy$.unsubscribe()
+        // force RXJS, close subject. TODO: avoid this
+        object._destroy$['_closed'] = true
         this.grid.clearObjectInCells(object.id)
         for (let playerId in this.players) {
             if (object.id == playerId) continue

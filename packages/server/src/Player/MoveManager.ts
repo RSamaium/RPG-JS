@@ -481,16 +481,16 @@ export class MoveManager {
                         ob$ = from(this.moveByDirection(route, 1))
                         break
                     case 'turn-' + Direction.Left:
-                        this.changeDirection(Direction.Left)
+                        ob$ = of(this.changeDirection(Direction.Left))
                         break
                     case 'turn-' + Direction.Right:
-                        this.changeDirection(Direction.Right)
+                        ob$ = of(this.changeDirection(Direction.Right))
                         break
                     case 'turn-' + Direction.Up:
-                        this.changeDirection(Direction.Up)
+                        ob$ = of(this.changeDirection(Direction.Up))
                         break
                     case 'turn-' + Direction.Down:
-                        this.changeDirection(Direction.Down)
+                        ob$ = of(this.changeDirection(Direction.Down))
                         break
                 }
 
@@ -502,11 +502,12 @@ export class MoveManager {
             }
             this.movingSubscription = this.server.tick
                 .pipe(
-                    takeUntil(this._destroy$.pipe(
-                        tap(() => {
-                            this.breakRoutes(true)
-                        })
-                    )),
+                    takeUntil(
+                        this._destroy$.pipe(
+                            tap(() => {
+                                this.breakRoutes(true)
+                            })
+                        )),
                     switchMap(move)
                 )
                 .subscribe()
