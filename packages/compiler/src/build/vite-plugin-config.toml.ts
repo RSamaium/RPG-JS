@@ -148,14 +148,13 @@ export function loadServerFiles(modulePath: string, options, config) {
         ${databaseFilesString?.importString}
         ${importEngine}
 
-        ${modulesCreated.length == 1 ? '' :
-            `const _lastConnectedCb = player.onConnected
+        ${modulesCreated.length == 1 ? `const _lastConnectedCb = player.onConnected
             player.onConnected = async (player) => {
                 if (_lastConnectedCb) await _lastConnectedCb(player)
                 ${config.start?.graphic ? `player.setGraphic('${config.start?.graphic}')` : ''}
                 ${config.start?.hitbox ? `player.setHitbox(${config.start?.hitbox})` : ''}
                 ${config.startMap ? `await player.changeMap('${config.startMap}')` : ''}
-        }`
+            }` : ''
         }
            
         @RpgModule<RpgServer>({ 
