@@ -6,7 +6,7 @@ import { Move } from '../Player/MoveManager'
 import { RpgServerEngine } from '../server'
 import { Observable } from 'rxjs'
 import path from 'path'
-import { HitBox, MovingHitbox, Position } from '@rpgjs/types'
+import { HitBox, MovingHitbox, PlayerType, Position } from '@rpgjs/types'
 import { World } from 'simple-room'
 
 export type EventPosOption = {
@@ -474,7 +474,7 @@ export class RpgMap extends RpgCommonMap {
         object._destroy$.next()
         object._destroy$.complete()
         // force RXJS, close subject. TODO: avoid this
-        object._destroy$['_closed'] = true
+        if (object.type != PlayerType.Player) object._destroy$['_closed'] = true
         this.grid.clearObjectInCells(object.id)
         for (let playerId in this.players) {
             if (object.id == playerId) continue

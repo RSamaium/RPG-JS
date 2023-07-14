@@ -721,6 +721,9 @@ export class AbstractObject {
     }
 
     // @internal
+    /**
+     * We need to know if the event is deleted. Because when the event is deleted, you don't update the positions and you don't send the positions back to the client.
+     */
     get isDestroyed(): boolean {
         return !!this._destroy$['_closed']
     }
