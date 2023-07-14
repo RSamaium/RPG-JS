@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/gamepad",
-  "version": "4.0.0-beta.8",
+  "version": "4.0.0-beta.13",
   "description": "",
   "main": "index.ts",
   "keywords": [],
@@ -10,7 +10,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@rpgjs/client": "^4.0.0-beta.8",
+    "@rpgjs/client": "^4.0.0-beta.13",
     "joypad.js": "^2.3.3"
   },
   "gitHead": "7bb0326cc3216764a4bfc86f53e7b24464a2040f"

@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/starter-kit",
-  "version": "4.0.0-beta.8",
+  "version": "4.0.0-beta.13",
   "description": "",
   "main": "src/index.ts",
   "publishConfig": {
@@ -21,9 +21,9 @@
     "typescript": "^4.1.3"
   },
   "dependencies": {
-    "@rpgjs/client": "^4.0.0-beta.8",
-    "@rpgjs/database": "^4.0.0-beta.8",
-    "@rpgjs/server": "^4.0.0-beta.8"
+    "@rpgjs/client": "^4.0.0-beta.13",
+    "@rpgjs/database": "^4.0.0-beta.13",
+    "@rpgjs/server": "^4.0.0-beta.13"
   },
   "gitHead": "7bb0326cc3216764a4bfc86f53e7b24464a2040f"
 }
