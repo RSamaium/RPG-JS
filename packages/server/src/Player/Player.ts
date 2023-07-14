@@ -1,5 +1,5 @@
 import { RpgCommonPlayer, Utils, RpgPlugin, RpgCommonGame, RpgCommonMap, Direction } from '@rpgjs/common'
-import { Room } from 'simple-room'
+import { Room, WorldClass } from 'simple-room'
 import { RpgMap, EventPosOption } from '../Game/Map'
 import { Query } from '../Query'
 import merge from 'lodash.merge'
@@ -80,10 +80,11 @@ const playerSchemas = {
     hp: Number,
     sp: Number,
     gold: Number,
-    level: Number,
+    level: {
+        $effects: ['$this.expForNextlevel']
+    },
     exp: Number,
     name: String,
-    expForNextlevel: Number,
     items: [{ nb: Number, item: itemSchemas }],
     _class: { name: String, description: String, id: String },
     equipments: [itemSchemas],
@@ -180,6 +181,10 @@ export class RpgPlayer extends RpgCommonPlayer {
     // redefine type (as RpgPlayer)
     get otherPlayersCollision(): RpgPlayer[] {
         return super.otherPlayersCollision as RpgPlayer[]
+    }
+
+    get world(): WorldClass | undefined {
+        return this.server?.world
     }
 
     // As soon as a teleport has been made, the value is changed to force the client to change the positions on the map without making a move.
@@ -803,6 +808,21 @@ export class RpgPlayer extends RpgCommonPlayer {
         this.emit('Player.' + name, val)
     }
 
+    // @internal
+    /**
+     * Allows you to manually update a status in the rooms that will then be sent to the customer.
+     * @param path 
+     * @example
+     * ```ts
+     * player.changeRoomState('hp')
+     * ```
+     */
+    changeRoomState(path: string) {
+        this.world?.forEachUserRooms(this.id, (room) => {
+            (room as any).$setCurrentState(`users.${this.id}.${path}`)
+        })
+    }
+
     private _eventChanges() {
         if (!this._getMap(this.map)) return
         const {
@@ -931,5 +951,12 @@ export class RpgEvent extends RpgPlayer {
             sync()
         }
         return ret
+    }
+
+    changeRoomState(path: string) {
+        const room = this.getCurrentMap()
+        if (room) {
+            (room as any).$setCurrentState(`events.${this.id}.${path}`)
+        }
     }
 }

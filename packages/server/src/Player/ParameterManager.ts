@@ -1,6 +1,4 @@
 import { Utils } from '@rpgjs/common'
-import { RpgPlayer } from './Player'
-
 import { 
     MAXHP, 
     MAXSP,
@@ -98,7 +96,7 @@ export class ParameterManager {
             val = this.param[MAXHP]
         }
         else if (val <= 0) { 
-            this['_triggerHook']('onDead')
+            this['execMethod']('onDead') 
             val = 0
         }
         this._hp = val
@@ -344,6 +342,7 @@ export class ParameterManager {
         }
     }) {
         this._paramsModifier = val
+        this.changeRoomState('param')
     }
 
     get parameters() {
@@ -372,7 +371,7 @@ export class ParameterManager {
         return features
     }
 
-    getParamValue(name: string): number {
+    getParamValue(name: string): number | never {
         const features = this.getParam(name)
         let curveVal = Math.floor((features.end - features.start) * ((this.level-1) / (this.finalLevel - this.initialLevel))) + features.start
         const modifier = this.paramsModifier[name]
@@ -412,6 +411,7 @@ export class ParameterManager {
             start,
             end
         })
+        this.changeRoomState('param.' + name)
     }
 
     /** 
@@ -466,5 +466,6 @@ export class ParameterManager {
 
 export interface ParameterManager {
     _class,
-    $schema
+    $schema,
+    changeRoomState(key: string): void
 }

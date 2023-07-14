@@ -4,6 +4,7 @@ import { HpUpValue } from './fixtures/armor'
 import { _beforeEach } from './beforeEach'
 import { clear } from '@rpgjs/testing'
 import { beforeEach, test, afterEach, expect, describe, vitest } from 'vitest'
+import { lastValueFrom } from 'rxjs'
 
 const { MAXHP_CURVE, MAXSP_CURVE, MAXHP, ATK, PDEF, SDEF, MAXSP } = Presets
 
@@ -252,6 +253,44 @@ describe('Test Level', () => {
    });
 })
 
+describe('Test Parameter', () => {
+   // Test for param initialization
+   test('should initialize param as an object', () => {
+      expect(player.param).toEqual({
+         agi: 58,
+         dex: 54,
+         int: 36,
+         maxHp: 741,
+         maxSp: 534,
+         str: 67,
+      });
+   });
+
+   // Test for addParameter() method
+   test('should add a new parameter to param object', () => {
+      player.addParameter('strength', {
+         start: 10,
+         end: 10
+      });
+      expect(player.param).toHaveProperty('strength', 10);
+   });
+
+   // Test for getParamValue() method
+   test('should get the value of a parameter from param object', () => {
+      player.addParameter('strength', {
+         start: 10,
+         end: 10
+      });
+      const value = player.getParamValue('strength');
+      expect(value).toBe(10);
+   });
+
+   // Test for getParamValue() method when parameter doesn't exist
+   test('should return undefined when trying to get the value of a non-existent parameter', () => {
+      expect(() => player.getParamValue('agility')).toThrowError()
+   });
+})
+
 describe('Test Hooks', () => {
    beforeEach(() => {
       clear()
@@ -277,6 +316,127 @@ describe('Test Hooks', () => {
          player.level = 2
       })
    })
+
+   test('Test onDead Hook', () => {
+      return new Promise(async (resolve: any) => {
+         @RpgModule<RpgServer>({
+            player: {
+               onDead: (player: RpgPlayer) => {
+                  resolve()
+               }
+            }
+         })
+         class RpgServerModule { }
+
+         const { player } = await _beforeEach([{
+            server: RpgServerModule
+         }])
+
+         player.hp = 0
+      })
+   })
+})
+
+describe('Sync with client', () => {
+   function testParamSync(prop, value) {
+      player[prop] = value
+      server.send()
+      const { paramsChanged: object } = client.gameEngine.getObject(player.id)
+      expect(object[prop]).toBe(value)
+   }
+
+   for (let prop of ['exp', 'hp', 'sp', 'level', 'gold', 'speed', 'frequency']) {
+      test(`${prop} is sync with client`, async () => {
+         testParamSync(prop, 50)
+      })
+   }
+
+   test('expForNextlevel sync with client', async () => {
+      player.exp = 150
+      server.send()
+      const { paramsChanged: object } = client.gameEngine.getObject(player.id)
+      expect(object.expForNextlevel).toBe(player.expForNextlevel)
+   })
+
+   test('expCurve sync with client', async () => {
+      player.expCurve = {
+         basis: 50,
+         extra: 20,
+         accelerationA: 30,
+         accelerationB: 30
+      }
+      player.exp = 150
+      server.send()
+      const { paramsChanged: object } = client.gameEngine.getObject(player.id)
+      expect(object.expForNextlevel).toBe(player.expForNextlevel)
+   })
+
+   test('addParameters sync with client', async () => {
+      player.addParameter('strength', {
+         start: 10,
+         end: 10
+      });
+      server.send()
+      const { paramsChanged: object } = client.gameEngine.getObject(player.id)
+      expect(object.param.strength).toBe(10)
+   })
+
+   test('addParameters (maxHp) sync with client', async () => {
+      player.addParameter(MAXHP, {
+         start: 10,
+         end: 10
+      });
+      server.send()
+      const { paramsChanged: object } = client.gameEngine.getObject(player.id)
+      expect(object.param[MAXHP]).toBe(10)
+   })
+
+   test('paramsModifier (maxHp) sync with client', async () => {
+      player.paramsModifier = {
+         [MAXHP]: {
+            value: 100
+         }
+      }
+      server.send()
+      const { paramsChanged: object } = client.gameEngine.getObject(player.id)
+      expect(object.param[MAXHP]).toBe(player.param[MAXHP])
+   })
+})
+
+describe('Test Recovery', () => {
+   beforeEach(() => {
+      player.addParameter(MAXHP, {
+         start: 800,
+         end: 800 // Setting the maximum HP
+      });
+      player.addParameter(MAXSP, {
+         start: 230,
+         end: 230 // Setting the maximum SP
+      });
+   })
+
+   // Test for recovery() method
+   test('should restore a certain percentage of health to the player', () => {
+      player.hp = 100;
+      player.recovery({ hp: 0.5 });  // Restore 50% of max HP
+      expect(player.hp).toBe(400);  // HP should be 50% of max HP, which is 400
+   });
+
+   // Test for recovery() method when trying to restore health more than maximum
+   test('should not exceed the maximum health when using recovery()', () => {
+      player.hp = 500;
+      player.recovery({ hp: 1 });  // Restore 100% of max HP
+      expect(player.hp).toBe(800);  // HP should be 100% of max HP, which is 800
+   });
+
+   // Test for allRecovery() method
+   test('should fully restore player\'s health and skill points', () => {
+      player.hp = 100;
+      player.sp = 50;
+      player.allRecovery();
+      expect(player.hp).toBe(800);  // HP should be 100% of max HP, which is 800
+      expect(player.sp).toBe(230);  // SP should be 100% of max SP, which is 230
+   });
 })
 
 afterEach(() => {

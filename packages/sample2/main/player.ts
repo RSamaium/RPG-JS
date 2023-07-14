@@ -40,10 +40,6 @@ const player: RpgPlayerHooks = {
       if (input == 'action') {
          const map = player.getCurrentMap()
          const event = map?.getEventByName('EV-5')
-         if (event) event.hp -= 100
-         const expToGive = 30;
-         player.exp += expToGive;
-         console.log('killed mob, exp for next level: ', player.expForNextlevel);
       }
    }
 }

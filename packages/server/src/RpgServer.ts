@@ -136,7 +136,6 @@ export interface RpgPlayerHooks {
     *  When the player increases one level
     * 
     * @prop { (player: RpgPlayer, nbLevel: number) => any } [onLevelUp]
-    * @stability 1
     * @memberof RpgPlayerHooks
     */
     onLevelUp?: (player: RpgPlayer, nbLevel: number) => any
@@ -145,7 +144,6 @@ export interface RpgPlayerHooks {
     *  When the player's HP drops to 0
     * 
     * @prop { (player: RpgPlayer) => any } [onDead]
-    * @stability 1
     * @memberof RpgPlayerHooks
     */
     onDead?: (player: RpgPlayer) => any,
