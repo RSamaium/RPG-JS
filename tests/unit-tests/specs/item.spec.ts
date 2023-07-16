@@ -235,8 +235,6 @@ describe('Item class Hooks', () => {
     })
 })
 
-
-
 afterEach(() => {
     clear()
 })

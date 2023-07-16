@@ -5,8 +5,11 @@ import { StateLog } from '../logs/state'
 
 const { 
     isInstanceOf,
-    applyMixins
+    applyMixins,
+    isString
 } = Utils
+
+type StateClass = { new(...args: any[]) }
 
 export class StateManager {
 
@@ -123,8 +126,9 @@ export class StateManager {
      * @returns {instance of StateClass | null}
      * @memberof StateManager
      */
-    getState(stateClass) {
-        return this.states.find(({ state }) => state instanceof stateClass)
+    getState(stateClass: StateClass | string) {
+        if (isString(stateClass)) stateClass = this.databaseById(stateClass)
+        return this.states.find(({ state }) => state instanceof (stateClass as StateClass))
     }
 
     /**
@@ -227,4 +231,6 @@ export class StateManager {
 
 applyMixins(StateManager, [ItemFixture])
 
-export interface StateManager extends ItemFixture { }
+export interface StateManager extends ItemFixture { 
+    databaseById(stateClass: any),
+}

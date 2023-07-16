@@ -101,7 +101,10 @@ export class ElementManager extends ItemFixture {
      * @readonly
      * @memberof ElementManager
      * */
-    get elements() {
+    get elements(): {
+        rate: number,
+        element: string
+    }[] {
         let elements: any = []
         for (let item of this.equipments) {
             if (item.elements) {

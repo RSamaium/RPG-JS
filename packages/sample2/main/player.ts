@@ -29,16 +29,37 @@ class MyEvent extends RpgEvent {
 const player: RpgPlayerHooks = {
    onJoinMap(player: RpgPlayer) {
       const map = player.getCurrentMap()
-      const events = map?.createDynamicEvent({
+      map?.createDynamicEvent({
          x: 400,
          y: 400,
+         event: MyEvent
+      })
+      map?.createDynamicEvent({
+         x: 300,
+         y: 300,
          event: MyEvent
       })
    },
    onInput(player: RpgPlayer, { input }) {
       if (input == 'action') {
          const map = player.getCurrentMap()
-         const event = map?.getEventByName('EV-5')
+         const events = map?.events
+         for (let event in events) {
+            events[event].moveTo(player).subscribe();
+         }
+      }
+      if (input == 'back') {
+         player.getCurrentMap()?.createMovingHitbox(
+            [
+                { x: 0, y: 0, width: 500, height: 500 },
+            ]
+        ).subscribe({
+            next(hitbox) {
+               hitbox.otherPlayersCollision.forEach((player) => {
+                  (player as RpgPlayer).hp -= 10
+               })
+            },
+        })
       }
    }
 }

@@ -18,30 +18,30 @@ const {
 export class BattleManager {
 
     /** 
-     * Apply damage. Player will lose HP. the `otherPlayer` parameter is the other player, the one who attacks.
+     * Apply damage. Player will lose HP. the `attackerPlayer` parameter is the other player, the one who attacks.
      * 
      * If you don't set the skill parameter, it will be a physical attack.
      * The attack formula is already defined but you can customize it in the server options
      * 
      * ```ts
-     * player.applyDamage(otherPlayer) // returns { damage: number }
+     * player.applyDamage(attackerPlayer) // returns { damage: number }
      * ```
      * 
      * @title Apply Damage
-     * @method player.applyDamage(otherPlayer,skill)
-     * @param {RpgPlayer} otherPlayer The attacking player
+     * @method player.applyDamage(attackerPlayer,skill)
+     * @param {RpgPlayer} attackerPlayer The attacking player
      * @param {any} [skill]
      * @returns {object} 
      * @memberof BattleManager
      * */
-    applyDamage(otherPlayer: RpgPlayer, skill?: any): { 
+    applyDamage(attackerPlayer: RpgPlayer, skill?: any): { 
         damage: number, 
         critical: boolean, 
         elementVulnerable: boolean,
         guard: boolean,
         superGuard: boolean
     } {
-        const getParam = (player) => {
+        const getParam = (player: RpgPlayer) => {
             const params = {}
             this.parameters.forEach((val, key) => {
                 params[key] = player.param[key]
@@ -58,8 +58,8 @@ export class BattleManager {
         let guard = false
         let superGuard = false
         let elementVulnerable = false
-        const paramA = getParam(otherPlayer)
-        const paramB = getParam(this)
+        const paramA = getParam(attackerPlayer)
+        const paramB = getParam(<any>this)
         if (skill) {
             fn = this.getFormulas('damageSkill')
             if (!fn) {
@@ -73,7 +73,7 @@ export class BattleManager {
                 throw new Error('Physic Formulas not exists')
             }
             damage = fn(paramA, paramB)
-            const coef = this.coefficientElements(otherPlayer)
+            const coef = this.coefficientElements(attackerPlayer)
             if (coef >= 2) {
                 elementVulnerable = true
             }
@@ -99,6 +99,7 @@ export class BattleManager {
         }
         if (this.hasEffect(Effect.SUPER_GUARD)) {
             damage /= 4
+            superGuard = true
         }
         this.hp -= damage
         return {

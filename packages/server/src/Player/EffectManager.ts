@@ -4,6 +4,7 @@ import { ParameterManager } from './ParameterManager'
 
 import {
     MAXHP, 
+    MAXSP
 } from '../presets'
 
 const { 
@@ -22,19 +23,19 @@ export class EffectManager {
             this.hp += item.hpValue
         }
         if (item.hpRate) {
-            this.hp += this.param[MAXHP] / item.hpRate
+            this.hp += this.param[MAXHP] * item.hpRate
         }
         if (item.spValue) {
-            this.sp += item.hpValue
+            this.sp += item.spValue
         }
         if (item.spRate) {
-            this.sp += this.param[MAXHP] / item.hpRate
+            this.sp += this.param[MAXSP] * item.spRate
         }
     }
 
     /** 
      * ```ts
-     * import { Effect } from '@rpgjs/server'
+     * import { Effect } from '@rpgjs/database'
      * 
      * const bool = player.hasEffect(Effect.CAN_NOT_SKILL)
      * ```
@@ -75,7 +76,7 @@ export class EffectManager {
      * Assigns effects to the player. If you give a array, it does not change the effects of the player's states and armor/weapons equipped.
      * 
      * ```ts
-     * import { Effect } from '@rpgjs/server'
+     * import { Effect } from '@rpgjs/database'
      * 
      * player.effects = [Effect.CAN_NOT_SKILL]
      * ``` 

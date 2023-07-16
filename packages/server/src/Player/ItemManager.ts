@@ -1,4 +1,4 @@
-import { Utils }  from '@rpgjs/common'
+import { Utils } from '@rpgjs/common'
 import { Effect, ItemOptions } from '@rpgjs/database'
 import { ItemLog } from '../logs'
 import { ItemModel } from '../models/Item'
@@ -6,43 +6,43 @@ import { EffectManager } from './EffectManager'
 import { GoldManager } from './GoldManager'
 import { StateManager } from './StateManager'
 
-import { 
+import {
     ATK,
     PDEF,
     SDEF
 } from '../presets'
 
-const { 
-    isString, 
+const {
+    isString,
     isInstanceOf,
     applyMixins
 } = Utils
 
 type ItemClass = { new(...args: any[]), price?: number, _type?: string }
-type Inventory =  { nb: number, item: ItemModel }
+type Inventory = { nb: number, item: ItemModel }
 
 export class ItemManager {
 
     items: Inventory[]
     equipments: ItemModel[] = []
-    
-     /**
-     * Retrieves the information of an object: the number and the instance 
-     * @title Get Item
-     * @method player.getItem(itemClass)
-     * @param {ItemClass | string} itemClass Identifier of the object if the parameter is a string
-     * @returns {{ nb: number, item: instance of ItemClass }}
-     * @memberof ItemManager
-     * @example
-     * 
-     * ```ts
-     * import Potion from 'your-database/potion'
-     * 
-     * player.addItem(Potion, 5)
-     * const inventory = player.getItem(Potion)
-     * console.log(inventory) // { nb: 5, item: <instance of Potion> }
-     *  ```
-     */
+
+    /**
+    * Retrieves the information of an object: the number and the instance 
+    * @title Get Item
+    * @method player.getItem(itemClass)
+    * @param {ItemClass | string} itemClass Identifier of the object if the parameter is a string
+    * @returns {{ nb: number, item: instance of ItemClass }}
+    * @memberof ItemManager
+    * @example
+    * 
+    * ```ts
+    * import Potion from 'your-database/potion'
+    * 
+    * player.addItem(Potion, 5)
+    * const inventory = player.getItem(Potion)
+    * console.log(inventory) // { nb: 5, item: <instance of Potion> }
+    *  ```
+    */
     getItem(itemClass: ItemClass | string): Inventory {
         const index: number = this._getItemIndex(itemClass)
         return this.items[index]
@@ -281,9 +281,9 @@ export class ItemManager {
         this.gold += (ItemClass.price / 2) * nbToSell
         this.removeItem(ItemClass, nbToSell)
         return inventory
-    } 
+    }
 
-    private getParamItem(name) {
+    private getParamItem(name: string): number {
         let nb = 0
         for (let item of this.equipments) {
             nb += item[name] || 0
@@ -296,14 +296,35 @@ export class ItemManager {
         return nb
     }
 
+    /**
+     * recover the attack sum of items equipped on the player.
+     * 
+     * @title Get the player's attack
+     * @prop {number} player.atk
+     * @memberof ItemManager
+     */
     get atk(): number {
         return this.getParamItem(ATK)
     }
 
+    /**
+    * recover the physic defense sum of items equipped on the player.
+    * 
+    * @title Get the player's pdef
+    * @prop {number} player.pdef
+    * @memberof ItemManager
+    */
     get pdef(): number {
         return this.getParamItem(PDEF)
     }
 
+    /**
+    * recover the skill defense sum of items equipped on the player.
+    * 
+    * @title Get the player's sdef
+    * @prop {number} player.sdef
+    * @memberof ItemManager
+    */
     get sdef(): number {
         return this.getParamItem(SDEF)
     }
