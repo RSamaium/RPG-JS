@@ -122,13 +122,18 @@ export class StateManager {
      * 
      * @title Get State
      * @method player.getState(stateClass)
-     * @param {StateClass} stateClass
+     * @param {StateClass | string} stateClass or state id
      * @returns {instance of StateClass | null}
      * @memberof StateManager
      */
     getState(stateClass: StateClass | string) {
         if (isString(stateClass)) stateClass = this.databaseById(stateClass)
-        return this.states.find(({ state }) => state instanceof (stateClass as StateClass))
+        return this.states.find((state) => {
+            if (isString(stateClass)) {
+                return state.id == stateClass
+            }
+            return isInstanceOf(state, stateClass)
+        })
     }
 
     /**
@@ -146,7 +151,7 @@ export class StateManager {
      * 
      * @title Add State
      * @method player.addState(stateClass,chance=1)
-     * @param {StateClass} stateClass
+     * @param {StateClass | string} stateClass state class or state id
      * @param {number} [chance] 1 by default
      * @throws {StateLog} addFailed 
      * If the chance to add the state has failed (defined with the `chance` param)
@@ -160,14 +165,17 @@ export class StateManager {
      * @memberof StateManager
      * @todo
      */
-    addState(stateClass, chance = 1): object | null {
+    addState(stateClass: StateClass | string, chance = 1): object | null {
         const state = this.getState(stateClass)
+        if (isString(stateClass)) {
+            stateClass = this.databaseById(stateClass)
+        }
         if (!state) {
             if (Math.random() > chance) {
                 throw StateLog.addFailed(stateClass)
             }
             //const efficiency = this.findStateEfficiency(stateClass)
-            const instance = new stateClass()
+            const instance = new (stateClass as StateClass)()
             this.states.push(instance)
             this.applyStates(<any>this, instance)
             return instance
@@ -190,7 +198,7 @@ export class StateManager {
      * 
      * @title Remove State
      * @method player.removeState(stateClass,chance=1)
-     * @param {StateClass} stateClass
+     * @param {StateClass|string} stateClass class state or state id
      * @param {number} [chance] 1 by default
      * @throws {StateLog} removeFailed 
      * If the chance to remove the state has failed (defined with the `chance` param)
@@ -211,8 +219,13 @@ export class StateManager {
      * @returns {instance of StateClass}
      * @memberof StateManager
      */
-    removeState(stateClass, chance = 1) {
-        const index = this.states.findIndex(state => state instanceof stateClass)
+    removeState(stateClass: StateClass | string, chance = 1) {
+        const index = this.states.findIndex((state) => {
+            if (isString(stateClass)) {
+                return state.id == stateClass
+            }
+            return isInstanceOf(state, stateClass)
+        })
         if (index != -1) {
             if (Math.random() > chance) {
                 throw StateLog.removeFailed(stateClass)

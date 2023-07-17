@@ -1,4 +1,4 @@
-import { Presets} from '@rpgjs/server'
+import { Presets, RpgServerEngine} from '@rpgjs/server'
 import { Confuse, HpPlus } from './fixtures/state';
 import { State, Armor } from '@rpgjs/database'
 import {_beforeEach} from './beforeEach'
@@ -7,7 +7,7 @@ import { beforeEach, test, afterEach, expect } from 'vitest'
 
 const { MAXHP_CURVE, MAXSP_CURVE, MAXHP, ATK, PDEF, SDEF, MAXSP } = Presets
 
-let  client, player, fixture, playerId
+let  client, player, fixture, playerId, server: RpgServerEngine
 
 beforeEach(async () => {
     const ret = await _beforeEach()
@@ -15,12 +15,28 @@ beforeEach(async () => {
     player = ret.player
     fixture = ret.fixture
     playerId = ret.playerId
+    server = ret.server
+    server.addInDatabase('confuse', Confuse)
 })
 
 test('add state', () => {
     player.addState(Confuse)
     expect(player.states).toHaveLength(1)
     expect(player).toHaveProperty('states.0.name')
+})
+
+test('get state', () => {
+    player.addState(Confuse)
+    const state = player.getState(Confuse)
+    expect(state).toBeDefined()
+    expect(state.name).toBe('Confuse')
+})
+
+test('get state by id', () => {
+    player.addState(Confuse)
+    const state = player.getState('confuse')
+    expect(state).toBeDefined()
+    expect(state.name).toBe('Confuse')
 })
 
 test('add state with not chance', () => {
