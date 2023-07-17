@@ -40,12 +40,11 @@ test('get state by id', () => {
 })
 
 test('add state with not chance', () => {
-    try {
-        player.addState(Confuse, 0)
-    }
-    catch (err: any) {
-        expect(err.id).toBe('ADD_STATE_FAILED')
-    }
+    expect(() => player.addState(Confuse, 0)).toThrowError(
+        expect.objectContaining({
+            id: 'ADD_STATE_FAILED'
+        })
+    )
 })
 
 test('remove state', () => {
@@ -56,22 +55,24 @@ test('remove state', () => {
 })
 
 test('remove state with not chance', () => {
-    try {
+    expect(() => {
         player.addState(Confuse)
         player.removeState(Confuse, 0)
-    }
-    catch (err: any) {
-        expect(err.id).toBe('REMOVE_STATE_FAILED')
-    }
+    }).toThrowError(
+        expect.objectContaining({
+            id: 'REMOVE_STATE_FAILED'
+        })
+    )
 })
 
 test('remove state but state is not applied', () => {
-    try {
+    expect(() => {
         player.removeState(Confuse)
-    }
-    catch (err: any) {
-        expect(err.id).toBe('STATE_NOT_APPLIED')
-    }
+    }).toThrowError(
+        expect.objectContaining({
+            id: 'STATE_NOT_APPLIED'
+        })
+    )
 })
 
 test('Add a state does not influence statesEfficiency', () => {

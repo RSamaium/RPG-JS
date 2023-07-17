@@ -51,7 +51,7 @@ export class SkillManager {
      */
     getSkill(skillClass: SkillClass | string) {
         const index = this._getSkillIndex(skillClass)
-        return this.skills[index]
+        return this.skills[index] ?? null
     }
 
     /**
@@ -118,8 +118,8 @@ export class SkillManager {
         if (index == -1) {
             throw SkillLog.notLearned(skillClass)
         }
-        this.skills.splice(index, 1)
         const instance = this.skills[index]
+        this.skills.splice(index, 1)
         this['execMethod']('onForget', [this], instance)
         return instance
     }
@@ -211,7 +211,7 @@ export class SkillManager {
             throw SkillLog.notEnoughSp(skillClass, skill.spCost, this.sp)
         }
         this.sp -= (skill.spCost / (this.hasEffect(Effect.HALF_SP_COST) ? 2 : 1))
-        const hitRate = skill.hitRate || 1
+        const hitRate = skill.hitRate ?? 1
         if (Math.random() > hitRate) {
             this['execMethod']('onUseFailed', [this, otherPlayer], skill)
             throw SkillLog.chanceToUseFailed(skillClass)

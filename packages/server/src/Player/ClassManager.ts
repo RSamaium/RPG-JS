@@ -3,8 +3,12 @@ import { ParameterManager } from './ParameterManager'
 import { ItemManager } from './ItemManager'
 
 const { 
-    applyMixins
+    applyMixins,
+    isString
 } = Utils
+
+type ClassClass = { new(...args: any[]) }
+type ActorClass = { new(...args: any[]) }
 
 export class ClassManager {
 
@@ -21,12 +25,13 @@ export class ClassManager {
      * 
      * @title Set Class
      * @method player.setClass(ClassClass)
-     * @param {ClassClass} class
+     * @param {ClassClass} class class or id
      * @returns {instance of ClassClass} 
      * @memberof ClassManager
      * */
-    setClass(_class) {
-        this._class = new _class()
+    setClass(_class: ClassClass | string) {
+        if (isString(_class)) _class = this.databaseById(_class)
+        this._class = new (_class as ClassClass)()
         this['execMethod']('onSet', [this], this._class)
         return this._class
     }
@@ -42,12 +47,13 @@ export class ClassManager {
      * 
      * @title Set Actor
      * @method player.setActor(ActorClass)
-     * @param {ActorClass} actorClass
+     * @param {ActorClass} actorClass actor class or id
      * @returns {instance of ActorClass} 
      * @memberof ClassManager
      * */
-    setActor(actorClass) {
-        const actor = new actorClass()
+    setActor(actorClass: ActorClass | string) {
+        if (isString(actorClass)) actorClass = this.databaseById(actorClass)
+        const actor = new (actorClass as ActorClass)()
         this.name  = actor.name
         this.initialLevel = actor.initialLevel
         this.finalLevel = actor.finalLevel
