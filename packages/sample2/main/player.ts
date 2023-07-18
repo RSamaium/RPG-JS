@@ -42,11 +42,12 @@ const player: RpgPlayerHooks = {
    },
    onInput(player: RpgPlayer, { input }) {
       if (input == 'action') {
-         const map = player.getCurrentMap()
+         /*const map = player.getCurrentMap()
          const events = map?.events
          for (let event in events) {
             events[event].moveTo(player).subscribe();
-         }
+         }*/
+         player.showAnimation('animation', 'default')
       }
       if (input == 'back') {
          player.getCurrentMap()?.createMovingHitbox(

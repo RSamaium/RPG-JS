@@ -6,6 +6,8 @@ modules = [
     '@rpgjs/chat'
 ]
 
+spritesheetDirectories = ['animations']
+
 [start]
     map = 'map'
     graphic = 'male'

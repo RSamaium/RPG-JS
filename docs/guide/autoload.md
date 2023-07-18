@@ -20,8 +20,9 @@ Just follow the file nomenclature. They will be understood automatically by the 
     * events
         * [event-name].ts
     * maps
-        * [map-name].tsx
-        * [tileset-name].tmx
+        * [map-name].tmx
+        * [map-name].ts (optional)
+        * [tileset-name].tsx
         * [tileset-name].png
     * worlds
         * [maps-directory]
@@ -33,6 +34,7 @@ Just follow the file nomenclature. They will be understood automatically by the 
     * sprite.ts
     * server.ts
     * client.ts
+    * scene-map.ts
 * .env
 * index.html
 * package.json
@@ -66,5 +68,22 @@ At this point, add in `rpg.toml`:
 
 ```toml
 spritesheetDirectories = ['animations'] # others directories
+```
+:::
+
+::: tip
+In the case of spritesheets, note that the file names also become the identifiers to be used in the code.
+
+Example:
+
+* [module-name]
+    * characters
+        * hero.png
+        * spritesheet.ts
+
+And in code:
+
+```ts
+player.setGraphic('hero') // hero is both the id and the file name (hero.png)
 ```
 :::

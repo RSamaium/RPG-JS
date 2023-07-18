@@ -348,7 +348,7 @@ type SpritesheetImageOptions = SpritesheetOptions & {
      * @prop {string} [image]
      * @memberof Spritesheet
      * */
-    image: string,
+    image?: string,
     /** 
     * Spritesheet identifier.
     * 
