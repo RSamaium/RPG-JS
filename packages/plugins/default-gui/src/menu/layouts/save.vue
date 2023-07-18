@@ -1,12 +1,12 @@
 <template>
-   <rpg-save @saved="back"></rpg-save>
+    <rpg-save @saved="back"></rpg-save>
 </template>
 
 <script lang="ts">
 import { Control } from '@rpgjs/client'
 
 export default {
-   inject: ['rpgKeypress'],
+    inject: ['rpgKeypress'],
     mounted() {
         this.obsKeyPress = this.rpgKeypress.subscribe(({ control }) => {
             if (!control) return
@@ -19,13 +19,11 @@ export default {
         this.obsKeyPress.unsubscribe()
     },
     methods: {
-       back() {
-          this.$emit('changeLayout', 'MainLayout')
-       }
+        back() {
+            this.$emit('changeLayout', 'MainLayout')
+        }
     }
 }
 </script>
 
-<style>
-
-</style>
+<style></style>

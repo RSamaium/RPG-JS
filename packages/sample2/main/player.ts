@@ -47,20 +47,26 @@ const player: RpgPlayerHooks = {
          for (let event in events) {
             events[event].moveTo(player).subscribe();
          }*/
-         player.showAnimation('animation', 'default')
+         // player.showAnimation('animation', 'default')
+         player.addParameter(Presets.MAXHP, {
+            start: 100,
+            end: 10000,
+         });
+         player.exp += 150
+         player.callMainMenu()
       }
       if (input == 'back') {
          player.getCurrentMap()?.createMovingHitbox(
             [
-                { x: 0, y: 0, width: 500, height: 500 },
+               { x: 0, y: 0, width: 500, height: 500 },
             ]
-        ).subscribe({
+         ).subscribe({
             next(hitbox) {
                hitbox.otherPlayersCollision.forEach((player) => {
                   (player as RpgPlayer).hp -= 10
                })
             },
-        })
+         })
       }
    }
 }

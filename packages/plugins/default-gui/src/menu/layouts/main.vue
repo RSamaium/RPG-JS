@@ -1,19 +1,19 @@
 <template>
- <div class="menu-row">
-    <div class="menu-left">
-        <rpg-window :fullWidth="true" class="menu-choice">
-            <rpg-choice :choices="menu" @selected="selectMenu" ref="menu" />
-        </rpg-window>
-         <rpg-window :fullWidth="true" class="gold">
-            <p>{{ gold }} {{ goldName}}</p>
-        </rpg-window>
+    <div class="menu-row">
+        <div class="menu-left">
+            <rpg-window :fullWidth="true" class="menu-choice">
+                <rpg-choice :choices="menu" @selected="selectMenu" ref="menu" />
+            </rpg-window>
+            <rpg-window :fullWidth="true" class="gold">
+                <p>{{ gold }} {{ goldName }}</p>
+            </rpg-window>
+        </div>
+        <div class="menu-right">
+            <rpg-window :fullWidth="true" height="100%">
+                <Hero class="hero-face" />
+            </rpg-window>
+        </div>
     </div>
-    <div class="menu-right">
-         <rpg-window :fullWidth="true" height="100%">
-            <Hero class="hero-face" />
-        </rpg-window>
-    </div>
- </div>
 </template>
 
 <script>
@@ -34,7 +34,7 @@ export default {
             text: 'Items',
             value: 'item',
             layout: 'ItemsLayout'
-        }, 
+        },
         /*  {
             text: 'Skills',
             value: 'skill'
@@ -64,13 +64,13 @@ export default {
     },
     mounted() {
         this.obsCurrentPlayer = this.rpgCurrentPlayer.subscribe(({ object }) => {
-           this.gold = object.gold
+            this.gold = object.gold
         })
         this.obsKeyPress = this.rpgKeypress.subscribe(({ control }) => {
             if (!this.active || !control) return
             if (control.actionName == 'back') {
                 this.rpgStage.filters = []
-                if (this.rpgGui.exists('rpg-controls')) this.rpgGui.display('rpg-controls') 
+                if (this.rpgGui.exists('rpg-controls')) this.rpgGui.display('rpg-controls')
                 this.rpgGuiClose('rpg-main-menu')
                 this.rpgEngine.controls.listenInputs()
             }
@@ -82,7 +82,7 @@ export default {
     },
     methods: {
         selectMenu(index) {
-            this.$emit('changeLayout', this.menu[index].layout) 
+            this.$emit('changeLayout', this.menu[index].layout)
         }
     },
     components: {
@@ -94,13 +94,12 @@ export default {
 <style lang="scss">
 $hero-face: none !default;
 
-.hero-face .face-column > div {
+.hero-face .face-column>div {
     background-image: $hero-face;
 }
 </style>
 
 <style scoped lang="scss">
-
 .menu-row {
     flex-direction: row;
     display: flex;

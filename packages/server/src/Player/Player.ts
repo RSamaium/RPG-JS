@@ -83,6 +83,7 @@ const playerSchemas = {
     level: {
         $effects: ['$this.expForNextlevel']
     },
+    expForNextlevel: Number,
     exp: Number,
     name: String,
     items: [{ nb: Number, item: itemSchemas }],

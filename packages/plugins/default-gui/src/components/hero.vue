@@ -5,16 +5,16 @@
         </div>
         <div class="name-column">
             <ul>
-                <li>{{ player.name }}</li>
-                <li class="space-between"><span class="param-name">Level</span> <span>{{ player.level }}</span></li>
-                <li><bar :nb="player.exp" :max="player.expForNextlevel" name="EXP"  color="gray" /></li>
+                <li>{{ name }}</li>
+                <li class="space-between"><span class="param-name">Level</span> <span>{{ level }}</span></li>
+                <li><bar :nb="exp" :max="expForNextlevel" name="EXP"  color="gray" /></li>
             </ul>
         </div>
         <div class="bars-column">
-             <ul v-if="player.param">
+             <ul>
                  <li>{{ _class.name }}</li>
-                 <li><bar :nb="player.hp" :max="player.param.maxHp" name="HP"  color="orange" /></li>
-                 <li><bar :nb="player.sp" :max="player.param.maxSp" name="SP"  color="blue" /></li>
+                 <li><bar :nb="hp" :max="maxHp" name="HP"  color="orange" /></li>
+                 <li><bar :nb="sp" :max="maxSp" name="SP"  color="blue" /></li>
              </ul>
         </div>
     </div>
@@ -28,12 +28,27 @@ export default {
     inject: ['rpgCurrentPlayer'],
     data() {
         return {
-            player: {}
+            name: '',
+            hp: 0,
+            sp: 0,
+            maxHp: 0,
+            maxSp: 0,
+            expForNextlevel: 0,
+            exp: 0,
+            level: 0,
+            _class: {}
         }
     },
     mounted() {
         this.obsCurrentPlayer = this.rpgCurrentPlayer.subscribe(({ object }) => {
-           this.player = object
+           this.name = object.name
+           this.hp = object.hp
+           this.sp = object.sp
+           this.maxHp = object.param.maxHp
+           this.maxSp = object.param.maxSp
+           this.expForNextlevel = object.expForNextlevel
+           this.exp = object.exp
+           this.level = object.level
         })
     },
     computed: {
@@ -41,10 +56,6 @@ export default {
             return {
                 backgroundImage: `url(${this.face})`
             }
-        },
-        _class() {
-            if (!this.player._class) return {}
-            return this.player._class
         }
     },
     unmounted() {

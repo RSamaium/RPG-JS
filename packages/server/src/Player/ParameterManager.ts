@@ -411,6 +411,14 @@ export class ParameterManager {
             start,
             end
         })
+        const maxHp = this.param[MAXHP]
+        const maxSp = this.param[MAXSP]
+        if (name == MAXHP && this.hp > maxHp) {
+            this.hp = maxHp // forcing hp not to exceed maxp 
+        }
+        else if (name == MAXSP && this.sp > maxSp) {
+            this.sp = maxSp
+        }
         this.changeRoomState('param.' + name)
     }
 
