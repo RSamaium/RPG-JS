@@ -267,6 +267,19 @@ export function createModuleLoad(id: string, variableName: string, modulePath: s
         return loadClientFiles(modulePath, options, config)
     }
 
+    const modulePathId = path.join(process.cwd(), id)
+    const packageJson = path.join(modulePathId, 'package.json')
+
+    if (fs.existsSync(packageJson)) {
+        const { main: entryPoint } = JSON.parse(fs.readFileSync(packageJson, 'utf-8'))
+        if (entryPoint) {
+            return `
+                import mod from '${path.join(modulePathId, entryPoint)}'
+                export default mod
+            `
+        }
+    }
+
     return `
         import client from 'client!./${clientFile}'
         import server from 'server!./${serverFile}'
