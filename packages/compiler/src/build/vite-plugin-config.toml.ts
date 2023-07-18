@@ -269,6 +269,7 @@ export function createModuleLoad(id: string, variableName: string, modulePath: s
 
     const modulePathId = path.join(process.cwd(), id)
     const packageJson = path.join(modulePathId, 'package.json')
+    const indexFile = path.join(modulePathId, 'index.ts')
 
     if (fs.existsSync(packageJson)) {
         const { main: entryPoint } = JSON.parse(fs.readFileSync(packageJson, 'utf-8'))
@@ -278,6 +279,12 @@ export function createModuleLoad(id: string, variableName: string, modulePath: s
                 export default mod
             `
         }
+    }
+    else if (fs.existsSync(indexFile)) {
+        return `
+            import mod from '${indexFile}'
+            export default mod
+        `
     }
 
     return `
