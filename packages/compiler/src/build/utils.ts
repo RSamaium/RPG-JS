@@ -34,3 +34,21 @@ export const createDistFolder = async  (outputDir: string): Promise<string> => {
 export function toPosix(path: string) {
     return path.replace(/\\/g, '/')
 }
+
+/**
+ * Example:
+ * 
+ * const projectPath = extractProjectPath('/home/user/project/RPG-JS-v4/packages/sample2/main/characters/npc', '/main/characters')
+ * console.log(projectPath) // /main/characters/npc
+ */
+export function extractProjectPath(absolutePath: string, projectPath: string): string {
+    const projectIndex = absolutePath.indexOf(projectPath);
+    
+    if (projectIndex === -1) {
+        throw new Error('Project path not found in absolute path');
+    }
+    
+    const extractedPath = absolutePath.substring(projectIndex);
+    
+    return extractedPath;
+}

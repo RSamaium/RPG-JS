@@ -234,6 +234,30 @@ describe('TOML Configuration test', () => {
         })
     })
 
+    describe('loadSpriteSheet', () => {
+        test('should return import strings for sprite sheet (deep)', () => {
+            const directoryName = 'sprite_folder'
+            const modulePath = 'main'
+            const options = { serveMode: true, type: 'rpg' }
+
+            mockFs({
+                [modulePath + '/' + directoryName  + '/npc']: {
+                    'sprite1.ts': '',
+                    'sprite1.png': ''
+                }
+            });
+
+            // Mock sizeOf to return specific dimensions
+            (sizeOf as Vi.Mock).mockReturnValue({ width: 100, height: 100 })
+
+            const result = loadSpriteSheet(directoryName, modulePath, options)
+
+            expect(result.variablesString).toBe('_main_sprite_folder_npc_sprite1ts')
+            expect(result.importString).toContain(`import _main_sprite_folder_npc_sprite1ts from './main/sprite_folder/npc/sprite1.ts'`)
+            expect(result.propImagesString).toContain(`"sprite1": "main/sprite_folder/npc/sprite1.png"`)
+        })
+    })
+
     describe('loadClientFiles', () => {
         test('should return a module string with the correct imports', () => {
             const modulePath = 'main'

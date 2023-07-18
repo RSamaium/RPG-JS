@@ -5,7 +5,7 @@ import sizeOf from 'image-size';
 import { ClientBuildConfigOptions, Config } from './client-config';
 import { loadGlobalConfig } from './load-global-config.js';
 import { warn } from '../logs/warning.js';
-import { assetsFolder, toPosix } from './utils.js';
+import { assetsFolder, extractProjectPath, toPosix } from './utils.js';
 
 const MODULE_NAME = 'virtual-modules'
 const GLOBAL_CONFIG_CLIENT = 'virtual-config-client'
@@ -193,7 +193,7 @@ export function loadSpriteSheet(directoryName: string, modulePath: string, optio
                 fs.copyFileSync(file, dest)
             }
             lastImagePath = file
-            objectString += `"${basename}": "${toPosix(path.join(projectPath, filename)).replace(/^\/+/, '')}",\n`
+            objectString += `"${basename}": "${toPosix(extractProjectPath(file, projectPath.replace(/^\/+/, '')))}",\n`
         })
         const dimensions = sizeOf(lastImagePath)
         propImagesString = `
