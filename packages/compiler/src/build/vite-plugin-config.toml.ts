@@ -300,6 +300,7 @@ export function createModuleLoad(id: string, variableName: string, modulePath: s
 
 export function createConfigFiles(id: string, configServer, configClient): string | null {
     if (id.endsWith(GLOBAL_CONFIG_SERVER)) {
+
         return `
             export default ${JSON.stringify(configServer)}
         `
@@ -454,7 +455,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
                 return codeToTransform
             }
 
-            const str = createConfigFiles(id, configClient, configServer)
+            const str = createConfigFiles(id, configServer, configClient)
             if (str) return str
 
             for (let module of modules) {
