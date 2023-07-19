@@ -2,6 +2,7 @@ import { RpgServer, RpgModule, RpgServerEngine, RpgPlayer, RpgMap, RpgWorld, Rpg
 import AgonesSDK from '@google-cloud/agones-sdk'
 import { RedisStore } from './redisStore'
 import { IAgones } from './interfaces/agones'
+import { throttleTime } from 'rxjs'
 
 const { MATCH_MAKER_URL, MATCH_MAKER_SECRET_TOKEN } = process.env
 
@@ -17,7 +18,8 @@ if (!MATCH_MAKER_SECRET_TOKEN) {
 
 let agonesSDK: IAgones
 
-@RpgModule<RpgServer>({ 
+// @ts-ignore
+@RpgModule<RpgServer>({
     player: {
         async onDisconnected(player: RpgPlayer) {
             const players = RpgWorld.getPlayers()
@@ -37,21 +39,25 @@ let agonesSDK: IAgones
         }
     },
     engine: {
-        async onStart(server: RpgServerEngine)  {
+        async onStart(server: RpgServerEngine) {
             let healthInterval
             try {
                 await agonesSDK.connect()
                 await agonesSDK.setLabel('server-id', server.serverId)
                 await agonesSDK.ready()
-                healthInterval = setInterval(() => {
-                    agonesSDK.health()
-                }, 20000)
+                healthInterval = server.tick
+                    .pipe(
+                        throttleTime(2000) as any
+                    )
+                    .subscribe(() => {
+                        agonesSDK.health()
+                    })
                 agonesSDK.health()
             }
             catch (error) {
                 console.log('Unable to connect to the Agones cluster')
                 console.error(error)
-                if (healthInterval) clearInterval(healthInterval)
+                if (healthInterval) healthInterval.unsubscribe()
                 process.exit(0)
             }
         }
@@ -78,7 +84,7 @@ let agonesSDK: IAgones
                 if (server) {
                     player.changeServer(server.url, server.port)
                     return true
-                } 
+                }
                 return false
             }
         }

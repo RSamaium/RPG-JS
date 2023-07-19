@@ -13,10 +13,11 @@
   "author": "Samuel Ronce",
   "license": "MIT",
   "dependencies": {
-    "@google-cloud/agones-sdk": "1.30.0",
+    "@google-cloud/agones-sdk": "^1.33.0",
     "@rpgjs/client": "^4.0.0-beta.15",
     "@rpgjs/server": "^4.0.0-beta.15",
-    "redis": "^4.6.5"
+    "redis": "^4.6.7",
+    "rxjs": "^7.8.1"
   },
   "gitHead": "76d1d8a1250e20b01fc4557e129d01c0f15632f0"
 }
