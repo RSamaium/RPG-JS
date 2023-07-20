@@ -11,6 +11,13 @@
             "mongodb"
         ]
     },
-    "client": {},
+    "client": {
+        "type": "object",
+        "properties": {
+            "apiUrl": {
+                "type": "string"
+            }
+        }
+    },
     "*": {}
 }

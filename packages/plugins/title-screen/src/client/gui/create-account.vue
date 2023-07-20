@@ -19,12 +19,17 @@ const NICKNAME_EXISTS_MSG = 'The nickname already exists, please choose another 
 
 export default {
     name: 'rpg-login',
-    inject: ['rpgGui'],
+    inject: ['rpgEngine', 'rpgGui'],
     data() {
         return {
            user: {},
            confirmPassword: '',
            nicknameExists: false
+        }
+    },
+    computed: {
+        apiUrl() {
+            return this.rpgEngine.globalConfig.apiUrl ?? 'http://' + this.rpgEngine.serverUrl
         }
     },
     methods: {
@@ -48,7 +53,7 @@ export default {
                 if (this.user.password != this.confirmPassword) {
                     throw 'The confirmed password is different from the password'
                 }
-                await axios.post('/user/create', this.user)
+                await axios.post(this.apiUrl + '/user/create', this.user)
                 this.rpgGui.display('rpg-notification', {
                     message: 'Your account has been created. Log in now to play the game',
                     time: 5000,
@@ -72,7 +77,7 @@ export default {
             })
         },
         async checkExist() {
-            const { data } = await axios.post('/user/exists', {
+            const { data } = await axios.post(this.apiUrl + '/user/exists', {
                 nickname: this.user.nickname
             }) 
             this.nicknameExists = data.exists

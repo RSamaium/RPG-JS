@@ -1,6 +1,7 @@
 import http from 'http'
 import path from 'path'
 import express from 'express'
+import cors from 'cors'
 import { Server } from 'socket.io'
 import entryPoint from '../entry-point'
 import PrettyError from 'pretty-error'
@@ -50,6 +51,8 @@ export function expressServer(modules: ModuleType[], options: ExpressServerOptio
                 limit: '50mb'
             }))
         }
+
+        app.use(cors())
 
         if (staticEnabled) {
             app.use('/', express.static(path.join(dirname, '..', staticDirectory, 'client')))

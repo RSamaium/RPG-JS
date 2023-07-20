@@ -29,7 +29,7 @@ import * as PIXI from 'pixi.js'
 
 const { extractId, isString } = Utils
 
-declare var __RPGJS_PRODUCTION__: boolean;  
+declare var __RPGJS_PRODUCTION__: boolean;
 
 type FrameData = {
     time: number,
@@ -107,6 +107,7 @@ export class RpgClientEngine {
     private assetsPath: string = 'assets'
     private serverFps: number = 60
     private scheduler: Scheduler = new Scheduler()
+    private _serverUrl: string = ''
 
     /**
      * Read objects synchronized with the server
@@ -166,12 +167,13 @@ export class RpgClientEngine {
         this.gameEngine.clientEngine = this
 
         this.addSpriteSheet(this.renderer.options.spritesheets);
-        
+
         (this.renderer.options.sounds || []).forEach(sound => {
             const id: any = isString(sound) ? extractId(sound) : undefined
             this.addSound(sound, id)
         })
         
+        // obsolete
         if (typeof __RPGJS_PRODUCTION__ != 'undefined' && __RPGJS_PRODUCTION__) {
             if ('serviceWorker' in navigator) {
                 window.addEventListener('load', () => {
@@ -328,7 +330,7 @@ export class RpgClientEngine {
             // @ts-ignore
             const envUrl = this.envs.VITE_SERVER_URL
             this.connection(
-                    serverUri.url ? serverUri.url + ':' + serverUri.port : 
+                serverUri.url ? serverUri.url + ':' + serverUri.port :
                     envUrl ? envUrl : undefined
             )
         }
@@ -416,6 +418,8 @@ export class RpgClientEngine {
      */
     connection(uri?: string) {
         const { standalone } = this.gameEngine
+
+        this._serverUrl = uri || ''
 
         if (!standalone) {
             this.socket = this.io(uri, {
@@ -555,7 +559,7 @@ export class RpgClientEngine {
                             this.gameEngine.removeObjectAndShape(key)
                         }
                         if (!obj) continue
-                        
+
                         if (!isShape) {
                             obj.type = {
                                 users: PlayerType.Player,
@@ -689,12 +693,66 @@ export class RpgClientEngine {
         return this.renderer.getScene<T>()
     }
 
+    /**
+     * get PIXI class
+     * @prop {PIXI} [PIXI]
+     * @readonly
+     * @memberof RpgClientEngine
+     */
     get PIXI() {
         return PIXI
     }
 
+    /**
+     * get player id of the current player
+     * @prop {string} [playerId]
+     * @readonly
+     * @memberof RpgClientEngine
+     */
     get playerId(): string {
         return this.gameEngine.playerId
+    }
+
+    /**
+     * Finds the game mode from the environment variables sent by the compiler.
+     * Can be used in menus to display options according to type
+     * 
+     * @title Game Type
+     * @prop {string|undefined} [gameType] mmorpg | rpg or undefined if environment variable not found
+     * @readonly
+     * @memberof RpgClientEngine
+     * @since 4.0.0
+     */
+    get gameType(): 'mmorpg' | 'rpg' | undefined {
+        return this.envs?.['VITE_RPG_TYPE']
+    }
+
+    /**
+     * Find out if the game is in production or not, from the environment variables sent by the compiler.
+     * 
+     * @title Game is dev mode
+     * @prop {boolean} [isDev]
+     * @readonly
+     * @memberof RpgClientEngine
+     * @since 4.0.0
+     */
+    get isDev(): boolean {
+        return !this.envs?.['VITE_BUILT']
+    }
+
+    /**
+     * Get the server url. This is the url for the websocket
+     * 
+     * To customize the URL, use the `matchMakerService` configuration
+     * 
+     * @title Server URL
+     * @prop {string} [serverUrl] If empty string, server url is same as client url
+     * @readonly
+     * @memberof RpgClientEngine
+     * @since 4.0.0
+     */
+    get serverUrl(): string {
+        return this._serverUrl
     }
 
     reset() {

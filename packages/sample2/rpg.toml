@@ -1,10 +1,10 @@
 modules = [
-    './main',
-    './other',
     '@rpgjs/default-gui',
     '@rpgjs/plugin-emotion-bubbles',
     '@rpgjs/gamepad',
-    '@rpgjs/chat'
+    '@rpgjs/chat',
+    '@rpgjs/title-screen',
+    './main'
 ]
 
 spritesheetDirectories = ['animations']
@@ -12,3 +12,6 @@ spritesheetDirectories = ['animations']
 [start]
     map = 'map'
     graphic = 'male'
+
+[titleScreen]
+  mongodb = 'mongodb://localhost:27017/rpg'

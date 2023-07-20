@@ -2,24 +2,24 @@ import { RpgPlayer, RpgPlayerHooks, Control, Components, RpgEvent, EventData, Sp
 
 
 @EventData({
-   name: 'EV-1',
-   hitbox: {
-       width: 32,
-       height: 16
-   }
+    name: 'EV-1',
+    hitbox: {
+        width: 32,
+        height: 16
+    }
 })
 class VillagerEvent extends RpgEvent {
-   onInit() {
-       this.speed = Speed.Fastest;
-       this.setGraphic('female');
-       this.through = true;
-       this.throughOtherPlayer = true;
-   }
+    onInit() {
+        this.speed = Speed.Fastest;
+        this.setGraphic('female');
+        this.through = true;
+        this.throughOtherPlayer = true;
+    }
 }
 
 const player: RpgPlayerHooks = {
-    onConnected(player: RpgPlayer) {
-        player.name = 'YourName'
+    onJoinMap(player: RpgPlayer) {
+        console.log(player.name)
         player.setComponentsTop(Components.text('{name}'))
     },
     onInput(player: RpgPlayer, { input }) {
@@ -49,8 +49,6 @@ const player: RpgPlayerHooks = {
                 }).subscribe();
             });
         }
-    },
-    async onJoinMap(player: RpgPlayer) {
     }
 }
 

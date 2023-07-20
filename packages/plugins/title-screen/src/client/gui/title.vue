@@ -21,9 +21,6 @@
 <script lang="ts">
 import { Control } from '@rpgjs/client'
 
-// @ts-ignore
-const isMMORPG = import.meta.env.VITE_RPG_TYPE == 'mmorpg'
-
 const name = 'rpg-title-screen'
 
 export default {
@@ -88,7 +85,7 @@ export default {
             })
         },
         isMMO() {
-            return isMMORPG
+            return this.rpgEngine.gameType == 'mmorpg'
         }
     }
 }
@@ -125,6 +122,7 @@ $title-screen-background: url('./assets/default.png') !default;
     height: 100%;
     display: flex;
     background-size: cover;
+    z-index: 100;
 }
 
 .margin-bottom {
