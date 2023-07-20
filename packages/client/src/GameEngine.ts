@@ -143,6 +143,7 @@ export class GameEngineClient extends RpgCommonGame {
             this._obsObjectsDeleteNotifier$[id].complete()
             this._obsObjects[id].complete()
             delete this._obsObjects[id]
+            delete this._obsObjectsDeleteNotifier$[id]
             this[prop].next(objects)
             return true
         }
