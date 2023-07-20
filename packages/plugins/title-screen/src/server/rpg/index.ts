@@ -16,7 +16,7 @@ import { RpgServer, RpgModule, RpgPlayer } from '@rpgjs/server'
             })
             gui.on('start-game', () => {
                 gui.close()
-                player.changeMap('medieval')
+                player.changeMap(player.server.globalConfig.start.map)
             })
             gui.open()
         }
