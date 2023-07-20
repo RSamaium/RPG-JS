@@ -458,6 +458,10 @@ export class MoveManager {
                 if (!this) {
                     return of(null)
                 }
+                // if map not exists
+                if (!this.getCurrentMap()) {
+                    return of(null)
+                }
                 if (count >= this['nbPixelInTile']) {
                     if (frequence < this.frequency) {
                         frequence++
