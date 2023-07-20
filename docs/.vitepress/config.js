@@ -163,6 +163,7 @@ const pluginMenu = [{
 module.exports = {
   title: 'RPGJS v4 Documentation',
   description: 'Create your RPG or MMORPG in Javascript',
+  ignoreDeadLinks: true,
   themeConfig: {
     search: {
       provider: 'local'
