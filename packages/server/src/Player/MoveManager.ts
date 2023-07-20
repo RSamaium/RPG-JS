@@ -444,7 +444,11 @@ export class MoveManager {
             this._finishRoute = resolve
             routes = routes.map((route: any) => {
                 if (isFunction(route)) {
-                    return route(this, this.getCurrentMap())
+                    const map = this.getCurrentMap()
+                    if (!map) {
+                        return undefined
+                    }
+                    return route(this, map)
                 }
                 return route
             })
@@ -562,7 +566,7 @@ export class MoveManager {
      */
     breakRoutes(force: boolean = false): void {
         if (this._finishRoute) {
-            this.movingSubscription.unsubscribe()
+            this.movingSubscription?.unsubscribe()
             this._finishRoute(force)
         }
     }

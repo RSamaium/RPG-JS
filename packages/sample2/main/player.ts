@@ -1,4 +1,4 @@
-import { RpgPlayerHooks, RpgPlayer, EventData, RpgEvent, Move, RpgWorld, Components, Presets } from '@rpgjs/server'
+import { RpgPlayerHooks, RpgPlayer, EventData, RpgEvent, Move, RpgWorld, Components, Presets, RpgMap } from '@rpgjs/server'
 
 const rand = Math.random()
 
@@ -18,7 +18,7 @@ class MyEvent extends RpgEvent {
          end: 200
       })
       this.recovery({ hp: 1 })
-      //this.infiniteMoveRoute([ Move.tileRandom()])
+      
    }
    onAction() {
       const map = this.getCurrentMap()
@@ -34,11 +34,16 @@ const player: RpgPlayerHooks = {
          y: 400,
          event: MyEvent
       })
-      map?.createDynamicEvent({
-         x: 300,
-         y: 300,
-         event: MyEvent
-      })
+      const event = map?.getEventByName('EV-5')
+      event?.moveTo(player).subscribe()
+   },
+   onLeaveMap(player: RpgPlayer, map: RpgMap) {
+      const event = map.getEventByName('EV-5')
+      event?.stopMoveTo();
+      event?.breakRoutes(true);
+      event?.infiniteMoveRoute([
+         Move.tileRandom()
+      ]);
    },
    onInput(player: RpgPlayer, { input }) {
       if (input == 'action') {
