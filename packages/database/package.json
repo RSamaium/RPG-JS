@@ -13,7 +13,7 @@
   "keywords": [],
   "author": "Samuel Ronce",
   "license": "MIT",
-  "gitHead": "76d1d8a1250e20b01fc4557e129d01c0f15632f0",
+  "gitHead": "84a7c4cd3111c0873474c18dbf3b5fb05b427dd5",
   "devDependencies": {
     "typescript": "^5.0.2"
   },
