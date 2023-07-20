@@ -218,7 +218,6 @@ export function loadClientFiles(modulePath: string, options, config) {
     const importSpriteString = importString(modulePath, 'sprite')
     const importEngine = importString(modulePath, 'client', 'engine')
     const guiFilesString = searchFolderAndTransformToImportString('gui', modulePath, '.vue')
-    const soundFilesString = searchFolderAndTransformToImportString('sounds', modulePath, ['.mp3', '.ogg'])
     let importSpritesheets: ImportImageObject[] = []
 
     if (config.spritesheetDirectories) {
@@ -228,6 +227,19 @@ export function loadClientFiles(modulePath: string, options, config) {
     if (!(config.spritesheetDirectories ?? []).some(dir => dir === 'characters')) {
         importSpritesheets.push(loadSpriteSheet('characters', modulePath, options, false))
     }
+
+    const soundStandaloneFilesString = searchFolderAndTransformToImportString('sounds', modulePath, '.ts')
+    const soundFilesString = searchFolderAndTransformToImportString('sounds', modulePath, ['.mp3', '.ogg'], undefined, {
+        customFilter: (file) => {
+            const tsFile = file.replace(/\.(mp3|ogg)$/, '.ts')
+            if (fs.existsSync(tsFile)) {
+                return false
+            }
+            return true
+        }
+    })
+
+    const hasSounds = !!soundFilesString?.variablesString
 
     // remove directory not found
     importSpritesheets = importSpritesheets.filter(importSpritesheet => importSpritesheet.importString)
@@ -241,6 +253,7 @@ export function loadClientFiles(modulePath: string, options, config) {
         }
         ${guiFilesString?.importString}
         ${soundFilesString?.importString}
+        ${soundStandaloneFilesString?.importString}
 
         ${importSpritesheets.map(importSpritesheet => importSpritesheet.propImagesString).join('\n')}
         
@@ -250,7 +263,7 @@ export function loadClientFiles(modulePath: string, options, config) {
             ${importEngine ? `engine,` : ''}
             scenes: { ${importSceneMapString ? 'map: sceneMap' : ''} },
             gui: [${guiFilesString?.variablesString}],
-            sounds: [${soundFilesString?.variablesString}]
+            sounds: [${soundFilesString?.variablesString}${hasSounds ? ',' : ''}${soundStandaloneFilesString?.variablesString}]
         })
         export default class RpgClientModuleEngine {}
     `

@@ -15,6 +15,11 @@ Just follow the file nomenclature. They will be understood automatically by the 
     * characters
         * [spritesheet-name].(png|jpeg|gif)
         * [spritesheet-name].ts
+    * sounds
+        * [sound-name].(mp3|ogg)
+        * [sound-name].ts (optional)
+    * gui
+        * [gui-name].(vue)
     * database
         * [item-name].ts
     * events

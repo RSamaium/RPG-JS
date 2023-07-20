@@ -1,4 +1,3 @@
-import path from 'path'
 import { KeyboardControls } from './KeyboardControls'
 import { RpgRenderer } from './Renderer'
 import { _initSpritesheet, spritesheets } from './Sprite/Spritesheets'
@@ -27,6 +26,8 @@ import { Sound } from './Sound/Sound'
 import { constructor, ObjectFixtureList, PlayerType, SocketEvents, SocketMethods, Tick } from '@rpgjs/types'
 import { Assets, utils } from 'pixi.js'
 import * as PIXI from 'pixi.js'
+
+const { extractId, isString } = Utils
 
 declare var __RPGJS_PRODUCTION__: boolean;  
 
@@ -164,9 +165,13 @@ export class RpgClientEngine {
         this.gameEngine.renderer = this.renderer
         this.gameEngine.clientEngine = this
 
-        this.addSpriteSheet(this.renderer.options.spritesheets)
-        this.addSound(this.renderer.options.sounds)
-
+        this.addSpriteSheet(this.renderer.options.spritesheets);
+        
+        (this.renderer.options.sounds || []).forEach(sound => {
+            const id: any = isString(sound) ? extractId(sound) : undefined
+            this.addSound(sound, id)
+        })
+        
         if (typeof __RPGJS_PRODUCTION__ != 'undefined' && __RPGJS_PRODUCTION__) {
             if ('serviceWorker' in navigator) {
                 window.addEventListener('load', () => {
