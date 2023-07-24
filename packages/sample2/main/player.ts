@@ -1,28 +1,42 @@
-import { RpgPlayer, RpgPlayerHooks, Control, Components, RpgEvent, EventData, Speed } from '@rpgjs/server'
+import { RpgPlayer, RpgPlayerHooks, Control, Components, RpgEvent } from '@rpgjs/server'
+import { Armor, Weapon } from '@rpgjs/database'
 
-@EventData({
-    name: 'EV-1',
-    hitbox: {
-        width: 32,
-        height: 16
-    }
+@Weapon({
+    name: 'Sword',
+    description: 'Attack 10'
 })
-class VillagerEvent extends RpgEvent {
-    onInit() {
-        this.speed = Speed.Fastest;
-        this.setGraphic('female');
-        this.through = true;
-        this.throughOtherPlayer = true;
+class Sword {
+    onAdd(player: RpgPlayer) {
+    }
+
+    onEquip(player: RpgPlayer, equip: boolean) {
+    }
+
+    onRemove(player: RpgPlayer) {
+    }
+}
+
+@Armor({
+    id: 'shield',
+    name: 'Shield',
+})
+class Shield {
+    onAdd(player: RpgPlayer) {
+    }
+
+    onEquip(player: RpgPlayer, equip: boolean) {
+    }
+
+    onRemove(player: RpgPlayer) {
     }
 }
 
 const player: RpgPlayerHooks = {
-    onJoinMap(player: RpgPlayer) {
+    onConnected(player: RpgPlayer) {
+        player.name = 'YourName'
         player.setComponentsTop(Components.text('{name}'))
-    },
-    onAuth(player: RpgPlayer) {
-        console.log('player auth')
-        return false
+
+        player.gui('inventory').open();
     },
     onInput(player: RpgPlayer, { input }) {
         if (input == Control.Back) {
@@ -30,27 +44,12 @@ const player: RpgPlayerHooks = {
         }
 
         if (input == Control.Action) {
-            const event: any = player.getCurrentMap()?.createDynamicEvent({
-                x: 100,
-                y: 100,
-                event: VillagerEvent,
-            })
-
-            const clear = (event: RpgEvent) => {
-                event.stopMoveTo();
-                event.showAnimation('female', 'stand');
-
-                setTimeout(() => {
-                    event.getCurrentMap()?.removeEvent(event.id);
-                }, 200)
-            }
-
-            Object.entries(event).forEach(([eventId, event]) => {
-                event.moveTo(player, {
-                    onComplete: () => clear(event),
-                }).subscribe();
-            });
+            player.addItem(Sword);
         }
+    },
+    async onJoinMap(player: RpgPlayer) {
+        player.addItem(Sword);
+        player.addItem(Shield);
     }
 }
 

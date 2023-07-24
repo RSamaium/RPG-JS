@@ -55,16 +55,16 @@ export function capitalize(s: unknown): string {
 }
 
 export function arrayEquals(a: any[], b: any[]): boolean {
-  return a.length === b.length && a.every((v, i) => v === b[i])
+    return a.length === b.length && a.every((v, i) => v === b[i])
 }
 
 export function applyMixins(derivedCtor: constructor<any>, baseCtors: constructor<any>[]) {
     baseCtors.forEach((baseCtor) => {
         Object.getOwnPropertyNames(baseCtor.prototype).forEach((name) => {
-        const baseCtorName = Object.getOwnPropertyDescriptor(baseCtor.prototype, name)
-        if (!baseCtorName) {
-            return
-        }
+            const baseCtorName = Object.getOwnPropertyDescriptor(baseCtor.prototype, name)
+            if (!baseCtorName) {
+                return
+            }
             Object.defineProperty(derivedCtor.prototype, name, baseCtorName)
         })
     })
@@ -80,7 +80,7 @@ export function generateUID(): string {
 
 export function createConstructor<T>(...propNames: any[]): T {
     return class {
-        constructor(...propValues){
+        constructor(...propValues) {
             propNames.forEach((name, idx) => {
                 this[name] = propValues[idx]
             })
@@ -140,6 +140,23 @@ export function preciseNow(): number {
     return typeof performance !== 'undefined' ? performance.now() : Date.now()
 }
 
+// https://stackoverflow.com/questions/54733539/javascript-implementation-of-lodash-set-method
+export function set(obj, path, value, onlyPlainObject = false) {
+    if (Object(obj) !== obj) return obj; // When obj is not an object
+    // If not yet an array, get the keys from the string-path
+    if (!Array.isArray(path)) path = path.toString().match(/[^.[\]]+/g) || [];
+    path.slice(0, -1).reduce((a, c, i) => // Iterate all of them except the last one
+        Object(a[c]) === a[c] // Does the key exist and is its value an object?
+            // Yes: then follow that path
+            ? a[c]
+            // No: create the key. Is the next key a potential array-index?
+            : a[c] = Math.abs(path[i + 1]) >> 0 === +path[i + 1]
+                ? onlyPlainObject ? {} : [] // Yes: assign a new array object
+                : {}, // No: assign a new plain object
+        obj)[path[path.length - 1]] = value; // Finally assign the value to the last key
+    return obj; // Return the top-level object to allow chaining
+};
+
 export default {
     random,
     isBrowser,
@@ -164,5 +181,6 @@ export default {
     basename,
     fps2ms,
     preciseNow,
-    hexaToNumber
+    hexaToNumber,
+    set
 }
