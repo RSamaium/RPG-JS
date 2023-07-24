@@ -7,7 +7,6 @@ import { Utils, RpgPlugin, Scheduler, HookServer, RpgCommonGame, DefaultInput } 
 import { Observable } from 'rxjs';
 import { Tick } from '@rpgjs/types';
 import { Actor, Armor, Class, DatabaseTypes, Item, Skill, State, Weapon } from '@rpgjs/database';
-import { RpgMap } from './Game/Map';
 
 export class RpgServerEngine {
 
@@ -335,6 +334,10 @@ export class RpgServerEngine {
      */
     get sceneMap(): SceneMap {
         return this.getScene<SceneMap>(SceneMap.id)
+    }
+
+    get module() {
+        return RpgPlugin
     }
 
     sendToPlayer(currentPlayer, eventName, data) {

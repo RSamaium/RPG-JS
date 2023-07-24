@@ -755,6 +755,10 @@ export class RpgClientEngine {
         return this._serverUrl
     }
 
+    get module() {
+        return RpgPlugin
+    }
+
     reset() {
         this.subscriptionWorld.unsubscribe()
         this.world.reset()

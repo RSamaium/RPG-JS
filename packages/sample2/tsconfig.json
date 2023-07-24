@@ -25,6 +25,7 @@
     },
     "include": [
         ".",
+        "node_modules/@rpgjs/**/*.d.ts",
         "node_modules/@rpgjs/compiler/*.d.ts"
     ]
 }

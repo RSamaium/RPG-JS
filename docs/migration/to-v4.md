@@ -132,6 +132,7 @@ document.addEventListener('DOMContentLoaded', function() {
     "include": [
         "src", 
         "index.d.ts", 
+        "node_modules/@rpgjs/**/*.d.ts",
         "node_modules/@rpgjs/compiler/index.d.ts"
     ]
  }

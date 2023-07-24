@@ -194,6 +194,48 @@ export interface RpgPlayerHooks {
 }
 
 export interface RpgServer {
+    /**
+     * Add hooks to the player or engine. All modules can listen to the hook
+     * 
+     * @prop { { player: string[], engine: string[] } } [hooks]
+     * @memberof RpgServer
+     * @since 4.0.0
+     * @stability 1
+     * @example
+     * 
+     * ```ts
+     * import { RpgServer, RpgModule } from '@rpgjs/server'
+     * 
+     * @RpgModule<RpgServer>({
+     *     hooks: {
+     *        player: ['onAuth']
+     *    }
+     * })
+     * class RpgServerEngine { }
+     * ```
+     * 
+     * Emit the hook:
+     * 
+     * ```ts
+     * server.module.emit('server.player.onAuth', player)
+     * ```
+     * 
+     * And listen to the hook:
+     * 
+     * ```ts
+     * import { RpgPlayerHooks, RpgPlayer } from '@rpgjs/server'
+     * 
+     * const player: RpgPlayerHooks = {
+     *    onAuth(player: RpgPlayer) {
+     *       console.log('player is authenticated') 
+     *   }
+     * }
+     * ```
+     */
+    hooks?: {
+        player?: string[],
+        engine?: string[]
+    }
 
     /**
      * Adding sub-modules

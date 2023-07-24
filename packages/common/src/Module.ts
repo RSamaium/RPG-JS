@@ -19,6 +19,9 @@ export type ModuleType = ModuleSide | [ModuleSide, {
 
 export function RpgModule<T>(options: T) {
     return (target) => {
+        if ((options as any).hooks) {
+            target.hooks = (options as any).hooks
+        }
         for (let key in options) {
             target.prototype[key] = options[key]
         }
@@ -28,8 +31,10 @@ export function RpgModule<T>(options: T) {
 export async function loadModules(modules, obj, middleware?: Function): Promise<{ playerProps: any }> {
     const { side, relations } = obj
     let playerProps = {}
-    for (let module of modules) {
-        if (!module) continue
+    let hooks = {}
+
+    const getModuleClass = (module) => {
+        if (!module) return null
         let plug: any = []
         if (!isArray(module)) {
             plug = [module]
@@ -39,7 +44,32 @@ export async function loadModules(modules, obj, middleware?: Function): Promise<
         }
         const [moduleClassSides, options] = plug
         const moduleClass = moduleClassSides[side]
-        if (!moduleClass) continue
+        if (!moduleClass) return null
+        return {
+            moduleClass,
+            options
+        }
+    }
+
+    for (let module of modules) {
+        const moduleObject = getModuleClass(module)
+        if (!moduleObject) continue
+        const { moduleClass } = moduleObject
+        if (moduleClass.hooks) {
+            for (let key in moduleClass.hooks) {
+                if (!hooks[key]) hooks[key] = []
+                hooks[key] = [
+                    ...hooks[key],
+                    ...moduleClass.hooks[key]
+                ]
+            }
+        }
+    }
+
+    for (let module of modules) {
+        const moduleObject = getModuleClass(module)
+        if (!moduleObject) continue
+        const { moduleClass, options } = moduleObject
         let mod
         if (options && side == Side.Client && options[Side.Server]) {
             warning(`Data that may be sensitive (normally visible only on the server side) are made optional and visible on the client side.\nInstead, import the configuration with the server! flag into an import. Example: \n\nimport config from 'server!./config\n\n'`, options[Side.Server])
@@ -85,11 +115,16 @@ export async function loadModules(modules, obj, middleware?: Function): Promise<
             RpgPlugin.on(HookClient.AddGui, () => gui)
         }
         const player = side == Side.Server ? mod.player : mod.sprite
-        const loadRelations = (hook, relatioName) => {
+        const loadRelations = (hook, relationName) => {
             if (hook) {
-                for (let method in relations[relatioName]) {
-                    const hookName = relations[relatioName][method]
+                for (let method in relations[relationName]) {
+                    const hookName = relations[relationName][method]
                     if (hook[method]) RpgPlugin.on(hookName, hook[method])
+                }
+            }
+            if (hooks[relationName]) {
+                for (let methodName of hooks[relationName]) {
+                    if (hook[methodName]) RpgPlugin.on(side + '.' + relationName + '.' + methodName, hook[methodName])
                 }
             }
         }

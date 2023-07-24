@@ -8,6 +8,10 @@ export class EventEmitter {
     private listenersOnce: {
         [eventName: string]: Function
     } = {}
+    
+    has(name: string): boolean {
+        return !!this.listeners[name] || !!this.listenersOnce[name]
+    }
 
     once(name: string, cb: Function): EventEmitter {
         this.listenersOnce[name] = cb

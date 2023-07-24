@@ -38,11 +38,11 @@ export default {
         }
     },
     mounted() {
-        const { screenTitle } = this.rpgEngine.globalConfig
-        if (screenTitle) {
-            this.title = screenTitle.title
-            if (screenTitle.music) {
-                this.rpgSound.get(screenTitle.music).play()
+        const { titleScreen } = this.rpgEngine.globalConfig
+        if (titleScreen) {
+            this.title = titleScreen.title
+            if (titleScreen.music) {
+                this.rpgSound.get(titleScreen.music).play()
             }
         }
         this.obsKeyPress = this.rpgKeypress.subscribe(({ control }) => {

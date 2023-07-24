@@ -1,11 +1,11 @@
 export { default as entryPoint } from './entry-point'
-export { 
-    Direction, 
-    Input, 
-    Control, 
-    RpgPlugin, 
-    HookServer, 
-    HookClient, 
+export {
+    Direction,
+    Input,
+    Control,
+    RpgPlugin,
+    HookServer,
+    HookClient,
     RpgModule,
     RpgShape,
     ShapePositioning,
@@ -26,3 +26,4 @@ export { SceneMap as RpgSceneMap, RpgClassMap } from './Scenes/Map'
 export { RpgMatchMaker } from './MatchMaker'
 export { IStoreState } from './Interfaces/StateStore'
 export { Components } from './Player/ComponentManager'
+export { Gui } from './Gui/Gui'

@@ -27,7 +27,7 @@ RPGJS was created several years ago, with the aim of creating an RPG on the brow
 
 **Server-Side**
 
-- NodeJS 14
+- NodeJS 18
 
 ## Installation
 

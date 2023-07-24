@@ -32,7 +32,8 @@ const files = [
     ...open('packages/client/src'),
     ...open('packages/tiled/src/classes'),
     ...open('packages/common/src/gui'),
-    ...open('packages/testing/src')
+    ...open('packages/testing/src'),
+    ...open('packages/plugins/title-screen')
 ]
 
 const types = [

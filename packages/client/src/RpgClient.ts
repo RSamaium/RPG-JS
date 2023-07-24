@@ -170,6 +170,50 @@ export interface RpgSceneMapHooks extends RpgSceneHooks<SceneMap> {
 
 export interface RpgClient {
     /**
+     * Add hooks to the player or engine. All modules can listen to the hook
+     * 
+     * @prop { { player: string[], engine: string[] } } [hooks]
+     * @memberof RpgClient
+     * @since 4.0.0
+     * @stability 1
+     * @example
+     * 
+     * ```ts
+     * import { RpgClient, RpgModule } from '@rpgjs/server'
+     * 
+     * @RpgModule<RpgClient>({
+     *     hooks: {
+     *        player: ['onAuth']
+     *    }
+     * })
+     * class RpgClientEngine { }
+     * ```
+     * 
+     * Emit the hook:
+     * 
+     * ```ts
+     * client.module.emit('client.player.onAuth', sprite)
+     * ```
+     * 
+     * And listen to the hook:
+     * 
+     * ```ts
+     * import { RpgClientEngineHooks, RpgSprite } from '@rpgjs/server'
+     * 
+     * const sprite: RpgSpriteHooks = {
+     *    onAuth(player: RpgSprite) {
+     *       console.log('player is authenticated') 
+     *   }
+     * }
+     * ```
+     */
+    hooks?: {
+        engine?: string[],
+        player?: string[],
+        sceneMap?: string[],
+    }
+
+    /**
      * Adding sub-modules
      * 
      * @prop { { client: null | Function, server: null | Function }[]} [imports]

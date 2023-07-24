@@ -1,6 +1,5 @@
 import { RpgPlayer, RpgPlayerHooks, Control, Components, RpgEvent, EventData, Speed } from '@rpgjs/server'
 
-
 @EventData({
     name: 'EV-1',
     hitbox: {
@@ -19,8 +18,11 @@ class VillagerEvent extends RpgEvent {
 
 const player: RpgPlayerHooks = {
     onJoinMap(player: RpgPlayer) {
-        console.log(player.name)
         player.setComponentsTop(Components.text('{name}'))
+    },
+    onAuth(player: RpgPlayer) {
+        console.log('player auth')
+        return false
     },
     onInput(player: RpgPlayer, { input }) {
         if (input == Control.Back) {

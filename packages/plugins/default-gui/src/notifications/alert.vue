@@ -116,7 +116,7 @@ $notification-font-family: 'lato' !default;
     position: absolute;
     width: 100%;
     overflow: hidden;
-    z-index: 100;
+    z-index: 200;
 
     &.bottom {
         height: 100%;

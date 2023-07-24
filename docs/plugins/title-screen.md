@@ -34,6 +34,12 @@ In MMORPG, the player must create an account and log in with his account to star
 
 To make a save, run the method [player.save()](/commands/common.html#save-progress). The method has been overloaded to store the data in MongoDB
 
+### Use Hooks
+
+You have two additional hooks you can use on the player:
+
+<!--@include: ../api/RpgPluginTitleScreen.md-->
+
 ## Custom
 
 **Change the background**
@@ -53,8 +59,8 @@ In `rpg.toml`:
 
 ```toml
 [titleScreen]
-    title = rpgConfig.name,
-    music = '<sound id>'*
+    title = 'My Title',
+    music = '<sound id>'
 ```
 
 - We get the game name from the JSON file
