@@ -48,6 +48,8 @@ export class SceneMap {
 
     /**
      * Returns an array of RpgClassMap objects that represent maps with static properties.
+     * 
+     * @method sceneMap.getMaps()
      * @returns {RpgClassMap<RpgMap>[]} Array of RpgClassMap objects.
      * @since 4.0.0
      * @example
