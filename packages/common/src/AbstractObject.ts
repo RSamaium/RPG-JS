@@ -305,6 +305,7 @@ export class AbstractObject {
 
     /** @internal */
     async triggerCollisionWith(type?: number) {
+        let doChanges = false
         for (let collisionWith of this.collisionWith) {
             if (collisionWith.isDestroyed) continue
             if (collisionWith instanceof RpgShape) {
@@ -313,11 +314,18 @@ export class AbstractObject {
             }
             else {
                 if (type == AbstractObject.ACTIONS.ACTION) {
-                    if ('onAction' in collisionWith) await collisionWith.execMethod('onAction', [this])
+                    if ('onAction' in collisionWith) {
+                        await collisionWith.execMethod('onAction', [this])
+                        doChanges = true
+                    }
                 }
-                else if ('onPlayerTouch' in collisionWith) await collisionWith.execMethod('onPlayerTouch', [this])
+                else if ('onPlayerTouch' in collisionWith) {
+                    await collisionWith.execMethod('onPlayerTouch', [this])
+                    doChanges = true
+                }
             }
         }
+        if (this.syncChanges && doChanges) this.syncChanges()
     }
 
     /** @internal */
@@ -912,10 +920,6 @@ export class AbstractObject {
 
     /** @internal */
     async execMethod(methodName: string, methodData?, instance?) { }
-    /** @internal */
-    onAction() { }
-    /** @internal */
-    onPlayerTouch() { }
 }
 
 export interface AbstractObject {
@@ -925,4 +929,5 @@ export interface AbstractObject {
     autoChangeMap?(nextPosition: Position): Promise<boolean>
     execMethod(methodName: string, methodData?, instance?)
     changeMap(mapName: string)
+    syncChanges()
 }
