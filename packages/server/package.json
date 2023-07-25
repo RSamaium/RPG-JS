@@ -38,7 +38,7 @@
     "pretty-error": "^4.0.0",
     "rxjs": "7.8.0",
     "sat": "^0.9.0",
-    "simple-room": "^2.3.1",
+    "simple-room": "^2.3.2",
     "socket.io": "^4.6.1"
   },
   "gitHead": "11ef47d2e4c982de49aa6c155ab43bf4695d142e",

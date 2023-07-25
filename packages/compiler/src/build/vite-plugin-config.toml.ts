@@ -137,7 +137,7 @@ export function loadServerFiles(modulePath: string, options, config) {
     const worldFilesString = searchFolderAndTransformToImportString('worlds', modulePath, '.world')
     const databaseFilesString = searchFolderAndTransformToImportString('database', modulePath, '.ts')
     const eventsFilesString = searchFolderAndTransformToImportString('events', modulePath, '.ts')
-
+    const hitbox = config.start?.hitbox
     const code = `
         import { RpgServer, RpgModule } from '@rpgjs/server'
         ${mapFilesString?.importString}
@@ -153,7 +153,7 @@ export function loadServerFiles(modulePath: string, options, config) {
                 if (_lastConnectedCb) await _lastConnectedCb(player)
                 if (!player.server.module.has('server.player.onAuth')) {
                     ${config.start?.graphic ? `player.setGraphic('${config.start?.graphic}')` : ''}
-                    ${config.start?.hitbox ? `player.setHitbox(...${config.start?.hitbox})` : ''}
+                    ${hitbox ? `player.setHitbox(${hitbox[0], hitbox[1]})` : ''}
                     ${config.startMap ? `await player.changeMap('${config.startMap}')` : ''}
                 }
             }` : ''

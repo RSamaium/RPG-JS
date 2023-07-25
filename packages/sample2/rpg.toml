@@ -1,5 +1,6 @@
 modules = [
     './main',
+    './other',
     '@rpgjs/default-gui',
     '@rpgjs/plugin-emotion-bubbles',
     '@rpgjs/gamepad',
@@ -11,6 +12,7 @@ spritesheetDirectories = ['animations']
 [start]
     map = 'map'
     graphic = 'male'
+    hitbox = [32, 32]
 
 [titleScreen]
   mongodb = 'mongodb://localhost:27017/rpg'
