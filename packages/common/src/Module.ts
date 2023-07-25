@@ -116,11 +116,10 @@ export async function loadModules(modules, obj, middleware?: Function): Promise<
         }
         const player = side == Side.Server ? mod.player : mod.sprite
         const loadRelations = (hook, relationName) => {
-            if (hook) {
-                for (let method in relations[relationName]) {
-                    const hookName = relations[relationName][method]
-                    if (hook[method]) RpgPlugin.on(hookName, hook[method])
-                }
+            if (!hook) return
+            for (let method in relations[relationName]) {
+                const hookName = relations[relationName][method]
+                if (hook[method]) RpgPlugin.on(hookName, hook[method])
             }
             if (hooks[relationName]) {
                 for (let methodName of hooks[relationName]) {
