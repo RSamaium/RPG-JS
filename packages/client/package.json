@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/client",
-  "version": "4.0.0-rc.3",
+  "version": "4.0.0-rc.4",
   "description": "",
   "main": "lib/index.js",
   "types": "./lib/index.d.ts",
@@ -16,7 +16,7 @@
   "license": "MIT",
   "dependencies": {
     "@pixi/tilemap": "^4.0.0",
-    "@rpgjs/common": "^4.0.0-rc.3",
+    "@rpgjs/common": "^4.0.0-rc.4",
     "@rpgjs/tiled": "^4.0.0-rc.3",
     "@rpgjs/types": "^4.0.0-rc.3",
     "@types/howler": "2.2.7",
