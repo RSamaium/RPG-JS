@@ -17,8 +17,8 @@
   "dependencies": {
     "@pixi/tilemap": "^4.0.0",
     "@rpgjs/common": "^4.0.0-rc.4",
-    "@rpgjs/tiled": "^4.0.0-rc.3",
-    "@rpgjs/types": "^4.0.0-rc.3",
+    "@rpgjs/tiled": "^4.0.0-rc.4",
+    "@rpgjs/types": "^4.0.0-rc.4",
     "@types/howler": "2.2.7",
     "howler": "2.2.3",
     "lodash.get": "^4.4.2",
@@ -29,7 +29,7 @@
     "simple-room-client": "^2.0.5",
     "vue": "^3.2.47"
   },
-  "gitHead": "11ef47d2e4c982de49aa6c155ab43bf4695d142e",
+  "gitHead": "5abe6ca78be96524d74a052a230f2315c900ddee",
   "devDependencies": {
     "@types/css-font-loading-module": "^0.0.8",
     "@types/node": "^18.16.0",

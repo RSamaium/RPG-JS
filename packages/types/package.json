@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/types",
-  "version": "4.0.0-rc.3",
+  "version": "4.0.0-rc.4",
   "description": "",
   "main": "lib/index.js",
   "types": "./lib/index.d.ts",
@@ -21,5 +21,5 @@
     "rxjs": "^7.8.1"
   },
   "type": "module",
-  "gitHead": "11ef47d2e4c982de49aa6c155ab43bf4695d142e"
+  "gitHead": "5abe6ca78be96524d74a052a230f2315c900ddee"
 }

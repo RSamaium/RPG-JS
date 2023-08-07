@@ -144,7 +144,6 @@ export class RpgServerEngine {
      * class
      * state
      * actor
-     * 
      * @since 3.0.0-beta.4
      * @example
      * ```ts
@@ -164,6 +163,7 @@ export class RpgServerEngine {
      *      name: 'Potion',
      *      description: 'Gives 100 HP',
      * }, 'item')
+     * ```
      * 
      * @returns {void}
      * @memberof RpgServerEngine

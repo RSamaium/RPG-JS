@@ -27,9 +27,9 @@
   "license": "MIT",
   "dependencies": {
     "@rpgjs/common": "^4.0.0-rc.4",
-    "@rpgjs/database": "^4.0.0-rc.3",
-    "@rpgjs/tiled": "^4.0.0-rc.3",
-    "@rpgjs/types": "^4.0.0-rc.3",
+    "@rpgjs/database": "^4.0.0-rc.4",
+    "@rpgjs/tiled": "^4.0.0-rc.4",
+    "@rpgjs/types": "^4.0.0-rc.4",
     "axios": "^1.3.6",
     "cors": "^2.8.5",
     "express": "^4.18.2",
@@ -41,7 +41,7 @@
     "simple-room": "^2.3.2",
     "socket.io": "^4.6.1"
   },
-  "gitHead": "11ef47d2e4c982de49aa6c155ab43bf4695d142e",
+  "gitHead": "5abe6ca78be96524d74a052a230f2315c900ddee",
   "devDependencies": {
     "typescript": "^5.0.4"
   },
