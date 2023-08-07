@@ -4,11 +4,8 @@ modules = [
     '@rpgjs/default-gui',
     '@rpgjs/plugin-emotion-bubbles',
     '@rpgjs/gamepad',
-    '@rpgjs/chat',
-    '@rpgjs/title-screen'
+    '@rpgjs/chat'
 ]
-
-spritesheetDirectories = ['animations']
 
 [start]
     map = 'map'

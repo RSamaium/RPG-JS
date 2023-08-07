@@ -230,6 +230,18 @@ export function loadClientFiles(modulePath: string, options, config) {
         importSpritesheets.push(loadSpriteSheet('characters', modulePath, options, false))
     }
 
+    const SPRITESHEET_DIRNAME = 'spritesheets'
+    const spritesheetDir = path.join(modulePath, SPRITESHEET_DIRNAME)
+    if (fs.existsSync(spritesheetDir)) {
+        const dirents = fs.readdirSync(spritesheetDir, { withFileTypes: true });
+
+        for (const dirent of dirents) {
+            if (!dirent.isDirectory()) continue
+            importSpritesheets.push(loadSpriteSheet(path.join(SPRITESHEET_DIRNAME, dirent.name), modulePath, options))
+        }
+    }
+
+
     const soundStandaloneFilesString = searchFolderAndTransformToImportString('sounds', modulePath, '.ts')
     const soundFilesString = searchFolderAndTransformToImportString('sounds', modulePath, ['.mp3', '.ogg'], undefined, {
         customFilter: (file) => {

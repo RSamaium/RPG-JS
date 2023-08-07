@@ -12,9 +12,10 @@ Just follow the file nomenclature. They will be understood automatically by the 
 
 ```
 * [module-name]
-    * characters
-        * [spritesheet-name].(png|jpeg|gif)
-        * [spritesheet-name].ts
+    * spritesheets
+        * [directory-name]
+            * [spritesheet-name].(png|jpeg|gif)
+            * [spritesheet-name].ts
     * sounds
         * [sound-name].(mp3|ogg)
         * [sound-name].ts (optional)
@@ -66,14 +67,18 @@ He doesn't have to have all these files. The minimum is
 :::
 
 
-::: tip Characters Folder
-By default, spritesheets are found in characters but you can create other folders 
+::: tip Spritesheets Folder
+In spritesheets, each folder must have a single .ts file defining size and animations
+
+You can also search for spritesheets in folders defined by `spritesheetDirectories` in rpg.toml
 
 At this point, add in `rpg.toml`:
 
 ```toml
-spritesheetDirectories = ['animations'] # others directories
+spritesheetDirectories = ['my_spritesheets_directory'] # others directories
 ```
+
+> It concerns all modules
 :::
 
 ::: tip
@@ -82,13 +87,49 @@ In the case of spritesheets, note that the file names also become the identifier
 Example:
 
 * [module-name]
-    * characters
-        * hero.png
-        * spritesheet.ts
+    * spritesheets
+        * characters
+            * hero.png
+            * spritesheet.ts
 
 And in code:
 
 ```ts
 player.setGraphic('hero') // hero is both the id and the file name (hero.png)
 ```
+:::
+
+### Without file detection
+
+```
+* [module-name]
+    * index.ts
+    * server
+        * index.ts
+    * client
+        * index.ts
+* index.html
+* package.json
+* tsconfig.json
+* rpg.toml
+```
+
+`index.ts` may contain this:
+
+```ts
+import client from 'client!./client'
+import server from 'server!./server'
+
+export default {
+    client,
+    server
+}
+```
+
+It's up to you to define the contents of the client and server
+
+More: [Create Module](/guide/create-module.html)
+
+::: tip
+This structure remains interesting if you want to create a plugin to share with the community.
 :::
