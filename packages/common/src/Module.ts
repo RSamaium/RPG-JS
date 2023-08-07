@@ -123,7 +123,9 @@ export async function loadModules(modules, obj, middleware?: Function): Promise<
             }
             if (hooks[relationName]) {
                 for (let methodName of hooks[relationName]) {
-                    if (hook[methodName]) RpgPlugin.on(side + '.' + relationName + '.' + methodName, hook[methodName])
+                    const hookName = side + '.' + relationName + '.' + methodName
+                    RpgPlugin.customHooks[hookName] = true
+                    if (hook[methodName]) RpgPlugin.on(hookName, hook[methodName])
                 }
             }
         }

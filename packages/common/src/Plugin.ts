@@ -59,6 +59,14 @@ export enum HookClient {
  * @deprecated
  */
 export class PluginSystem extends EventEmitter {
+    customHooks: {
+        [key: string]: boolean
+    } = {}
+
+    customHookExists(name: string): boolean {
+        return this.customHooks[name]
+    }
+    
     private loadPlugins(plugins: Plugin[], shared: any, type: string) {
         if (!plugins) return
         for (let plugin of plugins) {

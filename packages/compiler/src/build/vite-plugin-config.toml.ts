@@ -151,9 +151,9 @@ export function loadServerFiles(modulePath: string, options, config) {
         ${modulesCreated.length == 1 ? `const _lastConnectedCb = player.onConnected
             player.onConnected = async (player) => {
                 if (_lastConnectedCb) await _lastConnectedCb(player)
-                if (!player.server.module.has('server.player.onAuth')) {
+                if (!player.server.module.customHookExists('server.player.onAuth')) {
                     ${config.start?.graphic ? `player.setGraphic('${config.start?.graphic}')` : ''}
-                    ${hitbox ? `player.setHitbox(${hitbox[0], hitbox[1]})` : ''}
+                    ${hitbox ? `player.setHitbox(${hitbox[0]}, ${hitbox[1]})` : ''}
                     ${config.startMap ? `await player.changeMap('${config.startMap}')` : ''}
                 }
             }` : ''
