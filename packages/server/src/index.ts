@@ -27,3 +27,4 @@ export { RpgMatchMaker } from './MatchMaker'
 export { IStoreState } from './Interfaces/StateStore'
 export { Components } from './Player/ComponentManager'
 export { Gui } from './Gui/Gui'
+export { ItemModel } from './models/Item';
