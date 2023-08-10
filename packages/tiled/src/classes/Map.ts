@@ -325,7 +325,9 @@ export class MapClass extends TiledProperties {
     private mapTilesets() {
         this.tilesets = this.tilesets.map(tileset => {
             if (bufferTilesets[tileset.name]) {
-                return bufferTilesets[tileset.name]
+                const instance = bufferTilesets[tileset.name]
+                instance.firstgid = tileset.firstgid
+                return instance
             }
             const _tileset = new Tileset(tileset)
             bufferTilesets[_tileset.name] = _tileset
