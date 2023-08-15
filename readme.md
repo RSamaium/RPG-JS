@@ -70,9 +70,17 @@ Do you need help? Go to [https://community.rpgjs.dev](https://community.rpgjs.de
 
 ## Demo 
 
-[Demo](https://rpgjs.dev)
+[Demo](https://demo.rpgjs.dev)
 
 ![Demo](/docs/demo.png)
+
+## Other examples
+
+- https://game.chylo.pl/ (Author: https://github.com/dominx99)
+
+## Resources
+
+- Use LPC (Liberated Pixel Cup) Spritesheets: https://github.com/dominx99/rpgjs-tutorial#lpc-liberated-pixel-cup
 
 ## Documentation 
 
