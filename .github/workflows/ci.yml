@@ -37,8 +37,6 @@ jobs:
         cache: 'npm'
     - run: npm i
     - run: npm run build
-    - name: Bump version using conventional commits
-      run: 
     - name: "Version and publish" 
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
