@@ -428,7 +428,7 @@ export class RpgMap extends RpgCommonMap {
         }
         else {
             event = obj.event
-            position = { x: obj.x, y: obj.y, z: 0 }
+            position = { x: obj.x, y: obj.y, z: obj.z ?? 0 }
         }
 
         // The event is ignored if the mode is different.

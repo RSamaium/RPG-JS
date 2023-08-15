@@ -3,10 +3,10 @@ name: RPG CI
 on:
   push:
     branches:
-      - v4
+      - '*'
   pull_request:
     branches:
-      - v4
+      - '*'
 
 jobs:
   tests:
@@ -23,3 +23,23 @@ jobs:
         cache: 'npm'
     - run: npm i
     - run: npm test
+
+  build_and_publish:
+    needs: tests
+    if: github.ref == 'refs/heads/v4'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Use Node.js 18.x
+      uses: actions/setup-node@v3
+      with:
+        node-version: 18.x
+        cache: 'npm'
+    - run: npm i
+    - run: npm run build
+    - name: Bump version using conventional commits
+      run: npx lerna version --conventional-commits --no-push --yes
+    - name: Publish to NPM
+      run: npm run lerna:actions:publish
+      env:
+        NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
