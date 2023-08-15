@@ -38,8 +38,14 @@ jobs:
     - run: npm i
     - run: npm run build
     - name: Bump version using conventional commits
-      run: npx lerna version --conventional-commits --no-push --yes
-    - name: Publish to NPM
-      run: npm run lerna:actions:publish
+      run: 
+    - name: "Version and publish" 
       env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      run: |
+        git config user.name "${{ github.actor }}"
+        git config user.email "${{ github.actor}}@users.noreply.github.com"
+
+        npx lerna version --conventional-commits --no-push --yes
+        npx lerna publish from-git --no-private --yes
