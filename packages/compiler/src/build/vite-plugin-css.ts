@@ -26,17 +26,17 @@ export default function cssPlugin(config: Config): Plugin {
             const themeCss = resolve(process.cwd(), 'src/config/client/theme.scss')
             const themeCssRoot = resolve(process.cwd(), 'theme.scss')
             if (fs.existsSync(themeCss)) {
-                additionalData += `@import "${themeCss}";`
+                additionalData += `@import "@/config/client/theme.scss";`
             }
             else if (fs.existsSync(themeCssRoot)) {
-                additionalData += `@import "${themeCssRoot}";`
+                additionalData += `@import "@/../theme.scss";`
             }
             else if (config.themeCss) {
                 // exception if not find file
                 if (!fs.existsSync(resolve(process.cwd(), config.themeCss))) {
                     throw new Error(`File ${config.themeCss} not found`)
                 }
-                additionalData += `@import "@/${config.themeCss}";`
+                additionalData += `@import "@/../${config.themeCss}";`
             }
             else {
                 additionalData += DEFAULT_THEME
