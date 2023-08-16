@@ -44,7 +44,7 @@ function installModule(moduleName: string): Promise<void> {
     // Handle the close event
     installProcess.on('close', (code) => {
       if (code === 0) {
-        warn(`Module '${moduleName}' has been successfully installed.`);
+        info(`Module '${moduleName}' has been successfully installed.`);
         resolve();
       } else {
         reject(new Error(`NPM install process exited with code ${code}`));
