@@ -37,13 +37,16 @@ jobs:
         cache: 'npm'
     - run: npm i
     - run: npm run build
+    - name: Configure NPM Registry
+      run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
+      env:
+        NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
     - name: "Version and publish" 
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       run: |
         git config user.name "${{ github.actor }}"
         git config user.email "${{ github.actor}}@users.noreply.github.com"
 
         npx lerna version --conventional-commits --no-push --yes
-        npx lerna publish from-git --no-private --yes
+        npx lerna publish from-git --no-private --loglevel verbose --yes
