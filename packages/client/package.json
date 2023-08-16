@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/client",
-  "version": "4.0.0-rc.4",
+  "version": "4.0.0-rc.5",
   "description": "",
   "main": "lib/index.js",
   "types": "./lib/index.d.ts",
@@ -16,9 +16,9 @@
   "license": "MIT",
   "dependencies": {
     "@pixi/tilemap": "^4.0.0",
-    "@rpgjs/common": "^4.0.0-rc.4",
-    "@rpgjs/tiled": "^4.0.0-rc.4",
-    "@rpgjs/types": "^4.0.0-rc.4",
+    "@rpgjs/common": "^4.0.0-rc.5",
+    "@rpgjs/tiled": "^4.0.0-rc.5",
+    "@rpgjs/types": "^4.0.0-rc.5",
     "@types/howler": "2.2.7",
     "howler": "2.2.3",
     "lodash.get": "^4.4.2",
