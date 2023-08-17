@@ -172,7 +172,7 @@ export function loadServerFiles(modulePath: string, options, config) {
     return code
 }
 
-export function loadSpriteSheet(directoryName: string, modulePath: string, options, warning = true): ImportImageObject {
+export function loadSpriteSheet(directoryName: string, modulePath: string, options, warning = false): ImportImageObject {
     const importSprites = searchFolderAndTransformToImportString(directoryName, modulePath, '.ts')
     let propImagesString = ''
     if (importSprites?.importString) {
@@ -241,7 +241,6 @@ export function loadClientFiles(modulePath: string, options, config) {
         }
     }
 
-
     const soundStandaloneFilesString = searchFolderAndTransformToImportString('sounds', modulePath, '.ts')
     const soundFilesString = searchFolderAndTransformToImportString('sounds', modulePath, ['.mp3', '.ogg'], undefined, {
         customFilter: (file) => {
@@ -301,15 +300,17 @@ export function createModuleLoad(id: string, variableName: string, modulePath: s
     if (fs.existsSync(packageJson)) {
         const { main: entryPoint } = JSON.parse(fs.readFileSync(packageJson, 'utf-8'))
         if (entryPoint) {
+            const mod = toPosix(path.join(id, entryPoint))
             return `
-                import mod from '${path.join(modulePathId, entryPoint)}'
+                import mod from '${mod}'
                 export default mod
             `
         }
     }
     else if (fs.existsSync(indexFile)) {
+        const mod = extractProjectPath(toPosix(indexFile), id)
         return `
-            import mod from '${indexFile}'
+            import mod from '${mod}'
             export default mod
         `
     }
