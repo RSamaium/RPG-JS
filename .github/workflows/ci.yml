@@ -34,16 +34,13 @@ jobs:
       uses: actions/setup-node@v3
       with:
         node-version: 18.x
+        registry-url: 'https://registry.npmjs.org'
         cache: 'npm'
-    - run: npm i
     - run: npm run build
-    - name: Configure NPM Registry
-      run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
-      env:
-        NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
     - name: "Version and publish" 
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       run: |
         git config user.name "${{ github.actor }}"
         git config user.email "${{ github.actor}}@users.noreply.github.com"
