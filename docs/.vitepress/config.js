@@ -141,6 +141,7 @@ const guideMenu = [{
   collapsed: false,
   items: [
     { text: "Creating a Module", link: "/guide/create-module" },
+    { text: "Creating a plugin", link: "/advanced/create-plugin" },
     { text: "Using Agones for Game Server Hosting", link: "/advanced/agones" },
     { text: "Optimizing Performance", link: "/guide/performance" }
   ]

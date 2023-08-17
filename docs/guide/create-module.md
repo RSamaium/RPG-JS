@@ -1,27 +1,19 @@
-# Create module
+# Use Module structure
 
 ## Why ?
 
-What is the point of creating a module? The main reason is to structure a project. Your game must be modular.
+If you don't want to use the autoload world, or you are using RPGJS version 3, or you are creating a plugin, here's how to create a module
 
-A module must be a system of your game. The start of the game itself is a module named main
+When you create a module, create a folder. Here is the structure:
 
-Let's take an example of modules
-- A combat system
-- A menu or set of menus
-- Maps representing a world
-- A set of graphics on a theme
-
-When you create a module, create a folder in the <PathTo to="modDir" /> folder. Here is the structure:
-
-* src
-    * modules
-        * mymodule
-            * client
-                * index.ts
-            * server
-                * index.ts
-            * index.ts
+```
+mymodule
+    ├── client
+    │   └── index.ts
+    ├── server
+    │   └── index.ts
+    ├── index.ts
+```
 
 - the client folder will contain the module for the client part (spritesheets, sprites hooks, etc.)
 - the server, will contain the server part (maps, player hooks, events, etc.)
@@ -47,6 +39,9 @@ We can also use other loaders:
 - `development!`
 - `production!`
 
+::: tip
+If you are not using the automatic loading system
+
 Then put the module in the <PathTo to="moduleIndex" /> file:
 
 ```ts
@@ -56,10 +51,12 @@ export default [
     mymodule
 ]
 ```
+:::
+
 
 ## Create the client-side module
 
-In the <PathTo to="modDir" file="mymodule/client/index.ts" /> file, create a module with the `@RpgModule` decorator:
+In the `mymodule/client/index.ts` file, create a module with the `@RpgModule` decorator:
 
 ```ts
 import { RpgClient, RpgModule } from '@rpgjs/client'
@@ -81,7 +78,7 @@ In the module, you can specify the sprite, the scene map or the graphic contents
 
 ## Create the server side module
 
-In the <PathTo to="modDir" file="mymodule/server/index.ts" /> file, create a module with the `@RpgModule` decorator:
+In the `mymodule/server/index.ts` file, create a module with the `@RpgModule` decorator:
 
 ```ts
 import { RpgServer, RpgModule } from '@rpgjs/server'
@@ -98,17 +95,11 @@ In the module, you can specify the map, player, etc.
 
 [See RpgServer options](/classes/server.html#rpgmodule-rpgserver-decorator)
 
-## Generate a module in command line
-
-Go to the root of the project:
-
-`npx rpgjs generate module <directory-name>`
-
 ## Module with options
 
 Encapsulate the class in a function. This will allow you to pass custom options to the module
 
-<PathTo to="modDir" file="mymodule/server/index.ts" />
+`mymodule/server/index.ts`
 
 ```ts
 import { RpgServer, RpgModule, RpgPlayerHooks, RpgPlayer } from '@rpgjs/server'
