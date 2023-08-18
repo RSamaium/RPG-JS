@@ -14,6 +14,7 @@
   "dependencies": {
     "@rpgjs/chat": "^4.0.0-rc.5",
     "@rpgjs/client": "^4.0.0-rc.5",
+    "@rpgjs/common": "^4.0.0-rc.5",
     "@rpgjs/compiler": "^4.0.0-rc.5",
     "@rpgjs/database": "^4.0.0-rc.5",
     "@rpgjs/default-gui": "^4.0.0-rc.5",

@@ -1,10 +1,10 @@
 modules = [
     './main',
-    './other',
     '@rpgjs/default-gui',
     '@rpgjs/plugin-emotion-bubbles',
     '@rpgjs/gamepad',
-    '@rpgjs/chat'
+    '@rpgjs/chat',
+   # '@rpgjs/title-screen'
 ]
 
 [start]
