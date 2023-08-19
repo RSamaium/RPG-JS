@@ -64,3 +64,44 @@ The size of the tiles must not exceed the dimensions of the image. For example, 
 4. Set the `start` type
 
 ![start-player2](/assets/start-player2.png)
+
+<div class="module-api">
+
+## 3. Create Map class
+
+1. Create a new file: <PathTo to="mapDir" file="medieval.ts" />
+2. Then, the code must be as follows
+
+```ts
+import { RpgMap, MapData } from '@rpgjs/server'
+
+@MapData({
+    id: 'medieval',
+    file: require('./tmx/medieval.tmx'),
+    name: 'Town' // optional
+})
+export class MedievalMap extends RpgMap { }
+```
+
+3. Put an identifier to the map. this information will be used if you want to load maps to a player.
+4. Set the absolute path to the tmx file.
+
+## 4. Add Map in your Game
+
+In <PathTo to="serverIndex" /> :
+
+```ts
+import { RpgServer, RpgModule } from '@rpgjs/server'
+import { MedievalMap } from './maps/medieval.ts'
+
+@RpgModule<RpgServer>({
+    maps:  [
+        MedievalMap
+    ]
+})
+export default class RpgServerEngine { }
+```
+
+1. Add the map created in the property `maps` in the `@RpgModule` decorator
+
+</div>

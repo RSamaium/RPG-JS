@@ -23,6 +23,40 @@ import { Item } from '@rpgjs/database'
 export default class Potion { }
 ```
 
+::: tip
+If you want to add other parameters, just create properties:
+
+```ts
+import { Item } from '@rpgjs/database'
+
+@Item({  
+   
+})
+export class Potion {
+    otherParam = 'value'
+}
+```
+:::
+
+::: tip
+You also have hooks
+
+```ts
+import { Item } from '@rpgjs/database'
+
+@Item({  
+   
+})
+export class Potion {
+    onAdd(player: RpgPlayer) {
+
+    }
+}
+```
+
+take a look at the database APIs to see what else is possible: [/database/item.html](Items Database)
+:::
+
 ### Solution 2: Dynamic data
 
 With backend (example with axios request):
@@ -47,6 +81,26 @@ export default server
 
 Here it is at server loading but you can load items in other situations (when opening a maps, calling an event, etc.)
 
+<div class="module-api">
+
+## Add the item to your game
+
+Add the <PathTo to="databaseDir" file="items/potion.ts" /> file
+
+```ts
+import { RpgServer, RpgModule } from '@rpgjs/server'
+import { Potion } from './database/items/potion.ts'
+
+@RpgModule<RpgServer>({
+    database: {
+        Potion
+    }
+})
+export default class RpgServerEngine { }
+```
+
+</div>
+
 ## Using the item in an event
 
 Add the <PathTo to="eventDir" file="chara.ts" /> file
@@ -64,3 +118,14 @@ export class CharaEvent extends RpgEvent {
     }
 }
 ```
+
+::: tip Bests Pratices
+Either use the item's class or id: `player.addItem(Potion)` or `player.addItem('potion')`. 
+The identifier is useful for dynamic objects or those retrieved via APIs. If this isn't the case, use the class, which will allow you to set a Typescript control.
+
+In fact, you can use the class type to retrieve the item
+
+```ts
+const potion = player.getItem<Potion>('potion')
+```
+:::

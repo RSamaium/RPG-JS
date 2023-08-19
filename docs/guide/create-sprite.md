@@ -56,6 +56,27 @@ Follow the information in the comments
 
 > It is important to put `require()` because Webpack will retrieve the images and put it in the `dist` folder. 
 
+<div class="module-api">
+
+### Add the spritesheet in the module
+
+Then go to <PathTo to="clientIndex" />, and add the spritesheet in the appropriate property
+
+```ts
+import { RpgClient, RpgModule } from '@rpgjs/client'
+import { HeroCharacter } from './characters/hero'
+import { Tilesets } from './maps/medieval'
+
+@RpgModule<RpgClient>({
+    spritesheets: [
+        HeroCharacter // We add our spritesheet !
+    ]
+})
+export default class RpgClientModuleEngine {}
+```
+
+</div>
+
 ### Preset Spritesheet (optional)
 
 It can take quite a long time to create the animations. Think about creating common functions. For example, if you take a spritesheet compatible with RPG Maker (as above). You can take a `RMSpritesheet` function

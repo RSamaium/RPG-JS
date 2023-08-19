@@ -51,7 +51,46 @@ Then in each method, you can make commands, either on the event, on the player c
 
 ![start-event2](/assets/start-event2.png)
 
+<div class="module-api">
+
+5. Go to the <PathTo to="mapDir" file="medieval.ts" /> and add the event in the `events` array :
+
+::: code-group
+```ts [main/server/maps/medieval.ts]
+import { RpgMap, MapData } from '@rpgjs/server'
+import { CharaEvent } from '../events/chara'
+
+@MapData({
+    id: 'medieval',
+    file: require('./tmx/medieval.tmx'),
+    name: 'Town',
+    events: [
+        CharaEvent
+    ]
+})
+export class MedievalMap extends RpgMap { }
+```
+
+```ts [main/server/index.ts]
+import { RpgServer, RpgModule } from '@rpgjs/server'
+import { MedievalMap } from './maps/medieval.ts'
+
+@RpgModule<RpgServer>({
+    maps:  [
+        MedievalMap
+    ]
+})
+export default class RpgServerEngine { }
+```
+:::
+
+</div>
+
+<div class="autoload-api">
+
 5. reload server: stop `npm run serve` ans rerun
+
+</div>
 
 ## Example 1: Dialogue with a non-player character
 
