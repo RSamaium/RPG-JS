@@ -1,5 +1,3 @@
-import baseConfig from '@vue/theme/config'
-
 const apiMenu = [
   {
     text: 'Classes Server-Side',
@@ -167,7 +165,7 @@ const pluginMenu = [{
 }]
 
 module.exports = {
-  extends: baseConfig,
+  //extends: baseConfig,
   title: 'RPGJS v4 Documentation',
   description: 'Create your RPG or MMORPG in Javascript',
   ignoreDeadLinks: true,

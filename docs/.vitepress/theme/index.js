@@ -10,8 +10,8 @@ export default {
   extends: DefaultTheme,
   Layout: () => {
     // @ts-ignore
-    return h(VPTheme.Layout, null, {
-      'sidebar-top': () => h(PreferenceSwitch),
+    return h(DefaultTheme.Layout, null, {
+      'sidebar-nav-before': () => h(PreferenceSwitch),
     })
   },
   enhanceApp(ctx) {

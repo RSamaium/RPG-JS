@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { VTSwitch, VTIconChevronDown } from '@vue/theme'
+import { VTSwitch } from '@vue/theme'
 import { useRoute } from 'vitepress'
 import { ref, computed, inject, Ref, onMounted } from 'vue'
 import {
@@ -75,7 +75,6 @@ function useToggleFn(
       @blur="restoreOutline"
     >
       <span>API Preference</span>
-      <VTIconChevronDown class="vt-link-icon" :class="{ open: isOpen }" />
     </button>
     <div id="preference-switches" :hidden="!isOpen" :aria-hidden="!isOpen">
       <div class="switch-container">
@@ -96,7 +95,7 @@ function useToggleFn(
         <a
           class="switch-link"
           title="About API preference"
-          href="/guide/introduction.html#api-styles"
+          href="/guide/api-preference"
           @click="closeSideBar"
           >?</a
         >
@@ -108,12 +107,10 @@ function useToggleFn(
 <style scoped>
 .preference-switch {
   font-size: 12px;
-  border-bottom: 1px solid var(--vt-c-divider-light);
   transition: border-color 0.5s, background-color 0.5s ease;
   margin-bottom: 20px;
   position: sticky;
   top: -0.5px;
-  background-color: var(--vt-c-bg);
   padding-top: 10px;
   z-index: 10;
 }
