@@ -1,6 +1,6 @@
-const parser = require('comment-parser')
+const { parse } = require('comment-parser')
 const fs = require('fs')
-const compareVersions = require("compare-versions")
+const { compareVersions } = require("compare-versions")
 
 const baseUrl = __dirname + '/../'
 const destination  = __dirname + '/api/'
@@ -105,7 +105,7 @@ let summary = {}
 let byVersion = {}
 for (let file of files) {
     const code = fs.readFileSync(file, 'utf-8')
-    const comments = parser(code, {
+    const comments = parse(code, {
         trim: false
     })
     

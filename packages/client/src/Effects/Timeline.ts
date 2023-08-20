@@ -160,7 +160,7 @@ export class Timeline {
      * 
      * Here we say
      * 
-     * - For a duration of 30 seconds
+     * - Duration in frames, allowing you to specify the duration of each animation step. If the timeline respects a specific frame rate, e.g. 60 frames per second, 40 frames correspond to an animation duration of 2/3 of a second for each step.
      * - A function that will be called every 1 frame with the `scale` property defined in transform
      * - An object of transformation. Define the properties of your choice to be passed to the callback function
      *      - `to`: the starting value
