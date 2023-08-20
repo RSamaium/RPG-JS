@@ -1,6 +1,20 @@
 import { ref } from 'vue'
 
 export const inBrowser = typeof window !== 'undefined'
+
+if (!inBrowser) {
+  global.localStorage = {
+    getItem() {
+      return null
+    },
+    setItem() {
+      return null
+    },
+  }
+  global.document = {}
+}
+
+
 const get = (key: string, defaultValue = true): boolean => {
   return inBrowser
     ? JSON.parse(localStorage.getItem(key) || String(defaultValue))
@@ -8,4 +22,4 @@ const get = (key: string, defaultValue = true): boolean => {
 }
 
 export const preferAutoloadKey = 'vue-docs-prefer-autoload'
-export const preferAutoload = ref(get(preferAutoloadKey, true))
+export const preferAutoload = ref(get(preferAutoloadKey))

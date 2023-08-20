@@ -37,8 +37,7 @@ onMounted(() => {
     if (typeof localStorage === 'undefined') {
         return
     }
-    const preferAutoload = localStorage.getItem(preferAutoloadKey)
-    if (preferAutoload === 'true') {
+    if (preferAutoload.value) {
         toggleAutoloadAPI(true)
     }
 })
@@ -51,7 +50,7 @@ function useToggleFn(
   if (typeof localStorage === 'undefined') {
     return () => {}
   }
-  const classList = document.documentElement.classList
+  const classList = document.documentElement?.classList
   return (value = !state.value) => {
     if ((state.value = value)) {
       classList.add(className)

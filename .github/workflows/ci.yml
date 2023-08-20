@@ -38,18 +38,15 @@ jobs:
         cache: 'npm'
     - run: npm i
     - run: npm run build
-    - name: "NPM Identity"
-      env:
-        NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-      run: |
-        echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > .npmrc
     - name: "Version and publish" 
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       run: |
         git config user.name "${{ github.actor }}"
         git config user.email "${{ github.actor}}@users.noreply.github.com"
 
+        npm set //registry.npmjs.org/:_authToken=$NPM_TOKEN
+
         npx lerna version --conventional-commits --no-push --yes
-        npx lerna publish from-git --no-private --no-verify-access --loglevel verbose --yes
+        npx lerna publish from-git --no-private --loglevel=verbose --yes --registry=https://registry.npmjs.org/:_authToken=$NPM_TOKEN
