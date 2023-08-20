@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/chat",
-  "version": "4.0.0-rc.5",
+  "version": "4.0.0-rc.6",
   "description": "",
   "main": "index.ts",
   "types": "index.d.ts",
@@ -11,7 +11,7 @@
   "author": "Samuel Ronce",
   "license": "MIT",
   "dependencies": {
-    "@rpgjs/client": "^4.0.0-rc.5",
+    "@rpgjs/client": "^4.0.0-rc.6",
     "@rpgjs/server": "^4.0.0-rc.5"
   },
   "gitHead": "5abe6ca78be96524d74a052a230f2315c900ddee"
