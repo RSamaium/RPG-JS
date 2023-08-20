@@ -49,4 +49,4 @@ jobs:
         npm set //registry.npmjs.org/:_authToken=$NPM_TOKEN
 
         npx lerna version --conventional-commits --no-push --yes
-        npx lerna publish from-git --no-private --loglevel=verbose --yes --registry=https://registry.npmjs.org/:_authToken=$NPM_TOKEN
+        npx lerna publish from-git --no-private --loglevel=verbose --yes
