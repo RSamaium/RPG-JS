@@ -43,7 +43,8 @@ const frameY = direction => {
                     [ 
                         { time: 0, frameX: 0, frameY: frameY(direction) },
                         { time: 10, frameX: 1, frameY: frameY(direction) },
-                        { time: 20, frameX: 2, frameY: frameY(direction) }
+                        { time: 20, frameX: 2, frameY: frameY(direction) },
+                        { time: 40 } // indicate the last time at the end of the animation. This time is in fact the final duration of the animation.
                     ]
                 ]
          }
