@@ -665,6 +665,7 @@ export class RpgPlayer extends RpgCommonPlayer {
      * This is useful, if for example, you want to make an animated character (sword stroke when pressing a key)
      * When the animation is finished, the original graphic is displayed again
      * 
+     * 
      * ```ts
      * player.showAnimation('sword_stroke', 'default', true)
      * ```
@@ -674,6 +675,10 @@ export class RpgPlayer extends RpgCommonPlayer {
      * ```ts
      * player.showAnimation(['body', 'sword_stroke'], 'default', true)
      * ```
+     * 
+     * ::: tip
+     * For this to work, the animations must have been previously defined in `setGraphic`.
+     * :::
      * 
      * @title Show Animation
      * @method player.showAnimation(graphic,animationName,replaceGraphic=false)

@@ -106,7 +106,8 @@ let byVersion = {}
 for (let file of files) {
     const code = fs.readFileSync(file, 'utf-8')
     const comments = parse(code, {
-        trim: false
+        trim: false,
+        spacing: 'preserve'
     })
     
     for (let comment of comments) {

@@ -32,7 +32,7 @@ export default class Character extends Sprite {
     }
 
     /** @internal */
-    showAnimation(graphic: string | string[], animationName: string): Animation {
+    showAnimation(graphic: string | string[], animationName: string): Animation | null {
         const refreshAnimation = (graphic: string) => {
             this.removeChild(this.animation)
             this.animation = new Animation(graphic)
@@ -40,13 +40,18 @@ export default class Character extends Sprite {
             this.setAnimationAnchor()
         }
         const memoryGraphic = this.graphic
-        let graphicId: string = ''
+        let graphicId: string | undefined = ''
 
+         // Changes only graphics already defined on the character
         if (Utils.isArray(graphic)) {
-            graphicId = (graphic as string[]).find(id => id == this.graphic) as string
+            graphicId = (graphic as string[]).find(id => id == this.graphic)
         }
         else {
             graphicId = graphic as string
+        }
+
+        if (!graphicId) {
+            return null
         }
 
         refreshAnimation(graphicId)

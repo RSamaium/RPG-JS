@@ -351,27 +351,27 @@ export class AbstractObject {
      * 
      * Example of returns: 
      * 
-     ```ts
-        {
-            tiles: [
-                {
-                    id: 0,
-                    terrain: [],
-                    probability: null,
-                    properties: [Object],
-                    animations: [],
-                    objectGroups: [],
-                    image: null,
-                    gid: 1
-                }
-            ],
-            hasCollision: false,
-            isOverlay: undefined,
-            objectGroups: [],
-            isClimbable: undefined,
-            tileIndex: 93
-        }
-        ```
+     * ```ts
+     *   {
+     *       tiles: [
+     *           {
+     *               id: 0,
+     *               terrain: [],
+     *               probability: null,
+     *               properties: [Object],
+     *               animations: [],
+     *               objectGroups: [],
+     *               image: null,
+     *               gid: 1
+     *           }
+     *       ],
+     *       hasCollision: false,
+     *       isOverlay: undefined,
+     *       objectGroups: [],
+     *       isClimbable: undefined,
+     *       tileIndex: 93
+     *   }
+     * ```
      * 
      * @title Get Tile
      * @since 3.0.0-beta.4
