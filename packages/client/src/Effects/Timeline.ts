@@ -194,9 +194,35 @@ export const Ease: Record<string, EasingFunction> = {
 
 type EaseType = (t: number, b: number, c: number, d: number) => number
 
+/**
+ * Creates a new instance of the Timeline class, which allows for complex animations and control over keyframes.
+ * 
+ * @constructor
+ * @title new Timeline(options?)
+ * @param {object} [options] - Optional configuration object for the Timeline.
+ * @param {number} [options.keyframes=10] - Specifies the number of keyframes for the animation. Defaults to 10. The larger the keyframes, the smoother the animation, but the more resource-intensive it is, as the loop to browse the array will take longer.
+ * @memberof Timeline
+ * @since 4.0.0
+ * @example
+ * 
+ * ```ts
+ * const timeline = new Timeline({ keyframes: 20 });
+ * ```
+ */
+interface TimelineOptions {
+    keyframes?: number
+}
+
 export class Timeline {
     private time: number = 0
     private animation: FrameOptions[][] = []
+    private keyframes: number = 10
+
+    constructor(options?: TimelineOptions) {
+        if (options) {
+            if (options.keyframes) this.keyframes = options.keyframes
+        }
+    }
 
     /**
      * Allows you to create complex animations more easily. For example, to display a movement with an Easing function
@@ -296,7 +322,8 @@ export class Timeline {
             this.time += duration
             return this
         }
-        for (let i = 0; i < duration; i += 1) {
+        for (let k = 0; k < this.keyframes; k++) {
+            const i = Math.floor((duration / (this.keyframes - 1)) * k)
             let anim
             const obj = {}
             for (let prop in transform) {
