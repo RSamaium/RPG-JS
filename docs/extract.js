@@ -100,6 +100,17 @@ function createSummary(summary) {
     return text
 }
 
+function removeLeadingNewlines(text) {
+    // Find the first position of a non-newline character
+    let firstNonNewlineChar = 0;
+    while (firstNonNewlineChar < text.length && text[firstNonNewlineChar] === '\n') {
+        firstNonNewlineChar++;
+    }
+    
+    // Extract the text from the first non-newline position
+    return text.substring(firstNonNewlineChar);
+}
+
 let md = {}
 let summary = {}
 let byVersion = {}
@@ -114,6 +125,7 @@ for (let file of files) {
         const { tags, description } = comment
         const tag = name => tags.find(tag => tag.tag == name)
         const memberofs = tags.filter(tag => tag.tag == 'memberof')
+        const enums = tags.filter(tag => tag.tag == 'enum')
         const version = tag('since')?.name
         if (!byVersion[version]) byVersion[version] = `
 ## Version ${version}
@@ -171,21 +183,21 @@ It may change or be removed in future versions.
             md[memberof.name] += `
 - **Since**: ${tag('since').name}`
         }
-
-        if (tag('enum')) {
-md[memberof.name] += `
-- **Enum**: \`${tag('enum').type}\`
+        
+        for (let _enum of enums) {
+            md[memberof.name] += `
+- **Enum**: \`${_enum.type}\` ${_enum.name}
 
 | Tag           | Description |
 | ------------- |------------:|`
-            const description = tag('enum').description
+            const description = removeLeadingNewlines(_enum.description)
             const lines = description.split('\n')
             for (let line of lines) {
                 md[memberof.name] += `
 | ${line} |`
-            }
+            }   
         }
-       
+
         if (tag('prop')) {
             md[memberof.name] += 
 `

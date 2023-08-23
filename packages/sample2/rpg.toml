@@ -14,3 +14,8 @@ modules = [
 
 [titleScreen]
   mongodb = 'mongodb://localhost:27017/rpg'
+
+  [inputs.up]
+    name = "up"
+    repeat = true
+    bind = ["up", "h", "numpad 1"]
