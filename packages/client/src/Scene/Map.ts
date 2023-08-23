@@ -293,10 +293,15 @@ export class SceneMap extends Scene {
     removeObject(id: string) {
         let sprite = this.objects.get(id)
         if (sprite) {
-            this.objects.delete(id)
-            RpgPlugin.emit(HookClient.SceneRemoveSprite, [this, sprite], true)
-            RpgPlugin.emit(HookClient.RemoveSprite, sprite)
-            sprite.destroy()
+            if (!sprite.animationIsPlaying) {
+                this.objects.delete(id)
+                RpgPlugin.emit(HookClient.SceneRemoveSprite, [this, sprite], true)
+                RpgPlugin.emit(HookClient.RemoveSprite, sprite)
+                sprite.destroy()
+            }
+            else {
+                sprite.visible = false
+            }
         }
     }
 

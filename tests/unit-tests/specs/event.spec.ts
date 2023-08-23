@@ -3,6 +3,7 @@ import { EventData, EventMode, Input, MapData, RpgEvent, RpgMap, RpgModule, RpgP
 import { RpgClientEngine, RpgSceneMap, Control, RpgPlugin, HookClient } from '@rpgjs/client'
 import { clear, nextTick } from '@rpgjs/testing'
 import { beforeEach, test, afterEach, expect, describe } from 'vitest'
+import { createSprite } from './fixtures/animation'
 
 let client: RpgClientEngine,
     player: RpgPlayer,
@@ -54,45 +55,77 @@ test('Create Dynamic Event', () => {
 })
 
 
-describe('Remove Event', () => {
-    let event: RpgEvent, bool
-
-    beforeEach(() => {
-        @EventData({
-            name: 'test'
-        })
-        class MyEvent extends RpgEvent { }
-        const events = map.createDynamicEvent({
-            x: 100,
-            y: 200,
-            event: MyEvent
-        })
-        const eventId = Object.keys(events)[0]
-        event = map.getEvent(eventId) as RpgEvent
-        server.send()
-        bool = map.removeEvent(eventId)
-    })
-
-    test('Remove Event', () => {
-        expect(bool).toBeTruthy()
-        server.send()
-        client.objects.subscribe((objects) => {
+function testRemoveEvent(mode) {
+    describe('Remove Event: ' + mode + ' mode', () => {
+        let event: RpgEvent, bool
+    
+        function eventIsDeleted(objects, event)  {
             const events: any = Object.values(objects)
             const eventFind = events.find(ev => ev.object.id == event.id)
             expect(eventFind).toBeUndefined()
+        }
+
+        
+        beforeEach(async () => {
+            let _map = mode == EventMode.Scenario ? player : map
+
+            @EventData({
+                name: 'test',
+                mode
+            })
+            class MyEvent extends RpgEvent { }
+            const events = _map.createDynamicEvent({
+                x: 100,
+                y: 200,
+                event: MyEvent
+            })
+            const eventId = Object.keys(events)[0]
+            event = _map.getEvent(eventId) as RpgEvent
+            await nextTick(client)
+            bool = _map.removeEvent(eventId)
         })
+    
+        test('Remove Event', () => {
+            expect(bool).toBeTruthy()
+            server.send()
+            client.objects.subscribe((objects) => {
+                eventIsDeleted(objects, event)
+            })
+        })
+    
+        test('delete even if properties are changed', () => {
+            event.hp = 100
+            server.send()
+            client.objects.subscribe((objects) => {
+                eventIsDeleted(objects, event)
+            })
+        })
+    
+        test('animation continues on the event even if it has been deleted', async () => {
+            client.addSpriteSheet(createSprite())
+            event.showAnimation('shield', 'default')
+            await nextTick(client)
+            await nextTick(client, 10)
+            client.objects.subscribe((objects) => {
+                eventIsDeleted(objects, event)
+            })
+        })
+        
+        test('Remove Event, destroyed status == true', () => {
+            expect(event?.['isDestroyed']).toBeTruthy()
+        })
+    
+        test('do not modify positions if the event is deleted', () => {
+            event.teleport({ x: 0, y: 0 })
+            expect(event.position.x).toEqual(100)
+            expect(event.position.y).toEqual(200)
+        })
+    
     })
+}
 
-    test('Remove Event, destroyed status == true', () => {
-        expect(event?.['isDestroyed']).toBeTruthy()
-    })
-
-    test('do not modify positions if the event is deleted', () => {
-        event.teleport({ x: 0, y: 0 })
-        expect(event.position.x).toEqual(100)
-        expect(event.position.y).toEqual(200)
-    })
-})
+testRemoveEvent(EventMode.Scenario)
+testRemoveEvent(EventMode.Shared)
 
 test('Test onInit Hook', () => {
     return new Promise((resolve: any) => {

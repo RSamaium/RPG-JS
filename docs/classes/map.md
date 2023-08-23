@@ -16,11 +16,16 @@ import { MapData, RpgMap, RpgPlayer } from '@rpgjs/server'
      file: require('./tmx/town.tmx')
 })
 class TownMap extends RpgMap {
+    // When map is loaded
+    onLoad() {}
+
     // When the player enters the map
-    onEnter(player: RpgPlayer) {}
+    onJoin(player: RpgPlayer) {}
     
     // When the player leaves the map
-    onLeave(player: RpgPlayer) {}
+    onLeave(player: RpgPlayer) {
+        super.onLeave(player)
+    }
 }
 ```
 
