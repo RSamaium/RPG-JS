@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/standalone",
-  "version": "4.0.0-rc.7",
+  "version": "4.0.0-rc.8",
   "description": "",
   "main": "src/index.ts",
   "scripts": {},
@@ -8,9 +8,9 @@
   "author": "Samuel Ronce",
   "license": "MIT",
   "dependencies": {
-    "@rpgjs/client": "^4.0.0-rc.7",
-    "@rpgjs/common": "^4.0.0-rc.7",
-    "@rpgjs/server": "^4.0.0-rc.7"
+    "@rpgjs/client": "^4.0.0-rc.8",
+    "@rpgjs/common": "^4.0.0-rc.8",
+    "@rpgjs/server": "^4.0.0-rc.8"
   },
   "gitHead": "5abe6ca78be96524d74a052a230f2315c900ddee",
   "type": "module"
