@@ -1,13 +1,14 @@
 import { RpgCommonMap, Utils, RpgShape, RpgCommonGame, AbstractObject } from '@rpgjs/common'
 import { TiledParserFile, TiledParser, TiledTileset } from '@rpgjs/tiled'
 import { EventOptions } from '../decorators/event'
-import { RpgPlayer, EventMode, RpgEvent, RpgClassEvent } from '../Player/Player'
+import { RpgPlayer, RpgEvent, RpgClassEvent } from '../Player/Player'
 import { Move } from '../Player/MoveManager'
 import { RpgServerEngine } from '../server'
 import { Observable } from 'rxjs'
 import path from 'path'
 import { HitBox, MovingHitbox, PlayerType, Position } from '@rpgjs/types'
 import { World } from 'simple-room'
+import { EventManager, EventMode } from './EventManager'
 
 export type EventPosOption = {
     x: number,
@@ -63,15 +64,9 @@ export class RpgMap extends RpgCommonMap {
     public _events: EventOption[]
     public file: any
 
-    /** 
-    * @title event list
-    * @prop { { [eventId: string]: RpgEvent } } [events]
-    * @memberof Map
-    * */
-    public events: EventsList = {}
-
     constructor(private _server: RpgServerEngine) {
         super()
+        this.events = {}
     }
 
     // alias of users property in simple-room package
@@ -365,63 +360,13 @@ export class RpgMap extends RpgCommonMap {
         const events = this.createEvents(eventsList as EventPosOption[], EventMode.Shared)
         let ret = {}
         for (let key in events) {
-            this.events[key] = events[key]
+            this.events[key] = events[key] as any
             this.events[key].updateInVirtualGrid()
             this.events[key].execMethod('onInit')
             // force to get Proxy object to sync with client
             ret = { ...ret, [key]: this.events[key] }
         }
         return ret
-    }
-
-    /**
-     * Get Event in current map
-     * @title Get Event
-     * @since 3.0.0-beta.7
-     * @method map.getEvent(eventId)
-     * @param {string} eventId Event Id
-     * @returns {RpgEvent | undefined}
-     * @memberof Map
-     */
-    getEvent<T extends RpgEvent>(eventId: string): T | undefined {
-        return this.events[eventId] as T
-    }
-
-    /**
-     * Get Event in current map by name
-     * @title Get Event By Name
-     * @since 4.0.0
-     * @method map.getEventByName(eventName)
-     * @param {string} eventName Event Name
-     * @returns {RpgEvent | undefined}
-     * @memberof Map
-    */
-    getEventByName<T extends RpgEvent>(eventName: string): T | undefined {
-        const events = Object.keys(this.events)
-        const key = events.find(key => this.events[key].name == eventName)
-        if (!key) return
-        return this.events[key] as T
-    }
-
-    /**
-     * Removes an event from the map. Returns false if the event is not found
-     * 
-     * Deletion of an event forced to be performed at the end of several aynschronous notions
-     * 
-     * @title Remove Event
-     * @since 3.0.0-beta.4
-     * @method map.removeEvent(eventId)
-     * @param {string} eventId Event Name
-     * @returns {boolean}
-     * @memberof Map
-     */
-    removeEvent(eventId: string): boolean {
-        if (!this.events[eventId]) return false
-        this.removeObject(this.events[eventId])
-        delete this.events[eventId]
-        // Force this line to be executed at the end of synchronous notions. Otherwise, if the event is modified after deletion, the js proxy continues and synchronizes the values with the client. In this case, the client doesn't detect if there's been a deletion, but notices that properties have changed.
-        this.$setCurrentState(`events.${eventId}.deleted`, true)
-        return true
     }
 
     createEvent(obj: EventPosOption, mode: EventMode, shape?: RpgShape): RpgEvent | null {
@@ -469,32 +414,6 @@ export class RpgMap extends RpgCommonMap {
         return events
     }
 
-    private removeObject(object: RpgPlayer | RpgEvent) {
-        this.getShapes().forEach(shape => shape.out(object))
-        const events: RpgPlayer[] = Object.values(this.game.world.getObjectsOfGroup(this.id, object))
-        for (let event of events) {
-            object.getShapes().forEach(shape => shape.out(event))
-            event.getShapes().forEach(shape => shape.out(object))
-        }
-        object._destroy$.next()
-        object._destroy$.complete()
-        // force RXJS, close subject. TODO: avoid this
-        if (object.type != PlayerType.Player) object._destroy$['_closed'] = true
-        this.grid.clearObjectInCells(object.id)
-        for (let playerId in this.players) {
-            if (object.id == playerId) continue
-            const otherPlayer = this.players[playerId]
-            if (otherPlayer.following?.id == object.id) {
-                otherPlayer.cameraFollow(otherPlayer)
-            }
-        }
-        // last player before removed of this map 
-        if (this.nbPlayers === 1 && object.type === 'player') {
-            // clear cache for this map
-            this.remove(true)
-        }
-    }
-
     /**
      * Allows to create a temporary hitbox on the map that can have a movement
 For example, you can use it to explode a bomb and find all the affected players, or during a sword strike, you can create a moving hitbox and find the affected players again
@@ -539,9 +458,14 @@ For example, you can use it to explode a bomb and find all the affected players,
     setSync(schema: any) {
         return this.$setSchema(schema)
     }
+
+    // Reflects itself. Just for compatibility with the EventManager class
+    getCurrentMap() {
+        return this
+    }
 }
 
-export interface RpgMap {
+export interface RpgMap extends EventManager {
     sounds: string[]
     $schema: any
     $setSchema: (schema: any) => void
@@ -549,4 +473,9 @@ export interface RpgMap {
     $snapshotUser: (userId: string) => any
     onLoad()
     $setCurrentState: (path: string, value: any) => void;
+    id: string
 }
+
+Utils.applyMixins(RpgMap, [
+    EventManager
+])

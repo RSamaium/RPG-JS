@@ -20,7 +20,7 @@ const player: RpgPlayerHooks = {
             // });
         }
         if (input == 'back') {
-            const event = map?.getEventByName('EV-1') as any
+            const event = player?.getEventByName('EV-1') as any
             if (event) event.hp -= 200
         }
     },

@@ -1,4 +1,4 @@
-import { EventMode } from '../Player/Player'
+import { EventMode } from "../Game/EventManager"
 
 export interface EventOptions {
     /** 
@@ -53,5 +53,6 @@ export function EventData(options: EventOptions) {
         target.hitbox = options.hitbox
         target._name = options.name
         target.prototype._name = options.name
+        target.prototype.mode = target.mode
     }
 }
