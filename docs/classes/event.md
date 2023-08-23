@@ -66,3 +66,7 @@ If the event collides with the player and the player presses the action key, the
 ### onPlayerTouch()
 
 If the event collides with the player, the method is called
+
+## RpgEvent methods
+
+<!--@include: ../api/RpgEvent.md-->
