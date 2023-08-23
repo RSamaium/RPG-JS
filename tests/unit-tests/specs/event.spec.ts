@@ -3,6 +3,7 @@ import { EventData, EventMode, Input, MapData, RpgEvent, RpgMap, RpgModule, RpgP
 import { RpgClientEngine, RpgSceneMap, Control, RpgPlugin, HookClient } from '@rpgjs/client'
 import { clear, nextTick } from '@rpgjs/testing'
 import { beforeEach, test, afterEach, expect, describe } from 'vitest'
+import { createSprite } from './fixtures/animation'
 
 let client: RpgClientEngine,
     player: RpgPlayer,
@@ -57,7 +58,13 @@ test('Create Dynamic Event', () => {
 describe('Remove Event', () => {
     let event: RpgEvent, bool
 
-    beforeEach(() => {
+    function eventIsDeleted(objects, event)  {
+        const events: any = Object.values(objects)
+        const eventFind = events.find(ev => ev.object.id == event.id)
+        expect(eventFind).toBeUndefined()
+    }
+
+    beforeEach(async () => {
         @EventData({
             name: 'test'
         })
@@ -69,7 +76,7 @@ describe('Remove Event', () => {
         })
         const eventId = Object.keys(events)[0]
         event = map.getEvent(eventId) as RpgEvent
-        server.send()
+        await nextTick(client)
         bool = map.removeEvent(eventId)
     })
 
@@ -77,12 +84,28 @@ describe('Remove Event', () => {
         expect(bool).toBeTruthy()
         server.send()
         client.objects.subscribe((objects) => {
-            const events: any = Object.values(objects)
-            const eventFind = events.find(ev => ev.object.id == event.id)
-            expect(eventFind).toBeUndefined()
+            eventIsDeleted(objects, event)
         })
     })
 
+    test('delete even if properties are changed', () => {
+        event.hp = 100
+        server.send()
+        client.objects.subscribe((objects) => {
+            eventIsDeleted(objects, event)
+        })
+    })
+
+    test('animation continues on the event even if it has been deleted', async () => {
+        client.addSpriteSheet(createSprite())
+        event.showAnimation('shield', 'default')
+        await nextTick(client)
+        await nextTick(client, 10)
+        client.objects.subscribe((objects) => {
+            eventIsDeleted(objects, event)
+        })
+    })
+    
     test('Remove Event, destroyed status == true', () => {
         expect(event?.['isDestroyed']).toBeTruthy()
     })
@@ -92,6 +115,7 @@ describe('Remove Event', () => {
         expect(event.position.x).toEqual(100)
         expect(event.position.y).toEqual(200)
     })
+
 })
 
 test('Test onInit Hook', () => {

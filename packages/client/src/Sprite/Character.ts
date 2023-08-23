@@ -55,9 +55,12 @@ export default class Character extends Sprite {
         }
 
         refreshAnimation(graphicId)
+
+        this.component.animationIsPlaying = true
         
         this.animation.onFinish = () => {
             this.playStandardAnimation = true
+            this.component.animationIsPlaying = false
             refreshAnimation(memoryGraphic)
             this.update(this.objSaved)
         }

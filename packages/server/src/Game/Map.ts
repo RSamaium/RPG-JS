@@ -405,6 +405,9 @@ export class RpgMap extends RpgCommonMap {
 
     /**
      * Removes an event from the map. Returns false if the event is not found
+     * 
+     * Deletion of an event forced to be performed at the end of several aynschronous notions
+     * 
      * @title Remove Event
      * @since 3.0.0-beta.4
      * @method map.removeEvent(eventId)
@@ -416,6 +419,8 @@ export class RpgMap extends RpgCommonMap {
         if (!this.events[eventId]) return false
         this.removeObject(this.events[eventId])
         delete this.events[eventId]
+        // Force this line to be executed at the end of synchronous notions. Otherwise, if the event is modified after deletion, the js proxy continues and synchronizes the values with the client. In this case, the client doesn't detect if there's been a deletion, but notices that properties have changed.
+        this.$setCurrentState(`events.${eventId}.deleted`, true)
         return true
     }
 
@@ -543,4 +548,5 @@ export interface RpgMap {
     $patchSchema: (schema: any) => void
     $snapshotUser: (userId: string) => any
     onLoad()
+    $setCurrentState: (path: string, value: any) => void;
 }

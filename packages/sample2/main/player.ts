@@ -10,16 +10,18 @@ const player: RpgPlayerHooks = {
         player.setComponentsTop(Components.text('{name}'))
     },
     onInput(player: RpgPlayer, { input }) {
+        const map = player.getCurrentMap()
         if (input == 'action') {
-            const map = player.getCurrentMap()
-            const event = map?.createDynamicEvent({
-                x: player.position.x + 5,
-                y: player.position.y + 5,
-                event: CharaEvent,
-            });
+            
+            // const event = map?.createDynamicEvent({
+            //     x: player.position.x + 5,
+            //     y: player.position.y + 5,
+            //     event: CharaEvent,
+            // });
         }
         if (input == 'back') {
-            player.callMainMenu()
+            const event = map?.getEventByName('EV-1') as any
+            if (event) event.hp -= 200
         }
     },
     async onJoinMap(player: RpgPlayer, map: RpgMap) {

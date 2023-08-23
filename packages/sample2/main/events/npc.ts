@@ -8,12 +8,14 @@ export default class CharaEvent extends RpgEvent {
     onInit() {
         this.setGraphic('male')
         this.setHitbox(32, 32)
-        this.throughOtherPlayer = true
-        this.through = true
     }
     async onAction(player: RpgPlayer) {
-       await player.showText('Hello ', {
-            talkWith: this
-       })
+    
+    }
+    onDead() {
+        this.showAnimation('animation', 'default', true)
+        this.getCurrentMap()?.removeEvent(this.id)
+      
+       
     }
 }

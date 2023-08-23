@@ -41,6 +41,9 @@ export class RpgComponent<T = any> extends Container {
     h: number = 1
     /** @internal */
     w: number = 1
+    
+    animationIsPlaying: boolean = false
+    
     protected _x: number = 0
     protected _y: number = 0
     private _rotation: number = 0

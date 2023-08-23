@@ -73,9 +73,15 @@ const playerSchemas = {
         z: Number
     },
     direction: Number,
+   
     teleported: {
         $permanent: false
     },
+
+    deleted: {
+        $permanent: false
+    },
+
     param: Object,
     hp: Number,
     sp: Number,
@@ -190,6 +196,7 @@ export class RpgPlayer extends RpgCommonPlayer {
 
     // As soon as a teleport has been made, the value is changed to force the client to change the positions on the map without making a move.
     teleported: number = 0
+    deleted: boolean = false
 
     /** @internal */
     initialize() {
@@ -471,10 +478,10 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @title Load progress
      * @method player.load(json)
      * @param {string} json The JSON sent by the method save()
-     * @returns {string}
+     * @returns {Promise<boolean | RpgMap | null>}
      * @memberof Player
      */
-    load(json: any) {
+    load(json: any): Promise<boolean | RpgMap | null> {
         if (isString(json)) json = JSON.parse(json)
 
         const getData = (id) => new (this.databaseById(id))()
@@ -507,8 +514,10 @@ export class RpgPlayer extends RpgCommonPlayer {
         this.position = json.position
         if (json.map) {
             this.map = ''
-            this.changeMap(json.map, json.tmpPositions || json.position)
+            return this.changeMap(json.map, json.tmpPositions || json.position)
         }
+
+        return Promise.resolve(null)
     }
 
     /**
