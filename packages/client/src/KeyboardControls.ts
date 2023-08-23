@@ -32,16 +32,16 @@ const keyCodeTable = {
     44: 'Print Screen',
     45: 'insert',
     46: 'delete',
-    48: '0',
-    49: '1',
-    50: '2',
-    51: '3',
-    52: '4',
-    53: '5',
-    54: '6',
-    55: '7',
-    56: '8',
-    57: '9',
+    48: 'n0',
+    49: 'n1',
+    50: 'n2',
+    51: 'n3',
+    52: 'n4',
+    53: 'n5',
+    54: 'n6',
+    55: 'n7',
+    56: 'n8',
+    57: 'n9',
     58: ':',
     59: 'semicolon (firefox), equals',
     60: '<',
@@ -504,6 +504,172 @@ export class KeyboardControls {
      * Control.Right | right
      * Control.Action | action
      * Control.Back | back
+     * 
+     * @enum {string} Input 
+     * 
+     * break | Pause
+    * backspace | Backspace / Delete
+    * tab | Tab
+    * clear | Clear
+    * enter | Enter
+    * shift | Shift
+    * ctrl | Control
+    * alt | Alt
+    * pause/break | Pause / Break
+    * caps lock | Caps Lock
+    * escape | Escape
+    * conversion | Conversion
+    * non-conversion | Non-conversion
+    * space | Space
+    * page up | Page Up
+    * page down | Page Down
+    * end | End
+    * home | Home
+    * Direction.Left | Left Arrow
+    * Direction.Up | Up Arrow
+    * Direction.Right | Right Arrow
+    * Direction.Down | Down Arrow
+    * select | Select
+    * print | Print
+    * execute | Execute
+    * Print Screen | Print Screen
+    * insert | Insert
+    * delete | Delete
+    * n0 | 0
+    * n1 | 1
+    * n2 | 2
+    * n3 | 3
+    * n4 | 4
+    * n5 | 5
+    * n6 | 6
+    * n7 | 7
+    * n8 | 8
+    * n9 | 9
+    * : | Colon
+    * semicolon (firefox), equals | Semicolon (Firefox), Equals
+    * < | Less Than
+    * equals (firefox) | Equals (Firefox)
+    * ß | Eszett
+    * @ | At
+    * a | A
+    * b | B
+    * c | C
+    * d | D
+    * e | E
+    * f | F
+    * g | G
+    * h | H
+    * i | I
+    * j | J
+    * k | K
+    * l | L
+    * m | M
+    * n | N
+    * o | O
+    * p | P
+    * q | Q
+    * r | R
+    * s | S
+    * t | T
+    * u | U
+    * v | V
+    * w | W
+    * x | X
+    * y | Y
+    * z | Z
+    * Windows Key / Left ⌘ / Chromebook Search key | Windows Key / Left Command ⌘ / Chromebook Search Key
+    * right window key | Right Windows Key
+    * Windows Menu / Right ⌘ | Windows Menu / Right Command ⌘
+    * numpad 0 | Numpad 0
+    * numpad 1 | Numpad 1
+    * numpad 2 | Numpad 2
+    * numpad 3 | Numpad 3
+    * numpad 4 | Numpad 4
+    * numpad 5 | Numpad 5
+    * numpad 6 | Numpad 6
+    * numpad 7 | Numpad 7
+    * numpad 8 | Numpad 8
+    * numpad 9 | Numpad 9
+    * multiply | Multiply
+    * add | Add
+    * numpad period (firefox) | Numpad Period (Firefox)
+    * subtract | Subtract
+    * decimal point | Decimal Point
+    * divide | Divide
+    * f1 | F1
+    * f2 | F2
+    * f3 | F3
+    * f4 | F4
+    * f5 | F5
+    * f6 | F6
+    * f7 | F7
+    * f8 | F8
+    * f9 | F9
+    * f10 | F10
+    * f11 | F11
+    * f12 | F12
+    * f13 | F13
+    * f14 | F14
+    * f15 | F15
+    * f16 | F16
+    * f17 | F17
+    * f18 | F18
+    * f19 | F19
+    * f20 | F20
+    * f21 | F21
+    * f22 | F22
+    * f23 | F23
+    * f24 | F24
+    * num lock | Num Lock
+    * scroll lock | Scroll Lock
+    * ^ | Caret
+    * ! | Exclamation Point
+    * # | Hash
+    * $ | Dollar Sign
+    * ù | Grave Accent U
+    * page backward | Page Backward
+    * page forward | Page Forward
+    * closing paren (AZERTY) | Closing Parenthesis (AZERTY)
+    * * | Asterisk
+    * ~ + * key | Tilde + Asterisk Key
+    * minus (firefox), mute/unmute | Minus (Firefox), Mute/Unmute
+    * decrease volume level | Decrease Volume Level
+    * increase volume level | Increase Volume Level
+    * next | Next
+    * previous | Previous
+    * stop | Stop
+    * play/pause | Play/Pause
+    * e-mail | Email
+    * mute/unmute (firefox) | Mute/Unmute (Firefox)
+    * decrease volume level (firefox) | Decrease Volume Level (Firefox)
+    * increase volume level (firefox) | Increase Volume Level (Firefox)
+    * semi-colon / ñ | Semicolon / ñ
+    * equal sign | Equal Sign
+    * comma | Comma
+    * dash | Dash
+    * period | Period
+    * forward slash / ç | Forward Slash / ç
+    * grave accent / ñ / æ | Grave Accent / ñ / æ
+    * ?, / or ° | ?, / or °
+    * numpad period (chrome) | Numpad Period (Chrome)
+    * open bracket | Open Bracket
+    * back slash | Backslash
+    * close bracket / å | Close Bracket / å
+    * single quote / ø | Single Quote / ø
+    * \` | Backtick
+    * left or right ⌘ key (firefox) | Left or Right Command Key (Firefox)
+    * altgr | AltGr
+    * < /git > | < /git >
+    * GNOME Compose Key | GNOME Compose Key
+    * ç | ç
+    * XF86Forward | XF86Forward
+    * XF86Back | XF86Back
+    * alphanumeric | Alphanumeric
+    * hiragana/katakana | Hiragana/Katakana
+    * half-width/full-width | Half-Width/Full-Width
+    * kanji | Kanji
+    * toggle touchpad | Toggle Touchpad
+     * 
      * @title Set Inputs
      * @method setInputs(inputs)
      * @param {object} inputs
@@ -514,9 +680,11 @@ export class KeyboardControls {
         this.boundKeys = {}
         let inputsTransformed: any = {}
         for (let control in inputs) {
+            const bind = inputs[control].bind
+            const transformBind = Array.isArray(bind) ? bind.map((b) => this.transformDirectionInNumber(b)) : this.transformDirectionInNumber(bind)
             inputsTransformed[this.transformDirectionInNumber(control)] = {
                 ...inputs[control],
-                bind: this.transformDirectionInNumber(inputs[control].bind)
+                bind: transformBind
             }
         }
         for (let control in inputsTransformed) {

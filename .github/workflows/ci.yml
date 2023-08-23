@@ -48,7 +48,7 @@ jobs:
 
         npm set //registry.npmjs.org/:_authToken=$NPM_TOKEN
 
-        npx lerna version --conventional-commits --no-push --yes
+        npx lerna version --conventional-commits --yes
         npx lerna publish from-git --no-private --loglevel=verbose --yes
 
   starter_repo_update_dependencies:
@@ -58,24 +58,28 @@ jobs:
     - name: Checkout the starter repository
       run: git clone https://github.com/rpgjs/starter
 
-    - name: Change to the starter directory
-      run: cd starter
-
     - name: Install npm-check-updates globally
       run: npm i npm-check-updates -g
 
     - name: Run ncu to update dependencies
-      run: ncu -u
+      run: |
+        cd starter
+        ncu -u
 
-    - run: npm i
+    - name: Install updated dependencies
+      run: |
+        cd starter
+        npm i
 
     - name: Configure Git User
       run: |
-        git config --global user.name "${{ github.actor }}"
-        git config --global user.email "${{ github.actor}}@users.noreply.github.com"
+        cd starter
+        git config user.name "${{ github.actor }}"
+        git config user.email "${{ github.actor}}@users.noreply.github.com"
 
     - name: Commit the updated package.json
       run: |
+        cd starter
         git add package*.json
         git commit -m "Update dependencies to latest version"
         git push https://$GH_ACCESS_TOKEN@github.com/rpgjs/starter.git
