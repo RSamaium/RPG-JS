@@ -24,6 +24,10 @@ export class CharaEvent extends RpgEvent {
     onAction(player: RpgPlayer) { }
 
     onPlayerTouch(player: RpgPlayer) { }
+
+    onInShape(player: RpgPlayer) {}
+
+    onOutShape(player: RpgPlayer) {}
 }
 ```
 
@@ -66,6 +70,58 @@ If the event collides with the player and the player presses the action key, the
 ### onPlayerTouch()
 
 If the event collides with the player, the method is called
+
+### onInShape()
+
+If the player is in the shape of the event, the method is called.
+
+Example: 
+
+```ts
+import { RpgEvent, EventData, RpgPlayer, ShapePositioning } from '@rpgjs/server'
+
+@EventData({
+    name: 'EV-1'
+})
+export class CharaEvent extends RpgEvent {
+    onInit() {
+         this.attachShape({
+            height: 100,
+            width: 100,
+            positioning: ShapePositioning.Center
+        })
+    }
+    onInShape(player: RpgPlayer) {
+        console.log(player.id)
+    }
+}
+```
+
+### onOutShape()
+
+If the player is out of the shape of the event, the method is called.
+
+Example: 
+
+```ts
+import { RpgEvent, EventData, RpgPlayer, ShapePositioning } from '@rpgjs/server'
+
+@EventData({
+    name: 'EV-1'
+})
+export class CharaEvent extends RpgEvent {
+    onInit() {
+         this.attachShape({
+            height: 100,
+            width: 100,
+            positioning: ShapePositioning.Center
+        })
+    }
+    onOutShape(player: RpgPlayer) {
+        console.log(player.id)
+    }
+}
+```
 
 ## RpgEvent methods
 
