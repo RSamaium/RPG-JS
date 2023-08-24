@@ -7,14 +7,18 @@ import path from 'path'
 export default defineConfig(async () => {
     process.env.NODE_ENV = 'test'
 
+    const testRpgJSProject = process.env.RPGJS_TEST
+
     let config = await clientBuildConfig(process.cwd(), {
         mode: 'test',
         serveMode: false,
     })
     const packages = ['client', 'server', 'database', 'testing', 'common', 'standalone', 'types']
     let configResolveAlias = {}
-    for (const pkg of packages) {
-        configResolveAlias[`@rpgjs/${pkg}`] = path.resolve(__dirname, `../../../${pkg}/src/index.ts`)
+    if (testRpgJSProject) {
+        for (const pkg of packages) {
+            configResolveAlias[`@rpgjs/${pkg}`] = path.resolve(__dirname, `../../../${pkg}/src/index.ts`)
+         }
     }
     config = {
         ...config,
@@ -33,7 +37,7 @@ export default defineConfig(async () => {
             environment: 'jsdom',
             threads: false,
             setupFiles: [
-                'packages/compiler/src/setupFiles/canvas.ts'
+                path.join(__dirname, '..', 'setupFiles', 'canvas.ts')
             ],
             exclude: [
                 ...configDefaults.exclude, 
