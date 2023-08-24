@@ -448,7 +448,7 @@ export class MoveManager {
                     if (!map) {
                         return undefined
                     }
-                    return route(this, map)
+                    return route.apply(route, [this, map])
                 }
                 return route
             })

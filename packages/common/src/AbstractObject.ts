@@ -291,7 +291,10 @@ export class AbstractObject {
             return this.position[prop] + this.speed * deltaTimeInt
                 * (Math.round(Math[prop == 'x' ? 'cos' : 'sin'](angle) * 100) / 100)
         }
-        return new Vector2d(~~computePosition('x'), ~~computePosition('y'), ~~this.position.z)
+        // If it's greater than 1, there's no point in recovering the decimals. reduces bandwidth
+        const x = this.speed < 1 ? computePosition('x') : ~~computePosition('x')
+        const y = this.speed < 1 ? computePosition('y') : ~~computePosition('y')
+        return new Vector2d(x, y, ~~this.position.z)
     }
 
     /** @internal */
