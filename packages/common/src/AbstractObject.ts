@@ -598,7 +598,7 @@ export class AbstractObject {
         this._collisionWithTiles = []
         const prevMapId = this.map
         const hitbox = Hit.createObjectHitbox(nextPosition.x, nextPosition.y, 0, this.hitbox.w, this.hitbox.h)
-        const boundingMap = this.mapInstance.boundingMap(nextPosition, this.hitbox)
+        const boundingMap = this.mapInstance?.boundingMap(nextPosition, this.hitbox)
         let collided = false
 
         if (boundingMap?.bounding) {
