@@ -525,10 +525,10 @@ export class KeyboardControls {
     * page down | Page Down
     * end | End
     * home | Home
-    * Direction.Left | Left Arrow
-    * Direction.Up | Up Arrow
-    * Direction.Right | Right Arrow
-    * Direction.Down | Down Arrow
+    * left | Left Arrow
+    * up | Up Arrow
+    * right | Right Arrow
+    * down | Down Arrow
     * select | Select
     * print | Print
     * execute | Execute

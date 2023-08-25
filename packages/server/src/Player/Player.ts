@@ -688,7 +688,6 @@ export class RpgPlayer extends RpgCommonPlayer {
      */
     showAnimation(graphic: string | string[], animationName: string, replaceGraphic: boolean = false) {
         this.emitToMap('callMethod', {
-            objectId: this.playerId,
             name: SocketMethods.ShowAnimation,
             params: [graphic, animationName, replaceGraphic]
         })
@@ -798,7 +797,10 @@ export class RpgPlayer extends RpgCommonPlayer {
     }
 
     emitToMap(key: string, value: any) {
-        Query.getPlayersOfMap(this.map).forEach(player => player.emit(key, value))
+        const map = this.getCurrentMap()
+        if (map) {
+            map.$setCurrentState(`users.${this.id}.${key}`, value)
+        }
     }
 
     async execMethod(methodName: string, methodData = [], target?: any) {
@@ -874,18 +876,18 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @title Play Sound
      * @method player.playSound(soundId,allMap=false)
      * @param {string} soundId Sound identifier, defined on the client side
-     * @param {boolean} [allMap] Indicate if the sound is heard by the players on the map
+     * @param {boolean} [forEveryone=false] Indicate if the sound is heard by the players on the map
      * @since 3.0.0-alpha.9
      * @returns {void}
      * @memberof Player
      */
-    playSound(soundId: string, allMap: boolean = false) {
+    playSound(soundId: string, forEveryone: boolean = false) {
         const obj = {
             objectId: this.playerId,
             name: SocketMethods.PlaySound,
             params: [soundId]
         }
-        if (!allMap) {
+        if (!forEveryone) {
             this.emit(SocketEvents.CallMethod, obj)
             return
         }
@@ -979,5 +981,18 @@ export class RpgEvent extends RpgPlayer {
             bool = map.removeEvent(this.id)
         }
         return bool
+    }
+
+    override emitToMap(key: string, value: any) {
+        const map = this.getCurrentMap()
+        if (map) {
+            const eventPath = `events.${this.id}.${key}`
+            if (this.playerRelated) {
+                map.$setCurrentState(`users.${this.playerRelated.id}.${eventPath}`, value)
+            }
+            else {
+                map.$setCurrentState(eventPath, value)
+            }
+        }
     }
 }
