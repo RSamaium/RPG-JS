@@ -13,7 +13,6 @@ let server: RpgServerEngine
 function getEmitParams(graphic, animationName, replaceGraphic = false) {
     return [SocketEvents.CallMethod, {
         "name": SocketMethods.ShowAnimation,
-        "objectId": player.id,
         "params": [graphic, animationName, replaceGraphic]
     }]
 }
@@ -42,6 +41,7 @@ describe('player.showAnimation()', () => {
     test('Call Client, scene.showAnimation', () => {
         const spy = vi.spyOn(client.getScene(), 'showAnimation')
         player.showAnimation('shield', 'default')
+        server.send()
         expect(spy).toHaveBeenCalled()
     })
 })

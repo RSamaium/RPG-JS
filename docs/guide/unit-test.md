@@ -1,75 +1,79 @@
-# Unit Tests
+# Unit Testing in RPGJS Project
 
-## Prerequisites
+Unit testing is an essential part of ensuring the reliability and correctness of your RPGJS project. This guide will walk you through the process of setting up and running unit tests using the `vitest` testing framework along with `jsdom`.
 
-1. You must know [Jest](https://jestjs.io)
-2. The tests apply to the server side
+## Steps
 
-## Create a unit test
+Follow these steps to set up and run unit tests for your RPGJS project:
 
-1. Create a file in the `tests` folder. This folder must be outside the `src` folder.
-2. the file must end with `.spec.ts`
+### 1. Install Dependencies
 
-```ts
-import { RpgWorld, RpgPlayer } from '@rpgjs/server'
-import { testing, clear } from '@rpgjs/testing'
-import modules from '../src/modules'
+You need to install `vitest` and `jsdom` packages. These packages will be used for testing and providing a simulated DOM environment for your tests.
 
-let player: RpgPlayer
+```bash
+npm install vitest jsdom --save-dev
+```
+
+### 2. Create a Test Folder
+
+Create a `__test__` folder within the module where you want to add unit tests. For example, if you want to add tests for the `main` module, create a `__tests__` folder within the `main` module.
+
+### 3. Add Test Files
+
+Inside the `__test__` folder, create `.spec.ts` files for your unit tests. These files will contain your actual test cases.
+
+### 4. Write Unit Tests
+
+In your `.spec.ts` file, you can write unit tests using the provided RPGJS testing utilities along with the `vitest` framework. Here's an example of how you can structure your unit tests:
+
+```typescript
+import { RpgPlayer, RpgModule, RpgServer } from '@rpgjs/server';
+import { testing, clear } from '@rpgjs/testing';
+import { beforeEach, afterEach, test, expect } from 'vitest';
+import player from './player';
+
+@RpgModule<RpgServer>({
+    player
+})
+class RpgServerModule {}
+
+let currentPlayer: RpgPlayer;
 
 beforeEach(async () => {
-    const fixture = testing(modules, {
-        basePath: __dirname + '/../'
-    })
-    const client = await fixture.createClient()
-    player = RpgWorld.getPlayer(client.playerId)
-})
+    const fixture = await testing([
+        {
+            server: RpgServerModule
+        }
+    ]);
+    const clientFixture = await fixture.createClient();
+    currentPlayer = clientFixture.player;
+});
 
 test('test player', () => {
-    expect(player).toBeDefined()
-})
+    expect(currentPlayer).toBeDefined();
+});
 
 afterEach(() => {
-    clear()
-})
+    clear();
+});
 ```
 
-In the `beforeEach()` function, you must: 
+### 5. Update package.json
 
-1. Wrap your server class with the `testing()` function. It will allow you to emulate a client. 
-2. Create a client
-3. Using the [RpgWorld class](/classes/world.html), retrieve the player according to his identifier
-4. Add the `clear()` function in `afterEach` to empty the cards and players in memory, and start from 0 for the next test
+Add a test script in your `package.json` to run your unit tests using `vitest`. This script should reference the `vitest` configuration file.
 
-You can make tests ! 
-
-### Example of a test
-
-```ts
-test('check that after the connection, the player is on the map named town', () => {
-    const map = player.getCurrentMap()
-    expect(map.id).toBe('town')
-})
+```json
+"scripts": {
+    "test": "npx vitest --config node_modules/@rpgjs/compiler/src/test/vitest.config.ts"
+}
 ```
 
-## Launch unit tests
+### 6. Run Tests
 
-Add the code in `jest.config.js`:
+To run your unit tests, execute the following command in your terminal:
 
-```js
-const jestConfig = require('@rpgjs/compiler/jest')
-module.exports = jestConfig
+```bash
+npm test
 ```
 
-> If you want to extend the configuration of Jest:
-> ```js
-> const jestConfig = require('@rpgjs/compiler/jest')
-> module.exports = {
->    ...jestConfig,
->    verbose: true
-> }
-> ```
-
-Run the following command line :
-
-`NODE_ENV=test npx jest`
+This will initiate the unit tests using the `vitest` framework, and you'll see the test results in your terminal.

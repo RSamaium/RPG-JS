@@ -1,8 +1,7 @@
 import { RpgEvent, EventData, RpgPlayer, EventMode } from '@rpgjs/server'
  
 @EventData({
-    name: 'EV-1',
-    mode: EventMode.Scenario
+    name: 'EV-1'
 })
 export default class CharaEvent extends RpgEvent {
     onInit() {
