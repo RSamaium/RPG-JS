@@ -43,7 +43,8 @@ const frameY = direction => {
                     [ 
                         { time: 0, frameX: 0, frameY: frameY(direction) },
                         { time: 10, frameX: 1, frameY: frameY(direction) },
-                        { time: 20, frameX: 2, frameY: frameY(direction) }
+                        { time: 20, frameX: 2, frameY: frameY(direction) },
+                        { time: 40 } // indicate the last time at the end of the animation. This time is in fact the final duration of the animation.
                     ]
                 ]
          }
@@ -55,6 +56,27 @@ export default class Characters {}
 Follow the information in the comments
 
 > It is important to put `require()` because Webpack will retrieve the images and put it in the `dist` folder. 
+
+<div class="module-api">
+
+### Add the spritesheet in the module
+
+Then go to <PathTo to="clientIndex" />, and add the spritesheet in the appropriate property
+
+```ts
+import { RpgClient, RpgModule } from '@rpgjs/client'
+import { HeroCharacter } from './characters/hero'
+import { Tilesets } from './maps/medieval'
+
+@RpgModule<RpgClient>({
+    spritesheets: [
+        HeroCharacter // We add our spritesheet !
+    ]
+})
+export default class RpgClientModuleEngine {}
+```
+
+</div>
 
 ### Preset Spritesheet (optional)
 

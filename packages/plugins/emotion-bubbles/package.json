@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/plugin-emotion-bubbles",
-  "version": "4.0.0-rc.4",
+  "version": "4.0.0-rc.9",
   "description": "",
   "main": "src/index.ts",
   "types": "index.d.ts",
@@ -19,8 +19,8 @@
   "author": "Samuel Ronce",
   "license": "MIT",
   "dependencies": {
-    "@rpgjs/client": "^4.0.0-rc.4",
-    "@rpgjs/server": "^4.0.0-rc.4"
+    "@rpgjs/client": "^4.0.0-rc.9",
+    "@rpgjs/server": "^4.0.0-rc.9"
   },
   "gitHead": "5abe6ca78be96524d74a052a230f2315c900ddee"
 }

@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/server",
-  "version": "4.0.0-rc.4",
+  "version": "4.0.0-rc.9",
   "description": "",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
@@ -26,10 +26,10 @@
   "author": "Samuel Ronce",
   "license": "MIT",
   "dependencies": {
-    "@rpgjs/common": "^4.0.0-rc.4",
-    "@rpgjs/database": "^4.0.0-rc.4",
-    "@rpgjs/tiled": "^4.0.0-rc.4",
-    "@rpgjs/types": "^4.0.0-rc.4",
+    "@rpgjs/common": "^4.0.0-rc.9",
+    "@rpgjs/database": "^4.0.0-rc.9",
+    "@rpgjs/tiled": "^4.0.0-rc.9",
+    "@rpgjs/types": "^4.0.0-rc.9",
     "axios": "^1.3.6",
     "cors": "^2.8.5",
     "express": "^4.18.2",
@@ -38,7 +38,7 @@
     "pretty-error": "^4.0.0",
     "rxjs": "7.8.0",
     "sat": "^0.9.0",
-    "simple-room": "^2.3.2",
+    "simple-room": "^2.4.1",
     "socket.io": "^4.6.1"
   },
   "gitHead": "5abe6ca78be96524d74a052a230f2315c900ddee",

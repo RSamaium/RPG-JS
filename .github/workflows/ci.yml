@@ -3,10 +3,10 @@ name: RPG CI
 on:
   push:
     branches:
-      - v4
+      - '*'
   pull_request:
     branches:
-      - v4
+      - '*'
 
 jobs:
   tests:
@@ -23,3 +23,63 @@ jobs:
         cache: 'npm'
     - run: npm i
     - run: npm test
+
+  build_and_publish:
+    needs: tests
+    if: github.ref == 'refs/heads/v4'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Use Node.js 18.x
+      uses: actions/setup-node@v3
+      with:
+        node-version: 18.x
+        registry-url: 'https://registry.npmjs.org'
+        cache: 'npm'
+    - run: npm i
+    - run: npm run build
+    - name: "Version and publish" 
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      run: |
+        git config user.name "${{ github.actor }}"
+        git config user.email "${{ github.actor}}@users.noreply.github.com"
+
+        npm set //registry.npmjs.org/:_authToken=$NPM_TOKEN
+
+        npx lerna version --conventional-commits --yes
+        npx lerna publish from-git --no-private --loglevel=verbose --yes
+
+  starter_repo_update_dependencies:
+    needs: build_and_publish
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout the starter repository
+      run: git clone https://github.com/rpgjs/starter
+
+    - name: Install npm-check-updates globally
+      run: npm i npm-check-updates -g
+
+    - name: Run ncu to update dependencies
+      run: |
+        cd starter
+        ncu -u
+
+    - name: Install updated dependencies
+      run: |
+        cd starter
+        npm i
+
+    - name: Configure Git User
+      run: |
+        cd starter
+        git config user.name "${{ github.actor }}"
+        git config user.email "${{ github.actor}}@users.noreply.github.com"
+
+    - name: Commit the updated package.json
+      run: |
+        cd starter
+        git add package*.json
+        git commit -m "Update dependencies to latest version"
+        git push https://$GH_ACCESS_TOKEN@github.com/rpgjs/starter.git

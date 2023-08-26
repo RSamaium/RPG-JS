@@ -36,6 +36,7 @@ import { RpgTiledWorldMap } from '../Game/WorldMaps'
 import { CameraOptions, PositionXY_OptionalZ, SocketEvents, SocketMethods, LayoutObject } from '@rpgjs/types'
 import { ComponentManager } from './ComponentManager'
 import { Subject } from 'rxjs'
+import { EventManager, EventMode } from '../Game/EventManager'
 
 const {
     isPromise,
@@ -73,9 +74,15 @@ const playerSchemas = {
         z: Number
     },
     direction: Number,
+   
     teleported: {
         $permanent: false
     },
+
+    deleted: {
+        $permanent: false
+    },
+
     param: Object,
     hp: Number,
     sp: Number,
@@ -190,6 +197,9 @@ export class RpgPlayer extends RpgCommonPlayer {
 
     // As soon as a teleport has been made, the value is changed to force the client to change the positions on the map without making a move.
     teleported: number = 0
+
+    // a flag that lets the client know if the event is suppressed. The client can, for example, end animations before completely deleting the object (client side).
+    deleted: boolean = false
 
     /** @internal */
     initialize() {
@@ -397,26 +407,12 @@ export class RpgPlayer extends RpgCommonPlayer {
         let ret = {}
         for (let key in events) {
             this.events[key] = events[key]
+            this.events[key].playerRelated = this
             this.events[key].execMethod('onInit', [this])
             // force to get Proxy object to sync with client
             ret = { ...ret, [key]: this.events[key] }
         }
         return ret
-    }
-
-    /**
-     * Removes an event from the map (Scenario Mode). Returns false if the event is not found
-     * @title Remove Event
-     * @since 3.0.0-beta.4
-     * @method player.removeEvent(eventId)
-     * @param {string} eventId Event Name
-     * @returns {boolean}
-     * @memberof Player
-     */
-    removeEvent(eventId: string): boolean {
-        if (!this.events[eventId]) return false
-        delete this.events[eventId]
-        return true
     }
 
     /**
@@ -471,10 +467,10 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @title Load progress
      * @method player.load(json)
      * @param {string} json The JSON sent by the method save()
-     * @returns {string}
+     * @returns {Promise<boolean | RpgMap | null>}
      * @memberof Player
      */
-    load(json: any) {
+    load(json: any): Promise<boolean | RpgMap | null> {
         if (isString(json)) json = JSON.parse(json)
 
         const getData = (id) => new (this.databaseById(id))()
@@ -509,8 +505,10 @@ export class RpgPlayer extends RpgCommonPlayer {
         this.position = json.position
         if (json.map) {
             this.map = ''
-            this.changeMap(json.map, json.tmpPositions || json.position)
+            return this.changeMap(json.map, json.tmpPositions || json.position)
         }
+
+        return Promise.resolve(null)
     }
 
     /**
@@ -667,6 +665,7 @@ export class RpgPlayer extends RpgCommonPlayer {
      * This is useful, if for example, you want to make an animated character (sword stroke when pressing a key)
      * When the animation is finished, the original graphic is displayed again
      * 
+     * 
      * ```ts
      * player.showAnimation('sword_stroke', 'default', true)
      * ```
@@ -676,6 +675,10 @@ export class RpgPlayer extends RpgCommonPlayer {
      * ```ts
      * player.showAnimation(['body', 'sword_stroke'], 'default', true)
      * ```
+     * 
+     * ::: tip
+     * For this to work, the animations must have been previously defined in `setGraphic`.
+     * :::
      * 
      * @title Show Animation
      * @method player.showAnimation(graphic,animationName,replaceGraphic=false)
@@ -687,7 +690,6 @@ export class RpgPlayer extends RpgCommonPlayer {
      */
     showAnimation(graphic: string | string[], animationName: string, replaceGraphic: boolean = false) {
         this.emitToMap('callMethod', {
-            objectId: this.playerId,
             name: SocketMethods.ShowAnimation,
             params: [graphic, animationName, replaceGraphic]
         })
@@ -797,7 +799,10 @@ export class RpgPlayer extends RpgCommonPlayer {
     }
 
     emitToMap(key: string, value: any) {
-        Query.getPlayersOfMap(this.map).forEach(player => player.emit(key, value))
+        const map = this.getCurrentMap()
+        if (map) {
+            map.$setCurrentState(`users.${this.id}.${key}`, value)
+        }
     }
 
     async execMethod(methodName: string, methodData = [], target?: any) {
@@ -873,18 +878,18 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @title Play Sound
      * @method player.playSound(soundId,allMap=false)
      * @param {string} soundId Sound identifier, defined on the client side
-     * @param {boolean} [allMap] Indicate if the sound is heard by the players on the map
+     * @param {boolean} [forEveryone=false] Indicate if the sound is heard by the players on the map
      * @since 3.0.0-alpha.9
      * @returns {void}
      * @memberof Player
      */
-    playSound(soundId: string, allMap: boolean = false) {
+    playSound(soundId: string, forEveryone: boolean = false) {
         const obj = {
             objectId: this.playerId,
             name: SocketMethods.PlaySound,
             params: [soundId]
         }
-        if (!allMap) {
+        if (!forEveryone) {
             this.emit(SocketEvents.CallMethod, obj)
             return
         }
@@ -894,6 +899,7 @@ export class RpgPlayer extends RpgCommonPlayer {
 }
 
 export interface RpgPlayer extends
+    EventManager,
     ItemManager,
     GoldManager,
     StateManager,
@@ -913,6 +919,7 @@ export interface RpgPlayer extends
 }
 
 applyMixins(RpgPlayer, [
+    EventManager,
     ItemManager,
     GoldManager,
     StateManager,
@@ -928,11 +935,6 @@ applyMixins(RpgPlayer, [
     ComponentManager
 ])
 
-export enum EventMode {
-    Shared = 'shared',
-    Scenario = 'scenario'
-}
-
 export interface RpgClassEvent<T> {
     _name: string
     new(): T,
@@ -942,6 +944,12 @@ export class RpgEvent extends RpgPlayer {
 
     public readonly type: string = 'event'
     properties: any = {}
+    mode: EventMode
+    playerRelated: RpgPlayer | null = null
+
+    constructor(gameEngine: RpgCommonGame, playerId: string) {
+        super(gameEngine, playerId)
+    }
 
     async execMethod(methodName: string, methodData = []) {
         if (!this[methodName]) {
@@ -955,6 +963,38 @@ export class RpgEvent extends RpgPlayer {
         const room = this.getCurrentMap()
         if (room) {
             (room as any).$setCurrentState(`events.${this.id}.${path}`)
+        }
+    }
+
+    /**
+    * Deletes the event from the map (in shared or scenario mode)
+    * 
+    * @title Remove
+    * @since 4.0.0
+    * @method event.remove()
+    * @returns {boolean} true if the event has been removed. If false, the event is not on the map
+    * @memberof RpgEvent
+    */
+    remove(): boolean {
+        let bool = false
+        if (this.playerRelated) bool = this.playerRelated.removeEvent(this.id)
+        const map = this.getCurrentMap()
+        if (map) {
+            bool = map.removeEvent(this.id)
+        }
+        return bool
+    }
+
+    override emitToMap(key: string, value: any) {
+        const map = this.getCurrentMap()
+        if (map) {
+            const eventPath = `events.${this.id}.${key}`
+            if (this.playerRelated) {
+                map.$setCurrentState(`users.${this.playerRelated.id}.${eventPath}`, value)
+            }
+            else {
+                map.$setCurrentState(eventPath, value)
+            }
         }
     }
 }

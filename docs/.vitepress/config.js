@@ -106,6 +106,7 @@ const guideMenu = [{
   text: 'Go further',
   collapsed: false,
   items: [
+    { text: "Create World", link: "/guide/create-world-maps" },
     { text: "Add life bar, text or other above the player", link: "/guide/component" },
     { text: "Create event (NPC)", link: "/guide/create-event" },
     { text: "Create items", link: "/guide/create-database" },
@@ -130,9 +131,12 @@ const guideMenu = [{
   text: 'Technical',
   collapsed: false,
   items: [
+    { text: "Environment Variables", link: "/guide/env" },
+    { text: "All configuration in rpg.toml", link: "/guide/configuration" },
     { text: "Working with User Inputs", link: "/guide/inputs" },
     { text: "Supporting Gamepad Input", link: "/guide/gamepad" },
-    { text: "Creating Responsive Game Design", link: "/guide/responsive-design" }
+    { text: "Creating Responsive Game Design", link: "/guide/responsive-design" },
+    { text: "Upgrade/Update RPGJS", link: "/guide/upgrade" }
   ]
 
 },
@@ -140,7 +144,8 @@ const guideMenu = [{
   text: 'Advanced',
   collapsed: false,
   items: [
-    { text: "Creating a Module", link: "/guide/create-module" },
+    { text: "Synchronization between Server and Client", link: "/guide/synchronization" },
+    { text: "Creating a plugin", link: "/advanced/create-plugin" },
     { text: "Using Agones for Game Server Hosting", link: "/advanced/agones" },
     { text: "Optimizing Performance", link: "/guide/performance" }
   ]
@@ -159,8 +164,8 @@ const pluginMenu = [{
   ]
 }]
 
-
 module.exports = {
+  //extends: baseConfig,
   title: 'RPGJS v4 Documentation',
   description: 'Create your RPG or MMORPG in Javascript',
   ignoreDeadLinks: true,

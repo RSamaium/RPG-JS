@@ -118,11 +118,14 @@ export interface MapOptions {
      * export class TownMap extends RpgMap {
      *      count: number = 0
      * 
-     *      onEnter() {
+     *      onLoad() {}
+     * 
+     *      onJoin() {
      *          this.count++
      *      }
      * 
-     *      onLeave() {
+     *      onLeave(player) {
+     *          super.onLeave(player)
      *          this.count--
      *      }
      * }

@@ -329,7 +329,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     const except = ['@rpgjs/server', '@rpgjs/client', '@rpgjs/common', '@rpgjs/database', '@rpgjs/tiled', '@rpgjs/types', '@rpgjs/standalone']
     for (const dep of dependencies) {
         if (except.includes(dep)) continue
-        if (dep.startsWith('@rpgjs' || dep.startsWith('rpgjs-'))) {
+        if (dep.startsWith('@rpgjs') || dep.startsWith('rpgjs-')) {
             excludeDependencies.push(dep)
         }
     }

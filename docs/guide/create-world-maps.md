@@ -1,4 +1,4 @@
-# Step 3b. Create several attached maps in one world
+# Create several attached maps in one world
 
 ## Prerequisites
 
@@ -30,11 +30,14 @@ Place the maps so that the edges are touching
 
 ## Add the world to your game
 
-In <PathTo to="serverIndex" /> :
 
+<div class="module-api">
+
+In <PathTo to="serverIndex" /> :
 ```ts
+
 import { RpgServer, RpgModule } from '@rpgjs/server'
-import myworld from './maps/tmx/myworld.world'
+import myworld from './world/myworld.world'
 
 @RpgModule<RpgServer>({
     worldMaps: [
@@ -43,6 +46,15 @@ import myworld from './maps/tmx/myworld.world'
 })
 export default class RpgServerEngine { }
 ```
+
+</div>
+
+<div class="autoload-api">
+
+Just add JSON file in <PathTo to="baseModule" file="worlds/myworld.world" />
+
+</div>
+
 
 ::: tip
 The world creates maps automatically and the map ID will be the file name. Be aware that if you already have a map with the same ID, the world will use this map
@@ -65,7 +77,10 @@ There are several reasons for this. For example,
 
 Go to <Path to="playerFile" /> and add `canChangeMap()` hook
 
-```ts
+<div class="module-api">
+
+::: code-group
+```ts [main/server/player.ts]
 import { RpgPlayer, RpgPlayerHooks, RpgClassMap, RpgMap } from '@rpgjs/server'
 
 export const player: RpgPlayerHooks = {
@@ -78,6 +93,49 @@ export const player: RpgPlayerHooks = {
         return true
     }
 }
+
+export default player
 ```
+
+```ts [main/server/index.ts]
+import { RpgServer, RpgModule } from '@rpgjs/server'
+import player from './player.ts'
+import myworld from './maps/tmx/myworld.world'
+
+@RpgModule<RpgServer>({
+    player,
+    worldMaps: [
+        myworld
+    ]
+})
+export default class RpgServerEngine { }
+```
+:::
+
+</div>
+
+<div class="autoload-api">
+
+```ts
+import { RpgPlayer, RpgPlayerHooks, RpgClassMap, RpgMap } from '@rpgjs/server'
+
+const player: RpgPlayerHooks = {
+    // others hooks here...
+    async canChangeMap(player: RpgPlayer, nextMap: RpgClassMap<RpgMap>): Promise<boolean> {
+        if (nextMap.id == '<id of next map here>' && player.level < 10) {
+            await player.showText('You can\'t go in that direction yet. You must have level 10 minimum!')
+            return false
+        }
+        return true
+    }
+}
+
+export default player
+```
+
+</div>
+
+
+
 
 > Note that `nextMap` is not of type `RpgMap` because it is not loaded yet. It's only the class, so you can't get everything from it, e.g. the data of the next map

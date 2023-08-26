@@ -1,140 +1,228 @@
 import { TransformOptions, FrameOptions } from '../Sprite/Spritesheet'
 
-export const Ease = {
-	linear(t: number, b: number, c: number, d: number): number {
-		return c*(t/=d) + b;
-	},
-	easeInQuad (t: number, b: number, c: number, d: number): number {
-		return c*(t/=d)*t + b;
-	},
-	easeOutQuad (t: number, b: number, c: number, d: number): number {
-		return -c *(t/=d)*(t-2) + b;
-	},
-	easeInOutQuad (t: number, b: number, c: number, d: number): number {
-		if ((t/=d/2) < 1) return c/2*t*t + b;
-		return -c/2 * ((--t)*(t-2) - 1) + b;
-	},
-	easeInCubic (t: number, b: number, c: number, d: number): number {
-		return c*(t/=d)*t*t + b;
-	},
-	easeOutCubic (t: number, b: number, c: number, d: number): number {
-		return c*((t=t/d-1)*t*t + 1) + b;
-	},
-	easeInOutCubic (t: number, b: number, c: number, d: number): number {
-		if ((t/=d/2) < 1) return c/2*t*t*t + b;
-		return c/2*((t-=2)*t*t + 2) + b;
-	},
-	easeInQuart (t: number, b: number, c: number, d: number): number {
-		return c*(t/=d)*t*t*t + b;
-	},
-	easeOutQuart (t: number, b: number, c: number, d: number): number {
-		return -c * ((t=t/d-1)*t*t*t - 1) + b;
-	},
-	easeInOutQuart (t: number, b: number, c: number, d: number): number {
-		if ((t/=d/2) < 1) return c/2*t*t*t*t + b;
-		return -c/2 * ((t-=2)*t*t*t - 2) + b;
-	},
-	easeInQuint (t: number, b: number, c: number, d: number): number {
-		return c*(t/=d)*t*t*t*t + b;
-	},
-	easeOutQuint (t: number, b: number, c: number, d: number): number {
-		return c*((t=t/d-1)*t*t*t*t + 1) + b;
-	},
-	easeInOutQuint (t: number, b: number, c: number, d: number): number {
-		if ((t/=d/2) < 1) return c/2*t*t*t*t*t + b;
-		return c/2*((t-=2)*t*t*t*t + 2) + b;
-	},
-	easeInSine (t: number, b: number, c: number, d: number): number {
-		return -c * Math.cos(t/d * (Math.PI/2)) + c + b;
-	},
-	easeOutSine (t: number, b: number, c: number, d: number): number {
-		return c * Math.sin(t/d * (Math.PI/2)) + b;
-	},
-	easeInOutSine (t: number, b: number, c: number, d: number): number {
-		return -c/2 * (Math.cos(Math.PI*t/d) - 1) + b;
-	},
-	easeInExpo (t: number, b: number, c: number, d: number): number {
-		return (t==0) ? b : c * Math.pow(2, 10 * (t/d - 1)) + b;
-	},
-	easeOutExpo (t: number, b: number, c: number, d: number): number {
-		return (t==d) ? b+c : c * (-Math.pow(2, -10 * t/d) + 1) + b;
-	},
-	easeInOutExpo (t: number, b: number, c: number, d: number): number {
-		if (t==0) return b;
-		if (t==d) return b+c;
-		if ((t/=d/2) < 1) return c/2 * Math.pow(2, 10 * (t - 1)) + b;
-		return c/2 * (-Math.pow(2, -10 * --t) + 2) + b;
-	},
-	easeInCirc (t: number, b: number, c: number, d: number): number {
-		return -c * (Math.sqrt(1 - (t/=d)*t) - 1) + b;
-	},
-	easeOutCirc (t: number, b: number, c: number, d: number): number {
-		return c * Math.sqrt(1 - (t=t/d-1)*t) + b;
-	},
-	easeInOutCirc (t: number, b: number, c: number, d: number): number {
-		if ((t/=d/2) < 1) return -c/2 * (Math.sqrt(1 - t*t) - 1) + b;
-		return c/2 * (Math.sqrt(1 - (t-=2)*t) + 1) + b;
-	},
-	easeInElastic (t: number, b: number, c: number, d: number): number {
-		var s=1.70158;var p=0;var a=c;
-		if (t==0) return b;  if ((t/=d)==1) return b+c;  if (!p) p=d*.3;
-		if (a < Math.abs(c)) { a=c; var s=p/4; }
-		else var s = p/(2*Math.PI) * Math.asin (c/a);
-		return -(a*Math.pow(2,10*(t-=1)) * Math.sin( (t*d-s)*(2*Math.PI)/p )) + b;
-	},
-	easeOutElastic (t: number, b: number, c: number, d: number): number {
-		var s=1.70158;var p=0;var a=c;
-		if (t==0) return b;  if ((t/=d)==1) return b+c;  if (!p) p=d*.3;
-		if (a < Math.abs(c)) { a=c; var s=p/4; }
-		else var s = p/(2*Math.PI) * Math.asin (c/a);
-		return a*Math.pow(2,-10*t) * Math.sin( (t*d-s)*(2*Math.PI)/p ) + c + b;
-	},
-	easeInOutElastic (t: number, b: number, c: number, d: number): number {
-		var s=1.70158;var p=0;var a=c;
-		if (t==0) return b;  if ((t/=d/2)==2) return b+c;  if (!p) p=d*(.3*1.5);
-		if (a < Math.abs(c)) { a=c; var s=p/4; }
-		else var s = p/(2*Math.PI) * Math.asin (c/a);
-		if (t < 1) return -.5*(a*Math.pow(2,10*(t-=1)) * Math.sin( (t*d-s)*(2*Math.PI)/p )) + b;
-		return a*Math.pow(2,-10*(t-=1)) * Math.sin( (t*d-s)*(2*Math.PI)/p )*.5 + c + b;
-	},
-	easeInBack (t: number, b: number, c: number, d: number, s: number): number {
-		if (s == undefined) s = 1.70158;
-		return c*(t/=d)*t*((s+1)*t - s) + b;
-	},
-	easeOutBack (t: number, b: number, c: number, d: number, s: number): number {
-		if (s == undefined) s = 1.70158;
-		return c*((t=t/d-1)*t*((s+1)*t + s) + 1) + b;
-	},
-	easeInOutBack (t: number, b: number, c: number, d: number, s: number): number {
-		if (s == undefined) s = 1.70158; 
-		if ((t/=d/2) < 1) return c/2*(t*t*(((s*=(1.525))+1)*t - s)) + b;
-		return c/2*((t-=2)*t*(((s*=(1.525))+1)*t + s) + 2) + b;
-	},
-	easeInBounce (t: number, b: number, c: number, d: number): number {
-		return c - Ease.easeOutBounce (d-t, 0, c, d) + b;
-	},
-	easeOutBounce (t: number, b: number, c: number, d: number): number {
-		if ((t/=d) < (1/2.75)) {
-			return c*(7.5625*t*t) + b;
-		} else if (t < (2/2.75)) {
-			return c*(7.5625*(t-=(1.5/2.75))*t + .75) + b;
-		} else if (t < (2.5/2.75)) {
-			return c*(7.5625*(t-=(2.25/2.75))*t + .9375) + b;
-		} else {
-			return c*(7.5625*(t-=(2.625/2.75))*t + .984375) + b;
-		}
-	},
-	easeInOutBounce (t: number, b: number, c: number, d: number): number {
-		if (t < d/2) return Ease.easeInBounce (t*2, 0, c, d) * .5 + b;
-		return Ease.easeOutBounce (t*2-d, 0, c, d) * .5 + c*.5 + b;
-	}
-} 
+type EasingFunction = (time: number, _from: number, to: number, duration: number) => number;
+
+export const Ease: Record<string, EasingFunction> = {
+    linear: (time: number, _from: number, to: number, duration: number): number => {
+        return _from + (to - _from) * time / duration;
+    },
+    easeInQuad: (time: number, _from: number, to: number, duration: number): number => {
+        time /= duration;
+        return (to - _from) * time * time + _from;
+    },
+    easeOutQuad: (time: number, _from: number, to: number, duration: number): number => {
+        time /= duration;
+        return -(to - _from) * time * (time - 2) + _from;
+    },
+    easeInOutQuad: (time: number, _from: number, to: number, duration: number): number => {
+        time /= duration / 2;
+        if (time < 1) return ((to - _from) / 2) * time * time + _from;
+        time--;
+        return -((to - _from) / 2) * (time * (time - 2) - 1) + _from;
+    },
+    easeInCubic: (time: number, _from: number, to: number, duration: number): number => {
+        time /= duration;
+        return (to - _from) * time * time * time + _from;
+    },
+    easeOutCubic: (time: number, _from: number, to: number, duration: number): number => {
+        time /= duration;
+        time--;
+        return (to - _from) * (time * time * time + 1) + _from;
+    },
+    easeInOutCubic: (time: number, _from: number, to: number, duration: number): number => {
+        time /= duration / 2;
+        if (time < 1) return (to - _from) / 2 * time * time * time + _from;
+        time -= 2;
+        return (to - _from) / 2 * (time * time * time + 2) + _from;
+    },
+    easeInQuart: (time: number, _from: number, to: number, duration: number): number => {
+        time /= duration;
+        return (to - _from) * time * time * time * time + _from;
+    },
+    easeOutQuart: (time: number, _from: number, to: number, duration: number): number => {
+        time /= duration;
+        time--;
+        return -(to - _from) * (time * time * time * time - 1) + _from;
+    },
+    easeInOutQuart: (time: number, _from: number, to: number, duration: number): number => {
+        time /= duration / 2;
+        if (time < 1) return (to - _from) / 2 * time * time * time * time + _from;
+        time -= 2;
+        return -(to - _from) / 2 * (time * time * time * time - 2) + _from;
+    },
+    easeInQuint: (time: number, _from: number, to: number, duration: number): number => {
+        time /= duration;
+        return (to - _from) * time * time * time * time * time + _from;
+    },
+    easeOutQuint: (time: number, _from: number, to: number, duration: number): number => {
+        time /= duration;
+        time--;
+        return (to - _from) * (time * time * time * time * time + 1) + _from;
+    },
+    easeInOutQuint: (time: number, _from: number, to: number, duration: number): number => {
+        time /= duration / 2;
+        if (time < 1) return (to - _from) / 2 * time * time * time * time * time + _from;
+        time -= 2;
+        return (to - _from) / 2 * (time * time * time * time * time + 2) + _from;
+    },
+    easeInSine: (time: number, _from: number, to: number, duration: number): number => {
+        return -(to - _from) * Math.cos(time / duration * (Math.PI / 2)) + (to - _from) + _from;
+    },
+    easeOutSine: (time: number, _from: number, to: number, duration: number): number => {
+        return (to - _from) * Math.sin(time / duration * (Math.PI / 2)) + _from;
+    },
+    easeInOutSine: (time: number, _from: number, to: number, duration: number): number => {
+        return -(to - _from) / 2 * (Math.cos(Math.PI * time / duration) - 1) + _from;
+    },
+    easeInExpo: (time: number, _from: number, to: number, duration: number): number => {
+        return time === 0 ? _from : (to - _from) * Math.pow(2, 10 * (time / duration - 1)) + _from;
+    },
+    easeOutExpo: (time: number, _from: number, to: number, duration: number): number => {
+        return time === duration ? to : (to - _from) * (-Math.pow(2, -10 * time / duration) + 1) + _from;
+    },
+    easeInOutExpo: (time: number, _from: number, to: number, duration: number): number => {
+        if (time === 0) return _from;
+        if (time === duration) return to;
+        time /= duration / 2;
+        if (time < 1) return (to - _from) / 2 * Math.pow(2, 10 * (time - 1)) + _from;
+        return (to - _from) / 2 * (-Math.pow(2, -10 * --time) + 2) + _from;
+    },
+    easeInCirc: (time: number, _from: number, to: number, duration: number): number => {
+        time /= duration;
+        return -(to - _from) * (Math.sqrt(1 - time * time) - 1) + _from;
+    },
+    easeOutCirc: (time: number, _from: number, to: number, duration: number): number => {
+        time /= duration;
+        time--;
+        return (to - _from) * Math.sqrt(1 - time * time) + _from;
+    },
+    easeInOutCirc: (time: number, _from: number, to: number, duration: number): number => {
+        time /= duration / 2;
+        if (time < 1) return -(to - _from) / 2 * (Math.sqrt(1 - time * time) - 1) + _from;
+        time -= 2;
+        return (to - _from) / 2 * (Math.sqrt(1 - time * time) + 1) + _from;
+    },
+    easeInElastic: (time: number, _from: number, to: number, duration: number, amplitude = 0, period = 0): number => {
+        if (time === 0) return _from;
+        time /= duration;
+        if (time === 1) return to;
+        if (period === 0) period = duration * 0.3;
+        let s: number;
+        if (amplitude < Math.abs(to - _from)) {
+            amplitude = to - _from;
+            s = period / 4;
+        } else {
+            s = period / (2 * Math.PI) * Math.asin((to - _from) / amplitude);
+        }
+        time--;
+        return -(amplitude * Math.pow(2, 10 * time) * Math.sin((time * duration - s) * (2 * Math.PI) / period)) + _from;
+    },
+    easeOutElastic: (time: number, _from: number, to: number, duration: number, amplitude = 0, period = 0): number => {
+        if (time === 0) return _from;
+        time /= duration;
+        if (time === 1) return to;
+        if (period === 0) period = duration * 0.3;
+        let s: number;
+        if (amplitude < Math.abs(to - _from)) {
+            amplitude = to - _from;
+            s = period / 4;
+        } else {
+            s = period / (2 * Math.PI) * Math.asin((to - _from) / amplitude);
+        }
+        return amplitude * Math.pow(2, -10 * time) * Math.sin((time * duration - s) * (2 * Math.PI) / period) + (to - _from) + _from;
+    },
+    easeInOutElastic: (time: number, _from: number, to: number, duration: number, amplitude = 0, period = 0): number => {
+        if (time === 0) return _from;
+        time /= duration / 2;
+        if (time === 2) return to;
+        if (period === 0) period = duration * (0.3 * 1.5);
+        let s: number;
+        if (amplitude < Math.abs(to - _from)) {
+            amplitude = to - _from;
+            s = period / 4;
+        } else {
+            s = period / (2 * Math.PI) * Math.asin((to - _from) / amplitude);
+        }
+        if (time < 1) {
+            time--;
+            return -0.5 * (amplitude * Math.pow(2, 10 * time) * Math.sin((time * duration - s) * (2 * Math.PI) / period)) + _from;
+        }
+        time--;
+        return amplitude * Math.pow(2, -10 * time) * Math.sin((time * duration - s) * (2 * Math.PI) / period) * 0.5 + (to - _from) + _from;
+    },
+    // ...
+
+    easeInBack: (time: number, _from: number, to: number, duration: number, s = 1.70158): number => {
+        time /= duration;
+        return (to - _from) * time * time * ((s + 1) * time - s) + _from;
+    },
+    easeOutBack: (time: number, _from: number, to: number, duration: number, s = 1.70158): number => {
+        time = time / duration - 1;
+        return (to - _from) * (time * time * ((s + 1) * time + s) + 1) + _from;
+    },
+    easeInOutBack: (time: number, _from: number, to: number, duration: number, s = 1.70158): number => {
+        s *= 1.525;
+        time /= duration / 2;
+        if (time < 1) return (to - _from) / 2 * (time * time * ((s + 1) * time - s)) + _from;
+        time -= 2;
+        return (to - _from) / 2 * (time * time * ((s + 1) * time + s) + 2) + _from;
+    },
+    easeInBounce: (time: number, _from: number, to: number, duration: number): number => {
+        return (to - _from) - Ease.easeOutBounce(duration - time, 0, to - _from, duration) + _from;
+    },
+    easeOutBounce: (time: number, _from: number, to: number, duration: number): number => {
+        time /= duration;
+        let multiplier = 7.5625;
+        if (time < (1 / 2.75)) {
+            return (to - _from) * (multiplier * time * time) + _from;
+        } else if (time < (2 / 2.75)) {
+            time -= (1.5 / 2.75);
+            return (to - _from) * (multiplier * time * time + 0.75) + _from;
+        } else if (time < (2.5 / 2.75)) {
+            time -= (2.25 / 2.75);
+            return (to - _from) * (multiplier * time * time + 0.9375) + _from;
+        } else {
+            time -= (2.625 / 2.75);
+            return (to - _from) * (multiplier * time * time + 0.984375) + _from;
+        }
+    },
+    easeInOutBounce: (time: number, _from: number, to: number, duration: number): number => {
+        if (time < duration / 2) return Ease.easeInBounce(time * 2, 0, to - _from, duration) * 0.5 + _from;
+        return Ease.easeOutBounce(time * 2 - duration, 0, to - _from, duration) * 0.5 + (to - _from) * 0.5 + _from;
+    }
+}
 
 type EaseType = (t: number, b: number, c: number, d: number) => number
+
+/**
+ * Creates a new instance of the Timeline class, which allows for complex animations and control over keyframes.
+ * 
+ * @constructor
+ * @title new Timeline(options?)
+ * @param {object} [options] - Optional configuration object for the Timeline.
+ * @param {number} [options.keyframes=10] - Specifies the number of keyframes for the animation. Defaults to 10. The larger the keyframes, the smoother the animation, but the more resource-intensive it is, as the loop to browse the array will take longer.
+ * @memberof Timeline
+ * @since 4.0.0
+ * @example
+ * 
+ * ```ts
+ * const timeline = new Timeline({ keyframes: 20 });
+ * ```
+ */
+interface TimelineOptions {
+    keyframes?: number
+}
 
 export class Timeline {
     private time: number = 0
     private animation: FrameOptions[][] = []
+    private keyframes: number = 10
+
+    constructor(options?: TimelineOptions) {
+        if (options) {
+            if (options.keyframes) this.keyframes = options.keyframes
+        }
+    }
 
     /**
      * Allows you to create complex animations more easily. For example, to display a movement with an Easing function
@@ -160,7 +248,7 @@ export class Timeline {
      * 
      * Here we say
      * 
-     * - For a duration of 30 seconds
+     * - Duration in frames, allowing you to specify the duration of each animation step. If the timeline respects a specific frame rate, e.g. 60 frames per second, 40 frames correspond to an animation duration of 2/3 of a second for each step.
      * - A function that will be called every 1 frame with the `scale` property defined in transform
      * - An object of transformation. Define the properties of your choice to be passed to the callback function
      *      - `to`: the starting value
@@ -222,7 +310,7 @@ export class Timeline {
      */
     add(duration: number, cb?: (obj?: any, time?: number) => TransformOptions[], transform?: {
         [property: string]: {
-            to: number, 
+            to: number,
             from: number,
             easing?: EaseType
         }
@@ -234,18 +322,14 @@ export class Timeline {
             this.time += duration
             return this
         }
-        for (let i=0 ; i < duration ; i++) {
+        for (let k = 0; k < this.keyframes; k++) {
+            const i = Math.floor((duration / (this.keyframes - 1)) * k)
             let anim
             const obj = {}
             for (let prop in transform) {
                 const param = transform[prop]
                 const cbEasing = param.easing || Ease.linear
-                if (param.to < param.from) {
-                    obj[prop] = 1 - cbEasing(i, param.to, param.from, duration)
-                }
-                else {
-                    obj[prop] = cbEasing(i, param.from, param.to, duration)
-                }
+                obj[prop] = cbEasing(i, param.from, param.to, duration)
             }
             const ret = cb(obj, i)
             anim = ret.map(el => {

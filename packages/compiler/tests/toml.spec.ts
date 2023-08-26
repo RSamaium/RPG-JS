@@ -1,10 +1,9 @@
-import configTomlPlugin, { formatVariableName, getAllFiles, importString, transformPathIfModule, searchFolderAndTransformToImportString, loadSpriteSheet, loadClientFiles, } from '../src/build/vite-plugin-config.toml'
+import configTomlPlugin, { formatVariableName, getAllFiles, importString, transformPathIfModule, searchFolderAndTransformToImportString, loadSpriteSheet, loadClientFiles, createModuleLoad, } from '../src/build/vite-plugin-config.toml'
 import Vi, { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest'
 import * as path from 'path'
 import mockFs from 'mock-fs'
 import sizeOf from 'image-size'
 import { ClientBuildConfigOptions, Config } from '../src/build/client-config'
-import { loadGlobalConfig } from '../src/build/load-global-config.js';
 
 vi.mock('image-size')
 
@@ -338,3 +337,46 @@ describe('TOML Configuration test', () => {
         mockFs.restore();
     })
 });
+
+describe('createModuleLoad', () => {
+
+    afterEach(() => {
+        mockFs.restore();
+        vi.clearAllMocks();
+    });
+
+    test('should handle absence of package.json but presence of index.ts', () => {
+        mockFs({
+            'somepath': {
+                'index.ts': ''
+            }
+        });
+
+        const id = 'somepath';
+        const result = createModuleLoad(id, 'variableName', 'somepath', {}, {});
+        expect(result).toContain("import mod from './somepath/index.ts'");
+    });
+
+    test('default behavior when neither package.json nor index.ts exists', () => {
+        mockFs({
+            'somepath': {}
+        });
+
+        const id = 'somepath';
+        const result = createModuleLoad(id, 'variableName', 'somepath', {}, {});
+        expect(result).toContain("import client from 'client!./virtual-variableName-client.ts'");
+        expect(result).toContain("import server from 'server!./virtual-variableName-server.ts'");
+    });
+
+    test('should handle package.json with entry point', () => {
+        mockFs({
+            'somepath': {
+                'package.json': JSON.stringify({ main: 'main.ts' })
+            }
+        });
+
+        const id = 'somepath';
+        const result = createModuleLoad(id, 'variableName', 'somepath', {}, {});
+        expect(result).toContain("import mod from './somepath/main.ts'");
+    });
+})

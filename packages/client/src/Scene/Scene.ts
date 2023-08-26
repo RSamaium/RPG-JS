@@ -98,7 +98,7 @@ export abstract class Scene {
     }
 
      /** @internal */
-    draw(t: number, deltaTime: number, deltaRatio: number, frame: number) {
+    draw(time: number, deltaTime: number, deltaRatio: number, frame: number) {
         const logicObjects = { 
             ...this.game.world.getObjects(), 
             ...this.game.events,
@@ -116,7 +116,7 @@ export abstract class Scene {
             else {
                 const object = renderObjects.get(key)
                 if (!object?.update) return
-                const ret = object.update(val, valueChanged, t, deltaRatio)
+                const ret = object.update(val, valueChanged, time, deltaRatio)
                 this.triggerSpriteChanges(val, object, ret.moving)
             }
         }
@@ -130,7 +130,7 @@ export abstract class Scene {
         for (let animation of this.animations) {
             animation.update(deltaRatio)
         }
-        this.onDraw(t)
+        this.onDraw(time)
         RpgGui.update(logicObjects)
         RpgPlugin.emit(HookClient.SceneDraw, this)
     }

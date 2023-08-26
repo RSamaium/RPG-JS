@@ -1,4 +1,4 @@
-import { RpgServer, RpgModule } from '@rpgjs/server'
+import { RpgServer, RpgModule, RpgWorld } from '@rpgjs/server'
 import { Potion } from './fixtures/item'
 import { Sword } from './fixtures/weapons'
 import { Confuse } from './fixtures/state'
@@ -42,8 +42,7 @@ test('Test Save', () => {
     expect(obj.variables).toHaveLength(1)
 })
 
-
-test('Test Load', () => {
+test('Test Load', async () => {
     player.addItem(Potion)
     player.addItem(Sword)
     player.equip(Sword)
@@ -57,7 +56,7 @@ test('Test Load', () => {
     player.removeState(Confuse)
     player.forgetSkill(Fire)
     player.removeVariable('TEST')
-    player.load(json)
+    await player.load(json)
     expect(player).toHaveProperty('items.0.item.hpValue')
     expect(player).toHaveProperty('equipments.0.atk')
     expect(player).toHaveProperty('equipments.0.equipped')

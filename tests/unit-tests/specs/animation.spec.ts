@@ -1,9 +1,10 @@
-import { EventData, Move, RpgEvent, RpgMap, RpgPlayer, RpgShape, RpgServerEngine } from '@rpgjs/server'
+import { RpgMap, RpgPlayer, RpgServerEngine } from '@rpgjs/server'
 import { Spritesheet, RpgSceneMap, RpgComponent, AnimationClass as Animation, Animation as AnimationEnum  } from '@rpgjs/client'
 import { _beforeEach } from './beforeEach'
 import { clear, nextTick } from '@rpgjs/testing'
 import { SocketMethods, SocketEvents } from '@rpgjs/types'
 import { beforeEach, test, afterEach, expect, describe, vi } from 'vitest'
+import { createSprite } from './fixtures/animation'
 
 let client, player: RpgPlayer, fixture, playerId
 let event, map: RpgMap
@@ -12,37 +13,8 @@ let server: RpgServerEngine
 function getEmitParams(graphic, animationName, replaceGraphic = false) {
     return [SocketEvents.CallMethod, {
         "name": SocketMethods.ShowAnimation,
-        "objectId": player.id,
         "params": [graphic, animationName, replaceGraphic]
     }]
-}
-
-function createSprite({
-    parent = {},
-    animation = {}
-} = {}) {
-    @Spritesheet({
-        id: 'shield',
-        image: require('./fixtures/spritesheets/sample.png'),
-        framesWidth: 5,
-        framesHeight: 4,
-        width: 960,
-        height: 768,
-        textures: {
-            default: {
-                animations: [
-                    [
-                        { time: 0, frameX: 0, frameY: 0 },
-                        { time: 5, frameX: 1, frameY: 0 },
-                    ]
-                ],
-                ...animation
-            }
-        },
-        ...parent
-    })
-    class ShieldAnimations { }
-    return ShieldAnimations
 }
 
 beforeEach(async () => {
@@ -69,6 +41,7 @@ describe('player.showAnimation()', () => {
     test('Call Client, scene.showAnimation', () => {
         const spy = vi.spyOn(client.getScene(), 'showAnimation')
         player.showAnimation('shield', 'default')
+        server.send()
         expect(spy).toHaveBeenCalled()
     })
 })

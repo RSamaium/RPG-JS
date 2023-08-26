@@ -482,7 +482,7 @@ export class RpgClientEngine {
             scene?.changeTile(x, y, tiles)
         })
 
-        this.socket.on(SocketEvents.CallMethod, ({ objectId, params, name }) => {
+        const callMethod = ({ objectId, params, name }) => {
             const scene = this.renderer.getScene<SceneMap>()
             const sprite = scene?.getPlayer(objectId)
             if (!sprite) return
@@ -510,14 +510,15 @@ export class RpgClientEngine {
                     }
                     break
             }
-        })
+        }
+
+        this.socket.on(SocketEvents.CallMethod, callMethod)
 
         let lastRoomId = ''
 
         this.subscriptionWorld = World.listen(this.socket)
             .value
             .subscribe(async (val: { data: any, partial: any, time: number, roomId: string, resetProps: string[] }) => {
-
                 const scene = this.renderer.getScene<SceneMap>()
 
                 if (!val.data) {
@@ -552,12 +553,16 @@ export class RpgClientEngine {
                             }
                         }
                     }
+
                     for (let key in partial) {
                         const obj = list[key]
                         const paramsChanged = partial ? partial[key] : undefined
-                        if (obj == null) {
+                       
+                        if (obj == null || obj.deleted) {
                             this.gameEngine.removeObjectAndShape(key)
+                            continue
                         }
+
                         if (!obj) continue
 
                         if (!isShape) {
@@ -596,6 +601,14 @@ export class RpgClientEngine {
                             paramsChanged,
                             isShape
                         })
+                        if (SocketEvents.CallMethod in obj) {
+                            // Force rendering on the map (display events) and then perform actions on it (animation, etc.).
+                            this.renderer.draw(Date.now(), 1, 1, 1)
+                            callMethod({
+                                objectId: key,
+                                ...obj[SocketEvents.CallMethod]
+                            })
+                        }
                     }
                 }
 

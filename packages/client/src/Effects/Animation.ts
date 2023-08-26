@@ -33,7 +33,7 @@ type AnimationDataFrames = {
 }
 
 export class Animation extends Sprite {
-    public attachTo: RpgComponent
+    private _attachTo: RpgComponent | undefined
     public hitbox: { w: number, h: number }
     public applyTransform: (
         frame: FrameOptionsMerging,
@@ -49,6 +49,16 @@ export class Animation extends Sprite {
     readonly animation$: Observable<Sprite | null> = this._animation$.asObservable()
 
     onFinish: () => void
+
+    get attachTo(): RpgComponent | undefined {
+        return this._attachTo
+    }
+
+    set attachTo(component: RpgComponent | undefined) {
+        if (!component) return
+        component.animationIsPlaying = true
+        this._attachTo = component
+    }
 
     constructor(public id: string) {
         super()
@@ -284,6 +294,9 @@ export class Animation extends Sprite {
         if (!nextFrame) {
             this.time = 0
             this.frameIndex = 0
+            if (this.attachTo) {
+                this.attachTo.animationIsPlaying = false
+            }
             if (this.onFinish) this.onFinish()
             return
         }
