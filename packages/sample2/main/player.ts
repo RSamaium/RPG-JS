@@ -3,6 +3,7 @@ import { Speed } from '@rpgjs/server';
 import { RpgPlayer, RpgPlayerHooks, Control, Components, RpgEvent, EventData } from '@rpgjs/server'
 import Potion from './database/items/Potion';
 import CharaEvent from './events/npc';
+import { EmotionBubble } from '@rpgjs/plugin-emotion-bubbles'
 
 const player: RpgPlayerHooks = {
     onConnected(player: RpgPlayer) {
@@ -12,6 +13,7 @@ const player: RpgPlayerHooks = {
     onInput(player: RpgPlayer, { input }) {
         const map = player.getCurrentMap()
         if (input == 'action') {
+            player.showEmotionBubble(EmotionBubble.Like)
             
             // const event = map?.createDynamicEvent({
             //     x: player.position.x + 5,
