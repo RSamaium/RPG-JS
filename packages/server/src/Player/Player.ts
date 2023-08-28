@@ -74,7 +74,7 @@ const playerSchemas = {
         z: Number
     },
     direction: Number,
-   
+
     teleported: {
         $permanent: false
     },
@@ -168,13 +168,25 @@ export class RpgPlayer extends RpgCommonPlayer {
     public _rooms = []
     public session: string | null = null
     public prevMap: string = ''
-    /** @internal */
+
+    /** 
+    * ```ts
+    * retreive the server instance
+    * ``` 
+    * @title Server Instance
+    * @prop {RpgServerEngine} player.server
+    * @memberof Player
+    * */
     public server: RpgServerEngine
     private touchSide: boolean = false
+
     /** @internal */
     public tmpPositions: Position | string | null = null
     public otherPossessedPlayer: RpgPlayer | RpgEvent | null = null
     public following: RpgPlayer | RpgEvent | null = null
+
+    // Indicates whether to load data with load(). In this case, hooks are not triggered.
+    private _dataLoading: boolean = false
 
     _lastFramePositions: {
         frame: number
@@ -470,7 +482,9 @@ export class RpgPlayer extends RpgCommonPlayer {
      * @returns {Promise<boolean | RpgMap | null>}
      * @memberof Player
      */
-    load(json: any): Promise<boolean | RpgMap | null> {
+    async load(json: any): Promise<boolean | RpgMap | null> {
+        this._dataLoading = true
+
         if (isString(json)) json = JSON.parse(json)
 
         const getData = (id) => new (this.databaseById(id))()
@@ -501,12 +515,17 @@ export class RpgPlayer extends RpgCommonPlayer {
         merge(this, json)
 
         this.position = json.position
+        
         if (json.map) {
             this.map = ''
-            return this.changeMap(json.map, json.tmpPositions || json.position)
+            const map = await this.changeMap(json.map, json.tmpPositions || json.position)
+            this._dataLoading = false
+            return map
         }
 
-        return Promise.resolve(null)
+        this._dataLoading = false
+
+        return null
     }
 
     /**
@@ -804,6 +823,10 @@ export class RpgPlayer extends RpgCommonPlayer {
     }
 
     async execMethod(methodName: string, methodData = [], target?: any) {
+        const ignoreIfDataLoading = ['onLevelUp', 'onDead']
+        if (ignoreIfDataLoading.includes(methodName) && this._dataLoading) {
+            return
+        }
         let ret
         if (target && target[methodName]) {
             ret = target[methodName](...methodData)

@@ -95,7 +95,7 @@ export class ParameterManager {
         if (val > this.param[MAXHP]) {
             val = this.param[MAXHP]
         }
-        else if (val <= 0) { 
+        else if (val <= 0) {
             this['execMethod']('onDead') 
             val = 0
         }
