@@ -47,7 +47,7 @@ RpgPlayer.prototype.save = function (): string {
 
 @RpgModule<RpgServer>({
     hooks: {
-        player: ['onAuth', 'onAuthFailed']
+        player: ['onAuth', 'onAuthFailed', 'onAuthSuccess', 'canAuth']
     },
     engine: {
         onStart(engine: RpgServerEngine) {
@@ -127,7 +127,7 @@ RpgPlayer.prototype.save = function (): string {
 
                     player.mongoId = mongoId
 
-                    const ret: (undefined | boolean)[] = await player.server.module.emit('server.player.onAuth', [player, user.data, gui], true)
+                    const ret: (undefined | boolean)[] = await player.server.module.emit('server.player.canAuth', [player, user.data, gui], true)
 
                     if (ret.some(r => r === false)) {
                         return
@@ -136,9 +136,9 @@ RpgPlayer.prototype.save = function (): string {
                     if (!user.data) {
                         player.name = user.nickname
                         if (start) {
-                            if (start.map) player.changeMap(start.map)
                             if (start.hitbox) player.setHitbox(...(start.hitbox as [number, number]))
                             if (start.graphic) player.setGraphic(start.graphic)
+                            if (start.map) await player.changeMap(start.map)
                         }
                     }
                     else {
@@ -147,6 +147,9 @@ RpgPlayer.prototype.save = function (): string {
                     }
 
                     gui.close()
+
+                    player.server.module.emit('server.player.onAuth', [player, user.data], true)
+                    player.server.module.emit('server.player.onAuthSuccess', [player, user.data], true)
                 }
                 catch (err: any) {
                     let error = {}
