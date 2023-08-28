@@ -489,10 +489,12 @@ export class RpgPlayer extends RpgCommonPlayer {
                 items[it.item.id] = getData(it.item.id)
             }
             json.items = json.items.map(it => ({ nb: it.nb, item: items[it.item.id] }))
-            json.equipments = json.equipments.map(it => {
-                items[it.id].equipped = true
-                return items[it.id]
-            })
+            if (Array.isArray(json.equipments)) {
+                json.equipments = json.equipments.map(it => {
+                    items[it.id].equipped = true
+                    return items[it.id]
+                })
+            }
         }
         if (json.states) json.states = json.states.map(state => getData(state.id))
         if (json.skills) json.skills = json.skills.map(skill => getData(skill.id))
