@@ -1,4 +1,4 @@
-import { RpgServer, RpgModule, RpgPlugin } from '@rpgjs/server'
+import { RpgServer, RpgModule, RpgPlugin, RpgPlayer } from '@rpgjs/server'
 import { Potion } from './fixtures/item'
 import { Sword } from './fixtures/weapons'
 import { Confuse } from './fixtures/state'
@@ -7,7 +7,7 @@ import { _beforeEach } from './beforeEach'
 import { clear } from '@rpgjs/testing'
 import { beforeEach, test, afterEach, expect, describe, vi } from 'vitest'
 
-let client, player, fixture, playerId
+let client, player: RpgPlayer, fixture, playerId
 
 @RpgModule<RpgServer>({
     database: {
@@ -38,7 +38,7 @@ test('Test Save', () => {
     player.setVariable('TEST', true)
     const json = player.save()
     const obj = JSON.parse(json)
-    expect(obj.items).toMatchObject({ "0": { "item": { "id": "potion", "name": "Potion", "price": 100 }, "nb": 1 } })
+    expect(obj.items).toMatchObject({ "0": { "item": { "id": "potion" }, "nb": 1 } })
     expect(obj.variables).toHaveLength(1)
 })
 
@@ -66,6 +66,14 @@ test('Test Load', async () => {
     expect(player.statesEfficiency[0]).toHaveProperty('rate', 1)
     expect(player.statesEfficiency[0].state).toHaveProperty('id', 'confuse')
     expect(player.getVariable('TEST')).toBe(true)
+})
+
+test('Use Skill, after load', async () => {
+    player.learnSkill(Fire)
+    const json = player.save()
+    player.forgetSkill(Fire)
+    await player.load(json)
+    player.useSkill(Fire, player)
 })
 
 describe('After Load, Hook should not be called', () => {

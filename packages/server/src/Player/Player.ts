@@ -46,12 +46,24 @@ const {
 
 export interface Position { x: number, y: number, z: number }
 
-const itemSchemas = {
-    name: String,
-    description: String,
-    price: Number,
-    consumable: Boolean,
+const commonSchemaFeature = {
+    name: {
+        $permanent: false
+    },
+    description: {
+        $permanent: false
+    },
     id: String
+}
+
+const itemSchemas = {
+    price: {
+        $permanent: false
+    },
+    consumable: {
+        $permanent: false
+    },
+    ...commonSchemaFeature
 }
 
 export const componentSchema = { id: String, value: String }
@@ -90,14 +102,23 @@ const playerSchemas = {
     level: {
         $effects: ['$this.expForNextlevel']
     },
-    expForNextlevel: Number,
+    expForNextlevel: {
+        $permanent: false
+    },
     exp: Number,
     name: String,
     items: [{ nb: Number, item: itemSchemas }],
-    _class: { name: String, description: String, id: String },
+    _class: commonSchemaFeature,
     equipments: [itemSchemas],
-    skills: [{ name: String, description: String, spCost: Number, id: String }],
-    states: [{ name: String, description: String, id: String }],
+    skills: [
+        {
+            spCost: {
+                $permanent: false
+            },
+            ...commonSchemaFeature
+        }
+    ],
+    states: [commonSchemaFeature],
     effects: [String],
 
     layout: {
@@ -515,7 +536,7 @@ export class RpgPlayer extends RpgCommonPlayer {
         merge(this, json)
 
         this.position = json.position
-        
+
         if (json.map) {
             this.map = ''
             const map = await this.changeMap(json.map, json.tmpPositions || json.position)

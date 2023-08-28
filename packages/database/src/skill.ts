@@ -60,6 +60,9 @@ export interface SkillOptions extends StatesOption, ElementsOption, Data {
     hitRate?: number
 }
 
-export function Skill(options: SkillOptions) {   
+export function Skill(options: SkillOptions) {
+    if (!options.coefficient) options.coefficient = {
+        'int': 1
+    }
     return merge(options, 'skill')
 }
