@@ -1,4 +1,4 @@
-const canvasOptions ={
+const canvasOptions = {
     "canvas": {
         "type": "object",
         "properties": {
@@ -42,6 +42,20 @@ const canvasOptions ={
     },
     "serverFps": {
         "type": "number"
+    }
+}
+
+const compilerOptions = {
+    "compilerOptions": {
+        "type": "object",
+        "properties": {
+            "alias": {
+                "type": "object",
+                "additionalProperties": {
+                    "type": "string"
+                }
+            }
+        }
     }
 }
 
@@ -90,7 +104,8 @@ export default {
                     }
                 },
                 "required": ["enabled", "authSecret"]
-            }
+            },
+            ...compilerOptions
         }
     },
     "client": {

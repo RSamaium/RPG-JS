@@ -48,6 +48,11 @@ export interface Config {
         hitbox?: [number, number]
     }
     spritesheetDirectories?: string[]
+    compilerOptions?: {
+        alias?: {
+            [key: string]: string
+        }
+    }
 }
 
 export interface ClientBuildConfigOptions {
@@ -271,6 +276,13 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         }
     }
 
+    if (config.compilerOptions?.alias) {
+        aliasTransform = {
+            ...aliasTransform,
+            ...config.compilerOptions.alias
+        }
+    }
+
     const outputPath = isRpg ?
         resolve(dirname, 'dist', dirOutputName) :
         resolve(dirname, 'dist', isServer ? 'server' : dirOutputName)
@@ -280,7 +292,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         configFile,
         resolve: {
             alias: {
-                '@': join(process.cwd(), 'src'),
+                '@': join(process.cwd(), '.'),
                 ...aliasTransform
             },
             extensions: ['.ts', '.js', '.jsx', '.json', '.vue', '.css', '.scss', '.sass', '.html', 'tmx', 'tsx', '.toml'],
