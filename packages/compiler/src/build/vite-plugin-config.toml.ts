@@ -302,7 +302,7 @@ export function createModuleLoad(id: string, variableName: string, modulePath: s
         if (entryPoint) {
             const mod = toPosix(path.join(id, entryPoint))
             return `
-                import mod from './${mod}'
+                import mod from '@/${mod}'
                 export default mod
             `
         }
@@ -310,7 +310,7 @@ export function createModuleLoad(id: string, variableName: string, modulePath: s
     else if (fs.existsSync(indexFile)) {
         const mod = extractProjectPath(toPosix(indexFile), id)
         return `
-            import mod from './${mod}'
+            import mod from '@/${mod}'
             export default mod
         `
     }

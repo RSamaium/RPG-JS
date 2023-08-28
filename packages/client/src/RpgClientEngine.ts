@@ -601,12 +601,12 @@ export class RpgClientEngine {
                             paramsChanged,
                             isShape
                         })
-                        if (SocketEvents.CallMethod in obj) {
+                        if (paramsChanged && SocketEvents.CallMethod in paramsChanged) {
                             // Force rendering on the map (display events) and then perform actions on it (animation, etc.).
                             this.renderer.draw(Date.now(), 1, 1, 1)
                             callMethod({
                                 objectId: key,
-                                ...obj[SocketEvents.CallMethod]
+                                ...paramsChanged[SocketEvents.CallMethod]
                             })
                         }
                     }

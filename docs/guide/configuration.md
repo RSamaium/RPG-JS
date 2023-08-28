@@ -6,6 +6,17 @@ The configuration and properties of RPGJS are defined using a JSON schema, which
 
 . Below is an overview of the available configuration properties along with their descriptions and usage constraints.
 
+### `compiler`
+
+Configuration properties related to the compiler.
+
+- `compilerOptions`
+  - `alias`: (*object*) Aliases. Use aliases in Typescript imports
+    ```toml
+    [compilerOptions.alias]
+      "@" = "./src"
+    ```
+
 ### `server`
 
 Configuration properties related to the server-side of the RPG.

@@ -1,13 +1,13 @@
-import { RpgServer, RpgModule, RpgWorld } from '@rpgjs/server'
+import { RpgServer, RpgModule, RpgPlugin, RpgPlayer } from '@rpgjs/server'
 import { Potion } from './fixtures/item'
 import { Sword } from './fixtures/weapons'
 import { Confuse } from './fixtures/state'
 import { Fire } from './fixtures/skill'
-import {_beforeEach} from './beforeEach'
+import { _beforeEach } from './beforeEach'
 import { clear } from '@rpgjs/testing'
-import { beforeEach, test, afterEach, expect, describe } from 'vitest'
+import { beforeEach, test, afterEach, expect, describe, vi } from 'vitest'
 
-let  client, player, fixture, playerId
+let client, player: RpgPlayer, fixture, playerId
 
 @RpgModule<RpgServer>({
     database: {
@@ -17,7 +17,7 @@ let  client, player, fixture, playerId
         Fire
     }
 })
-class RpgServerModule {}
+class RpgServerModule { }
 
 const modules = [
     {
@@ -38,7 +38,7 @@ test('Test Save', () => {
     player.setVariable('TEST', true)
     const json = player.save()
     const obj = JSON.parse(json)
-    expect(obj.items).toMatchObject({"0": {"item": {"id": "potion", "name": "Potion", "price": 100}, "nb": 1}})
+    expect(obj.items).toMatchObject({ "0": { "item": { "id": "potion" }, "nb": 1 } })
     expect(obj.variables).toHaveLength(1)
 })
 
@@ -68,10 +68,49 @@ test('Test Load', async () => {
     expect(player.getVariable('TEST')).toBe(true)
 })
 
+test('Use Skill, after load', async () => {
+    player.learnSkill(Fire)
+    const json = player.save()
+    player.forgetSkill(Fire)
+    await player.load(json)
+    player.useSkill(Fire, player)
+})
+
+describe('After Load, Hook should not be called', () => {
+    async function testSave(action: Function, containHook: string) {
+        action(player)
+        const json = player.save()
+
+        const spy = vi.spyOn(RpgPlugin, 'emit')
+        await player.load(json)
+
+        for (let mock of spy.mock.calls) {
+            expect(mock[0]).not.toEqual(containHook)
+        }
+
+        spy.mockClear()
+        spy.mockRestore()
+    }
+
+    test('onLevelUp hook is ignored', async () => {
+        await testSave(
+            player => player.level = 5,
+            'Server.onLevelUp'
+        )
+    })
+
+    test('onDead hook is ignored', async () => {
+        await testSave(
+            player => player.hp = 0,
+            'Server.onDead'
+        )
+    })
+})
+
 describe('Custom Save / Load', () => {
     test('Prop', async () => {
         clear()
-    
+
         @RpgModule<RpgServer>({
             player: {
                 props: {
@@ -79,8 +118,8 @@ describe('Custom Save / Load', () => {
                 }
             }
         })
-        class RpgServerCustomModule {}
-    
+        class RpgServerCustomModule { }
+
         const { player } = await _beforeEach([
             {
                 server: RpgServerCustomModule

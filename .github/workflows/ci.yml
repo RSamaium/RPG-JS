@@ -66,20 +66,19 @@ jobs:
         cd starter
         ncu -u
 
-    - name: Install updated dependencies
+    - name: Update Package Lock
       run: |
         cd starter
-        npm i
+        npm i --package-lock-only
 
-    - name: Configure Git User
-      run: |
-        cd starter
-        git config user.name "${{ github.actor }}"
-        git config user.email "${{ github.actor}}@users.noreply.github.com"
-
-    - name: Commit the updated package.json
-      run: |
-        cd starter
-        git add package*.json
-        git commit -m "Update dependencies to latest version"
-        git push https://$GH_ACCESS_TOKEN@github.com/rpgjs/starter.git
+    - name: Deploy to external repository
+      uses: cpina/github-action-push-to-another-repository@main
+      env:
+        API_TOKEN_GITHUB: ${{ secrets.GH_ACCESS_TOKEN }}
+      with:
+        source-directory: starter/
+        destination-github-username: rpgjs
+        destination-repository-name: starter
+        user-email: "${{ github.actor}}@users.noreply.github.com"
+        commit-message: update to latest RPGJS version
+        target-branch: v4

@@ -354,7 +354,7 @@ describe('createModuleLoad', () => {
 
         const id = 'somepath';
         const result = createModuleLoad(id, 'variableName', 'somepath', {}, {});
-        expect(result).toContain("import mod from './somepath/index.ts'");
+        expect(result).toContain("import mod from '@/somepath/index.ts'");
     });
 
     test('default behavior when neither package.json nor index.ts exists', () => {
@@ -377,6 +377,17 @@ describe('createModuleLoad', () => {
 
         const id = 'somepath';
         const result = createModuleLoad(id, 'variableName', 'somepath', {}, {});
-        expect(result).toContain("import mod from './somepath/main.ts'");
+        expect(result).toContain("import mod from '@/somepath/main.ts'");
+    });
+
+    test('deep directories', () => {
+        mockFs({
+            'modules/somepath': {
+                'index.ts': ''
+            }
+        });
+        const id = 'modules/somepath';
+        const result = createModuleLoad(id, 'variableName', '', {}, {});
+        expect(result).toContain("import mod from '@/modules/somepath/index.ts'");
     });
 })

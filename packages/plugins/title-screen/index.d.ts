@@ -16,9 +16,38 @@ declare module '@rpgjs/server' {
      */
     export interface RpgPlayerHooks {
         /**
-         * This method is called when authentication is attempted for the player.
+         * This method is called at the end of authentication, when everything has worked.
          *
-         * @prop { (player: RpgPlayer, dbData: object | undefined, gui: Gui) => Promise<void> | void | Promise<boolean> | boolean } [onAuth]
+         * @prop { (player: RpgPlayer, dbData: object | undefined) => void } [onAuthSuccess]
+         * @param {RpgPlayer} player - The RPG player object.
+         * @param {object | undefined} dbData - Optional database data related to the player. If no data, then this is the first time the player has arrived, or he has no save.
+         * @returns {void}
+         * @memberof RpgPluginTitleScreen
+         * @since 4.0.0
+         * @example
+         * 
+         * ```ts
+         * import { RpgPlayer, RpgPlayerHooks } from '@rpgjs/server'
+
+         * const player: RpgPlayerHooks = {
+         *    onAuthSuccess(player: RpgPlayer) {
+         *          console.log('player auth')
+         *    }
+         * }
+         * ```
+         */
+        onAuthSuccess?: (player: RpgPlayer, dbData: object | undefined) => void;
+
+        /** 
+         * @prop
+         * @deprecated Use onAuthSuccess instead.
+         * */ 
+        onAuth?: (player: RpgPlayer, dbData: object | undefined) => void;
+
+        /**
+         * this method provides an additional check before loading the data
+         *
+         * @prop { (player: RpgPlayer, dbData: object | undefined, gui: Gui) => Promise<void> | void | Promise<boolean> | boolean } [canAuth]
          * @param {RpgPlayer} player - The RPG player object.
          * @param {object | undefined} dbData - Optional database data related to the player. If no data, then this is the first time the player has arrived, or he has no save.
          * @param {Gui} gui - The GUI object. Represents the authentication box
@@ -31,21 +60,9 @@ declare module '@rpgjs/server' {
          * 
          * ```ts
          * import { RpgPlayer, RpgPlayerHooks } from '@rpgjs/server'
-
-         * const player: RpgPlayerHooks = {
-         *    onAuth(player: RpgPlayer) {
-         *          console.log('player auth')
-         *    }
-         * }
-         * ```
-         * 
-         * Other example with boolean return:
-         * 
-         * ```ts
-         * import { RpgPlayer, RpgPlayerHooks } from '@rpgjs/server'
          * 
          * const player: RpgPlayerHooks = {
-         *   onAuth(player: RpgPlayer) {
+         *   canAuth(player: RpgPlayer) {
          *      console.log('player auth')
          *      // If you return false, the player is not loaded
          *      return false
@@ -53,7 +70,8 @@ declare module '@rpgjs/server' {
          * }
          * ```
          */
-        onAuth?: (player: RpgPlayer, dbData: object | undefined, gui: Gui) => Promise<void> | void | Promise<boolean> | boolean;
+        canAuth?: (player: RpgPlayer, dbData: object | undefined, gui: Gui) => Promise<void> | void | Promise<boolean> | boolean;
+        
 
         /**
          * This method is called when authentication fails for the player.
