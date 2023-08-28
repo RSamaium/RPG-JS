@@ -6,10 +6,6 @@ import { EffectManager } from './EffectManager'
 import { ParameterManager } from './ParameterManager';
 import { RpgPlayer } from './Player';
 
-import { 
-    INT
-} from '../presets'
-
 const { 
     isArray, 
     isString, 
@@ -74,9 +70,6 @@ export class SkillManager {
     learnSkill(skillClass: SkillClass | string) {
         if (isString(skillClass)) skillClass = this.databaseById(skillClass)
         const instance = new (skillClass as SkillClass)()
-        if (!instance.coefficient) instance.coefficient = {
-            [INT]: 1
-        }
         this.skills.push(instance)
         this['execMethod']('onLearn', [this], instance)
         return instance
