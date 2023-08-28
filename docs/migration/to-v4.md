@@ -130,10 +130,25 @@ document.addEventListener('DOMContentLoaded', function() {
       "resolveJsonModule": true
     },
     "include": [
-        "src", 
+        ".", 
         "index.d.ts", 
         "node_modules/@rpgjs/**/*.d.ts",
         "node_modules/@rpgjs/compiler/index.d.ts"
     ]
  }
  ```
+
+ ## rpg.json
+
+ Add the `alias` option to the `compilerOptions` object
+
+ ```json
+ {
+    "name": "Game",
+    "compilerOptions": {
+        "alias": {
+            "@": "./src"
+        }
+    } 
+}
+```
