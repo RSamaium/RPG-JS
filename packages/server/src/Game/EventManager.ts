@@ -61,14 +61,28 @@ export class EventManager {
     removeEvent(eventId: string): boolean {
         if (!this.events[eventId]) return false
         const mode = this.events[eventId].mode
+        let currentState
+        // Restores previous state 
+        if (mode == EventMode.Scenario) {
+            currentState = this.getCurrentMap()?.$currentState().users?.[this.id]?.events?.[eventId] ?? {}
+        }
+        else {
+            currentState = this.$currentState().events?.[eventId] ?? {}
+        }
         this.removeObject(this.events[eventId], mode)
         delete this.events[eventId]
         // Change the state of the packet that will be sent to the client, adding the deleted flag to indicate to the client that the event has been deleted.
         if (mode == EventMode.Scenario) {
-            this.getCurrentMap()?.$setCurrentState(`users.${this.id}.events.${eventId}.deleted`, true)
+            this.getCurrentMap()?.$setCurrentState(`users.${this.id}.events.${eventId}`, {
+                ...currentState,
+                deleted: true
+            })
         }
         else {
-            this.$setCurrentState(`events.${eventId}.deleted`, true)
+            this.$setCurrentState(`events.${eventId}`, {
+                ...currentState,
+                deleted: true
+            })
         }
         return true
     }
@@ -107,4 +121,5 @@ export interface EventManager {
     getCurrentMap(): RpgMap | null
     id: string
     $setCurrentState: (path: string, value: any) => void;
+    $currentState(): any
 }

@@ -537,6 +537,17 @@ export class RpgClientEngine {
 
                 const objectsChanged = {}
 
+                const callAction = (objectId: string, paramsChanged) => {
+                    if (paramsChanged && SocketEvents.CallMethod in paramsChanged) {
+                        // Force rendering on the map (display events) and then perform actions on it (animation, etc.).
+                        this.renderer.draw(Date.now(), 1, 1, 1)
+                        callMethod({
+                            objectId,
+                            ...paramsChanged[SocketEvents.CallMethod]
+                        })
+                    }
+                }
+
                 const change = (prop, root = val, localEvent = false) => {
                     const list = root.data[prop]
                     const partial = root.partial[prop]
@@ -553,12 +564,13 @@ export class RpgClientEngine {
                             }
                         }
                     }
-
                     for (let key in partial) {
                         const obj = list[key]
                         const paramsChanged = partial ? partial[key] : undefined
-                       
+
                         if (obj == null || obj.deleted) {
+                            // perform actions on the sprite before deleting it
+                            callAction(key, paramsChanged)
                             this.gameEngine.removeObjectAndShape(key)
                             continue
                         }
@@ -601,14 +613,9 @@ export class RpgClientEngine {
                             paramsChanged,
                             isShape
                         })
-                        if (paramsChanged && SocketEvents.CallMethod in paramsChanged) {
-                            // Force rendering on the map (display events) and then perform actions on it (animation, etc.).
-                            this.renderer.draw(Date.now(), 1, 1, 1)
-                            callMethod({
-                                objectId: key,
-                                ...paramsChanged[SocketEvents.CallMethod]
-                            })
-                        }
+                        
+                        // perform actions on the sprite after creation/update
+                        callAction(key, paramsChanged)
                     }
                 }
 
