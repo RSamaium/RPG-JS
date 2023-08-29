@@ -15,3 +15,5 @@ modules = [
 
 [titleScreen]
   mongodb = 'mongodb://localhost:27017/rpg'
+
+assetsPath = '/game/assets'

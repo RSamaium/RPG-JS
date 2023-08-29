@@ -54,6 +54,20 @@ const compilerOptions = {
                 "additionalProperties": {
                     "type": "string"
                 }
+            },
+            "build": {
+                "pwaEnabled": {
+                    "type": "boolean"
+                },
+                "assetsPath": {
+                    "type": "string"
+                },
+                "outputDir": {
+                    "type": "string"
+                },
+                "serverUrl": {
+                    "type": "string"
+                }
             }
         }
     }

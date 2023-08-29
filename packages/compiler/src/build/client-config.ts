@@ -57,7 +57,11 @@ export interface Config {
     compilerOptions?: {
         alias?: {
             [key: string]: string
-        }
+        },
+        pwaEnabled?: boolean // true by default
+        assetsPath?: string
+        outputDir?: string // dist by default
+        serverUrl?: string
     }
 }
 
@@ -83,7 +87,6 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     const isBuild = options.serveMode === false
     const dirOutputName = isRpg ? 'standalone' : 'client'
     const plugin = options.plugin
-    const serverUrl = 'http://' + process.env.VITE_SERVER_URL
     let config: Config = {}
 
     const envType = process.env.RPG_TYPE
@@ -100,6 +103,29 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     else if (_fs.existsSync(jsonFile)) {
         config = JSON.parse(await fs.readFile(jsonFile, 'utf8'));
     }
+
+    if (!config.compilerOptions) {
+        config.compilerOptions = {}
+    }
+
+    if (config.compilerOptions.pwaEnabled === undefined) {
+        config.compilerOptions.pwaEnabled = true
+    }
+
+    if (config.compilerOptions.outputDir === undefined) {
+        config.compilerOptions.outputDir = 'dist'
+    }
+
+    let serverUrl = ''
+
+    if (isBuild) {
+        process.env.VITE_SERVER_URL = process.env.VITE_SERVER_URL ?? config.compilerOptions.serverUrl ?? ''
+    }
+    else {
+        serverUrl = 'http://' + process.env.VITE_SERVER_URL
+    }
+ 
+    const { compilerOptions } = config
 
     if (options.mode != 'test' && !plugin) {
         // if index.html is not found, display an error
@@ -142,7 +168,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
             }),
             splitVendorChunkPlugin(),
         ]
-        if (isBuild) {
+        if (isBuild && compilerOptions.pwaEnabled) {
             plugins.push(
                 VitePWA({
                     manifest: {
@@ -289,9 +315,11 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         }
     }
 
+    const outputDir = compilerOptions.outputDir as string
+
     const outputPath = isRpg ?
-        resolve(dirname, 'dist', dirOutputName) :
-        resolve(dirname, 'dist', isServer ? 'server' : dirOutputName)
+        resolve(dirname, outputDir, dirOutputName) :
+        resolve(dirname, outputDir, isServer ? 'server' : dirOutputName)
     const viteConfig = {
         mode: options.mode || 'development',
         root: '.',

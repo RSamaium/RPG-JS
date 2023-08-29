@@ -25,6 +25,20 @@ VITE_SERVER_URL=https//world.rpgjs.dev npm run build
 - Description: This environment variable determines the type of the RPGJS application. It can be set to either "rpg" or "mmorpg" based on your desired type.
 - Usage: Set this variable to either "rpg" or "mmorpg" to define the type of game you are building.
 
+### 4. `PORT`
+
+the port on which the server will listen. (`3000` by default)
+
+## After build, running server:
+
+### `STATIC_DIRECTORY_ENABLED`
+
+the server reads the client on the same instance. (`true` by default)
+
+### `PORT`
+
+Same as above.
+
 ## Using Environment Variables in Configuration (rpg.toml)
 
 You can make use of environment variables in your RPGJS configuration files, such as `rpg.toml`. The `$ENV` syntax allows you to reference environment variables within the configuration values.
