@@ -355,6 +355,15 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
 
     config.startMap = config.startMap || config.start?.map
 
+    if (config.inputs && options.server) {
+        for (let inputKey in config.inputs) {
+            const input = config.inputs[inputKey]
+            if ((typeof input.bind == 'string' ? [input.bind] : input.bind).find((val) => ['1', '2', '3', '4'].includes(val))) {
+                warn(`Input "${inputKey}" : Note that 1, 2, 3 or 4 designates a direction. Use up, right, bottom or left instead. If you want the number key, use n1, n2, n<number>.`)
+            }
+        }
+    }
+
     let ret
     try {
         ret = loadGlobalConfig(modules, config, options)

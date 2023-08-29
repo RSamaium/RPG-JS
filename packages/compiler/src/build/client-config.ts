@@ -41,7 +41,13 @@ export interface Config {
         type: string
     }[]
     themeCss?: string
-    inputs?: any
+    inputs?: {
+        [key: string]: {
+            name: string,
+            repeat?: boolean,
+            bind: string | string[],
+        }
+    }
     start?: {
         map?: string,
         graphic?: string

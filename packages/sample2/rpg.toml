@@ -5,7 +5,7 @@ modules = [
     '@rpgjs/plugin-emotion-bubbles',
     '@rpgjs/gamepad',
     '@rpgjs/chat',
-    '@rpgjs/title-screen'
+    #'@rpgjs/title-screen'
 ]
 
 [start]
@@ -15,8 +15,3 @@ modules = [
 
 [titleScreen]
   mongodb = 'mongodb://localhost:27017/rpg'
-
-  [inputs.up]
-    name = "up"
-    repeat = true
-    bind = ["up", "h", "numpad 1"]
