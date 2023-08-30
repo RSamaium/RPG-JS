@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/tiled",
-  "version": "4.0.0-rc.10",
+  "version": "4.0.0-rc.11",
   "description": "",
   "main": "lib/index.js",
   "types": "./lib/index.d.ts",
