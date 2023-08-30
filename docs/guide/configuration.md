@@ -16,6 +16,9 @@ Configuration properties related to the compiler.
     [compilerOptions.alias]
       "@" = "./src"
     ```
+  - `pwaEnabled`: (*boolean*) Whether the PWA feature is enabled. (`true` by default)
+  - `outputDir`: (*string*) Output directory for the build.
+  - `serverUrl`: (*string*) Server URL.
 
 ### `server`
 
@@ -56,6 +59,7 @@ Configuration properties related to the client-side of the RPG.
 - `drawMap`: (*boolean*) Whether to draw the map. For unit tests
 - `maxFps`: (*number*) Maximum frames per second for rendering.
 - `serverFps`: (*number*) Server frames per second.
+- `pwa`: (*object*) : All [Vite PWA configuration](https://vite-pwa-org.netlify.app). If PWA is enabled.
 
 ### `Client and Server`
 

@@ -4,8 +4,8 @@ modules = [
     '@rpgjs/default-gui',
     '@rpgjs/plugin-emotion-bubbles',
     '@rpgjs/gamepad',
-    '@rpgjs/chat',
-    '@rpgjs/title-screen'
+   # '@rpgjs/chat',
+   # '@rpgjs/title-screen'
 ]
 
 [start]
@@ -16,7 +16,8 @@ modules = [
 [titleScreen]
   mongodb = 'mongodb://localhost:27017/rpg'
 
-  [inputs.up]
-    name = "up"
-    repeat = true
-    bind = ["up", "h", "numpad 1"]
+[pwa]
+  includeAssets = ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg']
+
+[compilerOptions.build]
+  serverUrl = 'http://localhost:8000'

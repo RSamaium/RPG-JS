@@ -29,7 +29,7 @@ export default {
     },
     computed: {
         apiUrl() {
-            return this.rpgEngine.globalConfig.apiUrl ?? 'http://' + this.rpgEngine.serverUrl
+            return this.rpgEngine.globalConfig.titleScreen?.apiUrl ?? this.rpgEngine.serverUrl
         }
     },
     methods: {

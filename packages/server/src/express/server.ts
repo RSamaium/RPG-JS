@@ -77,7 +77,7 @@ export function expressServer(modules: ModuleType[], options: ExpressServerOptio
         }
 
         // @ts-ignore
-        const serverPort = (envs.VITE_SERVER_URL || '').split(':')[1] || PORT
+        const serverPort = !isBuilt ? (envs.VITE_SERVER_URL || '').split(':')[1] || PORT : PORT
         server.listen(serverPort, start)
 
         process.on('uncaughtException', function (error) {

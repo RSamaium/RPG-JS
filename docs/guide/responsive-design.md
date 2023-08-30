@@ -78,25 +78,3 @@ If you don't want to create by yourself, You can add the plugin for the mobile
 `npx rpgjs add @rpgjs/mobile-gui`
 
 As soon as the map is opened, display the GUI for controls
-
-## Offline Mode
-
-> Works only when building the game and not during development
-
-The notion of offline mode is already integrated in RPGJS. Files are cached for offline play and a PWA is created to install the game on smartphone. 
-To do this, create an `rpg.toml` file at the root of your project.
-
-Example:
-```toml
-name = "My Game"
-shortName = "Game"
-description = "Beautiful Game"
-backgroundColor = "#ffffff"
-
-[[icons]]
-    src = "icon.png"
-    sizes = [96, 128, 192, 256]
-
-```
-
-The properties are the same as the [Webpack PWA Manifest](https://github.com/arthurbergmz/webpack-pwa-manifest) module.

@@ -104,7 +104,6 @@ export class RpgClientEngine {
     private lastConnection: string = ''
     private lastScene: string = ''
     private matchMakerService: string | (() => MatchMakerResponse) | null = null
-    private assetsPath: string = 'assets'
     private serverFps: number = 60
     private scheduler: Scheduler = new Scheduler()
     private _serverUrl: string = ''
@@ -161,7 +160,6 @@ export class RpgClientEngine {
         this.io = this.options.io
         if (this.options.serverFps) this.serverFps = this.options.serverFps
         this.globalConfig = this.options.globalConfig
-        if (this.globalConfig.assetsPath) this.assetsPath = this.globalConfig.assetsPath
         this.gameEngine.standalone = this.options.standalone
         this.gameEngine.renderer = this.renderer
         this.gameEngine.clientEngine = this
@@ -537,6 +535,17 @@ export class RpgClientEngine {
 
                 const objectsChanged = {}
 
+                const callAction = (objectId: string, paramsChanged) => {
+                    if (paramsChanged && SocketEvents.CallMethod in paramsChanged) {
+                        // Force rendering on the map (display events) and then perform actions on it (animation, etc.).
+                        this.renderer.draw(Date.now(), 1, 1, 1)
+                        callMethod({
+                            objectId,
+                            ...paramsChanged[SocketEvents.CallMethod]
+                        })
+                    }
+                }
+
                 const change = (prop, root = val, localEvent = false) => {
                     const list = root.data[prop]
                     const partial = root.partial[prop]
@@ -553,12 +562,13 @@ export class RpgClientEngine {
                             }
                         }
                     }
-
                     for (let key in partial) {
                         const obj = list[key]
                         const paramsChanged = partial ? partial[key] : undefined
-                       
+
                         if (obj == null || obj.deleted) {
+                            // perform actions on the sprite before deleting it
+                            callAction(key, paramsChanged)
                             this.gameEngine.removeObjectAndShape(key)
                             continue
                         }
@@ -601,14 +611,9 @@ export class RpgClientEngine {
                             paramsChanged,
                             isShape
                         })
-                        if (paramsChanged && SocketEvents.CallMethod in paramsChanged) {
-                            // Force rendering on the map (display events) and then perform actions on it (animation, etc.).
-                            this.renderer.draw(Date.now(), 1, 1, 1)
-                            callMethod({
-                                objectId: key,
-                                ...paramsChanged[SocketEvents.CallMethod]
-                            })
-                        }
+                        
+                        // perform actions on the sprite after creation/update
+                        callAction(key, paramsChanged)
                     }
                 }
 
@@ -765,7 +770,14 @@ export class RpgClientEngine {
      * @since 4.0.0
      */
     get serverUrl(): string {
+        if (!this._serverUrl.startsWith('http')) {
+            return 'http://' + this._serverUrl
+        }
         return this._serverUrl
+    }
+
+    get assetsPath(): string {
+        return this.envs?.['VITE_ASSETS_PATH'] || 'assets'
     }
 
     get module() {

@@ -26,7 +26,7 @@
     "@rpgjs/standalone": "^4.0.0-rc.10",
     "@rpgjs/title-screen": "^4.0.0-rc.10",
     "rpgjs-helloworld": "^0.0.1",
-    "socket.io-client": "^4.6.1"
+    "socket.io-client": "^4.7.2"
   },
   "type": "module"
 }

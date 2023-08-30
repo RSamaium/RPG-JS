@@ -41,7 +41,13 @@ export interface Config {
         type: string
     }[]
     themeCss?: string
-    inputs?: any
+    inputs?: {
+        [key: string]: {
+            name: string,
+            repeat?: boolean,
+            bind: string | string[],
+        }
+    }
     start?: {
         map?: string,
         graphic?: string
@@ -51,7 +57,16 @@ export interface Config {
     compilerOptions?: {
         alias?: {
             [key: string]: string
+        },
+        build?: {
+            pwaEnabled?: boolean // true by default
+            assetsPath?: string
+            outputDir?: string // dist by default
+            serverUrl?: string
         }
+    },
+    pwa?: {
+        [key: string]: any
     }
 }
 
@@ -77,7 +92,6 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     const isBuild = options.serveMode === false
     const dirOutputName = isRpg ? 'standalone' : 'client'
     const plugin = options.plugin
-    const serverUrl = 'http://' + process.env.VITE_SERVER_URL
     let config: Config = {}
 
     const envType = process.env.RPG_TYPE
@@ -93,6 +107,33 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     }
     else if (_fs.existsSync(jsonFile)) {
         config = JSON.parse(await fs.readFile(jsonFile, 'utf8'));
+    }
+
+    let buildOptions = config.compilerOptions?.build || {}
+
+    if (!config.compilerOptions) {
+        config.compilerOptions = {}
+    }
+
+    if (!config.compilerOptions.build) {
+        config.compilerOptions.build = {}
+    }
+
+    if (buildOptions.pwaEnabled === undefined) {
+        buildOptions.pwaEnabled = true
+    }
+
+    if (buildOptions.outputDir === undefined) {
+        buildOptions.outputDir = 'dist'
+    }
+
+    let serverUrl = ''
+
+    if (isBuild) {
+        serverUrl = process.env.VITE_SERVER_URL = process.env.VITE_SERVER_URL ?? buildOptions.serverUrl ?? ''
+    }
+    else {
+        serverUrl = 'http://' + process.env.VITE_SERVER_URL
     }
 
     if (options.mode != 'test' && !plugin) {
@@ -136,16 +177,18 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
             }),
             splitVendorChunkPlugin(),
         ]
-        if (isBuild) {
+        if (isBuild && buildOptions.pwaEnabled) {
             plugins.push(
                 VitePWA({
+                    registerType: 'autoUpdate',
                     manifest: {
                         name: config.name,
                         short_name: config.shortName || config.short_name,
                         description: config.description,
                         theme_color: config.themeColor || config.background_color,
                         icons: config.icons
-                    }
+                    },
+                    ...(config.pwa || {})
                 })
             )
         }
@@ -257,13 +300,13 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         moreBuildOptions = {
             minify: false,
             ssr: {
-              //  format: 'cjs'
+                //  format: 'cjs'
             },
             ...moreBuildOptions,
         }
         if (!options.serveMode) {
             outputOptions = {
-               // format: 'cjs',
+                // format: 'cjs',
             }
         }
     }
@@ -283,9 +326,12 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         }
     }
 
+    const outputDir = buildOptions.outputDir as string
+
     const outputPath = isRpg ?
-        resolve(dirname, 'dist', dirOutputName) :
-        resolve(dirname, 'dist', isServer ? 'server' : dirOutputName)
+        resolve(dirname, outputDir, dirOutputName) :
+        resolve(dirname, outputDir, isServer ? 'server' : dirOutputName)
+
     const viteConfig = {
         mode: options.mode || 'development',
         root: '.',
@@ -332,6 +378,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
             ...moreBuildOptions
         },
         plugins,
+        serverUrl,
         ...(options.overrideOptions || {}),
     }
 
@@ -345,7 +392,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
             excludeDependencies.push(dep)
         }
     }
-    
+
     viteConfig.optimizeDeps = {
         ...viteConfig.optimizeDeps,
         exclude: [

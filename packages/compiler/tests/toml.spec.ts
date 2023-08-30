@@ -319,7 +319,6 @@ describe('TOML Configuration test', () => {
 
         test("should return Plugin object when global config loads successfully", () => {
             // Simulate successful loading of global config
-
             const result = configTomlPlugin(options, config);
             expect(result).toBeDefined();
             expect(result).toHaveProperty("name", "vite-plugin-config-toml");
