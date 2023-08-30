@@ -4,11 +4,9 @@ modules = [
     '@rpgjs/default-gui',
     '@rpgjs/plugin-emotion-bubbles',
     '@rpgjs/gamepad',
-    '@rpgjs/chat',
-    #'@rpgjs/title-screen'
+   # '@rpgjs/chat',
+   # '@rpgjs/title-screen'
 ]
-
-assetsPath = '/game/assets'
 
 [start]
     map = 'map'
@@ -22,4 +20,4 @@ assetsPath = '/game/assets'
   includeAssets = ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg']
 
 [compilerOptions.build]
-  pwaEnabled = false
+  serverUrl = 'http://localhost:8000'

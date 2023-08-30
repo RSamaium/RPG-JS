@@ -424,7 +424,8 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
             const envsString = `{
                 VITE_BUILT: ${process.env.VITE_BUILT},
                 VITE_SERVER_URL: ${serverUrl ? "'" + serverUrl + "'" : 'undefined'},
-                VITE_RPG_TYPE: '${options.type ?? 'mmorpg'}'
+                VITE_RPG_TYPE: '${options.type ?? 'mmorpg'}',
+                VITE_ASSETS_PATH: '${process.env.VITE_ASSETS_PATH ?? ''}'
             }`
             if (id.endsWith(MODULE_NAME)) {
                 const modulesToImport = modules.reduce((acc, module) => {

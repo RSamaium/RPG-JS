@@ -161,6 +161,82 @@ describe('clientBuildConfig', () => {
                 vi.clearAllMocks()
             })
         })
+
+        describe('Server Url', () => {
+            beforeEach(() => {
+                process.env.RPG_TYPE = 'mmorpg';
+                mockFs({
+                    'rpg.toml': '',
+                    'index.html': '',
+                    'package.json': '{"name": "test"}'
+                });
+            })
+
+            test('Dev Mode', async () => {
+                process.env.VITE_SERVER_URL = 'localhost:3000'
+                const ret = await clientBuildConfig('.', {
+                    type: 'mmorpg',
+                    serveMode: true,
+                });
+                expect(ret.serverUrl).toBe('http://localhost:3000');
+            })
+
+            test('Build Mode', async () => {
+                process.env.VITE_SERVER_URL = 'https://myserver.com'
+                const ret = await clientBuildConfig('.', {
+                    type: 'mmorpg',
+                    serveMode: false,
+                });
+                expect(ret.serverUrl).toBe('https://myserver.com');
+            })
+
+            test('Build Mode (config)', async () => {
+                mockFs({
+                    'rpg.toml': `[compilerOptions.build]
+                        serverUrl = 'https://myserver.com'`,
+                    'index.html': '',
+                    'package.json': '{"name": "test"}'
+                });
+                const ret = await clientBuildConfig('.', {
+                    type: 'mmorpg',
+                    serveMode: false,
+                });
+                expect(ret.serverUrl).toBe('https://myserver.com');
+            })
+        })
+
+        describe('Build OutDir', () => {
+            beforeEach(() => {
+                process.env.RPG_TYPE = 'mmorpg';
+                mockFs({
+                    'rpg.toml': '',
+                    'index.html': '',
+                    'package.json': '{"name": "test"}'
+                });
+            })
+
+            test('Build OutDir', async () => {
+                const ret = await clientBuildConfig('.', {
+                    type: 'mmorpg',
+                    serveMode: false,
+                });
+                expect(ret.build.outDir).toContain('dist/client');
+            })
+
+            test('Build OutDir (config)', async () => {
+                mockFs({
+                    'rpg.toml': `[compilerOptions.build]
+                        outputDir = 'dist/mydir'`,
+                    'index.html': '',
+                    'package.json': '{"name": "test"}'
+                });
+                const ret = await clientBuildConfig('.', {
+                    type: 'mmorpg',
+                    serveMode: false,
+                });
+                expect(ret.build.outDir).toContain('dist/mydir');
+            })
+        })
     })
 
     describe('Test RPG Mode', () => {

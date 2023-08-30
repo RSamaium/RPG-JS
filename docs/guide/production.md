@@ -53,3 +53,28 @@ sudo docker run -p 3000:3000 -d rpg # Run
 ```
 
 > Put a reverse proxy to use a domain name (for example [Candy Server](https://caddyserver.com))
+
+## Game Server-Client Separation
+
+By default, when you go to the server, it opens the game. but you want to separate the two. Put the NodeJS server on a different IP from the client
+
+### Step 1: Modify rpg.toml
+
+Open the `rpg.toml` file and locate the `[compilerOptions.build]` section. Here, you will set the `serverUrl` to point to your server's WebSocket URL. Replace `'https://myserver.com'` with your actual server URL:
+
+```toml
+[compilerOptions.build]
+    serverUrl = 'https://myserver.com'
+```
+
+### Step 2: Launch the Server
+
+If you need to customize the server settings, you can set the desired port and static directory by modifying the environment variables. Run the following command to start the server:
+
+```bash
+PORT=3000 STATIC_DIRECTORY_ENABLED=false node dist/server/main
+```
+
+Replace `3000` with your desired port number and adjust the static directory settings as needed.
+
+> By default, port is `3000`

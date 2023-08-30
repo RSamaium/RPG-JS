@@ -130,7 +130,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     let serverUrl = ''
 
     if (isBuild) {
-        process.env.VITE_SERVER_URL = process.env.VITE_SERVER_URL ?? buildOptions.serverUrl ?? ''
+        serverUrl = process.env.VITE_SERVER_URL = process.env.VITE_SERVER_URL ?? buildOptions.serverUrl ?? ''
     }
     else {
         serverUrl = 'http://' + process.env.VITE_SERVER_URL
@@ -331,6 +331,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     const outputPath = isRpg ?
         resolve(dirname, outputDir, dirOutputName) :
         resolve(dirname, outputDir, isServer ? 'server' : dirOutputName)
+
     const viteConfig = {
         mode: options.mode || 'development',
         root: '.',
@@ -377,6 +378,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
             ...moreBuildOptions
         },
         plugins,
+        serverUrl,
         ...(options.overrideOptions || {}),
     }
 
