@@ -8,6 +8,8 @@ modules = [
     #'@rpgjs/title-screen'
 ]
 
+assetsPath = '/game/assets'
+
 [start]
     map = 'map'
     graphic = 'male'
@@ -16,4 +18,8 @@ modules = [
 [titleScreen]
   mongodb = 'mongodb://localhost:27017/rpg'
 
-assetsPath = '/game/assets'
+[pwa]
+  includeAssets = ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg']
+
+[compilerOptions.build]
+  pwaEnabled = false

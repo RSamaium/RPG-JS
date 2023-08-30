@@ -58,10 +58,15 @@ export interface Config {
         alias?: {
             [key: string]: string
         },
-        pwaEnabled?: boolean // true by default
-        assetsPath?: string
-        outputDir?: string // dist by default
-        serverUrl?: string
+        build?: {
+            pwaEnabled?: boolean // true by default
+            assetsPath?: string
+            outputDir?: string // dist by default
+            serverUrl?: string
+        }
+    },
+    pwa?: {
+        [key: string]: any
     }
 }
 
@@ -104,28 +109,32 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         config = JSON.parse(await fs.readFile(jsonFile, 'utf8'));
     }
 
+    let buildOptions = config.compilerOptions?.build || {}
+
     if (!config.compilerOptions) {
         config.compilerOptions = {}
     }
 
-    if (config.compilerOptions.pwaEnabled === undefined) {
-        config.compilerOptions.pwaEnabled = true
+    if (!config.compilerOptions.build) {
+        config.compilerOptions.build = {}
     }
 
-    if (config.compilerOptions.outputDir === undefined) {
-        config.compilerOptions.outputDir = 'dist'
+    if (buildOptions.pwaEnabled === undefined) {
+        buildOptions.pwaEnabled = true
+    }
+
+    if (buildOptions.outputDir === undefined) {
+        buildOptions.outputDir = 'dist'
     }
 
     let serverUrl = ''
 
     if (isBuild) {
-        process.env.VITE_SERVER_URL = process.env.VITE_SERVER_URL ?? config.compilerOptions.serverUrl ?? ''
+        process.env.VITE_SERVER_URL = process.env.VITE_SERVER_URL ?? buildOptions.serverUrl ?? ''
     }
     else {
         serverUrl = 'http://' + process.env.VITE_SERVER_URL
     }
- 
-    const { compilerOptions } = config
 
     if (options.mode != 'test' && !plugin) {
         // if index.html is not found, display an error
@@ -168,16 +177,18 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
             }),
             splitVendorChunkPlugin(),
         ]
-        if (isBuild && compilerOptions.pwaEnabled) {
+        if (isBuild && buildOptions.pwaEnabled) {
             plugins.push(
                 VitePWA({
+                    registerType: 'autoUpdate',
                     manifest: {
                         name: config.name,
                         short_name: config.shortName || config.short_name,
                         description: config.description,
                         theme_color: config.themeColor || config.background_color,
                         icons: config.icons
-                    }
+                    },
+                    ...(config.pwa || {})
                 })
             )
         }
@@ -289,13 +300,13 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         moreBuildOptions = {
             minify: false,
             ssr: {
-              //  format: 'cjs'
+                //  format: 'cjs'
             },
             ...moreBuildOptions,
         }
         if (!options.serveMode) {
             outputOptions = {
-               // format: 'cjs',
+                // format: 'cjs',
             }
         }
     }
@@ -315,7 +326,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         }
     }
 
-    const outputDir = compilerOptions.outputDir as string
+    const outputDir = buildOptions.outputDir as string
 
     const outputPath = isRpg ?
         resolve(dirname, outputDir, dirOutputName) :
@@ -379,7 +390,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
             excludeDependencies.push(dep)
         }
     }
-    
+
     viteConfig.optimizeDeps = {
         ...viteConfig.optimizeDeps,
         exclude: [

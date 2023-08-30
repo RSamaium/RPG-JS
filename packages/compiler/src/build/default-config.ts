@@ -56,22 +56,26 @@ const compilerOptions = {
                 }
             },
             "build": {
-                "pwaEnabled": {
-                    "type": "boolean"
-                },
-                "assetsPath": {
-                    "type": "string"
-                },
-                "outputDir": {
-                    "type": "string"
-                },
-                "serverUrl": {
-                    "type": "string"
+                "type": "object",
+                "properties": {
+                    "pwaEnabled": {
+                        "type": "boolean"
+                    },
+                    "assetsPath": {
+                        "type": "string"
+                    },
+                    "outputDir": {
+                        "type": "string"
+                    },
+                    "serverUrl": {
+                        "type": "string"
+                    }
                 }
             }
         }
     }
 }
+
 
 export default {
     "server": {
@@ -160,6 +164,10 @@ export default {
             },
             "matchMakerService": {
                 "type": "string"
+            },
+            "pwa": {
+                "type": "object",
+                "additionalProperties": true
             },
             ...canvasOptions
         }
