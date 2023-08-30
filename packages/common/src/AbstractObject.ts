@@ -109,6 +109,7 @@ export class AbstractObject {
             set: (target, prop, value) => {
                 this._hitboxPos[prop] = value
                 target[prop] = value
+                this.updateInVirtualGrid()
                 return true
             }
         })
