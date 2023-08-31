@@ -12,6 +12,8 @@
     "vue": "^3.2.47"
   },
   "devDependencies": {
+    "axios": "^1.5.0",
+    "git-parse": "^3.0.1",
     "jsdom": "^21.1.1",
     "lerna": "^6.6.1",
     "typescript": "^5.0.2",
