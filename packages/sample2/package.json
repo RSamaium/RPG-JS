@@ -10,7 +10,7 @@
   "private": true,
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "@rpgjs/chat": "^4.0.0-rc.11",
     "@rpgjs/client": "^4.0.0-rc.11",

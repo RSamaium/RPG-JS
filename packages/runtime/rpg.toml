@@ -1,0 +1,3 @@
+[compilerOptions.build]
+  pwaEnabled = false
+  outputDir = "."

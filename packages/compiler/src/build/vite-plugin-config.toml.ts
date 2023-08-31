@@ -466,13 +466,30 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
                 import globalConfigServer from './${GLOBAL_CONFIG_SERVER}'
                 import modules from './${MODULE_NAME}'
 
-                document.addEventListener('DOMContentLoaded', function() { 
-                    entryPoint(modules, {
-                        globalConfigClient,
-                        globalConfigServer,
-                        envs: ${envsString}
-                    }).start() 
-                })
+                ${options.libMode ?
+                 `  window.global ||= window
+                 
+                    export default (extraModules = []) => {
+                        return entryPoint([
+                            ...modules,
+                            ...extraModules
+                        ], {
+                            globalConfigClient,
+                            globalConfigServer,
+                            envs: ${envsString}
+                        })
+                    }
+                 `
+                 :
+                    `document.addEventListener('DOMContentLoaded', function() { 
+                        entryPoint(modules, {
+                            globalConfigClient,
+                            globalConfigServer,
+                            envs: ${envsString}
+                        }).start() 
+                    })`
+                }
+
               `;
                 return codeToTransform
             }

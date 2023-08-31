@@ -82,7 +82,8 @@ export interface ClientBuildConfigOptions {
     plugin?: {
         entry: string,
     },
-    optimizeDepsExclude?: string[]
+    optimizeDepsExclude?: string[],
+    libMode?: boolean
 }
 
 export async function clientBuildConfig(dirname: string, options: ClientBuildConfigOptions = {}) {
@@ -92,6 +93,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     const isBuild = options.serveMode === false
     const dirOutputName = isRpg ? 'standalone' : 'client'
     const plugin = options.plugin
+    const libMode = options.libMode
     let config: Config = {}
 
     const envType = process.env.RPG_TYPE
@@ -136,7 +138,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         serverUrl = 'http://' + process.env.VITE_SERVER_URL
     }
 
-    if (options.mode != 'test' && !plugin) {
+    if (options.mode != 'test' && !plugin && !libMode) {
         // if index.html is not found, display an error
         try {
             await fs.stat(resolve(dirname, 'index.html'))
@@ -319,6 +321,24 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         }
     }
 
+    if (libMode) {
+        moreBuildOptions = {
+            lib: {
+                entry: resolve(dirname, 'runtime.ts'),
+                name: 'RPG',
+                fileName: 'rpg.runtime',
+            },
+            ...moreBuildOptions,
+        }
+        outputOptions = {
+            format: 'umd',
+            globals: {
+                vue: 'Vue'
+            },
+            ...outputOptions,
+        }
+    }
+
     if (config.compilerOptions?.alias) {
         aliasTransform = {
             ...aliasTransform,
@@ -365,15 +385,20 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
                     },
                     ...outputOptions
                 },
-                input: {
-                    main: plugin ? plugin.entry :
-                        !isServer ?
-                            resolve(dirname, 'index.html') :
-                            entryPointServer()
-                },
+
                 plugins: [
                     !isServer ? nodePolyfills() as any : null
-                ]
+                ],
+                ...(libMode ? {
+                    external: ['vue']
+                } : {
+                    input: {
+                        main: plugin ? plugin.entry :
+                            !isServer ?
+                                resolve(dirname, 'index.html') :
+                                entryPointServer()
+                    },
+                })
             },
             ...moreBuildOptions
         },

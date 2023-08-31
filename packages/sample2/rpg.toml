@@ -21,3 +21,4 @@ modules = [
 
 [compilerOptions.build]
   serverUrl = 'http://localhost:8000'
+  pwaEnabled = false

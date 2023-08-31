@@ -2,7 +2,11 @@ import { build } from 'vite'
 import { cleanDist } from './clean-dist.js'
 import { clientBuildConfig } from './client-config.js'
 
-export async function buildMode() {
+export type BuildOptions = {
+    runtime?: boolean
+}
+
+export async function buildMode({ runtime }: BuildOptions) {
     cleanDist()
 
     process.env.VITE_BUILT = '1'
@@ -21,7 +25,8 @@ export async function buildMode() {
             mode,
             type: 'rpg',
             serveMode: false,
-            buildEnd
+            buildEnd,
+            libMode: runtime
         })
         await build(config)
     }
