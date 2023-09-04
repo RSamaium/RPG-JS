@@ -3,7 +3,7 @@ import colors from 'picocolors'
 import defaultConfig from './default-config.js'
 import fs from 'fs';
 import path from 'path';
-import { ClientBuildConfigOptions, Config } from './client-config';
+import type { ClientBuildConfigOptions, Config } from './client-config';
 import { loadEnv } from 'vite';
 import { warn } from '../logs/warning.js';
 

@@ -13,8 +13,7 @@ export function isFunction(val: unknown): boolean {
 }
 
 export function isClass(func: unknown): boolean {
-    return typeof func === 'function'
-        && /^class\s/.test(Function.prototype.toString.call(func));
+    return typeof func === 'function';
 }
 
 export function isPromise(val: unknown) {

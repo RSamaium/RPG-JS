@@ -35,8 +35,6 @@ export class RpgServerEngine {
      * */
     public globalConfig: any = {}
 
-    public assetsPath: string = 'assets'
-
     /**
      * Combat formulas
      * 
@@ -81,7 +79,6 @@ export class RpgServerEngine {
         }
 
         this.globalConfig = this.inputOptions.globalConfig
-        if (this.globalConfig.assetsPath !== undefined) this.assetsPath = this.globalConfig.assetsPath
 
         if (!this.inputOptions.maps) this.inputOptions.maps = []
         if (!this.inputOptions.events) this.inputOptions.events = []
@@ -338,6 +335,10 @@ export class RpgServerEngine {
 
     get module() {
         return RpgPlugin
+    }
+
+    get assetsPath(): string {
+        return this.envs?.['VITE_ASSETS_PATH'] || 'assets'
     }
 
     sendToPlayer(currentPlayer, eventName, data) {

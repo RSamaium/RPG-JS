@@ -1,3 +1,4 @@
+window.global ||= window;
 (function(global2, factory) {
   typeof exports === "object" && typeof module !== "undefined" ? module.exports = factory(require("vue")) : typeof define === "function" && define.amd ? define(["vue"], factory) : (global2 = typeof globalThis !== "undefined" ? globalThis : global2 || self, global2.RPG = factory(global2.Vue));
 })(this, function(vue) {
@@ -12,7 +13,7 @@
     return {}.toString.call(val) === "[object Function]";
   }
   function isClass(func) {
-    return typeof func === "function" && /^class\s/.test(Function.prototype.toString.call(func));
+    return typeof func === "function";
   }
   function isPromise$4(val) {
     return isInstanceOf$3(val, Promise);
@@ -9799,7 +9800,7 @@
       this.relativePath = relativePath;
     }
     static isBrowser() {
-      return typeof window !== "undefined";
+      return typeof window !== "undefined" && !window.useFileSystem;
     }
     static typeOfFile(file) {
       const isString2 = typeof file == "string";
@@ -13639,6 +13640,16 @@
     Side2["Server"] = "server";
     Side2["Client"] = "client";
   })(Side || (Side = {}));
+  function RpgModule(options2) {
+    return (target) => {
+      if (options2.hooks) {
+        target.hooks = options2.hooks;
+      }
+      for (let key in options2) {
+        target.prototype[key] = options2[key];
+      }
+    };
+  }
   async function loadModules(modules2, obj, middleware) {
     const {
       side,
@@ -18874,6 +18885,11 @@ import config from 'server!./config
       price: options2.price
     });
   }
+  function Enemy(options2) {
+    return merge$1({
+      options: options2
+    }, "enemy");
+  }
   var Effect;
   (function(Effect2) {
     Effect2["NONE"] = "NONE";
@@ -18904,6 +18920,23 @@ import config from 'server!./config
     Efficiency2[Efficiency2["PERFECT_INVULNERABLE"] = 0] = "PERFECT_INVULNERABLE";
     Efficiency2[Efficiency2["GAIN_HP"] = -0.5] = "GAIN_HP";
   })(Efficiency || (Efficiency = {}));
+  const Database = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+    __proto__: null,
+    Actor,
+    Armor,
+    Class,
+    get Effect() {
+      return Effect;
+    },
+    get Efficiency() {
+      return Efficiency;
+    },
+    Enemy,
+    Item,
+    Skill,
+    State: State$1,
+    Weapon
+  }, Symbol.toStringTag, { value: "Module" }));
   class Log {
     constructor(id, msg) {
       this.id = id;
@@ -19012,6 +19045,9 @@ import config from 'server!./config
       damage = 0;
     return damage;
   };
+  const DAMAGE_GUARD = function(damage) {
+    return damage / 2;
+  };
   const COEFFICIENT_ELEMENTS = function(a2, b2, bDef) {
     return (a2.rate + 1) * (b2.rate + 1) / (bDef.rate == 0 ? bDef.rate * 4 : 1);
   };
@@ -19026,6 +19062,29 @@ import config from 'server!./config
     [STR, DEX, AGI, INT].forEach((val) => rate += a2[val] * (skill.coefficient[val] || 0));
     return Math.round(power * rate / 20);
   };
+  const index$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+    __proto__: null,
+    AGI,
+    AGI_CURVE,
+    ATK,
+    COEFFICIENT_ELEMENTS,
+    DAMAGE_CRITICAL,
+    DAMAGE_GUARD,
+    DAMAGE_PHYSIC,
+    DAMAGE_SKILL,
+    DEX,
+    DEX_CURVE,
+    INT,
+    INT_CURVE,
+    MAXHP,
+    MAXHP_CURVE,
+    MAXSP,
+    MAXSP_CURVE,
+    PDEF,
+    SDEF,
+    STR,
+    STR_CURVE
+  }, Symbol.toStringTag, { value: "Module" }));
   const {
     isString: isString$8
   } = Utils$2;
@@ -22613,6 +22672,286 @@ import config from 'server!./config
     }
   }
   applyMixins$1(BattleManager, [ParameterManager, ElementManager, EffectManager]);
+  const defaultStyle = (style) => ({
+    borderColor: "#000000",
+    borderWidth: 2,
+    bgColor: "#000000",
+    borderRadius: 5,
+    ...style
+  });
+  const bar = (current, max, style, text) => {
+    return {
+      id: "bar",
+      value: {
+        current,
+        max,
+        text: text === null ? "" : text || "{$current}/{$max}",
+        style
+      }
+    };
+  };
+  const Components = {
+    /**
+     * Displays a bar
+     *
+     * Example:
+     *
+     * ```ts
+     * import { Components } from '@rpgjs/server'
+     * Components.bar('hp', 'param.maxHp', {
+     *    bgColor: '#ab0606'
+     * })
+     * ```
+     *
+     * For text, you can use the following variables:
+     * - {$current} current value
+     * - {$max} maximum value
+     * - {$percent} percentage
+     *
+     * Example:
+     *
+     * ```ts
+     * import { Components } from '@rpgjs/server'
+     * Components.bar('hp', 'param.maxHp', {
+     *   bgColor: '#ab0606'
+     * }, 'HP: {$current}/{$max}')
+     * ```
+     *
+     * and you can also use the variables of player:
+     *
+     * ```ts
+     * import { Components } from '@rpgjs/server'
+     * Components.bar('hp', 'param.maxHp', {
+     *  bgColor: '#ab0606'
+     * }, 'HP: {$current}/{$max} - {name}') // HP: 100/100 - John
+     * ```
+     *
+     * @title Bar Component
+     * @param {string} current Parameter that corresponds to the current value
+     * @param {string} max Parameter that corresponds to the maximum value
+     * @param {object} [style] style
+     * @param {string} [style.bgColor] background color. Hexadecimal format.
+     * @param {string} [style.fillColor] fill color. Hexadecimal format.
+     * @param {string} [style.borderColor] border color. Hexadecimal format.
+     * @param {number} [style.borderWidth] border width
+     * @param {number} [style.height] height
+     * @param {number} [style.width] width
+     * @param {number} [style.borderRadius] border radius
+     * @param {number} [style.opacity] opacity
+     * @param {string | null} [text] text above bar. if null, no text will be displayed. You can use the variables
+     * @returns {BarComponentObject}
+     * @memberof Components
+     * @since 3.3.0
+     */
+    bar,
+    /**
+     * Displays a life bar
+     *
+     * @title HP Bar Component
+     * @param {object} [style] style. See bar style (Components.bar())
+     * @param {string | null} [text] test above bar (Components.bar())
+     * @returns {BarComponentObject}
+     * @memberof Components
+     * @since 3.3.0
+     */
+    hpBar(style, text) {
+      return bar("hp", "param.maxHp", {
+        ...defaultStyle({
+          fillColor: "#ab0606"
+        }),
+        ...style || {}
+      }, text);
+    },
+    /**
+    * Displays a SP bar
+    *
+    * @title SP Bar Component
+    * @param {object} [style] style. See bar style (Components.bar())
+    * @param {string | null} [text] test above bar (Components.bar())
+    * @returns {BarComponentObject}
+    * @memberof Components
+    * @since 3.3.0
+    */
+    spBar(style, text) {
+      return bar("sp", "param.maxSp", {
+        ...defaultStyle({
+          fillColor: "#0fa38c"
+        }),
+        ...style || {}
+      }, text);
+    },
+    /**
+    * Put on the text. You can read the content of a variable with {} format (see example below)
+    *
+    * Example:
+    *
+    * ```ts
+    * import { Components } from '@rpgjs/server'
+    * Components.text('Hello World')
+    * ```
+    *
+    * Example with variable:
+    *
+    * ```ts
+    * import { Components } from '@rpgjs/server'
+    * Components.text('{name}')
+    * ```
+    *
+    * Other example with position:
+    *
+    * ```ts
+    * import { Components } from '@rpgjs/server'
+    * Components.text('X: {position.x} Y: {position.y}')
+    * ```
+    *
+    * With style:
+    *
+    * ```ts
+    * import { Components } from '@rpgjs/server'
+    * Components.text('Hello World', {
+    *      fill: '#ffffff',
+    *      fontSize: 20,
+    *      fontFamily: 'Arial',
+    *      stroke: '#000000',
+    *      fontStyle: 'italic',
+    *      fontWeight: 'bold'
+    * })
+    * ```
+    *
+    * @title Text Component
+    * @param {string} value source
+    * @param {object} [style] style
+    * @param {string} [style.fill] color. Hexadecimal format.
+    * @param {number} [style.fontSize] font size
+    * @param {string} [style.fontFamily] font family
+    * @param {string} [style.stroke] stroke color. Hexadecimal format.
+    * @param {'normal' | 'italic' | 'oblique'} [style.fontStyle] font style
+    * @param {'normal' | 'bold' | 'bolder' | 'lighter' | '100' | '200' | '300' | '400' | '500' | '600' | '700' | '800' | '900'} [style.fontWeight] font weight
+    * @param {number} [style.opacity] opacity. Between 0 and 1
+    * @param {boolean} [style.wordWrap] word wrap
+    * @param {'left' | 'center' | 'right' | 'justify'} [style.align] align
+    * @returns {TextComponentObject}
+    * @memberof Components
+    * @since 3.3.0
+    */
+    text(value, style) {
+      return {
+        id: "text",
+        value: {
+          text: value,
+          style: {
+            fill: "#ffffff",
+            fontSize: 15,
+            ...style || {}
+          }
+        }
+      };
+    },
+    /**
+     * Add a shape
+     *
+     * Example:
+     *
+     * ```ts
+     * import { Components } from '@rpgjs/server'
+     * Components.shape({
+     *      fill: '#ffffff',
+     *      type: 'circle',
+     *      radius: 10
+     * })
+     * ```
+     *
+     * You can use parameters:
+     *
+     * ```ts
+     * import { Components } from '@rpgjs/server'
+     * Components.shape({
+     *      fill: '#ffffff',
+     *      type: 'circle',
+     *      radius: 'hp'
+     * })
+     * ```
+     *
+     * Here, the radius will be the same as the hp value
+     *
+     * @title Shape Component
+     * @param {object} value
+     * @param {string} value.fill color. Hexadecimal format.
+     * @param {number | string} [value.opacity] opacity. Between 0 and 1
+     * @param {string} value.type type of shape. Can be 'circle' or 'rectangle', 'ellipse' or 'polygon', 'line' or 'rounded-rectangle'
+     * @param {number | string} [value.radius] if type is circle, radius of the circle
+     * @param {number | string} [value.width] if type is rectangle or ellipse, width of the rectangle
+     * @param {number | string} [value.height] if type is rectangle or ellipse, height of the rectangle
+     * @param {number | string} [value.x1] if type is line, x1 position of the line
+     * @param {number | string} [value.y1] if type is line, y1 position of the line
+     * @param {number | string} [value.x2] if type is line, x2 position of the line
+     * @param {number | string} [value.y2] if type is line, y2 position of the line
+     * @param {number[]} [value.points] if type is polygon, points of the polygon
+     * @param {object} [value.line] border style
+     * @param {string} [value.line.color] border color. Hexadecimal format.
+     * @param {number} [value.line.width] border width
+     * @param {number} [value.line.alpha] border opacity. Between 0 and 1
+     * @returns {ShapeComponentObject}
+     * @memberof Components
+     * @since 3.3.0
+     */
+    shape(value) {
+      return {
+        id: "shape",
+        value
+      };
+    },
+    /**
+     * Put the link to an image or the identifier of an image (if the spritesheet exists)
+     *
+     * Example:
+     *
+     * ```ts
+     * import { Components } from '@rpgjs/server'
+     * Components.image('mygraphic.png')
+     * ```
+     *
+     * @title Image Component
+     * @param {string} value source
+     * @returns {ImageComponentObject}
+     * @memberof Components
+     * @since 3.3.0
+     */
+    image(value) {
+      return {
+        id: "image",
+        value
+      };
+    },
+    /**
+     * Indicates the tile ID
+     *
+     * Example:
+     *
+     * ```ts
+     * import { Components } from '@rpgjs/server'
+     * Components.tile(3)
+     * ```
+     *
+     * @title Tile Component
+     * @param {number} value tile ID
+     * @returns {TileComponentObject}
+     * @memberof Components
+     * @since 3.3.0
+     */
+    tile(value) {
+      return {
+        id: "tile",
+        value
+      };
+    },
+    debug() {
+      return {
+        id: "debug",
+        value: ""
+      };
+    }
+  };
   class ComponentManager {
     /**
      * Give the spritesheet identifier
@@ -24749,7 +25088,6 @@ import config from 'server!./config
       this.inputOptions = inputOptions;
       this.database = {};
       this.globalConfig = {};
-      this.assetsPath = "assets";
       this.damageFormulas = {};
       this.serverId = {}.SERVER_ID || generateUID();
       this.scenes = /* @__PURE__ */ new Map();
@@ -24773,8 +25111,6 @@ import config from 'server!./config
         ...this.damageFormulas
       };
       this.globalConfig = this.inputOptions.globalConfig;
-      if (this.globalConfig.assetsPath !== void 0)
-        this.assetsPath = this.globalConfig.assetsPath;
       if (!this.inputOptions.maps)
         this.inputOptions.maps = [];
       if (!this.inputOptions.events)
@@ -25024,6 +25360,10 @@ import config from 'server!./config
     }
     get module() {
       return RpgPlugin;
+    }
+    get assetsPath() {
+      var _a;
+      return ((_a = this.envs) == null ? void 0 : _a["VITE_ASSETS_PATH"]) || "assets";
     }
     sendToPlayer(currentPlayer, eventName, data) {
       currentPlayer._socket.emit(eventName, data);
@@ -27171,6 +27511,17 @@ import config from 'server!./config
     });
     return serverEngine;
   }
+  function EventData(options2) {
+    return (target) => {
+      target.mode = options2.mode || EventMode.Shared;
+      target.width = options2.width;
+      target.height = options2.height;
+      target.hitbox = options2.hitbox;
+      target._name = options2.name;
+      target.prototype._name = options2.name;
+      target.prototype.mode = target.mode;
+    };
+  }
   class Monitor extends EventEmitter {
     constructor() {
       super(...arguments);
@@ -27212,7 +27563,58 @@ import config from 'server!./config
       this.totalConnected--;
     }
   }
-  new Monitor();
+  const index$1 = new Monitor();
+  const Server = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+    __proto__: null,
+    AbstractObject,
+    Components,
+    get Control() {
+      return Control;
+    },
+    get Direction() {
+      return Direction;
+    },
+    EventData,
+    get EventMode() {
+      return EventMode;
+    },
+    get Frequency() {
+      return Frequency;
+    },
+    Gui: Gui$1,
+    get HookClient() {
+      return HookClient;
+    },
+    get HookServer() {
+      return HookServer;
+    },
+    get Input() {
+      return Input;
+    },
+    MapData,
+    Monitor: index$1,
+    Move,
+    Presets: index$2,
+    Query,
+    RpgEvent,
+    RpgMap,
+    RpgMatchMaker,
+    RpgModule,
+    RpgPlayer,
+    RpgPlugin,
+    RpgSceneMap: SceneMap$1,
+    RpgServerEngine,
+    RpgShape,
+    RpgWorld: Query,
+    RpgWorldMaps,
+    get ShapePositioning() {
+      return ShapePositioning;
+    },
+    get Speed() {
+      return Speed;
+    },
+    entryPoint: entryPointServer
+  }, Symbol.toStringTag, { value: "Module" }));
   var extendStatics = function(d2, b2) {
     extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d3, b3) {
       d3.__proto__ = b3;
@@ -41766,14 +42168,14 @@ ${this.fragmentSrc}`;
       }
       return index2;
     }
-    setChildIndex(child, index$1) {
-      if (index$1 < 0 || index$1 >= this.children.length) {
-        throw new Error(`The index ${index$1} supplied is out of bounds ${this.children.length}`);
+    setChildIndex(child, index$12) {
+      if (index$12 < 0 || index$12 >= this.children.length) {
+        throw new Error(`The index ${index$12} supplied is out of bounds ${this.children.length}`);
       }
       const currentIndex = this.getChildIndex(child);
       removeItems(this.children, currentIndex, 1);
-      this.children.splice(index$1, 0, child);
-      this.onChildrenChange(index$1);
+      this.children.splice(index$12, 0, child);
+      this.onChildrenChange(index$12);
     }
     getChildAt(index2) {
       if (index2 < 0 || index2 >= this.children.length) {
@@ -41788,28 +42190,28 @@ ${this.fragmentSrc}`;
         }
       } else {
         const child = children[0];
-        const index$1 = this.children.indexOf(child);
-        if (index$1 === -1)
+        const index$12 = this.children.indexOf(child);
+        if (index$12 === -1)
           return null;
         child.parent = null;
         child.transform._parentID = -1;
-        removeItems(this.children, index$1, 1);
+        removeItems(this.children, index$12, 1);
         this._boundsID++;
-        this.onChildrenChange(index$1);
+        this.onChildrenChange(index$12);
         child.emit("removed", this);
-        this.emit("childRemoved", child, this, index$1);
+        this.emit("childRemoved", child, this, index$12);
       }
       return children[0];
     }
-    removeChildAt(index$1) {
-      const child = this.getChildAt(index$1);
+    removeChildAt(index$12) {
+      const child = this.getChildAt(index$12);
       child.parent = null;
       child.transform._parentID = -1;
-      removeItems(this.children, index$1, 1);
+      removeItems(this.children, index$12, 1);
       this._boundsID++;
-      this.onChildrenChange(index$1);
+      this.onChildrenChange(index$12);
       child.emit("removed", this);
-      this.emit("childRemoved", child, this, index$1);
+      this.emit("childRemoved", child, this, index$12);
       return child;
     }
     removeChildren(beginIndex = 0, endIndex = this.children.length) {
@@ -66320,10 +66722,107 @@ void main(void)
     const clientEngine = new RpgClientEngine(gameEngine, options2);
     return clientEngine;
   };
+  const RMSpritesheet = (framesWidth, framesHeight, frameStand = 1) => {
+    const frameY = (direction) => {
+      return {
+        [Direction.Down]: 0,
+        [Direction.Left]: 1,
+        [Direction.Right]: 2,
+        [Direction.Up]: 3
+      }[direction];
+    };
+    const stand = (direction) => [{
+      time: 0,
+      frameX: frameStand,
+      frameY: frameY(direction)
+    }];
+    const walk = (direction) => {
+      const array2 = [];
+      const durationFrame = 10;
+      for (let i2 = 0; i2 < framesWidth; i2++) {
+        array2.push({
+          time: i2 * durationFrame,
+          frameX: i2,
+          frameY: frameY(direction)
+        });
+      }
+      array2.push({
+        time: array2[array2.length - 1].time + durationFrame
+      });
+      return array2;
+    };
+    return {
+      textures: {
+        [Animation$1.Stand]: {
+          animations: (direction) => [stand(direction)]
+        },
+        [Animation$1.Walk]: {
+          animations: (direction) => [walk(direction)]
+        }
+      },
+      framesHeight,
+      framesWidth
+    };
+  };
+  const AnimationSpritesheet = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+    __proto__: null,
+    RMSpritesheet
+  }, Symbol.toStringTag, { value: "Module" }));
+  function SceneData(options2) {
+    return (target) => {
+      for (let key in options2) {
+        target.prototype[key] = options2[key];
+      }
+    };
+  }
   const RpgResource = {
     spritesheets,
     sounds
   };
+  const Client = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+    __proto__: null,
+    get Animation() {
+      return Animation$1;
+    },
+    AnimationClass: Animation,
+    get Control() {
+      return Control;
+    },
+    get Direction() {
+      return Direction;
+    },
+    Ease,
+    get HookClient() {
+      return HookClient;
+    },
+    get HookServer() {
+      return HookServer;
+    },
+    get Input() {
+      return Input;
+    },
+    get PrebuiltGui() {
+      return PrebuiltGui;
+    },
+    Presets: AnimationSpritesheet,
+    RpgClientEngine,
+    RpgComponent,
+    RpgGlobalSound: howler.Howler,
+    RpgGui,
+    RpgModule,
+    RpgPlugin,
+    RpgResource,
+    RpgScene: Scene$1,
+    RpgSceneMap: SceneMap,
+    RpgSound,
+    RpgSprite: RpgComponent,
+    RpgSpriteLogic: RpgCommonPlayer,
+    SceneData,
+    Sound: Sound$1,
+    Spritesheet,
+    Timeline,
+    entryPoint: entryPointClient
+  }, Symbol.toStringTag, { value: "Module" }));
   const {
     ClientIo,
     serverIo
@@ -66370,6 +66869,10 @@ void main(void)
     }
     return new StandaloneGame();
   }
+  const Standalone = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+    __proto__: null,
+    entryPoint: entryPoint$1
+  }, Symbol.toStringTag, { value: "Module" }));
   const globalConfigClient = {};
   const globalConfigServer = { "compilerOptions": { "build": { "pwaEnabled": false, "outputDir": "." } } };
   const modules = [];
@@ -66389,5 +66892,14 @@ void main(void)
       }
     });
   };
-  return entryPoint;
+  const runtime = {
+    run: (modules2) => {
+      return entryPoint(modules2).start();
+    },
+    Client,
+    Server,
+    Database,
+    Standalone
+  };
+  return runtime;
 });

@@ -23,7 +23,8 @@ export class TiledParserFile {
     }
 
     static isBrowser() {
-        return typeof window !== 'undefined'
+        // @ts-ignore
+        return (typeof window !== 'undefined' && !window.useFileSystem)
     }
 
     static typeOfFile(file: string): {

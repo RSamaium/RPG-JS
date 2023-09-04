@@ -23,6 +23,7 @@ import { createDistFolder, entryPointServer } from './utils.js'
 import cssPlugin from './vite-plugin-css.js';
 import { rpgjsPluginLoader } from './vite-plugin-rpgjs-loader.js';
 import { mapUpdatePlugin } from './vite-plugin-map-update.js';
+import { runtimePlugin } from './vite-plugin-lib.js';
 
 const require = createRequire(import.meta.url);
 
@@ -156,6 +157,12 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         await createDistFolder(dirOutputName)
     }
 
+    const outputDir = buildOptions.outputDir as string
+
+    const outputPath = isRpg ?
+        resolve(dirname, outputDir, dirOutputName) :
+        resolve(dirname, outputDir, isServer ? 'server' : dirOutputName)
+
     let plugins: any[] = [
         rpgjsPluginLoader(dirOutputName, options.serveMode),
         flagTransform(options),
@@ -165,6 +172,13 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         tsxXmlPlugin(),
         ...(options.plugins || [])
     ]
+
+    if (libMode) {
+        plugins = [
+            ...plugins,
+            runtimePlugin(outputPath)
+        ]
+    }
 
     if (!isServer) {
         plugins = [
@@ -346,11 +360,6 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         }
     }
 
-    const outputDir = buildOptions.outputDir as string
-
-    const outputPath = isRpg ?
-        resolve(dirname, outputDir, dirOutputName) :
-        resolve(dirname, outputDir, isServer ? 'server' : dirOutputName)
 
     const viteConfig = {
         mode: options.mode || 'development',
