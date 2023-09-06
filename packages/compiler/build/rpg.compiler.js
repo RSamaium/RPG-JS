@@ -5369,7 +5369,7 @@ ${$}`)}`), console.log("----------"), g;
     configServer: i(a, p)
   };
 }
-const Cl = (e) => me.join("dist", e, "assets");
+const Cl = (e) => me.join(e, "assets");
 function br(e) {
   return e.replace(/\\/g, "/");
 }

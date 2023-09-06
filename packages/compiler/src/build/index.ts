@@ -3,11 +3,15 @@ import { cleanDist } from './clean-dist.js'
 import { clientBuildConfig } from './client-config.js'
 
 export type BuildOptions = {
-    runtime?: boolean
+    runtime?: boolean | string
+    outputFilename?: string
+    outputDir?: string
 }
 
-export async function buildMode({ runtime }: BuildOptions) {
-    cleanDist()
+export async function buildMode(props: BuildOptions) {
+    const { outputDir } = props
+    
+    cleanDist(outputDir)
 
     process.env.VITE_BUILT = '1'
 
@@ -25,8 +29,7 @@ export async function buildMode({ runtime }: BuildOptions) {
             mode,
             type: 'rpg',
             serveMode: false,
-            buildEnd,
-            libMode: runtime
+            buildEnd
         })
         await build(config)
     }

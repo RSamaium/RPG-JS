@@ -83,9 +83,6 @@ yargs(hideBin(process.argv))
     })
     .command('build', 'Build for production', async (yargs) => {
         return yargs
-            .option('runtime', {
-                describe: 'Transform to runtime-only',
-            })
     }, async (argv) => {
         await buildMode(argv)
     })

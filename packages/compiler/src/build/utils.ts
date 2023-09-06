@@ -22,7 +22,7 @@ export const globFiles = (extension: string): string[] => {
 }
 
 export const assetsFolder = (outputDir: string): string => {
-    return path.join('dist', outputDir, 'assets')
+    return path.join(outputDir, 'assets')
 }
 
 export const createDistFolder = async  (outputDir: string): Promise<string> => {

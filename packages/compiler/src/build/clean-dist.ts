@@ -17,8 +17,8 @@ function deleteFolderRecursive(directory: string) {
   }
 }
 
-export const cleanDist = () => {
-  const distDirectory = path.resolve('dist');
+export const cleanDist = (outputDir = 'dist') => {
+  const distDirectory = path.resolve(outputDir);
   deleteFolderRecursive(distDirectory);
   fs.mkdirSync(distDirectory);
 };

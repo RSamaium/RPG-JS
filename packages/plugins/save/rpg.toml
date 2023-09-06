@@ -1,0 +1,11 @@
+[compilerOptions.build]
+  pwaEnabled = false
+  outputDir = "browser"
+
+[vite.build.lib]
+    entry = "index.ts"
+    name = "MyLib"
+    fileName = "my-lib"
+
+[vite.build.rollupOptions.output]
+  format = "umd"

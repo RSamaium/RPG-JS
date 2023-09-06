@@ -390,6 +390,9 @@ window.global ||= window;
     Input2["Altgr"] = "altgr";
   })(Input || (Input = {}));
   var commonjsGlobal = typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : {};
+  function getDefaultExportFromCjs(x2) {
+    return x2 && x2.__esModule && Object.prototype.hasOwnProperty.call(x2, "default") ? x2["default"] : x2;
+  }
   function getAugmentedNamespace(n2) {
     if (n2.__esModule)
       return n2;
@@ -397,10 +400,7 @@ window.global ||= window;
     if (typeof f2 == "function") {
       var a2 = function a3() {
         if (this instanceof a3) {
-          var args = [null];
-          args.push.apply(args, arguments);
-          var Ctor = Function.bind.apply(f2, args);
-          return new Ctor();
+          return Reflect.construct(f2, arguments, this.constructor);
         }
         return f2.apply(this, arguments);
       };
@@ -421,15 +421,7 @@ window.global ||= window;
     });
     return a2;
   }
-  var SATExports = {};
-  var SAT = {
-    get exports() {
-      return SATExports;
-    },
-    set exports(v2) {
-      SATExports = v2;
-    }
-  };
+  var SAT$1 = { exports: {} };
   (function(module2, exports2) {
     /** @preserve SAT.js - Version 0.9.0 - Copyright 2012 - 2021 - Jim Riecken <jimr@jimr.ca> - released under the MIT License. https://github.com/jriecken/sat-js */
     (function(root2, factory) {
@@ -970,10 +962,12 @@ window.global ||= window;
       SAT2["testPolygonPolygon"] = testPolygonPolygon;
       return SAT2;
     });
-  })(SAT);
+  })(SAT$1);
+  var SATExports = SAT$1.exports;
+  const SAT = /* @__PURE__ */ getDefaultExportFromCjs(SATExports);
   class HitClass {
     createObjectHitbox(x2, y2, z2, w2, h2) {
-      return new SATExports.Box(new SATExports.Vector(x2, y2 - z2), w2, h2);
+      return new SAT.Box(new SAT.Vector(x2, y2 - z2), w2, h2);
     }
     getHitbox(obj, offset) {
       let hitbox, type;
@@ -987,15 +981,15 @@ window.global ||= window;
       if ("ellipse" in obj || obj.type == HitType.Circle) {
         type = HitType.Circle;
         const radius = obj.width / 2;
-        hitbox = new SATExports.Circle(new SATExports.Vector(x2 + radius, y2 + radius), radius);
+        hitbox = new SAT.Circle(new SAT.Vector(x2 + radius, y2 + radius), radius);
       } else if ("polygon" in obj) {
         type = HitType.Polygon;
-        hitbox = new SATExports.Polygon(new SATExports.Vector(x2, y2), obj.polygon.map((pos) => new SATExports.Vector(+pos.x, +pos.y)));
+        hitbox = new SAT.Polygon(new SAT.Vector(x2, y2), obj.polygon.map((pos) => new SAT.Vector(+pos.x, +pos.y)));
       } else if (!("polygon" in obj) && "width" in obj && "height" in obj) {
         type = HitType.Box;
-        hitbox = new SATExports.Box(new SATExports.Vector(x2, y2), obj.width, obj.height);
+        hitbox = new SAT.Box(new SAT.Vector(x2, y2), obj.width, obj.height);
       } else {
-        hitbox = new SATExports.Vector(x2, y2);
+        hitbox = new SAT.Vector(x2, y2);
         type = obj.type;
       }
       return {
@@ -1012,16 +1006,16 @@ window.global ||= window;
         }
         return false;
       }
-      if (isInstanceOf$3(hit1, SATExports.Box))
+      if (isInstanceOf$3(hit1, SAT.Box))
         hit1 = hit1.toPolygon();
-      if (isInstanceOf$3(hit2, SATExports.Box))
+      if (isInstanceOf$3(hit2, SAT.Box))
         hit2 = hit2.toPolygon();
       switch (type) {
         case HitType.Circle:
-          collided = SATExports.testPolygonCircle(hit1, hit2);
+          collided = SAT.testPolygonCircle(hit1, hit2);
           break;
         case HitType.Polygon:
-          collided = SATExports.testPolygonPolygon(hit1, hit2);
+          collided = SAT.testPolygonPolygon(hit1, hit2);
           break;
       }
       return collided;
@@ -1043,18 +1037,18 @@ window.global ||= window;
   function EventHandlers() {
   }
   EventHandlers.prototype = /* @__PURE__ */ Object.create(null);
-  function EventEmitter$1() {
-    EventEmitter$1.init.call(this);
+  function EventEmitter$2() {
+    EventEmitter$2.init.call(this);
   }
-  EventEmitter$1.EventEmitter = EventEmitter$1;
-  EventEmitter$1.usingDomains = false;
-  EventEmitter$1.prototype.domain = void 0;
-  EventEmitter$1.prototype._events = void 0;
-  EventEmitter$1.prototype._maxListeners = void 0;
-  EventEmitter$1.defaultMaxListeners = 10;
-  EventEmitter$1.init = function() {
+  EventEmitter$2.EventEmitter = EventEmitter$2;
+  EventEmitter$2.usingDomains = false;
+  EventEmitter$2.prototype.domain = void 0;
+  EventEmitter$2.prototype._events = void 0;
+  EventEmitter$2.prototype._maxListeners = void 0;
+  EventEmitter$2.defaultMaxListeners = 10;
+  EventEmitter$2.init = function() {
     this.domain = null;
-    if (EventEmitter$1.usingDomains) {
+    if (EventEmitter$2.usingDomains) {
       if (domain.active)
         ;
     }
@@ -1064,7 +1058,7 @@ window.global ||= window;
     }
     this._maxListeners = this._maxListeners || void 0;
   };
-  EventEmitter$1.prototype.setMaxListeners = function setMaxListeners(n2) {
+  EventEmitter$2.prototype.setMaxListeners = function setMaxListeners(n2) {
     if (typeof n2 !== "number" || n2 < 0 || isNaN(n2))
       throw new TypeError('"n" argument must be a positive number');
     this._maxListeners = n2;
@@ -1072,10 +1066,10 @@ window.global ||= window;
   };
   function $getMaxListeners(that) {
     if (that._maxListeners === void 0)
-      return EventEmitter$1.defaultMaxListeners;
+      return EventEmitter$2.defaultMaxListeners;
     return that._maxListeners;
   }
-  EventEmitter$1.prototype.getMaxListeners = function getMaxListeners() {
+  EventEmitter$2.prototype.getMaxListeners = function getMaxListeners() {
     return $getMaxListeners(this);
   };
   function emitNone(handler, isFn, self2) {
@@ -1128,7 +1122,7 @@ window.global ||= window;
         listeners[i2].apply(self2, args);
     }
   }
-  EventEmitter$1.prototype.emit = function emit2(type) {
+  EventEmitter$2.prototype.emit = function emit2(type) {
     var er, handler, len, args, i2, events, domain2;
     var doError = type === "error";
     events = this._events;
@@ -1233,11 +1227,11 @@ window.global ||= window;
   function emitWarning(e2) {
     typeof console.warn === "function" ? console.warn(e2) : console.log(e2);
   }
-  EventEmitter$1.prototype.addListener = function addListener2(type, listener) {
+  EventEmitter$2.prototype.addListener = function addListener2(type, listener) {
     return _addListener(this, type, listener, false);
   };
-  EventEmitter$1.prototype.on = EventEmitter$1.prototype.addListener;
-  EventEmitter$1.prototype.prependListener = function prependListener2(type, listener) {
+  EventEmitter$2.prototype.on = EventEmitter$2.prototype.addListener;
+  EventEmitter$2.prototype.prependListener = function prependListener2(type, listener) {
     return _addListener(this, type, listener, true);
   };
   function _onceWrap(target, type, listener) {
@@ -1252,19 +1246,19 @@ window.global ||= window;
     g2.listener = listener;
     return g2;
   }
-  EventEmitter$1.prototype.once = function once2(type, listener) {
+  EventEmitter$2.prototype.once = function once2(type, listener) {
     if (typeof listener !== "function")
       throw new TypeError('"listener" argument must be a function');
     this.on(type, _onceWrap(this, type, listener));
     return this;
   };
-  EventEmitter$1.prototype.prependOnceListener = function prependOnceListener(type, listener) {
+  EventEmitter$2.prototype.prependOnceListener = function prependOnceListener(type, listener) {
     if (typeof listener !== "function")
       throw new TypeError('"listener" argument must be a function');
     this.prependListener(type, _onceWrap(this, type, listener));
     return this;
   };
-  EventEmitter$1.prototype.removeListener = function removeListener2(type, listener) {
+  EventEmitter$2.prototype.removeListener = function removeListener2(type, listener) {
     var list, events, position, i2, originalListener;
     if (typeof listener !== "function")
       throw new TypeError('"listener" argument must be a function');
@@ -1309,7 +1303,7 @@ window.global ||= window;
     }
     return this;
   };
-  EventEmitter$1.prototype.removeAllListeners = function removeAllListeners2(type) {
+  EventEmitter$2.prototype.removeAllListeners = function removeAllListeners2(type) {
     var listeners, events;
     events = this._events;
     if (!events)
@@ -1349,7 +1343,7 @@ window.global ||= window;
     }
     return this;
   };
-  EventEmitter$1.prototype.listeners = function listeners(type) {
+  EventEmitter$2.prototype.listeners = function listeners(type) {
     var evlistener;
     var ret;
     var events = this._events;
@@ -1366,14 +1360,14 @@ window.global ||= window;
     }
     return ret;
   };
-  EventEmitter$1.listenerCount = function(emitter, type) {
+  EventEmitter$2.listenerCount = function(emitter, type) {
     if (typeof emitter.listenerCount === "function") {
       return emitter.listenerCount(type);
     } else {
       return listenerCount$1.call(emitter, type);
     }
   };
-  EventEmitter$1.prototype.listenerCount = listenerCount$1;
+  EventEmitter$2.prototype.listenerCount = listenerCount$1;
   function listenerCount$1(type) {
     var events = this._events;
     if (events) {
@@ -1386,7 +1380,7 @@ window.global ||= window;
     }
     return 0;
   }
-  EventEmitter$1.prototype.eventNames = function eventNames() {
+  EventEmitter$2.prototype.eventNames = function eventNames() {
     return this._eventsCount > 0 ? Reflect.ownKeys(this._events) : [];
   };
   function spliceOne(list, index2) {
@@ -3826,7 +3820,7 @@ window.global ||= window;
   }, Symbol.toStringTag, { value: "Module" }));
   Readable.ReadableState = ReadableState;
   var debug = debuglog("stream");
-  inherits$3(Readable, EventEmitter$1);
+  inherits$3(Readable, EventEmitter$2);
   function prependListener(emitter, event, fn) {
     if (typeof emitter.prependListener === "function") {
       return emitter.prependListener(event, fn);
@@ -3882,7 +3876,7 @@ window.global ||= window;
     this.readable = true;
     if (options2 && typeof options2.read === "function")
       this._read = options2.read;
-    EventEmitter$1.call(this);
+    EventEmitter$2.call(this);
   }
   Readable.prototype.push = function(chunk, encoding) {
     var state = this._readableState;
@@ -4254,7 +4248,7 @@ window.global ||= window;
     return this;
   };
   Readable.prototype.on = function(ev, fn) {
-    var res = EventEmitter$1.prototype.on.call(this, ev, fn);
+    var res = EventEmitter$2.prototype.on.call(this, ev, fn);
     if (ev === "data") {
       if (this._readableState.flowing !== false)
         this.resume();
@@ -4489,7 +4483,7 @@ window.global ||= window;
     return -1;
   }
   Writable.WritableState = WritableState;
-  inherits$3(Writable, EventEmitter$1);
+  inherits$3(Writable, EventEmitter$2);
   function nop() {
   }
   function WriteReq(chunk, encoding, cb) {
@@ -4557,7 +4551,7 @@ window.global ||= window;
       if (typeof options2.writev === "function")
         this._writev = options2.writev;
     }
-    EventEmitter$1.call(this);
+    EventEmitter$2.call(this);
   }
   Writable.prototype.pipe = function() {
     this.emit("error", new Error("Cannot pipe, not readable"));
@@ -4956,7 +4950,7 @@ window.global ||= window;
   PassThrough.prototype._transform = function(chunk, encoding, cb) {
     cb(null, chunk);
   };
-  inherits$3(Stream, EventEmitter$1);
+  inherits$3(Stream, EventEmitter$2);
   Stream.Readable = Readable;
   Stream.Writable = Writable;
   Stream.Duplex = Duplex;
@@ -4964,7 +4958,7 @@ window.global ||= window;
   Stream.PassThrough = PassThrough;
   Stream.Stream = Stream;
   function Stream() {
-    EventEmitter$1.call(this);
+    EventEmitter$2.call(this);
   }
   Stream.prototype.pipe = function(dest, options2) {
     var source = this;
@@ -5002,7 +4996,7 @@ window.global ||= window;
     }
     function onerror(er) {
       cleanup();
-      if (EventEmitter$1.listenerCount(this, "error") === 0) {
+      if (EventEmitter$2.listenerCount(this, "error") === 0) {
         throw er;
       }
     }
@@ -7897,15 +7891,15 @@ window.global ||= window;
     return typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : global;
   })();
   const isContextDefined$1 = (context2) => !isUndefined$1(context2) && context2 !== _global$1;
-  function merge$2() {
+  function merge$4() {
     const { caseless } = isContextDefined$1(this) && this || {};
     const result = {};
     const assignValue = (val, key) => {
       const targetKey = caseless && findKey$1(result, key) || key;
       if (isPlainObject$1(result[targetKey]) && isPlainObject$1(val)) {
-        result[targetKey] = merge$2(result[targetKey], val);
+        result[targetKey] = merge$4(result[targetKey], val);
       } else if (isPlainObject$1(val)) {
-        result[targetKey] = merge$2({}, val);
+        result[targetKey] = merge$4({}, val);
       } else if (isArray$7(val)) {
         result[targetKey] = val.slice();
       } else {
@@ -8127,7 +8121,7 @@ window.global ||= window;
     isTypedArray: isTypedArray$1,
     isFileList: isFileList$1,
     forEach: forEach$1,
-    merge: merge$2,
+    merge: merge$4,
     extend: extend$2,
     trim: trim$1,
     stripBOM: stripBOM$1,
@@ -9803,6 +9797,7 @@ window.global ||= window;
       return typeof window !== "undefined" && !window.useFileSystem;
     }
     static typeOfFile(file) {
+      file = file.trim();
       const isString2 = typeof file == "string";
       const info = {
         isXml: isString2 && file.startsWith("<?xml"),
@@ -9841,7 +9836,10 @@ window.global ||= window;
       if (isXml(file)) {
         loadContent(file);
       } else if (isHttp || TiledParserFile.isBrowser() && {}.NODE_ENV != "test") {
-        const url2 = isHttp ? file : path$1.join(this.basePath, this.staticDir, file);
+        let url2 = isHttp ? file : path$1.join(this.basePath, this.staticDir, file);
+        if (TiledParserFile.isBrowser() && window.tilesets) {
+          url2 = window.tilesets[file];
+        }
         axios$3.get(url2).then((res) => res.data).then(loadContent);
       } else {
         let filepath = file;
@@ -12347,7 +12345,7 @@ window.global ||= window;
       }))), map$6(() => object));
     }
   }
-  class EventEmitter {
+  let EventEmitter$1 = class EventEmitter {
     constructor() {
       this.listeners = {};
       this.listenersOnce = {};
@@ -12395,7 +12393,7 @@ window.global ||= window;
       this.listeners = {};
       this.listenersOnce = {};
     }
-  }
+  };
   var HookServer;
   (function(HookServer2) {
     HookServer2["Start"] = "Server.Start";
@@ -12443,7 +12441,7 @@ window.global ||= window;
     HookClient2["WindowResize"] = "Client.WindowResize";
     HookClient2["SpriteMove"] = "Client.SpriteMove";
   })(HookClient || (HookClient = {}));
-  let PluginSystem$1 = class PluginSystem extends EventEmitter {
+  let PluginSystem$1 = class PluginSystem extends EventEmitter$1 {
     constructor() {
       super(...arguments);
       this.customHooks = {};
@@ -12497,7 +12495,7 @@ window.global ||= window;
     GameSide2["Client"] = "client";
     GameSide2["Worker"] = "worker";
   })(GameSide || (GameSide = {}));
-  class RpgCommonGame extends EventEmitter {
+  class RpgCommonGame extends EventEmitter$1 {
     constructor(side) {
       super();
       this.side = side;
@@ -12623,7 +12621,7 @@ window.global ||= window;
       this._collisionWithShapes = [];
       this.destroyMove$ = new Subject$2();
       this._destroy$ = new Subject$2();
-      this._hitboxPos = new SATExports.Vector(0, 0);
+      this._hitboxPos = new SAT.Vector(0, 0);
       this.setHitbox(this.width, this.height);
       this.position = {
         x: 0,
@@ -12792,7 +12790,7 @@ window.global ||= window;
       this.width = obj.width;
       this.height = obj.height;
       if (obj.hitbox) {
-        this.hitbox = new SATExports.Box(this._hitboxPos, obj.hitbox.width, obj.hitbox.height);
+        this.hitbox = new SAT.Box(this._hitboxPos, obj.hitbox.width, obj.hitbox.height);
       }
     }
     /**
@@ -12815,7 +12813,7 @@ window.global ||= window;
         this.width = map2.tileWidth;
         this.height = map2.tileHeight;
       }
-      this.hitbox = new SATExports.Box(this._hitboxPos, width, height);
+      this.hitbox = new SAT.Box(this._hitboxPos, width, height);
       this.wHitbox = width;
       this.hHitbox = height;
       this.updateInVirtualGrid();
@@ -13548,7 +13546,7 @@ window.global ||= window;
     ClientIo: ClientIo$1,
     serverIo: serverIo$1
   }, Symbol.toStringTag, { value: "Module" }));
-  class Scheduler extends EventEmitter {
+  class Scheduler extends EventEmitter$1 {
     constructor() {
       super(...arguments);
       this.fps = 60;
@@ -14565,6 +14563,7 @@ import config from 'server!./config
   function isValidObject(val) {
     return isObject$2(val) || Array.isArray(val) || typeof val === "function";
   }
+  const get$2 = /* @__PURE__ */ getDefaultExportFromCjs(getValue$1);
   const GENERIC_KEY_SCHEMA = "@";
   class Utils {
     static isObject(val) {
@@ -14629,19 +14628,11 @@ import config from 'server!./config
   var isarray$1 = Array.isArray || function(arr) {
     return toString$5.call(arr) == "[object Array]";
   };
-  var bufferishArrayExports$1 = {};
-  var bufferishArray$1 = {
-    get exports() {
-      return bufferishArrayExports$1;
-    },
-    set exports(v2) {
-      bufferishArrayExports$1 = v2;
-    }
-  };
+  var bufferishArray$1 = { exports: {} };
   var hasRequiredBufferishArray$1;
   function requireBufferishArray$1() {
     if (hasRequiredBufferishArray$1)
-      return bufferishArrayExports$1;
+      return bufferishArray$1.exports;
     hasRequiredBufferishArray$1 = 1;
     var Bufferish2 = requireBufferish$1();
     var exports2 = bufferishArray$1.exports = alloc2(0);
@@ -14663,21 +14654,13 @@ import config from 'server!./config
       }
       return Array.prototype.slice.call(value);
     }
-    return bufferishArrayExports$1;
+    return bufferishArray$1.exports;
   }
-  var bufferishBufferExports$1 = {};
-  var bufferishBuffer$1 = {
-    get exports() {
-      return bufferishBufferExports$1;
-    },
-    set exports(v2) {
-      bufferishBufferExports$1 = v2;
-    }
-  };
+  var bufferishBuffer$1 = { exports: {} };
   var hasRequiredBufferishBuffer$1;
   function requireBufferishBuffer$1() {
     if (hasRequiredBufferishBuffer$1)
-      return bufferishBufferExports$1;
+      return bufferishBuffer$1.exports;
     hasRequiredBufferishBuffer$1 = 1;
     var Bufferish2 = requireBufferish$1();
     var Buffer2 = Bufferish2.global;
@@ -14704,21 +14687,13 @@ import config from 'server!./config
         return new Buffer2(value);
       }
     }
-    return bufferishBufferExports$1;
+    return bufferishBuffer$1.exports;
   }
-  var bufferishUint8arrayExports$1 = {};
-  var bufferishUint8array$1 = {
-    get exports() {
-      return bufferishUint8arrayExports$1;
-    },
-    set exports(v2) {
-      bufferishUint8arrayExports$1 = v2;
-    }
-  };
+  var bufferishUint8array$1 = { exports: {} };
   var hasRequiredBufferishUint8array$1;
   function requireBufferishUint8array$1() {
     if (hasRequiredBufferishUint8array$1)
-      return bufferishUint8arrayExports$1;
+      return bufferishUint8array$1.exports;
     hasRequiredBufferishUint8array$1 = 1;
     var Bufferish2 = requireBufferish$1();
     var exports2 = bufferishUint8array$1.exports = Bufferish2.hasArrayBuffer ? alloc2(0) : [];
@@ -14750,7 +14725,7 @@ import config from 'server!./config
       }
       return new Uint8Array(value);
     }
-    return bufferishUint8arrayExports$1;
+    return bufferishUint8array$1.exports;
   }
   var bufferishProto$1 = {};
   var bufferLite$1 = {};
@@ -16384,15 +16359,7 @@ import config from 'server!./config
     return decode$1;
   }
   var encoder$1 = {};
-  var eventLiteExports$1 = {};
-  var eventLite$1 = {
-    get exports() {
-      return eventLiteExports$1;
-    },
-    set exports(v2) {
-      eventLiteExports$1 = v2;
-    }
-  };
+  var eventLite$1 = { exports: {} };
   /**
    * event-lite.js - Light-weight EventEmitter (less than 1KB when gzipped)
    *
@@ -16510,6 +16477,7 @@ import config from 'server!./config
       }
     })(EventLite2);
   })(eventLite$1);
+  var eventLiteExports$1 = eventLite$1.exports;
   encoder$1.Encoder = Encoder$1;
   var EventLite$3 = eventLiteExports$1;
   var EncodeBuffer$1 = requireEncodeBuffer$1().EncodeBuffer;
@@ -16905,7 +16873,7 @@ import config from 'server!./config
       function extract(path2) {
         const match = new RegExp("^(.*?)\\.\\" + GENERIC_KEY_SCHEMA).exec(path2);
         if (match) {
-          const generic = getValue$1(room2, match[1]);
+          const generic = get$2(room2, match[1]);
           if (generic) {
             const keys2 = Object.keys(generic);
             for (let key of keys2) {
@@ -16920,7 +16888,7 @@ import config from 'server!./config
         extract(path2);
       }
       for (let sheme of schemas) {
-        set(newObj, sheme, getValue$1(room2, sheme));
+        set(newObj, sheme, get$2(room2, sheme));
       }
       return newObj;
     }
@@ -16945,7 +16913,7 @@ import config from 'server!./config
     }
     editMemoryObject(path2, roomOrValue) {
       if (roomOrValue && typeof roomOrValue == "object" && "$currentState" in roomOrValue) {
-        set(this.memoryObject, path2, getValue$1(roomOrValue, path2), true);
+        set(this.memoryObject, path2, get$2(roomOrValue, path2), true);
       } else {
         set(this.memoryObject, path2, roomOrValue, true);
       }
@@ -18131,15 +18099,8 @@ import config from 'server!./config
     }
   };
   const World$1 = new WorldClass$1();
-  var lodash_mergeExports = {};
-  var lodash_merge = {
-    get exports() {
-      return lodash_mergeExports;
-    },
-    set exports(v2) {
-      lodash_mergeExports = v2;
-    }
-  };
+  var lodash_merge = { exports: {} };
+  lodash_merge.exports;
   (function(module2, exports2) {
     var LARGE_ARRAY_SIZE = 200;
     var HASH_UNDEFINED2 = "__lodash_hash_undefined__";
@@ -18816,8 +18777,10 @@ import config from 'server!./config
       return false;
     }
     module2.exports = merge2;
-  })(lodash_merge, lodash_mergeExports);
-  function merge$1(options2, type, _static = {}) {
+  })(lodash_merge, lodash_merge.exports);
+  var lodash_mergeExports = lodash_merge.exports;
+  const merge$3 = /* @__PURE__ */ getDefaultExportFromCjs(lodash_mergeExports);
+  function merge$2(options2, type, _static = {}) {
     const transformToRate = (optionName, propName) => {
       if (options2[optionName]) {
         options2[optionName] = options2[optionName].map((element) => {
@@ -18855,38 +18818,38 @@ import config from 'server!./config
     };
   }
   function Item(options2) {
-    return merge$1(options2, "item", {
+    return merge$2(options2, "item", {
       price: options2.price
     });
   }
   function Actor(options2) {
-    return merge$1(options2, "actor");
+    return merge$2(options2, "actor");
   }
   function Class(options2) {
-    return merge$1(options2, "class");
+    return merge$2(options2, "class");
   }
   function Skill(options2) {
     if (!options2.coefficient)
       options2.coefficient = {
         "int": 1
       };
-    return merge$1(options2, "skill");
+    return merge$2(options2, "skill");
   }
   function State$1(options2) {
-    return merge$1(options2, "state");
+    return merge$2(options2, "state");
   }
   function Weapon(options2) {
-    return merge$1(options2, "weapon", {
+    return merge$2(options2, "weapon", {
       price: options2.price
     });
   }
   function Armor(options2) {
-    return merge$1(options2, "armor", {
+    return merge$2(options2, "armor", {
       price: options2.price
     });
   }
   function Enemy(options2) {
-    return merge$1({
+    return merge$2({
       options: options2
     }, "enemy");
   }
@@ -20708,7 +20671,7 @@ import config from 'server!./config
     }
   }
   applyMixins$2(ElementManager, [ItemFixture]);
-  let Gui$1 = class Gui extends EventEmitter {
+  let Gui$1 = class Gui extends EventEmitter$1 {
     constructor(id, player) {
       super();
       this.id = id;
@@ -23722,7 +23685,7 @@ import config from 'server!./config
         json.skills = json.skills.map((skill) => getData(skill.id));
       if (json.variables)
         json.variables = new Map(json.variables);
-      lodash_mergeExports(this, json);
+      merge$3(this, json);
       this.position = json.position;
       if (json.map) {
         this.map = "";
@@ -25513,15 +25476,15 @@ import config from 'server!./config
     return typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : global;
   })();
   const isContextDefined = (context2) => !isUndefined(context2) && context2 !== _global;
-  function merge() {
+  function merge$1() {
     const { caseless } = isContextDefined(this) && this || {};
     const result = {};
     const assignValue = (val, key) => {
       const targetKey = caseless && findKey(result, key) || key;
       if (isPlainObject(result[targetKey]) && isPlainObject(val)) {
-        result[targetKey] = merge(result[targetKey], val);
+        result[targetKey] = merge$1(result[targetKey], val);
       } else if (isPlainObject(val)) {
-        result[targetKey] = merge({}, val);
+        result[targetKey] = merge$1({}, val);
       } else if (isArray$5(val)) {
         result[targetKey] = val.slice();
       } else {
@@ -25743,7 +25706,7 @@ import config from 'server!./config
     isTypedArray,
     isFileList,
     forEach,
-    merge,
+    merge: merge$1,
     extend,
     trim,
     stripBOM,
@@ -27522,7 +27485,7 @@ import config from 'server!./config
       target.prototype.mode = target.mode;
     };
   }
-  class Monitor extends EventEmitter {
+  class Monitor extends EventEmitter$1 {
     constructor() {
       super(...arguments);
       this.monitors = /* @__PURE__ */ new Map();
@@ -30456,15 +30419,7 @@ import config from 'server!./config
   const isMobile = isMobileCall(globalThis.navigator);
   settings.RETINA_PREFIX = /@([0-9\.]+)x/;
   settings.FAIL_IF_MAJOR_PERFORMANCE_CAVEAT = false;
-  var eventemitter3Exports = {};
-  var eventemitter3 = {
-    get exports() {
-      return eventemitter3Exports;
-    },
-    set exports(v2) {
-      eventemitter3Exports = v2;
-    }
-  };
+  var eventemitter3 = { exports: {} };
   (function(module2) {
     var has = Object.prototype.hasOwnProperty, prefix = "~";
     function Events() {
@@ -30641,17 +30596,11 @@ import config from 'server!./config
       module2.exports = EventEmitter2;
     }
   })(eventemitter3);
-  var earcutExports = {};
-  var earcut$1 = {
-    get exports() {
-      return earcutExports;
-    },
-    set exports(v2) {
-      earcutExports = v2;
-    }
-  };
-  earcut$1.exports = earcut;
-  earcutExports.default = earcut;
+  var eventemitter3Exports = eventemitter3.exports;
+  const EventEmitter = /* @__PURE__ */ getDefaultExportFromCjs(eventemitter3Exports);
+  var earcut$2 = { exports: {} };
+  earcut$2.exports = earcut;
+  earcut$2.exports.default = earcut;
   function earcut(data, holeIndices, dim) {
     dim = dim || 2;
     var hasHoles = holeIndices && holeIndices.length, outerLen = hasHoles ? holeIndices[0] * dim : data.length, outerNode = linkedList(data, 0, outerLen, dim, true), triangles = [];
@@ -31109,6 +31058,8 @@ import config from 'server!./config
     }
     return result;
   };
+  var earcutExports = earcut$2.exports;
+  const earcut$1 = /* @__PURE__ */ getDefaultExportFromCjs(earcutExports);
   /*! https://mths.be/punycode v1.4.1 by @mathias */
   var maxInt = 2147483647;
   var base = 36;
@@ -33023,7 +32974,7 @@ Deprecated since v${version2}`);
     BoundingBox,
     CanvasRenderTarget,
     DATA_URI,
-    EventEmitter: eventemitter3Exports,
+    EventEmitter,
     ProgramCache,
     TextureCache,
     clearTextureCache,
@@ -33033,9 +32984,7 @@ Deprecated since v${version2}`);
     deprecation,
     destroyTextureCache,
     determineCrossOrigin,
-    get earcut() {
-      return earcutExports;
-    },
+    earcut: earcut$1,
     getBufferType,
     getCanvasBoundingBox,
     getResolutionOfUrl,
@@ -33544,7 +33493,7 @@ Deprecated since v${version2}`);
     format: FORMATS.RGBA,
     alphaMode: ALPHA_MODES.NPM
   };
-  const _BaseTexture = class extends eventemitter3Exports {
+  const _BaseTexture = class extends EventEmitter {
     constructor(resource = null, options2 = null) {
       super();
       options2 = Object.assign({}, _BaseTexture.defaultOptions, options2);
@@ -36807,7 +36756,7 @@ ${this.fragmentSrc}`;
     tex.emit = function _emptyEmit() {
     };
   }
-  class Texture extends eventemitter3Exports {
+  class Texture extends EventEmitter {
     constructor(baseTexture, frame, orig, trim2, rotate, anchor, borders) {
       super();
       this.noFrame = false;
@@ -39600,7 +39549,7 @@ ${this.fragmentSrc}`;
     name: "state"
   };
   extensions$1.add(StateSystem);
-  class SystemManager extends eventemitter3Exports {
+  class SystemManager extends EventEmitter {
     constructor() {
       super(...arguments);
       this.runners = {};
@@ -41807,7 +41756,7 @@ ${this.fragmentSrc}`;
       this.maxY = this.maxY > y1 ? this.maxY : y1;
     }
   }
-  class DisplayObject extends eventemitter3Exports {
+  class DisplayObject extends EventEmitter {
     constructor() {
       super();
       this.tempDisplayObjectParent = null;
@@ -44252,7 +44201,7 @@ void main() {
   const tempLocalMapping = new Point();
   class EventBoundary {
     constructor(rootTarget) {
-      this.dispatch = new eventemitter3Exports();
+      this.dispatch = new EventEmitter();
       this.moveOnAll = false;
       this.enableGlobalMoveEvents = true;
       this.mappingState = {
@@ -48114,7 +48063,7 @@ ${e2}`);
           holeArray.push(points.length / 2);
           points = points.concat(hole.points);
         }
-        const triangles = earcutExports(points, holeArray, 2);
+        const triangles = earcut$1(points, holeArray, 2);
         if (!triangles) {
           return;
         }
@@ -58575,9 +58524,9 @@ void main(void)
           var events = self2["_on" + event];
           for (var i2 = events.length - 1; i2 >= 0; i2--) {
             if (!events[i2].id || events[i2].id === id || event === "load") {
-              setTimeout(function(fn) {
+              setTimeout((function(fn) {
                 fn.call(this, id, msg);
-              }.bind(self2, events[i2].fn), 0);
+              }).bind(self2, events[i2].fn), 0);
               if (events[i2].once) {
                 self2.off(event, events[i2].fn, events[i2].id);
               }
@@ -60987,6 +60936,7 @@ void main(void)
     return result === void 0 ? defaultValue2 : result;
   }
   var lodash_get = get;
+  const get$1 = /* @__PURE__ */ getDefaultExportFromCjs(lodash_get);
   const REGEXP_VAR = /{([^\}]+)}/g;
   class AbstractComponent extends Container {
     constructor(component, value) {
@@ -61012,7 +60962,7 @@ void main(void)
     }
     replaceText(object, text) {
       return text.replace(REGEXP_VAR, (match, key) => {
-        const value = lodash_get(object, key);
+        const value = get$1(object, key);
         if (value !== void 0) {
           this.cacheText[key] = value;
           return value ?? "";
@@ -61022,7 +60972,7 @@ void main(void)
     }
     getValue(object, expression) {
       if (typeof expression === "string") {
-        const value = lodash_get(object, expression);
+        const value = get$1(object, expression);
         if (value !== void 0) {
           if (this.cacheParams.indexOf(expression) === -1)
             this.cacheParams.push(expression);
@@ -61035,7 +60985,7 @@ void main(void)
       var _a;
       const params = this.component.logic;
       for (const param of this.cacheParams) {
-        if (lodash_get(params, param) === void 0) {
+        if (get$1(params, param) === void 0) {
           throw new Error(`Param ${param} not found in object ${(_a = this.component.logic) == null ? void 0 : _a.id}`);
         }
       }
@@ -61057,7 +61007,7 @@ void main(void)
         if (!params)
           return false;
         for (const param of this.cacheParams) {
-          if (lodash_get(params, param))
+          if (get$1(params, param))
             return true;
         }
         return false;
@@ -61145,8 +61095,8 @@ void main(void)
     }
     updateRender(object, firstRender) {
       this.currentValue = this.nextValue;
-      this.nextValue = lodash_get(object, this.value.current) ?? this.nextValue ?? 0;
-      this.maxValue = lodash_get(object, this.value.max) ?? this.maxValue;
+      this.nextValue = get$1(object, this.value.current) ?? this.nextValue ?? 0;
+      this.maxValue = get$1(object, this.value.max) ?? this.maxValue;
       const style = this.barStyle;
       const borderRadius = (style == null ? void 0 : style.borderRadius) ?? 0;
       const borderWidth = (style == null ? void 0 : style.borderWidth) ?? 0;
@@ -62842,19 +62792,11 @@ void main(void)
   var isarray = Array.isArray || function(arr) {
     return toString$1.call(arr) == "[object Array]";
   };
-  var bufferishArrayExports = {};
-  var bufferishArray = {
-    get exports() {
-      return bufferishArrayExports;
-    },
-    set exports(v2) {
-      bufferishArrayExports = v2;
-    }
-  };
+  var bufferishArray = { exports: {} };
   var hasRequiredBufferishArray;
   function requireBufferishArray() {
     if (hasRequiredBufferishArray)
-      return bufferishArrayExports;
+      return bufferishArray.exports;
     hasRequiredBufferishArray = 1;
     var Bufferish2 = requireBufferish();
     var exports2 = bufferishArray.exports = alloc2(0);
@@ -62876,21 +62818,13 @@ void main(void)
       }
       return Array.prototype.slice.call(value);
     }
-    return bufferishArrayExports;
+    return bufferishArray.exports;
   }
-  var bufferishBufferExports = {};
-  var bufferishBuffer = {
-    get exports() {
-      return bufferishBufferExports;
-    },
-    set exports(v2) {
-      bufferishBufferExports = v2;
-    }
-  };
+  var bufferishBuffer = { exports: {} };
   var hasRequiredBufferishBuffer;
   function requireBufferishBuffer() {
     if (hasRequiredBufferishBuffer)
-      return bufferishBufferExports;
+      return bufferishBuffer.exports;
     hasRequiredBufferishBuffer = 1;
     var Bufferish2 = requireBufferish();
     var Buffer2 = Bufferish2.global;
@@ -62917,21 +62851,13 @@ void main(void)
         return new Buffer2(value);
       }
     }
-    return bufferishBufferExports;
+    return bufferishBuffer.exports;
   }
-  var bufferishUint8arrayExports = {};
-  var bufferishUint8array = {
-    get exports() {
-      return bufferishUint8arrayExports;
-    },
-    set exports(v2) {
-      bufferishUint8arrayExports = v2;
-    }
-  };
+  var bufferishUint8array = { exports: {} };
   var hasRequiredBufferishUint8array;
   function requireBufferishUint8array() {
     if (hasRequiredBufferishUint8array)
-      return bufferishUint8arrayExports;
+      return bufferishUint8array.exports;
     hasRequiredBufferishUint8array = 1;
     var Bufferish2 = requireBufferish();
     var exports2 = bufferishUint8array.exports = Bufferish2.hasArrayBuffer ? alloc2(0) : [];
@@ -62963,7 +62889,7 @@ void main(void)
       }
       return new Uint8Array(value);
     }
-    return bufferishUint8arrayExports;
+    return bufferishUint8array.exports;
   }
   var bufferishProto = {};
   var bufferLite = {};
@@ -64597,15 +64523,7 @@ void main(void)
     return decode;
   }
   var encoder = {};
-  var eventLiteExports = {};
-  var eventLite = {
-    get exports() {
-      return eventLiteExports;
-    },
-    set exports(v2) {
-      eventLiteExports = v2;
-    }
-  };
+  var eventLite = { exports: {} };
   /**
    * event-lite.js - Light-weight EventEmitter (less than 1KB when gzipped)
    *
@@ -64723,6 +64641,7 @@ void main(void)
       }
     })(EventLite2);
   })(eventLite);
+  var eventLiteExports = eventLite.exports;
   encoder.Encoder = Encoder;
   var EventLite$1 = eventLiteExports;
   var EncodeBuffer = requireEncodeBuffer().EncodeBuffer;
@@ -64782,15 +64701,8 @@ void main(void)
   browser.Decoder = decoder.Decoder;
   browser.createCodec = ext.createCodec;
   browser.codec = codec.codec;
-  var lodash_mergewithExports = {};
-  var lodash_mergewith = {
-    get exports() {
-      return lodash_mergewithExports;
-    },
-    set exports(v2) {
-      lodash_mergewithExports = v2;
-    }
-  };
+  var lodash_mergewith = { exports: {} };
+  lodash_mergewith.exports;
   (function(module2, exports2) {
     var LARGE_ARRAY_SIZE = 200;
     var HASH_UNDEFINED2 = "__lodash_hash_undefined__";
@@ -65467,7 +65379,9 @@ void main(void)
       return false;
     }
     module2.exports = mergeWith;
-  })(lodash_mergewith, lodash_mergewithExports);
+  })(lodash_mergewith, lodash_mergewith.exports);
+  var lodash_mergewithExports = lodash_mergewith.exports;
+  const merge = /* @__PURE__ */ getDefaultExportFromCjs(lodash_mergewithExports);
   let clean = Symbol("clean");
   let listenerQueue = [];
   let atom = (initialValue, level) => {
@@ -65663,7 +65577,7 @@ void main(void)
         let resetProps = [];
         if (lastRoomId == roomId) {
           data.join = false;
-          mergeData = lodash_mergewithExports(Object.assign({}, this.obs$.value.data || {}), data, (objValue, srcValue, key, object, source, stack) => {
+          mergeData = merge(Object.assign({}, this.obs$.value.data || {}), data, (objValue, srcValue, key, object, source, stack) => {
             if (srcValue != null && typeof srcValue == "object") {
               if (Object.values(srcValue).length == 0) {
                 return {};
