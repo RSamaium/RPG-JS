@@ -140,7 +140,7 @@ export function loadServerFiles(modulePath: string, options, config) {
     const eventsFilesString = searchFolderAndTransformToImportString('events', modulePath, '.ts')
     const hitbox = config.start?.hitbox
     const code = `
-        import { RpgServer, RpgModule } from '@rpgjs/server'
+        import { type RpgServer, RpgModule } from '@rpgjs/server'
         ${mapFilesString?.importString}
         ${mapStandaloneFilesString?.importString}
         ${worldFilesString?.importString}
@@ -264,7 +264,7 @@ export function loadClientFiles(modulePath: string, options, config) {
     importSpritesheets = importSpritesheets.filter(importSpritesheet => importSpritesheet.importString)
 
     return dd`
-        import { RpgClient, RpgModule } from '@rpgjs/client'
+        import { type RpgClient, RpgModule } from '@rpgjs/client'
         ${importSpriteString}
         ${importSceneMapString}
         ${importEngine}
@@ -354,6 +354,7 @@ function resolveModule(name: string) {
 export default function configTomlPlugin(options: ClientBuildConfigOptions = {}, config: Config): Plugin | undefined {
     let modules: string[] = []
     let modulesCreated = []
+    const libMode = config.vite?.build?.lib
 
     if (config.modules) {
         modules = config.modules;
@@ -472,7 +473,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
                 import globalConfigServer from './${GLOBAL_CONFIG_SERVER}'
                 import modules from './${MODULE_NAME}'
 
-                ${options.libMode ?
+                ${libMode ?
                         `  window.global ||= window
                  
                     export default (extraModules = []) => {

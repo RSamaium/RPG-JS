@@ -9,7 +9,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "build:browser": "RPG_TYPE=rpg npx rpgjs build --runtime src/index.ts --output-dir browser --output-filename server.browser",
+    "build:browser": "RPG_TYPE=rpg npx rpgjs build",
     "watch": "tsc -w"
   },
   "typesVersions": {

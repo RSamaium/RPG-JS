@@ -1,11 +1,11 @@
 [compilerOptions.build]
   pwaEnabled = false
-  outputDir = 'browser'
+  outputDir = "./browser"
 
 [vite.build.lib]
     entry = "src/index.ts"
-    name = "MyLib"
-    fileName = "my-lib"
+    name = "RpgServer"
+    fileName = "rpg.server"
 
 [vite.build.rollupOptions.output]
   format = "umd"

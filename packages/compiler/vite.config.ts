@@ -89,7 +89,7 @@ const aliasPolyfills = {
 
 export default defineConfig({
     build: {
-        outDir: 'build',
+        outDir: 'browser',
         lib: {
             entry: 'src/browser.ts',
             name: 'RpgCompiler',

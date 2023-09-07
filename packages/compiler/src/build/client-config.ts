@@ -131,7 +131,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     }
 
     const libMode = config.vite?.build?.lib
-    const vite = config.vite
+    const vite = config.vite ?? {}
 
     let serverUrl = ''
 
@@ -164,8 +164,8 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     }
     
     const outputPath = isRpg ?
-        resolve(dirname, outputDir, dirOutputName) :
-        resolve(dirname, outputDir, isServer ? 'server' : dirOutputName)
+        resolve(dirname, dirOutputName) :
+        resolve(dirname, isServer ? join(outputDir, 'server') : dirOutputName)
 
     let plugins: any[] = [
         rpgjsPluginLoader(dirOutputName, options.serveMode),
@@ -431,8 +431,6 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
             ...excludeDependencies
         ]
     }
-
-    console.log(defaultComposer<any>(viteConfig, vite))
 
     return defaultComposer<any>(viteConfig, vite)
 }

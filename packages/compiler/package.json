@@ -10,7 +10,7 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
-    "test": "vitest",
+    "test": "vitest  --config vitest.config.ts",
     "build:browser": "vite build",
     "watch:browser": "vite build -w"
   },
