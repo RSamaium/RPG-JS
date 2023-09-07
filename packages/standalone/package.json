@@ -3,7 +3,9 @@
   "version": "4.0.0-rc.11",
   "description": "",
   "main": "src/index.ts",
-  "scripts": {},
+  "scripts": {
+    "build:browser": "RPG_TYPE=rpg npx rpgjs build"
+  },
   "keywords": [],
   "author": "Samuel Ronce",
   "license": "MIT",
@@ -11,6 +13,10 @@
     "@rpgjs/client": "^4.0.0-rc.11",
     "@rpgjs/common": "^4.0.0-rc.11",
     "@rpgjs/server": "^4.0.0-rc.11"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.2",
+    "@rpgjs/compiler": "^4.0.0-rc.11"
   },
   "gitHead": "5abe6ca78be96524d74a052a230f2315c900ddee",
   "type": "module"

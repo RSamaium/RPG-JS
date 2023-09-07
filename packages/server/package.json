@@ -8,7 +8,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && npm run build:browser",
     "build:browser": "RPG_TYPE=rpg npx rpgjs build",
     "watch": "tsc -w"
   },
@@ -29,7 +29,6 @@
   "dependencies": {
     "@rpgjs/common": "^4.0.0-rc.11",
     "@rpgjs/database": "^4.0.0-rc.11",
-    "@rpgjs/save": "^4.0.0-rc.11",
     "@rpgjs/tiled": "^4.0.0-rc.11",
     "@rpgjs/types": "^4.0.0-rc.11",
     "axios": "^1.3.6",

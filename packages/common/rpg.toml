@@ -4,11 +4,8 @@
 
 [vite.build.lib]
     entry = "src/index.ts"
-    name = "RpgServer"
-    fileName = "rpg.server"
+    name = "RpgCommon"
+    fileName = "rpg.common"
 
 [vite.build.rollupOptions.output]
   format = "umd"
-
-[vite.build.rollupOptions]
-  external = ["@rpgjs/common", "@rpgjs/database"]

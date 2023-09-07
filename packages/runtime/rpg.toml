@@ -1,3 +1,11 @@
 [compilerOptions.build]
   pwaEnabled = false
-  outputDir = "."
+  outputDir = "./browser"
+
+[vite.build.lib]
+    entry = "runtime.ts"
+    name = "RPG"
+    fileName = "rpg.runtime"
+
+[vite.build.rollupOptions.output]
+  format = "umd"

@@ -1,7 +1,0 @@
-{
-  "runtime.ts": {
-    "file": "rpg.runtime.umd.js",
-    "isEntry": true,
-    "src": "runtime.ts"
-  }
-}

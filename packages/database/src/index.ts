@@ -1,4 +1,4 @@
-import { Item, ItemOptions } from './item'
+import { Item, type ItemOptions } from './item'
 import { Actor } from './actor'
 import { Class } from './class'
 import { Skill } from './skill'
@@ -8,7 +8,7 @@ import { Armor } from './armor'
 import { Enemy } from './enemy'
 import { Effect } from './effect'
 import { Efficiency } from './interfaces/efficiency';
-import { DatabaseTypes } from './interfaces/types';
+import type { DatabaseTypes } from './interfaces/types';
 
 export { 
     Item, ItemOptions,

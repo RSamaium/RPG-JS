@@ -6,7 +6,7 @@ export function runtimePlugin(_outputPath, vite) {
         name: 'runtime-plugin',
         writeBundle() {
             const outputPath = path.join(_outputPath, 
-                (vite?.build?.lib?.fileName ?? 'rpg.runtime') +
+                (vite?.build?.lib?.fileName ?? 'rpg.runtime') + '.' +
                 (vite?.build?.rollupOptions?.output?.format ?? 'umd') +
                 '.js'
             )

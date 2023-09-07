@@ -7,7 +7,8 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && npm run build:browser",
+    "build:browser": "RPG_TYPE=rpg npx rpgjs build",
     "watch": "tsc -w"
   },
   "keywords": [],
@@ -15,7 +16,8 @@
   "license": "MIT",
   "gitHead": "5abe6ca78be96524d74a052a230f2315c900ddee",
   "devDependencies": {
-    "typescript": "^5.0.2"
+    "typescript": "^5.0.2",
+    "@rpgjs/compiler": "^4.0.0-rc.11"
   },
   "type": "module"
 }

@@ -8,7 +8,8 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc && tsc-esm-fix  --target='lib'",
+    "build": "tsc && tsc-esm-fix  --target='lib' && npm run build:browser",
+    "build:browser": "RPG_TYPE=rpg npx rpgjs build",
     "watch": "tsc -w"
   },
   "keywords": [],
@@ -34,7 +35,8 @@
     "@babel/types": "^7.22.11",
     "@types/css-font-loading-module": "^0.0.8",
     "@types/node": "^18.16.0",
-    "typescript": "^5.0.4"
+    "typescript": "^5.0.4",
+    "@rpgjs/compiler": "^4.0.0-rc.11"
   },
   "type": "module"
 }
