@@ -432,7 +432,5 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         ]
     }
 
-    console.log(defaultComposer<any>(viteConfig, vite))
-
     return defaultComposer<any>(viteConfig, vite)
 }

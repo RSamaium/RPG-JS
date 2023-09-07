@@ -8,7 +8,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && npm run build:browser",
     "watch": "tsc -w",
     "test": "vitest  --config vitest.config.ts",
     "build:browser": "vite build",
@@ -26,7 +26,6 @@
     "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
     "@esbuild-plugins/node-modules-polyfill": "^0.2.2",
     "@iarna/toml": "^2.2.5",
-    "@rpgjs/common": "^4.0.0-rc.11",
     "@vitejs/plugin-vue": "^4.2.1",
     "ajv": "^8.12.0",
     "ajv-formats": "^2.1.1",
