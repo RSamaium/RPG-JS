@@ -1,11 +1,12 @@
 import fs from 'fs';
 import path from 'path';
-import { Plugin } from 'vite';
+import type { Plugin } from 'vite';
 import sizeOf from 'image-size';
-import { ClientBuildConfigOptions, Config } from './client-config';
+import type { ClientBuildConfigOptions, Config } from './client-config';
 import { loadGlobalConfig } from './load-global-config.js';
 import { warn } from '../logs/warning.js';
 import { assetsFolder, extractProjectPath, toPosix } from './utils.js';
+import dd from 'dedent';
 
 const MODULE_NAME = 'virtual-modules'
 const GLOBAL_CONFIG_CLIENT = 'virtual-config-client'
@@ -139,7 +140,7 @@ export function loadServerFiles(modulePath: string, options, config) {
     const eventsFilesString = searchFolderAndTransformToImportString('events', modulePath, '.ts')
     const hitbox = config.start?.hitbox
     const code = `
-        import { RpgServer, RpgModule } from '@rpgjs/server'
+        import { type RpgServer, RpgModule } from '@rpgjs/server'
         ${mapFilesString?.importString}
         ${mapStandaloneFilesString?.importString}
         ${worldFilesString?.importString}
@@ -148,7 +149,7 @@ export function loadServerFiles(modulePath: string, options, config) {
         ${databaseFilesString?.importString}
         ${importEngine}
 
-        ${modulesCreated.length == 1 ? `const _lastConnectedCb = player.onConnected
+        ${modulesCreated.length == 1 ? dd`const _lastConnectedCb = player.onConnected
             player.onConnected = async (player) => {
                 if (_lastConnectedCb) await _lastConnectedCb(player)
                 if (!player.server.module.customHookExists('server.player.onAuth')) {
@@ -191,20 +192,26 @@ export function loadSpriteSheet(directoryName: string, modulePath: string, optio
             const basename = filename.replace(path.extname(file), '')
             // move image to assets folder, if build
             if (options.serveMode === false) {
-                const dest = path.join(assetsFolder(options.type === 'rpg' ? 'standalone' : 'client'), filename)
+                const { outputDir } = options.config.compilerOptions.build
+                const dest = path.join(outputDir, assetsFolder(options.type === 'rpg' ? 'standalone' : 'client'), filename)
                 fs.copyFileSync(file, dest)
             }
             lastImagePath = file
             objectString += `"${basename}": "${toPosix(extractProjectPath(file, projectPath.replace(/^\/+/, '')))}",\n`
         })
-        const dimensions = sizeOf(lastImagePath)
-        propImagesString = `
+        if (!lastImagePath) {
+            warn(`No spritesheet image found in ${directoryName} folder`)
+        }
+        else {
+            const dimensions = sizeOf(lastImagePath)
+            propImagesString = `
             ${importSprites?.variablesString}.images = {
                 ${objectString}
             }
             ${importSprites?.variablesString}.prototype.width = ${dimensions.width}
             ${importSprites?.variablesString}.prototype.height = ${dimensions.height}
         `
+        }
     }
     else if (warning) {
         warn(`No spritesheet folder found in ${directoryName} folder`)
@@ -222,12 +229,17 @@ export function loadClientFiles(modulePath: string, options, config) {
     const guiFilesString = searchFolderAndTransformToImportString('gui', modulePath, '.vue')
     let importSpritesheets: ImportImageObject[] = []
 
+    const extraOptions = {
+        config,
+        ...options
+    }
+
     if (config.spritesheetDirectories) {
-        importSpritesheets = config.spritesheetDirectories.map(directory => loadSpriteSheet(directory, modulePath, options))
+        importSpritesheets = config.spritesheetDirectories.map(directory => loadSpriteSheet(directory, modulePath, extraOptions))
     }
 
     if (!(config.spritesheetDirectories ?? []).some(dir => dir === 'characters')) {
-        importSpritesheets.push(loadSpriteSheet('characters', modulePath, options, false))
+        importSpritesheets.push(loadSpriteSheet('characters', modulePath, extraOptions, false))
     }
 
     const SPRITESHEET_DIRNAME = 'spritesheets'
@@ -237,7 +249,7 @@ export function loadClientFiles(modulePath: string, options, config) {
 
         for (const dirent of dirents) {
             if (!dirent.isDirectory()) continue
-            importSpritesheets.push(loadSpriteSheet(path.join(SPRITESHEET_DIRNAME, dirent.name), modulePath, options))
+            importSpritesheets.push(loadSpriteSheet(path.join(SPRITESHEET_DIRNAME, dirent.name), modulePath, extraOptions))
         }
     }
 
@@ -257,8 +269,8 @@ export function loadClientFiles(modulePath: string, options, config) {
     // remove directory not found
     importSpritesheets = importSpritesheets.filter(importSpritesheet => importSpritesheet.importString)
 
-    return `
-        import { RpgClient, RpgModule } from '@rpgjs/client'
+    return dd`
+        import { type RpgClient, RpgModule } from '@rpgjs/client'
         ${importSpriteString}
         ${importSceneMapString}
         ${importEngine}
@@ -301,7 +313,7 @@ export function createModuleLoad(id: string, variableName: string, modulePath: s
         const { main: entryPoint } = JSON.parse(fs.readFileSync(packageJson, 'utf-8'))
         if (entryPoint) {
             const mod = toPosix(path.join(id, entryPoint))
-            return `
+            return dd`
                 import mod from '@/${mod}'
                 export default mod
             `
@@ -309,13 +321,13 @@ export function createModuleLoad(id: string, variableName: string, modulePath: s
     }
     else if (fs.existsSync(indexFile)) {
         const mod = extractProjectPath(toPosix(indexFile), id)
-        return `
+        return dd`
             import mod from '@/${mod}'
             export default mod
         `
     }
 
-    return `
+    return dd`
         import client from 'client!./${clientFile}'
         import server from 'server!./${serverFile}'
         
@@ -348,6 +360,7 @@ function resolveModule(name: string) {
 export default function configTomlPlugin(options: ClientBuildConfigOptions = {}, config: Config): Plugin | undefined {
     let modules: string[] = []
     let modulesCreated = []
+    const libMode = config.vite?.build?.lib
 
     if (config.modules) {
         modules = config.modules;
@@ -389,7 +402,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
                 const standaloneFile = path.resolve(process.cwd(), 'src', 'standalone.ts')
                 const importStrStandalone = fs.existsSync(standaloneFile) ? 'rpg!./src/standalone.ts' : 'rpg!virtual-standalone.ts'
 
-                return html.replace('<head>', `
+                return html.replace('<head>', dd`
                 <head>
                 <script type="module">
                     import '${importStr}'
@@ -443,7 +456,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
                 `
             }
             else if (id.endsWith('virtual-client.ts?mmorpg')) {
-                const codeToTransform = `
+                const codeToTransform = dd`
                 import { entryPoint } from '@rpgjs/client'
                 import io from 'socket.io-client'
                 import modules from './${MODULE_NAME}'
@@ -460,24 +473,41 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
                 return codeToTransform
             }
             else if (id.endsWith('virtual-standalone.ts?rpg')) {
-                const codeToTransform = `
+                const codeToTransform = dd`
                 import { entryPoint } from '@rpgjs/standalone'
                 import globalConfigClient from './${GLOBAL_CONFIG_CLIENT}'
                 import globalConfigServer from './${GLOBAL_CONFIG_SERVER}'
                 import modules from './${MODULE_NAME}'
 
-                document.addEventListener('DOMContentLoaded', function() { 
-                    entryPoint(modules, {
-                        globalConfigClient,
-                        globalConfigServer,
-                        envs: ${envsString}
-                    }).start() 
-                })
+                ${libMode ?
+                        `  window.global ||= window
+                 
+                    export default (extraModules = []) => {
+                        return entryPoint([
+                            ...modules,
+                            ...extraModules
+                        ], {
+                            globalConfigClient,
+                            globalConfigServer,
+                            envs: ${envsString}
+                        })
+                    }
+                 `
+                        :
+                        `document.addEventListener('DOMContentLoaded', async function() { 
+                        window.RpgStandalone = await entryPoint(modules, {
+                            globalConfigClient,
+                            globalConfigServer,
+                            envs: ${envsString}
+                        }).start() 
+                    })`
+                    }
+
               `;
                 return codeToTransform
             }
             else if (id.endsWith('virtual-server.ts')) {
-                const codeToTransform = `
+                const codeToTransform = dd`
                 import { expressServer } from '@rpgjs/server/express'
                 import * as url from 'url'
                 import modules from './${MODULE_NAME}'

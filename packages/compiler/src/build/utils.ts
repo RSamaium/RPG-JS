@@ -22,10 +22,10 @@ export const globFiles = (extension: string): string[] => {
 }
 
 export const assetsFolder = (outputDir: string): string => {
-    return path.join('dist', outputDir, 'assets')
+    return path.join(outputDir, 'assets')
 }
 
-export const createDistFolder = async  (outputDir: string): Promise<string> => {
+export const createDistFolder = async (outputDir: string): Promise<string> => {
     const assetDir = assetsFolder(outputDir)
     fs.mkdirSync(assetDir, { recursive: true })
     return assetDir
@@ -43,12 +43,36 @@ export function toPosix(path: string) {
  */
 export function extractProjectPath(absolutePath: string, projectPath: string): string {
     const projectIndex = absolutePath.indexOf(projectPath);
-    
+
     if (projectIndex === -1) {
         throw new Error('Project path not found in absolute path');
     }
-    
+
     const extractedPath = absolutePath.substring(projectIndex);
-    
+
     return extractedPath;
+}
+
+export function replaceEnvVars(obj, envs) {
+    if (obj === null || obj === undefined) {
+        return obj;
+    }
+
+    if (typeof obj === 'string' && obj.startsWith('$ENV:')) {
+        const envVar = obj.slice(5);
+        return envs[envVar]
+    }
+
+    if (Array.isArray(obj)) {
+        return obj.map((item) => replaceEnvVars(item, envs));
+    }
+
+    if (typeof obj == 'object') {
+        return Object.entries(obj).reduce((acc, [key, value]) => {
+            acc[key] = replaceEnvVars(value, envs);
+            return acc;
+        }, {});
+    }
+
+    return obj
 }

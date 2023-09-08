@@ -73,6 +73,10 @@ const compilerOptions = {
                 }
             }
         }
+    },
+    "vite": {
+        "type": "object",
+        "additionalProperties": true
     }
 }
 

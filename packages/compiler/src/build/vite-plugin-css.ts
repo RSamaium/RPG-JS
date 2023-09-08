@@ -17,7 +17,7 @@ const DEFAULT_THEME = `
     @mixin window-content {}
 `
 
-export default function cssPlugin(config: Config): Plugin {
+export default function cssPlugin(configObject: Config): Plugin {
     return {
         name: 'vite-plugin-css',
         config(config: any) {
@@ -29,14 +29,14 @@ export default function cssPlugin(config: Config): Plugin {
                 additionalData += `@import "@/config/client/theme.scss";`
             }
             else if (fs.existsSync(themeCssRoot)) {
-                additionalData += `@import "@/../theme.scss";`
+                additionalData += `@import "@/theme.scss";`
             }
-            else if (config.themeCss) {
+            else if (configObject.themeCss) {
                 // exception if not find file
-                if (!fs.existsSync(resolve(process.cwd(), config.themeCss))) {
-                    throw new Error(`File ${config.themeCss} not found`)
+                if (!fs.existsSync(resolve(process.cwd(), configObject.themeCss))) {
+                    throw new Error(`File ${configObject.themeCss} not found`)
                 }
-                additionalData += `@import "@/../${config.themeCss}";`
+                additionalData += `@import "@/${configObject.themeCss}";`
             }
             else {
                 additionalData += DEFAULT_THEME

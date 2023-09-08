@@ -279,7 +279,7 @@ describe('TOML Configuration test', () => {
             const result = loadClientFiles(modulePath, options, config)
 
             // checking for import statements
-            expect(result).toContain(`import { RpgClient, RpgModule } from '@rpgjs/client'`)
+            expect(result).toContain(`import { type RpgClient, RpgModule } from '@rpgjs/client'`)
             expect(result).toContain(`import sprite from '${modulePath}/sprite.ts'`)
             expect(result).toContain(`import sceneMap from '${modulePath}/scene-map.ts'`)
             expect(result).toContain(`import engine from '${modulePath}/client.ts'`)

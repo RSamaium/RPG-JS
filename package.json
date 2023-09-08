@@ -12,18 +12,21 @@
     "vue": "^3.2.47"
   },
   "devDependencies": {
+    "axios": "^1.5.0",
+    "git-parse": "^3.0.1",
     "jsdom": "^21.1.1",
     "lerna": "^6.6.1",
     "typescript": "^5.0.2",
     "vitest": "^0.30.0"
   },
   "scripts": {
-    "postinstall": "lerna bootstrap --ci && npm run build:types && npm run build:tiled && npm run build:common && npm run build:client && npm run build:database && npm run build:server && npm run build:testing && npm run build:compiler && cd packages/client && cd ../../packages/plugins/agones/matchmaker && npm i",
+    "postinstall": "lerna bootstrap --ci && npm run build:compiler && npm run build:types && npm run build:tiled && npm run build:common && npm run build:client && npm run build:database && npm run build:server && npm run build:testing  && cd packages/client && cd ../../packages/plugins/agones/matchmaker && npm i",
     "test": "RPGJS_TEST=1 vitest --config ./packages/compiler/src/test/vitest.config.ts && cd ./packages/compiler && npm test",
     "lerna:publish": "lerna publish --ignore-prepublish --force-publish --no-private --no-push --no-git-tag-version",
     "lerna:actions:publish": "lerna publish from-git --ignore-prepublish --force-publish --no-private --no-push --no-git-tag-version --yes",
     "lerna:ls": "lerna ls",
     "build": "concurrently -n build \"npm:build:*\" && npm run fix-esm",
+    "build:standalone": "cd packages/standalone && npm run build:browser",
     "build:common": "cd packages/common && npm run build",
     "build:server": "cd packages/server && npm run build",
     "build:client": "cd packages/client && npm run build",

@@ -1,0 +1,11 @@
+[compilerOptions.build]
+  pwaEnabled = false
+  outputDir = "./browser"
+
+[vite.build.lib]
+    entry = "src/index.ts"
+    name = "RpgCommon"
+    fileName = "rpg.common"
+
+[vite.build.rollupOptions.output]
+  format = "umd"

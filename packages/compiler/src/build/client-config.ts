@@ -1,4 +1,4 @@
-import { splitVendorChunkPlugin } from 'vite'
+import { loadEnv, splitVendorChunkPlugin } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import toml from '@iarna/toml';
 import nodePolyfills from 'rollup-plugin-node-polyfills'
@@ -19,10 +19,13 @@ import { DevOptions } from '../serve/index.js';
 import { codeInjectorPlugin } from './vite-plugin-code-injector.js';
 import { error, ErrorCodes } from '../utils/log.js';
 import configTomlPlugin from './vite-plugin-config.toml.js'
-import { createDistFolder, entryPointServer } from './utils.js'
+import { createDistFolder, entryPointServer, replaceEnvVars } from './utils.js'
 import cssPlugin from './vite-plugin-css.js';
 import { rpgjsPluginLoader } from './vite-plugin-rpgjs-loader.js';
 import { mapUpdatePlugin } from './vite-plugin-map-update.js';
+import { runtimePlugin } from './vite-plugin-lib.js';
+import { BuildOptions } from './index.js';
+import { defaultComposer } from "default-composer";
 
 const require = createRequire(import.meta.url);
 
@@ -67,7 +70,8 @@ export interface Config {
     },
     pwa?: {
         [key: string]: any
-    }
+    },
+    vite?: any
 }
 
 export interface ClientBuildConfigOptions {
@@ -90,7 +94,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     const isTest = options.mode === 'test'
     const isRpg = options.type === 'rpg'
     const isBuild = options.serveMode === false
-    const dirOutputName = isRpg ? 'standalone' : 'client'
+    const mode = options.mode || 'development'
     const plugin = options.plugin
     let config: Config = {}
 
@@ -108,6 +112,9 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     else if (_fs.existsSync(jsonFile)) {
         config = JSON.parse(await fs.readFile(jsonFile, 'utf8'));
     }
+
+    const envs = loadEnv(mode, process.cwd())
+    config = replaceEnvVars(config, envs)
 
     let buildOptions = config.compilerOptions?.build || {}
 
@@ -127,6 +134,9 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         buildOptions.outputDir = 'dist'
     }
 
+    const libMode = config.vite?.build?.lib
+    const vite = config.vite ?? {}
+
     let serverUrl = ''
 
     if (isBuild) {
@@ -136,7 +146,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         serverUrl = 'http://' + process.env.VITE_SERVER_URL
     }
 
-    if (options.mode != 'test' && !plugin) {
+    if (options.mode != 'test' && !plugin && !libMode) {
         // if index.html is not found, display an error
         try {
             await fs.stat(resolve(dirname, 'index.html'))
@@ -150,9 +160,16 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     // alias for client
     process.env.VITE_RPG_TYPE = envType
 
+    const outputDir = buildOptions.outputDir as string
+    const dirOutputName = isRpg ? outputDir : join(outputDir, 'client')
+
     if (isBuild && !isTest) {
         await createDistFolder(dirOutputName)
     }
+
+    const outputPath = isRpg ?
+        resolve(dirname, dirOutputName) :
+        resolve(dirname, isServer ? join(outputDir, 'server') : dirOutputName)
 
     let plugins: any[] = [
         rpgjsPluginLoader(dirOutputName, options.serveMode),
@@ -163,6 +180,13 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         tsxXmlPlugin(),
         ...(options.plugins || [])
     ]
+
+    if (libMode) {
+        plugins = [
+            ...plugins,
+            runtimePlugin(outputPath, vite)
+        ]
+    }
 
     if (!isServer) {
         plugins = [
@@ -203,7 +227,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
 
     if (isBuild && !isTest) {
         plugins.push(
-            tmxTsxMoverPlugin(isRpg ? 'standalone' : 'server'),
+            tmxTsxMoverPlugin(isRpg ? outputDir : join(outputDir, 'server')),
             mapExtractPlugin(dirOutputName)
         )
     }
@@ -319,6 +343,15 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         }
     }
 
+    if (libMode) {
+        outputOptions = {
+            globals: {
+                vue: 'Vue'
+            },
+            ...outputOptions,
+        }
+    }
+
     if (config.compilerOptions?.alias) {
         aliasTransform = {
             ...aliasTransform,
@@ -326,11 +359,6 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         }
     }
 
-    const outputDir = buildOptions.outputDir as string
-
-    const outputPath = isRpg ?
-        resolve(dirname, outputDir, dirOutputName) :
-        resolve(dirname, outputDir, isServer ? 'server' : dirOutputName)
 
     const viteConfig = {
         mode: options.mode || 'development',
@@ -354,7 +382,9 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
             assetsInlineLimit: 0,
             emptyOutDir: false,
             rollupOptions: {
+                ...(vite?.build ?? {}),
                 output: {
+                    ...(vite?.build?.rollupOptions?.output ?? {}),
                     dir: outputPath,
                     assetFileNames: (assetInfo) => {
                         let extType = assetInfo.name.split('.').at(1);
@@ -363,17 +393,22 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
                         }
                         return `assets/[name]-[hash][extname]`;
                     },
-                    ...outputOptions
+                    ...outputOptions,
                 },
-                input: {
-                    main: plugin ? plugin.entry :
-                        !isServer ?
-                            resolve(dirname, 'index.html') :
-                            entryPointServer()
-                },
+
                 plugins: [
                     !isServer ? nodePolyfills() as any : null
-                ]
+                ],
+                ...(libMode ? {
+                    external: ['vue']
+                } : {
+                    input: {
+                        main: plugin ? plugin.entry :
+                            !isServer ?
+                                resolve(dirname, 'index.html') :
+                                entryPointServer()
+                    },
+                }),
             },
             ...moreBuildOptions
         },
@@ -401,5 +436,5 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         ]
     }
 
-    return viteConfig
+    return defaultComposer<any>(viteConfig, vite)
 }

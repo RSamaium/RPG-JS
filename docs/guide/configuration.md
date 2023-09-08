@@ -20,6 +20,16 @@ Configuration properties related to the compiler.
   - `outputDir`: (*string*) Output directory for the build.
   - `serverUrl`: (*string*) Server URL.
 
+- `vite`: (*object*) All [Vite configuration](https://vitejs.dev/config/). Example:
+    ```toml
+    [vite]
+      logLevel = "silent"
+    ```
+
+    > Please note that RPGJS contains certain configurations. You will therefore overwrite certain configurations ([the basic file is in the sources]([https://github.com/RSamaium/RPG-JS/blob/v4/packages/compiler/src/build/client-config.ts#L335])).
+
+- `spritesheetDirectories`: (*array*) Directories for spritesheets.
+
 ### `server`
 
 Configuration properties related to the server-side of the RPG.
@@ -28,7 +38,6 @@ Configuration properties related to the server-side of the RPG.
   - `map`: (*string*) The map where the player starts.
   - `graphic`: (*string*) The graphic representation.
   - `hitbox`: (*array*) The hitbox coordinates.
-- `spritesheetDirectories`: (*array*) Directories for spritesheets.
 - `api`: (*object*) API settings. **WIP**
   - `enabled`: (*boolean*) Whether the API is enabled.
   - `authSecret`: (*string*) Authentication secret.

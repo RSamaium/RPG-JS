@@ -1,0 +1,14 @@
+[compilerOptions.build]
+  pwaEnabled = false
+  outputDir = "./browser"
+
+[vite.build.lib]
+    entry = "src/index.ts"
+    name = "RpgStandalone"
+    fileName = "rpg.standalone"
+
+[vite.build.rollupOptions.output]
+  format = "umd"
+
+[vite.build.rollupOptions]
+  external = ["@rpgjs/client", "@rpgjs/server", "@rpgjs/common"]

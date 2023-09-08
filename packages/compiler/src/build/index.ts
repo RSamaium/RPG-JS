@@ -2,8 +2,16 @@ import { build } from 'vite'
 import { cleanDist } from './clean-dist.js'
 import { clientBuildConfig } from './client-config.js'
 
-export async function buildMode() {
-    cleanDist()
+export type BuildOptions = {
+    runtime?: boolean | string
+    outputFilename?: string
+    outputDir?: string
+}
+
+export async function buildMode(props: BuildOptions) {
+    const { outputDir } = props
+    
+    cleanDist(outputDir)
 
     process.env.VITE_BUILT = '1'
 

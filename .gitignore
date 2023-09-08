@@ -9,3 +9,4 @@ docs/others/*
 !docs/api/readme.md
 !docs/others/readme.md
 cache
+packages/**/browser
