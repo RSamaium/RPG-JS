@@ -6,8 +6,8 @@ import _generate from "@babel/generator";
 import { Plugin } from "vite";
 import { importDeclaration, importDefaultSpecifier, stringLiteral, identifier, newExpression, expressionStatement, memberExpression, BinaryExpression, ExpressionStatement } from "@babel/types";
 
-const traverse = _traverse.default;
-const generate = _generate.default;
+const traverse = _traverse.default ?? _generate;
+const generate = _generate.default ?? _generate;
 
 export default function vitePluginRequire(opts?: {
 	fileRegex?: RegExp;
