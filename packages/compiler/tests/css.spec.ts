@@ -1,5 +1,5 @@
 import cssPlugin from '../src/build/vite-plugin-css'
-import { vi, afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { beforeEach, describe, expect, test } from 'vitest';
 import mockFs from 'mock-fs';
 
 describe('cssPlugin', () => {

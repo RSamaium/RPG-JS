@@ -20,5 +20,5 @@ modules = [
   includeAssets = ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg']
 
 [compilerOptions.build]
-  serverUrl = 'http://localhost:8000'
+  serverUrl = '$ENV:VITE_SERVER_URL'
   pwaEnabled = false

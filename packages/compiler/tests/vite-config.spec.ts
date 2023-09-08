@@ -203,6 +203,21 @@ describe('clientBuildConfig', () => {
                 });
                 expect(ret.serverUrl).toBe('https://myserver.com');
             })
+
+            test('Build Mode (config with $ENV)', async () => {
+                process.env.VITE_SERVER_URL = 'https://myserver.com'
+                mockFs({
+                    'rpg.toml': `[compilerOptions.build]
+                        serverUrl = '$ENV:VITE_SERVER_URL'`,
+                    'index.html': '',
+                    'package.json': '{"name": "test"}'
+                });
+                const ret = await clientBuildConfig('.', {
+                    type: 'mmorpg',
+                    serveMode: false,
+                });
+                expect(ret.serverUrl).toBe('https://myserver.com');
+            })
         })
 
         describe('Build OutDir', () => {

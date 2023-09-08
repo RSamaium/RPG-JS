@@ -5,7 +5,6 @@ import { createDistFolder, globFiles } from './utils.js';
 
 const moveTMXTSXFiles = async (outputDir: string): Promise<void> => {
   const assetDir = await createDistFolder(outputDir);
-
   const files = globFiles('@(tmx|tsx)')
 
   for (const file of files) {

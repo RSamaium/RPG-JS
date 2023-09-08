@@ -192,7 +192,8 @@ export function loadSpriteSheet(directoryName: string, modulePath: string, optio
             const basename = filename.replace(path.extname(file), '')
             // move image to assets folder, if build
             if (options.serveMode === false) {
-                const dest = path.join(assetsFolder(options.type === 'rpg' ? 'standalone' : 'client'), filename)
+                const { outputDir } = options.config.compilerOptions.build
+                const dest = path.join(outputDir, assetsFolder(options.type === 'rpg' ? 'standalone' : 'client'), filename)
                 fs.copyFileSync(file, dest)
             }
             lastImagePath = file
@@ -228,12 +229,17 @@ export function loadClientFiles(modulePath: string, options, config) {
     const guiFilesString = searchFolderAndTransformToImportString('gui', modulePath, '.vue')
     let importSpritesheets: ImportImageObject[] = []
 
+    const extraOptions = {
+        config,
+        ...options
+    }
+
     if (config.spritesheetDirectories) {
-        importSpritesheets = config.spritesheetDirectories.map(directory => loadSpriteSheet(directory, modulePath, options))
+        importSpritesheets = config.spritesheetDirectories.map(directory => loadSpriteSheet(directory, modulePath, extraOptions))
     }
 
     if (!(config.spritesheetDirectories ?? []).some(dir => dir === 'characters')) {
-        importSpritesheets.push(loadSpriteSheet('characters', modulePath, options, false))
+        importSpritesheets.push(loadSpriteSheet('characters', modulePath, extraOptions, false))
     }
 
     const SPRITESHEET_DIRNAME = 'spritesheets'
@@ -243,7 +249,7 @@ export function loadClientFiles(modulePath: string, options, config) {
 
         for (const dirent of dirents) {
             if (!dirent.isDirectory()) continue
-            importSpritesheets.push(loadSpriteSheet(path.join(SPRITESHEET_DIRNAME, dirent.name), modulePath, options))
+            importSpritesheets.push(loadSpriteSheet(path.join(SPRITESHEET_DIRNAME, dirent.name), modulePath, extraOptions))
         }
     }
 

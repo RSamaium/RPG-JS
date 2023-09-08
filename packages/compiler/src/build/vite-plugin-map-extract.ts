@@ -47,7 +47,7 @@ async function processTmxFile(tmxFile: string, output: string) {
 // Copy an image file to the output directory
 function copyImageToOutput(imagePath: string, output: string) {
     const imageName = path.basename(imagePath);
-    const destPath = path.join('dist', output, 'assets', imageName);
+    const destPath = path.join(output, 'assets', imageName);
 
     if (!fs.existsSync(path.dirname(destPath))) {
         fs.mkdirSync(path.dirname(destPath), { recursive: true });

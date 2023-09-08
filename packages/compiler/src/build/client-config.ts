@@ -1,4 +1,4 @@
-import { splitVendorChunkPlugin } from 'vite'
+import { loadEnv, splitVendorChunkPlugin } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import toml from '@iarna/toml';
 import nodePolyfills from 'rollup-plugin-node-polyfills'
@@ -19,7 +19,7 @@ import { DevOptions } from '../serve/index.js';
 import { codeInjectorPlugin } from './vite-plugin-code-injector.js';
 import { error, ErrorCodes } from '../utils/log.js';
 import configTomlPlugin from './vite-plugin-config.toml.js'
-import { createDistFolder, entryPointServer } from './utils.js'
+import { createDistFolder, entryPointServer, replaceEnvVars } from './utils.js'
 import cssPlugin from './vite-plugin-css.js';
 import { rpgjsPluginLoader } from './vite-plugin-rpgjs-loader.js';
 import { mapUpdatePlugin } from './vite-plugin-map-update.js';
@@ -94,6 +94,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     const isTest = options.mode === 'test'
     const isRpg = options.type === 'rpg'
     const isBuild = options.serveMode === false
+    const mode = options.mode || 'development'
     const plugin = options.plugin
     let config: Config = {}
 
@@ -111,6 +112,9 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     else if (_fs.existsSync(jsonFile)) {
         config = JSON.parse(await fs.readFile(jsonFile, 'utf8'));
     }
+
+    const envs = loadEnv(mode, process.cwd())
+    config = replaceEnvVars(config, envs)
 
     let buildOptions = config.compilerOptions?.build || {}
 
@@ -162,7 +166,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     if (isBuild && !isTest) {
         await createDistFolder(dirOutputName)
     }
-    
+
     const outputPath = isRpg ?
         resolve(dirname, dirOutputName) :
         resolve(dirname, isServer ? join(outputDir, 'server') : dirOutputName)
