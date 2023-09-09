@@ -160,7 +160,7 @@ const guideMenu = [{
     { text: "Create Unit Tests", link: "/guide/unit-test" },
   ]
 },
-  ...migrationMenu
+...migrationMenu
 ]
 
 const pluginMenu = [{
@@ -173,6 +173,8 @@ const pluginMenu = [{
     { text: "Displaying Emotion Bubbles for Characters", link: "/plugins/emotion-bubble" }
   ]
 }]
+
+const GA_ID = 'G-VCPFWQS1BJ'
 
 module.exports = {
   //extends: baseConfig,
@@ -222,6 +224,20 @@ module.exports = {
       '/plugins/': pluginMenu,
       '/migration/': guideMenu,
     },
-    plugins: ['@vuepress/active-header-links']
+    plugins: ['@vuepress/active-header-links'],
+    head: [
+      [
+        'script',
+        { async: '', src: 'https://www.googletagmanager.com/gtag/js?id=' + GA_ID }
+      ],
+      [
+        'script',
+        {},
+        `window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', '${GA_ID}');`
+      ]
+    ]
   }
 }
