@@ -192,7 +192,7 @@ export function loadSpriteSheet(directoryName: string, modulePath: string, optio
             const basename = filename.replace(path.extname(file), '')
             // move image to assets folder, if build
             if (options.serveMode === false) {
-                const { outputDir } = options.config.compilerOptions.build
+                const { outputDir = 'dist' } = options.config.compilerOptions.build
                 const dest = path.join(outputDir, assetsFolder(options.type === 'rpg' ? 'standalone' : 'client'), filename)
                 fs.copyFileSync(file, dest)
             }
