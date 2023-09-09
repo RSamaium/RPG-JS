@@ -13,7 +13,7 @@ So, These methods allow developers to display components above or below a player
 In <PathTo to="serverDir" file="player.ts" />
 
 ```ts
-import { RpgPlayer, RpgPlayerHooks, Components } from '@rpgjs/server'
+import { RpgPlayer, type RpgPlayerHooks, Components } from '@rpgjs/server'
 
 const player: RpgPlayerHooks = {
     onConnected(player: RpgPlayer) {
@@ -48,7 +48,7 @@ Why? Because if the player's name changes, the entire component structure is sen
 ![name2](/assets/name2.png)
 
 ```ts
-import { RpgPlayer, RpgPlayerHooks, Components } from '@rpgjs/server'
+import { RpgPlayer, type RpgPlayerHooks, Components } from '@rpgjs/server'
 
 const player: RpgPlayerHooks = {
     onConnected(player: RpgPlayer) {
@@ -72,7 +72,7 @@ By calling `player.setComponentsTop()` and passing in the text component with th
 ![multi](/assets/component-multi.png)
 
 ```ts
-import { RpgPlayer, RpgPlayerHooks, Components } from '@rpgjs/server'
+import { RpgPlayer, type RpgPlayerHooks, Components } from '@rpgjs/server'
 
 const player: RpgPlayerHooks = {
     onConnected(player: RpgPlayer) {
@@ -93,7 +93,7 @@ The argument being passed to `setComponentsTop()` is an array of two text compon
 
 
 ```ts
-import { RpgPlayer, RpgPlayerHooks, Components } from '@rpgjs/server'
+import { RpgPlayer, type RpgPlayerHooks, Components } from '@rpgjs/server'
 
 const player: RpgPlayerHooks = {
     onConnected(player: RpgPlayer) {
@@ -112,7 +112,7 @@ The `setComponentsTop()` method is being called with an argument that is an arra
 ### Add Style for layout
 
 ```ts
-import { RpgPlayer, RpgPlayerHooks, Components } from '@rpgjs/server'
+import { RpgPlayer, type RpgPlayerHooks, Components } from '@rpgjs/server'
 
 const player: RpgPlayerHooks = {
     onConnected(player: RpgPlayer) {
@@ -151,7 +151,7 @@ By calling `player.setComponentsTop()` with the array of text components and the
 ![multi](/assets/hpbar2.png)
 
 ```ts
-import { RpgPlayer, RpgPlayerHooks, Components } from '@rpgjs/server'
+import { RpgPlayer, type RpgPlayerHooks, Components } from '@rpgjs/server'
 
 const player: RpgPlayerHooks = {
     onConnected(player: RpgPlayer) {
@@ -184,7 +184,7 @@ You can use the bar and the text. See [Component.bar()](/commands/components.htm
 ![hpbar3](/assets/hpbar3.png)
 
 ```ts
-import { RpgPlayer, RpgPlayerHooks, Components } from '@rpgjs/server'
+import { RpgPlayer, type RpgPlayerHooks, Components } from '@rpgjs/server'
 
 const player: RpgPlayerHooks = {
     onConnected(player: RpgPlayer) {
@@ -216,7 +216,7 @@ Set the value to `null` to not display any text
 
 
 ```ts
-import { RpgPlayer, RpgPlayerHooks, Components } from '@rpgjs/server'
+import { RpgPlayer, type RpgPlayerHooks, Components } from '@rpgjs/server'
 
 const player: RpgPlayerHooks = {
     onConnected(player: RpgPlayer) {
@@ -259,7 +259,7 @@ The second argument is an object with one property:
 ## Display a custom properties (bar, text, etc.)
 
 ```ts
-import { RpgPlayer, RpgPlayerHooks, Components } from '@rpgjs/server'
+import { RpgPlayer, type RpgPlayerHooks, Components } from '@rpgjs/server'
 
 declare module '@rpgjs/server' {
     export interface RpgPlayer {
@@ -285,7 +285,7 @@ export default player
 Other example
 
 ```ts
-import { RpgPlayer, RpgPlayerHooks, Components } from '@rpgjs/server'
+import { RpgPlayer, type RpgPlayerHooks, Components } from '@rpgjs/server'
 
 declare module '@rpgjs/server' {
     export interface RpgPlayer {

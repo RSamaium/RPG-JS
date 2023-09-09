@@ -8,8 +8,7 @@ RPGJS was created several years ago, with the aim of creating an RPG on the brow
 
 - Typescript v5
 - ViteJS v4 (for compilation)
-- NodeJS v18 (for server)
-
+- NodeJS v18+ (for server)
 - Socket.io v4 (for real time)
 - PixiJS v7 (for WebGL rendering)
 - VueJS v3 (for GUIs)
@@ -27,7 +26,7 @@ RPGJS was created several years ago, with the aim of creating an RPG on the brow
 
 **Server-Side**
 
-- NodeJS 18
+- NodeJS 18+
 
 ## Installation
 
