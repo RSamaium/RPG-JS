@@ -1,6 +1,7 @@
 import { RpgCommonMap, RpgPlugin, HookClient, RpgShape, Utils, RpgCommonPlayer } from '@rpgjs/common'
 import TileMap from '../Tilemap'
-import * as PixiViewport from 'pixi-viewport'
+import * as _PixiViewport from 'pixi-viewport'
+import { type Viewport } from 'pixi-viewport'
 import { Scene, SceneObservableData, SceneSpriteLogic } from './Scene'
 import { spritesheets } from '../Sprite/Spritesheets'
 import { RpgSound } from '../Sound/RpgSound'
@@ -16,7 +17,8 @@ interface MapObject extends TiledMap {
     sounds: string | string[] | undefined
 }
 
-const { Viewport } = PixiViewport;
+// The export was made in this way to ensure compatibility with unit tests (https://github.com/RSamaium/RPG-JS/issues/240)
+const { Viewport: PixiViewport } = _PixiViewport;
 
 export class SceneMap extends Scene {
     static readonly EVENTS_LAYER_DEFAULT: string = 'events-layer-default'
@@ -140,7 +142,7 @@ export class SceneMap extends Scene {
             drawTiles: this.options.drawMap,
             isUpdate
         })
-        this.viewport = new Viewport({
+        this.viewport = new PixiViewport({
             screenWidth: this.options.screenWidth,
             screenHeight: this.options.screenHeight,
             worldWidth: obj.width * obj.tilewidth,
