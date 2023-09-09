@@ -21,10 +21,11 @@ export default function cssPlugin(configObject: Config): Plugin {
     return {
         name: 'vite-plugin-css',
         config(config: any) {
+            const { cwd } = config
             // if find file config/client/theme.scss or have config.themeCss
             let additionalData = ''
-            const themeCss = resolve(process.cwd(), 'src/config/client/theme.scss')
-            const themeCssRoot = resolve(process.cwd(), 'theme.scss')
+            const themeCss = resolve(cwd(), 'src/config/client/theme.scss')
+            const themeCssRoot = resolve(cwd(), 'theme.scss')
             if (fs.existsSync(themeCss)) {
                 additionalData += `@import "@/config/client/theme.scss";`
             }
@@ -33,7 +34,7 @@ export default function cssPlugin(configObject: Config): Plugin {
             }
             else if (configObject.themeCss) {
                 // exception if not find file
-                if (!fs.existsSync(resolve(process.cwd(), configObject.themeCss))) {
+                if (!fs.existsSync(resolve(cwd(), configObject.themeCss))) {
                     throw new Error(`File ${configObject.themeCss} not found`)
                 }
                 additionalData += `@import "@/${configObject.themeCss}";`

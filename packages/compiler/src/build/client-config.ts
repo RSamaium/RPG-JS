@@ -97,14 +97,15 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     const mode = options.mode || 'development'
     const plugin = options.plugin
     let config: Config = {}
+    const { cwd, env } = process
 
-    const envType = process.env.RPG_TYPE
+    const envType = env.RPG_TYPE
     if (envType && !['rpg', 'mmorpg'].includes(envType)) {
         throw new Error('Invalid type. Choice between rpg or mmorpg')
     }
 
-    const tomlFile = resolve(process.cwd(), 'rpg.toml')
-    const jsonFile = resolve(process.cwd(), 'rpg.json')
+    const tomlFile = resolve(cwd(), 'rpg.toml')
+    const jsonFile = resolve(cwd(), 'rpg.json')
     // if file exists
     if (_fs.existsSync(tomlFile)) {
         config = toml.parse(await fs.readFile(tomlFile, 'utf8'));
@@ -113,7 +114,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         config = JSON.parse(await fs.readFile(jsonFile, 'utf8'));
     }
 
-    const envs = loadEnv(mode, process.cwd())
+    const envs = loadEnv(mode, cwd())
     config = replaceEnvVars(config, envs)
 
     let buildOptions = config.compilerOptions?.build || {}
@@ -140,10 +141,10 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     let serverUrl = ''
 
     if (isBuild) {
-        serverUrl = process.env.VITE_SERVER_URL = process.env.VITE_SERVER_URL ?? buildOptions.serverUrl ?? ''
+        serverUrl = env.VITE_SERVER_URL = process.env.VITE_SERVER_URL ?? buildOptions.serverUrl ?? ''
     }
     else {
-        serverUrl = 'http://' + process.env.VITE_SERVER_URL
+        serverUrl = 'http://' + env.VITE_SERVER_URL
     }
 
     if (options.mode != 'test' && !plugin && !libMode) {
@@ -158,7 +159,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     }
 
     // alias for client
-    process.env.VITE_RPG_TYPE = envType
+    env.VITE_RPG_TYPE = envType
 
     const outputDir = buildOptions.outputDir as string
     const dirOutputName = isRpg ? outputDir : join(outputDir, 'client')
@@ -366,7 +367,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         configFile,
         resolve: {
             alias: {
-                '@': join(process.cwd(), '.'),
+                '@': join(cwd(), '.'),
                 ...aliasTransform
             },
             extensions: ['.ts', '.js', '.jsx', '.json', '.vue', '.css', '.scss', '.sass', '.html', 'tmx', 'tsx', '.toml'],
@@ -417,7 +418,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         ...(options.overrideOptions || {}),
     }
 
-    const packageJSON = JSON.parse(await fs.readFile(resolve(process.cwd(), 'package.json'), 'utf8'));
+    const packageJSON = JSON.parse(await fs.readFile(resolve(cwd(), 'package.json'), 'utf8'));
     const dependencies = Object.keys(packageJSON.dependencies || {});
     const excludeDependencies: string[] = []
     const except = ['@rpgjs/server', '@rpgjs/client', '@rpgjs/common', '@rpgjs/database', '@rpgjs/tiled', '@rpgjs/types', '@rpgjs/standalone']

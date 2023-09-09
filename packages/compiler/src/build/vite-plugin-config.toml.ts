@@ -12,6 +12,8 @@ const MODULE_NAME = 'virtual-modules'
 const GLOBAL_CONFIG_CLIENT = 'virtual-config-client'
 const GLOBAL_CONFIG_SERVER = 'virtual-config-server'
 
+const { cwd, exit } = process
+
 type ImportObject = {
     importString: string,
     variablesString: string,
@@ -81,7 +83,7 @@ export function searchFolderAndTransformToImportString(
                     return true
                 })
                 .map(file => {
-                    const relativePath = toPosix(file.replace(process.cwd(), '.'))
+                    const relativePath = toPosix(file.replace(cwd(), '.'))
                     const variableName = formatVariableName(relativePath)
                     importString = importString + `\nimport ${variableName} from '${relativePath}'`
                     return returnCb ? returnCb(relativePath, variableName) : variableName
@@ -98,7 +100,7 @@ export function searchFolderAndTransformToImportString(
 }
 
 export function importString(modulePath: string, fileName: string, variableName?: string) {
-    const playerFile = path.resolve(process.cwd(), transformPathIfModule(modulePath), fileName + '.ts')
+    const playerFile = path.resolve(cwd(), transformPathIfModule(modulePath), fileName + '.ts')
     let importString = ''
     if (fs.existsSync(playerFile)) {
         importString = `import ${variableName || fileName} from '${modulePath}/${fileName}.ts'`
@@ -181,7 +183,7 @@ export function loadSpriteSheet(directoryName: string, modulePath: string, optio
         let objectString = ''
         // get all images in the folder
         let lastImagePath = ''
-        const projectPath = folder.replace(process.cwd(), '/')
+        const projectPath = folder.replace(cwd(), '/')
         //console.log(modulePath, folder)
         getAllFiles(folder).filter(file => {
             const ext = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.svg']
@@ -305,7 +307,7 @@ export function createModuleLoad(id: string, variableName: string, modulePath: s
         return loadClientFiles(modulePath, options, config)
     }
 
-    const modulePathId = path.join(process.cwd(), id)
+    const modulePathId = path.join(cwd(), id)
     const packageJson = path.join(modulePathId, 'package.json')
     const indexFile = path.join(modulePathId, 'index.ts')
 
@@ -382,7 +384,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
         ret = loadGlobalConfig(modules, config, options)
     }
     catch (err) {
-        if (options.side == 'server') process.exit()
+        if (options.side == 'server') exit()
     }
 
     if (!ret) return
@@ -395,11 +397,11 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
             enforce: 'pre',
             transform(html) {
                 // if find src/client.ts, import src/client.ts else mmorpg!virtual-client.ts
-                const clientFile = path.resolve(process.cwd(), 'src', 'client.ts')
+                const clientFile = path.resolve(cwd(), 'src', 'client.ts')
                 const importStr = fs.existsSync(clientFile) ? 'mmorpg!./src/client.ts' : 'mmorpg!virtual-client.ts'
 
                 // if find src/standalone.ts, import src/standalone.ts else mmorpg!virtual-standalone.ts
-                const standaloneFile = path.resolve(process.cwd(), 'src', 'standalone.ts')
+                const standaloneFile = path.resolve(cwd(), 'src', 'standalone.ts')
                 const importStrStandalone = fs.existsSync(standaloneFile) ? 'rpg!./src/standalone.ts' : 'rpg!virtual-standalone.ts'
 
                 return html.replace('<head>', dd`
@@ -433,12 +435,13 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
             }
         },
         async load(id: string) {
-            const serverUrl = process.env.VITE_SERVER_URL
+            const { env } = process
+            const serverUrl = env.VITE_SERVER_URL
             const envsString = `{
-                VITE_BUILT: ${process.env.VITE_BUILT},
+                VITE_BUILT: ${env.VITE_BUILT},
                 VITE_SERVER_URL: ${serverUrl ? "'" + serverUrl + "'" : 'undefined'},
                 VITE_RPG_TYPE: '${options.type ?? 'mmorpg'}',
-                VITE_ASSETS_PATH: '${process.env.VITE_ASSETS_PATH ?? ''}'
+                VITE_ASSETS_PATH: '${env.VITE_ASSETS_PATH ?? ''}'
             }`
             if (id.endsWith(MODULE_NAME)) {
                 const modulesToImport = modules.reduce((acc, module) => {
