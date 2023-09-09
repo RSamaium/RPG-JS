@@ -21,7 +21,7 @@ export default function cssPlugin(configObject: Config): Plugin {
     return {
         name: 'vite-plugin-css',
         config(config: any) {
-            const { cwd } = config
+            const { cwd } = process
             // if find file config/client/theme.scss or have config.themeCss
             let additionalData = ''
             const themeCss = resolve(cwd(), 'src/config/client/theme.scss')
