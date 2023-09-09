@@ -1,5 +1,5 @@
 import { parseJsonSchema } from '../src/utils/json-schema';
-import jsonSchema from '../src/build/default-config';
+import jsonSchema from '../src/jsonSchema';
 import { vi, afterEach, beforeEach, describe, expect, test } from 'vitest';
 
 describe('parseJsonSchema', () => {

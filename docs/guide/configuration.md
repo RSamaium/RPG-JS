@@ -25,8 +25,44 @@ Configuration properties related to the compiler.
     [vite]
       logLevel = "silent"
     ```
+    You can insert this section after the `vite` section in your `readme.md`.
 
     > Please note that RPGJS contains certain configurations. You will therefore overwrite certain configurations ([the basic file is in the sources]([https://github.com/RSamaium/RPG-JS/blob/v4/packages/compiler/src/build/client-config.ts#L335])).
+
+- `express`
+
+Configuration properties related to the Express server.
+
+- `static`: (*string*) Specifies the directory from which to serve static files.
+  > only for final files put into production
+- `port`: (*integer*) The port number on which the Express server listens.
+
+Example:
+
+```toml
+[express]
+  static = 'public'
+  port = 3000
+```
+
+- `express.json`
+
+Configuration properties for JSON middleware. Documentation: [express.json](https://expressjs.com/en/api.html#express.json)
+
+Example:
+
+```toml
+[express.json]
+  limit = "100kb"
+```
+
+- `express.cors`
+
+Configuration properties for CORS middleware. Documentation: [cors](https://expressjs.com/en/resources/middleware/cors.html)
+
+- `express.socketIo`
+
+Configuration properties for SocketIO middleware. Documentation: [socket.io](https://socket.io/docs/v4/server-initialization/)
 
 - `spritesheetDirectories`: (*array*) Directories for spritesheets.
 

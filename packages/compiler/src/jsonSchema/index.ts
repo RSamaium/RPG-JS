@@ -1,85 +1,6 @@
-const canvasOptions = {
-    "canvas": {
-        "type": "object",
-        "properties": {
-            "transparent": {
-                "type": "boolean"
-            },
-            "autoDensity": {
-                "type": "boolean"
-            },
-            "antialias": {
-                "type": "boolean"
-            },
-            "resolution": {
-                "type": "number"
-            },
-            "preserveDrawingBuffer": {
-                "type": "boolean"
-            },
-            "backgroundColor": {
-                "type": "number"
-            }
-        }
-    },
-    "selector": {
-        "type": "string"
-    },
-    "selectorGui": {
-        "type": "string"
-    },
-    "selectorCanvas": {
-        "type": "string"
-    },
-    "standalone": {
-        "type": "boolean"
-    },
-    "drawMap": {
-        "type": "boolean"
-    },
-    "maxFps": {
-        "type": "number"
-    },
-    "serverFps": {
-        "type": "number"
-    }
-}
-
-const compilerOptions = {
-    "compilerOptions": {
-        "type": "object",
-        "properties": {
-            "alias": {
-                "type": "object",
-                "additionalProperties": {
-                    "type": "string"
-                }
-            },
-            "build": {
-                "type": "object",
-                "properties": {
-                    "pwaEnabled": {
-                        "type": "boolean"
-                    },
-                    "assetsPath": {
-                        "type": "string"
-                    },
-                    "outputDir": {
-                        "type": "string"
-                    },
-                    "serverUrl": {
-                        "type": "string"
-                    }
-                }
-            }
-        }
-    },
-    "vite": {
-        "type": "object",
-        "additionalProperties": true
-    }
-}
-
+import compilerOptions  from "./compilation.js";
+import canvasOptions from "./canvas.js";
+import expressOptions from "./express.js";
 
 export default {
     "server": {
@@ -109,12 +30,7 @@ export default {
                     }
                 }
             },
-            "spritesheetDirectories": {
-                "type": "array",
-                "items": {
-                    "type": "string"
-                }
-            },
+            
             "api": {
                 "type": "object",
                 "properties": {
@@ -127,7 +43,8 @@ export default {
                 },
                 "required": ["enabled", "authSecret"]
             },
-            ...compilerOptions
+            ...compilerOptions,
+            ...expressOptions
         }
     },
     "client": {
