@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/database",
-  "version": "4.0.0-rc.12",
+  "version": "4.0.0-rc.13",
   "description": "",
   "main": "lib/index.js",
   "publishConfig": {
@@ -16,7 +16,7 @@
   "license": "MIT",
   "gitHead": "5abe6ca78be96524d74a052a230f2315c900ddee",
   "devDependencies": {
-    "@rpgjs/compiler": "^4.0.0-rc.12",
+    "@rpgjs/compiler": "^4.0.0-rc.13",
     "typescript": "^5.0.2"
   },
   "type": "module"

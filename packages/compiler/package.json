@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/compiler",
-  "version": "4.0.0-rc.12",
+  "version": "4.0.0-rc.13",
   "description": "",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
