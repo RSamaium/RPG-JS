@@ -1,6 +1,6 @@
 import { RpgCommonMap, RpgPlugin, HookClient, RpgShape, Utils, RpgCommonPlayer } from '@rpgjs/common'
 import TileMap from '../Tilemap'
-import { Viewport } from 'pixi-viewport'
+import * as PixiViewport from 'pixi-viewport'
 import { Scene, SceneObservableData, SceneSpriteLogic } from './Scene'
 import { spritesheets } from '../Sprite/Spritesheets'
 import { RpgSound } from '../Sound/RpgSound'
@@ -15,6 +15,8 @@ interface MapObject extends TiledMap {
     id: number
     sounds: string | string[] | undefined
 }
+
+const { Viewport } = PixiViewport;
 
 export class SceneMap extends Scene {
     static readonly EVENTS_LAYER_DEFAULT: string = 'events-layer-default'

@@ -1,6 +1,6 @@
 # Unit Testing in RPGJS Project
 
-Unit testing is an essential part of ensuring the reliability and correctness of your RPGJS project. This guide will walk you through the process of setting up and running unit tests using the `vitest` testing framework along with `jsdom`.
+Unit testing is an essential part of ensuring the reliability and correctness of your RPGJS project. This guide will walk you through the process of setting up and running unit tests using the `vitest` testing framework.
 
 ## Steps
 
@@ -8,10 +8,10 @@ Follow these steps to set up and run unit tests for your RPGJS project:
 
 ### 1. Install Dependencies
 
-You need to install `vitest` and `jsdom` packages. These packages will be used for testing and providing a simulated DOM environment for your tests.
+You need to install `vitest` ,`jsdom`, `canvas` and `@rpgjs/testing` packages. These packages will be used for testing and providing a simulated DOM environment for your tests.
 
 ```bash
-npm install vitest jsdom --save-dev
+npm install @rpgjs/testing vitest jsdom canvas --save-dev
 ```
 
 ### 2. Create a Test Folder
@@ -26,18 +26,22 @@ Inside the `__test__` folder, create `.spec.ts` files for your unit tests. These
 
 In your `.spec.ts` file, you can write unit tests using the provided RPGJS testing utilities along with the `vitest` framework. Here's an example of how you can structure your unit tests:
 
-```typescript
+::: code-group
+
+```typescript [main/__tests__/player.spec.ts]
 import { RpgPlayer, RpgModule, RpgServer } from '@rpgjs/server';
 import { testing, clear } from '@rpgjs/testing';
 import { beforeEach, afterEach, test, expect } from 'vitest';
-import player from './player';
+import player from '../player';
+import { RpgClientEngine } from '@rpgjs/client';
 
 @RpgModule<RpgServer>({
     player
 })
-class RpgServerModule {}
+class RpgServerModule { }
 
 let currentPlayer: RpgPlayer;
+let client: RpgClientEngine
 
 beforeEach(async () => {
     const fixture = await testing([
@@ -47,16 +51,32 @@ beforeEach(async () => {
     ]);
     const clientFixture = await fixture.createClient();
     currentPlayer = clientFixture.player;
+    client = clientFixture.client;
 });
 
-test('test player', () => {
+test('test name player', () => {
     expect(currentPlayer).toBeDefined();
+    expect(currentPlayer.name).toBe('YourName')
 });
 
 afterEach(() => {
     clear();
 });
 ```
+
+```typescript [main/player.ts]
+import { RpgPlayer, type RpgPlayerHooks, Control, Components } from '@rpgjs/server'
+
+const player: RpgPlayerHooks = {
+    onConnected(player: RpgPlayer) {
+        player.name = 'YourName'
+    }
+}
+
+export default player
+```
+
+:::
 
 ### 5. Update package.json
 
