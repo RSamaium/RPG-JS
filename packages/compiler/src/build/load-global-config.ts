@@ -1,6 +1,6 @@
 import { parseJsonSchema } from '../utils/json-schema.js';
 import colors from 'picocolors'
-import defaultConfig from './default-config.js'
+import defaultConfig from '../jsonSchema/index.js'
 import fs from 'fs';
 import path from 'path';
 import type { ClientBuildConfigOptions, Config } from './client-config';

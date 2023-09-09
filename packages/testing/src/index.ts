@@ -18,6 +18,17 @@ interface Testing {
     /**
      * Allows you to create a client and get fixtures to manipulate it during tests
      * 
+     * Returns:
+     * 
+     * ```ts
+     * {
+     *      client: RpgClientEngine,
+     *      socket: any,
+     *      playerId: string
+     *      player: RpgPlayer
+     * }
+     * ```
+     * 
      * @title Create Client
      * @method createClient()
      * @returns {Promise<ClientTesting>}
@@ -88,7 +99,23 @@ function changeMap(client: RpgClientEngine, server: RpgServerEngine, mapId: stri
  * @param {ModuleType[]} modules
  * @param {object} [optionsServer]
  * @param {object} [optionsClient]
- * @returns {Promise<Testing>}
+ * @returns {Promise<FixtureTesting>}
+ * @example
+ * 
+ * ```ts
+ * import { testing } from '@rpgjs/testing';
+ * import { beforeEach } from 'vitest';
+ * 
+ *  beforeEach(async () => {
+ *      const fixture = await testing([
+ *          {
+ *              server: RpgServerModule
+ *          },
+ *      ]);
+ *      const clientFixture = await fixture.createClient();
+ *      currentPlayer = clientFixture.player;
+ * });
+ * 
  * @memberof Testing
  */
 export async function testing(modules: ModuleType[], optionsServer: any = {}, optionsClient: any = {}): Promise<Testing> {
@@ -145,8 +172,8 @@ export async function testing(modules: ModuleType[], optionsServer: any = {}, op
  * 
  * ```ts
  * import { clear } from '@rpgjs/testing'
+ * import { afterEach } from 'vitest'
  * 
- * // with jest
  * afterEach(() => {
  *      clear()
  * })
@@ -194,6 +221,21 @@ export function nextTick(client: RpgClientEngine, timestamp = 0): Promise<Object
     })
 }
 
+/**
+ * @title Wait a moment
+ * @method waitUntil(promise)
+ * @param {Promise<any>} promise
+ * @returns {Promise<any>}
+ * @since 4.0.0
+ * @memberof Testing
+ * @example
+ * 
+ * ```ts
+ * await waitUntil(
+ *  player.moveRoutes([Move.right()])
+ * )
+ * ```
+ */
 export function waitUntil(promise: Promise<any>): Promise<any> {
     let tick = 0
     let finish = false

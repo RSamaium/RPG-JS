@@ -38,3 +38,5 @@ This is a very good way to customize the keyboard entries.
 The key corresponds to the type of control (used by the keyboard, the mouse, or a joystick, etc.) and the value corresponds to the action
 
 You have information here: [Set Inputs](/classes/keyboard.html#set-inputs)
+
+> If you want to use keyboard numbers, don't use "1" but "n1", etc.

@@ -117,7 +117,7 @@ export default class RpgServerEngine { }
 <div class="autoload-api">
 
 ```ts
-import { RpgPlayer, RpgPlayerHooks, RpgClassMap, RpgMap } from '@rpgjs/server'
+import { RpgPlayer, type RpgPlayerHooks, type RpgClassMap, RpgMap } from '@rpgjs/server'
 
 const player: RpgPlayerHooks = {
     // others hooks here...

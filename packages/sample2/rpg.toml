@@ -22,3 +22,16 @@ modules = [
 [compilerOptions.build]
   serverUrl = '$ENV:VITE_SERVER_URL'
   pwaEnabled = false
+
+[express]
+  static = 'public'
+  port = 3000
+
+[express.json]
+  limit = "100mb"
+
+[express.cors]
+  origin = "*"
+
+[express.socketIo]
+  maxHttpBufferSize = 100000000

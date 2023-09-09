@@ -107,11 +107,13 @@ function useToggleFn(
 .preference-switch {
   font-size: 12px;
   transition: border-color 0.5s, background-color 0.5s ease;
-  margin-bottom: 20px;
-  position: sticky;
-  top: -0.5px;
-  padding-top: 10px;
+  margin-bottom: 10px;
+  margin-top: 10px;
+  padding: 5px;
+  padding-bottom: 0;
+  top: 10px;
   z-index: 10;
+  width: 100%;
 }
 
 .toggle {
@@ -144,7 +146,6 @@ function useToggleFn(
 
 #preference-switches {
   padding: 12px 16px;
-  background-color: var(--vt-c-bg-soft);
   transition: background-color 0.5s;
   margin: 6px 0 12px;
   border-radius: 8px;

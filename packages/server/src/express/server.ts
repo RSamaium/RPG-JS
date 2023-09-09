@@ -23,8 +23,9 @@ export function expressServer(modules: ModuleType[], options: ExpressServerOptio
 }> {
     return new Promise((resolve, reject) => {
         const envs = options.envs || {}
+        const { express: expressConfig = {} } = options.globalConfig || {}
         const dirname = options.basePath
-        const PORT = process.env.PORT || 3000
+        const PORT = process.env.PORT || expressConfig.port || 3000
         const pe = new PrettyError()
         const app = express()
         const server = http.createServer(app)
@@ -33,7 +34,8 @@ export function expressServer(modules: ModuleType[], options: ExpressServerOptio
             cors: {
                 origin: "*",
                 methods: ["GET", "POST"]
-            }
+            },
+            ...(expressConfig.socketIo || {})
         })
 
         // @ts-ignore
@@ -41,20 +43,14 @@ export function expressServer(modules: ModuleType[], options: ExpressServerOptio
 
         // @ts-ignore
         const hasStatic = process.env.STATIC_DIRECTORY_ENABLED
-        const staticDirectory = isBuilt ? '' : 'dist'
+        const staticDirectory = isBuilt ? expressConfig.static : 'dist'
         // @ts-ignore
         const staticEnabled = (isBuilt && hasStatic === undefined) || hasStatic === 'true'
 
-        if (!isBuilt) {
-            app.use(express.json({
-                // TODO
-                limit: '50mb'
-            }))
-        }
+        app.use(express.json(expressConfig.json))
+        app.use(cors(expressConfig.cors))
 
-        app.use(cors())
-
-        if (staticEnabled) {
+        if (staticEnabled || expressConfig.static) {
             app.use('/', express.static(path.join(dirname, '..', staticDirectory, 'client')))
         }
 
