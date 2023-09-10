@@ -27,6 +27,7 @@
     "lerna:ls": "lerna ls",
     "build": "concurrently -n build \"npm:build:*\" && npm run fix-esm",
     "build:standalone": "cd packages/standalone && npm run build:browser",
+    "build:defaultGui": "cd packages/plugins/default-gui && npm run build:browser",
     "build:common": "cd packages/common && npm run build",
     "build:server": "cd packages/server && npm run build",
     "build:client": "cd packages/client && npm run build",

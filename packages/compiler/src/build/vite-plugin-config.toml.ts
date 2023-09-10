@@ -450,7 +450,9 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
                 }, {} as Record<string, string>);
 
                 return `
-                ${Object.keys(modulesToImport).map((variableName) => `import ${variableName} from '${resolveModule(modulesToImport[variableName])}'`).join('\n')}
+                ${Object.keys(modulesToImport).map((variableName) => {
+                    return `import ${variableName} from '${resolveModule(modulesToImport[variableName])}'`
+                }).join('\n')}
 
                 export default [
                    ${Object.keys(modulesToImport).join(',\n')}
