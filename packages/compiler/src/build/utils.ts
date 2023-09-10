@@ -35,6 +35,13 @@ export function toPosix(path: string) {
     return path.replace(/\\/g, '/')
 }
 
+export function relativePath(file: string): string {
+    const { cwd } = process
+    return toPosix(
+        './' + toPosix(path.relative(cwd(), file))
+    )
+}
+
 /**
  * Example:
  * 

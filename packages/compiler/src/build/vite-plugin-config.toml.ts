@@ -5,7 +5,7 @@ import sizeOf from 'image-size';
 import type { ClientBuildConfigOptions, Config } from './client-config';
 import { loadGlobalConfig } from './load-global-config.js';
 import { warn } from '../logs/warning.js';
-import { assetsFolder, extractProjectPath, toPosix } from './utils.js';
+import { assetsFolder, extractProjectPath, relativePath, toPosix } from './utils.js';
 import dd from 'dedent';
 
 const MODULE_NAME = 'virtual-modules'
@@ -83,10 +83,10 @@ export function searchFolderAndTransformToImportString(
                     return true
                 })
                 .map(file => {
-                    const relativePath = toPosix(file.replace(cwd(), '.'))
-                    const variableName = formatVariableName(relativePath)
-                    importString = importString + `\nimport ${variableName} from '${relativePath}'`
-                    return returnCb ? returnCb(relativePath, variableName) : variableName
+                    const _relativePath = relativePath(file)
+                    const variableName = formatVariableName(_relativePath)
+                    importString = importString + `\nimport ${variableName} from '${_relativePath}'`
+                    return returnCb ? returnCb(_relativePath, variableName) : variableName
                 }).join(','),
             importString,
             folder
@@ -184,7 +184,6 @@ export function loadSpriteSheet(directoryName: string, modulePath: string, optio
         // get all images in the folder
         let lastImagePath = ''
         const projectPath = folder.replace(cwd(), '/')
-        //console.log(modulePath, folder)
         getAllFiles(folder).filter(file => {
             const ext = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.svg']
             return ext.some(e => file.toLowerCase().endsWith(e))
