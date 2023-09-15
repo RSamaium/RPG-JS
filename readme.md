@@ -7,8 +7,6 @@
   <img src="https://img.shields.io/github/commit-activity/m/RSamaium/RPG-JS" alt="Activity">
 </p>
 
-
-
 # RPG JS v4 : Create RPG and MMORPG in your browser
 
 RPG JS is a versatile TypeScript framework meticulously designed to empower developers in the creation of both traditional Role-Playing Games (RPGs) and immersive Massively Multiplayer Online Role-Playing Games (MMORPGs). Our primary objective is to offer a seamless development experience where your codebase remains consistent, regardless of the game's nature.
