@@ -1,0 +1,13 @@
+[compilerOptions.build]
+  pwaEnabled = false
+  outputDir = "./browser"
+
+[vite.build.lib]
+    entry = "src/index.ts"
+    name = "RpgDefaultGui"
+    fileName = "rpg.default-gui"
+
+[vite.build.rollupOptions.output]
+  format = "umd"
+  assetFileNames = "assets/[name][extname]"
+

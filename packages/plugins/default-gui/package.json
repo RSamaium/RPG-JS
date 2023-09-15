@@ -6,7 +6,9 @@
   "publishConfig": {
     "access": "public"
   },
-  "scripts": {},
+  "scripts": {
+    "build:browser": "RPG_TYPE=rpg npx rpgjs build"
+  },
   "keywords": [],
   "author": "Samuel Ronce",
   "license": "MIT",
@@ -15,6 +17,9 @@
     "rxjs": "^7.8.0",
     "typescript": "^5.0.2",
     "vue": "^3.2.47"
+  },
+  "devDependencies": {
+    "@rpgjs/compiler": "^4.0.0-rc.13"
   },
   "gitHead": "5abe6ca78be96524d74a052a230f2315c900ddee"
 }

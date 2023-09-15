@@ -1,72 +1,26 @@
 ![Header icon](/docs/header.png)
 
+<p align="center">
+  <img src="https://img.shields.io/npm/v/@rpgjs/server" alt="Version">
+  <img src="https://img.shields.io/npm/dm/@rpgjs/server" alt="Downloads">
+  <img src="https://img.shields.io/github/license/RSamaium/RPG-JS" alt="License">
+  <img src="https://img.shields.io/github/commit-activity/m/RSamaium/RPG-JS" alt="Activity">
+</p>
 
-# RPG JS v4 Create RPG and MMORPG in your browser
 
-RPG JS is a framework for creating RPGs and MMORPGs.The code remains the same depending on the type of game!
 
-[rpgjs.dev](https://rpgjs.dev)
+# RPG JS v4 : Create RPG and MMORPG in your browser
 
-## Community
+RPG JS is a versatile TypeScript framework meticulously designed to empower developers in the creation of both traditional Role-Playing Games (RPGs) and immersive Massively Multiplayer Online Role-Playing Games (MMORPGs). Our primary objective is to offer a seamless development experience where your codebase remains consistent, regardless of the game's nature.
 
-Do you need help? Go to [https://community.rpgjs.dev](https://community.rpgjs.dev) and ask your question!
+With RPG JS, we aspire to provide developers with a robust foundation that adapts effortlessly to your creative vision. Whether you're crafting epic solo adventures or building vast multiplayer worlds, RPG JS ensures that your development journey remains cohesive and efficient. Our goal is to simplify the complexities of game development, allowing you to focus on bringing captivating stories and engaging gameplay to life.
 
-## Summary
+## WebSite and Documentation
 
-* [Features](#features)
-* [Demo](#demo)
-* [Documentation](#documentation)
-* [Installation](#installation)
-* [Production](#production)
-* [Contribute to developments](#contribute-to-developments)
-* [License](#license)
-
-## Features
-
-* **Create events** The event can be an NPC, a monster or anything else that builds the game scenario
-    - In "shared" mode, all players see the same event (the positions or the graphics of a monster)
-    - In "scenario" mode, only the player sees the event allowing to make a quest to be accomplished by player
-
-* **Customize your hero**: graphics, attack animation, speed, etc.
-
-* **Tiled Map Editor** 
-
-    Use the power of the software to create the maps. RPGJS supports several features:
-    - Create Worlds. Assemble the maps allowing the player to switch naturally from one to the other
-    ![tiled world](https://docs.rpgjs.dev/assets/tiled-world-2.png)
-    - Use shapes to perform interactions: who goes in, who comes out, etc.
-    ![tiled shape](https://docs.rpgjs.dev/assets/add-shape.png)
-    - Put as many layers as you want to draw the maps
-    - Put collisions on the tiles. Make your map even more realistic, by putting precise collisions on the tile
-    ![tiled collision](https://docs.rpgjs.dev/assets/overlay-problem-solved.png)
-
-* **WebGL Rendering** Game rendering uses WebGL rendering (with PixiJS) for better rendering performance
-
-* **MMORPG Performance** 
-    * The algorithms have been thought to have several players on a map. For example, the map has been divided into several zones and a collision search is performed on the different zones, not the whole map.
-    * The fluidity of the game is realized with the client-side prediction. 
-    * And the bandwidth is saved because only the modified properties are sent to the clients, moreover, the data are compacted with msgpack
-
-* **Designed for scaling** You want to have a fleet of servers to have thousands of players. RPGJS can use Agones and Kubernetes to scale the game
-
-* Playing on **mobile**, with a **gamepad** and of course the **keyboard**
-
-* **Using VueJS for user interfaces**  Prebuilt GUI (dialog box, main menu, shop menu, etc.)
-
-* **Code with Typescript** The creation of the game uses TypeScript. The interest is to know the properties and to make the structure clearer.
-
-* **Thought for the RPG** The API is simple. For example, just by doing: `player.exp += 100`. This can raise the player one level automatically, you can indicate this to all the players on the map, and the map events will be updated according to this new state.
-
-* **With same code: MMORPG or RPG**
-
-* **Modular**
-
-* **Unit tests**
-
-* **And other plugins**
-    * Chat
-    * Title Screen
-    * Emotion Bubble
+- Website: [https://rpgjs.dev](https://rpgjs.dev)
+- Documentation: [https://docs.rpgjs.dev](https://docs.rpgjs.dev)
+- Examples: [https://playground.rpgjs.dev](https://playground.rpgjs.dev)
+- Community: [https://community.rpgjs.dev](https://community.rpgjs.dev)
 
 ## Demo 
 
@@ -74,19 +28,11 @@ Do you need help? Go to [https://community.rpgjs.dev](https://community.rpgjs.de
 
 ![Demo](/docs/demo.png)
 
-## Other examples
-
-- https://game.chylo.pl/ (Author: https://github.com/dominx99)
-
 ## Resources
 
 - Use LPC (Liberated Pixel Cup) Spritesheets: https://github.com/dominx99/rpgjs-tutorial#lpc-liberated-pixel-cup
 
-## Documentation 
-
-[Read Documentation](https://docs.rpgjs.dev/guide/get-started.html)
-
-## Installation 
+## Getting Started
 
 ```bash
 npx degit rpgjs/starter my-rpg-game
@@ -95,34 +41,26 @@ npm install
 npm run dev
 ```
 
-To test only in RPG mode:
+Then go to port localhost:3000
 
-`RPG_TYPE=rpg npm run dev`
+## Features
 
-## Production
-
-To put into production:
-
-**MMORPG**
-
-`NODE_ENV=production npm run build`
-
-1. Put the folders `dist/server` and `dist/client` on a server
-2. Starting the server in `dist/server/index.cjs`.
-
-Example 1:
-
-`node dist/server`
-
-Example 2: (with [PM2](https://pm2.keymetrics.io))
-
-`pm2 start dist/server/index.cjs`
-
-**RPG**
-
-`NODE_ENV=production RPG_TYPE=rpg npm run build`
-
-Put the files in the `dist/standalone` folder on a static server (as [Vercel](https://vercel.com) or [Netlify](https://www.netlify.com) or your own server)
+| Feature                        | Description                                                                                         |
+|--------------------------------|-----------------------------------------------------------------------------------------------------|
+| 🌟 Create Events                | Build NPCs, monsters, and more to shape your game's storyline.                                      |
+| 🌎 Tiled Map Editor             | Craft intricate game worlds with multiple layers, shapes, and collisions.                         |
+| 🎨 Customize Your Hero          | Personalize your hero's appearance, animations, and attributes.                                      |
+| 🖥️ WebGL Rendering              | Enjoy high-performance game rendering with WebGL and PixiJS.                                        |
+| ⚙️ MMORPG Performance           | Optimize for multiple players with zone-based processing and client-side prediction.              |
+| 🚀 Designed for Scaling         | Utilize Agones and Kubernetes to scale your game for thousands of players.                         |
+| 📱 Cross-Platform Gaming        | Play on mobile, gamepad, or keyboard for versatile gaming experiences.                               |
+| 🌐 Using Vue.js for UI           | Leverage Vue.js for user interfaces, including dialog boxes and menus.                                |
+| 💻 Code with TypeScript         | Develop with TypeScript for enhanced code structure and clarity.                                    |
+| 📜 RPG-Focused API              | Simplify RPG development with an intuitive API for in-game actions.                                  |
+| 🔄 Same Code: MMORPG or RPG     | Create both MMORPGs and traditional RPGs using the same codebase.                                    |
+| 🧩 Modular                      | Expand functionality with ease through a modular design.                                            |
+| 🧪 Unit Tests                   | Ensure game stability and reliability with built-in unit testing.                                    |
+| 📦 And Other Plugins            | Enhance your game with additional features like chat, title screens, and more.                      |
 
 ## Contribute to developments
 
@@ -134,9 +72,7 @@ npm install
 npm run dev
 ```
 
-> The installation is a bit long, don't worry!
-
-The game can be found in `@rpgjs/sample` package.
+The game can be found in `@rpgjs/sample2` package.
 
 ### For documentation
 

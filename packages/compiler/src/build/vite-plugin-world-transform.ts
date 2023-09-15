@@ -1,18 +1,17 @@
 import path from 'path'
-import { globFiles, toPosix } from './utils.js'
+import { globFiles, relativePath } from './utils.js'
 import crypto from 'crypto'
 import { errorApi, info } from '../logs/warning.js'
-import fs from 'fs-extra';
+import fs from 'fs';
 import axios from '../serve/api.js';
 
 export function worldTransformPlugin(serverUrl?: string) {
 
     function extendsWorld(world, filePath: string) {
-        const relativePath = toPosix(filePath).replace(toPosix(process.cwd()) + '/', '')
-        const directory = path.dirname(relativePath)
-        const worldId = crypto.createHash('md5').update(relativePath).digest('hex')
+        const _relativePath = relativePath(filePath)
+        const directory = path.dirname(_relativePath)
         world.basePath = directory
-        world.id = worldId
+        world.id = _relativePath
         return world
     }
 
@@ -33,7 +32,7 @@ export function worldTransformPlugin(serverUrl?: string) {
             server.watcher.on('change', async (file: string) => {
                 if (file.endsWith('world')) {
                     info(`File ${file} changed, updating world...`)
-                    const data = await fs.readFile(file, 'utf-8');
+                    const data = fs.readFileSync(file, 'utf-8');
                     const world = extendsWorld(JSON.parse(data), file)
                     axios.put(serverUrl + '/api/worlds', {
                         worldId: world.id,

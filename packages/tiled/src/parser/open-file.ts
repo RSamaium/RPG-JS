@@ -79,9 +79,9 @@ export class TiledParserFile {
         else if (isHttp || (TiledParserFile.isBrowser() && process.env.NODE_ENV != 'test')) {
             let url = isHttp ? file : path.join(this.basePath, this.staticDir, file)
             // @ts-ignore
-            if (TiledParserFile.isBrowser() && window.tilesets) {
+            if (TiledParserFile.isBrowser() && window.urlCache) {
                 // @ts-ignore
-                url = window.tilesets[file]
+                url = window.urlCache[file]
             }
             axios.get(url).then(res => res.data).then(loadContent)
         }
