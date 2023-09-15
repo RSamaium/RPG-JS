@@ -17,10 +17,10 @@ With RPG JS, we aspire to provide developers with a robust foundation that adapt
 
 ## WebSite and Documentation
 
-Website: [https://rpgjs.dev](https://rpgjs.dev)
-Documentation: [https://docs.rpgjs.dev](https://docs.rpgjs.dev)
-Examples: [https://playground.rpgjs.dev](https://playground.rpgjs.dev)
-Community: [https://community.rpgjs.dev](https://community.rpgjs.dev)
+- Website: [https://rpgjs.dev](https://rpgjs.dev)
+- Documentation: [https://docs.rpgjs.dev](https://docs.rpgjs.dev)
+- Examples: [https://playground.rpgjs.dev](https://playground.rpgjs.dev)
+- Community: [https://community.rpgjs.dev](https://community.rpgjs.dev)
 
 ## Demo 
 
@@ -43,7 +43,7 @@ npm run dev
 
 Then go to port localhost:3000
 
-## Features
+## Features
 
 | Feature                        | Description                                                                                         |
 |--------------------------------|-----------------------------------------------------------------------------------------------------|
