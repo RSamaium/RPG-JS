@@ -2,25 +2,22 @@ import { merge, RpgClassDatabase, Data } from './common'
 import { ISkill } from './skill'
 import { EfficiencyOptions } from './interfaces/efficiency'
 
-export interface CanEquip {
+declare type RpgPlayer = any;
+
+export enum ClassHooks {
+    onSet = 'onSet',
+    canEquip = 'canEquip'
+}
+
+export interface ClassCanEquip {
     canEquip(item: any, player: RpgPlayer): boolean
 }
 
+export interface ClassOnSet {
+    onSet(player: RpgPlayer): void
+}
+
 export interface ClassOptions extends EfficiencyOptions, Data {
-    /**
-     * Indicate which equipment can be used by the class
-     * 
-     * ```ts
-     * import { Sword } from 'my-database/equipments/sword'
-     * 
-     * equippable: [Sword]
-     * ```
-     * 
-     * @prop {Array<EquipmentClass>} [equippable]
-     * @memberof Class
-     * @since 4.0.1
-     */
-    equippable?: any[]
     /** 
      * Indicate which skill will be learned when the level is reached
      * 

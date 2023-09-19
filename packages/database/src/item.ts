@@ -3,6 +3,12 @@ import { ElementsOption, Elements } from './interfaces/elements';
 import { ParamsModifierOption } from './interfaces/params-modifier'
 import { StatesOption, States } from './interfaces/states';
 
+export interface ItemClass {
+    new(...args: any[]): ItemInstance;
+    price?: number;
+    _type?: string;
+}
+
 export interface ItemGlobalOptions extends ParamsModifierOption, Data, ElementsOption, StatesOption {
      /** 
      * The price of the item. If the price is undefined, then it will not be possible to buy or sell the item.
@@ -43,6 +49,8 @@ export interface ItemOptions extends ItemGlobalOptions {
      * */ 
     consumable?: boolean
 }
+
+export interface ItemInstance extends ItemOptions {}
 
 export function Item(options: ItemOptions) {
     return merge(options, 'item', {

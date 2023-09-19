@@ -16,7 +16,7 @@ export interface Data {
     id?: string
      /** 
      * The name of the item. 
-     * @prop {string} name
+     * @prop {string} [name]
      * @memberof Item
      * @memberof Weapon
      * @memberof Armor
@@ -26,7 +26,7 @@ export interface Data {
      * @memberof State
      * @memberof Actor
      * */ 
-    name: string,
+    name?: string,
      /** 
      * The description of the item. 
      * @prop {string} [description]
