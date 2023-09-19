@@ -1,7 +1,7 @@
 import { RpgPlayer, RpgServerEngine } from '@rpgjs/server'
 import { _beforeEach } from './beforeEach'
 import { clear } from '@rpgjs/testing'
-import { beforeEach, test, afterEach, expect } from 'vitest'
+import { beforeEach, test, afterEach, expect, describe } from 'vitest'
 import { Fighter } from './fixtures/class'
 import { Hero } from './fixtures/actor'
 
@@ -37,6 +37,10 @@ test('setActor', () => {
 test('setActor (by id)', () => {
     const actor = player.setActor('hero')
     expect(player.name).toBe(actor.name)
+})
+
+describe('equippable', () => {
+
 })
 
 afterEach(() => {
