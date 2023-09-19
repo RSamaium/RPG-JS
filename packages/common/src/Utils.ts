@@ -122,7 +122,7 @@ export function hexaToNumber(hexa: string): {
 }
 
 export function extractId(path: string): string | null {
-    const id = path.match(/([a-zA-Z0-9-_$!]+)\.[a-z]+$/i)
+    const id = path.match(/([a-zA-Z0-9-_$!]+)\.[a-z0-9]+$/i)
     if (!id) return null
     return id[1]
 }

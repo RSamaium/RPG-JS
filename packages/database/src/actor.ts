@@ -61,7 +61,7 @@ export interface ActorGlobalOptions extends EfficiencyOptions, Data {
     class?: any
 }
 
-interface ActorOptions extends ActorGlobalOptions {
+export interface ActorOptions extends ActorGlobalOptions {
      /** 
      * @title Set initial level
      * @prop {number} [initialLevel]
