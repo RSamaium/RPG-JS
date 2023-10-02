@@ -472,7 +472,7 @@ export class ItemManager {
             throw ItemLog.invalidToEquiped(itemClass)
         }
 
-        if (this._class) {
+        if (this._class && this._class[ClassHooks.canEquip]) {
             const canEquip = this['execMethodSync'](ClassHooks.canEquip, [inventory.item, this], this._class)
             if (!canEquip) {
                 throw ItemLog.canNotEquip(itemClass)
