@@ -25,7 +25,7 @@ export class ClassManager {
      * 
      * @title Set Class
      * @method player.setClass(ClassClass)
-     * @param {ClassClass} class class or id
+     * @param {ClassClass | string} class class or id
      * @returns {instance of ClassClass} 
      * @memberof ClassManager
      * */
@@ -47,17 +47,16 @@ export class ClassManager {
      * 
      * @title Set Actor
      * @method player.setActor(ActorClass)
-     * @param {ActorClass} actorClass actor class or id
+     * @param {ActorClass | string} actorClass actor class or id
      * @returns {instance of ActorClass} 
      * @memberof ClassManager
      * */
     setActor(actorClass: ActorClass | string) {
         if (isString(actorClass)) actorClass = this.databaseById(actorClass)
-        const actor = new (actorClass as ActorClass)()
-        this.name  = actor.name
-        this.initialLevel = actor.initialLevel
-        this.finalLevel = actor.finalLevel
-        this.expCurve = actor.expCurve
+        const actor = new (actorClass as ActorClass)();
+        ['name', 'initialLevel', 'finalLevel', 'expCurve'].forEach(key => {
+            if (actor[key]) this[key] = actor[key]
+        })
         for (let param in actor.parameters) {
             this.addParameter(param, actor.parameters[param])
         }
@@ -65,7 +64,7 @@ export class ClassManager {
             this.addItem(item)
             this.equip(item, true)
         }
-        this.setClass(actor.class)
+        if (actor.class) this.setClass(actor.class)
         this['execMethod']('onSet', [this], actor)
         return actor
     }
