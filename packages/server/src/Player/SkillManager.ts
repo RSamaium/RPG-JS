@@ -64,10 +64,21 @@ export class SkillManager {
      * @title Learn Skill
      * @method player.learnSkill(skillClass)
      * @param {SkillClass | string} skillClass or data id
+     * @throws {SkillLog} alreadyLearned
+     *  If the player already knows the skill
+     *  ```
+        {
+            id: SKILL_ALREADY_LEARNED,
+            msg: '...'
+        }
+        ```
      * @returns {instance of SkillClass}
      * @memberof SkillManager
      */
     learnSkill(skillClass: SkillClass | string) {
+        if (this.getSkill(skillClass)) {
+            throw SkillLog.alreadyLearned(skillClass)
+        }
         if (isString(skillClass)) skillClass = this.databaseById(skillClass)
         const instance = new (skillClass as SkillClass)()
         this.skills.push(instance)

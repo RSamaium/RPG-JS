@@ -95,6 +95,17 @@ test('useSkill - effect can not skill', () => {
     )
 })
 
+test('useSkill - avoid several times skill learned', () => {
+    player.learnSkill('fire')
+    expect(() => {
+        player.learnSkill('fire')
+    }).toThrowError(
+        expect.objectContaining({
+            id: 'SKILL_ALREADY_LEARNED'
+        })
+    )
+})
+
 test('useSkill - skill learned', () => {
     player.learnSkill('fire') // learning 'fire' skill
     const fireSkill = player.useSkill('fire') // using 'fire' skill
