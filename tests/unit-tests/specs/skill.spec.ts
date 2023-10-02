@@ -1,5 +1,5 @@
 import { EventData, Presets, RpgEvent, RpgPlayer, RpgServerEngine } from '@rpgjs/server'
-import { Fire } from './fixtures/skill';
+import { Fire, Ice } from './fixtures/skill';
 import { _beforeEach } from './beforeEach'
 import { clear } from '@rpgjs/testing'
 import { Effect, Skill } from '@rpgjs/database'
@@ -18,11 +18,18 @@ beforeEach(async () => {
     playerId = ret.playerId
     server = ret.server
     server.addInDatabase('fire', Fire)
+    server.addInDatabase('ice', Ice)
 })
 
 test('getSkill - skill not found', () => {
     const skill = player.getSkill('fire')
     expect(skill).toBeNull()
+})
+
+test('getSkill - two skills, one learned, the other not. Do return null', () => {
+    player.learnSkill('fire')
+    const iceSkill = player.getSkill('ice')
+    expect(iceSkill).toBeNull()
 })
 
 test('learnSkill - skill learned successfully', () => {

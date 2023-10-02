@@ -25,14 +25,14 @@ export class SkillManager {
                 return skill.id == skillClass
             }
             if (isString(skillClass)) {
-                return skillClass == skill.id || skill
+                return skillClass == (skill.id || skill)
             }
             return isInstanceOf(skill, skillClass)
         })
     }
 
     /**
-     * Retrieves a skill. Returns null, if not found
+     * Retrieves a learned skill. Returns null, if not found
      * ```ts
      * import Fire from 'your-database/skills/fire'
      * 

@@ -9,3 +9,11 @@ import { Confuse } from './state'
     addStates: [Confuse]
 })
 export class Fire {}
+
+@Skill({
+    id: 'ice',
+    name: 'Ice',
+    spCost: 60,
+    power: 130,
+})
+export class Ice {}
