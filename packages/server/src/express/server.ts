@@ -43,7 +43,7 @@ export function expressServer(modules: ModuleType[], options: ExpressServerOptio
 
         // @ts-ignore
         const hasStatic = process.env.STATIC_DIRECTORY_ENABLED
-        const staticDirectory = isBuilt ? expressConfig.static : 'dist'
+        const staticDirectory = isBuilt ? expressConfig.static ?? '' : 'dist'
         // @ts-ignore
         const staticEnabled = (isBuilt && hasStatic === undefined) || hasStatic === 'true'
 
