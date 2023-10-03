@@ -1,0 +1,18 @@
+{
+  "name": "load-testing",
+  "version": "1.0.0",
+  "description": "",
+  "main": "load.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "msgpack-lite": "^0.1.26",
+    "socket.io-client": "^4.7.2",
+    "yargs": "^17.7.2"
+  },
+  "type": "module"
+}

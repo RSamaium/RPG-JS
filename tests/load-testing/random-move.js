@@ -3,17 +3,9 @@ function getRandomInt(max) {
 }
 
 function randomDir() {
-    const rand = getRandomInt(4)
-    const direction = [
-        'right',
-        'left',
-        'down',
-        'up'
-    ][rand];
-    
-    return direction
+    return getRandomInt(4)+1
 }
 
-module.exports = {
+export {
     randomDir
 }
