@@ -139,6 +139,10 @@ export function preciseNow(): number {
     return typeof performance !== 'undefined' ? performance.now() : Date.now()
 }
 
+export function round(num: number, decimals: number = 100): number {
+    return Math.round(num * decimals) / decimals
+}
+
 // https://stackoverflow.com/questions/54733539/javascript-implementation-of-lodash-set-method
 export function set(obj, path, value, onlyPlainObject = false) {
     if (Object(obj) !== obj) return obj; // When obj is not an object
@@ -181,5 +185,6 @@ export default {
     fps2ms,
     preciseNow,
     hexaToNumber,
-    set
+    set,
+    round
 }
