@@ -123,7 +123,7 @@ export default class TileMap extends Container {
                         if (size > 0) {
                             const ms = 1000 / 60
                             tile.animationSpeed = ms / (ms * this.frameRateAnimation)
-                            const frameIndex = (this.frameTile-1) - (size * Math.floor(this.frameTile / size))
+                            let frameIndex = this.frameTile % size;
                             tile.gotoAndPlay(frameIndex)
                         }
                         tilesLayer.push(tileLayer)

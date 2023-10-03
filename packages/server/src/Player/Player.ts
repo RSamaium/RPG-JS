@@ -845,6 +845,14 @@ export class RpgPlayer extends RpgCommonPlayer {
         }
     }
 
+    private execMethodSync<T>(methodName: string, methodData = [], target?: any): T {
+        let ret
+        if (target && target[methodName]) {
+            ret = target[methodName](...methodData)
+        }
+        return ret
+    }
+
     async execMethod(methodName: string, methodData = [], target?: any) {
         const ignoreIfDataLoading = ['onLevelUp', 'onDead']
         if (ignoreIfDataLoading.includes(methodName) && this._dataLoading) {

@@ -1,25 +1,17 @@
-import { Item, type ItemOptions } from './item'
-import { Actor } from './actor'
-import { Class } from './class'
-import { Skill } from './skill'
-import { State } from './state'
-import { Weapon } from './weapon'
-import { Armor } from './armor'
-import { Enemy } from './enemy'
-import { Effect } from './effect'
-import { Efficiency } from './interfaces/efficiency';
-import type { DatabaseTypes } from './interfaces/types';
+export { Item, type ItemOptions, type ItemClass, type ItemInstance } from './item'
+export { Actor, type ActorOptions } from './actor'
+export { Class, type ClassOptions, type ClassCanEquip, type ClassOnSet, ClassHooks } from './class'
+export { Skill, type SkillOptions } from './skill'
+export { State} from './state'
+export type { StateOptions } from './state'
 
-export { 
-    Item, ItemOptions,
-    Actor,
-    Class,
-    Skill,
-    State,
-    Effect,
-    Weapon,
-    Armor,
-    Enemy,
-    Efficiency,
-    DatabaseTypes
-}
+export { Weapon } from './weapon'
+export type { WeaponOptions, WeaponClass, WeaponInstance } from './weapon'
+
+export { Armor } from './armor'
+export type { ArmorOptions, ArmorClass, ArmorInstance } from './armor'
+
+export { Enemy } from './enemy'
+export { Effect } from './effect'
+export { Efficiency, type EfficiencyOptions } from './interfaces/efficiency';
+export type { DatabaseTypes } from './interfaces/types';

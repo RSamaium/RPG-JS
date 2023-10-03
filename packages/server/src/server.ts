@@ -352,6 +352,8 @@ export class RpgServerEngine {
         player.session = token
 
         socket.on('move', (data: { input: string[], frame: number }) => {
+            if (!data?.input) return
+            if (!Array.isArray(data.input)) return
             const controlPlayer = player.otherPossessedPlayer ?? player
             if (!controlPlayer.canMove) {
                 return

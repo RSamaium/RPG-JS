@@ -7,15 +7,15 @@ To put into production:
 `NODE_ENV=production npm run build`
 
 1. Put the folders `dist/server` and `dist/client` on a server
-2. Starting the server in `dist/server/index.js`.
+2. Starting the server in `dist/server/main.js`.
 
 Example 1:
 
-`node dist/server`
+`node dist/server/main`
 
 Example 2: (with [PM2](https://pm2.keymetrics.io))
 
-`pm2 start dist/server/index.js`
+`pm2 start dist/server/main.js`
 
 **RPG**
 
@@ -42,7 +42,7 @@ COPY --from=build /build/package*.json ./
 ENV NODE_ENV=production
 RUN npm i
 EXPOSE 3000
-CMD node server
+CMD node server/main
 ```
 
 it will build from the source and recreate a lighter image with the build. Then launch the container with

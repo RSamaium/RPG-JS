@@ -1,4 +1,4 @@
-import { ItemModel } from "../models/Item"
+import { ItemInstance } from "@rpgjs/database"
 
 export class ItemFixture {
     protected getFeature(name, prop): any {
@@ -20,5 +20,5 @@ export class ItemFixture {
 
 
 export interface ItemFixture{ 
-    equipments: ItemModel[]
+    equipments: ItemInstance[]
 }

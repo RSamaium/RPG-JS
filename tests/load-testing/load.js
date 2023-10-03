@@ -2,16 +2,16 @@
 
 // ex: ./load.js --players=100 --output=0  --arrival=10 --duration=1000
 
-const { io } = require("socket.io-client");
-const { hideBin } = require('yargs/helpers')
-const { randomDir } = require('./random-move')
-const os = require('os');
-const fs = require('fs')
-const msgpack = require('msgpack-lite')
-const yargs = require('yargs/yargs')
+import { io } from "socket.io-client";
+import { hideBin } from 'yargs/helpers';
+import { randomDir } from './random-move.js';
+import { cpus, platform as _platform, arch as _arch, release, totalmem } from 'os';
+import { writeFileSync } from 'fs';
+import { decode as _decode } from 'msgpack-lite';
+import yargs from 'yargs/yargs';
 const argv = yargs(hideBin(process.argv)).argv
 
-const URL = process.env.URL || "http://localhost:3000";
+const URL = process.env.URL || "http://localhost:8000";
 const MAX_CLIENTS = argv.players || 100;
 const CLIENT_CREATION_INTERVAL = argv.arrival || 0.1;
 const EMIT_INTERVAL_IN_MS = 16
@@ -20,11 +20,11 @@ const OUTPUT = +argv.output ?? true
 const REPORT_INTERVAL = 5000
 
 const date = new Date()
-const [cpu] = os.cpus()
-const platform = os.platform()
-const arch = os.arch()
-const version = os.release()
-const ram = os.totalmem()
+const [cpu] = cpus()
+const platform = _platform()
+const arch = _arch()
+const version = release()
+const ram = totalmem()
 let mkReport = `Loading Test 
 - Date: ${date.toDateString()}
 - Platform: ${platform} ${version}
@@ -66,7 +66,7 @@ const createClient = () => {
   socket.on("w", (data) => {
     packetBytes += data.length
     const bufView = new Uint8Array(data)
-    const decode = msgpack.decode(bufView)
+    const decode = _decode(bufView)
     const isLoad = !!decode[2].shapes
     const nbClients = Object.values(clients).filter(client => client.loaded).length
     if (nbClients >= MAX_CLIENTS && !canMove) {
@@ -86,7 +86,7 @@ const createClient = () => {
 
   socket.on('loadScene', () => {
     setInterval(() => {
-     socket.emit("move",  { input: randomDir() });
+     socket.emit("move",  { input: [randomDir()] });
     }, EMIT_INTERVAL_IN_MS);
   })
 
@@ -123,7 +123,7 @@ const printReport = () => {
   if (time >= MAX_TIME) {
     clearInterval(interval)
     console.log(mkReport)
-    if (OUTPUT) fs.writeFileSync('./reports/' + Date.now() + '.md', mkReport, 'utf-8')
+    if (OUTPUT) writeFileSync('./reports/' + Date.now() + '.md', mkReport, 'utf-8')
     process.exit()
   }
 };

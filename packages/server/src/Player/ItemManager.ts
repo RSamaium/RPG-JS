@@ -1,7 +1,6 @@
 import { Utils } from '@rpgjs/common'
-import { Effect, ItemOptions } from '@rpgjs/database'
+import { Effect, ClassHooks, ItemClass, ItemInstance, WeaponInstance, ArmorInstance, WeaponClass, ArmorClass } from '@rpgjs/database'
 import { ItemLog } from '../logs'
-import { ItemModel } from '../models/Item'
 import { EffectManager } from './EffectManager'
 import { GoldManager } from './GoldManager'
 import { StateManager } from './StateManager'
@@ -18,13 +17,13 @@ const {
     applyMixins
 } = Utils
 
-type ItemClass = { new(...args: any[]), price?: number, _type?: string }
-type Inventory = { nb: number, item: ItemModel }
+
+type Inventory = { nb: number, item: ItemInstance }
 
 export class ItemManager {
 
     items: Inventory[]
-    equipments: ItemModel[] = []
+    equipments: ItemInstance[] = []
 
     /**
     * Retrieves the information of an object: the number and the instance 
@@ -464,7 +463,7 @@ export class ItemManager {
      * }
      * ```
      */
-    equip(itemClass: ItemClass | string, equip: boolean = true): void {
+    equip(itemClass: WeaponClass | ArmorClass | string, equip: boolean = true): void {
         const inventory: Inventory = this.getItem(itemClass)
         if (!inventory) {
             throw ItemLog.notInInventory(itemClass)
@@ -472,7 +471,16 @@ export class ItemManager {
         if ((itemClass as ItemClass)._type == 'item') {
             throw ItemLog.invalidToEquiped(itemClass)
         }
-        const { item } = inventory
+
+        if (this._class && this._class[ClassHooks.canEquip]) {
+            const canEquip = this['execMethodSync'](ClassHooks.canEquip, [inventory.item, this], this._class)
+            if (!canEquip) {
+                throw ItemLog.canNotEquip(itemClass)
+            }
+        }
+
+        const item: WeaponInstance | ArmorInstance = inventory.item as any
+        
         if (item.equipped && equip) {
             throw ItemLog.isAlreadyEquiped(itemClass)
         }

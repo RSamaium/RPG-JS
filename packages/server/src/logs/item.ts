@@ -13,6 +13,9 @@ export class ItemLog {
     static invalidToEquiped(itemClass) {
         return new Log('INVALID_ITEM_TO_EQUIP', `The item ${itemClass.name} is not a weapon or armor`)
     }
+    static canNotEquip(itemClass) {
+        return new Log('CANNOT_EQUIP', `The item ${itemClass.name} cannot be equiped`)
+    }
     static isAlreadyEquiped(itemClass) {
         return new Log('ITEM_ALREADY_EQUIPED', `The item ${itemClass.name} is already equiped`)
     }

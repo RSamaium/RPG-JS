@@ -43,8 +43,8 @@ export default class Tile extends AnimatedSprite {
     setAnimation(frame: CompositeTilemap) {
         const size = this.animations.length
         if (size > 1) {
-            const offest = (this.animations[1].tileid - this.animations[0].tileid) * this.width
-            frame.tileAnimX(offest, size)
+            const offset = (this.animations[1].tileid - this.animations[0].tileid) * this.width
+            frame.tileAnimX(offset, size)
         }
     }
 

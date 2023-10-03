@@ -1,4 +1,4 @@
-import { intersection, generateUID, toRadians, isInstanceOf } from './Utils'
+import { intersection, generateUID, toRadians, isInstanceOf, round } from './Utils'
 import { Hit, HitType } from './Hit'
 import { RpgShape } from './Shape'
 import SAT from 'sat'
@@ -292,9 +292,9 @@ export class AbstractObject {
             return this.position[prop] + this.speed * deltaTimeInt
                 * (Math.round(Math[prop == 'x' ? 'cos' : 'sin'](angle) * 100) / 100)
         }
-        // If it's greater than 1, there's no point in recovering the decimals. reduces bandwidth
-        const x = this.speed < 1 ? computePosition('x') : ~~computePosition('x')
-        const y = this.speed < 1 ? computePosition('y') : ~~computePosition('y')
+        // If it's greater than 1, round value to reduces bandwidth
+        const x = this.speed < 1 ? computePosition('x') : round(computePosition('x'))
+        const y = this.speed < 1 ? computePosition('y') : round(computePosition('y'))
         return new Vector2d(x, y, ~~this.position.z)
     }
 

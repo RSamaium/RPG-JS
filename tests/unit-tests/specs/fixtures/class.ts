@@ -5,6 +5,4 @@ import { Elements } from './elements'
     name: 'Fighter',
     elementsEfficiency: [Elements.Fire]
 })
-export class Fighter {
-   
-}
+export class Fighter  {}

@@ -122,7 +122,7 @@ export function hexaToNumber(hexa: string): {
 }
 
 export function extractId(path: string): string | null {
-    const id = path.match(/([a-zA-Z0-9-_$!]+)\.[a-z]+$/i)
+    const id = path.match(/([a-zA-Z0-9-_$!]+)\.[a-z0-9]+$/i)
     if (!id) return null
     return id[1]
 }
@@ -137,6 +137,10 @@ export function fps2ms(fps: number): number {
 
 export function preciseNow(): number {
     return typeof performance !== 'undefined' ? performance.now() : Date.now()
+}
+
+export function round(num: number, decimals: number = 100): number {
+    return Math.round(num * decimals) / decimals
 }
 
 // https://stackoverflow.com/questions/54733539/javascript-implementation-of-lodash-set-method
@@ -181,5 +185,6 @@ export default {
     fps2ms,
     preciseNow,
     hexaToNumber,
-    set
+    set,
+    round
 }

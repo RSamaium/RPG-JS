@@ -105,6 +105,7 @@ spec:
       - name: default
         portPolicy: Dynamic
         containerPort: 3000
+        protocol: TCP
       health:
         initialDelaySeconds: 30
         periodSeconds: 25
@@ -133,5 +134,101 @@ Then launch the fleet:
 
 `kubectl apply -f fleet.yml`
 
+## SSL
 
+The game server may need an SSL certificate.
 
+The solution is to use Cert-Manager with a DNS01 resolver to obtain a free SSL certificate from Let's Encrypt.
+
+1. Install [Cert-Manager](https://cert-manager.io/docs/installation/)
+
+2. Next, create a certificate (the resolver depends on the platform chosen), but here's an example using Scaleway:
+
+  a. Follow: https://github.com/scaleway/cert-manager-webhook-scaleway
+
+  b. Then, create the certificate
+
+  ```yml
+  apiVersion: cert-manager.io/v1
+  kind: Issuer
+  metadata:
+    name: letsencrypt
+  spec:
+    acme:
+      email: <EMAIL>
+      server: https://acme-v02.api.letsencrypt.org/directory
+      privateKeySecretRef:
+        name: letsencrypt-secret
+      solvers:
+      - dns01:
+          webhook:
+            groupName: acme.scaleway.com
+            solverName: scaleway
+            config:
+              accessKeySecretRef:
+                key: SCW_ACCESS_KEY
+                name: scaleway-secret
+              secretKeySecretRef:
+                key: SCW_SECRET_KEY
+                name: scaleway-secret
+  ```
+
+> Note that the email address is required to generate the certificate.
+
+3. When you launch a Game Server, you also need to point a DNS to the IP. For example: `game.example.com`. You need to create the DNS before requesting the certificate, otherwise it won't work. So you need to build a logic on your side that  :
+   1. reads game servers with the kubernetes API
+   2. retrieves an IP and adds it to the DNS configuration
+4. Then ask for a certificate:
+
+```yml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: game-server-certificate
+spec:
+  secretName: game-server-tls
+  dnsNames:
+    - "game.example.com"
+  issuerRef:
+    name: letsencrypt
+```
+
+5. Finally, the certificate and key must be sent to the game server. For this, you must use a volume:
+
+```yml
+apiVersion: "agones.dev/v1"
+kind: Fleet
+metadata:
+  name: rpg-game-server
+spec:
+  replicas: 2
+  template:
+    spec:
+      ports:
+      - name: default
+        portPolicy: Dynamic
+        containerPort: 3000
+        protocol: TCP
+      health:
+        initialDelaySeconds: 30
+        periodSeconds: 25
+      template:
+        spec:
+          containers:
+          - name: rpg
+            image: $(IMAGE)
+            volumeMounts:
+            - name: cert-volume
+              mountPath: /app/certs
+            env:
+              - name: MATCH_MAKER_URL
+                value: "$(URL)"
+              - name: MATCH_MAKER_SECRET_TOKEN
+                value: "$(SECRET_TOKEN)"
+              - name: REDIS_URL
+                value: "$(REDIS_URL)"
+          volumes:
+            - name: cert-volume
+              secret:
+                secretName: game-server-tls
+```

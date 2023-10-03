@@ -13,4 +13,7 @@ export class SkillLog {
     static restriction(skillClass) {
         return new Log('RESTRICTION_SKILL', `A state blocks the use of the ${skillClass.name} skill`)
     }
+    static alreadyLearned(skillClass) {
+        return new Log('SKILL_ALREADY_LEARNED', `The ${skillClass.name} skill is already learned`)
+    }
 }

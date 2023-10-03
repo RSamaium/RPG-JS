@@ -1,7 +1,7 @@
 import { Utils }  from '@rpgjs/common'
 import { RpgPlayer } from './Player';
-import { ItemModel } from '../models/Item';
 import { ItemFixture } from './ItemFixture';
+import { ItemInstance } from '@rpgjs/database';
 
 const { 
     arrayUniq,
@@ -134,7 +134,7 @@ export class ElementManager extends ItemFixture {
 }
 
 export interface ElementManager{ 
-    equipments: ItemModel[]
+    equipments: ItemInstance[]
     getFormulas: (name: string) => any, 
     _class: any
 }
