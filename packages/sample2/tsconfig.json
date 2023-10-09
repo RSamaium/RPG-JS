@@ -21,7 +21,8 @@
         "types": [
             "node"
         ],
-        "resolveJsonModule": true
+        "resolveJsonModule": true,
+        "jsx": "react"
     },
     "include": [
         ".",

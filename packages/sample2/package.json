@@ -12,6 +12,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@nanostores/react": "^0.7.1",
     "@rpgjs/chat": "^4.0.2",
     "@rpgjs/client": "^4.0.2",
     "@rpgjs/common": "^4.0.2",
@@ -25,6 +26,8 @@
     "@rpgjs/server": "^4.0.2",
     "@rpgjs/standalone": "^4.0.2",
     "@rpgjs/title-screen": "^4.0.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "rpgjs-helloworld": "^0.0.1",
     "socket.io-client": "^4.7.2"
   },

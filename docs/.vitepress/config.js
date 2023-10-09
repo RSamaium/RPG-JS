@@ -145,7 +145,7 @@ const guideMenu = [{
     { text: "Supporting Gamepad Input", link: "/guide/gamepad" },
     { text: "Creating Responsive Game Design", link: "/guide/responsive-design" },
     { text: "Create Progressive Web Apps (PWA)", link: "/guide/pwa" },
-    { text: "Add TailwindCSS", link: "/guide/tailwindcss" }
+    { text: "Add TailwindCSS", link: "/guide/tailwindcss" },
     { text: "Upgrade/Update RPGJS", link: "/guide/upgrade" }
   ]
 

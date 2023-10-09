@@ -2,7 +2,7 @@ import { RpgPlugin, HookClient } from '@rpgjs/common'
 import { SceneMap } from './Scene/Map'
 import { Scene } from './Scene/Scene'
 import { Scene as PresetScene } from './Presets/Scene'
-import { RpgGui } from './RpgGui'
+import { RpgGui } from './Gui/Gui'
 import { RpgClientEngine } from './RpgClientEngine'
 import type { App, ComponentPublicInstance } from 'vue'
 import { TransitionScene } from './Effects/TransitionScene'
@@ -112,8 +112,10 @@ export class RpgRenderer {
 
         if (!this.guiEl) {
             this.guiEl = document.createElement('div')
-            this.selector.appendChild(this.guiEl)
+            this.guiEl = this.selector.appendChild(this.guiEl)
         }
+
+        this.guiEl.style.position = 'absolute'
 
         if (!this.canvasEl) {
             this.selector.insertBefore(this.renderer.view as HTMLCanvasElement, this.selector.firstChild)
@@ -131,7 +133,7 @@ export class RpgRenderer {
         this.fadeContainer.visible = false
         this.fadeContainer.alpha = 0
 
-        RpgGui._initalize(this.clientEngine)
+        RpgGui._initialize(this.clientEngine, this.guiEl)
 
         this.resize()
     }

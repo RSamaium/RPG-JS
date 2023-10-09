@@ -13,9 +13,21 @@
     "watch": "tsc -w"
   },
   "keywords": [],
+  "typesVersions": {
+    "*": {
+      "react": [
+        "lib/Gui/React.d.ts"
+      ]
+    }
+  },
+  "exports": {
+    ".": "./lib/index.js",
+    "./react": "./lib/Gui/React.js"
+  },
   "author": "Samuel Ronce",
   "license": "MIT",
   "dependencies": {
+    "@nanostores/react": "^0.7.1",
     "@pixi/tilemap": "^4.0.0",
     "@rpgjs/common": "^4.0.2",
     "@rpgjs/tiled": "^4.0.2",
@@ -26,6 +38,8 @@
     "lodash.merge": "4.6.2",
     "pixi-viewport": "^5.0.2",
     "pixi.js": "7.2.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "rxjs": "7.8.0",
     "simple-room-client": "^2.0.6",
     "vue": "^3.2.47"
@@ -36,6 +50,7 @@
     "@rpgjs/compiler": "^4.0.2",
     "@types/css-font-loading-module": "^0.0.8",
     "@types/node": "^18.16.0",
+    "@types/react": "^18.2.25",
     "typescript": "^5.0.4"
   },
   "type": "module"

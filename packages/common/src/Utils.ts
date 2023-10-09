@@ -53,6 +53,12 @@ export function capitalize(s: unknown): string {
     return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
+export function camelToKebab(str: string): string {
+    return str
+        .replace(/([a-z])([A-Z])/g, '$1-$2')
+        .toLowerCase();
+}
+
 export function arrayEquals(a: any[], b: any[]): boolean {
     return a.length === b.length && a.every((v, i) => v === b[i])
 }
@@ -186,5 +192,6 @@ export default {
     preciseNow,
     hexaToNumber,
     set,
-    round
+    round,
+    camelToKebab
 }

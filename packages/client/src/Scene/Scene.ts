@@ -3,7 +3,7 @@ import { KeyboardControls } from '../KeyboardControls'
 import RpgSprite from '../Sprite/Character'
 import { Animation } from '../Effects/Animation'
 import { BehaviorSubject, Observable } from 'rxjs'
-import { RpgGui } from '../RpgGui'
+import { RpgGui } from '../Gui/Gui'
 import { GameEngineClient } from '../GameEngine'
 import { RpgComponent } from '../Components/Component'
 import { Controls } from '@rpgjs/types'
@@ -131,7 +131,7 @@ export abstract class Scene {
             animation.update(deltaRatio)
         }
         this.onDraw(time)
-        RpgGui.update(logicObjects)
+      //  RpgGui.update(logicObjects)
         RpgPlugin.emit(HookClient.SceneDraw, this)
     }
 

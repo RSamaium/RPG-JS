@@ -23,7 +23,7 @@ export function mapUpdatePlugin(_serverUrl?: string): Plugin {
             data
           }).catch(errorApi)
         }
-        else if (file.endsWith('tsx')) {
+        else if (file.endsWith('tsx') && !file.includes('gui')) {
           info(`File ${file} changed, updating tileset...`)
           // open file
           const data = await fs.readFile(file, 'utf-8');

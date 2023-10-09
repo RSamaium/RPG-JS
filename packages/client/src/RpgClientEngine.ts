@@ -5,7 +5,7 @@ import { _initSound, sounds } from './Sound/Sounds'
 import { World } from 'simple-room-client'
 import { BehaviorSubject, Observable, Subject, Subscription, lastValueFrom } from 'rxjs'
 import { ajax } from 'rxjs/ajax'
-import { RpgGui } from './RpgGui'
+import { RpgGui } from './Gui/Gui'
 import {
     RpgCommonPlayer,
     PrebuiltGui,

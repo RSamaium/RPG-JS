@@ -5,6 +5,8 @@ import { globFiles } from './utils.js';
 
 // Process a TSX file and copy its image to the output directory
 async function processTsxFile(tsxFile: string, output: string) {
+    if (tsxFile.includes('gui')) return
+
     const content = fs.readFileSync(tsxFile, 'utf-8');
     const result = await parseStringPromise(content);
     const imagePath = path.join(path.dirname(tsxFile), result.tileset.image[0].$.source);
