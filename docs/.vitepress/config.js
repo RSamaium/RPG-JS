@@ -187,6 +187,13 @@ const pluginMenu = [{
     { text: "Creating a Title Screen Plugin", link: "/plugins/title-screen" },
     { text: "Displaying Emotion Bubbles for Characters", link: "/plugins/emotion-bubble" }
   ]
+}, 
+{
+  text: 'Unofficial Plugins',
+  collapsed: false,
+  items: [
+    { text: "Character Select", link: "/plugins/character-select" },
+  ]
 }]
 
 const GA_ID = 'G-VCPFWQS1BJ'
