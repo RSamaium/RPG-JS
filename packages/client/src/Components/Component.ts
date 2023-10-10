@@ -197,6 +197,12 @@ export class RpgComponent<T = any> extends Container {
 
     set guiDisplay(val: boolean) {
         (this.logic as RpgCommonPlayer).guiDisplay = val
+        this.game.setObject(this.logic?.id, {
+            object: this.logic,
+            paramsChanged: {
+                guiDisplay: val
+            }
+        })
     }
 
     setPosition(smooth: boolean = true) {

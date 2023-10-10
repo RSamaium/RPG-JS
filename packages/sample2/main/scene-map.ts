@@ -1,8 +1,9 @@
-import { RpgSceneMapHooks, RpgSceneMap } from '@rpgjs/client'
+import { RpgSceneMapHooks, RpgSceneMap, RpgGui } from '@rpgjs/client'
 
 const sceneMap: RpgSceneMapHooks = {
     onAfterLoading(scene: RpgSceneMap) {
-        console.log('loaded scene');
+        RpgGui.display('tooltip')
+        scene.viewport?.setZoom(1.5)
     }
 }
 

@@ -7,6 +7,7 @@ import { resolve, join } from 'path'
 import requireTransform from './vite-plugin-require.js';
 import { flagTransform } from './vite-plugin-flag-transform.js';
 import vue from '@vitejs/plugin-vue'
+import react from '@vitejs/plugin-react'
 import { worldTransformPlugin } from './vite-plugin-world-transform.js';
 import fs from 'fs/promises'
 import _fs from 'fs'
@@ -135,6 +136,14 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         buildOptions.outputDir = 'dist'
     }
 
+    // found react packages in node_modules
+    const hasPkg = pkg => _fs.existsSync(join(cwd(), 'node_modules', pkg))
+    let hasReact = false
+    if (hasPkg('react') && hasPkg('react-dom')) {
+        process.env.VITE_REACT = 'true'
+        hasReact = true
+    }
+
     const libMode = config.vite?.build?.lib
     const vite = config.vite ?? {}
 
@@ -193,6 +202,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         plugins = [
             ...plugins,
             vue(),
+            react(),
             cssPlugin(config),
             codeInjectorPlugin(),
             NodeModulesPolyfillPlugin(),
@@ -360,6 +370,19 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         }
     }
 
+    const external: string[] = []
+
+    if (libMode) {
+        external.push('vue')
+    }
+
+    if (!hasReact) {
+        external.push('react', 'react-dom/client')
+    }
+
+    if (vite?.build?.external) {
+        external.push(...vite.build.external)
+    }
 
     const viteConfig = {
         mode: options.mode || 'development',
@@ -372,7 +395,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
             },
             extensions: ['.ts', '.js', '.jsx', '.json', '.vue', '.css', '.scss', '.sass', '.html', 'tmx', 'tsx', '.toml'],
         },
-        assetsInclude: ['**/*.tmx', '**/*.tsx'],
+        assetsInclude: ['**/*.tmx', "{!(gui)/**/*}.tsx"],
         server: options.server,
         logLevel: options.server?.loglevel,
         debug: options.server?.debug,
@@ -401,15 +424,16 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
                     !isServer ? nodePolyfills() as any : null
                 ],
                 ...(libMode ? {
-                    external: ['vue']
+                    external
                 } : {
                     input: {
                         main: plugin ? plugin.entry :
                             !isServer ?
                                 resolve(dirname, 'index.html') :
                                 entryPointServer()
-                    },
+                    }
                 }),
+                external
             },
             ...moreBuildOptions
         },

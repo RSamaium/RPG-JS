@@ -118,20 +118,30 @@ export default {
 2. This service is an [Observable](https://github.com/ReactiveX/rxjs). Subscribe to it to read the last value. In the parameter, you get an object representing the current player
 3. Remember to unsubscribe to the observable to avoid memory leaks
 
-### Server Side
+## Server Side
 
-On the server side, you can call the menu at any time:
+> Even if we are on the server side, remember to add the GUI in the client side module
 
-In <PathTo to="serverDir" file="player.ts" />:
+<PathTo to="playerFile" />
 
-```ts{8}
+```ts
 import { RpgPlayer, RpgPlayerHooks } from '@rpgjs/server'
-
-const player: RpgPlayerHooks = {
+ 
+export const player: RpgPlayerHooks = {
     onJoinMap(player: RpgPlayer) {
-        player.gui('my-hud').open() // Here, open the HUD after loading the map
+        player.gui('my-tooltip').open()
+        player.showAttachedGui()
+		// you can hide with player.hideAttachedGui()
     }
 }
-
-export default player
 ```
+
+We open the `my-tooltip` GUI and display the player's tooltip 
+
+:::tip Tip 
+You can indicate which tooltips you want to display by specifying the events (or players) in parameter: 
+
+```ts
+player.showAttachedGui([otherEvent, otherPlayer])
+```
+:::

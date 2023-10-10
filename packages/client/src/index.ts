@@ -13,9 +13,10 @@ export { Animation as AnimationClass } from './Effects/Animation'
 export type { ISpriteCharacter } from './Interfaces/Character'
 export { SceneData } from './Scene/SceneData'
 export { SceneMap as RpgSceneMap } from './Scene/Map'
-export { RpgGui } from './RpgGui';
+export { RpgGui } from './Gui/Gui';
 export { Timeline, Ease } from './Effects/Timeline';
 export { RpgComponent, RpgComponent as RpgSprite } from './Components/Component'
+export { World, room } from 'simple-room-client'
 
 import { spritesheets } from './Sprite/Spritesheets'
 import { sounds } from './Sound/Sounds'

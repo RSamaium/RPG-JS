@@ -13,7 +13,8 @@ const player: RpgPlayerHooks = {
     onInput(player: RpgPlayer, { input }) {
         const map = player.getCurrentMap()
         if (input == 'action') {
-            
+            const gui = player.gui('test')
+            gui.open({ gold: 10 })
             // const event = map?.createDynamicEvent({
             //     x: player.position.x + 5,
             //     y: player.position.y + 5,
@@ -21,8 +22,7 @@ const player: RpgPlayerHooks = {
             // });
         }
         if (input == 'back') {
-            const event = player?.getEventByName('EV-1') as any
-            if (event) event.hp -= 200
+           player.callMainMenu()
         }
     },
     async onJoinMap(player: RpgPlayer, map: RpgMap) {

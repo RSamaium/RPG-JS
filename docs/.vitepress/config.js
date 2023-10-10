@@ -125,14 +125,28 @@ const guideMenu = [{
   ]
 },
 {
-  text: 'GUI Creation',
+  text: 'GUI',
   collapsed: false,
   items: [
     { text: "Customizing Your Theme", link: "/gui/theme" },
     { text: "Reusing GUI Components", link: "/gui/reuse-gui" },
     { text: "Creating Notifications in Your GUI", link: "/gui/notification-gui" },
+  ]
+},
+{
+  text: 'Create GUI with VueJS',
+  collapsed: false,
+  items: [
     { text: "Creating Your Own GUI", link: "/guide/create-gui" },
     { text: "Adding Tooltips to Your GUI", link: "/gui/tooltip" }
+  ]
+},
+{
+  text: 'Create GUI with React',
+  collapsed: false,
+  items: [
+    { text: "Create Gui with React", link: "/gui/react" },
+    { text: "Adding Tooltips to Your GUI", link: "/gui/react-tooltip" }
   ]
 },
 {
@@ -145,6 +159,7 @@ const guideMenu = [{
     { text: "Supporting Gamepad Input", link: "/guide/gamepad" },
     { text: "Creating Responsive Game Design", link: "/guide/responsive-design" },
     { text: "Create Progressive Web Apps (PWA)", link: "/guide/pwa" },
+    { text: "Add TailwindCSS", link: "/guide/tailwindcss" },
     { text: "Upgrade/Update RPGJS", link: "/guide/upgrade" }
   ]
 
@@ -171,6 +186,13 @@ const pluginMenu = [{
     { text: "Saving and Loading Game Data", link: "/plugins/save" },
     { text: "Creating a Title Screen Plugin", link: "/plugins/title-screen" },
     { text: "Displaying Emotion Bubbles for Characters", link: "/plugins/emotion-bubble" }
+  ]
+}, 
+{
+  text: 'Unofficial Plugins',
+  collapsed: false,
+  items: [
+    { text: "Character Select", link: "/plugins/character-select" },
   ]
 }]
 

@@ -227,7 +227,7 @@ export function loadClientFiles(modulePath: string, options, config) {
     const importSceneMapString = importString(modulePath, 'scene-map', 'sceneMap')
     const importSpriteString = importString(modulePath, 'sprite')
     const importEngine = importString(modulePath, 'client', 'engine')
-    const guiFilesString = searchFolderAndTransformToImportString('gui', modulePath, '.vue')
+    const guiFilesString = searchFolderAndTransformToImportString('gui', modulePath, ['.vue', '.tsx', '.jsx'])
     let importSpritesheets: ImportImageObject[] = []
 
     const extraOptions = {
@@ -440,7 +440,8 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
                 VITE_BUILT: ${env.VITE_BUILT},
                 VITE_SERVER_URL: ${serverUrl ? "'" + serverUrl + "'" : 'undefined'},
                 VITE_RPG_TYPE: '${options.type ?? 'mmorpg'}',
-                VITE_ASSETS_PATH: '${env.VITE_ASSETS_PATH ?? ''}'
+                VITE_ASSETS_PATH: '${env.VITE_ASSETS_PATH ?? ''}',
+                VITE_REACT: ${env.VITE_REACT},
             }`
             if (id.endsWith(MODULE_NAME)) {
                 const modulesToImport = modules.reduce((acc, module) => {

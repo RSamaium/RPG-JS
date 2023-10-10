@@ -53,6 +53,12 @@ export function capitalize(s: unknown): string {
     return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
+export function camelToKebab(str: string): string {
+    return str
+        .replace(/([a-z])([A-Z])/g, '$1-$2')
+        .toLowerCase();
+}
+
 export function arrayEquals(a: any[], b: any[]): boolean {
     return a.length === b.length && a.every((v, i) => v === b[i])
 }
@@ -160,6 +166,16 @@ export function set(obj, path, value, onlyPlainObject = false) {
     return obj; // Return the top-level object to allow chaining
 };
 
+export function elementToPositionAbsolute(element: HTMLElement) {
+    element.style.position = 'absolute'
+    element.style.top = '0'
+    element.style.left = '0'
+    element.style.right = '0'
+    element.style.bottom = '0'
+    element.style.width = '100%'
+    element.style.height = '100%'
+}
+
 export default {
     random,
     isBrowser,
@@ -186,5 +202,7 @@ export default {
     preciseNow,
     hexaToNumber,
     set,
-    round
+    round,
+    camelToKebab,
+    elementToPositionAbsolute
 }

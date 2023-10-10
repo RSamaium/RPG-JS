@@ -271,15 +271,19 @@ export class GameEngineClient extends RpgCommonGame {
             paramsChanged
         }
 
+        this.setObject(id, newObject)
+
+        return newObject
+    }
+
+    setObject(id: string, newObject) {
+        const propName = newObject.object instanceof RpgShape ? '_shapes' : '_objects'
         this[propName].next({
             ...this[propName].value,
             ...{
                 [id]: newObject
             }
         })
-
         this._obsObjects[id].next(newObject)
-
-        return newObject
     }
 }
