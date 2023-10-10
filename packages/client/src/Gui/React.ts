@@ -63,7 +63,7 @@ export class ReactGui {
         this.clientEngine = parentGui.clientEngine
         this.renderer = this.clientEngine.renderer
 
-        const GuiTooltip = (ui) => {
+        const GuiTooltip = (ui): any => {
             return () => {
                 const [_tooltip, setTooltip] = useState<any[]>([])
                 useEffect(() => {
@@ -95,12 +95,12 @@ export class ReactGui {
                 })),
                 ..._gui.filter(ui => ui.display && ui.attachToSprite).map(ui => createElement('div', {
                     key: ui.name
-                }, createElement(GuiTooltip(ui)), null)),
+                }, createElement(GuiTooltip(ui)))),
             )
         }
 
         this.app.render(
-            createElement(GuiWrapper, null)
+            createElement(GuiWrapper)
         )
     }
 
