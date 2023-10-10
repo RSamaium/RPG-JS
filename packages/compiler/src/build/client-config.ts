@@ -370,6 +370,19 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         }
     }
 
+    const external: string[] = []
+
+    if (libMode) {
+        external.push('vue')
+    }
+
+    if (!hasReact) {
+        external.push('react', 'react-dom/client')
+    }
+
+    if (vite?.build?.external) {
+        external.push(...vite.build.external)
+    }
 
     const viteConfig = {
         mode: options.mode || 'development',
@@ -411,16 +424,16 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
                     !isServer ? nodePolyfills() as any : null
                 ],
                 ...(libMode ? {
-                    external: ['vue']
+                    external
                 } : {
                     input: {
                         main: plugin ? plugin.entry :
                             !isServer ?
                                 resolve(dirname, 'index.html') :
                                 entryPointServer()
-                    },
-                    external: !hasReact ? ['react', 'react-dom/client'] : []
+                    }
                 }),
+                external
             },
             ...moreBuildOptions
         },

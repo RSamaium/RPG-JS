@@ -8,6 +8,7 @@ const moveTMXTSXFiles = async (outputDir: string): Promise<void> => {
   const files = globFiles('@(tmx|tsx)')
 
   for (const file of files) {
+    if (file.includes('gui')) continue;
     const target = path.join(assetDir, path.basename(file));
     await fs.copy(file, target, { overwrite: true });
   }
