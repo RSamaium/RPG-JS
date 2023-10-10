@@ -101,8 +101,9 @@ export class VueGui {
                     const scene = this.renderer.getScene<SceneMap>()
                     const viewport = scene?.viewport
                     if (viewport) {
-                        const left = position.x - viewport.left
-                        const top = position.y - viewport.top
+                        const currentZoom= viewport.scale.x
+                        const left = (position.x - viewport.left) * currentZoom
+                        const top = (position.y - viewport.top) * currentZoom
                         return {
                             transform: `translate(${left}px,${top}px)`
                         }
