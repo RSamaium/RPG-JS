@@ -22,8 +22,7 @@ const player: RpgPlayerHooks = {
             // });
         }
         if (input == 'back') {
-            console.log('main')
-            player.callMainMenu()
+           player.callMainMenu()
         }
     },
     async onJoinMap(player: RpgPlayer, map: RpgMap) {

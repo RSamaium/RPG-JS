@@ -5,7 +5,7 @@ import { RpgRenderer } from '../Renderer'
 import { GameEngineClient } from '../GameEngine'
 import { RpgClientEngine } from '../RpgClientEngine'
 import type { Gui } from './Gui'
-import { SceneMap } from '../Scene/Map'
+import { Scene } from '../Scene/Scene'
 
 interface VueInstance extends ComponentPublicInstance {
     gui: GuiList,
@@ -71,11 +71,12 @@ export class VueGui {
     private vm: VueInstance
     private socket
 
-    constructor(rootEl: HTMLDivElement, parentGui: Gui) {
+    constructor(rootEl: HTMLDivElement, private parentGui: Gui) {
         this.clientEngine = parentGui.clientEngine
         this.renderer = this.clientEngine.renderer
         this.gameEngine = this.clientEngine.gameEngine
         const { gui } = parentGui
+        const self = this
 
         const obj = {
             render,
@@ -97,21 +98,11 @@ export class VueGui {
                 }
             },
             methods: {
-                tooltipPosition: (position: { x: number, y: number }) => {
-                    const scene = this.renderer.getScene<SceneMap>()
-                    const viewport = scene?.viewport
-                    if (viewport) {
-                        const currentZoom= viewport.scale.x
-                        const left = (position.x - viewport.left) * currentZoom
-                        const top = (position.y - viewport.top) * currentZoom
-                        return {
-                            transform: `translate(${left}px,${top}px)`
-                        }
-                    }
-                },
-                tooltipFilter(sprites: RpgCommonPlayer[], ui: GuiOptions): RpgCommonPlayer[] {
-                    return sprites.filter(tooltip => tooltip.guiDisplay)
-                }
+                tooltipPosition: parentGui.tooltipPosition.bind(parentGui),
+                tooltipFilter: parentGui.tooltipFilter.bind(parentGui)
+            },
+            mounted() {
+               
             }
         }
 
@@ -128,6 +119,13 @@ export class VueGui {
         this.renderer.vm = this.vm
     }
 
+    _setSceneReady() {
+        this.parentGui.listenTooltipObjects.subscribe((tooltips) => {
+            this.vm.tooltips = [...tooltips]
+        })
+        this.parentGui.currentScene?.objectsMoving.next({})
+    }
+
     set gui(val) {
         for (let key in val) {
             // ignore react component
@@ -135,9 +133,5 @@ export class VueGui {
             this.vm.gui[key] = val[key]
         }
         this.vm.gui = Object.assign({}, this.vm.gui)
-    }
-
-    set tooltips(tooltips: any[]) {
-        this.vm.tooltips = tooltips
     }
 }

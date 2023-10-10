@@ -1,11 +1,12 @@
 import { RpgCommonPlayer, Utils } from '@rpgjs/common'
-import { map, filter } from 'rxjs'
 import { RpgSound } from '../Sound/RpgSound'
 import { RpgClientEngine, RpgResource } from '../index'
 import { RpgRenderer } from '../Renderer'
 import { GameEngineClient } from '../GameEngine'
 import { SceneMap } from '../Scene/Map'
 import { VueGui } from './Vue'
+import { Scene } from '../Scene/Scene'
+import { map, tap, combineLatest, Subject, filter, Observable } from 'rxjs';
 
 const { elementToPositionAbsolute } = Utils
 
@@ -32,6 +33,7 @@ export class Gui {
     public clientEngine: RpgClientEngine
     private socket
     public gui: GuiList = {}
+    public currentScene: Scene | null = null
     private librariesInstances: any[] = []
 
     async _initialize(clientEngine: RpgClientEngine, guiEl: HTMLDivElement) {
@@ -53,7 +55,7 @@ export class Gui {
                 isFunction: Utils.isFunction(ui),
                 gui: ui
             }
-        } 
+        }
 
         if (this.clientEngine.envs?.['VITE_REACT']) {
             console.warn('[RPGJS] React GUI is experimental feature. So, its use may change over time. Not yet in production')
@@ -81,6 +83,13 @@ export class Gui {
         guiEl.style['pointer-events'] = 'none'
     }
 
+    _setSceneReady(scene: Scene) {
+        this.currentScene = scene
+        this.librariesInstances.forEach(instance => {
+            if (instance._setSceneReady) instance._setSceneReady(scene)
+        })
+    }
+
     getInjectObject(): any {
         const self = this
         return {
@@ -102,22 +111,22 @@ export class Gui {
              * */
             rpgScene: this.renderer.getScene.bind(this.renderer),
 
-             /** 
-             * Retrieve the main container of the game
-             * 
-             * ```js
-             * export default {
-             *      inject: ['rpgStage'],
-             *      mounted() {
-             *          const blur = new PIXI.BlurFilter()
-                        this.rpgStage.filters = [blur]
-             *      }
-             * }
-             * ``` 
-             * 
-             * @prop {PIXI.Container} [rpgStage]
-             * @memberof VueInject
-             * */
+            /** 
+            * Retrieve the main container of the game
+            * 
+            * ```js
+            * export default {
+            *      inject: ['rpgStage'],
+            *      mounted() {
+            *          const blur = new PIXI.BlurFilter()
+                       this.rpgStage.filters = [blur]
+            *      }
+            * }
+            * ``` 
+            * 
+            * @prop {PIXI.Container} [rpgStage]
+            * @memberof VueInject
+            * */
             rpgStage: this.renderer.stage,
 
             /** 
@@ -210,7 +219,7 @@ export class Gui {
             rpgGuiClose(name: string, data?) {
                 const guiId = name || this.$options?.name
                 self.socket.emit('gui.exit', {
-                    guiId, 
+                    guiId,
                     data
                 })
             },
@@ -378,7 +387,7 @@ export class Gui {
             for (let playerId of players) {
                 const sprite = this.renderer.getScene<SceneMap>()?.getSprite(playerId)
                 if (sprite) sprite.guiDisplay = display
-            }   
+            }
         })
         this.socket.on('gui.exit', (guiId) => {
             this.hide(guiId)
@@ -510,10 +519,37 @@ export class Gui {
     }
 
     /** @internal */
-    update(logicObjects: RpgCommonPlayer) {
-        this.librariesInstances.forEach(instance => {
-            instance.tooltips = Object.values(logicObjects).map((object: any) => object.object)
-        })
+    tooltipPosition(position: { x: number, y: number }) {
+        const scene = this.renderer.getScene<SceneMap>()
+        const viewport = scene?.viewport
+        if (viewport) {
+            const currentZoom = viewport.scale.x
+            const left = (position.x - viewport.left) * currentZoom
+            const top = (position.y - viewport.top) * currentZoom
+            return {
+                transform: `translate(${left}px,${top}px)`
+            }
+        }
+        return {}
+    }
+
+    /** @internal */
+    tooltipFilter(sprites: RpgCommonPlayer[]): RpgCommonPlayer[] {
+        return sprites.filter(tooltip => tooltip.guiDisplay)
+    }
+
+    /** @internal */
+    get listenTooltipObjects(): Observable<RpgCommonPlayer[]> {
+        return combineLatest(
+            [
+                this.clientEngine.gameEngine.all,
+                this.currentScene?.objectsMoving as Subject<any>
+            ]
+        ).pipe(
+            map(([objects]) => {
+                return Object.values(objects).map((obj: any) => obj.object)
+            })
+        )
     }
 }
 

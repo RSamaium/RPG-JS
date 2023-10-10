@@ -2,12 +2,12 @@ import { RpgPlugin, HookClient, DefaultInput } from '@rpgjs/common'
 import { KeyboardControls } from '../KeyboardControls'
 import RpgSprite from '../Sprite/Character'
 import { Animation } from '../Effects/Animation'
-import { BehaviorSubject, Observable } from 'rxjs'
-import { RpgGui } from '../Gui/Gui'
+import { BehaviorSubject, Observable, Subject } from 'rxjs'
 import { GameEngineClient } from '../GameEngine'
 import { RpgComponent } from '../Components/Component'
 import { Controls } from '@rpgjs/types'
 import { Container } from 'pixi.js'
+import { RpgGui } from '../Gui/Gui'
 
 export type SceneObservableData = { 
     data: {
@@ -37,6 +37,32 @@ export abstract class Scene {
         partial: {}
     })
 
+    /**
+     * Listen to the movement of objects on stage
+     * 
+     * @prop {Observable<{ [key: string]: object }>} [objectsMoving]
+     * @readonly
+     * @memberof RpgScene
+     * @since v4.1.0
+     * 
+     * In <module>/scene-map.ts
+     * 
+     * ```ts
+     * import { RpgSceneMap } from '@rpgjs/client'
+     * 
+     * export default {
+     *      onAfterLoading(scene: RpgSceneMap) {
+     *         scene.objectsMoving.subscribe((objects) => {
+     *             console.log(objects)
+     *          })
+     *      }
+     * }
+     * ```
+     */
+    public readonly objectsMoving: Subject<{
+        [key: string]: any
+    }> = new Subject()
+
     constructor(public game: GameEngineClient) {
         const { globalConfig } = this.game.clientEngine
         this.controls = this.game.clientEngine.controls
@@ -45,6 +71,7 @@ export abstract class Scene {
             ...(globalConfig.inputs || {})
         }
         this.controls.setInputs(this.inputs || mergeInputs)
+        RpgGui._setSceneReady(this)
     }
 
     /**
@@ -106,8 +133,9 @@ export abstract class Scene {
         }
         const renderObjects = this.objects
         const sizeLogic = Object.values(logicObjects).length
+        const objectMoving = {}
         for (let key in logicObjects) {
-            const val: SceneSpriteLogic = logicObjects[key].object
+            const val: any = logicObjects[key].object
             const valueChanged = logicObjects[key].paramsChanged
             if (!renderObjects.has(key)) {
                 const sprite = this.addObject(val, key)
@@ -118,6 +146,7 @@ export abstract class Scene {
                 if (!object?.update) return
                 const ret = object.update(val, valueChanged, time, deltaRatio)
                 this.triggerSpriteChanges(val, object, ret.moving)
+                if (ret.moving) objectMoving[val.id] = val
             }
         }
         if (sizeLogic < renderObjects.size) {
@@ -131,7 +160,9 @@ export abstract class Scene {
             animation.update(deltaRatio)
         }
         this.onDraw(time)
-        RpgGui.update(logicObjects)
+        if (Object.values(objectMoving).length) {
+            this.objectsMoving.next(objectMoving)
+        }
         RpgPlugin.emit(HookClient.SceneDraw, this)
     }
 

@@ -125,14 +125,28 @@ const guideMenu = [{
   ]
 },
 {
-  text: 'GUI Creation',
+  text: 'GUI',
   collapsed: false,
   items: [
     { text: "Customizing Your Theme", link: "/gui/theme" },
     { text: "Reusing GUI Components", link: "/gui/reuse-gui" },
     { text: "Creating Notifications in Your GUI", link: "/gui/notification-gui" },
+  ]
+},
+{
+  text: 'Create GUI with VueJS',
+  collapsed: false,
+  items: [
     { text: "Creating Your Own GUI", link: "/guide/create-gui" },
     { text: "Adding Tooltips to Your GUI", link: "/gui/tooltip" }
+  ]
+},
+{
+  text: 'Create GUI with React',
+  collapsed: false,
+  items: [
+    { text: "Create Gui with React", link: "/gui/react" },
+    { text: "Adding Tooltips to Your GUI", link: "/gui/react-tooltip" }
   ]
 },
 {
