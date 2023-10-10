@@ -33,14 +33,7 @@ const _hoisted_1 = {
     style: { "position": "absolute", "top": "0", "left": "0" }
 }
 function render(_ctx, _cache) {
-    return (_openBlock(), _createElementBlock("div", {
-        onPointerdown: _cache[0] || (_cache[0] = $event => (_ctx.propagate('pointerdown', $event))),
-        onPointermove: _cache[1] || (_cache[1] = $event => (_ctx.propagate('pointermove', $event))),
-        onPointerleave: _cache[2] || (_cache[2] = $event => (_ctx.propagate('pointerleave', $event))),
-        onPointerover: _cache[3] || (_cache[3] = $event => (_ctx.propagate('pointerover', $event))),
-        onPointercancel: _cache[4] || (_cache[4] = $event => (_ctx.propagate('pointercancel', $event))),
-        onPointerup: _cache[5] || (_cache[5] = $event => (_ctx.propagate('pointerup', $event)))
-    }, [
+    return (_openBlock(), _createElementBlock("div", {}, [
         (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.fixedGui, (ui) => {
             return (_openBlock(), _createElementBlock(_Fragment, null, [
                 (ui.display)
@@ -104,9 +97,6 @@ export class VueGui {
                 }
             },
             methods: {
-                propagate: (type: string, event) => {
-                    this.renderer.canvas.dispatchEvent(new MouseEvent(type, event))
-                },
                 tooltipPosition: (position: { x: number, y: number }) => {
                     const scene = this.renderer.getScene<SceneMap>()
                     const viewport = scene?.viewport

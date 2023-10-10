@@ -1,5 +1,5 @@
 import { RpgCommonPlayer, Utils } from '@rpgjs/common'
-import { map } from 'rxjs'
+import { map, filter } from 'rxjs'
 import { RpgSound } from '../Sound/RpgSound'
 import { RpgClientEngine, RpgResource } from '../index'
 import { RpgRenderer } from '../Renderer'
@@ -60,12 +60,25 @@ export class Gui {
             COMPONENT_LIBRARIES.push(await import('./React').then(m => m.ReactGui))
         }
 
+        const propagateEvents = (el: HTMLElement) => {
+            const events = ['click', 'mousedown', 'mouseup', 'mousemove', 'mouseenter', 'mouseleave', 'mouseover', 'mouseout', 'contextmenu', 'pointerdown', 'pointerup', 'pointermove', 'pointerenter', 'pointerleave', 'pointerover', 'pointerout', 'pointerupoutside', 'pointercancel', 'touchstart', 'touchend', 'touchmove', 'touchcancel', 'wheel', 'keydown', 'keyup', 'keypress', 'keydownoutside', 'keyupoutside', 'keypressoutside']
+            for (let type of events) {
+                el.addEventListener(type, (e) => {
+                    this.renderer.canvas.dispatchEvent(new MouseEvent(type, e))
+                })
+            }
+        }
+
         for (let componentClass of COMPONENT_LIBRARIES) {
             const el = document.createElement('div')
             elementToPositionAbsolute(el)
+            el.style['pointer-events'] = 'auto'
+            propagateEvents(el)
             guiEl.appendChild(el)
             this.librariesInstances.push(new componentClass(el, this))
         }
+
+        guiEl.style['pointer-events'] = 'none'
     }
 
     getInjectObject(): any {
@@ -166,7 +179,8 @@ export class Gui {
              * */
             rpgCurrentPlayer: this.clientEngine.objects
                 .pipe(
-                    map((objects: any) => objects[this.gameEngine.playerId])
+                    map((objects: any) => objects[this.gameEngine.playerId]),
+                    filter(player => !!player)
                 ),
             rpgGameEngine: this.gameEngine,
 
