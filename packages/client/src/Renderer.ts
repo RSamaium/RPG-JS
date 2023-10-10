@@ -1,4 +1,4 @@
-import { RpgPlugin, HookClient } from '@rpgjs/common'
+import { RpgPlugin, HookClient, Utils } from '@rpgjs/common'
 import { SceneMap } from './Scene/Map'
 import { Scene } from './Scene/Scene'
 import { Scene as PresetScene } from './Presets/Scene'
@@ -10,6 +10,8 @@ import { Subject, forkJoin } from 'rxjs'
 import { GameEngineClient } from './GameEngine'
 import { SpinnerGraphic } from './Effects/Spinner'
 import { autoDetectRenderer, Container, Graphics, ICanvas, IRenderer } from 'pixi.js'
+
+const { elementToPositionAbsolute } = Utils
 
 export enum TransitionMode {
     None,
@@ -115,7 +117,7 @@ export class RpgRenderer {
             this.guiEl = this.selector.appendChild(this.guiEl)
         }
 
-        this.guiEl.style.position = 'absolute'
+        elementToPositionAbsolute(this.guiEl)
 
         if (!this.canvasEl) {
             this.selector.insertBefore(this.renderer.view as HTMLCanvasElement, this.selector.firstChild)

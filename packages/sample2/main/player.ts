@@ -22,8 +22,8 @@ const player: RpgPlayerHooks = {
             // });
         }
         if (input == 'back') {
-            const event = player?.getEventByName('EV-1') as any
-            if (event) event.hp -= 200
+            console.log('main')
+            player.callMainMenu()
         }
     },
     async onJoinMap(player: RpgPlayer, map: RpgMap) {

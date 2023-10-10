@@ -1,4 +1,4 @@
-import { Utils } from '@rpgjs/common'
+import { RpgCommonPlayer, Utils } from '@rpgjs/common'
 import { map } from 'rxjs'
 import { RpgSound } from '../Sound/RpgSound'
 import { RpgClientEngine, RpgResource } from '../index'
@@ -6,6 +6,8 @@ import { RpgRenderer } from '../Renderer'
 import { GameEngineClient } from '../GameEngine'
 import { SceneMap } from '../Scene/Map'
 import { VueGui } from './Vue'
+
+const { elementToPositionAbsolute } = Utils
 
 interface GuiOptions {
     data: any,
@@ -60,7 +62,7 @@ export class Gui {
 
         for (let componentClass of COMPONENT_LIBRARIES) {
             const el = document.createElement('div')
-            el.style.position = 'absolute'
+            elementToPositionAbsolute(el)
             guiEl.appendChild(el)
             this.librariesInstances.push(new componentClass(el, this))
         }
@@ -493,6 +495,12 @@ export class Gui {
         this.gui = {}
     }
 
+    /** @internal */
+    update(logicObjects: RpgCommonPlayer) {
+        this.librariesInstances.forEach(instance => {
+            instance.tooltips = Object.values(logicObjects).map((object: any) => object.object)
+        })
+    }
 }
 
 export const RpgGui = new Gui()

@@ -131,7 +131,7 @@ export abstract class Scene {
             animation.update(deltaRatio)
         }
         this.onDraw(time)
-      //  RpgGui.update(logicObjects)
+        RpgGui.update(logicObjects)
         RpgPlugin.emit(HookClient.SceneDraw, this)
     }
 

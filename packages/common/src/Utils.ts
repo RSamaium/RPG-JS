@@ -166,6 +166,16 @@ export function set(obj, path, value, onlyPlainObject = false) {
     return obj; // Return the top-level object to allow chaining
 };
 
+export function elementToPositionAbsolute(element: HTMLElement) {
+    element.style.position = 'absolute'
+    element.style.top = '0'
+    element.style.left = '0'
+    element.style.right = '0'
+    element.style.bottom = '0'
+    element.style.width = '100%'
+    element.style.height = '100%'
+}
+
 export default {
     random,
     isBrowser,
@@ -193,5 +203,6 @@ export default {
     hexaToNumber,
     set,
     round,
-    camelToKebab
+    camelToKebab,
+    elementToPositionAbsolute
 }
