@@ -21,7 +21,7 @@ To debug server with VSC we need to run command `npm run dev` and then attach to
 
 By clicking on gear we are able to add new debuging config to launch.json
 
-![Alt text](/assets/vsc-config.png)
+![vscConfig](/assets/vsc-config.png)
 
 Visual Studio code
 ```
@@ -39,7 +39,7 @@ Visual Studio code
 ### Start debugger
 Then we can attach to process by clicking green play button
 
-![Alt text](/assets/started-debug.png)
+![startDebugVsc](/assets/started-debug.png)
 
 ## Debuging with chrome
 
@@ -47,7 +47,7 @@ Instead of using IDE we can use chrome dev tools event to debug server. To do th
 - `chrome://inspect`
 
 If we have running server and we added inspect flag we should have inspect button what will lead us to chrome dev tools connected to our server
-![Alt text](/assets/chrome-inspect.png)
+![chromeInspect](/assets/chrome-inspect.png)
 
 Hit `ctrl + p`` to browse your server side code :)
 
@@ -60,19 +60,19 @@ Two options are very usefull during debugging process. If we have some error, bu
 
 If you turn them on, debugger automagicly will stop on line where problem is.
 
-![Alt text](/assets/exceptions-options-vsc.png)
-![Alt text](/assets/exceptions-options-devtools.png)
+![exceptionsOptionsVSC](/assets/exceptions-options-vsc.png)
+![exceptionsOptionsDevTools](/assets/exceptions-options-devtools.png)
 
 Then we can go back with call stack and find a problem
-![Alt text](/assets/callstack-vsc.png)
-![Alt text](/assets/callstack-devtools.png)
+![callstackVSC](/assets/callstack-vsc.png)
+![callstackDevtools](/assets/callstack-devtools.png)
 
 
 ## Server problem outputs
 Errors usually appear in that places:
 
 ### Server standard CLI output
-![Alt text](/assets/cli-errors.png)
+![cliErrors](/assets/cli-errors.png)
 
 
 ### Websockets response
