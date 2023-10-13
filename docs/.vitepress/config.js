@@ -160,9 +160,10 @@ const guideMenu = [{
     { text: "Creating Responsive Game Design", link: "/guide/responsive-design" },
     { text: "Create Progressive Web Apps (PWA)", link: "/guide/pwa" },
     { text: "Add TailwindCSS", link: "/guide/tailwindcss" },
-    { text: "Upgrade/Update RPGJS", link: "/guide/upgrade" }
+    { text: "Upgrade/Update RPGJS", link: "/guide/upgrade" },
+    { text: "Debugging server", link: "/debugging/server"},
+    { text: "Debugging client", link: "/debugging/client"},
   ]
-
 },
 {
   text: 'Advanced',
