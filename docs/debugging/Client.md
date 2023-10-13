@@ -16,7 +16,7 @@ Two options are very usefull during debugging process.
 
 If you turn them on, debugger automagicly will stop on line where problem is.
 
-![Alt text](public/exceptions-options-devtools.png)
+![Alt text](/assets/exceptions-options-devtools.png)
 
 Then we can go back with call stack and find a problem
-![Alt text](public/callstack-devtools.png)
+![Alt text](/assets/callstack-devtools.png)
