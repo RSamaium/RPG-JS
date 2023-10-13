@@ -1,1 +1,0 @@
-![websocketsDevTools](/assets/websockets-in-chrome-dev-tools.png)
