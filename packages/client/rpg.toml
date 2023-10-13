@@ -11,4 +11,4 @@
   format = "umd"
 
 [vite.build.rollupOptions]
-  external = ["@rpgjs/common", "vue", "rxjs"]
+  external = ["@rpgjs/common", "vue", "rxjs", "react", "react-dom"]
