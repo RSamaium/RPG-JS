@@ -30,6 +30,22 @@ In MMORPG, the player must create an account and log in with his account to star
     map = '<map id>'
 ```
 
+## If deployed game on server
+If you deployed your game on server, it might be required to set correct server url for axios calls.
+If your game is on https://google.com you should set VITE_GAME_URL env variable to https://google.com (without ending slash)
+
+```
+[compilerOptions.build]
+    serverUrl = '$ENV:VITE_GAME_URL'
+```
+
+or just
+
+```
+[compilerOptions.build]
+    serverUrl = 'https://google.com'
+```
+
 ## Usage (MMORPG only)
 
 To make a save, run the method [player.save()](/commands/common.html#save-progress). The method has been overloaded to store the data in MongoDB
