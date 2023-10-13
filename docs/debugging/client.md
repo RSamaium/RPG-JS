@@ -18,5 +18,5 @@ If you turn them on, debugger automagicly will stop on line where problem is.
 
 ![devToolsExceptions](/assets/exceptions-options-devtools.png)
 
-Then we can go back with call stack and find a problem
+Then we can travel be in time with call stack and find a problem
 ![devToolsCallstack](/assets/callstack-devtools.png)
