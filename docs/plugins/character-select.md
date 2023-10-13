@@ -14,6 +14,9 @@ and
 
 `npx rpgjs add rpgjs-character-select`
 
+## Configuration instruction
+https://github.com/dominx99/rpgjs-plugins/blob/master/character-select/readme.md
+
 ## Plugin Discussion
 
 https://community.rpgjs.dev/d/199-character-select-plugin
