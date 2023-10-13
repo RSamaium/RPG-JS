@@ -251,7 +251,7 @@ export function waitUntil(promise: Promise<any>): Promise<any> {
                     server.nextTick(tick)
                     timeout()
                 }
-            }, 10)
+            }, 50)
         }
         timeout()
     })
