@@ -1,1 +1,1 @@
-![medieval](/assets/websockets-in-chrome-dev-tools.png)
+![websocketsDevTools](/assets/websockets-in-chrome-dev-tools.png)
