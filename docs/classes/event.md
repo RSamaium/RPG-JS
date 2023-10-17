@@ -25,9 +25,13 @@ export class CharaEvent extends RpgEvent {
 
     onPlayerTouch(player: RpgPlayer) { }
 
-    onInShape(player: RpgPlayer) {}
+    onInShape(shape: RpgShape) {}
 
-    onOutShape(player: RpgPlayer) {}
+    onOutShape(shape: RpgShape) {}
+
+    onDetect(player: RpgPlayer, shape: RpgShape) {}
+
+    onUnDetect(player: RpgPlayer, shape: RpgShape) {}
 }
 ```
 
@@ -73,7 +77,7 @@ If the event collides with the player, the method is called
 
 ### onInShape()
 
-If the player is in the shape of the event, the method is called.
+If the event fits into a shape
 
 Example: 
 
@@ -84,22 +88,36 @@ import { RpgEvent, EventData, RpgPlayer, ShapePositioning } from '@rpgjs/server'
     name: 'EV-1'
 })
 export class CharaEvent extends RpgEvent {
-    onInit() {
-         this.attachShape({
-            height: 100,
-            width: 100,
-            positioning: ShapePositioning.Center
-        })
-    }
-    onInShape(player: RpgPlayer) {
-        console.log(player.id)
+    onInShape(shape: RpgShape) {
+        console.log(shape.id)
     }
 }
 ```
 
 ### onOutShape()
 
-If the player is out of the shape of the event, the method is called.
+If the event leaves a shape
+
+Example: 
+
+```ts
+import { RpgEvent, EventData, RpgPlayer, ShapePositioning } from '@rpgjs/server'
+
+@EventData({
+    name: 'EV-1'
+})
+export class CharaEvent extends RpgEvent {
+    onOutShape(shape: RpgShape) {
+        console.log(shape.id)
+    }
+}
+```
+
+### OnDetect
+
+`since v4.1.0`
+
+If a player or another event enters the shape attached to the event, it triggers the hook.
 
 Example: 
 
@@ -117,8 +135,36 @@ export class CharaEvent extends RpgEvent {
             positioning: ShapePositioning.Center
         })
     }
-    onOutShape(player: RpgPlayer) {
-        console.log(player.id)
+    onDetect(player: RpgPlayer, shape: RpgShape) {
+         console.log(player.id, shape.id)
+    }
+}
+```
+
+### OnUnDetect
+
+`since v4.1.0`
+
+If a player or other event leaves the shape attached to the event, it triggers the hook.
+
+Example: 
+
+```ts
+import { RpgEvent, EventData, RpgPlayer, ShapePositioning } from '@rpgjs/server'
+
+@EventData({
+    name: 'EV-1'
+})
+export class CharaEvent extends RpgEvent {
+    onInit() {
+         this.attachShape({
+            height: 100,
+            width: 100,
+            positioning: ShapePositioning.Center
+        })
+    }
+    onUnDetect(player: RpgPlayer, shape: RpgShape) {
+        console.log(player.id, shape.id)
     }
 }
 ```

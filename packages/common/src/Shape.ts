@@ -221,6 +221,7 @@ export class RpgShape extends TiledObjectClass {
             this.playersIn[player.id] = true
             player.inShapes[this.name] = this
             await player.execMethod('onInShape', [this])
+            await this.fixEvent?.execMethod('onDetect', [player, this], this.fixEvent)
             await player.execMethod('onIn', [player], this)
             return true
         }
@@ -232,6 +233,7 @@ export class RpgShape extends TiledObjectClass {
             delete this.playersIn[player.id]
             delete player.inShapes[this.name]
             await player.execMethod('onOutShape', [this])
+            await this.fixEvent?.execMethod('onUnDetect', [player, this], this.fixEvent)
             await player.execMethod('onOut', [player], this)
             return true
         }

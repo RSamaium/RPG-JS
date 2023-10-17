@@ -7,7 +7,7 @@ import CharaEvent from './events/npc';
 const player: RpgPlayerHooks = {
     onConnected(player: RpgPlayer) {
         player.name = 'YourName'
-        player.setComponentsTop(Components.text('{name}'))
+        player.setComponentsTop(Components.text('{id}'))
     },
     onAuth: () => {},
     onInput(player: RpgPlayer, { input }) {

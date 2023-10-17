@@ -406,7 +406,7 @@ export class AbstractObject {
         let boolFound = false
 
         for (let objectId of objects) {
-            // client side: read "object" propertie
+            // client side: read "object" property
             if (!events[objectId]) continue
             const event = events[objectId]['object'] || events[objectId]
 
@@ -495,13 +495,13 @@ export class AbstractObject {
         if (collided) {
             this._collisionWithShapes.push(shape)
             // TODO: in shape after map load
-            if (!collision) await shape.in(this)
+            if (!collision) await shape.in(player)
             if (verifyIfPositionChanged() === true) return true
             this.triggerCollisionWith()
             if (collision) return true
         }
         else {
-            await shape.out(this)
+            await shape.out(player)
             if (verifyIfPositionChanged() === true) return true
         }
 

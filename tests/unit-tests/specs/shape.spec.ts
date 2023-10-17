@@ -1,5 +1,5 @@
 import { _beforeEach } from './beforeEach'
-import { HookClient, RpgMap, RpgPlayer, RpgServerEngine, ShapePositioning, RpgShape, RpgServer, RpgModule, Move, MapData } from '@rpgjs/server'
+import { HookClient, RpgMap, RpgPlayer, RpgServerEngine, ShapePositioning, RpgShape, RpgServer, RpgModule, Move, MapData, EventData, RpgEvent } from '@rpgjs/server'
 import { RpgClientEngine, RpgSceneMap, RpgPlugin, Control } from '@rpgjs/client'
 import { clear, nextTick, waitUntil } from '@rpgjs/testing'
 import { inputs } from './fixtures/control'
@@ -68,6 +68,91 @@ test('Create Shape (polygon)', () => {
     expect(shape.hitbox.edges).toBeDefined()
 })
 
+describe('Shape - Event', () => {
+    test('Shape In -Hook', () => {
+        return new Promise(async (resolve: any) => {
+            const shape = map.createShape(box)
+
+            @EventData({
+                name: 'EV-1'
+            })
+            class MyEvent extends RpgEvent {
+                onInShape(_shape) {
+                    expect(_shape.id).toBe(shape.id)
+                    resolve()
+                }
+            }
+            map.createDynamicEvent({
+                x: 50,
+                y: 50,
+                event: MyEvent
+            })
+            const event = map.getEventByName('EV-1') as RpgEvent
+            await event.moveRoutes([Move.right()])
+        })
+    })
+
+    test('Detect Other Player (onDetect Hook)', () => {
+        return new Promise(async (resolve: any) => {
+            let shape
+            @EventData({
+                name: 'EV-1'
+            })
+            class MyEvent extends RpgEvent {
+                onInit() {
+                    shape = this.attachShape({
+                        height: 100,
+                        width: 100,
+                        positioning: ShapePositioning.Center
+                    })
+                }
+                onDetect(_player, _shape) {
+                    expect(_player.id).toBe(player.id)
+                    expect(_shape.id).toBe(shape.id)
+                    resolve()
+                }
+            }
+            map.createDynamicEvent({
+                x: 50,
+                y: 50,
+                event: MyEvent
+            })
+            player.teleport({ x: 50, y: 50 })
+        })
+    })
+
+    test('UnDetect Other Player (onUnDetect Hook)', () => {
+        return new Promise(async (resolve: any) => {
+            let shape
+            @EventData({
+                name: 'EV-1'
+            })
+            class MyEvent extends RpgEvent {
+                onInit() {
+                    shape = this.attachShape({
+                        height: 100,
+                        width: 100,
+                        positioning: ShapePositioning.Center
+                    })
+                }
+                onUnDetect(_player, _shape) {
+                    expect(_player.id).toBe(player.id)
+                    expect(_shape.id).toBe(shape.id)
+                    resolve()
+                }
+            }
+            map.createDynamicEvent({
+                x: 50,
+                y: 50,
+                event: MyEvent
+            })
+            await player.teleport({ x: 50, y: 50 })
+            player.teleport({ x: 200, y: 0 }) 
+        })
+    })
+})
+
+
 describe('Shape In - Hook', () => {
     function onInShape(shape, position = { x: 50, y: 50 }): Promise<{
         shape: RpgShape,
@@ -92,9 +177,7 @@ describe('Shape In - Hook', () => {
             }])
             map = player.getCurrentMap()
             map.createShape(shape)
-            player.position.x = position.x
-            player.position.y = position.y
-            await player.moveRoutes([Move.right()])
+            player.teleport(position)
         })
     }
 
@@ -115,6 +198,61 @@ describe('Shape In - Hook', () => {
 
     test('Test Z Position', async () => {
         const { player } = await onInShape(box)
+        player.position.z = 10
+        await waitUntil(
+            player.moveRoutes([Move.left()])
+        )
+        expect(player.position.z).toBe(10)
+    })
+})
+
+// TODO: If you teleport the player far away, he won't detect if you leave a shape because you're no longer in the same region (virtual grid).
+describe('Shape Out - Hook', () => {
+    function onOutShape(shape, position = { x: 50, y: 50 }): Promise<{
+        shape: RpgShape,
+        player: RpgPlayer
+    }> {
+        return new Promise(async (resolve: any) => {
+            clear()
+
+            @RpgModule<RpgServer>({
+                player: {
+                    onOutShape(player: RpgPlayer, shape: RpgShape) {
+                        expect(player.id).toBeDefined()
+                        expect(shape.name).toBeDefined()
+                        resolve({ shape, player })
+                    }
+                }
+            })
+            class RpgServerModule { }
+
+            const { player } = await _beforeEach([{
+                server: RpgServerModule
+            }])
+            map = player.getCurrentMap()
+            map.createShape(shape)
+            await player.teleport(position)
+            player.teleport({ x: 240, y: 0 })
+        })
+    }
+
+    test('Box', async () => {
+        const { shape } = await onOutShape(box)
+        expect(shape.type).toBe('box')
+    })
+
+    test('Circle', async () => {
+        const { shape } = await onOutShape(circle)
+        expect(shape.type).toBe('circle')
+    })
+
+    test('Polygon', async () => {
+        const { shape } = await onOutShape(polygon)
+        expect(shape.type).toBe('polygon')
+    })
+
+    test('Test Z Position', async () => {
+        const { player } = await onOutShape(box)
         player.position.z = 10
         await waitUntil(
             player.moveRoutes([Move.left()])
