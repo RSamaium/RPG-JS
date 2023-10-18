@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/types",
-  "version": "4.0.4",
+  "version": "4.0.5",
   "description": "",
   "main": "lib/index.js",
   "types": "./lib/index.d.ts",
