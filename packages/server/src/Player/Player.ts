@@ -95,6 +95,10 @@ const playerSchemas = {
         $permanent: false
     },
 
+    moving: {
+        $permanent: false
+    },
+
     param: Object,
     hp: Number,
     sp: Number,
@@ -262,6 +266,7 @@ export class RpgPlayer extends RpgCommonPlayer {
         this._gui = {}
         this._elementsEfficiency = []
         this._statesEfficiency = []
+        this.moving = false
 
         this.addParameter(MAXHP, MAXHP_CURVE)
         this.addParameter(MAXSP, MAXSP_CURVE)

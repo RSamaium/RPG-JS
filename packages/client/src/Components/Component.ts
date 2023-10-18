@@ -215,9 +215,9 @@ export class RpgComponent<T = any> extends Container {
         }
         else {
             const { position, direction } = this.data as RpgCommonPlayer
-            this._x = Math.floor(position?.x ?? 0)
-            this._y = Math.floor(position?.y ?? 0)
-            this.z = Math.floor(position?.z ?? 0)
+            this._x = position?.x ?? 0
+            this._y = position?.y ?? 0
+            this.z = position?.z ?? 0
             this.direction = direction
         }
         this._rotation = this.data['rotation'] ?? 0
@@ -262,7 +262,7 @@ export class RpgComponent<T = any> extends Container {
     update(obj: any, objChanged: any, time: number, deltaRatio: number): { moving: boolean } {
         if (this.dragMode?.dragging) return { moving: true }
 
-        const { speed, teleported, map, fixed, rotation } = obj
+        const { speed, teleported, map, fixed } = obj
         this.data = obj
         this.setPosition()
         const renderSpeed = speed * deltaRatio
@@ -270,7 +270,7 @@ export class RpgComponent<T = any> extends Container {
             this.angle += Math.min(renderSpeed, this._rotation - this.angle)
         }
 
-        let moving = false
+        let moving = obj.moving ?? false
 
         if (!fixed) {
             if (teleported != this.teleported || map != this.map) {

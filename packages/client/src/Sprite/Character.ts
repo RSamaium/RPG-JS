@@ -130,7 +130,7 @@ export default class Character extends Sprite {
                this.playAnimation(AnimationEnum.Walk)
             }
             else {
-                this.playAnimation(AnimationEnum.Stand)
+               this.playAnimation(AnimationEnum.Stand)
             }
         }
 

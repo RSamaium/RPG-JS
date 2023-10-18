@@ -9,6 +9,7 @@ import { Vector2d, Vector2dZero } from './Vector2d'
 import { Box } from './VirtualGrid'
 import { Behavior, ClientMode, Direction, MoveClientMode, MoveTo, PlayerType, Position, PositionXY, Tick } from '@rpgjs/types'
 import { from, map, mergeMap, Observable, Subject, tap, takeUntil, filter } from 'rxjs'
+import { RpgCommonPlayer } from './Player'
 
 const ACTIONS = { IDLE: 0, RUN: 1, ACTION: 2 }
 
@@ -24,6 +25,7 @@ export class AbstractObject {
     width: number = 0
     speed: number
     direction: number = 3
+    moving: boolean = false
 
     /*
         Properties for move mode
@@ -751,8 +753,34 @@ export class AbstractObject {
     */
     stopMoveTo() {
         if (this.destroyMove$.closed) return
+        this.moving = false
         this.destroyMove$.next(true)
         this.destroyMove$.unsubscribe()
+    }
+
+    private _lookToward(player: Vector2d, otherPlayer: Vector2d): Direction {
+        const { x, y } = player;
+        const { x: ox, y: oy } = otherPlayer;
+    
+        // Calculate the differences between the x and y coordinates.
+        const dx = ox - x;
+        const dy = oy - y;
+    
+        // Determine the primary direction based on the relative magnitude
+        // of the x and y differences.
+        if (Math.abs(dx) > Math.abs(dy)) {
+            if (dx > 0) {
+                return Direction.Right;
+            } else {
+                return Direction.Left;
+            }
+        } else {
+            if (dy > 0) {
+                return Direction.Down;
+            } else {
+                return Direction.Up;
+            }
+        }
     }
 
     _moveTo(tick$: Observable<Tick>, positionTarget: AbstractObject | RpgShape | PositionXY, options: MoveTo = {}): Observable<Vector2d> {
@@ -760,6 +788,7 @@ export class AbstractObject {
         let count = 0
         const lastPositions: Vector2d[] = []
         this.stopMoveTo()
+        this.moving = true
         this.destroyMove$ = new Subject()
         const { infinite, onStuck, onComplete } = options
         const getPosition = (): Vector2d => {
@@ -792,9 +821,16 @@ export class AbstractObject {
                         i = 0
                     }
                     if (
-                        lastPositions[2] && lastPositions[0].isEqual(lastPositions[2])
+                        lastPositions[2] &&
+                        (
+                            lastPositions[0].isEqual(lastPositions[2]) ||
+                            lastPositions[1].isEqual(lastPositions[2]) ||
+                            lastPositions[0].isEqual(lastPositions[1])
+                        )
                     ) {
+                        this.direction = this._lookToward(this.position, getPosition())
                         onStuck?.(count)
+                        this.moving = false
                     }
                     else if (this.position.isEqual(getPosition())) {
                         onComplete?.()
@@ -804,6 +840,7 @@ export class AbstractObject {
                     }
                     else {
                         count = 0
+                        this.moving = true
                     }
                 })
             )
