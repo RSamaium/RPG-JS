@@ -29,9 +29,9 @@ export class CharaEvent extends RpgEvent {
 
     onOutShape(shape: RpgShape) {}
 
-    onDetect(player: RpgPlayer, shape: RpgShape) {}
+    onDetectInShape(player: RpgPlayer, shape: RpgShape) {}
 
-    onUnDetect(player: RpgPlayer, shape: RpgShape) {}
+    onDetectOutShape(player: RpgPlayer, shape: RpgShape) {}
 }
 ```
 
@@ -135,7 +135,7 @@ export class CharaEvent extends RpgEvent {
             positioning: ShapePositioning.Center
         })
     }
-    onDetect(player: RpgPlayer, shape: RpgShape) {
+    onDetectInShape(player: RpgPlayer, shape: RpgShape) {
          console.log(player.id, shape.id)
     }
 }
@@ -163,7 +163,7 @@ export class CharaEvent extends RpgEvent {
             positioning: ShapePositioning.Center
         })
     }
-    onUnDetect(player: RpgPlayer, shape: RpgShape) {
+    onDetectOutShape(player: RpgPlayer, shape: RpgShape) {
         console.log(player.id, shape.id)
     }
 }

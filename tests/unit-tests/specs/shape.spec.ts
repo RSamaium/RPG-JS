@@ -92,7 +92,7 @@ describe('Shape - Event', () => {
         })
     })
 
-    test('Detect Other Player (onDetect Hook)', () => {
+    test('Detect Other Player (onDetectInShape Hook)', () => {
         return new Promise(async (resolve: any) => {
             let shape
             @EventData({
@@ -106,7 +106,7 @@ describe('Shape - Event', () => {
                         positioning: ShapePositioning.Center
                     })
                 }
-                onDetect(_player, _shape) {
+                onDetectInShape(_player, _shape) {
                     expect(_player.id).toBe(player.id)
                     expect(_shape.id).toBe(shape.id)
                     resolve()
@@ -121,7 +121,7 @@ describe('Shape - Event', () => {
         })
     })
 
-    test('UnDetect Other Player (onUnDetect Hook)', () => {
+    test('UnDetect Other Player (onDetectOutShape Hook)', () => {
         return new Promise(async (resolve: any) => {
             let shape
             @EventData({
@@ -135,7 +135,7 @@ describe('Shape - Event', () => {
                         positioning: ShapePositioning.Center
                     })
                 }
-                onUnDetect(_player, _shape) {
+                onDetectOutShape(_player, _shape) {
                     expect(_player.id).toBe(player.id)
                     expect(_shape.id).toBe(shape.id)
                     resolve()
