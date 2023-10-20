@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/client",
-  "version": "4.0.5",
+  "version": "4.1.0",
   "description": "",
   "main": "lib/index.js",
   "types": "./lib/index.d.ts",
@@ -29,7 +29,7 @@
   "dependencies": {
     "@nanostores/react": "^0.7.1",
     "@pixi/tilemap": "^4.0.0",
-    "@rpgjs/common": "^4.0.5",
+    "@rpgjs/common": "^4.1.0",
     "@rpgjs/tiled": "^4.0.5",
     "@rpgjs/types": "^4.0.5",
     "@types/howler": "2.2.7",

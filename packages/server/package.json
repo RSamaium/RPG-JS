@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/server",
-  "version": "4.0.5",
+  "version": "4.1.0",
   "description": "",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
@@ -27,7 +27,7 @@
   "author": "Samuel Ronce",
   "license": "MIT",
   "dependencies": {
-    "@rpgjs/common": "^4.0.5",
+    "@rpgjs/common": "^4.1.0",
     "@rpgjs/database": "^4.0.5",
     "@rpgjs/tiled": "^4.0.5",
     "@rpgjs/types": "^4.0.5",

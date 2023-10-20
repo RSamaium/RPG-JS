@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [4.1.0](https://github.com/RSamaium/RPG-JS/compare/v4.0.5...v4.1.0) (2023-10-20)
+
+
+### Features
+
+* onDetectInShape and onDetectOutShape hooks in event ([b2c6a2f](https://github.com/RSamaium/RPG-JS/commit/b2c6a2f98b3bcc992deb0473a9fb1699874b6e48))
+
+
+
+
+
 ## 4.0.5 (2023-10-18)
 
 
