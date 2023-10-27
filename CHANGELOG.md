@@ -3,6 +3,21 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [4.1.1](https://github.com/RSamaium/RPG-JS/compare/v4.1.0...v4.1.1) (2023-10-27)
+
+
+### Bug Fixes
+
+* **compiler:**  move images in RPG mode #community-216 ([182f2f1](https://github.com/RSamaium/RPG-JS/commit/182f2f11e53813cb7794295274b67d185906eb84)), closes [#community-216](https://github.com/RSamaium/RPG-JS/issues/community-216)
+* **gui:** get vue instance #community-215 ([2874815](https://github.com/RSamaium/RPG-JS/commit/287481517028196f1bf8bc327b68134e8f5f63d0)), closes [#community-215](https://github.com/RSamaium/RPG-JS/issues/community-215)
+* **scene:** click in scene map ([04d56d6](https://github.com/RSamaium/RPG-JS/commit/04d56d6e07c58e2c039732e35ae3b94fc6751fa5))
+* **test:** clear after scene tests ([e9a934c](https://github.com/RSamaium/RPG-JS/commit/e9a934c7fc197079036628a94891c371bae4edb2))
+* **tests:** size of ([558316e](https://github.com/RSamaium/RPG-JS/commit/558316e9c63282eef0ce6dd1594cc7b1a836c1d2))
+
+
+
+
+
 # [4.1.0](https://github.com/RSamaium/RPG-JS/compare/v4.0.5...v4.1.0) (2023-10-20)
 
 

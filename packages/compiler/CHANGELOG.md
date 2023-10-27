@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [4.1.1](https://github.com/RSamaium/RPG-JS/compare/v4.1.0...v4.1.1) (2023-10-27)
+
+
+### Bug Fixes
+
+* **compiler:**  move images in RPG mode #community-216 ([182f2f1](https://github.com/RSamaium/RPG-JS/commit/182f2f11e53813cb7794295274b67d185906eb84)), closes [#community-216](https://github.com/RSamaium/RPG-JS/issues/community-216)
+* **tests:** size of ([558316e](https://github.com/RSamaium/RPG-JS/commit/558316e9c63282eef0ce6dd1594cc7b1a836c1d2))
+
+
+
+
+
 ## 4.0.5 (2023-10-18)
 
 

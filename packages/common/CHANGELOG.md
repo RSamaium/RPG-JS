@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [4.1.1](https://github.com/RSamaium/RPG-JS/compare/v4.1.0...v4.1.1) (2023-10-27)
+
+
+### Bug Fixes
+
+* **scene:** click in scene map ([04d56d6](https://github.com/RSamaium/RPG-JS/commit/04d56d6e07c58e2c039732e35ae3b94fc6751fa5))
+* **test:** clear after scene tests ([e9a934c](https://github.com/RSamaium/RPG-JS/commit/e9a934c7fc197079036628a94891c371bae4edb2))
+
+
+
+
+
 # [4.1.0](https://github.com/RSamaium/RPG-JS/compare/v4.0.5...v4.1.0) (2023-10-20)
 
 
