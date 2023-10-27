@@ -78,12 +78,12 @@ export abstract class Scene {
      * Listen to all the synchronized values of the scene with the server
      * 
      * ```ts 
-     * import { RpgClient, RpgModule, RpgSceneMap, RpgSprite } from '@rpgjs/client'
+     * import { RpgClient, RpgModule, RpgSceneMap } from '@rpgjs/client'
      * 
      *  @RpgModule<RpgClient>({ 
             scenes: {
                 map: {
-                    onAfterLoading(scene: RpgSceneMap, sprite: RpgSprite) {
+                    onAfterLoading(scene: RpgSceneMap) {
                       scene.valuesChange.subscribe((obj) => {
                          console.log(obj.data, obj.partial)
                       })
@@ -182,17 +182,17 @@ export abstract class Scene {
      * * `loop`: Display the animation in a loop (false by default)
      * 
      * ```ts 
-     * import { RpgClient, RpgModule, RpgSceneMap, RpgSprite } from '@rpgjs/client'
+     * import { RpgClient, RpgModule, RpgSceneMap } from '@rpgjs/client'
      * 
 
      * @RpgModule<RpgClient>({ 
             scenes: {
                 map: {
-                    onAfterLoading(scene: RpgSceneMap, sprite: RpgSprite) {
-                      const animation = scene.showAnimation({
-                         graphic: 'my-spritesheet',
-                          animationName: 'my-anim'
-                      })
+                    onAfterLoading(scene: RpgSceneMap) {
+                        const animation = scene.showAnimation({
+                            graphic: 'my-spritesheet',
+                            animationName: 'my-anim'
+                        })
                     }
                 }
             }
