@@ -2,12 +2,16 @@ import {_beforeEach} from './beforeEach'
 import { RpgPlayer } from '@rpgjs/server'
 import { RpgClientEngine, RpgModule, RpgClient, RpgSceneMap } from '@rpgjs/client'
 import { clear } from '@rpgjs/testing'
-import { beforeEach, test, afterEach, expect, describe, vi } from 'vitest'
+import { beforeEach, test, afterEach, expect, describe, vi, afterAll } from 'vitest'
 
 let  client: RpgClientEngine, 
 player: RpgPlayer
 
 beforeEach(async () => {
+    clear()
+})
+
+afterAll(() => {
     clear()
 })
 

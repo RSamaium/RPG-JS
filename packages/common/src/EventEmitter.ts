@@ -32,7 +32,7 @@ export class EventEmitter {
                 else ret.push(listener(data))
             }
         }
-        else if (this.listenersOnce[name]) {
+        if (this.listenersOnce[name]) {
             if (rest) ret.push(this.listenersOnce[name](...data))
             else ret.push(this.listenersOnce[name](data))
         }
