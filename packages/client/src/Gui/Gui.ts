@@ -63,11 +63,20 @@ export class Gui {
         }
 
         const propagateEvents = (el: HTMLElement) => {
-            const events = ['click', 'mousedown', 'mouseup', 'mousemove', 'mouseenter', 'mouseleave', 'mouseover', 'mouseout', 'contextmenu', 'pointerdown', 'pointerup', 'pointermove', 'pointerenter', 'pointerleave', 'pointerover', 'pointerout', 'pointerupoutside', 'pointercancel', 'touchstart', 'touchend', 'touchmove', 'touchcancel', 'wheel', 'keydown', 'keyup', 'keypress', 'keydownoutside', 'keyupoutside', 'keypressoutside']
-            for (let type of events) {
-                el.addEventListener(type, (e) => {
-                    this.renderer.canvas.dispatchEvent(new MouseEvent(type, e))
-                })
+            const eventMap = {
+                MouseEvent: ['click', 'mousedown', 'mouseup', 'mousemove', 'mouseenter', 'mouseleave', 'mouseover', 'mouseout', 'contextmenu', 'wheel'],
+                KeyboardEvent: ['keydown', 'keyup', 'keypress', 'keydownoutside', 'keyupoutside', 'keypressoutside'],
+                PointerEvent: ['pointerdown', 'pointerup', 'pointermove', 'pointerover', 'pointerout', 'pointerenter', 'pointerleave', 'pointercancel'],
+                TouchEvent: ['touchstart', 'touchend', 'touchmove', 'touchcancel']
+            };
+        
+            for (let [_Constructor, events] of Object.entries(eventMap)) {
+                for (let type of events) {
+                    el.addEventListener(type, (e) => {
+                        const _class = window[_Constructor] ?? MouseEvent
+                        this.renderer.canvas.dispatchEvent(new _class(type, e))
+                    });
+                }
             }
         }
 

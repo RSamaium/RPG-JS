@@ -1,14 +1,14 @@
-import {_beforeEach} from './beforeEach'
+import { _beforeEach } from './beforeEach'
 import { Move, RpgModule, RpgPlayer, RpgServerEngine } from '@rpgjs/server'
 import { RpgClientEngine, RpgClient, RpgGui } from '@rpgjs/client'
 import { clear, nextTick, waitUntil } from '@rpgjs/testing'
 import menuGui from './fixtures/gui/menu.vue'
 import tooltipGui from './fixtures/gui/tooltip.vue'
-import { beforeEach, test, afterEach, expect } from 'vitest'
+import { beforeEach, test, afterEach, expect, vi } from 'vitest'
 
-let  client: RpgClientEngine, 
-player: RpgPlayer,
-server: RpgServerEngine
+let client: RpgClientEngine,
+    player: RpgPlayer,
+    server: RpgServerEngine
 
 const GUI_NAME = 'my-hud'
 const TOOLTIP_NAME = 'tooltip'
@@ -19,7 +19,7 @@ const TOOLTIP_NAME = 'tooltip'
         tooltipGui
     ]
 })
-class RpgClientModule {}
+class RpgClientModule { }
 
 beforeEach(async () => {
     const ret = await _beforeEach([{
@@ -65,7 +65,7 @@ test('display Tooltip and move', async () => {
     const tooltips1 = document.getElementById('tooltips')?.children
     expect(tooltips1?.length).toBe(1)
     await waitUntil(
-        player.moveRoutes([ Move.right() ])
+        player.moveRoutes([Move.right()])
     )
     const tooltips2 = document.getElementById('tooltips')?.children
     expect(tooltips2?.length).toBe(1)
@@ -81,6 +81,27 @@ test('close Tooltip', async () => {
     await nextTick(client)
     const tooltips2 = document.getElementById('tooltips')?.children
     expect(tooltips2?.length).toBe(0)
+})
+
+test('Get Vue App/Instance', async () => {
+    clear()
+
+    const onStart = vi.fn()
+
+    @RpgModule<RpgClient>({
+        engine: {
+            onStart
+        }
+    })
+    class RpgClientModule { }
+
+    await _beforeEach([{
+        client: RpgClientModule
+    }])
+
+    expect(onStart).toHaveBeenCalled()
+    expect(onStart.mock.calls[0][0].vueApp).toBeDefined()
+    expect(onStart.mock.calls[0][0].vueInstance).toBeDefined()
 })
 
 afterEach(() => {

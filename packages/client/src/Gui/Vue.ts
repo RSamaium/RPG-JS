@@ -76,8 +76,7 @@ export class VueGui {
         this.renderer = this.clientEngine.renderer
         this.gameEngine = this.clientEngine.gameEngine
         const { gui } = parentGui
-        const self = this
-
+  
         const obj = {
             render,
             data() {

@@ -10,7 +10,7 @@ const toml = `
         logLevel = 'silent'
 
     [vite.build]
-        external = ['@rpgjs/server/express', '@rpgjs/server']
+        external = ['@rpgjs/server/express', '@rpgjs/server', '@rpgjs/client', '@rpgjs/standalone', 'socket.io-client']
 `
 
 const map = `
@@ -46,6 +46,8 @@ const mapStructure = {
     'base.png': ''
 }
 
+vi.mock('image-size')
+
 describe('Test Structure files After Build', () => {
     const defaultFiles = {
         'package.json': JSON.stringify({
@@ -61,7 +63,7 @@ describe('Test Structure files After Build', () => {
             },
         }),
         'rpg.toml': toml,
-        'index.html': '<html></html>',
+        'index.html': '<html><head></head></html>',
         'node_modules': mockFs.load(path.resolve(__dirname, '../node_modules')),
     }
 
@@ -106,7 +108,7 @@ describe('Test Structure files After Build', () => {
             expect(serverFiles).toEqual(['map.tmx', 'tileset.tsx'])
 
             const clientFiles = fs.readdirSync('dist/client/assets')
-            expect(clientFiles).toEqual(['base.png'])
+            expect(clientFiles).toEqual(['base.png', expect.stringContaining('main')])
         })
     })
 
@@ -141,7 +143,28 @@ describe('Test Structure files After Build', () => {
             await buildMode({})
 
             const files = fs.readdirSync('dist/assets')
-            expect(files).toEqual(['base.png', 'map.tmx', 'tileset.tsx'])
+            expect(files).toEqual(['base.png', expect.stringContaining('main'), 'map.tmx', 'tileset.tsx',])
+        })
+
+        test('Copy Spritesheet', async () => {
+            mockFs({
+                ...defaultFiles,
+                'main/spritesheets/characters/female.png': '',
+                'main/spritesheets/characters/female.ts': `
+                    export default {}
+                `,
+                'rpg.toml': `
+                    modules = [
+                        './main'
+                    ]
+                    ${toml}
+                `
+            })
+
+            await buildMode({})
+
+            const files = fs.readdirSync('dist/assets')
+            expect(files).toEqual(['female.png', expect.stringContaining('main')])
         })
 
     })

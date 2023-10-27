@@ -55,8 +55,8 @@ export class RpgRenderer {
     }
 
     /** @internal */
-    async init() {
-        this.onDOMLoaded()
+    init(): Promise<void> {
+        return this.onDOMLoaded()
     }
 
     /** @internal */
@@ -102,7 +102,7 @@ export class RpgRenderer {
     }
 
     /** @internal */
-    onDOMLoaded() {
+    async onDOMLoaded(): Promise<void> {
         let options = {
             antialias: true,
             ...this.options.canvas
@@ -135,7 +135,7 @@ export class RpgRenderer {
         this.fadeContainer.visible = false
         this.fadeContainer.alpha = 0
 
-        RpgGui._initialize(this.clientEngine, this.guiEl)
+        await RpgGui._initialize(this.clientEngine, this.guiEl)
 
         this.resize()
     }

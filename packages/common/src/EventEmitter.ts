@@ -32,7 +32,7 @@ export class EventEmitter {
                 else ret.push(listener(data))
             }
         }
-        else if (this.listenersOnce[name]) {
+        if (this.listenersOnce[name]) {
             if (rest) ret.push(this.listenersOnce[name](...data))
             else ret.push(this.listenersOnce[name](data))
         }
@@ -44,9 +44,18 @@ export class EventEmitter {
         }))
     }
 
-    off(name: string) {
-        delete this.listeners[name]
-        delete this.listenersOnce[name]
+    off(name: string, listener?: Function) {
+        if (!listener) {
+            delete this.listeners[name]
+            delete this.listenersOnce[name]
+            return
+        }
+        if (this.listeners[name]) {
+            const index = this.listeners[name].indexOf(listener)
+            if (index !== -1) {
+                this.listeners[name].splice(index, 1)
+            }
+        }
     }
 
     clear() {

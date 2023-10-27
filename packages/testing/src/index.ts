@@ -78,15 +78,21 @@ let clients: RpgClientEngine[]
 function changeMap(client: RpgClientEngine, server: RpgServerEngine, mapId: string, position?: PositionMap): Promise<void> {
     return new Promise(async (resolve: any) => {
         let player = RpgWorld.getPlayer(client.playerId)
-        RpgPlugin.off(HookClient.BeforeSceneLoading)
-        RpgPlugin.off(HookClient.AfterSceneLoading)
-        RpgPlugin.on(HookClient.BeforeSceneLoading, () => {
-           client.PIXI.utils.clearTextureCache()
-        })
-        RpgPlugin.on(HookClient.AfterSceneLoading, () => {
-            client.nextFrame(0) // render scene
+
+        const beforeLoading = () => {
+            client.PIXI.utils.clearTextureCache()
+        }
+
+        const afterLoading = () => {
+            client.nextFrame(0) 
+            RpgPlugin.off(HookClient.BeforeSceneLoading, beforeLoading)
+            RpgPlugin.off(HookClient.AfterSceneLoading, afterLoading)
             resolve()
-        })
+        }
+
+        RpgPlugin.on(HookClient.BeforeSceneLoading, beforeLoading)
+        RpgPlugin.on(HookClient.AfterSceneLoading, afterLoading)
+        
         await player.changeMap(mapId, position)
     })
 }
@@ -185,8 +191,8 @@ export async function testing(modules: ModuleType[], optionsServer: any = {}, op
  * @memberof Testing
  */
 export function clear(): void {
-    server.world.clear()
-    clients.forEach(client => client.reset())
+    server?.world.clear()
+    clients?.forEach(client => client.reset())
     RpgMap.buffer.clear()
     RpgPlugin.clear()
     serverIo.clear()

@@ -219,9 +219,6 @@ describe('TOML Configuration test', () => {
                 }
             });
 
-            // Mock sizeOf to return specific dimensions
-            (sizeOf as Vi.Mock).mockReturnValue({ width: 100, height: 100 })
-
             const result = loadSpriteSheet(directoryName, modulePath, options)
 
             expect(result.variablesString).toBe('_main_sprite_folder_sprite1ts')
@@ -245,9 +242,6 @@ describe('TOML Configuration test', () => {
                     'sprite1.png': ''
                 }
             });
-
-            // Mock sizeOf to return specific dimensions
-            (sizeOf as Vi.Mock).mockReturnValue({ width: 100, height: 100 })
 
             const result = loadSpriteSheet(directoryName, modulePath, options)
 
