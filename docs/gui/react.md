@@ -49,12 +49,12 @@ export default function MyGUI({ foo }) {
   console.log(foo);
 
   useEffect(() => {
-    rpgCurrentPlayer.subscribe(({ object }) => {
+    const subscription = rpgCurrentPlayer.subscribe(({ object }) => {
       setHp(object.hp);
     });
     
     return () => {
-      rpgCurrentPlayer.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
 
