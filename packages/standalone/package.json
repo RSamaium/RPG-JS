@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/standalone",
-  "version": "4.1.1",
+  "version": "4.1.2",
   "description": "",
   "main": "src/index.ts",
   "scripts": {
@@ -10,9 +10,9 @@
   "author": "Samuel Ronce",
   "license": "MIT",
   "dependencies": {
-    "@rpgjs/client": "^4.1.1",
+    "@rpgjs/client": "^4.1.2",
     "@rpgjs/common": "^4.1.1",
-    "@rpgjs/server": "^4.1.1"
+    "@rpgjs/server": "^4.1.2"
   },
   "devDependencies": {
     "@rpgjs/compiler": "^4.1.1",

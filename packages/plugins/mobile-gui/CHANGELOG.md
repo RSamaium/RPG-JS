@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [4.1.2](https://github.com/RSamaium/RPG-JS/compare/v4.1.1...v4.1.2) (2023-10-30)
+
+
+### Bug Fixes
+
+* **gui:** don't propagate events ([1439e0f](https://github.com/RSamaium/RPG-JS/commit/1439e0fa4718cbdc07cd2ceb8ff4067e116cef9b))
+
+
+
+
+
 ## [4.1.1](https://github.com/RSamaium/RPG-JS/compare/v4.1.0...v4.1.1) (2023-10-27)
 
 **Note:** Version bump only for package @rpgjs/mobile-gui
