@@ -130,7 +130,6 @@ export class SceneMap extends Scene {
         if (nbLoad > 0) {
             const assetsLoaded = await Assets.load(assets)
             for (let assetName in assetsLoaded) {
-                if (!assetsLoaded[assetName]) console.log(assetName, assetsLoaded[assetName])
                 const spritesheet = spritesheets.get(assetName)
                 if (spritesheet) spritesheet.resource = assetsLoaded[assetName]
             }
@@ -368,9 +367,6 @@ export class SceneMap extends Scene {
     on(eventName: keyof DisplayObjectEvents, cb: (position: { x: number, y: number }, ev?: any) => any) {
         if (!this.viewport) return
         this.viewport.eventMode = 'static'
-        if (eventName == 'click') {
-            eventName = 'pointerdown'
-        }
         this.viewport.on(eventName, (...args) => {
             const ev: FederatedPointerEvent = args[0] as any
             const pos = ev.getLocalPosition(this.viewport as Viewport)

@@ -220,6 +220,9 @@ export interface RpgServer {
      * server.module.emit('server.player.onAuth', player)
      * ```
      * 
+     * > When we issue a hook, it has to be in form:
+     * > `<side>.<property>.<function>`
+     * 
      * And listen to the hook:
      * 
      * ```ts

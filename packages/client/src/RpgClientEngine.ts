@@ -273,6 +273,12 @@ export class RpgClientEngine {
     }
 
     getResourceUrl(source: string): string {
+        // @ts-ignore
+        if (window.urlCache && window.urlCache[source]) {
+            // @ts-ignore
+            return window.urlCache[source]
+        }
+
         if (source.startsWith('data:')) {
             return source
         }

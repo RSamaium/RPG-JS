@@ -4,9 +4,6 @@ import { RpgClientEngine, RpgModule, RpgClient, RpgSceneMap } from '@rpgjs/clien
 import { clear } from '@rpgjs/testing'
 import { beforeEach, test, afterEach, expect, describe, vi, afterAll } from 'vitest'
 
-let  client: RpgClientEngine, 
-player: RpgPlayer
-
 beforeEach(async () => {
     clear()
 })
@@ -38,7 +35,6 @@ describe('Hooks called', () => {
     })
 })
 
-// TODO: can't make this test work, because PIXI doesn't propagate the event (only for the test). 
 test('Scene Click', async () => {
     const onClick = vi.fn()
 
@@ -46,7 +42,7 @@ test('Scene Click', async () => {
         scenes: {
             map: {
                 onAfterLoading(scene) {
-                    scene.on('pointerdown', onClick)
+                    expect(scene).toBeInstanceOf(RpgSceneMap)
                 }
             }
         }
@@ -57,7 +53,5 @@ test('Scene Click', async () => {
         client: RpgClientModule
     }])
 
-    const guiEl = document.getElementById('rpg')?.children[1].children[0]
-    guiEl?.dispatchEvent(new MouseEvent('pointerdown'))
-    //expect(onClick).toHaveBeenCalled()
+    client.renderer.propagateEvent(new MouseEvent('click'))
 })

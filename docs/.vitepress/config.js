@@ -193,6 +193,7 @@ const pluginMenu = [{
   collapsed: false,
   items: [
     { text: "Character Select", link: "/plugins/character-select" },
+    { text: "Inventory GUI Plugin", link: "/plugins/inventory-plugin" },
   ]
 }]
 

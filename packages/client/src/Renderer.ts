@@ -9,7 +9,7 @@ import { TransitionScene } from './Effects/TransitionScene'
 import { Subject, forkJoin } from 'rxjs'
 import { GameEngineClient } from './GameEngine'
 import { SpinnerGraphic } from './Effects/Spinner'
-import { autoDetectRenderer, Container, Graphics, ICanvas, IRenderer } from 'pixi.js'
+import { autoDetectRenderer, Container, EventBoundary, FederatedEvent, FederatedPointerEvent, Graphics, ICanvas, IRenderer } from 'pixi.js'
 
 const { elementToPositionAbsolute } = Utils
 
@@ -263,5 +263,47 @@ export class RpgRenderer {
     clearScene() {
         this.scene = null
         this.sceneContainer.removeChildren()
+    }
+
+    /**
+     * @title Propagate mouse event to Viewport
+     * @method propagateEvent(ev)
+     * @stability 1
+     * @memberof RpgRenderer
+     * @returns {void}
+     */
+    propagateEvent(ev: MouseEvent) {
+        const boundary = new EventBoundary(this.stage);
+        const event = new FederatedPointerEvent(boundary)
+        event.global.set(ev.clientX, ev.clientY);
+        event.type = ev.type;
+        this.getScene<SceneMap>()?.viewport?.emit(event.type as any, event)
+    }
+
+    /***
+     * Propagate events from an HTMLElement to the canvas
+     * 
+     * @title Propagate events
+     * @method addPropagateEventsFrom(el)
+     * @stability 1
+     * @memberof RpgRenderer
+     * @returns {void}
+     */
+    addPropagateEventsFrom(el: HTMLElement) {
+        const eventMap = {
+            MouseEvent: ['click', 'mousedown', 'mouseup', 'mousemove', 'mouseenter', 'mouseleave', 'mouseover', 'mouseout', 'contextmenu', 'wheel'],
+            KeyboardEvent: ['keydown', 'keyup', 'keypress', 'keydownoutside', 'keyupoutside', 'keypressoutside'],
+            PointerEvent: ['pointerdown', 'pointerup', 'pointermove', 'pointerover', 'pointerout', 'pointerenter', 'pointerleave', 'pointercancel'],
+            TouchEvent: ['touchstart', 'touchend', 'touchmove', 'touchcancel']
+        };
+
+        for (let [_Constructor, events] of Object.entries(eventMap)) {
+            for (let type of events) {
+                el.addEventListener(type, (e) => {
+                    const _class = window[_Constructor] ?? MouseEvent
+                    this.canvas.dispatchEvent(new _class(type, e))
+                });
+            }
+        }
     }
 }

@@ -86,15 +86,19 @@ export class ReactGui {
             useEffect(() => {
                 this._gui.subscribe(gui => setGui(gui))
             }, [])
+
             return createElement(RpgReactContext.Provider, {
                 value: parentGui.getInjectObject()
             },
-                ..._gui.filter(ui => ui.display && !ui.attachToSprite).map(ui => createElement(ui.gui, {
+                ..._gui.filter(ui => ui.display && !ui.attachToSprite).map(ui => createElement('div', {
                     key: ui.name,
-                    ...(ui.data || {})
-                })),
+                    style: { 'pointerEvents': 'auto' },
+                },
+                    createElement(ui.gui, ui.data || {})
+                )),
                 ..._gui.filter(ui => ui.display && ui.attachToSprite).map(ui => createElement('div', {
-                    key: ui.name
+                    key: ui.name,
+                    style: { 'pointerEvents': 'auto' },
                 }, createElement(GuiTooltip(ui)))),
             )
         }
