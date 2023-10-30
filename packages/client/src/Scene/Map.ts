@@ -130,7 +130,6 @@ export class SceneMap extends Scene {
         if (nbLoad > 0) {
             const assetsLoaded = await Assets.load(assets)
             for (let assetName in assetsLoaded) {
-                if (!assetsLoaded[assetName]) console.log(assetName, assetsLoaded[assetName])
                 const spritesheet = spritesheets.get(assetName)
                 if (spritesheet) spritesheet.resource = assetsLoaded[assetName]
             }
