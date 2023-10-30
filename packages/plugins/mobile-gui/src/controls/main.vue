@@ -1,5 +1,5 @@
 <template>
-    <div class="controls">
+    <div class="controls" @click="propagate">
         <div class="d-pad" ref="dPad"></div>
         <div class="actions">
             <div class="action" @click="action"></div>
@@ -92,6 +92,9 @@ export default {
         },
         action() {
             this.rpgEngine.controls.applyControl(Control.Action)
+        },
+        propagate(evt) {
+            this.rpgEngine.renderer.propagateEvent(evt)
         }
     }
 }

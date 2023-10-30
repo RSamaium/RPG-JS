@@ -33,11 +33,11 @@ const _hoisted_1 = {
     style: { "position": "absolute", "top": "0", "left": "0" }
 }
 function render(_ctx, _cache) {
-    return (_openBlock(), _createElementBlock("div", {}, [
+    return (_openBlock(), _createElementBlock("div", {  }, [
         (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.fixedGui, (ui) => {
             return (_openBlock(), _createElementBlock(_Fragment, null, [
                 (ui.display)
-                    ? (_openBlock(), _createBlock(_resolveDynamicComponent(ui.name), _normalizeProps(_mergeProps({ key: 0 }, ui.data)), null, 16 /* FULL_PROPS */))
+                    ? (_openBlock(), _createBlock(_resolveDynamicComponent(ui.name), _normalizeProps(_mergeProps({ key: 0, style: { pointerEvents: 'auto' } }, ui.data)), null, 16 /* FULL_PROPS */))
                     : _createCommentVNode("v-if", true)
             ], 64 /* STABLE_FRAGMENT */))
         }), 256 /* UNKEYED_FRAGMENT */)),
@@ -49,7 +49,7 @@ function render(_ctx, _cache) {
                             return (_openBlock(), _createElementBlock("div", {
                                 style: _normalizeStyle(_ctx.tooltipPosition(tooltip.position))
                             }, [
-                                (_openBlock(), _createBlock(_resolveDynamicComponent(ui.name), _mergeProps({ ...ui.data, spriteData: tooltip }, {
+                                (_openBlock(), _createBlock(_resolveDynamicComponent(ui.name), _mergeProps({ ...ui.data, spriteData: tooltip, style: { pointerEvents: 'auto' }  }, {
                                     ref_for: true,
                                     ref: ui.name
                                 }), null, 16 /* FULL_PROPS */))
@@ -76,7 +76,7 @@ export class VueGui {
         this.renderer = this.clientEngine.renderer
         this.gameEngine = this.clientEngine.gameEngine
         const { gui } = parentGui
-  
+
         const obj = {
             render,
             data() {
@@ -101,7 +101,7 @@ export class VueGui {
                 tooltipFilter: parentGui.tooltipFilter.bind(parentGui)
             },
             mounted() {
-               
+
             }
         }
 

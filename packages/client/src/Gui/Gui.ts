@@ -62,29 +62,10 @@ export class Gui {
             COMPONENT_LIBRARIES.push(await import('./React').then(m => m.ReactGui))
         }
 
-        const propagateEvents = (el: HTMLElement) => {
-            const eventMap = {
-                MouseEvent: ['click', 'mousedown', 'mouseup', 'mousemove', 'mouseenter', 'mouseleave', 'mouseover', 'mouseout', 'contextmenu', 'wheel'],
-                KeyboardEvent: ['keydown', 'keyup', 'keypress', 'keydownoutside', 'keyupoutside', 'keypressoutside'],
-                PointerEvent: ['pointerdown', 'pointerup', 'pointermove', 'pointerover', 'pointerout', 'pointerenter', 'pointerleave', 'pointercancel'],
-                TouchEvent: ['touchstart', 'touchend', 'touchmove', 'touchcancel']
-            };
-        
-            for (let [_Constructor, events] of Object.entries(eventMap)) {
-                for (let type of events) {
-                    el.addEventListener(type, (e) => {
-                        const _class = window[_Constructor] ?? MouseEvent
-                        this.renderer.canvas.dispatchEvent(new _class(type, e))
-                    });
-                }
-            }
-        }
-
         for (let componentClass of COMPONENT_LIBRARIES) {
             const el = document.createElement('div')
             elementToPositionAbsolute(el)
-            el.style['pointer-events'] = 'auto'
-            propagateEvents(el)
+            el.style['pointer-events'] = 'none'
             guiEl.appendChild(el)
             this.librariesInstances.push(new componentClass(el, this))
         }
