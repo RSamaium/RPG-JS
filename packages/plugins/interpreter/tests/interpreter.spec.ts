@@ -106,6 +106,7 @@ describe('Interpreter', () => {
             player = {
                 showText: vi.fn().mockResolvedValue(undefined),
                 showChoices: vi.fn().mockResolvedValue({ text: 'test', value: 0 }),
+                gold: 0
             }
         })
 
@@ -205,6 +206,69 @@ describe('Interpreter', () => {
                 player,
                 blockId: 'block1'
             }))).rejects.toThrow('Timeout has occurred');
+        })
+
+        describe('With Parameters', () => {
+            const fnSchema = (formatMessage) => {
+                return {
+                    type: 'object',
+                    properties: {
+                        gold: {
+                            type: 'number',
+                            title: formatMessage({
+                                defaultMessage: 'Value',
+                                description: 'Set Value',
+                            }),
+                        }
+                    },
+                    required: ['gold']
+                }
+            }
+
+            test('Flow with Parameters, Wrong Param', async () => {
+                const interpreter = new RpgInterpreter({
+                    block1: {
+                        id: 'text',
+                        text: 'Hello World 1'
+                    }
+                }, {}, {
+                    parametersSchema: fnSchema
+                })
+
+                await expect(lastValueFrom(interpreter.start({
+                    player,
+                    blockId: 'block1'
+                }))).rejects.toThrow(
+                    expect.objectContaining({
+                        errors: expect.arrayContaining([
+                            expect.objectContaining({
+                                code: 'invalid_type'
+                            })
+                        ])
+                    })
+                )
+            })
+
+            test('Flow with Parameters, True Param', async () => {
+                const interpreter = new RpgInterpreter({
+                    block1: {
+                        id: 'gold',
+                        value: 10
+                    }
+                }, {}, {
+                    parametersSchema: fnSchema
+                })
+
+                await lastValueFrom(interpreter.start({
+                    player,
+                    blockId: 'block1',
+                    parameters: {
+                        gold: 100
+                    }
+                }))
+
+                expect(player.gold).toEqual(10)
+            })
         })
 
         afterEach(() => {
