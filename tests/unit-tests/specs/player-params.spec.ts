@@ -391,6 +391,13 @@ describe('Sync with client', () => {
       expect(object.param[MAXHP]).toBe(10)
    })
 
+   test('Level Up, maxHp is sync with client', async () => {
+      player.level = 2
+      server.send()
+      const { paramsChanged: object } = client.gameEngine.getObject(player.id)
+      expect(object.param[MAXHP]).toBe(player.param[MAXHP])
+   })
+
    test('paramsModifier (maxHp) sync with client', async () => {
       player.paramsModifier = {
          [MAXHP]: {
