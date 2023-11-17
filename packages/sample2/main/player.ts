@@ -10,6 +10,7 @@ const player: RpgPlayerHooks = {
         player.setComponentsTop(Components.text('{id}'))
     },
     onAuth: () => {},
+   
     onInput(player: RpgPlayer, { input }) {
         const map = player.getCurrentMap()
         if (input == 'action') {

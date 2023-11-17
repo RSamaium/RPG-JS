@@ -1,4 +1,4 @@
-import configTomlPlugin, { formatVariableName, getAllFiles, importString, transformPathIfModule, searchFolderAndTransformToImportString, loadSpriteSheet, loadClientFiles, createModuleLoad, } from '../src/build/vite-plugin-config.toml'
+import configTomlPlugin, { formatVariableName, getAllFiles, importString, transformPathIfModule, searchFolderAndTransformToImportString, loadSpriteSheet, loadClientFiles, createModuleLoad, loadServerFiles, } from '../src/build/vite-plugin-config.toml'
 import Vi, { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest'
 import * as path from 'path'
 import mockFs from 'mock-fs'
@@ -382,5 +382,37 @@ describe('createModuleLoad', () => {
         const id = 'modules/somepath';
         const result = createModuleLoad(id, 'variableName', '', {}, {});
         expect(result).toContain("import mod from '@/modules/somepath/index.ts'");
+    });
+
+    test('Test database', () => {
+        const fakeDatabase = {}
+
+        const nb = 10
+
+        for (let i = 0; i < nb; i++) {
+            fakeDatabase[`file${i}.ts`] = '"export default class Actor {}'
+        }
+
+        mockFs({
+            'main': {
+                'database': {
+                    'actors': fakeDatabase
+                }
+            }
+        });
+
+        const result = loadServerFiles('main', {
+            modulesCreated: []
+        }, {});
+
+        let str = ''
+        for (let i = 0; i < nb; i++) {
+            expect(result).toContain(`import _main_database_actors_file${i}ts from './main/database/actors/file${i}.ts'`)
+            str += `_main_database_actors_file${i}ts,`
+        }
+
+        str = str.slice(0, -1) // remove last comma
+
+        expect(result).toContain(`database: [${str}]`)
     });
 })

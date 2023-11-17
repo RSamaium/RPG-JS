@@ -3,6 +3,9 @@ import { z, ZodType } from "zod";
 const percent = z.number().min(0).max(100)
 
 const typeMap: Record<string, (property?: any, key?: string) => z.ZodType<any, any>> = {
+    'code': () => z.string(),
+    'color': () => z.string().regex(/^#(?:[0-9a-fA-F]{3}){1,2}$/, 'Invalid color format'),
+    'date': () => z.date(),
     'password': () => z.string(),
     'email': () => z.string().email(),
     'text': () => z.string(),

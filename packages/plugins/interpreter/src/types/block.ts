@@ -15,6 +15,8 @@ export interface Block {
     execute: (player: RpgPlayer, dataBlock: any) => BlockExecute;
 }
 
+export interface Parameters extends SchemaInterface {}
+
 interface DisplayItem {
     key: string;
     hasHandles: boolean;

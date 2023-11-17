@@ -9,12 +9,11 @@
 1. Each user interface uses the DOM and not HTML5 Canvas. Why not? Because it is easier to create interfaces with components than with canvas graphics.
 2. Each GUI has an identifier. Predefined identifiers exist to manage existing GUI (dialog, main menu, shop, etc.).
 
-## Goal
+## Preview
 
 We want to create a life bar. It will remain in hauy on the left side of the screen.
 
-![Hud](/assets/hud.png)
-
+<Playground id="222" />
 
 ## Component
 
@@ -125,15 +124,17 @@ export default {
 <PathTo to="playerFile" />
 
 ```ts
-import { RpgPlayer, RpgPlayerHooks } from '@rpgjs/server'
+import { RpgPlayer, type RpgPlayerHooks } from '@rpgjs/server'
  
-export const player: RpgPlayerHooks = {
+const player: RpgPlayerHooks = {
     onJoinMap(player: RpgPlayer) {
         player.gui('my-tooltip').open()
         player.showAttachedGui()
 		// you can hide with player.hideAttachedGui()
     }
 }
+
+export default player
 ```
 
 We open the `my-tooltip` GUI and display the player's tooltip 

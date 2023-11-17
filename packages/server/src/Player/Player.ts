@@ -104,7 +104,7 @@ const playerSchemas = {
     sp: Number,
     gold: Number,
     level: {
-        $effects: ['$this.expForNextlevel']
+        $effects: ['$this.expForNextlevel', '$this.param']
     },
     expForNextlevel: {
         $permanent: false

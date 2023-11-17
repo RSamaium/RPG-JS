@@ -1,5 +1,5 @@
 import { Observable, of, switchMap, from, throwError, timeout, map } from "rxjs"
-import type { Block, BlockExecuteReturn } from "./types/block"
+import type { Block, BlockExecuteReturn, Parameters } from "./types/block"
 import type { Edge } from "./types/edge"
 import { formatMessage } from "./format-message"
 import blocks, { Flow } from "./blocks"
@@ -13,6 +13,7 @@ export class RpgInterpreter {
     private recursionLimit = 1000; // set the recursion limit
     private currentRecursionDepth = 0; // track the current recursion depth
     private executionTimeout = 5000; // set the execution timeout in milliseconds
+    private parametersSchema?: Parameters
 
     constructor(
         private dataBlocks: Flow,
@@ -20,11 +21,13 @@ export class RpgInterpreter {
         options: {
             recursionLimit?: number;
             executionTimeout?: number;
+            parametersSchema?: (formatMessage?) => Parameters
         } = {},
         _formatMessage = formatMessage
     ) {
         this.recursionLimit = options.recursionLimit || this.recursionLimit;
         this.executionTimeout = options.executionTimeout || this.executionTimeout;
+        this.parametersSchema = options.parametersSchema?.(_formatMessage)
         blocks.forEach(block => {
             const _blocks = block(_formatMessage)
             this.blocksById[_blocks.id] = _blocks
@@ -44,16 +47,31 @@ export class RpgInterpreter {
       *
       * @return {Observable<any>} The RPG interpreter execution as an Observable.
       */
-    start({ player, blockId }: { player: RpgPlayer, blockId: string }): Observable<any> {
-        const validate = this.validateFlow(blockId)
-        if (validate === null) {
-            return this.executeFlow(player, blockId)
+    start({ player, blockId, parameters }: { player: RpgPlayer, blockId: string, parameters?}): Observable<any> {
+        const validateParams = this.validateParameters(parameters)
+        if (validateParams === null) {
+            const validate = this.validateFlow(blockId)
+            if (validate === null) {
+                return this.executeFlow(player, blockId, parameters)
+            }
+            return throwError(() => validate)
         }
-        return throwError(() => validate)
+        return throwError(() => validateParams)
     }
 
     getHistory() {
         return this.executionHistory
+    }
+
+    validateParameters(parameters: any): ZodError | null {
+        if (this.parametersSchema) {
+            const schemaZod = z.object(jsonSchemaToZod(this.parametersSchema));
+            const parse = schemaZod.safeParse(parameters);
+            if (!parse.success) {
+                return parse.error
+            }
+        }
+        return null
     }
 
     /**
@@ -183,7 +201,7 @@ export class RpgInterpreter {
      *
      * @return {Observable<any>} The flow execution as an Observable.
      */
-    private executeFlow(player: RpgPlayer, blockId: string): Observable<any> {
+    private executeFlow(player: RpgPlayer, blockId: string, parameters?: Parameters): Observable<any> {
         // Prevent recursion beyond the limit
         if (this.currentRecursionDepth++ > this.recursionLimit) {
             return throwError(() => new Error('Recursion limit exceeded'));
