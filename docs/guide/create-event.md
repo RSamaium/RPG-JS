@@ -134,6 +134,8 @@ export class CharaEvent extends RpgEvent {
 > You have to know that there are several commands, here we just display a text. In fact, it opens a predefined GUI.
 > We use `async/await` because we wait for the player to press Enter after the dialog to continue the other instructions.
 
+<Playground id="225" />
+
 ## Example 2: Example: Earn gold
 
 Here is a more complete example. It shows a small scenario. It is important to know that this event will be seen by everyone. However, the action will be independent to each player :
@@ -240,3 +242,6 @@ export class DoorEvent extends RpgEvent {
 With, `onChanges`, a listening is done on a potential change. You can then update the door graphics according to the state of the `LEVER` variable
 
 > Note that in MMORPG mode, everyone sees the change of the door graphics even if the variable is changed only for the player. Switch the event to Scenario mode if you want to make a single event per player
+
+
+<Playground id="228" />

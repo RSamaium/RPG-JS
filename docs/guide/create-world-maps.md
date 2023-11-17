@@ -11,6 +11,10 @@ The interest is to teleport the player on an adjacent map on consistent X and Y 
 
 <Video src="/assets/rpgjs_world.mp4" /> 
 
+## Preview
+
+<Playground id="224" />
+
 ## Preparing the world in the editor
 
 Click on `World > New World` and add a file ending with the extension `.world` in <Path to="tmxDir" />

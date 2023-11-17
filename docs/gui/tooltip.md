@@ -5,6 +5,10 @@
 - Know how to create a GUI and add it in the module
 - Be comfortable with VueJS
 
+## Preview
+
+<Playground id="232" />
+
 ## Goal
 
 This is very useful to make more advanced interactions on a sprite. For example, display a tooltip or additional interactive displays.
