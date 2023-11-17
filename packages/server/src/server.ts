@@ -107,18 +107,22 @@ export class RpgServerEngine {
 
         if (!this.inputOptions.database) this.inputOptions.database = {}
 
+        /**
+         * data is array with object or array
+         */
         const datas = await RpgPlugin.emit(HookServer.AddDatabase, this.inputOptions.database) || []
 
-        for (let plug of datas) {
-            this.inputOptions.database = {
-                ...plug,
-                ...this.inputOptions.database
+        for (let element of datas) {
+            if (Array.isArray(element)) {
+                for (let data of element) {
+                    this.addInDatabase(data.id, data)
+                }
             }
-        }
-
-        for (let key in this.inputOptions.database) {
-            const data = this.inputOptions.database[key]
-            this.addInDatabase(data.id, data)
+            else {
+                for (let id in element) {
+                    this.addInDatabase(element[id].id ?? id, element[id])
+                }
+            }
         }
 
         this.loadScenes()
