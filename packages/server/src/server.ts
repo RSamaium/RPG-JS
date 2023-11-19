@@ -7,6 +7,8 @@ import { Utils, RpgPlugin, Scheduler, HookServer, RpgCommonGame, DefaultInput } 
 import { Observable } from 'rxjs';
 import { Tick } from '@rpgjs/types';
 import { Actor, Armor, Class, DatabaseTypes, Item, Skill, State, Weapon } from '@rpgjs/database';
+import { UserState } from 'simple-room/lib/rooms/default';
+import { Transport } from 'simple-room/lib/transports/socket';
 
 export class RpgServerEngine {
 
@@ -237,8 +239,24 @@ export class RpgServerEngine {
                 return Query._getShapesOfMap(map)
             }
         })
-        this.io.on('connection', this.onPlayerConnected.bind(this))
+        //this.io.on('connection', this.onPlayerConnected.bind(this))
+        this.transport(this.io)
         await RpgPlugin.emit(HookServer.Start, this)
+    }
+
+    private transport(io): Transport {
+        const timeoutDisconnect = 10000
+        const transport = new Transport(io, {
+            timeoutDisconnect,
+            auth: (socket) => {
+                console.log( socket.handshake.auth)
+                return Utils.generateUID()
+            }
+        })
+        this.world.timeoutDisconnect = timeoutDisconnect
+        transport.onConnected(this.onPlayerConnected.bind(this))
+        transport.onDisconnected(this.onPlayerDisconnected.bind(this))
+        return transport
     }
 
     get tick(): Observable<Tick> {
@@ -351,11 +369,59 @@ export class RpgServerEngine {
         currentPlayer._socket.emit(eventName, data)
     }
 
-    private onPlayerConnected(socket) {
-        const { token } = socket.handshake.auth
-        const playerId = Utils.generateUID()
-        const player: RpgPlayer = new RpgPlayer(this.gameEngine, playerId)
-        player.session = token
+    private getPlayerBySession(session: string): RpgPlayer | null {
+        const users = this.world.getUsers<RpgPlayer>()
+        for (let userId in users) {
+            const user = users[userId]
+            if (user.session === session) {
+                return user
+            }
+        }
+        return null
+    }
+
+    private onPlayerConnected(socket, playerId: string) {
+        const existingUser = this.world.getUser<RpgPlayer>(playerId, false)
+
+        this.world.connectUser(socket, playerId)
+
+        let player: RpgPlayer
+
+        if (!existingUser) {
+            const { token } = socket.handshake.auth
+            player = new RpgPlayer(this.gameEngine, playerId)
+            player.session = token
+
+            this.world.setUser(player, socket)
+
+            player.server = this
+            player._init()
+
+            if (!token) {
+                const newToken = Utils.generateUID() + '-' + Utils.generateUID() + '-' + Utils.generateUID()
+                player.session = newToken
+            }
+
+            if (!token) {
+                player.execMethod('onConnected')
+            }
+            else {
+                RpgPlugin.emit(HookServer.ScalabilityPlayerConnected, player)
+            }
+        }
+        else {
+            player = existingUser
+            if (player.map) {
+                player.emit('preLoadScene', {
+                    reconnect: true,
+                    id: player.map
+                })
+                player.emitSceneMap()
+                this.world.joinRoom(player.map, playerId)
+            }
+        }
+
+        socket.emit('playerJoined', { playerId, session: player.session })
 
         socket.on('move', (data: { input: string[], frame: number }) => {
             if (!data?.input) return
@@ -372,28 +438,6 @@ export class RpgServerEngine {
             }
         })
 
-        socket.on('disconnect', () => {
-            this.onPlayerDisconnected(playerId)
-        })
-
-        this.world.setUser(player, socket)
-
-        player.server = this
-        player._init()
-
-        if (!token) {
-            const newToken = Utils.generateUID() + '-' + Utils.generateUID() + '-' + Utils.generateUID()
-            player.session = newToken
-        }
-
-        socket.emit('playerJoined', { playerId, session: player.session })
-
-        if (!token) {
-            player.execMethod('onConnected')
-        }
-        else {
-            RpgPlugin.emit(HookServer.ScalabilityPlayerConnected, player)
-        }
     }
 
     private onPlayerDisconnected(playerId: string) {

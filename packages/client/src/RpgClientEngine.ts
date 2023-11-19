@@ -170,7 +170,7 @@ export class RpgClientEngine {
             const id: any = isString(sound) ? extractId(sound) : undefined
             this.addSound(sound, id)
         })
-        
+
         // obsolete
         if (typeof __RPGJS_PRODUCTION__ != 'undefined' && __RPGJS_PRODUCTION__) {
             if ('serviceWorker' in navigator) {
@@ -451,12 +451,16 @@ export class RpgClientEngine {
             RpgPlugin.emit(HookClient.ConnectedError, [this, err, this.socket], true)
         })
 
-        this.socket.on('preLoadScene', (name: string) => {
-            if (this.lastScene == name) {
+        this.socket.on('preLoadScene', ({ id, reconnect }: { id: string, reconnect?: boolean }) => {
+            if (this.lastScene == id) {
                 return
             }
-            this.lastScene = name
-            this.renderer.transitionScene(name)
+            this.lastScene = id
+            this.renderer.transitionScene(id)
+            if (reconnect) {
+                this.roomJoin.next('')
+                this.roomJoin.complete() 
+            }
         })
 
         this.socket.on(SocketEvents.GameReload, () => {
@@ -617,7 +621,7 @@ export class RpgClientEngine {
                             paramsChanged,
                             isShape
                         })
-                        
+
                         // perform actions on the sprite after creation/update
                         callAction(key, paramsChanged)
                     }

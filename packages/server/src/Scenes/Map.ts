@@ -252,7 +252,9 @@ export class SceneMap {
             return null
         }
 
-        player.emit('preLoadScene', mapId)
+        player.emit('preLoadScene', {
+            id: mapId
+        })
 
         player.prevMap = player.map
 

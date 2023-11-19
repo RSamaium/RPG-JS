@@ -90,6 +90,21 @@ export class RpgMap extends RpgCommonMap {
         return Object.keys(this.players).length
     }
 
+    $additionalEmitProperties(player: RpgPlayer) {
+        const lastFramePositions: {
+            frame: number
+            position: unknown
+        } | undefined = player['_lastFramePositions']
+        let pos
+        let lastFrame
+        if (lastFramePositions) {
+            pos = lastFramePositions.position
+            lastFrame = lastFramePositions.frame
+        }
+        const data = { frame: lastFrame, pos }
+        return data
+    }
+
     async load() {
         if (RpgCommonMap.buffer.has(this.id)) {
             return
