@@ -2,13 +2,11 @@ import { SceneMap } from './Scenes/Map';
 import { RpgPlayer } from './Player/Player'
 import { Query } from './Query'
 import { DAMAGE_SKILL, DAMAGE_PHYSIC, DAMAGE_CRITICAL, COEFFICIENT_ELEMENTS } from './presets'
-import { World, WorldClass } from 'simple-room'
+import { World, WorldClass, Transport } from 'simple-room'
 import { Utils, RpgPlugin, Scheduler, HookServer, RpgCommonGame, DefaultInput } from '@rpgjs/common'
 import { Observable } from 'rxjs';
 import { Tick } from '@rpgjs/types';
 import { Actor, Armor, Class, DatabaseTypes, Item, Skill, State, Weapon } from '@rpgjs/database';
-import { UserState } from 'simple-room/lib/rooms/default';
-import { Transport } from 'simple-room/lib/transports/socket';
 
 export class RpgServerEngine {
 
@@ -245,11 +243,11 @@ export class RpgServerEngine {
     }
 
     private transport(io): Transport {
-        const timeoutDisconnect = 10000
+        const timeoutDisconnect = 0
         const transport = new Transport(io, {
             timeoutDisconnect,
             auth: (socket) => {
-                console.log( socket.handshake.auth)
+                //console.log( socket.handshake.auth)
                 return Utils.generateUID()
             }
         })
@@ -271,8 +269,8 @@ export class RpgServerEngine {
      * @returns {void}
      * @memberof RpgServerEngine
      */
-    send() {
-        this.world.send()
+    send(): Promise<void> {
+        return this.world.send()
     }
 
     private async updatePlayersMove(deltaTimeInt: number) {

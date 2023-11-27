@@ -26,7 +26,7 @@ beforeEach(async () => {
 })
 
 
-test('Create Dynamic Event', () => {
+test('Create Dynamic Event', async () => {
     @EventData({
         name: 'test'
     })
@@ -40,7 +40,7 @@ test('Create Dynamic Event', () => {
     expect(Object.values(map.events)).toHaveLength(1)
     const eventId = Object.keys(events)[0]
 
-    server.send()
+    await server.send()
 
     return new Promise((resolve: any) => {
         client.objects.subscribe((objects) => {
@@ -64,7 +64,6 @@ function testRemoveEvent(mode) {
             const eventFind = events.find(ev => ev.object.id == event.id)
             expect(eventFind).toBeUndefined()
         }
-
         
         beforeEach(async () => {
             let _map = mode == EventMode.Scenario ? player : map
@@ -85,17 +84,17 @@ function testRemoveEvent(mode) {
             bool = _map.removeEvent(eventId)
         })
     
-        test('Remove Event', () => {
+        test('Remove Event', async () => {
             expect(bool).toBeTruthy()
-            server.send()
+            await server.send()
             client.objects.subscribe((objects) => {
                 eventIsDeleted(objects, event)
             })
         })
     
-        test('delete even if properties are changed', () => {
+        test('delete even if properties are changed', async () => {
             event.hp = 100
-            server.send()
+            await server.send()
             client.objects.subscribe((objects) => {
                 eventIsDeleted(objects, event)
             })

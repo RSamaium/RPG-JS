@@ -1,13 +1,10 @@
 import {_beforeEach} from './beforeEach'
-import { RpgModule, RpgPlayer } from '@rpgjs/server'
+import { RpgModule } from '@rpgjs/server'
 import { RpgClient, RpgClientEngine } from '@rpgjs/client'
 import { clear } from '@rpgjs/testing'
-import { beforeEach, test, afterEach, expect } from 'vitest'
+import {  test, afterEach, expect } from 'vitest'
 
-let  client: RpgClientEngine, 
-player: RpgPlayer
-
-test('Test onJoinMap Hook', () => {
+test('Test onConnected Hook', () => {
     return new Promise(async (resolve: any) => {
         @RpgModule<RpgClient>({
             engine: {
@@ -22,7 +19,9 @@ test('Test onJoinMap Hook', () => {
 
         await _beforeEach([{
             client: RpgClientModule
-        }])
+        }], {
+            changeMap: false
+        })
     })
 })
 

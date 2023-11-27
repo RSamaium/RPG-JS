@@ -597,11 +597,8 @@ export class RpgPlayer extends RpgCommonPlayer {
     }
 
     toJSON() {
-        const map = this.getCurrentMap()
-        if (!map) {
-            throw new Error('The player is not assigned to any map')
-        }
-        const snapshot = map.$snapshotUser(this.id)
+        const { permanentObject } = Room.compileSchema(this.schema)
+        const snapshot = Room.extractObjectOfRoom(this, permanentObject)
         snapshot.variables = [...this.variables]
         return snapshot
     }

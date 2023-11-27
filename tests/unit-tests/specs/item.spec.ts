@@ -18,14 +18,14 @@ beforeEach(async () => {
 })
 
 test('add an item', () => {
-    return new Promise((resolve: any) => {
+    return new Promise(async (resolve: any) => {
         player.addItem(Potion)
         const { item, nb } = player.getItem(Potion)
 
         expect(item.name).toBe('Potion')
         expect(nb).toBe(1)
 
-        server.send()
+        await server.send()
 
         client.objects.subscribe((objects) => {
             const player: any = Object.values(objects)[0]

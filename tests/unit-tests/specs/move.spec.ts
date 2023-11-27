@@ -3,8 +3,7 @@ import { Control, RpgClientEngine } from '@rpgjs/client'
 import { _beforeEach } from './beforeEach'
 import { clear, nextTick, waitUntil } from '@rpgjs/testing'
 import { beforeEach, test, afterEach, expect, describe } from 'vitest'
-import { lastValueFrom, firstValueFrom } from 'rxjs'
-import { resolve } from 'path'
+import { firstValueFrom } from 'rxjs'
 
 let client: RpgClientEngine, player: RpgPlayer, fixture, playerId
 let server: RpgServerEngine

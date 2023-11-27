@@ -54,6 +54,7 @@ describe('Spy emitToMap', () => {
         expect(spy).toHaveBeenCalledWith(...getEmitParams(options))
     })
     
+    
     test('following property', async () => {
         player.cameraFollow(secondPlayer)
         expect(player.following?.id).toBe(secondPlayer.id)
@@ -65,6 +66,7 @@ describe('Spy emitToMap', () => {
         expect(player.following).toBe(null)
     })
 })
+
 
 describe('Client Apply', () => {
     test('viewport follow called', () => {

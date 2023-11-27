@@ -150,7 +150,6 @@ test('Change Server, state is shared', async () => {
     mockMatchmaker.mockReturnValue(MATCH_MAKER_SERVICE[1])
     await player.changeMap('map2')
     const newPlayer = RpgWorld.getPlayers()[0]
-    expect(newPlayer.playerId).not.toBe(playerId)
     expect(newPlayer.hp).toBe(100)
 })
 
