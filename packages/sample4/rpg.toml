@@ -1,0 +1,36 @@
+name = 'My Game'
+
+modules = [
+    './main',
+    '@rpgjs/default-gui',
+]
+
+spritesheetDirectories = [
+    'spritesheets/bullets',
+    'spritesheets/characters',
+]
+
+[start]
+    map = 'simplemap'
+    graphic = 'hero'
+    hitbox = [16, 16]
+
+[inputs.up]
+    name = "up"
+    repeat = true
+    bind = "w"
+
+[inputs.down]
+    name = "down"
+    repeat = true
+    bind = "s"
+
+[inputs.right]
+    name = "right"
+    repeat = true
+    bind = "d"
+
+[inputs.left]
+    name = "left"
+    repeat = true
+    bind = "a"

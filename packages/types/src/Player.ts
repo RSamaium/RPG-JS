@@ -59,3 +59,13 @@ export type MoveTo = {
     infinite?: boolean
     observer?: Observer<void>
 }
+
+export enum AnimationParamType {
+    ROTATION = 'rotation',
+    ANGLE = 'angle'
+}
+
+export interface AnimationParams {
+    [AnimationParamType.ROTATION]: number;
+    [AnimationParamType.ANGLE]: number;
+}

@@ -150,7 +150,7 @@ export default class Character extends Sprite {
             this.spritesheet[hook](this)
         }
         else if (this.animation.has(name)) {
-            this.animation.play(name, [this.data.direction])
+            this.animation.play(name, [this.data.direction, this.data.animationParams])
         }
     }
 

@@ -15,6 +15,7 @@ import { GuiManager } from './GuiManager'
 import { VariableManager } from './VariableManager'
 import { Frequency, MoveManager, Speed } from './MoveManager'
 import { BattleManager } from './BattleManager'
+import { AnimationParamsManager } from './AnimationParamsManager'
 
 import {
     MAXHP,
@@ -147,6 +148,11 @@ const playerSchemas = {
     wHitbox: Number,
     hHitbox: Number,
 
+    animationParams: {
+        rotation: Number,
+        angle: Number,
+    },
+
     // only for server
 
     _statesEfficiency: [{
@@ -267,6 +273,10 @@ export class RpgPlayer extends RpgCommonPlayer {
         this._elementsEfficiency = []
         this._statesEfficiency = []
         this.moving = false
+        this.animationParams = {
+            rotation: 0,
+            angle: 0
+        }
 
         this.addParameter(MAXHP, MAXHP_CURVE)
         this.addParameter(MAXSP, MAXSP_CURVE)
@@ -969,6 +979,7 @@ export interface RpgPlayer extends
     VariableManager,
     MoveManager,
     BattleManager,
+    AnimationParamsManager,
     ComponentManager {
     _socket: any
     vision,
@@ -989,7 +1000,8 @@ applyMixins(RpgPlayer, [
     VariableManager,
     MoveManager,
     BattleManager,
-    ComponentManager
+    ComponentManager,
+    AnimationParamsManager,
 ])
 
 export interface RpgClassEvent<T> {
