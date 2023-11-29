@@ -31,10 +31,10 @@ const anim = (direction: Direction, angle: number, rotation: number): any[][] =>
     framesHeight: 1,
     textures: {
         [Animation.Walk]: {
-            animations: (direction, params) => anim(direction, params),
+            animations: (direction, angle, rotation) => anim(direction, angle, rotation),
         },
         [Animation.Stand]: {
-            animations: (direction, params) => anim(direction, params),
+            animations: (direction, angle, rotation) => anim(direction, angle, rotation),
         },
     },
 })
