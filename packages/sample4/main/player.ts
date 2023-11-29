@@ -1,5 +1,4 @@
 import { RpgPlayer, type RpgPlayerHooks, Control, Components } from '@rpgjs/server'
-import { AnimationParamType } from '@rpgjs/types'
 import { PositionXY } from '@rpgjs/types'
 import { PhysicalAttack } from './src/PhysicalAttack';
 import { Vector2d } from "@rpgjs/common/src/Vector2d";
@@ -21,8 +20,6 @@ const player: RpgPlayerHooks = {
         }
     },
     async onJoinMap(player: RpgPlayer) {
-        player.setAnimationParam(AnimationParamType.ROTATION, 50);
-
         player.off('shoot-bullet');
         player.on('shoot-bullet', (position: PositionXY) => {
             const map = player.getCurrentMap();

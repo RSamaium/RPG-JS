@@ -5,7 +5,7 @@ import { EventData, RpgEvent } from '@rpgjs/server';
     name: 'arrow-bullet',
     hitbox: {
         width: 31,
-        height: 5
+        height: 2
     }
 })
 export default class ArrowBullet extends RpgEvent {

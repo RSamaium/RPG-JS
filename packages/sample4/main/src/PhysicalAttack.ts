@@ -1,7 +1,7 @@
 import { RpgPlayer } from "@rpgjs/server";
 import { Vector2d } from "@rpgjs/common/src/Vector2d";
 import ArrowBullet from "../events/ArrowBullet";
-import { AnimationParamType, PositionXY } from "@rpgjs/types";
+import { PositionXY } from "@rpgjs/types";
 import { Direction } from "@rpgjs/types";
 
 const rotate = function(currentPosition: PositionXY, targetPosition: PositionXY) {
@@ -48,7 +48,8 @@ export const PhysicalAttack = {
 
         const rotation = rotate(event.position, targetVector);
 
-        event.setAnimationParam(AnimationParamType.ANGLE, rotation);
+        event.angle = rotation;
+        console.log('angle', event.angle)
 
         event
             .moveToPosition(targetVector, {
@@ -70,7 +71,7 @@ export const PhysicalAttack = {
                         .filter((player) => player.id !== attacker.id)
                         .filter((player) => player.name !== 'arrow-bullet')
                         .forEach((player) => {
-                            player.hp -= 50;
+                            player.hp -= 1;
                             event.remove();
                             if (player.hp <= 0) {
                                 player.remove();

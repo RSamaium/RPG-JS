@@ -1,5 +1,5 @@
 import { Animation, Direction, Spritesheet } from '@rpgjs/client'
-import { AnimationParamType, AnimationParams } from '@rpgjs/types';
+import { FrameOptions } from '@rpgjs/client/lib/Sprite/Spritesheet';
 
 const getAnchor = (direction: Direction) => {
     switch (direction) {
@@ -14,12 +14,13 @@ const getAnchor = (direction: Direction) => {
     }
 }
 
-const anim = (direction: Direction, params: AnimationParams): any[][] => {
-    const animation: any[] = [{
+const anim = (direction: Direction, angle: number, rotation: number): any[][] => {
+    const animation: FrameOptions[] = [{
         time: 0,
         frameX: 0,
         frameY: 0,
-        angle: params[AnimationParamType.ANGLE],
+        angle: angle,
+        anchor: getAnchor(direction),
     }];
 
     return [animation];

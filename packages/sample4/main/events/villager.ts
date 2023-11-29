@@ -12,10 +12,21 @@ export default class VillagerEvent extends RpgEvent {
         this.setGraphic('female')
 
         this.speed = 1.2;
-        this.infiniteMoveRoute([
-            Move.tileRandom()
-        ])
-
+        // this.infiniteMoveRoute([
+        //     Move.tileRandom()
+        // ])
         this.setComponentsTop(Components.hpBar())
+    }
+    async onAction(player: RpgPlayer) {
+        this.getCurrentMap()?.createShape({
+            x: this.position.x,
+            y: this.position.y,
+            name: 'rectangle',
+            width: 32,
+            height: 16,
+            properties: {
+                color: '#ff0000'
+            }
+        });
     }
 }
