@@ -1,4 +1,4 @@
-import { RpgPlugin, HookClient, DefaultInput } from '@rpgjs/common'
+import { RpgPlugin, HookClient, DefaultInput, inject } from '@rpgjs/common'
 import { KeyboardControls } from '../KeyboardControls'
 import RpgSprite from '../Sprite/Character'
 import { Animation } from '../Effects/Animation'
@@ -29,13 +29,18 @@ export abstract class Scene {
     protected objects: Map<string, RpgComponent> = new Map()
     protected animationLayer: Container = new Container()
 
-    private controls: KeyboardControls
+    private controls: KeyboardControls = inject(KeyboardControls)
     private animations: Animation[] = []
 
     private _data: BehaviorSubject<SceneObservableData> = new BehaviorSubject({
         data: {},
         partial: {}
     })
+
+    /**
+     *  @deprecated Use `inject(GameEngineClient)` instead. Will be removed in v5
+     */
+    public game: GameEngineClient = inject(GameEngineClient)
 
     /**
      * Listen to the movement of objects on stage
@@ -63,9 +68,8 @@ export abstract class Scene {
         [key: string]: any
     }> = new Subject()
 
-    constructor(public game: GameEngineClient) {
+    constructor() {
         const { globalConfig } = this.game.clientEngine
-        this.controls = this.game.clientEngine.controls
         const mergeInputs = {
             ...DefaultInput,
             ...(globalConfig.inputs || {})

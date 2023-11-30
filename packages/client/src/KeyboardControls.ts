@@ -1,4 +1,4 @@
-import { DefaultInput, Direction, Input, Utils } from '@rpgjs/common'
+import { DefaultInput, Direction, Input, Utils, inject } from '@rpgjs/common'
 import { ControlOptions, Controls } from '@rpgjs/types';
 import { RpgClientEngine } from './RpgClientEngine';
 
@@ -191,6 +191,8 @@ const inverseKeyCodeTable = inverse(keyCodeTable)
 type BoundKey = { actionName: string, options: ControlOptions, parameters?: any }
 
 export class KeyboardControls {
+    private clientEngine: RpgClientEngine = inject(RpgClientEngine)
+
     private keyState: {
         [keyName: string]: {
             isDown: boolean,
@@ -204,8 +206,8 @@ export class KeyboardControls {
     private lastKeyPressed: number | null = null
     private _controlsOptions: Controls = {}
 
-    constructor(private clientEngine: RpgClientEngine) {
-        const { globalConfig } = clientEngine
+    constructor() {
+        const { globalConfig } = this.clientEngine
         this.setupListeners();
         this.setInputs({
             ...DefaultInput,

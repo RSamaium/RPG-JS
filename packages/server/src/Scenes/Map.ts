@@ -1,5 +1,5 @@
 
-import { HookServer, RpgCommonMap, RpgPlugin, Utils } from '@rpgjs/common'
+import { HookServer, RpgCommonMap, RpgPlugin, Utils, inject } from '@rpgjs/common'
 import { World } from 'simple-room'
 import { isTiledFormat, TiledMap } from '@rpgjs/tiled'
 import { MapOptions, MapData } from '../decorators/map'
@@ -28,8 +28,9 @@ export class SceneMap {
         [mapId: string]: RpgClassMap<RpgMap>
     } = {}
     private worldMaps: Map<string, RpgWorldMaps> = new Map()
+    private server: RpgServerEngine = inject(RpgServerEngine)
 
-    constructor(sceneMapObject: SceneMapObject, private server: RpgServerEngine) {
+    constructor(sceneMapObject: SceneMapObject) {
         const { maps, worldMaps, events } = sceneMapObject
         this.maps = maps
         this.mapsById = {}

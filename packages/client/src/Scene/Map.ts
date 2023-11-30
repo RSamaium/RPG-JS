@@ -1,14 +1,13 @@
-import { RpgCommonMap, RpgPlugin, HookClient, RpgShape, Utils, RpgCommonPlayer } from '@rpgjs/common'
+import { RpgCommonMap, RpgPlugin, HookClient, RpgShape, Utils, RpgCommonPlayer, inject } from '@rpgjs/common'
 import TileMap from '../Tilemap'
 import * as _PixiViewport from 'pixi-viewport'
 import { type Viewport } from 'pixi-viewport'
 import { Scene, SceneObservableData, SceneSpriteLogic } from './Scene'
 import { spritesheets } from '../Sprite/Spritesheets'
 import { RpgSound } from '../Sound/RpgSound'
-import { GameEngineClient } from '../GameEngine'
 import { TiledLayerType, TiledMap } from '@rpgjs/tiled'
 import { RpgComponent } from '../Components/Component'
-import { CameraOptions } from '@rpgjs/types'
+import { type CameraOptions } from '@rpgjs/types'
 import { Assets, Container, Point, IRenderer, DisplayObjectEvents, utils, FederatedPointerEvent } from 'pixi.js'
 import { EventLayer } from './EventLayer'
 
@@ -53,10 +52,9 @@ export class SceneMap extends Scene {
     shapes = {}
 
     constructor(
-        public game: GameEngineClient,
         private renderer: IRenderer,
         private options: { screenWidth?: number, screenHeight?: number, drawMap?: boolean } = {}) {
-        super(game)
+        super()
         if (options.drawMap === undefined) this.options.drawMap = true
         this.onInit()
     }
@@ -97,7 +95,7 @@ export class SceneMap extends Scene {
 
         RpgCommonMap.bufferClient.set(obj.id, this.gameMap)
 
-        this.tilemap = new TileMap(this.gameMap.getData(), this.game.renderer)
+        this.tilemap = new TileMap(this.gameMap.getData())
 
         // TODO: Remove this
         Assets.reset()

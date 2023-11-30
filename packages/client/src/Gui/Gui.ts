@@ -1,4 +1,4 @@
-import { RpgCommonPlayer, Utils } from '@rpgjs/common'
+import { RpgCommonPlayer, Utils, inject } from '@rpgjs/common'
 import { RpgSound } from '../Sound/RpgSound'
 import { RpgClientEngine, RpgResource } from '../index'
 import { RpgRenderer } from '../Renderer'
@@ -36,10 +36,10 @@ export class Gui {
     public currentScene: Scene | null = null
     private librariesInstances: any[] = []
 
-    async _initialize(clientEngine: RpgClientEngine, guiEl: HTMLDivElement) {
-        this.clientEngine = clientEngine
-        this.renderer = clientEngine.renderer
-        this.gameEngine = clientEngine.gameEngine
+    async _initialize(guiEl: HTMLDivElement) {
+        this.clientEngine = inject(RpgClientEngine)
+        this.renderer = inject(RpgRenderer)
+        this.gameEngine = inject(GameEngineClient)
         const { gui } = this.renderer.options
 
         for (let ui of gui) {

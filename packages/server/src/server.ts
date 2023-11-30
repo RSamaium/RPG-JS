@@ -3,7 +3,7 @@ import { RpgPlayer } from './Player/Player'
 import { Query } from './Query'
 import { DAMAGE_SKILL, DAMAGE_PHYSIC, DAMAGE_CRITICAL, COEFFICIENT_ELEMENTS } from './presets'
 import { World, WorldClass, Transport } from 'simple-room'
-import { Utils, RpgPlugin, Scheduler, HookServer, RpgCommonGame, DefaultInput } from '@rpgjs/common'
+import { Utils, RpgPlugin, Scheduler, HookServer, RpgCommonGame, DefaultInput, inject } from '@rpgjs/common'
 import { Observable } from 'rxjs';
 import { Tick } from '@rpgjs/types';
 import { Actor, Armor, Class, DatabaseTypes, Item, Skill, State, Weapon } from '@rpgjs/database';
@@ -49,6 +49,7 @@ export class RpgServerEngine {
     protected totalConnected: number = 0
     private scheduler: Scheduler = new Scheduler()
     private playerProps: any
+    public gameEngine: RpgCommonGame = inject(RpgCommonGame)
 
     world: WorldClass = World
     workers: any
@@ -60,7 +61,7 @@ export class RpgServerEngine {
      * @prop {Socket Io Server} [io]
      * @memberof RpgServerEngine
      */
-    constructor(public io, public gameEngine: RpgCommonGame, public inputOptions) {
+    constructor(public io, public inputOptions) {
         this.envs = inputOptions.envs || {}
         if (this.inputOptions.workers) {
             console.log('workers enabled')
@@ -387,12 +388,11 @@ export class RpgServerEngine {
 
         if (!existingUser) {
             const { token } = socket.handshake.auth
-            player = new RpgPlayer(this.gameEngine, playerId)
+            player = new RpgPlayer(playerId)
             player.session = token
 
             this.world.setUser(player, socket)
 
-            player.server = this
             player._init()
 
             if (!token) {

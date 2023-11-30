@@ -1,4 +1,4 @@
-import { Utils } from '@rpgjs/common'
+import { Utils, inject } from '@rpgjs/common'
 import ImageLayer from './ImageLayer'
 import TileLayer from './TileLayer'
 import TileSet from './TileSet'
@@ -25,9 +25,9 @@ export default class TileMap extends Container {
     } = {}
     private tilesLayer: Container = new Container()
     private frameTile: number = 0
+    private renderer: RpgRenderer = inject(RpgRenderer)
 
-
-    constructor(private data: MapInfo, private renderer: RpgRenderer) {
+    constructor(private data: MapInfo) {
         super()
         this.x = 0
         this.y = 0

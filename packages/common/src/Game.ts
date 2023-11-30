@@ -39,7 +39,12 @@ export class RpgCommonGame extends EventEmitter {
         let event
         if (!playerId) playerId = generateUID()
         if (isClass(_class)) {
-            event = new _class(this, playerId)
+            if (this.side == GameSide.Client) {
+                event = new _class(this, playerId)
+            }
+            else {
+                event = new _class(playerId)
+            }
         }
         else {
             event = _class

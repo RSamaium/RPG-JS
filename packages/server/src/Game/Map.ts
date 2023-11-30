@@ -405,7 +405,6 @@ export class RpgMap extends RpgCommonMap {
         const ev = this.game.addEvent<RpgEvent>(event)
         const _shape = shape || this.getEventShape(ev.name)
         ev.map = this.id
-        ev.server = this._server
         ev.width = event.width || this.tileWidth
         ev.height = event.height || this.tileHeight
         if (_shape && _shape.properties) ev.properties = _shape.properties

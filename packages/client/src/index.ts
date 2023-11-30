@@ -16,6 +16,7 @@ export { SceneMap as RpgSceneMap } from './Scene/Map'
 export { RpgGui } from './Gui/Gui';
 export { Timeline, Ease } from './Effects/Timeline';
 export { RpgComponent, RpgComponent as RpgSprite } from './Components/Component'
+export { KeyboardControls } from './KeyboardControls'
 export { World, room } from 'simple-room-client'
 
 import { spritesheets } from './Sprite/Spritesheets'
@@ -24,3 +25,4 @@ export const RpgResource = {
     spritesheets,
     sounds
 }
+export { inject } from '@rpgjs/common'

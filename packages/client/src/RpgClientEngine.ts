@@ -15,6 +15,7 @@ import {
     RpgCommonMap,
     Scheduler,
     Control,
+    inject,
 } from '@rpgjs/common'
 import { RpgSound } from './Sound/RpgSound'
 import { SceneMap } from './Scene/Map'
@@ -48,6 +49,7 @@ export class RpgClientEngine {
      * 
      * @prop {RpgRenderer} [renderer]
      * @readonly
+     * @deprecated Use `inject(RpgRenderer)` instead. Will be removed in v5
      * @memberof RpgClientEngine
      * */
     public renderer: RpgRenderer
@@ -74,6 +76,7 @@ export class RpgClientEngine {
      * Get the class managing the keyboard
      * 
      * @prop {KeyboardControls} [controls]
+     * @deprecated Use `inject(KeyboardControls)` instead. Will be removed in v5
      * @readonly
      * @memberof RpgClientEngine
      * */
@@ -107,6 +110,10 @@ export class RpgClientEngine {
     private serverFps: number = 60
     private scheduler: Scheduler = new Scheduler()
     private _serverUrl: string = ''
+    /**
+     * * @deprecated Use `inject(GameEngineClient)` instead. Will be removed in v5
+     */
+    public gameEngine = inject(GameEngineClient)
 
     /**
      * Read objects synchronized with the server
@@ -124,7 +131,7 @@ export class RpgClientEngine {
 
     envs?: object = {}
 
-    constructor(public gameEngine: GameEngineClient, private options) {
+    constructor(private options) {
         this.envs = options.envs || {}
         this.tick.subscribe(({ timestamp, deltaTime }) => {
             if (timestamp != -1) this.step(timestamp, deltaTime)
@@ -132,7 +139,7 @@ export class RpgClientEngine {
     }
 
     private async _init() {
-        this.renderer = new RpgRenderer(this)
+        this.renderer = inject(RpgRenderer)
 
         const pluginLoadRessource = async (hookName: string, type: string) => {
             const resource = this.options[type] || []
@@ -180,7 +187,7 @@ export class RpgClientEngine {
             }
         }
 
-        this.controls = new KeyboardControls(this)
+        this.controls = inject(KeyboardControls)
     }
 
     private addResource(resourceClass, cb) {

@@ -1,4 +1,4 @@
-import { RpgCommonPlayer, Utils, RpgPlugin, RpgCommonGame, RpgCommonMap, Direction } from '@rpgjs/common'
+import { RpgCommonPlayer, Utils, RpgPlugin, RpgCommonGame, RpgCommonMap, Direction, inject } from '@rpgjs/common'
 import { Room, WorldClass } from 'simple-room'
 import { RpgMap, EventPosOption } from '../Game/Map'
 import { Query } from '../Query'
@@ -200,6 +200,7 @@ export class RpgPlayer extends RpgCommonPlayer {
     * ``` 
     * @title Server Instance
     * @prop {RpgServerEngine} player.server
+    * @deprecated Use `inject(RpgServerEngine)` instead. Will be removed in v5
     * @memberof Player
     * */
     public server: RpgServerEngine
@@ -218,10 +219,10 @@ export class RpgPlayer extends RpgCommonPlayer {
         position: Position
     } | undefined
 
-    constructor(gameEngine: RpgCommonGame, playerId: string) {
-        super(gameEngine, playerId)
-        this.initialize()
-    }
+    /**
+     * @deprecated Use `inject(RpgCommonGame)` instead. Will be removed in v5
+     */
+    public gameEngine: RpgCommonGame = inject(RpgCommonGame)
 
     // redefine type (as RpgPlayer)
     get otherPlayersCollision(): RpgPlayer[] {
@@ -238,8 +239,14 @@ export class RpgPlayer extends RpgCommonPlayer {
     // a flag that lets the client know if the event is suppressed. The client can, for example, end animations before completely deleting the object (client side).
     deleted: boolean = false
 
+    constructor(public playerId: string) {
+        super(inject(RpgCommonGame), playerId)
+        this.initialize()
+    }
+
     /** @internal */
     initialize() {
+        this.server = inject(RpgServerEngine)
         this.expCurve = {
             basis: 30,
             extra: 20,
@@ -1004,8 +1011,8 @@ export class RpgEvent extends RpgPlayer {
     mode: EventMode
     playerRelated: RpgPlayer | null = null
 
-    constructor(gameEngine: RpgCommonGame, playerId: string) {
-        super(gameEngine, playerId)
+    constructor(playerId: string) {
+        super(playerId)
     }
 
     async execMethod(methodName: string, methodData = []) {

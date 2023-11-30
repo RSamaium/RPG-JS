@@ -1,4 +1,4 @@
-import { RpgPlugin, HookClient, Utils } from '@rpgjs/common'
+import { RpgPlugin, HookClient, Utils, inject } from '@rpgjs/common'
 import { SceneMap } from './Scene/Map'
 import { Scene } from './Scene/Scene'
 import { Scene as PresetScene } from './Presets/Scene'
@@ -23,6 +23,9 @@ enum ContainerName {
 }
 
 export class RpgRenderer {
+    private clientEngine: RpgClientEngine = inject(RpgClientEngine)
+    private gameEngine: GameEngineClient = inject(GameEngineClient)
+
     public vm: ComponentPublicInstance
     public app: App
     public readonly stage: Container = new Container()
@@ -38,7 +41,6 @@ export class RpgRenderer {
     private _height: number = 400
     private canvasEl: HTMLElement
     private selector: HTMLElement
-    private gameEngine: GameEngineClient = this.clientEngine.gameEngine
     private loadingScene = {
         transitionIn: new Subject(),
         transitionOut: new Subject()
@@ -47,7 +49,7 @@ export class RpgRenderer {
     private prevObjectScene: any = {}
     public transitionMode: TransitionMode = TransitionMode.Fading
 
-    constructor(private clientEngine: RpgClientEngine) {
+    constructor() {
         this.clientEngine.tick.subscribe(({ timestamp, deltaRatio, frame, deltaTime }) => {
             this.draw(timestamp, deltaTime, deltaRatio, frame)
         })
@@ -135,7 +137,7 @@ export class RpgRenderer {
         this.fadeContainer.visible = false
         this.fadeContainer.alpha = 0
 
-        await RpgGui._initialize(this.clientEngine, this.guiEl)
+        await RpgGui._initialize(this.guiEl)
 
         this.resize()
     }
@@ -205,7 +207,7 @@ export class RpgRenderer {
             this.loadingScene.transitionOut.complete()
         }
         if (this.transitionMode == TransitionMode.Fading) {
-            new TransitionScene(this.clientEngine, this.fadeContainer)
+            new TransitionScene(this.fadeContainer)
                 .addFadeOut()
                 .onComplete(finish)
                 .start()
@@ -232,7 +234,7 @@ export class RpgRenderer {
             switch (name) {
                 case PresetScene.Map:
                     const sceneClass = scenes[PresetScene.Map] || SceneMap
-                    this.scene = new sceneClass(this.gameEngine, this.renderer, {
+                    this.scene = new sceneClass(this.renderer, {
                         screenWidth: this.renderer.screen.width,
                         screenHeight: this.renderer.screen.height,
                         drawMap: this.options.drawMap
@@ -248,7 +250,7 @@ export class RpgRenderer {
                 RpgPlugin.emit(HookClient.AfterSceneLoading, this.scene)
             }
             if (this.transitionMode == TransitionMode.Fading) {
-                new TransitionScene(this.clientEngine, this.fadeContainer)
+                new TransitionScene(this.fadeContainer)
                     .addFadeIn()
                     .onComplete(finish)
                     .start()
