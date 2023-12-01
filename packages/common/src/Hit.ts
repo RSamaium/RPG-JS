@@ -74,6 +74,14 @@ class HitClass {
         }
         return collided
     }
+
+    getType(hit: SAT): string {
+        if (isInstanceOf(hit, SAT.Box)) return HitType.Box
+        if (isInstanceOf(hit, SAT.Circle)) return HitType.Circle
+        if (isInstanceOf(hit, SAT.Polygon)) return HitType.Polygon
+
+        throw new Error('Unsupported type of hitbox');
+    }
 }
 
 export const Hit = new HitClass()

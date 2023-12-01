@@ -417,7 +417,7 @@ export class AbstractObject {
             if (event.id == this.id) continue
             if (!this.zCollision(event)) continue
 
-            const collided = Hit.testPolyCollision(HitType.Polygon, hitbox, event.hitbox)
+            const collided = Hit.testPolyCollision(Hit.getType(hitbox), hitbox, event.hitbox)
 
             for (let shape of this.shapes) {
                 await this.collisionWithShape(shape, event)

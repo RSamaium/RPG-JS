@@ -49,7 +49,6 @@ export const PhysicalAttack = {
         const rotation = rotate(event.position, targetVector);
 
         event.angle = rotation;
-        console.log('angle', event.angle)
 
         event
             .moveToPosition(targetVector, {
