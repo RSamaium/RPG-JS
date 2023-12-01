@@ -1,4 +1,4 @@
-import { DefaultInput, Direction, Input, Utils, inject } from '@rpgjs/common'
+import { DefaultInput, Direction, InjectContext, Input, Utils, inject } from '@rpgjs/common'
 import { ControlOptions, Controls } from '@rpgjs/types';
 import { RpgClientEngine } from './RpgClientEngine';
 
@@ -191,7 +191,7 @@ const inverseKeyCodeTable = inverse(keyCodeTable)
 type BoundKey = { actionName: string, options: ControlOptions, parameters?: any }
 
 export class KeyboardControls {
-    private clientEngine: RpgClientEngine = inject(RpgClientEngine)
+    private clientEngine: RpgClientEngine = this.context.inject(RpgClientEngine)
 
     private keyState: {
         [keyName: string]: {
@@ -206,7 +206,7 @@ export class KeyboardControls {
     private lastKeyPressed: number | null = null
     private _controlsOptions: Controls = {}
 
-    constructor() {
+    constructor(private context: InjectContext) {
         const { globalConfig } = this.clientEngine
         this.setupListeners();
         this.setInputs({

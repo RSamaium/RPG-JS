@@ -1,13 +1,20 @@
-const cacheInstances: { [key: string]: any } = {};
+type Constructor<T> = new (...args: any[]) => T;
+type ServiceIdentifier<T> = string;
 
-export function inject<T>(service: new (...args: any[]) => T, args: any[] = []): T {
-    if (cacheInstances[service.name]) {
-        return cacheInstances[service.name] as T;
+export class InjectContext {
+    private instances = new Map<ServiceIdentifier<any>, any>();
+
+    inject<T>(constructor: Constructor<T>, args: any[] = []): T {
+        const serviceName = constructor.name;
+        if (!this.instances.has(serviceName)) {
+            const instance = new constructor(this, ...args);
+            if (instance['initialize']) {
+                instance['initialize'](...args);
+            }
+            this.instances.set(serviceName, instance);
+        }
+        return this.instances.get(serviceName);
     }
-    const instance = new service(...args);
-    if (instance['initialize']) instance['initialize'](...args)
-    cacheInstances[service.name] = instance;
-    return instance;
 }
 
 export interface InjectInit {

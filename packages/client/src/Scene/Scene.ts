@@ -1,4 +1,4 @@
-import { RpgPlugin, HookClient, DefaultInput, inject } from '@rpgjs/common'
+import { RpgPlugin, HookClient, DefaultInput, inject, InjectContext } from '@rpgjs/common'
 import { KeyboardControls } from '../KeyboardControls'
 import RpgSprite from '../Sprite/Character'
 import { Animation } from '../Effects/Animation'
@@ -29,7 +29,7 @@ export abstract class Scene {
     protected objects: Map<string, RpgComponent> = new Map()
     protected animationLayer: Container = new Container()
 
-    private controls: KeyboardControls = inject(KeyboardControls)
+    private controls: KeyboardControls = this.context.inject(KeyboardControls)
     private animations: Animation[] = []
 
     private _data: BehaviorSubject<SceneObservableData> = new BehaviorSubject({
@@ -40,7 +40,7 @@ export abstract class Scene {
     /**
      *  @deprecated Use `inject(GameEngineClient)` instead. Will be removed in v5
      */
-    public game: GameEngineClient = inject(GameEngineClient)
+    public game: GameEngineClient = this.context.inject(GameEngineClient)
 
     /**
      * Listen to the movement of objects on stage
@@ -68,7 +68,7 @@ export abstract class Scene {
         [key: string]: any
     }> = new Subject()
 
-    constructor() {
+    constructor(protected context: InjectContext) {
         const { globalConfig } = this.game.clientEngine
         const mergeInputs = {
             ...DefaultInput,

@@ -3,10 +3,11 @@ import { RpgPlayer } from './Player/Player'
 import { Query } from './Query'
 import { DAMAGE_SKILL, DAMAGE_PHYSIC, DAMAGE_CRITICAL, COEFFICIENT_ELEMENTS } from './presets'
 import { World, WorldClass, Transport } from 'simple-room'
-import { Utils, RpgPlugin, Scheduler, HookServer, RpgCommonGame, DefaultInput, inject } from '@rpgjs/common'
+import { Utils, RpgPlugin, Scheduler, HookServer, RpgCommonGame, DefaultInput } from '@rpgjs/common'
 import { Observable } from 'rxjs';
 import { Tick } from '@rpgjs/types';
 import { Actor, Armor, Class, DatabaseTypes, Item, Skill, State, Weapon } from '@rpgjs/database';
+import { inject } from './inject';
 
 export class RpgServerEngine {
 
@@ -54,6 +55,8 @@ export class RpgServerEngine {
     world: WorldClass = World
     workers: any
     envs: any = {}
+    io: any
+    inputOptions: any = {}
 
     /**
      * Combat formulas
@@ -61,7 +64,9 @@ export class RpgServerEngine {
      * @prop {Socket Io Server} [io]
      * @memberof RpgServerEngine
      */
-    constructor(public io, public inputOptions) {
+    initialize(io, inputOptions) {
+        this.io = io
+        this.inputOptions = inputOptions
         this.envs = inputOptions.envs || {}
         if (this.inputOptions.workers) {
             console.log('workers enabled')
@@ -337,8 +342,7 @@ export class RpgServerEngine {
                 maps: this.inputOptions.maps,
                 events: this.inputOptions.events,
                 worldMaps: this.inputOptions.worldMaps
-            },
-            this
+            }
         ))
     }
 

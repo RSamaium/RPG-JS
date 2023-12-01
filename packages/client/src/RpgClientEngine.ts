@@ -16,6 +16,7 @@ import {
     Scheduler,
     Control,
     inject,
+    InjectContext,
 } from '@rpgjs/common'
 import { RpgSound } from './Sound/RpgSound'
 import { SceneMap } from './Scene/Map'
@@ -113,7 +114,7 @@ export class RpgClientEngine {
     /**
      * * @deprecated Use `inject(GameEngineClient)` instead. Will be removed in v5
      */
-    public gameEngine = inject(GameEngineClient)
+    public gameEngine = this.context.inject(GameEngineClient)
 
     /**
      * Read objects synchronized with the server
@@ -131,7 +132,7 @@ export class RpgClientEngine {
 
     envs?: object = {}
 
-    constructor(private options) {
+    constructor(private context: InjectContext, private options) {
         this.envs = options.envs || {}
         this.tick.subscribe(({ timestamp, deltaTime }) => {
             if (timestamp != -1) this.step(timestamp, deltaTime)
@@ -139,7 +140,7 @@ export class RpgClientEngine {
     }
 
     private async _init() {
-        this.renderer = inject(RpgRenderer)
+        this.renderer = this.context.inject(RpgRenderer)
 
         const pluginLoadRessource = async (hookName: string, type: string) => {
             const resource = this.options[type] || []
@@ -187,7 +188,7 @@ export class RpgClientEngine {
             }
         }
 
-        this.controls = inject(KeyboardControls)
+        this.controls = this.context.inject(KeyboardControls)
     }
 
     private addResource(resourceClass, cb) {

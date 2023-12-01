@@ -3,7 +3,7 @@ import { RpgClientEngine } from "../RpgClientEngine";
 import { FrameOptions } from "../Sprite/Spritesheet";
 import { Timeline } from "./Timeline";
 import { Container } from "pixi.js"
-import { inject } from "@rpgjs/common";
+import { InjectContext, inject } from "@rpgjs/common";
 
 export class TransitionScene {
     private frameIndex: number = 0
@@ -12,7 +12,7 @@ export class TransitionScene {
     private complete: Function = () => {}
     private clientEngine: RpgClientEngine = inject(RpgClientEngine)
     
-    constructor(private container: Container) { }
+    constructor(private context: InjectContext, private container: Container) { }
 
     addFadeIn() {
         return this.addFading(1, 0)

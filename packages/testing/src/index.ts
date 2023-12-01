@@ -147,7 +147,7 @@ export async function testing(modules: ModuleType[], optionsServer: any = {}, op
         })
         clients.push(client)
         client.renderer.transitionMode = 0
-        const playerId = client['gameEngine'].playerId
+        const playerId = client.playerId
         return {
             client,
             socket: client.socket,

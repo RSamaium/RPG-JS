@@ -1,5 +1,5 @@
 
-import { HookServer, RpgCommonMap, RpgPlugin, Utils, inject } from '@rpgjs/common'
+import { HookServer, RpgCommonMap, RpgPlugin, Utils } from '@rpgjs/common'
 import { World } from 'simple-room'
 import { isTiledFormat, TiledMap } from '@rpgjs/tiled'
 import { MapOptions, MapData } from '../decorators/map'
@@ -7,6 +7,7 @@ import { RpgMap } from '../Game/Map'
 import { RpgWorldMaps, WorldMap } from '../Game/WorldMaps'
 import { RpgEvent, RpgPlayer } from '../Player/Player'
 import { RpgServerEngine } from '../server'
+import { inject } from '../inject'
 
 export interface RpgClassMap<T> {
     id?: string

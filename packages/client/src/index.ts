@@ -25,4 +25,4 @@ export const RpgResource = {
     spritesheets,
     sounds
 }
-export { inject } from '@rpgjs/common'
+export { inject } from './inject'

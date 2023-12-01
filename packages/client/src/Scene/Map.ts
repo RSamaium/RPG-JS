@@ -1,4 +1,4 @@
-import { RpgCommonMap, RpgPlugin, HookClient, RpgShape, Utils, RpgCommonPlayer, inject } from '@rpgjs/common'
+import { RpgCommonMap, RpgPlugin, HookClient, RpgShape, Utils, RpgCommonPlayer, InjectContext } from '@rpgjs/common'
 import TileMap from '../Tilemap'
 import * as _PixiViewport from 'pixi-viewport'
 import { type Viewport } from 'pixi-viewport'
@@ -52,9 +52,11 @@ export class SceneMap extends Scene {
     shapes = {}
 
     constructor(
+        protected context: InjectContext,
         private renderer: IRenderer,
-        private options: { screenWidth?: number, screenHeight?: number, drawMap?: boolean } = {}) {
-        super()
+        private options: { screenWidth?: number, screenHeight?: number, drawMap?: boolean } = {}
+    ) {
+        super(context)
         if (options.drawMap === undefined) this.options.drawMap = true
         this.onInit()
     }
@@ -95,7 +97,7 @@ export class SceneMap extends Scene {
 
         RpgCommonMap.bufferClient.set(obj.id, this.gameMap)
 
-        this.tilemap = new TileMap(this.gameMap.getData())
+        this.tilemap = new TileMap(this.context, this.gameMap.getData())
 
         // TODO: Remove this
         Assets.reset()

@@ -1,4 +1,4 @@
-import { RpgCommonPlayer, Utils, RpgPlugin, RpgCommonGame, RpgCommonMap, Direction, inject } from '@rpgjs/common'
+import { RpgCommonPlayer, Utils, RpgPlugin, RpgCommonGame, RpgCommonMap, Direction } from '@rpgjs/common'
 import { Room, WorldClass } from 'simple-room'
 import { RpgMap, EventPosOption } from '../Game/Map'
 import { Query } from '../Query'
@@ -37,6 +37,7 @@ import { CameraOptions, PositionXY_OptionalZ, SocketEvents, SocketMethods, Layou
 import { ComponentManager } from './ComponentManager'
 import { Subject } from 'rxjs'
 import { EventManager, EventMode } from '../Game/EventManager'
+import { inject } from '../inject'
 
 const {
     isPromise,
