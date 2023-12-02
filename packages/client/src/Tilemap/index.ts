@@ -1,4 +1,4 @@
-import { InjectContext, Utils, inject } from '@rpgjs/common'
+import { InjectContext, Utils } from '@rpgjs/common'
 import ImageLayer from './ImageLayer'
 import TileLayer from './TileLayer'
 import TileSet from './TileSet'

@@ -1,4 +1,4 @@
-import { InjectContext, RpgCommonPlayer, Utils, inject } from '@rpgjs/common'
+import { InjectContext, RpgCommonPlayer, Utils } from '@rpgjs/common'
 import { RpgSound } from '../Sound/RpgSound'
 import { RpgClientEngine, RpgResource } from '../index'
 import { RpgRenderer } from '../Renderer'

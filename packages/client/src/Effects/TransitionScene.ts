@@ -3,14 +3,14 @@ import { RpgClientEngine } from "../RpgClientEngine";
 import { FrameOptions } from "../Sprite/Spritesheet";
 import { Timeline } from "./Timeline";
 import { Container } from "pixi.js"
-import { InjectContext, inject } from "@rpgjs/common";
+import { InjectContext } from "@rpgjs/common";
 
 export class TransitionScene {
     private frameIndex: number = 0
     private animations: FrameOptions[][] = []
     private updateSubscription: Subscription
     private complete: Function = () => {}
-    private clientEngine: RpgClientEngine = inject(RpgClientEngine)
+    private clientEngine: RpgClientEngine = this.context.inject(RpgClientEngine)
     
     constructor(private context: InjectContext, private container: Container) { }
 

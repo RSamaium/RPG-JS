@@ -1,4 +1,4 @@
-import { RpgPlugin, HookClient, DefaultInput, inject, InjectContext } from '@rpgjs/common'
+import { RpgPlugin, HookClient, DefaultInput, InjectContext } from '@rpgjs/common'
 import { KeyboardControls } from '../KeyboardControls'
 import RpgSprite from '../Sprite/Character'
 import { Animation } from '../Effects/Animation'
