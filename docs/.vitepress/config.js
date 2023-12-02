@@ -1,5 +1,14 @@
 const apiMenu = [
   {
+    text: 'Functions',
+    collapsed: false,
+    sidebarDepth: 2,
+    items: [
+      { text: "inject()", link: "/functions/inject" },
+    ]
+
+  },
+  {
     text: 'Classes Server-Side',
     collapsed: false,
     sidebarDepth: 2,
@@ -237,6 +246,7 @@ module.exports = {
     }
     ],
     sidebar: {
+      '/functions/': apiMenu,
       '/classes/': apiMenu,
       '/commands/': apiMenu,
       '/database/': apiMenu,

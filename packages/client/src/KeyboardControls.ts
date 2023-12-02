@@ -1,4 +1,4 @@
-import { DefaultInput, Direction, InjectContext, Input, Utils, inject } from '@rpgjs/common'
+import { DefaultInput, Direction, InjectContext, Input, Utils } from '@rpgjs/common'
 import { ControlOptions, Controls } from '@rpgjs/types';
 import { RpgClientEngine } from './RpgClientEngine';
 
@@ -342,10 +342,11 @@ export class KeyboardControls {
      * From the name of the entry, we retrieve the control information
      * 
      * ```ts 
-     * import { Input } from '@rpgjs/client'
+     * import { Input, inject, KeyboardControls } from '@rpgjs/client'
      * 
-     * // In method hooks, client is RpgClientEngine
-     * client.controls.getControl(Input.Enter)
+     * const controls = inject(KeyboardControls)
+     * controls.getControl(Input.Enter)
+
      * if (control) {
      *    console.log(control.actionName) // action
      * }
@@ -364,19 +365,20 @@ export class KeyboardControls {
      * Triggers an input according to the name of the control
      * 
      * ```ts 
-     * import { Control } from '@rpgjs/client'
+     * import { Control, inject, KeyboardControls } from '@rpgjs/client'
      * 
-     * // In method hooks, client is RpgClientEngine
-     * client.controls.applyControl(Control.Action)
+     * const controls = inject(KeyboardControls)
+     * controls.applyControl(Control.Action)
      * ```
      * 
      * You can put a second parameter or indicate on whether the key is pressed or released
      * 
      * ```ts 
-     * import { Control } from '@rpgjs/client'
+     * import { Control, inject, KeyboardControls } from '@rpgjs/client'
      * 
-     * client.controls.applyControl(Control.Up, true) // keydown
-     * client.controls.applyControl(Control.Up, false) // keyup
+     * const controls = inject(KeyboardControls)
+     * controls.applyControl(Control.Up, true) // keydown
+     * controls.applyControl(Control.Up, false) // keyup
      * ```
      * @title Apply Control
      * @method applyControl(controlName,isDown)
@@ -441,10 +443,10 @@ export class KeyboardControls {
      *          * delay.otherControls {string | string[]} Indicates the other controls that will also have the delay at the same time
      * 
      * ```ts 
-     * import { Control, Input } from '@rpgjs/client'
+     * import { Control, Input, inject, KeyboardControls } from '@rpgjs/client'
      * 
-     * // In method hooks, client is RpgClientEngine
-     * client.controls.setInputs({
+     * const controls = inject(KeyboardControls)
+     * controls.setInputs({
             [Control.Up]: {
                 repeat: true,
                 bind: Input.Up

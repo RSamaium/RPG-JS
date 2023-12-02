@@ -1,4 +1,4 @@
-import { RpgPlugin, HookClient, Utils, inject, InjectContext } from '@rpgjs/common'
+import { RpgPlugin, HookClient, Utils, InjectContext } from '@rpgjs/common'
 import { SceneMap } from './Scene/Map'
 import { Scene } from './Scene/Scene'
 import { Scene as PresetScene } from './Presets/Scene'

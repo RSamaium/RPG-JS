@@ -15,7 +15,6 @@ import {
     RpgCommonMap,
     Scheduler,
     Control,
-    inject,
     InjectContext,
 } from '@rpgjs/common'
 import { RpgSound } from './Sound/RpgSound'

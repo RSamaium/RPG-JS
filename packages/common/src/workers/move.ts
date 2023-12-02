@@ -5,7 +5,7 @@ import { RpgCommonPlayer } from '../Player'
 
 const objects: any = {}
 let objectsByMap: any = {}
-const gameEngine = new RpgCommonGame(GameSide.Worker)
+const gameEngine = new RpgCommonGame()
 gameEngine.start({
   getObject(playerId) {
     return objects[playerId]
