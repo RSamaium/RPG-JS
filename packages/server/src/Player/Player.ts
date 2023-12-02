@@ -210,7 +210,7 @@ export class RpgPlayer extends RpgCommonPlayer {
     /** @internal */
     public tmpPositions: Position | string | null = null
     public otherPossessedPlayer: RpgPlayer | RpgEvent | null = null
-    public following: RpgPlayer | RpgEvent | null = null
+    public followingId: string | null = null
 
     // Indicates whether to load data with load(). In this case, hooks are not triggered.
     private _dataLoading: boolean = false
@@ -777,10 +777,10 @@ export class RpgPlayer extends RpgCommonPlayer {
      */
     cameraFollow(otherPlayer: RpgPlayer | RpgEvent, options: CameraOptions = {}) {
         if (otherPlayer.id == this.id) {
-            this.following = null
+            this.followingId = null
         }
         else {
-            this.following = otherPlayer
+            this.followingId = otherPlayer.id
         }
         this.emit(SocketEvents.CallMethod, {
             objectId: this.playerId,
