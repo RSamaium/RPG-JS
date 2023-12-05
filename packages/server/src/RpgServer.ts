@@ -25,6 +25,15 @@ export interface RpgServerEngineHooks {
      * @memberof RpgServerEngineHooks
      */
     onStep?: (server: RpgServerEngine) => any
+
+    /**
+     *  
+     * 
+     * @param server 
+     * @param socket 
+     * @returns 
+     */
+    auth?: (server: RpgServerEngine, socket: any) => Promise<string> | string | never
 }
 
 export interface RpgPlayerHooks {
@@ -239,7 +248,6 @@ export interface RpgServer {
         player?: string[],
         engine?: string[]
     }
-
     /**
      * Adding sub-modules
      *

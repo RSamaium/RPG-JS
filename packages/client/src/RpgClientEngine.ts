@@ -340,7 +340,7 @@ export class RpgClientEngine {
             }
             // @ts-ignore
             const envUrl = this.envs.VITE_SERVER_URL
-            this.connection(
+            await this.connection(
                 serverUri.url ? serverUri.url + ':' + serverUri.port :
                     envUrl ? envUrl : undefined
             )
@@ -427,7 +427,7 @@ export class RpgClientEngine {
      * @returns {void}
      * @memberof RpgClientEngine
      */
-    connection(uri?: string) {
+    async connection(uri?: string) {
         const { standalone } = this.gameEngine
 
         this._serverUrl = uri || ''
@@ -662,7 +662,7 @@ export class RpgClientEngine {
         RpgGui._setSocket(this.socket)
 
         if (standalone) {
-            this.socket.connection({
+            await this.socket.connection({
                 auth: {
                     token: this.session
                 }

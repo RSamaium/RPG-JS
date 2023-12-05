@@ -63,7 +63,8 @@ export default async function (modules: ModuleType[], options: RpgServerEntryPoi
 
     const relationsEngine = {
         onStart: HookServer.Start,
-        onStep: HookServer.Step
+        onStep: HookServer.Step,
+        auth: HookServer.Auth
     }
 
     const { playerProps } = await loadModules(modules, {
