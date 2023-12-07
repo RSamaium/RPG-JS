@@ -250,15 +250,17 @@ export class RpgServerEngine {
 
     private transport(io): Transport {
         const timeoutDisconnect = this.globalConfig.timeoutDisconnect ?? 0
-        const transport = new Transport(io, {
-            timeoutDisconnect,
-            auth: async (socket) => {
+        const auth = this.globalConfig.disableAuth ? () => Utils.generateUID() :
+            async (socket) => {
                 const val = await RpgPlugin.emit(HookServer.Auth, [this, socket], true)
                 if (val.length == 0) {
                     return Utils.generateUID()
                 }
-                return val[val.length-1]
+                return val[val.length - 1]
             }
+        const transport = new Transport(io, {
+            timeoutDisconnect,
+            auth
         })
         this.world.timeoutDisconnect = timeoutDisconnect
         transport.onConnected(this.onPlayerConnected.bind(this))

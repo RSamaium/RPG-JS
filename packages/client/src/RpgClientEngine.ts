@@ -478,7 +478,7 @@ export class RpgClientEngine {
             this.renderer.loadScene(name, data)
         })
 
-        this.socket.on(SocketEvents.ChangeServer, ({ url, port }) => {
+        this.socket.on(SocketEvents.ChangeServer, async({ url, port }) => {
             const connection = url + ':' + port
             if (this.lastConnection == connection) {
                 return

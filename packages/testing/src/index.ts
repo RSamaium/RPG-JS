@@ -130,6 +130,7 @@ export async function testing(modules: ModuleType[], optionsServer: any = {}, op
     const engine = await entryPoint(modules, {
         io: serverIo,
         standalone: true,
+        disableAuth: true,
         ...optionsServer
     })
     engine.start(null, false)

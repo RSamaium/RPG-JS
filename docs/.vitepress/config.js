@@ -177,6 +177,7 @@ const guideMenu = [{
   text: 'Advanced',
   collapsed: false,
   items: [
+    { text: "Create Authentication System", link: "/advanced/auth" },
     { text: "Synchronization between Server and Client", link: "/guide/synchronization" },
     { text: "Creating a plugin", link: "/advanced/create-plugin" },
     { text: "Using Agones for Game Server Hosting", link: "/advanced/agones" },
