@@ -1,8 +1,15 @@
 import { room } from '@rpgjs/client'
 import { RpgReactContext, useObjects, useCurrentPlayer } from '@rpgjs/client/react'
-import { useContext } from 'react'
+import { useContext, useEffect } from 'react'
 
 export default function Test({ gold }) {
-    const player = useCurrentPlayer()
-    return <>{player?.position?.x}</>
+    const { rpgCurrentPlayer } = useContext(RpgReactContext)
+
+    useEffect(() => {
+        rpgCurrentPlayer.subscribe(({ object }) => {
+            console.log('frontend', object.items);
+        })
+    }, [])
+
+    return <>test</>
 }

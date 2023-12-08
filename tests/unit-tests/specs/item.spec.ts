@@ -2,7 +2,7 @@ import { Potion, Key } from './fixtures/item'
 import { _beforeEach } from './beforeEach'
 import { clear } from '@rpgjs/testing'
 import { Item } from '@rpgjs/database'
-import { RpgPlayer } from '@rpgjs/server'
+import { RpgPlayer, RpgMap, MapData } from '@rpgjs/server'
 import { beforeEach, test, afterEach, expect, describe, vi } from 'vitest'
 
 let client, fixture, playerId, server
