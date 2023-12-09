@@ -5,10 +5,19 @@ export { HitType, HitObject } from '@rpgjs/types'
 
 class HitClass {
 
-    createObjectHitbox(x: number, y: number, z: number, w: number, h: number): SAT.Box {
-        return new SAT.Box(new SAT.Vector(x, y - z), w, h)
+    createObjectHitbox(x: number, y: number, z: number, w: number, h: number, angle: number = 0, rotation: number = 0): SAT.Box {
+        const box = new SAT.Box(new SAT.Vector(x, y - z), w, h)
+
+        if (angle) {
+            return box.toPolygon().setAngle(angle)
+        }
+
+        if (rotation) {
+            return box.toPolygon().rotate(rotation)
+        }
+
+        return box;
     }
-    
     getHitbox(obj: HitObject, offset?: { x: number, y: number }): {
         hitbox: SAT,
         type?: string,
@@ -64,6 +73,14 @@ class HitClass {
             break
         }
         return collided
+    }
+
+    getType(hit: SAT): string {
+        if (isInstanceOf(hit, SAT.Box)) return HitType.Box
+        if (isInstanceOf(hit, SAT.Circle)) return HitType.Circle
+        if (isInstanceOf(hit, SAT.Polygon)) return HitType.Polygon
+
+        throw new Error('Unsupported type of hitbox');
     }
 }
 

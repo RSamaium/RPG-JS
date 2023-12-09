@@ -35,6 +35,8 @@ export class AbstractObject {
     behavior: Behavior = Behavior.Direction
 
     hitbox: SAT.Box
+    angle: number = 0
+    rotation: number = 0
 
     inShapes: {
         [shapeId: string]: RpgShape
@@ -414,7 +416,7 @@ export class AbstractObject {
             if (event.id == this.id) continue
             if (!this.zCollision(event)) continue
 
-            const collided = Hit.testPolyCollision(HitType.Box, hitbox, event.hitbox)
+            const collided = Hit.testPolyCollision(Hit.getType(hitbox), hitbox, event.hitbox)
 
             for (let shape of this.shapes) {
                 await this.collisionWithShape(shape, event)
@@ -472,12 +474,15 @@ export class AbstractObject {
         else {
             position = player.position.copy()
         }
+        let { angle, rotation } = player;
         const hitboxObj = Hit.createObjectHitbox(
             position.x,
             position.y,
             position.z,
             hitbox.w,
-            hitbox.h
+            hitbox.h,
+            angle,
+            rotation
         )
         let collided = Hit.testPolyCollision(shape.type, hitboxObj, shape.hitbox)
         const playerPositionSaved = player.position.copy()
@@ -539,7 +544,16 @@ export class AbstractObject {
         const pull = (target.copy().subtract(nextPosition)).multiply((1 / pullDistance))
         const totalPush = new Vector2dZero()
         let contenders = 0
-        const hitbox = Hit.createObjectHitbox(nextPosition.x, nextPosition.y, nextPosition.z, this.hitbox.w, this.hitbox.h)
+        const { angle, rotation } = this;
+        const hitbox = Hit.createObjectHitbox(
+            nextPosition.x,
+            nextPosition.y,
+            nextPosition.z,
+            this.hitbox.w,
+            this.hitbox.h,
+            angle,
+            rotation
+        )
 
         const createObstacle = function (x: number, y: number, radius: number): Vector2d {
             const obstacle = new Vector2d(x, y)
@@ -563,7 +577,8 @@ export class AbstractObject {
         }, (index) => {
             if (index < 0) return
             const pos = this.mapInstance.getTilePosition(index)
-            const hitbox = Hit.createObjectHitbox(pos.x, pos.y, nextPosition.z, this.hitbox.w, this.hitbox.h)
+            const { angle, rotation } = this
+            const hitbox = Hit.createObjectHitbox(pos.x, pos.y, nextPosition.z, this.hitbox.w, this.hitbox.h, angle, rotation)
             const radius = this.mapInstance.tilewidth / 2
             const tile = this.getTile(pos.x, pos.y, nextPosition.z, hitbox)
             if (tile.hasCollision) {
@@ -602,7 +617,8 @@ export class AbstractObject {
         this.collisionWith = []
         this._collisionWithTiles = []
         const prevMapId = this.map
-        const hitbox = Hit.createObjectHitbox(nextPosition.x, nextPosition.y, 0, this.hitbox.w, this.hitbox.h)
+        const { angle, rotation } = this;
+        const hitbox = Hit.createObjectHitbox(nextPosition.x, nextPosition.y, 0, this.hitbox.w, this.hitbox.h, angle, rotation)
         const boundingMap = this.mapInstance?.boundingMap(nextPosition, this.hitbox)
         let collided = false
 

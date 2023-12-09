@@ -100,6 +100,14 @@ const playerSchemas = {
         $permanent: false
     },
 
+    angle: {
+        $permanent: false
+    },
+
+    rotation: {
+        $permanent: false
+    },
+
     param: Object,
     hp: Number,
     sp: Number,
@@ -275,6 +283,8 @@ export class RpgPlayer extends RpgCommonPlayer {
         this._elementsEfficiency = []
         this._statesEfficiency = []
         this.moving = false
+        this.angle = 0;
+        this.rotation = 0;
 
         this.addParameter(MAXHP, MAXHP_CURVE)
         this.addParameter(MAXSP, MAXSP_CURVE)
@@ -997,7 +1007,7 @@ applyMixins(RpgPlayer, [
     VariableManager,
     MoveManager,
     BattleManager,
-    ComponentManager
+    ComponentManager,
 ])
 
 export interface RpgClassEvent<T> {
