@@ -141,7 +141,7 @@ export class RpgClientEngine {
     private async _init() {
         this.renderer = this.context.inject(RpgRenderer)
 
-        const pluginLoadRessource = async (hookName: string, type: string) => {
+        const pluginLoadResource = async (hookName: string, type: string) => {
             const resource = this.options[type] || []
             this.options[type] = [
                 ...Utils.arrayFlat(await RpgPlugin.emit(hookName, resource)) || [],
@@ -149,9 +149,9 @@ export class RpgClientEngine {
             ]
         }
 
-        await pluginLoadRessource(HookClient.AddSpriteSheet, 'spritesheets')
-        await pluginLoadRessource(HookClient.AddGui, 'gui')
-        await pluginLoadRessource(HookClient.AddSound, 'sounds')
+        await pluginLoadResource(HookClient.AddSpriteSheet, 'spritesheets')
+        await pluginLoadResource(HookClient.AddGui, 'gui')
+        await pluginLoadResource(HookClient.AddSound, 'sounds')
 
         this.renderer.options = {
             selector: '#rpg',

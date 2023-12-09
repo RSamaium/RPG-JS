@@ -461,5 +461,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         ]
     }
 
+    viteConfig._projectConfig = config
+
     return defaultComposer<any>(viteConfig, vite)
 }

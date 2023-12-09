@@ -1,6 +1,7 @@
 export { Direction, Control, Input, PrebuiltGui, HookServer, HookClient, RpgPlugin, RpgModule, RpgCommonPlayer as RpgSpriteLogic } from '@rpgjs/common'
 export { default as entryPoint } from './clientEntryPoint'
 export type { RpgClient, RpgSceneHooks, RpgSceneMapHooks, RpgSpriteHooks, RpgClientEngineHooks } from './RpgClient'
+export { RpgRenderer } from './Renderer'
 export { Scene as RpgScene } from './Scene/Scene'
 export { RpgClientEngine } from './RpgClientEngine'
 export { Spritesheet } from './Sprite/Spritesheet'
