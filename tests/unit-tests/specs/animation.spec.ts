@@ -38,10 +38,10 @@ describe('player.showAnimation()', () => {
         expect(spy).toHaveBeenCalledWith(...getEmitParams('shield', 'default'))
     })
 
-    test('Call Client, scene.showAnimation', () => {
+    test('Call Client, scene.showAnimation', async () => {
         const spy = vi.spyOn(client.getScene(), 'showAnimation')
         player.showAnimation('shield', 'default')
-        server.send()
+        await server.send()
         expect(spy).toHaveBeenCalled()
     })
 })

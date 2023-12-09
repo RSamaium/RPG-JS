@@ -1,7 +1,7 @@
 import { renderList as _renderList, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock, resolveDynamicComponent as _resolveDynamicComponent, normalizeProps as _normalizeProps, guardReactiveProps as _guardReactiveProps, createBlock as _createBlock, mergeProps as _mergeProps, createCommentVNode as _createCommentVNode, normalizeStyle as _normalizeStyle, createElementVNode as _createElementVNode } from "vue"
 import { App, ComponentPublicInstance, createApp } from 'vue'
 import { RpgCommonPlayer, Utils } from '@rpgjs/common'
-import { RpgRenderer } from '../Renderer'
+import { EVENTS_MAP, RpgRenderer } from '../Renderer'
 import { GameEngineClient } from '../GameEngine'
 import { RpgClientEngine } from '../RpgClientEngine'
 import type { Gui } from './Gui'
@@ -33,7 +33,7 @@ const _hoisted_1 = {
     style: { "position": "absolute", "top": "0", "left": "0" }
 }
 function render(_ctx, _cache) {
-    return (_openBlock(), _createElementBlock("div", {  }, [
+    return (_openBlock(), _createElementBlock("div", {}, [
         (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.fixedGui, (ui) => {
             return (_openBlock(), _createElementBlock(_Fragment, null, [
                 (ui.display)
@@ -49,7 +49,7 @@ function render(_ctx, _cache) {
                             return (_openBlock(), _createElementBlock("div", {
                                 style: _normalizeStyle(_ctx.tooltipPosition(tooltip.position))
                             }, [
-                                (_openBlock(), _createBlock(_resolveDynamicComponent(ui.name), _mergeProps({ ...ui.data, spriteData: tooltip, style: { pointerEvents: 'auto' }  }, {
+                                (_openBlock(), _createBlock(_resolveDynamicComponent(ui.name), _mergeProps({ ...ui.data, spriteData: tooltip, style: { pointerEvents: 'auto' } }, {
                                     ref_for: true,
                                     ref: ui.name
                                 }), null, 16 /* FULL_PROPS */))
@@ -99,9 +99,6 @@ export class VueGui {
             methods: {
                 tooltipPosition: parentGui.tooltipPosition.bind(parentGui),
                 tooltipFilter: parentGui.tooltipFilter.bind(parentGui)
-            },
-            mounted() {
-
             }
         }
 
@@ -112,6 +109,27 @@ export class VueGui {
         for (let ui of guiVue) {
             this.app.component(ui.name, ui.gui)
         }
+
+        this.app.directive('propagate', {
+            mounted: (el, binding) => {
+                el.eventListeners = {};
+                EVENTS_MAP.MouseEvent.forEach(eventType => {
+                    const callback = (ev) => {
+                        this.renderer.propagateEvent(ev);
+                    };
+                    el.eventListeners[eventType] = callback;
+                    el.addEventListener(eventType, callback);
+                });
+            },
+            unmounted(el, binding) {
+                EVENTS_MAP.MouseEvent.forEach(eventType => {
+                    const callback = el.eventListeners[eventType];
+                    if (callback) {
+                        el.removeEventListener(eventType, callback);
+                    }
+                });
+            }
+        })
 
         this.vm = this.app.mount(rootEl) as VueInstance
         this.renderer.app = this.app

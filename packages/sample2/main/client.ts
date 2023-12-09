@@ -1,7 +1,9 @@
-import { RpgClientEngine, Timeline, Ease } from "@rpgjs/client"
+import { RpgClientEngineHooks, RpgClientEngine } from "@rpgjs/client"
 
-export default {
-    async onStart(engine: RpgClientEngine) {
-       
+const client: RpgClientEngineHooks = {
+    onConnectError(engine: RpgClientEngine, err: Error) {
+        console.log(err.message)
     }
 }
+
+export default client

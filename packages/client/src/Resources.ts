@@ -1,5 +1,4 @@
 import { RpgClientEngine } from "./RpgClientEngine"
-import { Utils } from '@rpgjs/common'
 
 /**
 * Get/Set images in resources

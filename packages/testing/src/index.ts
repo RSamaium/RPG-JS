@@ -1,9 +1,10 @@
-import { HookClient, HookServer, MockIo, ModuleType, RpgPlugin } from '@rpgjs/common'
+import { HookClient, ModuleType, RpgPlugin } from '@rpgjs/common'
 import { entryPoint, RpgServerEngine, RpgMap, RpgWorld, RpgPlayer } from '@rpgjs/server'
 import { entryPoint as entryPointClient, RpgClientEngine } from '@rpgjs/client'
 import { ObjectFixtureList, Position } from '@rpgjs/types'
+import { MockSocketIo } from 'simple-room'
 
-const { serverIo, ClientIo } = MockIo
+const { serverIo, ClientIo } = MockSocketIo
 
 type ClientTesting = {
     client: RpgClientEngine,
@@ -129,6 +130,7 @@ export async function testing(modules: ModuleType[], optionsServer: any = {}, op
     const engine = await entryPoint(modules, {
         io: serverIo,
         standalone: true,
+        disableAuth: true,
         ...optionsServer
     })
     engine.start(null, false)
@@ -146,7 +148,7 @@ export async function testing(modules: ModuleType[], optionsServer: any = {}, op
         })
         clients.push(client)
         client.renderer.transitionMode = 0
-        const playerId = client['gameEngine'].playerId
+        const playerId = client.playerId
         return {
             client,
             socket: client.socket,
@@ -196,6 +198,7 @@ export function clear(): void {
     RpgMap.buffer.clear()
     RpgPlugin.clear()
     serverIo.clear()
+    serverIo.events.clear()
     window.document.body.innerHTML = `<div id="rpg"></div>`
 }
 
@@ -214,9 +217,9 @@ export function clear(): void {
  * @returns {Promise<ObjectFixtureList>}
  * @memberof Testing
  */
-export function nextTick(client: RpgClientEngine, timestamp = 0): Promise<ObjectFixtureList> {
+export async function nextTick(client: RpgClientEngine, timestamp = 0): Promise<ObjectFixtureList> {
     server.nextTick(timestamp)
-    server.send()
+    await server.send()
     return new Promise((resolve: any) => {
         client.objects.subscribe(async (objects) => {
             await client.processInput()

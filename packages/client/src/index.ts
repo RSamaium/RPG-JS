@@ -1,6 +1,7 @@
 export { Direction, Control, Input, PrebuiltGui, HookServer, HookClient, RpgPlugin, RpgModule, RpgCommonPlayer as RpgSpriteLogic } from '@rpgjs/common'
 export { default as entryPoint } from './clientEntryPoint'
 export type { RpgClient, RpgSceneHooks, RpgSceneMapHooks, RpgSpriteHooks, RpgClientEngineHooks } from './RpgClient'
+export { RpgRenderer } from './Renderer'
 export { Scene as RpgScene } from './Scene/Scene'
 export { RpgClientEngine } from './RpgClientEngine'
 export { Spritesheet } from './Sprite/Spritesheet'
@@ -16,6 +17,7 @@ export { SceneMap as RpgSceneMap } from './Scene/Map'
 export { RpgGui } from './Gui/Gui';
 export { Timeline, Ease } from './Effects/Timeline';
 export { RpgComponent, RpgComponent as RpgSprite } from './Components/Component'
+export { KeyboardControls } from './KeyboardControls'
 export { World, room } from 'simple-room-client'
 
 import { spritesheets } from './Sprite/Spritesheets'
@@ -24,3 +26,4 @@ export const RpgResource = {
     spritesheets,
     sounds
 }
+export { inject } from './inject'

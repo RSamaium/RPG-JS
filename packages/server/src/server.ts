@@ -2,11 +2,12 @@ import { SceneMap } from './Scenes/Map';
 import { RpgPlayer } from './Player/Player'
 import { Query } from './Query'
 import { DAMAGE_SKILL, DAMAGE_PHYSIC, DAMAGE_CRITICAL, COEFFICIENT_ELEMENTS } from './presets'
-import { World, WorldClass } from 'simple-room'
+import { World, WorldClass, Transport } from 'simple-room'
 import { Utils, RpgPlugin, Scheduler, HookServer, RpgCommonGame, DefaultInput } from '@rpgjs/common'
 import { Observable } from 'rxjs';
 import { Tick } from '@rpgjs/types';
 import { Actor, Armor, Class, DatabaseTypes, Item, Skill, State, Weapon } from '@rpgjs/database';
+import { inject } from './inject';
 
 export class RpgServerEngine {
 
@@ -49,10 +50,13 @@ export class RpgServerEngine {
     protected totalConnected: number = 0
     private scheduler: Scheduler = new Scheduler()
     private playerProps: any
+    public gameEngine: RpgCommonGame = inject(RpgCommonGame)
 
     world: WorldClass = World
     workers: any
     envs: any = {}
+    io: any
+    inputOptions: any = {}
 
     /**
      * Combat formulas
@@ -60,7 +64,9 @@ export class RpgServerEngine {
      * @prop {Socket Io Server} [io]
      * @memberof RpgServerEngine
      */
-    constructor(public io, public gameEngine: RpgCommonGame, public inputOptions) {
+    initialize(io, inputOptions) {
+        this.io = io
+        this.inputOptions = inputOptions
         this.envs = inputOptions.envs || {}
         if (this.inputOptions.workers) {
             console.log('workers enabled')
@@ -237,8 +243,29 @@ export class RpgServerEngine {
                 return Query._getShapesOfMap(map)
             }
         })
-        this.io.on('connection', this.onPlayerConnected.bind(this))
+        //this.io.on('connection', this.onPlayerConnected.bind(this))
+        this.transport(this.io)
         await RpgPlugin.emit(HookServer.Start, this)
+    }
+
+    private transport(io): Transport {
+        const timeoutDisconnect = this.globalConfig.timeoutDisconnect ?? 0
+        const auth = this.globalConfig.disableAuth ? () => Utils.generateUID() :
+            async (socket) => {
+                const val = await RpgPlugin.emit(HookServer.Auth, [this, socket], true)
+                if (val.length == 0) {
+                    return Utils.generateUID()
+                }
+                return val[val.length - 1]
+            }
+        const transport = new Transport(io, {
+            timeoutDisconnect,
+            auth
+        })
+        this.world.timeoutDisconnect = timeoutDisconnect
+        transport.onConnected(this.onPlayerConnected.bind(this))
+        transport.onDisconnected(this.onPlayerDisconnected.bind(this))
+        return transport
     }
 
     get tick(): Observable<Tick> {
@@ -253,8 +280,8 @@ export class RpgServerEngine {
      * @returns {void}
      * @memberof RpgServerEngine
      */
-    send() {
-        this.world.send()
+    send(): Promise<void> {
+        return this.world.send()
     }
 
     private async updatePlayersMove(deltaTimeInt: number) {
@@ -320,8 +347,7 @@ export class RpgServerEngine {
                 maps: this.inputOptions.maps,
                 events: this.inputOptions.events,
                 worldMaps: this.inputOptions.worldMaps
-            },
-            this
+            }
         ))
     }
 
@@ -351,11 +377,58 @@ export class RpgServerEngine {
         currentPlayer._socket.emit(eventName, data)
     }
 
-    private onPlayerConnected(socket) {
-        const { token } = socket.handshake.auth
-        const playerId = Utils.generateUID()
-        const player: RpgPlayer = new RpgPlayer(this.gameEngine, playerId)
-        player.session = token
+    private getPlayerBySession(session: string): RpgPlayer | null {
+        const users = this.world.getUsers<RpgPlayer>()
+        for (let userId in users) {
+            const user = users[userId]
+            if (user.session === session) {
+                return user
+            }
+        }
+        return null
+    }
+
+    private onPlayerConnected(socket, playerId: string) {
+        const existingUser = this.world.getUser<RpgPlayer>(playerId, false)
+
+        this.world.connectUser(socket, playerId)
+
+        let player: RpgPlayer
+
+        if (!existingUser) {
+            const { token } = socket.handshake.auth
+            player = new RpgPlayer(playerId)
+            player.session = token
+
+            this.world.setUser(player, socket)
+
+            player._init()
+
+            if (!token) {
+                const newToken = Utils.generateUID() + '-' + Utils.generateUID() + '-' + Utils.generateUID()
+                player.session = newToken
+            }
+
+            if (!token) {
+                player.execMethod('onConnected')
+            }
+            else {
+                RpgPlugin.emit(HookServer.ScalabilityPlayerConnected, player)
+            }
+        }
+        else {
+            player = existingUser
+            if (player.map) {
+                player.emit('preLoadScene', {
+                    reconnect: true,
+                    id: player.map
+                })
+                player.emitSceneMap()
+                this.world.joinRoom(player.map, playerId)
+            }
+        }
+
+        socket.emit('playerJoined', { playerId, session: player.session })
 
         socket.on('move', (data: { input: string[], frame: number }) => {
             if (!data?.input) return
@@ -372,28 +445,6 @@ export class RpgServerEngine {
             }
         })
 
-        socket.on('disconnect', () => {
-            this.onPlayerDisconnected(playerId)
-        })
-
-        this.world.setUser(player, socket)
-
-        player.server = this
-        player._init()
-
-        if (!token) {
-            const newToken = Utils.generateUID() + '-' + Utils.generateUID() + '-' + Utils.generateUID()
-            player.session = newToken
-        }
-
-        socket.emit('playerJoined', { playerId, session: player.session })
-
-        if (!token) {
-            player.execMethod('onConnected')
-        }
-        else {
-            RpgPlugin.emit(HookServer.ScalabilityPlayerConnected, player)
-        }
     }
 
     private onPlayerDisconnected(playerId: string) {

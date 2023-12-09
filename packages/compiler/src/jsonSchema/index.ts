@@ -1,6 +1,7 @@
 import compilerOptions  from "./compilation.js";
 import canvasOptions from "./canvas.js";
 import expressOptions from "./express.js";
+import vitestOptions from "./vitest.js";
 
 export default {
     "server": {
@@ -44,7 +45,8 @@ export default {
                 "required": ["enabled", "authSecret"]
             },
             ...compilerOptions,
-            ...expressOptions
+            ...expressOptions,
+            ...vitestOptions
         }
     },
     "client": {

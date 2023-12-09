@@ -49,8 +49,8 @@ export class GameEngineClient extends RpgCommonGame {
         }
     }
 
-    constructor() {
-        super(GameSide.Client)
+    initialize() {
+        super.initialize(GameSide.Client)
     }
 
     private _get(prop: '_objects' | '_shapes', id: string): ObjectFixture | null {

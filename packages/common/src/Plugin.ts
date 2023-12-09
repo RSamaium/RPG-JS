@@ -8,6 +8,7 @@ export type Plugin = PluginSides | [PluginSides, any]
 export enum HookServer {
     Start = 'Server.Start',
     Step = "Server.Step",
+    Auth = "Server.Auth",
     PlayerConnected = 'Server.onConnected',
     PlayerDisconnected = 'Server.onDisconnected',
     AddMap = 'Server.AddMap',

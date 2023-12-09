@@ -17,7 +17,9 @@ test('Test onConnected Hook', () => {
 
         await _beforeEach([{
             server: RpgServerModule
-        }])
+        }], {
+            changeMap: false
+        })
     })
 })
 

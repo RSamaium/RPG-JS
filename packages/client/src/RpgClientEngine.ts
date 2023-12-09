@@ -15,6 +15,7 @@ import {
     RpgCommonMap,
     Scheduler,
     Control,
+    InjectContext,
 } from '@rpgjs/common'
 import { RpgSound } from './Sound/RpgSound'
 import { SceneMap } from './Scene/Map'
@@ -48,6 +49,7 @@ export class RpgClientEngine {
      * 
      * @prop {RpgRenderer} [renderer]
      * @readonly
+     * @deprecated Use `inject(RpgRenderer)` instead. Will be removed in v5
      * @memberof RpgClientEngine
      * */
     public renderer: RpgRenderer
@@ -74,6 +76,7 @@ export class RpgClientEngine {
      * Get the class managing the keyboard
      * 
      * @prop {KeyboardControls} [controls]
+     * @deprecated Use `inject(KeyboardControls)` instead. Will be removed in v5
      * @readonly
      * @memberof RpgClientEngine
      * */
@@ -107,6 +110,10 @@ export class RpgClientEngine {
     private serverFps: number = 60
     private scheduler: Scheduler = new Scheduler()
     private _serverUrl: string = ''
+    /**
+     * * @deprecated Use `inject(GameEngineClient)` instead. Will be removed in v5
+     */
+    public gameEngine = this.context.inject(GameEngineClient)
 
     /**
      * Read objects synchronized with the server
@@ -124,7 +131,7 @@ export class RpgClientEngine {
 
     envs?: object = {}
 
-    constructor(public gameEngine: GameEngineClient, private options) {
+    constructor(private context: InjectContext, private options) {
         this.envs = options.envs || {}
         this.tick.subscribe(({ timestamp, deltaTime }) => {
             if (timestamp != -1) this.step(timestamp, deltaTime)
@@ -132,9 +139,9 @@ export class RpgClientEngine {
     }
 
     private async _init() {
-        this.renderer = new RpgRenderer(this)
+        this.renderer = this.context.inject(RpgRenderer)
 
-        const pluginLoadRessource = async (hookName: string, type: string) => {
+        const pluginLoadResource = async (hookName: string, type: string) => {
             const resource = this.options[type] || []
             this.options[type] = [
                 ...Utils.arrayFlat(await RpgPlugin.emit(hookName, resource)) || [],
@@ -142,9 +149,9 @@ export class RpgClientEngine {
             ]
         }
 
-        await pluginLoadRessource(HookClient.AddSpriteSheet, 'spritesheets')
-        await pluginLoadRessource(HookClient.AddGui, 'gui')
-        await pluginLoadRessource(HookClient.AddSound, 'sounds')
+        await pluginLoadResource(HookClient.AddSpriteSheet, 'spritesheets')
+        await pluginLoadResource(HookClient.AddGui, 'gui')
+        await pluginLoadResource(HookClient.AddSound, 'sounds')
 
         this.renderer.options = {
             selector: '#rpg',
@@ -170,8 +177,8 @@ export class RpgClientEngine {
             const id: any = isString(sound) ? extractId(sound) : undefined
             this.addSound(sound, id)
         })
-        
-        // obsolete
+
+        // deprecated
         if (typeof __RPGJS_PRODUCTION__ != 'undefined' && __RPGJS_PRODUCTION__) {
             if ('serviceWorker' in navigator) {
                 window.addEventListener('load', () => {
@@ -180,7 +187,7 @@ export class RpgClientEngine {
             }
         }
 
-        this.controls = new KeyboardControls(this)
+        this.controls = this.context.inject(KeyboardControls)
     }
 
     private addResource(resourceClass, cb) {
@@ -333,7 +340,7 @@ export class RpgClientEngine {
             }
             // @ts-ignore
             const envUrl = this.envs.VITE_SERVER_URL
-            this.connection(
+            await this.connection(
                 serverUri.url ? serverUri.url + ':' + serverUri.port :
                     envUrl ? envUrl : undefined
             )
@@ -420,7 +427,7 @@ export class RpgClientEngine {
      * @returns {void}
      * @memberof RpgClientEngine
      */
-    connection(uri?: string) {
+    async connection(uri?: string) {
         const { standalone } = this.gameEngine
 
         this._serverUrl = uri || ''
@@ -451,12 +458,16 @@ export class RpgClientEngine {
             RpgPlugin.emit(HookClient.ConnectedError, [this, err, this.socket], true)
         })
 
-        this.socket.on('preLoadScene', (name: string) => {
-            if (this.lastScene == name) {
+        this.socket.on('preLoadScene', ({ id, reconnect }: { id: string, reconnect?: boolean }) => {
+            if (this.lastScene == id) {
                 return
             }
-            this.lastScene = name
-            this.renderer.transitionScene(name)
+            this.lastScene = id
+            this.renderer.transitionScene(id)
+            if (reconnect) {
+                this.roomJoin.next('')
+                this.roomJoin.complete() 
+            }
         })
 
         this.socket.on(SocketEvents.GameReload, () => {
@@ -467,7 +478,7 @@ export class RpgClientEngine {
             this.renderer.loadScene(name, data)
         })
 
-        this.socket.on(SocketEvents.ChangeServer, ({ url, port }) => {
+        this.socket.on(SocketEvents.ChangeServer, async({ url, port }) => {
             const connection = url + ':' + port
             if (this.lastConnection == connection) {
                 return
@@ -617,7 +628,7 @@ export class RpgClientEngine {
                             paramsChanged,
                             isShape
                         })
-                        
+
                         // perform actions on the sprite after creation/update
                         callAction(key, paramsChanged)
                     }
@@ -651,7 +662,7 @@ export class RpgClientEngine {
         RpgGui._setSocket(this.socket)
 
         if (standalone) {
-            this.socket.connection({
+            await this.socket.connection({
                 auth: {
                     token: this.session
                 }

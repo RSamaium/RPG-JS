@@ -105,7 +105,7 @@ export class EventManager {
         for (let playerId in map.players) {
             if (object.id == playerId) continue
             const otherPlayer = map.players[playerId]
-            if (otherPlayer.following?.id == object.id) {
+            if (otherPlayer.followingId == object.id) {
                 otherPlayer.cameraFollow(otherPlayer)
             }
         }

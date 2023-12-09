@@ -20,6 +20,7 @@ export default defineConfig(async () => {
             configResolveAlias[`@rpgjs/${pkg}`] = path.resolve(__dirname, `../../../${pkg}/src/index.ts`)
          }
     }
+    const customVitest = config._projectConfig.vitest
     config = {
         ...config,
         resolve: {
@@ -42,7 +43,8 @@ export default defineConfig(async () => {
             exclude: [
                 ...configDefaults.exclude, 
                 'packages/compiler/**/*'
-            ]
+            ],
+            ...(customVitest || {}),
         }
     }
 })

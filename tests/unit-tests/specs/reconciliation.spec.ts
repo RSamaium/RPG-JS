@@ -21,7 +21,7 @@ test('Test reconciliation', async () => {
     return new Promise(async (resolve: any) => {
         RpgPlugin.on(HookClient.SendInput, async (client, name) => {
             await server['updatePlayersMove'](1)
-            server.send()
+            await server.send()
             const pos = { x: 3, y: 0, z: 0 }
             expect(player.position).toMatchObject(pos)
             const { serverFrames, clientFrames } = client
@@ -43,7 +43,7 @@ test('Multi input', async () => {
     return new Promise(async (resolve: any) => {
         RpgPlugin.on(HookClient.SendInput, async (client, name) => {
             await server['updatePlayersMove'](1)
-            server.send()
+            await server.send()
             const { serverFrames, clientFrames } = client
             const [frame] = [ ...serverFrames.keys()]
             expect(serverFrames.get(frame).data).toMatchObject(clientFrames.get(frame).data)

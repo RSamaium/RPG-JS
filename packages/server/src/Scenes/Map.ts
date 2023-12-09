@@ -7,6 +7,7 @@ import { RpgMap } from '../Game/Map'
 import { RpgWorldMaps, WorldMap } from '../Game/WorldMaps'
 import { RpgEvent, RpgPlayer } from '../Player/Player'
 import { RpgServerEngine } from '../server'
+import { inject } from '../inject'
 
 export interface RpgClassMap<T> {
     id?: string
@@ -28,8 +29,9 @@ export class SceneMap {
         [mapId: string]: RpgClassMap<RpgMap>
     } = {}
     private worldMaps: Map<string, RpgWorldMaps> = new Map()
+    private server: RpgServerEngine = inject(RpgServerEngine)
 
-    constructor(sceneMapObject: SceneMapObject, private server: RpgServerEngine) {
+    constructor(sceneMapObject: SceneMapObject) {
         const { maps, worldMaps, events } = sceneMapObject
         this.maps = maps
         this.mapsById = {}
@@ -252,7 +254,9 @@ export class SceneMap {
             return null
         }
 
-        player.emit('preLoadScene', mapId)
+        player.emit('preLoadScene', {
+            id: mapId
+        })
 
         player.prevMap = player.map
 

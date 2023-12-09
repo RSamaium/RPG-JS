@@ -17,7 +17,8 @@
     "@rpgjs/client": "^4.1.3",
     "@rpgjs/common": "^4.1.3",
     "@rpgjs/server": "^4.1.3",
-    "@rpgjs/types": "^4.0.5"
+    "@rpgjs/types": "^4.0.5",
+    "simple-room": "^3.0.3"
   },
   "gitHead": "5abe6ca78be96524d74a052a230f2315c900ddee",
   "devDependencies": {

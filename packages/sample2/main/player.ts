@@ -2,15 +2,12 @@ import { RpgMap } from '@rpgjs/server';
 import { Speed } from '@rpgjs/server';
 import { RpgPlayer, RpgPlayerHooks, Control, Components, RpgEvent, EventData } from '@rpgjs/server'
 import Potion from './database/items/Potion';
-import CharaEvent from './events/npc';
 
 const player: RpgPlayerHooks = {
     onConnected(player: RpgPlayer) {
         player.name = 'YourName'
-        player.setComponentsTop(Components.text('{id}'))
+        player.setComponentsTop(Components.text('{position.x},{position.y}'))
     },
-    onAuth: () => {},
-   
     onInput(player: RpgPlayer, { input }) {
         const map = player.getCurrentMap()
         if (input == 'action') {
@@ -26,8 +23,12 @@ const player: RpgPlayerHooks = {
            player.callMainMenu()
         }
     },
-    async onJoinMap(player: RpgPlayer, map: RpgMap) {
-       player.save();
+    async onJoinMap(player: RpgPlayer) {
+        player.gui('test').open();
+
+        setTimeout(() => {
+            player.addItem(Potion, 1);
+        }, 5000);
     }
 }
 

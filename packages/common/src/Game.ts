@@ -7,6 +7,7 @@ import { GameWorker } from './Worker'
 import { HitObject } from './Hit'
 import { RpgShape } from './Shape'
 import { TiledObjectClass } from '@rpgjs/tiled'
+import { InjectContext } from './Inject'
 
 export enum GameSide {
     Server = 'server',
@@ -17,9 +18,10 @@ export enum GameSide {
 export class RpgCommonGame extends EventEmitter {
     events: any
     world: any
+    side: GameSide
 
-    constructor(public side: GameSide) {
-        super()
+    initialize(side: GameSide) {
+        this.side = side
         this.events = {} // events for all player in map
     }
 
@@ -39,7 +41,12 @@ export class RpgCommonGame extends EventEmitter {
         let event
         if (!playerId) playerId = generateUID()
         if (isClass(_class)) {
-            event = new _class(this, playerId)
+            if (this.side == GameSide.Client) {
+                event = new _class(this, playerId)
+            }
+            else {
+                event = new _class(playerId)
+            }
         }
         else {
             event = _class

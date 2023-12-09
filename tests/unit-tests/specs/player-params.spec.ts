@@ -338,22 +338,22 @@ describe('Test Hooks', () => {
 })
 
 describe('Sync with client', () => {
-   function testParamSync(prop, value) {
+   async function testParamSync(prop, value) {
       player[prop] = value
-      server.send()
+      await server.send()
       const { paramsChanged: object } = client.gameEngine.getObject(player.id)
       expect(object[prop]).toBe(value)
    }
 
    for (let prop of ['exp', 'hp', 'sp', 'level', 'gold', 'speed', 'frequency']) {
       test(`${prop} is sync with client`, async () => {
-         testParamSync(prop, 50)
+         await testParamSync(prop, 50)
       })
    }
 
    test('expForNextlevel sync with client', async () => {
       player.exp = 150
-      server.send()
+      await server.send()
       const { paramsChanged: object } = client.gameEngine.getObject(player.id)
       expect(object.expForNextlevel).toBe(player.expForNextlevel)
    })
@@ -366,7 +366,7 @@ describe('Sync with client', () => {
          accelerationB: 30
       }
       player.exp = 150
-      server.send()
+      await server.send()
       const { paramsChanged: object } = client.gameEngine.getObject(player.id)
       expect(object.expForNextlevel).toBe(player.expForNextlevel)
    })
@@ -376,7 +376,7 @@ describe('Sync with client', () => {
          start: 10,
          end: 10
       });
-      server.send()
+      await server.send()
       const { paramsChanged: object } = client.gameEngine.getObject(player.id)
       expect(object.param.strength).toBe(10)
    })
@@ -386,14 +386,14 @@ describe('Sync with client', () => {
          start: 10,
          end: 10
       });
-      server.send()
+      await server.send()
       const { paramsChanged: object } = client.gameEngine.getObject(player.id)
       expect(object.param[MAXHP]).toBe(10)
    })
 
    test('Level Up, maxHp is sync with client', async () => {
       player.level = 2
-      server.send()
+      await server.send()
       const { paramsChanged: object } = client.gameEngine.getObject(player.id)
       expect(object.param[MAXHP]).toBe(player.param[MAXHP])
    })
@@ -404,7 +404,7 @@ describe('Sync with client', () => {
             value: 100
          }
       }
-      server.send()
+      await server.send()
       const { paramsChanged: object } = client.gameEngine.getObject(player.id)
       expect(object.param[MAXHP]).toBe(player.param[MAXHP])
    })

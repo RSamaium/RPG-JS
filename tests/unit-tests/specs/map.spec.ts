@@ -193,10 +193,10 @@ describe('Server Side', () => {
     })
 })
 
-test('Player Teleport in map', () => {
+test('Player Teleport in map', async () => {
     player.teleport({ x: 100, y: 200 })
     expect(player.position).toMatchObject({ x: 100, y: 200, z: 0 })
-    server.send()
+    await server.send()
     const playerClient = client.gameEngine.world.getObject(playerId)
     const { x, y } = playerClient?.position || {}
     expect(x).toEqual(100)

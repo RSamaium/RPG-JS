@@ -2,6 +2,8 @@
 import axios from 'axios'
 import { Utils } from '@rpgjs/common'
 import { RpgPlayer } from './Player/Player'
+import { inject } from './inject'
+import { RpgServerEngine } from './server'
 
 interface MatchMakerPayload {
     playerId: string
@@ -32,7 +34,7 @@ export class RpgMatchMaker {
     }
 
     async getServer(player: RpgPlayer): Promise<MatchMakerResponse | null> {
-        const currentServerId = player.server.serverId
+        const currentServerId = inject(RpgServerEngine).serverId
         const payload: MatchMakerPayload = {
             playerId: player.id,
             mapName: player.map

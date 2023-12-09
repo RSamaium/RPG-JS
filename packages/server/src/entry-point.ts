@@ -1,7 +1,8 @@
-import { RpgCommonGame, HookServer, loadModules, ModuleType, GameSide, RpgPlugin } from '@rpgjs/common'
+import { RpgCommonGame, HookServer, loadModules, ModuleType, GameSide, RpgPlugin, InjectContext } from '@rpgjs/common'
 import { RpgServerEngine } from './server'
 import { RpgPlayer } from './Player/Player'
 import { RpgMatchMaker } from './MatchMaker'
+import { inject, setInject } from './inject'
 
 interface RpgServerEntryPointOptions {
     /** 
@@ -39,7 +40,10 @@ interface RpgServerEntryPointOptions {
 }
 
 export default async function (modules: ModuleType[], options: RpgServerEntryPointOptions): Promise<RpgServerEngine> {
-    const gameEngine = new RpgCommonGame(GameSide.Server)
+    const context = new InjectContext()
+    setInject(context)
+
+    inject(RpgCommonGame, [GameSide.Server])
 
     if (!options.globalConfig) options.globalConfig = {}
 
@@ -59,7 +63,8 @@ export default async function (modules: ModuleType[], options: RpgServerEntryPoi
 
     const relationsEngine = {
         onStart: HookServer.Start,
-        onStep: HookServer.Step
+        onStep: HookServer.Step,
+        auth: HookServer.Auth
     }
 
     const { playerProps } = await loadModules(modules, {
@@ -91,14 +96,16 @@ export default async function (modules: ModuleType[], options: RpgServerEntryPoi
         return mod
     })
 
-    const serverEngine = new RpgServerEngine(options.io, gameEngine, {
-        debug: {},
-        updateRate: 10,
-        stepRate: 60,
-        timeoutInterval: 0,
-        countConnections: false,
-        playerProps,
-        ...options
-    })
+    const serverEngine = inject(RpgServerEngine, [
+        options.io, {
+            debug: {},
+            updateRate: 10,
+            stepRate: 60,
+            timeoutInterval: 0,
+            countConnections: false,
+            playerProps,
+            ...options
+        }
+    ])
     return serverEngine
 }

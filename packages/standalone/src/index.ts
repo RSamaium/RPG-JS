@@ -1,8 +1,9 @@
-import { MockIo, Utils } from '@rpgjs/common'
+import { Utils } from '@rpgjs/common'
 import { entryPoint as entryPointServer, RpgServerEngine } from '@rpgjs/server'
 import { entryPoint as entryPointClient, RpgClientEngine } from '@rpgjs/client'
+import { MockSocketIo } from 'simple-room'
 
-const { ClientIo, serverIo } = MockIo
+const { serverIo, ClientIo } = MockSocketIo
 
 export function entryPoint(modules: any[], options: any = {}) {
     const io = new ClientIo()

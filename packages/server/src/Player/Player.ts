@@ -37,6 +37,7 @@ import { CameraOptions, PositionXY_OptionalZ, SocketEvents, SocketMethods, Layou
 import { ComponentManager } from './ComponentManager'
 import { Subject } from 'rxjs'
 import { EventManager, EventMode } from '../Game/EventManager'
+import { inject } from '../inject'
 
 const {
     isPromise,
@@ -200,6 +201,7 @@ export class RpgPlayer extends RpgCommonPlayer {
     * ``` 
     * @title Server Instance
     * @prop {RpgServerEngine} player.server
+    * @deprecated Use `inject(RpgServerEngine)` instead. Will be removed in v5
     * @memberof Player
     * */
     public server: RpgServerEngine
@@ -208,7 +210,7 @@ export class RpgPlayer extends RpgCommonPlayer {
     /** @internal */
     public tmpPositions: Position | string | null = null
     public otherPossessedPlayer: RpgPlayer | RpgEvent | null = null
-    public following: RpgPlayer | RpgEvent | null = null
+    public followingId: string | null = null
 
     // Indicates whether to load data with load(). In this case, hooks are not triggered.
     private _dataLoading: boolean = false
@@ -218,10 +220,10 @@ export class RpgPlayer extends RpgCommonPlayer {
         position: Position
     } | undefined
 
-    constructor(gameEngine: RpgCommonGame, playerId: string) {
-        super(gameEngine, playerId)
-        this.initialize()
-    }
+    /**
+     * @deprecated Use `inject(RpgCommonGame)` instead. Will be removed in v5
+     */
+    public gameEngine: RpgCommonGame = inject(RpgCommonGame)
 
     // redefine type (as RpgPlayer)
     get otherPlayersCollision(): RpgPlayer[] {
@@ -238,8 +240,14 @@ export class RpgPlayer extends RpgCommonPlayer {
     // a flag that lets the client know if the event is suppressed. The client can, for example, end animations before completely deleting the object (client side).
     deleted: boolean = false
 
+    constructor(public playerId: string) {
+        super(inject(RpgCommonGame), playerId)
+        this.initialize()
+    }
+
     /** @internal */
     initialize() {
+        this.server = inject(RpgServerEngine)
         this.expCurve = {
             basis: 30,
             extra: 20,
@@ -597,7 +605,7 @@ export class RpgPlayer extends RpgCommonPlayer {
     }
 
     toJSON() {
-        const { permanentObject } = Room.toDict(this.schema)
+        const { permanentObject } = Room.compileSchema(this.schema)
         const snapshot = Room.extractObjectOfRoom(this, permanentObject)
         snapshot.variables = [...this.variables]
         return snapshot
@@ -769,10 +777,10 @@ export class RpgPlayer extends RpgCommonPlayer {
      */
     cameraFollow(otherPlayer: RpgPlayer | RpgEvent, options: CameraOptions = {}) {
         if (otherPlayer.id == this.id) {
-            this.following = null
+            this.followingId = null
         }
         else {
-            this.following = otherPlayer
+            this.followingId = otherPlayer.id
         }
         this.emit(SocketEvents.CallMethod, {
             objectId: this.playerId,
@@ -1004,8 +1012,8 @@ export class RpgEvent extends RpgPlayer {
     mode: EventMode
     playerRelated: RpgPlayer | null = null
 
-    constructor(gameEngine: RpgCommonGame, playerId: string) {
-        super(gameEngine, playerId)
+    constructor(playerId: string) {
+        super(playerId)
     }
 
     async execMethod(methodName: string, methodData = []) {

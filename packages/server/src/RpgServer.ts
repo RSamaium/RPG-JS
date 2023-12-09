@@ -25,6 +25,36 @@ export interface RpgServerEngineHooks {
      * @memberof RpgServerEngineHooks
      */
     onStep?: (server: RpgServerEngine) => any
+
+   /**
+     * Flexible authentication function for RPGJS.
+     * 
+     * This `auth` function is an integral part of the connection process in RPGJS, designed to be agnostic 
+     * and adaptable to various authentication systems. It is not tied to any specific database or third-party 
+     * authentication service, allowing developers to implement custom logic suited to their game's requirements. 
+     * This flexibility is particularly useful in MMORPGs where diverse and robust authentication mechanisms may be needed.
+     *
+     * The function is called during the player connection phase and should handle the verification of player credentials.
+     * The implementation can vary widely based on the chosen authentication method (e.g., JWT tokens, OAuth, custom tokens).
+     *
+     * @param {RpgServerEngine} server - The instance of the game server.
+     * @param {SocketIO.Socket} socket - The socket instance for the connecting player. This can be used to access client-sent data, like tokens or other credentials.
+     * @returns {Promise<string> | string} The function should return a promise that resolves to a player's unique identifier (e.g., user ID) if authentication is successful, or a string representing the user's ID. Alternatively, it can throw an error if authentication fails.
+     * @throws {string} Throwing an error will prevent the player from connecting, signifying a failed authentication attempt.
+     *
+     * @example
+     * ```ts
+     * // Example of a simple token-based authentication in main/server.ts
+     * const server: RpgServerEngineHooks = {
+     *     auth(server, socket) {
+     *         const token = socket.handshake.query.token;
+     *         // Implement your authentication logic here
+     *         // Return user ID or throw an error if authentication fails
+     *     }
+     * };
+     * ```
+     */
+    auth?: (server: RpgServerEngine, socket: any) => Promise<string> | string | never
 }
 
 export interface RpgPlayerHooks {
@@ -239,7 +269,6 @@ export interface RpgServer {
         player?: string[],
         engine?: string[]
     }
-
     /**
      * Adding sub-modules
      *

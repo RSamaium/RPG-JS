@@ -53,12 +53,11 @@ export class AbstractObject {
     // notifier for destroy
     _destroy$: Subject<void> = new Subject()
 
-
     static get ACTIONS() {
         return ACTIONS
     }
 
-    constructor(private gameEngine: RpgCommonGame, public playerId: string) {
+    constructor(public gameEngine: RpgCommonGame, public playerId: string) {
         this._hitboxPos = new SAT.Vector(0, 0)
         this.setHitbox(this.width, this.height)
         this.position = { x: 0, y: 0, z: 0 }

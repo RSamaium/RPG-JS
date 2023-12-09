@@ -25,9 +25,14 @@ Configuration properties related to the compiler.
     [vite]
       logLevel = "silent"
     ```
-    You can insert this section after the `vite` section in your `readme.md`.
+    > Please note that RPGJS contains configurations. You will therefore overwrite configurations ([the basic file is in the sources]([https://github.com/RSamaium/RPG-JS/blob/v4/packages/compiler/src/build/client-config.ts#L335])).
 
-    > Please note that RPGJS contains certain configurations. You will therefore overwrite certain configurations ([the basic file is in the sources]([https://github.com/RSamaium/RPG-JS/blob/v4/packages/compiler/src/build/client-config.ts#L335])).
+  - `vitest`: (*object*) All [Vitest configuration](https://vitest.dev/config/). Example:
+    ```toml
+    [vitest]
+      silent = true
+    ```
+    >  You will therefore overwrite configurations ([the basic file is in the sources]([https://github.com/RSamaium/RPG-JS/blob/v4/packages/compiler/src/test/vitest.config.ts#L36])).
 
 - `express`
 

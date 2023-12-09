@@ -10,3 +10,4 @@ docs/others/*
 !docs/others/readme.md
 cache
 packages/**/browser
+vitest.config.ts.timestamp*

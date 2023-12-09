@@ -41,7 +41,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "rxjs": "7.8.0",
-    "simple-room-client": "^2.0.6",
+    "simple-room-client": "^3.0.0",
     "vue": "^3.2.47"
   },
   "gitHead": "5abe6ca78be96524d74a052a230f2315c900ddee",

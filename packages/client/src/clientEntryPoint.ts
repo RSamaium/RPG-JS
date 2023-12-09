@@ -1,6 +1,7 @@
-import { HookClient, loadModules, ModuleType } from '@rpgjs/common'
+import { InjectContext, HookClient, loadModules, ModuleType } from '@rpgjs/common'
 import { GameEngineClient } from './GameEngine'
 import { RpgClientEngine } from './RpgClientEngine'
+import { setInject } from './inject'
 
 interface RpgClientEntryPointOptions {
     /** 
@@ -142,7 +143,8 @@ export default (modules: ModuleType[], options: RpgClientEntryPointOptions): Rpg
         }
     })
 
-    const gameEngine = new GameEngineClient()
-    const clientEngine = new RpgClientEngine(gameEngine, options)
-    return clientEngine
+    const context = new InjectContext()
+    setInject(context)
+
+    return context.inject(RpgClientEngine, [options])
 }

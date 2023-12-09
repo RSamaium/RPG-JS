@@ -1,4 +1,4 @@
-import { RpgPlugin, HookClient, Utils } from '@rpgjs/common'
+import { RpgPlugin, HookClient, Utils, InjectContext } from '@rpgjs/common'
 import { SceneMap } from './Scene/Map'
 import { Scene } from './Scene/Scene'
 import { Scene as PresetScene } from './Presets/Scene'
@@ -10,6 +10,7 @@ import { Subject, forkJoin } from 'rxjs'
 import { GameEngineClient } from './GameEngine'
 import { SpinnerGraphic } from './Effects/Spinner'
 import { autoDetectRenderer, Container, EventBoundary, FederatedEvent, FederatedPointerEvent, Graphics, ICanvas, IRenderer } from 'pixi.js'
+import { KeyboardControls } from './KeyboardControls'
 
 const { elementToPositionAbsolute } = Utils
 
@@ -22,7 +23,17 @@ enum ContainerName {
     Map = 'map'
 }
 
+export const EVENTS_MAP = {
+    MouseEvent: ['click', 'dblclick', 'mousedown', 'mouseup', 'mousemove', 'mouseenter', 'mouseleave', 'mouseover', 'mouseout', 'contextmenu', 'wheel'],
+    KeyboardEvent: ['keydown', 'keyup', 'keypress', 'keydownoutside', 'keyupoutside', 'keypressoutside'],
+    PointerEvent: ['pointerdown', 'pointerup', 'pointermove', 'pointerover', 'pointerout', 'pointerenter', 'pointerleave', 'pointercancel'],
+    TouchEvent: ['touchstart', 'touchend', 'touchmove', 'touchcancel']
+};
+
 export class RpgRenderer {
+    private gameEngine: GameEngineClient = this.context.inject(GameEngineClient)
+    private clientEngine: RpgClientEngine = this.context.inject(RpgClientEngine)
+
     public vm: ComponentPublicInstance
     public app: App
     public readonly stage: Container = new Container()
@@ -38,7 +49,6 @@ export class RpgRenderer {
     private _height: number = 400
     private canvasEl: HTMLElement
     private selector: HTMLElement
-    private gameEngine: GameEngineClient = this.clientEngine.gameEngine
     private loadingScene = {
         transitionIn: new Subject(),
         transitionOut: new Subject()
@@ -47,7 +57,7 @@ export class RpgRenderer {
     private prevObjectScene: any = {}
     public transitionMode: TransitionMode = TransitionMode.Fading
 
-    constructor(private clientEngine: RpgClientEngine) {
+    constructor(private context: InjectContext) {
         this.clientEngine.tick.subscribe(({ timestamp, deltaRatio, frame, deltaTime }) => {
             this.draw(timestamp, deltaTime, deltaRatio, frame)
         })
@@ -81,8 +91,8 @@ export class RpgRenderer {
         this.spinner.y = h * 0.5
     }
 
-    get canvas(): ICanvas {
-        return this.renderer.view
+    get canvas(): HTMLCanvasElement {
+        return this.renderer.view as HTMLCanvasElement
     }
 
     get height(): number {
@@ -135,9 +145,24 @@ export class RpgRenderer {
         this.fadeContainer.visible = false
         this.fadeContainer.alpha = 0
 
-        await RpgGui._initialize(this.clientEngine, this.guiEl)
+        await RpgGui._initialize(this.context, this.guiEl)
 
         this.resize()
+        this.bindMouseControls()
+
+    }
+
+    private bindMouseControls() {
+        const controlInstance = this.context.inject(KeyboardControls)
+        const controls = controlInstance.getControls()
+        for (let key in controls) {
+            const { actionName } = controls[key]
+            if (EVENTS_MAP.MouseEvent.includes(key)) {
+                this.canvas.addEventListener(key, (e) => {
+                    controlInstance.applyControl(actionName)
+                })
+            }
+        }
     }
 
     /** @internal */
@@ -205,7 +230,7 @@ export class RpgRenderer {
             this.loadingScene.transitionOut.complete()
         }
         if (this.transitionMode == TransitionMode.Fading) {
-            new TransitionScene(this.clientEngine, this.fadeContainer)
+            new TransitionScene(this.context, this.fadeContainer)
                 .addFadeOut()
                 .onComplete(finish)
                 .start()
@@ -232,7 +257,7 @@ export class RpgRenderer {
             switch (name) {
                 case PresetScene.Map:
                     const sceneClass = scenes[PresetScene.Map] || SceneMap
-                    this.scene = new sceneClass(this.gameEngine, this.renderer, {
+                    this.scene = new sceneClass(this.context, this.renderer, {
                         screenWidth: this.renderer.screen.width,
                         screenHeight: this.renderer.screen.height,
                         drawMap: this.options.drawMap
@@ -248,7 +273,7 @@ export class RpgRenderer {
                 RpgPlugin.emit(HookClient.AfterSceneLoading, this.scene)
             }
             if (this.transitionMode == TransitionMode.Fading) {
-                new TransitionScene(this.clientEngine, this.fadeContainer)
+                new TransitionScene(this.context, this.fadeContainer)
                     .addFadeIn()
                     .onComplete(finish)
                     .start()
@@ -273,11 +298,18 @@ export class RpgRenderer {
      * @returns {void}
      */
     propagateEvent(ev: MouseEvent) {
+        const rect = this.canvas.getBoundingClientRect();
+        const canvasX = rect.left + window.scrollX;
+        const canvasY = rect.top + window.scrollY;
+        const realX = ev.clientX - canvasX;
+        const realY = ev.clientY - canvasY;
         const boundary = new EventBoundary(this.stage);
         const event = new FederatedPointerEvent(boundary)
-        event.global.set(ev.clientX, ev.clientY);
+        event.global.set(realX, realY);
         event.type = ev.type;
-        this.getScene<SceneMap>()?.viewport?.emit(event.type as any, event)
+        const hitTestTarget = boundary.hitTest(realX, realY);
+        hitTestTarget?.dispatchEvent(event)
+        this.canvas.dispatchEvent(new MouseEvent(ev.type, ev))
     }
 
     /***
@@ -290,14 +322,7 @@ export class RpgRenderer {
      * @returns {void}
      */
     addPropagateEventsFrom(el: HTMLElement) {
-        const eventMap = {
-            MouseEvent: ['click', 'mousedown', 'mouseup', 'mousemove', 'mouseenter', 'mouseleave', 'mouseover', 'mouseout', 'contextmenu', 'wheel'],
-            KeyboardEvent: ['keydown', 'keyup', 'keypress', 'keydownoutside', 'keyupoutside', 'keypressoutside'],
-            PointerEvent: ['pointerdown', 'pointerup', 'pointermove', 'pointerover', 'pointerout', 'pointerenter', 'pointerleave', 'pointercancel'],
-            TouchEvent: ['touchstart', 'touchend', 'touchmove', 'touchcancel']
-        };
-
-        for (let [_Constructor, events] of Object.entries(eventMap)) {
+        for (let [_Constructor, events] of Object.entries(EVENTS_MAP)) {
             for (let type of events) {
                 el.addEventListener(type, (e) => {
                     const _class = window[_Constructor] ?? MouseEvent
