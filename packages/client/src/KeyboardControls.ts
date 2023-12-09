@@ -362,6 +362,18 @@ export class KeyboardControls {
     }
 
     /**
+     * Returns all controls
+     * 
+     * @method getControls()
+     * @since 4.2.0
+     * @returns { { [key: string]: BoundKey } }
+     * @memberof KeyboardControls
+     */
+    getControls(): { [key: string]: BoundKey } {
+        return this.boundKeys
+    }
+
+    /**
      * Triggers an input according to the name of the control
      * 
      * ```ts 
@@ -508,6 +520,18 @@ export class KeyboardControls {
      * Control.Right | right
      * Control.Action | action
      * Control.Back | back
+     * 
+     * @enum {string} Mouse Event 
+     * 
+     * click | Click
+     * dblclick | Double Click
+     * mousedown | Mouse Down
+     * mouseup | Mouse Up
+     * mouseover | Mouse Over
+     * mousemove | Mouse Move
+     * mouseout | Mouse Out
+     * contextmenu | Context Menu
+     * 
      * 
      * @enum {string} Input 
      * 

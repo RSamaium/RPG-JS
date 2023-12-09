@@ -8,8 +8,6 @@ const player: RpgPlayerHooks = {
         player.name = 'YourName'
         player.setComponentsTop(Components.text('{position.x},{position.y}'))
     },
-    onAuth: () => {},
-   
     onInput(player: RpgPlayer, { input }) {
         const map = player.getCurrentMap()
         if (input == 'action') {

@@ -1,9 +1,10 @@
 import { createRoot } from 'react-dom/client';
 import { createElement, Fragment, useState, createContext, useEffect, useContext, useCallback, useSyncExternalStore, useRef } from 'react'
 import { RpgClientEngine } from '../RpgClientEngine';
-import { RpgRenderer } from '../Renderer';
+import { EVENTS_MAP, RpgRenderer } from '../Renderer';
 import { BehaviorSubject, map, tap, combineLatest, Subject } from 'rxjs';
 import type { Gui } from './Gui';
+import { inject } from '../inject';
 
 export { useStore } from '@nanostores/react'
 export const RpgReactContext = createContext({} as any)
@@ -50,6 +51,30 @@ export const useCurrentPlayer = () => {
 
     return useSyncExternalStore(subscribe, () => currentPlayerRef.current);
 }
+
+export const useEventPropagator = () => {
+    const ref = useRef(null);
+    useEffect(() => {
+        if (ref.current) {
+            const element = ref.current as HTMLElement;
+            const eventListeners = {};
+            const renderer = inject(RpgRenderer)
+
+            EVENTS_MAP.MouseEvent.forEach(eventType => {
+                const listener = event => renderer.propagateEvent(event)
+                element.addEventListener(eventType, listener);
+                eventListeners[eventType] = listener;
+            });
+
+            return () => {
+                EVENTS_MAP.MouseEvent.forEach(eventType => {
+                    element.removeEventListener(eventType, eventListeners[eventType]);
+                });
+            };
+        }
+    }, [ref]);
+    return ref
+};
 
 export class ReactGui {
     private app: any

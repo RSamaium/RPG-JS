@@ -10,6 +10,7 @@ import { Subject, forkJoin } from 'rxjs'
 import { GameEngineClient } from './GameEngine'
 import { SpinnerGraphic } from './Effects/Spinner'
 import { autoDetectRenderer, Container, EventBoundary, FederatedEvent, FederatedPointerEvent, Graphics, ICanvas, IRenderer } from 'pixi.js'
+import { KeyboardControls } from './KeyboardControls'
 
 const { elementToPositionAbsolute } = Utils
 
@@ -21,6 +22,13 @@ export enum TransitionMode {
 enum ContainerName {
     Map = 'map'
 }
+
+export const EVENTS_MAP = {
+    MouseEvent: ['click', 'dblclick', 'mousedown', 'mouseup', 'mousemove', 'mouseenter', 'mouseleave', 'mouseover', 'mouseout', 'contextmenu', 'wheel'],
+    KeyboardEvent: ['keydown', 'keyup', 'keypress', 'keydownoutside', 'keyupoutside', 'keypressoutside'],
+    PointerEvent: ['pointerdown', 'pointerup', 'pointermove', 'pointerover', 'pointerout', 'pointerenter', 'pointerleave', 'pointercancel'],
+    TouchEvent: ['touchstart', 'touchend', 'touchmove', 'touchcancel']
+};
 
 export class RpgRenderer {
     private gameEngine: GameEngineClient = this.context.inject(GameEngineClient)
@@ -83,8 +91,8 @@ export class RpgRenderer {
         this.spinner.y = h * 0.5
     }
 
-    get canvas(): ICanvas {
-        return this.renderer.view
+    get canvas(): HTMLCanvasElement {
+        return this.renderer.view as HTMLCanvasElement
     }
 
     get height(): number {
@@ -140,6 +148,21 @@ export class RpgRenderer {
         await RpgGui._initialize(this.context, this.guiEl)
 
         this.resize()
+        this.bindMouseControls()
+
+    }
+
+    private bindMouseControls() {
+        const controlInstance = this.context.inject(KeyboardControls)
+        const controls = controlInstance.getControls()
+        for (let key in controls) {
+            const { actionName } = controls[key]
+            if (EVENTS_MAP.MouseEvent.includes(key)) {
+                this.canvas.addEventListener(key, (e) => {
+                    controlInstance.applyControl(actionName)
+                })
+            }
+        }
     }
 
     /** @internal */
@@ -275,8 +298,7 @@ export class RpgRenderer {
      * @returns {void}
      */
     propagateEvent(ev: MouseEvent) {
-        const canvas = this.renderer.view as HTMLCanvasElement;
-        const rect = canvas.getBoundingClientRect();
+        const rect = this.canvas.getBoundingClientRect();
         const canvasX = rect.left + window.scrollX;
         const canvasY = rect.top + window.scrollY;
         const realX = ev.clientX - canvasX;
@@ -286,7 +308,8 @@ export class RpgRenderer {
         event.global.set(realX, realY);
         event.type = ev.type;
         const hitTestTarget = boundary.hitTest(realX, realY);
-        hitTestTarget?.dispatchEvent(event);
+        hitTestTarget?.dispatchEvent(event)
+        this.canvas.dispatchEvent(new MouseEvent(ev.type, ev))
     }
 
     /***
@@ -299,14 +322,7 @@ export class RpgRenderer {
      * @returns {void}
      */
     addPropagateEventsFrom(el: HTMLElement) {
-        const eventMap = {
-            MouseEvent: ['click', 'mousedown', 'mouseup', 'mousemove', 'mouseenter', 'mouseleave', 'mouseover', 'mouseout', 'contextmenu', 'wheel'],
-            KeyboardEvent: ['keydown', 'keyup', 'keypress', 'keydownoutside', 'keyupoutside', 'keypressoutside'],
-            PointerEvent: ['pointerdown', 'pointerup', 'pointermove', 'pointerover', 'pointerout', 'pointerenter', 'pointerleave', 'pointercancel'],
-            TouchEvent: ['touchstart', 'touchend', 'touchmove', 'touchcancel']
-        };
-
-        for (let [_Constructor, events] of Object.entries(eventMap)) {
+        for (let [_Constructor, events] of Object.entries(EVENTS_MAP)) {
             for (let type of events) {
                 el.addEventListener(type, (e) => {
                     const _class = window[_Constructor] ?? MouseEvent

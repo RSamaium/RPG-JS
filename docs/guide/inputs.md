@@ -39,4 +39,18 @@ The key corresponds to the type of control (used by the keyboard, the mouse, or 
 
 You have information here: [Set Inputs](/classes/keyboard.html#set-inputs)
 
-> If you want to use keyboard numbers, don't use "1" but "n1", etc.
+::: tip Keyboard numbers
+If you want to use keyboard numbers, don't use "1" but "n1", etc.
+:::
+
+::: tip Mouse Events
+Since v4.2.0, you can use mouse events.
+
+Example:
+
+```toml
+[inputs.action]
+    name = "action"
+    bind = ["space", "enter", "click"], 
+```
+:::

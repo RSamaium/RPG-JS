@@ -178,7 +178,7 @@ export class RpgClientEngine {
             this.addSound(sound, id)
         })
 
-        // obsolete
+        // deprecated
         if (typeof __RPGJS_PRODUCTION__ != 'undefined' && __RPGJS_PRODUCTION__) {
             if ('serviceWorker' in navigator) {
                 window.addEventListener('load', () => {

@@ -38,10 +38,26 @@ const apiMenu = [
       { text: "GUI Class", link: "/classes/gui" },
       { text: "Sound Class", link: "/classes/sound" },
       { text: "Resource Class", link: "/classes/resource" },
-      { text: "Keyboard Class", link: "/classes/keyboard" },
-      { text: "Vue Inject Class", link: "/classes/vue-inject" }
+      { text: "Keyboard Class", link: "/classes/keyboard" }
     ]
 
+  },
+  {
+    text: 'VueJS',
+    collapsed: false,
+    sidebarDepth: 2,
+    items: [
+      { text: "Vue Inject Class", link: "/classes/vue-inject" },
+      { text: "Vue directives", link: "/api-gui/vue-directive" }
+    ]
+  },
+  {
+    text: 'React',
+    collapsed: false,
+    sidebarDepth: 2,
+    items: [
+      { text: "React Hooks", link: "/api-gui/react" }
+    ]
   },
   {
     text: 'Testing',
@@ -252,6 +268,7 @@ module.exports = {
       '/commands/': apiMenu,
       '/database/': apiMenu,
       '/api/': apiMenu,
+      '/api-gui/': apiMenu,
       '/guide/': guideMenu,
       '/gui/': guideMenu,
       '/advanced/': guideMenu,
