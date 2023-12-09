@@ -6,7 +6,7 @@ import Potion from './database/items/Potion';
 const player: RpgPlayerHooks = {
     onConnected(player: RpgPlayer) {
         player.name = 'YourName'
-        player.setComponentsTop(Components.text('{id}'))
+        player.setComponentsTop(Components.text('{position.x},{position.y}'))
     },
     onAuth: () => {},
    

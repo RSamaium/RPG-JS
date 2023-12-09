@@ -275,11 +275,18 @@ export class RpgRenderer {
      * @returns {void}
      */
     propagateEvent(ev: MouseEvent) {
+        const canvas = this.renderer.view as HTMLCanvasElement;
+        const rect = canvas.getBoundingClientRect();
+        const canvasX = rect.left + window.scrollX;
+        const canvasY = rect.top + window.scrollY;
+        const realX = ev.clientX - canvasX;
+        const realY = ev.clientY - canvasY;
         const boundary = new EventBoundary(this.stage);
         const event = new FederatedPointerEvent(boundary)
-        event.global.set(ev.clientX, ev.clientY);
+        event.global.set(realX, realY);
         event.type = ev.type;
-        this.getScene<SceneMap>()?.viewport?.emit(event.type as any, event)
+        const hitTestTarget = boundary.hitTest(realX, realY);
+        hitTestTarget?.dispatchEvent(event);
     }
 
     /***
