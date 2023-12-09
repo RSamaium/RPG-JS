@@ -370,6 +370,7 @@ export class SceneMap extends Scene {
         this.viewport.on(eventName, (...args) => {
             const ev: FederatedPointerEvent = args[0] as any
             const pos = ev.getLocalPosition(this.viewport as Viewport)
+            if (ev.defaultPrevented) return
             cb(pos, ev)
         })
     }
