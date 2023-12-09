@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [4.2.0](https://github.com/RSamaium/RPG-JS/compare/v4.1.3...v4.2.0) (2023-12-09)
+
+
+### Features
+
+* inject function ([902e62f](https://github.com/RSamaium/RPG-JS/commit/902e62ff4fdd9b5bd26ee7d5be9ccae2b051f248))
+* propagate event directive ([edbab50](https://github.com/RSamaium/RPG-JS/commit/edbab506a2552ff64d2f638d1e088748cbc8cc86))
+
+
+
+
+
 ## [4.1.3](https://github.com/RSamaium/RPG-JS/compare/v4.1.2...v4.1.3) (2023-11-17)
 
 **Note:** Version bump only for package @rpgjs/client
