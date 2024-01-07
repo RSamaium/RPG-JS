@@ -31,7 +31,6 @@ export default {
                     }
                 }
             },
-            
             "api": {
                 "type": "object",
                 "properties": {

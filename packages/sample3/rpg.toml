@@ -1,0 +1,7 @@
+modulesRoot = './src/game'
+
+modules = [
+    './main'
+]
+
+autostart = false

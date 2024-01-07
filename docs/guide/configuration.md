@@ -10,6 +10,27 @@ The configuration and properties of RPGJS are defined using a JSON schema, which
 
 Configuration properties related to the compiler.
 
+- `modulesRoot`: (*string*) The root directory for modules. (since 4.3.0)
+
+- `modules`: (*array*) List of modules to load.
+
+Example:
+
+```toml
+modules = ["./main", "@rpgjs/gamepad"]
+```
+
+- `autostart`: (*boolean*) Finds the starting point selector and displays the game directly. (`true` by default). Since 4.3.0
+
+If `false`, it can be loaded as follows:
+
+```ts
+import { RpgClientEngine, inject } from '@rpgjs/client';
+
+const client = inject(RpgClientEngine)
+await client.start()
+```
+
 - `compilerOptions`
   - `alias`: (*object*) Aliases. Use aliases in Typescript imports
     ```toml

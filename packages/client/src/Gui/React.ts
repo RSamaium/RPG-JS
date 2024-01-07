@@ -143,3 +143,20 @@ export class ReactGui {
         this._gui.next(array)
     }
 }
+
+type onReadyCallback = (engine: RpgClientEngine) => void
+type RpgGameProps = {
+    onReady?: onReadyCallback
+}
+
+export function RpgGame({
+    onReady,
+}: RpgGameProps) {
+    useEffect(() => {
+        const engine = inject(RpgClientEngine)
+        engine.start().then(() => {
+            onReady?.(engine)
+        })
+    }, [])
+    return createElement('div', { id: 'rpg' })
+}

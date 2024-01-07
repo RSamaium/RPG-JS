@@ -223,7 +223,7 @@ export function loadSpriteSheet(directoryName: string, modulePath: string, optio
     }
 }
 
-export function loadClientFiles(modulePath: string, options, config) {
+export function loadClientFiles(modulePath: string, options, config: Config) {
     const importSceneMapString = importString(modulePath, 'scene-map', 'sceneMap')
     const importSpriteString = importString(modulePath, 'sprite')
     const importEngine = importString(modulePath, 'client', 'engine')
@@ -367,6 +367,13 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
         modules = config.modules;
     }
 
+    modules = modules.map((module) => {
+        if (module.startsWith('.')) {
+            return './' + path.join(config.modulesRoot as string, module)
+        }
+        return module
+    })
+
     config.startMap = config.startMap || config.start?.map
 
     if (config.inputs && options.server) {
@@ -446,7 +453,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
             if (id.endsWith(MODULE_NAME)) {
                 const modulesToImport = modules.reduce((acc, module) => {
                     const variableName = formatVariableName(module);
-                    acc[variableName] = module;
+                    acc[variableName] = module
                     return acc;
                 }, {} as Record<string, string>);
 
@@ -468,11 +475,11 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
                 import globalConfig from './${GLOBAL_CONFIG_CLIENT}'
 
                 document.addEventListener('DOMContentLoaded', function(e) { 
-                    entryPoint(modules, { 
+                    window.RpgStandalone = entryPoint(modules, { 
                         io,
                         globalConfig,
                         envs: ${envsString}
-                    }).start()
+                    })${config.autostart ? '.start()' : ''}
                 });
               `;
                 return codeToTransform
@@ -504,7 +511,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
                             globalConfigClient,
                             globalConfigServer,
                             envs: ${envsString}
-                        }).start() 
+                        })${config.autostart ? '.start()' : ''}
                     })`
                     }
 

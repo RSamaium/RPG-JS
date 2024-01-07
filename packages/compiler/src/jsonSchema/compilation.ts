@@ -36,5 +36,11 @@ export default {
     "vite": {
         "type": "object",
         "additionalProperties": true
-    }
+    },
+    "modulesRoot": {
+        "type": "string"
+    },
+    "autostart": {
+        "type": "boolean"
+    },
 }

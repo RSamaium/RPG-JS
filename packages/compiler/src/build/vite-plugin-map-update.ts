@@ -4,8 +4,9 @@ import { errorApi, info } from '../logs/warning.js';
 import fs from 'fs-extra';
 import xml2js from 'xml2js';
 import axios from '../serve/api.js';
+import { type Config } from './client-config.js';
 
-export function mapUpdatePlugin(_serverUrl?: string): Plugin {
+export function mapUpdatePlugin(_serverUrl: string, config: Config): Plugin {
   return {
     name: 'vite-plugin-map-update',
     configureServer(server) {
@@ -14,6 +15,8 @@ export function mapUpdatePlugin(_serverUrl?: string): Plugin {
       server.watcher.add(globFiles('@(tmx|tsx)'));
 
       server.watcher.on('change', async (file: string) => {
+        const gameRoot = (config.modulesRoot as string)
+        if (!file.startsWith(gameRoot)) return
         if (file.endsWith('tmx')) {
           info(`File ${file} changed, updating map...`)
           // open file

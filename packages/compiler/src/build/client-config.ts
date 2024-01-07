@@ -73,6 +73,8 @@ export interface Config {
         [key: string]: any
     },
     vite?: any
+    modulesRoot?: string
+    autostart?: boolean
 }
 
 export interface ClientBuildConfigOptions {
@@ -117,6 +119,8 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
 
     const envs = loadEnv(mode, cwd())
     config = replaceEnvVars(config, envs)
+    config.autostart = config.autostart ?? true
+    config.modulesRoot = config.modulesRoot ?? ''
 
     let buildOptions = config.compilerOptions?.build || {}
 
@@ -187,7 +191,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         configTomlPlugin(options, config), // after flagTransform
         (requireTransform as any)(),
         worldTransformPlugin(isRpg ? undefined : serverUrl),
-        tsxXmlPlugin(),
+        tsxXmlPlugin(config),
         ...(options.plugins || [])
     ]
 
@@ -231,7 +235,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     else {
         if (!isBuild) {
             plugins.push(
-                mapUpdatePlugin(isRpg ? undefined : serverUrl)
+                 mapUpdatePlugin(isRpg ? '' : serverUrl, config)
             )
         }
     }
