@@ -108,7 +108,9 @@ export default class TileMap extends Container {
                                 // if (yObject - tile.y >= height) {
                                 //     return false
                                 // }
-                                const zIntersection = intersection([zObject, zObject + height], [realZ, realZ + tile.height])
+                                // Always get tile.height for height. TODO: Fix this the height of the character.  To be seen according to future implementations...
+                                // Discussion: https://community.rpgjs.dev/d/250-rpgjs-v420/6
+                                const zIntersection = intersection([zObject, zObject + tile.height /** Old code: height */], [realZ, realZ + tile.height])
                                 if (!zIntersection) {
                                     return true
                                 }
