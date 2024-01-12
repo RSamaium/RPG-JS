@@ -205,6 +205,9 @@ export class TiledParser {
       const setLayer = (type) => {
         if (!type) return
         TiledParser.toArray(type).forEach((val: any) => {
+          if (this.layers.has(+val._attributes.id)) {
+            throw new Error(`Tiled Parser Error: Layer with id ${val._attributes.id} already exists`)
+          }
           this.layers.set(+val._attributes.id, val)
         })
       }

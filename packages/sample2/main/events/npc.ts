@@ -12,14 +12,5 @@ export default class CatEvent extends RpgEvent {
             Components.text('{id}')
         )
         this.speed = Speed.Slow
-        this.attachShape({
-            height: 100,
-            width: 100,
-            positioning: ShapePositioning.Center
-        })
-    }
-
-    onDetect(player, shape) {
-        this.moveTo(player).subscribe()
     }
 }

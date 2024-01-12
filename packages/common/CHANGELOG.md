@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [4.2.1](https://github.com/RSamaium/RPG-JS/compare/v4.2.0...v4.2.1) (2024-01-12)
+
+
+### Bug Fixes
+
+*  lag after action ([d057e17](https://github.com/RSamaium/RPG-JS/commit/d057e1736475e03a0553882a53b96a4d77e65acf))
+
+
+
+
+
 # [4.2.0](https://github.com/RSamaium/RPG-JS/compare/v4.1.3...v4.2.0) (2023-12-09)
 
 

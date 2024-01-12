@@ -1,14 +1,19 @@
 import { Direction } from '@rpgjs/common'
 import { Animation } from '../Effects/AnimationCharacter'
 
-export const RMSpritesheet = (framesWidth, framesHeight, frameStand = 1) => {
+export const RMSpritesheet = (framesWidth: number, framesHeight: number, frameStand: number = 1) => {
+
+    if (framesWidth <= frameStand) {
+        frameStand = framesWidth - 1
+    }
 
     const frameY = direction => {
+        const gap = Math.max(4 - framesHeight, 0)
         return {
             [Direction.Down]: 0,
-            [Direction.Left]: 1,
-            [Direction.Right]: 2,
-            [Direction.Up]: 3
+            [Direction.Left]: Math.max(0, 1 - gap),
+            [Direction.Right]: Math.max(0, 2 - gap),
+            [Direction.Up]: Math.max(0, 3 - gap)
         }[direction]
     }
 

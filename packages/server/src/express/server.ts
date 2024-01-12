@@ -83,15 +83,5 @@ export function expressServer(modules: ModuleType[], options: ExpressServerOptio
         process.on('unhandledRejection', function (reason: any) {
             console.log(pe.render(reason))
         })
-
-        if (import.meta['hot']) {
-            import.meta['hot'].on("vite:beforeFullReload", () => {
-                server.close()
-                Query.getPlayers().forEach(player => {
-                    player.gameReload()
-                })
-                rpgGame.stop()
-            });
-        }
     })
 }

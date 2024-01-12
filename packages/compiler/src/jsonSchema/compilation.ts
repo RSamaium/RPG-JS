@@ -43,4 +43,10 @@ export default {
     "autostart": {
         "type": "boolean"
     },
+    "spritesheetDirectories": {
+        "type": "array",
+        "items": {
+            "type": "string"
+        }
+    }
 }

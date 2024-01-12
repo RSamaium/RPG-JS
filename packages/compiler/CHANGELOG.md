@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [4.2.1](https://github.com/RSamaium/RPG-JS/compare/v4.2.0...v4.2.1) (2024-01-12)
+
+
+### Bug Fixes
+
+* [#277](https://github.com/RSamaium/RPG-JS/issues/277) #community-256 ([924ec6d](https://github.com/RSamaium/RPG-JS/commit/924ec6d6636b51eeb46cb1509c7244f69a8adb49)), closes [#community-256](https://github.com/RSamaium/RPG-JS/issues/community-256)
+* spritesheetDirectories warning ([4b34a15](https://github.com/RSamaium/RPG-JS/commit/4b34a15d60261501069100fb22aa0901b32a1d98))
+
+
+
+
+
 # [4.2.0](https://github.com/RSamaium/RPG-JS/compare/v4.1.3...v4.2.0) (2023-12-09)
 
 **Note:** Version bump only for package @rpgjs/compiler
