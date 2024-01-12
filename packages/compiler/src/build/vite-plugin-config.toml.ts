@@ -514,6 +514,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
             else if (id.endsWith('virtual-server.ts')) {
                 const codeToTransform = dd`
                 import { expressServer } from '@rpgjs/server/express'
+                import { RpgWorld } from '@rpgjs/server'
                 import * as url from 'url'
                 import modules from './${MODULE_NAME}'
                 import globalConfig from './${GLOBAL_CONFIG_SERVER}'
@@ -524,6 +525,16 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
                     globalConfig,
                     basePath: __dirname,
                     envs: ${envsString}
+                }).then(({ server, game }) => {
+                    if (import.meta['hot']) {
+                        import.meta['hot'].on("vite:beforeFullReload", () => {
+                            server.close();
+                            RpgWorld.getPlayers().forEach(player => {
+                                player.gameReload();
+                            });
+                            game.stop();
+                        });
+                    }
                 })
               `;
                 return codeToTransform
