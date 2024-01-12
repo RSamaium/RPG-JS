@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/interpreter",
-  "version": "4.2.0",
+  "version": "4.2.1",
   "description": "",
   "main": "src/index.ts",
   "scripts": {
@@ -17,7 +17,7 @@
   "author": "Samuel Ronce",
   "license": "MIT",
   "dependencies": {
-    "@rpgjs/server": "^4.2.0",
+    "@rpgjs/server": "^4.2.1",
     "rxjs": "^7.8.1",
     "zod": "^3.21.4"
   },

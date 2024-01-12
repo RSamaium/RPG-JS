@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/runtime",
-  "version": "4.2.0",
+  "version": "4.2.1",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -10,13 +10,13 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@rpgjs/client": "^4.2.0",
-    "@rpgjs/database": "^4.2.0",
-    "@rpgjs/server": "^4.2.0",
-    "@rpgjs/standalone": "^4.2.0"
+    "@rpgjs/client": "^4.2.1",
+    "@rpgjs/database": "^4.2.1",
+    "@rpgjs/server": "^4.2.1",
+    "@rpgjs/standalone": "^4.2.1"
   },
   "devDependencies": {
-    "@rpgjs/compiler": "^4.2.0"
+    "@rpgjs/compiler": "^4.2.1"
   },
   "publishConfig": {
     "access": "public"

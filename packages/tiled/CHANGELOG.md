@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [4.2.1](https://github.com/RSamaium/RPG-JS/compare/v4.2.0...v4.2.1) (2024-01-12)
+
+
+### Bug Fixes
+
+* tiled parser throw error ([4adfaea](https://github.com/RSamaium/RPG-JS/commit/4adfaea557b386556b459d7f64b8a24a24116aa8))
+
+
+
+
+
 ## 4.0.5 (2023-10-18)
 
 

@@ -3,6 +3,19 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [4.2.1](https://github.com/RSamaium/RPG-JS/compare/v4.2.0...v4.2.1) (2024-01-12)
+
+
+### Bug Fixes
+
+*  lag after action ([d057e17](https://github.com/RSamaium/RPG-JS/commit/d057e1736475e03a0553882a53b96a4d77e65acf))
+* [#277](https://github.com/RSamaium/RPG-JS/issues/277) #community-256 ([924ec6d](https://github.com/RSamaium/RPG-JS/commit/924ec6d6636b51eeb46cb1509c7244f69a8adb49)), closes [#community-256](https://github.com/RSamaium/RPG-JS/issues/community-256)
+* simple-room exports ([9592d18](https://github.com/RSamaium/RPG-JS/commit/9592d186cdb7d66dba4fe7b49d31b2fc97686677))
+
+
+
+
+
 # [4.2.0](https://github.com/RSamaium/RPG-JS/compare/v4.1.3...v4.2.0) (2023-12-09)
 
 
