@@ -9,6 +9,8 @@ modules = [
    # '@rpgjs/title-screen'
 ]
 
+spritesheetDirectories = []
+
 [start]
     map = 'map'
     graphic = 'male'
@@ -23,3 +25,5 @@ modules = [
 [compilerOptions.build]
   serverUrl = '$ENV:VITE_SERVER_URL'
   pwaEnabled = false
+
+
