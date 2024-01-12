@@ -293,7 +293,7 @@ export class RpgServerEngine {
             if (!playerInstance) continue
             const player = playerInstance.otherPossessedPlayer ?? playerInstance
             if (player.pendingMove.length > 0) {
-                player.moving = true
+                
                 const lastFrame = player.pendingMove[player.pendingMove.length - 1]
                 if (this.inputOptions.workers) obj.push(player.toObject())
                 else {

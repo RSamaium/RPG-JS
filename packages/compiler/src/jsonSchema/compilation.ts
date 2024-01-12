@@ -36,5 +36,11 @@ export default {
     "vite": {
         "type": "object",
         "additionalProperties": true
+    },
+    "spritesheetDirectories": {
+        "type": "array",
+        "items": {
+            "type": "string"
+        }
     }
 }

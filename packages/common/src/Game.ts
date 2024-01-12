@@ -84,7 +84,7 @@ export class RpgCommonGame extends EventEmitter {
         }
 
         const routesMove: any = []
-        
+
         while (player.pendingMove.length > 0) {
             const inputData = player.pendingMove.shift()
             
@@ -131,6 +131,7 @@ export class RpgCommonGame extends EventEmitter {
                 input == Direction.Up ||
                 input == Direction.Down
             ) {
+                player.moving = true
                 moving = true
                 const isMove = await player.moveByDirection(+input, deltaTimeInt || 1)
                 if (isMove) {
@@ -148,6 +149,7 @@ export class RpgCommonGame extends EventEmitter {
 
             inputs.push(input)
         }
+
 
         return {
             player,
