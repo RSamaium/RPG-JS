@@ -18,6 +18,7 @@ export class Gui extends EventEmitter {
         blockPlayerInput = false
     } = {}): Promise<any> {
         return new Promise((resolve) => {
+            this.player.moving = false
             this.player.emit('gui.open', {
                 guiId: this.id,
                 data
