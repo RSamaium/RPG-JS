@@ -64,12 +64,6 @@ Just add JSON file in <PathTo to="baseModule" file="worlds/myworld.world" />
 The world creates maps automatically and the map ID will be the file name. Be aware that if you already have a map with the same ID, the world will use this map
 :::
 
-::: tip
-To quickly add a sound, add a personality property to the map (in Tiled Map Editor) named sounds. Put the sound ID of the resource, client side (see [Create Sound](/guide/create-sound.html))
-
-![tiled world](/assets/map-sound.png)
-:::
-
 ## Bonus. Prevent map change
 
 There are several reasons for this. For example, 

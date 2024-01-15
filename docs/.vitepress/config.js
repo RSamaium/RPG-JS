@@ -144,6 +144,7 @@ const guideMenu = [{
     { text: "Create event (NPC)", link: "/guide/create-event" },
     { text: "Create items", link: "/guide/create-database" },
     { text: "Create shape", link: "/guide/create-shape" },
+    { text: "Add music in map", link: "/guide/create-sound" },
     { text: "Create animated tile", link: "/guide/animation-tile" },
     { text: "Save the player's progress", link: "/guide/save" },
     { text: "Production", link: "/guide/production" },
