@@ -35,7 +35,9 @@ export class TiledParser {
   }
 
   getImagePath(image: string) {
-    return path.join(path.dirname(this.filePath), image)
+    const baseName = path.dirname(this.filePath)
+    if (this.filePath.startsWith('http')) return new URL(image, this.filePath).href
+    return path.join(baseName, image)
   }
 
   transform = (obj) => {

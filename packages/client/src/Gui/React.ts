@@ -5,6 +5,7 @@ import { EVENTS_MAP, RpgRenderer } from '../Renderer';
 import { BehaviorSubject, map, tap, combineLatest, Subject } from 'rxjs';
 import type { Gui } from './Gui';
 import { inject } from '../inject';
+import { RpgPlugin } from '@rpgjs/common';
 
 export { useStore } from '@nanostores/react'
 export const RpgReactContext = createContext({} as any)
@@ -144,19 +145,49 @@ export class ReactGui {
     }
 }
 
-type onReadyCallback = (engine: RpgClientEngine) => void
+type onReadyCallback<T = any> = (object: { client: RpgClientEngine, server: T } ) => void
 type RpgGameProps = {
     onReady?: onReadyCallback
+    modules?: any[]
 }
 
 export function RpgGame({
     onReady,
+    modules
 }: RpgGameProps) {
+    const divRef = useRef(null)
+
     useEffect(() => {
-        const engine = inject(RpgClientEngine)
-        engine.start().then(() => {
-            onReady?.(engine)
+        let client: RpgClientEngine, server: any
+
+        // @ts-ignore
+        const engine = window.RpgStandalone
+        engine(modules).then((val) => {
+            if (val.client) {
+                client = val.client
+                server = val.server
+            }
+            else {
+                client = val
+                server = null
+            }
+            onReady?.({
+                client,
+                server
+            })
         })
-    }, [])
-    return createElement('div', { id: 'rpg' })
+
+        return () => {
+            server?.world.clear()
+            client.reset()
+            RpgPlugin.clear()
+            server?.io.clear()
+            server?.io.events.clear()
+            server?.stop()
+            if (divRef.current) (divRef.current as HTMLDivElement).innerHTML = ''
+        }
+
+    }, [modules])
+
+    return createElement('div', { id: 'rpg', ref: divRef })
 }

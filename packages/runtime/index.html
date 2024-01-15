@@ -1,25 +1,74 @@
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.min.js"
-    integrity="sha512-Wbf9QOX8TxnLykSrNGmAc5mDntbpyXjOw9zgnKql3DgQ7Iyr5TCSPWpvpwDuo+jikYoSNMD9tRRH854VfPpL9A=="
-    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="browser/rpg.runtime.umd.js"></script>
-
 <div id="rpg"></div>
 
-<script>
-    RPG.run([
-        {
-            server: {
-                engine: {
-                    onStart() {
-                        console.log('started')
-                    }
-                },
-                player: {
-                    onConnected(player) {
-                        console.log('player connected', player.id)
-                    }
-                }
-            }
+<script type="importmap">
+    {
+        "imports": {
+            "@rpgjs/client": "https://unpkg.com/@rpgjs/client/browser/rpg.client.js",
+            "@rpgjs/server": "https://unpkg.com/@rpgjs/server/browser/rpg.server.js",
+            "@rpgjs/common": "https://unpkg.com/@rpgjs/common/browser/rpg.common.js",
+            "@rpgjs/standalone": "https://unpkg.com/@rpgjs/standalone/browser/rpg.standalone.js",
+            "@rpgjs/database": "https://unpkg.com/@rpgjs/database/browser/rpg.database.js",
+            "standalone": "https://unpkg.com/vue@3.3.4/dist/vue.runtime.esm-browser.prod.js",
+            "vue": "https://unpkg.com/vue@3.3.4/dist/vue.runtime.esm-browser.prod.js",
+            "react": "https://cdn.skypack.dev/react@18.2.0",
+            "react-dom": "https://cdn.skypack.dev/react-dom",
+            "pixi.js": "https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.2.4/pixi.mjs",
+            "rxjs": "https://cdn.jsdelivr.net/npm/@esm-bundle/rxjs@7.8.1/+esm"
         }
-    ])
+    }
 </script>
+<script>window.global ||= {}</script>
+<script type="module">
+    import { entryPoint } from '@rpgjs/standalone'
+
+    const main = {
+        server: {
+            player: {
+                onConnected(player) {
+                    player.changeMap('mymap')
+                }
+            },
+            maps: [
+                {
+                    id: 'mymap',
+                    file: './tmx/mymap.tmx'
+                }
+            ]
+        }
+    }
+
+    entryPoint([
+        main
+    ], {
+        envs: {
+            VITE_BUILT: 1,
+            VITE_RPG_TYPE: 'rpg',
+            VITE_ASSETS_PATH: 'assets'
+        }
+    }).start()
+
+</script>
+
+<style>
+    body,
+    html {
+        height: 100%;
+        overflow: hidden;
+    }
+
+    body {
+        margin: 0;
+        background-color: black;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #rpg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+    }
+</style>

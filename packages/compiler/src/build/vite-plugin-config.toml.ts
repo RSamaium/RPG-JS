@@ -485,38 +485,55 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
                 return codeToTransform
             }
             else if (id.endsWith('virtual-standalone.ts?rpg')) {
-                const codeToTransform = dd`
-                import { entryPoint } from '@rpgjs/standalone'
-                import globalConfigClient from './${GLOBAL_CONFIG_CLIENT}'
-                import globalConfigServer from './${GLOBAL_CONFIG_SERVER}'
-                import modules from './${MODULE_NAME}'
+                const header = dd`
+                    import { entryPoint } from '@rpgjs/standalone'
+                    import globalConfigClient from './${GLOBAL_CONFIG_CLIENT}'
+                    import globalConfigServer from './${GLOBAL_CONFIG_SERVER}'
+                    import modules from './${MODULE_NAME}'
+                `
+                if (!config.autostart) {
+                    return dd`${header}
+                        window.RpgStandalone = (extraModules = []) => {
+                            return entryPoint([
+                                ...modules,
+                                ...extraModules
+                            ], {
+                                globalConfigClient,
+                                globalConfigServer,
+                                envs: ${envsString}
+                            }).start()
+                        }
+                    `
+                }
+                else {
+                    return dd`${header}
 
-                ${libMode ?
-                        `  window.global ||= window
-                 
-                    export default (extraModules = []) => {
-                        return entryPoint([
-                            ...modules,
-                            ...extraModules
-                        ], {
-                            globalConfigClient,
-                            globalConfigServer,
-                            envs: ${envsString}
-                        })
-                    }
-                 `
-                        :
-                        `document.addEventListener('DOMContentLoaded', async function() { 
-                        window.RpgStandalone = await entryPoint(modules, {
-                            globalConfigClient,
-                            globalConfigServer,
-                            envs: ${envsString}
-                        })${config.autostart ? '.start()' : ''}
-                    })`
-                    }
-
-              `;
-                return codeToTransform
+                    ${libMode ?
+                            `  window.global ||= window
+                     
+                        export default (extraModules = []) => {
+                            return entryPoint([
+                                ...modules,
+                                ...extraModules
+                            ], {
+                                globalConfigClient,
+                                globalConfigServer,
+                                envs: ${envsString}
+                            })
+                        }
+                     `
+                            :
+                            `document.addEventListener('DOMContentLoaded', async function() { 
+                            window.RpgStandalone = await entryPoint(modules, {
+                                globalConfigClient,
+                                globalConfigServer,
+                                envs: ${envsString}
+                            }).start()
+                        })`
+                        }
+    
+                  `
+                };
             }
             else if (id.endsWith('virtual-server.ts')) {
                 const codeToTransform = dd`
