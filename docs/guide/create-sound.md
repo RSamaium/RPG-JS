@@ -1,8 +1,43 @@
-# Step 8. Put sounds and music
+# Put sounds and music
 
-## Prerequisites
+<div class="autoload-api">
 
-1. You must have an sound
+## Structure
+
+Here is the structure: 
+
+* main
+    * sounds
+        * town.(mp3|ogg)
+  
+## Add sound in map
+
+To quickly add a sound, add a personality property to the map (in Tiled Map Editor) named sounds. Put the sound ID of the resource
+
+![tiled world](/assets/map-sound.png)
+
+
+
+## Parameters of the sound (optional)
+
+Add a file named `town.ts` in the directory `sounds` and add the following code:
+
+```ts
+import { Sound } from '@rpgjs/client'
+
+@Sound({
+    sounds: {
+        town: require('./town.mp3'),
+    },
+    loop: true
+})
+export class TownMusic {}
+```
+
+More information on the parameters: [Sound Class](/classes/sound.html)
+
+</div>
+<div class="module-api">
 
 ## Structure
 
@@ -62,3 +97,4 @@ import { RpgMap, MapData } from '@rpgjs/server'
 })
 export class MedievalMap extends RpgMap { }
 ```
+</div>

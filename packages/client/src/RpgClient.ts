@@ -179,7 +179,7 @@ export interface RpgClient {
      * @example
      * 
      * ```ts
-     * import { RpgClient, RpgModule } from '@rpgjs/server'
+     * import { RpgClient, RpgModule } from '@rpgjs/client'
      * 
      * @RpgModule<RpgClient>({
      *     hooks: {
@@ -198,7 +198,7 @@ export interface RpgClient {
      * And listen to the hook:
      * 
      * ```ts
-     * import { RpgClientEngineHooks, RpgSprite } from '@rpgjs/server'
+     * import { type RpgClientEngineHooks, RpgSprite } from '@rpgjs/client'
      * 
      * const sprite: RpgSpriteHooks = {
      *    onAuth(player: RpgSprite) {
