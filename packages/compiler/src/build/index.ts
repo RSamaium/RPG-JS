@@ -1,6 +1,7 @@
 import { build } from 'vite'
 import { cleanDist } from './clean-dist.js'
 import { clientBuildConfig } from './client-config.js'
+import { loadConfigFile } from './load-config-file.js'
 
 export type BuildOptions = {
     runtime?: boolean | string
@@ -9,6 +10,7 @@ export type BuildOptions = {
 }
 
 export async function buildMode(props: BuildOptions) {
+    const jsonConfig = await loadConfigFile()
     const { outputDir } = props
     
     cleanDist(outputDir)
@@ -30,7 +32,7 @@ export async function buildMode(props: BuildOptions) {
             type: 'rpg',
             serveMode: false,
             buildEnd
-        })
+        }, jsonConfig)
         await build(config)
     }
     else {
@@ -39,7 +41,7 @@ export async function buildMode(props: BuildOptions) {
             buildEnd ,
             mode,
             side: 'client'
-        })
+        }, jsonConfig)
         await build(clientConfig)
     
         const serverConfig = await clientBuildConfig(cwd, { 
@@ -47,7 +49,7 @@ export async function buildMode(props: BuildOptions) {
             buildEnd ,
             mode,
             side: 'server'
-        })
+        }, jsonConfig)
         await build(serverConfig)
     }
 }

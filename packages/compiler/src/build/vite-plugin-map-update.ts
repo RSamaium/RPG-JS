@@ -4,7 +4,7 @@ import { errorApi, info } from '../logs/warning.js';
 import fs from 'fs-extra';
 import xml2js from 'xml2js';
 import axios from '../serve/api.js';
-import { type Config } from './client-config.js';
+import { type Config } from './load-config-file.js';
 
 export function mapUpdatePlugin(_serverUrl: string, config: Config): Plugin {
   return {

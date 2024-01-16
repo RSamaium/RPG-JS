@@ -1,12 +1,13 @@
 import fs from 'fs';
-import path from 'path';
 import type { Plugin } from 'vite';
 import sizeOf from 'image-size';
-import type { ClientBuildConfigOptions, Config } from './client-config';
+import type { ClientBuildConfigOptions } from './client-config';
 import { loadGlobalConfig } from './load-global-config.js';
 import { warn } from '../logs/warning.js';
 import { assetsFolder, extractProjectPath, relativePath, toPosix } from './utils.js';
 import dd from 'dedent';
+import { Config } from './load-config-file';
+import path from 'path';
 
 const MODULE_NAME = 'virtual-modules'
 const GLOBAL_CONFIG_CLIENT = 'virtual-config-client'
@@ -367,15 +368,6 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
         modules = config.modules;
     }
 
-    modules = modules.map((module) => {
-        if (module.startsWith('.')) {
-            return './' + path.join(config.modulesRoot as string, module)
-        }
-        return module
-    })
-
-    config.startMap = config.startMap || config.start?.map
-
     if (config.inputs && options.server) {
         for (let inputKey in config.inputs) {
             const input = config.inputs[inputKey]
@@ -468,21 +460,38 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
                 `
             }
             else if (id.endsWith('virtual-client.ts?mmorpg')) {
-                const codeToTransform = dd`
-                import { entryPoint } from '@rpgjs/client'
-                import io from 'socket.io-client'
-                import modules from './${MODULE_NAME}'
-                import globalConfig from './${GLOBAL_CONFIG_CLIENT}'
-
-                document.addEventListener('DOMContentLoaded', function(e) { 
-                    window.RpgStandalone = entryPoint(modules, { 
-                        io,
-                        globalConfig,
-                        envs: ${envsString}
-                    })${config.autostart ? '.start()' : ''}
-                });
-              `;
-                return codeToTransform
+                const headers = dd`
+                    import { entryPoint } from '@rpgjs/client'
+                    import io from 'socket.io-client'
+                    import modules from './${MODULE_NAME}'
+                    import globalConfig from './${GLOBAL_CONFIG_CLIENT}'
+                `
+                if (!config.autostart) {
+                    return dd`${headers}
+                        window.RpgStandalone = (extraModules = []) => {
+                            return entryPoint([
+                                ...modules,
+                                ...extraModules
+                            ], { 
+                                io,
+                                globalConfig,
+                                envs: ${envsString}
+                            }).start()
+                        }
+                    `
+                }
+                else {
+                    return dd`${headers}
+    
+                    document.addEventListener('DOMContentLoaded', function(e) { 
+                        entryPoint(modules, { 
+                            io,
+                            globalConfig,
+                            envs: ${envsString}
+                        }).start()
+                    });
+                    `
+                }
             }
             else if (id.endsWith('virtual-standalone.ts?rpg')) {
                 const header = dd`

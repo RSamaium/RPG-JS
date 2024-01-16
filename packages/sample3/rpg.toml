@@ -1,7 +1,9 @@
 modulesRoot = './src/game'
 
 modules = [
-    './main'
+    './main',
+    '@rpgjs/default-gui'
 ]
 
 autostart = false
+type = 'rpg'

@@ -6,6 +6,7 @@ import colors from 'picocolors'
 import * as hmr from 'vite-node/hmr'
 import Joi from 'joi'
 import path from 'path'
+import { loadConfigFile } from '../build/load-config-file.js'
 
 export interface DevOptions {
     host?: string;
@@ -17,12 +18,17 @@ export interface DevOptions {
 }
 
 export async function devMode(options: DevOptions = {}) {
+    const jsonConfig = await loadConfigFile()
+
+    if (jsonConfig.type && !process.env.RPG_TYPE) process.env.RPG_TYPE = jsonConfig.type
+
     options.port = process.env.PORT ? parseInt(process.env.PORT) : options.port
     if (!options.port) {
         options.port = await portfinder.getPortPromise({
             port: 3000
         })
     }
+    
     const isRpg = process.env.RPG_TYPE == 'rpg'
     process.env.NODE_ENV = 'development'
     const cwd = process.cwd()
@@ -52,7 +58,7 @@ export async function devMode(options: DevOptions = {}) {
             },
             optimizeDepsExclude: ['*.tsx'],
             server: options
-        })
+        }, jsonConfig)
         const server = await createServer(config)
         await server.listen()
         console.log(`  ${colors.green('➜')}  ${colors.bold('Mode')}:    ${colorUrl('RPG')}`)
@@ -85,7 +91,7 @@ export async function devMode(options: DevOptions = {}) {
             host: 'localhost',
             ...options
         }
-    })
+    }, jsonConfig)
 
     server = await createServer(config)
     await server.listen()

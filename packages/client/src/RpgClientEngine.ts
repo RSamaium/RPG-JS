@@ -305,12 +305,12 @@ export class RpgClientEngine {
      *
      * @title Start Client Engine
      * @method start()
-     * @returns {Promise< void >}
+     * @returns {Promise< RpgClientEngine >}
      * @memberof RpgClientEngine
      */
     async start(options: { renderLoop: boolean } = {
         renderLoop: true
-    }) {
+    }): Promise<RpgClientEngine> {
         await this._init()
         await this.renderer.init()
         const { maxFps } = this.options
@@ -345,6 +345,7 @@ export class RpgClientEngine {
                     envUrl ? envUrl : undefined
             )
         }
+        return this
     }
 
     /**
@@ -466,7 +467,7 @@ export class RpgClientEngine {
             this.renderer.transitionScene(id)
             if (reconnect) {
                 this.roomJoin.next('')
-                this.roomJoin.complete() 
+                this.roomJoin.complete()
             }
         })
 
@@ -478,7 +479,7 @@ export class RpgClientEngine {
             this.renderer.loadScene(name, data)
         })
 
-        this.socket.on(SocketEvents.ChangeServer, async({ url, port }) => {
+        this.socket.on(SocketEvents.ChangeServer, async ({ url, port }) => {
             const connection = url + ':' + port
             if (this.lastConnection == connection) {
                 return

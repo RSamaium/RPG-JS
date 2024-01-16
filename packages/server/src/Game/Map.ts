@@ -396,6 +396,17 @@ export class RpgMap extends RpgCommonMap {
             position = { x: obj.x, y: obj.y, z: obj.z ?? 0 }
         }
 
+        if ('$decorator' in event) {
+            const options = event.$decorator
+            event.mode = options.mode || EventMode.Shared
+            event.width = options.width
+            event.height = options.height
+            event.hitbox = options.hitbox
+            event._name = options.name
+            event.prototype._name = options.name
+            event.prototype.mode = event.mode
+        }
+
         // The event is ignored if the mode is different.
         if (event.mode != mode) {
             return null

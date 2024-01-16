@@ -47,12 +47,6 @@ export interface EventOptions {
 
 export function EventData(options: EventOptions) {
     return (target) => {
-        target.mode = options.mode || EventMode.Shared
-        target.width = options.width
-        target.height = options.height
-        target.hitbox = options.hitbox
-        target._name = options.name
-        target.prototype._name = options.name
-        target.prototype.mode = target.mode
+       target.$decorator = options
     }
 }

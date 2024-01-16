@@ -7,8 +7,11 @@ import { clientBuildConfig } from "../build/client-config.js"
 import path from 'path'
 import { entryPointServer } from "../build/utils.js"
 import { HotContext } from "vite-node/index.js"
+import { loadConfigFile } from "../build/load-config-file.js"
 
 export async function runServer() {
+    const jsonConfig = await loadConfigFile()
+
     const config = await clientBuildConfig(process.cwd(), {
         serveMode: true,
         type: 'mmorpg',
@@ -21,7 +24,7 @@ export async function runServer() {
                 disabled: false,
             }
         }
-    })
+    }, jsonConfig)
 
     // create vite server
     const server = await createServer(config)
