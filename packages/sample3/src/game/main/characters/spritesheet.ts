@@ -1,6 +1,5 @@
 
-import { Animation, Spritesheet } from '@rpgjs/client'
-import { Direction } from '@rpgjs/common'
+import { Animation, Spritesheet, Direction } from '@rpgjs/client'
 
 const LPCSpritesheetPreset = () => {
     const frameY = (direction: Direction) => {

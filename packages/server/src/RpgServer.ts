@@ -39,7 +39,7 @@ export interface RpgServerEngineHooks {
      *
      * @param {RpgServerEngine} server - The instance of the game server.
      * @param {SocketIO.Socket} socket - The socket instance for the connecting player. This can be used to access client-sent data, like tokens or other credentials.
-     * @returns {Promise<string> | string} The function should return a promise that resolves to a player's unique identifier (e.g., user ID) if authentication is successful, or a string representing the user's ID. Alternatively, it can throw an error if authentication fails.
+     * @returns {Promise<string> | string  | undefined} The function should return a promise that resolves to a player's unique identifier (e.g., user ID) if authentication is successful, or a string representing the user's ID. Alternatively, it can throw an error if authentication fails. If undefined is returned, the player id is generated.
      * @throws {string} Throwing an error will prevent the player from connecting, signifying a failed authentication attempt.
      *
      * @example
@@ -54,7 +54,7 @@ export interface RpgServerEngineHooks {
      * };
      * ```
      */
-    auth?: (server: RpgServerEngine, socket: any) => Promise<string> | string | never
+    auth?: (server: RpgServerEngine, socket: any) => Promise<string> | string | never | undefined
 }
 
 export interface RpgPlayerHooks {

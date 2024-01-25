@@ -2,8 +2,22 @@ modulesRoot = './src/game'
 
 modules = [
     './main',
-    '@rpgjs/default-gui'
+    '@rpgjs/default-gui',
+    '@rpgjs/web3'
 ]
 
 autostart = false
-type = 'rpg'
+
+[auth]
+    jwtSecret = 'mysecret'
+
+[express.cors]
+    origin = 'http://localhost:3000'
+    credentials = true
+
+[express.socketIo.cors]
+    origin = "http://localhost:3000"
+    credentials = true
+
+[socketIoClient]
+    withCredentials = true

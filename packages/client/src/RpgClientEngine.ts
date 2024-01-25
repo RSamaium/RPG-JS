@@ -430,6 +430,7 @@ export class RpgClientEngine {
      */
     async connection(uri?: string) {
         const { standalone } = this.gameEngine
+        const { globalConfig } = this
 
         this._serverUrl = uri || ''
 
@@ -437,7 +438,8 @@ export class RpgClientEngine {
             this.socket = this.io(uri, {
                 auth: {
                     token: this.session
-                }
+                },
+                ...(globalConfig.socketIoClient || {})
             })
         }
         else {
