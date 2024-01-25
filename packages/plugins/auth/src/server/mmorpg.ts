@@ -15,8 +15,9 @@ declare module '@rpgjs/server' {
         auth(engine: RpgServerEngine, socket) {
             const { globalConfig } = engine
             const cookie = socket.request.headers.cookie
+            const cookieConfig = engine.globalConfig.auth?.cookie
             const { jwtSecret } = globalConfig.auth
-            const token = cookie?.split('rpg-token=')[1]?.split(';')[0]
+            const token = cookie?.split((cookieConfig?.name || 'rpg-token') + '=')[1]?.split(';')[0]
             if (!token) {
                 throw new Error('No token')
             }

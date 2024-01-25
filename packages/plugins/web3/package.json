@@ -11,8 +11,7 @@
   "license": "MIT",
   "type": "module",
   "dependencies": {
-    "@rpgjs/auth": "^1.0.0",
     "@rpgjs/server": "^4.2.2",
-    "@thirdweb-dev/sdk": "^4.0.28"
+    "@rpgjs/auth": "^1.0.0"
   }
 }

@@ -5,6 +5,10 @@
         "properties": {
             "jwtSecret": {
                 "type": "string"
+            },
+            "cookie": {
+                "type": "object",
+                "additionalProperties": true
             }
         },
         "required": [

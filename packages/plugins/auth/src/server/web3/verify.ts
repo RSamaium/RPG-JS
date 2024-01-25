@@ -1,5 +1,6 @@
 
 import { SiweMessage } from 'siwe'
+import { RpgServerEngine, inject } from '@rpgjs/server'
 import z from 'zod'
 import jwt from 'jsonwebtoken'
 
@@ -14,6 +15,8 @@ interface AuthConfig {
 export function playerWeb3VerifyHandler(authConfig: AuthConfig) {
     return async (req, res, next) => {
         try {
+            const server = inject(RpgServerEngine)
+
             z.object({
                 message: z.object({
                     nonce: z.string(),
@@ -47,11 +50,14 @@ export function playerWeb3VerifyHandler(authConfig: AuthConfig) {
                 token
             }
 
+            const cookie = server.globalConfig.auth?.cookie
+
             // http only
-            res.cookie('rpg-token', token, {
+            res.cookie(cookie?.name || 'rpg-token', token, {
                 httpOnly: true,
                 maxAge: 1000 * 60 * 60 * 24 * 365,
                 secure: false,
+                ...(cookie || {})
             }).send(result)
 
         } catch (error) {
