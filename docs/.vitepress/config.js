@@ -172,7 +172,8 @@ const guideMenu = [{
   collapsed: false,
   items: [
     { text: "Create Gui with React", link: "/gui/react" },
-    { text: "Adding Tooltips to Your GUI", link: "/gui/react-tooltip" }
+    { text: "Adding Tooltips to Your GUI", link: "/gui/react-tooltip" },
+    { text: "Integrate in React App", link: "/gui/react-app"}
   ]
 },
 {

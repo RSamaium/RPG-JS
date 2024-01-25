@@ -90,6 +90,17 @@ Configuration properties for CORS middleware. Documentation: [cors](https://expr
 
 Configuration properties for SocketIO middleware. Documentation: [socket.io](https://socket.io/docs/v4/server-initialization/)
 
+-  `socketIoClient`
+
+All [SocketIO client configuration](https://socket.io/docs/v4/client-initialization/).
+
+Example:
+
+```toml
+[socketIoClient]
+    withCredentials = true
+```
+
 - `spritesheetDirectories`: (*array*) Directories for spritesheets.
 
 ### `server`
