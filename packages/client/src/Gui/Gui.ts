@@ -58,7 +58,6 @@ export class Gui {
         }
 
         if (this.clientEngine.envs?.['VITE_REACT']) {
-            console.warn('[RPGJS] React GUI is experimental feature. So, its use may change over time. Not yet in production')
             COMPONENT_LIBRARIES.push(await import('./React').then(m => m.ReactGui))
         }
 

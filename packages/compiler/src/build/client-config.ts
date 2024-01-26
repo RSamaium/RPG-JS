@@ -59,7 +59,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         throw new Error('Invalid type. Choice between rpg or mmorpg')
     }
 
-    const buildOptions = config.compilerOptions.build
+    const buildOptions = config.compilerOptions?.build
 
     // found react packages in node_modules
     const hasPkg = pkg => _fs.existsSync(join(cwd(), 'node_modules', pkg))
@@ -75,7 +75,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     let serverUrl = ''
 
     if (isBuild) {
-        serverUrl = env.VITE_SERVER_URL = process.env.VITE_SERVER_URL ?? buildOptions.serverUrl ?? ''
+        serverUrl = env.VITE_SERVER_URL = process.env.VITE_SERVER_URL ?? buildOptions?.serverUrl ?? ''
     }
     else {
         serverUrl = 'http://' + env.VITE_SERVER_URL
