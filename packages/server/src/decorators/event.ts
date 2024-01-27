@@ -21,7 +21,7 @@ export interface EventOptions {
      * @memberof EventData
      * */
     mode?: EventMode,
-    
+
     width?: number,
     height?: number,
 
@@ -31,8 +31,8 @@ export interface EventOptions {
      * @prop { { width: number, height: number }} [hitbox]
      * @memberof EventData
      * */
-    hitbox?: { 
-        width?: number, 
+    hitbox?: {
+        width?: number,
         height?: number
     },
 
@@ -47,6 +47,12 @@ export interface EventOptions {
 
 export function EventData(options: EventOptions) {
     return (target) => {
-       target.$decorator = options
+        target.mode = options.mode || EventMode.Shared
+        target.width = options.width
+        target.height = options.height
+        target.hitbox = options.hitbox
+        target._name = options.name
+        target.prototype._name = options.name
+        target.prototype.mode = target.mode
     }
 }
