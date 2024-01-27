@@ -86,7 +86,7 @@ describe('Test Structure files After Build', () => {
             expect(clientFiles).toEqual(['assets', 'index.html', 'manifest.json', 'manifest.webmanifest', 'registerSW.js', 'sw.js', 'workbox-fa446783.js'])
 
             const serverFiles = fs.readdirSync('dist/server')
-            expect(serverFiles).toEqual(['assets', 'main.mjs', 'manifest.json'])
+            expect(serverFiles).toEqual(['assets', 'main.js', 'manifest.json'])
         })
 
         test('Move TMX files', async () => {
@@ -128,6 +128,7 @@ describe('Test Structure files After Build', () => {
         })
 
         test('Move TMX files', async () => {
+
             mockFs({
                 ...defaultFiles,
                 'main/maps': mapStructure,

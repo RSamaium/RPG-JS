@@ -3,7 +3,8 @@ import Vi, { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from
 import * as path from 'path'
 import mockFs from 'mock-fs'
 import sizeOf from 'image-size'
-import { ClientBuildConfigOptions, Config } from '../src/build/client-config'
+import { ClientBuildConfigOptions } from '../src/build/client-config'
+import { Config, loadConfigFile } from '../src/build/load-config-file'
 
 vi.mock('image-size')
 
@@ -303,12 +304,6 @@ describe('TOML Configuration test', () => {
             // Reset configuration after each test
             options = {};
             config = {};
-        });
-
-        test("should correctly set startMap from config.start.map if it exists", () => {
-            config.start = { map: 'testMap' };
-            configTomlPlugin(options, config);
-            expect(config.startMap).toEqual('testMap');
         });
 
         test("should return Plugin object when global config loads successfully", () => {

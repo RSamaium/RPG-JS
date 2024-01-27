@@ -312,7 +312,7 @@ export function createModuleLoad(id: string, variableName: string, modulePath: s
     const indexFile = path.join(modulePathId, 'index.ts')
 
     if (fs.existsSync(packageJson)) {
-        const { main: entryPoint } = JSON.parse(fs.readFileSync(packageJson, 'utf-8'))
+        const { main: entryPoint } = JSON.parse(fs.readFileSync(packageJson).toString())
         if (entryPoint) {
             const mod = toPosix(path.join(id, entryPoint))
             return dd`

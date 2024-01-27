@@ -252,6 +252,24 @@ describe('clientBuildConfig', () => {
                 expect(ret.build.outDir).toContain('dist/mydir');
             })
         })
+
+        describe('Start Map', () => {
+            test("should correctly set startMap from config.start.map if it exists", async () => {
+                mockFs({
+                    'rpg.toml': `
+                        [start]
+                            map = 'testMap'
+                    `,
+                    'index.html': '',
+                    'package.json': '{"name": "test"}'
+                });
+                const ret = await clientBuildConfig('.', {
+                    type: 'mmorpg',
+                    serveMode: false,
+                });
+                expect(ret._projectConfig.startMap).toBe('testMap');
+            }); 
+        })
     })
 
     describe('Test RPG Mode', () => {

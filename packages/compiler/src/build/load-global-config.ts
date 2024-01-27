@@ -65,7 +65,7 @@ export function loadGlobalConfig(modules: string[], config: Config, options: Cli
         }
         const configPath = path.resolve(process.cwd(), modulePath, 'config.json')
         if (fs.existsSync(configPath)) {
-            const configFile: any = fs.readFileSync(configPath, 'utf-8')
+            const configFile: any = fs.readFileSync(configPath).toString()
             const jsonFile = JSON.parse(configFile)
             if (jsonFile.namespace) namespaces.push(jsonFile.namespace)
             parseSchema(jsonFile, module)

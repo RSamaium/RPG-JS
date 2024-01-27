@@ -45,7 +45,7 @@ export interface ClientBuildConfigOptions {
     optimizeDepsExclude?: string[]
 }
 
-export async function clientBuildConfig(dirname: string, options: ClientBuildConfigOptions = {}, config: any) {
+export async function clientBuildConfig(dirname: string, options: ClientBuildConfigOptions = {}, config?) {
     const isServer = options.side === 'server'
     const isTest = options.mode === 'test'
     const isRpg = options.type === 'rpg'
@@ -53,6 +53,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     const mode = options.mode || 'development'
     const plugin = options.plugin
     const { cwd, env } = process
+    config = config ?? await loadConfigFile(mode)
 
     const envType = env.RPG_TYPE
     if (envType && !['rpg', 'mmorpg'].includes(envType)) {
