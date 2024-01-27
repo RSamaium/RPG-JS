@@ -1,9 +1,5 @@
 import request from 'supertest'
 import * as k8s from '@kubernetes/client-node'
-
-const SECRET_TOKEN = process.env.SECRET_TOKEN = 'test'
-process.env.KUBECONFIG = '{ "apiVersion": "1", "clusters": [ { "cluster": {} } ], "users": [ { "user": {} } ] }'
-
 import * as AgonesApi from '../src/agones-api'
 import { MatchMakerService, State } from '../src/service'
 import load from '../src/app'
@@ -15,6 +11,8 @@ let k8sMock, app
 let loadFromFile = vi.fn()
 let loadFromClusterAndUser = vi.fn()
 let listNamespacedCustomObject = vi.fn()
+
+const SECRET_TOKEN = process.env.SECRET_TOKEN
 
 function getItem(serverId, address, port, state, labels = {}) {
     return {

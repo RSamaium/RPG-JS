@@ -20,7 +20,7 @@ export default defineConfig(async () => {
     if (testRpgJSProject) {
         for (const pkg of packages) {
             configResolveAlias[`@rpgjs/${pkg}`] = path.resolve(__dirname, `../../../${pkg}/src/index.ts`)
-         }
+        }
     }
     const customVitest = config._projectConfig.vitest
     config = {
@@ -31,22 +31,29 @@ export default defineConfig(async () => {
                 ...config.resolve.alias,
                 ...configResolveAlias
             },
-            mainFields: [], 
+            mainFields: [],
         }
     }
+
+    const setupFiles = [
+        path.join(__dirname, '..', 'setupFiles', 'canvas.ts'),
+    ]
+
+    if (testRpgJSProject) {
+        setupFiles.push(path.join(__dirname, '..', 'setupFiles', 'env.ts'))
+    }
+
     return {
         ...config,
         test: {
             environment: 'jsdom',
-            threads: false,
-            setupFiles: [
-                path.join(__dirname, '..', 'setupFiles', 'canvas.ts')
-            ],
+            pool: 'forks',
+            setupFiles,
             exclude: [
-                ...configDefaults.exclude, 
+                ...configDefaults.exclude,
                 'packages/compiler/**/*'
             ],
-            ...(customVitest || {}),
+            ...(customVitest || {})
         }
     }
 })
