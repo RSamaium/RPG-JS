@@ -18,7 +18,8 @@ const { cwd, exit } = process
 type ImportObject = {
     importString: string,
     variablesString: string,
-    folder: string
+    folder: string,
+    relativePath: string
 }
 
 type ImportImageObject = ImportObject & { propImagesString: string }
@@ -63,6 +64,7 @@ export function searchFolderAndTransformToImportString(
     }
 ): ImportObject {
     let importString = ''
+    let fileRelativePath = ''
     const folder = path.resolve(modulePath, folderPath)
     if (fs.existsSync(folder)) {
         // read recursive folder and get all the files (flat array)
@@ -86,17 +88,20 @@ export function searchFolderAndTransformToImportString(
                 .map(file => {
                     const _relativePath = relativePath(file)
                     const variableName = formatVariableName(_relativePath)
+                    fileRelativePath = _relativePath
                     importString = importString + `\nimport ${variableName} from '${_relativePath}'`
                     return returnCb ? returnCb(_relativePath, variableName) : variableName
                 }).join(','),
             importString,
-            folder
+            folder,
+            relativePath: fileRelativePath
         }
     }
     return {
         variablesString: '',
         importString: '',
-        folder: ''
+        folder: '',
+        relativePath: ''
     }
 }
 
@@ -142,6 +147,16 @@ export function loadServerFiles(modulePath: string, options, config) {
     const databaseFilesString = searchFolderAndTransformToImportString('database', modulePath, '.ts')
     const eventsFilesString = searchFolderAndTransformToImportString('events', modulePath, '.ts')
     const hitbox = config.start?.hitbox
+
+    const verifyDefaultExport = (importObject: ImportObject) => `
+        [${importObject?.variablesString}].map((val) => {
+            if (!val) {
+                throw new Error('Do you have "export default" in this file ? :  ${importObject?.relativePath}')
+            }
+            return val
+        })
+    `
+
     const code = `
         import { type RpgServer, RpgModule } from '@rpgjs/server'
         ${mapFilesString?.importString}
@@ -162,12 +177,12 @@ export function loadServerFiles(modulePath: string, options, config) {
                 }
             }` : ''
         }
-           
+
         @RpgModule<RpgServer>({ 
             player,
-            events: [${eventsFilesString?.variablesString}],
+            events: ${verifyDefaultExport(eventsFilesString)},
             ${importEngine ? `engine: server,` : ''}
-            database: [${databaseFilesString?.variablesString}],
+            database: ${verifyDefaultExport(databaseFilesString)},
             maps: [${mapFilesString?.variablesString}${hasMaps ? ',' : ''}${mapStandaloneFilesString?.variablesString}],
             worldMaps: [${worldFilesString?.variablesString}] 
         })
