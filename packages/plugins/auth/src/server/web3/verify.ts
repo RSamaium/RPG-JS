@@ -17,12 +17,14 @@ export function playerWeb3VerifyHandler(authConfig: AuthConfig) {
         try {
             const server = inject(RpgServerEngine)
 
-            z.object({
+            const schema = z.object({
                 message: z.object({
                     nonce: z.string(),
                 }),
                 signature: z.string()
             }).strict()
+
+            schema.parse(req.body)
 
             const { message, signature }: { message: Message, signature: string } = req.body
             const jwtSecret = authConfig.jwtSecret
@@ -61,6 +63,10 @@ export function playerWeb3VerifyHandler(authConfig: AuthConfig) {
             }).send(result)
 
         } catch (error) {
+            if (error instanceof z.ZodError) {
+                res.status(400).send(error.errors)
+                return
+            }
             next(error)
         }
     }

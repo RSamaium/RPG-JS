@@ -14,7 +14,7 @@ export function Web3Wrapper({ children }) {
                 adapter={authenticationAdapter}
                 status={$authStatus}
             >
-                <RainbowKitProvider chains={chains}>
+                <RainbowKitProvider chains={chains}  locale="en">
                     {children}
                 </RainbowKitProvider>
             </RainbowKitAuthenticationProvider>

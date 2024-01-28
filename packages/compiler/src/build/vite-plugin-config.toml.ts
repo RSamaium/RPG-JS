@@ -435,9 +435,11 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
         async load(id: string) {
             const { env } = process
             const serverUrl = env.VITE_SERVER_URL
+            const gameUrl = env.VITE_GAME_URL
             const envsString = `{
                 VITE_BUILT: ${env.VITE_BUILT},
                 VITE_SERVER_URL: ${serverUrl ? "'" + serverUrl + "'" : 'undefined'},
+                VITE_GAME_URL: ${gameUrl ? "'" + gameUrl + "'" : 'undefined'},
                 VITE_RPG_TYPE: '${options.type ?? 'mmorpg'}',
                 VITE_ASSETS_PATH: '${env.VITE_ASSETS_PATH ?? ''}',
                 VITE_REACT: ${env.VITE_REACT},

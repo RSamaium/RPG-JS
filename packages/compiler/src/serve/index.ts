@@ -28,9 +28,10 @@ export async function devMode(options: DevOptions = {}) {
             port: 3000
         })
     }
-    
+
     const isRpg = process.env.RPG_TYPE == 'rpg'
     process.env.NODE_ENV = 'development'
+    process.env.VITE_GAME_URL ??= `http://localhost:${options.port}`
     const cwd = process.cwd()
 
     const colorUrl = (url: string) =>
@@ -73,6 +74,7 @@ export async function devMode(options: DevOptions = {}) {
         const { runner, server: serverSide, files, node } = await runServer()
         console.log(`  ${colors.green('➜')}  ${colors.bold('Mode')}:    ${colorUrl('MMORPG')}`)
         server.printUrls()
+
         console.log(`  ${colors.dim('➜')}  ${colors.dim('Server')}:  ${colors.dim(`http://localhost:${serverPort}/`)}`)
         restartViteServer(server, async () => {
             await hmr.handleMessage(runner, serverSide.emitter, [], {

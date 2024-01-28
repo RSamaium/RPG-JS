@@ -12,12 +12,17 @@ autostart = false
     jwtSecret = 'mysecret'
 
 [express.cors]
-    origin = 'http://localhost:3000'
+    origin = '$ENV:VITE_GAME_URL'
     credentials = true
 
 [express.socketIo.cors]
-    origin = "http://localhost:3000"
+    origin = '$ENV:VITE_GAME_URL'
     credentials = true
 
 [socketIoClient]
     withCredentials = true
+
+[start]
+    map = './src/game/main/maps/map'
+    graphic = 'male'
+    hitbox = [32, 32]
