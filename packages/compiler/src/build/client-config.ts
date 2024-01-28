@@ -75,12 +75,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
 
     let serverUrl = ''
 
-    if (isBuild) {
-        serverUrl = env.VITE_SERVER_URL = process.env.VITE_SERVER_URL ?? buildOptions?.serverUrl ?? ''
-    }
-    else {
-        serverUrl = 'http://' + env.VITE_SERVER_URL
-    }
+    serverUrl = env.VITE_SERVER_URL = process.env.VITE_SERVER_URL ?? buildOptions?.serverUrl ?? ''
 
     if (options.mode != 'test' && !plugin && !libMode) {
         // if index.html is not found, display an error

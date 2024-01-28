@@ -13,7 +13,9 @@ import { Query } from '../Query'
 type ExpressServerOptions = {
     basePath: string,
     globalConfig?: any,
-    envs?: object
+    envs?: {
+        [key: string]: string
+    }
 }
 
 export function expressServer(modules: ModuleType[], options: ExpressServerOptions): Promise<{
@@ -73,7 +75,12 @@ export function expressServer(modules: ModuleType[], options: ExpressServerOptio
         }
 
         // @ts-ignore
-        const serverPort = !isBuilt ? (envs.VITE_SERVER_URL || '').split(':')[1] || PORT : PORT
+        const getPort = (url: string) => {
+            const array = url.split(':')
+            return array[array.length - 1]
+        }
+        console.log(envs.VITE_SERVER_URL)
+        const serverPort = !isBuilt ? getPort(envs.VITE_SERVER_URL) || PORT : PORT
         server.listen(serverPort, start)
 
         process.on('uncaughtException', function (error) {

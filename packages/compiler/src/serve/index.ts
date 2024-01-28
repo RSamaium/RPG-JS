@@ -84,7 +84,7 @@ export async function devMode(options: DevOptions = {}) {
         })
     }
     const serverPort = await portfinder.getPortPromise()
-    process.env.VITE_SERVER_URL = 'localhost:' + serverPort
+    process.env.VITE_SERVER_URL = 'http://localhost:' + serverPort
 
     const config = await clientBuildConfig(cwd, {
         serveMode: true,

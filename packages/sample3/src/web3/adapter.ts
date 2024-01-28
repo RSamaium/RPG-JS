@@ -2,7 +2,7 @@ import { createAuthenticationAdapter } from '@rainbow-me/rainbowkit';
 import { SiweMessage } from 'siwe';
 import { setAuthStatus } from '../store/auth';
 
-const SERVER_URL = 'http://localhost:8000/players/web3';
+const SERVER_URL = import.meta.env.VITE_SERVER_URL + '/players/web3'
 
 export const authenticationAdapter = createAuthenticationAdapter({
   getNonce: async () => {
