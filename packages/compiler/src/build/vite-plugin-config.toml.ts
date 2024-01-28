@@ -148,7 +148,7 @@ export function loadServerFiles(modulePath: string, options, config) {
     const eventsFilesString = searchFolderAndTransformToImportString('events', modulePath, '.ts')
     const hitbox = config.start?.hitbox
 
-    const verifyDefaultExport = (importObject: ImportObject) => `
+    const verifyDefaultExport = (importObject: ImportObject) => dd`
         [${importObject?.variablesString}].map((val) => {
             if (!val) {
                 throw new Error('Do you have "export default" in this file ? :  ${importObject?.relativePath}')

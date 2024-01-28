@@ -202,6 +202,7 @@ describe('TOML Configuration test', () => {
             expect(result).toEqual({
                 variablesString: '',
                 importString: '',
+                relativePath: '',
                 folder: '',
             })
         })
