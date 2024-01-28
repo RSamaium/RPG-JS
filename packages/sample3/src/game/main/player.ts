@@ -1,5 +1,7 @@
+import { Components, RpgPlayer } from '@rpgjs/server'
+
 export default {
-    onConnected() {
-        console.log('ok')
+    onConnected(player: RpgPlayer) {
+        player.setComponentsTop(Components.text(player.web3.walletAdress))
     }
 }

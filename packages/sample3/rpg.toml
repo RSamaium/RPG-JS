@@ -1,9 +1,9 @@
 modulesRoot = './src/game'
 
 modules = [
+    '@rpgjs/web3',
     './main',
     '@rpgjs/default-gui',
-    '@rpgjs/web3'
 ]
 
 autostart = false
