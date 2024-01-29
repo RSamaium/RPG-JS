@@ -1,7 +1,7 @@
 {
   "name": "sample3",
   "private": true,
-  "version": "4.3.0",
+  "version": "4.3.1",
   "type": "module",
   "scripts": {
     "dev": "rpgjs dev",
@@ -17,7 +17,7 @@
     "@rpgjs/default-gui": "^4.3.0",
     "@rpgjs/server": "^4.3.0",
     "@rpgjs/standalone": "^4.3.0",
-    "@rpgjs/web3": "^4.3.0",
+    "@rpgjs/web3": "^4.3.1",
     "axios": "^1.6.5",
     "lucide-react": "^0.309.0",
     "nanostores": "^0.9.5",

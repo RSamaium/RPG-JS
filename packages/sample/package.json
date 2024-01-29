@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/sample3",
-  "version": "4.3.0",
+  "version": "4.3.1",
   "description": "",
   "main": "src/server.ts",
   "types": "index.d.ts",
@@ -25,12 +25,12 @@
     "@rpgjs/gamepad": "^4.3.0",
     "@rpgjs/mobile-gui": "^4.3.0",
     "@rpgjs/plugin-emotion-bubbles": "^4.3.0",
-    "@rpgjs/save": "^4.3.0",
+    "@rpgjs/save": "^4.3.1",
     "@rpgjs/server": "^4.3.0",
     "@rpgjs/standalone": "^4.3.0",
     "@rpgjs/starter-kit": "^4.3.0",
     "@rpgjs/testing": "^4.3.0",
-    "@rpgjs/title-screen": "^4.3.0",
+    "@rpgjs/title-screen": "^4.3.1",
     "@rpgjs/types": "^4.0.5",
     "socket.io-client": "^4.1.2",
     "vue": "^3.2.47"
