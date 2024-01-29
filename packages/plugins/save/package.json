@@ -7,6 +7,9 @@
   "scripts": {
     "build:browser": "RPG_TYPE=rpg npx rpgjs build"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "keywords": [],
   "author": "Samuel Ronce",
   "license": "MIT",

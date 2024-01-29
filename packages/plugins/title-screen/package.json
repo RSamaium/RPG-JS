@@ -18,5 +18,8 @@
     "mongoose": "^7.4.3",
     "mongoose-bcrypt": "^1.10.1"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "gitHead": "5abe6ca78be96524d74a052a230f2315c900ddee"
 }

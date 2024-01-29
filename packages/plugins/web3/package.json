@@ -14,5 +14,8 @@
   "dependencies": {
     "@rpgjs/auth": "^4.3.0",
     "@rpgjs/server": "^4.3.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
