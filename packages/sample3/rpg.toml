@@ -1,0 +1,28 @@
+modulesRoot = './src/game'
+
+modules = [
+    '@rpgjs/web3',
+    './main',
+    '@rpgjs/default-gui',
+]
+
+autostart = false
+
+[auth]
+    jwtSecret = 'mysecret'
+
+[express.cors]
+    origin = '$ENV:VITE_GAME_URL'
+    credentials = true
+
+[express.socketIo.cors]
+    origin = '$ENV:VITE_GAME_URL'
+    credentials = true
+
+[socketIoClient]
+    withCredentials = true
+
+[start]
+    map = './src/game/main/maps/map'
+    graphic = 'male'
+    hitbox = [32, 32]

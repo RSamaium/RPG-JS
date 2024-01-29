@@ -7,7 +7,7 @@ import { globFiles } from './utils.js';
 async function processTsxFile(tsxFile: string, output: string) {
     if (tsxFile.includes('gui')) return
 
-    const content = fs.readFileSync(tsxFile, 'utf-8');
+    const content = fs.readFileSync(tsxFile).toString()
     const result = await parseStringPromise(content);
     const imagePath = path.join(path.dirname(tsxFile), result.tileset.image[0].$.source);
 
@@ -16,7 +16,7 @@ async function processTsxFile(tsxFile: string, output: string) {
 
 // Process a TMX file and copy all its images to the output directory
 async function processTmxFile(tmxFile: string, output: string) {
-    const content = fs.readFileSync(tmxFile, 'utf-8');
+    const content = fs.readFileSync(tmxFile).toString()
     const result = await parseStringPromise(content);
 
     // Copy an image from a given source path to the output directory

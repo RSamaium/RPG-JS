@@ -1,6 +1,6 @@
 import { RpgCommonMap, Utils, RpgShape, RpgCommonGame, AbstractObject } from '@rpgjs/common'
 import { TiledParserFile, TiledParser, TiledTileset } from '@rpgjs/tiled'
-import { EventOptions } from '../decorators/event'
+import { EventData, EventOptions } from '../decorators/event'
 import { RpgPlayer, RpgEvent, RpgClassEvent } from '../Player/Player'
 import { Move } from '../Player/MoveManager'
 import { RpgServerEngine } from '../server'
@@ -394,6 +394,11 @@ export class RpgMap extends RpgCommonMap {
         else {
             event = obj.event
             position = { x: obj.x, y: obj.y, z: obj.z ?? 0 }
+        }
+
+        if ('$decorator' in event) {
+            const options = event.$decorator
+            EventData(options)(event)
         }
 
         // The event is ignored if the mode is different.

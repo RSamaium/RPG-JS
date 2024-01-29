@@ -8,24 +8,24 @@ const { serverIo, ClientIo } = MockSocketIo
 export function entryPoint(modules: any[], options: any = {}) {
     const io = new ClientIo()
 
-    class Module {}
+    class Module { }
 
     class StandaloneGame {
         server: RpgServerEngine
         client: RpgClientEngine
 
         async start() {
+            this.client = entryPointClient(modules, {
+                standalone: true,
+                io,
+                globalConfig: options.globalConfigClient,
+                ...options
+            })
             this.server = await entryPointServer(modules, {
                 io: serverIo,
                 standalone: true,
                 basePath: '',
                 globalConfig: options.globalConfigServer,
-                ...options
-            })
-            this.client = entryPointClient(modules, { 
-                standalone: true,
-                io,
-                globalConfig: options.globalConfigClient,
                 ...options
             })
             await this.server.start()
@@ -41,7 +41,7 @@ export function entryPoint(modules: any[], options: any = {}) {
                 return {
                     [side]: hook
                 }
-            }))  
+            }))
         }
 
         logicHooks(serverHooks) {
@@ -52,5 +52,5 @@ export function entryPoint(modules: any[], options: any = {}) {
             this.setHooks(clientHooks, 'client')
         }
     }
-   return new StandaloneGame()
+    return new StandaloneGame()
 }

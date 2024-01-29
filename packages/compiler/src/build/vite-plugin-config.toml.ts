@@ -1,12 +1,13 @@
 import fs from 'fs';
-import path from 'path';
 import type { Plugin } from 'vite';
 import sizeOf from 'image-size';
-import type { ClientBuildConfigOptions, Config } from './client-config';
+import type { ClientBuildConfigOptions } from './client-config';
 import { loadGlobalConfig } from './load-global-config.js';
 import { warn } from '../logs/warning.js';
 import { assetsFolder, extractProjectPath, relativePath, toPosix } from './utils.js';
 import dd from 'dedent';
+import { Config } from './load-config-file';
+import path from 'path';
 
 const MODULE_NAME = 'virtual-modules'
 const GLOBAL_CONFIG_CLIENT = 'virtual-config-client'
@@ -17,7 +18,8 @@ const { cwd, exit } = process
 type ImportObject = {
     importString: string,
     variablesString: string,
-    folder: string
+    folder: string,
+    relativePath: string
 }
 
 type ImportImageObject = ImportObject & { propImagesString: string }
@@ -62,6 +64,7 @@ export function searchFolderAndTransformToImportString(
     }
 ): ImportObject {
     let importString = ''
+    let fileRelativePath = ''
     const folder = path.resolve(modulePath, folderPath)
     if (fs.existsSync(folder)) {
         // read recursive folder and get all the files (flat array)
@@ -85,17 +88,20 @@ export function searchFolderAndTransformToImportString(
                 .map(file => {
                     const _relativePath = relativePath(file)
                     const variableName = formatVariableName(_relativePath)
+                    fileRelativePath = _relativePath
                     importString = importString + `\nimport ${variableName} from '${_relativePath}'`
                     return returnCb ? returnCb(_relativePath, variableName) : variableName
                 }).join(','),
             importString,
-            folder
+            folder,
+            relativePath: fileRelativePath
         }
     }
     return {
         variablesString: '',
         importString: '',
-        folder: ''
+        folder: '',
+        relativePath: ''
     }
 }
 
@@ -141,6 +147,16 @@ export function loadServerFiles(modulePath: string, options, config) {
     const databaseFilesString = searchFolderAndTransformToImportString('database', modulePath, '.ts')
     const eventsFilesString = searchFolderAndTransformToImportString('events', modulePath, '.ts')
     const hitbox = config.start?.hitbox
+
+    const verifyDefaultExport = (importObject: ImportObject) => dd`
+        [${importObject?.variablesString}].map((val) => {
+            if (!val) {
+                throw new Error('Do you have "export default" in this file ? :  ${importObject?.relativePath}')
+            }
+            return val
+        })
+    `
+
     const code = `
         import { type RpgServer, RpgModule } from '@rpgjs/server'
         ${mapFilesString?.importString}
@@ -161,12 +177,12 @@ export function loadServerFiles(modulePath: string, options, config) {
                 }
             }` : ''
         }
-           
+
         @RpgModule<RpgServer>({ 
             player,
-            events: [${eventsFilesString?.variablesString}],
+            events: ${verifyDefaultExport(eventsFilesString)},
             ${importEngine ? `engine: server,` : ''}
-            database: [${databaseFilesString?.variablesString}],
+            database: ${verifyDefaultExport(databaseFilesString)},
             maps: [${mapFilesString?.variablesString}${hasMaps ? ',' : ''}${mapStandaloneFilesString?.variablesString}],
             worldMaps: [${worldFilesString?.variablesString}] 
         })
@@ -223,7 +239,7 @@ export function loadSpriteSheet(directoryName: string, modulePath: string, optio
     }
 }
 
-export function loadClientFiles(modulePath: string, options, config) {
+export function loadClientFiles(modulePath: string, options, config: Config) {
     const importSceneMapString = importString(modulePath, 'scene-map', 'sceneMap')
     const importSpriteString = importString(modulePath, 'sprite')
     const importEngine = importString(modulePath, 'client', 'engine')
@@ -311,7 +327,7 @@ export function createModuleLoad(id: string, variableName: string, modulePath: s
     const indexFile = path.join(modulePathId, 'index.ts')
 
     if (fs.existsSync(packageJson)) {
-        const { main: entryPoint } = JSON.parse(fs.readFileSync(packageJson, 'utf-8'))
+        const { main: entryPoint } = JSON.parse(fs.readFileSync(packageJson).toString())
         if (entryPoint) {
             const mod = toPosix(path.join(id, entryPoint))
             return dd`
@@ -366,8 +382,6 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
     if (config.modules) {
         modules = config.modules;
     }
-
-    config.startMap = config.startMap || config.start?.map
 
     if (config.inputs && options.server) {
         for (let inputKey in config.inputs) {
@@ -436,9 +450,11 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
         async load(id: string) {
             const { env } = process
             const serverUrl = env.VITE_SERVER_URL
+            const gameUrl = env.VITE_GAME_URL
             const envsString = `{
                 VITE_BUILT: ${env.VITE_BUILT},
                 VITE_SERVER_URL: ${serverUrl ? "'" + serverUrl + "'" : 'undefined'},
+                VITE_GAME_URL: ${gameUrl ? "'" + gameUrl + "'" : 'undefined'},
                 VITE_RPG_TYPE: '${options.type ?? 'mmorpg'}',
                 VITE_ASSETS_PATH: '${env.VITE_ASSETS_PATH ?? ''}',
                 VITE_REACT: ${env.VITE_REACT},
@@ -446,7 +462,7 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
             if (id.endsWith(MODULE_NAME)) {
                 const modulesToImport = modules.reduce((acc, module) => {
                     const variableName = formatVariableName(module);
-                    acc[variableName] = module;
+                    acc[variableName] = module
                     return acc;
                 }, {} as Record<string, string>);
 
@@ -461,55 +477,89 @@ export default function configTomlPlugin(options: ClientBuildConfigOptions = {},
                 `
             }
             else if (id.endsWith('virtual-client.ts?mmorpg')) {
-                const codeToTransform = dd`
-                import { entryPoint } from '@rpgjs/client'
-                import io from 'socket.io-client'
-                import modules from './${MODULE_NAME}'
-                import globalConfig from './${GLOBAL_CONFIG_CLIENT}'
-
-                document.addEventListener('DOMContentLoaded', function(e) { 
-                    entryPoint(modules, { 
-                        io,
-                        globalConfig,
-                        envs: ${envsString}
-                    }).start()
-                });
-              `;
-                return codeToTransform
+                const headers = dd`
+                    import { entryPoint } from '@rpgjs/client'
+                    import io from 'socket.io-client'
+                    import modules from './${MODULE_NAME}'
+                    import globalConfig from './${GLOBAL_CONFIG_CLIENT}'
+                `
+                if (!config.autostart) {
+                    return dd`${headers}
+                        window.RpgStandalone = (extraModules = []) => {
+                            return entryPoint([
+                                ...modules,
+                                ...extraModules
+                            ], { 
+                                io,
+                                globalConfig,
+                                envs: ${envsString}
+                            }).start()
+                        }
+                    `
+                }
+                else {
+                    return dd`${headers}
+    
+                    document.addEventListener('DOMContentLoaded', function(e) { 
+                        entryPoint(modules, { 
+                            io,
+                            globalConfig,
+                            envs: ${envsString}
+                        }).start()
+                    });
+                    `
+                }
             }
             else if (id.endsWith('virtual-standalone.ts?rpg')) {
-                const codeToTransform = dd`
-                import { entryPoint } from '@rpgjs/standalone'
-                import globalConfigClient from './${GLOBAL_CONFIG_CLIENT}'
-                import globalConfigServer from './${GLOBAL_CONFIG_SERVER}'
-                import modules from './${MODULE_NAME}'
+                const header = dd`
+                    import { entryPoint } from '@rpgjs/standalone'
+                    import globalConfigClient from './${GLOBAL_CONFIG_CLIENT}'
+                    import globalConfigServer from './${GLOBAL_CONFIG_SERVER}'
+                    import modules from './${MODULE_NAME}'
+                `
+                if (!config.autostart) {
+                    return dd`${header}
+                        window.RpgStandalone = (extraModules = []) => {
+                            return entryPoint([
+                                ...modules,
+                                ...extraModules
+                            ], {
+                                globalConfigClient,
+                                globalConfigServer,
+                                envs: ${envsString}
+                            }).start()
+                        }
+                    `
+                }
+                else {
+                    return dd`${header}
 
-                ${libMode ?
-                        `  window.global ||= window
-                 
-                    export default (extraModules = []) => {
-                        return entryPoint([
-                            ...modules,
-                            ...extraModules
-                        ], {
-                            globalConfigClient,
-                            globalConfigServer,
-                            envs: ${envsString}
-                        })
-                    }
-                 `
-                        :
-                        `document.addEventListener('DOMContentLoaded', async function() { 
-                        window.RpgStandalone = await entryPoint(modules, {
-                            globalConfigClient,
-                            globalConfigServer,
-                            envs: ${envsString}
-                        }).start() 
-                    })`
-                    }
-
-              `;
-                return codeToTransform
+                    ${libMode ?
+                            `  window.global ||= window
+                     
+                        export default (extraModules = []) => {
+                            return entryPoint([
+                                ...modules,
+                                ...extraModules
+                            ], {
+                                globalConfigClient,
+                                globalConfigServer,
+                                envs: ${envsString}
+                            })
+                        }
+                     `
+                            :
+                            `document.addEventListener('DOMContentLoaded', async function() { 
+                            window.RpgStandalone = await entryPoint(modules, {
+                                globalConfigClient,
+                                globalConfigServer,
+                                envs: ${envsString}
+                            }).start()
+                        })`
+                        }
+    
+                  `
+                };
             }
             else if (id.endsWith('virtual-server.ts')) {
                 const codeToTransform = dd`

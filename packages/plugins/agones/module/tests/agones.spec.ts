@@ -1,11 +1,6 @@
 import { RpgServer, RpgModule, RpgServerEngine, RpgWorld } from '@rpgjs/server'
 import AgonesSDK from '@google-cloud/agones-sdk'
 import { beforeEach, vi, expect, afterEach, test, describe } from 'vitest'
-
-process.env.MATCH_MAKER_URL = 'test'
-process.env.MATCH_MAKER_SECRET_TOKEN = 'test'
-process.env.SERVER_ID = 'server1'
-
 import agones from '../src'
 import { _beforeEach } from '../../../../../tests/unit-tests/specs/beforeEach'
 // @ts-ignore

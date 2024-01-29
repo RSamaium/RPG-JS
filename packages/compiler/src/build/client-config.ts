@@ -1,9 +1,8 @@
-import { loadEnv, splitVendorChunkPlugin } from 'vite'
+import { splitVendorChunkPlugin } from 'vite'
+import { resolve, join } from 'path'
 import { VitePWA } from 'vite-plugin-pwa'
-import toml from '@iarna/toml';
 import nodePolyfills from 'rollup-plugin-node-polyfills'
 import { NodeModulesPolyfillPlugin } from '@esbuild-plugins/node-modules-polyfill'
-import { resolve, join } from 'path'
 import requireTransform from './vite-plugin-require.js';
 import { flagTransform } from './vite-plugin-flag-transform.js';
 import vue from '@vitejs/plugin-vue'
@@ -20,60 +19,16 @@ import { DevOptions } from '../serve/index.js';
 import { codeInjectorPlugin } from './vite-plugin-code-injector.js';
 import { error, ErrorCodes } from '../utils/log.js';
 import configTomlPlugin from './vite-plugin-config.toml.js'
-import { createDistFolder, entryPointServer, replaceEnvVars } from './utils.js'
+import { createDistFolder, entryPointServer } from './utils.js'
 import cssPlugin from './vite-plugin-css.js';
 import { rpgjsPluginLoader } from './vite-plugin-rpgjs-loader.js';
 import { mapUpdatePlugin } from './vite-plugin-map-update.js';
 import { runtimePlugin } from './vite-plugin-lib.js';
-import { BuildOptions } from './index.js';
 import { defaultComposer } from "default-composer";
+import { Config, loadConfigFile } from './load-config-file.js';
 
 const require = createRequire(import.meta.url);
 
-export interface Config {
-    modules?: string[]
-    startMap?: string
-    name?: string
-    shortName?: string,
-    short_name?: string // old value
-    description?: string,
-    themeColor?: string,
-    background_color?: string // old value
-    icons?: {
-        src: string,
-        sizes: number[],
-        type: string
-    }[]
-    themeCss?: string
-    inputs?: {
-        [key: string]: {
-            name: string,
-            repeat?: boolean,
-            bind: string | string[],
-        }
-    }
-    start?: {
-        map?: string,
-        graphic?: string
-        hitbox?: [number, number]
-    }
-    spritesheetDirectories?: string[]
-    compilerOptions?: {
-        alias?: {
-            [key: string]: string
-        },
-        build?: {
-            pwaEnabled?: boolean // true by default
-            assetsPath?: string
-            outputDir?: string // dist by default
-            serverUrl?: string
-        }
-    },
-    pwa?: {
-        [key: string]: any
-    },
-    vite?: any
-}
 
 export interface ClientBuildConfigOptions {
     buildEnd?: () => void,
@@ -90,51 +45,22 @@ export interface ClientBuildConfigOptions {
     optimizeDepsExclude?: string[]
 }
 
-export async function clientBuildConfig(dirname: string, options: ClientBuildConfigOptions = {}) {
+export async function clientBuildConfig(dirname: string, options: ClientBuildConfigOptions = {}, config?) {
     const isServer = options.side === 'server'
     const isTest = options.mode === 'test'
     const isRpg = options.type === 'rpg'
     const isBuild = options.serveMode === false
     const mode = options.mode || 'development'
     const plugin = options.plugin
-    let config: Config = {}
     const { cwd, env } = process
+    config = config ?? await loadConfigFile(mode)
 
     const envType = env.RPG_TYPE
     if (envType && !['rpg', 'mmorpg'].includes(envType)) {
         throw new Error('Invalid type. Choice between rpg or mmorpg')
     }
 
-    const tomlFile = resolve(cwd(), 'rpg.toml')
-    const jsonFile = resolve(cwd(), 'rpg.json')
-    // if file exists
-    if (_fs.existsSync(tomlFile)) {
-        config = toml.parse(await fs.readFile(tomlFile, 'utf8'));
-    }
-    else if (_fs.existsSync(jsonFile)) {
-        config = JSON.parse(await fs.readFile(jsonFile, 'utf8'));
-    }
-
-    const envs = loadEnv(mode, cwd())
-    config = replaceEnvVars(config, envs)
-
-    let buildOptions = config.compilerOptions?.build || {}
-
-    if (!config.compilerOptions) {
-        config.compilerOptions = {}
-    }
-
-    if (!config.compilerOptions.build) {
-        config.compilerOptions.build = {}
-    }
-
-    if (buildOptions.pwaEnabled === undefined) {
-        buildOptions.pwaEnabled = true
-    }
-
-    if (buildOptions.outputDir === undefined) {
-        buildOptions.outputDir = 'dist'
-    }
+    const buildOptions = config.compilerOptions?.build
 
     // found react packages in node_modules
     const hasPkg = pkg => _fs.existsSync(join(cwd(), 'node_modules', pkg))
@@ -149,12 +75,11 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
 
     let serverUrl = ''
 
-    if (isBuild) {
-        serverUrl = env.VITE_SERVER_URL = process.env.VITE_SERVER_URL ?? buildOptions.serverUrl ?? ''
+    let envServerUrl = process.env.VITE_SERVER_URL
+    if (envServerUrl && !envServerUrl.startsWith('http')) {
+        process.env.VITE_SERVER_URL = envServerUrl = `http://${envServerUrl}`
     }
-    else {
-        serverUrl = 'http://' + env.VITE_SERVER_URL
-    }
+    serverUrl = env.VITE_SERVER_URL = envServerUrl ?? buildOptions?.serverUrl ?? ''
 
     if (options.mode != 'test' && !plugin && !libMode) {
         // if index.html is not found, display an error
@@ -187,7 +112,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
         configTomlPlugin(options, config), // after flagTransform
         (requireTransform as any)(),
         worldTransformPlugin(isRpg ? undefined : serverUrl),
-        tsxXmlPlugin(),
+        tsxXmlPlugin(config),
         ...(options.plugins || [])
     ]
 
@@ -231,7 +156,7 @@ export async function clientBuildConfig(dirname: string, options: ClientBuildCon
     else {
         if (!isBuild) {
             plugins.push(
-                mapUpdatePlugin(isRpg ? undefined : serverUrl)
+                mapUpdatePlugin(isRpg ? '' : serverUrl, config)
             )
         }
     }

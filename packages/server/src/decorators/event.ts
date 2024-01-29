@@ -21,7 +21,7 @@ export interface EventOptions {
      * @memberof EventData
      * */
     mode?: EventMode,
-    
+
     width?: number,
     height?: number,
 
@@ -31,8 +31,8 @@ export interface EventOptions {
      * @prop { { width: number, height: number }} [hitbox]
      * @memberof EventData
      * */
-    hitbox?: { 
-        width?: number, 
+    hitbox?: {
+        width?: number,
         height?: number
     },
 

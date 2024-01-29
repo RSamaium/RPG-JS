@@ -1,0 +1,20 @@
+{
+    "namespace": "auth",
+    "server": {
+        "type": "object",
+        "properties": {
+            "jwtSecret": {
+                "type": "string"
+            },
+            "cookie": {
+                "type": "object",
+                "additionalProperties": true
+            }
+        },
+        "required": [
+            "jwtSecret"
+        ]
+    },
+    "client": {},
+    "*": {}
+}

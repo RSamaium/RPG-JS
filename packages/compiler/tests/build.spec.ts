@@ -128,6 +128,7 @@ describe('Test Structure files After Build', () => {
         })
 
         test('Move TMX files', async () => {
+
             mockFs({
                 ...defaultFiles,
                 'main/maps': mapStructure,

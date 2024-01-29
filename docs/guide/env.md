@@ -9,7 +9,7 @@ This repository utilizes environment variables to configure various aspects of t
 - Description: This environment variable specifies the current environment in which the RPGJS application is running. It can be set to either "development" or "production" mode.
 - Usage: Set this variable to "development" when working on the application locally, and set it to "production" when deploying the game to a live server.
 
-### 2. `VITE_SERVER_URL` (for build)
+### `VITE_SERVER_URL` (for build)
 
 - Description: This environment variable specifies the base URL for the server during the build process.
 - Usage: Set this variable to the appropriate server URL before building the application.
@@ -19,6 +19,11 @@ Example:
 ```bash
 VITE_SERVER_URL=https//world.rpgjs.dev npm run build
 ```
+
+###  `VITE_GAME_URL`
+
+- Description: This environment variable specifies the base URL for the game
+
 
 ### 3. `RPG_TYPE`
 

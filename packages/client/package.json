@@ -38,7 +38,6 @@
     "lodash.merge": "4.6.2",
     "pixi-viewport": "^5.0.2",
     "pixi.js": "7.2.4",
-    "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "rxjs": "7.8.0",
     "simple-room-client": "^3.0.0",

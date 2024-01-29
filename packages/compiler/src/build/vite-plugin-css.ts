@@ -1,7 +1,7 @@
 import { Plugin } from "vite";
 import { resolve } from "path";
 import fs from "fs-extra";
-import { Config } from "./client-config";
+import { type Config } from "./load-config-file";
 
 const DEFAULT_THEME = `
     $window-background: linear-gradient(148deg, rgba(79,82,136,0.7) 0%, rgba(42,43,73,0.7) 100%);

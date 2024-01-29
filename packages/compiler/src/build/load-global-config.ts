@@ -3,9 +3,9 @@ import colors from 'picocolors'
 import defaultConfig from '../jsonSchema/index.js'
 import fs from 'fs';
 import path from 'path';
-import type { ClientBuildConfigOptions, Config } from './client-config';
-import { loadEnv } from 'vite';
+import type { ClientBuildConfigOptions } from './client-config';
 import { warn } from '../logs/warning.js';
+import { type Config } from './load-config-file.js';
 
 export function loadGlobalConfig(modules: string[], config: Config, options: ClientBuildConfigOptions): {
     configClient: any;
@@ -65,7 +65,7 @@ export function loadGlobalConfig(modules: string[], config: Config, options: Cli
         }
         const configPath = path.resolve(process.cwd(), modulePath, 'config.json')
         if (fs.existsSync(configPath)) {
-            const configFile: any = fs.readFileSync(configPath, 'utf-8')
+            const configFile: any = fs.readFileSync(configPath).toString()
             const jsonFile = JSON.parse(configFile)
             if (jsonFile.namespace) namespaces.push(jsonFile.namespace)
             parseSchema(jsonFile, module)

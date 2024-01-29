@@ -2,6 +2,7 @@ import compilerOptions  from "./compilation.js";
 import canvasOptions from "./canvas.js";
 import expressOptions from "./express.js";
 import vitestOptions from "./vitest.js";
+import socketIoClient from './socket.js'
 
 export default {
     "server": {
@@ -31,7 +32,6 @@ export default {
                     }
                 }
             },
-            
             "api": {
                 "type": "object",
                 "properties": {
@@ -92,7 +92,8 @@ export default {
                 "type": "object",
                 "additionalProperties": true
             },
-            ...canvasOptions
+            ...canvasOptions,
+            ...socketIoClient
         }
     },
     "*": {

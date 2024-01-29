@@ -9,3 +9,6 @@
 
 [vite.build.rollupOptions.output]
   format = "umd"
+
+[vite.build.rollupOptions]
+  external = ["vue", "react", "react-dom"]

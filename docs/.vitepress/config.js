@@ -124,6 +124,13 @@ const migrationMenu = [{
   ]
 }]
 
+const web3Menu = [{
+  text: 'Web3',
+  collapsed: false,
+  items: [
+    { text: "Authentification with wallet", link: "/web3/auth" }
+  ]
+}]
 
 const guideMenu = [{
   text: 'Quick Start',
@@ -172,7 +179,8 @@ const guideMenu = [{
   collapsed: false,
   items: [
     { text: "Create Gui with React", link: "/gui/react" },
-    { text: "Adding Tooltips to Your GUI", link: "/gui/react-tooltip" }
+    { text: "Adding Tooltips to Your GUI", link: "/gui/react-tooltip" },
+    { text: "Integrate in React App", link: "/gui/react-app"}
   ]
 },
 {
@@ -202,6 +210,7 @@ const guideMenu = [{
     { text: "Create Unit Tests", link: "/guide/unit-test" },
   ]
 },
+...web3Menu,
 ...migrationMenu
 ]
 
@@ -275,6 +284,7 @@ module.exports = {
       '/advanced/': guideMenu,
       '/plugins/': pluginMenu,
       '/migration/': guideMenu,
+      '/web3/': guideMenu,
     },
     plugins: ['@vuepress/active-header-links'],
     head: [

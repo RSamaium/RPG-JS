@@ -6,7 +6,7 @@
   },
   "description": "RPG JS is a framework for creating RPGs and MMORPG",
   "dependencies": {
-    "canvas": "^2.11.0",
+    "canvas": "^2.11.2",
     "concurrently": "^7.6.0",
     "tsc-esm-fix": "^2.20.14",
     "vue": "^3.2.47"
@@ -17,7 +17,7 @@
     "jsdom": "^21.1.1",
     "lerna": "^6.6.1",
     "typescript": "^5.0.2",
-    "vitest": "^0.30.0"
+    "vitest": "^1.2.2"
   },
   "scripts": {
     "postinstall": "lerna bootstrap --ci && npm run build:compiler && npm run build:types && npm run build:tiled && npm run build:common && npm run build:client && npm run build:database && npm run build:server && npm run build:testing  && cd packages/client && cd ../../packages/plugins/agones/matchmaker && npm i",

@@ -10,6 +10,29 @@ The configuration and properties of RPGJS are defined using a JSON schema, which
 
 Configuration properties related to the compiler.
 
+- `type`: (*string*) The type of the RPG. Can be either "rpg" or "mmorpg".
+
+- `modulesRoot`: (*string*) The root directory for modules. (since 4.3.0)
+
+- `modules`: (*array*) List of modules to load.
+
+Example:
+
+```toml
+modules = ["./main", "@rpgjs/gamepad"]
+```
+
+- `autostart`: (*boolean*) Finds the starting point selector and displays the game directly. (`true` by default). Since 4.3.0
+
+If `false`, it can be loaded as follows:
+
+```ts
+import { RpgClientEngine, inject } from '@rpgjs/client';
+
+const client = inject(RpgClientEngine)
+await client.start()
+```
+
 - `compilerOptions`
   - `alias`: (*object*) Aliases. Use aliases in Typescript imports
     ```toml
@@ -36,11 +59,11 @@ Configuration properties related to the compiler.
 
 - `express`
 
-Configuration properties related to the Express server.
+  Configuration properties related to the Express server.
 
-- `static`: (*string*) Specifies the directory from which to serve static files.
-  > only for final files put into production
-- `port`: (*integer*) The port number on which the Express server listens.
+  - `static`: (*string*) Specifies the directory from which to serve static files.
+    > only for final files put into production
+  - `port`: (*integer*) The port number on which the Express server listens.
 
 Example:
 
@@ -68,6 +91,17 @@ Configuration properties for CORS middleware. Documentation: [cors](https://expr
 - `express.socketIo`
 
 Configuration properties for SocketIO middleware. Documentation: [socket.io](https://socket.io/docs/v4/server-initialization/)
+
+-  `socketIoClient`
+
+All [SocketIO client configuration](https://socket.io/docs/v4/client-initialization/).
+
+Example:
+
+```toml
+[socketIoClient]
+    withCredentials = true
+```
 
 - `spritesheetDirectories`: (*array*) Directories for spritesheets.
 

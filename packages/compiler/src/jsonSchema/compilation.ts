@@ -37,6 +37,12 @@ export default {
         "type": "object",
         "additionalProperties": true
     },
+    "modulesRoot": {
+        "type": "string"
+    },
+    "autostart": {
+        "type": "boolean"
+    },
     "spritesheetDirectories": {
         "type": "array",
         "items": {

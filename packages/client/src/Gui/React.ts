@@ -5,6 +5,7 @@ import { EVENTS_MAP, RpgRenderer } from '../Renderer';
 import { BehaviorSubject, map, tap, combineLatest, Subject } from 'rxjs';
 import type { Gui } from './Gui';
 import { inject } from '../inject';
+import { RpgPlugin } from '@rpgjs/common';
 
 export { useStore } from '@nanostores/react'
 export const RpgReactContext = createContext({} as any)
@@ -142,4 +143,51 @@ export class ReactGui {
         }
         this._gui.next(array)
     }
+}
+
+type onReadyCallback<T = any> = (object: { client: RpgClientEngine, server: T } ) => void
+type RpgGameProps = {
+    onReady?: onReadyCallback
+    modules?: any[]
+}
+
+export function RpgGame({
+    onReady,
+    modules
+}: RpgGameProps) {
+    const divRef = useRef(null)
+
+    useEffect(() => {
+        let client: RpgClientEngine, server: any
+
+        // @ts-ignore
+        const engine = window.RpgStandalone
+        engine(modules).then((val) => {
+            if (val.client) {
+                client = val.client
+                server = val.server
+            }
+            else {
+                client = val
+                server = null
+            }
+            onReady?.({
+                client,
+                server
+            })
+        })
+
+        return () => {
+            server?.world.clear()
+            client.reset()
+            RpgPlugin.clear()
+            server?.io.clear()
+            server?.io.events.clear()
+            server?.stop()
+            if (divRef.current) (divRef.current as HTMLDivElement).innerHTML = ''
+        }
+
+    }, [modules])
+
+    return createElement('div', { id: 'rpg', ref: divRef })
 }
