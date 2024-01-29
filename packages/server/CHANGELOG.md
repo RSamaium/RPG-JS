@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [4.3.0](https://github.com/RSamaium/RPG-JS/compare/v4.2.2...v4.3.0) (2024-01-29)
+
+
+### Bug Fixes
+
+* server url env ([e6a1237](https://github.com/RSamaium/RPG-JS/commit/e6a1237e360f7a25e2e8194127473e8a74d0b0ab))
+
+
+
+
+
 ## [4.2.2](https://github.com/RSamaium/RPG-JS/compare/v4.2.1...v4.2.2) (2024-01-15)
 
 **Note:** Version bump only for package @rpgjs/server

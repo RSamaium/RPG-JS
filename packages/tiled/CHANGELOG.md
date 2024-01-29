@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [4.3.0](https://github.com/RSamaium/RPG-JS/compare/v4.2.2...v4.3.0) (2024-01-29)
+
+
+### Features
+
+* reat app integration ([1b9b5d8](https://github.com/RSamaium/RPG-JS/commit/1b9b5d8bb5dd02bcf4a68ccd5eee19c6fc00a4eb))
+
+
+
+
+
 ## [4.2.1](https://github.com/RSamaium/RPG-JS/compare/v4.2.0...v4.2.1) (2024-01-12)
 
 

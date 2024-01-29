@@ -3,6 +3,27 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [4.3.0](https://github.com/RSamaium/RPG-JS/compare/v4.2.2...v4.3.0) (2024-01-29)
+
+
+### Bug Fixes
+
+* build spec ([65d48c0](https://github.com/RSamaium/RPG-JS/commit/65d48c04f8bdf53759205147ec80e00c96ed5fd9))
+* server url env ([e6a1237](https://github.com/RSamaium/RPG-JS/commit/e6a1237e360f7a25e2e8194127473e8a74d0b0ab))
+* unit tests compiler ([1292365](https://github.com/RSamaium/RPG-JS/commit/129236510198a08dbf376977068939b47d1ae350))
+* unit tests compiler ([6277f1b](https://github.com/RSamaium/RPG-JS/commit/6277f1b6f201c1f06b5058a3c985e41952520b55))
+* wallet address ([4f95fa5](https://github.com/RSamaium/RPG-JS/commit/4f95fa551f2dcc1cce23cc14a8dbbef677d25353))
+
+
+### Features
+
+* loading the game in a React app ([437917a](https://github.com/RSamaium/RPG-JS/commit/437917ace5de1a88777d84c4b39a48e147f77de4))
+* reat app integration ([1b9b5d8](https://github.com/RSamaium/RPG-JS/commit/1b9b5d8bb5dd02bcf4a68ccd5eee19c6fc00a4eb))
+
+
+
+
+
 ## [4.2.2](https://github.com/RSamaium/RPG-JS/compare/v4.2.1...v4.2.2) (2024-01-15)
 
 **Note:** Version bump only for package rpgjs
