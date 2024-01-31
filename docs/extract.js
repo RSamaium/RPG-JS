@@ -29,6 +29,7 @@ const files = [
     ...open('packages/client/src/Sound'),
     ...open('packages/client/src/Scene'),
     ...open('packages/client/src/Effects'),
+    ...open('packages/client/src/Gui'),
     ...open('packages/client/src'),
     ...open('packages/tiled/src/classes'),
     ...open('packages/common/src/gui'),
