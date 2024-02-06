@@ -30,7 +30,7 @@ export enum Direction {
     UpRight = 1.5,
     DownRight = 2.5,
     DownLeft = 3.5,
-    UpLeft =  2.5
+    UpLeft =  4.5
 }
 
 export type ClientMode =  MoveClientMode | { 
