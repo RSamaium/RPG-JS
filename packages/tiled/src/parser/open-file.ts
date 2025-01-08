@@ -1,6 +1,6 @@
 import { TiledParser } from "./parser"
 import axios from 'axios'
-import fs from 'fs'
+import fs from 'node:fs'
 import { TiledMap } from "../types/Map"
 import { TiledTileset } from "../types/Tileset"
 import path from "path"
