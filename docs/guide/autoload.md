@@ -50,7 +50,7 @@ For all directories , It is possible to create subfolders to improve the structu
 :::
 
 ::: tip
-You don't need to have all the above mentoioned files. The minimum number of files required are
+You don't need to have all the files. The minimum files required are
 
 
 ```
