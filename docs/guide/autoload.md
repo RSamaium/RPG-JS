@@ -50,7 +50,8 @@ For all directories , It is possible to create subfolders to improve the structu
 :::
 
 ::: tip
-He doesn't have to have all these files. The minimum is
+You don't need to have all the above mentoioned files. The minimum number of files required are
+
 
 ```
 * index.html
