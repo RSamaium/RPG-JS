@@ -25,10 +25,11 @@ export default class TileMap extends Container {
     } = {}
     private tilesLayer: Container = new Container()
     private frameTile: number = 0
-    private renderer: RpgRenderer = this.context.inject(RpgRenderer)
+    private renderer: RpgRenderer
 
     constructor(private context: InjectContext, private data: MapInfo) {
         super()
+        this.renderer = this.context.inject(RpgRenderer)
         this.x = 0
         this.y = 0
         this.create(data)

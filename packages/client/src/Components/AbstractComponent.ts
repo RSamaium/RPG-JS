@@ -18,7 +18,7 @@ export abstract class AbstractComponent<
     readonly onRender$ = this._onRender$.asObservable()
     protected readonly game: GameEngineClient
     protected firstRender: boolean = true
-    private style = this.value?.style
+    private style: any
     private cacheText: {
         [key: string]: string
     } = {}
@@ -27,6 +27,7 @@ export abstract class AbstractComponent<
     constructor(protected component: RpgComponent, protected value: TypeComponent['value']) {
         super()
         this.game = this.component.game
+        this.style = this.value?.style
     }
 
     getStyle<T>(): T {

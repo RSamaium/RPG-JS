@@ -12,6 +12,7 @@ import { ImageComponent } from "./ImageComponent"
 import { TextComponent } from "./TextComponent"
 import { TileComponent } from "./TileComponent"
 import { Container, Sprite } from "pixi.js"
+import { GameEngineClient } from "../GameEngine"
 
 type SpriteInfo = {
     width: number,
@@ -79,11 +80,13 @@ export class RpgComponent<T = any> extends Container {
         dragging: boolean
     }
 
-    readonly game = this.scene.game
-    readonly id: string = this.data.id
+    readonly game: GameEngineClient
+    readonly id: string
 
     constructor(private data: RpgCommonPlayer | RpgShape, private scene: Scene) {
         super()
+        this.game = this.scene.game
+        this.id = this.data.id
         this.setPosition(false)
         this.registerComponents.set(RpgSprite.id, RpgSprite)
         this.registerComponents.set(TextComponent.id, TextComponent)

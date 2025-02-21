@@ -113,25 +113,13 @@ export class RpgClientEngine {
     /**
      * * @deprecated Use `inject(GameEngineClient)` instead. Will be removed in v5
      */
-    public gameEngine = this.context.inject(GameEngineClient)
-
-    /**
-     * Read objects synchronized with the server
-     *
-     * @prop {Observable< {
-            [id: string]: {
-                object: any,
-                paramsChanged: any
-            }
-      } >} [objects]
-     * @readonly
-     * @memberof RpgClientEngine
-     */
-    objects: Observable<ObjectFixtureList> = this.gameEngine.objects
-
+    public gameEngine: GameEngineClient
+    objects: Observable<ObjectFixtureList>
     envs?: object = {}
 
     constructor(private context: InjectContext, private options) {
+        this.gameEngine = this.context.inject(GameEngineClient)
+        this.objects = this.gameEngine.objects
         this.envs = options.envs || {}
         this.tick.subscribe(({ timestamp, deltaTime }) => {
             if (timestamp != -1) this.step(timestamp, deltaTime)
