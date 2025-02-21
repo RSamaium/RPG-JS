@@ -28,9 +28,9 @@
   "dependencies": {
     "@nanostores/react": "^0.7.1",
     "@pixi/tilemap": "^4.0.0",
-    "@rpgjs/common": "^4.3.0",
-    "@rpgjs/tiled": "^4.3.0",
-    "@rpgjs/types": "^4.0.5",
+    "@rpgjs/common": "workspace:*",
+    "@rpgjs/tiled": "workspace:*",
+    "@rpgjs/types": "workspace:*",
     "@types/howler": "2.2.7",
     "howler": "2.2.3",
     "lodash.get": "^4.4.2",
@@ -45,7 +45,7 @@
   "gitHead": "5abe6ca78be96524d74a052a230f2315c900ddee",
   "devDependencies": {
     "@babel/types": "^7.22.11",
-    "@rpgjs/compiler": "^4.3.0",
+    "@rpgjs/compiler": "workspace:*",
     "@types/css-font-loading-module": "^0.0.8",
     "@types/node": "^18.16.0",
     "@types/react": "^18.2.25",

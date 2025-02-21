@@ -366,12 +366,7 @@ export class RpgServerEngine {
     }
 
     get module() {
-        return {
-            emit: RpgPlugin.emit.bind(RpgPlugin),
-            on: RpgPlugin.on.bind(RpgPlugin),
-            once: RpgPlugin.once.bind(RpgPlugin),
-            off: RpgPlugin.off.bind(RpgPlugin)
-        }
+        return RpgPlugin
     }
 
     get assetsPath(): string {

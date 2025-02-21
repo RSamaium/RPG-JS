@@ -12,8 +12,8 @@
   "license": "MIT",
   "type": "module",
   "dependencies": {
-    "@rpgjs/auth": "^4.3.1",
-    "@rpgjs/server": "^4.3.0"
+    "@rpgjs/auth": "workspace:*",
+    "@rpgjs/server": "workspace:*"
   },
   "publishConfig": {
     "access": "public"
