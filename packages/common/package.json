@@ -8,9 +8,8 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc && npm run build:browser",
-    "watch": "tsc -w",
-    "build:browser": "RPG_TYPE=rpg npx rpgjs build"
+    "build": "vite build",
+    "watch": "vite build --watch"
   },
   "keywords": [],
   "author": "Samuel Ronce",

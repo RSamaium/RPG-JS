@@ -8,9 +8,8 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc && tsc-esm-fix  --target='lib' && npm run build:browser",
-    "build:browser": "RPG_TYPE=rpg npx rpgjs build",
-    "watch": "tsc -w"
+    "build": "vite build",
+    "dev": "vite build --watch"
   },
   "keywords": [],
   "typesVersions": {
@@ -50,7 +49,7 @@
     "@types/css-font-loading-module": "^0.0.8",
     "@types/node": "^18.16.0",
     "@types/react": "^18.2.25",
-    "typescript": "^5.0.4"
+    "typescript": "^5.7.3"
   },
   "type": "module"
 }

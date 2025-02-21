@@ -8,8 +8,8 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc",
-    "watch": "tsc -w"
+    "build": "vite build",
+    "watch": "vite build --watch"
   },
   "keywords": [],
   "author": "",

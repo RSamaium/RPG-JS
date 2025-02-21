@@ -16,7 +16,7 @@ export abstract class AbstractComponent<
     private _onRender$: Subject<AbstractComponent<TypeComponent, ContainerType>> = new Subject()
     private _onDestroy$: Subject<void> = new Subject()
     readonly onRender$ = this._onRender$.asObservable()
-    protected readonly game: GameEngineClient = this.component.game
+    protected readonly game: GameEngineClient
     protected firstRender: boolean = true
     private style = this.value?.style
     private cacheText: {
@@ -26,6 +26,7 @@ export abstract class AbstractComponent<
 
     constructor(protected component: RpgComponent, protected value: TypeComponent['value']) {
         super()
+        this.game = this.component.game
     }
 
     getStyle<T>(): T {
