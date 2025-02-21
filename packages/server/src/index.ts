@@ -1,4 +1,5 @@
-export { default as entryPoint } from './entry-point'
+import _entryPoint from './entry-point'
+export const entryPoint = _entryPoint
 export {
     Direction,
     Input,

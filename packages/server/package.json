@@ -43,7 +43,7 @@
   "gitHead": "5abe6ca78be96524d74a052a230f2315c900ddee",
   "devDependencies": {
     "@rpgjs/compiler": "^4.3.0",
-    "typescript": "^5.0.4"
+    "typescript": "^5.7.3"
   },
   "alias": {
     "express": "./lib/express/server"
