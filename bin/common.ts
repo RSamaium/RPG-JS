@@ -1,4 +1,4 @@
-import { execa } from 'execa';
+import execa from 'execa';
 import waitOn from 'wait-on';
 import process from 'process';
 
