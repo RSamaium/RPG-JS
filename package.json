@@ -11,6 +11,7 @@
     "concurrently": "^7.6.0",
     "default-composer": "^0.6.0",
     "execa": "^5.1.1",
+    "rxjs": "^7.8.2",
     "tsc-esm-fix": "^2.20.14",
     "tsx": "^4.7.1",
     "vite": "^6.1.1",
