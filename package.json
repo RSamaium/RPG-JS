@@ -6,6 +6,7 @@
   },
   "description": "A RPG game engine for the web",
   "dependencies": {
+    "bumpp": "^10.0.3",
     "canvas": "^2.11.2",
     "concurrently": "^7.6.0",
     "default-composer": "^0.6.0",
@@ -30,6 +31,7 @@
   "scripts": {
     "build": "tsx bin/build.ts",
     "dev": "tsx bin/dev.ts",
+    "release": "bumpp packages/*/package.json",
     "postinstall": "npm run build",
     "test": "RPGJS_TEST=1 vitest --config ./packages/compiler/src/test/vitest.config.ts && cd ./packages/compiler && npm test",
     "dev:doc": "cd docs && npm run dev",
