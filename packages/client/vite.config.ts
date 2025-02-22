@@ -5,6 +5,9 @@ export default baseConfig({
   baseDir: __dirname,
 }, {
   build: {
-    ssr: undefined
-  }
+    ssr: undefined,
+    rollupOptions: {
+      external: ['react', 'react-dom'],
+    },
+  },
 })
