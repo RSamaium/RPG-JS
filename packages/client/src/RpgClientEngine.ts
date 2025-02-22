@@ -789,7 +789,7 @@ export class RpgClientEngine {
     }
 
     get module() {
-        return RpgPlugin
+        return RpgPlugin as any
     }
 
     reset() {

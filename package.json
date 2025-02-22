@@ -1,10 +1,10 @@
 {
-  "name": "rpg-js",
+  "name": "rpgjs",
   "version": "5.0.0",
   "engines": {
-    "node": ">=11.0.0"
+    "node": ">=18.x"
   },
-  "description": "A RPG game engine for the web",
+  "description": "A RPG and MMORPG game engine for the web",
   "dependencies": {
     "bumpp": "^10.0.3",
     "canvas": "^2.11.2",

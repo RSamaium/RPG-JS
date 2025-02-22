@@ -47,7 +47,6 @@ export async function buildSequentially(packages: PackageConfig[]) {
         for (const pkg of packages) {
             buildPackage(pkg);
         }
-        console.log('✅ All builds completed successfully');
     } catch (error) {
         console.error('❌ Build error:', error);
         process.exit(1);

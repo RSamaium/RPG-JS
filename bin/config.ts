@@ -14,32 +14,32 @@ export const packages = (type: 'build' | 'dev') => {
         {
             name: 'tiled',
             buildScript,
-            dependencies: [`${basePath}/types/lib/index.js`]
+            dependencies: [`${basePath}/types/lib/index.d.ts`]
         },
         {
             name: 'common',
             buildScript,
-            dependencies: [`${basePath}/tiled/lib/index.js`]
+            dependencies: [`${basePath}/tiled/lib/index.d.ts`]
         },
         {
             name: 'client',
             buildScript,
-            dependencies: [`${basePath}/common/lib/index.js`]
+            dependencies: [`${basePath}/common/lib/index.d.ts`]
         },
         {
             name: 'database',
             buildScript,
-            dependencies: [`${basePath}/client/lib/index.js`]
+            dependencies: [`${basePath}/client/lib/index.d.ts`]
         },
         {
             name: 'server',
             buildScript,
-            dependencies: [`${basePath}/database/lib/index.js`]
+            dependencies: [`${basePath}/database/lib/index.d.ts`]
         },
         {
             name: 'testing',
             buildScript,
-            dependencies: [`${basePath}/server/lib/index.js`]
+            dependencies: [`${basePath}/server/lib/index.d.ts`]
         }
     ];
     

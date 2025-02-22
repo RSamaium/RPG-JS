@@ -148,7 +148,7 @@ export class SceneMap extends Scene {
             worldHeight: obj.height * obj.tileheight,
             noTicker: true,
             events: this.renderer.events
-        })
+        } as any)
         this.tilemap.addChild(this.animationLayer)
         this.viewport.clamp({ direction: 'all' })
         this.viewport.addChild(this.tilemap, ...this.createEventLayers(obj))
