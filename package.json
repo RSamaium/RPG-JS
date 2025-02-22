@@ -33,6 +33,7 @@
     "build": "tsx bin/build.ts",
     "dev": "tsx bin/dev.ts",
     "release": "bumpp packages/*/package.json",
+    "postinstall": "npm run build",
     "test": "RPGJS_TEST=1 vitest --config ./packages/compiler/src/test/vitest.config.ts && cd ./packages/compiler && npm test",
     "dev:doc": "cd docs && npm run dev",
     "doc:build": "cd docs && npm run build",
