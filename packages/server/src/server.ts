@@ -366,7 +366,7 @@ export class RpgServerEngine {
     }
 
     get module() {
-        return RpgPlugin
+        return RpgPlugin as any
     }
 
     get assetsPath(): string {

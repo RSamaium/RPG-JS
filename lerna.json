@@ -1,9 +1,0 @@
-{
-  "packages": [
-    "packages/*",
-    "packages/plugins/*",
-    "packages/plugins/agones/module",
-    "tests/*"
-  ],
-  "version": "4.3.1"
-}

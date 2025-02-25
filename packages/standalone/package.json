@@ -10,13 +10,13 @@
   "author": "Samuel Ronce",
   "license": "MIT",
   "dependencies": {
-    "@rpgjs/client": "^4.3.0",
-    "@rpgjs/common": "^4.3.0",
-    "@rpgjs/server": "^4.3.0",
+    "@rpgjs/client": "workspace:*",
+    "@rpgjs/common": "workspace:*",
+    "@rpgjs/server": "workspace:*",
     "simple-room": "^3.0.6"
   },
   "devDependencies": {
-    "@rpgjs/compiler": "^4.3.0",
+    "@rpgjs/compiler": "workspace:*",
     "typescript": "^5.0.2"
   },
   "gitHead": "5abe6ca78be96524d74a052a230f2315c900ddee",

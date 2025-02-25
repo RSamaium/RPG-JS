@@ -7,16 +7,15 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc && npm run build:browser",
-    "build:browser": "RPG_TYPE=rpg npx rpgjs build",
-    "watch": "tsc -w"
+    "build": "vite build",
+    "watch": "vite build --watch"
   },
   "keywords": [],
   "author": "Samuel Ronce",
   "license": "MIT",
   "gitHead": "5abe6ca78be96524d74a052a230f2315c900ddee",
   "devDependencies": {
-    "@rpgjs/compiler": "^4.3.0",
+    "@rpgjs/compiler": "workspace:*",
     "typescript": "^5.0.2"
   },
   "type": "module"

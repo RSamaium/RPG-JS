@@ -191,7 +191,7 @@ const inverseKeyCodeTable = inverse(keyCodeTable)
 type BoundKey = { actionName: string, options: ControlOptions, parameters?: any }
 
 export class KeyboardControls {
-    private clientEngine: RpgClientEngine = this.context.inject(RpgClientEngine)
+    private clientEngine: RpgClientEngine
 
     private keyState: {
         [keyName: string]: {
@@ -207,6 +207,7 @@ export class KeyboardControls {
     private _controlsOptions: Controls = {}
 
     constructor(private context: InjectContext) {
+        this.clientEngine = this.context.inject(RpgClientEngine)
         const { globalConfig } = this.clientEngine
         this.setupListeners();
         this.setInputs({

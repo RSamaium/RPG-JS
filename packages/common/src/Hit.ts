@@ -1,7 +1,7 @@
-import { HitEllipse, HitObject, HitType } from '@rpgjs/types'
+import { type HitEllipse, type HitObject, HitType } from '@rpgjs/types'
 import  SAT from 'sat'
 import { isInstanceOf } from './Utils'
-export { HitType, HitObject } from '@rpgjs/types'
+export { HitType, type HitObject } from '@rpgjs/types'
 
 class HitClass {
 

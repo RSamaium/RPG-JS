@@ -1,8 +1,0 @@
-{
-    "name": "Game",
-    "compilerOptions": {
-        "alias": {
-            "@": "./src"
-        }
-    } 
-}

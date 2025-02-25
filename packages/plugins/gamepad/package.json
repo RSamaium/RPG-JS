@@ -10,7 +10,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@rpgjs/client": "^4.3.0",
+    "@rpgjs/client": "workspace:*",
     "joypad.js": "^2.3.3"
   },
   "gitHead": "5abe6ca78be96524d74a052a230f2315c900ddee"

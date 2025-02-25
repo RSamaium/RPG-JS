@@ -2,7 +2,7 @@ import { Subscription } from "rxjs";
 import { RpgClientEngine } from "../RpgClientEngine";
 import { FrameOptions } from "../Sprite/Spritesheet";
 import { Timeline } from "./Timeline";
-import { Container } from "pixi.js"
+import { Container } from "pixi.js"
 import { InjectContext } from "@rpgjs/common";
 
 export class TransitionScene {
@@ -10,9 +10,11 @@ export class TransitionScene {
     private animations: FrameOptions[][] = []
     private updateSubscription: Subscription
     private complete: Function = () => {}
-    private clientEngine: RpgClientEngine = this.context.inject(RpgClientEngine)
+    private clientEngine: RpgClientEngine
     
-    constructor(private context: InjectContext, private container: Container) { }
+    constructor(private context: InjectContext, private container: Container) { 
+        this.clientEngine = this.context.inject(RpgClientEngine)
+    }
 
     addFadeIn() {
         return this.addFading(1, 0)

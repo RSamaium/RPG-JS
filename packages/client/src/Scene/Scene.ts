@@ -29,7 +29,7 @@ export abstract class Scene {
     protected objects: Map<string, RpgComponent> = new Map()
     protected animationLayer: Container = new Container()
 
-    private controls: KeyboardControls = this.context.inject(KeyboardControls)
+    private controls: KeyboardControls
     private animations: Animation[] = []
 
     private _data: BehaviorSubject<SceneObservableData> = new BehaviorSubject({
@@ -40,7 +40,7 @@ export abstract class Scene {
     /**
      *  @deprecated Use `inject(GameEngineClient)` instead. Will be removed in v5
      */
-    public game: GameEngineClient = this.context.inject(GameEngineClient)
+    public game: GameEngineClient
 
     /**
      * Listen to the movement of objects on stage
@@ -69,6 +69,8 @@ export abstract class Scene {
     }> = new Subject()
 
     constructor(protected context: InjectContext) {
+        this.controls = this.context.inject(KeyboardControls)
+        this.game = this.context.inject(GameEngineClient)
         const { globalConfig } = this.game.clientEngine
         const mergeInputs = {
             ...DefaultInput,

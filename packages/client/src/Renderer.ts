@@ -31,15 +31,15 @@ export const EVENTS_MAP = {
 };
 
 export class RpgRenderer {
-    private gameEngine: GameEngineClient = this.context.inject(GameEngineClient)
-    private clientEngine: RpgClientEngine = this.context.inject(RpgClientEngine)
+    private gameEngine: GameEngineClient
+    private clientEngine: RpgClientEngine
 
     public vm: ComponentPublicInstance
     public app: App
     public readonly stage: Container = new Container()
     private readonly sceneContainer: Container = new Container()
     private readonly fadeContainer: Graphics = new Graphics()
-    private readonly spinner: SpinnerGraphic = new SpinnerGraphic(this.clientEngine)
+    private readonly spinner: SpinnerGraphic
     public options: any = {}
     public guiEl: HTMLDivElement
 
@@ -58,6 +58,9 @@ export class RpgRenderer {
     public transitionMode: TransitionMode = TransitionMode.Fading
 
     constructor(private context: InjectContext) {
+        this.gameEngine = this.context.inject(GameEngineClient)
+        this.clientEngine = this.context.inject(RpgClientEngine)
+        this.spinner = new SpinnerGraphic(this.clientEngine)
         this.clientEngine.tick.subscribe(({ timestamp, deltaRatio, frame, deltaTime }) => {
             this.draw(timestamp, deltaTime, deltaRatio, frame)
         })

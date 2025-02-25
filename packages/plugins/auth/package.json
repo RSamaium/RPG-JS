@@ -11,7 +11,7 @@
   "license": "MIT",
   "type": "module",
   "dependencies": {
-    "@rpgjs/server": "^4.3.0",
+    "@rpgjs/server": "workspace:*",
     "jsonwebtoken": "^9.0.2",
     "siwe": "^2.1.4",
     "zod": "^3.22.4"

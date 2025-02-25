@@ -981,6 +981,7 @@ export interface RpgPlayer extends
     _socket: any
     vision,
     attachShape: any
+    _destroy$: any
 }
 
 applyMixins(RpgPlayer, [
