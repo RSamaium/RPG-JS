@@ -401,86 +401,482 @@ const DirectionNames: { [key: string]: string } = {
 
 export const Move = new MoveList();
 
-/**
- * Move Manager mixin
- * 
- * Adds comprehensive movement management capabilities to a player class.
- * Provides access to all available movement strategies and utility methods
- * for common movement patterns.
- * 
- * ## Features
- * - **Strategy Management**: Add, remove, and query movement strategies
- * - **Predefined Movements**: Quick access to common movement patterns
- * - **Composite Movements**: Combine multiple strategies
- * - **Physics Integration**: Seamless integration with Matter.js physics
- * 
- * ## Available Movement Strategies
- * - `LinearMove`: Constant velocity movement
- * - `Dash`: Quick burst movement
- * - `Knockback`: Push effect with decay
- * - `PathFollow`: Follow waypoint sequences
- * - `Oscillate`: Back-and-forth patterns
- * - `SeekAvoid`: AI pathfinding with obstacle avoidance
- * - `LinearRepulsion`: Smoother obstacle avoidance
- * - `IceMovement`: Slippery surface physics
- * - `ProjectileMovement`: Ballistic trajectories
- * - `CompositeMovement`: Combine multiple strategies
- * 
- * @param Base - The base class to extend
- * @returns A new class with comprehensive movement management capabilities
- * 
- * @example
- * ```ts
- * // Basic usage
- * class MyPlayer extends WithMoveManager(RpgCommonPlayer) {
- *   onInput(direction: { x: number, y: number }) {
- *     // Apply dash movement on input
- *     this.dash(direction, 8, 200);
- *   }
- * 
- *   onIceTerrain() {
- *     // Switch to ice physics
- *     this.clearMovements();
- *     this.applyIceMovement({ x: 1, y: 0 }, 4);
- *   }
- * 
- *   createPatrol() {
- *     // Create patrol path
- *     const waypoints = [
- *       { x: 100, y: 100 },
- *       { x: 300, y: 100 },
- *       { x: 300, y: 300 }
- *     ];
- *     this.followPath(waypoints, 2, true);
- *   }
- * }
- * ```
- */
-/**
- * Move Manager Mixin
- * 
- * Provides comprehensive movement management capabilities to any class. This mixin handles
- * various types of movement including pathfinding, physics-based movement, route following,
- * and advanced movement strategies like dashing, knockback, and projectile movement.
- * 
- * @param Base - The base class to extend with movement management
- * @returns Extended class with movement management methods
- * 
- * @example
- * ```ts
- * class MyPlayer extends WithMoveManager(BasePlayer) {
- *   constructor() {
- *     super();
- *     this.frequency = Frequency.High;
- *   }
- * }
- * 
- * const player = new MyPlayer();
- * player.moveTo({ x: 100, y: 100 });
- * player.dash({ x: 1, y: 0 }, 8, 200);
- * ```
- */
-export function WithMoveManager<TBase extends PlayerCtor>(Base: TBase) {
+export interface IMoveManager {
+  /** 
+  * The player passes through the other players (or vice versa). But the player does not go through the events.
+  * 
+  * ```ts
+  * player.throughOtherPlayer = true
+  * ```
+  * 
+  * @title Go through to other player
+  * @prop {boolean} player.throughOtherPlayer
+  * @default true
+  * @memberof MoveManager
+  * */
+  throughOtherPlayer: boolean;
+
+  /** 
+   * The player goes through the event or the other players (or vice versa)
+   * 
+   * ```ts
+   * player.through = true
+   * ```
+   * 
+   * @title Go through the player
+   * @prop {boolean} player.through
+   * @default false
+   * @memberof MoveManager
+   * */
+  through: boolean;
+
+  /** 
+   * The frequency allows to put a stop time between each movement in the array of the moveRoutes() method.
+   * The value represents a dwell time in milliseconds. The higher the value, the slower the frequency.
+   * 
+   * ```ts
+   * player.frequency = 400
+   * ```
+   * 
+   * You can use Frequency enum
+   * 
+   * ```ts
+   * import { Frequency } from '@rpgjs/server'
+   * player.frequency = Frequency.Low
+   * ```
+   * 
+   * @title Change Frequency
+   * @prop {number} player.frequency
+   * @enum {number}
+   * 
+   * Frequency.Lowest | 600
+   * Frequency.Lower | 400
+   * Frequency.Low | 200
+   * Frequency.High | 100
+   * Frequency.Higher | 50
+   * Frequency.Highest | 25
+   * Frequency.None | 0
+   * @default 0
+   * @memberof MoveManager
+   * */
+  frequency: number;
+
+  /**
+   * Add a custom movement strategy to this entity
+   * 
+   * Allows adding any custom MovementStrategy implementation.
+   * Multiple strategies can be active simultaneously.
+   * 
+   * @param strategy - The movement strategy to add
+   * 
+   * @example
+   * ```ts
+   * // Add custom movement
+   * const customMove = new LinearMove(5, 0, 1000);
+   * player.addMovement(customMove);
+   * 
+   * // Add multiple movements
+   * player.addMovement(new Dash(8, { x: 1, y: 0 }, 200));
+   * player.addMovement(new Oscillate({ x: 0, y: 1 }, 10, 1000));
+   * ```
+   */
+  addMovement(strategy: MovementStrategy): void;
+
+  /**
+   * Remove a specific movement strategy from this entity
+   * 
+   * @param strategy - The strategy instance to remove
+   * @returns True if the strategy was found and removed
+   * 
+   * @example
+   * ```ts
+   * const dashMove = new Dash(8, { x: 1, y: 0 }, 200);
+   * player.addMovement(dashMove);
+   * 
+   * // Later, remove the specific movement
+   * const removed = player.removeMovement(dashMove);
+   * console.log('Movement removed:', removed);
+   * ```
+   */
+  removeMovement(strategy: MovementStrategy): boolean;
+
+  /**
+   * Remove all active movement strategies from this entity
+   * 
+   * Stops all current movements immediately.
+   * 
+   * @example
+   * ```ts
+   * // Stop all movements when player dies
+   * player.clearMovements();
+   * 
+   * // Clear movements before applying new ones
+   * player.clearMovements();
+   * player.dash({ x: 1, y: 0 });
+   * ```
+   */
+  clearMovements(): void;
+
+  /**
+   * Check if this entity has any active movement strategies
+   * 
+   * @returns True if entity has active movements
+   * 
+   * @example
+   * ```ts
+   * // Don't accept input while movements are active
+   * if (!player.hasActiveMovements()) {
+   *   player.dash(inputDirection);
+   * }
+   * 
+   * // Check before adding new movement
+   * if (player.hasActiveMovements()) {
+   *   player.clearMovements();
+   * }
+   * ```
+   */
+  hasActiveMovements(): boolean;
+
+  /**
+   * Get all active movement strategies for this entity
+   * 
+   * @returns Array of active movement strategies
+   * 
+   * @example
+   * ```ts
+   * // Check what movements are currently active
+   * const movements = player.getActiveMovements();
+   * console.log(`Player has ${movements.length} active movements`);
+   * 
+   * // Find specific movement type
+   * const hasDash = movements.some(m => m instanceof Dash);
+   * ```
+   */
+  getActiveMovements(): MovementStrategy[];
+
+  /**
+   * Move toward a target player or position using AI pathfinding
+   * 
+   * Uses SeekAvoid strategy for intelligent pathfinding with obstacle avoidance.
+   * The entity will seek toward the target while avoiding obstacles.
+   * 
+   * @param target - Target player or position to move toward
+   * 
+   * @example
+   * ```ts
+   * // Move toward another player
+   * const targetPlayer = game.getPlayer('player2');
+   * player.moveTo(targetPlayer);
+   * 
+   * // Move toward a specific position
+   * player.moveTo({ x: 300, y: 200 });
+   * 
+   * // Stop the movement later
+   * player.stopMoveTo();
+   * ```
+   */
+  moveTo(target: RpgCommonPlayer | { x: number, y: number }): void;
+
+  /**
+   * Stop the current moveTo behavior
+   * 
+   * Removes any active SeekAvoid strategies.
+   * 
+   * @example
+   * ```ts
+   * // Start following a target
+   * player.moveTo(targetPlayer);
+   * 
+   * // Stop following when target is reached
+   * if (distanceToTarget < 10) {
+   *   player.stopMoveTo();
+   * }
+   * ```
+   */
+  stopMoveTo(): void;
+
+  /**
+   * Perform a dash movement in the specified direction
+   * 
+   * Applies high-speed movement for a short duration.
+   * 
+   * @param direction - Normalized direction vector
+   * @param speed - Movement speed (default: 8)
+   * @param duration - Duration in milliseconds (default: 200)
+   * 
+   * @example
+   * ```ts
+   * // Dash right
+   * player.dash({ x: 1, y: 0 });
+   * 
+   * // Dash diagonally with custom speed and duration
+   * player.dash({ x: 0.7, y: 0.7 }, 12, 300);
+   * 
+   * // Dash in input direction
+   * player.dash(inputDirection, 10, 150);
+   * ```
+   */
+  dash(direction: { x: number, y: number }, speed?: number, duration?: number): void;
+
+  /**
+   * Apply knockback effect in the specified direction
+   * 
+   * Creates a push effect that gradually decreases over time.
+   * 
+   * @param direction - Normalized direction vector
+   * @param force - Initial knockback force (default: 5)
+   * @param duration - Duration in milliseconds (default: 300)
+   * 
+   * @example
+   * ```ts
+   * // Knockback from explosion
+   * const explosionDir = { x: -1, y: 0 };
+   * player.knockback(explosionDir, 8, 400);
+   * 
+   * // Light knockback from attack
+   * player.knockback(attackDirection, 3, 200);
+   * ```
+   */
+  knockback(direction: { x: number, y: number }, force?: number, duration?: number): void;
+
+  /**
+   * Follow a sequence of waypoints
+   * 
+   * Entity will move through each waypoint in order.
+   * 
+   * @param waypoints - Array of x,y positions to follow
+   * @param speed - Movement speed (default: 2)
+   * @param loop - Whether to loop back to start (default: false)
+   * 
+   * @example
+   * ```ts
+   * // Create a patrol route
+   * const patrolPoints = [
+   *   { x: 100, y: 100 },
+   *   { x: 300, y: 100 },
+   *   { x: 300, y: 300 },
+   *   { x: 100, y: 300 }
+   * ];
+   * player.followPath(patrolPoints, 3, true);
+   * 
+   * // One-time path to destination
+   * player.followPath([{ x: 500, y: 200 }], 4);
+   * ```
+   */
+  followPath(waypoints: Array<{ x: number, y: number }>, speed?: number, loop?: boolean): void;
+
+  /**
+   * Apply oscillating movement pattern
+   * 
+   * Entity moves back and forth along the specified axis.
+   * 
+   * @param direction - Primary oscillation axis (normalized)
+   * @param amplitude - Maximum distance from center (default: 50)
+   * @param period - Time for complete cycle in ms (default: 2000)
+   * 
+   * @example
+   * ```ts
+   * // Horizontal oscillation
+   * player.oscillate({ x: 1, y: 0 }, 100, 3000);
+   * 
+   * // Vertical oscillation
+   * player.oscillate({ x: 0, y: 1 }, 30, 1500);
+   * 
+   * // Diagonal oscillation
+   * player.oscillate({ x: 0.7, y: 0.7 }, 75, 2500);
+   * ```
+   */
+  oscillate(direction: { x: number, y: number }, amplitude?: number, period?: number): void;
+
+  /**
+   * Apply ice movement physics
+   * 
+   * Creates slippery movement with gradual acceleration and inertia.
+   * Perfect for ice terrains or slippery surfaces.
+   * 
+   * @param direction - Target movement direction
+   * @param maxSpeed - Maximum speed when fully accelerated (default: 4)
+   * 
+   * @example
+   * ```ts
+   * // Apply ice physics when on ice terrain
+   * if (onIceTerrain) {
+   *   player.applyIceMovement(inputDirection, 5);
+   * }
+   * 
+   * // Update direction when input changes
+   * iceMovement.setTargetDirection(newDirection);
+   * ```
+   */
+  applyIceMovement(direction: { x: number, y: number }, maxSpeed?: number): void;
+
+  /**
+   * Shoot a projectile in the specified direction
+   * 
+   * Creates projectile movement with various trajectory types.
+   * 
+   * @param type - Type of projectile trajectory
+   * @param direction - Normalized direction vector
+   * @param speed - Projectile speed (default: 200)
+   * 
+   * @example
+   * ```ts
+   * // Shoot arrow
+   * player.shootProjectile(ProjectileType.Straight, { x: 1, y: 0 }, 300);
+   * 
+   * // Throw grenade with arc
+   * player.shootProjectile(ProjectileType.Arc, { x: 0.7, y: 0.7 }, 150);
+   * 
+   * // Bouncing projectile
+   * player.shootProjectile(ProjectileType.Bounce, { x: 1, y: 0 }, 100);
+   * ```
+   */
+  shootProjectile(type: ProjectileType, direction: { x: number, y: number }, speed?: number): void;
+
+  /**
+   * Give an itinerary to follow using movement strategies
+   * 
+   * Executes a sequence of movements and actions in order. Each route can be:
+   * - A Direction enum value for basic movement
+   * - A string starting with "turn-" for direction changes
+   * - A function that returns directions or actions
+   * - A Promise for async operations
+   * 
+   * The method processes routes sequentially, respecting the entity's frequency
+   * setting for timing between movements.
+   * 
+   * @param routes - Array of movement instructions to execute
+   * @returns Promise that resolves when all routes are completed
+   * 
+   * @example
+   * ```ts
+   * // Basic directional movements
+   * await player.moveRoutes([
+   *   Direction.Right,
+   *   Direction.Up,
+   *   Direction.Left
+   * ]);
+   * 
+   * // Mix of movements and turns
+   * await player.moveRoutes([
+   *   Direction.Right,
+   *   'turn-' + Direction.Up,
+   *   Direction.Up
+   * ]);
+   * 
+   * // Using functions for dynamic behavior
+   * const customMove = (player, map) => [Direction.Right, Direction.Down];
+   * await player.moveRoutes([customMove]);
+   * 
+   * // With async operations
+   * await player.moveRoutes([
+   *   Direction.Right,
+   *   new Promise(resolve => setTimeout(resolve, 1000)), // Wait 1 second
+   *   Direction.Left
+   * ]);
+   * ```
+   */
+  moveRoutes(routes: Routes): Promise<boolean>;
+
+  /**
+   * Give a path that repeats itself in a loop to a character
+   * 
+   * Creates an infinite movement pattern that continues until manually stopped.
+   * The routes will repeat in a continuous loop, making it perfect for patrol
+   * patterns, ambient movements, or any repetitive behavior.
+   * 
+   * You can stop the movement at any time with `breakRoutes()` and replay it 
+   * with `replayRoutes()`.
+   * 
+   * @param routes - Array of movement instructions to repeat infinitely
+   * 
+   * @example
+   * ```ts
+   * // Create an infinite random movement pattern
+   * player.infiniteMoveRoute([Move.random()]);
+   * 
+   * // Create a patrol route
+   * player.infiniteMoveRoute([
+   *   Direction.Right,
+   *   Direction.Right,
+   *   Direction.Down,
+   *   Direction.Left,
+   *   Direction.Left,
+   *   Direction.Up
+   * ]);
+   * 
+   * // Mix movements and rotations
+   * player.infiniteMoveRoute([
+   *   Move.turnRight(),
+   *   Direction.Right,
+   *   Move.wait(1),
+   *   Move.turnLeft(),
+   *   Direction.Left
+   * ]);
+   * ```
+   */
+  infiniteMoveRoute(routes: Routes): void;
+
+  /**
+   * Stop an infinite movement
+   * 
+   * Works only for infinite movements created with `infiniteMoveRoute()`.
+   * This method stops the current route execution and prevents the next
+   * iteration from starting.
+   * 
+   * @param force - Forces the stop of the infinite movement immediately
+   * 
+   * @example
+   * ```ts
+   * // Start infinite movement
+   * player.infiniteMoveRoute([Move.random()]);
+   * 
+   * // Stop it when player enters combat
+   * if (inCombat) {
+   *   player.breakRoutes(true);
+   * }
+   * 
+   * // Gentle stop (completes current route first)
+   * player.breakRoutes();
+   * ```
+   */
+  breakRoutes(force?: boolean): void;
+
+  /**
+   * Replay an infinite movement
+   * 
+   * Works only for infinite movements that were previously created with 
+   * `infiniteMoveRoute()`. If the route was stopped with `breakRoutes()`, 
+   * you can restart it with this method using the same route configuration.
+   * 
+   * @example
+   * ```ts
+   * // Create infinite movement
+   * player.infiniteMoveRoute([Move.random()]);
+   * 
+   * // Stop it temporarily
+   * player.breakRoutes(true);
+   * 
+   * // Resume the same movement pattern
+   * player.replayRoutes();
+   * 
+   * // Stop and start with different conditions
+   * if (playerNearby) {
+   *   player.breakRoutes();
+   * } else {
+   *   player.replayRoutes();
+   * }
+   * ```
+   */
+  replayRoutes(): void;
+
+  // Deprecated methods kept for backward compatibility
+  infiniteRoute(routes: Routes): void;
+  finishRoute(finish: boolean): void;
+  isInfiniteRouteActive(): boolean;
+}
+
+export function WithMoveManager<TBase extends PlayerCtor>(Base: TBase): new (...args: ConstructorParameters<TBase>) => InstanceType<TBase> & IMoveManager {
   return class extends Base {
     
     // Properties for infinite route management
@@ -488,18 +884,6 @@ export function WithMoveManager<TBase extends PlayerCtor>(Base: TBase) {
     _finishRoute: ((value: boolean) => void) | null = null;
     _isInfiniteRouteActive: boolean = false;
 
-    /** 
-    * The player passes through the other players (or vice versa). But the player does not go through the events.
-    * 
-    * ```ts
-    * player.throughOtherPlayer = true
-    * ```
-    * 
-    * @title Go through to other player
-    * @prop {boolean} player.throughOtherPlayer
-    * @default true
-    * @memberof MoveManager
-    * */
     set throughOtherPlayer(value: boolean) {
       this._throughOtherPlayer.set(value);
     }
@@ -508,18 +892,6 @@ export function WithMoveManager<TBase extends PlayerCtor>(Base: TBase) {
       return this._throughOtherPlayer();
     }
 
-    /** 
-     * The player goes through the event or the other players (or vice versa)
-     * 
-     * ```ts
-     * player.through = true
-     * ```
-     * 
-     * @title Go through the player
-     * @prop {boolean} player.through
-     * @default false
-     * @memberof MoveManager
-     * */
     set through(value: boolean) {
       this._through.set(value);
     }
@@ -528,35 +900,6 @@ export function WithMoveManager<TBase extends PlayerCtor>(Base: TBase) {
       return this._through();
     }
 
-    /** 
-     * The frequency allows to put a stop time between each movement in the array of the moveRoutes() method.
-     * The value represents a dwell time in milliseconds. The higher the value, the slower the frequency.
-     * 
-     * ```ts
-     * player.frequency = 400
-     * ```
-     * 
-     * You can use Frequency enum
-     * 
-     * ```ts
-     * import { Frequency } from '@rpgjs/server'
-     * player.frequency = Frequency.Low
-     * ```
-     * 
-     * @title Change Frequency
-     * @prop {number} player.speed
-     * @enum {number}
-     * 
-     * Frequency.Lowest | 600
-     * Frequency.Lower | 400
-     * Frequency.Low | 200
-     * Frequency.High | 100
-     * Frequency.Higher | 50
-     * Frequency.Highest | 25
-     * Frequency.None | 0
-     * @default 0
-     * @memberof MoveManager
-     * */
     set frequency(value: number) {
       this._frequency.set(value);
     }
@@ -565,25 +908,6 @@ export function WithMoveManager<TBase extends PlayerCtor>(Base: TBase) {
       return this._frequency();
     }
     
-    /**
-     * Add a custom movement strategy to this entity
-     * 
-     * Allows adding any custom MovementStrategy implementation.
-     * Multiple strategies can be active simultaneously.
-     * 
-     * @param strategy - The movement strategy to add
-     * 
-     * @example
-     * ```ts
-     * // Add custom movement
-     * const customMove = new LinearMove(5, 0, 1000);
-     * player.addMovement(customMove);
-     * 
-     * // Add multiple movements
-     * player.addMovement(new Dash(8, { x: 1, y: 0 }, 200));
-     * player.addMovement(new Oscillate({ x: 0, y: 1 }, 10, 1000));
-     * ```
-     */
     addMovement(strategy: MovementStrategy): void {
       const map = (this as unknown as PlayerWithMixins).getCurrentMap();
       if (!map) return;
@@ -591,22 +915,6 @@ export function WithMoveManager<TBase extends PlayerCtor>(Base: TBase) {
       map.moveManager.add((this as unknown as PlayerWithMixins).id, strategy);
     }
 
-    /**
-     * Remove a specific movement strategy from this entity
-     * 
-     * @param strategy - The strategy instance to remove
-     * @returns True if the strategy was found and removed
-     * 
-     * @example
-     * ```ts
-     * const dashMove = new Dash(8, { x: 1, y: 0 }, 200);
-     * player.addMovement(dashMove);
-     * 
-     * // Later, remove the specific movement
-     * const removed = player.removeMovement(dashMove);
-     * console.log('Movement removed:', removed);
-     * ```
-     */
     removeMovement(strategy: MovementStrategy): boolean {
       const map = (this as unknown as PlayerWithMixins).getCurrentMap();
       if (!map) return false;
@@ -614,21 +922,6 @@ export function WithMoveManager<TBase extends PlayerCtor>(Base: TBase) {
       return map.moveManager.remove((this as unknown as PlayerWithMixins).id, strategy);
     }
 
-    /**
-     * Remove all active movement strategies from this entity
-     * 
-     * Stops all current movements immediately.
-     * 
-     * @example
-     * ```ts
-     * // Stop all movements when player dies
-     * player.clearMovements();
-     * 
-     * // Clear movements before applying new ones
-     * player.clearMovements();
-     * player.dash({ x: 1, y: 0 });
-     * ```
-     */
     clearMovements(): void {
       const map = (this as unknown as PlayerWithMixins).getCurrentMap();
       if (!map) return;
@@ -636,24 +929,6 @@ export function WithMoveManager<TBase extends PlayerCtor>(Base: TBase) {
       map.moveManager.clear((this as unknown as PlayerWithMixins).id);
     }
 
-    /**
-     * Check if this entity has any active movement strategies
-     * 
-     * @returns True if entity has active movements
-     * 
-     * @example
-     * ```ts
-     * // Don't accept input while movements are active
-     * if (!player.hasActiveMovements()) {
-     *   player.dash(inputDirection);
-     * }
-     * 
-     * // Check before adding new movement
-     * if (player.hasActiveMovements()) {
-     *   player.clearMovements();
-     * }
-     * ```
-     */
     hasActiveMovements(): boolean {
       const map = (this as unknown as PlayerWithMixins).getCurrentMap();
       if (!map) return false;
@@ -661,21 +936,6 @@ export function WithMoveManager<TBase extends PlayerCtor>(Base: TBase) {
       return map.moveManager.hasActiveStrategies((this as unknown as PlayerWithMixins).id);
     }
 
-    /**
-     * Get all active movement strategies for this entity
-     * 
-     * @returns Array of active movement strategies
-     * 
-     * @example
-     * ```ts
-     * // Check what movements are currently active
-     * const movements = player.getActiveMovements();
-     * console.log(`Player has ${movements.length} active movements`);
-     * 
-     * // Find specific movement type
-     * const hasDash = movements.some(m => m instanceof Dash);
-     * ```
-     */
     getActiveMovements(): MovementStrategy[] {
       const map = (this as unknown as PlayerWithMixins).getCurrentMap();
       if (!map) return [];
@@ -683,27 +943,6 @@ export function WithMoveManager<TBase extends PlayerCtor>(Base: TBase) {
       return map.moveManager.getStrategies((this as unknown as PlayerWithMixins).id);
     }
 
-    /**
-     * Move toward a target player or position using AI pathfinding
-     * 
-     * Uses SeekAvoid strategy for intelligent pathfinding with obstacle avoidance.
-     * The entity will seek toward the target while avoiding obstacles.
-     * 
-     * @param target - Target player or position to move toward
-     * 
-     * @example
-     * ```ts
-     * // Move toward another player
-     * const targetPlayer = game.getPlayer('player2');
-     * player.moveTo(targetPlayer);
-     * 
-     * // Move toward a specific position
-     * player.moveTo({ x: 300, y: 200 });
-     * 
-     * // Stop the movement later
-     * player.stopMoveTo();
-     * ```
-     */
     moveTo(target: RpgCommonPlayer | { x: number, y: number }): void {
       const map = (this as unknown as PlayerWithMixins).getCurrentMap();
       if (!map) return;
@@ -731,22 +970,6 @@ export function WithMoveManager<TBase extends PlayerCtor>(Base: TBase) {
       }
     }
 
-    /**
-     * Stop the current moveTo behavior
-     * 
-     * Removes any active SeekAvoid strategies.
-     * 
-     * @example
-     * ```ts
-     * // Start following a target
-     * player.moveTo(targetPlayer);
-     * 
-     * // Stop following when target is reached
-     * if (distanceToTarget < 10) {
-     *   player.stopMoveTo();
-     * }
-     * ```
-     */
     stopMoveTo(): void {
       const map = (this as unknown as PlayerWithMixins).getCurrentMap();
       if (!map) return;
@@ -759,152 +982,26 @@ export function WithMoveManager<TBase extends PlayerCtor>(Base: TBase) {
       });
     }
 
-    /**
-     * Perform a dash movement in the specified direction
-     * 
-     * Applies high-speed movement for a short duration.
-     * 
-     * @param direction - Normalized direction vector
-     * @param speed - Movement speed (default: 8)
-     * @param duration - Duration in milliseconds (default: 200)
-     * 
-     * @example
-     * ```ts
-     * // Dash right
-     * player.dash({ x: 1, y: 0 });
-     * 
-     * // Dash diagonally with custom speed and duration
-     * player.dash({ x: 0.7, y: 0.7 }, 12, 300);
-     * 
-     * // Dash in input direction
-     * player.dash(inputDirection, 10, 150);
-     * ```
-     */
     dash(direction: { x: number, y: number }, speed: number = 8, duration: number = 200): void {
       this.addMovement(new Dash(speed, direction, duration));
     }
 
-    /**
-     * Apply knockback effect in the specified direction
-     * 
-     * Creates a push effect that gradually decreases over time.
-     * 
-     * @param direction - Normalized direction vector
-     * @param force - Initial knockback force (default: 5)
-     * @param duration - Duration in milliseconds (default: 300)
-     * 
-     * @example
-     * ```ts
-     * // Knockback from explosion
-     * const explosionDir = { x: -1, y: 0 };
-     * player.knockback(explosionDir, 8, 400);
-     * 
-     * // Light knockback from attack
-     * player.knockback(attackDirection, 3, 200);
-     * ```
-     */
     knockback(direction: { x: number, y: number }, force: number = 5, duration: number = 300): void {
       this.addMovement(new Knockback(direction, force, duration));
     }
 
-    /**
-     * Follow a sequence of waypoints
-     * 
-     * Entity will move through each waypoint in order.
-     * 
-     * @param waypoints - Array of x,y positions to follow
-     * @param speed - Movement speed (default: 2)
-     * @param loop - Whether to loop back to start (default: false)
-     * 
-     * @example
-     * ```ts
-     * // Create a patrol route
-     * const patrolPoints = [
-     *   { x: 100, y: 100 },
-     *   { x: 300, y: 100 },
-     *   { x: 300, y: 300 },
-     *   { x: 100, y: 300 }
-     * ];
-     * player.followPath(patrolPoints, 3, true);
-     * 
-     * // One-time path to destination
-     * player.followPath([{ x: 500, y: 200 }], 4);
-     * ```
-     */
     followPath(waypoints: Array<{ x: number, y: number }>, speed: number = 2, loop: boolean = false): void {
       this.addMovement(new PathFollow(waypoints, speed, loop));
     }
 
-    /**
-     * Apply oscillating movement pattern
-     * 
-     * Entity moves back and forth along the specified axis.
-     * 
-     * @param direction - Primary oscillation axis (normalized)
-     * @param amplitude - Maximum distance from center (default: 50)
-     * @param period - Time for complete cycle in ms (default: 2000)
-     * 
-     * @example
-     * ```ts
-     * // Horizontal oscillation
-     * player.oscillate({ x: 1, y: 0 }, 100, 3000);
-     * 
-     * // Vertical oscillation
-     * player.oscillate({ x: 0, y: 1 }, 30, 1500);
-     * 
-     * // Diagonal oscillation
-     * player.oscillate({ x: 0.7, y: 0.7 }, 75, 2500);
-     * ```
-     */
     oscillate(direction: { x: number, y: number }, amplitude: number = 50, period: number = 2000): void {
       this.addMovement(new Oscillate(direction, amplitude, period));
     }
 
-    /**
-     * Apply ice movement physics
-     * 
-     * Creates slippery movement with gradual acceleration and inertia.
-     * Perfect for ice terrains or slippery surfaces.
-     * 
-     * @param direction - Target movement direction
-     * @param maxSpeed - Maximum speed when fully accelerated (default: 4)
-     * 
-     * @example
-     * ```ts
-     * // Apply ice physics when on ice terrain
-     * if (onIceTerrain) {
-     *   player.applyIceMovement(inputDirection, 5);
-     * }
-     * 
-     * // Update direction when input changes
-     * iceMovement.setTargetDirection(newDirection);
-     * ```
-     */
     applyIceMovement(direction: { x: number, y: number }, maxSpeed: number = 4): void {
       this.addMovement(new IceMovement(direction, maxSpeed));
     }
 
-    /**
-     * Shoot a projectile in the specified direction
-     * 
-     * Creates projectile movement with various trajectory types.
-     * 
-     * @param type - Type of projectile trajectory
-     * @param direction - Normalized direction vector
-     * @param speed - Projectile speed (default: 200)
-     * 
-     * @example
-     * ```ts
-     * // Shoot arrow
-     * player.shootProjectile(ProjectileType.Straight, { x: 1, y: 0 }, 300);
-     * 
-     * // Throw grenade with arc
-     * player.shootProjectile(ProjectileType.Arc, { x: 0.7, y: 0.7 }, 150);
-     * 
-     * // Bouncing projectile
-     * player.shootProjectile(ProjectileType.Bounce, { x: 1, y: 0 }, 100);
-     * ```
-     */
     shootProjectile(type: ProjectileType, direction: { x: number, y: number }, speed: number = 200): void {
       const config = {
         speed,
@@ -919,49 +1016,6 @@ export function WithMoveManager<TBase extends PlayerCtor>(Base: TBase) {
       this.addMovement(new ProjectileMovement(type, config));
     }
 
-    /**
-     * Give an itinerary to follow using movement strategies
-     * 
-     * Executes a sequence of movements and actions in order. Each route can be:
-     * - A Direction enum value for basic movement
-     * - A string starting with "turn-" for direction changes
-     * - A function that returns directions or actions
-     * - A Promise for async operations
-     * 
-     * The method processes routes sequentially, respecting the entity's frequency
-     * setting for timing between movements.
-     * 
-     * @param routes - Array of movement instructions to execute
-     * @returns Promise that resolves when all routes are completed
-     * 
-     * @example
-     * ```ts
-     * // Basic directional movements
-     * await player.moveRoutes([
-     *   Direction.Right,
-     *   Direction.Up,
-     *   Direction.Left
-     * ]);
-     * 
-     * // Mix of movements and turns
-     * await player.moveRoutes([
-     *   Direction.Right,
-     *   'turn-' + Direction.Up,
-     *   Direction.Up
-     * ]);
-     * 
-     * // Using functions for dynamic behavior
-     * const customMove = (player, map) => [Direction.Right, Direction.Down];
-     * await player.moveRoutes([customMove]);
-     * 
-     * // With async operations
-     * await player.moveRoutes([
-     *   Direction.Right,
-     *   new Promise(resolve => setTimeout(resolve, 1000)), // Wait 1 second
-     *   Direction.Left
-     * ]);
-     * ```
-     */
     moveRoutes(routes: Routes): Promise<boolean> {
       let count = 0;
       let frequence = 0;
@@ -1093,13 +1147,6 @@ export function WithMoveManager<TBase extends PlayerCtor>(Base: TBase) {
       });
     }
     
-    /**
-     * Utility method to flatten nested route arrays
-     * 
-     * @private
-     * @param routes - Routes array that may contain nested arrays
-     * @returns Flattened array of routes
-     */
     flattenRoutes(routes: any[]): any[] {
       const result: any[] = [];
       
@@ -1114,43 +1161,6 @@ export function WithMoveManager<TBase extends PlayerCtor>(Base: TBase) {
       return result;
     }
 
-    /**
-     * Give a path that repeats itself in a loop to a character
-     * 
-     * Creates an infinite movement pattern that continues until manually stopped.
-     * The routes will repeat in a continuous loop, making it perfect for patrol
-     * patterns, ambient movements, or any repetitive behavior.
-     * 
-     * You can stop the movement at any time with `breakRoutes()` and replay it 
-     * with `replayRoutes()`.
-     * 
-     * @param routes - Array of movement instructions to repeat infinitely
-     * 
-     * @example
-     * ```ts
-     * // Create an infinite random movement pattern
-     * player.infiniteMoveRoute([Move.random()]);
-     * 
-     * // Create a patrol route
-     * player.infiniteMoveRoute([
-     *   Direction.Right,
-     *   Direction.Right,
-     *   Direction.Down,
-     *   Direction.Left,
-     *   Direction.Left,
-     *   Direction.Up
-     * ]);
-     * 
-     * // Mix movements and rotations
-     * player.infiniteMoveRoute([
-     *   Move.turnRight(),
-     *   Direction.Right,
-     *   Move.wait(1),
-     *   Move.turnLeft(),
-     *   Direction.Left
-     * ]);
-     * ```
-     */
     infiniteMoveRoute(routes: Routes): void {
       this._infiniteRoutes = routes;
       this._isInfiniteRouteActive = true;
@@ -1175,29 +1185,6 @@ export function WithMoveManager<TBase extends PlayerCtor>(Base: TBase) {
       executeInfiniteRoute();
     }
 
-    /**
-     * Stop an infinite movement
-     * 
-     * Works only for infinite movements created with `infiniteMoveRoute()`.
-     * This method stops the current route execution and prevents the next
-     * iteration from starting.
-     * 
-     * @param force - Forces the stop of the infinite movement immediately
-     * 
-     * @example
-     * ```ts
-     * // Start infinite movement
-     * player.infiniteMoveRoute([Move.random()]);
-     * 
-     * // Stop it when player enters combat
-     * if (inCombat) {
-     *   player.breakRoutes(true);
-     * }
-     * 
-     * // Gentle stop (completes current route first)
-     * player.breakRoutes();
-     * ```
-     */
     breakRoutes(force: boolean = false): void {
       this._isInfiniteRouteActive = false;
       
@@ -1213,42 +1200,10 @@ export function WithMoveManager<TBase extends PlayerCtor>(Base: TBase) {
       }
     }
 
-    /**
-     * Replay an infinite movement
-     * 
-     * Works only for infinite movements that were previously created with 
-     * `infiniteMoveRoute()`. If the route was stopped with `breakRoutes()`, 
-     * you can restart it with this method using the same route configuration.
-     * 
-     * @example
-     * ```ts
-     * // Create infinite movement
-     * player.infiniteMoveRoute([Move.random()]);
-     * 
-     * // Stop it temporarily
-     * player.breakRoutes(true);
-     * 
-     * // Resume the same movement pattern
-     * player.replayRoutes();
-     * 
-     * // Stop and start with different conditions
-     * if (playerNearby) {
-     *   player.breakRoutes();
-     * } else {
-     *   player.replayRoutes();
-     * }
-     * ```
-     */
     replayRoutes(): void {
       if (this._infiniteRoutes && !this._isInfiniteRouteActive) {
         this.infiniteMoveRoute(this._infiniteRoutes);
       }
     }
-  } as unknown as TBase;
+  } as unknown as any;
 }
-
-/**
- * Type helper to extract the interface from the WithMoveManager mixin
- * This provides the type without duplicating method signatures
- */
-export type IMoveManager = InstanceType<ReturnType<typeof WithMoveManager>>;

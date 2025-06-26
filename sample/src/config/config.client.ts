@@ -5,21 +5,17 @@ import {
 } from "@rpgjs/client";
 import { provideTiledMap } from "@rpgjs/tiledmap/client";
 import Tooltip from "../components/tooltip.ce";
+import { provideActionBattle } from "@rpgjs/action-battle/client";
 
 export default {
   providers: [
     provideTiledMap({
       basePath: "map",
     }),
+    provideActionBattle(),
     provideClientGlobalConfig(),
     provideClientModules([
       {
-        sprite: {
-          componentsInFront: [Tooltip],
-          onInit: (sprite) => {
-            console.log(sprite)
-          }
-        },
         spritesheets: [
           {
             id: "hero",

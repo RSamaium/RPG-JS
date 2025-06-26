@@ -24,6 +24,19 @@ export function provideServerModules(modules: any[]): FactoryProvider {
           }
         };
       }
+      if (module.database ) {
+        const database = {...module.database};
+        module = {
+          ...module,
+          databaseList: {
+            load: (engine: RpgMap) => {
+              for (let id in database) {
+                engine.addInDatabase(id, database[id]);
+              }
+            },
+          }
+        };
+      }
       return module;
     })
     return modules

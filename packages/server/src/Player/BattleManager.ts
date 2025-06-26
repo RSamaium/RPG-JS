@@ -12,34 +12,8 @@ interface PlayerWithMixins extends RpgCommonPlayer {
   getCurrentMap(): any;
 }
 
-/**
- * Battle Manager Mixin
- * 
- * Provides battle management capabilities to any class. This mixin handles
- * damage calculation, critical hits, elemental vulnerabilities, and guard effects.
- * It implements a comprehensive battle system with customizable formulas and effects.
- * 
- * @param Base - The base class to extend with battle management
- * @returns Extended class with battle management methods
- * 
- * @example
- * ```ts
- * class MyPlayer extends WithBattleManager(BasePlayer) {
- *   constructor() {
- *     super();
- *     // Battle system is automatically initialized
- *   }
- * }
- * 
- * const player = new MyPlayer();
- * const attacker = new MyPlayer();
- * const result = player.applyDamage(attacker);
- * console.log(`Damage dealt: ${result.damage}`);
- * ```
- */
-export function WithBattleManager<TBase extends PlayerCtor>(Base: TBase) {
-  return class extends Base {
-    /**
+export interface IBattleManager {
+   /**
      * Apply damage. Player will lose HP. the `attackerPlayer` parameter is the other player, the one who attacks.
      *
      * If you don't set the skill parameter, it will be a physical attack.
@@ -71,6 +45,17 @@ export function WithBattleManager<TBase extends PlayerCtor>(Base: TBase) {
      * }
      * ```
      */
+  applyDamage(attackerPlayer: RpgPlayer, skill?: any): {
+    damage: number;
+    critical: boolean;
+    elementVulnerable: boolean;
+    guard: boolean;
+    superGuard: boolean;
+  };
+}
+
+export function WithBattleManager<TBase extends PlayerCtor>(Base: TBase): new (...args: ConstructorParameters<TBase>) => InstanceType<TBase> & IBattleManager {
+  return class extends Base {
     applyDamage(
       attackerPlayer: RpgPlayer,
       skill?: any
@@ -101,7 +86,6 @@ export function WithBattleManager<TBase extends PlayerCtor>(Base: TBase) {
       let elementVulnerable = false;
       const paramA = getParam(attackerPlayer);
       const paramB = getParam(<any>this);
-      console.log(paramA, paramB)
       if (skill) {
         fn = this.getFormulas("damageSkill");
         if (!fn) {
@@ -182,11 +166,5 @@ export function WithBattleManager<TBase extends PlayerCtor>(Base: TBase) {
       const map = (this as any).getCurrentMap(); 
       return map.damageFormulas[name];
     }
-  } as unknown as TBase
+  } as unknown as any;
 }
-
-/**
- * Type helper to extract the interface from the WithBattleManager mixin
- * This provides the type without duplicating method signatures
- */
-export type IBattleManager = InstanceType<ReturnType<typeof WithBattleManager>>;

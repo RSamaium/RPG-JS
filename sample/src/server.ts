@@ -1,12 +1,20 @@
 import { createServer, Move, provideServerModules, RpgPlayer } from "@rpgjs/server";
 import { provideTiledMap } from "@rpgjs/tiledmap/server";
 import { provideLoadMap } from "@rpgjs/client";
+import { provideActionBattle, BattleAi } from "@rpgjs/action-battle/server"; 
 
 export function Event() {
   return {
     name: "EV-1",
     onInit() {
       this.setGraphic("female");
+      this.addItem("sword");
+      this.equip("sword");
+      new BattleAi(this, {
+        attackCooldown: 1000,
+        visionRange: 100,
+        attackRange: 50,
+      });
     },
     async onAction(player: RpgPlayer) {
       player.gold = 100;
@@ -19,7 +27,10 @@ export function Event() {
 
 export default createServer({
   providers: [
-    provideTiledMap(),
+    provideTiledMap({
+      basePath: "map",
+    }),
+    provideActionBattle(),
     provideServerModules([
       {
         player: {
@@ -41,6 +52,15 @@ export default createServer({
             events: [Event()],
           },
         ],
+        database: {
+          sword: {
+            name: "Sword",
+            description: "A sword",
+            price: 100,
+            atk: 10,
+            pdef: 10, 
+          }
+        }
       },
     ]),
     provideLoadMap(() => {})

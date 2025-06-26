@@ -72,9 +72,9 @@ export class RpgCommonPlayer {
   @sync() _hp = signal(0);
   @sync() _sp = signal(0);
   @sync() _exp = signal(0);
-  @sync() _level = signal(0);
+  @sync() _level = signal(1);
   @sync() _class = signal({});
-  @sync(Item) items = signal<Item[]>([]);
+  @sync((data: any) => new Item(data)) items = signal<Item[]>([]);
   @sync() equipments = signal<any[]>([]);
   @sync() states = signal<any[]>([]);
   @sync() skills = signal<any[]>([]);

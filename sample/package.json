@@ -24,7 +24,8 @@
     "@rpgjs/tiledmap": "workspace:*",
     "@rpgjs/vite": "workspace:*",
     "@signe/di": "^2.3.1",
-    "canvasengine": "2.0.0-beta.27"
+    "canvasengine": "2.0.0-beta.27",
+    "@rpgjs/action-battle": "workspace:*"
   },
   "type": "module"
 }

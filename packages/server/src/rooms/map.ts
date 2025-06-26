@@ -137,6 +137,8 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
         coefficientElements: COEFFICIENT_ELEMENTS,
         ...this.damageFormulas
     }
+
+    await lastValueFrom(this.hooks.callHooks("server-databaseList-load", this))
     await lastValueFrom(this.hooks.callHooks("server-maps-load", this))
 
     map.events = map.events ?? []
