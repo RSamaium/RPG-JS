@@ -190,7 +190,7 @@ export class BattleAi {
     if (shape.id !== `vision_${this.event.id}`) return;
     // Set player as target and start pursuing
     this.target = player;
-   // this.event.moveTo(player);
+    this.event.moveTo(player);
   }
 
   /**
