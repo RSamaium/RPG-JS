@@ -49,6 +49,9 @@ export class Knockback implements MovementStrategy {
   /**
    * Apply knockback movement with decreasing force
    * 
+   * Uses translation instead of velocity to respect collision detection
+   * when the body has isSensor: true option
+   * 
    * @param body - Matter.js body to move
    * @param dt - Time delta in milliseconds
    */
@@ -56,14 +59,20 @@ export class Knockback implements MovementStrategy {
     this.elapsed += dt;
     
     if (this.elapsed <= this.duration) {
-      // Apply decreasing velocity
-      Matter.Body.setVelocity(body, {
-        x: this.direction.x * this.currentSpeed,
-        y: this.direction.y * this.currentSpeed
+      // Calculate movement delta for this frame
+      const frameMultiplier = dt / 16; // Normalize to 60fps (16ms per frame)
+      const movementX = this.direction.x * this.currentSpeed * frameMultiplier;
+      const movementY = this.direction.y * this.currentSpeed * frameMultiplier;
+      
+      // Use translation instead of velocity to allow collision detection
+      // even with isSensor bodies
+      Matter.Body.translate(body, {
+        x: movementX,
+        y: movementY
       });
       
       // Decay the speed
-      this.currentSpeed *= this.decayFactor;
+      this.currentSpeed *= Math.pow(this.decayFactor, frameMultiplier);
     } else {
       // Stop movement when knockback is complete
       Matter.Body.setVelocity(body, { x: 0, y: 0 });

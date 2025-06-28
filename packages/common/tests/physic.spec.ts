@@ -442,6 +442,55 @@ describe('RpgCommonPhysic – extended stability', () => {
   /* --------------------------------------------------------------------- */
   /*                              Stress & misc                            */
   /* --------------------------------------------------------------------- */
+  describe('Sensor wall collision', () => {
+    it('should prevent sensor bodies from passing through walls', () => {
+      // Create a wall
+      physic.addStaticHitbox('wall', 50, 0, 10, 100);
+      
+      // Create a sensor body (like an event) on the left side of the wall
+      const event = createMockPlayer('event', 30, 50);
+      physic.addMovableHitbox(event, 30, 50, 20, 20, { isSensor: true });
+      
+      // Store initial position
+      const initialX = event.x();
+      
+      // Try to move the sensor body through the wall (to the right)
+      physic.applyTranslation('event', 30, 0); // This should be blocked by the wall
+      
+      // Update physics to resolve collisions
+      tick(physic);
+      
+      // The event should not have moved past the wall
+      expect(event.x()).toBeLessThan(50); // Should be stopped before the wall at x=50
+      expect(event.x()).toBeGreaterThan(initialX); // But should have moved some distance
+    });
+
+    it('should allow sensor bodies to move parallel to walls', () => {
+      // Create a vertical wall at x=60-70, y=0-100 (well separated from event)
+      physic.addStaticHitbox('wall', 60, 0, 10, 100);
+      
+      // Create a sensor body at x=30-50, y=50-70 (separated from the wall)
+      const event = createMockPlayer('event', 30, 50);
+      physic.addMovableHitbox(event, 30, 50, 20, 20, { isSensor: true });
+      
+      // Sync to get the actual coordinates used by the physics system
+      tick(physic);
+      
+      const initialY = event.y();
+      const initialX = event.x();
+      
+      // Move parallel to the wall (up) - this should not cause collision
+      physic.applyTranslation('event', 0, -20);
+      
+      // Update physics
+      tick(physic);
+      
+      // Movement should be allowed (moved up by 20 pixels)
+      expect(event.y()).toBe(initialY - 20);
+      expect(event.x()).toBe(initialX); // X position should remain the same
+    });
+  });
+
   describe('Stress scenario', () => {
     it('handles 100 movable bodies without error', () => {
       for (let i = 0; i < 100; i++) {

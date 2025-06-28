@@ -1,16 +1,17 @@
 # Battle AI System
 
-Le système d'IA de combat de RPGJS permet de créer des ennemis intelligents qui peuvent détecter, poursuivre et attaquer les joueurs automatiquement. Ce guide explique comment utiliser et personnaliser ce système.
+The RPGJS Battle AI system allows you to create intelligent enemies that can detect, pursue, and attack players automatically. This guide explains how to use and customize this system.
 
-## Vue d'ensemble
+## Overview
 
-Le système d'IA de combat fournit :
+The Battle AI system provides:
 
-- **Détection de vision** : Les ennemis peuvent détecter les joueurs dans un rayon défini
-- **Poursuite intelligente** : Mouvement automatique vers les cibles détectées
-- **Système d'attaque** : Attaques automatiques avec hitboxes et dégâts
-- **Gestion de la santé** : Points de vie et mort des ennemis
-- **Nettoyage automatique** : Suppression des ennemis morts de la carte
+- **Vision Detection**: Enemies can detect players within a defined radius
+- **Intelligent Pursuit**: Automatic movement towards detected targets
+- **Attack System**: Automatic attacks with hitboxes and damage
+- **Health Management**: Hit points and enemy death handling
+- **Automatic Cleanup**: Removal of dead enemies from the map
+- **Configurable Parameters**: Customizable attack ranges, hitboxes, and vision buffers
 
 ## Architecture
 
@@ -19,49 +20,67 @@ Le système d'IA de combat fournit :
 │ Event Hooks     │ uses  │ BattleAi Class    │ manages │ AI Behavior   │
 │ (onInit, etc.)  │──────▶│ (vision, combat)  │─────────▶ (move, attack) │
 └─────────────────┘       └───────────────────┘         └───────────────┘
+                                      │
+                                      ▼
+                          ┌───────────────────┐
+                          │ BattleAiManager   │
+                          │ (Central Registry)│
+                          └───────────────────┘
 ```
 
-## Utilisation de base
+## Basic Usage
 
-### Appliquer l'IA à un événement
+### Apply AI to an Event
 
 ```typescript
-import { BattleAi } from "./ai";
+import { BattleAi } from "@rpgjs/action-battle/server";
 import { RpgEvent } from "@rpgjs/server";
 
-// Créer une instance d'IA
-const battleAi = new BattleAi(context);
+// Create an AI instance
+const battleAi = new BattleAi(event);
 
-// Appliquer l'IA à un événement
-battleAi.applyAt(event);
-```
-
-### Configuration personnalisée
-
-```typescript
-// Ennemi avec statistiques personnalisées
-battleAi.applyAt(event, {
-    health: 150,           // Points de vie
-    attackDamage: 25,      // Dégâts d'attaque
-    attackCooldown: 800,   // Délai entre attaques (ms)
-    visionRange: 200,      // Portée de vision
-    attackRange: 60        // Portée d'attaque
+// Apply AI with custom configuration
+const battleAi = new BattleAi(event, {
+    visionRange: 200
 });
 ```
 
-## Intégration avec les hooks
+### Custom Configuration
 
-### Hook onInit
+```typescript
+// Enemy with custom statistics
+new BattleAi(event, {
+    attackCooldown: 800,      // Delay between attacks (ms)
+    visionRange: 200,         // Vision range
+    attackRange: 60,          // Attack range
+    attackDistance: 40,       // Distance of attack hitbox from AI
+    visionRangeBuffer: 30     // Buffer zone to prevent vision flickering
+});
+```
 
-Applique automatiquement l'IA lors de la création d'événements :
+## Integration with Hooks
+
+### onInit Hook
+
+Automatically applies AI when creating events:
+
+Add sword in database :
+
+{
+    name: "Sword",
+    description: "A sword",
+    price: 100,
+    atk: 10,
+    pdef: 10, 
+}
 
 ```typescript
 export default defineModule<RpgServer>({
     event: {
         onInit(event: RpgEvent) {
-            // Appliquer l'IA à tous les nouveaux événements
-            battleAi.applyAt(event, {
-                health: 80,
+            this.addItem("sword");
+            this.equip("sword");
+            new BattleAi(event, {
                 attackDamage: 15,
                 visionRange: 120
             });
@@ -70,250 +89,291 @@ export default defineModule<RpgServer>({
 });
 ```
 
-### Hooks de détection
+## Player Combat System
 
-Gère la détection des joueurs :
+### Configurable Player Attacks
 
 ```typescript
-export default defineModule<RpgServer>({
-    event: {
-        onDetectInShape(event: RpgEvent, player: RpgPlayer, shape: any) {
-            // Le joueur entre dans la vision de l'IA
-            battleAi.onDetectInShape(event, player, shape);
-        },
-        
-        onDetectOutShape(event: RpgEvent, player: RpgPlayer, shape: any) {
-            // Le joueur sort de la vision de l'IA
-            battleAi.onDetectOutShape(event, player, shape);
-        }
-    }
+import { createActionBattleModule, DEFAULT_PLAYER_ATTACK_HITBOXES } from "@rpgjs/action-battle/server";
+
+// Create custom hitboxes
+const customHitboxes = {
+    ...DEFAULT_PLAYER_ATTACK_HITBOXES,
+    up: { x: -20, y: -60, width: 40, height: 40 },    // Larger upward attack
+    down: { x: -20, y: 20, width: 40, height: 40 }    // Larger downward attack
+};
+
+// Use the configurable module
+export default createActionBattleModule({
+    playerAttackHitboxes: customHitboxes,
+    playerAttackDamage: 50,      // Higher damage
+    playerAttackSpeed: 5         // Faster attack projectiles
 });
 ```
 
-## Système de combat joueur
+## AI Behaviors
 
-### Attaque des ennemis IA
+### Detection and Pursuit
+
+1. **Circular Vision**: AI detects players within a defined radius
+2. **Automatic Pursuit**: Movement towards detected player
+3. **Target Loss**: Stops pursuit if player leaves vision range
+4. **Vision Buffer**: Optional buffer zone to prevent flickering
+
+### Attack System
+
+1. **Range Check**: Only attacks if player is within range
+2. **Attack Cooldown**: Delay between attacks
+3. **Directional Hitbox**: Attacks in the direction of the player
+4. **Visual Feedback**: Damage display
+5. **Configurable Distance**: Customizable attack hitbox placement
+
+### Death Management
+
+1. **Hit Points**: Health system with damage
+2. **Automatic Death**: Removal at 0 HP
+3. **Cleanup**: Removal from map and data cleanup
+
+## BattleAi Class API
+
+### Constructor Options
 
 ```typescript
-export default defineModule<RpgServer>({
-    player: {
-        onInput(player: RpgPlayer, input: any) {
-            if (input.input && input.input.includes('action')) {
-                // Créer une hitbox d'attaque basée sur la direction
-                const direction = player.getDirection();
-                let hitboxes = [];
-                
-                switch (direction) {
-                    case 'up':
-                        hitboxes = [{ x: -16, y: -48, width: 32, height: 32 }];
-                        break;
-                    case 'down':
-                        hitboxes = [{ x: -16, y: 16, width: 32, height: 32 }];
-                        break;
-                    case 'left':
-                        hitboxes = [{ x: -48, y: -16, width: 32, height: 32 }];
-                        break;
-                    case 'right':
-                        hitboxes = [{ x: 16, y: -16, width: 32, height: 32 }];
-                        break;
-                }
-
-                player.createMovingHitbox(hitboxes, { speed: 3 }).subscribe({
-                    next(hits) {
-                        hits.forEach(hit => {
-                            if (hit instanceof RpgEvent) {
-                                // Infliger des dégâts à l'ennemi IA
-                                const defeated = battleAi.damageAi(hit, 30);
-                                if (defeated) {
-                                    console.log(`Enemy ${hit.id} defeated!`);
-                                }
-                            }
-                        });
-                    }
-                });
-            }
-        }
-    }
-});
+new BattleAi(event, {
+    attackCooldown?: number,      // Attack delay in ms (default: 1000)
+    visionRange?: number,         // Vision range (default: 150)
+    attackRange?: number,         // Attack range (default: 40)
+    attackDistance?: number,      // Attack hitbox distance (default: 30)
+    visionRangeBuffer?: number    // Vision buffer (default: 0)
+})
 ```
 
-## Comportements de l'IA
+### Main Methods
 
-### Détection et poursuite
+#### `takeDamage(damage: number): boolean`
 
-1. **Vision circulaire** : L'IA détecte les joueurs dans un rayon défini
-2. **Poursuite automatique** : Mouvement vers le joueur détecté
-3. **Perte de cible** : Arrêt de la poursuite si le joueur sort de la vision
+Applies damage to the AI.
 
-### Système d'attaque
+**Parameters:**
+- `damage: number` - Amount of damage to deal
 
-1. **Vérification de portée** : Attaque uniquement si le joueur est à portée
-2. **Cooldown d'attaque** : Délai entre les attaques
-3. **Hitbox directionnelle** : Attaque dans la direction du joueur
-4. **Feedback visuel** : Affichage des dégâts
+**Returns:**
+- `boolean` - `true` if the AI died, `false` otherwise
 
-### Gestion de la mort
 
-1. **Points de vie** : Système de santé avec dégâts
-2. **Mort automatique** : Suppression à 0 PV
-3. **Nettoyage** : Suppression de la carte et des données
+#### `getTarget(): RpgPlayer | null`
 
-## API de la classe BattleAi
+Returns current target player or null.
 
-### Méthodes principales
+#### `destroy(): void`
 
-#### `applyAt(event, options)`
+Cleans up the AI instance and removes it from the manager.
 
-Applique l'IA de combat à un événement.
+## BattleAiManager Class API
 
-**Paramètres :**
-- `event: RpgEvent` - L'événement à transformer
-- `options: object` - Configuration optionnelle
+The `BattleAiManager` provides centralized management of all AI instances.
 
-**Options disponibles :**
+### Static Methods
+
+#### `damageAi(event: RpgEvent, damage: number): boolean`
+
+Damages an AI by event reference.
+
 ```typescript
-{
-    health?: number,           // Points de vie (défaut: 100)
-    attackDamage?: number,     // Dégâts d'attaque (défaut: 20)
-    attackCooldown?: number,   // Délai entre attaques en ms (défaut: 1000)
-    visionRange?: number,      // Portée de vision (défaut: 150)
-    attackRange?: number       // Portée d'attaque (défaut: 40)
+const defeated = BattleAiManager.damageAi(enemyEvent, 50);
+if (defeated) {
+    console.log('Enemy defeated!');
 }
 ```
 
-#### `damageAi(event, damage)`
+#### `getAi(eventId: string): BattleAi | undefined`
 
-Inflige des dégâts à un ennemi IA.
-
-**Paramètres :**
-- `event: RpgEvent` - L'événement IA à endommager
-- `damage: number` - Quantité de dégâts
-
-**Retour :**
-- `boolean` - `true` si l'ennemi est mort, `false` sinon
-
-#### `onDetectInShape(event, player, shape)`
-
-Gère la détection d'un joueur entrant dans la vision.
-
-#### `onDetectOutShape(event, player, shape)`
-
-Gère un joueur sortant de la vision.
-
-### Méthodes utilitaires
-
-#### `getAiData(eventId)`
-
-Récupère les données d'IA pour un événement.
+Gets an AI instance by event ID.
 
 ```typescript
-const aiData = battleAi.getAiData(event.id);
-if (aiData) {
-    console.log(`Health: ${aiData.health}/${aiData.maxHealth}`);
-    console.log(`Target: ${aiData.target?.id || 'none'}`);
+const ai = BattleAiManager.getAi(event.id);
+if (ai) {
+    console.log(`AI Health: ${ai.getHealth()}/${ai.getMaxHealth()}`);
 }
 ```
 
-#### `removeAi(eventId)`
+#### `getAiData(eventId: string): BattleAi | undefined`
 
-Supprime l'IA d'un événement.
+Alias for `getAi()` - gets AI data for debugging.
+
+#### `clear(): void`
+
+Removes all AI instances (cleanup).
+
+## Usage Examples
+
+### Basic Enemy
 
 ```typescript
-battleAi.removeAi(event.id);
+// Simple enemy with default stats
+new BattleAi(goblinEvent);
 ```
 
-## Exemples d'utilisation
-
-### Ennemi de base
+### Powerful Boss
 
 ```typescript
-// Ennemi simple avec statistiques par défaut
-battleAi.applyAt(goblinEvent);
-```
-
-### Boss puissant
-
-```typescript
-// Boss avec beaucoup de vie et d'attaque
-battleAi.applyAt(bossEvent, {
-    health: 500,
-    attackDamage: 50,
+// Boss with high health and attack
+new BattleAi(bossEvent, {
     attackCooldown: 2000,
     visionRange: 300,
-    attackRange: 80
+    attackRange: 80,
+    attackDistance: 50
 });
 ```
 
-### Garde rapide
+### Fast Guard
 
 ```typescript
-// Garde avec attaques rapides mais faibles
-battleAi.applyAt(guardEvent, {
-    health: 60,
-    attackDamage: 10,
+// Guard with fast but weak attacks
+new BattleAi(guardEvent, {
     attackCooldown: 500,
     visionRange: 100,
-    attackRange: 30
+    attackRange: 30,
+    visionRangeBuffer: 20  // Prevent vision flickering
 });
 ```
 
-### Archer à distance
+### Ranged Archer
 
 ```typescript
-// Archer avec longue portée
-battleAi.applyAt(archerEvent, {
-    health: 40,
-    attackDamage: 20,
+// Archer with long range
+new BattleAi(archerEvent, {
     attackCooldown: 1500,
     visionRange: 250,
-    attackRange: 100
+    attackRange: 100,
+    attackDistance: 80     // Attack from further away
 });
 ```
 
-## Bonnes pratiques
+### Custom Player Combat
+
+```typescript
+// Custom attack hitboxes for different weapon types
+const swordHitboxes = {
+    up: { x: -20, y: -50, width: 40, height: 35 },
+    down: { x: -20, y: 15, width: 40, height: 35 },
+    left: { x: -50, y: -20, width: 35, height: 40 },
+    right: { x: 15, y: -20, width: 35, height: 40 },
+    default: { x: 0, y: -35, width: 35, height: 35 }
+};
+
+const spearHitboxes = {
+    up: { x: -10, y: -70, width: 20, height: 60 },
+    down: { x: -10, y: 10, width: 20, height: 60 },
+    left: { x: -70, y: -10, width: 60, height: 20 },
+    right: { x: 10, y: -10, width: 60, height: 20 },
+    default: { x: 0, y: -60, width: 20, height: 60 }
+};
+
+// Use different modules for different weapon types
+export const swordCombatModule = createActionBattleModule({
+    playerAttackHitboxes: swordHitboxes,
+    playerAttackDamage: 40,
+    playerAttackSpeed: 4
+});
+
+export const spearCombatModule = createActionBattleModule({
+    playerAttackHitboxes: spearHitboxes,
+    playerAttackDamage: 35,
+    playerAttackSpeed: 3
+});
+```
+
+## Best Practices
 
 ### Performance
 
-1. **Limitez le nombre d'IA** : Trop d'ennemis IA peuvent impacter les performances
-2. **Ajustez les intervalles** : L'IA se met à jour toutes les 100ms par défaut
-3. **Nettoyage automatique** : Le système nettoie automatiquement les IA mortes
+1. **Limit AI Count**: Too many AI enemies can impact performance
+2. **Adjust Intervals**: AI updates every 100ms by default
+3. **Automatic Cleanup**: The system automatically cleans up dead AIs
+4. **Use Vision Buffers**: Prevent unnecessary vision state changes
 
-### Équilibrage
+### Balancing
 
-1. **Testez les statistiques** : Ajustez les valeurs selon la difficulté souhaitée
-2. **Variez les comportements** : Utilisez différentes configurations pour différents types d'ennemis
-3. **Feedback visuel** : Assurez-vous que les attaques sont visibles pour le joueur
+1. **Test Statistics**: Adjust values according to desired difficulty
+2. **Vary Behaviors**: Use different configurations for different enemy types
+3. **Visual Feedback**: Ensure attacks are visible to the player
+4. **Range Considerations**: Balance vision vs attack ranges
 
-### Débogage
+### Debugging
 
 ```typescript
-// Vérifier l'état d'une IA
-const aiData = battleAi.getAiData(event.id);
-console.log('AI Status:', {
-    health: `${aiData.health}/${aiData.maxHealth}`,
-    hasTarget: !!aiData.target,
-    targetId: aiData.target?.id
-});
+// Check AI state
+const ai = BattleAiManager.getAi(event.id);
+if (ai) {
+    console.log('AI Status:', {
+        hasTarget: !!ai.getTarget(),
+        targetId: ai.getTarget()?.id
+    });
+}
 
-// Surveiller les événements
+// Monitor events
 console.log(`AI applied to event ${event.id}`);
 console.log(`Player ${player.id} defeated AI ${event.id}`);
 ```
 
-## Limitations actuelles
+## Configuration Examples
 
-1. **Une cible à la fois** : Chaque IA ne peut poursuivre qu'un joueur
-2. **Vision circulaire** : Pas de vision conique ou directionnelle
-3. **Attaques simples** : Pas de patterns d'attaque complexes
-4. **Pas de pathfinding avancé** : Mouvement direct vers la cible
+### No Vision Buffer (Immediate Response)
 
-## Extensions possibles
+```typescript
+new BattleAi(event, {
+    visionRange: 150,
+    visionRangeBuffer: 0  // No buffer - immediate vision changes
+});
+```
 
-Le système peut être étendu pour inclure :
+### Large Vision Buffer (Stable Tracking)
 
-- Patterns d'attaque multiples
-- IA coopérative entre ennemis
-- Système d'états (patrouille, alerte, combat)
-- Pathfinding intelligent
-- Différents types de vision
-- Système de spawn automatique 
+```typescript
+new BattleAi(event, {
+    visionRange: 150,
+    visionRangeBuffer: 50  // Large buffer - stable tracking
+});
+```
+
+### Close-Range Attacker
+
+```typescript
+new BattleAi(event, {
+    visionRange: 100,
+    attackRange: 40,
+    attackDistance: 20  // Attack hitbox close to AI
+});
+```
+
+### Long-Range Attacker
+
+```typescript
+new BattleAi(event, {
+    visionRange: 200,
+    attackRange: 80,
+    attackDistance: 60  // Attack hitbox far from AI
+});
+```
+
+## Current Limitations
+
+1. **Single Target**: Each AI can only pursue one player at a time
+2. **Circular Vision**: No cone or directional vision support
+3. **Simple Attacks**: No complex attack patterns
+4. **Basic Pathfinding**: Direct movement towards target
+
+## Possible Extensions
+
+The system can be extended to include:
+
+- Multiple attack patterns
+- Cooperative AI between enemies
+- State system (patrol, alert, combat)
+- Intelligent pathfinding
+- Different vision types
+- Automatic spawn system
+- Formation-based AI
+- Behavior trees
+- Dynamic difficulty adjustment 

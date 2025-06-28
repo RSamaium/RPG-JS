@@ -30,12 +30,12 @@ export class BattleAi {
   private event: RpgEvent;
   private target: InstanceType<typeof RpgPlayer> | null = null;
   private lastAttackTime: number = 0;
-  private health: number;
-  private maxHealth: number;
   private attackDamage: number;
   private attackCooldown: number;
   private visionRange: number;
   private attackRange: number;
+  private attackDistance: number;
+  private visionRangeBuffer: number;
   private updateInterval?: any;
 
   /**
@@ -70,16 +70,28 @@ export class BattleAi {
       attackCooldown?: number;
       visionRange?: number;
       attackRange?: number;
+      attackDistance?: number;
+      visionRangeBuffer?: number;
     } = {}
   ) {
     event.battleAi = this;
     this.event = event;
-    this.health = options.health || 100;
-    this.maxHealth = options.health || 100;
+    
+    // Initialize event health if provided
+    if (options.health) {
+      this.event.hp = options.health;
+      // Set max HP parameter if not already set
+      if (!this.event.param[MAXHP]) {
+        this.event.param[MAXHP] = options.health;
+      }
+    }
+    
     this.attackDamage = options.attackDamage || 20;
     this.attackCooldown = options.attackCooldown || 1000; // 1 second
     this.visionRange = options.visionRange || 150;
     this.attackRange = options.attackRange || 40;
+    this.attackDistance = options.attackDistance || 30;
+    this.visionRangeBuffer = options.visionRangeBuffer || 0;
 
     // Setup AI systems
     this.setupVision();
@@ -148,8 +160,7 @@ export class BattleAi {
       const distance = this.getDistance(this.event, this.target);
 
       // Check if target is still in vision range
-      if (distance > this.visionRange * 1.2) {
-        // 20% buffer to avoid flickering
+      if (distance > this.visionRange + this.visionRangeBuffer) {
         this.target = null;
         this.event.stopMoveTo();
         return;
@@ -179,7 +190,7 @@ export class BattleAi {
     if (shape.id !== `vision_${this.event.id}`) return;
     // Set player as target and start pursuing
     this.target = player;
-    this.event.moveTo(player);
+   // this.event.moveTo(player);
   }
 
   /**
@@ -222,11 +233,10 @@ export class BattleAi {
     const dirY = dy / distance;
 
     // Create attack hitbox in front of the event
-    const attackDistance = 30;
     const hitboxes = [
       {
-        x: dirX * attackDistance,
-        y: dirY * attackDistance,
+        x: dirX * this.attackDistance,
+        y: dirY * this.attackDistance,
         width: 40,
         height: 40,
       },
@@ -253,9 +263,8 @@ export class BattleAi {
    * This method handles the actual damage calculation and application.
    *
    * @param player - The player to damage
-   * @param damage - Amount of damage to deal
    */
-  private damagePlayer(player: RpgPlayer) {
+  damagePlayer(player: RpgPlayer) {
     // Calculate knockback direction based on attack direction
     const dx = player.x() - this.event.x();
     const dy = player.y() - this.event.y();
@@ -285,22 +294,22 @@ export class BattleAi {
    * Reduces the AI's health and handles death if health reaches zero.
    * When an AI dies, it is removed from the map and cleaned up.
    *
-   * @param damage - Amount of damage to deal
+   * @param player - The attacking player
    * @returns True if the AI died, false otherwise
    */
-  takeDamage(damage: number): boolean {
-    this.health = Math.max(0, this.health - damage);
+  takeDamage(player: RpgPlayer): boolean {
+    const { damage } = this.event.applyDamage(player);
 
     // Show damage feedback
     this.event.showHit(`-${damage}`);
-    this.event.broadcastEffect("damage", { damage });
+    //this.event.broadcastEffect("damage", { damage });
 
     console.log(
-      `AI ${this.event.id} took ${damage} damage. HP: ${this.health}/${this.maxHealth}`
+      `AI ${this.event.id} took ${damage} damage. HP: ${this.event.hp}/${this.event.param[MAXHP]}`
     );
 
     // Check if AI died
-    if (this.health <= 0) {
+    if (this.event.hp <= 0) {
       this.kill();
       return true;
     }
@@ -347,7 +356,7 @@ export class BattleAi {
    * @returns Current health value
    */
   getHealth(): number {
-    return this.health;
+    return this.event.hp;
   }
 
   /**
@@ -356,7 +365,7 @@ export class BattleAi {
    * @returns Maximum health value
    */
   getMaxHealth(): number {
-    return this.maxHealth;
+    return this.event.param[MAXHP];
   }
 
   /**

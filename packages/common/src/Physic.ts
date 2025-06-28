@@ -139,16 +139,19 @@ export class RpgCommonPhysic {
     // 3. Resolve movable-to-movable collisions to prevent pushing
     this.resolveMovableCollisions();
 
-    // 4. Sync bodies positions to player objects
+    // 4. Resolve sensor collisions with static bodies (for events that shouldn't pass through walls)
+    this.resolveSensorWallCollisions();
+
+    // 5. Sync bodies positions to player objects
     this.syncBodies();
     
-    // 5. Sync linked zones -> host hitboxes
+    // 6. Sync linked zones -> host hitboxes
     this.syncLinkedZones();
     
-    // 6. Check for movement state changes
+    // 7. Check for movement state changes
     this.checkMovementChanges();
     
-    // 7. Clear intended movements for next frame (collision normals are cleared in collision end events)
+    // 8. Clear intended movements for next frame (collision normals are cleared in collision end events)
     this.intendedMovements.clear();
   }
 
@@ -918,8 +921,9 @@ export class RpgCommonPhysic {
     const body = this.getBody(id);
     if (!body) return false;
     
-    // Store intended movement for sliding calculations
     const hitbox = this.hitboxes.get(id);
+    
+    // Store intended movement for sliding calculations
     if (hitbox?.enableSliding) {
       this.intendedMovements.set(id, { x: dx, y: dy });
     }
@@ -1640,5 +1644,152 @@ export class RpgCommonPhysic {
     // Dot product to check if movement is in the same direction as the vector to the other body
     const dotProduct = movement.x * directionToB.x + movement.y * directionToB.y;
     return dotProduct > 0;
+  }
+
+  /**
+   * Check if a sensor body would collide with walls and adjust movement accordingly
+   * 
+   * @param body - The sensor body to check
+   * @param dx - Intended X movement
+   * @param dy - Intended Y movement
+   * @returns Adjusted movement vector that avoids wall collisions
+   */
+  private checkSensorWallCollision(body: Matter.Body, dx: number, dy: number): Matter.Vector {
+    // Get all static bodies (walls)
+    const staticBodies = Array.from(this.hitboxes.values())
+      .filter(h => h.type === 'static')
+      .map(h => h.body);
+    
+    // If no walls, allow full movement
+    if (staticBodies.length === 0) {
+      return { x: dx, y: dy };
+    }
+    
+    const currentPos = body.position;
+    const bodyWidth = body.bounds.max.x - body.bounds.min.x;
+    const bodyHeight = body.bounds.max.y - body.bounds.min.y;
+    
+    // Test each direction independently
+    let adjustedDx = dx;
+    let adjustedDy = dy;
+    
+    // Test X movement only
+    if (dx !== 0) {
+      const testXOnly = Matter.Bodies.rectangle(
+        currentPos.x + dx, 
+        currentPos.y, 
+        bodyWidth,
+        bodyHeight,
+        { isSensor: true }
+      );
+      
+      for (const staticBody of staticBodies) {
+        if (this.areBodiesTouching(testXOnly, staticBody)) {
+          adjustedDx = 0;
+          break;
+        }
+      }
+      
+      // Clean up test body
+      Matter.World.remove(this.world, testXOnly);
+    }
+    
+    // Test Y movement only
+    if (dy !== 0) {
+      const testYOnly = Matter.Bodies.rectangle(
+        currentPos.x, 
+        currentPos.y + dy, 
+        bodyWidth,
+        bodyHeight,
+        { isSensor: true }
+      );
+      
+      for (const staticBody of staticBodies) {
+        if (this.areBodiesTouching(testYOnly, staticBody)) {
+          adjustedDy = 0;
+          break;
+        }
+      }
+      
+      // Clean up test body
+      Matter.World.remove(this.world, testYOnly);
+    }
+    
+    return { x: adjustedDx, y: adjustedDy };
+  }
+
+  /**
+   * Resolve collisions between sensor bodies and static walls
+   * 
+   * Sensor bodies (like events with isSensor: true) normally pass through
+   * static bodies, but we want them to be blocked by walls during knockback
+   * and other movement effects.
+   */
+  private resolveSensorWallCollisions(): void {
+    // Get all sensor bodies (movable hitboxes with isSensor: true)
+    const sensorBodies: { id: string; body: Matter.Body }[] = [];
+    
+    for (const [id, hitboxData] of this.hitboxes.entries()) {
+      if (hitboxData.type === 'movable' && hitboxData.body.isSensor) {
+        sensorBodies.push({ id, body: hitboxData.body });
+      }
+    }
+    
+    // Get all static bodies (walls)
+    const staticBodies = Array.from(this.hitboxes.values())
+      .filter(h => h.type === 'static')
+      .map(h => h.body);
+    
+    // Check each sensor body against all static bodies
+    for (const { id, body: sensorBody } of sensorBodies) {
+      for (const staticBody of staticBodies) {
+        // Check if sensor body overlaps with static body
+        if (this.areBodiesTouching(sensorBody, staticBody)) {
+          // Calculate separation vector to push sensor body out of static body
+          const separation = this.calculateSeparation(sensorBody, staticBody);
+          
+          if (separation.x !== 0 || separation.y !== 0) {
+            // Apply separation to move sensor body out of static body
+            Matter.Body.translate(sensorBody, separation);
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Calculate the minimum separation vector to separate two overlapping bodies
+   * 
+   * @param bodyA - First body (the one to move)
+   * @param bodyB - Second body (static reference)
+   * @returns Vector to separate bodyA from bodyB
+   */
+  private calculateSeparation(bodyA: Matter.Body, bodyB: Matter.Body): Matter.Vector {
+    const boundsA = bodyA.bounds;
+    const boundsB = bodyB.bounds;
+    
+    // Calculate overlap on each axis
+    const overlapX = Math.min(boundsA.max.x, boundsB.max.x) - Math.max(boundsA.min.x, boundsB.min.x);
+    const overlapY = Math.min(boundsA.max.y, boundsB.max.y) - Math.max(boundsA.min.y, boundsB.min.y);
+    
+    // If no overlap, no separation needed
+    if (overlapX <= 0 || overlapY <= 0) {
+      return { x: 0, y: 0 };
+    }
+    
+    // Choose the axis with minimum overlap for separation
+    if (overlapX < overlapY) {
+      // Separate horizontally
+      const centerA = (boundsA.min.x + boundsA.max.x) / 2;
+      const centerB = (boundsB.min.x + boundsB.max.x) / 2;
+      const direction = centerA < centerB ? -1 : 1;
+      return { x: direction * overlapX, y: 0 };
+    } else {
+      // Separate vertically
+      const centerA = (boundsA.min.y + boundsA.max.y) / 2;
+      const centerB = (boundsB.min.y + boundsB.max.y) / 2;
+      const direction = centerA < centerB ? -1 : 1;
+      return { x: 0, y: direction * overlapY };
+    }
   }
 }
