@@ -1,10 +1,18 @@
-<Container positionType="absolute" top={top} left={left}>
+<Container positionType={positionType} top={top} left={left} right={right} bottom={bottom} zIndex={zIndex}>
     <Container
-      anchor={[0.5, 0.5]}
+      anchor={anchor}
       height
       width
     >
-    <Rect width height color={_color} />
+    <Rect 
+      width 
+      height 
+      color={_color} 
+      alpha={alpha}
+      borderRadius={borderRadius}
+      border={_border}
+      shadow={_shadow}
+    />
     <Container attach={child}></Container>
   </Container>  
 </Container>
@@ -12,8 +20,88 @@
 <script>
   import { RpgClientEngine, inject } from "../../index";
 
-  const { width, height, children, color, top, left } = defineProps();
+  const { 
+    width, 
+    height, 
+    children, 
+    color, 
+    top, 
+    left, 
+    right, 
+    bottom,
+    positionType,
+    anchor,
+    alpha,
+    borderRadius,
+    border,
+    shadow,
+    zIndex
+  } = defineProps({
+    positionType: {
+      default: "absolute"
+    },
+    anchor: {
+      default: [0.5, 0.5]
+    },
+    alpha: {
+      default: 0.9
+    },
+    borderRadius: {
+      default: 0
+    },
+    border: {
+      default: null
+    },
+    shadow: {
+      default: null
+    },
+    zIndex: {
+      default: 0
+    },
+    top: {
+      default: 0
+    },
+    left: {
+      default: 0
+    },
+    right: {
+      default: null
+    },
+    bottom: {
+      default: null
+    }
+  });
+
   const engine = inject(RpgClientEngine)
   const child = children[0]
+  
   const _color = computed(() => engine.globalConfig.gui?.windowColor || color?.() || "#1a1a2e")
+  
+  const _border = computed(() => {
+    if (!border) return null;
+    const borderValue = border();
+    if (typeof borderValue === 'object') {
+      return {
+        width: borderValue.width || 2,
+        color: borderValue.color || "#595971",
+        ...borderValue
+      };
+    }
+    return { width: 2, color: "#595971" };
+  });
+  
+  const _shadow = computed(() => {
+    if (!shadow) return null;
+    const shadowValue = shadow();
+    if (typeof shadowValue === 'object') {
+      return {
+        color: shadowValue.color || "#000",
+        blur: shadowValue.blur || 5,
+        offsetX: shadowValue.offsetX || 2,
+        offsetY: shadowValue.offsetY || 2,
+        ...shadowValue
+      };
+    }
+    return { color: "#000", blur: 5, offsetX: 2, offsetY: 2 };
+  });
 </script>

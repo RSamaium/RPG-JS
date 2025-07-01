@@ -1,8 +1,58 @@
-<BoxComponent width={120} height={70} top={10} left={10}>
+<BoxComponent 
+    width={150} 
+    height={80} 
+    top={10} 
+    left={10}
+    color="#2c3e50"
+    alpha={0.95}
+    borderRadius={10}
+    border={{ width: 3, color: "#e74c3c" }}
+    shadow={{ color: "#000", blur: 8, offsetX: 4, offsetY: 4 }}
+    zIndex={100}
+>
     <Container positionType="absolute">
         <Container flexDirection="row" alignItems="center" top={0}>
             <Sprite image="wood.png" width={64} />
             <Text text={`: ${wood}`} color="white" />
+        </Container>    
+    </Container>
+</BoxComponent>
+
+<!-- Exemple d'une deuxième box avec un style différent -->
+<BoxComponent 
+    width={120} 
+    height={60} 
+    top={100} 
+    left={10}
+    color="#27ae60"
+    alpha={0.8}
+    borderRadius={15}
+    positionType="absolute"
+    anchor={[0, 0]}
+    shadow={{ color: "#2c3e50", blur: 5, offsetX: 2, offsetY: 2 }}
+>
+    <Container positionType="absolute">
+        <Container flexDirection="column" alignItems="center" justifyContent="center" height="100%">
+            <Text text="Score" color="white" fontSize={12} />
+            <Text text="1250" color="#f1c40f" fontSize={16} />
+        </Container>    
+    </Container>
+</BoxComponent>
+
+<!-- Exemple d'une box positionnée en bas à droite -->
+<BoxComponent 
+    width={100} 
+    height={50} 
+    bottom={20} 
+    right={20}
+    color="#8e44ad"
+    alpha={0.9}
+    borderRadius={8}
+    border={{ width: 2, color: "#9b59b6" }}
+>
+    <Container positionType="absolute">
+        <Container alignItems="center" justifyContent="center" height="100%">
+            <Text text="Menu" color="white" fontSize={14} />
         </Container>    
     </Container>
 </BoxComponent>
