@@ -204,6 +204,203 @@ const _color = computed(() =>
 </BoxComponent>
 ```
 
+## Persistent GUI with Dependencies
+
+When creating persistent GUI elements that remain on screen (like resource counters, health bars, or status displays), it's crucial to properly configure dependencies to ensure the GUI only displays when the required data is available.
+
+### The Problem
+
+Without proper dependencies, your GUI might:
+- Display before the player data is loaded
+- Show undefined or null values
+- Cause runtime errors when accessing player properties
+- Create a poor user experience with flickering or empty displays
+
+### Solution: Using Dependencies with currentPlayer
+
+Configure your GUI with `dependencies` that wait for `currentPlayer` to be available:
+
+```javascript
+// In your client configuration (e.g., config.client.ts)
+import { inject, RpgClientEngine } from "@rpgjs/client";
+
+export default {
+  providers: [
+    provideClientModules([
+      {
+        gui: [
+          {
+            id: "wood-ui",
+            component: WoodUiComponent,
+            autoDisplay: true,
+            dependencies: () => {
+              const engine = inject(RpgClientEngine);
+              return [engine.scene.currentPlayer];
+            }
+          }
+        ]
+      }
+    ])
+  ]
+};
+```
+
+### Complete Example: Resource Counter
+
+Here's a complete example showing how to create a persistent resource counter:
+
+#### 1. Component Implementation (`wood-ui.ce`)
+
+```vue
+<BoxComponent width={120} height={70} top={10} left={10}>
+    <Container positionType="absolute">
+        <Container flexDirection="row" alignItems="center" top={0}>
+            <Sprite image="wood.png" width={64} />
+            <Text text={`: ${wood}`} color="white" />
+        </Container>    
+    </Container>
+</BoxComponent>
+
+<script>
+    import { BoxComponent, RpgClientEngine, inject } from "@rpgjs/client";
+    
+    const engine = inject(RpgClientEngine);
+    
+    // This will be reactive and safe because dependencies ensure currentPlayer exists
+    const wood = computed(() => {
+        const currentPlayer = engine.getCurrentPlayer();
+        return currentPlayer?.wood() || 0; // Safe access with fallback
+    });
+</script>
+```
+
+#### 2. GUI Configuration
+
+```javascript
+gui: [
+  {
+    id: "wood-ui",
+    component: WoodUiComponent,
+    autoDisplay: true,
+    dependencies: () => {
+      const engine = inject(RpgClientEngine);
+      return [engine.scene.currentPlayer];
+    }
+  }
+]
+```
+
+### Advanced Dependencies
+
+For more complex scenarios, you can add multiple dependencies:
+
+```javascript
+dependencies: () => {
+  const engine = inject(RpgClientEngine);
+  return [
+    engine.scene.currentPlayer,    // Wait for player
+    engine.scene.data,             // Wait for scene data
+    customGameStateSignal          // Wait for custom state
+  ];
+}
+```
+
+### Best Practices for Persistent GUIs
+
+1. **Always Use Dependencies**: Never create persistent GUIs without proper dependencies
+2. **Safe Property Access**: Use optional chaining (`?.`) and fallback values
+3. **Minimal Dependencies**: Only include dependencies that are truly required
+4. **Performance Considerations**: Keep dependency arrays small for better performance
+
+### Common Patterns
+
+#### Health Bar
+```javascript
+{
+  id: "health-bar",
+  component: HealthBarComponent,
+  autoDisplay: true,
+  dependencies: () => {
+    const engine = inject(RpgClientEngine);
+    return [engine.scene.currentPlayer];
+  }
+}
+```
+
+#### Inventory Counter
+```javascript
+{
+  id: "inventory-counter",
+  component: InventoryCounterComponent,
+  autoDisplay: true,
+  dependencies: () => {
+    const engine = inject(RpgClientEngine);
+    return [
+      engine.scene.currentPlayer,
+      inventorySignal  // Custom inventory signal
+    ];
+  }
+}
+```
+
+#### Multi-Resource Display
+```javascript
+{
+  id: "resources-panel",
+  component: ResourcesPanelComponent,
+  autoDisplay: true,
+  dependencies: () => {
+    const engine = inject(RpgClientEngine);
+    return [
+      engine.scene.currentPlayer,
+      engine.scene.data  // Might need scene data for resource calculations
+    ];
+  }
+}
+```
+
+### Debugging Dependencies
+
+If your GUI isn't displaying, check your dependencies:
+
+```javascript
+// In your component or configuration
+const engine = inject(RpgClientEngine);
+console.log('Current Player:', engine.scene.currentPlayer());
+console.log('Scene Data:', engine.scene.data());
+
+// Check if dependencies are resolved
+const deps = [engine.scene.currentPlayer];
+console.log('Dependencies resolved:', deps.every(dep => dep() !== undefined));
+```
+
+### Migration from Manual Display
+
+If you're currently manually displaying GUIs, migrate to the dependency system:
+
+```javascript
+// ❌ Old way - manual display (unreliable)
+sceneMap: {
+  onAfterLoading: (scene) => {
+    const gui = inject(RpgGui);
+    gui.display('wood-ui'); // Might display before player is ready
+  }
+}
+
+// ✅ New way - dependency-based (reliable)
+gui: [
+  {
+    id: "wood-ui",
+    component: WoodUiComponent,
+    autoDisplay: true,
+    dependencies: () => {
+      const engine = inject(RpgClientEngine);
+      return [engine.scene.currentPlayer];
+    }
+  }
+]
+```
+
 ## Troubleshooting
 
 ### Common Issues
@@ -212,6 +409,8 @@ const _color = computed(() =>
 2. **Color not applying**: Verify the color string format and global config setup.
 3. **Content overflow**: Ensure child content fits within the specified dimensions.
 4. **Positioning issues**: Remember that positioning is absolute and relative to the parent container.
+5. **GUI not displaying**: Ensure dependencies are properly configured and resolved.
+6. **Undefined player data**: Always use dependencies when accessing currentPlayer properties.
 
 ### Debug Tips
 
@@ -219,4 +418,12 @@ const _color = computed(() =>
 // Log the current global config to verify settings
 const engine = inject(RpgClientEngine);
 console.log('Global Config:', engine.globalConfig);
+
+// Check if currentPlayer is available
+console.log('Current Player:', engine.getCurrentPlayer());
+console.log('Player Signal:', engine.scene.currentPlayer());
+
+// Verify GUI dependencies
+const gui = inject(RpgGui);
+console.log('GUI Instance:', gui.get('your-gui-id'));
 ```
