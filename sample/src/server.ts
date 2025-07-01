@@ -8,6 +8,14 @@ export function Event() {
     },
     async onAction(player: RpgPlayer) {
       player.gold = 100;
+      
+      // Show notification examples
+      await player.showNotification('You have found a treasure!', {
+        time: 2000,
+        icon: 'treasure-icon',
+        sound: 'treasure-sound'
+      });
+      
       player.showText("Hello World", {
         talkWith: this
       });
@@ -38,6 +46,12 @@ export default createServer({
             if (input.action) {
              player.wood.update(wood => wood + 1)
              player.showComponentAnimation('wood')
+             
+             // Show notification when collecting wood
+             player.showNotification(`Wood collected! Total: ${player.wood() + 1}`, {
+               time: 1500,
+               icon: 'wood-icon'
+             });
             }
           }
         },

@@ -1,0 +1,191 @@
+<Container 
+  justifyContent="center" 
+  alignItems="flex-start" 
+  width="100%" 
+  height="100%"
+  positionType="absolute"
+  top={20}
+  right={20}
+  pointerEvents="none"
+>
+  <Container
+    ref="notification"
+    scale={{ x: scaleX, y: scaleY }}
+    anchor={[1, 0]}
+    width={400}
+    height="auto"
+    positionType="absolute"
+    top={0}
+    right={0}
+    alpha={opacity}
+  >
+    <Rect 
+      width={400} 
+      height="auto"
+      color="#2c3e50"
+      alpha={0.95}
+      borderRadius={8}
+      border
+      shadow
+    />
+    
+    <Container
+      flexDirection="row"
+      width={400}
+      height="auto"
+      padding={16}
+      alignItems="center"
+    >
+      @if (iconSprite) {
+        <Sprite 
+          texture={iconSprite}
+          width={32}
+          height={32}
+          marginRight={12}
+        />
+      }
+      
+      <Container flexDirection="column" flex={1}>
+        <Text
+          text={message}
+          color="#ffffff"
+          fontSize={16}
+          style={textStyle}
+        />
+      </Container>
+    </Container>
+    
+    <!-- Progress bar for time remaining -->
+    @if (showProgressBar) {
+      <Rect
+        x={0}
+        y={-4}
+        width={progressWidth}
+        height={4}
+        color="#3498db"
+        positionType="absolute"
+        bottom={0}
+      />
+    }
+  </Container>
+</Container>
+
+<script>
+  import {
+    animatedSignal,
+    computed,
+    signal,
+    mount,
+    effect
+  } from "canvasengine";
+
+  import { inject } from "../../core/inject";
+  import { RpgClientEngine } from "../../RpgClientEngine";
+
+  const {
+    message: _message,
+    time = 3000,
+    icon,
+    sound,
+    onFinish
+  } = defineProps();
+
+  const client = inject(RpgClientEngine);
+  
+  const message = computed(() => _message() || '');
+  
+  // Animation signals
+  const scaleX = animatedSignal(0.8, { duration: 300, easing: 'easeOutBack' });
+  const scaleY = animatedSignal(0.8, { duration: 300, easing: 'easeOutBack' });
+  const opacity = animatedSignal(0, { duration: 300 });
+  
+  // Progress bar
+  const showProgressBar = signal(true);
+  const progressWidth = animatedSignal(400, { duration: time(), easing: 'linear' });
+  
+  // Icon handling
+  const iconSprite = computed(() => {
+    const iconId = icon();
+    if (!iconId) return null;
+    
+    // Try to get sprite from client resources
+    try {
+      return client.getSprite?.(iconId) || null;
+    } catch (e) {
+      console.warn(`Icon sprite not found: ${iconId}`);
+      return null;
+    }
+  });
+
+  const textStyle = {
+    wordWrap: true,
+    wordWrapWidth: 320,
+    lineHeight: 20
+  };
+
+  let timeoutId = null;
+  let isDestroyed = false;
+
+  // Play sound if provided
+  effect(() => {
+    const soundId = sound();
+    if (soundId && client.playSound) {
+      try {
+        client.playSound(soundId);
+      } catch (e) {
+        console.warn(`Sound not found: ${soundId}`);
+      }
+    }
+  });
+
+  // Start entrance animation
+  scaleX.set(1);
+  scaleY.set(1);
+  opacity.set(1);
+  
+  // Start progress bar animation
+  progressWidth.set(0);
+
+  // Auto close after specified time
+  timeoutId = setTimeout(() => {
+    if (!isDestroyed) {
+      closeNotification();
+    }
+  }, time());
+
+  function closeNotification() {
+    if (isDestroyed) return;
+    
+    // Exit animation
+    scaleX.set(0.8);
+    scaleY.set(0.8);
+    opacity.set(0);
+    
+    setTimeout(() => {
+      if (onFinish && !isDestroyed) {
+        onFinish();
+      }
+    }, 300);
+  }
+
+  mount((element) => {
+    return () => {
+      isDestroyed = true;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    }
+  });
+
+  // Allow manual close on click (optional)
+  const controls = signal({
+    close: {
+      bind: 'escape',
+      keyDown() {
+        if (!isDestroyed) {
+          closeNotification();
+        }
+      }
+    }
+  });
+</script>

@@ -207,6 +207,40 @@ export abstract class RpgCommonPlayer {
   abstract showComponentAnimation(id: string, params: any): void;
 
   /**
+   * Display a notification message
+   * 
+   * Shows a temporary notification with optional icon and sound.
+   * The notification appears in the top-right corner of the screen
+   * and automatically disappears after the specified time.
+   * 
+   * @param message - The message to display in the notification
+   * @param options - Configuration options for the notification
+   * @param options.time - Duration to show the notification in milliseconds (default: 3000)
+   * @param options.icon - ID of the icon sprite to display (optional)
+   * @param options.sound - ID of the sound to play when showing (optional)
+   * 
+   * @example
+   * ```ts
+   * // Simple notification
+   * player.showNotification('You have unlocked the secret passage');
+   * 
+   * // Notification with custom duration
+   * player.showNotification('Item received!', { time: 2000 });
+   * 
+   * // Notification with icon and sound
+   * player.showNotification('Level up!', {
+   *   time: 4000,
+   *   icon: 'level-up-icon',
+   *   sound: 'level-up-sound'
+   * });
+   * ```
+   */
+  abstract showNotification(
+    message: string, 
+    options?: { time?: number; icon?: string; sound?: string }
+  ): Promise<any>;
+
+  /**
    * Display a spritesheet animation on the player
    * 
    * This method displays a temporary visual animation using a spritesheet.

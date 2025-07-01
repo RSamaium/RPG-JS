@@ -21,7 +21,8 @@
     "@signe/reactive": "^2.3.1",
     "@signe/sync": "^2.3.1",
     "matter-js": "^0.20.0",
-    "rxjs": "^7.8.2"
+    "rxjs": "^7.8.2",
+    "typescript": "^5.8.3"
   },
   "devDependencies": {
     "vite": "^6.2.5",

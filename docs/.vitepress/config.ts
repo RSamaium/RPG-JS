@@ -8,7 +8,8 @@ const guideMenu = [{
     { text: "Display Animations", link: "/guide/display-animations" },
     { text: "Create Movement", link: "/guide/create-movement" },
     { text: "Sprite Components", link: "/guide/sprite-components" },
-    { text: "Battle AI", link: "/guide/battle-ai" }
+    { text: "Battle AI", link: "/guide/battle-ai" },
+    { text: "Notifications", link: "/guide/notifications" }
   ]
 }]
 

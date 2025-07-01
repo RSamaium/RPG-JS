@@ -1,7 +1,7 @@
 import { Context, inject } from "@signe/di";
 import { signal, Signal, WritableSignal } from "canvasengine";
 import { AbstractWebsocket, WebSocketToken } from "../services/AbstractSocket";
-import { DialogboxComponent } from "../components/gui";
+import { DialogboxComponent, NotificationComponent } from "../components/gui";
 import { combineLatest, Subscription } from "rxjs";
 
 interface GuiOptions {
@@ -46,6 +46,10 @@ export class RpgGui {
     this.add({
       name: "rpg-dialog",
       component: DialogboxComponent,
+    });
+    this.add({
+      name: "rpg-notification",
+      component: NotificationComponent,
     });
   }
 
