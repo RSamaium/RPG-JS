@@ -1,5 +1,6 @@
 import { startGame } from "../core/setup";
-import { provideServerReconciliation } from "../services/ServerReconciliationProvider";
+import { provideServerReconciliation, getClientPredictionService, ClientPredictionToken } from "../services/ServerReconciliationProvider";
+import { inject } from "../core/inject";
 
 /**
  * Example usage of the Server Reconciliation Provider
@@ -10,22 +11,22 @@ import { provideServerReconciliation } from "../services/ServerReconciliationPro
 
 // Basic usage with default configuration
 export async function setupGameWithBasicReconciliation() {
-  const game = await startGame({
+  const context = await startGame({
     providers: [
       // Add server reconciliation with default settings
-      provideServerReconciliation()
+      ...provideServerReconciliation()
     ]
   });
   
-  return game;
+  return context;
 }
 
 // Advanced usage with custom configuration
 export async function setupGameWithCustomReconciliation() {
-  const game = await startGame({
+  const context = await startGame({
     providers: [
       // Customize reconciliation behavior
-      provideServerReconciliation({
+      ...provideServerReconciliation({
         enabled: true,
         smoothThreshold: 3,      // Smoother corrections for small differences
         snapThreshold: 30,       // More aggressive snapping for medium differences
@@ -35,15 +36,15 @@ export async function setupGameWithCustomReconciliation() {
     ]
   });
   
-  return game;
+  return context;
 }
 
 // Production-ready configuration
 export async function setupProductionGame() {
-  const game = await startGame({
+  const context = await startGame({
     providers: [
       // Optimized settings for production
-      provideServerReconciliation({
+      ...provideServerReconciliation({
         enabled: true,
         smoothThreshold: 5,      // Standard threshold
         snapThreshold: 50,       // Conservative snapping
@@ -53,7 +54,30 @@ export async function setupProductionGame() {
     ]
   });
   
-  return game;
+  return context;
+}
+
+// Example of accessing services via dependency injection
+export async function setupGameWithServiceAccess() {
+  const context = await startGame({
+    providers: [
+      ...provideServerReconciliation({
+        smoothThreshold: 5,
+        snapThreshold: 50
+      })
+    ]
+  });
+  
+  // Access services through dependency injection
+  try {
+    const clientPredictionService = getClientPredictionService(context);
+    const stats = clientPredictionService.getStats('player-id');
+    console.log('Prediction service stats:', stats);
+  } catch (error) {
+    console.error('Could not access services:', error);
+  }
+  
+  return context;
 }
 
 /**

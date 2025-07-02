@@ -4,6 +4,9 @@ export {
   getClientPredictionService,
   getInterpolationService,
   getServerReconciliationConfig,
+  ClientPredictionToken,
+  InterpolationToken,
+  ServerReconciliationConfigToken,
   type ServerReconciliationConfig
 } from './ServerReconciliationProvider';
 

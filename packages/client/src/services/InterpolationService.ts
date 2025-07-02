@@ -20,7 +20,7 @@ export class InterpolationService {
   private activeInterpolations: Map<string, InterpolationTarget> = new Map();
   private animationFrameId: number | null = null;
 
-  constructor() {
+  constructor(protected context: any) {
     this.startUpdateLoop();
   }
 
@@ -161,5 +161,5 @@ export class InterpolationService {
   }
 }
 
-// Singleton instance of the interpolation service
-export const interpolationService = new InterpolationService();
+// Fallback singleton instance of the interpolation service (for backward compatibility)
+export const interpolationService = new InterpolationService({} as any);

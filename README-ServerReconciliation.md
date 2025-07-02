@@ -12,7 +12,7 @@ import { provideServerReconciliation } from '@rpgjs/client'
 
 startGame({
   providers: [
-    provideServerReconciliation()
+    ...provideServerReconciliation()
   ]
 })
 ```
@@ -22,7 +22,7 @@ startGame({
 ```typescript
 startGame({
   providers: [
-    provideServerReconciliation({
+    ...provideServerReconciliation({
       enabled: true,                  // Activer la réconciliation
       smoothThreshold: 5,             // Seuil pour interpolation douce (pixels)
       snapThreshold: 50,              // Seuil pour téléportation instantanée (pixels)
@@ -79,7 +79,7 @@ interface ServerReconciliationConfig {
 
 #### Jeu Rapide (Action)
 ```typescript
-provideServerReconciliation({
+...provideServerReconciliation({
   smoothThreshold: 3,      // Corrections plus sensibles
   snapThreshold: 30,       // Téléportation plus aggressive
   interpolationDuration: 50 // Corrections très rapides
@@ -88,7 +88,7 @@ provideServerReconciliation({
 
 #### Jeu Standard (RPG)
 ```typescript
-provideServerReconciliation({
+...provideServerReconciliation({
   smoothThreshold: 5,      // Équilibre standard
   snapThreshold: 50,       // Téléportation modérée
   interpolationDuration: 100 // Corrections fluides
@@ -97,7 +97,7 @@ provideServerReconciliation({
 
 #### Connexion Lente
 ```typescript
-provideServerReconciliation({
+...provideServerReconciliation({
   smoothThreshold: 8,      // Plus tolérant
   snapThreshold: 80,       // Téléportation moins fréquente
   maxTimeDifference: 1000  // Accepte des données plus anciennes
@@ -115,15 +115,24 @@ import {
   getServerReconciliationConfig 
 } from '@rpgjs/client'
 
-// Obtenir les services configurés
-const predictionService = getClientPredictionService();
-const interpolationService = getInterpolationService();
-const config = getServerReconciliationConfig();
+// Dans une classe ou méthode qui a accès au contexte
+async function accessServices() {
+  const context = await startGame({
+    providers: [
+      ...provideServerReconciliation()
+    ]
+  });
 
-// Obtenir des statistiques
-const stats = predictionService.getStats(playerId);
-console.log('Mouvements en attente:', stats.pendingMovements);
-console.log('Interpolation en cours:', stats.isInterpolating);
+  // Obtenir les services configurés via injection de dépendance
+  const predictionService = getClientPredictionService(context);
+  const interpolationService = getInterpolationService(context);
+  const config = getServerReconciliationConfig(context);
+
+  // Obtenir des statistiques
+  const stats = predictionService.getStats(playerId);
+  console.log('Mouvements en attente:', stats.pendingMovements);
+  console.log('Interpolation en cours:', stats.isInterpolating);
+}
 ```
 
 ### Intégration avec RpgClientPlayer
@@ -172,7 +181,7 @@ const isDevelopment = process.env.NODE_ENV === 'development';
 
 startGame({
   providers: [
-    provideServerReconciliation({
+    ...provideServerReconciliation({
       smoothThreshold: isDevelopment ? 10 : 5,
       snapThreshold: isDevelopment ? 100 : 50,
       // Plus tolérant en développement
@@ -185,7 +194,8 @@ startGame({
 ```typescript
 // Activer les logs en développement
 if (process.env.NODE_ENV === 'development') {
-  const service = getClientPredictionService();
+  // Dans un contexte où vous avez accès au context de l'injection de dépendance
+  const service = getClientPredictionService(context);
   setInterval(() => {
     const stats = service.getStats(currentPlayerId);
     console.log('Reconciliation Stats:', stats);
@@ -196,9 +206,9 @@ if (process.env.NODE_ENV === 'development') {
 ### Gestion des Erreurs
 ```typescript
 try {
-  const game = await startGame({
+  const context = await startGame({
     providers: [
-      provideServerReconciliation({
+      ...provideServerReconciliation({
         // configuration...
       })
     ]

@@ -44,7 +44,7 @@ export class ClientPredictionService {
     maxTimeDifference: 500 // ms - maximum time difference to accept for reconciliation
   };
 
-  constructor(config?: Partial<ReconciliationConfig>) {
+  constructor(protected context: any, config?: Partial<ReconciliationConfig>) {
     if (config) {
       this.config = { ...this.config, ...config };
     }
@@ -278,5 +278,5 @@ export class ClientPredictionService {
   }
 }
 
-// Singleton instance of the service
-export const clientPredictionService = new ClientPredictionService();
+// Fallback singleton instance of the service (for backward compatibility)
+export const clientPredictionService = new ClientPredictionService({} as any);

@@ -1,6 +1,14 @@
 import { RpgClientObject } from "./Object";
 import { Direction } from "@rpgjs/common";
-import { getClientPredictionService, getInterpolationService, getServerReconciliationConfig } from "../services/ServerReconciliationProvider";
+import { 
+  getClientPredictionService, 
+  getInterpolationService, 
+  getServerReconciliationConfig,
+  ClientPredictionToken,
+  InterpolationToken,
+  ServerReconciliationConfigToken
+} from "../services/ServerReconciliationProvider";
+import { inject, context } from "../core/inject";
 
 interface ServerPositionData {
     x: number;
@@ -30,8 +38,17 @@ export class RpgClientPlayer extends RpgClientObject {
 
     constructor() {
         super();
-        // Register player for reconciliation
-        getClientPredictionService().registerPlayer(this);
+        
+        // Register player for reconciliation if services are available
+        try {
+            if (context) {
+                const clientPredictionService = getClientPredictionService(context);
+                clientPredictionService.registerPlayer(this);
+            }
+        } catch (error) {
+            // Services not available - reconciliation disabled
+            console.warn('[RpgClientPlayer] Server reconciliation services not available:', error);
+        }
     }
 
     /**
@@ -45,12 +62,19 @@ export class RpgClientPlayer extends RpgClientObject {
             config.snapThreshold !== undefined || 
             config.interpolationDuration !== undefined ||
             config.maxTimeDifference !== undefined) {
-            getClientPredictionService().setConfig({
-                smoothThreshold: config.smoothThreshold,
-                snapThreshold: config.snapThreshold,
-                interpolationDuration: config.interpolationDuration,
-                maxTimeDifference: config.maxTimeDifference
-            });
+            try {
+                if (context) {
+                    const clientPredictionService = getClientPredictionService(context);
+                    clientPredictionService.setConfig({
+                        smoothThreshold: config.smoothThreshold,
+                        snapThreshold: config.snapThreshold,
+                        interpolationDuration: config.interpolationDuration,
+                        maxTimeDifference: config.maxTimeDifference
+                    });
+                }
+            } catch (error) {
+                console.warn('[RpgClientPlayer] Could not configure prediction service:', error);
+            }
         }
     }
 
@@ -84,7 +108,14 @@ export class RpgClientPlayer extends RpgClientObject {
         }
 
         // Positions differ - use reconciliation service
-        getClientPredictionService().reconcileWithServer(this, serverData);
+        try {
+            if (context) {
+                const clientPredictionService = getClientPredictionService(context);
+                clientPredictionService.reconcileWithServer(this, serverData);
+            }
+        } catch (error) {
+            console.warn('[RpgClientPlayer] Could not reconcile with server:', error);
+        }
     }
 
     /**
@@ -108,7 +139,14 @@ export class RpgClientPlayer extends RpgClientObject {
      * Force sync with server position (for teleports, map changes, etc.)
      */
     forceServerSync(x: number, y: number): void {
-        getInterpolationService().stopInterpolation((this as any).id);
+        try {
+            if (context) {
+                const interpolationService = getInterpolationService(context);
+                interpolationService.stopInterpolation((this as any).id);
+            }
+        } catch (error) {
+            console.warn('[RpgClientPlayer] Could not stop interpolation:', error);
+        }
         
         // Apply server position immediately
         (this as any).x.set(x);
@@ -132,7 +170,7 @@ export class RpgClientPlayer extends RpgClientObject {
             predictionEnabled: this._clientPredictionEnabled,
             lastServerUpdate: this._lastServerUpdate,
             timeSinceLastUpdate: Date.now() - this._lastServerUpdate,
-            serviceStats: getClientPredictionService().getStats((this as any).id)
+            serviceStats: this.getServiceStats()
         };
     }
 
@@ -156,6 +194,28 @@ export class RpgClientPlayer extends RpgClientObject {
      * Cleanup prediction resources
      */
     cleanupPrediction(): void {
-        getClientPredictionService().cleanup((this as any).id);
+        try {
+            if (context) {
+                const clientPredictionService = getClientPredictionService(context);
+                clientPredictionService.cleanup((this as any).id);
+            }
+        } catch (error) {
+            console.warn('[RpgClientPlayer] Could not cleanup prediction:', error);
+        }
+    }
+
+    /**
+     * Get service statistics (helper method)
+     */
+    private getServiceStats(): any {
+        try {
+            if (context) {
+                const clientPredictionService = getClientPredictionService(context);
+                return clientPredictionService.getStats((this as any).id);
+            }
+        } catch (error) {
+            console.warn('[RpgClientPlayer] Could not get service stats:', error);
+        }
+        return null;
     }
 }   

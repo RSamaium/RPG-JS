@@ -1,5 +1,5 @@
-import { ClientPredictionService, clientPredictionService } from "./ClientPrediction";
-import { InterpolationService, interpolationService } from "./InterpolationService";
+import { ClientPredictionService } from "./ClientPrediction";
+import { InterpolationService } from "./InterpolationService";
 
 export interface ServerReconciliationConfig {
   /** Enable server reconciliation */
@@ -14,30 +14,30 @@ export interface ServerReconciliationConfig {
   maxTimeDifference?: number;
 }
 
-// Service instances
-let _clientPredictionService: ClientPredictionService;
-let _interpolationService: InterpolationService;
-let _config: ServerReconciliationConfig;
+// Tokens for dependency injection
+export const ClientPredictionToken = Symbol("ClientPredictionService");
+export const InterpolationToken = Symbol("InterpolationService");
+export const ServerReconciliationConfigToken = Symbol("ServerReconciliationConfig");
 
 /**
- * Get the client prediction service instance
+ * Get the client prediction service from context
  */
-export function getClientPredictionService(): ClientPredictionService {
-  return _clientPredictionService || clientPredictionService;
+export function getClientPredictionService(context: any): ClientPredictionService {
+  return context.inject(ClientPredictionToken);
 }
 
 /**
- * Get the interpolation service instance
+ * Get the interpolation service from context
  */
-export function getInterpolationService(): InterpolationService {
-  return _interpolationService || interpolationService;
+export function getInterpolationService(context: any): InterpolationService {
+  return context.inject(InterpolationToken);
 }
 
 /**
- * Get the server reconciliation configuration
+ * Get the server reconciliation configuration from context
  */
-export function getServerReconciliationConfig(): ServerReconciliationConfig {
-  return _config;
+export function getServerReconciliationConfig(context: any): ServerReconciliationConfig {
+  return context.inject(ServerReconciliationConfigToken);
 }
 
 /**
@@ -49,7 +49,7 @@ export function getServerReconciliationConfig(): ServerReconciliationConfig {
  * 
  * startGame({
  *   providers: [
- *     provideServerReconciliation({
+ *     ...provideServerReconciliation({
  *       smoothThreshold: 5,
  *       snapThreshold: 50
  *     })
@@ -66,30 +66,33 @@ export function provideServerReconciliation(config: ServerReconciliationConfig =
     maxTimeDifference: 500
   };
 
-  _config = { ...defaultConfig, ...config };
+  const finalConfig = { ...defaultConfig, ...config };
 
-  // Initialize services with configuration
-  _interpolationService = new InterpolationService();
-  _clientPredictionService = new ClientPredictionService({
-    smoothThreshold: _config.smoothThreshold,
-    snapThreshold: _config.snapThreshold,
-    interpolationDuration: _config.interpolationDuration,
-    maxTimeDifference: _config.maxTimeDifference
-  });
-  
-  // Wire up the interpolation service
-  _clientPredictionService.setInterpolationService(_interpolationService);
-
-  // Return a factory that sets up the services
-  return {
-    provide: Symbol("ServerReconciliation"),
-    useFactory: () => {
-      // Services are already initialized above
-      return {
-        clientPrediction: _clientPredictionService,
-        interpolation: _interpolationService,
-        config: _config
-      };
+  return [
+    {
+      provide: ServerReconciliationConfigToken,
+      useValue: finalConfig
+    },
+    {
+      provide: InterpolationToken,
+      useFactory: (context: any) => new InterpolationService(context)
+    },
+    {
+      provide: ClientPredictionToken,
+      useFactory: (context: any) => {
+        const interpolationService = context.inject(InterpolationToken);
+        const clientPredictionService = new ClientPredictionService(context, {
+          smoothThreshold: finalConfig.smoothThreshold,
+          snapThreshold: finalConfig.snapThreshold,
+          interpolationDuration: finalConfig.interpolationDuration,
+          maxTimeDifference: finalConfig.maxTimeDifference
+        });
+        
+        // Wire up the interpolation service
+        clientPredictionService.setInterpolationService(interpolationService);
+        
+        return clientPredictionService;
+      }
     }
-  };
+  ];
 }
