@@ -32,7 +32,7 @@ export class ServerReconciliationExample {
       maxTimeDifference: 500     // ms - maximum time difference to accept
     });
 
-    console.log('[Example] Client-side prediction enabled for player', this.player.id);
+    console.log('[Example] Client-side prediction enabled for player', (this.player as any).id);
   }
 
   /**
@@ -83,16 +83,17 @@ export class ServerReconciliationExample {
   private handleMovementInput(direction: Direction): void {
     const timestamp = Date.now();
     
-    // Apply movement immediately on client side (prediction)
-    this.player.predictiveMove(direction);
+         // Movement is already handled by existing RPGJS input system
+     // Just record the timestamp for potential reconciliation
+     console.log(`[Example] Movement input processed: ${direction}`);
     
     // Send input to server (you would replace this with your actual network code)
     this.sendInputToServer({
       direction,
       timestamp,
-      x: this.player.x(),
-      y: this.player.y(),
-      playerId: this.player.id
+             x: (this.player as any).x(),
+              y: (this.player as any).y(),
+       playerId: (this.player as any).id
     });
 
     console.log(`[Example] Movement input: ${direction} at (${this.player.x()}, ${this.player.y()})`);
