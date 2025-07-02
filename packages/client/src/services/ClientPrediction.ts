@@ -10,18 +10,27 @@ interface PredictedMovement {
   deltaTime: number;
 }
 
+interface ServerPositionData {
+  x: number;
+  y: number;
+  timestamp: number;
+  sequenceNumber?: number;
+}
+
 interface ReconciliationConfig {
-  /** Distance threshold below which smooth interpolation is used */
+  /** Distance threshold below which smooth interpolation is used (pixels) */
   smoothThreshold: number;
-  /** Distance threshold above which immediate snapping is used */
+  /** Distance threshold above which immediate snapping is used (pixels) */
   snapThreshold: number;
   /** Duration for smooth interpolation in milliseconds */
   interpolationDuration: number;
+  /** Maximum time difference to accept for reconciliation (ms) */
+  maxTimeDifference: number;
 }
 
 /**
- * Service de prédiction côté client pour gérer les mouvements
- * et la réconciliation avec le serveur
+ * Client-side prediction service for managing movements
+ * and server reconciliation
  */
 export class ClientPredictionService {
   private pendingMovements: Map<string, PredictedMovement[]> = new Map();
@@ -31,7 +40,8 @@ export class ClientPredictionService {
   private config: ReconciliationConfig = {
     smoothThreshold: 5, // pixels
     snapThreshold: 50, // pixels
-    interpolationDuration: 100 // ms
+    interpolationDuration: 100, // ms
+    maxTimeDifference: 500 // ms - maximum time difference to accept for reconciliation
   };
 
   constructor(config?: Partial<ReconciliationConfig>) {
@@ -41,7 +51,7 @@ export class ClientPredictionService {
   }
 
   /**
-   * Applique un mouvement côté client en mode prédiction
+   * Apply client-side prediction movement
    */
   predictMovement(
     player: RpgCommonPlayer, 
@@ -51,7 +61,7 @@ export class ClientPredictionService {
     const playerId = player.id;
     const timestamp = Date.now();
     
-    // Calculer la nouvelle position prédite
+    // Calculate new predicted position
     const currentX = player.x();
     const currentY = player.y();
     const speed = typeof player.speed === 'function' ? player.speed() : player.speed;
@@ -59,7 +69,7 @@ export class ClientPredictionService {
     let newX = currentX;
     let newY = currentY;
     
-    const moveDistance = speed * (deltaTime / 16); // Normaliser par 16ms (60fps)
+    const moveDistance = speed * (deltaTime / 16); // Normalize by 16ms (60fps)
     
     switch (direction) {
       case Direction.Up:
@@ -76,7 +86,7 @@ export class ClientPredictionService {
         break;
     }
     
-    // Stocker le mouvement prédit
+    // Store predicted movement
     const predictedMovement: PredictedMovement = {
       id: `${playerId}_${timestamp}`,
       timestamp,
@@ -91,67 +101,77 @@ export class ClientPredictionService {
     }
     this.pendingMovements.get(playerId)!.push(predictedMovement);
     
-    // Nettoyer les anciens mouvements (garder seulement les 100 derniers)
+    // Clean up old movements (keep only the last 100)
     const movements = this.pendingMovements.get(playerId)!;
     if (movements.length > 100) {
       movements.splice(0, movements.length - 100);
     }
     
-    // Appliquer le mouvement immédiatement côté client
+    // Apply movement immediately on client side
     player.x.set(newX);
     player.y.set(newY);
     player.changeDirection(direction);
   }
 
   /**
-   * Réconcilie la position du client avec celle du serveur
+   * Reconciles client position with server position
+   * Takes into account timestamp to handle lag between server and client
    */
   reconcileWithServer(
     player: RpgCommonPlayer,
-    serverX: number,
-    serverY: number,
-    serverTimestamp?: number
+    serverData: ServerPositionData
   ): void {
     const playerId = player.id;
     const currentX = player.x();
     const currentY = player.y();
+    const currentTime = Date.now();
     
-    // Calculer la distance entre client et serveur
-    const distance = Math.sqrt(
-      Math.pow(serverX - currentX, 2) + Math.pow(serverY - currentY, 2)
-    );
-    
-    // Sauvegarder l'état du serveur
-    this.lastServerStates.set(playerId, {
-      x: serverX,
-      y: serverY,
-      timestamp: serverTimestamp || Date.now()
-    });
-    
-    // Nettoyer les mouvements acknowledgés par le serveur
-    if (serverTimestamp) {
-      const movements = this.pendingMovements.get(playerId) || [];
-      const acknowledgeBefore = serverTimestamp + 50; // Buffer de 50ms
-      this.pendingMovements.set(
-        playerId,
-        movements.filter(m => m.timestamp > acknowledgeBefore)
-      );
+    // Check if the server data is too old to be relevant
+    const timeDifference = currentTime - serverData.timestamp;
+    if (timeDifference > this.config.maxTimeDifference) {
+      console.warn(`[ClientPrediction] Server data too old for player ${playerId}: ${timeDifference}ms`);
+      return;
     }
     
+    // Calculate distance between client and server positions
+    const distance = Math.sqrt(
+      Math.pow(serverData.x - currentX, 2) + Math.pow(serverData.y - currentY, 2)
+    );
+    
+    // Save server state
+    this.lastServerStates.set(playerId, {
+      x: serverData.x,
+      y: serverData.y,
+      timestamp: serverData.timestamp
+    });
+    
+    // Clean up movements acknowledged by the server
+    const movements = this.pendingMovements.get(playerId) || [];
+    const bufferTime = 50; // 50ms buffer for network variance
+    const acknowledgeBefore = serverData.timestamp + bufferTime;
+    this.pendingMovements.set(
+      playerId,
+      movements.filter(m => m.timestamp > acknowledgeBefore)
+    );
+    
+    // Apply reconciliation based on distance
     if (distance <= this.config.smoothThreshold) {
-      // Petite différence : pas de correction nécessaire
+      // Small difference: no correction needed
+      console.log(`[ClientPrediction] No correction needed for player ${playerId}, distance: ${distance.toFixed(2)}px`);
       return;
     } else if (distance <= this.config.snapThreshold) {
-      // Différence moyenne : interpolation smooth
-      this.startSmoothInterpolation(player, currentX, currentY, serverX, serverY);
+      // Medium difference: smooth interpolation
+      console.log(`[ClientPrediction] Smooth correction for player ${playerId}, distance: ${distance.toFixed(2)}px`);
+      this.startSmoothInterpolation(player, currentX, currentY, serverData.x, serverData.y);
     } else {
-      // Grande différence : snap immédiat (le serveur a autorité)
-      this.snapToServerPosition(player, serverX, serverY);
+      // Large difference: immediate snap (server has authority)
+      console.log(`[ClientPrediction] Snap correction for player ${playerId}, distance: ${distance.toFixed(2)}px`);
+      this.snapToServerPosition(player, serverData.x, serverData.y);
     }
   }
 
   /**
-   * Démarre une interpolation smooth vers la position du serveur
+   * Start smooth interpolation towards server position
    */
   private startSmoothInterpolation(
     player: RpgCommonPlayer,
@@ -160,7 +180,7 @@ export class ClientPredictionService {
     toX: number,
     toY: number
   ): void {
-    // Utiliser le service d'interpolation pour un mouvement smooth
+    // Use interpolation service for smooth movement
     interpolationService.interpolate(
       player, 
       toX, 
@@ -171,17 +191,17 @@ export class ClientPredictionService {
   }
 
   /**
-   * Snap immédiat à la position du serveur
+   * Immediate snap to server position
    */
   private snapToServerPosition(
     player: RpgCommonPlayer,
     serverX: number,
     serverY: number
   ): void {
-    // Arrêter toute interpolation en cours
+    // Stop any ongoing interpolation
     interpolationService.stopInterpolation(player.id);
     
-    // Appliquer la position du serveur immédiatement
+    // Apply server position immediately
     player.x.set(serverX);
     player.y.set(serverY);
     
@@ -189,28 +209,28 @@ export class ClientPredictionService {
   }
 
   /**
-   * Enregistre un joueur dans le registre pour la réconciliation
+   * Register a player in the registry for reconciliation
    */
   registerPlayer(player: RpgCommonPlayer): void {
     this.playerRegistry.set(player.id, player);
   }
 
   /**
-   * Désenregistre un joueur du registre
+   * Unregister a player from the registry
    */
   unregisterPlayer(playerId: string): void {
     this.playerRegistry.delete(playerId);
   }
 
   /**
-   * Obtient un joueur depuis le registre
+   * Get a player from the registry
    */
   getPlayer(playerId: string): RpgCommonPlayer | undefined {
     return this.playerRegistry.get(playerId);
   }
 
   /**
-   * Nettoie les données pour un joueur déconnecté
+   * Clean up data for a disconnected player
    */
   cleanup(playerId: string): void {
     this.pendingMovements.delete(playerId);
@@ -220,14 +240,14 @@ export class ClientPredictionService {
   }
 
   /**
-   * Configure les seuils de réconciliation
+   * Configure reconciliation thresholds
    */
   setConfig(config: Partial<ReconciliationConfig>): void {
     this.config = { ...this.config, ...config };
   }
 
   /**
-   * Obtient les statistiques de prédiction pour un joueur
+   * Get prediction statistics for a player
    */
   getStats(playerId: string) {
     return {
@@ -239,5 +259,5 @@ export class ClientPredictionService {
   }
 }
 
-// Instance singleton du service
+// Singleton instance of the service
 export const clientPredictionService = new ClientPredictionService();

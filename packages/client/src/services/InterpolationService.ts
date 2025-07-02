@@ -13,8 +13,8 @@ interface InterpolationTarget {
 }
 
 /**
- * Service d'interpolation pour les mouvements smooth
- * Gère l'interpolation fluide entre les positions prédites et les positions du serveur
+ * Interpolation service for smooth movements
+ * Handles smooth interpolation between predicted positions and server positions
  */
 export class InterpolationService {
   private activeInterpolations: Map<string, InterpolationTarget> = new Map();
@@ -25,7 +25,7 @@ export class InterpolationService {
   }
 
   /**
-   * Démarre une interpolation smooth pour un joueur
+   * Start smooth interpolation for a player
    */
   interpolate(
     player: RpgCommonPlayer,
@@ -38,12 +38,12 @@ export class InterpolationService {
     const fromX = player.x();
     const fromY = player.y();
 
-    // Si une interpolation est déjà en cours, l'arrêter
+    // If an interpolation is already in progress, stop it
     if (this.activeInterpolations.has(playerId)) {
       this.activeInterpolations.delete(playerId);
     }
 
-    // Créer une nouvelle interpolation
+    // Create a new interpolation
     const interpolation: InterpolationTarget = {
       playerId,
       player,
@@ -60,21 +60,21 @@ export class InterpolationService {
   }
 
   /**
-   * Arrête l'interpolation pour un joueur spécifique
+   * Stop interpolation for a specific player
    */
   stopInterpolation(playerId: string): void {
     this.activeInterpolations.delete(playerId);
   }
 
   /**
-   * Vérifie si un joueur est en cours d'interpolation
+   * Check if a player is currently interpolating
    */
   isInterpolating(playerId: string): boolean {
     return this.activeInterpolations.has(playerId);
   }
 
   /**
-   * Fonction d'easing pour différents types d'interpolation
+   * Easing function for different interpolation types
    */
   private ease(t: number, type: 'linear' | 'easeOut' | 'easeInOut'): number {
     switch (type) {
@@ -90,7 +90,7 @@ export class InterpolationService {
   }
 
   /**
-   * Met à jour toutes les interpolations actives
+   * Update all active interpolations
    */
   private update(): void {
     const now = Date.now();
@@ -100,28 +100,28 @@ export class InterpolationService {
       const progress = Math.min(elapsed / interpolation.duration, 1);
 
       if (progress >= 1) {
-        // Interpolation terminée - position finale
+        // Interpolation finished - final position
         interpolation.player.x.set(interpolation.toX);
         interpolation.player.y.set(interpolation.toY);
         this.activeInterpolations.delete(playerId);
         continue;
       }
 
-      // Appliquer l'easing
+      // Apply easing
       const easedProgress = this.ease(progress, interpolation.easeType);
 
-      // Calculer la position interpolée
+      // Calculate interpolated position
       const currentX = interpolation.fromX + (interpolation.toX - interpolation.fromX) * easedProgress;
       const currentY = interpolation.fromY + (interpolation.toY - interpolation.fromY) * easedProgress;
 
-      // Mettre à jour la position du joueur
+      // Update player position
       interpolation.player.x.set(currentX);
       interpolation.player.y.set(currentY);
     }
   }
 
   /**
-   * Démarre la boucle de mise à jour
+   * Start the update loop
    */
   private startUpdateLoop(): void {
     const updateLoop = () => {
@@ -133,7 +133,7 @@ export class InterpolationService {
   }
 
   /**
-   * Arrête la boucle de mise à jour
+   * Stop the update loop
    */
   stopUpdateLoop(): void {
     if (this.animationFrameId !== null) {
@@ -143,7 +143,7 @@ export class InterpolationService {
   }
 
   /**
-   * Nettoie toutes les interpolations
+   * Clean up all interpolations
    */
   cleanup(): void {
     this.activeInterpolations.clear();
@@ -151,7 +151,7 @@ export class InterpolationService {
   }
 
   /**
-   * Obtient les statistiques d'interpolation
+   * Get interpolation statistics
    */
   getStats() {
     return {
@@ -161,5 +161,5 @@ export class InterpolationService {
   }
 }
 
-// Instance singleton du service d'interpolation
+// Singleton instance of the interpolation service
 export const interpolationService = new InterpolationService();
