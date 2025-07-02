@@ -1,7 +1,6 @@
 import { RpgClientObject } from "./Object";
 import { Direction } from "@rpgjs/common";
-import { clientPredictionService } from "../services/ClientPrediction";
-import { interpolationService } from "../services/InterpolationService";
+import { getClientPredictionService, getInterpolationService, getServerReconciliationConfig } from "../services/ServerReconciliationProvider";
 
 interface ServerPositionData {
     x: number;
@@ -32,7 +31,7 @@ export class RpgClientPlayer extends RpgClientObject {
     constructor() {
         super();
         // Register player for reconciliation
-        clientPredictionService.registerPlayer(this);
+        getClientPredictionService().registerPlayer(this);
     }
 
     /**
@@ -46,7 +45,7 @@ export class RpgClientPlayer extends RpgClientObject {
             config.snapThreshold !== undefined || 
             config.interpolationDuration !== undefined ||
             config.maxTimeDifference !== undefined) {
-            clientPredictionService.setConfig({
+            getClientPredictionService().setConfig({
                 smoothThreshold: config.smoothThreshold,
                 snapThreshold: config.snapThreshold,
                 interpolationDuration: config.interpolationDuration,
@@ -85,7 +84,7 @@ export class RpgClientPlayer extends RpgClientObject {
         }
 
         // Positions differ - use reconciliation service
-        clientPredictionService.reconcileWithServer(this, serverData);
+        getClientPredictionService().reconcileWithServer(this, serverData);
     }
 
     /**
@@ -109,7 +108,7 @@ export class RpgClientPlayer extends RpgClientObject {
      * Force sync with server position (for teleports, map changes, etc.)
      */
     forceServerSync(x: number, y: number): void {
-        interpolationService.stopInterpolation((this as any).id);
+        getInterpolationService().stopInterpolation((this as any).id);
         
         // Apply server position immediately
         (this as any).x.set(x);
@@ -133,7 +132,7 @@ export class RpgClientPlayer extends RpgClientObject {
             predictionEnabled: this._clientPredictionEnabled,
             lastServerUpdate: this._lastServerUpdate,
             timeSinceLastUpdate: Date.now() - this._lastServerUpdate,
-            serviceStats: clientPredictionService.getStats((this as any).id)
+            serviceStats: getClientPredictionService().getStats((this as any).id)
         };
     }
 
@@ -157,6 +156,6 @@ export class RpgClientPlayer extends RpgClientObject {
      * Cleanup prediction resources
      */
     cleanupPrediction(): void {
-        clientPredictionService.cleanup((this as any).id);
+        getClientPredictionService().cleanup((this as any).id);
     }
 }   

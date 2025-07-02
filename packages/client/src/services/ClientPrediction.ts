@@ -1,5 +1,4 @@
 import { Direction, RpgCommonPlayer } from "@rpgjs/common";
-import { interpolationService } from "./InterpolationService";
 
 interface PredictedMovement {
   id: string;
@@ -36,6 +35,7 @@ export class ClientPredictionService {
   private pendingMovements: Map<string, PredictedMovement[]> = new Map();
   private lastServerStates: Map<string, { x: number; y: number; timestamp: number }> = new Map();
   private playerRegistry: Map<string, RpgCommonPlayer> = new Map();
+  private interpolationService: any = null;
 
   private config: ReconciliationConfig = {
     smoothThreshold: 5, // pixels
@@ -48,6 +48,25 @@ export class ClientPredictionService {
     if (config) {
       this.config = { ...this.config, ...config };
     }
+  }
+
+  /**
+   * Set the interpolation service instance
+   */
+  setInterpolationService(service: any): void {
+    this.interpolationService = service;
+  }
+
+  /**
+   * Get the interpolation service (with fallback)
+   */
+  private getInterpolationService(): any {
+    if (!this.interpolationService) {
+      // Use fallback singleton to avoid circular dependency
+      const { interpolationService } = eval('require("./InterpolationService")');
+      this.interpolationService = interpolationService;
+    }
+    return this.interpolationService;
   }
 
   /**
@@ -181,7 +200,7 @@ export class ClientPredictionService {
     toY: number
   ): void {
     // Use interpolation service for smooth movement
-    interpolationService.interpolate(
+    this.getInterpolationService().interpolate(
       player, 
       toX, 
       toY, 
@@ -199,7 +218,7 @@ export class ClientPredictionService {
     serverY: number
   ): void {
     // Stop any ongoing interpolation
-    interpolationService.stopInterpolation(player.id);
+    this.getInterpolationService().stopInterpolation(player.id);
     
     // Apply server position immediately
     player.x.set(serverX);
@@ -236,7 +255,7 @@ export class ClientPredictionService {
     this.pendingMovements.delete(playerId);
     this.lastServerStates.delete(playerId);
     this.playerRegistry.delete(playerId);
-    interpolationService.stopInterpolation(playerId);
+    this.getInterpolationService().stopInterpolation(playerId);
   }
 
   /**
@@ -252,7 +271,7 @@ export class ClientPredictionService {
   getStats(playerId: string) {
     return {
       pendingMovements: this.pendingMovements.get(playerId)?.length || 0,
-      isInterpolating: interpolationService.isInterpolating(playerId),
+      isInterpolating: this.getInterpolationService().isInterpolating(playerId),
       lastServerState: this.lastServerStates.get(playerId),
       isRegistered: this.playerRegistry.has(playerId)
     };
