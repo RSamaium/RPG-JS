@@ -23,32 +23,96 @@ npm install @rpgjs/vue vue
 
 ## Usage
 
-### Basic Setup
+### Basic Setup with Dependency Injection (Recommended)
 
 ```typescript
-import { VueGui } from '@rpgjs/vue'
-import { RpgGui } from '@rpgjs/client'
+import { provideVueGui } from '@rpgjs/vue'
+import { RpgClient } from '@rpgjs/client'
 
-// Initialize Vue GUI overlay
-const vueGui = new VueGui(rootElement, rpgGuiInstance)
+@RpgClient({
+  providers: [
+    // Provide Vue GUI service with dependency injection
+    provideVueGui({
+      selector: '#vue-gui-overlay',
+      createIfNotFound: true
+    })
+  ],
+  gui: [
+    // Vue components will be automatically handled
+    InventoryVueComponent,
+    // Canvas Engine components continue to work
+    DialogCanvasComponent
+  ]
+})
+export class MyRpgClient {}
 ```
 
-### Adding Vue Components
-
-By default, the main `RpgGui` class now only accepts CanvasEngine components (.ce files). Vue components should be added through this package:
+### Manual Setup (Advanced)
 
 ```typescript
-// This will be ignored by the main RpgGui (CanvasEngine components only)
-gui.add({
-  name: 'inventory',
-  component: VueInventoryComponent, // Vue component - will be handled by @rpgjs/vue
+import { VueGui, VueGuiToken } from '@rpgjs/vue'
+import { inject } from '@signe/di'
+
+// Manual initialization (if needed)
+const vueGui = inject(context, VueGuiToken)
+```
+
+### Provider Options
+
+The `provideVueGui()` function accepts the following options:
+
+```typescript
+interface VueGuiProviderOptions {
+  /** The HTML element where Vue components will be mounted */
+  mountElement?: HTMLElement | string
+  /** Custom CSS selector for the mount element */
+  selector?: string
+  /** Whether to create a new div element if none is found */
+  createIfNotFound?: boolean
+}
+```
+
+**Examples:**
+
+```typescript
+// Basic usage with CSS selector
+provideVueGui({
+  selector: '#vue-gui-overlay',
+  createIfNotFound: true
 })
 
-// This will be accepted by the main RpgGui
-gui.add({
-  name: 'dialog',
-  component: DialogCanvasComponent, // .ce component - handled by main engine
+// Custom mount element
+provideVueGui({
+  mountElement: document.getElementById('my-ui-container')
 })
+
+// Automatic element creation
+provideVueGui({
+  selector: '.game-ui-overlay',
+  createIfNotFound: true
+})
+```
+
+### Component Separation
+
+The system automatically separates Vue and CanvasEngine components:
+
+```typescript
+gui: [
+  // Vue component - automatically handled by VueGui service
+  {
+    name: 'inventory',
+    component: VueInventoryComponent,
+    display: false
+  },
+  
+  // Canvas Engine component - handled by main RpgGui
+  {
+    name: 'dialog', 
+    component: DialogCanvasComponent,
+    display: false
+  }
+]
 ```
 
 ### Vue Component Example
