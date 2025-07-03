@@ -77,10 +77,13 @@ export class RpgGui {
   /**
    * Add a GUI component to the system
    * 
+   * By default, only CanvasEngine components (.ce files) are accepted.
+   * Vue components should be handled by the @rpgjs/vue package.
+   * 
    * @param gui - GUI configuration options
    * @param gui.name - Name or ID of the GUI component
    * @param gui.id - Alternative ID if name is not provided
-   * @param gui.component - The component to render
+   * @param gui.component - The component to render (must be a CanvasEngine component)
    * @param gui.display - Initial display state (default: false)
    * @param gui.data - Initial data for the component
    * @param gui.autoDisplay - Auto display when added (default: false)
@@ -90,7 +93,7 @@ export class RpgGui {
    * ```ts
    * gui.add({
    *   name: 'inventory',
-   *   component: InventoryComponent,
+   *   component: InventoryComponent, // Must be a .ce component
    *   autoDisplay: true,
    *   dependencies: () => [playerSignal, inventorySignal]
    * });
@@ -100,6 +103,13 @@ export class RpgGui {
     const guiId = gui.name || gui.id;
     if (!guiId) {
       throw new Error("GUI must have a name or id");
+    }
+
+    // Only accept CanvasEngine components (.ce) - functions
+    // Vue components should be handled by @rpgjs/vue package
+    if (typeof gui.component !== 'function') {
+      console.warn(`GUI component "${guiId}" is not a CanvasEngine component (.ce). Use @rpgjs/vue package for Vue components.`);
+      return;
     }
 
     const guiInstance: GuiInstance = {

@@ -1,0 +1,40 @@
+{
+  "name": "@rpgjs/vue",
+  "version": "5.0.0-alpha.10",
+  "description": "Vue.js integration for RPGJS - Allows rendering Vue components over the game canvas",
+  "main": "dist/index.js",
+  "types": "./dist/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "vite build"
+  },
+  "keywords": [
+    "rpg",
+    "game",
+    "engine",
+    "javascript",
+    "typescript",
+    "vue",
+    "vue3"
+  ],
+  "author": "Samuel Ronce",
+  "license": "MIT",
+  "peerDependencies": {
+    "vue": "^3.2.25"
+  },
+  "dependencies": {
+    "@rpgjs/client": "workspace:*",
+    "@rpgjs/common": "workspace:*"
+  },
+  "devDependencies": {
+    "@canvasengine/compiler": "2.0.0-beta.22",
+    "vite": "^6.2.5",
+    "vite-plugin-dts": "^4.5.3",
+    "vitest": "^3.1.1",
+    "vue": "^3.5.13"
+  },
+  "type": "module"
+}
