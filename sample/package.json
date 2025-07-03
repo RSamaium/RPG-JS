@@ -1,10 +1,14 @@
 {
   "name": "sample",
+  "private": true,
   "version": "1.0.0",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build"
+    "build": "vite build",
+    "test": "vitest",
+    "test:run": "vitest run"
   },
   "keywords": [],
   "author": "",
@@ -13,9 +17,9 @@
   "devDependencies": {
     "@canvasengine/compiler": "2.0.0-beta.28",
     "path-browserify": "^1.0.1",
-    "vite": "^6.2.5"
+    "vite": "^6.2.5",
+    "vitest": "^3.1.1"
   },
-  "private": true,
   "dependencies": {
     "@canvasengine/presets": "2.0.0-beta.28",
     "@rpgjs/client": "workspace:*",
@@ -25,6 +29,5 @@
     "@rpgjs/vite": "workspace:*",
     "@signe/di": "^2.3.1",
     "canvasengine": "2.0.0-beta.28"
-  },
-  "type": "module"
+  }
 }

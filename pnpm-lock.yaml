@@ -246,6 +246,9 @@ importers:
       vite:
         specifier: ^6.2.5
         version: 6.2.5(@types/node@24.0.1)(jiti@2.4.2)(tsx@4.19.3)(yaml@2.8.0)
+      vitest:
+        specifier: ^3.1.1
+        version: 3.1.1(@types/node@24.0.1)(jiti@2.4.2)(tsx@4.19.3)(yaml@2.8.0)
 
 packages:
 
