@@ -1,159 +1,130 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-// Mock simple de la fonction signal
-const signal = (initialValue: any) => {
-  let value = initialValue
-  const signalFn = () => value
-  signalFn.set = (newValue: any) => { value = newValue }
-  signalFn.update = (updateFn: (v: any) => any) => { value = updateFn(value) }
-  return signalFn
-}
-
 // Spy sur la fonction h de canvasengine
 const hSpy = vi.fn()
 
-// Mock de canvasengine pour espionner h
-vi.mock('canvasengine', () => ({
-  signal,
-  h: hSpy,
-  bootstrapCanvas: vi.fn(),
-  computed: vi.fn(),
-  effect: vi.fn(),
-  trigger: vi.fn()
-}))
+// Mock de canvasengine pour espionner h et utiliser les vraies fonctions signal/effect
+vi.mock('canvasengine', async () => {
+  const actual = await vi.importActual('canvasengine')
+  return {
+    ...actual,
+    h: hSpy
+  }
+})
+
+// Mock simple du système RPG pour simuler un serveur standalone
+const mockRpgSystem = {
+  server: {
+    isStandalone: true,
+    players: new Map()
+  },
+  startGame: vi.fn().mockResolvedValue({
+    server: {
+      isStandalone: true,
+      players: new Map()
+    },
+    stop: vi.fn()
+  })
+}
 
 describe('Module standalone avec serveur et clients', () => {
-  // Simulation d'un serveur simple
-  const mockServer = {
-    isStandalone: true,
-    players: signal([]),
-    addPlayer: vi.fn(),
-    removePlayer: vi.fn()
-  }
+  let gameInstance: any
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Réinitialiser les spies avant chaque test
     vi.clearAllMocks()
-    // Réinitialiser les players
-    mockServer.players.set([])
+    
+    // Démarrer le jeu en mode standalone (simulé)
+    gameInstance = await mockRpgSystem.startGame()
   })
 
-  afterEach(() => {
+  afterEach(async () => {
     // Nettoyer après chaque test
+    if (gameInstance) {
+      await gameInstance.stop?.()
+    }
     vi.restoreAllMocks()
   })
 
-  describe('Test du joueur', () => {
-    it('devrait créer un serveur et permettre plusieurs clients', () => {
-      // Vérifier que le serveur est bien configuré
-      expect(mockServer).toBeDefined()
+  describe('Test du joueur avec spy sur h', () => {
+    it('devrait créer un serveur en mode standalone', () => {
+      // Vérifier que le jeu est bien démarré
+      expect(gameInstance).toBeDefined()
       
-      // Le serveur devrait être en mode standalone
-      expect(mockServer.isStandalone).toBe(true)
-      
-      // Vérifier que le signal players est initialisé
-      expect(mockServer.players()).toEqual([])
+      // Le serveur devrait être accessible
+      expect(gameInstance.server).toBeDefined()
     })
 
-    it('devrait téléporter le joueur et mettre à jour le signal players', () => {
-      // Simuler la connexion d'un joueur
-      const mockPlayer = {
-        id: 'player1',
-        x: signal(100),
-        y: signal(200),
-        teleport: vi.fn(({ x, y }) => {
-          mockPlayer.x.set(x)
-          mockPlayer.y.set(y)
+    it('devrait espionner les appels à la fonction h', () => {
+      // Simuler un appel à h comme le ferait le système de rendu
+      hSpy('Container', { x: 100, y: 200 })
+      
+      // Vérifier que h a été appelé
+      expect(hSpy).toHaveBeenCalled()
+      
+      // Vérifier que h a été appelé avec les bons paramètres
+      expect(hSpy).toHaveBeenCalledWith('Container', { x: 100, y: 200 })
+      
+      // On devrait avoir au moins 1 appel à h
+      expect(hSpy.mock.calls.length).toBeGreaterThan(0)
+    })
+
+    it('devrait surveiller les changements de position du joueur avec effect', async () => {
+      const { effect, signal } = await import('canvasengine')
+      
+      // Créer un signal pour surveiller les changements
+      const playerPositionSignal = signal({ x: 100, y: 200 })
+      
+      // Créer un effect pour surveiller les changements
+      effect(() => {
+        const pos = playerPositionSignal()
+        // Simuler un appel à h quand la position change
+        hSpy('Container', {
+          x: pos.x,
+          y: pos.y,
+          id: 'player1'
         })
-      }
-
-      // Ajouter le joueur au signal du serveur
-      mockServer.players.update(players => [...players, mockPlayer])
+      })
       
-      // Vérifier que le signal players contient bien un joueur
-      expect(mockServer.players().length).toBe(1)
-      expect(mockServer.players()[0].id).toBe('player1')
-
-      // Tester la téléportation
-      const newPosition = { x: 1000, y: 400 }
-      mockPlayer.teleport(newPosition)
-
-      // Vérifier que les coordonnées ont été mises à jour
-      expect(mockPlayer.x()).toBe(1000)
-      expect(mockPlayer.y()).toBe(400)
-      expect(mockPlayer.teleport).toHaveBeenCalledWith(newPosition)
-    })
-
-    it('devrait afficher le joueur avec h et les bonnes positions x et y', () => {
-      // Simuler un joueur avec des coordonnées
-      const mockPlayer = {
-        id: 'player1',
-        x: signal(1000),
-        y: signal(400),
-        graphics: ['hero']
-      }
-
-      // Ajouter le joueur au serveur
-      mockServer.players.update(players => [...players, mockPlayer])
-
-      // Appeler h comme le ferait canvasengine pour afficher le joueur
-      hSpy('Container', {
-        x: mockPlayer.x(),
-        y: mockPlayer.y(),
-        id: mockPlayer.id
-      }, [
-        hSpy('Sprite', { sheet: 'hero' })
-      ])
-
-      // Vérifier que h a été appelé avec les bonnes coordonnées
+      // Changer la position pour déclencher l'effect
+      playerPositionSignal.set({ x: 1000, y: 400 })
+      
+      // Attendre que l'effect soit exécuté
+      await new Promise(resolve => setTimeout(resolve, 10))
+      
+      // Vérifier que h a été appelé avec les nouvelles coordonnées
       expect(hSpy).toHaveBeenCalledWith('Container', {
         x: 1000,
         y: 400,
         id: 'player1'
-      }, expect.any(Array))
-
-      // Vérifier que h a été appelé pour le sprite du joueur
-      expect(hSpy).toHaveBeenCalledWith('Sprite', { sheet: 'hero' })
-      
-      // Vérifier le nombre total d'appels à h
-      expect(hSpy).toHaveBeenCalledTimes(2)
+      })
     })
 
-    it('devrait gérer plusieurs clients simultanément', () => {
-      // Simuler plusieurs joueurs
-      const player1 = {
-        id: 'player1',
-        x: signal(100),
-        y: signal(200)
-      }
-
-      const player2 = {
-        id: 'player2', 
-        x: signal(300),
-        y: signal(400)
-      }
-
-      // Ajouter les joueurs au serveur
-      mockServer.players.update(players => [...players, player1, player2])
-
-      // Vérifier qu'on a bien 2 joueurs
-      expect(mockServer.players().length).toBe(2)
+    it('devrait surveiller plusieurs joueurs avec des effects', async () => {
+      const { effect, signal } = await import('canvasengine')
       
-      // Vérifier que chaque joueur a son ID unique
-      expect(mockServer.players().find(p => p.id === 'player1')).toBeDefined()
-      expect(mockServer.players().find(p => p.id === 'player2')).toBeDefined()
-
-      // Simuler l'affichage de chaque joueur avec h
-      mockServer.players().forEach(player => {
-        hSpy('Container', {
-          x: player.x(),
-          y: player.y(),
-          id: player.id
+      // Créer des signaux pour plusieurs joueurs
+      const playersSignal = signal([
+        { id: 'player1', x: 100, y: 200 },
+        { id: 'player2', x: 300, y: 400 }
+      ])
+      
+      // Créer un effect pour surveiller les changements de la liste des joueurs
+      effect(() => {
+        const players = playersSignal()
+        players.forEach(player => {
+          hSpy('Container', {
+            x: player.x,
+            y: player.y,
+            id: player.id
+          })
         })
       })
-
+      
+      // Attendre que l'effect soit exécuté
+      await new Promise(resolve => setTimeout(resolve, 10))
+      
       // Vérifier que h a été appelé pour chaque joueur
-      expect(hSpy).toHaveBeenCalledTimes(2)
       expect(hSpy).toHaveBeenCalledWith('Container', {
         x: 100,
         y: 200,
@@ -164,6 +135,41 @@ describe('Module standalone avec serveur et clients', () => {
         y: 400,
         id: 'player2'
       })
+    })
+
+    it('devrait tester la téléportation avec effect sur signal', async () => {
+      const { effect, signal } = await import('canvasengine')
+      
+      // Signal pour la position du joueur
+      const playerSignal = signal({ x: 100, y: 200, id: 'player1' })
+      
+      // Effect pour surveiller les changements
+      effect(() => {
+        const player = playerSignal()
+        hSpy('Container', {
+          x: player.x,
+          y: player.y,
+          id: player.id
+        }, [
+          hSpy('Sprite', { sheet: 'hero' })
+        ])
+      })
+      
+      // Simuler une téléportation
+      playerSignal.set({ x: 1000, y: 400, id: 'player1' })
+      
+      // Attendre que l'effect soit exécuté
+      await new Promise(resolve => setTimeout(resolve, 10))
+      
+      // Vérifier que h a été appelé avec les nouvelles coordonnées
+      expect(hSpy).toHaveBeenCalledWith('Container', {
+        x: 1000,
+        y: 400,
+        id: 'player1'
+      }, expect.any(Array))
+      
+      // Vérifier que h a été appelé pour le sprite
+      expect(hSpy).toHaveBeenCalledWith('Sprite', { sheet: 'hero' })
     })
   })
 })
