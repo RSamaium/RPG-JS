@@ -163,11 +163,103 @@ export default {
 
 ### Available Injections
 
-Vue components have access to these injected services:
+Vue components have access to all these injected services:
 
+#### Legacy Injections (for backward compatibility)
 - `engine`: RpgClientEngine instance
 - `socket`: WebSocket connection to the server
 - `gui`: RpgGui instance for GUI management
+
+#### Standard RPGJS Vue Injections
+
+| Injection | Type | Description |
+|-----------|------|-------------|
+| `rpgEngine` | `RpgClientEngine` | Main game engine instance |
+| `rpgSocket` | `Function` | Returns the WebSocket connection |
+| `rpgGui` | `RpgGui` | GUI management service |
+| `rpgScene` | `Function` | Returns the current game scene |
+| `rpgStage` | `PIXI.Container` | Main PIXI display container |
+| `rpgResource` | `Object` | Game resources `{ spritesheets: Map, sounds: Map }` |
+| `rpgObjects` | `Observable` | Stream of all scene objects (players + events) |
+| `rpgCurrentPlayer` | `Observable` | Stream of current player data |
+| `rpgGuiClose` | `Function` | Close GUI with data `(name, data?)` |
+| `rpgGuiInteraction` | `Function` | GUI interaction `(guiId, name, data)` |
+| `rpgKeypress` | `Observable` | Stream of keyboard events |
+| `rpgSound` | `Object` | Sound service with `get(id)`, `play(id)` methods |
+
+#### Usage Examples
+
+```vue
+<script>
+export default {
+  inject: [
+    'rpgEngine',
+    'rpgSocket', 
+    'rpgGui',
+    'rpgScene',
+    'rpgStage',
+    'rpgResource',
+    'rpgObjects',
+    'rpgCurrentPlayer',
+    'rpgGuiClose',
+    'rpgGuiInteraction',
+    'rpgKeypress',
+    'rpgSound'
+  ],
+  mounted() {
+    // Engine access
+    const player = this.rpgEngine.getCurrentPlayer()
+    
+    // Socket communication
+    const socket = this.rpgSocket()
+    socket.emit('player-action', { type: 'move' })
+    
+    // Scene control
+    const scene = this.rpgScene()
+    scene.stopInputs()
+    
+    // PIXI stage effects
+    if (this.rpgStage) {
+      const blur = new PIXI.BlurFilter()
+      this.rpgStage.filters = [blur]
+    }
+    
+    // Resources
+    const spritesheet = this.rpgResource.spritesheets.get('player')
+    
+    // Observables (remember to unsubscribe!)
+    this.playerSub = this.rpgCurrentPlayer.subscribe((player) => {
+      console.log('Player updated:', player.object)
+    })
+    
+    this.objectsSub = this.rpgObjects.subscribe((objects) => {
+      console.log('Scene objects:', objects)
+    })
+    
+    this.keysSub = this.rpgKeypress.subscribe(({ inputName, control }) => {
+      if (control.actionName === 'escape') {
+        this.rpgGuiClose('my-component')
+      }
+    })
+    
+    // Sound
+    this.rpgSound.play('click-sound')
+    
+    // GUI interaction
+    this.rpgGuiInteraction('inventory', 'add-item', { 
+      itemId: 'sword', 
+      quantity: 1 
+    })
+  },
+  unmounted() {
+    // Clean up subscriptions
+    this.playerSub?.unsubscribe()
+    this.objectsSub?.unsubscribe()
+    this.keysSub?.unsubscribe()
+  }
+}
+</script>
+```
 
 ### Event Propagation
 

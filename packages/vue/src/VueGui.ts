@@ -3,6 +3,7 @@ import { App, ComponentPublicInstance, createApp } from 'vue'
 import { RpgCommonPlayer, Utils } from '@rpgjs/common'
 import { RpgClientEngine, RpgGui } from '@rpgjs/client'
 import { Context, inject } from "@signe/di"
+import { Observable } from 'rxjs'
 
 export const VueGuiToken = "VueGuiToken"
 
@@ -199,9 +200,159 @@ export class VueGui {
 
     private getInjectObject() {
         return {
+            // Legacy injections (for backward compatibility)
             engine: this.clientEngine,
             socket: this.clientEngine.socket,
-            gui: this.parentGui
+            gui: this.parentGui,
+
+            // Standard RPGJS Vue injections
+            rpgEngine: this.clientEngine,
+            rpgSocket: () => this.clientEngine.socket,
+            rpgGui: this.parentGui,
+            rpgScene: () => this.clientEngine.scene,
+            rpgStage: this.clientEngine.renderer?.stage,
+            rpgResource: {
+                spritesheets: this.clientEngine.spritesheets,
+                sounds: this.clientEngine.sounds
+            },
+            rpgObjects: this.createObjectsObservable(),
+            rpgCurrentPlayer: this.createCurrentPlayerObservable(),
+            rpgGuiClose: (name: string, data?: any) => {
+                this.parentGui.guiClose(name, data)
+            },
+            rpgGuiInteraction: (guiId: string, name: string, data: any = {}) => {
+                this.parentGui.guiInteraction(guiId, name, data)
+            },
+            rpgKeypress: this.createKeypressObservable(),
+            rpgSound: this.createSoundService()
+        }
+    }
+
+    private createObjectsObservable() {
+        // Combine players and events into a single observable
+        const scene = this.clientEngine.scene
+        if (!scene) return null
+
+        // Create an observable that merges players and events
+        return new Observable((observer) => {
+            const subscription1 = scene.players.observable.subscribe((players) => {
+                const objects = {}
+                for (const [id, player] of Object.entries(players)) {
+                    objects[id] = {
+                        object: player,
+                        paramsChanged: player // For simplicity, could be enhanced to track actual changes
+                    }
+                }
+                observer.next(objects)
+            })
+
+            const subscription2 = scene.events.observable.subscribe((events) => {
+                const objects = {}
+                for (const [id, event] of Object.entries(events)) {
+                    objects[id] = {
+                        object: event,
+                        paramsChanged: event
+                    }
+                }
+                observer.next(objects)
+            })
+
+            return () => {
+                subscription1.unsubscribe()
+                subscription2.unsubscribe()
+            }
+        })
+    }
+
+    private createCurrentPlayerObservable() {
+        const scene = this.clientEngine.scene
+        if (!scene) return null
+
+        return new Observable((observer) => {
+            const subscription = scene.currentPlayer.observable.subscribe((player) => {
+                if (player) {
+                    observer.next({
+                        object: player,
+                        paramsChanged: player
+                    })
+                }
+            })
+
+            return () => subscription.unsubscribe()
+        })
+    }
+
+    private createKeypressObservable() {
+        return new Observable((observer) => {
+            const keyHandler = (event: KeyboardEvent) => {
+                // Map keyboard events to RPG controls
+                const keyMap = this.clientEngine.globalConfig?.keyboardControls || {
+                    up: 'up',
+                    down: 'down', 
+                    left: 'left',
+                    right: 'right',
+                    action: 'space',
+                    escape: 'escape'
+                }
+
+                const inputName = event.key.toLowerCase()
+                let control: { actionName: string; options: any } | null = null
+
+                // Find matching control
+                for (const [actionName, keyName] of Object.entries(keyMap)) {
+                    if (keyName === inputName || keyName === event.code.toLowerCase()) {
+                        control = {
+                            actionName,
+                            options: {}
+                        }
+                        break
+                    }
+                }
+
+                if (control) {
+                    observer.next({
+                        inputName,
+                        control
+                    })
+                }
+            }
+
+            document.addEventListener('keydown', keyHandler)
+            
+            return () => {
+                document.removeEventListener('keydown', keyHandler)
+            }
+        })
+    }
+
+    private createSoundService() {
+        return {
+            get: (id: string) => {
+                const sound = this.clientEngine.sounds.get(id)
+                return {
+                    play: () => {
+                        if (sound && sound.play) {
+                            sound.play()
+                        }
+                    },
+                    stop: () => {
+                        if (sound && sound.stop) {
+                            sound.stop()
+                        }
+                    },
+                    pause: () => {
+                        if (sound && sound.pause) {
+                            sound.pause()
+                        }
+                    }
+                }
+            },
+            play: (id: string) => {
+                const sound = this.clientEngine.sounds.get(id)
+                if (sound && sound.play) {
+                    sound.play()
+                }
+            }
         }
     }
 
@@ -214,10 +365,15 @@ export class VueGui {
             if (canvas) {
                 const rect = canvas.getBoundingClientRect();
                 const mouseEvent = event as MouseEvent
-                const newEvent = new event.constructor(event.type, {
-                    ...event,
+                
+                // Create a new mouse event with adjusted coordinates
+                const newEvent = new MouseEvent(event.type, {
+                    bubbles: event.bubbles,
+                    cancelable: event.cancelable,
                     clientX: mouseEvent.clientX - rect.left,
-                    clientY: mouseEvent.clientY - rect.top
+                    clientY: mouseEvent.clientY - rect.top,
+                    button: mouseEvent.button,
+                    buttons: mouseEvent.buttons
                 });
                 canvas.dispatchEvent(newEvent);
             }
