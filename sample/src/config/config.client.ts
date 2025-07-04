@@ -13,6 +13,7 @@ import WoodComponent from "../components/wood.ce";
 import WoodUiComponent from "../components/wood-ui.ce";
 import VueComponent from "../vue-component-with-injections.vue";
 import { signal, effect } from 'canvasengine'
+import { provideVueGui } from "@rpgjs/vue";
 
 export default {
   providers: [
@@ -24,6 +25,7 @@ export default {
           height: 1536,
        }
     }),
+    provideVueGui(),
     provideClientGlobalConfig(),
     provideClientModules([
       {
@@ -81,6 +83,6 @@ export default {
           },
         ],
       },
-    ])
+    ]),
   ],
 };

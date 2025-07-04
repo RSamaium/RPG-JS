@@ -6,6 +6,6 @@ import { provideVueGui } from "@rpgjs/vue";
 
 startGame(
   mergeConfig(configClient, {
-    providers: [provideRpg(startServer),  provideVueGui(), ],
+    providers: [provideRpg(startServer)],
   })
 );

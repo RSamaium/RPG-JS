@@ -60,6 +60,14 @@ export class RpgClientEngine<T = any> {
     this.renderer = app.renderer as PIXI.Renderer;
     this.tick = canvasElement?.propObservables?.context['tick'].observable
 
+
+    this.hooks.callHooks("client-spritesheets-load", this).subscribe();
+    this.hooks.callHooks("client-sounds-load", this).subscribe();
+    this.hooks.callHooks("client-gui-load", this).subscribe();
+    this.hooks.callHooks("client-particles-load", this).subscribe();
+    this.hooks.callHooks("client-componentAnimations-load", this).subscribe();
+    this.hooks.callHooks("client-sprite-load", this).subscribe();
+
     await lastValueFrom(this.hooks.callHooks("client-engine-onStart", this));
 
     // wondow is resize
@@ -71,14 +79,6 @@ export class RpgClientEngine<T = any> {
       this.hooks.callHooks("client-engine-onStep", this, tick).subscribe();
     })
 
-    this.hooks.callHooks("client-spritesheets-load", this).subscribe();
-    this.hooks.callHooks("client-sounds-load", this).subscribe();
-    this.hooks.callHooks("client-gui-load", this).subscribe();
-    this.hooks.callHooks("client-particles-load", this).subscribe();
-    this.hooks.callHooks("client-componentAnimations-load", this).subscribe();
-    this.hooks.callHooks("client-sprite-load", this).subscribe();
-
-  
     await this.webSocket.connection(() => {
       this.initListeners()
       this.guiService._initialize()

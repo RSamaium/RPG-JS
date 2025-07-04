@@ -329,7 +329,7 @@ export interface RpgClient {
      * @prop {Array<GuiOptions>} [gui]
      * @memberof RpgClient
      * */
-    gui?: {
+    gui?: ({
         id: string,
         component: ComponentFunction,
         /**
@@ -342,7 +342,7 @@ export interface RpgClient {
          * The GUI will only display when all dependencies are resolved (!= undefined)
          */
         dependencies?: () => Signal[]
-    }[],
+    } | any)[],
 
     /** 
      * Array containing the list of sounds

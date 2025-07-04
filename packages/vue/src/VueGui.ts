@@ -74,6 +74,10 @@ export class VueGui {
     private socket
 
     constructor(private context: Context, private options: VueGuiOptions = {}) {
+       
+    }
+
+    mount() {
         this.clientEngine = inject(RpgClientEngine)
         this.parentGui = inject(RpgGui)
         

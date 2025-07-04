@@ -1,5 +1,6 @@
-import { Context } from "@rpgjs/client"
+import { Context, inject, RpgClient } from "@rpgjs/client"
 import { VueGui, VueGuiToken } from "./VueGui"
+import { createModule } from "@rpgjs/common"
 
 interface VueGuiProviderOptions {
     /** The HTML element where Vue components will be mounted */
@@ -101,16 +102,30 @@ interface VueGuiProviderOptions {
  * @see {@link VueGuiProviderOptions} for configuration options
  * @see {@link VueGui} for the main service class
  */
+
 export function provideVueGui(options: VueGuiProviderOptions = {}) {
-    return {
-        provide: VueGuiToken,
-        useFactory: (context: Context) => {
-            // Only create VueGui on client side
-            if (context['side'] === 'server') {
-                console.warn('VueGui is only available on client side')
-                return null
-            }
-            return new VueGui(context, options)
+    return createModule('VueGui',[
+        {
+            client: {
+                engine: {
+                    onStart() {
+                        const vueGui = inject<VueGui>(VueGuiToken);
+                        vueGui.mount()
+                    }
+                }
+            } as RpgClient,
+            server: null
         },
-    }
+        {
+            provide: VueGuiToken,
+            useFactory: (context: Context) => {
+                // Only create VueGui on client side
+                if (context['side'] === 'server') {
+                    console.warn('VueGui is only available on client side')
+                    return null
+                }
+                return new VueGui(context, options)
+            },
+        }
+    ])
 }
