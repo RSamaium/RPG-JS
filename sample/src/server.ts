@@ -35,10 +35,11 @@ export default createServer({
             player.setGraphic("hero");
           },
           onInput(player: RpgPlayer, input: any) {
-            if (input.action) {
-             player.wood.update(wood => wood + 1)
-             player.showComponentAnimation('wood')
-            }
+            // if (input.action) {
+            //  player.wood.update(wood => wood + 1)
+            //  player.showComponentAnimation('wood')
+            // }
+            player.gui("RpgComponentExample").open()
           }
         },
         maps: [

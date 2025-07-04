@@ -12,3 +12,4 @@ export * from "./components/animations";
 export * from "./presets";
 export * from "./components";
 export * from "./components/gui";
+export { Context } from "@signe/di";

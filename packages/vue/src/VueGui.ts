@@ -1,8 +1,7 @@
 import { renderList as _renderList, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock, resolveDynamicComponent as _resolveDynamicComponent, normalizeProps as _normalizeProps, guardReactiveProps as _guardReactiveProps, createBlock as _createBlock, mergeProps as _mergeProps, createCommentVNode as _createCommentVNode, normalizeStyle as _normalizeStyle, createElementVNode as _createElementVNode } from "vue"
 import { App, ComponentPublicInstance, createApp } from 'vue'
-import { RpgCommonPlayer, Utils } from '@rpgjs/common'
-import { RpgClientEngine, RpgGui } from '@rpgjs/client'
-import { Context, inject } from "@signe/di"
+import { isFunction, RpgCommonPlayer } from '@rpgjs/common'
+import { RpgClientEngine, RpgGui, inject, Context } from '@rpgjs/client'
 import { Observable } from 'rxjs'
 
 export const VueGuiToken = "VueGuiToken"
@@ -75,8 +74,8 @@ export class VueGui {
     private socket
 
     constructor(private context: Context, private options: VueGuiOptions = {}) {
-        this.clientEngine = inject(context, RpgClientEngine)
-        this.parentGui = inject(context, RpgGui)
+        this.clientEngine = inject(RpgClientEngine)
+        this.parentGui = inject(RpgGui)
         
         // Get or create mount element
         const mountElement = this.getMountElement()
@@ -115,7 +114,7 @@ export class VueGui {
         this.app = createApp(obj)
 
         // Filter out function components (keep only Vue components)
-        const guiVue = Object.values(allGuis).filter(ui => !Utils.isFunction(ui.component))
+        const guiVue = Object.values(allGuis).filter(ui => !isFunction(ui.component))
 
         for (let ui of guiVue) {
             this.app.component(ui.name, ui.component)
@@ -407,7 +406,7 @@ export class VueGui {
     set gui(val: any) {
         for (let key in val) {
             // Ignore function components (they should only be handled by CanvasEngine)
-            if (Utils.isFunction(val[key].component)) continue
+            if (isFunction(val[key].component)) continue
             this.vm.gui[key] = val[key]
         }
         this.vm.gui = Object.assign({}, this.vm.gui)

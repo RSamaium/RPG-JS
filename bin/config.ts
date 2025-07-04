@@ -78,6 +78,12 @@ export const packages = (type: "build" | "dev") => {
       buildScript,
       dependencies: createDependencies(packagesPath, ['common']),
     },
+
+    {
+      name: "vue",
+      buildScript,
+      dependencies: createDependencies(packagesPath, ['client']),
+    },
     
     // Packages depending on client/server
     {

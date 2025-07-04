@@ -1,4 +1,4 @@
-import { Context } from "@signe/di"
+import { Context } from "@rpgjs/client"
 import { VueGui, VueGuiToken } from "./VueGui"
 
 interface VueGuiProviderOptions {

@@ -11,6 +11,7 @@ import Map from "../components/map.ce";
 import Shadow from "../components/shadow.ce";
 import WoodComponent from "../components/wood.ce";
 import WoodUiComponent from "../components/wood-ui.ce";
+import VueComponent from "../vue-component-with-injections.vue";
 import { signal, effect } from 'canvasengine'
 
 export default {
@@ -70,7 +71,8 @@ export default {
               const engine = inject(RpgClientEngine)
               return [engine.scene.currentPlayer]
             }
-          }
+          },
+          VueComponent
         ],
         componentAnimations: [
           {
@@ -79,6 +81,6 @@ export default {
           },
         ],
       },
-    ]),
+    ])
   ],
 };

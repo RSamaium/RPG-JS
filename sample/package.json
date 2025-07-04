@@ -12,6 +12,7 @@
   "description": "",
   "devDependencies": {
     "@canvasengine/compiler": "2.0.0-beta.28",
+    "@vitejs/plugin-vue": "^6.0.0",
     "path-browserify": "^1.0.1",
     "vite": "^6.2.5"
   },
@@ -23,8 +24,10 @@
     "@rpgjs/server": "workspace:*",
     "@rpgjs/tiledmap": "workspace:*",
     "@rpgjs/vite": "workspace:*",
+    "@rpgjs/vue": "workspace:*",
     "@signe/di": "^2.3.1",
-    "canvasengine": "2.0.0-beta.28"
+    "canvasengine": "2.0.0-beta.28",
+    "vue": "^3.5.13"
   },
   "type": "module"
 }
