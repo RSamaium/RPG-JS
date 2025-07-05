@@ -40,6 +40,8 @@ const throwError = (id: string) => {
 export class RpgGui {
   private webSocket: AbstractWebsocket;
   gui = signal<Record<string, GuiInstance>>({});
+  extraGuis: GuiInstance[] = [];
+  private vueGuiInstance: any = null; // Reference to VueGui instance
 
   constructor(private context: Context) {
     this.webSocket = inject(context, WebSocketToken);
@@ -57,6 +59,63 @@ export class RpgGui {
     this.webSocket.on("gui.exit", (guiId: string) => {
       this.hide(guiId);
     });
+  }
+
+  /**
+   * Set the VueGui instance reference for Vue component management
+   * This is called by VueGui when it's initialized
+   * 
+   * @param vueGuiInstance - The VueGui instance
+   */
+  _setVueGuiInstance(vueGuiInstance: any) {
+    this.vueGuiInstance = vueGuiInstance;
+  }
+
+  /**
+   * Notify VueGui about GUI state changes
+   * This synchronizes the Vue component display state
+   * 
+   * @param guiId - The GUI component ID
+   * @param display - Display state
+   * @param data - Component data
+   */
+  private _notifyVueGui(guiId: string, display: boolean, data: any = {}) {
+    if (this.vueGuiInstance && this.vueGuiInstance.vm) {
+      // Find the GUI in extraGuis
+      const extraGui = this.extraGuis.find(gui => gui.name === guiId);
+      if (extraGui) {
+        // Update the Vue component's display state and data
+        this.vueGuiInstance.vm.gui[guiId] = {
+          name: guiId,
+          display,
+          data,
+          attachToSprite: false // Default value, could be configurable
+        };
+        // Trigger Vue reactivity
+        this.vueGuiInstance.vm.gui = Object.assign({}, this.vueGuiInstance.vm.gui);
+      }
+    }
+  }
+
+  /**
+   * Initialize Vue components in the VueGui instance
+   * This should be called after VueGui is mounted
+   */
+  _initializeVueComponents() {
+    if (this.vueGuiInstance && this.vueGuiInstance.vm) {
+      // Initialize all extraGuis in the Vue instance
+      this.extraGuis.forEach(gui => {
+        this.vueGuiInstance.vm.gui[gui.name] = {
+          name: gui.name,
+          display: gui.display(),
+          data: gui.data(),
+          attachToSprite: false
+        };
+      });
+      
+      // Trigger Vue reactivity
+      this.vueGuiInstance.vm.gui = Object.assign({}, this.vueGuiInstance.vm.gui);
+    }
   }
 
   guiInteraction(guiId: string, name: string, data: any) {
@@ -105,13 +164,6 @@ export class RpgGui {
       throw new Error("GUI must have a name or id");
     }
 
-    // Only accept CanvasEngine components (.ce) - functions
-    // Vue components should be handled by @rpgjs/vue package
-    if (typeof gui.component !== 'function') {
-      console.warn(`GUI component "${guiId}" is not a CanvasEngine component (.ce). Use @rpgjs/vue package for Vue components.`);
-      return;
-    }
-
     const guiInstance: GuiInstance = {
       name: guiId,
       component: gui.component,
@@ -121,16 +173,35 @@ export class RpgGui {
       dependencies: gui.dependencies,
     };
 
+    // Accept both CanvasEngine components (.ce) and Vue components
+    // Vue components will be handled by VueGui if available
+    if (typeof gui.component !== 'function') {
+      this.extraGuis.push(guiInstance);
+      
+      // Auto display Vue components if enabled
+      if (guiInstance.autoDisplay) {
+        this._notifyVueGui(guiId, true, gui.data || {});
+      }
+      return;
+    }
+
     this.gui()[guiId] = guiInstance;
 
-    // Auto display if enabled
-    if (guiInstance.autoDisplay) {
+    // Auto display if enabled and it's a CanvasEngine component
+    if (guiInstance.autoDisplay && typeof gui.component === 'function') {
       this.display(guiId);
     }
   }
 
   get(id: string): GuiInstance | undefined {
-    return this.gui()[id];
+    // Check CanvasEngine GUIs first
+    const canvasGui = this.gui()[id];
+    if (canvasGui) {
+      return canvasGui;
+    }
+    
+    // Check Vue GUIs in extraGuis
+    return this.extraGuis.find(gui => gui.name === id);
   }
 
   exists(id: string): boolean {
@@ -138,7 +209,14 @@ export class RpgGui {
   }
 
   getAll(): Record<string, GuiInstance> {
-    return this.gui();
+    const allGuis = { ...this.gui() };
+    
+    // Add extraGuis to the result
+    this.extraGuis.forEach(gui => {
+      allGuis[gui.name] = gui;
+    });
+    
+    return allGuis;
   }
 
   /**
@@ -147,6 +225,7 @@ export class RpgGui {
    * Displays the GUI immediately if no dependencies are configured,
    * or waits for all dependencies to be resolved if dependencies are present.
    * Automatically manages subscriptions to prevent memory leaks.
+   * Works with both CanvasEngine components and Vue components.
    * 
    * @param id - The GUI component ID
    * @param data - Data to pass to the component
@@ -168,6 +247,67 @@ export class RpgGui {
 
     const guiInstance = this.get(id)!;
     
+    // Check if it's a Vue component (in extraGuis)
+    const isVueComponent = this.extraGuis.some(gui => gui.name === id);
+    
+    if (isVueComponent) {
+      // Handle Vue component display
+      this._handleVueComponentDisplay(id, data, dependencies, guiInstance);
+    } else {
+      // Handle CanvasEngine component display
+      this._handleCanvasComponentDisplay(id, data, dependencies, guiInstance);
+    }
+  }
+
+  /**
+   * Handle Vue component display logic
+   * 
+   * @param id - GUI component ID
+   * @param data - Component data
+   * @param dependencies - Runtime dependencies
+   * @param guiInstance - GUI instance
+   */
+  private _handleVueComponentDisplay(id: string, data: any, dependencies: Signal[], guiInstance: GuiInstance) {
+    // Unsubscribe from previous subscription if exists
+    if (guiInstance.subscription) {
+      guiInstance.subscription.unsubscribe();
+      guiInstance.subscription = undefined;
+    }
+
+    // Use runtime dependencies or config dependencies
+    const deps = dependencies.length > 0 
+      ? dependencies 
+      : (guiInstance.dependencies ? guiInstance.dependencies() : []);
+
+    if (deps.length > 0) {
+      // Subscribe to dependencies
+      guiInstance.subscription = combineLatest(
+        deps.map(dependency => dependency.observable)
+      ).subscribe((values) => {
+        if (values.every(value => value !== undefined)) {
+          guiInstance.data.set(data);
+          guiInstance.display.set(true);
+          this._notifyVueGui(id, true, data);
+        }
+      });
+      return;
+    }
+
+    // No dependencies, display immediately
+    guiInstance.data.set(data);
+    guiInstance.display.set(true);
+    this._notifyVueGui(id, true, data);
+  }
+
+  /**
+   * Handle CanvasEngine component display logic
+   * 
+   * @param id - GUI component ID
+   * @param data - Component data
+   * @param dependencies - Runtime dependencies
+   * @param guiInstance - GUI instance
+   */
+  private _handleCanvasComponentDisplay(id: string, data: any, dependencies: Signal[], guiInstance: GuiInstance) {
     // Unsubscribe from previous subscription if exists
     if (guiInstance.subscription) {
       guiInstance.subscription.unsubscribe();
@@ -201,6 +341,7 @@ export class RpgGui {
    * Hide a GUI component
    * 
    * Hides the GUI and cleans up any active subscriptions.
+   * Works with both CanvasEngine components and Vue components.
    * 
    * @param id - The GUI component ID
    * 
@@ -223,5 +364,11 @@ export class RpgGui {
     }
 
     guiInstance.display.set(false);
+    
+    // Check if it's a Vue component and notify VueGui
+    const isVueComponent = this.extraGuis.some(gui => gui.name === id);
+    if (isVueComponent) {
+      this._notifyVueGui(id, false);
+    }
   }
 }

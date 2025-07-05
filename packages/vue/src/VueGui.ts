@@ -81,6 +81,9 @@ export class VueGui {
         this.clientEngine = inject(RpgClientEngine)
         this.parentGui = inject(RpgGui)
         
+        // Establish connection with RpgGui for Vue component management
+        this.parentGui._setVueGuiInstance(this);
+        
         // Get or create mount element
         const mountElement = this.getMountElement()
         if (!mountElement) {
@@ -88,7 +91,7 @@ export class VueGui {
         }
 
         // Get all GUI components from the parent GUI service
-        const allGuis = this.parentGui.getAll()
+        const guiVue = this.parentGui.extraGuis
 
         const obj = {
             render,
@@ -116,9 +119,6 @@ export class VueGui {
         }
 
         this.app = createApp(obj)
-
-        // Filter out function components (keep only Vue components)
-        const guiVue = Object.values(allGuis).filter(ui => !isFunction(ui.component))
 
         for (let ui of guiVue) {
             this.app.component(ui.name, ui.component)
@@ -150,6 +150,9 @@ export class VueGui {
         })
 
         this.vm = this.app.mount(mountElement) as VueInstance
+        
+        // Initialize Vue components after mounting
+        this.parentGui._initializeVueComponents();
     }
 
     private getMountElement(): HTMLElement {
@@ -213,7 +216,6 @@ export class VueGui {
             rpgSocket: () => this.clientEngine.socket,
             rpgGui: this.parentGui,
             rpgScene: () => this.clientEngine.scene,
-            rpgStage: this.clientEngine.renderer?.stage,
             rpgResource: {
                 spritesheets: this.clientEngine.spritesheets,
                 sounds: this.clientEngine.sounds
@@ -363,9 +365,9 @@ export class VueGui {
         // Propagate mouse events to the canvas/engine
         // This allows interaction with the game through Vue components
         if (this.clientEngine.renderer) {
-            // Convert DOM event to canvas coordinates and propagate
-            const canvas = this.clientEngine.renderer.view as HTMLCanvasElement;
-            if (canvas) {
+            // Find the actual canvas element in the DOM
+            const canvas = document.querySelector('#rpg canvas') as HTMLCanvasElement;
+            if (canvas && canvas.getBoundingClientRect) {
                 const rect = canvas.getBoundingClientRect();
                 const mouseEvent = event as MouseEvent
                 

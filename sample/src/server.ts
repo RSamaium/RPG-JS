@@ -39,7 +39,9 @@ export default createServer({
             //  player.wood.update(wood => wood + 1)
             //  player.showComponentAnimation('wood')
             // }
-            player.gui("RpgComponentExample").open()
+            if (input.action) {
+              player.gui("RpgComponentExample").open()
+            }
           }
         },
         maps: [
