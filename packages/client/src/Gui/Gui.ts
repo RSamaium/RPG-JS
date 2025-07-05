@@ -176,6 +176,7 @@ export class RpgGui {
     // Accept both CanvasEngine components (.ce) and Vue components
     // Vue components will be handled by VueGui if available
     if (typeof gui.component !== 'function') {
+      guiInstance.component = gui;
       this.extraGuis.push(guiInstance);
       
       // Auto display Vue components if enabled

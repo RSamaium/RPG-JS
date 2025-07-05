@@ -162,7 +162,7 @@ export default {
   methods: {
     closeComponent() {
       // Use rpgGuiClose to close this component
-      this.rpgGuiClose('example-component', {
+      this.rpgGuiClose('RpgComponentExample', {
         closedBy: 'user',
         timestamp: Date.now()
       })
