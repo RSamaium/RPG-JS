@@ -78,6 +78,12 @@ export const packages = (type: "build" | "dev") => {
       buildScript,
       dependencies: createDependencies(packagesPath, ['common']),
     },
+
+    {
+      name: "testing",
+      buildScript,
+      dependencies: createDependencies(packagesPath, ['client', 'server']),
+    },
     
     // Packages depending on client/server
     {

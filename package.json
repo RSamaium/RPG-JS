@@ -7,7 +7,8 @@
     "clean": "tsx bin/clean.ts",
     "release": "bumpp package.json packages/*/package.json --all",
     "rpgjs:version": "tsx bin/version.ts",
-    "rpgjs:publish": "pnpm -r publish --publish-branch v5 --no-git-checks --access public --force"
+    "rpgjs:publish": "pnpm -r publish --publish-branch v5 --no-git-checks --access public --force",
+    "test": "vitest"
   },
   "author": "Samuel Ronce",
   "license": "MIT",
@@ -30,6 +31,9 @@
   "type": "module",
   "devDependencies": {
     "@changesets/cli": "^2.29.4",
-    "@types/node": "^24.0.1"
+    "@types/node": "^24.0.1",
+    "jsdom": "^26.1.0",
+    "vite": "^7.0.4",
+    "vitest": "^3.1.1"
   }
 }

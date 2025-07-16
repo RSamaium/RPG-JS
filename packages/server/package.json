@@ -8,7 +8,8 @@
   },
   "scripts": {
     "dev": "vite build --watch",
-    "build": "vite build"
+    "build": "vite build",
+    "test": "vitest"
   },
   "keywords": [],
   "author": "",
@@ -16,6 +17,7 @@
   "description": "",
   "dependencies": {
     "@rpgjs/common": "workspace:*",
+    "@rpgjs/testing": "workspace:*",
     "@rpgjs/database": "^4.3.0",
     "@signe/di": "^2.4.0",
     "@signe/reactive": "^2.4.0",

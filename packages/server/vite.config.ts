@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import dts from 'vite-plugin-dts'
+import path from 'path'
 
 export default defineConfig({
   plugins: [
@@ -18,4 +19,12 @@ export default defineConfig({
       fileName: 'index'
     }
   },
+  resolve: {
+    alias: {
+      '@rpgjs/testing': path.resolve(__dirname, '../testing/src')
+    }
+  },
+  test: {
+      environment: 'jsdom'
+  }
 })
