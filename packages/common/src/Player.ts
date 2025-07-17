@@ -74,7 +74,7 @@ export abstract class RpgCommonPlayer {
   @sync() hpSignal = signal(0);
   @sync() spSignal = signal(0);
   @sync() _exp = signal(0);
-  @sync() _level = signal(0);
+  @sync() _level = signal(1);
   @sync() _class = signal({});
   @sync(Item) items = signal<Item[]>([]);
   @sync() equipments = signal<any[]>([]);

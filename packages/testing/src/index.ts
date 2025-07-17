@@ -1,6 +1,6 @@
 import { mergeConfig } from "@signe/di";
-import { provideRpg, startGame, provideClientModules, provideLoadMap, provideClientGlobalConfig, inject, WebSocketToken, AbstractWebsocket, RpgClientEngine, RpgPlayer } from "@rpgjs/client";
-import { createServer, provideServerModules } from "@rpgjs/server";
+import { provideRpg, startGame, provideClientModules, provideLoadMap, provideClientGlobalConfig, inject, WebSocketToken, AbstractWebsocket, RpgClientEngine, RpgClient } from "@rpgjs/client";
+import { createServer, provideServerModules, RpgServer, RpgPlayer } from "@rpgjs/server";
 
 export function provideTestingLoadMap() {
     return provideLoadMap((id: string) => {
@@ -11,7 +11,10 @@ export function provideTestingLoadMap() {
     })
 }
 
-export async function testing(modules: any[], clientConfig: any = {}, serverConfig: any = {}) {
+export async function testing(modules: {
+    server: RpgServer,
+    client: RpgClient
+}[] = [], clientConfig: any = {}, serverConfig: any = {}) {
     const serverClass = createServer({
         ...serverConfig,
         providers: [
@@ -42,7 +45,7 @@ export async function testing(modules: any[], clientConfig: any = {}, serverConf
                 socket: websocket.getSocket(),
                 client: clientEngine,
                 playerId: clientEngine.playerId,
-                get player() {
+                get player(): RpgPlayer {
                     return server.subRoom.players()[clientEngine.playerId] as RpgPlayer
                 }
             }
