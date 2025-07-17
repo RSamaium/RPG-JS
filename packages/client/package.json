@@ -26,7 +26,6 @@
     "pixi.js": "^8.9.2"
   },
   "dependencies": {
-    "@rpgjs/client": "*",
     "@rpgjs/common": "*",
     "@rpgjs/server": "*",
     "@signe/di": "^2.4.0",

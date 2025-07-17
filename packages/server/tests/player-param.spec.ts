@@ -14,9 +14,7 @@ beforeEach(async () => {
       }
    }]);  
    
-   const client = fixture.createClient()
-   
-   console.log(client)
+   const { player } = await fixture.createClient()
 })
 
 test('Test HP', () => {

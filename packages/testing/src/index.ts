@@ -1,5 +1,5 @@
 import { mergeConfig } from "@signe/di";
-import { provideRpg, startGame, provideClientModules, provideLoadMap, provideClientGlobalConfig } from "@rpgjs/client";
+import { provideRpg, startGame, provideClientModules, provideLoadMap, provideClientGlobalConfig, inject, WebSocketToken, AbstractWebsocket, RpgClientEngine, RpgPlayer } from "@rpgjs/client";
 import { createServer, provideServerModules } from "@rpgjs/server";
 
 export function provideTestingLoadMap() {
@@ -12,16 +12,16 @@ export function provideTestingLoadMap() {
 }
 
 export async function testing(modules: any[], clientConfig: any = {}, serverConfig: any = {}) {
+    const serverClass = createServer({
+        ...serverConfig,
+        providers: [
+            provideServerModules(modules),
+            ...(serverConfig.providers || [])
+        ]
+    })
     return {
-        createClient: () => {
-            const server = createServer({
-                ...serverConfig,
-                providers: [
-                    provideServerModules(modules),
-                    ...(serverConfig.providers || [])
-                ]
-            })
-            const client = startGame(
+        async createClient() {
+            const client = await startGame(
                 mergeConfig({
                     ...clientConfig,
                     providers: [
@@ -31,12 +31,20 @@ export async function testing(modules: any[], clientConfig: any = {}, serverConf
                         ...(clientConfig.providers || [])
                     ]
                 }, {
-                    providers: [provideRpg(server)],
+                    providers: [provideRpg(serverClass)],
                 })
             )
+            const websocket = inject<AbstractWebsocket>(WebSocketToken)
+            const clientEngine = inject<RpgClientEngine>(RpgClientEngine)
+            const server = websocket.getServer()
             return {
                 server,
-                client,
+                socket: websocket.getSocket(),
+                client: clientEngine,
+                playerId: clientEngine.playerId,
+                get player() {
+                    return server.subRoom.players()[clientEngine.playerId] as RpgPlayer
+                }
             }
         }
     }

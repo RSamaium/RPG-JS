@@ -25,6 +25,7 @@ export default defineConfig({
     }
   },
   test: {
-      environment: 'jsdom'
+      environment: 'jsdom',
+      setupFiles: ['@rpgjs/testing/dist/setup.js'],
   }
 })

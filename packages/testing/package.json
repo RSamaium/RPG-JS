@@ -19,7 +19,8 @@
   "dependencies": {
     "@rpgjs/client": "workspace:*",
     "@rpgjs/server": "workspace:*",
-    "@signe/di": "^2.4.0"
+    "@signe/di": "^2.4.0",
+    "vitest-webgl-canvas-mock": "^1.1.0"
   },
   "type": "module"
 }

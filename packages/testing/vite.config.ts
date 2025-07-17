@@ -22,9 +22,19 @@ export default defineConfig({
     sourcemap: true,
     minify: false,
     lib: {
-      entry: 'src/index.ts',
+      entry: {
+        index: 'src/index.ts',
+        setup: 'src/setup.ts'
+      },
       formats: ['es'],
-      fileName: 'index'
-    }
+      fileName: (format, entryName) => `${entryName}.js`
+    },
+    rollupOptions: {
+      external: [/@rpgjs/, 'esbuild', 'canvasengine', '@canvasengine/presets', 'rxjs', 'pixi.js', 'vitest-webgl-canvas-mock'],
+      output: {
+        preserveModules: true,
+        preserveModulesRoot: 'src'
+      }
+    },
   },
 })
