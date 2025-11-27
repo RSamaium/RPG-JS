@@ -1,0 +1,10 @@
+name = 'My Game'
+
+modules = [
+    './src/modules/main'
+]
+
+[start]
+    map = 'simplemap'
+    graphic = 'hero'
+    hitbox = [16, 16]

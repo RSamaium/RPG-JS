@@ -4,7 +4,7 @@ import { serverPlugin } from "./server-plugin";
 import { entryPointPlugin } from "./entry-point-plugin";
 
 interface RpgjsPluginOptions {
-  server: any;
+  server?: any;
   entryPoints?: {
     rpg: string;
     mmorpg: string;
@@ -14,7 +14,7 @@ interface RpgjsPluginOptions {
 export function rpgjs({
   server,
   entryPoints
-}: RpgjsPluginOptions) {
+}: RpgjsPluginOptions = {}) {
   return [
     canvasengine(),
     replaceConfigImport(),
