@@ -1,9 +1,5 @@
 packages:
   - 'packages/**'
   - sample
-<<<<<<< HEAD
   - sample-v4-compatibility
   - starter
-=======
-  - sample-v4-compatibility
->>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap

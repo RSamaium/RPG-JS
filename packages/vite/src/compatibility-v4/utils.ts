@@ -71,7 +71,6 @@ export function searchFolderAndTransformToImportString(
     returnCb?: (file: string, variableName: string) => string,
     options?: {
         customFilter?: (file: string) => boolean
-<<<<<<< HEAD
     },
     projectRoot?: string
 ): ImportObject {
@@ -80,13 +79,6 @@ export function searchFolderAndTransformToImportString(
     const { cwd } = process
     const root = projectRoot || cwd()
     const folder = path.resolve(root, modulePath, folderPath)
-=======
-    }
-): ImportObject {
-    let importString = ''
-    let fileRelativePath = ''
-    const folder = path.resolve(modulePath, folderPath)
->>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
     if (fs.existsSync(folder)) {
         // read recursive folder and get all the files (flat array)
         const files = getAllFiles(folder)
@@ -108,13 +100,8 @@ export function searchFolderAndTransformToImportString(
                 })
                 .map(file => {
                     // Convert file path to use @/ alias if under src/
-<<<<<<< HEAD
                     // For files not under src/, use path relative to project root
                     const srcPath = path.join(root, 'src')
-=======
-                    const { cwd } = process
-                    const srcPath = path.join(cwd(), 'src')
->>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
                     let importPath: string
                     
                     if (file.startsWith(srcPath)) {
@@ -122,15 +109,9 @@ export function searchFolderAndTransformToImportString(
                         const relativeToSrc = path.relative(srcPath, file)
                         importPath = `@/${toPosix(relativeToSrc)}`
                     } else {
-<<<<<<< HEAD
                         // File is not under src/, use path relative to project root
                         const relativeToRoot = path.relative(root, file)
                         importPath = `./${toPosix(relativeToRoot)}`
-=======
-                        // File is not under src/, use relative path from cwd
-                        const _relativePath = relativePath(file)
-                        importPath = toPosix(_relativePath)
->>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
                     }
                     
                     const variableName = formatVariableName(importPath)
@@ -151,49 +132,29 @@ export function searchFolderAndTransformToImportString(
     }
 }
 
-<<<<<<< HEAD
 export function importString(modulePath: string, fileName: string, variableName?: string, projectRoot?: string) {
     const { cwd } = process
     const root = projectRoot || cwd()
     const transformedModulePath = transformPathIfModule(modulePath)
     const playerFile = path.resolve(root, transformedModulePath, fileName + '.ts')
-=======
-export function importString(modulePath: string, fileName: string, variableName?: string) {
-    const { cwd } = process
-    const transformedModulePath = transformPathIfModule(modulePath)
-    const playerFile = path.resolve(cwd(), transformedModulePath, fileName + '.ts')
->>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
     let importStr = ''
     if (fs.existsSync(playerFile)) {
         // Convert file path to use @/ alias for imports from virtual files
         // Example: './src/modules/main/player.ts' -> '@/modules/main/player.ts'
-<<<<<<< HEAD
         // For files not under src/, use path relative to project root
         let importPath: string
         
         // Check if the resolved file is under src/
         const srcPath = path.join(root, 'src')
-=======
-        let importPath: string
-        
-        // Check if the resolved file is under src/
-        const srcPath = path.join(cwd(), 'src')
->>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
         
         if (playerFile.startsWith(srcPath)) {
             // File is under src/, use @/ alias
             const relativeToSrc = path.relative(srcPath, playerFile)
             importPath = `@/${toPosix(relativeToSrc)}`
         } else {
-<<<<<<< HEAD
             // File is not under src/, use path relative to project root (works from virtual files)
             const relativeToRoot = path.relative(root, playerFile)
             importPath = `./${toPosix(relativeToRoot)}`
-=======
-            // File is not under src/, use relative path from cwd
-            const relativeToCwd = path.relative(cwd(), playerFile)
-            importPath = `./${toPosix(relativeToCwd)}`
->>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
         }
         importStr = `import ${variableName || fileName} from '${importPath}'`
     }
@@ -312,11 +273,7 @@ export function extractProjectPath(absolutePath: string, projectPath: string): s
     return extractedPath;
 }
 
-<<<<<<< HEAD
-export function replaceEnvVars(obj: any, envs: Record<string, any>): any {
-=======
 export function replaceEnvVars(obj, envs) {
->>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
     if (obj === null || obj === undefined) {
         return obj;
     }
@@ -331,11 +288,7 @@ export function replaceEnvVars(obj, envs) {
     }
 
     if (typeof obj == 'object') {
-<<<<<<< HEAD
-        return Object.entries(obj).reduce((acc: Record<string, any>, [key, value]) => {
-=======
         return Object.entries(obj).reduce((acc, [key, value]) => {
->>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
             acc[key] = replaceEnvVars(value, envs);
             return acc;
         }, {});

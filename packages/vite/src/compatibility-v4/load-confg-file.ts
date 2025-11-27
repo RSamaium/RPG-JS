@@ -92,11 +92,7 @@ export async function loadConfigFile(mode: string = 'development') {
     }
 
     if (config.modules) {
-<<<<<<< HEAD
         config.modules = config.modules.map((module: string): string => {
-=======
-        config.modules = config.modules.map((module) => {
->>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
             if (module.startsWith('.')) {
                 return './' + path.join(config.modulesRoot as string, module)
             }
@@ -107,7 +103,6 @@ export async function loadConfigFile(mode: string = 'development') {
     config.startMap = config.startMap || config.start?.map
 
     return config as any
-<<<<<<< HEAD
 }
 
 /**
@@ -175,6 +170,4 @@ export function loadConfigFileSync(mode: string = 'development'): Config {
     config.startMap = config.startMap || config.start?.map
 
     return config as Config
-=======
->>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
 }
