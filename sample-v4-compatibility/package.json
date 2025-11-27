@@ -1,0 +1,28 @@
+{
+    "name": "sample-v4-compatibility",
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "preview": "vite preview"
+    },
+    "dependencies": {
+        "@canvasengine/presets": "2.0.0-beta.33",
+        "@rpgjs/client": "workspace:*",
+        "@rpgjs/common": "workspace:*",
+        "@rpgjs/server": "workspace:*",
+        "@rpgjs/tiledmap": "workspace:*",
+        "@rpgjs/vite": "workspace:*",
+        "@rpgjs/vue": "workspace:*",
+        "@signe/di": "^2.5.0",
+        "canvasengine": "2.0.0-beta.33",
+        "pixi.js": "^8.14.0",
+        "vue": "^3.5.24"
+    },
+    "devDependencies": {
+        "typescript": "^5.0.0",
+        "vite": "^6.2.5",
+        "vite-plugin-dts": "^4.5.3"
+    }
+}
