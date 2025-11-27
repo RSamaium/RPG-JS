@@ -534,20 +534,12 @@ async function updateMap(roomId: string, rpgServer: RpgServerEngine) {
  * ```
  */
 export function serverPlugin(
-<<<<<<< HEAD
   serverModuleOrPath?: (new (room: Room) => RpgServerEngine) | string
-=======
-  serverModuleOrPath?: new (room: Room) => RpgServerEngine | string
->>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
 ) {
   let wsServer: WSServer | null = null;
   let rooms: Map<string, Room> = new Map();
   let servers: Map<string, RpgServerEngine> = new Map();
-<<<<<<< HEAD
   let serverModuleClass: (new (room: Room) => RpgServerEngine) | null = null;
-=======
-  let serverModuleClass: new (room: Room) => RpgServerEngine | null = null;
->>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
   let viteServer: ViteDevServer | null = null;
 
   // Ensure a room and its server instance exist for a given roomId
@@ -572,12 +564,8 @@ export function serverPlugin(
             // Use Vite's ssrLoadModule to load the module
             try {
               const module = await viteServer.ssrLoadModule(serverPath);
-<<<<<<< HEAD
               const loadedClass = (module.default || module) as new (room: Room) => RpgServerEngine;
               serverModuleClass = loadedClass;
-=======
-              serverModuleClass = module.default || module;
->>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
             } catch (error) {
               console.error(`Failed to load server module from ${serverPath}:`, error);
               throw error;
@@ -586,12 +574,8 @@ export function serverPlugin(
             // Fallback to dynamic import if Vite server not available
             try {
               const module = await import(serverPath + '?t=' + Date.now());
-<<<<<<< HEAD
               const loadedClass = (module.default || module) as new (room: Room) => RpgServerEngine;
               serverModuleClass = loadedClass;
-=======
-              serverModuleClass = module.default || module;
->>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
             } catch (error) {
               console.error(`Failed to load server module from ${serverPath}:`, error);
               throw error;
@@ -605,12 +589,8 @@ export function serverPlugin(
           if (viteServer) {
             try {
               const module = await viteServer.ssrLoadModule(defaultPath);
-<<<<<<< HEAD
               const loadedClass = (module.default || module) as new (room: Room) => RpgServerEngine;
               serverModuleClass = loadedClass;
-=======
-              serverModuleClass = module.default || module;
->>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
             } catch (error) {
               console.error('Failed to load default virtual server module:', error);
               throw error;
@@ -618,12 +598,8 @@ export function serverPlugin(
           } else {
             try {
               const module = await import(defaultPath + '?t=' + Date.now());
-<<<<<<< HEAD
               const loadedClass = (module.default || module) as new (room: Room) => RpgServerEngine;
               serverModuleClass = loadedClass;
-=======
-              serverModuleClass = module.default || module;
->>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
             } catch (error) {
               console.error('Failed to load default virtual server module:', error);
               throw error;
@@ -631,16 +607,12 @@ export function serverPlugin(
           }
         }
       }
-<<<<<<< HEAD
       
       if (!serverModuleClass) {
         throw new Error('Failed to load server module class');
       }
       
       rpgServer = new serverModuleClass(room);
-=======
-      rpgServer = new serverModuleClass!(room);
->>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
       servers.set(roomId, rpgServer);
       console.log(`Created new server instance for room: ${roomId}`);
       if (typeof rpgServer.onStart === "function") {

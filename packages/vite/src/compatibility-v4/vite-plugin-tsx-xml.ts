@@ -1,11 +1,7 @@
 import { Plugin } from 'vite';
 import fs from 'fs';
 import path from 'path';
-<<<<<<< HEAD
 import { type Config } from './load-confg-file';
-=======
-import { type Config } from './load-config-file';
->>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
 
 export const tsxXmlPlugin = (config: Config): Plugin => {
   return {

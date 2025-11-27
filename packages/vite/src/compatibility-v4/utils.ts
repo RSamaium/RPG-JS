@@ -273,7 +273,7 @@ export function extractProjectPath(absolutePath: string, projectPath: string): s
     return extractedPath;
 }
 
-export function replaceEnvVars(obj, envs) {
+export function replaceEnvVars(obj: any, envs: Record<string, any>): any {
     if (obj === null || obj === undefined) {
         return obj;
     }
@@ -288,7 +288,7 @@ export function replaceEnvVars(obj, envs) {
     }
 
     if (typeof obj == 'object') {
-        return Object.entries(obj).reduce((acc, [key, value]) => {
+        return Object.entries(obj).reduce((acc: Record<string, any>, [key, value]) => {
             acc[key] = replaceEnvVars(value, envs);
             return acc;
         }, {});
