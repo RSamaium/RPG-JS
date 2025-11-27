@@ -5,7 +5,6 @@ import sizeOf from 'image-size';
 import {
     ClientBuildConfigOptions,
     Config,
-    loadGlobalConfig,
     warn,
     assetsFolder,
     extractProjectPath,
@@ -17,12 +16,12 @@ import {
     getAllFiles,
     searchFolderAndTransformToImportString,
     importString,
-    ImportObject,
-    loadRpgToml
+    ImportObject
 } from './utils';
 import { flagTransform } from './flag-transform';
 import vitePluginRequire from './require-transform';
 import { tiledMapFolderPlugin } from '../tiled-map-folder-plugin';
+import { loadConfigFileSync } from './load-confg-file';
 
 const MODULE_NAME = 'virtual-modules'
 const GLOBAL_CONFIG_CLIENT = 'virtual-config-client'
@@ -36,27 +35,60 @@ function resolveModule(moduleName: string) {
     return transformPathIfModule(moduleName)
 }
 
-export function loadServerFiles(modulePath: string, options: any, config: Config) {
+export function loadServerFiles(modulePath: string, options: any, config: Config, globalConfig: any = {}, projectRoot?: string) {
     const modulesCreated = options.modulesCreated || []
     if (!modulesCreated.includes(modulePath)) modulesCreated.push(modulePath)
+    const root = projectRoot || cwd()
 
-    const importPlayer = importString(modulePath, 'player')
-    const importEngine = importString(modulePath, 'server')
-    const mapStandaloneFilesString = searchFolderAndTransformToImportString('maps', modulePath, '.ts')
+    const importPlayer = importString(modulePath, 'player', undefined, root)
+    const importEngine = importString(modulePath, 'server', undefined, root)
+    const mapStandaloneFilesString = searchFolderAndTransformToImportString('maps', modulePath, '.ts', undefined, undefined, root)
     const mapFilesString = searchFolderAndTransformToImportString('maps', modulePath, '.tmx', (file, variableName) => {
         return `{ id: '${file.replace('.tmx', '')}', file: ${variableName} }`
-    })
-    const worldFilesString = searchFolderAndTransformToImportString('worlds', modulePath, '.ts')
-    const eventsFilesString = searchFolderAndTransformToImportString('events', modulePath, '.ts')
-    const databaseFilesString = searchFolderAndTransformToImportString('database', modulePath, '.ts')
+    }, undefined, root)
+    const worldFilesString = searchFolderAndTransformToImportString('worlds', modulePath, '.ts', undefined, undefined, root)
+    const eventsFilesString = searchFolderAndTransformToImportString('events', modulePath, '.ts', undefined, undefined, root)
+    const databaseFilesString = searchFolderAndTransformToImportString('database', modulePath, '.ts', undefined, undefined, root)
 
     const hasMaps = mapFilesString?.variablesString || mapStandaloneFilesString?.variablesString
 
     // Check if tiled folder exists
-    const tiledFolderPath = path.join(cwd(), 'src', 'tiled')
+    const tiledFolderPath = path.join(cwd(), 'tiled')
     const hasTiled = fs.existsSync(tiledFolderPath)
     const tiledImport = hasTiled ? "import { provideTiledMap } from '@rpgjs/tiledmap/server'" : ''
     const tiledProvider = hasTiled ? 'provideTiledMap(),' : ''
+
+    // Generate player override code from global config if single module
+    const startConfig = globalConfig.start || config.start || {}
+    const startMap = globalConfig.startMap || config.startMap
+    const hitbox = startConfig.hitbox
+    const hasStartConfig = startConfig.graphic || hitbox || startMap
+
+    // Generate player wrapper code if needed
+    const shouldWrapPlayer = importPlayer && modulesCreated.length === 1 && hasStartConfig
+    const graphicCode = shouldWrapPlayer && startConfig.graphic ? `player.setGraphic('${startConfig.graphic}')` : ''
+    const hitboxCode = shouldWrapPlayer && hitbox ? `player.setHitbox(${hitbox[0]}, ${hitbox[1]})` : ''
+    const mapCode = shouldWrapPlayer && startMap ? `await player.changeMap('${startMap}')` : ''
+    
+    const playerWrapper = shouldWrapPlayer ? dd`
+        const _lastConnectedCb = player.onConnected
+
+        player.onConnected = async (player) => {
+
+            if (_lastConnectedCb) await _lastConnectedCb(player)
+
+           
+
+                ${graphicCode}
+
+                //${hitboxCode}
+
+                ${mapCode}
+
+            
+
+        }
+    ` : ''
 
     const code = dd`
         import { createServer, provideServerModules } from '@rpgjs/server'
@@ -68,6 +100,8 @@ export function loadServerFiles(modulePath: string, options: any, config: Config
         ${worldFilesString?.importString || ''}
         ${eventsFilesString?.importString || ''}
         ${databaseFilesString?.importString || ''}
+
+        ${playerWrapper}
 
         export default createServer({
             providers: [
@@ -122,26 +156,30 @@ export function loadSpriteSheet(directoryName: string, modulePath: string, optio
     }
 }
 
-export function loadClientFiles(modulePath: string, options: any, config: Config) {
+export function loadClientFiles(modulePath: string, options: any, config: Config, globalConfig: any = {}, projectRoot?: string) {
     const modulesCreated = options.modulesCreated || []
     if (!modulesCreated.includes(modulePath)) modulesCreated.push(modulePath)
+    const root = projectRoot || cwd()
 
-    const importSpriteString = importString(modulePath, 'sprite')
-    const importSceneMapString = importString(modulePath, 'scene-map')
-    const importEngine = importString(modulePath, 'client')
-    const guiFilesString = searchFolderAndTransformToImportString('gui', modulePath, '.vue')
-    const soundFilesString = searchFolderAndTransformToImportString('sounds', modulePath, '.ogg')
-    const soundStandaloneFilesString = searchFolderAndTransformToImportString('sounds', modulePath, '.ts')
+    const importSpriteString = importString(modulePath, 'sprite', undefined, root)
+    const importSceneMapString = importString(modulePath, 'scene-map', undefined, root)
+    const importEngine = importString(modulePath, 'client', undefined, root)
+    const guiFilesString = searchFolderAndTransformToImportString('gui', modulePath, '.vue', undefined, undefined, root)
+    const soundFilesString = searchFolderAndTransformToImportString('sounds', modulePath, '.ogg', undefined, undefined, root)
+    const soundStandaloneFilesString = searchFolderAndTransformToImportString('sounds', modulePath, '.ts', undefined, undefined, root)
     const importSpritesheets = loadSpriteSheet('spritesheets', modulePath, options, true)
 
     // Check if tiled folder exists
-    const tiledFolderPath = path.join(cwd(), 'src', 'tiled')
+    const tiledFolderPath = path.join(cwd(), 'tiled')
     const hasTiled = fs.existsSync(tiledFolderPath)
     const tiledImport = hasTiled ? "import { provideTiledMap } from '@rpgjs/tiledmap/client'" : ''
     const tiledProvider = hasTiled ? 'provideTiledMap({ basePath: "map" }),' : ''
 
+    // Generate provideClientGlobalConfig with loaded config
+    const configJson = JSON.stringify(globalConfig || {})
+
     const code = dd`
-        import { provideClientModules } from '@rpgjs/client'
+        import { provideClientModules, provideClientGlobalConfig } from '@rpgjs/client'
         ${tiledImport}
         ${importSpriteString || ''}
         ${importSceneMapString || ''}
@@ -153,6 +191,7 @@ export function loadClientFiles(modulePath: string, options: any, config: Config
 
         export default {
             providers: [
+                provideClientGlobalConfig(${configJson}),
                 ${tiledProvider}
                 provideClientModules([
                     {
@@ -170,15 +209,16 @@ export function loadClientFiles(modulePath: string, options: any, config: Config
     return code
 }
 
-export function createModuleLoad(id: string, variableName: string, modulePath: string, options: any, config: Config) {
+export function createModuleLoad(id: string, variableName: string, modulePath: string, options: any, config: Config, globalConfig: any = {}, projectRoot?: string) {
     const clientFile = `virtual-${variableName}-client.ts`
     const serverFile = `virtual-${variableName}-server.ts`
+    const root = projectRoot || cwd()
 
     if (id.includes(serverFile) && id.includes('?server')) {
-        return loadServerFiles(modulePath, options, config)
+        return loadServerFiles(modulePath, options, config, globalConfig, root)
     }
     else if (id.includes(clientFile) && id.includes('?client')) {
-        return loadClientFiles(modulePath, options, config)
+        return loadClientFiles(modulePath, options, config, globalConfig, root)
     }
 
     const modulePathId = path.join(cwd(), id)
@@ -214,51 +254,67 @@ export function createModuleLoad(id: string, variableName: string, modulePath: s
     `
 }
 
-export function createConfigFiles(id: string, configServer: any, configClient: any): string | null {
+export function createConfigFiles(id: string, configServer: any, globalConfig: any): string | null {
     if (id.endsWith(GLOBAL_CONFIG_SERVER)) {
         return `export default ${JSON.stringify(configServer)}`
     }
     else if (id.endsWith(GLOBAL_CONFIG_CLIENT)) {
-        return `export default ${JSON.stringify(configClient)}`
+        // Generate a config file that uses provideClientGlobalConfig with the loaded config
+        const configJson = JSON.stringify(globalConfig || {})
+        return dd`
+            import { provideClientGlobalConfig } from '@rpgjs/client'
+            
+            export default {
+                providers: [
+                    provideClientGlobalConfig(${configJson})
+                ]
+            }
+        `
     }
     return null
 }
 
-export default function compatibilityV4Plugin(options: ClientBuildConfigOptions = {}, config: Config): Plugin[] | undefined {
+export default function compatibilityV4Plugin(options: Partial<ClientBuildConfigOptions> = {}): Plugin[] {
     let modules: string[] = []
     let modulesCreated: string[] = []
-
-    if (config.modules) {
-        modules = config.modules;
+    let resolvedOptions: ClientBuildConfigOptions = {
+        type: (process.env.RPG_TYPE as 'rpg' | 'mmorpg') || 'mmorpg',
+        serveMode: true,
+        side: 'client',
+        ...options
     }
+    let viteMode: string = 'development'
+    let globalConfig: any = {}
+    let config: Config = {}
 
-    const rpgToml = loadRpgToml(cwd());
-    if (rpgToml.modules) {
-        modules = [...modules, ...rpgToml.modules];
-    }
-
-    config = { ...rpgToml, ...config };
-
-    let ret: any
+    // Load global config from rpg.toml/rpg.json using loadConfigFileSync
     try {
-        ret = loadGlobalConfig(modules, config, options)
+        globalConfig = loadConfigFileSync(viteMode)
+        // Get modules from rpg.toml
+        if (globalConfig.modules) {
+            modules = Array.isArray(globalConfig.modules) ? globalConfig.modules : [globalConfig.modules]
+        }
+        // Get type from rpg.toml or env var if not provided in options (priority: options > rpg.toml > env var)
+        if (!options.type) {
+            if (globalConfig.type) {
+                resolvedOptions.type = globalConfig.type
+            } else if (process.env.RPG_TYPE) {
+                resolvedOptions.type = process.env.RPG_TYPE as 'rpg' | 'mmorpg'
+            }
+        }
+        config = { ...globalConfig }
+    } catch (err) {
+        warn(`Error loading config file: ${err}`)
     }
-    catch (err) {
-        if (options.side == 'server') exit()
-    }
-
-    if (!ret) return
-
-    const { configClient, configServer } = ret
 
     const plugins: Plugin[] = []
 
-    // Add tiled map plugin by default if src/tiled folder exists
-    const tiledFolderPath = path.join(cwd(), 'src', 'tiled')
+    // Add tiled map plugin by default if tiled folder exists
+    const tiledFolderPath = path.join(cwd(), 'tiled')
     if (fs.existsSync(tiledFolderPath)) {
         plugins.push(
             tiledMapFolderPlugin({
-                sourceFolder: './src/tiled',
+                sourceFolder: './tiled',
                 publicPath: '/map',
                 buildOutputPath: 'assets/data'
             })
@@ -266,18 +322,46 @@ export default function compatibilityV4Plugin(options: ClientBuildConfigOptions 
     }
 
     plugins.push(
-        flagTransform({
-            side: options.side,
-            mode: config.vite?.mode,
-            type: options.type
-        }),
-        vitePluginRequire(),
         {
             name: 'vite-plugin-config-toml',
             enforce: 'pre',
+            configResolved(viteConfig) {
+                // Determine mode and serveMode from Vite config
+                viteMode = viteConfig.mode || 'development'
+                resolvedOptions.serveMode = viteConfig.command === 'serve'
+                
+                // Reload config with correct mode
+                try {
+                    globalConfig = loadConfigFileSync(viteMode)
+                    if (globalConfig.modules) {
+                        modules = Array.isArray(globalConfig.modules) ? globalConfig.modules : [globalConfig.modules]
+                    }
+                    // Get type from rpg.toml or env var if not provided in options (priority: options > rpg.toml > env var)
+                    if (!options.type) {
+                        if (globalConfig.type) {
+                            resolvedOptions.type = globalConfig.type
+                        } else if (process.env.RPG_TYPE) {
+                            resolvedOptions.type = process.env.RPG_TYPE as 'rpg' | 'mmorpg'
+                        }
+                    }
+                    config = { ...globalConfig }
+                } catch (err) {
+                    warn(`Error loading config file: ${err}`)
+                }
+            },
             handleHotUpdate() {
                 modulesCreated = []
             },
+        },
+        flagTransform({
+            side: resolvedOptions.side,
+            mode: viteMode,
+            type: resolvedOptions.type
+        }),
+        vitePluginRequire(),
+        {
+            name: 'vite-plugin-compatibility-v4',
+            enforce: 'pre',
             async resolveId(source: string, importer?: string) {
                 if (source.endsWith(MODULE_NAME) ||
                     source.endsWith(GLOBAL_CONFIG_CLIENT) ||
@@ -345,6 +429,27 @@ export default function compatibilityV4Plugin(options: ClientBuildConfigOptions 
                     }
                 }
 
+                // Handle relative imports from virtual files (e.g., ./main/player.ts from virtual:src/server.ts)
+                // Resolve them relative to project root
+                if (importer && importer.includes('virtual:src/')) {
+                    // Handle paths starting with ./ (relative to project root)
+                    if (source.startsWith('./')) {
+                        const pathFromRoot = source.replace(/^\.\//, '')
+                        const resolvedPath = path.resolve(cwd(), pathFromRoot)
+                        if (fs.existsSync(resolvedPath)) {
+                            return resolvedPath
+                        }
+                    }
+                    // Handle paths starting with ../ (back from src/ to root)
+                    if (source.startsWith('../')) {
+                        const pathFromRoot = source.replace(/^\.\.\//, '')
+                        const resolvedPath = path.resolve(cwd(), pathFromRoot)
+                        if (fs.existsSync(resolvedPath)) {
+                            return resolvedPath
+                        }
+                    }
+                }
+
                 for (let module of modules) {
                     if (source === resolveModule(module)) {
                         return source
@@ -363,7 +468,7 @@ export default function compatibilityV4Plugin(options: ClientBuildConfigOptions 
                         baseSource.includes('virtual-server')) {
                         return source;
                     }
-                    if ((!source.endsWith('virtual-server.ts') && options.serveMode) || !options.serveMode) {
+                    if ((!source.endsWith('virtual-server.ts') && resolvedOptions.serveMode) || !resolvedOptions.serveMode) {
                         return source;
                     }
                 }
@@ -419,22 +524,22 @@ export default function compatibilityV4Plugin(options: ClientBuildConfigOptions 
                 }
 
                 if (id === 'virtual:src/server.ts') {
-                    return loadServerFiles(modules[0] || '.', options, config)
+                    return loadServerFiles(modules[0] || '.', resolvedOptions, config, globalConfig, cwd())
                 }
 
                 // Handle virtual-config-client with any query string
                 if (id.includes('virtual-config-client')) {
-                    return loadClientFiles(modules[0] || '.', options, config)
+                    return loadClientFiles(modules[0] || '.', resolvedOptions, config, globalConfig, cwd())
                 }
 
                 // Handle virtual-config-server with any query string
                 if (id.includes('virtual-config-server')) {
-                    return `export default ${JSON.stringify(configServer)}`
+                    return `export default ${JSON.stringify({})}`
                 }
 
                 // Handle virtual-server with any query string
                 if (id.includes('virtual-server')) {
-                    return loadServerFiles(modules[0] || '.', options, config)
+                    return loadServerFiles(modules[0] || '.', resolvedOptions, config, globalConfig, cwd())
                 }
 
                 if (id.endsWith(MODULE_NAME)) {
@@ -455,7 +560,7 @@ export default function compatibilityV4Plugin(options: ClientBuildConfigOptions 
                     `
                 }
 
-                const str = createConfigFiles(id, configServer, configClient)
+                const str = createConfigFiles(id, {}, globalConfig)
                 if (str) return str
 
                 for (let module of modules) {
@@ -465,9 +570,9 @@ export default function compatibilityV4Plugin(options: ClientBuildConfigOptions 
                         id.endsWith(moduleName) || id.includes('virtual-' + variableName)
                     ) {
                         return createModuleLoad(id, variableName, module, {
-                            ...options,
+                            ...resolvedOptions,
                             modulesCreated
-                        }, config);
+                        }, config, globalConfig, cwd());
                     }
                 }
             }

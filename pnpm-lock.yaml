@@ -399,6 +399,55 @@ importers:
         specifier: ^4.5.3
         version: 4.5.4(@types/node@24.10.0)(rollup@4.46.2)(typescript@5.9.3)(vite@6.3.5(@types/node@24.10.0)(jiti@2.5.1)(tsx@4.20.6)(yaml@2.8.1))
 
+  starter:
+    dependencies:
+      '@canvasengine/presets':
+        specifier: 2.0.0-beta.33
+        version: 2.0.0-beta.33(canvasengine@2.0.0-beta.33(@types/react@19.1.10)(pixi.js@8.14.0)(react@19.1.1))(pixi.js@8.14.0)
+      '@rpgjs/client':
+        specifier: workspace:*
+        version: link:../packages/client
+      '@rpgjs/common':
+        specifier: workspace:*
+        version: link:../packages/common
+      '@rpgjs/server':
+        specifier: workspace:*
+        version: link:../packages/server
+      '@rpgjs/tiledmap':
+        specifier: workspace:*
+        version: link:../packages/tiledmap
+      '@rpgjs/vite':
+        specifier: workspace:*
+        version: link:../packages/vite
+      '@rpgjs/vue':
+        specifier: workspace:*
+        version: link:../packages/vue
+      '@signe/di':
+        specifier: ^2.5.0
+        version: 2.5.0
+      canvasengine:
+        specifier: 2.0.0-beta.33
+        version: 2.0.0-beta.33(@types/react@19.1.10)(pixi.js@8.14.0)(react@19.1.1)
+      pixi.js:
+        specifier: ^8.14.0
+        version: 8.14.0
+      vue:
+        specifier: ^3.5.24
+        version: 3.5.24(typescript@5.9.3)
+    devDependencies:
+      '@canvasengine/compiler':
+        specifier: 2.0.0-beta.33
+        version: 2.0.0-beta.33(@types/node@24.10.0)(jiti@2.5.1)(tsx@4.20.6)(yaml@2.8.1)
+      '@vitejs/plugin-vue':
+        specifier: ^6.0.1
+        version: 6.0.1(vite@7.2.4(@types/node@24.10.0)(jiti@2.5.1)(tsx@4.20.6)(yaml@2.8.1))(vue@3.5.24(typescript@5.9.3))
+      path-browserify:
+        specifier: ^1.0.1
+        version: 1.0.1
+      vite:
+        specifier: ^7.2.2
+        version: 7.2.4(@types/node@24.10.0)(jiti@2.5.1)(tsx@4.20.6)(yaml@2.8.1)
+
 packages:
 
   '@babel/code-frame@7.27.1':
@@ -3500,6 +3549,12 @@ snapshots:
     dependencies:
       '@rolldown/pluginutils': 1.0.0-beta.29
       vite: 7.2.2(@types/node@24.10.0)(jiti@2.5.1)(tsx@4.20.6)(yaml@2.8.1)
+      vue: 3.5.24(typescript@5.9.3)
+
+  '@vitejs/plugin-vue@6.0.1(vite@7.2.4(@types/node@24.10.0)(jiti@2.5.1)(tsx@4.20.6)(yaml@2.8.1))(vue@3.5.24(typescript@5.9.3))':
+    dependencies:
+      '@rolldown/pluginutils': 1.0.0-beta.29
+      vite: 7.2.4(@types/node@24.10.0)(jiti@2.5.1)(tsx@4.20.6)(yaml@2.8.1)
       vue: 3.5.24(typescript@5.9.3)
 
   '@vitest/coverage-v8@4.0.8(vitest@4.0.8(@types/node@24.10.0)(@vitest/ui@4.0.8)(jiti@2.5.1)(tsx@4.20.6)(yaml@2.8.1))':

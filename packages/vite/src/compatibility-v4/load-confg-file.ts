@@ -92,7 +92,7 @@ export async function loadConfigFile(mode: string = 'development') {
     }
 
     if (config.modules) {
-        config.modules = config.modules.map((module) => {
+        config.modules = config.modules.map((module: string): string => {
             if (module.startsWith('.')) {
                 return './' + path.join(config.modulesRoot as string, module)
             }
@@ -103,4 +103,71 @@ export async function loadConfigFile(mode: string = 'development') {
     config.startMap = config.startMap || config.start?.map
 
     return config as any
+}
+
+/**
+ * Synchronous version of loadConfigFile for use in Vite plugins
+ * 
+ * This function loads the configuration from rpg.toml or rpg.json synchronously,
+ * which is required for Vite plugins that need to access configuration during build.
+ * 
+ * @param mode - The environment mode (development, production, etc.)
+ * @returns The loaded configuration object
+ * 
+ * @example
+ * ```typescript
+ * const config = loadConfigFileSync('development');
+ * console.log(config.name); // 'My Game'
+ * ```
+ */
+export function loadConfigFileSync(mode: string = 'development'): Config {
+    const { cwd, env } = process
+    let config: any = {}
+
+    const tomlFile = resolve(cwd(), 'rpg.toml')
+    const jsonFile = resolve(cwd(), 'rpg.json')
+    
+    // if file exists
+    if (_fs.existsSync(tomlFile)) {
+        config = toml.parse(_fs.readFileSync(tomlFile, 'utf8'));
+    }
+    else if (_fs.existsSync(jsonFile)) {
+        config = JSON.parse(_fs.readFileSync(jsonFile, 'utf8'));
+    }
+
+    const envs = loadEnv(mode, cwd())
+    config = replaceEnvVars(config, envs)
+    config.autostart = config.autostart ?? true
+    config.modulesRoot = config.modulesRoot ?? ''
+
+    let buildOptions = config.compilerOptions?.build || {}
+
+    if (!config.compilerOptions) {
+        config.compilerOptions = {}
+    }
+
+    if (!config.compilerOptions.build) {
+        config.compilerOptions.build = {}
+    }
+
+    if (buildOptions.pwaEnabled === undefined) {
+        config.compilerOptions.build.pwaEnabled = true
+    }
+
+    if (buildOptions.outputDir === undefined) {
+        config.compilerOptions.build.outputDir = 'dist'
+    }
+
+    if (config.modules) {
+        config.modules = config.modules.map((module: string): string => {
+            if (module.startsWith('.')) {
+                return './' + path.join(config.modulesRoot as string, module)
+            }
+            return module
+        })
+    }
+   
+    config.startMap = config.startMap || config.start?.map
+
+    return config as Config
 }
