@@ -534,11 +534,13 @@ async function updateMap(roomId: string, rpgServer: RpgServerEngine) {
  * ```
  */
 export function serverPlugin(
-  serverModule: new (room: Room) => RpgServerEngine
+  serverModuleOrPath?: new (room: Room) => RpgServerEngine | string
 ) {
   let wsServer: WSServer | null = null;
   let rooms: Map<string, Room> = new Map();
   let servers: Map<string, RpgServerEngine> = new Map();
+  let serverModuleClass: new (room: Room) => RpgServerEngine | null = null;
+  let viteServer: ViteDevServer | null = null;
 
   // Ensure a room and its server instance exist for a given roomId
   async function ensureRoomAndServer(roomId: string) {
@@ -550,7 +552,58 @@ export function serverPlugin(
     }
     let rpgServer = servers.get(roomId);
     if (!rpgServer) {
-      rpgServer = new serverModule(room);
+      // Load server module if not already loaded
+      if (!serverModuleClass) {
+        if (typeof serverModuleOrPath === 'string') {
+          // Load module using Vite's module resolution
+          const serverPath = serverModuleOrPath.startsWith('.') 
+            ? serverModuleOrPath 
+            : `./${serverModuleOrPath}`;
+          
+          if (viteServer) {
+            // Use Vite's ssrLoadModule to load the module
+            try {
+              const module = await viteServer.ssrLoadModule(serverPath);
+              serverModuleClass = module.default || module;
+            } catch (error) {
+              console.error(`Failed to load server module from ${serverPath}:`, error);
+              throw error;
+            }
+          } else {
+            // Fallback to dynamic import if Vite server not available
+            try {
+              const module = await import(serverPath + '?t=' + Date.now());
+              serverModuleClass = module.default || module;
+            } catch (error) {
+              console.error(`Failed to load server module from ${serverPath}:`, error);
+              throw error;
+            }
+          }
+        } else if (serverModuleOrPath) {
+          serverModuleClass = serverModuleOrPath;
+        } else {
+          // Default to virtual-server.ts if no server provided
+          const defaultPath = 'virtual-server.ts';
+          if (viteServer) {
+            try {
+              const module = await viteServer.ssrLoadModule(defaultPath);
+              serverModuleClass = module.default || module;
+            } catch (error) {
+              console.error('Failed to load default virtual server module:', error);
+              throw error;
+            }
+          } else {
+            try {
+              const module = await import(defaultPath + '?t=' + Date.now());
+              serverModuleClass = module.default || module;
+            } catch (error) {
+              console.error('Failed to load default virtual server module:', error);
+              throw error;
+            }
+          }
+        }
+      }
+      rpgServer = new serverModuleClass!(room);
       servers.set(roomId, rpgServer);
       console.log(`Created new server instance for room: ${roomId}`);
       if (typeof rpgServer.onStart === "function") {
@@ -637,6 +690,7 @@ export function serverPlugin(
     name: "server-plugin",
 
     async configureServer(server: ViteDevServer) {
+      viteServer = server;
       // Dynamic import of WebSocketServer to avoid compatibility issues
       try {
         const WebSocketServerClass = await importWebSocketServer();
