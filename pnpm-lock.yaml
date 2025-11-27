@@ -405,6 +405,7 @@ importers:
         specifier: ^4.5.3
         version: 4.5.4(@types/node@24.10.0)(rollup@4.46.2)(typescript@5.9.3)(vite@6.3.5(@types/node@24.10.0)(jiti@2.5.1)(tsx@4.20.6)(yaml@2.8.1))
 
+<<<<<<< HEAD
   starter:
     dependencies:
       '@canvasengine/presets':
@@ -454,6 +455,8 @@ importers:
         specifier: ^7.2.2
         version: 7.2.4(@types/node@24.10.0)(jiti@2.5.1)(tsx@4.20.6)(yaml@2.8.1)
 
+=======
+>>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
 packages:
 
   '@babel/code-frame@7.27.1':
@@ -462,12 +465,21 @@ packages:
 
   '@babel/generator@7.28.5':
     resolution: {integrity: sha512-3EwLFhZ38J4VyIP6WNtt2kUdW9dokXA9Cr4IVIFHuCpZ3H8/YFOl5JjZHisrn1fATPBmKKqXzDFvh9fUwHz6CQ==}
+<<<<<<< HEAD
     engines: {node: '>=6.9.0'}
 
   '@babel/helper-globals@7.28.0':
     resolution: {integrity: sha512-+W6cISkXFa1jXsDEdYA8HeevQT/FULhxzR99pxphltZcVaugps53THCeiWA8SguxxpSp3gKPiuYfSWopkLQ4hw==}
     engines: {node: '>=6.9.0'}
 
+=======
+    engines: {node: '>=6.9.0'}
+
+  '@babel/helper-globals@7.28.0':
+    resolution: {integrity: sha512-+W6cISkXFa1jXsDEdYA8HeevQT/FULhxzR99pxphltZcVaugps53THCeiWA8SguxxpSp3gKPiuYfSWopkLQ4hw==}
+    engines: {node: '>=6.9.0'}
+
+>>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
   '@babel/helper-string-parser@7.27.1':
     resolution: {integrity: sha512-qMlSxKbpRlAridDExk92nSobyDdpPijUq2DW6oDnUqd0iOGxmQjyqhMIihI9+zv4LPyZdRje2cavWPbCbWm3eA==}
     engines: {node: '>=6.9.0'}
@@ -3579,12 +3591,15 @@ snapshots:
       vite: 7.2.2(@types/node@24.10.0)(jiti@2.5.1)(tsx@4.20.6)(yaml@2.8.1)
       vue: 3.5.24(typescript@5.9.3)
 
+<<<<<<< HEAD
   '@vitejs/plugin-vue@6.0.1(vite@7.2.4(@types/node@24.10.0)(jiti@2.5.1)(tsx@4.20.6)(yaml@2.8.1))(vue@3.5.24(typescript@5.9.3))':
     dependencies:
       '@rolldown/pluginutils': 1.0.0-beta.29
       vite: 7.2.4(@types/node@24.10.0)(jiti@2.5.1)(tsx@4.20.6)(yaml@2.8.1)
       vue: 3.5.24(typescript@5.9.3)
 
+=======
+>>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
   '@vitest/coverage-v8@4.0.8(vitest@4.0.8(@types/node@24.10.0)(@vitest/ui@4.0.8)(jiti@2.5.1)(tsx@4.20.6)(yaml@2.8.1))':
     dependencies:
       '@bcoe/v8-coverage': 1.0.2

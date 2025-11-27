@@ -5,6 +5,10 @@ import sizeOf from 'image-size';
 import {
     ClientBuildConfigOptions,
     Config,
+<<<<<<< HEAD
+=======
+    loadGlobalConfig,
+>>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
     warn,
     assetsFolder,
     extractProjectPath,
@@ -16,12 +20,20 @@ import {
     getAllFiles,
     searchFolderAndTransformToImportString,
     importString,
+<<<<<<< HEAD
     ImportObject
+=======
+    ImportObject,
+    loadRpgToml
+>>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
 } from './utils';
 import { flagTransform } from './flag-transform';
 import vitePluginRequire from './require-transform';
 import { tiledMapFolderPlugin } from '../tiled-map-folder-plugin';
+<<<<<<< HEAD
 import { loadConfigFileSync } from './load-confg-file';
+=======
+>>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
 
 const MODULE_NAME = 'virtual-modules'
 const GLOBAL_CONFIG_CLIENT = 'virtual-config-client'
@@ -35,6 +47,7 @@ function resolveModule(moduleName: string) {
     return transformPathIfModule(moduleName)
 }
 
+<<<<<<< HEAD
 export function loadServerFiles(modulePath: string, options: any, config: Config, globalConfig: any = {}, projectRoot?: string) {
     const modulesCreated = options.modulesCreated || []
     if (!modulesCreated.includes(modulePath)) modulesCreated.push(modulePath)
@@ -49,15 +62,35 @@ export function loadServerFiles(modulePath: string, options: any, config: Config
     const worldFilesString = searchFolderAndTransformToImportString('worlds', modulePath, '.ts', undefined, undefined, root)
     const eventsFilesString = searchFolderAndTransformToImportString('events', modulePath, '.ts', undefined, undefined, root)
     const databaseFilesString = searchFolderAndTransformToImportString('database', modulePath, '.ts', undefined, undefined, root)
+=======
+export function loadServerFiles(modulePath: string, options: any, config: Config) {
+    const modulesCreated = options.modulesCreated || []
+    if (!modulesCreated.includes(modulePath)) modulesCreated.push(modulePath)
+
+    const importPlayer = importString(modulePath, 'player')
+    const importEngine = importString(modulePath, 'server')
+    const mapStandaloneFilesString = searchFolderAndTransformToImportString('maps', modulePath, '.ts')
+    const mapFilesString = searchFolderAndTransformToImportString('maps', modulePath, '.tmx', (file, variableName) => {
+        return `{ id: '${file.replace('.tmx', '')}', file: ${variableName} }`
+    })
+    const worldFilesString = searchFolderAndTransformToImportString('worlds', modulePath, '.ts')
+    const eventsFilesString = searchFolderAndTransformToImportString('events', modulePath, '.ts')
+    const databaseFilesString = searchFolderAndTransformToImportString('database', modulePath, '.ts')
+>>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
 
     const hasMaps = mapFilesString?.variablesString || mapStandaloneFilesString?.variablesString
 
     // Check if tiled folder exists
+<<<<<<< HEAD
     const tiledFolderPath = path.join(cwd(), 'tiled')
+=======
+    const tiledFolderPath = path.join(cwd(), 'src', 'tiled')
+>>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
     const hasTiled = fs.existsSync(tiledFolderPath)
     const tiledImport = hasTiled ? "import { provideTiledMap } from '@rpgjs/tiledmap/server'" : ''
     const tiledProvider = hasTiled ? 'provideTiledMap(),' : ''
 
+<<<<<<< HEAD
     // Generate player override code from global config if single module
     const startConfig = globalConfig.start || config.start || {}
     const startMap = globalConfig.startMap || config.startMap
@@ -90,6 +123,8 @@ export function loadServerFiles(modulePath: string, options: any, config: Config
         }
     ` : ''
 
+=======
+>>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
     const code = dd`
         import { createServer, provideServerModules } from '@rpgjs/server'
         ${tiledImport}
@@ -101,8 +136,11 @@ export function loadServerFiles(modulePath: string, options: any, config: Config
         ${eventsFilesString?.importString || ''}
         ${databaseFilesString?.importString || ''}
 
+<<<<<<< HEAD
         ${playerWrapper}
 
+=======
+>>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
         export default createServer({
             providers: [
                 ${tiledProvider}
@@ -156,6 +194,7 @@ export function loadSpriteSheet(directoryName: string, modulePath: string, optio
     }
 }
 
+<<<<<<< HEAD
 export function loadClientFiles(modulePath: string, options: any, config: Config, globalConfig: any = {}, projectRoot?: string) {
     const modulesCreated = options.modulesCreated || []
     if (!modulesCreated.includes(modulePath)) modulesCreated.push(modulePath)
@@ -171,15 +210,36 @@ export function loadClientFiles(modulePath: string, options: any, config: Config
 
     // Check if tiled folder exists
     const tiledFolderPath = path.join(cwd(), 'tiled')
+=======
+export function loadClientFiles(modulePath: string, options: any, config: Config) {
+    const modulesCreated = options.modulesCreated || []
+    if (!modulesCreated.includes(modulePath)) modulesCreated.push(modulePath)
+
+    const importSpriteString = importString(modulePath, 'sprite')
+    const importSceneMapString = importString(modulePath, 'scene-map')
+    const importEngine = importString(modulePath, 'client')
+    const guiFilesString = searchFolderAndTransformToImportString('gui', modulePath, '.vue')
+    const soundFilesString = searchFolderAndTransformToImportString('sounds', modulePath, '.ogg')
+    const soundStandaloneFilesString = searchFolderAndTransformToImportString('sounds', modulePath, '.ts')
+    const importSpritesheets = loadSpriteSheet('spritesheets', modulePath, options, true)
+
+    // Check if tiled folder exists
+    const tiledFolderPath = path.join(cwd(), 'src', 'tiled')
+>>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
     const hasTiled = fs.existsSync(tiledFolderPath)
     const tiledImport = hasTiled ? "import { provideTiledMap } from '@rpgjs/tiledmap/client'" : ''
     const tiledProvider = hasTiled ? 'provideTiledMap({ basePath: "map" }),' : ''
 
+<<<<<<< HEAD
     // Generate provideClientGlobalConfig with loaded config
     const configJson = JSON.stringify(globalConfig || {})
 
     const code = dd`
         import { provideClientModules, provideClientGlobalConfig } from '@rpgjs/client'
+=======
+    const code = dd`
+        import { provideClientModules } from '@rpgjs/client'
+>>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
         ${tiledImport}
         ${importSpriteString || ''}
         ${importSceneMapString || ''}
@@ -191,7 +251,10 @@ export function loadClientFiles(modulePath: string, options: any, config: Config
 
         export default {
             providers: [
+<<<<<<< HEAD
                 provideClientGlobalConfig(${configJson}),
+=======
+>>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
                 ${tiledProvider}
                 provideClientModules([
                     {
@@ -209,6 +272,7 @@ export function loadClientFiles(modulePath: string, options: any, config: Config
     return code
 }
 
+<<<<<<< HEAD
 export function createModuleLoad(id: string, variableName: string, modulePath: string, options: any, config: Config, globalConfig: any = {}, projectRoot?: string) {
     const clientFile = `virtual-${variableName}-client.ts`
     const serverFile = `virtual-${variableName}-server.ts`
@@ -219,6 +283,17 @@ export function createModuleLoad(id: string, variableName: string, modulePath: s
     }
     else if (id.includes(clientFile) && id.includes('?client')) {
         return loadClientFiles(modulePath, options, config, globalConfig, root)
+=======
+export function createModuleLoad(id: string, variableName: string, modulePath: string, options: any, config: Config) {
+    const clientFile = `virtual-${variableName}-client.ts`
+    const serverFile = `virtual-${variableName}-server.ts`
+
+    if (id.includes(serverFile) && id.includes('?server')) {
+        return loadServerFiles(modulePath, options, config)
+    }
+    else if (id.includes(clientFile) && id.includes('?client')) {
+        return loadClientFiles(modulePath, options, config)
+>>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
     }
 
     const modulePathId = path.join(cwd(), id)
@@ -254,11 +329,16 @@ export function createModuleLoad(id: string, variableName: string, modulePath: s
     `
 }
 
+<<<<<<< HEAD
 export function createConfigFiles(id: string, configServer: any, globalConfig: any): string | null {
+=======
+export function createConfigFiles(id: string, configServer: any, configClient: any): string | null {
+>>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
     if (id.endsWith(GLOBAL_CONFIG_SERVER)) {
         return `export default ${JSON.stringify(configServer)}`
     }
     else if (id.endsWith(GLOBAL_CONFIG_CLIENT)) {
+<<<<<<< HEAD
         // Generate a config file that uses provideClientGlobalConfig with the loaded config
         const configJson = JSON.stringify(globalConfig || {})
         return dd`
@@ -270,10 +350,14 @@ export function createConfigFiles(id: string, configServer: any, globalConfig: a
                 ]
             }
         `
+=======
+        return `export default ${JSON.stringify(configClient)}`
+>>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
     }
     return null
 }
 
+<<<<<<< HEAD
 export default function compatibilityV4Plugin(options: Partial<ClientBuildConfigOptions> = {}): Plugin[] {
     let modules: string[] = []
     let modulesCreated: string[] = []
@@ -315,6 +399,43 @@ export default function compatibilityV4Plugin(options: Partial<ClientBuildConfig
         plugins.push(
             tiledMapFolderPlugin({
                 sourceFolder: './tiled',
+=======
+export default function compatibilityV4Plugin(options: ClientBuildConfigOptions = {}, config: Config): Plugin[] | undefined {
+    let modules: string[] = []
+    let modulesCreated: string[] = []
+
+    if (config.modules) {
+        modules = config.modules;
+    }
+
+    const rpgToml = loadRpgToml(cwd());
+    if (rpgToml.modules) {
+        modules = [...modules, ...rpgToml.modules];
+    }
+
+    config = { ...rpgToml, ...config };
+
+    let ret: any
+    try {
+        ret = loadGlobalConfig(modules, config, options)
+    }
+    catch (err) {
+        if (options.side == 'server') exit()
+    }
+
+    if (!ret) return
+
+    const { configClient, configServer } = ret
+
+    const plugins: Plugin[] = []
+
+    // Add tiled map plugin by default if src/tiled folder exists
+    const tiledFolderPath = path.join(cwd(), 'src', 'tiled')
+    if (fs.existsSync(tiledFolderPath)) {
+        plugins.push(
+            tiledMapFolderPlugin({
+                sourceFolder: './src/tiled',
+>>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
                 publicPath: '/map',
                 buildOutputPath: 'assets/data'
             })
@@ -322,6 +443,7 @@ export default function compatibilityV4Plugin(options: Partial<ClientBuildConfig
     }
 
     plugins.push(
+<<<<<<< HEAD
         {
             name: 'vite-plugin-config-toml',
             enforce: 'pre',
@@ -362,6 +484,20 @@ export default function compatibilityV4Plugin(options: Partial<ClientBuildConfig
         {
             name: 'vite-plugin-compatibility-v4',
             enforce: 'pre',
+=======
+        flagTransform({
+            side: options.side,
+            mode: config.vite?.mode,
+            type: options.type
+        }),
+        vitePluginRequire(),
+        {
+            name: 'vite-plugin-config-toml',
+            enforce: 'pre',
+            handleHotUpdate() {
+                modulesCreated = []
+            },
+>>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
             async resolveId(source: string, importer?: string) {
                 if (source.endsWith(MODULE_NAME) ||
                     source.endsWith(GLOBAL_CONFIG_CLIENT) ||
@@ -429,6 +565,7 @@ export default function compatibilityV4Plugin(options: Partial<ClientBuildConfig
                     }
                 }
 
+<<<<<<< HEAD
                 // Handle relative imports from virtual files (e.g., ./main/player.ts from virtual:src/server.ts)
                 // Resolve them relative to project root
                 if (importer && importer.includes('virtual:src/')) {
@@ -450,6 +587,8 @@ export default function compatibilityV4Plugin(options: Partial<ClientBuildConfig
                     }
                 }
 
+=======
+>>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
                 for (let module of modules) {
                     if (source === resolveModule(module)) {
                         return source
@@ -468,7 +607,11 @@ export default function compatibilityV4Plugin(options: Partial<ClientBuildConfig
                         baseSource.includes('virtual-server')) {
                         return source;
                     }
+<<<<<<< HEAD
                     if ((!source.endsWith('virtual-server.ts') && resolvedOptions.serveMode) || !resolvedOptions.serveMode) {
+=======
+                    if ((!source.endsWith('virtual-server.ts') && options.serveMode) || !options.serveMode) {
+>>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
                         return source;
                     }
                 }
@@ -524,22 +667,38 @@ export default function compatibilityV4Plugin(options: Partial<ClientBuildConfig
                 }
 
                 if (id === 'virtual:src/server.ts') {
+<<<<<<< HEAD
                     return loadServerFiles(modules[0] || '.', resolvedOptions, config, globalConfig, cwd())
+=======
+                    return loadServerFiles(modules[0] || '.', options, config)
+>>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
                 }
 
                 // Handle virtual-config-client with any query string
                 if (id.includes('virtual-config-client')) {
+<<<<<<< HEAD
                     return loadClientFiles(modules[0] || '.', resolvedOptions, config, globalConfig, cwd())
+=======
+                    return loadClientFiles(modules[0] || '.', options, config)
+>>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
                 }
 
                 // Handle virtual-config-server with any query string
                 if (id.includes('virtual-config-server')) {
+<<<<<<< HEAD
                     return `export default ${JSON.stringify({})}`
+=======
+                    return `export default ${JSON.stringify(configServer)}`
+>>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
                 }
 
                 // Handle virtual-server with any query string
                 if (id.includes('virtual-server')) {
+<<<<<<< HEAD
                     return loadServerFiles(modules[0] || '.', resolvedOptions, config, globalConfig, cwd())
+=======
+                    return loadServerFiles(modules[0] || '.', options, config)
+>>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
                 }
 
                 if (id.endsWith(MODULE_NAME)) {
@@ -560,7 +719,11 @@ export default function compatibilityV4Plugin(options: Partial<ClientBuildConfig
                     `
                 }
 
+<<<<<<< HEAD
                 const str = createConfigFiles(id, {}, globalConfig)
+=======
+                const str = createConfigFiles(id, configServer, configClient)
+>>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
                 if (str) return str
 
                 for (let module of modules) {
@@ -570,9 +733,15 @@ export default function compatibilityV4Plugin(options: Partial<ClientBuildConfig
                         id.endsWith(moduleName) || id.includes('virtual-' + variableName)
                     ) {
                         return createModuleLoad(id, variableName, module, {
+<<<<<<< HEAD
                             ...resolvedOptions,
                             modulesCreated
                         }, config, globalConfig, cwd());
+=======
+                            ...options,
+                            modulesCreated
+                        }, config);
+>>>>>>> chore: update dependencies and enhance Vite configuration for TiledMap
                     }
                 }
             }
