@@ -2,3 +2,4 @@ packages:
   - 'packages/**'
   - sample
   - sample-v4-compatibility
+  - starter
