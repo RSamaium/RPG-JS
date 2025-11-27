@@ -534,16 +534,16 @@ async function updateMap(roomId: string, rpgServer: RpgServerEngine) {
  * ```
  */
 export function serverPlugin(
-  serverModuleOrPath?: new (room: Room) => RpgServerEngine | string
+  serverModuleOrPath?: (new (room: Room) => RpgServerEngine) | string
 ) {
   let wsServer: WSServer | null = null;
   let rooms: Map<string, Room> = new Map();
   let servers: Map<string, RpgServerEngine> = new Map();
-  let serverModuleClass: new (room: Room) => RpgServerEngine | null = null;
+  let serverModuleClass: (new (room: Room) => RpgServerEngine) | null = null;
   let viteServer: ViteDevServer | null = null;
 
   // Ensure a room and its server instance exist for a given roomId
-  async function ensureRoomAndServer(roomId: string) {
+  async function ensureRoomAndServer(roomId: string): Promise<{ room: Room; rpgServer: RpgServerEngine }> {
     let room = rooms.get(roomId);
     if (!room) {
       room = new Room(roomId);
@@ -564,7 +564,8 @@ export function serverPlugin(
             // Use Vite's ssrLoadModule to load the module
             try {
               const module = await viteServer.ssrLoadModule(serverPath);
-              serverModuleClass = module.default || module;
+              const loadedClass = (module.default || module) as new (room: Room) => RpgServerEngine;
+              serverModuleClass = loadedClass;
             } catch (error) {
               console.error(`Failed to load server module from ${serverPath}:`, error);
               throw error;
@@ -573,7 +574,8 @@ export function serverPlugin(
             // Fallback to dynamic import if Vite server not available
             try {
               const module = await import(serverPath + '?t=' + Date.now());
-              serverModuleClass = module.default || module;
+              const loadedClass = (module.default || module) as new (room: Room) => RpgServerEngine;
+              serverModuleClass = loadedClass;
             } catch (error) {
               console.error(`Failed to load server module from ${serverPath}:`, error);
               throw error;
@@ -587,7 +589,8 @@ export function serverPlugin(
           if (viteServer) {
             try {
               const module = await viteServer.ssrLoadModule(defaultPath);
-              serverModuleClass = module.default || module;
+              const loadedClass = (module.default || module) as new (room: Room) => RpgServerEngine;
+              serverModuleClass = loadedClass;
             } catch (error) {
               console.error('Failed to load default virtual server module:', error);
               throw error;
@@ -595,7 +598,8 @@ export function serverPlugin(
           } else {
             try {
               const module = await import(defaultPath + '?t=' + Date.now());
-              serverModuleClass = module.default || module;
+              const loadedClass = (module.default || module) as new (room: Room) => RpgServerEngine;
+              serverModuleClass = loadedClass;
             } catch (error) {
               console.error('Failed to load default virtual server module:', error);
               throw error;
@@ -603,7 +607,12 @@ export function serverPlugin(
           }
         }
       }
-      rpgServer = new serverModuleClass!(room);
+      
+      if (!serverModuleClass) {
+        throw new Error('Failed to load server module class');
+      }
+      
+      rpgServer = new serverModuleClass(room);
       servers.set(roomId, rpgServer);
       console.log(`Created new server instance for room: ${roomId}`);
       if (typeof rpgServer.onStart === "function") {
@@ -616,6 +625,11 @@ export function serverPlugin(
       }
 
       await updateMap(roomId, rpgServer);
+    }
+    
+    // At this point, rpgServer should always be defined
+    if (!rpgServer) {
+      throw new Error(`Failed to create server instance for room: ${roomId}`);
     }
     
     // Make sure parties context is available on the room
