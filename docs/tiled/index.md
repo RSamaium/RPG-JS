@@ -12,7 +12,18 @@ npm install @rpgjs/tiledmap
 
 ## Vite Configuration
 
-Configure your `vite.config.ts` to handle Tiled map files:
+### Using V4 Compatibility Mode
+
+If you're using **V4 compatibility mode** (`compatibilityV4Plugin`), the `tiledMapFolderPlugin` is **automatically injected** when a `src/tiled` folder exists in your project. You don't need to manually configure it in your `vite.config.ts`.
+
+The plugin will be automatically configured with these default options:
+- `sourceFolder: './src/tiled'`
+- `publicPath: '/map'`
+- `buildOutputPath: 'assets/data'`
+
+### Manual Configuration
+
+For projects not using V4 compatibility mode, you need to manually configure the plugin in your `vite.config.ts`:
 
 ```ts
 import { defineConfig } from 'vite';
@@ -38,6 +49,8 @@ export default defineConfig({
 
 ## Client-Side Setup
 
+**Important**: You **must** configure `provideTiledMap` on the client side, even if the Vite plugin is automatically injected in V4 compatibility mode.
+
 Configure the client to use TiledMap:
 
 ```ts
@@ -50,7 +63,7 @@ startGame(
   mergeConfig({
     providers: [
       provideTiledMap({
-        basePath: "map"  // Must match publicPath in vite.config.ts
+        basePath: "map"  // Must match publicPath in vite.config.ts (or '/map' in V4 compatibility mode)
       }),
       provideClientGlobalConfig(),
       // ... other client providers
@@ -61,7 +74,11 @@ startGame(
 );
 ```
 
+> **Note**: The `basePath` must match the `publicPath` configured in the Vite plugin. In V4 compatibility mode, the default `publicPath` is `/map`.
+
 ## Server-Side Setup
+
+**Important**: You **must** configure `provideTiledMap` on the server side, even if the Vite plugin is automatically injected in V4 compatibility mode.
 
 Configure the server to use TiledMap:
 
@@ -76,7 +93,7 @@ export default createServer({
       {
         maps: [
           {
-            id: "mymap",  // Map ID (should match TMX filename)
+            id: "mymap",  // Map ID (should match TMX filename without .tmx extension)
             // ... other map configuration
           }
         ]
