@@ -19,6 +19,11 @@
   "dependencies": {
     "@canvasengine/compiler": "2.0.0-beta.34",
     "@hono/vite-dev-server": "^0.23.0",
+    "@babel/generator": "^7.28.5",
+    "@babel/parser": "^7.28.5",
+    "@babel/traverse": "^7.28.5",
+    "@babel/types": "^7.28.5",
+    "@iarna/toml": "^2.2.5",
     "@rpgjs/server": "workspace:*",
     "@types/node": "^24.10.1",
     "acorn": "^8.15.0",
