@@ -1,7 +1,9 @@
 // fork to https://github.com/wangzongming/vite-plugin-require
 
 import * as parser from "@babel/parser";
+// @ts-ignore - @babel/traverse doesn't have type definitions
 import _traverse from "@babel/traverse";
+// @ts-ignore - @babel/generator doesn't have type definitions
 import _generate from "@babel/generator";
 import { Plugin } from "vite";
 import { importDeclaration, importDefaultSpecifier, stringLiteral, identifier, newExpression, expressionStatement, memberExpression, BinaryExpression, ExpressionStatement } from "@babel/types";
@@ -40,7 +42,7 @@ export default function vitePluginRequire(opts?: {
                                     case "Identifier":
                                         const IdentifierName = arg.name;
                                         traverse(ast, {
-                                            Identifier: (path) => {
+                                            Identifier: (path: any) => {
                                                 if (path.node.name === IdentifierName) {
                                                     if (!Array.isArray(path.container) && (path.container as any).init?.type === "StringLiteral") {
                                                         stringVal = (path.container as any).init.value;
@@ -60,7 +62,7 @@ export default function vitePluginRequire(opts?: {
                                                 } else if (lOr.type === "Identifier") {
                                                     const IdentifierName = lOr.name;
                                                     traverse(ast, {
-                                                        Identifier: (path) => {
+                                                        Identifier: (path: any) => {
                                                             if (path.node.name === IdentifierName) {
                                                                 if (!Array.isArray(path.container) && (path.container as any).init?.type === "StringLiteral") {
                                                                     // log((path.container as any).init.value);

@@ -1,7 +1,7 @@
 import { Plugin } from 'vite';
 import fs from 'fs';
 import path from 'path';
-import { type Config } from './load-config-file';
+import { type Config } from './load-confg-file';
 
 export const tsxXmlPlugin = (config: Config): Plugin => {
   return {
