@@ -1,0 +1,125 @@
+{
+  "Objective": "Transform the current emergent MMORPG system into a playable demo and prepare a structured path toward public release.",
+  "Phase Split": {
+    "Phase_1_Playable_Demo": {
+      "Goal": "Get a stable, testable game that players can actually run and experience",
+      "Required Features": [
+        "Player movement (Rpg-JS default)",
+        "Basic combat (click or key attack)",
+        "Visible enemies (simple AI)",
+        "Loot drops",
+        "HUD showing heuristic values",
+        "At least 1 playable map"
+      ],
+      "Steps": [
+        {
+          "Step": 1,
+          "Action": "Create a simple map using Tiled",
+          "Detail": "Use grass tileset + collision layer"
+        },
+        {
+          "Step": 2,
+          "Action": "Add player spawn + movement",
+          "Detail": "Use Rpg-JS player event system"
+        },
+        {
+          "Step": 3,
+          "Action": "Add 1 enemy type",
+          "Code": "onPlayerNearby(() => attackPlayer());"
+        },
+        {
+          "Step": 4,
+          "Action": "Connect combat → loot → heuristics",
+          "Detail": "Ensure combat triggers 'combat' + 'loot' actions"
+        },
+        {
+          "Step": 5,
+          "Action": "Display HUD",
+          "Code": "drawHUD(ctx, H);"
+        },
+        {
+          "Step": 6,
+          "Action": "Run full loop",
+          "Result": "Player → acts → system reacts → visible changes"
+        }
+      ],
+      "Minimum Success Criteria": [
+        "Player can move",
+        "Player can fight",
+        "Player sees loot",
+        "System reacts (HUD changes)",
+        "No crashes"
+      ]
+    },
+    "Phase_2_Stabilization": {
+      "Goal": "Make the system reliable enough for multiple users",
+      "Tasks": [
+        "Fix crashes from async DB calls",
+        "Limit heuristic spikes (Watchdog tuning)",
+        "Optimize tick rate (100ms → 500ms where needed)",
+        "Cache frequent DB reads (Redis usage)"
+      ]
+    },
+    "Phase_3_User_Experience": {
+      "Goal": "Make the system understandable and engaging",
+      "Additions": [
+        "Visual feedback (damage numbers, loot glow)",
+        "Quest log UI (from narrative engine)",
+        "Faction indicators (colors, names)",
+        "Basic tutorial (movement, combat, trade)"
+      ]
+    },
+    "Phase_4_Release_Preparation": {
+      "Goal": "Package and deploy",
+      "Tasks": [
+        "Dockerize backend (MongoDB, Neo4j, Redis, Server)",
+        "Build client bundle (Vite/Webpack)",
+        "Deploy server (VPS or cloud)",
+        "Set up domain + SSL",
+        "Enable account system (login/register)"
+      ]
+    }
+  },
+  "Essential Playable Code Additions": {
+    "Enemy System (server)": {
+      "code": "setInterval(()=>{\n enemies.forEach(e=>{\n  if(distance(e,player)<5){\n   handleAction({type:'combat',playerId:player.id});\n  }\n });\n},500);"
+    },
+    "Loot Drop": {
+      "code": "function dropLoot(){\n handleAction({type:'loot',playerId:'player'});\n return {gold:10};\n}"
+    },
+    "HUD Integration": {
+      "code": "setInterval(()=>{\n drawHUD(ctx,H);\n},100);"
+    }
+  },
+  "Playable Loop (Final Form)": {
+    "Flow": [
+      "Player moves",
+      "Encounters enemy",
+      "Combat triggered",
+      "Loot dropped",
+      "Action sent → heuristics updated",
+      "World + economy shift",
+      "HUD reflects change"
+    ]
+  },
+  "Release Strategy": {
+    "Stage_1": "Closed alpha (you + testers)",
+    "Stage_2": "Small public demo (itch.io or web)",
+    "Stage_3": "Community feedback loop",
+    "Stage_4": "Expand content (maps, enemies, factions)",
+    "Stage_5": "Steam or full MMO deployment"
+  },
+  "Watchdog Final Constraints": [
+    "Do NOT add complexity before playability",
+    "Every system must be visible to player",
+    "If player cannot feel it → it does not exist"
+  ],
+  "Biggest Risk": {
+    "Issue": "System too complex, player confused",
+    "Solution": "Expose systems visually (HUD, map changes, quests)"
+  },
+  "Immediate Next Action": {
+    "Command": "Build first playable map + enemy",
+    "Reason": "You must SEE the system working, not just run it"
+  }
+}

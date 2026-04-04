@@ -1,0 +1,91 @@
+{
+  "Objective": "Create a self-generating, endless 2D open world that dynamically expands when players approach world boundaries, fully integrated with Are Logic (A1–A5) and heuristic-driven evolution.",
+  "Core Concept": {
+    "World Model": "Chunk-based infinite grid",
+    "Behavior": "Chunks generate only when players approach edges",
+    "Result": "Endless world that grows based on player exploration (A5)"
+  },
+  "Chunk System": {
+    "Definition": {
+      "ChunkSize": 32,
+      "TileSize": 16,
+      "CoordinateSystem": "chunkX, chunkY"
+    },
+    "Data Model": {
+      "Chunk": {
+        "id": "chunkX_chunkY",
+        "tiles": "array",
+        "biome": "string",
+        "resources": "number",
+        "history": "events"
+      }
+    }
+  },
+  "Procedural Generation (A3 Emergence)": {
+    "Method": "Noise-based + heuristic influence",
+    "Biome Rules": [
+      "High H1 → forest",
+      "High H7 → desert",
+      "Balanced → plains",
+      "High H6 → rare biome (ruins, tech zones)"
+    ],
+    "Code": "import SimplexNoise from 'simplex-noise';\nconst noise = new SimplexNoise();\n\nexport function generateChunk(cx:number,cy:number,H:number[]){\n let tiles=[];\n let n = noise.noise2D(cx*0.1,cy*0.1);\n\n let biome = 'plains';\n if(H[0] > 0.5) biome='forest';\n if(H[6] > 0.5) biome='desert';\n if(H[5] > 0.7) biome='ruins';\n\n for(let x=0;x<32;x++){\n  for(let y=0;y<32;y++){\n   tiles.push({x,y,type:biome});\n  }\n }\n\n return { id:`${cx}_${cy}`, tiles, biome, resources:Math.random()*100 };\n}"
+  },
+  "Dynamic Expansion Trigger": {
+    "Rule": "Generate new chunks when player is near edge",
+    "Threshold": 5,
+    "Code": "export function checkExpansion(playerPos,loadedChunks){\n const {cx,cy} = playerPos;\n let needed=[];\n\n for(let dx=-1;dx<=1;dx++){\n  for(let dy=-1;dy<=1;dy++){\n   let key=`${cx+dx}_${cy+dy}`;\n   if(!loadedChunks.has(key)){\n    needed.push({x:cx+dx,y:cy+dy});\n   }\n  }\n }\n return needed;\n}"
+  },
+  "World Manager": {
+    "Code": "const chunks = new Map();\n\nexport function updateWorld(player,H){\n const needed = checkExpansion(player,chunks);\n\n needed.forEach(pos=>{\n  const chunk = generateChunk(pos.x,pos.y,H);\n  chunks.set(chunk.id,chunk);\n });\n\n return chunks;\n}"
+  },
+  "Persistence (A2)": {
+    "MongoDB": "Each chunk stored permanently",
+    "Code": "await db.collection('chunks').updateOne(\n {id:chunk.id},\n {$set:chunk},\n {upsert:true}\n);"
+  },
+  "Heuristic Influence (A1 + A5)": {
+    "Rules": [
+      "Overharvesting → reduces chunk.resources",
+      "Combat zones → become dangerous biome",
+      "Trade hubs → spawn roads/structures"
+    ],
+    "Code": "function evolveChunk(chunk,H){\n if(H[6] > 0.6) chunk.resources -= 10;\n if(H[9] > 0.5) chunk.biome = 'warzone';\n return chunk;\n}"
+  },
+  "Client Integration (Rpg-JS)": {
+    "Approach": [
+      "Load chunks as maps dynamically",
+      "Unload distant chunks",
+      "Render based on player position"
+    ],
+    "Code": "socket.on('chunkData',(chunk)=>{\n loadMap(chunk);\n});"
+  },
+  "Streaming System": {
+    "Goal": "Only keep nearby chunks in memory",
+    "Code": "function unloadFarChunks(player){\n chunks.forEach((c,key)=>{\n  if(distance(c,player)>3){ chunks.delete(key); }\n });\n}"
+  },
+  "Watchdog Constraints": {
+    "Rules": [
+      "Limit chunk generation rate",
+      "Prevent infinite memory growth",
+      "Validate biome transitions"
+    ],
+    "Code": "if(chunks.size > 5000) pruneOldChunks();"
+  },
+  "Emergent Effects": {
+    "Exploration": "World expands infinitely",
+    "Scarcity": "Resources deplete in visited areas",
+    "History": "Each chunk retains its past",
+    "Civilization": "Cities form where players gather"
+  },
+  "Result": {
+    "World Type": "Infinite",
+    "Generation": "On-demand",
+    "Persistence": "Permanent",
+    "Evolution": "Heuristic + player driven"
+  },
+  "Next Critical Step": {
+    "Action": "Visual chunk stitching + minimap system",
+    "Command": "Say: 'Add world streaming + minimap UI'",
+    "Reason": "Players must understand infinite world navigation"
+  }
+}

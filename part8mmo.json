@@ -1,0 +1,117 @@
+{
+  "Objective": "Introduce autonomous AI-driven civilizations that operate under the Are Logic framework, enabling true A3 Emergent Potential and completing the self-evolving MMORPG ecosystem.",
+  "Core Concept": {
+    "Definition": "AI Civilizations are persistent, self-governing agent clusters (factions) that act, evolve, and interact using the same heuristic and axiomatic systems as players.",
+    "Outcome": "World evolves even without player input"
+  },
+  "Civilization Model": {
+    "EntityType": "Faction",
+    "Attributes": [
+      "id",
+      "population",
+      "territory",
+      "resources",
+      "knowledge",
+      "culture",
+      "politicalPower",
+      "goals"
+    ],
+    "StateSource": [
+      "MongoDB (state)",
+      "Neo4j (relations)",
+      "Heuristic Vector H"
+    ]
+  },
+  "AI Decision Engine": {
+    "Model": "Utility-based + Heuristic-driven",
+    "Inputs": ["H vector", "Faction state", "World state"],
+    "Output": "Action चयन",
+    "Code": "export function decideAction(faction,H){\n const weights = {\n  expand: H[0] + H[6],\n  trade: H[3] + H[2],\n  innovate: H[5] + H[12],\n  war: H[9] + H[11],\n  stabilize: H[4]\n };\n return Object.keys(weights).reduce((a,b)=> weights[a]>weights[b]?a:b);\n}"
+  },
+  "AI Action Execution": {
+    "Actions": {
+      "expand": "Claim new territory (affects H1, H7)",
+      "trade": "Exchange resources (H3, H4)",
+      "innovate": "Unlock tech (H6, H13)",
+      "war": "Attack other factions (H9, H11)",
+      "stabilize": "Redistribute wealth (H5)"
+    },
+    "Code": "export async function executeAction(faction,action){\n switch(action){\n  case 'expand': faction.territory+=1; break;\n  case 'trade': faction.resources+=10; break;\n  case 'innovate': faction.knowledge+=5; break;\n  case 'war': faction.power+=2; break;\n  case 'stabilize': faction.resources-=2; break;\n }\n return faction;\n}"
+  },
+  "Heuristic Integration (CRITICAL)": {
+    "Rule": "AI actions generate E vectors just like players",
+    "Code": "import { mapActionToE } from '../arelogic/event.mapper';\n\nconst E = mapActionToE(action);\nawait updateHeuristics(E);"
+  },
+  "Faction Persistence (MongoDB)": {
+    "Code": "await db.collection('factions').updateOne(\n {id:faction.id},\n {$set:faction},\n {upsert:true}\n);"
+  },
+  "Relational Graph Integration (Neo4j)": {
+    "Examples": [
+      "Faction OWNS Territory",
+      "Faction TRADES_WITH Faction",
+      "Faction WAR_WITH Faction"
+    ],
+    "Code": "await addRelation(faction.id,targetFaction.id,'INTERACTS',1);"
+  },
+  "AI Loop (Server Tick)": {
+    "Code": "setInterval(async ()=>{\n const factions = await db.collection('factions').find().toArray();\n for(const f of factions){\n  const action = decideAction(f,H);\n  const updated = await executeAction(f,action);\n  await updateHeuristics(mapActionToE(action));\n  await db.collection('factions').updateOne({id:f.id},{$set:updated});\n }\n},5000);"
+  },
+  "Emergent Systems Activated": {
+    "Politics (H11)": "Factions compete and form alliances",
+    "Culture (H10)": "Repeated behaviors form identity",
+    "Economy (H3–H5)": "AI trades shift markets",
+    "Scarcity (H7)": "AI consumption affects resources",
+    "Technology (H13)": "AI innovation unlocks systems"
+  },
+  "Watchdog Integration": {
+    "Rules": [
+      "Prevent runaway faction growth",
+      "Limit war frequency",
+      "Ensure resource conservation"
+    ],
+    "Code": "if(faction.resources < 0) faction.resources = 0;"
+  },
+  "Civilization Identity (Emergent Culture)": {
+    "Mechanism": "Track repeated actions over time",
+    "Example": [
+      "War-heavy → Militaristic culture",
+      "Trade-heavy → Merchant culture",
+      "Innovation-heavy → Technocratic culture"
+    ],
+    "Code": "faction.cultureProfile[action] = (faction.cultureProfile[action]||0)+1;"
+  },
+  "Player Interaction": {
+    "Features": [
+      "Join factions",
+      "Fight factions",
+      "Trade with factions",
+      "Influence faction decisions"
+    ]
+  },
+  "World Impact": {
+    "Examples": [
+      "AI overharvest → player resource shortage",
+      "AI war → dangerous regions",
+      "AI trade → cities emerge",
+      "AI innovation → new crafting unlocks"
+    ]
+  },
+  "Resulting System State": {
+    "Before": "Player-dependent world",
+    "After": [
+      "Self-running civilization",
+      "Persistent faction politics",
+      "Autonomous economy shifts",
+      "Living world without players"
+    ]
+  },
+  "Next Evolution (Final Layer)": {
+    "Options": [
+      "Dynamic Narrative Engine (history → quests)",
+      "Procedural Religion/Myth Systems",
+      "Self-modifying Heuristic Matrix (AI learning)",
+      "Full world regeneration cycles"
+    ],
+    "Recommended": "Dynamic Narrative Engine"
+  }
+}

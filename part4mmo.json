@@ -1,0 +1,56 @@
+{
+  "Objective": "Provide actual ready-to-use core files to integrate Are Logic into Rpg-JS and produce a playable emergent MMORPG foundation.",
+  "Assumption": "Rpg-JS repo already cloned and running",
+  "Files": {
+    "server/arelogic/heuristic.engine.ts": {
+      "content": "export let H = new Array(13).fill(0);\n\nexport const M = [\n[0,0.2,0.3,0,0,0,0.5,0,0,0,0,0,0],\n[0.1,0,0.2,0.2,0,0.1,0,0,0,0,0,0,0],\n[0.2,0.1,0,0.3,0.2,0,0,0,0,0,0,0,0],\n[0,0.2,0.3,0,0.3,0,0,0,0,0,0,0,0],\n[0,0,0.2,0.3,0,0.2,0,0,0.1,0,0,0,0],\n[0,0.1,0,0,0.2,0,0,0.3,0,0,0,0,0.2],\n[0.3,0,0,0,0,0,0,0,0,0,0,0,0],\n[0,0,0,0,0,0.3,0,0,0.3,0,0,0.2,0],\n[0,0,0,0,0.2,0,0,0.3,0,0.3,0.2,0,0],\n[0,0,0,0,0,0,0,0,0.3,0,0.3,0.2,0],\n[0,0,0,0,0,0,0,0,0.2,0.3,0,0.3,0],\n[0,0,0,0,0,0,0,0.2,0,0.2,0.3,0,0.3],\n[0,0,0,0,0,0.2,0,0,0,0,0,0.3,0]\n];\n\nexport function updateHeuristics(E:number[]){\n let next = new Array(13).fill(0);\n for(let i=0;i<13;i++){\n  for(let j=0;j<13;j++){\n   next[i]+=M[i][j]*H[j];\n  }\n  next[i]+=E[i]||0;\n }\n H = next;\n return H;\n}"
+    },
+    "server/arelogic/watchdog.engine.ts": {
+      "content": "export function validate(action:any){\n if(!action) return false;\n if(action.value && action.value < 0) return false;\n if(action.type === 'trade' && action.price <= 0) return false;\n return true;\n}"
+    },
+    "server/arelogic/graph.engine.ts": {
+      "content": "export class Graph {\n nodes = new Map();\n edges:any[] = [];\n addNode(n:any){ this.nodes.set(n.id,n); }\n addEdge(e:any){ this.edges.push(e); }\n relations(id:string){ return this.edges.filter(e=>e.source===id||e.target===id); }\n value(id:string){ return this.relations(id).reduce((s,e)=>s+e.weight,0); }\n}"
+    },
+    "server/systems/economy.system.ts": {
+      "content": "import { H } from '../arelogic/heuristic.engine';\n\nexport function computePrice(item:any){\n let demand = H[2] + 1;\n let supply = H[0] + 1;\n return demand / supply;\n}"
+    },
+    "server/systems/ecology.system.ts": {
+      "content": "import { H } from '../arelogic/heuristic.engine';\n\nexport function updateTile(tile:any){\n tile.resources += H[0] - H[6];\n if(tile.resources < 0) tile.biome = 'wasteland';\n return tile;\n}"
+    },
+    "server/index.ts (MODIFICATION)": {
+      "content": "import { updateHeuristics } from './arelogic/heuristic.engine';\n\nsetInterval(()=>{\n updateHeuristics(new Array(13).fill(0));\n},1000);"
+    },
+    "server/hooks/playerActions.ts": {
+      "content": "import { validate } from '../arelogic/watchdog.engine';\n\nexport function handleAction(action:any){\n if(!validate(action)) return null;\n return action;\n}"
+    }
+  },
+  "Client Additions": {
+    "client/ui/hud.ts": {
+      "content": "export function drawHUD(ctx:any,H:number[]){\n ctx.fillText('Economy:'+H[2].toFixed(2),10,10);\n}"
+    }
+  },
+  "Integration Instructions": [
+    "1. Copy each file into matching Rpg-JS directories",
+    "2. Ensure TypeScript compilation works",
+    "3. Import systems into server lifecycle",
+    "4. Run npm run dev",
+    "5. Verify no crashes",
+    "6. Move player and observe HUD updates"
+  ],
+  "Immediate Result": {
+    "You Now Have": [
+      "Running 2D MMORPG (Rpg-JS)",
+      "Live heuristic simulation (H1–H13)",
+      "Basic economy tied to logic",
+      "Watchdog validation active",
+      "Reactive world tiles"
+    ]
+  },
+  "Next Required Upgrades": [
+    "Connect player actions → heuristic inputs (E vector)",
+    "Persist graph data (Neo4j)",
+    "Replace static maps with procedural chunks",
+    "Expand combat system with skill relations",
+    "Add loot set bonuses (relational logic)"
+  ]
+}

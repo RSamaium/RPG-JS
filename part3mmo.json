@@ -1,0 +1,129 @@
+{
+  "Objective": "Upgrade the MMORPG framework into a true emergent, self-consistent system by replacing placeholders with mathematically grounded simulation, relational graphs, and strict Watchdog enforcement aligned with A1–A5.",
+  "Phase": "Phase 2 – True Emergence Implementation",
+  "Core Upgrades": {
+    "A1_Relational_Graph_Engine": {
+      "Description": "All entities exist as nodes in a weighted dynamic graph",
+      "Implementation": {
+        "Node": ["id", "type", "state", "history"],
+        "Edge": ["source", "target", "type", "weight", "timestamp"],
+        "CoreFunction": "value(entity) = Σ (edge.weight * relationalInfluence)"
+      },
+      "Code": "class Graph { constructor(){ this.nodes=new Map(); this.edges=[];} addNode(n){this.nodes.set(n.id,n);} addEdge(e){this.edges.push(e);} getRelations(id){return this.edges.filter(e=>e.source===id||e.target===id);} computeValue(id){let rel=this.getRelations(id); return rel.reduce((sum,e)=>sum+e.weight,0);} }"
+    },
+    "A2_Historical_Recurrence_Engine": {
+      "Description": "All states influenced by weighted historical data",
+      "Model": "Exponential decay + reinforcement",
+      "Formula": "currentState = Σ(pastState * e^(-λt)) + reinforcementFactor",
+      "Code": "function computeState(history,lambda=0.1){ return history.reduce((sum,h)=> sum + h.value*Math.exp(-lambda*h.age),0); }"
+    },
+    "A3_Emergent_Interaction_Matrix": {
+      "Description": "System-wide interaction matrix generating non-linear outcomes",
+      "Model": "NxN matrix of system variables",
+      "ExampleVariables": ["resources","players","markets","skills","factions"],
+      "Code": "function interact(matrix,state){ let result={}; Object.keys(state).forEach(a=>{ result[a]=0; Object.keys(state).forEach(b=>{ result[a]+=state[b]*matrix[a][b]; }); }); return result; }"
+    },
+    "A4_Watchdog_Constraint_Solver": {
+      "Description": "Hard constraint validation + correction engine",
+      "Constraints": [
+        "Conservation of value",
+        "Bounded economy",
+        "Relational dependency requirement",
+        "No state divergence"
+      ],
+      "Code": "function watchdog(state){ if(state.value<0) state.value=0; if(state.value>MAX) state.value=normalize(state.value); if(!hasRelations(state)) reject(state); return state; }"
+    },
+    "A5_Continuous_Integration_Stream": {
+      "Description": "Real-time ingestion of all player/system events",
+      "Pipeline": [
+        "Event Capture",
+        "Normalization",
+        "Graph Update",
+        "Heuristic Update",
+        "State Mutation"
+      ],
+      "Code": "function ingest(event){ normalized=normalize(event); graph.addEdge(normalized); updateHeuristics(normalized); }"
+    }
+  },
+  "Heuristic Wave Engine (Upgraded)": {
+    "Model": "Weighted dynamic system instead of randomness",
+    "Formula": "H(t+1) = M * H(t) + E(t)",
+    "Components": {
+      "H": "13-dimensional heuristic vector",
+      "M": "13x13 influence matrix",
+      "E": "external inputs (player actions)"
+    },
+    "Code": "function updateHeuristics(H,M,E){ let next=[]; for(let i=0;i<13;i++){ next[i]=0; for(let j=0;j<13;j++){ next[i]+=M[i][j]*H[j]; } next[i]+=E[i]||0;} return next; }"
+  },
+  "Reactive World Ecology": {
+    "Description": "Environment evolves based on resource usage and heuristics",
+    "Rules": [
+      "Over-harvesting → biome degradation",
+      "Low usage → regeneration",
+      "Trade hubs emerge from H4 peaks"
+    ],
+    "Code": "function updateBiome(tile,heuristics){ tile.resources += heuristics[0] - heuristics[6]; if(tile.resources<0) tile.biome='wasteland'; return tile; }"
+  },
+  "Economy Simulation (Real)": {
+    "Model": "Supply-demand differential equations",
+    "Formula": [
+      "price = demand / supply",
+      "demand(t+1) = demand(t) + H3 - H5",
+      "supply(t+1) = supply(t) + H1 - H7"
+    ],
+    "Code": "function updateMarket(m){ m.price=m.demand/m.supply; m.demand+=H3-H5; m.supply+=H1-H7; return m; }"
+  },
+  "Multiplayer Persistence Layer": {
+    "Description": "True MMO state persistence",
+    "Components": [
+      "WebSocket sync",
+      "Tick-based authoritative server",
+      "Delta state updates"
+    ],
+    "Code": "setInterval(()=>{ state=update(state); broadcast(state); },50);"
+  },
+  "Civilization Cycle (Full Implementation)": {
+    "Stages": [
+      "Capture full historical graph",
+      "Compress via pattern extraction",
+      "Apply heuristic transformation",
+      "Generate new world seed",
+      "Reintegrate into active world"
+    ],
+    "Code": "function civilizationCycle(graph){ let patterns=extractPatterns(graph); let newSeed=transform(patterns); world=generate(newSeed); return merge(world); }"
+  },
+  "Watchdog Enforcement Layer": {
+    "Priority": "ABSOLUTE",
+    "Pipeline": [
+      "All actions → Watchdog",
+      "All state updates → Watchdog",
+      "All heuristic outputs → Watchdog"
+    ],
+    "Failure Handling": [
+      "Correct if possible",
+      "Reject if contradiction persists",
+      "Log for historical learning (A5)"
+    ]
+  },
+  "Resulting System Properties": {
+    "Emergence": "Non-scripted economies, politics, and cultures",
+    "Adaptation": "World responds to player macro-behavior",
+    "Persistence": "History meaningfully shapes future",
+    "Stability": "Maintained by Watchdog constraints",
+    "Scalability": "Graph + matrix systems scale with players"
+  },
+  "Next Execution Steps": {
+    "1": "Replace all placeholder functions in Phase 1 with these systems",
+    "2": "Integrate Graph DB (Neo4j or equivalent)",
+    "3": "Define initial heuristic matrix (balanced weights)",
+    "4": "Run closed simulation (no players) to stabilize",
+    "5": "Deploy live test server",
+    "6": "Continuously tune via Watchdog logs"
+  },
+  "Optional Phase 3 Hooks": {
+    "AI Civilizations": "Autonomous factions using same axioms",
+    "Narrative Engine": "History → story generation",
+    "Player Governance": "Voting + law systems (H11)",
+    "Cultural Memory": "Myths generated from H12"
+  }
+}

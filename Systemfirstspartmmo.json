@@ -1,0 +1,155 @@
+{
+  "Objective": "Integrate the Are Logic Axiomatic System into the existing Rpg-JS framework to produce a functional 2D MMORPG with real structure, graphics support, and emergent simulation.",
+  "Critical Reality Check": {
+    "Status": "Your concern is valid",
+    "Problem": [
+      "Current system = abstract simulation core",
+      "Missing = rendering pipeline, asset pipeline, engine structure",
+      "Result = not yet a playable MMORPG"
+    ],
+    "Resolution": "Use Rpg-JS as the rendering + networking backbone and inject Are Logic as the core simulation layer"
+  },
+  "Integration Strategy": {
+    "Base Engine": "https://github.com/RSamaium/Rpg-Js",
+    "Role Separation": {
+      "Rpg-JS": [
+        "Rendering (2D canvas/WebGL)",
+        "Map system",
+        "Player movement",
+        "Event system",
+        "Multiplayer sync"
+      ],
+      "Are Logic Layer": [
+        "Economy simulation",
+        "Heuristic waves (H1–H13)",
+        "Relational graph (A1)",
+        "History engine (A2)",
+        "Emergence logic (A3)",
+        "Watchdog validation (A4)",
+        "Continuous integration (A5)"
+      ]
+    }
+  },
+  "Required Repo Structure (Modified)": {
+    "server": {
+      "arelogic": {
+        "graph.engine.ts": "Relational system (A1)",
+        "history.engine.ts": "State recurrence (A2)",
+        "heuristic.engine.ts": "13-node matrix system",
+        "watchdog.engine.ts": "Constraint solver",
+        "civilization.engine.ts": "Cycle processor"
+      },
+      "systems": {
+        "economy.system.ts": "Dynamic market",
+        "ecology.system.ts": "World reaction",
+        "faction.system.ts": "Politics (H11)"
+      }
+    },
+    "client": {
+      "ui": {
+        "hud.ts": "Display economy, stats",
+        "mapOverlay.ts": "Dynamic biome visualization"
+      }
+    },
+    "shared": {
+      "types": {
+        "heuristics.ts": "H1–H13 definitions",
+        "graph.ts": "Entity relations"
+      }
+    }
+  },
+  "Step-by-Step Implementation": [
+    {
+      "Step": 1,
+      "Action": "Clone Rpg-JS repo and run base project",
+      "Command": "git clone https://github.com/RSamaium/Rpg-Js && cd Rpg-Js && npm install && npm run dev"
+    },
+    {
+      "Step": 2,
+      "Action": "Inject Are Logic into server lifecycle",
+      "Code": "import { updateHeuristics } from './arelogic/heuristic.engine'; setInterval(()=>{ global.H = updateHeuristics(global.H, M, E); },100);"
+    },
+    {
+      "Step": 3,
+      "Action": "Hook player actions into A5 pipeline",
+      "Code": "onPlayerAction((action)=>{ ingest(action); });"
+    },
+    {
+      "Step": 4,
+      "Action": "Attach Watchdog to all game events",
+      "Code": "if(!watchdog.validate(action)) return;"
+    },
+    {
+      "Step": 5,
+      "Action": "Replace static loot/economy with dynamic systems",
+      "Code": "item.price = economy.compute(item, global.H);"
+    },
+    {
+      "Step": 6,
+      "Action": "Bind world tiles to ecology system",
+      "Code": "tile = ecology.update(tile, global.H);"
+    }
+  ],
+  "Graphics & World (Now Solved)": {
+    "Tilesets": "Use Rpg-JS Tiled map support",
+    "Sprites": "Import assets (Kenney.nl or OpenGameArt)",
+    "Maps": "Procedural chunks injected into Rpg-JS map loader",
+    "Dynamic Change": "Biome updates via ecology.system"
+  },
+  "Heuristic Matrix (Initial Balanced System)": {
+    "Instruction": "You MUST define this or system fails",
+    "Matrix": "13x13 weighted (sparse recommended)",
+    "ExampleRow_H1": [0,0.2,0.3,0,0,0,0.5,0,0,0,0,0,0]
+  },
+  "Watchdog (Strict Mode)": {
+    "Integration Point": "Rpg-JS event hooks",
+    "Events Covered": [
+      "onAttack",
+      "onLoot",
+      "onTrade",
+      "onCraft",
+      "onMove"
+    ],
+    "Rule": "No event executes without validation"
+  },
+  "Multiplayer Reality": {
+    "Handled By": "Rpg-JS WebSocket layer",
+    "Extension": "State sync includes heuristic vector + graph deltas"
+  },
+  "Civilization Cycle (Live MMO)": {
+    "Trigger": "Every X hours or threshold event",
+    "Effect": [
+      "Shift resource distribution",
+      "Alter biome generation",
+      "Update economic weights",
+      "Evolve factions"
+    ]
+  },
+  "Immediate Priorities (Correct Order)": [
+    "1. Get Rpg-JS running (visual playable world)",
+    "2. Add player movement + combat",
+    "3. Integrate Watchdog (basic validation)",
+    "4. Replace economy with heuristic system",
+    "5. Add relational graph backend",
+    "6. Activate civilization cycle"
+  ],
+  "What You Now Achieve": {
+    "Before": "Abstract framework",
+    "After": "Real MMORPG engine with:",
+    "Includes": [
+      "Graphics (tiles, sprites, maps)",
+      "Multiplayer networking",
+      "Action combat",
+      "Procedural world",
+      "Emergent economy",
+      "Self-evolving civilization"
+    ]
+  },
+  "Next Commands You Can Give": [
+    "Generate full working repo files (ready-to-run)",
+    "Build heuristic matrix (complete 13x13)",
+    "Create assets + tileset pipeline",
+    "Implement first playable map",
+    "Run simulated world test"
+  ]
+}

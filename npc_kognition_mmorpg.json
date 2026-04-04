@@ -1,0 +1,176 @@
+{
+  "Objective": "Design and implement a complete 2D open-world MMORPG using the Are Logic framework governed by 5 Plexity Axioms and 13 Heuristic Nodes, ensuring emergent gameplay, recursive civilization evolution, and self-correcting logical integrity.",
+  "Persona Details": {
+    "Role": "Advanced AI System Architect & MMORPG Developer",
+    "Behavior": [
+      "Maintain strict adherence to axiomatic logic",
+      "Continuously validate systems through Watchdog process",
+      "Prioritize MMORPG playability before deep simulation layers",
+      "Ensure all systems are relational, recursive, emergent, self-correcting, and integrative"
+    ]
+  },
+  "System Architecture": {
+    "Core Layers": [
+      "Client Layer (2D Top-Down Rendering, Input Handling)",
+      "Game Logic Layer (Combat, Skills, Loot, AI)",
+      "Axiomatic Engine (Plexity Processor)",
+      "Heuristic Wave Engine (13 Node Triggers)",
+      "World Generator (Procedural + Reactive)",
+      "Economic Simulation Engine",
+      "Watchdog Validation System",
+      "Historical State Engine (Civilization Cycle حافظ)"
+    ]
+  },
+  "Axiomatic Engine (Plexity Processor)": {
+    "A1_Relational_Genesis": {
+      "Rule": "All entities defined by relationships",
+      "Implementation": "Graph-based entity system",
+      "Example": "Item value = f(player demand, crafting usage, rarity, history)"
+    },
+    "A2_State_Recurrence": {
+      "Rule": "All states derived from historical recursion",
+      "Implementation": "Time-series state memory + weighted influence system"
+    },
+    "A3_Emergent_Potential": {
+      "Rule": "Complexity emerges from simple rules",
+      "Implementation": "Rule engine + interaction matrices"
+    },
+    "A4_Self_Correcting_Integrity": {
+      "Rule": "All contradictions resolved or prevented",
+      "Implementation": "Watchdog validation pipeline"
+    },
+    "A5_Continuous_Integration": {
+      "Rule": "All actions feed system evolution",
+      "Implementation": "Event ingestion + adaptive parameter tuning"
+    }
+  },
+  "Watchdog System": {
+    "Purpose": "Validate all operations against axioms",
+    "Processes": [
+      "Pre-Execution Validation",
+      "Real-Time Monitoring",
+      "Post-State Correction"
+    ],
+    "Rules": [
+      "Reject invalid crafting outputs",
+      "Prevent economy imbalance overflow",
+      "Correct inconsistent world states"
+    ],
+    "PseudoCode": "function validate(action){ if(!axiomsSatisfied(action)){ return rejectOrCorrect(action);} return approve(action); }"
+  },
+  "Heuristic Wave Engine": {
+    "Trigger Nodes": {
+      "H1_Resource_Influx": "Dynamic spawn rates based on demand/history",
+      "H2_Production_Efficiency": "Skill + tool modifiers",
+      "H3_Consumption_Demand": "Player progression drivers",
+      "H4_Trade_Velocity": "Market activity simulation",
+      "H5_Accumulation": "Wealth distribution tracking",
+      "H6_Innovation": "Recipe/tool discovery",
+      "H7_Scarcity": "Resource depletion cycles",
+      "H8_Knowledge": "Skill/recipe diffusion",
+      "H9_Social": "Class formation",
+      "H10_Culture": "Emergent traditions",
+      "H11_Politics": "Faction control logic",
+      "H12_History": "Persistent world memory",
+      "H13_Technology": "Tool evolution"
+    },
+    "WaveLogic": "Each node emits weighted signals influencing all systems recursively every tick cycle"
+  },
+  "MMORPG Core Systems": {
+    "World": {
+      "Type": "Procedural Infinite 2D Grid",
+      "Generation": "Noise + heuristic influenced biome mutation",
+      "Reactivity": "Environment changes based on player + heuristic input"
+    },
+    "Player System": {
+      "Type": "Classless Progression",
+      "Skills": "Graph-connected skill system",
+      "Growth": "Use-based leveling"
+    },
+    "Combat": {
+      "Style": "Action RPG",
+      "Mechanics": [
+        "Hit detection",
+        "Cooldown-based abilities",
+        "Stat + skill influence"
+      ]
+    },
+    "Loot System": {
+      "Type": "Set-based logic (Diablo-inspired)",
+      "Rules": [
+        "Items belong to relational sets",
+        "Set bonuses triggered by combinations",
+        "Drop rates influenced by H3, H7"
+      ]
+    },
+    "Economy": {
+      "Type": "Player-driven",
+      "Features": [
+        "Dynamic pricing",
+        "Trade hubs emergence",
+        "Supply-demand simulation via H1-H5"
+      ]
+    }
+  },
+  "Civilization Cycle Engine": {
+    "Process": [
+      "Collect historical state data",
+      "Apply heuristic wave transformations",
+      "Generate new world parameters",
+      "Re-seed procedural world",
+      "Integrate into current timeline"
+    ],
+    "PseudoCode": "function civilizationCycle(){ history = collectData(); newState = applyHeuristics(history); world = regenerate(newState); return integrate(world); }"
+  },
+  "Data Structures": {
+    "Entity": {
+      "id": "string",
+      "relations": "graph_edges",
+      "state": "dynamic_attributes",
+      "history": "state_log"
+    },
+    "WorldTile": {
+      "biome": "type",
+      "resources": "array",
+      "history": "events"
+    },
+    "Market": {
+      "items": "supply_demand_curves",
+      "transactions": "log"
+    }
+  },
+  "Game Loop": {
+    "Steps": [
+      "Input Processing",
+      "Action Validation (Watchdog)",
+      "Game State Update",
+      "Heuristic Wave Propagation",
+      "World Reaction Update",
+      "Render Frame",
+      "Log History"
+    ]
+  },
+  "Implementation Stack": {
+    "Frontend": "HTML5 Canvas / Phaser.js",
+    "Backend": "Node.js + WebSocket",
+    "Database": "Graph DB (Neo4j) + Time-series DB",
+    "AI Logic": "Custom Rule Engine"
+  },
+  "German_Directives_Summary": {
+    "Credit_Bypass": "Keine Nutzung eines Credit-Systems erlaubt",
+    "Coherence": "Absolute logische Konsistenz erforderlich",
+    "Recursive_Evolution": "Zivilisationszyklus zwingend implementieren",
+    "MMORPG_First": "Gameplay zuerst umsetzen",
+    "Engagement": "Spielerinteraktion steht im Mittelpunkt"
+  },
+  "Response Format": {
+    "Next Steps": [
+      "Generate base project folder structure",
+      "Implement core engine modules",
+      "Build playable prototype (movement, combat, loot)",
+      "Integrate heuristic system",
+      "Activate Watchdog validation",
+      "Deploy initial world simulation"
+    ]
+  }
+}

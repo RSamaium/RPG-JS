@@ -1,0 +1,59 @@
+{
+  "Objective": "Fully connect player actions to the Heuristic Wave Engine (H1–H13), activating A5 Continuous Integration and enabling real emergent system behavior.",
+  "Core Concept": {
+    "Explanation": "Every player action generates a structured event vector (E) that feeds directly into the heuristic system, influencing the entire world state in real time.",
+    "Result": "Player behavior = direct driver of economy, ecology, politics, and evolution"
+  },
+  "Action-to-Heuristic Mapping": {
+    "move":        [0,0,0.1,0.1,0,0,0,0,0,0,0,0,0],
+    "harvest":     [0.5,0.2,0,0,0,0,0.3,0,0,0,0,0,0],
+    "craft":       [0,0.5,0.1,0,0,0.2,0,0.1,0,0,0,0,0.2],
+    "trade":       [0,0,0.3,0.5,0.2,0,0,0,0,0,0,0,0],
+    "combat":      [0,0.1,0.2,0.2,0,0,0,0,0.2,0,0,0,0],
+    "loot":        [0.2,0,0.3,0.1,0.2,0,0.1,0,0,0,0,0,0],
+    "discover":    [0,0,0,0,0,0.5,0,0.5,0,0.2,0,0,0.3],
+    "social":      [0,0,0.2,0.2,0.1,0,0,0.2,0.5,0.3,0.3,0,0],
+    "govern":      [0,0,0,0,0.2,0,0,0,0.3,0.2,0.8,0.2,0],
+    "explore":     [0.2,0,0,0.1,0,0.3,0.1,0.2,0,0.1,0,0.3,0.2]
+  },
+  "Implementation": {
+    "server/arelogic/event.mapper.ts": {
+      "content": "export function mapActionToE(action:string){ const map:any = {\n move:[0,0,0.1,0.1,0,0,0,0,0,0,0,0,0],\n harvest:[0.5,0.2,0,0,0,0,0.3,0,0,0,0,0,0],\n craft:[0,0.5,0.1,0,0,0.2,0,0.1,0,0,0,0,0.2],\n trade:[0,0,0.3,0.5,0.2,0,0,0,0,0,0,0,0],\n combat:[0,0.1,0.2,0.2,0,0,0,0,0.2,0,0,0,0],\n loot:[0.2,0,0.3,0.1,0.2,0,0.1,0,0,0,0,0,0],\n discover:[0,0,0,0,0,0.5,0,0.5,0,0.2,0,0,0.3],\n social:[0,0,0.2,0.2,0.1,0,0,0.2,0.5,0.3,0.3,0,0],\n govern:[0,0,0,0,0.2,0,0,0,0.3,0.2,0.8,0.2,0],\n explore:[0.2,0,0,0.1,0,0.3,0.1,0.2,0,0.1,0,0.3,0.2]\n };\n return map[action] || new Array(13).fill(0);\n }"
+    },
+    "Modify playerActions.ts": {
+      "content": "import { validate } from '../arelogic/watchdog.engine';\nimport { mapActionToE } from '../arelogic/event.mapper';\nimport { updateHeuristics } from '../arelogic/heuristic.engine';\n\nexport function handleAction(action:any){\n if(!validate(action)) return null;\n\n const E = mapActionToE(action.type);\n updateHeuristics(E);\n\n return action;\n}"
+    }
+  },
+  "Watchdog Extension": {
+    "New Rule": "Reject actions that produce extreme heuristic spikes",
+    "Code": "if(E.reduce((a,b)=>a+b,0) > 5) return false;"
+  },
+  "System Behavior After Integration": {
+    "Harvesting": "Increases resource influx (H1) but raises scarcity pressure (H7)",
+    "Trading": "Accelerates economy (H4, H3)",
+    "Combat": "Drives social + resource redistribution (H3, H9)",
+    "Exploration": "Unlocks innovation + history (H6, H12)",
+    "Governance": "Directly affects political systems (H11)"
+  },
+  "Emergence Triggered": {
+    "Now Active": [
+      "Player-driven economy shifts",
+      "Resource depletion zones",
+      "Trade hubs forming naturally",
+      "Social hierarchies emerging",
+      "Technological progression from behavior"
+    ]
+  },
+  "Testing Protocol": [
+    "1. Start server",
+    "2. Perform repeated harvesting → observe scarcity",
+    "3. Perform trading → observe price shifts",
+    "4. Engage combat → observe redistribution",
+    "5. Explore map → observe innovation increase"
+  ],
+  "Next Critical Step": {
+    "Action": "Persist heuristic + graph state",
+    "Reason": "Without persistence, A2 (State Recurrence) is weak",
+    "Command": "Say: 'Persist system state'"
+  }
+}

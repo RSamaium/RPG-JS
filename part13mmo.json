@@ -1,0 +1,107 @@
+{
+  "Objective": "Upgrade the ruin dungeon system with clear visuals and satisfying combat feel, transforming the MVP into a tactile, playable experience.",
+  "Philosophy": {
+    "Rule": "If it doesn’t feel good, it doesn’t matter how smart the system is.",
+    "Focus": [
+      "Clarity (player understands instantly)",
+      "Feedback (every action responds)",
+      "Weight (combat feels impactful)"
+    ]
+  },
+  "Dungeon Visual System": {
+    "Tilesets": {
+      "Types": [
+        "floor (stone)",
+        "wall (cracked)",
+        "boss_tile (altar)",
+        "loot_tile (glow)"
+      ],
+      "Source": "Use free assets (itch.io / OpenGameArt)"
+    },
+    "Rendering Upgrade": {
+      "Client Code": "function drawTile(tile){\n switch(tile.type){\n  case 'floor': drawSprite('stone.png'); break;\n  case 'wall': drawSprite('wall.png'); break;\n  case 'boss': drawSprite('altar.png'); break;\n  case 'loot': drawSprite('chest.png'); break;\n }\n}"
+    },
+    "Lighting Effect": {
+      "Concept": "Dark dungeon with light radius around player",
+      "Code": "ctx.fillStyle='rgba(0,0,0,0.7)';\nctx.fillRect(0,0,canvas.width,canvas.height);\n\nctx.globalCompositeOperation='destination-out';\nctx.beginPath();\nctx.arc(player.x,player.y,100,0,Math.PI*2);\nctx.fill();\nctx.globalCompositeOperation='source-over';"
+    }
+  },
+  "Combat Feel System": {
+    "Core Elements": [
+      "Hit feedback",
+      "Damage numbers",
+      "Enemy reaction",
+      "Attack cooldown"
+    ],
+    "Attack Code": "function attack(target){\n if(Date.now() < player.nextAttack) return;\n\n player.nextAttack = Date.now() + 500;\n\n const damage = Math.floor(Math.random()*10+5);\n target.hp -= damage;\n\n showDamage(target.x,target.y,damage);\n playHitEffect(target);\n}"
+  },
+  "Damage Numbers (Visual Feedback)": {
+    "Code": "function showDamage(x,y,amount){\n floatingTexts.push({x,y,text:amount,life:60});\n}\n\nfunction updateFloatingTexts(){\n floatingTexts.forEach(t=>{\n  t.y -= 0.5;\n  t.life--;\n  drawText(t.text,t.x,t.y);\n });\n}"
+  },
+  "Enemy Feedback": {
+    "Hit Reaction": {
+      "Code": "function playHitEffect(target){\n target.flash = 5;\n}\n\nfunction renderEnemy(e){\n if(e.flash > 0){\n  ctx.globalAlpha = 0.5;\n  e.flash--;\n }\n drawEnemySprite(e);\n ctx.globalAlpha = 1;\n}"
+    }
+  },
+  "Basic Enemy AI (Dungeon)": {
+    "Behavior": [
+      "Idle → chase → attack"
+    ],
+    "Code": "function updateEnemy(e,player){\n const dist = distance(e,player);\n\n if(dist < 5){\n  moveTowards(e,player);\n }\n\n if(dist < 1.5){\n  attackPlayer(e,player);\n }\n}"
+  },
+  "Boss Feel Upgrade": {
+    "Features": [
+      "Higher HP",
+      "Slow heavy attacks",
+      "Knockback effect"
+    ],
+    "Code": "function bossAttack(player){\n player.x += (player.x - boss.x) * 0.5;\n player.y += (player.y - boss.y) * 0.5;\n}"
+  },
+  "Loot Feedback": {
+    "Visual": "Glow + bounce",
+    "Code": "function renderLoot(item){\n item.y += Math.sin(Date.now()/200)*0.5;\n drawSprite('loot_glow.png');\n}"
+  },
+  "Sound Layer (IMPORTANT)": {
+    "Minimum Sounds": [
+      "hit.wav",
+      "loot.wav",
+      "enemy_die.wav"
+    ],
+    "Code": "function playSound(name){ new Audio('/sounds/'+name).play(); }"
+  },
+  "Screen Feedback": {
+    "Hit Shake": {
+      "Code": "function screenShake(){\n camera.x += Math.random()*4-2;\n camera.y += Math.random()*4-2;\n}"
+    }
+  },
+  "Watchdog (Feel Constraints)": {
+    "Rules": [
+      "Attack speed capped",
+      "Damage readable (no spam)",
+      "Visual clarity over effects spam"
+    ]
+  },
+  "Result": {
+    "Before": "System works but feels empty",
+    "After": [
+      "Combat feels responsive",
+      "Dungeons feel atmospheric",
+      "Loot feels rewarding",
+      "Player understands actions instantly"
+    ]
+  },
+  "Minimum Asset Pack": {
+    "Needed": [
+      "Player sprite",
+      "Enemy sprite",
+      "Dungeon tileset",
+      "Loot icon",
+      "3 sound effects"
+    ]
+  },
+  "Next Step": {
+    "Action": "Add UI/UX layer (inventory, quest log, interaction prompts)",
+    "Command": "Say: 'Design full UI/UX layer'",
+    "Reason": "Player needs control + clarity over systems"
+  }
+}

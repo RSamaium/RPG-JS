@@ -1,0 +1,159 @@
+{
+  "Objective": "Define a realistic, fundable, and executable indie development plan for the emergent MMORPG, transforming the concept into a shippable product.",
+  "Core Strategy": {
+    "Truth": "You are not building a full MMO at first—you are building a focused, innovative indie game that can grow into one.",
+    "Approach": [
+      "Start small (MVP)",
+      "Prove the core innovation (living world + ruins loop)",
+      "Expand based on player feedback"
+    ]
+  },
+  "Game Identity": {
+    "WorkingTitle": "Echoes of the Living World",
+    "Genre": "2D Sandbox RPG (MMO-lite → MMO later)",
+    "Hook": "A world that remembers, collapses, and is reborn from its own history",
+    "Unique Selling Points": [
+      "World evolves without players",
+      "Ruins are real past civilizations",
+      "NPCs remember you",
+      "Economy + factions are alive",
+      "Infinite expanding world"
+    ]
+  },
+  "Target Scope (FIRST RELEASE)": {
+    "Type": "Singleplayer + Online-lite (NOT full MMO yet)",
+    "Players": "1–20 per server",
+    "Reason": "Massive cost reduction + faster launch"
+  },
+  "MVP Feature Set": {
+    "Gameplay": [
+      "Movement + combat + loot",
+      "Procedural infinite world",
+      "Basic factions with territory",
+      "NPC memory + simple dialogue",
+      "1 civilization lifecycle → ruin → dungeon → rebirth",
+      "Minimap + HUD"
+    ],
+    "Content": [
+      "2–3 biomes",
+      "3 enemy types",
+      "1 ruin type",
+      "10–20 items"
+    ],
+    "SessionGoal": "Player explores → finds ruin → gets rare item → sees world change"
+  },
+  "Development Timeline": {
+    "Month_1": [
+      "Set up repo (Rpg-JS + backend)",
+      "Implement movement + combat",
+      "Basic chunk world"
+    ],
+    "Month_2": [
+      "Add factions + territory overlay",
+      "Add heuristic system (simplified)",
+      "Basic NPCs"
+    ],
+    "Month_3": [
+      "Implement ruin system",
+      "Add dungeon + rare loot",
+      "Basic narrative quests"
+    ],
+    "Month_4": [
+      "Polish UI (HUD, minimap)",
+      "Bug fixing",
+      "Performance optimization"
+    ],
+    "Month_5": [
+      "Playtesting",
+      "Balancing",
+      "Steam/itch.io page setup"
+    ]
+  },
+  "Tech Stack (Lean)": {
+    "Client": "Rpg-JS (TypeScript)",
+    "Server": "Node.js",
+    "Database": "MongoDB (skip Neo4j early)",
+    "Cache": "Optional Redis later",
+    "Hosting": "VPS (DigitalOcean / Hetzner)"
+  },
+  "Cost Control": {
+    "Avoid": [
+      "Large servers",
+      "Complex AI at start",
+      "Full MMO infra"
+    ],
+    "Focus": [
+      "Gameplay feel",
+      "Core loop",
+      "Stability"
+    ]
+  },
+  "Monetization": {
+    "Phase_1": "Free demo (itch.io)",
+    "Phase_2": "$5–10 early access",
+    "Phase_3": Cosmetic items / expansions",
+    "DO_NOT": "Pay-to-win systems"
+  },
+  "Marketing Plan": {
+    "Channels": [
+      "YouTube devlogs",
+      "TikTok short clips",
+      "Reddit (r/gamedev, r/indiegames)",
+      "Twitter/X updates"
+    ],
+    "Content Strategy": [
+      "Show world evolving",
+      "Show ruins from past players",
+      "Show NPC remembering players"
+    ]
+  },
+  "Vertical Slice (CRITICAL)": {
+    "Definition": "A small but complete version of the game",
+    "Includes": [
+      "1 map region",
+      "1 ruin dungeon",
+      "1 faction conflict",
+      "1 rare item"
+    ],
+    "Goal": "Convince players (and yourself) it's fun"
+  },
+  "Expansion Roadmap (After Launch)": {
+    "Phase_2": [
+      "AI civilizations",
+      "Deeper economy",
+      "More ruins + history layers"
+    ],
+    "Phase_3": [
+      "Multiplayer scaling (50–100 players)",
+      "Kingdom politics",
+      "World wars"
+    ],
+    "Phase_4": [
+      "Full MMO vision",
+      "Cross-server civilizations",
+      "Advanced AI systems"
+    ]
+  },
+  "Biggest Risks": {
+    "1": "Overengineering (too complex too early)",
+    "2": "No fun gameplay loop",
+    "3": "Performance issues",
+    "4": "Player confusion"
+  },
+  "Solutions": {
+    "Rule_1": "If it's not fun in 10 minutes → fix it",
+    "Rule_2": "If player can't see it → simplify it",
+    "Rule_3": "Cut features, not performance"
+  },
+  "Success Definition": {
+    "ShortTerm": "Playable demo लोग enjoy",
+    "MidTerm": "Small community forms",
+    "LongTerm": "Evolves into unique MMO"
+  },
+  "Immediate Next Steps": {
+    "1": "Generate MVP repo structure",
+    "2": "Build first playable map",
+    "3": "Implement ruin dungeon",
+    "4": "Test core loop"
+  }
+}

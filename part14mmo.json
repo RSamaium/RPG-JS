@@ -1,0 +1,178 @@
+{
+  "Objective": "Design a complete, production-ready UI/UX layer including inventory, equipment, quest journal, crafting, and high-intensity combat-driven arena/coliseum systems.",
+  "Design Philosophy": {
+    "Principles": [
+      "Clarity over complexity",
+      "Everything visible = everything understandable",
+      "Fast interaction (≤2 clicks for core actions)",
+      "Combat-first responsiveness"
+    ]
+  },
+  "UI Layout (Screen Structure)": {
+    "Zones": {
+      "TopLeft": "Player stats (HP, stamina, level)",
+      "TopRight": "Minimap + territory overlay",
+      "BottomLeft": "Chat + system messages",
+      "BottomCenter": "Action bar (skills, attack)",
+      "BottomRight": "Quick inventory + equipment",
+      "CenterPopups": "Inventory / Crafting / Journal"
+    }
+  },
+  "Inventory (Bag System)": {
+    "Features": [
+      "Grid-based (e.g. 5x6)",
+      "Drag & drop",
+      "Stackable items",
+      "Hover tooltip"
+    ],
+    "Data Model": {
+      "slots": "array",
+      "item": ["id","name","type","rarity","stats"]
+    },
+    "Code": "function moveItem(from,to){\n const temp = bag[from];\n bag[from]=bag[to];\n bag[to]=temp;\n}"
+  },
+  "Equipment System": {
+    "Slots": [
+      "weapon",
+      "helmet",
+      "armor",
+      "boots",
+      "ring"
+    ],
+    "Logic": "Items give stat bonuses + set bonuses",
+    "Code": "function equip(item){\n equipment[item.type]=item;\n applyStats(item);\n}"
+  },
+  "Item Tooltip UX": {
+    "Content": [
+      "Name (color = rarity)",
+      "Stats",
+      "Origin (ruin name!)",
+      "Description"
+    ],
+    "Example": "Ancient Blade (Legendary)\\n+50 Power\\nFound in: Ashen Kingdom Ruin"
+  },
+  "Quest Journal": {
+    "Sections": [
+      "Active",
+      "Completed",
+      "World Events"
+    ],
+    "Dynamic Source": "Narrative Engine",
+    "Code": "function addQuest(q){ journal.active.push(q); }"
+  },
+  "Crafting System": {
+    "UI": [
+      "Recipe list",
+      "Required materials",
+      "Craft button"
+    ],
+    "Logic": "Recipes unlocked via exploration (H8)",
+    "Code": "function craft(recipe){\n if(hasMaterials(recipe)){\n  consume(recipe);\n  giveItem(recipe.result);\n }\n}"
+  },
+  "Combat UI (ULTRA IMPORTANT)": {
+    "Elements": [
+      "HP bar (player + enemy)",
+      "Damage numbers",
+      "Cooldown indicators",
+      "Target highlight",
+      "Hit direction indicator"
+    ],
+    "Code": "function drawHP(entity){\n ctx.fillRect(entity.x,entity.y-10,entity.hp,5);\n}"
+  },
+  "Action Bar": {
+    "Slots": 5,
+    "Bindings": ["1","2","3","4","5"],
+    "Code": "document.addEventListener('keydown',(e)=>{\n useSkill(e.key);\n});"
+  },
+  "Arena / Coliseum System": {
+    "Concept": "High-intensity combat events",
+    "Modes": [
+      "Solo survival",
+      "Wave defense",
+      "PvP duel",
+      "Faction battle"
+    ],
+    "Entry": "Interact with arena gate NPC",
+    "Code": "function joinArena(player){\n player.map='arena';\n startWave(player);\n}"
+  },
+  "Arena Loop": {
+    "Flow": [
+      "Player enters",
+      "Waves spawn",
+      "Difficulty scales",
+      "Rewards increase",
+      "Death or victory ends run"
+    ]
+  },
+  "Rewards System": {
+    "Types": [
+      "Gold",
+      "Rare loot",
+      "Reputation",
+      "Arena rank"
+    ]
+  },
+  "UI Feedback (Critical)": {
+    "Effects": [
+      "Screen shake on hit",
+      "Glow on rare item",
+      "Sound on UI click",
+      "Pulse on low HP"
+    ]
+  },
+  "Interaction Prompts": {
+    "Examples": [
+      "Press E to enter ruin",
+      "Press F to loot",
+      "Press C to craft"
+    ],
+    "Code": "if(nearObject) showPrompt('Press E');"
+  },
+  "UX Flow (Player Journey)": {
+    "Steps": [
+      "Explore world",
+      "Find ruin",
+      "Fight dungeon",
+      "Loot item",
+      "Open inventory",
+      "Equip gear",
+      "Unlock recipe",
+      "Enter arena",
+      "Gain rewards"
+    ]
+  },
+  "Watchdog UX Rules": {
+    "Constraints": [
+      "No UI clutter",
+      "Max 3 layers open at once",
+      "Combat UI always visible",
+      "Menus pause non-critical systems"
+    ]
+  },
+  "Visual Style Guide": {
+    "Theme": "Dark fantasy minimal",
+    "Colors": {
+      "Common": "gray",
+      "Rare": "blue",
+      "Epic": "purple",
+      "Legendary": "orange"
+    }
+  },
+  "MVP UI Checklist": {
+    "Must Work": [
+      "Inventory open/close",
+      "Equip items",
+      "Quest tracking",
+      "Combat readability",
+      "Arena entry"
+    ]
+  },
+  "Next Evolution": {
+    "Options": [
+      "Controller support",
+      "Advanced skill trees",
+      "Guild UI",
+      "Auction house"
+    ]
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "Objective": "Implement seamless world streaming and a dynamic minimap UI so players can navigate and understand the infinite procedural world in real time.",
+  "Core Principles": {
+    "Streaming": "Load only nearby chunks, unload distant ones (performance + scalability)",
+    "Minimap": "Visualize explored/generated world + player position",
+    "Axioms": {
+      "A1": "Chunks relate to player position and history",
+      "A2": "Explored areas persist",
+      "A3": "Map patterns emerge visually",
+      "A4": "Watchdog prevents overload",
+      "A5": "Player exploration drives expansion"
+    }
+  },
+  "World Streaming System": {
+    "Client Side": {
+      "State": {
+        "loadedChunks": "Map<string, Chunk>",
+        "renderRadius": 2
+      },
+      "Code": "const loadedChunks = new Map();\nconst RADIUS = 2;\n\nfunction updateStreaming(player){\n const cx = Math.floor(player.x / (32*16));\n const cy = Math.floor(player.y / (32*16));\n\n for(let dx=-RADIUS; dx<=RADIUS; dx++){\n  for(let dy=-RADIUS; dy<=RADIUS; dy++){\n   const key = `${cx+dx}_${cy+dy}`;\n   if(!loadedChunks.has(key)){\n    socket.emit('requestChunk',{x:cx+dx,y:cy+dy});\n   }\n  }\n }\n\n unloadFarChunks(cx,cy);\n}"
+    },
+    "Unload Logic": {
+      "Code": "function unloadFarChunks(cx,cy){\n loadedChunks.forEach((chunk,key)=>{\n  const [x,y] = key.split('_').map(Number);\n  if(Math.abs(x-cx)>2 || Math.abs(y-cy)>2){\n   loadedChunks.delete(key);\n   removeChunkFromScene(key);\n  }\n });\n}"
+    },
+    "Server Side": {
+      "Code": "socket.on('requestChunk', async ({x,y})=>{\n let chunk = await db.collection('chunks').findOne({id:`${x}_${y}`});\n if(!chunk){\n  chunk = generateChunk(x,y,H);\n  await db.collection('chunks').insertOne(chunk);\n }\n socket.emit('chunkData',chunk);\n});"
+    }
+  },
+  "Rendering Chunks (Client)": {
+    "Code": "socket.on('chunkData',(chunk)=>{\n loadedChunks.set(chunk.id,chunk);\n drawChunk(chunk);\n});\n\nfunction drawChunk(chunk){\n chunk.tiles.forEach(tile=>{\n  drawTile(tile,chunk.id);\n });\n}"
+  },
+  "Minimap System": {
+    "Canvas Setup": {
+      "Code": "const minimap = document.getElementById('minimap');\nconst mctx = minimap.getContext('2d');"
+    },
+    "Render Logic": {
+      "Code": "function drawMinimap(player){\n mctx.clearRect(0,0,200,200);\n\n loadedChunks.forEach((chunk,key)=>{\n  const [x,y] = key.split('_').map(Number);\n  let color = 'green';\n\n  if(chunk.biome==='desert') color='yellow';\n  if(chunk.biome==='forest') color='darkgreen';\n  if(chunk.biome==='warzone') color='red';\n\n  mctx.fillStyle = color;\n  mctx.fillRect(100 + x*5, 100 + y*5, 5, 5);\n });\n\n // Player marker\n mctx.fillStyle='blue';\n mctx.fillRect(100,100,4,4);\n}"
+    }
+  },
+  "Fog of War (Exploration Memory)": {
+    "Concept": "Only discovered chunks appear",
+    "Code": "const discovered = new Set();\n\nfunction onChunkLoaded(chunk){\n discovered.add(chunk.id);\n}\n\nfunction drawMinimap(player){\n loadedChunks.forEach((chunk,key)=>{\n  if(!discovered.has(key)) return;\n  // draw chunk\n });\n}"
+  },
+  "Heuristic Visualization": {
+    "HUD Overlay": {
+      "Code": "function drawHeuristicMini(H){\n mctx.fillStyle='white';\n mctx.fillText('Econ:'+H[2].toFixed(2),5,10);\n mctx.fillText('Scarcity:'+H[6].toFixed(2),5,20);\n}"
+    }
+  },
+  "Watchdog (Streaming Safety)": {
+    "Rules": [
+      "Max chunks loaded per player",
+      "Throttle chunk requests",
+      "Prevent spam requests"
+    ],
+    "Code": "if(requestsPerSecond > 20) blockPlayer();"
+  },
+  "Performance Strategy": {
+    "Techniques": [
+      "Chunk pooling (reuse objects)",
+      "Delta updates only",
+      "Redis caching for chunk reads",
+      "Limit render radius"
+    ]
+  },
+  "Player Experience": {
+    "Now Players Can": [
+      "See where they are",
+      "Understand biome distribution",
+      "Track exploration progress",
+      "Navigate infinite world",
+      "Identify danger zones (war/red)"
+    ]
+  },
+  "Result": {
+    "Before": "Infinite world but confusing",
+    "After": [
+      "Seamless world streaming",
+      "Clear spatial awareness",
+      "Exploration becomes meaningful",
+      "System becomes playable"
+    ]
+  },
+  "Next Evolution": {
+    "Options": [
+      "Add fast travel system",
+      "Add map markers (players, cities)",
+      "Add territory visualization (factions)",
+      "Add zoomable world map"
+    ],
+    "Recommended": "Add faction territory overlay"
+  }
+}

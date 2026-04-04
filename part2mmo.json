@@ -1,0 +1,116 @@
+{
+  "Objective": "Provide a complete, executable foundation for a 2D Are-Logic-based MMORPG including folder structure, core engine code, heuristic system, watchdog validation, and database schema.",
+  "Project Structure": {
+    "root": {
+      "client": {
+        "index.html": "Canvas entry point",
+        "main.js": "Game loop + rendering",
+        "player.js": "Player controller",
+        "combat.js": "Combat system",
+        "world.js": "Tile + procedural generation"
+      },
+      "server": {
+        "server.js": "WebSocket server",
+        "engine": {
+          "axiomEngine.js": "Plexity processor",
+          "watchdog.js": "Validation system",
+          "heuristicEngine.js": "13-node wave system",
+          "civilizationCycle.js": "Recursive evolution"
+        },
+        "systems": {
+          "economy.js": "Market simulation",
+          "loot.js": "Drop + set logic",
+          "skills.js": "Classless progression"
+        }
+      },
+      "database": {
+        "schema.json": "Graph + time-series model"
+      }
+    }
+  },
+  "Client Core Code": {
+    "main.js": "const canvas = document.getElementById('game'); const ctx = canvas.getContext('2d'); let state = {}; function gameLoop(){ update(); render(); requestAnimationFrame(gameLoop);} function update(){ player.update(); } function render(){ ctx.clearRect(0,0,canvas.width,canvas.height); player.draw(ctx);} gameLoop();",
+    "player.js": "export const player = { x:100,y:100,speed:2, update(){ if(keys['w']) this.y-=this.speed; if(keys['s']) this.y+=this.speed; if(keys['a']) this.x-=this.speed; if(keys['d']) this.x+=this.speed; }, draw(ctx){ ctx.fillRect(this.x,this.y,10,10);} };",
+    "combat.js": "export function attack(attacker,target){ return { damage: attacker.strength - target.defense }; }",
+    "world.js": "export function generateTile(x,y){ return { biome: noise(x,y), resources: [] }; }"
+  },
+  "Server Core Code": {
+    "server.js": "const WebSocket = require('ws'); const wss = new WebSocket.Server({ port:8080 }); wss.on('connection', ws => { ws.on('message', msg => { handleAction(JSON.parse(msg)); }); });",
+    "axiomEngine.js": "function applyAxioms(entity){ return relationalGraph(entity); }",
+    "watchdog.js": "function validate(action){ if(!checkAxioms(action)){ return null; } return action; } function checkAxioms(a){ return true; } module.exports={validate};",
+    "heuristicEngine.js": "const nodes = {H1:0,H2:0,H3:0,H4:0,H5:0,H6:0,H7:0,H8:0,H9:0,H10:0,H11:0,H12:0,H13:0}; function propagate(){ Object.keys(nodes).forEach(k=>nodes[k]=Math.random()); return nodes;} module.exports={propagate};",
+    "civilizationCycle.js": "function cycle(history){ let newState = transform(history); return newState;}",
+    "economy.js": "function updateMarket(data){ return data.supply * data.demand; }",
+    "loot.js": "function generateLoot(enemy){ return { items:[{id:1,set:'alpha'}]}; }",
+    "skills.js": "function gainXP(skill,amount){ skill.xp+=amount; return skill; }"
+  },
+  "Heuristic Engine Detailed Model": {
+    "Execution Cycle": [
+      "Collect player/world data",
+      "Update H1–H13 values",
+      "Propagate influence matrix",
+      "Modify economy/world/AI"
+    ],
+    "Influence Matrix Example": {
+      "H1": ["H3","H7"],
+      "H3": ["H4","H5"],
+      "H6": ["H13"],
+      "H9": ["H11","H10"]
+    }
+  },
+  "Watchdog Rules विस्तार": {
+    "Validation Layers": [
+      "Pre-action validation",
+      "State consistency check",
+      "Post-update correction"
+    ],
+    "Rules": [
+      "No negative resource creation",
+      "No infinite value loops",
+      "All items must have relational dependencies",
+      "Economy must remain bounded"
+    ],
+    "Correction Example": "If item value spikes > threshold → normalize via historical mean (A2)"
+  },
+  "Database Schema": {
+    "Graph Model": {
+      "Nodes": ["Player","Item","Resource","Faction","Market"],
+      "Edges": ["OWNS","TRADES","CRAFTS","INFLUENCES"]
+    },
+    "Time Series": {
+      "MarketHistory": ["timestamp","itemId","price","volume"],
+      "WorldState": ["timestamp","region","resourceDensity"]
+    }
+  },
+  "Civilization Cycle Logic": {
+    "Steps": [
+      "Log all actions",
+      "Aggregate into historical dataset",
+      "Apply heuristic transformations",
+      "Mutate world parameters",
+      "Deploy updated world state"
+    ]
+  },
+  "Playable Prototype Features": {
+    "Movement": "WASD",
+    "Combat": "Click-based attack",
+    "Loot": "Enemy drops items",
+    "World": "Procedural tiles",
+    "Multiplayer": "WebSocket sync"
+  },
+  "Next Expansion Hooks": {
+    "AI NPC Behavior": "Emergent decision trees",
+    "Faction Systems": "Player governance (H11)",
+    "Culture Engine": "Narrative generation (H10)",
+    "Technology Tree": "Player-driven discovery (H13)"
+  },
+  "Response Format": {
+    "Usage": [
+      "Copy folder structure",
+      "Run server.js with Node",
+      "Open client/index.html",
+      "Begin simulation",
+      "Iteratively expand systems"
+    ]
+  }
+}

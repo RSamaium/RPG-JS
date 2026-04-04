@@ -1,0 +1,88 @@
+{
+  "Objective": "Implement persistent state storage for heuristics, relational graph, and world history to fully activate A2 (State Recurrence) and enable a continuous MMO civilization.",
+  "Critical Principle": {
+    "A2_State_Recurrence": "No state is lost. Every action must persist and influence future states.",
+    "Result": "Server restarts DO NOT reset the world intelligence"
+  },
+  "Persistence Architecture": {
+    "Layers": [
+      "Heuristic State (H vector)",
+      "Relational Graph (entities + edges)",
+      "World State (tiles, resources, biomes)",
+      "Event Log (player actions history)"
+    ],
+    "Storage Choice": {
+      "Fast Start": "JSON file persistence",
+      "Scalable Upgrade": "MongoDB (state) + Neo4j (graph)"
+    }
+  },
+  "Phase 1 (Immediate Working Persistence - FILE BASED)": {
+    "server/persistence/state.store.ts": {
+      "content": "import fs from 'fs';\n\nconst FILE = './state.json';\n\nexport function saveState(state:any){\n fs.writeFileSync(FILE, JSON.stringify(state,null,2));\n}\n\nexport function loadState(){\n if(!fs.existsSync(FILE)) return null;\n return JSON.parse(fs.readFileSync(FILE,'utf-8'));\n}"
+    }
+  },
+  "Integrate With Heuristics": {
+    "Modify heuristic.engine.ts": {
+      "content": "import { saveState, loadState } from '../persistence/state.store';\n\nlet saved = loadState();\nexport let H = saved?.H || new Array(13).fill(0);\n\nexport function updateHeuristics(E:number[]){\n let next = new Array(13).fill(0);\n for(let i=0;i<13;i++){\n  for(let j=0;j<13;j++){\n   next[i]+=M[i][j]*H[j];\n  }\n  next[i]+=E[i]||0;\n }\n H = next;\n saveState({ H });\n return H;\n}"
+    }
+  },
+  "Persist Graph (A1 Core)": {
+    "Modify graph.engine.ts": {
+      "content": "import { saveState, loadState } from '../persistence/state.store';\n\nlet saved = loadState();\n\nexport class Graph {\n nodes = new Map(saved?.nodes || []);\n edges:any[] = saved?.edges || [];\n\n addNode(n:any){ this.nodes.set(n.id,n); this.persist(); }\n addEdge(e:any){ this.edges.push(e); this.persist(); }\n\n persist(){ saveState({ nodes:[...this.nodes], edges:this.edges }); }\n}"
+    }
+  },
+  "Persist Player Actions (A5 → A2 Bridge)": {
+    "server/persistence/event.log.ts": {
+      "content": "import fs from 'fs';\n\nexport function logEvent(event:any){\n fs.appendFileSync('./events.log', JSON.stringify(event)+'\\n');\n}"
+    },
+    "Modify playerActions.ts": {
+      "content": "import { logEvent } from '../persistence/event.log';\n\n// inside handleAction\nlogEvent(action);"
+    }
+  },
+  "World State Persistence": {
+    "server/persistence/world.store.ts": {
+      "content": "import fs from 'fs';\n\nexport function saveWorld(world:any){\n fs.writeFileSync('./world.json', JSON.stringify(world));\n}\n\nexport function loadWorld(){\n if(!fs.existsSync('./world.json')) return null;\n return JSON.parse(fs.readFileSync('./world.json','utf-8'));\n}"
+    }
+  },
+  "Server Boot Sequence (CRITICAL)": {
+    "Modify server/index.ts": {
+      "content": "import { loadState } from './persistence/state.store';\n\nconst state = loadState();\nif(state){\n console.log('Loaded persistent world state');\n}"
+    }
+  },
+  "Watchdog Upgrade (Persistence Protection)": {
+    "Rule": "Reject corrupted or extreme persisted states",
+    "Code": "if(H.some(v=>v > 1000)) H = H.map(v=>v*0.1);"
+  },
+  "Resulting System Behavior": {
+    "Before": "World resets every restart",
+    "After": [
+      "Economy remembers past trades",
+      "Scarcity persists across sessions",
+      "Player influence accumulates",
+      "Civilization evolves continuously"
+    ]
+  },
+  "Civilization Cycle (Now Activated)": {
+    "Trigger Example": "Every 10,000 logged events",
+    "Code": "if(eventCount % 10000 === 0){ civilizationCycle(); }"
+  },
+  "Upgrade Path (IMPORTANT)": {
+    "Next Step": "Move from JSON → Real Databases",
+    "Stack": {
+      "MongoDB": "World + heuristic state",
+      "Neo4j": "Relational graph (A1)",
+      "Redis": "Realtime caching"
+    }
+  },
+  "Testing Protocol": [
+    "1. Run server",
+    "2. Perform actions (harvest, trade)",
+    "3. Stop server",
+    "4. Restart server",
+    "5. Confirm values persist (H, economy, world)"
+  ],
+  "Next Critical Command": {
+    "Action": "Upgrade to database-backed persistence",
+    "Command": "Say: 'Upgrade to production persistence'"
+  }
+}

@@ -1,0 +1,177 @@
+{
+  "Objective": "Prepare a complete launch build for itch.io and Steam, including packaging, deployment, store presence, and first player acquisition.",
+  "Release Strategy": {
+    "Phase_1": "itch.io launch (fast, flexible, feedback-driven)",
+    "Phase_2": "Steam Early Access (after validation)",
+    "Reason": "Reduce risk, iterate quickly, then scale"
+  },
+  "Build Preparation": {
+    "Client Build": {
+      "Tool": "Vite or Webpack",
+      "Command": "npm run build",
+      "Output": "dist/",
+      "Requirement": "Minified, optimized assets"
+    },
+    "Server Build": {
+      "Command": "npm run start",
+      "Environment": ".env (DB, ports)",
+      "ProcessManager": "PM2 recommended"
+    },
+    "Assets": [
+      "Sprites optimized (png/webp)",
+      "Audio compressed",
+      "Remove unused files"
+    ]
+  },
+  "Project Packaging": {
+    "itch.io": {
+      "Format": "Web build (HTML5) OR downloadable zip",
+      "Steps": [
+        "Zip /dist folder",
+        "Upload to itch.io",
+        "Set 'This file will be played in browser'"
+      ]
+    },
+    "Steam": {
+      "Tool": "Steamworks SDK",
+      "Steps": [
+        "Create Steam app",
+        "Upload build via SteamCMD",
+        "Configure depots",
+        "Set launch options"
+      ]
+    }
+  },
+  "Multiplayer Deployment": {
+    "Server": {
+      "Provider": "DigitalOcean / Hetzner",
+      "Specs": "2–4GB RAM",
+      "Setup": [
+        "Install Node.js",
+        "Run MongoDB",
+        "Run Redis (optional)",
+        "Start server with PM2"
+      ]
+    },
+    "Domain": {
+      "Setup": [
+        "Buy domain",
+        "Point to server IP",
+        "Enable SSL (Let's Encrypt)"
+      ]
+    }
+  },
+  "Account System (MVP)": {
+    "Features": [
+      "Register",
+      "Login",
+      "Session persistence"
+    ],
+    "Code": "app.post('/login',(req,res)=>{/* basic auth */});"
+  },
+  "Store Page (CRITICAL)": {
+    "itch.io": {
+      "Needs": [
+        "Game title",
+        "Short description",
+        "Screenshots (gameplay!)",
+        "GIFs (combat, dungeon)",
+        "Download/play button"
+      ]
+    },
+    "Steam": {
+      "Needs": [
+        "Capsule art",
+        "Trailer (30–60 sec)",
+        "Description",
+        "Tags (RPG, Sandbox, Procedural)",
+        "System requirements"
+      ]
+    }
+  },
+  "Trailer Plan": {
+    "Structure": [
+      "0–5s: Hook (world evolves)",
+      "5–15s: Combat + loot",
+      "15–25s: Ruin dungeon",
+      "25–40s: World changes / city reborn",
+      "End: Title + call to action"
+    ]
+  },
+  "Marketing Launch": {
+    "Before Launch": [
+      "Post devlogs (YouTube/TikTok)",
+      "Show ruin → rebirth loop",
+      "Build small community"
+    ],
+    "Launch Day": [
+      "Post on Reddit (r/indiegames, r/gamedev)",
+      "Share gameplay clips",
+      "Invite testers"
+    ]
+  },
+  "Analytics (IMPORTANT)": {
+    "Track": [
+      "Session time",
+      "Player deaths",
+      "Dungeon completions",
+      "Item usage"
+    ],
+    "Goal": "See what players actually do"
+  },
+  "First Player Experience": {
+    "Must Include": [
+      "Spawn tutorial (movement + combat)",
+      "Guide to first ruin",
+      "First loot reward",
+      "Clear objective"
+    ]
+  },
+  "Performance Checklist": {
+    "Ensure": [
+      "Stable FPS (no stutter)",
+      "No memory leaks (chunks unload)",
+      "Fast load times (<3s)",
+      "Server handles 10–20 players"
+    ]
+  },
+  "Monetization (Safe Start)": {
+    "itch.io": "Free or pay-what-you-want",
+    "Steam": "$5–10 Early Access",
+    "Future": "Cosmetics only"
+  },
+  "Release Milestones": {
+    "Day_1": "itch.io launch",
+    "Week_1": "Bug fixes + feedback",
+    "Month_1": "Content update",
+    "Month_2": "Steam Early Access"
+  },
+  "Biggest Launch Risks": {
+    "1": "Players don’t understand the game",
+    "2": "No feedback loop",
+    "3": "Performance issues"
+  },
+  "Solutions": {
+    "Fix_1": "Add tutorial + UI clarity",
+    "Fix_2": "Watch players play (critical)",
+    "Fix_3": "Optimize before adding features"
+  },
+  "Definition_of_Success": {
+    "ShortTerm": "Players play >15 minutes",
+    "MidTerm": "Players return",
+    "LongTerm": "Community forms"
+  },
+  "Final State": {
+    "YouHave": [
+      "Playable game",
+      "Unique mechanic (living ruins)",
+      "Launch-ready build",
+      "Growth path to MMO"
+    ]
+  },
+  "Next Step": {
+    "Action": "Launch and observe real players",
+    "Command": "Say: 'Post-launch optimization plan'",
+    "Reason": "Real data will guide evolution"
+  }
+}
