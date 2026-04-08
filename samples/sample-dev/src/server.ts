@@ -5,6 +5,8 @@ import { provideMain } from "./modules/main";
 import { Direction } from "@rpgjs/common";
 import { provideActionBattle, BattleAi, EnemyType, AttackPattern } from "@rpgjs/action-battle/server";
 import { provideSaveStorage } from "@rpgjs/server";
+import { getXpMultiplier, isPremium, getPremiumStatus } from "./services/premium";
+import { createChatMessage, getChatHistory } from "./services/chat";
 
 /**
  * Basic Sword weapon
@@ -247,7 +249,9 @@ export default createServer({
         },
         player: {
           props: {
-            wood: Number
+            wood: Number,
+            premiumActive: Boolean,
+            goldenName: Boolean,
           },
           onStart: (player: RpgPlayer) => {
             player.addParameter(MAXHP, {
@@ -278,6 +282,30 @@ export default createServer({
           },
           onConnected: (player: RpgPlayer) => {
             player.addItem(BasicPotion);
+
+            const premium = getPremiumStatus(player.id);
+            (player as any).premiumActive = premium.active;
+            (player as any).goldenName = premium.active;
+
+            player.on("chat:send", (data: { text: string }) => {
+              if (!data?.text) return;
+              const msg = createChatMessage(
+                player.id,
+                player.name?.() || "Player",
+                data.text
+              );
+              const map = player.getCurrentMap();
+              if (map) {
+                map.broadcast("chat:message", msg);
+              }
+            });
+
+            player.on("premium:check", () => {
+              const status = getPremiumStatus(player.id);
+              (player as any).premiumActive = status.active;
+              (player as any).goldenName = status.active;
+              player.emit("premium:status", status);
+            });
           },
           onLoad: (player: RpgPlayer, data: any) => {
             console.log("load", player.items());
@@ -290,18 +318,19 @@ export default createServer({
             player.setGraphic("hero");
             console.log("join map", player.expCurve, player.param);
 
-            // Configure player stats
-            //player.hp = 200;
-            //player.param[MAXHP] = 200;
             player.param[ATK] = 20;
             player.param[PDEF] = 10;
-            
             
             if (!player.getSkill(fireSkill)) {
               player.learnSkill(fireSkill);
             }
             
+            const premium = getPremiumStatus(player.id);
+            (player as any).premiumActive = premium.active;
+            (player as any).goldenName = premium.active;
+
             console.log("Player equipped with:", player.equipments().map(e => e.name()));
+            console.log("Premium status:", premium.active ? "ACTIVE" : "inactive");
           },
           onLeaveMap: (player: RpgPlayer, map: RpgMap) => {
 
