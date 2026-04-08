@@ -1,39 +1,51 @@
-When an API is added on the client-side or server-side, be sure to update the documentation to explain how to use it.
+# Instructions for AI Agents (Jules/Cursor)
 
-If you use @signe/room package, read with curl : https://raw.githubusercontent.com/RSamaium/signe/refs/heads/master/packages/room/readme.md
-If you use @signe/reactive package, read with curl : https://raw.githubusercontent.com/RSamaium/signe/refs/heads/master/packages/reactive/readme.md
-If you use @signe/sync package, read with curl : https://raw.githubusercontent.com/RSamaium/signe/refs/heads/master/packages/sync/readme.md
-If you use @signe/di package, read with curl : https://raw.githubusercontent.com/RSamaium/signe/refs/heads/master/packages/di/readme.md
+This repository contains the **RPG JS v5** framework, which has been upgraded with the **Are Logic Engine** for emergent, heuristical gameplay. When working with this codebase, you must adhere to the following axioms and systems.
 
-If you're using CanvasEngine as a library to create components (*.ce file), the complete table of contents for the documentation is available at the following link: https://canvasengine.net/llms.txt. You can use `curl` to fetch the table of contents and then navigate to the relevant Markdown pages to code the components correctly.
+## 🌟 The 5 Axioms (A1–A5)
 
-## Cursor Cloud specific instructions
+The core of the engine is governed by five foundational principles:
 
-### Project overview
+1.  **A1 - Relational Integrity:** Every entity (player, NPC, item) exists in a weighted graph. When adding new features, ensure they create or modify relational edges rather than just isolated properties.
+2.  **A2 - Historical Persistence:** State is a function of history. Use the persistence layer to log significant events. Future states should be influenced by these historical weights.
+3.  **A3 - Emergent Complexity:** Prefer systems where complex behavior emerges from simple, interacting rules (matrices) rather than complex, hardcoded logic trees.
+4.  **A4 - Watchdog Enforcement:** All state transitions MUST be validated by the Watchdog. If a proposed change violates axiomatic constraints (e.g., negative value, broken relations), it must be rejected or normalized.
+5.  **A5 - Continuous Ingestion:** Every interaction (player or AI) must generate an event vector (E) that feeds into the Heuristic Wave Engine.
 
-RPG JS v5 is a TypeScript monorepo (pnpm workspaces) for creating RPG/MMORPG browser games. No external databases or Docker services are required.
+## 🧠 Heuristic Wave Engine (H1–H13)
 
-### Key commands
+The world state is represented by a 13-dimensional heuristic vector (H). When implementing actions, map them to shifts in these dimensions:
 
-| Action | Command | Notes |
+| Index | Dimension | Influence Example |
 |---|---|---|
-| Install deps | `pnpm install` | Run from workspace root |
-| Build all packages | `pnpm build` | Sequential build via `tsx bin/build.ts` |
-| Dev mode (watch) | `pnpm dev` | Parallel watch via `tsx bin/dev.ts` |
-| Run tests | `pnpm test -- --run` | Vitest with jsdom; 42 test files, 417+ tests |
-| TypeScript check | `cd packages/physic && npx tsc --noEmit` | No ESLint configured; TS is the lint layer |
-| Run sample app | `cd samples/sample-dev && pnpm dev` | Starts Vite on http://localhost:5173 |
+| H0 | Resource Influx | Harvesting increases H0, but raises Scarcity (H7). |
+| H2 | Economy/Demand | Trading increases H2. |
+| H3 | Market Velocity | High trade frequency accelerates H3. |
+| H6 | Innovation | Discovery and crafting increase H6. |
+| H7 | Scarcity | Over-harvesting or destruction increases H7. |
+| H9 | Conflict | Combat and war drive H9. |
+| H11 | Political Power | Governance and faction actions drive H11. |
 
-### Build order gotcha
+**Influence Matrix (M):** The propagation of these heuristics is defined by a 13x13 matrix. Do not modify the matrix without a system-wide stability analysis.
 
-The root `pnpm build` script (in `bin/config.ts`) builds 10 packages but **does not include `@rpgjs/vue`**. If you modify or depend on `@rpgjs/vue`, build it separately: `cd packages/vue && pnpm build`.
+## ♾️ World Generation & Chunks
 
-### .npmrc and build scripts
+The world is infinite and chunk-based.
+- **Chunk Size:** 32x32 tiles.
+- **Generation:** Noise-based but influenced by heuristics. High H7 (Scarcity) should trigger 'wasteland' biome generation.
+- **Streaming:** Implement on-demand loading and aggressive unloading of distant chunks to maintain performance.
 
-The `.npmrc` contains `//registry.npmjs.org/:_authToken=${NPM_AUTH_TOKEN}` which produces harmless warnings when `NPM_AUTH_TOKEN` is unset. To allow native packages like `esbuild` and `sharp` to run their postinstall scripts, the `.npmrc` also needs `only-built-dependencies[]=esbuild`, `only-built-dependencies[]=sharp`, and `only-built-dependencies[]=workerd`. These are already configured.
+## 🏛️ Autonomous Civilizations
 
-### Testing notes
+Factions are not static. They are "Agent Clusters" that use the same Heuristic Engine to decide on actions (trade, war, expansion). When creating NPCs, ensure they belong to a faction and contribute to its H-vector shifts.
 
-- Tests use `vitest` with `jsdom` environment. The root `vitest.config.ts` sets up aliases for workspace packages.
-- `HTMLCanvasElement.getContext()` warnings are expected in test output (jsdom limitation, does not affect test results).
-- One test file (`packages/server/tests/event.spec.ts`) is intentionally skipped.
+## 📜 Documentation & API
+
+When adding new APIs:
+1.  Update the relevant documentation in `docs/guide/`.
+2.  Ensure the API follows the reactive pattern (signals and side effects).
+3.  Register any new server modules via `provideServerModules`.
+
+## 🧪 Testing
+
+Always write unit tests for heuristic shifts and Watchdog constraints. Use `vitest` for all logic verification.
