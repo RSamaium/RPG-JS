@@ -29,6 +29,15 @@
             ]
           },
           {
+            "group": "Emergent Systems",
+            "pages": [
+              "guide/are-logic",
+              "guide/heuristic-system",
+              "guide/infinite-world",
+              "guide/emergent-narrative"
+            ]
+          },
+          {
             "group": "Maps & Rendering",
             "pages": [
               "tiled/index",
