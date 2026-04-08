@@ -11,25 +11,29 @@ If you're using CanvasEngine as a library to create components (*.ce file), the 
 
 ### Project overview
 
-RPG JS v5 is a pnpm monorepo (`pnpm@10.25.0`, Node 22+) for building RPG/MMORPG games. Key workspace areas:
+RPG JS v5 is a TypeScript monorepo (pnpm workspaces) for creating RPG/MMORPG browser games. No external databases or Docker services are required.
 
-- `packages/` — core libraries (physic, common, client, server, vite, tiledmap, action-battle, studio, etc.)
-- `samples/sample-dev/` — primary development sample app (Vite-based RPG game)
-- `samples/sample-tiled/`, `samples/sample-studio/` — additional sample apps
+### Key commands
 
-### Running commands
+| Action | Command | Notes |
+|---|---|---|
+| Install deps | `pnpm install` | Run from workspace root |
+| Build all packages | `pnpm build` | Sequential build via `tsx bin/build.ts` |
+| Dev mode (watch) | `pnpm dev` | Parallel watch via `tsx bin/dev.ts` |
+| Run tests | `pnpm test -- --run` | Vitest with jsdom; 42 test files, 417+ tests |
+| TypeScript check | `cd packages/physic && npx tsc --noEmit` | No ESLint configured; TS is the lint layer |
+| Run sample app | `cd samples/sample-dev && pnpm dev` | Starts Vite on http://localhost:5173 |
 
-| Task | Command | Notes |
-|------|---------|-------|
-| Install deps | `pnpm install --no-frozen-lockfile` | `.npmrc` references `NPM_AUTH_TOKEN`; ignore the warning if not publishing |
-| Run tests | `pnpm test -- --run` | Vitest; 42 test files, all in `packages/` |
-| Dev server (sample-dev) | `cd samples/sample-dev && npx vite` | Starts on port 5173 (or 5174 if 5173 is busy); includes WebSocket RPG server |
-| Build (sample-dev) | `cd samples/sample-dev && npx vite build` | Output in `samples/sample-dev/dist/` |
-| Build all packages | `pnpm run build` | Sequentially builds all workspace packages |
+### Build order gotcha
 
-### Caveats
+The root `pnpm build` script (in `bin/config.ts`) builds 10 packages but **does not include `@rpgjs/vue`**. If you modify or depend on `@rpgjs/vue`, build it separately: `cd packages/vue && pnpm build`.
 
-- TypeScript `tsc --noEmit` on `sample-dev` will report errors from `.tsx` tiled map data files (e.g. `[A]Dirt_pipo.tsx`). These are Tiled map XML/data files with `.tsx` extensions, **not** TypeScript source. The Vite build handles them correctly via the `tiledMapFolderPlugin`.
-- The `.npmrc` contains `${NPM_AUTH_TOKEN}` — this is only needed for publishing. `pnpm install` will warn but succeed without it.
-- The root `npm run dev` starts **all** packages in watch mode (long-running). For focused work on `sample-dev`, run `npx vite` directly in `samples/sample-dev/`.
-- Port 5173 may already be in use; Vite auto-increments to 5174. Check terminal output for the actual port.
+### .npmrc and build scripts
+
+The `.npmrc` contains `//registry.npmjs.org/:_authToken=${NPM_AUTH_TOKEN}` which produces harmless warnings when `NPM_AUTH_TOKEN` is unset. To allow native packages like `esbuild` and `sharp` to run their postinstall scripts, the `.npmrc` also needs `only-built-dependencies[]=esbuild`, `only-built-dependencies[]=sharp`, and `only-built-dependencies[]=workerd`. These are already configured.
+
+### Testing notes
+
+- Tests use `vitest` with `jsdom` environment. The root `vitest.config.ts` sets up aliases for workspace packages.
+- `HTMLCanvasElement.getContext()` warnings are expected in test output (jsdom limitation, does not affect test results).
+- One test file (`packages/server/tests/event.spec.ts`) is intentionally skipped.
