@@ -235,6 +235,29 @@ export function createApiMiddleware() {
       return json(res, createChatMessage(body.playerId, body.playerName || "Anonymous", body.text));
     }
 
+    // --- World / Heuristic APIs ---
+    if (pathname === "/api/world/heuristics" && method === "GET") {
+      const { handleGetHeuristics } = await import("../server/api/heuristic.api");
+      return json(res, handleGetHeuristics());
+    }
+
+    if (pathname === "/api/world/heuristics" && method === "POST") {
+      const { handlePostHeuristics } = await import("../server/api/heuristic.api");
+      return json(res, handlePostHeuristics(body));
+    }
+
+    if (pathname === "/api/world/chunks" && method === "GET") {
+      const { handleChunkListRequest } = await import("../server/api/chunk.api");
+      return json(res, await handleChunkListRequest());
+    }
+
+    const chunkGetMatch = pathname.match(/^\/api\/world\/chunks\/(.+)$/);
+    if (chunkGetMatch && method === "GET") {
+      const { handleChunkGetRequest } = await import("../server/api/chunk.api");
+      const chunk = await handleChunkGetRequest(chunkGetMatch[1]);
+      return chunk ? json(res, chunk) : json(res, { error: "Chunk not found" }, 404);
+    }
+
     next();
   };
 }

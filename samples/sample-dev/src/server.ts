@@ -7,6 +7,7 @@ import { provideActionBattle, BattleAi, EnemyType, AttackPattern } from "@rpgjs/
 import { provideSaveStorage } from "@rpgjs/server";
 import { getXpMultiplier, isPremium, getPremiumStatus } from "./services/premium";
 import { createChatMessage, getChatHistory } from "./services/chat";
+import { provideAreLogic } from "./modules/are-logic/index";
 
 /**
  * Basic Sword weapon
@@ -222,7 +223,8 @@ export default createServer({
   providers: [
   //  provideTiledMap(),
     provideMain(),
-   provideActionBattle(),
+    provideAreLogic(),
+    provideActionBattle(),
 
 
     provideSaveStorage(new LocalStorageSaveStorageStrategy({ key: "save" })),

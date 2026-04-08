@@ -32,6 +32,17 @@
       <button class="side-menu__btn side-menu__btn--premium" id="btnPremium" title="Premium" onclick="togglePremiumShop()">&#x1f451;</button>
       <button class="side-menu__btn" id="btnVote" title="Vote" onclick="toggleVotePanel()">&#x1f5f3;</button>
       <button class="side-menu__btn" id="btnHousing" title="Housing" onclick="toggleHousing()">&#x1f3e0;</button>
+      <button class="side-menu__btn" id="btnHeuristic" title="World State" onclick="toggleHeuristicPanel()">&#x1f30d;</button>
+    </div>
+
+    <!-- Heuristic World State HUD -->
+    <div id="heuristicPanel" style="display:none;position:fixed;top:10px;left:10px;width:220px;max-height:80vh;overflow-y:auto;background:rgba(0,0,0,0.85);border:1px solid #333;border-radius:10px;padding:12px;z-index:90;font-family:'Segoe UI',sans-serif;color:#fff;font-size:0.75rem;backdrop-filter:blur(8px);pointer-events:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="color:#ffd700;font-weight:700;font-size:0.85rem;">&#x1f30d; World State</span>
+        <button onclick="toggleHeuristicPanel()" style="background:none;border:none;color:#aaa;cursor:pointer;">&#x2715;</button>
+      </div>
+      <div id="hBars"></div>
+      <div id="hWorld" style="margin-top:8px;padding-top:8px;border-top:1px solid #333;"></div>
     </div>
 
     <!-- Chat Panel -->
@@ -334,6 +345,41 @@
             '<img src="' + t.dataUrl + '" style="width:24px;height:24px;border-radius:3px;object-fit:cover;" />' +
             '<span>' + t.name + '</span></div>'
           ).join('') || '<p>No custom textures uploaded yet.</p>';
+        } catch (e) { /* ignore */ }
+      }
+
+      // === Heuristic World State Panel ===
+      let heuristicVisible = false;
+      let heuristicPollInterval = null;
+      const H_LABELS = ['Resources','Population','Technology','Diplomacy','Military','Culture','Trade','Conflict','Environment','Social','Chaos','Spirituality','Rebirth'];
+
+      function toggleHeuristicPanel() {
+        heuristicVisible = !heuristicVisible;
+        document.getElementById('heuristicPanel').style.display = heuristicVisible ? 'block' : 'none';
+        if (heuristicVisible) {
+          loadHeuristics();
+          heuristicPollInterval = setInterval(loadHeuristics, 2000);
+        } else if (heuristicPollInterval) {
+          clearInterval(heuristicPollInterval);
+        }
+      }
+
+      async function loadHeuristics() {
+        try {
+          const res = await fetch('/api/world/heuristics');
+          const data = await res.json();
+          if (!data.H) return;
+          const barsEl = document.getElementById('hBars');
+          barsEl.innerHTML = data.H.map((v, i) => {
+            const pct = Math.min(100, Math.max(0, v * 100));
+            const color = v > 0.7 ? '#ffd700' : v > 0.4 ? '#4CAF50' : '#666';
+            return '<div style="margin-bottom:4px;"><div style="display:flex;justify-content:space-between;"><span>H' + (i+1) + ' ' + H_LABELS[i] + '</span><span>' + v.toFixed(2) + '</span></div>' +
+              '<div style="background:#222;border-radius:3px;height:6px;overflow:hidden;"><div style="background:' + color + ';height:100%;width:' + pct + '%;transition:width 0.3s;"></div></div></div>';
+          }).join('');
+
+          const chunksRes = await fetch('/api/world/chunks');
+          const chunks = await chunksRes.json();
+          document.getElementById('hWorld').innerHTML = '<div style="color:#aaa;">Chunks: ' + (Array.isArray(chunks) ? chunks.length : 0) + ' generated</div>';
         } catch (e) { /* ignore */ }
       }
 

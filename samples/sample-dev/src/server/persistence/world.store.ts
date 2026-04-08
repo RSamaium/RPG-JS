@@ -1,58 +1,70 @@
-import { promises as fs } from 'fs';
-import path from 'path';
+const isBrowser = typeof window !== "undefined";
 
-const WORLD_DATA_DIR = path.join(process.cwd(), 'world_data');
-const CHUNKS_DIR = path.join(WORLD_DATA_DIR, 'chunks');
+let _fs: any = null;
+let _path: any = null;
+let _chunksDir = "";
+let _metadataFile = "";
 
-/**
- * Ensures the chunks directory exists.
- */
-async function ensureDir() {
-    try {
-        await fs.mkdir(CHUNKS_DIR, { recursive: true });
-    } catch {
-        // Directory exists or other error
-    }
+async function ensureNodeModules() {
+  if (isBrowser || _fs) return;
+  try {
+    _fs = (await import("fs")).promises;
+    _path = await import("path");
+    _chunksDir = _path.join(process.cwd(), "world_data", "chunks");
+    _metadataFile = _path.join(process.cwd(), "world_data", "world_metadata.json");
+  } catch {
+    // Not available in browser
+  }
 }
 
-/**
- * Saves a single chunk as a JSON file.
- * Format: world_data/chunks/x_y.json
- */
-export async function saveChunk(chunk: any) {
-    await ensureDir();
-    const filePath = path.join(CHUNKS_DIR, `${chunk.id}.json`);
-    await fs.writeFile(filePath, JSON.stringify(chunk, null, 2));
+ensureNodeModules();
+
+const memoryChunks = new Map<string, any>();
+let memoryMetadata: any = {};
+
+export async function saveChunk(id: string, data: any) {
+  memoryChunks.set(id, data);
+  if (isBrowser || !_fs) return;
+  try {
+    await _fs.mkdir(_chunksDir, { recursive: true });
+    await _fs.writeFile(
+      _path.join(_chunksDir, `${id}.json`),
+      JSON.stringify(data, null, 2)
+    );
+  } catch {
+    // Ignore
+  }
 }
 
-/**
- * Loads a single chunk from its JSON file.
- */
 export async function loadChunk(id: string) {
-    const filePath = path.join(CHUNKS_DIR, `${id}.json`);
-    try {
-        const data = await fs.readFile(filePath, 'utf-8');
-        return JSON.parse(data);
-    } catch {
-        return null;
-    }
+  if (memoryChunks.has(id)) return memoryChunks.get(id);
+  if (isBrowser || !_fs) return null;
+  try {
+    const data = await _fs.readFile(
+      _path.join(_chunksDir, `${id}.json`),
+      "utf-8"
+    );
+    const parsed = JSON.parse(data);
+    memoryChunks.set(id, parsed);
+    return parsed;
+  } catch {
+    return null;
+  }
 }
 
-/**
- * Global world metadata (optional, replacing old monolithic world.json)
- */
-export async function saveWorld(worldMetadata: any) {
-    await ensureDir();
-    const filePath = path.join(WORLD_DATA_DIR, 'world_metadata.json');
-    await fs.writeFile(filePath, JSON.stringify(worldMetadata, null, 2));
+export function saveWorld(metadata: any = {}) {
+  memoryMetadata = metadata;
+  if (isBrowser || !_fs) return;
+  try {
+    const dir = _path.dirname(_metadataFile);
+    _fs.mkdir(dir, { recursive: true }).then(() => {
+      _fs.writeFile(_metadataFile, JSON.stringify(metadata, null, 2));
+    });
+  } catch {
+    // Ignore
+  }
 }
 
-export async function loadWorld() {
-    const filePath = path.join(WORLD_DATA_DIR, 'world_metadata.json');
-    try {
-        const data = await fs.readFile(filePath, 'utf-8');
-        return JSON.parse(data);
-    } catch {
-        return {};
-    }
+export function loadWorld() {
+  return memoryMetadata;
 }
