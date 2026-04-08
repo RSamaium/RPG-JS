@@ -5,6 +5,8 @@ import { dirname, join, resolve } from "node:path";
 import { WebSocketServer } from "ws";
 import { createRpgServerTransport } from "@rpgjs/server/node";
 import serverModule from "../server";
+import { registerAdminRoutes } from "../admin/routes";
+import { registerPublicRoutes } from "../admin/public-routes";
 
 const app = express();
 const httpServer = createServer(app);
@@ -14,6 +16,9 @@ const currentDir = dirname(fileURLToPath(import.meta.url));
 const clientDistDir = resolve(currentDir, "../client");
 const clientIndexFile = join(clientDistDir, "index.html");
 const port = Number(process.env.PORT || 3000);
+
+registerAdminRoutes(app);
+registerPublicRoutes(app);
 
 app.use("/parties", async (req, res, next) => {
   await transport.handleNodeRequest(req, res, next, {

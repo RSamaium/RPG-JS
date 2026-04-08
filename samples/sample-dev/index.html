@@ -2,25 +2,398 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>RPGJS Game</title>
+    <title>RPGJS Game - Chronicles of the Ancients</title>
     <meta
       name="viewport"
-      content="initial-scale=1, maximum-scale=1, user-scalable=no, minimum-scale=1, width=device-width, height=device-height"
+      content="initial-scale=1, maximum-scale=1, user-scalable=no, minimum-scale=1, width=device-width, height=device-height, viewport-fit=cover"
     />
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./node_modules/@rpgjs/ui-css/index.css">
     <link rel="stylesheet" href="./node_modules/@rpgjs/ui-css/theme-default.css">
+    <link rel="stylesheet" href="./premium-features.css">
     <style>
       body, #rpg {
         margin: 0;
         padding: 0;
         height: 100vh;
+        height: 100dvh;
         width: 100vw;
         overflow: hidden;
+        overscroll-behavior: none;
       }
     </style>
   </head>
   <body class="rpg-ui-app">
     <div id="rpg"></div>
+
+    <!-- Side menu for premium features -->
+    <div class="side-menu" id="sideMenu" style="display:none;">
+      <button class="side-menu__btn" id="btnChat" title="Chat" onclick="toggleChat()">&#x1f4ac;</button>
+      <button class="side-menu__btn side-menu__btn--premium" id="btnPremium" title="Premium" onclick="togglePremiumShop()">&#x1f451;</button>
+      <button class="side-menu__btn" id="btnVote" title="Vote" onclick="toggleVotePanel()">&#x1f5f3;</button>
+      <button class="side-menu__btn" id="btnHousing" title="Housing" onclick="toggleHousing()">&#x1f3e0;</button>
+      <button class="side-menu__btn" id="btnHeuristic" title="World State" onclick="toggleHeuristicPanel()">&#x1f30d;</button>
+    </div>
+
+    <!-- Heuristic World State HUD -->
+    <div id="heuristicPanel" style="display:none;position:fixed;top:10px;left:10px;width:220px;max-height:80vh;overflow-y:auto;background:rgba(0,0,0,0.85);border:1px solid #333;border-radius:10px;padding:12px;z-index:90;font-family:'Segoe UI',sans-serif;color:#fff;font-size:0.75rem;backdrop-filter:blur(8px);pointer-events:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="color:#ffd700;font-weight:700;font-size:0.85rem;">&#x1f30d; World State</span>
+        <button onclick="toggleHeuristicPanel()" style="background:none;border:none;color:#aaa;cursor:pointer;">&#x2715;</button>
+      </div>
+      <div id="hBars"></div>
+      <div id="hWorld" style="margin-top:8px;padding-top:8px;border-top:1px solid #333;"></div>
+    </div>
+
+    <!-- Chat Panel -->
+    <div class="chat-panel" id="chatPanel" style="display:none;">
+      <div class="chat-panel__header">
+        <span>&#x1f4ac; Chat</span>
+        <button onclick="toggleChat()" style="background:none;border:none;color:#aaa;cursor:pointer;">&#x2715;</button>
+      </div>
+      <div class="chat-panel__messages" id="chatMessages"></div>
+      <div class="chat-panel__input-row">
+        <input class="chat-panel__input" id="chatInput" placeholder="Type a message..." maxlength="500"
+          onkeydown="if(event.key==='Enter')sendChat()" />
+        <button class="chat-panel__send" onclick="sendChat()">Send</button>
+      </div>
+    </div>
+
+    <!-- Premium Shop -->
+    <div class="premium-shop" id="premiumShop" style="display:none;">
+      <div class="premium-shop__card">
+        <div class="premium-shop__crown">&#x1f451;</div>
+        <div class="premium-shop__title">Premium Membership</div>
+        <div class="premium-shop__price">&euro;10 <small>one-time</small></div>
+        <ul class="premium-shop__features">
+          <li>150% XP Gain on all experience earned</li>
+          <li>Access to the Housing System</li>
+          <li>Import custom textures for your house</li>
+          <li>Golden chat name in game chat</li>
+          <li>Exclusive premium badge</li>
+        </ul>
+        <button class="premium-shop__buy" id="buyPremiumBtn" onclick="buyPremium()">
+          Purchase with PayPal
+        </button>
+        <button class="premium-shop__close" onclick="togglePremiumShop()">Close</button>
+        <div id="premiumStatusText" style="margin-top:12px;font-size:0.8rem;color:#aaa;"></div>
+      </div>
+    </div>
+
+    <!-- Vote Panel -->
+    <div class="vote-panel" id="votePanel" style="display:none;">
+      <div class="vote-panel__title">&#x1f5f3; Vote for Us - Get 2h Premium!</div>
+      <div id="voteEntries">
+        <p style="color:#aaa;text-align:center;font-size:0.875rem;">No voting sites configured yet. Ask an admin to add toplist entries.</p>
+      </div>
+      <button class="vote-panel__close" onclick="toggleVotePanel()">Close</button>
+    </div>
+
+    <!-- Housing Panel -->
+    <div class="housing-panel" id="housingPanel" style="display:none;">
+      <div class="housing-panel__header">
+        <div class="housing-panel__title">&#x1f3e0; My House</div>
+        <button onclick="toggleHousing()" style="background:none;border:none;color:#aaa;cursor:pointer;font-size:1.2rem;">&#x2715;</button>
+      </div>
+      <div class="housing-panel__body">
+        <div class="housing-panel__canvas-area" id="housingCanvas">
+          <div style="position:absolute;inset:0;display:flex;justify-content:center;align-items:center;color:#555;">
+            <div style="text-align:center;">
+              <div style="font-size:3rem;">&#x1f3e0;</div>
+              <p id="housingMessage">Create your house to start decorating!</p>
+              <button id="createHouseBtn" onclick="createHouse()" style="margin-top:12px;padding:10px 20px;background:#ffd700;color:#000;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Create House</button>
+            </div>
+          </div>
+        </div>
+        <div class="housing-panel__sidebar">
+          <div class="housing-panel__section-title">Furniture</div>
+          <div class="housing-panel__grid" id="furnitureGrid">
+            <div class="housing-panel__item" data-type="chair" title="Chair">&#x1fa91;</div>
+            <div class="housing-panel__item" data-type="table" title="Table">&#x1f4cb;</div>
+            <div class="housing-panel__item" data-type="bed" title="Bed">&#x1f6cf;</div>
+            <div class="housing-panel__item" data-type="lamp" title="Lamp">&#x1f4a1;</div>
+            <div class="housing-panel__item" data-type="plant" title="Plant">&#x1fab4;</div>
+            <div class="housing-panel__item" data-type="bookshelf" title="Bookshelf">&#x1f4da;</div>
+            <div class="housing-panel__item" data-type="chest" title="Chest">&#x1f4e6;</div>
+            <div class="housing-panel__item" data-type="rug" title="Rug">&#x1f9f6;</div>
+            <div class="housing-panel__item" data-type="painting" title="Painting">&#x1f5bc;</div>
+          </div>
+          <div class="housing-panel__section-title">Custom Textures</div>
+          <button class="housing-panel__upload-btn" onclick="uploadTexture()">&#x1f4e4; Upload Texture</button>
+          <div id="textureList" style="font-size:0.75rem;color:#aaa;"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let currentPlayerId = '';
+      let chatVisible = false;
+      let chatPollInterval = null;
+
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          currentPlayerId = localStorage.getItem('rpgjs-user-id') || 'player-' + Math.random().toString(36).slice(2,8);
+          document.getElementById('sideMenu').style.display = 'flex';
+          checkPremiumStatus();
+        }, 2000);
+      });
+
+      async function checkPremiumStatus() {
+        try {
+          const res = await fetch('/api/premium/status/' + currentPlayerId);
+          const data = await res.json();
+          const el = document.getElementById('premiumStatusText');
+          const btn = document.getElementById('buyPremiumBtn');
+          if (data.active) {
+            el.innerHTML = '<span class="premium-badge premium-badge--active">&#x1f451; Premium Active</span>' +
+              (data.expiresAt ? ' until ' + new Date(data.expiresAt).toLocaleString() : ' (permanent)');
+            btn.textContent = 'Already Premium!';
+            btn.style.opacity = '0.5';
+            document.getElementById('btnPremium').classList.add('side-menu__btn--premium');
+          } else {
+            el.innerHTML = '<span class="premium-badge premium-badge--inactive">Free Account</span>';
+            btn.textContent = 'Purchase with PayPal';
+            btn.style.opacity = '1';
+          }
+        } catch (e) { /* ignore */ }
+      }
+
+      function toggleChat() {
+        chatVisible = !chatVisible;
+        document.getElementById('chatPanel').style.display = chatVisible ? 'flex' : 'none';
+        if (chatVisible) {
+          loadChatHistory();
+          chatPollInterval = setInterval(loadChatHistory, 3000);
+        } else if (chatPollInterval) {
+          clearInterval(chatPollInterval);
+        }
+      }
+
+      async function loadChatHistory() {
+        try {
+          const res = await fetch('/api/chat/history');
+          const msgs = await res.json();
+          const container = document.getElementById('chatMessages');
+          container.innerHTML = msgs.map(m =>
+            '<div class="chat-panel__message">' +
+            '<span class="' + (m.isGolden ? 'chat-name--golden' : '') + '">' +
+            (m.isPremium ? '&#x1f451; ' : '') + m.playerName + '</span>: ' +
+            m.text + '</div>'
+          ).join('');
+          container.scrollTop = container.scrollHeight;
+        } catch (e) { /* ignore */ }
+      }
+
+      async function sendChat() {
+        const input = document.getElementById('chatInput');
+        const text = input.value.trim();
+        if (!text) return;
+        input.value = '';
+        await fetch('/api/chat/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ playerId: currentPlayerId, playerName: 'Player', text })
+        });
+        loadChatHistory();
+      }
+
+      function togglePremiumShop() {
+        const el = document.getElementById('premiumShop');
+        el.style.display = el.style.display === 'none' ? 'flex' : 'none';
+        if (el.style.display === 'flex') checkPremiumStatus();
+      }
+
+      async function buyPremium() {
+        try {
+          const res = await fetch('/api/paypal/create-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ playerId: currentPlayerId })
+          });
+          const data = await res.json();
+          if (data.approveUrl) {
+            window.open(data.approveUrl, '_blank');
+          } else if (data.error) {
+            alert('PayPal not configured. Set PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET env vars.\n\nError: ' + data.error);
+          }
+        } catch (e) {
+          alert('Payment service unavailable. Configure PayPal credentials to enable payments.');
+        }
+      }
+
+      async function toggleVotePanel() {
+        const el = document.getElementById('votePanel');
+        el.style.display = el.style.display === 'none' ? 'block' : 'none';
+        if (el.style.display === 'block') loadToplistVotes();
+      }
+
+      async function loadToplistVotes() {
+        try {
+          const res = await fetch('/api/toplist');
+          const entries = await res.json();
+          const container = document.getElementById('voteEntries');
+          if (!entries.length) {
+            container.innerHTML = '<p style="color:#aaa;text-align:center;font-size:0.875rem;">No voting sites available yet.</p>';
+            return;
+          }
+          let html = '';
+          for (const e of entries) {
+            const checkRes = await fetch('/api/vote/check/' + currentPlayerId + '/' + e.id);
+            const checkData = await checkRes.json();
+            html += '<div class="vote-panel__entry">' +
+              (e.bannerUrl ? '<img src="' + e.bannerUrl + '" class="vote-panel__banner" onerror="this.style.display=\'none\'" />' : '') +
+              '<div class="vote-panel__info"><div class="vote-panel__name">' + e.name + '</div>' +
+              '<div class="vote-panel__reward">&#x1f451; +2h Premium per vote</div></div>' +
+              (checkData.canVote
+                ? '<button class="vote-panel__btn vote-panel__btn--vote" onclick="doVote(\'' + e.id + '\',\'' + e.voteUrl + '\')">Vote</button>'
+                : '<button class="vote-panel__btn vote-panel__btn--voted" disabled>Voted</button>') +
+              '</div>';
+          }
+          container.innerHTML = html;
+        } catch (e) { /* ignore */ }
+      }
+
+      async function doVote(toplistId, voteUrl) {
+        window.open(voteUrl, '_blank');
+        const res = await fetch('/api/vote', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ playerId: currentPlayerId, toplistId })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('Vote recorded! You received 2 hours of Premium membership!');
+          loadToplistVotes();
+          checkPremiumStatus();
+        } else {
+          alert(data.error || 'Vote failed');
+        }
+      }
+
+      function toggleHousing() {
+        const el = document.getElementById('housingPanel');
+        el.style.display = el.style.display === 'none' ? 'flex' : 'none';
+        if (el.style.display === 'flex') loadHousing();
+      }
+
+      async function loadHousing() {
+        try {
+          const res = await fetch('/api/premium/status/' + currentPlayerId);
+          const premium = await res.json();
+          if (!premium.active) {
+            document.getElementById('housingMessage').textContent = 'Premium membership required for housing!';
+            document.getElementById('createHouseBtn').textContent = 'Get Premium';
+            document.getElementById('createHouseBtn').onclick = togglePremiumShop;
+            return;
+          }
+          const houseRes = await fetch('/api/housing/' + currentPlayerId);
+          const house = await houseRes.json();
+          if (house.id) {
+            document.getElementById('housingMessage').textContent = house.name + ' (' + house.furniture.length + ' items)';
+            document.getElementById('createHouseBtn').style.display = 'none';
+          } else {
+            document.getElementById('housingMessage').textContent = 'Create your house to start decorating!';
+            document.getElementById('createHouseBtn').style.display = '';
+            document.getElementById('createHouseBtn').textContent = 'Create House';
+            document.getElementById('createHouseBtn').onclick = createHouse;
+          }
+          loadTextures();
+        } catch (e) { /* ignore */ }
+      }
+
+      async function createHouse() {
+        const name = prompt('Name your house:') || 'My House';
+        await fetch('/api/housing/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ playerId: currentPlayerId, name })
+        });
+        loadHousing();
+      }
+
+      async function uploadTexture() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/png,image/jpeg,image/webp';
+        input.onchange = async () => {
+          const file = input.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = async () => {
+            const name = prompt('Texture name:', file.name) || file.name;
+            const res = await fetch('/api/housing/texture', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ playerId: currentPlayerId, name, dataUrl: reader.result })
+            });
+            const data = await res.json();
+            if (data.error) alert(data.error);
+            else loadTextures();
+          };
+          reader.readAsDataURL(file);
+        };
+        input.click();
+      }
+
+      async function loadTextures() {
+        try {
+          const res = await fetch('/api/housing/textures/' + currentPlayerId);
+          const textures = await res.json();
+          const container = document.getElementById('textureList');
+          container.innerHTML = textures.map(t =>
+            '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">' +
+            '<img src="' + t.dataUrl + '" style="width:24px;height:24px;border-radius:3px;object-fit:cover;" />' +
+            '<span>' + t.name + '</span></div>'
+          ).join('') || '<p>No custom textures uploaded yet.</p>';
+        } catch (e) { /* ignore */ }
+      }
+
+      // === Heuristic World State Panel ===
+      let heuristicVisible = false;
+      let heuristicPollInterval = null;
+      const H_LABELS = ['Resources','Population','Technology','Diplomacy','Military','Culture','Trade','Conflict','Environment','Social','Chaos','Spirituality','Rebirth'];
+
+      function toggleHeuristicPanel() {
+        heuristicVisible = !heuristicVisible;
+        document.getElementById('heuristicPanel').style.display = heuristicVisible ? 'block' : 'none';
+        if (heuristicVisible) {
+          loadHeuristics();
+          heuristicPollInterval = setInterval(loadHeuristics, 2000);
+        } else if (heuristicPollInterval) {
+          clearInterval(heuristicPollInterval);
+        }
+      }
+
+      async function loadHeuristics() {
+        try {
+          const res = await fetch('/api/world/heuristics');
+          const data = await res.json();
+          if (!data.H) return;
+          const barsEl = document.getElementById('hBars');
+          barsEl.innerHTML = data.H.map((v, i) => {
+            const pct = Math.min(100, Math.max(0, v * 100));
+            const color = v > 0.7 ? '#ffd700' : v > 0.4 ? '#4CAF50' : '#666';
+            return '<div style="margin-bottom:4px;"><div style="display:flex;justify-content:space-between;"><span>H' + (i+1) + ' ' + H_LABELS[i] + '</span><span>' + v.toFixed(2) + '</span></div>' +
+              '<div style="background:#222;border-radius:3px;height:6px;overflow:hidden;"><div style="background:' + color + ';height:100%;width:' + pct + '%;transition:width 0.3s;"></div></div></div>';
+          }).join('');
+
+          const chunksRes = await fetch('/api/world/chunks');
+          const chunks = await chunksRes.json();
+          document.getElementById('hWorld').innerHTML = '<div style="color:#aaa;">Chunks: ' + (Array.isArray(chunks) ? chunks.length : 0) + ' generated</div>';
+        } catch (e) { /* ignore */ }
+      }
+
+      document.querySelectorAll('.housing-panel__item').forEach(item => {
+        item.addEventListener('click', async () => {
+          const type = item.dataset.type;
+          await fetch('/api/housing/furniture', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ playerId: currentPlayerId, type, x: Math.random() * 300, y: Math.random() * 300 })
+          });
+          loadHousing();
+        });
+      });
+    </script>
   </body>
 </html>
