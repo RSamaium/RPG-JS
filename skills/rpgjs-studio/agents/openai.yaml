@@ -1,0 +1,4 @@
+interface:
+  display_name: "RPGJS Studio API"
+  short_description: "Manage RPGJS Studio via HTTP API"
+  default_prompt: "Use $rpgjs-studio to create or manage maps, events, database records, media, or project settings through the RPGJS Studio API."

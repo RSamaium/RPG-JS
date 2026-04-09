@@ -1,29 +1,38 @@
 ---
 title: "Studio overview"
-description: "Overview of RPGJS Studio concepts, runtime package, and internal documentation entry points."
+description: "Use RPGJS Studio with AI assistants such as Claude Code, Codex, or similar tools."
 ---
 
 # Studio overview
 
-RPGJS Studio packages the editor-facing runtime used to connect a project, load assets, and execute visual content inside the game engine.
+RPGJS Studio can be used directly from an AI coding assistant such as Claude Code, Codex, or any similar tool that supports skills.
 
 ## In this section
 
-- A high-level overview of the Studio runtime
-- Visual scripting details for event blocks
-- Internal design notes used to document Studio-related architecture
+- What the Studio skill is for
+- How to install the RPGJS Studio skill
+- How to create and configure the Studio API key
 
-## Main entry points
+## Recommended workflow
 
-- `@rpgjs/studio` exposes the client runtime
-- `@rpgjs/studio/server` exposes server helpers
-- `@rpgjs/studio/runtime` exposes shared runtime schemas and execution utilities
+1. Install the shared skill:
 
-## Read next
+```bash
+npx skills add https://github.com/RSamaium/RPG-JS#v5
+```
 
-- [Studio blocks runtime](/studio/blocks-runtime)
-- [Internal overview](/internal/README)
+2. When the tool asks which skill to install, choose `RPGJS Studio`.
+3. Create an API key from [RPGJS Studio API keys](https://rpgjs.studio/api-keys).
+4. Add the key to your environment with `RPGSTUDIO_API_KEY`.
 
-## When to use Studio docs
+Example:
 
-Use this tab when you are integrating editor-generated content, extending Studio behavior, or documenting internal architecture around map and event tooling.
+```bash
+export RPGSTUDIO_API_KEY="your-api-key"
+```
+
+Or in a `.env` file:
+
+```dotenv
+RPGSTUDIO_API_KEY=your-api-key
+```

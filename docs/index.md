@@ -22,9 +22,9 @@ Unlike traditional engines, RPGJS v5 is built on five core axioms:
 
 The documentation is organized into three tabs:
 
-- **Guide** for setup, gameplay systems, and the **Emergent Engine**.
-- **API** for hooks and extension points.
-- **Studio** for editor runtime concepts and internal architecture.
+- **Guide** for setup, gameplay systems, GUI integration, and production workflows
+- **API** for hooks and extension points
+- **Studio** for AI-assisted Studio workflows, skill installation, and authentication
 
 ## Quick start
 
@@ -51,3 +51,10 @@ Open `http://localhost:5173`.
 - [Infinite World](/guide/infinite-world)
 - [Emergent Narrative](/guide/emergent-narrative)
 - [Quick Start](/guide/quick-start)
+- [Getting Started](/guide/get-started)
+- [Structure](/guide/structure)
+- [Create your first map](/guide/create-your-first-map)
+- [API overview](/api)
+- [Studio overview](/studio/index)
+- [Hooks reference](/hooks/client-engine-hooks)
+- [GitHub repository](https://github.com/RSamaium/RPG-JS)

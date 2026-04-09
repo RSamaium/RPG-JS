@@ -14,6 +14,7 @@
         "groups": [
           {
             "group": "Quick Start",
+            "root": "index",
             "pages": [
               "index",
               "guide/quick-start",
@@ -94,8 +95,9 @@
         "groups": [
           {
             "group": "Overview",
+            "root": "api",
             "pages": [
-              "api/index"
+              "api"
             ]
           },
           {
@@ -155,9 +157,9 @@
         "groups": [
           {
             "group": "Overview",
+            "root": "studio/index",
             "pages": [
-              "studio/index",
-              "studio/blocks-runtime"
+              "studio/index"
             ]
           }
         ]

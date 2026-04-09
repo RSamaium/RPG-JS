@@ -15,7 +15,8 @@ Our goal is to provide a unified codebase where your game world breathes, rememb
 
 ## 🌟 The Are Logic Core (A1–A5)
 
-At the heart of RPG JS v5 is the Are Logic system, which transforms the game from a static environment into a living organism:
+- Website: [https://rpgjs.dev](https://rpgjs.dev)
+- Documentation: [https://v5.rpgjs.dev](https://v5.rpgjs.dev)
 
 *   **A1 - Relational Graph:** Every player, item, and faction is a node in a massive, weighted graph. Influence propagates through relationships, not just hardcoded values.
 *   **A2 - Historical Recurrence:** The world has a memory. Past events influence present state through decay and reinforcement models.
