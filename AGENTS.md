@@ -49,3 +49,26 @@ When adding new APIs:
 ## 🧪 Testing
 
 Always write unit tests for heuristic shifts and Watchdog constraints. Use `vitest` for all logic verification.
+
+## Cursor Cloud specific instructions
+
+### Monorepo overview
+
+This is a **pnpm workspaces** monorepo (`pnpm@10.25.0`). Packages live in `packages/` and sample apps in `samples/`. There are no external service dependencies (no databases, Redis, etc.). Everything runs in-process.
+
+### Key commands
+
+| Task | Command | Notes |
+|---|---|---|
+| Install deps | `pnpm install --no-frozen-lockfile` | The `.npmrc` references `NPM_AUTH_TOKEN` which can be ignored for local dev |
+| Build all packages | `pnpm build` | Sequential build via `tsx bin/build.ts`; respects inter-package dependency order |
+| Run tests | `pnpm test --run` | Vitest with jsdom; 42 test files, ~417 tests. Config at root `vitest.config.ts` |
+| Run sample app | `cd samples/sample-dev && pnpm dev` | Starts Vite dev server on port 5173 with WebSocket game server |
+
+### Gotchas
+
+- **No ESLint configured.** There is no linter in this repo. TypeScript type-checking (`tsc --noEmit`) has pre-existing errors; the project uses Vite (esbuild) for transpilation which skips type-checking.
+- **esbuild build scripts warning.** `pnpm install` will warn about ignored build scripts for esbuild. The `.npmrc` has `only-built-dependencies` entries that handle this; esbuild falls back to WASM.
+- **Build before running sample apps.** The sample apps depend on workspace packages (`workspace:*`). You must run `pnpm build` at the root before `pnpm dev` in any sample app.
+- **`vitest.config.ts` aliases.** Tests resolve `@rpgjs/*` packages via path aliases to source (`packages/*/src`), so tests can run against source without a build. However, sample apps need the built `dist/` output.
+- **HTMLCanvasElement warnings in tests.** Tests emit many "Not implemented: HTMLCanvasElement's getContext()" warnings — these are expected in jsdom and do not indicate failures.
