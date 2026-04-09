@@ -1,1 +1,1 @@
-{\n  "build": {\n    "env": {\n      "PNPM_HOME": ".pnpm"\n    },\n    "installCommand": "pnpm install --no-frozen-lockfile"\n  }\n}
+{"install": {"command": "pnpm install --no-frozen-lockfile"}}
