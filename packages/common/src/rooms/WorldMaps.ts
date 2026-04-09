@@ -146,8 +146,8 @@ export class WorldMapsManager {
         const verticallyOverlapsOrTouches =
           Math.max(src.worldY, m.worldY) <= Math.min(src.worldY + src.heightPx, m.worldY + m.heightPx);
 
-        const marginLeftRight = src.tileWidth / 2
-        const marginTopDown = src.tileHeight / 2
+        const marginLeftRight = 16 / 2
+        const marginTopDown = 16 / 2
   
         switch (search) {
           case 0: // Up
