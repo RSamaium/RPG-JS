@@ -2,7 +2,7 @@
 
 This repository contains the **RPG JS v5** framework, which has been upgraded with the **Are Logic Engine** for emergent, heuristical gameplay. When working with this codebase, you must adhere to the following axioms and systems.
 
-## 🌟 The 5 Axioms (A1–A5)
+## 🌟 The 5 Axioms (A1–A5) 
 
 The core of the engine is governed by five foundational principles:
 
