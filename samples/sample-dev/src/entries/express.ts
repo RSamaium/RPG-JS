@@ -32,6 +32,11 @@ app.get(/.*/, (_req, res) => {
   res.sendFile(clientIndexFile);
 });
 
+// Health check endpoint for Docker/orchestration
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
+
 httpServer.on("upgrade", (request, socket, head) => {
   void transport.handleUpgrade(wsServer, request, socket, head);
 });

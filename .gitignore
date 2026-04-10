@@ -22,3 +22,13 @@ vitest.config.ts.timestamp*
 docs/.vitepress/cache
 .cursor/debug.log
 public
+
+# Zusätzliche Einträge für Deployment
+.env
+logs
+*.log
+.pnpm-store
+/samples/*/dist
+/samples/*/node_modules
+/packages/*/dist
+/packages/*/node_modules

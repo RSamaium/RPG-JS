@@ -25,6 +25,8 @@ ENV NPM_AUTH_TOKEN=""
 RUN pnpm install --no-frozen-lockfile
 
 COPY . .
+COPY docker-compose.prod.yml .
+COPY nginx.conf .
 
 RUN pnpm build
 RUN cd packages/vue && npm run build

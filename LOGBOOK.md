@@ -45,3 +45,20 @@
 1. **Secrets konfigurieren:** Sicherstellen, dass `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` (oder `VPS_PASSWORD`) in den GitHub Secrets hinterlegt sind.
 2. **VPS-Setup:** Falls Node.js-Deployment genutzt wird, muss PM2 auf dem VPS installiert sein.
 3. **Monitoring:** Die GitHub Actions auf Erfolg prüfen.
+
+## 2026-04-10 - Fortsetzung der Initialisierung und Analyse
+
+**Aktueller Stand (Fortsetzung):**
+1.  GitHub Actions Workflow-Datei `.github/workflows/deploy` in `.github/workflows/deploy.yml` umbenannt, um die korrekte Erkennung durch GitHub Actions zu gewährleisten.
+
+**Nächste Schritte (Präzisierung):**
+1.  **Analyse des bestehenden GitHub Actions Workflows (`deploy.yml`):**
+    *   Überprüfung der `deploy-docker` und `deploy-node` Jobs auf Korrektheit und Anpassungsbedarf.
+    *   Sicherstellen, dass das Docker-Deployment `docker-compose.prod.yml` verwendet und alle notwendigen Volumes und Umgebungsvariablen korrekt konfiguriert sind.
+    *   Anpassung des Node.js-Deployments, um den korrekten Pfad zur `express.js` Datei zu verwenden (`samples/sample-dev/dist/server/express.js`).
+    *   Sicherstellen, dass die Health Checks im `docker-compose.prod.yml` mit der tatsächlichen Anwendung übereinstimmen oder angepasst werden.
+2.  **Erstellung eines detaillierten Deployment-Plans:** Dokumentation der Schritte für Docker- und Node.js-Deployment, inklusive manueller Fallback-Option.
+3.  **Implementierung der Änderungen im Repository:** Anpassung der `Dockerfile`, `docker-compose.prod.yml` und `deploy.yml`.
+4.  **Test des Workflows:** Lokale Validierung der Docker-Konfiguration.
+5.  **Commit und Push:** Alle Änderungen in den `V5`-Branch pushen.
+6.  **Manuelles Deployment auf VPS:** Verbindung zum VPS herstellen und den neuesten Stand manuell deployen, falls der automatische Workflow nicht funktioniert.
