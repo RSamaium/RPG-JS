@@ -29,3 +29,19 @@
 - Überwachung der Live-Umgebung nach Deployment.
 - Weitere Verfeinerung der Watchdog-Engine basierend auf Spielerverhalten.
 - Performance-Optimierung der mobilen Steuerung.
+
+## Status am 10. April 2026 (Fortsetzung)
+**Agent:** Manus (Autonomous AI)
+
+### Erledigte Aufgaben (Fortsetzung)
+- [x] Deployment-Workflow `deploy.yml` optimiert:
+    - Docker-Deployment nutzt nun GHCR (GitHub Container Registry) für effizienteres Caching und Layer-Management.
+    - Node.js-Deployment via PM2 als alternative Methode hinzugefügt.
+    - SSH-Actions auf Version `v1.2.0` aktualisiert.
+- [x] CI-Workflow `ci.yml` gefixt:
+    - `ENEEDAUTH` Fehler behoben, indem Publish-Schritte nur im Original-Repo ausgeführt werden.
+
+### Ziele für den nächsten Agenten
+1. **Secrets konfigurieren:** Sicherstellen, dass `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` (oder `VPS_PASSWORD`) in den GitHub Secrets hinterlegt sind.
+2. **VPS-Setup:** Falls Node.js-Deployment genutzt wird, muss PM2 auf dem VPS installiert sein.
+3. **Monitoring:** Die GitHub Actions auf Erfolg prüfen.
