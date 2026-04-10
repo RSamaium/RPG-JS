@@ -3,6 +3,9 @@ version: '3.8'
 services:
   # Main RPGJS Game Server
   are-logic-rpg:
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: are-logic-rpg:latest
     container_name: are-logic-rpg-prod
     restart: unless-stopped
