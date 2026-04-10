@@ -1,0 +1,145 @@
+<!-- Mobile Virtual Joystick and Button Controls -->
+<Container positionType="absolute" bottom={20} left={20} right={20}>
+  <!-- Virtual Joystick -->
+  <Container id="joystick-area" width={120} height={120} x={20} y={0}>
+    <Circle x={60} y={60} radius={60} color="rgba(100, 100, 100, 0.3)" />
+    <Circle id="joystick-thumb" x={60} y={60} radius={30} color="rgba(150, 150, 150, 0.6)" />
+  </Container>
+
+  <!-- Action Buttons (Right side) -->
+  <Container id="action-buttons" x={screenWidth - 140} y={0}>
+    <!-- Attack Button -->
+    <Circle id="btn-attack" x={50} y={50} radius={40} color="rgba(200, 50, 50, 0.6)" />
+    <Text x={50} y={50} text="A" fontSize={24} color="white" align="center" baseline="middle" />
+    
+    <!-- Interact Button -->
+    <Circle id="btn-interact" x={50} y={120} radius={40} color="rgba(50, 150, 200, 0.6)" />
+    <Text x={50} y={120} text="B" fontSize={24} color="white" align="center" baseline="middle" />
+  </Container>
+
+  <!-- D-Pad (Alternative) -->
+  <Container id="dpad" x={20} y={150} display={showDpad ? 'block' : 'none'}>
+    <!-- Up -->
+    <Rect x={40} y={0} width={40} height={40} color="rgba(100, 100, 100, 0.5)" />
+    <!-- Left -->
+    <Rect x={0} y={40} width={40} height={40} color="rgba(100, 100, 100, 0.5)" />
+    <!-- Right -->
+    <Rect x={80} y={40} width={40} height={40} color="rgba(100, 100, 100, 0.5)" />
+    <!-- Down -->
+    <Rect x={40} y={80} width={40} height={40} color="rgba(100, 100, 100, 0.5)" />
+  </Container>
+</Container>
+
+<script>
+  import { signal, computed, mount } from "canvasengine";
+  import { inject, RpgClientEngine } from "@rpgjs/client";
+
+  const engine = inject(RpgClientEngine);
+  
+  // Responsive design signals
+  const screenWidth = signal(window.innerWidth);
+  const screenHeight = signal(window.innerHeight);
+  const isMobile = computed(() => screenWidth() < 768);
+  const isTablet = computed(() => screenWidth() >= 768 && screenWidth() < 1024);
+  const showDpad = signal(false);
+
+  // Joystick state
+  const joystickActive = signal(false);
+  const joystickX = signal(0);
+  const joystickY = signal(0);
+
+  // Update screen dimensions on resize
+  window.addEventListener('resize', () => {
+    screenWidth.set(window.innerWidth);
+    screenHeight.set(window.innerHeight);
+  });
+
+  // Joystick touch handling
+  const joystickArea = document.getElementById('joystick-area');
+  const joystickThumb = document.getElementById('joystick-thumb');
+
+  if (joystickArea) {
+    joystickArea.addEventListener('touchstart', (e) => {
+      joystickActive.set(true);
+      handleJoystickInput(e.touches[0]);
+    });
+
+    joystickArea.addEventListener('touchmove', (e) => {
+      if (joystickActive()) {
+        handleJoystickInput(e.touches[0]);
+      }
+    });
+
+    joystickArea.addEventListener('touchend', () => {
+      joystickActive.set(false);
+      joystickX.set(0);
+      joystickY.set(0);
+      // Send neutral input to engine
+      engine.input.setDirection(null);
+    });
+  }
+
+  function handleJoystickInput(touch) {
+    const rect = joystickArea.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    
+    let dx = touch.clientX - centerX;
+    let dy = touch.clientY - centerY;
+    
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const maxDistance = rect.width / 2;
+    
+    if (distance > maxDistance) {
+      dx = (dx / distance) * maxDistance;
+      dy = (dy / distance) * maxDistance;
+    }
+    
+    joystickX.set(dx);
+    joystickY.set(dy);
+    
+    // Map joystick input to game directions
+    const angle = Math.atan2(dy, dx);
+    const directions = ['right', 'down', 'left', 'up'];
+    const dirIndex = Math.round((angle + Math.PI) / (Math.PI / 2)) % 4;
+    
+    if (distance > 20) {
+      engine.input.setDirection(directions[dirIndex]);
+    } else {
+      engine.input.setDirection(null);
+    }
+  }
+
+  // Action button handling
+  const btnAttack = document.getElementById('btn-attack');
+  const btnInteract = document.getElementById('btn-interact');
+
+  if (btnAttack) {
+    btnAttack.addEventListener('touchstart', () => {
+      engine.input.setAction('attack');
+    });
+    btnAttack.addEventListener('touchend', () => {
+      engine.input.clearAction('attack');
+    });
+  }
+
+  if (btnInteract) {
+    btnInteract.addEventListener('touchstart', () => {
+      engine.input.setAction('interact');
+    });
+    btnInteract.addEventListener('touchend', () => {
+      engine.input.clearAction('interact');
+    });
+  }
+
+  // Hide controls on desktop
+  mount(() => {
+    if (!isMobile() && !isTablet()) {
+      // Hide mobile controls on desktop
+      const container = document.querySelector('[id="joystick-area"]')?.parentElement;
+      if (container) {
+        container.style.display = 'none';
+      }
+    }
+  });
+</script>

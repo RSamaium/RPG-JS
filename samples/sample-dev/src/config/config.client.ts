@@ -20,6 +20,7 @@ import WoodUiComponent from "../components/wood-ui.ce";
 import VueComponent from "../vue-component-with-injections.vue";
 import FadeComponent from "../components/fade.ce";
 import PlayerStatsComponent from "../components/player-stats.ce";
+import MobileControlsComponent from "../components/mobile-controls.ce";
 import { signal, effect } from 'canvasengine'
 import { provideVueGui } from "@rpgjs/vue";
 import { provideTiledMap } from "@rpgjs/tiledmap/client";
@@ -214,6 +215,11 @@ export default {
                 expression: 'happy'
               }
             }
+          },
+          {
+            id: "mobile-controls",
+            component: MobileControlsComponent,
+            autoDisplay: true
           }
         ],
         componentAnimations: [
