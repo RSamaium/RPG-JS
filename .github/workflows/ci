@@ -1,0 +1,129 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - "*"
+    paths-ignore:
+      - "docs/**"
+  pull_request:
+    branches:
+      - "*"
+    paths-ignore:
+      - "docs/**"
+
+jobs:
+  tests:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        node-version: [20]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.25.0
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "pnpm"
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile  
+      - name: Build
+        run: pnpm build
+
+  build_and_publish:
+      needs: tests
+      if: github.ref == 'refs/heads/v5' && github.repository == 'RSamaium/RPG-JS'
+      strategy:
+        matrix:
+          os: [ubuntu-latest]
+          node-version: [lts/*]
+          pnpm-version: [10.25.0]
+      runs-on: ${{ matrix.os }}
+      steps:
+        - name: ⬇️ Checkout
+          id: checkout
+          uses: actions/checkout@v4
+          with:
+            fetch-depth: 0
+  
+        - name: 🟢 Setup node
+          id: setup-node
+          uses: actions/setup-node@v4
+          with:
+            node-version: ${{ matrix.node-version }}
+  
+        - name: 🥡 Setup pnpm
+          id: setup-pnpm
+          uses: pnpm/action-setup@v4
+          with:
+            version: ${{ matrix.pnpm-version }}
+            run_install: false
+  
+        - name: 🎈 Get pnpm store directory
+          id: get-pnpm-cache-dir
+          run: |
+            echo "::set-output name=pnpm_cache_dir::$(pnpm store path)"
+  
+        - name: 🔆 Cache pnpm modules
+          uses: actions/cache@v4
+          id: pnpm-cache
+          with:
+            path: ${{ steps.get-pnpm-cache-dir.outputs.pnpm_cache_dir }}
+            key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+            restore-keys: |
+              ${{ runner.os }}-pnpm-store-
+  
+        - name: 🧩 Install Dependencies
+          id: install-dependencies
+          run: pnpm install --no-frozen-lockfile
+  
+        - name: 🏗️ Build
+          id: build-the-mono-repo
+          run: |
+            pnpm build
+  
+        - name: 📣 Change version and publish to npm
+          id: publish
+          run: |
+            pnpm run rpgjs:version
+            pnpm run rpgjs:publish
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  starter_repo_update_dependencies:
+      needs: build_and_publish
+      if: github.ref == 'refs/heads/v5' && github.repository == 'RSamaium/RPG-JS'
+      runs-on: ubuntu-latest
+      steps:
+        - name: Checkout the starter repository
+          run: git clone --branch v5-studio --single-branch https://github.com/rpgjs/starter starter
+
+        - name: Install npm-check-updates globally
+          run: npm i npm-check-updates -g
+
+        - name: Run ncu to update dependencies
+          run: |
+            cd starter/package
+            ncu -u
+
+        - name: Update package lock
+          run: |
+            cd starter/package
+            npm i --package-lock-only
+
+        - name: Deploy to external repository
+          uses: cpina/github-action-push-to-another-repository@main
+          env:
+            API_TOKEN_GITHUB: ${{ secrets.GH_ACCESS_TOKEN }}
+          with:
+            source-directory: starter/
+            destination-github-username: rpgjs
+            destination-repository-name: starter
+            user-email: "${{ github.actor}}@users.noreply.github.com"
+            commit-message: update package dependencies to latest RPGJS version
+            target-branch: v5-studio
