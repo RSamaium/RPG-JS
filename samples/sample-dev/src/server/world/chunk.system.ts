@@ -23,7 +23,7 @@ export async function getChunk(x: number, y: number) {
     // 3. Generate if not found (infinite world expansion)
     if (!chunk) {
         chunk = generateChunk(x, y, H);
-        await saveChunk(chunk);
+        await saveChunk(chunk.id, chunk);
     }
     
     // Update cache and return
