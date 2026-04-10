@@ -26,8 +26,8 @@
 
   const engine = inject(RpgClientEngine);
 
-  const width = signal(0)
-  const height = signal(0)
+  const width = signal(window.innerWidth)
+  const height = signal(window.innerHeight)
 
   // Animation: fade in from transparent to opaque, or fade out from opaque to transparent
   const opacity = animatedSignal(fadeIn() ? 0 : 1, {
@@ -41,8 +41,16 @@
 
   mount((element) => {
     opacity.set(fadeIn() ? 1 : 0);
-    console.log(opacity())
-    width.set(element.props.context.canvasSize().width)
-    height.set(element.props.context.canvasSize().height)
+    try {
+      const canvasSize = element.props.context.canvasSize();
+      if (canvasSize && canvasSize.width && canvasSize.height) {
+        width.set(canvasSize.width);
+        height.set(canvasSize.height);
+      }
+    } catch (e) {
+      // Fallback to window dimensions
+      width.set(window.innerWidth);
+      height.set(window.innerHeight);
+    }
   });
 </script>

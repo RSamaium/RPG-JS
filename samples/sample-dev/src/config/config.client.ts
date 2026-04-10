@@ -119,16 +119,20 @@ export default {
         },
         sceneMap: { 
           onBeforeLoading: (scene) => {
-            console.log(scene)
             const gui = inject(RpgGui)
             gui.display('fade', {
-              fadeIn: false,
-              duration: 5000
+              fadeIn: true,
+              duration: 800
             })
           },
           onAfterLoading: async (scene) => {
             const gui = inject(RpgGui)
-            await new Promise(resolve => setTimeout(resolve, 5000))
+            await new Promise(resolve => setTimeout(resolve, 1200))
+            gui.display('fade', {
+              fadeIn: false,
+              duration: 800
+            })
+            await new Promise(resolve => setTimeout(resolve, 900))
             gui.hide('fade')
           },
         },
