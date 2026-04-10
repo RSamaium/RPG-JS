@@ -20,8 +20,12 @@
 - [x] Repository geklont und Struktur analysiert.
 - [x] `AGENTS.md` und `package.json` evaluiert.
 - [x] Initiales Logbook erstellt.
+- [x] Blackscreen-Fehler nach Login diagnostiziert und behoben (Fade-Komponente, Canvas-Größe).
+- [x] Mobile Steuerung und responsives Design implementiert (Virtueller Joystick, Action Buttons, CSS Media Queries).
+- [x] ARE-Engine, Heuristiken und Weltgenerierung geprüft und sichergestellt (Chunk-Persistenz-Fix, Watchdog-Engine erweitert).
+- [x] Deployment-Workflow für VPS (Docker + Node) eingerichtet (Deployment Guide, Docker Compose, Nginx Config).
 
 ### Nächste Schritte
-- Untersuchung der Login-Logik und des Blackscreen-Fehlers in `samples/sample-dev`.
-- Implementierung von virtuellen Joysticks/Buttons für mobile Steuerung.
-- Prüfung der Docker-Konfiguration.
+- Überwachung der Live-Umgebung nach Deployment.
+- Weitere Verfeinerung der Watchdog-Engine basierend auf Spielerverhalten.
+- Performance-Optimierung der mobilen Steuerung.
