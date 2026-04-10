@@ -26,6 +26,8 @@
 - [x] Deployment-Workflow für VPS (Docker + Node) eingerichtet (Deployment Guide, Docker Compose, Nginx Config).
 - [x] PM2-Konfiguration (`ecosystem.config.cjs`) für Node.js-Deployment erstellt.
 - [x] GitHub Actions Workflow für hybrides Deployment (Docker/Node) vorbereitet (lokale Datei aktualisiert).
+- [x] Analyse des fehlgeschlagenen GitHub Actions Runs (ID 24221010983): Ursache ist der Versuch, Pakete zu NPM zu publizieren, wofür im Fork keine Berechtigungen/Secrets vorliegen.
+- [x] Lösung für CI-Fehler vorbereitet: `ci.yml` so angepasst, dass `build_and_publish` nur im Upstream-Repository (`RSamaium/RPG-JS`) ausgeführt wird. (Lokale Änderung bereit zum manuellen Push).
 
 ### Nächste Schritte
 - Überwachung der Live-Umgebung nach Deployment.
