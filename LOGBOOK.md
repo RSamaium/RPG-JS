@@ -24,6 +24,8 @@
 - [x] Mobile Steuerung und responsives Design implementiert (Virtueller Joystick, Action Buttons, CSS Media Queries).
 - [x] ARE-Engine, Heuristiken und Weltgenerierung geprüft und sichergestellt (Chunk-Persistenz-Fix, Watchdog-Engine erweitert).
 - [x] Deployment-Workflow für VPS (Docker + Node) eingerichtet (Deployment Guide, Docker Compose, Nginx Config).
+- [x] PM2-Konfiguration (`ecosystem.config.cjs`) für Node.js-Deployment erstellt.
+- [x] GitHub Actions Workflow für hybrides Deployment (Docker/Node) vorbereitet (lokale Datei aktualisiert).
 
 ### Nächste Schritte
 - Überwachung der Live-Umgebung nach Deployment.
