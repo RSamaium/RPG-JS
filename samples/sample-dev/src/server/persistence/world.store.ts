@@ -1,3 +1,4 @@
+import { createRequire } from "module";
 const isBrowser = typeof window !== "undefined";
 
 let _fs: any = null;
@@ -65,6 +66,20 @@ export function saveWorld(metadata: any = {}) {
   }
 }
 
+const require = typeof createRequire !== "undefined" ? createRequire(import.meta.url) : (typeof window !== "undefined" ? null : eval('require'));
+
 export function loadWorld() {
+  if (Object.keys(memoryMetadata).length > 0) return memoryMetadata;
+  if (isBrowser || !_path) return memoryMetadata;
+  try {
+    if (require) {
+      const fsNative = require("fs");
+      if (fsNative.existsSync(_metadataFile)) {
+        memoryMetadata = JSON.parse(fsNative.readFileSync(_metadataFile, "utf-8"));
+      }
+    }
+  } catch {
+    // Ignore error, return empty metadata
+  }
   return memoryMetadata;
 }
