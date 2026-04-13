@@ -274,14 +274,14 @@ export default defineModule<RpgServer>({
 });
 
 // Periodic world tick
-setInterval(() => {
+setInterval(async () => {
   try {
     updateHeuristics(new Array(13).fill(0));
     civTick();
     const env = updateWorldState();
 
     const lore = generateLore();
-    const world = loadWorld();
+    const world = await loadWorld();
     const factions = getAllFactions();
     const prophecies = interpretHeuristics();
 
