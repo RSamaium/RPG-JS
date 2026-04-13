@@ -1,3 +1,4 @@
+import { createRequire } from "module";
 const isBrowser = typeof window !== "undefined";
 
 let _fs: any = null;
@@ -12,6 +13,12 @@ async function ensureNodeModules() {
     _path = await import("path");
     _chunksDir = _path.join(process.cwd(), "world_data", "chunks");
     _metadataFile = _path.join(process.cwd(), "world_data", "world_metadata.json");
+    try {
+      const data = await _fs.readFile(_metadataFile, "utf-8");
+      memoryMetadata = JSON.parse(data);
+    } catch {
+      // Ignored if file doesn't exist yet
+    }
   } catch {
     // Not available in browser
   }
@@ -65,6 +72,14 @@ export function saveWorld(metadata: any = {}) {
   }
 }
 
-export function loadWorld() {
-  return memoryMetadata;
+export async function loadWorld() {
+  if (isBrowser || !_fs) return memoryMetadata;
+  try {
+    const data = await _fs.readFile(_metadataFile, "utf-8");
+    const parsed = JSON.parse(data);
+    memoryMetadata = parsed;
+    return parsed;
+  } catch {
+    return memoryMetadata;
+  }
 }
