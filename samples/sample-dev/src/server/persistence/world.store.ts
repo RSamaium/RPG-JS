@@ -13,6 +13,12 @@ async function ensureNodeModules() {
     _path = await import("path");
     _chunksDir = _path.join(process.cwd(), "world_data", "chunks");
     _metadataFile = _path.join(process.cwd(), "world_data", "world_metadata.json");
+    try {
+      const data = await _fs.readFile(_metadataFile, "utf-8");
+      memoryMetadata = JSON.parse(data);
+    } catch {
+      // Ignored if file doesn't exist yet
+    }
   } catch {
     // Not available in browser
   }
@@ -66,20 +72,14 @@ export function saveWorld(metadata: any = {}) {
   }
 }
 
-const require = typeof createRequire !== "undefined" ? createRequire(import.meta.url) : (typeof window !== "undefined" ? null : eval('require'));
-
-export function loadWorld() {
-  if (Object.keys(memoryMetadata).length > 0) return memoryMetadata;
-  if (isBrowser || !_path) return memoryMetadata;
+export async function loadWorld() {
+  if (isBrowser || !_fs) return memoryMetadata;
   try {
-    if (require) {
-      const fsNative = require("fs");
-      if (fsNative.existsSync(_metadataFile)) {
-        memoryMetadata = JSON.parse(fsNative.readFileSync(_metadataFile, "utf-8"));
-      }
-    }
+    const data = await _fs.readFile(_metadataFile, "utf-8");
+    const parsed = JSON.parse(data);
+    memoryMetadata = parsed;
+    return parsed;
   } catch {
-    // Ignore error, return empty metadata
+    return memoryMetadata;
   }
-  return memoryMetadata;
 }
