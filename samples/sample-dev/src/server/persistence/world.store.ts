@@ -12,6 +12,12 @@ async function ensureNodeModules() {
     _path = await import("path");
     _chunksDir = _path.join(process.cwd(), "world_data", "chunks");
     _metadataFile = _path.join(process.cwd(), "world_data", "world_metadata.json");
+    try {
+      const data = await _fs.readFile(_metadataFile, "utf-8");
+      memoryMetadata = JSON.parse(data);
+    } catch {
+      // Ignored if file doesn't exist yet
+    }
   } catch {
     // Not available in browser
   }
