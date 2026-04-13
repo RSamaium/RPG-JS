@@ -1,3 +1,4 @@
+import { createRequire } from "module";
 const isBrowser = typeof window !== "undefined";
 
 let _fs: any = null;
