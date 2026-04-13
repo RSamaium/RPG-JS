@@ -65,6 +65,14 @@ export function saveWorld(metadata: any = {}) {
   }
 }
 
-export function loadWorld() {
-  return memoryMetadata;
+export async function loadWorld() {
+  if (isBrowser || !_fs) return memoryMetadata;
+  try {
+    const data = await _fs.readFile(_metadataFile, "utf-8");
+    const parsed = JSON.parse(data);
+    memoryMetadata = parsed;
+    return parsed;
+  } catch {
+    return memoryMetadata;
+  }
 }
