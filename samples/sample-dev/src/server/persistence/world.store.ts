@@ -24,12 +24,14 @@ async function ensureNodeModules() {
   }
 }
 
-ensureNodeModules();
+// Initial load synchronously starts the promise, allowing functions to wait for it if they need to.
+const initPromise = ensureNodeModules();
 
 const memoryChunks = new Map<string, any>();
 let memoryMetadata: any = {};
 
 export async function saveChunk(id: string, data: any) {
+  await initPromise;
   memoryChunks.set(id, data);
   if (isBrowser || !_fs) return;
   try {
@@ -44,6 +46,7 @@ export async function saveChunk(id: string, data: any) {
 }
 
 export async function loadChunk(id: string) {
+  await initPromise;
   if (memoryChunks.has(id)) return memoryChunks.get(id);
   if (isBrowser || !_fs) return null;
   try {
@@ -59,20 +62,21 @@ export async function loadChunk(id: string) {
   }
 }
 
-export function saveWorld(metadata: any = {}) {
+export async function saveWorld(metadata: any = {}) {
+  await initPromise;
   memoryMetadata = metadata;
   if (isBrowser || !_fs) return;
   try {
     const dir = _path.dirname(_metadataFile);
-    _fs.mkdir(dir, { recursive: true }).then(() => {
-      _fs.writeFile(_metadataFile, JSON.stringify(metadata, null, 2));
-    });
+    await _fs.mkdir(dir, { recursive: true });
+    await _fs.writeFile(_metadataFile, JSON.stringify(metadata, null, 2));
   } catch {
     // Ignore
   }
 }
 
 export async function loadWorld() {
+  await initPromise;
   if (isBrowser || !_fs) return memoryMetadata;
   try {
     const data = await _fs.readFile(_metadataFile, "utf-8");
