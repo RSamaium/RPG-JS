@@ -56,16 +56,10 @@ describe('Heuristic Game Features', () => {
   it('handlePostHeuristics should return error for invalid body', () => {
     const res = handlePostHeuristics({} as any) as any;
     expect(res.error).toBeDefined();
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { saveState, loadState } from '../src/server/persistence/state.store';
+  });
+});
 
-vi.mock('../src/server/persistence/state.store', () => ({
-  saveState: vi.fn(),
-  loadState: vi.fn().mockReturnValue(null),
-}));
-
-import { updateHeuristics, H, M } from '../src/server/arelogic/heuristic.engine';
-import { handleGetHeuristics, handlePostHeuristics } from '../src/server/api/heuristic.api';
+import { M } from '../src/server/arelogic/heuristic.engine';
 
 describe('Heuristic Wave Engine', () => {
   beforeEach(() => {
