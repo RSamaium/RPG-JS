@@ -280,7 +280,7 @@ const characterRuntime: EventTypeRuntime = {
       if (typeData) {
         const dialogue = typeData.dialogue;
         if (dialogue) {
-          await show_text(context, {
+          await show_text(context as any, {
             text: dialogue.text,
             speaker: context.event.id,
             position: dialogue.position,

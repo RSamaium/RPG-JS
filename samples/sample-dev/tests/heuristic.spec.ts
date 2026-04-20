@@ -56,16 +56,8 @@ describe('Heuristic Game Features', () => {
   it('handlePostHeuristics should return error for invalid body', () => {
     const res = handlePostHeuristics({} as any) as any;
     expect(res.error).toBeDefined();
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { saveState, loadState } from '../src/server/persistence/state.store';
-
-vi.mock('../src/server/persistence/state.store', () => ({
-  saveState: vi.fn(),
-  loadState: vi.fn().mockReturnValue(null),
-}));
-
-import { updateHeuristics, H, M } from '../src/server/arelogic/heuristic.engine';
-import { handleGetHeuristics, handlePostHeuristics } from '../src/server/api/heuristic.api';
+  });
+});
 
 describe('Heuristic Wave Engine', () => {
   beforeEach(() => {
@@ -99,10 +91,26 @@ describe('Heuristic Wave Engine', () => {
 
       const newH = updateHeuristics(E);
 
+      const M = [
+        [0,0.2,0.3,0,0,0,0.5,0,0,0,0,0,0],
+        [0.1,0,0.2,0.2,0,0.1,0,0,0,0,0,0,0],
+        [0.2,0.1,0,0.3,0.2,0,0,0,0,0,0,0,0],
+        [0,0.2,0.3,0,0.3,0,0,0,0,0,0,0,0],
+        [0,0,0.2,0.3,0,0.2,0,0,0.1,0,0,0,0],
+        [0,0.1,0,0,0.2,0,0,0.3,0,0,0,0,0.2],
+        [0.3,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0.3,0,0,0.3,0,0,0.2,0],
+        [0,0,0,0,0.2,0,0,0.3,0,0.3,0.2,0,0],
+        [0,0,0,0,0,0,0,0,0.3,0,0.3,0.2,0],
+        [0,0,0,0,0,0,0,0,0.2,0.3,0,0.3,0],
+        [0,0,0,0,0,0,0,0.2,0,0.2,0.3,0,0.3],
+        [0,0,0,0,0,0.2,0,0,0,0,0,0.3,0]
+      ];
+
       // newH[i] = sum(M[i][j] * H[j]) + E[i]
       // since H[0] = 1, newH[i] = M[i][0]
       for (let i = 0; i < 13; i++) {
-        expect(newH[i]).toBeCloseTo(M[i][0]);
+        expect(newH[i]).toBeCloseTo(M[i][0] || 0);
       }
     });
   });
