@@ -335,7 +335,7 @@ export default (_config?: unknown) => {
               const trigger = object.triggers[i];
               const isEnabled = trigger?.enabled !== false;
               if (
-                matchesPageConditions(trigger.conditions, { player, event }) &&
+                matchesPageConditions(trigger.conditions, { player: player as any, event: event as any }) &&
                 isEnabled
               ) {
                 return { trigger, index: i };
@@ -379,7 +379,7 @@ export default (_config?: unknown) => {
             triggerType: string,
             event: RpgEvent,
           ) {
-            const blockExecutor = new BlockExecutionService(player, event);
+            const blockExecutor = new BlockExecutionService(player as any, event as any);
             const trigger = eventObj.applyActiveTrigger(player, event);
             if (!trigger || trigger.type !== triggerType) {
               return;
