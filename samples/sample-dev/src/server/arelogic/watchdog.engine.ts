@@ -181,7 +181,7 @@ export function validate(action: any, graph?: Graph, history?: any[]): Validatio
   }
 
   // A5 - Continuous Ingestion (Event Vector)
-  if (action.eventVector && !validateEventVector(action.eventVector)) {
+  if ("eventVector" in action && !validateEventVector(action.eventVector)) {
     return { valid: false, reason: 'Invalid event vector structure' };
   }
 
