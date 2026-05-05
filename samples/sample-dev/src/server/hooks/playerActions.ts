@@ -1,4 +1,6 @@
 import { validate } from '../arelogic/watchdog.engine';
+import { mapActionToE } from '../arelogic/event.mapper';
+import { updateHeuristics } from '../arelogic/heuristic.engine';
 
 export function handleAction(action:any){
  const result = validate(action);
@@ -8,5 +10,9 @@ export function handleAction(action:any){
     }
     return null;
  }
+
+ const E = mapActionToE(action.type);
+ updateHeuristics(E);
+
  return action;
 }

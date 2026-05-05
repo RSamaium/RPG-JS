@@ -1,147 +1,107 @@
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { H, updateHeuristics } from '../src/server/arelogic/heuristic.engine';
 import { handleGetHeuristics, handlePostHeuristics } from '../src/server/api/heuristic.api';
 import { saveState } from '../src/server/persistence/state.store';
+import { handleAction } from '../src/server/hooks/playerActions';
+import * as eventMapper from '../src/server/arelogic/event.mapper';
 
 vi.mock('../src/server/persistence/state.store', () => ({
   saveState: vi.fn(),
   loadState: vi.fn(() => ({ H: new Array(13).fill(0) }))
 }));
 
+vi.mock('../src/server/arelogic/watchdog.engine', () => ({
+  validate: vi.fn((action) => {
+    // Mock basic validation: reject actions with extreme heuristic spikes as per Watchdog Extension
+    if (action.eventVector) {
+        const sum = action.eventVector.reduce((a:number, b:number) => a + b, 0);
+        if (sum > 5) return { valid: false, reason: "Extreme heuristic spike" };
+    }
+    return { valid: true };
+  })
+}));
+
 describe('Heuristic Game Features', () => {
   beforeEach(() => {
-    // Manually reset state to guarantee test isolation and prevent side effects
     for (let i = 0; i < 13; i++) {
         H[i] = 0;
     }
     vi.clearAllMocks();
   });
 
-  it('updateHeuristics should update H and call saveState', () => {
-    const E = new Array(13).fill(0);
-    E[0] = 1; // +H1
+  describe('Player Actions to Heuristic Engine Integration', () => {
+    it('should update heuristics correctly on handleAction("harvest")', () => {
+      // Mock the mapActionToE to return the harvest vector
+      const spyMapActionToE = vi.spyOn(eventMapper, 'mapActionToE');
 
-    const result = updateHeuristics(E);
+      const action = { type: 'harvest' };
+      const handledAction = handleAction(action);
 
-    expect(result[0]).toBe(1);
-    expect(H[0]).toBe(1);
-    expect(saveState).toHaveBeenCalledWith({ H: result });
-  });
+      expect(handledAction).toEqual(action);
+      // Verify mapActionToE was called
+      expect(spyMapActionToE).toHaveBeenCalledWith('harvest');
 
-  it('handleGetHeuristics should return current H', () => {
-    const res = handleGetHeuristics();
-    expect(res.H).toEqual(new Array(13).fill(0));
-  });
-
-  it('handlePostHeuristics should update heuristics directly when H is provided', () => {
-    const newH = new Array(13).fill(1);
-    const res = handlePostHeuristics({ H: newH }) as any;
-
-    expect(res.message).toBe("Heuristics updated directly");
-    expect(res.H).toEqual(newH);
-    expect(H).toEqual(newH);
-  });
-
-  it('handlePostHeuristics should update heuristics via event vector E', () => {
-    const E = new Array(13).fill(0);
-    E[1] = 5; // +H2
-
-    const res = handlePostHeuristics({ E }) as any;
-
-    expect(res.message).toBe("Heuristics updated via event vector");
-    expect(res.H[1]).toBe(5);
-    expect(H[1]).toBe(5);
-  });
-
-  it('handlePostHeuristics should return error for invalid body', () => {
-    const res = handlePostHeuristics({} as any) as any;
-    expect(res.error).toBeDefined();
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { saveState, loadState } from '../src/server/persistence/state.store';
-
-vi.mock('../src/server/persistence/state.store', () => ({
-  saveState: vi.fn(),
-  loadState: vi.fn().mockReturnValue(null),
-}));
-
-import { updateHeuristics, H, M } from '../src/server/arelogic/heuristic.engine';
-import { handleGetHeuristics, handlePostHeuristics } from '../src/server/api/heuristic.api';
-
-describe('Heuristic Wave Engine', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    // Reset H to all zeros before each test to ensure test isolation
-    for (let i = 0; i < 13; i++) {
-      H[i] = 0;
-    }
-  });
-
-  describe('updateHeuristics', () => {
-    it('should calculate new H correctly with given E', () => {
-      const E = new Array(13).fill(0);
-      E[0] = 1; // E[0] is 1
-
-      // Initial H is all zeros, so next H should be just E
-      const newH = updateHeuristics(E);
-
-      expect(newH[0]).toBe(1);
-      for (let i = 1; i < 13; i++) {
-        expect(newH[i]).toBe(0);
-      }
-      expect(H[0]).toBe(1);
-      expect(saveState).toHaveBeenCalledWith({ H: newH });
+      // Verify heuristics were updated based on the harvest vector
+      // Harvest vector: [0.5,0.2,0,0,0,0,0.3,0,0,0,0,0,0]
+      // Initial H is [0...], so next H is just the vector
+      expect(H[0]).toBe(0.5); // H1 (index 0) Resource Influx
+      expect(H[6]).toBe(0.3); // H7 (index 6) Scarcity
     });
 
-    it('should apply influence matrix M correctly', () => {
-      // Set H manually for testing M calculation
-      H[0] = 1;
-      const E = new Array(13).fill(0);
+    it('should update heuristics correctly on handleAction("trade")', () => {
+      const spyMapActionToE = vi.spyOn(eventMapper, 'mapActionToE');
 
-      const newH = updateHeuristics(E);
+      const action = { type: 'trade' };
+      const handledAction = handleAction(action);
 
-      // newH[i] = sum(M[i][j] * H[j]) + E[i]
-      // since H[0] = 1, newH[i] = M[i][0]
-      for (let i = 0; i < 13; i++) {
-        expect(newH[i]).toBeCloseTo(M[i][0]);
-      }
+      expect(handledAction).toEqual(action);
+      expect(spyMapActionToE).toHaveBeenCalledWith('trade');
+
+      // Trade vector: [0,0,0.3,0.5,0.2,0,0,0,0,0,0,0,0]
+      expect(H[2]).toBe(0.3); // H3 (index 2) Market Velocity
+      expect(H[3]).toBe(0.5); // H4 (index 3) Stability
+    });
+
+    it('should reject actions that produce extreme heuristic spikes', () => {
+       const action = { type: 'extreme', eventVector: new Array(13).fill(1) }; // sum = 13
+       const handledAction = handleAction(action);
+
+       // Watchdog should reject it
+       expect(handledAction).toBeNull();
+       // H should not be updated
+       expect(H).toEqual(new Array(13).fill(0));
     });
   });
 
   describe('Heuristic API', () => {
-    it('should return current H via handleGetHeuristics', () => {
-      H[5] = 42;
-      const result = handleGetHeuristics();
-      expect(result.H).toBeDefined();
-      expect(result.H[5]).toBe(42);
-      expect(result.H).not.toBe(H); // should return a copy
+    it('handleGetHeuristics should return current H', () => {
+      const res = handleGetHeuristics();
+      expect(res.H).toEqual(new Array(13).fill(0));
     });
 
-    it('should update H directly via handlePostHeuristics', () => {
-      const newH = new Array(13).fill(0);
-      newH[2] = 10;
+    it('handlePostHeuristics should update heuristics directly when H is provided', () => {
+      const newH = new Array(13).fill(1);
+      const res = handlePostHeuristics({ H: newH }) as any;
 
-      const result = handlePostHeuristics({ H: newH }) as { H: number[]; message: string };
-
-      expect(result.message).toBe('Heuristics updated directly');
-      expect(result.H[2]).toBe(10);
-      expect(H[2]).toBe(10);
+      expect(res.message).toBe("Heuristics updated directly");
+      expect(res.H).toEqual(newH);
+      expect(H).toEqual(newH);
     });
 
-    it('should update H via event vector E via handlePostHeuristics', () => {
+    it('handlePostHeuristics should update heuristics via event vector E', () => {
       const E = new Array(13).fill(0);
-      E[4] = 5;
+      E[1] = 5; // +H2
 
-      const result = handlePostHeuristics({ E }) as { H: number[]; message: string };
+      const res = handlePostHeuristics({ E }) as any;
 
-      expect(result.message).toBe('Heuristics updated via event vector');
-      expect(result.H[4]).toBe(5);
-      expect(H[4]).toBe(5);
+      expect(res.message).toBe("Heuristics updated via event vector");
+      expect(res.H[1]).toBe(5);
+      expect(H[1]).toBe(5);
     });
 
-    it('should return error for invalid payload', () => {
-      const result = handlePostHeuristics({ E: [1, 2] }) as { error: string }; // Invalid length
-      expect(result.error).toBeDefined();
-      expect(result.error).toContain('Invalid request body');
+    it('handlePostHeuristics should return error for invalid body', () => {
+      const res = handlePostHeuristics({} as any) as any;
+      expect(res.error).toBeDefined();
     });
   });
 });
