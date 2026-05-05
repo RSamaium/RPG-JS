@@ -36,11 +36,11 @@
 }
 
 .rpg-ui-stat-change[data-type="positive"] {
-  color: var(--rpg-ui-success);
+  color: var(--rpg-ui-stat-positive);
 }
 
 .rpg-ui-stat-change[data-type="negative"] {
-  color: var(--rpg-ui-danger);
+  color: var(--rpg-ui-stat-negative);
 }
 
 /* Stat Bar Container (for combining label + bar + value) */

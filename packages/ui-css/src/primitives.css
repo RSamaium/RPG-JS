@@ -1,0 +1,13 @@
+/* Core primitives */
+@import './primitives/panel.css';
+@import './primitives/button.css';
+@import './primitives/input.css';
+@import './primitives/menu.css';
+@import './primitives/bar.css';
+@import './primitives/inventory.css';
+@import './primitives/dialog.css';
+@import './primitives/character-card.css';
+@import './primitives/stats.css';
+@import './primitives/hotbar.css';
+@import './primitives/tooltip.css';
+@import './primitives/toast.css';

@@ -1,0 +1,7 @@
+/* RPG interface patterns */
+@import './primitives/main-menu.css';
+@import './primitives/save-load.css';
+@import './primitives/title-screen.css';
+@import './primitives/gameover.css';
+@import './primitives/hud.css';
+@import './primitives/shop.css';

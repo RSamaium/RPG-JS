@@ -30,13 +30,37 @@
   --rpg-ui-mana: #60a5fa;
   --rpg-ui-xp: #facc15;
 
+  /* States */
+  --rpg-ui-hover-bg: rgba(0, 0, 0, 0.35);
+  --rpg-ui-selected-bg: color-mix(in srgb, var(--rpg-ui-accent), transparent 88%);
+  --rpg-ui-selected-border: var(--rpg-ui-accent);
+  --rpg-ui-disabled-opacity: 0.5;
+  --rpg-ui-focus-ring-color: color-mix(in srgb, var(--rpg-ui-accent), transparent 35%);
+  --rpg-ui-focus-ring: 0 0 0 2px var(--rpg-ui-focus-ring-color);
+
+  /* Game semantics */
+  --rpg-ui-health: #ef4444;
+  --rpg-ui-health-dark: #991b1b;
+  --rpg-ui-mana-dark: #1e3a8a;
+  --rpg-ui-xp-dark: #92400e;
+  --rpg-ui-stamina: #22c55e;
+  --rpg-ui-stamina-dark: #14532d;
+  --rpg-ui-stat-positive: var(--rpg-ui-success);
+  --rpg-ui-stat-negative: var(--rpg-ui-danger);
+  --rpg-ui-rarity-common: #9ca3af;
+  --rpg-ui-rarity-uncommon: #22c55e;
+  --rpg-ui-rarity-rare: #3b82f6;
+  --rpg-ui-rarity-epic: #a855f7;
+  --rpg-ui-rarity-legendary: #eab308;
+
   /* Gradients */
   --rpg-ui-gradient-surface: linear-gradient(180deg, var(--rpg-ui-surface) 0%, var(--rpg-ui-bg) 100%);
   --rpg-ui-gradient-accent: linear-gradient(180deg, var(--rpg-ui-accent) 0%, color-mix(in srgb, var(--rpg-ui-accent), black 20%) 100%);
   --rpg-ui-gradient-bar: linear-gradient(90deg, var(--rpg-ui-accent) 0%, color-mix(in srgb, var(--rpg-ui-accent), black 30%) 100%);
   --rpg-ui-health-gradient: linear-gradient(90deg, #fb7185 0%, #e11d48 100%);
-  --rpg-ui-mana-gradient: linear-gradient(90deg, #60a5fa 0%, #2563eb 100%);
-  --rpg-ui-xp-gradient: linear-gradient(90deg, #facc15 0%, #f59e0b 100%);
+  --rpg-ui-mana-gradient: linear-gradient(90deg, var(--rpg-ui-mana) 0%, #2563eb 100%);
+  --rpg-ui-xp-gradient: linear-gradient(90deg, var(--rpg-ui-xp) 0%, #f59e0b 100%);
+  --rpg-ui-stamina-gradient: linear-gradient(90deg, var(--rpg-ui-stamina) 0%, var(--rpg-ui-stamina-dark) 100%);
   --rpg-ui-fab-gradient: linear-gradient(135deg, #fb7185 0%, #b91c1c 100%);
 
   /* Shadows */
@@ -68,6 +92,18 @@
   --rpg-ui-spacing: 0.75rem;
   --rpg-ui-spacing-lg: 1.25rem;
   --rpg-ui-spacing-xl: 2rem;
+
+  /* Motion */
+  --rpg-ui-motion-duration-fast: 0.12s;
+  --rpg-ui-motion-duration: 0.2s;
+  --rpg-ui-motion-duration-slow: 0.4s;
+  --rpg-ui-motion-ease: ease;
+  --rpg-ui-motion-ease-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Layers */
+  --rpg-ui-z-hud: 20;
+  --rpg-ui-z-overlay: 1000;
+  --rpg-ui-z-toast: 2000;
 
   /* Effects */
   --rpg-ui-bevel-light: var(--rpg-ui-border-light);

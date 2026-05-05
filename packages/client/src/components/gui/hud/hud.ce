@@ -1,8 +1,8 @@
 <DOMContainer>
-    <div class="rpg-hud">
-        <div class="rpg-avatar">
+    <div class="rpg-ui-hud">
+        <div class="rpg-ui-avatar">
             @if (hasFace()) {
-                <div class="rpg-avatar-face">
+                <div class="rpg-ui-avatar-face">
                     <DOMSprite 
                         sheet={faceSheet(face())} 
                         width={64} 
@@ -11,16 +11,16 @@
                     />
                 </div>
             }
-            <div class="rpg-avatar-level">{{ level() }}</div>
+            <div class="rpg-ui-avatar-level">{{ level() }}</div>
         </div>
-        <div class="rpg-status-bars">
-            <div class="rpg-bar-container">
-                <span class="rpg-bar-text">HP {{ hp() }}/{{ hpMax() }}</span>
-                <div class="rpg-bar-fill health" style={{width: percentHp}}></div>
+        <div class="rpg-ui-status-bars">
+            <div class="rpg-ui-status-bar">
+                <span class="rpg-ui-status-bar-label">HP {{ hp() }}/{{ hpMax() }}</span>
+                <div class="rpg-ui-status-bar-fill" data-type="health" style={{width: percentHp}}></div>
             </div>
-            <div class="rpg-bar-container">
-                <span class="rpg-bar-text">SP {{ sp() }}/{{ spMax() }}</span>
-                <div class="rpg-bar-fill mana" style={{width: percentSp}}></div>
+            <div class="rpg-ui-status-bar">
+                <span class="rpg-ui-status-bar-label">SP {{ sp() }}/{{ spMax() }}</span>
+                <div class="rpg-ui-status-bar-fill" data-type="mana" style={{width: percentSp}}></div>
             </div>
         </div>
     </div>

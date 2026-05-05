@@ -29,7 +29,7 @@
                     @for ((tab,tabIndex) of tabs) {
                         <div
                             class="rpg-ui-menu-tab"
-                            class={{active: selectedTab() === tabIndex}}
+                            data-active={selectedTab() === tabIndex ? "true" : "false"}
                             tabindex={tabIndex}
                             click={selectTab(tabIndex)}
                         >{tab.label}</div>
@@ -39,7 +39,7 @@
                     @for ((item,index) of filteredItems) {
                         <div
                             class="rpg-ui-menu-item rpg-ui-menu-row"
-                            class={{disabled: !item.usable}}
+                            data-disabled={item.usable ? "false" : "true"}
                             data-selected={selectedItem() === index ? "true" : "false"}
                             tabindex={index}
                             click={selectItem(index)}

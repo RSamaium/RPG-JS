@@ -11,11 +11,12 @@
 
 .rpg-ui-bar-fill {
   height: 100%;
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: width var(--rpg-ui-motion-duration-slow) var(--rpg-ui-motion-ease-out);
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: var(--rpg-ui-gradient-bar);
 }
 
 /* Gloss effect */
@@ -59,21 +60,29 @@
 
 /* Types */
 .rpg-ui-bar[data-type="health"] .rpg-ui-bar-fill {
-  background: linear-gradient(180deg, #ef4444 0%, #991b1b 100%);
-  box-shadow: 0 0 10px #ef4444;
+  background: var(--rpg-ui-health-gradient);
+  box-shadow: 0 0 10px var(--rpg-ui-health);
 }
 
 .rpg-ui-bar[data-type="mana"] .rpg-ui-bar-fill {
-  background: linear-gradient(180deg, #3b82f6 0%, #1e3a8a 100%);
-  box-shadow: 0 0 10px #3b82f6;
+  background: var(--rpg-ui-mana-gradient);
+  box-shadow: 0 0 10px var(--rpg-ui-mana);
 }
 
 .rpg-ui-bar[data-type="experience"] .rpg-ui-bar-fill {
-  background: linear-gradient(180deg, #a855f7 0%, #6b21a8 100%);
-  box-shadow: 0 0 10px #a855f7;
+  background: var(--rpg-ui-xp-gradient);
+  box-shadow: 0 0 10px var(--rpg-ui-xp);
 }
 
 .rpg-ui-bar[data-type="stamina"] .rpg-ui-bar-fill {
-  background: linear-gradient(180deg, #22c55e 0%, #14532d 100%);
-  box-shadow: 0 0 10px #22c55e;
+  background: var(--rpg-ui-stamina-gradient);
+  box-shadow: 0 0 10px var(--rpg-ui-stamina);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rpg-ui-bar-fill,
+  .rpg-ui-bar-fill::before {
+    animation: none;
+    transition-duration: 1ms;
+  }
 }

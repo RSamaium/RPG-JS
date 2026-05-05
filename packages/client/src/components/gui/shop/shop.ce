@@ -1,10 +1,10 @@
     <DOMContainer width="100%" height="100%">
-        <div class="rpg-shop-container rpg-anim-fade-in">
-            <div class="rpg-shop-header">
-                <div class="rpg-shop-merchant">
+        <div class="rpg-ui-shop rpg-anim-fade-in">
+            <div class="rpg-ui-shop-header">
+                <div class="rpg-ui-shop-merchant">
                     <div>
                         @if (hasFace) {
-                            <div class="rpg-shop-merchant-avatar">
+                            <div class="rpg-ui-shop-merchant-avatar">
                                 <DOMSprite 
                                     sheet={faceSheet(face().id, face().expression)} 
                                     width="50px"
@@ -14,35 +14,35 @@
                             </div>
                         }
                     </div>
-                    <div class="rpg-shop-merchant-info">
+                    <div class="rpg-ui-shop-merchant-info">
                         <p>{{ shopMessage() }}</p>
                     </div>
                 </div>
-                <div class="rpg-shop-gold">
+                <div class="rpg-ui-shop-gold">
                      {{ gold() }} {{ goldTerm }}
                 </div>
             </div>
 
-            <div class="rpg-shop-body">
-                <div class="rpg-shop-left">
+            <div class="rpg-ui-shop-body">
+                <div class="rpg-ui-shop-left">
                 @if (tradeView() === 'mode') {
-                    <div class="rpg-shop-content rpg-shop-content-mode">
-                        <div class="rpg-shop-details rpg-shop-details-mode">
-                            <div class="rpg-shop-details-header">
-                            <div class="rpg-shop-details-icon">🛒</div>
+                    <div class="rpg-ui-shop-content rpg-ui-shop-content-mode">
+                        <div class="rpg-ui-shop-details rpg-ui-shop-details-mode">
+                            <div class="rpg-ui-shop-details-header">
+                            <div class="rpg-ui-shop-details-icon">🛒</div>
                             <h2 style="margin: 0;">Choose an action</h2>
                         </div>
-                        <div class="rpg-shop-trade">
+                        <div class="rpg-ui-shop-trade">
                             <Navigation tabindex={selectedModeIndex} controls={modeControls}>
-                                <div class="rpg-shop-tabs rpg-shop-trade-tabs">
+                                <div class="rpg-ui-shop-tabs rpg-ui-shop-trade-tabs">
                                     <div
-                                        class="rpg-shop-tab"
-                                        class={{active: selectedModeIndex() === 0}}
+                                        class="rpg-ui-shop-tab"
+                                        data-active={selectedModeIndex() === 0 ? "true" : "false"}
                                         click={selectMode('buy')}
                                     >Buy</div>
                                     <div
-                                        class="rpg-shop-tab"
-                                        class={{active: selectedModeIndex() === 1}}
+                                        class="rpg-ui-shop-tab"
+                                        data-active={selectedModeIndex() === 1 ? "true" : "false"}
                                         click={selectMode('sell')}
                                     >Sell</div>
                                 </div>
@@ -54,11 +54,11 @@
                 @else {
                     <div>
                     <Navigation tabindex={selectedTab} controls={tabControls}>  
-                        <div class="rpg-shop-tabs">
+                        <div class="rpg-ui-shop-tabs">
                             @for ((tab,index) of tabs) {
-                                <div 
-                                    class="rpg-shop-tab" 
-                                    class={{active: selectedTab() === index}} 
+                                <div
+                                    class="rpg-ui-shop-tab"
+                                    data-active={selectedTab() === index ? "true" : "false"}
                                     tabindex={index} 
                                     click={selectTab(index)}
                                 >{{ tab.label }}</div>
@@ -66,12 +66,18 @@
                         </div>
                     </Navigation>
 
-                    <div class="rpg-shop-content">
-                        <div class="rpg-shop-grid">
+                    <div class="rpg-ui-shop-content">
+                        <div class="rpg-ui-shop-grid">
                             <Navigation tabindex={selectedItem} controls={itemControls}>     
                                 @for ((item,index) of filteredItems) { 
-                                    <div class="rpg-shop-card" class={{disabled: isItemDisabled(item), selected: selectedItem() === index}} tabindex={index} click={selectItem(index)}>
-                                        <div class="rpg-shop-card-icon">
+                                    <div
+                                        class="rpg-ui-shop-card"
+                                        data-disabled={isItemDisabled(item) ? "true" : "false"}
+                                        data-selected={selectedItem() === index ? "true" : "false"}
+                                        tabindex={index}
+                                        click={selectItem(index)}
+                                    >
+                                        <div class="rpg-ui-shop-card-icon">
                                             @if (item.icon) {
                                                 <DOMSprite 
                                                     sheet={iconSheet(item.icon)} 
@@ -82,22 +88,22 @@
                                                 />
                                             }
                                         </div>
-                                        <div class="rpg-shop-card-name">{{ item.name }}</div>
-                                        <div class="rpg-shop-card-price">{{ item.price }} {{ goldTerm }}</div>
+                                        <div class="rpg-ui-shop-card-name">{{ item.name }}</div>
+                                        <div class="rpg-ui-shop-card-price">{{ item.price }} {{ goldTerm }}</div>
                                         @if (item.quantity !== undefined) {
-                                            <div class="rpg-shop-card-qty">x{{ item.quantity }}</div>
+                                            <div class="rpg-ui-shop-card-qty">x{{ item.quantity }}</div>
                                         }
                                         @if (item.equipped) {
-                                            <div class="rpg-shop-card-tag">Equipped</div>
+                                            <div class="rpg-ui-shop-card-tag">Equipped</div>
                                         }
                                     </div>
                                 }
                             </Navigation>
                         </div>
 
-                        <div class="rpg-shop-details">
-                            <div class="rpg-shop-details-header">
-                                <div class="rpg-shop-details-icon">
+                        <div class="rpg-ui-shop-details">
+                            <div class="rpg-ui-shop-details-header">
+                                <div class="rpg-ui-shop-details-icon">
                                     <DOMSprite 
                                         sheet={iconSheet(currentItem()?.icon)} 
                                         playing="default" 
@@ -109,62 +115,62 @@
                                 <h2 style="margin: 0;">{{ currentItem()?.name || "" }}</h2>
                                 <p style="color: #ffd700; font-weight: bold; margin: 8px 0;">{{ currentItem()?.price ?? 0 }} {{ goldTerm }}</p>
                                 @if (currentItem()?.quantity !== undefined) {
-                                    <div class="rpg-shop-details-qty">Qty: x{{ currentItem()?.quantity }}</div>
+                                    <div class="rpg-ui-shop-details-qty">Qty: x{{ currentItem()?.quantity }}</div>
                                 }
                             </div>
                             <div>
                                 @if (currentItem()?.equipped) {
-                                    <div class="rpg-shop-equipped">Already equipped</div>
+                                    <div class="rpg-ui-shop-equipped">Already equipped</div>
                                 }
                             </div>
-                            <div class="rpg-shop-details-desc">
+                            <div class="rpg-ui-shop-details-desc">
                                 {{ currentItem()?.description || "" }}
                             </div>
                             <div>
                                 @if (displayStats().length > 0) {
-                                    <div class="rpg-shop-stats">
+                                    <div class="rpg-ui-shop-stats">
                                         @for ((stat,index) of displayStats) {
-                                            <div class="rpg-shop-stat" class={{positive: stat.delta > 0, negative: stat.delta < 0}}>
-                                                <div class="rpg-shop-stat-key">{{ stat.label }}</div>
-                                                <div class="rpg-shop-stat-value">
+                                            <div class="rpg-ui-shop-stat" data-type={stat.delta > 0 ? "positive" : stat.delta < 0 ? "negative" : "neutral"}>
+                                                <div class="rpg-ui-shop-stat-key">{{ stat.label }}</div>
+                                                <div class="rpg-ui-shop-stat-value">
                                                     {{ stat.delta > 0 ? '+' : '' }}{{ stat.delta }}
                                                 </div>
                                                 @if (stat.current !== undefined) {
-                                                    <div class="rpg-shop-stat-current">{{ stat.current }} → {{ stat.next }}</div>
+                                                    <div class="rpg-ui-shop-stat-current">{{ stat.current }} → {{ stat.next }}</div>
                                                 }
                                             </div>
                                         }
                                     </div>
                                 }
                             </div>
-                            <button class="rpg-shop-btn" click={backToMode()}>Back</button>
+                            <button class="rpg-ui-shop-btn" click={backToMode()}>Back</button>
                         </div>
                     </div>
                     </div>
                 }
                 @if (quantityDialogOpen) {
-                    <div class="rpg-shop-modal">
-                        <div class="rpg-shop-modal-card">
-                            <div class="rpg-shop-modal-title">{{ actionLabel }}</div>
-                            <div class="rpg-shop-modal-item">{{ currentItem()?.name || "" }}</div>
+                    <div class="rpg-ui-shop-modal">
+                        <div class="rpg-ui-shop-modal-card">
+                            <div class="rpg-ui-shop-modal-title">{{ actionLabel }}</div>
+                            <div class="rpg-ui-shop-modal-item">{{ currentItem()?.name || "" }}</div>
                             @if (currentItem()?.quantity !== undefined) {
-                                <div class="rpg-shop-modal-qty">Available: x{{ currentItem()?.quantity }}</div>
+                                <div class="rpg-ui-shop-modal-qty">Available: x{{ currentItem()?.quantity }}</div>
                             }
-                            <div class="rpg-shop-quantity">
-                                <div class="rpg-shop-quantity-label">Quantity</div>
-                                <div class="rpg-shop-quantity-controls">
-                                    <button class="rpg-shop-btn" click={changeQuantity(-1)}>-</button>
-                                    <div class="rpg-shop-quantity-value">{{ quantity }}</div>
-                                    <button class="rpg-shop-btn" click={changeQuantity(1)}>+</button>
+                            <div class="rpg-ui-shop-quantity">
+                                <div class="rpg-ui-shop-quantity-label">Quantity</div>
+                                <div class="rpg-ui-shop-quantity-controls">
+                                    <button class="rpg-ui-shop-btn" click={changeQuantity(-1)}>-</button>
+                                    <div class="rpg-ui-shop-quantity-value">{{ quantity }}</div>
+                                    <button class="rpg-ui-shop-btn" click={changeQuantity(1)}>+</button>
                                 </div>
                             </div>
-                            <div class="rpg-shop-modal-total">
+                            <div class="rpg-ui-shop-modal-total">
                                 <span>Total</span>
                                 <span>{{ totalPrice() }} {{ goldTerm }}</span>
                             </div>
-                            <div class="rpg-shop-modal-actions">
-                                <button class="rpg-shop-btn rpg-shop-btn-secondary" click={closeQuantityDialog()}>Cancel</button>
-                                <button class="rpg-shop-btn" click={confirmTrade()}>
+                            <div class="rpg-ui-shop-modal-actions">
+                                <button class="rpg-ui-shop-btn" data-variant="secondary" click={closeQuantityDialog()}>Cancel</button>
+                                <button class="rpg-ui-shop-btn" click={confirmTrade()}>
                                     {{ actionLabel() }} x{{ quantity() }}
                                 </button>
                             </div>

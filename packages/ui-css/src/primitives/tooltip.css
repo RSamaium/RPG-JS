@@ -7,16 +7,16 @@
     border-radius: var(--rpg-ui-radius-md);
     box-shadow: var(--rpg-ui-shadow);
     font-size: var(--rpg-ui-font-size-sm);
-    z-index: 1000;
+    z-index: var(--rpg-ui-z-overlay);
     pointer-events: none;
     opacity: 0;
-    transition: opacity 0.2s;
+    transition: opacity var(--rpg-ui-motion-duration) var(--rpg-ui-motion-ease);
     white-space: nowrap;
 }
 
 .rpg-ui-tooltip[data-visible="true"] {
     opacity: 1;
-    animation: rpg-fade-in 0.2s ease-out;
+    animation: rpg-fade-in var(--rpg-ui-motion-duration) ease-out;
 }
 
 /* Arrow */

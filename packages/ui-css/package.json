@@ -8,13 +8,19 @@
     "build": "echo 'CSS package - no build needed'"
   },
   "exports": {
+    "./app.css": "./app.css",
     "./reset.css": "./reset.css",
     "./tokens.css": "./tokens.css",
+    "./primitives.css": "./primitives.css",
+    "./patterns.css": "./patterns.css",
     "./index.css": "./index.css",
     "./theme-default.css": "./theme-default.css"
   },
   "files": [
+    "app.css",
     "index.css",
+    "patterns.css",
+    "primitives.css",
     "reset.css",
     "tokens.css",
     "theme-default.css",

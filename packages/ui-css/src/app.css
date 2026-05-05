@@ -1,0 +1,35 @@
+body.rpg-ui-app,
+.rpg-ui-app,
+.rpg-ui-root,
+[data-rpg-ui-root] {
+  min-height: 100dvh;
+  margin: 0;
+  background-color: var(--rpg-ui-body-bg);
+  background-image: var(--rpg-ui-body-background);
+  background-size: var(--rpg-ui-body-background-size);
+  background-position: var(--rpg-ui-body-background-position);
+  background-attachment: var(--rpg-ui-body-background-attachment);
+  color: var(--rpg-ui-text);
+  font-family: var(--rpg-ui-font);
+}
+
+body.rpg-ui-app {
+  overflow: hidden;
+}
+
+.rpg-ui-app,
+.rpg-ui-root,
+[data-rpg-ui-root] {
+  position: relative;
+  isolation: isolate;
+}
+
+.rpg-ui-glass-panel,
+.glass-panel {
+  background: var(--rpg-ui-surface-overlay);
+  backdrop-filter: var(--rpg-ui-backdrop-blur);
+  -webkit-backdrop-filter: var(--rpg-ui-backdrop-blur);
+  border: 1px solid var(--rpg-ui-border);
+  border-radius: var(--rpg-ui-radius-lg);
+  box-shadow: var(--rpg-ui-shadow-lg);
+}

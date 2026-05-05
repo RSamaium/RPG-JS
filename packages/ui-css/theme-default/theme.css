@@ -28,6 +28,12 @@
   --rpg-ui-info: #00e5ff;
   --rpg-ui-mana: #448aff;
   --rpg-ui-xp: #ffd740;
+  --rpg-ui-hover-bg: rgba(0, 0, 0, 0.4);
+  --rpg-ui-selected-bg: rgba(0, 229, 255, 0.1);
+  --rpg-ui-selected-border: var(--rpg-ui-accent);
+  --rpg-ui-focus-ring-color: rgba(0, 229, 255, 0.35);
+  --rpg-ui-stat-positive: #7dff9a;
+  --rpg-ui-stat-negative: #ff7d7d;
 
   --rpg-ui-gradient-surface: linear-gradient(180deg, rgba(35, 35, 50, 0.9) 0%, rgba(18, 18, 30, 0.92) 100%);
   --rpg-ui-gradient-accent: linear-gradient(180deg, #84ffff 0%, #00e5ff 100%);
@@ -35,6 +41,7 @@
   --rpg-ui-health-gradient: linear-gradient(90deg, #ff5252 0%, #ff1744 100%);
   --rpg-ui-mana-gradient: linear-gradient(90deg, #448aff 0%, #2979ff 100%);
   --rpg-ui-xp-gradient: linear-gradient(90deg, #ffd740 0%, #ffc400 100%);
+  --rpg-ui-stamina-gradient: linear-gradient(90deg, #4ade80 0%, #22c55e 100%);
   --rpg-ui-fab-gradient: linear-gradient(135deg, #ff5252 0%, #d50000 100%);
 
   --rpg-ui-font: "Fredoka", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -216,9 +223,14 @@
 
 .rpg-ui-menu-item:hover,
 .rpg-ui-menu-item[data-selected="true"],
+.rpg-ui-menu-item[aria-selected="true"],
 .rpg-ui-dialog-choice.active,
+.rpg-ui-dialog-choice[data-selected="true"],
+.rpg-ui-dialog-choice[aria-selected="true"],
 .rpg-ui-dialog-choice:focus,
 .rpg-ui-save-load-slot.active,
+.rpg-ui-save-load-slot[data-selected="true"],
+.rpg-ui-save-load-slot[aria-selected="true"],
 .rpg-ui-save-load-slot:focus {
   background: rgba(0, 0, 0, 0.4);
   border-color: rgba(0, 229, 255, 0.35);
@@ -234,7 +246,8 @@
 }
 
 .rpg-ui-menu-tab.active,
-.rpg-ui-menu-tab[data-active="true"] {
+.rpg-ui-menu-tab[data-active="true"],
+.rpg-ui-menu-tab[aria-selected="true"] {
   border-color: rgba(0, 229, 255, 0.35);
   background: rgba(0, 229, 255, 0.2);
   color: #fff;

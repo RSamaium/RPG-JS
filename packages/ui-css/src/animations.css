@@ -89,26 +89,50 @@
     }
 }
 
-.rpg-anim-fade-in {
-    animation: rpg-fade-in 0.3s ease-out forwards;
+.rpg-anim-fade-in,
+.rpg-ui-anim-fade-in {
+    animation: rpg-fade-in var(--rpg-ui-motion-duration-slow, 0.4s) ease-out forwards;
 }
 
-.rpg-anim-slide-up {
-    animation: rpg-slide-up 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+.rpg-anim-slide-up,
+.rpg-ui-anim-slide-up {
+    animation: rpg-slide-up var(--rpg-ui-motion-duration-slow, 0.4s) cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
-.rpg-anim-bounce {
+.rpg-anim-bounce,
+.rpg-ui-anim-bounce {
     animation: rpg-bounce 2s infinite;
 }
 
-.rpg-anim-pulse {
+.rpg-anim-pulse,
+.rpg-ui-anim-pulse {
     animation: rpg-pulse 2s infinite;
 }
 
-.rpg-anim-shake {
+.rpg-anim-shake,
+.rpg-ui-anim-shake {
     animation: rpg-shake 0.3s ease-in-out;
 }
 
-.rpg-anim-float {
+.rpg-anim-float,
+.rpg-ui-anim-float {
     animation: rpg-float 3s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rpg-anim-fade-in,
+    .rpg-ui-anim-fade-in,
+    .rpg-anim-slide-up,
+    .rpg-ui-anim-slide-up,
+    .rpg-anim-bounce,
+    .rpg-ui-anim-bounce,
+    .rpg-anim-pulse,
+    .rpg-ui-anim-pulse,
+    .rpg-anim-shake,
+    .rpg-ui-anim-shake,
+    .rpg-anim-float,
+    .rpg-ui-anim-float {
+        animation-duration: 1ms;
+        animation-iteration-count: 1;
+    }
 }

@@ -90,6 +90,7 @@
             "group": "GUI",
             "pages": [
               "gui/index",
+              "gui/ui-css",
               "gui/title-screen",
               "gui/dialog-box",
               "gui/hud",

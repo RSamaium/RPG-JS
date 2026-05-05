@@ -1,35 +1,122 @@
-/* Reset for RPG UI components */
-*,
-*::before,
-*::after {
+/* Scoped reset for RPG UI components. */
+:where(
+  .rpg-ui-root,
+  .rpg-ui-app,
+  [data-rpg-ui-root],
+  [data-rpg-ui],
+  [class^="rpg-ui-"],
+  [class*=" rpg-ui-"],
+  [class^="rpg-shop-"],
+  [class*=" rpg-shop-"],
+  .rpg-hud,
+  .rpg-avatar,
+  .rpg-avatar-face,
+  .rpg-avatar-level,
+  .rpg-status-bars,
+  .rpg-bar-container,
+  .rpg-bar-fill,
+  .rpg-bar-text,
+  .rpg-item-dock,
+  .rpg-item-slot,
+  .rpg-item-qty,
+  .rpg-fab,
+  .rpg-minimap,
+  .glass-panel
+),
+:where(
+  .rpg-ui-root,
+  .rpg-ui-app,
+  [data-rpg-ui-root],
+  [data-rpg-ui],
+  [class^="rpg-ui-"],
+  [class*=" rpg-ui-"],
+  [class^="rpg-shop-"],
+  [class*=" rpg-shop-"],
+  .rpg-hud,
+  .rpg-avatar,
+  .rpg-avatar-face,
+  .rpg-avatar-level,
+  .rpg-status-bars,
+  .rpg-bar-container,
+  .rpg-bar-fill,
+  .rpg-bar-text,
+  .rpg-item-dock,
+  .rpg-item-slot,
+  .rpg-item-qty,
+  .rpg-fab,
+  .rpg-minimap,
+  .glass-panel
+) *,
+:where(
+  .rpg-ui-root,
+  .rpg-ui-app,
+  [data-rpg-ui-root],
+  [data-rpg-ui],
+  [class^="rpg-ui-"],
+  [class*=" rpg-ui-"],
+  [class^="rpg-shop-"],
+  [class*=" rpg-shop-"],
+  .rpg-hud,
+  .rpg-avatar,
+  .rpg-avatar-face,
+  .rpg-avatar-level,
+  .rpg-status-bars,
+  .rpg-bar-container,
+  .rpg-bar-fill,
+  .rpg-bar-text,
+  .rpg-item-dock,
+  .rpg-item-slot,
+  .rpg-item-qty,
+  .rpg-fab,
+  .rpg-minimap,
+  .glass-panel
+)::before,
+:where(
+  .rpg-ui-root,
+  .rpg-ui-app,
+  [data-rpg-ui-root],
+  [data-rpg-ui],
+  [class^="rpg-ui-"],
+  [class*=" rpg-ui-"],
+  [class^="rpg-shop-"],
+  [class*=" rpg-shop-"],
+  .rpg-hud,
+  .rpg-avatar,
+  .rpg-avatar-face,
+  .rpg-avatar-level,
+  .rpg-status-bars,
+  .rpg-bar-container,
+  .rpg-bar-fill,
+  .rpg-bar-text,
+  .rpg-item-dock,
+  .rpg-item-slot,
+  .rpg-item-qty,
+  .rpg-fab,
+  .rpg-minimap,
+  .glass-panel
+)::after {
   box-sizing: border-box;
 }
 
-:root {
-  /* Disable user selection by default for game UIs to prevent accidental text highlighting */
+:where(.rpg-ui-root, .rpg-ui-app, [data-rpg-ui-root], [data-rpg-ui]) {
+  color: var(--rpg-ui-text);
+  font-family: var(--rpg-ui-font, system-ui, sans-serif);
   user-select: none;
   -webkit-user-select: none;
 }
 
-body {
+body.rpg-ui-app {
   margin: 0;
   padding: 0;
-  font-family: var(--rpg-ui-font, serif);
-  background-color: #000;
-  /* Default to black for game canvas background */
-  color: white;
-  overflow: hidden;
-  /* Prevent scrollbars on full screen games */
 }
 
-/* Allow selection on inputs */
-input,
-textarea,
-[contenteditable] {
+:where(.rpg-ui-root, .rpg-ui-app, [data-rpg-ui-root], [data-rpg-ui])
+  :where(input, textarea, select, [contenteditable]) {
   user-select: text;
   -webkit-user-select: text;
 }
 
-button {
-  font-family: inherit;
+:where(.rpg-ui-root, .rpg-ui-app, [data-rpg-ui-root], [data-rpg-ui])
+  :where(button, input, textarea, select) {
+  font: inherit;
 }

@@ -21,7 +21,7 @@
 
   margin-bottom: 6px;
   /* Space for the 3D part */
-  transition: transform 0.1s, box-shadow 0.1s;
+  transition: transform var(--rpg-ui-motion-duration-fast) var(--rpg-ui-motion-ease), box-shadow var(--rpg-ui-motion-duration-fast) var(--rpg-ui-motion-ease), background var(--rpg-ui-motion-duration-fast) var(--rpg-ui-motion-ease), color var(--rpg-ui-motion-duration-fast) var(--rpg-ui-motion-ease);
   text-transform: uppercase;
   font-weight: bold;
   letter-spacing: 1px;
@@ -50,6 +50,24 @@
   /* Keep layout stable */
 }
 
+.rpg-ui-btn:focus-visible {
+  outline: none;
+  box-shadow:
+    var(--rpg-ui-focus-ring),
+    inset 2px 2px 0px rgba(255, 255, 255, 0.1),
+    inset -2px -2px 0px rgba(0, 0, 0, 0.3),
+    0 0 0 2px var(--rpg-ui-border-dark),
+    0 4px 0 2px var(--rpg-ui-border-dark),
+    0 6px 4px rgba(0, 0, 0, 0.4);
+}
+
+.rpg-ui-btn:disabled,
+.rpg-ui-btn[data-disabled="true"],
+.rpg-ui-btn[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: var(--rpg-ui-disabled-opacity);
+}
+
 /* Variants */
 .rpg-ui-btn[data-variant="primary"] {
   background: var(--rpg-ui-accent);
@@ -66,7 +84,7 @@
 }
 
 .rpg-ui-btn[data-variant="danger"]:hover {
-  background: #ef4444;
+  background: var(--rpg-ui-danger);
 }
 
 .rpg-ui-btn[data-variant="success"] {

@@ -24,7 +24,7 @@
                             @if (displayStats().length > 0) {
                                 <div class="rpg-ui-equip-stats">
                                     @for ((stat,index) of displayStats) {
-                                        <div class="rpg-ui-equip-stat" class={{positive: stat.delta > 0, negative: stat.delta < 0}}>
+                                        <div class="rpg-ui-equip-stat" data-type={stat.delta > 0 ? "positive" : stat.delta < 0 ? "negative" : "neutral"}>
                                             <div class="rpg-ui-equip-stat-key">{stat.label}</div>
                                             <div class="rpg-ui-equip-stat-value">
                                                 {stat.delta > 0 ? "+" : ""}{stat.delta}
@@ -49,7 +49,7 @@
                     @for ((tab,tabIndex) of slotList) {
                         <div
                             class="rpg-ui-menu-tab"
-                            class={{active: selectedTab() === tabIndex}}
+                            data-active={selectedTab() === tabIndex ? "true" : "false"}
                             tabindex={tabIndex}
                             click={selectTab(tabIndex)}
                         >{tab.label}</div>

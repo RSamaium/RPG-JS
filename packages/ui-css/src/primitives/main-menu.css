@@ -40,6 +40,10 @@
   border: 1px solid var(--rpg-ui-border);
 }
 
+.rpg-ui-main-menu-status-block-full {
+  grid-column: span 2;
+}
+
 .rpg-ui-main-menu-status-label {
   font-size: var(--rpg-ui-font-size-sm);
   color: var(--rpg-ui-text-muted);
@@ -64,15 +68,18 @@
   width: 0%;
 }
 
-.rpg-ui-main-menu-status-bar-fill.hp {
+.rpg-ui-main-menu-status-bar-fill.hp,
+.rpg-ui-main-menu-status-bar-fill[data-type="health"] {
   background: var(--rpg-ui-health-gradient);
 }
 
-.rpg-ui-main-menu-status-bar-fill.sp {
+.rpg-ui-main-menu-status-bar-fill.sp,
+.rpg-ui-main-menu-status-bar-fill[data-type="mana"] {
   background: var(--rpg-ui-mana-gradient);
 }
 
-.rpg-ui-main-menu-status-bar-fill.exp {
+.rpg-ui-main-menu-status-bar-fill.exp,
+.rpg-ui-main-menu-status-bar-fill[data-type="experience"] {
   background: var(--rpg-ui-xp-gradient);
 }
 
@@ -239,12 +246,14 @@
   font-size: var(--rpg-ui-font-size-sm);
 }
 
-.rpg-ui-equip-stat.positive {
-  color: var(--rpg-ui-success);
+.rpg-ui-equip-stat.positive,
+.rpg-ui-equip-stat[data-type="positive"] {
+  color: var(--rpg-ui-stat-positive);
 }
 
-.rpg-ui-equip-stat.negative {
-  color: var(--rpg-ui-danger);
+.rpg-ui-equip-stat.negative,
+.rpg-ui-equip-stat[data-type="negative"] {
+  color: var(--rpg-ui-stat-negative);
 }
 
 .rpg-ui-equip-stat-current {
@@ -292,8 +301,10 @@
   color: var(--rpg-ui-text-muted);
 }
 
-.rpg-ui-menu-item.disabled {
-  opacity: 0.5;
+.rpg-ui-menu-item.disabled,
+.rpg-ui-menu-item[data-disabled="true"],
+.rpg-ui-menu-item[aria-disabled="true"] {
+  opacity: var(--rpg-ui-disabled-opacity);
   pointer-events: none;
 }
 
@@ -338,10 +349,38 @@
 }
 
 .rpg-ui-menu-confirm-btn[data-selected="true"] {
-  box-shadow: 0 0 0 2px var(--rpg-ui-border-light);
+  box-shadow: var(--rpg-ui-focus-ring);
 }
 
-.rpg-ui-menu-confirm-btn-secondary {
+.rpg-ui-menu-confirm-btn-secondary,
+.rpg-ui-menu-confirm-btn[data-variant="secondary"] {
   background: transparent;
   color: var(--rpg-ui-text);
+}
+
+@media (max-width: 768px) {
+  .rpg-ui-main-menu {
+    padding: 16px;
+  }
+
+  .rpg-ui-main-menu-layout,
+  .rpg-ui-menu-panel-body,
+  .rpg-ui-equip-modal-card {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+
+  .rpg-ui-main-menu-left,
+  .rpg-ui-menu-panel {
+    width: 100%;
+  }
+
+  .rpg-ui-main-menu-status-card,
+  .rpg-ui-main-menu-params {
+    grid-template-columns: 1fr;
+  }
+
+  .rpg-ui-main-menu-status-block-full {
+    grid-column: auto;
+  }
 }

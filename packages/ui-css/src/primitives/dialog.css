@@ -108,15 +108,21 @@
 }
 
 .rpg-ui-dialog-choice.active,
-.rpg-ui-dialog-choice:focus {
-  background: rgba(0, 0, 0, 0.35);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+.rpg-ui-dialog-choice:focus,
+.rpg-ui-dialog-choice:focus-visible,
+.rpg-ui-dialog-choice[data-selected="true"],
+.rpg-ui-dialog-choice[aria-selected="true"] {
+  background: var(--rpg-ui-hover-bg);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12), var(--rpg-ui-focus-ring);
 }
 
 .rpg-ui-dialog-choice.active::before,
-.rpg-ui-dialog-choice:focus::before {
+.rpg-ui-dialog-choice:focus::before,
+.rpg-ui-dialog-choice:focus-visible::before,
+.rpg-ui-dialog-choice[data-selected="true"]::before,
+.rpg-ui-dialog-choice[aria-selected="true"]::before {
   background: var(--rpg-ui-accent);
-  box-shadow: 0 0 10px rgba(0, 229, 255, 0.6);
+  box-shadow: 0 0 10px var(--rpg-ui-focus-ring-color);
 }
 
 .rpg-ui-dialog-body {
@@ -180,6 +186,35 @@
   50% {
     transform: translateX(-50%) translateY(6px);
     opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rpg-ui-dialog-indicator {
+    animation: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .rpg-ui-dialog-container {
+    padding: 12px;
+  }
+
+  .rpg-ui-dialog {
+    --rpg-ui-dialog-min-height: 192px;
+    --rpg-ui-dialog-padding: 16px;
+    margin-top: 18px;
+  }
+
+  .rpg-ui-dialog-speaker {
+    left: 16px;
+    max-width: calc(100% - 32px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .rpg-ui-dialog-body {
+    gap: 12px;
   }
 }
 

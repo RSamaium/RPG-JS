@@ -9,7 +9,8 @@
                 @for ((item,displayIndex) of displaySlots) {
                     <div
                         class="rpg-ui-save-load-slot"
-                        class={{active: selectedSlot() === displayIndex}}
+                        data-selected={selectedSlot() === displayIndex ? "true" : "false"}
+                        data-disabled={canSelect(item) ? "false" : "true"}
                         tabindex={displayIndex}
                         data-slot-index={displayIndex}
                         click={selectSlot(displayIndex)}

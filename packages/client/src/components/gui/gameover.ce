@@ -14,7 +14,7 @@
                 @for ((entry,index) of entryList()) {
                     <div
                         class="rpg-ui-menu-item"
-                        class={{disabled: isEntryDisabled(entry)}}
+                        data-disabled={isEntryDisabled(entry) ? "true" : "false"}
                         data-selected={selectedEntry() === index ? "true" : "false"}
                         tabindex={index}
                         click={selectEntry(index)}

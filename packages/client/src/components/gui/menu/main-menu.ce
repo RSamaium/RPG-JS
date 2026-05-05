@@ -7,7 +7,7 @@
                     @for ((entry,index) of menuEntries()) {
                         <div
                             class="rpg-ui-menu-item"
-                            class={{disabled: isMenuDisabled(entry)}}
+                            data-disabled={isMenuDisabled(entry) ? "true" : "false"}
                             data-selected={selectedMenu() === index ? "true" : "false"}
                             tabindex={index}
                             click={selectMenu(index)}
@@ -31,19 +31,19 @@
                             <div class="rpg-ui-main-menu-status-block">
                                 <div class="rpg-ui-main-menu-status-label">HP {hp()}/{hpMax()}</div>
                                 <div class="rpg-ui-main-menu-status-bar">
-                                    <div class="rpg-ui-main-menu-status-bar-fill hp" style={{width: hpPercent}}></div>
+                                    <div class="rpg-ui-main-menu-status-bar-fill" data-type="health" style={{width: hpPercent}}></div>
                                 </div>
                             </div>
                             <div class="rpg-ui-main-menu-status-block">
                                 <div class="rpg-ui-main-menu-status-label">SP {sp()}/{spMax()}</div>
                                 <div class="rpg-ui-main-menu-status-bar">
-                                    <div class="rpg-ui-main-menu-status-bar-fill sp" style={{width: spPercent}}></div>
+                                    <div class="rpg-ui-main-menu-status-bar-fill" data-type="mana" style={{width: spPercent}}></div>
                                 </div>
                             </div>
-                            <div class="rpg-ui-main-menu-status-block" style={{gridColumn: "span 2"}}>
+                            <div class="rpg-ui-main-menu-status-block rpg-ui-main-menu-status-block-full">
                                 <div class="rpg-ui-main-menu-status-label">EXP {exp()}/{expForNextlevel()}</div>
                                 <div class="rpg-ui-main-menu-status-bar">
-                                    <div class="rpg-ui-main-menu-status-bar-fill exp" style={{width: expPercent}}></div>
+                                    <div class="rpg-ui-main-menu-status-bar-fill" data-type="experience" style={{width: expPercent}}></div>
                                 </div>
                             </div>
                         </div>

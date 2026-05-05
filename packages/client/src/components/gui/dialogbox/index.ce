@@ -20,7 +20,7 @@
                                 @for ((choice,index) of choices) {
                                     <div
                                         class="rpg-ui-dialog-choice"
-                                        class={{active: selectedItem() === index}}
+                                        data-selected={selectedItem() === index ? "true" : "false"}
                                         tabindex={index}
                                         data-choice-index={index}
                                         click={selectChoice(index)}

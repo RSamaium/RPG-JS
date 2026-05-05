@@ -78,4 +78,18 @@ Les classes CSS sont dans:
 
 - `packages/ui-css/src/primitives/title-screen.css`
 
-Vous pouvez changer la typo, le fond, ou les animations directement dans ce fichier.
+Pour personnaliser l'apparence, importez `@rpgjs/ui-css/index.css` puis surchargez les tokens localement ou globalement. Evitez de modifier directement le fichier CSS du package.
+
+```css
+@import "@rpgjs/ui-css/index.css";
+@import "@rpgjs/ui-css/theme-default.css";
+
+.my-title-screen {
+  --rpg-ui-accent: #ffd166;
+  --rpg-ui-body-background:
+    radial-gradient(circle at top, rgba(255, 209, 102, 0.24), transparent 40%),
+    linear-gradient(180deg, #17111f 0%, #07050a 100%);
+}
+```
+
+Les etats publics utilisent `data-selected="true"` et `data-disabled="true"` sur les entrees du menu.
