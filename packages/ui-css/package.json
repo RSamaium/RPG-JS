@@ -4,8 +4,11 @@
   "description": "CSS library for RPG UI components - framework-agnostic and fully customizable",
   "license": "MIT",
   "author": "Samuel Ronce",
+  "type": "module",
   "scripts": {
-    "build": "echo 'CSS package - no build needed'"
+    "build": "echo 'CSS package - no build needed'",
+    "storybook": "storybook dev -p 6006 -c storybook",
+    "storybook:build": "storybook build -c storybook -o storybook-static"
   },
   "exports": {
     "./app.css": "./app.css",
@@ -38,6 +41,8 @@
     "framework-agnostic"
   ],
   "devDependencies": {
+    "@storybook/html-vite": "^10.3.6",
+    "storybook": "^10.3.6",
     "vite": "^8.0.10"
   }
 }

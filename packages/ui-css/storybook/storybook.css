@@ -1,0 +1,92 @@
+.rpg-story-root {
+  min-height: 100vh;
+  padding: 32px;
+  background: var(--rpg-ui-body-background);
+  background-size: var(--rpg-ui-body-background-size);
+  background-position: var(--rpg-ui-body-background-position);
+  color: var(--rpg-ui-text);
+  overflow: auto;
+}
+
+.rpg-story-page {
+  display: grid;
+  gap: 24px;
+  width: min(1180px, 100%);
+  margin: 0 auto;
+}
+
+.rpg-story-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+.rpg-story-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.rpg-story-stage {
+  position: relative;
+  min-height: 560px;
+  overflow: hidden;
+  border: 1px solid var(--rpg-ui-border);
+  border-radius: var(--rpg-ui-radius-lg);
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.08), transparent 34%),
+    rgba(0, 0, 0, 0.18);
+  background-size: 48px 48px, 48px 48px, auto, auto;
+}
+
+.rpg-story-panel-title {
+  margin: 0 0 14px;
+  color: var(--rpg-ui-accent);
+  font-size: var(--rpg-ui-font-size-lg);
+  text-transform: uppercase;
+}
+
+.rpg-story-copy {
+  margin: 0;
+  color: var(--rpg-ui-text-muted);
+  line-height: 1.6;
+}
+
+.rpg-story-resource {
+  display: grid;
+  gap: 8px;
+}
+
+.rpg-story-inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(4, var(--rpg-ui-inventory-slot-size, 64px));
+  gap: 10px;
+}
+
+.rpg-story-icon {
+  font-size: 1.35rem;
+}
+
+.rpg-story-split {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.8fr) minmax(320px, 1.2fr);
+  gap: 20px;
+}
+
+@media (max-width: 760px) {
+  .rpg-story-root {
+    padding: 16px;
+  }
+
+  .rpg-story-split {
+    grid-template-columns: 1fr;
+  }
+
+  .rpg-story-stage {
+    min-height: 640px;
+  }
+}

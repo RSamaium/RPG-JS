@@ -27,6 +27,22 @@ It provides:
 - `@rpgjs/ui-css/theme-default.css`
   Opinionated default glass-RPG theme.
 
+## Storybook
+
+Run the CSS-only component gallery from this package:
+
+```bash
+pnpm --filter @rpgjs/ui-css storybook
+```
+
+Build the static gallery:
+
+```bash
+pnpm --filter @rpgjs/ui-css storybook:build
+```
+
+Stories live in `packages/ui-css/storybook`. They use plain HTML, JavaScript and CSS, and the toolbar includes a theme switcher backed by CSS token overrides.
+
 ## Usage
 
 ### Full package

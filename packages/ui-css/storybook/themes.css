@@ -1,0 +1,79 @@
+html[data-rpg-theme="forest"] {
+  --rpg-ui-body-bg: #07130d;
+  --rpg-ui-body-background:
+    radial-gradient(circle at 18% 14%, rgba(34, 197, 94, 0.24) 0%, transparent 32%),
+    radial-gradient(circle at 80% 74%, rgba(250, 204, 21, 0.12) 0%, transparent 34%),
+    linear-gradient(180deg, #102018 0%, #050b08 100%);
+  --rpg-ui-bg: #08120c;
+  --rpg-ui-surface: rgba(10, 28, 17, 0.9);
+  --rpg-ui-surface-light: rgba(42, 78, 52, 0.72);
+  --rpg-ui-surface-overlay: rgba(10, 28, 17, 0.7);
+  --rpg-ui-surface-overlay-strong: rgba(10, 28, 17, 0.94);
+  --rpg-ui-border: rgba(166, 216, 137, 0.26);
+  --rpg-ui-border-light: rgba(220, 252, 231, 0.32);
+  --rpg-ui-border-dark: rgba(3, 7, 5, 0.82);
+  --rpg-ui-text: #f2ffe8;
+  --rpg-ui-text-muted: rgba(220, 252, 231, 0.72);
+  --rpg-ui-accent: #86efac;
+  --rpg-ui-accent-hover: #bbf7d0;
+  --rpg-ui-accent-active: #22c55e;
+  --rpg-ui-warning: #facc15;
+  --rpg-ui-mana: #5eead4;
+  --rpg-ui-xp: #fde047;
+  --rpg-ui-focus-ring-color: rgba(134, 239, 172, 0.38);
+  --rpg-ui-selected-bg: rgba(134, 239, 172, 0.12);
+  --rpg-ui-shop-gold-color: #fde047;
+}
+
+html[data-rpg-theme="ember"] {
+  --rpg-ui-body-bg: #180807;
+  --rpg-ui-body-background:
+    radial-gradient(circle at 12% 18%, rgba(239, 68, 68, 0.34) 0%, transparent 34%),
+    radial-gradient(circle at 86% 70%, rgba(245, 158, 11, 0.18) 0%, transparent 34%),
+    linear-gradient(180deg, #24100c 0%, #0b0303 100%);
+  --rpg-ui-bg: #140706;
+  --rpg-ui-surface: rgba(38, 13, 10, 0.9);
+  --rpg-ui-surface-light: rgba(91, 33, 18, 0.74);
+  --rpg-ui-surface-overlay: rgba(38, 13, 10, 0.72);
+  --rpg-ui-surface-overlay-strong: rgba(38, 13, 10, 0.94);
+  --rpg-ui-border: rgba(251, 146, 60, 0.3);
+  --rpg-ui-border-light: rgba(254, 215, 170, 0.35);
+  --rpg-ui-border-dark: rgba(12, 4, 3, 0.84);
+  --rpg-ui-text: #fff7ed;
+  --rpg-ui-text-muted: rgba(254, 215, 170, 0.74);
+  --rpg-ui-accent: #fb923c;
+  --rpg-ui-accent-hover: #fdba74;
+  --rpg-ui-accent-active: #ea580c;
+  --rpg-ui-danger: #f43f5e;
+  --rpg-ui-mana: #c084fc;
+  --rpg-ui-xp: #facc15;
+  --rpg-ui-focus-ring-color: rgba(251, 146, 60, 0.4);
+  --rpg-ui-selected-bg: rgba(251, 146, 60, 0.13);
+  --rpg-ui-shop-gold-color: #facc15;
+}
+
+html[data-rpg-theme="arcane"] {
+  --rpg-ui-body-bg: #0d0820;
+  --rpg-ui-body-background:
+    radial-gradient(circle at 22% 16%, rgba(168, 85, 247, 0.34) 0%, transparent 34%),
+    radial-gradient(circle at 82% 78%, rgba(45, 212, 191, 0.14) 0%, transparent 34%),
+    linear-gradient(180deg, #17102f 0%, #060411 100%);
+  --rpg-ui-bg: #0b0718;
+  --rpg-ui-surface: rgba(22, 14, 46, 0.9);
+  --rpg-ui-surface-light: rgba(76, 29, 149, 0.7);
+  --rpg-ui-surface-overlay: rgba(22, 14, 46, 0.72);
+  --rpg-ui-surface-overlay-strong: rgba(22, 14, 46, 0.94);
+  --rpg-ui-border: rgba(196, 181, 253, 0.28);
+  --rpg-ui-border-light: rgba(221, 214, 254, 0.34);
+  --rpg-ui-border-dark: rgba(7, 4, 18, 0.86);
+  --rpg-ui-text: #f5f3ff;
+  --rpg-ui-text-muted: rgba(221, 214, 254, 0.74);
+  --rpg-ui-accent: #c084fc;
+  --rpg-ui-accent-hover: #ddd6fe;
+  --rpg-ui-accent-active: #9333ea;
+  --rpg-ui-mana: #38bdf8;
+  --rpg-ui-xp: #f0abfc;
+  --rpg-ui-focus-ring-color: rgba(192, 132, 252, 0.42);
+  --rpg-ui-selected-bg: rgba(192, 132, 252, 0.13);
+  --rpg-ui-shop-gold-color: #f0abfc;
+}

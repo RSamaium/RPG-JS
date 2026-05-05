@@ -3,6 +3,7 @@ dist
 lib
 lerna-debug.log
 coverage
+storybook-static
 packages/common/types
 docs/api/*
 docs/others/*
