@@ -25,7 +25,7 @@ It provides:
 - `@rpgjs/ui-css/patterns.css`
   RPGJS-oriented screens and layouts.
 - `@rpgjs/ui-css/theme-default.css`
-  Opinionated default glass-RPG theme.
+  Opinionated default modern glass RPG theme.
 
 ## Storybook
 
@@ -66,15 +66,6 @@ Stories live in `packages/ui-css/storybook`. They use plain HTML, JavaScript and
 ```html
 <link rel="stylesheet" href="./node_modules/@rpgjs/ui-css/index.css">
 <link rel="stylesheet" href="./node_modules/@rpgjs/ui-css/theme-default.css">
-```
-
-If you use the default theme, load its font:
-
-```html
-<link
-  rel="stylesheet"
-  href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap"
->
 ```
 
 ## App Shell
@@ -154,7 +145,7 @@ Legacy `.active`, `.selected`, `.disabled`, `rpg-*` and `rpg-shop-*` selectors r
     </div>
   </div>
 
-  <div class="rpg-ui-dock rpg-ui-glass-panel">
+  <div class="rpg-ui-dock">
     <button class="rpg-ui-dock-slot" data-selected="true">Sword</button>
     <button class="rpg-ui-dock-slot">Potion<span class="rpg-ui-dock-slot-qty">5</span></button>
     <button class="rpg-ui-dock-slot">Bag</button>

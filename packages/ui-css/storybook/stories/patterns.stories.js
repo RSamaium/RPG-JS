@@ -26,7 +26,7 @@ export const HUD = () => `
         <div class="rpg-ui-minimap-marker" style="left: 44%; top: 52%"></div>
       </div>
 
-      <div class="rpg-ui-dock rpg-ui-glass-panel">
+      <div class="rpg-ui-dock">
         <button class="rpg-ui-dock-slot" data-selected="true">S</button>
         <button class="rpg-ui-dock-slot">P<span class="rpg-ui-dock-slot-qty">5</span></button>
         <button class="rpg-ui-dock-slot">M<span class="rpg-ui-dock-slot-qty">2</span></button>

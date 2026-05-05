@@ -45,7 +45,7 @@ export const parameters = {
   layout: "fullscreen",
   options: {
     storySort: {
-      order: ["Overview", "Primitives", "Patterns"]
+      order: ["Overview", "Primitives", "Constructions", "Patterns"]
     }
   },
   controls: {
