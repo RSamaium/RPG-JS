@@ -1,0 +1,21 @@
+--- samples/sample-dev/tests/civ.engine.spec.ts
++++ samples/sample-dev/tests/civ.engine.spec.ts
+@@ -2,6 +2,7 @@
+ import { civTick, getActiveCivs } from '../src/server/civ/civ.engine';
+ import { H, updateHeuristics } from '../src/server/arelogic/heuristic.engine';
+
++const originalMathRandom = Math.random;
+ vi.mock('../src/server/arelogic/heuristic.engine', () => {
+   return {
+     H: new Array(13).fill(0),
+@@ -58,6 +59,7 @@
+     for (let i = 0; i < 13; i++) {
+         H[i] = 0;
+     }
++    Math.random = () => 0; // deterministic for test
+   });
++  afterEach(() => {
++    Math.random = originalMathRandom;
++  });
+
+   it('Growth logic creates farm when H[0] > 0.5', () => {
