@@ -30,6 +30,7 @@ const memoryChunks = new Map<string, any>();
 let memoryMetadata: any = {};
 
 export async function saveChunk(id: string, data: any) {
+  await ensureNodeModules();
   memoryChunks.set(id, data);
   if (isBrowser || !_fs) return;
   try {
@@ -44,6 +45,7 @@ export async function saveChunk(id: string, data: any) {
 }
 
 export async function loadChunk(id: string) {
+  await ensureNodeModules();
   if (memoryChunks.has(id)) return memoryChunks.get(id);
   if (isBrowser || !_fs) return null;
   try {
@@ -59,7 +61,8 @@ export async function loadChunk(id: string) {
   }
 }
 
-export function saveWorld(metadata: any = {}) {
+export async function saveWorld(metadata: any = {}) {
+  await ensureNodeModules();
   memoryMetadata = metadata;
   if (isBrowser || !_fs) return;
   try {
@@ -73,6 +76,7 @@ export function saveWorld(metadata: any = {}) {
 }
 
 export async function loadWorld() {
+  await ensureNodeModules();
   if (isBrowser || !_fs) return memoryMetadata;
   try {
     const data = await _fs.readFile(_metadataFile, "utf-8");
