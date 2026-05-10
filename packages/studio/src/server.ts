@@ -46,7 +46,7 @@ const mergePlayerConfig = (
 };
 
 const resolvePlayerConfig = async (player: RpgPlayer): Promise<ProjectBasic> => {
-  const gameConfig = window.gameConfig ?? {};
+  const gameConfig = (window as any).gameConfig ?? {};
   const baseHeroConfig = (gameConfig.hero ?? {}) as ProjectBasic;
   const provider = getGameDataProvider();
   const providerStartConfig = provider.getPlayerStartConfig;
@@ -272,7 +272,7 @@ export default (_config?: unknown) => {
             worldY: worldMap.worldY * RATIO_MAP_Y,
           }));
           worldManager.configure(worldMaps);
-          mapExtended.setInWorldMaps(worldManager);
+          mapExtended.setInWorldMaps(worldManager as any);
         }
 
         return map as any;
@@ -514,7 +514,7 @@ export default (_config?: unknown) => {
     database: async () => {
       const configuredProjectId =
         getStudioGameRuntimeConfig().projectId?.trim() || null;
-      const gameConfig = window.gameConfig;
+      const gameConfig = (window as any).gameConfig;
       const resolvedProjectId = configuredProjectId || gameConfig?._id || "";
 
       if (databaseCacheByProjectId.has(resolvedProjectId)) {
