@@ -210,7 +210,7 @@ export default defineModule<RpgServer>({
       });
       if (!validatedAction) return;
 
-      logEvent(validatedAction);
+      logEvent(validatedAction).catch(console.error);
       let E = mapActionToE(action);
 
       if (action === "harvest") {

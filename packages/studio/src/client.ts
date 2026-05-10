@@ -103,18 +103,19 @@ export default (config: StudioGameModuleConfig) => {
           response.keyboardControls.escape = response.keyboardControls.back;
         }
 
-        window.gameConfig = response;
+        (window as any).gameConfig = response;
 
-        engine.globalConfig = {
-          ...engine.globalConfig,
+        const engineWithConfig = engine as RpgClientEngineWithConfig;
+        engineWithConfig.globalConfig = {
+          ...engineWithConfig.globalConfig,
           ...response,
-          projectId: response._id || engine.globalConfig?.projectId,
-          startMapId: config.startMapId !== undefined ? config.startMapId : (response.startMapId || engine.globalConfig?.startMapId),
+          projectId: response._id || engineWithConfig.globalConfig?.projectId,
+          startMapId: config.startMapId !== undefined ? config.startMapId : (response.startMapId || engineWithConfig.globalConfig?.startMapId),
         };
 
         const heroMediaRefs = [
-          engine.globalConfig.hero?.graphic,
-          engine.globalConfig.hero?.faceset,
+          engineWithConfig.globalConfig.hero?.graphic,
+          engineWithConfig.globalConfig.hero?.faceset,
         ].filter(Boolean);
 
         // Load hero spritesheets from either direct media objects or media IDs.
@@ -158,7 +159,7 @@ export default (config: StudioGameModuleConfig) => {
       },
       onAfterLoading: async (scene) => {
         const gui = inject(RpgGui);
-        const engine = inject(RpgClientEngine);
+        const engine = inject(RpgClientEngine) as RpgClientEngineWithConfig;
         engine.scene.clearLocalWeather?.();
         fadeTrigger.start();
         gui.display("hud", {

@@ -1,3 +1,4 @@
+import { SweepResult } from "../collision/sweep";
 import { Entity } from '../physics/Entity';
 import { Integrator, IntegrationMethod } from '../physics/integrator';
 import { CollisionResolver } from '../collision/resolver';
@@ -575,7 +576,7 @@ export class World {
 
     const nearby = this.spatialPartition.queryAABB(sweptBounds);
     let minTime = 1.0;
-    let collision = null;
+    let collision: SweepResult | null = null;
 
     for (const other of nearby) {
       if (other === entity || !other.isStatic()) continue;

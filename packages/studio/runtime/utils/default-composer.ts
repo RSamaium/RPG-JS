@@ -116,7 +116,7 @@ function hasOwn<T extends PropertyKey>(
   obj: Partial<Record<T, unknown>>,
   key: unknown
 ): key is T {
-  return Object.prototype.hasOwnProperty.call(obj, key);
+  return Object.prototype.hasOwnProperty.call(obj, key as PropertyKey);
 }
 
 function getAllKeys(object: {}): PropertyKey[] {
