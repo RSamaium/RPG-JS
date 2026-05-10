@@ -24,7 +24,8 @@ async function ensureNodeModules() {
   }
 }
 
-ensureNodeModules();
+// Initial load synchronously starts the promise, allowing functions to wait for it if they need to.
+const initPromise = ensureNodeModules();
 
 const memoryChunks = new Map<string, any>();
 let memoryMetadata: any = {};
@@ -67,9 +68,8 @@ export async function saveWorld(metadata: any = {}) {
   if (isBrowser || !_fs) return;
   try {
     const dir = _path.dirname(_metadataFile);
-    _fs.mkdir(dir, { recursive: true }).then(() => {
-      _fs.writeFile(_metadataFile, JSON.stringify(metadata, null, 2));
-    });
+    await _fs.mkdir(dir, { recursive: true });
+    await _fs.writeFile(_metadataFile, JSON.stringify(metadata, null, 2));
   } catch {
     // Ignore
   }
