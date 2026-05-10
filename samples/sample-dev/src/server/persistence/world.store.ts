@@ -6,6 +6,8 @@ let _path: any = null;
 let _chunksDir = "";
 let _metadataFile = "";
 
+let initPromise: Promise<void> | null = null;
+
 async function ensureNodeModules() {
   if (isBrowser || _fs) return;
   try {
