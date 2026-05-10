@@ -4944,24 +4944,6 @@ snapshots:
       - '@types/react'
       - react
 
-  canvasengine@2.0.0-beta.61(@types/react@19.2.14)(pixi.js@8.17.1)(react@19.2.5):
-    dependencies:
-      '@barvynkoa/particle-emitter': 0.0.1(pixi.js@8.17.1)
-      '@chenglou/pretext': 0.0.6
-      '@pixi/layout': 3.2.0(@types/react@19.2.14)(pixi.js@8.17.1)(react@19.2.5)(yoga-layout@3.2.1)
-      '@signe/reactive': 2.9.0
-      howler: 2.2.4
-      joypad.js: 2.3.5
-      pixi-filters: 6.1.5(pixi.js@8.17.1)
-      pixi-viewport: 6.0.3(pixi.js@8.17.1)
-      pixi.js: 8.17.1
-      popmotion: 11.0.5
-      rxjs: 7.8.2
-      yoga-layout: 3.2.1
-    transitivePeerDependencies:
-      - '@types/react'
-      - react
-
   chai@6.2.2: {}
 
   chardet@2.1.1: {}
