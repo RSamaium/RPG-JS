@@ -1,4 +1,4 @@
-<Container sound={backgroundMusic} shake={shakeConfig} freeze={engine.gamePause}>
+<Container sound={backgroundMusic} shake={shakeConfig} freeze={engine.gamePause} filters={mapFilters()}>
   <Container sound={backgroundAmbientSound} />
 
   @if (map() && sceneComponent()) {
@@ -19,7 +19,7 @@
 </Container>
 
 <script>
-    import { NoiseFilter } from 'pixi-filters';
+    import { NoiseFilter, AdvancedBloomFilter, AdjustmentFilter } from 'pixi-filters';
     import { effect, signal, computed, mount, on, tick } from 'canvasengine'
     import { inject } from "../../core/inject";
     import { RpgClientEngine } from "../../RpgClientEngine";
@@ -53,6 +53,13 @@
       frequency: 10,
       direction: 'both'
     }
+
+    const mapFilters = computed(() => {
+        return [
+            new AdvancedBloomFilter({ threshold: 0.5, bloomScale: 1.0, brightness: 1.0, blur: 4, quality: 4 }),
+            new AdjustmentFilter({ gamma: 1, contrast: 1.1, saturation: 1.1, brightness: 1 })
+        ]
+    })
 
     const weatherProps = computed(() => {
       const state = weather?.()
