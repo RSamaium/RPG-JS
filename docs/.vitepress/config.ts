@@ -17,6 +17,7 @@ const guideMenu = [{
     { text: "Battle AI", link: "/guide/battle-ai" },
     { text: "Event Modes", link: "/guide/event-modes" },
     { text: "Testing", link: "/guide/testing" },
+    { text: "V4 Compatibility", link: "/guide/v4-compatibility" },
     { text: "Attach GUI", link: "/guide/gui/attach-gui" }
   ]
 }]

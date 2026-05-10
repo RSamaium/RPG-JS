@@ -1,0 +1,11 @@
+modulesRoot = './src/modules'
+modules = ['./main']
+
+[start]
+map = 'map'
+graphic = 'hero'
+hitbox = [32, 32]
+
+[compilerOptions.build]
+pwaEnabled = false
+

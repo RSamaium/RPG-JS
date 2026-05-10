@@ -16,6 +16,7 @@ export * from "./components";
 export * from "./components/gui";
 export * from "./Sound";
 export * from "./Resource";
+export * from "./decorators/spritesheet";
 export * from "./utils/getEntityProp";
 export { Context } from "@signe/di";
 export { KeyboardControls, Input } from "canvasengine";

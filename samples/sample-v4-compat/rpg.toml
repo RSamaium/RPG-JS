@@ -1,0 +1,10 @@
+name = 'RPGJS V4 Compatibility Sample'
+modules = ['./main', '@rpgjs/mobile-gui', '@rpgjs/default-gui', '@rpgjs/gamepad']
+
+[start]
+map = 'simplemap'
+graphic = 'hero'
+hitbox = [16, 16]
+
+[compilerOptions.build]
+pwaEnabled = false

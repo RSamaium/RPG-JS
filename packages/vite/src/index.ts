@@ -6,3 +6,4 @@ export { replaceConfigImport } from './replace-config-import';
 export { rpgjs } from './rpgjs-plugin';
 export { serverPlugin } from './server-plugin';
 export { entryPointPlugin, type EntryPointPluginOptions } from './entry-point-plugin';
+export { default as compatibilityV4Plugin } from './compatibility-v4';

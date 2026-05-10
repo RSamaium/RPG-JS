@@ -36,6 +36,12 @@ export default defineConfig({
         'vite',
         'vite-plugin-dts',
         '@canvasengine/compiler',
+        '@iarna/toml',
+        'image-size',
+        '@babel/parser',
+        '@babel/traverse',
+        '@babel/generator',
+        '@babel/types',
         'chokidar',
         'ws'
       ]

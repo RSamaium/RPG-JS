@@ -17,13 +17,19 @@
     "access": "public"
   },
   "dependencies": {
-    "@canvasengine/tiled": "2.0.0-beta.58",
+    "@babel/generator": "^7.29.1",
+    "@babel/parser": "^7.29.3",
+    "@babel/traverse": "^7.29.0",
+    "@babel/types": "^7.29.0",
     "@canvasengine/compiler": "2.0.0-beta.58",
+    "@canvasengine/tiled": "2.0.0-beta.58",
     "@hono/vite-dev-server": "^0.25.3",
+    "@iarna/toml": "^2.2.5",
     "@rpgjs/server": "workspace:*",
     "@types/node": "^25.6.0",
     "acorn": "^8.16.0",
     "acorn-walk": "^8.3.5",
+    "image-size": "^2.0.2",
     "magic-string": "^0.30.21",
     "typescript": "^6.0.3",
     "vite": "^8.0.10",
@@ -32,6 +38,8 @@
     "ws": "^8.20.0"
   },
   "devDependencies": {
+    "@types/babel__generator": "^7.27.0",
+    "@types/babel__traverse": "^7.28.0",
     "@types/ws": "^8.18.1"
   }
 }
