@@ -167,22 +167,38 @@ export function validate(action: any, graph?: Graph, history?: any[]): Validatio
 
   // A1 - Relational Integrity
   if (graph && !validateRelationalIntegrity(action, graph)) {
-    return { valid: false, reason: 'Action violates relational integrity' };
+    return {
+      valid: false,
+      reason: 'Action violates relational integrity',
+      normalized: normalize(action)
+    };
   }
 
   // A2 - Historical Persistence
   if (history && !validateHistoricalPersistence(action, history)) {
-    return { valid: false, reason: 'Action violates historical persistence patterns' };
+    return {
+      valid: false,
+      reason: 'Action violates historical persistence patterns',
+      normalized: normalize(action)
+    };
   }
 
   // A4 - Watchdog Enforcement (Heuristic Boundaries)
   if (!validateHeuristicBoundaries(action)) {
-    return { valid: false, reason: 'Action violates heuristic boundaries' };
+    return {
+      valid: false,
+      reason: 'Action violates heuristic boundaries',
+      normalized: normalize(action)
+    };
   }
 
   // A5 - Continuous Ingestion (Event Vector)
-  if ("eventVector" in action && !validateEventVector(action.eventVector)) {
-    return { valid: false, reason: 'Invalid event vector structure' };
+  if (action.eventVector && !validateEventVector(action.eventVector)) {
+    return {
+      valid: false,
+      reason: 'Invalid event vector structure',
+      normalized: normalize(action)
+    };
   }
 
   return { valid: true };
