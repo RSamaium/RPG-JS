@@ -49,7 +49,7 @@ describe('Heuristical Game Features', () => {
       const newH = updateHeuristics(E);
 
       for (let i = 0; i < 13; i++) {
-        expect(newH[i]).toBeCloseTo(M[i][0]);
+        expect(newH[i]).toBeCloseTo(M[i][0] || 0);
       }
     });
   });
