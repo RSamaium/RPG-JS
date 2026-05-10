@@ -1,3 +1,4 @@
+import { SweepResult } from "../collision/sweep";
 import { Entity } from '../physics/Entity';
 import { Integrator, IntegrationMethod } from '../physics/integrator';
 import { CollisionResolver } from '../collision/resolver';
