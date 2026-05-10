@@ -1,5 +1,4 @@
 import { FromSchema } from "json-schema-to-ts";
-import { creditCost } from "../permissions/credit";
 import { MAP_EDITOR_CONSTANTS } from "../constants";
 
 export const characterSchema = {
