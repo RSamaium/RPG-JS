@@ -4,6 +4,8 @@ let _fs: any = null;
 let _path: any = null;
 let _file = "";
 
+let initPromise: Promise<void> | null = null;
+
 async function ensureNodeModules() {
   if (isBrowser || _fs) return;
   try {
@@ -15,11 +17,16 @@ async function ensureNodeModules() {
   }
 }
 
-ensureNodeModules();
+initPromise = ensureNodeModules();
 
 const memoryLog: any[] = [];
 
-export function logEvent(event: any) {
+export function getHistory() {
+  return memoryLog;
+}
+
+export async function logEvent(event: any) {
+  await initPromise;
   const entry = { ...event, timestamp: Date.now() };
   memoryLog.push(entry);
   if (memoryLog.length > 1000) memoryLog.shift();
