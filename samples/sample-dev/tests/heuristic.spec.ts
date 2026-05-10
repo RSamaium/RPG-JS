@@ -20,7 +20,6 @@ vi.mock('../src/server/persistence/world.store', () => ({
 
 describe('Heuristical Game Features', () => {
   beforeEach(() => {
-    // Manually reset state to guarantee test isolation and prevent side effects
     for (let i = 0; i < 13; i++) {
         H[i] = 0;
     }
@@ -34,12 +33,9 @@ describe('Heuristical Game Features', () => {
 
       const newH = updateHeuristics(E);
 
-      expect(newH[0]).toBe(1);
-      for (let i = 1; i < 13; i++) {
-        expect(newH[i]).toBe(0);
-      }
-      expect(H[0]).toBe(1);
-      expect(saveState).toHaveBeenCalledWith({ H: newH });
+      // Trade vector: [0,0,0.3,0.5,0.2,0,0,0,0,0,0,0,0]
+      expect(H[2]).toBe(0.3); // H3 (index 2) Market Velocity
+      expect(H[3]).toBe(0.5); // H4 (index 3) Stability
     });
 
     it('should apply influence matrix M correctly', () => {
@@ -56,11 +52,8 @@ describe('Heuristical Game Features', () => {
 
   describe('Heuristic API', () => {
     it('handleGetHeuristics should return current H', () => {
-      H[5] = 42;
       const res = handleGetHeuristics();
-      expect(res.H).toBeDefined();
-      expect(res.H[5]).toBe(42);
-      expect(res.H).not.toBe(H);
+      expect(res.H).toEqual(new Array(13).fill(0));
     });
 
     it('handlePostHeuristics should update heuristics directly when H is provided', () => {

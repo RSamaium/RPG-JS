@@ -12,5 +12,9 @@ export function handleAction(action:any){
     }
     return null;
  }
+
+ const E = mapActionToE(action.type);
+ updateHeuristics(E);
+
  return action;
 }
