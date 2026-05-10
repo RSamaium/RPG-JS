@@ -27,7 +27,9 @@ export function updateHeuristics(E:number[]){
   }
   next[i]+=E[i]||0;
  }
- H = next;
- saveState({ H });
- return H;
+ for(let i=0;i<13;i++){
+     H[i] = next[i];
+ }
+ saveState({ H: [...H] });
+ return [...H];
 }
