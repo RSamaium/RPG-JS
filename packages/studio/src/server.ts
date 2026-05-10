@@ -46,7 +46,7 @@ const mergePlayerConfig = (
 };
 
 const resolvePlayerConfig = async (player: RpgPlayer): Promise<ProjectBasic> => {
-  const gameConfig = window.gameConfig ?? {};
+  const gameConfig = (window as any).gameConfig ?? {};
   const baseHeroConfig = (gameConfig.hero ?? {}) as ProjectBasic;
   const provider = getGameDataProvider();
   const providerStartConfig = provider.getPlayerStartConfig;
@@ -272,7 +272,7 @@ export default (_config?: unknown) => {
             worldY: worldMap.worldY * RATIO_MAP_Y,
           }));
           worldManager.configure(worldMaps);
-          mapExtended.setInWorldMaps(worldManager);
+          mapExtended.setInWorldMaps(worldManager as any);
         }
 
         return map as any;
@@ -335,7 +335,7 @@ export default (_config?: unknown) => {
               const trigger = object.triggers[i];
               const isEnabled = trigger?.enabled !== false;
               if (
-                matchesPageConditions(trigger.conditions, { player, event }) &&
+                matchesPageConditions(trigger.conditions, { player: player as any, event: event as any }) &&
                 isEnabled
               ) {
                 return { trigger, index: i };
@@ -379,7 +379,7 @@ export default (_config?: unknown) => {
             triggerType: string,
             event: RpgEvent,
           ) {
-            const blockExecutor = new BlockExecutionService(player, event);
+            const blockExecutor = new BlockExecutionService(player as any, event as any);
             const trigger = eventObj.applyActiveTrigger(player, event);
             if (!trigger || trigger.type !== triggerType) {
               return;
@@ -514,7 +514,7 @@ export default (_config?: unknown) => {
     database: async () => {
       const configuredProjectId =
         getStudioGameRuntimeConfig().projectId?.trim() || null;
-      const gameConfig = window.gameConfig;
+      const gameConfig = (window as any).gameConfig;
       const resolvedProjectId = configuredProjectId || gameConfig?._id || "";
 
       if (databaseCacheByProjectId.has(resolvedProjectId)) {

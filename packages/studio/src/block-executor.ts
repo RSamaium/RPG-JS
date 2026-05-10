@@ -216,8 +216,8 @@ export class BlockExecutionService {
       callEvent: async (eventId: string, parameters: Record<string, unknown>): Promise<void> => {
         // Call another event - implement based on your event system
         const targetEvent = event.getCurrentMap?.()?.getEvent?.(eventId);
-        if (targetEvent && typeof targetEvent.callEvent === 'function') {
-          await targetEvent.callEvent(eventId, parameters);
+        if (targetEvent && typeof (targetEvent as any).callEvent === 'function') {
+          await (targetEvent as any).callEvent(eventId, parameters);
         }
       },
       
