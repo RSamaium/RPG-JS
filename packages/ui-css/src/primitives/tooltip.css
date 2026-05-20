@@ -1,32 +1,56 @@
 .rpg-ui-tooltip {
-    position: absolute;
-    background: var(--rpg-ui-surface);
-    border: 2px solid var(--rpg-ui-border);
-    color: var(--rpg-ui-text);
-    padding: 8px 12px;
-    border-radius: var(--rpg-ui-radius-md);
-    box-shadow: var(--rpg-ui-shadow);
-    font-size: var(--rpg-ui-font-size-sm);
-    z-index: var(--rpg-ui-z-overlay);
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity var(--rpg-ui-motion-duration) var(--rpg-ui-motion-ease);
-    white-space: nowrap;
+  position: absolute;
+  z-index: var(--rpg-ui-z-overlay);
+  max-width: min(320px, calc(100vw - 24px));
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--rpg-ui-border-strong);
+  border-radius: var(--rpg-ui-radius-md);
+  background:
+    radial-gradient(circle at 18% 0%, rgba(91, 231, 255, 0.12), transparent 40%),
+    var(--rpg-ui-gradient-surface);
+  box-shadow:
+    0 0 0 1px var(--rpg-ui-border-dark),
+    var(--rpg-ui-shadow-md),
+    0 0 24px rgba(91, 231, 255, 0.14);
+  color: var(--rpg-ui-text);
+  font-size: var(--rpg-ui-font-size-sm);
+  line-height: 1.45;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition:
+    opacity var(--rpg-ui-motion-duration) var(--rpg-ui-motion-ease),
+    transform var(--rpg-ui-motion-duration) var(--rpg-ui-motion-ease);
 }
 
 .rpg-ui-tooltip[data-visible="true"] {
-    opacity: 1;
-    animation: rpg-fade-in var(--rpg-ui-motion-duration) ease-out;
+  opacity: 1;
+  transform: translateY(0);
 }
 
-/* Arrow */
 .rpg-ui-tooltip::after {
-    content: "";
-    position: absolute;
-    bottom: -6px;
-    left: 50%;
-    transform: translateX(-50%);
-    border-left: 6px solid transparent;
-    border-right: 6px solid transparent;
-    border-top: 6px solid var(--rpg-ui-border);
+  content: "";
+  position: absolute;
+  bottom: -7px;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  border-right: 1px solid var(--rpg-ui-border-strong);
+  border-bottom: 1px solid var(--rpg-ui-border-strong);
+  background: var(--rpg-ui-surface);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.rpg-ui-tooltip-title {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: var(--rpg-ui-accent);
+  font-weight: var(--rpg-ui-font-weight-bold);
+  letter-spacing: 0.04em;
+}
+
+.rpg-ui-tooltip-meta {
+  display: block;
+  color: var(--rpg-ui-text-muted);
+  font-size: var(--rpg-ui-font-size-xs);
 }

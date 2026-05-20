@@ -5,7 +5,7 @@
 It provides:
 
 - scoped base styles for RPG UI roots
-- reusable primitives such as panels, buttons, menus, dialogs, bars, inventories, hotbars and toasts
+- reusable primitives such as panels, cards, buttons, sidebars, dialogs, bars, inventories, avatar frames, quest cards, hotbars and toasts
 - RPG interface patterns such as HUD, shop, save/load, title screen, game over and main menu
 - token-based theming with a default theme
 - legacy aliases for older `rpg-*` and `rpg-shop-*` classes
@@ -101,15 +101,70 @@ Legacy `.active`, `.selected`, `.disabled`, `rpg-*` and `rpg-shop-*` selectors r
 ## Core Primitives
 
 - `.rpg-ui-panel`, `.rpg-ui-window`
+- `.rpg-ui-window-header`, `.rpg-ui-window-body`, `.rpg-ui-window-footer`
+- `.rpg-ui-card`, `.rpg-ui-card-grid`
 - `.rpg-ui-btn`
 - `.rpg-ui-input`, `.rpg-ui-checkbox`
 - `.rpg-ui-menu`, `.rpg-ui-menu-item`, `.rpg-ui-menu-tab`
+- `.rpg-ui-sidebar`, `.rpg-ui-sidebar-button`
 - `.rpg-ui-dialog`
 - `.rpg-ui-bar`
 - `.rpg-ui-inventory`, `.rpg-ui-inventory-slot`
+- `.rpg-ui-avatar-frame`
+- `.rpg-ui-stat-block`
+- `.rpg-ui-currency-display`
+- `.rpg-ui-quest-card`
+- `.rpg-ui-modal`, `.rpg-ui-modal-backdrop`
 - `.rpg-ui-hotbar`, `.rpg-ui-hotbar-slot`
 - `.rpg-ui-tooltip`
 - `.rpg-ui-toast`, `.rpg-ui-notification`
+
+## MMO Window Example
+
+```html
+<section class="rpg-ui-window" data-size="wide">
+  <header class="rpg-ui-window-header">
+    <div class="rpg-ui-window-header-main">
+      <span class="rpg-ui-window-kicker">Moon Order</span>
+      <h2 class="rpg-ui-window-heading">Character</h2>
+    </div>
+    <span class="rpg-ui-currency-display">
+      <span class="rpg-ui-currency-icon">G</span>
+      <span class="rpg-ui-currency-label">Gold</span>
+      <span class="rpg-ui-currency-value">2840</span>
+    </span>
+  </header>
+
+  <div class="rpg-ui-mmo-layout">
+    <nav class="rpg-ui-sidebar">
+      <button class="rpg-ui-sidebar-button" data-selected="true">
+        <span class="rpg-ui-sidebar-icon">C</span>
+        Character
+      </button>
+      <button class="rpg-ui-sidebar-button">
+        <span class="rpg-ui-sidebar-icon">I</span>
+        Inventory
+      </button>
+    </nav>
+
+    <div class="rpg-ui-mmo-content">
+      <div class="rpg-ui-card-grid">
+        <div class="rpg-ui-stat-block">
+          <span class="rpg-ui-stat-block-label">Power</span>
+          <strong class="rpg-ui-stat-block-value">8420</strong>
+          <span class="rpg-ui-stat-block-meta">+18 from gear</span>
+        </div>
+        <div class="rpg-ui-card">
+          <div class="rpg-ui-avatar-frame">
+            <div class="rpg-ui-avatar-frame-image">A</div>
+            <div class="rpg-ui-avatar-frame-level">24</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+```
 
 ## RPG Patterns
 
@@ -247,6 +302,7 @@ Useful token groups:
 - rarity: `--rpg-ui-rarity-common`, `--rpg-ui-rarity-rare`, `--rpg-ui-rarity-legendary`
 - layout: `--rpg-ui-hud-top`, `--rpg-ui-dock-slot-size`, `--rpg-ui-minimap-size`
 - motion: `--rpg-ui-motion-duration`, `--rpg-ui-motion-ease`
+- MMO surfaces: `--rpg-ui-surface-card`, `--rpg-ui-frame`, `--rpg-ui-frame-strong`, `--rpg-ui-shadow-glow`
 
 ## Compatibility Notes
 

@@ -2,7 +2,7 @@
     <div class="rpg-ui-main-menu rpg-anim-fade-in">
         <div class="rpg-ui-main-menu-layout">
             <div class="rpg-ui-main-menu-left rpg-ui-menu rpg-ui-panel">
-                <div class="rpg-ui-menu-header">Menu</div>
+                <div class="rpg-ui-menu-header">Main</div>
                 <div class="rpg-ui-main-menu-list">
                     @for ((entry,index) of menuEntries()) {
                         <div
@@ -11,50 +11,117 @@
                             data-selected={selectedMenu() === index ? "true" : "false"}
                             tabindex={index}
                             click={selectMenu(index)}
-                        >{entry.label}</div>
+                        >
+                            <span class="rpg-ui-menu-row">
+                                <span class="rpg-ui-menu-row-main">
+                                    <span class="rpg-ui-menu-row-icon">{menuIcon(entry.id)}</span>
+                                    <span class="rpg-ui-menu-row-label">{entry.label}</span>
+                                </span>
+                            </span>
+                        </div>
                     }
                 </div>
             </div>
             <div class="rpg-ui-main-menu-right">
                 @if (view() === "menu") {
-                    <div class="rpg-ui-panel">
-                        <div class="rpg-ui-main-menu-section-title">Status</div>
-                        <div class="rpg-ui-main-menu-status-card">
-                            <div class="rpg-ui-main-menu-status-block">
-                                <div class="rpg-ui-main-menu-status-label">Level</div>
-                                <div class="rpg-ui-main-menu-status-value">{level()}</div>
-                            </div>
-                            <div class="rpg-ui-main-menu-status-block">
-                                <div class="rpg-ui-main-menu-status-label">Gold</div>
-                                <div class="rpg-ui-main-menu-status-value">{gold()}</div>
-                            </div>
-                            <div class="rpg-ui-main-menu-status-block">
-                                <div class="rpg-ui-main-menu-status-label">HP {hp()}/{hpMax()}</div>
-                                <div class="rpg-ui-main-menu-status-bar">
-                                    <div class="rpg-ui-main-menu-status-bar-fill" data-type="health" style={{width: hpPercent}}></div>
+                    <div class="rpg-ui-main-menu-dashboard rpg-ui-panel">
+                        <div class="rpg-ui-main-menu-title">Main Menu</div>
+
+                        <div class="rpg-ui-main-menu-dashboard-grid">
+                            <section class="rpg-ui-main-menu-card rpg-ui-main-menu-character-card">
+                                <div class="rpg-ui-main-menu-section-title">Character Overview</div>
+                                <div class="rpg-ui-main-menu-character">
+                                    <div class="rpg-ui-main-menu-portrait">
+                                        <div class="rpg-ui-main-menu-portrait-avatar">{playerInitial()}</div>
+                                        <div class="rpg-ui-main-menu-portrait-level">{level()}</div>
+                                    </div>
+                                    <div class="rpg-ui-main-menu-character-info">
+                                        <div class="rpg-ui-main-menu-character-name">{playerName()}</div>
+                                        <div class="rpg-ui-main-menu-character-meta">Level {level()}</div>
+                                        <div class="rpg-ui-main-menu-vitals">
+                                            <div class="rpg-ui-main-menu-vital-row">
+                                                <span>EXP {exp()} / {expForNextlevel()}</span>
+                                                <div class="rpg-ui-main-menu-status-bar">
+                                                    <div class="rpg-ui-main-menu-status-bar-fill" data-type="experience" style={{width: expPercent}}></div>
+                                                </div>
+                                            </div>
+                                            <div class="rpg-ui-main-menu-status-bar">
+                                                <span class="rpg-ui-main-menu-status-bar-label">HP {hp()}/{hpMax()}</span>
+                                                <div class="rpg-ui-main-menu-status-bar-fill" data-type="health" style={{width: hpPercent}}></div>
+                                            </div>
+                                            <div class="rpg-ui-main-menu-status-bar">
+                                                <span class="rpg-ui-main-menu-status-bar-label">SP {sp()}/{spMax()}</span>
+                                                <div class="rpg-ui-main-menu-status-bar-fill" data-type="mana" style={{width: spPercent}}></div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="rpg-ui-main-menu-status-block">
-                                <div class="rpg-ui-main-menu-status-label">SP {sp()}/{spMax()}</div>
-                                <div class="rpg-ui-main-menu-status-bar">
-                                    <div class="rpg-ui-main-menu-status-bar-fill" data-type="mana" style={{width: spPercent}}></div>
+                                <div class="rpg-ui-main-menu-currency-grid">
+                                    <div class="rpg-ui-main-menu-currency">
+                                        <span class="rpg-ui-main-menu-currency-icon">G</span>
+                                        <span>
+                                            <span class="rpg-ui-main-menu-currency-label">Gold</span>
+                                            <strong>{gold()}</strong>
+                                        </span>
+                                    </div>
+                                    <div class="rpg-ui-main-menu-currency">
+                                        <span class="rpg-ui-main-menu-currency-icon">LV</span>
+                                        <span>
+                                            <span class="rpg-ui-main-menu-currency-label">Level</span>
+                                            <strong>{level()}</strong>
+                                        </span>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="rpg-ui-main-menu-status-block rpg-ui-main-menu-status-block-full">
-                                <div class="rpg-ui-main-menu-status-label">EXP {exp()}/{expForNextlevel()}</div>
-                                <div class="rpg-ui-main-menu-status-bar">
-                                    <div class="rpg-ui-main-menu-status-bar-fill" data-type="experience" style={{width: expPercent}}></div>
+                            </section>
+
+                            <section class="rpg-ui-main-menu-card rpg-ui-main-menu-stats-card">
+                                <div class="rpg-ui-main-menu-section-title">Stats</div>
+                                <div class="rpg-ui-main-menu-params">
+                                    @for ((param,index) of paramsList) {
+                                        <div class="rpg-ui-main-menu-param">
+                                            <span>{param.label}</span>
+                                            <span>{param.value}</span>
+                                        </div>
+                                    }
                                 </div>
-                            </div>
-                        </div>
-                        <div class="rpg-ui-main-menu-section-title">Parameters</div>
-                        <div class="rpg-ui-main-menu-params">
-                            @for ((param,index) of paramsList) {
-                                <div class="rpg-ui-main-menu-param">
-                                    <span>{param.label}</span>
-                                    <span>{param.value}</span>
+                            </section>
+
+                            <section class="rpg-ui-main-menu-card rpg-ui-main-menu-equipment-card">
+                                <div class="rpg-ui-main-menu-section-title">Equipment</div>
+                                <div class="rpg-ui-main-menu-equipment-grid">
+                                    @for ((slot,index) of equipmentPreview) {
+                                        <div class="rpg-ui-main-menu-equipment-slot" data-empty={slot.empty ? "true" : "false"}>
+                                            @if (slot.icon) {
+                                                <DOMSprite
+                                                    sheet={iconSheet(slot.icon)}
+                                                    playing="default"
+                                                    width="32px"
+                                                    height="32px"
+                                                    objectFit="contain"
+                                                />
+                                            }
+                                            @if (!slot.icon) {
+                                                <span>{slot.label}</span>
+                                            }
+                                        </div>
+                                    }
                                 </div>
-                            }
+                            </section>
+
+                            <section class="rpg-ui-main-menu-card rpg-ui-main-menu-activity-card">
+                                <div class="rpg-ui-main-menu-section-title">Recent Activity</div>
+                                <div class="rpg-ui-main-menu-activity-list">
+                                    @for ((entry,index) of activityRows) {
+                                        <div class="rpg-ui-main-menu-activity-row">
+                                            <span>
+                                                <strong>{entry.title}</strong>
+                                                <small>{entry.description}</small>
+                                            </span>
+                                            <span class="rpg-ui-main-menu-activity-meta">{entry.meta}</span>
+                                        </div>
+                                    }
+                                </div>
+                            </section>
                         </div>
                     </div>
                 }
@@ -205,6 +272,18 @@
         if (onInteraction) onInteraction("exit");
     };
 
+    const menuIcon = (id) => {
+        const icons = {
+            items: "B",
+            skills: "S",
+            equip: "E",
+            options: "O",
+            save: "V",
+            exit: "X"
+        };
+        return icons[id] || "M";
+    };
+
     const hp = getEntityProp(currentPlayer, "hp");
     const hpMax = getEntityProp(currentPlayer, "params.maxHp");
     const sp = getEntityProp(currentPlayer, "sp");
@@ -212,6 +291,12 @@
     const level = getEntityProp(currentPlayer, "level");
     const exp = getEntityProp(currentPlayer, "exp");
     const gold = getEntityProp(currentPlayer, "gold");
+    const name = getEntityProp(currentPlayer, "name");
+    const playerName = computed(() => name() || "Adventurer");
+    const playerInitial = computed(() => {
+        const value = playerName();
+        return String(value || "A").trim().slice(0, 1).toUpperCase() || "A";
+    });
     const expForNextlevel = computed(() => data().expForNextlevel || 0);
     const hpPercent = computed(() => {
         const max = hpMax() || 1;
@@ -226,15 +311,78 @@
         return `${Math.max(0, Math.min(100, (exp() / max) * 100))}%`;
     });
 
+    const safeItems = computed(() => {
+        const value = resolveProp(data().items);
+        return Array.isArray(value) ? value : [];
+    });
+    const safeEquips = computed(() => {
+        const value = resolveProp(data().equips);
+        if (Array.isArray(value)) return value;
+        return safeItems().filter((item) => item?.type === "weapon" || item?.type === "armor");
+    });
+    const safeSkills = computed(() => {
+        const value = resolveProp(data().skills);
+        return Array.isArray(value) ? value : [];
+    });
+    const iconSheet = (iconId) => ({
+        definition: engine.getSpriteSheet(iconId)
+    });
+    const equipmentPreview = computed(() => {
+        const slots = safeEquips().slice(0, 8).map((item) => ({
+            empty: false,
+            icon: item.icon,
+            label: (item.name || item.type || "?").slice(0, 1).toUpperCase()
+        }));
+        while (slots.length < 8) {
+            slots.push({ empty: true, icon: null, label: "" });
+        }
+        return slots;
+    });
+    const activityRows = computed(() => {
+        const rows = [];
+        safeEquips().slice(0, 2).forEach((item) => {
+            rows.push({
+                title: item.name || "Equipment",
+                description: item.equipped ? "Equipped" : (item.description || "Equipment available"),
+                meta: item.type || "gear"
+            });
+        });
+        safeSkills().slice(0, 2).forEach((skill) => {
+            rows.push({
+                title: skill.name || "Skill",
+                description: skill.description || "Learned skill",
+                meta: `SP ${skill.spCost ?? 0}`
+            });
+        });
+        safeItems().slice(0, 2).forEach((item) => {
+            rows.push({
+                title: item.name || "Item",
+                description: item.description || "Inventory item",
+                meta: `x${item.quantity ?? 1}`
+            });
+        });
+        if (!rows.length) {
+            rows.push({
+                title: "No activity",
+                description: "Inventory, skills and equipment will appear here.",
+                meta: "-"
+            });
+        }
+        return rows.slice(0, 3);
+    });
+
     const paramsList = computed(() => {
+        const stats = data().playerStats || {};
         return [
-            { label: "ATK", value: data().playerStats.atk },
-            { label: "PDEF", value: data().playerStats.pdef },
-            { label: "SDEF", value: data().playerStats.sdef },
-            { label: "STR", value: data().playerStats.str },
-            { label: "DEX", value: data().playerStats.dex },
-            { label: "INT", value: data().playerStats.int },
-            { label: "AGI", value: data().playerStats.agi }
+            { label: "ATK", value: stats.atk ?? 0 },
+            { label: "PDEF", value: stats.pdef ?? 0 },
+            { label: "SDEF", value: stats.sdef ?? 0 },
+            { label: "STR", value: stats.str ?? 0 },
+            { label: "DEX", value: stats.dex ?? 0 },
+            { label: "INT", value: stats.int ?? 0 },
+            { label: "AGI", value: stats.agi ?? 0 },
+            { label: "HP MAX", value: stats.maxHp ?? hpMax() ?? 0 },
+            { label: "SP MAX", value: stats.maxSp ?? spMax() ?? 0 }
         ]
     }
 

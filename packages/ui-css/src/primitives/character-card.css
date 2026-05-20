@@ -1,66 +1,94 @@
 .rpg-ui-character-card {
-  background: var(--rpg-ui-surface);
-  border: 4px solid var(--rpg-ui-border);
-  padding: 16px;
-  border-radius: var(--rpg-ui-radius-lg);
-  box-shadow: var(--rpg-ui-shadow-lg);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--rpg-ui-spacing);
+  padding: var(--rpg-ui-spacing);
+  border: 1px solid var(--rpg-ui-border);
+  border-radius: var(--rpg-ui-radius-lg);
+  background:
+    radial-gradient(circle at 16% 0%, rgba(91, 231, 255, 0.12), transparent 36%),
+    var(--rpg-ui-gradient-surface);
+  box-shadow:
+    0 0 0 1px var(--rpg-ui-border-dark),
+    var(--rpg-ui-shadow-md),
+    var(--rpg-ui-shadow-inset);
+  color: var(--rpg-ui-text);
 }
 
 .rpg-ui-character-card-header {
   display: flex;
-  gap: 16px;
   align-items: center;
-  border-bottom: 2px solid var(--rpg-ui-border-dark);
-  padding-bottom: 16px;
+  gap: var(--rpg-ui-spacing);
+  padding-bottom: var(--rpg-ui-spacing);
+  border-bottom: 1px solid var(--rpg-ui-divider);
 }
 
 .rpg-ui-character-card-avatar {
-  width: 64px;
-  height: 64px;
-  background: var(--rpg-ui-bg);
-  border: 2px solid var(--rpg-ui-border-light);
-  border-radius: var(--rpg-ui-radius-md);
   display: flex;
+  width: 72px;
+  height: 72px;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  font-size: 32px;
-  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(179, 239, 255, 0.22);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 20%, rgba(255, 255, 255, 0.12), transparent 42%),
+    var(--rpg-ui-surface-raised);
+  box-shadow: var(--rpg-ui-avatar-shadow);
+  color: var(--rpg-ui-accent);
+  font-size: 30px;
+  font-weight: var(--rpg-ui-font-weight-bold);
 }
 
 .rpg-ui-character-card-info {
   flex: 1;
+  min-width: 0;
 }
 
 .rpg-ui-character-card-name {
-  font-size: var(--rpg-ui-font-size-xl);
-  font-weight: bold;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--rpg-ui-spacing-sm);
   color: var(--rpg-ui-accent);
-  text-shadow: 1px 1px 0 #000;
+  font-size: var(--rpg-ui-font-size-lg);
+  font-weight: var(--rpg-ui-font-weight-bold);
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  text-shadow: 0 0 18px rgba(91, 231, 255, 0.32), var(--rpg-ui-text-shadow);
 }
 
 .rpg-ui-character-card-class {
+  margin-top: 0.25rem;
   color: var(--rpg-ui-text-muted);
   font-size: var(--rpg-ui-font-size-sm);
+  font-weight: var(--rpg-ui-font-weight-semibold);
+  letter-spacing: var(--rpg-ui-label-letter-spacing);
   text-transform: uppercase;
-  letter-spacing: 1px;
 }
 
 .rpg-ui-character-card-level {
-  color: var(--rpg-ui-text);
-  background: var(--rpg-ui-border-dark);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 12px;
-  margin-left: 8px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0.15rem 0.45rem;
+  border: 1px solid var(--rpg-ui-avatar-level-border);
+  border-radius: var(--rpg-ui-radius-full);
+  background: var(--rpg-ui-avatar-level-bg);
+  color: var(--rpg-ui-avatar-level-color);
+  font-family: var(--rpg-ui-font-mono);
+  font-size: var(--rpg-ui-font-size-xs);
+  font-weight: var(--rpg-ui-font-weight-bold);
+  letter-spacing: 0;
+  box-shadow: 0 0 14px rgba(246, 196, 83, 0.14);
 }
 
 .rpg-ui-character-card-section-title {
-  font-size: var(--rpg-ui-font-size-sm);
-  color: var(--rpg-ui-border-light);
+  margin-bottom: var(--rpg-ui-spacing-sm);
+  color: var(--rpg-ui-text-subtle);
+  font-size: var(--rpg-ui-font-size-xs);
+  font-weight: var(--rpg-ui-font-weight-bold);
+  letter-spacing: var(--rpg-ui-label-letter-spacing);
   text-transform: uppercase;
-  margin-bottom: 8px;
-  font-weight: bold;
 }

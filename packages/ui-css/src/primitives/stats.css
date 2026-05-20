@@ -1,19 +1,24 @@
 .rpg-ui-stats {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  background: rgba(0, 0, 0, 0.2);
-  padding: 12px;
+  gap: var(--rpg-ui-spacing-sm);
+  padding: var(--rpg-ui-spacing);
+  border: 1px solid rgba(179, 239, 255, 0.12);
   border-radius: var(--rpg-ui-radius-md);
-  border: 1px solid var(--rpg-ui-border-dark);
+  background:
+    var(--rpg-ui-gradient-subsurface),
+    rgba(0, 0, 0, 0.22);
+  box-shadow: inset 0 0 22px rgba(0, 0, 0, 0.18);
 }
 
 .rpg-ui-stat {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 4px 0;
-  border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+  justify-content: space-between;
+  gap: var(--rpg-ui-spacing);
+  min-height: 34px;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid var(--rpg-ui-divider);
 }
 
 .rpg-ui-stat:last-child {
@@ -22,17 +27,20 @@
 
 .rpg-ui-stat-label {
   color: var(--rpg-ui-text-muted);
+  font-size: var(--rpg-ui-font-size-sm);
+  font-weight: var(--rpg-ui-font-weight-semibold);
 }
 
 .rpg-ui-stat-value {
   color: var(--rpg-ui-text);
-  font-weight: bold;
   font-family: var(--rpg-ui-font-mono);
+  font-weight: var(--rpg-ui-font-weight-bold);
 }
 
 .rpg-ui-stat-change {
-  font-size: 12px;
-  margin-left: 8px;
+  margin-left: var(--rpg-ui-spacing-sm);
+  font-size: var(--rpg-ui-font-size-xs);
+  font-weight: var(--rpg-ui-font-weight-bold);
 }
 
 .rpg-ui-stat-change[data-type="positive"] {
@@ -43,28 +51,31 @@
   color: var(--rpg-ui-stat-negative);
 }
 
-/* Stat Bar Container (for combining label + bar + value) */
 .rpg-ui-stat-bar-container {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
+  gap: var(--rpg-ui-spacing-sm);
+  margin-bottom: var(--rpg-ui-spacing-xs);
 }
 
 .rpg-ui-stat-bar-container .rpg-ui-stat-label {
-  width: 30px;
-  font-size: 12px;
-  font-weight: bold;
+  width: 44px;
+  flex: 0 0 auto;
+  font-size: var(--rpg-ui-font-size-xs);
+  font-weight: var(--rpg-ui-font-weight-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .rpg-ui-stat-bar-container .rpg-ui-bar {
   flex: 1;
-  margin-bottom: 0;
   height: 16px;
+  margin-bottom: 0;
 }
 
 .rpg-ui-stat-bar-container .rpg-ui-stat-value {
-  width: 40px;
+  width: 48px;
+  flex: 0 0 auto;
+  font-size: var(--rpg-ui-font-size-xs);
   text-align: right;
-  font-size: 12px;
 }

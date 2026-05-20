@@ -30,6 +30,10 @@ body,
   margin: 0 auto;
 }
 
+.rpg-story-page-wide {
+  width: min(1680px, 100%);
+}
+
 .rpg-story-page > .rpg-ui-panel,
 .rpg-story-page > .rpg-ui-window,
 .rpg-story-page > .rpg-ui-dialog,

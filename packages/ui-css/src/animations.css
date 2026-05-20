@@ -1,138 +1,145 @@
 /* RPG UI Animations */
 
 @keyframes rpg-fade-in {
-    from {
-        opacity: 0;
-    }
+  from {
+    opacity: 0;
+  }
 
-    to {
-        opacity: 1;
-    }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes rpg-slide-up {
-    from {
-        transform: translateY(10px);
-        opacity: 0;
-    }
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+    filter: blur(3px);
+  }
 
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+    filter: blur(0);
+  }
 }
 
-@keyframes rpg-bounce {
+@keyframes rpg-ui-panel-open {
+  from {
+    transform: translateY(14px) scale(0.985);
+    opacity: 0;
+    filter: blur(4px);
+  }
 
-    0%,
-    100% {
-        transform: translateY(0);
-    }
-
-    50% {
-        transform: translateY(-4px);
-    }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+    filter: blur(0);
+  }
 }
 
 @keyframes rpg-pulse {
-    0% {
-        transform: scale(1);
-        box-shadow: 0 0 0 0 rgba(255, 204, 0, 0.7);
-    }
+  0%,
+  100% {
+    box-shadow: var(--rpg-ui-shadow-glow);
+  }
 
-    70% {
-        transform: scale(1.02);
-        box-shadow: 0 0 0 6px rgba(255, 204, 0, 0);
-    }
+  50% {
+    box-shadow: var(--rpg-ui-shadow-glow-strong, var(--rpg-ui-shadow-glow));
+  }
+}
 
-    100% {
-        transform: scale(1);
-        box-shadow: 0 0 0 0 rgba(255, 204, 0, 0);
-    }
+@keyframes rpg-ui-aura-pulse {
+  0%,
+  100% {
+    opacity: 0.38;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.62;
+    transform: scale(1.035);
+  }
 }
 
 @keyframes rpg-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
 
-    0%,
-    100% {
-        transform: translateX(0);
-    }
-
-    25% {
-        transform: translateX(-4px);
-    }
-
-    75% {
-        transform: translateX(4px);
-    }
+  50% {
+    transform: translateX(2px);
+  }
 }
 
 @keyframes rpg-shimmer {
-    0% {
-        background-position: 200% 0;
-    }
+  0% {
+    background-position: 200% 0;
+  }
 
-    100% {
-        background-position: -200% 0;
-    }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 @keyframes rpg-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
 
-    0%,
-    100% {
-        transform: translateY(0);
-    }
-
-    50% {
-        transform: translateY(-6px);
-    }
+  50% {
+    transform: translateY(-3px);
+  }
 }
 
 .rpg-anim-fade-in,
 .rpg-ui-anim-fade-in {
-    animation: rpg-fade-in var(--rpg-ui-motion-duration-slow, 0.4s) ease-out forwards;
+  animation: rpg-fade-in var(--rpg-ui-motion-duration-slow, 0.36s) var(--rpg-ui-motion-ease-out, ease-out) forwards;
 }
 
 .rpg-anim-slide-up,
 .rpg-ui-anim-slide-up {
-    animation: rpg-slide-up var(--rpg-ui-motion-duration-slow, 0.4s) cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  animation: rpg-slide-up var(--rpg-ui-motion-duration-slow, 0.36s) var(--rpg-ui-motion-ease-out, ease-out) forwards;
+}
+
+.rpg-ui-anim-panel-open {
+  animation: rpg-ui-panel-open var(--rpg-ui-motion-duration-slow, 0.36s) var(--rpg-ui-motion-ease-out, ease-out) forwards;
 }
 
 .rpg-anim-bounce,
-.rpg-ui-anim-bounce {
-    animation: rpg-bounce 2s infinite;
+.rpg-ui-anim-bounce,
+.rpg-anim-float,
+.rpg-ui-anim-float {
+  animation: rpg-float 3.6s var(--rpg-ui-motion-ease, ease) infinite;
 }
 
 .rpg-anim-pulse,
 .rpg-ui-anim-pulse {
-    animation: rpg-pulse 2s infinite;
+  animation: rpg-pulse 2.8s var(--rpg-ui-motion-ease, ease) infinite;
 }
 
 .rpg-anim-shake,
 .rpg-ui-anim-shake {
-    animation: rpg-shake 0.3s ease-in-out;
-}
-
-.rpg-anim-float,
-.rpg-ui-anim-float {
-    animation: rpg-float 3s ease-in-out infinite;
+  animation: rpg-shake 0.18s var(--rpg-ui-motion-ease, ease);
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .rpg-anim-fade-in,
-    .rpg-ui-anim-fade-in,
-    .rpg-anim-slide-up,
-    .rpg-ui-anim-slide-up,
-    .rpg-anim-bounce,
-    .rpg-ui-anim-bounce,
-    .rpg-anim-pulse,
-    .rpg-ui-anim-pulse,
-    .rpg-anim-shake,
-    .rpg-ui-anim-shake,
-    .rpg-anim-float,
-    .rpg-ui-anim-float {
-        animation-duration: 1ms;
-        animation-iteration-count: 1;
-    }
+  .rpg-anim-fade-in,
+  .rpg-ui-anim-fade-in,
+  .rpg-anim-slide-up,
+  .rpg-ui-anim-slide-up,
+  .rpg-ui-anim-panel-open,
+  .rpg-anim-bounce,
+  .rpg-ui-anim-bounce,
+  .rpg-anim-pulse,
+  .rpg-ui-anim-pulse,
+  .rpg-anim-shake,
+  .rpg-ui-anim-shake,
+  .rpg-anim-float,
+  .rpg-ui-anim-float {
+    animation-duration: 1ms;
+    animation-iteration-count: 1;
+  }
 }

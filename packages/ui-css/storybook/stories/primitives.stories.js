@@ -6,13 +6,96 @@ export const Panel = () => `
   <main class="rpg-story-page">
     <section class="rpg-story-grid">
       <div class="rpg-ui-panel">
-        <h2 class="rpg-story-panel-title">Panel</h2>
+        <div class="rpg-ui-panel-header">
+          <div class="rpg-ui-panel-header-main">
+            <span class="rpg-ui-panel-kicker">System</span>
+            <h2 class="rpg-ui-panel-heading">Panel</h2>
+          </div>
+        </div>
         <p class="rpg-story-copy">Basic framed surface for compact RPG information.</p>
       </div>
 
       <div class="rpg-ui-window">
-        <div class="rpg-ui-window-title">Window</div>
+        <div class="rpg-ui-window-header">
+          <div class="rpg-ui-window-header-main">
+            <span class="rpg-ui-window-kicker">Inventory</span>
+            <h2 class="rpg-ui-window-heading">Window</h2>
+          </div>
+          <div class="rpg-ui-window-actions">
+            <button class="rpg-ui-btn" data-size="sm">Close</button>
+          </div>
+        </div>
         <p class="rpg-story-copy">A larger framed surface with a title label.</p>
+      </div>
+    </section>
+  </main>
+`
+
+export const MMOComponents = () => `
+  <main class="rpg-story-page">
+    <section class="rpg-ui-window" data-size="wide">
+      <div class="rpg-ui-window-header">
+        <div class="rpg-ui-window-header-main">
+          <span class="rpg-ui-window-kicker">Moon Order</span>
+          <h2 class="rpg-ui-window-heading">Character Menu</h2>
+        </div>
+        <div class="rpg-ui-window-actions">
+          <span class="rpg-ui-currency-display"><span class="rpg-ui-currency-icon">G</span><span class="rpg-ui-currency-label">Gold</span><span class="rpg-ui-currency-value">2 840</span></span>
+          <button class="rpg-ui-btn" data-size="sm">Close</button>
+        </div>
+      </div>
+
+      <div class="rpg-ui-mmo-layout">
+        <nav class="rpg-ui-sidebar">
+          <div class="rpg-ui-sidebar-header">Menu</div>
+          <button class="rpg-ui-sidebar-button" data-selected="true"><span class="rpg-ui-menu-row"><span class="rpg-ui-menu-row-main"><span class="rpg-ui-sidebar-icon">C</span><span class="rpg-ui-menu-row-label">Character</span></span></span></button>
+          <button class="rpg-ui-sidebar-button"><span class="rpg-ui-menu-row"><span class="rpg-ui-menu-row-main"><span class="rpg-ui-sidebar-icon">I</span><span class="rpg-ui-menu-row-label">Inventory</span></span><span class="rpg-ui-sidebar-meta">42</span></span></button>
+          <button class="rpg-ui-sidebar-button"><span class="rpg-ui-menu-row"><span class="rpg-ui-menu-row-main"><span class="rpg-ui-sidebar-icon">Q</span><span class="rpg-ui-menu-row-label">Quests</span></span><span class="rpg-ui-sidebar-meta">3</span></span></button>
+          <button class="rpg-ui-sidebar-button"><span class="rpg-ui-menu-row"><span class="rpg-ui-menu-row-main"><span class="rpg-ui-sidebar-icon">S</span><span class="rpg-ui-menu-row-label">Skills</span></span></span></button>
+        </nav>
+
+        <div class="rpg-ui-mmo-content">
+          <section class="rpg-ui-card-grid">
+            <div class="rpg-ui-card">
+              <div class="rpg-ui-card-header"><h3 class="rpg-ui-card-title">Hero</h3><span class="rpg-ui-card-meta">Lv. 24</span></div>
+              <div class="rpg-ui-avatar-frame">
+                <div class="rpg-ui-avatar-frame-image">A</div>
+                <div class="rpg-ui-avatar-frame-level">24</div>
+              </div>
+            </div>
+            <div class="rpg-ui-stat-block" data-type="positive"><span class="rpg-ui-stat-block-label">Power</span><strong class="rpg-ui-stat-block-value">8 420</strong><span class="rpg-ui-stat-block-meta">+18 from gear</span></div>
+            <div class="rpg-ui-stat-block"><span class="rpg-ui-stat-block-label">Defense</span><strong class="rpg-ui-stat-block-value">1 230</strong><span class="rpg-ui-stat-block-meta">Moon guard stance</span></div>
+            <div class="rpg-ui-stat-block" data-type="warning"><span class="rpg-ui-stat-block-label">Renown</span><strong class="rpg-ui-stat-block-value">A+</strong><span class="rpg-ui-stat-block-meta">Guild eligible</span></div>
+          </section>
+
+          <section class="rpg-ui-card">
+            <div class="rpg-ui-card-header"><h3 class="rpg-ui-card-title">Vitals</h3><span class="rpg-ui-card-meta">Smooth bars</span></div>
+            <div class="rpg-story-resource">
+              <div class="rpg-ui-bar" data-type="health"><span class="rpg-ui-bar-label">HP 1820 / 2400</span><div class="rpg-ui-bar-fill" style="width: 76%"></div></div>
+              <div class="rpg-ui-bar" data-type="mana"><span class="rpg-ui-bar-label">MP 530 / 840</span><div class="rpg-ui-bar-fill" style="width: 63%"></div></div>
+              <div class="rpg-ui-bar" data-type="experience"><span class="rpg-ui-bar-label">EXP 42%</span><div class="rpg-ui-bar-fill" style="width: 42%"></div></div>
+            </div>
+          </section>
+
+          <section class="rpg-ui-card-grid">
+            <div class="rpg-ui-card">
+              <div class="rpg-ui-card-header"><h3 class="rpg-ui-card-title">Inventory</h3><span class="rpg-ui-card-meta">Rarity glow</span></div>
+              <div class="rpg-ui-inventory">
+                <button class="rpg-ui-inventory-slot" data-rarity="rare" data-equipped="true"><span class="rpg-ui-inventory-slot-icon">S</span></button>
+                <button class="rpg-ui-inventory-slot" data-rarity="epic"><span class="rpg-ui-inventory-slot-icon">W</span></button>
+                <button class="rpg-ui-inventory-slot" data-rarity="legendary"><span class="rpg-ui-inventory-slot-icon">R</span></button>
+                <button class="rpg-ui-inventory-slot"><span class="rpg-ui-inventory-slot-icon">P</span><span class="rpg-ui-inventory-slot-quantity">8</span></button>
+              </div>
+            </div>
+            <div class="rpg-ui-card">
+              <div class="rpg-ui-card-header"><h3 class="rpg-ui-card-title">Quest Log</h3><span class="rpg-ui-card-meta">Tracked</span></div>
+              <div class="rpg-ui-quest-list">
+                <article class="rpg-ui-quest-card" data-state="tracked"><div><h4 class="rpg-ui-quest-title">Moon Gate</h4><p class="rpg-ui-quest-desc">Carry the royal crest to the northern shrine.</p></div><div class="rpg-ui-quest-reward"><span class="rpg-ui-quest-tag">XP</span> 4 200</div></article>
+                <article class="rpg-ui-quest-card" data-state="event"><div><h4 class="rpg-ui-quest-title">Starfall Market</h4><p class="rpg-ui-quest-desc">Trade event tokens before dawn.</p></div><div class="rpg-ui-quest-reward"><span class="rpg-ui-quest-tag">Item</span> Charm</div></article>
+              </div>
+            </div>
+          </section>
+        </div>
       </div>
     </section>
   </main>

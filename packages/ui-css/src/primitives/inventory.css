@@ -1,99 +1,147 @@
 .rpg-ui-inventory {
-  --rpg-ui-inventory-slot-size: 48px;
+  --rpg-ui-inventory-slot-size: 56px;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(var(--rpg-ui-inventory-slot-size), 1fr));
-  gap: 8px;
-  padding: 8px;
-  background: rgba(0, 0, 0, 0.3);
+  gap: var(--rpg-ui-spacing-sm);
+  padding: var(--rpg-ui-spacing);
+  border: 1px solid rgba(179, 239, 255, 0.12);
   border-radius: var(--rpg-ui-radius-md);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.035) 0 25%, transparent 25% 50%, rgba(255, 255, 255, 0.018) 50% 75%, transparent 75%) 0 0 / 22px 22px,
+    rgba(0, 0, 0, 0.24);
+  box-shadow: inset 0 0 28px rgba(0, 0, 0, 0.26);
 }
 
 .rpg-ui-inventory-slot {
-  width: var(--rpg-ui-inventory-slot-size);
-  aspect-ratio: 1 / 1;
-  background: var(--rpg-ui-surface);
-  border: 2px solid var(--rpg-ui-border-dark);
-  border-radius: var(--rpg-ui-radius-sm);
+  appearance: none;
   position: relative;
-  cursor: pointer;
   display: flex;
+  width: var(--rpg-ui-inventory-slot-size);
+  max-width: 100%;
+  aspect-ratio: 1 / 1;
   align-items: center;
   justify-content: center;
-  transition: transform var(--rpg-ui-motion-duration-fast) var(--rpg-ui-motion-ease), border-color var(--rpg-ui-motion-duration-fast) var(--rpg-ui-motion-ease), box-shadow var(--rpg-ui-motion-duration-fast) var(--rpg-ui-motion-ease);
-  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  border: 1px solid rgba(179, 239, 255, 0.12);
+  border-radius: var(--rpg-ui-radius-md);
+  background:
+    radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.08), transparent 36%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0)),
+    rgba(7, 11, 18, 0.82);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 0 18px rgba(0, 0, 0, 0.48),
+    0 8px 18px rgba(0, 0, 0, 0.22);
+  color: var(--rpg-ui-text);
+  cursor: pointer;
+  transition:
+    transform var(--rpg-ui-motion-duration-fast) var(--rpg-ui-motion-ease),
+    border-color var(--rpg-ui-motion-duration-fast) var(--rpg-ui-motion-ease),
+    box-shadow var(--rpg-ui-motion-duration-fast) var(--rpg-ui-motion-ease),
+    filter var(--rpg-ui-motion-duration-fast) var(--rpg-ui-motion-ease);
 }
 
-.rpg-ui-inventory-slot:hover {
-  border-color: var(--rpg-ui-border-light);
-  transform: scale(1.05);
+.rpg-ui-inventory-slot::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.045);
+  border-radius: calc(var(--rpg-ui-radius-md) - 4px);
+  pointer-events: none;
+}
+
+.rpg-ui-inventory-slot:hover,
+.rpg-ui-inventory-slot:focus-visible {
   z-index: 1;
+  transform: translateY(-2px) scale(1.04);
+  border-color: rgba(179, 239, 255, 0.42);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 0 18px rgba(91, 231, 255, 0.08),
+    0 14px 26px rgba(0, 0, 0, 0.3),
+    0 0 22px rgba(91, 231, 255, 0.12);
+  outline: none;
 }
 
-.rpg-ui-inventory-slot[data-selected="true"] {
+.rpg-ui-inventory-slot:active {
+  transform: scale(0.98);
+  filter: brightness(0.9);
+}
+
+.rpg-ui-inventory-slot[data-selected="true"],
+.rpg-ui-inventory-slot[aria-selected="true"],
+.rpg-ui-inventory-slot[data-equipped="true"] {
   border-color: var(--rpg-ui-accent);
-  box-shadow: var(--rpg-ui-focus-ring), inset 0 0 10px rgba(255, 204, 0, 0.2);
-  animation: rpg-pulse 2s infinite;
+  box-shadow:
+    0 0 0 1px rgba(91, 231, 255, 0.24),
+    0 0 26px rgba(91, 231, 255, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 0 18px rgba(91, 231, 255, 0.1);
 }
 
 .rpg-ui-inventory-slot-icon {
+  position: relative;
+  z-index: 1;
   font-size: 24px;
-  filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.5));
+  font-weight: var(--rpg-ui-font-weight-bold);
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.72));
 }
 
 .rpg-ui-inventory-slot-quantity {
   position: absolute;
-  bottom: 2px;
-  right: 2px;
+  right: 4px;
+  bottom: 3px;
+  z-index: 1;
+  min-width: 18px;
+  padding: 1px 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--rpg-ui-radius-sm);
+  background: rgba(1, 5, 12, 0.72);
+  color: var(--rpg-ui-text);
   font-size: 10px;
-  color: white;
-  font-weight: bold;
-  text-shadow: 1px 1px 0 #000;
-  background: rgba(0, 0, 0, 0.6);
-  padding: 0 2px;
-  border-radius: 2px;
+  font-weight: var(--rpg-ui-font-weight-bold);
+  line-height: 1.2;
+  text-align: center;
+  text-shadow: var(--rpg-ui-text-shadow);
 }
 
-/* Rarity Borders */
 .rpg-ui-inventory-slot[data-rarity="common"] {
-  border-color: var(--rpg-ui-rarity-common);
+  border-color: color-mix(in srgb, var(--rpg-ui-rarity-common), transparent 34%);
 }
 
 .rpg-ui-inventory-slot[data-rarity="uncommon"] {
-  border-color: var(--rpg-ui-rarity-uncommon);
+  border-color: color-mix(in srgb, var(--rpg-ui-rarity-uncommon), transparent 20%);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--rpg-ui-rarity-uncommon), transparent 82%), inset 0 0 18px rgba(0, 0, 0, 0.42);
 }
 
 .rpg-ui-inventory-slot[data-rarity="rare"] {
-  border-color: var(--rpg-ui-rarity-rare);
+  border-color: color-mix(in srgb, var(--rpg-ui-rarity-rare), transparent 12%);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--rpg-ui-rarity-rare), transparent 76%), inset 0 0 18px rgba(0, 0, 0, 0.42);
 }
 
 .rpg-ui-inventory-slot[data-rarity="epic"] {
-  border-color: var(--rpg-ui-rarity-epic);
+  border-color: color-mix(in srgb, var(--rpg-ui-rarity-epic), transparent 10%);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--rpg-ui-rarity-epic), transparent 72%), inset 0 0 18px rgba(0, 0, 0, 0.42);
 }
 
 .rpg-ui-inventory-slot[data-rarity="legendary"] {
   border-color: var(--rpg-ui-rarity-legendary);
-  box-shadow: 0 0 5px var(--rpg-ui-rarity-legendary);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--rpg-ui-rarity-legendary), transparent 62%), inset 0 0 18px rgba(0, 0, 0, 0.42);
 }
 
-/* Locked/Empty */
 .rpg-ui-inventory-slot[data-locked="true"],
 .rpg-ui-inventory-slot[data-disabled="true"],
 .rpg-ui-inventory-slot[aria-disabled="true"] {
-  background: repeating-linear-gradient(45deg,
-      #1c1917,
-      #1c1917 10px,
-      #292524 10px,
-      #292524 20px);
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.02) 8px, rgba(0, 0, 0, 0.08) 8px, rgba(0, 0, 0, 0.08) 16px),
+    rgba(7, 11, 18, 0.82);
   cursor: not-allowed;
-  opacity: 0.7;
+  opacity: 0.62;
+  pointer-events: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .rpg-ui-inventory-slot {
     transition-duration: 1ms;
-  }
-
-  .rpg-ui-inventory-slot[data-selected="true"] {
-    animation: none;
   }
 }

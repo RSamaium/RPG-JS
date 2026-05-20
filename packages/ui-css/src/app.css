@@ -26,10 +26,15 @@ body.rpg-ui-app {
 
 .rpg-ui-glass-panel,
 .glass-panel {
-  background: var(--rpg-ui-surface-overlay);
+  background:
+    radial-gradient(circle at 18% 0%, rgba(91, 231, 255, 0.1), transparent 38%),
+    var(--rpg-ui-surface-overlay);
   backdrop-filter: var(--rpg-ui-backdrop-blur);
   -webkit-backdrop-filter: var(--rpg-ui-backdrop-blur);
   border: 1px solid var(--rpg-ui-border);
   border-radius: var(--rpg-ui-radius-lg);
-  box-shadow: var(--rpg-ui-shadow-lg);
+  box-shadow:
+    0 0 0 1px var(--rpg-ui-border-dark),
+    var(--rpg-ui-shadow-lg),
+    var(--rpg-ui-shadow-inset);
 }
