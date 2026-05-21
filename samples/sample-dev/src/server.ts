@@ -103,6 +103,11 @@ const BasicPotion = {
   price: 10,
   _type: 'item' as const,
   icon: 'potion',
+  consumable: true,
+  onUse(player: RpgPlayer) {
+    player.hp += 25;
+    player.showNotification('Potion used from hotbar')
+  }
 };
 
 const fireSkill = {
@@ -348,6 +353,50 @@ export default createServer({
               }
           },
           async onInput(player: RpgPlayer, input: any) {
+            if (input.action === 'sample-dev:use-item') {
+              try {
+                player.useItem(input.data?.id)
+                player.syncChanges()
+              }
+              catch (err: any) {
+                player.showNotification(err?.msg ?? 'Unable to use item')
+              }
+              return
+            }
+
+            if (input.action === 'sample-dev:use-skill') {
+              try {
+                player.useSkill(input.data?.id)
+                player.syncChanges()
+                player.showNotification('Skill used from hotbar')
+              }
+              catch (err: any) {
+                player.showNotification(err?.msg ?? 'Unable to use skill')
+              }
+              return
+            }
+
+            if (input.action === 'sample-dev:notify') {
+              player.showNotification(input.data?.message ?? 'Hotbar action received')
+              return
+            }
+
+            if (input.action === 'sample-dev:rain') {
+              const map = player.getCurrentMap()
+              map.setWeather({
+                effect: 'rain',
+                preset: 'steadyRain',
+                params: {
+                  density: 220,
+                  speed: 0.7,
+                  windStrength: 0.25
+                },
+                transitionMs: 900,
+                startedAt: Date.now()
+              })
+              player.showNotification('Rain triggered from hotbar')
+              return
+            }
             // console.log("call shop")
 
 

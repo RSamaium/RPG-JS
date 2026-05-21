@@ -5,6 +5,8 @@ import {
   LightHalo,
   Presets,
   provideClientGlobalConfig,
+  provideHotbar,
+  provideHotbarEntries,
   provideClientModules,
   provideLoadMap,
   RpgClientEngine,
@@ -29,6 +31,21 @@ import TooltipComponent from "../components/tooltip.ce";
 import { withMobile } from "@rpgjs/client";
 import { provideActionBattle } from "@rpgjs/action-battle/client";
 import { HudComponent } from "@rpgjs/client";
+
+const readValue = (value: any) => typeof value === "function" ? value() : value;
+
+const findEntry = (entries: any[] = [], id: string) => {
+  return entries.find((entry) => readValue(entry?.id) === id);
+};
+
+const getItemQuantity = (player: any, id: string) => {
+  const item = findEntry(readValue(player?.items) || [], id);
+  return readValue(item?.quantity) ?? 0;
+};
+
+const hasSkill = (player: any, id: string) => {
+  return Boolean(findEntry(readValue(player?.skills) || [], id));
+};
 
 export default {
   providers: [
@@ -66,6 +83,72 @@ export default {
           mode: "both" // "items" | "skills" | "both"
         }
       }
+    }),
+    provideHotbar({
+      slots: 5,
+      bindings: ["1", "2", "3", "4", "5"],
+      storageKey: "sample-dev",
+      autoDisplay: false,
+      initialRefs: [
+        { type: "item", id: "basic-potion" },
+        { type: "skill", id: "fire-skill" },
+        { type: "action", id: "rain" },
+        { type: "action", id: "notify" },
+        null,
+      ],
+    }),
+    provideHotbarEntries("sample-dev", ({ client }) => {
+      const player = client?.scene.currentPlayer?.();
+      return [
+        {
+          ref: { type: "item", id: "basic-potion" },
+          label: "Potion",
+          description: "Use a Basic Potion from the current inventory.",
+          icon: "potion",
+          quantity: player ? getItemQuantity(player, "basic-potion") : 0,
+          rarity: "rare",
+          disabled: player ? getItemQuantity(player, "basic-potion") <= 0 : true,
+          action: {
+            type: "input",
+            input: "sample-dev:use-item",
+            data: { id: "basic-potion" },
+          },
+        },
+        {
+          ref: { type: "skill", id: "fire-skill" },
+          label: "Fire",
+          description: "Cast the existing Fire Skill learned on player start.",
+          rarity: "epic",
+          disabled: player ? !hasSkill(player, "fire-skill") : true,
+          action: {
+            type: "input",
+            input: "sample-dev:use-skill",
+            data: { id: "fire-skill" },
+          },
+        },
+        {
+          ref: { type: "action", id: "rain" },
+          label: "Rain",
+          description: "Trigger the existing rain weather sample action.",
+          icon: "wood",
+          rarity: "common",
+          action: {
+            type: "input",
+            input: "sample-dev:rain",
+          },
+        },
+        {
+          ref: { type: "action", id: "notify" },
+          label: "Ping",
+          description: "Send a generic hotbar action to the server.",
+          rarity: "legendary",
+          action: {
+            type: "input",
+            input: "sample-dev:notify",
+            data: { message: "Hotbar action received" },
+          },
+        },
+      ];
     }),
     provideClientModules([
       withMobile(),

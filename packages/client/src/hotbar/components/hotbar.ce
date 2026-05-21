@@ -1,0 +1,178 @@
+<DOMContainer width="100%" height="100%" class="rpg-hotbar-root" controls={controls}>
+  <div class={rootClass()} data-position={position()}>
+    <div class="rpg-ui-hotbar rpg-hotbar-panel" style={hotbarStyle()}>
+      <div class="rpg-ui-hotbar-track">
+        @for (slot of slots) {
+          <button
+            class="rpg-ui-hotbar-slot rpg-hotbar-slot"
+            data-selected={slot.index === selectedSlot() ? "true" : "false"}
+            data-disabled={slot.disabled ? "true" : "false"}
+            data-empty={slot.empty ? "true" : "false"}
+            data-missing={slot.missing ? "true" : "false"}
+            data-rarity={slot.entry?.rarity || "common"}
+            title={slot.entry?.description || slot.entry?.label || ""}
+            click={triggerSlot(slot.index)}
+          >
+            <span class="rpg-ui-hotbar-key">{slot.binding}</span>
+            @if (slot.entry?.icon) {
+              <DOMSprite sheet={iconSheet(slot.entry.icon)} width="48px" height="48px" objectFit="contain" />
+            } @else if (slot.entry?.label) {
+              <span class="rpg-ui-hotbar-text">{slot.entry.label}</span>
+            }
+            @if (slot.entry?.quantity !== undefined && slot.entry?.quantity !== null) {
+              <span class="rpg-ui-hotbar-count">{slot.entry.quantity}</span>
+            }
+            @if (slot.entry?.cooldown) {
+              <span class="rpg-hotbar-cooldown" style={{height: cooldownHeight(slot.entry.cooldown)}}></span>
+            }
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+</DOMContainer>
+
+<style scoped>
+  .rpg-hotbar-root {
+    pointer-events: none;
+  }
+
+  .rpg-hotbar-dock {
+    position: absolute;
+    pointer-events: auto;
+    display: flex;
+    z-index: 20;
+  }
+
+  .rpg-hotbar-dock[data-position="bottom"] {
+    left: 50%;
+    bottom: 16px;
+    transform: translateX(-50%);
+    justify-content: center;
+  }
+
+  .rpg-hotbar-dock[data-position="top"] {
+    left: 50%;
+    top: 16px;
+    transform: translateX(-50%);
+    justify-content: center;
+  }
+
+  .rpg-hotbar-dock[data-position="left"] {
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .rpg-hotbar-dock[data-position="right"] {
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .rpg-hotbar-dock[data-position="left"] .rpg-ui-hotbar-track,
+  .rpg-hotbar-dock[data-position="right"] .rpg-ui-hotbar-track {
+    grid-template-columns: 1fr;
+  }
+
+  .rpg-hotbar-dock[data-position="custom"] {
+    inset: auto;
+  }
+
+  .rpg-hotbar-panel {
+    width: min(100vw - 32px, calc((var(--rpg-ui-hotbar-size) * var(--rpg-ui-hotbar-slots)) + (var(--rpg-ui-hotbar-gap) * (var(--rpg-ui-hotbar-slots) - 1)) + 24px));
+  }
+
+  .rpg-hotbar-slot {
+    appearance: none;
+    cursor: pointer;
+  }
+
+  .rpg-hotbar-slot[data-rarity="rare"] {
+    --rpg-ui-hotbar-highlight: var(--rpg-ui-accent, #37d8ff);
+  }
+
+  .rpg-hotbar-slot[data-rarity="epic"] {
+    --rpg-ui-hotbar-highlight: #a78bfa;
+  }
+
+  .rpg-hotbar-slot[data-rarity="legendary"] {
+    --rpg-ui-hotbar-highlight: #f5b642;
+  }
+
+  .rpg-hotbar-slot[data-missing="true"] {
+    border-style: dashed;
+  }
+
+  .rpg-hotbar-cooldown {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.58);
+    pointer-events: none;
+  }
+</style>
+
+<script>
+  import { computed, effect, signal } from "canvasengine";
+  import { HotbarManager } from "../HotbarManager";
+  import { inject } from "../../core/inject";
+
+  const hotbar = inject(HotbarManager);
+  const slots = computed(() => hotbar.data().slots);
+  const selectedSlot = computed(() => hotbar.data().selectedSlot);
+  const position = computed(() => hotbar.data().options.position);
+
+  const rootClass = computed(() => {
+    const customClass = hotbar.data().options.className;
+    return customClass ? `rpg-hotbar-dock ${customClass}` : "rpg-hotbar-dock";
+  });
+
+  const hotbarStyle = computed(() => ({
+    "--rpg-ui-hotbar-slots": String(hotbar.data().options.slots),
+  }));
+
+  const triggerSlot = (index) => () => {
+    hotbar.trigger(index);
+  };
+
+  const cooldownHeight = (cooldown) => `${Math.max(0, Math.min(1, Number(cooldown) || 0)) * 100}%`;
+
+  const iconSheet = (icon) => {
+    if (typeof icon === "string") {
+      return {
+        definition: hotbar.getClient(true)?.getSpriteSheet(icon),
+        playing: "default",
+      };
+    }
+    return {
+      definition: hotbar.getClient(true)?.getSpriteSheet(icon.id),
+      playing: icon.playing || "default",
+    };
+  };
+
+  const buildControls = () => {
+    const controls = {};
+    hotbar.data().slots.forEach((slot) => {
+      if (!slot.binding) return;
+      controls[`hotbar-${slot.index}`] = {
+        bind: slot.binding,
+        keyDown() {
+          hotbar.trigger(slot.index);
+        },
+      };
+    });
+    return {
+      ...controls,
+      gamepad: {
+        enabled: true,
+      },
+    };
+  };
+
+  const controls = signal(buildControls());
+
+  effect(() => {
+    controls.set(buildControls());
+  });
+</script>

@@ -1,0 +1,93 @@
+<DOMContainer width="100%" height="100%" class="rpg-hotbar-assign-root">
+  @if (entry()) {
+    <div class="rpg-hotbar-assign">
+      <div class="rpg-hotbar-assign-panel rpg-ui-window">
+        <div class="rpg-ui-window-header">
+          <div>
+            <div class="rpg-ui-window-title">Shortcut</div>
+            <div class="rpg-ui-window-subtitle">{entry().label}</div>
+          </div>
+          <button class="rpg-ui-button rpg-hotbar-assign-close" click={close}>Close</button>
+        </div>
+        <div class="rpg-ui-hotbar rpg-hotbar-assign-hotbar" style={hotbarStyle()}>
+          <div class="rpg-ui-hotbar-track">
+            @for (slot of slots) {
+              <button
+                class="rpg-ui-hotbar-slot rpg-hotbar-slot"
+                data-selected={isCurrentRef(slot) ? "true" : "false"}
+                data-disabled={slot.disabled ? "true" : "false"}
+                data-empty={slot.empty ? "true" : "false"}
+                data-rarity={slot.entry?.rarity || "common"}
+                click={assignSlot(slot.index)}
+              >
+                <span class="rpg-ui-hotbar-key">{slot.binding}</span>
+                @if (slot.entry?.label) {
+                  <span class="rpg-ui-hotbar-text">{slot.entry.label}</span>
+                }
+                @if (slot.entry?.quantity !== undefined && slot.entry?.quantity !== null) {
+                  <span class="rpg-ui-hotbar-count">{slot.entry.quantity}</span>
+                }
+              </button>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</DOMContainer>
+
+<style scoped>
+  .rpg-hotbar-assign-root {
+    pointer-events: none;
+  }
+
+  .rpg-hotbar-assign {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0 16px 96px;
+    pointer-events: auto;
+  }
+
+  .rpg-hotbar-assign-panel {
+    width: min(760px, 100%);
+  }
+
+  .rpg-hotbar-assign-close {
+    white-space: nowrap;
+  }
+
+  .rpg-hotbar-assign-hotbar {
+    margin-top: 14px;
+  }
+</style>
+
+<script>
+  import { computed } from "canvasengine";
+  import { HotbarManager } from "../HotbarManager";
+  import { inject } from "../../core/inject";
+
+  const hotbar = inject(HotbarManager);
+  const entry = computed(() => hotbar.assignData().entry);
+  const slots = computed(() => hotbar.assignData().slots);
+
+  const hotbarStyle = computed(() => ({
+    "--rpg-ui-hotbar-slots": String(hotbar.assignData().options.slots),
+  }));
+
+  const sameRef = (a, b) => Boolean(a && b && a.type === b.type && a.id === b.id);
+  const isCurrentRef = (slot) => sameRef(slot.ref, entry()?.ref);
+
+  const assignSlot = (index) => () => {
+    const currentEntry = entry();
+    if (!currentEntry) return;
+    hotbar.assign(index, currentEntry.ref);
+    hotbar.closeAssignMenu();
+  };
+
+  const close = () => {
+    hotbar.closeAssignMenu();
+  };
+</script>

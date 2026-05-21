@@ -15,6 +15,7 @@ export * from "./components/animations";
 export * from "./components/prebuilt";
 export * from "./presets";
 export * from "./components";
+export * from "./hotbar";
 export * from "./components/gui";
 export * from "./Sound";
 export * from "./Resource";

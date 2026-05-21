@@ -93,6 +93,7 @@
               "gui/ui-css",
               "gui/title-screen",
               "gui/dialog-box",
+              "gui/hotbar",
               "gui/hud",
               "gui/prebuilt-contracts",
               "guide/gui/attach-gui",

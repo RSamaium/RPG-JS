@@ -1,11 +1,11 @@
-import { RpgClient, RpgClientEngine } from "@rpgjs/client";
+import { HotbarGui, inject, RpgGui, type RpgClient, type RpgClientEngine } from "@rpgjs/client";
 import { defineModule } from "@rpgjs/common";
-import { effect } from "canvasengine";
 
 export default defineModule<RpgClient>({
-  engine: {
-    async onStart(engine: RpgClientEngine<any>) {
-     
+  sceneMap: {
+    async onAfterLoading() {
+      const gui = inject(RpgGui);
+      gui.display(HotbarGui.Hotbar);
     },
   },
 });

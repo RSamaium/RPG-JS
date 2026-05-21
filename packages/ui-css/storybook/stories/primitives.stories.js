@@ -234,11 +234,14 @@ export const Hotbar = () => `
     <section class="rpg-ui-window">
       <div class="rpg-ui-window-title">Hotbar</div>
       <div class="rpg-ui-hotbar">
-        <button class="rpg-ui-hotbar-slot" data-selected="true">1</button>
-        <button class="rpg-ui-hotbar-slot">2</button>
-        <button class="rpg-ui-hotbar-slot">3</button>
-        <button class="rpg-ui-hotbar-slot">4</button>
-        <button class="rpg-ui-hotbar-slot" data-disabled="true">5</button>
+        <div class="rpg-ui-hotbar-track">
+          <button class="rpg-ui-hotbar-slot" data-selected="true" data-rarity="legendary"><span class="rpg-ui-hotbar-key">1</span><span class="rpg-ui-hotbar-text">Slash</span></button>
+          <button class="rpg-ui-hotbar-slot" data-rarity="rare"><span class="rpg-ui-hotbar-key">2</span><span class="rpg-ui-hotbar-text">Potion</span><span class="rpg-ui-hotbar-count">12</span></button>
+          <button class="rpg-ui-hotbar-slot" data-rarity="epic"><span class="rpg-ui-hotbar-key">3</span><span class="rpg-ui-hotbar-text">Blink</span></button>
+          <button class="rpg-ui-hotbar-slot"><span class="rpg-ui-hotbar-key">4</span></button>
+          <button class="rpg-ui-hotbar-slot" data-empty="true"><span class="rpg-ui-hotbar-key">5</span></button>
+          <button class="rpg-ui-hotbar-slot" data-missing="true" data-disabled="true"><span class="rpg-ui-hotbar-key">6</span><span class="rpg-ui-hotbar-text">Missing</span></button>
+        </div>
       </div>
     </section>
   </main>

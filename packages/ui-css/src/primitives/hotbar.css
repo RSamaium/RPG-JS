@@ -63,6 +63,28 @@
     0 0 0 2px color-mix(in srgb, var(--rpg-ui-hotbar-highlight), transparent 60%);
 }
 
+.rpg-ui-hotbar-slot[data-rarity="rare"] {
+  border-color: color-mix(in srgb, var(--rpg-ui-accent), white 8%);
+}
+
+.rpg-ui-hotbar-slot[data-rarity="epic"] {
+  border-color: #9f7aea;
+  box-shadow:
+    inset 0 2px 0 color-mix(in srgb, #fff, transparent 70%),
+    0 0 14px color-mix(in srgb, #9f7aea, transparent 66%);
+}
+
+.rpg-ui-hotbar-slot[data-rarity="legendary"] {
+  border-color: var(--rpg-ui-warning, #f5b642);
+  box-shadow:
+    inset 0 2px 0 color-mix(in srgb, #fff, transparent 66%),
+    0 0 16px color-mix(in srgb, var(--rpg-ui-warning, #f5b642), transparent 62%);
+}
+
+.rpg-ui-hotbar-slot[data-missing="true"] {
+  border-style: dashed;
+}
+
 .rpg-ui-hotbar-slot:focus-visible {
   outline: none;
   box-shadow:
