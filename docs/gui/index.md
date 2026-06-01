@@ -15,6 +15,7 @@ Use GUI when the player interacts with an interface, when the server opens a men
 | --- | --- |
 | Show a start screen before the player enters the game | [Title Screen](/gui/title-screen) |
 | Display conversations or narrative text | [Dialog Box](/gui/dialog-box) |
+| Add map-local MMORPG player chat | [Chat](/gui/chat) |
 | Show persistent game information on screen | [HUD](/gui/hud) |
 | Replace a prebuilt GUI with your own component | [Prebuilt GUI Contracts](/gui/prebuilt-contracts) |
 | Attach an interactive interface to a sprite | [Attach GUI to Sprites](/guide/gui/attach-gui) |

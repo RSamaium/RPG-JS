@@ -1,0 +1,94 @@
+.rpg-chat-root {
+  pointer-events: none;
+}
+
+.rpg-ui-chat {
+  position: fixed;
+  width: min(420px, calc(100vw - 24px));
+  height: min(260px, 42vh);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--rpg-ui-spacing-sm);
+  pointer-events: auto;
+  z-index: 1200;
+}
+
+.rpg-ui-chat[data-position="bottom-left"] {
+  left: 12px;
+  bottom: 12px;
+}
+
+.rpg-ui-chat[data-position="bottom-right"] {
+  right: 12px;
+  bottom: 12px;
+}
+
+.rpg-ui-chat[data-position="top-left"] {
+  left: 12px;
+  top: 12px;
+}
+
+.rpg-ui-chat[data-position="top-right"] {
+  right: 12px;
+  top: 12px;
+}
+
+.rpg-ui-chat-log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 4px;
+}
+
+.rpg-ui-chat-message {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-size: var(--rpg-ui-font-size-sm);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.rpg-ui-chat-author {
+  flex: 0 0 auto;
+  color: var(--rpg-ui-accent);
+  font-weight: 700;
+}
+
+.rpg-ui-chat-author::after {
+  content: ":";
+}
+
+.rpg-ui-chat-text {
+  color: var(--rpg-ui-text);
+}
+
+.rpg-ui-chat-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--rpg-ui-spacing-sm);
+  align-items: center;
+}
+
+.rpg-ui-chat-input {
+  min-width: 0;
+}
+
+.rpg-ui-chat-send {
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  .rpg-ui-chat {
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    top: auto;
+    width: auto;
+    height: min(220px, 38vh);
+  }
+}

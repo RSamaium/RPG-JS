@@ -18,6 +18,7 @@
 @import './primitives/hotbar.css';
 @import './primitives/tooltip.css';
 @import './primitives/toast.css';
+@import './primitives/chat.css';
 @import './primitives/title-screen.css';
 @import './primitives/gameover.css';
 @import './primitives/hud.css';

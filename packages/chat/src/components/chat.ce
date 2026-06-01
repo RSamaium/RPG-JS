@@ -1,0 +1,56 @@
+<DOMContainer width="100%" height="100%" class="rpg-chat-root">
+  <section class="rpg-ui-chat rpg-ui-panel" data-position={position()}>
+    <div class="rpg-ui-chat-log">
+      @for (message of visibleMessages) {
+        <div class="rpg-ui-chat-message" data-player-id={message.playerId}>
+          <span class="rpg-ui-chat-author">{message.author}</span>
+          <span class="rpg-ui-chat-text">{message.text}</span>
+        </div>
+      }
+    </div>
+    <form class="rpg-ui-chat-form" submit={submitMessage}>
+      <input
+        class="rpg-ui-input rpg-ui-chat-input"
+        type="text"
+        maxlength={maxLength()}
+        placeholder={placeholder()}
+        value={draft()}
+        input={onInput}
+      />
+      <button class="rpg-ui-button rpg-ui-chat-send" type="submit" disabled={isEmpty()}>
+        Send
+      </button>
+    </form>
+  </section>
+</DOMContainer>
+
+<script>
+  import { computed, signal } from "canvasengine";
+  import { inject, WebSocketToken } from "@rpgjs/client";
+  import { CHAT_SEND_EVENT } from "../config";
+  import { chatMessages, chatOptions } from "../client-state";
+
+  const { data } = defineProps();
+  const socket = inject(WebSocketToken);
+  const draft = signal("");
+
+  const resolveProp = (value) => typeof value === "function" ? value() : value;
+  const providedData = computed(() => resolveProp(data) || {});
+  const placeholder = computed(() => providedData().placeholder || chatOptions().placeholder);
+  const position = computed(() => providedData().position || chatOptions().position);
+  const maxLength = computed(() => chatOptions().maxLength);
+  const visibleMessages = computed(() => chatMessages());
+  const isEmpty = computed(() => draft().trim().length === 0);
+
+  const onInput = (event) => {
+    draft.set(event.target?.value || "");
+  };
+
+  const submitMessage = (event) => {
+    event.preventDefault();
+    const text = draft().trim();
+    if (!text) return;
+    socket.emit(CHAT_SEND_EVENT, { text });
+    draft.set("");
+  };
+</script>

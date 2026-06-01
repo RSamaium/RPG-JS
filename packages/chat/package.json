@@ -1,0 +1,51 @@
+{
+  "name": "@rpgjs/chat",
+  "version": "5.0.0-beta.0",
+  "main": "dist/client/index.js",
+  "types": "dist/client/index.d.ts",
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "vite build",
+    "test": "vitest --environment jsdom"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/client/index.js",
+      "types": "./dist/client/index.d.ts"
+    },
+    "./client": {
+      "import": "./dist/client/index.js",
+      "types": "./dist/client/index.d.ts"
+    },
+    "./server": {
+      "import": "./dist/server/index.js",
+      "types": "./dist/server/index.d.ts"
+    }
+  },
+  "keywords": [
+    "rpg",
+    "mmorpg",
+    "chat",
+    "rpgjs"
+  ],
+  "author": "",
+  "license": "MIT",
+  "description": "Optional map-local MMORPG chat module for RPGJS",
+  "peerDependencies": {
+    "@rpgjs/client": "workspace:*",
+    "@rpgjs/common": "workspace:*",
+    "@rpgjs/server": "workspace:*",
+    "@rpgjs/vite": "workspace:*",
+    "canvasengine": "^2.0.0-rc.4"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@canvasengine/compiler": "2.0.0-rc.4",
+    "vite": "^8.0.13",
+    "vite-plugin-dts": "^5.0.0",
+    "vitest": "^4.1.6"
+  },
+  "type": "module"
+}

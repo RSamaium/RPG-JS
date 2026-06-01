@@ -77,6 +77,37 @@ importers:
         specifier: ^5.0.0
         version: 5.0.0(@microsoft/api-extractor@7.52.3(@types/node@25.8.0))(esbuild@0.28.0)(rolldown@1.0.1)(typescript@6.0.3)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.28.0)(tsx@4.22.0)(yaml@2.8.3))
 
+  packages/chat:
+    dependencies:
+      '@rpgjs/client':
+        specifier: workspace:*
+        version: link:../client
+      '@rpgjs/common':
+        specifier: workspace:*
+        version: link:../common
+      '@rpgjs/server':
+        specifier: workspace:*
+        version: link:../server
+      '@rpgjs/vite':
+        specifier: workspace:*
+        version: link:../vite
+      canvasengine:
+        specifier: ^2.0.0-rc.4
+        version: 2.0.0-rc.4(@types/react@19.2.14)(pixi.js@8.18.1)(react@19.2.6)
+    devDependencies:
+      '@canvasengine/compiler':
+        specifier: 2.0.0-rc.4
+        version: 2.0.0-rc.4(@types/node@25.8.0)(esbuild@0.28.0)(tsx@4.22.0)(yaml@2.8.3)
+      vite:
+        specifier: ^8.0.13
+        version: 8.0.13(@types/node@25.8.0)(esbuild@0.28.0)(tsx@4.22.0)(yaml@2.8.3)
+      vite-plugin-dts:
+        specifier: ^5.0.0
+        version: 5.0.0(@microsoft/api-extractor@7.52.3(@types/node@25.8.0))(esbuild@0.28.0)(rolldown@1.0.1)(typescript@6.0.3)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.28.0)(tsx@4.22.0)(yaml@2.8.3))
+      vitest:
+        specifier: ^4.1.6
+        version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.28.0)(tsx@4.22.0)(yaml@2.8.3))
+
   packages/client:
     dependencies:
       '@canvasengine/presets':

@@ -95,6 +95,7 @@
               "gui/index",
               "gui/title-screen",
               "gui/dialog-box",
+              "gui/chat",
               "gui/hud",
               "gui/prebuilt-contracts",
               "guide/gui/attach-gui",
