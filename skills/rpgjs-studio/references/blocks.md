@@ -91,6 +91,10 @@ Example variable:
 
 Fields like `itemId` must use an item `_id` from `/api/database/items`.
 
+### Common events
+
+Fields named `commonEventId` must use a common event `_id` from `/api/database/common-events`.
+
 ### Media
 
 Fields like `icon`, `sound`, `music`, `spritesheet`, `animation`, `faceset` must use media `_id`s resolved from `/api/media`.
@@ -207,6 +211,48 @@ Example shape:
 ## Generic payload patterns
 
 These patterns cover many blocks.
+
+### Common event blocks
+
+`call_common_event` executes a common event workflow in the current event context:
+
+```json
+{
+  "id": "block_1711711711716_callcommon",
+  "type": "call_common_event",
+  "level": 0,
+  "data": {
+    "commonEventId": "COMMON_EVENT_ID",
+    "parameters": {},
+    "maxDepth": 10
+  }
+}
+```
+
+`spawn_common_event` creates a visible runtime object on the current map. It is not persistent in v1:
+
+```json
+{
+  "id": "block_1711711711717_spawncommon",
+  "type": "spawn_common_event",
+  "level": 0,
+  "data": {
+    "commonEventId": "COMMON_EVENT_ID",
+    "positionMode": "current_event",
+    "mode": "shared"
+  }
+}
+```
+
+For explicit placement, use:
+
+```json
+{
+  "positionMode": "explicit",
+  "x": 10,
+  "y": 20
+}
+```
 
 ### Numeric modification blocks
 

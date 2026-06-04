@@ -80,6 +80,8 @@ Useful fields from `mapSchema` when a full map update is needed:
 
 `GET /api/game/maps/:mapId` returns event placement data for runtime use. Event media references under `event.params.graphic`, `event.params.faceset`, `event.triggers[].graphic`, and `event.triggers[].faceset` are returned as hydrated media objects when the media exists, including `_id`, `id`, `type`, `fileName`, `metadata`, `width`, and `height`. Runtime code should use the media object metadata directly instead of treating these fields as storage filenames.
 
+When map event blocks reference common events through `call_common_event` or `spawn_common_event`, the runtime response also includes `commonEvents[]`. Each returned common event includes its trigger media and resolved `triggers[].blocks`, so the RPGJS Studio runtime can call or spawn it without a second API lookup.
+
 ## Example: read all maps
 
 ```bash

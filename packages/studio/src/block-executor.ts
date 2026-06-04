@@ -10,7 +10,7 @@ import {
   BlockType,
   BlockParamsMap
 } from '@common/blocks';
-import { Move, RpgEvent, RpgPlayer } from '@rpgjs/server';
+import { EventMode, Move, RpgEvent, RpgPlayer } from '@rpgjs/server';
 
 // ============================================================================
 // Block Execution Service
@@ -219,6 +219,37 @@ export class BlockExecutionService {
         if (targetEvent && typeof targetEvent.callEvent === 'function') {
           await targetEvent.callEvent(eventId, parameters);
         }
+      },
+
+      getCommonEvent: (commonEventId: string): unknown => {
+        const map = event.getCurrentMap?.() ?? (player as any).getCurrentMap?.();
+        return (map as any)?.__studioCommonEventsById?.get?.(commonEventId);
+      },
+
+      spawnCommonEvent: async (
+        commonEventId: string,
+        position: { x: number; y: number },
+        options?: { mode?: 'shared' | 'scenario' }
+      ): Promise<void> => {
+        const map = event.getCurrentMap?.() ?? (player as any).getCurrentMap?.();
+        const commonEvent = (map as any)?.__studioCommonEventsById?.get?.(commonEventId);
+        if (!map?.createDynamicEvent || !commonEvent) return;
+
+        const runtimeId = `${commonEventId}:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`;
+        await map.createDynamicEvent({
+          id: runtimeId,
+          _id: runtimeId,
+          commonEventId,
+          x: position.x,
+          y: position.y,
+          event: {
+            ...commonEvent,
+            id: runtimeId,
+            _id: runtimeId,
+            commonEventId,
+            mode: options?.mode === 'scenario' ? EventMode.Scenario : EventMode.Shared,
+          },
+        });
       },
       
       executeScript: async (code: string): Promise<void> => {

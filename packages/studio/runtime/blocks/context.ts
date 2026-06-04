@@ -45,6 +45,23 @@ export const functionSchemas = {
       displayField: 'name',
       valueField: '_id'
     }
+  },
+
+  /**
+   * Common event selection schema
+   * Allows selecting a reusable common event from the database
+   */
+  commonEvent: {
+    type: 'string',
+    title: 'Common Event',
+    description: 'Select a common event from the database',
+    format: 'select',
+    options: {
+      source: 'database',
+      type: 'commonEvent',
+      displayField: 'name',
+      valueField: '_id'
+    }
   }
 };
 

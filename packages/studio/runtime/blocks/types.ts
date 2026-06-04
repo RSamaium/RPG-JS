@@ -824,10 +824,33 @@ export interface PlaySeParams {
  * Calls another event by ID.
  */
 export interface CallCommonEventParams {
-  /** ID of the event to call */
-  eventId: string;
+  /** ID of the common event to call */
+  commonEventId: string;
   /** Parameters to pass to the event */
   parameters?: Record<string, unknown>;
+  /** Recursion guard for nested common event calls */
+  maxDepth?: number;
+}
+
+export interface CommonEventPositionParams {
+  /** How to resolve the spawn position */
+  positionMode?: 'current_event' | 'player' | 'explicit';
+  /** Explicit X position */
+  x?: number;
+  /** Explicit Y position */
+  y?: number;
+}
+
+/**
+ * Parameters for the spawn_common_event block
+ *
+ * Spawns a visible common event on the current map.
+ */
+export interface SpawnCommonEventParams extends CommonEventPositionParams {
+  /** ID of the common event to spawn */
+  commonEventId: string;
+  /** Runtime event mode */
+  mode?: 'shared' | 'scenario';
 }
 
 /**
@@ -926,6 +949,7 @@ export interface BlockParamsMap {
   
   // System
   call_common_event: CallCommonEventParams;
+  spawn_common_event: SpawnCommonEventParams;
   script: ScriptParams;
   comment: CommentParams;
 }
@@ -1265,6 +1289,19 @@ export interface GameExecutionContext {
   event: ExecutionEvent | any;
   /** Reference to executors for recursive execution */
   executors?: RuntimeBlockExecutorRegistry;
+  /** Resolve a common event database record by id */
+  getCommonEvent?(commonEventId: string): Promise<unknown> | unknown;
+  /** Spawn a common event on the current map */
+  spawnCommonEvent?(
+    commonEventId: string,
+    position: { x: number; y: number },
+    options?: { mode?: 'shared' | 'scenario' }
+  ): Promise<void> | void;
+  /** Current common event recursion state */
+  commonEventExecutionState?: {
+    depth: number;
+    parameters: Record<string, unknown>;
+  };
   
   // Variable/Switch operations
   /** Get a game variable value */

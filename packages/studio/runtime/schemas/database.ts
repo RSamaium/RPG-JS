@@ -1,5 +1,24 @@
 import { FromSchema } from "json-schema-to-ts";
 
+const commonEventPageSchema = {
+    type: "object",
+    properties: {
+        id: { type: "string" },
+        conditions: { type: "object", additionalProperties: true },
+        typeData: { type: "object", additionalProperties: true },
+        graphic: {},
+        faceset: {},
+        direction: { type: "string" },
+        pattern: { type: "string" },
+        movement: { type: "object", additionalProperties: true },
+        trigger: { type: "string" },
+        blockCollectionId: { type: "string" },
+        enabled: { type: "boolean" },
+        options: { type: "object", additionalProperties: true },
+    },
+    additionalProperties: true,
+} as const;
+
 export const databaseSchema = {
     type: "object",
     properties: {
@@ -90,7 +109,7 @@ export const itemSchema = {
                         format: { layout: "specific" },
                     },
                 },
-                required: ["attack"],
+                required: ["atk"],
             },
             else: {
                 if: {
@@ -115,7 +134,7 @@ export const itemSchema = {
                         },
                         
                     },
-                    required: ["defense"],
+                    required: ["pdef"],
                 }
             },
         },
@@ -201,13 +220,49 @@ export const skillSchema = {
         icon: {
             type: "string",
             title: "Icon",
-            description: "The icon identifier for the skill",
-            format: { layout: "basic" },
+            description: "Media icon associated with this skill",
+            format: {
+                name: "media",
+                type: "icon",
+                buttonLabel: "Select Icon",
+                useUpload: {
+                    accept: "image/*",
+                },
+                layout: "basic",
+            } as any,
         },
-        mpCost: {
+        animation: {
+            type: "string",
+            title: "Animation",
+            description: "Media animation played by this skill",
+            format: {
+                name: "media",
+                type: "animation",
+                buttonLabel: "Select Animation",
+                useUpload: {
+                    accept: "image/*",
+                },
+                layout: "basic",
+            } as any,
+        },
+        sound: {
+            type: "string",
+            title: "Sound",
+            description: "Sound effect played by this skill",
+            format: {
+                name: "media",
+                type: "sound",
+                buttonLabel: "Select Sound Effect",
+                useUpload: {
+                    accept: "audio/*",
+                },
+                layout: "basic",
+            } as any,
+        },
+        spCost: {
             type: "number",
-            title: "MP Cost",
-            description: "The MP cost to use this skill",
+            title: "SP Cost",
+            description: "The SP cost to use this skill",
             default: 0,
             format: { layout: "combat" },
         },
@@ -259,7 +314,7 @@ export const skillSchema = {
             format: { layout: "target" },
         },
     },
-    required: ["name", "mpCost", "power"],
+    required: ["name", "spCost", "power"],
 } as any;
 
 export const variableSchema = {
@@ -273,9 +328,68 @@ export const variableSchema = {
         description: {
             type: "string",
             title: "Description",
-            format: {  type: "textarea" },
-        }
+            format: {  name: "textarea" },
+        },
     },
+     required: ["name"]
+} as any;
+
+export const commonEventSchema = {
+    type: "object",
+    properties: {
+        name: {
+            type: "string",
+            title: "Name",
+            format: { layout: "basic" },
+        },
+        description: {
+            type: "string",
+            title: "Description",
+            format: { name: "textarea", layout: "basic" },
+        },
+        pages: {
+            type: "array",
+            title: "Pages",
+            description: "Reusable event pages for this common event",
+            items: commonEventPageSchema,
+        },
+        triggers: {
+            type: "array",
+            title: "Triggers",
+            description: "Runtime event page triggers generated from pages",
+            items: {
+                type: "object",
+                properties: {
+                    type: { type: "string" },
+                    blockCollectionId: { type: "string" },
+                    enabled: { type: "boolean" },
+                    conditions: { type: "object", additionalProperties: true },
+                    typeData: { type: "object", additionalProperties: true },
+                    graphic: {},
+                    faceset: {},
+                    direction: { type: "string" },
+                    pattern: { type: "string" },
+                    movement: { type: "object", additionalProperties: true },
+                    options: { type: "object", additionalProperties: true },
+                },
+                additionalProperties: true,
+            },
+        },
+        parameters: {
+            type: "array",
+            title: "Parameters",
+            description: "Optional key/value parameter definitions available to common event blocks",
+            items: {
+                type: "object",
+                properties: {
+                    key: { type: "string", title: "Key" },
+                    defaultValue: { title: "Default Value" },
+                },
+                required: ["key"],
+            },
+        },
+    },
+    required: ["name"],
 } as any;
 
 export type Database = FromSchema<typeof databaseSchema>;
@@ -287,3 +401,5 @@ export type Skill = FromSchema<typeof skillSchema>;
 export type SkillData = Skill & { _id: string };
 export type Variable = FromSchema<typeof variableSchema>;
 export type VariableData = Variable & { _id: string };
+export type CommonEvent = FromSchema<typeof commonEventSchema>;
+export type CommonEventData = CommonEvent & { _id: string };

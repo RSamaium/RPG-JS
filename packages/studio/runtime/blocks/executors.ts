@@ -44,7 +44,9 @@ import {
   call_shop,
   erase_event,
   play_bgm,
-  play_se
+  play_se,
+  call_common_event,
+  spawn_common_event
 } from './executors/index';
 
 // Import execution functions
@@ -111,6 +113,8 @@ export const defaultExecutors: BlockExecutorRegistry<BlockType> = {
   erase_event,
   play_bgm,
   play_se,
+  call_common_event,
+  spawn_common_event,
 };
 
 // ============================================================================

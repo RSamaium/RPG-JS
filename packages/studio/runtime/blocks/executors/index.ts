@@ -32,6 +32,7 @@ export { call_shop } from './call-shop';
 export { erase_event } from './erase-event';
 export { play_bgm } from './play-bgm';
 export { play_se } from './play-se';
+export { call_common_event, spawn_common_event } from './common-event';
 
 // Export all block schemas
 export { schemaShowText } from './show-text';
@@ -67,6 +68,7 @@ export { schemaCallShop } from './call-shop';
 export { schemaEraseEvent } from './erase-event';
 export { schemaPlayBgm } from './play-bgm';
 export { schemaPlaySe } from './play-se';
+export { schemaCallCommonEvent, schemaSpawnCommonEvent } from './common-event';
 
 // Export utility functions
 export * from './utils';

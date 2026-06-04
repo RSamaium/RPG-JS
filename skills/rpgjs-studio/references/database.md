@@ -7,6 +7,8 @@ Current active types in this repo:
 - `variables`
 - `items`
 - `enemies`
+- `skills`
+- `common-events`
 
 ## Endpoint pattern
 
@@ -17,7 +19,7 @@ Current active types in this repo:
 - Update: `PUT /api/database/:type/:id`
 - Delete: `DELETE /api/database/:type/:id`
 
-`:type` is the database resource path, for example `items`, `enemies`, or `variables`.
+`:type` is the database resource path, for example `items`, `enemies`, `skills`, `variables`, or `common-events`.
 
 ## Headers
 
@@ -36,7 +38,7 @@ curl -sS "$BASE_URL/api/database/:type/:id" \
   -H "Content-Type: application/json"
 ```
 
-Replace `:type` with the collection path (`items`, `enemies`, or `variables`) and `:id` with the record `_id`.
+Replace `:type` with the collection path (`items`, `enemies`, `skills`, `variables`, or `common-events`) and `:id` with the record `_id`.
 
 Before updating, deleting, or explaining the record content, read the current record first and use the returned payload as the source of truth. Do not infer field names or values from the id alone.
 
@@ -185,6 +187,25 @@ Supported fields from `variableSchema`:
 
 - `name: string`
 - `description?: string`
+
+### `POST /api/database/common-events`
+
+Supported fields from `commonEventSchema`:
+
+- `name: string`
+- `description?: string`
+- `triggers?: Array<object>`
+- `pages?: Array<object>`
+- `parameters?: Array<{ key: string, defaultValue?: unknown }>`
+
+Notes:
+
+- The URL segment is `common-events`; the stored database type is `commonEvent`.
+- Common events reuse the same event page trigger model as placed map events.
+- Prefer writing runtime pages to `triggers[]`.
+- Trigger fields include `type`, `blockCollectionId`, `enabled`, `conditions`, `typeData`, `graphic`, `faceset`, `direction`, `pattern`, `movement`, and `options`.
+- `graphic` and `faceset` must be media `_id`s when set.
+- Use common event `_id`s in block params as `commonEventId`.
 
 ## Notes
 

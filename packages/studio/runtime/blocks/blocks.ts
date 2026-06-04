@@ -33,7 +33,9 @@ import {
   schemaCallShop,
   schemaEraseEvent,
   schemaPlayBgm,
-  schemaPlaySe
+  schemaPlaySe,
+  schemaCallCommonEvent,
+  schemaSpawnCommonEvent
 } from './executors/index';
 
 
@@ -230,6 +232,11 @@ export const defaultBlocks = [
     schemaPlayBgm,
   
     schemaPlaySe,
+
+    // System Blocks
+    schemaCallCommonEvent,
+
+    schemaSpawnCommonEvent,
   ] as const;
 
   /**

@@ -364,6 +364,21 @@ const hydrateEventMediaReferences = async (events: any[]): Promise<any[]> => {
   }));
 };
 
+const indexCommonEvents = (commonEvents: unknown): Map<string, any> => {
+  const entries = parseArrayValue(commonEvents);
+  const byId = new Map<string, any>();
+
+  for (const entry of entries) {
+    if (!entry || typeof entry !== "object") continue;
+    const record = entry as Record<string, unknown>;
+    const ids = [record._id, record.id, record.commonEventId]
+      .filter((value): value is string => typeof value === "string" && value.length > 0);
+    ids.forEach((id) => byId.set(id, entry));
+  }
+
+  return byId;
+};
+
 const shouldUseLocalBundleEvents = (config: StudioServerConfig = {}): boolean => {
   const runtimeConfig = getStudioGameRuntimeConfig();
   const runtimeMode = config.runtimeMode ?? runtimeConfig.runtimeMode;
@@ -538,6 +553,7 @@ const normalizeStudioMapPayload = async (
     data: mapDataValue,
     hitboxes: mergedHitboxes,
     events: hydratedEvents,
+    commonEvents: parseArrayValue(mapResponse.commonEvents ?? mapResponse.data?.commonEvents),
     params,
   };
 
@@ -546,6 +562,7 @@ const normalizeStudioMapPayload = async (
     id: normalizedMap.id,
     data: normalizedMap,
     events: hydratedEvents,
+    commonEvents: normalizedMap.commonEvents,
     hitboxes: mergedHitboxes,
     width:
       initialMapData?.width ||
@@ -666,6 +683,14 @@ export default (_config?: unknown) => {
         mapData.events = hydratedEvents;
         if (mapData?.data) {
           mapData.data.events = hydratedEvents;
+        }
+        const commonEvents = parseArrayValue(
+          mapData?.commonEvents ?? mapData?.data?.commonEvents,
+        );
+        (mapExtended as any).__studioCommonEventsById = indexCommonEvents(commonEvents);
+        mapData.commonEvents = commonEvents;
+        if (mapData?.data) {
+          mapData.data.commonEvents = commonEvents;
         }
         mapExtended.startPosition = mapData.data?.start;
         mapExtended.scale = mapData.data?.params?.scale || 1;
