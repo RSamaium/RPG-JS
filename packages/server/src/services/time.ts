@@ -18,26 +18,38 @@ import {
 import type { RpgMap } from "../rooms/map";
 
 type RegisteredMap = RpgMap & Record<string, any>;
+type SyncOptions = {
+  forceLighting?: boolean;
+  sync?: boolean;
+};
 
 export class TimeManager {
   private options = normalizeTimeOptions();
   private snapshot: TimeSnapshot = createTimeSnapshot();
   private maps = new Set<RegisteredMap>();
+  private lightingPhaseByMap = new WeakMap<RegisteredMap, string>();
+  private lightingTimer: ReturnType<typeof setInterval> | undefined;
 
   configure(options: TimeManagerOptions = {}): void {
     this.options = normalizeTimeOptions(options);
     this.snapshot = createTimeSnapshot(options);
+    this.lightingPhaseByMap = new WeakMap();
+    this.refreshLightingTimer();
   }
 
   registerMap(map: RpgMap): void {
     const runtimeMap = map as RegisteredMap;
     this.maps.add(runtimeMap);
     this.ensureMapSignal(runtimeMap);
-    this.syncMap(runtimeMap);
+    this.syncMap(runtimeMap, { forceLighting: true });
+    this.refreshLightingTimer();
   }
 
   unregisterMap(map: RpgMap): void {
-    this.maps.delete(map as RegisteredMap);
+    const runtimeMap = map as RegisteredMap;
+    this.maps.delete(runtimeMap);
+    this.lightingPhaseByMap.delete(runtimeMap);
+    this.refreshLightingTimer();
   }
 
   state(now = Date.now()): TimeState {
@@ -126,13 +138,14 @@ export class TimeManager {
     for (const map of this.maps) {
       this.syncMap(map, options);
     }
+    this.refreshLightingTimer();
   }
 
-  private syncMap(map: RegisteredMap, options: { sync?: boolean } = {}): void {
+  private syncMap(map: RegisteredMap, options: SyncOptions = {}): void {
     this.ensureMapSignal(map);
     const snapshot = this.getSnapshot();
     map[TIME_MANAGER_SYNC_KEY].set(snapshot);
-    this.applyLighting(map);
+    this.applyLighting(map, options.forceLighting);
     if (options.sync !== false && typeof map.$broadcast === "function") {
       map.$broadcast({
         type: "timeState",
@@ -144,38 +157,80 @@ export class TimeManager {
     }
   }
 
-  private applyLighting(map: RegisteredMap): void {
+  private refreshLightingTimer(): void {
+    const lighting = this.options.lighting;
+    const shouldRun = Boolean(lighting && lighting.enabled !== false && this.maps.size > 0 && this.snapshot.scale > 0 && !this.snapshot.paused);
+
+    if (!shouldRun) {
+      if (this.lightingTimer) {
+        clearInterval(this.lightingTimer);
+        this.lightingTimer = undefined;
+      }
+      return;
+    }
+
+    if (!this.lightingTimer) {
+      this.lightingTimer = setInterval(() => this.syncLightingPhases(), 1000);
+      this.lightingTimer.unref?.();
+    }
+  }
+
+  private syncLightingPhases(): void {
+    for (const map of this.maps) {
+      const phaseKey = this.resolveLightingPhase(this.state()).key;
+      if (this.lightingPhaseByMap.get(map) !== phaseKey) {
+        this.syncMap(map);
+      }
+    }
+  }
+
+  private applyLighting(map: RegisteredMap, force = false): void {
     const lighting = this.options.lighting;
     if (!lighting || lighting.enabled === false) {
       return;
     }
 
     const state = this.state();
-    const configuredPhase = this.resolveLightingPhase(state);
-    const nextLighting = configuredPhase?.lighting
-      ?? (state.hour >= 6 && state.hour < 18 ? DEFAULT_DAY_LIGHTING : DEFAULT_NIGHT_LIGHTING);
-    const transitionMs = configuredPhase ? lighting.transitionMs : 0;
+    const phase = this.resolveLightingPhase(state);
+    if (!force && this.lightingPhaseByMap.get(map) === phase.key) {
+      return;
+    }
 
-    if (transitionMs && typeof map.transitionLighting === "function") {
+    const nextLighting = phase.config?.lighting
+      ?? (state.hour >= 6 && state.hour < 18 ? DEFAULT_DAY_LIGHTING : DEFAULT_NIGHT_LIGHTING);
+    const transitionMs = phase.config ? lighting.transitionMs : 0;
+    const canBroadcast = typeof map.$broadcast === "function";
+
+    if (transitionMs && canBroadcast && typeof map.transitionLighting === "function") {
       map.transitionLighting(nextLighting, { duration: transitionMs });
+      this.lightingPhaseByMap.set(map, phase.key);
       return;
     }
 
     if (typeof map.setLighting === "function") {
-      map.setLighting(nextLighting);
+      map.setLighting(nextLighting, canBroadcast ? undefined : { sync: false });
+      this.lightingPhaseByMap.set(map, phase.key);
     }
   }
 
   private resolveLightingPhase(state: TimeState) {
     const phases = this.options.lighting ? this.options.lighting.phases : undefined;
     if (!phases) {
-      return undefined;
+      return {
+        key: state.hour >= 6 && state.hour < 18 ? "default:day" : "default:night",
+        config: undefined,
+      };
     }
 
     const currentMinutes = state.hour * 60 + state.minute;
-    return Object.values(phases)
-      .filter((phase) => (phase.hour * 60 + (phase.minute ?? 0)) <= currentMinutes)
-      .sort((a, b) => (b.hour * 60 + (b.minute ?? 0)) - (a.hour * 60 + (a.minute ?? 0)))[0]
-      ?? Object.values(phases).sort((a, b) => (b.hour * 60 + (b.minute ?? 0)) - (a.hour * 60 + (a.minute ?? 0)))[0];
+    const sorted = Object.entries(phases)
+      .sort(([, a], [, b]) => (b.hour * 60 + (b.minute ?? 0)) - (a.hour * 60 + (a.minute ?? 0)));
+    const resolved = sorted.find(([, phase]) => (phase.hour * 60 + (phase.minute ?? 0)) <= currentMinutes)
+      ?? sorted[0];
+
+    return {
+      key: resolved ? resolved[0] : "default",
+      config: resolved ? resolved[1] : undefined,
+    };
   }
 }

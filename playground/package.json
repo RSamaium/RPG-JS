@@ -20,6 +20,8 @@
     "build:pressure-plate": "pnpm --dir games/pressure-plate build",
     "dev:studio": "pnpm --dir games/studio dev",
     "build:studio": "pnpm --dir games/studio build",
+    "dev:time-manager": "pnpm --dir games/time-manager dev",
+    "build:time-manager": "pnpm --dir games/time-manager build",
     "dev:tiled": "pnpm --dir games/tiled dev",
     "build:tiled": "pnpm --dir games/tiled build",
     "dev:v4-compat": "pnpm --dir games/v4-compat dev",

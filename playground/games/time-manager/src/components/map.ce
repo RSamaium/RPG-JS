@@ -1,0 +1,35 @@
+<Container>
+  <Rect width={720} height={480} color="#eef5f3" />
+  <Rect x={32} y={32} width={656} height={416} color="#fbfefc" />
+  <Rect x={32} y={32} width={656} height={2} color="#9fb1aa" />
+  <Rect x={32} y={446} width={656} height={2} color="#9fb1aa" />
+  <Rect x={32} y={32} width={2} height={416} color="#9fb1aa" />
+  <Rect x={686} y={32} width={2} height={416} color="#9fb1aa" />
+
+  @for (line of gridLines) {
+    <Rect x={line.x} y={32} width={1} height={416} color="#d7e4df" alpha={0.72} />
+    <Rect x={32} y={line.y} width={656} height={1} color="#d7e4df" alpha={0.72} />
+  }
+
+  <Rect x={456} y={302} width={134} height={82} color="#c7e7ed" />
+  <Rect x={466} y={312} width={114} height={62} color="#8bd3e6" alpha={0.76} />
+  <Text x={474} y={334} text="pond hitbox" color="#24606e" size={12} fontFamily="Arial" />
+
+  <Text x={44} y={118} text="Time Manager Demo" color="#17202a" size={18} fontFamily="Arial" />
+  <Text x={44} y={146} text="The HUD reads ClientTimeManager." color="#475569" size={12} fontFamily="Arial" />
+  <Text x={44} y={166} text="Walk to the pedestal and press Space." color="#475569" size={12} fontFamily="Arial" />
+  <Text x={44} y={186} text="Server changes weather and advances time." color="#475569" size={12} fontFamily="Arial" />
+
+  <EventLayerComponent />
+  <TimeHud />
+</Container>
+
+<script>
+  import { EventLayerComponent } from "@rpgjs/client";
+  import TimeHud from "./time-hud.ce";
+
+  const gridLines = Array.from({ length: 19 }, (_, index) => ({
+    x: 64 + index * 32,
+    y: 64 + index * 32,
+  }));
+</script>

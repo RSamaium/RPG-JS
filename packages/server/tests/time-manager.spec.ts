@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 import { defineModule, TIME_MANAGER_SYNC_KEY, withTimeManager } from "@rpgjs/common";
 import { testing } from "@rpgjs/testing";
 import { inject as diInject } from "@signe/di";
@@ -113,4 +113,106 @@ test("withTimeManager syncs map time snapshots and lets the client infer current
   expect(clientTime.state()).toMatchObject({
     scale: 30,
   });
+});
+
+test("time manager applies initial lighting without broadcasting before map runtime is ready", () => {
+  const timeManager = new TimeManager();
+  timeManager.configure({
+    start: "0001-01-01 07:00",
+    lighting: {
+      enabled: true,
+      transitionMs: 900,
+      phases: {
+        dawn: {
+          hour: 6,
+          lighting: {
+            ambient: { darkness: 0.2 },
+            sun: { intensity: 0.6 },
+          },
+        },
+      },
+    },
+  });
+
+  const setLighting = vi.fn();
+  const transitionLighting = vi.fn();
+  const map = {
+    setSync(definitions: Record<string, { $initial: unknown }>) {
+      for (const [key, definition] of Object.entries(definitions)) {
+        let value = definition.$initial;
+        const signal = (() => value) as (() => unknown) & { set: (next: unknown) => void };
+        signal.set = (next: unknown) => {
+          value = next;
+        };
+        (this as any)[key] = signal;
+      }
+    },
+    setLighting,
+    transitionLighting,
+  };
+
+  expect(() => timeManager.registerMap(map as any)).not.toThrow();
+  expect(transitionLighting).not.toHaveBeenCalled();
+  expect(setLighting).toHaveBeenCalledWith(expect.any(Object), { sync: false });
+});
+
+test("time manager refreshes lighting when projected time crosses a phase", () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+
+  try {
+    const timeManager = new TimeManager();
+    timeManager.configure({
+      start: "0001-01-01 07:59",
+      scale: 60,
+      lighting: {
+        enabled: true,
+        phases: {
+          dawn: {
+            hour: 6,
+            lighting: {
+              ambient: { darkness: 0.2 },
+            },
+          },
+          day: {
+            hour: 8,
+            lighting: {
+              ambient: { darkness: 0 },
+            },
+          },
+        },
+      },
+    });
+
+    const setLighting = vi.fn();
+    const map = {
+      $broadcast: vi.fn(),
+      applySyncToClient: vi.fn(),
+      $applySync: vi.fn(),
+      setSync(definitions: Record<string, { $initial: unknown }>) {
+        for (const [key, definition] of Object.entries(definitions)) {
+          let value = definition.$initial;
+          const signal = (() => value) as (() => unknown) & { set: (next: unknown) => void };
+          signal.set = (next: unknown) => {
+            value = next;
+          };
+          (this as any)[key] = signal;
+        }
+      },
+      setLighting,
+    };
+
+    timeManager.registerMap(map as any);
+    expect(setLighting).toHaveBeenLastCalledWith(expect.objectContaining({
+      ambient: expect.objectContaining({ darkness: 0.2 }),
+    }), undefined);
+
+    vi.advanceTimersByTime(1000);
+
+    expect(setLighting).toHaveBeenLastCalledWith(expect.objectContaining({
+      ambient: expect.objectContaining({ darkness: 0 }),
+    }), undefined);
+  } finally {
+    vi.useRealTimers();
+  }
 });
