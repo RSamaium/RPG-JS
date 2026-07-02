@@ -1,10 +1,11 @@
-import { findModules, provideModules, registerI18nMessages } from "@rpgjs/common";
-import { FactoryProvider } from "@signe/di";
+import { TIME_MANAGER_MODULE_KEY, TIME_MANAGER_SYNC_KEY, findModules, provideModules, registerI18nMessages } from "@rpgjs/common";
+import { FactoryProvider, inject as diInject, isProvided, provide as diProvide } from "@signe/di";
 import { RpgClientEngine } from "./RpgClientEngine";
 import { RpgClient } from "./RpgClient";
 import { inject } from "@signe/di";
 import { RpgGui } from "./Gui/Gui";
 import { getSoundMetadata } from "./Sound";
+import { ClientTimeManager } from "./services/time";
 
 /**
  * Type for client modules that can be either:
@@ -66,6 +67,47 @@ export function provideClientModules(modules: RpgClientModule[]): FactoryProvide
       }
       if ('client' in module) {
         module = module.client as any;
+      }
+      if (module[TIME_MANAGER_MODULE_KEY]) {
+        const options = module[TIME_MANAGER_MODULE_KEY];
+        const timeManager = isProvided(context, ClientTimeManager)
+          ? diInject<ClientTimeManager>(context, ClientTimeManager)
+          : diProvide(context, ClientTimeManager, new ClientTimeManager());
+        timeManager.configure(options);
+        const engineHooks = module.engine ?? {};
+        const sceneMapHooks = module.sceneMap ?? {};
+        module = {
+          ...module,
+          [TIME_MANAGER_MODULE_KEY]: undefined,
+          engine: {
+            ...engineHooks,
+            onStart: (engine: RpgClientEngine) => {
+              engine.socket.on("timeState", (data: any) => {
+                const raw = data && typeof data === "object" && "value" in data
+                  ? data.value
+                  : data;
+                timeManager.acceptSnapshot(raw ?? null);
+              });
+              return engineHooks.onStart?.(engine);
+            },
+          },
+          sceneMap: {
+            ...sceneMapHooks,
+            onChanges: (sceneMap: any, payload: { partial?: any }) => {
+              const partial = payload?.partial;
+              if (partial && Object.prototype.hasOwnProperty.call(partial, TIME_MANAGER_SYNC_KEY)) {
+                timeManager.acceptSnapshot(partial[TIME_MANAGER_SYNC_KEY]);
+              } else if (partial) {
+                const patch = extractTimeSnapshotPatch(partial);
+                if (patch) {
+                  timeManager.patchSnapshot(patch);
+                }
+              }
+              return sceneMapHooks.onChanges?.(sceneMap, payload);
+            },
+          },
+        };
+        delete module[TIME_MANAGER_MODULE_KEY];
       }
       if (module.i18n) {
         registerI18nMessages(context, module.i18n, "client-module", 10);
@@ -253,6 +295,35 @@ export function provideClientModules(modules: RpgClientModule[]): FactoryProvide
     });
     return modules
   });
+}
+
+function extractTimeSnapshotPatch(partial: Record<string, any>) {
+  const prefix = `${TIME_MANAGER_SYNC_KEY}.`;
+  let found = false;
+  const patch: Record<string, any> = {};
+
+  for (const [key, value] of Object.entries(partial)) {
+    if (!key.startsWith(prefix)) {
+      continue;
+    }
+    found = true;
+    assignPath(patch, key.slice(prefix.length).split("."), value);
+  }
+
+  return found ? patch : null;
+}
+
+function assignPath(target: Record<string, any>, parts: string[], value: any): void {
+  let current = target;
+  for (let index = 0; index < parts.length; index += 1) {
+    const part = parts[index];
+    if (index === parts.length - 1) {
+      current[part] = value;
+      return;
+    }
+    current[part] = current[part] ?? {};
+    current = current[part];
+  }
 }
 
 export const GlobalConfigToken = "GlobalConfigToken";

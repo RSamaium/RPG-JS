@@ -55,6 +55,7 @@
               "guide/client-visuals",
               "guide/spritesheets",
               "guide/lighting",
+              "guide/time-manager",
               "guide/weather"
             ]
           },

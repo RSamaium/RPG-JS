@@ -11,6 +11,7 @@ export * from "./presets";
 export * from "@signe/reactive";
 export * from "./Gui";
 export * from "./services/save";
+export * from "./services/time";
 export * from "./storage";
 export * from "./projectiles";
 export * from "./i18n";
