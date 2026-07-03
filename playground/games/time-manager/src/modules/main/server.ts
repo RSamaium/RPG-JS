@@ -12,51 +12,6 @@ import {
 const MAP_WIDTH = 720;
 const MAP_HEIGHT = 480;
 
-const weatherCycle = [
-  {
-    label: "Clear",
-    weather: null,
-  },
-  {
-    label: "Cloud",
-    weather: {
-      effect: "cloud" as const,
-      preset: "slowClouds",
-      params: {
-        density: 0.65,
-        speed: 0.2,
-        alpha: 0.45,
-      },
-    },
-  },
-  {
-    label: "Rain",
-    weather: {
-      effect: "rain" as const,
-      preset: "demoRain",
-      params: {
-        density: 180,
-        speed: 0.85,
-        windStrength: 0.2,
-      },
-      transitionMs: 700,
-    },
-  },
-  {
-    label: "Fog",
-    weather: {
-      effect: "fog" as const,
-      preset: "demoFog",
-      params: {
-        density: 0.85,
-        alpha: 0.55,
-        height: 0.7,
-      },
-      transitionMs: 700,
-    },
-  },
-];
-
 function WeatherPedestal(): EventDefinition {
   return {
     name: "Weather Pedestal",
@@ -85,25 +40,8 @@ function WeatherPedestal(): EventDefinition {
       ]);
     },
     async onAction(player: RpgPlayer) {
-      const map = this.getCurrentMap();
-      if (!map) return;
-
-      const currentIndex = map.getVariable<number>("timeDemo.weatherIndex") ?? 0;
-      const nextIndex = (currentIndex + 1) % weatherCycle.length;
-      const next = weatherCycle[nextIndex];
-
-      map.setVariable("timeDemo.weatherIndex", nextIndex);
-      if (next.weather) {
-        map.setWeather({
-          ...next.weather,
-          startedAt: Date.now(),
-        });
-      } else {
-        map.clearWeather();
-      }
-
       inject(TimeManager).advance({ hours: 2 });
-      await player.showText(`Weather changed to ${next.label}. Time advanced by 2 hours.`);
+      await player.showText("Time advanced by 2 hours. The weather manager can roll a new ambience.");
     },
   };
 }

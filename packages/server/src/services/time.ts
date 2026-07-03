@@ -7,6 +7,8 @@ import {
   normalizeScale,
   normalizeTimeOptions,
   projectTimeState,
+  resolveTimeWeatherDuration,
+  resolveTimeWeatherWeight,
   timeDurationToMinutes,
   timeInputToElapsedMinutes,
   type TimeDuration,
@@ -14,13 +16,25 @@ import {
   type TimeManagerOptions,
   type TimeSnapshot,
   type TimeState,
+  type TimeWeatherAmbience,
+  type TimeWeatherTable,
 } from "@rpgjs/common";
 import type { RpgMap } from "../rooms/map";
 
 type RegisteredMap = RpgMap & Record<string, any>;
 type SyncOptions = {
   forceLighting?: boolean;
+  forceWeather?: boolean;
   sync?: boolean;
+};
+type WeatherRuntimeState = {
+  ambienceKey: string;
+  expiresAtElapsedMinutes: number;
+};
+type WeatherRollCandidate = {
+  key: string;
+  ambience: TimeWeatherAmbience;
+  weight: number;
 };
 
 export class TimeManager {
@@ -28,28 +42,32 @@ export class TimeManager {
   private snapshot: TimeSnapshot = createTimeSnapshot();
   private maps = new Set<RegisteredMap>();
   private lightingPhaseByMap = new WeakMap<RegisteredMap, string>();
-  private lightingTimer: ReturnType<typeof setInterval> | undefined;
+  private weatherStateByMap = new WeakMap<RegisteredMap, WeatherRuntimeState>();
+  private environmentTimer: ReturnType<typeof setInterval> | undefined;
 
   configure(options: TimeManagerOptions = {}): void {
     this.options = normalizeTimeOptions(options);
     this.snapshot = createTimeSnapshot(options);
     this.lightingPhaseByMap = new WeakMap();
-    this.refreshLightingTimer();
+    this.weatherStateByMap = new WeakMap();
+    this.refreshEnvironmentTimer();
   }
 
   registerMap(map: RpgMap): void {
     const runtimeMap = map as RegisteredMap;
+    const isFirstRegistration = !this.maps.has(runtimeMap);
     this.maps.add(runtimeMap);
     this.ensureMapSignal(runtimeMap);
-    this.syncMap(runtimeMap, { forceLighting: true });
-    this.refreshLightingTimer();
+    this.syncMap(runtimeMap, { forceLighting: isFirstRegistration, forceWeather: isFirstRegistration });
+    this.refreshEnvironmentTimer();
   }
 
   unregisterMap(map: RpgMap): void {
     const runtimeMap = map as RegisteredMap;
     this.maps.delete(runtimeMap);
     this.lightingPhaseByMap.delete(runtimeMap);
-    this.refreshLightingTimer();
+    this.weatherStateByMap.delete(runtimeMap);
+    this.refreshEnvironmentTimer();
   }
 
   state(now = Date.now()): TimeState {
@@ -138,7 +156,7 @@ export class TimeManager {
     for (const map of this.maps) {
       this.syncMap(map, options);
     }
-    this.refreshLightingTimer();
+    this.refreshEnvironmentTimer();
   }
 
   private syncMap(map: RegisteredMap, options: SyncOptions = {}): void {
@@ -146,6 +164,7 @@ export class TimeManager {
     const snapshot = this.getSnapshot();
     map[TIME_MANAGER_SYNC_KEY].set(snapshot);
     this.applyLighting(map, options.forceLighting);
+    this.applyWeather(map, options.forceWeather);
     if (options.sync !== false && typeof map.$broadcast === "function") {
       map.$broadcast({
         type: "timeState",
@@ -157,28 +176,44 @@ export class TimeManager {
     }
   }
 
-  private refreshLightingTimer(): void {
+  private refreshEnvironmentTimer(): void {
     const lighting = this.options.lighting;
-    const shouldRun = Boolean(lighting && lighting.enabled !== false && this.maps.size > 0 && this.snapshot.scale > 0 && !this.snapshot.paused);
+    const weather = this.options.weather;
+    const shouldRun = Boolean(
+      this.maps.size > 0
+      && this.snapshot.scale > 0
+      && !this.snapshot.paused
+      && (
+        Boolean(lighting && lighting.enabled !== false)
+        || Boolean(weather && weather.enabled !== false)
+      )
+    );
 
     if (!shouldRun) {
-      if (this.lightingTimer) {
-        clearInterval(this.lightingTimer);
-        this.lightingTimer = undefined;
+      if (this.environmentTimer) {
+        clearInterval(this.environmentTimer);
+        this.environmentTimer = undefined;
       }
       return;
     }
 
-    if (!this.lightingTimer) {
-      this.lightingTimer = setInterval(() => this.syncLightingPhases(), 1000);
-      this.lightingTimer.unref?.();
+    if (!this.environmentTimer) {
+      this.environmentTimer = setInterval(() => this.syncEnvironment(), 1000);
+      this.environmentTimer.unref?.();
     }
   }
 
-  private syncLightingPhases(): void {
+  private syncEnvironment(): void {
+    const lighting = this.options.lighting;
+    const shouldSyncLighting = Boolean(lighting && lighting.enabled !== false);
     for (const map of this.maps) {
-      const phaseKey = this.resolveLightingPhase(this.state()).key;
-      if (this.lightingPhaseByMap.get(map) !== phaseKey) {
+      const phaseKey = shouldSyncLighting ? this.resolveLightingPhase(this.state()).key : undefined;
+      if (phaseKey && this.lightingPhaseByMap.get(map) !== phaseKey) {
+        this.syncMap(map);
+        continue;
+      }
+
+      if (this.shouldRollWeather(map)) {
         this.syncMap(map);
       }
     }
@@ -211,6 +246,94 @@ export class TimeManager {
       map.setLighting(nextLighting, canBroadcast ? undefined : { sync: false });
       this.lightingPhaseByMap.set(map, phase.key);
     }
+  }
+
+  private shouldRollWeather(map: RegisteredMap): boolean {
+    if (!this.resolveWeatherTable(map)) {
+      return false;
+    }
+    const weatherState = this.weatherStateByMap.get(map);
+    return !weatherState || this.state().elapsedMinutes >= weatherState.expiresAtElapsedMinutes;
+  }
+
+  private applyWeather(map: RegisteredMap, force = false): void {
+    const table = this.resolveWeatherTable(map);
+    if (!table) {
+      return;
+    }
+
+    const currentState = this.weatherStateByMap.get(map);
+    const elapsedMinutes = this.state().elapsedMinutes;
+    if (!force && currentState && elapsedMinutes < currentState.expiresAtElapsedMinutes) {
+      return;
+    }
+
+    const next = this.rollWeather(map, table);
+    if (!next) {
+      return;
+    }
+
+    const durationMinutes = resolveTimeWeatherDuration(next.ambience.duration, this.randomFor(map, `${next.key}:duration:${Math.floor(elapsedMinutes)}`));
+    const expiresAtElapsedMinutes = elapsedMinutes + Math.max(1, durationMinutes);
+    const canBroadcast = typeof map.$broadcast === "function";
+    const options = canBroadcast ? undefined : { sync: false };
+
+    if (next.ambience.weather) {
+      map.setWeather?.({
+        ...next.ambience.weather,
+        params: next.ambience.weather.params ? { ...next.ambience.weather.params } : undefined,
+        startedAt: Date.now(),
+      }, options);
+    } else {
+      map.clearWeather?.(options);
+    }
+
+    this.weatherStateByMap.set(map, {
+      ambienceKey: next.key,
+      expiresAtElapsedMinutes,
+    });
+  }
+
+  private resolveWeatherTable(map: RegisteredMap): TimeWeatherTable | undefined {
+    const weather = this.options.weather;
+    if (!weather || weather.enabled === false) {
+      return undefined;
+    }
+    return weather.maps?.[map.id] ?? weather.default;
+  }
+
+  private rollWeather(map: RegisteredMap, table: TimeWeatherTable): WeatherRollCandidate | undefined {
+    const state = this.state();
+    const candidates = Object.entries(table.ambiences)
+      .map(([key, ambience]) => ({
+        key,
+        ambience,
+        weight: resolveTimeWeatherWeight(ambience.weight, state),
+      }))
+      .filter((candidate) => candidate.weight > 0);
+    const total = candidates.reduce((sum, candidate) => sum + candidate.weight, 0);
+    if (total <= 0) {
+      return undefined;
+    }
+
+    let cursor = this.randomFor(map, `weather:${state.year}:${state.month}:${state.day}:${Math.floor(state.elapsedMinutes)}`) * total;
+    for (const candidate of candidates) {
+      cursor -= candidate.weight;
+      if (cursor <= 0) {
+        return candidate;
+      }
+    }
+    return candidates[candidates.length - 1];
+  }
+
+  private randomFor(map: RegisteredMap, salt: string): number {
+    let hash = 2166136261;
+    const input = `${map.id}:${salt}`;
+    for (let index = 0; index < input.length; index += 1) {
+      hash ^= input.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    return (hash >>> 0) / 4294967296;
   }
 
   private resolveLightingPhase(state: TimeState) {

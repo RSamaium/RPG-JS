@@ -26,9 +26,29 @@ const serverModule = defineModule<RpgServer>({
 const clientModule = defineModule<RpgClient>({});
 
 let fixture: any;
+const createRuntimeMap = (id: string) => ({
+  id,
+  $broadcast: vi.fn(),
+  applySyncToClient: vi.fn(),
+  $applySync: vi.fn(),
+  setWeather: vi.fn(),
+  clearWeather: vi.fn(),
+  setLighting: vi.fn(),
+  setSync(definitions: Record<string, { $initial: unknown }>) {
+    for (const [key, definition] of Object.entries(definitions)) {
+      let value = definition.$initial;
+      const signal = (() => value) as (() => unknown) & { set: (next: unknown) => void };
+      signal.set = (next: unknown) => {
+        value = next;
+      };
+      (this as any)[key] = signal;
+    }
+  },
+});
 
 afterEach(() => {
   fixture?.clear();
+  vi.useRealTimers();
 });
 
 test("withTimeManager syncs map time snapshots and lets the client infer current time", async () => {
@@ -215,4 +235,148 @@ test("time manager refreshes lighting when projected time crosses a phase", () =
   } finally {
     vi.useRealTimers();
   }
+});
+
+test("time manager applies weather ambiences with month weights", () => {
+  const timeManager = new TimeManager();
+  timeManager.configure({
+    start: "0001-01-01 08:00",
+    weather: {
+      enabled: true,
+      default: {
+        ambiences: {
+          clear: {
+            weather: null,
+            weight: { default: 0 },
+            duration: { hours: 1 },
+          },
+          rain: {
+            weather: {
+              effect: "rain",
+              params: { density: 180 },
+            },
+            weight: { default: 0, months: { 1: 100 } },
+            duration: { hours: 1 },
+          },
+        },
+      },
+    },
+  });
+  const map = createRuntimeMap("map1");
+
+  timeManager.registerMap(map as any);
+
+  expect(map.setWeather).toHaveBeenCalledWith(expect.objectContaining({
+    effect: "rain",
+    params: { density: 180 },
+    startedAt: expect.any(Number),
+  }), undefined);
+  expect(map.clearWeather).not.toHaveBeenCalled();
+});
+
+test("time manager prefers map weather table over the default table", () => {
+  const timeManager = new TimeManager();
+  timeManager.configure({
+    start: "0001-01-01 08:00",
+    weather: {
+      enabled: true,
+      default: {
+        ambiences: {
+          rain: {
+            weather: { effect: "rain" },
+            weight: 100,
+            duration: { hours: 1 },
+          },
+        },
+      },
+      maps: {
+        map2: {
+          ambiences: {
+            fog: {
+              weather: { effect: "fog" },
+              weight: 100,
+              duration: { hours: 1 },
+            },
+          },
+        },
+      },
+    },
+  });
+  const map1 = createRuntimeMap("map1");
+  const map2 = createRuntimeMap("map2");
+
+  timeManager.registerMap(map1 as any);
+  timeManager.registerMap(map2 as any);
+
+  expect(map1.setWeather).toHaveBeenCalledWith(expect.objectContaining({ effect: "rain" }), undefined);
+  expect(map2.setWeather).toHaveBeenCalledWith(expect.objectContaining({ effect: "fog" }), undefined);
+});
+
+test("time manager can roll a clear weather ambience", () => {
+  const timeManager = new TimeManager();
+  timeManager.configure({
+    start: "0001-01-01 08:00",
+    weather: {
+      enabled: true,
+      default: {
+        ambiences: {
+          clear: {
+            weather: null,
+            weight: 100,
+            duration: { hours: 2 },
+          },
+        },
+      },
+    },
+  });
+  const map = createRuntimeMap("map1");
+
+  timeManager.registerMap(map as any);
+
+  expect(map.clearWeather).toHaveBeenCalledWith(undefined);
+  expect(map.setWeather).not.toHaveBeenCalled();
+});
+
+test("time manager refreshes weather when ambience duration expires", () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+
+  const timeManager = new TimeManager();
+  timeManager.configure({
+    start: "0001-01-01 08:00",
+    scale: 60,
+    weather: {
+      enabled: true,
+      default: {
+        ambiences: {
+          cloud: {
+            weather: { effect: "cloud" },
+            weight: 100,
+            duration: { minutes: 1 },
+          },
+        },
+      },
+    },
+  });
+  const map = createRuntimeMap("map1");
+
+  timeManager.registerMap(map as any);
+  expect(map.setWeather).toHaveBeenCalledTimes(1);
+
+  vi.advanceTimersByTime(1000);
+
+  expect(map.setWeather).toHaveBeenCalledTimes(2);
+});
+
+test("time manager leaves manual weather untouched when weather config is omitted", () => {
+  const timeManager = new TimeManager();
+  timeManager.configure({
+    start: "0001-01-01 08:00",
+  });
+  const map = createRuntimeMap("map1");
+
+  timeManager.registerMap(map as any);
+
+  expect(map.setWeather).not.toHaveBeenCalled();
+  expect(map.clearWeather).not.toHaveBeenCalled();
 });

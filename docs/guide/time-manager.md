@@ -145,3 +145,58 @@ withTimeManager({
 ```
 
 If lighting is omitted or disabled, the time manager does not modify map lighting.
+
+## Weather Ambiences
+
+When `weather.enabled` is true, the server can roll weather ambiences per map. Each ambience has a weight and a game-time duration. When the duration expires, the server rolls the next ambience and applies it with the existing map weather API.
+
+```ts
+withTimeManager({
+  weather: {
+    enabled: true,
+    default: {
+      ambiences: {
+        clear: {
+          weather: null,
+          weight: { default: 60, months: { 6: 80, 7: 85, 8: 80 } },
+          duration: { min: { hours: 2 }, max: { hours: 6 } }
+        },
+        rain: {
+          weather: {
+            effect: 'rain',
+            preset: 'steadyRain',
+            params: { density: 220, speed: 0.7 },
+            transitionMs: 900
+          },
+          weight: { default: 20, months: { 3: 45, 4: 50, 10: 40, 11: 45 } },
+          duration: { min: { hours: 1 }, max: { hours: 4 } }
+        },
+        fog: {
+          weather: {
+            effect: 'fog',
+            preset: 'morningFog',
+            params: { density: 0.8, alpha: 0.45 }
+          },
+          weight: { default: 10, seasons: { autumn: 30, winter: 20 } },
+          duration: { hours: 2 }
+        }
+      }
+    },
+    maps: {
+      forest: {
+        ambiences: {
+          rain: {
+            weather: { effect: 'rain', params: { density: 260 } },
+            weight: 100,
+            duration: { hours: 2 }
+          }
+        }
+      }
+    }
+  }
+})
+```
+
+`maps[mapId]` overrides the `default` weather table for that map. A `weather: null` ambience clears the map weather. If weather is omitted, disabled, or no table exists for a map, the time manager does not modify that map's weather.
+
+Weather remains server-owned. Clients receive the regular `weatherState` map update and should read `engine.sceneMap.weather()` or `engine.sceneMap.getWeather()` for rendering.
