@@ -1,9 +1,10 @@
-import { findModules, provideModules, registerI18nMessages } from "@rpgjs/common";
-import { FactoryProvider } from "@signe/di";
+import { TIME_MANAGER_MODULE_KEY, findModules, provideModules, registerI18nMessages } from "@rpgjs/common";
+import { FactoryProvider, inject as diInject, isProvided, provide as diProvide } from "@signe/di";
 import { RpgServerEngine } from "./RpgServerEngine";
 import { RpgMap } from "./rooms/map";
 import { RpgPlayer } from "./Player/Player";
 import { RpgServer } from "./RpgServer";
+import { TimeManager } from "./services/time";
 
 /**
  * Type for server modules that can be either:
@@ -65,6 +66,41 @@ export function provideServerModules(modules: RpgServerModule[]): FactoryProvide
       }
       if ('server' in module) {
         module = module.server as any;
+      }
+      if (module[TIME_MANAGER_MODULE_KEY]) {
+        const options = module[TIME_MANAGER_MODULE_KEY];
+        const timeManager = isProvided(context, TimeManager)
+          ? diInject<TimeManager>(context, TimeManager)
+          : diProvide(context, TimeManager, new TimeManager());
+        timeManager.configure(options);
+        const mapHooks = module.map ?? {};
+        module = {
+          ...module,
+          [TIME_MANAGER_MODULE_KEY]: undefined,
+          map: {
+            ...mapHooks,
+            onStart: (map: RpgMap) => {
+              timeManager.registerMap(map);
+              return mapHooks.onStart?.(map);
+            },
+            onLoad: (map: RpgMap) => {
+              timeManager.registerMap(map);
+              return mapHooks.onLoad?.(map);
+            },
+            onJoin: (player: RpgPlayer, map: RpgMap) => {
+              timeManager.registerMap(map);
+              return mapHooks.onJoin?.(player, map);
+            },
+            onLeave: (player: RpgPlayer, map: RpgMap) => {
+              const result = mapHooks.onLeave?.(player, map);
+              if (map.getPlayers().length <= 1) {
+                timeManager.unregisterMap(map);
+              }
+              return result;
+            },
+          },
+        };
+        delete module[TIME_MANAGER_MODULE_KEY];
       }
       if (module.i18n) {
         registerI18nMessages(context, module.i18n, "server-module", 10);

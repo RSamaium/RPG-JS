@@ -14,5 +14,6 @@ export * from "@rpgjs/physic";
 export * from "./Presets";
 export * from "./weather";
 export * from "./lighting";
+export * from "./time";
 export * from "./input";
 export * from "./i18n";

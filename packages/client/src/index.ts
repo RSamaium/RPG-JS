@@ -3,6 +3,7 @@ export type * from "./RpgClient";
 export * from "./services/standalone";
 export * from "./services/mmorpg";
 export * from "./services/save";
+export * from "./services/time";
 export * from "./core/setup";
 export * from "./core/inject";
 export * from "./services/loadMap";
