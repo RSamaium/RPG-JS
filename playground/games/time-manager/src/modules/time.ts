@@ -1,4 +1,70 @@
-import { withTimeManager } from "@rpgjs/common";
+import {
+  withTimeManager,
+  type TimeEnvironmentReason,
+  type TimeState,
+} from "@rpgjs/common";
+
+export const ENVIRONMENT_HOOK_LOG_KEY = "environmentHookLog";
+
+export interface EnvironmentHookLogEntry {
+  source: "plugin" | "event";
+  hook: string;
+  detail: string;
+  time: string;
+  reason: TimeEnvironmentReason;
+}
+
+export interface EnvironmentHookLog {
+  entries: EnvironmentHookLogEntry[];
+}
+
+type DemoRuntimeMap = {
+  id: string;
+  setSync?: (schema: Record<string, any>) => void;
+  applySyncToClient?: () => void;
+  [ENVIRONMENT_HOOK_LOG_KEY]?: (() => EnvironmentHookLog) & {
+    set: (value: EnvironmentHookLog) => void;
+  };
+};
+
+export function ensureEnvironmentHookLog(map: DemoRuntimeMap): void {
+  if (typeof map[ENVIRONMENT_HOOK_LOG_KEY] === "function") {
+    return;
+  }
+  map.setSync?.({
+    [ENVIRONMENT_HOOK_LOG_KEY]: {
+      $initial: { entries: [] },
+      $syncWithClient: true,
+      $permanent: false,
+    },
+  });
+}
+
+export function pushEnvironmentHookLog(
+  map: DemoRuntimeMap,
+  entry: Omit<EnvironmentHookLogEntry, "time"> & { time: TimeState },
+): void {
+  ensureEnvironmentHookLog(map);
+  const signal = map[ENVIRONMENT_HOOK_LOG_KEY];
+  if (!signal) {
+    return;
+  }
+  const current = signal()?.entries ?? [];
+  signal.set({
+    entries: [
+      {
+        ...entry,
+        time: formatTime(entry.time),
+      },
+      ...current,
+    ].slice(0, 6),
+  });
+  map.applySyncToClient?.();
+}
+
+function formatTime(time: TimeState): string {
+  return `${String(time.hour).padStart(2, "0")}:${String(time.minute).padStart(2, "0")} D${time.day}`;
+}
 
 export const timeManagerModule = withTimeManager({
   start: "0001-01-01 07:45",
@@ -73,6 +139,44 @@ export const timeManagerModule = withTimeManager({
           },
         },
       },
+    },
+  },
+  hooks: {
+    onDayChange({ map, current, reason }) {
+      pushEnvironmentHookLog(map as DemoRuntimeMap, {
+        source: "plugin",
+        hook: "onDayChange",
+        detail: `day ${current.day}`,
+        time: current,
+        reason,
+      });
+    },
+    onLightingPhaseChange({ map, previousKey, currentKey, time, reason }) {
+      pushEnvironmentHookLog(map as DemoRuntimeMap, {
+        source: "plugin",
+        hook: "onLightingPhaseChange",
+        detail: `${previousKey} -> ${currentKey}`,
+        time,
+        reason,
+      });
+    },
+    onBeforeWeatherChange({ map, candidate, time, reason }) {
+      pushEnvironmentHookLog(map as DemoRuntimeMap, {
+        source: "plugin",
+        hook: "onBeforeWeatherChange",
+        detail: `roll ${candidate.key}`,
+        time,
+        reason,
+      });
+    },
+    onWeatherChange({ map, previousKey, currentKey, time, reason }) {
+      pushEnvironmentHookLog(map as DemoRuntimeMap, {
+        source: "plugin",
+        hook: "onWeatherChange",
+        detail: `${previousKey ?? "none"} -> ${currentKey}`,
+        time,
+        reason,
+      });
     },
   },
 });

@@ -1,24 +1,24 @@
 <Container>
-  <Rect width={720} height={480} color="#eef5f3" />
-  <Rect x={32} y={32} width={656} height={416} color="#fbfefc" />
-  <Rect x={32} y={32} width={656} height={2} color="#9fb1aa" />
-  <Rect x={32} y={446} width={656} height={2} color="#9fb1aa" />
-  <Rect x={32} y={32} width={2} height={416} color="#9fb1aa" />
-  <Rect x={686} y={32} width={2} height={416} color="#9fb1aa" />
+  <Rect width={960} height={640} color="#dfead7" />
+  <Rect x={32} y={32} width={896} height={576} color="#e8d2a8" />
+  <Rect x={32} y={32} width={896} height={2} color="#87613b" />
+  <Rect x={32} y={606} width={896} height={2} color="#87613b" />
+  <Rect x={32} y={32} width={2} height={576} color="#87613b" />
+  <Rect x={926} y={32} width={2} height={576} color="#87613b" />
 
   @for (line of gridLines) {
-    <Rect x={line.x} y={32} width={1} height={416} color="#d7e4df" alpha={0.72} />
-    <Rect x={32} y={line.y} width={656} height={1} color="#d7e4df" alpha={0.72} />
+    <Rect x={line.x} y={32} width={1} height={576} color="#bb8b55" alpha={0.22} />
+    <Rect x={32} y={line.y} width={896} height={1} color="#bb8b55" alpha={0.22} />
   }
 
-  <Rect x={456} y={302} width={134} height={82} color="#c7e7ed" />
-  <Rect x={466} y={312} width={114} height={62} color="#8bd3e6" alpha={0.76} />
-  <Text x={474} y={334} text="pond hitbox" color="#24606e" size={12} fontFamily="Arial" />
+  <Rect x={82} y={198} width={394} height={248} color="#c08a4d" alpha={0.38} />
+  <Rect x={104} y={220} width={350} height={204} color="#7f4f2d" alpha={0.16} />
+  <Text x={108} y={180} text="Seasonal vegetable field" color="#553a22" size={18} fontFamily="Arial" />
+  <Text x={108} y={470} text="Space on soil: plant seasonal crop, water, harvest." color="#5d452d" size={12} fontFamily="Arial" />
+  <Text x={108} y={490} text="Scarecrow ends day. Rain barrel rolls weather. Season marker jumps seasons." color="#5d452d" size={12} fontFamily="Arial" />
 
-  <Text x={44} y={118} text="Time Manager Demo" color="#17202a" size={18} fontFamily="Arial" />
-  <Text x={44} y={146} text="The HUD reads ClientTimeManager." color="#475569" size={12} fontFamily="Arial" />
-  <Text x={44} y={166} text="Walk to the pedestal and press Space." color="#475569" size={12} fontFamily="Arial" />
-  <Text x={44} y={186} text="Server changes weather and advances time." color="#475569" size={12} fontFamily="Arial" />
+  <Rect x={742} y={224} width={150} height={154} color="#c6945f" alpha={0.34} />
+  <Text x={742} y={402} text="field controls" color="#5d452d" size={12} fontFamily="Arial" />
 
   <EventLayerComponent />
   <TimeHud />
@@ -28,7 +28,7 @@
   import { EventLayerComponent } from "@rpgjs/client";
   import TimeHud from "./time-hud.ce";
 
-  const gridLines = Array.from({ length: 19 }, (_, index) => ({
+  const gridLines = Array.from({ length: 28 }, (_, index) => ({
     x: 64 + index * 32,
     y: 64 + index * 32,
   }));

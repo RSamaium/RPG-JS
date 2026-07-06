@@ -64,12 +64,65 @@ export interface TimeWeatherConfig {
   maps?: Record<string, TimeWeatherTable>;
 }
 
+export type TimeEnvironmentReason = "initial" | "tick" | "set" | "advance" | "pause" | "resume" | "scale";
+
+export interface TimeTransitionPayload {
+  map: unknown;
+  previous: TimeState;
+  current: TimeState;
+  reason: TimeEnvironmentReason;
+}
+
+export interface TimeDayTransitionPayload extends TimeTransitionPayload {}
+
+export interface TimeLightingPhaseTransitionPayload {
+  map: unknown;
+  previousKey?: string;
+  currentKey: string;
+  previousLighting?: Partial<LightingState>;
+  currentLighting: Partial<LightingState>;
+  time: TimeState;
+  reason: TimeEnvironmentReason;
+}
+
+export interface TimeWeatherTransitionPayload {
+  map: unknown;
+  previousKey?: string;
+  currentKey: string;
+  previousWeather?: WeatherState | null;
+  currentWeather: WeatherState | null;
+  durationMinutes: number;
+  expiresAtElapsedMinutes: number;
+  time: TimeState;
+  reason: TimeEnvironmentReason;
+}
+
+export interface TimeWeatherBeforeTransitionPayload extends TimeWeatherTransitionPayload {
+  candidate: TimeWeatherRollCandidate;
+}
+
+export interface TimeWeatherRollCandidate {
+  key: string;
+  ambience: TimeWeatherAmbience;
+}
+
+export type TimeWeatherBeforeTransitionResult = false | TimeWeatherRollCandidate | void;
+
+export interface TimeManagerHooks {
+  onTimeChange?: (payload: TimeTransitionPayload) => any;
+  onDayChange?: (payload: TimeDayTransitionPayload) => any;
+  onLightingPhaseChange?: (payload: TimeLightingPhaseTransitionPayload) => any;
+  onBeforeWeatherChange?: (payload: TimeWeatherBeforeTransitionPayload) => TimeWeatherBeforeTransitionResult | Promise<TimeWeatherBeforeTransitionResult>;
+  onWeatherChange?: (payload: TimeWeatherTransitionPayload) => any;
+}
+
 export interface TimeManagerOptions {
   start?: TimeInput | string;
   scale?: number;
   calendar?: Partial<TimeCalendarConfig>;
   lighting?: boolean | TimeLightingConfig;
   weather?: boolean | TimeWeatherConfig;
+  hooks?: TimeManagerHooks;
 }
 
 export interface TimeSnapshot {
@@ -150,6 +203,7 @@ export function normalizeTimeOptions(options: TimeManagerOptions = {}) {
     calendar,
     lighting: normalizeTimeLighting(options.lighting),
     weather: normalizeTimeWeather(options.weather),
+    hooks: options.hooks ? { ...options.hooks } : undefined,
   };
 }
 

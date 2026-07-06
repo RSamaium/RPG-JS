@@ -200,3 +200,68 @@ withTimeManager({
 `maps[mapId]` overrides the `default` weather table for that map. A `weather: null` ambience clears the map weather. If weather is omitted, disabled, or no table exists for a map, the time manager does not modify that map's weather.
 
 Weather remains server-owned. Clients receive the regular `weatherState` map update and should read `engine.sceneMap.weather()` or `engine.sceneMap.getWeather()` for rendering.
+
+## Environment Hooks
+
+Use `hooks` on `withTimeManager()` when the environment should drive gameplay rules from the plugin itself:
+
+```ts
+withTimeManager({
+  hooks: {
+    onDayChange({ map, current }) {
+      console.log(`New day ${current.day}`)
+    },
+    onLightingPhaseChange({ previousKey, currentKey }) {
+      console.log(`${previousKey} -> ${currentKey}`)
+    },
+    onBeforeWeatherChange({ candidate, time }) {
+      if (time.season === 'summer' && candidate.key === 'snow') {
+        return false
+      }
+    },
+    onWeatherChange({ currentKey }) {
+      console.log(`Weather is now ${currentKey}`)
+    }
+  }
+})
+```
+
+`onBeforeWeatherChange()` can return `false` to cancel the roll, or another `{ key, ambience }` candidate to replace it. Initial map registration is silent: hooks run only after an actual time, lighting, or weather transition.
+
+Transition payloads include the current map so plugin hooks can update synchronized map state or trigger map-local systems.
+
+Events can react locally by declaring matching methods:
+
+```ts
+import { EventData, RpgEvent } from '@rpgjs/server'
+import type { TimeWeatherTransitionPayload } from '@rpgjs/common'
+
+@EventData({ name: 'Crop' })
+export class CropEvent extends RpgEvent {
+  onDayChange() {
+    this.setGraphic('crop-stage-2')
+  }
+
+  onWeatherChange(payload: TimeWeatherTransitionPayload) {
+    if (payload.currentKey === 'rain') {
+      this.setGraphic('crop-watered')
+    }
+  }
+}
+```
+
+Global event hooks work too:
+
+```ts
+const server = {
+  event: {
+    onWeatherChange(event, payload) {
+      if (payload.currentKey === 'rain') {
+        event.setGraphic('crop-watered')
+      }
+    }
+  }
+}
+```
+
+This keeps the environment logic centralized in the time plugin while still letting map events behave like Stardew Valley objects: crops grow on day changes, lamps react to lighting phases, and NPCs or interactables react to weather changes.

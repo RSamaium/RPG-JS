@@ -26,7 +26,12 @@ const serverModule = defineModule<RpgServer>({
 const clientModule = defineModule<RpgClient>({});
 
 let fixture: any;
-const createRuntimeMap = (id: string) => ({
+const flushEnvironment = async () => {
+  for (let index = 0; index < 8; index += 1) {
+    await Promise.resolve();
+  }
+};
+const createRuntimeMap = (id: string, events: Record<string, any>[] = []) => ({
   id,
   $broadcast: vi.fn(),
   applySyncToClient: vi.fn(),
@@ -34,6 +39,12 @@ const createRuntimeMap = (id: string) => ({
   setWeather: vi.fn(),
   clearWeather: vi.fn(),
   setLighting: vi.fn(),
+  getWeather: vi.fn(() => null),
+  getLighting: vi.fn(() => null),
+  getEvents: vi.fn(() => events),
+  hooks: {
+    getHookFunctions: vi.fn(() => []),
+  },
   setSync(definitions: Record<string, { $initial: unknown }>) {
     for (const [key, definition] of Object.entries(definitions)) {
       let value = definition.$initial;
@@ -135,7 +146,7 @@ test("withTimeManager syncs map time snapshots and lets the client infer current
   });
 });
 
-test("time manager applies initial lighting without broadcasting before map runtime is ready", () => {
+test("time manager applies initial lighting without broadcasting before map runtime is ready", async () => {
   const timeManager = new TimeManager();
   timeManager.configure({
     start: "0001-01-01 07:00",
@@ -172,11 +183,12 @@ test("time manager applies initial lighting without broadcasting before map runt
   };
 
   expect(() => timeManager.registerMap(map as any)).not.toThrow();
+  await flushEnvironment();
   expect(transitionLighting).not.toHaveBeenCalled();
   expect(setLighting).toHaveBeenCalledWith(expect.any(Object), { sync: false });
 });
 
-test("time manager refreshes lighting when projected time crosses a phase", () => {
+test("time manager refreshes lighting when projected time crosses a phase", async () => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
 
@@ -223,11 +235,13 @@ test("time manager refreshes lighting when projected time crosses a phase", () =
     };
 
     timeManager.registerMap(map as any);
+    await flushEnvironment();
     expect(setLighting).toHaveBeenLastCalledWith(expect.objectContaining({
       ambient: expect.objectContaining({ darkness: 0.2 }),
     }), undefined);
 
     vi.advanceTimersByTime(1000);
+    await flushEnvironment();
 
     expect(setLighting).toHaveBeenLastCalledWith(expect.objectContaining({
       ambient: expect.objectContaining({ darkness: 0 }),
@@ -237,7 +251,7 @@ test("time manager refreshes lighting when projected time crosses a phase", () =
   }
 });
 
-test("time manager applies weather ambiences with month weights", () => {
+test("time manager applies weather ambiences with month weights", async () => {
   const timeManager = new TimeManager();
   timeManager.configure({
     start: "0001-01-01 08:00",
@@ -265,6 +279,7 @@ test("time manager applies weather ambiences with month weights", () => {
   const map = createRuntimeMap("map1");
 
   timeManager.registerMap(map as any);
+  await flushEnvironment();
 
   expect(map.setWeather).toHaveBeenCalledWith(expect.objectContaining({
     effect: "rain",
@@ -274,7 +289,7 @@ test("time manager applies weather ambiences with month weights", () => {
   expect(map.clearWeather).not.toHaveBeenCalled();
 });
 
-test("time manager prefers map weather table over the default table", () => {
+test("time manager prefers map weather table over the default table", async () => {
   const timeManager = new TimeManager();
   timeManager.configure({
     start: "0001-01-01 08:00",
@@ -307,12 +322,13 @@ test("time manager prefers map weather table over the default table", () => {
 
   timeManager.registerMap(map1 as any);
   timeManager.registerMap(map2 as any);
+  await flushEnvironment();
 
   expect(map1.setWeather).toHaveBeenCalledWith(expect.objectContaining({ effect: "rain" }), undefined);
   expect(map2.setWeather).toHaveBeenCalledWith(expect.objectContaining({ effect: "fog" }), undefined);
 });
 
-test("time manager can roll a clear weather ambience", () => {
+test("time manager can roll a clear weather ambience", async () => {
   const timeManager = new TimeManager();
   timeManager.configure({
     start: "0001-01-01 08:00",
@@ -332,12 +348,13 @@ test("time manager can roll a clear weather ambience", () => {
   const map = createRuntimeMap("map1");
 
   timeManager.registerMap(map as any);
+  await flushEnvironment();
 
   expect(map.clearWeather).toHaveBeenCalledWith(undefined);
   expect(map.setWeather).not.toHaveBeenCalled();
 });
 
-test("time manager refreshes weather when ambience duration expires", () => {
+test("time manager refreshes weather when ambience duration expires", async () => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
 
@@ -361,14 +378,16 @@ test("time manager refreshes weather when ambience duration expires", () => {
   const map = createRuntimeMap("map1");
 
   timeManager.registerMap(map as any);
+  await flushEnvironment();
   expect(map.setWeather).toHaveBeenCalledTimes(1);
 
   vi.advanceTimersByTime(1000);
+  await flushEnvironment();
 
   expect(map.setWeather).toHaveBeenCalledTimes(2);
 });
 
-test("time manager leaves manual weather untouched when weather config is omitted", () => {
+test("time manager leaves manual weather untouched when weather config is omitted", async () => {
   const timeManager = new TimeManager();
   timeManager.configure({
     start: "0001-01-01 08:00",
@@ -376,7 +395,174 @@ test("time manager leaves manual weather untouched when weather config is omitte
   const map = createRuntimeMap("map1");
 
   timeManager.registerMap(map as any);
+  await flushEnvironment();
 
   expect(map.setWeather).not.toHaveBeenCalled();
   expect(map.clearWeather).not.toHaveBeenCalled();
+});
+
+test("time manager calls plugin and event hooks when the day changes", async () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+
+  const onDayChange = vi.fn();
+  const eventDayChange = vi.fn();
+  const event = {
+    onDayChange: eventDayChange,
+    execMethod(method: string, args: unknown[]) {
+      return (this as any)[method]?.(...args);
+    },
+  };
+  const timeManager = new TimeManager();
+  timeManager.configure({
+    start: "0001-01-01 23:59",
+    scale: 60,
+    hooks: {
+      onDayChange,
+    },
+  });
+  const map = createRuntimeMap("map1", [event]);
+
+  timeManager.registerMap(map as any);
+  await flushEnvironment();
+  expect(onDayChange).not.toHaveBeenCalled();
+
+  vi.advanceTimersByTime(1000);
+  await flushEnvironment();
+
+  expect(onDayChange).toHaveBeenCalledTimes(1);
+  expect(eventDayChange).toHaveBeenCalledTimes(1);
+  expect(onDayChange.mock.calls[0][0]).toMatchObject({
+    previous: { day: 1, hour: 23, minute: 59 },
+    current: { day: 2, hour: 0, minute: 0 },
+    reason: "tick",
+  });
+});
+
+test("time manager calls lighting phase hooks when the phase changes", async () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+
+  const onLightingPhaseChange = vi.fn();
+  const timeManager = new TimeManager();
+  timeManager.configure({
+    start: "0001-01-01 07:59",
+    scale: 60,
+    lighting: {
+      enabled: true,
+      phases: {
+        dawn: { hour: 6, lighting: { ambient: { darkness: 0.2 } } },
+        day: { hour: 8, lighting: { ambient: { darkness: 0 } } },
+      },
+    },
+    hooks: {
+      onLightingPhaseChange,
+    },
+  });
+  const map = createRuntimeMap("map1");
+
+  timeManager.registerMap(map as any);
+  await flushEnvironment();
+
+  vi.advanceTimersByTime(1000);
+  await flushEnvironment();
+
+  expect(onLightingPhaseChange).toHaveBeenCalledTimes(1);
+  expect(onLightingPhaseChange.mock.calls[0][0]).toMatchObject({
+    previousKey: "dawn",
+    currentKey: "day",
+    currentLighting: { ambient: { darkness: 0 } },
+  });
+});
+
+test("time manager before weather hook can cancel a weather transition", async () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+
+  const onBeforeWeatherChange = vi.fn(() => false as const);
+  const onWeatherChange = vi.fn();
+  const timeManager = new TimeManager();
+  timeManager.configure({
+    start: "0001-01-01 08:00",
+    scale: 60,
+    weather: {
+      enabled: true,
+      default: {
+        ambiences: {
+          rain: {
+            weather: { effect: "rain" },
+            weight: 100,
+            duration: { minutes: 1 },
+          },
+        },
+      },
+    },
+    hooks: {
+      onBeforeWeatherChange,
+      onWeatherChange,
+    },
+  });
+  const map = createRuntimeMap("map1");
+
+  timeManager.registerMap(map as any);
+  await flushEnvironment();
+  expect(map.setWeather).toHaveBeenCalledTimes(1);
+
+  vi.advanceTimersByTime(1000);
+  await flushEnvironment();
+
+  expect(onBeforeWeatherChange).toHaveBeenCalledTimes(1);
+  expect(map.setWeather).toHaveBeenCalledTimes(1);
+  expect(onWeatherChange).not.toHaveBeenCalled();
+});
+
+test("time manager before weather hook can replace a weather ambience", async () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+
+  const onBeforeWeatherChange = vi.fn(() => ({
+    key: "festival-clear",
+    ambience: {
+      weather: null,
+      weight: 1,
+      duration: { hours: 8 },
+    },
+  }));
+  const onWeatherChange = vi.fn();
+  const timeManager = new TimeManager();
+  timeManager.configure({
+    start: "0001-01-01 08:00",
+    scale: 60,
+    weather: {
+      enabled: true,
+      default: {
+        ambiences: {
+          rain: {
+            weather: { effect: "rain" },
+            weight: 100,
+            duration: { minutes: 1 },
+          },
+        },
+      },
+    },
+    hooks: {
+      onBeforeWeatherChange,
+      onWeatherChange,
+    },
+  });
+  const map = createRuntimeMap("map1");
+
+  timeManager.registerMap(map as any);
+  await flushEnvironment();
+
+  vi.advanceTimersByTime(1000);
+  await flushEnvironment();
+
+  expect(onBeforeWeatherChange).toHaveBeenCalledTimes(1);
+  expect(map.clearWeather).toHaveBeenCalledWith(undefined);
+  expect(onWeatherChange).toHaveBeenCalledWith(expect.objectContaining({
+    previousKey: "rain",
+    currentKey: "festival-clear",
+    currentWeather: null,
+  }));
 });
