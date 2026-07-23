@@ -23,21 +23,21 @@ type IStoreState = unknown
 export type ServerDatabase = Record<string, unknown> | unknown[]
 
 /**
- * Metrics collected after one queued server tick has been processed.
+ * Metrics collected after one queued map tick has been processed.
  *
  * The context is runtime-agnostic and can be aggregated before being exported
  * to Cloudflare Analytics Engine, OpenTelemetry, or another metrics backend.
  */
 export interface RpgServerStepMetrics {
-    /** Current fixed simulation tick after processing the queued delta. */
+    /** Current cumulative fixed simulation tick after processing the queued delta. */
     tick: number
-    /** Wall-clock time spent processing the queued tick, excluding the hook itself. */
+    /** Wall-clock milliseconds spent processing the queued tick, excluding the hook itself. */
     durationMs: number
-    /** Delta passed to the queued server tick. */
+    /** Delta in milliseconds passed to the queued server tick. */
     scheduledDeltaMs: number
-    /** Delta received while this tick was processing and still waiting to run. */
+    /** Delta in milliseconds received during processing and still waiting to run. */
     queuedDeltaMs: number
-    /** Number of fixed simulation steps executed for this queued tick. */
+    /** Number of fixed simulation steps executed for this queued tick; can be zero or greater. */
     fixedSteps: number
     /** Total number of unprocessed player inputs after this queued tick. */
     pendingInputs: number
@@ -99,7 +99,10 @@ export interface RpgServerEngineHooks {
     onStart?: (server: RpgServerEngine) => MaybePromise<void>
 
     /**
-     * After each queued map tick has been processed.
+     * For map rooms, after each queued map tick has been processed.
+     *
+     * A queued tick can execute zero, one, or several fixed simulation steps.
+     * The hook is not emitted for lobby rooms or inactive empty maps.
      * 
      * @prop { (engine: RpgServerEngine, metrics: RpgServerStepMetrics) => void | Promise<void> } [onStep]
      * @memberof RpgServerEngineHooks

@@ -60,17 +60,20 @@ const engine: RpgServerEngineHooks = {
 
 ### onStep
 
-**Description:** Called after each queued map tick has been processed. Empty maps
-stop their automatic loop, so observability does not keep an idle room active.
+**Description:** Called for map rooms, once after each queued map tick has been
+processed. It is not emitted for lobby rooms. A queued tick is one pass through
+the server scheduler; depending on the accumulated delta, it can execute zero,
+one, or several fixed simulation steps. Empty maps stop their automatic loop, so
+observability does not keep an idle room active.
 
 **Parameters:**
 - `server: RpgServerEngine` - The server engine instance
 - `metrics: RpgServerStepMetrics` - Metrics for the processed map tick:
-  - `tick` - Current fixed simulation tick
-  - `durationMs` - Wall-clock processing duration, excluding the hook itself
-  - `scheduledDeltaMs` - Delta passed to the queued tick
-  - `queuedDeltaMs` - Delta that arrived during processing and remains queued
-  - `fixedSteps` - Number of fixed simulation steps executed
+  - `tick` - Current cumulative fixed simulation tick after processing
+  - `durationMs` - Wall-clock processing duration in milliseconds, excluding the hook itself
+  - `scheduledDeltaMs` - Delta in milliseconds passed to the queued tick
+  - `queuedDeltaMs` - Delta in milliseconds that arrived during processing and remains queued
+  - `fixedSteps` - Number of fixed simulation steps executed (which can be zero or greater)
   - `pendingInputs` - Total unprocessed player inputs after the tick
 
 Handlers that only accept `server` remain compatible. Async handlers are awaited
@@ -82,17 +85,31 @@ I/O here because it directly increases the server backlog.
 ```ts
 import type { RpgServerEngineHooks, RpgServerStepMetrics } from '@rpgjs/server'
 
-const window = {
-    startedAt: Date.now(),
-    ticks: 0,
-    durationMs: 0,
-    maxQueuedDeltaMs: 0,
-    maxPendingInputs: 0
+type MetricsWindow = {
+    startedAt: number
+    fixedSteps: number
+    durationMs: number
+    maxQueuedDeltaMs: number
+    maxPendingInputs: number
 }
+
+function createMetricsWindow(): MetricsWindow {
+    return {
+        startedAt: Date.now(),
+        fixedSteps: 0,
+        durationMs: 0,
+        maxQueuedDeltaMs: 0,
+        maxPendingInputs: 0
+    }
+}
+
+// Application-owned queue drained by an exporter outside the tick hook.
+const metricsQueue: Array<MetricsWindow & { mapId: string | null }> = []
+let window = createMetricsWindow()
 
 const engine: RpgServerEngineHooks = {
     onStep(server, metrics: RpgServerStepMetrics) {
-        window.ticks += metrics.fixedSteps
+        window.fixedSteps += metrics.fixedSteps
         window.durationMs += metrics.durationMs
         window.maxQueuedDeltaMs = Math.max(
             window.maxQueuedDeltaMs,
@@ -110,11 +127,7 @@ const engine: RpgServerEngineHooks = {
                 mapId: server.getCurrentRoomId(),
                 ...window
             })
-            window.startedAt = Date.now()
-            window.ticks = 0
-            window.durationMs = 0
-            window.maxQueuedDeltaMs = 0
-            window.maxPendingInputs = 0
+            window = createMetricsWindow()
         }
     }
 }
@@ -251,7 +264,8 @@ const engine: RpgServerEngineHooks = {
     },
     
     onStep(server: RpgServerEngine) {
-        // Process global events every frame
+        // The legacy one-argument handler remains supported.
+        // This runs after each processed map tick, not after each fixed step.
         if (server.globalData.events.length > 0) {
             const event = server.globalData.events.shift()
             console.log('Processing global event:', event)
