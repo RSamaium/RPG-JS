@@ -2741,6 +2741,51 @@
       "packages/studio/dist/server/studio-map-plugins.d.ts"
     ]
   },
+  "@rpgjs/testing": {
+    "entry": "packages/testing/dist/index.d.ts",
+    "exports": [
+      "TestingFixture",
+      "clear",
+      "nextTick",
+      "provideTestingLoadMap",
+      "testing",
+      "waitForSync",
+      "waitForSyncComplete"
+    ],
+    "declarations": [
+      "packages/testing/dist/index.d.ts"
+    ]
+  },
+  "@rpgjs/tiledmap": {
+    "entry": "packages/tiledmap/dist/client/index.d.ts",
+    "exports": [
+      "TiledMapOptions",
+      "provideTiledMap"
+    ],
+    "declarations": [
+      "packages/tiledmap/dist/client/index.d.ts"
+    ]
+  },
+  "@rpgjs/tiledmap/client": {
+    "entry": "packages/tiledmap/dist/client/index.d.ts",
+    "exports": [
+      "TiledMapOptions",
+      "provideTiledMap"
+    ],
+    "declarations": [
+      "packages/tiledmap/dist/client/index.d.ts"
+    ]
+  },
+  "@rpgjs/tiledmap/server": {
+    "entry": "packages/tiledmap/dist/server/index.d.ts",
+    "exports": [
+      "TiledMapOptions",
+      "provideTiledMap"
+    ],
+    "declarations": [
+      "packages/tiledmap/dist/server/index.d.ts"
+    ]
+  },
   "@rpgjs/vite": {
     "entry": "packages/vite/dist/index.d.ts",
     "exports": [
