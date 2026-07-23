@@ -7,7 +7,7 @@ permissions:
 on:
   push:
     branches:
-      - "*"
+      - "**"
     paths-ignore:
       - "docs/**"
   pull_request:
