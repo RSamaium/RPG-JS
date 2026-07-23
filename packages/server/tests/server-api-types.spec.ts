@@ -15,6 +15,8 @@ import type {
   RpgPlayerSnapshot,
   RpgPlayerSnapshotLoadResult,
   RpgServerEngine,
+  RpgServerEngineHooks,
+  RpgServerStepMetrics,
   StateData,
   ServerMapStreamingAdapter,
 } from "@rpgjs/server";
@@ -181,6 +183,23 @@ describe("server public API types", () => {
     };
 
     expectTypeOf(assertions).toBeFunction();
+  });
+
+  test("server step hooks expose metrics without breaking one-argument handlers", () => {
+    const hooks = {
+      onStep(server, metrics) {
+        expectTypeOf(server).toEqualTypeOf<RpgServerEngine>();
+        expectTypeOf(metrics).toEqualTypeOf<RpgServerStepMetrics>();
+      },
+    } satisfies RpgServerEngineHooks;
+    const legacyHooks = {
+      onStep(server) {
+        expectTypeOf(server).toEqualTypeOf<RpgServerEngine>();
+      },
+    } satisfies RpgServerEngineHooks;
+
+    expectTypeOf(hooks).toMatchTypeOf<RpgServerEngineHooks>();
+    expectTypeOf(legacyHooks).toMatchTypeOf<RpgServerEngineHooks>();
   });
 
   test("legacy Signe root re-exports are not part of the stable API", () => {

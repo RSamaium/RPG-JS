@@ -6,6 +6,8 @@ import { LobbyRoom } from "./rooms/lobby";
 import { inject } from "./core/inject";
 import { context } from "./core/context";
 import { lastValueFrom } from "rxjs";
+import type { RpgServerStepMetrics } from "./RpgServer";
+import { registerServerStepEmitter } from "./server-step";
 
 /** Persistent storage available to the RPGJS server runtime. */
 export interface RpgServerRuntimeStorage {
@@ -97,6 +99,26 @@ export type RpgServerCompatibilityIo = unknown;
 export class RpgServerEngine extends RpgRoomServerBase {
   rooms = [RpgMap, LobbyRoom];
   private _globalConfig: any = {};
+
+  constructor(room: RpgServerRuntimeRoom) {
+    super(room);
+    registerServerStepEmitter(room, (metrics) => this.emitServerStep(metrics));
+  }
+
+  private async emitServerStep(metrics: RpgServerStepMetrics): Promise<void> {
+    let hooks: Hooks;
+
+    try {
+      hooks = inject<Hooks>(ModulesToken, context);
+    }
+    catch {
+      return;
+    }
+
+    await lastValueFrom(
+      hooks.callHooks("server-engine-onStep", this, metrics),
+    );
+  }
 
   /**
    * Optional compatibility handle for integrations that still expose an

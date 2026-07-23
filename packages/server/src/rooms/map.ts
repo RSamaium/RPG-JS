@@ -45,6 +45,7 @@ import type { RpgWritableSignal } from "@rpgjs/common";
 import { buildSaveSlotMeta, resolveSaveStorageStrategy } from "../services/save";
 import { Log } from "../logs/log";
 import { createMapUpdateHeaders, isMapUpdateAuthorized, MAP_UPDATE_TOKEN_ENV, MAP_UPDATE_TOKEN_HEADER } from "../map-update";
+import { emitServerStep } from "../server-step";
 import { RpgMapProjectiles } from "../projectiles";
 import type { DamageFormulas } from "../Player/BattleManager";
 import {
@@ -2534,7 +2535,9 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     this.stopServerTickLoop();
     const loopVersion = ++this._serverTickLoopVersion;
     this.tickSubscription = this.tick$.subscribe(({ delta }) => {
-      void this.runQueuedServerTick(delta, loopVersion);
+      void this.runQueuedServerTick(delta, loopVersion).catch((error) => {
+        console.error("[RPGJS] Error during server tick:", error);
+      });
     });
   }
 
@@ -2561,7 +2564,17 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
       while (this._queuedServerTickDelta > 0 && loopVersion === this._serverTickLoopVersion) {
         const nextDelta = this._queuedServerTickDelta;
         this._queuedServerTickDelta = 0;
-        await this.runServerTick(nextDelta);
+        const startedAt = this.getServerTickTime();
+        const fixedSteps = await this.runServerTick(nextDelta);
+        const durationMs = Math.max(0, this.getServerTickTime() - startedAt);
+        await emitServerStep(this.partyRoom, {
+          tick: this.getTick(),
+          durationMs,
+          scheduledDeltaMs: nextDelta,
+          queuedDeltaMs: this._queuedServerTickDelta,
+          fixedSteps,
+          pendingInputs: this.getPendingInputCount(),
+        });
       }
     }
     finally {
@@ -2590,6 +2603,22 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
         anyPlayer._isProcessingInputs = false;
       }
     }
+  }
+
+  private getServerTickTime(): number {
+    const performanceNow = globalThis.performance?.now?.();
+    return typeof performanceNow === "number" && Number.isFinite(performanceNow)
+      ? performanceNow
+      : Date.now();
+  }
+
+  private getPendingInputCount(): number {
+    return this.getPlayers().reduce(
+      (total, player) => total + (
+        Array.isArray(player.pendingInputs) ? player.pendingInputs.length : 0
+      ),
+      0,
+    );
   }
 
   async nextTickAsync(deltaMs?: number): Promise<number> {
