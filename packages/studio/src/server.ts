@@ -93,8 +93,32 @@ export const resolveRuntimeEventHitbox = (object: any, params: any): { width: nu
   return normalizeRuntimeHitbox(object?.hitbox) ?? normalizeRuntimeHitbox(triggerHitbox) ?? normalizeRuntimeHitbox(params?.hitbox);
 };
 
-const resolvePlayerConfig = async (player: RpgPlayer): Promise<ProjectBasic> => {
-  const gameConfig = readGameConfig();
+const normalizeProjectId = (value: unknown): string | null => {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+};
+
+const resolveStudioRuntimeContext = (map?: RpgMap): { gameConfig: any; projectId: string | null } => {
+  const legacyGameConfig = readGameConfig();
+  const mapConfig = map?.globalConfig;
+  if (mapConfig && typeof mapConfig === "object" && Object.keys(mapConfig).length > 0) {
+    return {
+      gameConfig: mapConfig,
+      projectId:
+        normalizeProjectId(mapConfig._id ?? mapConfig.projectId)
+        ?? normalizeProjectId(getStudioGameRuntimeConfig().projectId)
+        ?? normalizeProjectId(legacyGameConfig?._id ?? legacyGameConfig?.projectId),
+    };
+  }
+  return {
+    gameConfig: legacyGameConfig,
+    projectId:
+      normalizeProjectId(getStudioGameRuntimeConfig().projectId)
+      ?? normalizeProjectId(legacyGameConfig?._id ?? legacyGameConfig?.projectId),
+  };
+};
+
+const resolvePlayerConfig = async (player: RpgPlayer, map?: RpgMap): Promise<ProjectBasic> => {
+  const { gameConfig, projectId } = resolveStudioRuntimeContext(map);
   const baseHeroConfig = {
     ...(gameConfig.hero ?? {}),
     skillsToLearn: gameConfig.skillsToLearn ?? gameConfig.skills ?? gameConfig.hero?.skillsToLearn ?? gameConfig.hero?.skills,
@@ -108,12 +132,11 @@ const resolvePlayerConfig = async (player: RpgPlayer): Promise<ProjectBasic> => 
   }
 
   try {
-    const configuredProjectId = getStudioGameRuntimeConfig().projectId?.trim() || null;
     const overrideConfig = await providerStartConfig.call(provider, {
       player,
       heroConfig: baseHeroConfig,
       gameConfig,
-      projectId: configuredProjectId || gameConfig?._id || null,
+      projectId,
       mapId: gameConfig?.startMapId || null,
     });
 
@@ -125,7 +148,7 @@ const resolvePlayerConfig = async (player: RpgPlayer): Promise<ProjectBasic> => 
 };
 
 const startGame = async (player: RpgPlayer, map?: RpgMap) => {
-  const heroConfig = await resolvePlayerConfig(player);
+  const heroConfig = await resolvePlayerConfig(player, map);
   (player as any).studioCombatAnimations = heroConfig.animations ?? {};
   (player as any).combatAnimations = heroConfig.animations ?? {};
   const startingItems = await ensureStartingItemsInDatabase(player, heroConfig, map);
@@ -237,9 +260,7 @@ const ensureStartingItemsInDatabase = async (player: RpgPlayer, config: ProjectB
   }, {});
   if (missingIds.length === 0) return startingItems;
 
-  const gameConfig = readGameConfig();
-  const configuredProjectId = getStudioGameRuntimeConfig().projectId?.trim() || null;
-  const projectId = configuredProjectId || gameConfig?._id || null;
+  const { projectId } = resolveStudioRuntimeContext(map);
 
   try {
     const records = await getGameDataProvider().getDatabase(projectId ?? undefined);
