@@ -2,11 +2,11 @@ import { describe, expect, test, vi } from "vitest";
 import {
   CHAT_ERROR_EVENT,
   CHAT_MESSAGE_EVENT,
-  normalizeChatClientOptions,
-  normalizeChatServerOptions,
 } from "./config";
+import { normalizeChatClientOptions } from "./client-config";
+import { normalizeChatServerOptions } from "./server-config";
 import { createChatHandler, createChatServer } from "./server";
-import type { ChatPlayerLike } from "./types";
+import type { ChatPlayerLike } from "./server-types";
 
 const createPlayer = () => {
   const map = {
@@ -30,6 +30,7 @@ describe("@rpgjs/chat", () => {
       renderer: "canvas",
       autoOpen: true,
       maxMessages: 100,
+      maxLength: 180,
     });
     expect(normalizeChatServerOptions()).toMatchObject({
       channels: ["map"],
@@ -47,6 +48,11 @@ describe("@rpgjs/chat", () => {
       component: Replacement,
       renderer: "vue",
     });
+  });
+
+  test("normalizes the client input length", () => {
+    expect(normalizeChatClientOptions({ maxLength: 320 }).maxLength).toBe(320);
+    expect(normalizeChatClientOptions({ maxLength: 0 }).maxLength).toBe(1);
   });
 
   test("creates a server-authoritative map message", async () => {
@@ -89,6 +95,30 @@ describe("@rpgjs/chat", () => {
       CHAT_ERROR_EVENT,
       expect.objectContaining({ key: "rpg.chat.error.rate-limit" }),
     );
+  });
+
+  test("defaults an omitted channel to map and rejects unknown channels", async () => {
+    const { player, map } = createPlayer();
+    const handle = createChatHandler(normalizeChatServerOptions({
+      channels: ["map", "global"],
+      rateLimit: false,
+      broadcastGlobal: vi.fn(),
+    }));
+
+    await expect(handle(player, { text: "default" })).resolves.toMatchObject({
+      channel: "map",
+    });
+    expect(map.broadcast).toHaveBeenCalledTimes(1);
+
+    await expect(handle(player, {
+      text: "invalid",
+      channel: "private",
+    })).resolves.toBeNull();
+    expect(player.emit).toHaveBeenLastCalledWith(
+      CHAT_ERROR_EVENT,
+      expect.objectContaining({ key: "rpg.chat.error.channel" }),
+    );
+    expect(map.broadcast).toHaveBeenCalledTimes(1);
   });
 
   test("allows moderation and an optional global adapter", async () => {

@@ -22,7 +22,21 @@ import { directivePlugin, removeImportsPlugin } from "./index";
  * const serverConfig = createBuildConfig({ side: 'server', watch: true });
  * ```
  */
-function createBuildConfig({ side, watch }: { side: 'client' | 'server', watch: boolean }) {
+export interface RpgjsModuleViteConfigOptions {
+  entries?: Partial<Record<'client' | 'server', string>>;
+  copyDtsFiles?: boolean;
+  declarationIncludes?: Partial<Record<'client' | 'server', string[]>>;
+}
+
+function createBuildConfig({
+  side,
+  watch,
+  options,
+}: {
+  side: 'client' | 'server';
+  watch: boolean;
+  options: RpgjsModuleViteConfigOptions;
+}) {
   const isClient = side === 'client';
   const runtimeDir = resolve(process.cwd(), "runtime");
   const resolveOptions = existsSync(runtimeDir)
@@ -50,7 +64,8 @@ function createBuildConfig({ side, watch }: { side: 'client' | 'server', watch: 
     plugins: [
       ...plugins,
       dts({ 
-        include: ['src/**/*.ts'],
+        include: options.declarationIncludes?.[side] || ['src/**/*.ts'],
+        copyDtsFiles: options.copyDtsFiles,
         afterDiagnostic(diagnostics) {
           if (diagnostics.length > 0) throw new Error(`Declaration generation failed with ${diagnostics.length} TypeScript diagnostic(s)`)
         }
@@ -62,7 +77,7 @@ function createBuildConfig({ side, watch }: { side: 'client' | 'server', watch: 
       minify: false,
       lib: {
         entry: {
-          index: "src/index.ts",
+          index: options.entries?.[side] || "src/index.ts",
         },
         fileName: "index",
         formats: ["es" as const],
@@ -104,9 +119,12 @@ function createBuildConfig({ side, watch }: { side: 'client' | 'server', watch: 
  * await buildClientAndServer(true);
  * ```
  */
-async function buildClientAndServer(watch: boolean = false) {
-  const clientBuild = build(createBuildConfig({ side: 'client', watch }));
-  const serverBuild = build(createBuildConfig({ side: 'server', watch }));
+async function buildClientAndServer(
+  watch: boolean = false,
+  options: RpgjsModuleViteConfigOptions = {},
+) {
+  const clientBuild = build(createBuildConfig({ side: 'client', watch, options }));
+  const serverBuild = build(createBuildConfig({ side: 'server', watch, options }));
 
   await Promise.all([clientBuild, serverBuild]);
 
@@ -117,15 +135,17 @@ const isWatchMode = process.argv.includes("--watch");
 const isBuildCommand = process.argv.includes("build");
 const isManualControl = isWatchMode && isBuildCommand;
 
-export const rpgjsModuleViteConfig = () => {
+export const rpgjsModuleViteConfig = (
+  options: RpgjsModuleViteConfigOptions = {},
+) => {
   return defineConfig(async ({ command }) => {
     if (isManualControl) {
-      buildClientAndServer(true);
+      buildClientAndServer(true, options);
       return {};
     }
     if (command === "build") {
       console.log("👀 Building...");
-      await buildClientAndServer();
+      await buildClientAndServer(false, options);
       // Return empty config to prevent default build
       process.exit(0);
     } else {

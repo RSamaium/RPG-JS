@@ -1,10 +1,12 @@
 import { signal } from "canvasengine";
 import type {
+  ResolvedChatClientOptions,
+} from "./client-types";
+import type {
   ChatErrorPayload,
   ChatMessage,
-  ResolvedChatClientOptions,
-} from "./types";
-import { normalizeChatClientOptions } from "./config";
+} from "./shared-types";
+import { normalizeChatClientOptions } from "./client-config";
 
 export const chatMessages = signal<ChatMessage[]>([]);
 export const chatError = signal<ChatErrorPayload | null>(null);

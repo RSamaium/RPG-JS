@@ -46,6 +46,7 @@ export default {
       client: {
         position: 'bottom-left',
         maxMessages: 100,
+        maxLength: 180,
         autoOpen: true,
       },
     }),
@@ -66,8 +67,11 @@ export default {
 | `autoOpen` | `true` | Display the chat when the current player is ready. |
 | `position` | `'bottom-left'` | `top-left`, `top-right`, `bottom-left`, or `bottom-right`. |
 | `maxMessages` | `100` | Maximum messages retained by the local client signal. |
+| `maxLength` | `180` | Maximum length accepted by the built-in input. Keep it aligned with the server option. |
 
 `maxMessages` limits client memory only. It does not create permanent history.
+The server remains authoritative for `maxLength`; configure the same value on
+both sides so the built-in input rejects exactly the same message lengths.
 
 ## Configure the server
 
@@ -97,7 +101,8 @@ export default createServer({
 ```
 
 Map chat is enabled by default. A map message is broadcast only to players in
-the sender's current map.
+the sender's current map. An omitted channel defaults to `map`; any explicitly
+supplied value other than `map` or `global` is rejected.
 
 ### Server options and hooks
 
@@ -203,8 +208,8 @@ interface ChatMessage {
 ## Replace the CanvasEngine component
 
 A replacement component does not receive the message history as props.
-Instead, it consumes the public chat signals. GUI data currently contains the
-configured `position`.
+Instead, it consumes the public chat signals. GUI data contains the configured
+`position` and `maxLength`.
 
 Create `gui/custom-chat.ce`:
 
@@ -228,6 +233,7 @@ Create `gui/custom-chat.ce`:
       <input
         name="message"
         type="text"
+        maxlength={maxLength}
         value={draft}
         placeholder={t("rpg.chat.placeholder")}
       />
@@ -254,6 +260,9 @@ Create `gui/custom-chat.ce`:
   const messages = computed(() => chatMessages());
   const position = computed(() => {
     return data()?.position || chatClientOptions().position;
+  });
+  const maxLength = computed(() => {
+    return data()?.maxLength ?? chatClientOptions().maxLength;
   });
   const errorText = computed(() => {
     const error = chatError();

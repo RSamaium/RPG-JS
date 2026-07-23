@@ -22,6 +22,7 @@ export default {
       client: {
         position: "bottom-left",
         maxMessages: 100,
+        maxLength: 180,
       },
     }),
     provideClientModules([]),
@@ -51,6 +52,9 @@ export default createServer({
   ],
 })
 ```
+
+Configure the same `maxLength` on both sides so the built-in input matches the
+server-authoritative validation limit.
 
 Import the default semantic styles in the client entry:
 

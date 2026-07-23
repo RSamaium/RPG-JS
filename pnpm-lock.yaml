@@ -157,13 +157,13 @@ importers:
         specifier: 2.1.0
         version: 2.1.0(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
       vite:
-        specifier: ^8.0.16
+        specifier: ^8.1.5
         version: 8.1.5(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
       vite-plugin-dts:
-        specifier: ^5.0.2
+        specifier: ^5.0.3
         version: 5.0.3(@microsoft/api-extractor@7.58.9(@types/node@25.9.3))(esbuild@0.28.1)(rolldown@1.1.5)(rollup@4.62.0)(typescript@6.0.3)(vite@8.1.5(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0))
       vitest:
-        specifier: ^4.1.9
+        specifier: ^4.1.10
         version: 4.1.10(@types/node@25.9.3)(@vitest/coverage-v8@4.1.9(vitest@4.1.9))(@vitest/ui@4.1.9(vitest@4.1.9))(jsdom@29.1.1)(vite@8.1.5(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0))
 
   packages/common:

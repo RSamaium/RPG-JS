@@ -3,27 +3,28 @@
   "version": "5.0.0-beta.0",
   "description": "Official renderer-neutral chat module for RPGJS",
   "main": "dist/client/index.js",
-  "types": "dist/client/index.d.ts",
+  "types": "dist/client/client-index.d.ts",
   "exports": {
     ".": {
       "browser": "./dist/client/index.js",
       "node": "./dist/server/index.js",
       "import": "./dist/client/index.js",
-      "types": "./dist/client/index.d.ts"
+      "types": "./dist/client/client-index.d.ts"
     },
     "./client": {
       "import": "./dist/client/index.js",
-      "types": "./dist/client/index.d.ts"
+      "types": "./dist/client/client-index.d.ts"
     },
     "./server": {
       "import": "./dist/server/index.js",
-      "types": "./dist/server/index.d.ts"
+      "types": "./dist/server/server-index.d.ts"
     }
   },
   "scripts": {
     "dev": "vite build --watch",
     "build": "vite build",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:types": "tsc --noEmit --strict --skipLibCheck true --target ES2022 --module ESNext --moduleResolution Bundler tests/public-api-types.ts"
   },
   "peerDependencies": {
     "@rpgjs/client": "workspace:*",

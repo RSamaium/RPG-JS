@@ -46,7 +46,9 @@
   const draft = signal("");
   const messages = computed(() => chatMessages());
   const position = computed(() => data()?.position || chatClientOptions().position);
-  const maxLength = computed(() => data()?.maxLength || 180);
+  const maxLength = computed(() => {
+    return data()?.maxLength ?? chatClientOptions().maxLength;
+  });
   const isEmpty = computed(() => draft().trim().length === 0);
   const errorText = computed(() => {
     const error = chatError();

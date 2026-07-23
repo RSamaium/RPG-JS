@@ -13,3 +13,5 @@ production bundle isolation with executable fixtures. Include a runnable pixel
 chat playground and keep chat socket listeners active across standalone startup
 and player map transfers. Document client/server setup, moderation hooks,
 replacement components, themes, translations, and the public chat state API.
+Emit complete side-specific chat declarations, synchronize the built-in input
+length with client configuration, and reject explicitly unknown chat channels.

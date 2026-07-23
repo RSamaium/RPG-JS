@@ -11,8 +11,8 @@ import {
   CHAT_ERROR_EVENT,
   CHAT_MESSAGE_EVENT,
   CHAT_SEND_EVENT,
-  normalizeChatClientOptions,
 } from "./config";
+import { normalizeChatClientOptions } from "./client-config";
 import {
   addChatMessage,
   chatClientOptions,
@@ -21,10 +21,12 @@ import {
 } from "./client-state";
 import type {
   ChatClientOptions,
+} from "./client-types";
+import type {
   ChatErrorPayload,
   ChatMessage,
   ChatMessagePayload,
-} from "./types";
+} from "./shared-types";
 // @ts-ignore CanvasEngine components are compiled by @canvasengine/compiler.
 import ChatComponent from "./components/chat.ce";
 
@@ -70,6 +72,7 @@ export function createChatClient(options: ChatClientOptions = {}): RpgClient {
       autoDisplay: resolved.autoOpen,
       data: {
         position: resolved.position,
+        maxLength: resolved.maxLength,
       },
       dependencies: () => [inject(RpgClientEngine).scene.currentPlayer],
     }],

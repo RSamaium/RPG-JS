@@ -1,27 +1,8 @@
-import type { GuiComponent, GuiRenderer } from "@rpgjs/client";
-
-export type ChatChannel = "map" | "global";
-export type ChatPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right";
-
-export interface ChatMessagePayload {
-  text?: unknown;
-  channel?: unknown;
-}
-
-export interface ChatMessage {
-  id: string;
-  text: string;
-  author: string;
-  playerId: string;
-  channel: ChatChannel;
-  mapId?: string;
-  createdAt: number;
-}
-
-export interface ChatErrorPayload {
-  key: string;
-  params?: Record<string, unknown>;
-}
+import type {
+  ChatChannel,
+  ChatMessage,
+  ChatMessagePayload,
+} from "./shared-types";
 
 export interface ChatMapLike {
   id?: string | (() => string);
@@ -60,29 +41,6 @@ export interface ChatServerOptions {
     player: ChatPlayerLike,
   ) => void | Promise<void>;
   broadcastGlobal?: (message: ChatMessage, player: ChatPlayerLike) => void | Promise<void>;
-}
-
-export interface ChatClientOptions {
-  guiId?: string;
-  component?: GuiComponent;
-  renderer?: GuiRenderer;
-  autoOpen?: boolean;
-  position?: ChatPosition;
-  maxMessages?: number;
-}
-
-export interface ChatOptions {
-  client?: ChatClientOptions;
-  server?: ChatServerOptions;
-}
-
-export interface ResolvedChatClientOptions {
-  guiId: string;
-  component: GuiComponent;
-  renderer: GuiRenderer;
-  autoOpen: boolean;
-  position: ChatPosition;
-  maxMessages: number;
 }
 
 export interface ResolvedChatServerOptions {

@@ -4,17 +4,19 @@ import {
   CHAT_ERROR_EVENT,
   CHAT_MESSAGE_EVENT,
   CHAT_SEND_EVENT,
-  normalizeChatServerOptions,
 } from "./config";
+import { normalizeChatServerOptions } from "./server-config";
 import type {
   ChatChannel,
   ChatErrorPayload,
   ChatMessage,
   ChatMessagePayload,
+} from "./shared-types";
+import type {
   ChatPlayerLike,
   ChatServerOptions,
   ResolvedChatServerOptions,
-} from "./types";
+} from "./server-types";
 
 const createMessageId = (): string => {
   return globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
@@ -53,7 +55,14 @@ export function createChatHandler(options: ResolvedChatServerOptions) {
       });
     }
 
-    const channel: ChatChannel = payload.channel === "global" ? "global" : "map";
+    if (
+      payload.channel !== undefined
+      && payload.channel !== "map"
+      && payload.channel !== "global"
+    ) {
+      return emitError(player, "rpg.chat.error.channel");
+    }
+    const channel: ChatChannel = payload.channel ?? "map";
     if (!options.channels.includes(channel)) {
       return emitError(player, "rpg.chat.error.channel");
     }
