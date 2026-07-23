@@ -14,6 +14,8 @@
     "build:projectiles": "pnpm --dir games/projectiles build",
     "dev:dash": "pnpm --dir games/dash dev",
     "build:dash": "pnpm --dir games/dash build",
+    "dev:chat": "pnpm --dir games/chat dev",
+    "build:chat": "pnpm --dir games/chat build",
     "dev:mouse-interactions": "pnpm --dir games/mouse-interactions dev",
     "build:mouse-interactions": "pnpm --dir games/mouse-interactions build",
     "dev:pressure-plate": "pnpm --dir games/pressure-plate dev",

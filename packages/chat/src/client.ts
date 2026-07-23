@@ -48,6 +48,18 @@ export function createChatClient(options: ChatClientOptions = {}): RpgClient {
     component: options.component || ChatComponent,
   });
   configureChatClient(resolved);
+  const bindSocket = () => {
+    const socket = inject<AbstractWebsocket>(WebSocketToken);
+    if (boundSockets.has(socket)) return;
+    boundSockets.add(socket);
+    socket.on(CHAT_MESSAGE_EVENT, (message: ChatMessage) => {
+      chatError.set(null);
+      addChatMessage(message);
+    });
+    socket.on(CHAT_ERROR_EVENT, (error: ChatErrorPayload) => {
+      chatError.set(error);
+    });
+  };
 
   return defineModule<RpgClient>({
     i18n: CHAT_CLIENT_I18N,
@@ -62,17 +74,11 @@ export function createChatClient(options: ChatClientOptions = {}): RpgClient {
       dependencies: () => [inject(RpgClientEngine).scene.currentPlayer],
     }],
     engine: {
+      onStart() {
+        bindSocket();
+      },
       onConnected() {
-        const socket = inject<AbstractWebsocket>(WebSocketToken);
-        if (boundSockets.has(socket)) return;
-        boundSockets.add(socket);
-        socket.on(CHAT_MESSAGE_EVENT, (message: ChatMessage) => {
-          chatError.set(null);
-          addChatMessage(message);
-        });
-        socket.on(CHAT_ERROR_EVENT, (error: ChatErrorPayload) => {
-          chatError.set(error);
-        });
+        bindSocket();
       },
     },
   });

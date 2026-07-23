@@ -112,13 +112,22 @@ export function createChatHandler(options: ResolvedChatServerOptions) {
 export function createChatServer(options: ChatServerOptions = {}): RpgServer {
   const resolved = normalizeChatServerOptions(options);
   const handle = createChatHandler(resolved);
+  const boundPlayers = new WeakSet<object>();
+  const bindPlayer = (player: RpgPlayer) => {
+    if (boundPlayers.has(player)) return;
+    boundPlayers.add(player);
+    player.on<ChatMessagePayload>(CHAT_SEND_EVENT, async (payload) => {
+      await handle(player as unknown as ChatPlayerLike, payload);
+    });
+  };
 
   return defineModule<RpgServer>({
     player: {
       onConnected(player: RpgPlayer) {
-        player.on<ChatMessagePayload>(CHAT_SEND_EVENT, async (payload) => {
-          await handle(player as unknown as ChatPlayerLike, payload);
-        });
+        bindPlayer(player);
+      },
+      onJoinMap(player: RpgPlayer) {
+        bindPlayer(player);
       },
     },
   });

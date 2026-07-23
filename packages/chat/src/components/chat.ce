@@ -23,7 +23,7 @@
       <button
         class="rpg-ui-btn rpg-ui-chat-send"
         type="submit"
-        disabled={isEmpty}
+        aria-disabled={isEmpty() ? "true" : "false"}
       >{t("rpg.chat.send")}</button>
     </form>
   </section>

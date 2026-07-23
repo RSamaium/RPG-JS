@@ -1,0 +1,8 @@
+{
+  "id": "chat",
+  "title": "Pixel Chat",
+  "description": "Server-authoritative map chat using the shared RPGJS pixel theme.",
+  "tags": ["chat", "gui", "pixel-art", "theme"],
+  "modes": ["standalone", "mmorpg"],
+  "port": 5189
+}

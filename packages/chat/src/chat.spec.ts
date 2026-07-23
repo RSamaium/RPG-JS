@@ -5,7 +5,7 @@ import {
   normalizeChatClientOptions,
   normalizeChatServerOptions,
 } from "./config";
-import { createChatHandler } from "./server";
+import { createChatHandler, createChatServer } from "./server";
 import type { ChatPlayerLike } from "./types";
 
 const createPlayer = () => {
@@ -105,5 +105,22 @@ describe("@rpgjs/chat", () => {
 
     expect(message).toMatchObject({ text: "*** word", channel: "global" });
     expect(broadcastGlobal).toHaveBeenCalledWith(message, player);
+  });
+
+  test("binds chat listeners after map transfers without duplicates", () => {
+    const chat = createChatServer() as any;
+    const lobbyPlayer = createPlayer().player;
+    const mapPlayer = createPlayer().player;
+
+    chat.player.onConnected(lobbyPlayer);
+    chat.player.onJoinMap(lobbyPlayer);
+    chat.player.onJoinMap(mapPlayer);
+
+    expect(lobbyPlayer.on).toHaveBeenCalledTimes(1);
+    expect(mapPlayer.on).toHaveBeenCalledTimes(1);
+    expect(mapPlayer.on).toHaveBeenCalledWith(
+      "chat:send",
+      expect.any(Function),
+    );
   });
 });

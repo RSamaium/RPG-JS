@@ -1,0 +1,36 @@
+<Container>
+  <Rect width={720} height={480} color="#181425" />
+
+  <Rect x={16} y={16} width={688} height={448} color="#3a3158" />
+  <Rect x={32} y={32} width={656} height={416} color="#6f9f58" />
+
+  <Rect x={32} y={176} width={656} height={112} color="#d7a85b" />
+  <Rect x={304} y={32} width={112} height={416} color="#d7a85b" />
+  <Rect x={320} y={32} width={16} height={416} color="#f6c177" />
+  <Rect x={384} y={32} width={16} height={416} color="#b86f50" />
+
+  <Rect x={48} y={48} width={208} height={96} color="#33769c" />
+  <Rect x={64} y={64} width={176} height={16} color="#62a8ea" />
+  <Rect x={64} y={112} width={176} height={16} color="#24546f" />
+
+  <Rect x={480} y={64} width={160} height={80} color="#26213a" />
+  <Rect x={496} y={80} width={128} height={48} color="#e85d75" />
+  <Rect x={544} y={96} width={32} height={32} color="#fff1c7" />
+
+  <Rect x={464} y={320} width={192} height={96} color="#26213a" />
+  <Rect x={480} y={336} width={160} height={64} color="#7ecf6b" />
+  <Rect x={496} y={352} width={16} height={16} color="#fff1c7" />
+  <Rect x={608} y={368} width={16} height={16} color="#fff1c7" />
+
+  <Text x={44} y={300} text="PIXEL CHAT PLAZA" color="#fff1c7" size={20} />
+  <Text x={44} y={330} text="Write a message below." color="#fff1c7" size={14} />
+  <Text x={44} y={352} text="The server owns identity and broadcast." color="#c9b8a8" size={12} />
+
+  <Container>
+    <EventLayerComponent />
+  </Container>
+</Container>
+
+<script>
+  import { EventLayerComponent } from "@rpgjs/client";
+</script>

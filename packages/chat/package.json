@@ -6,6 +6,8 @@
   "types": "dist/client/index.d.ts",
   "exports": {
     ".": {
+      "browser": "./dist/client/index.js",
+      "node": "./dist/server/index.js",
       "import": "./dist/client/index.js",
       "types": "./dist/client/index.d.ts"
     },
