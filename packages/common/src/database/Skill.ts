@@ -1,5 +1,8 @@
 import { signal } from "@signe/reactive";
 import { id, sync } from "@signe/sync";
+import type { RpgWritableSignal } from "../foundation";
+
+const gameplaySignal = signal as <T>(value: T) => RpgWritableSignal<T>;
 
 export interface SkillData {
     id: string;
@@ -13,14 +16,14 @@ export interface SkillData {
 }
 
 export class Skill {
-    @id() id = signal('');
-    @sync() name = signal('');
-    description = signal('');
-    @sync() spCost = signal(0);
-    @sync() icon = signal('')
-    hitRate = signal(0);
-    power = signal(0);
-    coefficient = signal({});
+    @id() id = gameplaySignal('');
+    @sync() name = gameplaySignal('');
+    description = gameplaySignal('');
+    @sync() spCost = gameplaySignal(0);
+    @sync() icon = gameplaySignal('')
+    hitRate = gameplaySignal(0);
+    power = gameplaySignal(0);
+    coefficient = gameplaySignal<Record<string, number>>({});
 
     constructor(data?: SkillData) {
         this.id.set(data?.id ?? '');

@@ -112,6 +112,7 @@
               "philosophy",
               "roadmap",
               "migration/v4-to-v5",
+              "advanced/signe-extension-points",
               "advanced/mmorpg-entries",
               "advanced/node-server-production",
               "advanced/cloudflare-server-production",

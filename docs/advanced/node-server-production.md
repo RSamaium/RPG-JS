@@ -308,8 +308,7 @@ account persistence in an MMORPG.
 
 ## WebSocket session ids
 
-The Node transport is backed by `@signe/room/node` and follows the
-`@signe/room` session model:
+The Node transport uses the RPGJS room adapter and follows its session model:
 
 - `conn.id` is unique for each active WebSocket connection.
 - `conn.sessionId` is the stable private session id sent by the client.

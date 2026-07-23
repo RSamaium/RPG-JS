@@ -1,4 +1,5 @@
 import { signal } from "@signe/reactive";
+import type { RpgWritableSignal } from "@rpgjs/common";
 import { inject } from "../core/inject";
 import { context } from "../core/context";
 import { Hooks, ModulesToken } from "@rpgjs/common";
@@ -44,7 +45,7 @@ export abstract class BaseRoom {
    * const potion = room.database()['Potion'];
    * ```
    */
-  database = signal({});
+  database = signal({}) as unknown as RpgWritableSignal<Record<string, any>>;
 
 
   async onStart() {

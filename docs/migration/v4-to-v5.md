@@ -43,6 +43,23 @@ After the game runs on the v5 runtime, migrate one module at a time:
 
 The compatibility layer and native v5 modules may coexist during this process.
 
+### Replace Signe types leaked by early v5 betas
+
+Early v5 betas re-exported reactive and DI implementation types from RPGJS
+packages. Replace those imports before v5 stable:
+
+| Early beta import | Stable v5 replacement |
+| --- | --- |
+| `WritableSignal` or `Signal` from `@rpgjs/server` | `RpgWritableSignal` or `RpgReadableSignal` for gameplay property declarations |
+| `signal`, `computed`, or `effect` from `@rpgjs/server` | Framework-managed gameplay properties, or a direct `@signe/reactive` dependency in an advanced plugin |
+| `Context` from `@rpgjs/client` | `RpgContext` |
+| `NodeRoomStorage*` from `@rpgjs/server/node` | the corresponding `RpgRoomStorage*` contract |
+| Signe Cloudflare option types | `CreateRpgServerWorkerOptions` and `RpgServerWorkerEnv` |
+
+Plugins that deliberately use Signe internals should import and declare their
+`@signe/*` dependencies directly. See
+[Advanced Signe Extension Points](/advanced/signe-extension-points).
+
 ## Compatibility Matrix
 
 | V4 capability | V5 target | Stable-release validation |

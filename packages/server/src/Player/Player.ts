@@ -11,17 +11,19 @@ import {
   ShapePositioning,
   getOrCreateI18nService,
   type I18nParams,
+  type RpgContext,
+  type RpgReadableSignal,
+  type RpgWritableSignal,
 } from "@rpgjs/common";
 import { Entity, Vector2 } from "@rpgjs/physic";
 import { IComponentManager, WithComponentManager } from "./ComponentManager";
 import { RpgMap, type EventPosOption } from "../rooms/map";
-import { Context, inject } from "@signe/di";
 import { IGuiManager, WithGuiManager } from "./GuiManager";
 import { IMoveManager, WithMoveManager } from "./MoveManager";
 import { IGoldManager, WithGoldManager } from "./GoldManager";
 import { WithVariableManager, type IVariableManager } from "./VariableManager";
 import { createStatesSnapshotDeep, load, sync, type } from "@signe/sync";
-import { computed, signal, type ComputedSignal } from "@signe/reactive";
+import { computed, signal } from "@signe/reactive";
 import {
   IParameterManager,
   WithParameterManager,
@@ -55,6 +57,7 @@ import type {
   RpgPlayerSnapshotLoadResult,
 } from "./types";
 import type { RpgSyncSchema } from "./types";
+import { inject } from "../core/inject";
 
 export interface RpgTiledTile {
   [key: string]: unknown;
@@ -145,7 +148,7 @@ type CameraFollowEase =
  */
 export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
   map: RpgMap | null = null;
-  context?: Context;
+  context?: RpgContext;
   conn: Parameters<RpgMap["$send"]>[0] | null = null;
   touchSide: boolean = false; // Protection against map change loops
   private continueMovementOnNextMapChange = false;
@@ -186,9 +189,9 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
     return this._getComputedWorldPosition('y');
   }
 
-  private _worldPositionSignals = new WeakMap<object, Partial<Record<'x' | 'y', ComputedSignal<number>>>>();
+  private _worldPositionSignals = new WeakMap<object, Partial<Record<'x' | 'y', RpgReadableSignal<number>>>>();
 
-  private _getComputedWorldPosition(axis: 'x' | 'y'): ComputedSignal<number> {
+  private _getComputedWorldPosition(axis: 'x' | 'y'): RpgReadableSignal<number> {
     // We use a WeakMap to cache the computed signal per instance
     // This ensures that if the player object is copied (e.g. in tests),
     // the new instance gets its own signal bound to itself.
@@ -233,10 +236,10 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
 
   frames: { x: number; y: number; ts: number }[] = [];
 
-  @sync(RpgPlayer) events = signal<RpgEvent[]>([]);
+  @sync(RpgPlayer) events = signal<RpgEvent[]>([]) as unknown as RpgWritableSignal<RpgEvent[]>;
 
   /** Internal: named map position to resolve after the target map data is ready */
-  @sync() pendingMapPosition = signal<string | null>(null);
+  @sync() pendingMapPosition = signal<string | null>(null) as unknown as RpgWritableSignal<string | null>;
 
   constructor() {
     super();
@@ -247,7 +250,10 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
     let pendingUpdate: { x: number; y: number } | null = null;
     let updateScheduled = false;
 
-    combineLatest([this.x.observable, this.y.observable])
+    combineLatest([
+      (this.x as any).observable as Observable<number>,
+      (this.y as any).observable as Observable<number>,
+    ])
       .subscribe(([x, y]) => {
         pendingUpdate = { x, y };
 
@@ -344,7 +350,7 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
   }
 
   get hooks() {
-    return inject<Hooks>(this.context as any, ModulesToken);
+    return inject<Hooks>(ModulesToken, this.context);
   }
 
   // compatibility with v4

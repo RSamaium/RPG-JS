@@ -7,6 +7,8 @@ import { inject } from "./core/inject";
 import { context } from "./core/context";
 import { lastValueFrom } from "rxjs";
 
+const RpgRoomServerBase = Server as unknown as new (...args: any[]) => any;
+
 export type RpgServerRoomKind = "lobby" | "map" | "unknown";
 
 export interface RpgServerRoomInfo {
@@ -29,7 +31,7 @@ export interface RpgServerRoomInfo {
 export type RpgServerCompatibilityApp = unknown;
 export type RpgServerCompatibilityIo = unknown;
 
-export class RpgServerEngine extends Server {
+export class RpgServerEngine extends RpgRoomServerBase {
   rooms = [RpgMap, LobbyRoom];
   private _globalConfig: any = {};
 
@@ -255,7 +257,7 @@ export class RpgServerEngine extends Server {
     if (ctx?.request?.url) {
       const transferToken = new URL(ctx.request.url).searchParams.get("transferToken");
       if (transferToken) {
-        const transferData = await this.room.storage.get<any>(`transfer:${transferToken}`);
+        const transferData = await this.room.storage.get(`transfer:${transferToken}`) as any;
         if (transferData?.privateId) {
           privateIds.add(transferData.privateId);
         }
@@ -267,7 +269,7 @@ export class RpgServerEngine extends Server {
 
   private async saveAuthenticatedSession(privateId: string, publicId: string) {
     const sessionKey = `session:${privateId}`;
-    const existingSession = await this.room.storage.get<any>(sessionKey);
+    const existingSession = await this.room.storage.get(sessionKey) as any;
 
     if (existingSession?.publicId && existingSession.publicId !== publicId) {
       await this.removePrivateIdFromPublicIndex(privateId, existingSession.publicId);
@@ -283,7 +285,7 @@ export class RpgServerEngine extends Server {
 
   private async addPrivateIdToPublicIndex(privateId: string, publicId: string) {
     const key = `session-public:${publicId}`;
-    const privateIds = await this.room.storage.get<string[]>(key);
+    const privateIds = await this.room.storage.get(key) as string[] | undefined;
 
     if (Array.isArray(privateIds) && privateIds.includes(privateId)) {
       return;
@@ -294,7 +296,7 @@ export class RpgServerEngine extends Server {
 
   private async removePrivateIdFromPublicIndex(privateId: string, publicId: string) {
     const key = `session-public:${publicId}`;
-    const privateIds = await this.room.storage.get<string[]>(key);
+    const privateIds = await this.room.storage.get(key) as string[] | undefined;
 
     if (!Array.isArray(privateIds)) {
       return;

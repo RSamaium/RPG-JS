@@ -3,7 +3,7 @@ import { signal, Signal, WritableSignal } from "canvasengine";
 import { AbstractWebsocket, WebSocketToken } from "../services/AbstractSocket";
 import { DialogboxComponent, ShopComponent, SaveLoadComponent, MainMenuComponent, NotificationComponent, TitleScreenComponent, GameoverComponent, InputComponent } from "../components/gui";
 import { combineLatest, Subscription } from "rxjs";
-import { PrebuiltGui } from "@rpgjs/common";
+import { PrebuiltGui, type RpgContext } from "@rpgjs/common";
 
 interface GuiOptions {
   name?: string;
@@ -145,8 +145,8 @@ export class RpgGui {
    */
   attachedGuiDisplayState = signal<Record<string, boolean>>({});
 
-  constructor(private context: Context) {
-    this.webSocket = inject(context, WebSocketToken);
+  constructor(private context: RpgContext) {
+    this.webSocket = inject(context as Context, WebSocketToken);
     this.add({
       name: "rpg-dialog",
       component: DialogboxComponent,

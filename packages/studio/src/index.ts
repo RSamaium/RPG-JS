@@ -1,6 +1,6 @@
 import server from "./server";
 import client from "./client";
-import { createModule } from "@rpgjs/common";
+import { createModule, type RpgProvider } from "@rpgjs/common";
 import { createStudioMapClientProviders } from "./client-provider";
 import { configureStudioGameRuntime } from "./data-provider";
 import { configureStudioConstants } from "./constants";
@@ -38,7 +38,7 @@ export interface StudioGameModuleConfig {
       };
 }
 
-export function provideStudioGame(config: StudioGameModuleConfig = {}) {
+export function provideStudioGame(config: StudioGameModuleConfig = {}): RpgProvider[] {
   const hasProjectId = Boolean(config.projectId && config.projectId.trim().length > 0);
 
   const resolvedBaseUrl = config.baseUrl ?? "https://rpgjs.studio";

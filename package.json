@@ -10,6 +10,8 @@
     "docs:client-api": "tsx bin/extract-jsdoc.ts extract --package @rpgjs/client-api --entry packages/client/src --output docs/.generated/client-api.json && tsx bin/extract-jsdoc.ts render --input docs/.generated/client-api.json --config docs/api/client.config.json --output docs/api/client",
     "docs:map-api": "tsx bin/extract-jsdoc.ts extract --package @rpgjs/map-api --entry packages/server/src/rooms,packages/common/src/rooms --output docs/.generated/map-api.json && tsx bin/extract-jsdoc.ts render --input docs/.generated/map-api.json --config docs/api/map.config.json --output docs/api/map",
     "docs:player-api": "tsx bin/extract-jsdoc.ts extract --package @rpgjs/server --entry packages/server/src --output docs/.generated/server-api.json && tsx bin/extract-jsdoc.ts render --input docs/.generated/server-api.json --config docs/api/player.config.json --output docs/api/player",
+    "api:boundary": "tsx bin/check-public-boundary.ts",
+    "api:boundary:update": "tsx bin/check-public-boundary.ts --update",
     "changeset": "changeset",
     "version-packages": "changeset version && pnpm install --lockfile-only",
     "publish-packages": "pnpm run rpgjs:version && changeset publish && pnpm run rpgjs:tag-latest",

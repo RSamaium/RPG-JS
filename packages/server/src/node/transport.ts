@@ -1,7 +1,7 @@
 import type { IncomingHttpHeaders, IncomingMessage, ServerResponse } from "node:http";
 import type { Duplex } from "node:stream";
 import { injector } from "@signe/di";
-import { createMemoryNodeRoomStorage, createNodeRoomTransport, type NodeRoom, type NodeRoomTransport } from "@signe/room/node";
+import { createMemoryNodeRoomStorage, createNodeRoomTransport } from "@signe/room/node";
 import { context as serverContext } from "../core/context";
 import { setInject } from "../core/inject";
 import { provideServerModules } from "../module";
@@ -12,6 +12,7 @@ import type {
   RpgTransportRequestLike,
   RpgTransportServer,
   RpgTransportServerConstructor,
+  RpgHostedRoom,
   RpgWebSocketConnection,
   RpgWebSocketRequestLike,
   RpgWebSocketServer,
@@ -203,9 +204,9 @@ export class RpgServerTransport {
   private readonly initializeMaps: boolean;
   private readonly mapUpdateToken: string;
   private readonly tiledBasePaths?: string[];
-  private readonly rooms = new Map<string, NodeRoom>();
+  private readonly rooms = new Map<string, RpgHostedRoom>();
   private readonly servers = new Map<string, RpgTransportServer>();
-  private readonly transport: NodeRoomTransport;
+  private readonly transport: any;
   private lastKnownHost = "";
 
   constructor(private readonly serverModule: RpgTransportServerConstructor, options: CreateRpgServerTransportOptions = {}) {
@@ -216,7 +217,7 @@ export class RpgServerTransport {
 
     const owner = this;
     class RpgNodeServer extends serverModule {
-      constructor(room: NodeRoom) {
+      constructor(room: RpgHostedRoom) {
         super(room);
         owner.rooms.set(room.id, room);
         owner.servers.set(room.id, this as RpgTransportServer);
@@ -255,11 +256,11 @@ export class RpgServerTransport {
     }
 
     setInject(serverContext);
-    await injector(serverContext, [provideServerModules([])]);
+    await injector(serverContext as any, [provideServerModules([])] as any);
     this.serverContextInitialized = true;
   }
 
-  getRoom(roomId: string): NodeRoom | undefined {
+  getRoom(roomId: string): RpgHostedRoom | undefined {
     return this.rooms.get(roomId);
   }
 
@@ -267,7 +268,7 @@ export class RpgServerTransport {
     return this.servers.get(roomId);
   }
 
-  private async ensureRoomAndServer(roomId: string, host?: string): Promise<{ room: NodeRoom; rpgServer: RpgTransportServer }> {
+  private async ensureRoomAndServer(roomId: string, host?: string): Promise<{ room: RpgHostedRoom; rpgServer: RpgTransportServer }> {
     if (host) {
       this.lastKnownHost = host;
     }

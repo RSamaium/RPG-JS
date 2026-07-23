@@ -1,4 +1,6 @@
 import { Context } from "@signe/di";
+import type { RpgContext } from "@rpgjs/common";
 
-export const context = new Context();
-context['side'] = 'server'
+const signeContext = new Context();
+signeContext['side'] = 'server'
+export const context = signeContext as unknown as RpgContext;

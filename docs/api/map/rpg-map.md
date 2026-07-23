@@ -706,7 +706,8 @@ if (deleted) {
 
 Synchronized signal containing all events (NPCs, objects) on the map
 
-This signal is automatically synchronized with clients using
+This signal is automatically synchronized with clients by RPGJS.
+Events are indexed by their unique ID.
 
 - Source: `packages/server/src/rooms/map.ts`
 - Kind: `property`
@@ -1349,7 +1350,16 @@ console.log(`Current map: ${mapId}`);
 
 Intercepts and modifies packets before they are sent to clients
 
-This method is automatically called by
+This method is automatically called by the RPGJS room runtime for each packet sent to clients.
+It adds timestamp and acknowledgment information to sync packets for client-side
+prediction reconciliation. This helps with network synchronization and reduces
+perceived latency.
+
+## Architecture
+
+Adds metadata to packets:
+- `timestamp`: Current server time for client-side prediction
+- `ack`: Acknowledgment info with last processed frame and authoritative position
 
 - Source: `packages/server/src/rooms/map.ts`
 - Kind: `method`
@@ -1358,14 +1368,14 @@ This method is automatically called by
 ### Signature
 
 ```ts
-interceptorPacket(player: RpgPlayer, packet: any, conn: Parameters<RoomMethods["$send"]>[0])
+interceptorPacket(player: RpgPlayer, packet: any, conn: RpgRoomConnection)
 ```
 
 ### Parameters
 
 - `player`: `RpgPlayer`
 - `packet`: `any`
-- `conn`: `Parameters<RoomMethods["$send"]>[0]`
+- `conn`: `RpgRoomConnection`
 
 ### Returns
 
@@ -1604,7 +1614,17 @@ onInput(player: RpgPlayer, input: any)
 
 Called when a player joins the map
 
-This method is automatically called by
+This method is automatically called by the RPGJS room runtime when a player connects to the map.
+It initializes the player's connection, sets up the map context, and waits for
+the map data to be ready before playing sounds and triggering hooks.
+
+## Architecture
+
+1. Sets player's map reference and context
+2. Initializes the player
+3. Waits for map data to be ready
+4. Plays map sounds for the player
+5. Triggers `server-player-onJoinMap` hook
 
 - Source: `packages/server/src/rooms/map.ts`
 - Kind: `method`
@@ -1613,13 +1633,13 @@ This method is automatically called by
 ### Signature
 
 ```ts
-onJoin(player: RpgPlayer, conn: Parameters<RoomMethods["$send"]>[0])
+onJoin(player: RpgPlayer, conn: RpgRoomConnection)
 ```
 
 ### Parameters
 
 - `player`: `RpgPlayer`
-- `conn`: `Parameters<RoomMethods["$send"]>[0]`
+- `conn`: `RpgRoomConnection`
 
 ### Examples
 
@@ -1627,7 +1647,7 @@ onJoin(player: RpgPlayer, conn: Parameters<RoomMethods["$send"]>[0])
 // This method is called automatically by the framework
 // You can listen to the hook to perform custom logic
 server.addHook('server-player-onJoinMap', (player, map) => {
-console.log(`Player ${player.id} joined map ${map.id}`);
+  console.log(`Player ${player.id} joined map ${map.id}`);
 });
 ```
 
@@ -1635,7 +1655,13 @@ console.log(`Player ${player.id} joined map ${map.id}`);
 
 Called when a player leaves the map
 
-This method is automatically called by
+This method is automatically called by the RPGJS room runtime when a player disconnects from the map.
+It cleans up the player's pending inputs and triggers the appropriate hooks.
+
+## Architecture
+
+1. Triggers `server-player-onLeaveMap` hook
+2. Clears pending inputs to prevent processing after disconnection
 
 - Source: `packages/server/src/rooms/map.ts`
 - Kind: `method`
@@ -1644,13 +1670,13 @@ This method is automatically called by
 ### Signature
 
 ```ts
-onLeave(player: RpgPlayer, conn: Parameters<RoomMethods["$send"]>[0])
+onLeave(player: RpgPlayer, conn: RpgRoomConnection)
 ```
 
 ### Parameters
 
 - `player`: `RpgPlayer`
-- `conn`: `Parameters<RoomMethods["$send"]>[0]`
+- `conn`: `RpgRoomConnection`
 
 ### Examples
 
@@ -1658,7 +1684,7 @@ onLeave(player: RpgPlayer, conn: Parameters<RoomMethods["$send"]>[0])
 // This method is called automatically by the framework
 // You can listen to the hook to perform custom cleanup
 server.addHook('server-player-onLeaveMap', (player, map) => {
-console.log(`Player ${player.id} left map ${map.id}`);
+  console.log(`Player ${player.id} left map ${map.id}`);
 });
 ```
 
@@ -1722,7 +1748,8 @@ patchWeather(patch: Partial<WeatherState>, options?: WeatherSetOptions): Weather
 
 Synchronized signal containing all players currently on the map
 
-This signal is automatically synchronized with clients using
+This signal is automatically synchronized with clients by RPGJS.
+Players are indexed by their unique ID.
 
 - Source: `packages/server/src/rooms/map.ts`
 - Kind: `property`
@@ -2315,7 +2342,8 @@ structure as module properties with `$initial`, `$syncWithClient`, and `$permane
 ## Architecture
 
 - Reads a schema object shaped like module props
-- Creates typed sync signals with
+- Creates typed synchronized signals through the RPGJS gameplay contract
+- Properties are accessible as `map.propertyName`
 
 - Source: `packages/server/src/rooms/map.ts`
 - Kind: `method`
@@ -2336,16 +2364,16 @@ setSync(schema: Record<string, any>)
 ```ts
 // Add synchronized properties to the map
 map.setSync({
-weather: {
-$initial: 'sunny',
-$syncWithClient: true,
-$permanent: false
-},
-timeOfDay: {
-$initial: 12,
-$syncWithClient: true,
-$permanent: false
-}
+  weather: {
+    $initial: 'sunny',
+    $syncWithClient: true,
+    $permanent: false
+  },
+  timeOfDay: {
+    $initial: 12,
+    $syncWithClient: true,
+    $permanent: false
+  }
 });
 
 // Use the properties
@@ -2732,10 +2760,11 @@ and creates or updates the world manager. The world ID is extracted from the URL
 
 ## Architecture
 
-1. Extracts world ID from URL path parameter
-2. Normalizes input to array of WorldMapConfig
-3. Ensures all required map properties are present (width, height, tile sizes)
-4. Creates or updates the world manager
+1. Authenticates the administrative update request
+2. Extracts the world ID from the `/world/:id/update` path segment
+3. Normalizes input to array of WorldMapConfig
+4. Persists the topology so it survives Durable Object hibernation
+5. Creates or updates the world manager
 
 Expected payload examples:
 - `{ id: string, maps: WorldMapConfig[] }`

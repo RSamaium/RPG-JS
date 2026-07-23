@@ -1,6 +1,6 @@
 # ADR 002: Signe Public Boundary
 
-- Status: Proposed
+- Status: Accepted
 - Target: RPGJS v5 stable
 
 ## Context
@@ -9,7 +9,7 @@ Signe provides dependency injection, reactivity, synchronization, and room
 coordination. Directly exposing third-party types gives advanced users power,
 but also makes changes to Signe part of RPGJS's public compatibility contract.
 
-## Proposed decision
+## Decision
 
 Signe is an official internal foundation with documented advanced extension
 points. Stable gameplay APIs should expose RPGJS-owned types and behavior where

@@ -1,5 +1,5 @@
 import { createTiledMapServerModule } from "./server";
-import { createModule } from "@rpgjs/common";
+import { createModule, type RpgProvider } from "@rpgjs/common";
 import {
   createTiledMapClientProviders,
 } from "./client-provider";
@@ -32,7 +32,7 @@ export interface TiledMapOptions {
  */
 export function provideTiledMap(
   options: TiledMapOptions = { basePath: "map" },
-) {
+): RpgProvider[] {
   const clientFeature = createTiledMapClientProviders?.(options);
   const server = createTiledMapServerModule?.(options);
   return createModule("TiledMap", [

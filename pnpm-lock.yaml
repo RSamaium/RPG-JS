@@ -284,6 +284,9 @@ importers:
       '@rpgjs/client':
         specifier: workspace:*
         version: link:../client
+      '@rpgjs/common':
+        specifier: workspace:*
+        version: link:../common
       '@rpgjs/server':
         specifier: workspace:*
         version: link:../server

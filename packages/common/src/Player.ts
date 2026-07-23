@@ -2,6 +2,9 @@ import { signal } from "@signe/reactive";
 import { connected, id, persist, sync, users } from "@signe/sync";
 import { Item, Skill } from "./database";
 import { Constructor } from "./Utils";
+import type { RpgWritableSignal } from "./foundation";
+
+const gameplaySignal = signal as <T>(value: T) => RpgWritableSignal<T>;
 
 const readReactiveValue = (value: any) => {
   if (typeof value === "function" && value.observable) {
@@ -109,53 +112,53 @@ export interface AttachShapeOptions {
 
 export class RpgCommonPlayer {
   @id() id: string;
-  @sync() _name = signal("");
-  @sync() type = signal("");
+  @sync() _name = gameplaySignal("");
+  @sync() type = gameplaySignal("");
   // x and y must be @sync() to ensure initial positions are sent to client
   // The positions represent TOP-LEFT coordinates of the character's hitbox
   // @persist() only persists server-side but doesn't sync to client
-  @sync() x = signal(0);
-  @sync() y = signal(0);
-  @sync() z = signal(0);
-  @sync() tint = signal("white");
-  @sync() direction = signal(Direction.Down);
-  @sync() _speed = signal(4);
-  @sync() graphics = signal<any>([]);
-  @sync() _graphicScale = signal<any>(null);
+  @sync() x = gameplaySignal(0);
+  @sync() y = gameplaySignal(0);
+  @sync() z = gameplaySignal(0);
+  @sync() tint = gameplaySignal("white");
+  @sync() direction = gameplaySignal(Direction.Down);
+  @sync() _speed = gameplaySignal(4);
+  @sync() graphics = gameplaySignal<any>([]);
+  @sync() _graphicScale = gameplaySignal<any>(null);
   @sync({
     persist: false
-  }) _canMove = signal(true);
-  @sync() hitbox = signal<Hitbox>({
+  }) _canMove = gameplaySignal(true);
+  @sync() hitbox = gameplaySignal<Hitbox>({
     w: 32,
     h: 32,
   });
-  @sync() _gold = signal(0);
-  @sync() animationName = signal("stand");
-  @sync() hpSignal = signal(0);
-  @sync() spSignal = signal(0);
-  @sync() _exp = signal(0);
-  @sync() _level = signal(1);
-  @sync() _class = signal({});
-  @sync({ classType: Item, transform: toCloneableSyncValue }) items = signal<Item[]>([]);
-  @sync({ transform: toCloneableSyncValue }) equipments = signal<any[]>([]);
-  @sync() states = signal<any[]>([]);
-  @sync(Skill) skills = signal<Skill[]>([]);
-  @sync() _effects = signal<any[]>([]);
-  @sync() _through = signal(false);
-  @sync() _throughOtherPlayer = signal(true);
-  @sync() _throughEvent = signal(false);
-  @sync() _pushable = signal(false);
-  @sync() _frequency = signal(0);
-  @sync() _frames = signal<{ x: number; y: number; ts: number }[]>([]);
-  @sync() componentsTop = signal<string | null>(null);
-  @sync() componentsBottom = signal<string | null>(null);
-  @sync() componentsCenter = signal<string | null>(null);
-  @sync() componentsLeft = signal<string | null>(null);
-  @sync() componentsRight = signal<string | null>(null);
+  @sync() _gold = gameplaySignal(0);
+  @sync() animationName = gameplaySignal("stand");
+  @sync() hpSignal = gameplaySignal(0);
+  @sync() spSignal = gameplaySignal(0);
+  @sync() _exp = gameplaySignal(0);
+  @sync() _level = gameplaySignal(1);
+  @sync() _class = gameplaySignal<any>({});
+  @sync({ classType: Item, transform: toCloneableSyncValue }) items = gameplaySignal<Item[]>([]);
+  @sync({ transform: toCloneableSyncValue }) equipments = gameplaySignal<any[]>([]);
+  @sync() states = gameplaySignal<any[]>([]);
+  @sync(Skill) skills = gameplaySignal<Skill[]>([]);
+  @sync() _effects = gameplaySignal<any[]>([]);
+  @sync() _through = gameplaySignal(false);
+  @sync() _throughOtherPlayer = gameplaySignal(true);
+  @sync() _throughEvent = gameplaySignal(false);
+  @sync() _pushable = gameplaySignal(false);
+  @sync() _frequency = gameplaySignal(0);
+  @sync() _frames = gameplaySignal<{ x: number; y: number; ts: number }[]>([]);
+  @sync() componentsTop = gameplaySignal<string | null>(null);
+  @sync() componentsBottom = gameplaySignal<string | null>(null);
+  @sync() componentsCenter = gameplaySignal<string | null>(null);
+  @sync() componentsLeft = gameplaySignal<string | null>(null);
+  @sync() componentsRight = gameplaySignal<string | null>(null);
   @sync({
     persist: false
-  }) _removeTransition = signal("");
-  @connected() isConnected = signal(false)
+  }) _removeTransition = gameplaySignal("");
+  @connected() isConnected = gameplaySignal(false)
 
   // Store intended movement direction (not synced, only used locally)
   private _intendedDirection: Direction | null = null;
@@ -163,7 +166,7 @@ export class RpgCommonPlayer {
   // Direction and animation locking (server-side only, not synced)
   private _directionFixed = signal(false);
   private _animationFixed = signal(false);
-  @sync() protected _mass = signal(1);
+  @sync() protected _mass = gameplaySignal(1);
 
   /**
    * Physical mass used by the server-side physics body.

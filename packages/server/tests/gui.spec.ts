@@ -11,8 +11,8 @@ import {
   SaveLoadGui,
   ShopGui,
   TitleGui,
-  signal,
 } from "../src";
+import { signal } from "@signe/reactive";
 
 describe("GUI", () => {
   test("input gui returns typed text and number values", async () => {

@@ -162,8 +162,7 @@ event.remove({
 
 **Client example:**
 ```ts
-import { RpgClientEngine, RpgSprite, RpgSpriteHooks } from '@rpgjs/client'
-import { inject } from '@signe/di'
+import { inject, RpgClientEngine, RpgSprite, RpgSpriteHooks } from '@rpgjs/client'
 
 const sprite: RpgSpriteHooks = {
     async onBeforeRemove(sprite: RpgSprite, context) {

@@ -51,12 +51,11 @@ You can also create custom synchronization by extending existing schemas or defi
 Example:
 
 ```typescript
-import { RpgPlayerHooks, RpgPlayer } from "@rpgjs/server";
-import { signal, type Signal } from "@signe/reactive";
+import { RpgPlayerHooks, RpgPlayer, type RpgWritableSignal } from "@rpgjs/server";
 
 declare module "@rpgjs/server" {
   export interface RpgPlayer {
-    wood: Signal<number>;
+    wood: RpgWritableSignal<number>;
   }
 }
 
@@ -77,12 +76,11 @@ With these steps, you've successfully added a custom property named `wood` to th
 In addition to synchronization, RPGJS provides a mechanism to save snapshots of player data, including custom properties, to databases.
 
 ```ts
-import { RpgPlayerHooks, RpgPlayer } from "@rpgjs/server";
-import { signal, type Signal } from "@signe/reactive";
+import { RpgPlayerHooks, RpgPlayer, type RpgWritableSignal } from "@rpgjs/server";
 
 declare module "@rpgjs/server" {
   export interface RpgPlayer {
-    wood: Signal<number>;
+    wood: RpgWritableSignal<number>;
   }
 }
 
@@ -107,12 +105,11 @@ export const player: RpgPlayerHooks = {
 **Save custom props but not synchronized with the client**
 
 ```ts
-import { RpgPlayerHooks, RpgPlayer } from "@rpgjs/server";
-import { signal, type Signal } from "@signe/reactive";
+import { RpgPlayerHooks, RpgPlayer, type RpgWritableSignal } from "@rpgjs/server";
 
 declare module "@rpgjs/server" {
   export interface RpgPlayer {
-    secret: Signal<string>;
+    secret: RpgWritableSignal<string>;
   }
 }
 
@@ -139,12 +136,11 @@ By configuring the property with `$syncWithClient: false`, you can control what 
 **Synchronize with client but do not register**
 
 ```ts
-import { RpgPlayerHooks, RpgPlayer } from "@rpgjs/server";
-import { signal, type Signal } from "@signe/reactive";
+import { RpgPlayerHooks, RpgPlayer, type RpgWritableSignal } from "@rpgjs/server";
 
 declare module "@rpgjs/server" {
   export interface RpgPlayer {
-    message: Signal<string>;
+    message: RpgWritableSignal<string>;
   }
 }
 

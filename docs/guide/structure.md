@@ -14,19 +14,17 @@ The starter separates client boot, server boot, shared client config, and module
 ```ts
 import { startGame, provideMmorpg } from "@rpgjs/client";
 import configClient from "./config/config.client";
-import { mergeConfig } from "@signe/di";
 
-startGame(
-  mergeConfig(configClient, {
-    providers: [provideMmorpg({})],
-  }) 
-);
+startGame({
+  ...configClient,
+  providers: [...configClient.providers, provideMmorpg({})],
+});
 ```
 
 Use this entry when the client connects to a remote RPGJS server.
 
 By default, MMORPG mode stores a stable session id in `localStorage` and passes it
-to `@signe/room` as the connection session id. Refreshes and multiple tabs from
+to the RPGJS room adapter as the connection session id. Refreshes and multiple tabs from
 the same browser therefore restore the same player session while each WebSocket
 keeps its own connection id. Use `connectionIdScope: "session"` to keep the
 session only for one browser tab, or `connectionIdScope: "ephemeral"` to create a
@@ -76,16 +74,14 @@ This is where you plug modules, maps, database content, save strategies, or serv
 `standalone.ts` runs the client and server together for a standalone RPG:
 
 ```ts
-import { mergeConfig } from "@signe/di";
 import { provideRpg, startGame } from "@rpgjs/client";
 import startServer from "./server";
 import configClient from "./config/config.client";
 
-startGame(
-  mergeConfig(configClient, {
-    providers: [provideRpg(startServer)],
-  })
-);
+startGame({
+  ...configClient,
+  providers: [...configClient.providers, provideRpg(startServer)],
+});
 ```
 
 Use this entry when you want a single-player RPG running entirely from the client app.
@@ -247,8 +243,7 @@ loop.
 You can retrieve this global config anywhere on the client with `inject(GlobalConfigToken)`:
 
 ```ts
-import { inject } from "@signe/di";
-import { GlobalConfigToken } from "@rpgjs/client";
+import { inject, GlobalConfigToken } from "@rpgjs/client";
 import type { KeyboardActionConfig } from "@rpgjs/client";
 
 const config = inject(GlobalConfigToken) as {

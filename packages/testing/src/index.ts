@@ -1,4 +1,5 @@
-import { mergeConfig, Provider } from "@signe/di";
+import { mergeConfig } from "@signe/di";
+import type { RpgProvider } from "@rpgjs/common";
 import {
   provideRpg,
   startGame,
@@ -42,7 +43,7 @@ import { combineLatest, filter, take, firstValueFrom, Subject, map, throwError, 
  * })
  * ```
  */
-export function provideTestingLoadMap() {
+export function provideTestingLoadMap(): RpgProvider[] {
   return provideLoadMap((id: string) => {
     return {
       id,
@@ -203,7 +204,7 @@ export interface TestingFixture {
  * ```
  */
 export async function testing(
-  modules: ({ server?: RpgServer; client?: RpgClient } | Provider)[] = [],
+  modules: ({ server?: RpgServer; client?: RpgClient } | RpgProvider)[] = [],
   clientConfig: any = {},
   serverConfig: any = {}
 ): Promise<TestingFixture> {

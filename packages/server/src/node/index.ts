@@ -12,13 +12,21 @@ export { PartyRoom } from "./room";
 export {
   createMemoryNodeRoomStorage,
   createSqliteNodeRoomStorage,
-} from "@signe/room/node";
+} from "./storage";
 export type {
-  NodeRoomStorage,
-  NodeRoomStorageFactory,
-  NodeRoomStorageProvider,
-  NodeSqliteStorageOptions,
-} from "@signe/room/node";
+  RpgHostedRoom,
+  RpgHostedRoomConnection,
+  RpgMemoryRoomStorageProvider,
+  RpgMemoryStorageOptions,
+  RpgRoomMemorySnapshot,
+  RpgRoomStorage,
+  RpgRoomStorageFactory,
+  RpgRoomStorageListOptions,
+  RpgRoomStorageProvider,
+  RpgSqliteDatabase,
+  RpgSqliteJournalMode,
+  RpgSqliteStorageOptions,
+} from "./types";
 export { createRpgServerTransport, RpgServerTransport } from "./transport";
 export type {
   CreateRpgServerTransportOptions,

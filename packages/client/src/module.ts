@@ -1,5 +1,5 @@
 import { findModules, provideModules, registerI18nMessages } from "@rpgjs/common";
-import { FactoryProvider } from "@signe/di";
+import type { RpgFactoryProvider } from "@rpgjs/common";
 import { RpgClientEngine } from "./RpgClientEngine";
 import { RpgClient } from "./RpgClient";
 import { inject } from "@signe/di";
@@ -48,7 +48,7 @@ export type RpgClientModule = RpgClient | (new () => any);
  * provideClientModules([MyClientModule])
  * ```
  */
-export function provideClientModules(modules: RpgClientModule[]): FactoryProvider {
+export function provideClientModules(modules: RpgClientModule[]): RpgFactoryProvider {
   return provideModules(modules, "client", (modules, context) => {
     const mainModuleClient = findModules(context, 'Client')
     modules = [...mainModuleClient, ...modules]

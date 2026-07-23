@@ -19,6 +19,7 @@
   "dependencies": {
     "@canvasengine/testing": "2.0.0",
     "@rpgjs/client": "workspace:*",
+    "@rpgjs/common": "workspace:*",
     "@rpgjs/server": "workspace:*",
     "@signe/di": "3.1.0",
     "canvasengine": "2.0.1",

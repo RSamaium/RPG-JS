@@ -22,10 +22,21 @@ export * from "./Sound";
 export * from "./Resource";
 export * from "./decorators/spritesheet";
 export * from "./utils/getEntityProp";
-export { Context } from "@signe/di";
 export { KeyboardControls, Input } from "canvasengine";
 export { Control } from "./services/keyboardControls";
 export { defineModule } from "@rpgjs/common";
+export type {
+  RpgClassProvider,
+  RpgContext,
+  RpgExistingProvider,
+  RpgFactoryProvider,
+  RpgProvider,
+  RpgProviders,
+  RpgProviderToken,
+  RpgReadableSignal,
+  RpgValueProvider,
+  RpgWritableSignal,
+} from "@rpgjs/common";
 export { RpgClientObject } from "./Game/Object";
 export { RpgClientPlayer } from "./Game/Player";
 export { RpgClientEvent } from "./Game/Event";

@@ -1,5 +1,7 @@
 import { describe, expectTypeOf, test } from "vitest";
 import type { MapStreamDefinition, RpgActionInput } from "@rpgjs/common";
+import type { FactoryProvider as SigneFactoryProvider } from "@signe/di";
+import type { NodeConnection, NodeRoom } from "@signe/room/node";
 import { provideServerMapStreaming } from "@rpgjs/server";
 import type {
   RpgEvent,
@@ -15,6 +17,15 @@ import type {
   StateData,
   ServerMapStreamingAdapter,
 } from "@rpgjs/server";
+import {
+  createMemoryNodeRoomStorage,
+  createSqliteNodeRoomStorage,
+  type RpgHostedRoom,
+  type RpgHostedRoomConnection,
+  type RpgMemoryRoomStorageProvider,
+  type RpgRoomStorageProvider,
+} from "@rpgjs/server/node";
+import type { RpgProvider, RpgWritableSignal } from "@rpgjs/common";
 
 describe("server public API types", () => {
   test("player hooks match the runtime contracts", () => {
@@ -108,5 +119,35 @@ describe("server public API types", () => {
     } satisfies ServerMapStreamingAdapter<PrivateMap, ManifestData, ChunkData>;
 
     expectTypeOf(provideServerMapStreaming(adapter)).toMatchTypeOf<object>();
+  });
+
+  test("gameplay signals and room storage stay RPGJS-owned", () => {
+    const assertions = (player: RpgPlayer, room: RpgHostedRoom) => {
+      expectTypeOf(player.hpSignal).toEqualTypeOf<RpgWritableSignal<number>>();
+      expectTypeOf(room.storage.get("state")).toEqualTypeOf<Promise<unknown>>();
+    };
+
+    expectTypeOf(createMemoryNodeRoomStorage()).toEqualTypeOf<RpgMemoryRoomStorageProvider>();
+    expectTypeOf(createSqliteNodeRoomStorage({ databasePath: "rooms.sqlite" }))
+      .toEqualTypeOf<RpgRoomStorageProvider>();
+    expectTypeOf<NodeRoom>().toMatchTypeOf<RpgHostedRoom>();
+    expectTypeOf<NodeConnection>().toMatchTypeOf<RpgHostedRoomConnection>();
+    expectTypeOf(assertions).toBeFunction();
+  });
+
+  test("Signe providers remain structurally accepted", () => {
+    const provider = {
+      provide: "feature",
+      useFactory: () => ({ enabled: true }),
+    } satisfies RpgProvider;
+
+    expectTypeOf(provider).toMatchTypeOf<RpgProvider>();
+    expectTypeOf<SigneFactoryProvider>().toMatchTypeOf<RpgProvider>();
+  });
+
+  test("legacy Signe root re-exports are not part of the stable API", () => {
+    // @ts-expect-error reactive factories are no longer exported by @rpgjs/server
+    type LegacyServerSignal = typeof import("@rpgjs/server")["signal"];
+    expectTypeOf<LegacyServerSignal>();
   });
 });
