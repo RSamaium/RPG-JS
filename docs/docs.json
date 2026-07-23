@@ -100,6 +100,7 @@
               "gui/hud",
               "gui/mobile",
               "gui/prebuilt-contracts",
+              "gui/chat",
               "guide/gui/attach-gui",
               "gui/engine-injection",
               "gui/optimistic-actions",

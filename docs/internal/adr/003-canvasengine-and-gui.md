@@ -1,6 +1,6 @@
 # ADR 003: CanvasEngine and GUI Boundaries
 
-- Status: Proposed
+- Status: Accepted
 - Target: RPGJS v5 stable
 
 ## Context
@@ -10,13 +10,13 @@ CanvasEngine as the default game rendering and component environment while
 retaining Vue for appropriate DOM integrations. Gameplay commands must not
 depend on one visual implementation.
 
-## Proposed decision
+## Decision
 
 - CanvasEngine is the official v5 renderer and component contract for `.ce` game components.
 - PixiJS details remain implementation details unless explicitly documented.
-- player-facing gameplay commands operate through renderer-neutral GUI contracts.
+- Player-facing gameplay commands operate through renderer-neutral GUI contracts.
 - Vue remains an official stable integration for DOM overlays and low-level RPG UI building blocks.
-- feature-specific UI belongs to its feature module and exposes replaceable components or slots.
+- Feature-specific UI belongs to its feature module and exposes replaceable components or slots.
 - `@rpgjs/ui-css` defines the DOM styling and theming contract independently of gameplay behavior.
 
 ## Consequences
@@ -28,7 +28,11 @@ depend on one visual implementation.
 
 ## Validation
 
-- at least one gameplay GUI command is rendered by two different UI implementations
-- chat behavior runs with its default component and a replacement component
-- default and alternate CSS themes use the same DOM component markup
-- server bundle tests reject CanvasEngine client components
+- GUI registrations now declare an explicit `canvas` or `vue` renderer while
+  retaining the legacy component-shape fallback.
+- `@rpgjs/chat` separates authoritative server behavior from its replaceable
+  default CanvasEngine component.
+- the default and pixel themes are tested against the same chat DOM fixture.
+- production bundle-boundary tests exercise direct imports, re-exports,
+  dynamic imports, source maps, and runtime execution while rejecting client
+  rendering code from the server output.

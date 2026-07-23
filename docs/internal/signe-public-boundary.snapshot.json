@@ -658,6 +658,95 @@
       "packages/action-battle/dist/server/visual.d.ts"
     ]
   },
+  "@rpgjs/chat": {
+    "entry": "packages/chat/dist/client/index.d.ts",
+    "exports": [
+      "CHAT_ERROR_EVENT",
+      "CHAT_GUI_ID",
+      "CHAT_MESSAGE_EVENT",
+      "CHAT_SEND_EVENT",
+      "addChatMessage",
+      "chatClientOptions",
+      "chatError",
+      "chatMessages",
+      "clearChatMessages",
+      "configureChatClient",
+      "createChatClient",
+      "createChatHandler",
+      "createChatServer",
+      "default",
+      "normalizeChatClientOptions",
+      "normalizeChatServerOptions",
+      "openChat",
+      "provideChat",
+      "sendChatMessage"
+    ],
+    "declarations": [
+      "packages/chat/dist/client/client-state.d.ts",
+      "packages/chat/dist/client/client.d.ts",
+      "packages/chat/dist/client/config.d.ts",
+      "packages/chat/dist/client/index.d.ts"
+    ]
+  },
+  "@rpgjs/chat/client": {
+    "entry": "packages/chat/dist/client/index.d.ts",
+    "exports": [
+      "CHAT_ERROR_EVENT",
+      "CHAT_GUI_ID",
+      "CHAT_MESSAGE_EVENT",
+      "CHAT_SEND_EVENT",
+      "addChatMessage",
+      "chatClientOptions",
+      "chatError",
+      "chatMessages",
+      "clearChatMessages",
+      "configureChatClient",
+      "createChatClient",
+      "createChatHandler",
+      "createChatServer",
+      "default",
+      "normalizeChatClientOptions",
+      "normalizeChatServerOptions",
+      "openChat",
+      "provideChat",
+      "sendChatMessage"
+    ],
+    "declarations": [
+      "packages/chat/dist/client/client-state.d.ts",
+      "packages/chat/dist/client/client.d.ts",
+      "packages/chat/dist/client/config.d.ts",
+      "packages/chat/dist/client/index.d.ts"
+    ]
+  },
+  "@rpgjs/chat/server": {
+    "entry": "packages/chat/dist/server/index.d.ts",
+    "exports": [
+      "CHAT_ERROR_EVENT",
+      "CHAT_GUI_ID",
+      "CHAT_MESSAGE_EVENT",
+      "CHAT_SEND_EVENT",
+      "addChatMessage",
+      "chatClientOptions",
+      "chatError",
+      "chatMessages",
+      "clearChatMessages",
+      "configureChatClient",
+      "createChatClient",
+      "createChatHandler",
+      "createChatServer",
+      "default",
+      "normalizeChatClientOptions",
+      "normalizeChatServerOptions",
+      "openChat",
+      "provideChat",
+      "sendChatMessage"
+    ],
+    "declarations": [
+      "packages/chat/dist/server/config.d.ts",
+      "packages/chat/dist/server/index.d.ts",
+      "packages/chat/dist/server/server.d.ts"
+    ]
+  },
   "@rpgjs/client": {
     "entry": "packages/client/dist/index.d.ts",
     "exports": [
@@ -694,7 +783,12 @@
       "ExitMenuComponent",
       "GameoverComponent",
       "GlobalConfigToken",
+      "GuiComponent",
+      "GuiEntry",
       "GuiInstance",
+      "GuiRegistration",
+      "GuiRenderState",
+      "GuiRenderer",
       "HpBar",
       "HudComponent",
       "Input",
@@ -2709,8 +2803,11 @@
     "entry": "packages/vue/dist/index.d.ts",
     "exports": [
       "VueGui",
+      "VueGuiProviderOptions",
+      "VueGuiRegistration",
       "VueGuiToken",
-      "provideVueGui"
+      "provideVueGui",
+      "vueGui"
     ],
     "declarations": [
       "packages/vue/dist/VueGui.d.ts",

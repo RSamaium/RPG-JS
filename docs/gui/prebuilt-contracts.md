@@ -26,6 +26,7 @@ export default {
           {
             id: PrebuiltGui.Dialog,
             component: MyDialog,
+            renderer: 'canvas',
           },
         ],
       },
@@ -34,7 +35,7 @@ export default {
 }
 ```
 
-The last component registered for an ID wins. A CanvasEngine replacement removes any Vue entry with the same ID, and a Vue replacement removes the built-in CanvasEngine component. This page focuses on CanvasEngine `.ce` replacements; for Vue-specific examples, see [Vue.js integration](/gui/vue-integration).
+The last component registered for an ID wins. A CanvasEngine replacement removes any Vue entry with the same ID, and a Vue replacement removes the built-in CanvasEngine component. Declare `renderer: 'canvas'` for `.ce` registrations; registrations without a renderer still use legacy component-shape detection for compatibility. This page focuses on CanvasEngine `.ce` replacements; for Vue-specific examples, see [Vue.js integration](/gui/vue-integration).
 
 ## Component Interface
 

@@ -1,10 +1,23 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { provideVueGui } from "./provider";
+import { provideVueGui, vueGui } from "./provider";
 import { VueGui, VueGuiToken } from "./VueGui";
 
 describe("provideVueGui", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  test("marks GUI registrations as Vue-owned", () => {
+    const component = { name: "Inventory" };
+
+    expect(vueGui({
+      id: "inventory",
+      component,
+    })).toEqual({
+      id: "inventory",
+      component,
+      renderer: "vue",
+    });
   });
 
   test("registers the module client hook and VueGui factory", () => {

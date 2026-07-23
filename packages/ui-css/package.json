@@ -5,21 +5,26 @@
   "license": "MIT",
   "author": "Samuel Ronce",
   "scripts": {
-    "build": "echo 'CSS package - no build needed'"
+    "build": "echo 'CSS package - no build needed'",
+    "test": "vitest run"
   },
   "exports": {
     "./reset.css": "./reset.css",
     "./tokens.css": "./tokens.css",
     "./index.css": "./index.css",
-    "./theme-default.css": "./theme-default.css"
+    "./theme-default.css": "./theme-default.css",
+    "./theme-pixel.css": "./theme-pixel.css"
   },
   "files": [
     "index.css",
     "reset.css",
     "tokens.css",
     "theme-default.css",
+    "theme-pixel.css",
     "src/",
-    "theme-default/"
+    "theme-default/",
+    "theme-pixel/",
+    "theme-fixture.html"
   ],
   "publishConfig": {
     "access": "public"
@@ -32,6 +37,7 @@
     "framework-agnostic"
   ],
   "devDependencies": {
-    "vite": "^8.0.16"
+    "vite": "^8.0.16",
+    "vitest": "^4.1.9"
   }
 }

@@ -1,16 +1,28 @@
 import { Context, inject } from "@signe/di";
-import { signal, Signal, WritableSignal } from "canvasengine";
+import { signal, Signal, WritableSignal, type ComponentFunction } from "canvasengine";
 import { AbstractWebsocket, WebSocketToken } from "../services/AbstractSocket";
 import { DialogboxComponent, ShopComponent, SaveLoadComponent, MainMenuComponent, NotificationComponent, TitleScreenComponent, GameoverComponent, InputComponent } from "../components/gui";
 import { combineLatest, Subscription } from "rxjs";
 import { PrebuiltGui, type RpgContext } from "@rpgjs/common";
 
-interface GuiOptions {
+export type GuiRenderer = "canvas" | "vue";
+
+export type GuiComponent = ComponentFunction | object;
+
+export interface GuiRegistration<
+  TData = unknown,
+  TComponent extends GuiComponent = GuiComponent,
+> {
   name?: string;
   id?: string;
-  component?: any;
+  component: TComponent;
+  /**
+   * Renderer responsible for this component. CanvasEngine is the v5 default.
+   * `@rpgjs/vue` registers the official DOM overlay renderer.
+   */
+  renderer?: GuiRenderer;
   display?: boolean;
-  data?: any;
+  data?: TData;
   /**
    * Auto display the GUI when added to the system
    * @default false
@@ -21,7 +33,7 @@ interface GuiOptions {
    * The GUI will only display when all dependencies are resolved (!= undefined)
    * @returns Array of Signal dependencies
    */
-  dependencies?: () => Signal[];
+  dependencies?: () => Signal<unknown>[];
   /**
    * Attach the GUI to sprites instead of displaying globally
    * When true, the GUI will be rendered in character.ce for each sprite
@@ -34,30 +46,42 @@ interface GuiOptions {
   rpgAttachToSprite?: boolean;
 }
 
-export interface GuiInstance {
+export type GuiEntry<TData = unknown> =
+  | GuiRegistration<TData>
+  | GuiComponent;
+
+export interface GuiInstance<
+  TData = unknown,
+  TComponent extends GuiComponent = GuiComponent,
+> {
   name: string;
-  component: any;
+  component: TComponent;
+  renderer: GuiRenderer;
   display: WritableSignal<boolean>;
-  data: WritableSignal<any>;
+  data: WritableSignal<TData>;
   openId?: string;
   autoDisplay: boolean;
-  dependencies?: Signal[];
+  dependencies?: Signal<unknown>[];
   subscription?: Subscription;
   attachToSprite?: boolean;
 }
 
-type GuiState = {
+export type GuiRenderState<
+  TData = unknown,
+  TComponent extends GuiComponent = GuiComponent,
+> = {
   name: string;
-  component: any;
+  component: TComponent;
+  renderer: GuiRenderer;
   display: boolean;
-  data: any;
+  data: TData;
   openId?: string;
   attachToSprite: boolean;
 };
 
 type VueGuiBridge = {
-  updateGuiState?: (state: GuiState) => void;
-  initializeGuiStates?: (states: GuiState[]) => void;
+  updateGuiState?: (state: GuiRenderState) => void;
+  initializeGuiStates?: (states: GuiRenderState[]) => void;
 };
 
 interface GuiAction {
@@ -150,35 +174,43 @@ export class RpgGui {
     this.add({
       name: "rpg-dialog",
       component: DialogboxComponent,
+      renderer: "canvas",
     });
     this.add({
       name: PrebuiltGui.MainMenu,
       component: MainMenuComponent,
+      renderer: "canvas",
     });
     this.add({
       name: PrebuiltGui.Shop,
       component: ShopComponent,
+      renderer: "canvas",
     });
     this.add({
       name: PrebuiltGui.Notification,
       component: NotificationComponent,
+      renderer: "canvas",
       autoDisplay: true,
     });
     this.add({
       name: PrebuiltGui.Save,
       component: SaveLoadComponent,
+      renderer: "canvas",
     });
     this.add({
       name: PrebuiltGui.TitleScreen,
       component: TitleScreenComponent,
+      renderer: "canvas",
     });
     this.add({
       name: PrebuiltGui.Gameover,
       component: GameoverComponent,
+      renderer: "canvas",
     });
     this.add({
       name: PrebuiltGui.Input,
       component: InputComponent,
+      renderer: "canvas",
     });
 
     this.registerOptimisticReducer(PrebuiltGui.MainMenu, mainMenuOptimisticReducer);
@@ -311,21 +343,24 @@ export class RpgGui {
    * });
    * ```
    */
-  add(gui: GuiOptions | any) {
-    const component = this.resolveComponent(gui);
-    const guiId = this.resolveGuiId(gui, component);
+  add(gui: GuiEntry) {
+    const registration = this.resolveRegistration(gui);
+    const component = registration.component;
+    const guiId = registration.name || registration.id || this.resolveComponentName(component);
     if (!guiId) {
       throw new Error("GUI must have a name or id");
     }
-    const attachToSprite = this.resolveAttachToSprite(gui, component);
+    const attachToSprite = this.resolveAttachToSprite(registration, component);
+    const renderer = registration.renderer ?? this.resolveLegacyRenderer(component);
     const guiInstance: GuiInstance = {
       name: guiId,
       component,
-      display: signal<boolean>(gui.display || false),
-      data: signal<any>(gui.data || {}),
+      renderer,
+      display: signal<boolean>(registration.display || false),
+      data: signal(registration.data ?? {}),
       openId: undefined,
-      autoDisplay: gui.autoDisplay || false,
-      dependencies: gui.dependencies ? gui.dependencies() : [],
+      autoDisplay: registration.autoDisplay || false,
+      dependencies: registration.dependencies ? registration.dependencies() : [],
       attachToSprite,
     };
 
@@ -342,7 +377,7 @@ export class RpgGui {
       this._initializeVueComponents();
       
       if (guiInstance.autoDisplay) {
-        this.display(guiId, gui.data);
+        this.display(guiId, registration.data);
       } else {
         this._notifyVueGui(guiId, guiInstance.display(), guiInstance.data());
       }
@@ -354,8 +389,8 @@ export class RpgGui {
     this._initializeVueComponents();
 
     // Auto display if enabled and it's a CanvasEngine component
-    if (guiInstance.autoDisplay && typeof gui.component === 'function') {
-      this.display(guiId, gui.data);
+    if (guiInstance.autoDisplay && typeof component === 'function') {
+      this.display(guiId, registration.data);
     }
   }
 
@@ -400,15 +435,15 @@ export class RpgGui {
     return this.attachedGuiDisplayState()[playerId] === true;
   }
 
-  get(id: string): GuiInstance | undefined {
+  get<TData = unknown>(id: string): GuiInstance<TData> | undefined {
     // Check CanvasEngine GUIs first
     const canvasGui = this.gui()[id];
     if (canvasGui) {
-      return canvasGui;
+      return canvasGui as GuiInstance<TData>;
     }
     
     // Check Vue GUIs in extraGuis
-    return this.extraGuis.find(gui => gui.name === id);
+    return this.extraGuis.find(gui => gui.name === id) as GuiInstance<TData> | undefined;
   }
 
   exists(id: string): boolean {
@@ -447,7 +482,12 @@ export class RpgGui {
    * gui.display('shop', { shopId: 1 }, [playerSignal, shopSignal]);
    * ```
    */
-  display(id: string, data = {}, dependencies: Signal[] = [], openId?: string) {
+  display(
+    id: string,
+    data: unknown = {},
+    dependencies: Signal<unknown>[] = [],
+    openId?: string,
+  ) {
     if (!this.exists(id)) {
       throw throwError(id);
     }
@@ -595,7 +635,7 @@ export class RpgGui {
   }
 
   private isVueComponentInstance(gui: GuiInstance) {
-    return typeof gui.component !== "function";
+    return gui.renderer === "vue";
   }
 
   private removeCanvasGui(guiId: string) {
@@ -614,22 +654,46 @@ export class RpgGui {
     }
   }
 
-  private resolveComponent(gui: GuiOptions | any) {
-    return gui?.component ?? gui;
+  private resolveRegistration(gui: GuiEntry): GuiRegistration {
+    if (
+      typeof gui === "object"
+      && gui !== null
+      && "component" in gui
+    ) {
+      return gui as GuiRegistration;
+    }
+    return { component: gui };
   }
 
-  private resolveGuiId(gui: GuiOptions | any, component: any) {
-    return gui?.name || gui?.id || component?.name || component?.__name;
+  private resolveComponentName(component: GuiComponent): string | undefined {
+    const named = component as { name?: unknown; __name?: unknown };
+    if (typeof named.name === "string" && named.name.length > 0) return named.name;
+    if (typeof named.__name === "string" && named.__name.length > 0) return named.__name;
+    return undefined;
   }
 
-  private resolveAttachToSprite(gui: GuiOptions | any, component: any) {
-    return !!(gui?.attachToSprite || gui?.rpgAttachToSprite || component?.attachToSprite || component?.rpgAttachToSprite);
+  private resolveLegacyRenderer(component: GuiComponent): GuiRenderer {
+    return typeof component === "function" ? "canvas" : "vue";
   }
 
-  private toGuiState(gui: GuiInstance, display = gui.display(), data = gui.data()): GuiState {
+  private resolveAttachToSprite(gui: GuiRegistration, component: GuiComponent) {
+    const componentOptions = component as {
+      attachToSprite?: unknown;
+      rpgAttachToSprite?: unknown;
+    };
+    return !!(
+      gui.attachToSprite
+      || gui.rpgAttachToSprite
+      || componentOptions.attachToSprite
+      || componentOptions.rpgAttachToSprite
+    );
+  }
+
+  private toGuiState(gui: GuiInstance, display = gui.display(), data = gui.data()): GuiRenderState {
     return {
       name: gui.name,
       component: gui.component,
+      renderer: gui.renderer,
       display,
       data,
       openId: gui.openId,

@@ -17,12 +17,12 @@
     "vite-plugin-dts": "^5.0.2"
   },
   "dependencies": {
-    "@canvasengine/testing": "2.0.0",
+    "@canvasengine/testing": "2.1.1",
     "@rpgjs/client": "workspace:*",
     "@rpgjs/common": "workspace:*",
     "@rpgjs/server": "workspace:*",
     "@signe/di": "3.1.0",
-    "canvasengine": "2.0.1",
+    "canvasengine": "2.1.1",
     "rxjs": "^7.8.2",
     "vitest-webgl-canvas-mock": "^1.1.0"
   },

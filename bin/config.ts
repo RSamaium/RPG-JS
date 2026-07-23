@@ -110,6 +110,11 @@ export const packages = (type: "build" | "dev") => {
       dependencies: createDependencies(packagesPath, ['client', 'server', 'vite']),
     },
     {
+      name: "chat",
+      buildScript,
+      dependencies: createDependencies(packagesPath, ['client', 'server', 'vite']),
+    },
+    {
       name: "studio",
       buildScript,
       dependencies: [

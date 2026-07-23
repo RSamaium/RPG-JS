@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="./index.css">
+    <link id="rpg-theme" rel="stylesheet" href="./theme-default.css">
+    <title>RPGJS theme contract</title>
+  </head>
+  <body class="rpg-ui-app">
+    <main class="rpg-ui-chat rpg-ui-panel" data-position="bottom-left">
+      <div class="rpg-ui-chat-log" role="log" aria-live="polite">
+        <div class="rpg-ui-chat-message" data-player-id="hero">
+          <span class="rpg-ui-chat-author">Ayla</span>
+          <span class="rpg-ui-chat-text">Hello from the same markup.</span>
+        </div>
+      </div>
+      <form class="rpg-ui-chat-form">
+        <input class="rpg-ui-input rpg-ui-chat-input" aria-label="Message">
+        <button class="rpg-ui-btn rpg-ui-chat-send" type="submit">Send</button>
+      </form>
+    </main>
+  </body>
+</html>

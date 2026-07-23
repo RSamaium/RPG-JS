@@ -14,6 +14,8 @@ It provides:
   Includes `reset.css`, `tokens.css`, animations, primitives, HUD and shop styles.
 - `@rpgjs/ui-css/theme-default.css`
   Opinionated default theme with a modern glass-RPG look.
+- `@rpgjs/ui-css/theme-pixel.css`
+  Alternate high-contrast pixel theme using the exact same component markup.
 - `@rpgjs/ui-css/tokens.css`
   Only the design tokens, useful if you want to build your own theme.
 - `@rpgjs/ui-css/reset.css`
@@ -26,6 +28,13 @@ It provides:
 ```css
 @import "@rpgjs/ui-css/index.css";
 @import "@rpgjs/ui-css/theme-default.css";
+```
+
+Swap only the second import to use the pixel theme:
+
+```css
+@import "@rpgjs/ui-css/index.css";
+@import "@rpgjs/ui-css/theme-pixel.css";
 ```
 
 ### From static HTML
@@ -67,6 +76,7 @@ Apply `rpg-ui-app` on `body` or on a wrapper to get the full-screen themed backg
 - `.rpg-ui-toast`, `.rpg-ui-notification`
 - `.rpg-ui-title-screen`
 - `.rpg-ui-gameover-screen`
+- `.rpg-ui-chat`, `.rpg-ui-chat-log`, `.rpg-ui-chat-message`
 
 ### Generic in-game layout
 

@@ -135,4 +135,13 @@
   --rpg-ui-shop-card-border-active: var(--rpg-ui-accent);
   --rpg-ui-shop-muted-border: rgba(255, 255, 255, 0.12);
   --rpg-ui-shop-gold-color: #facc15;
+
+  /* Interaction and chat */
+  --rpg-ui-focus-color: var(--rpg-ui-accent);
+  --rpg-ui-focus-width: 2px;
+  --rpg-ui-focus-offset: 2px;
+  --rpg-ui-chat-width: 34rem;
+  --rpg-ui-chat-height: 20rem;
+  --rpg-ui-chat-message-padding: 0.4rem 0;
+  --rpg-ui-chat-divider: 1px solid color-mix(in srgb, var(--rpg-ui-border), transparent 40%);
 }

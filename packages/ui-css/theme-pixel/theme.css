@@ -1,0 +1,63 @@
+:root,
+.rpg-ui-theme-pixel {
+  --rpg-ui-body-bg: #181425;
+  --rpg-ui-body-background: #181425;
+  --rpg-ui-bg: #181425;
+  --rpg-ui-surface: #26213a;
+  --rpg-ui-surface-light: #3a3158;
+  --rpg-ui-surface-overlay: #26213a;
+  --rpg-ui-surface-overlay-strong: #181425;
+  --rpg-ui-border: #f6c177;
+  --rpg-ui-border-light: #fff1c7;
+  --rpg-ui-border-dark: #09070f;
+  --rpg-ui-text: #fff1c7;
+  --rpg-ui-text-muted: #c9b8a8;
+  --rpg-ui-accent: #f6c177;
+  --rpg-ui-accent-hover: #ffe49a;
+  --rpg-ui-accent-active: #d98745;
+  --rpg-ui-success: #7ecf6b;
+  --rpg-ui-warning: #f6c177;
+  --rpg-ui-danger: #e85d75;
+  --rpg-ui-info: #62a8ea;
+  --rpg-ui-font: "Courier New", ui-monospace, monospace;
+  --rpg-ui-font-mono: "Courier New", ui-monospace, monospace;
+  --rpg-ui-font-weight: 700;
+  --rpg-ui-font-weight-bold: 900;
+  --rpg-ui-radius-sm: 0;
+  --rpg-ui-radius-md: 0;
+  --rpg-ui-radius-lg: 0;
+  --rpg-ui-border-width: 3px;
+  --rpg-ui-shadow: 5px 5px 0 #09070f;
+  --rpg-ui-shadow-sm: 3px 3px 0 #09070f;
+  --rpg-ui-shadow-md: 6px 6px 0 #09070f;
+  --rpg-ui-shadow-lg: 8px 8px 0 #09070f;
+  --rpg-ui-shadow-glow: none;
+  --rpg-ui-shadow-inset: inset -3px -3px 0 #09070f, inset 3px 3px 0 #fff1c7;
+  --rpg-ui-backdrop-blur: none;
+  --rpg-ui-gradient-surface: linear-gradient(#3a3158, #26213a);
+  --rpg-ui-gradient-accent: linear-gradient(#ffe49a, #d98745);
+  --rpg-ui-gradient-bar: linear-gradient(90deg, #f6c177, #d98745);
+  --rpg-ui-focus-color: #fff1c7;
+  --rpg-ui-focus-width: 3px;
+  --rpg-ui-chat-divider: 2px dashed #6b5b7e;
+}
+
+.rpg-ui-theme-pixel :is(.rpg-ui-panel, .rpg-ui-window, .rpg-ui-dialog, .rpg-ui-chat),
+:root :is(.rpg-ui-panel, .rpg-ui-window, .rpg-ui-dialog, .rpg-ui-chat) {
+  border-style: solid;
+  image-rendering: pixelated;
+  text-shadow: 2px 2px 0 #09070f;
+}
+
+.rpg-ui-theme-pixel :is(.rpg-ui-btn, .rpg-ui-button),
+:root :is(.rpg-ui-btn, .rpg-ui-button) {
+  border-radius: 0;
+  text-transform: uppercase;
+  box-shadow: 3px 3px 0 #09070f;
+}
+
+.rpg-ui-theme-pixel :is(.rpg-ui-btn, .rpg-ui-button):active,
+:root :is(.rpg-ui-btn, .rpg-ui-button):active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 #09070f;
+}

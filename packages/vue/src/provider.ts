@@ -1,14 +1,40 @@
-import { inject, RpgClient } from "@rpgjs/client"
+import {
+    inject,
+    RpgClient,
+    type GuiRegistration,
+} from "@rpgjs/client"
 import { VueGui, VueGuiToken } from "./VueGui"
 import { createModule, type RpgContext, type RpgProvider } from "@rpgjs/common"
+import type { Component } from "vue"
 
-interface VueGuiProviderOptions {
+export interface VueGuiProviderOptions {
     /** The HTML element where Vue components will be mounted */
     mountElement?: HTMLElement | string
     /** Custom CSS selector for the mount element */
     selector?: string
     /** Whether to create a new div element if none is found */
     createIfNotFound?: boolean
+}
+
+export type VueGuiRegistration<TData = unknown> = GuiRegistration<TData, Component>
+
+/**
+ * Marks a GUI registration as an official Vue DOM overlay.
+ *
+ * @example
+ * ```ts
+ * gui: [
+ *   vueGui({ id: 'inventory', component: Inventory })
+ * ]
+ * ```
+ */
+export function vueGui<TData = unknown>(
+    registration: Omit<VueGuiRegistration<TData>, "renderer">,
+): VueGuiRegistration<TData> {
+    return {
+        ...registration,
+        renderer: "vue",
+    }
 }
 
 /**
