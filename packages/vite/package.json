@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/vite",
-  "version": "5.0.0-beta.26",
+  "version": "5.0.0-beta.27",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
