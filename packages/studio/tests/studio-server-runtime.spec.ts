@@ -79,6 +79,109 @@ describe("Studio server runtime", () => {
     }));
   });
 
+  test.each([
+    {
+      label: "record arrays",
+      published: [
+        { _id: "potion", itemType: "item", name: "Published potion" },
+      ],
+      expected: {
+        potion: {
+          id: "potion",
+          _type: "item",
+          name: "Published potion",
+        },
+      },
+    },
+    {
+      label: "normalized objects",
+      published: {
+        potion: {
+          id: "potion",
+          _type: "item",
+          name: "Published potion",
+        },
+      },
+      expected: {
+        potion: {
+          id: "potion",
+          _type: "item",
+          name: "Published potion",
+        },
+      },
+    },
+  ])("loads published Studio database $label without an HTTP fallback", async ({
+    published,
+    expected,
+  }) => {
+    const getDatabase = vi.fn(async () => {
+      throw new Error("The published database should avoid the HTTP provider");
+    });
+    configureGameDataProvider({
+      kind: "online",
+      getProject: vi.fn(),
+      getMap: vi.fn(),
+      getMedia: vi.fn(),
+      getDatabase,
+    });
+    const loadDatabase = (studioServer() as any).database as (
+      map: Pick<RpgMap, "data">,
+    ) => Promise<Record<string, any>>;
+
+    await expect(loadDatabase({
+      data: () => ({ database: published }),
+    } as Pick<RpgMap, "data">)).resolves.toEqual(expected);
+    expect(getDatabase).not.toHaveBeenCalled();
+  });
+
+  test("initializes starting inventory and equipment from the published database", async () => {
+    const getDatabase = vi.fn(async () => {
+      throw new Error("Player initialization should use the published database");
+    });
+    configureGameDataProvider({
+      kind: "online",
+      getProject: vi.fn(),
+      getMap: vi.fn(),
+      getMedia: vi.fn(),
+      getDatabase,
+    });
+    const database = {
+      potion: {
+        id: "potion",
+        _type: "item",
+        name: "Published potion",
+      },
+      sword: {
+        id: "sword",
+        _type: "weapon",
+        name: "Published sword",
+      },
+    };
+    const map = {
+      globalConfig: {
+        startMapId: "published-map",
+        hero: {
+          startingInventory: [{ itemId: "potion", amount: 2 }],
+          startingEquipment: { weapon: "sword" },
+        },
+      },
+      database: () => database,
+      addInDatabase: vi.fn(),
+      startPosition: { x: 0, y: 0 },
+      scale: 1,
+    } as unknown as RpgMap;
+    const player = new RpgPlayer();
+    player.initializeDefaultStats();
+    player.setMap(map);
+
+    await (studioServer() as any).player.onJoinMap(player, map);
+
+    expect(player.getItem("potion")?.quantity()).toBe(2);
+    expect(player.getItem("sword")?.quantity()).toBe(1);
+    expect(player.equipments().some((item) => item.id() === "sword")).toBe(true);
+    expect(getDatabase).not.toHaveBeenCalled();
+  });
+
   test("resolves the runtime event hitbox from the game map payload", () => {
     expect(resolveRuntimeEventHitbox({
       hitbox: { width: 56, height: 50 },
