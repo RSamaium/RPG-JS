@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/ui-css",
-  "version": "5.0.0-beta.23",
+  "version": "5.0.0-beta.24",
   "description": "CSS library for RPG UI components - framework-agnostic and fully customizable",
   "license": "MIT",
   "author": "Samuel Ronce",
