@@ -1,0 +1,156 @@
+import { describe, expect, test, vi } from "vitest";
+import {
+  CHAT_ERROR_EVENT,
+  CHAT_MESSAGE_EVENT,
+} from "./config";
+import { normalizeChatClientOptions } from "./client-config";
+import { normalizeChatServerOptions } from "./server-config";
+import { createChatHandler, createChatServer } from "./server";
+import type { ChatPlayerLike } from "./server-types";
+
+const createPlayer = () => {
+  const map = {
+    id: "forest",
+    broadcast: vi.fn(),
+  };
+  const player: ChatPlayerLike = {
+    id: "player-1",
+    name: "Ayla",
+    getCurrentMap: () => map,
+    emit: vi.fn(),
+    on: vi.fn(),
+  };
+  return { player, map };
+};
+
+describe("@rpgjs/chat", () => {
+  test("uses the stable v5 defaults", () => {
+    expect(normalizeChatClientOptions()).toMatchObject({
+      guiId: "rpg-chat",
+      renderer: "canvas",
+      autoOpen: true,
+      maxMessages: 100,
+      maxLength: 180,
+    });
+    expect(normalizeChatServerOptions()).toMatchObject({
+      channels: ["map"],
+      maxLength: 180,
+      rateLimit: { maxMessages: 5, windowMs: 10_000 },
+    });
+  });
+
+  test("accepts a replacement renderer without changing chat behavior", () => {
+    const Replacement = { name: "CustomChat" };
+    expect(normalizeChatClientOptions({
+      component: Replacement,
+      renderer: "vue",
+    })).toMatchObject({
+      component: Replacement,
+      renderer: "vue",
+    });
+  });
+
+  test("normalizes the client input length", () => {
+    expect(normalizeChatClientOptions({ maxLength: 320 }).maxLength).toBe(320);
+    expect(normalizeChatClientOptions({ maxLength: 0 }).maxLength).toBe(1);
+  });
+
+  test("creates a server-authoritative map message", async () => {
+    const { player, map } = createPlayer();
+    const afterSend = vi.fn();
+    const handle = createChatHandler(normalizeChatServerOptions({ afterSend }));
+
+    const result = await handle(player, {
+      text: "  Hello    map  ",
+      channel: "map",
+    });
+
+    expect(result).toMatchObject({
+      text: "Hello map",
+      author: "Ayla",
+      playerId: "player-1",
+      channel: "map",
+      mapId: "forest",
+    });
+    expect(map.broadcast).toHaveBeenCalledWith(CHAT_MESSAGE_EVENT, result);
+    expect(afterSend).toHaveBeenCalledWith(result, player);
+  });
+
+  test("rejects invalid messages and enforces rate limiting", async () => {
+    const { player } = createPlayer();
+    const handle = createChatHandler(normalizeChatServerOptions({
+      maxLength: 4,
+      rateLimit: { maxMessages: 1, windowMs: 10_000 },
+    }));
+
+    await expect(handle(player, { text: "longer" })).resolves.toBeNull();
+    expect(player.emit).toHaveBeenLastCalledWith(
+      CHAT_ERROR_EVENT,
+      expect.objectContaining({ key: "rpg.chat.error.too-long" }),
+    );
+
+    await expect(handle(player, { text: "ok" })).resolves.toMatchObject({ text: "ok" });
+    await expect(handle(player, { text: "no" })).resolves.toBeNull();
+    expect(player.emit).toHaveBeenLastCalledWith(
+      CHAT_ERROR_EVENT,
+      expect.objectContaining({ key: "rpg.chat.error.rate-limit" }),
+    );
+  });
+
+  test("defaults an omitted channel to map and rejects unknown channels", async () => {
+    const { player, map } = createPlayer();
+    const handle = createChatHandler(normalizeChatServerOptions({
+      channels: ["map", "global"],
+      rateLimit: false,
+      broadcastGlobal: vi.fn(),
+    }));
+
+    await expect(handle(player, { text: "default" })).resolves.toMatchObject({
+      channel: "map",
+    });
+    expect(map.broadcast).toHaveBeenCalledTimes(1);
+
+    await expect(handle(player, {
+      text: "invalid",
+      channel: "private",
+    })).resolves.toBeNull();
+    expect(player.emit).toHaveBeenLastCalledWith(
+      CHAT_ERROR_EVENT,
+      expect.objectContaining({ key: "rpg.chat.error.channel" }),
+    );
+    expect(map.broadcast).toHaveBeenCalledTimes(1);
+  });
+
+  test("allows moderation and an optional global adapter", async () => {
+    const { player } = createPlayer();
+    const broadcastGlobal = vi.fn();
+    const handle = createChatHandler(normalizeChatServerOptions({
+      channels: ["map", "global"],
+      rateLimit: false,
+      beforeSend: ({ text }) => text.replace("bad", "***"),
+      broadcastGlobal,
+    }));
+
+    const message = await handle(player, { text: "bad word", channel: "global" });
+
+    expect(message).toMatchObject({ text: "*** word", channel: "global" });
+    expect(broadcastGlobal).toHaveBeenCalledWith(message, player);
+  });
+
+  test("binds chat listeners after map transfers without duplicates", () => {
+    const chat = createChatServer() as any;
+    const lobbyPlayer = createPlayer().player;
+    const mapPlayer = createPlayer().player;
+
+    chat.player.onConnected(lobbyPlayer);
+    chat.player.onJoinMap(lobbyPlayer);
+    chat.player.onJoinMap(mapPlayer);
+
+    expect(lobbyPlayer.on).toHaveBeenCalledTimes(1);
+    expect(mapPlayer.on).toHaveBeenCalledTimes(1);
+    expect(mapPlayer.on).toHaveBeenCalledWith(
+      "chat:send",
+      expect.any(Function),
+    );
+  });
+});

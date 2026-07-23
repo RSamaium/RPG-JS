@@ -240,6 +240,7 @@ describe("VueGui root render", () => {
         vueGui.updateGuiState({
             name: "hidden-gui",
             component: HiddenGui,
+            renderer: "vue",
             data: {},
             attachToSprite: false,
             display: false,
@@ -247,6 +248,7 @@ describe("VueGui root render", () => {
         vueGui.updateGuiState({
             name: "visible-gui",
             component: VisibleGui,
+            renderer: "vue",
             data: {},
             attachToSprite: false,
             display: true,
@@ -254,6 +256,7 @@ describe("VueGui root render", () => {
         vueGui.updateGuiState({
             name: "nameplate-gui",
             component: NameplateGui,
+            renderer: "vue",
             data: {},
             attachToSprite: true,
             display: false,
@@ -271,6 +274,7 @@ describe("VueGui root render", () => {
         vueGui.updateGuiState({
             name: "visible-gui",
             component: VisibleGui,
+            renderer: "vue",
             data: {},
             attachToSprite: false,
             display: false,

@@ -8,20 +8,18 @@ import {
     markRaw,
     reactive,
 } from 'vue'
-import { RpgClientEngine, RpgGui, inject } from '@rpgjs/client'
+import {
+    RpgClientEngine,
+    RpgGui,
+    inject,
+    type GuiRenderState,
+} from '@rpgjs/client'
 import type { RpgContext } from '@rpgjs/common'
 import { Observable, Subscription } from 'rxjs'
 
 export const VueGuiToken = "VueGuiToken"
 
-interface GuiState {
-    name: string
-    component: any
-    data: any
-    openId?: string
-    attachToSprite: boolean
-    display: boolean
-}
+type GuiState = GuiRenderState<Record<string, unknown>>
 
 interface AttachedTarget {
     id: string

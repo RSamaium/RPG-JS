@@ -30,7 +30,7 @@
   "license": "MIT",
   "description": "",
   "dependencies": {
-    "@canvasengine/tiled": "2.0.0",
+    "@canvasengine/tiled": "2.1.0",
     "@rpgjs/common": "workspace:*",
     "@rpgjs/database": "^4.3.0",
     "@rpgjs/physic": "5.0.1",

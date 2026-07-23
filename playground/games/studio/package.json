@@ -23,7 +23,7 @@
     "@cloudflare/vitest-pool-workers": "0.5.41",
     "@vitest/runner": "2.1.9",
     "@vitest/snapshot": "2.1.9",
-    "@canvasengine/compiler": "2.0.0",
+    "@canvasengine/compiler": "2.1.0",
     "@rpgjs/testing": "workspace:*",
     "@rpgjs/vite": "workspace:*",
     "concurrently": "^9.2.1",
@@ -33,7 +33,7 @@
   },
   "private": true,
   "dependencies": {
-    "@canvasengine/presets": "2.0.0",
+    "@canvasengine/presets": "2.1.0",
     "@rpgjs/action-battle": "workspace:*",
     "@rpgjs/client": "workspace:*",
     "@rpgjs/common": "workspace:*",
@@ -42,7 +42,7 @@
     "@rpgjs/tiledmap": "workspace:*",
     "@rpgjs/ui-css": "workspace:*",
     "@signe/di": "3.1.0",
-    "canvasengine": "2.0.1",
+    "canvasengine": "2.1.1",
     "pixi.js": "8.19.0",
     "vite-plugin-dts": "^5.0.3"
   },

@@ -176,6 +176,29 @@ describe("RpgGui Vue integration", () => {
     expect(gui.getAttachedVueGuis().map(item => item.name)).toEqual(["tooltip"]);
   });
 
+  test("records explicit renderer ownership for both GUI registries", async () => {
+    const { gui } = await createGui();
+
+    gui.add({
+      id: "explicit-canvas",
+      component: CanvasGui,
+      renderer: "canvas",
+    });
+    gui.add({
+      id: "explicit-vue",
+      component: VueInventory,
+      renderer: "vue",
+    });
+
+    expect(gui.getAll()["explicit-canvas"].renderer).toBe("canvas");
+    expect(gui.getVueGuis()).toEqual([
+      expect.objectContaining({
+        name: "explicit-vue",
+        renderer: "vue",
+      }),
+    ]);
+  });
+
   test("synchronizes Vue GUI display and hide states through the Vue bridge", async () => {
     const { gui } = await createGui();
     const bridge = {
@@ -334,7 +357,9 @@ describe("RpgGui Vue integration", () => {
 
     gui.guiInteraction(PrebuiltGui.MainMenu, "useItem", { id: "potion" });
 
-    expect(gui.get(PrebuiltGui.MainMenu)?.data().items).toEqual([
+    expect(gui.get<{ items: Array<{ id: string; quantity: number }> }>(
+      PrebuiltGui.MainMenu
+    )?.data().items).toEqual([
       {
         id: "potion",
         quantity: 1,

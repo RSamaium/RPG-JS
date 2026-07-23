@@ -17,6 +17,7 @@ Use GUI when the player interacts with an interface, when the server opens a men
 | Display conversations or narrative text | [Dialog Box](/gui/dialog-box) |
 | Show persistent game information on screen | [HUD](/gui/hud) |
 | Replace a prebuilt GUI with your own component | [Prebuilt GUI Contracts](/gui/prebuilt-contracts) |
+| Add authoritative map or global chat | [Chat module](/gui/chat) |
 | Attach an interactive interface to a sprite | [Attach GUI to Sprites](/guide/gui/attach-gui) |
 | Apply client-side feedback before the server confirms an action | [Optimistic GUI Actions](/gui/optimistic-actions) |
 | Inject engine services inside `.ce` GUI files | [Engine Injection in .ce Files](/gui/engine-injection) |
@@ -27,6 +28,10 @@ Use GUI when the player interacts with an interface, when the server opens a men
 Use [Components overview](/guide/components-overview) when you only need a passive visual layer around sprites.
 
 Use GUI when the element behaves like an interface: it can be opened, hidden, updated with GUI data, or can send interactions back to the server.
+
+GUI IDs and their data/interaction contracts are renderer-neutral. CanvasEngine
+is the default renderer for `.ce` components; Vue registrations explicitly opt
+into the DOM overlay with `vueGui()`.
 
 ## Attached GUI
 

@@ -9,8 +9,8 @@ Accepted:
 
 - `001-canonical-module-api.md`
 - `002-signe-public-boundary.md`
+- `003-canvasengine-and-gui.md`
 
 Current proposals:
 
-- `003-canvasengine-and-gui.md`
 - `004-v4-compatibility-policy.md`
