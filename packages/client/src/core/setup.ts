@@ -13,7 +13,8 @@ export async function startGame(options: SetupOptions): Promise<RpgContext> {
   context['side'] = 'client'
   setInject(context as unknown as RpgContext);
 
-  await injector(context, options.providers as Providers);
+  const providers = (options.providers as unknown[]).flat(Infinity) as Providers;
+  await injector(context, providers);
 
   const engine = inject<RpgClientEngine>(context, RpgClientEngine);
   await engine.start();

@@ -14,7 +14,10 @@ export function createServer(options: SetupOptions): any {
     
     async onStart() {
       setInject(context);
-      await injector(context as any, options.providers as Providers);
+      const providers = (options.providers as unknown[]).flat(
+        Infinity,
+      ) as Providers;
+      await injector(context as any, providers);
       return super.onStart();
     }
   };
