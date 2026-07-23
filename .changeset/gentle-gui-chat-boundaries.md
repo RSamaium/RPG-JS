@@ -11,4 +11,5 @@ ship the authoritative and replaceable RPGJS chat module, provide default and
 pixel chat themes over shared semantic CSS primitives, and enforce client/server
 production bundle isolation with executable fixtures. Include a runnable pixel
 chat playground and keep chat socket listeners active across standalone startup
-and player map transfers.
+and player map transfers. Document client/server setup, moderation hooks,
+replacement components, themes, translations, and the public chat state API.
