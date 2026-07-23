@@ -42,6 +42,10 @@ RPGJS v5 is ready for a stable release when:
 - publish the v5 deprecation and compatibility policy
 - generate and compare public export and declaration snapshots in CI
 
+ADR 002 establishes the accepted Signe boundary: gameplay declarations and
+runtime adapters expose RPGJS-owned contracts, while direct Signe imports are
+reserved for documented advanced plugins.
+
 ### Exit gate
 
 No unresolved architecture question may require a v5 user to choose between

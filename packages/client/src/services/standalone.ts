@@ -1,8 +1,7 @@
 import { AbstractWebsocket, SocketUpdateProperties, WebSocketToken } from "./AbstractSocket";
 import { ClientIo, ServerIo } from "@signe/room";
-import { Context } from "@signe/di";
 import { RpgClientEngine } from "../RpgClientEngine";
-import { UpdateMapService, UpdateMapToken } from "@rpgjs/common";
+import { UpdateMapService, UpdateMapToken, type RpgContext, type RpgProvider } from "@rpgjs/common";
 import { LoadMapToken } from "./loadMap";
 import { RpgGui } from "../Gui/Gui";
 import { provideKeyboardControls } from "./keyboardControls";
@@ -43,7 +42,7 @@ class BridgeWebsocket extends AbstractWebsocket {
   }
   private serverInstance: any;
 
-  constructor(protected context: Context, private server: any, options: StandaloneOptions = {}) {
+  constructor(protected context: RpgContext, private server: any, options: StandaloneOptions = {}) {
     super(context);
     // fake room
     this.rooms.env = options.env || {};
@@ -240,11 +239,11 @@ class UpdateMapStandaloneService extends UpdateMapService {
   }
 }
 
-export function provideRpg(server: any, options: StandaloneOptions = {}) {
+export function provideRpg(server: any, options: StandaloneOptions = {}): RpgProvider[] {
   return [
     {
       provide: WebSocketToken,
-      useFactory: (context: Context) => new BridgeWebsocket(context, server, options),
+      useFactory: (context: RpgContext) => new BridgeWebsocket(context, server, options),
     },
     {
       provide: UpdateMapToken,

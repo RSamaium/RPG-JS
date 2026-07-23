@@ -1,4 +1,4 @@
-import { Action, Request, Room, UnhandledAction, type RoomMethods, type RoomOnJoin } from "@signe/room";
+import { Action, Request, Room, UnhandledAction } from "@signe/room";
 import {
   Hooks,
   IceMovement,
@@ -30,7 +30,7 @@ import {
 } from "@rpgjs/common";
 import { RpgPlayer, RpgEvent } from "../Player/Player";
 import { createStatesSnapshotDeep, generateShortUUID, sync, type, users } from "@signe/sync";
-import { signal, type WritableSignal } from "@signe/reactive";
+import { signal } from "@signe/reactive";
 import { inject } from "@signe/di";
 import { context } from "../core/context";;
 import { finalize, lastValueFrom } from "rxjs";
@@ -41,6 +41,7 @@ import { z } from "zod";
 import { MapOptions } from "../decorators/map";
 import { EventMode } from "../decorators/event";
 import { BaseRoom } from "./BaseRoom";
+import type { RpgWritableSignal } from "@rpgjs/common";
 import { buildSaveSlotMeta, resolveSaveStorageStrategy } from "../services/save";
 import { Log } from "../logs/log";
 import { createMapUpdateHeaders, isMapUpdateAuthorized, MAP_UPDATE_TOKEN_ENV, MAP_UPDATE_TOKEN_HEADER } from "../map-update";
@@ -326,11 +327,35 @@ interface LightingSetOptions {
   cancelTransition?: boolean;
 }
 
+/**
+ * Stable connection surface passed to RPGJS room lifecycle methods.
+ *
+ * The room runtime owns the connection. Game code may send data, close the
+ * socket, or replace its application state without depending on a transport
+ * implementation.
+ */
+export interface RpgRoomConnection<TState = unknown> {
+  /** Stable public connection identifier. */
+  readonly id: string;
+  /** Private session identifier retained by supported reconnection flows. */
+  readonly sessionId?: string;
+  /** Current application-owned state. Use `setState()` to replace it. */
+  readonly state: Readonly<TState> | null;
+  /** Replace the application-owned connection state. */
+  setState(
+    state: TState | ((previous: Readonly<TState> | null) => TState) | null,
+  ): Readonly<TState> | null;
+  /** Send data to this connection. */
+  send(data: string | ArrayBuffer | ArrayBufferView): void;
+  /** Close this connection. */
+  close(code?: number, reason?: string): void;
+}
+
 @Room({
   path: "map-{id}",
   persistState: true
 })
-export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
+export class RpgMap extends RpgCommonMap<RpgPlayer> {
   private readonly partyRoom: {
     env: Record<string, unknown>;
     getConnections(): Iterable<unknown>;
@@ -348,7 +373,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
   /** 
    * Synchronized signal containing all players currently on the map
    * 
-   * This signal is automatically synchronized with clients using @signe/sync.
+   * This signal is automatically synchronized with clients by RPGJS.
    * Players are indexed by their unique ID.
    * 
    * @example
@@ -360,12 +385,12 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
    * const player = map.players()['player-id'];
    * ```
    */
-  @users(RpgPlayer) players = signal({});
+  @users(RpgPlayer) players = signal({}) as unknown as RpgWritableSignal<Record<string, RpgPlayer>>;
 
   /** 
    * Synchronized signal containing all events (NPCs, objects) on the map
    * 
-   * This signal is automatically synchronized with clients using @signe/sync.
+   * This signal is automatically synchronized with clients by RPGJS.
    * Events are indexed by their unique ID.
    * 
    * @example
@@ -377,7 +402,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
    * const event = map.events()['event-id'];
    * ```
    */
-  @sync(RpgPlayer) events = signal({});
+  @sync(RpgPlayer) events = signal({}) as unknown as RpgWritableSignal<Record<string, RpgEvent>>;
 
   /** 
    * Signal containing the map's database of items, classes, and other game data
@@ -395,14 +420,14 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
    * const potion = map.database()['Potion'];
    * ```
    */
-  database = signal({});
+  database = signal({}) as unknown as RpgWritableSignal<Record<string, any>>;
 
-  variables: WritableSignal<Record<string, unknown>> = type(
+  variables: RpgWritableSignal<Record<string, unknown>> = type(
     signal<Record<string, unknown>>({}) as never,
     "variables",
     { persist: true },
     this as never
-  ) as unknown as WritableSignal<Record<string, unknown>>;
+  ) as unknown as RpgWritableSignal<Record<string, unknown>>;
 
   /** 
    * Array of map configurations - can contain MapOptions objects or instances of map classes
@@ -1331,7 +1356,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
   /**
    * Intercepts and modifies packets before they are sent to clients
    * 
-   * This method is automatically called by @signe/room for each packet sent to clients.
+   * This method is automatically called by the RPGJS room runtime for each packet sent to clients.
    * It adds timestamp and acknowledgment information to sync packets for client-side
    * prediction reconciliation. This helps with network synchronization and reduces
    * perceived latency.
@@ -1353,7 +1378,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
    * // You typically don't call it directly
    * ```
    */
-  interceptorPacket(player: RpgPlayer, packet: any, conn: Parameters<RoomMethods["$send"]>[0]) {
+  interceptorPacket(player: RpgPlayer, packet: any, conn: RpgRoomConnection) {
     let obj: any = {}
     let packetValue = packet?.value;
 
@@ -1515,7 +1540,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
   /**
    * Called when a player joins the map
    * 
-   * This method is automatically called by @signe/room when a player connects to the map.
+   * This method is automatically called by the RPGJS room runtime when a player connects to the map.
    * It initializes the player's connection, sets up the map context, and waits for
    * the map data to be ready before playing sounds and triggering hooks.
    * 
@@ -1539,7 +1564,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
    * });
    * ```
    */
-  onJoin(player: RpgPlayer, conn: Parameters<RoomMethods["$send"]>[0]) {
+  onJoin(player: RpgPlayer, conn: RpgRoomConnection) {
     // A reconnect reuses the public player id but starts with an empty client
     // entity cache. Force the next sync packet to include every visible entity.
     this.spatialVisibleEventIds.delete(player.id);
@@ -1638,7 +1663,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
   /**
    * Called when a player leaves the map
    * 
-   * This method is automatically called by @signe/room when a player disconnects from the map.
+   * This method is automatically called by the RPGJS room runtime when a player disconnects from the map.
    * It cleans up the player's pending inputs and triggers the appropriate hooks.
    * 
    * ## Architecture
@@ -1658,7 +1683,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
    * });
    * ```
    */
-  async onLeave(player: RpgPlayer, conn: Parameters<RoomMethods["$send"]>[0]) {
+  async onLeave(player: RpgPlayer, conn: RpgRoomConnection) {
     removeMapStreamingPlayer(this, player);
     this.spatialVisibleEventIds.delete(player.id);
     this.spatialVisiblePlayerIds.delete(player.id);
@@ -2917,8 +2942,8 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
    * }
    * ```
    */
-  getEvent<T extends RpgPlayer>(eventId: string): T | undefined {
-    return this.events()[eventId] as T
+  getEvent<T extends RpgEvent = RpgEvent>(eventId: string): T | undefined {
+    return this.events()[eventId] as unknown as T
   }
 
   /**
@@ -3372,7 +3397,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
    * ## Architecture
    * 
    * - Reads a schema object shaped like module props
-   * - Creates typed sync signals with @signe/sync
+   * - Creates typed synchronized signals through the RPGJS gameplay contract
    * - Properties are accessible as `map.propertyName`
    * 
    * @param schema - Schema object defining the properties to sync
@@ -3860,4 +3885,9 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
   }
 }
 
-export interface RpgMap extends RoomMethods { }
+export interface RpgMap {
+  $send(connection: RpgRoomConnection, packet: unknown): void;
+  $broadcast(packet: unknown, without?: string[]): void;
+  $applySync(): void;
+  $sessionTransfer(connection: RpgRoomConnection, roomId: string): Promise<unknown>;
+}

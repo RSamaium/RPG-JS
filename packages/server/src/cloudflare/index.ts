@@ -1,26 +1,51 @@
 import {
   SigneRoomDurableObject,
   createCloudflareRoomWorker,
-  type CloudflareRoomEnv,
   type CloudflareRoomWorkerOptions,
 } from "@signe/room/cloudflare";
 import type { RpgServerEngine } from "../RpgServerEngine";
 import { MAP_UPDATE_TOKEN_ENV } from "../map-update";
 
-export { SigneRoomDurableObject as RpgServerDurableObject };
+/** Bindings and static values available to an RPGJS Cloudflare Worker. */
+export type RpgServerWorkerEnv = Record<string, unknown>;
 
-export interface CreateRpgServerWorkerOptions
-  extends Omit<CloudflareRoomWorkerOptions, "env"> {
-  /** Static values merged into each Signe room environment. */
+interface RpgDurableObject {
+  fetch(request: Request): Promise<Response>;
+  alarm(): Promise<void>;
+}
+
+const RpgDurableObjectBase = SigneRoomDurableObject as unknown as new (
+  state: unknown,
+  env: RpgServerWorkerEnv,
+) => RpgDurableObject;
+
+/**
+ * Durable Object entry point used by an RPGJS Cloudflare Worker deployment.
+ *
+ * Export this class from the Worker module under the binding configured in
+ * `createRpgServerWorker`.
+ */
+export class RpgServerDurableObject extends RpgDurableObjectBase {}
+
+/** Options used to create an RPGJS Cloudflare Worker room router. */
+export interface CreateRpgServerWorkerOptions {
+  /** Durable Object binding that owns RPGJS room instances. */
+  binding: string;
+  /** URL prefix used for room routes. */
+  partiesPath?: string;
+  /** Additional room constructors exposed beside the main RPGJS server. */
+  rooms?: Record<string, RpgServerWorkerConstructor>;
+  /** Static values merged into each RPGJS room environment. */
   env?: Record<string, unknown>;
   /** Reject map administration requests when the secret is absent. @default true */
   requireMapUpdateToken?: boolean;
 }
 
+/** RPGJS server constructor accepted by the Cloudflare Worker adapter. */
 export type RpgServerWorkerConstructor = new (room: unknown) => RpgServerEngine;
 
 /**
- * Create a Cloudflare Worker that routes RPGJS rooms through `@signe/room`.
+ * Create a Cloudflare Worker that routes RPGJS rooms through the RPGJS room adapter.
  * Gameplay maps are initialized exclusively through the authenticated
  * `POST /parties/main/map-<id>/map/update` administration endpoint.
  */
@@ -47,10 +72,13 @@ export function createRpgServerWorker(
       }));
     }
   }
-  const worker = createCloudflareRoomWorker(RpgCloudflareServer as any, options);
+  const worker = createCloudflareRoomWorker(
+    RpgCloudflareServer as any,
+    options as CloudflareRoomWorkerOptions,
+  );
 
   return {
-    async fetch(request: Request, env: CloudflareRoomEnv, ctx: unknown): Promise<Response> {
+    async fetch(request: Request, env: RpgServerWorkerEnv, ctx: unknown): Promise<Response> {
       if (requireMapUpdateToken && isAdministrationUpdateRequest(request)) {
         const token = env[MAP_UPDATE_TOKEN_ENV];
         if (typeof token !== "string" || token.length === 0) {

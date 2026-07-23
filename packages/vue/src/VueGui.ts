@@ -8,7 +8,8 @@ import {
     markRaw,
     reactive,
 } from 'vue'
-import { RpgClientEngine, RpgGui, inject, Context } from '@rpgjs/client'
+import { RpgClientEngine, RpgGui, inject } from '@rpgjs/client'
+import type { RpgContext } from '@rpgjs/common'
 import { Observable, Subscription } from 'rxjs'
 
 export const VueGuiToken = "VueGuiToken"
@@ -96,7 +97,7 @@ export class VueGui {
     private objectSubscriptions: Subscription[] = []
     private tickSubscription?: Subscription
 
-    constructor(private context: Context, private options: VueGuiOptions = {}) {
+    constructor(private context: RpgContext, private options: VueGuiOptions = {}) {
 
     }
 

@@ -1,6 +1,6 @@
 import { Hooks, ModulesToken, RpgCommonPlayer } from "@rpgjs/common";
 import { trigger, signal, type Trigger } from "canvasengine";
-import { combineLatest, from, map, of, startWith, Subscription, switchMap } from "rxjs";
+import { combineLatest, from, map, of, startWith, Subscription, switchMap, type Observable } from "rxjs";
 import { inject } from "../core/inject";
 import { RpgClientEngine } from "../RpgClientEngine";
 type Frame = { x: number; y: number; ts: number };
@@ -123,7 +123,7 @@ export abstract class RpgClientObject extends RpgCommonPlayer {
     const engine = this.engine;
     this.hooks.callHooks("client-sprite-onInit", this).subscribe();
 
-    this._frames.observable.subscribe(({ items }) => {
+    (this._frames as any).observable.subscribe(({ items }) => {
       if (!this.id) return;
       //if (this.id == this.engine.playerIdSignal()!) return;
       this.frames = mergeFreshFramePayload(
@@ -133,8 +133,8 @@ export abstract class RpgClientObject extends RpgCommonPlayer {
       );
     });
 
-    const graphics$ = this.graphics.observable.pipe(map(({ items }) => items));
-    const graphicScale$ = this._graphicScale.observable.pipe(
+    const graphics$: Observable<unknown> = (this.graphics as any).observable.pipe(map(({ items }) => items));
+    const graphicScale$: Observable<unknown> = (this._graphicScale as any).observable.pipe(
       startWith({ value: this._graphicScale() }),
       map((payload: any) => payload?.value ?? payload),
     );

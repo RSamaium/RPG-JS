@@ -1,6 +1,6 @@
 export const ModulesToken = "ModulesToken";
 
-import { Context, Provider } from "@signe/di";
+import type { RpgContext, RpgFactoryProvider, RpgProvider } from "./foundation";
 import { Subject, Observable, from } from "rxjs";
 import { mergeMap, toArray } from "rxjs/operators";
 
@@ -177,21 +177,26 @@ export class Hooks {
  * const provider = provideModules(modules, 'game');
  * ```
  */
-export function provideModules(modules: any[], namespace: string, transform?: (modules: any, context: Context) => any) {
+export function provideModules(
+  modules: any[],
+  namespace: string,
+  transform?: (modules: any, context: RpgContext) => any
+): RpgFactoryProvider<Hooks> {
   return {
     provide: ModulesToken,
-    useFactory: (context: Context) => {
+    useFactory: (context: RpgContext) => {
       modules = transform ? transform(modules, context) : modules
       return new Hooks(modules, namespace);
     },
   };
 }
 
-export function findModules(context: Context, namespace: string) {
+export function findModules(context: RpgContext, namespace: string) {
   let modules: any[] = []
-  for (let key in context['values']) {
+  const values = (context as any).values;
+  for (let key in values) {
     if (key.endsWith('Module' + namespace)) {
-      modules.push(context['values'][key].values.get('__default__'))
+      modules.push(values[key].values.get('__default__'))
     }
   }
   return modules
@@ -218,8 +223,8 @@ export function findModules(context: Context, namespace: string) {
  */
 export function createModule(
   tokenName: string,
-  providers: (Provider | Provider[] | ModuleSide)[]
-): Provider[] {
+  providers: (RpgProvider | RpgProvider[] | ModuleSide)[]
+): RpgProvider[] {
   const results = providers.map(provider => {
     const results: any[] = [];
 
@@ -257,7 +262,7 @@ export function createModule(
     return results;
   }).flat(); // Flatten the array to handle multiple results per provider
 
-  return results.flat();
+  return results.flat() as RpgProvider[];
 }
 
 /**

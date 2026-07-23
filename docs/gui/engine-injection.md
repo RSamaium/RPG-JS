@@ -292,7 +292,7 @@ const eventName = getEntityProp(someEvent, "name");
 
 ## Signal Synchronization
 
-The signals are automatically synchronized with the server through the `@signe/sync` system:
+The signals are automatically synchronized with the server through the RPGJS synchronization layer:
 
 - **Server Changes**: When the server updates player positions, event states, or other data
 - **WebSocket Events**: Changes are sent via WebSocket `sync` events

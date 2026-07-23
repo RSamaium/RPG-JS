@@ -1,5 +1,5 @@
-import { Constructor, PlayerCtor } from "@rpgjs/common";
-import { signal, type WritableSignal } from "@signe/reactive";
+import { Constructor, PlayerCtor, type RpgWritableSignal } from "@rpgjs/common";
+import { signal } from "@signe/reactive";
 import { type } from "@signe/sync";
 
 /**
@@ -32,12 +32,12 @@ import { type } from "@signe/sync";
  */
 export function WithVariableManager<TBase extends PlayerCtor>(Base: TBase) {
   return class extends Base {
-    variables: WritableSignal<Record<string, unknown>> = type(
+    variables: RpgWritableSignal<Record<string, unknown>> = type(
       signal<Record<string, unknown>>({}) as never,
       'variables',
       { persist: true },
       this as never
-    ) as unknown as WritableSignal<Record<string, unknown>>;
+    ) as unknown as RpgWritableSignal<Record<string, unknown>>;
 
     setVariable<T = unknown>(key: string, val: T): void {
       this.variables.mutate((variables) => {
@@ -91,7 +91,7 @@ export interface IVariableManager {
    * These values belong to the player, are persisted, and travel with the
    * player snapshot when switching maps or servers.
    */
-  variables: WritableSignal<Record<string, unknown>>;
+  variables: RpgWritableSignal<Record<string, unknown>>;
 
   /**
    * Assign a variable to the player.

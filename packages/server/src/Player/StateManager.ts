@@ -1,5 +1,5 @@
-import { isInstanceOf, isString, PlayerCtor } from "@rpgjs/common";
-import { signal, type WritableArraySignal, type WritableSignal } from "@signe/reactive";
+import { isInstanceOf, isString, PlayerCtor, type RpgWritableSignal } from "@rpgjs/common";
+import { signal } from "@signe/reactive";
 import { ItemLog, StateLog } from "../logs";
 import { persist } from "@signe/sync";
 import { RpgPlayer } from "./Player";
@@ -53,7 +53,7 @@ export interface StateEfficiency { state: StateInput; rate: number }
  */
 export function WithStateManager<TBase extends PlayerCtor>(Base: TBase) {
   return class extends Base {
-    _statesEfficiency = signal<StateEfficiency[]>([]);
+    _statesEfficiency = signal<StateEfficiency[]>([]) as unknown as RpgWritableSignal<StateEfficiency[]>;
 
     private _getStateMap(required: boolean = true) {
       // Use this.map directly to support both RpgMap and LobbyRoom
@@ -225,7 +225,7 @@ export interface IStateManager {
    * 
    * @returns Signal containing array of state efficiency objects
    */
-  statesEfficiency: WritableSignal<StateEfficiency[]>;
+  statesEfficiency: RpgWritableSignal<StateEfficiency[]>;
 
   /**
    * Apply states to a player from skill or item effects

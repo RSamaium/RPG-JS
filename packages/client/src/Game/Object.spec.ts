@@ -101,7 +101,7 @@ describe("RpgClientObject animations", () => {
     const object = createObject();
     const animationChanges: Array<{ name: string; isPlaying: boolean }> = [];
 
-    object.animationName.observable.subscribe((name) => {
+    (object.animationName as any).observable.subscribe((name) => {
       animationChanges.push({
         name,
         isPlaying: object.animationIsPlaying(),

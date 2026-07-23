@@ -1,4 +1,4 @@
-import { Context } from "@signe/di";
+import type { RpgContext } from "@rpgjs/common";
 
 export const WebSocketToken = "websocket";
 
@@ -14,7 +14,7 @@ export type WebSocketMode = "standalone" | "mmorpg";
 export abstract class AbstractWebsocket {
   readonly mode?: WebSocketMode;
 
-  constructor(protected context: Context) {}
+  constructor(protected context: RpgContext) {}
 
   abstract connection(listeners?: (data: any) => void): Promise<void>;
   abstract emit(event: string, data: any): void;

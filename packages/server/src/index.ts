@@ -14,7 +14,6 @@ export * from "./Player/Components";
 export * from "./module";
 export * from "./rooms/map";
 export * from "./presets";
-export * from "@signe/reactive";
 export * from "./Gui";
 export * from "./services/save";
 export * from "./storage";
@@ -43,6 +42,16 @@ export type {
   MapAreaTargetBounds,
   MapAreaTargetKind,
   MapAreaTargetSelector,
+  RpgClassProvider,
+  RpgContext,
+  RpgExistingProvider,
+  RpgFactoryProvider,
+  RpgProvider,
+  RpgProviders,
+  RpgProviderToken,
+  RpgReadableSignal,
+  RpgValueProvider,
+  RpgWritableSignal,
 } from "@rpgjs/common";
 export { Control } from "@rpgjs/common";
 export * from "./decorators/event";

@@ -1,5 +1,4 @@
-import { findModules, provideModules, registerI18nMessages } from "@rpgjs/common";
-import { FactoryProvider } from "@signe/di";
+import { findModules, provideModules, registerI18nMessages, type RpgFactoryProvider } from "@rpgjs/common";
 import { RpgServerEngine } from "./RpgServerEngine";
 import { RpgMap } from "./rooms/map";
 import { RpgPlayer } from "./Player/Player";
@@ -47,7 +46,7 @@ export type RpgServerModule = RpgServer | (new () => any);
  * provideServerModules([MyServerModule])
  * ```
  */
-export function provideServerModules(modules: RpgServerModule[]): FactoryProvider {
+export function provideServerModules(modules: RpgServerModule[]): RpgFactoryProvider {
   return provideModules(modules, "server", (modules, context) => {
     const mainModuleServer = findModules(context, 'Server')
     modules = [...mainModuleServer, ...modules]

@@ -6,6 +6,8 @@ import {
   type MapStreamChunk,
   type MapStreamManifest,
   type MapStreamPacket,
+  type RpgContext,
+  type RpgProvider,
 } from "@rpgjs/common";
 import { AbstractWebsocket, WebSocketToken } from "./AbstractSocket";
 import { LoadMapToken, type MapData, type LoadMapOptions } from "./loadMap";
@@ -221,13 +223,13 @@ class MapStreamingLoadMapService<TManifestData, TChunkData, TState> {
   private updateMap?: UpdateMapService;
 
   constructor(
-    private readonly context: Context,
+    private readonly context: RpgContext,
     private readonly options: ClientMapStreamingOptions<TManifestData, TChunkData, TState>,
   ) {}
 
   initialize(): void {
     if (this.stream) return;
-    this.socket = inject<AbstractWebsocket>(this.context, WebSocketToken);
+    this.socket = inject<AbstractWebsocket>(this.context as Context, WebSocketToken);
     this.stream = new MapStreamingClientService(this.socket, this.options);
   }
 
@@ -236,7 +238,7 @@ class MapStreamingLoadMapService<TManifestData, TChunkData, TState> {
     const map = this.socket?.mode === "standalone" && this.options.directLoad
       ? await this.options.directLoad(mapId.replace(/^map-/, ""))
       : await this.stream!.load(mapId);
-    this.updateMap ??= inject<UpdateMapService>(this.context, UpdateMapToken);
+    this.updateMap ??= inject<UpdateMapService>(this.context as Context, UpdateMapToken);
     await this.updateMap.update(map);
     return map;
   }
@@ -265,11 +267,11 @@ class MapStreamingLoadMapService<TManifestData, TChunkData, TState> {
  */
 export function provideClientMapStreaming<TManifestData, TChunkData, TState>(
   options: ClientMapStreamingOptions<TManifestData, TChunkData, TState>,
-) {
+): RpgProvider[] {
   return [
     {
       provide: LoadMapToken,
-      useFactory: (context: Context) => new MapStreamingLoadMapService(context, options),
+      useFactory: (context: RpgContext) => new MapStreamingLoadMapService(context, options),
     },
   ];
 }

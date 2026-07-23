@@ -1,5 +1,5 @@
 import { generateShortUUID, users } from "@signe/sync";
-import { effect, Signal, signal } from "@signe/reactive";
+import { effect, signal } from "@signe/reactive";
 import { Direction, RpgCommonPlayer } from "../Player";
 import {
   PhysicsEngine,
@@ -17,6 +17,9 @@ import { WorldMapsManager, type RpgWorldMaps } from "./WorldMaps";
 import { queryArea as queryMapArea } from "./area/query";
 import type { MapAreaHit, MapAreaQueryOptions } from "./area/types";
 import type { MapChunkHitbox } from "../map-streaming";
+import type { RpgReadableSignal, RpgWritableSignal } from "../foundation";
+
+const gameplaySignal = signal as <T>(value: T) => RpgWritableSignal<T>;
 
 export type PhysicsEntityKind = "hero" | "npc" | "generic";
 
@@ -71,10 +74,10 @@ const DEFAULT_MAX_FIXED_STEPS_PER_TICK = 5;
 const DEFAULT_MAX_TICK_DELTA_MS = 250;
 
 export abstract class RpgCommonMap<T extends RpgCommonPlayer> {
-  abstract players: Signal<Record<string, T>>;
-  abstract events: Signal<Record<string, any>>;
+  abstract players: RpgReadableSignal<Record<string, T>>;
+  abstract events: RpgReadableSignal<Record<string, any>>;
 
-  data = signal<any | null>(null);
+  data = gameplaySignal<any | null>(null);
   physic = new PhysicsEngine({
     timeStep: 1 / 60,
     gravity: new Vector2(0, 0),
@@ -436,7 +439,7 @@ export abstract class RpgCommonMap<T extends RpgCommonPlayer> {
       },
     );
 
-    this.eventsSubscription = this.events.observable.subscribe(({ value: event, type, key }) => {
+    this.eventsSubscription = (this.events as any).observable.subscribe(({ value: event, type, key }) => {
       if (type === "add") {
         event.id = key;
         this.createCharacterHitbox(event, "npc", {

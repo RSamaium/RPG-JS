@@ -1,9 +1,8 @@
-import { Context } from "@signe/di";
 import { connectionRoom } from "@signe/sync/client";
 import { RpgGui } from "../Gui/Gui";
 import { RpgClientEngine } from "../RpgClientEngine";
 import { AbstractWebsocket, SocketQuery, SocketUpdateProperties, WebSocketToken } from "./AbstractSocket";
-import { UpdateMapService, UpdateMapToken } from "@rpgjs/common";
+import { UpdateMapService, UpdateMapToken, type RpgContext, type RpgProvider } from "@rpgjs/common";
 import { provideKeyboardControls } from "./keyboardControls";
 import { provideSaveClient } from "./save";
 import { isNativeSocketEvent, waitForRpgjsConnected } from "./mmorpg-connection";
@@ -31,7 +30,7 @@ export class BridgeWebsocket extends AbstractWebsocket {
   private acceptedOpenListeners = new Set<(data: any) => void>();
   private targetRoom = "lobby-1";
 
-  constructor(protected context: Context, private options: MmorpgOptions = {}) {
+  constructor(protected context: RpgContext, private options: MmorpgOptions = {}) {
     super(context);
     this.privateId = this.resolveConnectionId();
   }
@@ -186,7 +185,7 @@ export class BridgeWebsocket extends AbstractWebsocket {
 }
 
 class UpdateMapStandaloneService extends UpdateMapService {
-  constructor(protected context: Context, private _options: MmorpgOptions) {
+  constructor(protected context: RpgContext, private _options: MmorpgOptions) {
     super(context);
   }
 
@@ -197,15 +196,15 @@ class UpdateMapStandaloneService extends UpdateMapService {
   }
 }
 
-export function provideMmorpg(options: MmorpgOptions) {
+export function provideMmorpg(options: MmorpgOptions): RpgProvider[] {
   return [
     {
       provide: WebSocketToken,
-      useFactory: (context: Context) => new BridgeWebsocket(context, options),
+      useFactory: (context: RpgContext) => new BridgeWebsocket(context, options),
     },
     {
       provide: UpdateMapToken,
-      useFactory: (context: Context) => new UpdateMapStandaloneService(context, options),
+      useFactory: (context: RpgContext) => new UpdateMapStandaloneService(context, options),
     },
     provideKeyboardControls(),
     provideSaveClient(),

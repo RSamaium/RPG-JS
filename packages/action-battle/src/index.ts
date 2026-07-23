@@ -1,6 +1,6 @@
 import server, { createActionBattleServer } from "./server";
 import client, { createActionBattleClient } from "./client";
-import { createModule } from "@rpgjs/common";
+import { createModule, type RpgProvider } from "@rpgjs/common";
 import type { ActionBattleOptions } from "./types";
 
 // AI exports
@@ -233,7 +233,7 @@ export {
   createActionBattleServer,
 } from "./server";
 
-export function provideActionBattle(options: ActionBattleOptions = {}) {
+export function provideActionBattle(options: ActionBattleOptions = {}): RpgProvider[] {
   return createModule("ActionBattle", [
     {
       server: createActionBattleServer?.(options),

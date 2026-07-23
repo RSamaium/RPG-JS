@@ -1,19 +1,21 @@
 import { inject } from "@signe/di";
-import { Action, Room, type RoomMethods } from "@signe/room";
+import { Action, Room } from "@signe/room";
 import { Hooks, ModulesToken } from "@rpgjs/common";
 import { context } from "../core/context";
 import { users } from "@signe/sync";
 import { signal } from "@signe/reactive";
 import { RpgPlayer } from "../Player/Player";
+import type { RpgRoomConnection } from "./map";
 import { BaseRoom } from "./BaseRoom";
 import { buildSaveSlotMeta, resolveSaveStorageStrategy } from "../services/save";
 import { lastValueFrom } from "rxjs";
+import type { RpgWritableSignal } from "@rpgjs/common";
 
 @Room({
   path: "lobby-{id}",
 })
 export class LobbyRoom extends BaseRoom {
-  @users(RpgPlayer) players = signal({});
+  @users(RpgPlayer) players = signal({}) as unknown as RpgWritableSignal<Record<string, RpgPlayer>>;
   autoSync: boolean = true;
 
   constructor(room) {
@@ -24,7 +26,7 @@ export class LobbyRoom extends BaseRoom {
     }
   }
 
-  async onJoin(player: RpgPlayer, conn: Parameters<RoomMethods["$send"]>[0]) {
+  async onJoin(player: RpgPlayer, conn: RpgRoomConnection) {
     player.map = this as unknown as RpgPlayer["map"];
     player.context = context;
     player.conn = conn;

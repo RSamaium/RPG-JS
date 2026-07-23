@@ -70,24 +70,20 @@ exposes TMX/TSX files.
 Configure the client to use TiledMap:
 
 ```ts
-import { mergeConfig } from "@signe/di";
 import { provideClientGlobalConfig, provideRpg, startGame } from "@rpgjs/client";
 import { provideTiledMap } from "@rpgjs/tiledmap/client";
 import startServer from "./server";
 
-startGame(
-  mergeConfig({
-    providers: [
-      provideTiledMap({
-        basePath: "map"  // Must match publicPath in vite.config.ts
-      }),
-      provideClientGlobalConfig(),
-      // ... other client providers
-    ]
-  }, {
-    providers: [provideRpg(startServer)]
-  })
-);
+startGame({
+  providers: [
+    provideTiledMap({
+      basePath: "map"  // Must match publicPath in vite.config.ts
+    }),
+    provideClientGlobalConfig(),
+    provideRpg(startServer),
+    // ... other client providers
+  ],
+});
 ```
 
 ## Server-Side Setup

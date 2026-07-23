@@ -1,5 +1,5 @@
-import { isString, PlayerCtor } from "@rpgjs/common";
-import { signal, computed, WritableSignal, ComputedSignal } from "@signe/reactive";
+import { isString, PlayerCtor, type RpgReadableSignal, type RpgWritableSignal } from "@rpgjs/common";
+import { signal, computed } from "@signe/reactive";
 import { MAXHP, MAXSP } from "@rpgjs/common";
 import { type } from "@signe/sync";
 
@@ -407,7 +407,7 @@ export interface IParameterManager {
 /**
  * Parameter Manager Mixin with Reactive Signals
  * 
- * Provides comprehensive parameter management functionality using reactive signals from `@signe/reactive`.
+ * Provides comprehensive parameter management through RPGJS reactive gameplay signals.
  * This mixin handles health points (HP), skill points (SP), experience and level progression, 
  * custom parameters, and parameter modifiers with automatic reactivity.
  * 
@@ -465,12 +465,12 @@ export function WithParameterManager<TBase extends PlayerCtor>(Base: TBase) {
      * console.log(player.param[MAXHP]); // Updated value
      * ```
      */
-    private _paramsModifierSignal: WritableSignal<ParameterModifierMap> = type(
+    private _paramsModifierSignal: RpgWritableSignal<ParameterModifierMap> = type(
         signal<ParameterModifierMap>({}) as never,
         '_paramsModifierSignal',
         { persist: true },
         this as never
-    ) as unknown as WritableSignal<ParameterModifierMap>
+    ) as unknown as RpgWritableSignal<ParameterModifierMap>
 
     /**
      * Signal for base parameters configuration
@@ -478,12 +478,12 @@ export function WithParameterManager<TBase extends PlayerCtor>(Base: TBase) {
      * Stores the start and end values for each parameter's level curve.
      * Changes to this signal trigger recalculation of all parameter values.
      */
-    private _parametersSignal: WritableSignal<ParameterCurveMap> = type(
+    private _parametersSignal: RpgWritableSignal<ParameterCurveMap> = type(
         signal<ParameterCurveMap>({}) as never,
         '_parametersSignal',
         { persist: true },
         this as never
-    ) as unknown as WritableSignal<ParameterCurveMap>
+    ) as unknown as RpgWritableSignal<ParameterCurveMap>
 
     private _paramProxy: { [key: string]: number } | null = null
 
@@ -503,7 +503,7 @@ export function WithParameterManager<TBase extends PlayerCtor>(Base: TBase) {
      * console.log(player.param[MAXHP]); // New calculated value
      * ```
      */
-    _param: ComputedSignal<Record<string, number>> = type(computed<Record<string, number>>(() => {
+    _param: RpgReadableSignal<Record<string, number>> = type(computed<Record<string, number>>(() => {
         const obj: Record<string, number> = {}
         const parameters = this._parametersSignal()
         const allModifiers = this._getAggregatedModifiers()
@@ -522,7 +522,7 @@ export function WithParameterManager<TBase extends PlayerCtor>(Base: TBase) {
         }
         
         return obj
-    }) as never, '_param', {}, this as never) as unknown as ComputedSignal<Record<string, number>>
+    }) as never, '_param', {}, this as never) as unknown as RpgReadableSignal<Record<string, number>>
 
     /**
      * Aggregates parameter modifiers from all sources (direct modifiers, states, equipment)
@@ -621,12 +621,12 @@ export function WithParameterManager<TBase extends PlayerCtor>(Base: TBase) {
      * ```
      * @memberof ParameterManager
      * */
-    public _expCurveSignal: WritableSignal<string> = type(
+    public _expCurveSignal: RpgWritableSignal<string> = type(
         signal<string>(JSON.stringify(DEFAULT_EXP_CURVE)) as never,
         '_expCurveSignal',
         { persist: true },
         this as never
-    ) as unknown as WritableSignal<string>
+    ) as unknown as RpgWritableSignal<string>
 
     get expCurve(): ExpCurve { 
         const raw = this._expCurveSignal()

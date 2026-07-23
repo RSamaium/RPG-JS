@@ -1,5 +1,5 @@
 import { Context, inject } from "@signe/di";
-import { UpdateMapToken, UpdateMapService, type LightingState } from "@rpgjs/common";
+import { UpdateMapToken, UpdateMapService, type LightingState, type RpgContext, type RpgProvider } from "@rpgjs/common";
 import type { RpgClientMap } from "../Game/Map";
 
 export const LoadMapToken = 'LoadMapToken'
@@ -47,8 +47,8 @@ export type LoadMapOptions = (mapId: string) => Promise<MapData> | MapData
 export class LoadMapService {
   private updateMapService: UpdateMapService;
 
-  constructor(private context: Context, private options: LoadMapOptions) {
-    if (context['side'] === 'server') {
+  constructor(private context: RpgContext, private options: LoadMapOptions) {
+    if (context.side === 'server') {
       return
     }
   }
@@ -56,7 +56,7 @@ export class LoadMapService {
   initialize(): void {}
 
   async load(mapId: string) {
-    this.updateMapService ??= inject(this.context, UpdateMapToken);
+    this.updateMapService ??= inject(this.context as Context, UpdateMapToken);
     const map = await this.options(mapId.replace('map-', ''))
     await this.updateMapService.update(map);
     return map;
@@ -154,12 +154,12 @@ export class LoadMapService {
  * @see {@link LoadMapOptions} for callback function signature
  * @see {@link MapData} for return data structure
  */
-export function provideLoadMap(options: LoadMapOptions) {
+export function provideLoadMap(options: LoadMapOptions): RpgProvider[] {
   return [
     {
       provide: UpdateMapToken,
-      useFactory: (context: Context) => {
-        if (context['side'] === 'client') {
+      useFactory: (context: RpgContext) => {
+        if (context.side === 'client') {
           console.warn('UpdateMapToken is not overridden')
         }
         return
@@ -167,7 +167,7 @@ export function provideLoadMap(options: LoadMapOptions) {
     },
     {
       provide: LoadMapToken,
-      useFactory: (context: Context) => new LoadMapService(context, options),
+      useFactory: (context: RpgContext) => new LoadMapService(context, options),
     },
   ];
 }
