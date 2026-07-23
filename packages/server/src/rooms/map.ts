@@ -194,6 +194,17 @@ const MapUpdateSchema = z.object({
   parsedMap: z.any().optional(),
   /** Raw map source payload (optional) */
   data: z.any().optional(),
+  /**
+   * Server-owned game database published with the map (optional).
+   *
+   * Studio publishes either its record array or an already normalized record.
+   * Keeping it in the validated payload lets database hooks populate the room
+   * without an HTTP fallback and preserves it across room restoration.
+   */
+  database: z.union([
+    z.array(z.any()),
+    z.record(z.string(), z.any()),
+  ]).optional(),
   /** Optional map params payload */
   params: z.any().optional(),
 });
@@ -2084,7 +2095,14 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
    * ```ts
    * // This endpoint is called automatically when a map is loaded
    * // POST /map/update
-   * // Body: { id: string, width: number, height: number, config?: any, damageFormulas?: any }
+   * // Body: {
+   * //   id: string,
+   * //   width: number,
+   * //   height: number,
+   * //   config?: any,
+   * //   damageFormulas?: any,
+   * //   database?: any[] | Record<string, any>
+   * // }
    * ```
    */
   @Request({

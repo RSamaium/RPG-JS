@@ -4,7 +4,13 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { createServer, provideServerModules } from "../src";
 import { RpgServerEngine } from "../src/RpgServerEngine";
-import { MAP_UPDATE_TOKEN_ENV, PartyConnection, createMapUpdatePayload, createRpgServerTransport } from "../src/node";
+import {
+  MAP_UPDATE_TOKEN_ENV,
+  PartyConnection,
+  createMapUpdatePayload,
+  createMemoryNodeRoomStorage,
+  createRpgServerTransport,
+} from "../src/node";
 
 function wait(ms = 0): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -447,6 +453,99 @@ describe("createRpgServerTransport", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("application/json");
+  });
+
+  it.each([
+    {
+      label: "array",
+      database: [
+        { _id: "potion", itemType: "item", name: "Published potion" },
+      ],
+      expected: {
+        potion: { id: "potion", name: "Published potion" },
+      },
+    },
+    {
+      label: "object",
+      database: {
+        sword: { id: "sword", name: "Published sword" },
+      },
+      expected: {
+        sword: { id: "sword", name: "Published sword" },
+      },
+    },
+  ])("preserves a published $label database through validation and restoration", async ({
+    database,
+    expected,
+  }) => {
+    const storage = createMemoryNodeRoomStorage();
+    const GameServer = createServer({
+      providers: [
+        provideServerModules([
+          {
+            database(map: any) {
+              const published = map.data()?.database;
+              if (!Array.isArray(published)) {
+                return published ?? {};
+              }
+              return Object.fromEntries(published.map((record) => [
+                record._id ?? record.id,
+                {
+                  id: record._id ?? record.id,
+                  name: record.name,
+                },
+              ]));
+            },
+          },
+        ]),
+      ],
+    });
+    const transport = createRpgServerTransport(GameServer as any, {
+      initializeMaps: false,
+      storage,
+    });
+
+    const response = await transport.updateMap("published-database", {
+      id: "published-database",
+      width: 320,
+      height: 240,
+      events: [],
+      database,
+    });
+
+    expect(response.status).toBe(200);
+    const room = transport.getRoom("map-published-database")!;
+    const map = (transport.getServer("map-published-database") as RealServer)
+      .getCurrentRoom<any>();
+    expect(await room.storage.get("$room:rpgjs-map-source")).toMatchObject({
+      database,
+    });
+    expect(map.database()).toEqual(expected);
+
+    map.database.set({});
+    map.data.set(await room.storage.get("$room:rpgjs-map-source"));
+    await map.onRestore();
+
+    expect(map.database()).toEqual(expected);
+  });
+
+  it("keeps map updates without a published database backward compatible", async () => {
+    const transport = createRpgServerTransport(RealServer as any, {
+      initializeMaps: false,
+    });
+
+    const response = await transport.updateMap("legacy-map", {
+      id: "legacy-map",
+      width: 320,
+      height: 240,
+      events: [],
+    });
+
+    expect(response.status).toBe(200);
+    const map = (transport.getServer("map-legacy-map") as RealServer)
+      .getCurrentRoom<any>();
+    expect(map.data()).not.toHaveProperty("database");
+    expect(map.database()).toEqual({});
   });
 
   it("authenticates and durably restores world updates", async () => {
