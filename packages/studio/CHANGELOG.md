@@ -1,5 +1,22 @@
 # @rpgjs/studio
 
+## 5.0.0-beta.29
+
+### Patch Changes
+
+- 995277f: Upgrade the RPGJS workspace and published package compatibility ranges to
+  CanvasEngine 2.1, including its compiler, presets, testing, and Tiled
+  integrations. Keep PixiJS on the CanvasEngine-supported 8.19 line and verify the
+  existing client, server, sample, and playground builds against the new runtime.
+- Updated dependencies [37a4fb0]
+- Updated dependencies [995277f]
+- Updated dependencies [995277f]
+- Updated dependencies [335b768]
+  - @rpgjs/server@5.0.0-beta.28
+  - @rpgjs/action-battle@5.0.0-beta.28
+  - @rpgjs/client@5.0.0-beta.28
+  - @rpgjs/vite@5.0.0-beta.28
+
 ## 5.0.0-beta.28
 
 ### Patch Changes

@@ -1,5 +1,29 @@
 # @rpgjs/vue
 
+## 5.0.0-beta.28
+
+### Minor Changes
+
+- 995277f: Add explicit renderer-neutral GUI registrations with an official Vue helper,
+  ship the authoritative and replaceable RPGJS chat module, provide default and
+  pixel chat themes over shared semantic CSS primitives, and enforce client/server
+  production bundle isolation with executable fixtures. Include a runnable pixel
+  chat playground and keep chat socket listeners active across standalone startup
+  and player map transfers. Document client/server setup, moderation hooks,
+  replacement components, themes, translations, and the public chat state API.
+  Emit complete side-specific chat declarations, synchronize the built-in input
+  length with client configuration, and reject explicitly unknown chat channels.
+
+### Patch Changes
+
+- 995277f: Upgrade the RPGJS workspace and published package compatibility ranges to
+  CanvasEngine 2.1, including its compiler, presets, testing, and Tiled
+  integrations. Keep PixiJS on the CanvasEngine-supported 8.19 line and verify the
+  existing client, server, sample, and playground builds against the new runtime.
+- Updated dependencies [995277f]
+- Updated dependencies [995277f]
+  - @rpgjs/client@5.0.0-beta.28
+
 ## 5.0.0-beta.27
 
 ### Patch Changes

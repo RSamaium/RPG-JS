@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/chat",
-  "version": "5.0.0-beta.0",
+  "version": "5.0.0-beta.1",
   "description": "Official renderer-neutral chat module for RPGJS",
   "main": "dist/client/index.js",
   "types": "dist/client/client-index.d.ts",

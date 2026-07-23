@@ -1,5 +1,21 @@
 # @rpgjs/server
 
+## 5.0.0-beta.28
+
+### Patch Changes
+
+- 37a4fb0: Call the documented server `onStep` hook after each queued map tick with typed
+  duration, backlog, fixed-step, and pending-input metrics.
+- 995277f: Upgrade the RPGJS workspace and published package compatibility ranges to
+  CanvasEngine 2.1, including its compiler, presets, testing, and Tiled
+  integrations. Keep PixiJS on the CanvasEngine-supported 8.19 line and verify the
+  existing client, server, sample, and playground builds against the new runtime.
+- 335b768: Preserve trusted Studio databases through map update validation and durable room
+  restoration so player inventory and equipment initialization do not require an
+  HTTP database fallback.
+- Updated dependencies [995277f]
+  - @rpgjs/testing@5.0.0-beta.28
+
 ## 5.0.0-beta.27
 
 ### Patch Changes
