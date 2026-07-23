@@ -1,5 +1,30 @@
 # @rpgjs/studio
 
+## 5.0.0-beta.28
+
+### Patch Changes
+
+- ecb31da: Scope Studio player initialization and starting database records to the joined
+  map project so multi-project Workers do not leak global project configuration.
+- e5ad24a: Establish the stable RPGJS-owned boundary for reactive gameplay properties,
+  dependency-injection providers, Node room storage, and Cloudflare room hosting.
+  Remove accidental Signe re-exports from the client and server roots, keep
+  direct Signe imports as an explicitly advanced plugin path, and protect every
+  published TypeScript entry with declaration reachability snapshots in CI.
+  Keep provider creation strategies mutually exclusive, support asynchronous
+  provider factories, and preserve strict member checking on the server engine.
+  Enforce these public contracts in CI, test the RPGJS-owned Node storage
+  lifecycle, and document complete stable migration examples.
+- 9673224: Allow trusted Studio map publishers to inject a server-owned data provider for
+  project, map, media, and database reads without calling the public Studio API.
+- Updated dependencies [dc6aed5]
+- Updated dependencies [e5ad24a]
+  - @rpgjs/client@5.0.0-beta.27
+  - @rpgjs/server@5.0.0-beta.27
+  - @rpgjs/action-battle@5.0.0-beta.27
+  - @rpgjs/common@5.0.0-beta.26
+  - @rpgjs/vite@5.0.0-beta.27
+
 ## 5.0.0-beta.27
 
 ### Minor Changes

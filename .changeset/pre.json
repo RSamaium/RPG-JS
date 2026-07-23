@@ -42,15 +42,19 @@
     "clean-workspace-internal-deps",
     "clear-mmorpg-save-guide",
     "fix-ci-test-discovery",
+    "fix-recursive-providers",
+    "fresh-studio-map-config",
     "plain-studio-animations",
     "quiet-menu-hud-layout",
     "sharp-server-player-types",
     "sharp-studio-edge-repeat",
     "smart-studio-string-templates",
     "soft-studio-media-scale",
+    "stable-signe-boundary",
     "strong-rooms-deploy",
     "tame-event-touch-plates",
     "tidy-tiled-vite-runtime",
+    "trusted-studio-provider",
     "warm-input-forms"
   ]
 }
