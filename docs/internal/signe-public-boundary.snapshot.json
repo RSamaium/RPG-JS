@@ -659,12 +659,20 @@
     ]
   },
   "@rpgjs/chat": {
-    "entry": "packages/chat/dist/client/index.d.ts",
+    "entry": "packages/chat/dist/client/client-index.d.ts",
     "exports": [
       "CHAT_ERROR_EVENT",
       "CHAT_GUI_ID",
       "CHAT_MESSAGE_EVENT",
       "CHAT_SEND_EVENT",
+      "ChatChannel",
+      "ChatClientModuleOptions",
+      "ChatClientOptions",
+      "ChatErrorPayload",
+      "ChatMessage",
+      "ChatMessagePayload",
+      "ChatPosition",
+      "ResolvedChatClientOptions",
       "addChatMessage",
       "chatClientOptions",
       "chatError",
@@ -672,29 +680,37 @@
       "clearChatMessages",
       "configureChatClient",
       "createChatClient",
-      "createChatHandler",
-      "createChatServer",
       "default",
       "normalizeChatClientOptions",
-      "normalizeChatServerOptions",
       "openChat",
       "provideChat",
       "sendChatMessage"
     ],
     "declarations": [
+      "packages/chat/dist/client/client-config.d.ts",
+      "packages/chat/dist/client/client-index.d.ts",
       "packages/chat/dist/client/client-state.d.ts",
+      "packages/chat/dist/client/client-types.d.ts",
       "packages/chat/dist/client/client.d.ts",
       "packages/chat/dist/client/config.d.ts",
-      "packages/chat/dist/client/index.d.ts"
+      "packages/chat/dist/client/shared-types.d.ts"
     ]
   },
   "@rpgjs/chat/client": {
-    "entry": "packages/chat/dist/client/index.d.ts",
+    "entry": "packages/chat/dist/client/client-index.d.ts",
     "exports": [
       "CHAT_ERROR_EVENT",
       "CHAT_GUI_ID",
       "CHAT_MESSAGE_EVENT",
       "CHAT_SEND_EVENT",
+      "ChatChannel",
+      "ChatClientModuleOptions",
+      "ChatClientOptions",
+      "ChatErrorPayload",
+      "ChatMessage",
+      "ChatMessagePayload",
+      "ChatPosition",
+      "ResolvedChatClientOptions",
       "addChatMessage",
       "chatClientOptions",
       "chatError",
@@ -702,49 +718,53 @@
       "clearChatMessages",
       "configureChatClient",
       "createChatClient",
-      "createChatHandler",
-      "createChatServer",
       "default",
       "normalizeChatClientOptions",
-      "normalizeChatServerOptions",
       "openChat",
       "provideChat",
       "sendChatMessage"
     ],
     "declarations": [
+      "packages/chat/dist/client/client-config.d.ts",
+      "packages/chat/dist/client/client-index.d.ts",
       "packages/chat/dist/client/client-state.d.ts",
+      "packages/chat/dist/client/client-types.d.ts",
       "packages/chat/dist/client/client.d.ts",
       "packages/chat/dist/client/config.d.ts",
-      "packages/chat/dist/client/index.d.ts"
+      "packages/chat/dist/client/shared-types.d.ts"
     ]
   },
   "@rpgjs/chat/server": {
-    "entry": "packages/chat/dist/server/index.d.ts",
+    "entry": "packages/chat/dist/server/server-index.d.ts",
     "exports": [
       "CHAT_ERROR_EVENT",
       "CHAT_GUI_ID",
       "CHAT_MESSAGE_EVENT",
       "CHAT_SEND_EVENT",
-      "addChatMessage",
-      "chatClientOptions",
-      "chatError",
-      "chatMessages",
-      "clearChatMessages",
-      "configureChatClient",
-      "createChatClient",
+      "ChatChannel",
+      "ChatErrorPayload",
+      "ChatMapLike",
+      "ChatMessage",
+      "ChatMessagePayload",
+      "ChatModerationContext",
+      "ChatPlayerLike",
+      "ChatRateLimitOptions",
+      "ChatServerModuleOptions",
+      "ChatServerOptions",
+      "ResolvedChatServerOptions",
       "createChatHandler",
       "createChatServer",
       "default",
-      "normalizeChatClientOptions",
       "normalizeChatServerOptions",
-      "openChat",
-      "provideChat",
-      "sendChatMessage"
+      "provideChat"
     ],
     "declarations": [
       "packages/chat/dist/server/config.d.ts",
-      "packages/chat/dist/server/index.d.ts",
-      "packages/chat/dist/server/server.d.ts"
+      "packages/chat/dist/server/server-config.d.ts",
+      "packages/chat/dist/server/server-index.d.ts",
+      "packages/chat/dist/server/server-types.d.ts",
+      "packages/chat/dist/server/server.d.ts",
+      "packages/chat/dist/server/shared-types.d.ts"
     ]
   },
   "@rpgjs/client": {
@@ -2721,51 +2741,6 @@
       "packages/studio/dist/server/studio-map-plugins.d.ts"
     ]
   },
-  "@rpgjs/testing": {
-    "entry": "packages/testing/dist/index.d.ts",
-    "exports": [
-      "TestingFixture",
-      "clear",
-      "nextTick",
-      "provideTestingLoadMap",
-      "testing",
-      "waitForSync",
-      "waitForSyncComplete"
-    ],
-    "declarations": [
-      "packages/testing/dist/index.d.ts"
-    ]
-  },
-  "@rpgjs/tiledmap": {
-    "entry": "packages/tiledmap/dist/client/index.d.ts",
-    "exports": [
-      "TiledMapOptions",
-      "provideTiledMap"
-    ],
-    "declarations": [
-      "packages/tiledmap/dist/client/index.d.ts"
-    ]
-  },
-  "@rpgjs/tiledmap/client": {
-    "entry": "packages/tiledmap/dist/client/index.d.ts",
-    "exports": [
-      "TiledMapOptions",
-      "provideTiledMap"
-    ],
-    "declarations": [
-      "packages/tiledmap/dist/client/index.d.ts"
-    ]
-  },
-  "@rpgjs/tiledmap/server": {
-    "entry": "packages/tiledmap/dist/server/index.d.ts",
-    "exports": [
-      "TiledMapOptions",
-      "provideTiledMap"
-    ],
-    "declarations": [
-      "packages/tiledmap/dist/server/index.d.ts"
-    ]
-  },
   "@rpgjs/vite": {
     "entry": "packages/vite/dist/index.d.ts",
     "exports": [
@@ -2774,6 +2749,7 @@
       "EntryPointPluginOptions",
       "RemoveImportsPluginOptions",
       "RpgjsDevServerOptions",
+      "RpgjsModuleViteConfigOptions",
       "RpgjsPluginOptions",
       "compatibilityV4Plugin",
       "directivePlugin",
