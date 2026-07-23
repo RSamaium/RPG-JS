@@ -137,6 +137,15 @@ state transitions. Read their READMEs before changing synchronization behavior.
   module, client API, server API, synchronization behavior, or runtime adapter.
 - Update samples only when they clarify the new API or protect an important
   integration path.
+- Before merging changes that can affect package consumers, validate them
+  against the matching branch of
+  [`rpgjs/starter`](https://github.com/rpgjs/starter) in a temporary directory.
+  Build and pack the affected local packages, install those artifacts in the
+  starter, run its production build, and start the game on a fixed local port.
+  Open it in a browser and check the rendered game, console errors, failed
+  network requests, and at least one basic interaction. Review a screenshot and
+  report any warning that also occurs with the currently published packages so
+  pre-existing starter issues are not mistaken for regressions.
 
 ## External Package Notes
 
