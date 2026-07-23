@@ -1,12 +1,16 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { MAXHP, MAXSP } from "@rpgjs/common";
 import { RpgPlayer, type RpgMap } from "@rpgjs/server";
-import studioServer, { resolveRuntimeEventHitbox } from "../src/server";
+import studioServer, {
+  createStudioMapUpdatePayload,
+  resolveRuntimeEventHitbox,
+} from "../src/server";
 import {
   configureGameDataProvider,
   configureStudioGameRuntime,
   resetGameDataProvider,
 } from "../src/data-provider";
+import type { GameDataProvider } from "../src/server-entry";
 
 afterEach(() => {
   delete (globalThis as typeof globalThis & { gameConfig?: unknown }).gameConfig;
@@ -15,6 +19,66 @@ afterEach(() => {
 });
 
 describe("Studio server runtime", () => {
+  test("uses an injected provider to prepare trusted map updates", async () => {
+    const getProject = vi.fn(async () => ({
+      _id: "trusted-project",
+      startMapId: "trusted-map",
+    }));
+    const getMap = vi.fn(async () => ({
+      _id: "trusted-map",
+      projectId: "trusted-project",
+      creationDetails: { version: "v2" },
+      params: { width: 2, height: 3 },
+      events: [{
+        id: "event-1",
+        params: { graphic: { _id: "#hero-media" } },
+      }],
+      commonEvents: [{
+        id: "common-event-1",
+        triggers: [{ graphic: { mediaId: "trigger-media" } }],
+      }],
+      terrain: [],
+      terrainByTileset: [],
+    }));
+    const getMedia = vi.fn(async (mediaId: string) => ({
+      _id: mediaId,
+      url: `https://private.example/${mediaId}.png`,
+    }));
+    const getDatabase = vi.fn(async () => [{
+      _id: "potion",
+      itemType: "item",
+      name: "Trusted potion",
+    }]);
+    const dataProvider: GameDataProvider = {
+      kind: "online",
+      getProject,
+      getMap,
+      getMedia,
+      getDatabase,
+    };
+
+    const payload = await createStudioMapUpdatePayload("trusted-map", {
+      projectId: "trusted-project",
+      dataProvider,
+    });
+
+    expect(getProject).toHaveBeenCalledWith({ projectId: "trusted-project" });
+    expect(getMap).toHaveBeenCalledWith("trusted-map");
+    expect(getMedia.mock.calls.map(([mediaId]) => mediaId)).toEqual([
+      "hero-media",
+      "trigger-media",
+    ]);
+    expect(getDatabase).toHaveBeenCalledWith("trusted-project");
+    expect(payload.database).toEqual([expect.objectContaining({
+      _id: "potion",
+      name: "Trusted potion",
+    })]);
+    expect(payload.events[0].params.graphic).toEqual(expect.objectContaining({
+      _id: "hero-media",
+      url: "https://private.example/hero-media.png",
+    }));
+  });
+
   test("resolves the runtime event hitbox from the game map payload", () => {
     expect(resolveRuntimeEventHitbox({
       hitbox: { width: 56, height: 50 },

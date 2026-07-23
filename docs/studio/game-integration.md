@@ -174,6 +174,39 @@ the room. This direct `curl` updates only one map revision; it does not perform
 the world fan-out. Use the RPGJS publisher or the Studio seed command for a full
 map-and-world publication.
 
+### Trusted publisher data provider
+
+A trusted backend that already owns the Studio project data can inject a
+`GameDataProvider` and avoid calling the public Studio API while preparing an
+MMORPG map update:
+
+```ts
+import {
+  createStudioMapUpdatePayload,
+  type GameDataProvider,
+} from "@rpgjs/studio/server";
+
+const databaseBackedStudioProvider: GameDataProvider = {
+  kind: "online",
+  getProject: async ({ projectId, mapId }) => loadProject({ projectId, mapId }),
+  getMap: async (mapId) => loadMap(mapId),
+  getMedia: async (mediaId) => loadMedia(mediaId),
+  getDatabase: async (projectId) => loadDatabase(projectId),
+};
+
+await createStudioMapUpdatePayload("your-map-id", {
+  projectId: "your-project-id",
+  startMapId: "your-map-id",
+  dataProvider: databaseBackedStudioProvider,
+});
+```
+
+The injected provider handles every project, map, event-media, and database
+read for that payload. It is server-owned in both standalone and MMORPG
+deployments: never expose database adapters, private storage handles, or
+credentials to browser code. When `dataProvider` is omitted, the existing
+online, offline, and auto runtime modes keep selecting the built-in provider.
+
 For a runnable local Worker, deterministic fixture, seed script, and real Studio
 API seed command, see the
 [Studio playground](https://github.com/RSamaium/RPG-JS/tree/master/playground/games/studio).

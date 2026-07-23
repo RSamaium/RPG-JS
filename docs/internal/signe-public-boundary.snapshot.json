@@ -2591,6 +2591,7 @@
     "exports": [
       "CreateStudioMapPluginsOptions",
       "CreateStudioMapUpdatePayloadOptions",
+      "GameDataProvider",
       "StudioCombatAnimationIds",
       "StudioCombatAnimationOptions",
       "StudioDebugCollisionsOptions",
