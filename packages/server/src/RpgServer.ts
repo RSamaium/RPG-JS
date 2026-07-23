@@ -1,7 +1,7 @@
 import { MapOptions } from "./decorators/map"
 import { RpgPlayer } from "./Player/Player"
 import { type RpgMap } from "./rooms/map"
-import { RpgServerEngine } from "./RpgServerEngine"
+import type { RpgServerEngine } from "./RpgServerEngine"
 import { WorldMapConfig, RpgShape, type I18nMessages, type MapPhysicsInitContext, type MapPhysicsEntityContext, type RpgActionInput } from "@rpgjs/common"
 import { RpgEvent } from "./Player/Player"
 import type { MaybePromise, RpgMapChangeTarget, RpgPlayerSnapshot, RpgSyncSchema } from "./Player/types"
@@ -21,6 +21,27 @@ type RpgMatchMaker = unknown
 type IStoreState = unknown
 
 export type ServerDatabase = Record<string, unknown> | unknown[]
+
+/**
+ * Metrics collected after one queued server tick has been processed.
+ *
+ * The context is runtime-agnostic and can be aggregated before being exported
+ * to Cloudflare Analytics Engine, OpenTelemetry, or another metrics backend.
+ */
+export interface RpgServerStepMetrics {
+    /** Current fixed simulation tick after processing the queued delta. */
+    tick: number
+    /** Wall-clock time spent processing the queued tick, excluding the hook itself. */
+    durationMs: number
+    /** Delta passed to the queued server tick. */
+    scheduledDeltaMs: number
+    /** Delta received while this tick was processing and still waiting to run. */
+    queuedDeltaMs: number
+    /** Number of fixed simulation steps executed for this queued tick. */
+    fixedSteps: number
+    /** Total number of unprocessed player inputs after this queued tick. */
+    pendingInputs: number
+}
 
 export interface RpgServerModuleSide {
     client?: unknown
@@ -78,12 +99,15 @@ export interface RpgServerEngineHooks {
     onStart?: (server: RpgServerEngine) => MaybePromise<void>
 
     /**
-     *  At each server frame. Normally represents 60FPS
+     * After each queued map tick has been processed.
      * 
-     * @prop { (engine: RpgServerEngine) => void | Promise<void> } [onStep]
+     * @prop { (engine: RpgServerEngine, metrics: RpgServerStepMetrics) => void | Promise<void> } [onStep]
      * @memberof RpgServerEngineHooks
      */
-    onStep?: (server: RpgServerEngine) => MaybePromise<void>
+    onStep?: (
+        server: RpgServerEngine,
+        metrics: RpgServerStepMetrics,
+    ) => MaybePromise<void>
 
    /**
      * Flexible authentication function for RPGJS.

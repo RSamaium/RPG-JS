@@ -16,8 +16,9 @@ const engine: RpgServerEngineHooks = {
     onStart(server: RpgServerEngine) {
         console.log('Server is starting...')
     },
-    onStep(server: RpgServerEngine) {
-        // Called at each server frame (60 FPS)
+    onStep(server: RpgServerEngine, metrics) {
+        // Called after each queued map tick
+        console.log(metrics.durationMs, metrics.pendingInputs)
     },
     auth(server: RpgServerEngine, socket: any) {
         // Custom authentication logic
@@ -59,19 +60,61 @@ const engine: RpgServerEngineHooks = {
 
 ### onStep
 
-**Description:** Called at each server frame, typically representing 60 FPS
+**Description:** Called after each queued map tick has been processed. Empty maps
+stop their automatic loop, so observability does not keep an idle room active.
 
 **Parameters:**
 - `server: RpgServerEngine` - The server engine instance
+- `metrics: RpgServerStepMetrics` - Metrics for the processed map tick:
+  - `tick` - Current fixed simulation tick
+  - `durationMs` - Wall-clock processing duration, excluding the hook itself
+  - `scheduledDeltaMs` - Delta passed to the queued tick
+  - `queuedDeltaMs` - Delta that arrived during processing and remains queued
+  - `fixedSteps` - Number of fixed simulation steps executed
+  - `pendingInputs` - Total unprocessed player inputs after the tick
+
+Handlers that only accept `server` remain compatible. Async handlers are awaited
+in the tick queue. If a handler throws or rejects, RPGJS logs the error for the
+automatic loop and retries queued simulation work on a later tick. Avoid network
+I/O here because it directly increases the server backlog.
 
 **Example:**
 ```ts
+import type { RpgServerEngineHooks, RpgServerStepMetrics } from '@rpgjs/server'
+
+const window = {
+    startedAt: Date.now(),
+    ticks: 0,
+    durationMs: 0,
+    maxQueuedDeltaMs: 0,
+    maxPendingInputs: 0
+}
+
 const engine: RpgServerEngineHooks = {
-    onStep(server: RpgServerEngine) {
-        // Update global timers, check conditions, etc.
-        const currentTime = Date.now()
-        if (currentTime % 10000 === 0) { // Every 10 seconds
-            console.log(`Server running for ${currentTime - server.globalData.startTime}ms`)
+    onStep(server, metrics: RpgServerStepMetrics) {
+        window.ticks += metrics.fixedSteps
+        window.durationMs += metrics.durationMs
+        window.maxQueuedDeltaMs = Math.max(
+            window.maxQueuedDeltaMs,
+            metrics.queuedDeltaMs
+        )
+        window.maxPendingInputs = Math.max(
+            window.maxPendingInputs,
+            metrics.pendingInputs
+        )
+
+        if (Date.now() - window.startedAt >= 10_000) {
+            // Enqueue this aggregate for an out-of-band exporter instead of
+            // performing analytics or network I/O on every server tick.
+            metricsQueue.push({
+                mapId: server.getCurrentRoomId(),
+                ...window
+            })
+            window.startedAt = Date.now()
+            window.ticks = 0
+            window.durationMs = 0
+            window.maxQueuedDeltaMs = 0
+            window.maxPendingInputs = 0
         }
     }
 }

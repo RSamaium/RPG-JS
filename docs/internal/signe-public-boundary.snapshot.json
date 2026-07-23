@@ -1678,6 +1678,7 @@
       "RpgServerRoomKind",
       "RpgServerRuntimeRoom",
       "RpgServerRuntimeStorage",
+      "RpgServerStepMetrics",
       "RpgShape",
       "RpgSyncProperty",
       "RpgSyncPropertyOptions",
