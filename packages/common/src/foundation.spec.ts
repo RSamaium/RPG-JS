@@ -37,4 +37,25 @@ describe("RPGJS public foundation contracts", () => {
     expectTypeOf([provider]).toMatchTypeOf<RpgProviders>();
     expectTypeOf(provider.useFactory).parameter(0).toEqualTypeOf<RpgContext>();
   });
+
+  test("provider factories may initialize asynchronously", () => {
+    const provider = {
+      provide: "counter",
+      useFactory: async () => 1,
+    } satisfies RpgFactoryProvider<number>;
+
+    expectTypeOf(provider).toMatchTypeOf<RpgProvider<number>>();
+    expectTypeOf(provider.useFactory()).toEqualTypeOf<Promise<number>>();
+  });
+
+  test("providers accept exactly one creation strategy", () => {
+    // @ts-expect-error useValue and useFactory are mutually exclusive
+    const provider: RpgProvider<number> = {
+      provide: "counter",
+      useValue: 1,
+      useFactory: () => 2,
+    };
+
+    expectTypeOf(provider).toEqualTypeOf<RpgProvider<number>>();
+  });
 });

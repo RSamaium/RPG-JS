@@ -14,3 +14,5 @@ dependency-injection providers, Node room storage, and Cloudflare room hosting.
 Remove accidental Signe re-exports from the client and server roots, keep
 direct Signe imports as an explicitly advanced plugin path, and protect every
 published TypeScript entry with declaration reachability snapshots in CI.
+Keep provider creation strategies mutually exclusive, support asynchronous
+provider factories, and preserve strict member checking on the server engine.

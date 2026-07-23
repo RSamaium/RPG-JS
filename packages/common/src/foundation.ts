@@ -56,6 +56,12 @@ export interface RpgValueProvider<T = unknown> extends RpgProviderOptions {
   provide: RpgProviderToken;
   /** Value made available to the runtime. */
   useValue: T;
+  /** A value provider cannot use another creation strategy. */
+  useClass?: never;
+  /** A value provider cannot use another creation strategy. */
+  useFactory?: never;
+  /** A value provider cannot use another creation strategy. */
+  useExisting?: never;
 }
 
 /** Register a class instantiated by the RPGJS dependency container. */
@@ -64,6 +70,12 @@ export interface RpgClassProvider<T = unknown> extends RpgProviderOptions {
   provide: RpgProviderToken;
   /** Class constructed when the provider is initialized. */
   useClass: new (...args: any[]) => T;
+  /** A class provider cannot use another creation strategy. */
+  useValue?: never;
+  /** A class provider cannot use another creation strategy. */
+  useFactory?: never;
+  /** A class provider cannot use another creation strategy. */
+  useExisting?: never;
 }
 
 /**
@@ -80,8 +92,14 @@ export interface RpgClassProvider<T = unknown> extends RpgProviderOptions {
 export interface RpgFactoryProvider<T = unknown> extends RpgProviderOptions {
   /** Token under which the factory result is registered. */
   provide: RpgProviderToken;
-  /** Factory invoked during runtime initialization. */
-  useFactory: (context: RpgContext) => T;
+  /** Factory invoked and awaited during runtime initialization. */
+  useFactory: (context: RpgContext) => T | Promise<T>;
+  /** A factory provider cannot use another creation strategy. */
+  useValue?: never;
+  /** A factory provider cannot use another creation strategy. */
+  useClass?: never;
+  /** A factory provider cannot use another creation strategy. */
+  useExisting?: never;
 }
 
 /** Register an alias to another dependency token. */
@@ -90,6 +108,12 @@ export interface RpgExistingProvider extends RpgProviderOptions {
   provide: RpgProviderToken;
   /** Existing token resolved through the alias. */
   useExisting: RpgProviderToken;
+  /** An alias provider cannot use another creation strategy. */
+  useValue?: never;
+  /** An alias provider cannot use another creation strategy. */
+  useClass?: never;
+  /** An alias provider cannot use another creation strategy. */
+  useFactory?: never;
 }
 
 /** Provider shapes accepted by RPGJS client and server bootstrap functions. */

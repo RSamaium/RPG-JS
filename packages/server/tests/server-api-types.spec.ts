@@ -14,6 +14,7 @@ import type {
   RpgPlayerSlotLoadResult,
   RpgPlayerSnapshot,
   RpgPlayerSnapshotLoadResult,
+  RpgServerEngine,
   StateData,
   ServerMapStreamingAdapter,
 } from "@rpgjs/server";
@@ -143,6 +144,17 @@ describe("server public API types", () => {
 
     expectTypeOf(provider).toMatchTypeOf<RpgProvider>();
     expectTypeOf<SigneFactoryProvider>().toMatchTypeOf<RpgProvider>();
+  });
+
+  test("the server engine rejects unknown inherited members", () => {
+    const assertions = (server: RpgServerEngine) => {
+      expectTypeOf(server.onStart()).toEqualTypeOf<Promise<void>>();
+      expectTypeOf(server.getCurrentRoomId()).toEqualTypeOf<string | null>();
+      // @ts-expect-error typo in the public server surface
+      server.getCurentRoom();
+    };
+
+    expectTypeOf(assertions).toBeFunction();
   });
 
   test("legacy Signe root re-exports are not part of the stable API", () => {

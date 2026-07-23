@@ -7,7 +7,70 @@ import { inject } from "./core/inject";
 import { context } from "./core/context";
 import { lastValueFrom } from "rxjs";
 
-const RpgRoomServerBase = Server as unknown as new (...args: any[]) => any;
+/** Persistent storage available to the RPGJS server runtime. */
+export interface RpgServerRuntimeStorage {
+  /** Read one value from room storage. */
+  get<T = unknown>(key: string): Promise<T | undefined>;
+  /** Store one value in room storage. */
+  put<T = unknown>(key: string, value: T): Promise<void>;
+  /** Delete one or several values from room storage. */
+  delete(key: string | string[]): Promise<unknown>;
+}
+
+/** Low-level room handle owned by an RPGJS server runtime. */
+export interface RpgServerRuntimeRoom {
+  /** Stable low-level room identifier. */
+  readonly id?: string;
+  /** Storage scoped to the room. */
+  readonly storage: RpgServerRuntimeStorage;
+}
+
+/**
+ * RPGJS-owned structural contract for the room server inherited by
+ * {@link RpgServerEngine}.
+ */
+export interface RpgRoomServer {
+  /** Current low-level room handle. */
+  readonly room: RpgServerRuntimeRoom;
+  /** Current initialized gameplay sub-room. */
+  subRoom: unknown | null;
+  /** Gameplay room classes available to this server. */
+  rooms: unknown[];
+  /** Whether the low-level room runtime is hibernating. */
+  readonly isHibernate: boolean;
+  /** Storage scoped to the current room. */
+  readonly roomStorage: RpgServerRuntimeStorage;
+  /** Send a packet to one low-level connection. */
+  send(connection: unknown, payload: unknown, subRoom: unknown): Promise<void>;
+  /** Send a packet to every low-level connection. */
+  broadcast(payload: unknown, subRoom: unknown): void;
+  /** Initialize the current room. */
+  onStart(): Promise<void>;
+  /** Run session garbage collection immediately. */
+  runGarbageCollector(): Promise<void>;
+  /** Resolve one persisted session. */
+  getSession(privateId: string): Promise<unknown | null>;
+  /** Delete one persisted session. */
+  deleteSession(privateId: string): Promise<void>;
+  /** Connect a client to the current gameplay room. */
+  onConnectClient(connection: unknown, context: unknown): Promise<void>;
+  /** Handle an incoming low-level connection. */
+  onConnect(connection: unknown, context: unknown): Promise<void>;
+  /** Handle an incoming packet. */
+  onMessage(message: string, sender: unknown): Promise<void>;
+  /** Handle a closed connection. */
+  onClose(connection: unknown): Promise<void>;
+  /** Handle a room alarm. */
+  onAlarm(): Promise<void>;
+  /** Handle a connection error. */
+  onError(connection: unknown, error: Error): Promise<void>;
+  /** Handle an HTTP request routed to the room. */
+  onRequest(request: Request): Promise<Response>;
+}
+
+const RpgRoomServerBase = Server as unknown as new (
+  room: RpgServerRuntimeRoom,
+) => RpgRoomServer;
 
 export type RpgServerRoomKind = "lobby" | "map" | "unknown";
 
@@ -124,7 +187,7 @@ export class RpgServerEngine extends RpgRoomServerBase {
    * @returns The current room id, or `null` when unavailable.
    */
   getCurrentRoomId(): string | null {
-    const id = (this.room as any)?.id;
+    const id = this.room?.id;
     return typeof id === "string" ? id : null;
   }
 
