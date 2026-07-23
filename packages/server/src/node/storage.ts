@@ -38,7 +38,10 @@ export function createMemoryNodeRoomStorage(
 /**
  * Create a persistent SQLite room storage provider for the Node.js RPGJS adapter.
  *
- * @param options - Database connection or path and optional SQLite tuning.
+ * Pass exactly one database source: `databasePath` to let RPGJS own the
+ * connection, or `database` to reuse a connection owned by the application.
+ *
+ * @param options - Exactly one database source and optional SQLite tuning.
  * @returns An RPGJS-owned persistent room storage provider.
  *
  * @example

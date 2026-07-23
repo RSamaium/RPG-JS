@@ -136,6 +136,32 @@ describe("server public API types", () => {
     expectTypeOf(assertions).toBeFunction();
   });
 
+  test("SQLite storage requires exactly one database source", () => {
+    const assertSqliteSources = () => {
+      createSqliteNodeRoomStorage({ databasePath: "rooms.sqlite" });
+
+      // @ts-expect-error SQLite storage requires database or databasePath
+      createSqliteNodeRoomStorage({});
+
+      const database = {
+        exec() {},
+        prepare() {
+          return {
+            get: () => undefined,
+            run: () => ({ changes: 0 }),
+            all: () => [],
+          };
+        },
+      };
+      createSqliteNodeRoomStorage({ database });
+
+      // @ts-expect-error database and databasePath are mutually exclusive
+      createSqliteNodeRoomStorage({ database, databasePath: "rooms.sqlite" });
+    };
+
+    expectTypeOf(assertSqliteSources).toBeFunction();
+  });
+
   test("Signe providers remain structurally accepted", () => {
     const provider = {
       provide: "feature",

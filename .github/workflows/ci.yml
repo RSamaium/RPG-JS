@@ -37,12 +37,16 @@ jobs:
         run: pnpm build
       - name: Public API boundary
         run: pnpm api:boundary
+      - name: Public API type contracts
+        run: pnpm test:types
       - name: Unit tests
         run: pnpm test -- --run
       - name: Cloudflare MMORPG runtime tests
         run: pnpm --dir samples/cloudflare-mmorpg test
       - name: Cloudflare Studio runtime tests
         run: pnpm --dir playground/games/studio test
+      - name: Playground and sample builds
+        run: pnpm --filter '@rpgjs/playground-*' --filter sample run build
 
   build_and_publish:
       needs: tests

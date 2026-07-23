@@ -306,6 +306,42 @@ starter's `LocalStorageSaveStorageStrategy` only works for standalone browser
 games. Configure a server-side save strategy before relying on save slots or
 account persistence in an MMORPG.
 
+## Memory snapshots and SQLite ownership
+
+The memory provider can snapshot all party and room values for a test, a local
+tool, or an explicit short-lived backup:
+
+```ts
+import { createMemoryNodeRoomStorage } from "@rpgjs/server/node"
+
+const storage = createMemoryNodeRoomStorage()
+const room = await storage.getStorage("main", "map-town")
+
+await room.put("weather", { kind: "rain" })
+const snapshot = storage.snapshot()
+
+storage.clear()
+storage.restore(snapshot)
+
+// Reacquire handles after clear() or restore().
+const restoredRoom = await storage.getStorage("main", "map-town")
+console.log(await restoredRoom.get("weather"))
+```
+
+`snapshot()` returns an independent representation of the current data.
+`clear()` and `restore()` replace the provider's room registry, so reacquire
+room handles afterward. Memory data is process-local and disappears when the
+process exits unless the application persists the snapshot itself.
+
+For SQLite, pass exactly one database source:
+
+- `databasePath` lets RPGJS open and own the SQLite connection;
+- `database` reuses a compatible connection owned by the application.
+
+Passing neither source or both sources is invalid. A filesystem path is the
+simplest production configuration for the single-process Node adapter shown
+above.
+
 ## WebSocket session ids
 
 The Node transport uses the RPGJS room adapter and follows its session model:

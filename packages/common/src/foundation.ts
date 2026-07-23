@@ -85,7 +85,9 @@ export interface RpgClassProvider<T = unknown> extends RpgProviderOptions {
  * ```ts
  * const provider = {
  *   provide: 'inventory',
- *   useFactory: (context: RpgContext) => createInventory(context)
+ *   async useFactory(context: RpgContext) {
+ *     return createInventory(await context.get('inventory-config'))
+ *   }
  * } satisfies RpgFactoryProvider
  * ```
  */

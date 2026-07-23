@@ -80,12 +80,7 @@ export type RpgSqliteJournalMode =
   | "DELETE" | "TRUNCATE" | "PERSIST" | "MEMORY" | "WAL" | "OFF"
   | "delete" | "truncate" | "persist" | "memory" | "wal" | "off";
 
-/** Configuration for persistent SQLite-backed RPGJS room storage. */
-export interface RpgSqliteStorageOptions {
-  /** Existing compatible SQLite database connection. */
-  database?: RpgSqliteDatabase;
-  /** Path opened when an existing database is not provided. */
-  databasePath?: string;
+interface RpgSqliteStorageTuningOptions {
   /** Table used to store room values. */
   tableName?: string;
   /** SQLite busy timeout in milliseconds. */
@@ -95,6 +90,27 @@ export interface RpgSqliteStorageOptions {
   /** Number of retries after a transient busy response. */
   busyRetries?: number;
 }
+
+/**
+ * Configuration for persistent SQLite-backed RPGJS room storage.
+ *
+ * Provide exactly one database source: either an existing compatible
+ * connection or a filesystem path opened by the Node.js adapter.
+ */
+export type RpgSqliteStorageOptions = RpgSqliteStorageTuningOptions & (
+  | {
+    /** Existing compatible SQLite database connection. */
+    database: RpgSqliteDatabase;
+    /** A path cannot be combined with an existing database connection. */
+    databasePath?: never;
+  }
+  | {
+    /** An existing connection cannot be combined with a database path. */
+    database?: never;
+    /** Path opened by the Node.js adapter. */
+    databasePath: string;
+  }
+);
 
 /** Network connection exposed to an RPGJS hosted room. */
 export interface RpgHostedRoomConnection<TState = unknown> {

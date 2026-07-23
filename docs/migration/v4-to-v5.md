@@ -60,6 +60,61 @@ Plugins that deliberately use Signe internals should import and declare their
 `@signe/*` dependencies directly. See
 [Advanced Signe Extension Points](/advanced/signe-extension-points).
 
+### Register providers through RPGJS contracts
+
+Import provider types from `@rpgjs/common`, including on the client and server.
+Factories may initialize asynchronously; the runtime waits for their result
+before exposing the provider:
+
+```ts
+import type { RpgContext, RpgFactoryProvider } from "@rpgjs/common"
+
+interface InventoryService {
+  capacity: number
+}
+
+const inventoryProvider = {
+  provide: "inventory",
+  deps: ["inventory-config"],
+  async useFactory(context: RpgContext): Promise<InventoryService> {
+    const config = context.get<{ capacity: number }>("inventory-config")
+    await loadInventoryCatalog()
+    return { capacity: config.capacity }
+  },
+} satisfies RpgFactoryProvider<InventoryService>
+```
+
+Each object provider must choose exactly one creation strategy: `useValue`,
+`useClass`, `useFactory`, or `useExisting`. These contracts catch conflicting
+strategies during type checking instead of silently ignoring one.
+
+For synchronized gameplay property declarations, import
+`RpgReadableSignal` or `RpgWritableSignal` from `@rpgjs/common`. See
+[Synchronization](/guide/synchronization) for the gameplay-level API. Import
+`@signe/reactive` directly only when an advanced plugin intentionally needs
+Signe behavior that RPGJS does not expose.
+
+### Use the stable Node storage names
+
+Node storage factories and their RPGJS-owned contracts come from the same
+entry:
+
+```ts
+import {
+  createSqliteNodeRoomStorage,
+  type RpgRoomStorageProvider,
+} from "@rpgjs/server/node"
+
+const storage: RpgRoomStorageProvider = createSqliteNodeRoomStorage({
+  databasePath: "./data/rooms.sqlite",
+})
+```
+
+SQLite configuration requires exactly one source: `databasePath` for an
+RPGJS-owned connection or `database` for an existing compatible connection.
+See [Node server in production](/advanced/node-server-production) for the
+memory lifecycle and production persistence guidance.
+
 ## Compatibility Matrix
 
 | V4 capability | V5 target | Stable-release validation |

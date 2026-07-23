@@ -1,10 +1,13 @@
 import { describe, expectTypeOf, test } from "vitest";
 import type {
+  RpgClassProvider,
   RpgContext,
+  RpgExistingProvider,
   RpgFactoryProvider,
   RpgProvider,
   RpgProviders,
   RpgReadableSignal,
+  RpgValueProvider,
   RpgWritableSignal,
 } from "./foundation";
 
@@ -48,6 +51,39 @@ describe("RPGJS public foundation contracts", () => {
     expectTypeOf(provider.useFactory()).toEqualTypeOf<Promise<number>>();
   });
 
+  test("all documented provider strategies compose in nested lists", () => {
+    class InventoryService {
+      enabled = true;
+    }
+
+    const valueProvider = {
+      provide: "inventory-config",
+      useValue: { capacity: 20 },
+    } satisfies RpgValueProvider<{ capacity: number }>;
+    const classProvider = {
+      provide: InventoryService,
+      useClass: InventoryService,
+    } satisfies RpgClassProvider<InventoryService>;
+    const factoryProvider = {
+      provide: "inventory",
+      deps: ["inventory-config"],
+      useFactory: async (context: RpgContext) => ({
+        capacity: context.get<{ capacity: number }>("inventory-config").capacity,
+      }),
+    } satisfies RpgFactoryProvider<{ capacity: number }>;
+    const existingProvider = {
+      provide: "inventory-alias",
+      useExisting: "inventory",
+    } satisfies RpgExistingProvider;
+
+    const providers = [
+      valueProvider,
+      [classProvider, factoryProvider, existingProvider],
+    ] satisfies RpgProviders;
+
+    expectTypeOf(providers).toMatchTypeOf<RpgProviders>();
+  });
+
   test("providers accept exactly one creation strategy", () => {
     // @ts-expect-error useValue and useFactory are mutually exclusive
     const provider: RpgProvider<number> = {
@@ -57,5 +93,16 @@ describe("RPGJS public foundation contracts", () => {
     };
 
     expectTypeOf(provider).toEqualTypeOf<RpgProvider<number>>();
+  });
+
+  test("every pair of provider creation strategies is rejected", () => {
+    // @ts-expect-error useClass and useExisting are mutually exclusive
+    const classAlias: RpgProvider = {
+      provide: "inventory",
+      useClass: class InventoryService {},
+      useExisting: "existing-inventory",
+    };
+
+    expectTypeOf(classAlias).toEqualTypeOf<RpgProvider>();
   });
 });
