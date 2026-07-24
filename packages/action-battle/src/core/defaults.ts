@@ -101,8 +101,16 @@ export const defaultRpgjsDamageResolver = (
       raw,
     };
   }
+  const multiplier =
+    typeof context.multiplier === "number" && Number.isFinite(context.multiplier)
+      ? Math.max(0, context.multiplier)
+      : 1;
+  const scaledDamage = Math.max(0, Math.round(resolvedDamage * multiplier));
+  if (previousHp !== undefined && scaledDamage !== resolvedDamage) {
+    target.hp = Math.max(0, previousHp - scaledDamage);
+  }
   return {
-    damage: resolvedDamage,
+    damage: scaledDamage,
     defeated: target.hp <= 0,
     raw,
   };
@@ -113,7 +121,9 @@ export const defaultKnockbackResolver = (
 ): ActionBattleKnockbackResult => {
   const weapon = context.weapon ?? resolveEquippedWeapon(context.attacker);
   return {
-    force: weapon?.knockbackForce ?? DEFAULT_CORE_KNOCKBACK.force,
+    force:
+      (weapon?.knockbackForce ?? DEFAULT_CORE_KNOCKBACK.force) *
+      (context.multiplier ?? 1),
     duration: weapon?.knockbackDuration ?? DEFAULT_CORE_KNOCKBACK.duration,
     direction: resolveDirection(context.attacker as any, context.target as any),
   };

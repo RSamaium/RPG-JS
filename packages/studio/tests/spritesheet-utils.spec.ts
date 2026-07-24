@@ -34,6 +34,7 @@ describe("Studio spritesheet utils", () => {
     expect(spritesheet.scale).toEqual([1, 1]);
     expect(spritesheet.anchor).toBeUndefined();
     expect(spritesheet.displayScale).toBe(STUDIO_DEFAULT_CHARACTER_DISPLAY_SCALE);
+    expect(spritesheet.trimTransparentBounds).toBeUndefined();
   });
 
   test("keeps explicit Studio media scale", async () => {
@@ -51,6 +52,22 @@ describe("Studio spritesheet utils", () => {
     expect(spritesheet.scale).toEqual([1, 1]);
     expect(spritesheet.anchor).toBeUndefined();
     expect(spritesheet.displayScale).toBe(STUDIO_DEFAULT_CHARACTER_DISPLAY_SCALE * 0.75);
+    expect(spritesheet.trimTransparentBounds).toBeUndefined();
+  });
+
+  test("enables visible-frame bounds for generated four-direction spritesheets", async () => {
+    const spritesheet = await createSpriteSheetObject({
+      type: "spritesheet",
+      id: "generated-enemy",
+      fileName: "enemy.png",
+      metadata: {
+        frameWidth: 4,
+        frameHeight: 4,
+        fourDirections: true,
+      },
+    });
+
+    expect(spritesheet.trimTransparentBounds).toBe(true);
   });
 
   test("keeps LPC sprite real size in source pixels when media is scaled", async () => {

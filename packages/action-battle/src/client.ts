@@ -19,10 +19,16 @@ import {
 import { resolveActionBattleUi } from "./ui";
 import {
   ACTION_BATTLE_HIT_FX_COMPONENT_ID,
+  ACTION_BATTLE_DAMAGE_COMPONENT_ID,
+  ACTION_BATTLE_TELEGRAPH_COMPONENT_ID,
   createActionBattleClientVisuals,
   playActionBattleVisual,
   setActionBattlePreviewStarter,
 } from "./visual";
+// @ts-ignore CanvasEngine components are compiled by @canvasengine/compiler.
+import AttackTelegraphComponent from "./components/attack-telegraph.ce";
+// @ts-ignore CanvasEngine components are compiled by @canvasengine/compiler.
+import DamagePopupComponent from "./components/damage-popup.ce";
 
 const DEFAULT_ATTACK_LOCK_DURATION_MS = 350;
 
@@ -149,6 +155,14 @@ export const createActionBattleClient = (
             },
           ]
         : []),
+      {
+        id: ACTION_BATTLE_TELEGRAPH_COMPONENT_ID,
+        component: AttackTelegraphComponent,
+      },
+      {
+        id: ACTION_BATTLE_DAMAGE_COMPONENT_ID,
+        component: DamagePopupComponent,
+      },
     ],
     clientVisuals: createActionBattleClientVisuals(normalized),
     gui: resolvedUi.gui,
@@ -158,6 +172,17 @@ export const createActionBattleClient = (
     },
     sceneMap: {
       onAfterLoading() {
+        const engine = inject(RpgClientEngine);
+        const dodge = normalized.combat?.player?.dodge;
+        if (dodge && typeof dodge === "object" && dodge.enabled !== false) {
+          engine.dashDefaults = {
+            duration: dodge.durationMs,
+            cooldown: dodge.cooldownMs,
+            additionalSpeed: dodge.additionalSpeed,
+          };
+        } else {
+          engine.dashDefaults = {};
+        }
         if (actionBarEnabled && resolvedUi.actionBar.autoOpen) {
           const gui = inject(RpgGui)
           gui.display('action-battle-action-bar')
@@ -166,6 +191,15 @@ export const createActionBattleClient = (
     },
     engine: {
       onInput(engine: RpgClientEngine, { input, data }: any) {
+        if (input?.type === "dash") {
+          const dodge = normalized.combat?.player?.dodge;
+          if (dodge && typeof dodge === "object" && dodge.enabled !== false) {
+            engine.processAction("action-battle:dodge", {
+              direction: input.direction,
+            });
+          }
+          return;
+        }
         if (input !== "action") return;
         const player = engine.scene?.getCurrentPlayer?.() as any;
         if (!player) return;

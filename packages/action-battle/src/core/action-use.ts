@@ -167,6 +167,9 @@ const buildActionContext = (input: {
             actionId: input.usable?.id,
             actionType: input.usable?._type,
             pattern: input.pattern,
+            damageMultiplier: input.profile?.damageMultiplier,
+            knockbackMultiplier: input.profile?.knockbackMultiplier,
+            visual: input.action?.visual,
           }
         )
       );
@@ -183,6 +186,9 @@ const buildActionContext = (input: {
           actionId: input.usable?.id,
           actionType: input.usable?._type,
           pattern: input.pattern,
+          damageMultiplier: input.profile?.damageMultiplier,
+          knockbackMultiplier: input.profile?.knockbackMultiplier,
+          visual: input.action?.visual,
         }
       );
     },
@@ -201,11 +207,18 @@ const buildActionContext = (input: {
         const nextHp = Math.min(maxHp, currentHp + amount);
         (entry as any).hp = nextHp;
         emitActionBattleClientVisual({
-          moment: "hurt",
+          moment: "heal",
           entity: entry,
           target: entry,
           damage: Math.max(0, nextHp - currentHp),
           skill: input.skill,
+          result: {
+            damage: Math.max(0, nextHp - currentHp),
+            metadata: {
+              healing: true,
+              visual: input.action?.visual,
+            },
+          },
         });
         return total + nextHp - currentHp;
       }, 0);

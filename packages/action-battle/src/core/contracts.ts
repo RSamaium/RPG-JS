@@ -70,6 +70,20 @@ export interface ActionBattleActionConfig {
   cooldownMs?: number;
   mode?: ActionBattleActionMode;
   projectile?: Omit<ActionBattleProjectileOptions, "onImpact">;
+  /**
+   * Serializable client presentation hints for this action.
+   * Gameplay remains authoritative on the server.
+   */
+  visual?: {
+    /** CanvasEngine built-in or custom FX preset name. */
+    fx?: string;
+    /** Main damage-popup text color. */
+    color?: string | number;
+    /** Damage-popup outline color. */
+    accentColor?: string | number;
+    /** Scale applied to the impact particle effect. */
+    scale?: number;
+  };
 }
 
 export interface ActionBattleProjectileImpactContext {
@@ -137,6 +151,7 @@ export interface ActionBattleDamageContext {
   target: ActionBattleEntity;
   skill?: any;
   pattern?: AttackPattern | string;
+  multiplier?: number;
 }
 
 export interface ActionBattleDamageResult {
@@ -150,6 +165,7 @@ export interface ActionBattleKnockbackContext {
   target: ActionBattleEntity;
   damage: ActionBattleDamageResult;
   weapon?: any;
+  multiplier?: number;
 }
 
 export interface ActionBattleKnockbackResult {

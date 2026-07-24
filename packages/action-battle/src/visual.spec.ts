@@ -1,6 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 import {
   ACTION_BATTLE_CLIENT_VISUAL_ID,
+  ACTION_BATTLE_DAMAGE_COMPONENT_ID,
   ACTION_BATTLE_HIT_FX_COMPONENT_ID,
   createActionBattleVisual,
   createActionBattleClientVisuals,
@@ -81,6 +82,108 @@ describe("action battle visual composer", () => {
     expect(usesActionBattleFxVisual(visual)).toBe(true);
   });
 
+  test("impact uses a charged damage popup and impact burst without duplicating classic hit text", () => {
+    const target = createEntity();
+    const visual = createActionBattleVisual("impact");
+
+    visual({
+      moment: "hurt",
+      target,
+      damage: 42,
+      result: {
+        damage: 42,
+        metadata: { charged: true },
+      },
+    });
+
+    expect(target.showHit).not.toHaveBeenCalled();
+    expect(target.showComponentAnimation).toHaveBeenCalledWith(
+      ACTION_BATTLE_DAMAGE_COMPONENT_ID,
+      expect.objectContaining({
+        amount: 42,
+        kind: "charged",
+      })
+    );
+    expect(target.showComponentAnimation).toHaveBeenCalledWith(
+      ACTION_BATTLE_HIT_FX_COMPONENT_ID,
+      expect.objectContaining({
+        name: "impactBurst",
+        scale: 1.3,
+      })
+    );
+  });
+
+  test("impact lets a skill customize its typography and CanvasEngine preset", () => {
+    const target = createEntity();
+    const visual = createActionBattleVisual("impact");
+
+    visual({
+      moment: "hurt",
+      target,
+      damage: 24,
+      skill: { id: "fire", name: "Fire" },
+      result: {
+        damage: 24,
+        metadata: {
+          visual: {
+            fx: "magicBurst",
+            color: "#ffd166",
+            accentColor: "#a62c21",
+            scale: 1.2,
+          },
+        },
+      },
+    });
+
+    expect(target.showComponentAnimation).toHaveBeenCalledWith(
+      ACTION_BATTLE_DAMAGE_COMPONENT_ID,
+      expect.objectContaining({
+        amount: 24,
+        kind: "skill",
+        caption: "Fire",
+        color: "#ffd166",
+        accentColor: "#a62c21",
+      })
+    );
+    expect(target.showComponentAnimation).toHaveBeenCalledWith(
+      ACTION_BATTLE_HIT_FX_COMPONENT_ID,
+      expect.objectContaining({
+        name: "magicBurst",
+        scale: 1.2,
+      })
+    );
+  });
+
+  test("impact gives healing skills a green popup and heal pulse", () => {
+    const target = createEntity();
+    const visual = createActionBattleVisual("impact");
+
+    visual({
+      moment: "heal",
+      target,
+      damage: 30,
+      skill: { id: "heal-wave", name: "Heal Wave" },
+      result: {
+        damage: 30,
+        metadata: { healing: true },
+      },
+    });
+
+    expect(target.showComponentAnimation).toHaveBeenCalledWith(
+      ACTION_BATTLE_DAMAGE_COMPONENT_ID,
+      expect.objectContaining({
+        amount: 30,
+        kind: "heal",
+      })
+    );
+    expect(target.showComponentAnimation).toHaveBeenCalledWith(
+      ACTION_BATTLE_HIT_FX_COMPONENT_ID,
+      expect.objectContaining({
+        name: "healPulse",
+      })
+    );
+  });
+
   test("custom composer parts receive helpers", () => {
     const target = createEntity();
     const visual = createActionBattleVisual({
@@ -116,6 +219,7 @@ describe("action battle visual composer", () => {
       entity: attacker,
       target,
       damage: 7,
+      skill: { id: "fire", name: "Fire" },
       animations: {
         attack: () => "attack",
       },
@@ -124,6 +228,12 @@ describe("action battle visual composer", () => {
         defeated: false,
         attacker,
         target,
+        metadata: {
+          visual: {
+            fx: "magicBurst",
+            color: "#ffd166",
+          },
+        },
       },
     });
 
@@ -138,11 +248,54 @@ describe("action battle visual composer", () => {
         result: expect.objectContaining({
           damage: 7,
           defeated: false,
+          metadata: {
+            visual: {
+              fx: "magicBurst",
+              color: "#ffd166",
+            },
+          },
         }),
+        skill: { id: "fire", name: "Fire" },
       })
     );
     const payload = clientVisual.mock.calls[0][1];
-    expect(payload).not.toHaveProperty("animations");
+    expect(payload.animations).toEqual({
+      attack: "attack",
+    });
+    expect(() => structuredClone(payload)).not.toThrow();
+  });
+
+  test("resolves entity-specific animation functions before client transfer", () => {
+    setActionBattleOptions({ visual: "classic" } as any);
+    const clientVisual = vi.fn();
+    const enemy = {
+      id: "enemy-1",
+      studioCombatAnimations: {
+        attack: "studio-attack-media",
+      },
+      getCurrentMap: () => ({ clientVisual }),
+    };
+
+    emitActionBattleClientVisual({
+      moment: "attack",
+      entity: enemy,
+      animations: {
+        attack: (entity) => ({
+          animationName: "attack",
+          graphic: entity.studioCombatAnimations.attack,
+          repeat: 1,
+        }),
+      },
+    });
+
+    const payload = clientVisual.mock.calls[0][1];
+    expect(payload.animations).toEqual({
+      attack: {
+        animationName: "attack",
+        graphic: "studio-attack-media",
+        repeat: 1,
+      },
+    });
     expect(() => structuredClone(payload)).not.toThrow();
   });
 
@@ -168,6 +321,28 @@ describe("action battle visual composer", () => {
         name: "hitSpark",
       })
     );
+  });
+
+  test("client custom visual parts can use sound and camera shake helpers", () => {
+    const sound = vi.fn();
+    const shake = vi.fn();
+    const visual = createActionBattleVisual({
+      hit(_context, fx) {
+        fx.sound("heavy-hit", { volume: 0.8 });
+        fx.shake({ intensity: 5 });
+      },
+    });
+    const visuals = createActionBattleClientVisuals({ visual } as any);
+
+    visuals[ACTION_BATTLE_CLIENT_VISUAL_ID](
+      {
+        data: { moment: "hit" },
+      },
+      { sound, shake }
+    );
+
+    expect(sound).toHaveBeenCalledWith("heavy-hit", { volume: 0.8 });
+    expect(shake).toHaveBeenCalledWith({ intensity: 5 });
   });
 
   test("routes generic AI visuals by kind and ignores unknown kinds", () => {

@@ -65,7 +65,7 @@ export default {
     provideClientGlobalConfig(),
     provideMain(),
     provideActionBattle({
-      visual: createActionBattleVisual("fx"),
+      visual: createActionBattleVisual("impact"),
       ui: createActionBattleUi({
         actionBar: false,
         targeting: true,

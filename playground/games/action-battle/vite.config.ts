@@ -4,6 +4,9 @@ import startServer from "./src/server";
 import playgroundConfig from "./playground.config.json";
 
 export default defineConfig({
+  optimizeDeps: {
+    include: ["pixi.js > @xmldom/xmldom"],
+  },
   server: {
     port: playgroundConfig.port,
     strictPort: true,

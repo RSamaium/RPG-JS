@@ -45,6 +45,7 @@ export const applyActionBattleHit = (
       target: hitContext.target,
       skill: hitContext.skill,
       pattern: hitContext.pattern,
+      multiplier: hitContext.metadata?.damageMultiplier,
     });
   hitContext.damage = damage;
 
@@ -57,6 +58,7 @@ export const applyActionBattleHit = (
       attacker: hitContext.attacker,
       target: hitContext.target,
       damage,
+      multiplier: hitContext.metadata?.knockbackMultiplier,
     });
   hitContext.knockback = knockback;
 

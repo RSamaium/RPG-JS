@@ -1,0 +1,57 @@
+<Container x={telegraphX} y={telegraphY} zIndex={zIndex}>
+  <Graphics draw={drawTelegraph} />
+</Container>
+
+<script>
+  import { signal, tick } from "canvasengine";
+
+  const {
+    durationMs,
+    pattern,
+    scale,
+    x,
+    y,
+    object,
+    onFinish,
+    zIndex,
+  } = defineProps({
+    durationMs: { default: 300 },
+    scale: { default: 1 },
+    x: { default: 0 },
+    y: { default: 0 },
+    zIndex: { default: 750 },
+  });
+
+  const elapsed = signal(0);
+  const sprite = object?.();
+  const hitbox = () => sprite?.hitbox?.() ?? { w: 0, h: 0 };
+  const telegraphX = () => Number(x()) + (hitbox().w ?? 0) / 2;
+  const telegraphY = () => Number(y()) + (hitbox().h ?? 0) / 2;
+
+  tick(({ deltaTime }) => {
+    elapsed.update((value) => value + deltaTime);
+    if (elapsed() >= durationMs()) onFinish?.();
+  });
+
+  const drawTelegraph = (g) => {
+    g.clear();
+    const progress = Math.max(0, Math.min(1, elapsed() / Math.max(1, durationMs())));
+    const pulse = 0.55 + Math.sin(progress * Math.PI * 6) * 0.18;
+    const radius =
+      (pattern() === "zone" ? 54 : pattern() === "charged" ? 42 : 30) *
+      scale();
+    const color = pattern() === "charged" ? 0xffb703 : 0xff355d;
+
+    if (pattern() === "dashAttack") {
+      g.roundRect(-18, -radius * 1.6, 36, radius * 3.2, 10);
+      g.fill({ color, alpha: 0.12 + progress * 0.18 });
+      g.stroke({ color, alpha: pulse, width: 2 + progress * 3 });
+      return;
+    }
+
+    g.circle(0, 0, radius);
+    g.fill({ color, alpha: 0.1 + progress * 0.2 });
+    g.circle(0, 0, Math.max(4, radius * progress));
+    g.stroke({ color, alpha: pulse, width: 2 + progress * 3 });
+  };
+</script>

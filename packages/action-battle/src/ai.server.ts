@@ -1,4 +1,11 @@
-import { MAXHP, RpgEvent, RpgPlayer } from "@rpgjs/server";
+import {
+  Components,
+  MAXHP,
+  RpgEvent,
+  RpgPlayer,
+  type BarComponentOptions,
+  type ComponentLayout,
+} from "@rpgjs/server";
 import {
   getActionBattleAnimationRemovalDelay,
   resolveActionBattleAnimation,
@@ -120,6 +127,35 @@ export type BattleAiLegacyDefeatedCallback = (
   attacker?: ActionBattleEntity
 ) => void;
 
+export interface BattleAiHealthBarOptions {
+  /** Style forwarded to the standard RPGJS `Components.hpBar()` factory. */
+  style?: BarComponentOptions;
+  /** Optional label template. Use `null` to render only the bar. */
+  text?: string | null;
+  /** Layout forwarded to the entity's `componentsTop` block. */
+  layout?: ComponentLayout;
+}
+
+const hasTopComponent = (event: RpgEventWithBattleAi, id: string) => {
+  const raw = (event as any).componentsTop?.();
+  if (!raw) return false;
+  let data = raw;
+  if (typeof raw === "string") {
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      return false;
+    }
+  }
+  const contains = (value: any): boolean => {
+    if (Array.isArray(value)) return value.some(contains);
+    if (!value || typeof value !== "object") return false;
+    if (value.id === id) return true;
+    return Object.values(value).some(contains);
+  };
+  return contains(data?.components ?? data);
+};
+
 export interface BattleAiBaseOptions {
   preset?: string | ActionBattleAiPreset;
   faction?: string;
@@ -155,6 +191,15 @@ export interface BattleAiBaseOptions {
   animations?: ActionBattleAnimationOptions;
   rewards?: BattleAiRewards;
   autoAwardRewards?: boolean;
+  presentation?: {
+    role?: "enemy" | "boss" | "hidden";
+    name?: string;
+    /**
+     * Adds the standard RPGJS HP component above the rendered graphic.
+     * Enabled by default for visible battle AI entities.
+     */
+    healthBar?: boolean | BattleAiHealthBarOptions;
+  };
 }
 
 export interface BattleAiOptions extends BattleAiBaseOptions {
@@ -600,6 +645,10 @@ export class BattleAi {
     | BattleAiLegacyDefeatedCallback;
   private rewards?: BattleAiRewards;
   private autoAwardRewards: boolean = true;
+  private presentation: {
+    role: "enemy" | "boss" | "hidden";
+    name?: string;
+  } = { role: "enemy" };
   private defeated: boolean = false;
 
   // Direction hysteresis to prevent animation flickering
@@ -707,6 +756,39 @@ export class BattleAi {
     this.onDefeatedCallback = options.onDefeated;
     this.rewards = options.rewards;
     this.autoAwardRewards = options.autoAwardRewards ?? true;
+    this.presentation = {
+      role: options.presentation?.role ?? "enemy",
+      name: options.presentation?.name,
+    };
+    const healthBar = options.presentation?.healthBar;
+    if (
+      this.presentation.role !== "hidden" &&
+      healthBar !== false &&
+      !hasTopComponent(event, "rpg:hpBar")
+    ) {
+      const healthOptions =
+        healthBar && typeof healthBar === "object" ? healthBar : {};
+      const boss = this.presentation.role === "boss";
+      const style: BarComponentOptions = {
+        width: boss ? 104 : 68,
+        height: boss ? 9 : 7,
+        bgColor: "#17131b",
+        fillColor: boss ? "#ff355d" : "#ef476f",
+        borderColor: boss ? "#f8d57e" : "#ffffff",
+        borderWidth: 1,
+        borderRadius: 4,
+        ...healthOptions.style,
+      };
+      event.mergeComponents?.(
+        "top",
+        [Components.hpBar(style, healthOptions.text ?? null)],
+        {
+          width: style.width,
+          marginBottom: 2,
+          ...healthOptions.layout,
+        }
+      );
+    }
 
     // Behavior gauge settings
     if (options.behavior) {
@@ -764,6 +846,10 @@ export class BattleAi {
     }
 
     this.debugLog('init', `AI created (type=${this.enemyType}, visionRange=${this.visionRange}, attackRange=${this.attackRange})`);
+  }
+
+  getPresentation() {
+    return { ...this.presentation };
   }
 
   /**
@@ -1343,7 +1429,7 @@ export class BattleAi {
 
     this.faceTarget({ force: true });
     this.lockForAttack(profile, AttackPattern.Melee);
-    this.telegraphAttack(profile);
+    this.telegraphAttack(profile, AttackPattern.Melee);
     this.playAttackVisual(profile, AttackPattern.Melee);
 
     this.scheduleAttackStartup(profile, () => {
@@ -1646,7 +1732,7 @@ export class BattleAi {
     const profile = this.getAttackProfile(AttackPattern.Combo);
     this.faceTarget({ force: true });
     this.lockForAttack(profile, AttackPattern.Combo);
-    this.telegraphAttack(profile);
+    this.telegraphAttack(profile, AttackPattern.Combo);
     this.playAttackVisual(profile, AttackPattern.Combo);
     this.scheduleAttackStartup(profile, () => {
       this.executeMeleeAttack(profile, AttackPattern.Combo);
@@ -1675,7 +1761,7 @@ export class BattleAi {
     this.chargingAttack = true;
     this.faceTarget({ force: true });
     this.lockForAttack(profile, AttackPattern.Charged);
-    this.telegraphAttack(profile);
+    this.telegraphAttack(profile, AttackPattern.Charged);
     this.playAttackVisual(profile, AttackPattern.Charged, { repeat: 2 });
 
     this.scheduleAttackStartup(profile, () => {
@@ -1696,7 +1782,7 @@ export class BattleAi {
   private performZoneAttack() {
     const profile = this.getAttackProfile(AttackPattern.Zone);
     this.lockForAttack(profile, AttackPattern.Zone);
-    this.telegraphAttack(profile);
+    this.telegraphAttack(profile, AttackPattern.Zone);
     this.playAttackVisual(profile, AttackPattern.Zone);
 
     const eventX = this.event.x();
@@ -1752,7 +1838,7 @@ export class BattleAi {
 
     this.faceTarget({ force: true });
     this.lockForAttack(profile, AttackPattern.DashAttack);
-    this.telegraphAttack(profile);
+    this.telegraphAttack(profile, AttackPattern.DashAttack);
     this.playAttackVisual(profile, AttackPattern.DashAttack);
 
     this.scheduleAttackStartup(profile, () => {
@@ -1795,8 +1881,25 @@ export class BattleAi {
     });
   }
 
-  private telegraphAttack(profile: NormalizedActionBattleAttackProfile) {
+  private telegraphAttack(
+    profile: NormalizedActionBattleAttackProfile,
+    pattern?: AttackPattern
+  ) {
     if (profile.startupMs <= 0) return;
+    emitActionBattleClientVisual({
+      moment: "telegraph",
+      entity: this.event,
+      target: this.target ?? undefined,
+      result: {
+        durationMs: profile.startupMs,
+        telegraphScale: profile.id.includes("zone")
+          ? 1.6
+          : profile.id.includes("charged")
+            ? 1.3
+            : 1,
+        pattern,
+      },
+    });
     this.event.flash({
       type: 'tint',
       tint: 'white',

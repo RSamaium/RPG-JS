@@ -44,6 +44,9 @@ export const actionBattleUiOptions = signal(
 export const actionBattleSkillOptions = signal(
   normalizeActionBattleOptions({}).skills || {}
 );
+export const actionBattleCombatOptions = signal(
+  normalizeActionBattleOptions({}).combat || {}
+);
 
 export const actionBattleTargetingState = signal<ActionBattleTargetingState>({
   ...defaultTargetingState,
@@ -52,11 +55,11 @@ export const actionBattleAttackPreviewState =
   signal<ActionBattleAttackPreviewState>({
     ...defaultAttackPreviewState,
   });
-
 export const setActionBattleOptions = (options: ActionBattleOptions = {}) => {
   const normalized = normalizeActionBattleOptions(options);
   actionBattleUiOptions.set(normalized.ui || {});
   actionBattleSkillOptions.set(normalized.skills || {});
+  actionBattleCombatOptions.set(normalized.combat || {});
 };
 
 export const startTargeting = (skill: ActionBattleActionBarSkill) => {

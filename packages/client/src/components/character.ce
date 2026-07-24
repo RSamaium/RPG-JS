@@ -86,6 +86,11 @@
   import { RpgGui } from "../Gui/Gui";
   import { getCanMoveValue } from "../utils/readPropValue";
   import {
+    loadCachedSpriteSheetAlphaBounds,
+    mergeSpriteAlphaBounds,
+    scanSpriteSheetAlphaBounds,
+  } from "./sprite-alpha-bounds";
+  import {
     getKeyboardControlBind,
     keyboardEventMatchesBind,
     resolveKeyboardActionInput,
@@ -750,6 +755,8 @@
 
   const imageDimensions = signal({});
   const loadingImageDimensions = new Set();
+  const alphaFrameBounds = signal({});
+  const loadingAlphaFrameBounds = new Set();
 
   const toFiniteNumber = (value, fallback = 0) => {
     const number = typeof value === 'number' ? value : parseFloat(value);
@@ -799,6 +806,7 @@
       'image',
       'sound',
       'spriteRealSize',
+      'trimTransparentBounds',
       'scale',
       'anchor',
       'pivot',
@@ -829,22 +837,26 @@
     };
   };
 
-  const resolveFirstAnimationFrame = (textureOptions) => {
+  const resolveAnimationFrames = (textureOptions) => {
     const animations = textureOptions?.animations;
-    if (!animations) return {};
+    if (!animations) return [];
 
     try {
       const frames = typeof animations === 'function'
         ? animations({ direction: direction() })
         : animations;
-      if (!Array.isArray(frames)) return {};
+      if (!Array.isArray(frames)) return [];
       const firstGroup = frames[0];
-      return Array.isArray(firstGroup) ? firstGroup[0] ?? {} : firstGroup ?? {};
+      return (Array.isArray(firstGroup) ? firstGroup : frames)
+        .filter((frame) => frame && typeof frame === 'object');
     }
     catch {
-      return {};
+      return [];
     }
   };
+
+  const resolveFirstAnimationFrame = (textureOptions) =>
+    resolveAnimationFrames(textureOptions)[0] ?? {};
 
   const optionValue = (prop, frame, textureOptions, graphicObject) => {
     return frame?.[prop] ?? textureOptions?.[prop] ?? graphicObject?.[prop];
@@ -901,10 +913,110 @@
       });
   };
 
+  const alphaBoundsKey = (textureOptions) => {
+    const source = resolveImageSource(textureOptions?.image);
+    const framesWidth = Math.floor(toPositiveNumber(textureOptions?.framesWidth) ?? 1);
+    const framesHeight = Math.floor(toPositiveNumber(textureOptions?.framesHeight) ?? 1);
+    return source ? `${source}|${framesWidth}x${framesHeight}` : undefined;
+  };
+
+  const readTexturePixels = (texture, width, height) => {
+    const resource =
+      texture?.source?.resource ??
+      texture?.baseTexture?.resource?.source ??
+      texture?.source?.resource?.source;
+    if (!resource) return undefined;
+
+    const canvas =
+      typeof OffscreenCanvas !== 'undefined'
+        ? new OffscreenCanvas(width, height)
+        : typeof document !== 'undefined'
+          ? Object.assign(document.createElement('canvas'), { width, height })
+          : undefined;
+    const context = canvas?.getContext?.('2d', { willReadFrequently: true });
+    if (!context) return undefined;
+
+    context.clearRect(0, 0, width, height);
+    context.drawImage(resource, 0, 0, width, height);
+    return context.getImageData(0, 0, width, height).data;
+  };
+
+  const loadAlphaBounds = (textureOptions) => {
+    if (textureOptions?.trimTransparentBounds !== true) return;
+    const source = resolveImageSource(textureOptions?.image);
+    const key = alphaBoundsKey(textureOptions);
+    if (
+      !source ||
+      !key ||
+      Object.prototype.hasOwnProperty.call(alphaFrameBounds(), key) ||
+      loadingAlphaFrameBounds.has(key)
+    ) {
+      return;
+    }
+
+    loadingAlphaFrameBounds.add(key);
+    loadCachedSpriteSheetAlphaBounds(key, async () => {
+      const texture = await Assets.load(source);
+      const width = toPositiveNumber(texture?.width);
+      const height = toPositiveNumber(texture?.height);
+      const framesWidth = Math.floor(toPositiveNumber(textureOptions?.framesWidth) ?? 1);
+      const framesHeight = Math.floor(toPositiveNumber(textureOptions?.framesHeight) ?? 1);
+      if (!width || !height) return null;
+      const pixels = readTexturePixels(texture, width, height);
+      if (!pixels) return null;
+      return scanSpriteSheetAlphaBounds(
+        pixels,
+        width,
+        height,
+        framesWidth,
+        framesHeight,
+      );
+    })
+      .then((bounds) => {
+        alphaFrameBounds.update((current) => ({
+          ...current,
+          [key]: bounds,
+        }));
+      })
+      .catch(() => {
+        // Cross-origin or non-image resources fall back to rectangular bounds.
+        alphaFrameBounds.update((current) => ({ ...current, [key]: null }));
+      })
+      .finally(() => {
+        loadingAlphaFrameBounds.delete(key);
+      });
+  };
+
+  const resolveVisibleFrameBounds = (textureOptions) => {
+    if (textureOptions?.trimTransparentBounds !== true) return undefined;
+    const key = alphaBoundsKey(textureOptions);
+    const allBounds = key ? alphaFrameBounds()[key] : undefined;
+    if (!Array.isArray(allBounds)) return undefined;
+
+    const framesWidth = Math.floor(toPositiveNumber(textureOptions?.framesWidth) ?? 1);
+    const framesHeight = Math.floor(toPositiveNumber(textureOptions?.framesHeight) ?? 1);
+    const frames = resolveAnimationFrames(textureOptions);
+    const selectedFrames = frames.length > 0 ? frames : [{ frameX: 0, frameY: 0 }];
+    return mergeSpriteAlphaBounds(
+      selectedFrames.map((frame) => {
+        const frameX = Math.min(
+          framesWidth - 1,
+          Math.max(0, Math.floor(toFiniteNumber(frame.frameX, 0))),
+        );
+        const frameY = Math.min(
+          framesHeight - 1,
+          Math.max(0, Math.floor(toFiniteNumber(frame.frameY, 0))),
+        );
+        return allBounds[frameY * framesWidth + frameX];
+      }),
+    );
+  };
+
   effect(() => {
     const sources = new Set();
 
     graphicsSignals().forEach((graphicObject) => {
+      loadAlphaBounds(resolveTextureOptions(graphicObject));
       const baseImage = resolveImageSource(graphicObject?.image);
       if (baseImage) sources.add(baseImage);
 
@@ -967,10 +1079,15 @@
       );
       const x = toFiniteNumber(optionValue('x', frame, textureOptions, graphicObject), 0);
       const y = toFiniteNumber(optionValue('y', frame, textureOptions, graphicObject), 0);
-      const leftEdge = -anchor[0] * spriteWidth * scale[0];
-      const rightEdge = (1 - anchor[0]) * spriteWidth * scale[0];
-      const topEdge = -anchor[1] * spriteHeight * scale[1];
-      const bottomEdge = (1 - anchor[1]) * spriteHeight * scale[1];
+      const visible = resolveVisibleFrameBounds(textureOptions);
+      const visibleLeft = visible?.left ?? 0;
+      const visibleTop = visible?.top ?? 0;
+      const visibleRight = visible?.right ?? spriteWidth;
+      const visibleBottom = visible?.bottom ?? spriteHeight;
+      const leftEdge = (visibleLeft - anchor[0] * spriteWidth) * scale[0];
+      const rightEdge = (visibleRight - anchor[0] * spriteWidth) * scale[0];
+      const topEdge = (visibleTop - anchor[1] * spriteHeight) * scale[1];
+      const bottomEdge = (visibleBottom - anchor[1] * spriteHeight) * scale[1];
       const graphic = {
         left: x + Math.min(leftEdge, rightEdge),
         top: y + Math.min(topEdge, bottomEdge),
@@ -1003,6 +1120,11 @@
       centerY: bounds.top + height / 2
     };
   });
+
+  // Internal world-space anchor used by transient sprite effects such as
+  // action-battle damage popups. Keeping the computed bounds on the client
+  // object lets effects follow graphics that are taller than their hitbox.
+  sprite.__rpgjsGraphicBounds = graphicBounds;
 
   const interactionBounds = () => ({
     bounds: graphicBounds(),

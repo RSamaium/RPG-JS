@@ -11,6 +11,9 @@ The AI controller manages **behavior only**. All stats, HP, SP, skills, items, c
 
 ## Features
 
+- Adventure combat by default: three-hit player combo, charged attack, and dodge invulnerability
+- Reuses the standard RPGJS HUD and graphic-bound entity components
+- Impact visual preset with particles, animated combat typography, and camera shake
 - State machine AI with `Idle`, `Alert`, `Combat`, `Flee`, and `Stunned`
 - Multiple enemy types: `Aggressive`, `Defensive`, `Ranged`, `Tank`, `Berserker`
 - Attack patterns: `Melee`, `Combo`, `Charged`, `Zone`, `DashAttack`
@@ -133,6 +136,82 @@ export default createServer({
   ]
 });
 ```
+
+## Adventure player combat
+
+Action Battle now uses the `adventure` preset by default. Press the action
+control for a buffered three-hit combo, hold <kbd>E</kbd> and release it for a
+charged attack, and use the normal dash control (<kbd>Shift</kbd> by default)
+to dodge. Damage, charge duration, cooldowns, and invulnerability remain
+server-authoritative.
+
+Use `preset: "classic"` to retain the previous single-attack behavior and UI:
+
+```ts
+provideActionBattle({
+  preset: "classic"
+});
+```
+
+Every Adventure mechanic can be tuned independently:
+
+```ts
+provideActionBattle({
+  combat: {
+    player: {
+      combo: {
+        bufferMs: 140,
+        resetMs: 700
+      },
+      chargedAttack: {
+        control: "e",
+        minChargeMs: 300,
+        maxChargeMs: 900
+      },
+      dodge: {
+        durationMs: 180,
+        cooldownMs: 650,
+        invincibilityMs: 220
+      }
+    }
+  }
+});
+```
+
+Action Battle does not register another player HUD. Keep using the standard
+RPGJS `hud.ce` component so HP, SP, face, and level remain consistent with the
+rest of the game.
+
+For enemies, `BattleAi` reuses the regular server `Components.hpBar()` and
+merges it into `componentsTop`. That native component is positioned from the
+rendered graphic bounds, not only from the entity hitbox, so it remains above
+tall or scaled sprites. Generated four-direction Studio spritesheets also
+exclude transparent frame padding from those bounds. Customize it through
+`presentation.healthBar`:
+
+```ts
+new BattleAi(this, {
+  presentation: {
+    role: "boss",
+    healthBar: {
+      style: {
+        width: 120,
+        height: 9,
+        fillColor: "#ff355d"
+      },
+      text: null,
+      layout: { marginBottom: 8 }
+    }
+  }
+});
+```
+
+Set `presentation.healthBar: false` for entities that should not display it.
+No additional HUD or custom HP-bar component is registered by Action Battle.
+
+Mobile games can expose the charged attack through `withMobile({ buttons: {
+heavy: true } })`; the heavy button dispatches the same authoritative charge
+start/release controls as the keyboard.
 
 `animations` is optional. If you omit it, attacks keep using the default
 `attack` animation and no extra hurt, death, or skill-cast animation is played.
@@ -275,12 +354,43 @@ Available presets:
 ```ts
 visual: createActionBattleVisual("classic") // sprite animation + flash + hit text
 visual: createActionBattleVisual("fx")      // classic + CanvasEngine Fx hit spark
+visual: createActionBattleVisual("impact")  // contextual typography, particles + camera shake
 visual: createActionBattleVisual("none")    // no built-in visual feedback
 ```
 
-The built-in CanvasEngine effect is registered as the component animation
-`action-battle-hit-fx`. You can also call any component animation registered by
-your own client modules with `fx.component(entity, id, params)`.
+The `impact` preset selects an official CanvasEngine preset from the combat
+context: `hitSpark` for normal hits, `slashSpark` for combo finishers,
+`impactBurst` for charged or critical attacks, `magicBurst` for skills, and
+`healPulse` for healing. Its world-space damage popup changes font size, color,
+outline, movement, and duration for the same contexts. The built-in component
+animations are registered as `action-battle-hit-fx` and
+`action-battle-damage`.
+
+A skill or weapon action can override its impact presentation with serializable
+metadata:
+
+```ts
+const Fire = {
+  id: "fire",
+  name: "Fire",
+  _type: "skill",
+  action: {
+    target: "enemy",
+    mode: "instant",
+    visual: {
+      fx: "magicBurst",
+      color: "#ffd166",
+      accentColor: "#a62c21",
+      scale: 1.2
+    }
+  }
+};
+```
+
+These hints only affect the client presentation. Damage, SP consumption,
+targeting, and hit resolution remain server-authoritative. You can also call
+any component animation registered by your own client modules with
+`fx.component(entity, id, params)`.
 
 Action-battle visual composition runs through the general
 [Client Visuals](/guide/client-visuals) mechanism for server-triggered combat
@@ -764,8 +874,10 @@ media ids or media objects returned by the Studio game API.
 
 For Studio enemies, the runtime reads `enemy.animations` automatically when an
 enemy is created from the Studio database. The supported Studio fields are
-`attack`, `hurt`, `die`, and `castSpell`. `castSkill` is also accepted when you
-configure action-battle directly.
+`attack`, `hurt`, `die`, and `castSpell`; `castSkill` is also accepted when you
+configure action-battle directly. These values are resolved on the server and
+sent to the client as plain animation data, so media IDs remain usable without
+transferring resolver functions.
 
 ## Composable AI behaviors
 

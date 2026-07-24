@@ -58,6 +58,12 @@ const WoodThrowSkill = {
     target: "enemy" as const,
     range: 260,
     mode: "projectile" as const,
+    visual: {
+      fx: "impactBurst",
+      color: "#f7d794",
+      accentColor: "#7a4b16",
+      scale: 0.92,
+    },
     projectile: {
       type: "wood",
       speed: 230,
@@ -83,8 +89,14 @@ const FireSkill = {
     target: "enemy" as const,
     range: 240,
     mode: "instant" as const,
+    visual: {
+      fx: "magicBurst",
+      color: "#ffd166",
+      accentColor: "#a62c21",
+      scale: 1.2,
+    },
   },
-  onUse(user: RpgEvent, target: RpgEvent | RpgPlayer | undefined, ctx: any) {
+  onUse(user: RpgEvent | RpgPlayer, target: RpgEvent | RpgPlayer | undefined, ctx: any) {
     ctx.defaultEffect(target);
     if (!target) return;
     user.getCurrentMap()?.showAnimation(
@@ -95,7 +107,7 @@ const FireSkill = {
 };
 
 type SpawnBehavior = "aggressive" | "ranged" | "defensive" | "passive";
-type SpawnEnemyType = "brute" | "wood-thrower" | "fire-caster";
+type SpawnEnemyType = "brute" | "wood-thrower" | "fire-caster" | "guardian";
 type SpawnTarget = "players" | "events" | "all" | "hostile";
 
 const SKILL_ATTACK_COOLDOWN: Record<Extract<SpawnEnemyType, "wood-thrower" | "fire-caster">, number> = {
@@ -169,21 +181,30 @@ function createSpawnedEnemy(payload: Required<SpawnEnemyPayload>): EventDefiniti
     onInit() {
       this.setGraphic("monster");
       this.name =
-        payload.enemyType === "wood-thrower"
+        payload.enemyType === "guardian"
+          ? "Guardian"
+          : payload.enemyType === "wood-thrower"
           ? "Wood Thrower"
           : payload.enemyType === "fire-caster"
             ? "Fire Caster"
             : "Brute";
       this.speed = aiBehavior === "aggressive" ? 3 : 2.2;
       this.through = false;
-      const maxHp = payload.enemyType === "brute" ? 260 : 190;
+      const maxHp =
+        payload.enemyType === "guardian"
+          ? 900
+          : payload.enemyType === "brute"
+            ? 260
+            : 190;
       const maxSp = 100;
       this.param[MAXHP] = maxHp;
       this.param[MAXSP] = maxSp;
       this.hp = maxHp;
       this.sp = maxSp;
-      this.param[ATK] = payload.enemyType === "brute" ? 17 : 12;
-      this.param[PDEF] = payload.enemyType === "brute" ? 8 : 4;
+      this.param[ATK] =
+        payload.enemyType === "guardian" ? 24 : payload.enemyType === "brute" ? 17 : 12;
+      this.param[PDEF] =
+        payload.enemyType === "guardian" ? 12 : payload.enemyType === "brute" ? 8 : 4;
       this.addItem(EnemyClaw);
       this.equip(EnemyClaw.id);
       this.setComponentsTop(
@@ -194,17 +215,6 @@ function createSpawnedEnemy(payload: Required<SpawnEnemyPayload>): EventDefiniti
             fontWeight: "700",
             stroke: "#111827",
           }),
-          Components.hpBar(
-            {
-              width: 72,
-              height: 6,
-              bgColor: "#231f20",
-              fillColor: "#ef4444",
-              borderColor: "#111827",
-              borderWidth: 1,
-            },
-            null,
-          ),
           Components.spBar(
             {
               width: 72,
@@ -245,6 +255,10 @@ function createSpawnedEnemy(payload: Required<SpawnEnemyPayload>): EventDefiniti
           : [AttackPattern.Melee, AttackPattern.Combo, AttackPattern.Charged],
         behaviorTree: buildBehaviorTree(aiBehavior, skill),
         rewards: { exp: 10, gold: 3 },
+        presentation:
+          payload.enemyType === "guardian"
+            ? { role: "boss", name: "Guardian of the Lab" }
+            : { role: "enemy" },
       });
     },
   };
@@ -287,7 +301,7 @@ const player = {
     if (input?.action !== "playground-action-battle:spawn-enemy") return;
 
     const payload: Required<SpawnEnemyPayload> = {
-      enemyType: ["brute", "wood-thrower", "fire-caster"].includes(data.enemyType)
+      enemyType: ["brute", "wood-thrower", "fire-caster", "guardian"].includes(data.enemyType)
         ? data.enemyType
         : "brute",
       behavior: ["aggressive", "ranged", "defensive", "passive"].includes(data.behavior)
@@ -312,7 +326,7 @@ export default createServer({
   providers: [
     provideMain(),
     provideActionBattle({
-      visual: createActionBattleVisual("fx"),
+      visual: createActionBattleVisual("impact"),
       combat: {
         pvp: true,
       },

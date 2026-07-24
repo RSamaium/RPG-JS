@@ -1,0 +1,46 @@
+<Container controls={controls} />
+
+<script>
+  import { computed } from "canvasengine";
+  import { inject, RpgClientEngine } from "@rpgjs/client";
+  import { actionBattleCombatOptions } from "../ui/state";
+
+  const { object } = defineProps();
+  const engine = inject(RpgClientEngine);
+  const sprite = object();
+
+  const isCurrentPlayer = computed(() => {
+    const id = typeof sprite?.id === "function" ? sprite.id() : sprite?.id;
+    return id === engine.playerId;
+  });
+
+  const chargedOptions = computed(() => {
+    const value = actionBattleCombatOptions().player?.chargedAttack;
+    return value && typeof value === "object" ? value : null;
+  });
+
+  const direction = () =>
+    typeof sprite?.getDirection === "function"
+      ? sprite.getDirection()
+      : typeof sprite?.direction === "function"
+        ? sprite.direction()
+        : sprite?.direction ?? "down";
+
+  const controls = {
+    chargedAttack: {
+      bind: chargedOptions()?.control ?? "e",
+      keyDown() {
+        if (!isCurrentPlayer() || chargedOptions()?.enabled === false) return;
+        engine.processAction("action-battle:charge-start", {
+          direction: direction(),
+        });
+      },
+      keyUp() {
+        if (!isCurrentPlayer() || chargedOptions()?.enabled === false) return;
+        engine.processAction("action-battle:charge-release", {
+          direction: direction(),
+        });
+      },
+    },
+  };
+</script>
