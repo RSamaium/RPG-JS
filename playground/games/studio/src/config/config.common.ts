@@ -8,7 +8,7 @@
 
 export const studio = {
   projectId: "c058981c-3af2-4630-a7bb-37b5b72ab287",
-  startMapId: "b73228b2-9319-4328-9b32-fa09d9e220b4?",
+  startMapId: "b73228b2-9319-4328-9b32-fa09d9e220b4",
   apiUrl: "https://preprod.rpgjs.studio/api",
   assetsUrl: "https://assets.preprod.rpgjs.studio",
   streaming: {

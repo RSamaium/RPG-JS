@@ -65,7 +65,6 @@ const serializeActionBattleVisualContext = (
   skill: serializeSkill(context.skill),
   pattern: context.pattern,
   visual: context.visual,
-  animations: context.animations,
   animationDefaults: context.animationDefaults,
 });
 
