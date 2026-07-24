@@ -5,5 +5,7 @@ export type {
   StudioCollisionPolygon,
   StudioTerrainCell,
   StudioTerrainMorphologyFeature,
+  StudioTerrainRenderBounds,
   StudioTerrainRenderData,
+  StudioTerrainStreamUpdate,
 } from "./types";

@@ -3,6 +3,7 @@ import {
   applyStudioMapStreamChunk,
   compileStudioMapStream,
   createStudioMapStreamState,
+  getStudioMapStreamData,
   isStudioDirectLoadPayload,
   prepareStudioMapPayload,
   removeStudioMapStreamChunk,
@@ -141,20 +142,72 @@ describe("Studio authoritative map streaming", () => {
     const state = createStudioMapStreamState(definition.manifest);
     const initialVersion = state.map.terrainRenderData.version;
     applyStudioMapStreamChunk(state, definition.chunks["0:0"]);
-    expect(state.map.terrainRenderData.terrainControl.regions)
+    const map = getStudioMapStreamData(state);
+    expect(map.terrainRenderData.terrainControl.regions)
       .toEqual([definition.chunks["0:0"].renderData.terrainControlRegion]);
-    expect(state.map.terrainRenderData.version).not.toBe(initialVersion);
+    expect(map.terrainRenderData.version).not.toBe(initialVersion);
   });
 
-  it("rebuilds the render state when chunks enter and leave", () => {
+  it("consolidates chunk deltas into one render generation", () => {
     const definition = compileStudioMapStream(
       prepareStudioMapPayload(createMap()),
       { chunkSize: 2 }
     );
     const state = createStudioMapStreamState(definition.manifest);
+    applyStudioMapStreamChunk(state, definition.chunks["0:0"]);
     applyStudioMapStreamChunk(state, definition.chunks["1:0"]);
-    expect(state.map.elementsLow).toHaveLength(1);
-    removeStudioMapStreamChunk(state, "1:0");
+    expect(state.generation).toBe(0);
     expect(state.map.elementsLow).toHaveLength(0);
+
+    const enteredMap = getStudioMapStreamData(state);
+    expect(state.generation).toBe(1);
+    expect(enteredMap.elementsLow).toHaveLength(1);
+    expect(enteredMap.terrainRenderData.streamUpdate).toMatchObject({
+      revision: definition.manifest.revision,
+      generation: 1,
+    });
+    expect(enteredMap.terrainRenderData.streamUpdate.dirtyRegions).toHaveLength(2);
+    expect(enteredMap.terrainRenderData.streamUpdate.activeRegions).toHaveLength(2);
+    expect(getStudioMapStreamData(state)).toBe(enteredMap);
+    expect(state.generation).toBe(1);
+
+    removeStudioMapStreamChunk(state, "1:0");
+    expect(state.map).toBe(enteredMap);
+    const removedMap = getStudioMapStreamData(state);
+    expect(state.generation).toBe(2);
+    expect(removedMap.elementsLow).toHaveLength(0);
+    expect(removedMap.terrainRenderData.streamUpdate).toMatchObject({
+      generation: 2,
+      activeRegions: [expect.any(Object)],
+      dirtyRegions: [expect.any(Object)],
+    });
+  });
+
+  it("invalidates an updated chunk even when its key is unchanged", () => {
+    const definition = compileStudioMapStream(
+      prepareStudioMapPayload(createMap()),
+      { chunkSize: 2 }
+    );
+    const state = createStudioMapStreamState(definition.manifest);
+    applyStudioMapStreamChunk(state, definition.chunks["0:0"]);
+    getStudioMapStreamData(state);
+
+    applyStudioMapStreamChunk(state, {
+      ...definition.chunks["0:0"],
+      renderData: {
+        ...definition.chunks["0:0"].renderData,
+        terrainCells: [],
+      },
+    });
+    const map = getStudioMapStreamData(state);
+
+    expect(map.terrainRenderData.streamUpdate.generation).toBe(2);
+    expect(map.terrainRenderData.streamUpdate.dirtyRegions).toHaveLength(2);
+    expect(map.terrainRenderData.streamUpdate.dirtyRegions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ width: 96 }),
+        expect.objectContaining({ width: 192 }),
+      ])
+    );
   });
 });
