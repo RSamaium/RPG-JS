@@ -29,6 +29,7 @@ export function createStudioMapClientProviders(): any[] {
         backgroundMusic: manifest.renderData.map.params?.backgroundMusic,
         backgroundAmbientSound:
           manifest.renderData.map.params?.backgroundAmbientSound,
+        combatMusic: manifest.renderData.map.params?.combatMusic,
       }),
     },
     directLoad: loadMap,

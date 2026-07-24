@@ -3,7 +3,6 @@ import {
   RpgClient,
   RpgClientEngine,
   RpgGui,
-  RpgSound,
   TitleScreenComponent,
   inject,
 } from "@rpgjs/client";
@@ -333,7 +332,6 @@ export default (config: StudioGameModuleConfig) => {
       return resolveSpritesheet(id);
     },
     soundResolver: async (id: string) => {
-      RpgSound.global.stop();
       try {
         const media = await getGameDataProvider().getMedia(id);
         return {

@@ -6,6 +6,17 @@ type ParamCurve = {
 type ParamValue = ParamCurve | number;
 
 export type ProjectBasic = {
+  combatAudio?: {
+    battleMusic?: string;
+    attack?: string;
+    skill?: string;
+    hit?: string;
+    hurt?: string;
+    die?: string;
+    fadeInMs?: number;
+    fadeOutMs?: number;
+    exitDelayMs?: number;
+  };
   initialLevel?: number;
   finalLevel?: number;
   hitbox?: {

@@ -315,6 +315,15 @@ export const resolveEnemyBattleAiOptions = (
     visionRange: 150,
     attackRange: 50,
     animations: createStudioActionBattleAnimations(enemy.animations),
+    presentation: {
+      ...(enemy.presentation ?? {}),
+      music: {
+        battle: enemy.combatMusic ?? enemy.presentation?.music?.battle,
+        priority:
+          toNumber(enemy.combatMusicPriority) ??
+          toNumber(enemy.presentation?.music?.priority),
+      },
+    },
   };
 
   if (typeof behaviorKey === "string" && behaviorKey.trim()) {

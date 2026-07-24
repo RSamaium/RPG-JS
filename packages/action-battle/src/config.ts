@@ -337,6 +337,7 @@ export function normalizeActionBattleOptions(
       ...DEFAULT_ACTION_BATTLE_OPTIONS.animations,
       ...options.animations,
     },
+    audio: options.audio,
     systems: {
       combat: {
         ...combat,

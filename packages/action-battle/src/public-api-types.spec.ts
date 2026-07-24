@@ -12,6 +12,7 @@ import {
   type ActionBattleAiIntent,
   type ActionBattleAiTreeNode,
   type ActionBattleAiVisual,
+  type ActionBattleAudioOptions,
 } from "./index";
 
 describe("action battle public API types", () => {
@@ -56,5 +57,21 @@ describe("action battle public API types", () => {
     });
 
     expectTypeOf(providers).toBeArray();
+  });
+
+  test("audio cues accept variants, tuning, and context resolvers", () => {
+    const audio = {
+      attack: ["swing-a", "swing-b"],
+      hit: { id: "impact", volume: 0.7, cooldownMs: 120 },
+      skill: (context) => context.skill?.sound,
+      music: {
+        battle: "battle-theme",
+        fadeInMs: 600,
+        exitDelayMs: 1500,
+      },
+    } satisfies ActionBattleAudioOptions;
+
+    expectTypeOf(audio).toMatchTypeOf<ActionBattleAudioOptions>();
+    expectTypeOf(provideActionBattle({ audio })).toBeArray();
   });
 });

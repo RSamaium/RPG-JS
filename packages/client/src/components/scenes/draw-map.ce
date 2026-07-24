@@ -55,7 +55,12 @@
     const weather = engine.sceneMap.weather
     const backgroundMusic = computed(() => {
       const src = map()?.params?.backgroundMusic
-      return src ? { src, autoplay: true, loop: true } : undefined
+      return src ? {
+        src,
+        autoplay: true,
+        loop: true,
+        volume: engine.music.mapVolume(),
+      } : undefined
     })
     const backgroundAmbientSound = computed(() => {
       const src = map()?.params?.backgroundAmbientSound

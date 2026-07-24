@@ -10,6 +10,7 @@ import type {
 } from "./types";
 import { getActionBattleOptions } from "./config";
 import { playActionBattleAnimation } from "./animations";
+import { playActionBattleMomentAudio } from "./audio";
 
 export const ACTION_BATTLE_CLIENT_VISUAL_ID = "action-battle.visual";
 export const ACTION_BATTLE_HIT_FX_COMPONENT_ID = "action-battle-hit-fx";
@@ -280,6 +281,7 @@ export function createActionBattleClientVisuals(
         visual: data.visual,
         animations: data.animations ?? options.animations,
         animationDefaults: data.animationDefaults,
+        engine: context.engine,
       } as ActionBattleVisualContext;
 
       const cue = data.visual;
@@ -296,6 +298,7 @@ export function createActionBattleClientVisuals(
       }
 
       const feedback = options.feedback ?? {};
+      playActionBattleMomentAudio(context.engine, options.audio, visualContext);
       const hitStopDuration = resolveHitStopDuration(visualContext, feedback);
       if (hitStopDuration > 0) {
         startActionBattleHitStop(context.engine, hitStopDuration);
@@ -708,9 +711,6 @@ const impactParts: Partial<Record<ActionBattleVisualContext["moment"], ActionBat
         graphic: context.skill.animation,
         animationName: "default",
       });
-    }
-    if (context.skill?.sound) {
-      fx.sound(context.skill.sound, { volume: 0.9 });
     }
     fx.component(context.entity, ACTION_BATTLE_HIT_FX_COMPONENT_ID, {
       name: "magicBurst",

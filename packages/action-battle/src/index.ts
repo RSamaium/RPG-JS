@@ -32,6 +32,10 @@ export type {
   ActionBattleAiVisualClientContext,
   ActionBattleAiVisualHandler,
   ActionBattleOptions,
+  ActionBattleAudioCue,
+  ActionBattleAudioCueInput,
+  ActionBattleAudioOptions,
+  ActionBattleMusicOptions,
   ActionBattleActionBarData,
   ActionBattleActionBarItem,
   ActionBattleActionBarSkill,
@@ -73,6 +77,13 @@ export type {
   ActionBattleVisualPart,
   ActionBattleVisualPreset,
 } from "./types";
+export {
+  ACTION_BATTLE_COMBAT_AUDIO_ID,
+  createActionBattleCombatAudioVisual,
+  playActionBattleAudioCue,
+  playActionBattleMomentAudio,
+  playLocalActionBattleAttackAudio,
+} from "./audio";
 export type {
   ActionBattleAiAction,
   ActionBattleAiBehavior,

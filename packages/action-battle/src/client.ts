@@ -29,6 +29,11 @@ import {
   playActionBattleVisual,
   setActionBattlePreviewStarter,
 } from "./visual";
+import {
+  ACTION_BATTLE_COMBAT_AUDIO_ID,
+  createActionBattleCombatAudioVisual,
+  playLocalActionBattleAttackAudio,
+} from "./audio";
 // @ts-ignore CanvasEngine components are compiled by @canvasengine/compiler.
 import AttackTelegraphComponent from "./components/attack-telegraph.ce";
 // @ts-ignore CanvasEngine components are compiled by @canvasengine/compiler.
@@ -186,7 +191,11 @@ export const createActionBattleClient = (
         component: SoftTargetComponent,
       },
     ],
-    clientVisuals: createActionBattleClientVisuals(normalized),
+    clientVisuals: {
+      ...createActionBattleClientVisuals(normalized),
+      [ACTION_BATTLE_COMBAT_AUDIO_ID]:
+        createActionBattleCombatAudioVisual(normalized.audio),
+    },
     gui: resolvedUi.gui,
     sprite: {
       componentsBehind: resolvedUi.sprite.componentsBehind,
@@ -195,6 +204,7 @@ export const createActionBattleClient = (
     sceneMap: {
       onAfterLoading() {
         const engine = inject(RpgClientEngine);
+        engine.music.reset();
         const dodge = normalized.combat?.player?.dodge;
         if (dodge && typeof dodge === "object" && dodge.enabled !== false) {
           engine.dashDefaults = {
@@ -233,6 +243,11 @@ export const createActionBattleClient = (
           if (!locked) return;
         }
         playLocalPlayerAttackAnimation(player, normalized);
+        playLocalActionBattleAttackAudio(engine, normalized.audio, {
+          moment: "attack",
+          entity: player,
+          engine,
+        });
         showLocalAttackPreview(player, normalized);
       },
     }

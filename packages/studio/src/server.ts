@@ -19,6 +19,11 @@ import { prepareStudioTerrainControlRegions } from "./terrain-control-streaming"
 import { assignStudioEventPlacementIds } from "./event-placement";
 export { createStudioActionBattleAnimations } from "./action-battle-animations";
 export type { StudioCombatAnimationIds, StudioCombatAnimationOptions } from "./action-battle-animations";
+export {
+  createStudioActionBattleAudio,
+  createStudioActionBattlePreset,
+} from "./action-battle-audio";
+export type { StudioCombatAudioConfig } from "./action-battle-audio";
 
 const mergePlayerConfig = (baseConfig: ProjectBasic = {}, overrideConfig?: Partial<ProjectBasic> | null): ProjectBasic => {
   if (!overrideConfig) {
