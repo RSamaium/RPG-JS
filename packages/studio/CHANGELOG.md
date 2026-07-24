@@ -1,5 +1,11 @@
 # @rpgjs/studio
 
+## 5.0.0-beta.30
+
+### Patch Changes
+
+- 7da338c: Render only terrain chunks affected by consolidated Studio map stream updates.
+
 ## 5.0.0-beta.29
 
 ### Patch Changes

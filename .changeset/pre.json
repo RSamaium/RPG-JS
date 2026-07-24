@@ -48,6 +48,7 @@
     "fix-recursive-providers",
     "fresh-canvasengine-compatibility",
     "fresh-studio-map-config",
+    "fuzzy-terrain-streaming",
     "gentle-gui-chat-boundaries",
     "plain-studio-animations",
     "quiet-menu-hud-layout",
