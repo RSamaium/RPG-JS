@@ -90,10 +90,47 @@ export const DEFAULT_ACTION_BATTLE_OPTIONS: ActionBattleOptions = {
         invincibilityMs: 220,
         additionalSpeed: 8,
       },
+      guard: {
+        enabled: true,
+        control: "f",
+        parryWindowMs: 140,
+        guardDamageReduction: 0.65,
+        guardKnockbackReduction: 0.6,
+        guardArcDegrees: 120,
+        staggerMs: 650,
+        counterWindowMs: 700,
+        counterDamageMultiplier: 1.5,
+        counterStaggerMultiplier: 1.5,
+      },
+      softTargeting: {
+        enabled: true,
+        range: 112,
+        coneDegrees: 110,
+        directionWeight: 0.48,
+        distanceWeight: 0.32,
+        threatWeight: 0.2,
+        indicatorDurationMs: 220,
+      },
     },
   },
   visual: "impact",
+  feedback: {
+    hitStop: true,
+    hitStopMs: 32,
+    heavyHitStopMs: 52,
+    parryHitStopMs: 68,
+    flashes: true,
+    screenShake: true,
+    damageNumbers: true,
+  },
   animations: {},
+  ai: {
+    director: {
+      enabled: true,
+      maxConcurrentAttackers: 1,
+      slotDurationMs: 1200,
+    },
+  },
 };
 
 let currentActionBattleOptions: ActionBattleOptions =
@@ -105,7 +142,15 @@ export function normalizeActionBattleOptions(
   const preset = options.preset ?? DEFAULT_ACTION_BATTLE_OPTIONS.preset;
   const classic = preset === "classic";
   const defaultCombat = classic
-    ? { player: { combo: false, chargedAttack: false, dodge: false } }
+    ? {
+        player: {
+          combo: false,
+          chargedAttack: false,
+          dodge: false,
+          guard: false,
+          softTargeting: false,
+        },
+      }
     : DEFAULT_ACTION_BATTLE_OPTIONS.combat;
   const defaultAdventurePlayer = DEFAULT_ACTION_BATTLE_OPTIONS.combat?.player;
   const requestedPlayer = {
@@ -148,6 +193,14 @@ export function normalizeActionBattleOptions(
         requestedPlayer.dodge,
         defaultAdventurePlayer?.dodge
       ),
+      guard: normalizePlayerFeature(
+        requestedPlayer.guard,
+        defaultAdventurePlayer?.guard
+      ),
+      softTargeting: normalizePlayerFeature(
+        requestedPlayer.softTargeting,
+        defaultAdventurePlayer?.softTargeting
+      ),
     },
   };
   const attack = {
@@ -155,6 +208,23 @@ export function normalizeActionBattleOptions(
     ...options.attack,
     ...combat.attack,
   };
+  if (
+    !classic &&
+    options.attack?.profile?.control === undefined &&
+    options.combat?.attack?.profile?.control === undefined &&
+    options.systems?.combat?.attack?.profile?.control === undefined
+  ) {
+    attack.profile = {
+      ...attack.profile,
+      control: {
+        movementLock: "active",
+        directionLock: "active",
+        moveCancelsRecovery: true,
+        dodgeCancelsRecovery: true,
+        inputBufferMs: 160,
+      },
+    };
+  }
   const attackProfile = normalizeActionBattleAttackProfile(attack.profile, {
     lockMovement: attack.lockMovement,
     lockDurationMs: attack.lockDurationMs,
@@ -228,6 +298,14 @@ export function normalizeActionBattleOptions(
       ...options.systems?.ai?.visuals,
       ...options.ai?.visuals,
     },
+    director:
+      options.ai?.director === false
+        ? false
+        : {
+            ...((DEFAULT_ACTION_BATTLE_OPTIONS.ai?.director as object) ?? {}),
+            ...((options.systems?.ai?.director as object) ?? {}),
+            ...((options.ai?.director as object) ?? {}),
+          },
   };
 
   return {
@@ -250,6 +328,11 @@ export function normalizeActionBattleOptions(
     },
     ai,
     visual: options.visual ?? (classic ? "classic" : DEFAULT_ACTION_BATTLE_OPTIONS.visual),
+    feedback: {
+      ...DEFAULT_ACTION_BATTLE_OPTIONS.feedback,
+      ...(classic ? { hitStop: false } : {}),
+      ...options.feedback,
+    },
     animations: {
       ...DEFAULT_ACTION_BATTLE_OPTIONS.animations,
       ...options.animations,

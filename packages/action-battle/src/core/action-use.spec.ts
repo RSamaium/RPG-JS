@@ -4,6 +4,10 @@ import {
   handleActionBattleProjectileImpact,
 } from "./action-use";
 import { setActionBattleSystems } from "./context";
+import {
+  beginActionBattleGuard,
+  clearActionBattleDefense,
+} from "./defense";
 
 const createEntity = (id: string, hp = 100) => ({
   id,
@@ -52,6 +56,79 @@ describe("executeActionBattleUse", () => {
     expect(attacker.sp).toBe(90);
     expect(attacker.applyStates).toHaveBeenCalled();
     expect(target.applyDamage).toHaveBeenCalledWith(attacker, expect.objectContaining({ id: "fire" }));
+  });
+
+  test("consumes SP and resolves a failed skill without basic damage", () => {
+    vi.spyOn(Math, "random").mockReturnValue(0.99);
+    const attacker = {
+      ...createEntity("caster"),
+      getCurrentMap: () => ({
+        clientVisual: vi.fn(),
+      }),
+    };
+    const target = createEntity("target");
+
+    const handled = executeActionBattleUse({
+      attacker: attacker as any,
+      target: target as any,
+      usable: {
+        id: "risky",
+        _type: "skill",
+        spCost: 5,
+        hitRate: 0.95,
+      },
+      skill: {
+        id: "risky",
+        _type: "skill",
+        spCost: 5,
+        hitRate: 0.95,
+      },
+    });
+
+    expect(handled).toBe(true);
+    expect(attacker.sp).toBe(95);
+    expect(target.applyDamage).not.toHaveBeenCalled();
+  });
+
+  test("parries skill damage before states and staggers the attacking AI", () => {
+    const clientVisual = vi.fn();
+    const stagger = vi.fn();
+    const attacker = {
+      ...createEntity("monster"),
+      battleAi: { stagger },
+      getCurrentMap: () => ({ clientVisual }),
+    };
+    const target = {
+      ...createEntity("hero"),
+      direction: "up",
+    };
+    beginActionBattleGuard(target, { parryWindowMs: 200 });
+
+    executeActionBattleUse({
+      attacker: attacker as any,
+      target: target as any,
+      usable: {
+        id: "claw",
+        _type: "skill",
+        spCost: 0,
+        hitRate: 1,
+      },
+      skill: {
+        id: "claw",
+        _type: "skill",
+        spCost: 0,
+        hitRate: 1,
+      },
+    });
+
+    expect(target.applyDamage).not.toHaveBeenCalled();
+    expect(attacker.applyStates).not.toHaveBeenCalled();
+    expect(stagger).toHaveBeenCalledWith(650, target);
+    expect(clientVisual).toHaveBeenCalledWith(
+      "action-battle.visual",
+      expect.objectContaining({ moment: "parry" })
+    );
+    clearActionBattleDefense(target);
   });
 
   test("lets onUse compose custom behavior with defaultEffect", () => {

@@ -1,0 +1,74 @@
+<Container x={indicatorX} y={indicatorY} zIndex={zIndex} alpha={opacity}>
+  <Graphics draw={drawIndicator} />
+</Container>
+
+<script>
+  import { computed, signal, tick } from "canvasengine";
+
+  const {
+    duration,
+    x,
+    y,
+    object,
+    onFinish,
+    zIndex,
+  } = defineProps({
+    duration: { default: 220 },
+    x: { default: 0 },
+    y: { default: 0 },
+    zIndex: { default: 850 },
+  });
+
+  const elapsed = signal(0);
+  const sprite = object?.();
+  let finished = false;
+  const progress = computed(() =>
+    Math.max(0, Math.min(1, elapsed() / Math.max(1, duration())))
+  );
+  const bounds = () => sprite?.__rpgjsGraphicBounds?.();
+  const hitbox = () => sprite?.hitbox?.() ?? { w: 32, h: 32 };
+  const indicatorX = computed(() => {
+    const graphic = bounds();
+    if (Number.isFinite(graphic?.centerX)) {
+      return Number(x()) + graphic.centerX;
+    }
+    return Number(x()) + (hitbox().w ?? 32) / 2;
+  });
+  const indicatorY = computed(() => {
+    const graphic = bounds();
+    if (Number.isFinite(graphic?.bottom)) {
+      return Number(y()) + graphic.bottom - 3;
+    }
+    return Number(y()) + (hitbox().h ?? 32);
+  });
+  const opacity = computed(() =>
+    progress() < 0.55 ? 0.9 : Math.max(0, 1 - (progress() - 0.55) / 0.45)
+  );
+
+  tick(({ deltaTime }) => {
+    if (finished) return;
+    elapsed.update((value) => value + deltaTime);
+    if (elapsed() < duration()) return;
+    finished = true;
+    onFinish?.();
+  });
+
+  const drawIndicator = (g) => {
+    g.clear();
+    const pulse = 1 + Math.sin(progress() * Math.PI * 4) * 0.08;
+    const radiusX = 18 * pulse;
+    const radiusY = 7 * pulse;
+    g.ellipse(0, 0, radiusX, radiusY);
+    g.stroke({
+      color: 0xffd166,
+      alpha: opacity(),
+      width: 2,
+    });
+    g.ellipse(0, 0, radiusX + 4, radiusY + 2);
+    g.stroke({
+      color: 0xffffff,
+      alpha: opacity() * 0.35,
+      width: 1,
+    });
+  };
+</script>

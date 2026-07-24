@@ -57,6 +57,36 @@ describe("Studio initial event hitbox hydration", () => {
     expect(event.hitbox()).toEqual({ w: 32, h: 48 });
   });
 
+  test("hydrates repeated placements through their runtime ids", () => {
+    const first = createEvent();
+    const second = createEvent();
+    const scene = {
+      data: () => ({
+        events: [
+          {
+            eventId: "monster",
+            runtimeEventId: "monster",
+            hitbox: { width: 56, height: 50 },
+          },
+          {
+            eventId: "monster",
+            runtimeEventId: "monster::2",
+            hitbox: { width: 56, height: 50 },
+          },
+        ],
+      }),
+      events: () => ({
+        monster: first,
+        "monster::2": second,
+      }),
+    };
+
+    bindInitialStudioEventHitboxes(scene);
+
+    expect(first.setHitbox).toHaveBeenCalledWith(56, 50);
+    expect(second.setHitbox).toHaveBeenCalledWith(56, 50);
+  });
+
   test("does not overwrite a synchronized runtime hitbox", () => {
     const event = createEvent({ w: 18, h: 26 });
     const scene = {

@@ -13,6 +13,7 @@ import {
 import { emitActionBattleClientVisual } from "./visual";
 import { getActionBattleOptions } from "./config";
 import { getActionBattleSystems } from "./core/context";
+import { applyActionBattleHit } from "./core/hit";
 import {
   isActionBattleEntityInvincible,
   setActionBattleInvincibility,
@@ -35,6 +36,10 @@ import {
 import { resolveActionBattleWeapon } from "./core/equipment";
 import { withActionBattleAnimationUnlocked } from "./locomotion";
 import { safeActionBattleDash } from "./movement";
+import {
+  acquireActionBattleAttackSlot,
+  releaseActionBattleAttackSlot,
+} from "./core/combat-director";
 import {
   defineAiBehavior,
   defineAiTree,
@@ -136,6 +141,17 @@ export interface BattleAiHealthBarOptions {
   layout?: ComponentLayout;
 }
 
+export interface BattleAiDeathPresentationOptions {
+  /** CanvasEngine FX preset emitted once when defeat starts. */
+  effect?: string;
+  /** Time the non-colliding sprite remains available to client visuals. */
+  durationMs?: number;
+  /** Particle scale forwarded to the visual preset. */
+  scale?: number;
+  /** Whether the impact preset should shake the local camera. */
+  shake?: boolean;
+}
+
 const hasTopComponent = (event: RpgEventWithBattleAi, id: string) => {
   const raw = (event as any).componentsTop?.();
   if (!raw) return false;
@@ -199,6 +215,11 @@ export interface BattleAiBaseOptions {
      * Enabled by default for visible battle AI entities.
      */
     healthBar?: boolean | BattleAiHealthBarOptions;
+    /**
+     * Client-only defeat presentation. Gameplay collision and AI are disabled
+     * immediately by the authoritative server.
+     */
+    death?: false | BattleAiDeathPresentationOptions;
   };
 }
 
@@ -244,6 +265,10 @@ export interface HitResult {
   attacker: RpgEvent | RpgPlayer;
   /** The entity that was hit */
   target: RpgPlayer | RpgEvent;
+  defense?: {
+    kind: "guard" | "parry";
+    staggerMs: number;
+  };
 }
 
 const normalizeRewardItem = (
@@ -648,7 +673,16 @@ export class BattleAi {
   private presentation: {
     role: "enemy" | "boss" | "hidden";
     name?: string;
-  } = { role: "enemy" };
+    death: false | Required<BattleAiDeathPresentationOptions>;
+  } = {
+    role: "enemy",
+    death: {
+      effect: "explosionSmall",
+      durationMs: 450,
+      scale: 1.4,
+      shake: true,
+    },
+  };
   private defeated: boolean = false;
 
   // Direction hysteresis to prevent animation flickering
@@ -759,6 +793,21 @@ export class BattleAi {
     this.presentation = {
       role: options.presentation?.role ?? "enemy",
       name: options.presentation?.name,
+      death:
+        options.presentation?.death === false
+          ? false
+          : {
+              effect: options.presentation?.death?.effect ?? "explosionSmall",
+              durationMs: Math.max(
+                0,
+                options.presentation?.death?.durationMs ?? 450
+              ),
+              scale: Math.max(
+                0,
+                options.presentation?.death?.scale ?? 1.4
+              ),
+              shake: options.presentation?.death?.shake ?? true,
+            },
     };
     const healthBar = options.presentation?.healthBar;
     if (
@@ -784,7 +833,9 @@ export class BattleAi {
         [Components.hpBar(style, healthOptions.text ?? null)],
         {
           width: style.width,
-          marginBottom: 2,
+          // Keep the bar visually attached to tall/scaled Studio graphics.
+          // Positive top margin moves a top component toward the sprite.
+          marginTop: 2,
           ...healthOptions.layout,
         }
       );
@@ -1295,9 +1346,30 @@ export class BattleAi {
     // Attack if ready
     if (distance <= this.attackRange && currentTime - this.lastAttackTime >= this.attackCooldown) {
       if (!this.chargingAttack) {
+        const director = getActionBattleOptions().ai?.director;
+        if (
+          director !== false &&
+          !acquireActionBattleAttackSlot(
+            this.event,
+            this.target,
+            director,
+            currentTime
+          )
+        ) {
+          this.faceTarget();
+          this.handleTacticalMovement(distance);
+          return;
+        }
         this.debugLog('attack', `Attacking (dist=${distance.toFixed(1)}, cooldown=${this.attackCooldown}ms)`);
         this.selectAndPerformAttack();
         this.lastAttackTime = currentTime;
+        const releaseTarget = this.target;
+        this.schedule(
+          () => releaseActionBattleAttackSlot(this.event, releaseTarget),
+          typeof director === "object"
+            ? director.slotDurationMs ?? 1200
+            : 1200
+        );
       }
     }
   }
@@ -1454,6 +1526,7 @@ export class BattleAi {
           skill: resolvedSkill,
           pattern,
           profile,
+          playVisual: false,
         });
       } catch (e) {
         // Skill failed (no SP, etc.) - fall back to basic attack
@@ -1472,6 +1545,7 @@ export class BattleAi {
         weapon,
         pattern,
         profile,
+        playVisual: false,
       })
     ) {
       return;
@@ -1605,33 +1679,17 @@ export class BattleAi {
       };
     }
 
-    if (isActionBattleEntityInvincible(target)) {
-      return {
-        damage: 0,
-        knockbackForce: 0,
-        knockbackDuration: 0,
-        defeated: false,
-        attacker: this.event,
-        target
-      };
-    }
-
-    // Use RPGJS damage formula
-    const { damage } = target.applyDamage(this.event as any);
-
-    // Get knockback force from equipped weapon
-    const knockbackForce = this.getWeaponKnockbackForce();
-    const knockbackDuration = DEFAULT_KNOCKBACK.duration;
-
-    // Create hit result
-    let hitResult: HitResult = {
-      damage,
-      knockbackForce,
-      knockbackDuration,
-      defeated: target.hp <= 0,
+    const resolved = applyActionBattleHit(getActionBattleSystems().combat, {
       attacker: this.event,
-      target
-    };
+      target,
+      pattern,
+      reaction: profile.reaction,
+      metadata: {
+        damageMultiplier: profile.damageMultiplier,
+        knockbackMultiplier: profile.knockbackMultiplier,
+      },
+    });
+    let hitResult: HitResult = resolved;
 
     // Call onBeforeHit hook
     if (hooks?.onBeforeHit) {
@@ -1641,10 +1699,19 @@ export class BattleAi {
       }
     }
 
+    if (hitResult.defense?.kind === "parry") {
+      this.stagger(hitResult.defense.staggerMs, target);
+    }
+
     // Visual feedback
     withActionBattleAnimationUnlocked(target, () => {
       emitActionBattleClientVisual({
-        moment: "hurt",
+        moment:
+          hitResult.defense?.kind === "parry"
+            ? "parry"
+            : hitResult.defense?.kind === "guard"
+              ? "block"
+              : "hurt",
         entity: this.event,
         target,
         attacker: this.event,
@@ -1652,25 +1719,6 @@ export class BattleAi {
         result: hitResult,
       });
     });
-    setActionBattleInvincibility(
-      target,
-      profile.reaction.invincibilityMs
-    );
-
-    // Apply knockback
-    if (hitResult.knockbackForce > 0) {
-      const dx = target.x() - this.event.x();
-      const dy = target.y() - this.event.y();
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      
-      if (distance > 0) {
-        const knockbackDirection = {
-          x: dx / distance,
-          y: dy / distance
-        };
-        target.knockback(knockbackDirection, hitResult.knockbackForce, hitResult.knockbackDuration);
-      }
-    }
 
     // Call onAfterHit hook
     if (hooks?.onAfterHit) {
@@ -1678,7 +1726,7 @@ export class BattleAi {
     }
 
     const targetAi = (target as any).battleAi as BattleAi | undefined;
-    if (targetAi) {
+    if (targetAi && !resolved.cancelled) {
       targetAi.handleDamage(this.event, {
         damage: hitResult.damage,
         defeated: hitResult.defeated,
@@ -1864,8 +1912,16 @@ export class BattleAi {
     pattern: AttackPattern,
     animationDefaults?: { animationName?: string; repeat?: number }
   ): void {
+    const resolvedSkill = this.attackSkill
+      ? this.resolveUsable(this.attackSkill)
+      : undefined;
+    const skillType = resolvedSkill?.skillType;
     const moment =
-      profile.animationKey === "castSkill" || profile.animationKey === "castSpell"
+      profile.animationKey === "castSkill" ||
+      profile.animationKey === "castSpell" ||
+      skillType === "magical" ||
+      skillType === "support" ||
+      skillType === "healing"
         ? "castSkill"
         : "attack";
 
@@ -1875,6 +1931,7 @@ export class BattleAi {
         entity: this.event,
         target: this.target ?? undefined,
         pattern,
+        skill: resolvedSkill,
         animations: this.animations,
         animationDefaults,
       });
@@ -2240,6 +2297,35 @@ export class BattleAi {
     });
   }
 
+  /**
+   * Interrupt this enemy with an authoritative stagger.
+   *
+   * Used by parries and heavy reactions. The visual is emitted separately so
+   * games can replace the default presentation without changing AI ownership.
+   */
+  stagger(durationMs = 650, source?: ActionBattleEntity): void {
+    if (this.defeated || this.destroyed) return;
+    const duration = Math.max(0, durationMs);
+    this.isMovingToTarget = false;
+    this.event.stopMoveTo();
+    this.stunnedUntil = Date.now() + duration;
+    this.lockActionUntil(this.stunnedUntil, "stagger", {
+      sourceId: source?.id,
+      durationMs: duration,
+    });
+    this.changeState(AiState.Stunned);
+    withActionBattleAnimationUnlocked(this.event, () => {
+      emitActionBattleClientVisual({
+        moment: "stagger",
+        entity: this.event,
+        target: this.event,
+        attacker: source,
+        pattern: "stagger",
+        animations: this.animations,
+      });
+    });
+  }
+
   handleDamage(
     attacker: ActionBattleEntity,
     damageResult: ActionBattleDamageResult & {
@@ -2342,6 +2428,7 @@ export class BattleAi {
   private kill(attacker?: ActionBattleEntity) {
     if (this.defeated) return;
     this.defeated = true;
+    releaseActionBattleAttackSlot(this.event);
 
     const dieAnimation = resolveActionBattleAnimation(
       "die",
@@ -2351,7 +2438,12 @@ export class BattleAi {
         attacker,
       }
     );
-    const removeDelay = getActionBattleAnimationRemovalDelay(dieAnimation);
+    const deathPresentation = this.presentation.death;
+    const animationDelay = getActionBattleAnimationRemovalDelay(dieAnimation);
+    const removeDelay = Math.max(
+      animationDelay,
+      deathPresentation === false ? 0 : deathPresentation.durationMs
+    );
     const reward = createDefeatReward(this.rewards);
     let removed = false;
     const remove = () => {
@@ -2361,11 +2453,16 @@ export class BattleAi {
         reason: "defeated",
         data: {
           animation: dieAnimation,
+          deathPresentation,
         },
-        transition: dieAnimation
+        transition: dieAnimation || deathPresentation !== false
           ? {
-              animation: dieAnimation.animationName,
-              graphic: dieAnimation.graphic,
+              animation: dieAnimation?.animationName,
+              graphic: dieAnimation?.graphic,
+              effect:
+                deathPresentation === false
+                  ? undefined
+                  : deathPresentation.effect,
               duration: removeDelay,
             }
           : undefined,
@@ -2383,6 +2480,27 @@ export class BattleAi {
       reward,
       remove,
     };
+
+    if (deathPresentation !== false) {
+      const visualDelay = Math.max(0, animationDelay - 300);
+      setTimeout(() => {
+        emitActionBattleClientVisual({
+          moment: "defeat",
+          entity: this.event,
+          target: this.event,
+          attacker,
+          result: {
+            durationMs: deathPresentation.durationMs,
+            metadata: {
+              deathEffect: deathPresentation.effect,
+              deathScale: deathPresentation.scale,
+              deathShake: deathPresentation.shake,
+            },
+          },
+          animations: this.animations,
+        });
+      }, visualDelay);
+    }
 
     // Call onDefeated hook before cleanup. One-argument callbacks receive the
     // newer context object; two-argument callbacks keep the legacy signature.
@@ -3029,6 +3147,7 @@ export class BattleAi {
    */
   destroy() {
     this.destroyed = true;
+    releaseActionBattleAttackSlot(this.event, this.target);
     if (this.updateInterval) {
       clearInterval(this.updateInterval);
       this.updateInterval = undefined;

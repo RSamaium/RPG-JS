@@ -5,9 +5,12 @@ export const CharacterSpritesheet = (options: {
   imageSource: string;
   framesWidth: number;
   framesHeight: number;
+  attackDurationMs?: number;
   scale?: [number, number];
   anchor?: [number, number];
 }) => {
+  const timelineTicksPerSecond = 60;
+
   const frameY = (direction: Direction) => {
     return {
       [Direction.Right]: 3,
@@ -37,6 +40,13 @@ export const CharacterSpritesheet = (options: {
     return array;
   };
 
+  const attackDurationMs = Math.max(1, options.attackDurationMs ?? 350);
+  const attackDurationTicks =
+    (attackDurationMs / 1_000) * timelineTicksPerSecond;
+  const attackFrameSpeed = Math.max(
+    1,
+    (attackDurationTicks - 1) / options.framesWidth,
+  );
   const scale = options.scale ?? [1, 1];
 
   return {
@@ -55,7 +65,9 @@ export const CharacterSpritesheet = (options: {
         animations: ({ direction }) => [anim(direction, options.framesWidth)],
       },
       [Animation.Attack]: {
-        animations: ({ direction }) => [anim(direction, options.framesWidth)],
+        animations: ({ direction }) => [
+          anim(direction, options.framesWidth, attackFrameSpeed),
+        ],
       }
     },
   };

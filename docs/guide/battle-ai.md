@@ -172,11 +172,26 @@ provideActionBattle({
         durationMs: 180,
         cooldownMs: 650,
         invincibilityMs: 220
+      },
+      guard: {
+        control: "f",
+        parryWindowMs: 140,
+        guardDamageReduction: 0.65,
+        guardArcDegrees: 120
+      },
+      softTargeting: {
+        range: 112,
+        coneDegrees: 110
       }
     }
   }
 });
 ```
+
+Guard is frontal and server-authoritative. A hit received during the opening
+parry window is cancelled, staggers the attacker, and opens a short empowered
+counterattack window. Soft targeting only adjusts the attack facing inside the
+configured cone; it never moves the player or replaces manual direction.
 
 Action Battle does not register another player HUD. Keep using the standard
 RPGJS `hud.ce` component so HP, SP, face, and level remain consistent with the
@@ -200,7 +215,7 @@ new BattleAi(this, {
         fillColor: "#ff355d"
       },
       text: null,
-      layout: { marginBottom: 8 }
+      layout: { marginTop: 4 }
     }
   }
 });
@@ -216,8 +231,10 @@ start/release controls as the keyboard.
 `animations` is optional. If you omit it, attacks keep using the default
 `attack` animation and no extra hurt, death, or skill-cast animation is played.
 
-Player attacks lock movement for `350ms` by default. This gives an A-RPG feel
-where the hero performs the attack in place before moving again.
+Adventure attacks lock movement and facing through their active frames by
+default, then allow movement or dodge to cancel recovery. Control locks are
+leased independently, so a hurt, guard, dodge, or follow-up attack cannot let
+an older timer restore stale animation or direction flags.
 
 ```ts
 provideActionBattle({
@@ -236,6 +253,47 @@ Set `lockMovement` to `false` if you want players to keep moving while
 attacking. The client stops local predicted movement as soon as the action
 input is pressed and shows a short slash preview by default. Disable
 `showPreview` when you provide your own client-side attack effect.
+
+For precise attack-by-attack control, use the profile's `control` block:
+
+```ts
+provideActionBattle({
+  attack: {
+    profile: {
+      startupMs: 55,
+      activeMs: 100,
+      recoveryMs: 180,
+      control: {
+        movementLock: "active",
+        directionLock: "active",
+        moveCancelsRecovery: true,
+        dodgeCancelsRecovery: true,
+        inputBufferMs: 160
+      }
+    }
+  }
+});
+```
+
+The `impact` visual preset adds CanvasEngine particles, anchored floating
+damage typography, screen shake, and a short render-only hit-stop.
+Accessibility controls can disable these independently without changing server
+combat:
+
+```ts
+provideActionBattle({
+  visual: "impact",
+  feedback: {
+    hitStop: true,
+    hitStopMs: 32,
+    heavyHitStopMs: 52,
+    parryHitStopMs: 68,
+    flashes: true,
+    screenShake: true,
+    damageNumbers: true
+  }
+});
+```
 
 ## Recommended composable DX
 
@@ -847,11 +905,11 @@ than or equal to the enemy's `poise`.
 
 `rewards` are awarded once to the player who lands the killing blow. On defeat,
 Action Battle calls `event.remove({ reason: "defeated", transition })`. The
-server only sends that removal context; client modules decide how to render it
-with `sprite.onBeforeRemove`, for example by awaiting a death animation, playing
-a sound, or showing a particle effect before the sprite disappears. The legacy
-`onDefeated(event, attacker)` signature remains supported for two-argument
-callbacks.
+server removes collision immediately while clients keep the sprite long enough
+to play its Studio `die` animation and a configurable CanvasEngine death effect.
+Use `presentation.death` to tune the effect, scale, shake, and duration, or set
+it to `false` for immediate removal. The legacy `onDefeated(event, attacker)`
+signature remains supported for two-argument callbacks.
 
 When combat spritesheets come from RPGJS Studio media fields, convert the media
 ids with `createStudioActionBattleAnimations()`. Studio-generated combat
@@ -872,12 +930,34 @@ the player at runtime by `provideStudioGame()`. You can still pass a static
 object when you want to override the media ids manually. Animation values may be
 media ids or media objects returned by the Studio game API.
 
+Studio four-direction attack spritesheets play in `350ms` by default so their
+visual timing matches the default Adventure attack profile without changing the
+walk animation speed. A media record may override this client-side presentation
+with `metadata.attackDurationMs`; gameplay startup, active, and recovery windows
+remain server-authoritative and independent.
+
 For Studio enemies, the runtime reads `enemy.animations` automatically when an
 enemy is created from the Studio database. The supported Studio fields are
-`attack`, `hurt`, `die`, and `castSpell`; `castSkill` is also accepted when you
-configure action-battle directly. These values are resolved on the server and
-sent to the client as plain animation data, so media IDs remain usable without
-transferring resolver functions.
+`attack`, `hurt`, `die`, `castSpell`, `guard`, `parry`, and `stagger`;
+`castSkill` is also accepted when you configure action-battle directly.
+`stagger` falls back to the Studio `hurt` animation. These values are resolved
+on the server and sent to the client as plain animation data, so media IDs
+remain usable without transferring resolver functions.
+
+The Adventure AI director limits how many enemies attack one target
+simultaneously. Other enemies keep repositioning instead of stacking the same
+attack:
+
+```ts
+provideActionBattle({
+  ai: {
+    director: {
+      maxConcurrentAttackers: 1,
+      slotDurationMs: 1200
+    }
+  }
+});
+```
 
 ## Composable AI behaviors
 

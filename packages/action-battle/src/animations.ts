@@ -56,6 +56,9 @@ const DEFAULT_ANIMATION_BY_KEY: Record<ActionBattleAnimationKey, string> = {
   die: "die",
   castSkill: "skill",
   castSpell: "skill",
+  guard: "guard",
+  parry: "parry",
+  stagger: "hurt",
 };
 
 const getConfiguredAnimation = (

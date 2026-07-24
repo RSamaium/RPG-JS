@@ -323,6 +323,77 @@ describe("action battle visual composer", () => {
     );
   });
 
+  test("impact feedback applies a short render-only hit-stop", () => {
+    vi.useFakeTimers();
+    const target = createEntity();
+    let paused = false;
+    const visualPause = Object.assign(() => paused, {
+      set(value: boolean) {
+        paused = value;
+      },
+    });
+    const visuals = createActionBattleClientVisuals({
+      visual: "impact",
+      animations: {},
+      feedback: {
+        hitStop: true,
+        hitStopMs: 30,
+      },
+    } as any);
+
+    visuals[ACTION_BATTLE_CLIENT_VISUAL_ID]({
+      engine: { visualPause },
+      target,
+      data: {
+        moment: "hit",
+        damage: 11,
+      },
+    });
+
+    expect(paused).toBe(true);
+    vi.advanceTimersByTime(30);
+    expect(paused).toBe(false);
+    vi.useRealTimers();
+  });
+
+  test("feedback accessibility options suppress flash, shake, and damage labels", () => {
+    const target = createEntity();
+    const shake = vi.fn();
+    const visuals = createActionBattleClientVisuals({
+      visual: "impact",
+      animations: {},
+      feedback: {
+        hitStop: false,
+        flashes: false,
+        screenShake: false,
+        damageNumbers: false,
+      },
+    } as any);
+
+    visuals[ACTION_BATTLE_CLIENT_VISUAL_ID](
+      {
+        target,
+        data: {
+          moment: "hit",
+          damage: 11,
+        },
+      },
+      { shake }
+    );
+
+    expect(target.flash).not.toHaveBeenCalled();
+    expect(shake).not.toHaveBeenCalled();
+    expect(target.showHit).not.toHaveBeenCalled();
+    expect(target.showComponentAnimation).not.toHaveBeenCalledWith(
+      ACTION_BATTLE_DAMAGE_COMPONENT_ID,
+      expect.anything()
+    );
+    expect(target.showComponentAnimation).toHaveBeenCalledWith(
+      ACTION_BATTLE_HIT_FX_COMPONENT_ID,
+      expect.anything()
+    );
+  });
+
   test("client custom visual parts can use sound and camera shake helpers", () => {
     const sound = vi.fn();
     const shake = vi.fn();

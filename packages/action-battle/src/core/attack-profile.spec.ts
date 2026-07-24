@@ -11,6 +11,34 @@ describe("normalizeActionBattleAttackProfile", () => {
     const profile = normalizeActionBattleAttackProfile();
 
     expect(profile).toEqual(DEFAULT_ACTION_BATTLE_ATTACK_PROFILE);
+    expect(profile.control).toEqual({
+      movementLock: "full",
+      directionLock: "full",
+      moveCancelsRecovery: false,
+      dodgeCancelsRecovery: true,
+      inputBufferMs: 140,
+    });
+  });
+
+  test("normalizes responsive active-frame control locks", () => {
+    const profile = normalizeActionBattleAttackProfile({
+      startupMs: 50,
+      activeMs: 100,
+      recoveryMs: 200,
+      control: {
+        movementLock: "active",
+        directionLock: "none",
+        moveCancelsRecovery: true,
+        inputBufferMs: 160,
+      },
+    });
+
+    expect(profile.control).toMatchObject({
+      movementLock: "active",
+      directionLock: "none",
+      moveCancelsRecovery: true,
+      inputBufferMs: 160,
+    });
   });
 
   test("derives recovery from the legacy lock duration when recovery is omitted", () => {
@@ -114,11 +142,22 @@ describe("normalizeActionBattleAttackProfile", () => {
     expect((adventure.combat?.player?.combo as any).enabled).toBe(true);
     expect((adventure.combat?.player?.chargedAttack as any).control).toBe("e");
     expect((adventure.combat?.player?.dodge as any).invincibilityMs).toBe(220);
+    expect((adventure.combat?.player?.guard as any).enabled).toBe(true);
+    expect((adventure.combat?.player?.softTargeting as any).enabled).toBe(true);
+    expect(
+      (adventure.attack?.profile as NormalizedActionBattleAttackProfile).control
+    ).toMatchObject({
+      movementLock: "active",
+      directionLock: "active",
+      inputBufferMs: 160,
+    });
     expect(adventure.ui).not.toHaveProperty("health");
     expect(adventure.visual).toBe("impact");
 
     expect(classic.preset).toBe("classic");
     expect(classic.combat?.player?.combo).toBe(false);
+    expect(classic.combat?.player?.guard).toBe(false);
+    expect(classic.combat?.player?.softTargeting).toBe(false);
     expect(classic.visual).toBe("classic");
   });
 

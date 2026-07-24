@@ -1,6 +1,7 @@
 import type {
   ActionBattleAnimationOptions,
   ActionBattleAnimationKey,
+  ActionBattleFeedbackOptions,
   ActionBattleVisualComposer,
   ActionBattleVisualContext,
   ActionBattleVisualHelpers,
@@ -15,6 +16,8 @@ export const ACTION_BATTLE_HIT_FX_COMPONENT_ID = "action-battle-hit-fx";
 export const ACTION_BATTLE_DAMAGE_COMPONENT_ID = "action-battle-damage";
 export const ACTION_BATTLE_TELEGRAPH_COMPONENT_ID =
   "action-battle-telegraph";
+export const ACTION_BATTLE_SOFT_TARGET_COMPONENT_ID =
+  "action-battle-soft-target";
 
 type PreviewStarter = (
   entity: any,
@@ -22,6 +25,63 @@ type PreviewStarter = (
 ) => void;
 
 let previewStarter: PreviewStarter | undefined;
+
+type HitStopState = {
+  active: number;
+  baseline: boolean;
+};
+
+const hitStopStates = new WeakMap<object, HitStopState>();
+
+const startActionBattleHitStop = (engine: any, durationMs: number) => {
+  const pause = engine?.visualPause;
+  if (
+    !pause ||
+    typeof pause !== "function" ||
+    typeof pause.set !== "function" ||
+    durationMs <= 0
+  ) {
+    return;
+  }
+
+  let state = hitStopStates.get(engine);
+  if (!state) {
+    const baseline = pause() === true;
+    if (baseline) return;
+    state = { active: 0, baseline };
+    hitStopStates.set(engine, state);
+  }
+  state.active += 1;
+  pause.set(true);
+  setTimeout(() => {
+    const current = hitStopStates.get(engine);
+    if (!current) return;
+    current.active = Math.max(0, current.active - 1);
+    if (current.active > 0) return;
+    pause.set(current.baseline);
+    hitStopStates.delete(engine);
+  }, durationMs);
+};
+
+const resolveHitStopDuration = (
+  context: ActionBattleVisualContext,
+  feedback: ActionBattleFeedbackOptions
+) => {
+  if (feedback.hitStop === false) return 0;
+  if (context.moment === "parry") return feedback.parryHitStopMs ?? 68;
+  if (context.moment === "block") {
+    return Math.min(24, feedback.hitStopMs ?? 32);
+  }
+  if (context.moment === "stagger") return feedback.heavyHitStopMs ?? 52;
+  if (context.moment !== "hit" && context.moment !== "hurt") return 0;
+  const heavy =
+    context.result?.rawDamage?.critical ||
+    context.result?.metadata?.charged ||
+    context.result?.metadata?.comboStep >= 2;
+  return heavy
+    ? feedback.heavyHitStopMs ?? 52
+    : feedback.hitStopMs ?? 32;
+};
 
 export function setActionBattlePreviewStarter(starter?: PreviewStarter) {
   previewStarter = starter;
@@ -38,10 +98,17 @@ const serializeSkill = (skill: any) => {
       : typeof skill?.name === "function"
         ? skill.name.call(skill)
         : undefined;
-  if (typeof id === "string") return { id, name };
+  const presentation = {
+    name,
+    skillType: skill?.skillType,
+    icon: skill?.icon,
+    animation: skill?.animation,
+    sound: skill?.sound,
+  };
+  if (typeof id === "string") return { id, ...presentation };
   if (typeof id === "function") {
     const value = id.call(skill);
-    if (typeof value === "string") return { id: value, name };
+    if (typeof value === "string") return { id: value, ...presentation };
   }
   return undefined;
 };
@@ -73,6 +140,7 @@ const serializeResult = (result: any) => {
     rawDamage: result.rawDamage,
     reaction: result.reaction,
     cancelled: result.cancelled,
+    defense: result.defense,
     metadata: result.metadata,
     durationMs: result.durationMs,
     telegraphScale: result.telegraphScale,
@@ -86,6 +154,9 @@ const animationKeys: ActionBattleAnimationKey[] = [
   "die",
   "castSkill",
   "castSpell",
+  "guard",
+  "parry",
+  "stagger",
 ];
 
 const serializeAnimationResult = (result: any) => {
@@ -224,7 +295,15 @@ export function createActionBattleClientVisuals(
         );
       }
 
-      playActionBattleVisual(options.visual, visualContext, helpers);
+      const feedback = options.feedback ?? {};
+      const hitStopDuration = resolveHitStopDuration(visualContext, feedback);
+      if (hitStopDuration > 0) {
+        startActionBattleHitStop(context.engine, hitStopDuration);
+      }
+      playActionBattleVisual(options.visual, visualContext, {
+        ...helpers,
+        actionBattleFeedback: feedback,
+      });
     },
   };
 }
@@ -275,11 +354,15 @@ const callGraphic = (
 const createHelpers = (
   context: ActionBattleVisualContext,
   clientHelpers?: any
-): ActionBattleVisualHelpers => ({
+): ActionBattleVisualHelpers => {
+  const feedback: ActionBattleFeedbackOptions =
+    clientHelpers?.actionBattleFeedback ?? {};
+  return {
   graphic(entity, keyOrOptions) {
     callGraphic(entity, keyOrOptions, context);
   },
   flash(entity, options = {}) {
+    if (feedback.flashes === false) return;
     entity?.flash?.({
       type: "tint",
       tint: "red",
@@ -289,6 +372,7 @@ const createHelpers = (
     });
   },
   damageText(entity, damageOrText) {
+    if (feedback.damageNumbers === false) return;
     if (typeof damageOrText === "string") {
       if (entity?.showHit) {
         entity.showHit(damageOrText);
@@ -313,6 +397,12 @@ const createHelpers = (
     });
   },
   component(entity, id, params = {}) {
+    if (
+      feedback.damageNumbers === false &&
+      id === ACTION_BATTLE_DAMAGE_COMPONENT_ID
+    ) {
+      return;
+    }
     entity?.showComponentAnimation?.(id, params);
   },
   preview(entity, options = {}) {
@@ -322,9 +412,11 @@ const createHelpers = (
     void clientHelpers?.sound?.(id, options);
   },
   shake(options = {}) {
+    if (feedback.screenShake === false) return;
     clientHelpers?.shake?.(options);
   },
-});
+  };
+};
 
 const classicParts: Partial<Record<ActionBattleVisualContext["moment"], ActionBattleVisualPart>> = {
   attack({ entity }, fx) {
@@ -332,6 +424,15 @@ const classicParts: Partial<Record<ActionBattleVisualContext["moment"], ActionBa
   },
   castSkill({ entity }, fx) {
     fx.graphic(entity, "castSkill");
+  },
+  guard({ entity }, fx) {
+    fx.graphic(entity, "guard");
+  },
+  parry({ entity, target }, fx) {
+    fx.graphic(target ?? entity, "parry");
+  },
+  counter({ entity }, fx) {
+    fx.graphic(entity, "attack");
   },
   preview({ entity }, fx) {
     fx.preview(entity);
@@ -345,6 +446,9 @@ const classicParts: Partial<Record<ActionBattleVisualContext["moment"], ActionBa
     fx.flash(hurtTarget);
     fx.damageText(hurtTarget);
     fx.graphic(hurtTarget, "hurt");
+  },
+  stagger({ entity, target }, fx) {
+    fx.graphic(target ?? entity, "stagger");
   },
   defeat({ entity, target }, fx) {
     fx.graphic(target ?? entity, "die");
@@ -435,6 +539,15 @@ const showImpactFx = (
 
 const impactParts: Partial<Record<ActionBattleVisualContext["moment"], ActionBattleVisualPart>> = {
   ...fxParts,
+  attack(context, fx) {
+    classicParts.attack?.(context, fx);
+    if (context.target) {
+      fx.component(context.target, ACTION_BATTLE_SOFT_TARGET_COMPONENT_ID, {
+        duration: 220,
+        zIndex: 850,
+      });
+    }
+  },
   hit(context, fx) {
     const target = context.target;
     fx.flash(target, {
@@ -466,6 +579,17 @@ const impactParts: Partial<Record<ActionBattleVisualContext["moment"], ActionBat
       frequency: 18,
     });
   },
+  stagger(context, fx) {
+    const target = context.target ?? context.entity;
+    fx.graphic(target, "stagger");
+    fx.flash(target, { tint: "white", duration: 180, cycles: 2 });
+    fx.component(target, ACTION_BATTLE_HIT_FX_COMPONENT_ID, {
+      name: "impactBurst",
+      scale: 1.1,
+      displayDuration: 360,
+      zIndex: 1000,
+    });
+  },
   heal(context, fx) {
     const target = context.target ?? context.entity;
     showImpactDamage(context, fx, target);
@@ -476,14 +600,84 @@ const impactParts: Partial<Record<ActionBattleVisualContext["moment"], ActionBat
       cycles: 2,
     });
   },
+  guard({ entity }, fx) {
+    fx.graphic(entity, "guard");
+    fx.flash(entity, {
+      tint: "#8bd3ff",
+      duration: 180,
+      cycles: 1,
+    });
+  },
+  block(context, fx) {
+    const target = context.target ?? context.entity;
+    fx.component(target, ACTION_BATTLE_DAMAGE_COMPONENT_ID, {
+      text: "BLOCK",
+      kind: "block",
+      duration: 650,
+      zIndex: 1200,
+    });
+    fx.component(target, ACTION_BATTLE_HIT_FX_COMPONENT_ID, {
+      name: "impactBurst",
+      scale: 0.72,
+      displayDuration: 280,
+      zIndex: 1000,
+    });
+    fx.flash(target, { tint: "#9adfff", duration: 120, cycles: 1 });
+    fx.shake({ intensity: 2, duration: 100, frequency: 16 });
+  },
+  parry(context, fx) {
+    const target = context.target ?? context.entity;
+    fx.graphic(target, "parry");
+    fx.component(target, ACTION_BATTLE_DAMAGE_COMPONENT_ID, {
+      text: "PARRY!",
+      kind: "parry",
+      duration: 850,
+      zIndex: 1250,
+    });
+    fx.component(context.attacker ?? target, ACTION_BATTLE_HIT_FX_COMPONENT_ID, {
+      name: "impactBurst",
+      scale: 1.4,
+      displayDuration: 420,
+      zIndex: 1050,
+    });
+    fx.flash(target, { tint: "white", duration: 180, cycles: 2 });
+    fx.shake({ intensity: 8, duration: 260, frequency: 22 });
+  },
+  counter({ entity }, fx) {
+    fx.graphic(entity, "attack");
+    fx.flash(entity, { tint: "#ffd166", duration: 160, cycles: 1 });
+    fx.component(entity, ACTION_BATTLE_HIT_FX_COMPONENT_ID, {
+      name: "slashSpark",
+      scale: 1.1,
+      displayDuration: 320,
+      zIndex: 1000,
+    });
+  },
+  target({ target }, fx) {
+    if (!target) return;
+    fx.component(target, ACTION_BATTLE_SOFT_TARGET_COMPONENT_ID, {
+      duration: 220,
+      zIndex: 850,
+    });
+  },
+  miss(context, fx) {
+    fx.component(context.target ?? context.entity, ACTION_BATTLE_DAMAGE_COMPONENT_ID, {
+      text: "MISS",
+      kind: "miss",
+      duration: 650,
+      zIndex: 1200,
+    });
+  },
   defeat(context, fx) {
     classicParts.defeat?.(context, fx);
     fx.component(context.target ?? context.entity, ACTION_BATTLE_HIT_FX_COMPONENT_ID, {
-      name: "explosionSmall",
-      scale: 1.4,
+      name: context.result?.metadata?.deathEffect ?? "explosionSmall",
+      scale: context.result?.metadata?.deathScale ?? 1.4,
       zIndex: 1000,
     });
-    fx.shake({ intensity: 8, duration: 320, frequency: 16 });
+    if (context.result?.metadata?.deathShake !== false) {
+      fx.shake({ intensity: 8, duration: 320, frequency: 16 });
+    }
   },
   dodge({ entity }, fx) {
     fx.flash(entity, { tint: "white", duration: 120, cycles: 2 });
@@ -509,6 +703,15 @@ const impactParts: Partial<Record<ActionBattleVisualContext["moment"], ActionBat
   },
   castSkill(context, fx) {
     classicParts.castSkill?.(context, fx);
+    if (context.skill?.animation) {
+      fx.component(context.target ?? context.entity, "animation", {
+        graphic: context.skill.animation,
+        animationName: "default",
+      });
+    }
+    if (context.skill?.sound) {
+      fx.sound(context.skill.sound, { volume: 0.9 });
+    }
     fx.component(context.entity, ACTION_BATTLE_HIT_FX_COMPONENT_ID, {
       name: "magicBurst",
       scale: 0.72,

@@ -6,6 +6,7 @@ import { CharacterSpritesheet } from "./spritesheets/character";
 import { getGameDataProvider } from "./data-provider";
 
 export const STUDIO_DEFAULT_CHARACTER_DISPLAY_SCALE = 0.7;
+export const STUDIO_DEFAULT_ATTACK_ANIMATION_DURATION_MS = 350;
 
 const resolveCharacterDisplayScale = (scale: unknown): number => {
   return typeof scale === "number"
@@ -120,6 +121,10 @@ export const createSpriteSheetObject = async (
           imageSource: url,
           framesWidth: media.metadata?.frameWidth ?? 4,
           framesHeight: media.metadata?.frameHeight ?? 4,
+          attackDurationMs:
+            typeof media.metadata?.attackDurationMs === "number"
+              ? media.metadata.attackDurationMs
+              : STUDIO_DEFAULT_ATTACK_ANIMATION_DURATION_MS,
         });
         return {
           ...spritesheet,

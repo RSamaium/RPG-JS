@@ -53,7 +53,7 @@
   );
   const easeOut = computed(() => 1 - Math.pow(1 - progress(), 3));
   const isHeavy = computed(() =>
-    ["critical", "charged", "finisher"].includes(kind())
+    ["critical", "charged", "finisher", "parry"].includes(kind())
   );
   const isHeal = computed(() => kind() === "heal");
   const mainFontSize = computed(() =>
@@ -66,6 +66,9 @@
     if (kind() === "charged") return "#ffb347";
     if (kind() === "finisher") return "#ff7a90";
     if (kind() === "skill") return "#82d9ff";
+    if (kind() === "parry") return "#fff4a8";
+    if (kind() === "block") return "#9adfff";
+    if (kind() === "miss") return "#d6dae3";
     return "#ffffff";
   });
   const resolvedAccent = computed(() => {
@@ -74,6 +77,9 @@
     if (kind() === "critical") return "#c77b00";
     if (kind() === "charged") return "#8f2d15";
     if (kind() === "skill") return "#155e9c";
+    if (kind() === "parry") return "#8f5d00";
+    if (kind() === "block") return "#145b7a";
+    if (kind() === "miss") return "#4c5260";
     return "#351321";
   });
   const displayText = computed(() => {

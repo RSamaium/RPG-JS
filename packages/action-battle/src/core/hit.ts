@@ -3,6 +3,7 @@ import {
   isActionBattleEntityInvincible,
   setActionBattleInvincibility,
 } from "./hit-reaction";
+import { resolveActionBattleDefense } from "./defense";
 
 export const applyActionBattleHit = (
   system: ActionBattleCombatSystem,
@@ -35,6 +36,39 @@ export const applyActionBattleHit = (
       cancelled: true,
       metadata: hitContext.metadata,
       reaction: hitContext.reaction,
+    };
+  }
+
+  const defense = resolveActionBattleDefense(
+    hitContext.target as any,
+    hitContext.attacker as any
+  );
+  if (defense?.kind === "parry") {
+    return {
+      damage: 0,
+      knockbackForce: 0,
+      knockbackDuration: 0,
+      defeated: false,
+      attacker: hitContext.attacker,
+      target: hitContext.target,
+      cancelled: true,
+      metadata: hitContext.metadata,
+      reaction: hitContext.reaction,
+      defense: {
+        kind: defense.kind,
+        staggerMs: defense.staggerMs,
+      },
+    };
+  }
+  if (defense) {
+    hitContext.metadata = {
+      ...hitContext.metadata,
+      damageMultiplier:
+        (hitContext.metadata?.damageMultiplier ?? 1) *
+        defense.damageMultiplier,
+      knockbackMultiplier:
+        (hitContext.metadata?.knockbackMultiplier ?? 1) *
+        defense.knockbackMultiplier,
     };
   }
 
@@ -87,6 +121,12 @@ export const applyActionBattleHit = (
     rawDamage: damage.raw,
     reaction: hitContext.reaction,
     metadata: hitContext.metadata,
+    defense: defense
+      ? {
+          kind: defense.kind,
+          staggerMs: defense.staggerMs,
+        }
+      : undefined,
   };
 
   system.hooks?.afterHit?.(result);

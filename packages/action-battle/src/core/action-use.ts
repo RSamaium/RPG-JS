@@ -93,9 +93,7 @@ const consumeSkillUse = (attacker: ActionBattleEntity, skill: any) => {
   }
 
   const hitRate = typeof skill?.hitRate === "number" ? skill.hitRate : 1;
-  if (Math.random() > hitRate) {
-    throw new Error(`Action battle skill failed: ${skill?.id ?? skill?.name ?? "skill"}`);
-  }
+  return Math.random() <= Math.max(0, Math.min(1, hitRate));
 };
 
 const applyDamageEffect = (
@@ -106,7 +104,6 @@ const applyDamageEffect = (
   metadata?: Record<string, any>
 ) => {
   const systems = getActionBattleSystems();
-  (attacker as any).applyStates?.(target, skill);
   const result = applyActionBattleHit(systems.combat, {
     attacker,
     target,
@@ -115,17 +112,47 @@ const applyDamageEffect = (
     metadata,
   });
 
-  if (!result.cancelled) {
+  if (result.defense?.kind === "parry") {
     emitActionBattleClientVisual({
-      moment: "hurt",
+      moment: "parry",
       entity: attacker,
       target,
       attacker,
-      damage: result.damage,
       result,
       skill,
     });
-    (target as any).battleAi?.handleDamage?.(attacker, {
+    (attacker as any).battleAi?.stagger?.(
+      result.defense.staggerMs,
+      target
+    );
+    return result;
+  }
+
+  if (!result.cancelled) {
+    (attacker as any).applyStates?.(target, skill);
+    const targetAi = (target as any).battleAi;
+    if (result.defense?.kind === "guard") {
+      emitActionBattleClientVisual({
+        moment: "block",
+        entity: attacker,
+        target,
+        attacker,
+        damage: result.damage,
+        result,
+        skill,
+      });
+    } else if (!targetAi?.handleDamage) {
+      emitActionBattleClientVisual({
+        moment: "hurt",
+        entity: attacker,
+        target,
+        attacker,
+        damage: result.damage,
+        result,
+        skill,
+      });
+    }
+    targetAi?.handleDamage?.(attacker, {
       damage: result.damage,
       defeated: result.defeated,
       raw: result.rawDamage,
@@ -348,8 +375,12 @@ export const executeActionBattleUse = (input: {
   if (!shouldUseActionBattleUsable(input.usable, input.skill)) return false;
 
   const actionConfig = resolveActionConfig(input.usable);
+  let skillSucceeded = true;
   if (isSkill(input.usable, input.skill)) {
-    consumeSkillUse(input.attacker, input.skill ?? input.usable);
+    skillSucceeded = consumeSkillUse(
+      input.attacker,
+      input.skill ?? input.usable
+    );
   }
 
   const action = buildActionContext({
@@ -365,6 +396,21 @@ export const executeActionBattleUse = (input: {
       skill: input.skill,
       target: firstTarget(input.target),
     });
+  }
+
+  if (!skillSucceeded) {
+    emitActionBattleClientVisual({
+      moment: "miss",
+      entity: input.attacker,
+      target: firstTarget(input.target),
+      skill: input.skill,
+      result: {
+        damage: 0,
+        cancelled: true,
+        metadata: { miss: true },
+      },
+    });
+    return true;
   }
 
   if (hook) {
