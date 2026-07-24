@@ -27,6 +27,8 @@ const createEvent = () => ({
   flash: vi.fn(),
   showHit: vi.fn(),
   setGraphicAnimation: vi.fn(),
+  mergeComponents: vi.fn(),
+  componentsTop: vi.fn(() => null),
   stopMoveTo: vi.fn(),
   moveTo: vi.fn(),
   teleport: vi.fn(async () => undefined),
@@ -50,6 +52,71 @@ const createPlayer = () => ({
       potion: { icon: "potion-icon" },
     }),
   })),
+});
+
+describe("BattleAi health presentation", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    setActionBattleSystems({});
+  });
+
+  test("reuses the standard RPGJS HP component above the entity graphic", () => {
+    const event = createEvent();
+    const ai = new BattleAi(event as any, {
+      presentation: {
+        role: "boss",
+        healthBar: {
+          style: { width: 120, fillColor: "#cc2244" },
+        },
+      },
+    });
+
+    expect(event.mergeComponents).toHaveBeenCalledWith(
+      "top",
+      [
+        expect.objectContaining({
+          id: "rpg:hpBar",
+          props: expect.objectContaining({
+            style: expect.objectContaining({
+              width: 120,
+              height: 9,
+              fillColor: "#cc2244",
+            }),
+            text: undefined,
+          }),
+        }),
+      ],
+      expect.objectContaining({
+        width: 120,
+        marginBottom: 2,
+      })
+    );
+    ai.destroy();
+  });
+
+  test("can disable the standard HP component for one AI", () => {
+    const event = createEvent();
+    const ai = new BattleAi(event as any, {
+      presentation: { healthBar: false },
+    });
+
+    expect(event.mergeComponents).not.toHaveBeenCalled();
+    ai.destroy();
+  });
+
+  test("does not duplicate an HP component already supplied by the game", () => {
+    const event = createEvent();
+    event.componentsTop.mockReturnValue(
+      JSON.stringify({
+        components: [[{ id: "rpg:hpBar", type: "hpBar" }]],
+        layout: {},
+      })
+    );
+    const ai = new BattleAi(event as any);
+
+    expect(event.mergeComponents).not.toHaveBeenCalled();
+    ai.destroy();
+  });
 });
 
 describe("BattleAi defeat flow", () => {

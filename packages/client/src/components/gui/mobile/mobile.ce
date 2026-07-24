@@ -13,6 +13,12 @@
                 </Container>
             }
 
+            @if (showHeavyButton()) {
+                <Container ...buttonContainerProps("heavy")>
+                    <heavyButtonComponent() ...buttonProps("heavy") />
+                </Container>
+            }
+
             @if (showBackButton()) {
                 <Container ...buttonContainerProps("back")>
                     <backButtonComponent() ...buttonProps("back") />
@@ -51,6 +57,7 @@
     const showActionButton = computed(() => buttonEnabled("action", true))
     const showBackButton = computed(() => buttonEnabled("back", true))
     const showDashButton = computed(() => buttonEnabled("dash", false))
+    const showHeavyButton = computed(() => buttonEnabled("heavy", false))
     const showJoystick = computed(() => joystick() !== false)
     const joystickSide = computed(() => layout().joystickSide || "right")
     const rootDirection = computed(() => joystickSide() === "left" ? "row-reverse" : "row")
@@ -75,6 +82,7 @@
     const actionButtonComponent = computed(() => resolveButtonComponent("action"))
     const backButtonComponent = computed(() => resolveButtonComponent("back"))
     const dashButtonComponent = computed(() => resolveButtonComponent("dash"))
+    const heavyButtonComponent = computed(() => resolveButtonComponent("heavy"))
     let activeJoystickControl = null
     let activeJoystickPower = 0
     let joystickRepeatTimer = null
@@ -133,6 +141,16 @@
         }
     }
 
+    const heavyButtonStyle = {
+        ...dashButtonStyle,
+        backgroundColor: {
+            normal: "#4a2037",
+            hover: "#64304b",
+            pressed: "#2c1221",
+            disabled: "#7f8c8d"
+        }
+    }
+
     const defaultButtonProps = {
         action: {
             shape: "circle",
@@ -163,6 +181,16 @@
             controlName: "dash",
             style: dashButtonStyle,
             alpha: 0.78
+        },
+        heavy: {
+            shape: "circle",
+            text: "E",
+            width: 62,
+            height: 62,
+            controls: controlsInstance,
+            controlName: "chargedAttack",
+            style: heavyButtonStyle,
+            alpha: 0.82
         }
     }
 

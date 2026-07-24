@@ -28,7 +28,12 @@ export const configClient = {
     }),
     ...configCommon.providers,
     provideClientModules([
-      withMobile()
+      withMobile({
+        buttons: {
+          dash: true,
+          heavy: true
+        }
+      })
     ]),
   ],
 };

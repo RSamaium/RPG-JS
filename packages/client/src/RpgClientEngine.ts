@@ -152,6 +152,8 @@ type MapShakeOptions = {
 };
 
 export class RpgClientEngine<T = any> {
+  /** Runtime defaults used by modules that specialize the built-in dash. */
+  dashDefaults: Partial<RpgDashInput> = {};
   private guiService: RpgGui;
   private webSocket: AbstractWebsocket;
   private loadMapService: LoadMapService;
@@ -2017,7 +2019,10 @@ export class RpgClientEngine<T = any> {
       typeof currentPlayer?.direction === "function"
         ? currentPlayer.direction()
         : currentPlayer?.direction;
-    const dashInput = normalizeDashInput(input, fallbackDirection);
+    const dashInput = normalizeDashInput(
+      { ...this.dashDefaults, ...input },
+      fallbackDirection
+    );
     if (!dashInput) return;
     await this.processInput({ input: dashInput });
   }

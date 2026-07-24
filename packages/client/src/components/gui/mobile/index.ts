@@ -21,7 +21,7 @@ export interface MobileJoystickComponentProps extends JoystickSettings {
 }
 
 export interface MobileButtonComponentProps extends ButtonProps {
-    controlName: "action" | "back" | "dash";
+    controlName: "action" | "back" | "dash" | "heavy";
     defaultProps: ButtonProps;
 }
 
@@ -31,6 +31,7 @@ export interface MobileGuiComponentsOptions {
         action?: ComponentFunction<MobileButtonComponentProps>;
         back?: ComponentFunction<MobileButtonComponentProps>;
         dash?: ComponentFunction<MobileButtonComponentProps>;
+        heavy?: ComponentFunction<MobileButtonComponentProps>;
     };
 }
 
@@ -56,6 +57,7 @@ export interface MobileGuiOptions {
         action?: boolean | MobileGuiButtonOptions;
         back?: boolean | MobileGuiButtonOptions;
         dash?: boolean | MobileGuiButtonOptions;
+        heavy?: boolean | MobileGuiButtonOptions;
     };
 }
 

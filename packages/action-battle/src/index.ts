@@ -16,6 +16,7 @@ export type {
   BattleAiDefeatReward,
   BattleAiLegacyDefeatedCallback,
   BattleAiLegacyOptions,
+  BattleAiHealthBarOptions,
   BattleAiRewardItem,
   BattleAiRewards,
 } from "./ai.server";
@@ -50,6 +51,10 @@ export type {
   NormalizedActionBattleHitReactionProfile,
   NormalizedActionBattleAttackProfile,
   ActionBattleCombatOptions,
+  ActionBattlePlayerCombatOptions,
+  ActionBattleComboOptions,
+  ActionBattleChargedAttackOptions,
+  ActionBattleDodgeOptions,
   ActionBattleSystemOptions,
   ActionBattleAiSystemOptions,
   ActionBattleVisualComposer,
@@ -218,8 +223,15 @@ export {
 } from "./core/context";
 export { applyActionBattleHit } from "./core/hit";
 export {
+  canActionBattleDodge,
+  resolveActionBattleCharge,
+  resolveActionBattleComboStep,
+} from "./core/player-combat";
+export {
   ACTION_BATTLE_CLIENT_VISUAL_ID,
   ACTION_BATTLE_HIT_FX_COMPONENT_ID,
+  ACTION_BATTLE_DAMAGE_COMPONENT_ID,
+  ACTION_BATTLE_TELEGRAPH_COMPONENT_ID,
   createActionBattleClientVisuals,
   createActionBattleVisual,
   createClassicActionBattleVisual,
@@ -249,6 +261,7 @@ export {
   applyActionBattleEntityHit,
   applyPlayerHitToEvent,
   ACTION_BATTLE_ACTION_BAR_GUI_ID,
+  ACTION_BATTLE_DODGE,
   openActionBattleActionBar,
   updateActionBattleActionBar,
   createActionBattleServer,

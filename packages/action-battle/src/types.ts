@@ -119,6 +119,8 @@ export interface ActionBattleAttackProfile {
   hitPolicy?: ActionBattleAttackHitPolicy;
   reaction?: ActionBattleHitReactionProfile;
   hitboxes?: ActionBattleAttackHitboxMap;
+  damageMultiplier?: number;
+  knockbackMultiplier?: number;
 }
 
 export interface NormalizedActionBattleAttackProfile
@@ -157,10 +159,44 @@ export interface ActionBattleAttackOptions {
 
 export interface ActionBattleCombatOptions {
   attack?: ActionBattleAttackOptions;
+  player?: ActionBattlePlayerCombatOptions;
   damage?: ActionBattleCombatSystem["resolveDamage"];
   knockback?: ActionBattleCombatSystem["resolveKnockback"];
   hooks?: ActionBattleHitHooks;
   targets?: ActionBattleTargetOptions;
+}
+
+export interface ActionBattleComboOptions {
+  enabled?: boolean;
+  bufferMs?: number;
+  resetMs?: number;
+  steps?: ActionBattleAttackProfile[];
+}
+
+export interface ActionBattleChargedAttackOptions {
+  enabled?: boolean;
+  control?: string;
+  minChargeMs?: number;
+  maxChargeMs?: number;
+  minDamageMultiplier?: number;
+  maxDamageMultiplier?: number;
+  minKnockbackMultiplier?: number;
+  maxKnockbackMultiplier?: number;
+  profile?: ActionBattleAttackProfile;
+}
+
+export interface ActionBattleDodgeOptions {
+  enabled?: boolean;
+  durationMs?: number;
+  cooldownMs?: number;
+  invincibilityMs?: number;
+  additionalSpeed?: number;
+}
+
+export interface ActionBattlePlayerCombatOptions {
+  combo?: boolean | ActionBattleComboOptions;
+  chargedAttack?: boolean | ActionBattleChargedAttackOptions;
+  dodge?: boolean | ActionBattleDodgeOptions;
 }
 
 export interface ActionBattleAiOptions {
@@ -194,9 +230,14 @@ export interface ActionBattleSystemOptions {
 
 export type ActionBattleVisualMoment =
   | "attack"
+  | "chargeStart"
+  | "chargeRelease"
+  | "dodge"
+  | "telegraph"
   | "castSkill"
   | "hit"
   | "hurt"
+  | "heal"
   | "defeat"
   | "preview"
   | "ai";
@@ -225,6 +266,13 @@ export interface ActionBattleVisualHelpers {
   damageText(entity: any, damageOrText?: number | string): void;
   component(entity: any, id: string, params?: Record<string, any>): void;
   preview(entity: any, options?: Record<string, any>): void;
+  sound(id: string, options?: { volume?: number; loop?: boolean }): void;
+  shake(options?: {
+    intensity?: number;
+    duration?: number;
+    frequency?: number;
+    direction?: string;
+  }): void;
 }
 
 export type ActionBattleVisualPart = (
@@ -236,7 +284,7 @@ export type ActionBattleVisualComposer = (
   context: ActionBattleVisualContext
 ) => void;
 
-export type ActionBattleVisualPreset = "classic" | "fx" | "none";
+export type ActionBattleVisualPreset = "classic" | "fx" | "impact" | "none";
 
 export type ActionBattleVisualInput =
   | ActionBattleVisualPreset
@@ -285,6 +333,7 @@ export interface ActionBattleUiOptions {
 }
 
 export interface ActionBattleOptions {
+  preset?: "adventure" | "classic";
   combat?: ActionBattleCombatOptions;
   visual?: ActionBattleVisualInput;
   ui?: ActionBattleUiOptions;

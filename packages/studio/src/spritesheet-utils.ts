@@ -105,6 +105,9 @@ export const createSpriteSheetObject = async (
         return {
           ...spritesheet,
           displayScale: resolveCharacterDisplayScale(scale),
+          ...(media.metadata?.fourDirections === true
+            ? { trimTransparentBounds: true }
+            : {}),
         };
       } else {
         const scale =
@@ -121,6 +124,9 @@ export const createSpriteSheetObject = async (
         return {
           ...spritesheet,
           displayScale: resolveCharacterDisplayScale(scale),
+          ...(media.metadata?.fourDirections === true
+            ? { trimTransparentBounds: true }
+            : {}),
         };
 
       }

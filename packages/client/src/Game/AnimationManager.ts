@@ -1,6 +1,16 @@
 import { generateUID, RpgCommonPlayer } from "@rpgjs/common";
 import { signal } from "canvasengine";
 
+type EffectTarget = RpgCommonPlayer | {
+  x: number | (() => number);
+  y: number | (() => number);
+};
+
+const readCoordinate = (value: number | (() => number)): number => {
+  const resolved = typeof value === "function" ? value() : value;
+  return Number.isFinite(resolved) ? resolved : 0;
+};
+
 export class AnimationManager {
   current = signal<any[]>([]);
 
@@ -8,7 +18,7 @@ export class AnimationManager {
     this.current.set([]);
   }
 
-  displayEffect(params: any, player: RpgCommonPlayer | { x: number, y: number }): Promise<void> {
+  displayEffect(params: any, player: EffectTarget): Promise<void> {
     const id = generateUID();
     const effectParams = params ?? {};
     return new Promise<void>((resolve) => {
@@ -27,8 +37,11 @@ export class AnimationManager {
       this.current().push({
         ...effectParams,
         id,
-        x: player.x,
-        y: player.y,
+        // Component animations live in map/world space. Client objects expose
+        // coordinates as CanvasEngine signals, while plain positions use
+        // numbers, so snapshot both forms before passing them to a component.
+        x: readCoordinate(player.x),
+        y: readCoordinate(player.y),
         object: player,
         onFinish: finish,
       });

@@ -1,0 +1,152 @@
+<Container
+  x={popupX}
+  y={popupY}
+  zIndex={zIndex}
+  alpha={opacity}
+  scale={scale}
+  rotation={rotation}
+>
+  @if (captionText()) {
+    <Text
+      text={captionText}
+      anchor={[0.5, 1]}
+      y={-mainFontSize() * 0.54}
+      style={captionStyle}
+    />
+  }
+  <Text
+    text={displayText}
+    anchor={[0.5, 0.5]}
+    style={mainStyle}
+  />
+</Container>
+
+<script>
+  import { computed, signal, tick } from "canvasengine";
+
+  const {
+    text,
+    amount,
+    kind,
+    caption,
+    color,
+    accentColor,
+    duration,
+    x: anchorX,
+    y: anchorY,
+    object,
+    onFinish,
+    zIndex,
+  } = defineProps({
+    kind: { default: "damage" },
+    duration: { default: 900 },
+    zIndex: { default: 1200 },
+  });
+
+  const elapsed = signal(0);
+  const sprite = object?.();
+  const seed = Math.random() - 0.5;
+  let finished = false;
+
+  const progress = computed(() =>
+    Math.max(0, Math.min(1, elapsed() / Math.max(1, duration())))
+  );
+  const easeOut = computed(() => 1 - Math.pow(1 - progress(), 3));
+  const isHeavy = computed(() =>
+    ["critical", "charged", "finisher"].includes(kind())
+  );
+  const isHeal = computed(() => kind() === "heal");
+  const mainFontSize = computed(() =>
+    kind() === "critical" ? 40 : isHeavy() ? 35 : kind() === "skill" ? 32 : 28
+  );
+  const resolvedColor = computed(() => {
+    if (color?.()) return color();
+    if (isHeal()) return "#70f5a5";
+    if (kind() === "critical") return "#fff4a8";
+    if (kind() === "charged") return "#ffb347";
+    if (kind() === "finisher") return "#ff7a90";
+    if (kind() === "skill") return "#82d9ff";
+    return "#ffffff";
+  });
+  const resolvedAccent = computed(() => {
+    if (accentColor?.()) return accentColor();
+    if (isHeal()) return "#126a45";
+    if (kind() === "critical") return "#c77b00";
+    if (kind() === "charged") return "#8f2d15";
+    if (kind() === "skill") return "#155e9c";
+    return "#351321";
+  });
+  const displayText = computed(() => {
+    if (text?.()) return String(text());
+    const value = Math.max(0, Math.round(Number(amount?.() ?? 0)));
+    return `${isHeal() ? "+" : "-"}${value}`;
+  });
+  const captionText = computed(() =>
+    typeof caption?.() === "string" ? caption().trim() : ""
+  );
+  const graphicTop = computed(() => {
+    const bounds = sprite?.__rpgjsGraphicBounds?.();
+    if (Number.isFinite(bounds?.top)) return bounds.top;
+    const hitbox = sprite?.hitbox?.() ?? { h: 32 };
+    return -Math.max(24, hitbox.h * 0.65);
+  });
+  const popupX = computed(() =>
+    Number(anchorX()) +
+    (sprite?.hitbox?.()?.w ?? 0) / 2 +
+    seed * 28 +
+    seed * 30 * easeOut()
+  );
+  const popupY = computed(() =>
+    Number(anchorY()) + graphicTop() - 12 - 62 * easeOut()
+  );
+  const opacity = computed(() => {
+    const p = progress();
+    if (p < 0.12) return p / 0.12;
+    if (p < 0.68) return 1;
+    return Math.max(0, 1 - (p - 0.68) / 0.32);
+  });
+  const scale = computed(() => {
+    const p = progress();
+    if (p < 0.16) {
+      const local = p / 0.16;
+      return 0.5 + Math.sin(local * Math.PI * 0.5) * (isHeavy() ? 0.82 : 0.62);
+    }
+    return (isHeavy() ? 1.14 : 1) - (p - 0.16) * 0.12;
+  });
+  const rotation = computed(() => seed * 0.12 * (1 - progress()));
+  const mainStyle = computed(() => ({
+    fontFamily: "Inter, Arial Black, sans-serif",
+    fontSize: mainFontSize(),
+    fontWeight: "900",
+    fill: resolvedColor(),
+    letterSpacing: isHeavy() ? 1.5 : 0.5,
+    stroke: {
+      color: resolvedAccent(),
+      width: isHeavy() ? 6 : 5,
+      join: "round",
+    },
+    dropShadow: {
+      color: "#000000",
+      alpha: 0.72,
+      blur: 3,
+      distance: 3,
+      angle: Math.PI / 2,
+    },
+  }));
+  const captionStyle = computed(() => ({
+    fontFamily: "Inter, Arial, sans-serif",
+    fontSize: 11,
+    fontWeight: "800",
+    fill: resolvedColor(),
+    letterSpacing: 1.2,
+    stroke: { color: "#10141d", width: 3, join: "round" },
+  }));
+
+  tick(({ deltaTime }) => {
+    if (finished) return;
+    elapsed.update((value) => value + deltaTime);
+    if (elapsed() < duration()) return;
+    finished = true;
+    onFinish?.();
+  });
+</script>

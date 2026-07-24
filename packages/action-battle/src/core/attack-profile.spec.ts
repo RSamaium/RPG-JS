@@ -43,6 +43,8 @@ describe("normalizeActionBattleAttackProfile", () => {
       directionLock: false,
       animationKey: "castSkill",
       hitPolicy: "allowRepeatHits",
+      damageMultiplier: 2.2,
+      knockbackMultiplier: 1.8,
       hitboxes,
     });
 
@@ -56,6 +58,8 @@ describe("normalizeActionBattleAttackProfile", () => {
       directionLock: false,
       animationKey: "castSkill",
       hitPolicy: "allowRepeatHits",
+      damageMultiplier: 2.2,
+      knockbackMultiplier: 1.8,
       totalDurationMs: 500,
     });
     expect(profile.hitboxes).toBe(hitboxes);
@@ -99,6 +103,46 @@ describe("normalizeActionBattleAttackProfile", () => {
       cooldownMs: 300,
       movementLock: false,
       totalDurationMs: 300,
+    });
+  });
+
+  test("enables Adventure combat and impact visuals by default with a classic escape hatch", () => {
+    const adventure = normalizeActionBattleOptions();
+    const classic = normalizeActionBattleOptions({ preset: "classic" });
+
+    expect(adventure.preset).toBe("adventure");
+    expect((adventure.combat?.player?.combo as any).enabled).toBe(true);
+    expect((adventure.combat?.player?.chargedAttack as any).control).toBe("e");
+    expect((adventure.combat?.player?.dodge as any).invincibilityMs).toBe(220);
+    expect(adventure.ui).not.toHaveProperty("health");
+    expect(adventure.visual).toBe("impact");
+
+    expect(classic.preset).toBe("classic");
+    expect(classic.combat?.player?.combo).toBe(false);
+    expect(classic.visual).toBe("classic");
+  });
+
+  test("merges partial Adventure player features and supports boolean toggles", () => {
+    const options = normalizeActionBattleOptions({
+      combat: {
+        player: {
+          combo: { bufferMs: 220 },
+          chargedAttack: false,
+          dodge: true,
+        },
+      },
+    });
+
+    expect(options.combat?.player?.combo).toMatchObject({
+      enabled: true,
+      bufferMs: 220,
+      resetMs: 700,
+    });
+    expect(options.combat?.player?.chargedAttack).toBe(false);
+    expect(options.combat?.player?.dodge).toMatchObject({
+      enabled: true,
+      cooldownMs: 650,
+      invincibilityMs: 220,
     });
   });
 

@@ -129,4 +129,24 @@ describe("applyActionBattleHit", () => {
     expect(result.defeated).toBe(false);
     expect(target.hp).toBe(100);
   });
+
+  test("scales RPGJS damage from an authoritative attack profile multiplier", () => {
+    const attacker = entity();
+    const target = {
+      ...entity(100),
+      applyDamage() {
+        this.hp -= 10;
+        return { damage: 10 };
+      },
+    };
+
+    const result = defaultRpgjsDamageResolver({
+      attacker: attacker as any,
+      target: target as any,
+      multiplier: 2.4,
+    });
+
+    expect(result.damage).toBe(24);
+    expect(target.hp).toBe(76);
+  });
 });

@@ -2,6 +2,7 @@ import { ActionBattleOptions } from "./types";
 import { normalizeActionBattleAttackProfile } from "./core/attack-profile";
 
 export const DEFAULT_ACTION_BATTLE_OPTIONS: ActionBattleOptions = {
+  preset: "adventure",
   ui: {
     actionBar: {
       enabled: false,
@@ -33,6 +34,65 @@ export const DEFAULT_ACTION_BATTLE_OPTIONS: ActionBattleOptions = {
     previewColor: 0xfff3b0,
     previewAccentColor: 0xffffff,
   },
+  combat: {
+    player: {
+      combo: {
+        enabled: true,
+        bufferMs: 140,
+        resetMs: 700,
+        steps: [
+          {
+            id: "adventure-combo-1",
+            startupMs: 55,
+            activeMs: 90,
+            recoveryMs: 120,
+            damageMultiplier: 0.85,
+            knockbackMultiplier: 0.7,
+          },
+          {
+            id: "adventure-combo-2",
+            startupMs: 45,
+            activeMs: 95,
+            recoveryMs: 130,
+            damageMultiplier: 1,
+            knockbackMultiplier: 0.85,
+          },
+          {
+            id: "adventure-combo-3",
+            startupMs: 90,
+            activeMs: 120,
+            recoveryMs: 240,
+            damageMultiplier: 1.35,
+            knockbackMultiplier: 1.4,
+          },
+        ],
+      },
+      chargedAttack: {
+        enabled: true,
+        control: "e",
+        minChargeMs: 300,
+        maxChargeMs: 900,
+        minDamageMultiplier: 1.5,
+        maxDamageMultiplier: 2.4,
+        minKnockbackMultiplier: 1.6,
+        maxKnockbackMultiplier: 2.3,
+        profile: {
+          id: "adventure-charged",
+          startupMs: 100,
+          activeMs: 140,
+          recoveryMs: 380,
+        },
+      },
+      dodge: {
+        enabled: true,
+        durationMs: 180,
+        cooldownMs: 650,
+        invincibilityMs: 220,
+        additionalSpeed: 8,
+      },
+    },
+  },
+  visual: "impact",
   animations: {},
 };
 
@@ -42,7 +102,30 @@ let currentActionBattleOptions: ActionBattleOptions =
 export function normalizeActionBattleOptions(
   options: ActionBattleOptions = {}
 ): ActionBattleOptions {
+  const preset = options.preset ?? DEFAULT_ACTION_BATTLE_OPTIONS.preset;
+  const classic = preset === "classic";
+  const defaultCombat = classic
+    ? { player: { combo: false, chargedAttack: false, dodge: false } }
+    : DEFAULT_ACTION_BATTLE_OPTIONS.combat;
+  const defaultAdventurePlayer = DEFAULT_ACTION_BATTLE_OPTIONS.combat?.player;
+  const requestedPlayer = {
+    ...defaultCombat?.player,
+    ...options.systems?.combat?.player,
+    ...options.combat?.player,
+  };
+  const normalizePlayerFeature = (
+    value: any,
+    defaults: any
+  ) => {
+    if (value === false) return false;
+    if (value === true) return { ...defaults, enabled: true };
+    if (value && typeof value === "object") {
+      return { ...defaults, ...value, enabled: value.enabled ?? true };
+    }
+    return value;
+  };
   const combat = {
+    ...defaultCombat,
     ...DEFAULT_ACTION_BATTLE_OPTIONS.systems?.combat,
     ...options.systems?.combat,
     ...options.combat,
@@ -50,6 +133,21 @@ export function normalizeActionBattleOptions(
       ...DEFAULT_ACTION_BATTLE_OPTIONS.systems?.combat?.hooks,
       ...options.systems?.combat?.hooks,
       ...options.combat?.hooks,
+    },
+    player: {
+      ...requestedPlayer,
+      combo: normalizePlayerFeature(
+        requestedPlayer.combo,
+        defaultAdventurePlayer?.combo
+      ),
+      chargedAttack: normalizePlayerFeature(
+        requestedPlayer.chargedAttack,
+        defaultAdventurePlayer?.chargedAttack
+      ),
+      dodge: normalizePlayerFeature(
+        requestedPlayer.dodge,
+        defaultAdventurePlayer?.dodge
+      ),
     },
   };
   const attack = {
@@ -133,6 +231,7 @@ export function normalizeActionBattleOptions(
   };
 
   return {
+    preset,
     ui: {
       ...options.ui,
       actionBar,
@@ -150,7 +249,7 @@ export function normalizeActionBattleOptions(
       attack: normalizedAttack,
     },
     ai,
-    visual: options.visual,
+    visual: options.visual ?? (classic ? "classic" : DEFAULT_ACTION_BATTLE_OPTIONS.visual),
     animations: {
       ...DEFAULT_ACTION_BATTLE_OPTIONS.animations,
       ...options.animations,
