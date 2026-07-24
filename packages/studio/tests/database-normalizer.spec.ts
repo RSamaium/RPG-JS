@@ -40,6 +40,18 @@ describe("Studio database normalizer", () => {
     expect(normalized?.data.spCost).toBe(7);
   });
 
+  test("maps Studio successRate percentages to RPGJS hit rates", () => {
+    const normalized = normalizeStudioDatabaseRecord({
+      _id: "beast-strike",
+      type: "skill",
+      name: "Frappe bestiale",
+      successRate: 95,
+      spCost: 5,
+    });
+
+    expect(normalized?.data.hitRate).toBe(0.95);
+  });
+
   test("normalizes item and resource types without mutating the source", () => {
     const source = {
       _id: "potion",

@@ -4,6 +4,9 @@ export type StudioCombatAnimationIds = {
   die?: StudioCombatAnimationRef;
   castSkill?: StudioCombatAnimationRef;
   castSpell?: StudioCombatAnimationRef;
+  guard?: StudioCombatAnimationRef;
+  parry?: StudioCombatAnimationRef;
+  stagger?: StudioCombatAnimationRef;
 };
 
 export type StudioCombatAnimationRef =
@@ -23,13 +26,22 @@ export type StudioCombatAnimationOptions = {
   hurtAnimationName?: string;
   dieAnimationName?: string;
   castSkillAnimationName?: string;
+  guardAnimationName?: string;
+  parryAnimationName?: string;
+  staggerAnimationName?: string;
   repeat?: number;
   dieDelayMs?: number;
 };
 
 type ActionBattleAnimationOptions = Partial<
   Record<
-    "attack" | "hurt" | "die" | "castSkill",
+    | "attack"
+    | "hurt"
+    | "die"
+    | "castSkill"
+    | "guard"
+    | "parry"
+    | "stagger",
     ActionBattleAnimationResult | ActionBattleAnimationResolver
   >
 >;
@@ -72,6 +84,21 @@ const resolveStudioAnimationsFromEntity = (
   );
 };
 
+/**
+ * Make the Studio project combat animations available to runtime animation
+ * resolvers. The aliases keep compatibility with action-battle integrations
+ * that predate the Studio-specific property.
+ */
+export const bindStudioCombatAnimationsToEntity = (
+  entity: ActionBattleAnimationEntity | null | undefined,
+  animations: StudioCombatAnimationIds | null | undefined,
+): void => {
+  if (!entity) return;
+  const resolvedAnimations = animations ?? {};
+  entity.studioCombatAnimations = resolvedAnimations;
+  entity.combatAnimations = resolvedAnimations;
+};
+
 const createAnimationResult = (
   graphic: unknown,
   animationName: string,
@@ -108,6 +135,12 @@ export const createStudioActionBattleAnimations = (
   const dieAnimationName = options.dieAnimationName ?? fallbackAnimationName;
   const castSkillAnimationName =
     options.castSkillAnimationName ?? fallbackAnimationName;
+  const guardAnimationName =
+    options.guardAnimationName ?? fallbackAnimationName;
+  const parryAnimationName =
+    options.parryAnimationName ?? fallbackAnimationName;
+  const staggerAnimationName =
+    options.staggerAnimationName ?? fallbackAnimationName;
   const repeat = options.repeat ?? 1;
   const dieDelayMs = options.dieDelayMs ?? 500;
 
@@ -130,6 +163,22 @@ export const createStudioActionBattleAnimations = (
         return createAnimationResult(
           current.castSkill ?? current.castSpell,
           castSkillAnimationName,
+          repeat,
+        );
+      },
+      guard: (entity) => {
+        const current = resolveStudioAnimationsFromEntity(entity);
+        return createAnimationResult(current.guard, guardAnimationName, repeat);
+      },
+      parry: (entity) => {
+        const current = resolveStudioAnimationsFromEntity(entity);
+        return createAnimationResult(current.parry, parryAnimationName, repeat);
+      },
+      stagger: (entity) => {
+        const current = resolveStudioAnimationsFromEntity(entity);
+        return createAnimationResult(
+          current.stagger ?? current.hurt,
+          staggerAnimationName,
           repeat,
         );
       },
@@ -171,6 +220,33 @@ export const createStudioActionBattleAnimations = (
     result.castSkill = {
       animationName: castSkillAnimationName,
       graphic: castSkill,
+      repeat,
+    };
+  }
+
+  const guard = resolveGraphic(animations.guard);
+  if (hasGraphic(guard)) {
+    result.guard = {
+      animationName: guardAnimationName,
+      graphic: guard,
+      repeat,
+    };
+  }
+
+  const parry = resolveGraphic(animations.parry);
+  if (hasGraphic(parry)) {
+    result.parry = {
+      animationName: parryAnimationName,
+      graphic: parry,
+      repeat,
+    };
+  }
+
+  const stagger = resolveGraphic(animations.stagger ?? animations.hurt);
+  if (hasGraphic(stagger)) {
+    result.stagger = {
+      animationName: staggerAnimationName,
+      graphic: stagger,
       repeat,
     };
   }

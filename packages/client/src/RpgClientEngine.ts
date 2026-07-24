@@ -234,6 +234,11 @@ export class RpgClientEngine<T = any> {
 
   controlsReady = signal<boolean | undefined>(undefined); 
   gamePause = signal(false);
+  /**
+   * Freezes map rendering for short presentation-only beats such as combat
+   * hit-stop. It is deliberately separate from menu/gameplay pause ownership.
+   */
+  visualPause = signal(false);
 
   private predictionEnabled = false;
   private prediction?: PredictionController<RpgMovementInput, Direction>;

@@ -12,15 +12,19 @@ import {
   applyActionBattleAttackDirection,
   resolveActionBattleAttackDirection,
 } from "./attack-input";
+import { withActionBattleAnimationUnlocked } from "./locomotion";
+import { getActionBattleControlLockDuration } from "./core/attack-profile";
 import {
-  forceActionBattleLocomotionAnimation,
-  withActionBattleAnimationUnlocked,
-} from "./locomotion";
+  acquireActionBattleControl,
+  releaseActionBattleControls,
+} from "./core/control-state";
+import type { NormalizedActionBattleAttackProfile } from "./types";
 import { resolveActionBattleUi } from "./ui";
 import {
   ACTION_BATTLE_HIT_FX_COMPONENT_ID,
   ACTION_BATTLE_DAMAGE_COMPONENT_ID,
   ACTION_BATTLE_TELEGRAPH_COMPONENT_ID,
+  ACTION_BATTLE_SOFT_TARGET_COMPONENT_ID,
   createActionBattleClientVisuals,
   playActionBattleVisual,
   setActionBattlePreviewStarter,
@@ -29,16 +33,13 @@ import {
 import AttackTelegraphComponent from "./components/attack-telegraph.ce";
 // @ts-ignore CanvasEngine components are compiled by @canvasengine/compiler.
 import DamagePopupComponent from "./components/damage-popup.ce";
-
-const DEFAULT_ATTACK_LOCK_DURATION_MS = 350;
+// @ts-ignore CanvasEngine components are compiled by @canvasengine/compiler.
+import SoftTargetComponent from "./components/soft-target.ce";
 
 const beginLocalPlayerAttackLock = (
   engine: RpgClientEngine,
-  durationMs: number,
-  locks: { movement: boolean; direction: boolean }
+  profile: NormalizedActionBattleAttackProfile
 ): boolean => {
-  if (durationMs <= 0) return true;
-
   const player = engine.scene?.getCurrentPlayer?.() as any;
   if (!player) return true;
 
@@ -51,37 +52,54 @@ const beginLocalPlayerAttackLock = (
     return false;
   }
 
-  const lockId = (runtimePlayer.__actionBattleAttackLockId ?? 0) + 1;
-  runtimePlayer.__actionBattleAttackLockId = lockId;
-  runtimePlayer.__actionBattleAttackLockedUntil = now + durationMs;
+  releaseActionBattleControls(player, "attack");
+  const actionId = (runtimePlayer.__actionBattleAttackLockId ?? 0) + 1;
+  runtimePlayer.__actionBattleAttackLockId = actionId;
+  runtimePlayer.__actionBattleAttackLockedUntil =
+    now + profile.totalDurationMs;
+  runtimePlayer.__actionBattleAttackActiveUntil =
+    now + profile.startupMs + profile.activeMs;
 
-  const previousCanMove = player.canMove;
-  const previousDirectionFixed = player.directionFixed;
-  const previousAnimationFixed = player.animationFixed;
+  const movementDuration = getActionBattleControlLockDuration(
+    profile,
+    profile.control.movementLock
+  );
+  const directionDuration = getActionBattleControlLockDuration(
+    profile,
+    profile.control.directionLock
+  );
 
-  if (locks.movement) {
+  if (movementDuration > 0) {
     if (typeof engine.interruptCurrentPlayerMovement === "function") {
       engine.interruptCurrentPlayerMovement(player);
     } else {
       (engine.scene as any)?.stopMovement?.(player);
     }
-    player.canMove = false;
+    acquireActionBattleControl(player, {
+      owner: "attack",
+      movement: true,
+      durationMs: movementDuration,
+    });
   }
-  if (locks.direction) {
-    player.directionFixed = true;
+  if (directionDuration > 0) {
+    acquireActionBattleControl(player, {
+      owner: "attack",
+      direction: true,
+      durationMs: directionDuration,
+    });
   }
-  player.animationFixed = true;
+  acquireActionBattleControl(player, {
+    owner: "attack",
+    animation: true,
+    durationMs: profile.totalDurationMs,
+  });
 
   setTimeout(() => {
-    if (runtimePlayer.__actionBattleAttackLockId !== lockId) return;
+    if (runtimePlayer.__actionBattleAttackLockId !== actionId) return;
     runtimePlayer.__actionBattleAttackLockedUntil = 0;
-    player.canMove = previousCanMove;
-    player.directionFixed = previousDirectionFixed;
-    player.animationFixed = previousAnimationFixed;
-    if (locks.movement && !previousAnimationFixed) {
-      forceActionBattleLocomotionAnimation(player, "stand");
-    }
-  }, durationMs);
+    runtimePlayer.__actionBattleAttackActiveUntil = 0;
+    releaseActionBattleControls(player, "attack");
+  }, profile.totalDurationMs);
 
   return true;
 };
@@ -163,6 +181,10 @@ export const createActionBattleClient = (
         id: ACTION_BATTLE_DAMAGE_COMPONENT_ID,
         component: DamagePopupComponent,
       },
+      {
+        id: ACTION_BATTLE_SOFT_TARGET_COMPONENT_ID,
+        component: SoftTargetComponent,
+      },
     ],
     clientVisuals: createActionBattleClientVisuals(normalized),
     gui: resolvedUi.gui,
@@ -206,15 +228,8 @@ export const createActionBattleClient = (
         const direction = resolveActionBattleAttackDirection(player, { data });
         applyActionBattleAttackDirection(player, direction);
         const attackProfile = getNormalizedActionBattleAttackProfile(normalized);
-        const lockDurationMs = Math.max(
-          0,
-          attackProfile.totalDurationMs ?? DEFAULT_ATTACK_LOCK_DURATION_MS
-        );
-        if (attackProfile.movementLock || attackProfile.directionLock) {
-          const locked = beginLocalPlayerAttackLock(engine, lockDurationMs, {
-            movement: attackProfile.movementLock,
-            direction: attackProfile.directionLock,
-          });
+        if (attackProfile.totalDurationMs > 0) {
+          const locked = beginLocalPlayerAttackLock(engine, attackProfile);
           if (!locked) return;
         }
         playLocalPlayerAttackAnimation(player, normalized);

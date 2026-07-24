@@ -23,6 +23,7 @@ import {
 import type { StudioGameModuleConfig } from ".";
 import { createStudioMapPlugins, type StudioMapPlugin } from "./studio-map-plugins";
 import { bindInitialStudioEventHitboxes } from "./initial-event-hitboxes-client";
+import { bindStudioCombatAnimationsToEntity } from "./action-battle-animations";
 
 interface GlobalConfig {
   projectId?: string;
@@ -301,6 +302,10 @@ export default (config: StudioGameModuleConfig) => {
       onAfterLoading: async (scene) => {
         const engine = inject(RpgClientEngine) as RpgClientEngineWithConfig;
         engine.scene.clearLocalWeather?.();
+        bindStudioCombatAnimationsToEntity(
+          engine.scene.getCurrentPlayer?.(),
+          engine.globalConfig.animations,
+        );
         bindInitialStudioEventHitboxes(scene);
         await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
         fadeTrigger.start();

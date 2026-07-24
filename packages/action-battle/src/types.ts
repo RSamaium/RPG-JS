@@ -26,7 +26,10 @@ export type ActionBattleAnimationKey =
   | "hurt"
   | "die"
   | "castSkill"
-  | "castSpell";
+  | "castSpell"
+  | "guard"
+  | "parry"
+  | "stagger";
 
 export type ActionBattleAnimationResult =
   | string
@@ -121,13 +124,46 @@ export interface ActionBattleAttackProfile {
   hitboxes?: ActionBattleAttackHitboxMap;
   damageMultiplier?: number;
   knockbackMultiplier?: number;
+  /**
+   * Fine-grained control locks for responsive action combat.
+   *
+   * The server owns gameplay locks. Clients may mirror them for prediction,
+   * but must reconcile with the authoritative state.
+   */
+  control?: ActionBattleAttackControlOptions;
 }
 
 export interface NormalizedActionBattleAttackProfile
-  extends Required<Omit<ActionBattleAttackProfile, "hitboxes" | "reaction">> {
+  extends Required<
+    Omit<ActionBattleAttackProfile, "hitboxes" | "reaction" | "control">
+  > {
   reaction: NormalizedActionBattleHitReactionProfile;
+  control: NormalizedActionBattleAttackControlOptions;
   hitboxes?: ActionBattleAttackHitboxMap;
   totalDurationMs: number;
+}
+
+export type ActionBattleControlLock = "none" | "active" | "full";
+
+export interface ActionBattleAttackControlOptions {
+  /** Lock movement until the active frames or the complete recovery finish. */
+  movementLock?: ActionBattleControlLock;
+  /** Lock facing until the active frames or the complete recovery finish. */
+  directionLock?: ActionBattleControlLock;
+  /** Let movement cancel recovery after active frames have completed. */
+  moveCancelsRecovery?: boolean;
+  /** Let dodge cancel recovery after active frames have completed. */
+  dodgeCancelsRecovery?: boolean;
+  /** Input buffer used for follow-up attacks. */
+  inputBufferMs?: number;
+}
+
+export interface NormalizedActionBattleAttackControlOptions {
+  movementLock: ActionBattleControlLock;
+  directionLock: ActionBattleControlLock;
+  moveCancelsRecovery: boolean;
+  dodgeCancelsRecovery: boolean;
+  inputBufferMs: number;
 }
 
 export interface ActionBattleSkillOptions {
@@ -193,10 +229,52 @@ export interface ActionBattleDodgeOptions {
   additionalSpeed?: number;
 }
 
+export interface ActionBattleGuardOptions {
+  /** Enable guard and parry handling for players. */
+  enabled?: boolean;
+  /** Keyboard control name sent to the authoritative server. */
+  control?: string;
+  /** Opening guard window that cancels damage and staggers the attacker. */
+  parryWindowMs?: number;
+  /** Fraction of incoming damage removed by a successful frontal guard. */
+  guardDamageReduction?: number;
+  /** Fraction of incoming knockback removed by a successful frontal guard. */
+  guardKnockbackReduction?: number;
+  /** Frontal guard cone, in degrees. */
+  guardArcDegrees?: number;
+  /** Attacker stagger duration after a successful parry. */
+  staggerMs?: number;
+  /** Time available to consume the empowered counterattack. */
+  counterWindowMs?: number;
+  /** Counterattack damage multiplier. */
+  counterDamageMultiplier?: number;
+  /** Counterattack stagger multiplier. */
+  counterStaggerMultiplier?: number;
+}
+
+export interface ActionBattleSoftTargetingOptions {
+  /** Enable contextual melee aim assistance without moving the player. */
+  enabled?: boolean;
+  /** Maximum target distance in map pixels. */
+  range?: number;
+  /** Search cone centered on the player's manual facing direction. */
+  coneDegrees?: number;
+  /** Relative influence of facing alignment in target scoring. */
+  directionWeight?: number;
+  /** Relative influence of proximity in target scoring. */
+  distanceWeight?: number;
+  /** Relative influence of enemies already threatening the player. */
+  threatWeight?: number;
+  /** Duration of the local target marker. */
+  indicatorDurationMs?: number;
+}
+
 export interface ActionBattlePlayerCombatOptions {
   combo?: boolean | ActionBattleComboOptions;
   chargedAttack?: boolean | ActionBattleChargedAttackOptions;
   dodge?: boolean | ActionBattleDodgeOptions;
+  guard?: boolean | ActionBattleGuardOptions;
+  softTargeting?: boolean | ActionBattleSoftTargetingOptions;
 }
 
 export interface ActionBattleAiOptions {
@@ -208,6 +286,17 @@ export interface ActionBattleAiOptions {
   presets?: Record<string, ActionBattleAiPreset>;
   /** Client-only renderers for cues emitted by the `visual()` intent. */
   visuals?: Record<string, ActionBattleAiVisualHandler>;
+  /** Coordinates attack turns around one target without owning enemy AI. */
+  director?: false | ActionBattleCombatDirectorOptions;
+}
+
+export interface ActionBattleCombatDirectorOptions {
+  /** Disable the coordinator while keeping the surrounding AI configuration. */
+  enabled?: boolean;
+  /** Maximum enemies allowed to attack the same target at once. */
+  maxConcurrentAttackers?: number;
+  /** Time before an abandoned attack turn becomes available again. */
+  slotDurationMs?: number;
 }
 
 export type ActionBattleAiSystemOptions = ActionBattleAiOptions;
@@ -237,8 +326,15 @@ export type ActionBattleVisualMoment =
   | "castSkill"
   | "hit"
   | "hurt"
+  | "stagger"
   | "heal"
   | "defeat"
+  | "guard"
+  | "block"
+  | "parry"
+  | "counter"
+  | "miss"
+  | "target"
   | "preview"
   | "ai";
 
@@ -291,6 +387,28 @@ export type ActionBattleVisualInput =
   | ActionBattleVisualComposer
   | Partial<Record<ActionBattleVisualMoment, ActionBattleVisualPart>>;
 
+/**
+ * Local-only combat feedback and accessibility controls.
+ *
+ * These options never affect authoritative damage, collision, or timing.
+ */
+export interface ActionBattleFeedbackOptions {
+  /** Briefly freeze map rendering on impacts. */
+  hitStop?: boolean;
+  /** Duration of a regular impact freeze. */
+  hitStopMs?: number;
+  /** Duration used by charged attacks, finishers, and stagger. */
+  heavyHitStopMs?: number;
+  /** Duration of the stronger successful-parry freeze. */
+  parryHitStopMs?: number;
+  /** Allow tint flashes generated by Action Battle visuals. */
+  flashes?: boolean;
+  /** Allow camera shake generated by Action Battle visuals. */
+  screenShake?: boolean;
+  /** Allow floating damage, guard, parry, and miss labels. */
+  damageNumbers?: boolean;
+}
+
 export interface ActionBattleUiActionBarOptions {
   enabled?: boolean;
   autoOpen?: boolean;
@@ -336,6 +454,7 @@ export interface ActionBattleOptions {
   preset?: "adventure" | "classic";
   combat?: ActionBattleCombatOptions;
   visual?: ActionBattleVisualInput;
+  feedback?: ActionBattleFeedbackOptions;
   ui?: ActionBattleUiOptions;
   ai?: ActionBattleAiOptions;
   skills?: ActionBattleSkillOptions;

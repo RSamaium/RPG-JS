@@ -88,7 +88,7 @@ describe("BattleAi health presentation", () => {
       ],
       expect.objectContaining({
         width: 120,
-        marginBottom: 2,
+        marginTop: 2,
       })
     );
     ai.destroy();
@@ -158,10 +158,17 @@ describe("BattleAi defeat flow", () => {
           animationName: "die",
           delayMs: 700,
         }),
+        deathPresentation: {
+          effect: "explosionSmall",
+          durationMs: 450,
+          scale: 1.4,
+          shake: true,
+        },
       },
       transition: {
         animation: "die",
         graphic: undefined,
+        effect: "explosionSmall",
         duration: 700,
       },
       timeoutMs: 700,
@@ -199,6 +206,36 @@ describe("BattleAi defeat flow", () => {
       reason: "defeated",
       data: {
         animation: null,
+        deathPresentation: {
+          effect: "explosionSmall",
+          durationMs: 450,
+          scale: 1.4,
+          shake: true,
+        },
+      },
+      transition: {
+        animation: undefined,
+        graphic: undefined,
+        effect: "explosionSmall",
+        duration: 450,
+      },
+      timeoutMs: 450,
+    });
+  });
+
+  test("can disable the fallback death presentation", () => {
+    const event = createEvent();
+    const ai = new BattleAi(event as any, {
+      presentation: { death: false },
+    });
+
+    ai.handleDamage(createPlayer() as any, { damage: 10, defeated: true });
+
+    expect(event.remove).toHaveBeenCalledWith({
+      reason: "defeated",
+      data: {
+        animation: null,
+        deathPresentation: false,
       },
       transition: undefined,
       timeoutMs: 0,

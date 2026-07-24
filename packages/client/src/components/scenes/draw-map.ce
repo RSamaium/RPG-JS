@@ -1,4 +1,4 @@
-<Container shake={shakeConfig} freeze={engine.gamePause}>
+<Container shake={shakeConfig} freeze={mapFrozen}>
   @if (backgroundMusic()) {
     <Container sound={backgroundMusic()} />
   }
@@ -51,6 +51,7 @@
     const emptySceneData = { params: {} }
     const emptySceneParams = {}
     const sceneComponent = computed(() => map()?.component)
+    const mapFrozen = computed(() => engine.gamePause() || engine.visualPause())
     const weather = engine.sceneMap.weather
     const backgroundMusic = computed(() => {
       const src = map()?.params?.backgroundMusic

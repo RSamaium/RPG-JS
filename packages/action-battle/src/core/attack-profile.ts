@@ -1,8 +1,10 @@
 import type {
+  ActionBattleAttackControlOptions,
   ActionBattleAttackHitboxMap,
   ActionBattleAttackHitPolicy,
   ActionBattleAttackProfile,
   ActionBattleAnimationKey,
+  ActionBattleControlLock,
   NormalizedActionBattleAttackProfile,
 } from "../types";
 import {
@@ -24,6 +26,13 @@ export const DEFAULT_ACTION_BATTLE_ATTACK_PROFILE:
   damageMultiplier: 1,
   knockbackMultiplier: 1,
   reaction: DEFAULT_ACTION_BATTLE_HIT_REACTION,
+  control: {
+    movementLock: "full",
+    directionLock: "full",
+    moveCancelsRecovery: false,
+    dodgeCancelsRecovery: true,
+    inputBufferMs: 140,
+  },
   totalDurationMs: 350,
 };
 
@@ -56,6 +65,28 @@ const resolveAnimationKey = (
 ): ActionBattleAnimationKey =>
   value ?? DEFAULT_ACTION_BATTLE_ATTACK_PROFILE.animationKey;
 
+const resolveControlLock = (
+  value: ActionBattleControlLock | undefined,
+  legacyEnabled: boolean
+): ActionBattleControlLock =>
+  value === "none" || value === "active" || value === "full"
+    ? value
+    : legacyEnabled
+      ? "full"
+      : "none";
+
+const normalizeControl = (
+  control: ActionBattleAttackControlOptions | undefined,
+  movementLock: boolean,
+  directionLock: boolean
+) => ({
+  movementLock: resolveControlLock(control?.movementLock, movementLock),
+  directionLock: resolveControlLock(control?.directionLock, directionLock),
+  moveCancelsRecovery: control?.moveCancelsRecovery ?? false,
+  dodgeCancelsRecovery: control?.dodgeCancelsRecovery ?? true,
+  inputBufferMs: nonNegativeMs(control?.inputBufferMs, 140),
+});
+
 export function normalizeActionBattleAttackProfile(
   profile: ActionBattleAttackProfile | undefined = {},
   fallbacks: ActionBattleAttackProfileFallbacks = {}
@@ -77,6 +108,13 @@ export function normalizeActionBattleAttackProfile(
   const totalDurationMs = startupMs + activeMs + recoveryMs;
   const cooldownMs = nonNegativeMs(profile.cooldownMs, totalDurationMs);
   const hitboxes = profile.hitboxes ?? fallbacks.hitboxes;
+  const movementLock =
+    profile.movementLock ??
+    fallbacks.lockMovement ??
+    DEFAULT_ACTION_BATTLE_ATTACK_PROFILE.movementLock;
+  const directionLock =
+    profile.directionLock ??
+    DEFAULT_ACTION_BATTLE_ATTACK_PROFILE.directionLock;
 
   const normalized: NormalizedActionBattleAttackProfile = {
     id: profile.id || fallbacks.id || DEFAULT_ACTION_BATTLE_ATTACK_PROFILE.id,
@@ -84,13 +122,8 @@ export function normalizeActionBattleAttackProfile(
     activeMs,
     recoveryMs,
     cooldownMs,
-    movementLock:
-      profile.movementLock ??
-      fallbacks.lockMovement ??
-      DEFAULT_ACTION_BATTLE_ATTACK_PROFILE.movementLock,
-    directionLock:
-      profile.directionLock ??
-      DEFAULT_ACTION_BATTLE_ATTACK_PROFILE.directionLock,
+    movementLock,
+    directionLock,
     animationKey: resolveAnimationKey(profile.animationKey),
     hitPolicy: resolveHitPolicy(profile.hitPolicy),
     damageMultiplier: nonNegativeMultiplier(
@@ -102,6 +135,7 @@ export function normalizeActionBattleAttackProfile(
       DEFAULT_ACTION_BATTLE_ATTACK_PROFILE.knockbackMultiplier
     ),
     reaction: normalizeActionBattleHitReaction(profile.reaction),
+    control: normalizeControl(profile.control, movementLock, directionLock),
     totalDurationMs,
   };
 
@@ -111,3 +145,12 @@ export function normalizeActionBattleAttackProfile(
 
   return normalized;
 }
+
+export const getActionBattleControlLockDuration = (
+  profile: NormalizedActionBattleAttackProfile,
+  lock: ActionBattleControlLock
+) => {
+  if (lock === "none") return 0;
+  if (lock === "active") return profile.startupMs + profile.activeMs;
+  return profile.totalDurationMs;
+};

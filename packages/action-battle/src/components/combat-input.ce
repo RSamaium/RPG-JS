@@ -19,6 +19,11 @@
     return value && typeof value === "object" ? value : null;
   });
 
+  const guardOptions = computed(() => {
+    const value = actionBattleCombatOptions().player?.guard;
+    return value && typeof value === "object" ? value : null;
+  });
+
   const direction = () =>
     typeof sprite?.getDirection === "function"
       ? sprite.getDirection()
@@ -38,6 +43,21 @@
       keyUp() {
         if (!isCurrentPlayer() || chargedOptions()?.enabled === false) return;
         engine.processAction("action-battle:charge-release", {
+          direction: direction(),
+        });
+      },
+    },
+    guard: {
+      bind: guardOptions()?.control ?? "f",
+      keyDown() {
+        if (!isCurrentPlayer() || guardOptions()?.enabled === false) return;
+        engine.processAction("defense", {
+          direction: direction(),
+        });
+      },
+      keyUp() {
+        if (!isCurrentPlayer() || guardOptions()?.enabled === false) return;
+        engine.processAction("action-battle:guard-end", {
           direction: direction(),
         });
       },

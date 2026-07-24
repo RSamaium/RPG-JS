@@ -197,6 +197,10 @@ export interface ActionBattleHitResult {
   reaction?: NormalizedActionBattleHitReactionProfile;
   cancelled?: boolean;
   metadata?: Record<string, any>;
+  defense?: {
+    kind: "guard" | "parry";
+    staggerMs: number;
+  };
 }
 
 export interface ActionBattleHitHooks {

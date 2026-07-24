@@ -85,7 +85,12 @@ const applyEventHitbox = (
 const collectConfiguredEventHitboxes = (scene: any): Map<string, StudioEventHitboxSize> => {
   const configuredEvents = new Map<string, any>();
   for (const event of collectStudioMapEvents(scene)) {
-    const ids = [event?.eventId, event?.id, event?._id]
+    const ids = [
+      event?.runtimeEventId,
+      event?.eventId,
+      event?.id,
+      event?._id,
+    ]
       .filter((value): value is string => typeof value === "string" && value.length > 0);
     ids.forEach((id) => configuredEvents.set(id, event));
   }

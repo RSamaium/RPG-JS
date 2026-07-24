@@ -114,6 +114,11 @@ describe("Studio event runtime", () => {
         graphic: "hurt-media",
         repeat: 1,
       },
+      stagger: {
+        animationName: "attack",
+        graphic: "hurt-media",
+        repeat: 1,
+      },
       die: {
         animationName: "attack",
         graphic: "die-media",

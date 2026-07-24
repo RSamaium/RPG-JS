@@ -17,6 +17,7 @@ export type {
   BattleAiLegacyDefeatedCallback,
   BattleAiLegacyOptions,
   BattleAiHealthBarOptions,
+  BattleAiDeathPresentationOptions,
   BattleAiRewardItem,
   BattleAiRewards,
 } from "./ai.server";
@@ -47,6 +48,9 @@ export type {
   ActionBattleAttackHitboxMap,
   ActionBattleAttackHitPolicy,
   ActionBattleAttackProfile,
+  ActionBattleAttackControlOptions,
+  ActionBattleControlLock,
+  NormalizedActionBattleAttackControlOptions,
   ActionBattleHitReactionProfile,
   NormalizedActionBattleHitReactionProfile,
   NormalizedActionBattleAttackProfile,
@@ -55,6 +59,10 @@ export type {
   ActionBattleComboOptions,
   ActionBattleChargedAttackOptions,
   ActionBattleDodgeOptions,
+  ActionBattleGuardOptions,
+  ActionBattleSoftTargetingOptions,
+  ActionBattleCombatDirectorOptions,
+  ActionBattleFeedbackOptions,
   ActionBattleSystemOptions,
   ActionBattleAiSystemOptions,
   ActionBattleVisualComposer,
@@ -159,9 +167,25 @@ export {
 } from "./core/ai-behavior-tree";
 export {
   DEFAULT_ACTION_BATTLE_ATTACK_PROFILE,
+  getActionBattleControlLockDuration,
   normalizeActionBattleAttackProfile,
   type ActionBattleAttackProfileFallbacks,
 } from "./core/attack-profile";
+export {
+  beginActionBattleGuard,
+  clearActionBattleDefense,
+  consumeActionBattleCounter,
+  endActionBattleGuard,
+  isActionBattleGuarding,
+  normalizeActionBattleGuardOptions,
+  resolveActionBattleDefense,
+  type ActionBattleDefenseKind,
+  type ActionBattleDefenseResolution,
+} from "./core/defense";
+export {
+  acquireActionBattleAttackSlot,
+  releaseActionBattleAttackSlot,
+} from "./core/combat-director";
 export {
   ACTION_BATTLE_HITBOX_FRAME_MS,
   ActionBattleHitTracker,
@@ -228,10 +252,16 @@ export {
   resolveActionBattleComboStep,
 } from "./core/player-combat";
 export {
+  directionToActionBattleTarget,
+  resolveActionBattleSoftTarget,
+  type ActionBattleSoftTargetResult,
+} from "./targeting";
+export {
   ACTION_BATTLE_CLIENT_VISUAL_ID,
   ACTION_BATTLE_HIT_FX_COMPONENT_ID,
   ACTION_BATTLE_DAMAGE_COMPONENT_ID,
   ACTION_BATTLE_TELEGRAPH_COMPONENT_ID,
+  ACTION_BATTLE_SOFT_TARGET_COMPONENT_ID,
   createActionBattleClientVisuals,
   createActionBattleVisual,
   createClassicActionBattleVisual,
@@ -262,6 +292,8 @@ export {
   applyPlayerHitToEvent,
   ACTION_BATTLE_ACTION_BAR_GUI_ID,
   ACTION_BATTLE_DODGE,
+  ACTION_BATTLE_GUARD_START,
+  ACTION_BATTLE_GUARD_END,
   openActionBattleActionBar,
   updateActionBattleActionBar,
   createActionBattleServer,

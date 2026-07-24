@@ -7,14 +7,17 @@ import {
   ActionBattleOptions,
 } from "./types";
 import { normalizeActionBattleOptions, setActionBattleOptions } from "./config";
-import { manhattanDistance, parseAoeMask } from "./targeting";
+import {
+  manhattanDistance,
+  parseAoeMask,
+  resolveActionBattleSoftTarget,
+} from "./targeting";
 import { emitActionBattleClientVisual } from "./visual";
 import {
   applyActionBattleAttackDirection,
   resolveActionBattleAttackDirection,
 } from "./attack-input";
 import {
-  forceActionBattleLocomotionAnimation,
   withActionBattleAnimationUnlocked,
 } from "./locomotion";
 import { getActionBattleSystems, setActionBattleSystems } from "./core/context";
@@ -40,6 +43,17 @@ import {
   handleActionBattleProjectileImpact,
 } from "./core/action-use";
 import { normalizeActionBattleAttackProfile } from "./core/attack-profile";
+import { getActionBattleControlLockDuration } from "./core/attack-profile";
+import {
+  acquireActionBattleControl,
+  releaseActionBattleControls,
+} from "./core/control-state";
+import {
+  beginActionBattleGuard,
+  clearActionBattleDefense,
+  consumeActionBattleCounter,
+  endActionBattleGuard,
+} from "./core/defense";
 import {
   resolveActionBattleWeapon,
   resolveActionBattleWeaponAttackProfile,
@@ -55,7 +69,6 @@ import type {
 } from "./types";
 
 export const ACTION_BATTLE_ACTION_BAR_GUI_ID = "action-battle-action-bar";
-const DEFAULT_ATTACK_LOCK_DURATION_MS = 350;
 
 /**
  * Default player attack hitboxes offsets for each direction
@@ -71,11 +84,8 @@ export const DEFAULT_PLAYER_ATTACK_HITBOXES = {
 const beginPlayerAttackLock = (
   player: RpgPlayer,
   map: ReturnType<RpgPlayer["getCurrentMap"]> | undefined,
-  durationMs: number,
-  locks: { movement: boolean; direction: boolean }
+  profile: NormalizedActionBattleAttackProfile
 ): boolean => {
-  if (durationMs <= 0) return true;
-
   const runtimePlayer = player as any;
   const now = Date.now();
   if (
@@ -85,37 +95,53 @@ const beginPlayerAttackLock = (
     return false;
   }
 
-  const lockId = (runtimePlayer.__actionBattleAttackLockId ?? 0) + 1;
-  runtimePlayer.__actionBattleAttackLockId = lockId;
-  runtimePlayer.__actionBattleAttackLockedUntil = now + durationMs;
+  releaseActionBattleControls(player, "attack");
+  const actionId = (runtimePlayer.__actionBattleAttackLockId ?? 0) + 1;
+  runtimePlayer.__actionBattleAttackLockId = actionId;
+  runtimePlayer.__actionBattleAttackLockedUntil =
+    now + profile.totalDurationMs;
+  runtimePlayer.__actionBattleAttackActiveUntil =
+    now + profile.startupMs + profile.activeMs;
+  runtimePlayer.__actionBattleAttackProfile = profile;
 
-  const previousCanMove = player.canMove;
-  const previousDirectionFixed = player.directionFixed;
-  const previousAnimationFixed = player.animationFixed;
-  runtimePlayer.__actionBattlePreviousCanMove = previousCanMove;
-  runtimePlayer.__actionBattlePreviousDirectionFixed = previousDirectionFixed;
-  runtimePlayer.__actionBattlePreviousAnimationFixed = previousAnimationFixed;
+  const movementDuration = getActionBattleControlLockDuration(
+    profile,
+    profile.control.movementLock
+  );
+  const directionDuration = getActionBattleControlLockDuration(
+    profile,
+    profile.control.directionLock
+  );
 
-  if (locks.movement) {
+  if (movementDuration > 0) {
     player.pendingInputs = [];
     player.lastProcessedInputTs = 0;
     (map as any)?.stopMovement?.(player);
-    player.canMove = false;
+    acquireActionBattleControl(player, {
+      owner: "attack",
+      movement: true,
+      durationMs: movementDuration,
+    });
   }
-  if (locks.direction) {
-    player.directionFixed = true;
+  if (directionDuration > 0) {
+    acquireActionBattleControl(player, {
+      owner: "attack",
+      direction: true,
+      durationMs: directionDuration,
+    });
   }
-
+  acquireActionBattleControl(player, {
+    owner: "attack",
+    animation: true,
+    durationMs: profile.totalDurationMs,
+  });
   setTimeout(() => {
-    if (runtimePlayer.__actionBattleAttackLockId !== lockId) return;
+    if (runtimePlayer.__actionBattleAttackLockId !== actionId) return;
     runtimePlayer.__actionBattleAttackLockedUntil = 0;
-    player.canMove = previousCanMove;
-    player.directionFixed = previousDirectionFixed;
-    player.animationFixed = previousAnimationFixed;
-    if (locks.movement && !previousAnimationFixed) {
-      forceActionBattleLocomotionAnimation(player, "stand");
-    }
-  }, durationMs);
+    runtimePlayer.__actionBattleAttackActiveUntil = 0;
+    runtimePlayer.__actionBattleAttackProfile = undefined;
+    releaseActionBattleControls(player, "attack");
+  }, profile.totalDurationMs);
 
   return true;
 };
@@ -125,11 +151,9 @@ const cancelPlayerAttackRecovery = (player: RpgPlayer) => {
   runtimePlayer.__actionBattleAttackLockId =
     (runtimePlayer.__actionBattleAttackLockId ?? 0) + 1;
   runtimePlayer.__actionBattleAttackLockedUntil = 0;
-  player.canMove = runtimePlayer.__actionBattlePreviousCanMove ?? true;
-  player.directionFixed =
-    runtimePlayer.__actionBattlePreviousDirectionFixed ?? false;
-  player.animationFixed =
-    runtimePlayer.__actionBattlePreviousAnimationFixed ?? false;
+  runtimePlayer.__actionBattleAttackActiveUntil = 0;
+  runtimePlayer.__actionBattleAttackProfile = undefined;
+  releaseActionBattleControls(player, "attack");
 };
 
 const isBattleEvent = (event: RpgEvent) => !!(event as any).battleAi;
@@ -331,6 +355,20 @@ export function applyActionBattleEntityHit(
     }
   );
 
+  if (result.defense) {
+    emitActionBattleClientVisual({
+      moment: result.defense.kind === "parry" ? "parry" : "block",
+      entity: target,
+      target,
+      attacker,
+      damage: result.damage,
+      result,
+    });
+    if (result.defense.kind === "parry") {
+      (attacker as any).battleAi?.stagger?.(result.defense.staggerMs, target);
+    }
+  }
+
   if (!result.cancelled && ai) {
     ai.handleDamage(attacker, {
       damage: result.damage,
@@ -425,7 +463,33 @@ const performPlayerAttack = (
   metadata: Record<string, any> = {}
 ): boolean => {
   const map = player.getCurrentMap();
-  const direction = resolveActionBattleAttackDirection(player, input);
+  const inputDirection = resolveActionBattleAttackDirection(player, input);
+  const softTargeting = options.combat?.player?.softTargeting;
+  const softTargetOptions =
+    softTargeting && typeof softTargeting === "object"
+      ? softTargeting
+      : undefined;
+  const softTarget =
+    softTargetOptions?.enabled !== false && map
+      ? resolveActionBattleSoftTarget(
+          player,
+          map
+            .getEvents()
+            .filter(
+              (event: RpgEvent) =>
+                isBattleEvent(event) &&
+                canActionBattleTarget(
+                  player,
+                  event,
+                  getActionBattleTargets(player, "events"),
+                  options.combat?.targets
+                )
+            ),
+          inputDirection,
+          softTargetOptions
+        )
+      : null;
+  const direction = softTarget?.direction ?? inputDirection;
   applyActionBattleAttackDirection(player, direction);
   const directionKey = direction as string;
   const resolveActiveHitboxes = () =>
@@ -436,25 +500,21 @@ const performPlayerAttack = (
     return false;
   }
 
-  const lockMovement = attackProfile.movementLock;
-  const lockDirection = attackProfile.directionLock;
-  const lockDurationMs =
-    attackProfile.totalDurationMs ?? DEFAULT_ATTACK_LOCK_DURATION_MS;
-  const actionLocked = (lockMovement || lockDirection) && lockDurationMs > 0;
+  const actionLocked = attackProfile.totalDurationMs > 0;
 
-  if (
-    actionLocked &&
-    !beginPlayerAttackLock(player, map, Math.max(0, lockDurationMs), {
-      movement: lockMovement,
-      direction: lockDirection,
-    })
-  ) {
+  if (actionLocked && !beginPlayerAttackLock(player, map, attackProfile)) {
     return false;
   }
 
+  const counter = consumeActionBattleCounter(player);
+
   withActionBattleAnimationUnlocked(player, () => {
     emitActionBattleClientVisual({
-      moment: metadata.charged ? "chargeRelease" : "attack",
+      moment: counter
+        ? "counter"
+        : metadata.charged
+          ? "chargeRelease"
+          : "attack",
       entity: player,
       pattern: metadata.comboStep !== undefined
         ? `combo-${metadata.comboStep + 1}`
@@ -462,13 +522,12 @@ const performPlayerAttack = (
           ? "charged"
           : undefined,
       result: { metadata },
+      target: softTarget?.target,
+      // Resolve Studio/player animation functions on the authoritative entity
+      // before the client visual payload is structured-cloned.
+      animations: options.animations,
     });
   });
-  if (actionLocked) {
-    player.animationFixed = true;
-    (player as any).__actionBattleAttackActiveUntil =
-      Date.now() + attackProfile.startupMs + attackProfile.activeMs;
-  }
 
   const attackId = createActionBattleAttackId(player.id, attackProfile.id);
   const weapon = resolveActionBattleWeapon(player);
@@ -476,11 +535,14 @@ const performPlayerAttack = (
   const targetSelector = getActionBattleTargets(player, "events");
   const hitMetadata = {
     ...metadata,
+    counter: Boolean(counter),
     attackId,
     attackProfileId: attackProfile.id,
     reaction: attackProfile.reaction,
-    damageMultiplier: attackProfile.damageMultiplier,
-    knockbackMultiplier: attackProfile.knockbackMultiplier,
+    damageMultiplier:
+      attackProfile.damageMultiplier * (counter?.damageMultiplier ?? 1),
+    knockbackMultiplier:
+      attackProfile.knockbackMultiplier * (counter?.staggerMultiplier ?? 1),
   };
 
   const processHits = (hits: any[]) => {
@@ -535,6 +597,10 @@ const mergeAttackProfileOverrides = (
     ...base.reaction,
     ...override.reaction,
   },
+  control: {
+    ...base.control,
+    ...override.control,
+  },
   hitboxes: {
     ...base.hitboxes,
     ...override.hitboxes,
@@ -561,6 +627,8 @@ const resolvePlayerAttackProfile = (
 const ACTION_BATTLE_CHARGE_START = "action-battle:charge-start";
 const ACTION_BATTLE_CHARGE_RELEASE = "action-battle:charge-release";
 export const ACTION_BATTLE_DODGE = "action-battle:dodge";
+export const ACTION_BATTLE_GUARD_START = Control.Defense;
+export const ACTION_BATTLE_GUARD_END = "action-battle:guard-end";
 
 interface PlayerCombatRuntimeState {
   comboIndex: number;
@@ -945,9 +1013,59 @@ export const createActionBattleServer = (
         const state = getPlayerCombatState(player);
         const charged = objectOption(options.combat?.player?.chargedAttack);
         const dodge = objectOption(options.combat?.player?.dodge);
+        const guard = objectOption(options.combat?.player?.guard);
+        const runtimePlayer = player as any;
+        const now = Date.now();
+        const activeProfile = runtimePlayer
+          .__actionBattleAttackProfile as
+          | NormalizedActionBattleAttackProfile
+          | undefined;
+        const activeUntil = Number(
+          runtimePlayer.__actionBattleAttackActiveUntil ?? 0
+        );
+        const lockedUntil = Number(
+          runtimePlayer.__actionBattleAttackLockedUntil ?? 0
+        );
+        const directionalActions = new Set<any>([
+          Control.Up,
+          Control.Down,
+          Control.Left,
+          Control.Right,
+          "up",
+          "down",
+          "left",
+          "right",
+        ]);
+        if (
+          activeProfile?.control.moveCancelsRecovery &&
+          lockedUntil > now &&
+          activeUntil <= now &&
+          directionalActions.has(input.action)
+        ) {
+          cancelPlayerAttackRecovery(player);
+          state.queuedCombo = false;
+        }
+
+        if (input.action === ACTION_BATTLE_GUARD_END) {
+          endActionBattleGuard(player);
+          return;
+        }
+
+        if (input.action === ACTION_BATTLE_GUARD_START && guard?.enabled) {
+          if (activeUntil > now) return;
+          if (lockedUntil > now) {
+            cancelPlayerAttackRecovery(player);
+            state.queuedCombo = false;
+          }
+          beginActionBattleGuard(player, guard, now);
+          emitActionBattleClientVisual({
+            moment: "guard",
+            entity: player,
+          });
+          return;
+        }
 
         if (input.action === ACTION_BATTLE_DODGE && dodge?.enabled) {
-          const now = Date.now();
           const lockedUntil = Number((player as any).__actionBattleDodgeLockedUntil ?? 0);
           const attackLockedUntil = Number((player as any).__actionBattleAttackLockedUntil ?? 0);
           const activeUntil = Number(
@@ -962,7 +1080,10 @@ export const createActionBattleServer = (
           ) {
             return;
           }
-          if (attackLockedUntil > now) {
+          if (
+            attackLockedUntil > now &&
+            (activeProfile?.control.dodgeCancelsRecovery ?? true)
+          ) {
             cancelPlayerAttackRecovery(player);
             state.queuedCombo = false;
           }
@@ -1024,14 +1145,16 @@ export const createActionBattleServer = (
         }
 
         if (input.action == Control.Action) {
-          const now = Date.now();
           const combo = objectOption(options.combat?.player?.combo);
           const lockedUntil = Number((player as any).__actionBattleAttackLockedUntil ?? 0);
           if (lockedUntil > now) {
             const remaining = lockedUntil - now;
             if (
               combo?.enabled &&
-              remaining <= (combo.bufferMs ?? 140) &&
+              remaining <=
+                (combo.bufferMs ??
+                  activeProfile?.control.inputBufferMs ??
+                  160) &&
               !state.queuedCombo
             ) {
               state.queuedCombo = true;
@@ -1067,6 +1190,11 @@ export const createActionBattleServer = (
         if (actionBar?.enabled && actionBar?.autoOpen) {
           openActionBattleActionBar(player, options);
         }
+      },
+      onDisconnected(player: RpgPlayer) {
+        releaseActionBattleControls(player);
+        clearActionBattleDefense(player);
+        playerCombatStates.delete(player);
       },
     },
     event: {
@@ -1133,6 +1261,7 @@ export {
 } from "./core/attack-runtime";
 export {
   DEFAULT_ACTION_BATTLE_ATTACK_PROFILE,
+  getActionBattleControlLockDuration,
   normalizeActionBattleAttackProfile,
   type ActionBattleAttackProfileFallbacks,
 } from "./core/attack-profile";
@@ -1142,10 +1271,37 @@ export type {
   ActionBattleAttackHitboxMap,
   ActionBattleAttackHitPolicy,
   ActionBattleAttackProfile,
+  ActionBattleAttackControlOptions,
+  ActionBattleControlLock,
+  NormalizedActionBattleAttackControlOptions,
+  ActionBattleGuardOptions,
+  ActionBattleSoftTargetingOptions,
+  ActionBattleCombatDirectorOptions,
+  ActionBattleFeedbackOptions,
   ActionBattleHitReactionProfile,
   NormalizedActionBattleHitReactionProfile,
   NormalizedActionBattleAttackProfile,
 } from "./types";
+export {
+  beginActionBattleGuard,
+  clearActionBattleDefense,
+  consumeActionBattleCounter,
+  endActionBattleGuard,
+  isActionBattleGuarding,
+  normalizeActionBattleGuardOptions,
+  resolveActionBattleDefense,
+  type ActionBattleDefenseKind,
+  type ActionBattleDefenseResolution,
+} from "./core/defense";
+export {
+  acquireActionBattleAttackSlot,
+  releaseActionBattleAttackSlot,
+} from "./core/combat-director";
+export {
+  directionToActionBattleTarget,
+  resolveActionBattleSoftTarget,
+  type ActionBattleSoftTargetResult,
+} from "./targeting";
 export type {
   ActionBattleActionConfig,
   ActionBattleActionMode,
@@ -1216,6 +1372,7 @@ export type {
   BattleAiLegacyDefeatedCallback,
   BattleAiLegacyOptions,
   BattleAiOptions,
+  BattleAiDeathPresentationOptions,
   BattleAiRewardItem,
   BattleAiRewards,
   HitResult,

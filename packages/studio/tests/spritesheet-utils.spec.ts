@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import {
   createSpriteSheetObject,
   resolveSpritesheet,
+  STUDIO_DEFAULT_ATTACK_ANIMATION_DURATION_MS,
   STUDIO_DEFAULT_CHARACTER_DISPLAY_SCALE,
 } from "../src/spritesheet-utils";
 
@@ -68,6 +69,49 @@ describe("Studio spritesheet utils", () => {
     });
 
     expect(spritesheet.trimTransparentBounds).toBe(true);
+  });
+
+  test("plays attacks in 350ms without accelerating locomotion", async () => {
+    const spritesheet = await createSpriteSheetObject({
+      type: "spritesheet",
+      id: "generated-attack",
+      fileName: "attack.png",
+      metadata: {
+        frameWidth: 4,
+        frameHeight: 4,
+        fourDirections: true,
+      },
+    });
+
+    const params = { direction: "down" };
+    const attack = spritesheet.textures.attack.animations(params)[0];
+    const walk = spritesheet.textures.walk.animations(params)[0];
+    const attackDurationMs =
+      (attack.at(-1).time / 60) * 1_000;
+
+    expect(attackDurationMs).toBe(
+      STUDIO_DEFAULT_ATTACK_ANIMATION_DURATION_MS,
+    );
+    expect(walk.at(-1).time).toBe(41);
+  });
+
+  test("accepts a Studio media attack duration override", async () => {
+    const spritesheet = await createSpriteSheetObject({
+      type: "spritesheet",
+      id: "generated-heavy-attack",
+      fileName: "heavy-attack.png",
+      metadata: {
+        frameWidth: 4,
+        frameHeight: 4,
+        attackDurationMs: 600,
+      },
+    });
+
+    const attack = spritesheet.textures.attack.animations({
+      direction: "down",
+    })[0];
+
+    expect((attack.at(-1).time / 60) * 1_000).toBeCloseTo(600);
   });
 
   test("keeps LPC sprite real size in source pixels when media is scaled", async () => {

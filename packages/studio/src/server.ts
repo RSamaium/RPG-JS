@@ -16,6 +16,7 @@ import { getStudioSkillChangeNotification } from "./skill-notification";
 import { triggerMatchesExecution, type StudioTouchTarget } from "./touch-runtime";
 import { compileStudioMapStream, isStudioDirectLoadPayload, prepareStudioMapPayload, type PreparedStudioMapPayload } from "./map-streaming";
 import { prepareStudioTerrainControlRegions } from "./terrain-control-streaming";
+import { assignStudioEventPlacementIds } from "./event-placement";
 export { createStudioActionBattleAnimations } from "./action-battle-animations";
 export type { StudioCombatAnimationIds, StudioCombatAnimationOptions } from "./action-battle-animations";
 
@@ -566,7 +567,9 @@ const normalizeStudioMapPayload = async (
   const params = mapResponse.params ?? {};
   const isV2 = mapResponse.creationDetails?.version === "v2";
   const resolvedEvents = await resolveMapEventReferences(mapResponse.events ?? mapResponse.data?.events, { useLocalBundleEvents });
-  const hydratedEvents = await hydrateEventMediaReferences(resolvedEvents, resolvedProvider);
+  const hydratedEvents = assignStudioEventPlacementIds(
+    await hydrateEventMediaReferences(resolvedEvents, resolvedProvider)
+  );
   const hydratedCommonEvents = await hydrateEventMediaReferences(
     parseArrayValue(mapResponse.commonEvents ?? mapResponse.data?.commonEvents),
     resolvedProvider,
@@ -773,7 +776,9 @@ export default (_config?: unknown) => {
         mapExtended.globalConfig = mapData.config ?? {};
 
         const resolvedEvents = await resolveMapEventReferences(mapData?.events ?? mapData?.data?.events, { useLocalBundleEvents });
-        const hydratedEvents = await hydrateEventMediaReferences(resolvedEvents);
+        const hydratedEvents = assignStudioEventPlacementIds(
+          await hydrateEventMediaReferences(resolvedEvents)
+        );
         const resolvedEventsById = new Map<string, any>();
         hydratedEvents.forEach((entry) => {
           const id = String(entry?.eventId ?? entry?.id ?? entry?._id ?? "");
@@ -935,6 +940,9 @@ export default (_config?: unknown) => {
 
           // Add trigger-specific execution methods
           eventObj.onInit = async function () {
+            (this as any).sourceEventId =
+              object.sourceEventId ?? object.eventId ?? object.id ?? object._id;
+            (this as any).studioEventId = (this as any).sourceEventId;
             setTimeout(async () => {
               const map = this.getCurrentMap();
               const [player] = map?.getPlayers() ?? [];
@@ -1068,7 +1076,11 @@ export default (_config?: unknown) => {
           x: object.x * mapExtended.scale,
           y: object.y * mapExtended.scale,
           ...(hitbox ? { hitbox } : {}),
-          id: object.eventId || object.id || object._id,
+          id:
+            object.runtimeEventId ||
+            object.eventId ||
+            object.id ||
+            object._id,
         };
       },
     },

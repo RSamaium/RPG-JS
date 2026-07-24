@@ -8,7 +8,7 @@ const normalizeHitRate = (value: unknown): number | undefined => {
 };
 
 const normalizeSkillRecord = (record: any): any => {
-  const hitRate = normalizeHitRate(record.hitRate);
+  const hitRate = normalizeHitRate(record.hitRate ?? record.successRate);
   return {
     ...record,
     spCost: record.spCost ?? record.mpCost ?? 0,
