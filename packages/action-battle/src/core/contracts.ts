@@ -2,6 +2,7 @@ import type { RpgEvent, RpgPlayer } from "@rpgjs/server";
 import type { AttackPattern, EnemyType, AiState } from "../ai.server";
 import type { NormalizedActionBattleHitReactionProfile } from "../types";
 import type {
+  ActionBattleAiTreeContext,
   ActionBattleAiIntent,
   ActionBattleAiSimpleBehavior,
   ActionBattleAiTreeInput,
@@ -224,6 +225,16 @@ export type ActionBattleAiBehavior = (
   context: ActionBattleAiContext
 ) => ActionBattleAiDecision | void;
 
+/**
+ * Reusable authoritative action registered through `provideActionBattle()`.
+ *
+ * Returning `false` lets the AI continue to another fallback behavior.
+ */
+export type ActionBattleAiAction = (
+  context: ActionBattleAiTreeContext,
+  payload?: Readonly<Record<string, unknown>>
+) => void | boolean;
+
 export interface ActionBattleAiPreset {
   preset?: string | ActionBattleAiPreset;
   faction?: string;
@@ -265,6 +276,7 @@ export interface ActionBattleAiPreset {
 export interface ActionBattleSystems {
   combat: ActionBattleCombatSystem;
   ai: {
+    actions: Record<string, ActionBattleAiAction>;
     behaviors: Record<string, ActionBattleAiBehavior>;
     presets: Record<string, ActionBattleAiPreset>;
   };

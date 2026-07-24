@@ -11,6 +11,7 @@ import {
   AttackPattern,
   provideActionBattle,
   action,
+  callAction,
   chase,
   condition,
   distanceLessThan,
@@ -20,11 +21,17 @@ import {
   ifHpBelow,
   ifTargetInRange,
   keepDistance,
+  phase,
   selector,
   sequence,
+  sequenceWithDelay,
+  setSpeed,
   targetInRange,
+  teleportNearTarget,
   useAttack,
   useSkill,
+  visual,
+  wait,
 } from "@rpgjs/action-battle/server";
 import { provideSaveStorage } from "@rpgjs/server";
 
@@ -416,6 +423,56 @@ export function AiTreeElite(
   };
 }
 
+export function AiPhaseBoss() {
+  return {
+    name: "AI Demo - Phase Boss",
+    onInit() {
+      setupActionBattleEnemy(this, {
+        name: "Phase Boss",
+        x: 420,
+        y: 260,
+        hp: 900,
+        atk: 24,
+        speed: 2,
+        ai: {
+          preset: "tank",
+          attackRange: 72,
+          attackCooldown: 1000,
+          poise: 5,
+          behaviorTree: selector([
+            phase(
+              "boss-alert",
+              0.6,
+              sequenceWithDelay("boss-alert-sequence", [
+                visual({ kind: "bubble", text: "!", durationMs: 700 }),
+                wait(700),
+                setSpeed(3.5),
+                teleportNearTarget({ distance: 140 }),
+              ])
+            ),
+            phase(
+              "boss-rage",
+              0.3,
+              sequenceWithDelay("boss-rage-sequence", [
+                visual({ kind: "rage", durationMs: 900 }),
+                wait(450),
+                callAction("sample-boss-rage", { attackBonus: 8 }),
+                useAttack(AttackPattern.Charged),
+              ])
+            ),
+            sequence([
+              condition(targetInRange(72)),
+              action(useAttack(AttackPattern.Combo)),
+            ]),
+            action(chase()),
+          ]),
+          rewards: { exp: 120, gold: 80 },
+        },
+      });
+    },
+  };
+}
+
 export default createServer({
   providers: [
   //  provideTiledMap(),
@@ -442,6 +499,14 @@ export default createServer({
       },
       visual: sampleActionBattleVisual,
       ai: {
+        actions: {
+          "sample-boss-rage": ({ event }, payload) => {
+            const attackBonus = Number(payload?.attackBonus ?? 0);
+            if (Number.isFinite(attackBonus)) {
+              event.param[ATK] += attackBonus;
+            }
+          },
+        },
         presets: {
           "sample-rusher": {
             preset: "aggressive",
@@ -686,6 +751,7 @@ export default createServer({
               //{ event: Event() },
               { event: AiTreeElite(200, 300, "elite-a", "brute") },
               { event: AiTreeElite(300, 200, "elite-b", "skirmisher") },
+              { event: AiPhaseBoss() },
             ]
           }
         ],

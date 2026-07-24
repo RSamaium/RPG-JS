@@ -219,6 +219,7 @@ export const defaultEnemyPresets: Record<string, ActionBattleAiPreset> = {
 export const defaultActionBattleSystems: ActionBattleSystems = {
   combat: defaultCombatSystem,
   ai: {
+    actions: {},
     behaviors: defaultEnemyBehaviors,
     presets: defaultEnemyPresets,
   },

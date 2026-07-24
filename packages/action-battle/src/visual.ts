@@ -64,6 +64,7 @@ const serializeActionBattleVisualContext = (
   result: serializeResult(context.result),
   skill: serializeSkill(context.skill),
   pattern: context.pattern,
+  visual: context.visual,
   animations: context.animations,
   animationDefaults: context.animationDefaults,
 });
@@ -85,9 +86,9 @@ export function createActionBattleClientVisuals(
   options = getActionBattleOptions()
 ) {
   return {
-    [ACTION_BATTLE_CLIENT_VISUAL_ID]: (context: any) => {
+    [ACTION_BATTLE_CLIENT_VISUAL_ID]: (context: any, helpers: any) => {
       const data = context.data ?? {};
-      playActionBattleVisual(options.visual, {
+      const visualContext = {
         moment: data.moment,
         entity: context.object ?? context.source ?? context.target,
         target: context.target,
@@ -97,9 +98,25 @@ export function createActionBattleClientVisuals(
         result: data.result,
         skill: data.skill,
         pattern: data.pattern,
+        visual: data.visual,
         animations: data.animations ?? options.animations,
         animationDefaults: data.animationDefaults,
-      });
+      } as ActionBattleVisualContext;
+
+      const cue = data.visual;
+      if (data.moment === "ai" && cue && typeof cue.kind === "string") {
+        const handler = options.ai?.visuals?.[cue.kind];
+        if (!handler) return;
+        return handler(
+          {
+            ...context,
+            visual: cue,
+          },
+          helpers
+        );
+      }
+
+      playActionBattleVisual(options.visual, visualContext);
     },
   };
 }

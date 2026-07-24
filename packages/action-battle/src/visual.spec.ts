@@ -163,4 +163,48 @@ describe("action battle visual composer", () => {
       })
     );
   });
+
+  test("routes generic AI visuals by kind and ignores unknown kinds", () => {
+    const rage = vi.fn();
+    const helpers = { flash: vi.fn() };
+    const object = createEntity();
+    const visuals = createActionBattleClientVisuals({
+      ai: {
+        visuals: {
+          rage,
+        },
+      },
+    } as any);
+    const play = visuals[ACTION_BATTLE_CLIENT_VISUAL_ID];
+
+    play(
+      {
+        object,
+        data: {
+          moment: "ai",
+          visual: { kind: "rage", durationMs: 600 },
+        },
+      },
+      helpers
+    );
+    play(
+      {
+        object,
+        data: {
+          moment: "ai",
+          visual: { kind: "not-registered" },
+        },
+      },
+      helpers
+    );
+
+    expect(rage).toHaveBeenCalledTimes(1);
+    expect(rage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        object,
+        visual: { kind: "rage", durationMs: 600 },
+      }),
+      helpers
+    );
+  });
 });

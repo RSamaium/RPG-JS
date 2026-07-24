@@ -110,6 +110,11 @@ export function normalizeActionBattleOptions(
     ...DEFAULT_ACTION_BATTLE_OPTIONS.systems?.ai,
     ...options.systems?.ai,
     ...options.ai,
+    actions: {
+      ...DEFAULT_ACTION_BATTLE_OPTIONS.systems?.ai?.actions,
+      ...options.systems?.ai?.actions,
+      ...options.ai?.actions,
+    },
     behaviors: {
       ...DEFAULT_ACTION_BATTLE_OPTIONS.systems?.ai?.behaviors,
       ...options.systems?.ai?.behaviors,
@@ -119,6 +124,11 @@ export function normalizeActionBattleOptions(
       ...DEFAULT_ACTION_BATTLE_OPTIONS.systems?.ai?.presets,
       ...options.systems?.ai?.presets,
       ...options.ai?.presets,
+    },
+    visuals: {
+      ...DEFAULT_ACTION_BATTLE_OPTIONS.systems?.ai?.visuals,
+      ...options.systems?.ai?.visuals,
+      ...options.ai?.visuals,
     },
   };
 
