@@ -848,6 +848,7 @@ behavior tree. Each rule checks a condition and returns an intent:
 import {
   AttackPattern,
   BattleAi,
+  action,
   chase,
   flee,
   ifDistanceLessThan,
@@ -973,13 +974,132 @@ The context includes:
 | `hpPercent` / `self.hpPercent` | Current HP ratio, or `null` if max HP is unavailable. |
 | `memory` | Mutable per-AI storage for custom behavior state. |
 
+### Boss phases and delayed sequences
+
+Phase helpers keep scripted behavior in the existing behavior-tree runtime.
+Their state is stored per AI instance in `memory`, so a preset can safely be
+shared by several enemies:
+
+```ts
+import {
+  AttackPattern,
+  BattleAi,
+  callAction,
+  chase,
+  phase,
+  selector,
+  sequenceWithDelay,
+  setSpeed,
+  teleportNearTarget,
+  useAttack,
+  visual,
+  wait
+} from "@rpgjs/action-battle/server";
+
+new BattleAi(event, {
+  behaviorTree: selector([
+    phase("rage", 0.6, sequenceWithDelay("rage-sequence", [
+      visual({ kind: "bubble", text: "!", durationMs: 700 }),
+      wait(700),
+      setSpeed(5),
+      teleportNearTarget({ distance: 160 }),
+      callAction("summon-wave", { count: 3 })
+    ])),
+    action(useAttack(AttackPattern.Melee)),
+    action(chase())
+  ])
+});
+```
+
+`phase(key, hpRatio, action)` completes once after HP falls below the ratio.
+`once(key, action)` provides the same one-time behavior without an HP
+condition. `cooldown(key, ms, action)` starts its cooldown only after the
+wrapped action succeeds. `sequenceWithDelay(key, steps)` advances across AI
+ticks, and `wait(ms)` uses the authoritative server clock without creating
+client-owned gameplay timers.
+
+Use `run(callback)` when project logic is local to the tree. For reusable or
+module-provided behavior, register a named action:
+
+```ts
+provideActionBattle({
+  ai: {
+    actions: {
+      "summon-wave": ({ event, target, memory }, payload) => {
+        const count = Number(payload?.count ?? 1);
+        // Use normal RPGJS server APIs here.
+      }
+    }
+  }
+});
+```
+
+`callAction()` returns failure when its name is not registered, allowing a
+selector to continue to a fallback branch.
+
+### Server-driven AI visuals
+
+`visual()` sends a JSON-shaped cue through the existing Action Battle client
+visual packet. The server decides when it happens; the client handler only
+renders it:
+
+```ts
+// Server
+visual({
+  kind: "ground-marker",
+  durationMs: 900,
+  position: { x: 320, y: 240 }
+});
+
+// Client
+provideActionBattle({
+  ai: {
+    visuals: {
+      "ground-marker"({ visual }, fx) {
+        fx.component(
+          "boss-ground-marker",
+          visual.position as { x: number; y: number },
+          { durationMs: visual.durationMs }
+        );
+      }
+    }
+  }
+});
+```
+
+Unknown visual kinds are ignored. Keep cue payloads serializable and use
+`once()` or `cooldown()` around cues selected by a tree branch so they are not
+sent on every 100 ms AI tick. Visual handlers must never apply damage, change
+stats, select targets, or otherwise own gameplay state.
+
+### Movement and server actions
+
+The advanced intent helpers are thin wrappers over the controlled event:
+
+| Helper | Runtime behavior |
+|---|---|
+| `setSpeed(value)` | Set the event's synchronized speed; non-consuming by default. |
+| `moveToPoint({ x, y })` | Use RPGJS `moveTo()` with the AI movement throttle. |
+| `holdPosition()` | Stop the current movement. |
+| `teleportTo({ x, y })` | Use RPGJS `teleport()` at a fixed position. |
+| `teleportNearTarget({ distance, angleDegrees? })` | Compute a position around the current target on the server, then teleport. |
+| `run(callback)` | Execute project logic directly with the current tree context. |
+| `callAction(name, payload?)` | Execute a reusable action from `ai.actions`. |
+
+Teleport helpers deliberately use the normal RPGJS teleport primitive and do
+not search for a collision-free position. Projects that need safe placement
+should resolve it in `run()` or a registered action before calling
+`teleportTo()`.
+
 ### Sample project
 
-`samples/sample-dev` contains three AI demo enemies on `center-map`:
+`samples/sample-dev` contains four AI demo enemies on `center-map`:
 
 - `Preset Rusher` uses a named preset.
 - `Simple Kiter` uses `simpleBehavior` and distance control.
 - `Tree Elite` uses a direct `behaviorTree`.
+- `Phase Boss` uses delayed phases, generic visuals, speed changes,
+  teleportation, and a registered action.
 
 ## Enemy types
 

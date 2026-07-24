@@ -1,7 +1,19 @@
 import { MAXHP } from "@rpgjs/server";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { AttackPattern, BattleAi } from "./ai.server";
-import { chase, idle, ifTargetVisible } from "./core/ai-behavior-tree";
+import {
+  callAction,
+  chase,
+  holdPosition,
+  idle,
+  ifTargetVisible,
+  moveToPoint,
+  run,
+  setSpeed,
+  teleportNearTarget,
+  teleportTo,
+  visual,
+} from "./core/ai-behavior-tree";
 import { setActionBattleSystems } from "./core/context";
 import { ACTION_BATTLE_CLIENT_VISUAL_ID } from "./visual";
 
@@ -17,6 +29,8 @@ const createEvent = () => ({
   setGraphicAnimation: vi.fn(),
   stopMoveTo: vi.fn(),
   moveTo: vi.fn(),
+  teleport: vi.fn(async () => undefined),
+  speed: 4,
   getCurrentMap: vi.fn(() => ({})),
   remove: vi.fn(),
   x: vi.fn(() => 0),
@@ -494,6 +508,117 @@ describe("BattleAi behavior tree", () => {
         pattern: AttackPattern.DashAttack,
       })
     );
+    ai.destroy();
+  });
+
+  test("executes advanced server intents and emits a generic visual cue", () => {
+    vi.useFakeTimers();
+    const clientVisual = vi.fn();
+    const event = createEvent();
+    event.getCurrentMap.mockReturnValue({ clientVisual });
+    event.attachShape.mockReturnValue({ id: "vision_monster-1" });
+    const customRun = vi.fn();
+    const customAction = vi.fn();
+    setActionBattleSystems({
+      ai: {
+        actions: {
+          enrage: customAction,
+        },
+      },
+    });
+    const ai = new BattleAi(event as any, {
+      moveToCooldown: 0,
+      behaviorTree: () => ({
+        status: "success",
+        intent: [
+          run(customRun),
+          setSpeed(7),
+          moveToPoint({ x: 40, y: 60 }),
+          holdPosition(),
+          teleportTo({ x: 80, y: 90 }),
+          visual({ kind: "rage", durationMs: 500 }),
+          callAction("enrage", { multiplier: 2 }),
+        ],
+      }),
+    });
+
+    vi.advanceTimersByTime(100);
+
+    expect(customRun).toHaveBeenCalledWith(
+      expect.objectContaining({ event, memory: expect.any(Object) })
+    );
+    expect(event.speed).toBe(7);
+    expect(event.moveTo).toHaveBeenCalledWith({ x: 40, y: 60 });
+    expect(event.teleport).toHaveBeenCalledWith({ x: 80, y: 90 });
+    expect(customAction).toHaveBeenCalledWith(
+      expect.objectContaining({ event }),
+      { multiplier: 2 }
+    );
+    expect(clientVisual).toHaveBeenCalledWith(
+      ACTION_BATTLE_CLIENT_VISUAL_ID,
+      expect.objectContaining({
+        moment: "ai",
+        objectId: "monster-1",
+        visual: {
+          kind: "rage",
+          durationMs: 500,
+        },
+      })
+    );
+    ai.destroy();
+  });
+
+  test("continues with default AI when a registered action is unknown", () => {
+    vi.useFakeTimers();
+    const event = createEvent();
+    event.attachShape.mockReturnValue({ id: "vision_monster-1" });
+    const player = {
+      ...createPlayer(),
+      hp: 10,
+      x: vi.fn(() => 120),
+      y: vi.fn(() => 0),
+    };
+    const ai = new BattleAi(event as any, {
+      attackRange: 50,
+      visionRange: 150,
+      moveToCooldown: 0,
+      behaviorTree: () => ({
+        status: "success",
+        intent: callAction("not-registered"),
+      }),
+    });
+
+    ai.onDetectInShape(player as any, {});
+    vi.advanceTimersByTime(100);
+
+    expect(event.moveTo).toHaveBeenCalledWith(player);
+    ai.destroy();
+  });
+
+  test("teleports near the current target using a server-selected position", () => {
+    vi.useFakeTimers();
+    const event = createEvent();
+    event.attachShape.mockReturnValue({ id: "vision_monster-1" });
+    const player = {
+      ...createPlayer(),
+      hp: 10,
+      x: vi.fn(() => 100),
+      y: vi.fn(() => 50),
+    };
+    const ai = new BattleAi(event as any, {
+      behaviorTree: () => ({
+        status: "success",
+        intent: teleportNearTarget({
+          distance: 30,
+          angleDegrees: 0,
+        }),
+      }),
+    });
+
+    ai.onDetectInShape(player as any, {});
+    vi.advanceTimersByTime(100);
+
+    expect(event.teleport).toHaveBeenCalledWith({ x: 130, y: 50 });
     ai.destroy();
   });
 });

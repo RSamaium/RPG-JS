@@ -2571,6 +2571,56 @@ export class BattleAi {
         this.behaviorMode = intent.mode;
         this.behaviorEnabled = true;
         return consumes;
+      case "run": {
+        const result = intent.callback(this.createAiTreeContext(currentTime));
+        return result === false ? false : consumes;
+      }
+      case "visual":
+        emitActionBattleClientVisual({
+          moment: "ai",
+          entity: this.event,
+          target: this.target ?? undefined,
+          visual: intent.visual,
+        });
+        return consumes;
+      case "setSpeed":
+        if (!Number.isFinite(intent.value) || intent.value < 0) return false;
+        this.event.speed = intent.value;
+        return consumes;
+      case "moveToPoint":
+        return this.requestMoveTo(intent.position) ? consumes : false;
+      case "holdPosition":
+        this.isMovingToTarget = false;
+        this.event.stopMoveTo();
+        return consumes;
+      case "teleportTo":
+        return this.executeTeleport(intent.position, consumes);
+      case "teleportNearTarget": {
+        if (!this.target) return false;
+        const distance = intent.options.distance;
+        if (!Number.isFinite(distance) || distance < 0) return false;
+        const angleDegrees =
+          intent.options.angleDegrees ?? Math.random() * 360;
+        if (!Number.isFinite(angleDegrees)) return false;
+        const angle = (angleDegrees * Math.PI) / 180;
+        return this.executeTeleport(
+          {
+            x: this.target.x() + Math.cos(angle) * distance,
+            y: this.target.y() + Math.sin(angle) * distance,
+          },
+          consumes
+        );
+      }
+      case "callAction": {
+        const registeredAction =
+          getActionBattleSystems().ai.actions[intent.name];
+        if (!registeredAction) return false;
+        const result = registeredAction(
+          this.createAiTreeContext(currentTime),
+          intent.payload
+        );
+        return result === false ? false : consumes;
+      }
       case "idle":
         this.isMovingToTarget = false;
         this.event.stopMoveTo();
@@ -2601,6 +2651,23 @@ export class BattleAi {
       case "useSkill":
         return this.executeRequestedSkill(intent.skill, currentTime, consumes);
     }
+  }
+
+  private executeTeleport(
+    position: { x: number; y: number },
+    consumes: boolean
+  ): boolean {
+    if (
+      !Number.isFinite(position.x) ||
+      !Number.isFinite(position.y) ||
+      typeof this.event.teleport !== "function"
+    ) {
+      return false;
+    }
+    this.isMovingToTarget = false;
+    this.event.stopMoveTo();
+    void this.event.teleport(position);
+    return consumes;
   }
 
   private executeKeepDistance(

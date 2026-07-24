@@ -19,7 +19,7 @@
     "rpgjs:tag-latest": "tsx bin/tag-latest.ts",
     "rpgjs:publish": "pnpm run publish-packages",
     "test": "vitest",
-    "test:types": "vitest --typecheck run packages/client/src/public-api-types.spec.ts packages/common/src/foundation.spec.ts packages/server/tests/server-api-types.spec.ts"
+    "test:types": "vitest --typecheck run packages/action-battle/src/public-api-types.spec.ts packages/client/src/public-api-types.spec.ts packages/common/src/foundation.spec.ts packages/server/tests/server-api-types.spec.ts"
   },
   "author": "Samuel Ronce",
   "license": "MIT",

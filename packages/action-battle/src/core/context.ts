@@ -20,6 +20,11 @@ const mergeSystems = (options: ActionBattleOptions = {}): ActionBattleSystems =>
     },
   },
   ai: {
+    actions: {
+      ...defaultActionBattleSystems.ai.actions,
+      ...options.systems?.ai?.actions,
+      ...options.ai?.actions,
+    },
     behaviors: {
       ...defaultActionBattleSystems.ai.behaviors,
       ...options.systems?.ai?.behaviors,

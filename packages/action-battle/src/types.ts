@@ -1,4 +1,12 @@
 import type {
+  ClientVisualContext,
+  ClientVisualHelpers,
+} from "@rpgjs/client";
+import type {
+  ActionBattleAiVisual,
+} from "./core/ai-behavior-tree";
+import type {
+  ActionBattleAiAction,
   ActionBattleAiBehavior,
   ActionBattleAiPreset,
   ActionBattleTargetOptions,
@@ -156,11 +164,28 @@ export interface ActionBattleCombatOptions {
 }
 
 export interface ActionBattleAiOptions {
+  /** Named server actions invoked by the `callAction()` intent. */
+  actions?: Record<string, ActionBattleAiAction>;
+  /** Named low-level behavior resolvers. */
   behaviors?: Record<string, ActionBattleAiBehavior>;
+  /** Reusable enemy AI option presets. */
   presets?: Record<string, ActionBattleAiPreset>;
+  /** Client-only renderers for cues emitted by the `visual()` intent. */
+  visuals?: Record<string, ActionBattleAiVisualHandler>;
 }
 
 export type ActionBattleAiSystemOptions = ActionBattleAiOptions;
+
+/** Client visual context enriched with the serializable AI cue. */
+export type ActionBattleAiVisualClientContext = ClientVisualContext & {
+  visual: ActionBattleAiVisual;
+};
+
+/** Client-only renderer registered for one AI visual `kind`. */
+export type ActionBattleAiVisualHandler = (
+  context: ActionBattleAiVisualClientContext,
+  helpers: ClientVisualHelpers
+) => void | Promise<void>;
 
 export interface ActionBattleSystemOptions {
   combat?: ActionBattleCombatOptions;
@@ -173,7 +198,8 @@ export type ActionBattleVisualMoment =
   | "hit"
   | "hurt"
   | "defeat"
-  | "preview";
+  | "preview"
+  | "ai";
 
 export interface ActionBattleVisualContext {
   moment: ActionBattleVisualMoment;
@@ -185,6 +211,7 @@ export interface ActionBattleVisualContext {
   result?: any;
   skill?: any;
   pattern?: string;
+  visual?: ActionBattleAiVisual;
   animations?: ActionBattleAnimationOptions;
   animationDefaults?: {
     animationName?: string;
