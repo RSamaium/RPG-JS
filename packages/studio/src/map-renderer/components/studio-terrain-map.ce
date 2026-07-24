@@ -53,11 +53,10 @@ const renderTerrain = async () => {
   const currentSerial = ++renderSerial
   await terrainRenderer.renderMap(mapData, {
     debugCollisions: readValue(debugCollisions) === true,
-    splitWallForeground: readValue(splitWallForeground) === true
+    splitWallForeground: readValue(splitWallForeground) === true,
+    streamUpdate: mapData.terrainRenderData?.streamUpdate
   })
   if (currentSerial !== renderSerial) {
-    terrainRenderer.invalidateTerrain()
-    lastCullKey = ""
     return
   }
   lastCullKey = ""

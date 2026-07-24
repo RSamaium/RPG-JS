@@ -11,7 +11,10 @@ import {
   buildStudioTerrainCollisionPolygons,
   createStudioTerrainRenderData,
 } from "./map-renderer";
-import type { StudioTerrainControlRegion } from "./map-renderer/types";
+import type {
+  StudioTerrainControlRegion,
+  StudioTerrainRenderBounds,
+} from "./map-renderer/types";
 import { resolveStudioElementSize } from "./studio-element-size";
 
 type StudioElementLayer = "elementsAlwaysLow" | "elementsLow" | "elementsHigh";
@@ -31,6 +34,9 @@ export interface StudioMapStreamState {
   manifest: MapStreamManifest<StudioMapStreamManifestData>;
   chunks: Map<string, MapStreamChunk<StudioMapStreamChunkData>>;
   map: Record<string, any>;
+  generation: number;
+  needsRebuild: boolean;
+  pendingTerrainRegions: Map<string, StudioTerrainRenderBounds>;
 }
 
 export interface PreparedStudioMapPayload {
@@ -524,6 +530,62 @@ export function compileStudioMapStream(
   return { manifest, chunks };
 }
 
+function clipTerrainBounds(
+  bounds: StudioTerrainRenderBounds,
+  manifest: MapStreamManifest<StudioMapStreamManifestData>
+): StudioTerrainRenderBounds | null {
+  const x = Math.max(0, Math.min(manifest.width, bounds.x));
+  const y = Math.max(0, Math.min(manifest.height, bounds.y));
+  const right = Math.max(x, Math.min(manifest.width, bounds.x + bounds.width));
+  const bottom = Math.max(y, Math.min(manifest.height, bounds.y + bounds.height));
+  if (right <= x || bottom <= y) return null;
+  return { x, y, width: right - x, height: bottom - y };
+}
+
+function getChunkTerrainBounds(
+  state: StudioMapStreamState,
+  chunk: MapStreamChunk<StudioMapStreamChunkData>
+): StudioTerrainRenderBounds {
+  let left = chunk.bounds.x;
+  let top = chunk.bounds.y;
+  let right = chunk.bounds.x + chunk.bounds.width;
+  let bottom = chunk.bounds.y + chunk.bounds.height;
+  const include = (bounds: StudioTerrainRenderBounds): void => {
+    left = Math.min(left, bounds.x);
+    top = Math.min(top, bounds.y);
+    right = Math.max(right, bounds.x + bounds.width);
+    bottom = Math.max(bottom, bounds.y + bounds.height);
+  };
+
+  for (const [tileX, tileY] of chunk.renderData.terrainCells) {
+    include({ x: tileX * 48, y: tileY * 48, width: 48, height: 48 });
+  }
+  for (const feature of chunk.renderData.morphologyFeatures) {
+    include(featureBounds(feature));
+  }
+  if (chunk.renderData.terrainControlRegion) {
+    include(chunk.renderData.terrainControlRegion);
+  }
+
+  return (
+    clipTerrainBounds(
+      { x: left, y: top, width: right - left, height: bottom - top },
+      state.manifest
+    ) ?? { ...chunk.bounds }
+  );
+}
+
+function markTerrainRegion(
+  state: StudioMapStreamState,
+  chunk: MapStreamChunk<StudioMapStreamChunkData>
+): void {
+  const bounds = getChunkTerrainBounds(state, chunk);
+  state.pendingTerrainRegions.set(
+    `${bounds.x}:${bounds.y}:${bounds.width}:${bounds.height}`,
+    bounds
+  );
+}
+
 function rebuildState(state: StudioMapStreamState): void {
   const map = clone(state.manifest.renderData.map);
   const terrain = map.terrainRenderData;
@@ -561,16 +623,26 @@ function rebuildState(state: StudioMapStreamState): void {
   });
   if (terrain) {
     terrain.morphologyFeatures = [...features.values()];
-    terrain.version = `streamed:${state.manifest.revision}:${[
+    terrain.version = `streamed:${state.manifest.revision}:${state.generation}:${[
       ...state.chunks.keys(),
     ]
       .sort()
       .join(",")}`;
+    terrain.streamUpdate = {
+      revision: state.manifest.revision,
+      generation: state.generation,
+      dirtyRegions: [...state.pendingTerrainRegions.values()],
+      activeRegions: [...state.chunks.values()].map((chunk) =>
+        getChunkTerrainBounds(state, chunk)
+      ),
+    };
     if (terrain.terrainControl) {
       terrain.terrainControl.regions = [...controlRegions.values()];
     }
   }
   state.map = map;
+  state.pendingTerrainRegions.clear();
+  state.needsRebuild = false;
 }
 
 export function createStudioMapStreamState(
@@ -580,23 +652,42 @@ export function createStudioMapStreamState(
     manifest,
     chunks: new Map(),
     map: {},
+    generation: 0,
+    needsRebuild: false,
+    pendingTerrainRegions: new Map(),
   } as StudioMapStreamState;
   rebuildState(state);
   return state;
+}
+
+export function getStudioMapStreamData(
+  state: StudioMapStreamState
+): Record<string, any> {
+  if (state.needsRebuild) {
+    state.generation += 1;
+    rebuildState(state);
+  }
+  return state.map;
 }
 
 export function applyStudioMapStreamChunk(
   state: StudioMapStreamState,
   chunk: MapStreamChunk<StudioMapStreamChunkData>
 ): void {
+  const previous = state.chunks.get(chunk.key);
+  if (previous) markTerrainRegion(state, previous);
   state.chunks.set(chunk.key, chunk);
-  rebuildState(state);
+  markTerrainRegion(state, chunk);
+  state.needsRebuild = true;
 }
 
 export function removeStudioMapStreamChunk(
   state: StudioMapStreamState,
   key: string
 ): void {
+  const previous = state.chunks.get(key);
+  if (!previous) return;
+  markTerrainRegion(state, previous);
   state.chunks.delete(key);
-  rebuildState(state);
+  state.needsRebuild = true;
 }

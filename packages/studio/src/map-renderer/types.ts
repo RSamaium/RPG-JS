@@ -87,6 +87,28 @@ export interface StudioTerrainMorphologyFeature {
   operations?: StudioTerrainMorphologyOperation[];
 }
 
+export interface StudioTerrainRenderBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Client-only invalidation data produced after an authoritative Studio stream
+ * packet has been consolidated.
+ */
+export interface StudioTerrainStreamUpdate {
+  /** Authoritative map revision represented by the active chunks. */
+  revision: string;
+  /** Monotonic client generation incremented once per consolidated packet. */
+  generation: number;
+  /** Terrain regions whose disclosed content changed in this generation. */
+  dirtyRegions: StudioTerrainRenderBounds[];
+  /** Terrain regions represented by all chunks currently retained by the client. */
+  activeRegions: StudioTerrainRenderBounds[];
+}
+
 export interface StudioTerrainRenderData {
   widthTiles: number;
   heightTiles: number;
@@ -100,6 +122,8 @@ export interface StudioTerrainRenderData {
   morphologyFeatures: StudioTerrainMorphologyFeature[];
   waterAnimation: StudioWaterAnimationOptions;
   version: string;
+  /** Incremental invalidation state for streamed maps; absent for direct loads. */
+  streamUpdate?: StudioTerrainStreamUpdate;
 }
 
 /**

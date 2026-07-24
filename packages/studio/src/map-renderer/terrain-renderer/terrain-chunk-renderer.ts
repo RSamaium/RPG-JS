@@ -9,7 +9,9 @@ import {
   type StudioCollisionPolygon,
   type StudioTerrainControlTexture,
   type StudioTerrainMorphologyFeature,
+  type StudioTerrainRenderBounds,
   type StudioTerrainRenderData,
+  type StudioTerrainStreamUpdate,
   type StudioWaterAnimationOptions,
 } from "../types";
 import {
@@ -173,9 +175,14 @@ export interface StudioTerrainWallShadowStyle {
 }
 
 export interface StudioTerrainChunkRendererOptions {
+  /** Renderer chunk size in world pixels. */
   chunkSize?: number;
+  /** Draw collision polygons into regenerated terrain chunks. */
   debugCollisions?: boolean;
+  /** Render wall foreground separately from the terrain base. */
   splitWallForeground?: boolean;
+  /** Consolidated client stream update used for spatial invalidation. */
+  streamUpdate?: StudioTerrainStreamUpdate | null;
 }
 
 export class StudioTerrainChunkRenderer {
@@ -187,6 +194,9 @@ export class StudioTerrainChunkRenderer {
   private imageBufferCache = new Map<string, ImageBuffer>();
   private patternCache = new Map<string, HTMLCanvasElement>();
   private renderVersion = "";
+  private renderConfiguration = "";
+  private streamRevision = "";
+  private streamGeneration = -1;
   private destroyed = false;
   private viewportBounds: TerrainViewportBounds | null = null;
   private viewportMargin = 0;
@@ -207,32 +217,67 @@ export class StudioTerrainChunkRenderer {
       : createStudioTerrainRenderData(map);
     const debugCollisions = options.debugCollisions === true;
     const splitWallForeground = options.splitWallForeground === true;
-    const version = `${data.version}|debug:${debugCollisions}|chunk:${this.chunkSize}|splitWall:${splitWallForeground}`;
-    if (version === this.renderVersion && this.chunks.size > 0) return;
+    const configuration = `debug:${debugCollisions}|chunk:${this.chunkSize}|splitWall:${splitWallForeground}`;
+    const version = `${data.version}|${configuration}`;
+    const streamUpdate = options.streamUpdate ?? data.streamUpdate ?? null;
+    if (!streamUpdate && version === this.renderVersion && this.chunks.size > 0) return;
+    if (
+      streamUpdate &&
+      version === this.renderVersion &&
+      configuration === this.renderConfiguration &&
+      streamUpdate.revision === this.streamRevision &&
+      streamUpdate.generation === this.streamGeneration
+    ) {
+      return;
+    }
+    const renderAllActiveStreamChunks = Boolean(
+      streamUpdate &&
+        (
+          !this.renderVersion ||
+          configuration !== this.renderConfiguration ||
+          streamUpdate.revision !== this.streamRevision
+        )
+    );
     this.renderVersion = version;
+    this.renderConfiguration = configuration;
+    this.streamRevision = streamUpdate?.revision ?? "";
+    this.streamGeneration = streamUpdate?.generation ?? -1;
 
     const image = data.sourceTexture ? this.loadedImages.get(data.sourceTexture) ?? null : null;
     const controlImage = data.terrainControl?.source
       ? this.loadedImages.get(data.terrainControl.source) ?? null
       : null;
 
-    const nextKeys = new Set<string>();
+    const activeKeys = streamUpdate
+      ? this.collectChunkKeys(streamUpdate.activeRegions, data)
+      : null;
+    const nextKeys = streamUpdate
+      ? renderAllActiveStreamChunks
+        ? activeKeys!
+        : this.collectChunkKeys(streamUpdate.dirtyRegions, data)
+      : this.collectAllChunkKeys(data);
     const collisions = debugCollisions ? buildStudioTerrainCollisionPolygons(map) : [];
-    const columns = Math.max(1, Math.ceil(data.width / this.chunkSize));
-    const rows = Math.max(1, Math.ceil(data.height / this.chunkSize));
 
     this.resetMorphologyRenderCaches();
     try {
-      for (let row = 0; row < rows; row += 1) {
-        for (let column = 0; column < columns; column += 1) {
-          const x = column * this.chunkSize;
-          const y = row * this.chunkSize;
-          const width = Math.min(this.chunkSize, data.width - x);
-          const height = Math.min(this.chunkSize, data.height - y);
-          const key = `${column}:${row}`;
-          nextKeys.add(key);
-          this.renderChunk(key, data, image, controlImage, { x, y, width, height }, collisions, splitWallForeground);
+      for (const key of nextKeys) {
+        if (activeKeys && !activeKeys.has(key)) {
+          const previous = this.chunks.get(key);
+          if (previous) {
+            this.destroyChunk(previous);
+            this.chunks.delete(key);
+          }
+          continue;
         }
+        this.renderChunk(
+          key,
+          data,
+          image,
+          controlImage,
+          this.getChunkBounds(key, data),
+          collisions,
+          splitWallForeground
+        );
       }
     } finally {
       this.resetMorphologyRenderCaches();
@@ -241,6 +286,16 @@ export class StudioTerrainChunkRenderer {
     if (data.sourceTexture && !image) {
       void this.loadImage(data.sourceTexture).then((loadedImage) => {
         if (!loadedImage || this.destroyed) return;
+        if (
+          this.renderVersion !== version ||
+          (streamUpdate &&
+            (
+              this.streamRevision !== streamUpdate.revision ||
+              this.streamGeneration !== streamUpdate.generation
+            ))
+        ) {
+          return;
+        }
         this.renderVersion = "";
         void this.renderMap(map, options);
       });
@@ -252,19 +307,91 @@ export class StudioTerrainChunkRenderer {
     ) {
       void this.loadImage(data.terrainControl.source).then((loadedImage) => {
         if (!loadedImage || this.destroyed) return;
+        if (
+          this.renderVersion !== version ||
+          (streamUpdate &&
+            (
+              this.streamRevision !== streamUpdate.revision ||
+              this.streamGeneration !== streamUpdate.generation
+            ))
+        ) {
+          return;
+        }
         this.renderVersion = "";
         void this.renderMap(map, options);
       });
     }
 
-    for (const [key, chunk] of this.chunks) {
-      if (!nextKeys.has(key)) {
-        this.destroyChunk(chunk);
-        this.chunks.delete(key);
+    if (!streamUpdate || renderAllActiveStreamChunks) {
+      const retainedKeys = activeKeys ?? nextKeys;
+      for (const [key, chunk] of this.chunks) {
+        if (!retainedKeys.has(key)) {
+          this.destroyChunk(chunk);
+          this.chunks.delete(key);
+        }
       }
     }
 
     this.updateChunkVisibility(this.viewportBounds, this.viewportMargin);
+  }
+
+  private collectAllChunkKeys(data: StudioTerrainRenderData): Set<string> {
+    const keys = new Set<string>();
+    const columns = Math.max(1, Math.ceil(data.width / this.chunkSize));
+    const rows = Math.max(1, Math.ceil(data.height / this.chunkSize));
+    for (let row = 0; row < rows; row += 1) {
+      for (let column = 0; column < columns; column += 1) {
+        keys.add(`${column}:${row}`);
+      }
+    }
+    return keys;
+  }
+
+  private collectChunkKeys(
+    regions: StudioTerrainRenderBounds[],
+    data: StudioTerrainRenderData
+  ): Set<string> {
+    const keys = new Set<string>();
+    const columns = Math.max(1, Math.ceil(data.width / this.chunkSize));
+    const rows = Math.max(1, Math.ceil(data.height / this.chunkSize));
+    for (const region of regions) {
+      const left = Math.max(0, Math.min(data.width, Number(region.x) || 0));
+      const top = Math.max(0, Math.min(data.height, Number(region.y) || 0));
+      const right = Math.max(
+        left,
+        Math.min(data.width, (Number(region.x) || 0) + (Number(region.width) || 0))
+      );
+      const bottom = Math.max(
+        top,
+        Math.min(data.height, (Number(region.y) || 0) + (Number(region.height) || 0))
+      );
+      if (right <= left || bottom <= top) continue;
+      const minColumn = Math.floor(left / this.chunkSize);
+      const minRow = Math.floor(top / this.chunkSize);
+      const maxColumn = Math.min(columns - 1, Math.ceil(right / this.chunkSize) - 1);
+      const maxRow = Math.min(rows - 1, Math.ceil(bottom / this.chunkSize) - 1);
+      for (let row = minRow; row <= maxRow; row += 1) {
+        for (let column = minColumn; column <= maxColumn; column += 1) {
+          keys.add(`${column}:${row}`);
+        }
+      }
+    }
+    return keys;
+  }
+
+  private getChunkBounds(
+    key: string,
+    data: StudioTerrainRenderData
+  ): StudioTerrainRenderBounds {
+    const [column, row] = key.split(":").map(Number);
+    const x = column * this.chunkSize;
+    const y = row * this.chunkSize;
+    return {
+      x,
+      y,
+      width: Math.min(this.chunkSize, data.width - x),
+      height: Math.min(this.chunkSize, data.height - y),
+    };
   }
 
   updateChunkVisibility(bounds?: TerrainViewportBounds | null, margin = 0): void {
@@ -320,8 +447,8 @@ export class StudioTerrainChunkRenderer {
     }
     const minX = Math.floor(bounds.x / this.chunkSize);
     const minY = Math.floor(bounds.y / this.chunkSize);
-    const maxX = Math.floor((bounds.x + bounds.width) / this.chunkSize);
-    const maxY = Math.floor((bounds.y + bounds.height) / this.chunkSize);
+    const maxX = Math.ceil((bounds.x + bounds.width) / this.chunkSize) - 1;
+    const maxY = Math.ceil((bounds.y + bounds.height) / this.chunkSize) - 1;
     for (let y = minY; y <= maxY; y += 1) {
       for (let x = minX; x <= maxX; x += 1) {
         const chunk = this.chunks.get(`${x}:${y}`);
@@ -343,6 +470,10 @@ export class StudioTerrainChunkRenderer {
     this.patternCache.clear();
     this.imageBufferCache.clear();
     this.viewportBounds = null;
+    this.renderVersion = "";
+    this.renderConfiguration = "";
+    this.streamRevision = "";
+    this.streamGeneration = -1;
     this.resetMorphologyRenderCaches();
     this.world.removeChildren();
   }

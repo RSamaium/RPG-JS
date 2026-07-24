@@ -6,6 +6,7 @@ import loadMap from "./map-loader";
 import {
   applyStudioMapStreamChunk,
   createStudioMapStreamState,
+  getStudioMapStreamData,
   removeStudioMapStreamChunk,
   type StudioMapStreamChunkData,
   type StudioMapStreamManifestData,
@@ -23,7 +24,7 @@ export function createStudioMapClientProviders(): any[] {
       createState: createStudioMapStreamState,
       applyChunk: applyStudioMapStreamChunk,
       removeChunk: removeStudioMapStreamChunk,
-      getData: (state) => state.map,
+      getData: getStudioMapStreamData,
       getParams: (manifest) => ({
         backgroundMusic: manifest.renderData.map.params?.backgroundMusic,
         backgroundAmbientSound:
