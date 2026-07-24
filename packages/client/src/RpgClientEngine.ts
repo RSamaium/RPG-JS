@@ -43,6 +43,7 @@ import { applySyncedHitboxPayload } from "./utils/syncHitbox";
 import { EventComponentResolverRegistry, type EventComponentResolver } from "./Game/EventComponentResolver";
 import { RpgClientBuiltinI18n } from "./i18n";
 import type { CameraFollowSmoothMove } from "./services/cameraFollow";
+import { RpgMusicManager } from "./Game/MusicManager";
 export type {
   CameraFollowEase,
   CameraFollowSmoothMove,
@@ -169,6 +170,12 @@ export class RpgClientEngine<T = any> {
   spritesheets: Map<string | number, any> = new Map();
   private spritesheetPromises: Map<string | number, Promise<any>> = new Map();
   sounds: Map<string, any> = new Map();
+  /** Client-only controller for temporary looping music and map BGM crossfades. */
+  music = new RpgMusicManager({
+    getSound: (id) => this.getSound(id),
+    createSound: (src, options) =>
+      new (Howl as any).Howl({ src: [src], ...options }),
+  });
   componentAnimations: any[] = [];
   clientVisuals = new ClientVisualRegistry();
   projectiles: ProjectileManager;

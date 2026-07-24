@@ -385,6 +385,7 @@ function sanitizeTemplate(data: Record<string, any>): Record<string, any> {
     scale: params.scale,
     backgroundMusic: params.backgroundMusic,
     backgroundAmbientSound: params.backgroundAmbientSound,
+    combatMusic: params.combatMusic,
     weather: params.weather,
     tileset: sanitizeMedia(params.tileset),
     primaryElementTileset: sanitizeMedia(params.primaryElementTileset),

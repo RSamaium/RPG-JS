@@ -67,6 +67,7 @@ import type {
   NormalizedActionBattleHitReactionProfile,
 } from "./types";
 import type { ActionBattleAnimationOptions } from "./types";
+import { updateActionBattleThreat } from "./audio";
 
 type RpgEventWithBattleAi = RpgEvent & {
   battleAi?: BattleAi;
@@ -220,6 +221,11 @@ export interface BattleAiBaseOptions {
      * immediately by the authoritative server.
      */
     death?: false | BattleAiDeathPresentationOptions;
+    /** Optional battle track used while this enemy threatens a player. */
+    music?: {
+      battle?: string;
+      priority?: number;
+    };
   };
 }
 
@@ -674,6 +680,7 @@ export class BattleAi {
     role: "enemy" | "boss" | "hidden";
     name?: string;
     death: false | Required<BattleAiDeathPresentationOptions>;
+    music?: { battle?: string; priority?: number };
   } = {
     role: "enemy",
     death: {
@@ -808,6 +815,7 @@ export class BattleAi {
               ),
               shake: options.presentation?.death?.shake ?? true,
             },
+      music: options.presentation?.music,
     };
     const healthBar = options.presentation?.healthBar;
     if (
@@ -1075,6 +1083,7 @@ export class BattleAi {
     });
     this.state = newState;
     this.stateStartTime = Date.now();
+    this.syncThreat();
 
     switch (newState) {
       case AiState.Idle:
@@ -2254,6 +2263,10 @@ export class BattleAi {
       state: this.state,
       distance: this.getDistance(this.event, target),
     });
+    const previousTarget = this.target;
+    if (previousTarget && previousTarget !== target) {
+      this.removeThreat(previousTarget);
+    }
     this.target = target;
 
     if (this.state === AiState.Idle) {
@@ -2261,6 +2274,7 @@ export class BattleAi {
     } else if (this.state === AiState.Alert) {
       this.changeState(AiState.Combat);
     }
+    this.syncThreat();
   }
 
   /**
@@ -2428,6 +2442,7 @@ export class BattleAi {
   private kill(attacker?: ActionBattleEntity) {
     if (this.defeated) return;
     this.defeated = true;
+    this.removeThreat(this.target);
     releaseActionBattleAttackSlot(this.event);
 
     const dieAnimation = resolveActionBattleAnimation(
@@ -2617,6 +2632,7 @@ export class BattleAi {
   }
 
   private clearTarget() {
+    this.removeThreat(this.target);
     this.target = null;
     this.isMovingToTarget = false;
     this.event.stopMoveTo();
@@ -3142,10 +3158,31 @@ export class BattleAi {
   }
   getEnemyType(): EnemyType { return this.enemyType; }
 
+  private syncThreat() {
+    if (!this.target) return;
+    const active =
+      !this.destroyed &&
+      !this.defeated &&
+      this.state !== AiState.Idle;
+    updateActionBattleThreat(this.event, this.target as any, active, {
+      enemyId: this.event.id,
+      music: this.presentation.music?.battle,
+      priority: this.presentation.music?.priority,
+      boss: this.presentation.role === "boss",
+    });
+  }
+
+  private removeThreat(target: ActionBattleEntity | null | undefined) {
+    updateActionBattleThreat(this.event, target as any, false, {
+      enemyId: this.event.id,
+    });
+  }
+
   /**
    * Clean up
    */
   destroy() {
+    this.removeThreat(this.target);
     this.destroyed = true;
     releaseActionBattleAttackSlot(this.event, this.target);
     if (this.updateInterval) {

@@ -60,6 +60,30 @@ export const projectSchema = {
       },
     },
     hero: createAppearanceSchema("Hero"),
+    combatAudio: {
+      type: "object",
+      title: "Combat Audio",
+      properties: {
+        battleMusic: {
+          type: "string",
+          title: "Default Battle Music",
+          format: {
+            name: "media",
+            type: "bgm",
+            buttonLabel: "Select Battle Music",
+            useUpload: { accept: "audio/*" },
+          } as any,
+        },
+        attack: { type: "string", title: "Attack Sound", format: { name: "media", type: "sound" } as any },
+        skill: { type: "string", title: "Skill Sound", format: { name: "media", type: "sound" } as any },
+        hit: { type: "string", title: "Hit Sound", format: { name: "media", type: "sound" } as any },
+        hurt: { type: "string", title: "Hurt Sound", format: { name: "media", type: "sound" } as any },
+        die: { type: "string", title: "Defeat Sound", format: { name: "media", type: "sound" } as any },
+        fadeInMs: { type: "number", title: "Battle Fade In (ms)", default: 600, minimum: 0 },
+        fadeOutMs: { type: "number", title: "Battle Fade Out (ms)", default: 900, minimum: 0 },
+        exitDelayMs: { type: "number", title: "Combat Exit Delay (ms)", default: 1500, minimum: 0 },
+      },
+    },
     skills: {
       type: "array",
       title: "Skills",

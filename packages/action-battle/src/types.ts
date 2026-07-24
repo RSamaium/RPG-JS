@@ -340,6 +340,8 @@ export type ActionBattleVisualMoment =
 
 export interface ActionBattleVisualContext {
   moment: ActionBattleVisualMoment;
+  /** Available only while a visual is rendered on the client. */
+  engine?: any;
   entity?: any;
   target?: any;
   attacker?: any;
@@ -450,6 +452,40 @@ export interface ActionBattleUiOptions {
   } | any[];
 }
 
+export interface ActionBattleAudioCue {
+  id: string | string[];
+  volume?: number;
+  cooldownMs?: number;
+}
+
+export type ActionBattleAudioCueInput =
+  | string
+  | string[]
+  | ActionBattleAudioCue
+  | ((context: ActionBattleVisualContext) =>
+      | string
+      | string[]
+      | ActionBattleAudioCue
+      | undefined);
+
+export interface ActionBattleMusicOptions {
+  battle?: string | ((context: any) => string | undefined);
+  volume?: number;
+  mapVolume?: number;
+  fadeInMs?: number;
+  fadeOutMs?: number;
+  exitDelayMs?: number;
+}
+
+export interface ActionBattleAudioOptions {
+  attack?: ActionBattleAudioCueInput;
+  skill?: ActionBattleAudioCueInput;
+  hit?: ActionBattleAudioCueInput;
+  hurt?: ActionBattleAudioCueInput;
+  die?: ActionBattleAudioCueInput;
+  music?: false | ActionBattleMusicOptions;
+}
+
 export interface ActionBattleOptions {
   preset?: "adventure" | "classic";
   combat?: ActionBattleCombatOptions;
@@ -462,6 +498,8 @@ export interface ActionBattleOptions {
   attack?: ActionBattleAttackOptions;
   animations?: ActionBattleAnimationOptions;
   systems?: ActionBattleSystemOptions;
+  /** Client-side combat cues and dynamic battle music. */
+  audio?: false | ActionBattleAudioOptions;
 }
 
 export interface ActionBattleActionBarItem {

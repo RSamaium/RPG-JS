@@ -42,6 +42,7 @@ export { RpgClientPlayer } from "./Game/Player";
 export { RpgClientEvent } from "./Game/Event";
 export * from "./Game/ProjectileManager";
 export * from "./Game/ClientVisuals";
+export * from "./Game/MusicManager";
 export { withMobile } from "./components/gui/mobile";
 export type {
     MobileButtonComponentProps,

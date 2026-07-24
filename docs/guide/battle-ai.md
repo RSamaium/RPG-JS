@@ -944,6 +944,70 @@ enemy is created from the Studio database. The supported Studio fields are
 on the server and sent to the client as plain animation data, so media IDs
 remain usable without transferring resolver functions.
 
+## Combat sounds and dynamic music
+
+Action Battle can play local action cues and crossfade the current map BGM into
+a looping battle track:
+
+```ts
+provideActionBattle({
+  audio: {
+    attack: ["sword-swing-1", "sword-swing-2"],
+    skill: "magic-cast",
+    hit: "blade-hit",
+    hurt: "hero-hurt",
+    die: "enemy-die",
+    music: {
+      battle: "battle-theme",
+      volume: 0.8,
+      fadeInMs: 600,
+      fadeOutMs: 900,
+      exitDelayMs: 1500
+    }
+  }
+});
+```
+
+A cue accepts one sound id, several variants, or
+`{ id, volume, cooldownMs }`. Basic attacks are predicted locally and suppress
+the matching authoritative cue for 250ms. A skill's own `sound` field takes
+priority over the generic skill cue. Cue cooldowns prevent repeated area hits
+from producing an unusable wall of sound.
+
+Combat threat is authoritative on the server and isolated per player. Alert,
+combat, fleeing, and stunned enemies keep that player in combat. On equal
+priority the currently selected enemy stays stable; bosses default to priority
+`100` and ordinary enemies to `0`. Configure an enemy-specific track with:
+
+```ts
+new BattleAi(event, {
+  presentation: {
+    role: "boss",
+    music: {
+      battle: "boss-theme",
+      priority: 120
+    }
+  }
+});
+```
+
+Track precedence is enemy, map, project/default, then silence. The ambient sound
+layer is never stopped. With RPGJS Studio, use the combined preset on both
+client and server:
+
+```ts
+import { provideActionBattle } from "@rpgjs/action-battle";
+import { createStudioActionBattlePreset } from "@rpgjs/studio";
+
+provideActionBattle(createStudioActionBattlePreset());
+```
+
+Studio reads project `combatAudio`, map `combatMusic`, and enemy `combatMusic`
+plus `combatMusicPriority`. `createStudioActionBattleAudio(config)` can provide
+the same settings statically before these fields are available in a project.
+Studio media ids are resolved lazily; resolving a new effect does not stop
+music that is already playing.
+
 The Adventure AI director limits how many enemies attack one target
 simultaneously. Other enemies keep repositioning instead of stacking the same
 attack:

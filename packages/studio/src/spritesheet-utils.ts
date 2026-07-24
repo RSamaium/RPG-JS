@@ -266,7 +266,7 @@ export const addSpriteSheetToClient = async (
   if (media.type === "bgs" || media.type === "bgm" || media.type === "sound") {
     client.addSound({
       id,
-      file: url,
+      src: url,
     });
     return;
   }
@@ -303,7 +303,7 @@ export const addSoundToClient = (
   if (media.type === "bgs" || media.type === "bgm" || media.type === "sound") {
     client.addSound({
       id,
-      file: url,
+      src: url,
     });
     console.log('Add Sound:', id, url);
   } else {

@@ -10,6 +10,11 @@ export { collectStudioMapPluginPixiChildren, composeStudioMapPluginOptions, crea
 export type { CreateStudioMapPluginsOptions, StudioDebugCollisionsOptions, StudioMapPlugin, StudioMapPluginContext, StudioMapPluginPixiChild, StudioTerrainRenderOptions } from "./studio-map-plugins";
 export { createStudioActionBattleAnimations } from "./action-battle-animations";
 export type { StudioCombatAnimationIds, StudioCombatAnimationOptions } from "./action-battle-animations";
+export {
+  createStudioActionBattleAudio,
+  createStudioActionBattlePreset,
+} from "./action-battle-audio";
+export type { StudioCombatAudioConfig } from "./action-battle-audio";
 
 export interface StudioGameModuleConfig {
   projectId?: string | null;

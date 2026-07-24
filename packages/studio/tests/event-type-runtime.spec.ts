@@ -93,6 +93,22 @@ describe("Studio event runtime", () => {
     expect(options.attackPatterns).toEqual([AttackPattern.DashAttack]);
   });
 
+  test("maps Studio enemy combat music and priority", () => {
+    const options = resolveEnemyBattleAiOptions({
+      combatMusic: "boss-theme",
+      combatMusicPriority: 125,
+      presentation: { role: "boss" },
+    });
+
+    expect(options.presentation).toMatchObject({
+      role: "boss",
+      music: {
+        battle: "boss-theme",
+        priority: 125,
+      },
+    });
+  });
+
   test("maps Studio enemy animation media to serializable battle animation options", () => {
     const options = resolveEnemyBattleAiOptions({
       animations: {
