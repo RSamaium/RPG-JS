@@ -116,6 +116,9 @@ describe("action battle visual composer", () => {
       entity: attacker,
       target,
       damage: 7,
+      animations: {
+        attack: () => "attack",
+      },
       result: {
         damage: 7,
         defeated: false,
@@ -138,6 +141,9 @@ describe("action battle visual composer", () => {
         }),
       })
     );
+    const payload = clientVisual.mock.calls[0][1];
+    expect(payload).not.toHaveProperty("animations");
+    expect(() => structuredClone(payload)).not.toThrow();
   });
 
   test("client visual handler replays configured action-battle visual locally", () => {
