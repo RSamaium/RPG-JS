@@ -106,4 +106,18 @@ describe("studio element size resolution", () => {
     expect(resolved.targetHeight).toBe(752);
     expect(resolved.scale).toEqual({ x: 2, y: 2 });
   });
+
+  it("does not use atlas image dimensions as element dimensions", () => {
+    const resolved = resolveStudioElementSize(
+      {},
+      {},
+      { width: 1023, height: 640, scale: 1 },
+      139,
+      163
+    );
+
+    expect(resolved.targetWidth).toBe(139);
+    expect(resolved.targetHeight).toBe(163);
+    expect(resolved.scale).toEqual({ x: 1, y: 1 });
+  });
 });

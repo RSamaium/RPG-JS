@@ -103,13 +103,11 @@ const readTilesetMetadataSize = (
         metadata.tilewidth ??
         metadata.tileWidth ??
         metadata.elementWidth ??
-        metadata.width ??
         (textureGrid && typeof textureGrid === "object" ? textureGrid.tileSize : undefined),
       height:
         metadata.tileheight ??
         metadata.tileHeight ??
         metadata.elementHeight ??
-        metadata.height ??
         (textureGrid && typeof textureGrid === "object" ? textureGrid.tileSize : undefined),
       size: metadata.size,
     },
