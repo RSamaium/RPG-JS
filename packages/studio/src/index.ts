@@ -27,6 +27,15 @@ export interface StudioGameModuleConfig {
   assetsUrl?: string;
   apiUrl?: string;
   displayTitleScreen?: boolean;
+  /**
+   * Start the player as soon as the server connection is established.
+   *
+   * The server initializes the default player stats and transfers the player
+   * to `startMapId`, or to the starting map resolved from the Studio project.
+   * Defaults to `false`. Set `displayTitleScreen: false` separately when the
+   * client should also skip the Studio title screen.
+   */
+  autoStart?: boolean;
   startMapId?: string;
   debugCollisions?: boolean;
   studioPlugins?: StudioMapPlugin[];

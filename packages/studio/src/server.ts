@@ -327,7 +327,9 @@ export interface CreateStudioMapUpdatePayloadOptions {
       };
 }
 
-type StudioServerConfig = CreateStudioMapUpdatePayloadOptions;
+type StudioServerConfig = CreateStudioMapUpdatePayloadOptions & {
+  autoStart?: boolean;
+};
 
 const prepareStudioWorldMaps = (worldMaps: unknown): WorldMapConfig[] =>
   parseArrayValue(worldMaps).map((worldMap: any) => ({
@@ -679,6 +681,7 @@ export async function createStudioMapUpdatePayload(mapId: string, config: Create
 
 export default (_config?: unknown) => {
   const config = (_config ?? {}) as StudioServerConfig;
+  const autoStart = config.autoStart === true;
   const streamingOptions = config.streaming === false ? undefined : config.streaming ?? {};
   const streamingModule = streamingOptions
     ? provideServerMapStreaming(
@@ -696,7 +699,13 @@ export default (_config?: unknown) => {
 
   return defineModule<RpgServer>({
     player: {
+      onConnected: async (player: RpgPlayer) => {
+        if (!autoStart) return;
+        player.initializeDefaultStats();
+        await player.changeMap(await resolveStartMapId(config));
+      },
       onStart: async (player: RpgPlayer) => {
+        if (autoStart) return;
         await player.changeMap(await resolveStartMapId(config));
       },
       onJoinMap: async (player: RpgPlayer, map: RpgMap) => {
