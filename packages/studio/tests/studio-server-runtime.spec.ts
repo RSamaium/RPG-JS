@@ -19,6 +19,82 @@ afterEach(() => {
 });
 
 describe("Studio server runtime", () => {
+  test("starts a player immediately when autoStart is enabled", async () => {
+    const calls: string[] = [];
+    const player = {
+      initializeDefaultStats() {
+        calls.push("initialize");
+      },
+      async changeMap(mapId: string) {
+        calls.push(`map:${mapId}`);
+      },
+    };
+    const hooks = (studioServer({
+      autoStart: true,
+      startMapId: "requested-map",
+    }) as any).player;
+
+    await hooks.onConnected(player);
+    await hooks.onStart(player);
+
+    expect(calls).toEqual(["initialize", "map:requested-map"]);
+  });
+
+  test.each([
+    { label: "by default", autoStart: undefined },
+    { label: "when autoStart is disabled", autoStart: false },
+  ])("keeps the title-screen start flow $label", async ({ autoStart }) => {
+    const initializeDefaultStats = vi.fn();
+    const changeMap = vi.fn(async () => true);
+    const player = {
+      initializeDefaultStats,
+      changeMap,
+    };
+    const hooks = (studioServer({
+      autoStart,
+      startMapId: "requested-map",
+    }) as any).player;
+
+    await hooks.onConnected(player);
+    expect(initializeDefaultStats).not.toHaveBeenCalled();
+    expect(changeMap).not.toHaveBeenCalled();
+
+    await hooks.onStart(player);
+    expect(changeMap).toHaveBeenCalledOnce();
+    expect(changeMap).toHaveBeenCalledWith("requested-map");
+  });
+
+  test("resolves the project start map for immediate startup", async () => {
+    const getProject = vi.fn(async () => ({
+      _id: "auto-start-project",
+      startMapId: "project-start-map",
+    }));
+    configureGameDataProvider({
+      kind: "online",
+      getProject,
+      getMap: vi.fn(),
+      getMedia: vi.fn(),
+      getDatabase: vi.fn(async () => []),
+    });
+    const initializeDefaultStats = vi.fn();
+    const changeMap = vi.fn(async () => true);
+    const hooks = (studioServer({
+      autoStart: true,
+      projectId: "auto-start-project",
+    }) as any).player;
+
+    await hooks.onConnected({
+      initializeDefaultStats,
+      changeMap,
+    });
+
+    expect(getProject).toHaveBeenCalledWith({
+      projectId: "auto-start-project",
+    });
+    expect(initializeDefaultStats).toHaveBeenCalledOnce();
+    expect(changeMap).toHaveBeenCalledWith("project-start-map");
+  });
+
   test("uses an injected provider to prepare trusted map updates", async () => {
     const getProject = vi.fn(async () => ({
       _id: "trusted-project",
