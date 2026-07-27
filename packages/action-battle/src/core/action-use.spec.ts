@@ -249,11 +249,12 @@ describe("executeActionBattleUse", () => {
     const target = createEntity("target");
     target.applyDamage.mockReturnValue({ damage: 30 });
     const emitted = [{ id: "bolt-1" }];
+    const emit = vi.fn(() => emitted);
     const attacker = {
       ...createEntity("caster"),
       getCurrentMap: () => ({
         projectiles: {
-          emit: vi.fn(() => emitted),
+          emit,
         },
       }),
     };
@@ -269,6 +270,9 @@ describe("executeActionBattleUse", () => {
         action: {
           mode: "projectile",
           range: 200,
+          visual: {
+            trailFx: "torchFire",
+          },
           projectile: {
             type: "bolt",
             speed: 200,
@@ -285,6 +289,12 @@ describe("executeActionBattleUse", () => {
     });
 
     expect(target.applyDamage).not.toHaveBeenCalled();
+    expect(emit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        params: expect.objectContaining({ trailFx: "torchFire" }),
+      }),
+      attacker
+    );
 
     handleActionBattleProjectileImpact({
       attacker: attacker as any,
@@ -390,5 +400,57 @@ describe("executeActionBattleUse", () => {
       direction: { x: 1, y: 0 },
       spreadDegrees: 20,
     });
+  });
+
+  test("uses the built-in projectile and serializes Studio presentation", () => {
+    const emit = vi.fn(() => [{ id: "studio-bolt-1" }]);
+    const attacker = {
+      ...createEntity("caster"),
+      getCurrentMap: () => ({
+        tileWidth: 48,
+        projectiles: { emit },
+      }),
+    };
+
+    executeActionBattleUse({
+      attacker: attacker as any,
+      usable: {
+        id: "studio-bolt",
+        _type: "skill",
+        spCost: 0,
+        targeting: { range: 6 },
+        action: {
+          mode: "projectile",
+          projectile: {
+            graphic: "fireball-spritesheet",
+            scale: 1.4,
+            rotateToDirection: false,
+          },
+        },
+      },
+      skill: {
+        id: "studio-bolt",
+        _type: "skill",
+        spCost: 0,
+        targeting: { range: 6 },
+      },
+    });
+
+    expect(emit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "action-battle-skill",
+        trajectory: {
+          type: "linear",
+          speed: 180,
+          range: 288,
+        },
+        params: {
+          graphic: "fireball-spritesheet",
+          scale: 1.4,
+          rotateToDirection: false,
+        },
+      }),
+      attacker,
+    );
   });
 });

@@ -1,8 +1,7 @@
 import { FromSchema } from "json-schema-to-ts";
 import { createAppearanceSchema, parameterSchemas, inventorySchemas } from "./character-config";
 import { skillSchema } from "./database";
-
-const keyEnum = ["down", "up", "left", "right", "space", "backspace", "tab", "shift", "control", "alt", "meta", "capslock", "numlock", "scrolllock", "printscreen", "pause", "insert", "delete", "home", "end", "pageup", "pagedown", "arrowup", "arrowdown", "arrowleft", "arrowright", "escape", "enter", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"] as const;
+import { inputKeyEnum } from "./input-controls";
 
 export const projectSchema = {
   type: "object",
@@ -24,37 +23,37 @@ export const projectSchema = {
         down: {
           type: "string",
           title: "Down",
-          enum: keyEnum,
+          enum: inputKeyEnum,
           default: "down",
         },
         up: {
           type: "string",
           title: "Up",
-          enum: keyEnum,
+          enum: inputKeyEnum,
           default: "up",
         },
         left: {
           type: "string",
           title: "Left",
-          enum: keyEnum,
+          enum: inputKeyEnum,
           default: "left",
         },
         right: {
           type: "string",
           title: "Right",
-          enum: keyEnum,
+          enum: inputKeyEnum,
           default: "right",
         },
         action: {
           type: "string",
           title: "Action",
-          enum: keyEnum,
+          enum: inputKeyEnum,
           default: "space",
         },
         back: {
           type: "string",
           title: "Back",
-          enum: keyEnum,
+          enum: inputKeyEnum,
           default: "escape",
         },
       },

@@ -105,6 +105,8 @@ const serializeSkill = (skill: any) => {
     icon: skill?.icon,
     animation: skill?.animation,
     sound: skill?.sound,
+    casterAnimation: skill?.casterAnimation,
+    impactSound: skill?.impactSound,
   };
   if (typeof id === "string") return { id, ...presentation };
   if (typeof id === "function") {
@@ -458,6 +460,18 @@ const classicParts: Partial<Record<ActionBattleVisualContext["moment"], ActionBa
   },
 };
 
+const showSkillImpactAnimation = (
+  context: ActionBattleVisualContext,
+  fx: ActionBattleVisualHelpers,
+  target: any
+) => {
+  if (!target || typeof context.skill?.animation !== "string") return;
+  fx.component(target, "animation", {
+    graphic: context.skill.animation,
+    animationName: "default",
+  });
+};
+
 const fxParts: Partial<Record<ActionBattleVisualContext["moment"], ActionBattleVisualPart>> = {
   ...classicParts,
   hit(context, fx) {
@@ -470,6 +484,7 @@ const fxParts: Partial<Record<ActionBattleVisualContext["moment"], ActionBattleV
   },
   hurt(context, fx) {
     classicParts.hurt?.(context, fx);
+    showSkillImpactAnimation(context, fx, context.target ?? context.entity);
     fx.component(context.target ?? context.entity, ACTION_BATTLE_HIT_FX_COMPONENT_ID, {
       name: "hitSpark",
       scale: 0.8,
@@ -489,8 +504,16 @@ const resolveDamageKind = (context: ActionBattleVisualContext) => {
 };
 
 const resolveImpactFx = (context: ActionBattleVisualContext) => {
-  const configured = context.result?.metadata?.visual?.fx;
-  if (typeof configured === "string" && configured) return configured;
+  const visual = context.result?.metadata?.visual;
+  const configured = visual?.impactFx ?? visual?.fx;
+  if (configured === "none") return null;
+  if (
+    typeof configured === "string" &&
+    configured &&
+    configured !== "auto"
+  ) {
+    return configured;
+  }
   const kind = resolveDamageKind(context);
   if (kind === "heal") return "healPulse";
   if (kind === "critical" || kind === "charged") return "impactBurst";
@@ -526,8 +549,10 @@ const showImpactFx = (
 ) => {
   const visual = context.result?.metadata?.visual ?? {};
   const kind = resolveDamageKind(context);
+  const name = resolveImpactFx(context);
+  if (!name) return;
   fx.component(entity, ACTION_BATTLE_HIT_FX_COMPONENT_ID, {
-    name: resolveImpactFx(context),
+    name,
     scale:
       visual.scale ??
       (kind === "critical" || kind === "charged"
@@ -574,6 +599,7 @@ const impactParts: Partial<Record<ActionBattleVisualContext["moment"], ActionBat
       cycles: 1,
     });
     fx.graphic(target, "hurt");
+    showSkillImpactAnimation(context, fx, target);
     showImpactDamage(context, fx, target);
     showImpactFx(context, fx, target);
     fx.shake({
@@ -595,6 +621,7 @@ const impactParts: Partial<Record<ActionBattleVisualContext["moment"], ActionBat
   },
   heal(context, fx) {
     const target = context.target ?? context.entity;
+    showSkillImpactAnimation(context, fx, target);
     showImpactDamage(context, fx, target);
     showImpactFx(context, fx, target);
     fx.flash(target, {
@@ -705,19 +732,29 @@ const impactParts: Partial<Record<ActionBattleVisualContext["moment"], ActionBat
     fx.shake({ intensity: 5, duration: 220, frequency: 18 });
   },
   castSkill(context, fx) {
-    classicParts.castSkill?.(context, fx);
-    if (context.skill?.animation) {
-      fx.component(context.target ?? context.entity, "animation", {
-        graphic: context.skill.animation,
-        animationName: "default",
+    if (context.skill?.casterAnimation) {
+      fx.graphic(context.entity, {
+        animationName: "attack",
+        graphic: context.skill.casterAnimation,
+        repeat: 1,
+      });
+    } else {
+      classicParts.castSkill?.(context, fx);
+    }
+    const configured = context.result?.metadata?.visual?.castFx;
+    if (configured !== "none") {
+      fx.component(context.entity, ACTION_BATTLE_HIT_FX_COMPONENT_ID, {
+        name:
+          typeof configured === "string" &&
+          configured &&
+          configured !== "auto"
+            ? configured
+            : "magicBurst",
+        scale: 0.72,
+        displayDuration: 360,
+        zIndex: 900,
       });
     }
-    fx.component(context.entity, ACTION_BATTLE_HIT_FX_COMPONENT_ID, {
-      name: "magicBurst",
-      scale: 0.72,
-      displayDuration: 360,
-      zIndex: 900,
-    });
   },
   telegraph({ entity, result }, fx) {
     fx.component(entity, ACTION_BATTLE_TELEGRAPH_COMPONENT_ID, {

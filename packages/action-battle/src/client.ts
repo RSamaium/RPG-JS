@@ -40,6 +40,14 @@ import AttackTelegraphComponent from "./components/attack-telegraph.ce";
 import DamagePopupComponent from "./components/damage-popup.ce";
 // @ts-ignore CanvasEngine components are compiled by @canvasengine/compiler.
 import SoftTargetComponent from "./components/soft-target.ce";
+// @ts-ignore CanvasEngine components are compiled by @canvasengine/compiler.
+import SkillProjectileComponent from "./components/skill-projectile.ce";
+import {
+  ACTION_BATTLE_SKILL_LOADOUT_VISUAL_ID,
+  setActionBattleSkillLoadout,
+} from "./ui/state";
+
+export const ACTION_BATTLE_SKILL_PROJECTILE_TYPE = "action-battle-skill";
 
 const beginLocalPlayerAttackLock = (
   engine: RpgClientEngine,
@@ -193,8 +201,16 @@ export const createActionBattleClient = (
     ],
     clientVisuals: {
       ...createActionBattleClientVisuals(normalized),
+      [ACTION_BATTLE_SKILL_LOADOUT_VISUAL_ID]: (context: any) => {
+        setActionBattleSkillLoadout(context.data?.skills ?? []);
+      },
       [ACTION_BATTLE_COMBAT_AUDIO_ID]:
         createActionBattleCombatAudioVisual(normalized.audio),
+    },
+    projectiles: {
+      components: {
+        [ACTION_BATTLE_SKILL_PROJECTILE_TYPE]: SkillProjectileComponent,
+      },
     },
     gui: resolvedUi.gui,
     sprite: {

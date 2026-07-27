@@ -32,7 +32,7 @@ export const parseAoeMask = (mask: ActionBattleAoeMask | undefined): ParsedAoeMa
   rows.forEach((row, y) => {
     for (let x = 0; x < row.length; x++) {
       const char = row[x];
-      if (char && char !== "." && char !== " ") {
+      if (char && char !== "." && char !== " " && char !== "0") {
         cells.push({ dx: x - centerX, dy: y - centerY });
       }
     }

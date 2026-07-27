@@ -228,6 +228,77 @@ Mobile games can expose the charged attack through `withMobile({ buttons: {
 heavy: true } })`; the heavy button dispatches the same authoritative charge
 start/release controls as the keyboard.
 
+## Studio skills and keyboard shortcuts
+
+Skills loaded from RPGJS Studio can define their complete Action Battle
+presentation and gameplay contract. The client only requests a skill use; the
+server verifies that the skill is learned, that SP is available, that its
+cooldown has elapsed, and that the selected target is valid.
+
+```ts
+{
+  id: "fireball",
+  _type: "skill",
+  key: "1",
+  casterAnimation: "mage-cast",
+  animation: "fire-impact",
+  sound: "fire-cast",
+  impactSound: "fire-hit",
+  targeting: {
+    range: 6
+  },
+  action: {
+    mode: "projectile",
+    target: "enemy",
+    cooldownMs: 900,
+    visual: {
+      castFx: "magicBurst",
+      trailFx: "torchFire",
+      impactFx: "explosionSmall"
+    },
+    projectile: {
+      graphic: "fireball",
+      speed: 240,
+      scale: 1.2,
+      rotateToDirection: true
+    }
+  }
+}
+```
+
+`action.visual` controls client-only particle presentation and never changes
+server gameplay:
+
+- `castFx` is a short preset attached to the caster.
+- `trailFx` is a continuous preset attached to the moving projectile.
+- `impactFx` is a short preset attached to the target on impact.
+
+Each field accepts a CanvasEngine built-in or custom FX preset name. Use
+`"auto"` to retain Action Battle defaults and `"none"` to disable that phase.
+The legacy `visual.fx` field remains supported as an impact alias, but
+`impactFx` takes precedence.
+
+`key` accepts the same keyboard names as project input controls. If it is
+omitted, learned skills use the numeric slots `1` through `0`. The Adventure
+preset reserves its charged-attack and guard keys, so Studio reports `E` and
+`F` conflicts without blocking the save.
+
+`targeting.range` is expressed in map tiles. A projectile can override its
+travel range in pixels; otherwise Action Battle derives it from the targeting
+range and tile width. When `action.mode` is `projectile` and no custom
+projectile `type` is supplied, the built-in `action-battle-skill` CanvasEngine
+renderer displays `projectile.graphic`, applies `scale`, and optionally rotates
+the graphic along its trajectory. Damage and the impact animation/sound occur
+only when the authoritative projectile collides.
+
+Area masks use `#` for affected tiles and `.` for empty tiles. Studio exposes
+this as a visual grid and canonicalizes legacy binary masks by treating `1` as
+affected and `0` as empty.
+
+Use `action.target` to select `enemy`, `ally`, `self`, or `any`. Ranged ally
+skills and area shapes enter the targeting overlay; a single-target enemy
+projectile can use the soft target in front of the player.
+
 `animations` is optional. If you omit it, attacks keep using the default
 `attack` animation and no extra hurt, death, or skill-cast animation is played.
 

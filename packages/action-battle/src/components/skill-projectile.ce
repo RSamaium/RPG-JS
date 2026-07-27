@@ -1,0 +1,111 @@
+<Container
+  x={x}
+  y={y}
+  rotation={rotation}
+  scale={projectileScale}
+  zIndex={1000}
+>
+  @if (trailFx()) {
+    <Fx
+      name={trailFx}
+      loop
+      x={0}
+      y={0}
+      scale={projectileScale}
+      maxParticles={80}
+      zIndex={-1}
+    />
+  }
+  @if (impact()) {
+    <Graphics draw={drawImpact} />
+  } @else if (projectileSheet()) {
+    <Sprite
+      sheet={projectileSheet}
+      width={32}
+      height={32}
+      x={-16}
+      y={-16}
+      objectFit="contain"
+    />
+  } @else {
+    <Graphics draw={drawFallback} />
+  }
+</Container>
+
+<script>
+  import { computed } from "canvasengine";
+  import { Fx } from "@canvasengine/presets";
+  import { inject, RpgClientEngine } from "@rpgjs/client";
+
+  const {
+    x,
+    y,
+    angle,
+    impact,
+    impactProgress,
+    params,
+  } = defineProps({
+    x: Number,
+    y: Number,
+    angle: Number,
+    impact: {
+      type: Object,
+      default: null,
+    },
+    impactProgress: {
+      type: Number,
+      default: 0,
+    },
+    params: {
+      type: Object,
+      default: () => ({}),
+    },
+  });
+
+  const engine = inject(RpgClientEngine);
+  const projectileParams = computed(() => params() ?? {});
+  const projectileScale = computed(() => {
+    const value = Number(projectileParams().scale ?? 1);
+    return Number.isFinite(value) && value > 0 ? value : 1;
+  });
+  const rotation = computed(() =>
+    projectileParams().rotateToDirection === false ? 0 : angle()
+  );
+  const trailFx = computed(() => {
+    const value = projectileParams().trailFx;
+    if (
+      typeof value !== "string" ||
+      !value ||
+      value === "auto" ||
+      value === "none"
+    ) {
+      return null;
+    }
+    return value;
+  });
+  const projectileSheet = computed(() => {
+    const graphic = projectileParams().graphic;
+    if (typeof graphic !== "string" || !graphic) return null;
+    const definition = engine.getSpriteSheet(graphic);
+    if (!definition) return null;
+    return {
+      definition,
+      playing: "default",
+    };
+  });
+
+  function drawFallback(g) {
+    g.circle(0, 0, 7);
+    g.fill({ color: 0x8be9fd, alpha: 0.95 });
+    g.circle(-2, -2, 3);
+    g.fill({ color: 0xffffff, alpha: 0.8 });
+  }
+
+  function drawImpact(g) {
+    const progress = Math.max(0, Math.min(1, impactProgress() ?? 0));
+    g.circle(0, 0, 8 + progress * 18);
+    g.fill({ color: 0x8be9fd, alpha: Math.max(0, 0.45 * (1 - progress)) });
+    g.circle(0, 0, 3 + progress * 8);
+    g.fill({ color: 0xffffff, alpha: Math.max(0, 0.75 * (1 - progress)) });
+  }
+</script>

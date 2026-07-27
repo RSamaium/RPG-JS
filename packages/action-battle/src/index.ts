@@ -104,6 +104,7 @@ export type {
   ActionBattleTargetSelector,
   ActionBattleProjectileImpactContext,
   ActionBattleProjectileOptions,
+  ActionBattleSkillTargetingConfig,
   ActionBattleUsable,
   ActionBattleUseContext,
   ActionBattleHitContext,

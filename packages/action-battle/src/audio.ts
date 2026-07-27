@@ -97,13 +97,24 @@ export const playActionBattleMomentAudio = (
       playActionBattleAudioCue(engine, options.hit, context);
       return;
     case "hurt":
-      playActionBattleAudioCue(engine, options.hit, context);
+      playActionBattleAudioCue(
+        engine,
+        context.skill?.impactSound ?? options.hit,
+        context
+      );
       if (context.defeated || context.result?.defeated) {
         lethalCueTimes.set(engine, Date.now());
         playActionBattleAudioCue(engine, options.die, context);
       } else {
         playActionBattleAudioCue(engine, options.hurt, context);
       }
+      return;
+    case "heal":
+      playActionBattleAudioCue(
+        engine,
+        context.skill?.impactSound ?? options.skill,
+        context
+      );
       return;
     case "defeat":
       if (Date.now() - (lethalCueTimes.get(engine) ?? 0) < 750) return;

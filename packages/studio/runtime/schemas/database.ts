@@ -1,4 +1,5 @@
 import { FromSchema } from "json-schema-to-ts";
+import { inputKeyEnum } from "./input-controls";
 
 export const databaseSchema = {
     type: "object",
@@ -196,7 +197,7 @@ export const skillSchema = {
         description: {
             type: "string",
             title: "Description",
-            format: { layout: "basic", type: "textarea" },
+            format: { name: "textarea", layout: "basic" },
         },
         icon: {
             type: "string",
@@ -214,12 +215,12 @@ export const skillSchema = {
         },
         animation: {
             type: "string",
-            title: "Animation",
-            description: "Media animation played by this skill",
+            title: "skill editor.impact animation",
+            description: "skill editor.impact animation description",
             format: {
-                name: "media",
+                name: "translated-media",
                 type: "animation",
-                buttonLabel: "Select Animation",
+                buttonLabel: "skill editor.select impact animation",
                 useUpload: {
                     accept: "image/*",
                 },
@@ -228,16 +229,51 @@ export const skillSchema = {
         },
         sound: {
             type: "string",
-            title: "Sound",
-            description: "Sound effect played by this skill",
+            title: "skill editor.cast sound",
+            description: "skill editor.cast sound description",
             format: {
-                name: "media",
+                name: "translated-media",
                 type: "sound",
-                buttonLabel: "Select Sound Effect",
+                buttonLabel: "skill editor.select cast sound",
                 useUpload: {
                     accept: "audio/*",
                 },
                 layout: "basic",
+            } as any,
+        },
+        key: {
+            type: "string",
+            title: "skill editor.shortcut",
+            description: "skill editor.shortcut description",
+            enum: inputKeyEnum,
+            format: {
+                name: "skill-shortcut",
+                layout: "presentation",
+                allowClear: true,
+            } as any,
+        },
+        casterAnimation: {
+            type: "string",
+            title: "skill editor.caster animation",
+            description: "skill editor.caster animation description",
+            format: {
+                name: "translated-media",
+                type: "spritesheet",
+                buttonLabel: "skill editor.select caster animation",
+                useUpload: { accept: "image/*" },
+                layout: "presentation",
+            } as any,
+        },
+        impactSound: {
+            type: "string",
+            title: "skill editor.impact sound",
+            description: "skill editor.impact sound description",
+            format: {
+                name: "translated-media",
+                type: "sound",
+                buttonLabel: "skill editor.select impact sound",
+                useUpload: { accept: "audio/*" },
+                layout: "presentation",
             } as any,
         },
         spCost: {
@@ -270,20 +306,68 @@ export const skillSchema = {
             default: "physical",
             format: { layout: "combat" },
         },
-        target: {
-            type: "string",
-            title: "Target",
-            description: "The target of the skill",
-            enum: ["single", "all", "self", "ally", "enemy"],
-            default: "single",
-            format: { layout: "target" },
+        targeting: {
+            type: "object",
+            title: "skill editor.targeting",
+            format: { name: "skill-targeting", layout: "target" },
+            properties: {
+                range: {
+                    type: "number",
+                    title: "skill editor.range",
+                    description: "skill editor.range description",
+                    minimum: 0,
+                    default: 0,
+                },
+                aoeMask: {
+                    type: "array",
+                    title: "skill editor.aoe mask",
+                    description: "skill editor.aoe mask description",
+                    items: { type: "string" },
+                },
+            },
         },
-        range: {
-            type: "number",
-            title: "Range",
-            description: "The range of the skill (0 = melee)",
-            default: 0,
-            format: { layout: "target" },
+        action: {
+            type: "object",
+            title: "skill editor.action",
+            format: {
+                name: "skill-action",
+                layout: "action",
+            } as any,
+            properties: {
+                mode: {
+                    type: "string",
+                    enum: ["instant", "melee", "projectile"],
+                    default: "melee",
+                },
+                target: {
+                    type: "string",
+                    enum: ["enemy", "ally", "self", "any"],
+                    default: "enemy",
+                },
+                cooldownMs: {
+                    type: "number",
+                    minimum: 0,
+                    default: 0,
+                },
+                visual: {
+                    type: "object",
+                    properties: {
+                        castFx: { type: "string", default: "auto" },
+                        trailFx: { type: "string", default: "auto" },
+                        impactFx: { type: "string", default: "auto" },
+                    },
+                },
+                projectile: {
+                    type: "object",
+                    properties: {
+                        graphic: { type: "string" },
+                        speed: { type: "number", minimum: 1, default: 180 },
+                        range: { type: "number", minimum: 1 },
+                        scale: { type: "number", exclusiveMinimum: 0, default: 1 },
+                        rotateToDirection: { type: "boolean", default: true },
+                    },
+                },
+            },
         },
         successRate: {
             type: "number",
