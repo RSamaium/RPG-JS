@@ -867,7 +867,7 @@ setParameter(name: string, value: ParameterValue): void
 
 Parameter Manager Mixin with Reactive Signals
 
-Provides comprehensive parameter management functionality using reactive signals from `@signe/reactive`.
+Provides comprehensive parameter management through RPGJS reactive gameplay signals.
 This mixin handles health points (HP), skill points (SP), experience and level progression,
 custom parameters, and parameter modifiers with automatic reactivity.
 

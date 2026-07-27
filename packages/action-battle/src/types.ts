@@ -551,7 +551,35 @@ export interface ActionBattleActionBarSkill {
   readyAt?: number;
 }
 
+export type ActionBattleActionBarSlot =
+  | {
+      index: number;
+      type: "empty";
+      entry: null;
+      usable: false;
+      label?: string;
+    }
+  | {
+      index: number;
+      type: "skill";
+      entry: { type: "skill"; id: string };
+      skill: ActionBattleActionBarSkill;
+      item?: never;
+      usable: boolean;
+      label?: string;
+    }
+  | {
+      index: number;
+      type: "item";
+      entry: { type: "item"; id: string };
+      item: ActionBattleActionBarItem;
+      skill?: never;
+      usable: boolean;
+      label?: string;
+    };
+
 export interface ActionBattleActionBarData {
   items: ActionBattleActionBarItem[];
   skills: ActionBattleActionBarSkill[];
+  slots: ActionBattleActionBarSlot[];
 }

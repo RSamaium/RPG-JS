@@ -64,7 +64,7 @@
                     <ItemsMenu data={data} onInteraction={onInteraction} onBack={goBack} />
                 }
                 @if (view() === "skills") {
-                    <SkillsMenu data={data} onBack={goBack} />
+                    <SkillsMenu data={data} onInteraction={onInteraction} onBack={goBack} />
                 }
                 @if (view() === "equip") {
                     <EquipMenu data={data} onInteraction={onInteraction} onBack={goBack} />

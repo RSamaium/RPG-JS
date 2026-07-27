@@ -61,12 +61,12 @@ Set up the player as a specific actor archetype
 ### Signature
 
 ```ts
-setActor(actorClass: ActorClass | string): any
+setActor(actorClass: ActorConstructor | string): ActorData
 ```
 
 ### Parameters
 
-- `actorClass`: `ActorClass | string`
+- `actorClass`: `ActorConstructor | string`
 
 ### Returns
 
@@ -83,12 +83,12 @@ Assign a class to the player
 ### Signature
 
 ```ts
-setClass(_class: ClassClass | string): any
+setClass(_class: ClassConstructor | string): ClassData
 ```
 
 ### Parameters
 
-- `_class`: `ClassClass | string`
+- `_class`: `ClassConstructor | string`
 
 ### Returns
 

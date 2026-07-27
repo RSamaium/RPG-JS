@@ -1,5 +1,9 @@
 import { signal } from "canvasengine";
-import { ActionBattleActionBarSkill, ActionBattleOptions } from "../types";
+import {
+  ActionBattleActionBarSkill,
+  ActionBattleActionBarSlot,
+  ActionBattleOptions,
+} from "../types";
 import { DEFAULT_ACTION_BATTLE_OPTIONS, normalizeActionBattleOptions } from "../config";
 
 export interface ActionBattleAttackPreviewState {
@@ -50,6 +54,7 @@ export const actionBattleCombatOptions = signal(
 export const ACTION_BATTLE_SKILL_LOADOUT_VISUAL_ID =
   "action-battle.skill-loadout";
 export const actionBattleSkillLoadout = signal<ActionBattleActionBarSkill[]>([]);
+export const actionBattleHotbarSlots = signal<ActionBattleActionBarSlot[]>([]);
 
 export const actionBattleTargetingState = signal<ActionBattleTargetingState>({
   ...defaultTargetingState,
@@ -66,7 +71,8 @@ export const setActionBattleOptions = (options: ActionBattleOptions = {}) => {
 };
 
 export const setActionBattleSkillLoadout = (
-  skills: ActionBattleActionBarSkill[] = []
+  skills: ActionBattleActionBarSkill[] = [],
+  slots: ActionBattleActionBarSlot[] = [],
 ) => {
   actionBattleSkillLoadout.set(
     Array.isArray(skills)
@@ -76,16 +82,27 @@ export const setActionBattleSkillLoadout = (
         )
       : []
   );
+  actionBattleHotbarSlots.set(
+    Array.isArray(slots)
+      ? slots.filter(
+          (slot): slot is ActionBattleActionBarSlot =>
+            !!slot && Number.isInteger(slot.index)
+        )
+      : []
+  );
 };
 
-export const startTargeting = (skill: ActionBattleActionBarSkill) => {
+export const startTargeting = (
+  skill: ActionBattleActionBarSkill,
+  initialOffset: { x: number; y: number } = { x: 0, y: 0 },
+) => {
   const skillsOptions = actionBattleSkillOptions();
   const mask = skill.aoeMask || (skillsOptions.defaultAoeMask as string[]) || ["#"];
   actionBattleTargetingState.set({
     active: true,
     skill,
     range: skill.range ?? 0,
-    offset: { x: 0, y: 0 },
+    offset: initialOffset,
     aoeMask: mask,
   });
 };

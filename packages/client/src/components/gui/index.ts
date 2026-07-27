@@ -14,6 +14,7 @@ import TitleScreenComponent from "./title-screen.ce";
 import GameoverComponent from "./gameover.ce";
 import InputComponent from "./input.ce";
 import InputFieldComponent from "./input-field.ce";
+import HotbarComponent from "./hotbar.ce";
 
 export {
     DialogboxComponent,
@@ -31,5 +32,6 @@ export {
     TitleScreenComponent,
     GameoverComponent,
     InputComponent,
-    InputFieldComponent
+    InputFieldComponent,
+    HotbarComponent
 }

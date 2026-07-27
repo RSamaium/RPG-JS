@@ -1,12 +1,13 @@
 import { RpgPlayer } from "./Player";
-import { Gui, DialogGui, MenuGui, ShopGui, NotificationGui, SaveLoadGui, GameoverGui, InputGui } from "../Gui";
+import { Gui, DialogGui, MenuGui, ShopGui, NotificationGui, SaveLoadGui, GameoverGui, InputGui, HotbarGui } from "../Gui";
+import type { HotbarGuiOptions } from "../Gui/HotbarGui";
 import type { ShopGuiOptions, ShopItemInput } from "../Gui/ShopGui";
 import { DialogOptions, DialogBaseOptions, Choice } from "../Gui/DialogGui";
 import { SaveLoadOptions, SaveSlot } from "../Gui/SaveLoadGui";
 import { MenuGuiOptions } from "../Gui/MenuGui";
 import { GameoverGuiOptions, GameoverGuiSelection } from "../Gui/GameoverGui";
 import { InputOptions, NumberInputOptions, TextInputOptions, TextareaInputOptions } from "../Gui/InputForm";
-import { Constructor, PlayerCtor } from "@rpgjs/common";
+import { Constructor, PlayerCtor, PrebuiltGui } from "@rpgjs/common";
 
 /**
  * GUI Manager Mixin
@@ -87,6 +88,44 @@ export function WithGuiManager<TBase extends PlayerCtor>(
       const gui = new MenuGui(<any>this);
       this._gui[gui.id] = gui;
       return gui.open(options);
+    }
+
+    /**
+     * Display the persistent player hotbar.
+     *
+     * The server owns slot content and validates every use. The default client
+     * GUI provides direct keyboard shortcuts and a gamepad radial selector.
+     *
+     * @title Show Hotbar
+     * @method player.showHotbar(options)
+     * @param options - Initialization and optional custom use handler.
+     * @returns The GUI open result.
+     * @memberof RpgPlayer
+     *
+     * @example
+     * ```ts
+     * player.showHotbar();
+     * ```
+     */
+    showHotbar(options: HotbarGuiOptions = {}) {
+      const existing = this._gui[PrebuiltGui.Hotbar] as HotbarGui | undefined;
+      const gui = existing ?? new HotbarGui(this as unknown as RpgPlayer);
+      this._gui[gui.id] = gui;
+      return existing
+        ? Promise.resolve(null)
+        : gui.open(options);
+    }
+
+    /**
+     * Hide the default hotbar GUI.
+     *
+     * @title Hide Hotbar
+     * @method player.hideHotbar()
+     * @returns {void}
+     * @memberof RpgPlayer
+     */
+    hideHotbar(): void {
+      this._gui[PrebuiltGui.Hotbar]?.close();
     }
 
     callGameover(options: GameoverGuiOptions = {}): Promise<GameoverGuiSelection | null> {
@@ -495,6 +534,8 @@ export interface IGuiManager {
    * @memberof GuiManager
    */
   callMainMenu(options?: MenuGuiOptions): void;
+  showHotbar(options?: HotbarGuiOptions): Promise<unknown | null>;
+  hideHotbar(): void;
 
   /**
    * Calls game over menu. Opens the GUI named `rpg-gameover`

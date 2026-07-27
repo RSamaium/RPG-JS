@@ -39,6 +39,7 @@ import { ISkillManager, WithSkillManager } from "./SkillManager";
 import { IBattleManager, WithBattleManager } from "./BattleManager";
 import { IClassManager, WithClassManager } from "./ClassManager";
 import { IStateManager, WithStateManager } from "./StateManager";
+import { IHotbarManager, WithHotbarManager } from "./HotbarManager";
 import {
   buildSaveSlotMeta,
   resolveAutoSaveStrategy,
@@ -91,6 +92,7 @@ const BasicPlayerMixins = combinePlayerMixins([
   WithStateManager,
   WithClassManager,
   WithSkillManager,
+  WithHotbarManager,
   WithBattleManager,
 ]);
 
@@ -2036,4 +2038,5 @@ export interface RpgPlayer extends
   ISkillManager,
   IBattleManager,
   IClassManager,
-  IStateManager { } 
+  IStateManager,
+  IHotbarManager { }

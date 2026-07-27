@@ -1,7 +1,7 @@
 import { Context, inject } from "@signe/di";
 import { signal, Signal, WritableSignal, type ComponentFunction } from "canvasengine";
 import { AbstractWebsocket, WebSocketToken } from "../services/AbstractSocket";
-import { DialogboxComponent, ShopComponent, SaveLoadComponent, MainMenuComponent, NotificationComponent, TitleScreenComponent, GameoverComponent, InputComponent } from "../components/gui";
+import { DialogboxComponent, ShopComponent, SaveLoadComponent, MainMenuComponent, NotificationComponent, TitleScreenComponent, GameoverComponent, InputComponent, HotbarComponent } from "../components/gui";
 import { combineLatest, Subscription } from "rxjs";
 import { PrebuiltGui, type RpgContext } from "@rpgjs/common";
 
@@ -126,6 +126,82 @@ const updateEquippedFlag = (items: any[], id: string, equip: boolean) => {
 
 const mainMenuOptimisticReducer: OptimisticReducer = (data, action) => {
   if (!data || typeof data !== "object") return data;
+  if (
+    action.name === "assignHotbarSlot" ||
+    action.name === "clearHotbarSlot"
+  ) {
+    const slot = Number(action.data?.slot);
+    if (!Number.isInteger(slot) || slot < 0 || slot >= 10 || !data.hotbar) {
+      return data;
+    }
+    const stateSlots = Array.from(
+      { length: 10 },
+      (_, index) => data.hotbar.hotbar?.slots?.[index] ?? null,
+    );
+    const displaySlots = Array.from(
+      { length: 10 },
+      (_, index) => data.hotbar.slots?.[index] ?? {
+        index,
+        type: "empty",
+        entry: null,
+        usable: false,
+      },
+    );
+
+    if (action.name === "clearHotbarSlot") {
+      stateSlots[slot] = null;
+      displaySlots[slot] = {
+        index: slot,
+        type: "empty",
+        entry: null,
+        usable: false,
+      };
+    } else {
+      const entry = action.data?.entry;
+      if (!entry?.id || (entry.type !== "skill" && entry.type !== "item")) {
+        return data;
+      }
+      const source = entry.type === "skill"
+        ? data.skills?.find((candidate: any) => candidate?.id === entry.id)
+        : data.items?.find((candidate: any) => candidate?.id === entry.id);
+      for (let index = 0; index < 10; index++) {
+        const current = stateSlots[index];
+        if (current?.type === entry.type && current.id === entry.id) {
+          stateSlots[index] = null;
+          displaySlots[index] = {
+            index,
+            type: "empty",
+            entry: null,
+            usable: false,
+          };
+        }
+      }
+      stateSlots[slot] = { type: entry.type, id: entry.id };
+      displaySlots[slot] = {
+        index: slot,
+        type: entry.type,
+        entry: { type: entry.type, id: entry.id },
+        id: entry.id,
+        name: source?.name ?? entry.id,
+        icon: source?.icon,
+        quantity: source?.quantity,
+        usable: source?.usable !== false,
+      };
+    }
+
+    return {
+      ...data,
+      hotbar: {
+        ...data.hotbar,
+        hotbar: {
+          ...(data.hotbar.hotbar ?? {}),
+          initialized: true,
+          slots: stateSlots,
+        },
+        slots: displaySlots,
+      },
+    };
+  }
   if (action.name === "useItem") {
     if (!Array.isArray(data.items)) return data;
     const id = action.data?.id;
@@ -210,6 +286,11 @@ export class RpgGui {
     this.add({
       name: PrebuiltGui.Input,
       component: InputComponent,
+      renderer: "canvas",
+    });
+    this.add({
+      name: PrebuiltGui.Hotbar,
+      component: HotbarComponent,
       renderer: "canvas",
     });
 

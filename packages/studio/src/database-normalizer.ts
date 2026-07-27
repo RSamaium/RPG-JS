@@ -34,7 +34,7 @@ const normalizeSkillRecord = (record: any): any => {
         graphic: mediaId(record.action.projectile.graphic),
       }
     : undefined;
-  return {
+  const normalized = {
     ...record,
     spCost: record.spCost ?? record.mpCost ?? 0,
     hitRate: hitRate ?? 1,
@@ -55,6 +55,11 @@ const normalizeSkillRecord = (record: any): any => {
       ...(projectile ? { projectile } : {}),
     },
   };
+  const onUse = createStudioSkillOnUse(
+    String(record._id ?? record.id ?? ""),
+    record.workflowTriggers,
+  );
+  return onUse ? { ...normalized, onUse } : normalized;
 };
 
 export const normalizeStudioDatabaseRecord = (
@@ -97,3 +102,4 @@ export const normalizeStudioDatabase = (records: any[]): Record<string, any> => 
 
   return database;
 };
+import { createStudioSkillOnUse } from "./skill-workflow";

@@ -1,0 +1,219 @@
+<DOMContainer
+  width="100%"
+  height="100%"
+  class="rpg-ui-menu-confirm rpg-hotbar-picker-overlay"
+  controls={controls}
+  click={cancelFromPointer}
+>
+  <div class="rpg-ui-menu-confirm-card rpg-hotbar-picker-card" click={stopEvent}>
+    <div class="rpg-ui-menu-confirm-title">
+      {t("rpg.menu.choose-hotbar-slot")} — {entry()?.name}
+    </div>
+    <div class="rpg-hotbar-picker-grid">
+        @for ((slot, index) of slots()) {
+          <button
+            type="button"
+            class="rpg-ui-hotbar-slot rpg-hotbar-picker-slot"
+            data-selected={selectedSlot() === index ? "true" : "false"}
+            data-empty={slot.type === "empty" ? "true" : "false"}
+            tabindex={index}
+            aria-label={slotAriaLabel(slot, index)}
+            click={assignSlot(index)}
+          >
+            <span class="rpg-ui-hotbar-key">{slotLabels[index]}</span>
+            @if (slot.icon) {
+              <DOMSprite sheet={iconSheet(slot.icon)} width="48px" height="48px" scale={2} objectFit="contain" />
+            } @else {
+              <span class="rpg-ui-hotbar-text">{slot.name || t("rpg.menu.empty")}</span>
+            }
+            @if (isEntrySlot(slot)) {
+              <span class="rpg-hotbar-picker-current">✓</span>
+            }
+          </button>
+        }
+    </div>
+    <div class="rpg-hotbar-picker-help">
+      <span>{t("rpg.menu.assign-hotbar")}</span>
+      <button type="button" class="rpg-ui-menu-confirm-btn rpg-ui-menu-confirm-btn-secondary" click={clearSelected}>
+        {t("rpg.menu.clear-hotbar-slot")}
+      </button>
+      <button type="button" class="rpg-ui-menu-confirm-btn rpg-ui-menu-confirm-btn-secondary" click={cancel}>
+        {t("rpg.menu.cancel")}
+      </button>
+    </div>
+  </div>
+</DOMContainer>
+
+<style>
+  .rpg-hotbar-picker-card {
+    width: min(650px, calc(100vw - 42px));
+    color: #f7fbff;
+    background:
+      linear-gradient(180deg, rgb(24 39 59 / 98%), rgb(7 14 27 / 99%));
+    border: 2px solid color-mix(in srgb, var(--rpg-ui-accent), white 18%);
+    box-shadow: 0 24px 80px rgb(0 0 0 / 72%);
+  }
+
+  .rpg-hotbar-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(72px, 1fr));
+    gap: 10px;
+    margin: 16px 0;
+  }
+
+  .rpg-hotbar-picker-slot {
+    min-height: 76px;
+    color: #f7fbff;
+    font: inherit;
+    background: rgb(14 25 42 / 96%);
+  }
+
+  .rpg-hotbar-picker-slot[data-selected="true"] {
+    background: color-mix(in srgb, var(--rpg-ui-accent), #10213a 72%);
+    box-shadow: 0 0 0 2px var(--rpg-ui-accent), 0 0 24px color-mix(in srgb, var(--rpg-ui-accent), transparent 50%);
+  }
+
+  .rpg-hotbar-picker-current {
+    position: absolute;
+    right: 5px;
+    top: 3px;
+    color: var(--rpg-ui-success, #56d68b);
+    font-weight: 900;
+  }
+
+  .rpg-hotbar-picker-help {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: flex-end;
+    color: var(--rpg-ui-text-muted);
+    font-size: 0.78rem;
+  }
+
+  @media (max-width: 640px) {
+    .rpg-hotbar-picker-grid {
+      grid-template-columns: repeat(5, minmax(48px, 1fr));
+      gap: 5px;
+    }
+  }
+</style>
+
+<script>
+  import { computed, signal, createTabindexNavigator } from "canvasengine";
+  import { inject } from "../../../core/inject";
+  import { RpgClientEngine } from "../../../RpgClientEngine";
+  import { getKeyboardControlBind } from "../../../services/actionInput";
+
+  const { hotbar, entry, onAssign, onClear, onCancel } = defineProps();
+  const engine = inject(RpgClientEngine);
+  const { t } = engine.i18n();
+  const keyboardControls = engine.globalConfig.keyboardControls || {};
+  const slotLabels = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
+  const resolveProp = (value) => typeof value === "function" ? value() : value;
+  const slots = computed(() => {
+    const data = resolveProp(hotbar);
+    const source = Array.isArray(data?.slots) ? data.slots : [];
+    return Array.from({ length: 10 }, (_, index) => source[index] || {
+      index,
+      type: "empty",
+      entry: null,
+      usable: false
+    });
+  });
+  const assignedSlot = computed(() => slots().findIndex(isEntrySlot));
+  const selectedSlot = signal(Math.max(0, assignedSlot()));
+  const nav = createTabindexNavigator(selectedSlot, { count: () => 10 }, "wrap");
+
+  const iconSheet = (iconId) => ({
+    definition: engine.getSpriteSheet(iconId),
+    playing: "default"
+  });
+  const slotAriaLabel = (slot, index) =>
+    `${slotLabels[index]}: ${slot.name || t("rpg.menu.empty")}`;
+
+  function isEntrySlot(slot) {
+    const selectedEntry = resolveProp(entry);
+    return Boolean(
+      selectedEntry &&
+      slot?.entry?.type === selectedEntry.type &&
+      slot?.entry?.id === selectedEntry.id
+    );
+  }
+
+  const stopEvent = (event) => event?.stopPropagation?.();
+  const cancel = () => onCancel?.();
+  const cancelFromPointer = (event) => {
+    stopEvent(event);
+    cancel();
+  };
+
+  function assignSlot(index) {
+    return function() {
+      selectedSlot.set(index);
+      onAssign?.(index);
+    };
+  }
+
+  const clearSelected = () => onClear?.(selectedSlot());
+
+  const controls = signal({
+    left: {
+      repeat: true,
+      bind: keyboardControls.left,
+      throttle: 150,
+      keyDown() {
+        nav.next(-1);
+      }
+    },
+    right: {
+      repeat: true,
+      bind: keyboardControls.right,
+      throttle: 150,
+      keyDown() {
+        nav.next(1);
+      }
+    },
+    up: {
+      repeat: true,
+      bind: keyboardControls.up,
+      throttle: 150,
+      keyDown() {
+        selectedSlot.update((value) => (value - 5 + 10) % 10);
+      }
+    },
+    down: {
+      repeat: true,
+      bind: keyboardControls.down,
+      throttle: 150,
+      keyDown() {
+        selectedSlot.update((value) => (value + 5) % 10);
+      }
+    },
+    action: {
+      bind: getKeyboardControlBind(keyboardControls.action),
+      keyDown() {
+        assignSlot(selectedSlot())();
+      }
+    },
+    clear: {
+      bind: keyboardControls.hotbarClear || "backspace",
+      keyDown() {
+        clearSelected();
+      }
+    },
+    escape: {
+      bind: keyboardControls.escape,
+      keyDown() {
+        cancel();
+      }
+    },
+    gamepad: {
+      enabled: true,
+      buttonMapping: {
+        button_0: "action",
+        button_1: "escape",
+        button_2: "clear"
+      }
+    }
+  });
+</script>

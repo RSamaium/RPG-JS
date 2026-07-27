@@ -15,8 +15,10 @@ Dialogs, menus, notifications, and custom GUI commands.
 - [Call Shop Menu](#call-shop-menu)
 - [Close custom GUI](#close-custom-gui)
 - [Displays a notification](#displays-a-notification)
+- [Hide Hotbar](#hide-hotbar)
 - [Hide to GUI attached](#hide-to-gui-attached)
 - [Show Choices](#show-choices)
+- [Show Hotbar](#show-hotbar)
 - [Show Input](#show-input)
 - [Show Load](#show-load)
 - [Show Save](#show-save)
@@ -135,13 +137,7 @@ player.callShop()
 
 ### Parameters
 
-- `items`: `any[] | {
-      items: any[]
-      sell?: Record<string, number> | Array<{ id: string; multiplier: number }>
-      sellMultiplier?: number
-      message?: string
-      face?: { id: string; expression?: string }
-    }`
+- `items`: `ShopItemInput[] | ShopGuiOptions`
 
 ## Close custom GUI
 
@@ -161,7 +157,8 @@ player.removeGui(guiId,data)
 ### Parameters
 
 - `guiId`: `string`
-- `data?`: `any`
+- `data?`: `unknown`
+- `guiOpenId?`: `unknown`
 
 ## Displays a notification
 
@@ -182,6 +179,21 @@ player.showNotification()
 
 - `message`: `string`
 - `options?`: `{ time?: number; icon?: string; sound?: string; type?: "info" | "warn" | "error" }`
+
+## Hide Hotbar
+
+Hide the default hotbar GUI.
+
+- Source: `packages/server/src/Player/GuiManager.ts`
+- Kind: `method`
+- Member of: `RpgPlayer`
+- Defined in: `GuiManagerMixin`
+
+### Signature
+
+```ts
+player.hideHotbar()
+```
 
 ## Hide to GUI attached
 
@@ -247,6 +259,38 @@ player.showChoices(text,choices)
 - `choices`: `Choice[]`
 - `options?`: `DialogBaseOptions`
 
+## Show Hotbar
+
+Display the persistent player hotbar.
+
+The server owns slot content and validates every use. The default client
+GUI provides direct keyboard shortcuts and a gamepad radial selector.
+
+- Source: `packages/server/src/Player/GuiManager.ts`
+- Kind: `method`
+- Member of: `RpgPlayer`
+- Defined in: `GuiManagerMixin`
+
+### Signature
+
+```ts
+player.showHotbar(options)
+```
+
+### Parameters
+
+- `options?`: `HotbarGuiOptions`
+
+### Returns
+
+The GUI open result.
+
+### Examples
+
+```ts
+player.showHotbar();
+```
+
 ## Show Input
 
 Opens the prebuilt input GUI and waits for the player to submit or cancel it.
@@ -284,7 +328,7 @@ player.showInput(message,options)
 ### Parameters
 
 - `message`: `string`
-- `options`: `InputOptions`
+- `options`: `NumberInputOptions`
 
 ### Returns
 
@@ -396,13 +440,7 @@ Add a typed input directly below the dialog text:
 
 ```ts
 const age = await player.showText('How old are you?', {
-  input: {
-    type: 'number',
-    required: true,
-    min: 1,
-    confirmText: 'Validate',
-    cancelButton: false
-  }
+  input: { type: 'number', required: true, min: 1 }
 })
 // age is number | null
 ```
@@ -470,7 +508,7 @@ player.showText(text,options)
 ### Parameters
 
 - `msg`: `string`
-- `options?`: `DialogOptions`
+- `options`: `DialogBaseOptions & { input: NumberInputOptions }`
 
 ## View to GUI attached
 

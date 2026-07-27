@@ -18,6 +18,11 @@
                             <div>
                                 <div class="rpg-ui-menu-panel-details-title">{currentItem()?.name}</div>
                                 <div class="rpg-ui-menu-panel-details-desc">{currentItem()?.description || ""}</div>
+                                @if (currentItemSlot() >= 0) {
+                                    <div class="rpg-item-menu-assigned">
+                                        {t("rpg.menu.assigned-slot", { slot: slotLabels[currentItemSlot()] })}
+                                    </div>
+                                }
                             </div>
                         </div>
                     </div>
@@ -83,8 +88,26 @@
                 </div>
             </div>
         }
+        @if (assignmentOpen()) {
+            <HotbarSlotPicker
+                hotbar={hotbar}
+                entry={assignmentEntry}
+                onAssign={assignSlot}
+                onClear={clearSlot}
+                onCancel={closeAssignment}
+            />
+        }
     </div>
 </DOMContainer>
+
+<style>
+    .rpg-item-menu-assigned {
+        margin-top: 8px;
+        color: var(--rpg-ui-accent);
+        font-size: 0.76rem;
+        font-weight: 800;
+    }
+</style>
 
 <script>
     import { signal, computed, createTabindexNavigator, effect } from "canvasengine";
@@ -92,6 +115,7 @@
     import { RpgClientEngine } from "../../../RpgClientEngine";
     import { delay } from "@rpgjs/common";
     import { getKeyboardControlBind } from "../../../services/actionInput";
+    import HotbarSlotPicker from "./hotbar-slot-picker.ce";
 
     const engine = inject(RpgClientEngine);
     const { t } = engine.i18n();
@@ -102,10 +126,14 @@
     const selectedConfirm = signal(0);
     const confirmOpen = signal(false);
     const confirmItem = signal(null);
+    const assignmentOpen = signal(false);
+    const assignmentItem = signal(null);
 
     const { data, onInteraction, onBack } = defineProps();
 
     const items = computed(() => data().items);
+    const hotbar = computed(() => data().hotbar || { slots: [] });
+    const slotLabels = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
 
     const tabs = [
         { id: "item", label: t("rpg.menu.items") },
@@ -128,12 +156,24 @@
 
     const confirmOptions = [
         { id: "use", label: t("rpg.menu.use") },
+        { id: "assign", label: t("rpg.menu.assign-hotbar") },
         { id: "cancel", label: t("rpg.menu.cancel") }
     ];
 
     const nav = createTabindexNavigator(selectedItem, { count: () => filteredItems().length }, "wrap");
     const navConfirm = createTabindexNavigator(selectedConfirm, { count: () => confirmOptions.length }, "wrap");
     const currentItem = computed(() => filteredItems()[selectedItem()]);
+    const itemSlot = (item) => {
+        if (!item) return -1;
+        return (hotbar().slots || []).findIndex(
+            (slot) => slot?.entry?.type === "item" && slot.entry.id === item.id
+        );
+    };
+    const currentItemSlot = computed(() => itemSlot(currentItem()));
+    const assignmentEntry = computed(() => {
+        const item = assignmentItem();
+        return item ? { type: "item", id: item.id, name: item.name } : null;
+    });
     const iconSheet = (iconId) => ({
         definition: engine.getSpriteSheet(iconId)
     });
@@ -198,6 +238,35 @@
         });
     };
 
+    const openAssignment = () => {
+        const item = confirmItem();
+        if (!item?.usable || !item?.consumable) return;
+        assignmentItem.set(item);
+        confirmOpen.set(false);
+        confirmItem.set(null);
+        assignmentOpen.set(true);
+    };
+
+    const closeAssignment = () => {
+        assignmentOpen.set(false);
+        assignmentItem.set(null);
+    };
+
+    const assignSlot = (slot) => {
+        const entry = assignmentEntry();
+        if (!entry) return;
+        onInteraction?.("assignHotbarSlot", {
+            slot,
+            entry: { type: entry.type, id: entry.id }
+        });
+        closeAssignment();
+    };
+
+    const clearSlot = (slot) => {
+        onInteraction?.("clearHotbarSlot", { slot });
+        closeAssignment();
+    };
+
     const stopEvent = (event) => {
         event?.stopPropagation?.();
     };
@@ -210,8 +279,12 @@
     function confirmSelect(index) {
         return function() {
             selectedConfirm.set(index);
-            if (index === 0) {
+            if (confirmOptions[index]?.id === "use") {
                 confirmUse();
+                return;
+            }
+            if (confirmOptions[index]?.id === "assign") {
+                openAssignment();
                 return;
             }
             cancelConfirm();
@@ -259,7 +332,7 @@
             bind: keyboardControls.up,
             throttle: 150,
             keyDown() {
-                if (confirmOpen()) {
+                if (confirmOpen() || assignmentOpen()) {
                     return;
                 }
                 nav.next(-1);
@@ -270,7 +343,7 @@
             bind: keyboardControls.left,
             throttle: 150,
             keyDown() {
-                if (confirmOpen()) {
+                if (confirmOpen() || assignmentOpen()) {
                     return;
                 }
                 selectedTab.update((value) => (value - 1 + tabs.length) % tabs.length);
@@ -282,7 +355,7 @@
             bind: keyboardControls.right,
             throttle: 150,
             keyDown() {
-                if (confirmOpen()) {
+                if (confirmOpen() || assignmentOpen()) {
                     return;
                 }
                 selectedTab.update((value) => (value + 1) % tabs.length);
@@ -294,7 +367,7 @@
             bind: keyboardControls.down,
             throttle: 150,
             keyDown() {
-                if (confirmOpen()) {
+                if (confirmOpen() || assignmentOpen()) {
                     return;
                 }
                 nav.next(1);
@@ -303,6 +376,7 @@
         action: {
             bind: getKeyboardControlBind(keyboardControls.action),
             keyDown() {
+                if (assignmentOpen()) return;
                 if (confirmOpen()) {
                     confirmSelect(selectedConfirm())();
                     return;
@@ -313,6 +387,10 @@
         escape: {
             bind: keyboardControls.escape,
             keyDown() {
+                if (assignmentOpen()) {
+                    closeAssignment();
+                    return;
+                }
                 if (confirmOpen()) {
                     cancelConfirm();
                     return;

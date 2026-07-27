@@ -369,6 +369,28 @@ export const skillSchema = {
                 },
             },
         },
+        workflowTriggers: {
+            type: "array",
+            title: "skill editor.workflow triggers",
+            description: "skill editor.workflow triggers description",
+            format: {
+                name: "skill-workflow-triggers",
+                layout: "action",
+            } as any,
+            items: {
+                type: "object",
+                properties: {
+                    phase: {
+                        type: "string",
+                        enum: ["cast", "impact", "defeat"],
+                    },
+                    blockCollectionId: {
+                        type: "string",
+                    },
+                },
+                required: ["phase", "blockCollectionId"],
+            },
+        },
         successRate: {
             type: "number",
             title: "Success Rate",

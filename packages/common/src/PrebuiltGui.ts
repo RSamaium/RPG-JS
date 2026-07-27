@@ -15,6 +15,7 @@
  * PrebuiltGui.Notification | rpg-notification
  * PrebuiltGui.TitleScreen | rpg-title-screen
  * PrebuiltGui.Input | rpg-input
+ * PrebuiltGui.Hotbar | rpg-hotbar
  * @memberof PrebuiltGui
  * */
  export enum PrebuiltGui {
@@ -27,5 +28,6 @@
     Controls = 'rpg-controls',
     Notification = 'rpg-notification',
     TitleScreen = 'rpg-title-screen',
-    Input = 'rpg-input'
+    Input = 'rpg-input',
+    Hotbar = 'rpg-hotbar'
 }

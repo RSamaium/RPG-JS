@@ -28,7 +28,7 @@ The returned array contains unique effects without duplicates.
 ### Signature
 
 ```ts
-effects: any[]
+effects: string[]
 ```
 
 ### Returns

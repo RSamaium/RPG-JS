@@ -3,6 +3,7 @@ import { connected, id, persist, sync, users } from "@signe/sync";
 import { Item, Skill } from "./database";
 import { Constructor } from "./Utils";
 import type { RpgWritableSignal } from "./foundation";
+import { createHotbarState, type HotbarState } from "./Hotbar";
 
 const gameplaySignal = signal as <T>(value: T) => RpgWritableSignal<T>;
 
@@ -143,6 +144,7 @@ export class RpgCommonPlayer {
   @sync({ transform: toCloneableSyncValue }) equipments = gameplaySignal<any[]>([]);
   @sync() states = gameplaySignal<any[]>([]);
   @sync(Skill) skills = gameplaySignal<Skill[]>([]);
+  @sync() hotbar = gameplaySignal<HotbarState>(createHotbarState());
   @sync() _effects = gameplaySignal<any[]>([]);
   @sync() _through = gameplaySignal(false);
   @sync() _throughOtherPlayer = gameplaySignal(true);

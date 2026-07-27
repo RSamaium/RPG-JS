@@ -1,5 +1,5 @@
 import { describe, expectTypeOf, test } from "vitest";
-import type { MapStreamDefinition, RpgActionInput } from "@rpgjs/common";
+import type { HotbarState, MapStreamDefinition, RpgActionInput } from "@rpgjs/common";
 import type { FactoryProvider as SigneFactoryProvider } from "@signe/di";
 import type { NodeConnection, NodeRoom } from "@signe/room/node";
 import { provideServerMapStreaming } from "@rpgjs/server";
@@ -45,6 +45,11 @@ describe("server public API types", () => {
         expectTypeOf(player).toEqualTypeOf<RpgPlayer>();
         expectTypeOf(input).toEqualTypeOf<RpgActionInput<unknown>>();
       },
+      onHotbarChange(player, change) {
+        expectTypeOf(player).toEqualTypeOf<RpgPlayer>();
+        expectTypeOf(change.state).toEqualTypeOf<HotbarState>();
+        expectTypeOf(change.action).toEqualTypeOf<"initialize" | "assign" | "clear">();
+      },
       canChangeMap(player, nextMap) {
         expectTypeOf(player).toEqualTypeOf<RpgPlayer>();
         expectTypeOf(nextMap).toEqualTypeOf<{ id: string }>();
@@ -67,6 +72,10 @@ describe("server public API types", () => {
       expectTypeOf(player.getVariable<number>("quest")).toEqualTypeOf<number | undefined>();
       expectTypeOf(player.on<{ text: string }>("chat", payload => { void payload.text })).toEqualTypeOf<void>();
       expectTypeOf(player.getState("poison")).toEqualTypeOf<StateData | undefined>();
+      expectTypeOf(player.getHotbar()).toEqualTypeOf<HotbarState>();
+      expectTypeOf(player.assignHotbarSlot(0, { type: "skill", id: "fire" }))
+        .toEqualTypeOf<HotbarState>();
+      expectTypeOf(player.clearHotbarSlot(0)).toEqualTypeOf<HotbarState>();
     };
 
     expectTypeOf(assertions).toBeFunction();
