@@ -37,7 +37,17 @@ export type ActionBattleActionMode = "instant" | "melee" | "projectile";
 export type ActionBattleActionTarget = "enemy" | "ally" | "self" | "any";
 
 export interface ActionBattleProjectileOptions {
-  type: string;
+  /**
+   * Client renderer identifier. Action Battle provides
+   * `action-battle-skill` when no custom renderer is requested.
+   */
+  type?: string;
+  /** Serializable Studio media/spritesheet identifier rendered by the default component. */
+  graphic?: string;
+  /** Visual scale used by the default Action Battle projectile component. */
+  scale?: number;
+  /** Rotate the default projectile graphic toward its travel direction. */
+  rotateToDirection?: boolean;
   speed?: number;
   range?: number;
   /**
@@ -75,8 +85,26 @@ export interface ActionBattleActionConfig {
    * Gameplay remains authoritative on the server.
    */
   visual?: {
-    /** CanvasEngine built-in or custom FX preset name. */
+    /**
+     * Legacy impact FX alias. Prefer `impactFx` for new integrations.
+     * CanvasEngine built-in and custom preset names are supported.
+     */
     fx?: string;
+    /**
+     * Particle preset displayed on the caster. Use `auto` for the default
+     * `magicBurst` effect or `none` to disable it.
+     */
+    castFx?: string;
+    /**
+     * Continuous particle preset attached to a moving projectile.
+     * Use `none` or `auto` to keep the projectile trail disabled.
+     */
+    trailFx?: string;
+    /**
+     * Particle preset displayed on impact. Use `auto` to infer the preset
+     * from the result or `none` to disable impact particles.
+     */
+    impactFx?: string;
     /** Main damage-popup text color. */
     color?: string | number;
     /** Damage-popup outline color. */
@@ -84,6 +112,17 @@ export interface ActionBattleActionConfig {
     /** Scale applied to the impact particle effect. */
     scale?: number;
   };
+}
+
+/**
+ * Serializable targeting metadata stored on a skill.
+ *
+ * `range` is expressed in map tiles. Projectile travel remains expressed in
+ * world pixels through `ActionBattleProjectileOptions.range`.
+ */
+export interface ActionBattleSkillTargetingConfig {
+  range?: number;
+  aoeMask?: string[] | string;
 }
 
 export interface ActionBattleProjectileImpactContext {
@@ -117,6 +156,12 @@ export interface ActionBattleUsable {
   _type?: string;
   action?: ActionBattleActionConfig;
   actionBattle?: ActionBattleActionConfig;
+  key?: string;
+  casterAnimation?: string;
+  animation?: string;
+  sound?: string;
+  impactSound?: string;
+  targeting?: ActionBattleSkillTargetingConfig;
   onUse?: (
     user: ActionBattleEntity,
     target: ActionBattleEntity | ActionBattleEntity[] | null | undefined,

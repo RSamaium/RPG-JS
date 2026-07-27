@@ -1,9 +1,17 @@
 <Container controls={controls} />
 
 <script>
-  import { computed } from "canvasengine";
+  import { computed, effect, signal } from "canvasengine";
   import { inject, RpgClientEngine } from "@rpgjs/client";
-  import { actionBattleCombatOptions } from "../ui/state";
+  import { getKeyboardControlBind } from "@rpgjs/client";
+  import {
+    actionBattleCombatOptions,
+    actionBattleSkillLoadout,
+    actionBattleTargetingState,
+    moveTargetingOffset,
+    startTargeting,
+    stopTargeting,
+  } from "../ui/state";
 
   const { object } = defineProps();
   const engine = inject(RpgClientEngine);
@@ -31,36 +39,185 @@
         ? sprite.direction()
         : sprite?.direction ?? "down";
 
-  const controls = {
-    chargedAttack: {
-      bind: chargedOptions()?.control ?? "e",
-      keyDown() {
-        if (!isCurrentPlayer() || chargedOptions()?.enabled === false) return;
-        engine.processAction("action-battle:charge-start", {
-          direction: direction(),
-        });
-      },
-      keyUp() {
-        if (!isCurrentPlayer() || chargedOptions()?.enabled === false) return;
-        engine.processAction("action-battle:charge-release", {
-          direction: direction(),
-        });
-      },
-    },
-    guard: {
-      bind: guardOptions()?.control ?? "f",
-      keyDown() {
-        if (!isCurrentPlayer() || guardOptions()?.enabled === false) return;
-        engine.processAction("defense", {
-          direction: direction(),
-        });
-      },
-      keyUp() {
-        if (!isCurrentPlayer() || guardOptions()?.enabled === false) return;
-        engine.processAction("action-battle:guard-end", {
-          direction: direction(),
-        });
-      },
-    },
+  const keyboardControls = engine.globalConfig.keyboardControls;
+  const SLOT_LABELS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
+  const SLOT_CONFIG_KEYS = [
+    "hotbar1",
+    "hotbar2",
+    "hotbar3",
+    "hotbar4",
+    "hotbar5",
+    "hotbar6",
+    "hotbar7",
+    "hotbar8",
+    "hotbar9",
+    "hotbar0",
+  ];
+
+  const resolveKeyBind = (key) => {
+    if (!key) return null;
+    if (typeof key === "string" && keyboardControls?.[key]) {
+      return keyboardControls[key];
+    }
+    return key;
   };
+
+  const getPlayerTile = () => {
+    const player = engine.scene.getCurrentPlayer();
+    if (!player) return null;
+    const hitbox = player.hitbox?.() || { w: 32, h: 32 };
+    const tileWidth = hitbox.w || 32;
+    const tileHeight = hitbox.h || 32;
+    return {
+      x: Math.floor((player.x() + hitbox.w / 2) / tileWidth),
+      y: Math.floor((player.y() + hitbox.h / 2) / tileHeight),
+    };
+  };
+
+  const confirmTargeting = () => {
+    const state = actionBattleTargetingState();
+    if (!state.skill) return;
+    const origin = getPlayerTile();
+    if (!origin) return;
+    engine.processAction("action-battle:use-skill", {
+      id: state.skill.id,
+      target: {
+        x: origin.x + state.offset.x,
+        y: origin.y + state.offset.y,
+      },
+    });
+    stopTargeting();
+  };
+
+  const hasAreaMask = (skill) => {
+    const rows = Array.isArray(skill.aoeMask) ? skill.aoeMask : [];
+    return rows.length > 1 || rows.some((row) => row !== "#");
+  };
+
+  const useSkill = (skill) => {
+    if (!isCurrentPlayer() || !skill) return;
+    const cooldownActive =
+      typeof skill.readyAt === "number" && skill.readyAt > Date.now();
+    if (cooldownActive) return;
+    const requiresGrid =
+      skill.action?.target === "ally" ||
+      hasAreaMask(skill) ||
+      ((skill.range ?? 0) > 0 && skill.action?.mode !== "projectile");
+    if (requiresGrid) {
+      startTargeting(skill);
+      return;
+    }
+    engine.processAction("action-battle:use-skill", { id: skill.id });
+  };
+
+  const buildControls = () => {
+    const chargedBind = chargedOptions()?.control ?? "e";
+    const guardBind = guardOptions()?.control ?? "f";
+    const reserved = new Set([chargedBind, guardBind]);
+    const skillControls = {};
+
+    actionBattleSkillLoadout().slice(0, 10).forEach((skill, index) => {
+      const explicitBind = resolveKeyBind(skill.key);
+      const fallbackBind =
+        keyboardControls?.[SLOT_CONFIG_KEYS[index]] ?? SLOT_LABELS[index];
+      const bind =
+        explicitBind && !reserved.has(explicitBind)
+          ? explicitBind
+          : fallbackBind;
+      skillControls[`skill-${index}`] = {
+        bind,
+        keyDown() {
+          if (actionBattleTargetingState().active) return;
+          useSkill(skill);
+        },
+      };
+    });
+
+    return {
+      chargedAttack: {
+        bind: chargedBind,
+        keyDown() {
+          if (!isCurrentPlayer() || chargedOptions()?.enabled === false) return;
+          engine.processAction("action-battle:charge-start", {
+            direction: direction(),
+          });
+        },
+        keyUp() {
+          if (!isCurrentPlayer() || chargedOptions()?.enabled === false) return;
+          engine.processAction("action-battle:charge-release", {
+            direction: direction(),
+          });
+        },
+      },
+      guard: {
+        bind: guardBind,
+        keyDown() {
+          if (!isCurrentPlayer() || guardOptions()?.enabled === false) return;
+          engine.processAction("defense", {
+            direction: direction(),
+          });
+        },
+        keyUp() {
+          if (!isCurrentPlayer() || guardOptions()?.enabled === false) return;
+          engine.processAction("action-battle:guard-end", {
+            direction: direction(),
+          });
+        },
+      },
+      targetLeft: {
+        repeat: true,
+        throttle: 150,
+        bind: keyboardControls.left,
+        keyDown() {
+          if (actionBattleTargetingState().active) moveTargetingOffset(-1, 0);
+        },
+      },
+      targetRight: {
+        repeat: true,
+        throttle: 150,
+        bind: keyboardControls.right,
+        keyDown() {
+          if (actionBattleTargetingState().active) moveTargetingOffset(1, 0);
+        },
+      },
+      targetUp: {
+        repeat: true,
+        throttle: 150,
+        bind: keyboardControls.up,
+        keyDown() {
+          if (actionBattleTargetingState().active) moveTargetingOffset(0, -1);
+        },
+      },
+      targetDown: {
+        repeat: true,
+        throttle: 150,
+        bind: keyboardControls.down,
+        keyDown() {
+          if (actionBattleTargetingState().active) moveTargetingOffset(0, 1);
+        },
+      },
+      targetConfirm: {
+        bind: getKeyboardControlBind(keyboardControls.action),
+        keyDown() {
+          if (actionBattleTargetingState().active) confirmTargeting();
+        },
+      },
+      targetCancel: {
+        bind: keyboardControls.escape,
+        keyDown() {
+          if (actionBattleTargetingState().active) stopTargeting();
+        },
+      },
+      ...skillControls,
+      gamepad: {
+        enabled: true,
+      },
+    };
+  };
+
+  const controls = signal(buildControls());
+
+  effect(() => {
+    controls.set(buildControls());
+  });
 </script>

@@ -154,6 +154,76 @@ describe("action battle visual composer", () => {
     );
   });
 
+  test("impactFx overrides the legacy fx alias and none disables particles", () => {
+    const target = createEntity();
+    const visual = createActionBattleVisual("impact");
+
+    visual({
+      moment: "hurt",
+      target,
+      damage: 24,
+      skill: { id: "fire", name: "Fire" },
+      result: {
+        damage: 24,
+        metadata: {
+          visual: {
+            fx: "hitSpark",
+            impactFx: "explosionSmall",
+          },
+        },
+      },
+    });
+
+    expect(target.showComponentAnimation).toHaveBeenCalledWith(
+      ACTION_BATTLE_HIT_FX_COMPONENT_ID,
+      expect.objectContaining({ name: "explosionSmall" })
+    );
+
+    target.showComponentAnimation.mockClear();
+    visual({
+      moment: "hurt",
+      target,
+      damage: 24,
+      result: {
+        damage: 24,
+        metadata: { visual: { impactFx: "none" } },
+      },
+    });
+
+    expect(target.showComponentAnimation).not.toHaveBeenCalledWith(
+      ACTION_BATTLE_HIT_FX_COMPONENT_ID,
+      expect.anything()
+    );
+  });
+
+  test("castSkill supports a custom cast preset and can disable particles", () => {
+    const caster = createEntity();
+    const visual = createActionBattleVisual("impact");
+
+    visual({
+      moment: "castSkill",
+      entity: caster,
+      result: { metadata: { visual: { castFx: "healPulse" } } },
+    });
+
+    expect(caster.showComponentAnimation).toHaveBeenCalledWith(
+      ACTION_BATTLE_HIT_FX_COMPONENT_ID,
+      expect.objectContaining({ name: "healPulse" })
+    );
+
+    caster.showComponentAnimation.mockClear();
+    visual({
+      moment: "castSkill",
+      entity: caster,
+      result: { metadata: { visual: { castFx: "none" } } },
+    });
+
+    expect(caster.showComponentAnimation).not.toHaveBeenCalledWith(
+      ACTION_BATTLE_HIT_FX_COMPONENT_ID,
+      expect.anything()
+    );
+  });
+
   test("impact gives healing skills a green popup and heal pulse", () => {
     const target = createEntity();
     const visual = createActionBattleVisual("impact");

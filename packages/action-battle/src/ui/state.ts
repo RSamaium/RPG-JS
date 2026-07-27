@@ -47,6 +47,9 @@ export const actionBattleSkillOptions = signal(
 export const actionBattleCombatOptions = signal(
   normalizeActionBattleOptions({}).combat || {}
 );
+export const ACTION_BATTLE_SKILL_LOADOUT_VISUAL_ID =
+  "action-battle.skill-loadout";
+export const actionBattleSkillLoadout = signal<ActionBattleActionBarSkill[]>([]);
 
 export const actionBattleTargetingState = signal<ActionBattleTargetingState>({
   ...defaultTargetingState,
@@ -60,6 +63,19 @@ export const setActionBattleOptions = (options: ActionBattleOptions = {}) => {
   actionBattleUiOptions.set(normalized.ui || {});
   actionBattleSkillOptions.set(normalized.skills || {});
   actionBattleCombatOptions.set(normalized.combat || {});
+};
+
+export const setActionBattleSkillLoadout = (
+  skills: ActionBattleActionBarSkill[] = []
+) => {
+  actionBattleSkillLoadout.set(
+    Array.isArray(skills)
+      ? skills.filter(
+          (skill): skill is ActionBattleActionBarSkill =>
+            !!skill && typeof skill.id === "string"
+        )
+      : []
+  );
 };
 
 export const startTargeting = (skill: ActionBattleActionBarSkill) => {

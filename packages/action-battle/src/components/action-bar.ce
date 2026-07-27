@@ -25,6 +25,9 @@
             @if (slot.type === "item" && slot.item) {
               <span class="rpg-ui-hotbar-count action-battle-actionbar-count">x{getItemQuantity(slot.item)}</span>
             }
+            @if (slot.type === "skill" && cooldownLabel(slot.skill)) {
+              <span class="action-battle-actionbar-cooldown">{cooldownLabel(slot.skill)}</span>
+            }
           </div>
         }
       </div>
@@ -55,37 +58,34 @@
   .action-battle-actionbar-track {
     --rpg-ui-hotbar-slots: 10;
   }
+
+  .action-battle-actionbar-cooldown {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    border-radius: inherit;
+    background: rgb(5 10 18 / 68%);
+    color: white;
+    font-weight: 800;
+    font-size: 0.82rem;
+    text-shadow: 0 1px 3px rgb(0 0 0 / 85%);
+  }
 </style>
 
 <script>
-  import { signal, computed, effect } from "canvasengine";
+  import { signal, computed } from "canvasengine";
   import { inject } from "@rpgjs/client";
-  import { getKeyboardControlBind, RpgClientEngine } from "@rpgjs/client";
+  import { RpgClientEngine } from "@rpgjs/client";
   import {
-    actionBattleTargetingState,
     actionBattleUiOptions,
-    startTargeting,
-    stopTargeting,
-    moveTargetingOffset
+    startTargeting
   } from "../ui/state";
 
   const engine = inject(RpgClientEngine);
-  const keyboardControls = engine.globalConfig.keyboardControls;
   const { data, onInteraction, onBack } = defineProps();
   const ACTION_BAR_SIZE = 10;
   const SLOT_LABELS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
-  const SLOT_CONFIG_KEYS = [
-    "hotbar1",
-    "hotbar2",
-    "hotbar3",
-    "hotbar4",
-    "hotbar5",
-    "hotbar6",
-    "hotbar7",
-    "hotbar8",
-    "hotbar9",
-    "hotbar0"
-  ];
 
   const selectedSlotIndex = signal(-1);
 
@@ -98,8 +98,6 @@
     const mode = uiOptions().actionBar?.mode || "both";
     return mode === "skills" || mode === "both";
   });
-
-  const isTargeting = computed(() => actionBattleTargetingState().active);
 
   const iconSheet = (iconId) => ({
     definition: engine.getSpriteSheet(iconId),
@@ -135,7 +133,10 @@
       .slice(0, ACTION_BAR_SIZE)
       .map((entry, index) => ({
         ...entry,
-        label: SLOT_LABELS[index]
+        label:
+          entry.type === "skill" && entry.skill?.key
+            ? String(entry.skill.key).toUpperCase()
+            : SLOT_LABELS[index]
       }));
     while (slots.length < ACTION_BAR_SIZE) {
       slots.push({
@@ -160,6 +161,12 @@
     if (!item) return 0;
     if (typeof item.quantity === "function") return item.quantity();
     return item.quantity || 0;
+  };
+
+  const cooldownLabel = (skill) => {
+    const remaining = Number(skill?.readyAt ?? 0) - Date.now();
+    if (remaining <= 0) return "";
+    return `${Math.max(1, Math.ceil(remaining / 1000))}s`;
   };
 
   const selectItem = (item) => {
@@ -192,140 +199,5 @@
     selectSlot(index);
   };
 
-  const getPlayerTile = () => {
-    const player = engine.scene.getCurrentPlayer();
-    if (!player) return null;
-    const hitbox = player.hitbox?.() || { w: 32, h: 32 };
-    const tileWidth = hitbox.w || 32;
-    const tileHeight = hitbox.h || 32;
-    const x = Math.floor((player.x() + hitbox.w / 2) / tileWidth);
-    const y = Math.floor((player.y() + hitbox.h / 2) / tileHeight);
-    return { x, y };
-  };
-
-  const confirmTargeting = () => {
-    const state = actionBattleTargetingState();
-    if (!state.skill) return;
-    const origin = getPlayerTile();
-    if (!origin) return;
-    const target = {
-      x: origin.x + state.offset.x,
-      y: origin.y + state.offset.y
-    };
-    if (onInteraction) {
-      onInteraction("useSkill", {
-        id: state.skill.id,
-        target
-      });
-    }
-    stopTargeting();
-  };
-
-  const resolveKeyBind = (key) => {
-    if (!key) return null;
-    if (typeof key === "string" && keyboardControls?.[key]) {
-      return keyboardControls[key];
-    }
-    return key;
-  };
-
-  const slotBind = (index) => keyboardControls?.[SLOT_CONFIG_KEYS[index]] || SLOT_LABELS[index];
-
-  const buildControls = () => {
-    const hotbarControls = {};
-    actionBarSlots().forEach((slot, index) => {
-      if (!hasSlotEntry(slot)) return;
-      const bind = slotBind(index);
-      hotbarControls[`slot-${index}`] = {
-        bind,
-        keyDown() {
-          if (isTargeting()) return;
-          selectedSlotIndex.set(index);
-          selectSlot(index);
-        }
-      };
-      if (slot.type === "skill") {
-        const skillBind = resolveKeyBind(slot.skill?.key);
-        if (!skillBind || skillBind === bind) return;
-        hotbarControls[`skill-${index}`] = {
-          bind: skillBind,
-          keyDown() {
-            if (isTargeting()) return;
-            selectedSlotIndex.set(index);
-            selectSlot(index);
-          }
-        };
-      }
-    });
-    return {
-      left: {
-        repeat: true,
-        bind: keyboardControls.left,
-        throttle: 150,
-        keyDown() {
-          if (isTargeting()) {
-            moveTargetingOffset(-1, 0);
-          }
-        }
-      },
-      right: {
-        repeat: true,
-        bind: keyboardControls.right,
-        throttle: 150,
-        keyDown() {
-          if (isTargeting()) {
-            moveTargetingOffset(1, 0);
-          }
-        }
-      },
-      up: {
-        repeat: true,
-        bind: keyboardControls.up,
-        throttle: 150,
-        keyDown() {
-          if (isTargeting()) {
-            moveTargetingOffset(0, -1);
-          }
-        }
-      },
-      down: {
-        repeat: true,
-        bind: keyboardControls.down,
-        throttle: 150,
-        keyDown() {
-          if (isTargeting()) {
-            moveTargetingOffset(0, 1);
-          }
-        }
-      },
-      action: {
-        bind: getKeyboardControlBind(keyboardControls.action),
-        keyDown() {
-          if (isTargeting()) {
-            confirmTargeting();
-          }
-        }
-      },
-      escape: {
-        bind: keyboardControls.escape,
-        keyDown() {
-          if (isTargeting()) {
-            stopTargeting();
-            return;
-          }
-          if (onBack) onBack();
-        }
-      },
-      ...hotbarControls,
-      gamepad: {
-        enabled: true
-      }
-    };
-  };
-
-  const controls = signal(buildControls());
-
-  effect(() => {
-    controls.set(buildControls());
-  });
+  const controls = {};
 </script>

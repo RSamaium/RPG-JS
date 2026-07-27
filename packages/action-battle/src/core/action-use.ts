@@ -250,7 +250,7 @@ const buildActionContext = (input: {
         return total + nextHp - currentHp;
       }, 0);
     },
-    projectile(options: ActionBattleProjectileOptions = { type: "action" }) {
+    projectile(options: ActionBattleProjectileOptions = {}) {
       const map = (input.attacker as any).getCurrentMap?.();
       if (!map?.projectiles?.emit) return [];
 
@@ -259,11 +259,20 @@ const buildActionContext = (input: {
         ...configured,
         ...options,
       };
-      const range = projectile.range ?? input.action?.range ?? 160;
+      const tileWidth = Number(map?.tileWidth ?? 32);
+      const targetingRange = Number(
+        input.skill?.targeting?.range ?? input.skill?.range
+      );
+      const derivedRange =
+        Number.isFinite(targetingRange) && targetingRange > 0
+          ? targetingRange * tileWidth
+          : undefined;
+      const range =
+        projectile.range ?? input.action?.range ?? derivedRange ?? 160;
       const speed = projectile.speed ?? 180;
       const emitted = map.projectiles.emit(
         {
-          type: projectile.type,
+          type: projectile.type ?? "action-battle-skill",
           origin: projectile.origin,
           direction:
             projectile.direction ?? directionToTarget(input.attacker, input.target),
@@ -283,7 +292,21 @@ const buildActionContext = (input: {
             attackerId: input.attacker.id,
             actionId: input.usable?.id,
           },
-          params: projectile.params,
+          params: {
+            ...projectile.params,
+            ...(typeof input.action?.visual?.trailFx === "string"
+              ? { trailFx: input.action.visual.trailFx }
+              : {}),
+            ...(typeof projectile.graphic === "string"
+              ? { graphic: projectile.graphic }
+              : {}),
+            ...(typeof projectile.scale === "number"
+              ? { scale: projectile.scale }
+              : {}),
+            ...(typeof projectile.rotateToDirection === "boolean"
+              ? { rotateToDirection: projectile.rotateToDirection }
+              : {}),
+          },
           canHit: ({ target }: { target?: ActionBattleEntity }) => {
             if (!target) return false;
             return canActionBattleUseTarget(
@@ -395,6 +418,13 @@ export const executeActionBattleUse = (input: {
       entity: input.attacker,
       skill: input.skill,
       target: firstTarget(input.target),
+      result: input.skill
+        ? {
+            metadata: {
+              visual: actionConfig?.visual,
+            },
+          }
+        : undefined,
     });
   }
 

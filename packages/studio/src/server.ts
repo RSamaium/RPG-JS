@@ -817,10 +817,16 @@ export default (_config?: unknown) => {
         }
         mapExtended.startPosition = mapData.data?.start;
         mapExtended.scale = mapData.data?.params?.scale || 1;
-        const normalizedInitialWeather = normalizeWeatherState(mapData?.data?.weather);
+        const initialWeather = mapData?.data?.weather !== undefined
+          ? mapData.data.weather
+          : mapData?.data?.params?.weather;
+        const normalizedInitialWeather = normalizeWeatherState(initialWeather);
         if (mapData?.data) {
           mapData.data.weather = normalizedInitialWeather;
           mapData.data.lighting = normalizeLightingState(mapData?.data?.lighting);
+        }
+        if (normalizedInitialWeather) {
+          mapExtended.setWeather(normalizedInitialWeather);
         }
         // Add baseUrl to map context for use in block executors
         (mapExtended as any).apiBaseUrl = apiUrl;

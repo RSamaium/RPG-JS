@@ -69,6 +69,10 @@ import type {
 } from "./types";
 
 export const ACTION_BATTLE_ACTION_BAR_GUI_ID = "action-battle-action-bar";
+export const ACTION_BATTLE_SKILL_USE = "action-battle:use-skill";
+export const ACTION_BATTLE_SKILL_LOADOUT_VISUAL_ID =
+  "action-battle.skill-loadout";
+export const ACTION_BATTLE_SKILL_PROJECTILE_TYPE = "action-battle-skill";
 
 /**
  * Default player attack hitboxes offsets for each direction
@@ -639,6 +643,7 @@ interface PlayerCombatRuntimeState {
 }
 
 const playerCombatStates = new WeakMap<RpgPlayer, PlayerCombatRuntimeState>();
+const playerSkillCooldowns = new WeakMap<RpgPlayer, Map<string, number>>();
 
 const getPlayerCombatState = (player: RpgPlayer): PlayerCombatRuntimeState => {
   let state = playerCombatStates.get(player);
@@ -692,6 +697,25 @@ const resolvePlayerComboProfile = (
 const resolveSignal = (value: any) =>
   typeof value === "function" ? value() : value;
 
+const getPlayerSkillCooldowns = (player: RpgPlayer) => {
+  let cooldowns = playerSkillCooldowns.get(player);
+  if (!cooldowns) {
+    cooldowns = new Map<string, number>();
+    playerSkillCooldowns.set(player, cooldowns);
+  }
+  return cooldowns;
+};
+
+const resolveSkillId = (skill: any): string | undefined => {
+  const value = resolveSignal(skill?.id);
+  return typeof value === "string" && value ? value : undefined;
+};
+
+const isPlayerSkillLearned = (player: RpgPlayer, skillId: string) =>
+  (player.skills?.() ?? []).some(
+    (skill: any) => resolveSkillId(skill) === skillId
+  );
+
 const resolveItemData = (player: RpgPlayer, itemId: string) => {
   try {
     return (player as any).databaseById?.(itemId);
@@ -729,8 +753,8 @@ const resolveSkillTargeting = (
     return skillsOptions.getTargeting(skillData);
   }
   const range =
-    skillData?.range ??
-    skillData?.targeting?.range ??
+    resolveSignal(skillData?.targeting?.range) ??
+    resolveSignal(skillData?.range) ??
     (skillData?.targeting?.distance as number | undefined);
   const aoeMask =
     skillData?.aoeMask ??
@@ -743,6 +767,85 @@ const resolveSkillTargeting = (
     range: range ?? 0,
     aoeMask,
   };
+};
+
+const serializeSkillAction = (skillData: any) => {
+  const action = getActionBattleActionConfig(skillData);
+  if (!action || typeof action !== "object") return undefined;
+  return {
+    ...(typeof action.mode === "string" ? { mode: action.mode } : {}),
+    ...(typeof action.target === "string" ? { target: action.target } : {}),
+    ...(typeof action.cooldownMs === "number"
+      ? { cooldownMs: Math.max(0, action.cooldownMs) }
+      : {}),
+    ...(action.visual && typeof action.visual === "object"
+      ? { visual: action.visual }
+      : {}),
+  };
+};
+
+const serializeActionBattleSkill = (
+  player: RpgPlayer,
+  skill: any,
+  options: ActionBattleOptions
+): ActionBattleActionBarSkill | null => {
+  const id = resolveSkillId(skill);
+  if (!id) return null;
+  const data = resolveSkillData(player, id) || skill;
+  const name = resolveSignal(data?.name) ?? resolveSignal(skill.name) ?? id;
+  const description =
+    resolveSignal(data?.description) ??
+    resolveSignal(skill.description) ??
+    "";
+  const icon = resolveSignal(data?.icon) ?? resolveSignal(skill.icon);
+  const spCost =
+    resolveSignal(data?.spCost) ?? resolveSignal(skill.spCost) ?? 0;
+  const targeting = resolveSkillTargeting(player, id, options);
+  const action = serializeSkillAction(data);
+  const cooldownMs = Math.max(0, action?.cooldownMs ?? 0);
+  const readyAt = getPlayerSkillCooldowns(player).get(id) ?? 0;
+  const entry: ActionBattleActionBarSkill = {
+    id,
+    name,
+    description,
+    icon,
+    spCost,
+    usable: spCost <= player.sp && readyAt <= Date.now(),
+    range: targeting?.range ?? 0,
+    key: resolveSignal(data?.key),
+    casterAnimation: resolveSignal(data?.casterAnimation),
+    animation: resolveSignal(data?.animation),
+    sound: resolveSignal(data?.sound),
+    impactSound: resolveSignal(data?.impactSound),
+    action,
+    cooldownMs,
+    readyAt,
+  };
+  if (targeting) {
+    const mask = targeting.aoeMask ?? options.skills?.defaultAoeMask;
+    if (mask) entry.aoeMask = normalizeMaskRows(mask);
+  }
+  return entry;
+};
+
+const buildActionBattleSkillLoadout = (
+  player: RpgPlayer,
+  options: ActionBattleOptions
+) =>
+  (player.skills?.() || [])
+    .map((skill: any) => serializeActionBattleSkill(player, skill, options))
+    .filter(
+      (skill: ActionBattleActionBarSkill | null): skill is ActionBattleActionBarSkill =>
+        skill !== null
+    );
+
+const sendActionBattleSkillLoadout = (
+  player: RpgPlayer,
+  options: ActionBattleOptions
+) => {
+  player.clientVisual(ACTION_BATTLE_SKILL_LOADOUT_VISUAL_ID, {
+    skills: buildActionBattleSkillLoadout(player, options),
+  });
 };
 
 const normalizeMaskRows = (mask: string[] | string | undefined) => {
@@ -784,36 +887,7 @@ const buildActionBarData = (
     };
   });
 
-  const skills = (player.skills?.() || []).map((skill: any) => {
-    const id = skill.id?.() ?? skill.id;
-    const data = resolveSkillData(player, id) || skill;
-    const name = resolveSignal(data?.name) ?? resolveSignal(skill.name) ?? id;
-    const description =
-      resolveSignal(data?.description) ??
-      resolveSignal(skill.description) ??
-      "";
-    const icon = resolveSignal(data?.icon) ?? resolveSignal(skill.icon);
-    const spCost =
-      resolveSignal(data?.spCost) ?? resolveSignal(skill.spCost) ?? 0;
-    const usable = spCost <= player.sp;
-    const targeting = resolveSkillTargeting(player, id, options);
-    const skillEntry: ActionBattleActionBarSkill = {
-      id,
-      name,
-      description,
-      icon,
-      spCost,
-      usable,
-      range: targeting?.range ?? 0,
-    };
-    if (targeting) {
-      const mask = targeting.aoeMask ?? options.skills?.defaultAoeMask;
-      if (mask) {
-        skillEntry.aoeMask = normalizeMaskRows(mask);
-      }
-    }
-    return skillEntry;
-  });
+  const skills = buildActionBattleSkillLoadout(player, options);
 
   return { items, skills };
 };
@@ -889,38 +963,112 @@ const handleActionBattleSkillUse = (
   target: { x: number; y: number } | undefined,
   options: ActionBattleOptions
 ) => {
+  if (!isPlayerSkillLearned(player, skillId)) return false;
   const skillData = resolvePlayerSkillUsable(player, skillId);
+  if (!skillData) return false;
   const actionConfig = getActionBattleActionConfig(skillData);
+  const cooldowns = getPlayerSkillCooldowns(player);
+  const now = Date.now();
+  if ((cooldowns.get(skillId) ?? 0) > now) return false;
+  const spCost = Number(resolveSignal(skillData?.spCost) ?? 0);
+  if (Number.isFinite(spCost) && spCost > player.sp) return false;
+
+  const finishUse = (
+    selectedTarget?: RpgPlayer | RpgEvent | Array<RpgPlayer | RpgEvent> | null
+  ) => {
+    try {
+      const used = executeActionBattleUse({
+        attacker: player,
+        target: selectedTarget,
+        usable: skillData,
+        skill: skillData,
+      });
+      if (!used) return false;
+      const cooldownMs = Math.max(0, Number(actionConfig?.cooldownMs ?? 0));
+      if (cooldownMs > 0) {
+        const readyAt = Date.now() + cooldownMs;
+        cooldowns.set(skillId, readyAt);
+        setTimeout(() => {
+          if (cooldowns.get(skillId) !== readyAt) return;
+          cooldowns.delete(skillId);
+          sendActionBattleSkillLoadout(player, options);
+          updateActionBattleActionBar(player, options);
+        }, cooldownMs);
+      }
+      sendActionBattleSkillLoadout(player, options);
+      updateActionBattleActionBar(player, options);
+      return true;
+    } catch {
+      return false;
+    }
+  };
 
   if (actionConfig?.target === "self") {
-    executeActionBattleUse({
-      attacker: player,
-      target: player,
-      usable: skillData,
-      skill: skillData,
-    });
-    return;
+    return finishUse(player);
   }
 
   const map = player.getCurrentMap();
   if (!map) {
-    emitActionBattleClientVisual({
-      moment: "castSkill",
-      entity: player,
-      skill: skillData,
-    });
-    player.useSkill(skillId);
-    return;
+    try {
+      player.useSkill(skillId);
+      return true;
+    } catch {
+      return false;
+    }
   }
   const targeting = resolveSkillTargeting(player, skillId, options);
   if (!targeting || !target) {
-    emitActionBattleClientVisual({
-      moment: "castSkill",
-      entity: player,
-      skill: skillData,
-    });
-    player.useSkill(skillId);
-    return;
+    if (actionConfig) {
+      const affects = options.targeting?.affects || "events";
+      const candidates: Array<RpgPlayer | RpgEvent> = [];
+      if (affects === "events" || affects === "both") {
+        candidates.push(
+          ...map
+            .getEvents()
+            .filter((event: RpgEvent) =>
+              canActionBattleUseTarget(
+                player,
+                event,
+                actionConfig.target ?? "enemy",
+                options.combat?.targets
+              )
+            )
+        );
+      }
+      if (affects === "players" || affects === "both") {
+        candidates.push(
+          ...map
+            .getPlayers()
+            .filter(
+              (other: RpgPlayer) =>
+                other.id !== player.id &&
+                canActionBattleUseTarget(
+                  player,
+                  other,
+                  actionConfig.target ?? "enemy",
+                  options.combat?.targets
+                )
+            )
+        );
+      }
+      const direction =
+        typeof player.getDirection === "function"
+          ? player.getDirection()
+          : "down";
+      const softTarget = resolveActionBattleSoftTarget(
+        player,
+        candidates,
+        direction,
+        objectOption(options.combat?.player?.softTargeting)
+      );
+      return finishUse(softTarget?.target ?? null);
+    }
+    try {
+      player.useSkill(skillId);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   const tileSize = getTileSize(map);
@@ -928,7 +1076,7 @@ const handleActionBattleSkillUse = (
   const targetTile = { x: target.x, y: target.y };
 
   if (manhattanDistance(origin, targetTile) > targeting.range) {
-    return;
+    return false;
   }
 
   const mask = parseAoeMask(
@@ -979,15 +1127,10 @@ const handleActionBattleSkillUse = (
   }
 
   if (!options.targeting?.allowEmptyTarget && targets.length === 0) {
-    return;
+    return false;
   }
 
-  executeActionBattleUse({
-    attacker: player,
-    target: targets,
-    usable: skillData,
-    skill: skillData,
-  });
+  return finishUse(targets);
 };
 
 export const createActionBattleServer = (
@@ -1036,6 +1179,21 @@ export const createActionBattleServer = (
           "left",
           "right",
         ]);
+        if (input.action === ACTION_BATTLE_SKILL_USE) {
+          const skillId =
+            typeof input.data?.id === "string" ? input.data.id : "";
+          if (!skillId) return;
+          const target =
+            typeof input.data?.target?.x === "number" &&
+            typeof input.data?.target?.y === "number"
+              ? {
+                  x: input.data.target.x,
+                  y: input.data.target.y,
+                }
+              : undefined;
+          handleActionBattleSkillUse(player, skillId, target, options);
+          return;
+        }
         if (
           activeProfile?.control.moveCancelsRecovery &&
           lockedUntil > now &&
@@ -1186,15 +1344,24 @@ export const createActionBattleServer = (
         }
       },
       onConnected(player: RpgPlayer) {
+        sendActionBattleSkillLoadout(player, options);
         const actionBar = options.ui?.actionBar as any;
         if (actionBar?.enabled && actionBar?.autoOpen) {
           openActionBattleActionBar(player, options);
         }
       },
+      onJoinMap(player: RpgPlayer) {
+        sendActionBattleSkillLoadout(player, options);
+      },
+      onSkillChange(player: RpgPlayer) {
+        sendActionBattleSkillLoadout(player, options);
+        updateActionBattleActionBar(player, options);
+      },
       onDisconnected(player: RpgPlayer) {
         releaseActionBattleControls(player);
         clearActionBattleDefense(player);
         playerCombatStates.delete(player);
+        playerSkillCooldowns.delete(player);
       },
     },
     event: {

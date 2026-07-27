@@ -13,6 +13,7 @@ import {
   type ActionBattleAiTreeNode,
   type ActionBattleAiVisual,
   type ActionBattleAudioOptions,
+  type ActionBattleUsable,
 } from "./index";
 
 describe("action battle public API types", () => {
@@ -73,5 +74,36 @@ describe("action battle public API types", () => {
 
     expectTypeOf(audio).toMatchTypeOf<ActionBattleAudioOptions>();
     expectTypeOf(provideActionBattle({ audio })).toBeArray();
+  });
+
+  test("Studio skills expose shortcuts, presentation, targeting, and projectiles", () => {
+    const skill = {
+      id: "fireball",
+      _type: "skill",
+      key: "1",
+      casterAnimation: "cast",
+      animation: "impact",
+      sound: "cast-sound",
+      impactSound: "impact-sound",
+      targeting: { range: 6, aoeMask: ["010", "111", "010"] },
+      action: {
+        mode: "projectile",
+        target: "enemy",
+        cooldownMs: 800,
+        visual: {
+          castFx: "magicBurst",
+          trailFx: "torchFire",
+          impactFx: "explosionSmall",
+        },
+        projectile: {
+          graphic: "fireball",
+          speed: 240,
+          scale: 1.2,
+          rotateToDirection: true,
+        },
+      },
+    } satisfies ActionBattleUsable;
+
+    expectTypeOf(skill).toMatchTypeOf<ActionBattleUsable>();
   });
 });

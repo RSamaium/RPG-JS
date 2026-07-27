@@ -25,6 +25,14 @@ describe("Studio database normalizer", () => {
         hitRate: 0.8,
         power: 40,
         coefficient: {},
+        targeting: {
+          range: 0,
+        },
+        action: {
+          mode: "melee",
+          target: "enemy",
+          cooldownMs: 0,
+        },
       },
     });
   });
@@ -50,6 +58,55 @@ describe("Studio database normalizer", () => {
     });
 
     expect(normalized?.data.hitRate).toBe(0.95);
+  });
+
+  test("normalizes Studio action-battle media and legacy targeting", () => {
+    const normalized = normalizeStudioDatabaseRecord({
+      _id: "fireball",
+      type: "skill",
+      name: "Fireball",
+      range: 5,
+      target: "ally",
+      casterAnimation: { _id: "cast-animation" },
+      animation: { _id: "impact-animation" },
+      sound: { _id: "cast-sound" },
+      impactSound: { _id: "impact-sound" },
+      action: {
+        mode: "projectile",
+        cooldownMs: 900,
+        visual: {
+          castFx: "magicBurst",
+          trailFx: "torchFire",
+          impactFx: "explosionSmall",
+        },
+        projectile: {
+          graphic: { _id: "fireball-graphic" },
+          speed: 240,
+        },
+      },
+    });
+
+    expect(normalized?.data).toMatchObject({
+      casterAnimation: "cast-animation",
+      animation: "impact-animation",
+      sound: "cast-sound",
+      impactSound: "impact-sound",
+      targeting: { range: 5 },
+      action: {
+        mode: "projectile",
+        target: "ally",
+        cooldownMs: 900,
+        visual: {
+          castFx: "magicBurst",
+          trailFx: "torchFire",
+          impactFx: "explosionSmall",
+        },
+        projectile: {
+          graphic: "fireball-graphic",
+          speed: 240,
+        },
+      },
+    });
   });
 
   test("normalizes item and resource types without mutating the source", () => {

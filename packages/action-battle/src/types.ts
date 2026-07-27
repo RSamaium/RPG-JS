@@ -521,6 +521,34 @@ export interface ActionBattleActionBarSkill {
   range?: number;
   aoeMask?: string[];
   key?: string;
+  casterAnimation?: string;
+  animation?: string;
+  sound?: string;
+  impactSound?: string;
+  action?: {
+    mode?: "instant" | "melee" | "projectile";
+    target?: "enemy" | "ally" | "self" | "any";
+    cooldownMs?: number;
+    /** Serializable client-only particle and damage-popup presentation. */
+    visual?: {
+      /** Legacy impact FX alias. Prefer `impactFx`. */
+      fx?: string;
+      /** Caster FX preset, `auto`, or `none`. */
+      castFx?: string;
+      /** Continuous projectile FX preset, `auto`, or `none`. */
+      trailFx?: string;
+      /** Target impact FX preset, `auto`, or `none`. */
+      impactFx?: string;
+      /** Main damage-popup text color. */
+      color?: string | number;
+      /** Damage-popup outline color. */
+      accentColor?: string | number;
+      /** Impact particle scale. */
+      scale?: number;
+    };
+  };
+  cooldownMs?: number;
+  readyAt?: number;
 }
 
 export interface ActionBattleActionBarData {

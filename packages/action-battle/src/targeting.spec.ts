@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   directionToActionBattleTarget,
+  parseAoeMask,
   resolveActionBattleSoftTarget,
 } from "./targeting";
 
@@ -12,6 +13,16 @@ const entity = (id: string, x: number, y: number) => ({
 });
 
 describe("action battle soft targeting", () => {
+  test("parses legacy binary area masks without treating zeroes as active cells", () => {
+    expect(parseAoeMask(["010", "111", "010"]).cells).toEqual([
+      { dx: 0, dy: -1 },
+      { dx: -1, dy: 0 },
+      { dx: 0, dy: 0 },
+      { dx: 1, dy: 0 },
+      { dx: 0, dy: 1 },
+    ]);
+  });
+
   test("selects the closest target inside the facing cone", () => {
     const source = entity("hero", 0, 0);
     const close = entity("close", 48, 0);
