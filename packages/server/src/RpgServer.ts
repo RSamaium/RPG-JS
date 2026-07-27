@@ -8,6 +8,7 @@ import type { MaybePromise, RpgMapChangeTarget, RpgPlayerSnapshot, RpgSyncSchema
 import type { EventPosOption, RpgTouchContext } from "./rooms/map"
 import type { DamageFormulas } from "./Player/BattleManager"
 import type { SkillChangePayload } from "./Player/SkillManager"
+import type { HotbarChangePayload } from "./Player/HotbarManager"
 import type {
     ProjectileDestroyHookContext,
     ProjectileHookContext,
@@ -269,6 +270,14 @@ export interface RpgPlayerHooks {
     * @memberof RpgPlayerHooks
     */
     onSkillChange?: (player: RpgPlayer, payload: SkillChangePayload) => MaybePromise<void>
+
+    /**
+    *  When the player initializes or changes a hotbar slot
+    *
+    * @prop { (player: RpgPlayer, payload: HotbarChangePayload) => void | Promise<void> } [onHotbarChange]
+    * @memberof RpgPlayerHooks
+    */
+    onHotbarChange?: (player: RpgPlayer, payload: HotbarChangePayload) => MaybePromise<void>
 
     /**
     *  When the player's HP drops to 0

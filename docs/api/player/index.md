@@ -18,6 +18,7 @@ This reference is generated from the JSDoc comments in `@rpgjs/server`. It group
 - [Element Commands](/api/player/element-commands)
 - [Item Commands](/api/player/item-commands)
 - [Skill Commands](/api/player/skill-commands)
+- [Hotbar Commands](/api/player/hotbar-commands)
 - [Variable Commands](/api/player/variable-commands)
 - [Move Commands](/api/player/move-commands)
 - [GUI Commands](/api/player/gui-commands)

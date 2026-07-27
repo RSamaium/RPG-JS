@@ -1,84 +1,298 @@
-<DOMContainer width="100%" height="100%">
-    <div class="rpg-ui-menu-panel rpg-ui-panel">
-        <div class="rpg-ui-menu-panel-header">{t("rpg.menu.skills")}</div>
-        <div class="rpg-ui-menu-panel-body rpg-ui-menu-panel-body-stacked">
-            <div class="rpg-ui-menu-panel-details rpg-ui-panel">
-                @if (currentSkill) {
-                    <div class="rpg-ui-menu-panel-hero">
-                        <div class="rpg-ui-menu-panel-hero-icon">✨</div>
-                        <div>
-                            <div class="rpg-ui-menu-panel-details-title">{currentSkill()?.name}</div>
-                            <div class="rpg-ui-menu-panel-details-desc">{currentSkill()?.description || ""}</div>
-                        </div>
-                    </div>
+<DOMContainer width="100%" height="100%" controls={controls}>
+  <div class="rpg-ui-menu-panel rpg-ui-panel">
+    <div class="rpg-ui-menu-panel-header">{t("rpg.menu.skills")}</div>
+    <div class="rpg-ui-menu-panel-body rpg-skill-menu-layout">
+      <div class="rpg-ui-menu-panel-list rpg-ui-menu rpg-ui-menu-panel-list-full rpg-skill-menu-list">
+        <div class="rpg-skill-menu-help">{t("rpg.menu.skill-hotbar-help")}</div>
+        <div class="rpg-skill-menu-navigation">
+          @for ((skill,index) of skills()) {
+            <button
+              type="button"
+              class="rpg-ui-menu-item rpg-ui-menu-row rpg-skill-menu-row"
+              data-selected={selectedSkill() === index ? "true" : "false"}
+              tabindex={index}
+              aria-label={skill.name}
+              click={selectSkill(index)}
+            >
+              <div class="rpg-ui-menu-row-main">
+                <div class="rpg-ui-menu-row-icon rpg-skill-menu-row-icon">
+                  @if (skill.icon) {
+                    <DOMSprite sheet={iconSheet(skill.icon)} width="32px" height="32px" scale={2} objectFit="contain" />
+                  } @else {
+                    <span>✦</span>
+                  }
+                </div>
+                <span>{skill.name}</span>
+              </div>
+              <div class="rpg-ui-menu-row-end">
+                @if (skillSlot(skill) >= 0) {
+                  <span class="rpg-skill-menu-key">{slotLabels[skillSlot(skill)]}</span>
                 }
-            </div>
-            <div class="rpg-ui-menu-panel-list rpg-ui-menu rpg-ui-menu-panel-list-full">
-                <Navigation tabindex={selectedSkill} controls={controls}>
-                    @for ((skill,index) of skills) {
-                        <div
-                            class="rpg-ui-menu-item rpg-ui-menu-row"
-                            data-selected={selectedSkill() === index ? "true" : "false"}
-                            tabindex={index}
-                            click={selectSkill(index)}
-                        >
-                            <span>{skill.name}</span>
-                            <span class="rpg-ui-menu-row-end">SP {skill.spCost ?? 0}</span>
-                        </div>
-                    }
-                </Navigation>
-            </div>
+                <span>SP {skill.spCost ?? 0}</span>
+              </div>
+            </button>
+          }
         </div>
+      </div>
+      <div class="rpg-ui-menu-panel-details rpg-ui-panel rpg-skill-menu-card">
+        @if (currentSkill()) {
+          <div class="rpg-ui-menu-panel-hero">
+            <div class="rpg-ui-menu-panel-hero-icon">
+              @if (currentSkill().icon) {
+                <DOMSprite sheet={iconSheet(currentSkill().icon)} width="48px" height="48px" scale={2} objectFit="contain" />
+              } @else {
+                <span>✨</span>
+              }
+            </div>
+            <div class="rpg-skill-menu-details">
+              <div class="rpg-ui-menu-panel-details-title">{currentSkill().name}</div>
+              <div class="rpg-ui-menu-panel-details-desc">{currentSkill().description || ""}</div>
+              <div class="rpg-skill-menu-meta">
+                <span>SP {currentSkill().spCost ?? 0}</span>
+                <span>{t("rpg.menu.range")}: {currentSkill().range ?? 0}</span>
+                @if ((currentSkill().cooldownMs ?? 0) > 0) {
+                  <span>{t("rpg.menu.cooldown")}: {formatCooldown(currentSkill().cooldownMs)}</span>
+                }
+                @if (assignedSlot() >= 0) {
+                  <span class="rpg-skill-menu-assigned">
+                    {t("rpg.menu.assigned-slot", { slot: slotLabels[assignedSlot()] })}
+                  </span>
+                }
+              </div>
+            </div>
+          </div>
+          <div class="rpg-skill-menu-actions">
+            <button type="button" class="rpg-ui-menu-confirm-btn" click={openAssignment}>
+              {t("rpg.menu.assign-hotbar")}
+            </button>
+            @if (lastAssignedSlot() >= 0) {
+              <span class="rpg-skill-menu-confirmation">
+                {t("rpg.menu.assigned-slot", { slot: slotLabels[lastAssignedSlot()] })}
+              </span>
+            }
+          </div>
+        }
+      </div>
     </div>
+    @if (assignmentOpen()) {
+      <HotbarSlotPicker
+        hotbar={hotbar}
+        entry={assignmentEntry}
+        onAssign={assignSlot}
+        onClear={clearSlot}
+        onCancel={closeAssignment}
+      />
+    }
+  </div>
 </DOMContainer>
 
-<script>
-    import { signal, computed, createTabindexNavigator } from "canvasengine";
-    import { inject } from "../../../core/inject";
-    import { RpgClientEngine } from "../../../RpgClientEngine";
+<style>
+  .rpg-skill-menu-layout {
+    grid-template-columns: minmax(230px, 0.9fr) minmax(280px, 1.1fr);
+    color: #f7fbff;
+  }
 
-    const engine = inject(RpgClientEngine);
-    const { t } = engine.i18n();
-    const keyboardControls = engine.globalConfig.keyboardControls;
+  .rpg-skill-menu-list,
+  .rpg-skill-menu-card {
+    border: 1px solid color-mix(in srgb, var(--rpg-ui-border), white 15%);
+    background: rgb(5 12 24 / 82%);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 7%);
+  }
 
-    const selectedSkill = signal(0);
-    const { data, onBack } = defineProps();
-    const skills = computed(() => data().skills);
+  .rpg-skill-menu-help {
+    padding: 2px 4px 10px;
+    color: #b8c8dc;
+    font-size: 0.72rem;
+    line-height: 1.4;
+  }
 
-    const nav = createTabindexNavigator(selectedSkill, { count: () => skills().length }, "wrap");
-    const currentSkill = computed(() => skills()[selectedSkill()]);
+  .rpg-skill-menu-row {
+    width: 100%;
+    color: #f7fbff;
+    font: inherit;
+    text-align: left;
+  }
 
-    function selectSkill(index) {
-        return function() {
-            selectedSkill.set(index);
-        }
+  .rpg-skill-menu-row[data-selected="true"] {
+    color: white;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--rpg-ui-accent), #14233a 66%), #14233a);
+    box-shadow: inset 3px 0 0 var(--rpg-ui-accent);
+  }
+
+  .rpg-skill-menu-row-icon {
+    display: grid;
+    place-items: center;
+    color: var(--rpg-ui-accent);
+    font-size: 1.1rem;
+  }
+
+  .rpg-skill-menu-key {
+    min-width: 24px;
+    padding: 3px 7px;
+    border: 1px solid var(--rpg-ui-accent);
+    border-radius: 6px;
+    background: rgb(4 10 20 / 85%);
+    color: white;
+    font-weight: 900;
+    text-align: center;
+  }
+
+  .rpg-skill-menu-details {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .rpg-skill-menu-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px 14px;
+    margin-top: 9px;
+    color: var(--rpg-ui-text-muted);
+    font-size: 0.76rem;
+  }
+
+  .rpg-skill-menu-assigned {
+    color: var(--rpg-ui-accent);
+    font-weight: 800;
+  }
+
+  .rpg-skill-menu-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-top: auto;
+    padding-top: 14px;
+  }
+
+  .rpg-skill-menu-confirmation {
+    color: #6ef0a7;
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+
+  @media (max-width: 760px) {
+    .rpg-skill-menu-layout {
+      display: flex;
+      flex-direction: column-reverse;
     }
+  }
+</style>
 
-    const controls = signal({
-        up: {
-            repeat: true,
-            bind: keyboardControls.up,
-            throttle: 150,
-            keyDown() {
-                nav.next(-1);
-            }
-        },
-        down: {
-            repeat: true,
-            bind: keyboardControls.down,
-            throttle: 150,
-            keyDown() {
-                nav.next(1);
-            }
-        },
-        escape: {
-            bind: keyboardControls.escape,
-            keyDown() {
-                if (onBack) onBack();
-            }
-        },
-        gamepad: {
-            enabled: true
-        }
+<script>
+  import { signal, computed, createTabindexNavigator } from "canvasengine";
+  import { inject } from "../../../core/inject";
+  import { RpgClientEngine } from "../../../RpgClientEngine";
+  import { getKeyboardControlBind } from "../../../services/actionInput";
+  import HotbarSlotPicker from "./hotbar-slot-picker.ce";
+
+  const engine = inject(RpgClientEngine);
+  const { t } = engine.i18n();
+  const keyboardControls = engine.globalConfig.keyboardControls || {};
+  const slotLabels = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
+  const normalizeBind = (bind) =>
+    typeof bind === "string" && /^[0-9]$/.test(bind) ? `n${bind}` : bind;
+  const selectedSkill = signal(0);
+  const assignmentOpen = signal(false);
+  const lastAssignedSlot = signal(-1);
+  const { data, onInteraction, onBack } = defineProps();
+  const resolveProp = (value) => typeof value === "function" ? value() : value;
+  const skills = computed(() => {
+    const value = resolveProp(data)?.skills;
+    return Array.isArray(value) ? value : [];
+  });
+  const hotbar = computed(() => resolveProp(data)?.hotbar || { slots: [] });
+  const nav = createTabindexNavigator(selectedSkill, { count: () => skills().length }, "wrap");
+  const currentSkill = computed(() => skills()[selectedSkill()]);
+  const assignmentEntry = computed(() => {
+    const skill = currentSkill();
+    return skill ? { type: "skill", id: skill.id, name: skill.name } : null;
+  });
+
+  const iconSheet = (iconId) => ({
+    definition: engine.getSpriteSheet(iconId),
+    playing: "default"
+  });
+  const formatCooldown = (value) =>
+    value >= 1000 ? `${Number(value / 1000).toFixed(value % 1000 ? 1 : 0)}s` : `${value}ms`;
+  const skillSlot = (skill) => {
+    if (!skill) return -1;
+    return (hotbar().slots || []).findIndex(
+      (slot) => slot?.entry?.type === "skill" && slot.entry.id === skill.id
+    );
+  };
+  const assignedSlot = computed(() => skillSlot(currentSkill()));
+
+  function selectSkill(index) {
+    return function() {
+      selectedSkill.set(index);
+    };
+  }
+
+  const openAssignment = () => {
+    if (currentSkill()) assignmentOpen.set(true);
+  };
+  const closeAssignment = () => assignmentOpen.set(false);
+  const assignSlot = (slot) => {
+    const entry = assignmentEntry();
+    if (!entry) return;
+    onInteraction?.("assignHotbarSlot", {
+      slot,
+      entry: { type: entry.type, id: entry.id }
     });
+    lastAssignedSlot.set(slot);
+    closeAssignment();
+  };
+  const clearSlot = (slot) => {
+    onInteraction?.("clearHotbarSlot", { slot });
+    closeAssignment();
+  };
+
+  const controlsConfig = {
+    up: {
+      repeat: true,
+      bind: keyboardControls.up,
+      throttle: 150,
+      keyDown() {
+        if (!assignmentOpen()) nav.next(-1);
+      }
+    },
+    down: {
+      repeat: true,
+      bind: keyboardControls.down,
+      throttle: 150,
+      keyDown() {
+        if (!assignmentOpen()) nav.next(1);
+      }
+    },
+    action: {
+      bind: getKeyboardControlBind(keyboardControls.action),
+      keyDown() {
+        if (!assignmentOpen()) openAssignment();
+      }
+    },
+    escape: {
+      bind: keyboardControls.escape,
+      keyDown() {
+        if (assignmentOpen()) {
+          closeAssignment();
+          return;
+        }
+        onBack?.();
+      }
+    },
+    gamepad: {
+      enabled: true
+    }
+  };
+  slotLabels.forEach((label, slot) => {
+    const configKey = slot === 9 ? "hotbar0" : `hotbar${slot + 1}`;
+    controlsConfig[`assign-hotbar-${slot}`] = {
+      bind: normalizeBind(keyboardControls[configKey] || `n${label}`),
+      keyDown() {
+        if (!assignmentOpen() && currentSkill()) assignSlot(slot);
+      }
+    };
+  });
+  const controls = signal(controlsConfig);
 </script>

@@ -37,6 +37,27 @@ describe("Studio database normalizer", () => {
     });
   });
 
+  test("attaches Studio workflows through the native skill onUse hook", () => {
+    const normalized = normalizeStudioDatabaseRecord({
+      _id: "fire",
+      type: "skill",
+      workflowTriggers: [
+        { phase: "cast", blockCollectionId: "cast-workflow", blocks: [] },
+      ],
+    });
+
+    expect(normalized?.data.onUse).toBeTypeOf("function");
+  });
+
+  test("keeps skills without workflows on the default RPGJS use path", () => {
+    const normalized = normalizeStudioDatabaseRecord({
+      _id: "fire",
+      type: "skill",
+    });
+
+    expect(normalized?.data.onUse).toBeUndefined();
+  });
+
   test("keeps compatibility with Studio skill payloads that still use mpCost", () => {
     const normalized = normalizeStudioDatabaseRecord({
       _id: "ice",

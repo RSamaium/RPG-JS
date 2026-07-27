@@ -1,0 +1,77 @@
+diff --git a/dist/index.js b/dist/index.js
+index ed35b62f75c2eb54aa06afa5cca1cbcf0ed1a9e6..7b95233d446701f74482abd6f2cbbe6b9f2b1e32 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -439,13 +439,28 @@ function loadValue(rootInstance, parts, value) {
+     if (i === parts.length - 1) {
+       if (value == DELETE_TOKEN) {
+         if (isSignal2(current)) {
+-          current = current();
++          const container = current();
++          if (container !== null && typeof container === "object") {
++            current.mutate((target) => {
++              Reflect.deleteProperty(target, part);
++            });
++            continue;
++          }
++          current = container;
+         }
+         Reflect.deleteProperty(current, part);
+       } else if (current[part]?._subject) {
+         current[part].set(value);
+-      } else if (isSignal2(current) && Array.isArray(current()) && !isNaN(Number(part))) {
+-        current()[Number(part)] = value;
++      } else if (isSignal2(current)) {
++        const container = current();
++        if (container !== null && typeof container === "object") {
++          current.mutate((target) => {
++            const key = Array.isArray(target) && !isNaN(Number(part)) ? Number(part) : part;
++            target[key] = value;
++          });
++        } else {
++          current[part] = value;
++        }
+       } else {
+         current[part] = value;
+       }
+diff --git a/src/load.ts b/src/load.ts
+index 0144c90a597c8f2be7d5c2ae5b3070eeb886b153..735bd1498134d445e596c5c95367761e83acf557 100644
+--- a/src/load.ts
++++ b/src/load.ts
+@@ -92,15 +92,33 @@ function loadValue(rootInstance: any, parts: string[], value: any) {
+     if (i === parts.length - 1) {
+       if (value == DELETE_TOKEN) {
+         if (isSignal(current)) {
+-          current = current();
++          const container = current();
++          if (container !== null && typeof container === "object") {
++            current.mutate((target: any) => {
++              Reflect.deleteProperty(target, part);
++            });
++            continue;
++          }
++          current = container;
+         }
+         Reflect.deleteProperty(current, part);
+       }
+       else if (current[part]?._subject) {
+         current[part].set(value);
+       }
+-      else if (isSignal(current) && Array.isArray(current()) && !isNaN(Number(part))) {
+-        current()[Number(part)] = value;
++      else if (isSignal(current)) {
++        const container = current();
++        if (container !== null && typeof container === "object") {
++          current.mutate((target: any) => {
++            const key = Array.isArray(target) && !isNaN(Number(part))
++              ? Number(part)
++              : part;
++            target[key] = value;
++          });
++        }
++        else {
++          current[part] = value;
++        }
+       }
+       else {
+         current[part] = value;

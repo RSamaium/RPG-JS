@@ -43,7 +43,7 @@ Get a variable value
 ### Signature
 
 ```ts
-getVariable(key: string): U | undefined
+getVariable(key: string): T | undefined
 ```
 
 ### Parameters
@@ -131,13 +131,13 @@ that must survive saves and map transitions.
 ### Signature
 
 ```ts
-setVariable(key: string, val: any): void
+setVariable(key: string, val: T): void
 ```
 
 ### Parameters
 
 - `key`: `string`
-- `val`: `any`
+- `val`: `T`
 
 ## variables
 
@@ -153,7 +153,7 @@ player snapshot when switching maps or servers.
 ### Signature
 
 ```ts
-variables: Map<string, any>
+variables: RpgWritableSignal<Record<string, unknown>>
 ```
 
 ## WithVariableManager

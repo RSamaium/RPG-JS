@@ -261,6 +261,28 @@ Studio listens to the RPGJS `player.onSkillChange` hook and displays a notificat
 
 Enemy records can also drive action-battle AI. Use `behavior` on the enemy to set fields such as `enemyType`, `behaviorKey`, `visionRange`, `attackRange`, `attackCooldown`, `dodgeChance`, `dodgeCooldown`, `fleeThreshold`, `attackPatterns`, `patrolWaypoints`, `groupBehavior`, or the nested behavior gauge options. The older `aiBehavior` field is still accepted as a compatibility alias. If the enemy has `attackSkillId`, that skill is used for attacks; otherwise the first learned enemy skill is used.
 
+### Skill workflow triggers
+
+Studio skills may declare `workflowTriggers` that reference Studio block
+collections:
+
+```json
+{
+  "workflowTriggers": [
+    { "phase": "cast", "blockCollectionId": "cast-workflow" },
+    { "phase": "impact", "blockCollectionId": "impact-workflow" },
+    { "phase": "defeat", "blockCollectionId": "defeat-workflow" }
+  ]
+}
+```
+
+This is a Studio orchestration feature built on RPGJS's native skill `onUse`
+hook. It does not add a second engine hook. Studio preserves the default skill
+effect, waits for projectile impact when applicable, then executes the blocks
+from the referenced collection. The block context exposes the caster as the
+player and the affected map event as the current event when one exists. A skill
+workflow can call or spawn Common Events through the corresponding blocks.
+
 The same Studio enemy definition can be placed on a map more than once. The
 runtime keeps the first placement's legacy id and assigns deterministic ids
 such as `enemy-id::2` to later placements, while preserving `sourceEventId` for

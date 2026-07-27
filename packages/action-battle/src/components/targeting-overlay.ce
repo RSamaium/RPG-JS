@@ -1,8 +1,43 @@
 <Container>
   @if (shouldRender) {
     <Graphics draw={drawGrid} />
+    <DOMContainer class="action-battle-targeting-help-root">
+      <div class="action-battle-targeting-help">
+        <strong>{targetingState().skill?.name}</strong>
+        <span>{t("rpg.action-battle.targeting-help")}</span>
+      </div>
+    </DOMContainer>
   }
 </Container>
+
+<style>
+  .action-battle-targeting-help-root {
+    pointer-events: none;
+  }
+
+  .action-battle-targeting-help {
+    position: absolute;
+    left: 16px;
+    top: -58px;
+    width: max-content;
+    max-width: 260px;
+    display: grid;
+    gap: 3px;
+    padding: 7px 10px;
+    border: 1px solid color-mix(in srgb, var(--rpg-ui-accent), white 25%);
+    border-radius: 9px;
+    background: rgb(3 10 20 / 92%);
+    color: white;
+    font-family: var(--rpg-ui-font);
+    font-size: 10px;
+    line-height: 1.35;
+    box-shadow: 0 8px 24px rgb(0 0 0 / 45%);
+  }
+
+  .action-battle-targeting-help span {
+    color: #c4d2e5;
+  }
+</style>
 
 <script>
   import { computed } from "canvasengine";
@@ -13,6 +48,7 @@
 
   const { object } = defineProps();
   const engine = inject(RpgClientEngine);
+  const { t } = engine.i18n();
 
   const isCurrentPlayer = computed(() => {
     if (!object?.id) return false;

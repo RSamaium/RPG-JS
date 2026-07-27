@@ -273,6 +273,16 @@ export function provideClientGlobalConfig(config: any = {}) {
     action: 'space',
     dash: 'shift',
     escape: 'escape',
+    hotbar1: 'n1',
+    hotbar2: 'n2',
+    hotbar3: 'n3',
+    hotbar4: 'n4',
+    hotbar5: 'n5',
+    hotbar6: 'n6',
+    hotbar7: 'n7',
+    hotbar8: 'n8',
+    hotbar9: 'n9',
+    hotbar0: 'n0',
     ...(config.keyboardControls ?? {}),
   }
   return provideGlobalConfig(config)

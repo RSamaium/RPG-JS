@@ -8,6 +8,7 @@ export * from "./services/updateMap";
 export * from "./services/save";
 export * from "./Utils";
 export * from "./PrebuiltGui";
+export * from "./Hotbar";
 export * from "./database";
 export * from "./PerlinNoise";
 export * from "@rpgjs/physic";

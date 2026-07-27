@@ -104,14 +104,13 @@ Removes a skill from the player's skill list.
 ### Signature
 
 ```ts
-forgetSkill(skillInput: SkillClass | SkillObject | string, options?: SkillChangeOptions): any
+forgetSkill(skillInput: SkillClass | SkillObject | string, options?: SkillChangeOptions): SkillData
 ```
 
 ### Parameters
 
 - `skillInput`: `SkillClass | SkillObject | string`
-- `options.source`: Optional source reported to `player.onSkillChange`. Defaults to `manual`.
-- `options.level`: Optional level reported to `player.onSkillChange`.
+- `options?`: `SkillChangeOptions`
 
 ### Returns
 
@@ -136,14 +135,13 @@ Forget a skill
 ### Signature
 
 ```ts
-forgetSkill(skillInput: SkillClass | SkillObject | string, options?: SkillChangeOptions): any
+forgetSkill(skillInput: SkillClass | SkillObject | string, options?: SkillChangeOptions): SkillData
 ```
 
 ### Parameters
 
 - `skillInput`: `SkillClass | SkillObject | string`
-- `options.source`: Optional source reported to `player.onSkillChange`. Defaults to `manual`.
-- `options.level`: Optional level reported to `player.onSkillChange`.
+- `options?`: `SkillChangeOptions`
 
 ### Returns
 
@@ -192,7 +190,7 @@ Retrieves a learned skill. Returns null if not found
 ### Signature
 
 ```ts
-getSkill(skillInput: SkillClass | SkillObject | string): any | null
+getSkill(skillInput: SkillClass | SkillObject | string): Skill | null
 ```
 
 ### Parameters
@@ -253,14 +251,13 @@ Adds a skill to the player's skill list. Supports three input formats:
 ### Signature
 
 ```ts
-learnSkill(skillInput: SkillClass | SkillObject | string, options?: SkillChangeOptions): any
+learnSkill(skillInput: SkillClass | SkillObject | string, options?: SkillChangeOptions): SkillObject
 ```
 
 ### Parameters
 
 - `skillInput`: `SkillClass | SkillObject | string`
-- `options.source`: Optional source reported to `player.onSkillChange`. Defaults to `manual`.
-- `options.level`: Optional level reported to `player.onSkillChange`.
+- `options?`: `SkillChangeOptions`
 
 ### Returns
 
@@ -302,14 +299,13 @@ Supports three input formats:
 ### Signature
 
 ```ts
-learnSkill(skillInput: SkillClass | SkillObject | string, options?: SkillChangeOptions): any
+learnSkill(skillInput: SkillClass | SkillObject | string, options?: SkillChangeOptions): SkillObject
 ```
 
 ### Parameters
 
 - `skillInput`: `SkillClass | SkillObject | string`
-- `options.source`: Optional source reported to `player.onSkillChange`. Defaults to `manual`.
-- `options.level`: Optional level reported to `player.onSkillChange`.
+- `options?`: `SkillChangeOptions`
 
 ### Returns
 
@@ -466,7 +462,7 @@ The skill must be learned and the player must have enough SP.
 ### Signature
 
 ```ts
-useSkill(skillInput: SkillClass | SkillObject | string, otherPlayer?: RpgPlayer | RpgPlayer[]): any
+useSkill(skillInput: SkillClass | SkillObject | string, otherPlayer?: RpgPlayer | RpgPlayer[]): SkillData
 ```
 
 ### Parameters
@@ -502,7 +498,7 @@ Use a skill
 ### Signature
 
 ```ts
-useSkill(skillInput: SkillClass | SkillObject | string, otherPlayer?: RpgPlayer | RpgPlayer[]): any
+useSkill(skillInput: SkillClass | SkillObject | string, otherPlayer?: RpgPlayer | RpgPlayer[]): SkillData
 ```
 
 ### Parameters

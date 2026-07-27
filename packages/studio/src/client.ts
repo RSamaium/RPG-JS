@@ -52,6 +52,16 @@ const DEFAULT_STUDIO_KEYBOARD_CONTROLS = {
   action: "space",
   dash: "shift",
   escape: "escape",
+  hotbar1: "n1",
+  hotbar2: "n2",
+  hotbar3: "n3",
+  hotbar4: "n4",
+  hotbar5: "n5",
+  hotbar6: "n6",
+  hotbar7: "n7",
+  hotbar8: "n8",
+  hotbar9: "n9",
+  hotbar0: "n0",
 };
 
 const normalizeStudioKeyboardControls = (
@@ -63,6 +73,11 @@ const normalizeStudioKeyboardControls = (
     ...(current ?? {}),
     ...(incoming ?? {}),
   };
+  for (const key of Object.keys(DEFAULT_STUDIO_KEYBOARD_CONTROLS)) {
+    if (key.startsWith("hotbar") && /^[0-9]$/.test(merged[key])) {
+      merged[key] = `n${merged[key]}`;
+    }
+  }
 
   if (incoming?.back && !incoming.escape) {
     merged.escape = incoming.back;

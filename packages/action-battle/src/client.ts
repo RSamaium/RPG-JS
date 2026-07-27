@@ -202,7 +202,10 @@ export const createActionBattleClient = (
     clientVisuals: {
       ...createActionBattleClientVisuals(normalized),
       [ACTION_BATTLE_SKILL_LOADOUT_VISUAL_ID]: (context: any) => {
-        setActionBattleSkillLoadout(context.data?.skills ?? []);
+        setActionBattleSkillLoadout(
+          context.data?.skills ?? [],
+          context.data?.slots ?? [],
+        );
       },
       [ACTION_BATTLE_COMBAT_AUDIO_ID]:
         createActionBattleCombatAudioVisual(normalized.audio),
