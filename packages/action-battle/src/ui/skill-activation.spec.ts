@@ -21,10 +21,22 @@ describe("action battle skill activation", () => {
     ).toBe("immediate");
   });
 
+  test("fires instant area skills directly and lets the server soft-target", () => {
+    expect(
+      resolveActionBattleSkillActivationMode(
+        skill({
+          range: 6,
+          aoeMask: ["###", "###", "###"],
+          action: { mode: "instant", target: "enemy" },
+        }),
+      ),
+    ).toBe("immediate");
+  });
+
   test("opens targeting for area and ally skills", () => {
     expect(
       resolveActionBattleSkillActivationMode(
-        skill({ range: 4, aoeMask: ["###"], action: { mode: "instant" } }),
+        skill({ range: 4, aoeMask: ["###"], action: { mode: "melee" } }),
       ),
     ).toBe("targeting");
     expect(

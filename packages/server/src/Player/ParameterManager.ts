@@ -773,6 +773,7 @@ export function WithParameterManager<TBase extends PlayerCtor>(Base: TBase) {
             this['execMethod']('onLevelUp', <any>[hasNewLevel])   
         }
         this._level.set(val)
+        this['refreshHotbar']?.()
     }
 
     get level(): number {

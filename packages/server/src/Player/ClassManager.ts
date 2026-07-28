@@ -115,6 +115,7 @@ export function WithClassManager<TBase extends PlayerCtor>(Base: TBase) {
       const { instance } = this._createClassInstance(_class);
       const classInstance = instance;
       (this as any)["execMethod"]("onSet", [this], classInstance);
+      (this as any).refreshHotbar?.();
       return classInstance;
     }
 

@@ -2344,6 +2344,8 @@ export class BattleAi {
     attacker: ActionBattleEntity,
     damageResult: ActionBattleDamageResult & {
       reaction?: NormalizedActionBattleHitReactionProfile;
+      skill?: any;
+      metadata?: Record<string, any>;
     }
   ): boolean {
     if (this.defeated) return true;
@@ -2373,6 +2375,7 @@ export class BattleAi {
         damage,
         defeated: damageResult.defeated,
         result: damageResult,
+        skill: damageResult.skill,
         animations: this.animations,
       });
     });

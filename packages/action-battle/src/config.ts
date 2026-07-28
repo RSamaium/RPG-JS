@@ -4,10 +4,9 @@ import { normalizeActionBattleAttackProfile } from "./core/attack-profile";
 export const DEFAULT_ACTION_BATTLE_OPTIONS: ActionBattleOptions = {
   preset: "adventure",
   ui: {
-    actionBar: {
+    hotbar: {
       enabled: false,
       autoOpen: false,
-      mode: "both",
     },
     targeting: {
       enabled: true,
@@ -241,17 +240,17 @@ export function normalizeActionBattleOptions(
   skills.targeting = skills.targeting ?? skills.getTargeting;
   skills.getTargeting = skills.getTargeting ?? skills.targeting;
 
-  const defaultActionBar = DEFAULT_ACTION_BATTLE_OPTIONS.ui?.actionBar as any;
+  const defaultHotbar = DEFAULT_ACTION_BATTLE_OPTIONS.ui?.hotbar as any;
   const defaultTargeting = DEFAULT_ACTION_BATTLE_OPTIONS.ui?.targeting as any;
-  const optionActionBar = options.ui?.actionBar as any;
+  const optionHotbar = options.ui?.hotbar as any;
   const optionTargeting = options.ui?.targeting as any;
   const optionAttackPreview = options.ui?.attackPreview as any;
-  const actionBar =
-    options.ui?.actionBar === false
-      ? { ...defaultActionBar, enabled: false }
+  const hotbar =
+    options.ui?.hotbar === false
+      ? { ...defaultHotbar, enabled: false }
       : {
-          ...defaultActionBar,
-          ...(options.ui?.actionBar === true ? { enabled: true } : optionActionBar),
+          ...defaultHotbar,
+          ...(options.ui?.hotbar === true ? { enabled: true } : optionHotbar),
         };
   const legacyPreviewEnabled = normalizedAttack.showPreview !== false;
   const attackPreview =
@@ -312,7 +311,7 @@ export function normalizeActionBattleOptions(
     preset,
     ui: {
       ...options.ui,
-      actionBar,
+      hotbar,
       targeting,
       attackPreview,
     },

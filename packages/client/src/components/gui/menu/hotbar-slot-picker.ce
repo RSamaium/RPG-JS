@@ -16,6 +16,8 @@
             class="rpg-ui-hotbar-slot rpg-hotbar-picker-slot"
             data-selected={selectedSlot() === index ? "true" : "false"}
             data-empty={slot.type === "empty" ? "true" : "false"}
+            data-locked={slot.locked ? "true" : "false"}
+            disabled={slot.locked}
             tabindex={index}
             aria-label={slotAriaLabel(slot, index)}
             click={assignSlot(index)}
@@ -28,6 +30,10 @@
             }
             @if (isEntrySlot(slot)) {
               <span class="rpg-hotbar-picker-current">✓</span>
+            }
+            @if (slot.locked) {
+              <span class="rpg-hotbar-picker-lock">🔒</span>
+              <small>{slot.lockedHint || t("rpg.menu.hotbar-slot-locked")}</small>
             }
           </button>
         }
@@ -45,8 +51,15 @@
 </DOMContainer>
 
 <style>
+  .rpg-hotbar-picker-overlay {
+    box-sizing: border-box;
+    padding: clamp(12px, 3vw, 30px);
+  }
+
   .rpg-hotbar-picker-card {
     width: min(650px, calc(100vw - 42px));
+    max-height: calc(100% - 24px);
+    overflow: auto;
     color: #f7fbff;
     background:
       linear-gradient(180deg, rgb(24 39 59 / 98%), rgb(7 14 27 / 99%));
@@ -73,12 +86,47 @@
     box-shadow: 0 0 0 2px var(--rpg-ui-accent), 0 0 24px color-mix(in srgb, var(--rpg-ui-accent), transparent 50%);
   }
 
+  .rpg-hotbar-picker-slot[data-locked="true"] {
+    cursor: not-allowed;
+    filter: grayscale(0.85);
+    opacity: 0.48;
+  }
+
+  .rpg-hotbar-picker-slot[data-locked="true"]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      -45deg,
+      transparent 0 6px,
+      rgb(255 255 255 / 4%) 6px 8px
+    );
+    pointer-events: none;
+  }
+
   .rpg-hotbar-picker-current {
     position: absolute;
     right: 5px;
     top: 3px;
     color: var(--rpg-ui-success, #56d68b);
     font-weight: 900;
+  }
+
+  .rpg-hotbar-picker-lock {
+    position: absolute;
+    top: 5px;
+    right: 6px;
+    font-size: 0.95rem;
+  }
+
+  .rpg-hotbar-picker-slot small {
+    position: absolute;
+    inset: auto 4px 4px;
+    overflow: hidden;
+    color: #dbe4ee;
+    font-size: 0.62rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .rpg-hotbar-picker-help {
@@ -117,7 +165,8 @@
       index,
       type: "empty",
       entry: null,
-      usable: false
+      usable: false,
+      locked: index >= Math.max(1, Math.min(10, Number(data?.capacity ?? 10)))
     });
   });
   const assignedSlot = computed(() => slots().findIndex(isEntrySlot));
@@ -129,7 +178,9 @@
     playing: "default"
   });
   const slotAriaLabel = (slot, index) =>
-    `${slotLabels[index]}: ${slot.name || t("rpg.menu.empty")}`;
+    `${slotLabels[index]}: ${slot.locked
+      ? slot.lockedHint || t("rpg.menu.hotbar-slot-locked")
+      : slot.name || t("rpg.menu.empty")}`;
 
   function isEntrySlot(slot) {
     const selectedEntry = resolveProp(entry);
@@ -150,11 +201,15 @@
   function assignSlot(index) {
     return function() {
       selectedSlot.set(index);
+      if (slots()[index]?.locked) return;
       onAssign?.(index);
     };
   }
 
-  const clearSelected = () => onClear?.(selectedSlot());
+  const clearSelected = () => {
+    if (slots()[selectedSlot()]?.locked) return;
+    onClear?.(selectedSlot());
+  };
 
   const controls = signal({
     left: {
@@ -212,7 +267,9 @@
       buttonMapping: {
         button_0: "action",
         button_1: "escape",
-        button_2: "clear"
+        button_2: "clear",
+        button_6: "left",
+        button_7: "right"
       }
     }
   });

@@ -157,6 +157,8 @@ const applyDamageEffect = (
       defeated: result.defeated,
       raw: result.rawDamage,
       reaction: result.reaction,
+      skill,
+      metadata: result.metadata,
     });
   }
 

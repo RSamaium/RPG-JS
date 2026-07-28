@@ -435,6 +435,7 @@ export function WithItemManager<TBase extends PlayerCtor>(Base: TBase) {
       const hookTarget = (instance as any)._itemInstance || instance;
       // Only call onAdd if it exists and is a function
       (this as any)["execMethod"]("onAdd", [this], hookTarget);
+      this["refreshHotbar"]?.();
       return instance;
     }
 
@@ -458,6 +459,7 @@ export function WithItemManager<TBase extends PlayerCtor>(Base: TBase) {
       if (hookTarget && typeof hookTarget.onRemove === 'function') {
         this["execMethod"]("onRemove", [this], hookTarget);
       }
+      this["refreshHotbar"]?.();
       return this.items()[itemIndex];
     }
 
@@ -626,6 +628,7 @@ export function WithItemManager<TBase extends PlayerCtor>(Base: TBase) {
       // Call onEquip hook - use stored instance if available
       const hookTarget = (item as any)._itemInstance || item;
       this["execMethod"]("onEquip", [this, equipState], hookTarget);
+      this["refreshHotbar"]?.();
     }
   } as unknown as TBase;
 }

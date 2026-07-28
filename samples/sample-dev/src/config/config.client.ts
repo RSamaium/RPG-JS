@@ -82,7 +82,7 @@ export default {
         },
       },
       ui: createActionBattleUi({
-        actionBar: false,
+        hotbar: false,
         targeting: true,
         attackPreview: true,
       }),

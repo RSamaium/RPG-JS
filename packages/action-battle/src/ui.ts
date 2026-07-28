@@ -1,6 +1,3 @@
-import { inject, RpgClientEngine } from "@rpgjs/client";
-// @ts-ignore CanvasEngine components are compiled by @canvasengine/compiler.
-import ActionBarComponent from "./components/action-bar.ce";
 // @ts-ignore CanvasEngine components are compiled by @canvasengine/compiler.
 import TargetingOverlayComponent from "./components/targeting-overlay.ce";
 // @ts-ignore CanvasEngine components are compiled by @canvasengine/compiler.
@@ -8,14 +5,13 @@ import AttackPreviewComponent from "./components/attack-preview.ce";
 // @ts-ignore CanvasEngine components are compiled by @canvasengine/compiler.
 import CombatInputComponent from "./components/combat-input.ce";
 import type {
-  ActionBattleUiActionBarOptions,
+  ActionBattleUiHotbarOptions,
   ActionBattleUiAttackPreviewOptions,
   ActionBattleUiOptions,
   ActionBattleUiTargetingOptions,
 } from "./types";
 
 export const ActionBattleUi = {
-  ActionBar: ActionBarComponent,
   TargetingOverlay: TargetingOverlayComponent,
   AttackPreview: AttackPreviewComponent,
   CombatInput: CombatInputComponent,
@@ -27,7 +23,7 @@ export interface ResolvedActionBattleUi {
     componentsInFront: any[];
     componentsBehind: any[];
   };
-  actionBar: ActionBattleUiActionBarOptions;
+  hotbar: ActionBattleUiHotbarOptions;
   targeting: ActionBattleUiTargetingOptions;
   attackPreview: ActionBattleUiAttackPreviewOptions;
 }
@@ -62,11 +58,9 @@ export function createActionBattleUi(
 }
 
 export function resolveActionBattleUi(options: ActionBattleUiOptions = {}): ResolvedActionBattleUi {
-  const actionBar = normalizeToggle(options.actionBar, {
+  const hotbar = normalizeToggle(options.hotbar, {
     enabled: false,
     autoOpen: false,
-    mode: "both",
-    component: ActionBattleUi.ActionBar,
   });
   const targeting = normalizeToggle(options.targeting, {
     enabled: true,
@@ -83,16 +77,6 @@ export function resolveActionBattleUi(options: ActionBattleUiOptions = {}): Reso
     component: ActionBattleUi.AttackPreview,
   });
   const gui = [...(options.gui ?? [])];
-  if (actionBar.enabled && actionBar.component) {
-    gui.unshift({
-      id: "action-battle-action-bar",
-      component: actionBar.component,
-      dependencies: () => {
-        const engine = inject(RpgClientEngine);
-        return [engine.scene.currentPlayer];
-      },
-    });
-  }
   const configuredSpriteComponents = Array.isArray(options.spriteComponents)
     ? { front: options.spriteComponents, back: [] }
     : options.spriteComponents ?? {};
@@ -108,7 +92,7 @@ export function resolveActionBattleUi(options: ActionBattleUiOptions = {}): Reso
       ],
       componentsBehind: configuredSpriteComponents.back ?? [],
     },
-    actionBar,
+    hotbar,
     targeting,
     attackPreview,
   };

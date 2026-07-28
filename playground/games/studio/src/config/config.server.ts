@@ -22,7 +22,7 @@ export const configServer = {
         lockDurationMs: 350
       },
       ui: {
-        actionBar: {
+        hotbar: {
           enabled: true,
           autoOpen: true
         }

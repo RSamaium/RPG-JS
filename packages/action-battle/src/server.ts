@@ -1,9 +1,13 @@
-import { RpgEvent, RpgPlayer, type RpgServer } from "@rpgjs/server";
+import {
+  RpgEvent,
+  RpgPlayer,
+  type HotbarGuiOptions,
+  type RpgServer,
+} from "@rpgjs/server";
 import { Control, defineModule } from "@rpgjs/common";
 import { BattleAi, HitResult, ApplyHitHooks, DEFAULT_KNOCKBACK } from "./ai.server";
 import {
-  ActionBattleActionBarData,
-  ActionBattleActionBarSkill,
+  ActionBattleHotbarSkill,
   ActionBattleOptions,
 } from "./types";
 import { normalizeActionBattleOptions, setActionBattleOptions } from "./config";
@@ -68,11 +72,8 @@ import type {
   NormalizedActionBattleAttackProfile,
 } from "./types";
 
-export const ACTION_BATTLE_ACTION_BAR_GUI_ID = "action-battle-action-bar";
 export const ACTION_BATTLE_SKILL_USE = "action-battle:use-skill";
 export const ACTION_BATTLE_HOTBAR_USE = "action-battle:use-hotbar";
-export const ACTION_BATTLE_SKILL_LOADOUT_VISUAL_ID =
-  "action-battle.skill-loadout";
 export const ACTION_BATTLE_SKILL_PROJECTILE_TYPE = "action-battle-skill";
 
 /**
@@ -789,7 +790,7 @@ const serializeActionBattleSkill = (
   player: RpgPlayer,
   skill: any,
   options: ActionBattleOptions
-): ActionBattleActionBarSkill | null => {
+): ActionBattleHotbarSkill | null => {
   const id = resolveSkillId(skill);
   if (!id) return null;
   const data = resolveSkillData(player, id) || skill;
@@ -805,7 +806,7 @@ const serializeActionBattleSkill = (
   const action = serializeSkillAction(data);
   const cooldownMs = Math.max(0, action?.cooldownMs ?? 0);
   const readyAt = getPlayerSkillCooldowns(player).get(id) ?? 0;
-  const entry: ActionBattleActionBarSkill = {
+  const entry: ActionBattleHotbarSkill = {
     id,
     name,
     description,
@@ -829,26 +830,60 @@ const serializeActionBattleSkill = (
   return entry;
 };
 
-const buildActionBattleSkillLoadout = (
-  player: RpgPlayer,
-  options: ActionBattleOptions
-) =>
-  (player.skills?.() || [])
-    .map((skill: any) => serializeActionBattleSkill(player, skill, options))
-    .filter(
-      (skill: ActionBattleActionBarSkill | null): skill is ActionBattleActionBarSkill =>
-        skill !== null
-    );
-
-const sendActionBattleSkillLoadout = (
-  player: RpgPlayer,
-  options: ActionBattleOptions
+const requiresActionBattleTargeting = (
+  skill: ActionBattleHotbarSkill,
 ) => {
-  const actionBar = buildActionBarData(player, options);
-  player.clientVisual(ACTION_BATTLE_SKILL_LOADOUT_VISUAL_ID, {
-    skills: actionBar.skills,
-    slots: actionBar.slots,
-  });
+  const mask = Array.isArray(skill.aoeMask) ? skill.aoeMask : [];
+  return (
+    skill.action?.target === "ally"
+    || mask.length > 1
+    || mask.some((row) => row !== "#")
+    || (
+      (skill.range ?? 0) > 0
+      && skill.action?.mode !== "projectile"
+      && skill.action?.target !== "self"
+    )
+  );
+};
+
+const actionBattleHotbarOptions = (
+  options: ActionBattleOptions,
+): HotbarGuiOptions => {
+  const hotbar = (
+    options.ui?.hotbar && typeof options.ui.hotbar === "object"
+      ? options.ui.hotbar
+      : {}
+  );
+  return {
+    capacity: hotbar.capacity,
+    lockedSlotHint: hotbar.lockedSlotHint,
+    transformEntry(player, entry, presentation) {
+      if (entry.type !== "skill") return presentation;
+      const skill = serializeActionBattleSkill(player, entry, options);
+      if (!skill) return presentation;
+      return {
+        ...presentation,
+        ...skill,
+        type: "skill",
+        cost: skill.spCost
+          ? { value: skill.spCost, label: "SP" }
+          : undefined,
+        activation: {
+          mode: requiresActionBattleTargeting(skill) ? "target" : "instant",
+          handler: "action-battle.skill",
+          payload: { skill },
+        },
+      };
+    },
+    onUse(player, request) {
+      return handleActionBattleHotbarUse(
+        player,
+        request.slot,
+        request.target as { x: number; y: number } | undefined,
+        options,
+      );
+    },
+  };
 };
 
 const normalizeMaskRows = (mask: string[] | string | undefined) => {
@@ -860,166 +895,26 @@ const normalizeMaskRows = (mask: string[] | string | undefined) => {
     .map((row: string) => row.replace(/\r/g, ""));
 };
 
-const buildActionBarData = (
-  player: RpgPlayer,
-  options: ActionBattleOptions
-): ActionBattleActionBarData => {
-  player.initializeHotbar?.();
-  const items = (player.items?.() || []).map((item: any) => {
-    const id = item.id?.() ?? item.id;
-    const data = resolveItemData(player, id);
-    const name = resolveSignal(data?.name) ?? resolveSignal(item.name) ?? id;
-    const description =
-      resolveSignal(data?.description) ??
-      resolveSignal(item.description) ??
-      "";
-    const icon = resolveSignal(data?.icon) ?? resolveSignal(item.icon);
-    const quantity = resolveSignal(item.quantity) ?? 1;
-    const consumable = resolveSignal(data?.consumable);
-    const itemType = resolveSignal(data?._type);
-    const usable =
-      quantity > 0 &&
-      consumable !== false &&
-      (itemType ? itemType === "item" : true);
-    return {
-      id,
-      name,
-      description,
-      icon,
-      quantity,
-      usable,
-    };
-  });
-
-  const skills = buildActionBattleSkillLoadout(player, options);
-  const itemsById = new Map(items.map((item) => [item.id, item]));
-  const skillsById = new Map(skills.map((skill) => [skill.id, skill]));
-  const mode = (options.ui?.actionBar as any)?.mode ?? "both";
-  const assignedSlots = player.getHotbar?.().slots ?? [
-    ...skills.map((skill) => ({ type: "skill" as const, id: skill.id })),
-    ...items.map((item) => ({ type: "item" as const, id: item.id })),
-  ].slice(0, 10);
-  const slots = Array.from(
-    { length: 10 },
-    (_, index) => assignedSlots[index] ?? null,
-  ).map((entry, index) => {
-    if (!entry) {
-      return {
-        index,
-        type: "empty" as const,
-        entry: null,
-        usable: false as const,
-      };
-    }
-    if (entry.type === "skill") {
-      const skill = skillsById.get(entry.id) ?? {
-        id: entry.id,
-        name: entry.id,
-        usable: false,
-      };
-      if (mode === "items") {
-        return {
-          index,
-          type: "empty" as const,
-          entry: null,
-          usable: false as const,
-        };
-      }
-      return {
-        index,
-        type: "skill" as const,
-        entry: { type: "skill" as const, id: entry.id },
-        skill,
-        usable: skill.usable !== false,
-      };
-    }
-    const item = itemsById.get(entry.id) ?? {
-      id: entry.id,
-      name: entry.id,
-      quantity: 0,
-      usable: false,
-    };
-    if (mode === "skills") {
-      return {
-        index,
-        type: "empty" as const,
-        entry: null,
-        usable: false as const,
-      };
-    }
-    return {
-      index,
-      type: "item" as const,
-      entry: { type: "item" as const, id: entry.id },
-      item,
-      usable: item.usable !== false,
-    };
-  });
-
-  return { items, skills, slots };
-};
-
-const ensureActionBarGui = (
-  player: RpgPlayer,
-  options: ActionBattleOptions
-) => {
-  const existing = player.getGui?.(ACTION_BATTLE_ACTION_BAR_GUI_ID);
-  const gui = existing || player.gui(ACTION_BATTLE_ACTION_BAR_GUI_ID);
-  if (!(gui as any).__actionBattleReady) {
-    (gui as any).__actionBattleReady = true;
-    gui.on("useItem", ({ id }: { id: string }) => {
-      try {
-        player.useItem(id);
-      } catch {
-        // Ignore failures (not usable, not enough, etc.)
-      }
-      gui.update(buildActionBarData(player, options));
-    });
-    gui.on(
-      "useSkill",
-      ({ id, target }: { id: string; target?: { x: number; y: number } }) => {
-        handleActionBattleSkillUse(player, id, target, options);
-        gui.update(buildActionBarData(player, options));
-      }
-    );
-    gui.on(
-      "useSlot",
-      ({
-        slot,
-        target,
-      }: {
-        slot: number;
-        target?: { x: number; y: number };
-      }) => {
-        handleActionBattleHotbarUse(player, slot, target, options);
-        gui.update(buildActionBarData(player, options));
-      }
-    );
-    gui.on("refresh", () => {
-      gui.update(buildActionBarData(player, options));
-    });
-  }
-  return gui;
-};
-
-export const openActionBattleActionBar = (
+/**
+ * Open the generic hotbar with Action Battle skill presentation and targeting.
+ */
+export const openActionBattleHotbar = (
   player: RpgPlayer,
   rawOptions: ActionBattleOptions = {}
 ) => {
   const options = normalizeActionBattleOptions(rawOptions);
-  const gui = ensureActionBarGui(player, options);
-  gui.open(buildActionBarData(player, options));
+  return player.showHotbar(actionBattleHotbarOptions(options));
 };
 
-export const updateActionBattleActionBar = (
+/**
+ * Refresh cooldowns and usability in an open generic hotbar.
+ */
+export const updateActionBattleHotbar = (
   player: RpgPlayer,
   rawOptions: ActionBattleOptions = {}
 ) => {
-  const options = normalizeActionBattleOptions(rawOptions);
-  const gui = player.getGui?.(ACTION_BATTLE_ACTION_BAR_GUI_ID);
-  if (gui) {
-    gui.update(buildActionBarData(player, options));
-  }
+  normalizeActionBattleOptions(rawOptions);
+  player.refreshHotbar?.();
 };
 
 const getTileSize = (map: any) => ({
@@ -1071,12 +966,10 @@ const handleActionBattleSkillUse = (
         setTimeout(() => {
           if (cooldowns.get(skillId) !== readyAt) return;
           cooldowns.delete(skillId);
-          sendActionBattleSkillLoadout(player, options);
-          updateActionBattleActionBar(player, options);
+          updateActionBattleHotbar(player, options);
         }, cooldownMs);
       }
-      sendActionBattleSkillLoadout(player, options);
-      updateActionBattleActionBar(player, options);
+      updateActionBattleHotbar(player, options);
       return true;
     } catch {
       return false;
@@ -1135,19 +1028,41 @@ const handleActionBattleSkillUse = (
         typeof player.getDirection === "function"
           ? player.getDirection()
           : "down";
+      const softTargeting = objectOption(
+        options.combat?.player?.softTargeting
+      );
+      const tileSize = getTileSize(map);
       const softTarget = resolveActionBattleSoftTarget(
         player,
         candidates,
         direction,
-        objectOption(options.combat?.player?.softTargeting)
+        {
+          ...softTargeting,
+          ...(targeting
+            ? { range: Math.max(1, targeting.range * tileSize.width) }
+            : {}),
+        }
       );
-      return finishUse(softTarget?.target ?? null);
+      if (
+        targeting
+        && actionConfig.mode === "instant"
+        && softTarget?.target
+      ) {
+        target = getEntityTile(softTarget.target, tileSize);
+      } else {
+        if (!softTarget && options.targeting?.allowEmptyTarget === false) {
+          return false;
+        }
+        return finishUse(softTarget?.target ?? null);
+      }
     }
-    try {
-      player.useSkill(skillId);
-      return true;
-    } catch {
-      return false;
+    if (!target || !targeting) {
+      try {
+        player.useSkill(skillId);
+        return true;
+      } catch {
+        return false;
+      }
     }
   }
 
@@ -1226,10 +1141,7 @@ const handleActionBattleHotbarUse = (
     return handleActionBattleSkillUse(player, entry.id, target, options);
   }
   try {
-    player.useItem(entry.id);
-    sendActionBattleSkillLoadout(player, options);
-    updateActionBattleActionBar(player, options);
-    return true;
+    return player.useHotbarSlot(slot, target);
   } catch {
     return false;
   }
@@ -1460,27 +1372,17 @@ export const createActionBattleServer = (
       },
       onConnected(player: RpgPlayer) {
         player.initializeHotbar?.();
-        sendActionBattleSkillLoadout(player, options);
-        const actionBar = options.ui?.actionBar as any;
-        if (actionBar?.enabled && actionBar?.autoOpen) {
-          openActionBattleActionBar(player, options);
+        const hotbar = options.ui?.hotbar as any;
+        if (hotbar?.enabled && hotbar?.autoOpen) {
+          openActionBattleHotbar(player, options);
         }
       },
       onJoinMap(player: RpgPlayer) {
         player.initializeHotbar?.();
-        sendActionBattleSkillLoadout(player, options);
-        const actionBar = options.ui?.actionBar as any;
-        if (actionBar?.enabled && actionBar?.autoOpen) {
-          openActionBattleActionBar(player, options);
+        const hotbar = options.ui?.hotbar as any;
+        if (hotbar?.enabled && hotbar?.autoOpen) {
+          openActionBattleHotbar(player, options);
         }
-      },
-      onSkillChange(player: RpgPlayer) {
-        sendActionBattleSkillLoadout(player, options);
-        updateActionBattleActionBar(player, options);
-      },
-      onHotbarChange(player: RpgPlayer) {
-        sendActionBattleSkillLoadout(player, options);
-        updateActionBattleActionBar(player, options);
       },
       onDisconnected(player: RpgPlayer) {
         releaseActionBattleControls(player);

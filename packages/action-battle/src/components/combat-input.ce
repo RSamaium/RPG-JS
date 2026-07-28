@@ -6,13 +6,11 @@
   import { getKeyboardControlBind } from "@rpgjs/client";
   import {
     actionBattleCombatOptions,
-    actionBattleHotbarSlots,
     actionBattleTargetingState,
+    confirmActionBattleTarget,
     moveTargetingOffset,
-    startTargeting,
     stopTargeting,
   } from "../ui/state";
-  import { activateActionBattleSkill } from "../ui/skill-activation";
 
   const { object } = defineProps();
   const engine = inject(RpgClientEngine);
@@ -41,22 +39,6 @@
         : sprite?.direction ?? "down";
 
   const keyboardControls = engine.globalConfig.keyboardControls;
-  const SLOT_LABELS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
-  const SLOT_CONFIG_KEYS = [
-    "hotbar1",
-    "hotbar2",
-    "hotbar3",
-    "hotbar4",
-    "hotbar5",
-    "hotbar6",
-    "hotbar7",
-    "hotbar8",
-    "hotbar9",
-    "hotbar0",
-  ];
-  const normalizeBind = (bind) =>
-    typeof bind === "string" && /^[0-9]$/.test(bind) ? `n${bind}` : bind;
-
   const getPlayerTile = () => {
     const player = engine.scene.getCurrentPlayer();
     if (!player) return null;
@@ -74,61 +56,15 @@
     if (!state.skill) return;
     const origin = getPlayerTile();
     if (!origin) return;
-    engine.processAction("action-battle:use-skill", {
-      id: state.skill.id,
-      target: {
-        x: origin.x + state.offset.x,
-        y: origin.y + state.offset.y,
-      },
+    confirmActionBattleTarget({
+      x: origin.x + state.offset.x,
+      y: origin.y + state.offset.y,
     });
-    stopTargeting();
-  };
-
-  const useSkill = (skill) => {
-    if (!isCurrentPlayer() || !skill) return;
-    const cooldownActive =
-      typeof skill.readyAt === "number" && skill.readyAt > Date.now();
-    if (cooldownActive) return;
-    activateActionBattleSkill(skill, {
-      direction: direction(),
-      use: () =>
-        engine.processAction("action-battle:use-skill", { id: skill.id }),
-      target: (offset) => startTargeting(skill, offset),
-    });
-  };
-
-  const useSlot = (slot, index) => {
-    if (!slot || slot.type === "empty" || slot.usable === false) return;
-    if (slot.type === "skill") {
-      useSkill(slot.skill);
-      return;
-    }
-    engine.processAction("action-battle:use-hotbar", { slot: index });
   };
 
   const buildControls = () => {
     const chargedBind = chargedOptions()?.control ?? "e";
     const guardBind = guardOptions()?.control ?? "f";
-    const reserved = new Set([chargedBind, guardBind]);
-    const hotbarControls = {};
-
-    SLOT_CONFIG_KEYS.forEach((configKey, index) => {
-      const bind = normalizeBind(
-        keyboardControls?.[configKey] ?? `n${SLOT_LABELS[index]}`,
-      );
-      if (reserved.has(bind)) return;
-      hotbarControls[`hotbar-${index}`] = {
-        bind,
-        keyDown() {
-          if (actionBattleTargetingState().active) return;
-          const slot = actionBattleHotbarSlots().find(
-            (entry) => entry.index === index,
-          );
-          useSlot(slot, index);
-        },
-      };
-    });
-
     return {
       chargedAttack: {
         bind: chargedBind,
@@ -204,7 +140,6 @@
           if (actionBattleTargetingState().active) stopTargeting();
         },
       },
-      ...hotbarControls,
       gamepad: {
         enabled: true,
       },

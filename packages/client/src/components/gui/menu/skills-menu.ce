@@ -74,15 +74,6 @@
         }
       </div>
     </div>
-    @if (assignmentOpen()) {
-      <HotbarSlotPicker
-        hotbar={hotbar}
-        entry={assignmentEntry}
-        onAssign={assignSlot}
-        onClear={clearSlot}
-        onCancel={closeAssignment}
-      />
-    }
   </div>
 </DOMContainer>
 
@@ -184,7 +175,6 @@
   import { inject } from "../../../core/inject";
   import { RpgClientEngine } from "../../../RpgClientEngine";
   import { getKeyboardControlBind } from "../../../services/actionInput";
-  import HotbarSlotPicker from "./hotbar-slot-picker.ce";
 
   const engine = inject(RpgClientEngine);
   const { t } = engine.i18n();
@@ -193,10 +183,16 @@
   const normalizeBind = (bind) =>
     typeof bind === "string" && /^[0-9]$/.test(bind) ? `n${bind}` : bind;
   const selectedSkill = signal(0);
-  const assignmentOpen = signal(false);
   const lastAssignedSlot = signal(-1);
-  const { data, onInteraction, onBack } = defineProps();
+  const {
+    data,
+    assignmentOpen,
+    onAssignHotbar,
+    onInteraction,
+    onBack
+  } = defineProps();
   const resolveProp = (value) => typeof value === "function" ? value() : value;
+  const isAssignmentOpen = () => Boolean(resolveProp(assignmentOpen));
   const skills = computed(() => {
     const value = resolveProp(data)?.skills;
     return Array.isArray(value) ? value : [];
@@ -230,9 +226,9 @@
   }
 
   const openAssignment = () => {
-    if (currentSkill()) assignmentOpen.set(true);
+    const entry = assignmentEntry();
+    if (entry) onAssignHotbar?.(entry);
   };
-  const closeAssignment = () => assignmentOpen.set(false);
   const assignSlot = (slot) => {
     const entry = assignmentEntry();
     if (!entry) return;
@@ -241,11 +237,6 @@
       entry: { type: entry.type, id: entry.id }
     });
     lastAssignedSlot.set(slot);
-    closeAssignment();
-  };
-  const clearSlot = (slot) => {
-    onInteraction?.("clearHotbarSlot", { slot });
-    closeAssignment();
   };
 
   const controlsConfig = {
@@ -254,7 +245,7 @@
       bind: keyboardControls.up,
       throttle: 150,
       keyDown() {
-        if (!assignmentOpen()) nav.next(-1);
+        if (!isAssignmentOpen()) nav.next(-1);
       }
     },
     down: {
@@ -262,22 +253,19 @@
       bind: keyboardControls.down,
       throttle: 150,
       keyDown() {
-        if (!assignmentOpen()) nav.next(1);
+        if (!isAssignmentOpen()) nav.next(1);
       }
     },
     action: {
       bind: getKeyboardControlBind(keyboardControls.action),
       keyDown() {
-        if (!assignmentOpen()) openAssignment();
+        if (!isAssignmentOpen()) openAssignment();
       }
     },
     escape: {
       bind: keyboardControls.escape,
       keyDown() {
-        if (assignmentOpen()) {
-          closeAssignment();
-          return;
-        }
+        if (isAssignmentOpen()) return;
         onBack?.();
       }
     },
@@ -290,7 +278,13 @@
     controlsConfig[`assign-hotbar-${slot}`] = {
       bind: normalizeBind(keyboardControls[configKey] || `n${label}`),
       keyDown() {
-        if (!assignmentOpen() && currentSkill()) assignSlot(slot);
+        if (
+          !isAssignmentOpen()
+          && currentSkill()
+          && slot < Number(hotbar().capacity ?? 10)
+        ) {
+          assignSlot(slot);
+        }
       }
     };
   });

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { createModule, defineModule } from "@rpgjs/common";
 import { testing, type TestingFixture } from "@rpgjs/testing";
-import { RpgPlayer } from "../src";
+import { registerHotbarEntryType, RpgPlayer } from "../src";
 
 const onHotbarChange = vi.fn();
 
@@ -101,8 +101,10 @@ describe("player hotbar", () => {
 
     expect(player.snapshot()).toMatchObject({
       hotbar: {
-        version: 1,
+        version: 2,
         initialized: true,
+        capacity: 10,
+        activeSlot: null,
         slots: expect.arrayContaining([{ type: "item", id: "potion" }]),
       },
     });
@@ -120,5 +122,76 @@ describe("player hotbar", () => {
       initialized: true,
       slots: expect.arrayContaining([{ type: "skill", id: "fire" }]),
     });
+  });
+
+  test("seeds an open hotbar when the loadout arrives later", async () => {
+    player.forgetSkill("fire");
+    player.forgetSkill("ice");
+    player.removeItem("potion");
+
+    await player.showHotbar();
+    expect(player.getHotbar().initialized).toBe(false);
+
+    player.learnSkill("fire");
+    expect(player.getHotbar()).toMatchObject({
+      initialized: true,
+      slots: expect.arrayContaining([{ type: "skill", id: "fire" }]),
+    });
+  });
+
+  test("keeps locked assignments while capacity changes dynamically", () => {
+    player.configureHotbar({
+      capacity: current => current.level,
+      lockedSlotHint: (_current, slot) => `Reach level ${slot + 1}`,
+    });
+    player.level = 3;
+    player.initializeHotbar();
+    player.selectHotbarSlot(2);
+
+    expect(player.getHotbar()).toMatchObject({
+      capacity: 3,
+      activeSlot: 2,
+    });
+    expect(player.getHotbarLockedSlotHint(3)).toBe("Reach level 4");
+    expect(() =>
+      player.assignHotbarSlot(3, { type: "skill", id: "fire" }),
+    ).toThrow(RangeError);
+
+    player.configureHotbar({ capacity: 10 });
+    player.assignHotbarSlot(8, { type: "skill", id: "fire" });
+    player.configureHotbar({ capacity: 3 });
+    expect(player.getHotbar().slots[8]).toEqual({ type: "skill", id: "fire" });
+    player.configureHotbar({ capacity: 10 });
+    expect(player.getHotbar().slots[8]).toEqual({ type: "skill", id: "fire" });
+  });
+
+  test("supports custom authoritative entry types", () => {
+    const use = vi.fn();
+    const unregister = registerHotbarEntryType({
+      type: "emote",
+      validate(_player, id) {
+        if (id !== "wave") throw new Error("Unknown emote");
+      },
+      resolve(_player, id) {
+        return {
+          id,
+          type: "emote",
+          name: "Wave",
+          usable: true,
+          activation: { mode: "select" },
+        };
+      },
+      use(_player, id, context) {
+        use(id, context.slot);
+      },
+    });
+
+    try {
+      player.assignHotbarSlot(4, { type: "emote", id: "wave" });
+      player.useHotbarSlot(4);
+      expect(use).toHaveBeenCalledWith("wave", 4);
+    } finally {
+      unregister();
+    }
   });
 });

@@ -58,6 +58,39 @@ describe("executeActionBattleUse", () => {
     expect(target.applyDamage).toHaveBeenCalledWith(attacker, expect.objectContaining({ id: "fire" }));
   });
 
+  test("forwards skill presentation through AI-owned hurt feedback", () => {
+    const attacker = createEntity("caster");
+    const handleDamage = vi.fn();
+    const target = {
+      ...createEntity("target"),
+      battleAi: { handleDamage },
+    };
+    target.applyDamage.mockReturnValue({ damage: 25 });
+    const skill = {
+      id: "arcane",
+      _type: "skill",
+      spCost: 0,
+      hitRate: 1,
+      animation: "arcane-impact",
+    };
+
+    executeActionBattleUse({
+      attacker: attacker as any,
+      target: target as any,
+      usable: skill,
+      skill,
+    });
+
+    expect(handleDamage).toHaveBeenCalledWith(
+      attacker,
+      expect.objectContaining({
+        skill: expect.objectContaining({
+          animation: "arcane-impact",
+        }),
+      }),
+    );
+  });
+
   test("consumes SP and resolves a failed skill without basic damage", () => {
     vi.spyOn(Math, "random").mockReturnValue(0.99);
     const attacker = {

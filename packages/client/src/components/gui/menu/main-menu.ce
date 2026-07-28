@@ -64,7 +64,13 @@
                     <ItemsMenu data={data} onInteraction={onInteraction} onBack={goBack} />
                 }
                 @if (view() === "skills") {
-                    <SkillsMenu data={data} onInteraction={onInteraction} onBack={goBack} />
+                    <SkillsMenu
+                        data={data}
+                        assignmentOpen={skillAssignmentOpen}
+                        onAssignHotbar={openSkillAssignment}
+                        onInteraction={onInteraction}
+                        onBack={goBack}
+                    />
                 }
                 @if (view() === "equip") {
                     <EquipMenu data={data} onInteraction={onInteraction} onBack={goBack} />
@@ -77,6 +83,15 @@
                 }
             </div>
         </div>
+        @if (skillAssignmentOpen()) {
+            <HotbarSlotPicker
+                hotbar={menuHotbar}
+                entry={skillAssignmentEntry}
+                onAssign={assignSkillHotbarSlot}
+                onClear={clearSkillHotbarSlot}
+                onCancel={closeSkillAssignment}
+            />
+        }
         @if (saveOverlay) {
             <div class="rpg-ui-main-menu-overlay">
                 <div class="rpg-ui-main-menu-overlay-backdrop" click={closeSaveOverlayFromPointer}></div>
@@ -101,6 +116,7 @@
     import EquipMenu from "./equip-menu.ce";
     import OptionsMenu from "./options-menu.ce";
     import ExitMenu from "./exit-menu.ce";
+    import HotbarSlotPicker from "./hotbar-slot-picker.ce";
     import { getEntityProp } from "../../../utils/getEntityProp";
     import { delay } from "@rpgjs/common";
     import { getKeyboardControlBind } from "../../../services/actionInput";
@@ -144,6 +160,9 @@
     const selectedMenu = signal(0);
     const view = signal("menu");
     const saveOverlay = signal(false);
+    const skillAssignmentEntry = signal(null);
+    const skillAssignmentOpen = computed(() => Boolean(skillAssignmentEntry()));
+    const menuHotbar = computed(() => resolveProp(data)?.hotbar || { slots: [] });
 
     const selectableIndexes = computed(() => {
         const entries = menuEntries();
@@ -192,9 +211,43 @@
     };
 
     const goBack = () => {
+        if (skillAssignmentOpen()) {
+            closeSkillAssignment();
+            return;
+        }
         delay(() => {
             view.set("menu");
         });
+    };
+
+    const openSkillAssignment = (entry) => {
+        if (!entry?.id) return;
+        skillAssignmentEntry.set({
+            type: entry.type || "skill",
+            id: entry.id,
+            name: entry.name || entry.id
+        });
+    };
+
+    const closeSkillAssignment = () => {
+        // Keep the modal state active until the current CanvasEngine control
+        // dispatch finishes so parent/child Escape handlers cannot both act.
+        queueMicrotask(() => skillAssignmentEntry.set(null));
+    };
+
+    const assignSkillHotbarSlot = (slot) => {
+        const entry = skillAssignmentEntry();
+        if (!entry) return;
+        onInteraction?.("assignHotbarSlot", {
+            slot,
+            entry: { type: entry.type, id: entry.id }
+        });
+        closeSkillAssignment();
+    };
+
+    const clearSkillHotbarSlot = (slot) => {
+        onInteraction?.("clearHotbarSlot", { slot });
+        closeSkillAssignment();
     };
 
     const closeSaveOverlay = () => {
@@ -269,7 +322,7 @@
             bind: keyboardControls.up,
             throttle: 150,
             keyDown() {
-                if (saveOverlay()) return;
+                if (saveOverlay() || skillAssignmentOpen()) return;
                 if (view() !== "menu") return;
                 moveMenu(-1);
             }
@@ -279,7 +332,7 @@
             bind: keyboardControls.down,
             throttle: 150,
             keyDown() {
-                if (saveOverlay()) return;
+                if (saveOverlay() || skillAssignmentOpen()) return;
                 if (view() !== "menu") return;
                 moveMenu(1);
             }
@@ -287,7 +340,7 @@
         action: {
             bind: getKeyboardControlBind(keyboardControls.action),
             keyDown() {
-                if (saveOverlay()) return;
+                if (saveOverlay() || skillAssignmentOpen()) return;
                 if (view() !== "menu") return;
                 openMenu();
             }
@@ -296,6 +349,10 @@
             bind: keyboardControls.escape,
             keyDown() {
                 if (saveOverlay()) return;
+                if (skillAssignmentOpen()) {
+                    closeSkillAssignment();
+                    return;
+                }
                 if (view() !== "menu") {
                     goBack();
                     return;

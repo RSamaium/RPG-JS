@@ -1,19 +1,25 @@
-import type { ActionBattleActionBarSkill } from "../types";
+import type { ActionBattleHotbarSkill } from "../types";
 
 export type ActionBattleSkillActivationMode = "immediate" | "targeting";
 
-const hasAreaMask = (skill: ActionBattleActionBarSkill) => {
+const hasAreaMask = (skill: ActionBattleHotbarSkill) => {
   const rows = Array.isArray(skill.aoeMask) ? skill.aoeMask : [];
   return rows.length > 1 || rows.some((row) => row !== "#");
 };
 
 export const resolveActionBattleSkillActivationMode = (
-  skill: ActionBattleActionBarSkill,
+  skill: ActionBattleHotbarSkill,
 ): ActionBattleSkillActivationMode => {
   if (skill.action?.target === "self") return "immediate";
+  if (
+    skill.action?.mode === "instant"
+    || skill.action?.mode === "projectile"
+  ) {
+    return "immediate";
+  }
   if (skill.action?.target === "ally") return "targeting";
   if (hasAreaMask(skill)) return "targeting";
-  if ((skill.range ?? 0) > 0 && skill.action?.mode !== "projectile") {
+  if ((skill.range ?? 0) > 0) {
     return "targeting";
   }
   return "immediate";
@@ -31,7 +37,7 @@ export const actionBattleTargetingOffset = (
 };
 
 export const activateActionBattleSkill = (
-  skill: ActionBattleActionBarSkill | null | undefined,
+  skill: ActionBattleHotbarSkill | null | undefined,
   callbacks: {
     use: () => void;
     target: (initialOffset: { x: number; y: number }) => void;
