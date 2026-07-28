@@ -272,7 +272,10 @@ export interface RpgPlayerHooks {
     onSkillChange?: (player: RpgPlayer, payload: SkillChangePayload) => MaybePromise<void>
 
     /**
-    *  When the player initializes or changes a hotbar slot
+    *  When the player initializes, assigns, clears, selects, or refreshes a hotbar
+    *
+    * The payload contains a detached state snapshot. Gameplay remains
+    * authoritative on the server in standalone and MMORPG modes.
     *
     * @prop { (player: RpgPlayer, payload: HotbarChangePayload) => void | Promise<void> } [onHotbarChange]
     * @memberof RpgPlayerHooks

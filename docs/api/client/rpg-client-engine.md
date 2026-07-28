@@ -19,6 +19,7 @@ Reference for the `RpgClientEngine` class.
 - [cameraFollowTargetId](#camerafollowtargetid)
 - [clear](#clear)
 - [clearClientPredictionStates](#clearclientpredictionstates)
+- [dashDefaults](#dashdefaults)
 - [flash](#flash)
 - [getComponentAnimation](#getcomponentanimation)
 - [getSound](#getsound)
@@ -27,6 +28,7 @@ Reference for the `RpgClientEngine` class.
 - [interactions](#interactions)
 - [interruptCurrentPlayerMovement](#interruptcurrentplayermovement)
 - [mapShakeTrigger](#mapshaketrigger)
+- [music](#music)
 - [playClientVisual](#playclientvisual)
 - [playSound](#playsound)
 - [pointer](#pointer)
@@ -43,6 +45,7 @@ Reference for the `RpgClientEngine` class.
 - [startTransition](#starttransition)
 - [stopAllSounds](#stopallsounds)
 - [stopSound](#stopsound)
+- [visualPause](#visualpause)
 
 ## addComponentAnimation
 
@@ -364,6 +367,20 @@ clearClientPredictionStates()
 engine.clearClientPredictionStates();
 ```
 
+## dashDefaults
+
+Runtime defaults used by modules that specialize the built-in dash.
+
+- Source: `packages/client/src/RpgClientEngine.ts`
+- Kind: `property`
+- Defined in: `RpgClientEngine`
+
+### Signature
+
+```ts
+dashDefaults: Partial<RpgDashInput>
+```
+
 ## flash
 
 Trigger a flash animation on a sprite
@@ -633,6 +650,20 @@ Trigger for map shake animation
 
 ```ts
 mapShakeTrigger: ConfigurableTrigger<MapShakeOptions>
+```
+
+## music
+
+Client-only controller for temporary looping music and map BGM crossfades.
+
+- Source: `packages/client/src/RpgClientEngine.ts`
+- Kind: `property`
+- Defined in: `RpgClientEngine`
+
+### Signature
+
+```ts
+music
 ```
 
 ## playClientVisual
@@ -1150,4 +1181,19 @@ engine.playSound('background-music', { loop: true });
 
 // Later, stop it
 engine.stopSound('background-music');
+```
+
+## visualPause
+
+Freezes map rendering for short presentation-only beats such as combat
+hit-stop. It is deliberately separate from menu/gameplay pause ownership.
+
+- Source: `packages/client/src/RpgClientEngine.ts`
+- Kind: `property`
+- Defined in: `RpgClientEngine`
+
+### Signature
+
+```ts
+visualPause
 ```

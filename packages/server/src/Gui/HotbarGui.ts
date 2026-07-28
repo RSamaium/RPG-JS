@@ -11,24 +11,44 @@ import {
 } from "../Player/HotbarManager";
 import { Gui } from "./Gui";
 
+/** Authoritative use request passed to a custom `showHotbar()` handler. */
 export interface HotbarUseRequest {
+  /** Zero-based slot requested by the client. */
   slot: number;
+  /** Entry stored in the slot at request time. */
   entry: HotbarEntry;
+  /** Optional targeting data supplied by a client activation handler. */
   target?: unknown;
 }
 
+/** Short-lived visual feedback sent to the built-in client component. */
 export interface HotbarActionFeedback {
+  /** Monotonic value used to replay feedback for repeated actions. */
   revision: number;
+  /** Zero-based slot receiving feedback. */
   slot: number;
+  /** Result rendered by the client animation. */
   status: "used" | "selected" | "rejected";
 }
 
+/** Options accepted by `player.showHotbar()`. */
 export interface HotbarGuiOptions extends HotbarConfiguration {
+  /**
+   * Initialize from the player's loadout when opening or refreshing.
+   * @default true
+   */
   autoInitialize?: boolean;
+  /**
+   * Optional authoritative override for entry execution.
+   *
+   * Return `false` to reject the action. The server still owns validation and
+   * gameplay state.
+   */
   onUse?: (
     player: RpgPlayer,
     request: HotbarUseRequest,
   ) => unknown | Promise<unknown>;
+  /** Customize the serializable presentation for this GUI instance. */
   transformEntry?: (
     player: RpgPlayer,
     entry: HotbarEntry,
@@ -68,6 +88,14 @@ const formatSlot = (
   };
 };
 
+/**
+ * Build the renderer-neutral data contract consumed by `rpg-hotbar`.
+ *
+ * @param player - Player receiving the GUI.
+ * @param options - Capacity, presentation, and use options.
+ * @param feedback - Optional transient interaction feedback.
+ * @returns Serializable state and ten presentation slots.
+ */
 export const buildPlayerHotbarData = (
   player: RpgPlayer,
   options: HotbarGuiOptions = {},

@@ -57,7 +57,9 @@
   const sceneData = engine.sceneMap.data
   const lighting = engine.sceneMap.lighting
   const guiList = computed(() => {
-    return Object.values(guiService.gui()).filter((gui) => !gui.attachToSprite)
+    return Object.values(guiService.gui()).filter(
+      (gui) => !gui.attachToSprite && gui.display()
+    )
   })
   const worldWidth = computed(() => {
     const data = sceneData?.()

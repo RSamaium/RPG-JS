@@ -1,10 +1,10 @@
 .rpg-ui-hotbar {
   --rpg-ui-hotbar-slots: 10;
-  --rpg-ui-hotbar-gap: 6px;
-  --rpg-ui-hotbar-size: 52px;
-  --rpg-ui-hotbar-padding-x: 10px;
-  --rpg-ui-hotbar-padding-y: 10px;
-  --rpg-ui-hotbar-padding-bottom: 12px;
+  --rpg-ui-hotbar-gap: var(--rpg-hotbar-gap, 6px);
+  --rpg-ui-hotbar-size: var(--rpg-hotbar-slot-size, 52px);
+  --rpg-ui-hotbar-padding-x: var(--rpg-hotbar-plate-padding-x, 10px);
+  --rpg-ui-hotbar-padding-y: var(--rpg-hotbar-plate-padding-y, 10px);
+  --rpg-ui-hotbar-padding-bottom: var(--rpg-hotbar-plate-padding-bottom, 12px);
   --rpg-ui-hotbar-plate-dark: color-mix(in srgb, var(--rpg-ui-surface), var(--rpg-ui-bg) 35%);
   --rpg-ui-hotbar-plate-mid: color-mix(in srgb, var(--rpg-ui-surface), var(--rpg-ui-border-light) 25%);
   --rpg-ui-hotbar-plate-light: color-mix(in srgb, var(--rpg-ui-surface-light, var(--rpg-ui-surface)), white 12%);
@@ -15,8 +15,8 @@
   position: relative;
   display: block;
   padding: var(--rpg-ui-hotbar-padding-y) var(--rpg-ui-hotbar-padding-x) var(--rpg-ui-hotbar-padding-bottom);
-  border-radius: calc(var(--rpg-ui-radius-lg) + 4px);
-  border: max(2px, var(--rpg-ui-border-width)) solid var(--rpg-ui-hotbar-edge);
+  border-radius: var(--rpg-hotbar-plate-radius, calc(var(--rpg-ui-radius-lg) + 4px));
+  border: var(--rpg-hotbar-plate-border, max(2px, var(--rpg-ui-border-width)) solid var(--rpg-ui-hotbar-edge));
   background:
     linear-gradient(180deg, color-mix(in srgb, #fff, transparent 80%), transparent) 0 0 / 100% 40% no-repeat,
     linear-gradient(180deg, var(--rpg-ui-hotbar-plate-light), var(--rpg-ui-hotbar-plate-mid) 42%, var(--rpg-ui-hotbar-plate-dark));
@@ -36,8 +36,8 @@
   position: relative;
   min-height: var(--rpg-ui-hotbar-size);
   aspect-ratio: 1 / 1;
-  border-radius: var(--rpg-ui-radius-md);
-  border: max(2px, var(--rpg-ui-border-width)) solid var(--rpg-ui-hotbar-edge);
+  border-radius: var(--rpg-hotbar-slot-radius, var(--rpg-ui-radius-md));
+  border: var(--rpg-hotbar-slot-border, max(2px, var(--rpg-ui-border-width)) solid var(--rpg-ui-hotbar-edge));
   background: linear-gradient(180deg, color-mix(in srgb, var(--rpg-ui-hotbar-slot), white 10%), var(--rpg-ui-hotbar-slot));
   box-shadow:
     inset 0 2px 0 color-mix(in srgb, var(--rpg-ui-bevel-light), transparent 30%),
@@ -112,10 +112,10 @@
 
 @media (max-width: 768px) {
   .rpg-ui-hotbar {
-    --rpg-ui-hotbar-gap: 4px;
-    --rpg-ui-hotbar-padding-x: 6px;
-    --rpg-ui-hotbar-padding-y: 8px;
-    --rpg-ui-hotbar-padding-bottom: 9px;
-    --rpg-ui-hotbar-size: 42px;
+    --rpg-ui-hotbar-gap: var(--rpg-hotbar-gap, 4px);
+    --rpg-ui-hotbar-padding-x: var(--rpg-hotbar-plate-padding-x, 6px);
+    --rpg-ui-hotbar-padding-y: var(--rpg-hotbar-plate-padding-y, 8px);
+    --rpg-ui-hotbar-padding-bottom: var(--rpg-hotbar-plate-padding-bottom, 9px);
+    --rpg-ui-hotbar-size: var(--rpg-hotbar-mobile-slot-size, 42px);
   }
 }

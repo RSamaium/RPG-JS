@@ -215,6 +215,44 @@ CanvasEngine example:
 </script>
 ```
 
+## Hotbar
+
+| Contract | Value |
+| --- | --- |
+| ID | `PrebuiltGui.Hotbar` / `rpg-hotbar` |
+| Server APIs | `player.showHotbar(options)`, `player.hideHotbar()` |
+| Keep open with | `onInteraction(name, payload)` |
+
+Data:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `hotbar` | `HotbarState` | Persistent version, initialization state, capacity, active slot, and ten serialized assignments. |
+| `capacity` | `number` | Number of currently accessible slots, from 1 to 10. |
+| `activeSlot` | `number \| null` | Zero-based selected slot. |
+| `slots` | `HotbarDisplaySlot[]` | Ten resolved presentation slots. |
+| `feedback` | `HotbarActionFeedback` | Optional transient `used`, `selected`, or `rejected` animation state. |
+
+Each presentation slot contains `index`, `type`, `entry`, `name`,
+`description`, `icon`, `quantity`, `cost`, `badge`, `usable`, `cooldownMs`,
+`readyAt`, `activation`, `locked`, and `lockedHint` when applicable. Empty
+slots use `type: "empty"` and `entry: null`.
+
+Interactions:
+
+| Interaction | Payload | Server behavior |
+| --- | --- | --- |
+| `selectSlot` | `{ slot }` | Validates capacity and persists the active slot. |
+| `useSlot` | `{ slot, target? }` | Selects and authoritatively uses the current entry. |
+| `useActiveSlot` | `{ target? }` | Uses the selected slot when one exists. |
+| `refresh` | none | Rebuilds presentation, quantities, costs, and cooldowns. |
+
+Custom components should render only the received presentation and send these
+interactions. They must not consume inventory, SP, or apply gameplay effects
+on the client. For color, spacing, and typography changes, prefer the native
+[hotbar theme variables](/guide/hotbar#theme-the-native-component) over a
+replacement.
+
 ## Main Menu
 
 | Contract | Value |
