@@ -1659,6 +1659,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
 
             // Execute player hooks
             await lastValueFrom(this.hooks.callHooks("server-player-onJoinMap", player, this));
+            player.refreshHotbar?.();
           }
           catch (error) {
             if (isRpgLog(error)) {

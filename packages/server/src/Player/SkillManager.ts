@@ -473,6 +473,7 @@ export function WithSkillManager<TBase extends PlayerCtor>(Base: TBase): TBase {
           level: options.level,
         },
       ]);
+      this["refreshHotbar"]?.();
       
       return skillData as SkillObject;
     }
@@ -533,6 +534,7 @@ export function WithSkillManager<TBase extends PlayerCtor>(Base: TBase): TBase {
           level: options.level,
         },
       ]);
+      this["refreshHotbar"]?.();
       
       return skillData as SkillData;
     }

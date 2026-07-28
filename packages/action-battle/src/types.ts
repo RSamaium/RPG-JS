@@ -17,8 +17,6 @@ import type {
 
 export type ActionBattleAoeMask = string[] | string;
 
-export type ActionBattleActionBarMode = "items" | "skills" | "both";
-
 export type ActionBattleTargetingAffects = "events" | "players" | "both";
 
 export type ActionBattleAnimationKey =
@@ -411,11 +409,11 @@ export interface ActionBattleFeedbackOptions {
   damageNumbers?: boolean;
 }
 
-export interface ActionBattleUiActionBarOptions {
+export interface ActionBattleUiHotbarOptions {
   enabled?: boolean;
   autoOpen?: boolean;
-  mode?: ActionBattleActionBarMode;
-  component?: any;
+  capacity?: number | ((player: any) => number);
+  lockedSlotHint?: string | ((player: any, slot: number) => string | undefined);
 }
 
 export interface ActionBattleUiTargetingOptions {
@@ -442,7 +440,7 @@ export interface ActionBattleUiGuiEntry {
 }
 
 export interface ActionBattleUiOptions {
-  actionBar?: boolean | ActionBattleUiActionBarOptions;
+  hotbar?: boolean | ActionBattleUiHotbarOptions;
   targeting?: boolean | ActionBattleUiTargetingOptions;
   attackPreview?: boolean | ActionBattleUiAttackPreviewOptions;
   gui?: ActionBattleUiGuiEntry[];
@@ -502,16 +500,7 @@ export interface ActionBattleOptions {
   audio?: false | ActionBattleAudioOptions;
 }
 
-export interface ActionBattleActionBarItem {
-  id: string;
-  name: string;
-  description?: string;
-  icon?: string;
-  quantity?: number;
-  usable?: boolean;
-}
-
-export interface ActionBattleActionBarSkill {
+export interface ActionBattleHotbarSkill {
   id: string;
   name: string;
   description?: string;
@@ -549,37 +538,4 @@ export interface ActionBattleActionBarSkill {
   };
   cooldownMs?: number;
   readyAt?: number;
-}
-
-export type ActionBattleActionBarSlot =
-  | {
-      index: number;
-      type: "empty";
-      entry: null;
-      usable: false;
-      label?: string;
-    }
-  | {
-      index: number;
-      type: "skill";
-      entry: { type: "skill"; id: string };
-      skill: ActionBattleActionBarSkill;
-      item?: never;
-      usable: boolean;
-      label?: string;
-    }
-  | {
-      index: number;
-      type: "item";
-      entry: { type: "item"; id: string };
-      item: ActionBattleActionBarItem;
-      skill?: never;
-      usable: boolean;
-      label?: string;
-    };
-
-export interface ActionBattleActionBarData {
-  items: ActionBattleActionBarItem[];
-  skills: ActionBattleActionBarSkill[];
-  slots: ActionBattleActionBarSlot[];
 }

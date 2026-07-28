@@ -438,7 +438,7 @@ import {
 export default provideActionBattle({
   visual: createActionBattleVisual("fx"),
   ui: createActionBattleUi({
-    actionBar: false,
+    hotbar: false,
     targeting: true,
     attackPreview: true
   })
@@ -535,8 +535,26 @@ temporary graphics. New orchestration should go through `visual`, while
 
 ### Composable UI
 
-The UI is client-owned. Keep the defaults, disable them with booleans, or
-replace each component.
+Action Battle uses RPGJS's generic, server-authoritative hotbar. Enable it on
+the server with `ui.hotbar`; targeting and attack-preview components remain
+client-owned and replaceable.
+
+```ts
+import { provideActionBattle } from "@rpgjs/action-battle/server";
+
+export default provideActionBattle({
+  ui: {
+    hotbar: {
+      enabled: true,
+      autoOpen: true,
+      capacity: player => Math.min(10, 3 + player.level),
+      lockedSlotHint: (_player, slot) => `Unlocks at level ${slot - 2}`
+    }
+  }
+});
+```
+
+The client can still customize targeting and preview presentation:
 
 ```ts
 import {
@@ -547,12 +565,6 @@ import {
 
 export default provideActionBattle({
   ui: createActionBattleUi({
-    actionBar: {
-      enabled: true,
-      component: ActionBattleUi.ActionBar,
-      autoOpen: true,
-      mode: "both"
-    },
     targeting: {
       enabled: true,
       component: ActionBattleUi.TargetingOverlay,
@@ -573,10 +585,29 @@ export default provideActionBattle({
 });
 ```
 
+The generic hotbar uses LT/RT to cycle through visible slots and LB to open
+the radial selector. Projects with a custom gamepad layout can override the
+standard Gamepad API button indexes:
+
+```ts
+export default {
+  gamepadControls: {
+    hotbarPreviousButton: 6,
+    hotbarNextButton: 7,
+    hotbarUseButton: 2,
+    hotbarWheelButton: 4
+  }
+};
+```
+
+Number keys use their assigned slot immediately. On a standard gamepad, LT/RT
+change the active slot and X uses it. Instant skills soft-target in front of
+the player; melee area skills keep the manual targeting confirmation.
+
 Shortcuts are accepted:
 
 ```ts
-ui: createActionBattleUi({ actionBar: false })
+ui: { hotbar: false }
 ui: createActionBattleUi({ targeting: false, attackPreview: false })
 ```
 
@@ -664,7 +695,7 @@ const Dagger = {
 Skills and weapons can define an `action` block for action-battle selection,
 while their effect stays automatic by default.
 `BattleAi` uses this block when it casts `attackSkill` or attacks with an
-equipped weapon. Player action-bar skills and configured equipped weapons use
+equipped weapon. Player hotbar skills and configured equipped weapons use
 the same executor, so `onUse` receives the same context in both cases.
 
 ```ts

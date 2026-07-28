@@ -1,7 +1,14 @@
-import { PrebuiltComponentAnimations, RpgClient, RpgClientEngine, RpgGui, inject } from "@rpgjs/client";
+import {
+  PrebuiltComponentAnimations,
+  RpgClient,
+  RpgClientEngine,
+  inject,
+  registerHotbarActivationHandler,
+} from "@rpgjs/client";
 import { defineModule } from "@rpgjs/common";
 import {
   setActionBattleOptions,
+  startTargeting,
   startAttackPreview,
   stopAttackPreview,
 } from "./ui/state";
@@ -42,10 +49,7 @@ import DamagePopupComponent from "./components/damage-popup.ce";
 import SoftTargetComponent from "./components/soft-target.ce";
 // @ts-ignore CanvasEngine components are compiled by @canvasengine/compiler.
 import SkillProjectileComponent from "./components/skill-projectile.ce";
-import {
-  ACTION_BATTLE_SKILL_LOADOUT_VISUAL_ID,
-  setActionBattleSkillLoadout,
-} from "./ui/state";
+import { activateActionBattleSkill } from "./ui/skill-activation";
 
 export const ACTION_BATTLE_SKILL_PROJECTILE_TYPE = "action-battle-skill";
 
@@ -149,6 +153,17 @@ export const createActionBattleClient = (
 ) => {
   const normalized = normalizeActionBattleOptions(options);
   setActionBattleOptions(normalized);
+  registerHotbarActivationHandler("action-battle.skill", (context) => {
+    const skill = context.slot.activation?.payload?.skill as any;
+    if (!skill) return false;
+    const player = inject(RpgClientEngine).scene?.getCurrentPlayer?.() as any;
+    return activateActionBattleSkill(skill, {
+      direction: resolveLocalPlayerDirection(player),
+      use: () => context.use(),
+      target: (offset) =>
+        startTargeting(skill, offset, (target) => context.use(target)),
+    });
+  });
   setActionBattlePreviewStarter((entity, previewOptions = {}) => {
     const direction = previewOptions.direction ?? resolveLocalPlayerDirection(entity);
     const durationMs = Math.max(
@@ -165,7 +180,6 @@ export const createActionBattleClient = (
     setTimeout(() => stopAttackPreview(previewId), durationMs);
   });
   const resolvedUi = resolveActionBattleUi(normalized.ui);
-  const actionBarEnabled = resolvedUi.actionBar.enabled;
   const hitComponent = PrebuiltComponentAnimations?.Hit;
   const fxComponent = PrebuiltComponentAnimations?.Fx;
   return defineModule<RpgClient>({
@@ -201,12 +215,6 @@ export const createActionBattleClient = (
     ],
     clientVisuals: {
       ...createActionBattleClientVisuals(normalized),
-      [ACTION_BATTLE_SKILL_LOADOUT_VISUAL_ID]: (context: any) => {
-        setActionBattleSkillLoadout(
-          context.data?.skills ?? [],
-          context.data?.slots ?? [],
-        );
-      },
       [ACTION_BATTLE_COMBAT_AUDIO_ID]:
         createActionBattleCombatAudioVisual(normalized.audio),
     },
@@ -233,10 +241,6 @@ export const createActionBattleClient = (
           };
         } else {
           engine.dashDefaults = {};
-        }
-        if (actionBarEnabled && resolvedUi.actionBar.autoOpen) {
-          const gui = inject(RpgGui)
-          gui.display('action-battle-action-bar')
         }
       }
     },

@@ -4,11 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-patchedDependencies:
-  '@signe/sync@3.1.0':
-    hash: ai3kd4h2z3xr2oqdl6lp4v7axq
-    path: patches/@signe__sync@3.1.0.patch
-
 importers:
 
   .:
@@ -143,8 +138,8 @@ importers:
         specifier: 3.1.0
         version: 3.1.0(react@19.2.7)
       '@signe/sync':
-        specifier: 3.1.0
-        version: 3.1.0(patch_hash=ai3kd4h2z3xr2oqdl6lp4v7axq)(react@19.2.7)
+        specifier: 3.1.1
+        version: 3.1.1(react@19.2.7)
       canvasengine:
         specifier: ^2.1.1
         version: 2.1.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
@@ -183,8 +178,8 @@ importers:
         specifier: 3.1.0
         version: 3.1.0
       '@signe/sync':
-        specifier: 3.1.0
-        version: 3.1.0(patch_hash=ai3kd4h2z3xr2oqdl6lp4v7axq)(react@19.2.7)
+        specifier: 3.1.1
+        version: 3.1.1(react@19.2.7)
       rxjs:
         specifier: ^7.8.2
         version: 7.8.2
@@ -256,8 +251,8 @@ importers:
         specifier: 3.1.0
         version: 3.1.0(react@19.2.7)
       '@signe/sync':
-        specifier: 3.1.0
-        version: 3.1.0(patch_hash=ai3kd4h2z3xr2oqdl6lp4v7axq)(react@19.2.7)
+        specifier: 3.1.1
+        version: 3.1.1(react@19.2.7)
       rxjs:
         specifier: ^7.8.2
         version: 7.8.2
@@ -428,8 +423,8 @@ importers:
         specifier: 3.1.0
         version: 3.1.0(react@19.2.7)
       '@signe/sync':
-        specifier: 3.1.0
-        version: 3.1.0(patch_hash=ai3kd4h2z3xr2oqdl6lp4v7axq)(react@19.2.7)
+        specifier: 3.1.1
+        version: 3.1.1(react@19.2.7)
       '@types/node':
         specifier: ^25.9.3
         version: 25.9.3
@@ -2596,11 +2591,17 @@ packages:
   '@signe/reactive@3.1.0':
     resolution: {integrity: sha512-cMaisjBWB4Hvtysp+gxNmuNYZtTMNMwttRF5i6ch43QAWSDG/UtA6lkXBjcSQBM1L5L8+mX+ygiTG0fUPmc2Ag==}
 
+  '@signe/reactive@3.1.1':
+    resolution: {integrity: sha512-WP3gGmDqQJnssp9CgaNrsZ41/nhktPjzxBj7Xm46xo8l54bmZbg14jqlq/O5GM1FZ0BmvYcUlTdmwDVPaJbysQ==}
+
   '@signe/room@3.1.0':
     resolution: {integrity: sha512-9aNzyYK/b0dfkMDOFGCTX0fmAn4nljuvFmFxPbM/ON7GFo3xnzZk5Lq2obC2bcIO+P92n1lXoeUcSttVW7x9eg==}
 
   '@signe/sync@3.1.0':
     resolution: {integrity: sha512-RawoP4Cjk3QqnmRVAQT/Rxf36VR3+36U5+/bXwHAym77THaQbu41phhpDGmvTqSm5wYaV7jWgq4iRSPPx+ygrA==}
+
+  '@signe/sync@3.1.1':
+    resolution: {integrity: sha512-s6UmuumDGE0n/qyso1mN9rbRLUcuSSRZf9mtBquL99nBMTKUHZ+3ouPxbMX4FKT81m9Tu5gF5DA0wk5r3PI/kg==}
 
   '@sindresorhus/is@7.2.0':
     resolution: {integrity: sha512-P1Cz1dWaFfR4IR+U13mqqiGsLFf1KbayybWwdd2vfctdV6hDpUkgCY0nKOLLTMSoRd/jJNjtbqzf13K8DCCXQw==}
@@ -6342,18 +6343,30 @@ snapshots:
     dependencies:
       rxjs: 7.8.2
 
+  '@signe/reactive@3.1.1':
+    dependencies:
+      rxjs: 7.8.2
+
   '@signe/room@3.1.0(react@19.2.7)':
     dependencies:
-      '@signe/sync': 3.1.0(patch_hash=ai3kd4h2z3xr2oqdl6lp4v7axq)(react@19.2.7)
+      '@signe/sync': 3.1.0(react@19.2.7)
       dset: 3.1.4
       partysocket: 1.2.0(react@19.2.7)
       zod: 3.25.76
     transitivePeerDependencies:
       - react
 
-  '@signe/sync@3.1.0(patch_hash=ai3kd4h2z3xr2oqdl6lp4v7axq)(react@19.2.7)':
+  '@signe/sync@3.1.0(react@19.2.7)':
     dependencies:
       '@signe/reactive': 3.1.0
+      partysocket: 1.2.0(react@19.2.7)
+      rxjs: 7.8.2
+    transitivePeerDependencies:
+      - react
+
+  '@signe/sync@3.1.1(react@19.2.7)':
+    dependencies:
+      '@signe/reactive': 3.1.1
       partysocket: 1.2.0(react@19.2.7)
       rxjs: 7.8.2
     transitivePeerDependencies:

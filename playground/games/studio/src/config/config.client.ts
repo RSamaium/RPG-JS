@@ -10,7 +10,7 @@ export const configClient = {
     provideActionBattle({
       ...createStudioActionBattlePreset(),
       ui: {
-        actionBar: {
+        hotbar: {
           enabled: true,
           autoOpen: true
         }

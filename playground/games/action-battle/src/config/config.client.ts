@@ -67,7 +67,7 @@ export default {
     provideActionBattle({
       visual: createActionBattleVisual("impact"),
       ui: createActionBattleUi({
-        actionBar: false,
+        hotbar: false,
         targeting: true,
         attackPreview: true,
       }),

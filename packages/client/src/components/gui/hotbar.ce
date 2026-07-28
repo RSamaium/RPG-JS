@@ -1,42 +1,68 @@
 <DOMContainer width="100%" height="100%" class="rpg-hotbar-root" controls={controls}>
   <div class="rpg-hotbar-dock">
     @if (visibleSlots().length) {
-    <div
-      class="rpg-ui-hotbar rpg-hotbar-plate"
-      style={{ "--rpg-ui-hotbar-slots": Math.max(1, visibleSlots().length) }}
-    >
-      <div class="rpg-ui-hotbar-track">
-        @for ((slot, visibleIndex) of visibleSlots()) {
-          <button
-            type="button"
-            class="rpg-ui-hotbar-slot rpg-hotbar-slot"
-            data-selected={selectedSlot() === slot.index ? "true" : "false"}
-            data-disabled={slot.usable === false ? "true" : "false"}
-            attrs={{ "aria-label": slotAriaLabel(slot, slot.index), tabindex: slot.index }}
-            click={selectSlot(slot.index)}
-          >
-            <span class="rpg-ui-hotbar-key">{slotLabels[slot.index]}</span>
-            @if (slot.icon) {
-              <DOMSprite sheet={iconSheet(slot.icon)} width="52px" height="52px" scale={2} objectFit="contain" />
-            } @else if (slot.name) {
-              @if (slot.type === "skill") {
-                <span class="rpg-hotbar-fallback">✦</span>
-              }
-              <span class="rpg-ui-hotbar-text">{slot.name}</span>
-            }
-            @if (slot.type === "skill" && (slot.spCost ?? 0) > 0) {
-              <span class="rpg-hotbar-cost">{slot.spCost} SP</span>
-            }
-            @if (slot.type === "item" && slot.quantity !== undefined) {
-              <span class="rpg-ui-hotbar-count">x{slot.quantity}</span>
-            }
-            @if (cooldownLabel(slot)) {
-              <span class="rpg-hotbar-cooldown">{cooldownLabel(slot)}</span>
-            }
-          </button>
+      <div
+        class="rpg-hotbar-nameplate"
+        data-visible={activeEntry()?.name ? "true" : "false"}
+      >
+        <span>{activeEntry()?.name || ""}</span>
+        @if (activeEntry()?.description) {
+          <small>{activeEntry().description}</small>
         }
       </div>
-    </div>
+      <div
+        class="rpg-ui-hotbar rpg-hotbar-plate"
+      >
+        <div class="rpg-hotbar-rail">
+          <div
+            class="rpg-ui-hotbar-track rpg-hotbar-track"
+            style={{
+              gridTemplateColumns: gridColumns,
+              transform: mobileTransform
+            }}
+          >
+            @for ((slot, index) of visibleSlots()) {
+              <button
+                type="button"
+                class="rpg-ui-hotbar-slot rpg-hotbar-slot"
+                data-active={activeSlot() === slot.index ? "true" : "false"}
+                data-disabled={slot.usable === false ? "true" : "false"}
+                data-empty={slot.type === "empty" ? "true" : "false"}
+                data-feedback={feedbackFor(slot.index)}
+                tabindex={slot.index}
+                aria-label={slotAriaLabel(slot, slot.index)}
+                click={selectSlot(slot.index)}
+              >
+                <span class="rpg-ui-hotbar-key rpg-hotbar-key">{slotLabels[slot.index]}</span>
+                <span class="rpg-hotbar-icon-frame">
+                  @if (slot.icon) {
+                    <DOMSprite sheet={iconSheet(slot.icon)} width="56px" height="56px" scale={2} objectFit="contain" />
+                  } @else if (slot.type !== "empty") {
+                    <span class="rpg-hotbar-fallback">{fallbackIcon(slot.type)}</span>
+                  }
+                </span>
+                @if (slot.cost?.value > 0) {
+                  <span class="rpg-hotbar-cost">{slot.cost.value} {slot.cost.label}</span>
+                }
+                @if (slot.quantity !== undefined) {
+                  <span class="rpg-ui-hotbar-count">×{slot.quantity}</span>
+                }
+                @if (slot.badge) {
+                  <span class="rpg-hotbar-badge">{slot.badge}</span>
+                }
+                @if (cooldownProgress(slot) > 0) {
+                  <span
+                    class="rpg-hotbar-cooldown"
+                    style={{ background: cooldownBackground(slot) }}
+                  >
+                    <strong>{cooldownLabel(slot)}</strong>
+                  </span>
+                }
+              </button>
+            }
+          </div>
+        </div>
+      </div>
     }
   </div>
 
@@ -45,21 +71,21 @@
       <div class="rpg-hotbar-wheel" role="menu" aria-label={t("rpg.hotbar.radial")}>
         <div class="rpg-hotbar-wheel-center">
           <span>{selectedWheelLabel()}</span>
-          <small>{t("rpg.hotbar.release")}</small>
+          <small>{wheelInstruction()}</small>
         </div>
-        @for ((slot, index) of slots()) {
+        @for ((slot, index) of visibleSlots()) {
           <div
             class="rpg-hotbar-wheel-slot"
-            data-selected={wheelSlot() === index ? "true" : "false"}
+            data-selected={wheelSlot() === slot.index ? "true" : "false"}
             data-disabled={slot.usable === false ? "true" : "false"}
             data-empty={slot.type === "empty" ? "true" : "false"}
             style={wheelSlotStyle(index)}
           >
-            <span class="rpg-hotbar-wheel-key">{slotLabels[index]}</span>
+            <span class="rpg-hotbar-wheel-key">{slotLabels[slot.index]}</span>
             @if (slot.icon) {
-              <DOMSprite sheet={iconSheet(slot.icon)} width="54px" height="54px" scale={2} objectFit="contain" />
+              <DOMSprite sheet={iconSheet(slot.icon)} width="58px" height="58px" scale={2} objectFit="contain" />
             } @else {
-              <span>{slot.name || t("rpg.menu.empty")}</span>
+              <span class="rpg-hotbar-fallback">{fallbackIcon(slot.type)}</span>
             }
           </div>
         }
@@ -71,63 +97,246 @@
 <style>
   .rpg-hotbar-root {
     pointer-events: none;
+    --rpg-hotbar-gold: #d9ad62;
+    --rpg-hotbar-gold-bright: #ffe0a1;
+    --rpg-hotbar-wood: #442b20;
+    --rpg-hotbar-wood-dark: #1c1210;
+    --rpg-hotbar-leather: #6b4530;
   }
 
   .rpg-hotbar-dock {
     position: absolute;
     left: 12px;
     right: 12px;
-    bottom: 12px;
-    display: flex;
-    justify-content: center;
+    bottom: 14px;
+    display: grid;
+    justify-items: center;
     pointer-events: auto;
+    filter: drop-shadow(0 12px 18px rgb(0 0 0 / 48%));
+  }
+
+  .rpg-hotbar-nameplate {
+    max-width: min(360px, 76vw);
+    margin-bottom: 7px;
+    padding: 5px 15px 6px;
+    border: 1px solid color-mix(in srgb, var(--rpg-hotbar-gold), transparent 22%);
+    border-radius: 9px 9px 4px 4px;
+    background: linear-gradient(180deg, rgb(77 49 35 / 96%), rgb(30 19 17 / 96%));
+    color: #fff1cf;
+    text-align: center;
+    box-shadow: inset 0 1px 0 rgb(255 235 185 / 24%);
+    opacity: 0;
+    translate: 0 5px;
+    transition: opacity 140ms ease, translate 140ms ease;
+  }
+
+  .rpg-hotbar-nameplate[data-visible="true"] {
+    opacity: 1;
+    translate: 0;
+  }
+
+  .rpg-hotbar-nameplate span {
+    display: block;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0.03em;
+  }
+
+  .rpg-hotbar-nameplate small {
+    display: block;
+    max-width: 320px;
+    overflow: hidden;
+    color: #d7c5a7;
+    font-size: 9px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .rpg-hotbar-plate {
     width: auto;
     max-width: 100%;
-    --rpg-ui-hotbar-size: clamp(38px, 8vw, 52px);
+    padding: 9px 11px 12px;
+    border: 2px solid #21130f;
+    border-radius: 15px;
+    background:
+      linear-gradient(90deg, transparent, rgb(255 224 161 / 9%), transparent),
+      repeating-linear-gradient(96deg, rgb(255 255 255 / 2%) 0 2px, transparent 2px 19px),
+      linear-gradient(180deg, #75503a, var(--rpg-hotbar-wood) 46%, var(--rpg-hotbar-wood-dark));
+    box-shadow:
+      inset 0 2px 0 rgb(255 224 161 / 24%),
+      inset 0 -4px 0 rgb(0 0 0 / 36%),
+      0 0 0 2px color-mix(in srgb, var(--rpg-hotbar-gold), #2b1711 55%);
+  }
+
+  .rpg-hotbar-track {
+    --rpg-ui-hotbar-gap: 7px;
   }
 
   .rpg-hotbar-slot {
     appearance: none;
-    color: inherit;
-    font: inherit;
+    width: clamp(50px, 7vw, 62px);
+    min-height: clamp(50px, 7vw, 62px);
     padding: 0;
-    width: clamp(48px, 7vw, 62px);
+    overflow: visible;
+    border: 2px solid #2b1a16;
+    border-radius: 10px;
+    background:
+      radial-gradient(circle at 50% 35%, rgb(255 231 183 / 12%), transparent 55%),
+      linear-gradient(180deg, #3d3029, #1d1817);
+    color: #fff0ce;
+    font: inherit;
+    box-shadow:
+      inset 0 2px 2px rgb(255 255 255 / 10%),
+      inset 0 -3px 4px rgb(0 0 0 / 42%),
+      0 2px 0 #a97845;
+    transition:
+      translate 110ms ease,
+      scale 110ms ease,
+      border-color 110ms ease,
+      filter 110ms ease,
+      box-shadow 110ms ease;
+  }
+
+  .rpg-hotbar-slot:hover,
+  .rpg-hotbar-slot:focus-visible {
+    z-index: 3;
+    translate: 0 -3px;
+    border-color: var(--rpg-hotbar-gold);
+    outline: none;
+  }
+
+  .rpg-hotbar-slot[data-active="true"] {
+    z-index: 4;
+    translate: 0 -7px;
+    scale: 1.08;
+    border-color: var(--rpg-hotbar-gold-bright);
+    box-shadow:
+      inset 0 2px 2px rgb(255 255 255 / 18%),
+      inset 0 -3px 4px rgb(0 0 0 / 40%),
+      0 0 0 2px rgb(217 173 98 / 45%),
+      0 7px 18px rgb(255 190 80 / 22%);
+  }
+
+  .rpg-hotbar-slot[data-active="true"]::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -8px;
+    width: 13px;
+    height: 7px;
+    translate: -50% 0;
+    background: var(--rpg-hotbar-gold-bright);
+    clip-path: polygon(50% 100%, 0 0, 100% 0);
+  }
+
+  .rpg-hotbar-slot[data-empty="true"] {
+    opacity: 0.7;
+    background: linear-gradient(180deg, #2b211e, #171313);
+  }
+
+  .rpg-hotbar-slot[data-disabled="true"] {
+    filter: grayscale(0.82);
+    opacity: 0.52;
+  }
+
+  .rpg-hotbar-icon-frame {
+    width: 80%;
+    height: 80%;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border-radius: 7px;
   }
 
   .rpg-hotbar-fallback {
-    font-size: 1.3rem;
-    color: var(--rpg-ui-accent);
-    text-shadow: 0 0 12px color-mix(in srgb, var(--rpg-ui-accent), transparent 25%);
+    color: var(--rpg-hotbar-gold-bright);
+    font-size: 1.5rem;
+    text-shadow: 0 0 13px rgb(255 192 86 / 42%);
   }
 
-  .rpg-hotbar-cost {
+  .rpg-hotbar-key {
+    top: -6px;
+    left: -5px;
+    min-width: 17px;
+    padding: 3px 4px;
+    border: 1px solid #251611;
+    border-radius: 5px;
+    background: linear-gradient(180deg, #e6bd78, #9c6938);
+    color: #271711;
+    font-size: 9px;
+    text-align: center;
+    text-shadow: 0 1px 0 rgb(255 244 211 / 45%);
+    box-shadow: 0 2px 3px rgb(0 0 0 / 38%);
+  }
+
+  .rpg-hotbar-cost,
+  .rpg-hotbar-badge,
+  .rpg-ui-hotbar-count {
     position: absolute;
-    right: 3px;
+    z-index: 5;
+    right: 2px;
     bottom: 2px;
-    z-index: 3;
-    padding: 1px 3px;
-    border-radius: 4px;
-    background: rgb(4 10 20 / 82%);
-    color: #86caff;
+    padding: 2px 4px;
+    border: 1px solid rgb(255 255 255 / 13%);
+    border-radius: 6px;
+    background: rgb(18 13 13 / 88%);
+    color: #f7e5c2;
     font-size: 8px;
     font-weight: 900;
     line-height: 1;
   }
 
+  .rpg-hotbar-cost {
+    color: #94d5ff;
+  }
+
+  .rpg-hotbar-badge {
+    top: 2px;
+    right: 2px;
+    bottom: auto;
+    color: #ffe7a4;
+  }
+
   .rpg-hotbar-cooldown {
     position: absolute;
     inset: 0;
+    z-index: 4;
     display: grid;
     place-items: center;
-    border-radius: inherit;
-    background: rgb(5 10 18 / 68%);
+    overflow: hidden;
+    border-radius: 8px;
+    background: conic-gradient(
+      rgb(7 8 13 / 78%) 0 360deg,
+      transparent 360deg
+    );
+  }
+
+  .rpg-hotbar-cooldown strong {
+    padding: 2px 5px;
+    border-radius: 6px;
+    background: rgb(7 8 13 / 72%);
     color: white;
-    font-weight: 800;
-    font-size: 0.82rem;
-    text-shadow: 0 1px 3px rgb(0 0 0 / 85%);
+    font-size: 10px;
+  }
+
+  .rpg-hotbar-slot[data-feedback="used"] {
+    animation: hotbar-use 240ms ease-out;
+  }
+
+  .rpg-hotbar-slot[data-feedback="rejected"] {
+    animation: hotbar-reject 220ms ease-in-out;
+  }
+
+  @keyframes hotbar-use {
+    0% { filter: brightness(1); }
+    45% { filter: brightness(1.65) saturate(1.25); scale: 1.14; }
+    100% { filter: brightness(1); }
+  }
+
+  @keyframes hotbar-reject {
+    0%, 100% { translate: 0 0; }
+    25% { translate: -4px 0; }
+    65% { translate: 4px 0; }
   }
 
   .rpg-hotbar-wheel-backdrop {
@@ -135,7 +344,7 @@
     inset: 0;
     display: grid;
     place-items: center;
-    background: rgb(2 7 14 / 38%);
+    background: rgb(14 8 6 / 44%);
     pointer-events: none;
   }
 
@@ -143,31 +352,30 @@
     position: relative;
     width: min(72vw, 430px);
     aspect-ratio: 1;
+    border: 4px solid var(--rpg-hotbar-gold);
     border-radius: 50%;
     background:
-      radial-gradient(circle, rgb(17 28 43 / 96%) 0 23%, transparent 24%),
-      radial-gradient(circle, rgb(9 18 31 / 88%) 0 64%, rgb(3 8 16 / 92%) 65% 100%);
-    border: 3px solid var(--rpg-ui-border-light);
-    box-shadow: 0 20px 65px rgb(0 0 0 / 58%);
+      radial-gradient(circle, #5a3929 0 23%, transparent 24%),
+      radial-gradient(circle, rgb(65 40 29 / 94%) 0 64%, rgb(24 14 12 / 97%) 65% 100%);
+    box-shadow: inset 0 0 34px rgb(0 0 0 / 45%), 0 24px 70px rgb(0 0 0 / 58%);
   }
 
   .rpg-hotbar-wheel-center {
     position: absolute;
-    inset: 38%;
+    inset: 36%;
     display: grid;
     place-items: center;
     align-content: center;
+    color: #fff0ce;
+    font-weight: 900;
     text-align: center;
-    color: white;
-    font-weight: 800;
     text-shadow: 0 2px 4px black;
   }
 
   .rpg-hotbar-wheel-center small {
     margin-top: 4px;
-    color: var(--rpg-ui-text-muted);
-    font-size: 0.65rem;
-    font-weight: 600;
+    color: #d2b993;
+    font-size: 0.63rem;
   }
 
   .rpg-hotbar-wheel-slot {
@@ -178,20 +386,18 @@
     display: grid;
     place-items: center;
     overflow: hidden;
-    border: 2px solid var(--rpg-ui-border-dark);
+    border: 2px solid #261713;
     border-radius: 16px;
-    background: var(--rpg-ui-surface);
-    color: var(--rpg-ui-text);
-    font-size: 0.68rem;
-    text-align: center;
-    transition: scale 90ms ease, border-color 90ms ease, filter 90ms ease;
+    background: linear-gradient(180deg, #49372d, #1e1715);
+    color: #fff0ce;
+    transition: scale 90ms ease, border-color 90ms ease;
   }
 
   .rpg-hotbar-wheel-slot[data-selected="true"] {
     z-index: 2;
     scale: 1.18;
-    border-color: var(--rpg-ui-accent);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--rpg-ui-accent), transparent 58%);
+    border-color: var(--rpg-hotbar-gold-bright);
+    box-shadow: 0 0 0 3px rgb(217 173 98 / 45%);
   }
 
   .rpg-hotbar-wheel-slot[data-disabled="true"],
@@ -202,16 +408,59 @@
 
   .rpg-hotbar-wheel-key {
     position: absolute;
-    left: 5px;
-    top: 3px;
-    z-index: 3;
+    top: 4px;
+    left: 6px;
+    color: var(--rpg-hotbar-gold-bright);
+    font-size: 10px;
     font-weight: 900;
-    color: var(--rpg-ui-accent);
+  }
+
+  @media (max-width: 640px) {
+    .rpg-hotbar-dock {
+      left: 0;
+      right: 0;
+      bottom: 8px;
+      overflow: hidden;
+    }
+
+    .rpg-hotbar-plate {
+      width: 100vw;
+      padding-inline: 0;
+      border-radius: 0;
+    }
+
+    .rpg-hotbar-rail {
+      width: 100%;
+      overflow: hidden;
+    }
+
+    .rpg-hotbar-track {
+      display: flex;
+      width: max-content;
+      gap: 7px;
+      transition: transform 180ms cubic-bezier(.2, .8, .2, 1);
+    }
+
+    .rpg-hotbar-slot {
+      width: 54px;
+      min-width: 54px;
+      height: 54px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rpg-hotbar-slot,
+    .rpg-hotbar-track,
+    .rpg-hotbar-nameplate {
+      animation: none !important;
+      transition: none !important;
+    }
   }
 </style>
 
 <script>
-  import { computed, mount, signal } from "canvasengine";
+  import { computed, effect, mount, signal } from "canvasengine";
+  import { activateHotbarSlot } from "../../services/hotbar";
   import { inject } from "../../core/inject";
   import { RpgClientEngine } from "../../RpgClientEngine";
 
@@ -220,73 +469,152 @@
   const { t } = engine.i18n();
   const slotLabels = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
   const slotControlNames = [
-    "hotbar1",
-    "hotbar2",
-    "hotbar3",
-    "hotbar4",
-    "hotbar5",
-    "hotbar6",
-    "hotbar7",
-    "hotbar8",
-    "hotbar9",
-    "hotbar0"
+    "hotbar1", "hotbar2", "hotbar3", "hotbar4", "hotbar5",
+    "hotbar6", "hotbar7", "hotbar8", "hotbar9", "hotbar0"
   ];
-  const selectedSlot = signal(-1);
+  const optimisticActiveSlot = signal(null);
   const wheelOpen = signal(false);
   const wheelSlot = signal(-1);
   const clock = signal(Date.now());
+  const feedback = signal({ revision: -1, slot: -1, status: "" });
+  const viewportWidth = signal(
+    typeof window === "undefined" ? 1024 : window.innerWidth
+  );
   const normalizeBind = (bind) =>
     typeof bind === "string" && /^[0-9]$/.test(bind) ? `n${bind}` : bind;
-
   const resolveProp = (value) => typeof value === "function" ? value() : value;
+
   const hotbarData = computed(() => resolveProp(data) || {});
+  const capacity = computed(() =>
+    Math.max(1, Math.min(10, Number(hotbarData().capacity ?? hotbarData().hotbar?.capacity ?? 10)))
+  );
   const slots = computed(() => {
-    const source = Array.isArray(hotbarData().slots) ? hotbarData().slots : [];
-    return Array.from({ length: 10 }, (_, index) => source[index] || {
+    const source = resolveProp(hotbarData().slots);
+    return Array.from({ length: 10 }, (_, index) => source?.[index] || {
       index,
       type: "empty",
       entry: null,
-      usable: false
+      usable: false,
+      activation: { mode: "instant" }
     });
   });
-  const visibleSlots = computed(() =>
-    slots().filter((slot) => slot.type !== "empty")
-  );
+  const visibleSlots = computed(() => slots().slice(0, capacity()));
+  const activeSlot = computed(() => {
+    const optimistic = optimisticActiveSlot();
+    return optimistic !== null
+      ? optimistic
+      : Number(hotbarData().activeSlot ?? hotbarData().hotbar?.activeSlot ?? -1);
+  });
+  const activeEntry = computed(() => slots()[activeSlot()] || null);
+
+  effect(() => {
+    const serverActive = hotbarData().activeSlot ?? hotbarData().hotbar?.activeSlot;
+    const next = hotbarData().feedback;
+    const optimistic = optimisticActiveSlot();
+    if (
+      optimistic !== null
+      && serverActive !== null
+      && serverActive !== undefined
+      && Number(serverActive) === optimistic
+    ) {
+      optimisticActiveSlot.set(null);
+    }
+    if (
+      optimistic !== null
+      && next?.slot === optimistic
+      && next?.status === "rejected"
+    ) {
+      optimisticActiveSlot.set(null);
+    }
+    if (!next || next.revision === feedback().revision) return;
+    feedback.set({ revision: next.revision, slot: next.slot, status: "" });
+    queueMicrotask(() => feedback.set(next));
+  });
 
   const iconSheet = (iconId) => ({
     definition: engine.getSpriteSheet(iconId),
     playing: "default"
   });
-
+  const fallbackIcon = (type) =>
+    type === "skill" ? "✦" : type === "item" ? "◆" : type === "empty" ? "" : "●";
+  const feedbackFor = (index) =>
+    feedback().slot === index ? feedback().status : "";
+  const gridColumns = computed(() =>
+    `repeat(${visibleSlots().length}, minmax(0, 1fr))`
+  );
+  const mobileTransform = computed(() =>
+    viewportWidth() <= 640
+      ? `translateX(calc(50vw - 29px - ${Math.max(0, activeSlot()) * 61}px))`
+      : "none"
+  );
+  const cooldownRemaining = (slot) =>
+    Math.max(0, Number(slot?.readyAt ?? 0) - clock());
   const cooldownLabel = (slot) => {
-    const remaining = Number(slot?.readyAt ?? 0) - clock();
+    const remaining = cooldownRemaining(slot);
     return remaining > 0 ? `${Math.max(1, Math.ceil(remaining / 1000))}s` : "";
   };
-
+  const cooldownProgress = (slot) => {
+    const total = Number(slot?.cooldownMs ?? 0);
+    return total > 0 ? Math.min(1, cooldownRemaining(slot) / total) : 0;
+  };
+  const cooldownBackground = (slot) => {
+    const degrees = cooldownProgress(slot) * 360;
+    return `conic-gradient(rgb(7 8 13 / 78%) 0 ${degrees}deg, transparent ${degrees}deg 360deg)`;
+  };
   const slotAriaLabel = (slot, index) =>
     `${t("rpg.hotbar.slot", { index: slotLabels[index] })}: ${slot.name || t("rpg.menu.empty")}`;
 
-  const useSlot = (index) => {
+  const activateSlot = async (index) => {
     const slot = slots()[index];
-    if (!slot || slot.type === "empty" || slot.usable === false) return;
-    selectedSlot.set(index);
-    onInteraction?.("useSlot", { slot: index });
+    if (!slot || slot.type === "empty" || slot.locked) return;
+    if (slot.usable === false) {
+      feedback.set({ revision: feedback().revision + 1, slot: index, status: "rejected" });
+      return;
+    }
+    await activateHotbarSlot({
+      slot,
+      select() {
+        optimisticActiveSlot.set(index);
+        if (slot.activation?.mode === "select") {
+          onInteraction?.("selectSlot", { slot: index });
+        }
+      },
+      use(target) {
+        onInteraction?.("useSlot", { slot: index, target });
+      }
+    });
+  };
+  const selectSlot = (index) => () => activateSlot(index);
+  const selectAdjacentSlot = (direction) => {
+    const count = visibleSlots().length;
+    if (!count) return;
+    const current = activeSlot();
+    const visibleIndex = visibleSlots().findIndex((slot) => slot.index === current);
+    const origin = visibleIndex >= 0 ? visibleIndex : direction > 0 ? -1 : 0;
+    const nextIndex = (origin + direction + count) % count;
+    const nextSlot = visibleSlots()[nextIndex];
+    if (!nextSlot) return;
+    optimisticActiveSlot.set(nextSlot.index);
+    onInteraction?.("selectSlot", { slot: nextSlot.index });
   };
 
-  const selectSlot = (index) => () => useSlot(index);
-
-  const wheelSlotStyle = (index) => {
-    const angle = (index / 10) * Math.PI * 2 - Math.PI / 2;
+  const wheelSlotStyle = (visibleIndex) => {
+    const count = Math.max(1, visibleSlots().length);
+    const angle = (visibleIndex / count) * Math.PI * 2 - Math.PI / 2;
     return {
       left: `${50 + Math.cos(angle) * 39}%`,
       top: `${50 + Math.sin(angle) * 39}%`
     };
   };
-
-  const selectedWheelLabel = computed(() => {
-    const slot = slots()[wheelSlot()];
-    return slot?.name || (wheelSlot() >= 0 ? t("rpg.menu.empty") : t("rpg.hotbar.choose"));
-  });
+  const selectedWheelEntry = computed(() => slots()[wheelSlot()]);
+  const selectedWheelLabel = computed(() =>
+    selectedWheelEntry()?.name || (wheelSlot() >= 0 ? t("rpg.menu.empty") : t("rpg.hotbar.choose"))
+  );
+  const wheelInstruction = computed(() =>
+    selectedWheelEntry()?.activation?.mode === "select"
+      ? t("rpg.hotbar.release-select")
+      : t("rpg.hotbar.release")
+  );
 
   const keyboardControls = engine.globalConfig.keyboardControls || {};
   const controlsConfig = {};
@@ -294,22 +622,39 @@
     controlsConfig[`hotbar-slot-${index}`] = {
       bind: normalizeBind(keyboardControls[name] || `n${slotLabels[index]}`),
       keyDown() {
-        if (!wheelOpen()) useSlot(index);
+        if (!wheelOpen() && index < capacity()) activateSlot(index);
       }
     };
   });
+  if (keyboardControls.hotbarUse) {
+    controlsConfig["hotbar-use-active"] = {
+      bind: normalizeBind(keyboardControls.hotbarUse),
+      keyDown() {
+        const slot = activeSlot();
+        if (slot >= 0) activateSlot(slot);
+      }
+    };
+  }
   controlsConfig.gamepad = { enabled: false };
   const controls = signal(controlsConfig);
 
   mount(() => {
     if (typeof navigator === "undefined" || typeof requestAnimationFrame === "undefined") return;
+    const updateViewport = () => viewportWidth.set(window.innerWidth);
+    window.addEventListener("resize", updateViewport);
     const clockTimer = setInterval(() => clock.set(Date.now()), 100);
     const gamepadConfig = engine.globalConfig.gamepadControls || {};
     const wheelButton = Number(gamepadConfig.hotbarWheelButton ?? 4);
     const cancelButton = Number(gamepadConfig.cancelButton ?? 1);
+    const previousButton = Number(gamepadConfig.hotbarPreviousButton ?? 6);
+    const nextButton = Number(gamepadConfig.hotbarNextButton ?? 7);
+    const useButton = Number(gamepadConfig.hotbarUseButton ?? 2);
     const deadzone = Number(gamepadConfig.hotbarWheelDeadzone ?? 0.35);
     let animationFrame = 0;
     let wasPressed = false;
+    let wasPreviousPressed = false;
+    let wasNextPressed = false;
+    let wasUsePressed = false;
     let cancelled = false;
     let previousStopProcessingInput = false;
 
@@ -318,7 +663,7 @@
       wheelOpen.set(false);
       wheelSlot.set(-1);
       engine.stopProcessingInput = previousStopProcessingInput;
-      if (activate && !cancelled && slot >= 0) useSlot(slot);
+      if (activate && !cancelled && slot >= 0) activateSlot(slot);
       cancelled = false;
     };
 
@@ -326,6 +671,19 @@
       const gamepad = Array.from(navigator.getGamepads?.() || [])
         .find((entry) => entry?.connected);
       const pressed = Boolean(gamepad?.buttons?.[wheelButton]?.pressed);
+      const previousPressed = Boolean(gamepad?.buttons?.[previousButton]?.pressed);
+      const nextPressed = Boolean(gamepad?.buttons?.[nextButton]?.pressed);
+      const usePressed = Boolean(gamepad?.buttons?.[useButton]?.pressed);
+      if (!wheelOpen() && previousPressed && !wasPreviousPressed) {
+        selectAdjacentSlot(-1);
+      }
+      if (!wheelOpen() && nextPressed && !wasNextPressed) {
+        selectAdjacentSlot(1);
+      }
+      if (!wheelOpen() && usePressed && !wasUsePressed) {
+        const slot = activeSlot();
+        if (slot >= 0) activateSlot(slot);
+      }
       if (pressed && !wasPressed) {
         previousStopProcessingInput = engine.stopProcessingInput;
         engine.stopProcessingInput = true;
@@ -334,7 +692,6 @@
         wheelSlot.set(-1);
         cancelled = false;
       }
-
       if (pressed && gamepad) {
         if (gamepad.buttons?.[cancelButton]?.pressed) {
           cancelled = true;
@@ -347,19 +704,23 @@
             wheelSlot.set(-1);
           } else {
             const angle = (Math.atan2(y, x) + Math.PI / 2 + Math.PI * 2) % (Math.PI * 2);
-            const sector = (Math.PI * 2) / 10;
-            wheelSlot.set(Math.floor((angle + sector / 2) / sector) % 10);
+            const sector = (Math.PI * 2) / Math.max(1, visibleSlots().length);
+            const visibleIndex = Math.floor((angle + sector / 2) / sector) % visibleSlots().length;
+            wheelSlot.set(visibleSlots()[visibleIndex]?.index ?? -1);
           }
         }
       }
-
       if (!pressed && wasPressed && wheelOpen()) closeWheel(true);
       wasPressed = pressed;
+      wasPreviousPressed = previousPressed;
+      wasNextPressed = nextPressed;
+      wasUsePressed = usePressed;
       animationFrame = requestAnimationFrame(poll);
     };
 
     animationFrame = requestAnimationFrame(poll);
     return () => {
+      window.removeEventListener("resize", updateViewport);
       clearInterval(clockTimer);
       cancelAnimationFrame(animationFrame);
       if (wheelOpen()) closeWheel(false);

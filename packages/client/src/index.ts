@@ -7,6 +7,7 @@ export * from "./core/setup";
 export * from "./core/inject";
 export * from "./services/loadMap";
 export * from "./services/actionInput";
+export * from "./services/hotbar";
 export * from "./services/mapStreaming";
 export * from "./services/pointerContext";
 export * from "./services/interactions";

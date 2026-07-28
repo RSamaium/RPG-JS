@@ -227,7 +227,7 @@ describe("normalizeActionBattleAttackProfile", () => {
         targeting,
       },
       ui: {
-        actionBar: true,
+        hotbar: true,
         targeting: false,
         attackPreview: false,
       },
@@ -240,7 +240,7 @@ describe("normalizeActionBattleAttackProfile", () => {
     expect(options.ai?.behaviors?.slime).toBe(behavior);
     expect(options.skills?.getTargeting).toBe(targeting);
     expect(options.skills?.targeting).toBe(targeting);
-    expect((options.ui?.actionBar as any).enabled).toBe(true);
+    expect((options.ui?.hotbar as any).enabled).toBe(true);
     expect((options.ui?.targeting as any).enabled).toBe(false);
     expect((options.ui?.attackPreview as any).enabled).toBe(false);
   });

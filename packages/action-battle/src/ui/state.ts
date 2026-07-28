@@ -1,7 +1,6 @@
 import { signal } from "canvasengine";
 import {
-  ActionBattleActionBarSkill,
-  ActionBattleActionBarSlot,
+  ActionBattleHotbarSkill,
   ActionBattleOptions,
 } from "../types";
 import { DEFAULT_ACTION_BATTLE_OPTIONS, normalizeActionBattleOptions } from "../config";
@@ -18,7 +17,7 @@ export interface ActionBattleAttackPreviewState {
 
 export interface ActionBattleTargetingState {
   active: boolean;
-  skill: ActionBattleActionBarSkill | null;
+  skill: ActionBattleHotbarSkill | null;
   range: number;
   offset: { x: number; y: number };
   aoeMask: string[] | string;
@@ -51,11 +50,6 @@ export const actionBattleSkillOptions = signal(
 export const actionBattleCombatOptions = signal(
   normalizeActionBattleOptions({}).combat || {}
 );
-export const ACTION_BATTLE_SKILL_LOADOUT_VISUAL_ID =
-  "action-battle.skill-loadout";
-export const actionBattleSkillLoadout = signal<ActionBattleActionBarSkill[]>([]);
-export const actionBattleHotbarSlots = signal<ActionBattleActionBarSlot[]>([]);
-
 export const actionBattleTargetingState = signal<ActionBattleTargetingState>({
   ...defaultTargetingState,
 });
@@ -63,6 +57,9 @@ export const actionBattleAttackPreviewState =
   signal<ActionBattleAttackPreviewState>({
     ...defaultAttackPreviewState,
   });
+let targetingConfirmation:
+  | ((target: { x: number; y: number }) => void)
+  | undefined;
 export const setActionBattleOptions = (options: ActionBattleOptions = {}) => {
   const normalized = normalizeActionBattleOptions(options);
   actionBattleUiOptions.set(normalized.ui || {});
@@ -70,31 +67,10 @@ export const setActionBattleOptions = (options: ActionBattleOptions = {}) => {
   actionBattleCombatOptions.set(normalized.combat || {});
 };
 
-export const setActionBattleSkillLoadout = (
-  skills: ActionBattleActionBarSkill[] = [],
-  slots: ActionBattleActionBarSlot[] = [],
-) => {
-  actionBattleSkillLoadout.set(
-    Array.isArray(skills)
-      ? skills.filter(
-          (skill): skill is ActionBattleActionBarSkill =>
-            !!skill && typeof skill.id === "string"
-        )
-      : []
-  );
-  actionBattleHotbarSlots.set(
-    Array.isArray(slots)
-      ? slots.filter(
-          (slot): slot is ActionBattleActionBarSlot =>
-            !!slot && Number.isInteger(slot.index)
-        )
-      : []
-  );
-};
-
 export const startTargeting = (
-  skill: ActionBattleActionBarSkill,
+  skill: ActionBattleHotbarSkill,
   initialOffset: { x: number; y: number } = { x: 0, y: 0 },
+  onConfirm?: (target: { x: number; y: number }) => void,
 ) => {
   const skillsOptions = actionBattleSkillOptions();
   const mask = skill.aoeMask || (skillsOptions.defaultAoeMask as string[]) || ["#"];
@@ -105,10 +81,20 @@ export const startTargeting = (
     offset: initialOffset,
     aoeMask: mask,
   });
+  targetingConfirmation = onConfirm;
 };
 
 export const stopTargeting = () => {
+  targetingConfirmation = undefined;
   actionBattleTargetingState.set({ ...defaultTargetingState });
+};
+
+export const confirmActionBattleTarget = (
+  target: { x: number; y: number },
+) => {
+  const confirm = targetingConfirmation;
+  stopTargeting();
+  confirm?.(target);
 };
 
 export const moveTargetingOffset = (dx: number, dy: number) => {

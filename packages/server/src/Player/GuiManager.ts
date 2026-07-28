@@ -109,11 +109,14 @@ export function WithGuiManager<TBase extends PlayerCtor>(
      */
     showHotbar(options: HotbarGuiOptions = {}) {
       const existing = this._gui[PrebuiltGui.Hotbar] as HotbarGui | undefined;
-      const gui = existing ?? new HotbarGui(this as unknown as RpgPlayer);
+      if (existing) {
+        existing.configure(options);
+        existing.refresh();
+        return Promise.resolve(null);
+      }
+      const gui = new HotbarGui(this as unknown as RpgPlayer);
       this._gui[gui.id] = gui;
-      return existing
-        ? Promise.resolve(null)
-        : gui.open(options);
+      return gui.open(options);
     }
 
     /**

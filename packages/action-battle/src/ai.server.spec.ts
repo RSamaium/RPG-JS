@@ -117,6 +117,36 @@ describe("BattleAi health presentation", () => {
     expect(event.mergeComponents).not.toHaveBeenCalled();
     ai.destroy();
   });
+
+  test("keeps the skill impact media in AI-owned hurt visuals", () => {
+    const clientVisual = vi.fn();
+    const event = createEvent();
+    event.hp = 10;
+    event.getCurrentMap.mockReturnValue({ clientVisual });
+    const ai = new BattleAi(event as any);
+
+    ai.handleDamage(createPlayer() as any, {
+      damage: 3,
+      defeated: false,
+      skill: {
+        id: "arcane",
+        name: "Arcane",
+        animation: "arcane-impact",
+      },
+    });
+
+    expect(clientVisual).toHaveBeenCalledWith(
+      ACTION_BATTLE_CLIENT_VISUAL_ID,
+      expect.objectContaining({
+        moment: "hurt",
+        skill: expect.objectContaining({
+          id: "arcane",
+          animation: "arcane-impact",
+        }),
+      }),
+    );
+    ai.destroy();
+  });
 });
 
 describe("BattleAi defeat flow", () => {
