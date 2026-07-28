@@ -1,0 +1,8 @@
+{
+  "id": "hotbar",
+  "title": "Farm Hotbar",
+  "description": "A server-authoritative mixed item and skill hotbar with a warm farm-inspired CSS theme.",
+  "tags": ["hotbar", "items", "skills", "gui", "theme"],
+  "modes": ["standalone", "mmorpg"],
+  "port": 5190
+}

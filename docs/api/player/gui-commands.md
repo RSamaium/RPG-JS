@@ -184,6 +184,9 @@ player.showNotification()
 
 Hide the default hotbar GUI.
 
+Persistent slot assignments are unchanged. Call `showHotbar()` to create
+and display the GUI again.
+
 - Source: `packages/server/src/Player/GuiManager.ts`
 - Kind: `method`
 - Member of: `RpgPlayer`
@@ -193,6 +196,13 @@ Hide the default hotbar GUI.
 
 ```ts
 player.hideHotbar()
+```
+
+### Examples
+
+```ts
+player.hideHotbar();
+await player.showHotbar();
 ```
 
 ## Hide to GUI attached
@@ -265,6 +275,7 @@ Display the persistent player hotbar.
 
 The server owns slot content and validates every use. The default client
 GUI provides direct keyboard shortcuts and a gamepad radial selector.
+Calling it again refreshes the existing GUI without duplicating it.
 
 - Source: `packages/server/src/Player/GuiManager.ts`
 - Kind: `method`
@@ -288,7 +299,10 @@ The GUI open result.
 ### Examples
 
 ```ts
-player.showHotbar();
+await player.showHotbar({
+  capacity: 8,
+  lockedSlotHint: (_current, slot) => `Unlock slot ${slot + 1}`,
+});
 ```
 
 ## Show Input

@@ -13,6 +13,11 @@ import {
   TitleGui,
 } from "../src";
 import { signal } from "@signe/reactive";
+import { createHotbarState } from "@rpgjs/common";
+
+const emptyHotbarPlayer = {
+  getHotbar: () => createHotbarState(),
+};
 
 describe("GUI", () => {
   test("input gui returns typed text and number values", async () => {
@@ -118,6 +123,7 @@ describe("GUI", () => {
     };
     const sent: any[] = [];
     const player: any = {
+      ...emptyHotbarPlayer,
       canMove: signal(true),
       items: signal([inventoryItem]),
       equipments: signal([inventoryItem]),
@@ -174,6 +180,7 @@ describe("GUI", () => {
   test("main menu item and equipment actions sync the player and refresh the client", async () => {
     const sent: any[] = [];
     const player: any = {
+      ...emptyHotbarPlayer,
       canMove: true,
       items: signal([{ id: "potion", name: "Potion", quantity: 2 }]),
       equipments: signal([]),
@@ -213,6 +220,7 @@ describe("GUI", () => {
   test("main menu reports action errors and still refreshes the menu", async () => {
     const sent: any[] = [];
     const player: any = {
+      ...emptyHotbarPlayer,
       canMove: true,
       items: signal([{ id: "potion", name: "Potion", quantity: 1 }]),
       equipments: signal([]),
@@ -246,6 +254,7 @@ describe("GUI", () => {
 
   test("main menu exit resolves the waiting open call and restores movement", async () => {
     const player: any = {
+      ...emptyHotbarPlayer,
       canMove: true,
       items: signal([]),
       equipments: signal([]),

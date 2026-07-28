@@ -95,16 +95,20 @@ export function WithGuiManager<TBase extends PlayerCtor>(
      *
      * The server owns slot content and validates every use. The default client
      * GUI provides direct keyboard shortcuts and a gamepad radial selector.
+     * Calling it again refreshes the existing GUI without duplicating it.
      *
      * @title Show Hotbar
      * @method player.showHotbar(options)
-     * @param options - Initialization and optional custom use handler.
+     * @param options - Initialization, capacity, presentation, and optional authoritative use handler.
      * @returns The GUI open result.
      * @memberof RpgPlayer
      *
      * @example
      * ```ts
-     * player.showHotbar();
+     * await player.showHotbar({
+     *   capacity: 8,
+     *   lockedSlotHint: (_current, slot) => `Unlock slot ${slot + 1}`,
+     * });
      * ```
      */
     showHotbar(options: HotbarGuiOptions = {}) {
@@ -122,10 +126,19 @@ export function WithGuiManager<TBase extends PlayerCtor>(
     /**
      * Hide the default hotbar GUI.
      *
+     * Persistent slot assignments are unchanged. Call `showHotbar()` to create
+     * and display the GUI again.
+     *
      * @title Hide Hotbar
      * @method player.hideHotbar()
      * @returns {void}
      * @memberof RpgPlayer
+     *
+     * @example
+     * ```ts
+     * player.hideHotbar();
+     * await player.showHotbar();
+     * ```
      */
     hideHotbar(): void {
       this._gui[PrebuiltGui.Hotbar]?.close();

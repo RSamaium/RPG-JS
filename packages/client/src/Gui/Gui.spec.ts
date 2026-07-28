@@ -15,6 +15,7 @@ vi.mock("../components/gui", () => {
     TitleScreenComponent: component,
     GameoverComponent: component,
     InputComponent: component,
+    HotbarComponent: component,
   };
 });
 

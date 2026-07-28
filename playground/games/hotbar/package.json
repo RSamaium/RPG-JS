@@ -1,0 +1,23 @@
+{
+  "name": "@rpgjs/playground-hotbar",
+  "version": "1.0.0-beta.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@rpgjs/client": "workspace:*",
+    "@rpgjs/common": "workspace:*",
+    "@rpgjs/server": "workspace:*",
+    "@rpgjs/ui-css": "workspace:*",
+    "@rpgjs/vite": "workspace:*",
+    "canvasengine": "2.1.1",
+    "pixi.js": "^8.19.0"
+  },
+  "devDependencies": {
+    "@canvasengine/compiler": "2.1.0",
+    "vite": "^8.0.16"
+  }
+}

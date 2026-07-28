@@ -8,16 +8,30 @@ import {
   type PlayerCtor,
 } from "@rpgjs/common";
 import type { RpgPlayer } from "./Player";
+import { context as injectionContext } from "../core/inject";
 
+/** Authoritative context passed to a registered hotbar entry type. */
 export interface HotbarUseContext {
+  /** Zero-based slot used by the player. */
   slot: number;
+  /** Optional targeting data supplied by the client or battle module. */
   target?: unknown;
 }
 
+/**
+ * Server-side contract for a built-in or plugin-provided hotbar entry type.
+ *
+ * The definition owns availability validation, client presentation, and use so
+ * serialized slot data never grants gameplay authority to the client.
+ */
 export interface HotbarEntryTypeDefinition {
+  /** Unique serialized entry type. */
   type: string;
+  /** Throw when the player may not assign or use this entry. */
   validate(player: RpgPlayer, id: string): void;
+  /** Build the serializable presentation sent to the current player. */
   resolve(player: RpgPlayer, id: string): HotbarEntryPresentation;
+  /** Execute the authoritative gameplay action. */
   use(
     player: RpgPlayer,
     id: string,
@@ -25,23 +39,33 @@ export interface HotbarEntryTypeDefinition {
   ): unknown | Promise<unknown>;
 }
 
+/** Static capacity or per-player capacity resolver, clamped between 1 and 10. */
 export type HotbarCapacityResolver =
   | number
   | ((player: RpgPlayer) => number);
 
+/** Static unlock hint or per-player, per-slot hint resolver. */
 export type HotbarLockedSlotHintResolver =
   | string
   | ((player: RpgPlayer, slot: number) => string | undefined);
 
+/** Per-player capacity and locked-slot presentation options. */
 export interface HotbarConfiguration {
+  /** Number of currently accessible slots or a dynamic player resolver. */
   capacity?: HotbarCapacityResolver;
+  /** Player-visible unlock hint or a per-slot resolver. */
   lockedSlotHint?: HotbarLockedSlotHintResolver;
 }
 
+/** Payload delivered to the server `onHotbarChange` player hook. */
 export interface HotbarChangePayload {
+  /** Mutation or refresh that produced the snapshot. */
   action: "initialize" | "assign" | "clear" | "select" | "refresh";
+  /** Affected zero-based slot when the action targets one slot. */
   slot?: number;
+  /** Assigned or selected entry when available. */
   entry?: HotbarEntry;
+  /** Detached state after the change. */
   state: HotbarState;
 }
 
@@ -155,10 +179,35 @@ entryTypes.set(nativeItemDefinition.type, nativeItemDefinition);
  *
  * The definition owns validation, client presentation, and authoritative use.
  * The returned function restores the previous definition.
+ *
+ * @param definition - Type definition shared by every player on this server.
+ * @returns A cleanup function that restores the previous definition.
+ *
+ * @example
+ * ```ts
+ * const unregister = registerHotbarEntryType({
+ *   type: "emote",
+ *   validate(_player, id) {
+ *     if (id !== "wave") throw new Error("Unknown emote");
+ *   },
+ *   resolve(_player, id) {
+ *     return {
+ *       id,
+ *       type: "emote",
+ *       name: "Wave",
+ *       usable: true,
+ *       activation: { mode: "instant" },
+ *     };
+ *   },
+ *   use(player) {
+ *     player.showAnimation("wave");
+ *   },
+ * });
+ * ```
  */
-export const registerHotbarEntryType = (
+export function registerHotbarEntryType(
   definition: HotbarEntryTypeDefinition,
-): (() => void) => {
+): () => void {
   if (!definition?.type) {
     throw new TypeError("A hotbar entry type requires a non-empty type");
   }
@@ -168,20 +217,32 @@ export const registerHotbarEntryType = (
     if (previous) entryTypes.set(definition.type, previous);
     else entryTypes.delete(definition.type);
   };
-};
+}
 
 /**
  * Return the registered definition for an entry type.
+ *
+ * @param type - Serialized entry type.
+ * @returns The definition, or `undefined` when the type is unknown.
  */
-export const getHotbarEntryType = (type: string) => entryTypes.get(type);
+export function getHotbarEntryType(type: string): HotbarEntryTypeDefinition | undefined {
+  return entryTypes.get(type);
+}
 
 /**
  * Resolve the serializable client presentation for a hotbar entry.
+ *
+ * Unavailable or unknown entries return a disabled fallback instead of
+ * exposing an authoritative validation error to the client.
+ *
+ * @param player - Player receiving the presentation.
+ * @param entry - Persistent entry reference.
+ * @returns Serializable presentation for the generic hotbar GUI.
  */
-export const resolveHotbarEntryPresentation = (
+export function resolveHotbarEntryPresentation(
   player: RpgPlayer,
   entry: HotbarEntry,
-) => {
+): HotbarEntryPresentation {
   const definition = getHotbarEntryType(entry.type);
   if (!definition) {
     return {
@@ -204,7 +265,7 @@ export const resolveHotbarEntryPresentation = (
       activation: { mode: "instant" as const },
     };
   }
-};
+}
 
 export function WithHotbarManager<TBase extends PlayerCtor>(
   Base: TBase,
@@ -258,13 +319,15 @@ export function WithHotbarManager<TBase extends PlayerCtor>(
       (this as any).hotbar.set(next);
       const gui = (this as any).getGui?.(PrebuiltGui.Hotbar);
       if (gui?.openId) gui.refresh?.();
-      void (this as any).execMethod?.("onHotbarChange", [{
-        ...payload,
-        state: {
-          ...next,
-          slots: next.slots.map(cloneEntry),
-        },
-      }]);
+      if (injectionContext || (this as any).context) {
+        void (this as any).execMethod?.("onHotbarChange", [{
+          ...payload,
+          state: {
+            ...next,
+            slots: next.slots.map(cloneEntry),
+          },
+        }]);
+      }
       return this.getHotbar();
     }
 
@@ -342,6 +405,24 @@ export function WithHotbarManager<TBase extends PlayerCtor>(
 
     /**
      * Configure dynamic capacity and locked-slot messaging for this player.
+     *
+     * The resolver is evaluated on refresh and gameplay changes. Reducing
+     * capacity keeps assignments in locked slots so they return if capacity
+     * grows again.
+     *
+     * @title Configure Hotbar
+     * @method player.configureHotbar(options)
+     * @param options - Capacity and optional locked-slot hint.
+     * @returns The refreshed detached hotbar state.
+     * @memberof RpgPlayer
+     *
+     * @example
+     * ```ts
+     * player.configureHotbar({
+     *   capacity: current => Math.min(10, current.level + 2),
+     *   lockedSlotHint: (_current, slot) => `Unlocks at level ${slot + 1}`,
+     * });
+     * ```
      */
     configureHotbar(options: HotbarConfiguration = {}): HotbarState {
       playerConfigurations.set(this, options);
@@ -350,6 +431,11 @@ export function WithHotbarManager<TBase extends PlayerCtor>(
 
     /**
      * Return a detached snapshot of the player's persistent hotbar.
+     *
+     * @title Get Hotbar
+     * @method player.getHotbar()
+     * @returns The current detached ten-slot state.
+     * @memberof RpgPlayer
      */
     getHotbar(): HotbarState {
       const current = this.normalizeHotbar();
@@ -361,6 +447,11 @@ export function WithHotbarManager<TBase extends PlayerCtor>(
 
     /**
      * Return the number of slots currently available to the player.
+     *
+     * @title Get Hotbar Capacity
+     * @method player.getHotbarCapacity()
+     * @returns An integer between 1 and 10.
+     * @memberof RpgPlayer
      */
     getHotbarCapacity(): number {
       return this.normalizeHotbar().capacity;
@@ -368,6 +459,12 @@ export function WithHotbarManager<TBase extends PlayerCtor>(
 
     /**
      * Return the optional unlock hint for a slot.
+     *
+     * @title Get Hotbar Locked Slot Hint
+     * @method player.getHotbarLockedSlotHint(slot)
+     * @param slot - Zero-based slot index.
+     * @returns The resolved hint, or `undefined`.
+     * @memberof RpgPlayer
      */
     getHotbarLockedSlotHint(slot: number): string | undefined {
       this.assertSlot(slot);
@@ -379,6 +476,11 @@ export function WithHotbarManager<TBase extends PlayerCtor>(
 
     /**
      * Re-evaluate dynamic configuration and refresh an open hotbar GUI.
+     *
+     * @title Refresh Hotbar
+     * @method player.refreshHotbar()
+     * @returns The refreshed detached hotbar state.
+     * @memberof RpgPlayer
      */
     refreshHotbar(): HotbarState {
       const current = this.normalizeHotbar();
@@ -387,6 +489,24 @@ export function WithHotbarManager<TBase extends PlayerCtor>(
 
     /**
      * Seed the hotbar once from explicit entries or the player loadout.
+     *
+     * Learned skills are placed before usable consumable items when `entries`
+     * is omitted. Invalid explicit entries are ignored. Calling this method
+     * after initialization preserves the player's assignments.
+     *
+     * @title Initialize Hotbar
+     * @method player.initializeHotbar(entries)
+     * @param entries - Optional ordered skill, item, or plugin entry list.
+     * @returns The initialized state, or the existing state when already seeded.
+     * @memberof RpgPlayer
+     *
+     * @example
+     * ```ts
+     * player.initializeHotbar([
+     *   { type: "item", id: "berry-snack" },
+     *   { type: "skill", id: "water-crops" },
+     * ]);
+     * ```
      */
     initializeHotbar(entries?: HotbarEntry[]): HotbarState {
       const current = this.normalizeHotbar();
@@ -424,6 +544,13 @@ export function WithHotbarManager<TBase extends PlayerCtor>(
 
     /**
      * Assign an available slot, moving any duplicate entry.
+     *
+     * @title Assign Hotbar Slot
+     * @method player.assignHotbarSlot(slot,entry)
+     * @param slot - Zero-based accessible slot index.
+     * @param entry - Available skill, item, or registered plugin entry.
+     * @returns The updated detached state.
+     * @memberof RpgPlayer
      */
     assignHotbarSlot(slot: number, entry: HotbarEntry): HotbarState {
       this.assertAccessibleSlot(slot);
@@ -443,6 +570,12 @@ export function WithHotbarManager<TBase extends PlayerCtor>(
 
     /**
      * Clear a slot while preserving all other assignments.
+     *
+     * @title Clear Hotbar Slot
+     * @method player.clearHotbarSlot(slot)
+     * @param slot - Zero-based slot index, including a currently locked slot.
+     * @returns The updated detached state.
+     * @memberof RpgPlayer
      */
     clearHotbarSlot(slot: number): HotbarState {
       this.assertSlot(slot);
@@ -461,6 +594,12 @@ export function WithHotbarManager<TBase extends PlayerCtor>(
 
     /**
      * Persist the player's active available slot.
+     *
+     * @title Select Hotbar Slot
+     * @method player.selectHotbarSlot(slot)
+     * @param slot - Zero-based accessible slot index.
+     * @returns The updated detached state.
+     * @memberof RpgPlayer
      */
     selectHotbarSlot(slot: number): HotbarState {
       this.assertAccessibleSlot(slot);
@@ -473,6 +612,13 @@ export function WithHotbarManager<TBase extends PlayerCtor>(
 
     /**
      * Use an entry through its registered authoritative type handler.
+     *
+     * @title Use Hotbar Slot
+     * @method player.useHotbarSlot(slot,target)
+     * @param slot - Zero-based accessible slot index.
+     * @param target - Optional target understood by the entry definition.
+     * @returns The entry handler result, or `null` for an empty slot.
+     * @memberof RpgPlayer
      */
     useHotbarSlot(slot: number, target?: unknown): unknown {
       this.assertAccessibleSlot(slot);
@@ -493,6 +639,12 @@ export function WithHotbarManager<TBase extends PlayerCtor>(
 
     /**
      * Use the currently active slot, if one is selected.
+     *
+     * @title Use Active Hotbar Slot
+     * @method player.useActiveHotbarSlot(target)
+     * @param target - Optional target understood by the entry definition.
+     * @returns The entry handler result, or `null` when no slot is active.
+     * @memberof RpgPlayer
      */
     useActiveHotbarSlot(target?: unknown): unknown {
       const activeSlot = this.getHotbar().activeSlot;

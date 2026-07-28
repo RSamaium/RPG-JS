@@ -617,6 +617,37 @@ importers:
         specifier: ^8.0.16
         version: 8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
 
+  playground/games/hotbar:
+    dependencies:
+      '@rpgjs/client':
+        specifier: workspace:*
+        version: link:../../../packages/client
+      '@rpgjs/common':
+        specifier: workspace:*
+        version: link:../../../packages/common
+      '@rpgjs/server':
+        specifier: workspace:*
+        version: link:../../../packages/server
+      '@rpgjs/ui-css':
+        specifier: workspace:*
+        version: link:../../../packages/ui-css
+      '@rpgjs/vite':
+        specifier: workspace:*
+        version: link:../../../packages/vite
+      canvasengine:
+        specifier: 2.1.1
+        version: 2.1.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+      pixi.js:
+        specifier: ^8.19.0
+        version: 8.19.0
+    devDependencies:
+      '@canvasengine/compiler':
+        specifier: 2.1.0
+        version: 2.1.0(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
+      vite:
+        specifier: ^8.0.16
+        version: 8.1.5(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
+
   playground/games/mouse-interactions:
     dependencies:
       '@canvasengine/presets':
