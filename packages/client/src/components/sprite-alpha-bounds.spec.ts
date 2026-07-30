@@ -17,6 +17,23 @@ describe("sprite alpha bounds", () => {
     expect(loader).toHaveBeenCalledTimes(1);
   });
 
+  test("allows a later sprite to retry a transient alpha scan failure", async () => {
+    const failedLoader = vi.fn(async () => null);
+    const retryLoader = vi.fn(async () => []);
+
+    await loadCachedSpriteSheetAlphaBounds(
+      "transient-enemy.png|4x4",
+      failedLoader,
+    );
+    await loadCachedSpriteSheetAlphaBounds(
+      "transient-enemy.png|4x4",
+      retryLoader,
+    );
+
+    expect(failedLoader).toHaveBeenCalledTimes(1);
+    expect(retryLoader).toHaveBeenCalledTimes(1);
+  });
+
   test("finds visible pixels relative to each spritesheet frame", () => {
     const pixels = new Uint8ClampedArray(8 * 4 * 4);
     const setOpaque = (x: number, y: number) => {

@@ -19,7 +19,16 @@ export const loadCachedSpriteSheetAlphaBounds = (
   const cached = alphaBoundsCache.get(key);
   if (cached) return cached;
 
-  const pending = loader().catch(() => null);
+  const pending = loader().then(
+    (bounds) => {
+      if (bounds === null) alphaBoundsCache.delete(key);
+      return bounds;
+    },
+    () => {
+      alphaBoundsCache.delete(key);
+      return null;
+    },
+  );
   alphaBoundsCache.set(key, pending);
   return pending;
 };
