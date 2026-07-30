@@ -88,7 +88,7 @@ describe("BattleAi health presentation", () => {
       ],
       expect.objectContaining({
         width: 120,
-        marginTop: 2,
+        marginBottom: 4,
       })
     );
     ai.destroy();
@@ -642,6 +642,72 @@ describe("BattleAi behavior tree", () => {
         pattern: AttackPattern.DashAttack,
       })
     );
+    ai.destroy();
+  });
+
+  test("selects distance-appropriate special attacks without repetition", () => {
+    const event = createEvent();
+    const player = {
+      ...createPlayer(),
+      hp: 10,
+      x: vi.fn(() => 20),
+      y: vi.fn(() => 0),
+    };
+    const ai = new BattleAi(event as any, {
+      attackRange: 100,
+      attackPatterns: [
+        AttackPattern.Zone,
+        AttackPattern.DashAttack,
+        AttackPattern.Melee,
+      ],
+    });
+    ai.onDetectInShape(player as any, {});
+
+    expect((ai as any).selectAttackCandidates(20)).toEqual([
+      AttackPattern.Zone,
+      AttackPattern.Melee,
+    ]);
+    (ai as any).lastAttackPattern = AttackPattern.Zone;
+    expect((ai as any).selectAttackCandidates(20)).toEqual([
+      AttackPattern.Melee,
+    ]);
+    expect((ai as any).selectAttackCandidates(90)).toEqual([
+      AttackPattern.DashAttack,
+      AttackPattern.Melee,
+    ]);
+    ai.destroy();
+  });
+
+  test("respects a skill cooldown inside enemy combos", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1000);
+    const event = createEvent();
+    const onUse = vi.fn();
+    const skill = {
+      id: "fire",
+      spCost: 0,
+      action: { cooldownMs: 800 },
+      onUse,
+    };
+    const player = {
+      ...createPlayer(),
+      hp: 10,
+      x: vi.fn(() => 20),
+      y: vi.fn(() => 0),
+    };
+    const ai = new BattleAi(event as any, {
+      attackSkill: skill,
+    });
+    ai.onDetectInShape(player as any, {});
+    const profile = (ai as any).getAttackProfile(AttackPattern.Combo);
+
+    (ai as any).executeMeleeAttack(profile, AttackPattern.Combo);
+    vi.setSystemTime(1300);
+    (ai as any).executeMeleeAttack(profile, AttackPattern.Combo);
+    vi.setSystemTime(1800);
+    (ai as any).executeMeleeAttack(profile, AttackPattern.Combo);
+
+    expect(onUse).toHaveBeenCalledTimes(2);
     ai.destroy();
   });
 

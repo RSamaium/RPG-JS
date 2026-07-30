@@ -31,6 +31,7 @@ import {
 import { applyActionBattleAttackDirection } from "./attack-input";
 import {
   executeActionBattleUse,
+  getActionBattleActionConfig,
   getActionBattleActionRange,
 } from "./core/action-use";
 import { resolveActionBattleWeapon } from "./core/equipment";
@@ -649,6 +650,8 @@ export class BattleAi {
   private attackPatterns: AttackPattern[];
   private attackProfiles: NormalizedActionBattleEnemyAttackProfileMap;
   private animations?: ActionBattleAnimationOptions;
+  private lastAttackPattern: AttackPattern | null = null;
+  private skillCooldowns = new Map<any, number>();
   private comboCount: number = 0;
   private comboMax: number = 3;
   private chargingAttack: boolean = false;
@@ -841,9 +844,8 @@ export class BattleAi {
         [Components.hpBar(style, healthOptions.text ?? null)],
         {
           width: style.width,
-          // Keep the bar visually attached to tall/scaled Studio graphics.
-          // Positive top margin moves a top component toward the sprite.
-          marginTop: 2,
+          // Keep a small, scale-independent gap above the visible graphic.
+          marginBottom: 4,
           ...healthOptions.layout,
         }
       );
@@ -1353,7 +1355,7 @@ export class BattleAi {
     }
 
     // Attack if ready
-    if (distance <= this.attackRange && currentTime - this.lastAttackTime >= this.attackCooldown) {
+    if (distance <= this.attackRange && this.isAttackReady(currentTime)) {
       if (!this.chargingAttack) {
         const director = getActionBattleOptions().ai?.director;
         if (
@@ -1421,6 +1423,7 @@ export class BattleAi {
 
     // Select pattern based on weights
     const pattern = this.selectAttackPattern();
+    this.lastAttackPattern = pattern;
     this.debugLog('attack', `Selected pattern: ${pattern}`);
     this.performAttackPattern(pattern);
   }
@@ -1458,11 +1461,16 @@ export class BattleAi {
         break;
     }
 
+    const distance = this.target
+      ? this.getDistance(this.event, this.target)
+      : this.attackRange;
+    const candidates = this.selectAttackCandidates(distance);
+
     // Calculate selection
     let total = 0;
     const available: Array<{ pattern: AttackPattern; weight: number }> = [];
     
-    this.attackPatterns.forEach(p => {
+    candidates.forEach(p => {
       const weight = weights[p] || 10;
       total += weight;
       available.push({ pattern: p, weight });
@@ -1474,7 +1482,29 @@ export class BattleAi {
       if (random <= 0) return item.pattern;
     }
 
-    return this.attackPatterns[0] || AttackPattern.Melee;
+    return candidates[0] || AttackPattern.Melee;
+  }
+
+  /**
+   * Keep special attacks appropriate for the current distance and avoid
+   * immediately repeating one when another pattern is available.
+   */
+  private selectAttackCandidates(distance: number): AttackPattern[] {
+    const configured = Array.from(new Set(this.attackPatterns));
+    if (configured.length <= 1) return configured;
+
+    const closeRange = Math.min(this.attackRange * 0.8, 70);
+    const dashRange = this.attackRange * 0.45;
+    const distanceAware = configured.filter((pattern) => {
+      if (pattern === AttackPattern.Zone) return distance <= closeRange;
+      if (pattern === AttackPattern.DashAttack) return distance >= dashRange;
+      return true;
+    });
+    const suitable = distanceAware.length > 0 ? distanceAware : configured;
+    const varied = suitable.filter(
+      (pattern) => pattern !== this.lastAttackPattern
+    );
+    return varied.length > 0 ? varied : suitable;
   }
 
   /**
@@ -1527,8 +1557,13 @@ export class BattleAi {
 
     if (this.attackSkill) {
       const resolvedSkill = this.resolveUsable(this.attackSkill);
+      const currentTime = Date.now();
+      if (!this.isSkillReady(resolvedSkill, currentTime)) {
+        this.performBasicHitbox(profile, pattern);
+        return;
+      }
       try {
-        executeActionBattleUse({
+        const handled = executeActionBattleUse({
           attacker: this.event,
           target: this.target,
           usable: resolvedSkill,
@@ -1537,6 +1572,11 @@ export class BattleAi {
           profile,
           playVisual: false,
         });
+        if (handled) {
+          this.markSkillUsed(resolvedSkill, currentTime);
+        } else {
+          this.performBasicHitbox(profile, pattern);
+        }
       } catch (e) {
         // Skill failed (no SP, etc.) - fall back to basic attack
         this.performBasicHitbox(profile, pattern);
@@ -2562,6 +2602,40 @@ export class BattleAi {
     }
   }
 
+  private getSkillCooldownKey(skill: any): any {
+    const rawId =
+      typeof skill?.id === "function" ? skill.id.call(skill) : skill?.id;
+    return rawId ?? skill;
+  }
+
+  private getSkillCooldown(skill: any): number {
+    const cooldown = getActionBattleActionConfig(skill)?.cooldownMs;
+    return typeof cooldown === "number" && Number.isFinite(cooldown)
+      ? Math.max(0, cooldown)
+      : 0;
+  }
+
+  private isSkillReady(skill: any, currentTime: number): boolean {
+    return currentTime >= (
+      this.skillCooldowns.get(this.getSkillCooldownKey(skill)) ?? 0
+    );
+  }
+
+  private markSkillUsed(skill: any, currentTime: number): void {
+    const cooldown = this.getSkillCooldown(skill);
+    if (cooldown <= 0) return;
+    this.skillCooldowns.set(
+      this.getSkillCooldownKey(skill),
+      currentTime + cooldown
+    );
+  }
+
+  private isAttackReady(currentTime: number): boolean {
+    if (currentTime - this.lastAttackTime < this.attackCooldown) return false;
+    if (!this.attackSkill) return true;
+    return this.isSkillReady(this.resolveUsable(this.attackSkill), currentTime);
+  }
+
   private getCurrentActionRange(): number | undefined {
     const skillRange = this.attackSkill
       ? getActionBattleActionRange(this.resolveUsable(this.attackSkill))
@@ -2941,7 +3015,7 @@ export class BattleAi {
     if (!this.target || this.isTargetDefeated(this.target) || this.chargingAttack) return false;
     const distance = this.getDistance(this.event, this.target);
     if (distance > this.attackRange) return false;
-    if (currentTime - this.lastAttackTime < this.attackCooldown) return false;
+    if (!this.isAttackReady(currentTime)) return false;
 
     if (pattern) {
       this.performAttackPattern(pattern as AttackPattern);
@@ -2961,17 +3035,19 @@ export class BattleAi {
     const distance = this.getDistance(this.event, this.target);
     const resolvedSkill = this.resolveUsable(skill);
     const range = getActionBattleActionRange(resolvedSkill) ?? this.attackRange;
-    const cooldownRemaining = this.attackCooldown - (currentTime - this.lastAttackTime);
     if (distance > range) return false;
-    if (cooldownRemaining > 0) return false;
+    if (currentTime - this.lastAttackTime < this.attackCooldown) return false;
+    if (!this.isSkillReady(resolvedSkill, currentTime)) return false;
 
-    executeActionBattleUse({
+    const handled = executeActionBattleUse({
       attacker: this.event,
       target: this.target,
       usable: resolvedSkill,
       skill: resolvedSkill,
       profile: this.getAttackProfile(AttackPattern.Melee),
     });
+    if (!handled) return false;
+    this.markSkillUsed(resolvedSkill, currentTime);
     this.lastAttackTime = currentTime;
     return consumes;
   }

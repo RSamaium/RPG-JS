@@ -1080,6 +1080,12 @@
       const x = toFiniteNumber(optionValue('x', frame, textureOptions, graphicObject), 0);
       const y = toFiniteNumber(optionValue('y', frame, textureOptions, graphicObject), 0);
       const visible = resolveVisibleFrameBounds(textureOptions);
+      if (textureOptions?.trimTransparentBounds === true && !visible) {
+        // Scaled spritesheets can contain large transparent frame padding.
+        // Until the alpha scan is ready (or when pixels are unavailable), the
+        // hitbox is a safer anchor than the full frame for top components.
+        return;
+      }
       const visibleLeft = visible?.left ?? 0;
       const visibleTop = visible?.top ?? 0;
       const visibleRight = visible?.right ?? spriteWidth;
