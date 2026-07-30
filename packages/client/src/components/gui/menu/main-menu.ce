@@ -61,13 +61,19 @@
                     </div>
                 }
                 @if (view() === "items") {
-                    <ItemsMenu data={data} onInteraction={onInteraction} onBack={goBack} />
+                    <ItemsMenu
+                        data={data}
+                        assignmentOpen={hotbarAssignmentOpen}
+                        onAssignHotbar={openHotbarAssignment}
+                        onInteraction={onInteraction}
+                        onBack={goBack}
+                    />
                 }
                 @if (view() === "skills") {
                     <SkillsMenu
                         data={data}
-                        assignmentOpen={skillAssignmentOpen}
-                        onAssignHotbar={openSkillAssignment}
+                        assignmentOpen={hotbarAssignmentOpen}
+                        onAssignHotbar={openHotbarAssignment}
                         onInteraction={onInteraction}
                         onBack={goBack}
                     />
@@ -83,13 +89,13 @@
                 }
             </div>
         </div>
-        @if (skillAssignmentOpen()) {
+        @if (hotbarAssignmentOpen()) {
             <HotbarSlotPicker
                 hotbar={menuHotbar}
-                entry={skillAssignmentEntry}
-                onAssign={assignSkillHotbarSlot}
-                onClear={clearSkillHotbarSlot}
-                onCancel={closeSkillAssignment}
+                entry={hotbarAssignmentEntry}
+                onAssign={assignHotbarSlot}
+                onClear={clearHotbarSlot}
+                onCancel={closeHotbarAssignment}
             />
         }
         @if (saveOverlay) {
@@ -160,9 +166,13 @@
     const selectedMenu = signal(0);
     const view = signal("menu");
     const saveOverlay = signal(false);
-    const skillAssignmentEntry = signal(null);
-    const skillAssignmentOpen = computed(() => Boolean(skillAssignmentEntry()));
+    const hotbarAssignmentEntry = signal(null);
+    const hotbarAssignmentOpen = computed(() => Boolean(hotbarAssignmentEntry()));
     const menuHotbar = computed(() => resolveProp(data)?.hotbar || { slots: [] });
+    const canAssignHotbarType = (type) => {
+        const allowed = menuHotbar().allowedEntryTypes;
+        return !Array.isArray(allowed) || allowed.includes(type);
+    };
 
     const selectableIndexes = computed(() => {
         const entries = menuEntries();
@@ -211,8 +221,8 @@
     };
 
     const goBack = () => {
-        if (skillAssignmentOpen()) {
-            closeSkillAssignment();
+        if (hotbarAssignmentOpen()) {
+            closeHotbarAssignment();
             return;
         }
         delay(() => {
@@ -220,34 +230,34 @@
         });
     };
 
-    const openSkillAssignment = (entry) => {
-        if (!entry?.id) return;
-        skillAssignmentEntry.set({
+    const openHotbarAssignment = (entry) => {
+        if (!entry?.id || !canAssignHotbarType(entry.type)) return;
+        hotbarAssignmentEntry.set({
             type: entry.type || "skill",
             id: entry.id,
             name: entry.name || entry.id
         });
     };
 
-    const closeSkillAssignment = () => {
+    const closeHotbarAssignment = () => {
         // Keep the modal state active until the current CanvasEngine control
         // dispatch finishes so parent/child Escape handlers cannot both act.
-        queueMicrotask(() => skillAssignmentEntry.set(null));
+        queueMicrotask(() => hotbarAssignmentEntry.set(null));
     };
 
-    const assignSkillHotbarSlot = (slot) => {
-        const entry = skillAssignmentEntry();
+    const assignHotbarSlot = (slot) => {
+        const entry = hotbarAssignmentEntry();
         if (!entry) return;
         onInteraction?.("assignHotbarSlot", {
             slot,
             entry: { type: entry.type, id: entry.id }
         });
-        closeSkillAssignment();
+        closeHotbarAssignment();
     };
 
-    const clearSkillHotbarSlot = (slot) => {
+    const clearHotbarSlot = (slot) => {
         onInteraction?.("clearHotbarSlot", { slot });
-        closeSkillAssignment();
+        closeHotbarAssignment();
     };
 
     const closeSaveOverlay = () => {
@@ -322,7 +332,7 @@
             bind: keyboardControls.up,
             throttle: 150,
             keyDown() {
-                if (saveOverlay() || skillAssignmentOpen()) return;
+                if (saveOverlay() || hotbarAssignmentOpen()) return;
                 if (view() !== "menu") return;
                 moveMenu(-1);
             }
@@ -332,7 +342,7 @@
             bind: keyboardControls.down,
             throttle: 150,
             keyDown() {
-                if (saveOverlay() || skillAssignmentOpen()) return;
+                if (saveOverlay() || hotbarAssignmentOpen()) return;
                 if (view() !== "menu") return;
                 moveMenu(1);
             }
@@ -340,7 +350,7 @@
         action: {
             bind: getKeyboardControlBind(keyboardControls.action),
             keyDown() {
-                if (saveOverlay() || skillAssignmentOpen()) return;
+                if (saveOverlay() || hotbarAssignmentOpen()) return;
                 if (view() !== "menu") return;
                 openMenu();
             }
@@ -349,8 +359,8 @@
             bind: keyboardControls.escape,
             keyDown() {
                 if (saveOverlay()) return;
-                if (skillAssignmentOpen()) {
-                    closeSkillAssignment();
+                if (hotbarAssignmentOpen()) {
+                    closeHotbarAssignment();
                     return;
                 }
                 if (view() !== "menu") {

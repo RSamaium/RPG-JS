@@ -28,7 +28,7 @@ export interface ResolvedActionBattleUi {
   attackPreview: ActionBattleUiAttackPreviewOptions;
 }
 
-const normalizeToggle = <T extends { enabled?: boolean }>(
+const normalizeToggle = <T extends { enabled?: unknown }>(
   value: boolean | T | undefined,
   defaults: T
 ): T => {

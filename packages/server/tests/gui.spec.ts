@@ -17,6 +17,7 @@ import { createHotbarState } from "@rpgjs/common";
 
 const emptyHotbarPlayer = {
   getHotbar: () => createHotbarState(),
+  isHotbarEntryTypeAllowed: () => true,
 };
 
 describe("GUI", () => {
@@ -159,6 +160,7 @@ describe("GUI", () => {
               id: "sword",
               icon: "db-icon",
               type: "weapon",
+              hotbarAssignable: false,
               equipped: true,
             },
           ],
@@ -200,6 +202,13 @@ describe("GUI", () => {
 
     const gui = new MenuGui(player);
     const pending = gui.open();
+
+    expect(sent[0].value.data.items[0]).toMatchObject({
+      id: "potion",
+      type: "item",
+      usable: true,
+      hotbarAssignable: true,
+    });
 
     await gui.emit("useItem", { id: "potion", clientActionId: "use-1" });
     await gui.emit("equipItem", { id: "sword", equip: true, clientActionId: "equip-1" });

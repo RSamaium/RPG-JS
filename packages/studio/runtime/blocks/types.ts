@@ -167,6 +167,16 @@ export interface CallMainMenuParams {
   saveAutoSlotLabel?: string;
 }
 
+/** Parameters for displaying or hiding the persistent player hotbar. */
+export interface SetHotbarParams {
+  /** Whether the hotbar is displayed or hidden. */
+  action: 'show' | 'hide';
+  /** Entry types available when displaying the hotbar. */
+  content?: 'skills' | 'items' | 'mixed';
+  /** Exact visible slot count when displaying the hotbar. */
+  slotCount?: number;
+}
+
 /**
  * Parameters for the call_gameover block
  * 
@@ -1065,6 +1075,7 @@ export interface BlockParamsMap {
   change_screen_tone: ChangeScreenToneParams;
   show_animation: ShowAnimationParams;
   camera_follow: CameraFollowParams;
+  set_hotbar: SetHotbarParams;
   call_main_menu: CallMainMenuParams;
   call_gameover: CallGameoverParams;
   show_save: ShowSaveParams;

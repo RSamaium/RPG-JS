@@ -17,6 +17,140 @@ export const databaseSchema = {
     },
 } as any;
 
+const createItemWorkflowTriggersSchema = (
+    phases: readonly string[],
+) => ({
+    type: "array",
+    title: "item editor.workflow triggers",
+    description: "item editor.workflow triggers description",
+    format: {
+        name: "item-workflow-triggers",
+        layout: "action",
+        workflowKind: "item",
+    } as any,
+    items: {
+        type: "object",
+        properties: {
+            phase: {
+                type: "string",
+                enum: phases,
+            },
+            blockCollectionId: {
+                type: "string",
+            },
+        },
+        required: ["phase", "blockCollectionId"],
+    },
+});
+
+const paramsModifierSchema = {
+    type: "object",
+    title: "item editor.parameter modifiers",
+    description: "item editor.parameter modifiers description",
+    format: { layout: "specific" },
+    properties: Object.fromEntries(
+        ["maxhp", "maxsp", "str", "int", "dex", "agi"].map((parameter) => [
+            parameter,
+            {
+                type: "object",
+                title: `item editor.parameter ${parameter}`,
+                properties: {
+                    value: { type: "number", title: "item editor.modifier value", default: 0 },
+                    rate: { type: "number", title: "item editor.modifier rate", default: 1 },
+                },
+            },
+        ]),
+    ),
+};
+
+const itemUsageProperties = {
+    hpValue: {
+        type: "number",
+        title: "item editor.hp value",
+        description: "item editor.hp value description",
+        default: 0,
+        format: { layout: "usage" },
+    },
+    mpValue: {
+        type: "number",
+        title: "item editor.sp value",
+        description: "item editor.sp value description",
+        default: 0,
+        format: { layout: "usage" },
+    },
+    hitRate: {
+        type: "number",
+        title: "item editor.hit rate",
+        description: "item editor.hit rate description",
+        minimum: 0,
+        maximum: 100,
+        default: 100,
+        format: { layout: "usage" },
+    },
+    consumable: {
+        type: "boolean",
+        title: "item editor.consumable",
+        description: "item editor.consumable description",
+        default: true,
+        format: { layout: "usage" },
+    },
+    useAnimation: {
+        type: "string",
+        title: "item editor.use animation",
+        description: "item editor.use animation description",
+        format: {
+            name: "translated-media",
+            type: "animation",
+            buttonLabel: "item editor.select use animation",
+            useUpload: { accept: "image/*" },
+            layout: "presentation",
+        } as any,
+    },
+    useSound: {
+        type: "string",
+        title: "item editor.use sound",
+        description: "item editor.use sound description",
+        format: {
+            name: "translated-media",
+            type: "sound",
+            buttonLabel: "item editor.select use sound",
+            useUpload: { accept: "audio/*" },
+            layout: "presentation",
+        } as any,
+    },
+    useParticleEffect: {
+        type: "string",
+        title: "item editor.use particle effect",
+        description: "item editor.use particle effect description",
+        enum: [
+            "none",
+            "healPulse",
+            "magicBurst",
+            "pickup",
+            "levelUp",
+            "hitSpark",
+            "explosionSmall",
+        ],
+        default: "none",
+        format: { layout: "presentation" },
+    },
+    workflowTriggers: createItemWorkflowTriggersSchema([
+        "onAdd",
+        "onUse",
+        "onUseFailed",
+        "onRemove",
+    ]),
+};
+
+const equipmentProperties = {
+    paramsModifier: paramsModifierSchema,
+    workflowTriggers: createItemWorkflowTriggersSchema([
+        "onAdd",
+        "onRemove",
+        "onEquip",
+    ]),
+};
+
 export const itemSchema = {
     type: "object",
     properties: {
@@ -28,7 +162,7 @@ export const itemSchema = {
         description: {
             type: "string",
             title: "Description",
-            format: { name: "textarea" },
+            format: { name: "textarea", layout: "basic" },
         },
         icon: {
             type: "string",
@@ -40,7 +174,8 @@ export const itemSchema = {
                 buttonLabel: "Select Icon",
                 useUpload: {
                     accept: "image/*",
-                }
+                },
+                layout: "basic",
             } as any,
         },
         itemType: {
@@ -57,7 +192,7 @@ export const itemSchema = {
             description: "The price of the item. If the item is not for sale, set the price to 0.",
             default: 0,
             format: { layout: "properties" },
-        }
+        },
     },
     required: ["name", "itemType"],
     allOf: [
@@ -67,6 +202,7 @@ export const itemSchema = {
             },
             then: {
                 properties: {
+                    ...equipmentProperties,
                     atk: {
                         type: "number",
                         title: "Attack Power",
@@ -99,6 +235,7 @@ export const itemSchema = {
                 },
                 then: {
                     properties: {
+                        ...equipmentProperties,
                         pdef: {
                             type: "number",
                             title: "Defense",
@@ -117,7 +254,10 @@ export const itemSchema = {
                         
                     },
                     required: ["pdef"],
-                }
+                },
+                else: {
+                    properties: itemUsageProperties,
+                },
             },
         },
     ],

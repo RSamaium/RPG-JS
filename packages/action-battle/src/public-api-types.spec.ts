@@ -14,6 +14,7 @@ import {
   type ActionBattleAiVisual,
   type ActionBattleAudioOptions,
   type ActionBattleUsable,
+  type ActionBattleUiHotbarOptions,
 } from "./index";
 
 describe("action battle public API types", () => {
@@ -105,5 +106,15 @@ describe("action battle public API types", () => {
     } satisfies ActionBattleUsable;
 
     expectTypeOf(skill).toMatchTypeOf<ActionBattleUsable>();
+  });
+
+  test("hotbar resolvers receive an authoritative player", () => {
+    const hotbar = {
+      enabled: player => player.level > 1,
+      capacity: player => player.level,
+      allowedEntryTypes: player => player.level > 5 ? ["skill", "item"] : ["item"],
+    } satisfies ActionBattleUiHotbarOptions;
+
+    expectTypeOf(hotbar).toMatchTypeOf<ActionBattleUiHotbarOptions>();
   });
 });

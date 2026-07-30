@@ -238,6 +238,42 @@ describe("Studio common event runtime blocks", () => {
     );
   });
 
+  test("BlockExecutionService displays and hides the Hotbar with block settings", async () => {
+    const showHotbar = vi.fn(async () => undefined);
+    const hideHotbar = vi.fn();
+    const player = {
+      showHotbar,
+      hideHotbar,
+      getCurrentMap: () => null,
+    };
+    const service = new BlockExecutionService(player as any, null, null);
+
+    await service.executeBlockSequence([
+      {
+        id: "show-hotbar",
+        type: "set_hotbar",
+        data: {
+          action: "show",
+          content: "mixed",
+          slotCount: 6,
+        },
+      } as any,
+      {
+        id: "hide-hotbar",
+        type: "set_hotbar",
+        data: {
+          action: "hide",
+        },
+      } as any,
+    ]);
+
+    expect(showHotbar).toHaveBeenCalledWith({
+      capacity: 6,
+      allowedEntryTypes: ["skill", "item"],
+    });
+    expect(hideHotbar).toHaveBeenCalledOnce();
+  });
+
   test("BlockExecutionService uses map variables when no player is available", async () => {
     const variables = new Map<string, unknown>([["counter", 2]]);
     const map = {

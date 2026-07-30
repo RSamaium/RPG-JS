@@ -141,4 +141,33 @@ describe("action battle player visuals", () => {
     });
     expect(onUse).toHaveBeenCalledTimes(2);
   });
+
+  test("opens or hides the hotbar from the per-player resolver on map changes", () => {
+    const player = {
+      initializeHotbar: vi.fn(),
+      showHotbar: vi.fn(),
+      hideHotbar: vi.fn(),
+      enabled: true,
+    };
+    const server = createActionBattleServer({
+      ui: {
+        hotbar: {
+          enabled: current => (current as any).enabled,
+          autoOpen: true,
+          capacity: () => 6,
+          allowedEntryTypes: ["item"],
+        },
+      },
+    });
+
+    (server.player?.onJoinMap as any)(player);
+    expect(player.showHotbar).toHaveBeenCalledWith(expect.objectContaining({
+      capacity: expect.any(Function),
+      allowedEntryTypes: ["item"],
+    }));
+
+    player.enabled = false;
+    (server.player?.onJoinMap as any)(player);
+    expect(player.hideHotbar).toHaveBeenCalledTimes(1);
+  });
 });

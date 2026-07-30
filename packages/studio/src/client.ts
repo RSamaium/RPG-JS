@@ -1,5 +1,6 @@
 import {
   HudComponent,
+  PrebuiltComponentAnimations,
   RpgClient,
   RpgClientEngine,
   RpgGui,
@@ -36,6 +37,10 @@ interface GlobalConfig {
   };
   animations?: Record<string, any>;
   database?: any[];
+  menus?: {
+    titleScreen?: { enabled: boolean };
+    hud?: { enabled: boolean };
+  };
 }
 
 interface RpgClientEngineWithConfig extends RpgClientEngine {
@@ -244,7 +249,10 @@ export default (config: StudioGameModuleConfig) => {
             engine.addSpriteSheet(spritesheet);
           });
 
-        if (config.displayTitleScreen !== false) {
+        const displayTitleScreen = config.displayTitleScreen
+          ?? response.menus?.titleScreen?.enabled
+          ?? true;
+        if (displayTitleScreen) {
           gui.display("rpg-title-screen", {
             title: response.name,
             subtitle: response.subtitle,
@@ -303,12 +311,14 @@ export default (config: StudioGameModuleConfig) => {
             loadingText: engine.t("rpg.transition.loading"),
             onCovered: complete,
             onRevealed: () => {
-              gui.display("hud", {
-                faceset: {
-                  id: resolveMediaId(engine.globalConfig?.hero?.faceset),
-                  expression: "happy",
-                },
-              });
+              if (engine.globalConfig.menus?.hud?.enabled !== false) {
+                gui.display("hud", {
+                  faceset: {
+                    id: resolveMediaId(engine.globalConfig?.hero?.faceset),
+                    expression: "happy",
+                  },
+                });
+              }
             },
           });
         });
@@ -359,6 +369,10 @@ export default (config: StudioGameModuleConfig) => {
     },
 
     componentAnimations: [
+      {
+        id: "studio-item-use-fx",
+        component: PrebuiltComponentAnimations.Fx,
+      },
       {
         id: "up",
         component: UpComponent,

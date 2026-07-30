@@ -8,13 +8,7 @@ export const configClient = {
   providers: [
     provideStudioGame(studio),
     provideActionBattle({
-      ...createStudioActionBattlePreset(),
-      ui: {
-        hotbar: {
-          enabled: true,
-          autoOpen: true
-        }
-      }
+      ...createStudioActionBattlePreset()
     }),
     provideGlobalConfig({
       keyboardControls: {

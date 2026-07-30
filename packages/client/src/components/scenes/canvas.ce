@@ -32,7 +32,7 @@
         width={engine.width}
         height={engine.height}
       >
-        @if (gui.display) {
+        @if (gui.display()) {
           <gui.component data={gui.data} dependencies={gui.dependencies} guiOpenId={gui.openId} onFinish={(data, guiOpenId) => {
             onGuiFinish(gui, data, guiOpenId)
           }} onInteraction={(name, data) => {
@@ -57,9 +57,7 @@
   const sceneData = engine.sceneMap.data
   const lighting = engine.sceneMap.lighting
   const guiList = computed(() => {
-    return Object.values(guiService.gui()).filter(
-      (gui) => !gui.attachToSprite && gui.display()
-    )
+    return Object.values(guiService.gui()).filter((gui) => !gui.attachToSprite)
   })
   const worldWidth = computed(() => {
     const data = sceneData?.()

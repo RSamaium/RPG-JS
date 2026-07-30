@@ -119,6 +119,7 @@ export class MenuGui extends Gui {
                 consumable: isConsumable,
                 type,
                 usable,
+                hotbarAssignable: type === 'item' && usable,
                 equipped: equippedIds.has(id)
             }
         })

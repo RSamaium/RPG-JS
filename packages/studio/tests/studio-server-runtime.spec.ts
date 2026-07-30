@@ -95,6 +95,53 @@ describe("Studio server runtime", () => {
     expect(changeMap).toHaveBeenCalledWith("project-start-map");
   });
 
+  test("starts directly when the project disables the title screen", async () => {
+    configureGameDataProvider({
+      kind: "online",
+      getProject: vi.fn(async () => ({
+        _id: "no-title-project",
+        startMapId: "first-map",
+        menus: {
+          titleScreen: { enabled: false, guiId: null },
+        },
+      })),
+      getMap: vi.fn(),
+      getMedia: vi.fn(),
+      getDatabase: vi.fn(async () => []),
+    });
+    const initializeDefaultStats = vi.fn();
+    const changeMap = vi.fn(async () => true);
+    const hooks = (studioServer({
+      projectId: "no-title-project",
+    }) as any).player;
+
+    await hooks.onConnected({ initializeDefaultStats, changeMap });
+    await hooks.onStart({ initializeDefaultStats, changeMap });
+
+    expect(initializeDefaultStats).toHaveBeenCalledOnce();
+    expect(changeMap).toHaveBeenCalledOnce();
+    expect(changeMap).toHaveBeenCalledWith("first-map");
+  });
+
+  test("does not open the main menu when its project binding is disabled", () => {
+    const callMainMenu = vi.fn();
+    const hooks = (studioServer() as any).player;
+    const player = {
+      callMainMenu,
+      getCurrentMap: () => ({
+        globalConfig: {
+          menus: {
+            mainMenu: { enabled: false, guiId: null },
+          },
+        },
+      }),
+    };
+
+    hooks.onInput(player, { action: "escape" });
+
+    expect(callMainMenu).not.toHaveBeenCalled();
+  });
+
   test("uses an injected provider to prepare trusted map updates", async () => {
     const getProject = vi.fn(async () => ({
       _id: "trusted-project",
@@ -206,7 +253,7 @@ describe("Studio server runtime", () => {
 
     await expect(loadDatabase({
       data: () => ({ database: published }),
-    } as Pick<RpgMap, "data">)).resolves.toEqual(expected);
+    } as Pick<RpgMap, "data">)).resolves.toMatchObject(expected);
     expect(getDatabase).not.toHaveBeenCalled();
   });
 
@@ -256,6 +303,50 @@ describe("Studio server runtime", () => {
     expect(player.getItem("sword")?.quantity()).toBe(1);
     expect(player.equipments().some((item) => item.id() === "sword")).toBe(true);
     expect(getDatabase).not.toHaveBeenCalled();
+  });
+
+  test("ignores incompatible starting equipment without adding it to inventory", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const database = {
+      potion: {
+        id: "potion",
+        _type: "item",
+        name: "Potion",
+      },
+      helmet: {
+        id: "helmet",
+        _type: "armor",
+        name: "Helmet",
+      },
+    };
+    const map = {
+      globalConfig: {
+        startMapId: "published-map",
+        hero: {
+          startingEquipment: {
+            weaponId: "potion",
+            armorId: "helmet",
+          },
+        },
+      },
+      database: () => database,
+      addInDatabase: vi.fn(),
+      startPosition: { x: 0, y: 0 },
+      scale: 1,
+    } as unknown as RpgMap;
+    const player = new RpgPlayer();
+    player.initializeDefaultStats();
+    player.setMap(map);
+
+    await (studioServer() as any).player.onJoinMap(player, map);
+
+    expect(player.getItem("potion")).toBeUndefined();
+    expect(player.getItem("helmet")?.quantity()).toBe(1);
+    expect(player.equipments().some((item) => item.id() === "helmet")).toBe(true);
+    expect(warn).toHaveBeenCalledWith(
+      "[StudioGame] starting equipment weaponId=potion must reference a weapon, received item",
+    );
+    warn.mockRestore();
   });
 
   test("resolves the runtime event hitbox from the game map payload", () => {
@@ -375,6 +466,53 @@ describe("Studio server runtime", () => {
       "project-a",
       "project-b",
     ]);
+  });
+
+  test("refreshes online item records when a player joins an existing map", async () => {
+    const staleOnUse = vi.fn();
+    const database: Record<string, any> = {
+      potion: {
+        id: "potion",
+        _type: "item",
+        useAnimation: "old-animation",
+        onUse: staleOnUse,
+      },
+    };
+    const getDatabase = vi.fn(async () => [{
+      _id: "potion",
+      itemType: "item",
+      name: "Potion",
+      useAnimation: null,
+      useParticleEffect: "none",
+    }]);
+    configureGameDataProvider({
+      kind: "online",
+      getProject: vi.fn(),
+      getMap: vi.fn(),
+      getMedia: vi.fn(),
+      getDatabase,
+    });
+    const map = {
+      globalConfig: {
+        _id: "live-project",
+        startMapId: "live-map",
+      },
+      database: () => database,
+      addInDatabase: (id: string, value: any) => {
+        database[id] = value;
+      },
+      startPosition: { x: 0, y: 0 },
+      scale: 1,
+    } as unknown as RpgMap;
+    const player = new RpgPlayer();
+    player.initializeDefaultStats();
+    player.setMap(map);
+
+    await (studioServer() as any).player.onJoinMap(player, map);
+
+    expect(getDatabase).toHaveBeenCalledWith("live-project");
+    expect(database.potion).not.toHaveProperty("useAnimation");
+    expect(database.potion).not.toHaveProperty("onUse");
   });
 
   test("keeps the legacy global project fallback for maps without config", async () => {

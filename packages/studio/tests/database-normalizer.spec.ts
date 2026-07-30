@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import {
   normalizeStudioDatabase,
   normalizeStudioDatabaseRecord,
@@ -149,5 +149,101 @@ describe("Studio database normalizer", () => {
     expect(database.potion).not.toHaveProperty("itemType");
     expect(database.potion).not.toHaveProperty("resourceType");
     expect(source).toHaveProperty("_id", "potion");
+  });
+
+  test("maps Studio item settings and lifecycle workflows to RPGJS item data", () => {
+    const normalized = normalizeStudioDatabaseRecord({
+      _id: "elixir",
+      type: "item",
+      itemType: "item",
+      name: "Elixir",
+      hpValue: 250,
+      mpValue: 40,
+      hitRate: 85,
+      consumable: true,
+      workflowTriggers: [{
+        phase: "onUse",
+        blockCollectionId: "elixir-use",
+        blocks: [],
+      }],
+    });
+
+    expect(normalized?.data).toMatchObject({
+      id: "elixir",
+      _type: "item",
+      hpValue: 250,
+      mpValue: 40,
+      hitRate: 0.85,
+      consumable: true,
+      onUse: expect.any(Function),
+    });
+  });
+
+  test("plays configured item animations and particle effects on successful use", async () => {
+    const normalized = normalizeStudioDatabaseRecord({
+      _id: "elixir",
+      type: "item",
+      itemType: "item",
+      useAnimation: { _id: "elixir-animation" },
+      useSound: { _id: "elixir-sound" },
+      useParticleEffect: "healPulse",
+    });
+    const showAnimation = vi.fn();
+    const showComponentAnimation = vi.fn();
+    const playSound = vi.fn();
+    const player = {
+      x: () => 40,
+      y: () => 72,
+      getCurrentMap: () => ({ showAnimation }),
+      showComponentAnimation,
+      playSound,
+    };
+
+    await normalized?.data.onUse(player);
+
+    expect(normalized?.data).toMatchObject({
+      useAnimation: "elixir-animation",
+      useSound: "elixir-sound",
+      useParticleEffect: "healPulse",
+    });
+    expect(showAnimation).toHaveBeenCalledWith(
+      { x: 40, y: 72 },
+      "elixir-animation",
+    );
+    expect(showComponentAnimation).toHaveBeenCalledWith(
+      "studio-item-use-fx",
+      expect.objectContaining({ name: "healPulse" }),
+    );
+    expect(playSound).toHaveBeenCalledWith("elixir-sound");
+  });
+
+  test("omits consumable use fields from equipment and attaches onEquip", () => {
+    const normalized = normalizeStudioDatabaseRecord({
+      _id: "iron-sword",
+      type: "item",
+      itemType: "weapon",
+      name: "Iron Sword",
+      workflowTriggers: [{
+        phase: "onEquip",
+        blockCollectionId: "iron-sword-equip",
+        blocks: [],
+      }, {
+        phase: "onUse",
+        blockCollectionId: "invalid-weapon-use",
+        blocks: [],
+      }],
+    });
+
+    expect(normalized?.data).toMatchObject({
+      id: "iron-sword",
+      _type: "weapon",
+      onEquip: expect.any(Function),
+    });
+    expect(normalized?.data).not.toHaveProperty("consumable");
+    expect(normalized?.data).not.toHaveProperty("hitRate");
+    expect(normalized?.data).not.toHaveProperty("useAnimation");
+    expect(normalized?.data).not.toHaveProperty("useSound");
+    expect(normalized?.data).not.toHaveProperty("useParticleEffect");
+    expect(normalized?.data.onUse).toBeUndefined();
   });
 });

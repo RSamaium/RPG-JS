@@ -6,7 +6,7 @@ description: "Assign, theme, show, and hide persistent server-authoritative skil
 # Skill and item hotbar
 
 RPGJS provides a persistent, server-authoritative ten-slot hotbar for learned
-skills, usable consumable items, and plugin-provided entry types. Slot contents
+skills, usable regular items, and plugin-provided entry types. Slot contents
 are synchronized to clients and included in player snapshots. The server
 remains responsible for validating ownership, consuming SP or items, and
 applying gameplay effects in standalone and MMORPG modes.
@@ -83,9 +83,14 @@ entry exposes **Assign to hotbar**, followed by the slot picker:
 player.callMainMenu()
 ```
 
-Items that are equipment, non-consumable, absent, or otherwise unusable cannot
-be assigned through the native item entry type. Register a custom entry type
+The Items screen keeps separate Item, Weapon, and Armor tabs for browsing.
+Weapons and armors are managed from the Equip screen and never expose Use or
+Assign to hotbar. Regular items that are non-consumable, absent, or otherwise
+unusable cannot be assigned through the native item entry type. Register a
+custom entry type
 when a game needs tools, emotes, quests, or another authoritative action.
+The assignment action is also omitted from Items or Skills when that entry type
+is excluded by `allowedEntryTypes`.
 
 ## Configure capacity
 
@@ -102,6 +107,44 @@ player.configureHotbar({
 Reducing capacity preserves assignments in locked slots. Call
 `player.refreshHotbar()` after game-specific state changes that can affect a
 custom capacity resolver.
+
+Restrict a hotbar to items, skills, or another registered entry type with
+`allowedEntryTypes`:
+
+```ts
+player.configureHotbar({
+  capacity: 6,
+  allowedEntryTypes: ["skill", "item"],
+})
+```
+
+The option also accepts a per-player resolver. Entries excluded by the current
+configuration stay in the persistent ten-slot state, but are rendered as empty
+and cannot be assigned or used. Allowing their type again restores them without
+changing the player's saved layout.
+
+When the last copy of a consumable item is used from the native hotbar, its
+assignment is cleared automatically. Remaining stacks keep their assignment
+and update the quantity badge.
+
+Action Battle forwards the same configuration and can resolve visibility per
+player:
+
+```ts
+provideActionBattle({
+  ui: {
+    hotbar: {
+      enabled: player => player.level >= 2,
+      autoOpen: true,
+      capacity: player => Math.min(10, player.level + 2),
+      allowedEntryTypes: ["skill"],
+    },
+  },
+})
+```
+
+With `autoOpen`, the module re-evaluates `enabled` on map changes and closes an
+open hotbar when the resolver returns `false`.
 
 ## Theme the native component
 

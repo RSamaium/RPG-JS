@@ -3,7 +3,108 @@ import type {
   ActionBattleOptions,
   ActionBattleVisualContext,
 } from "@rpgjs/action-battle";
+import type { RpgPlayer } from "@rpgjs/server";
 import { createStudioActionBattleAnimations } from "./action-battle-animations";
+
+export type StudioHotbarContent = "skills" | "items" | "mixed";
+
+/** Runtime hotbar settings resolved from a Studio GUI binding. */
+export interface StudioHotbarSettings {
+  /** Whether the hotbar is shown automatically. */
+  enabled: boolean;
+  /** Database record types available in the hotbar. */
+  content: StudioHotbarContent;
+  /** Exact number of visible slots, from 1 to 10. */
+  slotCount: number;
+}
+
+/** Project- or map-level binding between the hotbar role and a Studio GUI. */
+export interface StudioHotbarBinding {
+  /** Whether this binding is active. */
+  enabled: boolean;
+  /** Future project GUI definition. `null` selects the native RPGJS GUI. */
+  guiId?: string | null;
+  /** Settings understood by the selected hotbar GUI. */
+  settings: Omit<StudioHotbarSettings, "enabled">;
+}
+
+/** Project-level binding between a built-in GUI role and its renderer. */
+export interface StudioGuiBinding {
+  /** Whether the GUI is available or displayed by its native lifecycle. */
+  enabled: boolean;
+  /** Future project GUI definition. `null` selects the native RPGJS GUI. */
+  guiId?: string | null;
+}
+
+/** GUI bindings persisted by RPGJS Studio. */
+export interface StudioMenusSettings {
+  /** Title Screen binding. Disabled projects enter their starting map directly. */
+  titleScreen?: StudioGuiBinding;
+  /** Hotbar binding and its role-specific settings. */
+  hotbar?: StudioHotbarBinding;
+  /** Persistent player status HUD binding. */
+  hud?: StudioGuiBinding;
+  /** Main Menu binding opened by the logical Back action. */
+  mainMenu?: StudioGuiBinding;
+}
+
+const DEFAULT_STUDIO_HOTBAR: StudioHotbarSettings = {
+  enabled: false,
+  content: "skills",
+  slotCount: 10,
+};
+
+/**
+ * Normalize project hotbar data received from RPGJS Studio.
+ *
+ * @param value - Untrusted Studio hotbar configuration.
+ * @returns A complete runtime configuration with backward-compatible defaults.
+ */
+export const normalizeStudioHotbarSettings = (
+  value: unknown,
+): StudioHotbarSettings => {
+  if (!value || typeof value !== "object") return { ...DEFAULT_STUDIO_HOTBAR };
+  const input = value as Partial<StudioHotbarBinding>
+    & Partial<StudioHotbarSettings>;
+  const settings = input.settings && typeof input.settings === "object"
+    ? input.settings
+    : input;
+  const content = settings.content === "items" || settings.content === "mixed"
+    ? settings.content
+    : "skills";
+  const requestedSlots = Math.floor(Number(settings.slotCount));
+  return {
+    enabled: input.enabled === true,
+    content,
+    slotCount: Number.isFinite(requestedSlots)
+      ? Math.max(1, Math.min(10, requestedSlots))
+      : DEFAULT_STUDIO_HOTBAR.slotCount,
+  };
+};
+
+/**
+ * Resolve the effective hotbar settings for a player.
+ *
+ * @param player - Player whose current Studio map provides the settings.
+ * @returns The normalized effective hotbar configuration.
+ */
+export const resolveStudioHotbarSettings = (
+  player: RpgPlayer,
+): StudioHotbarSettings => {
+  const map = player.getCurrentMap?.() as {
+    globalConfig?: { menus?: StudioMenusSettings };
+  } | undefined;
+  return normalizeStudioHotbarSettings(
+    map?.globalConfig?.menus?.hotbar,
+  );
+};
+
+const studioHotbarEntryTypes = (player: RpgPlayer): readonly string[] => {
+  const content = resolveStudioHotbarSettings(player).content;
+  if (content === "items") return ["item"];
+  if (content === "mixed") return ["skill", "item"];
+  return ["skill"];
+};
 
 export interface StudioCombatAudioConfig {
   battleMusic?: string;
@@ -59,10 +160,27 @@ export const createStudioActionBattleAudio = (
   },
 });
 
-/** Studio-ready Action Battle presentation options for client and server. */
+/**
+ * Create the Studio-ready Action Battle presentation preset.
+ *
+ * The server resolves hotbar visibility, content, and capacity from the
+ * player's current Studio project/map configuration. The client safely ignores
+ * those server-only resolvers while sharing animation and audio presentation.
+ *
+ * @param config - Optional fallback combat audio settings.
+ * @returns Action Battle animation, audio, and dynamic hotbar options.
+ */
 export const createStudioActionBattlePreset = (
   config: StudioCombatAudioConfig = {},
-): Pick<ActionBattleOptions, "animations" | "audio"> => ({
+): Pick<ActionBattleOptions, "animations" | "audio" | "ui"> => ({
   animations: createStudioActionBattleAnimations(),
   audio: createStudioActionBattleAudio(config),
+  ui: {
+    hotbar: {
+      enabled: (player) => resolveStudioHotbarSettings(player).enabled,
+      autoOpen: true,
+      capacity: (player) => resolveStudioHotbarSettings(player).slotCount,
+      allowedEntryTypes: studioHotbarEntryTypes,
+    },
+  },
 });
