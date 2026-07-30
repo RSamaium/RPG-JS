@@ -392,18 +392,6 @@ export const skillSchema = {
                 allowClear: true,
             } as any,
         },
-        casterAnimation: {
-            type: "string",
-            title: "skill editor.caster animation",
-            description: "skill editor.caster animation description",
-            format: {
-                name: "translated-media",
-                type: "spritesheet",
-                buttonLabel: "skill editor.select caster animation",
-                useUpload: { accept: "image/*" },
-                layout: "presentation",
-            } as any,
-        },
         impactSound: {
             type: "string",
             title: "skill editor.impact sound",

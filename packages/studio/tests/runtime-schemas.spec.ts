@@ -40,6 +40,9 @@ describe("Studio runtime schemas", () => {
       type: "number",
       title: "SP Cost",
     });
+    expect((skillSchema as any).properties).not.toHaveProperty(
+      "casterAnimation",
+    );
   });
 
   test("map schema exposes the map entry workflow collection id", () => {
