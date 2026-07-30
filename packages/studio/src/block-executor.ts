@@ -17,6 +17,27 @@ import { EventMode, Move, RpgEvent, RpgMap, RpgPlayer } from '@rpgjs/server';
 // ============================================================================
 
 /**
+ * Options used to initialize a Studio block execution.
+ *
+ * `initialVariables` are scoped to the current executor. They are available to
+ * custom conditions through the `variables` object and are never persisted on
+ * the player or map.
+ *
+ * @example
+ * ```ts
+ * const executor = new BlockExecutionService(player, null, map, {
+ *   initialVariables: { itemId: 'iron-sword', equip: true }
+ * })
+ * ```
+ */
+export interface BlockExecutionOptions {
+  /** Selects the persistent variable owner used by variable blocks. */
+  variableScope?: 'player' | 'map';
+  /** Read-only inputs seeded into the local workflow condition context. */
+  initialVariables?: Readonly<Record<string, unknown>>;
+}
+
+/**
  * Block execution service for the RPGJS game engine
  * 
  * This service handles the execution of visual programming blocks within the game.
@@ -53,13 +74,18 @@ export class BlockExecutionService {
    * 
    * @param player - The RpgPlayer instance for this execution context
    * @param event - The RpgEvent instance (the current event being executed)
+   * @param map - Optional authoritative map when it cannot be resolved from the player or event
+   * @param options - Variable ownership and local workflow inputs
    */
   constructor(
     player: RpgPlayer | null,
     event: RpgEvent | null,
     map: RpgMap | null = null,
-    options?: { variableScope?: 'player' | 'map' },
+    options?: BlockExecutionOptions,
   ) {
+    for (const [key, value] of Object.entries(options?.initialVariables ?? {})) {
+      this.variables.set(key, value);
+    }
     this.executors = createExecutorRegistry();
     this.context = this.createGameContext(player, event, map, options);
   }
@@ -154,7 +180,7 @@ export class BlockExecutionService {
     player: RpgPlayer | null,
     event: RpgEvent | null,
     map: RpgMap | null,
-    options?: { variableScope?: 'player' | 'map' },
+    options?: BlockExecutionOptions,
   ): GameExecutionContext {
     const resolveCurrentMap = () => {
       return map ?? event?.getCurrentMap?.() ?? player?.getCurrentMap?.() ?? (player as any)?.map ?? null;

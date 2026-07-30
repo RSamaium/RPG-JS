@@ -856,6 +856,7 @@ const actionBattleHotbarOptions = (
   );
   return {
     capacity: hotbar.capacity,
+    allowedEntryTypes: hotbar.allowedEntryTypes,
     lockedSlotHint: hotbar.lockedSlotHint,
     transformEntry(player, entry, presentation) {
       if (entry.type !== "skill") return presentation;
@@ -915,6 +916,21 @@ export const updateActionBattleHotbar = (
 ) => {
   normalizeActionBattleOptions(rawOptions);
   player.refreshHotbar?.();
+};
+
+const syncActionBattleHotbar = (
+  player: RpgPlayer,
+  options: ActionBattleOptions,
+) => {
+  const hotbar = options.ui?.hotbar;
+  if (!hotbar || typeof hotbar !== "object" || !hotbar.autoOpen) return;
+  const enabled = typeof hotbar.enabled === "function"
+    ? hotbar.enabled(player)
+    : hotbar.enabled;
+  if (enabled) {
+    return openActionBattleHotbar(player, options);
+  }
+  player.hideHotbar?.();
 };
 
 const getTileSize = (map: any) => ({
@@ -1372,17 +1388,11 @@ export const createActionBattleServer = (
       },
       onConnected(player: RpgPlayer) {
         player.initializeHotbar?.();
-        const hotbar = options.ui?.hotbar as any;
-        if (hotbar?.enabled && hotbar?.autoOpen) {
-          openActionBattleHotbar(player, options);
-        }
+        syncActionBattleHotbar(player, options);
       },
       onJoinMap(player: RpgPlayer) {
         player.initializeHotbar?.();
-        const hotbar = options.ui?.hotbar as any;
-        if (hotbar?.enabled && hotbar?.autoOpen) {
-          openActionBattleHotbar(player, options);
-        }
+        syncActionBattleHotbar(player, options);
       },
       onDisconnected(player: RpgPlayer) {
         releaseActionBattleControls(player);

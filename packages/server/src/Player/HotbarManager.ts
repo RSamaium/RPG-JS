@@ -49,10 +49,26 @@ export type HotbarLockedSlotHintResolver =
   | string
   | ((player: RpgPlayer, slot: number) => string | undefined);
 
-/** Per-player capacity and locked-slot presentation options. */
+/**
+ * Static allowed entry types or a resolver evaluated for the current player.
+ *
+ * Entries whose type is not allowed remain persisted, but cannot be displayed,
+ * assigned, or used until the configuration allows them again.
+ */
+export type HotbarAllowedEntryTypesResolver =
+  | readonly string[]
+  | ((player: RpgPlayer) => readonly string[]);
+
+/** Per-player capacity, entry filtering, and locked-slot presentation options. */
 export interface HotbarConfiguration {
   /** Number of currently accessible slots or a dynamic player resolver. */
   capacity?: HotbarCapacityResolver;
+  /**
+   * Entry types available in this hotbar.
+   *
+   * Omit this option to allow every registered entry type.
+   */
+  allowedEntryTypes?: HotbarAllowedEntryTypesResolver;
   /** Player-visible unlock hint or a per-slot resolver. */
   lockedSlotHint?: HotbarLockedSlotHintResolver;
 }
@@ -166,8 +182,14 @@ const nativeItemDefinition: HotbarEntryTypeDefinition = {
       activation: { mode: "instant" },
     };
   },
-  use(player, id) {
-    return player.useItem(id);
+  use(player, id, context) {
+    try {
+      return player.useItem(id);
+    } finally {
+      if (!player.getItem(id)) {
+        player.clearHotbarSlot(context.slot);
+      }
+    }
   },
 };
 
@@ -257,6 +279,14 @@ export function resolveHotbarEntryPresentation(
     definition.validate(player, entry.id);
     return definition.resolve(player, entry.id);
   } catch {
+    try {
+      return {
+        ...definition.resolve(player, entry.id),
+        usable: false,
+      };
+    } catch {
+      // A definition may require the entry to remain available in resolve().
+    }
     return {
       id: entry.id,
       type: entry.type,
@@ -350,6 +380,9 @@ export function WithHotbarManager<TBase extends PlayerCtor>(
       if (!entry?.id || typeof entry.type !== "string" || !entry.type) {
         throw new TypeError("Hotbar entry must reference a registered type");
       }
+      if (!this.isHotbarEntryTypeAllowed(entry.type)) {
+        throw new Error(`Hotbar entry type "${entry.type}" is not allowed`);
+      }
       const definition = getHotbarEntryType(entry.type);
       if (!definition) {
         throw new Error(`Hotbar entry type "${entry.type}" is not registered`);
@@ -365,7 +398,7 @@ export function WithHotbarManager<TBase extends PlayerCtor>(
       const overflow: HotbarEntry[] = [];
       const skills = readValue<any[]>((this as any).skills, []);
 
-      for (const skill of skills) {
+      for (const skill of this.isHotbarEntryTypeAllowed("skill") ? skills : []) {
         const id = String(readValue(skill?.id, ""));
         if (!id) continue;
         const data = (this as any).databaseById?.(id) ?? skill?._skillData ?? skill;
@@ -384,7 +417,7 @@ export function WithHotbarManager<TBase extends PlayerCtor>(
       }
 
       const items = readValue<any[]>((this as any).items, []);
-      for (const item of items) {
+      for (const item of this.isHotbarEntryTypeAllowed("item") ? items : []) {
         const id = String(readValue(item?.id, ""));
         if (!id) continue;
         try {
@@ -404,7 +437,8 @@ export function WithHotbarManager<TBase extends PlayerCtor>(
     }
 
     /**
-     * Configure dynamic capacity and locked-slot messaging for this player.
+     * Configure dynamic capacity, allowed entry types, and locked-slot
+     * messaging for this player.
      *
      * The resolver is evaluated on refresh and gameplay changes. Reducing
      * capacity keeps assignments in locked slots so they return if capacity
@@ -420,6 +454,7 @@ export function WithHotbarManager<TBase extends PlayerCtor>(
      * ```ts
      * player.configureHotbar({
      *   capacity: current => Math.min(10, current.level + 2),
+     *   allowedEntryTypes: ["skill", "item"],
      *   lockedSlotHint: (_current, slot) => `Unlocks at level ${slot + 1}`,
      * });
      * ```
@@ -455,6 +490,27 @@ export function WithHotbarManager<TBase extends PlayerCtor>(
      */
     getHotbarCapacity(): number {
       return this.normalizeHotbar().capacity;
+    }
+
+    /**
+     * Return whether an entry type is enabled by the current configuration.
+     *
+     * A missing `allowedEntryTypes` option allows every registered or
+     * plugin-provided type.
+     *
+     * @title Is Hotbar Entry Type Allowed
+     * @method player.isHotbarEntryTypeAllowed(type)
+     * @param type - Serialized entry type to check.
+     * @returns `true` when entries of this type may be displayed and used.
+     * @memberof RpgPlayer
+     */
+    isHotbarEntryTypeAllowed(type: string): boolean {
+      const configured = playerConfigurations.get(this)?.allowedEntryTypes;
+      if (configured === undefined) return true;
+      const allowed = typeof configured === "function"
+        ? configured(this as unknown as RpgPlayer)
+        : configured;
+      return Array.isArray(allowed) && allowed.includes(type);
     }
 
     /**
@@ -657,6 +713,7 @@ export interface IHotbarManager {
   configureHotbar(options?: HotbarConfiguration): HotbarState;
   getHotbar(): HotbarState;
   getHotbarCapacity(): number;
+  isHotbarEntryTypeAllowed(type: string): boolean;
   getHotbarLockedSlotHint(slot: number): string | undefined;
   refreshHotbar(): HotbarState;
   initializeHotbar(entries?: HotbarEntry[]): HotbarState;

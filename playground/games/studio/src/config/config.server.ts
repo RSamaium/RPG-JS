@@ -20,12 +20,6 @@ export const configServer = {
       attack: {
         lockMovement: true,
         lockDurationMs: 350
-      },
-      ui: {
-        hotbar: {
-          enabled: true,
-          autoOpen: true
-        }
       }
     })
   ],

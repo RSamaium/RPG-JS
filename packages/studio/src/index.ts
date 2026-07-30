@@ -15,6 +15,26 @@ export {
   createStudioActionBattlePreset,
 } from "./action-battle-audio";
 export type { StudioCombatAudioConfig } from "./action-battle-audio";
+export type {
+  StudioGuiBinding,
+  StudioHotbarContent,
+  StudioHotbarBinding,
+  StudioHotbarSettings,
+  StudioMenusSettings,
+} from "./action-battle-audio";
+export {
+  normalizeStudioHotbarSettings,
+  resolveStudioHotbarSettings,
+} from "./action-battle-audio";
+export {
+  createStudioItemWorkflowHooks,
+  normalizeStudioItemWorkflowTriggers,
+} from "./item-workflow";
+export type {
+  StudioItemWorkflowHooks,
+  StudioItemWorkflowPhase,
+  StudioItemWorkflowTrigger,
+} from "./item-workflow";
 
 export interface StudioGameModuleConfig {
   projectId?: string | null;

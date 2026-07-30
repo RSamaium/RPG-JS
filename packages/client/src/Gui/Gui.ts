@@ -114,6 +114,54 @@ const updateItemQuantity = (items: any[], id: string) => {
   return nextItems;
 };
 
+const updateHotbarItemQuantity = (
+  hotbar: any,
+  id: string,
+  quantity: number,
+) => {
+  if (!hotbar || typeof hotbar !== "object") return hotbar;
+  const stateSlots = Array.from(
+    { length: 10 },
+    (_, index) => hotbar.hotbar?.slots?.[index] ?? null,
+  );
+  const displaySlots = Array.from(
+    { length: 10 },
+    (_, index) => hotbar.slots?.[index] ?? null,
+  );
+  let changed = false;
+  for (let index = 0; index < stateSlots.length; index++) {
+    const entry = stateSlots[index];
+    if (entry?.type !== "item" || entry.id !== id) continue;
+    changed = true;
+    if (quantity <= 0) {
+      stateSlots[index] = null;
+      displaySlots[index] = {
+        index,
+        type: "empty",
+        entry: null,
+        usable: false,
+      };
+    } else if (displaySlots[index]) {
+      displaySlots[index] = { ...displaySlots[index], quantity };
+    }
+  }
+  if (!changed) return hotbar;
+  const activeSlot = quantity <= 0
+    && stateSlots[hotbar.activeSlot] === null
+      ? null
+      : hotbar.activeSlot;
+  return {
+    ...hotbar,
+    activeSlot,
+    hotbar: {
+      ...(hotbar.hotbar ?? {}),
+      activeSlot,
+      slots: stateSlots,
+    },
+    slots: displaySlots,
+  };
+};
+
 const updateEquippedFlag = (items: any[], id: string, equip: boolean) => {
   const index = items.findIndex((item) => item?.id === id);
   if (index === -1) return items;
@@ -208,7 +256,17 @@ const mainMenuOptimisticReducer: OptimisticReducer = (data, action) => {
     if (!id) return data;
     const nextItems = updateItemQuantity(data.items, id);
     if (nextItems === data.items) return data;
-    return { ...data, items: nextItems };
+    const nextItem = nextItems.find((item: any) => item?.id === id);
+    const nextHotbar = updateHotbarItemQuantity(
+      data.hotbar,
+      id,
+      Number(nextItem?.quantity ?? 0),
+    );
+    return {
+      ...data,
+      items: nextItems,
+      ...(nextHotbar !== data.hotbar ? { hotbar: nextHotbar } : {}),
+    };
   }
   if (action.name === "equipItem") {
     const id = action.data?.id;

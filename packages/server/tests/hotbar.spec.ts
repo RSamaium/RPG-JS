@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { createModule, defineModule } from "@rpgjs/common";
 import { testing, type TestingFixture } from "@rpgjs/testing";
 import { registerHotbarEntryType, RpgPlayer } from "../src";
+import { buildPlayerHotbarData } from "../src/Gui/HotbarGui";
 
 const onHotbarChange = vi.fn();
 
@@ -30,6 +31,25 @@ const serverModule = defineModule({
       consumable: true,
       hitRate: 1,
     },
+    keepsake: {
+      id: "keepsake",
+      _type: "item",
+      name: "Keepsake",
+      consumable: false,
+      hitRate: 1,
+    },
+    sword: {
+      id: "sword",
+      _type: "weapon",
+      name: "Sword",
+      hitRate: 1,
+    },
+    shield: {
+      id: "shield",
+      _type: "armor",
+      name: "Shield",
+      hitRate: 1,
+    },
   },
   player: {
     async onConnected(player) {
@@ -54,6 +74,9 @@ beforeEach(async () => {
   player.learnSkill("fire");
   player.learnSkill("ice");
   player.addItem("potion");
+  player.addItem("keepsake");
+  player.addItem("sword");
+  player.addItem("shield");
 });
 
 afterEach(async () => {
@@ -93,6 +116,55 @@ describe("player hotbar", () => {
     ).toThrow('Skill "unknown" is not learned');
     expect(() => player.assignHotbarSlot(10, { type: "skill", id: "fire" }))
       .toThrow(RangeError);
+  });
+
+  test("rejects equipment and non-consumable regular items", () => {
+    expect(() =>
+      player.assignHotbarSlot(0, { type: "item", id: "sword" }),
+    ).toThrow('Item "sword" is not usable from the hotbar');
+    expect(() =>
+      player.assignHotbarSlot(0, { type: "item", id: "shield" }),
+    ).toThrow('Item "shield" is not usable from the hotbar');
+    expect(() =>
+      player.assignHotbarSlot(0, { type: "item", id: "keepsake" }),
+    ).toThrow('Item "keepsake" is not usable from the hotbar');
+
+    const initialized = player.initializeHotbar([
+      { type: "item", id: "sword" },
+      { type: "item", id: "shield" },
+      { type: "item", id: "keepsake" },
+      { type: "item", id: "potion" },
+    ]);
+    expect(initialized.slots[0]).toEqual({ type: "item", id: "potion" });
+    expect(initialized.slots.slice(1)).not.toContainEqual(
+      expect.objectContaining({ type: "item" }),
+    );
+  });
+
+  test("clears a consumed item assignment after its last use", () => {
+    player.initializeHotbar([{ type: "item", id: "potion" }]);
+
+    player.useHotbarSlot(0);
+
+    expect(player.getItem("potion")).toBeUndefined();
+    expect(player.getHotbar().activeSlot).toBeNull();
+    expect(player.getHotbar().slots[0]).toBeNull();
+    expect(buildPlayerHotbarData(player).slots[0]).toMatchObject({
+      type: "empty",
+      entry: null,
+    });
+  });
+
+  test("keeps the database name when an assigned entry becomes unavailable", () => {
+    player.initializeHotbar([{ type: "item", id: "potion" }]);
+    player.removeItem("potion");
+
+    expect(buildPlayerHotbarData(player).slots[0]).toMatchObject({
+      type: "item",
+      name: "Potion",
+      quantity: 0,
+      usable: false,
+    });
   });
 
   test("includes hotbar choices in player snapshots", () => {
@@ -193,5 +265,45 @@ describe("player hotbar", () => {
     } finally {
       unregister();
     }
+  });
+
+  test("filters entry types without deleting persisted assignments", () => {
+    player.initializeHotbar();
+    player.configureHotbar({ allowedEntryTypes: ["item"] });
+
+    expect(buildPlayerHotbarData(player).allowedEntryTypes).toEqual(["item"]);
+    expect(player.getHotbar().slots[0]).toEqual({ type: "skill", id: "ice" });
+    expect(buildPlayerHotbarData(player).slots[0]).toMatchObject({
+      type: "empty",
+      entry: null,
+    });
+    expect(() =>
+      player.assignHotbarSlot(4, { type: "skill", id: "fire" }),
+    ).toThrow('Hotbar entry type "skill" is not allowed');
+    expect(() => player.useHotbarSlot(0)).toThrow(
+      'Hotbar entry type "skill" is not allowed',
+    );
+
+    player.configureHotbar({ allowedEntryTypes: ["skill", "item"] });
+    expect(buildPlayerHotbarData(player).slots[0]).toMatchObject({
+      type: "skill",
+      entry: { type: "skill", id: "ice" },
+    });
+  });
+
+  test("seeds only entry types allowed by dynamic configuration", () => {
+    player.configureHotbar({
+      capacity: 4,
+      allowedEntryTypes: () => ["item"],
+    });
+
+    const hotbar = player.initializeHotbar();
+    expect(hotbar.capacity).toBe(4);
+    expect(hotbar.slots.slice(0, 4)).toEqual([
+      { type: "item", id: "potion" },
+      null,
+      null,
+      null,
+    ]);
   });
 });

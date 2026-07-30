@@ -3,7 +3,9 @@
     <div class="rpg-ui-menu-panel-header">{t("rpg.menu.skills")}</div>
     <div class="rpg-ui-menu-panel-body rpg-skill-menu-layout">
       <div class="rpg-ui-menu-panel-list rpg-ui-menu rpg-ui-menu-panel-list-full rpg-skill-menu-list">
-        <div class="rpg-skill-menu-help">{t("rpg.menu.skill-hotbar-help")}</div>
+        @if (canAssignSkills()) {
+          <div class="rpg-skill-menu-help">{t("rpg.menu.skill-hotbar-help")}</div>
+        }
         <div class="rpg-skill-menu-navigation">
           @for ((skill,index) of skills()) {
             <button
@@ -61,16 +63,18 @@
               </div>
             </div>
           </div>
-          <div class="rpg-skill-menu-actions">
-            <button type="button" class="rpg-ui-menu-confirm-btn" click={openAssignment}>
-              {t("rpg.menu.assign-hotbar")}
-            </button>
-            @if (lastAssignedSlot() >= 0) {
-              <span class="rpg-skill-menu-confirmation">
-                {t("rpg.menu.assigned-slot", { slot: slotLabels[lastAssignedSlot()] })}
-              </span>
-            }
-          </div>
+          @if (canAssignSkills()) {
+            <div class="rpg-skill-menu-actions">
+              <button type="button" class="rpg-ui-menu-confirm-btn" click={openAssignment}>
+                {t("rpg.menu.assign-hotbar")}
+              </button>
+              @if (lastAssignedSlot() >= 0) {
+                <span class="rpg-skill-menu-confirmation">
+                  {t("rpg.menu.assigned-slot", { slot: slotLabels[lastAssignedSlot()] })}
+                </span>
+              }
+            </div>
+          }
         }
       </div>
     </div>
@@ -198,6 +202,10 @@
     return Array.isArray(value) ? value : [];
   });
   const hotbar = computed(() => resolveProp(data)?.hotbar || { slots: [] });
+  const canAssignSkills = computed(() => {
+    const allowed = hotbar().allowedEntryTypes;
+    return !Array.isArray(allowed) || allowed.includes("skill");
+  });
   const nav = createTabindexNavigator(selectedSkill, { count: () => skills().length }, "wrap");
   const currentSkill = computed(() => skills()[selectedSkill()]);
   const assignmentEntry = computed(() => {
@@ -226,6 +234,7 @@
   }
 
   const openAssignment = () => {
+    if (!canAssignSkills()) return;
     const entry = assignmentEntry();
     if (entry) onAssignHotbar?.(entry);
   };
@@ -280,6 +289,7 @@
       keyDown() {
         if (
           !isAssignmentOpen()
+          && canAssignSkills()
           && currentSkill()
           && slot < Number(hotbar().capacity ?? 10)
         ) {

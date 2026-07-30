@@ -64,7 +64,7 @@ const formatSlot = (
   const hotbar = player.getHotbar();
   const entry = hotbar.slots[index];
   const locked = index >= hotbar.capacity;
-  if (!entry) {
+  if (!entry || !player.isHotbarEntryTypeAllowed(entry.type)) {
     return {
       index,
       type: "empty" as const,
@@ -94,7 +94,8 @@ const formatSlot = (
  * @param player - Player receiving the GUI.
  * @param options - Capacity, presentation, and use options.
  * @param feedback - Optional transient interaction feedback.
- * @returns Serializable state and ten presentation slots.
+ * @returns Serializable state, allowed built-in assignment types, and ten
+ * presentation slots.
  */
 export const buildPlayerHotbarData = (
   player: RpgPlayer,
@@ -106,6 +107,9 @@ export const buildPlayerHotbarData = (
     hotbar,
     capacity: hotbar.capacity,
     activeSlot: hotbar.activeSlot,
+    allowedEntryTypes: ["skill", "item"].filter((type) =>
+      player.isHotbarEntryTypeAllowed(type)
+    ),
     slots: Array.from(
       { length: HOTBAR_SLOT_COUNT },
       (_, index) => formatSlot(player, index, options),
@@ -192,7 +196,7 @@ export class HotbarGui extends Gui {
         clientActionId?: string;
       }) => {
         const entry = this.player.getHotbar().slots[slot];
-        if (!entry) {
+        if (!entry || !this.player.isHotbarEntryTypeAllowed(entry.type)) {
           this.setFeedback(slot, "rejected");
           this.refresh(clientActionId);
           return;
@@ -222,7 +226,7 @@ export class HotbarGui extends Gui {
         const slot = this.player.getHotbar().activeSlot;
         if (slot === null) return;
         const entry = this.player.getHotbar().slots[slot];
-        if (!entry) return;
+        if (!entry || !this.player.isHotbarEntryTypeAllowed(entry.type)) return;
         try {
           const result = this.options.onUse
             ? await this.options.onUse(this.player, { slot, entry, target })

@@ -17,6 +17,11 @@ import { triggerMatchesExecution, type StudioTouchTarget } from "./touch-runtime
 import { compileStudioMapStream, isStudioDirectLoadPayload, prepareStudioMapPayload, type PreparedStudioMapPayload } from "./map-streaming";
 import { prepareStudioTerrainControlRegions } from "./terrain-control-streaming";
 import { assignStudioEventPlacementIds } from "./event-placement";
+import {
+  isStartingEquipmentCompatible,
+  resolveStartingEquipmentType,
+  resolveStudioItemType,
+} from "./starting-equipment";
 export { createStudioActionBattleAnimations } from "./action-battle-animations";
 export type { StudioCombatAnimationIds, StudioCombatAnimationOptions } from "./action-battle-animations";
 export {
@@ -24,6 +29,17 @@ export {
   createStudioActionBattlePreset,
 } from "./action-battle-audio";
 export type { StudioCombatAudioConfig } from "./action-battle-audio";
+export type {
+  StudioGuiBinding,
+  StudioHotbarContent,
+  StudioHotbarBinding,
+  StudioHotbarSettings,
+  StudioMenusSettings,
+} from "./action-battle-audio";
+export {
+  normalizeStudioHotbarSettings,
+  resolveStudioHotbarSettings,
+} from "./action-battle-audio";
 
 const mergePlayerConfig = (baseConfig: ProjectBasic = {}, overrideConfig?: Partial<ProjectBasic> | null): ProjectBasic => {
   if (!overrideConfig) {
@@ -235,6 +251,16 @@ const assignPlayerStartParams = (player: RpgPlayer, config: ProjectBasic, starti
         console.warn(`[StudioGame] starting equipment item ${itemId} was not found in the database`);
         continue;
       }
+      if (!isStartingEquipmentCompatible(type, itemData)) {
+        const expectedType = resolveStartingEquipmentType(type);
+        const actualType = resolveStudioItemType(itemData) ?? "unknown";
+        console.warn(
+          expectedType
+            ? `[StudioGame] starting equipment ${type}=${itemId} must reference a ${expectedType}, received ${actualType}`
+            : `[StudioGame] starting equipment field ${type} is not supported`,
+        );
+        continue;
+      }
       if (!player.getItem(itemId)) {
         player.addItem(itemData, 1);
       }
@@ -286,9 +312,42 @@ const ensureStartingItemsInDatabase = async (player: RpgPlayer, config: ProjectB
   return startingItems;
 };
 
-const databaseCacheByProjectId = new Map<string, any>();
 const eventsCacheByBundlePath = new Map<string, Promise<any[]>>();
 const projectCacheByKey = new Map<string, Promise<any>>();
+
+const getPublishedStudioDatabase = (map?: RpgMap): any => {
+  const publishedMapData =
+    typeof (map as any)?.data === "function"
+      ? (map as any).data()
+      : undefined;
+  return publishedMapData?.database;
+};
+
+const refreshOnlineStudioDatabase = async (map: RpgMap): Promise<void> => {
+  const publishedDatabase = getPublishedStudioDatabase(map);
+  if (
+    Array.isArray(publishedDatabase)
+    || (publishedDatabase && typeof publishedDatabase === "object")
+  ) {
+    return;
+  }
+
+  const provider = getGameDataProvider();
+  if (provider.kind === "offline") return;
+
+  const { projectId } = resolveStudioRuntimeContext(map);
+  if (!projectId || typeof (map as any).addInDatabase !== "function") return;
+
+  try {
+    const records = await provider.getDatabase(projectId);
+    const database = normalizeStudioDatabase(records);
+    for (const [id, data] of Object.entries(database)) {
+      (map as any).addInDatabase(id, data, { force: true });
+    }
+  } catch (error) {
+    console.error("[StudioGame] database refresh failed", error);
+  }
+};
 
 /** Server-side and trusted-publisher options for a Studio game. */
 export interface CreateStudioMapUpdatePayloadOptions {
@@ -329,6 +388,7 @@ export interface CreateStudioMapUpdatePayloadOptions {
 
 type StudioServerConfig = CreateStudioMapUpdatePayloadOptions & {
   autoStart?: boolean;
+  displayTitleScreen?: boolean;
 };
 
 const prepareStudioWorldMaps = (worldMaps: unknown): WorldMapConfig[] =>
@@ -681,7 +741,12 @@ export async function createStudioMapUpdatePayload(mapId: string, config: Create
 
 export default (_config?: unknown) => {
   const config = (_config ?? {}) as StudioServerConfig;
-  const autoStart = config.autoStart === true;
+  const shouldAutoStart = async () => {
+    if (config.autoStart === true) return true;
+    if (config.displayTitleScreen === true) return false;
+    const project = await resolveStudioProject(undefined, config);
+    return project?.menus?.titleScreen?.enabled === false;
+  };
   const streamingOptions = config.streaming === false ? undefined : config.streaming ?? {};
   const streamingModule = streamingOptions
     ? provideServerMapStreaming(
@@ -700,15 +765,16 @@ export default (_config?: unknown) => {
   return defineModule<RpgServer>({
     player: {
       onConnected: async (player: RpgPlayer) => {
-        if (!autoStart) return;
+        if (!await shouldAutoStart()) return;
         player.initializeDefaultStats();
         await player.changeMap(await resolveStartMapId(config));
       },
       onStart: async (player: RpgPlayer) => {
-        if (autoStart) return;
+        if (await shouldAutoStart()) return;
         await player.changeMap(await resolveStartMapId(config));
       },
       onJoinMap: async (player: RpgPlayer, map: RpgMap) => {
+        await refreshOnlineStudioDatabase(map);
         const startMapId = map.globalConfig.startMapId;
         const mapExtended = map as RpgMapExtended;
         const heroGraphic = (mapExtended.globalConfig.hero as any)?.graphic;
@@ -731,6 +797,8 @@ export default (_config?: unknown) => {
       },
       onInput: (player: RpgPlayer, input: RpgActionInput<unknown>) => {
         if (input.action == "escape") {
+          const map = player.getCurrentMap?.();
+          if (map?.globalConfig?.menus?.mainMenu?.enabled === false) return;
           player.callMainMenu({
             menus: [
               {
@@ -1105,11 +1173,7 @@ export default (_config?: unknown) => {
       },
     },
     database: async (map: RpgMap) => {
-      const publishedMapData =
-        typeof (map as any)?.data === "function"
-          ? (map as any).data()
-          : undefined;
-      const publishedDatabase = publishedMapData?.database;
+      const publishedDatabase = getPublishedStudioDatabase(map);
       if (Array.isArray(publishedDatabase)) {
         return normalizeStudioDatabase(publishedDatabase);
       }
@@ -1118,16 +1182,8 @@ export default (_config?: unknown) => {
       }
       const configuredProjectId = getStudioGameRuntimeConfig().projectId?.trim() || null;
       const gameConfig = readGameConfig();
-      const resolvedProjectId = configuredProjectId || gameConfig?._id || "";
-
-      if (databaseCacheByProjectId.has(resolvedProjectId)) {
-        return databaseCacheByProjectId.get(resolvedProjectId);
-      }
-
       const response = await getGameDataProvider().getDatabase(configuredProjectId || gameConfig?._id);
-      const database = normalizeStudioDatabase(response);
-      databaseCacheByProjectId.set(resolvedProjectId, database);
-      return database;
+      return normalizeStudioDatabase(response);
     },
   });
 };

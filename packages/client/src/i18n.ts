@@ -25,6 +25,7 @@ export const RpgClientBuiltinI18n = {
     "rpg.menu.options-help": "Configure your preferences here.",
     "rpg.menu.assign-hotbar": "Assign to hotbar",
     "rpg.menu.assigned-slot": "Assigned slot {slot}",
+    "rpg.menu.manage-in-equip": "Manage this equipment from the Equip menu.",
     "rpg.menu.choose-hotbar-slot": "Choose a hotbar slot",
     "rpg.menu.clear-hotbar-slot": "Clear slot",
     "rpg.menu.hotbar-slot-locked": "Locked slot",

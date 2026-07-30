@@ -7,6 +7,11 @@ description: "Guide for Items System in RPGJS."
 
 The items system in RPGJS allows you to manage player inventory, equipment, and item usage. You can add items to players in three different ways: using string IDs, item classes, or item objects.
 
+Studio regular items can also select a spritesheet animation, a personal sound,
+and/or a built-in particle preset for successful use. This feedback runs from
+the authoritative native `onUse` hook and can be combined with an item
+workflow.
+
 ## Adding Items
 
 ### Method 1: String ID (Pre-registered Items)
@@ -193,6 +198,14 @@ Items can implement lifecycle hooks that are called at specific moments:
 - **`onRemove(player)`**: Called when the item is removed from inventory
 - **`onEquip(player, equip)`**: Called when the item is equipped/unequipped
 
+Use `onUse` and `onUseFailed` for consumable items. Weapons and armors use
+`onEquip` instead and should not declare consumable-use hooks.
+
+When an item is used by string ID, RPGJS resolves object-based lifecycle hooks
+from the current map database. Updating that database entry therefore replaces
+the hook used by an item that is already present in the player's inventory.
+Class-based items keep using their instantiated class hooks.
+
 ### Using Classes
 
 ```ts
@@ -217,10 +230,6 @@ export class MagicSword {
     }
   }
   
-  onUse(player: RpgPlayer) {
-    // This won't be called if consumable is false
-    player.showText('You cannot use this item!');
-  }
 }
 
 // Register in provideServerModules

@@ -2,6 +2,7 @@ import type {
   ClientVisualContext,
   ClientVisualHelpers,
 } from "@rpgjs/client";
+import type { RpgPlayer } from "@rpgjs/server";
 import type {
   ActionBattleAiVisual,
 } from "./core/ai-behavior-tree";
@@ -410,10 +411,18 @@ export interface ActionBattleFeedbackOptions {
 }
 
 export interface ActionBattleUiHotbarOptions {
-  enabled?: boolean;
+  /** Enable the hotbar globally or resolve availability for each player. */
+  enabled?: boolean | ((player: RpgPlayer) => boolean);
+  /** Open an enabled hotbar automatically on connection and map changes. */
   autoOpen?: boolean;
-  capacity?: number | ((player: any) => number);
-  lockedSlotHint?: string | ((player: any, slot: number) => string | undefined);
+  /** Number of visible slots, clamped between 1 and 10. */
+  capacity?: number | ((player: RpgPlayer) => number);
+  /** Entry types that may be displayed, assigned, and used. */
+  allowedEntryTypes?:
+    | readonly string[]
+    | ((player: RpgPlayer) => readonly string[]);
+  /** Optional hint for slots outside the current capacity. */
+  lockedSlotHint?: string | ((player: RpgPlayer, slot: number) => string | undefined);
 }
 
 export interface ActionBattleUiTargetingOptions {
