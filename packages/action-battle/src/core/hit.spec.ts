@@ -130,6 +130,32 @@ describe("applyActionBattleHit", () => {
     expect(target.hp).toBe(100);
   });
 
+  test("unwraps reactive skill stats before RPGJS calculates damage", () => {
+    const attacker = entity();
+    const target = {
+      ...entity(100),
+      applyDamage(_attacker: unknown, skill: any) {
+        const damage = skill.power + (skill.coefficient.atk ?? 0);
+        this.hp -= damage;
+        return { damage };
+      },
+    };
+
+    const result = defaultRpgjsDamageResolver({
+      attacker: attacker as any,
+      target: target as any,
+      skill: {
+        id: () => "arcane-trait",
+        power: () => 24,
+        coefficient: () => ({}),
+        skillType: "magical",
+      } as any,
+    });
+
+    expect(result.damage).toBe(24);
+    expect(target.hp).toBe(76);
+  });
+
   test("scales RPGJS damage from an authoritative attack profile multiplier", () => {
     const attacker = entity();
     const target = {

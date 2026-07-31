@@ -19,5 +19,8 @@ configured animation on the first use. Resolve reactive skill presentation
 and impact metadata before client transfer, consume their reactive SP and hit
 rate values, and play ranged skills as casts.
 
+Unwrap reactive skill combat values before RPGJS evaluates damage formulas, so
+enemy skills apply their configured power instead of resolving to zero damage.
+
 Remove the caster animation control from the Studio skill editor while keeping
 existing skill records compatible at runtime.
