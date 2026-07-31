@@ -1,5 +1,70 @@
 # @rpgjs/server
 
+## 5.0.0-beta.29
+
+### Minor Changes
+
+- 4cc3086: Add a persistent server-authoritative, type-extensible hotbar for skills, items, and custom gameplay entries. The hotbar now supports a dynamic 1–10 slot capacity, retained locked-slot assignments, unlock hints, a persistent active slot, automatic refresh after level/class/inventory/map changes, direct keyboard shortcuts, a radial gamepad selector, LT/RT slot cycling with X activation, mobile centering, cooldown/cost/quantity presentation, and serialized `instant`, `select`, or `target` activation handlers.
+
+  Replace Action Battle's dedicated `ui.actionBar` and component with the generic `ui.hotbar`. Action Battle skills enrich generic entries with targeting, cooldown, projectile, sound, animation, and visual metadata while their authoritative execution continues through native skill and item hooks. This is an intentional breaking configuration and export cleanup.
+
+  Keep direct 1–0 Zelda-style menu assignment, display unavailable slots with their unlock condition in the root-level assignment picker, execute Studio skill workflows through the native `onUse` hook, make instant skills soft-target without a confirmation step, preserve skill impact media through AI damage feedback, and add translated Studio presentation fields, visual area targeting, phase-specific CanvasEngine cast/trail/impact presets, a default projectile renderer compatible with Studio skill records, and robust object-signal hydration for class and hotbar sync payloads. Upgrade to `@signe/sync` 3.1.1 so object-signal hydration uses the upstream fix without a local package patch.
+
+  Expose a complete set of `--rpg-hotbar-*` CSS variables, bridge them through
+  `@rpgjs/ui-css`, document the public client and server APIs with generated
+  JSDoc references, and add a farm-themed playground showing mixed item and skill
+  slots, menu assignment, and the persistent hotbar show/hide lifecycle.
+
+### Patch Changes
+
+- 512e637: Add type-aware Studio item fields and lifecycle workflows. Regular items expose
+  consumable use hooks, while weapons and armors expose equipment modifiers and
+  the native equip hook. Regular items can also display a configured spritesheet
+  animation, play a personal sound, and display a built-in particle effect after
+  successful use. The editor groups Item fields into dedicated layouts. Because
+  the Item schema is conditional, it resolves the selected Item, Weapon, or Armor
+  branch before distributing fields across editor tabs, avoiding duplicate
+  generic property sections. Online Studio games refresh database records when a
+  player joins a map, and item use resolves lifecycle hooks from the current map
+  database so a removed use animation no longer survives in an inventory
+  snapshot.
+
+  Clarify the built-in hotbar model: it accepts learned skills and usable regular
+  items, while weapons and armors remain browseable in Items and are managed from
+  Equip. Studio now labels these choices as usable items, filters starting
+  equipment selectors by slot type, and ignores invalid saved equipment without
+  adding it to the player's inventory.
+
+  The Studio Item editor now derives its tabs from the selected item type.
+  Regular items expose Usage and Presentation, while weapons and armors expose
+  Equipment, so conditional schemas no longer leave empty tabs visible.
+  Custom fields now leave their schema description to the shared CMS field
+  wrapper, preventing duplicate help text, and Item and Skill lifecycle actions
+  are consistently presented as triggers in the editor.
+
+  Creating a trigger now persists its parent Item or Skill first, keeps the
+  editor on the newly created record, and immediately saves the trigger
+  attachment. Failed attachments restore the previous form state instead of
+  leaving an untracked trigger.
+
+  The Studio Skill editor now presents its schema layouts as translated tabs,
+  matching the Item editor while keeping Action Battle and its triggers together.
+  Area size, presets, and individual area-mask edits now notify the Skill form,
+  so the updated targeting area is saved and restored after reloading the editor.
+  Translated Skill and Item media fields now render the same native media preview
+  as icon fields, including image, spritesheet, and audio previews.
+  The Studio sidebar now uses a supported panel icon for the GUI editor entry.
+
+- 512e637: Allow hotbars to filter entry types dynamically, let Action Battle resolve
+  visibility per player, apply RPGJS Studio project hotbar settings, expose a
+  Studio event block for displaying or hiding the Hotbar, and honor the Studio
+  Title Screen, HUD, and Main Menu bindings. The main menu now hides disallowed
+  item or skill assignment actions, displays the item slot picker correctly, and
+  clears the native assignment when the last consumable is used.
+- Updated dependencies [4cc3086]
+  - @rpgjs/common@5.0.0-beta.27
+  - @rpgjs/testing@5.0.0-beta.29
+
 ## 5.0.0-beta.28
 
 ### Patch Changes

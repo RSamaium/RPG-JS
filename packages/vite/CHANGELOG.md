@@ -1,5 +1,14 @@
 # @rpgjs/vite
 
+## 5.0.0-beta.29
+
+### Patch Changes
+
+- Updated dependencies [512e637]
+- Updated dependencies [4cc3086]
+- Updated dependencies [512e637]
+  - @rpgjs/server@5.0.0-beta.29
+
 ## 5.0.0-beta.28
 
 ### Patch Changes

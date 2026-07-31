@@ -1,5 +1,21 @@
 # @rpgjs/tiledmap
 
+## 5.0.0-beta.29
+
+### Patch Changes
+
+- Updated dependencies [512e637]
+- Updated dependencies [4b6fe16]
+- Updated dependencies [512e637]
+- Updated dependencies [4cc3086]
+- Updated dependencies [9f317fb]
+- Updated dependencies [512e637]
+- Updated dependencies [aa4a517]
+  - @rpgjs/server@5.0.0-beta.29
+  - @rpgjs/client@5.0.0-beta.29
+  - @rpgjs/common@5.0.0-beta.27
+  - @rpgjs/vite@5.0.0-beta.29
+
 ## 5.0.0-beta.28
 
 ### Patch Changes
