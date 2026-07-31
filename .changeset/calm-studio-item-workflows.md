@@ -40,3 +40,4 @@ Area size, presets, and individual area-mask edits now notify the Skill form,
 so the updated targeting area is saved and restored after reloading the editor.
 Translated Skill and Item media fields now render the same native media preview
 as icon fields, including image, spritesheet, and audio previews.
+The Studio sidebar now uses a supported panel icon for the GUI editor entry.

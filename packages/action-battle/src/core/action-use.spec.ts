@@ -91,6 +91,54 @@ describe("executeActionBattleUse", () => {
     );
   });
 
+  test("resolves reactive skill metadata before impact client transfer", () => {
+    const packets: any[] = [];
+    const attacker = {
+      ...createEntity("caster"),
+      getCurrentMap: () => ({
+        clientVisual: (_id: string, payload: any) => {
+          packets.push(structuredClone(payload));
+        },
+      }),
+    };
+    const target = createEntity("target");
+    target.applyDamage.mockReturnValue({ damage: 25 });
+    const skill = {
+      id: () => "arcane",
+      _type: () => "skill",
+      name: () => "Arcane",
+      spCost: () => 5,
+      hitRate: () => 1,
+      animation: () => "arcane-impact",
+    };
+
+    expect(() =>
+      executeActionBattleUse({
+        attacker: attacker as any,
+        target: target as any,
+        usable: skill,
+        skill,
+      })
+    ).not.toThrow();
+
+    expect(attacker.sp).toBe(95);
+    expect(packets).toContainEqual(
+      expect.objectContaining({
+        moment: "hurt",
+        skill: expect.objectContaining({
+          id: "arcane",
+          animation: "arcane-impact",
+        }),
+        result: expect.objectContaining({
+          metadata: expect.objectContaining({
+            actionId: "arcane",
+            actionType: "skill",
+          }),
+        }),
+      })
+    );
+  });
+
   test("consumes SP and resolves a failed skill without basic damage", () => {
     vi.spyOn(Math, "random").mockReturnValue(0.99);
     const attacker = {
@@ -465,7 +513,9 @@ describe("executeActionBattleUse", () => {
         id: "studio-bolt",
         _type: "skill",
         spCost: 0,
-        targeting: { range: 6 },
+        _skillInstance: {
+          targeting: { range: 6 },
+        },
       },
     });
 

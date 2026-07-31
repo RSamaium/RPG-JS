@@ -297,7 +297,7 @@ The project can define hero skill progression with `skills` or `skillsToLearn`. 
 
 Studio listens to the RPGJS `player.onSkillChange` hook and displays a notification when the hero learns or forgets a skill.
 
-Enemy records can also drive action-battle AI. Use `behavior` on the enemy to set fields such as `enemyType`, `behaviorKey`, `visionRange`, `attackRange`, `attackCooldown`, `dodgeChance`, `dodgeCooldown`, `fleeThreshold`, `attackPatterns`, `patrolWaypoints`, `groupBehavior`, or the nested behavior gauge options. The older `aiBehavior` field is still accepted as a compatibility alias. If the enemy has `attackSkillId`, that skill is used for attacks; otherwise the first learned enemy skill is used.
+Enemy records can also drive action-battle AI. Use `behavior` on the enemy to set fields such as `enemyType`, `behaviorKey`, `visionRange`, `attackRange`, `attackCooldown`, `dodgeChance`, `dodgeCooldown`, `fleeThreshold`, `attackPatterns`, `patrolWaypoints`, `groupBehavior`, or the nested behavior gauge options. The older `aiBehavior` field is still accepted as a compatibility alias. Every learned enemy skill is evaluated from its action mode, targeting range, area mask, SP cost, and cooldown. `attackSkillId` gives one skill priority without disabling normal attacks or the other learned skills.
 
 ### Skill workflow triggers
 

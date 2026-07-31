@@ -694,9 +694,11 @@ const Dagger = {
 
 Skills and weapons can define an `action` block for action-battle selection,
 while their effect stays automatic by default.
-`BattleAi` uses this block when it casts `attackSkill` or attacks with an
-equipped weapon. Player hotbar skills and configured equipped weapons use
-the same executor, so `onUse` receives the same context in both cases.
+`BattleAi` evaluates every learned skill and uses `attackSkill` as a priority
+hint. A skill that is cooling down, too expensive, out of range, or unable to
+cover the target does not block a normal attack. Player hotbar skills, enemy
+skills, and configured equipped weapons use the same executor, so `onUse`
+receives the same context in every case.
 
 ```ts
 const Fireball = {
@@ -1504,6 +1506,38 @@ onInit() {
   });
 }
 ```
+
+All skills learned by the enemy are candidates. `attackSkill` makes one skill
+the preferred opener without excluding the others. Melee skills require contact,
+projectiles use their configured travel range, and instant area skills use
+`targeting.range` plus `aoeMask`. While no action is ready, the enemy approaches,
+retreats, or strafes toward the useful range of its next action.
+
+Self-targeted healing and support skills are used automatically below 60% HP.
+Ally-targeted skills are outside the current automatic planner.
+
+## Debug enemy decisions
+
+Decision tracing is disabled by default. Enable it on the authoritative server
+and optionally filter one enemy or a set of categories:
+
+```ts
+import { AiDebug } from "@rpgjs/action-battle/server";
+
+AiDebug.enabled = true;
+AiDebug.filterEventId = "dark-mage-1";
+AiDebug.categories = ["decision", "movement"];
+```
+
+`decision` logs include the distance, global cooldown, evaluated skills,
+effective ranges, rejection reasons, and the selected attack or repositioning
+request. Common rejection reasons are `cooldown`, `insufficientSp`,
+`outOfRange`, `invalidTarget`, `maskMiss`, and `notUseful`.
+
+For increasing levels of control, start with learned skills only, add
+`attackSkill` for an explicit priority, use `defineActionBattleAiPreset()` for
+reusable typed defaults, then use `behaviorKey` or a behavior tree for fully
+custom decisions.
 
 ## Examples
 

@@ -2,6 +2,8 @@ import { describe, expect, test } from "vitest";
 import {
   directionToActionBattleTarget,
   parseAoeMask,
+  resolveActionBattleAoeCells,
+  resolveActionBattleAoeTarget,
   resolveActionBattleSoftTarget,
 } from "./targeting";
 
@@ -49,5 +51,32 @@ describe("action battle soft targeting", () => {
         entity("enemy", 12, -60)
       )
     ).toBe("up");
+  });
+
+  test("finds a legal offset center when an area mask has a hole", () => {
+    const mask = ["010", "101", "010"];
+    const target = resolveActionBattleAoeTarget(
+      { x: 0, y: 0 },
+      { x: 2, y: 0 },
+      1,
+      mask
+    );
+
+    expect(target).toEqual({ x: 1, y: 0 });
+    expect(resolveActionBattleAoeCells(target!, mask)).toContainEqual({
+      x: 2,
+      y: 0,
+    });
+  });
+
+  test("rejects an area target when no mask cell can cover it in range", () => {
+    expect(
+      resolveActionBattleAoeTarget(
+        { x: 0, y: 0 },
+        { x: 5, y: 0 },
+        1,
+        ["#"]
+      )
+    ).toBeNull();
   });
 });

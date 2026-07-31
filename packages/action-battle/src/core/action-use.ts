@@ -77,14 +77,42 @@ const getUseHook = (usable: any) => {
     : undefined;
 };
 
+const resolveUsableField = (usable: any, key: string) => {
+  for (const source of [
+    usable,
+    usable?._skillInstance,
+    usable?._skillData,
+  ]) {
+    if (!source) continue;
+    const candidate = source[key];
+    if (candidate === undefined) continue;
+    if (typeof candidate !== "function") return candidate;
+    try {
+      return candidate.call(source);
+    } catch {
+      // Continue with the compatible snapshots when one reactive source fails.
+    }
+  }
+  return undefined;
+};
+
 const isSkill = (usable: any, explicitSkill?: any) =>
-  !!explicitSkill || usable?._type === "skill" || usable?.spCost !== undefined;
+  !!explicitSkill ||
+  resolveUsableField(usable, "_type") === "skill" ||
+  resolveUsableField(usable, "spCost") !== undefined;
 
 const consumeSkillUse = (attacker: ActionBattleEntity, skill: any) => {
-  const spCost = typeof skill?.spCost === "number" ? skill.spCost : 0;
+  const resolvedSpCost = resolveUsableField(skill, "spCost");
+  const spCost = typeof resolvedSpCost === "number" ? resolvedSpCost : 0;
   if (spCost > 0) {
     if (spCost > ((attacker as any).sp ?? 0)) {
-      throw new Error(`Not enough SP to use ${skill?.id ?? skill?.name ?? "skill"}`);
+      throw new Error(
+        `Not enough SP to use ${
+          resolveUsableField(skill, "id") ??
+          resolveUsableField(skill, "name") ??
+          "skill"
+        }`
+      );
     }
     const halfCost =
       (attacker as any).hasEffect?.("HALF_SP_COST") ||
@@ -92,7 +120,8 @@ const consumeSkillUse = (attacker: ActionBattleEntity, skill: any) => {
     (attacker as any).sp -= spCost / (halfCost ? 2 : 1);
   }
 
-  const hitRate = typeof skill?.hitRate === "number" ? skill.hitRate : 1;
+  const resolvedHitRate = resolveUsableField(skill, "hitRate");
+  const hitRate = typeof resolvedHitRate === "number" ? resolvedHitRate : 1;
   return Math.random() <= Math.max(0, Math.min(1, hitRate));
 };
 
@@ -193,8 +222,8 @@ const buildActionContext = (input: {
           input.skill,
           input.profile?.reaction,
           {
-            actionId: input.usable?.id,
-            actionType: input.usable?._type,
+            actionId: resolveUsableField(input.usable, "id"),
+            actionType: resolveUsableField(input.usable, "_type"),
             pattern: input.pattern,
             damageMultiplier: input.profile?.damageMultiplier,
             knockbackMultiplier: input.profile?.knockbackMultiplier,
@@ -212,8 +241,8 @@ const buildActionContext = (input: {
         input.skill,
         input.profile?.reaction,
         {
-          actionId: input.usable?.id,
-          actionType: input.usable?._type,
+          actionId: resolveUsableField(input.usable, "id"),
+          actionType: resolveUsableField(input.usable, "_type"),
           pattern: input.pattern,
           damageMultiplier: input.profile?.damageMultiplier,
           knockbackMultiplier: input.profile?.knockbackMultiplier,
@@ -263,7 +292,8 @@ const buildActionContext = (input: {
       };
       const tileWidth = Number(map?.tileWidth ?? 32);
       const targetingRange = Number(
-        input.skill?.targeting?.range ?? input.skill?.range
+        getActionBattleSkillTargetingConfig(input.skill)?.range ??
+        input.skill?.range
       );
       const derivedRange =
         Number.isFinite(targetingRange) && targetingRange > 0
@@ -292,7 +322,7 @@ const buildActionContext = (input: {
             ...projectile.payload,
             actionBattle: true,
             attackerId: input.attacker.id,
-            actionId: input.usable?.id,
+            actionId: resolveUsableField(input.usable, "id"),
           },
           params: {
             ...projectile.params,
@@ -337,6 +367,11 @@ const buildActionContext = (input: {
 
 export const getActionBattleActionConfig = (usable: any) =>
   resolveActionConfig(usable);
+
+export const getActionBattleSkillTargetingConfig = (usable: any) =>
+  usable?.targeting ??
+  usable?._skillInstance?.targeting ??
+  usable?._skillData?.targeting;
 
 export const getActionBattleActionRange = (usable: any): number | undefined =>
   resolveActionConfig(usable)?.range;

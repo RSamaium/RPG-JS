@@ -82,6 +82,24 @@ describe("action battle visual composer", () => {
     expect(usesActionBattleFxVisual(visual)).toBe(true);
   });
 
+  test("fx hurt renders the skill impact animation on its target", () => {
+    const target = createEntity();
+    const visual = createActionBattleVisual("fx");
+
+    visual({
+      moment: "hurt",
+      target,
+      skill: {
+        animation: "arcane-impact",
+      },
+    });
+
+    expect(target.showComponentAnimation).toHaveBeenCalledWith("animation", {
+      graphic: "arcane-impact",
+      animationName: "default",
+    });
+  });
+
   test("impact uses a charged damage popup and impact burst without duplicating classic hit text", () => {
     const target = createEntity();
     const visual = createActionBattleVisual("impact");
@@ -365,6 +383,43 @@ describe("action battle visual composer", () => {
         graphic: "studio-attack-media",
         repeat: 1,
       },
+    });
+    expect(() => structuredClone(payload)).not.toThrow();
+  });
+
+  test("resolves reactive skill presentation before client transfer", () => {
+    setActionBattleOptions({ visual: "fx" } as any);
+    const clientVisual = vi.fn();
+    const attacker = {
+      id: "enemy-1",
+      getCurrentMap: () => ({ clientVisual }),
+    };
+
+    emitActionBattleClientVisual({
+      moment: "castSkill",
+      entity: attacker,
+      skill: {
+        id: () => "arcane",
+        name: () => "Arcane",
+        skillType: () => "magical",
+        icon: () => "arcane-icon",
+        animation: () => "arcane-impact",
+        sound: () => "arcane-cast",
+        casterAnimation: () => "legacy-caster",
+        impactSound: () => "arcane-impact-sound",
+      },
+    });
+
+    const payload = clientVisual.mock.calls[0][1];
+    expect(payload.skill).toEqual({
+      id: "arcane",
+      name: "Arcane",
+      skillType: "magical",
+      icon: "arcane-icon",
+      animation: "arcane-impact",
+      sound: "arcane-cast",
+      casterAnimation: "legacy-caster",
+      impactSound: "arcane-impact-sound",
     });
     expect(() => structuredClone(payload)).not.toThrow();
   });

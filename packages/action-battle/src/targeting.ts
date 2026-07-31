@@ -12,6 +12,16 @@ export interface ParsedAoeMask {
   cells: Array<{ dx: number; dy: number }>;
 }
 
+export interface ActionBattleTilePoint {
+  x: number;
+  y: number;
+}
+
+export interface ActionBattleTileSize {
+  width: number;
+  height: number;
+}
+
 const normalizeMaskRows = (mask: ActionBattleAoeMask | undefined): string[] => {
   if (!mask) return ["#"];
   if (Array.isArray(mask)) return mask;
@@ -47,6 +57,66 @@ export const parseAoeMask = (mask: ActionBattleAoeMask | undefined): ParsedAoeMa
 
 export const manhattanDistance = (a: { x: number; y: number }, b: { x: number; y: number }) =>
   Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+
+export const getActionBattleTileSize = (map: any): ActionBattleTileSize => ({
+  width: Number(map?.tileWidth ?? 32),
+  height: Number(map?.tileHeight ?? 32),
+});
+
+export const getActionBattleEntityTile = (
+  entity: any,
+  tileSize: ActionBattleTileSize
+): ActionBattleTilePoint => {
+  const hitbox = entity.hitbox?.() ?? {
+    w: tileSize.width,
+    h: tileSize.height,
+  };
+  return {
+    x: Math.floor((entity.x() + (hitbox.w ?? tileSize.width) / 2) / tileSize.width),
+    y: Math.floor((entity.y() + (hitbox.h ?? tileSize.height) / 2) / tileSize.height),
+  };
+};
+
+export const resolveActionBattleAoeCells = (
+  targetTile: ActionBattleTilePoint,
+  mask: ActionBattleAoeMask | undefined
+): ActionBattleTilePoint[] =>
+  parseAoeMask(mask).cells.map((cell) => ({
+    x: targetTile.x + cell.dx,
+    y: targetTile.y + cell.dy,
+  }));
+
+/**
+ * Find a legal cast center whose area mask covers the desired target tile.
+ * Prefer centering the mask on the target, then the closest legal center.
+ */
+export const resolveActionBattleAoeTarget = (
+  origin: ActionBattleTilePoint,
+  desiredTarget: ActionBattleTilePoint,
+  range: number,
+  mask: ActionBattleAoeMask | undefined
+): ActionBattleTilePoint | null => {
+  const candidates = parseAoeMask(mask).cells
+    .map((cell) => ({
+      target: {
+        x: desiredTarget.x - cell.dx,
+        y: desiredTarget.y - cell.dy,
+      },
+      offsetDistance: Math.abs(cell.dx) + Math.abs(cell.dy),
+    }))
+    .filter(({ target }) => manhattanDistance(origin, target) <= range)
+    .sort((left, right) => {
+      if (left.offsetDistance !== right.offsetDistance) {
+        return left.offsetDistance - right.offsetDistance;
+      }
+      return (
+        manhattanDistance(origin, left.target) -
+        manhattanDistance(origin, right.target)
+      );
+    });
+
+  return candidates[0]?.target ?? null;
+};
 
 type SoftTargetEntity = {
   id?: string;

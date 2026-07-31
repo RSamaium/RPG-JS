@@ -24,6 +24,7 @@ import type { StudioGameModuleConfig } from ".";
 import { createStudioMapPlugins, type StudioMapPlugin } from "./studio-map-plugins";
 import { bindInitialStudioEventHitboxes } from "./initial-event-hitboxes-client";
 import { bindStudioCombatAnimationsToEntity } from "./action-battle-animations";
+import { collectStudioActionBattleMediaRefs } from "./action-battle-animation-preload";
 
 interface GlobalConfig {
   projectId?: string;
@@ -125,35 +126,6 @@ const resolveHeroMediaSpritesheet = async (value: unknown): Promise<any | null> 
   return null;
 };
 
-const getMediaRefKey = (value: unknown): string | null => {
-  if (!value) return null;
-  if (typeof value === "string") return value;
-  if (typeof value !== "object") return null;
-  const candidate = value as Record<string, unknown>;
-  const key =
-    candidate.id ?? candidate._id ?? candidate.mediaId ?? candidate.fileName;
-  return typeof key === "string" && key.trim().length > 0 ? key : null;
-};
-
-const collectStudioCombatAnimationRefs = (database: any[] = []): unknown[] => {
-  const refs: unknown[] = [];
-  const seen = new Set<string>();
-  const add = (value: unknown) => {
-    const key = getMediaRefKey(value);
-    if (!key || seen.has(key)) return;
-    seen.add(key);
-    refs.push(value);
-  };
-
-  for (const entry of database) {
-    const animations = entry?.animations ?? entry?.combatAnimations;
-    if (!animations || typeof animations !== "object") continue;
-    Object.values(animations).forEach(add);
-  }
-
-  return refs;
-};
-
 const resolveStudioDatabaseForPreload = async (
   projectId?: string,
 ): Promise<any[]> => {
@@ -227,7 +199,7 @@ export default (config: StudioGameModuleConfig) => {
           engine.globalConfig.database = database;
         }
         const databaseAnimationMediaRefs =
-          collectStudioCombatAnimationRefs(database);
+          collectStudioActionBattleMediaRefs(database);
 
         const heroMediaRefs = [
           engine.globalConfig.hero?.graphic,

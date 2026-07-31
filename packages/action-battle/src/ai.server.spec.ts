@@ -1,6 +1,6 @@
 import { MAXHP } from "@rpgjs/server";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { AttackPattern, BattleAi } from "./ai.server";
+import { AiDebug, AttackPattern, BattleAi } from "./ai.server";
 import {
   callAction,
   chase,
@@ -52,6 +52,41 @@ const createPlayer = () => ({
       potion: { icon: "potion-icon" },
     }),
   })),
+});
+
+describe("AiDebug", () => {
+  test("emits structured and filtered decision logs only when enabled", () => {
+    const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
+    AiDebug.enabled = false;
+    AiDebug.filterEventId = null;
+    AiDebug.categories = [];
+
+    AiDebug.log("decision", "enemy-1", "disabled");
+    expect(debug).not.toHaveBeenCalled();
+
+    AiDebug.enabled = true;
+    AiDebug.filterEventId = "enemy-1";
+    AiDebug.categories = ["decision"];
+    AiDebug.log("movement", "enemy-1", "filtered category");
+    AiDebug.log("decision", "enemy-2", "filtered enemy");
+    AiDebug.log("decision", "enemy-1", "selected", { id: "fireball" });
+
+    expect(debug).toHaveBeenCalledOnce();
+    expect(debug).toHaveBeenCalledWith(
+      "[ActionBattle AI]",
+      expect.objectContaining({
+        category: "decision",
+        eventId: "enemy-1",
+        message: "selected",
+        data: { id: "fireball" },
+      })
+    );
+
+    AiDebug.enabled = false;
+    AiDebug.filterEventId = null;
+    AiDebug.categories = [];
+    debug.mockRestore();
+  });
 });
 
 describe("BattleAi health presentation", () => {
@@ -678,7 +713,7 @@ describe("BattleAi behavior tree", () => {
     ai.destroy();
   });
 
-  test("respects a skill cooldown inside enemy combos", () => {
+  test("falls back to a basic attack while the preferred skill cools down", () => {
     vi.useFakeTimers();
     vi.setSystemTime(1000);
     const event = createEvent();
@@ -697,17 +732,106 @@ describe("BattleAi behavior tree", () => {
     };
     const ai = new BattleAi(event as any, {
       attackSkill: skill,
+      attackRange: 50,
     });
     ai.onDetectInShape(player as any, {});
-    const profile = (ai as any).getAttackProfile(AttackPattern.Combo);
+    const firstEvaluations = (ai as any).evaluateSkillActions(1000);
+    const firstAction = (ai as any).selectCombatAction(firstEvaluations, 20);
+    expect(firstAction).toMatchObject({
+      kind: "skill",
+      evaluation: { id: "fire" },
+    });
 
-    (ai as any).executeMeleeAttack(profile, AttackPattern.Combo);
-    vi.setSystemTime(1300);
-    (ai as any).executeMeleeAttack(profile, AttackPattern.Combo);
-    vi.setSystemTime(1800);
-    (ai as any).executeMeleeAttack(profile, AttackPattern.Combo);
+    expect((ai as any).performPlannedSkill(firstAction.evaluation)).toBe(true);
+    vi.advanceTimersByTime(500);
+    expect(onUse).toHaveBeenCalledTimes(1);
 
-    expect(onUse).toHaveBeenCalledTimes(2);
+    vi.setSystemTime(1600);
+    const cooldownEvaluations = (ai as any).evaluateSkillActions(1600);
+    expect(cooldownEvaluations[0].rejection).toBe("cooldown");
+    expect((ai as any).selectCombatAction(cooldownEvaluations, 20)).toEqual({
+      kind: "basic",
+    });
+    ai.destroy();
+  });
+
+  test("selects a learned ranged skill while keeping other learned skills", () => {
+    const event = createEvent();
+    const clientVisual = vi.fn();
+    const melee = {
+      id: "slash",
+      spCost: 0,
+      action: { mode: "melee", target: "enemy" },
+    };
+    const projectile = {
+      id: () => "fireball",
+      skillType: () => "magical",
+      animation: () => "fireball-impact",
+      spCost: 0,
+      targeting: { range: 6 },
+      action: { mode: "projectile", target: "enemy" },
+    };
+    (event as any).skills = vi.fn(() => [melee, projectile]);
+    event.getCurrentMap.mockReturnValue({
+      tileWidth: 32,
+      tileHeight: 32,
+      getPlayers: () => [],
+      getEvents: () => [],
+      clientVisual,
+    });
+    const player = {
+      ...createPlayer(),
+      hp: 10,
+      x: vi.fn(() => 150),
+      y: vi.fn(() => 0),
+    };
+    const ai = new BattleAi(event as any, { attackRange: 50 });
+    ai.onDetectInShape(player as any, {});
+
+    const evaluations = (ai as any).evaluateSkillActions(1000);
+    expect(evaluations.map((entry: any) => entry.id)).toEqual([
+      "slash",
+      "fireball",
+    ]);
+    const selection = (ai as any).selectCombatAction(evaluations, 150);
+    expect(selection).toMatchObject({
+      kind: "skill",
+      evaluation: { id: "fireball", mode: "projectile" },
+    });
+    expect((ai as any).performPlannedSkill(selection.evaluation)).toBe(true);
+    expect(clientVisual).toHaveBeenCalledWith(
+      ACTION_BATTLE_CLIENT_VISUAL_ID,
+      expect.objectContaining({
+        moment: "castSkill",
+        skill: expect.objectContaining({
+          id: "fireball",
+          skillType: "magical",
+          animation: "fireball-impact",
+        }),
+      })
+    );
+    ai.destroy();
+  });
+
+  test("strafes laterally while already inside its preferred range", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1000);
+    const event = createEvent();
+    const player = {
+      ...createPlayer(),
+      hp: 10,
+      x: vi.fn(() => 40),
+      y: vi.fn(() => 0),
+    };
+    const ai = new BattleAi(event as any, {
+      attackRange: 50,
+      moveToCooldown: 0,
+    });
+    ai.onDetectInShape(player as any, {});
+
+    (ai as any).handleSmartCombatMovement(40, [], 1000);
+
+    expect(event.moveTo).toHaveBeenCalledWith({ x: 0, y: 32 });
     ai.destroy();
   });
 

@@ -12,8 +12,10 @@ import {
 } from "./types";
 import { normalizeActionBattleOptions, setActionBattleOptions } from "./config";
 import {
+  getActionBattleEntityTile,
+  getActionBattleTileSize,
   manhattanDistance,
-  parseAoeMask,
+  resolveActionBattleAoeCells,
   resolveActionBattleSoftTarget,
 } from "./targeting";
 import { emitActionBattleClientVisual } from "./visual";
@@ -933,21 +935,6 @@ const syncActionBattleHotbar = (
   player.hideHotbar?.();
 };
 
-const getTileSize = (map: any) => ({
-  width: map?.tileWidth ?? 32,
-  height: map?.tileHeight ?? 32,
-});
-
-const getEntityTile = (
-  entity: any,
-  tileSize: { width: number; height: number }
-) => {
-  const hitbox = entity.hitbox?.() || { w: tileSize.width, h: tileSize.height };
-  const x = Math.floor((entity.x() + hitbox.w / 2) / tileSize.width);
-  const y = Math.floor((entity.y() + hitbox.h / 2) / tileSize.height);
-  return { x, y };
-};
-
 const handleActionBattleSkillUse = (
   player: RpgPlayer,
   skillId: string,
@@ -1047,7 +1034,7 @@ const handleActionBattleSkillUse = (
       const softTargeting = objectOption(
         options.combat?.player?.softTargeting
       );
-      const tileSize = getTileSize(map);
+      const tileSize = getActionBattleTileSize(map);
       const softTarget = resolveActionBattleSoftTarget(
         player,
         candidates,
@@ -1064,7 +1051,7 @@ const handleActionBattleSkillUse = (
         && actionConfig.mode === "instant"
         && softTarget?.target
       ) {
-        target = getEntityTile(softTarget.target, tileSize);
+        target = getActionBattleEntityTile(softTarget.target, tileSize);
       } else {
         if (!softTarget && options.targeting?.allowEmptyTarget === false) {
           return false;
@@ -1082,30 +1069,27 @@ const handleActionBattleSkillUse = (
     }
   }
 
-  const tileSize = getTileSize(map);
-  const origin = getEntityTile(player, tileSize);
+  const tileSize = getActionBattleTileSize(map);
+  const origin = getActionBattleEntityTile(player, tileSize);
   const targetTile = { x: target.x, y: target.y };
 
   if (manhattanDistance(origin, targetTile) > targeting.range) {
     return false;
   }
 
-  const mask = parseAoeMask(
-    targeting.aoeMask || options.skills?.defaultAoeMask
+  const affected = new Set(
+    resolveActionBattleAoeCells(
+      targetTile,
+      targeting.aoeMask || options.skills?.defaultAoeMask
+    ).map((cell) => `${cell.x},${cell.y}`)
   );
-  const affected = new Set<string>();
-  mask.cells.forEach((cell) => {
-    const x = targetTile.x + cell.dx;
-    const y = targetTile.y + cell.dy;
-    affected.add(`${x},${y}`);
-  });
 
   const targets: any[] = [];
   const actionTarget = actionConfig?.target ?? "enemy";
   const affects = options.targeting?.affects || "events";
   if (affects === "events" || affects === "both") {
     map.getEvents().forEach((event: RpgEvent) => {
-      const tile = getEntityTile(event, tileSize);
+      const tile = getActionBattleEntityTile(event, tileSize);
       if (
         affected.has(`${tile.x},${tile.y}`) &&
         canActionBattleUseTarget(
@@ -1122,7 +1106,7 @@ const handleActionBattleSkillUse = (
   if (affects === "players" || affects === "both") {
     map.getPlayers().forEach((other: RpgPlayer) => {
       if (other.id === player.id) return;
-      const tile = getEntityTile(other, tileSize);
+      const tile = getActionBattleEntityTile(other, tileSize);
       if (
         affected.has(`${tile.x},${tile.y}`) &&
         canActionBattleUseTarget(

@@ -91,29 +91,40 @@ export function setActionBattlePreviewStarter(starter?: PreviewStarter) {
 const entityId = (entity: any): string | undefined =>
   typeof entity?.id === "string" ? entity.id : undefined;
 
-const serializeSkill = (skill: any) => {
-  const id = skill?.id;
-  const name =
-    typeof skill?.name === "string"
-      ? skill.name
-      : typeof skill?.name === "function"
-        ? skill.name.call(skill)
-        : undefined;
-  const presentation = {
-    name,
-    skillType: skill?.skillType,
-    icon: skill?.icon,
-    animation: skill?.animation,
-    sound: skill?.sound,
-    casterAnimation: skill?.casterAnimation,
-    impactSound: skill?.impactSound,
-  };
-  if (typeof id === "string") return { id, ...presentation };
-  if (typeof id === "function") {
-    const value = id.call(skill);
-    if (typeof value === "string") return { id: value, ...presentation };
+const resolveSkillString = (skill: any, key: string): string | undefined => {
+  for (const source of [
+    skill,
+    skill?._skillInstance,
+    skill?._skillData,
+  ]) {
+    if (!source) continue;
+    const candidate = source[key];
+    let value = candidate;
+    if (typeof candidate === "function") {
+      try {
+        value = candidate.call(source);
+      } catch {
+        continue;
+      }
+    }
+    if (typeof value === "string") return value;
   }
   return undefined;
+};
+
+const serializeSkill = (skill: any) => {
+  const id = resolveSkillString(skill, "id");
+  if (!id) return undefined;
+  const presentation = {
+    name: resolveSkillString(skill, "name"),
+    skillType: resolveSkillString(skill, "skillType"),
+    icon: resolveSkillString(skill, "icon"),
+    animation: resolveSkillString(skill, "animation"),
+    sound: resolveSkillString(skill, "sound"),
+    casterAnimation: resolveSkillString(skill, "casterAnimation"),
+    impactSound: resolveSkillString(skill, "impactSound"),
+  };
+  return { id, ...presentation };
 };
 
 const serializePresentation = (entity: any) => {
