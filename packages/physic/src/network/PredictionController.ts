@@ -149,8 +149,15 @@ export class PredictionController<
         ? Math.max(this.lastAckTick, ack.serverTick)
         : this.lastAckTick;
 
+    // A repeated ack no longer has a matching history entry. While newer inputs
+    // are pending, comparing that older server snapshot with the current client
+    // position measures normal prediction lead as if it were authoritative drift.
+    const hasNewerPendingInputs =
+      ack.frame === this.lastAckFrame
+      && this.history.some((entry) => entry.frame > ack.frame);
+
     let needsReconciliation = false;
-    if (ack.state) {
+    if (ack.state && !hasNewerPendingInputs) {
       const acknowledgedEntry = this.history.find(
         (entry) => entry.frame === nextAckFrame && !!entry.state,
       );

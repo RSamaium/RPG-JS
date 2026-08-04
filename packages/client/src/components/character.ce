@@ -1311,6 +1311,7 @@
 
   mount((element) => {
     let appliedCameraFollowRevision = null;
+    let appliedCameraFollowOwnership = null;
     if (typeof document !== 'undefined') {
       document.addEventListener('keydown', handleNativeActionWhileMoving);
       document.addEventListener('keyup', handleNativeActionWhileMoving);
@@ -1327,6 +1328,7 @@
       const followRevision = client.cameraFollowRevision();
       if (!shouldFollowCamera()) {
         appliedCameraFollowRevision = null;
+        appliedCameraFollowOwnership = null;
         return;
       }
 
@@ -1335,10 +1337,11 @@
       const target = element.componentInstance;
       if (!viewport || !target) {
         appliedCameraFollowRevision = null;
+        appliedCameraFollowOwnership = null;
         return;
       }
 
-      const appliedCameraFollow = applyCameraFollow({
+      appliedCameraFollowOwnership = applyCameraFollow({
         viewport,
         target,
         smoothMove,
@@ -1346,12 +1349,12 @@
         isCurrentRevision: (revision) => client.cameraFollowRevision() === revision,
         shouldFollowCamera
       });
-      appliedCameraFollowRevision = appliedCameraFollow ? followRevision : null;
+      appliedCameraFollowRevision = appliedCameraFollowOwnership ? followRevision : null;
     })
 
     return () => {
       if (ownsCameraFollowRevision(appliedCameraFollowRevision, client.cameraFollowRevision())) {
-        clearCameraFollowPlugins(element.props.context?.viewport);
+        clearCameraFollowPlugins(element.props.context?.viewport, appliedCameraFollowOwnership);
       }
     }
   })

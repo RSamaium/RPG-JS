@@ -97,6 +97,41 @@ describe("PredictionController", () => {
     expect(secondAck.acknowledgedTick).toBe(101);
   });
 
+  it("does not reconcile a repeated ack against the current state while newer inputs are pending", () => {
+    let current: PredictionState<string> = { x: 52, y: 100, direction: "right" };
+
+    const controller = new PredictionController<string>({
+      correctionThreshold: 5,
+      getPhysicsTick: () => 1,
+      getCurrentState: () => current,
+      setAuthoritativeState: (state) => {
+        current = state;
+      },
+    });
+
+    const acknowledged = controller.recordInput("right", Date.now());
+    controller.attachPredictedState(acknowledged.frame, current);
+    controller.applyServerAck({
+      frame: acknowledged.frame,
+      serverTick: 100,
+      state: current,
+    });
+
+    current = { x: 82, y: 100, direction: "right" };
+    const pending = controller.recordInput("right", Date.now() + 1);
+    controller.attachPredictedState(pending.frame, current);
+
+    const repeatedAck = controller.applyServerAck({
+      frame: acknowledged.frame,
+      serverTick: 101,
+      state: { x: 52, y: 100, direction: "right" },
+    });
+
+    expect(repeatedAck.needsReconciliation).toBe(false);
+    expect(repeatedAck.acknowledgedTick).toBe(101);
+    expect(repeatedAck.pendingInputs.map((entry) => entry.frame)).toEqual([pending.frame]);
+  });
+
   it("can clear pending inputs without resetting the next frame", () => {
     const controller = new PredictionController<string>({
       getPhysicsTick: () => 1,

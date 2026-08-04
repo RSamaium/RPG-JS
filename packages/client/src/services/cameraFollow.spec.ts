@@ -3,6 +3,7 @@ import {
   applyCameraFollow,
   cameraFollowAnimationOptions,
   cameraFollowOptions,
+  clearCameraFollowPlugins,
   ownsCameraFollowRevision,
 } from "./cameraFollow";
 
@@ -116,6 +117,63 @@ describe("camera follow", () => {
 
     const animateOptions = viewport.animate.mock.calls[0][0];
     animateOptions.callbackOnComplete();
+
+    expect(viewport.follow).not.toHaveBeenCalled();
+  });
+
+  it("does not let a remounted sprite cleanup remove the newer follow owner", () => {
+    const viewport = createViewport();
+
+    const previousOwner = applyCameraFollow({
+      viewport,
+      target: { x: 120, y: 240 },
+      smoothMove: false,
+      followRevision: 2,
+      isCurrentRevision: () => true,
+      shouldFollowCamera: () => true,
+    });
+    const currentOwner = applyCameraFollow({
+      viewport,
+      target: { x: 160, y: 280 },
+      smoothMove: false,
+      followRevision: 2,
+      isCurrentRevision: () => true,
+      shouldFollowCamera: () => true,
+    });
+
+    viewport.plugins.remove.mockClear();
+
+    expect(clearCameraFollowPlugins(viewport, previousOwner)).toBe(false);
+    expect(viewport.plugins.remove).not.toHaveBeenCalled();
+    expect(clearCameraFollowPlugins(viewport, currentOwner)).toBe(true);
+    expect(viewport.plugins.remove).toHaveBeenCalledWith("animate");
+    expect(viewport.plugins.remove).toHaveBeenCalledWith("follow");
+  });
+
+  it("ignores an animation callback from a previous owner with the same revision", () => {
+    const viewport = createViewport();
+
+    applyCameraFollow({
+      viewport,
+      target: { x: 120, y: 240 },
+      smoothMove: true,
+      followRevision: 2,
+      isCurrentRevision: () => true,
+      shouldFollowCamera: () => true,
+    });
+    const previousAnimation = viewport.animate.mock.calls[0][0];
+
+    applyCameraFollow({
+      viewport,
+      target: { x: 160, y: 280 },
+      smoothMove: false,
+      followRevision: 2,
+      isCurrentRevision: () => true,
+      shouldFollowCamera: () => true,
+    });
+    viewport.follow.mockClear();
+
+    previousAnimation.callbackOnComplete();
 
     expect(viewport.follow).not.toHaveBeenCalled();
   });

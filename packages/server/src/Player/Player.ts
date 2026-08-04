@@ -224,8 +224,14 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
 
   /** Internal: Shapes where this player is currently located */
   private _inShapes: Set<RpgShape> = new Set();
-  /** Last processed client input timestamp for reconciliation */
+  /** Server-clock deadline used to stop idle movement. */
   lastProcessedInputTs: number = 0;
+  /** Last client-authored timestamp, kept separately for anti-cheat validation. */
+  lastProcessedClientInputTs: number = 0;
+  /** Client physics tick attached to the last processed movement input. */
+  lastProcessedInputTick: number | null = null;
+  /** Server physics tick at which that client tick was applied. */
+  lastProcessedInputServerTick: number | null = null;
   /** Last processed client input frame for reconciliation with server tick */
   _lastFramePositions: {
     frame: number;
