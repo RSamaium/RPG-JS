@@ -42,7 +42,7 @@ import { normalizeRoomMapId } from "./utils/mapId";
 import { applySyncedHitboxPayload } from "./utils/syncHitbox";
 import { EventComponentResolverRegistry, type EventComponentResolver } from "./Game/EventComponentResolver";
 import { RpgClientBuiltinI18n } from "./i18n";
-import type { CameraFollowSmoothMove } from "./services/cameraFollow";
+import { clearCameraFollowPlugins, type CameraFollowSmoothMove } from "./services/cameraFollow";
 import { RpgMusicManager } from "./Game/MusicManager";
 export type {
   CameraFollowEase,
@@ -670,8 +670,7 @@ export class RpgClientEngine<T = any> {
 
   private clearCameraFollowViewportPlugins(): void {
     const viewport = this.findViewportInstance();
-    viewport?.plugins?.remove?.("animate");
-    viewport?.plugins?.remove?.("follow");
+    clearCameraFollowPlugins(viewport);
   }
 
   private prepareSyncPayload(data: any): any {
@@ -727,6 +726,9 @@ export class RpgClientEngine<T = any> {
     ack: { frame: number; serverTick?: number; x?: number; y?: number; direction?: Direction },
     syncData: any,
   ): { frame: number; serverTick?: number; x?: number; y?: number; direction?: Direction } {
+    if (typeof ack.x === "number" && typeof ack.y === "number") {
+      return ack;
+    }
     const myId = this.playerIdSignal();
     if (!myId) {
       return ack;

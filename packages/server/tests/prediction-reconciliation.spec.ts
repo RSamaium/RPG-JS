@@ -283,7 +283,7 @@ describe("Prediction + Reconciliation Server Protocol", () => {
     });
   });
 
-  test("should align ack position with the synced local player payload when available", () => {
+  test("should keep ack position aligned with its processed frame when the sync snapshot advances", () => {
     player._lastFramePositions = {
       frame: 21,
       position: {
@@ -314,10 +314,10 @@ describe("Prediction + Reconciliation Server Protocol", () => {
     expect(intercepted?.value?.ack).toEqual(
       expect.objectContaining({
         frame: 21,
-        x: 321,
-        y: 45,
-        direction: Direction.Left,
-        serverTick: serverMap.getTick(),
+        x: 0,
+        y: 0,
+        direction: Direction.Down,
+        serverTick: 1,
       }),
     );
   });
@@ -362,20 +362,64 @@ describe("Prediction + Reconciliation Server Protocol", () => {
 
     expect(player.pendingInputs.map((entry: any) => entry.frame)).toEqual([1, 2, 3]);
 
-    await serverMap.processInput(player.id);
+    await serverMap.nextTickAsync();
     expect(player._lastFramePositions?.frame).toBe(1);
-    expect(player._lastFramePositions?.position?.x).toBe(101);
     expect(player.pendingInputs.map((entry: any) => entry.frame)).toEqual([2, 3]);
 
-    await serverMap.processInput(player.id);
+    await serverMap.nextTickAsync();
     expect(player._lastFramePositions?.frame).toBe(2);
-    expect(player._lastFramePositions?.position?.x).toBe(102);
     expect(player.pendingInputs.map((entry: any) => entry.frame)).toEqual([3]);
 
-    await serverMap.processInput(player.id);
+    await serverMap.nextTickAsync();
     expect(player._lastFramePositions?.frame).toBe(3);
-    expect(player._lastFramePositions?.position?.x).toBe(103);
     expect(player.pendingInputs).toHaveLength(0);
+  });
+
+  test("should preserve client physics tick spacing while replaying queued inputs", async () => {
+    const baseTs = Date.now();
+    await serverMap.onInput(player, {
+      input: Direction.Right,
+      frame: 2,
+      tick: 13,
+      timestamp: baseTs + 48,
+      trajectory: [
+        { input: Direction.Right, frame: 1, tick: 10, timestamp: baseTs },
+        { input: Direction.Right, frame: 2, tick: 13, timestamp: baseTs + 48 },
+      ],
+    });
+
+    await serverMap.nextTickAsync();
+    const firstServerTick = player.lastProcessedInputServerTick;
+    expect(player._lastFramePositions?.frame).toBe(1);
+
+    await serverMap.nextTickAsync();
+    expect(player._lastFramePositions?.frame).toBe(1);
+    await serverMap.nextTickAsync();
+    expect(player._lastFramePositions?.frame).toBe(1);
+    await serverMap.nextTickAsync();
+
+    expect(player._lastFramePositions?.frame).toBe(2);
+    expect(player.lastProcessedInputTick).toBe(13);
+    expect(player.lastProcessedInputServerTick).toBe(firstServerTick + 3);
+  });
+
+  test("should use server time for movement idle detection despite an old client timestamp", async () => {
+    const staleClientTimestamp = Date.now() - 5_000;
+    await serverMap.onInput(player, {
+      input: Direction.Right,
+      frame: 1,
+      tick: 1,
+      timestamp: staleClientTimestamp,
+    });
+
+    await serverMap.nextTickAsync();
+
+    expect(player.lastProcessedClientInputTs).toBe(staleClientTimestamp);
+    expect(player.lastProcessedInputTs).toBeGreaterThan(staleClientTimestamp + 4_000);
+
+    const stopMovement = vi.spyOn(serverMap, "stopMovement");
+    await serverMap.nextTickAsync();
+    expect(stopMovement).not.toHaveBeenCalled();
   });
 
   test("should process dash inputs through the movement queue", async () => {
@@ -430,6 +474,8 @@ describe("Prediction + Reconciliation Server Protocol", () => {
     expect(player.pendingInputs).toHaveLength(0);
     expect(player._lastFramePositions?.frame).toBe(frame);
     expect(player.x()).toBeGreaterThan(initialX);
+    expect(player._lastFramePositions?.position?.x).toBe(Math.round(player.x()));
+    expect(player._lastFramePositions?.serverTick).toBe(serverMap.getTick());
     expect(serverMap.getTick()).toBeGreaterThan(0);
   });
 
