@@ -222,6 +222,25 @@ export const followCameraInstantly = (
   return true;
 };
 
+export const syncCameraFollowPosition = (
+  viewport: any,
+  target: CameraFollowTarget,
+  smoothMove: CameraFollowSmoothMove
+) => {
+  if (smoothMoveEnabled(smoothMove) || typeof viewport?.moveCenter !== "function") {
+    return false;
+  }
+
+  const position = readCameraFollowPosition(target);
+  if (!position) return false;
+
+  const center = viewport.center;
+  if (center?.x !== position.x || center?.y !== position.y) {
+    viewport.moveCenter(position.x, position.y);
+  }
+  return true;
+};
+
 export const applyCameraFollow = ({
   viewport,
   target,

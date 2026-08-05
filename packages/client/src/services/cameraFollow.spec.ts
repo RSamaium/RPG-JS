@@ -5,11 +5,14 @@ import {
   cameraFollowOptions,
   clearCameraFollowPlugins,
   ownsCameraFollowRevision,
+  syncCameraFollowPosition,
 } from "./cameraFollow";
 
 const createViewport = () => ({
   animate: vi.fn(),
   follow: vi.fn(),
+  moveCenter: vi.fn(),
+  center: { x: 0, y: 0 },
   plugins: {
     remove: vi.fn(),
   },
@@ -101,6 +104,26 @@ describe("camera follow", () => {
     expect(followTarget).not.toBe(target);
     expect(followTarget.x).toBe(120);
     expect(followTarget.y).toBe(240);
+  });
+
+  it("synchronizes an instant camera with the rendered target position", () => {
+    const viewport = createViewport();
+    const target = { x: 120, y: 240 };
+
+    expect(syncCameraFollowPosition(viewport, target, false)).toBe(true);
+    expect(viewport.moveCenter).toHaveBeenCalledWith(120, 240);
+
+    viewport.moveCenter.mockClear();
+    viewport.center = { x: 120, y: 240 };
+    expect(syncCameraFollowPosition(viewport, target, false)).toBe(true);
+    expect(viewport.moveCenter).not.toHaveBeenCalled();
+  });
+
+  it("leaves animated camera following to the viewport plugin", () => {
+    const viewport = createViewport();
+
+    expect(syncCameraFollowPosition(viewport, { x: 120, y: 240 }, true)).toBe(false);
+    expect(viewport.moveCenter).not.toHaveBeenCalled();
   });
 
   it("does not follow after animation if another camera command superseded it", () => {
