@@ -45,6 +45,7 @@ import { EventComponentResolverRegistry, type EventComponentResolver } from "./G
 import { RpgClientBuiltinI18n } from "./i18n";
 import { clearCameraFollowPlugins, type CameraFollowSmoothMove } from "./services/cameraFollow";
 import { RpgMusicManager } from "./Game/MusicManager";
+import { routePredictedLocalPlayerSync } from "./services/localPlayerSync";
 export type {
   CameraFollowEase,
   CameraFollowSmoothMove,
@@ -673,12 +674,27 @@ export class RpgClientEngine<T = any> {
     clearCameraFollowPlugins(viewport);
   }
 
-  private prepareSyncPayload(data: any): any {
+  private prepareSyncPayload(data: any): {
+    payload: any;
+    localPredictionSnapshot?: PredictionState<Direction>;
+  } {
     const payload = { ...(data ?? {}) };
     delete payload.ack;
     delete payload.timestamp;
 
     const myId = this.playerIdSignal();
+    if (this.predictionEnabled && this.prediction) {
+      const currentPlayer = this.sceneMap?.getCurrentPlayer?.();
+      const currentState = currentPlayer ? this.getLocalPlayerState() : undefined;
+      const routed = routePredictedLocalPlayerSync<Direction>(payload, myId, currentState);
+      if (routed.snapshot) {
+        return {
+          payload: routed.payload,
+          localPredictionSnapshot: routed.snapshot,
+        };
+      }
+    }
+
     const players = payload.players;
     const localPatch = myId && players ? players[myId] : undefined;
     const shouldMaskLocalPosition = this.shouldPreserveLocalPlayerPosition(localPatch);
@@ -694,7 +710,7 @@ export class RpgClientEngine<T = any> {
       };
     }
 
-    return payload;
+    return { payload };
   }
 
   private shouldPreserveLocalPlayerPosition(localPatch?: any): boolean {
@@ -1031,12 +1047,15 @@ export class RpgClientEngine<T = any> {
       ack && typeof ack.frame === "number"
         ? this.normalizeAckWithSyncState(ack, data)
         : undefined;
-    const payload = this.prepareSyncPayload(data);
+    const { payload, localPredictionSnapshot } = this.prepareSyncPayload(data);
     load(this.sceneMap, payload, true);
     applySyncedHitboxPayload(this.sceneMap, payload);
 
     if (normalizedAck) {
       this.applyServerAck(normalizedAck);
+    }
+    if (localPredictionSnapshot) {
+      this.prediction?.queueServerSnapshot(localPredictionSnapshot);
     }
 
     applySyncedParamPayload(this.sceneMap, payload);
