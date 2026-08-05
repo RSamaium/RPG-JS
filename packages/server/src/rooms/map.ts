@@ -59,6 +59,7 @@ import {
 } from "../map-streaming";
 
 const DEFAULT_DASH_COOLDOWN_MS = 450;
+const MOVEMENT_IDLE_TIMEOUT_MS = 100;
 const GROUND_TOUCH_SENSOR_COVERAGE_THRESHOLD = 0.8;
 const MAP_SOURCE_STORAGE_KEY = "$room:rpgjs-map-source";
 const WORLD_MAPS_STORAGE_KEY = "$room:rpgjs-world-maps";
@@ -505,7 +506,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
   private _serverTickInProgress = false;
   private _queuedServerTickDelta = 0;
   private _serverTickLoopVersion = 0;
-  private _playersAwaitingAckPosition = new Set<string>();
+  private _pendingAckFrames = new Map<string, number>();
   /** Enable/disable automatic tick processing (useful for unit tests) */
   private _autoTickEnabled: boolean = true;
   /** Runtime templates for scenario events to instantiate per player */
@@ -1583,7 +1584,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
    * ```
    */
   onJoin(player: RpgPlayer, conn: RpgRoomConnection) {
-    this._playersAwaitingAckPosition.delete(player.id);
+    this._pendingAckFrames.delete(player.id);
     // A reconnect reuses the public player id but starts with an empty client
     // entity cache. Force the next sync packet to include every visible entity.
     this.spatialVisibleEventIds.delete(player.id);
@@ -1707,7 +1708,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
    * ```
    */
   async onLeave(player: RpgPlayer, conn: RpgRoomConnection) {
-    this._playersAwaitingAckPosition.delete(player.id);
+    this._pendingAckFrames.delete(player.id);
     removeMapStreamingPlayer(this, player);
     this.spatialVisibleEventIds.delete(player.id);
     this.spatialVisiblePlayerIds.delete(player.id);
@@ -1905,11 +1906,15 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
       player.lastProcessedClientInputTs = 0;
       player.lastProcessedInputTick = null;
       player.lastProcessedInputServerTick = null;
+      this._pendingAckFrames.delete(player.id);
       (this as any).stopMovement(player);
       return;
     }
 
-    const lastAckedFrame = player._lastFramePositions?.frame ?? 0;
+    const lastAckedFrame = Math.max(
+      player._lastFramePositions?.frame ?? 0,
+      this._pendingAckFrames.get(player.id) ?? 0,
+    );
     const now = Date.now();
     const candidates: Array<{
       input: any;
@@ -2415,6 +2420,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
       player.lastProcessedClientInputTs = 0;
       player.lastProcessedInputTick = null;
       player.lastProcessedInputServerTick = null;
+      this._pendingAckFrames.delete(player.id);
       (this as any).stopMovement(player);
       return {
         player,
@@ -2434,7 +2440,10 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     const config = { ...defaultControls, ...controls };
     let lastProcessedTime = player.lastProcessedInputTs || 0;
     let lastProcessedClientTime = player.lastProcessedClientInputTs || 0;
-    let lastProcessedFrame = player._lastFramePositions?.frame ?? 0;
+    let lastProcessedFrame = Math.max(
+      player._lastFramePositions?.frame ?? 0,
+      this._pendingAckFrames.get(player.id) ?? 0,
+    );
 
     // Sort inputs by frame number to ensure proper order
     player.pendingInputs.sort((a, b) => (a.frame || 0) - (b.frame || 0));
@@ -2522,25 +2531,10 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
         player.lastProcessedInputServerTick = this.getTick();
         processedThisTick += 1;
 
-        const bodyPos = this.getBodyPosition(player.id, "top-left");
-        const ackX =
-          typeof input.clientState?.x === "number"
-            ? input.clientState.x
-            : bodyPos?.x ?? player.x();
-        const ackY =
-          typeof input.clientState?.y === "number"
-            ? input.clientState.y
-            : bodyPos?.y ?? player.y();
-        player._lastFramePositions = {
-          frame: input.frame,
-          position: {
-            x: Math.round(ackX),
-            y: Math.round(ackY),
-            direction: input.clientState?.direction ?? player.direction(),
-          },
-          serverTick: this.getTick(),
-        };
-        this._playersAwaitingAckPosition.add(player.id);
+        // Do not expose this frame until the following authoritative physics
+        // step has completed. In particular, never pair the new frame with the
+        // client-authored trajectory position while that step is pending.
+        this._pendingAckFrames.set(player.id, input.frame);
       }
 
       // Update tracking variables
@@ -2554,7 +2548,10 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
       player.lastProcessedInputTs = lastProcessedTime;
       player.lastProcessedClientInputTs = lastProcessedClientTime;
     } else {
-      const idleTimeout = Math.max(config.minTimeBetweenInputs * 4, 50);
+      const idleTimeout = Math.max(
+        config.minTimeBetweenInputs * 4,
+        MOVEMENT_IDLE_TIMEOUT_MS,
+      );
       const lastTs = player.lastProcessedInputTs || 0;
       if (lastTs > 0 && Date.now() - lastTs > idleTimeout) {
         (this as any).stopMovement(player);
@@ -2633,19 +2630,21 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
   }
 
   private captureProcessedInputPositions(tick: number): void {
-    for (const playerId of this._playersAwaitingAckPosition) {
+    for (const [playerId, frame] of this._pendingAckFrames) {
       const player = this.getPlayer(playerId);
-      const lastFramePositions = player?._lastFramePositions;
-      if (!player || !lastFramePositions) continue;
+      if (!player) continue;
       const bodyPos = this.getBodyPosition(player.id, "top-left");
-      lastFramePositions.position = {
-        x: Math.round(bodyPos?.x ?? player.x()),
-        y: Math.round(bodyPos?.y ?? player.y()),
-        direction: player.direction(),
+      player._lastFramePositions = {
+        frame,
+        position: {
+          x: Math.round(bodyPos?.x ?? player.x()),
+          y: Math.round(bodyPos?.y ?? player.y()),
+          direction: player.direction(),
+        },
+        serverTick: tick,
       };
-      lastFramePositions.serverTick = tick;
     }
-    this._playersAwaitingAckPosition.clear();
+    this._pendingAckFrames.clear();
   }
 
   private async processPendingInputsForTick(): Promise<void> {

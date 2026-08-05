@@ -92,7 +92,7 @@ describe("Prediction + Reconciliation Server Protocol", () => {
       tick: 0,
       timestamp: Date.now(),
     });
-    await serverMap.processInput(player.id);
+    await serverMap.nextTickAsync();
 
     const intercepted = serverMap.interceptorPacket(
       player,
@@ -322,6 +322,61 @@ describe("Prediction + Reconciliation Server Protocol", () => {
     );
   });
 
+  test("should not expose a new frame before its authoritative physics position is captured", async () => {
+    player._lastFramePositions = {
+      frame: 20,
+      position: {
+        x: 90,
+        y: 100,
+        direction: Direction.Right,
+      },
+      serverTick: serverMap.getTick(),
+    };
+
+    await serverMap.onInput(player, {
+      input: Direction.Right,
+      frame: 21,
+      tick: 21,
+      timestamp: Date.now(),
+      trajectory: [{
+        input: Direction.Right,
+        frame: 21,
+        tick: 21,
+        timestamp: Date.now(),
+        x: 500,
+        y: 100,
+        direction: Direction.Right,
+      }],
+    });
+    await serverMap.processInput(player.id);
+
+    const beforeStep = serverMap.interceptorPacket(
+      player,
+      { type: "sync", value: {} },
+      player.conn,
+    );
+
+    expect(beforeStep?.value?.ack).toEqual(expect.objectContaining({
+      frame: 20,
+      x: 90,
+      y: 100,
+    }));
+
+    await serverMap.nextTickAsync();
+    const afterStep = serverMap.interceptorPacket(
+      player,
+      { type: "sync", value: {} },
+      player.conn,
+    );
+
+    expect(afterStep?.value?.ack).toEqual(expect.objectContaining({
+      frame: 21,
+      x: Math.round(player.x()),
+      y: Math.round(player.y()),
+      serverTick: serverMap.getTick(),
+    }));
+  });
+
   test("should queue trajectory frames and replay them progressively on server ticks", async () => {
     const baseTs = Date.now();
     await serverMap.onInput(player, {
@@ -422,6 +477,32 @@ describe("Prediction + Reconciliation Server Protocol", () => {
     expect(stopMovement).not.toHaveBeenCalled();
   });
 
+  test("should keep movement active for the same idle window as the client", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-08-05T08:00:00.000Z"));
+      await serverMap.onInput(player, {
+        input: Direction.Right,
+        frame: 1,
+        tick: 1,
+        timestamp: Date.now(),
+      });
+      await serverMap.nextTickAsync();
+
+      const stopMovement = vi.spyOn(serverMap, "stopMovement");
+      vi.advanceTimersByTime(80);
+      await serverMap.nextTickAsync();
+      expect(stopMovement).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(21);
+      await serverMap.nextTickAsync();
+      expect(stopMovement).toHaveBeenCalledWith(player);
+    }
+    finally {
+      vi.useRealTimers();
+    }
+  });
+
   test("should process dash inputs through the movement queue", async () => {
     const dashBody = vi.spyOn(serverMap, "dashBody" as any);
     const frame = 11;
@@ -440,7 +521,7 @@ describe("Prediction + Reconciliation Server Protocol", () => {
       timestamp,
     });
 
-    await serverMap.processInput(player.id);
+    await serverMap.nextTickAsync();
 
     expect(dashBody).toHaveBeenCalledWith(
       player,
