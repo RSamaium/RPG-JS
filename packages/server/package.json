@@ -33,7 +33,7 @@
     "@canvasengine/tiled": "2.1.0",
     "@rpgjs/common": "workspace:*",
     "@rpgjs/database": "^4.3.0",
-    "@rpgjs/physic": "5.0.1",
+    "@rpgjs/physic": "workspace:*",
     "@rpgjs/testing": "workspace:*",
     "@signe/di": "3.1.0",
     "@signe/reactive": "3.1.0",

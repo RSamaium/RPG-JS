@@ -502,7 +502,6 @@ export class RpgClientEngine<T = any> {
     const tickSubscription = this.tick.subscribe((tick) => {
       this.stepClientPhysicsTick();
       this.projectiles.step();
-      this.flushPendingPredictedStates();
       this.flushPendingMovePath();
       this.hooks.callHooks("client-engine-onStep", this, tick).subscribe();
 
@@ -2199,7 +2198,12 @@ export class RpgClientEngine<T = any> {
     }
     const deltaMs = Math.max(1, Math.min(100, now - this.lastClientPhysicsStepAt));
     this.lastClientPhysicsStepAt = now;
-    this.sceneMap.stepClientPhysics(deltaMs);
+    this.sceneMap.stepClientPhysics(deltaMs, {
+      // A slow render can execute several fixed physics steps at once. An input
+      // frame belongs to the first of those steps, which is also where the
+      // authoritative server captures its matching ACK position.
+      afterStep: () => this.flushPendingPredictedStates(),
+    });
   }
 
   private flushPendingPredictedStates(): void {

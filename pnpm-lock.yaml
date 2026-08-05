@@ -169,8 +169,8 @@ importers:
   packages/common:
     dependencies:
       '@rpgjs/physic':
-        specifier: 5.0.1
-        version: 5.0.1
+        specifier: workspace:*
+        version: link:../physic
       '@signe/di':
         specifier: 3.1.0
         version: 3.1.0
@@ -236,8 +236,8 @@ importers:
         specifier: ^4.3.0
         version: 4.3.0
       '@rpgjs/physic':
-        specifier: 5.0.1
-        version: 5.0.1
+        specifier: workspace:*
+        version: link:../physic
       '@rpgjs/testing':
         specifier: workspace:*
         version: link:../testing
@@ -2561,9 +2561,6 @@ packages:
 
   '@rpgjs/database@4.3.0':
     resolution: {integrity: sha512-XmF1gkdfbf8XOfvsCnwJ4bC3nk+ZqQaQnBrSYFndVQgmTEPD2RcgPutYm1KcsXDMhVmvFZSb/X7m1sK8ujdvSw==}
-
-  '@rpgjs/physic@5.0.1':
-    resolution: {integrity: sha512-ls+ZrSyVWTlKdQ86teG+hizcnl8FONyANvx2n9xqL9DiRo5EznliOwK13Yh19t3s2SAbV1w4EWBG0hW5HsHK0w==}
 
   '@rushstack/node-core-library@5.23.1':
     resolution: {integrity: sha512-wlKmIKIYCKuCASbITvOxLZXepPbwXvrv7S6ig6XNWFchSyhL/E2txmVXspHY49Wu2dzf7nI27a2k/yV5BA3EiA==}
@@ -6295,8 +6292,6 @@ snapshots:
     optional: true
 
   '@rpgjs/database@4.3.0': {}
-
-  '@rpgjs/physic@5.0.1': {}
 
   '@rushstack/node-core-library@5.23.1(@types/node@25.9.3)':
     dependencies:

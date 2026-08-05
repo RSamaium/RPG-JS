@@ -132,6 +132,45 @@ describe("PredictionController", () => {
     expect(repeatedAck.pendingInputs.map((entry) => entry.frame)).toEqual([pending.frame]);
   });
 
+  it("does not reconcile a delayed ack whose matching history entry expired", () => {
+    let tick = 1;
+    const now = Date.now();
+    let current: PredictionState<string> = { x: 0, y: 0, direction: "right" };
+    const controller = new PredictionController<string>({
+      correctionThreshold: 5,
+      historyTtlMs: 100,
+      getPhysicsTick: () => tick,
+      getCurrentState: () => current,
+      setAuthoritativeState: (state) => {
+        current = state;
+      },
+    });
+
+    const acknowledged = controller.recordInput("right", now - 300);
+    controller.attachPredictedState(acknowledged.frame, current);
+    controller.applyServerAck({
+      frame: acknowledged.frame,
+      state: current,
+    });
+
+    tick += 1;
+    const expired = controller.recordInput("right", now - 200);
+    controller.attachPredictedState(expired.frame, { x: 10, y: 0, direction: "right" });
+    tick += 1;
+    const pending = controller.recordInput("right", now);
+    controller.attachPredictedState(pending.frame, { x: 20, y: 0, direction: "right" });
+    controller.cleanup(now);
+    current = { x: 50, y: 0, direction: "right" };
+
+    const delayedAck = controller.applyServerAck({
+      frame: expired.frame,
+      state: { x: 10, y: 0, direction: "right" },
+    });
+
+    expect(delayedAck.needsReconciliation).toBe(false);
+    expect(delayedAck.pendingInputs.map((entry) => entry.frame)).toEqual([pending.frame]);
+  });
+
   it("can clear pending inputs without resetting the next frame", () => {
     const controller = new PredictionController<string>({
       getPhysicsTick: () => 1,

@@ -16,7 +16,7 @@
   "license": "MIT",
   "description": "",
   "dependencies": {
-    "@rpgjs/physic": "5.0.1",
+    "@rpgjs/physic": "workspace:*",
     "@signe/di": "3.1.0",
     "@signe/reactive": "3.1.0",
     "@signe/sync": "3.1.1",
