@@ -6,7 +6,7 @@ import { AbstractWebsocket, WebSocketToken } from "./services/AbstractSocket";
 import { LoadMapService, LoadMapToken } from "./services/loadMap";
 import { RpgSound } from "./Sound";
 import { RpgResource } from "./Resource";
-import { getOrCreateI18nService, Hooks, ModulesToken, Direction, normalizeLightingState, Vector2, type I18nParams, type I18nService } from "@rpgjs/common";
+import { getOrCreateI18nService, Hooks, ModulesToken, Direction, normalizeLightingState, Vector2, type I18nParams, type I18nService, type RpgRoomDescriptor } from "@rpgjs/common";
 import type { EventComponentConfig } from "./RpgClient";
 import type { RpgClientEvent } from "./Game/Event";
 import { load } from "@signe/sync";
@@ -44,6 +44,11 @@ import { EventComponentResolverRegistry, type EventComponentResolver } from "./G
 import { RpgClientBuiltinI18n } from "./i18n";
 import type { CameraFollowSmoothMove } from "./services/cameraFollow";
 import { RpgMusicManager } from "./Game/MusicManager";
+import {
+  RpgClientRoom,
+  RpgClientSceneRegistry,
+  type RpgClientSceneDefinition,
+} from "./services/gameplayRooms";
 export type {
   CameraFollowEase,
   CameraFollowSmoothMove,
@@ -160,6 +165,16 @@ export class RpgClientEngine<T = any> {
   private loadMapService: LoadMapService;
   private hooks: Hooks;
   private sceneMap: RpgClientMap
+  /** Synchronized state for the active non-map gameplay room. */
+  public readonly sceneRoom = new RpgClientRoom();
+  /** Authoritative descriptor of the active room. */
+  public readonly activeRoom = signal<RpgRoomDescriptor | null>(null);
+  /** Active room kind; `map` keeps the historical map pipeline enabled. */
+  public readonly activeSceneKind = signal("map");
+  /** CanvasEngine component selected for a custom gameplay room. */
+  public readonly activeRoomSceneComponent = signal<any>(undefined);
+  private readonly clientSceneRegistry: RpgClientSceneRegistry;
+  private activeClientScene?: RpgClientSceneDefinition;
   private selector: HTMLElement;
   public globalConfig: T;
   public sceneComponent: any;
@@ -284,6 +299,7 @@ export class RpgClientEngine<T = any> {
   private socketListenersInitialized = false;
   private clientReadyForMapChanges = false;
   private pendingMapChanges: any[] = [];
+  private pendingRoomChanges: unknown[] = [];
   
   // Store subscriptions and event listeners for cleanup
   private tickSubscriptions: any[] = [];
@@ -302,6 +318,7 @@ export class RpgClientEngine<T = any> {
     this.guiService = inject(RpgGui);
     this.loadMapService = inject(LoadMapToken);
     this.hooks = inject<Hooks>(ModulesToken);
+    this.clientSceneRegistry = inject(RpgClientSceneRegistry);
     this.i18nService = getOrCreateI18nService(context);
     this.i18nService.addMessages(RpgClientBuiltinI18n, "rpgjs-client", 0);
     this.projectiles = new ProjectileManager(
@@ -492,6 +509,7 @@ export class RpgClientEngine<T = any> {
     await lastValueFrom(this.hooks.callHooks("client-engine-onStart", this));
     this.clientReadyForMapChanges = true;
     this.flushPendingMapChanges();
+    this.flushPendingRoomChanges();
 
     // wondow is resize
     this.resizeHandler = () => {
@@ -784,6 +802,14 @@ export class RpgClientEngine<T = any> {
       this.handleChangeMap(data);
     });
 
+    this.webSocket.on("changeRoom", (data) => {
+      if (!this.clientReadyForMapChanges) {
+        this.pendingRoomChanges.push(data);
+        return;
+      }
+      void this.handleChangeRoom(data);
+    });
+
     this.webSocket.on("showComponentAnimation", (data) => {
       const { params, object, position, id } = data;
       if (!object && position === undefined) {
@@ -997,11 +1023,87 @@ export class RpgClientEngine<T = any> {
     packets.forEach((packet) => this.handleChangeMap(packet));
   }
 
-  private handleChangeMap(data: any) {
+  private flushPendingRoomChanges(): void {
+    const packets = this.pendingRoomChanges;
+    this.pendingRoomChanges = [];
+    packets.forEach((packet) => void this.handleChangeRoom(packet));
+  }
+
+  private async handleChangeMap(data: any) {
     const nextMapId = typeof data?.mapId === "string" ? data.mapId : undefined;
+    const descriptor: RpgRoomDescriptor | undefined = nextMapId
+      ? {
+          id: nextMapId,
+          kind: "map",
+          name: typeof data?.name === "string" ? data.name : nextMapId.replace(/^map-/, ""),
+        }
+      : undefined;
+    if (descriptor) {
+      await this.leaveActiveClientScene(descriptor);
+      this.sceneRoom.reset();
+      this.activeRoom.set(descriptor);
+    }
+    this.activeSceneKind.set("map");
+    this.activeRoomSceneComponent.set(undefined);
     this.beginMapTransfer(nextMapId, data?.continueMovement === true);
     const transferToken = typeof data?.transferToken === "string" ? data.transferToken : undefined;
-    this.loadScene(data.mapId, transferToken);
+    await this.loadScene(data.mapId, transferToken);
+  }
+
+  private async handleChangeRoom(data: unknown): Promise<void> {
+    const packet = data as Partial<RpgRoomDescriptor> & { transferToken?: unknown };
+    if (
+      typeof packet.id !== "string"
+      || typeof packet.kind !== "string"
+      || typeof packet.name !== "string"
+    ) {
+      await this.callConnectError(new Error("Invalid RPGJS room-change packet"));
+      return;
+    }
+    const definition = this.clientSceneRegistry.get(packet.kind);
+    if (!definition) {
+      await this.callConnectError(new Error(`No client scene registered for room kind: ${packet.kind}`));
+      return;
+    }
+    const descriptor: RpgRoomDescriptor = {
+      id: packet.id,
+      kind: packet.kind,
+      name: packet.name,
+    };
+
+    await this.leaveActiveClientScene(descriptor);
+    this.sceneRoom.reset(descriptor);
+    await definition.onBeforeEnter?.(this.sceneRoom, descriptor);
+    this.sceneMap.reset();
+    this.sceneMap.configureClientPrediction(false);
+    this.activeMapStreamController?.detach();
+    this.activeMapStreamController = undefined;
+    this.projectiles.clear();
+    this.activeClientScene = definition;
+    this.activeRoom.set(descriptor);
+    this.activeSceneKind.set(descriptor.kind);
+    this.activeRoomSceneComponent.set(definition.component);
+    this.webSocket.updateProperties({
+      room: descriptor.id,
+      query: typeof packet.transferToken === "string"
+        ? { transferToken: packet.transferToken }
+        : undefined,
+    });
+
+    try {
+      await this.webSocket.reconnect();
+      await definition.onEnter?.(this.sceneRoom, descriptor);
+    }
+    catch (error) {
+      await this.callConnectError(error);
+      throw error;
+    }
+  }
+
+  private async leaveActiveClientScene(next: RpgRoomDescriptor): Promise<void> {
+    if (!this.activeClientScene) return;
+    await this.activeClientScene.onLeave?.(this.sceneRoom, next);
+    this.activeClientScene = undefined;
   }
 
   private applySyncPacket(data: any) {
@@ -1009,6 +1111,17 @@ export class RpgClientEngine<T = any> {
       this.playerIdSignal.set(data.pId);
       // Signal that player ID was received
       this.playerIdReceived$.next(true);
+    }
+
+    if (this.activeSceneKind() !== "map") {
+      if (data && typeof data === "object" && Object.prototype.hasOwnProperty.call(data, "state")) {
+        this.sceneRoom.state.set(data.state);
+      }
+      if (data && typeof data === "object" && Object.prototype.hasOwnProperty.call(data, "players")) {
+        this.sceneRoom.loadPlayers(data.players);
+      }
+      void this.activeClientScene?.onChanges?.(this.sceneRoom, data);
+      return;
     }
 
     if (this.sceneResetQueued) {
@@ -2378,7 +2491,14 @@ export class RpgClientEngine<T = any> {
   }
 
   getCurrentPlayer() {
-    return this.sceneMap.getCurrentPlayer()
+    if (this.activeSceneKind() === "map") return this.sceneMap.getCurrentPlayer();
+    const playerId = this.playerIdSignal();
+    return playerId ? this.sceneRoom.players()[playerId] : undefined;
+  }
+
+  /** Return the active map scene or synchronized custom gameplay room. */
+  getCurrentRoom(): RpgClientMap | RpgClientRoom {
+    return this.activeSceneKind() === "map" ? this.sceneMap : this.sceneRoom;
   }
 
   emitSceneMapHook(hookName: string, ...args: any[]): void {
@@ -2705,6 +2825,11 @@ export class RpgClientEngine<T = any> {
       if (this.sceneMap && typeof (this.sceneMap as any).reset === 'function') {
         (this.sceneMap as any).reset(true);
       }
+      this.sceneRoom.reset();
+      this.activeClientScene = undefined;
+      this.activeRoom.set(null);
+      this.activeSceneKind.set("map");
+      this.activeRoomSceneComponent.set(undefined);
 
       // Stop all sounds
       this.stopAllSounds();

@@ -14,6 +14,8 @@ import {
   type RpgContext,
   type RpgReadableSignal,
   type RpgWritableSignal,
+  type RpgRoomDescriptor,
+  type RpgRoomTarget,
 } from "@rpgjs/common";
 import { Entity, Vector2 } from "@rpgjs/physic";
 import { IComponentManager, WithComponentManager } from "./ComponentManager";
@@ -57,6 +59,7 @@ import type {
   RpgPlayerSnapshot,
   RpgPlayerSnapshotLoadResult,
 } from "./types";
+import { RpgRoomRegistry } from "../rooms/registry";
 import type { RpgSyncSchema } from "./types";
 import { inject } from "../core/inject";
 
@@ -148,8 +151,16 @@ type CameraFollowEase =
  * player.addItem(sword);
  * ```
  */
+/** Structural contract shared by lobby, map, and custom gameplay rooms. */
+export interface RpgPlayerRoom {
+  $send(connection: Parameters<RpgMap["$send"]>[0], packet: unknown): void;
+  $sessionTransfer(connection: Parameters<RpgMap["$send"]>[0], roomId: string): Promise<unknown>;
+}
+
 export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
   map: RpgMap | null = null;
+  /** Active RPGJS room. Unlike `map`, this also covers non-spatial gameplay rooms. */
+  room: RpgPlayerRoom | null = null;
   context?: RpgContext;
   conn: Parameters<RpgMap["$send"]>[0] | null = null;
   touchSide: boolean = false; // Protection against map change loops
@@ -388,6 +399,7 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
 
   setMap(map: RpgMap) {
     this.map = map;
+    this.room = map;
     // Prevent immediate ping-pong map transfers when spawning near a border.
     this.touchSide = true;
   }
@@ -436,30 +448,98 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
     mapId: string,
     positions?: { x: number; y: number; z?: number } | string
   ): Promise<boolean> {
-    const realMapId = 'map-' + mapId;
-    const room = this.getCurrentMap();
-
+    const descriptor: RpgRoomDescriptor = {
+      id: `map-${mapId}`,
+      kind: "map",
+      name: mapId,
+    };
     const canChange: boolean[] = await lastValueFrom(this.hooks.callHooks("server-player-canChangeMap", this, {
       id: mapId,
     }));
     if (canChange.some(v => v === false)) return false;
+    const canChangeRoom: boolean[] = await lastValueFrom(
+      this.hooks.callHooks("server-player-canChangeRoom", this, descriptor),
+    );
+    if (canChangeRoom.some((value) => value === false)) return false;
 
     if (positions && typeof positions === 'object') {
       this.pendingMapPosition.set(null);
-      await this.teleport(positions)
+      if (this.getCurrentMap()) {
+        await this.teleport(positions)
+      }
+      else {
+        this.x.set(positions.x);
+        this.y.set(positions.y);
+        if (typeof positions.z === "number") this.z.set(positions.z);
+      }
     }
     else {
       this.pendingMapPosition.set(positions ?? "start");
     }
     const transferToken = this.conn
-      ? await room?.$sessionTransfer(this.conn, realMapId)
+      ? await this.getCurrentRoom()?.$sessionTransfer(this.conn, descriptor.id)
       : undefined;
     this.emit("changeMap", {
-      mapId: realMapId,
+      ...descriptor,
+      mapId: descriptor.id,
       positions,
       continueMovement: this.continueMovementOnNextMapChange,
-      transferToken: typeof transferToken === 'string' ? transferToken : undefined,
+      transferToken: typeof transferToken === "string" ? transferToken : undefined,
     });
+    return true;
+  }
+
+  /**
+   * Transfer this player to a registered custom gameplay room.
+   *
+   * The server resolves the destination, runs authorization hooks, creates a
+   * Signe session-transfer token, and tells the client which scene kind to
+   * mount. Clients cannot select a destination on their own.
+   *
+   * @method player.changeRoom(target)
+   * @param target - Registered room kind and values for its path placeholders.
+   * @returns `false` when a hook rejects the transfer; otherwise `true`.
+   *
+   * @example
+   * ```ts
+   * await player.changeRoom({
+   *   kind: "battle",
+   *   params: { id: "encounter-42" },
+   * })
+   * ```
+   */
+  async changeRoom(target: RpgRoomTarget): Promise<boolean> {
+    if (target.kind === "map" || target.kind === "lobby") {
+      throw new Error(`Use changeMap() for RPGJS built-in room kind: ${target.kind}`);
+    }
+    return this.transferRoom(target);
+  }
+
+  /** Return the active map-independent RPGJS room. */
+  getCurrentRoom<T extends RpgPlayerRoom = RpgPlayerRoom>(): T | null {
+    return this.room as T | null;
+  }
+
+  private async transferRoom(
+    target: RpgRoomTarget,
+  ): Promise<boolean> {
+    const registry = inject<RpgRoomRegistry>(RpgRoomRegistry, this.context);
+    const descriptor = registry.describe(target);
+    const canChange: boolean[] = await lastValueFrom(
+      this.hooks.callHooks("server-player-canChangeRoom", this, descriptor),
+    );
+    if (canChange.some((value) => value === false)) return false;
+
+    const currentRoom = this.getCurrentRoom();
+    const transferToken = this.conn
+      ? await currentRoom?.$sessionTransfer(this.conn, descriptor.id)
+      : undefined;
+
+    const payload: RpgRoomDescriptor & Record<string, unknown> = {
+      ...descriptor,
+      transferToken: typeof transferToken === "string" ? transferToken : undefined,
+    };
+    this.emit("changeRoom", payload);
     return true;
   }
 
@@ -796,9 +876,9 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
    * ```
    */
   emit<T = unknown>(type: string, value?: T): void {
-    const map = this.getCurrentMap();
-    if (!map || !this.conn) return;
-    map.$send(this.conn, {
+    const room = this.getCurrentRoom() ?? this.getCurrentMap();
+    if (!room || !this.conn) return;
+    room.$send(this.conn, {
       type,
       value,
     });

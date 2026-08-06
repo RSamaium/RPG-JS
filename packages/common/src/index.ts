@@ -18,4 +18,5 @@ export * from "./lighting";
 export * from "./input";
 export * from "./i18n";
 export * from "./map-streaming";
+export * from "./gameplay-room";
 export * from "./foundation";

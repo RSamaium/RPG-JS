@@ -14,6 +14,8 @@ export type { ElementAffinity } from "./Player/ElementManager";
 export * from "./Player/Components";
 export * from "./module";
 export * from "./rooms/map";
+export * from "./rooms/gameplay";
+export * from "./rooms/registry";
 export * from "./presets";
 export * from "./Gui";
 export * from "./services/save";

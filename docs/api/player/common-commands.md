@@ -13,10 +13,12 @@ Core server-side player commands defined on the main Player class.
 - [attachShape](#attachshape)
 - [cameraFollow](#camerafollow)
 - [changeMap](#changemap)
+- [changeRoom](#changeroom)
 - [clientVisual](#clientvisual)
 - [createDynamicEvent](#createdynamicevent)
 - [emit](#emit)
 - [flash](#flash)
+- [getCurrentRoom](#getcurrentroom)
 - [getInShapes](#getinshapes)
 - [getShapes](#getshapes)
 - [getTile](#gettile)
@@ -31,6 +33,7 @@ Core server-side player commands defined on the main Player class.
 - [position](#position)
 - [position](#position)
 - [Remove listeners of the client event](#remove-listeners-of-the-client-event)
+- [room](#room)
 - [Run Sync Changes](#run-sync-changes)
 - [save](#save)
 - [setAnimation](#setanimation)
@@ -217,6 +220,41 @@ await player.changeMap("dungeon", "entrance");
 await player.changeMap("town");
 ```
 
+## changeRoom
+
+Transfer this player to a registered custom gameplay room.
+
+The server resolves the destination, runs authorization hooks, creates a
+Signe session-transfer token, and tells the client which scene kind to
+mount. Clients cannot select a destination on their own.
+
+- Source: `packages/server/src/Player/Player.ts`
+- Kind: `method`
+- Defined in: `RpgPlayer`
+
+### Signature
+
+```ts
+player.changeRoom(target)
+```
+
+### Parameters
+
+- `target`: `RpgRoomTarget`
+
+### Returns
+
+`false` when a hook rejects the transfer; otherwise `true`.
+
+### Examples
+
+```ts
+await player.changeRoom({
+  kind: "battle",
+  params: { id: "encounter-42" },
+})
+```
+
 ## clientVisual
 
 Trigger a named client visual for this player only.
@@ -387,6 +425,20 @@ player.flash({
   duration: 150,
   cycles: 1
 });
+```
+
+## getCurrentRoom
+
+Return the active map-independent RPGJS room.
+
+- Source: `packages/server/src/Player/Player.ts`
+- Kind: `method`
+- Defined in: `RpgPlayer`
+
+### Signature
+
+```ts
+getCurrentRoom(): T | null
 ```
 
 ## getInShapes
@@ -749,6 +801,20 @@ player.off(key)
 
 ```ts
 player.off("chat:message");
+```
+
+## room
+
+Active RPGJS room. Unlike `map`, this also covers non-spatial gameplay rooms.
+
+- Source: `packages/server/src/Player/Player.ts`
+- Kind: `property`
+- Defined in: `RpgPlayer`
+
+### Signature
+
+```ts
+room: RpgPlayerRoom | null
 ```
 
 ## Run Sync Changes

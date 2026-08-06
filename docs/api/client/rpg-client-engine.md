@@ -9,6 +9,9 @@ Reference for the `RpgClientEngine` class.
 
 ## Members
 
+- [activeRoom](#activeroom)
+- [activeRoomSceneComponent](#activeroomscenecomponent)
+- [activeSceneKind](#activescenekind)
 - [addComponentAnimation](#addcomponentanimation)
 - [addEventComponentResolver](#addeventcomponentresolver)
 - [addSound](#addsound)
@@ -22,6 +25,7 @@ Reference for the `RpgClientEngine` class.
 - [dashDefaults](#dashdefaults)
 - [flash](#flash)
 - [getComponentAnimation](#getcomponentanimation)
+- [getCurrentRoom](#getcurrentroom)
 - [getSound](#getsound)
 - [getSpriteComponent](#getspritecomponent)
 - [getSpriteSheet](#getspritesheet)
@@ -38,6 +42,7 @@ Reference for the `RpgClientEngine` class.
 - [registerClientVisuals](#registerclientvisuals)
 - [registerSpriteComponent](#registerspritecomponent)
 - [resolveEventComponent](#resolveeventcomponent)
+- [sceneRoom](#sceneroom)
 - [setCameraFollow](#setcamerafollow)
 - [setKeyboardControls](#setkeyboardcontrols)
 - [setSoundResolver](#setsoundresolver)
@@ -46,6 +51,48 @@ Reference for the `RpgClientEngine` class.
 - [stopAllSounds](#stopallsounds)
 - [stopSound](#stopsound)
 - [visualPause](#visualpause)
+
+## activeRoom
+
+Authoritative descriptor of the active room.
+
+- Source: `packages/client/src/RpgClientEngine.ts`
+- Kind: `property`
+- Defined in: `RpgClientEngine`
+
+### Signature
+
+```ts
+activeRoom
+```
+
+## activeRoomSceneComponent
+
+CanvasEngine component selected for a custom gameplay room.
+
+- Source: `packages/client/src/RpgClientEngine.ts`
+- Kind: `property`
+- Defined in: `RpgClientEngine`
+
+### Signature
+
+```ts
+activeRoomSceneComponent
+```
+
+## activeSceneKind
+
+Active room kind; `map` keeps the historical map pipeline enabled.
+
+- Source: `packages/client/src/RpgClientEngine.ts`
+- Kind: `property`
+- Defined in: `RpgClientEngine`
+
+### Signature
+
+```ts
+activeSceneKind
+```
 
 ## addComponentAnimation
 
@@ -482,6 +529,20 @@ const hitAnimation = engine.getComponentAnimation('hit');
 hitAnimation.displayEffect({ text: "Critical!" }, player);
 ```
 
+## getCurrentRoom
+
+Return the active map scene or synchronized custom gameplay room.
+
+- Source: `packages/client/src/RpgClientEngine.ts`
+- Kind: `method`
+- Defined in: `RpgClientEngine`
+
+### Signature
+
+```ts
+getCurrentRoom(): RpgClientMap | RpgClientRoom
+```
+
 ## getSound
 
 Get a sound by ID, using resolver if not found in cache
@@ -914,6 +975,20 @@ resolveEventComponent(event: RpgClientEvent): EventComponentConfig | null
 ### Returns
 
 The component/config returned by the last matching resolver
+
+## sceneRoom
+
+Synchronized state for the active non-map gameplay room.
+
+- Source: `packages/client/src/RpgClientEngine.ts`
+- Kind: `property`
+- Defined in: `RpgClientEngine`
+
+### Signature
+
+```ts
+sceneRoom
+```
 
 ## setCameraFollow
 

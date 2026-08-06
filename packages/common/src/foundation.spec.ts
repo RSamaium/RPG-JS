@@ -10,8 +10,23 @@ import type {
   RpgValueProvider,
   RpgWritableSignal,
 } from "./foundation";
+import type { RpgRoomDescriptor, RpgRoomTarget } from "./gameplay-room";
 
 describe("RPGJS public foundation contracts", () => {
+  test("gameplay room destinations have a serializable public contract", () => {
+    const target = {
+      kind: "battle",
+      params: { id: "encounter-42", round: 2 },
+    } satisfies RpgRoomTarget;
+    const descriptor: RpgRoomDescriptor = {
+      id: "battle-encounter-42",
+      kind: target.kind,
+      name: "encounter-42",
+    };
+
+    expectTypeOf(target.params.id).toEqualTypeOf<string>();
+    expectTypeOf(descriptor.kind).toEqualTypeOf<string>();
+  });
   test("signals expose the stable gameplay operations", () => {
     const assertions = (
       readable: RpgReadableSignal<number>,

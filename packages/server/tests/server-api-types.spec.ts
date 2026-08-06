@@ -1,5 +1,5 @@
 import { describe, expectTypeOf, test } from "vitest";
-import type { HotbarState, MapStreamDefinition, RpgActionInput } from "@rpgjs/common";
+import type { HotbarState, MapStreamDefinition, RpgActionInput, RpgRoomDescriptor } from "@rpgjs/common";
 import type { FactoryProvider as SigneFactoryProvider } from "@signe/di";
 import type { NodeConnection, NodeRoom } from "@signe/room/node";
 import { provideServerMapStreaming } from "@rpgjs/server";
@@ -19,6 +19,7 @@ import type {
   RpgServerStepMetrics,
   StateData,
   ServerMapStreamingAdapter,
+  RpgGameplayRoom,
 } from "@rpgjs/server";
 import {
   createMemoryNodeRoomStorage,
@@ -55,6 +56,11 @@ describe("server public API types", () => {
         expectTypeOf(nextMap).toEqualTypeOf<{ id: string }>();
         return nextMap.id !== "forbidden";
       },
+      canChangeRoom(player, room) {
+        expectTypeOf(player).toEqualTypeOf<RpgPlayer>();
+        expectTypeOf(room).toEqualTypeOf<RpgRoomDescriptor>();
+        return room.kind !== "forbidden";
+      },
     } satisfies RpgPlayerHooks;
 
     expectTypeOf(hooks).toMatchTypeOf<RpgPlayerHooks>();
@@ -76,6 +82,10 @@ describe("server public API types", () => {
       expectTypeOf(player.assignHotbarSlot(0, { type: "skill", id: "fire" }))
         .toEqualTypeOf<HotbarState>();
       expectTypeOf(player.clearHotbarSlot(0)).toEqualTypeOf<HotbarState>();
+      expectTypeOf(player.changeRoom({ kind: "battle", params: { id: "one" } }))
+        .toEqualTypeOf<Promise<boolean>>();
+      expectTypeOf(player.getCurrentRoom<RpgGameplayRoom<{ turn: number }>>())
+        .toEqualTypeOf<RpgGameplayRoom<{ turn: number }> | null>();
     };
 
     expectTypeOf(assertions).toBeFunction();

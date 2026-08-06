@@ -18,6 +18,7 @@ import {
   provideServerModules,
   RpgServer,
   RpgPlayer,
+  getRpgRoomMetadata,
 } from "@rpgjs/server";
 import { h, Container } from "canvasengine";
 import { clearInject as clearClientInject } from "@rpgjs/client";
@@ -165,6 +166,7 @@ export interface TestingFixture {
     playerId: string;
     player: RpgPlayer;
     waitForMapChange(expectedMapId: string, timeout?: number): Promise<RpgPlayer>;
+    waitForRoomChange(expectedKind: string, timeout?: number): Promise<RpgPlayer>;
   }>;
   server: RpgServer;
   clear(): Promise<void>;
@@ -361,6 +363,33 @@ export async function testing(
                 `Current map: ${currentMap?.id || "null"}`
             );
           }
+        },
+
+        /** Wait until the player joins a registered room kind. */
+        async waitForRoomChange(
+          expectedKind: string,
+          timeout = 5000,
+        ): Promise<RpgPlayer> {
+          const currentRoom = clientObj.player?.getCurrentRoom();
+          if (currentRoom && getRpgRoomMetadata(currentRoom.constructor as any)?.kind === expectedKind) {
+            return clientObj.player;
+          }
+
+          const roomChange$ = timer(0, 10).pipe(
+            map(() => clientObj.player),
+            filter((player): player is RpgPlayer => {
+              const room = player?.getCurrentRoom();
+              return Boolean(room && getRpgRoomMetadata(room.constructor as any)?.kind === expectedKind);
+            }),
+            take(1),
+          );
+          const timeout$ = timer(timeout).pipe(
+            take(1),
+            switchMap(() => throwError(() => new Error(
+              `Timeout: Player did not reach room kind ${expectedKind} within ${timeout}ms`,
+            ))),
+          );
+          return firstValueFrom(race([roomChange$, timeout$])) as Promise<RpgPlayer>;
         },
         
       };
