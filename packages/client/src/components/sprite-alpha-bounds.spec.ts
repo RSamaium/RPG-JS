@@ -2,10 +2,32 @@ import { describe, expect, test, vi } from "vitest";
 import {
   loadCachedSpriteSheetAlphaBounds,
   mergeSpriteAlphaBounds,
+  resolveTextureSourceDimensions,
   scanSpriteSheetAlphaBounds,
 } from "./sprite-alpha-bounds";
 
 describe("sprite alpha bounds", () => {
+  test("uses intrinsic source dimensions when a cached texture is sliced to one frame", () => {
+    expect(
+      resolveTextureSourceDimensions({
+        width: 256,
+        height: 256,
+        source: {
+          pixelWidth: 1024,
+          pixelHeight: 1024,
+          resource: { width: 1024, height: 1024 },
+        },
+      }),
+    ).toEqual({ width: 1024, height: 1024 });
+  });
+
+  test("falls back to texture dimensions for unsliced textures", () => {
+    expect(resolveTextureSourceDimensions({ width: 48, height: 64 })).toEqual({
+      width: 48,
+      height: 64,
+    });
+  });
+
   test("shares one alpha scan across sprites using the same source and grid", async () => {
     const loader = vi.fn(async () => []);
 
