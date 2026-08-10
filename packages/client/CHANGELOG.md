@@ -1,5 +1,27 @@
 # @rpgjs/client
 
+## 5.0.0-beta.30
+
+### Patch Changes
+
+- e0bba29: Fix Studio world-map transitions and preserve the reactive HUD state during
+  map transfers.
+
+  - Normalize scaled Studio world coordinates to integer pixels and resolve
+    automatic transitions from exact directional neighbors.
+  - Keep explicit border-entry coordinates through map-room transfers instead of
+    falling back to the destination map's `start` position.
+  - Restore Studio's generated class from every destination map database so a
+    standalone session transfer keeps the player snapshot, including HP and SP,
+    while deferring a runtime class until the destination database has loaded.
+  - Apply synchronized player parameters through their signal and keep the Studio
+    HUD mounted so the avatar, HP, and SP remain reactive across map changes.
+
+- aed4d3e: Position sprite components from intrinsic spritesheet dimensions and the scaled visible graphic bounds, with a full-frame fallback while transparent bounds are loading.
+- Updated dependencies [e0bba29]
+  - @rpgjs/common@5.0.0-beta.28
+  - @rpgjs/server@5.0.0-beta.30
+
 ## 5.0.0-beta.29
 
 ### Minor Changes
