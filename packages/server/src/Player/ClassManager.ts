@@ -21,6 +21,7 @@ export interface ActorData {
 export type ClassConstructor = new () => ClassData;
 export type ActorConstructor = new () => ActorData;
 type ClassClass = ClassConstructor;
+type ClassInput = ClassClass | ClassData | string;
 type ActorClass = ActorConstructor;
 
 interface PlayerWithMixins extends RpgCommonPlayer {
@@ -56,7 +57,7 @@ interface PlayerWithMixins extends RpgCommonPlayer {
  */
 export function WithClassManager<TBase extends PlayerCtor>(Base: TBase) {
   return class extends Base {
-    private _resolveClassInput(classInput: ClassClass | string, databaseByIdOverride?: (id: string) => any) {
+    private _resolveClassInput(classInput: ClassInput, databaseByIdOverride?: (id: string) => any) {
       if (isString(classInput)) {
         return databaseByIdOverride
           ? databaseByIdOverride(classInput as string)
@@ -65,10 +66,12 @@ export function WithClassManager<TBase extends PlayerCtor>(Base: TBase) {
       return classInput;
     }
 
-    private _createClassInstance(classInput: ClassClass | string) {
-      const classClass = this._resolveClassInput(classInput);
-      const instance = new (classClass as ClassClass)();
-      return { classClass, instance };
+    private _createClassInstance(classInput: ClassInput) {
+      const classData = this._resolveClassInput(classInput);
+      const instance = typeof classData === "function"
+        ? new (classData as ClassClass)()
+        : Object.assign(new class RuntimeClass {}, classData as ClassData);
+      return { classClass: classData, instance };
     }
 
     /**
@@ -86,19 +89,21 @@ export function WithClassManager<TBase extends PlayerCtor>(Base: TBase) {
         return snapshot;
       }
 
+      if (typeof snapshot._class === "object") {
+        const { instance } = this._createClassInstance(snapshot._class);
+        (this as any)._class?.set(instance);
+        const rest = { ...snapshot };
+        delete rest._class;
+        return rest;
+      }
+
       const map = mapOverride ?? ((this as any).getCurrentMap?.() || (this as any).map);
       if (!map || !map.database) {
         return snapshot;
       }
 
       const databaseByIdOverride = (id: string) => {
-        const data = map.database()[id];
-        if (!data) {
-          throw new Error(
-            `The ID=${id} data is not found in the database. Add the data in the property "database"`
-          );
-        }
-        return data;
+        return map.database()[id];
       };
 
       const classId = isString(snapshot._class) ? snapshot._class : snapshot._class?.id;
@@ -106,9 +111,22 @@ export function WithClassManager<TBase extends PlayerCtor>(Base: TBase) {
         return snapshot;
       }
 
-      const classClass = this._resolveClassInput(classId, databaseByIdOverride);
-      const { instance } = this._createClassInstance(classClass as ClassClass);
-      return { ...snapshot, _class: instance };
+      const classData = this._resolveClassInput(classId, databaseByIdOverride);
+      // A destination room can receive a session snapshot before its dynamic
+      // database has finished loading. Clear that unresolved reference instead
+      // of rejecting the whole player transfer; the destination join hook can
+      // then assign its runtime class once the map data is ready.
+      if (!classData) {
+        (this as any)._class?.set({});
+        const rest = { ...snapshot };
+        delete rest._class;
+        return rest;
+      }
+      const { instance } = this._createClassInstance(classData);
+      (this as any)._class?.set(instance);
+      const rest = { ...snapshot };
+      delete rest._class;
+      return rest;
     }
 
     setClass(_class: ClassClass | string): ClassData {

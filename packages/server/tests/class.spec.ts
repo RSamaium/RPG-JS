@@ -156,6 +156,55 @@ describe("Class Manager - setClass", () => {
     player.setClass(TestClass);
     expect(onSetSpy).toHaveBeenCalledWith(player);
   });
+
+  test("restores plain-object classes from a runtime database", () => {
+    player.getCurrentMap()?.addInDatabase("studio-default-class", {
+      id: "studio-default-class",
+      name: "Studio Default Class",
+      skillsToLearn: [{ level: 1, skill: "fire" }],
+    });
+
+    const restored = player.resolveClassSnapshot({
+      _class: "studio-default-class",
+    }, player.getCurrentMap());
+
+    expect(restored._class).toBeUndefined();
+    expect((player as any)._class()).toMatchObject({
+      id: "studio-default-class",
+      name: "Studio Default Class",
+      skillsToLearn: [{ level: 1, skill: "fire" }],
+    });
+  });
+
+  test("restores an inline class snapshot before the database is ready", async () => {
+    const inlineClass = {
+      id: "studio-default-class",
+      name: "Studio Default Class",
+      skillsToLearn: [{ level: 1, skill: "fire" }],
+    };
+
+    const restored = player.resolveClassSnapshot({
+      _class: inlineClass,
+    }, { database: () => ({}) });
+
+    expect(restored._class).toBeUndefined();
+    expect((player as any)._class()).toMatchObject(inlineClass);
+    expect((player as any)._class()).not.toBe(inlineClass);
+
+    await expect(player.applySnapshot({
+      ...player.snapshot(),
+      _class: inlineClass,
+    })).resolves.toBeDefined();
+    expect((player as any)._class()).toMatchObject(inlineClass);
+  });
+
+  test("defers a dynamic class while the destination database loads", () => {
+    expect(player.resolveClassSnapshot({
+      _class: "late-runtime-class",
+    }, player.getCurrentMap())).toEqual({
+    });
+    expect((player as any)._class()).toEqual({});
+  });
 });
 
 describe("Class Manager - setActor", () => {
@@ -271,4 +320,3 @@ describe("Class Manager - Edge Cases", () => {
     // No equipment should be added
   });
 });
-

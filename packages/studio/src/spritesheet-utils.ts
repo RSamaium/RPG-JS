@@ -178,7 +178,10 @@ export const createSpriteSheetObject = async (
           },
         },
       };
-    case "icon":
+    case "icon": {
+      const iconTexture = {
+        animations: () => [[{ time: 0, frameX: 0, frameY: 0 }]],
+      };
       return {
         id,
         image: url,
@@ -187,11 +190,11 @@ export const createSpriteSheetObject = async (
         framesWidth: 1,
         framesHeight: 1,
         textures: {
-          stand: {
-            animations: () => [[{ time: 0, frameX: 0, frameY: 0 }]],
-          },
+          default: iconTexture,
+          stand: iconTexture,
         },
       };
+    }
     case "bgs":
     case "bgm":
     case "sound":

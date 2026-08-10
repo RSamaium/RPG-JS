@@ -105,6 +105,28 @@ const resolveMediaId = (value: unknown): string | null => {
   return null;
 };
 
+export const displayStudioHudOnce = (
+  gui: Pick<RpgGui, "display" | "get" | "isDisplaying">,
+  engine: RpgClientEngineWithConfig,
+): void => {
+  if (gui.isDisplaying("hud")) return;
+
+  const currentData = gui.get("hud")?.data();
+  const facesetId = resolveMediaId(engine.globalConfig?.hero?.faceset);
+  const nextData: Record<string, any> = currentData && typeof currentData === "object"
+    ? { ...currentData }
+    : {};
+
+  if (facesetId) {
+    nextData.faceset = {
+      id: facesetId,
+      expression: "happy",
+    };
+  }
+
+  gui.display("hud", nextData);
+};
+
 const resolveHeroMediaSpritesheet = async (value: unknown): Promise<any | null> => {
   if (!value) return null;
 
@@ -264,7 +286,6 @@ export default (config: StudioGameModuleConfig) => {
         const gui = inject(RpgGui);
         const engine = inject(RpgClientEngine) as RpgClientEngineWithConfig;
         const hasPreviousMap = Boolean(engine.scene.data?.());
-        gui.hide("hud");
         await new Promise<void>((resolve) => {
           let completed = false;
           const complete = () => {
@@ -284,12 +305,7 @@ export default (config: StudioGameModuleConfig) => {
             onCovered: complete,
             onRevealed: () => {
               if (engine.globalConfig.menus?.hud?.enabled !== false) {
-                gui.display("hud", {
-                  faceset: {
-                    id: resolveMediaId(engine.globalConfig?.hero?.faceset),
-                    expression: "happy",
-                  },
-                });
+                displayStudioHudOnce(gui, engine);
               }
             },
           });

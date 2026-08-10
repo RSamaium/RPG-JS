@@ -40,6 +40,7 @@ import { createClientPointerContext, type ClientPointerContext } from "./service
 import { RpgClientInteractions } from "./services/interactions";
 import { normalizeRoomMapId } from "./utils/mapId";
 import { applySyncedHitboxPayload } from "./utils/syncHitbox";
+import { applySyncedParamPayload } from "./utils/syncParams";
 import { EventComponentResolverRegistry, type EventComponentResolver } from "./Game/EventComponentResolver";
 import { RpgClientBuiltinI18n } from "./i18n";
 import type { CameraFollowSmoothMove } from "./services/cameraFollow";
@@ -1037,13 +1038,7 @@ export class RpgClientEngine<T = any> {
       this.applyServerAck(normalizedAck);
     }
 
-    for (const playerId in payload.players ?? {}) {
-      const player = payload.players[playerId]
-      if (!player._param) continue
-      for (const param in player._param) {
-       this.sceneMap.players()[playerId]._param()[param] = player._param[param]
-      }
-    }
+    applySyncedParamPayload(this.sceneMap, payload);
 
     // Check if players and events are present in sync data
     const players = payload.players || this.sceneMap.players();

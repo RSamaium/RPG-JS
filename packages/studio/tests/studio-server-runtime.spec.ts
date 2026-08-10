@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { MAXHP, MAXSP } from "@rpgjs/common";
+import { Direction, MAXHP, MAXSP, WorldMapsManager } from "@rpgjs/common";
 import { RpgPlayer, type RpgMap } from "@rpgjs/server";
 import studioServer, {
   createStudioMapUpdatePayload,
+  prepareStudioWorldMaps,
   resolveRuntimeEventHitbox,
 } from "../src/server";
 import {
@@ -19,6 +20,53 @@ afterEach(() => {
 });
 
 describe("Studio server runtime", () => {
+  test("publishes the generated Studio class in every map database", async () => {
+    const databaseProvider = (studioServer() as any).database as (map: RpgMap) => Promise<Record<string, any>>;
+    const database = await databaseProvider({
+      data: () => ({
+        config: {
+          skills: [{ level: 1, skillId: "fire" }],
+        },
+        database: [],
+      }),
+    } as unknown as RpgMap);
+
+    expect(database["studio-default-class"]).toEqual({
+      id: "studio-default-class",
+      name: "Studio Default Class",
+      skillsToLearn: [{ level: 1, skill: "fire", source: "studio" }],
+    });
+  });
+
+  test("normalizes real Studio world coordinates to touching pixel edges", () => {
+    const [startMap, upperMap] = prepareStudioWorldMaps([
+      {
+        id: "333a4ea7-3c10-4bc8-b9be-acafe9d2c06b",
+        worldX: -1432,
+        worldY: -1040,
+        width: 2400,
+        height: 2400,
+      },
+      {
+        id: "77a61765-58cd-41fa-a1a9-7f71ec2333cb",
+        worldX: -1433,
+        worldY: -1211,
+        width: 1440,
+        height: 960,
+      },
+    ]);
+    const worldMaps = new WorldMapsManager();
+    worldMaps.configure([startMap, upperMap]);
+
+    expect(startMap.worldY).toBe(-5840);
+    expect(upperMap.worldY).toBe(-6800);
+    expect(upperMap.worldY + upperMap.height).toBe(startMap.worldY);
+    expect(worldMaps.getAdjacentMaps(worldMaps.getMapInfo(startMap.id)!, Direction.Up))
+      .toEqual([expect.objectContaining({ id: upperMap.id })]);
+    expect(worldMaps.getAdjacentMaps(worldMaps.getMapInfo(upperMap.id)!, Direction.Down))
+      .toEqual([expect.objectContaining({ id: startMap.id })]);
+  });
+
   test("starts a player immediately when autoStart is enabled", async () => {
     const calls: string[] = [];
     const player = {

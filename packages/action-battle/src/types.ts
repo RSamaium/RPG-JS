@@ -18,6 +18,9 @@ import type {
 
 export type ActionBattleAoeMask = string[] | string;
 
+/** Legacy Action Battle bar content filter. Prefer the generic `ui.hotbar`. */
+export type ActionBattleActionBarMode = "items" | "skills" | "both";
+
 export type ActionBattleTargetingAffects = "events" | "players" | "both";
 
 export type ActionBattleAnimationKey =
@@ -425,6 +428,30 @@ export interface ActionBattleUiHotbarOptions {
   lockedSlotHint?: string | ((player: RpgPlayer, slot: number) => string | undefined);
 }
 
+/**
+ * Legacy Action Battle-specific bar configuration.
+ *
+ * Kept for projects that still render `ActionBattleUi.ActionBar`; new projects
+ * should use the persistent, server-authoritative `ui.hotbar` configuration.
+ */
+export interface ActionBattleUiActionBarOptions {
+  enabled?: boolean;
+  autoOpen?: boolean;
+  mode?: ActionBattleActionBarMode;
+  /** Number of visible slots, clamped between 1 and 10. */
+  slotCount?: number;
+  /** Ordered server-authoritative entries assigned to each visible slot. */
+  slots?: Array<ActionBattleActionBarAssignment | null>;
+  /** Called on the server when the player requests the main menu from the bar. */
+  onOpenMenu?: () => void;
+  component?: any;
+}
+
+export interface ActionBattleActionBarAssignment {
+  type: "item" | "skill";
+  id: string;
+}
+
 export interface ActionBattleUiTargetingOptions {
   enabled?: boolean;
   component?: any;
@@ -450,6 +477,8 @@ export interface ActionBattleUiGuiEntry {
 
 export interface ActionBattleUiOptions {
   hotbar?: boolean | ActionBattleUiHotbarOptions;
+  /** Legacy Action Battle-specific bar. Prefer `hotbar`. */
+  actionBar?: boolean | ActionBattleUiActionBarOptions;
   targeting?: boolean | ActionBattleUiTargetingOptions;
   attackPreview?: boolean | ActionBattleUiAttackPreviewOptions;
   gui?: ActionBattleUiGuiEntry[];
@@ -547,4 +576,30 @@ export interface ActionBattleHotbarSkill {
   };
   cooldownMs?: number;
   readyAt?: number;
+}
+
+export interface ActionBattleActionBarItem {
+  id: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  quantity?: number;
+  usable?: boolean;
+}
+
+export type ActionBattleActionBarSkill = ActionBattleHotbarSkill;
+
+export interface ActionBattleActionBarData {
+  items: ActionBattleActionBarItem[];
+  skills: ActionBattleActionBarSkill[];
+  /** Server-selected content mode for this rendered action bar. */
+  mode?: ActionBattleActionBarMode;
+  /** Server-selected number of visible slots. */
+  slotCount?: number;
+  /** Resolved entries in their assigned slot order. */
+  slots?: Array<{
+    type: "empty" | "item" | "skill";
+    item: ActionBattleActionBarItem | null;
+    skill: ActionBattleActionBarSkill | null;
+  }>;
 }

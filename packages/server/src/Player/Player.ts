@@ -6,6 +6,7 @@ import {
   ShowAnimationParams,
   Constructor,
   Direction,
+  type WorldMapInfo,
   AttachShapeOptions,
   RpgShape,
   ShapePositioning,
@@ -487,13 +488,19 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
             this.touchSide = false
         }
 
-        const changeMap = async (adjacent, to) => {
+        const changeMap = async (
+            adjacent: Direction,
+            to: (nextMapInfo: WorldMapInfo) => { x: number; y: number; z?: number }
+        ) => {
             const [nextMap] = worldMaps.getAdjacentMaps(map, adjacent)
             if (!nextMap) {
                 return false
             }
             const id = nextMap.id as string
             const nextMapInfo = worldMaps.getMapInfo(id)
+            if (!nextMapInfo) {
+                return false
+            }
             this.continueMovementOnNextMapChange = true
             let changed = false
             try {
@@ -509,38 +516,26 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
         }
 
         if (nextPosition.x < marginLeftRight && direction == Direction.Left) {
-            ret = await changeMap({
-                x: map.worldX - 1,
-                y: this.worldPositionY() + 1
-            }, nextMapInfo => ({
+            ret = await changeMap(Direction.Left, nextMapInfo => ({
                 x: (nextMapInfo.width) - this.hitbox().w - marginLeftRight,
-                y: map.worldY - nextMapInfo.y + nextPosition.y
+                y: map.worldY - nextMapInfo.worldY + nextPosition.y
             }))
         }
         else if (nextPosition.x > map.widthPx - this.hitbox().w - marginLeftRight && direction == Direction.Right) {
-            ret = await changeMap({
-                x: map.worldX + map.widthPx + 1,
-                y: this.worldPositionY() + 1
-            }, nextMapInfo => ({
+            ret = await changeMap(Direction.Right, nextMapInfo => ({
                 x: marginLeftRight,
-                y: map.worldY - nextMapInfo.y + nextPosition.y
+                y: map.worldY - nextMapInfo.worldY + nextPosition.y
             }))
         }
         else if (nextPosition.y < marginTopDown && direction == Direction.Up) {
-            ret = await changeMap({
-                x: this.worldPositionX() + 1,
-                y: map.worldY - 1
-            }, nextMapInfo => ({
-                x: map.worldX - nextMapInfo.x + nextPosition.x,
+            ret = await changeMap(Direction.Up, nextMapInfo => ({
+                x: map.worldX - nextMapInfo.worldX + nextPosition.x,
                 y: (nextMapInfo.height) - this.hitbox().h - marginTopDown,
             }))
         }
         else if (nextPosition.y > map.heightPx - this.hitbox().h - marginTopDown && direction == Direction.Down) {
-            ret = await changeMap({
-                x: this.worldPositionX() + 1,
-                y: map.worldY + map.heightPx + 1
-            }, nextMapInfo => ({
-                x: map.worldX - nextMapInfo.x + nextPosition.x,
+            ret = await changeMap(Direction.Down, nextMapInfo => ({
+                x: map.worldX - nextMapInfo.worldX + nextPosition.x,
                 y: marginTopDown,
             }))
         }

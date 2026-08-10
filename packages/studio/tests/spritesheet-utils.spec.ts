@@ -159,4 +159,17 @@ describe("Studio spritesheet utils", () => {
     expect(spritesheet.framesWidth).toBe(4);
     expect(spritesheet.displayScale).toBe(STUDIO_DEFAULT_CHARACTER_DISPLAY_SCALE);
   });
+
+  test("exposes Studio icons with the default animation expected by GUI components", async () => {
+    const spritesheet = await createSpriteSheetObject({
+      type: "icon",
+      id: "fire-icon",
+      fileName: "fire.png",
+      width: 32,
+      height: 32,
+    });
+
+    expect(spritesheet.textures.default).toBeDefined();
+    expect(spritesheet.textures.default).toBe(spritesheet.textures.stand);
+  });
 });

@@ -168,6 +168,7 @@ describe("GUI", () => {
             {
               id: "fire",
               name: "Fire",
+              icon: "db-icon",
               spCost: 3,
             },
           ],

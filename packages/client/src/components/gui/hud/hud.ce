@@ -15,11 +15,11 @@
         </div>
         <div class="rpg-status-bars">
             <div class="rpg-bar-container">
-                <span class="rpg-bar-text">HP {{ hp() }}/{{ hpMax() }}</span>
+                <span class="rpg-bar-text">HP {{ currentHp() }}/{{ maxHp() }}</span>
                 <div class="rpg-bar-fill health" style={{width: percentHp}}></div>
             </div>
             <div class="rpg-bar-container">
-                <span class="rpg-bar-text">SP {{ sp() }}/{{ spMax() }}</span>
+                <span class="rpg-bar-text">SP {{ currentSp() }}/{{ maxSp() }}</span>
                 <div class="rpg-bar-fill mana" style={{width: percentSp}}></div>
             </div>
         </div>
@@ -39,6 +39,8 @@
 
     const resolveProp = (value) => typeof value === "function" ? value() : value;
     const face = computed(() => resolveProp(data().faceset));
+    const resolveNumeric = (value: unknown): number =>
+        typeof value === "number" && Number.isFinite(value) ? value : 0
 
     const hasFace = computed(() => {
         const value = face();
@@ -50,11 +52,15 @@
     });
     const hp = getEntityProp(currentPlayer, "hp")
     const hpMax = getEntityProp(currentPlayer, "params.maxHp")
-    const percentHp = computed(() => (hp() / hpMax() * 100) + '%')
+    const currentHp = computed(() => resolveNumeric(hp()))
+    const maxHp = computed(() => resolveNumeric(hpMax()))
+    const percentHp = computed(() => (maxHp() === 0 ? 0 : Math.min(100, Math.max(0, (currentHp() / maxHp()) * 100))) + '%')
 
     const sp = getEntityProp(currentPlayer, "sp")
     const spMax = getEntityProp(currentPlayer, "params.maxSp")
-    const percentSp = computed(() => (sp() / spMax() * 100) + '%')
+    const currentSp = computed(() => resolveNumeric(sp()))
+    const maxSp = computed(() => resolveNumeric(spMax()))
+    const percentSp = computed(() => (maxSp() === 0 ? 0 : Math.min(100, Math.max(0, (currentSp() / maxSp()) * 100))) + '%')
 
     const level = getEntityProp(currentPlayer, "level")
 </script>

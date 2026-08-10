@@ -207,6 +207,23 @@ const applyPlayerHitbox = (player: RpgPlayer, config: ProjectBasic): void => {
   (player as any).setHitbox(hitbox.width, hitbox.height);
 };
 
+const addStudioDefaultClass = (
+  database: Record<string, any>,
+  gameConfig: any,
+): Record<string, any> => {
+  const defaultClass = createStudioDefaultClass(
+    gameConfig?.skillsToLearn
+      ?? gameConfig?.skills
+      ?? gameConfig?.hero?.skillsToLearn
+      ?? gameConfig?.hero?.skills,
+  );
+  if (!defaultClass) return database;
+  return {
+    ...database,
+    [defaultClass.id]: defaultClass,
+  };
+};
+
 const assignPlayerStartParams = (player: RpgPlayer, config: ProjectBasic, startingItems: Record<string, any> = {}) => {
   const defaultClass = createStudioDefaultClass(config.skillsToLearn);
   const currentClass = (player as any)._class?.();
@@ -391,11 +408,11 @@ type StudioServerConfig = CreateStudioMapUpdatePayloadOptions & {
   displayTitleScreen?: boolean;
 };
 
-const prepareStudioWorldMaps = (worldMaps: unknown): WorldMapConfig[] =>
+export const prepareStudioWorldMaps = (worldMaps: unknown): WorldMapConfig[] =>
   parseArrayValue(worldMaps).map((worldMap: any) => ({
     ...worldMap,
-    worldX: Number(worldMap?.worldX ?? 0) * RATIO_MAP_X,
-    worldY: Number(worldMap?.worldY ?? 0) * RATIO_MAP_Y,
+    worldX: Math.round(Number(worldMap?.worldX ?? 0) * RATIO_MAP_X),
+    worldY: Math.round(Number(worldMap?.worldY ?? 0) * RATIO_MAP_Y),
   }));
 
 const ensureLeadingSlash = (value: string): string => {
@@ -1173,17 +1190,26 @@ export default (_config?: unknown) => {
       },
     },
     database: async (map: RpgMap) => {
+      const publishedMapData =
+        typeof (map as any)?.data === "function"
+          ? (map as any).data()
+          : undefined;
+      const resolvedGameConfig =
+        publishedMapData?.config
+        ?? (map as any)?.globalConfig
+        ?? readGameConfig();
       const publishedDatabase = getPublishedStudioDatabase(map);
       if (Array.isArray(publishedDatabase)) {
-        return normalizeStudioDatabase(publishedDatabase);
+        return addStudioDefaultClass(normalizeStudioDatabase(publishedDatabase), resolvedGameConfig);
       }
       if (publishedDatabase && typeof publishedDatabase === "object") {
-        return publishedDatabase;
+        return addStudioDefaultClass(publishedDatabase, resolvedGameConfig);
       }
       const configuredProjectId = getStudioGameRuntimeConfig().projectId?.trim() || null;
       const gameConfig = readGameConfig();
       const response = await getGameDataProvider().getDatabase(configuredProjectId || gameConfig?._id);
-      return normalizeStudioDatabase(response);
+      const database = normalizeStudioDatabase(response);
+      return addStudioDefaultClass(database, resolvedGameConfig);
     },
   });
 };
