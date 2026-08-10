@@ -27,6 +27,7 @@ import type { StudioViewportBounds } from "../viewport-culling";
 
 const DEFAULT_CHUNK_SIZE = 768;
 const SOLID_BLACK_TERRAIN_TEXTURE_ID = "__solid_black__";
+const WATER_ANIMATION_FRAME_DURATION = 1 / 30;
 
 interface TerrainChunk {
   key: string;
@@ -127,6 +128,7 @@ interface CanvasBuffer {
 interface TerrainMorphologyMaskBuffer {
   canvas: HTMLCanvasElement;
   bounds: { x: number; y: number; width: number; height: number };
+  alphaBounds?: { minX: number; minY: number; maxX: number; maxY: number };
 }
 
 interface TerrainWallRenderParts {
@@ -183,6 +185,10 @@ export interface StudioTerrainChunkRendererOptions {
   splitWallForeground?: boolean;
   /** Consolidated client stream update used for spatial invalidation. */
   streamUpdate?: StudioTerrainStreamUpdate | null;
+  /** Local world viewport used to lazily rasterize non-streamed terrain. */
+  viewportBounds?: StudioViewportBounds | null;
+  /** Extra world pixels rasterized around the current viewport. */
+  viewportMargin?: number;
 }
 
 export class StudioTerrainChunkRenderer {
@@ -197,12 +203,19 @@ export class StudioTerrainChunkRenderer {
   private renderConfiguration = "";
   private streamRevision = "";
   private streamGeneration = -1;
+  private renderRequestSerial = 0;
   private destroyed = false;
   private viewportBounds: TerrainViewportBounds | null = null;
   private viewportMargin = 0;
   private morphologyMaskCache = new WeakMap<StudioTerrainMorphologyFeature, TerrainMorphologyMaskBuffer | null>();
   private terrainWallRenderPartsCache = new WeakMap<StudioTerrainMorphologyFeature, TerrainWallRenderParts | null>();
   private terrainHoleRenderPartsCache = new WeakMap<StudioTerrainMorphologyFeature, TerrainHoleRenderParts | null>();
+  private morphologyColorOverlayCache = new WeakMap<HTMLCanvasElement, Map<string, HTMLCanvasElement>>();
+  private morphologyTextureFillCache = new WeakMap<HTMLCanvasElement, Map<string, HTMLCanvasElement>>();
+  private morphologyCanvasIds = new WeakMap<HTMLCanvasElement, number>();
+  private nextMorphologyCanvasId = 1;
+  private morphologyClipBounds: StudioTerrainRenderBounds | null = null;
+  private waterAnimationElapsed = 0;
 
   constructor(world: PixiContainer, options: StudioTerrainChunkRendererOptions = {}) {
     this.world = world;
@@ -220,7 +233,20 @@ export class StudioTerrainChunkRenderer {
     const configuration = `debug:${debugCollisions}|chunk:${this.chunkSize}|splitWall:${splitWallForeground}`;
     const version = `${data.version}|${configuration}`;
     const streamUpdate = options.streamUpdate ?? data.streamUpdate ?? null;
-    if (!streamUpdate && version === this.renderVersion && this.chunks.size > 0) return;
+    const viewportKeys = !streamUpdate && options.viewportBounds
+      ? this.collectChunkKeys([
+          expandBounds(options.viewportBounds, Math.max(0, options.viewportMargin ?? 0)),
+        ], data)
+      : null;
+    if (
+      !streamUpdate &&
+      version === this.renderVersion &&
+      this.chunks.size > 0 &&
+      (!viewportKeys || [...viewportKeys].every((key) => this.chunks.has(key)))
+    ) {
+      this.updateChunkVisibility(options.viewportBounds ?? this.viewportBounds, options.viewportMargin ?? this.viewportMargin);
+      return;
+    }
     if (
       streamUpdate &&
       version === this.renderVersion &&
@@ -238,15 +264,24 @@ export class StudioTerrainChunkRenderer {
           streamUpdate.revision !== this.streamRevision
         )
     );
+    const requestSerial = ++this.renderRequestSerial;
+    const [image, controlImage] = await Promise.all([
+      data.sourceTexture ? this.loadImage(data.sourceTexture) : Promise.resolve(null),
+      data.terrainControl?.source && !data.terrainControl.regions?.length
+        ? this.loadImage(data.terrainControl.source)
+        : Promise.resolve(null),
+    ]);
+    if (this.destroyed || requestSerial !== this.renderRequestSerial) return;
+
+    const previousVersion = this.renderVersion;
+    if (!streamUpdate && previousVersion && previousVersion !== version) {
+      for (const chunk of this.chunks.values()) this.destroyChunk(chunk);
+      this.chunks.clear();
+    }
     this.renderVersion = version;
     this.renderConfiguration = configuration;
     this.streamRevision = streamUpdate?.revision ?? "";
     this.streamGeneration = streamUpdate?.generation ?? -1;
-
-    const image = data.sourceTexture ? this.loadedImages.get(data.sourceTexture) ?? null : null;
-    const controlImage = data.terrainControl?.source
-      ? this.loadedImages.get(data.terrainControl.source) ?? null
-      : null;
 
     const activeKeys = streamUpdate
       ? this.collectChunkKeys(streamUpdate.activeRegions, data)
@@ -255,84 +290,52 @@ export class StudioTerrainChunkRenderer {
       ? renderAllActiveStreamChunks
         ? activeKeys!
         : this.collectChunkKeys(streamUpdate.dirtyRegions, data)
-      : this.collectAllChunkKeys(data);
+      : viewportKeys ?? this.collectAllChunkKeys(data);
+    if (!streamUpdate && previousVersion === version) {
+      for (const key of [...nextKeys]) {
+        if (this.chunks.has(key)) nextKeys.delete(key);
+      }
+    }
     const collisions = debugCollisions ? buildStudioTerrainCollisionPolygons(map) : [];
 
-    this.resetMorphologyRenderCaches();
-    try {
-      for (const key of nextKeys) {
-        if (activeKeys && !activeKeys.has(key)) {
-          const previous = this.chunks.get(key);
-          if (previous) {
-            this.destroyChunk(previous);
-            this.chunks.delete(key);
-          }
-          continue;
+    if (previousVersion !== version) this.resetMorphologyRenderCaches();
+    let renderedChunkCount = 0;
+    for (const key of nextKeys) {
+      if (activeKeys && !activeKeys.has(key)) {
+        const previous = this.chunks.get(key);
+        if (previous) {
+          this.destroyChunk(previous);
+          this.chunks.delete(key);
         }
-        this.renderChunk(
-          key,
-          data,
-          image,
-          controlImage,
-          this.getChunkBounds(key, data),
-          collisions,
-          splitWallForeground
-        );
+        continue;
       }
-    } finally {
-      this.resetMorphologyRenderCaches();
-    }
-
-    if (data.sourceTexture && !image) {
-      void this.loadImage(data.sourceTexture).then((loadedImage) => {
-        if (!loadedImage || this.destroyed) return;
-        if (
-          this.renderVersion !== version ||
-          (streamUpdate &&
-            (
-              this.streamRevision !== streamUpdate.revision ||
-              this.streamGeneration !== streamUpdate.generation
-            ))
-        ) {
-          return;
-        }
-        this.renderVersion = "";
-        void this.renderMap(map, options);
-      });
-    }
-    if (
-      data.terrainControl?.source &&
-      !controlImage &&
-      !data.terrainControl.regions?.length
-    ) {
-      void this.loadImage(data.terrainControl.source).then((loadedImage) => {
-        if (!loadedImage || this.destroyed) return;
-        if (
-          this.renderVersion !== version ||
-          (streamUpdate &&
-            (
-              this.streamRevision !== streamUpdate.revision ||
-              this.streamGeneration !== streamUpdate.generation
-            ))
-        ) {
-          return;
-        }
-        this.renderVersion = "";
-        void this.renderMap(map, options);
-      });
+      this.renderChunk(
+        key,
+        data,
+        image,
+        controlImage,
+        this.getChunkBounds(key, data),
+        collisions,
+        splitWallForeground
+      );
+      renderedChunkCount += 1;
+      if (renderedChunkCount < nextKeys.size) {
+        await yieldToMainThread();
+        if (this.destroyed || requestSerial !== this.renderRequestSerial) return;
+      }
     }
 
     if (!streamUpdate || renderAllActiveStreamChunks) {
       const retainedKeys = activeKeys ?? nextKeys;
       for (const [key, chunk] of this.chunks) {
-        if (!retainedKeys.has(key)) {
+        if (!retainedKeys.has(key) && !(viewportKeys && !streamUpdate)) {
           this.destroyChunk(chunk);
           this.chunks.delete(key);
         }
       }
     }
 
-    this.updateChunkVisibility(this.viewportBounds, this.viewportMargin);
+    this.updateChunkVisibility(options.viewportBounds ?? this.viewportBounds, options.viewportMargin ?? this.viewportMargin);
   }
 
   private collectAllChunkKeys(data: StudioTerrainRenderData): Set<string> {
@@ -427,12 +430,16 @@ export class StudioTerrainChunkRenderer {
   update(deltaTime: number): void {
     if (this.destroyed) return;
     const safeDelta = clampNumber(Number(deltaTime) || 16.67, 0, 120) / 1000;
+    this.waterAnimationElapsed += safeDelta;
+    if (this.waterAnimationElapsed < WATER_ANIMATION_FRAME_DURATION) return;
+    const animationDelta = Math.min(this.waterAnimationElapsed, 0.3);
+    this.waterAnimationElapsed %= WATER_ANIMATION_FRAME_DURATION;
 
     for (const chunk of this.chunks.values()) {
       const overlay = chunk.waterOverlay;
       if (!overlay || overlay.sprite.destroyed) continue;
       for (const region of overlay.regions) {
-        region.phase += safeDelta * region.speed;
+        region.phase += animationDelta * region.speed;
       }
       if (!overlay.sprite.visible) continue;
       drawWaterAnimationFrame(overlay);
@@ -463,6 +470,7 @@ export class StudioTerrainChunkRenderer {
 
   destroy(): void {
     this.destroyed = true;
+    this.renderRequestSerial += 1;
     for (const chunk of this.chunks.values()) {
       this.destroyChunk(chunk);
     }
@@ -474,6 +482,7 @@ export class StudioTerrainChunkRenderer {
     this.renderConfiguration = "";
     this.streamRevision = "";
     this.streamGeneration = -1;
+    this.waterAnimationElapsed = 0;
     this.resetMorphologyRenderCaches();
     this.world.removeChildren();
   }
@@ -540,6 +549,11 @@ export class StudioTerrainChunkRenderer {
     this.morphologyMaskCache = new WeakMap();
     this.terrainWallRenderPartsCache = new WeakMap();
     this.terrainHoleRenderPartsCache = new WeakMap();
+    this.morphologyColorOverlayCache = new WeakMap();
+    this.morphologyTextureFillCache = new WeakMap();
+    this.morphologyCanvasIds = new WeakMap();
+    this.nextMorphologyCanvasId = 1;
+    this.morphologyClipBounds = null;
     resetTerrainMorphologyFeatureMetricsCache();
   }
 
@@ -717,17 +731,22 @@ export class StudioTerrainChunkRenderer {
     bounds: { x: number; y: number; width: number; height: number },
     splitWallForeground: boolean
   ): void {
-    for (const feature of data.morphologyFeatures) {
-      if (!featureIntersectsBounds(feature, bounds)) continue;
-      if (feature.kind === "hole") {
-        this.drawHole(ctx, data, image, feature);
-      } else {
-        if (splitWallForeground) {
-          continue;
+    this.morphologyClipBounds = bounds;
+    try {
+      for (const feature of data.morphologyFeatures) {
+        if (!featureIntersectsBounds(feature, bounds)) continue;
+        if (feature.kind === "hole") {
+          this.drawHole(ctx, data, image, feature);
         } else {
-          this.drawWall(ctx, data, image, feature);
+          if (splitWallForeground) {
+            continue;
+          } else {
+            this.drawWall(ctx, data, image, feature);
+          }
         }
       }
+    } finally {
+      this.morphologyClipBounds = null;
     }
   }
 
@@ -1026,29 +1045,51 @@ export class StudioTerrainChunkRenderer {
     regions.push(...holeRegions);
     if (regions.length === 0) return null;
 
-    const canvas = this.createCanvasBuffer(bounds.width, bounds.height, true);
+    const overlayBounds = unionBounds(regions.map((region) => region.bounds));
+    if (!overlayBounds) return null;
+    const localRegions = regions.map((region) => ({
+      ...region,
+      bounds: {
+        ...region.bounds,
+        x: region.bounds.x - overlayBounds.x,
+        y: region.bounds.y - overlayBounds.y,
+      },
+    }));
+    const croppedSurface = this.createCanvasBuffer(overlayBounds.width, overlayBounds.height, true);
+    croppedSurface.ctx.drawImage(
+      surface,
+      overlayBounds.x,
+      overlayBounds.y,
+      overlayBounds.width,
+      overlayBounds.height,
+      0,
+      0,
+      overlayBounds.width,
+      overlayBounds.height
+    );
+    const canvas = this.createCanvasBuffer(overlayBounds.width, overlayBounds.height, true);
     const texture = Texture.from(canvas.canvas);
     setNearestTextureScale(texture);
     const sprite = new Sprite(texture);
-    sprite.x = Math.round(bounds.x);
-    sprite.y = Math.round(bounds.y);
+    sprite.x = Math.round(bounds.x + overlayBounds.x);
+    sprite.y = Math.round(bounds.y + overlayBounds.y);
     sprite.zIndex = 0.15;
     sprite.roundPixels = true;
     sprite.cullable = true;
-    sprite.cullArea = new Rectangle(0, 0, bounds.width, bounds.height);
+    sprite.cullArea = new Rectangle(0, 0, overlayBounds.width, overlayBounds.height);
     sprite.label = "StudioTerrain:water-animation";
 
     const overlay: TerrainWaterOverlay = {
       canvas: canvas.canvas,
       ctx: canvas.ctx,
-      frame: this.createCanvasBuffer(bounds.width, bounds.height, true),
-      waveMask: this.createCanvasBuffer(bounds.width, bounds.height, true),
-      surface,
+      frame: this.createCanvasBuffer(overlayBounds.width, overlayBounds.height, true),
+      waveMask: this.createCanvasBuffer(overlayBounds.width, overlayBounds.height, true),
+      surface: croppedSurface.canvas,
       texture,
       sprite,
-      regions,
-      originX: bounds.x,
-      originY: bounds.y,
+      regions: localRegions,
+      originX: bounds.x + overlayBounds.x,
+      originY: bounds.y + overlayBounds.y,
     };
     drawWaterAnimationFrame(overlay);
     updateCanvasTexture(texture);
@@ -1465,8 +1506,9 @@ export class StudioTerrainChunkRenderer {
       }
     }
 
-    const result = { canvas: mask.canvas, bounds };
-    const cached = this.isTerrainMorphologyMaskEmpty(result) ? null : result;
+    const result: TerrainMorphologyMaskBuffer = { canvas: mask.canvas, bounds };
+    const alphaBounds = getTerrainMorphologyLocalMaskBounds(result);
+    const cached = alphaBounds ? { ...result, alphaBounds } : null;
     this.morphologyMaskCache.set(feature, cached);
     return cached;
   }
@@ -1621,32 +1663,43 @@ export class StudioTerrainChunkRenderer {
   ): void {
     if (alpha <= 0) return;
 
-    const fill = this.createCanvasBuffer(mask.canvas.width, mask.canvas.height);
-    const isSolidBlack = terrainTextureId === SOLID_BLACK_TERRAIN_TEXTURE_ID;
-    const pattern = !isSolidBlack && terrainTextureId
-      ? this.getPattern(fill.ctx, data, image, terrainTextureId)
-      : null;
-    if (pattern) {
-      fill.ctx.save();
-      fill.ctx.imageSmoothingEnabled = false;
-      fill.ctx.fillStyle = pattern;
-      fill.ctx.translate(-mask.bounds.x, -mask.bounds.y);
-      fill.ctx.fillRect(mask.bounds.x, mask.bounds.y, mask.bounds.width, mask.bounds.height);
-      fill.ctx.restore();
-    } else {
-      fill.ctx.fillStyle = isSolidBlack ? "#050505" : fallbackColor;
-      fill.ctx.fillRect(0, 0, mask.canvas.width, mask.canvas.height);
+    const cacheKey = `${terrainTextureId ?? ""}|${fallbackColor}`;
+    let cache = this.morphologyTextureFillCache.get(mask.canvas);
+    if (!cache) {
+      cache = new Map();
+      this.morphologyTextureFillCache.set(mask.canvas, cache);
     }
+    let fillCanvas = cache.get(cacheKey);
+    if (!fillCanvas) {
+      const fill = this.createCanvasBuffer(mask.canvas.width, mask.canvas.height);
+      const isSolidBlack = terrainTextureId === SOLID_BLACK_TERRAIN_TEXTURE_ID;
+      const pattern = !isSolidBlack && terrainTextureId
+        ? this.getPattern(fill.ctx, data, image, terrainTextureId)
+        : null;
+      if (pattern) {
+        fill.ctx.save();
+        fill.ctx.imageSmoothingEnabled = false;
+        fill.ctx.fillStyle = pattern;
+        fill.ctx.translate(-mask.bounds.x, -mask.bounds.y);
+        fill.ctx.fillRect(mask.bounds.x, mask.bounds.y, mask.bounds.width, mask.bounds.height);
+        fill.ctx.restore();
+      } else {
+        fill.ctx.fillStyle = isSolidBlack ? "#050505" : fallbackColor;
+        fill.ctx.fillRect(0, 0, mask.canvas.width, mask.canvas.height);
+      }
 
-    fill.ctx.save();
-    fill.ctx.globalCompositeOperation = "destination-in";
-    fill.ctx.drawImage(mask.canvas, 0, 0);
-    fill.ctx.restore();
+      fill.ctx.save();
+      fill.ctx.globalCompositeOperation = "destination-in";
+      fill.ctx.drawImage(mask.canvas, 0, 0);
+      fill.ctx.restore();
+      fillCanvas = fill.canvas;
+      cache.set(cacheKey, fillCanvas);
+    }
 
     ctx.save();
     ctx.globalCompositeOperation = "source-over";
     ctx.globalAlpha = alpha;
-    ctx.drawImage(fill.canvas, mask.bounds.x, mask.bounds.y);
+    this.drawMorphologyCanvas(ctx, fillCanvas, mask.bounds);
     ctx.restore();
   }
 
@@ -1663,26 +1716,68 @@ export class StudioTerrainChunkRenderer {
   ): void {
     if (alpha <= 0) return;
 
-    const overlay = this.createCanvasBuffer(mask.canvas.width, mask.canvas.height);
-    overlay.ctx.save();
-    overlay.ctx.filter = filter;
-    overlay.ctx.drawImage(mask.canvas, offsetX, offsetY);
-    overlay.ctx.restore();
-    overlay.ctx.save();
-    overlay.ctx.globalCompositeOperation = "source-in";
-    overlay.ctx.fillStyle = color;
-    overlay.ctx.fillRect(0, 0, mask.canvas.width, mask.canvas.height);
-    overlay.ctx.restore();
-    overlay.ctx.save();
-    overlay.ctx.globalCompositeOperation = "destination-in";
-    overlay.ctx.drawImage(clipMask.canvas, 0, 0);
-    overlay.ctx.restore();
+    const clipId = this.getMorphologyCanvasId(clipMask.canvas);
+    const cacheKey = `${clipId}|${color}|${filter}|${offsetX}|${offsetY}`;
+    let cache = this.morphologyColorOverlayCache.get(mask.canvas);
+    if (!cache) {
+      cache = new Map();
+      this.morphologyColorOverlayCache.set(mask.canvas, cache);
+    }
+    let overlayCanvas = cache.get(cacheKey);
+    if (!overlayCanvas) {
+      const overlay = this.createCanvasBuffer(mask.canvas.width, mask.canvas.height);
+      overlay.ctx.save();
+      overlay.ctx.filter = filter;
+      overlay.ctx.drawImage(mask.canvas, offsetX, offsetY);
+      overlay.ctx.restore();
+      overlay.ctx.save();
+      overlay.ctx.globalCompositeOperation = "source-in";
+      overlay.ctx.fillStyle = color;
+      overlay.ctx.fillRect(0, 0, mask.canvas.width, mask.canvas.height);
+      overlay.ctx.restore();
+      overlay.ctx.save();
+      overlay.ctx.globalCompositeOperation = "destination-in";
+      overlay.ctx.drawImage(clipMask.canvas, 0, 0);
+      overlay.ctx.restore();
+      overlayCanvas = overlay.canvas;
+      cache.set(cacheKey, overlayCanvas);
+    }
 
     ctx.save();
     ctx.globalCompositeOperation = operation;
     ctx.globalAlpha = alpha;
-    ctx.drawImage(overlay.canvas, mask.bounds.x, mask.bounds.y);
+    this.drawMorphologyCanvas(ctx, overlayCanvas, mask.bounds);
     ctx.restore();
+  }
+
+  private getMorphologyCanvasId(canvas: HTMLCanvasElement): number {
+    const cached = this.morphologyCanvasIds.get(canvas);
+    if (cached) return cached;
+    const id = this.nextMorphologyCanvasId++;
+    this.morphologyCanvasIds.set(canvas, id);
+    return id;
+  }
+
+  private drawMorphologyCanvas(
+    ctx: CanvasRenderingContext2D,
+    canvas: HTMLCanvasElement,
+    bounds: StudioTerrainRenderBounds
+  ): void {
+    const intersection = this.morphologyClipBounds
+      ? intersectBounds(bounds, this.morphologyClipBounds)
+      : bounds;
+    if (!intersection) return;
+    ctx.drawImage(
+      canvas,
+      intersection.x - bounds.x,
+      intersection.y - bounds.y,
+      intersection.width,
+      intersection.height,
+      intersection.x,
+      intersection.y,
+      intersection.width,
+      intersection.height
+    );
   }
 
   private drawTerrainMorphologyDepthBands(
@@ -1922,16 +2017,6 @@ export class StudioTerrainChunkRenderer {
     targetContext.globalCompositeOperation = "destination-in";
     targetContext.drawImage(clipMask.canvas, 0, 0);
     targetContext.restore();
-  }
-
-  private isTerrainMorphologyMaskEmpty(mask: TerrainMorphologyMaskBuffer): boolean {
-    const context = mask.canvas.getContext("2d", { willReadFrequently: true });
-    if (!context) return true;
-    const data = context.getImageData(0, 0, mask.canvas.width, mask.canvas.height).data;
-    for (let index = 3; index < data.length; index += 4) {
-      if (data[index] > 0) return false;
-    }
-    return true;
   }
 
   private fillTerrainRect(
@@ -2473,6 +2558,45 @@ function intersectBounds(
   return { x, y, width: right - x, height: bottom - y };
 }
 
+function expandBounds(
+  bounds: StudioTerrainRenderBounds,
+  margin: number
+): StudioTerrainRenderBounds {
+  return {
+    x: bounds.x - margin,
+    y: bounds.y - margin,
+    width: bounds.width + margin * 2,
+    height: bounds.height + margin * 2,
+  };
+}
+
+function unionBounds(
+  bounds: StudioTerrainRenderBounds[]
+): StudioTerrainRenderBounds | null {
+  if (bounds.length === 0) return null;
+  const x = Math.min(...bounds.map((entry) => entry.x));
+  const y = Math.min(...bounds.map((entry) => entry.y));
+  const right = Math.max(...bounds.map((entry) => entry.x + entry.width));
+  const bottom = Math.max(...bounds.map((entry) => entry.y + entry.height));
+  return {
+    x: Math.floor(x),
+    y: Math.floor(y),
+    width: Math.max(1, Math.ceil(right) - Math.floor(x)),
+    height: Math.max(1, Math.ceil(bottom) - Math.floor(y)),
+  };
+}
+
+async function yieldToMainThread(): Promise<void> {
+  const scheduler = (globalThis as typeof globalThis & {
+    scheduler?: { yield?: () => Promise<void> };
+  }).scheduler;
+  if (typeof scheduler?.yield === "function") {
+    await scheduler.yield();
+    return;
+  }
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+}
+
 function getTerrainMorphologyHeight(feature: StudioTerrainMorphologyFeature): number {
   if (feature.kind === "hole") {
     return clampNumber(Number(feature.params.depth) || 58, 12, 160);
@@ -2671,6 +2795,7 @@ function drawTerrainMorphologyRoundRect(
 function getTerrainMorphologyLocalMaskBounds(
   mask: TerrainMorphologyMaskBuffer
 ): { maxX: number; maxY: number; minX: number; minY: number } | null {
+  if (mask.alphaBounds) return mask.alphaBounds;
   const data = mask.canvas.getContext("2d", { willReadFrequently: true })?.getImageData(0, 0, mask.canvas.width, mask.canvas.height).data;
   if (!data) return null;
 
@@ -3006,7 +3131,6 @@ function drawWaterAnimationRegion(overlay: TerrainWaterOverlay, region: TerrainW
     renderBounds.width,
     renderBounds.height
   );
-  drawCanvasBounds(frameCtx, surface, renderBounds);
 
   drawDirectionalWaterRefraction(
     frameCtx,
@@ -3022,8 +3146,13 @@ function drawWaterAnimationRegion(overlay: TerrainWaterOverlay, region: TerrainW
   frameCtx.save();
   frameCtx.globalCompositeOperation = "screen";
   frameCtx.globalAlpha = strength.glowAlpha;
-  frameCtx.filter = terrainWaveHighlightFilter();
-  drawCanvasBounds(frameCtx, surface, renderBounds);
+  frameCtx.fillStyle = "#b4ebff";
+  frameCtx.fillRect(
+    renderBounds.x,
+    renderBounds.y,
+    renderBounds.width,
+    renderBounds.height
+  );
   frameCtx.restore();
 
   drawDirectionalWaveMask(
@@ -3035,9 +3164,6 @@ function drawWaterAnimationRegion(overlay: TerrainWaterOverlay, region: TerrainW
     overlay.originX,
     overlay.originY
   );
-  waveMask.ctx.globalCompositeOperation = "source-in";
-  waveMask.ctx.filter = terrainWaveHighlightFilter();
-  drawCanvasBounds(waveMask.ctx, surface, renderBounds);
   resetCanvasContext(waveMask.ctx);
 
   frameCtx.save();
@@ -3067,7 +3193,7 @@ function drawDirectionalWaterRefraction(
   const centerX = width * 0.5;
   const centerY = height * 0.5;
   const projected = projectBoundsIntoRotatedSpace(region.bounds, centerX, centerY, cos, sin);
-  const refractionBandHeight = 8;
+  const refractionBandHeight = 48;
   const drift = positiveModulo(phase * 12, refractionBandHeight);
   const flow = resolveTerrainWaveDirectionVector(region.direction);
   const across = { x: flow.y, y: -flow.x };
@@ -3129,7 +3255,7 @@ function drawDirectionalWaveMask(
   const centerX = width * 0.5;
   const centerY = height * 0.5;
   const projected = projectBoundsIntoRotatedSpace(region.bounds, centerX, centerY, cos, sin);
-  const bandSpacing = 22;
+  const bandSpacing = 32;
   const drift = positiveModulo(phase * 28, bandSpacing);
   const flow = resolveTerrainWaveDirectionVector(region.direction);
   const across = { x: flow.y, y: -flow.x };
@@ -3273,10 +3399,6 @@ function resetCanvasContext(ctx: CanvasRenderingContext2D): void {
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = "source-over";
   ctx.filter = "none";
-}
-
-function terrainWaveHighlightFilter(amount = 0.36): string {
-  return `brightness(${Math.round((1 + clampNumber(amount, 0, 1)) * 100)}%)`;
 }
 
 /** @internal */

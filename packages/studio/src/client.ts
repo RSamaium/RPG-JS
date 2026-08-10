@@ -25,6 +25,7 @@ import { createStudioMapPlugins, type StudioMapPlugin } from "./studio-map-plugi
 import { bindInitialStudioEventHitboxes } from "./initial-event-hitboxes-client";
 import { bindStudioCombatAnimationsToEntity } from "./action-battle-animations";
 import { collectStudioActionBattleMediaRefs } from "./action-battle-animation-preload";
+import { beginStudioMapLoading, waitForStudioMapReady } from "./studio-map-readiness";
 
 interface GlobalConfig {
   projectId?: string;
@@ -286,6 +287,7 @@ export default (config: StudioGameModuleConfig) => {
         const gui = inject(RpgGui);
         const engine = inject(RpgClientEngine) as RpgClientEngineWithConfig;
         const hasPreviousMap = Boolean(engine.scene.data?.());
+        beginStudioMapLoading();
         await new Promise<void>((resolve) => {
           let completed = false;
           const complete = () => {
@@ -319,6 +321,8 @@ export default (config: StudioGameModuleConfig) => {
           engine.globalConfig.animations,
         );
         bindInitialStudioEventHitboxes(scene);
+        const loadedScene = engine.scene.data?.();
+        await waitForStudioMapReady(loadedScene?.data ?? loadedScene);
         await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
         fadeTrigger.start();
       },

@@ -11,6 +11,7 @@ import { RpgClientEngine, inject } from "@rpgjs/client"
 import { Container as PixiContainer } from "pixi.js"
 import { StudioTerrainChunkRenderer } from "../terrain-renderer/terrain-chunk-renderer"
 import { createViewportCullKey, getPixiLocalViewportBounds } from "../viewport-culling"
+import { markStudioMapReady } from "../../studio-map-readiness"
 
 const { data, debugCollisions, splitWallForeground } = defineProps({
   debugCollisions: {
@@ -23,7 +24,7 @@ const { data, debugCollisions, splitWallForeground } = defineProps({
   }
 })
 
-const TERRAIN_CULL_MARGIN = 1024
+const TERRAIN_CULL_MARGIN = 384
 const TERRAIN_CULL_GRID_SIZE = 128
 const readValue = (value) => typeof value === "function" ? value() : value
 const engine = inject(RpgClientEngine)
@@ -34,6 +35,7 @@ const terrainPixiChildren = [terrainWorld]
 let terrainRenderer = new StudioTerrainChunkRenderer(terrainWorld)
 let renderSerial = 0
 let lastCullKey = ""
+let readyMapData = null
 
 const terrainSize = computed(() => {
   const mapData = readValue(data)
@@ -47,20 +49,27 @@ const terrainSize = computed(() => {
   return { width, height }
 })
 
-const renderTerrain = async () => {
+const renderTerrain = async (viewportBounds = getPixiLocalViewportBounds(engine, terrainWorld)) => {
   const mapData = readValue(data)
   if (!mapData) return
   const currentSerial = ++renderSerial
   await terrainRenderer.renderMap(mapData, {
     debugCollisions: readValue(debugCollisions) === true,
     splitWallForeground: readValue(splitWallForeground) === true,
-    streamUpdate: mapData.terrainRenderData?.streamUpdate
+    streamUpdate: mapData.terrainRenderData?.streamUpdate,
+    viewportBounds,
+    viewportMargin: TERRAIN_CULL_MARGIN
   })
   if (currentSerial !== renderSerial) {
     return
   }
-  lastCullKey = ""
-  updateTerrainCulling()
+  terrainRenderer.updateChunkVisibility(viewportBounds, TERRAIN_CULL_MARGIN)
+  if (readyMapData !== mapData) {
+    await waitForPresentedFrame()
+    if (currentSerial !== renderSerial) return
+    readyMapData = mapData
+    markStudioMapReady()
+  }
 }
 
 effect(() => {
@@ -93,11 +102,18 @@ function updateTerrainCulling() {
 
   lastCullKey = cullKey
   terrainRenderer.updateChunkVisibility(bounds, TERRAIN_CULL_MARGIN)
+  void renderTerrain(bounds)
 }
 
 function destroyTerrainRenderer() {
   renderSerial += 1
   lastCullKey = ""
+  readyMapData = null
   terrainRenderer.destroy()
+}
+
+async function waitForPresentedFrame() {
+  await new Promise((resolve) => requestAnimationFrame(resolve))
+  await new Promise((resolve) => requestAnimationFrame(resolve))
 }
 </script>
