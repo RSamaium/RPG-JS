@@ -43,8 +43,9 @@ import { applySyncedHitboxPayload } from "./utils/syncHitbox";
 import { applySyncedParamPayload } from "./utils/syncParams";
 import { EventComponentResolverRegistry, type EventComponentResolver } from "./Game/EventComponentResolver";
 import { RpgClientBuiltinI18n } from "./i18n";
-import type { CameraFollowSmoothMove } from "./services/cameraFollow";
+import { clearCameraFollowPlugins, type CameraFollowSmoothMove } from "./services/cameraFollow";
 import { RpgMusicManager } from "./Game/MusicManager";
+import { routePredictedLocalPlayerSync } from "./services/localPlayerSync";
 export type {
   CameraFollowEase,
   CameraFollowSmoothMove,
@@ -503,7 +504,6 @@ export class RpgClientEngine<T = any> {
     const tickSubscription = this.tick.subscribe((tick) => {
       this.stepClientPhysicsTick();
       this.projectiles.step();
-      this.flushPendingPredictedStates();
       this.flushPendingMovePath();
       this.hooks.callHooks("client-engine-onStep", this, tick).subscribe();
 
@@ -671,16 +671,33 @@ export class RpgClientEngine<T = any> {
 
   private clearCameraFollowViewportPlugins(): void {
     const viewport = this.findViewportInstance();
-    viewport?.plugins?.remove?.("animate");
-    viewport?.plugins?.remove?.("follow");
+    clearCameraFollowPlugins(viewport);
   }
 
-  private prepareSyncPayload(data: any): any {
+  private prepareSyncPayload(
+    data: any,
+    ack?: { frame: number; serverTick?: number; x?: number; y?: number; direction?: Direction },
+  ): {
+    payload: any;
+    localPredictionSnapshot?: PredictionState<Direction>;
+  } {
     const payload = { ...(data ?? {}) };
     delete payload.ack;
     delete payload.timestamp;
 
     const myId = this.playerIdSignal();
+    if (this.predictionEnabled && this.prediction) {
+      const currentPlayer = this.sceneMap?.getCurrentPlayer?.();
+      const currentState = currentPlayer ? this.getLocalPlayerState() : undefined;
+      const routed = routePredictedLocalPlayerSync<Direction>(payload, myId, currentState, ack);
+      if (routed.payload !== payload) {
+        return {
+          payload: routed.payload,
+          ...(routed.snapshot ? { localPredictionSnapshot: routed.snapshot } : {}),
+        };
+      }
+    }
+
     const players = payload.players;
     const localPatch = myId && players ? players[myId] : undefined;
     const shouldMaskLocalPosition = this.shouldPreserveLocalPlayerPosition(localPatch);
@@ -696,7 +713,7 @@ export class RpgClientEngine<T = any> {
       };
     }
 
-    return payload;
+    return { payload };
   }
 
   private shouldPreserveLocalPlayerPosition(localPatch?: any): boolean {
@@ -722,28 +739,6 @@ export class RpgClientEngine<T = any> {
       return true;
     }
     return Date.now() - this.lastLocalMovementInputAt <= this.LOCAL_MOVEMENT_AUTHORITY_ACK_GRACE_MS;
-  }
-
-  private normalizeAckWithSyncState(
-    ack: { frame: number; serverTick?: number; x?: number; y?: number; direction?: Direction },
-    syncData: any,
-  ): { frame: number; serverTick?: number; x?: number; y?: number; direction?: Direction } {
-    const myId = this.playerIdSignal();
-    if (!myId) {
-      return ack;
-    }
-
-    const localPatch = syncData?.players?.[myId];
-    if (typeof localPatch?.x !== "number" || typeof localPatch?.y !== "number") {
-      return ack;
-    }
-
-    return {
-      ...ack,
-      x: localPatch.x,
-      y: localPatch.y,
-      direction: localPatch.direction ?? ack.direction,
-    };
   }
 
   private initListeners() {
@@ -1027,15 +1022,18 @@ export class RpgClientEngine<T = any> {
 
     const ack = data?.ack;
     const normalizedAck =
-      ack && typeof ack.frame === "number"
-        ? this.normalizeAckWithSyncState(ack, data)
+      ack && typeof ack.frame === "number" && Number.isFinite(ack.frame)
+        ? ack
         : undefined;
-    const payload = this.prepareSyncPayload(data);
+    const { payload, localPredictionSnapshot } = this.prepareSyncPayload(data, normalizedAck);
     load(this.sceneMap, payload, true);
     applySyncedHitboxPayload(this.sceneMap, payload);
 
     if (normalizedAck) {
       this.applyServerAck(normalizedAck);
+    }
+    if (localPredictionSnapshot) {
+      this.prediction?.queueServerSnapshot(localPredictionSnapshot);
     }
 
     applySyncedParamPayload(this.sceneMap, payload);
@@ -1985,6 +1983,7 @@ export class RpgClientEngine<T = any> {
     this.hooks.callHooks("client-engine-onInput", this, { input: movementInput, playerId: this.playerId }).subscribe();
 
     const bodyReady = this.ensureCurrentPlayerBody();
+    let waitsForPredictionStep = false;
     if (currentPlayer && bodyReady) {
       this.applyPredictedMovementInput(currentPlayer, movementInput);
       if (this.predictionEnabled && this.prediction) {
@@ -1992,10 +1991,16 @@ export class RpgClientEngine<T = any> {
         if (this.pendingPredictionFrames.length > 240) {
           this.pendingPredictionFrames = this.pendingPredictionFrames.slice(-240);
         }
+        waitsForPredictionStep = true;
       }
     }
 
-    this.emitMovePacket(movementInput, frame, tick, timestamp, true);
+    // Prediction input can be sampled more often than the fixed physics loop.
+    // Wait for that loop to attach the resulting state so every input sharing
+    // one client tick is sent to the server as one complete batch.
+    if (!waitsForPredictionStep) {
+      this.emitMovePacket(movementInput, frame, tick, timestamp, true);
+    }
     this.lastInputTime = isDashInput(movementInput)
       ? Date.now() + (movementInput.duration ?? DEFAULT_DASH_DURATION_MS)
       : Date.now();
@@ -2192,7 +2197,12 @@ export class RpgClientEngine<T = any> {
     }
     const deltaMs = Math.max(1, Math.min(100, now - this.lastClientPhysicsStepAt));
     this.lastClientPhysicsStepAt = now;
-    this.sceneMap.stepClientPhysics(deltaMs);
+    this.sceneMap.stepClientPhysics(deltaMs, {
+      // A slow render can execute several fixed physics steps at once. An input
+      // frame belongs to the first of those steps, which is also where the
+      // authoritative server captures its matching ACK position.
+      afterStep: () => this.flushPendingPredictedStates(),
+    });
   }
 
   private flushPendingPredictedStates(): void {
@@ -2200,11 +2210,28 @@ export class RpgClientEngine<T = any> {
       return;
     }
     const state = this.getLocalPlayerState();
+    let latestFlushedFrame: number | undefined;
     while (this.pendingPredictionFrames.length > 0) {
       const frame = this.pendingPredictionFrames.shift();
       if (typeof frame === "number") {
         this.prediction.attachPredictedState(frame, state);
+        latestFlushedFrame = frame;
       }
+    }
+    if (typeof latestFlushedFrame !== "number") {
+      return;
+    }
+    const latest = this.prediction
+      .getPendingInputs()
+      .find((entry) => entry.frame === latestFlushedFrame);
+    if (latest?.state) {
+      this.emitMovePacket(
+        latest.direction,
+        latest.frame,
+        latest.tick,
+        latest.timestamp,
+        true,
+      );
     }
   }
 
@@ -2279,8 +2306,14 @@ export class RpgClientEngine<T = any> {
     if (pendingInputs.length === 0) {
       return;
     }
-    const latest = pendingInputs[pendingInputs.length - 1];
-    if (!latest) {
+    let latest: PredictionHistoryEntry<RpgMovementInput, Direction> | undefined;
+    for (let index = pendingInputs.length - 1; index >= 0; index -= 1) {
+      if (pendingInputs[index].state) {
+        latest = pendingInputs[index];
+        break;
+      }
+    }
+    if (!latest?.state) {
       return;
     }
     const now = Date.now();
@@ -2547,13 +2580,13 @@ export class RpgClientEngine<T = any> {
 
   private applyServerAck(ack: { frame: number; serverTick?: number; x?: number; y?: number; direction?: Direction }) {
     this.updateServerTickEstimate(ack.serverTick);
-    const keepLocalMovement = this.shouldKeepLocalPlayerMovement();
     if (this.predictionEnabled && this.prediction) {
       const result = this.prediction.applyServerAck({
         frame: ack.frame,
         serverTick: ack.serverTick,
         state:
-          !keepLocalMovement && typeof ack.x === "number" && typeof ack.y === "number"
+          typeof ack.x === "number" && Number.isFinite(ack.x)
+            && typeof ack.y === "number" && Number.isFinite(ack.y)
             ? { x: ack.x, y: ack.y, direction: ack.direction }
             : undefined,
       });
@@ -2563,6 +2596,7 @@ export class RpgClientEngine<T = any> {
       return;
     }
 
+    const keepLocalMovement = this.shouldKeepLocalPlayerMovement();
     if (typeof ack.x !== "number" || typeof ack.y !== "number") {
       return;
     }
@@ -2602,17 +2636,28 @@ export class RpgClientEngine<T = any> {
     (this.sceneMap as any).stopMovement(player);
     this.applyAuthoritativeState(authoritativeState);
 
-    if (!pendingInputs.length) {
-      return;
-    }
-
-    // Keep replay bounded while still tolerating high-latency links.
+    // Keep replay bounded while still tolerating high-latency links. Inputs
+    // sampled during the same fixed client tick must update velocity together
+    // and then share the one resulting physics state.
     const replayInputs = pendingInputs.slice(-600);
-    for (const entry of replayInputs) {
-      if (!entry?.direction) continue;
-      this.applyPredictedMovementInput(player, entry.direction);
+    for (let index = 0; index < replayInputs.length;) {
+      const first = replayInputs[index];
+      const tick = first.tick;
+      const group: PredictionHistoryEntry<RpgMovementInput, Direction>[] = [];
+      while (index < replayInputs.length && replayInputs[index].tick === tick) {
+        group.push(replayInputs[index]);
+        index += 1;
+      }
+      for (const entry of group) {
+        if (entry?.direction) {
+          this.applyPredictedMovementInput(player, entry.direction);
+        }
+      }
       this.sceneMap.stepPredictionTick();
-      this.prediction?.attachPredictedState(entry.frame, this.getLocalPlayerState());
+      const state = this.getLocalPlayerState();
+      for (const entry of group) {
+        this.prediction?.attachPredictedState(entry.frame, state);
+      }
     }
   }
 

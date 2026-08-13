@@ -59,6 +59,7 @@ import {
 } from "../map-streaming";
 
 const DEFAULT_DASH_COOLDOWN_MS = 450;
+const MOVEMENT_IDLE_TIMEOUT_MS = 100;
 const GROUND_TOUCH_SENSOR_COVERAGE_THRESHOLD = 0.8;
 const MAP_SOURCE_STORAGE_KEY = "$room:rpgjs-map-source";
 const WORLD_MAPS_STORAGE_KEY = "$room:rpgjs-world-maps";
@@ -505,6 +506,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
   private _serverTickInProgress = false;
   private _queuedServerTickDelta = 0;
   private _serverTickLoopVersion = 0;
+  private _pendingAckFrames = new Map<string, number>();
   /** Enable/disable automatic tick processing (useful for unit tests) */
   private _autoTickEnabled: boolean = true;
   /** Runtime templates for scenario events to instantiate per player */
@@ -1405,25 +1407,30 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     if (packet && typeof packet === 'object') {
       obj.timestamp = Date.now();
 
-      // Add ack info: last processed frame and authoritative position.
-      // When the sync payload already contains this player's coordinates,
-      // prefer them to keep ack state aligned with the snapshot sent to the client.
+      // Keep the acknowledged frame paired with the authoritative position
+      // captured immediately after that input's physics step. A newer sync
+      // snapshot may already represent another server tick.
       if (player) {
         const value = packet.value && typeof packet.value === "object" ? packet.value : undefined;
         const packetPlayers = value?.players && typeof value.players === "object" ? value.players : undefined;
         const playerSnapshot = packetPlayers?.[player.id];
         const bodyPos = this.getBodyPosition(player.id, "top-left");
-        const ackX =
-          typeof playerSnapshot?.x === "number" ? playerSnapshot.x : bodyPos?.x ?? player.x();
-        const ackY =
-          typeof playerSnapshot?.y === "number" ? playerSnapshot.y : bodyPos?.y ?? player.y();
         const lastFramePositions = player._lastFramePositions;
+        const ackPosition = lastFramePositions?.position;
+        const ackX =
+          typeof ackPosition?.x === "number"
+            ? ackPosition.x
+            : typeof playerSnapshot?.x === "number" ? playerSnapshot.x : bodyPos?.x ?? player.x();
+        const ackY =
+          typeof ackPosition?.y === "number"
+            ? ackPosition.y
+            : typeof playerSnapshot?.y === "number" ? playerSnapshot.y : bodyPos?.y ?? player.y();
         obj.ack = {
           frame: lastFramePositions?.frame ?? 0,
-          serverTick: this.getTick(),
+          serverTick: lastFramePositions?.serverTick ?? this.getTick(),
           x: Math.round(ackX),
           y: Math.round(ackY),
-          direction: playerSnapshot?.direction ?? player.direction(),
+          direction: ackPosition?.direction ?? playerSnapshot?.direction ?? player.direction(),
         };
       }
     }
@@ -1577,6 +1584,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
    * ```
    */
   onJoin(player: RpgPlayer, conn: RpgRoomConnection) {
+    this._pendingAckFrames.delete(player.id);
     // A reconnect reuses the public player id but starts with an empty client
     // entity cache. Force the next sync packet to include every visible entity.
     this.spatialVisibleEventIds.delete(player.id);
@@ -1628,6 +1636,9 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     sendInitialMapStreaming(this, player);
     player.pendingInputs = [];
     player.lastProcessedInputTs = 0;
+    player.lastProcessedClientInputTs = 0;
+    player.lastProcessedInputTick = null;
+    player.lastProcessedInputServerTick = null;
     player._lastFramePositions = null;
     player._onInit()
     alignPlayerBodyWithSignals();
@@ -1697,6 +1708,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
    * ```
    */
   async onLeave(player: RpgPlayer, conn: RpgRoomConnection) {
+    this._pendingAckFrames.delete(player.id);
     removeMapStreamingPlayer(this, player);
     this.spatialVisibleEventIds.delete(player.id);
     this.spatialVisiblePlayerIds.delete(player.id);
@@ -1713,6 +1725,9 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     this.removeScenarioEventsForPlayer(player.id);
     player.pendingInputs = [];
     player.lastProcessedInputTs = 0;
+    player.lastProcessedClientInputTs = 0;
+    player.lastProcessedInputTick = null;
+    player.lastProcessedInputServerTick = null;
     player._lastFramePositions = null;
     if (!this.hasActiveConnections()) {
       this.setAutoTick(false);
@@ -1888,11 +1903,18 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     if ((player as any).canMove === false) {
       player.pendingInputs = [];
       player.lastProcessedInputTs = 0;
+      player.lastProcessedClientInputTs = 0;
+      player.lastProcessedInputTick = null;
+      player.lastProcessedInputServerTick = null;
+      this._pendingAckFrames.delete(player.id);
       (this as any).stopMovement(player);
       return;
     }
 
-    const lastAckedFrame = player._lastFramePositions?.frame ?? 0;
+    const lastAckedFrame = Math.max(
+      player._lastFramePositions?.frame ?? 0,
+      this._pendingAckFrames.get(player.id) ?? 0,
+    );
     const now = Date.now();
     const candidates: Array<{
       input: any;
@@ -2345,7 +2367,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
    * anti-cheat validation to prevent time manipulation and frame skipping.
    * It validates the time deltas between inputs and ensures they are within
    * acceptable ranges. To preserve movement itinerary under network bursts,
-   * the number of inputs processed per call is capped.
+   * the number of distinct client ticks processed per call is capped.
    * 
    * ## Architecture
    * 
@@ -2395,6 +2417,10 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     if ((player as any).canMove === false) {
       player.pendingInputs = [];
       player.lastProcessedInputTs = 0;
+      player.lastProcessedClientInputTs = 0;
+      player.lastProcessedInputTick = null;
+      player.lastProcessedInputServerTick = null;
+      this._pendingAckFrames.delete(player.id);
       (this as any).stopMovement(player);
       return {
         player,
@@ -2413,21 +2439,58 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
 
     const config = { ...defaultControls, ...controls };
     let lastProcessedTime = player.lastProcessedInputTs || 0;
-    let lastProcessedFrame = player._lastFramePositions?.frame ?? 0;
+    let lastProcessedClientTime = player.lastProcessedClientInputTs || 0;
+    let lastProcessedFrame = Math.max(
+      player._lastFramePositions?.frame ?? 0,
+      this._pendingAckFrames.get(player.id) ?? 0,
+    );
 
     // Sort inputs by frame number to ensure proper order
     player.pendingInputs.sort((a, b) => (a.frame || 0) - (b.frame || 0));
 
     let hasProcessedInputs = false;
-    let processedThisTick = 0;
+    let processedTickGroups = 0;
+    let activeClientTick: number | undefined;
+    let hasActiveClientTickGroup = false;
 
     // Process pending inputs progressively to preserve itinerary under latency.
-    while (player.pendingInputs.length > 0 && processedThisTick < config.maxInputsPerTick) {
-      const input = player.pendingInputs.shift();
+    // Several input callbacks can run before one fixed client physics step. All
+    // frames carrying that same tick must therefore update velocity before one
+    // authoritative step instead of advancing the server once per frame.
+    while (player.pendingInputs.length > 0) {
+      const input = player.pendingInputs[0];
 
       if (!input || typeof input.frame !== 'number') {
+        player.pendingInputs.shift();
         continue;
       }
+
+      const clientInputTick = typeof input.tick === "number" ? input.tick : undefined;
+      const joinsActiveClientTickGroup =
+        hasActiveClientTickGroup
+        && typeof clientInputTick === "number"
+        && clientInputTick === activeClientTick;
+      if (!joinsActiveClientTickGroup && processedTickGroups >= config.maxInputsPerTick) {
+        break;
+      }
+      const previousClientInputTick = player.lastProcessedInputTick;
+      const previousServerInputTick = player.lastProcessedInputServerTick;
+      if (
+        !joinsActiveClientTickGroup
+        && typeof clientInputTick === "number"
+        && typeof previousClientInputTick === "number"
+        && typeof previousServerInputTick === "number"
+      ) {
+        const clientTickDelta = clientInputTick - previousClientInputTick;
+        if (clientTickDelta <= 0) {
+          player.pendingInputs.shift();
+          continue;
+        }
+        if (this.getTick() < previousServerInputTick + clientTickDelta) {
+          break;
+        }
+      }
+      player.pendingInputs.shift();
 
       // Anti-cheat validation
       if (config.enableAntiCheat) {
@@ -2438,16 +2501,16 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
         }
 
         // Check time delta if timestamp is available
-        if (input.timestamp && lastProcessedTime > 0) {
-          const timeDelta = input.timestamp - lastProcessedTime;
+        if (input.timestamp && lastProcessedClientTime > 0) {
+          const timeDelta = input.timestamp - lastProcessedClientTime;
           if (timeDelta > config.maxTimeDelta) {
-            input.timestamp = lastProcessedTime + config.minTimeBetweenInputs;
+            input.timestamp = lastProcessedClientTime + config.minTimeBetweenInputs;
           }
         }
 
         // Check minimum time between inputs
-        if (input.timestamp && lastProcessedTime > 0) {
-          const timeDelta = input.timestamp - lastProcessedTime;
+        if (!joinsActiveClientTickGroup && input.timestamp && lastProcessedClientTime > 0) {
+          const timeDelta = input.timestamp - lastProcessedClientTime;
           if (timeDelta < config.minTimeBetweenInputs) {
             continue;
           }
@@ -2479,27 +2542,20 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
         }
         processedInputs.push(input.input);
         hasProcessedInputs = true;
-        lastProcessedTime = (input.timestamp || Date.now()) + idleHoldMs;
-        processedThisTick += 1;
+        lastProcessedClientTime = (input.timestamp || Date.now()) + idleHoldMs;
+        lastProcessedTime = Date.now() + idleHoldMs;
+        player.lastProcessedInputTick = clientInputTick ?? null;
+        player.lastProcessedInputServerTick = this.getTick();
+        if (!joinsActiveClientTickGroup) {
+          processedTickGroups += 1;
+          activeClientTick = clientInputTick;
+          hasActiveClientTickGroup = true;
+        }
 
-        const bodyPos = this.getBodyPosition(player.id, "top-left");
-        const ackX =
-          typeof input.clientState?.x === "number"
-            ? input.clientState.x
-            : bodyPos?.x ?? player.x();
-        const ackY =
-          typeof input.clientState?.y === "number"
-            ? input.clientState.y
-            : bodyPos?.y ?? player.y();
-        player._lastFramePositions = {
-          frame: input.frame,
-          position: {
-            x: Math.round(ackX),
-            y: Math.round(ackY),
-            direction: input.clientState?.direction ?? player.direction(),
-          },
-          serverTick: this.getTick(),
-        };
+        // Do not expose this frame until the following authoritative physics
+        // step has completed. In particular, never pair the new frame with the
+        // client-authored trajectory position while that step is pending.
+        this._pendingAckFrames.set(player.id, input.frame);
       }
 
       // Update tracking variables
@@ -2511,8 +2567,12 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     // The physics step will be executed in the next tick cycle
     if (hasProcessedInputs) {
       player.lastProcessedInputTs = lastProcessedTime;
+      player.lastProcessedClientInputTs = lastProcessedClientTime;
     } else {
-      const idleTimeout = Math.max(config.minTimeBetweenInputs * 4, 50);
+      const idleTimeout = Math.max(
+        config.minTimeBetweenInputs * 4,
+        MOVEMENT_IDLE_TIMEOUT_MS,
+      );
       const lastTs = player.lastProcessedInputTs || 0;
       if (lastTs > 0 && Date.now() - lastTs > idleTimeout) {
         (this as any).stopMovement(player);
@@ -2586,7 +2646,26 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
   private async runServerTick(deltaMs: number): Promise<number> {
     return this.runFixedTicksAsync(deltaMs, {
       beforeStep: () => this.processPendingInputsForTick(),
+      afterStep: (tick) => this.captureProcessedInputPositions(tick),
     });
+  }
+
+  private captureProcessedInputPositions(tick: number): void {
+    for (const [playerId, frame] of this._pendingAckFrames) {
+      const player = this.getPlayer(playerId);
+      if (!player) continue;
+      const bodyPos = this.getBodyPosition(player.id, "top-left");
+      player._lastFramePositions = {
+        frame,
+        position: {
+          x: Math.round(bodyPos?.x ?? player.x()),
+          y: Math.round(bodyPos?.y ?? player.y()),
+          direction: player.direction(),
+        },
+        serverTick: tick,
+      };
+    }
+    this._pendingAckFrames.clear();
   }
 
   private async processPendingInputsForTick(): Promise<void> {
