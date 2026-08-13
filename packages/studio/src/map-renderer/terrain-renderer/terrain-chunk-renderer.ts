@@ -87,6 +87,16 @@ export interface TerrainWaveRenderStrength {
   lineWidth: number;
 }
 
+/** @internal */
+export interface CanvasOffsetDrawRegion {
+  sourceX: number;
+  sourceY: number;
+  destinationX: number;
+  destinationY: number;
+  width: number;
+  height: number;
+}
+
 interface TerrainViewportBounds {
   x: number;
   y: number;
@@ -3224,11 +3234,42 @@ function drawDirectionalWaterRefraction(
     );
     ctx.clip();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.drawImage(
-      surface,
-      across.x * acrossOffset + flow.x * flowOffset,
-      across.y * acrossOffset + flow.y * flowOffset
+    const offsetX = across.x * acrossOffset + flow.x * flowOffset;
+    const offsetY = across.y * acrossOffset + flow.y * flowOffset;
+    const bandBounds = resolveRotatedRectangleBounds(
+      {
+        x: projected.minX - 4,
+        y,
+        width: projected.maxX - projected.minX + 8,
+        height: refractionBandHeight + 0.5,
+      },
+      centerX,
+      centerY,
+      cos,
+      sin
     );
+    const drawRegion = resolveCanvasOffsetDrawRegion(
+      surface.width,
+      surface.height,
+      width,
+      height,
+      offsetX,
+      offsetY,
+      bandBounds
+    );
+    if (drawRegion) {
+      ctx.drawImage(
+        surface,
+        drawRegion.sourceX,
+        drawRegion.sourceY,
+        drawRegion.width,
+        drawRegion.height,
+        drawRegion.destinationX,
+        drawRegion.destinationY,
+        drawRegion.width,
+        drawRegion.height
+      );
+    }
     ctx.restore();
   }
   ctx.globalAlpha = 1;
@@ -3314,6 +3355,63 @@ function projectBoundsIntoRotatedSpace(
     minY: Math.min(...projected.map((point) => point.y)),
     maxX: Math.max(...projected.map((point) => point.x)),
     maxY: Math.max(...projected.map((point) => point.y)),
+  };
+}
+
+function resolveRotatedRectangleBounds(
+  bounds: { x: number; y: number; width: number; height: number },
+  centerX: number,
+  centerY: number,
+  cos: number,
+  sin: number
+): { x: number; y: number; width: number; height: number } {
+  const corners = [
+    { x: bounds.x, y: bounds.y },
+    { x: bounds.x + bounds.width, y: bounds.y },
+    { x: bounds.x, y: bounds.y + bounds.height },
+    { x: bounds.x + bounds.width, y: bounds.y + bounds.height },
+  ].map((point) => ({
+    x: centerX + point.x * cos - point.y * sin,
+    y: centerY + point.x * sin + point.y * cos,
+  }));
+  const minX = Math.min(...corners.map((point) => point.x));
+  const minY = Math.min(...corners.map((point) => point.y));
+  const maxX = Math.max(...corners.map((point) => point.x));
+  const maxY = Math.max(...corners.map((point) => point.y));
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+}
+
+/** @internal */
+export function resolveCanvasOffsetDrawRegion(
+  sourceWidth: number,
+  sourceHeight: number,
+  destinationWidth: number,
+  destinationHeight: number,
+  offsetX: number,
+  offsetY: number,
+  clipBounds: { x: number; y: number; width: number; height: number }
+): CanvasOffsetDrawRegion | null {
+  const destinationX = Math.max(0, clipBounds.x, offsetX);
+  const destinationY = Math.max(0, clipBounds.y, offsetY);
+  const destinationMaxX = Math.min(
+    destinationWidth,
+    clipBounds.x + clipBounds.width,
+    offsetX + sourceWidth
+  );
+  const destinationMaxY = Math.min(
+    destinationHeight,
+    clipBounds.y + clipBounds.height,
+    offsetY + sourceHeight
+  );
+  if (destinationMaxX <= destinationX || destinationMaxY <= destinationY) return null;
+
+  return {
+    sourceX: destinationX - offsetX,
+    sourceY: destinationY - offsetY,
+    destinationX,
+    destinationY,
+    width: destinationMaxX - destinationX,
+    height: destinationMaxY - destinationY,
   };
 }
 

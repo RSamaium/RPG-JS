@@ -8,6 +8,7 @@ import {
 } from "./studio-element-renderer";
 import {
   isTerrainWaveAnimated,
+  resolveCanvasOffsetDrawRegion,
   resolveTerrainHoleFillGeometry,
   resolveTerrainHoleWaveDescriptors,
   resolveTerrainHoleWaveOptions,
@@ -169,6 +170,37 @@ describe("studio element renderer helpers", () => {
       sourceX: 68,
       sourceY: 10,
     });
+  });
+
+  it("crops an offset refraction draw to the affected band", () => {
+    expect(resolveCanvasOffsetDrawRegion(
+      768,
+      768,
+      768,
+      768,
+      3,
+      -2,
+      { x: 90, y: 120, width: 580, height: 9 }
+    )).toEqual({
+      sourceX: 87,
+      sourceY: 122,
+      destinationX: 90,
+      destinationY: 120,
+      width: 580,
+      height: 9,
+    });
+  });
+
+  it("returns no refraction draw when the shifted source misses the clipped band", () => {
+    expect(resolveCanvasOffsetDrawRegion(
+      64,
+      64,
+      768,
+      768,
+      700,
+      700,
+      { x: 90, y: 120, width: 580, height: 9 }
+    )).toBeNull();
   });
 
   it("repeats terrain texture coordinates without mirroring adjacent tiles", () => {

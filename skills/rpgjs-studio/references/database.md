@@ -1,12 +1,13 @@
 # Database API
 
-Use this reference for CRUD on game database entities such as items, enemies, and variables.
+Use this reference for CRUD on game database entities such as actors, items, enemies, and variables.
 
 Current active types in this repo:
 
 - `variables`
 - `items`
 - `enemies`
+- `actors`
 
 ## Endpoint pattern
 
@@ -17,8 +18,10 @@ Current active types in this repo:
 - Update: `PUT /api/database/:type/:id`
 - Delete: `DELETE /api/database/:type/:id`
 - Enemy previews: `GET /api/database/enemies/preview?ids=<id1,id2>`
+- Main actor: `GET /api/database/actors/main`
+- Assign main actor: `PUT /api/database/actors/:id/main`
 
-`:type` is the database resource path, for example `items`, `enemies`, or `variables`.
+`:type` is the database resource path, for example `actors`, `items`, `enemies`, or `variables`.
 
 ## Headers
 
@@ -37,7 +40,7 @@ curl -sS "$BASE_URL/api/database/:type/:id" \
   -H "Content-Type: application/json"
 ```
 
-Replace `:type` with the collection path (`items`, `enemies`, or `variables`) and `:id` with the record `_id`.
+Replace `:type` with the collection path (`actors`, `items`, `enemies`, or `variables`) and `:id` with the record `_id`.
 
 Before updating, deleting, or explaining the record content, read the current record first and use the returned payload as the source of truth. Do not infer field names or values from the id alone.
 
@@ -58,6 +61,33 @@ This is required for flows like:
 - Event or page conditions that refer to items
 
 ## Payloads from schemas
+
+### `POST /api/database/actors`
+
+Supported fields from `actorSchema`:
+
+- `name: string`
+- `graphic?: string`
+- `faceset?: string`
+- `hitbox?: { width: number, height: number }`
+- `initialLevel?: number`
+- `finalLevel?: number`
+- `expCurve?: { basis, extra, accelerationA, accelerationB }`
+- `parameters?: { maxHp, maxSp, str, agi, int, dex }`
+- `startingEquipment?: { weaponId?: string, armorId?: string }`
+- `startingInventory?: Array<{ itemId: string, amount: number }>`
+- `animations?: { attack?: string, hurt?: string, die?: string, castSpell?: string }`
+- `skills?: Array<{ skillId: string, level: number }>`
+
+The first actor is assigned automatically when the project has no main actor.
+Use `PUT /api/database/actors/:id/main` to assign another actor. The actor must
+belong to the API key project. Deleting the current main actor returns `409`, so
+assign a replacement first.
+
+`graphic`, `faceset`, and animation fields are media `_id`s. Equipment,
+inventory, and skills reference the corresponding database record `_id`s.
+Actor hitbox dimensions are positive RPGJS pixels and are not scaled with the
+graphic.
 
 ### `POST /api/database/skills`
 
