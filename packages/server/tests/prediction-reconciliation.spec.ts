@@ -430,6 +430,35 @@ describe("Prediction + Reconciliation Server Protocol", () => {
     expect(player.pendingInputs).toHaveLength(0);
   });
 
+  test("should apply every input from one client physics tick before a single server step", async () => {
+    const baseTs = Date.now();
+    await serverMap.onInput(player, {
+      input: Direction.Right,
+      frame: 3,
+      tick: 11,
+      timestamp: baseTs + 16,
+      trajectory: [
+        { input: Direction.Right, frame: 1, tick: 10, timestamp: baseTs },
+        { input: Direction.Down, frame: 2, tick: 10, timestamp: baseTs + 1 },
+        { input: Direction.Right, frame: 3, tick: 11, timestamp: baseTs + 16 },
+      ],
+    });
+
+    await serverMap.nextTickAsync();
+
+    expect(player._lastFramePositions?.frame).toBe(2);
+    expect(player._lastFramePositions?.position?.direction).toBe(Direction.Down);
+    expect(player.lastProcessedInputTick).toBe(10);
+    expect(player.pendingInputs.map((entry: any) => entry.frame)).toEqual([3]);
+
+    await serverMap.nextTickAsync();
+
+    expect(player._lastFramePositions?.frame).toBe(3);
+    expect(player._lastFramePositions?.position?.direction).toBe(Direction.Right);
+    expect(player.lastProcessedInputTick).toBe(11);
+    expect(player.pendingInputs).toHaveLength(0);
+  });
+
   test("should preserve client physics tick spacing while replaying queued inputs", async () => {
     const baseTs = Date.now();
     await serverMap.onInput(player, {

@@ -2367,7 +2367,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
    * anti-cheat validation to prevent time manipulation and frame skipping.
    * It validates the time deltas between inputs and ensures they are within
    * acceptable ranges. To preserve movement itinerary under network bursts,
-   * the number of inputs processed per call is capped.
+   * the number of distinct client ticks processed per call is capped.
    * 
    * ## Architecture
    * 
@@ -2449,10 +2449,15 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     player.pendingInputs.sort((a, b) => (a.frame || 0) - (b.frame || 0));
 
     let hasProcessedInputs = false;
-    let processedThisTick = 0;
+    let processedTickGroups = 0;
+    let activeClientTick: number | undefined;
+    let hasActiveClientTickGroup = false;
 
     // Process pending inputs progressively to preserve itinerary under latency.
-    while (player.pendingInputs.length > 0 && processedThisTick < config.maxInputsPerTick) {
+    // Several input callbacks can run before one fixed client physics step. All
+    // frames carrying that same tick must therefore update velocity before one
+    // authoritative step instead of advancing the server once per frame.
+    while (player.pendingInputs.length > 0) {
       const input = player.pendingInputs[0];
 
       if (!input || typeof input.frame !== 'number') {
@@ -2461,14 +2466,26 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
       }
 
       const clientInputTick = typeof input.tick === "number" ? input.tick : undefined;
+      const joinsActiveClientTickGroup =
+        hasActiveClientTickGroup
+        && typeof clientInputTick === "number"
+        && clientInputTick === activeClientTick;
+      if (!joinsActiveClientTickGroup && processedTickGroups >= config.maxInputsPerTick) {
+        break;
+      }
       const previousClientInputTick = player.lastProcessedInputTick;
       const previousServerInputTick = player.lastProcessedInputServerTick;
       if (
-        typeof clientInputTick === "number"
+        !joinsActiveClientTickGroup
+        && typeof clientInputTick === "number"
         && typeof previousClientInputTick === "number"
         && typeof previousServerInputTick === "number"
       ) {
-        const clientTickDelta = Math.max(1, clientInputTick - previousClientInputTick);
+        const clientTickDelta = clientInputTick - previousClientInputTick;
+        if (clientTickDelta <= 0) {
+          player.pendingInputs.shift();
+          continue;
+        }
         if (this.getTick() < previousServerInputTick + clientTickDelta) {
           break;
         }
@@ -2492,7 +2509,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
         }
 
         // Check minimum time between inputs
-        if (input.timestamp && lastProcessedClientTime > 0) {
+        if (!joinsActiveClientTickGroup && input.timestamp && lastProcessedClientTime > 0) {
           const timeDelta = input.timestamp - lastProcessedClientTime;
           if (timeDelta < config.minTimeBetweenInputs) {
             continue;
@@ -2529,7 +2546,11 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
         lastProcessedTime = Date.now() + idleHoldMs;
         player.lastProcessedInputTick = clientInputTick ?? null;
         player.lastProcessedInputServerTick = this.getTick();
-        processedThisTick += 1;
+        if (!joinsActiveClientTickGroup) {
+          processedTickGroups += 1;
+          activeClientTick = clientInputTick;
+          hasActiveClientTickGroup = true;
+        }
 
         // Do not expose this frame until the following authoritative physics
         // step has completed. In particular, never pair the new frame with the

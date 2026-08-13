@@ -45,10 +45,7 @@ import { EventComponentResolverRegistry, type EventComponentResolver } from "./G
 import { RpgClientBuiltinI18n } from "./i18n";
 import { clearCameraFollowPlugins, type CameraFollowSmoothMove } from "./services/cameraFollow";
 import { RpgMusicManager } from "./Game/MusicManager";
-import {
-  routePredictedLocalPlayerSync,
-  shouldApplyPredictionReconciliation,
-} from "./services/localPlayerSync";
+import { routePredictedLocalPlayerSync } from "./services/localPlayerSync";
 export type {
   CameraFollowEase,
   CameraFollowSmoothMove,
@@ -1986,6 +1983,7 @@ export class RpgClientEngine<T = any> {
     this.hooks.callHooks("client-engine-onInput", this, { input: movementInput, playerId: this.playerId }).subscribe();
 
     const bodyReady = this.ensureCurrentPlayerBody();
+    let waitsForPredictionStep = false;
     if (currentPlayer && bodyReady) {
       this.applyPredictedMovementInput(currentPlayer, movementInput);
       if (this.predictionEnabled && this.prediction) {
@@ -1993,10 +1991,16 @@ export class RpgClientEngine<T = any> {
         if (this.pendingPredictionFrames.length > 240) {
           this.pendingPredictionFrames = this.pendingPredictionFrames.slice(-240);
         }
+        waitsForPredictionStep = true;
       }
     }
 
-    this.emitMovePacket(movementInput, frame, tick, timestamp, true);
+    // Prediction input can be sampled more often than the fixed physics loop.
+    // Wait for that loop to attach the resulting state so every input sharing
+    // one client tick is sent to the server as one complete batch.
+    if (!waitsForPredictionStep) {
+      this.emitMovePacket(movementInput, frame, tick, timestamp, true);
+    }
     this.lastInputTime = isDashInput(movementInput)
       ? Date.now() + (movementInput.duration ?? DEFAULT_DASH_DURATION_MS)
       : Date.now();
@@ -2206,11 +2210,28 @@ export class RpgClientEngine<T = any> {
       return;
     }
     const state = this.getLocalPlayerState();
+    let latestFlushedFrame: number | undefined;
     while (this.pendingPredictionFrames.length > 0) {
       const frame = this.pendingPredictionFrames.shift();
       if (typeof frame === "number") {
         this.prediction.attachPredictedState(frame, state);
+        latestFlushedFrame = frame;
       }
+    }
+    if (typeof latestFlushedFrame !== "number") {
+      return;
+    }
+    const latest = this.prediction
+      .getPendingInputs()
+      .find((entry) => entry.frame === latestFlushedFrame);
+    if (latest?.state) {
+      this.emitMovePacket(
+        latest.direction,
+        latest.frame,
+        latest.tick,
+        latest.timestamp,
+        true,
+      );
     }
   }
 
@@ -2285,8 +2306,14 @@ export class RpgClientEngine<T = any> {
     if (pendingInputs.length === 0) {
       return;
     }
-    const latest = pendingInputs[pendingInputs.length - 1];
-    if (!latest) {
+    let latest: PredictionHistoryEntry<RpgMovementInput, Direction> | undefined;
+    for (let index = pendingInputs.length - 1; index >= 0; index -= 1) {
+      if (pendingInputs[index].state) {
+        latest = pendingInputs[index];
+        break;
+      }
+    }
+    if (!latest?.state) {
       return;
     }
     const now = Date.now();
@@ -2369,18 +2396,13 @@ export class RpgClientEngine<T = any> {
         : Math.max(600, Math.ceil(historyTtlMs / 16) + 120);
     this.sceneMap?.configureClientPrediction?.(true);
     this.prediction = new PredictionController<RpgMovementInput, Direction>({
-      correctionThreshold: this.getPredictionCorrectionThreshold(),
+      correctionThreshold: (this.globalConfig as any)?.prediction?.correctionThreshold ?? this.SERVER_CORRECTION_THRESHOLD,
       historyTtlMs,
       maxHistoryEntries,
       getPhysicsTick: () => this.getPhysicsTick(),
       getCurrentState: () => this.getLocalPlayerState(),
       setAuthoritativeState: (state) => this.applyAuthoritativeState(state),
     });
-  }
-
-  private getPredictionCorrectionThreshold(): number {
-    return (this.globalConfig as any)?.prediction?.correctionThreshold
-      ?? this.SERVER_CORRECTION_THRESHOLD;
   }
 
   getCurrentPlayer() {
@@ -2568,16 +2590,7 @@ export class RpgClientEngine<T = any> {
             ? { x: ack.x, y: ack.y, direction: ack.direction }
             : undefined,
       });
-      if (
-        result.state
-        && result.needsReconciliation
-        && shouldApplyPredictionReconciliation(
-          this.getLocalPlayerState(),
-          result.state,
-          result.pendingInputs.length,
-          this.getPredictionCorrectionThreshold(),
-        )
-      ) {
+      if (result.state && result.needsReconciliation) {
         this.reconcilePrediction(result.state, result.pendingInputs);
       }
       return;
@@ -2620,31 +2633,31 @@ export class RpgClientEngine<T = any> {
       return;
     }
 
-    const renderedState = player.__rpgjsPredictionVisualBridge?.getPosition?.();
-
     (this.sceneMap as any).stopMovement(player);
     this.applyAuthoritativeState(authoritativeState);
 
-    if (pendingInputs.length) {
-      // Keep replay bounded while still tolerating high-latency links.
-      const replayInputs = pendingInputs.slice(-600);
-      for (const entry of replayInputs) {
-        if (!entry?.direction) continue;
-        this.applyPredictedMovementInput(player, entry.direction);
-        this.sceneMap.stepPredictionTick();
-        this.prediction?.attachPredictedState(entry.frame, this.getLocalPlayerState());
+    // Keep replay bounded while still tolerating high-latency links. Inputs
+    // sampled during the same fixed client tick must update velocity together
+    // and then share the one resulting physics state.
+    const replayInputs = pendingInputs.slice(-600);
+    for (let index = 0; index < replayInputs.length;) {
+      const first = replayInputs[index];
+      const tick = first.tick;
+      const group: PredictionHistoryEntry<RpgMovementInput, Direction>[] = [];
+      while (index < replayInputs.length && replayInputs[index].tick === tick) {
+        group.push(replayInputs[index]);
+        index += 1;
       }
-    }
-
-    if (
-      renderedState
-      && Number.isFinite(renderedState.x)
-      && Number.isFinite(renderedState.y)
-    ) {
-      player.__rpgjsPredictionVisualBridge?.reconcileFrom?.(
-        renderedState,
-        this.getLocalPlayerState(),
-      );
+      for (const entry of group) {
+        if (entry?.direction) {
+          this.applyPredictedMovementInput(player, entry.direction);
+        }
+      }
+      this.sceneMap.stepPredictionTick();
+      const state = this.getLocalPlayerState();
+      for (const entry of group) {
+        this.prediction?.attachPredictedState(entry.frame, state);
+      }
     }
   }
 
