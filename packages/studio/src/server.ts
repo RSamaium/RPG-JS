@@ -591,6 +591,34 @@ const parseJsonValue = (value: unknown, fallback: any): any => {
   }
 };
 
+const resolveStudioMapPositions = (
+  positions: Record<string, { x: number; y: number }> | undefined,
+  mapData: any,
+): Record<string, { x: number; y: number }> => {
+  const start = mapData?.start;
+  if (
+    typeof start?.x !== "number"
+    || !Number.isFinite(start.x)
+    || typeof start?.y !== "number"
+    || !Number.isFinite(start.y)
+  ) {
+    return positions ?? {};
+  }
+
+  const scale = typeof mapData?.params?.scale === "number"
+    && Number.isFinite(mapData.params.scale)
+    ? mapData.params.scale
+    : 1;
+
+  return {
+    ...(positions ?? {}),
+    start: {
+      x: start.x * scale,
+      y: start.y * scale,
+    },
+  };
+};
+
 const resolveStudioProject = async (
   mapId?: string,
   config: StudioServerConfig = {},
@@ -691,6 +719,10 @@ const normalizeStudioMapPayload = async (
     ...initialMapData,
     id: normalizedMap.id,
     data: normalizedMap,
+    positions: resolveStudioMapPositions({
+      ...(mapResponse.positions ?? {}),
+      ...(initialMapData?.positions ?? {}),
+    }, normalizedMap),
     events: hydratedEvents,
     commonEvents: hydratedCommonEvents,
     hitboxes: mergedHitboxes,
@@ -791,9 +823,20 @@ export default (_config?: unknown) => {
         await player.changeMap(await resolveStartMapId(config));
       },
       onJoinMap: async (player: RpgPlayer, map: RpgMap) => {
-        await refreshOnlineStudioDatabase(map);
-        const startMapId = map.globalConfig.startMapId;
         const mapExtended = map as RpgMapExtended;
+        const startPosition = typeof (map as any).data === "function"
+          ? (map as any).data()?.positions?.start
+          : undefined;
+        if (
+          player.x() === 0
+          && player.y() === 0
+          && typeof startPosition?.x === "number"
+          && typeof startPosition?.y === "number"
+        ) {
+          await player.teleport(startPosition);
+        }
+
+        await refreshOnlineStudioDatabase(map);
         const heroGraphic = (mapExtended.globalConfig.hero as any)?.graphic;
         const heroGraphicKey = getGraphicKey(heroGraphic);
         if (heroGraphicKey) {
@@ -802,12 +845,6 @@ export default (_config?: unknown) => {
         } else {
           (player as any)._graphicScale?.set(null);
           player.setGraphic("default_character");
-        }
-        if (player.x() == 0 && player.y() == 0) {
-          player.teleport({
-            x: (mapExtended.startPosition?.x ?? 0) * mapExtended.scale,
-            y: (mapExtended.startPosition?.y ?? 0) * mapExtended.scale,
-          });
         }
 
         await applyStartGameOnce(player, map);
@@ -860,6 +897,7 @@ export default (_config?: unknown) => {
         const useLocalBundleEvents = shouldUseLocalBundleEvents(config);
         const hydratedMapData = await normalizeStudioMapPayload(mapData?.id ?? mapData?.data?._id ?? mapData?.data?.id, mapData, config);
         Object.assign(mapData, hydratedMapData);
+        mapData.positions = resolveStudioMapPositions(mapData.positions, mapData.data);
         if (streamingOptions && !isDirectLoad && !mapData?.data?.__studioPrepared) {
           const preparedMapData = prepareStudioMapPayload(mapData, {
             id: mapData?.id,
@@ -900,7 +938,6 @@ export default (_config?: unknown) => {
           mapData.data.events = hydratedEvents;
           mapData.data.commonEvents = hydratedCommonEvents;
         }
-        mapExtended.startPosition = mapData.data?.start;
         mapExtended.scale = mapData.data?.params?.scale || 1;
         const initialWeather = mapData?.data?.weather !== undefined
           ? mapData.data.weather

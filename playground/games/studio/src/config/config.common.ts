@@ -1,10 +1,10 @@
 export const studio = {
   projectId: 'd8d6c955-3d7f-421d-9ffc-edf99a940fbc',
-   startMapId: '333a4ea7-3c10-4bc8-b9be-acafe9d2c06b',
-   apiUrl: 'https://rpgjs.studio/api',
-   assetsUrl: 'https://assets.rpgjs.studio',
-   debugCollisions: true,
-}
+  startMapId: '333a4ea7-3c10-4bc8-b9be-acafe9d2c06b',
+  apiUrl: 'https://rpgjs.studio/api',
+  assetsUrl: 'https://assets.rpgjs.studio',
+  debugCollisions: true,
+};
 
 // export const studio = {
 //   projectId: "c058981c-3af2-4630-a7bb-37b5b72ab287",

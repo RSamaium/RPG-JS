@@ -44,6 +44,7 @@ export interface PreparedStudioMapPayload {
   width: number;
   height: number;
   data: Record<string, any>;
+  positions?: Record<string, { x: number; y: number }>;
   events: any[];
   hitboxes: MapChunkHitbox[];
   config?: Record<string, any>;
@@ -298,6 +299,7 @@ export function prepareStudioMapPayload(
       terrainRenderData,
       events,
     },
+    positions: source.positions,
     events,
     hitboxes: [
       ...baseHitboxes,

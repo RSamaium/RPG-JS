@@ -199,7 +199,8 @@ describe("Studio server runtime", () => {
       _id: "trusted-map",
       projectId: "trusted-project",
       creationDetails: { version: "v2" },
-      params: { width: 2, height: 3 },
+      params: { width: 2, height: 3, scale: 2 },
+      start: { x: 24, y: 36 },
       events: [{
         id: "event-1",
         params: { graphic: { _id: "#hero-media" } },
@@ -244,6 +245,7 @@ describe("Studio server runtime", () => {
       _id: "potion",
       name: "Trusted potion",
     })]);
+    expect(payload.positions?.start).toEqual({ x: 48, y: 72 });
     expect(payload.events[0].params.graphic).toEqual(expect.objectContaining({
       _id: "hero-media",
       url: "https://private.example/hero-media.png",
@@ -561,6 +563,47 @@ describe("Studio server runtime", () => {
     expect(getDatabase).toHaveBeenCalledWith("live-project");
     expect(database.potion).not.toHaveProperty("useAnimation");
     expect(database.potion).not.toHaveProperty("onUse");
+  });
+
+  test("applies the named start position before refreshing the online database", async () => {
+    let resolveDatabase!: (records: any[]) => void;
+    const getDatabase = vi.fn(() => new Promise<any[]>((resolve) => {
+      resolveDatabase = resolve;
+    }));
+    configureGameDataProvider({
+      kind: "online",
+      getProject: vi.fn(),
+      getMap: vi.fn(),
+      getMedia: vi.fn(),
+      getDatabase,
+    });
+    const map = {
+      globalConfig: {
+        _id: "start-project",
+        startMapId: "start-map",
+        hero: {},
+      },
+      data: () => ({
+        positions: {
+          start: { x: 292, y: 550 },
+        },
+      }),
+      database: () => ({}),
+      addInDatabase: vi.fn(),
+      scale: 1,
+    } as unknown as RpgMap;
+    const player = new RpgPlayer();
+    player.initializeDefaultStats();
+    player.setMap(map);
+
+    const joining = (studioServer() as any).player.onJoinMap(player, map);
+
+    await vi.waitFor(() => expect(getDatabase).toHaveBeenCalledWith("start-project"));
+    expect(player.x()).toBe(292);
+    expect(player.y()).toBe(550);
+
+    resolveDatabase([]);
+    await joining;
   });
 
   test("keeps the legacy global project fallback for maps without config", async () => {

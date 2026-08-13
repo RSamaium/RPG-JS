@@ -19,47 +19,41 @@ Useful fields from `projectSchema`:
 - `name?: string`
 - `subtitle?: string`
 - `keyboardControls?: { down?, up?, left?, right?, action?, back? }`
-- `hero?: { graphic?: string, faceset?: string, hitbox?: { width: number, height: number } }`
-- `startingEquipment?: { weaponId?: string, armorId?: string }`
-- `startingInventory?: Array<{ itemId: string, amount: number }>`
-- `initialLevel?: number`
-- `finalLevel?: number`
-- `expCurve?: { basis, extra, accelerationA, accelerationB }`
-- `parameters?: { maxHp, maxSp, str, agi, int, dex }`
-- `animations?: { attack?: string, hurt?: string, die?: string, castSpell?: string }`
-- `skills?: Array<{ skillId: string, level: number }>`
+- `mainActorId?: string` (assigned through the Actors API)
 - `startMapId?: string`
 
 ## Dependency resolution workflow
 
-### Hero appearance
+### Main actor
 
-- `hero.graphic` and `hero.faceset` are media `_id`s.
-- Search `/api/media?query=<search>` first.
-- If missing and generation is required, ask user permission before spending credits.
-- `hero.hitbox` is optional. Use positive RPGJS-pixel dimensions `{ width, height }`; omit it to keep the default `32 x 32` player hitbox. Do not send graphic-scaled dimensions or `dx`/`dy` offsets.
-- In Studio UI, `hero.graphic` and `hero.hitbox` are edited together by the reusable `character-graphic-hitbox` form-schema format. It should reuse Signestack Admin's built-in `media` form-schema format for graphic selection behind one visible "Change graphic" button; avoid adding a second visible media card, second hitbox field, or custom media dialog next to it.
-- Project update payloads must keep hero appearance fields under `hero`. If UI code receives root-level `graphic`, `faceset`, or `hitbox` from a form renderer, normalize them to `hero.graphic`, `hero.faceset`, or `hero.hitbox` before calling the API.
+Do not write playable character configuration directly to project settings.
+Create or update an actor through `/api/database/actors`, then assign it with
+`PUT /api/database/actors/:id/main`. Read the current selection with
+`GET /api/database/actors/main`.
 
-### Hero animations
+The actor owns appearance, hitbox, progression, equipment, inventory,
+animations, and skills. See `references/database.md` for the complete actor
+shape and dependency resolution rules.
+
+### Actor animations
 
 - `animations.attack`, `animations.hurt`, `animations.die`, and `animations.castSpell` are spritesheet media `_id`s.
 - Search `/api/media?query=<search>` first.
 - If missing and generation is required, ask user permission before spending credits.
 
-### Starting equipment
+### Actor starting equipment
 
 - `startingEquipment.weaponId` and `startingEquipment.armorId` are item `_id`s from `/api/database/items`.
 - Search `/api/database/items?query=<search>` first.
 - If missing, create the weapon or armor item, then reuse the returned `_id`.
 
-### Starting inventory
+### Actor starting inventory
 
 - Each `startingInventory[].itemId` is an item `_id`.
 - Search `/api/database/items?query=<search>` first.
-- Create missing items before updating project settings.
+- Create missing items before updating the actor.
 
-### Hero skills
+### Actor skills
 
 - Each `skills[].skillId` is a skill `_id`.
 - Search `/api/database/skills?query=<search>` first.
@@ -76,10 +70,10 @@ curl -sS -X PUT "$BASE_URL/api/projects/$PROJECT_ID" \
   }'
 ```
 
-## Example: set hero starter equipment
+## Example: set actor starter equipment
 
 ```bash
-curl -sS -X PUT "$BASE_URL/api/projects/$PROJECT_ID" \
+curl -sS -X PUT "$BASE_URL/api/database/actors/$ACTOR_ID" \
   -H "x-api-key:$RPGSTUDIO_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -88,6 +82,15 @@ curl -sS -X PUT "$BASE_URL/api/projects/$PROJECT_ID" \
       "armorId": "'"$ARMOR_ID"'"
     }
   }'
+```
+
+Assign that actor as the main hero when needed:
+
+```bash
+curl -sS -X PUT "$BASE_URL/api/database/actors/$ACTOR_ID/main" \
+  -H "x-api-key:$RPGSTUDIO_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{}'
 ```
 
 ## Notes
