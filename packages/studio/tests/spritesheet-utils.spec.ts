@@ -114,6 +114,33 @@ describe("Studio spritesheet utils", () => {
     expect((attack.at(-1).time / 60) * 1_000).toBeCloseTo(600);
   });
 
+  test("provides the default animation expected by UI icon sprites", async () => {
+    const spritesheet = await createSpriteSheetObject({
+      type: "icon",
+      id: "fire",
+      fileName: "fire.png",
+      width: 32,
+      height: 32,
+    });
+
+    expect(spritesheet.textures.default.animations()).toEqual([
+      [{ time: 0, frameX: 0, frameY: 0 }],
+    ]);
+    expect(spritesheet.textures.stand).toBeDefined();
+  });
+
+  test("uses the neutral face as the default faceset expression", async () => {
+    const spritesheet = await createSpriteSheetObject({
+      type: "faceset",
+      id: "hero-face",
+      fileName: "hero-face.png",
+    });
+
+    expect(spritesheet.textures.default.animations()).toEqual(
+      spritesheet.textures.neutral.animations(),
+    );
+  });
+
   test("keeps LPC sprite real size in source pixels when media is scaled", async () => {
     const spritesheet = await createSpriteSheetObject({
       type: "character",
