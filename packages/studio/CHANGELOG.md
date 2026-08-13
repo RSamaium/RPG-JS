@@ -1,5 +1,21 @@
 # @rpgjs/studio
 
+## 5.0.0-beta.33
+
+### Patch Changes
+
+- bfc0933: Reduce animated terrain water rendering cost by copying only the pixels covered by each refraction band instead of redrawing the full terrain chunk for every band. Configure the Studio playground with a large animated-water map for local performance testing.
+- bfc0933: Expose a `default` animation for Studio icons and facesets so RPGJS UI components can render them without rejecting spritesheet playback.
+- bfc0933: Use the native named map start position when spawning players in Studio games,
+  avoiding asynchronous database refreshes moving a player away from the `(0, 0)`
+  sentinel before the configured start position is applied.
+- Updated dependencies [e892732]
+  - @rpgjs/client@5.0.0-beta.31
+  - @rpgjs/common@5.0.0-beta.29
+  - @rpgjs/server@5.0.0-beta.31
+  - @rpgjs/action-battle@5.0.0-beta.31
+  - @rpgjs/vite@5.0.0-beta.31
+
 ## 5.0.0-beta.32
 
 ### Patch Changes
