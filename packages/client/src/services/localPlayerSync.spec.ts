@@ -2,7 +2,9 @@ import { PredictionController } from "@rpgjs/common";
 import { describe, expect, it } from "vitest";
 import {
   hasAuthoritativePredictionState,
+  resolvePredictionVisualCorrection,
   routePredictedLocalPlayerSync,
+  shouldApplyPredictionReconciliation,
 } from "./localPlayerSync";
 
 describe("routePredictedLocalPlayerSync", () => {
@@ -68,6 +70,44 @@ describe("routePredictedLocalPlayerSync", () => {
     expect(hasAuthoritativePredictionState({ frame: 1, x: 10, y: 20 })).toBe(true);
     expect(hasAuthoritativePredictionState({ frame: 1, x: 10 })).toBe(false);
     expect(hasAuthoritativePredictionState({ frame: 1, x: Number.NaN, y: 20 })).toBe(false);
+  });
+
+  it("does not apply a stale correction that is already within the visible threshold", () => {
+    expect(shouldApplyPredictionReconciliation(
+      { x: 1010.716, y: 480 },
+      { x: 1040, y: 480 },
+      0,
+      30,
+    )).toBe(false);
+  });
+
+  it("still reconciles material drift or an ACK that requires pending input replay", () => {
+    expect(shouldApplyPredictionReconciliation(
+      { x: 1009, y: 480 },
+      { x: 1040, y: 480 },
+      0,
+      30,
+    )).toBe(true);
+    expect(shouldApplyPredictionReconciliation(
+      { x: 1015, y: 480 },
+      { x: 1040, y: 480 },
+      1,
+      30,
+    )).toBe(true);
+  });
+
+  it("preserves the rendered position while a physics correction is eased out", () => {
+    const correction = resolvePredictionVisualCorrection(
+      { x: 1519.083, y: 480 },
+      { x: 1556, y: 480 },
+    );
+    expect(correction.offsetX).toBeCloseTo(-36.917);
+    expect(correction.offsetY).toBe(0);
+    expect(correction.duration).toBeCloseTo(147.668);
+    expect(resolvePredictionVisualCorrection(
+      { x: 1556, y: 480 },
+      { x: 1556, y: 480 },
+    )).toEqual({ offsetX: 0, offsetY: 0, duration: 0 });
   });
 
   it("prevents a below-threshold snapshot from producing a visible jump", () => {

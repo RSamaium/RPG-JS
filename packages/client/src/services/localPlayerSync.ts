@@ -22,6 +22,37 @@ export const hasAuthoritativePredictionState = (
     && Number.isFinite(ack.y);
 };
 
+export const shouldApplyPredictionReconciliation = <DirectionType>(
+  currentState: PredictionState<DirectionType>,
+  authoritativeState: PredictionState<DirectionType>,
+  pendingInputCount: number,
+  correctionThreshold: number,
+): boolean => {
+  if (pendingInputCount > 0) {
+    return true;
+  }
+  return Math.hypot(
+    currentState.x - authoritativeState.x,
+    currentState.y - authoritativeState.y,
+  ) > correctionThreshold;
+};
+
+export const resolvePredictionVisualCorrection = (
+  renderedState: Pick<PredictionState, "x" | "y">,
+  physicsState: Pick<PredictionState, "x" | "y">,
+): { offsetX: number; offsetY: number; duration: number } => {
+  const offsetX = renderedState.x - physicsState.x;
+  const offsetY = renderedState.y - physicsState.y;
+  const distance = Math.hypot(offsetX, offsetY);
+  return {
+    offsetX,
+    offsetY,
+    duration: distance > 0
+      ? Math.min(180, Math.max(120, distance * 4))
+      : 0,
+  };
+};
+
 /**
  * Keep a predicted local player's authoritative position out of the generic
  * sync loader. The prediction controller must be the only code path that

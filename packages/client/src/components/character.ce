@@ -1,6 +1,6 @@
 <Container
-  x={smoothX}
-  y={smoothY}
+  x={renderX}
+  y={renderY}
   zIndex={z}
   controls
   onBeforeDestroy
@@ -82,6 +82,7 @@
     ownsCameraFollowRevision,
     syncCameraFollowPosition,
   } from "../services/cameraFollow";
+  import { resolvePredictionVisualCorrection } from "../services/localPlayerSync";
   import { resolveScaledGraphicBounds, resolveScaledHitboxAnchor, scaleHitboxForGraphicDisplay, toPositiveNumber } from "./character-hitbox";
   import { inject } from "../core/inject";  
   import { Direction, Animation } from "@rpgjs/common";
@@ -674,6 +675,43 @@
   const smoothY = animatedSignal(y(), {
     duration: isMe() ? 0 : 0,
   });
+
+  // Physics corrections remain authoritative immediately. These offsets only
+  // keep the rendered player and camera continuous while the correction is
+  // absorbed over a few frames.
+  const predictionOffsetX = animatedSignal(0, { duration: 0 });
+  const predictionOffsetY = animatedSignal(0, { duration: 0 });
+  const renderX = computed(() => smoothX() + predictionOffsetX());
+  const renderY = computed(() => smoothY() + predictionOffsetY());
+  const predictionVisualBridge = {
+    getPosition: () => ({ x: renderX(), y: renderY() }),
+    reconcileFrom: (renderedState, physicsState) => {
+      const correction = resolvePredictionVisualCorrection(renderedState, physicsState);
+      smoothX.animatedState.set({
+        current: physicsState.x,
+        start: physicsState.x,
+        end: physicsState.x,
+      });
+      smoothY.animatedState.set({
+        current: physicsState.y,
+        start: physicsState.y,
+        end: physicsState.y,
+      });
+      predictionOffsetX.animatedState.set({
+        current: correction.offsetX,
+        start: correction.offsetX,
+        end: correction.offsetX,
+      });
+      predictionOffsetY.animatedState.set({
+        current: correction.offsetY,
+        start: correction.offsetY,
+        end: correction.offsetY,
+      });
+      void predictionOffsetX.set(0, { duration: correction.duration });
+      void predictionOffsetY.set(0, { duration: correction.duration });
+    },
+  };
+  sprite.__rpgjsPredictionVisualBridge = predictionVisualBridge;
 
   const z = computed(() => {
     const box = hitbox?.()
@@ -1311,6 +1349,9 @@
     activeControlDirectionReleaseTimers.clear();
     xSubscription.unsubscribe();
     ySubscription.unsubscribe();
+    if (sprite.__rpgjsPredictionVisualBridge === predictionVisualBridge) {
+      delete sprite.__rpgjsPredictionVisualBridge;
+    }
     await lastValueFrom(hooks.callHooks("client-sprite-onDestroy", sprite)) 
     await lastValueFrom(hooks.callHooks("client-sceneMap-onRemoveSprite", client.sceneMap, sprite))
   }
@@ -1320,10 +1361,10 @@
     let appliedCameraFollowOwnership = null;
     const cameraFollowTarget = {
       get x() {
-        return smoothX();
+        return renderX();
       },
       get y() {
-        return smoothY();
+        return renderY();
       },
       get destroyed() {
         return element.componentInstance?.destroyed ?? true;

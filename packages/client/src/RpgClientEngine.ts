@@ -45,7 +45,10 @@ import { EventComponentResolverRegistry, type EventComponentResolver } from "./G
 import { RpgClientBuiltinI18n } from "./i18n";
 import { clearCameraFollowPlugins, type CameraFollowSmoothMove } from "./services/cameraFollow";
 import { RpgMusicManager } from "./Game/MusicManager";
-import { routePredictedLocalPlayerSync } from "./services/localPlayerSync";
+import {
+  routePredictedLocalPlayerSync,
+  shouldApplyPredictionReconciliation,
+} from "./services/localPlayerSync";
 export type {
   CameraFollowEase,
   CameraFollowSmoothMove,
@@ -2366,13 +2369,18 @@ export class RpgClientEngine<T = any> {
         : Math.max(600, Math.ceil(historyTtlMs / 16) + 120);
     this.sceneMap?.configureClientPrediction?.(true);
     this.prediction = new PredictionController<RpgMovementInput, Direction>({
-      correctionThreshold: (this.globalConfig as any)?.prediction?.correctionThreshold ?? this.SERVER_CORRECTION_THRESHOLD,
+      correctionThreshold: this.getPredictionCorrectionThreshold(),
       historyTtlMs,
       maxHistoryEntries,
       getPhysicsTick: () => this.getPhysicsTick(),
       getCurrentState: () => this.getLocalPlayerState(),
       setAuthoritativeState: (state) => this.applyAuthoritativeState(state),
     });
+  }
+
+  private getPredictionCorrectionThreshold(): number {
+    return (this.globalConfig as any)?.prediction?.correctionThreshold
+      ?? this.SERVER_CORRECTION_THRESHOLD;
   }
 
   getCurrentPlayer() {
@@ -2560,7 +2568,16 @@ export class RpgClientEngine<T = any> {
             ? { x: ack.x, y: ack.y, direction: ack.direction }
             : undefined,
       });
-      if (result.state && result.needsReconciliation) {
+      if (
+        result.state
+        && result.needsReconciliation
+        && shouldApplyPredictionReconciliation(
+          this.getLocalPlayerState(),
+          result.state,
+          result.pendingInputs.length,
+          this.getPredictionCorrectionThreshold(),
+        )
+      ) {
         this.reconcilePrediction(result.state, result.pendingInputs);
       }
       return;
@@ -2603,20 +2620,31 @@ export class RpgClientEngine<T = any> {
       return;
     }
 
+    const renderedState = player.__rpgjsPredictionVisualBridge?.getPosition?.();
+
     (this.sceneMap as any).stopMovement(player);
     this.applyAuthoritativeState(authoritativeState);
 
-    if (!pendingInputs.length) {
-      return;
+    if (pendingInputs.length) {
+      // Keep replay bounded while still tolerating high-latency links.
+      const replayInputs = pendingInputs.slice(-600);
+      for (const entry of replayInputs) {
+        if (!entry?.direction) continue;
+        this.applyPredictedMovementInput(player, entry.direction);
+        this.sceneMap.stepPredictionTick();
+        this.prediction?.attachPredictedState(entry.frame, this.getLocalPlayerState());
+      }
     }
 
-    // Keep replay bounded while still tolerating high-latency links.
-    const replayInputs = pendingInputs.slice(-600);
-    for (const entry of replayInputs) {
-      if (!entry?.direction) continue;
-      this.applyPredictedMovementInput(player, entry.direction);
-      this.sceneMap.stepPredictionTick();
-      this.prediction?.attachPredictedState(entry.frame, this.getLocalPlayerState());
+    if (
+      renderedState
+      && Number.isFinite(renderedState.x)
+      && Number.isFinite(renderedState.y)
+    ) {
+      player.__rpgjsPredictionVisualBridge?.reconcileFrom?.(
+        renderedState,
+        this.getLocalPlayerState(),
+      );
     }
   }
 
