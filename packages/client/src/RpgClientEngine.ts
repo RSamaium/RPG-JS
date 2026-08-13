@@ -674,7 +674,10 @@ export class RpgClientEngine<T = any> {
     clearCameraFollowPlugins(viewport);
   }
 
-  private prepareSyncPayload(data: any): {
+  private prepareSyncPayload(
+    data: any,
+    ack?: { frame: number; serverTick?: number; x?: number; y?: number; direction?: Direction },
+  ): {
     payload: any;
     localPredictionSnapshot?: PredictionState<Direction>;
   } {
@@ -686,11 +689,11 @@ export class RpgClientEngine<T = any> {
     if (this.predictionEnabled && this.prediction) {
       const currentPlayer = this.sceneMap?.getCurrentPlayer?.();
       const currentState = currentPlayer ? this.getLocalPlayerState() : undefined;
-      const routed = routePredictedLocalPlayerSync<Direction>(payload, myId, currentState);
-      if (routed.snapshot) {
+      const routed = routePredictedLocalPlayerSync<Direction>(payload, myId, currentState, ack);
+      if (routed.payload !== payload) {
         return {
           payload: routed.payload,
-          localPredictionSnapshot: routed.snapshot,
+          ...(routed.snapshot ? { localPredictionSnapshot: routed.snapshot } : {}),
         };
       }
     }
@@ -736,31 +739,6 @@ export class RpgClientEngine<T = any> {
       return true;
     }
     return Date.now() - this.lastLocalMovementInputAt <= this.LOCAL_MOVEMENT_AUTHORITY_ACK_GRACE_MS;
-  }
-
-  private normalizeAckWithSyncState(
-    ack: { frame: number; serverTick?: number; x?: number; y?: number; direction?: Direction },
-    syncData: any,
-  ): { frame: number; serverTick?: number; x?: number; y?: number; direction?: Direction } {
-    if (typeof ack.x === "number" && typeof ack.y === "number") {
-      return ack;
-    }
-    const myId = this.playerIdSignal();
-    if (!myId) {
-      return ack;
-    }
-
-    const localPatch = syncData?.players?.[myId];
-    if (typeof localPatch?.x !== "number" || typeof localPatch?.y !== "number") {
-      return ack;
-    }
-
-    return {
-      ...ack,
-      x: localPatch.x,
-      y: localPatch.y,
-      direction: localPatch.direction ?? ack.direction,
-    };
   }
 
   private initListeners() {
@@ -1044,10 +1022,10 @@ export class RpgClientEngine<T = any> {
 
     const ack = data?.ack;
     const normalizedAck =
-      ack && typeof ack.frame === "number"
-        ? this.normalizeAckWithSyncState(ack, data)
+      ack && typeof ack.frame === "number" && Number.isFinite(ack.frame)
+        ? ack
         : undefined;
-    const { payload, localPredictionSnapshot } = this.prepareSyncPayload(data);
+    const { payload, localPredictionSnapshot } = this.prepareSyncPayload(data, normalizedAck);
     load(this.sceneMap, payload, true);
     applySyncedHitboxPayload(this.sceneMap, payload);
 
@@ -2572,13 +2550,13 @@ export class RpgClientEngine<T = any> {
 
   private applyServerAck(ack: { frame: number; serverTick?: number; x?: number; y?: number; direction?: Direction }) {
     this.updateServerTickEstimate(ack.serverTick);
-    const keepLocalMovement = this.shouldKeepLocalPlayerMovement();
     if (this.predictionEnabled && this.prediction) {
       const result = this.prediction.applyServerAck({
         frame: ack.frame,
         serverTick: ack.serverTick,
         state:
-          !keepLocalMovement && typeof ack.x === "number" && typeof ack.y === "number"
+          typeof ack.x === "number" && Number.isFinite(ack.x)
+            && typeof ack.y === "number" && Number.isFinite(ack.y)
             ? { x: ack.x, y: ack.y, direction: ack.direction }
             : undefined,
       });
@@ -2588,6 +2566,7 @@ export class RpgClientEngine<T = any> {
       return;
     }
 
+    const keepLocalMovement = this.shouldKeepLocalPlayerMovement();
     if (typeof ack.x !== "number" || typeof ack.y !== "number") {
       return;
     }

@@ -5,6 +5,23 @@ export interface RoutedLocalPlayerSync<DirectionType> {
   snapshot?: PredictionState<DirectionType>;
 }
 
+export interface PredictionAckLike {
+  frame?: unknown;
+  x?: unknown;
+  y?: unknown;
+}
+
+export const hasAuthoritativePredictionState = (
+  ack: PredictionAckLike | null | undefined,
+): boolean => {
+  return typeof ack?.frame === "number"
+    && Number.isFinite(ack.frame)
+    && typeof ack.x === "number"
+    && Number.isFinite(ack.x)
+    && typeof ack.y === "number"
+    && Number.isFinite(ack.y);
+};
+
 /**
  * Keep a predicted local player's authoritative position out of the generic
  * sync loader. The prediction controller must be the only code path that
@@ -14,6 +31,7 @@ export const routePredictedLocalPlayerSync = <DirectionType>(
   payload: any,
   playerId: string | null | undefined,
   currentState?: PredictionState<DirectionType>,
+  ack?: PredictionAckLike | null,
 ): RoutedLocalPlayerSync<DirectionType> => {
   const players = payload?.players;
   const localPatch = playerId && players ? players[playerId] : undefined;
@@ -52,6 +70,9 @@ export const routePredictedLocalPlayerSync = <DirectionType>(
         [playerId]: filteredLocalPatch,
       },
     },
-    snapshot,
+    // An ACK with its own authoritative coordinates is reconciled separately.
+    // Returning the synchronized position as well would apply two competing
+    // corrections from the same network packet.
+    snapshot: hasAuthoritativePredictionState(ack) ? undefined : snapshot,
   };
 };

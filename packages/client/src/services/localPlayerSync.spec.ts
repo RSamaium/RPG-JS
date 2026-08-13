@@ -1,6 +1,9 @@
 import { PredictionController } from "@rpgjs/common";
 import { describe, expect, it } from "vitest";
-import { routePredictedLocalPlayerSync } from "./localPlayerSync";
+import {
+  hasAuthoritativePredictionState,
+  routePredictedLocalPlayerSync,
+} from "./localPlayerSync";
 
 describe("routePredictedLocalPlayerSync", () => {
   it("routes the local position through prediction without mutating the sync packet", () => {
@@ -29,6 +32,42 @@ describe("routePredictedLocalPlayerSync", () => {
       _frames: [1, 2],
       hp: 90,
     });
+  });
+
+  it("filters local sync coordinates without returning a second snapshot when the ACK is authoritative", () => {
+    const packet = {
+      players: {
+        local: { x: 1254, y: 300, direction: "right", _frames: [1], hp: 90 },
+      },
+    };
+
+    const routed = routePredictedLocalPlayerSync<string>(
+      packet,
+      "local",
+      undefined,
+      { frame: 12, x: 1248, y: 300 },
+    );
+
+    expect(routed.payload.players.local).toEqual({ hp: 90 });
+    expect(routed.snapshot).toBeUndefined();
+  });
+
+  it("keeps the legacy snapshot fallback when an ACK has no authoritative coordinates", () => {
+    const routed = routePredictedLocalPlayerSync<string>(
+      { players: { local: { x: 1254, y: 300, direction: "right" } } },
+      "local",
+      undefined,
+      { frame: 12 },
+    );
+
+    expect(routed.payload.players.local).toEqual({});
+    expect(routed.snapshot).toEqual({ x: 1254, y: 300, direction: "right" });
+  });
+
+  it("requires finite frame and coordinates for an authoritative ACK", () => {
+    expect(hasAuthoritativePredictionState({ frame: 1, x: 10, y: 20 })).toBe(true);
+    expect(hasAuthoritativePredictionState({ frame: 1, x: 10 })).toBe(false);
+    expect(hasAuthoritativePredictionState({ frame: 1, x: Number.NaN, y: 20 })).toBe(false);
   });
 
   it("prevents a below-threshold snapshot from producing a visible jump", () => {
