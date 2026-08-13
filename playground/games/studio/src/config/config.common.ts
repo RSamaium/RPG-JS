@@ -1,10 +1,10 @@
 export const studio = {
-  projectId: 'f54814b5-02ba-4712-a174-d84c900b7ff3',
-   startMapId: '6c524591-c8b8-4bc6-843e-43ea8d8b7c49',
-   apiUrl: 'http://localhost:5173/api',
-   assetsUrl: 'http://localhost:5173/api/game/assets',
-   debugCollisions: true,
-}
+  projectId: 'd8d6c955-3d7f-421d-9ffc-edf99a940fbc',
+  startMapId: '0737df9e-73f3-4782-a22f-8bce911d362b',
+  apiUrl: 'https://rpgjs.studio/api',
+  assetsUrl: 'https://assets.rpgjs.studio',
+  debugCollisions: true,
+};
 
 // export const studio = {
 //   projectId: "c058981c-3af2-4630-a7bb-37b5b72ab287",

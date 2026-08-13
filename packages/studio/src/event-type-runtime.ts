@@ -16,10 +16,6 @@ export { getGraphicKey, getGraphicScale } from "./graphic-key";
  * Extended RpgMap interface with studio-specific properties
  */
 export interface RpgMapExtended extends RpgMap {
-  startPosition: {
-    x: number;
-    y: number;
-  };
   scale: number;
   globalConfig: Record<string, unknown>;
   setInWorldMaps(worldMap: import("@rpgjs/common").WorldMapsManager): void;

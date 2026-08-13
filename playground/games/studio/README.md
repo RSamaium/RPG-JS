@@ -23,6 +23,10 @@ pnpm --dir playground dev:studio
 
 The direct URL is `http://localhost:5182`.
 
+The playground is configured with the local Studio project
+`f54814b5-02ba-4712-a174-d84c900b7ff3` and starts on map
+`6c524591-c8b8-4bc6-843e-43ea8d8b7c49`.
+
 ## Node.js MMORPG
 
 The Node.js provider does not require the Cloudflare map-update token:
