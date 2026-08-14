@@ -36,6 +36,7 @@
   },
   "changesets": [
     "blue-holes-flow",
+    "brave-character-select",
     "brave-stable-foundations",
     "bright-readme-map",
     "calm-liquid-waves",
@@ -47,6 +48,7 @@
     "clean-studio-hitbox-sync",
     "clean-workspace-internal-deps",
     "clear-mmorpg-save-guide",
+    "clear-sound-api",
     "fair-studio-atlas-sizes",
     "fast-water-refraction",
     "fierce-action-battle-impact",
