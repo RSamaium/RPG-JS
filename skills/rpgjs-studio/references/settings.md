@@ -21,7 +21,12 @@ Useful fields from `projectSchema`:
 - `keyboardControls?: { down?, up?, left?, right?, action?, back? }`
 - `mainActorId?: string` (assigned through the Actors API)
 - `startMapId?: string`
+- `menus.titleScreen?: { enabled, guiId?, settings: { backgroundMusic?, backgroundImage? } }`
 - `menus.characterSelect?: { enabled, guiId?, settings: { allActors, actorIds } }`
+- `audio.ui?: { navigate?, confirm?, cancel?, open?, close?, error? }`
+- `combatAudio?: { battleMusic?, attack?, skill?, hit?, hurt?, die? }`
+
+Every sound or music value is a Studio media `_id`. Omitted or empty UI cues use the RPGJS built-in pack. Omitted or empty combat cues inherit the project setting and eventually use the built-in pack. `battleMusic` and title-screen background music have no built-in default.
 
 ## Dependency resolution workflow
 
@@ -77,6 +82,25 @@ curl -sS -X PUT "$BASE_URL/api/projects/$PROJECT_ID" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "My RPG Project"
+  }'
+```
+
+## Example: configure project audio
+
+```bash
+curl -sS -X PUT "$BASE_URL/api/projects/$PROJECT_ID" \
+  -H "x-api-key:$RPGSTUDIO_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "audio": {
+      "ui": {
+        "confirm": "confirm-media-id"
+      }
+    },
+    "combatAudio": {
+      "attack": "sword-media-id",
+      "battleMusic": "battle-theme-media-id"
+    }
   }'
 ```
 

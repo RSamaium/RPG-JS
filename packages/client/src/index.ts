@@ -44,6 +44,11 @@ export { RpgClientEvent } from "./Game/Event";
 export * from "./Game/ProjectileManager";
 export * from "./Game/ClientVisuals";
 export * from "./Game/MusicManager";
+export type {
+    RpgAudioChannel,
+    RpgAudioPosition,
+    RpgPlaySoundOptions,
+} from "./Game/AudioManager";
 export { withMobile } from "./components/gui/mobile";
 export type {
     MobileButtonComponentProps,

@@ -142,6 +142,11 @@ const serializePresentation = (entity: any) => {
   };
 };
 
+const serializeEntityAudio = (entity: any) => {
+  const value = entity?.battleAi?.getPresentation?.()?.audio ?? entity?.studioCombatAudio;
+  return value && typeof value === "object" ? value : undefined;
+};
+
 const serializeResult = (result: any) => {
   if (!result) return undefined;
   return {
@@ -257,6 +262,8 @@ const serializeActionBattleVisualContext = (
   pattern: context.pattern,
   visual: context.visual,
   animations: serializeAnimations(context.animations, context),
+  sourceAudio: serializeEntityAudio(source),
+  targetAudio: serializeEntityAudio(context.target),
   animationDefaults: context.animationDefaults,
   presentations,
   };
@@ -293,6 +300,8 @@ export function createActionBattleClientVisuals(
         pattern: data.pattern,
         visual: data.visual,
         animations: data.animations ?? options.animations,
+        sourceAudio: data.sourceAudio,
+        targetAudio: data.targetAudio,
         animationDefaults: data.animationDefaults,
         engine: context.engine,
       } as ActionBattleVisualContext;

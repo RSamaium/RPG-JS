@@ -354,6 +354,10 @@ export interface ActionBattleVisualContext {
   pattern?: string;
   visual?: ActionBattleAiVisual;
   animations?: ActionBattleAnimationOptions;
+  /** Serializable source-side combat audio overrides. */
+  sourceAudio?: ActionBattleAudioOptions;
+  /** Serializable target-side reaction audio overrides. */
+  targetAudio?: ActionBattleAudioOptions;
   animationDefaults?: {
     animationName?: string;
     repeat?: number;
@@ -495,6 +499,7 @@ export interface ActionBattleAudioCue {
 }
 
 export type ActionBattleAudioCueInput =
+  | false
   | string
   | string[]
   | ActionBattleAudioCue
@@ -502,6 +507,7 @@ export type ActionBattleAudioCueInput =
       | string
       | string[]
       | ActionBattleAudioCue
+      | false
       | undefined);
 
 export interface ActionBattleMusicOptions {

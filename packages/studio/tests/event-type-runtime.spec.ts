@@ -93,9 +93,9 @@ describe("Studio event runtime", () => {
     expect(options.attackPatterns).toEqual([AttackPattern.DashAttack]);
   });
 
-  test("maps Studio enemy combat music and priority", () => {
+  test("maps the enemy battle music override and priority", () => {
     const options = resolveEnemyBattleAiOptions({
-      combatMusic: "boss-theme",
+      audio: { combat: { battleMusic: "boss-theme" } },
       combatMusicPriority: 125,
       presentation: { role: "boss" },
     });

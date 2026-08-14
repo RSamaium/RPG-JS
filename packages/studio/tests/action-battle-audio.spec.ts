@@ -31,6 +31,52 @@ describe("Studio Action Battle audio", () => {
     expect(preset.ui?.hotbar).toBeDefined();
   });
 
+  it("resolves enemy and project combat overrides without map-level audio", () => {
+    const audio = createStudioActionBattleAudio({ attack: "fallback" });
+    const attack = audio.attack as Function;
+    const context = {
+      moment: "attack",
+      sourceAudio: { attack: "enemy" },
+      engine: {
+        globalConfig: { combatAudio: { attack: "project" } },
+        sceneMap: { data: () => ({ params: { audio: { combat: { attack: "map" } } } }) },
+      },
+    };
+
+    expect(attack(context)).toBe("enemy");
+    expect(attack({ ...context, sourceAudio: undefined })).toBe("project");
+  });
+
+  it("uses built-in combat cues when Studio fields are blank", () => {
+    const audio = createStudioActionBattleAudio({
+      attack: "",
+      skill: [],
+      hit: "  ",
+      hurt: "",
+      die: "",
+    });
+    const context = {
+      moment: "attack",
+      engine: {
+        globalConfig: {
+          combatAudio: {
+            attack: "",
+            skill: "",
+            hit: "",
+            hurt: "",
+            die: "",
+          },
+        },
+      },
+    };
+
+    expect((audio.attack as Function)(context)).toBe("rpgjs-combat-attack");
+    expect((audio.skill as Function)(context)).toBe("rpgjs-combat-cast");
+    expect((audio.hit as Function)(context)).toBe("rpgjs-combat-hit");
+    expect((audio.hurt as Function)(context)).toBe("rpgjs-combat-hurt");
+    expect((audio.die as Function)(context)).toBe("rpgjs-combat-die");
+  });
+
   it("normalizes Studio hotbar data with safe defaults and bounds", () => {
     expect(normalizeStudioHotbarSettings(undefined)).toEqual({
       enabled: false,

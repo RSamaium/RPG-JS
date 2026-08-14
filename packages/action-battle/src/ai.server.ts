@@ -72,6 +72,7 @@ import type {
   NormalizedActionBattleHitReactionProfile,
 } from "./types";
 import type { ActionBattleAnimationOptions } from "./types";
+import type { ActionBattleAudioOptions } from "./types";
 import { updateActionBattleThreat } from "./audio";
 
 type RpgEventWithBattleAi = RpgEvent & {
@@ -231,6 +232,8 @@ export interface BattleAiBaseOptions {
       battle?: string;
       priority?: number;
     };
+    /** Sounds emitted by this enemy when attacking or reacting. */
+    audio?: ActionBattleAudioOptions;
   };
 }
 
@@ -700,6 +703,7 @@ export class BattleAi {
     name?: string;
     death: false | Required<BattleAiDeathPresentationOptions>;
     music?: { battle?: string; priority?: number };
+    audio?: ActionBattleAudioOptions;
   } = {
     role: "enemy",
     death: {
@@ -837,6 +841,7 @@ export class BattleAi {
               shake: options.presentation?.death?.shake ?? true,
             },
       music: options.presentation?.music,
+      audio: options.presentation?.audio,
     };
     const healthBar = options.presentation?.healthBar;
     if (

@@ -6,10 +6,24 @@ type ParamCurve = {
 type ParamValue = ParamCurve | number;
 
 export type ProjectBasic = {
+  audio?: {
+    ui?: {
+      navigate?: string;
+      confirm?: string;
+      cancel?: string;
+      open?: string;
+      close?: string;
+      error?: string;
+    };
+  };
   menus?: {
     titleScreen?: {
       enabled: boolean;
       guiId?: string | null;
+      settings: {
+        backgroundMusic?: string | null;
+        backgroundImage?: string | null;
+      };
     };
     hotbar?: {
       enabled: boolean;
@@ -35,9 +49,6 @@ export type ProjectBasic = {
     hit?: string;
     hurt?: string;
     die?: string;
-    fadeInMs?: number;
-    fadeOutMs?: number;
-    exitDelayMs?: number;
   };
   initialLevel?: number;
   finalLevel?: number;

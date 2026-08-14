@@ -1,7 +1,7 @@
 import Canvas from "./components/scenes/canvas.ce";
 import BuiltinSceneMap from "./components/scenes/draw-map.ce";
 import { inject } from './core/inject'
-import { signal, bootstrapCanvas, Howl, trigger, type Trigger } from "canvasengine";
+import { signal, bootstrapCanvas, Howl, Howler, trigger, type Trigger } from "canvasengine";
 import { AbstractWebsocket, WebSocketToken } from "./services/AbstractSocket";
 import { LoadMapService, LoadMapToken } from "./services/loadMap";
 import { RpgSound } from "./Sound";
@@ -45,6 +45,13 @@ import { EventComponentResolverRegistry, type EventComponentResolver } from "./G
 import { RpgClientBuiltinI18n } from "./i18n";
 import { clearCameraFollowPlugins, type CameraFollowSmoothMove } from "./services/cameraFollow";
 import { RpgMusicManager } from "./Game/MusicManager";
+import {
+  RpgAudioManager,
+  type RpgAudioChannel,
+  type RpgPlaySoundOptions,
+  type RpgSoundConfiguration,
+  type RpgUiAudioEvent,
+} from "./Game/AudioManager";
 import { routePredictedLocalPlayerSync } from "./services/localPlayerSync";
 export type {
   CameraFollowEase,
@@ -172,6 +179,15 @@ export class RpgClientEngine<T = any> {
   spritesheets: Map<string | number, any> = new Map();
   private spritesheetPromises: Map<string | number, Promise<any>> = new Map();
   sounds: Map<string, any> = new Map();
+  /** Internal mixer behind the established sound API. */
+  private readonly audio = new RpgAudioManager({
+    getSound: (id) => this.getSound(id),
+    addSound: (sound) => this.addSound(sound),
+    onPreferencesChange: (preferences) => {
+      (Howler as any).volume(preferences.master);
+      this.music?.setOutputGain(preferences.music);
+    },
+  });
   /** Client-only controller for temporary looping music and map BGM crossfades. */
   music = new RpgMusicManager({
     getSound: (id) => this.getSound(id),
@@ -324,6 +340,11 @@ export class RpgClientEngine<T = any> {
         sounds: {}
       }
     }
+    this.audio.configure({
+      projectId: (this.globalConfig as any).projectId ?? (this.globalConfig as any)._id,
+      ui: (this.globalConfig as any).audio?.ui,
+    });
+    this.music.setOutputGain(this.audio.channelGain("music"));
 
     this.addComponentAnimation({
       id: "animation",
@@ -1471,6 +1492,56 @@ export class RpgClientEngine<T = any> {
     return undefined;
   }
 
+  /** @internal Configure project-owned preferences and semantic cues for framework modules. */
+  private configureSound(configuration: RpgSoundConfiguration = {}): void {
+    this.audio.configure(configuration);
+  }
+
+  /** @internal Play a semantic sound used by RPGJS native interfaces. */
+  private playUiSound(event: RpgUiAudioEvent): void {
+    void this.audio.playUi(event);
+  }
+
+  /**
+   * Set the persisted volume of one sound channel for the current project.
+   * Master volume is applied through Howler, including sounds controlled through
+   * the legacy `RpgSound.global` facade. This client-owned preference behaves the
+   * same in standalone and MMORPG games and never changes server state.
+   *
+   * @title setSoundVolume
+   * @method setSoundVolume(channel: RpgAudioChannel, value: number): void
+   * @param {RpgAudioChannel} channel - Channel to update.
+   * @param {number} value - Volume between 0 and 1; out-of-range values are clamped.
+   * @returns {void}
+   * @memberof RpgClientEngine
+   * @example
+   * ```ts
+   * engine.setSoundVolume('music', 0.6)
+   * engine.setSoundVolume('master', 0.8)
+   * ```
+   */
+  setSoundVolume(channel: RpgAudioChannel, value: number): void {
+    this.audio.setVolume(channel, value);
+  }
+
+  /**
+   * Read the persisted volume of one sound channel for the current project.
+   * Calls made inside a CanvasEngine computed value remain reactive.
+   *
+   * @title getSoundVolume
+   * @method getSoundVolume(channel: RpgAudioChannel): number
+   * @param {RpgAudioChannel} channel - Channel to read.
+   * @returns {number} Volume between 0 and 1.
+   * @memberof RpgClientEngine
+   * @example
+   * ```ts
+   * const musicVolume = engine.getSoundVolume('music')
+   * ```
+   */
+  getSoundVolume(channel: RpgAudioChannel): number {
+    return this.audio.getVolume(channel);
+  }
+
   /**
    * Play a sound by its ID
    * 
@@ -1478,10 +1549,9 @@ export class RpgClientEngine<T = any> {
    * If the sound is not found, it will attempt to resolve it using the soundResolver.
    * Uses Howler.js for audio playback instead of native Audio elements.
    * 
-   * @param soundId - The sound ID to play
-   * @param options - Optional sound configuration
-   * @param options.volume - Volume level (0.0 to 1.0, overrides sound default)
-   * @param options.loop - Whether the sound should loop (overrides sound default)
+   * The existing API remains the single entry point for ordinary, channel-aware,
+   * and spatial sounds. Playback is client-owned in both standalone and MMORPG
+   * games; server calls only ask the receiving client to play a registered ID.
    * 
    * @example
    * ```ts
@@ -1493,53 +1563,24 @@ export class RpgClientEngine<T = any> {
    * 
    * // Play a sound asynchronously (when resolver returns Promise)
    * await engine.playSound('dynamic-sound', { volume: 0.8 });
+   *
+   * // Play a spatial sound without exposing CanvasEngine signals
+   * await engine.playSound('enemy-hit', {
+   *   channel: 'sfx',
+   *   position: { x: enemy.x(), y: enemy.y() },
+   *   listener: { x: player.x(), y: player.y() },
+   * });
    * ```
+   * @title playSound
+   * @method playSound(soundId: string, options?: RpgPlaySoundOptions): Promise<void>
+   * @param {string} soundId - Registered sound ID or ID handled by the sound resolver.
+   * @param {RpgPlaySoundOptions} [options] - Playback, channel, and spatial options.
+   * @returns {Promise<void>} Resolves after the sound has been resolved and started when available.
+   * @memberof RpgClientEngine
    */
-  async playSound(soundId: string, options?: { volume?: number; loop?: boolean }): Promise<void> {
-    const sound = await this.getSound(soundId);
-    if (sound && sound.play) {
-      // Sound is already a Howler instance or has a play method
-      const howlSoundId = sound._sounds?.[0]?._id;
-      
-      // Apply volume if provided
-      if (options?.volume !== undefined) {
-        if (howlSoundId !== undefined) {
-          sound.volume(Math.max(0, Math.min(1, options.volume)), howlSoundId);
-        } else {
-          sound.volume(Math.max(0, Math.min(1, options.volume)));
-        }
-      }
-      
-      // Apply loop if provided
-      if (options?.loop !== undefined) {
-        if (howlSoundId !== undefined) {
-          sound.loop(options.loop, howlSoundId);
-        } else {
-          sound.loop(options.loop);
-        }
-      }
-      
-      if (howlSoundId !== undefined) {
-        sound.play(howlSoundId);
-      } else {
-        sound.play();
-      }
-    } else if (sound && sound.src) {
-      // If sound is just a source URL, create a Howler instance and cache it
-      const howlOptions: any = {
-        src: [sound.src],
-        loop: options?.loop !== undefined ? options.loop : (sound.loop || false),
-        volume: options?.volume !== undefined ? Math.max(0, Math.min(1, options.volume)) : (sound.volume !== undefined ? sound.volume : 1.0),
-      };
-
-      const howl = new (Howl as any).Howl(howlOptions);
-      
-      // Cache the Howler instance for future use
-      this.sounds.set(soundId, howl);
-      
-      // Play the sound
-      howl.play();
-    } else {
+  async playSound(soundId: string, options: RpgPlaySoundOptions = {}): Promise<void> {
+    const played = await this.audio.play(soundId, options);
+    if (played === undefined) {
       console.warn(`Sound with id "${soundId}" not found or cannot be played`);
     }
   }

@@ -39,8 +39,17 @@ interface GlobalConfig {
   };
   animations?: Record<string, any>;
   database?: any[];
+  audio?: {
+    ui?: Record<string, any>;
+  };
   menus?: {
-    titleScreen?: { enabled: boolean };
+    titleScreen?: {
+      enabled: boolean;
+      settings?: {
+        backgroundMusic?: string | null;
+        backgroundImage?: string | null;
+      };
+    };
     hud?: { enabled: boolean };
   };
 }
@@ -104,6 +113,23 @@ const resolveMediaId = (value: unknown): string | null => {
     }
   }
   return null;
+};
+
+const resolveStudioMediaSource = async (value: unknown): Promise<string> => {
+  if (value && typeof value === "object") {
+    const fileName = (value as Record<string, unknown>).fileName;
+    if (typeof fileName === "string" && fileName.trim()) {
+      return resolveAssetSource(fileName);
+    }
+  }
+  const id = resolveMediaId(value);
+  if (!id) return "";
+  try {
+    const media = await getGameDataProvider().getMedia(id);
+    return resolveAssetSource(media?.fileName);
+  } catch {
+    return "";
+  }
 };
 
 export const displayStudioHudOnce = (
@@ -231,6 +257,10 @@ export default (config: StudioGameModuleConfig) => {
             debugCollisions,
           }),
         };
+        (engine as any).configureSound?.({
+          projectId: engine.globalConfig.projectId,
+          ui: engine.globalConfig.audio?.ui,
+        });
 
         const animationMediaRefs = Object.values(
           engine.globalConfig.animations ?? {},
@@ -275,9 +305,17 @@ export default (config: StudioGameModuleConfig) => {
           ?? response.menus?.titleScreen?.enabled
           ?? true;
         if (displayTitleScreen) {
+          const backgroundImage = await resolveStudioMediaSource(
+            response.menus?.titleScreen?.settings?.backgroundImage,
+          );
+          if (backgroundImage && engine.globalConfig.menus?.titleScreen?.settings) {
+            engine.globalConfig.menus.titleScreen.settings.backgroundImage = backgroundImage;
+          }
           gui.display("rpg-title-screen", {
             title: response.name,
             subtitle: response.subtitle,
+            backgroundMusic: response.menus?.titleScreen?.settings?.backgroundMusic,
+            backgroundImage,
             version: "v1.0.0",
             localActions: true,
             saveLoad: {

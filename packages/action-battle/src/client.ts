@@ -231,7 +231,7 @@ export const createActionBattleClient = (
     sceneMap: {
       onAfterLoading() {
         const engine = inject(RpgClientEngine);
-        engine.music.reset();
+        engine.music.resetOverride();
         const dodge = normalized.combat?.player?.dodge;
         if (dodge && typeof dodge === "object" && dodge.enabled !== false) {
           engine.dashDefaults = {

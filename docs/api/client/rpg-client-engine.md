@@ -23,6 +23,7 @@ Reference for the `RpgClientEngine` class.
 - [flash](#flash)
 - [getComponentAnimation](#getcomponentanimation)
 - [getSound](#getsound)
+- [getSoundVolume](#getsoundvolume)
 - [getSpriteComponent](#getspritecomponent)
 - [getSpriteSheet](#getspritesheet)
 - [interactions](#interactions)
@@ -41,6 +42,7 @@ Reference for the `RpgClientEngine` class.
 - [setCameraFollow](#setcamerafollow)
 - [setKeyboardControls](#setkeyboardcontrols)
 - [setSoundResolver](#setsoundresolver)
+- [setSoundVolume](#setsoundvolume)
 - [setSpritesheetResolver](#setspritesheetresolver)
 - [startTransition](#starttransition)
 - [stopAllSounds](#stopallsounds)
@@ -518,6 +520,36 @@ const sound = engine.getSound('my-sound');
 const sound = await engine.getSound('dynamic-sound');
 ```
 
+## getSoundVolume
+
+Read the persisted volume of one sound channel for the current project.
+Calls made inside a CanvasEngine computed value remain reactive.
+
+- Source: `packages/client/src/RpgClientEngine.ts`
+- Kind: `method`
+- Member of: `RpgClientEngine`
+- Defined in: `RpgClientEngine`
+
+### Signature
+
+```ts
+getSoundVolume(channel: RpgAudioChannel): number
+```
+
+### Parameters
+
+- `channel`: `RpgAudioChannel`
+
+### Returns
+
+Volume between 0 and 1.
+
+### Examples
+
+```ts
+const musicVolume = engine.getSoundVolume('music')
+```
+
 ## getSpriteComponent
 
 Get a reusable sprite component by id.
@@ -695,20 +727,29 @@ This method retrieves a sound from the cache or resolver and plays it.
 If the sound is not found, it will attempt to resolve it using the soundResolver.
 Uses Howler.js for audio playback instead of native Audio elements.
 
+The existing API remains the single entry point for ordinary, channel-aware,
+and spatial sounds. Playback is client-owned in both standalone and MMORPG
+games; server calls only ask the receiving client to play a registered ID.
+
 - Source: `packages/client/src/RpgClientEngine.ts`
 - Kind: `method`
+- Member of: `RpgClientEngine`
 - Defined in: `RpgClientEngine`
 
 ### Signature
 
 ```ts
-playSound(soundId: string, options?: { volume?: number; loop?: boolean }): Promise<void>
+playSound(soundId: string, options?: RpgPlaySoundOptions): Promise<void>
 ```
 
 ### Parameters
 
 - `soundId`: `string`
-- `options?`: `{ volume?: number; loop?: boolean }`
+- `options?`: `RpgPlaySoundOptions`
+
+### Returns
+
+Resolves after the sound has been resolved and started when available.
 
 ### Examples
 
@@ -721,6 +762,13 @@ engine.playSound('background-music', { volume: 0.5, loop: true });
 
 // Play a sound asynchronously (when resolver returns Promise)
 await engine.playSound('dynamic-sound', { volume: 0.8 });
+
+// Play a spatial sound without exposing CanvasEngine signals
+await engine.playSound('enemy-hit', {
+  channel: 'sfx',
+  position: { x: enemy.x(), y: enemy.y() },
+  listener: { x: player.x(), y: player.y() },
+});
 ```
 
 ## pointer
@@ -1049,6 +1097,36 @@ engine.setSoundResolver(async (id) => {
   const data = await response.json();
   return data;
 });
+```
+
+## setSoundVolume
+
+Set the persisted volume of one sound channel for the current project.
+Master volume is applied through Howler, including sounds controlled through
+the legacy `RpgSound.global` facade. This client-owned preference behaves the
+same in standalone and MMORPG games and never changes server state.
+
+- Source: `packages/client/src/RpgClientEngine.ts`
+- Kind: `method`
+- Member of: `RpgClientEngine`
+- Defined in: `RpgClientEngine`
+
+### Signature
+
+```ts
+setSoundVolume(channel: RpgAudioChannel, value: number): void
+```
+
+### Parameters
+
+- `channel`: `RpgAudioChannel`
+- `value`: `number`
+
+### Examples
+
+```ts
+engine.setSoundVolume('music', 0.6)
+engine.setSoundVolume('master', 0.8)
 ```
 
 ## setSpritesheetResolver

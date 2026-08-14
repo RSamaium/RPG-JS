@@ -216,6 +216,7 @@
     if (actorList().length < 2 || isTransitioning()) return;
     transitionDirection.set(offset < 0 ? "previous" : "next");
     selectedIndex.update((index) => (index + offset + actorList().length) % actorList().length);
+    engine.playUiSound("navigate");
     isTransitioning.set(true);
     setTimeout(() => isTransitioning.set(false), 400);
   }
@@ -230,11 +231,18 @@
 
   function confirm() {
     const actor = selectedActor();
-    if (actor) onInteraction?.("select", { id: actor.id });
+    if (!actor) {
+      engine.playUiSound("error");
+      return;
+    }
+    engine.playUiSound("confirm");
+    onInteraction?.("select", { id: actor.id });
   }
 
   function cancel() {
-    if (allowCancel()) onInteraction?.("cancel");
+    if (!allowCancel()) return;
+    engine.playUiSound("cancel");
+    onInteraction?.("cancel");
   }
 
   function activateFocused() {

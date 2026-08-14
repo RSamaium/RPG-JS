@@ -104,6 +104,7 @@ Supported fields from `skillSchema`:
 - `icon?: string`
 - `animation?: string`
 - `sound?: string`
+- `impactSound?: string`
 - `spCost: number`
 - `power: number`
 - `element?: "none" | "fire" | "water" | "earth" | "wind" | "light" | "dark"`
@@ -115,8 +116,8 @@ Supported fields from `skillSchema`:
 Notes:
 
 - `name`, `spCost`, and `power` are the required fields from the schema.
-- `icon`, `animation`, and `sound` must be media `_id`s. Search `/api/media?query=<search>` first.
-- Use media type `icon` for `icon`, media type `animation` for `animation`, and media type `sound` for `sound`.
+- `icon`, `animation`, `sound`, and `impactSound` must be media `_id`s. Search `/api/media?query=<search>` first.
+- Use media type `icon` for `icon`, media type `animation` for `animation`, and media type `sound` for `sound` and `impactSound`. Action Battle uses `sound` while casting and `impactSound` on the target.
 
 ### `POST /api/database/items`
 
@@ -206,6 +207,7 @@ Supported fields from `enemySchema`:
 - `behavior?: { enemyType?: "aggressive" | "defensive" | "ranged" | "tank" | "berserker", attackCooldown?: number, visionRange?: number, attackRange?: number, dodgeChance?: number, dodgeCooldown?: number, fleeThreshold?: number, attackPatterns?: Array<"melee" | "combo" | "charged" | "zone" | "dashAttack">, patrolWaypoints?: Array<{ x: number, y: number }>, groupBehavior?: boolean }`
 - `skills?: Array<{ skillId: string, level: number }>`
 - `reward?: { exp?: number, gold?: number, items?: Array<{ itemId: string, amount: number, chance: number }> }`
+- `audio?: { combat?: { battleMusic?, attack?, skill?, hit?, hurt?, die? } }`
 
 Notes:
 
@@ -215,6 +217,7 @@ Notes:
 - `skills[].skillId` is a skill `_id`. Search `/api/database/skills?query=<search>` first.
 - `skills[].level` is the minimum enemy level required to acquire the skill.
 - `behavior.dodgeChance` and `behavior.fleeThreshold` use ratios between `0` and `1`.
+- `audio.combat` values are media `_id`s and override project cues for this enemy. `battleMusic` replaces the general battle track while that enemy is active; source cues (`attack`, `skill`, `hit`) and target reactions (`hurt`, `die`) are resolved independently.
 
 ### `GET /api/database/enemies/preview?ids=<id1,id2>`
 

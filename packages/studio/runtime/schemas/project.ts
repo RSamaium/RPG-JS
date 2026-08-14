@@ -74,13 +74,28 @@ export const projectSchema = {
           } as any,
         },
         attack: { type: "string", title: "Attack Sound", format: { name: "media", type: "sound" } as any },
-        skill: { type: "string", title: "Skill Sound", format: { name: "media", type: "sound" } as any },
-        hit: { type: "string", title: "Hit Sound", format: { name: "media", type: "sound" } as any },
+        skill: { type: "string", title: "Cast Sound", format: { name: "media", type: "sound" } as any },
+        hit: { type: "string", title: "Impact Sound", format: { name: "media", type: "sound" } as any },
         hurt: { type: "string", title: "Hurt Sound", format: { name: "media", type: "sound" } as any },
         die: { type: "string", title: "Defeat Sound", format: { name: "media", type: "sound" } as any },
-        fadeInMs: { type: "number", title: "Battle Fade In (ms)", default: 600, minimum: 0 },
-        fadeOutMs: { type: "number", title: "Battle Fade Out (ms)", default: 900, minimum: 0 },
-        exitDelayMs: { type: "number", title: "Combat Exit Delay (ms)", default: 1500, minimum: 0 },
+      },
+    },
+    audio: {
+      type: "object",
+      title: "Audio",
+      properties: {
+        ui: {
+          type: "object",
+          title: "Interface Audio",
+          properties: {
+            navigate: { type: "string" },
+            confirm: { type: "string" },
+            cancel: { type: "string" },
+            open: { type: "string" },
+            close: { type: "string" },
+            error: { type: "string" },
+          },
+        },
       },
     },
     skills: {

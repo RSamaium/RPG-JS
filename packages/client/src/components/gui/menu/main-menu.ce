@@ -197,18 +197,24 @@
         const currentIndex = Math.max(0, available.indexOf(current));
         const nextIndex = (currentIndex + delta + available.length) % available.length;
         selectedMenu.set(available[nextIndex]);
+        engine.playUiSound("navigate");
     };
 
     function selectMenu(index) {
         return function() {
             selectedMenu.set(index);
+            engine.playUiSound("navigate");
             openMenu();
         }
     }
 
     const openMenu = () => {
         const entry = menuEntries()[selectedMenu()];
-        if (!entry || isMenuDisabled(entry)) return;
+        if (!entry || isMenuDisabled(entry)) {
+            engine.playUiSound("error");
+            return;
+        }
+        engine.playUiSound("confirm");
         if (entry.id === "save") {
             saveOverlay.set(true);
             return;
@@ -221,6 +227,7 @@
     };
 
     const goBack = () => {
+        engine.playUiSound("cancel");
         if (hotbarAssignmentOpen()) {
             closeHotbarAssignment();
             return;
@@ -281,6 +288,7 @@
             closeSaveOverlay();
             return;
         }
+        engine.playUiSound("close");
         onFinish();
     };
 
@@ -367,7 +375,7 @@
                     goBack();
                     return;
                 }
-                onFinish()
+                closeMenu()
             }
         },
         gamepad: {
@@ -376,6 +384,7 @@
     });
 
     mount((element) => {
+        engine.playUiSound("open");
         const inputLockToken = {};
         const previousStopProcessingInput = engine.stopProcessingInput;
         const previousGamePause = engine.gamePause();
