@@ -20,10 +20,13 @@ export type {
   StudioHotbarContent,
   StudioHotbarBinding,
   StudioHotbarSettings,
+  StudioCharacterSelectBinding,
+  StudioCharacterSelectSettings,
   StudioMenusSettings,
 } from "./action-battle-audio";
 export {
   normalizeStudioHotbarSettings,
+  normalizeStudioCharacterSelectSettings,
   resolveStudioHotbarSettings,
 } from "./action-battle-audio";
 export {

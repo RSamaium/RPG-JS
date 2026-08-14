@@ -25,6 +25,7 @@ import { createStudioMapPlugins, type StudioMapPlugin } from "./studio-map-plugi
 import { bindInitialStudioEventHitboxes } from "./initial-event-hitboxes-client";
 import { bindStudioCombatAnimationsToEntity } from "./action-battle-animations";
 import { collectStudioActionBattleMediaRefs } from "./action-battle-animation-preload";
+import { beginStudioMapLoading, waitForStudioMapReady } from "./studio-map-readiness";
 
 interface GlobalConfig {
   projectId?: string;
@@ -105,6 +106,28 @@ const resolveMediaId = (value: unknown): string | null => {
   return null;
 };
 
+export const displayStudioHudOnce = (
+  gui: Pick<RpgGui, "display" | "get" | "isDisplaying">,
+  engine: RpgClientEngineWithConfig,
+): void => {
+  if (gui.isDisplaying("hud")) return;
+
+  const currentData = gui.get("hud")?.data();
+  const facesetId = resolveMediaId(engine.globalConfig?.hero?.faceset);
+  const nextData: Record<string, any> = currentData && typeof currentData === "object"
+    ? { ...currentData }
+    : {};
+
+  if (facesetId) {
+    nextData.faceset = {
+      id: facesetId,
+      expression: "happy",
+    };
+  }
+
+  gui.display("hud", nextData);
+};
+
 const resolveHeroMediaSpritesheet = async (value: unknown): Promise<any | null> => {
   if (!value) return null;
 
@@ -137,6 +160,26 @@ const resolveStudioDatabaseForPreload = async (
     console.warn("[StudioGame] combat animation preload database fetch failed", error);
     return [];
   }
+};
+
+const resolveActorIllustrationRefs = async (
+  database: any[],
+): Promise<unknown[]> => {
+  const provider = getGameDataProvider();
+  const actors = database.filter((record) => (record?.type ?? record?._type) === "actor");
+  const refs = await Promise.all(actors.map(async (actor) => {
+    const direct = actor.illustration ?? actor.graphic?.metadata?.illustration;
+    if (direct) return direct;
+    const graphicId = resolveMediaId(actor.graphic);
+    if (!graphicId) return null;
+    try {
+      const graphicMedia = await provider.getMedia(graphicId);
+      return graphicMedia?.metadata?.illustration ?? null;
+    } catch {
+      return null;
+    }
+  }));
+  return refs.filter(Boolean);
 };
 
 export default (config: StudioGameModuleConfig) => {
@@ -200,12 +243,19 @@ export default (config: StudioGameModuleConfig) => {
         }
         const databaseAnimationMediaRefs =
           collectStudioActionBattleMediaRefs(database);
+        const actorMediaRefs = database
+          .filter((record) => (record?.type ?? record?._type) === "actor")
+          .flatMap((actor) => [actor.graphic, actor.faceset])
+          .filter(Boolean);
+        const actorIllustrationRefs = await resolveActorIllustrationRefs(database);
 
         const heroMediaRefs = [
           engine.globalConfig.hero?.graphic,
           engine.globalConfig.hero?.faceset,
           ...animationMediaRefs,
           ...databaseAnimationMediaRefs,
+          ...actorMediaRefs,
+          ...actorIllustrationRefs,
         ].filter(Boolean);
 
         // Load hero and combat animation spritesheets from either direct media objects or media IDs.
@@ -264,7 +314,7 @@ export default (config: StudioGameModuleConfig) => {
         const gui = inject(RpgGui);
         const engine = inject(RpgClientEngine) as RpgClientEngineWithConfig;
         const hasPreviousMap = Boolean(engine.scene.data?.());
-        gui.hide("hud");
+        beginStudioMapLoading();
         await new Promise<void>((resolve) => {
           let completed = false;
           const complete = () => {
@@ -284,12 +334,7 @@ export default (config: StudioGameModuleConfig) => {
             onCovered: complete,
             onRevealed: () => {
               if (engine.globalConfig.menus?.hud?.enabled !== false) {
-                gui.display("hud", {
-                  faceset: {
-                    id: resolveMediaId(engine.globalConfig?.hero?.faceset),
-                    expression: "happy",
-                  },
-                });
+                displayStudioHudOnce(gui, engine);
               }
             },
           });
@@ -303,6 +348,8 @@ export default (config: StudioGameModuleConfig) => {
           engine.globalConfig.animations,
         );
         bindInitialStudioEventHitboxes(scene);
+        const loadedScene = engine.scene.data?.();
+        await waitForStudioMapReady(loadedScene?.data ?? loadedScene);
         await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
         fadeTrigger.start();
       },

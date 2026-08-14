@@ -1,0 +1,273 @@
+<DOMContainer width="100%" height="100%">
+  <div class="rpg-ui-character-select-layer rpg-anim-fade-in">
+    <section
+      class="rpg-ui-character-select"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="rpg-character-select-title"
+      pointerdown={startSwipe}
+      pointerup={finishSwipe}
+    >
+      <header class="rpg-ui-character-select-header">
+        <span class="rpg-ui-character-select-ornament" aria-hidden="true"></span>
+        <div>
+          <h1 id="rpg-character-select-title">{titleText()}</h1>
+          @if (subtitleText()) {
+            <p>{subtitleText()}</p>
+          }
+        </div>
+        <span class="rpg-ui-character-select-ornament rpg-ui-character-select-ornament-right" aria-hidden="true"></span>
+      </header>
+
+      <Navigation tabindex={focusedIndex} controls={controls}>
+        <div class="rpg-ui-character-select-stage">
+          @if (actorList().length > 1) {
+            <button
+              type="button"
+              class="rpg-ui-character-select-arrow rpg-ui-character-select-arrow-left"
+              aria-label={t("rpg.character-select.previous")}
+              tabindex={0}
+              click={previousActor}
+            >‹</button>
+          }
+
+          <div class="rpg-ui-character-select-viewport" role="listbox" aria-label={titleText()}>
+            @for (actor of visibleActors(); track actor.id) {
+              <article
+                class="rpg-ui-character-select-card"
+                data-direction={transitionDirection()}
+                role="option"
+                aria-selected="true"
+              >
+                <div class="rpg-ui-character-select-portrait" aria-label={actor.name || actor.id}>
+                  <div class="rpg-ui-character-select-portrait-glow" aria-hidden="true"></div>
+                  @if (actor.illustration) {
+                    <DOMSprite
+                      sheet={illustrationSheet(actor.illustration)}
+                      width="100%"
+                      height="100%"
+                      objectFit="contain"
+                    />
+                  }
+                  @else if (actor.graphic) {
+                    <DOMSprite
+                      sheet={actorSheet(actor.graphic)}
+                      width="100%"
+                      height="100%"
+                      objectFit="contain"
+                    />
+                  }
+                  @else {
+                    <span class="rpg-ui-character-select-portrait-fallback" aria-hidden="true">?</span>
+                  }
+                </div>
+
+                <div class="rpg-ui-character-select-details">
+                  <div class="rpg-ui-character-select-identity">
+                    <div>
+                      <h2>{actor.name || actor.id}</h2>
+                      @if (actor.className) {
+                        <div class="rpg-ui-character-select-class">
+                          @if (actor.classIcon) {
+                            <span class="rpg-ui-character-select-class-icon">
+                              <DOMSprite sheet={iconSheet(actor.classIcon)} width="100%" height="100%" objectFit="contain" />
+                            </span>
+                          }
+                          <strong>{actor.className}</strong>
+                        </div>
+                      }
+                    </div>
+                    <span class="rpg-ui-character-select-check" aria-hidden="true">✓</span>
+                  </div>
+
+                  @if (actor.description || actor.classDescription) {
+                    <div class="rpg-ui-character-select-description">
+                      <span aria-hidden="true">✦</span>
+                      <p>{actor.description || actor.classDescription}</p>
+                    </div>
+                  }
+
+                  <div class="rpg-ui-character-select-stats" aria-label={t("rpg.character-select.stats")}>
+                    @for (stat of currentStats(); track stat.key) {
+                      <div class="rpg-ui-character-select-stat" style={{"--rpg-stat-delay": stat.delay}}>
+                        <div class="rpg-ui-character-select-stat-label">
+                          <span aria-hidden="true">{stat.icon}</span>
+                          <span>{stat.label}</span>
+                        </div>
+                        <strong>{stat.value}</strong>
+                        <div class="rpg-ui-character-select-stat-bar" aria-hidden="true">
+                          <span style={{width: stat.percent}}></span>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                </div>
+              </article>
+            }
+          </div>
+
+          @if (actorList().length > 1) {
+            <button
+              type="button"
+              class="rpg-ui-character-select-arrow rpg-ui-character-select-arrow-right"
+              aria-label={t("rpg.character-select.next")}
+              tabindex={1}
+              click={nextActor}
+            >›</button>
+          }
+        </div>
+
+        <footer class="rpg-ui-character-select-footer">
+          <div class="rpg-ui-character-select-hint">
+            <span aria-hidden="true">i</span>
+            <p>{t("rpg.character-select.hint")}</p>
+          </div>
+          @if (actorList().length > 1) {
+            <div class="rpg-ui-character-select-pagination" aria-live="polite">
+              {selectedIndex() + 1} / {actorList().length}
+            </div>
+          }
+          <div class="rpg-ui-character-select-actions">
+            @if (allowCancel()) {
+              <button
+                type="button"
+                class="rpg-ui-btn rpg-ui-btn-secondary"
+                tabindex={cancelIndex()}
+                click={cancel}
+              >{t("rpg.character-select.cancel")}</button>
+            }
+            <button
+              type="button"
+              class="rpg-ui-btn rpg-ui-character-select-confirm"
+              tabindex={confirmIndex()}
+              click={confirm}
+            ><span aria-hidden="true">✦</span>{t("rpg.character-select.confirm")}</button>
+          </div>
+        </footer>
+      </Navigation>
+    </section>
+  </div>
+</DOMContainer>
+
+<script>
+  import { computed, createTabindexNavigator, signal } from "canvasengine";
+  import { Animation, Direction } from "@rpgjs/common";
+  import { inject } from "../../core/inject";
+  import { RpgClientEngine } from "../../RpgClientEngine";
+  import { getKeyboardControlBind } from "../../services/actionInput";
+
+  const engine = inject(RpgClientEngine);
+  const { t } = engine.i18n();
+  const keyboardControls = engine.globalConfig.keyboardControls;
+  const { data, onInteraction } = defineProps();
+
+  const guiData = computed(() => data() || {});
+  const actorList = computed(() => Array.isArray(guiData().actors) ? guiData().actors : []);
+  const titleText = computed(() => guiData().title || t("rpg.character-select.title"));
+  const subtitleText = computed(() => guiData().subtitle || t("rpg.character-select.subtitle"));
+  const allowCancel = computed(() => guiData().allowCancel === true);
+  const initialActorId = guiData().selectedActorId || actorList()[0]?.id || "";
+  const initialIndex = Math.max(0, actorList().findIndex((actor) => actor.id === initialActorId));
+  const selectedIndex = signal(initialIndex);
+  const transitionDirection = signal("next");
+  const isTransitioning = signal(false);
+  const focusedIndex = signal(actorList().length > 1 ? 0 : 2);
+  const confirmIndex = computed(() => 2);
+  const cancelIndex = computed(() => 3);
+  const focusCount = computed(() => allowCancel() ? 4 : 3);
+  const navigator = createTabindexNavigator(focusedIndex, { count: focusCount }, "wrap");
+  const visibleActors = computed(() => {
+    const actor = actorList()[selectedIndex()];
+    return actor ? [actor] : [];
+  });
+  const selectedActor = computed(() => actorList()[selectedIndex()]);
+  const swipeStartX = signal(null);
+
+  const statDefinitions = [
+    { key: "maxHp", labelKey: "rpg.character-select.stat.life", icon: "♥" },
+    { key: "str", labelKey: "rpg.character-select.stat.strength", icon: "✊" },
+    { key: "pdef", labelKey: "rpg.character-select.stat.defense", icon: "◈" },
+    { key: "agi", labelKey: "rpg.character-select.stat.speed", icon: "➟" },
+    { key: "int", labelKey: "rpg.character-select.stat.magic", icon: "✦" },
+  ];
+
+  const currentStats = computed(() => statDefinitions.map((definition,index) => {
+    const value = Number(selectedActor()?.stats?.[definition.key] ?? 0);
+    const max = Math.max(...actorList().map((actor) => Number(actor.stats?.[definition.key] ?? 0)), 1);
+    const percent = value <= 0 ? 0 : Math.max(18, Math.round((value / max) * 100));
+    return {
+      ...definition,
+      label: t(definition.labelKey),
+      value,
+      percent: `${percent}%`,
+      delay: `${120 + index * 55}ms`,
+    };
+  }));
+
+  const actorSheet = (graphic) => ({
+    definition: engine.getSpriteSheet(graphic),
+    playing: Animation.Stand,
+    params: { direction: Direction.Down },
+  });
+  const illustrationSheet = (illustration) => ({ definition: engine.getSpriteSheet(illustration) });
+  const iconSheet = (icon) => ({ definition: engine.getSpriteSheet(icon) });
+
+  function moveActor(offset) {
+    if (actorList().length < 2 || isTransitioning()) return;
+    transitionDirection.set(offset < 0 ? "previous" : "next");
+    selectedIndex.update((index) => (index + offset + actorList().length) % actorList().length);
+    isTransitioning.set(true);
+    setTimeout(() => isTransitioning.set(false), 400);
+  }
+
+  function previousActor() {
+    moveActor(-1);
+  }
+
+  function nextActor() {
+    moveActor(1);
+  }
+
+  function confirm() {
+    const actor = selectedActor();
+    if (actor) onInteraction?.("select", { id: actor.id });
+  }
+
+  function cancel() {
+    if (allowCancel()) onInteraction?.("cancel");
+  }
+
+  function activateFocused() {
+    const index = focusedIndex();
+    if (index === 0 && actorList().length > 1) previousActor();
+    else if (index === 1 && actorList().length > 1) nextActor();
+    else if (index === confirmIndex()) confirm();
+    else if (allowCancel() && index === cancelIndex()) cancel();
+  }
+
+  function pointerX(event) {
+    return event?.clientX ?? event?.global?.x ?? event?.data?.global?.x ?? null;
+  }
+
+  function startSwipe(event) {
+    swipeStartX.set(pointerX(event));
+  }
+
+  function finishSwipe(event) {
+    const start = swipeStartX();
+    const end = pointerX(event);
+    swipeStartX.set(null);
+    if (start === null || end === null || Math.abs(end - start) < 48) return;
+    moveActor(end < start ? 1 : -1);
+  }
+
+  const controls = signal({
+    up: { repeat: true, bind: keyboardControls.up, throttle: 150, keyDown: () => navigator.next(-1) },
+    left: { repeat: true, bind: keyboardControls.left, throttle: 400, keyDown: previousActor },
+    down: { repeat: true, bind: keyboardControls.down, throttle: 150, keyDown: () => navigator.next(1) },
+    right: { repeat: true, bind: keyboardControls.right, throttle: 400, keyDown: nextActor },
+    action: { bind: getKeyboardControlBind(keyboardControls.action), keyDown: activateFocused },
+    escape: { bind: getKeyboardControlBind(keyboardControls.escape), keyDown: cancel },
+    gamepad: { enabled: true },
+  });
+</script>

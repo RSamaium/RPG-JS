@@ -71,6 +71,24 @@ describe("Studio spritesheet utils", () => {
     expect(spritesheet.trimTransparentBounds).toBe(true);
   });
 
+  test("registers character illustrations as single-frame spritesheets", async () => {
+    const spritesheet = await createSpriteSheetObject({
+      type: "illustration",
+      id: "hero-art",
+      fileName: "hero-art.png",
+      width: 800,
+      height: 1000,
+    });
+
+    expect(spritesheet).toMatchObject({
+      id: "#illustration_hero-art",
+      framesWidth: 1,
+      framesHeight: 1,
+      width: 800,
+      height: 1000,
+    });
+  });
+
   test("plays attacks in 350ms without accelerating locomotion", async () => {
     const spritesheet = await createSpriteSheetObject({
       type: "spritesheet",
@@ -185,5 +203,18 @@ describe("Studio spritesheet utils", () => {
     expect(getMedia).toHaveBeenCalledWith("hero.png");
     expect(spritesheet.framesWidth).toBe(4);
     expect(spritesheet.displayScale).toBe(STUDIO_DEFAULT_CHARACTER_DISPLAY_SCALE);
+  });
+
+  test("exposes Studio icons with the default animation expected by GUI components", async () => {
+    const spritesheet = await createSpriteSheetObject({
+      type: "icon",
+      id: "fire-icon",
+      fileName: "fire.png",
+      width: 32,
+      height: 32,
+    });
+
+    expect(spritesheet.textures.default).toBeDefined();
+    expect(spritesheet.textures.default).toBe(spritesheet.textures.stand);
   });
 });

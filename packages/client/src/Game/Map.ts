@@ -212,11 +212,14 @@ export class RpgClientMap extends RpgCommonMap<any> {
     this.localLightSpots.set({});
   }
 
-  stepClientPhysics(deltaMs: number): number {
+  stepClientPhysics(
+    deltaMs: number,
+    hooks?: { afterStep?: (tick: number) => void },
+  ): number {
     if (!this.manualClientPhysicsTick) {
       return 0;
     }
-    return this.nextTick(deltaMs);
+    return this.runFixedTicks(deltaMs, hooks);
   }
 
   stepPredictionTick(): void {

@@ -21,8 +21,18 @@ Useful fields from `projectSchema`:
 - `keyboardControls?: { down?, up?, left?, right?, action?, back? }`
 - `mainActorId?: string` (assigned through the Actors API)
 - `startMapId?: string`
+- `menus.characterSelect?: { enabled, guiId?, settings: { allActors, actorIds } }`
 
 ## Dependency resolution workflow
+
+### Character selection GUI
+
+Set `menus.characterSelect.enabled` to show the native character selector only
+for new games. With `settings.allActors: true`, every project Actor is offered.
+With `allActors: false`, `settings.actorIds` contains the ordered Studio Actor
+`_id` values to offer. Invalid or deleted IDs are ignored; an empty effective
+list skips the GUI and uses the main Actor. The player's choice is saved on that
+player and never changes the project `mainActorId`.
 
 ### Main actor
 

@@ -149,11 +149,18 @@ export class PredictionController<
         ? Math.max(this.lastAckTick, ack.serverTick)
         : this.lastAckTick;
 
+    // A delayed ack may no longer have a matching history entry. While newer
+    // inputs are pending, comparing that older server snapshot with the current
+    // client position measures normal prediction lead as authoritative drift.
+    const hasNewerPendingInputs = this.history.some(
+      (entry) => entry.frame > ack.frame,
+    );
+    const acknowledgedEntry = this.history.find(
+      (entry) => entry.frame === nextAckFrame && !!entry.state,
+    );
+
     let needsReconciliation = false;
-    if (ack.state) {
-      const acknowledgedEntry = this.history.find(
-        (entry) => entry.frame === nextAckFrame && !!entry.state,
-      );
+    if (ack.state && (acknowledgedEntry || !hasNewerPendingInputs)) {
       const comparisonState = acknowledgedEntry?.state ?? this.config.getCurrentState();
       const dx = comparisonState.x - ack.state.x;
       const dy = comparisonState.y - ack.state.y;

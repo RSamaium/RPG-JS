@@ -1,5 +1,7 @@
 import { RpgPlayer } from "./Player";
-import { Gui, DialogGui, MenuGui, ShopGui, NotificationGui, SaveLoadGui, GameoverGui, InputGui, HotbarGui } from "../Gui";
+import { Gui, DialogGui, MenuGui, ShopGui, NotificationGui, SaveLoadGui, GameoverGui, InputGui, HotbarGui, CharacterSelectGui } from "../Gui";
+import type { CharacterSelectOptions } from "../Gui/CharacterSelectGui";
+import type { ActorData, ActorInput } from "./ClassManager";
 import type { HotbarGuiOptions } from "../Gui/HotbarGui";
 import type { ShopGuiOptions, ShopItemInput } from "../Gui/ShopGui";
 import { DialogOptions, DialogBaseOptions, Choice } from "../Gui/DialogGui";
@@ -82,6 +84,38 @@ export function WithGuiManager<TBase extends PlayerCtor>(
       const gui = new InputGui(<any>this);
       this._gui[gui.id] = gui;
       return gui.openInput(message, options);
+    }
+
+    /**
+     * Display the prebuilt character selection GUI and return the server-owned
+     * actor chosen by the player. This method never applies the actor.
+     *
+     * @title Show Character Select
+     * @method player.showCharacterSelect(actors,options)
+     * @param actors - Actor constructors, database IDs, or resolved actor objects offered to the player.
+     * @param options - Optional title, subtitle, initial selection, and cancellation behavior.
+     * @returns The validated actor, or `null` when cancellation is allowed and requested.
+     * @memberof RpgPlayer
+     *
+     * @example
+     * ```ts
+     * const actor = await player.showCharacterSelect([Hero, Mage])
+     * if (actor) player.setActor(actor)
+     * ```
+     */
+    showCharacterSelect(
+      actors: readonly ActorInput[],
+      options: CharacterSelectOptions = {},
+    ): Promise<ActorData | null> {
+      const resolvedActors = actors.map((actorInput) => {
+        const resolved = typeof actorInput === "string"
+          ? (this as unknown as RpgPlayer).databaseById(actorInput)
+          : actorInput;
+        return typeof resolved === "function" ? new (resolved as new () => ActorData)() : resolved;
+      });
+      const gui = new CharacterSelectGui(this as unknown as RpgPlayer);
+      this._gui[gui.id] = gui;
+      return gui.openCharacterSelect(resolvedActors as (ActorData & { id: string })[], options);
     }
 
     callMainMenu(options: MenuGuiOptions = {}) {
@@ -316,6 +350,22 @@ export function WithGuiManager<TBase extends PlayerCtor>(
  * Defines the methods that will be available on the player
  */
 export interface IGuiManager {
+  /**
+   * Opens the prebuilt character selector and returns only an actor offered by
+   * the authoritative server. Applying the result remains explicit.
+   *
+   * @title Show Character Select
+   * @method player.showCharacterSelect(actors,options)
+   * @param actors Actor constructors, database IDs, or resolved actor objects.
+   * @param options Presentation and cancellation options.
+   * @returns The selected actor, or `null` after an allowed cancellation.
+   * @memberof RpgPlayer
+   */
+  showCharacterSelect(
+    actors: readonly ActorInput[],
+    options?: CharacterSelectOptions,
+  ): Promise<ActorData | null>;
+
   /**
    * Opens the prebuilt input GUI and waits for the player to submit or cancel it.
    * The player cannot move while the form is open. Number inputs resolve to a

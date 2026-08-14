@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 import {
+  CharacterSelectGui,
   DialogGui,
   DialogPosition,
   GameoverGui,
@@ -21,6 +22,93 @@ const emptyHotbarPlayer = {
 };
 
 describe("GUI", () => {
+  test("character select returns only a server-provided actor", async () => {
+    const player: any = { canMove: true, emit: vi.fn() };
+    const hero = { id: "hero", name: "Hero", graphic: "hero-sheet" };
+    const mage = { id: "mage", name: "Mage", description: "Uses magic" };
+    const gui = new CharacterSelectGui(player);
+    const pending = gui.openCharacterSelect([hero, mage], { selectedActorId: "mage" });
+
+    expect(player.emit).toHaveBeenCalledWith("gui.open", expect.objectContaining({
+      guiId: "rpg-character-select",
+      data: expect.objectContaining({
+        actors: [hero, mage],
+        selectedActorId: "mage",
+        allowCancel: false,
+      }),
+    }));
+    expect(player.canMove).toBe(false);
+
+    await gui.emit("select", { id: "intruder" });
+    expect(player.canMove).toBe(false);
+
+    await gui.emit("select", { id: "hero" });
+    await expect(pending).resolves.toBe(hero);
+    expect(player.canMove).toBe(true);
+  });
+
+  test("character select validates candidates and optional cancellation", async () => {
+    const player: any = { canMove: true, emit: vi.fn() };
+    const gui = new CharacterSelectGui(player);
+
+    expect(() => gui.openCharacterSelect([])).toThrow("at least one actor");
+    expect(() => gui.openCharacterSelect([
+      { id: "hero", name: "Hero" },
+      { id: "hero", name: "Copy" },
+    ])).toThrow("unique actor IDs");
+
+    const pending = gui.openCharacterSelect([{ id: "hero", name: "Hero" }], { allowCancel: true });
+    await gui.emit("cancel", {});
+    await expect(pending).resolves.toBeNull();
+  });
+
+  test("character select exposes only presentation-safe class, illustration and stat data", () => {
+    const player: any = { canMove: true, emit: vi.fn() };
+    const gui = new CharacterSelectGui(player);
+
+    const pending = gui.openCharacterSelect([{
+      id: "hero",
+      name: "Lorian",
+      description: "A young knight",
+      illustration: "lorian-illustration",
+      class: {
+        id: "knight",
+        name: "Knight",
+        description: "A sturdy melee fighter",
+        icon: "sword-icon",
+        privateServerValue: "hidden",
+      },
+      parameters: {
+        maxHp: { start: 120, end: 900 },
+        str: { start: 16, end: 80 },
+        pdef: { start: 14, end: 70 },
+        agi: { start: 13, end: 60 },
+        int: { start: 8, end: 45 },
+      },
+      serverOnly: "hidden",
+    }]);
+
+    expect(player.emit).toHaveBeenCalledWith("gui.open", expect.objectContaining({
+      data: expect.objectContaining({
+        actors: [{
+          id: "hero",
+          name: "Lorian",
+          description: "A young knight",
+          graphic: undefined,
+          faceset: undefined,
+          illustration: "lorian-illustration",
+          className: "Knight",
+          classDescription: "A sturdy melee fighter",
+          classIcon: "sword-icon",
+          stats: { maxHp: 120, str: 16, pdef: 14, agi: 13, int: 8 },
+        }],
+      }),
+    }));
+
+    gui.close();
+    return pending;
+  });
+
   test("input gui returns typed text and number values", async () => {
     const player: any = { canMove: true, emit: vi.fn() };
 
@@ -168,6 +256,7 @@ describe("GUI", () => {
             {
               id: "fire",
               name: "Fire",
+              icon: "db-icon",
               spCost: 3,
             },
           ],

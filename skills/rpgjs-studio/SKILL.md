@@ -131,6 +131,35 @@ curl -sS -X POST "$BASE_URL/..." \
   `DELETE /api/projects/:projectId/env/:name`. Plain values are returned in
   responses; secret values expose only `isSet` and must never be logged or
   printed.
+- Playable characters are database Actors under `/api/database/actors`. The
+  public runtime database includes Actors and the public project exposes
+  `mainActorId` so a new game can preselect the project hero.
+- Playable identities are database Classes under `/api/database/classes`.
+  New Actors require a valid `classId`; existing legacy Actors without one
+  remain readable. Classes own `name`, `description`, `icon`, and level-gated
+  `skills`, while Actors own appearance, statistics, inventory, and equipment.
+  A Class assigned to any Actor cannot be deleted until those Actors are
+  reassigned.
+- Character spritesheet metadata can contain `illustration`, the media `_id`
+  of a transparent 4:5 JRPG character illustration inherited by every Actor
+  using that spritesheet. AI generation type `illustration` costs 5 credits.
+- Database create and update validation treats `null` from non-nullable form
+  fields as an omitted value. When the JSON Schema declares a `default`, that
+  default is applied instead; explicit `0` values and explicitly nullable
+  fields are preserved. Optional object groups containing only omitted values,
+  such as `{ "hitbox": { "width": null, "height": null } }`, are omitted as
+  well. A validation `400` identifies the first invalid field with a dotted path
+  in `message`, for example
+  `{ "message": "parameters.pdef.start: Required" }`.
+- `menus.characterSelect` configures the new-game Actor selector. It supports
+  every Actor with `settings.allActors: true`, or an ordered list of Studio
+  Actor `_id` values in `settings.actorIds`. The selection is player/save-local
+  and does not mutate `mainActorId`.
+- Event workflows can open the same selector with `call_character_select` and
+  can assign a Class to the active player with `change_class`. The selector can
+  expose every Actor or an ordered unique subset and can optionally allow
+  cancellation. Applying a selected Actor preserves acquired progression; see
+  `references/blocks.md` for the exact payloads.
 - Maps may expose a shader terrain `terrainLayer` object with `version: 1`, `mode: "control-texture"`, pixel `width`/`height`, `tileSize`, `palette`, and `controlTexture` metadata. The control texture is RGBA8; terrain palette index is encoded as `R + G * 256`, optional light uses `B` with `128` as neutral, and `A` stores terrain mask coverage for pixel brush strokes. Soft edges are computed from transition/blend metadata at render time. Legacy tile grids are normalized into `tileSize x tileSize` blocks, but brush edits can update individual world pixels in the control texture.
 - Maps may expose a terrain morphology `terrainMorphologyLayer` object with `version: 1`, `mode: "terrain-morphology"`, pixel `width`/`height`, `tileSize`, and `features[]`. Each feature is either `{ kind: "hole", params, strokes }` or `{ kind: "wall", params, strokes }`; strokes store world-pixel `points[]` and `radius`. Hole params support `depth`, `roundness`, `roughness`, optional facade `textureId`, optional bottom-fill `fillTextureId`, `fillHeight` clamped to `0..100`, and optional per-hole `waveIntensity`, `waveDirection`, and `waveSpeed`; omitted wave fields inherit the map's `waterAnimation` values, while `waveIntensity: 0` keeps the fill static. `textureId` is not used as the bottom-fill fallback. Wall params support `height`, `roundness`, `roughness`, and optional facade `textureId`; the editor's wall smoothness control maps to `roughness = 1 - smoothness`. The brush tool modifies the terrain surface; hole/wall tools use the selected terrain texture as the vertical facade while the top surface remains the already-painted base terrain. The renderer merges hole/wall masks as signed terrain levels before drawing, so overlapping strokes are clipped or neutralized instead of being rendered as independent overlays. The editor renders morphology after the base terrain control texture and merges morphology strokes into terrain collision as blocking cells.
 - Maps may expose `waterAnimation: { enabled, speed, intensity, direction }` for map-level liquid animation defaults. `direction` is measured clockwise in screen-space degrees (`0` right, `90` down) and defaults to `90`. Filled holes inherit these defaults unless their params override them; wave highlights are derived from each fill's local color or texture instead of using a fixed blue tint.

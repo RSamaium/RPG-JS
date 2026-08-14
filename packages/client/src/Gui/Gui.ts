@@ -1,7 +1,7 @@
 import { Context, inject } from "@signe/di";
 import { signal, Signal, WritableSignal, type ComponentFunction } from "canvasengine";
 import { AbstractWebsocket, WebSocketToken } from "../services/AbstractSocket";
-import { DialogboxComponent, ShopComponent, SaveLoadComponent, MainMenuComponent, NotificationComponent, TitleScreenComponent, GameoverComponent, InputComponent, HotbarComponent } from "../components/gui";
+import { DialogboxComponent, ShopComponent, SaveLoadComponent, MainMenuComponent, NotificationComponent, TitleScreenComponent, GameoverComponent, InputComponent, HotbarComponent, CharacterSelectComponent } from "../components/gui";
 import { combineLatest, Subscription } from "rxjs";
 import { PrebuiltGui, type RpgContext } from "@rpgjs/common";
 
@@ -349,6 +349,11 @@ export class RpgGui {
     this.add({
       name: PrebuiltGui.Hotbar,
       component: HotbarComponent,
+      renderer: "canvas",
+    });
+    this.add({
+      name: PrebuiltGui.CharacterSelect,
+      component: CharacterSelectComponent,
       renderer: "canvas",
     });
 

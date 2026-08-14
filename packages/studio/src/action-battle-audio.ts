@@ -36,10 +36,27 @@ export interface StudioGuiBinding {
   guiId?: string | null;
 }
 
+/** Character selection settings persisted by RPGJS Studio. */
+export interface StudioCharacterSelectSettings {
+  /** Whether character select is shown for a new game. */
+  enabled: boolean;
+  /** Whether every Actor record is offered. */
+  allActors: boolean;
+  /** Studio Actor document IDs offered when `allActors` is false. */
+  actorIds: string[];
+}
+
+/** Project-level binding for the native character selection GUI. */
+export interface StudioCharacterSelectBinding extends StudioGuiBinding {
+  settings: Omit<StudioCharacterSelectSettings, "enabled">;
+}
+
 /** GUI bindings persisted by RPGJS Studio. */
 export interface StudioMenusSettings {
   /** Title Screen binding. Disabled projects enter their starting map directly. */
   titleScreen?: StudioGuiBinding;
+  /** Character selection shown only when starting a new game. */
+  characterSelect?: StudioCharacterSelectBinding;
   /** Hotbar binding and its role-specific settings. */
   hotbar?: StudioHotbarBinding;
   /** Persistent player status HUD binding. */
@@ -47,6 +64,36 @@ export interface StudioMenusSettings {
   /** Main Menu binding opened by the logical Back action. */
   mainMenu?: StudioGuiBinding;
 }
+
+const DEFAULT_STUDIO_CHARACTER_SELECT: StudioCharacterSelectSettings = {
+  enabled: false,
+  allActors: true,
+  actorIds: [],
+};
+
+/** Normalize untrusted Studio character selection settings. */
+export const normalizeStudioCharacterSelectSettings = (
+  value: unknown,
+): StudioCharacterSelectSettings => {
+  if (!value || typeof value !== "object") {
+    return { ...DEFAULT_STUDIO_CHARACTER_SELECT };
+  }
+  const input = value as Partial<StudioCharacterSelectBinding>
+    & Partial<StudioCharacterSelectSettings>;
+  const settings = input.settings && typeof input.settings === "object"
+    ? input.settings
+    : input;
+  const actorIds = Array.isArray(settings.actorIds)
+    ? Array.from(new Set(settings.actorIds.filter(
+        (id): id is string => typeof id === "string" && id.trim().length > 0,
+      )))
+    : [];
+  return {
+    enabled: input.enabled === true,
+    allActors: settings.allActors !== false,
+    actorIds,
+  };
+};
 
 const DEFAULT_STUDIO_HOTBAR: StudioHotbarSettings = {
   enabled: false,

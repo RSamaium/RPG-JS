@@ -1,5 +1,26 @@
 # @rpgjs/playground-hotbar
 
+## 1.0.0-beta.3
+
+### Patch Changes
+
+- Updated dependencies [e892732]
+  - @rpgjs/client@5.0.0-beta.31
+  - @rpgjs/common@5.0.0-beta.29
+  - @rpgjs/server@5.0.0-beta.31
+  - @rpgjs/vite@5.0.0-beta.31
+
+## 1.0.0-beta.2
+
+### Patch Changes
+
+- Updated dependencies [e0bba29]
+- Updated dependencies [aed4d3e]
+  - @rpgjs/client@5.0.0-beta.30
+  - @rpgjs/common@5.0.0-beta.28
+  - @rpgjs/server@5.0.0-beta.30
+  - @rpgjs/vite@5.0.0-beta.30
+
 ## 1.0.0-beta.1
 
 ### Patch Changes

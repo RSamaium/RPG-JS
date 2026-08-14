@@ -5,6 +5,7 @@ import {
   schemaShowChoices,
   schemaShowNotification,
   schemaConditionalBranch,
+  schemaQueryArea,
   schemaWait,
   schemaSetVariable,
   schemaSetSwitch,
@@ -14,6 +15,8 @@ import {
   schemaChangeSp,
   schemaChangeExp,
   schemaChangeLevel,
+  schemaCallCharacterSelect,
+  schemaChangeClass,
   schemaChangeParameter,
   schemaRecoverAll,
   schemaChangeItem,
@@ -72,6 +75,8 @@ export const defaultBlocks = [
   
     // Control Flow Blocks
     schemaConditionalBranch,
+
+    schemaQueryArea,
   
     schemaWait,
   
@@ -167,6 +172,10 @@ export const defaultBlocks = [
     schemaApplyGraphicAnimation,
 
     schemaShowUpAnimation,
+
+    schemaCallCharacterSelect,
+
+    schemaChangeClass,
   
     // Scene & Map Blocks
     schemaTransferPlayer,

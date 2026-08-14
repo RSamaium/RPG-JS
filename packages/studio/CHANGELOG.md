@@ -1,5 +1,52 @@
 # @rpgjs/studio
 
+## 5.0.0-beta.33
+
+### Patch Changes
+
+- bfc0933: Reduce animated terrain water rendering cost by copying only the pixels covered by each refraction band instead of redrawing the full terrain chunk for every band. Configure the Studio playground with a large animated-water map for local performance testing.
+- bfc0933: Expose a `default` animation for Studio icons and facesets so RPGJS UI components can render them without rejecting spritesheet playback.
+- bfc0933: Use the native named map start position when spawning players in Studio games,
+  avoiding asynchronous database refreshes moving a player away from the `(0, 0)`
+  sentinel before the configured start position is applied.
+- Updated dependencies [e892732]
+  - @rpgjs/client@5.0.0-beta.31
+  - @rpgjs/common@5.0.0-beta.29
+  - @rpgjs/server@5.0.0-beta.31
+  - @rpgjs/action-battle@5.0.0-beta.31
+  - @rpgjs/vite@5.0.0-beta.31
+
+## 5.0.0-beta.32
+
+### Patch Changes
+
+- d005fdd: Reduce Studio terrain CPU usage by coalescing terrain asset loading, lazily rasterizing non-streamed chunks around the viewport, reusing morphology masks and filtered overlays across chunks, and rendering cropped water animations at a smooth capped frame rate. Keep the existing map loader visible until the initial terrain viewport has been rasterized and presented.
+- e0bba29: Keep the legacy Action Battle-specific action bar available alongside the new
+  persistent hotbar, including configured slot ordering, menu access, keyboard
+  activation, and direct activation from its slots. Studio icon spritesheets now
+  expose the default texture expected by GUI components.
+- e0bba29: Fix Studio world-map transitions and preserve the reactive HUD state during
+  map transfers.
+
+  - Normalize scaled Studio world coordinates to integer pixels and resolve
+    automatic transitions from exact directional neighbors.
+  - Keep explicit border-entry coordinates through map-room transfers instead of
+    falling back to the destination map's `start` position.
+  - Restore Studio's generated class from every destination map database so a
+    standalone session transfer keeps the player snapshot, including HP and SP,
+    while deferring a runtime class until the destination database has loaded.
+  - Apply synchronized player parameters through their signal and keep the Studio
+    HUD mounted so the avatar, HP, and SP remain reactive across map changes.
+
+- Updated dependencies [e0bba29]
+- Updated dependencies [e0bba29]
+- Updated dependencies [aed4d3e]
+  - @rpgjs/action-battle@5.0.0-beta.30
+  - @rpgjs/client@5.0.0-beta.30
+  - @rpgjs/common@5.0.0-beta.28
+  - @rpgjs/server@5.0.0-beta.30
+  - @rpgjs/vite@5.0.0-beta.30
+
 ## 5.0.0-beta.31
 
 ### Minor Changes

@@ -158,6 +158,10 @@ export abstract class BaseRoom {
         return userSnapshot;
       }
 
+      if (user) {
+        await lastValueFrom(this.hooks.callHooks("server-playerProps-load", user));
+      }
+
       let resolvedSnapshot = userSnapshot;
       if (user && typeof (user as any).resolveItemsSnapshot === 'function') {
         resolvedSnapshot = (user as any).resolveItemsSnapshot(resolvedSnapshot, this);

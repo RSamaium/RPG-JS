@@ -18,6 +18,7 @@ import type {
   RpgServerEngineHooks,
   RpgServerStepMetrics,
   StateData,
+  ActorData,
   ServerMapStreamingAdapter,
 } from "@rpgjs/server";
 import {
@@ -76,6 +77,12 @@ describe("server public API types", () => {
       expectTypeOf(player.assignHotbarSlot(0, { type: "skill", id: "fire" }))
         .toEqualTypeOf<HotbarState>();
       expectTypeOf(player.clearHotbarSlot(0)).toEqualTypeOf<HotbarState>();
+      expectTypeOf(player.showCharacterSelect([{ id: "hero", name: "Hero" }]))
+        .toEqualTypeOf<Promise<ActorData | null>>();
+      expectTypeOf(player.setActor({ id: "hero", name: "Hero" }))
+        .toEqualTypeOf<ActorData>();
+      expectTypeOf(player.changeActor({ id: "mage", name: "Mage" }))
+        .toEqualTypeOf<ActorData>();
     };
 
     expectTypeOf(assertions).toBeFunction();

@@ -7,6 +7,60 @@ export type SpriteAlphaBounds = {
   height: number;
 };
 
+type TextureLike = {
+  width?: unknown;
+  height?: unknown;
+  source?: {
+    width?: unknown;
+    height?: unknown;
+    pixelWidth?: unknown;
+    pixelHeight?: unknown;
+    resource?: {
+      width?: unknown;
+      height?: unknown;
+      naturalWidth?: unknown;
+      naturalHeight?: unknown;
+      videoWidth?: unknown;
+      videoHeight?: unknown;
+      source?: unknown;
+    };
+  };
+};
+
+const positiveDimension = (value: unknown): number | undefined =>
+  typeof value === "number" && Number.isFinite(value) && value > 0
+    ? value
+    : undefined;
+
+/**
+ * Resolve the dimensions of the original image rather than those of a cached
+ * Pixi texture frame. Pixi can mutate a cached texture to the active
+ * spritesheet frame while its source resource keeps the full image size.
+ */
+export const resolveTextureSourceDimensions = (
+  value: unknown,
+): { width: number; height: number } | undefined => {
+  const texture = value as TextureLike | null | undefined;
+  const source = texture?.source;
+  const resource = source?.resource;
+  const candidates: Array<[unknown, unknown]> = [
+    [source?.pixelWidth, source?.pixelHeight],
+    [resource?.naturalWidth, resource?.naturalHeight],
+    [resource?.videoWidth, resource?.videoHeight],
+    [resource?.width, resource?.height],
+    [source?.width, source?.height],
+    [texture?.width, texture?.height],
+  ];
+
+  for (const [candidateWidth, candidateHeight] of candidates) {
+    const width = positiveDimension(candidateWidth);
+    const height = positiveDimension(candidateHeight);
+    if (width && height) return { width, height };
+  }
+
+  return undefined;
+};
+
 const alphaBoundsCache = new Map<
   string,
   Promise<Array<SpriteAlphaBounds | null> | null>

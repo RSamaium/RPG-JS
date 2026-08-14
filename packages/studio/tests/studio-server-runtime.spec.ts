@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { MAXHP, MAXSP } from "@rpgjs/common";
+import { Direction, MAXHP, MAXSP, WorldMapsManager } from "@rpgjs/common";
 import { RpgPlayer, type RpgMap } from "@rpgjs/server";
 import studioServer, {
   createStudioMapUpdatePayload,
+  prepareStudioWorldMaps,
   resolveRuntimeEventHitbox,
 } from "../src/server";
 import {
@@ -19,6 +20,53 @@ afterEach(() => {
 });
 
 describe("Studio server runtime", () => {
+  test("publishes the generated Studio class in every map database", async () => {
+    const databaseProvider = (studioServer() as any).database as (map: RpgMap) => Promise<Record<string, any>>;
+    const database = await databaseProvider({
+      data: () => ({
+        config: {
+          skills: [{ level: 1, skillId: "fire" }],
+        },
+        database: [],
+      }),
+    } as unknown as RpgMap);
+
+    expect(database["studio-default-class"]).toEqual({
+      id: "studio-default-class",
+      name: "Studio Default Class",
+      skillsToLearn: [{ level: 1, skill: "fire", source: "studio" }],
+    });
+  });
+
+  test("normalizes real Studio world coordinates to touching pixel edges", () => {
+    const [startMap, upperMap] = prepareStudioWorldMaps([
+      {
+        id: "333a4ea7-3c10-4bc8-b9be-acafe9d2c06b",
+        worldX: -1432,
+        worldY: -1040,
+        width: 2400,
+        height: 2400,
+      },
+      {
+        id: "77a61765-58cd-41fa-a1a9-7f71ec2333cb",
+        worldX: -1433,
+        worldY: -1211,
+        width: 1440,
+        height: 960,
+      },
+    ]);
+    const worldMaps = new WorldMapsManager();
+    worldMaps.configure([startMap, upperMap]);
+
+    expect(startMap.worldY).toBe(-5840);
+    expect(upperMap.worldY).toBe(-6800);
+    expect(upperMap.worldY + upperMap.height).toBe(startMap.worldY);
+    expect(worldMaps.getAdjacentMaps(worldMaps.getMapInfo(startMap.id)!, Direction.Up))
+      .toEqual([expect.objectContaining({ id: upperMap.id })]);
+    expect(worldMaps.getAdjacentMaps(worldMaps.getMapInfo(upperMap.id)!, Direction.Down))
+      .toEqual([expect.objectContaining({ id: startMap.id })]);
+  });
+
   test("starts a player immediately when autoStart is enabled", async () => {
     const calls: string[] = [];
     const player = {
@@ -121,6 +169,172 @@ describe("Studio server runtime", () => {
     expect(initializeDefaultStats).toHaveBeenCalledOnce();
     expect(changeMap).toHaveBeenCalledOnce();
     expect(changeMap).toHaveBeenCalledWith("first-map");
+  });
+
+  test("selects and applies an actor before the first map of a new game", async () => {
+    const actors = [
+      {
+        _id: "actor-1",
+        type: "actor",
+        name: "Ayla",
+        description: "Swift and precise",
+        graphic: "ayla",
+        classId: "ranger-class",
+        parameters: { maxHp: { start: 90, end: 500 }, agi: { start: 18, end: 90 } },
+      },
+      { _id: "actor-2", type: "actor", name: "Borin", graphic: "borin", classId: "knight-class" },
+      {
+        _id: "ranger-class",
+        type: "class",
+        name: "Ranger",
+        description: "A fast ranged fighter",
+        icon: "bow-icon",
+        skills: [{ skillId: "arrow-rain", level: 3 }],
+      },
+      { _id: "knight-class", type: "class", name: "Knight", skills: [{ skillId: "guard", level: 1 }] },
+    ];
+    configureGameDataProvider({
+      kind: "online",
+      getProject: vi.fn(async () => ({
+        _id: "character-select-project",
+        startMapId: "first-map",
+        mainActorId: "actor-1",
+        menus: {
+          titleScreen: { enabled: false },
+          characterSelect: {
+            enabled: true,
+            settings: { allActors: false, actorIds: ["actor-2", "actor-1"] },
+          },
+        },
+      })),
+      getMap: vi.fn(),
+      getMedia: vi.fn(async (id: string) => ({
+        _id: id,
+        type: "spritesheet",
+        fileName: `${id}.png`,
+        metadata: id === "ayla" ? { illustration: "ayla-art" } : {},
+      })),
+      getDatabase: vi.fn(async () => actors),
+    });
+    const showCharacterSelect = vi.fn(async () => ({ id: "actor-2", name: "Borin" }));
+    const setActor = vi.fn();
+    const changeMap = vi.fn(async () => true);
+    const player: any = {
+      initializeDefaultStats: vi.fn(),
+      showCharacterSelect,
+      setActor,
+      changeMap,
+    };
+    const hooks = (studioServer({ projectId: "character-select-project" }) as any).player;
+
+    expect(hooks.props.studioSelectedActorId).toEqual({
+      $default: null,
+      $syncWithClient: false,
+      $permanent: true,
+    });
+
+    await hooks.onConnected(player);
+
+    expect(showCharacterSelect).toHaveBeenCalledWith([
+      expect.objectContaining({ id: "actor-2", name: "Borin", graphic: "borin" }),
+      expect.objectContaining({
+        id: "actor-1",
+        name: "Ayla",
+        graphic: "ayla",
+        illustration: "ayla-art",
+        class: expect.objectContaining({
+          id: "ranger-class",
+          name: "Ranger",
+          icon: "bow-icon",
+          skillsToLearn: [{ level: 3, skill: "arrow-rain", source: "studio" }],
+        }),
+        parameters: expect.objectContaining({ maxHp: { start: 90, end: 500 } }),
+      }),
+    ], expect.objectContaining({ selectedActorId: "actor-1", allowCancel: false }));
+    expect(setActor).toHaveBeenCalledWith(expect.objectContaining({
+      id: "actor-2",
+      name: "Borin",
+      class: expect.objectContaining({ id: "knight-class", name: "Knight" }),
+    }));
+    expect(player.studioSelectedActorId).toBe("actor-2");
+    expect(changeMap).toHaveBeenCalledWith("first-map");
+  });
+
+  test("skips an invalid character selection and keeps the main actor fallback", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    configureGameDataProvider({
+      kind: "online",
+      getProject: vi.fn(async () => ({
+        _id: "empty-character-select-project",
+        startMapId: "first-map",
+        menus: {
+          titleScreen: { enabled: false },
+          characterSelect: {
+            enabled: true,
+            settings: { allActors: false, actorIds: ["deleted-actor"] },
+          },
+        },
+      })),
+      getMap: vi.fn(),
+      getMedia: vi.fn(),
+      getDatabase: vi.fn(async () => [
+        { _id: "actor-1", type: "actor", name: "Ayla" },
+      ]),
+    });
+    const showCharacterSelect = vi.fn();
+    const changeMap = vi.fn(async () => true);
+    const hooks = (studioServer({ projectId: "empty-character-select-project" }) as any).player;
+
+    await hooks.onConnected({
+      initializeDefaultStats: vi.fn(),
+      showCharacterSelect,
+      setActor: vi.fn(),
+      changeMap,
+    });
+
+    expect(showCharacterSelect).not.toHaveBeenCalled();
+    expect(changeMap).toHaveBeenCalledWith("first-map");
+    expect(warn).toHaveBeenCalledWith(
+      "[StudioGame] character select has no valid actors; using the project main actor",
+    );
+    warn.mockRestore();
+  });
+
+  test("keeps the main actor fallback when character select actors cannot be loaded", async () => {
+    const error = new Error("database unavailable");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    configureGameDataProvider({
+      kind: "online",
+      getProject: vi.fn(async () => ({
+        _id: "unavailable-character-select-project",
+        startMapId: "first-map",
+        menus: {
+          titleScreen: { enabled: false },
+          characterSelect: { enabled: true, settings: { allActors: true, actorIds: [] } },
+        },
+      })),
+      getMap: vi.fn(),
+      getMedia: vi.fn(),
+      getDatabase: vi.fn(async () => { throw error; }),
+    });
+    const showCharacterSelect = vi.fn();
+    const changeMap = vi.fn(async () => true);
+    const hooks = (studioServer({ projectId: "unavailable-character-select-project" }) as any).player;
+
+    await hooks.onConnected({
+      initializeDefaultStats: vi.fn(),
+      showCharacterSelect,
+      setActor: vi.fn(),
+      changeMap,
+    });
+
+    expect(showCharacterSelect).not.toHaveBeenCalled();
+    expect(changeMap).toHaveBeenCalledWith("first-map");
+    expect(warn).toHaveBeenCalledWith(
+      "[StudioGame] character select actors could not be loaded; using the project main actor",
+      error,
+    );
+    warn.mockRestore();
   });
 
   test("does not open the main menu when its project binding is disabled", () => {
@@ -468,6 +682,84 @@ describe("Studio server runtime", () => {
       "project-a",
       "project-b",
     ]);
+  });
+
+  test("applies the selected actor resources and actor skills on map join", async () => {
+    const records = [
+      {
+        _id: "actor-luna",
+        type: "actor",
+        name: "Luna",
+        graphic: "luna-graphic",
+        classId: "class-warrior",
+        parameters: {
+          [MAXHP]: { start: 420, end: 4200 },
+          [MAXSP]: { start: 900, end: 7000 },
+        },
+        skills: [{ skillId: "skill-heal", level: 1 }],
+      },
+      {
+        _id: "class-warrior",
+        type: "class",
+        name: "Warrior",
+        skills: [],
+      },
+      {
+        _id: "skill-heal",
+        type: "skill",
+        name: "Soin astral",
+        spCost: 12,
+        power: 35,
+      },
+    ];
+    configureGameDataProvider({
+      kind: "online",
+      getProject: vi.fn(),
+      getMap: vi.fn(),
+      getMedia: vi.fn(),
+      getDatabase: vi.fn(async () => records),
+    });
+    const database: Record<string, any> = {};
+    const map = {
+      globalConfig: {
+        _id: "actor-project",
+        startMapId: "actor-map",
+        hero: {
+          graphic: "fallback-graphic",
+          parameters: {
+            [MAXHP]: { start: 741, end: 7467 },
+            [MAXSP]: { start: 534, end: 5500 },
+          },
+        },
+      },
+      database: () => database,
+      addInDatabase: (id: string, value: any) => {
+        database[id] = value;
+      },
+      startPosition: { x: 0, y: 0 },
+      scale: 1,
+    } as unknown as RpgMap;
+    const player = new RpgPlayer() as RpgPlayer & {
+      studioSelectedActorId: (() => string | null) & { set(value: string | null): void };
+    };
+    player.setSync({
+      studioSelectedActorId: {
+        $default: null,
+        $syncWithClient: false,
+        $permanent: true,
+      },
+    });
+    player.studioSelectedActorId.set("actor-luna");
+    (player as any).execMethod = vi.fn(async () => undefined);
+    player.initializeDefaultStats();
+    player.setMap(map);
+
+    await (studioServer() as any).player.onJoinMap(player, map);
+
+    expect(player.graphics()).toContain("luna-graphic");
+    expect(player.hp).toBe(420);
+    expect(player.sp).toBe(900);
+    expect(player.getSkill("skill-heal")).toBeDefined();
   });
 
   test("refreshes online item records when a player joins an existing map", async () => {

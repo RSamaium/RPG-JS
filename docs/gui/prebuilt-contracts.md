@@ -99,6 +99,22 @@ For example, this CanvasEngine component can replace the built-in dialog box:
 
 Use `onFinish()` when the server is waiting for a final answer, such as a dialog choice. Use `onInteraction()` for actions that should keep the GUI open, such as buying an item or equipping gear.
 
+## Character Select
+
+| Contract | Value |
+| --- | --- |
+| ID | `PrebuiltGui.CharacterSelect` / `rpg-character-select` |
+| Server API | `player.showCharacterSelect(actors, options)` |
+| Select with | `onInteraction('select', { id })` |
+| Cancel with | `onInteraction('cancel')` when `allowCancel` is true |
+
+Data contains `actors`, `title`, `subtitle`, `selectedActorId`, and
+`allowCancel`. Each Actor presentation contains `id`, optional `name`, optional
+`description`, and optional `graphic` and `faceset` spritesheet IDs. A custom
+renderer must return an Actor ID from this list; the server ignores unknown IDs
+and keeps the GUI open. The promise resolves to the original server-owned Actor,
+not the client payload, and never calls `setActor()` implicitly.
+
 ## Input
 
 | Contract | Value |

@@ -6,6 +6,7 @@ import {
   ShowAnimationParams,
   Constructor,
   Direction,
+  type WorldMapInfo,
   AttachShapeOptions,
   RpgShape,
   ShapePositioning,
@@ -223,8 +224,14 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
 
   /** Internal: Shapes where this player is currently located */
   private _inShapes: Set<RpgShape> = new Set();
-  /** Last processed client input timestamp for reconciliation */
+  /** Server-clock deadline used to stop idle movement. */
   lastProcessedInputTs: number = 0;
+  /** Last client-authored timestamp, kept separately for anti-cheat validation. */
+  lastProcessedClientInputTs: number = 0;
+  /** Client physics tick attached to the last processed movement input. */
+  lastProcessedInputTick: number | null = null;
+  /** Server physics tick at which that client tick was applied. */
+  lastProcessedInputServerTick: number | null = null;
   /** Last processed client input frame for reconciliation with server tick */
   _lastFramePositions: {
     frame: number;
@@ -299,8 +306,8 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
     }
   }
 
-  _onInit() {
-    this.hooks.callHooks("server-playerProps-load", this).subscribe();
+  async _onInit(): Promise<void> {
+    await lastValueFrom(this.hooks.callHooks("server-playerProps-load", this));
   }
 
   /**
@@ -487,13 +494,19 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
             this.touchSide = false
         }
 
-        const changeMap = async (adjacent, to) => {
+        const changeMap = async (
+            adjacent: Direction,
+            to: (nextMapInfo: WorldMapInfo) => { x: number; y: number; z?: number }
+        ) => {
             const [nextMap] = worldMaps.getAdjacentMaps(map, adjacent)
             if (!nextMap) {
                 return false
             }
             const id = nextMap.id as string
             const nextMapInfo = worldMaps.getMapInfo(id)
+            if (!nextMapInfo) {
+                return false
+            }
             this.continueMovementOnNextMapChange = true
             let changed = false
             try {
@@ -509,38 +522,26 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
         }
 
         if (nextPosition.x < marginLeftRight && direction == Direction.Left) {
-            ret = await changeMap({
-                x: map.worldX - 1,
-                y: this.worldPositionY() + 1
-            }, nextMapInfo => ({
+            ret = await changeMap(Direction.Left, nextMapInfo => ({
                 x: (nextMapInfo.width) - this.hitbox().w - marginLeftRight,
-                y: map.worldY - nextMapInfo.y + nextPosition.y
+                y: map.worldY - nextMapInfo.worldY + nextPosition.y
             }))
         }
         else if (nextPosition.x > map.widthPx - this.hitbox().w - marginLeftRight && direction == Direction.Right) {
-            ret = await changeMap({
-                x: map.worldX + map.widthPx + 1,
-                y: this.worldPositionY() + 1
-            }, nextMapInfo => ({
+            ret = await changeMap(Direction.Right, nextMapInfo => ({
                 x: marginLeftRight,
-                y: map.worldY - nextMapInfo.y + nextPosition.y
+                y: map.worldY - nextMapInfo.worldY + nextPosition.y
             }))
         }
         else if (nextPosition.y < marginTopDown && direction == Direction.Up) {
-            ret = await changeMap({
-                x: this.worldPositionX() + 1,
-                y: map.worldY - 1
-            }, nextMapInfo => ({
-                x: map.worldX - nextMapInfo.x + nextPosition.x,
+            ret = await changeMap(Direction.Up, nextMapInfo => ({
+                x: map.worldX - nextMapInfo.worldX + nextPosition.x,
                 y: (nextMapInfo.height) - this.hitbox().h - marginTopDown,
             }))
         }
         else if (nextPosition.y > map.heightPx - this.hitbox().h - marginTopDown && direction == Direction.Down) {
-            ret = await changeMap({
-                x: this.worldPositionX() + 1,
-                y: map.worldY + map.heightPx + 1
-            }, nextMapInfo => ({
-                x: map.worldX - nextMapInfo.x + nextPosition.x,
+            ret = await changeMap(Direction.Down, nextMapInfo => ({
+                x: map.worldX - nextMapInfo.worldX + nextPosition.x,
                 y: marginTopDown,
             }))
         }
@@ -1917,9 +1918,19 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
   setSync(schema: RpgSyncSchema): void {
     for (let key in schema) {
       const options = schema[key] && typeof schema[key] === 'object' && !Array.isArray(schema[key])
-        ? schema[key] as { $syncWithClient?: boolean; $permanent?: boolean }
+        ? schema[key] as { $default?: unknown; $syncWithClient?: boolean; $permanent?: boolean }
         : {};
-      this[key] = type(signal<unknown>(null) as never, key, {
+      const currentProperty = this[key];
+      if (
+        typeof currentProperty === 'function'
+        && typeof (currentProperty as { set?: unknown }).set === 'function'
+      ) {
+        continue;
+      }
+      const initialValue = currentProperty !== undefined
+        ? currentProperty
+        : options.$default ?? null;
+      this[key] = type(signal<unknown>(initialValue) as never, key, {
         syncToClient: options.$syncWithClient,
         persist: options.$permanent,
       }, this as never)
