@@ -186,7 +186,8 @@ export const createSpriteSheetObject = async (
           },
         },
       };
-    case "icon": {
+    case "icon":
+    case "illustration": {
       const iconTexture = {
         animations: () => [[{ time: 0, frameX: 0, frameY: 0 }]],
       };

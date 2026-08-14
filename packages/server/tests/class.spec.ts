@@ -135,6 +135,15 @@ describe("Class Manager - setClass", () => {
     expect(classInstance.id).toBe("warrior");
   });
 
+  test("should set class using a resolved object and expose it on the player", () => {
+    const source = { id: "ranger", name: "Ranger", description: "A precise scout" };
+
+    const classInstance = player.setClass(source);
+
+    expect(classInstance).toBe(source);
+    expect(player._class()).toStrictEqual(source);
+  });
+
   test("should set different classes", () => {
     const warrior = player.setClass(WarriorClass);
     expect(warrior.name).toBe("Warrior");
@@ -208,6 +217,24 @@ describe("Class Manager - setClass", () => {
 });
 
 describe("Class Manager - setActor", () => {
+  test("should set actor using a resolved actor object", () => {
+    const source = {
+      id: "resolved-hero",
+      name: "Resolved Hero",
+      initialLevel: 3,
+      finalLevel: 40,
+      parameters: {},
+      startingEquipment: [],
+    };
+
+    const actor = player.setActor(source);
+
+    expect(actor).toBe(source);
+    expect(actor.id).toBe("resolved-hero");
+    expect(player.name).toBe("Resolved Hero");
+    expect((player as any).initialLevel).toBe(3);
+  });
+
   test("should set actor using class constructor", () => {
     const actor = player.setActor(HeroActor);
     expect(actor).toBeDefined();
@@ -253,10 +280,16 @@ describe("Class Manager - setActor", () => {
     expect((item as any)?.equipped).toBe(true);
   });
 
-  test.skip("should set class from actor if defined", () => {
-    player.setActor(HeroActor);
-    // Class should be set to Warrior
-    expect(player._class()).toBeDefined();
+  test("should set class from a resolved actor object", () => {
+    player.setActor({
+      id: "classed-hero",
+      name: "Classed Hero",
+      parameters: {},
+      startingEquipment: [],
+      class: { id: "guardian", name: "Guardian" },
+    });
+
+    expect(player._class()).toMatchObject({ id: "guardian", name: "Guardian" });
   });
 
   test("should work with actor without class", () => {
@@ -282,16 +315,78 @@ describe("Class Manager - setActor", () => {
   });
 });
 
+describe("Class Manager - changeActor", () => {
+  test("should apply a new actor while preserving progression", () => {
+    player.parameters = {
+      [MAXHP]: { start: 200, end: 200 },
+      [MAXSP]: { start: 80, end: 80 },
+    };
+    player.level = 12;
+    player.exp = 500;
+    player.hp = 100;
+    player.sp = 20;
+    const level = player.level;
+    const exp = player.exp;
+    const inventory = player.items();
+    const equipment = player.equipments();
+    const skills = player.skills();
+    const states = player.states();
+    const modifiers = { [ATK]: { value: 7 } };
+    player.paramsModifier = modifiers;
+    const addItem = vi.spyOn(player, "addItem");
+    const equip = vi.spyOn(player, "equip");
+
+    const actor = player.changeActor({
+      id: "runtime-mage",
+      name: "Runtime Mage",
+      initialLevel: 3,
+      finalLevel: 60,
+      graphic: "runtime-mage",
+      hitbox: { width: 24, height: 28 },
+      parameters: {
+        [MAXHP]: { start: 400, end: 400 },
+        [MAXSP]: { start: 160, end: 160 },
+      },
+      startingEquipment: ["forbidden-starter-item"],
+      class: { id: "runtime-class", name: "Runtime Class" },
+    });
+
+    expect(actor.id).toBe("runtime-mage");
+    expect(player.name).toBe("Runtime Mage");
+    expect(player.level).toBe(level);
+    expect(player.exp).toBe(exp);
+    expect(player.param[MAXHP]).toBe(400);
+    expect(player.param[MAXSP]).toBe(160);
+    expect(player.hp).toBe(200);
+    expect(player.sp).toBe(40);
+    expect(Array.from(player.graphics())).toEqual(["runtime-mage"]);
+    expect(player.hitbox()).toStrictEqual({ w: 24, h: 28 });
+    expect(player._class()).toMatchObject({ id: "runtime-class" });
+    expect(player.items()).toBe(inventory);
+    expect(player.equipments()).toBe(equipment);
+    expect(player.skills()).toBe(skills);
+    expect(player.states()).toBe(states);
+    expect(player.paramsModifier).toStrictEqual(modifiers);
+    expect(addItem).not.toHaveBeenCalled();
+    expect(equip).not.toHaveBeenCalled();
+  });
+
+  test("should resolve an actor database ID", () => {
+    const actor = player.changeActor("villain");
+
+    expect(actor.id).toBe("villain");
+    expect(player.name).toBe("Villain");
+  });
+});
+
 describe("Class Manager - Class Properties", () => {
-  // Note: elementsEfficiency from class requires _class() to return class data
-  // setClass creates an instance but doesn't store it in _class signal
-  test.skip("should get elementsEfficiency from class", () => {
+  test("should get elementsEfficiency from class", () => {
     player.setClass(WarriorClass);
     const efficiency = player.elementsEfficiency;
     expect(efficiency.some(e => e.element === "physical")).toBe(true);
   });
 
-  test.skip("should get elementsEfficiency from mage class", () => {
+  test("should get elementsEfficiency from mage class", () => {
     player.setClass(MageClass);
     const efficiency = player.elementsEfficiency;
     

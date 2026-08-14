@@ -71,6 +71,24 @@ describe("Studio spritesheet utils", () => {
     expect(spritesheet.trimTransparentBounds).toBe(true);
   });
 
+  test("registers character illustrations as single-frame spritesheets", async () => {
+    const spritesheet = await createSpriteSheetObject({
+      type: "illustration",
+      id: "hero-art",
+      fileName: "hero-art.png",
+      width: 800,
+      height: 1000,
+    });
+
+    expect(spritesheet).toMatchObject({
+      id: "#illustration_hero-art",
+      framesWidth: 1,
+      framesHeight: 1,
+      width: 800,
+      height: 1000,
+    });
+  });
+
   test("plays attacks in 350ms without accelerating locomotion", async () => {
     const spritesheet = await createSpriteSheetObject({
       type: "spritesheet",

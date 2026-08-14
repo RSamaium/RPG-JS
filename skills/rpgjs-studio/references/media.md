@@ -66,6 +66,13 @@ Credit costs available in `common/permissions/credit.ts`:
 - `spritesheetPreview`: 1
 - `terrain`: 5
 - `tileset`: 15
+- `illustration`: 5
+
+`illustration` generates one transparent full- or three-quarter-body JRPG
+character image intended for a vertical 4:5 hero selector. Pass the character
+spritesheet URL or data URI as `metadata.referenceImage`. After generation,
+store the returned media `_id` in the owning spritesheet's
+`metadata.illustration`; Actors using that spritesheet inherit it.
 
 ## Example: list all media
 

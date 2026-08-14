@@ -17,6 +17,7 @@ Dialogs, menus, notifications, and custom GUI commands.
 - [Displays a notification](#displays-a-notification)
 - [Hide Hotbar](#hide-hotbar)
 - [Hide to GUI attached](#hide-to-gui-attached)
+- [Show Character Select](#show-character-select)
 - [Show Choices](#show-choices)
 - [Show Hotbar](#show-hotbar)
 - [Show Input](#show-input)
@@ -235,6 +236,38 @@ player.hideAttachedGui(aPlayer)
 ```
 ```ts
 player.hideAttachedGui([player1, player2])
+```
+
+## Show Character Select
+
+Display the prebuilt character selection GUI and return the server-owned
+actor chosen by the player. This method never applies the actor.
+
+- Source: `packages/server/src/Player/GuiManager.ts`
+- Kind: `method`
+- Member of: `RpgPlayer`
+- Defined in: `GuiManagerMixin`
+
+### Signature
+
+```ts
+player.showCharacterSelect(actors,options)
+```
+
+### Parameters
+
+- `actors`: `readonly ActorInput[]`
+- `options?`: `CharacterSelectOptions`
+
+### Returns
+
+The validated actor, or `null` when cancellation is allowed and requested.
+
+### Examples
+
+```ts
+const actor = await player.showCharacterSelect([Hero, Mage])
+if (actor) player.setActor(actor)
 ```
 
 ## Show Choices

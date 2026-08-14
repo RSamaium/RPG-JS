@@ -3,6 +3,9 @@ import { Constructor, isString, PlayerCtor, RpgCommonPlayer } from "@rpgjs/commo
 export interface ClassData {
   id?: string;
   name?: string;
+  description?: string;
+  icon?: string;
+  skillsToLearn?: Array<{ level: number; skill: unknown; source?: string }>;
   [key: string]: unknown;
 }
 
@@ -14,15 +17,16 @@ export interface ActorData {
   expCurve?: Record<string, number>;
   parameters?: Record<string, { start: number; end: number }>;
   startingEquipment?: unknown[];
-  class?: ClassConstructor | string;
+  class?: ClassInput;
+  graphic?: string | number | (string | number)[];
+  hitbox?: { width: number; height: number };
   [key: string]: unknown;
 }
 
 export type ClassConstructor = new () => ClassData;
+export type ClassInput = ClassConstructor | ClassData | string;
 export type ActorConstructor = new () => ActorData;
-type ClassClass = ClassConstructor;
-type ClassInput = ClassClass | ClassData | string;
-type ActorClass = ActorConstructor;
+export type ActorInput = ActorConstructor | ActorData | string;
 
 interface PlayerWithMixins extends RpgCommonPlayer {
   databaseById(id: string): any;
@@ -57,8 +61,17 @@ interface PlayerWithMixins extends RpgCommonPlayer {
  */
 export function WithClassManager<TBase extends PlayerCtor>(Base: TBase) {
   return class extends Base {
-    private _resolveClassInput(classInput: ClassInput, databaseByIdOverride?: (id: string) => any) {
-      if (isString(classInput)) {
+    private _resolveActorInput(actorInput: ActorInput): ActorData {
+      const resolvedActor: ActorConstructor | ActorData = typeof actorInput === "string"
+        ? (this as any).databaseById(actorInput) as ActorConstructor | ActorData
+        : actorInput;
+      return typeof resolvedActor === "function"
+        ? new (resolvedActor as ActorConstructor)()
+        : resolvedActor;
+    }
+
+    private _resolveClassInput(classInput: ClassInput, databaseByIdOverride?: (id: string) => any): ClassConstructor | ClassData {
+      if (typeof classInput === "string") {
         return databaseByIdOverride
           ? databaseByIdOverride(classInput as string)
           : (this as any).databaseById(classInput as string);
@@ -67,17 +80,17 @@ export function WithClassManager<TBase extends PlayerCtor>(Base: TBase) {
     }
 
     private _createClassInstance(classInput: ClassInput) {
-      const classData = this._resolveClassInput(classInput);
-      const instance = typeof classData === "function"
-        ? new (classData as ClassClass)()
-        : Object.assign(new class RuntimeClass {}, classData as ClassData);
-      return { classClass: classData, instance };
+      const classClass = this._resolveClassInput(classInput);
+      const instance = typeof classClass === "function"
+        ? new (classClass as ClassConstructor)()
+        : classClass;
+      return { classClass, instance };
     }
 
     /**
      * Create a class instance without side effects.
      */
-    createClassInstance(classInput: ClassClass | string) {
+    createClassInstance(classInput: ClassInput) {
       return this._createClassInstance(classInput);
     }
 
@@ -129,17 +142,26 @@ export function WithClassManager<TBase extends PlayerCtor>(Base: TBase) {
       return rest;
     }
 
-    setClass(_class: ClassClass | string): ClassData {
+    setClass(_class: ClassInput): ClassData {
       const { instance } = this._createClassInstance(_class);
       const classInstance = instance;
-      (this as any)["execMethod"]("onSet", [this], classInstance);
-      (this as any).refreshHotbar?.();
+      const player = this as any;
+      player._class.set(classInstance);
+      player["execMethod"]("onSet", [this], classInstance);
+      for (const skill of classInstance.skillsToLearn ?? []) {
+        if (skill.level <= player.level && !player.getSkill?.(skill.skill)) {
+          player.learnSkill?.(skill.skill, {
+            source: skill.source ?? "class",
+            level: skill.level,
+          });
+        }
+      }
+      player.refreshHotbar?.();
       return classInstance;
     }
 
-    setActor(actorClass: ActorClass | string): ActorData {
-      if (isString(actorClass)) actorClass = (this as any).databaseById(actorClass);
-      const actor = new (actorClass as ActorClass)();
+    setActor(actorInput: ActorInput): ActorData {
+      const actor = this._resolveActorInput(actorInput);
       ["name", "initialLevel", "finalLevel", "expCurve"].forEach((key) => {
         if (actor[key]) (this as any)[key] = actor[key];
       });
@@ -155,6 +177,51 @@ export function WithClassManager<TBase extends PlayerCtor>(Base: TBase) {
       }
       if (actor.class) this.setClass(actor.class);
       (this as any)["execMethod"]("onSet", [this], actor);
+      return actor;
+    }
+
+    /**
+     * Replace the player's active actor identity while preserving acquired
+     * progression. The new actor's parameter curves are evaluated at the
+     * current level and HP/SP keep their previous fill ratios. Starting
+     * equipment is intentionally not granted.
+     *
+     * @title Change Actor
+     * @method player.changeActor(actor)
+     * @param actor - Actor constructor, registered database ID, or resolved actor object.
+     * @returns The resolved actor object.
+     * @memberof RpgPlayer
+     */
+    changeActor(actorInput: ActorInput): ActorData {
+      const actor = this._resolveActorInput(actorInput);
+      const player = this as any;
+      const level = player.level;
+      const experience = player.exp;
+      const maxHp = Number(player.param?.maxHp ?? 0);
+      const maxSp = Number(player.param?.maxSp ?? 0);
+      const hpRatio = maxHp > 0 ? player.hp / maxHp : 0;
+      const spRatio = maxSp > 0 ? player.sp / maxSp : 0;
+
+      if (actor.name !== undefined) player.name = actor.name;
+      if (actor.initialLevel !== undefined) player.initialLevel = Math.min(actor.initialLevel, level);
+      if (actor.finalLevel !== undefined) player.finalLevel = Math.max(actor.finalLevel, level);
+      if (actor.expCurve !== undefined) player.expCurve = actor.expCurve;
+      if (actor.parameters !== undefined) player.parameters = actor.parameters;
+      if (actor.class) this.setClass(actor.class);
+      if (actor.graphic !== undefined) player.setGraphic?.(actor.graphic);
+      if (actor.hitbox) player.setHitbox?.(actor.hitbox.width, actor.hitbox.height);
+
+      player.execMethod("onSet", [this], actor);
+      if (player._exp?.set) player._exp.set(experience);
+      else player.exp = experience;
+      if (player._level?.set) player._level.set(level);
+      else player.level = level;
+
+      const nextMaxHp = Number(player.param?.maxHp ?? 0);
+      const nextMaxSp = Number(player.param?.maxSp ?? 0);
+      player.hp = Math.round(nextMaxHp * hpRatio);
+      player.sp = Math.round(nextMaxSp * spRatio);
+      player.refreshHotbar?.();
       return actor;
     }
   } as unknown as TBase;
@@ -173,13 +240,22 @@ export interface IClassManager {
    * @param _class - The class constructor or class ID to assign to the player
    * @returns The instantiated class object
    */
-  setClass(_class: ClassConstructor | string): ClassData;
+  setClass(_class: ClassInput): ClassData;
 
   /**
    * Set up the player as a specific actor archetype
    * 
-   * @param actorClass - The actor constructor or actor ID to assign to the player
-   * @returns The instantiated actor object
+   * @param actor - The actor constructor, database ID, or resolved actor object to assign to the player
+   * @returns The resolved actor object
    */
-  setActor(actorClass: ActorConstructor | string): ActorData;
+  setActor(actor: ActorInput): ActorData;
+
+  /**
+   * Change the active actor without granting starting equipment or resetting
+   * the player's acquired progression.
+   *
+   * @param actor - The actor constructor, database ID, or resolved actor object to apply
+   * @returns The resolved actor object
+   */
+  changeActor(actor: ActorInput): ActorData;
 }

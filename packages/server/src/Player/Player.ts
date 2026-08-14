@@ -306,8 +306,8 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
     }
   }
 
-  _onInit() {
-    this.hooks.callHooks("server-playerProps-load", this).subscribe();
+  async _onInit(): Promise<void> {
+    await lastValueFrom(this.hooks.callHooks("server-playerProps-load", this));
   }
 
   /**
@@ -1918,9 +1918,19 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
   setSync(schema: RpgSyncSchema): void {
     for (let key in schema) {
       const options = schema[key] && typeof schema[key] === 'object' && !Array.isArray(schema[key])
-        ? schema[key] as { $syncWithClient?: boolean; $permanent?: boolean }
+        ? schema[key] as { $default?: unknown; $syncWithClient?: boolean; $permanent?: boolean }
         : {};
-      this[key] = type(signal<unknown>(null) as never, key, {
+      const currentProperty = this[key];
+      if (
+        typeof currentProperty === 'function'
+        && typeof (currentProperty as { set?: unknown }).set === 'function'
+      ) {
+        continue;
+      }
+      const initialValue = currentProperty !== undefined
+        ? currentProperty
+        : options.$default ?? null;
+      this[key] = type(signal<unknown>(initialValue) as never, key, {
         syncToClient: options.$syncWithClient,
         persist: options.$permanent,
       }, this as never)

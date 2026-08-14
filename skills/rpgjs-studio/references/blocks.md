@@ -337,6 +337,85 @@ Example with self switch:
 
 ## Available blocks and payloads
 
+### `query_area`
+
+Run child blocks once for each player or event selected through the native
+`RpgMap.queryArea()` API. Results run from nearest to farthest, with IDs used as
+the deterministic tie-breaker.
+
+```json
+{
+  "type": "query_area",
+  "data": {
+    "centerType": "entity",
+    "centerEventId": "$this",
+    "shape": "circle",
+    "radius": 64,
+    "targets": "all",
+    "includeOrigin": false,
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "children": []
+}
+```
+
+Supported shapes are `circle`, `rect`, `line`, and `cross`. The center may be
+an entity (`$player`, `$this`, or an event ID) or an absolute pixel position.
+Inside children, a player hit becomes the current player and an event hit
+becomes `$this`.
+
+### `call_character_select`
+
+Open the character selector for the active player. Use every database Actor or
+provide an ordered unique subset. When the player confirms, the selected Actor
+is applied and persisted for that player/save while acquired progression is
+preserved. Cancelling leaves the current Actor unchanged.
+
+All Actors:
+
+```json
+{
+  "type": "call_character_select",
+  "data": {
+    "allActors": true,
+    "actorIds": [],
+    "allowCancel": false
+  }
+}
+```
+
+Selected Actors:
+
+```json
+{
+  "type": "call_character_select",
+  "data": {
+    "allActors": false,
+    "actorIds": ["ACTOR_ID_1", "ACTOR_ID_2"],
+    "allowCancel": true
+  }
+}
+```
+
+`actorIds` values must be Actor `_id` values from `/api/database/actors`. At
+least one valid ID is required when `allActors` is `false`.
+
+### `change_class`
+
+Assign a database Class to the active player.
+
+```json
+{
+  "type": "change_class",
+  "data": {
+    "classId": "CLASS_ID"
+  }
+}
+```
+
+`classId` must be a Class `_id` from `/api/database/classes`.
+
 ### `show_text`
 
 Use for dialogue or narration.
@@ -496,6 +575,9 @@ Allowed `valueSource`:
 - `constant`: use `value` as a free text field
 - `variable`: use `sourceVariableId`
 - `random`: use `randomMin` and `randomMax`
+- `area_target_id`, `area_target_kind`, `area_distance`,
+  `area_distance_ratio`, and `area_falloff_linear`: read the current
+  `query_area` hit; outside its children they resolve to `""` or `0`
 - `player_x`
 - `player_y`
 - `player_direction`

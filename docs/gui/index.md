@@ -14,6 +14,7 @@ Use GUI when the player interacts with an interface, when the server opens a men
 | Need | Use |
 | --- | --- |
 | Show a start screen before the player enters the game | [Title Screen](/gui/title-screen) |
+| Let the player choose a server-owned Actor | [Character Select](/gui/character-select) |
 | Display conversations or narrative text | [Dialog Box](/gui/dialog-box) |
 | Show persistent game information on screen | [HUD](/gui/hud) |
 | Replace a prebuilt GUI with your own component | [Prebuilt GUI Contracts](/gui/prebuilt-contracts) |

@@ -399,7 +399,12 @@ export type SetVariableValueSource =
   | 'player_name'
   | 'level'
   | 'hp'
-  | 'sp';
+  | 'sp'
+  | 'area_target_id'
+  | 'area_target_kind'
+  | 'area_distance'
+  | 'area_distance_ratio'
+  | 'area_falloff_linear';
 
 /**
  * Parameters for the set_variable block
@@ -421,6 +426,50 @@ export interface SetVariableParams {
   randomMin?: number;
   /** Maximum random value when valueSource is random */
   randomMax?: number;
+}
+
+export type QueryAreaShape = 'circle' | 'rect' | 'line' | 'cross';
+export type QueryAreaTarget = 'players' | 'events';
+export type QueryAreaTargetSelector = QueryAreaTarget | 'all';
+
+export interface QueryAreaParams {
+  centerType: 'entity' | 'position';
+  centerEventId?: string;
+  centerPosition?: { x: number; y: number };
+  shape: QueryAreaShape;
+  targets: QueryAreaTargetSelector;
+  includeOrigin: boolean;
+  offsetX?: number;
+  offsetY?: number;
+  radius?: number;
+  width?: number;
+  height?: number;
+  angleDegrees?: number;
+  length?: number;
+  thickness?: number;
+  direction?: 'up' | 'down' | 'left' | 'right';
+  armLength?: number;
+  children?: BlockInstance<BlockType>[];
+}
+
+export interface AreaHitContext {
+  id: string;
+  kind: QueryAreaTarget;
+  distance: number;
+  distanceRatio: number;
+  falloffLinear: number;
+}
+
+export interface AreaShapeApi {
+  circle(options: { radius: number; offset?: { x?: number; y?: number } }): unknown;
+  rect(options: { width: number; height: number; offset?: { x?: number; y?: number }; angle?: number }): unknown;
+  line(options: {
+    length: number;
+    thickness: number;
+    direction: 'up' | 'down' | 'left' | 'right';
+    offset?: { x?: number; y?: number };
+  }): unknown;
+  cross(options: { armLength: number; thickness: number; offset?: { x?: number; y?: number } }): unknown;
 }
 
 /**
@@ -540,6 +589,16 @@ export interface ChangeLevelParams {
   amount?: number;
   /** Variable ID containing amount (when type is 'variable') */
   amountVariableId?: string;
+}
+
+export interface CallCharacterSelectParams {
+  allActors: boolean;
+  actorIds: string[];
+  allowCancel: boolean;
+}
+
+export interface ChangeClassParams {
+  classId: string;
 }
 
 /**
@@ -1040,6 +1099,7 @@ export interface BlockParamsMap {
   
   // Control Flow
   conditional_branch: ConditionalBranchParams;
+  query_area: QueryAreaParams;
   loop: LoopParams;
   break_loop: BreakLoopParams;
   wait: WaitParams;
@@ -1068,6 +1128,8 @@ export interface BlockParamsMap {
   set_hitbox: SetHitboxParams;
   apply_graphic_animation: ApplyGraphicAnimationParams;
   show_up_animation: ShowUpAnimationParams;
+  call_character_select: CallCharacterSelectParams;
+  change_class: ChangeClassParams;
   
   // Scene & Map
   transfer_player: TransferPlayerParams;
@@ -1476,6 +1538,10 @@ export interface GameExecutionContext {
   map?: any;
   /** Reference to executors for recursive execution */
   executors?: RuntimeBlockExecutorRegistry;
+  /** Metadata for the current target while executing query_area children. */
+  areaHit?: AreaHitContext;
+  /** Native RPGJS AreaShape helpers supplied by the server runtime. */
+  areaShapeApi?: AreaShapeApi;
   /** Resolve an event record by id */
   getCommonEvent?(commonEventId: string): Promise<unknown> | unknown;
   /** Spawn an event on the current map */

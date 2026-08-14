@@ -10,7 +10,7 @@ import {
   BlockType,
   BlockParamsMap
 } from '@common/blocks';
-import { EventMode, Move, RpgEvent, RpgMap, RpgPlayer } from '@rpgjs/server';
+import { AreaShape, EventMode, Move, RpgEvent, RpgMap, RpgPlayer } from '@rpgjs/server';
 
 // ============================================================================
 // Block Execution Service
@@ -193,6 +193,7 @@ export class BlockExecutionService {
       map: currentMap,
       executors: this.executors,
       moveApi: Move,
+      areaShapeApi: AreaShape,
      
       // Switch operations
       getVariable: (variableId: string): unknown => {

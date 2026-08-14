@@ -162,6 +162,26 @@ const resolveStudioDatabaseForPreload = async (
   }
 };
 
+const resolveActorIllustrationRefs = async (
+  database: any[],
+): Promise<unknown[]> => {
+  const provider = getGameDataProvider();
+  const actors = database.filter((record) => (record?.type ?? record?._type) === "actor");
+  const refs = await Promise.all(actors.map(async (actor) => {
+    const direct = actor.illustration ?? actor.graphic?.metadata?.illustration;
+    if (direct) return direct;
+    const graphicId = resolveMediaId(actor.graphic);
+    if (!graphicId) return null;
+    try {
+      const graphicMedia = await provider.getMedia(graphicId);
+      return graphicMedia?.metadata?.illustration ?? null;
+    } catch {
+      return null;
+    }
+  }));
+  return refs.filter(Boolean);
+};
+
 export default (config: StudioGameModuleConfig) => {
   return defineModule<RpgClient>({
     engine: {
@@ -223,12 +243,19 @@ export default (config: StudioGameModuleConfig) => {
         }
         const databaseAnimationMediaRefs =
           collectStudioActionBattleMediaRefs(database);
+        const actorMediaRefs = database
+          .filter((record) => (record?.type ?? record?._type) === "actor")
+          .flatMap((actor) => [actor.graphic, actor.faceset])
+          .filter(Boolean);
+        const actorIllustrationRefs = await resolveActorIllustrationRefs(database);
 
         const heroMediaRefs = [
           engine.globalConfig.hero?.graphic,
           engine.globalConfig.hero?.faceset,
           ...animationMediaRefs,
           ...databaseAnimationMediaRefs,
+          ...actorMediaRefs,
+          ...actorIllustrationRefs,
         ].filter(Boolean);
 
         // Load hero and combat animation spritesheets from either direct media objects or media IDs.

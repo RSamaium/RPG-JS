@@ -1583,7 +1583,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
    * });
    * ```
    */
-  onJoin(player: RpgPlayer, conn: RpgRoomConnection) {
+  async onJoin(player: RpgPlayer, conn: RpgRoomConnection) {
     this._pendingAckFrames.delete(player.id);
     // A reconnect reuses the public player id but starts with an empty client
     // entity cache. Force the next sync packet to include every visible entity.
@@ -1640,7 +1640,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     player.lastProcessedInputTick = null;
     player.lastProcessedInputServerTick = null;
     player._lastFramePositions = null;
-    player._onInit()
+    await player._onInit()
     alignPlayerBodyWithSignals();
     this.dataIsReady$.pipe(
       finalize(() => {

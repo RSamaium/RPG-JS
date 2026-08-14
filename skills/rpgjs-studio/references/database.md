@@ -8,6 +8,8 @@ Current active types in this repo:
 - `items`
 - `enemies`
 - `actors`
+- `classes`
+- `skills`
 
 ## Endpoint pattern
 
@@ -21,7 +23,7 @@ Current active types in this repo:
 - Main actor: `GET /api/database/actors/main`
 - Assign main actor: `PUT /api/database/actors/:id/main`
 
-`:type` is the database resource path, for example `actors`, `items`, `enemies`, or `variables`.
+`:type` is the database resource path, for example `actors`, `classes`, `skills`, `items`, `enemies`, or `variables`.
 
 ## Headers
 
@@ -40,7 +42,7 @@ curl -sS "$BASE_URL/api/database/:type/:id" \
   -H "Content-Type: application/json"
 ```
 
-Replace `:type` with the collection path (`actors`, `items`, `enemies`, or `variables`) and `:id` with the record `_id`.
+Replace `:type` with the collection path (`actors`, `classes`, `skills`, `items`, `enemies`, or `variables`) and `:id` with the record `_id`.
 
 Before updating, deleting, or explaining the record content, read the current record first and use the returned payload as the source of truth. Do not infer field names or values from the id alone.
 
@@ -64,30 +66,34 @@ This is required for flows like:
 
 ### `POST /api/database/actors`
 
-Supported fields from `actorSchema`:
+Actors own playable-character appearance and starting configuration. Supported
+fields are `name`, `description`, `classId`, `graphic`, `faceset`, `hitbox`,
+`initialLevel`, `finalLevel`, `expCurve`, `parameters`, `startingEquipment`,
+`startingInventory`, `animations`, and legacy `skills`. New Actors require
+`classId`, the `_id` of a Class in the same project. Actor `parameters` include
+`maxHp`, `maxSp`, `str`, `pdef`, `agi`, `int`, and `dex`. Media and database
+relations use their Studio `_id` values.
 
-- `name: string`
-- `graphic?: string`
-- `faceset?: string`
-- `hitbox?: { width: number, height: number }`
-- `initialLevel?: number`
-- `finalLevel?: number`
-- `expCurve?: { basis, extra, accelerationA, accelerationB }`
-- `parameters?: { maxHp, maxSp, str, agi, int, dex }`
-- `startingEquipment?: { weaponId?: string, armorId?: string }`
-- `startingInventory?: Array<{ itemId: string, amount: number }>`
-- `animations?: { attack?: string, hurt?: string, die?: string, castSpell?: string }`
+Legacy Actors without `classId` remain readable and keep their Actor-level
+skills until they are edited and assigned a Class.
+
+The first Actor becomes the project main Actor automatically. Read it with
+`GET /api/database/actors/main` and assign another with
+`PUT /api/database/actors/:id/main`. Assign a replacement before deleting the
+current main Actor; deleting it returns `409`.
+
+### `POST /api/database/classes`
+
+Classes own the reusable identity and skill progression shared with an Actor:
+
+- `name: string` (required)
+- `description?: string`
+- `icon?: string` (media `_id` of type `icon`)
 - `skills?: Array<{ skillId: string, level: number }>`
 
-The first actor is assigned automatically when the project has no main actor.
-Use `PUT /api/database/actors/:id/main` to assign another actor. The actor must
-belong to the API key project. Deleting the current main actor returns `409`, so
-assign a replacement first.
-
-`graphic`, `faceset`, and animation fields are media `_id`s. Equipment,
-inventory, and skills reference the corresponding database record `_id`s.
-Actor hitbox dimensions are positive RPGJS pixels and are not scaled with the
-graphic.
+Create or resolve the Class before creating an Actor, then send its `_id` as
+`classId`. Deleting a Class referenced by an Actor returns `409`; reassign the
+Actor first.
 
 ### `POST /api/database/skills`
 
@@ -241,6 +247,16 @@ Supported fields from `variableSchema`:
 - Creation requires a non-empty `name`.
 - The API generates a slug-like `id` automatically from the name.
 - For updates, send only the fields to change.
+- Non-nullable fields submitted as `null` are treated as omitted form values.
+  If their JSON Schema declares a `default`, the API applies it before
+  validation. Explicit numeric zeroes remain `0`, and fields whose schema
+  explicitly allows `null` preserve it. An optional object containing only
+  omitted values is itself omitted, so a disabled hitbox submitted as
+  `{ "width": null, "height": null }` does not enable hitbox validation.
+- Schema validation failures return `400` with the first invalid field's dotted
+  path in `message`, for example
+  `{ "message": "parameters.pdef.start: Required" }`. Use the path to correct
+  the corresponding nested payload field.
 - If the user only knows a record name, search the collection first and match the returned `_id`.
 # Semantic search
 

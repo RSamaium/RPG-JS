@@ -11,7 +11,7 @@ import { normalizeWeatherState } from "@common/weather";
 import { getGameDataProvider, getStudioGameRuntimeConfig, configureStudioGameRuntime, resetGameDataProvider } from "./data-provider";
 import type { GameDataProvider, GameRuntimeMode } from "./data-provider";
 import { normalizeStudioDatabase, normalizeStudioDatabaseRecord } from "./database-normalizer";
-import { createStudioDefaultClass } from "./skills-to-learn";
+import { createStudioDefaultClass, normalizeStudioSkillsToLearn } from "./skills-to-learn";
 import { getStudioSkillChangeNotification } from "./skill-notification";
 import { triggerMatchesExecution, type StudioTouchTarget } from "./touch-runtime";
 import { compileStudioMapStream, isStudioDirectLoadPayload, prepareStudioMapPayload, type PreparedStudioMapPayload } from "./map-streaming";
@@ -22,6 +22,7 @@ import {
   resolveStartingEquipmentType,
   resolveStudioItemType,
 } from "./starting-equipment";
+import { normalizeStudioCharacterSelectSettings } from "./action-battle-audio";
 export { createStudioActionBattleAnimations } from "./action-battle-animations";
 export type { StudioCombatAnimationIds, StudioCombatAnimationOptions } from "./action-battle-animations";
 export {
@@ -35,9 +36,12 @@ export type {
   StudioHotbarBinding,
   StudioHotbarSettings,
   StudioMenusSettings,
+  StudioCharacterSelectBinding,
+  StudioCharacterSelectSettings,
 } from "./action-battle-audio";
 export {
   normalizeStudioHotbarSettings,
+  normalizeStudioCharacterSelectSettings,
   resolveStudioHotbarSettings,
 } from "./action-battle-audio";
 
@@ -141,10 +145,26 @@ const resolveStudioRuntimeContext = (map?: RpgMap): { gameConfig: any; projectId
 
 const resolvePlayerConfig = async (player: RpgPlayer, map?: RpgMap): Promise<ProjectBasic> => {
   const { gameConfig, projectId } = resolveStudioRuntimeContext(map);
+  const selectedActor = await resolveSelectedStudioActor(player, projectId);
+  let selectedClass: Record<string, any> | null = null;
+  if (selectedActor?.classId) {
+    try {
+      const records = await getGameDataProvider().getDatabase(projectId ?? undefined);
+      selectedClass = resolveStudioActorClass(selectedActor, records);
+    } catch (error) {
+      console.warn("[StudioGame] selected actor class preload failed", error);
+    }
+  }
   const baseHeroConfig = {
-    ...(gameConfig.hero ?? {}),
-    skillsToLearn: gameConfig.skillsToLearn ?? gameConfig.skills ?? gameConfig.hero?.skillsToLearn ?? gameConfig.hero?.skills,
-    animations: gameConfig.animations ?? gameConfig.hero?.animations,
+    ...(selectedActor ?? gameConfig.hero ?? {}),
+    class: selectedClass ?? undefined,
+    skillsToLearn: selectedActor?.skills
+      ?? selectedActor?.skillsToLearn
+      ?? gameConfig.skillsToLearn
+      ?? gameConfig.skills
+      ?? gameConfig.hero?.skillsToLearn
+      ?? gameConfig.hero?.skills,
+    animations: selectedActor?.animations ?? gameConfig.animations ?? gameConfig.hero?.animations,
   } as ProjectBasic;
   const provider = getGameDataProvider();
   const providerStartConfig = provider.getPlayerStartConfig;
@@ -169,8 +189,8 @@ const resolvePlayerConfig = async (player: RpgPlayer, map?: RpgMap): Promise<Pro
   }
 };
 
-const startGame = async (player: RpgPlayer, map?: RpgMap) => {
-  const heroConfig = await resolvePlayerConfig(player, map);
+const startGame = async (player: RpgPlayer, map?: RpgMap, heroConfig?: ProjectBasic) => {
+  heroConfig ??= await resolvePlayerConfig(player, map);
   (player as any).studioCombatAnimations = heroConfig.animations ?? {};
   (player as any).combatAnimations = heroConfig.animations ?? {};
   const startingItems = await ensureStartingItemsInDatabase(player, heroConfig, map);
@@ -178,12 +198,12 @@ const startGame = async (player: RpgPlayer, map?: RpgMap) => {
   applyPlayerHitbox(player, heroConfig);
 };
 
-const applyStartGameOnce = async (player: RpgPlayer, map?: RpgMap) => {
+const applyStartGameOnce = async (player: RpgPlayer, map?: RpgMap, heroConfig?: ProjectBasic) => {
   const runtimePlayer = player as RpgPlayer & {
     __studioStartGameApplied?: boolean;
   };
   if (runtimePlayer.__studioStartGameApplied) return;
-  await startGame(player, map);
+  await startGame(player, map, heroConfig);
   runtimePlayer.__studioStartGameApplied = true;
 };
 
@@ -225,6 +245,10 @@ const addStudioDefaultClass = (
 };
 
 const assignPlayerStartParams = (player: RpgPlayer, config: ProjectBasic, startingItems: Record<string, any> = {}) => {
+  const assignedClass = (config as any).class;
+  if (assignedClass && typeof (player as any).setClass === "function") {
+    (player as any).setClass(assignedClass);
+  }
   const defaultClass = createStudioDefaultClass(config.skillsToLearn);
   const currentClass = (player as any)._class?.();
   const hasCurrentClass = currentClass && typeof currentClass === "object" && Object.keys(currentClass).length > 0;
@@ -244,6 +268,16 @@ const assignPlayerStartParams = (player: RpgPlayer, config: ProjectBasic, starti
   if (config.parameters) {
     for (const paramName in config.parameters) {
       player.setParameter(paramName, config.parameters[paramName]);
+    }
+  }
+  player.allRecovery();
+
+  for (const skill of normalizeStudioSkillsToLearn(config.skillsToLearn)) {
+    if (skill.level <= player.level && !player.getSkill(skill.skill)) {
+      player.learnSkill(skill.skill, {
+        source: skill.source,
+        level: skill.level,
+      });
     }
   }
 
@@ -652,6 +686,160 @@ const resolveStudioProject = async (
   return projectCacheByKey.get(cacheKey)!;
 };
 
+const studioActorRecordId = (actor: unknown): string | null => {
+  if (!actor || typeof actor !== "object") return null;
+  const record = actor as Record<string, unknown>;
+  const id = record._id ?? record.id;
+  return typeof id === "string" && id.trim().length > 0 ? id : null;
+};
+
+const isStudioActorRecord = (actor: unknown): actor is Record<string, any> => {
+  if (!actor || typeof actor !== "object") return false;
+  const record = actor as Record<string, unknown>;
+  return (record.type ?? record._type) === "actor" && studioActorRecordId(record) !== null;
+};
+
+const isStudioClassRecord = (value: unknown): value is Record<string, any> => {
+  if (!value || typeof value !== "object") return false;
+  const record = value as Record<string, unknown>;
+  return (record.type ?? record._type) === "class" && studioActorRecordId(record) !== null;
+};
+
+const resolveStudioActorClass = (
+  actor: Record<string, any>,
+  records: readonly any[],
+): Record<string, any> | null => {
+  const classId = typeof actor.classId === "object"
+    ? studioActorRecordId(actor.classId)
+    : actor.classId;
+  const classRecord = isStudioClassRecord(actor.classId)
+    ? actor.classId
+    : records.find((record) => isStudioClassRecord(record) && studioActorRecordId(record) === classId);
+  if (!classRecord) return null;
+  return {
+    id: studioActorRecordId(classRecord)!,
+    name: classRecord.name,
+    description: classRecord.description,
+    icon: getGraphicKey(classRecord.icon) ?? undefined,
+    skillsToLearn: normalizeStudioSkillsToLearn(classRecord.skillsToLearn ?? classRecord.skills),
+  };
+};
+
+const resolveStudioActorIllustration = async (
+  actor: Record<string, any>,
+  provider: GameDataProvider,
+): Promise<string | undefined> => {
+  const direct = getGraphicKey(actor.illustration ?? actor.graphic?.metadata?.illustration);
+  if (direct) return direct;
+  const graphicId = getGraphicKey(actor.graphic);
+  if (!graphicId) return undefined;
+  try {
+    const graphicMedia = await provider.getMedia(graphicId);
+    return getGraphicKey(graphicMedia?.metadata?.illustration) ?? undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+const selectedStudioActorId = (player: RpgPlayer): string | null => {
+  const value = (player as any).studioSelectedActorId;
+  const resolved = typeof value === "function" ? value() : value;
+  return typeof resolved === "string" && resolved.trim().length > 0 ? resolved : null;
+};
+
+const setSelectedStudioActorId = (player: RpgPlayer, actorId: string): void => {
+  const property = (player as any).studioSelectedActorId;
+  if (property && typeof property.set === "function") {
+    property.set(actorId);
+    return;
+  }
+  (player as any).studioSelectedActorId = actorId;
+};
+
+const resolveSelectedStudioActor = async (
+  player: RpgPlayer,
+  projectId: string | null,
+): Promise<Record<string, any> | null> => {
+  const runtimePlayer = player as RpgPlayer & { __studioSelectedActor?: Record<string, any> };
+  const selectedId = selectedStudioActorId(player);
+  if (!selectedId) return null;
+  if (studioActorRecordId(runtimePlayer.__studioSelectedActor) === selectedId) {
+    return runtimePlayer.__studioSelectedActor ?? null;
+  }
+  try {
+    const records = await getGameDataProvider().getDatabase(projectId ?? undefined);
+    const actor = records.find((record) => isStudioActorRecord(record) && studioActorRecordId(record) === selectedId);
+    if (actor) runtimePlayer.__studioSelectedActor = actor;
+    return actor ?? null;
+  } catch (error) {
+    console.warn("[StudioGame] selected actor preload failed", error);
+    return null;
+  }
+};
+
+const selectStudioActorForNewGame = async (
+  player: RpgPlayer,
+  project: any,
+  config: StudioServerConfig,
+): Promise<void> => {
+  const settings = normalizeStudioCharacterSelectSettings(project?.menus?.characterSelect);
+  if (!settings.enabled) return;
+
+  const provider = config.dataProvider ?? getGameDataProvider();
+  let records: any[];
+  try {
+    records = await provider.getDatabase(project?._id ?? config.projectId ?? undefined);
+  } catch (error) {
+    console.warn("[StudioGame] character select actors could not be loaded; using the project main actor", error);
+    return;
+  }
+  const actors = records.filter(isStudioActorRecord);
+  const actorsById = new Map(actors.map((actor) => [studioActorRecordId(actor)!, actor]));
+  const offeredActors = settings.allActors
+    ? actors
+    : settings.actorIds.flatMap((id) => actorsById.get(id) ? [actorsById.get(id)!] : []);
+
+  if (offeredActors.length === 0) {
+    console.warn("[StudioGame] character select has no valid actors; using the project main actor");
+    return;
+  }
+
+  const presentationActors = await Promise.all(offeredActors.map(async (actor) => {
+    const actorClass = resolveStudioActorClass(actor, records);
+    return {
+      id: studioActorRecordId(actor)!,
+      name: typeof actor.name === "string" ? actor.name : undefined,
+      description: typeof actor.description === "string" ? actor.description : undefined,
+      graphic: getGraphicKey(actor.graphic) ?? undefined,
+      faceset: getGraphicKey(actor.faceset) ?? undefined,
+      illustration: await resolveStudioActorIllustration(actor, provider),
+      class: actorClass ?? undefined,
+      parameters: actor.parameters,
+    };
+  }));
+  const selected = await player.showCharacterSelect(
+    presentationActors,
+    {
+      selectedActorId: actorsById.has(project?.mainActorId) ? project.mainActorId : undefined,
+      allowCancel: false,
+    },
+  );
+  if (!selected?.id) return;
+
+  const actor = actorsById.get(selected.id);
+  if (!actor) return;
+  const actorClass = resolveStudioActorClass(actor, records);
+  player.setActor({
+    id: selected.id,
+    name: actor.name,
+    ...(actorClass ? { class: actorClass } : {}),
+    parameters: {},
+    startingEquipment: [],
+  });
+  setSelectedStudioActorId(player, selected.id);
+  (player as RpgPlayer & { __studioSelectedActor?: Record<string, any> }).__studioSelectedActor = actor;
+};
+
 const resolveStartMapId = async (config: StudioServerConfig): Promise<string> => {
   if (config.startMapId) return config.startMapId;
 
@@ -813,17 +1001,25 @@ export default (_config?: unknown) => {
 
   return defineModule<RpgServer>({
     player: {
+      props: {
+        studioSelectedActorId: {
+          $default: null,
+          $syncWithClient: false,
+          $permanent: true,
+        },
+      },
       onConnected: async (player: RpgPlayer) => {
         if (!await shouldAutoStart()) return;
         player.initializeDefaultStats();
+        await selectStudioActorForNewGame(player, await resolveStudioProject(undefined, config), config);
         await player.changeMap(await resolveStartMapId(config));
       },
       onStart: async (player: RpgPlayer) => {
         if (await shouldAutoStart()) return;
+        await selectStudioActorForNewGame(player, await resolveStudioProject(undefined, config), config);
         await player.changeMap(await resolveStartMapId(config));
       },
       onJoinMap: async (player: RpgPlayer, map: RpgMap) => {
-        const mapExtended = map as RpgMapExtended;
         const startPosition = typeof (map as any).data === "function"
           ? (map as any).data()?.positions?.start
           : undefined;
@@ -837,17 +1033,18 @@ export default (_config?: unknown) => {
         }
 
         await refreshOnlineStudioDatabase(map);
-        const heroGraphic = (mapExtended.globalConfig.hero as any)?.graphic;
+        const heroConfig = await resolvePlayerConfig(player, map);
+        const heroGraphic = (heroConfig as any)?.graphic;
         const heroGraphicKey = getGraphicKey(heroGraphic);
         if (heroGraphicKey) {
-          (player as any)._graphicScale?.set(getGraphicScale((mapExtended.globalConfig.hero as any)?.params, mapExtended.globalConfig.hero) ?? null);
+          (player as any)._graphicScale?.set(getGraphicScale((heroConfig as any)?.params, heroConfig) ?? null);
           player.setGraphic(heroGraphicKey);
         } else {
           (player as any)._graphicScale?.set(null);
           player.setGraphic("default_character");
         }
 
-        await applyStartGameOnce(player, map);
+        await applyStartGameOnce(player, map, heroConfig);
       },
       onInput: (player: RpgPlayer, input: RpgActionInput<unknown>) => {
         if (input.action == "escape") {
