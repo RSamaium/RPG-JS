@@ -1,5 +1,20 @@
 # @rpgjs/action-battle
 
+## 5.0.0-beta.32
+
+### Minor Changes
+
+- 1bcd9fc: Keep `playSound()` as the single canonical sound API while adding persisted mixer channels, spatial playback, native interface cues, coordinated map and battle music, and Studio audio configuration, so framework users do not have to choose between overlapping concepts.
+
+### Patch Changes
+
+- Updated dependencies [decf73e]
+- Updated dependencies [1bcd9fc]
+  - @rpgjs/common@5.0.0-beta.30
+  - @rpgjs/client@5.0.0-beta.32
+  - @rpgjs/server@5.0.0-beta.32
+  - @rpgjs/vite@5.0.0-beta.32
+
 ## 5.0.0-beta.31
 
 ### Patch Changes

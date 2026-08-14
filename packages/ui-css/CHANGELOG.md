@@ -1,5 +1,15 @@
 # @rpgjs/ui-css
 
+## 5.0.0-beta.26
+
+### Minor Changes
+
+- decf73e: Add a server-authoritative Actor selection API, runtime Actor switching that preserves acquired progression, a responsive cinematic CanvasEngine character selector, resolved Actor and Class object inputs, class skill progression for CMS-backed data, RPGJS Studio new-game Actor selection settings, character-select/change-class event blocks, and a native query-area block with per-target child execution.
+
+### Patch Changes
+
+- 1bcd9fc: Keep `playSound()` as the single canonical sound API while adding persisted mixer channels, spatial playback, native interface cues, coordinated map and battle music, and Studio audio configuration, so framework users do not have to choose between overlapping concepts.
+
 ## 5.0.0-beta.25
 
 ### Minor Changes
