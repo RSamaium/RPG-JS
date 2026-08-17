@@ -43,6 +43,7 @@ Use this skill to execute content-management tasks against an RPGJS Studio insta
   - `references/media.md`
   - `references/settings.md`
   - `references/project-env.md`
+  - `references/mmorpg.md`
 
 ## Local memory file
 
@@ -117,9 +118,14 @@ curl -sS -X POST "$BASE_URL/..." \
 - `media` task: read [references/media.md](./references/media.md)
 - `settings` task: read [references/settings.md](./references/settings.md)
 - `project env` task: read [references/project-env.md](./references/project-env.md)
+- `MMORPG publication` task: read [references/mmorpg.md](./references/mmorpg.md)
 
 ## Current schema notes
 
+- An authenticated Studio session can publish the current project with
+  `POST /api/mmorpg/publish`. Publication prepares every map before sending any
+  update. Failures return a stable `code`, `stage`, and optional `resourceId`;
+  see `references/mmorpg.md` for the response contract.
 - `show_text` blocks may set `inputEnabled: true` and must then provide
   `inputVariableId`, the `_id` of a database variable receiving the submitted
   string or number. Cancelling the input stores `null`; see
