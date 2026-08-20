@@ -9,6 +9,8 @@ import { isNativeSocketEvent, waitForRpgjsConnected } from "./mmorpg-connection"
 
 export interface MmorpgOptions {
     host?: string;
+    /** Initial lobby room used before the first map transfer. */
+    room?: string;
     connectionId?: string;
     connectionIdScope?: "local" | "session" | "ephemeral";
     query?: SocketQuery | (() => SocketQuery | undefined);
@@ -28,10 +30,11 @@ export class BridgeWebsocket extends AbstractWebsocket {
   private privateId: string;
   private pendingOn: Array<{ event: string; callback: (data: any) => void }> = [];
   private acceptedOpenListeners = new Set<(data: any) => void>();
-  private targetRoom = "lobby-1";
+  private targetRoom: string;
 
   constructor(protected context: RpgContext, private options: MmorpgOptions = {}) {
     super(context);
+    this.targetRoom = options.room ?? "lobby-1";
     this.privateId = this.resolveConnectionId();
   }
 

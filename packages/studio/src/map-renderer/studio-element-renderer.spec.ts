@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildStudioElementSpriteParts,
+  extractStudioGroundShadowPixels,
   resolveStudioElementLightSpotOverlay,
   resolveStudioElementMetrics,
   resolveStudioElementShadowCaster,
@@ -47,6 +48,18 @@ const createTerrainData = (overrides: Record<string, any> = {}) => ({
 });
 
 describe("studio element renderer helpers", () => {
+  it("extracts only dark, translucent pixels from the lower portion as a ground shadow", () => {
+    const pixels = new Uint8ClampedArray([
+      30, 30, 30, 120, 255, 255, 255, 255,
+      30, 30, 30, 120, 255, 255, 255, 255,
+    ]);
+    const split = extractStudioGroundShadowPixels(pixels, 2, 2);
+
+    expect(split.element[3]).toBe(120);
+    expect(split.element[7]).toBe(255);
+    expect(split.element[11]).toBe(0);
+    expect(split.shadow[11]).toBe(120);
+  });
   const createMorphologyMask = (width: number, height: number, filled = true) => {
     const canvas = document.createElement("canvas");
     canvas.width = width;

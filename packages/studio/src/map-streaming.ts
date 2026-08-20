@@ -194,6 +194,7 @@ function prepareElements(map: Record<string, any>): {
         layer: layerIndex,
         scale: size.scale,
         hasShadow: placement.hasShadow ?? source.hasShadow,
+        extractGroundShadow: placement.extractGroundShadow ?? source.extractGroundShadow,
         lightSpot: placement.lightSpot ?? source.lightSpot,
         zIndexOffset: finite(placement.zIndexOffset),
         ...(rule

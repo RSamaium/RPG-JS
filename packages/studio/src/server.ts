@@ -440,6 +440,11 @@ export interface CreateStudioMapUpdatePayloadOptions {
 type StudioServerConfig = CreateStudioMapUpdatePayloadOptions & {
   autoStart?: boolean;
   displayTitleScreen?: boolean;
+  skipCharacterSelect?: boolean;
+  resolveStartup?: (
+    player: RpgPlayer,
+  ) => Promise<Pick<StudioServerConfig, "projectId" | "startMapId" | "autoStart" | "displayTitleScreen" | "skipCharacterSelect">>
+    | Pick<StudioServerConfig, "projectId" | "startMapId" | "autoStart" | "displayTitleScreen" | "skipCharacterSelect">;
 };
 
 export const prepareStudioWorldMaps = (worldMaps: unknown): WorldMapConfig[] =>
@@ -978,10 +983,14 @@ export async function createStudioMapUpdatePayload(mapId: string, config: Create
 
 export default (_config?: unknown) => {
   const config = (_config ?? {}) as StudioServerConfig;
-  const shouldAutoStart = async () => {
-    if (config.autoStart === true) return true;
-    if (config.displayTitleScreen === true) return false;
-    const project = await resolveStudioProject(undefined, config);
+  const resolvePlayerStartup = async (player: RpgPlayer): Promise<StudioServerConfig> => ({
+    ...config,
+    ...(typeof config.resolveStartup === "function" ? await config.resolveStartup(player) : {}),
+  });
+  const shouldAutoStart = async (playerConfig: StudioServerConfig) => {
+    if (playerConfig.autoStart === true) return true;
+    if (playerConfig.displayTitleScreen === true) return false;
+    const project = await resolveStudioProject(undefined, playerConfig);
     return project?.menus?.titleScreen?.enabled === false;
   };
   const streamingOptions = config.streaming === false ? undefined : config.streaming ?? {};
@@ -1009,15 +1018,19 @@ export default (_config?: unknown) => {
         },
       },
       onConnected: async (player: RpgPlayer) => {
-        if (!await shouldAutoStart()) return;
+        const playerConfig = await resolvePlayerStartup(player);
+        if (!await shouldAutoStart(playerConfig)) return;
         player.initializeDefaultStats();
-        await selectStudioActorForNewGame(player, await resolveStudioProject(undefined, config), config);
-        await player.changeMap(await resolveStartMapId(config));
+        if (playerConfig.skipCharacterSelect !== true) {
+          await selectStudioActorForNewGame(player, await resolveStudioProject(undefined, playerConfig), playerConfig);
+        }
+        await player.changeMap(await resolveStartMapId(playerConfig));
       },
       onStart: async (player: RpgPlayer) => {
-        if (await shouldAutoStart()) return;
-        await selectStudioActorForNewGame(player, await resolveStudioProject(undefined, config), config);
-        await player.changeMap(await resolveStartMapId(config));
+        const playerConfig = await resolvePlayerStartup(player);
+        if (await shouldAutoStart(playerConfig)) return;
+        await selectStudioActorForNewGame(player, await resolveStudioProject(undefined, playerConfig), playerConfig);
+        await player.changeMap(await resolveStartMapId(playerConfig));
       },
       onJoinMap: async (player: RpgPlayer, map: RpgMap) => {
         const startPosition = typeof (map as any).data === "function"

@@ -111,6 +111,21 @@ describe("Prediction + Reconciliation Server Protocol", () => {
     );
   });
 
+  test("should preserve custom event payloads without reconciliation metadata", () => {
+    expect(serverMap.interceptorPacket(
+      player,
+      { type: "weatherState", value: null },
+      player.conn,
+    )).toEqual({ type: "weatherState", value: null });
+
+    const weather = { effect: "snow", startedAt: 1234 };
+    expect(serverMap.interceptorPacket(
+      player,
+      { type: "weatherState", value: weather },
+      player.conn,
+    )).toEqual({ type: "weatherState", value: weather });
+  });
+
   test("should reset spatial entity visibility when a public player id reconnects", () => {
     serverMap.spatialVisibleEventIds.set(player.id, new Set(["old-event"]));
     serverMap.spatialVisiblePlayerIds.set(player.id, new Set([player.id]));

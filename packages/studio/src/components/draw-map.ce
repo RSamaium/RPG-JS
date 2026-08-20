@@ -44,7 +44,7 @@
 
     effect(() => {
       const weather = data().weather ?? data().params?.weather ?? null;
-      untracked(() => engine.sceneMap.setLocalWeather(weather));
+      untracked(() => engine.sceneMap.setMapWeatherFallback(weather));
     })
 
     const weatherOptions = computed(() => {

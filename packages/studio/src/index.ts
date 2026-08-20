@@ -6,6 +6,7 @@ import { configureStudioGameRuntime } from "./data-provider";
 import { configureStudioConstants } from "./constants";
 import type { GameRuntimeMode } from "./data-provider/types";
 import type { StudioMapPlugin } from "./studio-map-plugins";
+import type { RpgPlayer } from "@rpgjs/server";
 export { collectStudioMapPluginPixiChildren, composeStudioMapPluginOptions, createStudioEventCollisionDebugOverlay, createStudioMapPlugins, studioDebugCollisionsPlugin } from "./studio-map-plugins";
 export type { CreateStudioMapPluginsOptions, StudioDebugCollisionsOptions, StudioMapPlugin, StudioMapPluginContext, StudioMapPluginPixiChild, StudioTerrainRenderOptions } from "./studio-map-plugins";
 export { createStudioActionBattleAnimations } from "./action-battle-animations";
@@ -60,6 +61,13 @@ export interface StudioGameModuleConfig {
    */
   autoStart?: boolean;
   startMapId?: string;
+  /** Skip character selection for an explicit direct-map startup. */
+  skipCharacterSelect?: boolean;
+  /** Resolve player-specific startup settings for a shared MMORPG server. */
+  resolveStartup?: (
+    player: RpgPlayer,
+  ) => Promise<Pick<StudioGameModuleConfig, "projectId" | "startMapId" | "autoStart" | "displayTitleScreen" | "skipCharacterSelect">>
+    | Pick<StudioGameModuleConfig, "projectId" | "startMapId" | "autoStart" | "displayTitleScreen" | "skipCharacterSelect">;
   debugCollisions?: boolean;
   studioPlugins?: StudioMapPlugin[];
   /** Authoritative Studio v2 map streaming, or `false` to disable it. */

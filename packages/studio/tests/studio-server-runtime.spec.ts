@@ -143,6 +143,67 @@ describe("Studio server runtime", () => {
     expect(changeMap).toHaveBeenCalledWith("project-start-map");
   });
 
+  test("resolves player-specific startup settings on a shared MMORPG server", async () => {
+    const getProject = vi.fn(async ({ projectId }: { projectId?: string }) => ({
+      _id: projectId,
+      startMapId: `${projectId}-start`,
+    }));
+    configureGameDataProvider({
+      kind: "online",
+      getProject,
+      getMap: vi.fn(),
+      getMedia: vi.fn(),
+      getDatabase: vi.fn(async () => []),
+    });
+    const resolveStartup = vi.fn(async (player: { id: string }) => ({
+      projectId: player.id.split(":")[0],
+      autoStart: false,
+      displayTitleScreen: true,
+    }));
+    const hooks = (studioServer({ resolveStartup }) as any).player;
+    const firstPlayer = { id: "project-a:player-1", changeMap: vi.fn(async () => true) };
+    const secondPlayer = { id: "project-b:player-2", changeMap: vi.fn(async () => true) };
+
+    await hooks.onConnected(firstPlayer);
+    await hooks.onConnected(secondPlayer);
+    expect(firstPlayer.changeMap).not.toHaveBeenCalled();
+    expect(secondPlayer.changeMap).not.toHaveBeenCalled();
+
+    await hooks.onStart(firstPlayer);
+    await hooks.onStart(secondPlayer);
+
+    expect(firstPlayer.changeMap).toHaveBeenCalledWith("project-a-start");
+    expect(secondPlayer.changeMap).toHaveBeenCalledWith("project-b-start");
+    expect(getProject).toHaveBeenCalledWith({ projectId: "project-a" });
+    expect(getProject).toHaveBeenCalledWith({ projectId: "project-b" });
+  });
+
+  test("skips character selection for a player-specific direct map startup", async () => {
+    const showCharacterSelect = vi.fn();
+    const changeMap = vi.fn(async () => true);
+    const player = {
+      id: "project-a:player-1",
+      initializeDefaultStats: vi.fn(),
+      showCharacterSelect,
+      changeMap,
+    };
+    const hooks = (studioServer({
+      resolveStartup: async () => ({
+        projectId: "project-a",
+        startMapId: "requested-map",
+        autoStart: true,
+        displayTitleScreen: false,
+        skipCharacterSelect: true,
+      }),
+    }) as any).player;
+
+    await hooks.onConnected(player);
+
+    expect(player.initializeDefaultStats).toHaveBeenCalledOnce();
+    expect(showCharacterSelect).not.toHaveBeenCalled();
+    expect(changeMap).toHaveBeenCalledWith("requested-map");
+  });
+
   test("starts directly when the project disables the title screen", async () => {
     configureGameDataProvider({
       kind: "online",

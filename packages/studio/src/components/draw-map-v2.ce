@@ -1,6 +1,7 @@
 <Container scale>
     <StudioTerrainMap data debugCollisions={terrainPluginOptions().debugCollisions === true} splitWallForeground={true} /> 
     <Container sortableChildren={true} pixiChildren={terrainWallShadowPixiChildren} />
+    <Container sortableChildren={true} pixiChildren={groundShadowPixiChildren} />
     <Container sortableChildren={true} pixiChildren={elementsAlwaysLowPixiChildren} />
     <StudioEventLayer pixiChildren={eventLayerPixiChildren} /> 
     <Container sortableChildren={true} pixiChildren={elementsHighPixiChildren} />
@@ -47,18 +48,23 @@
 
     const engine = inject(RpgClientEngine);
     const terrainWallShadowWorld = new PixiContainer()
+    const groundShadowWorld = new PixiContainer()
     const elementsAlwaysLowWorld = new PixiContainer()
     const elementsHighWorld = new PixiContainer()
     const terrainWallShadowMask = new Graphics()
+    const groundShadowMask = new Graphics()
     const elementsAlwaysLowMask = new Graphics()
     const elementsHighMask = new Graphics()
     terrainWallShadowWorld.sortableChildren = true
+    groundShadowWorld.sortableChildren = true
     elementsAlwaysLowWorld.sortableChildren = true
     elementsHighWorld.sortableChildren = true
     terrainWallShadowWorld.mask = terrainWallShadowMask
+    groundShadowWorld.mask = groundShadowMask
     elementsAlwaysLowWorld.mask = elementsAlwaysLowMask
     elementsHighWorld.mask = elementsHighMask
     const terrainWallShadowPixiChildren = [terrainWallShadowWorld, terrainWallShadowMask]
+    const groundShadowPixiChildren = [groundShadowWorld, groundShadowMask]
     const elementsAlwaysLowPixiChildren = [elementsAlwaysLowWorld, elementsAlwaysLowMask]
     const elementsHighPixiChildren = [elementsHighWorld, elementsHighMask]
     let terrainWallShadowChildren = []
@@ -188,6 +194,7 @@
         elementsLowPixiChildren.set([])
         elementsHighChildren = []
         syncPixiWorldChildren(terrainWallShadowWorld, terrainWallShadowChildren)
+        syncPixiWorldChildren(groundShadowWorld, [])
         syncPixiWorldChildren(elementsAlwaysLowWorld, elementsAlwaysLowChildren)
         syncPixiWorldChildren(elementsHighWorld, elementsHighChildren)
         terrainWallOcclusionRenderer.destroy()
@@ -505,6 +512,7 @@
     effect(() => {
       const bounds = mapBounds()
       updateMapMask(terrainWallShadowMask, bounds)
+      updateMapMask(groundShadowMask, bounds)
       updateMapMask(elementsAlwaysLowMask, bounds)
       updateMapMask(elementsHighMask, bounds)
     })
@@ -547,6 +555,11 @@
       elementsAlwaysLowChildren = alwaysLowChildren
       syncPixiWorldChildren(elementsAlwaysLowWorld, elementsAlwaysLowChildren)
       elementsLowPixiChildren.set(lowChildren)
+      syncPixiWorldChildren(groundShadowWorld, [
+        ...elementsAlwaysLowRenderer.getGroundShadowSprites(),
+        ...elementsLowRenderer.getGroundShadowSprites(),
+        ...elementsHighRenderer.getGroundShadowSprites(),
+      ])
       elementsHighChildren = highChildren
       syncPixiWorldChildren(elementsHighWorld, elementsHighChildren)
     }
@@ -565,7 +578,7 @@
 
     effect(() => {
       const weather = data().weather ?? data().params?.weather ?? null;
-      untracked(() => engine.sceneMap.setLocalWeather(weather));
+      untracked(() => engine.sceneMap.setMapWeatherFallback(weather));
     })
 
     const weatherOptions = computed(() => {

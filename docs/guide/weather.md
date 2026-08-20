@@ -78,13 +78,16 @@ map.patchWeather({
 
 When `sync` is not `false`, the weather is broadcast to players in the map.
 
+A synchronized `null` is authoritative: `clearWeather()` removes an initial
+weather effect declared in the map data in both standalone and MMORPG modes.
+
 ## Runtime API (Client)
 
 `RpgClientMap` exposes:
 
 - `map.weatherState` (server-synchronized state)
 - `map.localWeatherOverride` (client-only override)
-- `map.weather` (computed: local override first, then server state)
+- `map.weather` (computed: local override first, then server state, then map-data fallback before the first synchronization)
 - `map.getWeather()`
 - `map.setLocalWeather(next)`
 - `map.clearLocalWeather()`

@@ -52,6 +52,16 @@ describe("standalone websocket bridge", () => {
     expect(mmorpgProvider.useFactory(context).mode).toBe("mmorpg");
   });
 
+  test("uses the configured initial MMORPG lobby", () => {
+    const context = new Context();
+    const mmorpgProvider = provideMmorpg({
+      connectionId: "test-client",
+      room: "lobby-project-1",
+    }).find((provider: any) => provider.provide === WebSocketToken) as any;
+
+    expect(mmorpgProvider.useFactory(context).getCurrentRoom()).toBe("lobby-project-1");
+  });
+
   test("reconnects standalone rooms with updated room and query", async () => {
     const connects: Array<{ roomId: string; url: string; sessionId: string }> = [];
     class Server {

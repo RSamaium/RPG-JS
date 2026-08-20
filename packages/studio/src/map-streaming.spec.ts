@@ -27,6 +27,7 @@ function createMap() {
             {
               id: 0,
               rect: [0, 0, 48, 48],
+              extractGroundShadow: true,
               hitbox: { x: 0, y: 24, width: 48, height: 24 },
             },
           ]),
@@ -95,6 +96,9 @@ describe("Studio authoritative map streaming", () => {
     expect(
       definition.chunks["1:0"].renderData.elements.elementsLow
     ).toHaveLength(1);
+    expect(definition.chunks["1:0"].renderData.elements.elementsLow[0]).toMatchObject({
+      extractGroundShadow: true,
+    });
     expect(definition.chunks["1:0"].hitboxes).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: "studio-element:0" }),

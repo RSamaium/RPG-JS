@@ -1403,8 +1403,9 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     if (!packet) return null;
     packetValue = packet?.value;
 
-    // Add timestamp to sync packets for client-side prediction reconciliation
-    if (packet && typeof packet === 'object') {
+    // Add timestamp only to sync packets for client-side prediction reconciliation.
+    // Custom events must preserve their payload exactly, including null values.
+    if (packet?.type === "sync" && packetValue && typeof packetValue === "object") {
       obj.timestamp = Date.now();
 
       // Keep the acknowledged frame paired with the authoritative position
@@ -1543,7 +1544,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
       this.spatialVisiblePlayerIds.set(player.id, visiblePlayers);
     }
 
-    if (typeof packet.value == 'string') {
+    if (packet?.type !== "sync" || typeof packet.value == 'string') {
       return packet
     }
 

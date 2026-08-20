@@ -973,7 +973,7 @@ export class RpgClientEngine<T = any> {
     // The before-loading hook has now covered the previous scene. Unmount it
     // before reconnecting so stale map content cannot appear behind the loader.
     this.sceneMap.data.set(null);
-    this.sceneMap.weatherState.set(null);
+    this.sceneMap.weatherState.set(undefined);
     this.sceneMap.lightingState.set(null);
     this.sceneMap.clearLightSpots();
     this.clearComponentAnimations();

@@ -422,6 +422,23 @@ player to `startMapId` or to the starting map defined by the Studio project.
 interaction keep their existing behavior. `displayTitleScreen` controls only
 the client display and does not enable immediate startup by itself.
 
+## Shared MMORPG startup
+
+Use `resolveStartup` when one MMORPG server hosts several Studio projects. The
+callback runs for each player after authentication, so it can return that
+player's `projectId`, optional direct `startMapId`, and startup mode:
+
+```ts
+provideStudioGame({
+  resolveStartup: (player) => startupByPlayerId.get(player.id),
+})
+```
+
+For a direct map link, return `autoStart: true`,
+`displayTitleScreen: false`, and `skipCharacterSelect: true`. For a normal game
+entry, return `autoStart: false` and `displayTitleScreen: true`; the title screen
+then opens character selection before the resolved project's starting map.
+
 ## Options
 
 - `projectId`: Studio project identifier. When provided, the default runtime mode is `"online"`.
@@ -435,6 +452,8 @@ Studio projects can instead persist `menus.titleScreen.enabled: false`; the
 Studio runtime then enables immediate startup automatically. Explicit
 `autoStart` remains useful for non-Studio configuration and overrides.
 - `startMapId`: force the map used to start the player.
+- `skipCharacterSelect`: skip actor selection during an automatic direct-map startup.
+- `resolveStartup`: resolve player-specific startup settings after MMORPG authentication.
 - `streaming`: authoritative Studio v2 chunk settings for MMORPG mode. Set it to
   `false` only when another server map provider replaces the built-in streaming
   adapter. Standalone mode always uses the direct loader. Its options are

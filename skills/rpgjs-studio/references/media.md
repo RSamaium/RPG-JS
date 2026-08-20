@@ -67,12 +67,19 @@ Credit costs available in `common/permissions/credit.ts`:
 - `terrain`: 5
 - `tileset`: 15
 - `illustration`: 5
+- `image`: 5
 
 `illustration` generates one transparent full- or three-quarter-body JRPG
 character image intended for a vertical 4:5 hero selector. Pass the character
 spritesheet URL or data URI as `metadata.referenceImage`. After generation,
 store the returned media `_id` in the owning spritesheet's
 `metadata.illustration`; Actors using that spritesheet inherit it.
+
+`image` generates an opaque full-scene landscape illustration. The generation
+workflow center-crops its stored PNG to an exact 16:9 ratio, making it suitable
+for `menus.titleScreen.settings.backgroundImage` and generic in-game artwork.
+`metadata.referenceImage` may be supplied as an optional visual guide and is not
+persisted with the generated media.
 
 ## Example: list all media
 
