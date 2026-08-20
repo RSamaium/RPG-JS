@@ -1,5 +1,18 @@
 # @rpgjs/server
 
+## 5.0.0-beta.33
+
+### Minor Changes
+
+- c849207: Add a post-acceptance player lifecycle context and a connection-scoped Studio MMORPG startup resolver with discriminated title/direct flows, single evaluation, URL project loading, and authoritative project/map validation.
+
+### Patch Changes
+
+- 0909491: Preserve weather WebSocket payloads through server reconciliation and render
+  them as authoritative so runtime updates and `clearWeather()` replace weather
+  initially configured in Studio map data.
+  - @rpgjs/testing@5.0.0-beta.33
+
 ## 5.0.0-beta.32
 
 ### Minor Changes

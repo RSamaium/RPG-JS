@@ -1,5 +1,27 @@
 # @rpgjs/studio
 
+## 5.0.0-beta.35
+
+### Minor Changes
+
+- e48f8f0: Add opt-in extraction of embedded element ground shadows into a texture cache
+  and dedicated layer below Studio characters in standalone and streamed MMORPG
+  maps. Preserve anti-aliased object contours and expose the tileset-element
+  configuration through the Studio runtime schema.
+- c849207: Add a post-acceptance player lifecycle context and a connection-scoped Studio MMORPG startup resolver with discriminated title/direct flows, single evaluation, URL project loading, and authoritative project/map validation.
+
+### Patch Changes
+
+- 0909491: Preserve weather WebSocket payloads through server reconciliation and render
+  them as authoritative so runtime updates and `clearWeather()` replace weather
+  initially configured in Studio map data.
+- Updated dependencies [0909491]
+- Updated dependencies [c849207]
+  - @rpgjs/client@5.0.0-beta.33
+  - @rpgjs/server@5.0.0-beta.33
+  - @rpgjs/action-battle@5.0.0-beta.33
+  - @rpgjs/vite@5.0.0-beta.33
+
 ## 5.0.0-beta.34
 
 ### Minor Changes
