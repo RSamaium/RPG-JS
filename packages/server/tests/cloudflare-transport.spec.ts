@@ -20,9 +20,14 @@ describe("Cloudflare room transport", () => {
   });
 
   it("sends initial packets when an accepted Workerd socket still reports CONNECTING", async () => {
+    const acceptedPackets = vi.fn();
     class TestServer {
       async onConnect(connection: { send(data: string): void }): Promise<void> {
         connection.send("initial-sync");
+      }
+
+      async onConnectionAccepted(): Promise<void> {
+        acceptedPackets(rawSend.mock.calls.map(([packet]) => packet));
       }
     }
 
@@ -47,6 +52,10 @@ describe("Cloudflare room transport", () => {
       type: "connected",
       id: "player-1",
     });
+    expect(acceptedPackets).toHaveBeenCalledWith([
+      "initial-sync",
+      expect.stringContaining('"type":"connected"'),
+    ]);
   });
 
   it("requires the administration secret for world updates", async () => {

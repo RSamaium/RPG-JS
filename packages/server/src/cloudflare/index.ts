@@ -70,6 +70,7 @@ export function createRpgServerWorker(
         id: connection.id,
         message: "Connected to RPG-JS server",
       }));
+      await this.onConnectionAccepted?.(connection, context);
     }
   }
   const worker = createCloudflareRoomWorker(

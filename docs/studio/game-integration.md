@@ -112,6 +112,58 @@ Authoritative streaming requires Studio map format v2. A v1 Studio map continues
 to work in standalone mode, but publication to an MMORPG map room fails explicitly
 instead of silently exposing or approximating its data.
 
+### Share one server between Studio projects
+
+Use a connection-scoped startup resolver when several Studio projects share the
+same MMORPG Worker. The browser forwards the requested project and optional map,
+while the server makes the authoritative startup decision:
+
+```ts
+// src/config/config.client.ts
+const params = new URLSearchParams(window.location.search)
+const projectId = params.get("game") ?? ""
+const mapId = params.get("map")
+
+provideMmorpg({
+  room: `lobby-${projectId}`,
+  query: {
+    game: projectId,
+    ...(mapId ? { map: mapId } : {}),
+  },
+})
+
+provideStudioGame()
+```
+
+```ts
+// src/config/config.server.ts
+provideStudioGame({
+  resolveStartup: ({ query, connection }) => {
+    // connection.state may contain trusted context attached by auth().
+    const projectId = query.game
+
+    return query.map
+      ? { projectId, flow: "direct", mapId: query.map }
+      : { projectId, flow: "title" }
+  },
+})
+```
+
+`flow: "title"` keeps the Studio-owned title screen, character selection,
+actor application, default stats, and start-map transfer. `flow: "direct"`
+skips the interactive screens and transfers to `mapId` after verifying that the
+map belongs to `projectId`.
+
+The resolver receives `{ player, query, headers, connection }`, runs after the
+RPGJS `connected` packet, and is evaluated only once for that lobby connection.
+Its result is reused when the player presses Start. Missing projects and maps
+from another project fail explicitly; they never fall back to global Studio
+configuration.
+
+The `game` URL parameter also lets the Studio client load the corresponding
+title-screen configuration. When `map` is present, the client does not render
+the title screen while the server validates and performs the direct transfer.
+
 Configure the disclosure window on the shared Studio module:
 
 ```ts
@@ -422,23 +474,6 @@ player to `startMapId` or to the starting map defined by the Studio project.
 interaction keep their existing behavior. `displayTitleScreen` controls only
 the client display and does not enable immediate startup by itself.
 
-## Shared MMORPG startup
-
-Use `resolveStartup` when one MMORPG server hosts several Studio projects. The
-callback runs for each player after authentication, so it can return that
-player's `projectId`, optional direct `startMapId`, and startup mode:
-
-```ts
-provideStudioGame({
-  resolveStartup: (player) => startupByPlayerId.get(player.id),
-})
-```
-
-For a direct map link, return `autoStart: true`,
-`displayTitleScreen: false`, and `skipCharacterSelect: true`. For a normal game
-entry, return `autoStart: false` and `displayTitleScreen: true`; the title screen
-then opens character selection before the resolved project's starting map.
-
 ## Options
 
 - `projectId`: Studio project identifier. When provided, the default runtime mode is `"online"`.
@@ -453,7 +488,8 @@ Studio runtime then enables immediate startup automatically. Explicit
 `autoStart` remains useful for non-Studio configuration and overrides.
 - `startMapId`: force the map used to start the player.
 - `skipCharacterSelect`: skip actor selection during an automatic direct-map startup.
-- `resolveStartup`: resolve player-specific startup settings after MMORPG authentication.
+- `resolveStartup`: resolve a player-specific `title` or `direct` startup after
+  MMORPG authentication. See [Share one server between Studio projects](#share-one-server-between-studio-projects).
 - `streaming`: authoritative Studio v2 chunk settings for MMORPG mode. Set it to
   `false` only when another server map provider replaces the built-in streaming
   adapter. Standalone mode always uses the direct loader. Its options are

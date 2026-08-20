@@ -6,7 +6,8 @@ import { LobbyRoom } from "./rooms/lobby";
 import { inject } from "./core/inject";
 import { context } from "./core/context";
 import { lastValueFrom } from "rxjs";
-import type { RpgServerStepMetrics } from "./RpgServer";
+import type { RpgPlayerConnectionContext, RpgServerStepMetrics } from "./RpgServer";
+import type { RpgPlayer } from "./Player/Player";
 import { registerServerStepEmitter } from "./server-step";
 
 /** Persistent storage available to the RPGJS server runtime. */
@@ -103,6 +104,36 @@ export class RpgServerEngine extends RpgRoomServerBase {
   constructor(room: RpgServerRuntimeRoom) {
     super(room);
     registerServerStepEmitter(room, (metrics) => this.emitServerStep(metrics));
+  }
+
+  /** Run post-acceptance player hooks for the physical WebSocket connection. */
+  async onConnectionAccepted(connection: any, requestContext: any): Promise<void> {
+    const room = this.getCurrentRoom<any>();
+    const players = typeof room?.players === "function" ? room.players() : undefined;
+    if (!players || typeof players !== "object") return;
+
+    const player = Object.values(players).find((candidate: any) =>
+      candidate?.conn === connection || candidate?.conn?.id === connection?.id
+    ) as RpgPlayer | undefined;
+    if (!player) return;
+
+    let hooks: Hooks;
+    try {
+      hooks = inject<Hooks>(ModulesToken, context);
+    }
+    catch {
+      return;
+    }
+
+    const request = requestContext?.request;
+    const url = request?.url ? new URL(request.url, "http://localhost") : new URL("http://localhost");
+    const connectionContext: RpgPlayerConnectionContext = Object.freeze({
+      connection,
+      query: Object.freeze(Object.fromEntries(url.searchParams.entries())),
+      headers: Object.freeze(Object.fromEntries(request?.headers?.entries?.() ?? [])),
+      request,
+    });
+    await lastValueFrom(hooks.callHooks("server-player-onAccepted", player, connectionContext));
   }
 
   private async emitServerStep(metrics: RpgServerStepMetrics): Promise<void> {

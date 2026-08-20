@@ -10,6 +10,7 @@ Assign and use persistent server-authoritative skill and item slots.
 ## Members
 
 - [action](#action)
+- [allowedEntryTypes](#allowedentrytypes)
 - [Assign Hotbar Slot](#assign-hotbar-slot)
 - [capacity](#capacity)
 - [Clear Hotbar Slot](#clear-hotbar-slot)
@@ -20,6 +21,7 @@ Assign and use persistent server-authoritative skill and item slots.
 - [Get Hotbar Locked Slot Hint](#get-hotbar-locked-slot-hint)
 - [getHotbarEntryType](#gethotbarentrytype)
 - [Initialize Hotbar](#initialize-hotbar)
+- [Is Hotbar Entry Type Allowed](#is-hotbar-entry-type-allowed)
 - [lockedSlotHint](#lockedslothint)
 - [Refresh Hotbar](#refresh-hotbar)
 - [registerHotbarEntryType](#registerhotbarentrytype)
@@ -48,6 +50,22 @@ Mutation or refresh that produced the snapshot.
 
 ```ts
 action: "initialize" | "assign" | "clear" | "select" | "refresh"
+```
+
+## allowedEntryTypes
+
+Entry types available in this hotbar.
+
+Omit this option to allow every registered entry type.
+
+- Source: `packages/server/src/Player/HotbarManager.ts`
+- Kind: `property`
+- Defined in: `HotbarConfiguration`
+
+### Signature
+
+```ts
+allowedEntryTypes: HotbarAllowedEntryTypesResolver
 ```
 
 ## Assign Hotbar Slot
@@ -113,7 +131,8 @@ The updated detached state.
 
 ## Configure Hotbar
 
-Configure dynamic capacity and locked-slot messaging for this player.
+Configure dynamic capacity, allowed entry types, and locked-slot
+messaging for this player.
 
 The resolver is evaluated on refresh and gameplay changes. Reducing
 capacity keeps assignments in locked slots so they return if capacity
@@ -143,6 +162,7 @@ The refreshed detached hotbar state.
 ```ts
 player.configureHotbar({
   capacity: current => Math.min(10, current.level + 2),
+  allowedEntryTypes: ["skill", "item"],
   lockedSlotHint: (_current, slot) => `Unlocks at level ${slot + 1}`,
 });
 ```
@@ -278,6 +298,32 @@ player.initializeHotbar([
   { type: "skill", id: "water-crops" },
 ]);
 ```
+
+## Is Hotbar Entry Type Allowed
+
+Return whether an entry type is enabled by the current configuration.
+
+A missing `allowedEntryTypes` option allows every registered or
+plugin-provided type.
+
+- Source: `packages/server/src/Player/HotbarManager.ts`
+- Kind: `method`
+- Member of: `RpgPlayer`
+- Defined in: `HotbarManagerMixin`
+
+### Signature
+
+```ts
+player.isHotbarEntryTypeAllowed(type)
+```
+
+### Parameters
+
+- `type`: `string`
+
+### Returns
+
+`true` when entries of this type may be displayed and used.
 
 ## lockedSlotHint
 

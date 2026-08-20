@@ -6,7 +6,16 @@ import { configureStudioGameRuntime } from "./data-provider";
 import { configureStudioConstants } from "./constants";
 import type { GameRuntimeMode } from "./data-provider/types";
 import type { StudioMapPlugin } from "./studio-map-plugins";
-import type { RpgPlayer } from "@rpgjs/server";
+import type { StudioStartupResolver } from "./startup";
+export {
+  StudioStartupError,
+  type StudioDirectStartup,
+  type StudioPlayerStartup,
+  type StudioStartupErrorCode,
+  type StudioStartupResolver,
+  type StudioStartupResolverContext,
+  type StudioTitleStartup,
+} from "./startup";
 export { collectStudioMapPluginPixiChildren, composeStudioMapPluginOptions, createStudioEventCollisionDebugOverlay, createStudioMapPlugins, studioDebugCollisionsPlugin } from "./studio-map-plugins";
 export type { CreateStudioMapPluginsOptions, StudioDebugCollisionsOptions, StudioMapPlugin, StudioMapPluginContext, StudioMapPluginPixiChild, StudioTerrainRenderOptions } from "./studio-map-plugins";
 export { createStudioActionBattleAnimations } from "./action-battle-animations";
@@ -63,11 +72,24 @@ export interface StudioGameModuleConfig {
   startMapId?: string;
   /** Skip character selection for an explicit direct-map startup. */
   skipCharacterSelect?: boolean;
-  /** Resolve player-specific startup settings for a shared MMORPG server. */
-  resolveStartup?: (
-    player: RpgPlayer,
-  ) => Promise<Pick<StudioGameModuleConfig, "projectId" | "startMapId" | "autoStart" | "displayTitleScreen" | "skipCharacterSelect">>
-    | Pick<StudioGameModuleConfig, "projectId" | "startMapId" | "autoStart" | "displayTitleScreen" | "skipCharacterSelect">;
+  /**
+   * Resolve one player-specific startup flow after MMORPG connection acceptance.
+   * Static startup options remain supported when this resolver is omitted.
+   *
+   * The resolver runs only on the server and exactly once for the accepted
+   * lobby connection. RPGJS validates the returned project/map relationship
+   * before running its built-in title or direct-map sequence.
+   *
+   * @example
+   * ```ts
+   * provideStudioGame({
+   *   resolveStartup: ({ query }) => query.map
+   *     ? { projectId: query.game, flow: "direct", mapId: query.map }
+   *     : { projectId: query.game, flow: "title" },
+   * })
+   * ```
+   */
+  resolveStartup?: StudioStartupResolver;
   debugCollisions?: boolean;
   studioPlugins?: StudioMapPlugin[];
   /** Authoritative Studio v2 map streaming, or `false` to disable it. */
@@ -100,7 +122,7 @@ export function provideStudioGame(config: StudioGameModuleConfig = {}): RpgProvi
 
   configureStudioGameRuntime({
     projectId: config.projectId ?? null,
-    runtimeMode: config.runtimeMode,
+    runtimeMode: config.runtimeMode ?? (config.resolveStartup ? "online" : undefined),
     apiBaseUrl: config.apiBaseUrl ?? resolvedApiUrl,
     bundleBasePath: config.bundleBasePath ?? "/game-data",
   });

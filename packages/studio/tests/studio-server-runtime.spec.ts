@@ -13,6 +13,18 @@ import {
 } from "../src/data-provider";
 import type { GameDataProvider } from "../src/server-entry";
 
+const acceptedContext = (query: Record<string, string> = {}) => ({
+  connection: {
+    id: "connection-1",
+    state: null,
+    setState: vi.fn(),
+    send: vi.fn(),
+    close: vi.fn(),
+  },
+  query,
+  headers: {},
+});
+
 afterEach(() => {
   delete (globalThis as typeof globalThis & { gameConfig?: unknown }).gameConfig;
   configureStudioGameRuntime({ projectId: null });
@@ -82,7 +94,7 @@ describe("Studio server runtime", () => {
       startMapId: "requested-map",
     }) as any).player;
 
-    await hooks.onConnected(player);
+    await hooks.onAccepted(player, acceptedContext());
     await hooks.onStart(player);
 
     expect(calls).toEqual(["initialize", "map:requested-map"]);
@@ -103,7 +115,7 @@ describe("Studio server runtime", () => {
       startMapId: "requested-map",
     }) as any).player;
 
-    await hooks.onConnected(player);
+    await hooks.onAccepted(player, acceptedContext());
     expect(initializeDefaultStats).not.toHaveBeenCalled();
     expect(changeMap).not.toHaveBeenCalled();
 
@@ -131,10 +143,10 @@ describe("Studio server runtime", () => {
       projectId: "auto-start-project",
     }) as any).player;
 
-    await hooks.onConnected({
+    await hooks.onAccepted({
       initializeDefaultStats,
       changeMap,
-    });
+    }, acceptedContext());
 
     expect(getProject).toHaveBeenCalledWith({
       projectId: "auto-start-project",
@@ -155,17 +167,16 @@ describe("Studio server runtime", () => {
       getMedia: vi.fn(),
       getDatabase: vi.fn(async () => []),
     });
-    const resolveStartup = vi.fn(async (player: { id: string }) => ({
-      projectId: player.id.split(":")[0],
-      autoStart: false,
-      displayTitleScreen: true,
+    const resolveStartup = vi.fn(async ({ query }: { query: Record<string, string> }) => ({
+      projectId: query.game,
+      flow: "title" as const,
     }));
     const hooks = (studioServer({ resolveStartup }) as any).player;
     const firstPlayer = { id: "project-a:player-1", changeMap: vi.fn(async () => true) };
     const secondPlayer = { id: "project-b:player-2", changeMap: vi.fn(async () => true) };
 
-    await hooks.onConnected(firstPlayer);
-    await hooks.onConnected(secondPlayer);
+    await hooks.onAccepted(firstPlayer, acceptedContext({ game: "project-a" }));
+    await hooks.onAccepted(secondPlayer, acceptedContext({ game: "project-b" }));
     expect(firstPlayer.changeMap).not.toHaveBeenCalled();
     expect(secondPlayer.changeMap).not.toHaveBeenCalled();
 
@@ -176,9 +187,19 @@ describe("Studio server runtime", () => {
     expect(secondPlayer.changeMap).toHaveBeenCalledWith("project-b-start");
     expect(getProject).toHaveBeenCalledWith({ projectId: "project-a" });
     expect(getProject).toHaveBeenCalledWith({ projectId: "project-b" });
+    expect(resolveStartup).toHaveBeenCalledTimes(2);
   });
 
   test("skips character selection for a player-specific direct map startup", async () => {
+    configureGameDataProvider({
+      kind: "online",
+      getProject: vi.fn(async (query: { projectId?: string; mapId?: string }) => ({
+        _id: query.projectId ?? (query.mapId === "requested-map" ? "project-a" : undefined),
+      })),
+      getMap: vi.fn(),
+      getMedia: vi.fn(),
+      getDatabase: vi.fn(async () => []),
+    });
     const showCharacterSelect = vi.fn();
     const changeMap = vi.fn(async () => true);
     const player = {
@@ -190,18 +211,49 @@ describe("Studio server runtime", () => {
     const hooks = (studioServer({
       resolveStartup: async () => ({
         projectId: "project-a",
-        startMapId: "requested-map",
-        autoStart: true,
-        displayTitleScreen: false,
-        skipCharacterSelect: true,
+        flow: "direct",
+        mapId: "requested-map",
       }),
     }) as any).player;
 
-    await hooks.onConnected(player);
+    await hooks.onAccepted(player, acceptedContext({ game: "project-a", map: "requested-map" }));
 
     expect(player.initializeDefaultStats).toHaveBeenCalledOnce();
     expect(showCharacterSelect).not.toHaveBeenCalled();
     expect(changeMap).toHaveBeenCalledWith("requested-map");
+  });
+
+  test("rejects a direct map owned by another Studio project without fallback", async () => {
+    configureGameDataProvider({
+      kind: "online",
+      getProject: vi.fn(async (query: { projectId?: string; mapId?: string }) => ({
+        _id: query.projectId ?? (query.mapId ? "project-b" : undefined),
+      })),
+      getMap: vi.fn(),
+      getMedia: vi.fn(),
+      getDatabase: vi.fn(async () => []),
+    });
+    const player = {
+      initializeDefaultStats: vi.fn(),
+      changeMap: vi.fn(),
+    };
+    const hooks = (studioServer({
+      resolveStartup: async () => ({
+        projectId: "project-a",
+        flow: "direct",
+        mapId: "project-b-map",
+      }),
+    }) as any).player;
+
+    await expect(hooks.onAccepted(
+      player,
+      acceptedContext({ game: "project-a", map: "project-b-map" }),
+    )).rejects.toMatchObject({
+      name: "StudioStartupError",
+      code: "MAP_PROJECT_MISMATCH",
+    });
+    expect(player.initializeDefaultStats).not.toHaveBeenCalled();
+    expect(player.changeMap).not.toHaveBeenCalled();
   });
 
   test("starts directly when the project disables the title screen", async () => {
@@ -224,8 +276,9 @@ describe("Studio server runtime", () => {
       projectId: "no-title-project",
     }) as any).player;
 
-    await hooks.onConnected({ initializeDefaultStats, changeMap });
-    await hooks.onStart({ initializeDefaultStats, changeMap });
+    const player = { initializeDefaultStats, changeMap };
+    await hooks.onAccepted(player, acceptedContext());
+    await hooks.onStart(player);
 
     expect(initializeDefaultStats).toHaveBeenCalledOnce();
     expect(changeMap).toHaveBeenCalledOnce();
@@ -294,7 +347,7 @@ describe("Studio server runtime", () => {
       $permanent: true,
     });
 
-    await hooks.onConnected(player);
+    await hooks.onAccepted(player, acceptedContext());
 
     expect(showCharacterSelect).toHaveBeenCalledWith([
       expect.objectContaining({ id: "actor-2", name: "Borin", graphic: "borin" }),
@@ -346,12 +399,12 @@ describe("Studio server runtime", () => {
     const changeMap = vi.fn(async () => true);
     const hooks = (studioServer({ projectId: "empty-character-select-project" }) as any).player;
 
-    await hooks.onConnected({
+    await hooks.onAccepted({
       initializeDefaultStats: vi.fn(),
       showCharacterSelect,
       setActor: vi.fn(),
       changeMap,
-    });
+    }, acceptedContext());
 
     expect(showCharacterSelect).not.toHaveBeenCalled();
     expect(changeMap).toHaveBeenCalledWith("first-map");
@@ -382,12 +435,12 @@ describe("Studio server runtime", () => {
     const changeMap = vi.fn(async () => true);
     const hooks = (studioServer({ projectId: "unavailable-character-select-project" }) as any).player;
 
-    await hooks.onConnected({
+    await hooks.onAccepted({
       initializeDefaultStats: vi.fn(),
       showCharacterSelect,
       setActor: vi.fn(),
       changeMap,
-    });
+    }, acceptedContext());
 
     expect(showCharacterSelect).not.toHaveBeenCalled();
     expect(changeMap).toHaveBeenCalledWith("first-map");

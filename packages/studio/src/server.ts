@@ -1,4 +1,4 @@
-import { Move, RpgEvent, RpgMap, RpgPlayer, RpgServer, provideServerMapStreaming } from "@rpgjs/server";
+import { Move, RpgEvent, RpgMap, RpgPlayer, RpgServer, provideServerMapStreaming, type RpgPlayerConnectionContext } from "@rpgjs/server";
 import { defineModule, normalizeLightingState, WorldMapsManager, type RpgActionInput, type WorldMapConfig } from "@rpgjs/common";
 import { BlockExecutionService } from "./block-executor";
 import { apiUrl, configureStudioConstants } from "./constants";
@@ -23,6 +23,7 @@ import {
   resolveStudioItemType,
 } from "./starting-equipment";
 import { normalizeStudioCharacterSelectSettings } from "./action-battle-audio";
+import { StudioStartupError, type StudioPlayerStartup } from "./startup";
 export { createStudioActionBattleAnimations } from "./action-battle-animations";
 export type { StudioCombatAnimationIds, StudioCombatAnimationOptions } from "./action-battle-animations";
 export {
@@ -441,10 +442,7 @@ type StudioServerConfig = CreateStudioMapUpdatePayloadOptions & {
   autoStart?: boolean;
   displayTitleScreen?: boolean;
   skipCharacterSelect?: boolean;
-  resolveStartup?: (
-    player: RpgPlayer,
-  ) => Promise<Pick<StudioServerConfig, "projectId" | "startMapId" | "autoStart" | "displayTitleScreen" | "skipCharacterSelect">>
-    | Pick<StudioServerConfig, "projectId" | "startMapId" | "autoStart" | "displayTitleScreen" | "skipCharacterSelect">;
+  resolveStartup?: import("./startup").StudioStartupResolver;
 };
 
 export const prepareStudioWorldMaps = (worldMaps: unknown): WorldMapConfig[] =>
@@ -983,10 +981,85 @@ export async function createStudioMapUpdatePayload(mapId: string, config: Create
 
 export default (_config?: unknown) => {
   const config = (_config ?? {}) as StudioServerConfig;
-  const resolvePlayerStartup = async (player: RpgPlayer): Promise<StudioServerConfig> => ({
-    ...config,
-    ...(typeof config.resolveStartup === "function" ? await config.resolveStartup(player) : {}),
-  });
+  const startupByPlayer = new WeakMap<RpgPlayer, Promise<StudioServerConfig>>();
+  const validateResolvedStartup = async (startup: StudioPlayerStartup): Promise<StudioServerConfig> => {
+    const projectId = startup.projectId?.trim();
+    if (!projectId) {
+      throw new StudioStartupError("PROJECT_REQUIRED", "Studio startup requires a projectId");
+    }
+
+    const provider = config.dataProvider ?? getGameDataProvider();
+    let project: any;
+    try {
+      project = await provider.getProject({ projectId });
+    }
+    catch (error) {
+      throw new StudioStartupError("PROJECT_NOT_FOUND", `Studio project could not be resolved: ${projectId}`);
+    }
+    if (normalizeProjectId(project?._id ?? project?.id) !== projectId) {
+      throw new StudioStartupError("PROJECT_NOT_FOUND", `Studio project could not be resolved: ${projectId}`);
+    }
+
+    if (startup.flow === "title") {
+      return {
+        ...config,
+        projectId,
+        startMapId: startup.startMapId,
+        autoStart: false,
+        displayTitleScreen: true,
+        skipCharacterSelect: false,
+      };
+    }
+
+    const mapId = startup.mapId?.trim();
+    if (!mapId) {
+      throw new StudioStartupError("MAP_REQUIRED", "Direct Studio startup requires a mapId");
+    }
+
+    let mapProject: any;
+    try {
+      mapProject = await provider.getProject({ mapId });
+    }
+    catch (error) {
+      throw new StudioStartupError(
+        "MAP_PROJECT_MISMATCH",
+        `Studio map ${mapId} does not belong to project ${projectId}`,
+      );
+    }
+    if (normalizeProjectId(mapProject?._id ?? mapProject?.id) !== projectId) {
+      throw new StudioStartupError(
+        "MAP_PROJECT_MISMATCH",
+        `Studio map ${mapId} does not belong to project ${projectId}`,
+      );
+    }
+
+    return {
+      ...config,
+      projectId,
+      startMapId: mapId,
+      autoStart: true,
+      displayTitleScreen: false,
+      skipCharacterSelect: true,
+    };
+  };
+  const resolvePlayerStartup = (
+    player: RpgPlayer,
+    connectionContext?: RpgPlayerConnectionContext,
+  ): Promise<StudioServerConfig> => {
+    const cached = startupByPlayer.get(player);
+    if (cached) return cached;
+
+    const pending = typeof config.resolveStartup === "function"
+      ? connectionContext
+        ? Promise.resolve(config.resolveStartup({
+            ...connectionContext,
+            player,
+          })).then(validateResolvedStartup)
+        : Promise.reject(new Error("Studio startup was requested before connection acceptance"))
+      : Promise.resolve(config);
+    startupByPlayer.set(player, pending);
+    return pending;
+  };
   const shouldAutoStart = async (playerConfig: StudioServerConfig) => {
     if (playerConfig.autoStart === true) return true;
     if (playerConfig.displayTitleScreen === true) return false;
@@ -1017,8 +1090,11 @@ export default (_config?: unknown) => {
           $permanent: true,
         },
       },
-      onConnected: async (player: RpgPlayer) => {
-        const playerConfig = await resolvePlayerStartup(player);
+      onAccepted: async (player: RpgPlayer, connectionContext: RpgPlayerConnectionContext) => {
+        const roomId = String((player as any).getCurrentMap?.()?.id ?? (player as any).map?.id ?? "");
+        if (roomId && !roomId.startsWith("lobby-")) return;
+
+        const playerConfig = await resolvePlayerStartup(player, connectionContext);
         if (!await shouldAutoStart(playerConfig)) return;
         player.initializeDefaultStats();
         if (playerConfig.skipCharacterSelect !== true) {

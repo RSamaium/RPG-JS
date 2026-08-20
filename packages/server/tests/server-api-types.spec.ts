@@ -10,6 +10,7 @@ import type {
   RpgMapHooks,
   RpgPlayer,
   RpgPlayerHooks,
+  RpgPlayerConnectionContext,
   RpgPlayerSaveResult,
   RpgPlayerSlotLoadResult,
   RpgPlayerSnapshot,
@@ -45,6 +46,11 @@ describe("server public API types", () => {
       onInput(player, input) {
         expectTypeOf(player).toEqualTypeOf<RpgPlayer>();
         expectTypeOf(input).toEqualTypeOf<RpgActionInput<unknown>>();
+      },
+      onAccepted(player, context) {
+        expectTypeOf(player).toEqualTypeOf<RpgPlayer>();
+        expectTypeOf(context).toEqualTypeOf<RpgPlayerConnectionContext>();
+        expectTypeOf(context.query).toEqualTypeOf<Readonly<Record<string, string>>>();
       },
       onHotbarChange(player, change) {
         expectTypeOf(player).toEqualTypeOf<RpgPlayer>();

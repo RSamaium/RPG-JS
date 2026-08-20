@@ -1,8 +1,43 @@
-import { describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { signal } from "canvasengine";
-import { displayStudioHudOnce } from "../src/client";
+import {
+  configureStudioClientStartupProject,
+  displayStudioHudOnce,
+  resolveStudioClientStartupQuery,
+} from "../src/client";
+import {
+  configureStudioGameRuntime,
+  getGameDataProvider,
+  getStudioGameRuntimeConfig,
+} from "../src/data-provider";
+
+afterEach(() => {
+  configureStudioGameRuntime({ projectId: null, runtimeMode: undefined });
+});
 
 describe("Studio client runtime", () => {
+  test("resolves the shared MMORPG project and direct map from the page URL", () => {
+    expect(resolveStudioClientStartupQuery("?game=project-a&map=town")).toEqual({
+      projectId: "project-a",
+      directMapId: "town",
+    });
+    expect(resolveStudioClientStartupQuery("?game=%20%20")).toEqual({
+      projectId: undefined,
+      directMapId: undefined,
+    });
+  });
+
+  test("uses the online provider for a project resolved from the URL", () => {
+    configureStudioGameRuntime({ projectId: null, runtimeMode: undefined });
+
+    configureStudioClientStartupProject("project-a", {});
+
+    expect(getStudioGameRuntimeConfig()).toMatchObject({
+      projectId: "project-a",
+      runtimeMode: "online",
+    });
+    expect(getGameDataProvider().kind).toBe("online");
+  });
   test("displays the HUD once with the configured faceset", () => {
     const display = vi.fn();
     const gui = {

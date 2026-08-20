@@ -17,6 +17,7 @@ import FadeComponent from "./components/fade.ce";
 import { trigger } from "canvasengine";
 import UpComponent from "./components/up.ce";
 import {
+  configureStudioGameRuntime,
   getGameDataProvider,
   getStudioGameRuntimeConfig,
 } from "./data-provider";
@@ -208,6 +209,28 @@ const resolveActorIllustrationRefs = async (
   return refs.filter(Boolean);
 };
 
+export const resolveStudioClientStartupQuery = (search: string): {
+  projectId?: string;
+  directMapId?: string;
+} => {
+  const params = new URLSearchParams(search);
+  const projectId = params.get("game")?.trim() || undefined;
+  const directMapId = params.get("map")?.trim() || undefined;
+  return { projectId, directMapId };
+};
+
+export const configureStudioClientStartupProject = (
+  projectId: string | undefined,
+  config: StudioGameModuleConfig,
+): void => {
+  const runtimeConfig = getStudioGameRuntimeConfig();
+  if (!projectId || runtimeConfig.projectId || config.projectId !== undefined) return;
+  configureStudioGameRuntime({
+    projectId,
+    runtimeMode: config.runtimeMode ?? "online",
+  });
+};
+
 export default (config: StudioGameModuleConfig) => {
   return defineModule<RpgClient>({
     engine: {
@@ -216,23 +239,20 @@ export default (config: StudioGameModuleConfig) => {
 
         await new Promise((resolve) => setTimeout(resolve, 20));
 
-        const gameParam = config.projectId;
         const configuredProjectId = getStudioGameRuntimeConfig().projectId;
+        const startupQuery = resolveStudioClientStartupQuery(window.location.search);
+        const projectId = configuredProjectId
+          ?? (config.projectId === undefined ? startupQuery.projectId : config.projectId);
+        configureStudioClientStartupProject(projectId ?? undefined, config);
 
         let response: any = {};
         const provider = getGameDataProvider();
 
         // Configuration projectId takes precedence over URL mode.
-        if (configuredProjectId) {
+        if (projectId) {
           response = await provider.getProject({
-            projectId: configuredProjectId,
+            projectId,
           });
-        }
-        // If ?game parameter is present, fetch project by projectId
-        // gameParam should contain the projectId (e.g., ?game=projectId)
-        else if (gameParam !== null) {
-          const projectId = gameParam;
-          response = await provider.getProject({ projectId });
         }
 
         window.gameConfig = response;
@@ -301,7 +321,9 @@ export default (config: StudioGameModuleConfig) => {
             engine.addSpriteSheet(spritesheet);
           });
 
-        const displayTitleScreen = config.displayTitleScreen
+        const displayTitleScreen = startupQuery.directMapId
+          ? false
+          : config.displayTitleScreen
           ?? response.menus?.titleScreen?.enabled
           ?? true;
         if (displayTitleScreen) {

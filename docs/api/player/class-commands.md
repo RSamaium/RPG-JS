@@ -9,12 +9,61 @@ Assign and inspect player classes and class-driven behaviors.
 
 ## Members
 
-- [createClassInstance](#createclassinstance)
+- [Change Actor](#change-actor)
 - [changeActor](#changeactor)
+- [createClassInstance](#createclassinstance)
 - [resolveClassSnapshot](#resolveclasssnapshot)
 - [setActor](#setactor)
 - [setClass](#setclass)
 - [WithClassManager](#withclassmanager)
+
+## Change Actor
+
+Replace the player's active actor identity while preserving acquired
+progression. The new actor's parameter curves are evaluated at the
+current level and HP/SP keep their previous fill ratios. Starting
+equipment is intentionally not granted.
+
+- Source: `packages/server/src/Player/ClassManager.ts`
+- Kind: `method`
+- Member of: `RpgPlayer`
+
+### Signature
+
+```ts
+player.changeActor(actor)
+```
+
+### Parameters
+
+- `actorInput`: `ActorInput`
+
+### Returns
+
+The resolved actor object.
+
+## changeActor
+
+Change the active actor without granting starting equipment or resetting
+the player's acquired progression.
+
+- Source: `packages/server/src/Player/ClassManager.ts`
+- Kind: `method`
+- Defined in: `IClassManager`
+
+### Signature
+
+```ts
+changeActor(actor: ActorInput): ActorData
+```
+
+### Parameters
+
+- `actor`: `ActorInput`
+
+### Returns
+
+The resolved actor object
 
 ## createClassInstance
 
@@ -31,37 +80,7 @@ createClassInstance(classInput: ClassInput)
 
 ### Parameters
 
-- `classInput`: `ClassInput` (`ClassConstructor | ClassData | string`)
-
-## changeActor
-
-Replace the active actor identity without resetting the player's acquired
-progression.
-
-- Source: `packages/server/src/Player/ClassManager.ts`
-- Kind: `method`
-- Defined in: `IClassManager`
-
-### Signature
-
-```ts
-changeActor(actor: ActorInput): ActorData
-```
-
-### Parameters
-
-- `actor`: an actor constructor, registered database ID, or resolved actor object
-
-### Returns
-
-The resolved actor object.
-
-The actor's identity, appearance, hitbox, default class, experience curve, and
-parameter curves are applied. Existing level and experience are retained, the
-new curves are evaluated at that level, and HP/SP retain their previous fill
-ratios. Inventory, equipment, learned skills, states, and parameter modifiers
-are not cleared. Unlike `setActor`, this method does not grant starting
-equipment.
+- `classInput`: `ClassInput`
 
 ## resolveClassSnapshot
 
@@ -119,16 +138,11 @@ setClass(_class: ClassInput): ClassData
 
 ### Parameters
 
-- `_class`: a class constructor, registered database ID, or resolved class object
+- `_class`: `ClassInput`
 
 ### Returns
 
 The instantiated class object
-
-The assigned instance is stored in `player._class`, its `onSet` hook runs, and
-eligible `skillsToLearn` entries up to the player's current level are learned.
-This makes resolved objects returned by a CMS usable without generating a
-constructor at runtime.
 
 ## WithClassManager
 

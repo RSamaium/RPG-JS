@@ -387,6 +387,51 @@ describe("createRpgServerTransport", () => {
     });
   });
 
+  it("runs onAccepted after the connected packet with immutable request context", async () => {
+    const ws = new MockWebSocket();
+    const accepted = vi.fn();
+    const GameServer = createServer({
+      providers: [
+        provideServerModules([
+          {
+            engine: {
+              auth(_server: RpgServerEngine, socket: any) {
+                socket.conn.setState({ projectId: "project-a" });
+                return "accepted-user";
+              },
+            },
+            player: {
+              onAccepted(_player: any, context: any) {
+                accepted({
+                  packetTypes: ws.sent.map((packet) => JSON.parse(packet).type),
+                  query: context.query,
+                  state: context.connection.state,
+                  queryFrozen: Object.isFrozen(context.query),
+                });
+              },
+            },
+          },
+        ]),
+      ],
+    });
+    const transport = createRpgServerTransport(GameServer as any, {
+      initializeMaps: false,
+    });
+
+    await transport.acceptWebSocket(ws as any, {
+      url: "http://localhost/parties/main/lobby-1?id=accepted-session&game=project-a",
+      method: "GET",
+      headers: { host: "localhost" },
+    });
+
+    expect(accepted).toHaveBeenCalledWith(expect.objectContaining({
+      packetTypes: expect.arrayContaining(["connected"]),
+      query: expect.objectContaining({ game: "project-a" }),
+      state: expect.objectContaining({ projectId: "project-a" }),
+      queryFrozen: true,
+    }));
+  });
+
   it("rejects a websocket connection when authentication fails", async () => {
     const transport = createRpgServerTransport(AuthServer as any, {
       initializeMaps: false,
