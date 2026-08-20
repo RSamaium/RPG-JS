@@ -45,11 +45,13 @@ Use `PUT /api/media/update/:id` when the payload can change the media category/t
 Common payload confirmed in server code:
 
 - `POST /api/media/generate`: `{ "action": "estimate" | "execute", "type": string, "userPrompt": string, "metadata"?: { "source"?: string, "referenceImage"?: string, "referenceImages"?: string[], "duration"?: number, ... } }`
-- `GET /api/media/generate/:instanceId`: returns the workflow status and, once complete, the generated `media` record. The public API does not expose internal workflow `steps`.
+- `GET /api/media/generate/:instanceId`: returns the project-scoped canonical workflow status and, once complete, the generated `media` record. The public API does not expose internal workflow `steps`. For a known run it falls back to the persisted application status when Cloudflare temporarily reports `instance.not_found`; unknown or cross-project ids return `404`.
 
 Generated `type: "animation"` and `type: "spritesheet"` media use spritesheet.ai. VFX animations use the `effect` preset, one directionless lane, 16 frames, and the provider's dynamic grid metadata; they are not normalized to 4x4. Spritesheets should include either guided `metadata.animationIntent` or advanced `metadata.motionPreset`/`metadata.animationLayout`, plus optional `metadata.frameCount`. For guided `movement` intents containing `walk` or `run`, Studio forces `idleFirstFrame: true`, even if the caller omits it or sends `false`; spritesheet.ai treats it as a generation instruction rather than a guaranteed PNG post-processing operation. Character-editor animations should pass the complete base image as execution-only `metadata.referenceImage`, pass the character media id as `metadata.groupId`, and request a four-direction `character-actions` intent; the persisted `groupId` makes the generated spritesheet appear in `GET /api/media/group/:groupId`. Generic image types use Fal.ai `openai/gpt-image-2.5/sunburst`; reference images select its edit endpoint and transparent asset types use native PNG alpha. Generated tilesets may include `metadata.elements`, a JSON string of packed rectangles produced by the image-processing container. Element set (`type: "tileset"`) generation may pass `metadata.terrainReferenceImage` plus `metadata.terrainReferenceMediaId` to guide generated objects toward the terrain style; `terrainReferenceImage` is execution-only and is stripped from persisted metadata. Generated terrain media include `metadata.sourceTexture`, direct `metadata.rows` and `metadata.columns`, and `metadata.textureGrid`.
 
 Studio terrain generation defaults to a `4x4` `sourceTexture` atlas in the UI and persists the generated atlas directly. It no longer creates Wang/autotile output through the image-processing container. Requests can set `metadata.sourceTextureColumns` and `metadata.sourceTextureRows` to choose the atlas layout, and can pass `terrainStyleId` plus `terrainStylePrompt` to guide the technical terrain prompt. Consumers should read `metadata.rows` and `metadata.columns` or the mirrored `metadata.textureGrid`.
+
+Each terrain texture may use `defaultRenderMode: { "type": "nine-slice", "center": { "x": 12, "y": 12, "width": 24, "height": 24 } }`. Center coordinates are integer source pixels relative to that atlas cell. Keep at least one source pixel outside the center on all four sides. Studio repeats the center, maps the remaining bands along the painted contour, and forces a hard boundary without fade bleed. Set `renderingStyle: "hd-2d"` for generated hand-painted terrain; omit it for legacy pixel-art media.
 
 Workflow to follow:
 
@@ -57,7 +59,7 @@ Workflow to follow:
 2. Report the returned `credits`, `availableCredits`, and `hasEnoughCredits`.
 3. Ask the user to confirm the spend.
 4. Only after confirmation, call the same endpoint with `action: "execute"`.
-5. Poll `GET /api/media/generate/:instanceId` until completion if the task requires the final media record.
+5. A non-chat API client may poll `GET /api/media/generate/:instanceId` until completion if it requires the final media record. In the Studio assistant, stop after the generation tool returns its `assetWorkflowWatcher`; the client progress card owns polling and resumes the assistant once at a terminal status.
 
 Credit costs available in `common/permissions/credit.ts`:
 

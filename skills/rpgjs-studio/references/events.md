@@ -63,6 +63,13 @@ Use this mode for UI lists or agents that only need one page of events. The maxi
 6. Create or update the event.
 7. If the event needs a real workflow, create or update block collections and link them through triggers.
 
+The built-in Studio assistant makes new workflow creation deterministic. It
+loads `build-event-workflow/references/workflow.md`, discovers block summaries,
+loads the exact selected schemas, resolves placement through the compact map
+context, and only then exposes the combined event workflow writer. A suggested
+pixel position is authoritative when it is inside the map; otherwise the map
+start is used. The compact context never returns terrain layers or elements.
+
 ## Map resolution
 
 Use the map list as the search base when the user gives a title or description:

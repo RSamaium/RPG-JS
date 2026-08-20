@@ -58,6 +58,12 @@ schemas.
 - Delete a block: `DELETE /api/blocks/:collectionId/blocks/:blockId`
 - Duplicate a block: `POST /api/blocks/:collectionId/blocks/:blockId/duplicate`
 
+For the built-in Studio assistant, event workflow creation is sequenced rather
+than freely planned: read the qualified workflow resource, discover the
+catalog, load exact schemas, resolve a compact map position, then call the
+combined workflow writer. Do not exact-read complete map layers to place a new
+event.
+
 ## Block collection payload
 
 ```json

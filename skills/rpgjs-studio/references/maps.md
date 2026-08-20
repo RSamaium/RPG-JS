@@ -20,6 +20,12 @@ Use this reference for map CRUD and map-specific secondary operations.
 - Update world position: `PUT /api/maps/:mapId/world-position`
 - Generate a new map with AI: `POST /api/maps/generate`
 - Complete an existing map with AI: `POST /api/maps/:mapId/generate`
+- Prepare or execute the durable map workflow: `POST /api/map-generations`
+- Poll the durable map workflow: `GET /api/map-generations/:instanceId`
+- Retry a failed and refunded workflow: `POST /api/map-generations/:instanceId/retry`
+- Read legacy/diagnostic drawing references: `GET /api/map-generations/:requestId/drawing-plan`
+- Finalize a legacy prepared run: `POST /api/map-generations/:requestId/finalize`
+- Cancel it: `DELETE /api/map-generations/:requestId`
 
 ## Workflow
 
@@ -28,6 +34,24 @@ Use this reference for map CRUD and map-specific secondary operations.
 3. For event lookup on a map, prefer `GET /api/maps/:mapId/events` before editing event placement.
 4. If map params require media IDs such as `backgroundMusic` or `backgroundAmbientSound`, search media first with `GET /api/media?query=<search>`.
 5. If the required media does not exist and would need AI generation, ask for user permission before consuming credits.
+
+## Durable map-generation workflow
+
+Use `POST /api/map-generations` with `action: "prepare"`. A create payload contains `mode: "create"`, `name`, optional `description`, optional `assistantConversationId`, `objective`, `kind`, `width`, `height`, and optional `terrainMediaId` / `elementTilesetMediaId`. It may also contain `followUpPlan`; its optional `music` suggestion is `{ id, title, description, prompt }`, and each of its three event suggestions accepts an optional pixel `position: { x, y }` strictly inside `width * 48` by `height * 48`. Existing clients may omit the plan, music, conversation id, or positions. When description is omitted, the server persists the objective as its fallback. An edit payload contains `mode: "edit"`, `scope: "full-map" | "partial-edit"`, `mapId`, a base64 `currentMapImage`, `objective`, `kind`, optional media IDs, and `regions`. A partial edit requires one to eight normalized polygons; a full edit requires an empty region list.
+
+Preparation does not charge credits. It returns a UUID `confirmationId`, an estimate, expiry, and exact confirm/cancel choice IDs. After explicit user confirmation, call the same endpoint with `{ "action": "execute", "confirmationId": "..." }`. Poll the returned `instanceId`; do not poll tightly. A `complete` response includes the final persisted `mapId` and `ignoredElementCount`. An `errored` or `terminated` response exposes `creditsRestored: true` after the debit is refunded and `retryAvailable: true` when the prepared inputs remain reusable. Only then may a client call `POST /api/map-generations/:instanceId/retry`; it returns a fresh instance and does not require another confirmation.
+
+The server generates the concept, runs the configured layerizer, audits every semantic layer once, separates disconnected elements while preserving their map rectangles, converts masks into terrain and morphology, and persists the final RPGJS map. At most one existing terrain and one existing element set are accepted; both are optional. A combined layer such as grass plus dirt path exposes distinct `terrainPatterns`; discrete rocks and contained decorative water such as fountains or ornamental ponds are positioned elements. Gameplay-scale rivers, lakes and flooded passages remain water holes with `fillTextureId`. Large fitted carpets become terrain with the procedural `carpet-border` mode, while loose rugs remain low elements. Structural walls persist an exact top/face/trim/void control texture plus collision-only morphology; organic or failed segmentation keeps the procedural morphology fallback. A selected terrain is reused only when its metadata covers every required pattern, otherwise a complete 4×4 atlas is derived from its style. A partial edit inherits current assets and merges wall pixels outside its normalized regions.
+
+No agent drawing phase follows execution. A client may poll until `complete` and then navigate to the returned map. Do not read `drawing-plan`, redraw terrain or morphology, or call `finalize` for a normal new workflow; those endpoints remain only for legacy or diagnostic integrations.
+
+When a user selects a generated event suggestion, Studio forwards its optional
+position to the compact event-map resolver. The resolver returns only map
+identity, dimensions, start, and the chosen bounded position. Missing or
+out-of-bounds positions use the map start; complete map layers are never loaded
+into the event-creation conversation.
+
+The fixed deployment cost is 45 credits. Failure refunds once and retains private intermediate artifacts until the run expires so a Cloudflare step can be restarted; deferred cleanup then removes them. Explicit cancellation cleans immediately. API retry starts a fresh attempt from the prepared inputs and charges that attempt normally. The older `/api/maps/generate` endpoints remain available, but new agent integrations should use the two-phase `/api/map-generations` workflow.
 
 ## Payloads from schemas
 
@@ -50,6 +74,7 @@ This endpoint accepts partial section updates. Omitted fields are preserved. Sen
 - Start position only: `{ "startX": 0, "startY": 0 }`
 - Events only: `{ "events": [{ "eventId": "...", "x": 10, "y": 20 }] }` or `{ "events": [] }`
 - Terrain morphology only: `{ "terrainMorphologyLayer": { ... } }` or `{ "terrainMorphologyLayer": null }`
+- Semantic generated walls: send `wallSurfaceLayer` together with base64 `wallSurfaceControlTexture`; send `{ "wallSurfaceLayer": null }` to remove the semantic visual layer
 - Terrain only: send `terrain`, and optionally `terrainLayer` plus `terrainControlTexture`
 - Elements only: send `elementsAlwaysLow`, `elementsLow`, and `elementsHigh`
 - Tileset params only: send `baseTerrainId`, `tilesetId`, `terrainTilesetIds`, `elementTilesetIds`, `primaryTerrainTilesetId`, or `primaryElementTilesetId`
@@ -58,6 +83,8 @@ This endpoint accepts partial section updates. Omitted fields are preserved. Sen
 Useful fields from `mapSchema` when a full map update is needed:
 
 - `name?: string`
+- `description?: string`
+- `assistantConversationId?: string` links a generated map to its Studio assistant conversation
 - `data?: string`
 - `params?: object`
 - `weather?: object | null`
@@ -70,6 +97,8 @@ Useful fields from `mapSchema` when a full map update is needed:
 - `elementsHigh?: string`
 - `terrainLayer?: { version: 1, mode: "control-texture", width: number, height: number, tileSize: number, palette: string[], controlTexture: { fileName: string, encoding: "rgba8", terrainIndex: ["r", "g"], light?: "b", coverage?: "a", reserved?: "a" } }`
 - `terrainMorphologyLayer?: { version: 1, mode: "terrain-morphology", width: number, height: number, tileSize: number, features: Array<{ id: string, kind: "hole" | "wall", params: object, strokes: Array<{ id: string, points: Array<{ x: number, y: number }>, radius: number }> }> }`
+- `wallSurfaceLayer?: { version: 1, mode: "wall-surface", width: number, height: number, tileSize: number, materials: Array<{ id: string, label: string, topTextureId: string, faceTextureId: string, trimTextureId: string, baseTextureId?: string }>, controlTexture: { fileName: string, encoding: "rgba8", materialIndex: "r", role: "g", reserved: "b", coverage: "a" } }`
+- `wallSurfaceControlTexture?: string` base64 PNG used with `wallSurfaceLayer` during updates; the API stores it and persists only the project-scoped filename
 - `terrainControlTexture?: string` base64 `data:image/png` payload used with `terrainLayer` during map updates; the API stores it and writes the resulting `controlTexture.fileName`.
 - `hitboxes?: array`
 - `polygons?: array`
@@ -77,7 +106,9 @@ Useful fields from `mapSchema` when a full map update is needed:
 
 `terrainLayer` is the shader terrain V1 contract. The control texture is stored as an RGBA8 media/storage file, with the terrain palette index encoded as `R + G * 256`. `B` is optional light data and treats `128` as neutral when present. `A` is terrain mask coverage for pixel brush strokes, with `255` as fully covered. Soft edges are computed from transition/blend metadata at render time. Legacy tile grids are normalized into `tileSize x tileSize` blocks at load time, but editor brush edits may update the control texture at world-pixel resolution.
 
-`terrainMorphologyLayer` stores hole and wall strokes in world pixels. Hole params support `depth`, `roundness`, `roughness`, optional facade `textureId`, optional bottom-fill `fillTextureId`, `fillHeight` clamped to `0..100`, and optional per-hole `waveIntensity`, `waveDirection`, and `waveSpeed`; `textureId` is not used as the bottom-fill fallback. Wall params support `height`, `roundness`, `roughness`, and optional facade `textureId`. The editor wall smoothness control maps to `roughness = 1 - smoothness`. The brush tool modifies the terrain surface; hole/wall tools use the selected terrain texture as the vertical facade while the top surface remains the already-painted base terrain. The renderer merges hole/wall masks as signed terrain levels before drawing, so overlapping strokes are clipped or neutralized instead of being rendered as independent overlays. The editor renders this layer after `terrainLayer` and treats intersecting hole/wall cells as blocking collision.
+`terrainMorphologyLayer` stores hole and wall strokes in world pixels. Hole params support `depth`, `roundness`, `roughness`, optional facade `textureId`, optional bottom-fill `fillTextureId`, `fillHeight` clamped to `0..100`, and optional per-hole `waveIntensity`, `waveDirection`, and `waveSpeed`; `textureId` is not used as the bottom-fill fallback. Wall params support `height`, `roundness`, `roughness`, optional facade `textureId`, cap `surfaceTextureId`, rim `trimTextureId`, base `baseTextureId`, and `renderMode`. The special value `__solid_black__` draws a solid black cutaway cap. A `collision-only` wall stays in collision but skips the procedural visual pass because `wallSurfaceLayer` is authoritative.
+
+`wallSurfaceLayer` references a map-sized RGBA8 PNG. `R` selects `materials[R]`; `G` stores `0=void`, `1=top`, `2=face`, or `3=trim`; `B` is reserved; `A` is coverage. Studio fills each exact role mask with its dedicated repeatable texture, so it does not reconstruct wall bands from morphology strokes. The morphology eraser and undo/redo update semantic pixels and collision together.
 
 `waterAnimation` defines map-level liquid animation defaults. `speed` defaults to `1`, `intensity` to `0.45`, and `direction` to `90`. Directions use clockwise screen-space degrees: `0` moves right, `90` down, `180` left, and `270` up. Direction values are normalized around the circle.
 
