@@ -37,7 +37,36 @@ export function extractStudioGroundShadowPixels(
       const alpha = pixels[index + 3];
       const luminance = pixels[index] * 0.2126 + pixels[index + 1] * 0.7152 + pixels[index + 2] * 0.0722;
       if (alpha < 12 || alpha > 220 || luminance > 112) continue;
-      shadow.set(pixels.slice(index, index + 4), index);
+
+      // Preserve translucent anti-aliasing attached to opaque artwork. A soft
+      // floor shadow is normally separated from opaque pixels by at least one
+      // transparent pixel, while an object contour directly touches them.
+      let touchesOpaqueArtwork = false;
+      for (let offsetY = -1; offsetY <= 1 && !touchesOpaqueArtwork; offsetY += 1) {
+        const neighborY = y + offsetY;
+        if (neighborY < 0 || neighborY >= height) continue;
+        for (let offsetX = -1; offsetX <= 1; offsetX += 1) {
+          const neighborX = x + offsetX;
+          if (neighborX < 0 || neighborX >= width || (offsetX === 0 && offsetY === 0)) continue;
+          const neighborIndex = (neighborY * width + neighborX) * 4;
+          const neighborAlpha = pixels[neighborIndex + 3];
+          const colorDistance = Math.max(
+            Math.abs(pixels[index] - pixels[neighborIndex]),
+            Math.abs(pixels[index + 1] - pixels[neighborIndex + 1]),
+            Math.abs(pixels[index + 2] - pixels[neighborIndex + 2]),
+          );
+          if (neighborAlpha > 220 && colorDistance <= 48) {
+            touchesOpaqueArtwork = true;
+            break;
+          }
+        }
+      }
+      if (touchesOpaqueArtwork) continue;
+
+      shadow[index] = pixels[index];
+      shadow[index + 1] = pixels[index + 1];
+      shadow[index + 2] = pixels[index + 2];
+      shadow[index + 3] = alpha;
       element[index + 3] = 0;
     }
   }
@@ -1203,6 +1232,7 @@ const createRenderVersion = (
       hitbox: readValue(element?.hitbox),
       zIndexOffset: readValue(element?.zIndexOffset),
       hasShadow: readValue(element?.hasShadow),
+      extractGroundShadow: readValue(element?.extractGroundShadow),
       scale: readValue(element?.scale),
       drawRule: readValue(element?.drawRule),
       lightSpot: readValue(element?.lightSpot),
@@ -1574,7 +1604,8 @@ export class StudioElementRenderer {
   private renderVersion = "";
   private shadowCasterCount = 0;
   private groundShadowSprites: Sprite[] = [];
-  private groundShadowTextureCache = new Map<string, { element: Texture; shadow: Texture }>();
+  private groundShadowTextureCache = new WeakMap<object, Map<string, { element: Texture; shadow: Texture }>>();
+  private groundShadowTextureEntries = new Set<{ element: Texture; shadow: Texture }>();
 
   getGroundShadowSprites(): Sprite[] {
     return this.groundShadowSprites;
@@ -1633,11 +1664,12 @@ export class StudioElementRenderer {
     destroyContainers(this.containers);
     destroyGroundShadowSprites(this.groundShadowSprites);
     this.groundShadowSprites = [];
-    for (const textures of this.groundShadowTextureCache.values()) {
+    for (const textures of this.groundShadowTextureEntries) {
       textures.element.destroy(true);
       textures.shadow.destroy(true);
     }
-    this.groundShadowTextureCache.clear();
+    this.groundShadowTextureCache = new WeakMap();
+    this.groundShadowTextureEntries.clear();
     this.containers = [];
     this.lightSpotSprites = [];
     this.renderVersion = "";
@@ -1700,7 +1732,7 @@ export class StudioElementRenderer {
     const parts = buildStudioElementSpriteParts(element);
     for (const part of parts) {
       const extracted = element?.extractGroundShadow === true
-        ? this.createExtractedSegmentTextures(baseTexture, part.sourceRect, `${image}:${part.sourceRect.x}:${part.sourceRect.y}:${part.sourceRect.width}:${part.sourceRect.height}`)
+        ? this.createExtractedSegmentTextures(baseTexture, part.sourceRect)
         : null;
       const texture = extracted?.element ?? this.createSegmentTexture(baseTexture, part.sourceRect, `${container.label}:${part.key}`);
       if (!extracted && texture !== Texture.EMPTY) {
@@ -1784,10 +1816,14 @@ export class StudioElementRenderer {
     });
   }
 
-  private createExtractedSegmentTextures(baseTexture: Texture, sourceRect: StudioElementRect, key: string): { element: Texture; shadow: Texture } | null {
-    const cached = this.groundShadowTextureCache.get(key);
+  private createExtractedSegmentTextures(baseTexture: Texture, sourceRect: StudioElementRect): { element: Texture; shadow: Texture } | null {
+    const textureSource = baseTexture.source as object | undefined;
+    if (!textureSource) return null;
+    const key = `${sourceRect.x}:${sourceRect.y}:${sourceRect.width}:${sourceRect.height}`;
+    const sourceCache = this.groundShadowTextureCache.get(textureSource);
+    const cached = sourceCache?.get(key);
     if (cached) return cached;
-    const resource = (baseTexture.source as any)?.resource as CanvasImageSource | undefined;
+    const resource = getTextureCanvasSource(baseTexture);
     if (!resource || typeof document === "undefined") return null;
     const width = Math.max(1, Math.round(sourceRect.width));
     const height = Math.max(1, Math.round(sourceRect.height));
@@ -1803,10 +1839,19 @@ export class StudioElementRenderer {
       const shadowCanvas = document.createElement("canvas");
       elementCanvas.width = shadowCanvas.width = width;
       elementCanvas.height = shadowCanvas.height = height;
-      elementCanvas.getContext("2d")!.putImageData(new ImageData(new Uint8ClampedArray(split.element), width, height), 0, 0);
-      shadowCanvas.getContext("2d")!.putImageData(new ImageData(new Uint8ClampedArray(split.shadow), width, height), 0, 0);
+      const elementContext = elementCanvas.getContext("2d")!;
+      const shadowContext = shadowCanvas.getContext("2d")!;
+      const elementImageData = elementContext.createImageData(width, height);
+      const shadowImageData = shadowContext.createImageData(width, height);
+      elementImageData.data.set(split.element);
+      shadowImageData.data.set(split.shadow);
+      elementContext.putImageData(elementImageData, 0, 0);
+      shadowContext.putImageData(shadowImageData, 0, 0);
       const textures = { element: Texture.from(elementCanvas), shadow: Texture.from(shadowCanvas) };
-      this.groundShadowTextureCache.set(key, textures);
+      const nextSourceCache = sourceCache ?? new Map();
+      nextSourceCache.set(key, textures);
+      if (!sourceCache) this.groundShadowTextureCache.set(textureSource, nextSourceCache);
+      this.groundShadowTextureEntries.add(textures);
       return textures;
     } catch {
       return null;

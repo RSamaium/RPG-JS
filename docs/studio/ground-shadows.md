@@ -11,4 +11,8 @@ Studio keeps the normal element in its usual Y-sorted layer and renders the extr
 
 The extraction is intentionally opt-in and conservative. It only moves dark, semi-transparent pixels from the lower area of the element. Use images with an isolated object, transparent background, and one soft floor shadow. Disable the option for smoke, glass, reflections, or other translucent artwork that should remain part of the object.
 
+Recommended GPT Image prompt suffix:
+
+> Isolated object, transparent background, exactly one soft dark ground shadow beneath the object. No scenery, reflection, smoke, or additional objects.
+
 This is a client-only visual behavior and works in standalone games as well as streamed MMORPG Studio maps.

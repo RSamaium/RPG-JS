@@ -790,6 +790,10 @@ export const loadMap = async (mapId: string) => {
           typeof element.hasShadow === 'boolean'
             ? element.hasShadow
             : tilesetElement.hasShadow,
+        extractGroundShadow:
+          typeof element.extractGroundShadow === 'boolean'
+            ? element.extractGroundShadow
+            : tilesetElement.extractGroundShadow,
         lightSpot: element.lightSpot !== undefined ? element.lightSpot : tilesetElement.lightSpot,
         zIndexOffset,
       }

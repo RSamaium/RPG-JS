@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { Texture } from "pixi.js";
 import {
   buildStudioElementSpriteParts,
   extractStudioGroundShadowPixels,
@@ -59,6 +60,58 @@ describe("studio element renderer helpers", () => {
     expect(split.element[7]).toBe(255);
     expect(split.element[11]).toBe(0);
     expect(split.shadow[11]).toBe(120);
+  });
+
+  it("keeps dark anti-aliased contours attached to opaque artwork", () => {
+    const width = 5;
+    const height = 3;
+    const pixels = new Uint8ClampedArray(width * height * 4);
+    const setPixel = (x: number, y: number, red: number, green: number, blue: number, alpha: number) => {
+      const index = (y * width + x) * 4;
+      pixels.set([red, green, blue, alpha], index);
+    };
+    setPixel(0, 2, 20, 20, 20, 255);
+    setPixel(1, 2, 20, 20, 20, 120);
+    setPixel(4, 2, 20, 20, 20, 120);
+
+    const split = extractStudioGroundShadowPixels(pixels, width, height);
+    const contourAlpha = (2 * width + 1) * 4 + 3;
+    const shadowAlpha = (2 * width + 4) * 4 + 3;
+
+    expect(split.element[contourAlpha]).toBe(120);
+    expect(split.shadow[contourAlpha]).toBe(0);
+    expect(split.element[shadowAlpha]).toBe(0);
+    expect(split.shadow[shadowAlpha]).toBe(120);
+  });
+
+  it("keeps element sprites separate and reuses one derived texture per source rect", async () => {
+    const renderer = new StudioElementRenderer();
+    const sourceCanvas = document.createElement("canvas");
+    sourceCanvas.width = 2;
+    sourceCanvas.height = 2;
+    const baseTexture = Texture.from(sourceCanvas);
+    (renderer as any).textureCache.set("tree.png", Promise.resolve(baseTexture));
+
+    await renderer.renderElements([
+      createElement({ image: "tree.png", rect: [0, 0, 2, 2], drawIn: [10, 20, 2, 2] }),
+    ]);
+    expect(renderer.getGroundShadowSprites()).toHaveLength(0);
+
+    const containers = await renderer.renderElements([
+      createElement({ image: "tree.png", rect: [0, 0, 2, 2], drawIn: [10, 20, 2, 2], extractGroundShadow: true }),
+      createElement({ id: "tree-2", image: "tree.png", rect: [0, 0, 2, 2], drawIn: [30, 40, 2, 2], extractGroundShadow: true }),
+    ]);
+    const shadows = renderer.getGroundShadowSprites();
+
+    expect(containers).toHaveLength(2);
+    expect(shadows).toHaveLength(2);
+    expect(containers[0].children).not.toContain(shadows[0]);
+    expect(containers[1].children).not.toContain(shadows[1]);
+    expect(shadows[0].texture).toBe(shadows[1].texture);
+    expect((renderer as any).groundShadowTextureEntries.size).toBe(1);
+
+    renderer.destroy();
+    baseTexture.destroy(true);
   });
   const createMorphologyMask = (width: number, height: number, filled = true) => {
     const canvas = document.createElement("canvas");
