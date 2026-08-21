@@ -22,6 +22,31 @@ client/server game where the server owns gameplay state.
 - Keep APIs small and composable. Prefer focused methods, hooks, providers, and
   components over large configuration objects that cannot be extended cleanly.
 
+## Framework DX and Conceptual Ownership
+
+RPGJS is a framework, so developer experience must be designed around a small,
+coherent vocabulary rather than exposing every internal abstraction. For each
+capability, provide one obvious, documented path that developers can recognize
+in autocomplete, examples, and both client and server APIs.
+
+- Extend an established concept before introducing a parallel manager, service,
+  method family, configuration shape, or naming convention. New behavior should
+  normally appear as an option or extension of the canonical API.
+- Avoid duplicate concepts that leave users asking which API to use. If overlap
+  is unavoidable for backward compatibility, identify the canonical API,
+  preserve the legacy path as an alias or adapter, and document the migration.
+- Be opinionated about ownership, defaults, precedence, and fallbacks. Choose the
+  behavior that fits most RPGJS projects and keep lower-level flexibility behind
+  advanced hooks instead of making every internal choice part of the public API.
+- Keep related vocabulary consistent across decorators, engine methods, module
+  configuration, Studio schemas, server commands, documentation, and examples.
+- Treat public surface area as a long-term maintenance cost. Do not export an
+  internal class or method merely because another RPGJS package needs it; prefer
+  a private adapter, provider, hook, or narrowly scoped integration point.
+
+Before approving a public API, verify that a new RPGJS user can answer “which
+method should I use?” without comparing two equivalent concepts.
+
 ## API and Documentation Rules
 
 - When adding or changing a client-side or server-side API, update the

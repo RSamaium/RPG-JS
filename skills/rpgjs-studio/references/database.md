@@ -1,12 +1,15 @@
 # Database API
 
-Use this reference for CRUD on game database entities such as items, enemies, and variables.
+Use this reference for CRUD on game database entities such as actors, items, enemies, and variables.
 
 Current active types in this repo:
 
 - `variables`
 - `items`
 - `enemies`
+- `actors`
+- `classes`
+- `skills`
 
 ## Endpoint pattern
 
@@ -17,8 +20,10 @@ Current active types in this repo:
 - Update: `PUT /api/database/:type/:id`
 - Delete: `DELETE /api/database/:type/:id`
 - Enemy previews: `GET /api/database/enemies/preview?ids=<id1,id2>`
+- Main actor: `GET /api/database/actors/main`
+- Assign main actor: `PUT /api/database/actors/:id/main`
 
-`:type` is the database resource path, for example `items`, `enemies`, or `variables`.
+`:type` is the database resource path, for example `actors`, `classes`, `skills`, `items`, `enemies`, or `variables`.
 
 ## Headers
 
@@ -37,7 +42,7 @@ curl -sS "$BASE_URL/api/database/:type/:id" \
   -H "Content-Type: application/json"
 ```
 
-Replace `:type` with the collection path (`items`, `enemies`, or `variables`) and `:id` with the record `_id`.
+Replace `:type` with the collection path (`actors`, `classes`, `skills`, `items`, `enemies`, or `variables`) and `:id` with the record `_id`.
 
 Before updating, deleting, or explaining the record content, read the current record first and use the returned payload as the source of truth. Do not infer field names or values from the id alone.
 
@@ -59,6 +64,37 @@ This is required for flows like:
 
 ## Payloads from schemas
 
+### `POST /api/database/actors`
+
+Actors own playable-character appearance and starting configuration. Supported
+fields are `name`, `description`, `classId`, `graphic`, `faceset`, `hitbox`,
+`initialLevel`, `finalLevel`, `expCurve`, `parameters`, `startingEquipment`,
+`startingInventory`, `animations`, and legacy `skills`. New Actors require
+`classId`, the `_id` of a Class in the same project. Actor `parameters` include
+`maxHp`, `maxSp`, `str`, `pdef`, `agi`, `int`, and `dex`. Media and database
+relations use their Studio `_id` values.
+
+Legacy Actors without `classId` remain readable and keep their Actor-level
+skills until they are edited and assigned a Class.
+
+The first Actor becomes the project main Actor automatically. Read it with
+`GET /api/database/actors/main` and assign another with
+`PUT /api/database/actors/:id/main`. Assign a replacement before deleting the
+current main Actor; deleting it returns `409`.
+
+### `POST /api/database/classes`
+
+Classes own the reusable identity and skill progression shared with an Actor:
+
+- `name: string` (required)
+- `description?: string`
+- `icon?: string` (media `_id` of type `icon`)
+- `skills?: Array<{ skillId: string, level: number }>`
+
+Create or resolve the Class before creating an Actor, then send its `_id` as
+`classId`. Deleting a Class referenced by an Actor returns `409`; reassign the
+Actor first.
+
 ### `POST /api/database/skills`
 
 Supported fields from `skillSchema`:
@@ -68,6 +104,7 @@ Supported fields from `skillSchema`:
 - `icon?: string`
 - `animation?: string`
 - `sound?: string`
+- `impactSound?: string`
 - `spCost: number`
 - `power: number`
 - `element?: "none" | "fire" | "water" | "earth" | "wind" | "light" | "dark"`
@@ -79,8 +116,8 @@ Supported fields from `skillSchema`:
 Notes:
 
 - `name`, `spCost`, and `power` are the required fields from the schema.
-- `icon`, `animation`, and `sound` must be media `_id`s. Search `/api/media?query=<search>` first.
-- Use media type `icon` for `icon`, media type `animation` for `animation`, and media type `sound` for `sound`.
+- `icon`, `animation`, `sound`, and `impactSound` must be media `_id`s. Search `/api/media?query=<search>` first.
+- Use media type `icon` for `icon`, media type `animation` for `animation`, and media type `sound` for `sound` and `impactSound`. Action Battle uses `sound` while casting and `impactSound` on the target.
 
 ### `POST /api/database/items`
 
@@ -170,6 +207,7 @@ Supported fields from `enemySchema`:
 - `behavior?: { enemyType?: "aggressive" | "defensive" | "ranged" | "tank" | "berserker", attackCooldown?: number, visionRange?: number, attackRange?: number, dodgeChance?: number, dodgeCooldown?: number, fleeThreshold?: number, attackPatterns?: Array<"melee" | "combo" | "charged" | "zone" | "dashAttack">, patrolWaypoints?: Array<{ x: number, y: number }>, groupBehavior?: boolean }`
 - `skills?: Array<{ skillId: string, level: number }>`
 - `reward?: { exp?: number, gold?: number, items?: Array<{ itemId: string, amount: number, chance: number }> }`
+- `audio?: { combat?: { battleMusic?, attack?, skill?, hit?, hurt?, die? } }`
 
 Notes:
 
@@ -179,6 +217,7 @@ Notes:
 - `skills[].skillId` is a skill `_id`. Search `/api/database/skills?query=<search>` first.
 - `skills[].level` is the minimum enemy level required to acquire the skill.
 - `behavior.dodgeChance` and `behavior.fleeThreshold` use ratios between `0` and `1`.
+- `audio.combat` values are media `_id`s and override project cues for this enemy. `battleMusic` replaces the general battle track while that enemy is active; source cues (`attack`, `skill`, `hit`) and target reactions (`hurt`, `die`) are resolved independently.
 
 ### `GET /api/database/enemies/preview?ids=<id1,id2>`
 
@@ -211,6 +250,16 @@ Supported fields from `variableSchema`:
 - Creation requires a non-empty `name`.
 - The API generates a slug-like `id` automatically from the name.
 - For updates, send only the fields to change.
+- Non-nullable fields submitted as `null` are treated as omitted form values.
+  If their JSON Schema declares a `default`, the API applies it before
+  validation. Explicit numeric zeroes remain `0`, and fields whose schema
+  explicitly allows `null` preserve it. An optional object containing only
+  omitted values is itself omitted, so a disabled hitbox submitted as
+  `{ "width": null, "height": null }` does not enable hitbox validation.
+- Schema validation failures return `400` with the first invalid field's dotted
+  path in `message`, for example
+  `{ "message": "parameters.pdef.start: Required" }`. Use the path to correct
+  the corresponding nested payload field.
 - If the user only knows a record name, search the collection first and match the returned `_id`.
 # Semantic search
 

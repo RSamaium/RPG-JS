@@ -43,19 +43,6 @@ export const mapParamsSchema = {
         // },
       },
     },
-    combatMusic: {
-      type: "string",
-      title: "Combat Music",
-      description: "Music crossfaded in while the player is threatened on this map",
-      format: {
-        name: "media",
-        type: "bgm",
-        buttonLabel: "Select Combat Music",
-        useUpload: {
-          accept: "audio/*",
-        },
-      },
-    },
     backgroundAmbientSound: {
       type: "string",
       title: "Background Ambient Sound",

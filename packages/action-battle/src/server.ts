@@ -7,6 +7,8 @@ import {
 import { Control, defineModule } from "@rpgjs/common";
 import { BattleAi, HitResult, ApplyHitHooks, DEFAULT_KNOCKBACK } from "./ai.server";
 import {
+  ActionBattleActionBarData,
+  ActionBattleActionBarSkill,
   ActionBattleHotbarSkill,
   ActionBattleOptions,
 } from "./types";
@@ -77,6 +79,7 @@ import type {
 export const ACTION_BATTLE_SKILL_USE = "action-battle:use-skill";
 export const ACTION_BATTLE_HOTBAR_USE = "action-battle:use-hotbar";
 export const ACTION_BATTLE_SKILL_PROJECTILE_TYPE = "action-battle-skill";
+export const ACTION_BATTLE_ACTION_BAR_GUI_ID = "action-battle-action-bar";
 
 /**
  * Default player attack hitboxes offsets for each direction
@@ -898,6 +901,156 @@ const normalizeMaskRows = (mask: string[] | string | undefined) => {
     .map((row: string) => row.replace(/\r/g, ""));
 };
 
+const buildActionBarData = (
+  player: RpgPlayer,
+  options: ActionBattleOptions
+): ActionBattleActionBarData => {
+  const actionBar = typeof options.ui?.actionBar === "object"
+    ? options.ui.actionBar
+    : undefined;
+  const requestedSlotCount = Number(actionBar?.slotCount);
+  const slotCount = Number.isFinite(requestedSlotCount)
+    ? Math.min(10, Math.max(1, Math.round(requestedSlotCount)))
+    : 10;
+  const items = (player.items?.() || []).map((item: any) => {
+    const id = item.id?.() ?? item.id;
+    const data = resolveItemData(player, id);
+    const name = resolveSignal(data?.name) ?? resolveSignal(item.name) ?? id;
+    const description =
+      resolveSignal(data?.description) ??
+      resolveSignal(item.description) ??
+      "";
+    const icon = resolveSignal(data?.icon) ?? resolveSignal(item.icon);
+    const quantity = resolveSignal(item.quantity) ?? 1;
+    const consumable = resolveSignal(data?.consumable);
+    const itemType = resolveSignal(data?._type);
+    const usable =
+      quantity > 0 &&
+      consumable !== false &&
+      (itemType ? itemType === "item" : true);
+    return {
+      id,
+      name,
+      description,
+      icon,
+      quantity,
+      usable,
+    };
+  });
+
+  const skills = (player.skills?.() || []).map((skill: any) => {
+    const id = skill.id?.() ?? skill.id;
+    const serialized = serializeActionBattleSkill(
+      player,
+      skill,
+      options,
+    );
+    if (serialized) return serialized as ActionBattleActionBarSkill;
+
+    const data = resolveSkillData(player, id) || skill;
+    return {
+      id,
+      name: resolveSignal(data?.name) ?? resolveSignal(skill.name) ?? id,
+      description:
+        resolveSignal(data?.description) ??
+        resolveSignal(skill.description) ??
+        "",
+      icon: resolveSignal(data?.icon) ?? resolveSignal(skill.icon),
+      spCost: resolveSignal(data?.spCost) ?? resolveSignal(skill.spCost) ?? 0,
+      usable: false,
+      range: 0,
+    } satisfies ActionBattleActionBarSkill;
+  });
+
+  const configuredSlots = Array.isArray(actionBar?.slots)
+    ? Array.from({ length: slotCount }, (_, index) => {
+        const assignment = actionBar.slots?.[index];
+        if (assignment?.type === "skill") {
+          const skill = skills.find((entry) => entry.id === assignment.id) ?? null;
+          return skill
+            ? { type: "skill" as const, skill, item: null }
+            : { type: "empty" as const, skill: null, item: null };
+        }
+        if (assignment?.type === "item") {
+          const item = items.find((entry) => entry.id === assignment.id) ?? null;
+          return item
+            ? { type: "item" as const, skill: null, item }
+            : { type: "empty" as const, skill: null, item: null };
+        }
+        return { type: "empty" as const, skill: null, item: null };
+      })
+    : undefined;
+
+  return {
+    items,
+    skills,
+    mode: actionBar?.mode ?? "both",
+    slotCount,
+    slots: configuredSlots,
+  };
+};
+
+const ensureActionBarGui = (
+  player: RpgPlayer,
+  options: ActionBattleOptions
+) => {
+  const existing = player.getGui?.(ACTION_BATTLE_ACTION_BAR_GUI_ID);
+  const gui = existing || player.gui(ACTION_BATTLE_ACTION_BAR_GUI_ID);
+  (gui as any).__actionBattleOptions = options;
+  if (!(gui as any).__actionBattleReady) {
+    (gui as any).__actionBattleReady = true;
+    const currentOptions = () =>
+      ((gui as any).__actionBattleOptions ?? options) as ActionBattleOptions;
+    gui.on("useItem", ({ id }: { id: string }) => {
+      try {
+        player.useItem(id);
+      } catch {
+        // Ignore failures (not usable, not enough, etc.)
+      }
+      gui.update(buildActionBarData(player, currentOptions()));
+    });
+    gui.on(
+      "useSkill",
+      ({ id, target }: { id: string; target?: { x: number; y: number } }) => {
+        handleActionBattleSkillUse(player, id, target, currentOptions());
+        gui.update(buildActionBarData(player, currentOptions()));
+      }
+    );
+    gui.on("refresh", () => {
+      gui.update(buildActionBarData(player, currentOptions()));
+    });
+    gui.on("openMenu", () => {
+      const actionBar = currentOptions().ui?.actionBar;
+      if (typeof actionBar === "object") {
+        actionBar.onOpenMenu?.();
+      }
+    });
+  }
+  return gui;
+};
+
+/** Open the retained legacy Action Battle-specific bar. */
+export const openActionBattleActionBar = (
+  player: RpgPlayer,
+  rawOptions: ActionBattleOptions = {}
+) => {
+  const options = normalizeActionBattleOptions(rawOptions);
+  const gui = ensureActionBarGui(player, options);
+  gui.open(buildActionBarData(player, options));
+};
+
+/** Refresh the retained legacy Action Battle-specific bar. */
+export const updateActionBattleActionBar = (
+  player: RpgPlayer,
+  rawOptions: ActionBattleOptions = {}
+) => {
+  const options = normalizeActionBattleOptions(rawOptions);
+  const gui = player.getGui?.(ACTION_BATTLE_ACTION_BAR_GUI_ID);
+  if (gui) {
+    gui.update(buildActionBarData(player, options));
+  }
+};
+
 /**
  * Open the generic hotbar with Action Battle skill presentation and targeting.
  */
@@ -935,6 +1088,17 @@ const syncActionBattleHotbar = (
   player.hideHotbar?.();
 };
 
+const syncActionBattleActionBar = (
+  player: RpgPlayer,
+  options: ActionBattleOptions,
+) => {
+  const actionBar = options.ui?.actionBar;
+  if (!actionBar || typeof actionBar !== "object" || !actionBar.autoOpen) return;
+  if (actionBar.enabled) {
+    return openActionBattleActionBar(player, options);
+  }
+};
+
 const handleActionBattleSkillUse = (
   player: RpgPlayer,
   skillId: string,
@@ -970,9 +1134,11 @@ const handleActionBattleSkillUse = (
           if (cooldowns.get(skillId) !== readyAt) return;
           cooldowns.delete(skillId);
           updateActionBattleHotbar(player, options);
+          updateActionBattleActionBar(player, options);
         }, cooldownMs);
       }
       updateActionBattleHotbar(player, options);
+      updateActionBattleActionBar(player, options);
       return true;
     } catch {
       return false;
@@ -1373,10 +1539,12 @@ export const createActionBattleServer = (
       onConnected(player: RpgPlayer) {
         player.initializeHotbar?.();
         syncActionBattleHotbar(player, options);
+        syncActionBattleActionBar(player, options);
       },
       onJoinMap(player: RpgPlayer) {
         player.initializeHotbar?.();
         syncActionBattleHotbar(player, options);
+        syncActionBattleActionBar(player, options);
       },
       onDisconnected(player: RpgPlayer) {
         releaseActionBattleControls(player);

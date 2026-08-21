@@ -33,6 +33,12 @@ export const collectStudioActionBattleMediaRefs = (
     add(entry?.animation);
     add(entry?.action?.projectile?.graphic);
     add(entry?.actionBattle?.projectile?.graphic);
+    const combatAudio = entry?.audio?.combat ?? entry?.combatAudio;
+    if (combatAudio && typeof combatAudio === "object") {
+      Object.values(combatAudio).forEach(add);
+    }
+    add(entry?.sound);
+    add(entry?.impactSound);
   }
 
   return refs;

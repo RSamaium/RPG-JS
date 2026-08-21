@@ -10,6 +10,7 @@ import type {
   RpgMapHooks,
   RpgPlayer,
   RpgPlayerHooks,
+  RpgPlayerConnectionContext,
   RpgPlayerSaveResult,
   RpgPlayerSlotLoadResult,
   RpgPlayerSnapshot,
@@ -18,6 +19,7 @@ import type {
   RpgServerEngineHooks,
   RpgServerStepMetrics,
   StateData,
+  ActorData,
   ServerMapStreamingAdapter,
   RpgGameplayRoom,
 } from "@rpgjs/server";
@@ -45,6 +47,11 @@ describe("server public API types", () => {
       onInput(player, input) {
         expectTypeOf(player).toEqualTypeOf<RpgPlayer>();
         expectTypeOf(input).toEqualTypeOf<RpgActionInput<unknown>>();
+      },
+      onAccepted(player, context) {
+        expectTypeOf(player).toEqualTypeOf<RpgPlayer>();
+        expectTypeOf(context).toEqualTypeOf<RpgPlayerConnectionContext>();
+        expectTypeOf(context.query).toEqualTypeOf<Readonly<Record<string, string>>>();
       },
       onHotbarChange(player, change) {
         expectTypeOf(player).toEqualTypeOf<RpgPlayer>();
@@ -86,6 +93,12 @@ describe("server public API types", () => {
         .toEqualTypeOf<Promise<boolean>>();
       expectTypeOf(player.getCurrentRoom<RpgGameplayRoom<{ turn: number }>>())
         .toEqualTypeOf<RpgGameplayRoom<{ turn: number }> | null>();
+      expectTypeOf(player.showCharacterSelect([{ id: "hero", name: "Hero" }]))
+        .toEqualTypeOf<Promise<ActorData | null>>();
+      expectTypeOf(player.setActor({ id: "hero", name: "Hero" }))
+        .toEqualTypeOf<ActorData>();
+      expectTypeOf(player.changeActor({ id: "mage", name: "Mage" }))
+        .toEqualTypeOf<ActorData>();
     };
 
     expectTypeOf(assertions).toBeFunction();

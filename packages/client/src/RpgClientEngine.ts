@@ -1,7 +1,7 @@
 import Canvas from "./components/scenes/canvas.ce";
 import BuiltinSceneMap from "./components/scenes/draw-map.ce";
 import { inject } from './core/inject'
-import { signal, bootstrapCanvas, Howl, trigger, type Trigger } from "canvasengine";
+import { signal, bootstrapCanvas, Howl, Howler, trigger, type Trigger } from "canvasengine";
 import { AbstractWebsocket, WebSocketToken } from "./services/AbstractSocket";
 import { LoadMapService, LoadMapToken } from "./services/loadMap";
 import { RpgSound } from "./Sound";
@@ -40,15 +40,24 @@ import { createClientPointerContext, type ClientPointerContext } from "./service
 import { RpgClientInteractions } from "./services/interactions";
 import { normalizeRoomMapId } from "./utils/mapId";
 import { applySyncedHitboxPayload } from "./utils/syncHitbox";
+import { applySyncedParamPayload } from "./utils/syncParams";
 import { EventComponentResolverRegistry, type EventComponentResolver } from "./Game/EventComponentResolver";
 import { RpgClientBuiltinI18n } from "./i18n";
-import type { CameraFollowSmoothMove } from "./services/cameraFollow";
+import { clearCameraFollowPlugins, type CameraFollowSmoothMove } from "./services/cameraFollow";
 import { RpgMusicManager } from "./Game/MusicManager";
 import {
   RpgClientRoom,
   RpgClientSceneRegistry,
   type RpgClientSceneDefinition,
 } from "./services/gameplayRooms";
+import {
+  RpgAudioManager,
+  type RpgAudioChannel,
+  type RpgPlaySoundOptions,
+  type RpgSoundConfiguration,
+  type RpgUiAudioEvent,
+} from "./Game/AudioManager";
+import { routePredictedLocalPlayerSync } from "./services/localPlayerSync";
 export type {
   CameraFollowEase,
   CameraFollowSmoothMove,
@@ -185,6 +194,15 @@ export class RpgClientEngine<T = any> {
   spritesheets: Map<string | number, any> = new Map();
   private spritesheetPromises: Map<string | number, Promise<any>> = new Map();
   sounds: Map<string, any> = new Map();
+  /** Internal mixer behind the established sound API. */
+  private readonly audio = new RpgAudioManager({
+    getSound: (id) => this.getSound(id),
+    addSound: (sound) => this.addSound(sound),
+    onPreferencesChange: (preferences) => {
+      (Howler as any).volume(preferences.master);
+      this.music?.setOutputGain(preferences.music);
+    },
+  });
   /** Client-only controller for temporary looping music and map BGM crossfades. */
   music = new RpgMusicManager({
     getSound: (id) => this.getSound(id),
@@ -339,6 +357,11 @@ export class RpgClientEngine<T = any> {
         sounds: {}
       }
     }
+    this.audio.configure({
+      projectId: (this.globalConfig as any).projectId ?? (this.globalConfig as any)._id,
+      ui: (this.globalConfig as any).audio?.ui,
+    });
+    this.music.setOutputGain(this.audio.channelGain("music"));
 
     this.addComponentAnimation({
       id: "animation",
@@ -520,7 +543,6 @@ export class RpgClientEngine<T = any> {
     const tickSubscription = this.tick.subscribe((tick) => {
       this.stepClientPhysicsTick();
       this.projectiles.step();
-      this.flushPendingPredictedStates();
       this.flushPendingMovePath();
       this.hooks.callHooks("client-engine-onStep", this, tick).subscribe();
 
@@ -688,16 +710,33 @@ export class RpgClientEngine<T = any> {
 
   private clearCameraFollowViewportPlugins(): void {
     const viewport = this.findViewportInstance();
-    viewport?.plugins?.remove?.("animate");
-    viewport?.plugins?.remove?.("follow");
+    clearCameraFollowPlugins(viewport);
   }
 
-  private prepareSyncPayload(data: any): any {
+  private prepareSyncPayload(
+    data: any,
+    ack?: { frame: number; serverTick?: number; x?: number; y?: number; direction?: Direction },
+  ): {
+    payload: any;
+    localPredictionSnapshot?: PredictionState<Direction>;
+  } {
     const payload = { ...(data ?? {}) };
     delete payload.ack;
     delete payload.timestamp;
 
     const myId = this.playerIdSignal();
+    if (this.predictionEnabled && this.prediction) {
+      const currentPlayer = this.sceneMap?.getCurrentPlayer?.();
+      const currentState = currentPlayer ? this.getLocalPlayerState() : undefined;
+      const routed = routePredictedLocalPlayerSync<Direction>(payload, myId, currentState, ack);
+      if (routed.payload !== payload) {
+        return {
+          payload: routed.payload,
+          ...(routed.snapshot ? { localPredictionSnapshot: routed.snapshot } : {}),
+        };
+      }
+    }
+
     const players = payload.players;
     const localPatch = myId && players ? players[myId] : undefined;
     const shouldMaskLocalPosition = this.shouldPreserveLocalPlayerPosition(localPatch);
@@ -713,7 +752,7 @@ export class RpgClientEngine<T = any> {
       };
     }
 
-    return payload;
+    return { payload };
   }
 
   private shouldPreserveLocalPlayerPosition(localPatch?: any): boolean {
@@ -739,28 +778,6 @@ export class RpgClientEngine<T = any> {
       return true;
     }
     return Date.now() - this.lastLocalMovementInputAt <= this.LOCAL_MOVEMENT_AUTHORITY_ACK_GRACE_MS;
-  }
-
-  private normalizeAckWithSyncState(
-    ack: { frame: number; serverTick?: number; x?: number; y?: number; direction?: Direction },
-    syncData: any,
-  ): { frame: number; serverTick?: number; x?: number; y?: number; direction?: Direction } {
-    const myId = this.playerIdSignal();
-    if (!myId) {
-      return ack;
-    }
-
-    const localPatch = syncData?.players?.[myId];
-    if (typeof localPatch?.x !== "number" || typeof localPatch?.y !== "number") {
-      return ack;
-    }
-
-    return {
-      ...ack,
-      x: localPatch.x,
-      y: localPatch.y,
-      direction: localPatch.direction ?? ack.direction,
-    };
   }
 
   private initListeners() {
@@ -982,7 +999,7 @@ export class RpgClientEngine<T = any> {
     // The before-loading hook has now covered the previous scene. Unmount it
     // before reconnecting so stale map content cannot appear behind the loader.
     this.sceneMap.data.set(null);
-    this.sceneMap.weatherState.set(null);
+    this.sceneMap.weatherState.set(undefined);
     this.sceneMap.lightingState.set(null);
     this.sceneMap.clearLightSpots();
     this.clearComponentAnimations();
@@ -1139,24 +1156,21 @@ export class RpgClientEngine<T = any> {
 
     const ack = data?.ack;
     const normalizedAck =
-      ack && typeof ack.frame === "number"
-        ? this.normalizeAckWithSyncState(ack, data)
+      ack && typeof ack.frame === "number" && Number.isFinite(ack.frame)
+        ? ack
         : undefined;
-    const payload = this.prepareSyncPayload(data);
+    const { payload, localPredictionSnapshot } = this.prepareSyncPayload(data, normalizedAck);
     load(this.sceneMap, payload, true);
     applySyncedHitboxPayload(this.sceneMap, payload);
 
     if (normalizedAck) {
       this.applyServerAck(normalizedAck);
     }
-
-    for (const playerId in payload.players ?? {}) {
-      const player = payload.players[playerId]
-      if (!player._param) continue
-      for (const param in player._param) {
-       this.sceneMap.players()[playerId]._param()[param] = player._param[param]
-      }
+    if (localPredictionSnapshot) {
+      this.prediction?.queueServerSnapshot(localPredictionSnapshot);
     }
+
+    applySyncedParamPayload(this.sceneMap, payload);
 
     // Check if players and events are present in sync data
     const players = payload.players || this.sceneMap.players();
@@ -1591,6 +1605,56 @@ export class RpgClientEngine<T = any> {
     return undefined;
   }
 
+  /** @internal Configure project-owned preferences and semantic cues for framework modules. */
+  private configureSound(configuration: RpgSoundConfiguration = {}): void {
+    this.audio.configure(configuration);
+  }
+
+  /** @internal Play a semantic sound used by RPGJS native interfaces. */
+  private playUiSound(event: RpgUiAudioEvent): void {
+    void this.audio.playUi(event);
+  }
+
+  /**
+   * Set the persisted volume of one sound channel for the current project.
+   * Master volume is applied through Howler, including sounds controlled through
+   * the legacy `RpgSound.global` facade. This client-owned preference behaves the
+   * same in standalone and MMORPG games and never changes server state.
+   *
+   * @title setSoundVolume
+   * @method setSoundVolume(channel: RpgAudioChannel, value: number): void
+   * @param {RpgAudioChannel} channel - Channel to update.
+   * @param {number} value - Volume between 0 and 1; out-of-range values are clamped.
+   * @returns {void}
+   * @memberof RpgClientEngine
+   * @example
+   * ```ts
+   * engine.setSoundVolume('music', 0.6)
+   * engine.setSoundVolume('master', 0.8)
+   * ```
+   */
+  setSoundVolume(channel: RpgAudioChannel, value: number): void {
+    this.audio.setVolume(channel, value);
+  }
+
+  /**
+   * Read the persisted volume of one sound channel for the current project.
+   * Calls made inside a CanvasEngine computed value remain reactive.
+   *
+   * @title getSoundVolume
+   * @method getSoundVolume(channel: RpgAudioChannel): number
+   * @param {RpgAudioChannel} channel - Channel to read.
+   * @returns {number} Volume between 0 and 1.
+   * @memberof RpgClientEngine
+   * @example
+   * ```ts
+   * const musicVolume = engine.getSoundVolume('music')
+   * ```
+   */
+  getSoundVolume(channel: RpgAudioChannel): number {
+    return this.audio.getVolume(channel);
+  }
+
   /**
    * Play a sound by its ID
    * 
@@ -1598,10 +1662,9 @@ export class RpgClientEngine<T = any> {
    * If the sound is not found, it will attempt to resolve it using the soundResolver.
    * Uses Howler.js for audio playback instead of native Audio elements.
    * 
-   * @param soundId - The sound ID to play
-   * @param options - Optional sound configuration
-   * @param options.volume - Volume level (0.0 to 1.0, overrides sound default)
-   * @param options.loop - Whether the sound should loop (overrides sound default)
+   * The existing API remains the single entry point for ordinary, channel-aware,
+   * and spatial sounds. Playback is client-owned in both standalone and MMORPG
+   * games; server calls only ask the receiving client to play a registered ID.
    * 
    * @example
    * ```ts
@@ -1613,53 +1676,24 @@ export class RpgClientEngine<T = any> {
    * 
    * // Play a sound asynchronously (when resolver returns Promise)
    * await engine.playSound('dynamic-sound', { volume: 0.8 });
+   *
+   * // Play a spatial sound without exposing CanvasEngine signals
+   * await engine.playSound('enemy-hit', {
+   *   channel: 'sfx',
+   *   position: { x: enemy.x(), y: enemy.y() },
+   *   listener: { x: player.x(), y: player.y() },
+   * });
    * ```
+   * @title playSound
+   * @method playSound(soundId: string, options?: RpgPlaySoundOptions): Promise<void>
+   * @param {string} soundId - Registered sound ID or ID handled by the sound resolver.
+   * @param {RpgPlaySoundOptions} [options] - Playback, channel, and spatial options.
+   * @returns {Promise<void>} Resolves after the sound has been resolved and started when available.
+   * @memberof RpgClientEngine
    */
-  async playSound(soundId: string, options?: { volume?: number; loop?: boolean }): Promise<void> {
-    const sound = await this.getSound(soundId);
-    if (sound && sound.play) {
-      // Sound is already a Howler instance or has a play method
-      const howlSoundId = sound._sounds?.[0]?._id;
-      
-      // Apply volume if provided
-      if (options?.volume !== undefined) {
-        if (howlSoundId !== undefined) {
-          sound.volume(Math.max(0, Math.min(1, options.volume)), howlSoundId);
-        } else {
-          sound.volume(Math.max(0, Math.min(1, options.volume)));
-        }
-      }
-      
-      // Apply loop if provided
-      if (options?.loop !== undefined) {
-        if (howlSoundId !== undefined) {
-          sound.loop(options.loop, howlSoundId);
-        } else {
-          sound.loop(options.loop);
-        }
-      }
-      
-      if (howlSoundId !== undefined) {
-        sound.play(howlSoundId);
-      } else {
-        sound.play();
-      }
-    } else if (sound && sound.src) {
-      // If sound is just a source URL, create a Howler instance and cache it
-      const howlOptions: any = {
-        src: [sound.src],
-        loop: options?.loop !== undefined ? options.loop : (sound.loop || false),
-        volume: options?.volume !== undefined ? Math.max(0, Math.min(1, options.volume)) : (sound.volume !== undefined ? sound.volume : 1.0),
-      };
-
-      const howl = new (Howl as any).Howl(howlOptions);
-      
-      // Cache the Howler instance for future use
-      this.sounds.set(soundId, howl);
-      
-      // Play the sound
-      howl.play();
-    } else {
+  async playSound(soundId: string, options: RpgPlaySoundOptions = {}): Promise<void> {
+    const played = await this.audio.play(soundId, options);
+    if (played === undefined) {
       console.warn(`Sound with id "${soundId}" not found or cannot be played`);
     }
   }
@@ -2103,6 +2137,7 @@ export class RpgClientEngine<T = any> {
     this.hooks.callHooks("client-engine-onInput", this, { input: movementInput, playerId: this.playerId }).subscribe();
 
     const bodyReady = this.ensureCurrentPlayerBody();
+    let waitsForPredictionStep = false;
     if (currentPlayer && bodyReady) {
       this.applyPredictedMovementInput(currentPlayer, movementInput);
       if (this.predictionEnabled && this.prediction) {
@@ -2110,10 +2145,16 @@ export class RpgClientEngine<T = any> {
         if (this.pendingPredictionFrames.length > 240) {
           this.pendingPredictionFrames = this.pendingPredictionFrames.slice(-240);
         }
+        waitsForPredictionStep = true;
       }
     }
 
-    this.emitMovePacket(movementInput, frame, tick, timestamp, true);
+    // Prediction input can be sampled more often than the fixed physics loop.
+    // Wait for that loop to attach the resulting state so every input sharing
+    // one client tick is sent to the server as one complete batch.
+    if (!waitsForPredictionStep) {
+      this.emitMovePacket(movementInput, frame, tick, timestamp, true);
+    }
     this.lastInputTime = isDashInput(movementInput)
       ? Date.now() + (movementInput.duration ?? DEFAULT_DASH_DURATION_MS)
       : Date.now();
@@ -2310,7 +2351,12 @@ export class RpgClientEngine<T = any> {
     }
     const deltaMs = Math.max(1, Math.min(100, now - this.lastClientPhysicsStepAt));
     this.lastClientPhysicsStepAt = now;
-    this.sceneMap.stepClientPhysics(deltaMs);
+    this.sceneMap.stepClientPhysics(deltaMs, {
+      // A slow render can execute several fixed physics steps at once. An input
+      // frame belongs to the first of those steps, which is also where the
+      // authoritative server captures its matching ACK position.
+      afterStep: () => this.flushPendingPredictedStates(),
+    });
   }
 
   private flushPendingPredictedStates(): void {
@@ -2318,11 +2364,28 @@ export class RpgClientEngine<T = any> {
       return;
     }
     const state = this.getLocalPlayerState();
+    let latestFlushedFrame: number | undefined;
     while (this.pendingPredictionFrames.length > 0) {
       const frame = this.pendingPredictionFrames.shift();
       if (typeof frame === "number") {
         this.prediction.attachPredictedState(frame, state);
+        latestFlushedFrame = frame;
       }
+    }
+    if (typeof latestFlushedFrame !== "number") {
+      return;
+    }
+    const latest = this.prediction
+      .getPendingInputs()
+      .find((entry) => entry.frame === latestFlushedFrame);
+    if (latest?.state) {
+      this.emitMovePacket(
+        latest.direction,
+        latest.frame,
+        latest.tick,
+        latest.timestamp,
+        true,
+      );
     }
   }
 
@@ -2397,8 +2460,14 @@ export class RpgClientEngine<T = any> {
     if (pendingInputs.length === 0) {
       return;
     }
-    const latest = pendingInputs[pendingInputs.length - 1];
-    if (!latest) {
+    let latest: PredictionHistoryEntry<RpgMovementInput, Direction> | undefined;
+    for (let index = pendingInputs.length - 1; index >= 0; index -= 1) {
+      if (pendingInputs[index].state) {
+        latest = pendingInputs[index];
+        break;
+      }
+    }
+    if (!latest?.state) {
       return;
     }
     const now = Date.now();
@@ -2672,13 +2741,13 @@ export class RpgClientEngine<T = any> {
 
   private applyServerAck(ack: { frame: number; serverTick?: number; x?: number; y?: number; direction?: Direction }) {
     this.updateServerTickEstimate(ack.serverTick);
-    const keepLocalMovement = this.shouldKeepLocalPlayerMovement();
     if (this.predictionEnabled && this.prediction) {
       const result = this.prediction.applyServerAck({
         frame: ack.frame,
         serverTick: ack.serverTick,
         state:
-          !keepLocalMovement && typeof ack.x === "number" && typeof ack.y === "number"
+          typeof ack.x === "number" && Number.isFinite(ack.x)
+            && typeof ack.y === "number" && Number.isFinite(ack.y)
             ? { x: ack.x, y: ack.y, direction: ack.direction }
             : undefined,
       });
@@ -2688,6 +2757,7 @@ export class RpgClientEngine<T = any> {
       return;
     }
 
+    const keepLocalMovement = this.shouldKeepLocalPlayerMovement();
     if (typeof ack.x !== "number" || typeof ack.y !== "number") {
       return;
     }
@@ -2727,17 +2797,28 @@ export class RpgClientEngine<T = any> {
     (this.sceneMap as any).stopMovement(player);
     this.applyAuthoritativeState(authoritativeState);
 
-    if (!pendingInputs.length) {
-      return;
-    }
-
-    // Keep replay bounded while still tolerating high-latency links.
+    // Keep replay bounded while still tolerating high-latency links. Inputs
+    // sampled during the same fixed client tick must update velocity together
+    // and then share the one resulting physics state.
     const replayInputs = pendingInputs.slice(-600);
-    for (const entry of replayInputs) {
-      if (!entry?.direction) continue;
-      this.applyPredictedMovementInput(player, entry.direction);
+    for (let index = 0; index < replayInputs.length;) {
+      const first = replayInputs[index];
+      const tick = first.tick;
+      const group: PredictionHistoryEntry<RpgMovementInput, Direction>[] = [];
+      while (index < replayInputs.length && replayInputs[index].tick === tick) {
+        group.push(replayInputs[index]);
+        index += 1;
+      }
+      for (const entry of group) {
+        if (entry?.direction) {
+          this.applyPredictedMovementInput(player, entry.direction);
+        }
+      }
       this.sceneMap.stepPredictionTick();
-      this.prediction?.attachPredictedState(entry.frame, this.getLocalPlayerState());
+      const state = this.getLocalPlayerState();
+      for (const entry of group) {
+        this.prediction?.attachPredictedState(entry.frame, state);
+      }
     }
   }
 

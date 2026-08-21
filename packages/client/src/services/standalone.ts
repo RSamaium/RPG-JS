@@ -176,6 +176,7 @@ class BridgeWebsocket extends AbstractWebsocket {
       this.socket.addEventListener("message", handler);
     });
     await this.serverInstance.onConnect(this.socket.conn as any, { request } as any);
+    await this.serverInstance.onConnectionAccepted?.(this.socket.conn as any, { request } as any);
   }
 
   private normalizeQuery(query?: SocketQuery): Record<string, string> | undefined {

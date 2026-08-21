@@ -189,4 +189,74 @@ describe("StudioTerrainChunkRenderer streamed invalidation", () => {
       "2:0",
     ]);
   });
+
+  it("rasterizes non-streamed chunks lazily as the viewport moves", async () => {
+    const { renderer, renderChunk } = createInstrumentedRenderer();
+    const map = createTerrainMap(3072, 1536);
+
+    await renderer.renderMap(map, {
+      viewportBounds: { x: 0, y: 0, width: 700, height: 700 },
+      viewportMargin: 0,
+    });
+    expect(renderChunk.mock.calls.map(([key]) => key)).toEqual(["0:0"]);
+
+    renderChunk.mockClear();
+    await renderer.renderMap(map, {
+      viewportBounds: { x: 800, y: 0, width: 700, height: 700 },
+      viewportMargin: 0,
+    });
+    expect(renderChunk.mock.calls.map(([key]) => key)).toEqual(["1:0"]);
+    expect([...(renderer as any).chunks.keys()]).toEqual(["0:0", "1:0"]);
+  });
+
+  it("waits for terrain assets and drops an obsolete render request", async () => {
+    const { renderer, renderChunk } = createInstrumentedRenderer();
+    const map = createTerrainMap(768, 768);
+    map.terrainRenderData.sourceTexture = "terrain.png";
+    map.terrainRenderData.terrainControl = {
+      source: "control.png",
+      width: 768,
+      height: 768,
+      palette: [],
+    } as any;
+    const pending = new Map<string, {
+      promise: Promise<HTMLImageElement>;
+      resolve: (image: HTMLImageElement) => void;
+    }>();
+    for (const source of ["terrain.png", "control.png"]) {
+      let resolve!: (image: HTMLImageElement) => void;
+      const promise = new Promise<HTMLImageElement>((done) => { resolve = done; });
+      pending.set(source, { promise, resolve });
+    }
+    vi.spyOn(renderer as any, "loadImage").mockImplementation(
+      (...args: unknown[]) => pending.get(String(args[0]))!.promise
+    );
+
+    const obsolete = renderer.renderMap(map);
+    map.terrainRenderData.version = "streamed:revision-1:2";
+    const current = renderer.renderMap(map);
+    expect(renderChunk).not.toHaveBeenCalled();
+
+    pending.get("terrain.png")?.resolve({} as HTMLImageElement);
+    pending.get("control.png")?.resolve({} as HTMLImageElement);
+    await Promise.all([obsolete, current]);
+    expect(renderChunk).toHaveBeenCalledTimes(1);
+  });
+
+  it("updates water animation smoothly at no more than thirty frames per second", () => {
+    const { renderer } = createInstrumentedRenderer();
+    const region = { phase: 0, speed: 1 };
+    (renderer as any).chunks.set("0:0", {
+      sprite: { visible: false },
+      waterOverlay: {
+        sprite: { destroyed: false, visible: false },
+        regions: [region],
+      },
+    });
+
+    for (let index = 0; index < 2; index += 1) renderer.update(16);
+    expect(region.phase).toBe(0);
+    renderer.update(16);
+    expect(region.phase).toBeCloseTo(0.048);
+  });
 });

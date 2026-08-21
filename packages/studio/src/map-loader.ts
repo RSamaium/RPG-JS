@@ -491,7 +491,6 @@ export const loadMap = async (mapId: string) => {
 
   params.backgroundMusic = await resolveAudioSource(params.backgroundMusic);
   params.backgroundAmbientSound = await resolveAudioSource(params.backgroundAmbientSound);
-  params.combatMusic = await resolveAudioSource(params.combatMusic);
 
   const resolvedMapEvents = assignStudioEventPlacementIds(await hydrateEventMediaReferences(
     await resolveMapEventReferences(mapResponse.events, {
@@ -791,6 +790,10 @@ export const loadMap = async (mapId: string) => {
           typeof element.hasShadow === 'boolean'
             ? element.hasShadow
             : tilesetElement.hasShadow,
+        extractGroundShadow:
+          typeof element.extractGroundShadow === 'boolean'
+            ? element.extractGroundShadow
+            : tilesetElement.extractGroundShadow,
         lightSpot: element.lightSpot !== undefined ? element.lightSpot : tilesetElement.lightSpot,
         zIndexOffset,
       }
@@ -994,7 +997,6 @@ export const loadMap = async (mapId: string) => {
     params: {
       backgroundMusic: map.params.backgroundMusic,
       backgroundAmbientSound: map.params.backgroundAmbientSound,
-      combatMusic: map.params.combatMusic,
     }
   };
 };

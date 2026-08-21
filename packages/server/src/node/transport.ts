@@ -421,6 +421,14 @@ export class RpgServerTransport {
         }),
       );
 
+      const rpgServer = this.servers.get(route.roomId);
+      await rpgServer?.onConnectionAccepted(connection, {
+        request: new Request(normalizedRequest.url.toString(), {
+          headers: normalizedRequest.headers,
+          method: normalizedRequest.method || "GET",
+        }),
+      });
+
       return true;
     } catch (error) {
       console.error("Error establishing WebSocket connection:", error);

@@ -35,6 +35,25 @@ const selectCueId = (cue: ActionBattleAudioCue): string | undefined => {
   return available[Math.floor(Math.random() * available.length)];
 };
 
+const readNumber = (value: unknown): number | undefined => {
+  const resolved = typeof value === "function" ? value() : value;
+  return typeof resolved === "number" && Number.isFinite(resolved)
+    ? resolved
+    : undefined;
+};
+
+const readPosition = (entity: any): { x: number; y: number } | undefined => {
+  if (!entity) return undefined;
+  const x = readNumber(entity.x);
+  const y = readNumber(entity.y);
+  return x === undefined || y === undefined ? undefined : { x, y };
+};
+
+const readCurrentPlayer = (engine: any): any => {
+  const currentPlayer = engine.scene?.currentPlayer;
+  return typeof currentPlayer === "function" ? currentPlayer() : currentPlayer;
+};
+
 export const playActionBattleAudioCue = (
   engine: any,
   input: ActionBattleAudioCueInput | undefined,
@@ -54,7 +73,20 @@ export const playActionBattleAudioCue = (
   }
   if (now - (times.get(id) ?? 0) < cooldownMs) return;
   times.set(id, now);
-  void engine.playSound?.(id, { volume: cue.volume ?? 1 });
+  const source = context.moment === "hurt" || context.moment === "defeat"
+    ? context.target ?? context.entity
+    : context.entity ?? context.attacker;
+  if (engine.playSound) {
+    void engine.playSound(id, {
+      volume: cue.volume ?? 1,
+      channel: "sfx",
+      position: readPosition(source),
+      listener: readPosition(readCurrentPlayer(engine)),
+      maxDistance: 640,
+      panStrength: 0.75,
+    });
+    return;
+  }
 };
 
 export const playLocalActionBattleAttackAudio = (
@@ -151,15 +183,18 @@ export const createActionBattleCombatAudioVisual = (
     return;
   }
   const selected = chooseThreat(threats, engine.music.contextId);
-  const mapMusic = engine.sceneMap?.data?.()?.params?.combatMusic;
   const configured = typeof music === "object" ? music : {};
   const projectMusic =
     typeof configured.battle === "function"
       ? configured.battle(context)
       : configured.battle;
-  const battle = selected?.music ?? mapMusic ?? projectMusic;
+  const battle = selected?.music ?? projectMusic;
   engine.music.contextId = selected?.enemyId;
-  void engine.music.enter(battle, configured);
+  if (battle) {
+    void engine.music.enter(battle, configured);
+  } else if (engine.music.overrideId) {
+    engine.music.leave(configured);
+  }
 };
 
 type ThreatTarget = {

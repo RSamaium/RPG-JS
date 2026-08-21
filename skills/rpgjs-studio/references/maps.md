@@ -41,7 +41,7 @@ Fields supported by `mapParamsSchema`:
 - `backgroundMusic?: string`
 - `backgroundAmbientSound?: string`
 
-Media fields must use media `_id` values resolved through `/api/media?query=<search>`.
+Music and ambience fields must use media `_id` values resolved through `/api/media?query=<search>`. Combat audio is configured at project, enemy, and skill level rather than on maps.
 
 ### `PUT /api/maps/:mapId`
 

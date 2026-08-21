@@ -136,7 +136,7 @@ export const createSpriteSheetObject = async (
 
       }
     case "faceset":
-      return Presets.FacesetPreset({
+      const faceset = Presets.FacesetPreset({
         id,
         image: url,
       }, 3, 4, {
@@ -160,6 +160,14 @@ export const createSpriteSheetObject = async (
         terrified: [1, 3],    // Terrifié(e) – yeux grands ouverts, tremblements
         ashamed: [2, 3]       // Honteux(se)/mal à l'aise – rougissement, évite le regard
       });
+      return {
+        ...faceset,
+        textures: {
+          ...faceset.textures,
+          // RPGJS UI components request `default` when no expression is set.
+          default: faceset.textures.neutral,
+        },
+      };
     case "animation":
       return {
         id,
@@ -179,6 +187,10 @@ export const createSpriteSheetObject = async (
         },
       };
     case "icon":
+    case "illustration": {
+      const iconTexture = {
+        animations: () => [[{ time: 0, frameX: 0, frameY: 0 }]],
+      };
       return {
         id,
         image: url,
@@ -187,11 +199,11 @@ export const createSpriteSheetObject = async (
         framesWidth: 1,
         framesHeight: 1,
         textures: {
-          stand: {
-            animations: () => [[{ time: 0, frameX: 0, frameY: 0 }]],
-          },
+          default: iconTexture,
+          stand: iconTexture,
         },
       };
+    }
     case "bgs":
     case "bgm":
     case "sound":

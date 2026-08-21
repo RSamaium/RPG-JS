@@ -148,7 +148,11 @@
         const list = displaySlots();
         const item = list[displayIndex];
         if (!item) return;
-        if (!canSelect(item)) return;
+        if (!canSelect(item)) {
+            engine.playUiSound("error");
+            return;
+        }
+        engine.playUiSound("confirm");
         const action = data().mode === "save" ? "save" : "load";
         if (action === "save") {
             await saveClient.saveSlot(item.slotIndex);
@@ -168,6 +172,7 @@
     function selectSlot(index) {
         return function() {
             selectedSlot.set(index);
+            engine.playUiSound("navigate");
             triggerSelect(index);
         }
     }
@@ -177,6 +182,7 @@
     };
 
     const closeSaveLoad = () => {
+        engine.playUiSound("close");
         if (onFinish) onFinish();
         gui.hide(PrebuiltGui.Save);
     };
@@ -193,6 +199,7 @@
             throttle: 150,
             keyDown() {
                 nav.next(-1);
+                engine.playUiSound("navigate");
             }
         },
         down: {
@@ -201,6 +208,7 @@
             throttle: 150,
             keyDown() {
                 nav.next(1);
+                engine.playUiSound("navigate");
             }
         },
         action: {
@@ -221,6 +229,7 @@
     });
 
     mount((element) => {
+        engine.playUiSound("open");
         refreshSlots();
     });
 </script>

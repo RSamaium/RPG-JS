@@ -1,6 +1,6 @@
 import { MapOptions } from "./decorators/map"
 import { RpgPlayer, type RpgPlayerRoom } from "./Player/Player"
-import { type RpgMap } from "./rooms/map"
+import { type RpgMap, type RpgRoomConnection } from "./rooms/map"
 import type { RpgServerEngine } from "./RpgServerEngine"
 import { WorldMapConfig, RpgShape, type I18nMessages, type MapPhysicsInitContext, type MapPhysicsEntityContext, type RpgActionInput, type RpgRoomDescriptor } from "@rpgjs/common"
 import { RpgEvent } from "./Player/Player"
@@ -51,13 +51,28 @@ export interface RpgServerModuleSide {
 
 export type RpgServerModuleImport = RpgServerModuleSide | [RpgServerModuleSide, RpgServerModuleSide]
 
-export interface RpgServerAuthSocket {
-    conn: unknown
+export interface RpgServerAuthSocket<TState = unknown> {
+    conn: RpgRoomConnection<TState>
     request?: unknown
     handshake: {
         query: Record<string, string>
         headers: Record<string, string>
     }
+}
+
+/**
+ * Immutable request information exposed after an RPGJS WebSocket connection
+ * has received its acceptance packet.
+ */
+export interface RpgPlayerConnectionContext<TState = unknown> {
+    /** The accepted room connection, including application-owned auth state. */
+    readonly connection: RpgRoomConnection<TState>
+    /** URL query values captured from this physical WebSocket connection. */
+    readonly query: Readonly<Record<string, string>>
+    /** Request headers captured from this physical WebSocket connection. */
+    readonly headers: Readonly<Record<string, string>>
+    /** Original adapter request when the runtime exposes it. */
+    readonly request?: unknown
 }
 
 /**
@@ -233,6 +248,17 @@ export interface RpgPlayerHooks {
     * @memberof RpgPlayerHooks
     */
     onConnected?: (player: RpgPlayer) => MaybePromise<void>
+
+    /**
+    * Called after the WebSocket acceptance packet has been sent.
+    *
+    * Use this hook for player-specific asynchronous startup work that must not
+    * delay the RPGJS connection handshake.
+    *
+    * @prop { (player: RpgPlayer, context: RpgPlayerConnectionContext) => void | Promise<void> } [onAccepted]
+    * @memberof RpgPlayerHooks
+    */
+    onAccepted?: (player: RpgPlayer, context: RpgPlayerConnectionContext) => MaybePromise<void>
 
     /**
     *  When the player starts the game from the lobby

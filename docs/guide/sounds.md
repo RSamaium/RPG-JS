@@ -11,6 +11,73 @@ This guide explains how to work with sounds in RPG-JS, including static sound co
 
 Sounds are audio files that can be played during gameplay to provide audio feedback for actions, events, and ambient effects. RPG-JS supports both pre-loaded static sounds and dynamic sound creation through a resolver system.
 
+## Audio channels and player preferences
+
+The existing sound API supports four channels: `master`, `music`, `sfx`, and `ui`. Values range from `0` to `1` and are persisted in the browser for each project.
+
+```ts
+engine.setSoundVolume("master", 0.8);
+engine.setSoundVolume("music", 0.6);
+engine.setSoundVolume("sfx", 1);
+engine.setSoundVolume("ui", 0.5);
+
+const musicVolume = engine.getSoundVolume("music");
+```
+
+The native Options menu provides accessible 0–100 sliders for the same channels. Map music, ambient sounds, Action Battle effects, and native UI cues consume these gains automatically. The legacy `RpgSound.global.volume(value)` call is kept as an alias of the Master channel.
+
+## Semantic menu sounds
+
+Native menus use the semantic cues `navigate`, `confirm`, `cancel`, `open`, `close`, and `error`. RPGJS includes a small original neutral-fantasy pack generated at runtime, so these cues work without assets or attribution.
+
+Override the global Studio interface theme with `audio.ui`:
+
+```ts
+const config = {
+  projectId: "my-game",
+  audio: {
+    ui: {
+      navigate: "wood-cursor",
+      confirm: { id: ["confirm-1", "confirm-2"], volume: 0.8, cooldownMs: 60 },
+    },
+  },
+};
+```
+
+The project theme applies to every native menu, then falls back to the built-in cue. Per-menu overrides are not used. In Studio, a missing or empty media field uses the built-in cue and a selected media file replaces it globally.
+
+`playSound()` remains the single API for ordinary and spatial effects. Passing positions enables distance attenuation and stereo panning; without positions it behaves exactly as before.
+
+```ts
+engine.playSound("hit", {
+  channel: "sfx",
+  position: { x: enemy.x(), y: enemy.y() },
+  listener: { x: player.x(), y: player.y() },
+});
+```
+
+## Studio and Action Battle
+
+Studio stores interface defaults in `audio.ui` and the general Action Battle defaults in `combatAudio`, both in the Project Audio tab. Title-screen presentation belongs to `menus.titleScreen.settings`, with `backgroundMusic` and `backgroundImage`. Maps keep their normal background music and ambience but do not override combat audio. Enemies can override `audio.combat`, and skills keep their dedicated `sound` and `impactSound` fields.
+
+Action Battle resolves sounds in this order:
+
+- cast: skill `sound`, source enemy, project, built-in default;
+- impact: skill `impactSound`, source enemy, project, built-in default;
+- hurt/defeat: target enemy, project, built-in default.
+
+Combat effects use 2D spatial audio with full volume within 64 pixels, attenuation to silence at 640 pixels, and a maximum stereo pan strength of `0.75`. Battle music is optional: when no enemy or project battle track is configured, map music is not ducked. Music transitions are sequential: the current track fades out before the next track fades in, preventing two background tracks from playing audibly together.
+
+The built-in map renderer registers its BGM with the shared Howler music manager automatically. A custom map renderer can do the same when its source changes:
+
+```ts
+engine.music.setMap(map.params.backgroundMusic);
+```
+
+Passing `null` or `undefined` stops the owned map track. The manager applies the Music channel gain and coordinates that track with title-screen and battle overrides.
+
+The legacy project `audio.combat` shape and enemy `combatMusic` / `combatMusicPriority` fields remain supported by the runtime.
+
 ## Static Sounds
 
 ### Basic Configuration

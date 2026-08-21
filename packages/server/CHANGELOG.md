@@ -1,5 +1,60 @@
 # @rpgjs/server
 
+## 5.0.0-beta.33
+
+### Minor Changes
+
+- c849207: Add a post-acceptance player lifecycle context and a connection-scoped Studio MMORPG startup resolver with discriminated title/direct flows, single evaluation, URL project loading, and authoritative project/map validation.
+
+### Patch Changes
+
+- 0909491: Preserve weather WebSocket payloads through server reconciliation and render
+  them as authoritative so runtime updates and `clearWeather()` replace weather
+  initially configured in Studio map data.
+  - @rpgjs/testing@5.0.0-beta.33
+
+## 5.0.0-beta.32
+
+### Minor Changes
+
+- decf73e: Add a server-authoritative Actor selection API, runtime Actor switching that preserves acquired progression, a responsive cinematic CanvasEngine character selector, resolved Actor and Class object inputs, class skill progression for CMS-backed data, RPGJS Studio new-game Actor selection settings, character-select/change-class event blocks, and a native query-area block with per-target child execution.
+
+### Patch Changes
+
+- Updated dependencies [decf73e]
+  - @rpgjs/common@5.0.0-beta.30
+  - @rpgjs/testing@5.0.0-beta.32
+
+## 5.0.0-beta.31
+
+### Patch Changes
+
+- e892732: Keep the camera attached when MMORPG streaming refreshes Tiled layers and synchronize instant following with the rendered character position so the viewport cannot trail by one frame. Stabilize predicted movement by publishing finalized input batches only after their client physics step, applying every input from the same client tick in one authoritative server step, capturing the matching acknowledged position, ignoring delayed acknowledgements whose prediction history expired, routing local-player snapshots through prediction instead of applying them directly, and sharing the same movement idle window on both peers.
+- Updated dependencies [e892732]
+  - @rpgjs/common@5.0.0-beta.29
+  - @rpgjs/testing@5.0.0-beta.31
+
+## 5.0.0-beta.30
+
+### Patch Changes
+
+- e0bba29: Fix Studio world-map transitions and preserve the reactive HUD state during
+  map transfers.
+
+  - Normalize scaled Studio world coordinates to integer pixels and resolve
+    automatic transitions from exact directional neighbors.
+  - Keep explicit border-entry coordinates through map-room transfers instead of
+    falling back to the destination map's `start` position.
+  - Restore Studio's generated class from every destination map database so a
+    standalone session transfer keeps the player snapshot, including HP and SP,
+    while deferring a runtime class until the destination database has loaded.
+  - Apply synchronized player parameters through their signal and keep the Studio
+    HUD mounted so the avatar, HP, and SP remain reactive across map changes.
+
+- Updated dependencies [e0bba29]
+  - @rpgjs/common@5.0.0-beta.28
+  - @rpgjs/testing@5.0.0-beta.30
+
 ## 5.0.0-beta.29
 
 ### Minor Changes

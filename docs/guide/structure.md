@@ -34,6 +34,12 @@ new player session on each page load:
 providers: [provideMmorpg({ connectionIdScope: "session" })]
 ```
 
+When one host serves several games, give each game its own initial lobby room:
+
+```ts
+providers: [provideMmorpg({ room: `lobby-${projectId}` })]
+```
+
 If your server uses `engine.auth()`, send the token with the MMORPG connection
 query. RPGJS includes this query on the initial lobby connection and on map-room
 reconnects:

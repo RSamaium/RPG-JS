@@ -44,6 +44,7 @@ export interface PreparedStudioMapPayload {
   width: number;
   height: number;
   data: Record<string, any>;
+  positions?: Record<string, { x: number; y: number }>;
   events: any[];
   hitboxes: MapChunkHitbox[];
   config?: Record<string, any>;
@@ -193,6 +194,7 @@ function prepareElements(map: Record<string, any>): {
         layer: layerIndex,
         scale: size.scale,
         hasShadow: placement.hasShadow ?? source.hasShadow,
+        extractGroundShadow: placement.extractGroundShadow ?? source.extractGroundShadow,
         lightSpot: placement.lightSpot ?? source.lightSpot,
         zIndexOffset: finite(placement.zIndexOffset),
         ...(rule
@@ -298,6 +300,7 @@ export function prepareStudioMapPayload(
       terrainRenderData,
       events,
     },
+    positions: source.positions,
     events,
     hitboxes: [
       ...baseHitboxes,
@@ -391,7 +394,6 @@ function sanitizeTemplate(data: Record<string, any>): Record<string, any> {
     scale: params.scale,
     backgroundMusic: params.backgroundMusic,
     backgroundAmbientSound: params.backgroundAmbientSound,
-    combatMusic: params.combatMusic,
     weather: params.weather,
     tileset: sanitizeMedia(params.tileset),
     primaryElementTileset: sanitizeMedia(params.primaryElementTileset),

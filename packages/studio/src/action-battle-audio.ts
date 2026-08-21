@@ -36,10 +36,40 @@ export interface StudioGuiBinding {
   guiId?: string | null;
 }
 
+/** Settings owned by the native title-screen GUI. */
+export interface StudioTitleScreenSettings {
+  /** Looping background music played while the title screen is visible. */
+  backgroundMusic?: string | null;
+  /** Image displayed behind the native title-screen content. */
+  backgroundImage?: string | null;
+}
+
+/** Project-level binding for the native title-screen GUI. */
+export interface StudioTitleScreenBinding extends StudioGuiBinding {
+  settings: StudioTitleScreenSettings;
+}
+
+/** Character selection settings persisted by RPGJS Studio. */
+export interface StudioCharacterSelectSettings {
+  /** Whether character select is shown for a new game. */
+  enabled: boolean;
+  /** Whether every Actor record is offered. */
+  allActors: boolean;
+  /** Studio Actor document IDs offered when `allActors` is false. */
+  actorIds: string[];
+}
+
+/** Project-level binding for the native character selection GUI. */
+export interface StudioCharacterSelectBinding extends StudioGuiBinding {
+  settings: Omit<StudioCharacterSelectSettings, "enabled">;
+}
+
 /** GUI bindings persisted by RPGJS Studio. */
 export interface StudioMenusSettings {
   /** Title Screen binding. Disabled projects enter their starting map directly. */
-  titleScreen?: StudioGuiBinding;
+  titleScreen?: StudioTitleScreenBinding;
+  /** Character selection shown only when starting a new game. */
+  characterSelect?: StudioCharacterSelectBinding;
   /** Hotbar binding and its role-specific settings. */
   hotbar?: StudioHotbarBinding;
   /** Persistent player status HUD binding. */
@@ -47,6 +77,36 @@ export interface StudioMenusSettings {
   /** Main Menu binding opened by the logical Back action. */
   mainMenu?: StudioGuiBinding;
 }
+
+const DEFAULT_STUDIO_CHARACTER_SELECT: StudioCharacterSelectSettings = {
+  enabled: false,
+  allActors: true,
+  actorIds: [],
+};
+
+/** Normalize untrusted Studio character selection settings. */
+export const normalizeStudioCharacterSelectSettings = (
+  value: unknown,
+): StudioCharacterSelectSettings => {
+  if (!value || typeof value !== "object") {
+    return { ...DEFAULT_STUDIO_CHARACTER_SELECT };
+  }
+  const input = value as Partial<StudioCharacterSelectBinding>
+    & Partial<StudioCharacterSelectSettings>;
+  const settings = input.settings && typeof input.settings === "object"
+    ? input.settings
+    : input;
+  const actorIds = Array.isArray(settings.actorIds)
+    ? Array.from(new Set(settings.actorIds.filter(
+        (id): id is string => typeof id === "string" && id.trim().length > 0,
+      )))
+    : [];
+  return {
+    enabled: input.enabled === true,
+    allActors: settings.allActors !== false,
+    actorIds,
+  };
+};
 
 const DEFAULT_STUDIO_HOTBAR: StudioHotbarSettings = {
   enabled: false,
@@ -113,30 +173,70 @@ export interface StudioCombatAudioConfig {
   hit?: string | string[];
   hurt?: string | string[];
   die?: string | string[];
-  fadeInMs?: number;
-  fadeOutMs?: number;
-  exitDelayMs?: number;
 }
+
+const DEFAULT_STUDIO_COMBAT_AUDIO: StudioCombatAudioConfig = {
+  attack: "rpgjs-combat-attack",
+  skill: "rpgjs-combat-cast",
+  hit: "rpgjs-combat-hit",
+  hurt: "rpgjs-combat-hurt",
+  die: "rpgjs-combat-die",
+};
+
+const compactStudioCombatAudio = (
+  value: unknown,
+): StudioCombatAudioConfig => {
+  if (!value || typeof value !== "object") return {};
+  const input = value as StudioCombatAudioConfig;
+  const compact: StudioCombatAudioConfig = {};
+  const battleMusic = input.battleMusic?.trim();
+  if (battleMusic) compact.battleMusic = battleMusic;
+  (["attack", "skill", "hit", "hurt", "die"] as const).forEach((key) => {
+    const cue = input[key];
+    if (typeof cue === "string") {
+      const id = cue.trim();
+      if (id) compact[key] = id;
+      return;
+    }
+    if (Array.isArray(cue)) {
+      const ids = cue.map((id) => id.trim()).filter(Boolean);
+      if (ids.length > 0) compact[key] = ids;
+    }
+  });
+  return compact;
+};
 
 const resolveConfig = (
   context: ActionBattleVisualContext,
   fallback: StudioCombatAudioConfig,
+  key: "attack" | "skill" | "hit" | "hurt" | "die",
 ): StudioCombatAudioConfig => {
-  const runtime = (context as any).engine?.globalConfig?.combatAudio;
-  const entity =
-    (context.entity as any)?.studioCombatAudio ??
-    (context.attacker as any)?.studioCombatAudio;
+  const engine = (context as any).engine;
+  const runtime = engine?.globalConfig?.combatAudio ?? engine?.globalConfig?.audio?.combat;
+  const source = context.entity ?? context.attacker;
+  const target = context.target ?? context.entity;
+  const sourceAudio = (context as any).sourceAudio
+    ?? (source as any)?.audio?.combat
+    ?? (source as any)?.studioCombatAudio;
+  const targetAudio = (context as any).targetAudio
+    ?? (target as any)?.audio?.combat
+    ?? (target as any)?.studioCombatAudio;
+  const entity = key === "hurt" || key === "die" ? targetAudio : sourceAudio;
   return {
-    ...fallback,
-    ...(runtime && typeof runtime === "object" ? runtime : {}),
-    ...(entity && typeof entity === "object" ? entity : {}),
+    ...DEFAULT_STUDIO_COMBAT_AUDIO,
+    ...compactStudioCombatAudio(fallback),
+    ...compactStudioCombatAudio(runtime),
+    ...compactStudioCombatAudio(entity),
   };
 };
 
 const cue = (
   key: "attack" | "skill" | "hit" | "hurt" | "die",
   fallback: StudioCombatAudioConfig,
-) => (context: ActionBattleVisualContext) => resolveConfig(context, fallback)[key];
+) => (context: ActionBattleVisualContext) => {
+  const config = resolveConfig(context, fallback, key);
+  return config[key];
+};
 
 /**
  * Maps Studio project combat-audio settings to Action Battle. Skill-specific
@@ -151,11 +251,14 @@ export const createStudioActionBattleAudio = (
   hurt: cue("hurt", config),
   die: cue("die", config),
   music: {
-    battle: (context) => resolveConfig(context, config).battleMusic,
+    battle: (context) => {
+      const resolved = resolveConfig(context, config, "attack");
+      return resolved.battleMusic;
+    },
     volume: 0.8,
-    fadeInMs: config.fadeInMs ?? 600,
-    fadeOutMs: config.fadeOutMs ?? 900,
-    exitDelayMs: config.exitDelayMs ?? 1500,
+    fadeInMs: 600,
+    fadeOutMs: 900,
+    exitDelayMs: 1500,
     mapVolume: 0,
   },
 });

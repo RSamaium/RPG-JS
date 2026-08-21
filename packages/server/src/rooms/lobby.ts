@@ -33,6 +33,7 @@ export class LobbyRoom extends BaseRoom {
     player.map = this as unknown as RpgPlayer["map"];
     player.context = context;
     player.conn = conn;
+    await player._onInit();
     await lastValueFrom(this.hooks.callHooks("server-player-onConnected", player));
     await lastValueFrom(this.hooks.callHooks("server-room-onJoin", player, this));
     await lastValueFrom(this.hooks.callHooks("server-player-onJoinRoom", player, this));

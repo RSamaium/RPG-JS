@@ -9,7 +9,9 @@ import {
   provideClientScenes,
   type RpgClientRoomSceneProps,
   type RpgClientSceneDefinition,
+  type RpgAudioChannel,
   type RpgMusicManager,
+  type RpgPlaySoundOptions,
 } from "./index";
 
 describe("client public API types", () => {
@@ -56,5 +58,16 @@ describe("client public API types", () => {
   test("temporary music exposes a typed transition controller", () => {
     expectTypeOf<RpgMusicManager["enter"]>().toBeFunction();
     expectTypeOf<RpgMusicManager["leave"]>().toBeFunction();
+  });
+
+  test("the established sound API exposes channel and spatial options", () => {
+    expectTypeOf<RpgAudioChannel>().toEqualTypeOf<"master" | "music" | "sfx" | "ui">();
+    expectTypeOf<RpgPlaySoundOptions>().toMatchTypeOf<{
+      volume?: number;
+      loop?: boolean;
+      channel?: "music" | "sfx" | "ui";
+      position?: { x: number; y: number };
+      listener?: { x: number; y: number };
+    }>();
   });
 });

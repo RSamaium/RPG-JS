@@ -97,6 +97,7 @@
             "pages": [
               "gui/index",
               "gui/title-screen",
+              "gui/character-select",
               "gui/dialog-box",
               "gui/hud",
               "gui/mobile",

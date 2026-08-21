@@ -20,7 +20,8 @@ import {
  */
 const BLOCKS_WITH_SELF_MANAGED_CHILDREN = new Set<BlockType>([
   'conditional_branch',
-  'show_choices'
+  'show_choices',
+  'query_area'
 ]);
 
 /**
@@ -199,4 +200,3 @@ export async function executeBlocksRecursively(
     logBlockSequenceEnd(blocks.length, totalDuration);
   }
 }
-

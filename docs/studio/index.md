@@ -44,4 +44,5 @@ RPGSTUDIO_API_KEY=your-api-key
 
 - [Use a game with Studio](/studio/game-integration)
 - [Studio event page options](/studio/event-page-options)
+- [Render embedded ground shadows](/studio/ground-shadows)
 - [Create a Studio plugin](/studio/plugins)

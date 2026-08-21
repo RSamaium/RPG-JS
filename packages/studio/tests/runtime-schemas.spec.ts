@@ -67,6 +67,11 @@ describe("Studio runtime schemas", () => {
       "level",
       "hp",
       "sp",
+      "area_target_id",
+      "area_target_kind",
+      "area_distance",
+      "area_distance_ratio",
+      "area_falloff_linear",
     ]);
   });
 });

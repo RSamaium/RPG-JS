@@ -47,4 +47,5 @@ export * from "./schemas/lighting";
 export * from "./schemas/map";
 export * from "./schemas/map-generation";
 export * from "./schemas/project";
+export * from "./schemas/tileset-element";
 export * from "./schemas/weather";

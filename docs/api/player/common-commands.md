@@ -23,6 +23,9 @@ Core server-side player commands defined on the main Player class.
 - [getShapes](#getshapes)
 - [getTile](#gettile)
 - [initializeDefaultStats](#initializedefaultstats)
+- [lastProcessedClientInputTs](#lastprocessedclientinputts)
+- [lastProcessedInputServerTick](#lastprocessedinputservertick)
+- [lastProcessedInputTick](#lastprocessedinputtick)
 - [lastProcessedInputTs](#lastprocessedinputts)
 - [Listen one-time to data from the client](#listen-one-time-to-data-from-the-client)
 - [Listen to data from the client](#listen-to-data-from-the-client)
@@ -555,9 +558,51 @@ overwrite those values.
 player.initializeDefaultStats()
 ```
 
+## lastProcessedClientInputTs
+
+Last client-authored timestamp, kept separately for anti-cheat validation.
+
+- Source: `packages/server/src/Player/Player.ts`
+- Kind: `property`
+- Defined in: `RpgPlayer`
+
+### Signature
+
+```ts
+lastProcessedClientInputTs: number
+```
+
+## lastProcessedInputServerTick
+
+Server physics tick at which that client tick was applied.
+
+- Source: `packages/server/src/Player/Player.ts`
+- Kind: `property`
+- Defined in: `RpgPlayer`
+
+### Signature
+
+```ts
+lastProcessedInputServerTick: number | null
+```
+
+## lastProcessedInputTick
+
+Client physics tick attached to the last processed movement input.
+
+- Source: `packages/server/src/Player/Player.ts`
+- Kind: `property`
+- Defined in: `RpgPlayer`
+
+### Signature
+
+```ts
+lastProcessedInputTick: number | null
+```
+
 ## lastProcessedInputTs
 
-Last processed client input timestamp for reconciliation
+Server-clock deadline used to stop idle movement.
 
 - Source: `packages/server/src/Player/Player.ts`
 - Kind: `property`

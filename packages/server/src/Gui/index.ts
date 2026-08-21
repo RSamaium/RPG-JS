@@ -8,6 +8,7 @@ import { TitleGui } from './TitleGui'
 import { GameoverGui } from './GameoverGui'
 import { InputGui } from './InputGui'
 import { HotbarGui } from './HotbarGui'
+import { CharacterSelectGui } from './CharacterSelectGui'
 
 export { 
     Gui,
@@ -19,7 +20,8 @@ export {
     TitleGui,
     GameoverGui,
     InputGui,
-    HotbarGui
+    HotbarGui,
+    CharacterSelectGui
 }
 
 export { DialogPosition } from './DialogGui'
@@ -31,3 +33,4 @@ export type { TitleEntry, TitleGuiOptions, TitleGuiSelection } from './TitleGui'
 export type { GameoverEntry, GameoverGuiOptions, GameoverGuiSelection } from './GameoverGui'
 export type { BaseInputOptions, TextInputOptions, NumberInputOptions, TextareaInputOptions, InputOptions, InputResult } from './InputForm'
 export type { HotbarGuiOptions, HotbarUseRequest } from './HotbarGui'
+export type { CharacterSelectActorData, CharacterSelectOptions } from './CharacterSelectGui'

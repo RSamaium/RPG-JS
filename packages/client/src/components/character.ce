@@ -68,15 +68,21 @@
 </Container>
 
 <script>
-  import { signal, effect, mount, computed, tick, animatedSignal, on } from "canvasengine";
+  import { signal, effect, mount, computed, tick, animatedSignal, on, untracked } from "canvasengine";
   import { Assets } from "pixi.js";
 
   import { lastValueFrom, combineLatest, pairwise, filter, map, startWith } from "rxjs";
   import { Particle } from "@canvasengine/presets";
   import { GameEngineToken, ModulesToken, shouldRenderLightingShadows } from "@rpgjs/common";
   import { RpgClientEngine } from "../RpgClientEngine";
-  import { applyCameraFollow, clearCameraFollowPlugins, ownsCameraFollowRevision } from "../services/cameraFollow";
-  import { resolveScaledHitboxAnchor, scaleHitboxForGraphicDisplay, toPositiveNumber } from "./character-hitbox";
+  import {
+    applyCameraFollow,
+    clearCameraFollowPlugins,
+    ownsCameraFollow,
+    ownsCameraFollowRevision,
+    syncCameraFollowPosition,
+  } from "../services/cameraFollow";
+  import { resolveScaledGraphicBounds, resolveScaledHitboxAnchor, scaleHitboxForGraphicDisplay, toPositiveNumber } from "./character-hitbox";
   import { inject } from "../core/inject";  
   import { Direction, Animation } from "@rpgjs/common";
   import { normalizeEventComponent } from "../Game/EventComponentResolver";
@@ -88,6 +94,7 @@
   import {
     loadCachedSpriteSheetAlphaBounds,
     mergeSpriteAlphaBounds,
+    resolveTextureSourceDimensions,
     scanSpriteSheetAlphaBounds,
   } from "./sprite-alpha-bounds";
   import {
@@ -898,13 +905,12 @@
     loadingImageDimensions.add(source);
     Assets.load(source)
       .then((texture) => {
-        const width = toPositiveNumber(texture?.width);
-        const height = toPositiveNumber(texture?.height);
-        if (!width || !height) return;
+        const dimensions = resolveTextureSourceDimensions(texture);
+        if (!dimensions) return;
 
-        imageDimensions.update((dimensions) => ({
-          ...dimensions,
-          [source]: { width, height }
+        imageDimensions.update((current) => ({
+          ...current,
+          [source]: dimensions
         }));
       })
       .catch(() => {})
@@ -957,11 +963,11 @@
     loadingAlphaFrameBounds.add(key);
     loadCachedSpriteSheetAlphaBounds(key, async () => {
       const texture = await Assets.load(source);
-      const width = toPositiveNumber(texture?.width);
-      const height = toPositiveNumber(texture?.height);
+      const dimensions = resolveTextureSourceDimensions(texture);
       const framesWidth = Math.floor(toPositiveNumber(textureOptions?.framesWidth) ?? 1);
       const framesHeight = Math.floor(toPositiveNumber(textureOptions?.framesHeight) ?? 1);
-      if (!width || !height) return null;
+      if (!dimensions) return null;
+      const { width, height } = dimensions;
       const pixels = readTexturePixels(texture, width, height);
       if (!pixels) return null;
       return scanSpriteSheetAlphaBounds(
@@ -987,10 +993,10 @@
       });
   };
 
-  const resolveVisibleFrameBounds = (textureOptions) => {
+  const resolveVisibleFrameBounds = (textureOptions, boundsByKey) => {
     if (textureOptions?.trimTransparentBounds !== true) return undefined;
     const key = alphaBoundsKey(textureOptions);
-    const allBounds = key ? alphaFrameBounds()[key] : undefined;
+    const allBounds = key ? boundsByKey[key] : undefined;
     if (!Array.isArray(allBounds)) return undefined;
 
     const framesWidth = Math.floor(toPositiveNumber(textureOptions?.framesWidth) ?? 1);
@@ -1054,6 +1060,9 @@
       return fallback;
     }
     const dimensions = imageDimensions();
+    // Keep this signal read inside the computed so the bounds are recalculated
+    // as soon as the asynchronous alpha scan completes.
+    const loadedAlphaBounds = alphaFrameBounds();
     const graphics = graphicsSignals();
     let bounds = null;
 
@@ -1079,27 +1088,16 @@
       );
       const x = toFiniteNumber(optionValue('x', frame, textureOptions, graphicObject), 0);
       const y = toFiniteNumber(optionValue('y', frame, textureOptions, graphicObject), 0);
-      const visible = resolveVisibleFrameBounds(textureOptions);
-      if (textureOptions?.trimTransparentBounds === true && !visible) {
-        // Scaled spritesheets can contain large transparent frame padding.
-        // Until the alpha scan is ready (or when pixels are unavailable), the
-        // hitbox is a safer anchor than the full frame for top components.
-        return;
-      }
-      const visibleLeft = visible?.left ?? 0;
-      const visibleTop = visible?.top ?? 0;
-      const visibleRight = visible?.right ?? spriteWidth;
-      const visibleBottom = visible?.bottom ?? spriteHeight;
-      const leftEdge = (visibleLeft - anchor[0] * spriteWidth) * scale[0];
-      const rightEdge = (visibleRight - anchor[0] * spriteWidth) * scale[0];
-      const topEdge = (visibleTop - anchor[1] * spriteHeight) * scale[1];
-      const bottomEdge = (visibleBottom - anchor[1] * spriteHeight) * scale[1];
-      const graphic = {
-        left: x + Math.min(leftEdge, rightEdge),
-        top: y + Math.min(topEdge, bottomEdge),
-        right: x + Math.max(leftEdge, rightEdge),
-        bottom: y + Math.max(topEdge, bottomEdge)
-      };
+      const visible = resolveVisibleFrameBounds(textureOptions, loadedAlphaBounds);
+      const graphic = resolveScaledGraphicBounds({
+        frameWidth: spriteWidth,
+        frameHeight: spriteHeight,
+        visibleBounds: visible,
+        anchor,
+        scale,
+        x,
+        y,
+      });
 
       bounds = bounds
         ? {
@@ -1319,6 +1317,18 @@
 
   mount((element) => {
     let appliedCameraFollowRevision = null;
+    let appliedCameraFollowOwnership = null;
+    const cameraFollowTarget = {
+      get x() {
+        return smoothX();
+      },
+      get y() {
+        return smoothY();
+      },
+      get destroyed() {
+        return element.componentInstance?.destroyed ?? true;
+      },
+    };
     if (typeof document !== 'undefined') {
       document.addEventListener('keydown', handleNativeActionWhileMoving);
       document.addEventListener('keyup', handleNativeActionWhileMoving);
@@ -1335,31 +1345,41 @@
       const followRevision = client.cameraFollowRevision();
       if (!shouldFollowCamera()) {
         appliedCameraFollowRevision = null;
+        appliedCameraFollowOwnership = null;
         return;
       }
 
       const smoothMove = client.cameraFollowSmoothMove;
       const viewport = element.props.context?.viewport;
-      const target = element.componentInstance;
-      if (!viewport || !target) {
+      if (!viewport || !element.componentInstance) {
         appliedCameraFollowRevision = null;
+        appliedCameraFollowOwnership = null;
         return;
       }
 
-      const appliedCameraFollow = applyCameraFollow({
-        viewport,
-        target,
-        smoothMove,
-        followRevision,
-        isCurrentRevision: (revision) => client.cameraFollowRevision() === revision,
-        shouldFollowCamera
-      });
-      appliedCameraFollowRevision = appliedCameraFollow ? followRevision : null;
+      appliedCameraFollowOwnership = untracked(() =>
+        applyCameraFollow({
+          viewport,
+          target: cameraFollowTarget,
+          smoothMove,
+          followRevision,
+          isCurrentRevision: (revision) => client.cameraFollowRevision() === revision,
+          shouldFollowCamera
+        })
+      );
+      appliedCameraFollowRevision = appliedCameraFollowOwnership ? followRevision : null;
+    })
+
+    effect(() => {
+      if (!shouldFollowCamera() || !ownsCameraFollow(appliedCameraFollowOwnership)) return;
+      const viewport = element.props.context?.viewport;
+      if (!viewport || !element.componentInstance) return;
+      syncCameraFollowPosition(viewport, cameraFollowTarget, client.cameraFollowSmoothMove);
     })
 
     return () => {
       if (ownsCameraFollowRevision(appliedCameraFollowRevision, client.cameraFollowRevision())) {
-        clearCameraFollowPlugins(element.props.context?.viewport);
+        clearCameraFollowPlugins(element.props.context?.viewport, appliedCameraFollowOwnership);
       }
     }
   })

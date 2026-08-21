@@ -14,6 +14,7 @@ import { Signal, signal, computed, effect } from "canvasengine";
 import { RpgClientEvent } from "./Event";
 import { RpgClientEngine } from "../RpgClientEngine";
 import { inject } from "../core/inject";
+import { resolveEffectiveWeather } from "./weather-state";
 
 type TestGlobalScope = typeof globalThis & {
   process?: {
@@ -57,15 +58,18 @@ export class RpgClientMap extends RpgCommonMap<any> {
   @users(RpgClientPlayer) players = signal<Record<string, RpgClientPlayer>>({});
   @sync(RpgClientEvent) events = signal<Record<string, RpgClientEvent>>({});
   currentPlayer = computed(() => this.players()[this.engine.playerIdSignal()!])
-  weatherState = signal<WeatherState | null>(null);
+  weatherState = signal<WeatherState | null | undefined>(undefined);
   localWeatherOverride = signal<WeatherState | null>(null);
+  private mapWeatherFallback = signal<WeatherState | null>(null);
   private localWeatherValue: WeatherState | null = null;
   lightingState = signal<LightingState | null>(null);
   localLightSpots = signal<Record<string, LightSpot>>({});
   weather = computed<WeatherState | null>(() => {
-    const local = this.localWeatherOverride() 
-    const state = this.weatherState()
-    return local ?? state
+    return resolveEffectiveWeather(
+      this.localWeatherOverride(),
+      this.weatherState(),
+      this.mapWeatherFallback(),
+    );
   });
   lighting = computed<LightingState | null>(() => {
     const state = cloneLightingState(this.lightingState());
@@ -132,9 +136,10 @@ export class RpgClientMap extends RpgCommonMap<any> {
       currentPlayerId && currentPlayer ? { [currentPlayerId]: currentPlayer } : {}
     );
     this.events.set({})
-    this.weatherState.set(null);
+    this.weatherState.set(undefined);
     this.localWeatherValue = null;
     this.localWeatherOverride.set(null);
+    this.mapWeatherFallback.set(null);
     this.lightingState.set(null);
     this.localLightSpots.set({});
     this.clearPhysic()
@@ -155,6 +160,11 @@ export class RpgClientMap extends RpgCommonMap<any> {
   clearLocalWeather(): void {
     this.localWeatherValue = null;
     this.localWeatherOverride.set(null);
+  }
+
+  /** @internal Set weather read from map data until the server sends its authoritative state. */
+  setMapWeatherFallback(next: WeatherState | null): void {
+    this.mapWeatherFallback.set(next);
   }
 
   getLighting(): LightingState | null {
@@ -212,11 +222,14 @@ export class RpgClientMap extends RpgCommonMap<any> {
     this.localLightSpots.set({});
   }
 
-  stepClientPhysics(deltaMs: number): number {
+  stepClientPhysics(
+    deltaMs: number,
+    hooks?: { afterStep?: (tick: number) => void },
+  ): number {
     if (!this.manualClientPhysicsTick) {
       return 0;
     }
-    return this.nextTick(deltaMs);
+    return this.runFixedTicks(deltaMs, hooks);
   }
 
   stepPredictionTick(): void {

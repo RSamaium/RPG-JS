@@ -297,6 +297,7 @@
        return function() {
         selectedItem.set(index)
         quantity.set(1)
+        engine.playUiSound("navigate")
         if (!isItemDisabled(filteredItems()[index])) {
             quantityDialogOpen.set(true)
         }
@@ -307,6 +308,7 @@
         return function() {
             selectedTab.set(index)
             selectedItem.set(0)
+            engine.playUiSound("navigate")
         }
     }
 
@@ -317,6 +319,7 @@
             selectedItem.set(0)
             quantity.set(1)
             tradeView.set('items')
+            engine.playUiSound("confirm")
         }
     }
 
@@ -334,6 +337,7 @@
     function backToMode() {
         return function() {
             tradeView.set('mode')
+            engine.playUiSound("cancel")
         }
     }
 
@@ -344,6 +348,7 @@
             const nextValue = Math.max(1, Math.min(limit, quantity() + delta))
             if (nextValue !== quantity()) {
                 quantity.set(nextValue)
+                engine.playUiSound("navigate")
             }
         }
     }
@@ -351,6 +356,7 @@
     function closeQuantityDialog() {
         return function() {
             quantityDialogOpen.set(false)
+            engine.playUiSound("cancel")
         }
     }
 
@@ -366,8 +372,10 @@
     const closeShop = () => {
         if (quantityDialogOpen()) {
             quantityDialogOpen.set(false)
+            engine.playUiSound("cancel")
             return
         }
+        engine.playUiSound("close")
         onFinish()
     }
 
@@ -381,8 +389,10 @@
             const item = currentItem()
             if (!item || isItemDisabled(item)) {
                 quantityDialogOpen.set(false)
+                engine.playUiSound("error")
                 return
             }
+            engine.playUiSound("confirm")
             const action = tradeMode() === 'buy' ? 'buyItem' : 'sellItem'
             onInteraction(action, { id: item.id, nb: quantity() })
             quantityDialogOpen.set(false)
@@ -403,6 +413,7 @@
             throttle: 150,
             keyDown() {
                 navMode.next(-1)
+                engine.playUiSound("navigate")
             }
         },
         right: {
@@ -411,6 +422,7 @@
             throttle: 150,
             keyDown() {
                 navMode.next(1)
+                engine.playUiSound("navigate")
             }
         },
         action: {
@@ -421,12 +433,13 @@
                 selectedItem.set(0)
                 quantity.set(1)
                 tradeView.set('items')
+                engine.playUiSound("confirm")
             }
         },
         escape: {
             bind: keyboardControls.escape,
             keyDown() {
-                onFinish()
+                closeShop()
             }
         },
         gamepad: {
@@ -445,6 +458,7 @@
                     return
                 }
                 nav.next(-1)
+                engine.playUiSound("navigate")
             }
         },
         down: {
@@ -457,6 +471,7 @@
                     return
                 }
                 nav.next(1)
+                engine.playUiSound("navigate")
             }
         },
         action: {
@@ -466,8 +481,10 @@
                     const item = currentItem()
                     if (!item || isItemDisabled(item)) {
                         quantityDialogOpen.set(false)
+                        engine.playUiSound("error")
                         return
                     }
+                    engine.playUiSound("confirm")
                     const action = tradeMode() === 'buy' ? 'buyItem' : 'sellItem'
                     onInteraction(action, { id: item.id, nb: quantity() })
                     quantityDialogOpen.set(false)
@@ -476,6 +493,9 @@
                 const item = currentItem()
                 if (!isItemDisabled(item)) {
                     quantityDialogOpen.set(true)
+                    engine.playUiSound("confirm")
+                } else {
+                    engine.playUiSound("error")
                 }
             }
         },
@@ -484,9 +504,11 @@
             keyDown() {
                 if (quantityDialogOpen()) {
                     quantityDialogOpen.set(false)
+                    engine.playUiSound("cancel")
                     return
                 }
                 tradeView.set('mode')
+                engine.playUiSound("cancel")
             }
         },
         gamepad: {
@@ -502,6 +524,7 @@
             keyDown() {
                 if (quantityDialogOpen()) return
                 navTab.next(-1)
+                engine.playUiSound("navigate")
             }
         },
         right: {
@@ -511,10 +534,15 @@
             keyDown() {
                 if (quantityDialogOpen()) return
                 navTab.next(1)
+                engine.playUiSound("navigate")
             }
         },
         gamepad: {
             enabled: true
         }
+    })
+
+    mount(() => {
+        engine.playUiSound("open")
     })
 </script>

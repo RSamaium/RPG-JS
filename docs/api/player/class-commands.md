@@ -9,11 +9,61 @@ Assign and inspect player classes and class-driven behaviors.
 
 ## Members
 
+- [Change Actor](#change-actor)
+- [changeActor](#changeactor)
 - [createClassInstance](#createclassinstance)
 - [resolveClassSnapshot](#resolveclasssnapshot)
 - [setActor](#setactor)
 - [setClass](#setclass)
 - [WithClassManager](#withclassmanager)
+
+## Change Actor
+
+Replace the player's active actor identity while preserving acquired
+progression. The new actor's parameter curves are evaluated at the
+current level and HP/SP keep their previous fill ratios. Starting
+equipment is intentionally not granted.
+
+- Source: `packages/server/src/Player/ClassManager.ts`
+- Kind: `method`
+- Member of: `RpgPlayer`
+
+### Signature
+
+```ts
+player.changeActor(actor)
+```
+
+### Parameters
+
+- `actorInput`: `ActorInput`
+
+### Returns
+
+The resolved actor object.
+
+## changeActor
+
+Change the active actor without granting starting equipment or resetting
+the player's acquired progression.
+
+- Source: `packages/server/src/Player/ClassManager.ts`
+- Kind: `method`
+- Defined in: `IClassManager`
+
+### Signature
+
+```ts
+changeActor(actor: ActorInput): ActorData
+```
+
+### Parameters
+
+- `actor`: `ActorInput`
+
+### Returns
+
+The resolved actor object
 
 ## createClassInstance
 
@@ -25,12 +75,12 @@ Create a class instance without side effects.
 ### Signature
 
 ```ts
-createClassInstance(classInput: ClassClass | string)
+createClassInstance(classInput: ClassInput)
 ```
 
 ### Parameters
 
-- `classInput`: `ClassClass | string`
+- `classInput`: `ClassInput`
 
 ## resolveClassSnapshot
 
@@ -61,16 +111,16 @@ Set up the player as a specific actor archetype
 ### Signature
 
 ```ts
-setActor(actorClass: ActorConstructor | string): ActorData
+setActor(actor: ActorInput): ActorData
 ```
 
 ### Parameters
 
-- `actorClass`: `ActorConstructor | string`
+- `actor`: `ActorInput`
 
 ### Returns
 
-The instantiated actor object
+The resolved actor object
 
 ## setClass
 
@@ -83,12 +133,12 @@ Assign a class to the player
 ### Signature
 
 ```ts
-setClass(_class: ClassConstructor | string): ClassData
+setClass(_class: ClassInput): ClassData
 ```
 
 ### Parameters
 
-- `_class`: `ClassConstructor | string`
+- `_class`: `ClassInput`
 
 ### Returns
 

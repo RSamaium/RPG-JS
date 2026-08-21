@@ -114,47 +114,35 @@ describe('WorldMapsManager', () => {
   })
 
   test('should find adjacent maps by direction', () => {
-    // For direction-based lookup, maps must overlap in the perpendicular direction
-    // Right/Left require vertical overlap (same Y range), Up/Down require horizontal overlap (same X range)
     worldMaps.configure([
       { id: 'map1', worldX: 0, worldY: 0, width: 1024, height: 768 },
-      // Right: must have horizontallyOverlaps (same X range) - but maps are side by side, so they don't overlap
-      // Let's use overlapping maps instead
-      { id: 'map2', worldX: 1024, worldY: 0, width: 1024, height: 768 }, // Right - touches but doesn't overlap
-      { id: 'map3', worldX: 0, worldY: 768, width: 1024, height: 768 }, // Down - touches but doesn't overlap
-      { id: 'map4', worldX: 0, worldY: -768, width: 1024, height: 768 }, // Up - touches but doesn't overlap  
-      { id: 'map5', worldX: -1024, worldY: 0, width: 1024, height: 768 }, // Left - touches but doesn't overlap
+      // Right - touches
+      { id: 'map2', worldX: 1024, worldY: 0, width: 1024, height: 768 }, // Right - touching
+      { id: 'map3', worldX: 0, worldY: 768, width: 1024, height: 768 }, // Down - touching
+      { id: 'map4', worldX: 0, worldY: -768, width: 1024, height: 768 }, // Up - touching
+      { id: 'map5', worldX: -1024, worldY: 0, width: 1024, height: 768 }, // Left - touching
     ])
 
     const currentMap = { worldX: 0, worldY: 0, widthPx: 1024, heightPx: 768 }
 
-    // Note: The direction-based lookup requires maps to overlap, not just touch
-    // Since the current implementation checks for overlap, maps that just touch won't be found
-    // This test documents the current behavior - direction lookup may not work for perfectly adjacent maps
-    
-    // Right (3): requires horizontallyOverlaps AND m.worldX === src.worldX + src.width
-    // Maps that touch don't overlap, so this will return empty
     const rightMaps = worldMaps.getAdjacentMaps(currentMap, 3)
-    // Current implementation: maps must overlap, so touching maps won't be found
-    expect(rightMaps.length).toBe(0)
+    expect(rightMaps.length).toBe(1)
+    expect(rightMaps[0].id).toBe('map2')
 
     // Down (1): requires verticallyOverlaps AND m.worldY === src.worldY + src.height  
     const downMaps = worldMaps.getAdjacentMaps(currentMap, 1)
-    expect(downMaps.length).toBe(0)
+    expect(downMaps.length).toBe(1)
+    expect(downMaps[0].id).toBe('map3')
 
     // Up (0): requires verticallyOverlaps AND m.worldY + m.height === src.worldY
     const upMaps = worldMaps.getAdjacentMaps(currentMap, 0)
-    expect(upMaps.length).toBe(0)
+    expect(upMaps.length).toBe(1)
+    expect(upMaps[0].id).toBe('map4')
 
     // Left (2): requires horizontallyOverlaps AND m.worldX + m.width === src.worldX
     const leftMaps = worldMaps.getAdjacentMaps(currentMap, 2)
-    expect(leftMaps.length).toBe(0)
-
-    // Note: The direction-based lookup has a limitation:
-    // - Right/Left (3/2) require horizontal overlap (same X range), but adjacent maps don't overlap
-    // - Up/Down (0/1) require vertical overlap (same Y range), but adjacent maps don't overlap
-    // In practice, autoChangeMap uses point-based lookup instead of direction-based lookup
-    // This test documents the current behavior: direction lookup returns empty for adjacent maps
+    expect(leftMaps.length).toBe(1)
+    expect(leftMaps[0].id).toBe('map5')
   })
 
   test('should find adjacent maps by box', () => {
@@ -526,6 +514,7 @@ describe('Automatic Map Change on Border Touch', () => {
     player = await client.waitForMapChange('map1')
     const initialMap = player.getCurrentMap()
     expect(initialMap?.id).toBe('map1')
+    await player.autoChangeMap({ x: 513, y: 384 }, Direction.Right)
 
     // Move player to the right border
     // The map is 1024px wide, so we need to move close to the right edge
@@ -541,20 +530,12 @@ describe('Automatic Map Change on Border Touch', () => {
 
     // Try to move further right (this should trigger autoChangeMap)
     const mapChanged = await player.autoChangeMap({ x: borderX + 1, y: 384 }, Direction.Right)
-    
-    if (mapChanged) {
-      player = await client.waitForMapChange('map2')
-      const newMap = player.getCurrentMap()
-      expect(newMap?.id).toBe('map2')
-    } else {
-      // If autoChangeMap didn't trigger, manually test the change
-      // This might happen if the position calculation doesn't match exactly
-      const result = await player.changeMap('map2', { x: 16, y: 384 })
-      expect(result).toBe(true)
-      player = await client.waitForMapChange('map2')
-      const newMap = player.getCurrentMap()
-      expect(newMap?.id).toBe('map2')
-    }
+
+    expect(mapChanged).toBe(true)
+    player = await client.waitForMapChange('map2')
+    expect(player.getCurrentMap()?.id).toBe('map2')
+    expect(player.x()).toBe(16)
+    expect(player.y()).toBe(384)
   })
 
   test('should change map when player touches left border', async () => {
@@ -581,6 +562,7 @@ describe('Automatic Map Change on Border Touch', () => {
 
   test('should change map when player touches bottom border', async () => {
     player = await client.waitForMapChange('map1')
+    await player.autoChangeMap({ x: 512, y: 385 }, Direction.Down)
     
     // Move player to the bottom border
     const hitbox = player.hitbox()
@@ -592,22 +574,17 @@ describe('Automatic Map Change on Border Touch', () => {
 
     // Try to move further down
     const mapChanged = await player.autoChangeMap({ x: 512, y: borderY + 1 }, Direction.Down)
-    
-    if (mapChanged) {
-      player = await client.waitForMapChange('map3')
-      const newMap = player.getCurrentMap()
-      expect(newMap?.id).toBe('map3')
-    } else {
-      // Manual change as fallback
-      const result = await player.changeMap('map3', { x: 512, y: 16 })
-      expect(result).toBe(true)
-      player = await client.waitForMapChange('map3')
-      expect(player.getCurrentMap()?.id).toBe('map3')
-    }
+
+    expect(mapChanged).toBe(true)
+    player = await client.waitForMapChange('map3')
+    expect(player.getCurrentMap()?.id).toBe('map3')
+    expect(player.x()).toBe(512)
+    expect(player.y()).toBe(16)
   })
 
   test('should change map when player touches top border', async () => {
     player = await client.waitForMapChange('map1')
+    await player.autoChangeMap({ x: 512, y: 383 }, Direction.Up)
     
     // Move player to the top border
     const hitbox = player.hitbox()
@@ -619,18 +596,12 @@ describe('Automatic Map Change on Border Touch', () => {
 
     // Try to move further up
     const mapChanged = await player.autoChangeMap({ x: 512, y: borderY - 1 }, Direction.Up)
-    
-    if (mapChanged) {
-      player = await client.waitForMapChange('map4')
-      const newMap = player.getCurrentMap()
-      expect(newMap?.id).toBe('map4')
-    } else {
-      // Manual change as fallback
-      const result = await player.changeMap('map4', { x: 512, y: 768 - hitbox.h - 16 })
-      expect(result).toBe(true)
-      player = await client.waitForMapChange('map4')
-      expect(player.getCurrentMap()?.id).toBe('map4')
-    }
+
+    expect(mapChanged).toBe(true)
+    player = await client.waitForMapChange('map4')
+    expect(player.getCurrentMap()?.id).toBe('map4')
+    expect(player.x()).toBe(512)
+    expect(player.y()).toBe(768 - hitbox.h - 16)
   })
 
   test('should not immediately bounce back after returning from adjacent map', async () => {

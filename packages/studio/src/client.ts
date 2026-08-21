@@ -17,6 +17,7 @@ import FadeComponent from "./components/fade.ce";
 import { trigger } from "canvasengine";
 import UpComponent from "./components/up.ce";
 import {
+  configureStudioGameRuntime,
   getGameDataProvider,
   getStudioGameRuntimeConfig,
 } from "./data-provider";
@@ -25,6 +26,7 @@ import { createStudioMapPlugins, type StudioMapPlugin } from "./studio-map-plugi
 import { bindInitialStudioEventHitboxes } from "./initial-event-hitboxes-client";
 import { bindStudioCombatAnimationsToEntity } from "./action-battle-animations";
 import { collectStudioActionBattleMediaRefs } from "./action-battle-animation-preload";
+import { beginStudioMapLoading, waitForStudioMapReady } from "./studio-map-readiness";
 
 interface GlobalConfig {
   projectId?: string;
@@ -38,8 +40,17 @@ interface GlobalConfig {
   };
   animations?: Record<string, any>;
   database?: any[];
+  audio?: {
+    ui?: Record<string, any>;
+  };
   menus?: {
-    titleScreen?: { enabled: boolean };
+    titleScreen?: {
+      enabled: boolean;
+      settings?: {
+        backgroundMusic?: string | null;
+        backgroundImage?: string | null;
+      };
+    };
     hud?: { enabled: boolean };
   };
 }
@@ -105,6 +116,45 @@ const resolveMediaId = (value: unknown): string | null => {
   return null;
 };
 
+const resolveStudioMediaSource = async (value: unknown): Promise<string> => {
+  if (value && typeof value === "object") {
+    const fileName = (value as Record<string, unknown>).fileName;
+    if (typeof fileName === "string" && fileName.trim()) {
+      return resolveAssetSource(fileName);
+    }
+  }
+  const id = resolveMediaId(value);
+  if (!id) return "";
+  try {
+    const media = await getGameDataProvider().getMedia(id);
+    return resolveAssetSource(media?.fileName);
+  } catch {
+    return "";
+  }
+};
+
+export const displayStudioHudOnce = (
+  gui: Pick<RpgGui, "display" | "get" | "isDisplaying">,
+  engine: RpgClientEngineWithConfig,
+): void => {
+  if (gui.isDisplaying("hud")) return;
+
+  const currentData = gui.get("hud")?.data();
+  const facesetId = resolveMediaId(engine.globalConfig?.hero?.faceset);
+  const nextData: Record<string, any> = currentData && typeof currentData === "object"
+    ? { ...currentData }
+    : {};
+
+  if (facesetId) {
+    nextData.faceset = {
+      id: facesetId,
+      expression: "happy",
+    };
+  }
+
+  gui.display("hud", nextData);
+};
+
 const resolveHeroMediaSpritesheet = async (value: unknown): Promise<any | null> => {
   if (!value) return null;
 
@@ -139,6 +189,48 @@ const resolveStudioDatabaseForPreload = async (
   }
 };
 
+const resolveActorIllustrationRefs = async (
+  database: any[],
+): Promise<unknown[]> => {
+  const provider = getGameDataProvider();
+  const actors = database.filter((record) => (record?.type ?? record?._type) === "actor");
+  const refs = await Promise.all(actors.map(async (actor) => {
+    const direct = actor.illustration ?? actor.graphic?.metadata?.illustration;
+    if (direct) return direct;
+    const graphicId = resolveMediaId(actor.graphic);
+    if (!graphicId) return null;
+    try {
+      const graphicMedia = await provider.getMedia(graphicId);
+      return graphicMedia?.metadata?.illustration ?? null;
+    } catch {
+      return null;
+    }
+  }));
+  return refs.filter(Boolean);
+};
+
+export const resolveStudioClientStartupQuery = (search: string): {
+  projectId?: string;
+  directMapId?: string;
+} => {
+  const params = new URLSearchParams(search);
+  const projectId = params.get("game")?.trim() || undefined;
+  const directMapId = params.get("map")?.trim() || undefined;
+  return { projectId, directMapId };
+};
+
+export const configureStudioClientStartupProject = (
+  projectId: string | undefined,
+  config: StudioGameModuleConfig,
+): void => {
+  const runtimeConfig = getStudioGameRuntimeConfig();
+  if (!projectId || runtimeConfig.projectId || config.projectId !== undefined) return;
+  configureStudioGameRuntime({
+    projectId,
+    runtimeMode: config.runtimeMode ?? "online",
+  });
+};
+
 export default (config: StudioGameModuleConfig) => {
   return defineModule<RpgClient>({
     engine: {
@@ -147,23 +239,20 @@ export default (config: StudioGameModuleConfig) => {
 
         await new Promise((resolve) => setTimeout(resolve, 20));
 
-        const gameParam = config.projectId;
         const configuredProjectId = getStudioGameRuntimeConfig().projectId;
+        const startupQuery = resolveStudioClientStartupQuery(window.location.search);
+        const projectId = configuredProjectId
+          ?? (config.projectId === undefined ? startupQuery.projectId : config.projectId);
+        configureStudioClientStartupProject(projectId ?? undefined, config);
 
         let response: any = {};
         const provider = getGameDataProvider();
 
         // Configuration projectId takes precedence over URL mode.
-        if (configuredProjectId) {
+        if (projectId) {
           response = await provider.getProject({
-            projectId: configuredProjectId,
+            projectId,
           });
-        }
-        // If ?game parameter is present, fetch project by projectId
-        // gameParam should contain the projectId (e.g., ?game=projectId)
-        else if (gameParam !== null) {
-          const projectId = gameParam;
-          response = await provider.getProject({ projectId });
         }
 
         window.gameConfig = response;
@@ -188,6 +277,10 @@ export default (config: StudioGameModuleConfig) => {
             debugCollisions,
           }),
         };
+        (engine as any).configureSound?.({
+          projectId: engine.globalConfig.projectId,
+          ui: engine.globalConfig.audio?.ui,
+        });
 
         const animationMediaRefs = Object.values(
           engine.globalConfig.animations ?? {},
@@ -200,12 +293,19 @@ export default (config: StudioGameModuleConfig) => {
         }
         const databaseAnimationMediaRefs =
           collectStudioActionBattleMediaRefs(database);
+        const actorMediaRefs = database
+          .filter((record) => (record?.type ?? record?._type) === "actor")
+          .flatMap((actor) => [actor.graphic, actor.faceset])
+          .filter(Boolean);
+        const actorIllustrationRefs = await resolveActorIllustrationRefs(database);
 
         const heroMediaRefs = [
           engine.globalConfig.hero?.graphic,
           engine.globalConfig.hero?.faceset,
           ...animationMediaRefs,
           ...databaseAnimationMediaRefs,
+          ...actorMediaRefs,
+          ...actorIllustrationRefs,
         ].filter(Boolean);
 
         // Load hero and combat animation spritesheets from either direct media objects or media IDs.
@@ -221,13 +321,23 @@ export default (config: StudioGameModuleConfig) => {
             engine.addSpriteSheet(spritesheet);
           });
 
-        const displayTitleScreen = config.displayTitleScreen
+        const displayTitleScreen = startupQuery.directMapId
+          ? false
+          : config.displayTitleScreen
           ?? response.menus?.titleScreen?.enabled
           ?? true;
         if (displayTitleScreen) {
+          const backgroundImage = await resolveStudioMediaSource(
+            response.menus?.titleScreen?.settings?.backgroundImage,
+          );
+          if (backgroundImage && engine.globalConfig.menus?.titleScreen?.settings) {
+            engine.globalConfig.menus.titleScreen.settings.backgroundImage = backgroundImage;
+          }
           gui.display("rpg-title-screen", {
             title: response.name,
             subtitle: response.subtitle,
+            backgroundMusic: response.menus?.titleScreen?.settings?.backgroundMusic,
+            backgroundImage,
             version: "v1.0.0",
             localActions: true,
             saveLoad: {
@@ -264,7 +374,7 @@ export default (config: StudioGameModuleConfig) => {
         const gui = inject(RpgGui);
         const engine = inject(RpgClientEngine) as RpgClientEngineWithConfig;
         const hasPreviousMap = Boolean(engine.scene.data?.());
-        gui.hide("hud");
+        beginStudioMapLoading();
         await new Promise<void>((resolve) => {
           let completed = false;
           const complete = () => {
@@ -284,12 +394,7 @@ export default (config: StudioGameModuleConfig) => {
             onCovered: complete,
             onRevealed: () => {
               if (engine.globalConfig.menus?.hud?.enabled !== false) {
-                gui.display("hud", {
-                  faceset: {
-                    id: resolveMediaId(engine.globalConfig?.hero?.faceset),
-                    expression: "happy",
-                  },
-                });
+                displayStudioHudOnce(gui, engine);
               }
             },
           });
@@ -303,6 +408,8 @@ export default (config: StudioGameModuleConfig) => {
           engine.globalConfig.animations,
         );
         bindInitialStudioEventHitboxes(scene);
+        const loadedScene = engine.scene.data?.();
+        await waitForStudioMapReady(loadedScene?.data ?? loadedScene);
         await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
         fadeTrigger.start();
       },

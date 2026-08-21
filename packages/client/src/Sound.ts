@@ -169,6 +169,25 @@ export function getSoundMetadata(soundClass: any): SoundMetadata | undefined {
  */
 export class RpgSound {
   private static engine: RpgClientEngine | null = null;
+  private static readonly globalFacade = new Proxy(Howler as any, {
+    get(target, property) {
+      if (property === "volume") {
+        return (value?: number) => {
+          if (value === undefined) {
+            return RpgSound.engine?.getSoundVolume("master") ?? target.volume();
+          }
+          if (RpgSound.engine) {
+            RpgSound.engine.setSoundVolume("master", value);
+          } else {
+            target.volume(value);
+          }
+          return target;
+        };
+      }
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
 
   /**
    * Initialize RpgSound with the engine instance
@@ -232,7 +251,8 @@ export class RpgSound {
    * Global Howler instance for managing all sounds
    * 
    * Provides access to Howler.js global methods for controlling all sounds
-   * at once (volume, mute, etc.).
+   * at once (volume, mute, etc.). `volume()` is kept as a backward-compatible
+   * alias of the persisted RPGJS Master channel.
    * 
    * @example
    * ```ts
@@ -247,7 +267,6 @@ export class RpgSound {
    * ```
    */
   static get global(): typeof Howler {
-    return Howler;
+    return RpgSound.globalFacade;
   }
 }
-

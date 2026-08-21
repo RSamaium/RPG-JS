@@ -3,10 +3,24 @@
         <div class="rpg-ui-menu-panel-header">{t("rpg.menu.options")}</div>
         <div class="rpg-ui-menu-panel-body">
             <div class="rpg-ui-menu-panel-details">
-                <div class="rpg-ui-menu-panel-details-title">{t("rpg.menu.options")}</div>
-                <div class="rpg-ui-menu-panel-details-desc">
-                    {t("rpg.menu.options-help")}
-                </div>
+                <div class="rpg-ui-menu-panel-details-title">{t("rpg.audio.title")}</div>
+                <div class="rpg-ui-menu-panel-details-desc">{t("rpg.audio.help")}</div>
+                @for (channel of channels) {
+                    <label class="rpg-ui-audio-option">
+                        <span>{t(channel.label)}</span>
+                        <span>{percent(channel.id)}%</span>
+                        <input
+                            class="rpg-ui-input"
+                            type="range"
+                            min="0"
+                            max="100"
+                            step="1"
+                            value={percent(channel.id)}
+                            aria-label={t(channel.label)}
+                            input={changeVolume(channel.id)}
+                        />
+                    </label>
+                }
             </div>
         </div>
     </div>
@@ -21,11 +35,24 @@
     const { t } = engine.i18n();
     const keyboardControls = engine.globalConfig.keyboardControls;
     const { onBack } = defineProps();
+    const channels = [
+        { id: "master", label: "rpg.audio.master" },
+        { id: "music", label: "rpg.audio.music" },
+        { id: "sfx", label: "rpg.audio.sfx" },
+        { id: "ui", label: "rpg.audio.ui" }
+    ];
+    const percent = (channel) => Math.round(engine.getSoundVolume(channel) * 100);
+    const changeVolume = (channel) => (event) => {
+        const value = Number(event?.target?.value ?? 100) / 100;
+        engine.setSoundVolume(channel, value);
+        if (channel === "ui" || channel === "master") engine.playUiSound("navigate");
+    };
 
     const controls = signal({
         escape: {
             bind: keyboardControls.escape,
             keyDown() {
+                engine.playUiSound("cancel");
                 if (onBack) onBack();
             }
         },
@@ -34,3 +61,19 @@
         }
     });
 </script>
+
+<style>
+    .rpg-ui-audio-option {
+        display: grid;
+        grid-template-columns: minmax(7rem, 1fr) auto;
+        align-items: center;
+        gap: 0.35rem 1rem;
+        margin-top: 0.9rem;
+        color: var(--rpg-ui-text);
+    }
+    .rpg-ui-audio-option .rpg-ui-input {
+        grid-column: 1 / -1;
+        padding: 0;
+        accent-color: var(--rpg-ui-accent);
+    }
+</style>

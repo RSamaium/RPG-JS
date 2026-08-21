@@ -16,6 +16,7 @@ vi.mock("../components/gui", () => {
     GameoverComponent: component,
     InputComponent: component,
     HotbarComponent: component,
+    CharacterSelectComponent: component,
   };
 });
 
@@ -69,6 +70,10 @@ describe("RpgGui Vue integration", () => {
   test("registers the prebuilt input GUI", async () => {
     const { gui } = await createGui();
     expect(gui.get(PrebuiltGui.Input)).toBeDefined();
+  });
+  test("registers the prebuilt character select GUI", async () => {
+    const { gui } = await createGui();
+    expect(gui.get(PrebuiltGui.CharacterSelect)).toBeDefined();
   });
   test("tracks GUI open ids and sends them back when closing", async () => {
     const { gui, socket } = await createGui();

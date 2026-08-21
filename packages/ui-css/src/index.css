@@ -15,6 +15,7 @@
 @import './primitives/dialog.css';
 @import './primitives/save-load.css';
 @import './primitives/character-card.css';
+@import './primitives/character-select.css';
 @import './primitives/stats.css';
 @import './primitives/hotbar.css';
 @import './primitives/tooltip.css';

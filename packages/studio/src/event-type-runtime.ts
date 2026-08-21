@@ -16,10 +16,6 @@ export { getGraphicKey, getGraphicScale } from "./graphic-key";
  * Extended RpgMap interface with studio-specific properties
  */
 export interface RpgMapExtended extends RpgMap {
-  startPosition: {
-    x: number;
-    y: number;
-  };
   scale: number;
   globalConfig: Record<string, unknown>;
   setInWorldMaps(worldMap: import("@rpgjs/common").WorldMapsManager): void;
@@ -313,11 +309,15 @@ export const resolveEnemyBattleAiOptions = (
     presentation: {
       ...(enemy.presentation ?? {}),
       music: {
-        battle: enemy.combatMusic ?? enemy.presentation?.music?.battle,
+        battle:
+          enemy.audio?.combat?.battleMusic
+          ?? enemy.combatMusic
+          ?? enemy.presentation?.music?.battle,
         priority:
           toNumber(enemy.combatMusicPriority) ??
           toNumber(enemy.presentation?.music?.priority),
       },
+      audio: enemy.audio?.combat ?? enemy.combatAudio,
     },
   };
 

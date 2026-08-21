@@ -9,7 +9,7 @@ export type { DamageFormulas, DamageResult, BattleParameterSet } from "./Player/
 export type { SkillClass, SkillData, SkillObject, SkillHooks, SkillChangePayload, SkillChangeOptions } from "./Player/SkillManager";
 export * from "./Player/HotbarManager";
 export type { StateClass, StateData, StateInput, StateApplication, StateEfficiency } from "./Player/StateManager";
-export type { ClassConstructor, ClassData, ActorConstructor, ActorData } from "./Player/ClassManager";
+export type { ClassConstructor, ClassData, ClassInput, ActorConstructor, ActorData, ActorInput } from "./Player/ClassManager";
 export type { ElementAffinity } from "./Player/ElementManager";
 export * from "./Player/Components";
 export * from "./module";

@@ -28,8 +28,13 @@ export class RpgMusicManager {
   contextId?: string;
   private currentId?: string;
   private currentSound?: any;
+  private pendingId?: string;
+  private mapId?: string;
+  private mapSound?: any;
   private readonly sounds = new Map<string, any>();
   private revision = 0;
+  private outputGain = 1;
+  private currentBaseVolume = 0.8;
   private timers = new Set<ReturnType<typeof setTimeout>>();
 
   constructor(private readonly host: MusicHost) {}
@@ -38,24 +43,52 @@ export class RpgMusicManager {
     return this.currentId;
   }
 
+  /** Play the map BGM through the same Howler owner as temporary music. */
+  setMap(src: string | null | undefined): void {
+    const normalized = src?.trim();
+    if (!normalized) {
+      this.mapSound?.stop?.();
+      this.mapSound = undefined;
+      this.mapId = undefined;
+      return;
+    }
+    if (normalized === this.mapId && this.mapSound) return;
+
+    const previous = this.mapSound;
+    const sound = this.host.createSound(normalized, {
+      loop: true,
+      volume: this.mapVolume() * this.outputGain,
+    });
+    previous?.stop?.();
+    this.mapId = normalized;
+    this.mapSound = sound;
+    this.setLoop(sound, true);
+    this.setVolume(sound, this.mapVolume() * this.outputGain);
+    sound?.play?.();
+  }
+
   async enter(
     id: string | undefined,
     options: RpgMusicTransitionOptions = {},
   ): Promise<void> {
+    if (id && id === this.pendingId) return;
     const revision = ++this.revision;
     this.clearTimers();
+    this.pendingId = undefined;
     const fadeInMs = Math.max(0, options.fadeInMs ?? 600);
     const fadeOutMs = Math.max(0, options.fadeOutMs ?? fadeInMs);
     const volume = clampVolume(options.volume ?? 0.8);
+    this.currentBaseVolume = volume;
+    const outputVolume = volume * this.outputGain;
     const mapVolume = clampVolume(options.mapVolume ?? 0);
 
-    this.tweenMapVolume(mapVolume, fadeInMs, revision);
     if (!id) {
-      await this.fadeOutCurrent(fadeOutMs, revision);
+      this.fadeOutThenRestoreMap(fadeOutMs, revision);
       return;
     }
     if (id === this.currentId && this.currentSound) {
-      this.fade(this.currentSound, this.readVolume(this.currentSound), volume, fadeInMs);
+      this.fadeMapVolume(mapVolume, fadeOutMs, revision);
+      this.fade(this.currentSound, this.readVolume(this.currentSound), outputVolume, fadeInMs);
       return;
     }
 
@@ -63,37 +96,69 @@ export class RpgMusicManager {
     const sound = await this.resolve(id);
     if (revision !== this.revision || !sound) return;
 
-    this.currentId = id;
-    this.currentSound = sound;
-    this.setLoop(sound, true);
-    this.setVolume(sound, 0);
-    sound.play?.();
-    this.fade(sound, 0, volume, fadeInMs);
-    if (previous && previous !== sound) {
+    this.pendingId = id;
+    const startNextTrack = () => {
+      this.pendingId = undefined;
+      this.currentId = id;
+      this.currentSound = sound;
+      this.setLoop(sound, true);
+      this.setVolume(sound, 0);
+      sound.play?.();
+      this.fade(sound, 0, outputVolume, fadeInMs);
+    };
+    const finishFadeOut = () => {
+      previous?.stop?.();
+      this.setMapVolume(mapVolume);
+      this.schedule(startNextTrack, 16, revision);
+    };
+    const fadeMapFirst = Boolean(this.mapSound) && this.mapVolume() > mapVolume;
+    const fadePreviousFirst = Boolean(previous && previous !== sound);
+    if (fadeMapFirst) this.fadeMapVolume(mapVolume, fadeOutMs, revision);
+    if (fadePreviousFirst) {
       this.fade(previous, this.readVolume(previous), 0, fadeOutMs);
-      this.schedule(() => previous.stop?.(), fadeOutMs, revision);
+    }
+    if ((fadeMapFirst || fadePreviousFirst) && fadeOutMs > 0) {
+      this.schedule(finishFadeOut, fadeOutMs, revision);
+    } else {
+      this.setMapVolume(mapVolume);
+      startNextTrack();
     }
   }
 
   leave(options: RpgMusicTransitionOptions = {}): void {
     const revision = ++this.revision;
     this.clearTimers();
+    this.pendingId = undefined;
     const delay = Math.max(0, options.exitDelayMs ?? 1500);
     this.schedule(() => {
       const fadeOutMs = Math.max(0, options.fadeOutMs ?? 900);
-      this.tweenMapVolume(1, fadeOutMs, revision);
-      void this.fadeOutCurrent(fadeOutMs, revision);
+      this.fadeOutThenRestoreMap(fadeOutMs, revision);
     }, delay, revision);
   }
 
   reset(): void {
+    this.mapSound?.stop?.();
+    this.mapSound = undefined;
+    this.mapId = undefined;
+    this.resetOverride();
+  }
+
+  /** Clear title or battle music while preserving the current map track. */
+  resetOverride(): void {
     this.revision += 1;
     this.clearTimers();
     this.currentSound?.stop?.();
     this.currentSound = undefined;
     this.currentId = undefined;
+    this.pendingId = undefined;
     this.contextId = undefined;
-    this.mapVolume.set(1);
+    this.setMapVolume(1);
+  }
+
+  setOutputGain(value: number): void {
+    this.outputGain = clampVolume(value);
+    if (this.currentSound) this.setVolume(this.currentSound, this.currentBaseVolume * this.outputGain);
+    if (this.mapSound) this.setVolume(this.mapSound, this.mapVolume() * this.outputGain);
   }
 
   private async resolve(id: string): Promise<any> {
@@ -112,15 +177,19 @@ export class RpgMusicManager {
     return sound;
   }
 
-  private async fadeOutCurrent(duration: number, revision: number) {
+  private fadeOutThenRestoreMap(duration: number, revision: number): void {
     const sound = this.currentSound;
-    if (!sound) return;
+    if (!sound) {
+      this.fadeMapVolume(1, duration, revision);
+      return;
+    }
     this.fade(sound, this.readVolume(sound), 0, duration);
     this.schedule(() => {
       sound.stop?.();
       if (revision === this.revision && this.currentSound === sound) {
         this.currentSound = undefined;
         this.currentId = undefined;
+        this.fadeMapVolume(1, duration, revision);
       }
     }, duration, revision);
   }
@@ -146,20 +215,25 @@ export class RpgMusicManager {
     sound?.loop?.(loop);
   }
 
-  private tweenMapVolume(target: number, duration: number, revision: number) {
-    const start = this.mapVolume();
-    if (duration === 0) {
-      this.mapVolume.set(target);
-      return;
+  private fadeMapVolume(target: number, duration: number, revision: number) {
+    const normalized = clampVolume(target);
+    const outputVolume = normalized * this.outputGain;
+    this.mapVolume.set(normalized);
+    if (!this.mapSound) return;
+    this.fade(this.mapSound, this.readVolume(this.mapSound), outputVolume, duration);
+    if (duration > 0) {
+      this.schedule(
+        () => this.setVolume(this.mapSound, normalized * this.outputGain),
+        duration,
+        revision,
+      );
     }
-    const startedAt = Date.now();
-    const step = () => {
-      if (revision !== this.revision) return;
-      const progress = Math.min(1, (Date.now() - startedAt) / duration);
-      this.mapVolume.set(start + (target - start) * progress);
-      if (progress < 1) this.schedule(step, 16, revision);
-    };
-    step();
+  }
+
+  private setMapVolume(value: number) {
+    const normalized = clampVolume(value);
+    this.mapVolume.set(normalized);
+    this.setVolume(this.mapSound, normalized * this.outputGain);
   }
 
   private schedule(callback: () => void, delay: number, revision: number) {
