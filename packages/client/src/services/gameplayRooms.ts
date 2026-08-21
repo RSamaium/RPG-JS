@@ -63,8 +63,24 @@ export interface RpgClientSceneDefinition<TState = unknown> {
   onChanges?: (room: RpgClientRoom<TState>, partial: unknown) => void | Promise<void>;
 }
 
-/** Register CanvasEngine scene adapters for custom gameplay-room kinds. */
-export function provideClientScenes(scenes: RpgClientSceneDefinition<any>[]): RpgProvider {
+/**
+ * Register CanvasEngine scene adapters for custom gameplay-room kinds.
+ *
+ * The client owns rendering and input while synchronized room data remains
+ * server-authoritative. The provider works in standalone and MMORPG clients.
+ *
+ * @param scenes - Scene definitions keyed by the server-registered room kind.
+ * @returns An RPGJS provider installed in the client configuration.
+ *
+ * @example
+ * ```ts
+ * provideClientScenes<BattleState>([{
+ *   kind: "battle",
+ *   component: BattleScene,
+ * }])
+ * ```
+ */
+export function provideClientScenes<TState = unknown>(scenes: RpgClientSceneDefinition<TState>[]): RpgProvider {
   const token = class RpgClientScenesProvider {};
   return {
     provide: token,
@@ -73,6 +89,7 @@ export function provideClientScenes(scenes: RpgClientSceneDefinition<any>[]): Rp
   };
 }
 
+/** @internal */
 export function collectProvidedClientScenes(providers: RpgProviders): RpgClientSceneDefinition<any>[] {
   const scenes: RpgClientSceneDefinition<any>[] = [];
   const visit = (entries: RpgProviders): void => {
@@ -96,6 +113,7 @@ export function collectProvidedClientScenes(providers: RpgProviders): RpgClientS
   return scenes;
 }
 
+/** @internal */
 export class RpgClientSceneRegistry {
   private readonly definitions = new Map<string, RpgClientSceneDefinition<any>>();
 

@@ -4,8 +4,8 @@
   }
 
   <Container>
-    @if (map() && sceneComponent()) {
-      <sceneComponent() data={map()?.data ?? emptySceneData} params={map()?.params ?? emptySceneParams} />
+    @if (map() && sceneComponent() && sceneData() != null) {
+      <sceneComponent() data={sceneData()} params={map()?.params ?? emptySceneParams} />
     }
   </Container>
 
@@ -44,9 +44,9 @@
     const componentAnimations = engine.componentAnimations
     const projectiles = engine.projectiles.current
     const map = engine.sceneMap?.data
-    const emptySceneData = { params: {} }
     const emptySceneParams = {}
     const sceneComponent = computed(() => map()?.component)
+    const sceneData = computed(() => map()?.data)
     const mapFrozen = computed(() => engine.gamePause() || engine.visualPause())
     const weather = engine.sceneMap.weather
     effect(() => engine.music.setMap(map()?.params?.backgroundMusic))

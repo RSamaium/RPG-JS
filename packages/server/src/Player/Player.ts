@@ -522,7 +522,23 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
     return this.transferRoom(target);
   }
 
-  /** Return the active map-independent RPGJS room. */
+  /**
+   * Return the active RPGJS room.
+   *
+   * The result is a lobby, map, or registered custom gameplay room. Use
+   * `getCurrentMap()` when map-only APIs are required.
+   *
+   * @method player.getCurrentRoom()
+   * @returns The active room, or `null` before the player joins one.
+   *
+   * @example
+   * ```ts
+   * const battle = player.getCurrentRoom<BattleRoom>()
+   * if (battle?.descriptor.kind === "battle") {
+   *   console.log(battle.state())
+   * }
+   * ```
+   */
   getCurrentRoom<T extends RpgPlayerRoom = RpgPlayerRoom>(): T | null {
     return this.room as T | null;
   }

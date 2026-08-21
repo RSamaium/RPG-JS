@@ -1060,11 +1060,14 @@ export class RpgClientEngine<T = any> {
       this.sceneRoom.reset();
       this.activeRoom.set(descriptor);
     }
-    this.activeSceneKind.set("map");
-    this.activeRoomSceneComponent.set(undefined);
     this.beginMapTransfer(nextMapId, data?.continueMovement === true);
     const transferToken = typeof data?.transferToken === "string" ? data.transferToken : undefined;
     await this.loadScene(data.mapId, transferToken);
+    // Keep the custom room scene mounted until the destination map has valid
+    // render data. Mounting SceneMap earlier can briefly feed a detached or
+    // incomplete streamed map into its CanvasEngine component.
+    this.activeRoomSceneComponent.set(undefined);
+    this.activeSceneKind.set("map");
   }
 
   private async handleChangeRoom(data: unknown): Promise<void> {

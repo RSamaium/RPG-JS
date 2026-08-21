@@ -432,7 +432,10 @@ player.flash({
 
 ## getCurrentRoom
 
-Return the active map-independent RPGJS room.
+Return the active RPGJS room.
+
+The result is a lobby, map, or registered custom gameplay room. Use
+`getCurrentMap()` when map-only APIs are required.
 
 - Source: `packages/server/src/Player/Player.ts`
 - Kind: `method`
@@ -441,7 +444,20 @@ Return the active map-independent RPGJS room.
 ### Signature
 
 ```ts
-getCurrentRoom(): T | null
+player.getCurrentRoom()
+```
+
+### Returns
+
+The active room, or `null` before the player joins one.
+
+### Examples
+
+```ts
+const battle = player.getCurrentRoom<BattleRoom>()
+if (battle?.descriptor.kind === "battle") {
+  console.log(battle.state())
+}
 ```
 
 ## getInShapes

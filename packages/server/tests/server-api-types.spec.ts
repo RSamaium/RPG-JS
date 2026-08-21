@@ -2,7 +2,7 @@ import { describe, expectTypeOf, test } from "vitest";
 import type { HotbarState, MapStreamDefinition, RpgActionInput, RpgRoomDescriptor } from "@rpgjs/common";
 import type { FactoryProvider as SigneFactoryProvider } from "@signe/di";
 import type { NodeConnection, NodeRoom } from "@signe/room/node";
-import { provideServerMapStreaming } from "@rpgjs/server";
+import { provideServerMapStreaming, provideServerRooms, RpgGameplayRoom } from "@rpgjs/server";
 import type {
   RpgEvent,
   RpgEventHooks,
@@ -21,7 +21,6 @@ import type {
   StateData,
   ActorData,
   ServerMapStreamingAdapter,
-  RpgGameplayRoom,
 } from "@rpgjs/server";
 import {
   createMemoryNodeRoomStorage,
@@ -34,6 +33,11 @@ import {
 import type { RpgProvider, RpgWritableSignal } from "@rpgjs/common";
 
 describe("server public API types", () => {
+  test("gameplay room subclasses are accepted by the room provider", () => {
+    class BattleRoom extends RpgGameplayRoom<{ turn: number }> {}
+    expectTypeOf(provideServerRooms([BattleRoom])).toMatchTypeOf<RpgProvider[]>();
+  });
+
   test("player hooks match the runtime contracts", () => {
     const hooks = {
       async onLoad(player, snapshot) {

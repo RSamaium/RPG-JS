@@ -163,12 +163,6 @@ class MapStreamingClientService<TManifestData, TChunkData, TState> {
 
   async load(mapId: string): Promise<MapData> {
     const normalizedId = mapId.replace(/^map-/, "");
-    const existing = this.controllers.get(normalizedId);
-    if (existing) {
-      this.socket.emit(MAP_STREAM_REQUEST_EVENT, { mapId: normalizedId });
-      return existing.toMapData();
-    }
-
     const shouldRequest = !this.waiters.has(normalizedId);
     const controllerPromise = new Promise<MapStreamClientController<TManifestData, TChunkData, TState>>((resolve, reject) => {
       const timeoutMs = Math.max(1, this.options.timeoutMs ?? 10_000);

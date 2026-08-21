@@ -10,8 +10,17 @@ import type {
 const RPG_ROOM_METADATA = Symbol.for("@rpgjs/server/room-metadata");
 const SERVER_ROOMS_PROVIDER_META = "rpgjs:server-rooms";
 
+/** Runtime context supplied when RPGJS creates a registered gameplay room. */
+export interface RpgRoomConstructorContext {
+  id?: string;
+  env?: Record<string, unknown>;
+}
+
 /** Constructor for an RPGJS gameplay room. */
-export type RpgRoomClass<T = unknown> = new (room: unknown) => T;
+export type RpgRoomClass<T = unknown> = new (
+  room: RpgRoomConstructorContext,
+  params?: Record<string, string>,
+) => T;
 
 /** Options understood by the RPGJS-owned room decorator. */
 export interface RpgRoomOptions<TState = unknown> {
@@ -68,6 +77,14 @@ export function RpgRoom<TState = unknown>(options: RpgRoomOptions<TState>): Clas
  *
  * @param name - Packet action name sent by the client.
  * @returns A method decorator backed internally by Signe rooms.
+ *
+ * @example
+ * ```ts
+ * @RpgRoomAction("battle.nextTurn")
+ * nextTurn(player: RpgPlayer) {
+ *   this.state.update((state) => ({ ...state, turn: state.turn + 1 }))
+ * }
+ * ```
  */
 export function RpgRoomAction(name: string): MethodDecorator {
   if (!name.trim()) {
@@ -76,7 +93,22 @@ export function RpgRoomAction(name: string): MethodDecorator {
   return Action(name) as MethodDecorator;
 }
 
-/** Add custom gameplay-room classes to an RPGJS server bootstrap. */
+/**
+ * Add custom gameplay-room classes to an RPGJS server bootstrap.
+ *
+ * Registered rooms own authoritative state and actions in both standalone and
+ * MMORPG modes. Each room kind must have a corresponding client scene.
+ *
+ * @param rooms - Concrete `RpgGameplayRoom` subclasses decorated with `@RpgRoom()`.
+ * @returns An RPGJS provider installed in the server configuration.
+ *
+ * @example
+ * ```ts
+ * createServer({
+ *   providers: [provideServerRooms([BattleRoom])],
+ * })
+ * ```
+ */
 export function provideServerRooms(rooms: RpgRoomClass[]): RpgProvider {
   const token = class RpgServerRoomsProvider {};
   return {
