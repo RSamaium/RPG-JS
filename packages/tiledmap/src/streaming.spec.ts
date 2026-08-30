@@ -18,7 +18,15 @@ describe("Tiled map streaming adapter", () => {
         objects: [{ name: "secret-event" }],
         properties: { serverSecret: true },
         layers: [
-          { id: 1, name: "ground", type: "tilelayer", width: 4, height: 2, data: [1, 2, 0, 0, 0, 0, 3, 4] },
+          {
+            id: 1,
+            name: "ground",
+            type: "tilelayer",
+            width: 4,
+            height: 2,
+            data: [1, 2, 0, 0, 0, 0, 3, 4],
+            properties: { z: 1, serverSecret: true },
+          },
           { id: 2, name: "events", type: "objectgroup", objects: [{ name: "secret-event" }] },
         ],
         tilesets: [{
@@ -27,7 +35,10 @@ describe("Tiled map streaming adapter", () => {
           name: "tiles",
           image: { source: "tiles.png", width: 64, height: 64 },
           wangsets: [{ name: "private-editor-metadata" }],
-          tiles: [{ id: 0, properties: { collision: true } }],
+          tiles: [
+            { id: 0, properties: { collision: true, z: 2 } },
+            { id: 2, properties: { collision: true, z: 0 } },
+          ],
         }],
       },
       hitboxes: [
@@ -42,6 +53,12 @@ describe("Tiled map streaming adapter", () => {
     expect(definition.manifest.renderData.map.tilesets[0].source).toBeUndefined();
     expect(definition.manifest.renderData.map.tilesets[0].wangsets).toBeUndefined();
     expect(definition.manifest.renderData.map.tilesets[0].image.source).toBe("/assets/tiles.png");
+    expect(definition.manifest.renderData.map.tilesets[0].tiles).toEqual([
+      { id: 0, properties: { z: 2 } },
+      { id: 1 },
+      { id: 2, properties: { z: 0 } },
+    ]);
+    expect(definition.manifest.renderData.map.layers[0].properties).toEqual({ z: 1 });
     expect(definition.manifest.renderData.map.layers[1].objects).toEqual([]);
     expect(definition.chunks["0:0"].hitboxes.map((hitbox) => hitbox.id)).toEqual([
       "wall",

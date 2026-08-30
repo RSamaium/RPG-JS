@@ -33,6 +33,10 @@ function joinPublicPath(basePath: string, source: string): string {
   return `${basePath.replace(/\/$/, "")}/${source.replace(/^\.\//, "")}`;
 }
 
+function sanitizeRenderProperties(properties: any): { z: number } | undefined {
+  return Number.isFinite(properties?.z) ? { z: properties.z } : undefined;
+}
+
 function sanitizeTileset(tileset: any, basePath: string, usedGids: Set<number>): any {
   const next = clone(tileset);
   delete next.source;
@@ -44,24 +48,42 @@ function sanitizeTileset(tileset: any, basePath: string, usedGids: Set<number>):
   }
   if (Array.isArray(next.tiles)) {
     const firstgid = Number(next.firstgid) || 0;
-    next.tiles = next.tiles
+    const renderTiles = next.tiles
       .filter((tile: any) => usedGids.has(firstgid + Number(tile.id)))
       .map((tile: any) => {
         const sanitized = { ...tile };
         delete sanitized.objectgroup;
-        delete sanitized.properties;
+        sanitized.properties = sanitizeRenderProperties(tile.properties);
+        if (!sanitized.properties) delete sanitized.properties;
         delete sanitized.class;
         delete sanitized.type;
         return sanitized;
       })
-      .filter((tile: any) => Array.isArray(tile.animation) || Array.isArray(tile.animations) || !!tile.image);
+      .filter((tile: any) => (
+        Array.isArray(tile.animation)
+        || Array.isArray(tile.animations)
+        || !!tile.image
+        || !!tile.properties
+      ));
+    const highestTileId = renderTiles.reduce(
+      (highest: number, tile: any) => Math.max(highest, Number(tile.id)),
+      -1,
+    );
+    const renderTilesById = new Map<number, any>(
+      renderTiles.map((tile: any) => [Number(tile.id), tile]),
+    );
+    next.tiles = Array.from(
+      { length: highestTileId + 1 },
+      (_, id) => renderTilesById.get(id) ?? { id },
+    );
   }
   return next;
 }
 
 function sanitizeLayerTemplate(layer: any): any | undefined {
   const next = clone(layer);
-  delete next.properties;
+  next.properties = sanitizeRenderProperties(layer.properties);
+  if (!next.properties) delete next.properties;
   delete next.class;
   if (layer?.type === "objectgroup") {
     // Preserve the layer slot/order used by CanvasEngine to mount RPGJS
