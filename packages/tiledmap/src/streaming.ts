@@ -33,6 +33,10 @@ function joinPublicPath(basePath: string, source: string): string {
   return `${basePath.replace(/\/$/, "")}/${source.replace(/^\.\//, "")}`;
 }
 
+function sanitizeRenderProperties(properties: any): { z: number } | undefined {
+  return Number.isFinite(properties?.z) ? { z: properties.z } : undefined;
+}
+
 function sanitizeTileset(tileset: any, basePath: string, usedGids: Set<number>): any {
   const next = clone(tileset);
   delete next.source;
@@ -49,19 +53,26 @@ function sanitizeTileset(tileset: any, basePath: string, usedGids: Set<number>):
       .map((tile: any) => {
         const sanitized = { ...tile };
         delete sanitized.objectgroup;
-        delete sanitized.properties;
+        sanitized.properties = sanitizeRenderProperties(tile.properties);
+        if (!sanitized.properties) delete sanitized.properties;
         delete sanitized.class;
         delete sanitized.type;
         return sanitized;
       })
-      .filter((tile: any) => Array.isArray(tile.animation) || Array.isArray(tile.animations) || !!tile.image);
+      .filter((tile: any) => (
+        Array.isArray(tile.animation)
+        || Array.isArray(tile.animations)
+        || !!tile.image
+        || !!tile.properties
+      ));
   }
   return next;
 }
 
 function sanitizeLayerTemplate(layer: any): any | undefined {
   const next = clone(layer);
-  delete next.properties;
+  next.properties = sanitizeRenderProperties(layer.properties);
+  if (!next.properties) delete next.properties;
   delete next.class;
   if (layer?.type === "objectgroup") {
     // Preserve the layer slot/order used by CanvasEngine to mount RPGJS
