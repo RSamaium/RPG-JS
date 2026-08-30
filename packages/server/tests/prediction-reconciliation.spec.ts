@@ -29,6 +29,8 @@ function createStreamingDefinition(): MapStreamDefinition {
   };
 }
 
+let onMoveCalls = 0;
+
 const serverModule = defineModule<RpgServer>({
   maps: [
     {
@@ -40,6 +42,9 @@ const serverModule = defineModule<RpgServer>({
     async onConnected(player) {
       await player.changeMap("test-map", { x: 100, y: 100 });
     },
+    onMove() {
+      onMoveCalls += 1;
+    },
   },
 });
 
@@ -49,6 +54,7 @@ let player: RpgPlayer;
 let serverMap: any;
 
 beforeEach(async () => {
+  onMoveCalls = 0;
   const module = createModule("PredictionServerModule", [
     {
       server: serverModule,
@@ -65,6 +71,18 @@ afterEach(async () => {
 });
 
 describe("Prediction + Reconciliation Server Protocol", () => {
+  test("should call onMove after authoritative movement input changes position", async () => {
+    await serverMap.onInput(player, {
+      input: Direction.Right,
+      frame: 1,
+      tick: 0,
+      timestamp: Date.now(),
+    });
+    await serverMap.nextTickAsync();
+
+    expect(onMoveCalls).toBeGreaterThan(0);
+  });
+
   test("should reply pong with server tick", () => {
     const emitSpy = vi.spyOn(player, "emit");
     const payload = {

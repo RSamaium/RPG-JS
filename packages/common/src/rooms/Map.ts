@@ -1688,6 +1688,14 @@ export abstract class RpgCommonMap<T extends RpgCommonPlayer> {
         }
       });
       if (changed) {
+        if (
+          typeof currentOwner.execMethod === "function" &&
+          !(typeof currentOwner.isEvent === "function" && currentOwner.isEvent())
+        ) {
+          void Promise.resolve(currentOwner.execMethod("onMove")).catch((error) => {
+            console.error("[RPGJS] Error during player onMove hooks:", error);
+          });
+        }
         const applyFrames = currentOwner.applyFrames;
         if (typeof applyFrames === "function") {
           queueMicrotask(() => applyFrames.call(currentOwner));

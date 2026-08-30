@@ -35,6 +35,10 @@ export class LobbyRoom extends BaseRoom {
     (this as any).$applySync?.();
   }
 
+  async onLeave(player: RpgPlayer, _conn: RpgRoomConnection) {
+    await lastValueFrom(this.hooks.callHooks("server-player-onDisconnected", player));
+  }
+
   @Action('gui.interaction')
   async guiInteraction(player: RpgPlayer, value: { guiId: string, name: string, data: any }) {
     const gui = player.getGui(value.guiId);
