@@ -48,7 +48,7 @@ function sanitizeTileset(tileset: any, basePath: string, usedGids: Set<number>):
   }
   if (Array.isArray(next.tiles)) {
     const firstgid = Number(next.firstgid) || 0;
-    next.tiles = next.tiles
+    const renderTiles = next.tiles
       .filter((tile: any) => usedGids.has(firstgid + Number(tile.id)))
       .map((tile: any) => {
         const sanitized = { ...tile };
@@ -65,6 +65,17 @@ function sanitizeTileset(tileset: any, basePath: string, usedGids: Set<number>):
         || !!tile.image
         || !!tile.properties
       ));
+    const highestTileId = renderTiles.reduce(
+      (highest: number, tile: any) => Math.max(highest, Number(tile.id)),
+      -1,
+    );
+    const renderTilesById = new Map<number, any>(
+      renderTiles.map((tile: any) => [Number(tile.id), tile]),
+    );
+    next.tiles = Array.from(
+      { length: highestTileId + 1 },
+      (_, id) => renderTilesById.get(id) ?? { id },
+    );
   }
   return next;
 }

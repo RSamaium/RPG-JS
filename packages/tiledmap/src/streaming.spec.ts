@@ -35,7 +35,10 @@ describe("Tiled map streaming adapter", () => {
           name: "tiles",
           image: { source: "tiles.png", width: 64, height: 64 },
           wangsets: [{ name: "private-editor-metadata" }],
-          tiles: [{ id: 0, properties: { collision: true, z: 2 } }],
+          tiles: [
+            { id: 0, properties: { collision: true, z: 2 } },
+            { id: 2, properties: { collision: true, z: 0 } },
+          ],
         }],
       },
       hitboxes: [
@@ -52,6 +55,8 @@ describe("Tiled map streaming adapter", () => {
     expect(definition.manifest.renderData.map.tilesets[0].image.source).toBe("/assets/tiles.png");
     expect(definition.manifest.renderData.map.tilesets[0].tiles).toEqual([
       { id: 0, properties: { z: 2 } },
+      { id: 1 },
+      { id: 2, properties: { z: 0 } },
     ]);
     expect(definition.manifest.renderData.map.layers[0].properties).toEqual({ z: 1 });
     expect(definition.manifest.renderData.map.layers[1].objects).toEqual([]);
