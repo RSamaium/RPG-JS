@@ -258,6 +258,7 @@ export class RpgClientEngine<T = any> {
   mapShakeTrigger: ConfigurableTrigger<MapShakeOptions> = trigger<MapShakeOptions>();
 
   controlsReady = signal<boolean | undefined>(undefined); 
+  activeKeyboardControls = signal<any>(null);
   gamePause = signal(false);
   /**
    * Freezes map rendering for short presentation-only beats such as combat
@@ -447,6 +448,7 @@ export class RpgClientEngine<T = any> {
       ...currentValues,
       values: new Map([['__default__', controlInstance]])
     }
+    this.activeKeyboardControls.set(controlInstance);
     this.controlsReady.set(true);
   }
 

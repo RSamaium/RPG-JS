@@ -36,11 +36,13 @@
 </Container>
 
 <script>
-    import { Button, Joystick, signal, mount, computed } from 'canvasengine'
+    import { Button, Joystick, effect, computed } from 'canvasengine'
     import { inject } from '../../../core/inject'
+    import { RpgClientEngine } from '../../../RpgClientEngine'
 
     const { data } = defineProps()
-    const controlsInstance = signal(null)
+    const engine = inject(RpgClientEngine)
+    const controlsInstance = engine.activeKeyboardControls
     const options = computed(() => data?.() || {})
     const layout = computed(() => options().layout || {})
     const components = computed(() => options().components || {})
@@ -382,9 +384,7 @@
         releaseJoystickControl()
     }
 
-    mount((element) => {
-        const control = inject('KeyboardControls')
-        controlsInstance.set(control)
-        applyJoystickOptions(control)
+    effect(() => {
+        applyJoystickOptions(controlsInstance())
     })
 </script>
