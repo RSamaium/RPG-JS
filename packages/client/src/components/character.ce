@@ -1297,7 +1297,11 @@
     });
   };
 
+  let controlsSubscription = null;
   const onBeforeDestroy = async () => {
+    // Stop publishing controls before asynchronous removal hooks can yield.
+    controlsSubscription?.unsubscribe();
+    controlsSubscription = null;
     await runBeforeRemove();
     await waitForTemporaryAnimationEnd();
     if (typeof document !== 'undefined') {
@@ -1335,7 +1339,7 @@
     }
     hooks.callHooks("client-sprite-onAdd", sprite).subscribe()
     hooks.callHooks("client-sceneMap-onAddSprite", client.sceneMap, sprite).subscribe()
-    effect(() => {
+    controlsSubscription = effect(() => {
       if (isCurrentPlayer()) {
         client.setKeyboardControls(element.directives.controls)
       }
@@ -1378,6 +1382,7 @@
     })
 
     return () => {
+      controlsSubscription?.unsubscribe();
       if (ownsCameraFollowRevision(appliedCameraFollowRevision, client.cameraFollowRevision())) {
         clearCameraFollowPlugins(element.props.context?.viewport, appliedCameraFollowOwnership);
       }

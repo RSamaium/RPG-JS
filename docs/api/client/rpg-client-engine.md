@@ -1013,49 +1013,37 @@ engine.setCameraFollow(null);
 
 ## setKeyboardControls
 
-Assigns a CanvasEngine KeyboardControls instance to the dependency injection context
+Registers the current player's live CanvasEngine controls on the client.
 
-This method registers a KeyboardControls instance from CanvasEngine into the DI container,
-making it available for injection throughout the application. The particularity is that
-this method is automatically called when a sprite is displayed on the map, allowing the
-controls to be automatically associated with the active sprite.
-
-## Design
-
-- The instance is stored in the DI context under the `KeyboardControls` token
-- It's automatically assigned when a sprite component mounts (in `character.ce`)
-- The controls instance comes from the CanvasEngine component's directives
-- Once registered, it can be retrieved using `inject(KeyboardControls)` from anywhere
+Used automatically when the player component mounts in standalone RPG and
+MMORPG modes. Destroyed directives are ignored so a retiring component cannot
+overwrite replacement controls during streamed map updates. Input handling
+remains client-side; this does not change server movement authority.
 
 - Source: `packages/client/src/RpgClientEngine.ts`
 - Kind: `method`
+- Member of: `RpgClientEngine`
 - Defined in: `RpgClientEngine`
 
 ### Signature
 
 ```ts
-setKeyboardControls(controlInstance: any)
+setKeyboardControls
 ```
 
 ### Parameters
 
-- `controlInstance`: `any`
+- `controlInstance`: `ControlsDirective`
+
+### Returns
+
+Nothing.
 
 ### Examples
 
 ```ts
-// The method is automatically called when a sprite is displayed:
-// client.setKeyboardControls(element.directives.controls)
-
-// Later, retrieve and use the controls instance:
-import { Input, inject, KeyboardControls } from '@rpgjs/client'
-
-const controls = inject(KeyboardControls)
-const control = controls.getControl(Input.Enter)
-
-if (control) {
-  console.log(control.actionName) // 'action'
-}
+// Inside the current player's CanvasEngine mount callback:
+client.setKeyboardControls(element.directives.controls)
 ```
 
 ## setSoundResolver

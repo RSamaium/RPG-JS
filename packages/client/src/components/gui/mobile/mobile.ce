@@ -330,13 +330,14 @@
             releaseJoystickControl()
             return
         }
-        activeJoystickPower = power
         if (activeJoystickControl === controlName) {
+            activeJoystickPower = power
             startJoystickRepeat()
             return
         }
         releaseJoystickControl()
         activeJoystickControl = controlName
+        activeJoystickPower = power
         applyJoystickControl(controlName, true, power)
         startJoystickRepeat()
     }

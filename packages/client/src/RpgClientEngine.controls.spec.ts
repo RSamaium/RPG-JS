@@ -1,21 +1,41 @@
-import { signal } from "canvasengine";
+import { ControlsDirective, signal, type Element } from "canvasengine";
 import { describe, expect, it, vi } from "vitest";
 import { RpgClientEngine } from "./RpgClientEngine";
 
+function createControls() {
+  const element = {
+    props: { controls: { down: { bind: "down", keyDown: vi.fn() } } },
+    propObservables: {},
+  } as unknown as Element;
+  const controls = new ControlsDirective();
+  controls.onInit(element);
+  return { controls, destroy: () => controls.onDestroy(element) };
+}
+
 describe("RpgClientEngine controls", () => {
-  it("publishes replacement controls when the current player is remounted", () => {
+  it("does not let a retired character overwrite replacement controls", () => {
     const engine = Object.create(RpgClientEngine.prototype) as RpgClientEngine;
     engine.context = { values: {} } as any;
-    engine.controlsReady = { set: vi.fn() } as any;
-    engine.activeKeyboardControls = signal<any>(null);
-    const firstControls = { applyControl: vi.fn() };
-    const replacementControls = { applyControl: vi.fn() };
+    engine.controlsReady = signal<boolean | undefined>(undefined);
+    engine.activeKeyboardControls = signal<ControlsDirective | null>(null);
+    const first = createControls();
+    const replacement = createControls();
 
-    engine.setKeyboardControls(firstControls);
-    engine.setKeyboardControls(replacementControls);
+    try {
+      engine.setKeyboardControls(first.controls);
+      first.destroy();
+      engine.setKeyboardControls(replacement.controls);
 
-    expect(engine.activeKeyboardControls()).toBe(replacementControls);
-    expect(engine.context.values["inject:KeyboardControls"].values.get("__default__"))
-      .toBe(replacementControls);
+      // A retiring character effect can run again while streamed layers change.
+      engine.setKeyboardControls(first.controls);
+
+      expect(engine.activeKeyboardControls()).toBe(replacement.controls);
+      expect(engine.context.values["inject:KeyboardControls"].values.get("__default__"))
+        .toBe(replacement.controls);
+      expect(engine.controlsReady()).toBe(true);
+    } finally {
+      first.destroy();
+      replacement.destroy();
+    }
   });
 });
