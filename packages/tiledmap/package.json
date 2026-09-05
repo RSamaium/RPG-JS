@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/tiledmap",
-  "version": "5.0.0-beta.33",
+  "version": "5.0.0-beta.34",
   "main": "dist/client/index.js",
   "types": "dist/client/index.d.ts",
   "scripts": {

@@ -1,5 +1,22 @@
 # @rpgjs/studio
 
+## 5.0.0-beta.36
+
+### Patch Changes
+
+- 331787c: Deduplicate Studio project, map, database, and media reads within each runtime provider. Cache in-flight and resolved requests by resource identifier, keep project and map lookup keys distinct, and evict failed requests so later calls can retry.
+- 6b8d872: Preserve switched actors, chosen classes and progression when restoring Studio players. Persist parameter curve bounds and Studio initialization state, rebuild derived parameters instead of loading over their runtime signal, restore actor presentation without granting starting inventory again, and normalize Studio media and hitbox records for character selection. Apply combat animation bindings in changeActor.
+- 85aea0c: Start immediately when displayTitleScreen is explicitly false, including when project metadata is unavailable or enables the title screen. Preserve project-driven startup when the option is omitted.
+- Updated dependencies [b74236b]
+- Updated dependencies [1fb8040]
+- Updated dependencies [6b8d872]
+- Updated dependencies [85aea0c]
+  - @rpgjs/client@5.0.0-beta.34
+  - @rpgjs/common@5.0.0-beta.31
+  - @rpgjs/server@5.0.0-beta.34
+  - @rpgjs/action-battle@5.0.0-beta.34
+  - @rpgjs/vite@5.0.0-beta.34
+
 ## 5.0.0-beta.35
 
 ### Minor Changes

@@ -1,5 +1,28 @@
 # @rpgjs/tiledmap
 
+## 5.0.0-beta.34
+
+### Patch Changes
+
+- aaa44f3: Preserve Tiled tile and layer `z` metadata and their tile ID positions in MMORPG map streams so foreground tiles render above characters without assigning depth to the wrong tiles, while other private custom properties remain server-side.
+- b74236b: Add server-authoritative custom gameplay rooms with registered room paths,
+  session-preserving player transfers, synchronized client room state, and
+  CanvasEngine scene adapters that run independently of maps and map physics.
+  Room providers also accept concrete `RpgGameplayRoom` subclasses with their
+  typed constructor context, so strict TypeScript applications can register them.
+  Returning from a custom room now waits for a fresh map-stream packet before
+  remounting the map component and keeps the room scene visible until that data
+  is ready. Map components are also gated on non-null render data, preventing
+  stale or incomplete values from reaching CanvasEngine presets.
+- Updated dependencies [b74236b]
+- Updated dependencies [1fb8040]
+- Updated dependencies [6b8d872]
+- Updated dependencies [85aea0c]
+  - @rpgjs/client@5.0.0-beta.34
+  - @rpgjs/common@5.0.0-beta.31
+  - @rpgjs/server@5.0.0-beta.34
+  - @rpgjs/vite@5.0.0-beta.34
+
 ## 5.0.0-beta.33
 
 ### Patch Changes
