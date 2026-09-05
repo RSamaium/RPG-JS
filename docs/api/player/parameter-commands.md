@@ -650,8 +650,10 @@ player.finalLevel = 50
 player.finalLevel = 50
 ```
 
+The server retains this curve bound in saves and room transfers in both RPG and MMORPG modes.
+
 - Source: `packages/server/src/Player/ParameterManager.ts`
-- Kind: `property`
+- Kind: `getter`
 - Member of: `ParameterManager`
 
 ### Signature
@@ -695,8 +697,10 @@ player.initialLevel = 5
 player.initialLevel = 5
 ```
 
+The server retains this curve bound in saves and room transfers in both RPG and MMORPG modes.
+
 - Source: `packages/server/src/Player/ParameterManager.ts`
-- Kind: `property`
+- Kind: `getter`
 - Member of: `ParameterManager`
 
 ### Signature

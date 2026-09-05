@@ -1,3 +1,5 @@
+import { getGraphicKey, getGraphicScale } from "../../../src/graphic-key";
+import { normalizeRuntimeHitbox } from "../../../src/runtime-hitbox";
 import { excludeTriggers } from '../context-helpers';
 import type { BlockExecutor } from '../types';
 
@@ -9,6 +11,7 @@ type StudioDatabaseRecord = Record<string, unknown> & {
   classId?: unknown;
   class?: unknown;
   animations?: unknown;
+  params?: unknown;
 };
 
 const recordType = (record: unknown): unknown => {
@@ -101,7 +104,12 @@ export const call_character_select: BlockExecutor<'call_character_select'> = asy
   const presentationActors = offeredActors.map((actor) => {
     const classRecord = typeof actor.classId === 'string' ? database[actor.classId] : actor.class;
     const resolvedClass = classRecord && recordType(classRecord) === 'class' ? classRecord : undefined;
-    return { ...actor, class: resolvedClass };
+    return {
+      ...actor,
+      graphic: getGraphicKey(actor.graphic) ?? undefined,
+      hitbox: normalizeRuntimeHitbox(actor.hitbox),
+      class: resolvedClass,
+    };
   });
   const selected = await player.showCharacterSelect(presentationActors, {
     selectedActorId: currentActorId(player),
@@ -113,6 +121,7 @@ export const call_character_select: BlockExecutor<'call_character_select'> = asy
   const actor = presentationActors.find((candidate) => candidate.id === selectedId);
   if (!actor) return;
   player.changeActor(actor);
+  player._graphicScale?.set(getGraphicScale(actor.params, actor) ?? null);
   player.studioCombatAnimations = actor.animations ?? {};
   player.combatAnimations = actor.animations ?? {};
   persistActorId(player, actor.id);

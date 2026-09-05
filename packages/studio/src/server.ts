@@ -1,3 +1,4 @@
+import { normalizeRuntimeHitbox } from "./runtime-hitbox";
 import { Move, RpgEvent, RpgMap, RpgPlayer, RpgServer, provideServerMapStreaming, type RpgPlayerConnectionContext } from "@rpgjs/server";
 import { defineModule, normalizeLightingState, WorldMapsManager, type RpgActionInput, type WorldMapConfig } from "@rpgjs/common";
 import { BlockExecutionService } from "./block-executor";
@@ -96,22 +97,6 @@ const readGameConfig = (): any => {
   return globalScope.window?.gameConfig ?? globalScope.gameConfig ?? {};
 };
 
-const normalizeRuntimeHitbox = (value: unknown): { width: number; height: number } | undefined => {
-  if (!value || typeof value !== "object") return undefined;
-  const record = value as Record<string, unknown>;
-  const rawWidth = record.width ?? record.w;
-  const rawHeight = record.height ?? record.h;
-  const width = typeof rawWidth === "number" ? rawWidth : Number(rawWidth);
-  const height = typeof rawHeight === "number" ? rawHeight : Number(rawHeight);
-  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
-    return undefined;
-  }
-  return {
-    width: Math.max(1, Math.round(width)),
-    height: Math.max(1, Math.round(height)),
-  };
-};
-
 export const resolveRuntimeEventHitbox = (object: any, params: any): { width: number; height: number } | undefined => {
   const triggerHitbox = Array.isArray(object?.triggers)
     ? [...object.triggers].reverse().find((trigger: any) => trigger?.enabled !== false && normalizeRuntimeHitbox(trigger?.hitbox))?.hitbox
@@ -199,13 +184,23 @@ const startGame = async (player: RpgPlayer, map?: RpgMap, heroConfig?: ProjectBa
   applyPlayerHitbox(player, heroConfig);
 };
 
-const applyStartGameOnce = async (player: RpgPlayer, map?: RpgMap, heroConfig?: ProjectBasic) => {
+const markStudioInitialized = (player: RpgPlayer): void => {
   const runtimePlayer = player as RpgPlayer & {
+    studioStartGameApplied?: { set(value: boolean): void };
     __studioStartGameApplied?: boolean;
   };
-  if (runtimePlayer.__studioStartGameApplied) return;
-  await startGame(player, map, heroConfig);
+  runtimePlayer.studioStartGameApplied?.set(true);
   runtimePlayer.__studioStartGameApplied = true;
+};
+
+const applyStartGameOnce = async (player: RpgPlayer, map?: RpgMap, heroConfig?: ProjectBasic) => {
+  const runtimePlayer = player as RpgPlayer & {
+    studioStartGameApplied?: () => boolean;
+    __studioStartGameApplied?: boolean;
+  };
+  if (runtimePlayer.studioStartGameApplied?.() || runtimePlayer.__studioStartGameApplied) return;
+  await startGame(player, map, heroConfig);
+  markStudioInitialized(player);
 };
 
 const collectStartingItemIds = (config: ProjectBasic): string[] => {
@@ -226,6 +221,15 @@ const applyPlayerHitbox = (player: RpgPlayer, config: ProjectBasic): void => {
   const hitbox = normalizeRuntimeHitbox((config as any).hitbox);
   if (!hitbox || typeof (player as any).setHitbox !== "function") return;
   (player as any).setHitbox(hitbox.width, hitbox.height);
+};
+
+const applyPlayerPresentation = (player: RpgPlayer, config: ProjectBasic & { graphic?: unknown; params?: unknown }): void => {
+  const graphicKey = getGraphicKey(config.graphic);
+  (player as any)._graphicScale?.set(graphicKey ? getGraphicScale(config.params, config) ?? null : null);
+  player.setGraphic(graphicKey ?? "default_character");
+  (player as any).studioCombatAnimations = config.animations ?? {};
+  (player as any).combatAnimations = config.animations ?? {};
+  applyPlayerHitbox(player, config);
 };
 
 const addStudioDefaultClass = (
@@ -1085,6 +1089,11 @@ export default (_config?: unknown) => {
   return defineModule<RpgServer>({
     player: {
       props: {
+        studioStartGameApplied: {
+          $default: false,
+          $syncWithClient: false,
+          $permanent: true,
+        },
         studioSelectedActorId: {
           $default: null,
           $syncWithClient: false,
@@ -1124,17 +1133,26 @@ export default (_config?: unknown) => {
 
         await refreshOnlineStudioDatabase(map);
         const heroConfig = await resolvePlayerConfig(player, map);
-        const heroGraphic = (heroConfig as any)?.graphic;
-        const heroGraphicKey = getGraphicKey(heroGraphic);
-        if (heroGraphicKey) {
-          (player as any)._graphicScale?.set(getGraphicScale((heroConfig as any)?.params, heroConfig) ?? null);
-          player.setGraphic(heroGraphicKey);
-        } else {
-          (player as any)._graphicScale?.set(null);
-          player.setGraphic("default_character");
-        }
-
         await applyStartGameOnce(player, map, heroConfig);
+        applyPlayerPresentation(player, heroConfig);
+      },
+      onLoad: async (player: RpgPlayer, snapshot) => {
+        // Loading a saved game is never new-game initialization, including old
+        // saves that predate the persisted initialization marker.
+        markStudioInitialized(player);
+        const map = player.getCurrentMap();
+        if (map) {
+          const config = await resolvePlayerConfig(player, map);
+          // Older saves did not persist these bounds. Recover them from the
+          // selected actor where possible without overwriting modern snapshots.
+          if (snapshot && snapshot._initialLevelSignal === undefined && config.initialLevel !== undefined) {
+            player.initialLevel = Math.min(config.initialLevel, player.level);
+          }
+          if (snapshot && snapshot._finalLevelSignal === undefined && config.finalLevel !== undefined) {
+            player.finalLevel = Math.max(config.finalLevel, player.level);
+          }
+          applyPlayerPresentation(player, config);
+        }
       },
       onInput: (player: RpgPlayer, input: RpgActionInput<unknown>) => {
         if (input.action == "escape") {

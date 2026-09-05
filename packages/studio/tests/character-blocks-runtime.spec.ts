@@ -11,6 +11,34 @@ const executionContext = (player: Record<string, any>, database: Record<string, 
 } as any);
 
 describe('character workflow blocks', () => {
+  test.each([null, { id: 'not-offered' }])('does not mutate player state for cancellation or an unknown selection: %j', async (selection) => {
+    const player = {
+      studioSelectedActorId: 'original',
+      showCharacterSelect: vi.fn(async () => selection),
+      changeActor: vi.fn(),
+      combatAnimations: { attack: 'original' },
+    };
+    await call_character_select(executionContext(player, {
+      candidate: { _type: 'actor', name: 'Candidate' },
+    }), { allActors: true, actorIds: [], allowCancel: true });
+    expect(player.changeActor).not.toHaveBeenCalled();
+    expect(player.studioSelectedActorId).toBe('original');
+    expect(player.combatAnimations).toEqual({ attack: 'original' });
+  });
+
+  test('normalizes Studio media references and hitboxes before switching actors', async () => {
+    const player = {
+      showCharacterSelect: vi.fn(async (actors) => actors[0]),
+      changeActor: vi.fn(),
+    };
+    await call_character_select(executionContext(player, {
+      mage: { _type: 'actor', graphic: { _id: 'mage-sheet' }, hitbox: { w: 20, h: 28 } },
+    }), { allActors: true, actorIds: [], allowCancel: false });
+    expect(player.changeActor).toHaveBeenCalledWith(expect.objectContaining({
+      id: 'mage', graphic: 'mage-sheet', hitbox: { width: 20, height: 28 },
+    }));
+  });
+
   test('registers the character selector and class blocks', () => {
     const characterSelect = defaultBlocks.find((block) => block.type === 'call_character_select');
     const changeClass = defaultBlocks.find((block) => block.type === 'change_class');

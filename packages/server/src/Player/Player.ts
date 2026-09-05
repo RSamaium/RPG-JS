@@ -939,19 +939,26 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
     });
   }
 
+  /**
+   * Preserve runtime signals while preparing serialized player data for loading.
+   * @internal
+   * @param snapshot - Player state received by the server restoration path.
+   * @returns A copy excluding fields that are restored separately or recomputed.
+   */
   prepareSnapshotForObjectLoad(snapshot: RpgPlayerSnapshot): RpgPlayerSnapshot {
     if (!snapshot || typeof snapshot !== "object") {
       return snapshot;
     }
 
-    const hitbox = this.normalizeSnapshotHitbox(snapshot.hitbox);
-    if (!hitbox) {
-      return snapshot;
-    }
-
-    this.hitbox.set(hitbox);
+    // Derived parameters must be recomputed from the restored curves, level and
+    // modifiers. Loading their serialized values can overwrite the computed signal.
     const rest = { ...snapshot };
-    delete rest.hitbox;
+    delete rest._param;
+    const hitbox = this.normalizeSnapshotHitbox(snapshot.hitbox);
+    if (hitbox) {
+      this.hitbox.set(hitbox);
+      delete rest.hitbox;
+    }
     return rest;
   }
 
@@ -973,6 +980,18 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
       : null;
   }
 
+  /**
+   * Capture serializable authoritative player state in RPG and MMORPG modes.
+   * Derived parameters are recalculated from saved curves, bounds and modifiers.
+   * @title Player Snapshot
+   * @method player.snapshot()
+   * @returns Player state suitable for serialization and later restoration.
+   * @memberof RpgPlayer
+   * @example
+   * ```ts
+   * const saved = JSON.stringify(player.snapshot());
+   * ```
+   */
   snapshot(): RpgPlayerSnapshot {
     const snapshot = createStatesSnapshotDeep(this) as RpgPlayerSnapshot;
     delete (snapshot as any).pendingMapPosition;
@@ -996,6 +1015,19 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
     return snapshot;
   }
 
+  /**
+   * Restore authoritative player state without new-game initialization in RPG
+   * and MMORPG modes, then run the server onLoad hooks.
+   * @title Apply Player Snapshot
+   * @method player.applySnapshot(snapshot)
+   * @param snapshot - A serialized snapshot or a parsed player snapshot.
+   * @returns The resolved snapshot after database references have been restored.
+   * @memberof RpgPlayer
+   * @example
+   * ```ts
+   * await player.applySnapshot(saved);
+   * ```
+   */
   async applySnapshot(snapshot: string | RpgPlayerSnapshot): Promise<RpgPlayerSnapshot> {
     const data = (typeof snapshot === "string" ? JSON.parse(snapshot) : snapshot) as RpgPlayerSnapshot;
     if (data && typeof data === "object" && typeof (data as any).locale === "string") {
@@ -1015,7 +1047,7 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
     const withStates = (this as any).resolveStatesSnapshot?.(withSkills) ?? withSkills;
     const withClass = (this as any).resolveClassSnapshot?.(withStates) ?? withStates;
     const resolvedSnapshot = ((this as any).resolveEquipmentsSnapshot?.(withClass) ?? withClass) as RpgPlayerSnapshot;
-    load(this, resolvedSnapshot);
+    load(this, this.prepareSnapshotForObjectLoad(resolvedSnapshot));
     if (resolvedSnapshot.expCurve) {
       (this as any).expCurve = resolvedSnapshot.expCurve;
     }
