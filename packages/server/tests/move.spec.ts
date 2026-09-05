@@ -1,8 +1,10 @@
-import { beforeEach, test, expect, afterEach, describe } from "vitest";
+import { beforeEach, test, expect, afterEach, describe, vi } from "vitest";
 import { testing, TestingFixture } from "@rpgjs/testing";
 import { defineModule, createModule, Direction } from "@rpgjs/common";
 import { RpgPlayer, RpgServer, Move } from "../src";
 import { RpgClient } from "../../client/src";
+
+let onMoveCalls = 0;
 
 // Define server module with test map
 const serverModule = defineModule<RpgServer>({
@@ -15,6 +17,9 @@ const serverModule = defineModule<RpgServer>({
   player: {
     async onConnected(player) {
       await player.changeMap("test-map", { x: 100, y: 100 });
+    },
+    onMove() {
+      onMoveCalls += 1;
     },
   },
 });
@@ -29,6 +34,7 @@ let client: any;
 let fixture: TestingFixture;
 
 beforeEach(async () => {
+  onMoveCalls = 0;
   const myModule = createModule("TestModule", [
     {
       server: serverModule,
@@ -48,6 +54,23 @@ afterEach(async () => {
 
 
 describe("Move Routes - Basic Movements", () => {
+  test("does not dispatch onMove for unchanged positions or events", async () => {
+    const body = player.getCurrentMap()!.getBody(player.id)!;
+    onMoveCalls = 0;
+    body.notifyPositionChange();
+    await Promise.resolve();
+    expect(onMoveCalls).toBe(0);
+    vi.spyOn(player, 'isEvent').mockReturnValue(true);
+    await fixture.waitUntil(player.moveRoutes([Direction.Right]));
+    expect(onMoveCalls).toBe(0);
+  });
+
+  test("calls the player onMove hook when its position changes", async () => {
+    await fixture.waitUntil(player.moveRoutes([Direction.Right]));
+
+    expect(onMoveCalls).toBeGreaterThan(0);
+  });
+
   test("should create player physics body with rectangular RPG hitbox and speed", async () => {
     const map = player.getCurrentMap() as any;
     const entity = map.getBody(player.id);

@@ -1062,6 +1062,7 @@ export default (_config?: unknown) => {
   };
   const shouldAutoStart = async (playerConfig: StudioServerConfig) => {
     if (playerConfig.autoStart === true) return true;
+    if (playerConfig.displayTitleScreen === false) return true;
     if (playerConfig.displayTitleScreen === true) return false;
     const project = await resolveStudioProject(undefined, playerConfig);
     return project?.menus?.titleScreen?.enabled === false;

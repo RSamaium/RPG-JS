@@ -1,3 +1,4 @@
+import { dispatchPlayerDisconnected } from "./connection-lifecycle";
 import { UnhandledAction } from "@signe/room";
 import { signal } from "@signe/reactive";
 import { sync, users } from "@signe/sync";
@@ -109,9 +110,10 @@ export class RpgGameplayRoom<TState = Record<string, unknown>> extends BaseRoom 
     this.$applySync?.();
   }
 
-  async onLeave(player: RpgPlayer): Promise<void> {
+  async onLeave(player: RpgPlayer, conn: RpgRoomConnection | null = player.conn): Promise<void> {
     await lastValueFrom(this.hooks.callHooks("server-room-onLeave", player, this));
     await lastValueFrom(this.hooks.callHooks("server-player-onLeaveRoom", player, this));
+    await dispatchPlayerDisconnected(this.hooks, player, conn);
   }
 
   /** Subscribe to an ephemeral client action not handled by a decorated method. */

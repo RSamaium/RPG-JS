@@ -59,14 +59,15 @@ export interface StudioGameModuleConfig {
   baseUrl?: string;
   assetsUrl?: string;
   apiUrl?: string;
+  /** Set false to skip the title screen and start immediately in RPG and MMORPG modes. */
   displayTitleScreen?: boolean;
   /**
    * Start the player as soon as the server connection is established.
    *
    * The server initializes the default player stats and transfers the player
    * to `startMapId`, or to the starting map resolved from the Studio project.
-   * Defaults to `false`. Set `displayTitleScreen: false` separately when the
-   * client should also skip the Studio title screen.
+   * Defaults to `false`. `displayTitleScreen: false` also enables immediate
+   * startup, even when project metadata cannot be loaded.
    */
   autoStart?: boolean;
   startMapId?: string;

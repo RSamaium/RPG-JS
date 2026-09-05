@@ -11,6 +11,7 @@ import { buildSaveSlotMeta, resolveSaveStorageStrategy } from "../services/save"
 import { lastValueFrom } from "rxjs";
 import type { RpgWritableSignal } from "@rpgjs/common";
 import { RpgRoom } from "./registry";
+import { dispatchPlayerDisconnected } from "./connection-lifecycle";
 
 @RpgRoom({
   kind: "lobby",
@@ -40,9 +41,10 @@ export class LobbyRoom extends BaseRoom {
     (this as any).$applySync?.();
   }
 
-  async onLeave(player: RpgPlayer) {
+  async onLeave(player: RpgPlayer, conn: RpgRoomConnection | null = player.conn) {
     await lastValueFrom(this.hooks.callHooks("server-room-onLeave", player, this));
     await lastValueFrom(this.hooks.callHooks("server-player-onLeaveRoom", player, this));
+    await dispatchPlayerDisconnected(this.hooks, player, conn);
   }
 
   @Action('gui.interaction')
