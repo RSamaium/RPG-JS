@@ -6,6 +6,7 @@ import { LobbyRoom } from "./rooms/lobby";
 import { inject } from "./core/inject";
 import { context } from "./core/context";
 import { lastValueFrom } from "rxjs";
+import { RpgRoomRegistry } from "./rooms/registry";
 import type { RpgPlayerConnectionContext, RpgServerStepMetrics } from "./RpgServer";
 import type { RpgPlayer } from "./Player/Player";
 import { registerServerStepEmitter } from "./server-step";
@@ -75,7 +76,7 @@ const RpgRoomServerBase = Server as unknown as new (
   room: RpgServerRuntimeRoom,
 ) => RpgRoomServer;
 
-export type RpgServerRoomKind = "lobby" | "map" | "unknown";
+export type RpgServerRoomKind = string;
 
 export interface RpgServerRoomInfo {
   /** Full low-level room id, for example `lobby-1` or `map-town`. */
@@ -98,8 +99,15 @@ export type RpgServerCompatibilityApp = unknown;
 export type RpgServerCompatibilityIo = unknown;
 
 export class RpgServerEngine extends RpgRoomServerBase {
-  rooms = [RpgMap, LobbyRoom];
+  rooms: unknown[] = [RpgMap, LobbyRoom];
+  private roomRegistry = new RpgRoomRegistry([RpgMap, LobbyRoom]);
   private _globalConfig: any = {};
+
+  /** @internal Configure built-in and provider-contributed gameplay rooms. */
+  setRoomRegistry(registry: RpgRoomRegistry): void {
+    this.roomRegistry = registry;
+    this.rooms = registry.roomClasses;
+  }
 
   constructor(room: RpgServerRuntimeRoom) {
     super(room);
@@ -442,22 +450,11 @@ export class RpgServerEngine extends RpgRoomServerBase {
   }
 
   private getRoomKind(id: string | null): RpgServerRoomKind {
-    if (id?.startsWith("lobby-")) {
-      return "lobby";
-    }
-    if (id?.startsWith("map-")) {
-      return "map";
-    }
-    return "unknown";
+    if (!id) return "unknown";
+    return this.roomRegistry.describeId(id)?.kind ?? "unknown";
   }
 
   private getRoomName(id: string): string {
-    if (id.startsWith("lobby-")) {
-      return id.slice("lobby-".length);
-    }
-    if (id.startsWith("map-")) {
-      return id.slice("map-".length);
-    }
-    return id;
+    return this.roomRegistry.describeId(id)?.name ?? id;
   }
 }

@@ -1,8 +1,8 @@
 import { MapOptions } from "./decorators/map"
-import { RpgPlayer } from "./Player/Player"
+import { RpgPlayer, type RpgPlayerRoom } from "./Player/Player"
 import { type RpgMap, type RpgRoomConnection } from "./rooms/map"
 import type { RpgServerEngine } from "./RpgServerEngine"
-import { WorldMapConfig, RpgShape, type I18nMessages, type MapPhysicsInitContext, type MapPhysicsEntityContext, type RpgActionInput } from "@rpgjs/common"
+import { WorldMapConfig, RpgShape, type I18nMessages, type MapPhysicsInitContext, type MapPhysicsEntityContext, type RpgActionInput, type RpgRoomDescriptor } from "@rpgjs/common"
 import { RpgEvent } from "./Player/Player"
 import type { MaybePromise, RpgMapChangeTarget, RpgPlayerSnapshot, RpgSyncSchema } from "./Player/types"
 import type { EventPosOption, RpgTouchContext } from "./rooms/map"
@@ -238,6 +238,9 @@ export interface RpgPlayerHooks {
     */
     onJoinMap?: (player: RpgPlayer, map: RpgMap) => MaybePromise<void>
 
+    /** Called after the player joins any registered gameplay room. */
+    onJoinRoom?: (player: RpgPlayer, room: RpgPlayerRoom) => MaybePromise<void>
+
     /**
     *  When the player is connected to the server
     * 
@@ -280,6 +283,9 @@ export interface RpgPlayerHooks {
     * @memberof RpgPlayerHooks
     */
     onLeaveMap?: (player: RpgPlayer, map: RpgMap) => MaybePromise<void>
+
+    /** Called before the player leaves any registered gameplay room. */
+    onLeaveRoom?: (player: RpgPlayer, room: RpgPlayerRoom) => MaybePromise<void>
 
     /**
     *  When the player increases one level
@@ -391,6 +397,15 @@ export interface RpgPlayerHooks {
     * @memberof RpgPlayerHooks
     */
     canChangeMap?: (player: RpgPlayer, nextMap: RpgMapChangeTarget) => MaybePromise<boolean>
+
+    /** Allow or reject a server-requested transfer to any registered room. */
+    canChangeRoom?: (player: RpgPlayer, room: RpgRoomDescriptor) => MaybePromise<boolean>
+}
+
+/** Global lifecycle hooks for map-independent gameplay rooms. */
+export interface RpgRoomHooks {
+    onJoin?: (player: RpgPlayer, room: RpgPlayerRoom) => MaybePromise<void>
+    onLeave?: (player: RpgPlayer, room: RpgPlayerRoom) => MaybePromise<void>
 }
 
 /**
@@ -1011,6 +1026,9 @@ export interface RpgServer {
      * @since 4.0.0
      * */
     map?: RpgMapHooks
+
+    /** Lifecycle shared by custom gameplay rooms independently of map hooks. */
+    room?: RpgRoomHooks
 
     /**
      * Global projectile hooks.

@@ -1,4 +1,4 @@
-import { Action, Request, Room, UnhandledAction } from "@signe/room";
+import { Action, Request, UnhandledAction } from "@signe/room";
 import {
   Hooks,
   IceMovement,
@@ -41,6 +41,7 @@ import { z } from "zod";
 import { MapOptions } from "../decorators/map";
 import { EventMode } from "../decorators/event";
 import { BaseRoom } from "./BaseRoom";
+import { RpgRoom } from "./registry";
 import type { RpgWritableSignal } from "@rpgjs/common";
 import { buildSaveSlotMeta, resolveSaveStorageStrategy } from "../services/save";
 import { Log } from "../logs/log";
@@ -364,7 +365,8 @@ export interface RpgRoomConnection<TState = unknown> {
   close(code?: number, reason?: string): void;
 }
 
-@Room({
+@RpgRoom({
+  kind: "map",
   path: "map-{id}",
   persistState: true
 })
@@ -1663,6 +1665,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
 
             // Execute global map hooks (from RpgServer.map)
             await lastValueFrom(this.hooks.callHooks("server-map-onJoin", player, this));
+            await lastValueFrom(this.hooks.callHooks("server-room-onJoin", player, this));
 
             // // Execute map-specific hooks (from @MapData or MapOptions)
             if (typeof (this as any)._onJoin === 'function') {
@@ -1670,6 +1673,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
             }
 
             // Execute player hooks
+            await lastValueFrom(this.hooks.callHooks("server-player-onJoinRoom", player, this));
             await lastValueFrom(this.hooks.callHooks("server-player-onJoinMap", player, this));
             player.refreshHotbar?.();
           }
@@ -1715,6 +1719,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     this.spatialVisiblePlayerIds.delete(player.id);
     // Execute global map hooks (from RpgServer.map)
     await lastValueFrom(this.hooks.callHooks("server-map-onLeave", player, this));
+    await lastValueFrom(this.hooks.callHooks("server-room-onLeave", player, this));
 
     // Execute map-specific hooks (from @MapData or MapOptions)
     if (typeof (this as any)._onLeave === 'function') {
@@ -1723,6 +1728,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
 
     // Execute player hooks
     await lastValueFrom(this.hooks.callHooks("server-player-onLeaveMap", player, this));
+    await lastValueFrom(this.hooks.callHooks("server-player-onLeaveRoom", player, this));
     this.removeScenarioEventsForPlayer(player.id);
     player.pendingInputs = [];
     player.lastProcessedInputTs = 0;

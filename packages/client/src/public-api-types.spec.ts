@@ -1,16 +1,33 @@
 import { describe, expectTypeOf, test } from "vitest";
+import { Container, h } from "canvasengine";
 import type { RpgContext, RpgProvider } from "@rpgjs/common";
 import {
   provideMmorpg,
   startGame,
   type GuiRegistration,
   type GuiRenderer,
+  provideClientScenes,
+  type RpgClientRoomSceneProps,
+  type RpgClientSceneDefinition,
   type RpgAudioChannel,
   type RpgMusicManager,
   type RpgPlaySoundOptions,
 } from "./index";
 
 describe("client public API types", () => {
+  test("custom room scenes infer synchronized state and component props", () => {
+    type BattleState = { turn: number };
+    const scene: RpgClientSceneDefinition<BattleState> = {
+      kind: "battle",
+      component(props: RpgClientRoomSceneProps<BattleState>) {
+        expectTypeOf(props.room.state()).toEqualTypeOf<BattleState>();
+        expectTypeOf(props.descriptor.kind).toEqualTypeOf<string>();
+        return h(Container);
+      },
+    };
+
+    expectTypeOf(provideClientScenes([scene])).toEqualTypeOf<RpgProvider>();
+  });
   test("bootstrap and providers expose RPGJS-owned contracts", () => {
     expectTypeOf(provideMmorpg({})).toEqualTypeOf<RpgProvider[]>();
     const assertions = (start: typeof startGame) => {

@@ -39,7 +39,9 @@ one of `useValue`, `useClass`, `useFactory`, or `useExisting`.
 
 Use the gameplay synchronization APIs described in
 [Synchronization](/guide/synchronization) before reaching for low-level
-signals. See [Migrate from v4 to v5](/migration/v4-to-v5) when replacing types
+signals. Use [Custom Gameplay Rooms](/advanced/custom-gameplay-rooms) for
+map-independent synchronized sessions before defining a low-level room protocol.
+See [Migrate from v4 to v5](/migration/v4-to-v5) when replacing types
 re-exported by an early v5 beta.
 
 ## When direct Signe usage is appropriate
@@ -47,7 +49,7 @@ re-exported by an early v5 beta.
 Use Signe directly only when an advanced plugin needs behavior absent from the
 stable RPGJS surface, such as:
 
-- defining a custom room protocol;
+- defining a low-level room protocol beyond the RPGJS gameplay-room contract;
 - consuming Signe-specific signal observables;
 - implementing reusable infrastructure whose public boundary stays
   independent of Signe.

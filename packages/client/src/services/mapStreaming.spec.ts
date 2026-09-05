@@ -156,10 +156,13 @@ describe("MapStreamClientController", () => {
 
   it("requests fresh streaming data when a cached map is loaded again", async () => {
     const listeners = new Map<string, (packet: unknown) => void>();
+    let requestCount = 0;
     const socket = {
       on: vi.fn((event: string, callback: (packet: unknown) => void) => listeners.set(event, callback)),
       emit: vi.fn((event: string) => {
         if (event !== MAP_STREAM_REQUEST_EVENT) return;
+        requestCount += 1;
+        if (requestCount > 1) return;
         listeners.get(MAP_STREAM_EVENT)?.({
           mapId: "demo",
           revision: "one",
@@ -172,7 +175,18 @@ describe("MapStreamClientController", () => {
     const { loader } = await createStreamingLoader(socket);
 
     await loader.load("map-demo");
-    await loader.load("map-demo");
+    let resolved = false;
+    const reloaded = loader.load("map-demo").then((value) => { resolved = true; return value });
+    await Promise.resolve();
+    expect(resolved).toBe(false);
+    listeners.get(MAP_STREAM_EVENT)?.({
+      mapId: "demo",
+      revision: "one",
+      manifest: manifest("one"),
+      chunks: [chunk("1:0", 1)],
+      removed: ["0:0"],
+    });
+    await expect(reloaded).resolves.toMatchObject({ data: ["1:0"] });
 
     expect(socket.emit).toHaveBeenCalledTimes(2);
     expect(socket.emit).toHaveBeenNthCalledWith(2, MAP_STREAM_REQUEST_EVENT, { mapId: "demo" });

@@ -11,6 +11,7 @@ export * from "./services/hotbar";
 export * from "./services/mapStreaming";
 export * from "./services/pointerContext";
 export * from "./services/interactions";
+export * from "./services/gameplayRooms";
 export * from "./module";
 export * from "./Gui/Gui";
 export * from "./components/gui";

@@ -1,27 +1,32 @@
 <Canvas width={engine.width} height={engine.height}>
-  <Viewport worldWidth worldHeight clamp sortableChildren={true}>
-    @if (lightingAmbientEnabled()) {
-      <NightAmbiant
-        spots={nightLights}
-        darkness={lightingDarknessProps}
-        haze={lightingHaze}
-      />
-    }
-    @if (shadowEnabled()) {
-      <SpriteShadows
-        lights={shadowLights}
-        ambientLight={shadowAmbientLight}
-        minInfluence={shadowMinInfluence}
-        falloffPower={shadowFalloffPower}
-        mode={shadowMode}
-        updateHz={shadowUpdateHz}
-        scanHz={shadowScanHz}
-        cullToViewport={shadowCullToViewport}
-        shadowColor={shadowColor}
-      />
-    }
-    <SceneMap />
-  </Viewport>
+  @if (isMapScene()) {
+    <Viewport worldWidth worldHeight clamp sortableChildren={true}>
+      @if (lightingAmbientEnabled()) {
+        <NightAmbiant
+          spots={nightLights}
+          darkness={lightingDarknessProps}
+          haze={lightingHaze}
+        />
+      }
+      @if (shadowEnabled()) {
+        <SpriteShadows
+          lights={shadowLights}
+          ambientLight={shadowAmbientLight}
+          minInfluence={shadowMinInfluence}
+          falloffPower={shadowFalloffPower}
+          mode={shadowMode}
+          updateHz={shadowUpdateHz}
+          scanHz={shadowScanHz}
+          cullToViewport={shadowCullToViewport}
+          shadowColor={shadowColor}
+        />
+      }
+      <SceneMap />
+    </Viewport>
+  }
+  @else if (RoomScene()) {
+    <RoomScene() room={engine.sceneRoom} descriptor={engine.activeRoom()} />
+  }
   @for (gui of guiList) {
       <Container
         positionType="absolute"
@@ -53,6 +58,8 @@
 
   const engine = inject(RpgClientEngine);
   const SceneMap = engine.sceneMapComponent;
+  const RoomScene = engine.activeRoomSceneComponent;
+  const isMapScene = computed(() => engine.activeSceneKind() === "map");
   const guiService = inject(RpgGui);
   const sceneData = engine.sceneMap.data
   const lighting = engine.sceneMap.lighting

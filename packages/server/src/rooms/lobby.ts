@@ -1,5 +1,5 @@
 import { inject } from "@signe/di";
-import { Action, Room } from "@signe/room";
+import { Action } from "@signe/room";
 import { Hooks, ModulesToken } from "@rpgjs/common";
 import { context } from "../core/context";
 import { users } from "@signe/sync";
@@ -10,8 +10,10 @@ import { BaseRoom } from "./BaseRoom";
 import { buildSaveSlotMeta, resolveSaveStorageStrategy } from "../services/save";
 import { lastValueFrom } from "rxjs";
 import type { RpgWritableSignal } from "@rpgjs/common";
+import { RpgRoom } from "./registry";
 
-@Room({
+@RpgRoom({
+  kind: "lobby",
   path: "lobby-{id}",
 })
 export class LobbyRoom extends BaseRoom {
@@ -27,12 +29,20 @@ export class LobbyRoom extends BaseRoom {
   }
 
   async onJoin(player: RpgPlayer, conn: RpgRoomConnection) {
+    player.room = this as unknown as RpgPlayer["room"];
     player.map = this as unknown as RpgPlayer["map"];
     player.context = context;
     player.conn = conn;
     await player._onInit();
     await lastValueFrom(this.hooks.callHooks("server-player-onConnected", player));
+    await lastValueFrom(this.hooks.callHooks("server-room-onJoin", player, this));
+    await lastValueFrom(this.hooks.callHooks("server-player-onJoinRoom", player, this));
     (this as any).$applySync?.();
+  }
+
+  async onLeave(player: RpgPlayer) {
+    await lastValueFrom(this.hooks.callHooks("server-room-onLeave", player, this));
+    await lastValueFrom(this.hooks.callHooks("server-player-onLeaveRoom", player, this));
   }
 
   @Action('gui.interaction')
