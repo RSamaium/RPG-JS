@@ -1,7 +1,7 @@
 import Canvas from "./components/scenes/canvas.ce";
 import BuiltinSceneMap from "./components/scenes/draw-map.ce";
 import { inject } from './core/inject'
-import { signal, bootstrapCanvas, Howl, Howler, trigger, type Trigger } from "canvasengine";
+import { signal, bootstrapCanvas, Howl, Howler, trigger, type Trigger, type ControlsDirective } from "canvasengine";
 import { AbstractWebsocket, WebSocketToken } from "./services/AbstractSocket";
 import { LoadMapService, LoadMapToken } from "./services/loadMap";
 import { RpgSound } from "./Sound";
@@ -273,6 +273,8 @@ export class RpgClientEngine<T = any> {
   mapShakeTrigger: ConfigurableTrigger<MapShakeOptions> = trigger<MapShakeOptions>();
 
   controlsReady = signal<boolean | undefined>(undefined); 
+  // Active client input directive, shared with the mobile overlay.
+  activeKeyboardControls = signal<ControlsDirective | null>(null);
   gamePause = signal(false);
   /**
    * Freezes map rendering for short presentation-only beats such as combat
@@ -426,44 +428,34 @@ export class RpgClientEngine<T = any> {
   }
 
   /**
-   * Assigns a CanvasEngine KeyboardControls instance to the dependency injection context
-   * 
-   * This method registers a KeyboardControls instance from CanvasEngine into the DI container,
-   * making it available for injection throughout the application. The particularity is that
-   * this method is automatically called when a sprite is displayed on the map, allowing the
-   * controls to be automatically associated with the active sprite.
-   * 
-   * ## Design
-   * 
-   * - The instance is stored in the DI context under the `KeyboardControls` token
-   * - It's automatically assigned when a sprite component mounts (in `character.ce`)
-   * - The controls instance comes from the CanvasEngine component's directives
-   * - Once registered, it can be retrieved using `inject(KeyboardControls)` from anywhere
-   * 
-   * @param controlInstance - The CanvasEngine KeyboardControls instance to register
-   * 
+   * Registers the current player's live CanvasEngine controls on the client.
+   *
+   * Used automatically when the player component mounts in standalone RPG and
+   * MMORPG modes. Destroyed directives are ignored so a retiring component cannot
+   * overwrite replacement controls during streamed map updates. Input handling
+   * remains client-side; this does not change server movement authority.
+   *
+   * @title setKeyboardControls
+   * @method setKeyboardControls
+   * @param controlInstance - The live CanvasEngine controls directive to register.
+   * @returns Nothing.
+   * @memberof RpgClientEngine
    * @example
    * ```ts
-   * // The method is automatically called when a sprite is displayed:
-   * // client.setKeyboardControls(element.directives.controls)
-   * 
-   * // Later, retrieve and use the controls instance:
-   * import { Input, inject, KeyboardControls } from '@rpgjs/client'
-   * 
-   * const controls = inject(KeyboardControls)
-   * const control = controls.getControl(Input.Enter)
-   * 
-   * if (control) {
-   *   console.log(control.actionName) // 'action'
-   * }
+   * // Inside the current player's CanvasEngine mount callback:
+   * client.setKeyboardControls(element.directives.controls)
    * ```
    */
-  setKeyboardControls(controlInstance: any) {
+  setKeyboardControls(controlInstance: ControlsDirective): void {
+    // CanvasEngine clears the keyboard when a controls directive is destroyed.
+    // A retiring character's effect must not replace the new player's controls.
+    if (!controlInstance?.keyboard) return;
     const currentValues = this.context.values['inject:' + 'KeyboardControls']
     this.context.values['inject:' + 'KeyboardControls'] = {
       ...currentValues,
       values: new Map([['__default__', controlInstance]])
     }
+    this.activeKeyboardControls.set(controlInstance);
     this.controlsReady.set(true);
   }
 

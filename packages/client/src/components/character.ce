@@ -70,6 +70,8 @@
 <script>
   import { signal, effect, mount, computed, tick, animatedSignal, on, untracked } from "canvasengine";
   import { Assets } from "pixi.js";
+  import { observeCurrentPlayerControls } from "./current-player-controls";
+  import type { Subscription } from "rxjs";
 
   import { lastValueFrom, combineLatest, pairwise, filter, map, startWith } from "rxjs";
   import { Particle } from "@canvasengine/presets";
@@ -1297,7 +1299,11 @@
     });
   };
 
+  let controlsSubscription: Subscription | null = null;
   const onBeforeDestroy = async () => {
+    // Stop publishing controls before asynchronous removal hooks can yield.
+    controlsSubscription?.unsubscribe();
+    controlsSubscription = null;
     await runBeforeRemove();
     await waitForTemporaryAnimationEnd();
     if (typeof document !== 'undefined') {
@@ -1335,11 +1341,11 @@
     }
     hooks.callHooks("client-sprite-onAdd", sprite).subscribe()
     hooks.callHooks("client-sceneMap-onAddSprite", client.sceneMap, sprite).subscribe()
-    effect(() => {
-      if (isCurrentPlayer()) {
-        client.setKeyboardControls(element.directives.controls)
-      }
-    })
+    controlsSubscription = observeCurrentPlayerControls(
+      isCurrentPlayer,
+      element.directives.controls,
+      (controls) => client.setKeyboardControls(controls)
+    );
 
     effect(() => {
       const followRevision = client.cameraFollowRevision();
@@ -1378,6 +1384,7 @@
     })
 
     return () => {
+      controlsSubscription?.unsubscribe();
       if (ownsCameraFollowRevision(appliedCameraFollowRevision, client.cameraFollowRevision())) {
         clearCameraFollowPlugins(element.props.context?.viewport, appliedCameraFollowOwnership);
       }
