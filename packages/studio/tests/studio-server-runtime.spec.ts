@@ -32,6 +32,67 @@ afterEach(() => {
 });
 
 describe("Studio server runtime", () => {
+  test.each(["snapshot", "legacy-save"])("restores a switched actor without resetting progression or a manually selected class: %s", async (mode) => {
+    const actor = {
+      _id: "runtime-actor", _type: "actor", name: "Mage",
+      graphic: "mage-graphic", initialLevel: 2, finalLevel: 60,
+      classId: "default-class",
+      parameters: { [MAXHP]: { start: 200, end: 800 }, [MAXSP]: { start: 80, end: 160 } },
+      animations: { attack: "magic-attack" },
+      startingInventory: [{ itemId: "potion", amount: 2 }],
+      startingEquipment: { weapon: "sword" },
+    };
+    const hooks = (studioServer() as any).player;
+    configureGameDataProvider({
+      kind: "online", getProject: vi.fn(), getMap: vi.fn(), getMedia: vi.fn(),
+      getDatabase: vi.fn(async () => [actor, { _id: "default-class", _type: "class", name: "Default" }, { _id: "potion", _type: "item", name: "Potion" }, { _id: "sword", _type: "weapon", name: "Sword" }]),
+    });
+    const database: Record<string, any> = {};
+    const map = {
+      globalConfig: { _id: "restore-actor-project", hero: { initialLevel: 1, startingInventory: [{ itemId: "potion", amount: 2 }], startingEquipment: { weapon: "sword" } } },
+      database: () => database,
+      addInDatabase(id: string, value: unknown) { database[id] = value; },
+      scale: 1,
+    } as unknown as RpgMap;
+    const makePlayer = () => {
+      const player = new RpgPlayer();
+      player.setSync(hooks.props);
+      (player as any).execMethod = vi.fn(async () => undefined);
+      player.initializeDefaultStats();
+      player.setMap(map);
+      return player;
+    };
+    const player = makePlayer();
+    await hooks.onJoinMap(player, map);
+    player.level = 12;
+    player.exp = 500;
+    player.changeActor(actor);
+    (player as any).studioSelectedActorId.set("runtime-actor");
+    player.setClass({ id: "chosen-class", name: "Chosen" });
+    player.hp = Math.round(player.param[MAXHP] / 2);
+    player.sp = Math.round(player.param[MAXSP] / 4);
+    expect(player.getItem("potion")?.quantity()).toBe(2);
+    const snapshot = JSON.parse(JSON.stringify(player.snapshot()));
+    if (mode === "legacy-save") delete snapshot.studioStartGameApplied;
+    const restored = makePlayer();
+    await restored.applySnapshot(snapshot);
+    if (mode === "legacy-save") await hooks.onLoad(restored);
+    const addItem = vi.spyOn(restored, "addItem");
+    await hooks.onJoinMap(restored, map);
+    expect(restored.level).toBe(player.level);
+    expect(restored.exp).toBe(player.exp);
+    expect(restored.hp).toBe(player.hp);
+    expect(restored.sp).toBe(player.sp);
+    expect(restored._class()).toMatchObject({ id: "chosen-class" });
+    expect((restored as any).studioSelectedActorId()).toBe("runtime-actor");
+    expect(restored.graphics()).toContain("mage-graphic");
+    expect((restored as any).studioCombatAnimations).toEqual({ attack: "magic-attack" });
+    expect(addItem).not.toHaveBeenCalled();
+    expect(restored.getItem("potion")?.quantity()).toBe(2);
+    expect(restored.getItem("sword")?.quantity()).toBe(1);
+    expect(restored.equipments()).toHaveLength(1);
+  });
+
   test.each(["unavailable", "enabled"] as const)("explicit hidden title screen starts when project title screen is %s", async (projectState) => {
     const player = { initializeDefaultStats: vi.fn(), changeMap: vi.fn() };
     const hooks = (studioServer({

@@ -316,6 +316,39 @@ describe("Class Manager - setActor", () => {
 });
 
 describe("Class Manager - changeActor", () => {
+  test("preserves actor parameter curves and class through a serialized snapshot", async () => {
+    player.level = 12;
+    player.changeActor({
+      id: "saved-actor", initialLevel: 3, finalLevel: 60,
+      parameters: { [MAXHP]: { start: 200, end: 800 } },
+      class: { id: "actor-class", name: "Actor Class" },
+      animations: { attack: "sword" },
+    });
+    player.hp = Math.round(player.param[MAXHP] / 2);
+    const expectedMaxHp = player.param[MAXHP];
+    const snapshot = JSON.parse(JSON.stringify(player.snapshot()));
+    // Older snapshots also serialized this derived object. It must not replace
+    // the destination player's computed parameter signal.
+    snapshot._param = { maxHp: expectedMaxHp };
+    const restored = new RpgPlayer();
+    await restored.applySnapshot(snapshot);
+    expect(restored.level).toBe(player.level);
+    expect(restored.initialLevel).toBe(player.initialLevel);
+    expect(restored.finalLevel).toBe(player.finalLevel);
+    expect(restored.param[MAXHP]).toBe(expectedMaxHp);
+    expect(restored.hp).toBe(player.hp);
+    expect(restored._class()).toMatchObject({ id: "actor-class" });
+    restored.level += 1;
+    expect(restored.param[MAXHP]).toBeGreaterThan(expectedMaxHp);
+  });
+
+  test("applies actor combat animations and clears the previous actor's animations", () => {
+    player.changeActor({ id: "mage", animations: { attack: "magic" } });
+    expect((player as any).combatAnimations).toEqual({ attack: "magic" });
+    player.changeActor({ id: "other" });
+    expect((player as any).combatAnimations).toEqual({});
+  });
+
   test("should apply a new actor while preserving progression", () => {
     player.parameters = {
       [MAXHP]: { start: 200, end: 200 },

@@ -101,7 +101,7 @@ describe("server public API types", () => {
         .toEqualTypeOf<Promise<ActorData | null>>();
       expectTypeOf(player.setActor({ id: "hero", name: "Hero" }))
         .toEqualTypeOf<ActorData>();
-      expectTypeOf(player.changeActor({ id: "mage", name: "Mage" }))
+      expectTypeOf(player.changeActor({ id: "mage", name: "Mage", animations: { attack: "magic" }, class: { id: "caster", name: "Caster" } }))
         .toEqualTypeOf<ActorData>();
     };
 

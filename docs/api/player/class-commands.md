@@ -9,6 +9,7 @@ Assign and inspect player classes and class-driven behaviors.
 
 ## Members
 
+- [animations](#animations)
 - [Change Actor](#change-actor)
 - [changeActor](#changeactor)
 - [createClassInstance](#createclassinstance)
@@ -17,12 +18,28 @@ Assign and inspect player classes and class-driven behaviors.
 - [setClass](#setclass)
 - [WithClassManager](#withclassmanager)
 
+## animations
+
+Animation names mapped to graphics, consumed by optional combat modules.
+
+- Source: `packages/server/src/Player/ClassManager.ts`
+- Kind: `property`
+- Defined in: `ActorData`
+
+### Signature
+
+```ts
+animations: Record<string, string>
+```
+
 ## Change Actor
 
 Replace the player's active actor identity while preserving acquired
 progression. The new actor's parameter curves are evaluated at the
 current level and HP/SP keep their previous fill ratios. Starting
-equipment is intentionally not granted.
+equipment is intentionally not granted. Runs on the authoritative server
+in standalone RPG and MMORPG modes. Animation bindings are available to
+optional combat modules through `combatAnimations`.
 
 - Source: `packages/server/src/Player/ClassManager.ts`
 - Kind: `method`
@@ -41,6 +58,13 @@ player.changeActor(actor)
 ### Returns
 
 The resolved actor object.
+
+### Examples
+
+```ts
+const actor = await player.showCharacterSelect([Hero, Mage], { allowCancel: true });
+if (actor) player.changeActor(actor);
+```
 
 ## changeActor
 

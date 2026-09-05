@@ -43,3 +43,28 @@ properties remain server-side. Register `graphic`, `illustration`, and
 Projects can replace the CanvasEngine component by registering another GUI with
 `PrebuiltGui.CharacterSelect`; preserve the interactions documented in
 [Prebuilt GUI Contracts](/gui/prebuilt-contracts).
+
+## Switching actors during play
+
+Use `changeActor()` when reopening the selector during gameplay:
+
+```ts
+const actor = await player.showCharacterSelect([Hero, Mage], {
+  selectedActorId: "hero",
+  allowCancel: true,
+})
+if (actor) player.changeActor(actor)
+```
+
+The authoritative server applies the actor's name, graphic, hitbox, default class,
+parameter curves and combat animation bindings. Level, experience, inventory,
+equipment, learned skills, states and modifiers are retained. HP/SP keep their
+fill ratios, and starting equipment is not granted again. Cancellation applies
+no actor changes. `setActor()` remains the initialization API.
+
+In Studio, the `call_character_select` block offers all Actors or an ordered
+`actorIds` subset and persists the chosen Actor ID. It normalizes Studio media
+references before calling the server API. `change_class` can then select another
+resolved Class. Saves and room transfers retain that class, the selected Actor,
+and progression; restoring a player does not grant starting inventory again.
+These rules apply in both standalone RPG and MMORPG modes.

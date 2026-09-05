@@ -9,6 +9,7 @@ Core server-side player commands defined on the main Player class.
 
 ## Members
 
+- [Apply Player Snapshot](#apply-player-snapshot)
 - [applyDefaultParameters](#applydefaultparameters)
 - [attachShape](#attachshape)
 - [cameraFollow](#camerafollow)
@@ -32,9 +33,11 @@ Core server-side player commands defined on the main Player class.
 - [load](#load)
 - [otherPlayersCollision](#otherplayerscollision)
 - [pendingMapPosition](#pendingmapposition)
+- [Player Snapshot](#player-snapshot)
 - [playSound](#playsound)
 - [position](#position)
 - [position](#position)
+- [prepareSnapshotForObjectLoad](#preparesnapshotforobjectload)
 - [Remove listeners of the client event](#remove-listeners-of-the-client-event)
 - [room](#room)
 - [Run Sync Changes](#run-sync-changes)
@@ -54,6 +57,36 @@ Core server-side player commands defined on the main Player class.
 - [tiles](#tiles)
 - [worldPositionX](#worldpositionx)
 - [worldPositionY](#worldpositiony)
+
+## Apply Player Snapshot
+
+Restore authoritative player state without new-game initialization in RPG
+and MMORPG modes, then run the server onLoad hooks.
+
+- Source: `packages/server/src/Player/Player.ts`
+- Kind: `method`
+- Member of: `RpgPlayer`
+- Defined in: `RpgPlayer`
+
+### Signature
+
+```ts
+player.applySnapshot(snapshot)
+```
+
+### Parameters
+
+- `snapshot`: `string | RpgPlayerSnapshot`
+
+### Returns
+
+The resolved snapshot after database references have been restored.
+
+### Examples
+
+```ts
+await player.applySnapshot(saved);
+```
 
 ## applyDefaultParameters
 
@@ -758,6 +791,32 @@ Internal: named map position to resolve after the target map data is ready
 pendingMapPosition
 ```
 
+## Player Snapshot
+
+Capture serializable authoritative player state in RPG and MMORPG modes.
+Derived parameters are recalculated from saved curves, bounds and modifiers.
+
+- Source: `packages/server/src/Player/Player.ts`
+- Kind: `method`
+- Member of: `RpgPlayer`
+- Defined in: `RpgPlayer`
+
+### Signature
+
+```ts
+player.snapshot()
+```
+
+### Returns
+
+Player state suitable for serialization and later restoration.
+
+### Examples
+
+```ts
+const saved = JSON.stringify(player.snapshot());
+```
+
 ## playSound
 
 Play a sound on the client side for this player only
@@ -838,6 +897,28 @@ when the player is currently attached to a map.
 ```ts
 position
 ```
+
+## prepareSnapshotForObjectLoad
+
+Preserve runtime signals while preparing serialized player data for loading.
+
+- Source: `packages/server/src/Player/Player.ts`
+- Kind: `method`
+- Defined in: `RpgPlayer`
+
+### Signature
+
+```ts
+prepareSnapshotForObjectLoad(snapshot: RpgPlayerSnapshot): RpgPlayerSnapshot
+```
+
+### Parameters
+
+- `snapshot`: `RpgPlayerSnapshot`
+
+### Returns
+
+A copy excluding fields that are restored separately or recomputed.
 
 ## Remove listeners of the client event
 

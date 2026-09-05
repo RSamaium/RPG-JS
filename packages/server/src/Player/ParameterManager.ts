@@ -485,6 +485,9 @@ export function WithParameterManager<TBase extends PlayerCtor>(Base: TBase) {
         this as never
     ) as unknown as RpgWritableSignal<ParameterCurveMap>
 
+    private _initialLevelSignal = type(signal(1) as never, '_initialLevelSignal', { persist: true }, this as never) as unknown as RpgWritableSignal<number>
+    private _finalLevelSignal = type(signal(99) as never, '_finalLevelSignal', { persist: true }, this as never) as unknown as RpgWritableSignal<number>
+
     private _paramProxy: { [key: string]: number } | null = null
 
     /**
@@ -583,24 +586,28 @@ export function WithParameterManager<TBase extends PlayerCtor>(Base: TBase) {
      * player.initialLevel = 5
      * ``` 
      * 
+     * The server retains this curve bound in saves and room transfers in both RPG and MMORPG modes.
      * @title Set initial level
      * @prop {number} player.initialLevel
      * @default 1
      * @memberof ParameterManager
      * */
-    public initialLevel:number = 1
+    get initialLevel(): number { return this._initialLevelSignal() }
+    set initialLevel(value: number) { this._initialLevelSignal.set(value) }
 
     /** 
      * ```ts
      * player.finalLevel = 50
      * ``` 
      * 
+     * The server retains this curve bound in saves and room transfers in both RPG and MMORPG modes.
      * @title Set final level
      * @prop {number} player.finalLevel
      * @default 99
      * @memberof ParameterManager
      * */
-    public finalLevel:number = 99
+    get finalLevel(): number { return this._finalLevelSignal() }
+    set finalLevel(value: number) { this._finalLevelSignal.set(value) }
 
     /** 
      * With Object-based syntax, you can use following options:

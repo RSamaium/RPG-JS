@@ -20,6 +20,8 @@ export interface ActorData {
   class?: ClassInput;
   graphic?: string | number | (string | number)[];
   hitbox?: { width: number; height: number };
+  /** Animation names mapped to graphics, consumed by optional combat modules. */
+  animations?: Record<string, string>;
   [key: string]: unknown;
 }
 
@@ -184,7 +186,15 @@ export function WithClassManager<TBase extends PlayerCtor>(Base: TBase) {
      * Replace the player's active actor identity while preserving acquired
      * progression. The new actor's parameter curves are evaluated at the
      * current level and HP/SP keep their previous fill ratios. Starting
-     * equipment is intentionally not granted.
+     * equipment is intentionally not granted. Runs on the authoritative server
+     * in standalone RPG and MMORPG modes. Animation bindings are available to
+     * optional combat modules through `combatAnimations`.
+     *
+     * @example
+     * ```ts
+     * const actor = await player.showCharacterSelect([Hero, Mage], { allowCancel: true });
+     * if (actor) player.changeActor(actor);
+     * ```
      *
      * @title Change Actor
      * @method player.changeActor(actor)
@@ -210,6 +220,7 @@ export function WithClassManager<TBase extends PlayerCtor>(Base: TBase) {
       if (actor.class) this.setClass(actor.class);
       if (actor.graphic !== undefined) player.setGraphic?.(actor.graphic);
       if (actor.hitbox) player.setHitbox?.(actor.hitbox.width, actor.hitbox.height);
+      player.combatAnimations = { ...(actor.animations ?? {}) };
 
       player.execMethod("onSet", [this], actor);
       if (player._exp?.set) player._exp.set(experience);
