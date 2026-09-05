@@ -1,3 +1,4 @@
+import { dispatchPlayerDisconnected } from "./connection-lifecycle";
 import { Action, Request, UnhandledAction } from "@signe/room";
 import {
   Hooks,
@@ -1739,6 +1740,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     if (!this.hasActiveConnections()) {
       this.setAutoTick(false);
     }
+    await dispatchPlayerDisconnected(this.hooks, player, conn);
   }
 
   /**

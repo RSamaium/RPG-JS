@@ -323,7 +323,16 @@ export interface RpgPlayerHooks {
     onDead?: (player: RpgPlayer) => MaybePromise<void>,
 
     /**
-    *  When the player leaves the server
+    * When the last active connection for the player session closes in a lobby,
+    * map, or gameplay room. Runs on the authoritative server in RPG and MMORPG
+    * modes. Successful room transfers do not dispatch this hook.
+    *
+    * @example
+    * ```ts
+    * const player: RpgPlayerHooks = {
+    *   onDisconnected(player) { console.log(player.id, "disconnected"); }
+    * }
+    * ```
     * 
     * @prop { (player: RpgPlayer) => void | Promise<void> } [onDisconnected]
     * @memberof RpgPlayerHooks
@@ -349,7 +358,16 @@ export interface RpgPlayerHooks {
     onOutShape?: (player: RpgPlayer, shape: RpgShape) => MaybePromise<void>
 
     /**
-    * When the x, y positions change
+    * When authoritative physics changes the player's synchronized x/y position.
+    * Runs in RPG and MMORPG modes for players, excluding events and unchanged
+    * positions. Async handlers do not block the physics step.
+    *
+    * @example
+    * ```ts
+    * const player: RpgPlayerHooks = {
+    *   onMove(player) { console.log(player.x(), player.y()); }
+    * }
+    * ```
     * 
     * @prop { (player: RpgPlayer) => void | Promise<void> } [onMove]
     * @since 3.0.0-beta.4

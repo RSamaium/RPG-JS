@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { h, Container } from "canvasengine";
 import { testing, type TestingFixture } from "@rpgjs/testing";
 import { defineModule } from "@rpgjs/common";
@@ -41,9 +41,12 @@ class BattleRoom extends RpgGameplayRoom<BattleState> {
 @RpgRoom({ kind: "duel", path: "battle-{slug}" })
 class AmbiguousBattleRoom extends RpgGameplayRoom {}
 
+const onDisconnected = vi.fn();
+
 const serverModule = defineModule<RpgServer>({
   maps: [{ id: "start", file: "" }],
   player: {
+    onDisconnected,
     onConnected(player) {
       player.setVariable("transfer-proof", "preserved");
     },
@@ -57,6 +60,8 @@ const clientModule = defineModule<RpgClient>({});
 
 describe("custom gameplay rooms", () => {
   let fixture: TestingFixture | undefined;
+
+  beforeEach(() => onDisconnected.mockClear());
 
   afterEach(async () => {
     await fixture?.clear();
@@ -121,11 +126,15 @@ describe("custom gameplay rooms", () => {
     expect(player.getVariable("transfer-proof")).toBe("preserved");
     expect(player.snapshot?.()).toMatchObject({ variables: { "transfer-proof": "preserved" } });
 
+    const sourceMapConnection = player.conn!;
     const battleChange = client.waitForRoomChange("battle");
     expect(await player.changeRoom({ kind: "battle", params: { id: "encounter-42" } })).toBe(true);
     player = await battleChange;
     await fixture.wait(0);
 
+    sourceMapConnection.close();
+    await fixture.wait(50);
+    expect(onDisconnected).not.toHaveBeenCalled();
     const room = player.getCurrentRoom<BattleRoom>();
     expect(player.snapshot?.()).toMatchObject({ variables: { "transfer-proof": "preserved" } });
     expect(player.id).toBe(playerId);
@@ -154,6 +163,7 @@ describe("custom gameplay rooms", () => {
     await fixture.wait(0);
     expect(client.client.sceneRoom.state()).toEqual({ turn: 2, lastPlayerId: playerId });
 
+    const sourceBattleConnection = player.conn!;
     expect(await player.changeMap("start", { x: 220, y: 240 })).toBe(true);
     await fixture.wait(200);
     player = client.player;
@@ -163,5 +173,14 @@ describe("custom gameplay rooms", () => {
     expect(player.y()).toBe(240);
     expect(player.getVariable("transfer-proof")).toBe("preserved");
     expect(client.client.activeSceneKind()).toBe("map");
+    sourceBattleConnection.close();
+    await fixture.wait(50);
+    expect(onDisconnected).not.toHaveBeenCalled();
+
+    const battleAgain = client.waitForRoomChange("battle");
+    await player.changeRoom({ kind: "battle", params: { id: "another" } });
+    player = await battleAgain;
+    player.conn!.close();
+    await vi.waitFor(() => expect(onDisconnected).toHaveBeenCalledOnce());
   });
 });

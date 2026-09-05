@@ -456,30 +456,32 @@ provideStudioGame({
 
 ## Start without a title screen
 
-Use `autoStart` when the player should enter the starting map as soon as the
-server connection is established:
+Set `displayTitleScreen: false` to enter the starting map as soon as the
+server accepts the connection, in both standalone RPG and MMORPG modes:
 
 ```ts
 provideStudioGame({
   projectId: "your-project-id",
   startMapId: "requested-map",
   displayTitleScreen: false,
-  autoStart: true,
 });
 ```
 
 The server initializes the built-in default player stats, then transfers the
 player to `startMapId` or to the starting map defined by the Studio project.
-`autoStart` defaults to `false`, so games using the title-screen `start`
-interaction keep their existing behavior. `displayTitleScreen` controls only
-the client display and does not enable immediate startup by itself.
+An explicit `displayTitleScreen: false` enables startup even if the project
+metadata cannot be loaded or its title screen is enabled. Provide `startMapId`
+when startup must work without project metadata. Character selection is still
+honored when project data is available, unless `skipCharacterSelect` is true.
+When `displayTitleScreen` is omitted, the project setting controls the title flow.
+`autoStart: true` remains an explicit immediate-start override.
 
 ## Options
 
 - `projectId`: Studio project identifier. When provided, the default runtime mode is `"online"`.
 - `runtimeMode`: data loading strategy. Use `"online"`, `"offline"`, or `"auto"`.
 - `bundleBasePath`: public path for exported Studio data. Defaults to `/game-data`.
-- `displayTitleScreen`: display the Studio title screen when supported by the project.
+- `displayTitleScreen`: `false` skips the title screen and starts immediately; `true` retains the title flow unless `autoStart: true` overrides it.
 - `autoStart`: initialize the player and enter the starting map immediately on
 connection. Defaults to `false`.
 

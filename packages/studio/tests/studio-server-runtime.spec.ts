@@ -32,6 +32,27 @@ afterEach(() => {
 });
 
 describe("Studio server runtime", () => {
+  test.each(["unavailable", "enabled"] as const)("explicit hidden title screen starts when project title screen is %s", async (projectState) => {
+    const player = { initializeDefaultStats: vi.fn(), changeMap: vi.fn() };
+    const hooks = (studioServer({
+      displayTitleScreen: false,
+      startMapId: "requested-map",
+      dataProvider: {
+        kind: "online",
+        getProject: async () => {
+          if (projectState === "unavailable") throw new Error("project unavailable");
+          return { menus: { titleScreen: { enabled: true } } };
+        },
+        getMap: vi.fn(), getMedia: vi.fn(), getDatabase: async () => [],
+      },
+    }) as any).player;
+    await hooks.onAccepted(player, { connection: {}, query: {}, headers: {} });
+    expect(player.initializeDefaultStats).toHaveBeenCalledOnce();
+    expect(player.changeMap).toHaveBeenCalledWith("requested-map");
+    await hooks.onStart(player);
+    expect(player.changeMap).toHaveBeenCalledOnce();
+  });
+
   test("publishes the generated Studio class in every map database", async () => {
     const databaseProvider = (studioServer() as any).database as (map: RpgMap) => Promise<Record<string, any>>;
     const database = await databaseProvider({
@@ -124,9 +145,10 @@ describe("Studio server runtime", () => {
     expect(changeMap).toHaveBeenCalledWith("requested-map");
   });
 
-  test("resolves the project start map for immediate startup", async () => {
+  test.each([{ autoStart: true }, { displayTitleScreen: false }])("resolves the project start map for immediate startup %j", async (startupOptions) => {
+    const projectId = `auto-start-project-${Object.keys(startupOptions)[0]}`;
     const getProject = vi.fn(async () => ({
-      _id: "auto-start-project",
+      _id: projectId,
       startMapId: "project-start-map",
     }));
     configureGameDataProvider({
@@ -139,8 +161,8 @@ describe("Studio server runtime", () => {
     const initializeDefaultStats = vi.fn();
     const changeMap = vi.fn(async () => true);
     const hooks = (studioServer({
-      autoStart: true,
-      projectId: "auto-start-project",
+      ...startupOptions,
+      projectId: projectId,
     }) as any).player;
 
     await hooks.onAccepted({
@@ -149,7 +171,7 @@ describe("Studio server runtime", () => {
     }, acceptedContext());
 
     expect(getProject).toHaveBeenCalledWith({
-      projectId: "auto-start-project",
+      projectId: projectId,
     });
     expect(initializeDefaultStats).toHaveBeenCalledOnce();
     expect(changeMap).toHaveBeenCalledWith("project-start-map");

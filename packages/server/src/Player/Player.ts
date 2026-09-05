@@ -1,3 +1,4 @@
+import { markRoomTransfer } from "../rooms/connection-lifecycle";
 import {
   combineMixins,
   Hooks,
@@ -486,6 +487,7 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
     const transferToken = this.conn
       ? await this.getCurrentRoom()?.$sessionTransfer(this.conn, descriptor.id)
       : undefined;
+    if (this.conn) markRoomTransfer(this.conn, transferToken);
     this.emit("changeMap", {
       ...descriptor,
       mapId: descriptor.id,
@@ -562,6 +564,7 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
       ...descriptor,
       transferToken: typeof transferToken === "string" ? transferToken : undefined,
     };
+    if (this.conn) markRoomTransfer(this.conn, transferToken);
     this.emit("changeRoom", payload);
     return true;
   }

@@ -30,6 +30,30 @@ export default defineModule({
 })
 ```
 
+## Movement and disconnection
+
+`onMove(player)` runs when authoritative physics changes the player's synchronized
+x/y position, in both standalone RPG and MMORPG modes. It excludes events and
+unchanged positions. Async handlers do not block the physics step; errors are
+logged by the runtime.
+
+`onDisconnected(player)` runs when the last active connection for the session
+closes, whether the player is in the lobby, a map, or a custom gameplay room.
+The room's leave hooks run first. A successful `changeMap()` or `changeRoom()`
+transfer closes the source connection without dispatching `onDisconnected`.
+The destination connection starts a new connection lifecycle.
+
+```ts
+const player: RpgPlayerHooks = {
+    onMove(player) {
+        console.log(player.id, player.x(), player.y())
+    },
+    onDisconnected(player) {
+        console.log(player.id, 'disconnected')
+    }
+}
+```
+
 ## Custom Properties
 
 You can define custom properties that will be synchronized with the client and optionally saved to the database:

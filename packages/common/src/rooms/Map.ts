@@ -1677,6 +1677,8 @@ export abstract class RpgCommonMap<T extends RpgCommonPlayer> {
       }
       let changed = false;
 
+      const previousX = typeof currentOwner.x === "function" ? currentOwner.x() : undefined;
+      const previousY = typeof currentOwner.y === "function" ? currentOwner.y() : undefined;
       this.withPhysicsSync(() => {
         if (typeof currentOwner.x === "function" && typeof currentOwner.x.set === "function") {
           currentOwner.x.set(Math.round(topLeftX));
@@ -1688,6 +1690,16 @@ export abstract class RpgCommonMap<T extends RpgCommonPlayer> {
         }
       });
       if (changed) {
+        if (
+          ((typeof currentOwner.x === "function" && previousX !== currentOwner.x()) ||
+            (typeof currentOwner.y === "function" && previousY !== currentOwner.y())) &&
+          typeof currentOwner.execMethod === "function" &&
+          !(typeof currentOwner.isEvent === "function" && currentOwner.isEvent())
+        ) {
+          void Promise.resolve().then(() => currentOwner.execMethod("onMove")).catch((error) => {
+            console.error("[RPGJS] Error during player onMove hooks:", error);
+          });
+        }
         const applyFrames = currentOwner.applyFrames;
         if (typeof applyFrames === "function") {
           queueMicrotask(() => applyFrames.call(currentOwner));
