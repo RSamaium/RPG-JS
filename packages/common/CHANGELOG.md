@@ -1,5 +1,23 @@
 # @rpgjs/common
 
+## 5.0.0-beta.31
+
+### Minor Changes
+
+- b74236b: Add server-authoritative custom gameplay rooms with registered room paths,
+  session-preserving player transfers, synchronized client room state, and
+  CanvasEngine scene adapters that run independently of maps and map physics.
+  Room providers also accept concrete `RpgGameplayRoom` subclasses with their
+  typed constructor context, so strict TypeScript applications can register them.
+  Returning from a custom room now waits for a fresh map-stream packet before
+  remounting the map component and keeps the room scene visible until that data
+  is ready. Map components are also gated on non-null render data, preventing
+  stale or incomplete values from reaching CanvasEngine presets.
+
+### Patch Changes
+
+- 85aea0c: Restore authoritative player onMove hooks and dispatch onDisconnected from lobby, map, and gameplay rooms. Do not report successful room transfers as disconnections or dispatch duplicate disconnection hooks for the same connection.
+
 ## 5.0.0-beta.30
 
 ### Minor Changes

@@ -1,5 +1,18 @@
 # @rpgjs/chat
 
+## 5.0.0-beta.7
+
+### Patch Changes
+
+- Updated dependencies [b74236b]
+- Updated dependencies [1fb8040]
+- Updated dependencies [6b8d872]
+- Updated dependencies [85aea0c]
+  - @rpgjs/client@5.0.0-beta.34
+  - @rpgjs/common@5.0.0-beta.31
+  - @rpgjs/server@5.0.0-beta.34
+  - @rpgjs/vite@5.0.0-beta.34
+
 ## 5.0.0-beta.6
 
 ### Patch Changes

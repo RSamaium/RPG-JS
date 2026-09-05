@@ -1,5 +1,15 @@
 # @rpgjs/vue
 
+## 5.0.0-beta.34
+
+### Patch Changes
+
+- Updated dependencies [b74236b]
+- Updated dependencies [1fb8040]
+- Updated dependencies [85aea0c]
+  - @rpgjs/client@5.0.0-beta.34
+  - @rpgjs/common@5.0.0-beta.31
+
 ## 5.0.0-beta.33
 
 ### Patch Changes
