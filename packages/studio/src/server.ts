@@ -1136,12 +1136,23 @@ export default (_config?: unknown) => {
         await applyStartGameOnce(player, map, heroConfig);
         applyPlayerPresentation(player, heroConfig);
       },
-      onLoad: async (player: RpgPlayer) => {
+      onLoad: async (player: RpgPlayer, snapshot) => {
         // Loading a saved game is never new-game initialization, including old
         // saves that predate the persisted initialization marker.
         markStudioInitialized(player);
         const map = player.getCurrentMap();
-        if (map) applyPlayerPresentation(player, await resolvePlayerConfig(player, map));
+        if (map) {
+          const config = await resolvePlayerConfig(player, map);
+          // Older saves did not persist these bounds. Recover them from the
+          // selected actor where possible without overwriting modern snapshots.
+          if (snapshot && snapshot._initialLevelSignal === undefined && config.initialLevel !== undefined) {
+            player.initialLevel = Math.min(config.initialLevel, player.level);
+          }
+          if (snapshot && snapshot._finalLevelSignal === undefined && config.finalLevel !== undefined) {
+            player.finalLevel = Math.max(config.finalLevel, player.level);
+          }
+          applyPlayerPresentation(player, config);
+        }
       },
       onInput: (player: RpgPlayer, input: RpgActionInput<unknown>) => {
         if (input.action == "escape") {

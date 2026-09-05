@@ -73,14 +73,19 @@ describe("Studio server runtime", () => {
     player.sp = Math.round(player.param[MAXSP] / 4);
     expect(player.getItem("potion")?.quantity()).toBe(2);
     const snapshot = JSON.parse(JSON.stringify(player.snapshot()));
-    if (mode === "legacy-save") delete snapshot.studioStartGameApplied;
+    if (mode === "legacy-save") {
+      delete snapshot.studioStartGameApplied;
+      delete snapshot._initialLevelSignal;
+      delete snapshot._finalLevelSignal;
+    }
     const restored = makePlayer();
     await restored.applySnapshot(snapshot);
-    if (mode === "legacy-save") await hooks.onLoad(restored);
+    if (mode === "legacy-save") await hooks.onLoad(restored, snapshot);
     const addItem = vi.spyOn(restored, "addItem");
     await hooks.onJoinMap(restored, map);
     expect(restored.level).toBe(player.level);
     expect(restored.exp).toBe(player.exp);
+    expect(restored.param[MAXHP]).toBe(player.param[MAXHP]);
     expect(restored.hp).toBe(player.hp);
     expect(restored.sp).toBe(player.sp);
     expect(restored._class()).toMatchObject({ id: "chosen-class" });

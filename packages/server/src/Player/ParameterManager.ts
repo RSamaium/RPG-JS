@@ -511,9 +511,11 @@ export function WithParameterManager<TBase extends PlayerCtor>(Base: TBase) {
         const parameters = this._parametersSignal()
         const allModifiers = this._getAggregatedModifiers()
         const level = this._level()
+        const initialLevel = this.initialLevel
+        const finalLevel = this.finalLevel
         
         for (const [name, paramConfig] of Object.entries(parameters)) {
-            let curveVal = Math.floor((paramConfig.end - paramConfig.start) * ((level - 1) / (this.finalLevel - this.initialLevel))) + paramConfig.start
+            let curveVal = Math.floor((paramConfig.end - paramConfig.start) * ((level - 1) / (finalLevel - initialLevel))) + paramConfig.start
             
             const modifier = allModifiers[name]
             if (modifier) {
