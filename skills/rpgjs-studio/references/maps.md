@@ -147,3 +147,8 @@ curl -sS -X PUT "$BASE_URL/api/maps/$MAP_ID/params" \
 # Semantic search
 
 `GET /api/maps` accepts `query` and optional `minScore` (`0..1`, default `0.40`). Search results are ordered by Vectorize relevance and remain scoped to the API key project.
+
+
+## Read an existing thumbnail
+
+`GET /api/maps/:mapId/thumbnail` returns the stored thumbnail image with its MIME type, using the current project access. It returns 404 for a map outside the project, a missing thumbnail or a missing storage object. Use these bytes as a generation reference (base64 data URI), not the map ID. See [media.md](media.md) for ordered multiple references and video generation.

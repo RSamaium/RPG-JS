@@ -40,7 +40,7 @@ Use `PUT /api/media/update/:id` when the payload can change the media category/t
 
 Common payload confirmed in server code:
 
-- `POST /api/media/generate`: `{ "action": "estimate" | "execute", "type": string, "userPrompt": string, "metadata"?: { "source"?: string, "referenceImage"?: string, ... } }`
+- `POST /api/media/generate`: `{ "action": "estimate" | "execute", "type": string, "userPrompt": string, "metadata"?: { "source"?: string, "referenceImage"?: string, "referenceImages"?: string[], "duration"?: number, ... } }`
 - `GET /api/media/generate/:instanceId`: returns the workflow status and, once complete, the generated `media` record. The public API does not expose internal workflow `steps`.
 
  Generated animations use a 4x4 spritesheet workflow and should include `frameWidth: 4` and `frameHeight: 4` for frame-by-frame previews. Character-editor animations should generate `type: "spritesheet"`, pass the complete base image as execution-only `metadata.referenceImage`, and pass the character media id as `metadata.groupId`; the persisted `groupId` makes the generated spritesheet appear in `GET /api/media/group/:groupId`. Generated tilesets may include `metadata.elements`, a JSON string of packed rectangles produced by the image-processing container. Element set (`type: "tileset"`) generation may pass `metadata.terrainReferenceImage` plus `metadata.terrainReferenceMediaId` to guide generated objects toward the terrain style; `terrainReferenceImage` is execution-only and is stripped from persisted metadata. Generated terrain media include `metadata.sourceTexture`, direct `metadata.rows` and `metadata.columns`, and `metadata.textureGrid`.
@@ -128,3 +128,35 @@ curl -sS -X POST "$BASE_URL/api/media/replace/$MEDIA_ID" \
 - Use `GET /api/game/media/:mediaId` when the caller is game/runtime code and needs the media fields usable in the game.
 - For metadata-only updates, use `PUT /api/media/:id` with JSON. If the update includes a media type change, use `PUT /api/media/update/:id` so the root `type` field is synchronized with metadata.
 - Media generation is now unified and workflow-based. Always estimate first, ask for confirmation, then execute.
+
+
+## Multiple references and cinematic videos
+
+Images and videos accept `metadata.referenceImages`, an ordered list of up to 9 image URLs or base64 data URIs. Do not also send `referenceImage`, even with an empty list. The old singular field remains supported for existing integrations. Empty lists mean no reference. All images are passed to the image provider; they are not assembled into a collage. Internal reference payloads are omitted from persisted media metadata.
+
+For `type: "video"`, set `metadata.duration` to a whole number from 5 to 10 (default 5). Estimate and execution charge 4 credits per second, including reference-to-video (20–40 credits). With the new nonempty list, Studio uses `minimax/h3-max/reference-to-video`; without references it uses `minimax/h3-max-turbo/text-to-video`. Legacy `referenceImage` retains Turbo image-to-video and its 16:9 crop. New references are context images and are not cropped. Refer to them in prompt order as Image 1, Image 2, etc. The output is 768P, 16:9, native audio, at most 30 MB; persisted metadata includes the requested duration and actual model.
+
+Read a library record using `GET /api/media/data/:id`, then obtain its image bytes with `GET /api/media/<fileName>`. Read a project's existing map thumbnail with `GET /api/maps/:mapId/thumbnail` (404 when absent or outside the project). Encode these image bytes as data URIs when the provider cannot access their authenticated URLs. Never send map IDs as image URLs. `referenceImageFiles` is internal and cannot be supplied in public requests.
+
+```json
+{
+  "action": "estimate",
+  "type": "video",
+  "userPrompt": "Image 1 is the hero, Image 2 is the environment. Show the hero entering the village.",
+  "metadata": {
+    "duration": 8,
+    "referenceImages": ["https://example.com/hero.png", "https://example.com/village.png"]
+  }
+}
+```
+
+This example costs 32 credits. Follow the existing estimate/execute workflow above.
+
+
+### Map references as environment context
+
+Image and video requests accept optional `metadata.mapReferenceIndices`: unique, zero-based integer indices into `referenceImages`. For example, `referenceImages: [heroImage, villageMapImage]` with `mapReferenceIndices: [1]` identifies Image 2 as a map. Indices must be in range; the parameter cannot be used with legacy `referenceImage`. Omit it or send an empty array with `referenceImages` for ordinary references.
+
+Studio calculates these indices from the Maps source when sending the request, recalculating them after references are removed. Other API clients must supply the indices themselves. Their order and meaning survive temporary image storage and workflow retries.
+
+The provider prompt treats maps as environment context (buildings, materials, vegetation, colors, atmosphere, and spatial organization), rather than a required overhead camera or tile-sheet presentation. It honors explicitly requested camera perspectives, including top-down, and the technical layout/perspective required by the asset type. Full-scene images and videos default to an immersive character-eye-level view only when no camera perspective is requested. The user's original prompt is unchanged; this guidance is added only to the provider prompt.

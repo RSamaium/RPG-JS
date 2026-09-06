@@ -7,6 +7,10 @@ description: Use the RPGJS Studio HTTP API to create or manage a 2D RPG game. Tr
 
 Use this skill to execute content-management tasks against an RPGJS Studio instance.
 
+## Image and cinematic generation
+
+For image/video generation with multiple references, video duration and pricing, read [references/media.md](references/media.md). Use `metadata.referenceImages` for up to 9 ordered context images; do not combine it with legacy `referenceImage`. Video duration is 5–10 whole seconds, default 5, at 4 credits per second. Use `metadata.mapReferenceIndices` (unique zero-based indices into `referenceImages`) to identify map thumbnails as environment context without imposing their overhead camera; explicit camera requests and technical asset constraints still apply. Read map thumbnail bytes with `GET /api/maps/:mapId/thumbnail` before including them as references.
+
 ## Inputs
 
 - Check whether a local `RPGSTUDIO.md` file exists in the current working directory.
