@@ -20,7 +20,6 @@ export const schemaShowCinematic = {
           name: 'cinematic-media',
           type: 'video',
           buttonLabel: 'block.show cinematic.select video',
-          useUpload: { accept: 'video/mp4,video/webm' },
         },
       },
       allowSkip: {
