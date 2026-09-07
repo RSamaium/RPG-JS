@@ -30,13 +30,15 @@
 }
   
   <script>
-    import { computed, effect, untracked } from 'canvasengine'
+    import { computed, effect, mount, untracked } from 'canvasengine'
+    import { preloadMapCinematics } from '../cinematic';
     import { EventLayerComponent, RpgClientEngine, inject } from "@rpgjs/client";
     import ElementMap from './element-map.ce'
     import { Weather } from '@canvasengine/presets'
     import { toCanvasWeatherOptions } from '@common/weather';
 
     const { data } = defineProps()
+    mount(() => preloadMapCinematics([data()?.events, data()?.commonEvents]));
     
     const middleLayer = computed(() => data().data)
 

@@ -33,7 +33,13 @@ export class RpgMusicManager {
   private mapSound?: any;
   private readonly sounds = new Map<string, any>();
   private revision = 0;
-  private outputGain = 1;
+  private configuredOutputGain = 1;
+  private readonly ducks = new Map<symbol, number>();
+  private suspensions = 0;
+  private readonly pausedSounds = new Set<any>();
+  private get outputGain(): number {
+    return this.configuredOutputGain * Math.min(1, ...this.ducks.values());
+  }
   private currentBaseVolume = 0.8;
   private timers = new Set<ReturnType<typeof setTimeout>>();
 
@@ -64,7 +70,7 @@ export class RpgMusicManager {
     this.mapSound = sound;
     this.setLoop(sound, true);
     this.setVolume(sound, this.mapVolume() * this.outputGain);
-    sound?.play?.();
+    this.playSound(sound);
   }
 
   async enter(
@@ -103,7 +109,7 @@ export class RpgMusicManager {
       this.currentSound = sound;
       this.setLoop(sound, true);
       this.setVolume(sound, 0);
-      sound.play?.();
+      this.playSound(sound);
       this.fade(sound, 0, outputVolume, fadeInMs);
     };
     const finishFadeOut = () => {
@@ -156,9 +162,61 @@ export class RpgMusicManager {
   }
 
   setOutputGain(value: number): void {
-    this.outputGain = clampVolume(value);
+    this.configuredOutputGain = clampVolume(value);
+    this.refreshOutputGain();
+  }
+
+  /**
+   * Temporarily attenuate music without changing saved volume preferences.
+   * The strongest active attenuation wins. Call the returned function to release it.
+   * @param gain Multiplier between 0 and 1.
+   * @returns Idempotent release callback.
+   * @example const restore = engine.music.duck(0.15); restore();
+   */
+  duck(gain: number): () => void {
+    const id = Symbol();
+    this.ducks.set(id, clampVolume(gain));
+    this.refreshOutputGain();
+    return () => {
+      if (this.ducks.delete(id)) this.refreshOutputGain();
+    };
+  }
+
+  private refreshOutputGain(): void {
     if (this.currentSound) this.setVolume(this.currentSound, this.currentBaseVolume * this.outputGain);
     if (this.mapSound) this.setVolume(this.mapSound, this.mapVolume() * this.outputGain);
+  }
+
+  /** Pause music until the returned idempotent release callback is called.
+   * Tracks resume at their previous position; newer map tracks replace old ones.
+   * @returns Callback that releases this pause without changing saved preferences.
+   * @example const resume = engine.music.pause(); resume();
+   */
+  pause(): () => void {
+    if (this.suspensions++ === 0) {
+      for (const sound of [this.mapSound, this.currentSound]) {
+        if (sound && sound.playing?.() !== false) {
+          sound.pause?.();
+          this.pausedSounds.add(sound);
+        }
+      }
+    }
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      if (--this.suspensions !== 0) return;
+      for (const sound of this.pausedSounds) {
+        if (sound === this.mapSound || sound === this.currentSound) sound.play?.();
+      }
+      this.pausedSounds.clear();
+    };
+  }
+
+  private playSound(sound: any): void {
+    if (!sound) return;
+    if (this.suspensions) this.pausedSounds.add(sound);
+    else sound.play?.();
   }
 
   private async resolve(id: string): Promise<any> {

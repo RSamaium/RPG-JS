@@ -1,4 +1,5 @@
 // Export all block executors
+export { show_cinematic, schemaShowCinematic, STUDIO_CINEMATIC_GUI_ID } from './show-cinematic';
 export { show_text } from './show-text';
 export { show_input, schemaShowInput } from './show-input';
 export { show_choices } from './show-choices';

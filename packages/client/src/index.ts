@@ -14,6 +14,7 @@ export * from "./services/interactions";
 export * from "./services/gameplayRooms";
 export * from "./module";
 export * from "./Gui/Gui";
+export type { CinematicData, CinematicResult } from "./Gui/CinematicPlayback";
 export * from "./components/gui";
 export * from "./components/animations";
 export * from "./components/prebuilt";

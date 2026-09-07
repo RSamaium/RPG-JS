@@ -14,6 +14,7 @@ import {
   resolveSpritesheet,
 } from "./spritesheet-utils";
 import FadeComponent from "./components/fade.ce";
+import CinematicComponent from "./components/cinematic.ce";
 import { trigger } from "canvasengine";
 import UpComponent from "./components/up.ce";
 import {
@@ -415,6 +416,10 @@ export default (config: StudioGameModuleConfig) => {
       },
     },
     gui: [
+      {
+        id: "studio-cinematic",
+        component: CinematicComponent,
+      },
       {
         id: "rpg-title-screen",
         component: TitleScreenComponent,

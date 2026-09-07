@@ -16,6 +16,7 @@ import InputComponent from "./input.ce";
 import InputFieldComponent from "./input-field.ce";
 import HotbarComponent from "./hotbar.ce";
 import CharacterSelectComponent from "./character-select.ce";
+import CinematicComponent from "./cinematic.ce";
 
 export {
     DialogboxComponent,
@@ -35,5 +36,6 @@ export {
     InputComponent,
     InputFieldComponent,
     HotbarComponent,
-    CharacterSelectComponent
+    CharacterSelectComponent,
+    CinematicComponent
 }

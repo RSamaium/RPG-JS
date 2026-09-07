@@ -14,6 +14,7 @@ const guideMenu = [{
     { text: "World Maps", link: "/guide/world-maps" },
     { text: "Items", link: "/guide/items" },
     { text: "Sounds", link: "/guide/sounds" },
+    { text: "Cinematic videos", link: "/guide/cinematics" },
     { text: "Weather", link: "/guide/weather" },
     { text: "Synchronization", link: "/guide/synchronization" },
     { text: "Battle AI", link: "/guide/battle-ai" },

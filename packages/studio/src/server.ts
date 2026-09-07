@@ -1,4 +1,5 @@
 import { normalizeRuntimeHitbox } from "./runtime-hitbox";
+import { runPlayerEventOnce } from "./event-execution-guard";
 import { Move, RpgEvent, RpgMap, RpgPlayer, RpgServer, provideServerMapStreaming, type RpgPlayerConnectionContext } from "@rpgjs/server";
 import { defineModule, normalizeLightingState, WorldMapsManager, type RpgActionInput, type WorldMapConfig } from "@rpgjs/common";
 import { BlockExecutionService } from "./block-executor";
@@ -1381,7 +1382,12 @@ export default (_config?: unknown) => {
               return;
             }
             if (trigger && trigger.blocks) {
-              await blockExecutor.executeBlockSequence(trigger.blocks);
+              const run = () => blockExecutor.executeBlockSequence(trigger.blocks);
+              if (player && (triggerType === 'onAction' || (triggerType === 'onTouch' && options?.touchTarget !== 'event'))) {
+                await runPlayerEventOnce(player, run);
+              } else {
+                await run();
+              }
             }
           };
 

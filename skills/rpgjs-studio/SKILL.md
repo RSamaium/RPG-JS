@@ -9,7 +9,9 @@ Use this skill to execute content-management tasks against an RPGJS Studio insta
 
 ## Image and cinematic generation
 
-For image/video generation with multiple references, video duration and pricing, read [references/media.md](references/media.md). Use `metadata.referenceImages` for up to 9 ordered context images; do not combine it with legacy `referenceImage`. Video duration is 5–10 whole seconds, default 5, at 4 credits per second. Use `metadata.mapReferenceIndices` (unique zero-based indices into `referenceImages`) to identify map thumbnails as environment context without imposing their overhead camera; explicit camera requests and technical asset constraints still apply. Read map thumbnail bytes with `GET /api/maps/:mapId/thumbnail` before including them as references.
+For image/video generation with multiple references, video duration and pricing, read [references/media.md](references/media.md). Use `metadata.referenceImages` for up to 9 ordered context images; do not combine it with legacy `referenceImage`. Video duration is 5–15 whole seconds, default 5, at 8 credits per second. Use `metadata.style: "reference"` to preserve reference aesthetics (requires at least one reference image). Use `metadata.mapReferenceIndices` (unique zero-based indices into `referenceImages`) to identify map thumbnails as environment context without imposing their overhead camera; explicit camera requests and technical asset constraints still apply. Read map thumbnail bytes with `GET /api/maps/:mapId/thumbnail` before including them as references.
+
+To play a video in an event, use `show_cinematic` with `{ "video": "media-id", "allowSkip": false, "bgm": "pause", "preload": true }`. Only `video` is required: skipping and preloading default to true; `bgm` defaults to `"duck"` (15% music volume). `"pause"` resumes music afterwards. Adjacent video blocks share one overlay. See [references/media.md](references/media.md) for details; no map-to-video association is required.
 
 ## Inputs
 

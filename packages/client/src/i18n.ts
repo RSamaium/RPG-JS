@@ -2,6 +2,12 @@ import { createI18nProvider, type I18nConfig } from "@rpgjs/common";
 
 export const RpgClientBuiltinI18n = {
   en: {
+    "rpg.cinematic.title": "Cinematic",
+    "rpg.cinematic.loading": "Loading cinematic…",
+    "rpg.cinematic.play": "Play cinematic",
+    "rpg.cinematic.skip": "Skip · Escape",
+    "rpg.cinematic.error": "This cinematic could not be played.",
+    "rpg.cinematic.close": "Return to game",
     "rpg.menu.title": "Menu",
     "rpg.menu.status": "Status",
     "rpg.menu.level": "Level",
@@ -99,6 +105,12 @@ export const RpgClientBuiltinI18n = {
     "rpg.shop.total": "Total",
   },
   fr: {
+    "rpg.cinematic.title": "Cinématique",
+    "rpg.cinematic.loading": "Chargement de la cinématique…",
+    "rpg.cinematic.play": "Lire la cinématique",
+    "rpg.cinematic.skip": "Passer · Échap",
+    "rpg.cinematic.error": "Impossible de lire cette cinématique.",
+    "rpg.cinematic.close": "Revenir au jeu",
     "rpg.audio.title": "Audio",
     "rpg.audio.help": "Réglez chaque catégorie sonore. Vos choix sont enregistrés dans ce navigateur.",
     "rpg.audio.master": "Volume général",

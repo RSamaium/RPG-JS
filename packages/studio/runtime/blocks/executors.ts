@@ -12,6 +12,7 @@ import type {
 // Import all block executors from individual files
 import {
   show_text,
+  show_cinematic,
   show_input,
   show_choices,
   show_notification,
@@ -86,6 +87,7 @@ import {
  * ```
  */
 export const defaultExecutors: BlockExecutorRegistry<BlockType> = {
+  show_cinematic,
   show_text,
   show_input,
   show_choices,

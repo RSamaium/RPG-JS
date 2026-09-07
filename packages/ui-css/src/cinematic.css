@@ -1,0 +1,42 @@
+.rpg-ui-cinematic {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: var(--rpg-ui-text, white);
+  background: black;
+  outline: none;
+  animation: rpg-cinematic-in 200ms ease;
+  touch-action: none;
+}
+.rpg-ui-cinematic-video { width: 100%; height: 100%; object-fit: contain; grid-area: 1 / 1; opacity: 0; transition: opacity 200ms ease; }
+.rpg-ui-cinematic[data-state="playing"] .rpg-ui-cinematic-video { opacity: 1; }
+.rpg-ui-cinematic-status, .rpg-ui-cinematic-action { grid-area: 1 / 1; z-index: 1; text-align: center; max-width: 90%; }
+.rpg-ui-cinematic-status { align-self: center; }
+.rpg-ui-cinematic[data-state="error"] .rpg-ui-cinematic-action { transform: translateY(4rem); }
+.rpg-ui-cinematic-skip {
+  position: absolute;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  max-width: calc(100% - 2rem);
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  background: rgba(0, 0, 0, .8);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, .45);
+  min-height: 44px;
+  cursor: pointer;
+  user-select: none;
+}
+.rpg-ui-cinematic button { cursor: pointer; }
+.rpg-ui-cinematic button:focus-visible { outline: 2px solid white; outline-offset: 4px; }
+.rpg-ui-cinematic [hidden] { display: none; }
+.rpg-ui-cinematic[data-state="closing"] { opacity: 0; transition: opacity 200ms ease; }
+@keyframes rpg-cinematic-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .rpg-ui-cinematic, .rpg-ui-cinematic-video { animation: none; transition: none !important; }
+}

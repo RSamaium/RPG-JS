@@ -6,6 +6,7 @@ const createSound = () => {
   return {
     play: vi.fn(),
     stop: vi.fn(),
+    pause: vi.fn(),
     loop: vi.fn(),
     fade: vi.fn((from: number, to: number) => {
       currentVolume = to;
@@ -18,6 +19,39 @@ const createSound = () => {
 };
 
 describe("RpgMusicManager", () => {
+  it('pauses music until all owners release it, and does not resume replaced tracks', () => {
+    const first = createSound();
+    const second = createSound();
+    const manager = new RpgMusicManager({ getSound: vi.fn(), createSound: vi.fn().mockReturnValueOnce(first).mockReturnValueOnce(second) });
+    manager.setMap('first.mp3');
+    const release = manager.pause();
+    const releaseOther = manager.pause();
+    expect(first.pause).toHaveBeenCalledOnce();
+    manager.setMap('second.mp3');
+    expect(second.play).not.toHaveBeenCalled();
+    release();
+    expect(second.play).not.toHaveBeenCalled();
+    releaseOther();
+    releaseOther();
+    expect(second.play).toHaveBeenCalledOnce();
+    expect(first.play).toHaveBeenCalledOnce();
+  });
+  it("restores the current mixer gain after overlapping cinematic ducks", () => {
+    const sound = createSound();
+    const manager = new RpgMusicManager({ getSound: vi.fn(), createSound: () => sound });
+    manager.setMap("map.mp3");
+    const release = manager.duck(.15);
+    expect(sound.volume()).toBe(.15);
+    manager.setOutputGain(.5);
+    expect(sound.volume()).toBe(.075);
+    const releaseOther = manager.duck(.1);
+    release();
+    expect(sound.volume()).toBe(.05);
+    releaseOther();
+    releaseOther();
+    expect(sound.volume()).toBe(.5);
+    expect(sound.stop).not.toHaveBeenCalled();
+  });
   afterEach(() => vi.useRealTimers());
 
   it("fades map music out before starting one stable override", async () => {

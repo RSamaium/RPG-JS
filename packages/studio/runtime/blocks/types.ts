@@ -1091,6 +1091,7 @@ export interface CommentParams {
  * ```
  */
 export interface BlockParamsMap {
+  show_cinematic: { video: string; allowSkip?: boolean; bgm?: 'duck' | 'pause'; preload?: boolean };
   // Message & Dialog
   show_text: ShowTextParams;
   show_input: ShowInputParams;

@@ -1,5 +1,9 @@
 # Media API
 
+## Cinematic event blocks
+
+`show_cinematic` accepts `video` (required media ID), `allowSkip` (default `true`; false hides Skip), `bgm` (`"duck"` by default, or `"pause"` to pause/resume music), and `preload` (default `true`, best-effort buffering of up to three videos on map entry). Adjacent cinematic blocks without children share one blocking overlay and retain per-video options. Other blocks end the playlist. Errors remain dismissible with skipping disabled. Old `{ video }` blocks remain compatible.
+
 Use this reference for browsing media, updating metadata, replacing files, or calling AI media generation endpoints.
 
 ## Search first
@@ -134,7 +138,7 @@ curl -sS -X POST "$BASE_URL/api/media/replace/$MEDIA_ID" \
 
 Images and videos accept `metadata.referenceImages`, an ordered list of up to 9 image URLs or base64 data URIs. Do not also send `referenceImage`, even with an empty list. The old singular field remains supported for existing integrations. Empty lists mean no reference. All images are passed to the image provider; they are not assembled into a collage. Internal reference payloads are omitted from persisted media metadata.
 
-For `type: "video"`, set `metadata.duration` to a whole number from 5 to 10 (default 5). Estimate and execution charge 4 credits per second, including reference-to-video (20–40 credits). With the new nonempty list, Studio uses `minimax/h3-max/reference-to-video`; without references it uses `minimax/h3-max-turbo/text-to-video`. Legacy `referenceImage` retains Turbo image-to-video and its 16:9 crop. New references are context images and are not cropped. Refer to them in prompt order as Image 1, Image 2, etc. The output is 768P, 16:9, native audio, at most 30 MB; persisted metadata includes the requested duration and actual model.
+For `type: "video"`, set `metadata.duration` to a whole number from 5 to 15 (default 5). Estimate and execution charge 8 credits per second, including reference-to-video (40–120 credits). With the new nonempty list, Studio uses `minimax/h3-max/reference-to-video`; without references it uses `minimax/h3-max-turbo/text-to-video`. Legacy `referenceImage` retains Turbo image-to-video and its 16:9 crop. New references are context images and are not cropped. Refer to them in prompt order as Image 1, Image 2, etc. The output is 768P, 16:9, native audio, at most 30 MB; persisted metadata includes the requested duration and actual model.
 
 Read a library record using `GET /api/media/data/:id`, then obtain its image bytes with `GET /api/media/<fileName>`. Read a project's existing map thumbnail with `GET /api/maps/:mapId/thumbnail` (404 when absent or outside the project). Encode these image bytes as data URIs when the provider cannot access their authenticated URLs. Never send map IDs as image URLs. `referenceImageFiles` is internal and cannot be supplied in public requests.
 
@@ -160,3 +164,12 @@ Image and video requests accept optional `metadata.mapReferenceIndices`: unique,
 Studio calculates these indices from the Maps source when sending the request, recalculating them after references are removed. Other API clients must supply the indices themselves. Their order and meaning survive temporary image storage and workflow retries.
 
 The provider prompt treats maps as environment context (buildings, materials, vegetation, colors, atmosphere, and spatial organization), rather than a required overhead camera or tile-sheet presentation. It honors explicitly requested camera perspectives, including top-down, and the technical layout/perspective required by the asset type. Full-scene images and videos default to an immersive character-eye-level view only when no camera perspective is requested. The user's original prompt is unchanged; this guidance is added only to the provider prompt.
+
+For video, `metadata.style: "reference"` preserves the supplied images' rendering technique, linework, pixel treatment, textures, palette and detail. It requires at least one reference image (the new list or legacy singular field). This does not copy the reference camera: map perspective guidance still applies. New map cutscenes in Studio default to this option; explicit preset styles remain available.
+
+
+### Studio actor references
+
+Generated or imported video media can be played with the `show_cinematic` event block: `{ video: "media-id" }`. The RPGJS Studio client resolves that media id and displays the cinematic GUI. The event waits until playback ends, is skipped, or an error is dismissed; movement is blocked only for the triggering player. The video is not linked to a map. See the RPGJS cinematic guide for player controls and recovery behavior.
+
+Actor selection loads the project's actors on demand, prefers each actor's faceset, and otherwise uses its character graphic. Actors without a linked image cannot be selected. These images become ordinary ordered references after map regions, share the existing nine-image total/eight-additional-image limits, and may be removed individually. Actor ids are not added to the provider request. Generated videos remain available in the media library and are not linked to the source map.

@@ -1,0 +1,8 @@
+<CinematicComponent data={data} resolveSource={resolveSource} onFinish={onFinish} guiOpenId={guiOpenId} />
+
+<script>
+  import { CinematicComponent } from "@rpgjs/client";
+  import { resolveStudioCinematicSource } from "../cinematic";
+  const { data, onFinish, guiOpenId } = defineProps();
+  const resolveSource = value => resolveStudioCinematicSource(value?.mediaId);
+</script>

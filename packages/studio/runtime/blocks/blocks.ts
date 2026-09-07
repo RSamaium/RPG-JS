@@ -1,6 +1,7 @@
 import type { BlockDefinition, AnyBlockDefinition, BlockType } from './types';
 import {
   schemaShowText,
+  schemaShowCinematic,
   schemaShowInput,
   schemaShowChoices,
   schemaShowNotification,
@@ -64,6 +65,7 @@ import {
  * ```
  */
 export const defaultBlocks = [
+    schemaShowCinematic,
     // Message & Dialog Blocks
     schemaShowText,
 

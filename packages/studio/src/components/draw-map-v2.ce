@@ -30,6 +30,7 @@
   <script>
     import { computed, effect, mount, signal, tick, untracked } from 'canvasengine'
     import { Weather } from "@canvasengine/presets";
+    import { preloadMapCinematics } from '../cinematic';
     import { RpgClientEngine, inject } from "@rpgjs/client";
     import { Container as PixiContainer, Graphics } from "pixi.js";
     import StudioTerrainMap from '../map-renderer/components/studio-terrain-map.ce'
@@ -183,7 +184,9 @@
     })
 
     mount(() => {
+      const releaseCinematics = preloadMapCinematics([data()?.events, data()?.commonEvents]);
       return () => {
+        releaseCinematics();
         terrainWallOcclusionSerial += 1
         terrainWallShadowSerial += 1
         studioElementRenderSerial += 1

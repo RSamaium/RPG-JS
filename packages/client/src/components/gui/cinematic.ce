@@ -1,0 +1,48 @@
+<DOMContainer width="100%" height="100%">
+  <DOMElement element={{ value: playback.element }} />
+</DOMContainer>
+
+<script>
+  import { mount } from "canvasengine";
+  import { inject } from "../../core/inject";
+  import { RpgClientEngine } from "../../RpgClientEngine";
+  import { RpgGui } from "../../Gui/Gui";
+  import { CinematicPlayback } from "../../Gui/CinematicPlayback";
+
+  const { data, resolveSource, onFinish, guiOpenId } = defineProps();
+  const engine = inject(RpgClientEngine);
+  const gui = inject(RpgGui);
+  const { t } = engine.i18n();
+  const opening = guiOpenId;
+  let restoreMusic = () => {};
+  const clips = [data(), ...(data()?.clips ?? [])];
+  const playback = new CinematicPlayback({
+    source: () => resolveSource ? resolveSource(data()) : data()?.src,
+    allowSkip: data()?.allowSkip !== false,
+    volume: engine.audio.getVolume("master"),
+    translate: t,
+    clips: clips.map(clip => ({
+      source: () => resolveSource ? resolveSource(clip) : clip?.src,
+      allowSkip: clip?.allowSkip !== false,
+      bgm: clip?.bgm ?? 'duck',
+    })),
+    beforeClip: bgm => {
+      const previous = restoreMusic;
+      restoreMusic = bgm === 'pause' ? engine.music.pause() : engine.music.duck(0.15);
+      previous();
+    },
+    finish: result => onFinish?.(result, opening),
+  });
+
+  mount(() => {
+    const hud = gui.get("hud");
+    const hudVisible = hud?.display();
+    if (hudVisible) gui.hide("hud");
+    void playback.start();
+    return () => {
+      playback.dispose();
+      restoreMusic();
+      if (hudVisible && gui.get("hud") === hud) gui.display("hud", hud.data());
+    };
+  });
+</script>
