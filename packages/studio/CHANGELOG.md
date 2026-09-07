@@ -1,5 +1,21 @@
 # @rpgjs/studio
 
+## 5.0.0-beta.37
+
+### Patch Changes
+
+- e7b12ab: Add cinematic video playback through the existing GUI lifecycle, with aspect-preserving presentation, fades, accessible skip controls, autoplay recovery, temporary music attenuation, and error recovery. Register the Studio show_cinematic block and resolve its media through the game data provider without adding map-media associations.
+
+  Support per-clip skip/music options, map video preloading and consecutive video playlists. Guard overlapping player event interactions and let gameplay release movement keys during cinematics.
+
+  Skip immediately on click, tap or Escape, honoring non-skippable clips and ignoring key repeats and late responses from skipped clips.
+
+- Updated dependencies [e7b12ab]
+  - @rpgjs/client@5.0.0-beta.35
+  - @rpgjs/action-battle@5.0.0-beta.35
+  - @rpgjs/server@5.0.0-beta.35
+  - @rpgjs/vite@5.0.0-beta.35
+
 ## 5.0.0-beta.36
 
 ### Patch Changes
