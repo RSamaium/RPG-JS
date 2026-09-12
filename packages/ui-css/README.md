@@ -1,263 +1,92 @@
 # @rpgjs/ui-css
 
-`@rpgjs/ui-css` is the shared CSS layer for RPGJS interfaces.
+Reusable RPG GUI styles for HTML, CanvasEngine DOMContainer and Vue.
+The default crystal theme provides navy surfaces, silver edges, cyan actions
+and gold selection. The pixel theme uses the same markup.
 
-It provides:
-
-- generic RPG UI primitives
-- a reusable HUD / dock / minimap / shop layer
-- a default theme you can use as-is or override with CSS variables
-
-## Entry Points
-
-- `@rpgjs/ui-css/index.css`
-  Includes `reset.css`, `tokens.css`, animations, primitives, HUD and shop styles.
-- `@rpgjs/ui-css/theme-default.css`
-  Opinionated default theme with a modern glass-RPG look.
-- `@rpgjs/ui-css/theme-pixel.css`
-  Alternate high-contrast pixel theme using the exact same component markup.
-- `@rpgjs/ui-css/tokens.css`
-  Only the design tokens, useful if you want to build your own theme.
-- `@rpgjs/ui-css/reset.css`
-  Reset only.
-
-## Usage
-
-### With a bundler
+## Install and use
 
 ```css
 @import "@rpgjs/ui-css/index.css";
 @import "@rpgjs/ui-css/theme-default.css";
+/* Your overrides go last. */
 ```
 
-Swap only the second import to use the pixel theme:
-
-```css
-@import "@rpgjs/ui-css/index.css";
-@import "@rpgjs/ui-css/theme-pixel.css";
-```
-
-### From static HTML
+For widgets embedded in a normal page, use `components.css` instead of
+`index.css` to omit the full-screen game reset.
 
 ```html
-<link rel="stylesheet" href="./node_modules/@rpgjs/ui-css/index.css">
-<link rel="stylesheet" href="./node_modules/@rpgjs/ui-css/theme-default.css">
-```
-
-If you use the default theme, load the default font too:
-
-```html
-<link
-  rel="stylesheet"
-  href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap"
->
-```
-
-### App shell
-
-Apply `rpg-ui-app` on `body` or on a wrapper to get the full-screen themed background:
-
-```html
-<body class="rpg-ui-app">
-  <div id="rpg"></div>
-</body>
-```
-
-## What Is Included
-
-### Core primitives
-
-- `.rpg-ui-panel`, `.rpg-ui-window`
-- `.rpg-ui-btn`
-- `.rpg-ui-menu`, `.rpg-ui-menu-item`, `.rpg-ui-menu-tab`
-- `.rpg-ui-dialog`
-- `.rpg-ui-bar`
-- `.rpg-ui-save-load`
-- `.rpg-ui-toast`, `.rpg-ui-notification`
-- `.rpg-ui-title-screen`
-- `.rpg-ui-gameover-screen`
-- `.rpg-ui-chat`, `.rpg-ui-chat-log`, `.rpg-ui-chat-message`
-
-### Generic in-game layout
-
-- `.rpg-hud` / `.rpg-ui-hud`
-- `.rpg-avatar`, `.rpg-avatar-face`, `.rpg-avatar-level`
-- `.rpg-status-bars`, `.rpg-bar-container`, `.rpg-bar-fill`, `.rpg-bar-text`
-- `.glass-panel` / `.rpg-ui-glass-panel`
-- `.rpg-item-dock`, `.rpg-item-slot`, `.rpg-item-qty`
-- `.rpg-fab`
-- `.rpg-minimap`
-
-### Shop UI
-
-- `.rpg-shop-container`
-- `.rpg-shop-tabs`, `.rpg-shop-tab`
-- `.rpg-shop-card`, `.rpg-shop-card-icon`, `.rpg-shop-card-tag`
-- `.rpg-shop-details`
-- `.rpg-shop-modal`
-- `.rpg-shop-btn`
-
-## Minimal Example
-
-```html
-<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap"
-    >
-    <link rel="stylesheet" href="./node_modules/@rpgjs/ui-css/index.css">
-    <link rel="stylesheet" href="./node_modules/@rpgjs/ui-css/theme-default.css">
-  </head>
-  <body class="rpg-ui-app">
-    <div class="rpg-hud">
-      <div class="rpg-avatar">
-        🧙
-        <div class="rpg-avatar-level">42</div>
-      </div>
-
-      <div class="rpg-status-bars">
-        <div class="rpg-bar-container">
-          <span class="rpg-bar-text">HP 2450 / 3200</span>
-          <div class="rpg-bar-fill health" style="width: 76%"></div>
-        </div>
-        <div class="rpg-bar-container">
-          <span class="rpg-bar-text">SP 1200 / 2000</span>
-          <div class="rpg-bar-fill mana" style="width: 60%"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="rpg-item-dock glass-panel">
-      <div class="rpg-item-slot active">⚔️</div>
-      <div class="rpg-item-slot">🧪<span class="rpg-item-qty">5</span></div>
-      <div class="rpg-item-slot">🎒</div>
-    </div>
-
-    <div class="rpg-fab">⚔️</div>
-  </body>
-</html>
-```
-
-## Shop Example
-
-```html
-<div class="rpg-shop-container">
-  <div class="rpg-shop-header">
-    <div class="rpg-shop-merchant">
-      <div class="rpg-shop-merchant-avatar">🧝</div>
-      <div class="rpg-shop-merchant-info">
-        <p>Welcome to my shop.</p>
-      </div>
-    </div>
-    <div class="rpg-shop-gold">1240 G</div>
+<section class="rpg-ui-panel rpg-ui-stack">
+  <h2>Crystal sword</h2>
+  <div class="rpg-ui-row">
+    <button class="rpg-ui-btn" data-variant="primary">Equip</button>
+    <button class="rpg-ui-btn" data-variant="secondary">Cancel</button>
   </div>
-
-  <div class="rpg-shop-body">
-    <div class="rpg-shop-left">
-      <div class="rpg-shop-tabs">
-        <div class="rpg-shop-tab active">Weapons</div>
-        <div class="rpg-shop-tab">Armor</div>
-      </div>
-
-      <div class="rpg-shop-content">
-        <div class="rpg-shop-grid">
-          <div class="rpg-shop-card selected" tabindex="0">
-            <div class="rpg-shop-card-icon">🗡️</div>
-            <div class="rpg-shop-card-name">Crystal Blade</div>
-            <div class="rpg-shop-card-price">320 G</div>
-            <div class="rpg-shop-card-tag">Equipped</div>
-          </div>
-        </div>
-
-        <div class="rpg-shop-details">
-          <div class="rpg-shop-details-header">
-            <div class="rpg-shop-details-icon">🗡️</div>
-            <h2>Crystal Blade</h2>
-          </div>
-          <div class="rpg-shop-details-desc">
-            A light blade forged for fast melee attacks.
-          </div>
-          <button class="rpg-shop-btn">Buy</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+</section>
 ```
 
-## Theming
+Use native button `disabled` for unavailable actions, `aria-pressed` for
+toggles, and `aria-busy` together with `disabled` for loading.
+Variants: primary, secondary, ghost, danger, success and warning.
+Sizes: small, medium and large. Hover, keyboard focus and reduced motion are
+handled by the stylesheet.
 
-`index.css` already ships with default tokens. If you import `theme-default.css`, those tokens are overridden by the default RPG theme.
-
-To customize the look, override the variables you need globally or locally.
-
-### Global override
+## Customize
 
 ```css
 :root {
-  --rpg-ui-accent: #7c3aed;
-  --rpg-ui-accent-hover: #a78bfa;
-  --rpg-ui-body-background:
-    radial-gradient(circle at top, rgba(124, 58, 237, 0.35), transparent 38%),
-    linear-gradient(180deg, #120f1e 0%, #09070f 100%);
-  --rpg-ui-surface-overlay-strong: rgba(18, 12, 30, 0.88);
+  --rpg-ui-accent: #c5a8ff;
+  --rpg-ui-selection: #f3cd87;
+  --rpg-ui-font: system-ui, sans-serif;
+  --rpg-ui-control-radius: 0px;
+  --rpg-ui-ornament-opacity: 0;
 }
 ```
 
-### Local override
+For a scoped theme, set `data-rpg-theme="my-theme"` on a wrapper and declare
+its palette on that selector. Each boundary resets tokens and resolves aliases
+locally. Built-in boundary classes are `rpg-ui-theme-default` and
+`rpg-ui-theme-pixel`. Import both theme files to use them side by side; the last
+import controls the global default.
 
-```css
-.my-combat-ui {
-  --rpg-ui-hud-top: 12px;
-  --rpg-ui-hud-left: 12px;
-  --rpg-ui-dock-bottom: 20px;
-  --rpg-ui-dock-slot-size: 72px;
-  --rpg-ui-fab-size: 92px;
-}
+The new default replaces the old glass appearance; existing imports, GUI IDs and
+CSS classes remain valid. Fredoka and remote fonts are no longer required.
+The library supplies interface materials, not character portraits or game scenery.
+
+## Catalogue and documentation
+
+- [Public Storybook](https://rsamaium.github.io/RPG-JS/) — foundations, elements,
+  states, complete compositions and three-theme comparison, deployed from v5.
+- [Theming guide](../../docs/gui/theming.md) — imports, tokens, local themes,
+  buttons, recipes, CanvasEngine/Vue integration and migration.
+- [Mobile controls](../../docs/gui/mobile.md) — native canvas control configuration.
+
+From the repository root:
+
+```sh
+pnpm storybook
+pnpm build-storybook
+pnpm --filter @rpgjs/ui-css test
+pnpm --filter @rpgjs/ui-css exec playwright install chromium
+pnpm --filter @rpgjs/ui-css test:browser
 ```
 
-## Useful Tokens
+The browser suite requires a freshly built Storybook. Compositions are HTML
+presentation fixtures; the game owns their behavior and translated labels.
+The catalogue uses the published component CSS, with only page framing in its
+preview stylesheet.
 
-### Scene
+## Entry points
 
-- `--rpg-ui-body-bg`
-- `--rpg-ui-body-background`
-- `--rpg-ui-backdrop-blur`
+| Import              | Contents                                                    |
+| ------------------- | ----------------------------------------------------------- |
+| `index.css`         | Full-screen game reset, tokens, primitives and compositions |
+| `components.css`    | Same components without the page reset                      |
+| `tokens.css`        | Base design values only                                     |
+| `reset.css`         | Legacy full-screen game reset only                          |
+| `theme-default.css` | Crystal palette                                             |
+| `theme-pixel.css`   | Pixel palette                                               |
 
-### Core colors
-
-- `--rpg-ui-surface`
-- `--rpg-ui-surface-overlay`
-- `--rpg-ui-surface-overlay-strong`
-- `--rpg-ui-border`
-- `--rpg-ui-text`
-- `--rpg-ui-text-muted`
-- `--rpg-ui-accent`
-- `--rpg-ui-accent-hover`
-- `--rpg-ui-accent-active`
-
-### RPG bars
-
-- `--rpg-ui-health-gradient`
-- `--rpg-ui-mana-gradient`
-- `--rpg-ui-xp-gradient`
-
-### HUD / dock
-
-- `--rpg-ui-hud-top`
-- `--rpg-ui-hud-left`
-- `--rpg-ui-avatar-size`
-- `--rpg-ui-status-bars-width`
-- `--rpg-ui-dock-slot-size`
-- `--rpg-ui-fab-size`
-- `--rpg-ui-minimap-size`
-
-## Notes
-
-- If you want a completely different aesthetic, import only `index.css` and override the tokens yourself.
-- The default theme is intentionally more opinionated than the base primitives.
-- The RPGJS samples now consume this package directly instead of maintaining duplicated `rpg.css` files.
+Existing HUD, shop and `--rpg-hotbar-*` customization remains supported.
+Native mobile canvas controls read the palette from the game root; explicit
+`withMobile()` visual options take precedence.

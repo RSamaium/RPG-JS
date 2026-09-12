@@ -96,6 +96,7 @@
             "group": "GUI",
             "pages": [
               "gui/index",
+              "gui/theming",
               "gui/title-screen",
               "gui/character-select",
               "gui/dialog-box",

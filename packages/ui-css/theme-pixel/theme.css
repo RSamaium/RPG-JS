@@ -20,6 +20,7 @@
   --rpg-ui-danger: #e85d75;
   --rpg-ui-info: #62a8ea;
   --rpg-ui-font: "Courier New", ui-monospace, monospace;
+  --rpg-ui-font-display: "Courier New", ui-monospace, monospace;
   --rpg-ui-font-mono: "Courier New", ui-monospace, monospace;
   --rpg-ui-font-weight: 700;
   --rpg-ui-font-weight-bold: 900;
@@ -40,24 +41,4 @@
   --rpg-ui-focus-color: #fff1c7;
   --rpg-ui-focus-width: 3px;
   --rpg-ui-chat-divider: 2px dashed #6b5b7e;
-}
-
-.rpg-ui-theme-pixel :is(.rpg-ui-panel, .rpg-ui-window, .rpg-ui-dialog, .rpg-ui-chat),
-:root :is(.rpg-ui-panel, .rpg-ui-window, .rpg-ui-dialog, .rpg-ui-chat) {
-  border-style: solid;
-  image-rendering: pixelated;
-  text-shadow: 2px 2px 0 #09070f;
-}
-
-.rpg-ui-theme-pixel :is(.rpg-ui-btn, .rpg-ui-button),
-:root :is(.rpg-ui-btn, .rpg-ui-button) {
-  border-radius: 0;
-  text-transform: uppercase;
-  box-shadow: 3px 3px 0 #09070f;
-}
-
-.rpg-ui-theme-pixel :is(.rpg-ui-btn, .rpg-ui-button):active,
-:root :is(.rpg-ui-btn, .rpg-ui-button):active {
-  transform: translate(2px, 2px);
-  box-shadow: 1px 1px 0 #09070f;
 }

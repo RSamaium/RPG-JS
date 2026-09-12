@@ -36,12 +36,24 @@
 </Container>
 
 <script>
-    import { Button, Joystick, effect, computed } from 'canvasengine'
+    import { Button, Joystick, effect, computed, signal, mount } from 'canvasengine'
+    import { readMobilePalette } from './theme'
     import { inject } from '../../../core/inject'
     import { RpgClientEngine } from '../../../RpgClientEngine'
 
     const { data } = defineProps()
     const engine = inject(RpgClientEngine)
+    const themeScope = document.querySelector('#rpg') || document.documentElement
+    const palette = signal(readMobilePalette(themeScope))
+    mount(() => {
+        const refresh = () => palette.set(readMobilePalette(themeScope))
+        refresh()
+        const observer = new MutationObserver(refresh)
+        for (let node = themeScope; node; node = node.parentElement) {
+            observer.observe(node, { attributes: true, attributeFilter: ['class', 'style', 'data-rpg-theme'] })
+        }
+        return () => observer.disconnect()
+    })
     const controlsInstance = engine.activeKeyboardControls
     const options = computed(() => data?.() || {})
     const layout = computed(() => options().layout || {})
@@ -199,7 +211,22 @@
     const buttonProps = (name) => {
         const option = readObjectOption(readButtonOption(name))
         const { enabled, component, container, ...props } = option
-        const defaultProps = defaultButtonProps[name]
+        const colors = palette()
+        const original = defaultButtonProps[name]
+        const defaultProps = {
+            ...original,
+            style: {
+                ...original.style,
+                backgroundColor: {
+                    normal: colors.surface,
+                    hover: colors.hover,
+                    pressed: colors.background,
+                    disabled: colors.background
+                },
+                text: { ...original.style.text, color: colors.text },
+                border: { ...original.style.border, color: name === 'heavy' ? colors.danger : name === 'action' ? colors.accent : colors.border }
+            }
+        }
         return {
             ...defaultProps,
             ...props,
@@ -220,8 +247,8 @@
         const joystickOptions = readObjectOption(joystick())
         const { component, moveInterval, threshold, ...props } = joystickOptions
         const defaultProps = {
-            outerColor: "#d7e7ff",
-            innerColor: "#ffffff",
+            outerColor: palette().surface,
+            innerColor: palette().accent,
             scale: 0.82,
             outerScale: { x: 0.86, y: 0.86 },
             innerScale: { x: 0.88, y: 0.88 },
