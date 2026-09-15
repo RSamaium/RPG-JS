@@ -17,8 +17,7 @@
           <div
             class="rpg-ui-hotbar-track rpg-hotbar-track"
             style={{
-              gridTemplateColumns: gridColumns,
-              transform: mobileTransform
+              gridTemplateColumns: gridColumns
             }}
           >
             @for ((slot, index) of visibleSlots()) {
@@ -427,7 +426,11 @@
 
     .rpg-hotbar-rail {
       width: 100%;
-      overflow: hidden;
+      overflow-x: auto;
+      overflow-y: hidden;
+      overscroll-behavior-x: contain;
+      scrollbar-width: thin;
+      scroll-snap-type: x proximity;
     }
 
     .rpg-hotbar-track {
@@ -438,6 +441,8 @@
     }
 
     .rpg-hotbar-slot {
+      flex-shrink: 0;
+      scroll-snap-align: start;
       width: var(--rpg-hotbar-mobile-slot-size, 54px);
       min-width: var(--rpg-hotbar-mobile-slot-size, 54px);
       height: var(--rpg-hotbar-mobile-slot-size, 54px);
@@ -537,11 +542,6 @@
     feedback().slot === index ? feedback().status : "";
   const gridColumns = computed(() =>
     `repeat(${visibleSlots().length}, minmax(0, 1fr))`
-  );
-  const mobileTransform = computed(() =>
-    viewportWidth() <= 640
-      ? `translateX(calc(50vw - 29px - ${Math.max(0, activeSlot()) * 61}px))`
-      : "none"
   );
   const cooldownRemaining = (slot) =>
     Math.max(0, Number(slot?.readyAt ?? 0) - clock());

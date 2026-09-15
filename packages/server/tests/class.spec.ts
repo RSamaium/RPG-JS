@@ -166,6 +166,20 @@ describe("Class Manager - setClass", () => {
     expect(onSetSpy).toHaveBeenCalledWith(player);
   });
 
+  test("reapplying and increasing a level does not relearn class skills", () => {
+    const spark = { id: "join-spark", name: "Spark", _type: "skill" as const };
+    const flare = { id: "join-flare", name: "Flare", _type: "skill" as const };
+    player.setClass({ id: "join-mage", name: "Mage", skillsToLearn: [
+      { level: 1, skill: spark }, { level: 2, skill: flare },
+    ] });
+    expect(player.getSkill(spark)).toBeTruthy();
+    expect(() => { player.level = 1; }).not.toThrow();
+    expect(() => { player.level = 2; }).not.toThrow();
+    expect(player.getSkill(flare)).toBeTruthy();
+    expect(() => { player.level = 1; player.level = 2; }).not.toThrow();
+    expect(player.skills().filter(skill => skill.id() === "join-spark")).toHaveLength(1);
+  });
+
   test("restores plain-object classes from a runtime database", () => {
     player.getCurrentMap()?.addInDatabase("studio-default-class", {
       id: "studio-default-class",

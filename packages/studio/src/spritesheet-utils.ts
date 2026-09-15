@@ -219,6 +219,7 @@ export const createSpriteSheetObject = async (
  * Resolves spritesheet by fetching media data from the API.
  */
 export const resolveSpritesheet = async (id: string): Promise<any> => {
+  if (typeof id !== "string" || !id.trim()) return null;
   try {
     const rawId = id.startsWith('#') ? id.slice(1) : id;
     const normalizedId = rawId.startsWith('spritesheet_') ? rawId.slice('spritesheet_'.length) : rawId;

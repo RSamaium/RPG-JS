@@ -1,8 +1,10 @@
 <DOMContainer width="100%" height="100%" controls={menuControls}>
-    <div class="rpg-ui-main-menu rpg-anim-fade-in" click={closeMenuFromPointer}>
+    <div class="rpg-ui-main-menu rpg-anim-fade-in" data-closing={transition.closing() ? "true" : "false"} click={closeMenuFromPointer}>
         <div class="rpg-ui-main-menu-backdrop"></div>
-        <button class="rpg-ui-close-button" type="button" title="Close" aria-label="Close menu" click={closeMenuFromPointer}>x</button>
         <div class="rpg-ui-main-menu-layout" click={stopEvent}>
+            @if (!saveOverlay() && !hotbarAssignmentOpen()) {
+                <button class="rpg-ui-close-button" type="button" aria-label={t("rpg.ui.close")} click={closeMenuFromPointer}>×</button>
+            }
             <div class="rpg-ui-main-menu-left rpg-ui-menu rpg-ui-panel">
                 <div class="rpg-ui-menu-header">{t("rpg.menu.title")}</div>
                 <div class="rpg-ui-main-menu-list">
@@ -20,7 +22,20 @@
             <div class="rpg-ui-main-menu-right">
                 @if (view() === "menu") {
                     <div class="rpg-ui-panel">
-                        <div class="rpg-ui-main-menu-section-title">{t("rpg.menu.status")}</div>
+                        <div class="rpg-ui-dossier">
+                            <div class="rpg-ui-dossier-portrait">
+                                @if (heroGraphic()) {
+                                    <DOMSprite sheet={heroSheet()} playing="stand" width="100px" height="110px" objectFit="contain" />
+                                } @else {
+                                    <span class="rpg-ui-fallback-icon" aria-hidden="true">◇</span>
+                                }
+                            </div>
+                            <div>
+                                <div class="rpg-ui-eyebrow">{t("rpg.menu.status")}</div>
+                                <h1 class="rpg-ui-dossier-name">{heroName()}</h1>
+                                <div class="rpg-ui-dossier-caption">{t("rpg.menu.level") + ' ' + level()}</div>
+                            </div>
+                        </div>
                         <div class="rpg-ui-main-menu-status-card">
                             <div class="rpg-ui-main-menu-status-block">
                                 <div class="rpg-ui-main-menu-status-label">{t("rpg.menu.level")}</div>
@@ -31,13 +46,13 @@
                                 <div class="rpg-ui-main-menu-status-value">{gold()}</div>
                             </div>
                             <div class="rpg-ui-main-menu-status-block">
-                                <div class="rpg-ui-main-menu-status-label">HP {hp()}/{hpMax()}</div>
+                                <div class="rpg-ui-main-menu-status-label">HP {hp() ?? 0}/{hpMax() ?? 0}</div>
                                 <div class="rpg-ui-main-menu-status-bar">
                                     <div class="rpg-ui-main-menu-status-bar-fill hp" style={{width: hpPercent}}></div>
                                 </div>
                             </div>
                             <div class="rpg-ui-main-menu-status-block">
-                                <div class="rpg-ui-main-menu-status-label">SP {sp()}/{spMax()}</div>
+                                <div class="rpg-ui-main-menu-status-label">SP {sp() ?? 0}/{spMax() ?? 0}</div>
                                 <div class="rpg-ui-main-menu-status-bar">
                                     <div class="rpg-ui-main-menu-status-bar-fill sp" style={{width: spPercent}}></div>
                                 </div>
@@ -124,10 +139,14 @@
     import ExitMenu from "./exit-menu.ce";
     import HotbarSlotPicker from "./hotbar-slot-picker.ce";
     import { getEntityProp } from "../../../utils/getEntityProp";
-    import { delay } from "@rpgjs/common";
+    import { delay, Direction } from "@rpgjs/common";
     import { getKeyboardControlBind } from "../../../services/actionInput";
 
+    import { movementPreferences, refreshKeyboardBindings } from "../../../services/movementPreferences";
+    import { guiTransition, lockGuiInput } from "../lifecycle";
     const engine = inject(RpgClientEngine);
+    const transition = guiTransition();
+    const releaseInput = lockGuiInput(engine);
     const { t } = engine.i18n();
     const currentPlayer = engine.scene.currentPlayer;
     const keyboardControls = engine.globalConfig.keyboardControls;
@@ -136,6 +155,7 @@
     const { menus, items, skills, equips, saveLoad } = data();
 
     const defaultMenus = [
+        { id: "status", label: t("rpg.menu.status") },
         { id: "items", label: t("rpg.menu.items") },
         { id: "skills", label: t("rpg.menu.skills") },
         { id: "equip", label: t("rpg.menu.equip") },
@@ -145,7 +165,7 @@
     ];
 
     const menuEntries = computed(() => {
-        if (menus && Array.isArray(menus) && menus.length) return menus;
+        if (menus && Array.isArray(menus) && menus.length) return menus.map(entry => ({ ...entry, label: entry.label?.startsWith("rpg.") ? t(entry.label) : entry.label }));
         return defaultMenus;
     });
 
@@ -223,7 +243,7 @@
             view.set("exit");
             return;
         }
-        view.set(entry.id);
+        view.set(entry.id === "status" ? "menu" : entry.id);
     };
 
     const goBack = () => {
@@ -234,6 +254,8 @@
         }
         delay(() => {
             view.set("menu");
+            const statusIndex = menuEntries().findIndex(entry => entry.id === "status");
+            if (statusIndex >= 0) selectedMenu.set(statusIndex);
         });
     };
 
@@ -289,7 +311,7 @@
             return;
         }
         engine.playUiSound("close");
-        onFinish();
+        transition.finish(() => onFinish());
     };
 
     const closeMenuFromPointer = (event) => {
@@ -308,6 +330,9 @@
     const level = getEntityProp(currentPlayer, "level");
     const exp = getEntityProp(currentPlayer, "exp");
     const gold = getEntityProp(currentPlayer, "gold");
+    const heroName = getEntityProp(currentPlayer, "name");
+    const heroGraphic = computed(() => currentPlayer()?.graphicsSignals?.()?.[0]);
+    const heroSheet = () => ({ definition: heroGraphic(), params: { direction: Direction.Down } });
     const expForNextlevel = computed(() => data().expForNextlevel || 0);
     const hpPercent = computed(() => {
         const max = hpMax() || 1;
@@ -332,7 +357,7 @@
             { label: "INT", value: data().playerStats.int },
             { label: "AGI", value: data().playerStats.agi }
         ]
-    }
+    });
 
     const menuControls = signal({
         up: {
@@ -384,18 +409,22 @@
     });
 
     mount((element) => {
+        const bindingsSubscription = effect(() => {
+            refreshKeyboardBindings(element.directives.controls, movementPreferences(engine).bindings());
+        }).subscription;
         engine.playUiSound("open");
         const inputLockToken = {};
-        const previousStopProcessingInput = engine.stopProcessingInput;
         const previousGamePause = engine.gamePause();
         engine.__rpgMainMenuInputLock = inputLockToken;
         engine.stopProcessingInput = true;
         engine.gamePause.set(true);
         return () => {
+            transition.dispose();
+            releaseInput();
+            bindingsSubscription.unsubscribe();
             delay(() => {
                 if (engine.__rpgMainMenuInputLock !== inputLockToken) return;
                 engine.__rpgMainMenuInputLock = undefined;
-                engine.stopProcessingInput = previousStopProcessingInput;
                 engine.gamePause.set(previousGamePause);
             });
         }

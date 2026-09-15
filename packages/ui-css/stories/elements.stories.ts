@@ -44,7 +44,7 @@ const meta: Meta = {
         args.selected +
         '" aria-busy="' +
         args.loading +
-        '"',
+        '"'
     ),
 };
 export default meta;
@@ -61,26 +61,44 @@ export const AllStates: StoryObj = {
             button("Selected", v, 'aria-pressed="true"') +
             button("Disabled", v, "disabled") +
             button("Loading", v, 'disabled aria-busy="true"') +
-            "</div>",
-        ),
+            "</div>"
+        )
       )
       .join("") +
     "</div></div>",
 };
 export const SizesAndIcons: StoryObj = {
   render: () =>
-    '<div class="rpg-ui-row">' +
+    '<div class="catalog-content"><header class="catalog-sheet-heading"><span class="rpg-ui-eyebrow">Crystal chronicles · Interaction system</span><h1>Every action, intentional.</h1><p class="rpg-ui-muted">Gilded metal, etched edges and a clear hierarchy of actions.</p></header><div class="catalog-button-sizes">' +
     ["small", "medium", "large"]
       .map(
         (size) =>
-          '<button class="rpg-ui-btn" data-variant="primary" data-size="' +
+          '<section class="rpg-ui-panel rpg-ui-stack"><span class="rpg-ui-eyebrow">' +
+          size +
+          ' action</span><div class="catalog-button-specimen"><button class="rpg-ui-btn" data-variant="primary" data-size="' +
           size +
           '">' +
           icon("sword") +
-          "Equip</button>",
+          'Equip</button></div><small class="rpg-ui-muted">' +
+          {
+            small: "Compact toolbars & secondary tasks",
+            medium: "The everyday action",
+            large: "The moment that matters",
+          }[size] +
+          "</small></section>"
       )
       .join("") +
-    "</div>",
+    '</div><div class="catalog-section">' +
+    panel(
+      "A language of choices",
+      '<div class="rpg-ui-row">' +
+        button("Begin journey", "primary") +
+        button("View equipment") +
+        button("Return", "ghost") +
+        button("Discard", "danger") +
+        "</div>"
+    ) +
+    "</div></div>",
 };
 export const LongLabel: StoryObj = {
   args: {

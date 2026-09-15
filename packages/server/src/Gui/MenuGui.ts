@@ -5,7 +5,7 @@ import { SaveLoadGui, SaveSlot } from './SaveLoadGui'
 import { resolveAutoSaveStrategy } from '../services/save'
 import { buildPlayerHotbarData } from './HotbarGui'
 
-export type MenuEntryId = 'items' | 'skills' | 'equip' | 'options' | 'save' | 'exit'
+export type MenuEntryId = 'status' | 'items' | 'skills' | 'equip' | 'options' | 'save' | 'exit'
 
 export interface MenuEntry {
     id: MenuEntryId
@@ -57,6 +57,7 @@ export class MenuGui extends Gui {
         this.player.initializeHotbar?.()
         const disabledSet = new Set(options.disabled || [])
         const defaultMenus: MenuEntry[] = [
+            { id: 'status', label: 'rpg.menu.status' },
             { id: 'items', label: 'Items' },
             { id: 'skills', label: 'Skills' },
             { id: 'equip', label: 'Equip' },

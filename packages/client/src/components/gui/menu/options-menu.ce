@@ -1,65 +1,109 @@
-<DOMContainer width="100%" height="100%" controls={controls}>
+<DOMContainer width="100%" height="100%">
     <div class="rpg-ui-menu-panel rpg-ui-panel">
         <div class="rpg-ui-menu-panel-header">{t("rpg.menu.options")}</div>
-        <div class="rpg-ui-menu-panel-body">
-            <div class="rpg-ui-menu-panel-details">
+        <div class="rpg-ui-menu-panel-body rpg-ui-options">
+            <section class="rpg-ui-option-section">
+                <div class="rpg-ui-eyebrow">{t("rpg.controls.title")}</div>
+                <h2>{t("rpg.controls.movement")}</h2>
+                <p>{t("rpg.controls.help")}</p>
+                <div class="rpg-ui-keybindings">
+                    @for (direction of configurableControls) {
+                        <button type="button" class="rpg-ui-keybinding" class={{active: listening() === direction}} click={listen(direction)}>
+                            <span>{t("rpg.controls." + direction)}</span>
+                            <kbd>{listening() === direction ? "…" : keyLabel(preferences.bindings()[direction])}</kbd>
+                        </button>
+                    }
+                </div>
+                <p class="rpg-ui-option-feedback" role="status" aria-live="polite">{t(message())}</p>
+                @if (listening()) {
+                    <button type="button" class="rpg-ui-btn" click={cancelCapture}>{t("rpg.controls.cancel")}</button>
+                }
+                <button type="button" class="rpg-ui-btn" data-variant="secondary" click={resetBindings}>{t("rpg.controls.reset")}</button>
+            </section>
+            <section class="rpg-ui-option-section">
                 <div class="rpg-ui-menu-panel-details-title">{t("rpg.audio.title")}</div>
                 <div class="rpg-ui-menu-panel-details-desc">{t("rpg.audio.help")}</div>
                 @for (channel of channels) {
                     <label class="rpg-ui-audio-option">
                         <span>{t(channel.label)}</span>
-                        <span>{percent(channel.id)}%</span>
+                        <span>{percentages()[channel.id]}%</span>
                         <input
                             class="rpg-ui-input"
                             type="range"
                             min="0"
                             max="100"
                             step="1"
-                            value={percent(channel.id)}
+                            value={channel.value}
                             aria-label={t(channel.label)}
                             input={changeVolume(channel.id)}
                         />
                     </label>
                 }
-            </div>
+            </section>
         </div>
     </div>
 </DOMContainer>
 
 <script>
-    import { signal } from "canvasengine";
+    import { signal, computed, mount } from "canvasengine";
+    import { configurableControls, movementPreferences } from "../../../services/movementPreferences";
     import { inject } from "../../../core/inject";
     import { RpgClientEngine } from "../../../RpgClientEngine";
 
     const engine = inject(RpgClientEngine);
     const { t } = engine.i18n();
-    const keyboardControls = engine.globalConfig.keyboardControls;
-    const { onBack } = defineProps();
+    const preferences = movementPreferences(engine);
+    const listening = signal(null);
+    const message = signal("rpg.controls.saved");
+    const keyLabel = (bind) => {
+        if (Array.isArray(bind)) return bind.map(keyLabel).join(" / ");
+        const special = ({ space: "space", 32: "space", enter: "enter", 13: "enter", escape: "escape", 27: "escape", backspace: "backspace", 8: "backspace" })[bind];
+        if (special) return t("rpg.controls.key." + special);
+        return ({ up: "↑", down: "↓", left: "←", right: "→", 38: "↑", 40: "↓", 37: "←", 39: "→" })[bind] || String(bind).toUpperCase();
+    };
+    const listen = (direction) => () => { listening.set(direction); message.set("rpg.controls.listen"); };
+    const resetBindings = () => { listening.set(null); preferences.reset(); message.set("rpg.controls.saved"); };
+    const cancelCapture = () => { listening.set(null); message.set("rpg.controls.saved"); };
+    mount(() => {
+        let captured = false;
+        const keyDown = (event) => {
+            if (captured && !listening()) { event.preventDefault(); event.stopImmediatePropagation(); return; }
+            if (!listening()) return;
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            captured = true;
+            if (event.repeat) return;
+            if (event.key === "Escape" && listening() !== "escape") { cancelCapture(); return; }
+            const key = event.key === " " ? "space" : event.key.toLowerCase().replace(/^arrow/, "");
+            if (event.ctrlKey || event.altKey || event.metaKey || !preferences.assign(listening(), key)) {
+                message.set("rpg.controls.conflict");
+                return;
+            }
+            listening.set(null);
+            message.set("rpg.controls.saved");
+        };
+        const keyUp = (event) => {
+            if (!captured) return;
+            event.preventDefault(); event.stopImmediatePropagation(); captured = false;
+        };
+        window.addEventListener("keydown", keyDown, true);
+        window.addEventListener("keyup", keyUp, true);
+        return () => { window.removeEventListener("keydown", keyDown, true); window.removeEventListener("keyup", keyUp, true); };
+    });
     const channels = [
         { id: "master", label: "rpg.audio.master" },
         { id: "music", label: "rpg.audio.music" },
         { id: "sfx", label: "rpg.audio.sfx" },
         { id: "ui", label: "rpg.audio.ui" }
-    ];
-    const percent = (channel) => Math.round(engine.getSoundVolume(channel) * 100);
+    ].map(channel => ({ ...channel, value: signal(String(Math.round(engine.getSoundVolume(channel.id) * 100))) }));
+    const percentages = computed(() => Object.fromEntries(channels.map(channel => [channel.id, Number(channel.value())])));
     const changeVolume = (channel) => (event) => {
         const value = Number(event?.target?.value ?? 100) / 100;
+        channels.find(entry => entry.id === channel).value.set(String(Math.round(value * 100)));
         engine.setSoundVolume(channel, value);
         if (channel === "ui" || channel === "master") engine.playUiSound("navigate");
     };
 
-    const controls = signal({
-        escape: {
-            bind: keyboardControls.escape,
-            keyDown() {
-                engine.playUiSound("cancel");
-                if (onBack) onBack();
-            }
-        },
-        gamepad: {
-            enabled: true
-        }
-    });
 </script>
 
 <style>

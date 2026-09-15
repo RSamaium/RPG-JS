@@ -1,35 +1,52 @@
 /* Import this file for a global crystal theme. The class also supports
    scoped previews alongside other themes. All component rules live in src/. */
+@font-face {
+  font-family: "RPGJS Cinzel";
+  src: url("./fonts/cinzel-variable.ttf") format("truetype");
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
 :root,
 .rpg-ui-theme-default {
   color-scheme: dark;
-  --rpg-ui-bg: #080f21;
-  --rpg-ui-body-bg: #080f21;
+  --rpg-ui-bg: #090f14;
+  --rpg-ui-body-bg: #090f14;
   --rpg-ui-body-background: radial-gradient(
     ellipse at 50% 0%,
-    #203e68,
-    #080f21 75%
+    #253e47,
+    #080e13 75%
   );
-  --rpg-ui-surface: #101d35;
-  --rpg-ui-surface-light: #233c60;
-  --rpg-ui-surface-overlay: rgb(12 24 45 / 85%);
-  --rpg-ui-surface-overlay-strong: rgb(8 17 34 / 96%);
-  --rpg-ui-border: #6483ac;
-  --rpg-ui-border-light: #c5def5;
-  --rpg-ui-border-dark: #040b19;
-  --rpg-ui-text: #eef5ff;
-  --rpg-ui-text-muted: #b5c7df;
-  --rpg-ui-accent: #82d7ff;
+  --rpg-ui-surface: #15232b;
+  --rpg-ui-surface-light: #2b414a;
+  --rpg-ui-surface-overlay: rgb(15 26 33 / 92%);
+  --rpg-ui-surface-overlay-strong: rgb(9 17 23 / 98%);
+  --rpg-ui-border: #7d7460;
+  --rpg-ui-border-light: #e3cf9e;
+  --rpg-ui-border-dark: #03090e;
+  --rpg-ui-text: #f3eee1;
+  --rpg-ui-text-muted: #a9b6b8;
+  --rpg-ui-accent: #91d8dc;
   --rpg-ui-accent-hover: #c4edff;
   --rpg-ui-accent-active: #55aeea;
-  --rpg-ui-warning: #f3cd87;
+  --rpg-ui-warning: #e7c78b;
   --rpg-ui-danger: #f08098;
   --rpg-ui-success: #7edab6;
   --rpg-ui-info: #82d7ff;
   --rpg-ui-mana: #55bfff;
   --rpg-ui-xp: #efc574;
-  --rpg-ui-font: "Trebuchet MS", "Segoe UI", sans-serif;
-  --rpg-ui-font-display: Georgia, "Times New Roman", serif;
+  --rpg-ui-font: "Segoe UI", "Helvetica Neue", sans-serif;
+  --rpg-ui-font-display: "RPGJS Cinzel", Georgia, serif;
+  --rpg-ui-emblem: url("./astrolabe.svg");
+  --rpg-ui-emblem-display: block;
+  --rpg-ui-title-alignment: flex-start;
+  --rpg-ui-title-text-align: left;
+  --rpg-ui-title-overlay: linear-gradient(
+    90deg,
+    rgb(4 12 23 / 85%),
+    rgb(4 12 23 / 25%) 55%,
+    transparent 80%
+  );
   --rpg-ui-font-mono: ui-monospace, monospace;
   --rpg-ui-focus-width: 2px;
   --rpg-ui-chat-divider: 1px solid
@@ -45,33 +62,41 @@
   --rpg-ui-font-size-xl: 2rem;
   --rpg-ui-font-weight: 500;
   --rpg-ui-font-weight-bold: 700;
-  --rpg-ui-radius-sm: 5px;
-  --rpg-ui-radius-md: 8px;
-  --rpg-ui-radius-lg: 12px;
+  --rpg-ui-radius-sm: 2px;
+  --rpg-ui-radius-md: 3px;
+  --rpg-ui-radius-lg: 4px;
   --rpg-ui-border-width: 1px;
   --rpg-ui-spacing-sm: 8px;
   --rpg-ui-spacing: 12px;
   --rpg-ui-spacing-lg: 24px;
   --rpg-ui-spacing-xl: 32px;
-  --rpg-ui-gradient-surface: linear-gradient(
-    165deg,
-    color-mix(in srgb, var(--rpg-ui-surface-light), transparent 8%),
-    var(--rpg-ui-surface-overlay-strong) 65%
-  );
+  --rpg-ui-gradient-surface: radial-gradient(
+      ellipse at 0% 0%,
+      color-mix(in srgb, var(--rpg-ui-accent), transparent 91%),
+      transparent 65%
+    ),
+    linear-gradient(
+      145deg,
+      var(--rpg-ui-surface),
+      var(--rpg-ui-surface-overlay-strong) 80%
+    );
   --rpg-ui-gradient-accent: linear-gradient(
     180deg,
     var(--rpg-ui-accent-hover),
     var(--rpg-ui-accent-active)
   );
-  --rpg-ui-shadow-inset:
-    inset 0 1px 0 rgb(219 239 255 / 24%), inset 0 -1px 0 rgb(0 0 0 / 50%);
-  --rpg-ui-shadow-sm: 0 3px 8px rgb(0 5 18 / 36%);
+  --rpg-ui-shadow-inset: inset 0 1px 0 rgb(244 229 191 / 18%),
+    inset 0 -1px 0 rgb(0 0 0 / 65%);
+  --rpg-ui-shadow-sm: 0 3px 0 #03090e, 0 6px 12px rgb(0 5 18 / 45%);
   --rpg-ui-shadow-md: 0 8px 24px rgb(0 5 18 / 45%);
-  --rpg-ui-shadow-lg: 0 18px 48px rgb(0 5 18 / 60%);
+  --rpg-ui-shadow-lg: 0 24px 64px rgb(0 5 12 / 72%), 0 0 0 3px rgb(0 0 0 / 35%);
   --rpg-ui-shadow: var(--rpg-ui-shadow-md);
   --rpg-ui-shadow-glow: 0 0 18px
     color-mix(in srgb, var(--rpg-ui-accent), transparent 75%);
   --rpg-ui-text-shadow: 0 2px 3px #020814;
   --rpg-ui-backdrop-blur: blur(12px);
   --rpg-ui-focus-color: var(--rpg-ui-accent-hover);
+  --rpg-ui-ornament-opacity: 0.8;
+  --rpg-ui-control-font: var(--rpg-ui-font-display);
+  --rpg-ui-control-tracking: 0.13em;
 }

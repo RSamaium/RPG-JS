@@ -7,6 +7,7 @@
                     <div class="rpg-ui-menu-panel-details rpg-ui-panel">
                         <div class="rpg-ui-menu-panel-hero">
                             <div class="rpg-ui-menu-panel-hero-icon">
+                                @if (currentItem()?.icon) {
                                 <DOMSprite 
                                     sheet={iconSheet(currentItem()?.icon)} 
                                     playing="default" 
@@ -14,6 +15,9 @@
                                     height="48px"
                                     objectFit="contain"
                                 />
+                                } @else {
+                                    <span class="rpg-ui-fallback-icon" aria-hidden="true">◇</span>
+                                }
                             </div>
                             <div>
                                 <div class="rpg-ui-menu-panel-details-title">{currentItem()?.name}</div>
@@ -46,6 +50,9 @@
                     }
                 </div>
                 <Navigation tabindex={selectedItem} controls={controls}>
+                    @if (!filteredItems().length) {
+                        <div class="rpg-ui-empty-state"><span aria-hidden="true">◇</span><h3>{t("rpg.menu.no-items")}</h3><p>{t("rpg.menu.no-items-help")}</p></div>
+                    }
                     @for ((item,index) of filteredItems) {
                         <div
                             class="rpg-ui-menu-item rpg-ui-menu-row"
@@ -56,6 +63,7 @@
                         >
                             <div class="rpg-ui-menu-row-main">
                                 <div class="rpg-ui-menu-row-icon">
+                                    @if (item.icon) {
                                     <DOMSprite 
                                         sheet={iconSheet(item.icon)} 
                                         playing="default" 
@@ -63,6 +71,9 @@
                                         height="28px"
                                         objectFit="contain"
                                     />
+                                    } @else {
+                                        <span class="rpg-ui-fallback-icon" aria-hidden="true">◇</span>
+                                    }
                                 </div>
                                 <span>{item.name}</span>
                             </div>
@@ -114,6 +125,7 @@
 
 <script>
     import { signal, computed, createTabindexNavigator, effect } from "canvasengine";
+    import { selectionSound } from "../lifecycle";
     import { inject } from "../../../core/inject";
     import { RpgClientEngine } from "../../../RpgClientEngine";
     import { delay } from "@rpgjs/common";
@@ -125,6 +137,7 @@
 
     const selectedItem = signal(0);
     const selectedTab = signal(0);
+    selectionSound(() => `${selectedTab()}:${selectedItem()}`, () => engine.playUiSound("navigate"));
     const selectedConfirm = signal(0);
     const confirmOpen = signal(false);
     const confirmItem = signal(null);

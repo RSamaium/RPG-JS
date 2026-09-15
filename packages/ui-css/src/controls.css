@@ -1,11 +1,11 @@
 /* Shared by native buttons and the existing engine-owned action elements. */
 :is(
-  .rpg-ui-btn,
-  .rpg-ui-input-button,
-  .rpg-shop-btn,
-  .rpg-ui-menu-confirm-btn,
-  .rpg-ui-character-select-confirm
-) {
+    .rpg-ui-btn,
+    .rpg-ui-input-button,
+    .rpg-shop-btn,
+    .rpg-ui-menu-confirm-btn,
+    .rpg-ui-character-select-confirm
+  ) {
   appearance: none;
   position: relative;
   display: inline-flex;
@@ -21,7 +21,7 @@
   color: var(--rpg-ui-text);
   box-shadow: var(--rpg-ui-control-shadow);
   font: var(--rpg-ui-font-weight-bold) var(--rpg-ui-font-size)
-    var(--rpg-ui-font);
+    var(--rpg-ui-control-font);
   letter-spacing: var(--rpg-ui-control-tracking);
   line-height: 1.35;
   text-transform: uppercase;
@@ -31,8 +31,7 @@
   overflow-wrap: anywhere;
   cursor: pointer;
   touch-action: manipulation;
-  transition:
-    border-color var(--rpg-ui-motion-duration),
+  transition: border-color var(--rpg-ui-motion-duration),
     background var(--rpg-ui-motion-duration),
     box-shadow var(--rpg-ui-motion-duration);
 }
@@ -56,12 +55,13 @@
   transform: none;
 }
 .rpg-ui-btn[data-variant="primary"] {
-  --rpg-ui-control-border: var(--rpg-ui-accent);
-  --rpg-ui-control-background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--rpg-ui-accent) 25%, var(--rpg-ui-surface)),
-    var(--rpg-ui-bg)
-  );
+  --rpg-ui-control-border: var(--rpg-ui-selection);
+  --rpg-ui-control-background: var(--rpg-ui-primary-background);
+  color: var(--rpg-ui-primary-color);
+  text-shadow: 0 1px 0 color-mix(in srgb, var(--rpg-ui-selection), white 35%);
+}
+.rpg-ui-btn[data-variant="primary"]:active:not(:disabled) {
+  background: var(--rpg-ui-selection);
 }
 .rpg-ui-btn[data-variant="danger"] {
   --rpg-ui-control-border: var(--rpg-ui-danger);
@@ -82,26 +82,27 @@
 }
 .rpg-ui-btn[data-size="small"] {
   --rpg-ui-control-padding: 8px 14px;
+  --rpg-ui-control-height: 36px;
   font-size: var(--rpg-ui-font-size-sm);
 }
 .rpg-ui-btn[data-size="large"] {
-  --rpg-ui-control-padding: 16px 30px;
-  min-height: 56px;
+  --rpg-ui-control-padding: 18px 38px;
+  min-height: 60px;
 }
 .rpg-ui-btn[aria-pressed="true"] {
+  text-shadow: none;
   border-color: var(--rpg-ui-selection);
   background: var(--rpg-ui-selected-background);
   color: var(--rpg-ui-selection);
-  box-shadow:
-    var(--rpg-ui-shadow-inset),
+  box-shadow: var(--rpg-ui-shadow-inset),
     0 0 12px color-mix(in srgb, var(--rpg-ui-selection), transparent 78%);
 }
 :is(
-  .rpg-ui-btn,
-  .rpg-ui-input-button,
-  .rpg-shop-btn,
-  .rpg-ui-menu-confirm-btn
-):is(:disabled, [aria-disabled="true"], [aria-busy="true"]) {
+    .rpg-ui-btn,
+    .rpg-ui-input-button,
+    .rpg-shop-btn,
+    .rpg-ui-menu-confirm-btn
+  ):is(:disabled, [aria-disabled="true"], [aria-busy="true"]) {
   opacity: var(--rpg-ui-disabled-opacity);
   cursor: not-allowed;
   box-shadow: none;
@@ -126,31 +127,31 @@
   inset: 3px;
   border: 1px solid currentColor;
   border-radius: max(0px, calc(var(--rpg-ui-control-radius) - 2px));
-  opacity: calc(var(--rpg-ui-ornament-opacity) * 0.5);
+  opacity: var(--rpg-ui-ornament-opacity);
   pointer-events: none;
   mask-image: linear-gradient(
     135deg,
     black,
-    transparent 20%,
-    transparent 80%,
+    transparent 35%,
+    transparent 65%,
     black
   );
 }
 :is(
-  .rpg-ui-btn,
-  .rpg-ui-close-button,
-  .rpg-ui-input,
-  .rpg-ui-checkbox,
-  .rpg-ui-menu-item,
-  .rpg-ui-menu-tab,
-  .rpg-ui-dialog-choice,
-  .rpg-shop-btn,
-  .rpg-shop-tab,
-  .rpg-shop-card,
-  .rpg-ui-hotbar-slot,
-  .rpg-ui-input-button,
-  .rpg-ui-character-select-confirm
-):focus-visible {
+    .rpg-ui-btn,
+    .rpg-ui-close-button,
+    .rpg-ui-input,
+    .rpg-ui-checkbox,
+    .rpg-ui-menu-item,
+    .rpg-ui-menu-tab,
+    .rpg-ui-dialog-choice,
+    .rpg-shop-btn,
+    .rpg-shop-tab,
+    .rpg-shop-card,
+    .rpg-ui-hotbar-slot,
+    .rpg-ui-input-button,
+    .rpg-ui-character-select-confirm
+  ):focus-visible {
   outline: var(--rpg-ui-focus-width) solid var(--rpg-ui-focus-color);
   outline-offset: var(--rpg-ui-focus-offset);
 }

@@ -5,9 +5,29 @@
 .rpg-ui-theme-pixel,
 [data-rpg-theme] {
   --rpg-ui-selection: var(--rpg-ui-warning);
+  --rpg-ui-scene-art: none;
+  --rpg-ui-scene-position: center;
+  --rpg-ui-emblem: none;
+  --rpg-ui-emblem-display: none;
+  --rpg-ui-title-alignment: center;
+  --rpg-ui-title-text-align: center;
+  --rpg-ui-title-overlay: linear-gradient(
+    180deg,
+    rgb(0 0 0 / 25%),
+    rgb(0 0 0 / 75%)
+  );
   --rpg-ui-font-display: Georgia, "Times New Roman", serif;
   --rpg-ui-control-height: 44px;
-  --rpg-ui-control-padding: 12px 22px;
+  --rpg-ui-control-padding: 13px 28px;
+  --rpg-ui-control-font: var(--rpg-ui-font);
+  --rpg-ui-primary-color: var(--rpg-ui-bg);
+  --rpg-ui-primary-background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--rpg-ui-selection), white 24%),
+    var(--rpg-ui-selection) 48%,
+    color-mix(in srgb, var(--rpg-ui-selection), black 18%)
+  );
+  --rpg-ui-frame-inset: 6px;
   --rpg-ui-control-radius: var(--rpg-ui-radius-sm);
   --rpg-ui-control-background: var(--rpg-ui-gradient-surface);
   --rpg-ui-control-border: var(--rpg-ui-border);
@@ -18,10 +38,10 @@
   --rpg-ui-ornament-opacity: 0.5;
   --rpg-ui-motion-duration: 140ms;
   --rpg-ui-disabled-opacity: 0.48;
-  --rpg-ui-selected-background: color-mix(
-    in srgb,
-    var(--rpg-ui-selection) 14%,
-    var(--rpg-ui-bg)
+  --rpg-ui-selected-background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--rpg-ui-selection) 20%, var(--rpg-ui-bg)),
+    color-mix(in srgb, var(--rpg-ui-selection) 5%, var(--rpg-ui-bg))
   );
   --rpg-ui-health-gradient: linear-gradient(
     90deg,

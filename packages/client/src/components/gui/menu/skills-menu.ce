@@ -7,6 +7,9 @@
           <div class="rpg-skill-menu-help">{t("rpg.menu.skill-hotbar-help")}</div>
         }
         <div class="rpg-skill-menu-navigation">
+          @if (!skills().length) {
+            <div class="rpg-ui-empty-state"><span aria-hidden="true">✦</span><h3>{t("rpg.menu.no-skills")}</h3><p>{t("rpg.menu.no-skills-help")}</p></div>
+          }
           @for ((skill,index) of skills()) {
             <button
               type="button"
@@ -43,7 +46,7 @@
               @if (currentSkill().icon) {
                 <DOMSprite sheet={iconSheet(currentSkill().icon)} width="48px" height="48px" scale={2} objectFit="contain" />
               } @else {
-                <span>✨</span>
+                <span class="rpg-ui-fallback-icon" aria-hidden="true">✦</span>
               }
             </div>
             <div class="rpg-skill-menu-details">
@@ -176,6 +179,7 @@
 
 <script>
   import { signal, computed, createTabindexNavigator } from "canvasengine";
+  import { selectionSound } from "../lifecycle";
   import { inject } from "../../../core/inject";
   import { RpgClientEngine } from "../../../RpgClientEngine";
   import { getKeyboardControlBind } from "../../../services/actionInput";
@@ -187,6 +191,7 @@
   const normalizeBind = (bind) =>
     typeof bind === "string" && /^[0-9]$/.test(bind) ? `n${bind}` : bind;
   const selectedSkill = signal(0);
+  selectionSound(() => selectedSkill(), () => engine.playUiSound("navigate"));
   const lastAssignedSlot = signal(-1);
   const {
     data,

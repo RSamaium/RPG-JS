@@ -9,14 +9,14 @@ body {
   background: var(--rpg-ui-body-background);
   font-family: var(--rpg-ui-font);
 }
-.catalog h1,
-.catalog h2,
-.catalog h3 {
+:where(.catalog) h1,
+:where(.catalog) h2,
+:where(.catalog) h3 {
   font-family: var(--rpg-ui-font-display);
   font-weight: 400;
   letter-spacing: 0.06em;
 }
-.catalog h1 {
+:where(.catalog) h1 {
   font-size: clamp(28px, 4vw, 48px);
   margin: 0 0 16px;
 }
@@ -33,10 +33,12 @@ body {
   min-height: 480px;
   overflow: hidden;
   isolation: isolate;
-  background:
-    radial-gradient(ellipse at 60% 0%, #46667b, transparent 60%),
-    linear-gradient(145deg, #132b36, #090f23);
-  border-radius: 8px;
+  background: linear-gradient(rgb(4 12 23 / 25%), rgb(4 12 23 / 45%)),
+    var(--rpg-ui-scene-art), var(--rpg-ui-bg);
+  background-position: center;
+  background-size: cover;
+  border: 1px solid color-mix(in srgb, var(--rpg-ui-border), transparent 65%);
+  border-radius: var(--rpg-ui-radius-lg);
 }
 .catalog-content {
   max-width: 1200px;
@@ -71,6 +73,30 @@ body {
   width: 28px;
   height: 28px;
   flex-shrink: 0;
+}
+.catalog-item-art {
+  display: block;
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  filter: drop-shadow(0 3px 5px rgb(0 0 0 / 65%));
+}
+.catalog-sheet-heading {
+  padding: 24px 0 40px;
+  max-width: 720px;
+}
+.catalog-sheet-heading h1 {
+  margin: 16px 0;
+}
+.catalog-button-sizes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 24px;
+}
+.catalog-button-specimen {
+  display: grid;
+  place-items: center;
+  min-height: 160px;
 }
 [data-rpg-theme="forest"] {
   color-scheme: dark;

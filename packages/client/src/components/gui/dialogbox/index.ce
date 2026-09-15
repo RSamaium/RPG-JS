@@ -1,6 +1,5 @@
 <DOMContainer width="100%" height="100%" controls={dialogControls}>
-    <div class="rpg-ui-dialog-layer" click={closeDialogFromPointer}>
-        <button class="rpg-ui-close-button" type="button" title="Close" aria-label="Close dialog" click={closeDialogFromPointer}>x</button>
+    <div class="rpg-ui-dialog-layer" data-closing={transition.closing() ? "true" : "false"}>
         <div
             class="rpg-ui-dialog-container"
             data-position={dialogPosition()}
@@ -8,15 +7,18 @@
             data-has-face={hasFace() ? "true" : "false"}
         >
             <div class="rpg-ui-dialog rpg-anim-fade-in" click={stopEvent}>
+                <button class="rpg-ui-close-button" type="button" aria-label={t("rpg.ui.close")} click={closeDialogFromPointer}>×</button>
                 <div class="rpg-ui-dialog-body">
                    <div>
                         @if (speakerName()) {
                             <div class="rpg-ui-dialog-speaker">{speakerName()}</div>
                         }
-                        <div class="rpg-ui-dialog-content">
-                            {displayMessage()}
+                        <div class="rpg-ui-dialog-content" click={advance}>
+                            @for (run of visibleRuns()) {
+                                <span class={"rpg-ui-rich-" + run.kind}>{run.text}</span>
+                            }
                         </div>
-                        @if (hasChoices()) {
+                        @if (hasChoices() && ready()) {
                             <Navigation tabindex={selectedItem} controls={controls}>
                                 <div class="rpg-ui-dialog-choices">
                                     @for ((choice,index) of dialogChoices()) {
@@ -31,7 +33,7 @@
                                 </div>
                             </Navigation>
                         }
-                        @if (hasInput()) {
+                        @if (hasInput() && ready()) {
                             <InputField
                                 data={dialogInput}
                                 layout="dialog"
@@ -45,15 +47,17 @@
                         <div class="rpg-ui-dialog-face">
                             <DOMSprite
                                 sheet={faceSheet(dialogFace())}
-                                width="100%"
-                                height="100%"
+                                width="128px"
+                                height="128px"
                                 objectFit="contain"
                             />
                         </div>
                     }
                 </div>
-                @if (showIndicator) {
-                    <div class="rpg-ui-dialog-indicator"></div>
+                @if (!hasInput() && !hasChoices() || !ready()) {
+                    <button class="rpg-ui-dialog-continue" type="button" click={advance} aria-label={t("rpg.input.confirm")}>
+                        <span>{pageIndex() + 1} / {pages().length}</span><span aria-hidden="true">◆</span>
+                    </button>
                 }
             </div>
         </div>
@@ -64,15 +68,18 @@
     import { effect, signal, computed, createTabindexNavigator, mount } from "canvasengine";
     import { inject } from "../../../core/inject";
     import { RpgClientEngine } from "../../../RpgClientEngine";
-    import { delay } from "@rpgjs/common";
+    import { guiTransition, lockGuiInput, selectionSound } from "../lifecycle";
+    import { parseRichText, paginateRichText, sliceRichText } from "../../../utils/richText";
     import { getKeyboardControlBind } from "../../../services/actionInput";
     import InputField from "../input-field.ce";
 
     const engine = inject(RpgClientEngine);
+    const { t } = engine.i18n();
     const currentPlayer = engine.scene.currentPlayer
     const keyboardControls = engine.globalConfig.keyboardControls;
 
-    engine.stopProcessingInput = true;
+    const releaseInput = lockGuiInput(engine);
+    const transition = guiTransition();
 
     const selectedItem = signal(0)
     const ACTION_OPEN_GUARD_MS = 150;
@@ -114,26 +121,33 @@
         return !!(value && value.id);
     });
 
-    const displayMessage = signal("");
+    const pageIndex = signal(0);
+    const pages = computed(() => paginateRichText(parseRichText(String(resolveProp(message()) || "")), typeof window !== "undefined" && window.innerWidth < 700 ? 180 : 320));
+    const currentRuns = computed(() => pages()[Math.min(pageIndex(), pages().length - 1)]);
+    const visibleCount = signal(0);
+    const visibleRuns = computed(() => sliceRichText(currentRuns(), visibleCount()));
     const fullMessage = signal("");
     const isTyping = signal(false);
     let typewriterTimer = null;
-    let rootElement = null;
-
-    mount((element) => {
-        rootElement = element;
-    });
+    let lastSoundAt = 0;
+    effect(() => { message(); pageIndex.set(0); });
 
     const startTypewriter = (text) => {
         if (typewriterTimer) clearInterval(typewriterTimer);
-        displayMessage.set("");
+        visibleCount.set(0);
+        isTyping.set(false);
         if (!text) return;
+        const characters = Array.from(text);
         let index = 0;
         isTyping.set(true);
         typewriterTimer = setInterval(() => {
             index += 1;
-            displayMessage.set(text.slice(0, index));
-            if (index >= text.length) {
+            visibleCount.set(index);
+            if (/\S/.test(characters[index - 1]) && Date.now() - lastSoundAt >= 65) {
+                engine.playUiSound("typewriter");
+                lastSoundAt = Date.now();
+            }
+            if (index >= characters.length) {
                 clearInterval(typewriterTimer);
                 typewriterTimer = null;
                 isTyping.set(false);
@@ -144,12 +158,12 @@
     const finishTyping = () => {
         if (typewriterTimer) clearInterval(typewriterTimer);
         typewriterTimer = null;
-        displayMessage.set(fullMessage());
+        visibleCount.set(Array.from(fullMessage()).length);
         isTyping.set(false);
     };
 
     effect(() => {
-        const text = resolveProp(message()) || "";
+        const text = currentRuns().map(run => run.text).join("");
         fullMessage.set(text);
         const useTypewriter = resolveProp(typewriterEffect()) !== false;
         if (!useTypewriter) {
@@ -161,7 +175,8 @@
 
 
     const hasChoices = computed(() => dialogChoices().length > 0);
-    const showIndicator = computed(() => !hasChoices() && !hasInput() && !isTyping());
+    const ready = computed(() => !isTyping() && pageIndex() === pages().length - 1);
+    selectionSound(() => selectedItem(), () => engine.playUiSound("navigate"));
     const nav = createTabindexNavigator(selectedItem, { count: () => dialogChoices().length }, 'wrap');
 
     function selectChoice(index) {
@@ -172,7 +187,9 @@
     }
 
     function _onFinish(value) {
-        if (onFinish) onFinish(value, normalizeOpenId(guiOpenId));
+        if (typewriterTimer) clearInterval(typewriterTimer);
+        const openId = normalizeOpenId(guiOpenId);
+        transition.finish(() => onFinish?.(value, openId));
     }
 
     const stopEvent = (event) => {
@@ -181,7 +198,7 @@
 
     const closeDialog = () => {
         if (hasInput()) {
-            onInteraction?.("cancel");
+            cancelInput();
             return;
         }
         _onFinish();
@@ -205,6 +222,17 @@
     };
 
     const canAcceptAction = () => Date.now() - openedAt >= ACTION_OPEN_GUARD_MS;
+    let lastActionAt = 0;
+    function advance(event) {
+        event?.stopPropagation?.();
+        if (!canAcceptAction() || transition.closing() || Date.now() - lastActionAt < 100) return;
+        lastActionAt = Date.now();
+        if (isTyping()) { finishTyping(); return; }
+        if (pageIndex() < pages().length - 1) { pageIndex.set(pageIndex() + 1); return; }
+        if (hasInput()) return;
+        if (hasChoices()) { onSelect(selectedItem()); return; }
+        _onFinish();
+    }
 
     const controls = signal({
         up: {
@@ -225,20 +253,6 @@
                 nav.next(1);
             }
         },
-        action: {
-            bind: getKeyboardControlBind(keyboardControls.action),
-            keyDown() {
-                if (!canAcceptAction()) {
-                    return;
-                }
-                if (isTyping()) {
-                    finishTyping();
-                    return;
-                }
-                if (!hasChoices()) return;
-                onSelect(selectedItem());
-            }
-        },
         gamepad: {
             enabled: true
         }
@@ -247,18 +261,7 @@
     const dialogControls = signal({
         action: {
             bind: getKeyboardControlBind(keyboardControls.action),
-            keyDown() {
-                if (!canAcceptAction()) {
-                    return;
-                }
-                if (isTyping()) {
-                    finishTyping();
-                    return;
-                }
-                if (hasInput()) return;
-                if (hasChoices()) return;
-                _onFinish();
-            }
+            keyDown: advance
         },
     })
 
@@ -274,10 +277,9 @@
 
     mount((element) => {
         return () => {
-            // Wait destroy is finished before start processing input
-            delay(() => {
-                engine.stopProcessingInput = false;
-            })
+            if (typewriterTimer) clearInterval(typewriterTimer);
+            transition.dispose();
+            releaseInput();
         }
   })
 </script>

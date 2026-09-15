@@ -7,6 +7,8 @@ import {
   menuItems,
   scene,
   icon,
+  itemArt,
+  lunaPortrait,
   interactive,
 } from "./fixtures";
 export default {
@@ -18,17 +20,17 @@ export const TitleScreen: StoryObj = {
   render: () =>
     interactive(
       scene(
-        '<div class="rpg-ui-title-screen"><header class="rpg-ui-title-screen-header"><span class="rpg-ui-title-screen-subtitle">A new journey awaits</span><h1 class="rpg-ui-title-screen-title">RPGJS</h1><p class="rpg-ui-title-screen-subtitle">Crystal chronicles</p></header><nav class="rpg-ui-menu rpg-ui-title-screen-menu" aria-label="Title menu">' +
+        '<div class="rpg-ui-title-screen"><header class="rpg-ui-title-screen-header"><span class="rpg-ui-title-screen-subtitle">An RPGJS adventure</span><h1 class="rpg-ui-title-screen-title">Crystal<br>Chronicles</h1><p class="rpg-ui-title-screen-subtitle">Echoes of the celestial age</p><p class="rpg-ui-title-screen-description">Beyond the last light, a forgotten world awaits.</p></header><nav class="rpg-ui-menu rpg-ui-title-screen-menu" aria-label="Title menu">' +
           menuItems(["New game", "Continue", "Settings"]) +
-          '</nav><small class="rpg-ui-title-screen-version">GUI design system</small></div>',
-      ),
+          '</nav><small class="rpg-ui-title-screen-version">RPGJS · Celestial collection / 01</small></div>'
+      )
     ),
 };
 export const Dialogue: StoryObj = {
   render: () =>
     interactive(
       scene(
-        '<div class="rpg-ui-dialog-layer"><div class="rpg-ui-dialog-container" data-position="bottom" data-full-width="false"><section class="rpg-ui-dialog"><div class="rpg-ui-dialog-speaker">Luna</div><div class="rpg-ui-dialog-content"><p>The crystal is calling. Will you come with me?</p><div class="rpg-ui-dialog-choices">' +
+        '<div class="rpg-ui-dialog-layer"><div class="rpg-ui-dialog-container" data-position="bottom" data-full-width="false" data-has-face="true"><section class="rpg-ui-dialog"><div class="rpg-ui-dialog-body"><div><span class="rpg-ui-eyebrow">Guardian of the sanctuary</span><div class="rpg-ui-dialog-speaker">Luna</div><div class="rpg-ui-dialog-content"><p>The crystal is calling. Will you come with me?</p><div class="rpg-ui-dialog-choices">' +
           ["I am ready", "Tell me more", "Not yet"]
             .map(
               (x, i) =>
@@ -36,11 +38,13 @@ export const Dialogue: StoryObj = {
                 (i === 0) +
                 '">' +
                 x +
-                "</button>",
+                "</button>"
             )
             .join("") +
-          "</div></div></section></div></div>",
-      ),
+          '</div></div></div><div class="rpg-ui-dialog-face"><img src="' +
+          lunaPortrait +
+          '" alt="Luna"></div></div></section></div></div>'
+      )
     ),
 };
 const inventory =
@@ -53,8 +57,8 @@ const inventory =
       '" aria-label="Inventory slot ' +
       (i + 1) +
       '">' +
-      (i < 8 ? icon(["sword", "shield", "potion", "crystal"][i % 4]) : "") +
-      "</button>",
+      (i < 8 ? itemArt(["sword", "shield", "potion", "crystal"][i % 4]) : "") +
+      "</button>"
   ).join("") +
   "</div>";
 function mainMenu(body: string) {
@@ -64,25 +68,28 @@ function mainMenu(body: string) {
         menuItems(["Inventory", "Equipment", "Skills", "Status", "Options"]) +
         '</div><small>Gold · 1,240</small></nav><div class="rpg-ui-main-menu-right"><section class="rpg-ui-panel rpg-ui-stack">' +
         body +
-        "</section></div></div></div>",
-    ),
+        "</section></div></div></div>"
+    )
   );
 }
 export const Inventory: StoryObj = {
   render: () =>
     mainMenu(
-      '<h2 class="rpg-ui-menu-panel-header">Inventory</h2><div class="rpg-ui-grid">' +
+      '<span class="rpg-ui-eyebrow">The wanderer’s collection</span><h2 class="rpg-ui-menu-panel-header">Inventory</h2><div class="rpg-ui-grid"><div class="rpg-ui-stack"><div class="rpg-ui-stat-line"><span class="rpg-ui-muted">Satchel</span><small>8 / 18</small></div>' +
         inventory +
-        '<div class="rpg-ui-stack"><h3>Crystal sword</h3><p class="rpg-ui-muted">A blade that carries the light of the northern stars.</p><div class="rpg-ui-stat-line"><span>Attack</span><strong>+24</strong></div>' +
+        "</div>" +
+        '<div class="rpg-ui-stack rpg-ui-item-details"><div class="rpg-ui-item-display">' +
+        itemArt("sword") +
+        '</div><span class="rpg-ui-eyebrow">Rare · One-handed blade</span><h3>Crystal sword</h3><p class="rpg-ui-muted">Forged beneath the northern stars. A quiet light runs along its edge.</p><div class="rpg-ui-stat-line"><span>Attack power</span><strong>+24</strong></div>' +
         button("Equip", "primary") +
-        "</div></div>",
+        "</div></div>"
     ),
 };
 export const EmptyInventory: StoryObj = {
   render: () =>
     mainMenu(
       '<h2>Inventory</h2><p class="rpg-ui-muted">Your bag is empty. Items you collect will appear here.</p>' +
-        button("Use item", "primary", "disabled"),
+        button("Use item", "primary", "disabled")
     ),
 };
 export const Equipment: StoryObj = {
@@ -100,11 +107,11 @@ export const Equipment: StoryObj = {
               label +
               "</span>" +
               icon("shield") +
-              "</div>",
+              "</div>"
           )
           .join("") +
         bars() +
-        button("Change equipment", "primary"),
+        button("Change equipment", "primary")
     ),
 };
 export const Skills: StoryObj = {
@@ -117,14 +124,14 @@ export const Skills: StoryObj = {
           "Starlight · Locked",
         ]) +
         '</div><p class="rpg-ui-muted">Choose a skill to assign it to your hotbar.</p>' +
-        slots(4),
+        slots(4)
     ),
 };
 export const Options: StoryObj = {
   render: () =>
     mainMenu(
       '<h2>Options</h2><label class="rpg-ui-stack">Music volume<input type="range" aria-label="Music volume" value="65"></label><label><input class="rpg-ui-checkbox" type="checkbox" checked>Sound effects</label><label class="rpg-ui-stack">Language<select class="rpg-ui-input"><option>English</option><option>Français</option></select></label>' +
-        button("Apply", "primary"),
+        button("Apply", "primary")
     ),
 };
 export const Shop: StoryObj = {
@@ -138,18 +145,18 @@ export const Shop: StoryObj = {
             .map(
               (name, i) =>
                 '<button class="rpg-shop-card" data-selected="' +
-                (i === 0) +
+                (i === 2) +
                 '"><span class="rpg-shop-card-icon">' +
                 icon(i < 2 ? "potion" : "sword") +
                 '</span><span class="rpg-shop-card-name">' +
                 name +
                 '</span><span class="rpg-shop-card-price">' +
                 (50 + i * 100) +
-                " G</span></button>",
+                " G</span></button>"
             )
             .join("") +
-          '</div><div class="rpg-shop-details"><h2>Health potion</h2><p class="rpg-shop-details-desc">Restores 100 HP to one ally.</p><div class="rpg-ui-stat-line"><span>Owned</span><strong>3</strong></div><button class="rpg-shop-btn">Buy · 50 G</button></div></div></div></div></section></div>',
-      ),
+          '</div><div class="rpg-shop-details"><h2>Crystal sword</h2><p class="rpg-shop-details-desc">A light blade tempered in the sanctuary.</p><div class="rpg-ui-eyebrow">Equipment attributes</div><div class="rpg-shop-stats rpg-ui-equip-stats"><div class="rpg-shop-stat rpg-ui-equip-stat positive"><div class="rpg-shop-stat-key rpg-ui-equip-stat-key">ATK</div><div class="rpg-shop-stat-value rpg-ui-equip-stat-value">+18</div><div class="rpg-shop-stat-current rpg-ui-equip-stat-current"><span>50</span><span>→</span><strong>68</strong></div></div><div class="rpg-shop-stat rpg-ui-equip-stat negative"><div class="rpg-shop-stat-key rpg-ui-equip-stat-key">AGI</div><div class="rpg-shop-stat-value rpg-ui-equip-stat-value">−4</div><div class="rpg-shop-stat-current rpg-ui-equip-stat-current"><span>24</span><span>→</span><strong>20</strong></div></div></div><button class="rpg-shop-btn">Buy · 250 G</button></div></div></div></div></section></div>'
+      )
     ),
 };
 export const SaveLoad: StoryObj = {
@@ -170,13 +177,13 @@ export const SaveLoad: StoryObj = {
                 (i + 1) +
                 '</span><span class="rpg-ui-save-load-slot-meta">' +
                 label +
-                "</span></button>",
+                "</span></button>"
             )
             .join("") +
           "</div>" +
           button("Load game", "primary") +
-          "</section></div>",
-      ),
+          "</section></div>"
+      )
     ),
 };
 export const GameOver: StoryObj = {
@@ -185,19 +192,21 @@ export const GameOver: StoryObj = {
       scene(
         '<div class="rpg-ui-gameover-screen"><header class="rpg-ui-gameover-header"><h1 class="rpg-ui-gameover-title">Journey ended</h1><p class="rpg-ui-gameover-subtitle">A new dawn is waiting.</p></header><nav class="rpg-ui-menu rpg-ui-gameover-menu">' +
           menuItems(["Try again", "Load game", "Return to title"]) +
-          "</nav></div>",
-      ),
+          "</nav></div>"
+      )
     ),
 };
 export const CharacterSelect: StoryObj = {
   render: () =>
     scene(
-      '<div class="rpg-ui-character-select-layer"><section class="rpg-ui-character-select"><header class="rpg-ui-character-select-header"><span class="rpg-ui-character-select-ornament"></span><div><h1>Choose your path</h1><p>Each journey begins with a hero</p></div><span class="rpg-ui-character-select-ornament rpg-ui-character-select-ornament-right"></span></header><div class="rpg-ui-character-select-stage"><button class="rpg-ui-character-select-arrow" aria-label="Previous character">‹</button><div class="rpg-ui-character-select-viewport"><article class="rpg-ui-character-select-card"><div class="rpg-ui-character-select-portrait"><span class="rpg-ui-character-select-portrait-fallback" aria-label="Portrait placeholder">◇</span></div><div class="rpg-ui-character-select-details"><div class="rpg-ui-character-select-identity"><h2>Luna</h2><span class="rpg-ui-character-select-check">✓</span></div><div class="rpg-ui-character-select-class">Crystal mage</div><div class="rpg-ui-character-select-description"><p>A guardian of the northern sanctuary, guided by the light of the stars.</p></div>' +
+      '<div class="rpg-ui-character-select-layer"><section class="rpg-ui-character-select"><header class="rpg-ui-character-select-header"><span class="rpg-ui-character-select-ornament"></span><div><h1>Choose your path</h1><p>Each journey begins with a hero</p></div><span class="rpg-ui-character-select-ornament rpg-ui-character-select-ornament-right"></span></header><div class="rpg-ui-character-select-stage"><button class="rpg-ui-character-select-arrow" aria-label="Previous character">‹</button><div class="rpg-ui-character-select-viewport"><article class="rpg-ui-character-select-card"><div class="rpg-ui-character-select-portrait"><img src="' +
+        lunaPortrait +
+        '" alt="Luna"></div><div class="rpg-ui-character-select-details"><div class="rpg-ui-character-select-identity"><h2>Luna</h2><span class="rpg-ui-character-select-check">✓</span></div><div class="rpg-ui-character-select-class">Crystal mage</div><div class="rpg-ui-character-select-description"><p>A guardian of the northern sanctuary, guided by the light of the stars.</p></div>' +
         bars() +
         '</div></article></div><button class="rpg-ui-character-select-arrow" aria-label="Next character">›</button></div><footer class="rpg-ui-character-select-footer"><span class="rpg-ui-character-select-pagination">1 / 4</span><div class="rpg-ui-character-select-actions">' +
         button("Cancel") +
         button("Confirm", "primary") +
-        "</div></footer></section></div>",
+        "</div></footer></section></div>"
     ),
 };
 export const HudAndCombat: StoryObj = {
@@ -208,8 +217,8 @@ export const HudAndCombat: StoryObj = {
           panel("Lv. 12 · Luna", bars()) +
           '</div><div style="position:absolute;bottom:24px;left:24px;right:24px">' +
           slots() +
-          "</div></div>",
-      ),
+          "</div></div>"
+      )
     ),
 };
 export const Chat: StoryObj = {
@@ -223,7 +232,7 @@ export const InputDialog: StoryObj = {
       '<label class="rpg-ui-stack">Name<input class="rpg-ui-input" value="Luna" maxlength="24"></label><div class="rpg-ui-row">' +
         button("Confirm", "primary") +
         button("Cancel") +
-        "</div>",
+        "</div>"
     ),
 };
 export const MobileControls: StoryObj = {
@@ -240,6 +249,6 @@ export const MobileControls: StoryObj = {
         button("↓") +
         button("→") +
         button("Attack", "primary") +
-        "</div></div>",
+        "</div></div>"
     ),
 };
