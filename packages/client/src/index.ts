@@ -66,3 +66,4 @@ export type {
 } from "./components/gui/mobile";
 export * from "./services/AbstractSocket";
 export * from "./i18n";
+export { parseRichText, sliceRichText, paginateRichText, type RichTextRun } from "./utils/richText";

@@ -1,28 +1,3 @@
-/* RPG UI CSS Library */
+/* Legacy full-screen game entry point. Embedded widgets use components.css. */
 @import './reset.css';
-@import './tokens.css';
-@import './animations.css';
-
-/* Primitives */
-@import './primitives/panel.css';
-@import './primitives/button.css';
-@import './primitives/input.css';
-@import './primitives/input-dialog.css';
-@import './primitives/menu.css';
-@import './primitives/main-menu.css';
-@import './primitives/bar.css';
-@import './primitives/inventory.css';
-@import './primitives/dialog.css';
-@import './primitives/save-load.css';
-@import './primitives/character-card.css';
-@import './primitives/character-select.css';
-@import './primitives/stats.css';
-@import './primitives/hotbar.css';
-@import './primitives/tooltip.css';
-@import './primitives/toast.css';
-@import './primitives/title-screen.css';
-@import './primitives/gameover.css';
-@import './primitives/hud.css';
-@import './primitives/shop.css';
-@import './primitives/chat.css';
-@import './cinematic.css';
+@import './components.css';

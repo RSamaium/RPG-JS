@@ -1,7 +1,7 @@
     <DOMContainer width="100%" height="100%">
-        <div class="rpg-shop-layer" click={closeShopFromPointer}>
-        <button class="rpg-ui-close-button" type="button" title="Close" aria-label="Close shop" click={closeShopFromPointer}>x</button>
+        <div class="rpg-shop-layer" data-closing={transition.closing() ? "true" : "false"} click={closeShopFromPointer}>
         <div class="rpg-shop-container rpg-anim-fade-in" click={stopEvent}>
+            <button class="rpg-ui-close-button" type="button" aria-label={t("rpg.ui.close")} click={closeShopFromPointer}>×</button>
             <div class="rpg-shop-header">
                 <div class="rpg-shop-merchant">
                     <div>
@@ -17,6 +17,7 @@
                         }
                     </div>
                     <div class="rpg-shop-merchant-info">
+                        <div class="rpg-ui-eyebrow">{t("rpg.shop.title")}</div>
                         <p>{{ shopMessage() }}</p>
                     </div>
                 </div>
@@ -31,22 +32,22 @@
                     <div class="rpg-shop-content rpg-shop-content-mode">
                         <div class="rpg-shop-details rpg-shop-details-mode">
                             <div class="rpg-shop-details-header">
-                            <div class="rpg-shop-details-icon">🛒</div>
+                            <div class="rpg-shop-details-icon rpg-ui-merchant-seal" aria-hidden="true">◇</div>
                             <h2 style="margin: 0;">{t("rpg.shop.choose-action")}</h2>
                         </div>
                         <div class="rpg-shop-trade">
                             <Navigation tabindex={selectedModeIndex} controls={modeControls}>
                                 <div class="rpg-shop-tabs rpg-shop-trade-tabs">
-                                    <div
+                                    <button type="button"
                                         class="rpg-shop-tab"
                                         class={{active: selectedModeIndex() === 0}}
                                         click={selectMode('buy')}
-                                    >{t("rpg.shop.buy")}</div>
-                                    <div
+                                    >{t("rpg.shop.buy")}</button>
+                                    <button type="button"
                                         class="rpg-shop-tab"
                                         class={{active: selectedModeIndex() === 1}}
                                         click={selectMode('sell')}
-                                    >{t("rpg.shop.sell")}</div>
+                                    >{t("rpg.shop.sell")}</button>
                                 </div>
                             </Navigation>
                         </div>
@@ -63,13 +64,16 @@
                                     class={{active: selectedTab() === index}} 
                                     tabindex={index} 
                                     click={selectTab(index)}
-                                >{{ tab.label }}</div>
+                                >{t(tab.label)}</div>
                             }
                         </div>
                     </Navigation>
 
                     <div class="rpg-shop-content">
                         <div class="rpg-shop-grid">
+                            @if (!filteredItems().length) {
+                                <div class="rpg-ui-empty-state"><span aria-hidden="true">◇</span><h3>{t("rpg.shop.no-items")}</h3><p>{tradeMode() === 'sell' ? t("rpg.shop.no-sell-help") : t("rpg.shop.no-buy-help")}</p></div>
+                            }
                             <Navigation tabindex={selectedItem} controls={itemControls}>     
                                 @for ((item,index) of filteredItems) { 
                                     <div class="rpg-shop-card" class={{disabled: isItemDisabled(item), selected: selectedItem() === index}} tabindex={index} click={selectItem(index)}>
@@ -82,10 +86,12 @@
                                                     height="48px"
                                                     objectFit="contain"
                                                 />
+                                            } @else {
+                                                <span class="rpg-ui-fallback-icon" aria-hidden="true">◇</span>
                                             }
                                         </div>
                                         <div class="rpg-shop-card-name">{{ item.name }}</div>
-                                        <div class="rpg-shop-card-price">{{ item.price }} {{ goldTerm }}</div>
+                                        <div class="rpg-shop-card-price">{item.price > 0 ? item.price + ' ' + goldTerm : t("rpg.shop.unavailable")}</div>
                                         @if (item.quantity !== undefined) {
                                             <div class="rpg-shop-card-qty">x{{ item.quantity }}</div>
                                         }
@@ -98,8 +104,11 @@
                         </div>
 
                         <div class="rpg-shop-details">
+                            @if (currentItem()) {
+                            <div class="rpg-shop-inspection">
                             <div class="rpg-shop-details-header">
                                 <div class="rpg-shop-details-icon">
+                                    @if (currentItem()?.icon) {
                                     <DOMSprite 
                                         sheet={iconSheet(currentItem()?.icon)} 
                                         playing="default" 
@@ -107,9 +116,12 @@
                                         height="80px"
                                         objectFit="contain"
                                     />
+                                    } @else {
+                                        <span class="rpg-ui-fallback-icon" aria-hidden="true">◇</span>
+                                    }
                                 </div>
                                 <h2 style="margin: 0;">{{ currentItem()?.name || "" }}</h2>
-                                <p style="color: #ffd700; font-weight: bold; margin: 8px 0;">{{ currentItem()?.price ?? 0 }} {{ goldTerm }}</p>
+                                <p class="rpg-shop-price">{currentItem()?.price > 0 ? currentItem().price + ' ' + goldTerm : t("rpg.shop.unavailable")}</p>
                                 @if (currentItem()?.quantity !== undefined) {
                                     <div class="rpg-shop-details-qty">{t("rpg.shop.qty")}: x{{ currentItem()?.quantity }}</div>
                                 }
@@ -124,21 +136,30 @@
                             </div>
                             <div>
                                 @if (displayStats().length > 0) {
-                                    <div class="rpg-shop-stats">
+                                    <div class="rpg-ui-eyebrow">{t("rpg.equip.attributes")}</div>
+                                    <p class="rpg-ui-equip-caption">{t("rpg.equip.comparison")}</p>
+                                    <div class="rpg-shop-stats rpg-ui-equip-stats">
                                         @for ((stat,index) of displayStats) {
-                                            <div class="rpg-shop-stat" class={{positive: stat.delta > 0, negative: stat.delta < 0}}>
-                                                <div class="rpg-shop-stat-key">{{ stat.label }}</div>
-                                                <div class="rpg-shop-stat-value">
-                                                    {{ stat.delta > 0 ? '+' : '' }}{{ stat.delta }}
+                                            <div class="rpg-shop-stat rpg-ui-equip-stat" class={{positive: stat.delta > 0, negative: stat.delta < 0}}>
+                                                <div class="rpg-shop-stat-key rpg-ui-equip-stat-key">{{ stat.label }}</div>
+                                                <div class="rpg-shop-stat-value rpg-ui-equip-stat-value">
+                                                    {(stat.delta > 0 ? "+" : "") + stat.delta}
                                                 </div>
                                                 @if (stat.current !== undefined) {
-                                                    <div class="rpg-shop-stat-current">{{ stat.current }} → {{ stat.next }}</div>
+                                                    <div class="rpg-shop-stat-current rpg-ui-equip-stat-current"><span>{{ stat.current }}</span><span>→</span><strong>{{ stat.next }}</strong></div>
                                                 }
                                             </div>
                                         }
                                     </div>
                                 }
                             </div>
+                            @if (currentItem() && isItemDisabled(currentItem())) {
+                                <p class="rpg-ui-notice">{currentItem()?.price > 0 ? t("rpg.shop.not-enough-gold") : t("rpg.shop.no-price-help")}</p>
+                            }
+                            </div>
+                            } @else {
+                                <div class="rpg-ui-empty-state"><span aria-hidden="true">◇</span><p>{t("rpg.shop.select-item")}</p></div>
+                            }
                             <button class="rpg-shop-btn" click={backToMode()}>{t("rpg.shop.back")}</button>
                         </div>
                     </div>
@@ -181,11 +202,14 @@
 
 <script>
     import { mount, signal, computed, createTabindexNavigator, effect } from "canvasengine";
+    import { guiTransition, lockGuiInput } from "../lifecycle";
     import { inject } from "../../../core/inject";
     import { RpgClientEngine } from "../../../RpgClientEngine";
     import { getKeyboardControlBind } from "../../../services/actionInput";
 
     const engine = inject(RpgClientEngine)
+    const transition = guiTransition();
+    const releaseInput = lockGuiInput(engine);
     const { t } = engine.i18n()
     const currentPlayer = engine.scene.currentPlayer
     const keyboardControls = engine.globalConfig.keyboardControls
@@ -202,11 +226,10 @@
     const selectedModeIndex = signal(0)
     const quantity = signal(1)
     const quantityDialogOpen = signal(false)
-    const defaultMessage = t("rpg.shop.default-message")
     const tabs = [
-        { id: 'item', label: t("rpg.menu.items") },
-        { id: 'weapon', label: t("rpg.menu.weapons") },
-        { id: 'armor', label: t("rpg.menu.armor") }
+        { id: 'item', label: "rpg.menu.items" },
+        { id: 'weapon', label: "rpg.menu.weapons" },
+        { id: 'armor', label: "rpg.menu.armor" }
     ]
 
     const { data, onInteraction , onFinish } = defineProps()
@@ -215,7 +238,7 @@
     const guiData = computed(() => resolveProp(data) || {})
     const shopMessage = computed(() => {
         const message = resolveProp(guiData().message)
-        return message ? String(message) : defaultMessage
+        return message ? String(message) : t("rpg.shop.default-message")
     })
     const face = computed(() => resolveProp(guiData().face))
     const hasFace = computed(() => {
@@ -376,7 +399,7 @@
             return
         }
         engine.playUiSound("close")
-        onFinish()
+        transition.finish(() => onFinish())
     }
 
     const closeShopFromPointer = (event) => {
@@ -544,5 +567,6 @@
 
     mount(() => {
         engine.playUiSound("open")
+        return () => { transition.dispose(); releaseInput(); };
     })
 </script>

@@ -1,0 +1,172 @@
+/* Shared by native buttons and the existing engine-owned action elements. */
+:is(
+    .rpg-ui-btn,
+    .rpg-ui-input-button,
+    .rpg-shop-btn,
+    .rpg-ui-menu-confirm-btn,
+    .rpg-ui-character-select-confirm
+  ) {
+  appearance: none;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65em;
+  min-height: var(--rpg-ui-control-height);
+  padding: var(--rpg-ui-control-padding);
+  margin: 0;
+  border: var(--rpg-ui-border-width) solid var(--rpg-ui-control-border);
+  border-radius: var(--rpg-ui-control-radius);
+  background: var(--rpg-ui-control-background);
+  color: var(--rpg-ui-text);
+  box-shadow: var(--rpg-ui-control-shadow);
+  font: var(--rpg-ui-font-weight-bold) var(--rpg-ui-font-size)
+    var(--rpg-ui-control-font);
+  letter-spacing: var(--rpg-ui-control-tracking);
+  line-height: 1.35;
+  text-transform: uppercase;
+  text-align: center;
+  text-decoration: none;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: border-color var(--rpg-ui-motion-duration),
+    background var(--rpg-ui-motion-duration),
+    box-shadow var(--rpg-ui-motion-duration);
+}
+:is(
+    .rpg-ui-btn,
+    .rpg-ui-input-button,
+    .rpg-shop-btn,
+    .rpg-ui-menu-confirm-btn,
+    .rpg-ui-character-select-confirm
+  ):hover:not(:disabled):not([aria-disabled="true"]):not([aria-busy="true"]) {
+  border-color: var(--rpg-ui-accent);
+  box-shadow: var(--rpg-ui-control-shadow), var(--rpg-ui-shadow-glow);
+}
+:is(
+    .rpg-ui-btn,
+    .rpg-ui-input-button,
+    .rpg-shop-btn,
+    .rpg-ui-menu-confirm-btn
+  ):active:not(:disabled) {
+  background: var(--rpg-ui-bg);
+  transform: none;
+}
+.rpg-ui-btn[data-variant="primary"] {
+  --rpg-ui-control-border: var(--rpg-ui-selection);
+  --rpg-ui-control-background: var(--rpg-ui-primary-background);
+  color: var(--rpg-ui-primary-color);
+  text-shadow: 0 1px 0 color-mix(in srgb, var(--rpg-ui-selection), white 35%);
+}
+.rpg-ui-btn[data-variant="primary"]:active:not(:disabled) {
+  background: var(--rpg-ui-selection);
+}
+.rpg-ui-btn[data-variant="danger"] {
+  --rpg-ui-control-border: var(--rpg-ui-danger);
+  color: var(--rpg-ui-danger);
+}
+.rpg-ui-btn[data-variant="success"] {
+  --rpg-ui-control-border: var(--rpg-ui-success);
+  color: var(--rpg-ui-success);
+}
+.rpg-ui-btn[data-variant="warning"] {
+  --rpg-ui-control-border: var(--rpg-ui-warning);
+  color: var(--rpg-ui-warning);
+}
+.rpg-ui-btn[data-variant="ghost"] {
+  --rpg-ui-control-background: transparent;
+  --rpg-ui-control-border: transparent;
+  --rpg-ui-control-shadow: none;
+}
+.rpg-ui-btn[data-size="small"] {
+  --rpg-ui-control-padding: 8px 14px;
+  --rpg-ui-control-height: 36px;
+  font-size: var(--rpg-ui-font-size-sm);
+}
+.rpg-ui-btn[data-size="large"] {
+  --rpg-ui-control-padding: 18px 38px;
+  min-height: 60px;
+}
+.rpg-ui-btn[aria-pressed="true"] {
+  text-shadow: none;
+  border-color: var(--rpg-ui-selection);
+  background: var(--rpg-ui-selected-background);
+  color: var(--rpg-ui-selection);
+  box-shadow: var(--rpg-ui-shadow-inset),
+    0 0 12px color-mix(in srgb, var(--rpg-ui-selection), transparent 78%);
+}
+:is(
+    .rpg-ui-btn,
+    .rpg-ui-input-button,
+    .rpg-shop-btn,
+    .rpg-ui-menu-confirm-btn
+  ):is(:disabled, [aria-disabled="true"], [aria-busy="true"]) {
+  opacity: var(--rpg-ui-disabled-opacity);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.rpg-ui-btn[aria-busy="true"]::after {
+  content: "";
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: rpg-ui-spin 1s linear infinite;
+}
+@keyframes rpg-ui-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+.rpg-ui-btn::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border: 1px solid currentColor;
+  border-radius: max(0px, calc(var(--rpg-ui-control-radius) - 2px));
+  opacity: var(--rpg-ui-ornament-opacity);
+  pointer-events: none;
+  mask-image: linear-gradient(
+    135deg,
+    black,
+    transparent 35%,
+    transparent 65%,
+    black
+  );
+}
+:is(
+    .rpg-ui-btn,
+    .rpg-ui-close-button,
+    .rpg-ui-input,
+    .rpg-ui-checkbox,
+    .rpg-ui-menu-item,
+    .rpg-ui-menu-tab,
+    .rpg-ui-dialog-choice,
+    .rpg-shop-btn,
+    .rpg-shop-tab,
+    .rpg-shop-card,
+    .rpg-ui-hotbar-slot,
+    .rpg-ui-input-button,
+    .rpg-ui-character-select-confirm
+  ):focus-visible {
+  outline: var(--rpg-ui-focus-width) solid var(--rpg-ui-focus-color);
+  outline-offset: var(--rpg-ui-focus-offset);
+}
+.rpg-ui-input {
+  border-color: var(--rpg-ui-border);
+  min-height: var(--rpg-ui-control-height);
+  box-shadow: var(--rpg-ui-shadow-inset);
+}
+.rpg-ui-input:focus {
+  border-color: var(--rpg-ui-focus-color);
+  box-shadow: var(--rpg-ui-shadow-inset);
+}
+.rpg-ui-input[aria-invalid="true"] {
+  border-color: var(--rpg-ui-danger);
+}
+.rpg-ui-input:disabled {
+  background: var(--rpg-ui-bg);
+}

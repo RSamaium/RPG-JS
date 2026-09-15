@@ -243,6 +243,7 @@ describe("GUI", () => {
         guiId: "rpg-main-menu",
         data: {
           expForNextlevel: 150,
+          menus: expect.arrayContaining([expect.objectContaining({ id: "status", label: "rpg.menu.status" })]),
           items: [
             {
               id: "sword",

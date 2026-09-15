@@ -11,6 +11,17 @@ const createHost = () => {
 };
 
 describe("RpgAudioManager", () => {
+  it("routes a quiet typewriter cue through UI gain and allows disabling it", async () => {
+    const { host, sound } = createHost();
+    const manager = new RpgAudioManager(host, undefined);
+    manager.setVolume("ui", 0.4);
+    await manager.playUi("typewriter");
+    expect(host.getSound).toHaveBeenLastCalledWith("rpgjs-ui-typewriter");
+    expect(sound.volume).toHaveBeenLastCalledWith(0.1, 7);
+    manager.configure({ ui: { typewriter: false } });
+    await manager.playUi("typewriter");
+    expect(sound.play).toHaveBeenCalledTimes(1);
+  });
   it("persists four independent channels per project", () => {
     const values = new Map<string, string>();
     const storage = { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value) };

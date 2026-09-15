@@ -1,4 +1,4 @@
-:root {
+:root, .rpg-ui-theme-default, .rpg-ui-theme-pixel, [data-rpg-theme] {
   /* Scene */
   --rpg-ui-bg: #0f172a;
   --rpg-ui-body-bg: #050816;

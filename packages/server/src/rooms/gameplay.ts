@@ -7,6 +7,7 @@ import type { RpgRoomDescriptor, RpgWritableSignal } from "@rpgjs/common";
 import { context } from "../core/context";
 import { RpgPlayer } from "../Player/Player";
 import { BaseRoom } from "./BaseRoom";
+import { applyConnectionLocale } from "./locale";
 import type { RpgRoomConnection } from "./map";
 import { getRpgRoomMetadata, RpgRoomAction } from "./registry";
 
@@ -100,11 +101,12 @@ export class RpgGameplayRoom<TState = Record<string, unknown>> extends BaseRoom 
     return restored;
   }
 
-  async onJoin(player: RpgPlayer, conn: RpgRoomConnection): Promise<void> {
+  async onJoin(player: RpgPlayer, conn: RpgRoomConnection, ctx?: { request?: { url: string } }): Promise<void> {
     player.room = this;
     player.map = null;
     player.context = context;
     player.conn = conn;
+    applyConnectionLocale(player, ctx);
     await lastValueFrom(this.hooks.callHooks("server-room-onJoin", player, this));
     await lastValueFrom(this.hooks.callHooks("server-player-onJoinRoom", player, this));
     this.$applySync?.();

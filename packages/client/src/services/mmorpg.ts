@@ -31,6 +31,8 @@ export class BridgeWebsocket extends AbstractWebsocket {
   private pendingOn: Array<{ event: string; callback: (data: any) => void }> = [];
   private acceptedOpenListeners = new Set<(data: any) => void>();
   private targetRoom: string;
+  private transferQuery?: SocketQuery;
+  private targetHost?: string;
 
   constructor(protected context: RpgContext, private options: MmorpgOptions = {}) {
     super(context);
@@ -88,6 +90,7 @@ export class BridgeWebsocket extends AbstractWebsocket {
         id: this.privateId,
         query: {
           ...this.resolveQuery(),
+          locale: this.locale?.(),
           id: this.privateId,
         },
     }, instance)
@@ -153,13 +156,16 @@ export class BridgeWebsocket extends AbstractWebsocket {
   updateProperties({ room, host, query }: SocketUpdateProperties) {
     if (!this.socket?.conn) return;
     this.targetRoom = room;
+    this.transferQuery = query;
+    this.targetHost = host || this.targetHost || this.options.host || window.location.host;
     this.socket.conn.updateProperties({
       room,
       id: this.privateId,
-      host: host || this.options.host || window.location.host,
+      host: this.targetHost,
       query: {
         ...this.resolveQuery(),
         ...query,
+        locale: this.locale?.(),
         id: this.privateId,
       },
     })
@@ -172,6 +178,7 @@ export class BridgeWebsocket extends AbstractWebsocket {
   async reconnect(_listeners?: (data: any) => void): Promise<void> {
     if (!this.socket?.conn) return;
     const conn = this.socket.conn;
+    this.updateProperties({ room: this.targetRoom, query: this.transferQuery });
     const connected = waitForRpgjsConnected(
       conn,
       this.options.connectionAcceptanceTimeoutMs ?? 10_000,

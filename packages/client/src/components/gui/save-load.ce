@@ -1,7 +1,7 @@
 <DOMContainer width="100%" height="100%">
     <div class="rpg-ui-save-load-layer" click={closeSaveLoadFromPointer}>
-        <button class="rpg-ui-close-button" type="button" title="Close" aria-label="Close save menu" click={closeSaveLoadFromPointer}>x</button>
         <div class="rpg-ui-save-load rpg-anim-fade-in" click={stopEvent}>
+            <button class="rpg-ui-close-button" type="button" aria-label={t("rpg.ui.close")} click={closeSaveLoadFromPointer}>×</button>
             <div class="rpg-ui-save-load-header">
                 <div class="rpg-ui-save-load-title">{title()}</div>
                 <div class="rpg-ui-save-load-subtitle">{subtitle()}</div>

@@ -768,7 +768,10 @@ export function WithParameterManager<TBase extends PlayerCtor>(Base: TBase) {
         if (currentClass && 'skillsToLearn' in currentClass && Array.isArray(currentClass.skillsToLearn)) {
             for (let i = this._level() ; i <= val; i++) {
                 for (let skill of currentClass.skillsToLearn as any[]) {
-                    if (skill.level == i) {
+                    // Class assignment can already have granted this skill.
+                    // Reapplying a level (e.g. Studio new-game initialization)
+                    // must not abort the remaining join hooks.
+                    if (skill.level == i && !this['getSkill'](skill.skill)) {
                         this['learnSkill'](skill.skill, {
                             source: skill.source ?? 'level',
                             level: i

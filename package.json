@@ -5,6 +5,8 @@
     "build": "tsx bin/build.ts",
     "dev": "tsx bin/dev.ts",
     "playground": "pnpm --dir playground dev",
+    "storybook": "pnpm --filter @rpgjs/ui-css storybook",
+    "build-storybook": "pnpm --filter @rpgjs/ui-css build-storybook",
     "clean": "tsx bin/clean.ts",
     "docs:extract-api": "tsx bin/extract-jsdoc.ts",
     "docs:client-api": "tsx bin/extract-jsdoc.ts extract --package @rpgjs/client-api --entry packages/client/src --output docs/.generated/client-api.json && tsx bin/extract-jsdoc.ts render --input docs/.generated/client-api.json --config docs/api/client.config.json --output docs/api/client",

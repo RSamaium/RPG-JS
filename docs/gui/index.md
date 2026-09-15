@@ -13,6 +13,7 @@ Use GUI when the player interacts with an interface, when the server opens a men
 
 | Need | Use |
 | --- | --- |
+| Change the visual theme or reuse CSS elements | [Customize GUI themes](/gui/theming) |
 | Show a start screen before the player enters the game | [Title Screen](/gui/title-screen) |
 | Let the player choose a server-owned Actor | [Character Select](/gui/character-select) |
 | Display conversations or narrative text | [Dialog Box](/gui/dialog-box) |

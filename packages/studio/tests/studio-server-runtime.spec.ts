@@ -539,6 +539,14 @@ describe("Studio server runtime", () => {
     warn.mockRestore();
   });
 
+  test("includes localized client options in the Studio main menu", () => {
+    const callMainMenu = vi.fn();
+    const hooks = (studioServer() as any).player;
+    hooks.onInput({ getCurrentMap: () => ({ globalConfig: {} }), callMainMenu }, { action: "escape" });
+    expect(callMainMenu).toHaveBeenCalledWith(expect.objectContaining({ menus: expect.arrayContaining([{ id: "options", label: "rpg.menu.options" }]) }));
+    expect(callMainMenu).toHaveBeenCalledWith(expect.objectContaining({ menus: expect.arrayContaining([{ id: "status", label: "rpg.menu.status" }]) }));
+  });
+
   test("does not open the main menu when its project binding is disabled", () => {
     const callMainMenu = vi.fn();
     const hooks = (studioServer() as any).player;
@@ -886,13 +894,14 @@ describe("Studio server runtime", () => {
     ]);
   });
 
-  test("applies the selected actor resources and actor skills on map join", async () => {
+  test.each([false, true])("applies actor appearance and inventory even when its class already grants the skill: %s", async (classGrantsSkill) => {
     const records = [
       {
         _id: "actor-luna",
         type: "actor",
         name: "Luna",
         graphic: "luna-graphic",
+        startingInventory: [{ itemId: "starter-potion", amount: 2 }],
         classId: "class-warrior",
         parameters: {
           [MAXHP]: { start: 420, end: 4200 },
@@ -904,7 +913,7 @@ describe("Studio server runtime", () => {
         _id: "class-warrior",
         type: "class",
         name: "Warrior",
-        skills: [],
+        skills: classGrantsSkill ? [{ skillId: "skill-heal", level: 1 }] : [],
       },
       {
         _id: "skill-heal",
@@ -913,6 +922,7 @@ describe("Studio server runtime", () => {
         spCost: 12,
         power: 35,
       },
+      { _id: "starter-potion", type: "item", name: "Potion" },
     ];
     configureGameDataProvider({
       kind: "online",
@@ -962,6 +972,7 @@ describe("Studio server runtime", () => {
     expect(player.hp).toBe(420);
     expect(player.sp).toBe(900);
     expect(player.getSkill("skill-heal")).toBeDefined();
+    expect(player.getItem("starter-potion")?.quantity()).toBe(2);
   });
 
   test("refreshes online item records when a player joins an existing map", async () => {

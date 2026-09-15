@@ -25,6 +25,7 @@ export default defineConfig({
   test: {
     exclude: [
       ...configDefaults.exclude,
+      "packages/ui-css/tests/**",
       "samples/cloudflare-mmorpg/src/worker.spec.ts",
       "playground/games/studio/src/worker.spec.ts",
     ],

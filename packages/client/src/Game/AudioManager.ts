@@ -1,7 +1,7 @@
 import { signal } from "canvasengine";
 
 export type RpgAudioChannel = "master" | "music" | "sfx" | "ui";
-export type RpgUiAudioEvent = "navigate" | "confirm" | "cancel" | "open" | "close" | "error";
+export type RpgUiAudioEvent = "navigate" | "confirm" | "cancel" | "open" | "close" | "error" | "typewriter";
 
 export type RpgAudioCue =
   | string
@@ -27,6 +27,8 @@ export interface RpgUiAudioTheme {
   open?: RpgAudioCue;
   close?: RpgAudioCue;
   error?: RpgAudioCue;
+  /** Dialogue character cue. Set false to silence it independently of other UI sounds. */
+  typewriter?: RpgAudioCue;
 }
 
 export interface RpgAudioPosition {
@@ -72,13 +74,14 @@ const DEFAULT_PREFERENCES: RpgAudioPreferences = {
   ui: 1,
 };
 
-const DEFAULT_UI_CUES: Record<RpgUiAudioEvent, string> = {
+const DEFAULT_UI_CUES: Record<RpgUiAudioEvent, RpgAudioCue> = {
   navigate: "rpgjs-ui-navigate",
   confirm: "rpgjs-ui-confirm",
   cancel: "rpgjs-ui-cancel",
   open: "rpgjs-ui-open",
   close: "rpgjs-ui-close",
   error: "rpgjs-ui-error",
+  typewriter: { id: "rpgjs-ui-typewriter", volume: 0.25 },
 };
 
 const clamp = (value: number) => Math.max(0, Math.min(1, value));
@@ -146,6 +149,7 @@ const DEFAULT_SOUNDS = {
   "rpgjs-ui-open": createTone(520, 110, 300),
   "rpgjs-ui-close": createTone(620, 100, -260),
   "rpgjs-ui-error": createTone(190, 150, -30),
+  "rpgjs-ui-typewriter": createTone(480, 18, -100),
   "rpgjs-combat-attack": createTone(180, 95, 420),
   "rpgjs-combat-cast": createTone(440, 180, 480),
   "rpgjs-combat-hit": createTone(150, 85, -80),

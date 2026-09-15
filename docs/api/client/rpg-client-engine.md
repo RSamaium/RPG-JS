@@ -24,8 +24,11 @@ Reference for the `RpgClientEngine` class.
 - [clearClientPredictionStates](#clearclientpredictionstates)
 - [dashDefaults](#dashdefaults)
 - [flash](#flash)
+- [getAvailableLocales](#getavailablelocales)
 - [getComponentAnimation](#getcomponentanimation)
 - [getCurrentRoom](#getcurrentroom)
+- [getLocale](#getlocale)
+- [getLocalePreference](#getlocalepreference)
 - [getSound](#getsound)
 - [getSoundVolume](#getsoundvolume)
 - [getSpriteComponent](#getspritecomponent)
@@ -46,6 +49,7 @@ Reference for the `RpgClientEngine` class.
 - [sceneRoom](#sceneroom)
 - [setCameraFollow](#setcamerafollow)
 - [setKeyboardControls](#setkeyboardcontrols)
+- [setLocale](#setlocale)
 - [setSoundResolver](#setsoundresolver)
 - [setSoundVolume](#setsoundvolume)
 - [setSpritesheetResolver](#setspritesheetresolver)
@@ -498,6 +502,31 @@ engine.flash(undefined, {
 });
 ```
 
+## getAvailableLocales
+
+Game catalogue locales only, in both standalone and MMORPG mode.
+
+- Source: `packages/client/src/RpgClientEngine.ts`
+- Kind: `method`
+- Member of: `RpgClientEngine`
+- Defined in: `RpgClientEngine`
+
+### Signature
+
+```ts
+getAvailableLocales
+```
+
+### Returns
+
+Registered game locales; defaultLocale if there are no catalogues.
+
+### Examples
+
+```ts
+client.getAvailableLocales() // ['en', 'fr']
+```
+
 ## getComponentAnimation
 
 Get a component animation by its ID
@@ -543,6 +572,57 @@ Return the active map scene or synchronized custom gameplay room.
 
 ```ts
 getCurrentRoom(): RpgClientMap | RpgClientRoom
+```
+
+## getLocale
+
+Read the resolved client locale, reactively inside CanvasEngine computations.
+Works in standalone RPG and MMORPG modes.
+
+- Source: `packages/client/src/RpgClientEngine.ts`
+- Kind: `method`
+- Member of: `RpgClientEngine`
+- Defined in: `RpgClientEngine`
+
+### Signature
+
+```ts
+getLocale
+```
+
+### Returns
+
+The resolved game locale, never `auto`.
+
+### Examples
+
+```ts
+client.getLocale() // 'fr'
+```
+
+## getLocalePreference
+
+Current client preference in standalone RPG and MMORPG modes.
+
+- Source: `packages/client/src/RpgClientEngine.ts`
+- Kind: `method`
+- Member of: `RpgClientEngine`
+- Defined in: `RpgClientEngine`
+
+### Signature
+
+```ts
+getLocalePreference
+```
+
+### Returns
+
+Locale preference, reactive in client components.
+
+### Examples
+
+```ts
+client.getLocalePreference() // 'auto'
 ```
 
 ## getSound
@@ -1119,6 +1199,36 @@ Nothing.
 ```ts
 // Inside the current player's CanvasEngine mount callback:
 client.setKeyboardControls(element.directives.controls)
+```
+
+## setLocale
+
+Select and persist a game language, or `auto` for browser negotiation.
+Updates client labels and the connected player's future translations.
+
+- Source: `packages/client/src/RpgClientEngine.ts`
+- Kind: `method`
+- Member of: `RpgClientEngine`
+- Defined in: `RpgClientEngine`
+
+### Signature
+
+```ts
+setLocale
+```
+
+### Parameters
+
+- `locale`: `string`
+
+### Returns
+
+Nothing.
+
+### Examples
+
+```ts
+client.setLocale('fr')
 ```
 
 ## setSoundResolver

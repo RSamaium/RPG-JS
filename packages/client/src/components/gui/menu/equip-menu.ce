@@ -1,11 +1,12 @@
 <DOMContainer width="100%" height="100%">
     <div class="rpg-ui-menu-panel rpg-ui-panel">
         <div class="rpg-ui-menu-panel-header">{t("rpg.menu.equip")}</div>
-        <div class="rpg-ui-menu-panel-body rpg-ui-menu-panel-body-stacked">
-            <div>
+        <div class="rpg-ui-menu-panel-body rpg-ui-equipment-layout">
+            <div class="rpg-ui-equipment-inspector">
                 <div class="rpg-ui-menu-panel-details rpg-ui-panel">
                     <div class="rpg-ui-menu-panel-hero">
                         <div class="rpg-ui-menu-panel-hero-icon">
+                            @if (detailsItem()?.icon) {
                             <DOMSprite 
                                 sheet={iconSheet(detailsItem()?.icon)} 
                                 playing="default" 
@@ -13,6 +14,9 @@
                                 height="48px"
                                 objectFit="contain"
                             />
+                            } @else {
+                                <span class="rpg-ui-fallback-icon" aria-hidden="true">◇</span>
+                            }
                         </div>
                         <div>
                             <div class="rpg-ui-menu-panel-details-title">
@@ -22,18 +26,22 @@
                                 {detailsItem()?.description || ""}
                             </div>
                             @if (displayStats().length > 0) {
+                                <div class="rpg-ui-equip-attributes">
+                                <div class="rpg-ui-eyebrow">{t("rpg.equip.attributes")}</div>
+                                <p class="rpg-ui-equip-caption">{t("rpg.equip.comparison")}</p>
                                 <div class="rpg-ui-equip-stats">
                                     @for ((stat,index) of displayStats) {
                                         <div class="rpg-ui-equip-stat" class={{positive: stat.delta > 0, negative: stat.delta < 0}}>
                                             <div class="rpg-ui-equip-stat-key">{stat.label}</div>
                                             <div class="rpg-ui-equip-stat-value">
-                                                {stat.delta > 0 ? "+" : ""}{stat.delta}
+                                                {(stat.delta > 0 ? "+" : "") + stat.delta}
                                             </div>
-                                            @if (stat.current) {
-                                                <div class="rpg-ui-equip-stat-current">{stat.current} -> {stat.next}</div>
+                                            @if (stat.current !== undefined) {
+                                                <div class="rpg-ui-equip-stat-current"><span>{stat.current}</span><span aria-hidden="true">→</span><strong>{stat.next}</strong></div>
                                             }
                                         </div>
                                     }
+                                </div>
                                 </div>
                             }
                             <div class="rpg-ui-menu-panel-details-meta">
@@ -56,6 +64,9 @@
                     }
                 </div>
                 <Navigation tabindex={selectedItem} controls={controls}>
+                    @if (!listEntries().length) {
+                        <div class="rpg-ui-empty-state"><span aria-hidden="true">◇</span><h3>{t("rpg.menu.no-equipment")}</h3><p>{t("rpg.menu.no-equipment-help")}</p></div>
+                    }
                     @for ((entry,index) of listEntries) {
                         <div
                             class="rpg-ui-menu-item rpg-ui-menu-row"
@@ -88,6 +99,7 @@
 
 <script>
     import { signal, computed, createTabindexNavigator, effect } from "canvasengine";
+    import { selectionSound } from "../lifecycle";
     import { inject } from "../../../core/inject";
     import { RpgClientEngine } from "../../../RpgClientEngine";
     import { getKeyboardControlBind } from "../../../services/actionInput";
@@ -99,15 +111,16 @@
 
     const selectedTab = signal(0);
     const selectedItem = signal(0);
+    selectionSound(() => `${selectedTab()}:${selectedItem()}`, () => engine.playUiSound("navigate"));
     const { data, onInteraction, onBack } = defineProps();
 
     const equips = computed(() => data().equips ?? data().items);
     const slots = computed(() => data().slots);
 
-    const defaultSlots = [
+    const defaultSlots = computed(() => [
         { id: "weapon", label: t("rpg.menu.weapons"), types: ["weapon"] },
         { id: "armor", label: t("rpg.menu.armor"), types: ["armor"] }
-    ];
+    ]);
     const resolveProp = (value) => typeof value === "function" ? value() : value;
     const safeEquips = computed(() => {
         const list = resolveProp(equips);
@@ -116,7 +129,7 @@
     const slotList = computed(() => {
         const list = resolveProp(slots);
         if (Array.isArray(list) && list.length) return list;
-        return defaultSlots;
+        return defaultSlots();
     });
 
     const currentSlot = computed(() => slotList()[selectedTab()]);
@@ -244,7 +257,7 @@
         const list = [];
         for (const key of keys) {
             const delta = deltaStats[key];
-            if (delta === undefined || delta === 0) continue;
+            if (delta === undefined) continue;
             let current = params[key];
             if (current === undefined && key === "def") current = params.pdef;
             const next = current !== undefined ? current + delta : undefined;

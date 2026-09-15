@@ -6,17 +6,22 @@
   "author": "Samuel Ronce",
   "scripts": {
     "build": "echo 'CSS package - no build needed'",
-    "test": "vitest run"
+    "test": "vitest run",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build",
+    "test:browser": "playwright test"
   },
   "exports": {
     "./reset.css": "./reset.css",
     "./tokens.css": "./tokens.css",
     "./index.css": "./index.css",
+    "./components.css": "./components.css",
     "./theme-default.css": "./theme-default.css",
     "./theme-pixel.css": "./theme-pixel.css"
   },
   "files": [
     "index.css",
+    "components.css",
     "reset.css",
     "tokens.css",
     "theme-default.css",
@@ -37,6 +42,13 @@
     "framework-agnostic"
   ],
   "devDependencies": {
+    "@playwright/test": "^1.58.0",
+    "@storybook/addon-a11y": "10.6.0",
+    "@storybook/addon-docs": "10.6.0",
+    "@storybook/html-vite": "10.6.0",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "storybook": "10.6.0",
     "vite": "^8.0.16",
     "vitest": "^4.1.9"
   }

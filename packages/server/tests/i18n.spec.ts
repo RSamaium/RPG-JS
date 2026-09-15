@@ -1,8 +1,36 @@
 import { describe, expect, test } from "vitest";
 import { Context, injector } from "@signe/di";
 import { RpgPlayer, provideI18n, provideServerModules } from "../src";
+import { applyConnectionLocale, applyPlayerLocale } from "../src/rooms/locale";
 
 describe("server i18n", () => {
+  test("validates connection/action locales, isolates players and retains preference after loading", async () => {
+    const context = new Context();
+    await injector(context, [provideServerModules([]), provideI18n({ messages: {
+      en: { hello: "Hello" }, fr: { hello: "Bonjour" },
+    } })]);
+    const makePlayer = () => {
+      const player = new RpgPlayer();
+      player.context = context;
+      player.conn = { id: Math.random().toString(), state: {}, setState(state: any) { this.state = state; return state; }, send() {}, close() {} };
+      return player;
+    };
+    const first = makePlayer(), second = makePlayer();
+    applyConnectionLocale(first, { request: { url: "http://localhost/?locale=fr" } });
+    expect(first.t("hello")).toBe("Bonjour");
+    expect(second.t("hello")).toBe("Hello");
+    for (const value of [null, "fr", { locale: 1 }, { locale: "de" }, { locale: "__proto__" }]) expect(applyPlayerLocale(first, value)).toBe(false);
+    expect(first.getLocale()).toBe("fr");
+    const saved = await first.save();
+    applyPlayerLocale(first, { locale: "en", playerId: second.id });
+    await first.load(saved);
+    expect(first.getLocale()).toBe("en");
+    const reconnected = makePlayer();
+    await reconnected.load(saved);
+    applyConnectionLocale(reconnected, { request: { url: "http://localhost/?locale=en" } });
+    expect(reconnected.t("hello")).toBe("Hello");
+    expect(second.getLocale()).toBe("en");
+  });
   test("translates through player helpers with module defaults and game overrides", async () => {
     const context = new Context();
     await injector(context, [

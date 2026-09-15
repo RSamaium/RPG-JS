@@ -7,6 +7,12 @@ import { provideClientModules } from "./module";
 import { provideI18n, RpgClientBuiltinI18n } from "./i18n";
 
 describe("client i18n", () => {
+  test("ships complete French labels without adding them to the game's locale list", () => {
+    expect(Object.keys(RpgClientBuiltinI18n.fr).sort()).toEqual(Object.keys(RpgClientBuiltinI18n.en).sort());
+    const service = getOrCreateI18nService(null, { defaultLocale: "en" });
+    service.addMessages(RpgClientBuiltinI18n, "rpgjs-client", 0);
+    expect(service.getAvailableLocales()).toEqual(["en"]);
+  });
   test("merges client module translations with game overrides", async () => {
     const context = new Context();
 

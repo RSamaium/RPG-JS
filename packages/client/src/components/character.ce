@@ -69,6 +69,7 @@
 
 <script>
   import { signal, effect, mount, computed, tick, animatedSignal, on, untracked } from "canvasengine";
+  import { movementPreferences } from "../services/movementPreferences";
   import { Assets } from "pixi.js";
   import { observeCurrentPlayerControls } from "./current-player-controls";
   import type { Subscription } from "rxjs";
@@ -374,6 +375,7 @@
 
   const canControls = () => isMe() && getCanMoveValue(sprite)
   const keyboardControls = client.globalConfig.keyboardControls;
+  const movementBindings = movementPreferences(client).bindings;
   const activeDirectionKeys = new Map();
   const activeControlDirections = new Map();
   const activeControlDirectionReleaseTimers = new Map();
@@ -578,10 +580,10 @@
     return isConnected()
   });
 
-  const controls = {
+  const controls = computed(() => ({
     down: {
       repeat: true,
-      bind: keyboardControls.down,
+      bind: movementBindings().down,
       keyDown() {
         activateControlDirection('down', Direction.Down)
         processMovementInput(Direction.Down)
@@ -592,7 +594,7 @@
     },
     up: {
       repeat: true,
-      bind: keyboardControls.up,
+      bind: movementBindings().up,
       keyDown() {
         activateControlDirection('up', Direction.Up)
         processMovementInput(Direction.Up)
@@ -603,7 +605,7 @@
     },
     left: {
       repeat: true,
-      bind: keyboardControls.left,
+      bind: movementBindings().left,
       keyDown() {
         activateControlDirection('left', Direction.Left)
         processMovementInput(Direction.Left)
@@ -614,7 +616,7 @@
     },
     right: {
       repeat: true,
-      bind: keyboardControls.right,
+      bind: movementBindings().right,
       keyDown() {
         activateControlDirection('right', Direction.Right)
         processMovementInput(Direction.Right)
@@ -667,7 +669,7 @@
     gamepad: {
       enabled: true
     }
-  };
+  }));
 
   const smoothX = animatedSignal(x(), {
     duration: isMe() ? 0 : 0

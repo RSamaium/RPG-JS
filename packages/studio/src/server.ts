@@ -1161,6 +1161,7 @@ export default (_config?: unknown) => {
           if (map?.globalConfig?.menus?.mainMenu?.enabled === false) return;
           player.callMainMenu({
             menus: [
+              { id: "status", label: "rpg.menu.status" },
               {
                 id: "items",
                 label: "Items",
@@ -1172,6 +1173,10 @@ export default (_config?: unknown) => {
               {
                 id: "equip",
                 label: "Equipment",
+              },
+              {
+                id: "options",
+                label: "rpg.menu.options",
               },
               {
                 id: "save",

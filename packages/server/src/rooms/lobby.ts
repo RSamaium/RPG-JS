@@ -7,6 +7,7 @@ import { signal } from "@signe/reactive";
 import { RpgPlayer } from "../Player/Player";
 import type { RpgRoomConnection } from "./map";
 import { BaseRoom } from "./BaseRoom";
+import { applyConnectionLocale } from "./locale";
 import { buildSaveSlotMeta, resolveSaveStorageStrategy } from "../services/save";
 import { lastValueFrom } from "rxjs";
 import type { RpgWritableSignal } from "@rpgjs/common";
@@ -29,11 +30,12 @@ export class LobbyRoom extends BaseRoom {
     }
   }
 
-  async onJoin(player: RpgPlayer, conn: RpgRoomConnection) {
+  async onJoin(player: RpgPlayer, conn: RpgRoomConnection, ctx?: { request?: { url: string } }) {
     player.room = this as unknown as RpgPlayer["room"];
     player.map = this as unknown as RpgPlayer["map"];
     player.context = context;
     player.conn = conn;
+    applyConnectionLocale(player, ctx);
     await player._onInit();
     await lastValueFrom(this.hooks.callHooks("server-player-onConnected", player));
     await lastValueFrom(this.hooks.callHooks("server-room-onJoin", player, this));

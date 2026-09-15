@@ -33,3 +33,6 @@ public
 .vite
 .env.local
 .dev.vars
+storybook-static/
+test-results/
+playwright-report/

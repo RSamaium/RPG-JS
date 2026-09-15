@@ -1029,9 +1029,13 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
    * ```
    */
   async applySnapshot(snapshot: string | RpgPlayerSnapshot): Promise<RpgPlayerSnapshot> {
+    const preferred = (this.conn?.state as { rpgjsLocale?: string } | null)?.rpgjsLocale;
+    const localeService = getOrCreateI18nService(this.context);
+    const hasPreference = preferred && (localeService.getAvailableLocales().includes(preferred) || preferred === localeService.defaultLocale);
     const data = (typeof snapshot === "string" ? JSON.parse(snapshot) : snapshot) as RpgPlayerSnapshot;
     if (data && typeof data === "object" && typeof (data as any).locale === "string") {
-      this.setLocale((data as any).locale);
+      this.setLocale(hasPreference
+        ? preferred : (data as any).locale);
     }
     if (data && typeof data === "object" && (data as any).name !== undefined && (data as any)._name === undefined) {
       (data as any)._name = (data as any).name;
@@ -1048,6 +1052,7 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
     const withClass = (this as any).resolveClassSnapshot?.(withStates) ?? withStates;
     const resolvedSnapshot = ((this as any).resolveEquipmentsSnapshot?.(withClass) ?? withClass) as RpgPlayerSnapshot;
     load(this, this.prepareSnapshotForObjectLoad(resolvedSnapshot));
+    if (hasPreference) this.setLocale(preferred);
     if (resolvedSnapshot.expCurve) {
       (this as any).expCurve = resolvedSnapshot.expCurve;
     }
