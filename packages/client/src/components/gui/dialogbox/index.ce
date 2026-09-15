@@ -8,7 +8,7 @@
         >
             <div class="rpg-ui-dialog rpg-anim-fade-in" click={stopEvent}>
                 <button class="rpg-ui-close-button" type="button" aria-label={t("rpg.ui.close")} click={closeDialogFromPointer}>×</button>
-                <div class="rpg-ui-dialog-body">
+                <div class="rpg-ui-dialog-body" data-has-choices={hasChoices() ? "true" : "false"}>
                    <div>
                         @if (speakerName()) {
                             <div class="rpg-ui-dialog-speaker">{speakerName()}</div>
@@ -18,6 +18,8 @@
                                 <span class={"rpg-ui-rich-" + run.kind}>{run.text}</span>
                             }
                         </div>
+                        @if (hasChoices() || hasInput()) {
+                          <div class="rpg-ui-dialog-actions">
                         @if (hasChoices() && ready()) {
                             <Navigation tabindex={selectedItem} controls={controls}>
                                 <div class="rpg-ui-dialog-choices">
@@ -42,21 +44,23 @@
                                 cancel={cancelInput}
                             />
                         }
+                          </div>
+                        }
                     </div>
                     @if (hasFace()) {
                         <div class="rpg-ui-dialog-face">
                             <DOMSprite
                                 sheet={faceSheet(dialogFace())}
-                                width="128px"
-                                height="128px"
+                                width={portraitSize}
+                                height={portraitSize}
                                 objectFit="contain"
                             />
                         </div>
                     }
                 </div>
-                @if (!hasInput() && !hasChoices() || !ready()) {
+                @if (!isTyping() && (!ready() || (!hasInput() && !hasChoices()))) {
                     <button class="rpg-ui-dialog-continue" type="button" click={advance} aria-label={t("rpg.input.confirm")}>
-                        <span>{pageIndex() + 1} / {pages().length}</span><span aria-hidden="true">◆</span>
+                        <span aria-hidden="true"></span>
                     </button>
                 }
             </div>
@@ -70,6 +74,7 @@
     import { RpgClientEngine } from "../../../RpgClientEngine";
     import { guiTransition, lockGuiInput, selectionSound } from "../lifecycle";
     import { parseRichText, paginateRichText, sliceRichText } from "../../../utils/richText";
+    import { measureRichText, richTextLength, locateReadPosition } from "../../../utils/measuredRichText";
     import { getKeyboardControlBind } from "../../../services/actionInput";
     import InputField from "../input-field.ce";
 
@@ -82,7 +87,7 @@
     const transition = guiTransition();
 
     const selectedItem = signal(0)
-    const ACTION_OPEN_GUARD_MS = 150;
+    const ACTION_OPEN_GUARD_MS = 180;
     const openedAt = Date.now();
 
     const {
@@ -121,8 +126,10 @@
         return !!(value && value.id);
     });
 
-    const pageIndex = signal(0);
-    const pages = computed(() => paginateRichText(parseRichText(String(resolveProp(message()) || "")), typeof window !== "undefined" && window.innerWidth < 700 ? 180 : 320));
+    const pagination = signal({ pages: [[]], index: 0, resume: 0 });
+    const pageIndex = computed(() => pagination().index);
+    const portraitSize = signal("180px");
+    const pages = computed(() => pagination().pages);
     const currentRuns = computed(() => pages()[Math.min(pageIndex(), pages().length - 1)]);
     const visibleCount = signal(0);
     const visibleRuns = computed(() => sliceRichText(currentRuns(), visibleCount()));
@@ -130,15 +137,26 @@
     const isTyping = signal(false);
     let typewriterTimer = null;
     let lastSoundAt = 0;
-    effect(() => { message(); pageIndex.set(0); });
+    let alive = true;
+    let scheduleMeasure = () => {};
+    effect(() => {
+        const runs = parseRichText(String(resolveProp(message()) || ""));
+        // Keep downstream layout reads outside dependency collection of this effect.
+        queueMicrotask(() => {
+            if (!alive) return;
+            pagination.set({ pages: paginateRichText(runs, 320), index: 0, resume: 0 });
+            scheduleMeasure();
+        });
+    });
 
-    const startTypewriter = (text) => {
+    const startTypewriter = (text, resume = 0) => {
         if (typewriterTimer) clearInterval(typewriterTimer);
-        visibleCount.set(0);
+        visibleCount.set(resume);
         isTyping.set(false);
         if (!text) return;
         const characters = Array.from(text);
-        let index = 0;
+        let index = resume;
+        if (index >= characters.length) return;
         isTyping.set(true);
         typewriterTimer = setInterval(() => {
             index += 1;
@@ -170,7 +188,7 @@
             finishTyping();
             return;
         }
-        startTypewriter(text);
+        startTypewriter(text, pagination().resume);
     });
 
 
@@ -225,10 +243,10 @@
     let lastActionAt = 0;
     function advance(event) {
         event?.stopPropagation?.();
-        if (!canAcceptAction() || transition.closing() || Date.now() - lastActionAt < 100) return;
+        if (event?.repeat || !canAcceptAction() || transition.closing() || Date.now() - lastActionAt < 180) return;
         lastActionAt = Date.now();
         if (isTyping()) { finishTyping(); return; }
-        if (pageIndex() < pages().length - 1) { pageIndex.set(pageIndex() + 1); return; }
+        if (pageIndex() < pages().length - 1) { pagination.set({ pages: pages(), index: pageIndex() + 1, resume: 0 }); return; }
         if (hasInput()) return;
         if (hasChoices()) { onSelect(selectedItem()); return; }
         _onFinish();
@@ -240,7 +258,7 @@
             bind: keyboardControls.up,
             throttle: 150,
             keyDown() {
-                if (!hasChoices()) return;
+                if (!hasChoices() || !ready()) return;
                 nav.next(-1);
             }
         },
@@ -249,7 +267,7 @@
             bind: keyboardControls.down,
             throttle: 150,
             keyDown() {
-                if (!hasChoices()) return;
+                if (!hasChoices() || !ready()) return;
                 nav.next(1);
             }
         },
@@ -276,7 +294,66 @@
     }
 
     mount((element) => {
+        // DOMSprite's contain transform needs concrete dimensions when the
+        // typewriter or a viewport resize changes the dialogue body's height.
+        const body = element.componentInstance?.element?.querySelector(".rpg-ui-dialog-body");
+        const layer = element.componentInstance?.element?.querySelector(".rpg-ui-dialog-layer");
+        const content = body?.querySelector(".rpg-ui-dialog-content");
+        let frame = 0;
+        let disposed = false;
+        let measuredMessage = null;
+        const reflow = () => {
+            frame = 0;
+            if (disposed || !content) return;
+            const source = String(resolveProp(message()) || "");
+            const column = content.parentElement;
+            const speakerElement = column.querySelector(".rpg-ui-dialog-speaker");
+            const speakerHeight = speakerElement ? speakerElement.offsetHeight + parseFloat(getComputedStyle(speakerElement).marginBottom || "0") : 0;
+            const choiceTextBudget = hasChoices() ? Math.max(1, (column.clientHeight - speakerHeight) * .45) : undefined;
+            const next = measureRichText(parseRichText(source), content, choiceTextBudget);
+            if (!next) return;
+            // An initial unmeasured fallback is not a page the player has read.
+            const position = measuredMessage === source
+                ? pages().slice(0, pageIndex()).reduce((sum, runs) => sum + richTextLength(runs), 0) + visibleCount() : 0;
+            measuredMessage = source;
+            if (JSON.stringify(next) === JSON.stringify(pages())) return;
+            pagination.set({ pages: next, ...locateReadPosition(next, position) });
+        };
+        scheduleMeasure = () => { if (!frame && !disposed) frame = requestAnimationFrame(reflow); };
+        const syncPortraitHeight = () => {
+            if (body?.clientHeight) portraitSize.set(`${body.clientHeight}px`);
+            scheduleMeasure();
+        };
+        const portraitObserver = typeof ResizeObserver !== "undefined" && body
+            ? new ResizeObserver(syncPortraitHeight) : null;
+        portraitObserver?.observe(body);
+        if (content) portraitObserver?.observe(content);
+        syncPortraitHeight();
+        document.fonts?.ready.then(scheduleMeasure);
+        document.fonts?.addEventListener("loadingdone", scheduleMeasure);
+        const resizeViewport = () => {
+            if (layer && window.visualViewport) layer.style.maxHeight = `${window.visualViewport.height}px`;
+            scheduleMeasure();
+        };
+        resizeViewport();
+        window.visualViewport?.addEventListener("resize", resizeViewport);
+        // Enter is also a dialogue confirmation key. Do not intercept text inputs
+        // or their validation, and suppress the button's synthetic Enter click.
+        const confirmWithEnter = (event) => {
+            if (event.key !== "Enter" || (hasInput() && ready()) || event.isComposing) return;
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            advance(event);
+        };
+        window.addEventListener("keydown", confirmWithEnter, true);
         return () => {
+            disposed = true;
+            alive = false;
+            cancelAnimationFrame(frame);
+            document.fonts?.removeEventListener("loadingdone", scheduleMeasure);
+            window.visualViewport?.removeEventListener("resize", resizeViewport);
+            portraitObserver?.disconnect();
+            window.removeEventListener("keydown", confirmWithEnter, true);
             if (typewriterTimer) clearInterval(typewriterTimer);
             transition.dispose();
             releaseInput();

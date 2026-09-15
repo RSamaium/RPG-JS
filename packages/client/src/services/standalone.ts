@@ -164,6 +164,7 @@ class BridgeWebsocket extends AbstractWebsocket {
         url.searchParams.set(key, value);
       }
     }
+    if (this.locale) url.searchParams.set('locale', this.locale());
     const request = new Request(url.toString(), {
       method: 'GET',
       headers: {

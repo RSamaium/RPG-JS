@@ -58,12 +58,12 @@ export class MenuGui extends Gui {
         const disabledSet = new Set(options.disabled || [])
         const defaultMenus: MenuEntry[] = [
             { id: 'status', label: 'rpg.menu.status' },
-            { id: 'items', label: 'Items' },
-            { id: 'skills', label: 'Skills' },
-            { id: 'equip', label: 'Equip' },
-            { id: 'options', label: 'Options' },
-            { id: 'save', label: 'Save' },
-            { id: 'exit', label: 'Exit' }
+            { id: 'items', label: 'rpg.menu.items' },
+            { id: 'skills', label: 'rpg.menu.skills' },
+            { id: 'equip', label: 'rpg.menu.equip' },
+            { id: 'options', label: 'rpg.menu.options' },
+            { id: 'save', label: 'rpg.menu.save' },
+            { id: 'exit', label: 'rpg.menu.exit' }
         ]
         const menus = (options.menus && options.menus.length ? options.menus : defaultMenus)
             .map(menu => ({

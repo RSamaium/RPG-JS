@@ -22,6 +22,15 @@
             </section>
             <section class="rpg-ui-option-section">
                 <div class="rpg-ui-menu-panel-details-title">{t("rpg.audio.title")}</div>
+                <label class="rpg-ui-language-option">
+                    <span>{t("rpg.options.language")}</span>
+                    <select class="rpg-ui-input" value={language} change={changeLanguage} aria-label={t("rpg.options.language")}>
+                        <option value="auto">{t("rpg.options.language-auto")}</option>
+                        @for (locale of locales) {
+                            <option value={locale.id}>{locale.name}</option>
+                        }
+                    </select>
+                </label>
                 <div class="rpg-ui-menu-panel-details-desc">{t("rpg.audio.help")}</div>
                 @for (channel of channels) {
                     <label class="rpg-ui-audio-option">
@@ -45,7 +54,7 @@
 </DOMContainer>
 
 <script>
-    import { signal, computed, mount } from "canvasengine";
+    import { signal, computed, effect, mount } from "canvasengine";
     import { configurableControls, movementPreferences } from "../../../services/movementPreferences";
     import { inject } from "../../../core/inject";
     import { RpgClientEngine } from "../../../RpgClientEngine";
@@ -53,6 +62,18 @@
     const engine = inject(RpgClientEngine);
     const { t } = engine.i18n();
     const preferences = movementPreferences(engine);
+    const language = signal(engine.getLocalePreference());
+    effect(() => { language.set(engine.getLocalePreference()); });
+    const locales = engine.getAvailableLocales().map(id => {
+        let name = id;
+        try { name = new Intl.DisplayNames([id], { type: "language" }).of(id) || id; } catch { /* Non-BCP47 catalogue ids. */ }
+        return { id, name: name.charAt(0).toUpperCase() + name.slice(1) };
+    });
+    const changeLanguage = (event) => {
+        engine.setLocale(event.target.value);
+        language.set(engine.getLocalePreference());
+        engine.playUiSound("navigate");
+    };
     const listening = signal(null);
     const message = signal("rpg.controls.saved");
     const keyLabel = (bind) => {

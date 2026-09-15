@@ -64,7 +64,7 @@
                                     class={{active: selectedTab() === index}} 
                                     tabindex={index} 
                                     click={selectTab(index)}
-                                >{{ tab.label }}</div>
+                                >{t(tab.label)}</div>
                             }
                         </div>
                     </Navigation>
@@ -136,12 +136,14 @@
                             </div>
                             <div>
                                 @if (displayStats().length > 0) {
+                                    <div class="rpg-ui-eyebrow">{t("rpg.equip.attributes")}</div>
+                                    <p class="rpg-ui-equip-caption">{t("rpg.equip.comparison")}</p>
                                     <div class="rpg-shop-stats rpg-ui-equip-stats">
                                         @for ((stat,index) of displayStats) {
                                             <div class="rpg-shop-stat rpg-ui-equip-stat" class={{positive: stat.delta > 0, negative: stat.delta < 0}}>
                                                 <div class="rpg-shop-stat-key rpg-ui-equip-stat-key">{{ stat.label }}</div>
                                                 <div class="rpg-shop-stat-value rpg-ui-equip-stat-value">
-                                                    {{ stat.delta > 0 ? '+' : '' }}{{ stat.delta }}
+                                                    {(stat.delta > 0 ? "+" : "") + stat.delta}
                                                 </div>
                                                 @if (stat.current !== undefined) {
                                                     <div class="rpg-shop-stat-current rpg-ui-equip-stat-current"><span>{{ stat.current }}</span><span>→</span><strong>{{ stat.next }}</strong></div>
@@ -224,11 +226,10 @@
     const selectedModeIndex = signal(0)
     const quantity = signal(1)
     const quantityDialogOpen = signal(false)
-    const defaultMessage = t("rpg.shop.default-message")
     const tabs = [
-        { id: 'item', label: t("rpg.menu.items") },
-        { id: 'weapon', label: t("rpg.menu.weapons") },
-        { id: 'armor', label: t("rpg.menu.armor") }
+        { id: 'item', label: "rpg.menu.items" },
+        { id: 'weapon', label: "rpg.menu.weapons" },
+        { id: 'armor', label: "rpg.menu.armor" }
     ]
 
     const { data, onInteraction , onFinish } = defineProps()
@@ -237,7 +238,7 @@
     const guiData = computed(() => resolveProp(data) || {})
     const shopMessage = computed(() => {
         const message = resolveProp(guiData().message)
-        return message ? String(message) : defaultMessage
+        return message ? String(message) : t("rpg.shop.default-message")
     })
     const face = computed(() => resolveProp(guiData().face))
     const hasFace = computed(() => {

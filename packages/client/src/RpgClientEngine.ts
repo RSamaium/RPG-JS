@@ -43,6 +43,7 @@ import { applySyncedHitboxPayload } from "./utils/syncHitbox";
 import { applySyncedParamPayload } from "./utils/syncParams";
 import { EventComponentResolverRegistry, type EventComponentResolver } from "./Game/EventComponentResolver";
 import { RpgClientBuiltinI18n } from "./i18n";
+import { createLocalePreferences } from "./services/localePreferences";
 import { clearCameraFollowPlugins, type CameraFollowSmoothMove } from "./services/cameraFollow";
 import { RpgMusicManager } from "./Game/MusicManager";
 import {
@@ -331,7 +332,9 @@ export class RpgClientEngine<T = any> {
   private pendingSyncPackets: any[] = [];
   private notificationManager: NotificationManager = new NotificationManager();
   private i18nService: I18nService;
-  private locale?: string;
+  private locale = signal("");
+  private localePreferences: ReturnType<typeof createLocalePreferences>;
+  private localeConnected = false;
 
   constructor(public context) {
     this.webSocket = inject(WebSocketToken);
@@ -350,6 +353,13 @@ export class RpgClientEngine<T = any> {
     if (!this.globalConfig) {
       this.globalConfig = {} as T
     }
+    let localeStorage: Storage | undefined;
+    try { localeStorage = window.localStorage; } catch { /* Storage is optional. */ }
+    this.localePreferences = createLocalePreferences(this.getAvailableLocales(), this.i18nService.defaultLocale,
+      (this.globalConfig as any).projectId ?? (this.globalConfig as any)._id ?? (typeof location !== "undefined" ? location.pathname : "default"),
+      typeof navigator !== "undefined" ? navigator.languages : [], localeStorage);
+    this.locale.set(this.localePreferences.resolve());
+    this.webSocket.locale = () => this.getLocale();
     if (!(this.globalConfig as any).box) {
       (this.globalConfig as any).box = {
         styles: {
@@ -408,13 +418,52 @@ export class RpgClientEngine<T = any> {
     return this.webSocket.mode === "standalone";
   }
 
-  setLocale(locale: string) {
-    this.locale = locale;
+  /**
+   * Select and persist a game language, or `auto` for browser negotiation.
+   * Updates client labels and the connected player's future translations.
+   * @title setLocale
+   * @method setLocale
+   * @param locale - Registered game locale or `auto`.
+   * @returns Nothing.
+   * @memberof RpgClientEngine
+   * @example client.setLocale('fr')
+   */
+  setLocale(locale: string): void {
+    this.localePreferences.select(locale);
+    this.locale.set(this.localePreferences.resolve());
+    if (this.localeConnected) this.webSocket.emit("player.locale", { locale: this.getLocale() });
   }
 
+  /**
+   * Read the resolved client locale, reactively inside CanvasEngine computations.
+   * Works in standalone RPG and MMORPG modes.
+   * @title getLocale
+   * @method getLocale
+   * @returns The resolved game locale, never `auto`.
+   * @memberof RpgClientEngine
+   * @example client.getLocale() // 'fr'
+   */
   getLocale(): string {
-    return this.locale || this.i18nService.defaultLocale;
+    return this.locale() || this.i18nService.defaultLocale;
   }
+
+  /** Game catalogue locales only, in both standalone and MMORPG mode.
+   * @title getAvailableLocales
+   * @method getAvailableLocales
+   * @returns Registered game locales; defaultLocale if there are no catalogues.
+   * @memberof RpgClientEngine
+   * @example client.getAvailableLocales() // ['en', 'fr']
+   */
+  getAvailableLocales(): string[] { return this.i18nService.getAvailableLocales(); }
+
+  /** Current client preference in standalone RPG and MMORPG modes.
+   * @title getLocalePreference
+   * @method getLocalePreference
+   * @returns Locale preference, reactive in client components.
+   * @memberof RpgClientEngine
+   * @example client.getLocalePreference() // 'auto'
+   */
+  getLocalePreference(): string { return this.localePreferences.preference(); }
 
   t(key: string, params?: I18nParams): string {
     return this.i18nService.t(key, params, this.getLocale());
@@ -473,6 +522,8 @@ export class RpgClientEngine<T = any> {
 
     try {
       await this.webSocket.connection();
+      this.localeConnected = true;
+      this.webSocket.emit("player.locale", { locale: this.getLocale() });
     }
     catch (error) {
       this.stopPingPong();
@@ -958,12 +1009,15 @@ export class RpgClientEngine<T = any> {
     });
 
     this.webSocket.on('open', () => {
+      this.localeConnected = true;
+      this.webSocket.emit("player.locale", { locale: this.getLocale() });
       this.hooks.callHooks("client-engine-onConnected", this, this.socket).subscribe();
       // Start ping/pong for synchronization
       this.startPingPong();
     })
 
     this.webSocket.on('close', () => {
+      this.localeConnected = false;
       this.hooks.callHooks("client-engine-onDisconnected", this, this.socket).subscribe();
       // Stop ping/pong when disconnected
       this.stopPingPong();

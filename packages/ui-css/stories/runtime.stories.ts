@@ -15,6 +15,7 @@ export const RichDialogue: StoryObj = {
   render: () => {
     const root = interactive(scene(`<div class="rpg-ui-dialog-layer"><div class="rpg-ui-dialog-container" data-position="bottom" data-full-width="false" data-has-face="true"><div class="rpg-ui-dialog"><div class="rpg-ui-dialog-body"><div><div class="rpg-ui-dialog-speaker">Luna · Keeper of the sanctuary</div><div class="rpg-ui-dialog-content"></div></div><div class="rpg-ui-dialog-face"><img src="${lunaPortrait}" alt="Luna"></div></div><button class="rpg-ui-dialog-continue" type="button" aria-label="Replay transition"><span>Replay transition</span><span aria-hidden="true">◆</span></button></div></div></div>`));
     const content = root.querySelector('.rpg-ui-dialog-content')!;
+    root.querySelector('.rpg-ui-dialog-continue')!.innerHTML = '<span aria-hidden="true"></span>';
     for (const run of parseRichText('The **silver key** belongs to you now.\nBeyond the gate lies *the forgotten kingdom*. Tread carefully, traveler.')) {
       const span = document.createElement('span');
       span.className = `rpg-ui-rich-${run.kind}`;
@@ -43,6 +44,7 @@ export const PlayerOptions: StoryObj = {
     const root = menu(`<div class="rpg-ui-menu-panel-header">Options</div><div class="rpg-ui-menu-panel-body rpg-ui-options"><section class="rpg-ui-option-section"><div class="rpg-ui-eyebrow">Controls</div><h2>Movement keys</h2><p>Select a direction, then press a letter or an arrow key. Escape cancels.</p><div class="rpg-ui-keybindings">${[["up", "W"], ["down", "S"], ["left", "A"], ["right", "D"]].map(([direction, key]) => `<button type="button" class="rpg-ui-keybinding"><span>Move ${direction}</span><kbd>${key}</kbd></button>`).join("")}</div><p class="rpg-ui-option-feedback" role="status">Preview only — the game saves and applies these preferences.</p></section><section class="rpg-ui-option-section"><h2>Audio</h2><p>Adjust each sound category.</p>${["Master volume", "Music", "Sound effects", "Interface"].map(label => `<label class="rpg-ui-audio-option"><span>${label}</span><output>75%</output><input type="range" min="0" max="100" value="75" aria-label="${label}"></label>`).join("")}</section></div>`);
     root.querySelector('.rpg-ui-keybindings')!.insertAdjacentHTML('beforeend', '<button type="button" class="rpg-ui-keybinding"><span>Action</span><kbd>Space</kbd></button><button type="button" class="rpg-ui-keybinding"><span>Back / menu</span><kbd>Esc</kbd></button>');
     root.querySelector('.rpg-ui-option-section h2')!.textContent = 'Keyboard bindings';
+    root.querySelectorAll('.rpg-ui-option-section')[1].insertAdjacentHTML('afterbegin', '<label class="rpg-ui-language-option">Language<select class="rpg-ui-input" aria-label="Language"><option value="auto">Automatic — browser</option><option value="en">English</option><option value="fr">Français</option><option value="ja">日本語</option></select></label>');
     root.querySelectorAll('input[type="range"]').forEach(input => input.addEventListener("input", () => { input.parentElement!.querySelector("output")!.textContent = `${(input as HTMLInputElement).value}%`; }));
     return root;
   },

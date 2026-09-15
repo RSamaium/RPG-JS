@@ -17,8 +17,9 @@
             data-selected={selectedSlot() === index ? "true" : "false"}
             data-empty={slot.type === "empty" ? "true" : "false"}
             data-locked={slot.locked ? "true" : "false"}
-            disabled={slot.locked}
-            tabindex={index}
+            aria-disabled={slot.locked ? "true" : "false"}
+            tabindex={slot.locked ? -1 : 0}
+            focus={focusSlot(index)}
             aria-label={slotAriaLabel(slot, index)}
             click={assignSlot(index)}
           >
@@ -75,10 +76,14 @@
   }
 
   .rpg-hotbar-picker-slot {
+    width: 100%;
+    min-width: 0;
     min-height: 76px;
     color: #f7fbff;
     font: inherit;
     background: rgb(14 25 42 / 96%);
+    touch-action: manipulation;
+    cursor: pointer;
   }
 
   .rpg-hotbar-picker-slot[data-selected="true"] {
@@ -143,6 +148,18 @@
       grid-template-columns: repeat(5, minmax(48px, 1fr));
       gap: 5px;
     }
+    .rpg-hotbar-picker-help {
+      flex-wrap: wrap;
+    }
+    .rpg-hotbar-picker-help > span {
+      flex-basis: 100%;
+    }
+    .rpg-hotbar-picker-help > button {
+      flex: 1 1 0;
+      min-width: 0;
+      padding-inline: 8px;
+      font-size: 0.8rem;
+    }
   }
 </style>
 
@@ -199,12 +216,17 @@
   };
 
   function assignSlot(index) {
-    return function() {
-      selectedSlot.set(index);
+    return function(event) {
+      stopEvent(event);
       if (slots()[index]?.locked) return;
+      selectedSlot.set(index);
       onAssign?.(index);
     };
   }
+
+  const focusSlot = (index) => () => {
+    if (!slots()[index]?.locked) selectedSlot.set(index);
+  };
 
   const clearSelected = () => {
     if (slots()[selectedSlot()]?.locked) return;

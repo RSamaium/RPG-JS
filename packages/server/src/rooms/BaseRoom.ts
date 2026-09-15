@@ -7,6 +7,7 @@ import { Action } from "@signe/room";
 import { RpgPlayer } from "../Player/Player";
 import { resolveSaveStorageStrategy } from "../services/save";
 import { lastValueFrom } from "rxjs";
+import { applyPlayerLocale } from "./locale";
 
 /**
  * Base class for rooms that need database functionality
@@ -28,6 +29,10 @@ import { lastValueFrom } from "rxjs";
  * ```
  */
 export abstract class BaseRoom {
+    @Action('player.locale')
+    setPlayerLocale(player: RpgPlayer, value: unknown): void {
+      applyPlayerLocale(player, value);
+    }
 
   /**
    * Signal containing the room's database of items, classes, and other game data

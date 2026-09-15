@@ -42,6 +42,7 @@ import { z } from "zod";
 import { MapOptions } from "../decorators/map";
 import { EventMode } from "../decorators/event";
 import { BaseRoom } from "./BaseRoom";
+import { applyConnectionLocale, applyPlayerLocale } from "./locale";
 import { RpgRoom } from "./registry";
 import type { RpgWritableSignal } from "@rpgjs/common";
 import { buildSaveSlotMeta, resolveSaveStorageStrategy } from "../services/save";
@@ -1587,7 +1588,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
    * });
    * ```
    */
-  async onJoin(player: RpgPlayer, conn: RpgRoomConnection) {
+  async onJoin(player: RpgPlayer, conn: RpgRoomConnection, ctx?: { request?: { url: string } }) {
     this._pendingAckFrames.delete(player.id);
     // A reconnect reuses the public player id but starts with an empty client
     // entity cache. Force the next sync packet to include every visible entity.
@@ -1634,6 +1635,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     }
     player.context = context;
     player.conn = conn;
+    applyConnectionLocale(player, ctx);
     // Deliver opportunistically when this room instance is already compiled.
     // The explicit client request below remains the reliable fallback when a
     // hibernating provider recreated the room or the transport was not ready.
@@ -2024,6 +2026,11 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
   @Action('save.list')
   async listSaveSlots(player: RpgPlayer, value: { requestId: string }) {
     return await BaseRoom.prototype.listSaveSlots(player, value);
+  }
+
+  @Action('player.locale')
+  setPlayerLocale(player: RpgPlayer, value: unknown): void {
+    applyPlayerLocale(player, value);
   }
 
   /**

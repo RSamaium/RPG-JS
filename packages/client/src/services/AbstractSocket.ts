@@ -13,6 +13,8 @@ export type WebSocketMode = "standalone" | "mmorpg";
 
 export abstract class AbstractWebsocket {
   readonly mode?: WebSocketMode;
+  /** @internal Current negotiated language, evaluated before every connection. */
+  locale?: () => string;
 
   constructor(protected context: RpgContext) {}
 

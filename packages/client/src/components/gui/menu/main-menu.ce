@@ -154,7 +154,7 @@
     const { data, onFinish, onInteraction } = defineProps();
     const { menus, items, skills, equips, saveLoad } = data();
 
-    const defaultMenus = [
+    const defaultMenus = computed(() => [
         { id: "status", label: t("rpg.menu.status") },
         { id: "items", label: t("rpg.menu.items") },
         { id: "skills", label: t("rpg.menu.skills") },
@@ -162,11 +162,11 @@
         { id: "options", label: t("rpg.menu.options") },
         { id: "save", label: t("rpg.menu.save") },
         { id: "exit", label: t("rpg.menu.exit") }
-    ];
+    ]);
 
     const menuEntries = computed(() => {
         if (menus && Array.isArray(menus) && menus.length) return menus.map(entry => ({ ...entry, label: entry.label?.startsWith("rpg.") ? t(entry.label) : entry.label }));
-        return defaultMenus;
+        return defaultMenus();
     });
 
     const resolveProp = (value) => typeof value === "function" ? value() : value;
@@ -421,7 +421,8 @@
         return () => {
             transition.dispose();
             releaseInput();
-            bindingsSubscription.unsubscribe();
+            bindingsSubscription.subscription?.unsubscribe?.();
+            bindingsSubscription.unsubscribe?.();
             delay(() => {
                 if (engine.__rpgMainMenuInputLock !== inputLockToken) return;
                 engine.__rpgMainMenuInputLock = undefined;

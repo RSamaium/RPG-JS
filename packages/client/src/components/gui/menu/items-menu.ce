@@ -46,7 +46,7 @@
                             class={{active: selectedTab() === tabIndex}}
                             tabindex={tabIndex}
                             click={selectTab(tabIndex)}
-                        >{tab.label}</div>
+                        >{t(tab.label)}</div>
                     }
                 </div>
                 <Navigation tabindex={selectedItem} controls={controls}>
@@ -154,9 +154,9 @@
     const slotLabels = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
 
     const tabs = [
-        { id: "item", label: t("rpg.menu.items") },
-        { id: "weapon", label: t("rpg.menu.weapons") },
-        { id: "armor", label: t("rpg.menu.armor") }
+        { id: "item", label: "rpg.menu.items" },
+        { id: "weapon", label: "rpg.menu.weapons" },
+        { id: "armor", label: "rpg.menu.armor" }
     ];
 
     const resolveProp = (value) => typeof value === "function" ? value() : value;

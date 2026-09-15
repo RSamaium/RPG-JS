@@ -249,7 +249,7 @@ the whole page at once is silent. `typewriterEffect: false` shows text immediate
 :root {
   --rpg-ui-font-dialogue: Georgia, Cambria, serif;
   --rpg-ui-dialogue-font-size: 20px;
-  --rpg-ui-dialogue-portrait-size: 128px;
+  --rpg-ui-dialogue-portrait-width: 180px;
 }
 ```
 
@@ -258,3 +258,40 @@ retains the input lock through exit so the closing key cannot open a background
 menu. `prefers-reduced-motion: reduce` disables these transitions. Custom renderers
 can use `data-closing="true"` on the layer and unmount after 180 ms (immediately for
 reduced motion). Keep the exit duration and unmount delay aligned if overriding CSS.
+
+Dialogue pagination has no visible page counter. Enter also reveals/advances text,
+with a 180 ms guard and no repeated advancement while the key is held. Input-dialog
+validation retains ownership of Enter. Portrait scale follows the dialogue body's
+height via container-height units, not the viewport width; the portrait column
+crops horizontal overflow without stretching the artwork (90 px wide on mobile
+unless overridden). Shop comparisons use the equipment inspector's compact
+attribute / current → preview / change layout.
+
+### Stable dialogue layout
+
+The integrated dialogue uses these theme-owned CSS variables:
+
+| Variable | Default | Format |
+| --- | --- | --- |
+| `--rpg-ui-dialogue-height` | `280px` | Desktop |
+| `--rpg-ui-dialogue-height-portrait` | `320px` | Portrait, width ≤ 640px |
+| `--rpg-ui-dialogue-height-landscape` | `220px` | Height ≤ 520px |
+| `--rpg-ui-dialogue-portrait-width` | `180px` / `90px` | Portrait crop column |
+
+Heights are capped to the available viewport with safe-area margins. The portrait
+tracks the inner height, not the amount of text. RPGJS measures Markdown runs
+with the actual font and available content dimensions to paginate without losing
+text, and recalculates after resizing/font loading. Choices and input reserve
+their own scrollable area. The continuation triangle has a 44px touch target;
+its motion is disabled by `prefers-reduced-motion: reduce`.
+
+For choice dialogues, `.rpg-ui-dialog-body[data-has-choices="true"]` lets the
+choices occupy the remaining space below the measured prompt. Short prompts do
+not reserve an empty text block; ordinary two-choice lists fit without scrolling.
+Only lists longer than the available area scroll. The hotbar slot picker accepts
+a click/tap on an unlocked slot as well as keyboard assignment.
+
+See **Compositions / Responsive dialogue** for the three heights, rotation and
+long choices, and **Integrated game states / Player options** for native-language
+selection and touch-friendly audio controls. HTML-only users must paginate their
+own content; measured pagination is supplied by the RPGJS client component.

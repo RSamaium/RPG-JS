@@ -4,6 +4,81 @@ const index = JSON.parse(readFileSync("storybook-static/index.json", "utf8"));
 const stories = Object.values(index.entries).filter(
   (entry: any) => entry.type === "story"
 ) as { id: string }[];
+test.describe('touch controls', () => {
+  test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
+  test('continuation triangle responds to a tap', async ({ page }) => {
+    await page.goto('/iframe.html?id=compositions-responsive-dialogue--portrait&viewMode=story');
+    const content = page.locator('.rpg-ui-dialog-content');
+    await expect(content).toContainText('silver key');
+    const before = await content.textContent();
+    await page.getByRole('button', { name: 'Continue', exact: true }).tap();
+    await expect(content).not.toHaveText(before!);
+    await page.goto('/iframe.html?id=compositions-integrated-game-states--player-options&viewMode=story');
+    const select = page.getByRole('combobox', { name: 'Language' });
+    await select.scrollIntoViewIfNeeded();
+    expect((await select.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await select.selectOption('fr');
+    await expect(select).toHaveValue('fr');
+  });
+});
+for (const [name, width, height, expected] of [['desktop', 1280, 844, 280], ['portrait', 390, 844, 320], ['landscape', 844, 390, 220]] as const) {
+  test(`measured dialogue ${name} preserves text and stable height`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
+    await page.goto(`/iframe.html?id=compositions-responsive-dialogue--${name}&viewMode=story`);
+    const dialog = page.locator('.rpg-ui-dialog');
+    const content = page.locator('.rpg-ui-dialog-content');
+    await expect(content).toContainText('silver key');
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    expect(Math.round((await dialog.boundingBox())!.height)).toBe(expected);
+    const first = await content.textContent();
+    let collected = '';
+    for (let i = 0; i < 100; i++) {
+      expect(await content.evaluate(el => el.scrollHeight <= el.clientHeight + 1)).toBe(true);
+      collected += await content.textContent();
+      const arrow = page.getByRole('button', { name: 'Continue', exact: true });
+      const bounds = (await arrow.boundingBox())!;
+      expect(bounds.width).toBeGreaterThanOrEqual(44);
+      expect(bounds.height).toBeGreaterThanOrEqual(44);
+      await arrow.click();
+      expect(Math.round((await dialog.boundingBox())!.height)).toBe(expected);
+      if (await content.textContent() === first) break;
+    }
+    expect(collected).toBe('The silver key belongs to you now.\nBeyond the gate lies the forgotten kingdom. 🗝️\n' + 'Follow the river until you reach the sanctuary. '.repeat(18));
+    expect(await page.locator('.rpg-ui-dialog-continue > span').evaluate(el => getComputedStyle(el).animationName)).toBe('none');
+  });
+}
+test('rotation retains bounded text and long choices scroll inside the fixed dialogue', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/iframe.html?id=compositions-responsive-dialogue--rotation-and-long-choices&viewMode=story');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const arrow = page.getByRole('button', { name: 'Continue', exact: true });
+  await arrow.click();
+  await page.setViewportSize({ width: 844, height: 390 });
+  const content = page.locator('.rpg-ui-dialog-content');
+  for (let i = 0; i < 100 && await arrow.isVisible(); i++) {
+    expect(await content.evaluate(el => el.scrollHeight <= el.clientHeight + 1)).toBe(true);
+    await arrow.click();
+  }
+  await expect(arrow).toBeHidden();
+  await expect(page.locator('.rpg-ui-dialog-choice')).toHaveCount(12);
+  const actions = page.locator('.rpg-ui-dialog-actions');
+  expect(await actions.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
+  await page.getByRole('button', { name: 'Destination 12', exact: true }).scrollIntoViewIfNeeded();
+  expect(Math.round((await page.locator('.rpg-ui-dialog').boundingBox())!.height)).toBe(220);
+});
+for (const viewport of [{ width: 1280, height: 844 }, { width: 390, height: 844 }, { width: 844, height: 390 }]) {
+  test(`short dialogue choices fit without scrolling ${viewport.width}`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await page.goto('/iframe.html?id=compositions-responsive-dialogue--short-choices&viewMode=story');
+    const actions = page.locator('.rpg-ui-dialog-actions');
+    await expect(actions.locator('button')).toHaveCount(2);
+    await page.evaluate(() => document.fonts.ready);
+    await expect.poll(() => actions.evaluate(el => el.scrollHeight - el.clientHeight)).toBeLessThanOrEqual(1);
+    const bounds = await actions.boundingBox();
+    const last = await actions.locator('button').last().boundingBox();
+    expect(last!.y + last!.height).toBeLessThanOrEqual(bounds!.y + bounds!.height + 1);
+  });
+}
 for (const width of [390, 1280]) {
   test(`rich dialogue typography and portrait stay bounded at ${width}`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
@@ -12,9 +87,13 @@ for (const width of [390, 1280]) {
     const content = page.locator('.rpg-ui-dialog-content');
     expect(await content.evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(18);
     expect(await content.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+    await page.locator('.rpg-ui-dialog').evaluate(el => Promise.all(el.getAnimations().map(a => a.finished)));
     const face = await page.locator('.rpg-ui-dialog-face').boundingBox();
-    expect(face!.width).toBeLessThanOrEqual(128);
-    expect(face!.height).toBeLessThanOrEqual(128);
+    const body = await page.locator('.rpg-ui-dialog-body').boundingBox();
+    expect(Math.abs(face!.height - body!.height)).toBeLessThan(2);
+    const portrait = await page.locator('.rpg-ui-dialog-face > img').boundingBox();
+    expect(Math.abs(portrait!.height - face!.height)).toBeLessThan(2);
+    expect(await page.locator('.rpg-ui-dialog-continue').innerText()).not.toMatch(/\d+\s*\/\s*\d+/);
     await page.emulateMedia({ reducedMotion: 'reduce' });
     expect(await page.locator('.rpg-ui-dialog').evaluate(el => getComputedStyle(el).animationName)).toBe('none');
   });

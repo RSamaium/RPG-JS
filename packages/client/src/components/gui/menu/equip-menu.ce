@@ -34,7 +34,7 @@
                                         <div class="rpg-ui-equip-stat" class={{positive: stat.delta > 0, negative: stat.delta < 0}}>
                                             <div class="rpg-ui-equip-stat-key">{stat.label}</div>
                                             <div class="rpg-ui-equip-stat-value">
-                                                {stat.delta > 0 ? "+" : ""}{stat.delta}
+                                                {(stat.delta > 0 ? "+" : "") + stat.delta}
                                             </div>
                                             @if (stat.current !== undefined) {
                                                 <div class="rpg-ui-equip-stat-current"><span>{stat.current}</span><span aria-hidden="true">→</span><strong>{stat.next}</strong></div>
@@ -117,10 +117,10 @@
     const equips = computed(() => data().equips ?? data().items);
     const slots = computed(() => data().slots);
 
-    const defaultSlots = [
+    const defaultSlots = computed(() => [
         { id: "weapon", label: t("rpg.menu.weapons"), types: ["weapon"] },
         { id: "armor", label: t("rpg.menu.armor"), types: ["armor"] }
-    ];
+    ]);
     const resolveProp = (value) => typeof value === "function" ? value() : value;
     const safeEquips = computed(() => {
         const list = resolveProp(equips);
@@ -129,7 +129,7 @@
     const slotList = computed(() => {
         const list = resolveProp(slots);
         if (Array.isArray(list) && list.length) return list;
-        return defaultSlots;
+        return defaultSlots();
     });
 
     const currentSlot = computed(() => slotList()[selectedTab()]);

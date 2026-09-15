@@ -38,7 +38,7 @@ function normalizeMessages(messages?: I18nMessages): I18nMessages {
 
 function hasMessages(messages?: I18nMessages): messages is I18nMessages {
   if (!messages) return false;
-  return Object.values(messages).some((catalog) => catalog && Object.keys(catalog).length > 0);
+  return Object.values(messages).some((catalog) => catalog && typeof catalog === "object" && !Array.isArray(catalog));
 }
 
 function interpolate(message: string, params: I18nParams = {}): string {
@@ -85,6 +85,17 @@ export class I18nService {
 
   hasLocale(locale: string): boolean {
     return this.layers.some((layer) => !!layer.messages[locale]);
+  }
+
+  /**
+   * List locales declared by the game's provideI18n catalogues (not modules).
+   * @returns Registered game locales, or defaultLocale when none are declared.
+   * @example service.getAvailableLocales() // ['en', 'fr']
+   */
+  getAvailableLocales(): string[] {
+    const locales = [...new Set(this.layers.filter(layer => layer.source === "game")
+      .flatMap(layer => Object.keys(layer.messages)))];
+    return locales.length ? locales : [this.defaultLocale];
   }
 
   translate(key: string, params: I18nParams = {}, locale = this.defaultLocale): string {
