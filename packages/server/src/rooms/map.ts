@@ -51,6 +51,7 @@ import { createMapUpdateHeaders, isMapUpdateAuthorized, MAP_UPDATE_TOKEN_ENV, MA
 import { emitServerStep } from "../server-step";
 import { RpgMapProjectiles } from "../projectiles";
 import type { DamageFormulas } from "../Player/BattleManager";
+import { runPlayerAuthenticationHooks } from "../auth";
 import {
   filterMapStreamingProjectilePacket,
   getMapStreamingVisibleEntityIds,
@@ -1647,6 +1648,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     player.lastProcessedInputServerTick = null;
     player._lastFramePositions = null;
     await player._onInit()
+    await runPlayerAuthenticationHooks(this.hooks, player, conn);
     alignPlayerBodyWithSignals();
     this.dataIsReady$.pipe(
       finalize(() => {

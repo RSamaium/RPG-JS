@@ -13,6 +13,7 @@ import { lastValueFrom } from "rxjs";
 import type { RpgWritableSignal } from "@rpgjs/common";
 import { RpgRoom } from "./registry";
 import { dispatchPlayerDisconnected } from "./connection-lifecycle";
+import { runPlayerAuthenticationHooks } from "../auth";
 
 @RpgRoom({
   kind: "lobby",
@@ -37,6 +38,7 @@ export class LobbyRoom extends BaseRoom {
     player.conn = conn;
     applyConnectionLocale(player, ctx);
     await player._onInit();
+    await runPlayerAuthenticationHooks(this.hooks, player, conn);
     await lastValueFrom(this.hooks.callHooks("server-player-onConnected", player));
     await lastValueFrom(this.hooks.callHooks("server-room-onJoin", player, this));
     await lastValueFrom(this.hooks.callHooks("server-player-onJoinRoom", player, this));

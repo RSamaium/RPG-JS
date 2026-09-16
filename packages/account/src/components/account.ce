@@ -1,0 +1,151 @@
+<DOMContainer width="100%" height="100%">
+ <div class="rpg-account-root" style={{backgroundImage: background()}}>
+ <div class="rpg-ui-account-layout">
+  <header class="rpg-ui-account-brand">
+    <span class="rpg-ui-account-emblem" aria-hidden="true">✧</span>
+    <h1>{config.title || t("rpg.title.default")}</h1>
+    <p>{config.subtitle || t("rpg.account.welcome")}</p>
+  </header>
+  <section class="rpg-ui-account rpg-ui-panel">
+    <h2 class="rpg-ui-account-title">{t("rpg.account." + mode())}</h2>
+    <form class="rpg-ui-account-form" submit={submit} novalidate="novalidate">
+     <div class="rpg-ui-form-grid" data-mode={mode()}>
+       @for (field of fields()) {
+         <label class="rpg-ui-account-field"><span>{t(field.label)}</span><input class="rpg-ui-input" type={field.type} autocomplete={field.autocomplete} value={field.value} focus={() => sound("navigate")} /></label>
+       }
+     </div>
+      <div class="rpg-ui-form-messages">
+      @if (errorText()) {
+        <div class="rpg-ui-form-feedback" data-tone="error" role="alert"><span class="rpg-ui-form-feedback-icon" aria-hidden="true">!</span><div><strong>{t("rpg.account.error.heading")}</strong><p>{errorText()}</p></div></div>
+      }
+      @if (notice()) {
+        <div class="rpg-ui-form-feedback" data-tone="success" role="status"><span aria-hidden="true">✓</span><p>{t(notice())}</p></div>
+      }
+      </div>
+      <div class="rpg-ui-form-actions">
+      <button class="rpg-ui-btn rpg-ui-account-submit" data-variant="primary" type="submit" aria-disabled={pending() ? "true" : "false"}>
+        {pending() ? t("rpg.account.pending") : actionLabel()}
+      </button>
+      </div>
+    </form>
+    <nav class="rpg-ui-account-links">
+    <button class="rpg-ui-account-switch" type="button" click={switchMode} aria-disabled={pending() ? "true" : "false"}>
+      {switchLabel()}
+    </button>
+    @if (mode() === "sign-in" && config.forgotPassword) {
+      <button class="rpg-ui-text-button" type="button" click={() => changeMode("forgot-password")}>{t("rpg.account.forgot-password")}</button>
+    }
+    @if (mode() === "forgot-password" && config.resetPassword) {
+      <button class="rpg-ui-text-button" type="button" click={() => changeMode("reset-password")}>{t("rpg.account.have-token")}</button>
+    }
+    </nav>
+  </section>
+ </div>
+ </div>
+</DOMContainer>
+
+<script>
+  import { computed, signal, mount } from "canvasengine";
+  import { inject, RpgClientEngine } from "@rpgjs/client";
+  import { accountError, accountPending, accountClientOptions } from "../client-state";
+  import { recoverPassword } from "../recovery";
+  import { submitAccount } from "../client";
+
+  const engine = inject(RpgClientEngine);
+  const { t } = engine.i18n();
+  const config = accountClientOptions();
+  const mode = signal(config.resetToken && config.resetPassword ? "reset-password" : "sign-in");
+  const token = signal(config.resetToken || "");
+  const notice = signal("");
+  const background = computed(() => config.backgroundImage ? `linear-gradient(100deg,#07121b55,#07121bde),url(${JSON.stringify(config.backgroundImage)})` : "none");
+  const identifier = signal("");
+  const username = signal("");
+  const email = signal("");
+  const password = signal("");
+  const passwordConfirmation = signal("");
+  const fields = computed(() => {
+    const field = (name, value, type = "text", autocomplete = name) => ({ label: "rpg.account." + name, value, type, autocomplete });
+    const secret = field("password", password, "password", mode() === "sign-in" ? "current-password" : "new-password");
+    const confirmation = field("password-confirmation", passwordConfirmation, "password", "new-password");
+    if (mode() === "sign-in") return [field("identifier", identifier, "text", "username"), secret];
+    if (mode() === "sign-up") return [field("username", username), field("email", email, "email"), secret, confirmation];
+    if (mode() === "forgot-password") return [field("email", email, "email")];
+    return [field("token", token, "text", "one-time-code"), secret, confirmation];
+  });
+  const pending = computed(() => accountPending());
+  const errorText = computed(() => {
+    const error = accountError();
+    return error ? t(error.key, error.params || {}) : "";
+  });
+  const actionLabel = computed(() => t(mode() === "forgot-password" ? "rpg.account.send-reset" : mode() === "reset-password" ? "rpg.account.reset-submit" : "rpg.account." + mode()));
+  const switchLabel = computed(() => t(mode() === "sign-in" ? "rpg.account.switch-sign-up" : "rpg.account.back"));
+  const passwordAutocomplete = computed(() => mode() === "sign-in" ? "current-password" : "new-password");
+  function sound(action) {
+    const id = config.sounds?.[action];
+    if (id) void engine.playSound(id);
+    else engine.playUiSound(action);
+  }
+  mount(() => {
+    sound("open");
+    if (config.backgroundMusic) {
+      engine.music.contextId = "account";
+      void engine.music.enter(config.backgroundMusic, { volume: 0.8, mapVolume: 0, fadeInMs: 600, fadeOutMs: 400 });
+    }
+    return () => {
+      if (engine.music.contextId !== "account") return;
+      engine.music.contextId = undefined;
+      engine.music.leave({ exitDelayMs: 0, fadeOutMs: 400 });
+    };
+  });
+
+  function onIdentifier(event) { identifier.set(event.target?.value || ""); }
+  function onUsername(event) { username.set(event.target?.value || ""); }
+  function onEmail(event) { email.set(event.target?.value || ""); }
+  function onPassword(event) { password.set(event.target?.value || ""); }
+  function onPasswordConfirmation(event) { passwordConfirmation.set(event.target?.value || ""); }
+  function switchMode() {
+    changeMode(mode() === "sign-in" ? "sign-up" : "sign-in");
+  }
+  function changeMode(next) {
+    if (pending()) return;
+    sound("navigate");
+    mode.set(next);
+    notice.set("");
+    password.set("");
+    passwordConfirmation.set("");
+    accountError.set(null);
+  }
+  async function submit(event) {
+    event.preventDefault();
+    if (pending()) return;
+    sound("confirm");
+    notice.set("");
+    if (mode() === "forgot-password" || mode() === "reset-password") {
+      accountPending.set(true);
+      accountError.set(null);
+      try {
+        await recoverPassword(config, mode(), { email: email(), token: token(), password: password(), passwordConfirmation: passwordConfirmation() });
+        const reset = mode() === "reset-password";
+        if (reset) { token.set(""); config.resetToken = undefined; mode.set("sign-in"); }
+        notice.set(reset ? "rpg.account.reset-done" : "rpg.account.recovery-sent");
+        password.set(""); passwordConfirmation.set("");
+      } catch (error) {
+        accountError.set({ key: typeof error?.key === "string" ? error.key : "rpg.account.error.recovery", params: error?.params });
+      } finally { accountPending.set(false); }
+      if (accountError()) sound("error");
+      return;
+    }
+    if (mode() === "sign-up") {
+      await submitAccount("sign-up", {
+        username: username(),
+        email: email(),
+        password: password(),
+        passwordConfirmation: passwordConfirmation(),
+      });
+    }
+    else {
+      await submitAccount("sign-in", { identifier: identifier(), password: password() });
+    }
+    if (accountError()) sound("error");
+  }
+</script>

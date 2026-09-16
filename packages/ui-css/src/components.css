@@ -24,6 +24,8 @@
 @import "./primitives/hud.css";
 @import "./primitives/shop.css";
 @import "./primitives/chat.css";
+@import "./primitives/account.css";
+@import "./primitives/form.css";
 @import "./cinematic.css";
 @import "./semantic.css";
 @import "./controls.css";

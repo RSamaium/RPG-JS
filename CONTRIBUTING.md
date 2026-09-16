@@ -103,6 +103,13 @@ Game UI components should be built with CanvasEngine by default. This keeps the
 runtime consistent with the rendering stack and makes components composable
 inside RPGJS scenes and modules.
 
+Every new player-facing UI component must be referenced in the `@rpgjs/ui-css`
+Storybook in the same contribution. Add a dedicated story, or extend an existing
+composition when the component is a variant of an established interface. The
+story must demonstrate the component's default styling and its important visual
+states, and should include responsive browser coverage when the layout can vary
+with the viewport.
+
 Vue components belong in `@rpgjs/vue` only when they are low-level RPG building
 blocks or part of the base RPG experience, such as a dialog box. Do not add
 feature-specific Vue components to the shared Vue package.

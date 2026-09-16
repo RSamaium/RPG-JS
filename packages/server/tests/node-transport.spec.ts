@@ -387,6 +387,106 @@ describe("createRpgServerTransport", () => {
     });
   });
 
+  it("passes rich auth data through player hooks before onConnected", async () => {
+    const calls: string[] = [];
+    const canAuth = vi.fn((_player: any, auth: any) => {
+      calls.push("canAuth");
+      expect(auth).toMatchObject({
+        id: "rich-user",
+        data: { role: "member" },
+        roomId: "lobby-1",
+        roomKind: "lobby",
+      });
+      return true;
+    });
+    const onAuthSuccess = vi.fn(() => calls.push("onAuthSuccess"));
+    const onConnected = vi.fn(() => calls.push("onConnected"));
+    const GameServer = createServer({
+      providers: [provideServerModules([{
+        engine: {
+          auth: () => ({ id: "rich-user", data: { role: "member" } }),
+        },
+        player: { canAuth, onAuthSuccess, onConnected },
+      }])],
+    });
+    const transport = createRpgServerTransport(GameServer as any, { initializeMaps: false });
+    const ws = new MockWebSocket();
+
+    await transport.acceptWebSocket(ws as any, {
+      url: "http://localhost/parties/main/lobby-1?id=rich-session&token=secret",
+      method: "GET",
+      headers: { host: "localhost" },
+    });
+    await wait(10);
+
+    expect(calls).toEqual(["canAuth", "onAuthSuccess", "onConnected"]);
+    expect(canAuth).toHaveBeenCalledOnce();
+    expect(onAuthSuccess).toHaveBeenCalledOnce();
+    expect(ws.sent.map((message) => JSON.parse(message).type)).toContain("connected");
+  });
+
+  it("refuses canAuth failures and reports them through the engine hook", async () => {
+    const onAuthFailed = vi.fn();
+    const onConnected = vi.fn();
+    const GameServer = createServer({
+      providers: [provideServerModules([{
+        engine: {
+          auth: () => "blocked-user",
+          onAuthFailed,
+        },
+        player: {
+          canAuth: () => false,
+          onConnected,
+        },
+      }])],
+    });
+    const transport = createRpgServerTransport(GameServer as any, { initializeMaps: false });
+    const ws = new MockWebSocket();
+
+    await transport.acceptWebSocket(ws as any, {
+      url: "http://localhost/parties/main/lobby-1?id=blocked-session",
+      method: "GET",
+      headers: { host: "localhost" },
+    });
+    await wait(10);
+
+    expect(onConnected).not.toHaveBeenCalled();
+    expect(onAuthFailed).toHaveBeenCalledOnce();
+    expect(onAuthFailed.mock.calls[0][1]).toMatchObject({
+      message: "Authentication failed: canAuth() returned false",
+    });
+    expect(ws.readyState).toBe(3);
+    expect(await transport.getRoom("lobby-1")!.storage.get("session:blocked-session")).toBeUndefined();
+    const server = transport.getServer("lobby-1") as any;
+    expect(server.subRoom.players()["blocked-user"]).toBeUndefined();
+  });
+
+  it("reports auth hook errors before a player is created", async () => {
+    const onAuthFailed = vi.fn();
+    const GameServer = createServer({
+      providers: [provideServerModules([{
+        engine: {
+          auth: () => { throw new Error("Invalid token"); },
+          onAuthFailed,
+        },
+      }])],
+    });
+    const transport = createRpgServerTransport(GameServer as any, { initializeMaps: false });
+    const ws = new MockWebSocket();
+
+    await transport.acceptWebSocket(ws as any, {
+      url: "http://localhost/parties/main/lobby-1?id=invalid-session",
+      method: "GET",
+      headers: { host: "localhost" },
+    });
+    await wait(10);
+
+    expect(onAuthFailed).toHaveBeenCalledOnce();
+    expect(onAuthFailed.mock.calls[0][1]).toMatchObject({ message: "Invalid token" });
+    expect(ws.readyState).toBe(3);
+    expect(Object.keys((transport.getServer("lobby-1") as any).subRoom.players())).toEqual([]);
+  });
+
   it("runs onAccepted after the connected packet with immutable request context", async () => {
     const ws = new MockWebSocket();
     const accepted = vi.fn();

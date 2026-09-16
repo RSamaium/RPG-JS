@@ -52,4 +52,3 @@ bindings/secrets, not project env variables:
 - `FAL_KEY`
 - `GEMINI_API_KEY`
 - `REPLICATE_API_TOKEN`
-- `ASSET_GENERATION_IMAGE_PROVIDER`

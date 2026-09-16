@@ -1,4 +1,80 @@
 {
+  "@rpgjs/account": {
+    "entry": "packages/account/dist/client/client-index.d.ts",
+    "exports": [
+      "ACCOUNT_GUI_ID",
+      "AccountAuthResult",
+      "AccountClientModuleOptions",
+      "AccountClientOptions",
+      "AccountCredentials",
+      "AccountErrorPayload",
+      "AccountRegistrationCredentials",
+      "AccountResetCredentials",
+      "AccountSession",
+      "AccountStorage",
+      "DEFAULT_ACCOUNT_STORAGE_KEY",
+      "ResolvedAccountClientOptions",
+      "accountClientOptions",
+      "accountError",
+      "accountPending",
+      "accountQuery",
+      "accountSession",
+      "configureAccountClient",
+      "createAccountClient",
+      "default",
+      "normalizeAccountClientOptions",
+      "provideAccount",
+      "restoreAccountSession",
+      "signOut",
+      "submitAccount"
+    ],
+    "declarations": [
+      "packages/account/dist/client/client-config.d.ts",
+      "packages/account/dist/client/client-index.d.ts",
+      "packages/account/dist/client/client-state.d.ts",
+      "packages/account/dist/client/client-types.d.ts",
+      "packages/account/dist/client/client.d.ts",
+      "packages/account/dist/client/config.d.ts"
+    ]
+  },
+  "@rpgjs/account/client": {
+    "entry": "packages/account/dist/client/client-index.d.ts",
+    "exports": [
+      "ACCOUNT_GUI_ID",
+      "AccountAuthResult",
+      "AccountClientModuleOptions",
+      "AccountClientOptions",
+      "AccountCredentials",
+      "AccountErrorPayload",
+      "AccountRegistrationCredentials",
+      "AccountResetCredentials",
+      "AccountSession",
+      "AccountStorage",
+      "DEFAULT_ACCOUNT_STORAGE_KEY",
+      "ResolvedAccountClientOptions",
+      "accountClientOptions",
+      "accountError",
+      "accountPending",
+      "accountQuery",
+      "accountSession",
+      "configureAccountClient",
+      "createAccountClient",
+      "default",
+      "normalizeAccountClientOptions",
+      "provideAccount",
+      "restoreAccountSession",
+      "signOut",
+      "submitAccount"
+    ],
+    "declarations": [
+      "packages/account/dist/client/client-config.d.ts",
+      "packages/account/dist/client/client-index.d.ts",
+      "packages/account/dist/client/client-state.d.ts",
+      "packages/account/dist/client/client-types.d.ts",
+      "packages/account/dist/client/client.d.ts",
+      "packages/account/dist/client/config.d.ts"
+    ]
+  },
   "@rpgjs/action-battle": {
     "entry": "packages/action-battle/dist/client/index.d.ts",
     "exports": [
@@ -1093,6 +1169,7 @@
       "ProjectileSpawnClock",
       "RenderedProjectile",
       "RenderedProjectileProps",
+      "RichTextRun",
       "RpgAudioChannel",
       "RpgAudioPosition",
       "RpgClassProvider",
@@ -1172,6 +1249,8 @@
       "isKeyboardActionConfig",
       "keyboardEventMatchesBind",
       "normalizeActionInput",
+      "paginateRichText",
+      "parseRichText",
       "provideClientGlobalConfig",
       "provideClientMapStreaming",
       "provideClientModules",
@@ -1187,6 +1266,7 @@
       "resolveKeyboardDirectionInput",
       "selectable",
       "setInject",
+      "sliceRichText",
       "startGame",
       "withMobile"
     ],
@@ -1232,7 +1312,8 @@
       "packages/client/dist/services/pointerContext.d.ts",
       "packages/client/dist/services/save.d.ts",
       "packages/client/dist/services/standalone.d.ts",
-      "packages/client/dist/utils/getEntityProp.d.ts"
+      "packages/client/dist/utils/getEntityProp.d.ts",
+      "packages/client/dist/utils/richText.d.ts"
     ]
   },
   "@rpgjs/common": {
@@ -1931,6 +2012,9 @@
       "ProjectileServerState",
       "ProjectileTrajectory",
       "Routes",
+      "RpgAuthContext",
+      "RpgAuthResult",
+      "RpgAuthenticatedIdentity",
       "RpgClassProvider",
       "RpgContext",
       "RpgEvent",
@@ -2148,6 +2232,7 @@
       "packages/server/dist/Player/StateManager.d.ts",
       "packages/server/dist/Player/VariableManager.d.ts",
       "packages/server/dist/Player/types.d.ts",
+      "packages/server/dist/RpgServer.d.ts",
       "packages/server/dist/RpgServerEngine.d.ts",
       "packages/server/dist/cloudflare/index.d.ts",
       "packages/server/dist/decorators/event.d.ts",
@@ -2230,6 +2315,7 @@
       "packages/server/dist/Player/StateManager.d.ts",
       "packages/server/dist/Player/VariableManager.d.ts",
       "packages/server/dist/Player/types.d.ts",
+      "packages/server/dist/RpgServer.d.ts",
       "packages/server/dist/RpgServerEngine.d.ts",
       "packages/server/dist/decorators/event.d.ts",
       "packages/server/dist/decorators/map.d.ts",

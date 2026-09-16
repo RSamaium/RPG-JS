@@ -98,6 +98,7 @@
               "gui/index",
               "gui/theming",
               "gui/title-screen",
+              "gui/account",
               "gui/character-select",
               "gui/dialog-box",
               "gui/hud",

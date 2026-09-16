@@ -21,10 +21,13 @@ export interface MmorpgOptions {
      * Defaults to 10 seconds.
      */
     connectionAcceptanceTimeoutMs?: number;
+    /** Render the client and its GUIs before opening the initial WebSocket. */
+    deferConnection?: boolean;
 }
 
 export class BridgeWebsocket extends AbstractWebsocket {
   readonly mode = "mmorpg" as const;
+  readonly deferConnection: boolean;
 
   private socket: any;
   private privateId: string;
@@ -36,6 +39,7 @@ export class BridgeWebsocket extends AbstractWebsocket {
 
   constructor(protected context: RpgContext, private options: MmorpgOptions = {}) {
     super(context);
+    this.deferConnection = options.deferConnection === true;
     this.targetRoom = options.room ?? "lobby-1";
     this.privateId = this.resolveConnectionId();
   }
@@ -187,6 +191,11 @@ export class BridgeWebsocket extends AbstractWebsocket {
     conn.reconnect();
     await connected;
     this.emitAcceptedOpen();
+  }
+
+  disconnect(): void {
+    this.socket?.conn?.close?.();
+    this.socket = undefined;
   }
 
   getCurrentRoom(): string {

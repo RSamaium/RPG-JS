@@ -62,6 +62,16 @@ describe("standalone websocket bridge", () => {
     expect(mmorpgProvider.useFactory(context).getCurrentRoom()).toBe("lobby-project-1");
   });
 
+  test("exposes deferred MMORPG connection mode on the websocket provider", () => {
+    const context = new Context();
+    const provider = provideMmorpg({
+      connectionId: "test-client",
+      deferConnection: true,
+    }).find((entry: any) => entry.provide === WebSocketToken) as any;
+
+    expect(provider.useFactory(context).deferConnection).toBe(true);
+  });
+
   test("reconnects standalone rooms with updated room and query", async () => {
     const connects: Array<{ roomId: string; url: string; sessionId: string }> = [];
     class Server {

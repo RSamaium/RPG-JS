@@ -47,7 +47,7 @@ Common payload confirmed in server code:
 - `POST /api/media/generate`: `{ "action": "estimate" | "execute", "type": string, "userPrompt": string, "metadata"?: { "source"?: string, "referenceImage"?: string, "referenceImages"?: string[], "duration"?: number, ... } }`
 - `GET /api/media/generate/:instanceId`: returns the workflow status and, once complete, the generated `media` record. The public API does not expose internal workflow `steps`.
 
- Generated animations use a 4x4 spritesheet workflow and should include `frameWidth: 4` and `frameHeight: 4` for frame-by-frame previews. Character-editor animations should generate `type: "spritesheet"`, pass the complete base image as execution-only `metadata.referenceImage`, and pass the character media id as `metadata.groupId`; the persisted `groupId` makes the generated spritesheet appear in `GET /api/media/group/:groupId`. Generated tilesets may include `metadata.elements`, a JSON string of packed rectangles produced by the image-processing container. Element set (`type: "tileset"`) generation may pass `metadata.terrainReferenceImage` plus `metadata.terrainReferenceMediaId` to guide generated objects toward the terrain style; `terrainReferenceImage` is execution-only and is stripped from persisted metadata. Generated terrain media include `metadata.sourceTexture`, direct `metadata.rows` and `metadata.columns`, and `metadata.textureGrid`.
+Generated `type: "animation"` and `type: "spritesheet"` media use spritesheet.ai. VFX animations use the `effect` preset, one directionless lane, 16 frames, and the provider's dynamic grid metadata; they are not normalized to 4x4. Spritesheets should include either guided `metadata.animationIntent` or advanced `metadata.motionPreset`/`metadata.animationLayout`, plus optional `metadata.frameCount`. For guided `movement` intents containing `walk` or `run`, Studio forces `idleFirstFrame: true`, even if the caller omits it or sends `false`; spritesheet.ai treats it as a generation instruction rather than a guaranteed PNG post-processing operation. Character-editor animations should pass the complete base image as execution-only `metadata.referenceImage`, pass the character media id as `metadata.groupId`, and request a four-direction `character-actions` intent; the persisted `groupId` makes the generated spritesheet appear in `GET /api/media/group/:groupId`. Generic image types use Fal.ai `openai/gpt-image-2.5/sunburst`; reference images select its edit endpoint and transparent asset types use native PNG alpha. Generated tilesets may include `metadata.elements`, a JSON string of packed rectangles produced by the image-processing container. Element set (`type: "tileset"`) generation may pass `metadata.terrainReferenceImage` plus `metadata.terrainReferenceMediaId` to guide generated objects toward the terrain style; `terrainReferenceImage` is execution-only and is stripped from persisted metadata. Generated terrain media include `metadata.sourceTexture`, direct `metadata.rows` and `metadata.columns`, and `metadata.textureGrid`.
 
 Studio terrain generation defaults to a `4x4` `sourceTexture` atlas in the UI and persists the generated atlas directly. It no longer creates Wang/autotile output through the image-processing container. Requests can set `metadata.sourceTextureColumns` and `metadata.sourceTextureRows` to choose the atlas layout, and can pass `terrainStyleId` plus `terrainStylePrompt` to guide the technical terrain prompt. Consumers should read `metadata.rows` and `metadata.columns` or the mirrored `metadata.textureGrid`.
 
@@ -66,7 +66,8 @@ Credit costs available in `common/permissions/credit.ts`:
 - `backgroundAmbientSound`: 5
 - `backgroundMusic`: 10
 - `faceset`: 5
-- `spritesheet`: 10
+- `animation`: 15
+- `spritesheet`: 15
 - `spritesheetPreview`: 1
 - `terrain`: 5
 - `tileset`: 15
@@ -136,7 +137,7 @@ curl -sS -X POST "$BASE_URL/api/media/replace/$MEDIA_ID" \
 
 ## Multiple references and cinematic videos
 
-Images and videos accept `metadata.referenceImages`, an ordered list of up to 9 image URLs or base64 data URIs. Do not also send `referenceImage`, even with an empty list. The old singular field remains supported for existing integrations. Empty lists mean no reference. All images are passed to the image provider; they are not assembled into a collage. Internal reference payloads are omitted from persisted media metadata.
+Images and videos accept `metadata.referenceImages`, an ordered list of up to 9 image URLs or base64 data URIs. Spritesheets and VFX animations accept up to 15. Do not also send `referenceImage`, even with an empty list. The old singular field remains supported for existing integrations. Empty lists mean no reference. All images are passed to the image provider; they are not assembled into a collage. Internal reference payloads are omitted from persisted media metadata.
 
 For `type: "video"`, set `metadata.duration` to a whole number from 5 to 15 (default 5). Estimate and execution charge 8 credits per second, including reference-to-video (40–120 credits). With the new nonempty list, Studio uses `minimax/h3-max/reference-to-video`; without references it uses `minimax/h3-max-turbo/text-to-video`. Legacy `referenceImage` retains Turbo image-to-video and its 16:9 crop. New references are context images and are not cropped. Refer to them in prompt order as Image 1, Image 2, etc. The output is 768P, 16:9, native audio, at most 30 MB; persisted metadata includes the requested duration and actual model.
 
@@ -158,6 +159,10 @@ This example costs 32 credits. Follow the existing estimate/execute workflow abo
 
 
 ### Map references as environment context
+
+Base64 reference MIME headers may include parameters such as `charset=utf-8`. Recognized PNG, JPEG, GIF, or WebP signatures take precedence over missing or incorrect MIME headers (including a PNG served as `text/xml`). Malformed base64 and unrecognized non-image references return HTTP 400, with the startup debit refunded.
+
+Generation billing: `action: "estimate"` is free; `action: "execute"` debits the API key's numeric `creditBalance` before enqueueing. Keys configured with a null balance retain unlimited behavior. Reference upload and workflow creation failures refund the debit; terminal workflow execution failures refund through a persisted `refund-credits` step. `queued` means accepted, not completed. Poll the instance status before using its media. The API externalizes both legacy singular base64 references and ordered reference arrays before workflow creation; remaining workflow parameters exceeding 1 MiB return HTTP 413 and refund the debit. Do not send internal storage-reference fields yourself.
 
 Image and video requests accept optional `metadata.mapReferenceIndices`: unique, zero-based integer indices into `referenceImages`. For example, `referenceImages: [heroImage, villageMapImage]` with `mapReferenceIndices: [1]` identifies Image 2 as a map. Indices must be in range; the parameter cannot be used with legacy `referenceImage`. Omit it or send an empty array with `referenceImages` for ordinary references.
 

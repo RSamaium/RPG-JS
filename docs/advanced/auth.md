@@ -30,7 +30,8 @@ protecting an admin action, a custom room, or an HTTP endpoint.
 ## Server
 
 Add `auth()` to the server engine hooks. Return the stable public player id for
-the authenticated account.
+the authenticated account. Return `{ id, data }` when later player hooks also
+need server-only account context. RPGJS never synchronizes or saves `data`.
 
 ```ts
 import { RpgServerEngine, type RpgServerEngineHooks } from "@rpgjs/server";
@@ -52,6 +53,52 @@ export default {
   engine,
 };
 ```
+
+## Player authentication hooks
+
+After `auth()` identifies the account, `canAuth()` can perform a final
+player-aware authorization check. Returning `false` or throwing refuses the
+connection. `onAuthSuccess()` then runs before the regular player connection and
+room hooks.
+
+```ts
+import type { RpgPlayerHooks, RpgServerEngineHooks } from "@rpgjs/server";
+
+type AccountAuthData = { status: string };
+
+export const engine: RpgServerEngineHooks<AccountAuthData> = {
+  async auth(_server, socket) {
+    const account = await verifyToken(socket.handshake.query.token);
+    return { id: account.id, data: { status: account.status } };
+  },
+  onAuthFailed(_server, error) {
+    console.error("Authentication refused", error);
+  },
+};
+
+export const player: RpgPlayerHooks<AccountAuthData> = {
+  canAuth(_player, auth) {
+    return auth.data?.status !== "banned";
+  },
+  onAuthSuccess(player, auth) {
+    console.log(`${player.id} authenticated in ${auth.roomId}`);
+  },
+};
+```
+
+The lifecycle order is:
+
+```text
+auth() -> create/restore player -> canAuth() -> onAuthSuccess()
+       -> onConnected()/room hooks -> title screen
+```
+
+`auth()`, `canAuth()`, and `onAuthSuccess()` run for every physical room
+connection, including map transfers. Keep player hooks idempotent.
+
+Unlike RPGJS v4, `onAuthFailed` is an engine hook and does not receive a player:
+invalid credentials can be rejected before any `RpgPlayer` exists. `canAuth`
+also receives an authentication context rather than a database record or GUI.
 
 The returned id becomes the Signe/RPGJS `publicId` used by `@users(RpgPlayer)`.
 Return the same id for the same account on every room connection so the player
@@ -139,6 +186,10 @@ listing them. A generated anonymous lobby id cannot identify the account's
 long-term saves.
 
 ## Client
+
+For the built-in pre-connection sign-in/sign-up GUI, use
+[`@rpgjs/account`](/gui/account). It combines `deferConnection: true` with the
+query shown below while keeping the identity provider application-owned.
 
 In a browser, send credentials through the connection query. RPGJS sends this
 query on the initial connection and again when the player reconnects to another

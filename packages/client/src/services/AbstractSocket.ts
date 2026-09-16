@@ -13,6 +13,8 @@ export type WebSocketMode = "standalone" | "mmorpg";
 
 export abstract class AbstractWebsocket {
   readonly mode?: WebSocketMode;
+  /** Whether the client should render its GUI before opening the first connection. */
+  readonly deferConnection?: boolean;
   /** @internal Current negotiated language, evaluated before every connection. */
   locale?: () => string;
 
@@ -24,4 +26,6 @@ export abstract class AbstractWebsocket {
   abstract off(event: string, callback: (data: any) => void): void;
   abstract updateProperties(params: SocketUpdateProperties): void;
   abstract reconnect(listeners?: (data: any) => void): Promise<void>;
+  /** Close the current physical connection when the transport supports it. */
+  disconnect(): void {}
 }

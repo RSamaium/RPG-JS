@@ -156,6 +156,41 @@ test("autodocs renders the actual component documentation", async ({
   ).toBeVisible();
   expect(errors).toEqual([]);
 });
+test("account composition supports sign-in and sign-up layouts", async ({ page }) => {
+  await page.goto(
+    "/iframe.html?id=compositions-game-interfaces--account&viewMode=story"
+  );
+  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
+  await expect(page.getByLabel("Password", { exact: true })).toHaveAttribute("type", "password");
+  await page.getByRole("button", { name: "Create a new account" }).click();
+  await expect(page.getByRole("heading", { name: "Create account" })).toBeVisible();
+  await expect(page.getByLabel("Username", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Email", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Confirm password", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Email or username", { exact: true })).toBeHidden();
+  const panel = page.locator(".rpg-ui-account");
+  const bounds = await panel.boundingBox();
+  expect(bounds!.x).toBeGreaterThanOrEqual(0);
+  expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(1280);
+});
+for (const viewport of [{ width: 390, height: 844 }, { width: 1280, height: 720 }, { width: 844, height: 390 }]) {
+  test("account forms keep actions reachable " + viewport.width, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    for (const state of ["registration", "registration-error", "forgot-password", "instructions-sent", "reset-password", "expired-code"]) {
+      await page.goto("/iframe.html?id=compositions-account--" + state + "&viewMode=story");
+      const panel = page.locator(".rpg-ui-account");
+      await expect(panel).toBeVisible();
+      expect(await panel.evaluate(el => getComputedStyle(el).overflowY)).not.toBe("auto");
+      const action = page.locator(".rpg-ui-account-submit");
+      await action.scrollIntoViewIfNeeded();
+      await action.click({ trial: true });
+      const fields = await page.locator(".rpg-ui-form-grid").boundingBox();
+      const button = await action.boundingBox();
+      expect(button!.y).toBeGreaterThanOrEqual(fields!.y + fields!.height);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport.width);
+    }
+  });
+}
 for (const theme of ["default", "pixel", "forest"]) {
   test("all stories render without errors: " + theme, async ({ page }) => {
     const errors: string[] = [];
@@ -327,6 +362,7 @@ test("character heading does not overlap the portrait stage", async ({
 for (const width of [390, 1280]) {
   for (const id of [
     "title-screen",
+    "account",
     "dialogue",
     "inventory",
     "shop",

@@ -22,7 +22,9 @@ Reference for the `RpgClientEngine` class.
 - [cameraFollowTargetId](#camerafollowtargetid)
 - [clear](#clear)
 - [clearClientPredictionStates](#clearclientpredictionstates)
+- [connect](#connect)
 - [dashDefaults](#dashdefaults)
+- [disconnect](#disconnect)
 - [flash](#flash)
 - [getAvailableLocales](#getavailablelocales)
 - [getComponentAnimation](#getcomponentanimation)
@@ -420,6 +422,27 @@ clearClientPredictionStates()
 engine.clearClientPredictionStates();
 ```
 
+## connect
+
+Open the initial MMORPG connection after a deferred account flow.
+Concurrent calls share the same attempt. Standalone and normal MMORPG starts
+call this automatically.
+
+- Source: `packages/client/src/RpgClientEngine.ts`
+- Kind: `method`
+- Member of: `RpgClientEngine`
+- Defined in: `RpgClientEngine`
+
+### Signature
+
+```ts
+connect
+```
+
+### Returns
+
+A promise resolved after the RPGJS server accepts the connection.
+
 ## dashDefaults
 
 Runtime defaults used by modules that specialize the built-in dash.
@@ -433,6 +456,26 @@ Runtime defaults used by modules that specialize the built-in dash.
 ```ts
 dashDefaults: Partial<RpgDashInput>
 ```
+
+## disconnect
+
+Close the current physical connection without destroying the rendered client.
+Account modules can return to a pre-connection GUI and call `connect()` again.
+
+- Source: `packages/client/src/RpgClientEngine.ts`
+- Kind: `method`
+- Member of: `RpgClientEngine`
+- Defined in: `RpgClientEngine`
+
+### Signature
+
+```ts
+disconnect
+```
+
+### Returns
+
+Nothing.
 
 ## flash
 

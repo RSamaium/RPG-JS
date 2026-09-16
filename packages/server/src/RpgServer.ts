@@ -105,7 +105,7 @@ export interface WorldMap {
 }
 
 
-export interface RpgServerEngineHooks {
+export interface RpgServerEngineHooks<TAuthData = unknown> {
     /**
      *  When the server starts
      * 
@@ -141,7 +141,7 @@ export interface RpgServerEngineHooks {
      *
      * @param {RpgServerEngine} server - The instance of the game server.
      * @param {SocketIO.Socket} socket - The socket instance for the connecting player. This can be used to access client-sent data, like tokens or other credentials.
-     * @returns {Promise<string> | string  | undefined} The function should return a promise that resolves to a player's unique identifier (e.g., user ID) if authentication is successful, or a string representing the user's ID. Alternatively, it can throw an error if authentication fails. If undefined is returned, the player id is generated.
+     * @returns The stable player ID, an identity with ephemeral server-only data, or undefined for the generated default ID.
      * @throws {string} Throwing an error will prevent the player from connecting, signifying a failed authentication attempt.
      *
      * @example
@@ -156,10 +156,76 @@ export interface RpgServerEngineHooks {
      * };
      * ```
      */
-    auth?: (server: RpgServerEngine, socket: RpgServerAuthSocket) => MaybePromise<string | undefined>
+    auth?: (server: RpgServerEngine, socket: RpgServerAuthSocket) => MaybePromise<RpgAuthResult<TAuthData> | undefined>
+
+    /**
+     * Called whenever `auth()` or a player `canAuth()` hook refuses a connection.
+     * A player is intentionally not provided because authentication can fail before one exists.
+     *
+     * @title onAuthFailed
+     * @method onAuthFailed
+     * @param server - Current authoritative server engine.
+     * @param error - Authentication error returned or thrown by application code.
+     * @param socket - Read-only authentication socket facade.
+     * @returns Nothing.
+     * @memberof RpgServerEngineHooks
+     */
+    onAuthFailed?: (
+        server: RpgServerEngine,
+        error: unknown,
+        socket: RpgServerAuthSocket,
+    ) => MaybePromise<void>
 }
 
-export interface RpgPlayerHooks {
+/** Rich server-owned identity returned by the global `auth()` hook. */
+export interface RpgAuthenticatedIdentity<TData = unknown> {
+    /** Stable public player/account identifier. */
+    id: string
+    /** Ephemeral server-only application context for player authentication hooks. */
+    data?: TData
+}
+
+/** Backward-compatible authentication result. */
+export type RpgAuthResult<TData = unknown> = string | RpgAuthenticatedIdentity<TData>
+
+/** Server-only context passed to player authentication hooks. */
+export interface RpgAuthContext<TData = unknown> {
+    /** Stable public player/account identifier. */
+    id: string
+    /** Ephemeral data returned by `auth()`. Never synchronized or saved by RPGJS. */
+    data?: TData
+    /** RPGJS room receiving this physical connection. */
+    roomId?: string
+    /** RPGJS room kind inferred from the room identifier. */
+    roomKind?: string
+}
+
+export interface RpgPlayerHooks<TAuthData = unknown> {
+    /**
+     * Authorize an authenticated player before regular connection/join hooks.
+     * Return `false` or throw to refuse the physical connection.
+     *
+     * @title canAuth
+     * @method canAuth
+     * @param player - Restored authoritative player for this room connection.
+     * @param auth - Stable identity and ephemeral server-only authentication data.
+     * @returns `false` to refuse the connection; otherwise the connection continues.
+     * @memberof RpgPlayerHooks
+     */
+    canAuth?: (player: RpgPlayer, auth: RpgAuthContext<TAuthData>) => MaybePromise<boolean | void>
+
+    /**
+     * Called for every accepted authenticated connection, including room transfers.
+     * Implementations should be idempotent.
+     *
+     * @title onAuthSuccess
+     * @method onAuthSuccess
+     * @param player - Authenticated authoritative player.
+     * @param auth - Stable identity and ephemeral server-only authentication data.
+     * @returns Nothing.
+     * @memberof RpgPlayerHooks
+     */
+    onAuthSuccess?: (player: RpgPlayer, auth: RpgAuthContext<TAuthData>) => MaybePromise<void>
     /**
      *  Set custom properties on the player. Several interests:
      * 1. The property is shared with the client

@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/html-vite";
+import { accountStory } from "./account.stories";
 import {
   panel,
   button,
@@ -26,6 +27,7 @@ export const TitleScreen: StoryObj = {
       )
     ),
 };
+export const Account: StoryObj = { render: () => accountStory() };
 export const Dialogue: StoryObj = {
   render: () =>
     interactive(

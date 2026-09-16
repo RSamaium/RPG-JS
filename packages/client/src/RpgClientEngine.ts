@@ -335,6 +335,7 @@ export class RpgClientEngine<T = any> {
   private locale = signal("");
   private localePreferences: ReturnType<typeof createLocalePreferences>;
   private localeConnected = false;
+  private connectionPromise?: Promise<void>;
 
   constructor(public context) {
     this.webSocket = inject(WebSocketToken);
@@ -520,16 +521,7 @@ export class RpgClientEngine<T = any> {
     this.initListeners();
     this.guiService._initialize();
 
-    try {
-      await this.webSocket.connection();
-      this.localeConnected = true;
-      this.webSocket.emit("player.locale", { locale: this.getLocale() });
-    }
-    catch (error) {
-      this.stopPingPong();
-      await this.callConnectError(error);
-      throw error;
-    }
+    if (!this.webSocket.deferConnection) await this.connect();
 
     this.selector = document.body.querySelector("#rpg") as HTMLElement;
 
@@ -598,7 +590,53 @@ export class RpgClientEngine<T = any> {
     });
     this.tickSubscriptions.push(tickSubscription);
 
-    this.startPingPong();
+  }
+
+  /**
+   * Open the initial MMORPG connection after a deferred account flow.
+   * Concurrent calls share the same attempt. Standalone and normal MMORPG starts
+   * call this automatically.
+   *
+   * @title connect
+   * @method connect
+   * @returns A promise resolved after the RPGJS server accepts the connection.
+   * @memberof RpgClientEngine
+   */
+  async connect(): Promise<void> {
+    if (this.localeConnected) return;
+    if (this.connectionPromise) return this.connectionPromise;
+    this.connectionPromise = (async () => {
+      try {
+        await this.webSocket.connection();
+        this.localeConnected = true;
+        this.webSocket.emit("player.locale", { locale: this.getLocale() });
+        this.startPingPong();
+      }
+      catch (error) {
+        this.stopPingPong();
+        await this.callConnectError(error);
+        throw error;
+      }
+      finally {
+        this.connectionPromise = undefined;
+      }
+    })();
+    return this.connectionPromise;
+  }
+
+  /**
+   * Close the current physical connection without destroying the rendered client.
+   * Account modules can return to a pre-connection GUI and call `connect()` again.
+   *
+   * @title disconnect
+   * @method disconnect
+   * @returns Nothing.
+   * @memberof RpgClientEngine
+   */
+  disconnect(): void {
+    this.localeConnected = false;
+    this.stopPingPong();
+    this.webSocket.disconnect();
   }
 
   private installCanvasResizeGuard(app: any) {

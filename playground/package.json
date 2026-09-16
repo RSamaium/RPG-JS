@@ -14,6 +14,8 @@
     "build:projectiles": "pnpm --dir games/projectiles build",
     "dev:dash": "pnpm --dir games/dash dev",
     "build:dash": "pnpm --dir games/dash build",
+    "dev:account": "pnpm --dir games/account dev",
+    "build:account": "pnpm --dir games/account build",
     "dev:chat": "pnpm --dir games/chat dev",
     "build:chat": "pnpm --dir games/chat build",
     "dev:hotbar": "pnpm --dir games/hotbar dev",

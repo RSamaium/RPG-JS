@@ -7,9 +7,10 @@ import { inject } from "./core/inject";
 import { context } from "./core/context";
 import { lastValueFrom } from "rxjs";
 import { RpgRoomRegistry } from "./rooms/registry";
-import type { RpgPlayerConnectionContext, RpgServerStepMetrics } from "./RpgServer";
+import type { RpgAuthContext, RpgAuthResult, RpgPlayerConnectionContext, RpgServerAuthSocket, RpgServerStepMetrics } from "./RpgServer";
 import type { RpgPlayer } from "./Player/Player";
 import { registerServerStepEmitter } from "./server-step";
+import { setConnectionAuthentication } from "./auth";
 
 /** Persistent storage available to the RPGJS server runtime. */
 export interface RpgServerRuntimeStorage {
@@ -302,16 +303,28 @@ export class RpgServerEngine extends RpgRoomServerBase {
   }
 
   async onConnectClient(conn: any, ctx: any) {
-    const publicId = await this.authenticateConnection(conn, ctx);
+    const socket = this.createAuthSocket(conn, ctx);
+    let auth: RpgAuthContext | undefined;
+    try {
+      const result = await this.authenticateConnection(conn, ctx);
+      auth = typeof result === "string"
+        ? this.createAuthContext({ id: result })
+        : result;
+    }
+    catch (error) {
+      await this.notifyAuthenticationFailed(error, socket);
+      throw error;
+    }
 
-    if (typeof publicId === "string") {
-      await this.prepareAuthenticatedSession(publicId, conn, ctx);
+    if (auth) {
+      setConnectionAuthentication(conn, { context: auth, server: this, socket });
+      await this.prepareAuthenticatedSession(auth.id, conn, ctx);
     }
 
     return super.onConnectClient(conn, ctx);
   }
 
-  protected async authenticateConnection(conn: any, ctx: any): Promise<string | undefined> {
+  protected async authenticateConnection(conn: any, ctx: any): Promise<RpgAuthContext | string | undefined> {
     let hooks: Hooks;
 
     try {
@@ -324,18 +337,56 @@ export class RpgServerEngine extends RpgRoomServerBase {
     const results = await lastValueFrom(
       hooks.callHooks("server-engine-auth", this, this.createAuthSocket(conn, ctx))
     );
-    const publicIds = results.filter((result) => typeof result === "string");
+    const identities = results.filter((result): result is RpgAuthResult =>
+      typeof result === "string"
+      || (typeof result === "object" && result !== null && "id" in result)
+    );
 
-    if (publicIds.length === 0) {
+    if (identities.length === 0) {
       return undefined;
     }
 
-    const publicId = publicIds[publicIds.length - 1].trim();
+    const identity = identities[identities.length - 1];
+    const publicId = (typeof identity === "string" ? identity : identity.id).trim();
     if (!publicId) {
       throw new Error("Authentication failed: auth() returned an empty player id");
     }
 
-    return publicId;
+    return this.createAuthContext({
+      id: publicId,
+      ...(typeof identity === "object" && "data" in identity
+        ? { data: identity.data }
+        : {}),
+    });
+  }
+
+  private createAuthContext(identity: { id: string; data?: unknown }): RpgAuthContext {
+    const roomId = this.getCurrentRoomId() ?? undefined;
+    return Object.freeze({
+      ...identity,
+      roomId,
+      roomKind: roomId
+        ? this.getRoomKind(roomId)
+        : undefined,
+    });
+  }
+
+  private async notifyAuthenticationFailed(error: unknown, socket: RpgServerAuthSocket) {
+    let hooks: Hooks;
+    try {
+      hooks = inject<Hooks>(ModulesToken, context);
+    }
+    catch {
+      return;
+    }
+    try {
+      await lastValueFrom(
+        hooks.callHooks("server-engine-onAuthFailed", this, error, socket),
+      );
+    }
+    catch {
+      // Failure observers must not replace the authoritative rejection reason.
+    }
   }
 
   private createAuthSocket(conn: any, ctx: any) {
@@ -447,6 +498,22 @@ export class RpgServerEngine extends RpgRoomServerBase {
     const user = (this as any).createUserFromClassType(classType, conn, ctx);
     signal()[publicId] = user;
     await (this as any).saveStatePath?.(`${usersPropName}.${publicId}`, createStatesSnapshotDeep(user));
+  }
+
+  /** @internal Roll back provisional identity state when player authorization fails. */
+  async rejectAuthenticatedConnection(publicId: string, conn: any, ctx: any): Promise<void> {
+    const privateIds = await this.resolveAuthenticatedPrivateIds(conn, ctx);
+    for (const privateId of privateIds) {
+      await this.room.storage.delete(`session:${privateId}`);
+      await this.removePrivateIdFromPublicIndex(privateId, publicId);
+    }
+
+    const subRoom = await (this as any).getSubRoom?.({ getMemoryAll: true });
+    const signal = subRoom ? (this as any).getUsersProperty?.(subRoom) : undefined;
+    const user = signal?.()[publicId];
+    if (user?.conn === conn) {
+      delete signal()[publicId];
+    }
   }
 
   private getRoomKind(id: string | null): RpgServerRoomKind {

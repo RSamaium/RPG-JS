@@ -5,6 +5,8 @@ import type { NodeConnection, NodeRoom } from "@signe/room/node";
 import { provideServerMapStreaming, provideServerRooms, RpgGameplayRoom } from "@rpgjs/server";
 import type {
   RpgEvent,
+  RpgAuthContext,
+  RpgAuthResult,
   RpgEventHooks,
   RpgMap,
   RpgMapHooks,
@@ -57,6 +59,15 @@ describe("server public API types", () => {
         expectTypeOf(context).toEqualTypeOf<RpgPlayerConnectionContext>();
         expectTypeOf(context.query).toEqualTypeOf<Readonly<Record<string, string>>>();
       },
+      canAuth(player, auth) {
+        expectTypeOf(player).toEqualTypeOf<RpgPlayer>();
+        expectTypeOf(auth).toEqualTypeOf<RpgAuthContext>();
+        return auth.id.length > 0;
+      },
+      onAuthSuccess(player, auth) {
+        expectTypeOf(player).toEqualTypeOf<RpgPlayer>();
+        expectTypeOf(auth).toEqualTypeOf<RpgAuthContext>();
+      },
       onHotbarChange(player, change) {
         expectTypeOf(player).toEqualTypeOf<RpgPlayer>();
         expectTypeOf(change.state).toEqualTypeOf<HotbarState>();
@@ -75,6 +86,23 @@ describe("server public API types", () => {
     } satisfies RpgPlayerHooks;
 
     expectTypeOf(hooks).toMatchTypeOf<RpgPlayerHooks>();
+  });
+
+  test("engine authentication accepts legacy and rich identities", () => {
+    const legacy: RpgAuthResult = "player-id";
+    const rich: RpgAuthResult<{ role: string }> = {
+      id: "player-id",
+      data: { role: "member" },
+    };
+    expectTypeOf(legacy).toMatchTypeOf<RpgAuthResult>();
+    expectTypeOf(rich.data?.role).toEqualTypeOf<string | undefined>();
+    const hooks = {
+      canAuth(_player, auth) {
+        expectTypeOf(auth.data?.role).toEqualTypeOf<string | undefined>();
+        return true;
+      },
+    } satisfies RpgPlayerHooks<{ role: string }>;
+    expectTypeOf(hooks).toMatchTypeOf<RpgPlayerHooks<{ role: string }>>();
   });
 
   test("save and load overloads expose discriminated results", () => {

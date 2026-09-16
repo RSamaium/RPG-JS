@@ -54,6 +54,11 @@ providers: [
 ]
 ```
 
+Set `deferConnection: true` when a client GUI such as `@rpgjs/account` must run
+before credentials are available. The GUI calls `RpgClientEngine.connect()`
+after it obtains a token; without this option, startup connects automatically as
+before.
+
 ## `server.ts`
 
 `server.ts` creates the game server and registers your providers:
@@ -176,6 +181,7 @@ If you omit `keyboardControls`, RPGJS injects the default bindings automatically
   escape: "escape"
 }
 ```
+
 
 Partial `keyboardControls` objects are merged with these defaults, so a game can
 override one key without redefining every movement/action binding.
