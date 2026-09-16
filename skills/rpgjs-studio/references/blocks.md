@@ -60,9 +60,10 @@ schemas.
 
 For the built-in Studio assistant, event workflow creation is sequenced rather
 than freely planned: read the qualified workflow resource, discover the
-catalog, load exact schemas, resolve a compact map position, then call the
-combined workflow writer. Do not exact-read complete map layers to place a new
-event.
+catalog, load exact schemas, then call the combined workflow writer. The writer
+accepts a map ID or exact map name and
+resolves the compact safe position internally. Do not exact-read complete map
+layers to place a new event.
 
 ## Block collection payload
 

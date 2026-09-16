@@ -17,6 +17,15 @@ For image/video generation with multiple references, video duration and pricing,
 
 To play a video in an event, use `show_cinematic` with `{ "video": "media-id", "allowSkip": false, "bgm": "pause", "preload": true }`. Only `video` is required: skipping and preloading default to true; `bgm` defaults to `"duck"` (15% music volume). `"pause"` resumes music afterwards. Adjacent video blocks share one overlay. See [references/media.md](references/media.md) for details; no map-to-video association is required.
 
+## Direct map generation release
+
+For generation without an assistant, read the durable workflow and direct progress
+sections in `references/maps.md`. Use the existing prepare/execute endpoints,
+explicit credit confirmation, project-scoped status and intermediate preview.
+Require `finalized: true` and `mapId` before presenting a saved result. Never infer
+completion from the workflow status alone. Safe spawn is tracked upstream in
+RSamaium/RPG-JS#367; do not implement a local collision workaround.
+
 ## Inputs
 
 - Check whether a local `RPGSTUDIO.md` file exists in the current working directory.
@@ -136,6 +145,19 @@ curl -sS -X POST "$BASE_URL/..." \
   `POST /api/mmorpg/publish`. Publication prepares every map before sending any
   update. Failures return a stable `code`, `stage`, and optional `resourceId`;
   see `references/mmorpg.md` for the response contract.
+- A character event whose only behavior is one dialogue can store it directly in
+  `triggers[].typeData.dialogue` on an `onAction` trigger. It does not need a
+  block collection. Resolve both `graphic` (`spritesheet`) and `faceset` media
+  first; propose confirmed generation when either type has no suitable result.
+  An explicit faceset-generation refusal may omit the faceset. If the user
+  explicitly forbids all asset generation, create the functional event with
+  whichever coherent searched appearance IDs exist and omit any missing
+  `graphic` or `faceset`.
+- For a character that sells a database item, follow the canonical shop
+  workflow: resolve or create the real item with a positive `price`, then
+  create one `call_shop` block referencing its `_id`. The RPGJS shop charges the
+  price before granting the item. Do not synthesize manual choice/gold/item
+  branches or placeholder resource identifiers.
 - Map-generation `followUpPlan.events[]` accepts an optional pixel
   `position: { x, y }`. It must stay inside `width * 48` by `height * 48`;
   Studio validates it through a compact event-map context and falls back to the
@@ -185,6 +207,7 @@ curl -sS -X POST "$BASE_URL/..." \
   cancellation. Applying a selected Actor preserves acquired progression; see
   `references/blocks.md` for the exact payloads.
 - Maps may expose a shader terrain `terrainLayer` object with `version: 1`, `mode: "control-texture"`, pixel `width`/`height`, `tileSize`, `palette`, and `controlTexture` metadata. The control texture is RGBA8; terrain palette index is encoded as `R + G * 256`, optional light uses `B` with `128` as neutral, and `A` stores terrain mask coverage for pixel brush strokes. Soft edges are computed from transition/blend metadata at render time. Legacy tile grids are normalized into `tileSize x tileSize` blocks, but brush edits can update individual world pixels in the control texture.
+- Game or editor integrations that need to reproduce Studio terrain rendering must use `@rpgjs/render-map2d`. Decode terrain and control images in the host, call `normalizeTerrainMap()` and `prepareTerrainMap()`, then render world-aligned regions with `renderTerrainRegion()`. Do not reimplement road, carpet, nine-slice, water, or morphology pixels in an Angular, Pixi, or CanvasEngine adapter.
 - `POST /api/map-generations` is the project-scoped confirmed Cloudflare Workflow for map creation and editing. It accepts optional terrain/element-set references, generates missing assets, extracts semantic terrain patterns, builds terrain/morphology, preserves separated element positions, and persists the final map. Use prepare, explicit confirmation, execute, then poll the returned instance until `complete`; the response includes the final `mapId`. Failed terminal responses expose refund/retry flags, and `POST /api/map-generations/:instanceId/retry` starts a fresh instance only after the former attempt is refunded. Targeted edits use normalized polygons and inherit current assets when omitted; see `references/maps.md`.
 - Maps may expose a terrain morphology `terrainMorphologyLayer` object with `version: 1`, `mode: "terrain-morphology"`, pixel `width`/`height`, `tileSize`, and `features[]`. Each feature is either `{ kind: "hole", params, strokes }` or `{ kind: "wall", params, strokes }`; strokes store world-pixel `points[]` and `radius`. Hole params support `depth`, `roundness`, `roughness`, optional facade `textureId`, optional bottom-fill `fillTextureId`, `fillHeight` clamped to `0..100`, and optional per-hole `waveIntensity`, `waveDirection`, and `waveSpeed`; omitted wave fields inherit the map's `waterAnimation` values, while `waveIntensity: 0` keeps the fill static. `textureId` is not used as the bottom-fill fallback. Wall params support `height`, `roundness`, `roughness`, optional facade `textureId`, `surfaceTextureId`, `trimTextureId`, `baseTextureId`, and `renderMode: "procedural" | "collision-only"`; collision-only generated walls block movement but defer their visual to `wallSurfaceLayer`. The editor's wall smoothness control maps to `roughness = 1 - smoothness`. The renderer merges hole/wall masks as signed terrain levels before drawing and merges morphology strokes into terrain collision as blocking cells.
 - Generated maps may expose `wallSurfaceLayer` with `version: 1`, `mode: "wall-surface"`, map-pixel dimensions, `materials[]`, and an external RGBA8 `controlTexture`. `R` is the zero-based material index, `G` is `0=void`, `1=top`, `2=face`, or `3=trim`, `B` is reserved, and `A` is coverage. Each material references dedicated top, face and trim texture ids plus an optional base id. Studio renders these masks pixel-exactly and edits/undoes them together with wall collision morphology. `PUT /api/maps/:mapId` persists edits from `wallSurfaceLayer` plus base64 `wallSurfaceControlTexture`; the API stores the PNG outside the map document.

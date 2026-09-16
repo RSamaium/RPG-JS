@@ -46,7 +46,7 @@ The paginated response shape is:
 }
 ```
 
-Use this mode for UI lists or agents that only need one page of events. The maximum `limit` is `100`. Paginated lists are sorted by newest creation date by default. Optional query params:
+Use this mode for UI lists or clients that only need one page of events. The maximum `limit` is `100`. Paginated lists are sorted by newest creation date by default. Optional query params:
 
 - `sortBy=createdAt|updatedAt|name`
 - `sortDirection=asc|desc`
@@ -63,12 +63,11 @@ Use this mode for UI lists or agents that only need one page of events. The maxi
 6. Create or update the event.
 7. If the event needs a real workflow, create or update block collections and link them through triggers.
 
-The built-in Studio assistant makes new workflow creation deterministic. It
-loads `build-event-workflow/references/workflow.md`, discovers block summaries,
-loads the exact selected schemas, resolves placement through the compact map
-context, and only then exposes the combined event workflow writer. A suggested
-pixel position is authoritative when it is inside the map; otherwise the map
-start is used. The compact context never returns terrain layers or elements.
+For a new event workflow, read [blocks.md](./blocks.md), resolve the map ID from
+`GET /api/maps`, create the event and its block collection through the documented
+REST endpoints, then link the collection through the event trigger. Use the
+suggested pixel position when it is inside the map bounds; otherwise use the map
+start. Do not fetch complete terrain or element layers solely to place the event.
 
 ## Map resolution
 
@@ -76,7 +75,7 @@ Use the map list as the search base when the user gives a title or description:
 
 - `GET /api/maps`
 
-Then filter client-side or in the agent logic by:
+Then filter client-side or in the calling logic by:
 
 - `name`
 - `description`
@@ -104,7 +103,14 @@ The server creates the event, then links it to the target map.
 
 ## Dependency resolution workflow
 
-Before sending media references in an event payload:
+Before creating a new character event, derive a semantic appearance query from
+the NPC role, the map description, and the situation. This applies in every
+user language. Search both required appearance types:
+
+- `GET /api/media?type=spritesheet&query=<semantic query>`
+- `GET /api/media?type=faceset&query=<semantic query>`
+
+Then, before sending media references in an event payload:
 
 1. Search media with `GET /api/media?query=<search>`.
 2. If found, use the returned `_id`.
@@ -117,6 +123,60 @@ Typical dependent fields:
 - `faceset`
 - `pages[].graphic`
 - Media references used by blocks linked to the event
+
+If either a coherent spritesheet or faceset is missing, normally estimate and
+propose generation for one missing type at a time. Do not silently create a
+character event with no appearance. If the user explicitly declines faceset
+generation, the event may omit the faceset. If the user explicitly forbids all
+asset generation, create the functional event with whichever coherent searched
+appearance IDs exist and omit any missing `graphic` or `faceset`.
+
+## Priced item shop event
+
+For an event that sells an item, resolve or create the real database item with
+`itemType: "item"` and a positive `price`, then create a `call_shop` block whose
+`items` array contains that record's `_id`. RPGJS debits the configured price
+before granting the item. Use the database and block collection REST endpoints
+documented in [database.md](./database.md) and [blocks.md](./blocks.md) for these
+writes. Do not replace the shop block with manual choice, gold, and inventory
+branches, and never invent an item ID, media filename, or placeholder map name.
+
+## One-dialogue character without a workflow
+
+When a character only says one dialogue and has no choices, rewards, state
+changes, shop, movement sequence, or other scripted behavior, store the
+dialogue directly on the `onAction` trigger. Do not create a block collection:
+
+```json
+{
+  "name": "Village Baker",
+  "eventType": "character",
+  "mapId": "MAP_ID",
+  "position": { "x": 384, "y": 240 },
+  "triggers": [
+    {
+      "id": "dialogue",
+      "type": "onAction",
+      "enabled": true,
+      "graphic": "SPRITESHEET_MEDIA_ID",
+      "faceset": "FACESET_MEDIA_ID",
+      "direction": "down",
+      "pattern": "initial",
+      "typeData": {
+        "dialogue": {
+          "text": "Fresh bread is ready.",
+          "position": "bottom",
+          "faceset": "FACESET_MEDIA_ID"
+        }
+      }
+    }
+  ]
+}
+```
+
+The RPGJS Studio runtime displays `typeData.dialogue` on action before running
+any optional linked workflow. Use a block collection only when the interaction
+contains actual scripted steps.
 
 ## Payloads from schema
 

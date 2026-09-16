@@ -15,7 +15,7 @@ curl -sS "$BASE_URL/api/projects/<projectId>/env" \
 ## Set a plain variable
 
 ```bash
-curl -sS -X PUT "$BASE_URL/api/projects/<projectId>/env/AGENT_MODEL" \
+curl -sS -X PUT "$BASE_URL/api/projects/<projectId>/env/GAME_MODEL" \
   -H "x-api-key:$RPGSTUDIO_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"type":"plain","value":"gpt-4.1-mini"}'
@@ -26,7 +26,7 @@ Plain variable responses include `value`.
 ## Set a secret variable
 
 ```bash
-curl -sS -X PUT "$BASE_URL/api/projects/<projectId>/env/AGENT_INTERNAL_API_KEY" \
+curl -sS -X PUT "$BASE_URL/api/projects/<projectId>/env/GAME_INTERNAL_API_KEY" \
   -H "x-api-key:$RPGSTUDIO_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"type":"secret","value":"sk_project_secret"}'
@@ -38,7 +38,7 @@ print, log, or store raw secret values in `RPGSTUDIO.md`.
 ## Delete a variable
 
 ```bash
-curl -sS -X DELETE "$BASE_URL/api/projects/<projectId>/env/AGENT_MODEL" \
+curl -sS -X DELETE "$BASE_URL/api/projects/<projectId>/env/GAME_MODEL" \
   -H "x-api-key:$RPGSTUDIO_API_KEY" \
   -H "Content-Type: application/json"
 ```

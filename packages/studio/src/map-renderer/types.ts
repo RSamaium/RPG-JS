@@ -1,10 +1,8 @@
+import type { TerrainRenderMode } from "@rpgjs/render-map2d";
+
 export const STUDIO_TERRAIN_TILE_SIZE = 48;
 
-export type TerrainRenderMode =
-  | { type: "hard" }
-  | { type: "fade"; width?: number; curve?: "linear" | "smooth" | "sharp" }
-  | { type: "water"; border?: boolean; foam?: boolean }
-  | { type: "custom"; shaderKey: string; params?: Record<string, unknown> };
+export type { TerrainNineSliceCenter, TerrainRenderMode } from "@rpgjs/render-map2d";
 
 export interface TerrainTextureMetadata {
   id: string;

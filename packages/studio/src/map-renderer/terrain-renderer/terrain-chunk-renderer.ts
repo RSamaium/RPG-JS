@@ -1,5 +1,14 @@
 import { Container as PixiContainer, Rectangle, Sprite, Texture } from "pixi.js";
 import { hasAutoLightingSunShadows, type LightingColor, type LightingState } from "@rpgjs/common";
+import {
+  builtInTerrainPresets,
+  composeTerrainLayerPixels,
+  renderNineSlice,
+  resolveTerrainMorphologyLiquidGeometry,
+  type RasterImage,
+  type TerrainMorphologyLiquidEdgeMetrics,
+  type TerrainPresetRenderer,
+} from "@rpgjs/render-map2d";
 import { buildStudioTerrainCollisionPolygons } from "../collision-polygons";
 import { createStudioTerrainRenderData } from "../map-normalizer";
 import {
@@ -125,11 +134,6 @@ interface TerrainControlRenderLayer {
   mode: TerrainRenderMode;
 }
 
-interface TerrainCompositeLayer {
-  pixels: Uint8ClampedArray;
-  mask: Uint8ClampedArray;
-}
-
 interface CanvasBuffer {
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
@@ -139,6 +143,13 @@ interface TerrainMorphologyMaskBuffer {
   canvas: HTMLCanvasElement;
   bounds: { x: number; y: number; width: number; height: number };
   alphaBounds?: { minX: number; minY: number; maxX: number; maxY: number };
+}
+
+interface TerrainMorphologyLiquidPalette {
+  contactShadow: string;
+  edgeSoft: string;
+  edgeStrong: string;
+  fillFallback: string;
 }
 
 interface TerrainWallRenderParts {
@@ -778,7 +789,12 @@ export class StudioTerrainChunkRenderer {
     const layers = createTerrainControlRenderLayers(data.asset, control.palette);
     if (layers.length === 0) return false;
 
-    const margin = Math.ceil(Math.max(24, ...layers.map((layer) => layer.blendRadius + 8)));
+    const sharedPresetMargin = layers.some((layer) =>
+      layer.mode.type === "nine-slice"
+      || (layer.mode.type === "custom" && Boolean(resolveSharedTerrainPreset(layer.mode.shaderKey))))
+      ? data.tileSize * 3
+      : 0;
+    const margin = Math.ceil(Math.max(24, sharedPresetMargin, ...layers.map((layer) => layer.blendRadius + 8)));
     const renderBounds = intersectBounds(
       {
         x: Math.floor(bounds.x - margin),
@@ -792,7 +808,7 @@ export class StudioTerrainChunkRenderer {
 
     const width = Math.max(1, Math.ceil(renderBounds.width));
     const height = Math.max(1, Math.ceil(renderBounds.height));
-    const composites: TerrainCompositeLayer[] = [];
+    const composites: Array<{ pixels: Uint8ClampedArray; mask: Uint8ClampedArray }> = [];
 
     for (const layer of layers) {
       const rawMask = this.buildTerrainControlRawMask(controlBuffer, control, layer.paletteIndex, renderBounds);
@@ -817,7 +833,7 @@ export class StudioTerrainChunkRenderer {
     const imageData = output.ctx.createImageData(width, height);
     imageData.data.set(composeTerrainLayerPixels(width, height, composites));
     output.ctx.putImageData(imageData, 0, 0);
-    this.drawTerrainLayerEffects(output, control, layers, renderBounds);
+    this.drawTerrainLayerEffects(output, controlBuffer, control, data, image, layers, renderBounds);
 
     ctx.drawImage(output.canvas, renderBounds.x, renderBounds.y);
     return true;
@@ -928,11 +944,46 @@ export class StudioTerrainChunkRenderer {
 
   private drawTerrainLayerEffects(
     output: CanvasBuffer,
+    controlBuffer: ImageBuffer,
     control: StudioTerrainControlTexture,
+    data: StudioTerrainRenderData,
+    image: HTMLImageElement,
     layers: TerrainControlRenderLayer[],
     bounds: { x: number; y: number; width: number; height: number }
   ): void {
     for (const layer of layers) {
+      const rawMask = this.buildTerrainControlRawMask(controlBuffer, control, layer.paletteIndex, bounds);
+      const maskPixels = rawMask.getContext("2d", { willReadFrequently: true })
+        ?.getImageData(0, 0, rawMask.width, rawMask.height).data;
+      if (!maskPixels) continue;
+
+      if (layer.mode.type === "custom") {
+        const preset = resolveSharedTerrainPreset(layer.mode.shaderKey);
+        if (preset) {
+          this.drawSharedTerrainPixels(output, preset({
+            width: output.canvas.width,
+            height: output.canvas.height,
+            tileSize: data.tileSize,
+            mask: maskPixels,
+            params: layer.mode.params ?? {},
+          }));
+        }
+      } else if (layer.mode.type === "nine-slice") {
+        const texture = findTerrainTexture(data.asset, layer.terrainTextureId);
+        const sourceBuffer = this.getImageBuffer(data.sourceTexture, image);
+        if (texture && sourceBuffer && data.asset) {
+          const rect = resolveTerrainTextureSourceRect(data.asset, texture, sourceBuffer.width, sourceBuffer.height);
+          this.drawSharedTerrainPixels(output, renderNineSlice({
+            width: output.canvas.width,
+            height: output.canvas.height,
+            mask: maskPixels,
+            source: cropRasterImage(sourceBuffer, rect),
+            center: layer.mode.center,
+            renderTileSize: texture.renderTileSize ?? data.tileSize,
+          }));
+        }
+      }
+
       if (layer.mode.type !== "water" && !isWaterTerrainTexture(null, layer.terrainTextureId)) {
         continue;
       }
@@ -956,6 +1007,15 @@ export class StudioTerrainChunkRenderer {
       output.ctx.drawImage(overlay.canvas, 0, 0);
       output.ctx.restore();
     }
+  }
+
+  private drawSharedTerrainPixels(output: CanvasBuffer, pixels: Uint8ClampedArray): void {
+    if (pixels.length !== output.canvas.width * output.canvas.height * 4) return;
+    const buffer = this.createCanvasBuffer(output.canvas.width, output.canvas.height);
+    const imageData = buffer.ctx.createImageData(output.canvas.width, output.canvas.height);
+    imageData.data.set(pixels);
+    buffer.ctx.putImageData(imageData, 0, 0);
+    output.ctx.drawImage(buffer.canvas, 0, 0);
   }
 
   private createWaterOverlay(
@@ -1195,6 +1255,18 @@ export class StudioTerrainChunkRenderer {
     const parts = this.createTerrainHoleRenderParts(data, feature);
     if (!parts) return;
 
+    const fillTextureId = stringParam(feature.params.fillTextureId);
+    const fillHeight = Number(feature.params.fillHeight ?? 0);
+    if (
+      fillTextureId
+      && Number.isFinite(fillHeight)
+      && fillHeight > 0
+      && data.asset?.terrainTextures.some((texture) => texture.id === fillTextureId)
+    ) {
+      this.drawTerrainMorphologyLiquidEdge(ctx, parts.mask, feature, data, image);
+      return;
+    }
+
     this.drawTerrainMorphologyMaskedColor(
       ctx,
       parts.mask,
@@ -1222,6 +1294,76 @@ export class StudioTerrainChunkRenderer {
     this.drawTerrainMorphologyMaskedColor(ctx, parts.leftEdge, "#e7cca0", 0.13 - parts.smoothness * 0.03, "screen", "blur(1px)", -2, 0);
     this.drawTerrainMorphologyMaskedColor(ctx, parts.rightEdge, "#080604", 0.34 - parts.smoothness * 0.08, "multiply", "blur(1px)", 3, 0);
     this.drawTerrainHoleFillMorphology(ctx, parts.mask, feature, data, image);
+  }
+
+  private drawTerrainMorphologyLiquidEdge(
+    ctx: CanvasRenderingContext2D,
+    mask: TerrainMorphologyMaskBuffer,
+    feature: StudioTerrainMorphologyFeature,
+    data: StudioTerrainRenderData,
+    image: HTMLImageElement | null
+  ): void {
+    const bounds = getTerrainMorphologyLocalMaskBounds(mask);
+    if (!bounds) return;
+    const geometry = resolveTerrainMorphologyLiquidGeometry({
+      bounds,
+      depth: getTerrainMorphologyHeight(feature),
+      fillHeight: Number(feature.params.fillHeight ?? 0),
+      tileSize: data.tileSize,
+    });
+    if (geometry.level <= 0) return;
+
+    const smoothedMask = this.createTerrainMorphologySmoothedLiquidMask(
+      mask,
+      geometry.metrics.contourSmoothingRadius,
+      geometry.metrics.antiAliasWidth
+    );
+    const fillMask = this.createTerrainMorphologyProjectedLevelMask(smoothedMask, geometry.inset, geometry.dropY);
+    if (geometry.wallAlpha > 0) {
+      const exposedWallBuffer = this.createCanvasBuffer(mask.canvas.width, mask.canvas.height);
+      exposedWallBuffer.ctx.drawImage(mask.canvas, 0, 0);
+      const exposedWall = { canvas: exposedWallBuffer.canvas, bounds: mask.bounds };
+      this.subtractTerrainMorphologyMask(exposedWall, fillMask);
+      this.drawTerrainMorphologyMaskedColor(ctx, exposedWall, "#070604", geometry.wallAlpha, "source-over", "blur(1px)");
+    }
+
+    const contactBand = this.createTerrainMorphologyOuterEdgeMask(
+      fillMask,
+      geometry.metrics.contactWidth,
+      geometry.metrics.antiAliasWidth,
+      smoothedMask
+    );
+    const innerTransition = this.createTerrainMorphologyInnerEdgeMask(
+      fillMask,
+      geometry.metrics.innerTransitionWidth,
+      geometry.metrics.antiAliasWidth
+    );
+    const nearEdge = this.createTerrainMorphologyInnerEdgeMask(
+      fillMask,
+      geometry.metrics.nearEdgeWidth,
+      geometry.metrics.antiAliasWidth
+    );
+    const meniscus = this.createTerrainMorphologyInnerEdgeMask(
+      fillMask,
+      geometry.metrics.meniscusWidth,
+      geometry.metrics.antiAliasWidth
+    );
+    const palette = resolveTerrainMorphologyLiquidPalette(feature.params.fillColor);
+
+    this.drawTerrainMorphologyMaskedColor(ctx, contactBand, palette.contactShadow, 0.34, "multiply");
+    this.drawTerrainMorphologyTextureFill(
+      ctx,
+      fillMask,
+      stringParam(feature.params.fillTextureId),
+      data,
+      image,
+      stringParam(feature.params.fillColor) ?? palette.fillFallback,
+      0.96
+    );
+    this.drawTerrainMorphologyMaskedColor(ctx, innerTransition, palette.edgeSoft, 0.42, "source-over");
+    this.drawTerrainMorphologyMaskedColor(ctx, nearEdge, palette.edgeSoft, 0.3, "source-over");
+    this.drawTerrainMorphologyMaskedColor(ctx, meniscus, palette.edgeStrong, 0.78, "source-over");
+    this.drawTerrainMorphologyLiquidMeniscus(ctx, fillMask, feature.id, palette.edgeStrong, geometry.metrics);
   }
 
   private drawWall(
@@ -1966,6 +2108,183 @@ export class StudioTerrainChunkRenderer {
     return result;
   }
 
+  private createTerrainMorphologySmoothedLiquidMask(
+    source: TerrainMorphologyMaskBuffer,
+    radius: number,
+    antiAliasWidth: number
+  ): TerrainMorphologyMaskBuffer {
+    const smoothingRadius = Math.max(1, Math.round(radius));
+    const padding = smoothingRadius + Math.max(1, Math.round(antiAliasWidth)) + 2;
+    const padded = this.createCanvasBuffer(source.canvas.width + padding * 2, source.canvas.height + padding * 2);
+    padded.ctx.drawImage(source.canvas, padding, padding);
+
+    const expanded = this.createTerrainMorphologyDilatedCanvas(padded.canvas, smoothingRadius);
+    const closed = this.createTerrainMorphologyErodedCanvas(expanded, smoothingRadius);
+    const softened = this.createCanvasBuffer(closed.width, closed.height);
+    softened.ctx.save();
+    softened.ctx.filter = `blur(${Math.max(1, Math.round(antiAliasWidth))}px)`;
+    softened.ctx.drawImage(closed, 0, 0);
+    softened.ctx.restore();
+
+    const result = this.createCanvasBuffer(source.canvas.width, source.canvas.height);
+    result.ctx.drawImage(
+      softened.canvas,
+      padding,
+      padding,
+      source.canvas.width,
+      source.canvas.height,
+      0,
+      0,
+      source.canvas.width,
+      source.canvas.height
+    );
+    return { canvas: result.canvas, bounds: source.bounds };
+  }
+
+  private createTerrainMorphologyDilatedCanvas(source: HTMLCanvasElement, distance: number): HTMLCanvasElement {
+    const target = this.createCanvasBuffer(source.width, source.height);
+    const radius = Math.max(1, Math.round(distance));
+    const samples = Math.round(clampNumber(12 + radius * 2, 16, 28));
+    target.ctx.drawImage(source, 0, 0);
+    for (let index = 0; index < samples; index += 1) {
+      const angle = index / samples * Math.PI * 2;
+      target.ctx.drawImage(source, Math.round(Math.cos(angle) * radius), Math.round(Math.sin(angle) * radius));
+    }
+    return target.canvas;
+  }
+
+  private createTerrainMorphologyErodedCanvas(source: HTMLCanvasElement, distance: number): HTMLCanvasElement {
+    const target = this.createCanvasBuffer(source.width, source.height);
+    const radius = Math.max(1, Math.round(distance));
+    const samples = Math.round(clampNumber(12 + radius * 2, 16, 28));
+    target.ctx.drawImage(source, 0, 0);
+    target.ctx.save();
+    target.ctx.globalCompositeOperation = "destination-in";
+    for (let index = 0; index < samples; index += 1) {
+      const angle = index / samples * Math.PI * 2;
+      target.ctx.drawImage(source, Math.round(Math.cos(angle) * radius), Math.round(Math.sin(angle) * radius));
+    }
+    target.ctx.restore();
+    return target.canvas;
+  }
+
+  private createTerrainMorphologyInnerEdgeMask(
+    source: TerrainMorphologyMaskBuffer,
+    distance: number,
+    blur = 0
+  ): TerrainMorphologyMaskBuffer {
+    const edgeDistance = Math.max(1, Math.round(distance));
+    const eroded = this.createCanvasBuffer(source.canvas.width, source.canvas.height);
+    eroded.ctx.drawImage(source.canvas, 0, 0);
+    eroded.ctx.save();
+    eroded.ctx.globalCompositeOperation = "destination-in";
+    for (let index = 0; index < 12; index += 1) {
+      const angle = index / 12 * Math.PI * 2;
+      eroded.ctx.drawImage(source.canvas, Math.round(Math.cos(angle) * edgeDistance), Math.round(Math.sin(angle) * edgeDistance));
+    }
+    eroded.ctx.restore();
+
+    const edge = this.createCanvasBuffer(source.canvas.width, source.canvas.height);
+    edge.ctx.drawImage(source.canvas, 0, 0);
+    edge.ctx.save();
+    edge.ctx.globalCompositeOperation = "destination-out";
+    edge.ctx.drawImage(eroded.canvas, 0, 0);
+    edge.ctx.restore();
+    if (blur <= 0) return { canvas: edge.canvas, bounds: source.bounds };
+
+    const softened = this.createCanvasBuffer(source.canvas.width, source.canvas.height);
+    softened.ctx.save();
+    softened.ctx.filter = `blur(${Math.max(1, Math.round(blur))}px)`;
+    softened.ctx.drawImage(edge.canvas, 0, 0);
+    softened.ctx.restore();
+    const result = { canvas: softened.canvas, bounds: source.bounds };
+    this.clipTerrainMorphologyMask(result, source);
+    return result;
+  }
+
+  private createTerrainMorphologyOuterEdgeMask(
+    source: TerrainMorphologyMaskBuffer,
+    distance: number,
+    blur: number,
+    clipMask: TerrainMorphologyMaskBuffer
+  ): TerrainMorphologyMaskBuffer {
+    const edgeDistance = Math.max(1, Math.round(distance));
+    const dilated = this.createCanvasBuffer(source.canvas.width, source.canvas.height);
+    dilated.ctx.drawImage(source.canvas, 0, 0);
+    for (let index = 0; index < 16; index += 1) {
+      const angle = index / 16 * Math.PI * 2;
+      dilated.ctx.drawImage(source.canvas, Math.round(Math.cos(angle) * edgeDistance), Math.round(Math.sin(angle) * edgeDistance));
+    }
+    dilated.ctx.save();
+    dilated.ctx.globalCompositeOperation = "destination-out";
+    dilated.ctx.drawImage(source.canvas, 0, 0);
+    dilated.ctx.restore();
+
+    const edge = this.createCanvasBuffer(source.canvas.width, source.canvas.height);
+    edge.ctx.save();
+    edge.ctx.filter = blur > 0 ? `blur(${Math.max(1, Math.round(blur))}px)` : "none";
+    edge.ctx.drawImage(dilated.canvas, 0, 0);
+    edge.ctx.restore();
+    edge.ctx.save();
+    edge.ctx.globalCompositeOperation = "destination-out";
+    edge.ctx.drawImage(source.canvas, 0, 0);
+    edge.ctx.restore();
+    const result = { canvas: edge.canvas, bounds: source.bounds };
+    this.clipTerrainMorphologyMask(result, clipMask);
+    return result;
+  }
+
+  private subtractTerrainMorphologyMask(
+    target: TerrainMorphologyMaskBuffer,
+    source: TerrainMorphologyMaskBuffer
+  ): void {
+    const context = target.canvas.getContext("2d");
+    if (!context) return;
+    context.save();
+    context.globalCompositeOperation = "destination-out";
+    context.drawImage(source.canvas, 0, 0);
+    context.restore();
+  }
+
+  private drawTerrainMorphologyLiquidMeniscus(
+    ctx: CanvasRenderingContext2D,
+    fillMask: TerrainMorphologyMaskBuffer,
+    featureId: string,
+    color: string,
+    metrics: TerrainMorphologyLiquidEdgeMetrics
+  ): void {
+    const accent = this.createCanvasBuffer(fillMask.canvas.width, fillMask.canvas.height);
+    const accentBand = this.createTerrainMorphologyInnerEdgeMask(
+      fillMask,
+      metrics.meniscusWidth + 1,
+      metrics.antiAliasWidth
+    );
+    const seed = hashTerrainString(`morphology-liquid-edge:${featureId}`);
+    const spacing = 9;
+    const firstWorldX = Math.floor((fillMask.bounds.x - spacing) / spacing) * spacing;
+    const firstWorldY = Math.floor((fillMask.bounds.y - spacing) / spacing) * spacing;
+    const lastWorldX = fillMask.bounds.x + fillMask.canvas.width + spacing;
+    const lastWorldY = fillMask.bounds.y + fillMask.canvas.height + spacing;
+    accent.ctx.fillStyle = color;
+    for (let worldY = firstWorldY; worldY < lastWorldY; worldY += spacing) {
+      for (let worldX = firstWorldX; worldX < lastWorldX; worldX += spacing) {
+        if (terrainMorphologyNoise(worldX * 0.09, worldY * 0.09, seed) < 0.43) continue;
+        const radius = 3 + terrainMorphologyNoise(worldX, worldY, seed + 17) * 3;
+        accent.ctx.beginPath();
+        accent.ctx.arc(worldX - fillMask.bounds.x, worldY - fillMask.bounds.y, radius, 0, Math.PI * 2);
+        accent.ctx.fill();
+      }
+    }
+    accent.ctx.save();
+    accent.ctx.globalCompositeOperation = "destination-in";
+    accent.ctx.drawImage(accentBand.canvas, 0, 0);
+    accent.ctx.restore();
+    ctx.save();
+    ctx.globalAlpha = 0.56;
+    this.drawMorphologyCanvas(ctx, accent.canvas, fillMask.bounds);
+    ctx.restore();
+  }
+
   private createTerrainMorphologyProjectedLevelMask(
     source: TerrainMorphologyMaskBuffer,
     inset: number,
@@ -2483,6 +2802,7 @@ function resolveTerrainLayerBlendRadius(
 
 function resolveTerrainModeBlendRadius(mode: TerrainRenderMode): number {
   if (mode.type === "hard") return 0;
+  if (mode.type === "nine-slice") return 0;
   if (mode.type === "fade") {
     const width = Number(mode.width);
     return Number.isFinite(width) && width > 0 ? width : 18;
@@ -2513,47 +2833,6 @@ function resolveTransitionNeighborIds(
     .filter((transition) => predicate(transition.mode))
     .map((transition) => (transition.from === terrainTextureId ? transition.to : transition.from))
     .filter((neighborId, index, all) => all.indexOf(neighborId) === index);
-}
-
-function composeTerrainLayerPixels(
-  width: number,
-  height: number,
-  layers: TerrainCompositeLayer[]
-): Uint8ClampedArray {
-  const pixelCount = Math.max(0, Math.floor(width) * Math.floor(height));
-  const output = new Uint8ClampedArray(pixelCount * 4);
-
-  for (let offset = 0; offset < output.length; offset += 4) {
-    let maskTotal = 0;
-    let alphaTotal = 0;
-    let red = 0;
-    let green = 0;
-    let blue = 0;
-
-    for (const layer of layers) {
-      const maskAlpha = layer.mask[offset + 3] / 255;
-      if (maskAlpha <= 0) continue;
-
-      const pixelAlpha = layer.pixels[offset + 3] / 255;
-      const alphaWeight = maskAlpha * pixelAlpha;
-      maskTotal += maskAlpha;
-      if (alphaWeight <= 0) continue;
-
-      alphaTotal += alphaWeight;
-      red += layer.pixels[offset] * alphaWeight;
-      green += layer.pixels[offset + 1] * alphaWeight;
-      blue += layer.pixels[offset + 2] * alphaWeight;
-    }
-
-    if (maskTotal <= 0 || alphaTotal <= 0) continue;
-
-    output[offset] = clampByte(red / alphaTotal);
-    output[offset + 1] = clampByte(green / alphaTotal);
-    output[offset + 2] = clampByte(blue / alphaTotal);
-    output[offset + 3] = clampByte((alphaTotal / maskTotal) * 255);
-  }
-
-  return output;
 }
 
 function intersectBounds(
@@ -2855,6 +3134,37 @@ function terrainMorphologyNoise(x: number, y: number, seed = 0): number {
   return value - Math.floor(value);
 }
 
+function hashTerrainString(value: string): number {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = Math.imul(hash ^ value.charCodeAt(index), 16777619);
+  }
+  return hash >>> 0;
+}
+
+function resolveTerrainMorphologyLiquidPalette(fillColor: unknown): TerrainMorphologyLiquidPalette {
+  const match = typeof fillColor === "string"
+    ? fillColor.trim().match(/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})/i)
+    : null;
+  const base = match
+    ? { r: Number(match[1]), g: Number(match[2]), b: Number(match[3]) }
+    : { r: 68, g: 145, b: 165 };
+  const luma = base.r * 0.2126 + base.g * 0.7152 + base.b * 0.0722;
+  const contrast = luma > 190 ? { r: 0, g: 0, b: 0 } : { r: 255, g: 255, b: 255 };
+  const mix = (target: { r: number; g: number; b: number }, amount: number): string => {
+    const r = Math.round(base.r + (target.r - base.r) * amount);
+    const g = Math.round(base.g + (target.g - base.g) * amount);
+    const b = Math.round(base.b + (target.b - base.b) * amount);
+    return `rgb(${r}, ${g}, ${b})`;
+  };
+  return {
+    contactShadow: mix({ r: 0, g: 0, b: 0 }, 0.68),
+    edgeSoft: mix(contrast, luma > 190 ? 0.16 : 0.24),
+    edgeStrong: mix(contrast, luma > 190 ? 0.34 : 0.52),
+    fillFallback: `rgba(${base.r}, ${base.g}, ${base.b}, 0.92)`,
+  };
+}
+
 function stringParam(value: unknown): string | undefined {
   return typeof value === "string" && value.length > 0 ? value : undefined;
 }
@@ -3097,6 +3407,7 @@ function resolveTerrainTransitionWidth(asset: TerrainAssetMetadata): number {
 
 function terrainRenderModeWidth(mode: TerrainRenderMode | undefined): number {
   if (!mode) return 0;
+  if (mode.type === "nine-slice") return 0;
   if (mode.type === "fade") {
     const width = Number(mode.width);
     return Number.isFinite(width) && width > 0 ? width : 18;
@@ -3850,6 +4161,24 @@ function fallbackTerrainColor(textureId: string): string {
   }
   const hue = hash % 360;
   return `hsl(${hue} 32% 42%)`;
+}
+
+function resolveSharedTerrainPreset(shaderKey: string): TerrainPresetRenderer | undefined {
+  return builtInTerrainPresets[shaderKey];
+}
+
+function cropRasterImage(
+  source: ImageBuffer,
+  bounds: { x: number; y: number; width: number; height: number }
+): RasterImage {
+  const width = Math.max(1, Math.floor(bounds.width));
+  const height = Math.max(1, Math.floor(bounds.height));
+  const pixels = new Uint8ClampedArray(width * height * 4);
+  for (let y = 0; y < height; y += 1) {
+    const sourceStart = ((Math.floor(bounds.y) + y) * source.width + Math.floor(bounds.x)) * 4;
+    pixels.set(source.data.subarray(sourceStart, sourceStart + width * 4), y * width * 4);
+  }
+  return { width, height, pixels };
 }
 
 function isStudioTerrainRenderData(value: unknown): value is StudioTerrainRenderData {

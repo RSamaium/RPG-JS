@@ -67,6 +67,10 @@ export const packages = (type: "build" | "dev") => {
       buildScript,
     },
     {
+      name: "render-map2d",
+      buildScript,
+    },
+    {
       name: "common",
       buildScript,
       dependencies: createDependencies(packagesPath, ['physic']),
@@ -123,6 +127,7 @@ export const packages = (type: "build" | "dev") => {
       name: "studio",
       buildScript,
       dependencies: [
+        createDependency(packagesPath, 'render-map2d'),
         createDependency(packagesPath, 'action-battle', 'client/index.d.ts'),
         createDependency(packagesPath, 'vite'),
       ],

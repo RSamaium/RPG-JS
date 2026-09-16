@@ -221,7 +221,7 @@ Notes:
 
 ### `GET /api/database/enemies/preview?ids=<id1,id2>`
 
-Use this endpoint when a UI or agent only needs lightweight enemy display data for known enemy `_id`s.
+Use this endpoint when a UI or API client only needs lightweight enemy display data for known enemy `_id`s.
 
 Response items contain only:
 

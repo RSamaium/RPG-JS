@@ -309,7 +309,16 @@ function normalizeTerrainTransitionRules(value: unknown): TerrainTransitionRule[
 
 function isTerrainRenderMode(value: unknown): value is TerrainRenderMode {
   if (!value || typeof value !== "object") return false;
-  const type = (value as Record<string, unknown>).type;
+  const mode = value as Record<string, unknown>;
+  const type = mode.type;
+  if (type === "nine-slice") {
+    const center = mode.center as Record<string, unknown> | undefined;
+    return Boolean(center)
+      && Number(center?.x) >= 0
+      && Number(center?.y) >= 0
+      && Number(center?.width) > 0
+      && Number(center?.height) > 0;
+  }
   return type === "hard" || type === "fade" || type === "water" || type === "custom";
 }
 
