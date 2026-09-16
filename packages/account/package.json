@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/account",
-  "version": "5.0.0-beta.0",
+  "version": "5.0.0-beta.1",
   "description": "Official account GUI and deferred MMORPG authentication flow for RPGJS",
   "main": "dist/client/index.js",
   "types": "dist/client/client-index.d.ts",

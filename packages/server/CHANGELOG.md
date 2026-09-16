@@ -1,5 +1,28 @@
 # @rpgjs/server
 
+## 5.0.0-beta.36
+
+### Minor Changes
+
+- f624302: Add a pre-connection MMORPG account GUI, deferred client connections, rich
+  server authentication results, and player-aware authentication lifecycle hooks.
+  Registration uses distinct username and email fields with password confirmation,
+  and restored sessions no longer flash the account GUI before the title screen.
+  Add branded account screens with configurable imagery, music and UI sounds,
+  reusable form feedback primitives, and optional password recovery/reset adapters.
+
+### Patch Changes
+
+- 94cbdac: Move equipment details into a compact inspector beside the list, add a Status menu entry returning to the hero overview, and extend local key preferences to Action and Back with immediate menu/game updates and preserved action payloads.
+- 94cbdac: Repair Studio hero initialization when a class skill is already learned, prefer canonical media references, and guard missing spritesheet identifiers. Refine the integrated status, inventory, equipment, skills, save and shop interfaces with theme-driven layouts, localized empty/unavailable states, safe icon fallbacks and window-local close buttons. Make the mobile hotbar scrollable instead of clipping its slots.
+- 66c0d77: Add game-catalogue language selection with browser negotiation, project-scoped persistence, reactive client labels and validated per-player connection/action synchronization. Preserve the current language when loading saves.
+
+  Stabilize dialogue heights across desktop, portrait and landscape layouts. Measure rich-text pagination against available space, retain reading progress on resize, reserve scrollable choice/input space and add a touch-friendly continuation triangle with reduced-motion support.
+
+- Updated dependencies [66c0d77]
+  - @rpgjs/common@5.0.0-beta.32
+  - @rpgjs/testing@5.0.0-beta.36
+
 ## 5.0.0-beta.35
 
 ### Patch Changes

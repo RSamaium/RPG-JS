@@ -1,5 +1,27 @@
 # @rpgjs/studio
 
+## 5.0.0-beta.38
+
+### Patch Changes
+
+- 94cbdac: Move equipment details into a compact inspector beside the list, add a Status menu entry returning to the hero overview, and extend local key preferences to Action and Back with immediate menu/game updates and preserved action payloads.
+- 94cbdac: Polish equipment attribute comparisons and expose Studio's Options menu with per-project movement key preferences, conflict validation, reset controls and existing channel-based audio sliders.
+- 94cbdac: Repair Studio hero initialization when a class skill is already learned, prefer canonical media references, and guard missing spritesheet identifiers. Refine the integrated status, inventory, equipment, skills, save and shop interfaces with theme-driven layouts, localized empty/unavailable states, safe icon fallbacks and window-local close buttons. Make the mobile hotbar scrollable instead of clipping its slots.
+- Updated dependencies [94cbdac]
+- Updated dependencies [4d53aa7]
+- Updated dependencies [66c0d77]
+- Updated dependencies [66c0d77]
+- Updated dependencies [94cbdac]
+- Updated dependencies [94cbdac]
+- Updated dependencies [94cbdac]
+- Updated dependencies [f624302]
+- Updated dependencies [66c0d77]
+  - @rpgjs/client@5.0.0-beta.36
+  - @rpgjs/server@5.0.0-beta.36
+  - @rpgjs/common@5.0.0-beta.32
+  - @rpgjs/action-battle@5.0.0-beta.36
+  - @rpgjs/vite@5.0.0-beta.36
+
 ## 5.0.0-beta.37
 
 ### Patch Changes
