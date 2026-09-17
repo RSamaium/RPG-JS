@@ -1,5 +1,16 @@
 # @rpgjs/playground-hotbar
 
+## 1.0.0-rc.11
+
+### Patch Changes
+
+- Updated dependencies
+  - @rpgjs/client@5.0.0-rc.4
+  - @rpgjs/common@5.0.0-rc.4
+  - @rpgjs/server@5.0.0-rc.4
+  - @rpgjs/ui-css@5.0.0-rc.4
+  - @rpgjs/vite@5.0.0-rc.4
+
 ## 1.0.0-rc.10
 
 ### Patch Changes

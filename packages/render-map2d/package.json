@@ -1,7 +1,7 @@
 {
   "name": "@rpgjs/render-map2d",
   "repository": "github:RSamaium/RPG-JS",
-  "version": "5.0.0-rc.3",
+  "version": "5.0.0-rc.4",
   "description": "Framework-agnostic CPU renderer for RPGJS Studio 2D terrain maps",
   "type": "module",
   "main": "./dist/index.js",

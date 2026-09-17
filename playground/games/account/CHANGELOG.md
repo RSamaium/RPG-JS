@@ -1,5 +1,17 @@
 # @rpgjs/playground-account
 
+## 1.0.0-rc.4
+
+### Patch Changes
+
+- Updated dependencies
+  - @rpgjs/account@5.0.0-rc.4
+  - @rpgjs/client@5.0.0-rc.4
+  - @rpgjs/common@5.0.0-rc.4
+  - @rpgjs/server@5.0.0-rc.4
+  - @rpgjs/ui-css@5.0.0-rc.4
+  - @rpgjs/vite@5.0.0-rc.4
+
 ## 1.0.0-rc.3
 
 ### Patch Changes

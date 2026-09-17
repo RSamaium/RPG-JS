@@ -16,7 +16,7 @@
     "api:boundary:update": "tsx bin/check-public-boundary.ts --update",
     "changeset": "changeset",
     "version-packages": "changeset version && pnpm install --lockfile-only",
-    "publish-packages": "pnpm run rpgjs:version && changeset publish --tag latest",
+    "publish-packages": "pnpm run rpgjs:version && tsx bin/publish.ts",
     "rpgjs:version": "tsx bin/version.ts",
     "rpgjs:tag-latest": "tsx bin/tag-latest.ts",
     "rpgjs:publish": "pnpm run publish-packages",

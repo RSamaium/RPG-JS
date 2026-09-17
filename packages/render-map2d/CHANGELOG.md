@@ -1,5 +1,11 @@
 # @rpgjs/render-map2d
 
+## 5.0.0-rc.4
+
+### Patch Changes
+
+- Publish release candidates under npm's `latest` tag while retaining the repository's prerelease mode.
+
 ## 5.0.0-rc.3
 
 ### Patch Changes
