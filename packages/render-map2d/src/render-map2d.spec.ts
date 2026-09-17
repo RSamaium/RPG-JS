@@ -199,7 +199,7 @@ describe("@rpgjs/render-map2d", () => {
     expect(frame.pixels[edge + 2]).toBeGreaterThan(frame.pixels[edge]);
 
     const cloned = structuredClone(frame, { transfer: [frame.pixels.buffer] });
-    expect(cloned.pixels).toBeInstanceOf(Uint8ClampedArray);
+    expect(Object.prototype.toString.call(cloned.pixels)).toBe("[object Uint8ClampedArray]");
     expect(cloned.pixels.length).toBe(frame.width * frame.height * 4);
     expect(frame.pixels.length).toBe(0);
   });
