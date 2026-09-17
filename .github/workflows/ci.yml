@@ -140,15 +140,20 @@ jobs:
         - name: Install npm-check-updates globally
           run: npm i npm-check-updates -g
 
+        - name: Install pnpm
+          uses: pnpm/action-setup@v4
+          with:
+            version: 10
+
         - name: Run ncu to update dependencies
           run: |
             cd starter
             ncu -u
 
-        - name: Update package lock
+        - name: Update pnpm lock
           run: |
             cd starter
-            npm i --package-lock-only
+            pnpm install --lockfile-only --ignore-scripts
 
         - name: Deploy to external repository
           run: |
@@ -160,6 +165,6 @@ jobs:
 
             git config user.name "${{ github.actor }}"
             git config user.email "${{ github.actor }}@users.noreply.github.com"
-            git add package.json package-lock.json
+            git add package.json pnpm-lock.yaml
             git commit -m "update package dependencies to latest RPGJS version on ${{ matrix.starter_branch }}"
             git push origin HEAD:${{ matrix.starter_branch }}
