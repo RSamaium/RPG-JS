@@ -7,7 +7,7 @@
   <img src="https://img.shields.io/github/commit-activity/m/RSamaium/RPG-JS" alt="Activity">
 </p>
 
-# RPG JS v5 Beta: Build 2D RPGs and MMORPGs in TypeScript
+# RPG JS v5 Release Candidate: Build 2D RPGs and MMORPGs in TypeScript
 
 RPGJS is a TypeScript framework for building 2D browser RPGs and MMORPGs without rebuilding the same engine layers for every project.
 

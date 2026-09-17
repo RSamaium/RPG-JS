@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/playground-chat",
-  "version": "1.0.0-beta.8",
+  "version": "1.0.0-rc.9",
   "private": true,
   "type": "module",
   "scripts": {

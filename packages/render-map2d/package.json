@@ -1,6 +1,6 @@
 {
   "name": "@rpgjs/render-map2d",
-  "version": "5.0.0-beta.0",
+  "version": "5.0.0-rc.1",
   "description": "Framework-agnostic CPU renderer for RPGJS Studio 2D terrain maps",
   "type": "module",
   "main": "./dist/index.js",
@@ -11,13 +11,18 @@
       "types": "./dist/index.d.ts"
     }
   },
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "vite build",
     "dev": "vite build --watch",
     "test": "vitest run"
   },
-  "publishConfig": { "access": "public" },
+  "publishConfig": {
+    "access": "public"
+  },
   "license": "MIT",
   "devDependencies": {
     "vite": "^8.0.16",

@@ -1,5 +1,57 @@
 # @rpgjs/client
 
+## 5.0.0-rc.36
+
+### Minor Changes
+
+- f624302: Add a pre-connection MMORPG account GUI, deferred client connections, rich
+  server authentication results, and player-aware authentication lifecycle hooks.
+  Registration uses distinct username and email fields with password confirmation,
+  and restored sessions no longer flash the account GUI before the title screen.
+  Add branded account screens with configurable imagery, music and UI sounds,
+  reusable form feedback primitives, and optional password recovery/reset adapters.
+
+### Patch Changes
+
+- 94cbdac: Move equipment details into a compact inspector beside the list, add a Status menu entry returning to the hero overview, and extend local key preferences to Action and Back with immediate menu/game updates and preserved action payloads.
+- 4d53aa7: Replace the default GUI theme with a crystalline JRPG palette, refined controls,
+  shared panel treatments and semantic customization tokens. Keep existing CSS
+  entry points and support isolated pixel and custom themes on the same page.
+
+  Add a Storybook catalogue of foundations, primitive states and game compositions,
+  browser checks and GitHub Pages deployment. Document theme creation and migration.
+  Bridge mobile canvas control colors to the game CSS palette while preserving
+  explicit withMobile overrides.
+
+- 66c0d77: Fix unnecessarily clipped dialogue choices by sizing short prompts from their complete text and giving choices the remaining fixed-height space. Keep scrolling for genuinely long lists.
+
+  Restore mouse and touch assignment in the hotbar slot picker by avoiding false HTML disabled attributes, preserving locked-slot guards and keyboard focus selection.
+
+- 66c0d77: Remove dialogue page counters, fill the panel's inner height with the portrait, and support Enter confirmation with a short guard against repeated advancement. Align shop attribute comparisons with the compact equipment inspector.
+
+  Fix positive attribute changes rendering only the plus sign in both equipment and shop panels.
+
+- 94cbdac: Polish equipment attribute comparisons and expose Studio's Options menu with per-project movement key preferences, conflict validation, reset controls and existing channel-based audio sliders.
+- 94cbdac: Add reduced-motion-aware GUI transitions, nested input locks, submenu navigation sounds and writable audio sliders. Improve shop comparisons and dialogue typography/portraits. Add safe reusable Markdown text runs, paginated dialogue reveal and a configurable typewriter sound on the UI channel.
+- 94cbdac: Repair Studio hero initialization when a class skill is already learned, prefer canonical media references, and guard missing spritesheet identifiers. Refine the integrated status, inventory, equipment, skills, save and shop interfaces with theme-driven layouts, localized empty/unavailable states, safe icon fallbacks and window-local close buttons. Make the mobile hotbar scrollable instead of clipping its slots.
+- 66c0d77: Add game-catalogue language selection with browser negotiation, project-scoped persistence, reactive client labels and validated per-player connection/action synchronization. Preserve the current language when loading saves.
+
+  Stabilize dialogue heights across desktop, portrait and landscape layouts. Measure rich-text pagination against available space, retain reading progress on resize, reserve scrollable choice/input space and add a touch-friendly continuation triangle with reduced-motion support.
+
+- Updated dependencies [94cbdac]
+- Updated dependencies [4d53aa7]
+- Updated dependencies [66c0d77]
+- Updated dependencies [66c0d77]
+- Updated dependencies [94cbdac]
+- Updated dependencies [94cbdac]
+- Updated dependencies [94cbdac]
+- Updated dependencies [94cbdac]
+- Updated dependencies [f624302]
+- Updated dependencies [66c0d77]
+  - @rpgjs/server@5.0.0-rc.36
+  - @rpgjs/ui-css@5.0.0-rc.28
+  - @rpgjs/common@5.0.0-rc.32
+
 ## 5.0.0-beta.35
 
 ### Patch Changes
