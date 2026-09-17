@@ -1,5 +1,6 @@
 {
   "name": "@rpgjs/vue",
+  "repository": "github:RSamaium/RPG-JS",
   "version": "5.0.0-rc.36",
   "description": "Vue.js integration for RPGJS - Allows rendering Vue components over the game canvas",
   "main": "dist/index.js",

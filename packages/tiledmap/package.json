@@ -1,5 +1,6 @@
 {
   "name": "@rpgjs/tiledmap",
+  "repository": "github:RSamaium/RPG-JS",
   "version": "5.0.0-rc.36",
   "main": "dist/client/index.js",
   "types": "dist/client/index.d.ts",

@@ -1,5 +1,6 @@
 {
   "name": "@rpgjs/account",
+  "repository": "github:RSamaium/RPG-JS",
   "version": "5.0.0-rc.1",
   "description": "Official account GUI and deferred MMORPG authentication flow for RPGJS",
   "main": "dist/client/index.js",

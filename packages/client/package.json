@@ -1,5 +1,6 @@
 {
   "name": "@rpgjs/client",
+  "repository": "github:RSamaium/RPG-JS",
   "version": "5.0.0-rc.36",
   "description": "RPGJS is a framework for creating RPG/MMORPG games",
   "main": "dist/index.js",

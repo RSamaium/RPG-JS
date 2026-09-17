@@ -1,5 +1,6 @@
 {
   "name": "@rpgjs/server",
+  "repository": "github:RSamaium/RPG-JS",
   "version": "5.0.0-rc.36",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
