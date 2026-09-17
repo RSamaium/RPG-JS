@@ -25,6 +25,10 @@ async function main(): Promise<void> {
 
     if (!packageJson.name || !packageJson.version || packageJson.private) continue;
     if (packageJson.name === '@rpgjs/physic') continue;
+    if (packageJson.version.includes('-')) {
+      console.log(`Skipping prerelease ${packageJson.name}@${packageJson.version}`);
+      continue;
+    }
 
     const spec = `${packageJson.name}@${packageJson.version}`;
     console.log(`Tagging ${spec} as latest`);
