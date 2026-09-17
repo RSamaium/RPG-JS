@@ -14,4 +14,4 @@
 "@rpgjs/vue": patch
 ---
 
-Prevent npm releases from containing unresolved `workspace:` dependency protocols, and keep the npm `latest` tag aligned with the current release candidate.
+Prevent npm releases from containing unresolved `workspace:` dependency protocols, and publish release candidates directly under the npm `latest` tag.
