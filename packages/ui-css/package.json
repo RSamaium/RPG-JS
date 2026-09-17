@@ -1,7 +1,7 @@
 {
   "name": "@rpgjs/ui-css",
   "repository": "github:RSamaium/RPG-JS",
-  "version": "5.0.0-rc.1",
+  "version": "5.0.0-rc.2",
   "description": "CSS library for RPG UI components - framework-agnostic and fully customizable",
   "license": "MIT",
   "author": "Samuel Ronce",

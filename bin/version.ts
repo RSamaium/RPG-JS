@@ -176,6 +176,37 @@ async function processPackageJson(
 }
 
 /**
+ * Fail when a package manifest still contains a workspace protocol.
+ * Published npm packages cannot resolve workspace protocols outside this monorepo.
+ */
+async function assertNoWorkspaceReferences(packageCache: Map<string, PackageInfo>): Promise<void> {
+  const unresolved: string[] = [];
+  const dependencyTypes = [
+    'dependencies',
+    'devDependencies',
+    'peerDependencies',
+    'optionalDependencies'
+  ] as const;
+
+  for (const packageInfo of packageCache.values()) {
+    const packageJsonPath = join(packageInfo.path, 'package.json');
+    const packageJson = JSON.parse(await readFile(packageJsonPath, 'utf-8')) as PackageJson;
+
+    for (const dependencyType of dependencyTypes) {
+      for (const [dependencyName, version] of Object.entries(packageJson[dependencyType] ?? {})) {
+        if (version.startsWith('workspace:')) {
+          unresolved.push(`${packageJson.name}:${dependencyType}.${dependencyName}=${version}`);
+        }
+      }
+    }
+  }
+
+  if (unresolved.length > 0) {
+    throw new Error(`Unresolved workspace protocols:\n${unresolved.join('\n')}`);
+  }
+}
+
+/**
  * Main deployment script function
  * 
  * This is the main entry point that orchestrates the entire process:
@@ -192,10 +223,8 @@ async function processPackageJson(
  * npx tsx bin/deploy.ts
  * ```
  */
-async function main(): Promise<void> {
+async function main(projectRoot = resolve(process.cwd())): Promise<void> {
   console.log('🚀 Starting deployment script...\n');
-  
-  const projectRoot = resolve(process.cwd());
   const packagesDir = join(projectRoot, 'packages');
   
   try {
@@ -217,6 +246,10 @@ async function main(): Promise<void> {
       const packageJsonPath = join(packageInfo.path, 'package.json');
       await processPackageJson(packageJsonPath, packageCache);
     }
+
+    console.log('\n🔎 Step 3: Validating publish manifests...');
+    await assertNoWorkspaceReferences(packageCache);
+    console.log('✅ Publish manifests contain no workspace protocols');
     
     console.log('\n🎉 Deployment script completed successfully!');
     console.log('\n📊 Summary:');
@@ -237,4 +270,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   });
 }
 
-export { main, cachePackageVersions, replaceWorkspaceReferences, processPackageJson };
+export {
+  main,
+  cachePackageVersions,
+  replaceWorkspaceReferences,
+  processPackageJson,
+  assertNoWorkspaceReferences
+};

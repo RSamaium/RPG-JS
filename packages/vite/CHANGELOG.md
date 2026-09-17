@@ -1,5 +1,13 @@
 # @rpgjs/vite
 
+## 5.0.0-rc.2
+
+### Patch Changes
+
+- Prevent npm releases from containing unresolved `workspace:` dependency protocols.
+- Updated dependencies
+  - @rpgjs/server@5.0.0-rc.2
+
 ## 5.0.0-rc.36
 
 ### Patch Changes

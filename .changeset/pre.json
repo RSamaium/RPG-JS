@@ -64,6 +64,7 @@
     "fix-canvas-gui-visibility",
     "fix-ci-test-discovery",
     "fix-mmorpg-streaming-camera",
+    "fix-published-workspace-dependencies",
     "fix-recursive-providers",
     "fix-studio-default-media-animation",
     "fix-studio-map-weather",

@@ -1,5 +1,11 @@
 # @rpgjs/ui-css
 
+## 5.0.0-rc.2
+
+### Patch Changes
+
+- Prevent npm releases from containing unresolved `workspace:` dependency protocols.
+
 ## 5.0.0-rc.28
 
 ### Minor Changes

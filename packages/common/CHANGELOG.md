@@ -1,5 +1,11 @@
 # @rpgjs/common
 
+## 5.0.0-rc.2
+
+### Patch Changes
+
+- Prevent npm releases from containing unresolved `workspace:` dependency protocols.
+
 ## 5.0.0-rc.32
 
 ### Patch Changes
