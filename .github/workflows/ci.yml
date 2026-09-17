@@ -112,7 +112,7 @@ jobs:
 
   starter_repo_update_dependencies:
       needs: build_and_publish
-      if: github.ref == 'refs/heads/v5' && needs.build_and_publish.outputs.published == 'true'
+      if: github.ref == 'refs/heads/v5' && needs.build_and_publish.result == 'success'
       runs-on: ubuntu-latest
       strategy:
         matrix:
