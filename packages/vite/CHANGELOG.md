@@ -1,5 +1,13 @@
 # @rpgjs/vite
 
+## 5.0.0-rc.3
+
+### Patch Changes
+
+- Publish release candidates under the npm `latest` tag so fresh RPGJS projects install the current release.
+- Updated dependencies
+  - @rpgjs/server@5.0.0-rc.3
+
 ## 5.0.0-rc.2
 
 ### Patch Changes
