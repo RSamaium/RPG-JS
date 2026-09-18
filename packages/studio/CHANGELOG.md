@@ -1,5 +1,11 @@
 # @rpgjs/studio
 
+## 5.0.0-rc.6
+
+### Patch Changes
+
+- Use generated spritesheet lane metadata and frame timing when rendering character movement.
+
 ## 5.0.0-rc.5
 
 ### Patch Changes

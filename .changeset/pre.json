@@ -32,6 +32,7 @@
     "sample": "1.0.0"
   },
   "changesets": [
+    "accurate-generated-character-sprites",
     "blue-holes-flow",
     "brave-character-select",
     "brave-stable-foundations",
