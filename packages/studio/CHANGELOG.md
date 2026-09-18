@@ -1,5 +1,13 @@
 # @rpgjs/studio
 
+## 5.0.0-rc.5
+
+### Patch Changes
+
+- 3b55a3f: Render legacy Studio terrain grids with the same soft-mask composition used by
+  control-texture maps, so terrain such as grass and dirt keeps its editor fade in
+  the running game.
+
 ## 5.0.0-rc.4
 
 ### Patch Changes
