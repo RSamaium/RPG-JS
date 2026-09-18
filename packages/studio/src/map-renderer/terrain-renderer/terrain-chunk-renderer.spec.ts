@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { StudioTerrainChunkRenderer } from "./terrain-chunk-renderer";
+import {
+  shouldRenderTerrainGridWithSoftMasks,
+  StudioTerrainChunkRenderer,
+} from "./terrain-chunk-renderer";
 
 function createTerrainMap(width = 2304, height = 768) {
   return {
@@ -74,6 +77,30 @@ describe("StudioTerrainChunkRenderer terrain control cache", () => {
 
     expect(second).not.toBe(first);
     expect(Array.from(second.data)).not.toEqual(Array.from(first.data));
+  });
+});
+
+describe("StudioTerrainChunkRenderer legacy terrain composition", () => {
+  it("selects soft-mask composition for texture grids without a control texture", () => {
+    const map = createTerrainMap(96, 48);
+    map.terrainRenderData.asset = {
+      sourceTexture: "terrain.png",
+      textureGrid: { columns: 2, rows: 1, tileSize: 48 },
+      terrainTextures: [
+        { id: "grass", index: 0, label: "Grass" },
+        { id: "dirt", index: 1, label: "Dirt" },
+      ],
+      transitions: [],
+    } as any;
+    (map.terrainRenderData as any).terrainGrid = [[
+      { source: "terrain-texture", terrainTextureId: "grass", textureIndex: 0, collision: false },
+      { source: "terrain-texture", terrainTextureId: "dirt", textureIndex: 1, collision: false },
+    ]];
+
+    expect(shouldRenderTerrainGridWithSoftMasks(map.terrainRenderData as any)).toBe(true);
+
+    map.terrainRenderData.terrainControl = { source: "control.png" } as any;
+    expect(shouldRenderTerrainGridWithSoftMasks(map.terrainRenderData as any)).toBe(false);
   });
 });
 

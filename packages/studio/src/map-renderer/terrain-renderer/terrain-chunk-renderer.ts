@@ -595,8 +595,10 @@ export class StudioTerrainChunkRenderer {
 
     ctx.imageSmoothingEnabled = false;
     ctx.translate(-bounds.x, -bounds.y);
-    const renderedControlTerrain = this.drawTerrainControlTexture(ctx, data, image, controlImage, bounds);
-    if (!renderedControlTerrain) {
+    const renderedCompositedTerrain =
+      this.drawTerrainControlTexture(ctx, data, image, controlImage, bounds) ||
+      this.drawTerrainGridTexture(ctx, data, image, bounds);
+    if (!renderedCompositedTerrain) {
       this.drawBaseTerrain(ctx, data, image, bounds);
       this.drawTerrainTransitions(ctx, data, bounds);
     }
@@ -837,6 +839,129 @@ export class StudioTerrainChunkRenderer {
 
     ctx.drawImage(output.canvas, renderBounds.x, renderBounds.y);
     return true;
+  }
+
+  /**
+   * Render legacy tile-grid terrain through the same soft-mask compositor as
+   * control-texture terrain. The editor presents both storage formats with the
+   * same fade semantics, so the runtime must not fall back to hard tile edges.
+   */
+  private drawTerrainGridTexture(
+    ctx: CanvasRenderingContext2D,
+    data: StudioTerrainRenderData,
+    image: HTMLImageElement | null,
+    bounds: { x: number; y: number; width: number; height: number }
+  ): boolean {
+    const asset = data.asset;
+    if (!image || !asset || !shouldRenderTerrainGridWithSoftMasks(data)) return false;
+
+    const palette = asset.terrainTextures
+      .slice()
+      .sort((left, right) => left.index - right.index)
+      .map((texture) => texture.id)
+      .filter((id, index, all) => all.indexOf(id) === index);
+    const layers = createTerrainControlRenderLayers(asset, palette);
+    if (layers.length === 0) return false;
+
+    const margin = Math.ceil(Math.max(24, ...layers.map((layer) => layer.blendRadius + 8)));
+    const renderBounds = intersectBounds(
+      {
+        x: Math.floor(bounds.x - margin),
+        y: Math.floor(bounds.y - margin),
+        width: Math.ceil(bounds.width + margin * 2),
+        height: Math.ceil(bounds.height + margin * 2),
+      },
+      { x: 0, y: 0, width: data.width, height: data.height }
+    );
+    if (!renderBounds) return false;
+
+    const width = Math.max(1, Math.ceil(renderBounds.width));
+    const height = Math.max(1, Math.ceil(renderBounds.height));
+    const rawMasks = new Map<string, HTMLCanvasElement>();
+    for (const layer of layers) {
+      rawMasks.set(
+        layer.terrainTextureId,
+        this.buildTerrainGridRawMask(data, layer.terrainTextureId, renderBounds)
+      );
+    }
+
+    const composites: Array<{ pixels: Uint8ClampedArray; mask: Uint8ClampedArray }> = [];
+    for (const layer of layers) {
+      const rawMask = rawMasks.get(layer.terrainTextureId)!;
+      const softMask = this.buildTerrainControlMaskFromRaw(rawMask, layer.blendRadius);
+      this.applyHardTerrainGridCutouts(softMask, asset, layers, layer, rawMasks);
+
+      const fill = this.createCanvasBuffer(width, height, true);
+      if (!this.fillTerrainPatternInBounds(fill.ctx, data, image, layer.terrainTextureId, renderBounds)) {
+        fill.ctx.fillStyle = fallbackTerrainColor(layer.terrainTextureId);
+        fill.ctx.fillRect(0, 0, width, height);
+      }
+      composites.push({
+        pixels: fill.ctx.getImageData(0, 0, width, height).data,
+        mask: softMask.getContext("2d", { willReadFrequently: true })!.getImageData(0, 0, width, height).data,
+      });
+    }
+
+    const output = this.createCanvasBuffer(width, height);
+    const imageData = output.ctx.createImageData(width, height);
+    imageData.data.set(composeTerrainLayerPixels(width, height, composites));
+    output.ctx.putImageData(imageData, 0, 0);
+    ctx.drawImage(output.canvas, renderBounds.x, renderBounds.y);
+    return true;
+  }
+
+  private buildTerrainGridRawMask(
+    data: StudioTerrainRenderData,
+    terrainTextureId: string,
+    bounds: { x: number; y: number; width: number; height: number }
+  ): HTMLCanvasElement {
+    const buffer = this.createCanvasBuffer(
+      Math.max(1, Math.ceil(bounds.width)),
+      Math.max(1, Math.ceil(bounds.height))
+    );
+    const tileSize = data.tileSize;
+    const minTileX = Math.max(0, Math.floor(bounds.x / tileSize));
+    const minTileY = Math.max(0, Math.floor(bounds.y / tileSize));
+    const maxTileX = Math.min(data.widthTiles - 1, Math.ceil((bounds.x + bounds.width) / tileSize) - 1);
+    const maxTileY = Math.min(data.heightTiles - 1, Math.ceil((bounds.y + bounds.height) / tileSize) - 1);
+    buffer.ctx.fillStyle = "#fff";
+    for (let tileY = minTileY; tileY <= maxTileY; tileY += 1) {
+      for (let tileX = minTileX; tileX <= maxTileX; tileX += 1) {
+        if (data.terrainGrid[tileY]?.[tileX]?.terrainTextureId !== terrainTextureId) continue;
+        buffer.ctx.fillRect(
+          tileX * tileSize - bounds.x,
+          tileY * tileSize - bounds.y,
+          tileSize,
+          tileSize
+        );
+      }
+    }
+    return buffer.canvas;
+  }
+
+  private applyHardTerrainGridCutouts(
+    mask: HTMLCanvasElement,
+    asset: TerrainAssetMetadata,
+    layers: TerrainControlRenderLayer[],
+    layer: TerrainControlRenderLayer,
+    rawMasks: ReadonlyMap<string, HTMLCanvasElement>
+  ): void {
+    const hardNeighbors = new Set(resolveTransitionNeighborIds(asset, layer.terrainTextureId, (mode) => mode.type === "hard"));
+    for (const other of layers) {
+      if (other.terrainTextureId !== layer.terrainTextureId && other.mode.type === "nine-slice") {
+        hardNeighbors.add(other.terrainTextureId);
+      }
+    }
+    if (hardNeighbors.size === 0) return;
+    const context = mask.getContext("2d");
+    if (!context) return;
+    context.save();
+    context.globalCompositeOperation = "destination-out";
+    for (const id of hardNeighbors) {
+      const neighborMask = rawMasks.get(id);
+      if (neighborMask) context.drawImage(neighborMask, 0, 0);
+    }
+    context.restore();
   }
 
   private buildTerrainControlRawMask(
@@ -2738,6 +2863,16 @@ export class StudioTerrainWallShadowRenderer {
     this.sprites = [];
     this.renderVersion = "";
   }
+}
+
+/** @internal */
+export function shouldRenderTerrainGridWithSoftMasks(data: StudioTerrainRenderData): boolean {
+  return Boolean(
+    data.asset &&
+    !data.terrainControl &&
+    data.terrainGrid.length > 0 &&
+    !data.terrainGrid.some((row) => row.some((cell) => cell?.source === "tile-atlas"))
+  );
 }
 
 export function resolveStudioTerrainWallShadowStyle(
