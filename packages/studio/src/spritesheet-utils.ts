@@ -121,6 +121,13 @@ export const createSpriteSheetObject = async (
           imageSource: url,
           framesWidth: media.metadata?.frameWidth ?? 4,
           framesHeight: media.metadata?.frameHeight ?? 4,
+          frameDurationMs:
+            typeof media.metadata?.frameDurationMs === "number"
+              ? media.metadata.frameDurationMs
+              : undefined,
+          lanes: Array.isArray(media.metadata?.lanes)
+            ? media.metadata.lanes
+            : undefined,
           attackDurationMs:
             typeof media.metadata?.attackDurationMs === "number"
               ? media.metadata.attackDurationMs

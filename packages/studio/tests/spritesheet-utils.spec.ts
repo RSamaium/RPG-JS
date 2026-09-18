@@ -113,6 +113,30 @@ describe("Studio spritesheet utils", () => {
     expect(walk.at(-1).time).toBe(41);
   });
 
+  test("uses generated lane order and frame duration for character locomotion", async () => {
+    const spritesheet = await createSpriteSheetObject({
+      type: "spritesheet",
+      id: "generated-hero",
+      fileName: "hero.png",
+      metadata: {
+        frameWidth: 8,
+        frameHeight: 4,
+        frameDurationMs: 106,
+        lanes: [
+          { id: "walk-down" },
+          { id: "walk-left" },
+          { id: "walk-right" },
+          { id: "walk-up" },
+        ],
+      },
+    });
+
+    const walk = spritesheet.textures.walk.animations({ direction: "up" })[0];
+
+    expect(walk[0]).toMatchObject({ time: 0, frameX: 0, frameY: 3 });
+    expect(walk[1].time).toBeCloseTo(6.36);
+  });
+
   test("accepts a Studio media attack duration override", async () => {
     const spritesheet = await createSpriteSheetObject({
       type: "spritesheet",
