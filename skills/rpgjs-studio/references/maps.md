@@ -37,6 +37,14 @@ Use this reference for map CRUD and map-specific secondary operations.
 
 ## Durable map-generation workflow
 
+Specify visual style in the client-supplied `objective`, for example
+`"An oasis with a market. Visual style: Cel shading."`. Natural-language style
+instructions in any language take precedence over the fallback: high-definition
+pixel art is used only when no style is specified. There is no separate `style`
+API field. Layer separation and generated terrain/wall atlases preserve the
+concept's art direction. An attached image used directly as the concept keeps its
+existing appearance and bypasses concept generation, including this fallback.
+
 Use `POST /api/map-generations` with `action: "prepare"`. A create payload contains `mode: "create"`, `name`, optional `description`, optional `assistantConversationId`, `objective`, `kind`, `width`, `height`, and optional `terrainMediaId` / `elementTilesetMediaId`. It may also contain `followUpPlan`; its optional `music` suggestion is `{ id, title, description, prompt }`, and each of its three event suggestions accepts an optional pixel `position: { x, y }` strictly inside `width * 48` by `height * 48`. Existing clients may omit the plan, music, conversation id, or positions. When description is omitted, the server persists the objective as its fallback. An edit payload contains `mode: "edit"`, `scope: "full-map" | "partial-edit"`, `mapId`, a base64 `currentMapImage`, `objective`, `kind`, optional media IDs, and `regions`. A partial edit requires one to eight normalized polygons; a full edit requires an empty region list.
 
 Preparation does not charge credits. It returns a UUID `confirmationId`, an estimate, expiry, and exact confirm/cancel choice IDs. After explicit user confirmation, call the same endpoint with `{ "action": "execute", "confirmationId": "..." }`. Poll the returned `instanceId`; do not poll tightly. Use `finalized: true` together with `mapId` to detect a fully persisted result; workflow `status: "complete"` alone is not sufficient. The result also includes `ignoredElementCount`. An `errored` or `terminated` response exposes `creditsRestored: true` after the debit is refunded and `retryAvailable: true` when the prepared inputs remain reusable. Only then may a client call `POST /api/map-generations/:instanceId/retry`; it returns a fresh instance and does not require another confirmation.

@@ -1,14 +1,14 @@
 // export const studio = {
-//   projectId: 'f54814b5-02ba-4712-a174-d84c900b7ff3',
-//   startMapId: '6c524591-c8b8-4bc6-843e-43ea8d8b7c49',
+//   projectId: 'c8672456-90ea-4a85-af68-946af146df3b',
+//   startMapId: 'c0d8a05c-2531-49fe-afc7-d481c23726bb',
 //   apiUrl: 'http://localhost:5173/api',
 //   assetsUrl: 'http://localhost:5173/api/game/assets',
-//   debugCollisions: true,
+//   debugCollisions: false,
 // };
 
 export const studio = {
-  projectId: "c058981c-3af2-4630-a7bb-37b5b72ab287",
-  startMapId: "b73228b2-9319-4328-9b32-fa09d9e220b4",
+   projectId: '711f2e28-0a77-40bb-b1d7-2df054859e3b',
+  startMapId: '694a25d2-762a-47a4-8b67-adbed3711698',
   apiUrl: "https://preprod.rpgjs.studio/api",
   assetsUrl: "https://assets.preprod.rpgjs.studio"
 };

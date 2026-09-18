@@ -219,6 +219,7 @@ describe("studio element renderer helpers", () => {
       glowAlpha: 0,
       waveAlpha: 0,
     });
+    expect(resolveTerrainWaveRenderStrength(1).waveAlpha).toBe(0);
 
     const subtle = resolveTerrainWaveRenderStrength(0.001);
     expect(subtle.refractionAlpha).toBeLessThan(0.01);

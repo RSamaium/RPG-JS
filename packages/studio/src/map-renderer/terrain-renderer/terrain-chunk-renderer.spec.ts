@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  resolveTerrainHoleWaveDescriptors,
   shouldRenderTerrainGridWithSoftMasks,
   StudioTerrainChunkRenderer,
 } from "./terrain-chunk-renderer";
@@ -81,6 +82,12 @@ describe("StudioTerrainChunkRenderer terrain control cache", () => {
 });
 
 describe("StudioTerrainChunkRenderer legacy terrain composition", () => {
+  it("keeps filled water holes available for surface undulation when map waves are disabled", () => {
+    expect(resolveTerrainHoleWaveDescriptors([
+      { id: "pond", kind: "hole", params: { fillHeight: 32 }, strokes: [] },
+    ] as any, { enabled: false, intensity: 1 })).toHaveLength(1);
+  });
+
   it("selects soft-mask composition for texture grids without a control texture", () => {
     const map = createTerrainMap(96, 48);
     map.terrainRenderData.asset = {

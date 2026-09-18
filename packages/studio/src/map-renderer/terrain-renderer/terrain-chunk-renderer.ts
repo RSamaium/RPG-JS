@@ -4018,7 +4018,7 @@ export function resolveTerrainWaveRenderStrength(intensity: number): TerrainWave
     refractionAcrossAmplitude: value * (2.5 + value * 2.5),
     refractionFlowAmplitude: value * (0.8 + value * 0.8),
     glowAlpha: value * 0.08,
-    waveAlpha: Math.min(1, value * 1.1),
+    waveAlpha: 0,
     lineWidth: 1 + value * 2,
   };
 }

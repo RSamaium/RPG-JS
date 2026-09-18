@@ -19,6 +19,12 @@ To play a video in an event, use `show_cinematic` with `{ "video": "media-id", "
 
 ## Direct map generation release
 
+Express the requested map visual style in `objective`, in the user's language.
+The generator follows that style and only defaults to high-definition pixel art
+when the objective specifies none. Terrain and wall materials preserve the
+concept art direction. See `references/maps.md`; do not add a separate `style`
+field to the API payload.
+
 For generation without an assistant, read the durable workflow and direct progress
 sections in `references/maps.md`. Use the existing prepare/execute endpoints,
 explicit credit confirmation, project-scoped status and intermediate preview.
