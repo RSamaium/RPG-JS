@@ -1,4 +1,7 @@
-import { Assets, Container as PixiContainer, Graphics, Rectangle, Sprite, Texture } from "pixi.js";
+import { normalizeElementSubmersion, submergeElementPixels } from "./element-submersion";
+import { StudioTerrainChunkRenderer } from "./terrain-renderer/terrain-chunk-renderer";
+import type { StudioTerrainRenderData } from "./types";
+import { Assets, CanvasSource, Container as PixiContainer, Graphics, Rectangle, Sprite, Texture } from "pixi.js";
 import { hasAutoLightingSunShadows, shouldRenderLightingShadows, type LightingState } from "@rpgjs/common";
 
 const DEFAULT_SHADOW_CASTER_LIMIT = 1000;
@@ -7,6 +10,8 @@ const LIGHT_SPOT_TEXTURE_SIZE = 256;
 type ScaleValue = number | [number, number] | { x?: number; y?: number } | null | undefined;
 
 export interface StudioElementRenderOptions {
+  /** Current terrain surface used for optional static-element immersion. */
+  terrain?: StudioTerrainRenderData;
   sceneMap?: any;
   lighting?: LightingState | null;
   shadowBudget?: { remaining: number };
@@ -1233,6 +1238,7 @@ const createRenderVersion = (
       zIndexOffset: readValue(element?.zIndexOffset),
       hasShadow: readValue(element?.hasShadow),
       extractGroundShadow: readValue(element?.extractGroundShadow),
+      submersion: readValue(element?.submersion),
       scale: readValue(element?.scale),
       drawRule: readValue(element?.drawRule),
       lightSpot: readValue(element?.lightSpot),
@@ -1596,6 +1602,10 @@ const createStudioElementShapeShadowSprite = (
 };
 
 export class StudioElementRenderer {
+  private submersionCache = new Map<string, HTMLCanvasElement | null>();
+  private usedSubmersionKeys = new Set<string>();
+  private submersionRevision = "";
+  private liquidSampler: StudioTerrainChunkRenderer | null = null;
   private textureCache = new Map<string, Promise<Texture>>();
   private containers: PixiContainer[] = [];
   private lightSpotIds = new Set<string>();
@@ -1614,7 +1624,8 @@ export class StudioElementRenderer {
   async renderElements(elements: any[], options: StudioElementRenderOptions = {}): Promise<PixiContainer[]> {
     const shadowLimit = options.shadowCasterLimit ?? DEFAULT_SHADOW_CASTER_LIMIT;
     const debugCollisions = options.debugCollisions === true;
-    const renderVersion = createRenderVersion(elements, shadowLimit, resolveLighting(options), debugCollisions);
+    const renderVersion = createRenderVersion(elements, shadowLimit, resolveLighting(options), debugCollisions) +
+      JSON.stringify([options.terrain?.version, options.terrain?.sourceTexture, options.terrain?.streamUpdate?.revision, options.terrain?.streamUpdate?.generation]);
     if (this.renderVersion === renderVersion) {
       if (options.shadowBudget) {
         options.shadowBudget.remaining = Math.max(0, options.shadowBudget.remaining - this.shadowCasterCount);
@@ -1622,6 +1633,12 @@ export class StudioElementRenderer {
       return this.containers;
     }
 
+    const terrainRevision = JSON.stringify([options.terrain?.version, options.terrain?.sourceTexture, options.terrain?.streamUpdate]);
+    if (this.submersionRevision !== terrainRevision) {
+      this.submersionCache.clear();
+      this.submersionRevision = terrainRevision;
+    }
+    this.usedSubmersionKeys.clear();
     const currentSerial = ++this.renderSerial;
     const nextLightSpotIds = new Set<string>();
     const nextContainers: PixiContainer[] = [];
@@ -1647,6 +1664,9 @@ export class StudioElementRenderer {
       return this.containers;
     }
 
+    for (const key of this.submersionCache.keys()) {
+      if (!this.usedSubmersionKeys.has(key)) this.submersionCache.delete(key);
+    }
     this.replaceLightSpots(options.sceneMap, nextLightSpotIds);
     destroyContainers(this.containers);
     destroyGroundShadowSprites(this.groundShadowSprites);
@@ -1660,6 +1680,9 @@ export class StudioElementRenderer {
   }
 
   destroy(sceneMap?: any): void {
+    this.submersionCache.clear();
+    this.liquidSampler?.destroy();
+    this.liquidSampler = null;
     this.renderSerial += 1;
     destroyContainers(this.containers);
     destroyGroundShadowSprites(this.groundShadowSprites);
@@ -1757,6 +1780,54 @@ export class StudioElementRenderer {
         groundShadow.label = `${container.label}:ground-shadow`;
         const groundShadows = ((container as any).__studioGroundShadows ??= []) as Sprite[];
         groundShadows.push(groundShadow);
+      }
+    }
+
+    const submersion = normalizeElementSubmersion(readValue(element?.submersion));
+    if (submersion && options.terrain && typeof document !== "undefined") {
+      const width = Math.max(1, Math.ceil(metrics.drawWidth));
+      const height = Math.max(1, Math.ceil(metrics.drawHeight));
+      const key = JSON.stringify([options.terrain.version, options.terrain.sourceTexture, options.terrain.streamUpdate?.revision, options.terrain.streamUpdate?.generation, image, parts, submersion.depth, element.extractGroundShadow, container.x, container.y, width, height]);
+      this.usedSubmersionKeys.add(key);
+      let canvas = this.submersionCache.get(key);
+      if (canvas === undefined) {
+        canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        try {
+          if (!ctx) throw new Error("Canvas unavailable");
+          // Compose already shadow-separated segments at their rendered scale.
+          for (const child of container.children as Sprite[]) {
+            const resource = getTextureCanvasSource(child.texture);
+            if (!resource) throw new Error("Sprite pixels unavailable");
+            const frame = child.texture.frame;
+            ctx.drawImage(resource, frame.x, frame.y, frame.width, frame.height, child.x, child.y, child.width, child.height);
+          }
+          const source = ctx.getImageData(0, 0, width, height);
+          this.liquidSampler ??= new StudioTerrainChunkRenderer(new PixiContainer());
+          const region = await this.liquidSampler.createLiquidContactRegion(options.terrain, {
+            x: container.x, y: container.y, width, height,
+          });
+          if (region && region.pixels.some((alpha, index) => index % 4 === 3 && alpha > 0)) {
+            source.data.set(submergeElementPixels(source.data, region, submersion.depth));
+            ctx.putImageData(source, 0, 0);
+          } else canvas = null;
+        } catch {
+          // Tainted/unavailable pixels retain the original sprite, with no rectangular fallback.
+          canvas = null;
+        }
+        this.submersionCache.set(key, canvas);
+      }
+      if (canvas) {
+        // Own the GPU texture per container; the cache retains only reusable pixels.
+        const texture = new Texture({ source: new CanvasSource({ resource: canvas }) });
+        (texture as any).__studioOwnedSource = true;
+        createdTextures.push(texture);
+        for (const child of container.removeChildren()) child.destroy();
+        const sprite = new Sprite(texture);
+        sprite.roundPixels = true;
+        container.addChild(sprite);
       }
     }
 
@@ -1949,7 +2020,7 @@ function destroyContainers(containers: PixiContainer[]): void {
     });
     for (const texture of createdTextures) {
       if (texture && texture !== Texture.EMPTY && !texture.destroyed) {
-        texture.destroy(false);
+        texture.destroy((texture as any).__studioOwnedSource === true);
       }
     }
   }

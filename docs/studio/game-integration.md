@@ -540,3 +540,44 @@ single filled polygon that would block islands or other walkable interiors.
 The same geometry generator is used by server-authoritative collisions, client
 prediction, and collision debugging; enabling debug collisions does not alter
 movement rules.
+
+### Liquid contacts and submerged scenery
+
+Liquid borders derive their dominant, light and dark colors from the opaque
+pixels of the selected texture's atlas region. This works with water, lava,
+mud and custom materials without classifying their names. Existing `border`
+and `foam` settings remain supported: disabling foam keeps a subtle dark contact;
+disabling the border removes contact accents. If pixels cannot be read,
+`fillColor` provides the palette; without either, no colored accent is added.
+
+Static scenery placements can opt into visual immersion in map data:
+
+```json
+{
+  "id": 3,
+  "tilesetId": "rocks",
+  "x": 384,
+  "y": 240,
+  "submersion": { "depth": 0.2 },
+  "extractGroundShadow": true
+}
+```
+
+`depth` is the proportion of the element's rendered height that may be immersed,
+from `0` to `1`. Omit it or use zero to disable the effect. Only pixels that also
+intersect liquid are tinted and attenuated. Filled holes use their projected
+surface at the current fill level, including erased areas. Terrain layers marked
+with the existing `water` render mode also support immersion. Contact follows
+sprite alpha, after `extractGroundShadow` separates an embedded shadow when enabled;
+transparent corners never acquire rectangular foam. Scaled elements and draw-rule
+segments retain their position and display order.
+
+The placement option survives direct map loading and authoritative chunk streaming.
+It is a client rendering effect in both standalone RPG and MMORPG games: it changes
+neither collisions nor position nor server authority. There is no new external
+Studio editor control in this contribution; set the property in map data.
+
+Palettes and liquid masks are cached, and an element's composed pixels are reused
+until its artwork, placement, depth or terrain revision changes. Stream updates
+invalidate affected rendered state; discarded elements release their cached pixels.
+No sprite-pixel reads or contour reconstruction run in the animation tick.

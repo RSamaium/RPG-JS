@@ -1,3 +1,4 @@
+import { normalizeElementSubmersion } from "./map-renderer/element-submersion";
 import {
   getMapChunkKey,
   type MapChunkBounds,
@@ -195,6 +196,7 @@ function prepareElements(map: Record<string, any>): {
         scale: size.scale,
         hasShadow: placement.hasShadow ?? source.hasShadow,
         extractGroundShadow: placement.extractGroundShadow ?? source.extractGroundShadow,
+        submersion: normalizeElementSubmersion(placement.submersion),
         lightSpot: placement.lightSpot ?? source.lightSpot,
         zIndexOffset: finite(placement.zIndexOffset),
         ...(rule

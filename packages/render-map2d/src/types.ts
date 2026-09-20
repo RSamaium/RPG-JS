@@ -89,6 +89,8 @@ export interface TerrainMapDocument {
 }
 
 export interface TerrainPresetInput {
+  /** Optional decoded material texture for texture-derived effects. */
+  source?: RasterImage;
   width: number;
   height: number;
   tileSize: number;

@@ -137,3 +137,5 @@ export function provideStudioGame(config: StudioGameModuleConfig = {}): RpgProvi
     ...clientProviders,
   ]);
 }
+
+export type { StudioElementSubmersion } from "./map-renderer/element-submersion";

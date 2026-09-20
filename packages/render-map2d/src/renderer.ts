@@ -1,3 +1,4 @@
+import { resolveTerrainLiquidPalette, type TerrainLiquidPalette } from "./liquid";
 import { TerrainMapValidationError } from "./error";
 import { composeTerrainLayerPixels } from "./composite";
 import { renderNineSlice } from "./nine-slice";
@@ -17,6 +18,8 @@ import type {
 interface PreparedTerrainState {
   disposed: boolean;
   overlays: Map<string, Uint8ClampedArray>;
+  rasters: Map<string, RasterImage>;
+  palettes: Map<string, TerrainLiquidPalette | null>;
 }
 
 const preparedState = new WeakMap<object, PreparedTerrainState>();
@@ -30,7 +33,7 @@ export function prepareTerrainMap(input: PrepareTerrainMapInput): PreparedTerrai
     presets: { ...builtInTerrainPresets, ...input.presets },
     get disposed(): boolean { return preparedState.get(prepared)?.disposed ?? true; },
   };
-  preparedState.set(prepared, { disposed: false, overlays: new Map() });
+  preparedState.set(prepared, { disposed: false, overlays: new Map(), palettes: new Map(), rasters: new Map() });
   return prepared;
 }
 
@@ -39,6 +42,8 @@ export function disposeTerrainMap(terrain: PreparedTerrainMap): void {
   if (state) {
     state.disposed = true;
     state.overlays.clear();
+    state.palettes.clear();
+    state.rasters.clear();
   }
 }
 
@@ -268,7 +273,7 @@ function applyMode(
   }
   let overlay: Uint8ClampedArray | undefined;
   if (mode.type === "water" || texture.specialType === "water") {
-    overlay = renderWaterOverlay(mask, bounds, terrain.map.width, terrain.map.waterAnimation, timeMs, mode.type === "water" ? mode : undefined);
+    overlay = renderWaterOverlay(mask, bounds, terrain.map.width, terrain.map.waterAnimation, timeMs, mode.type === "water" ? mode : undefined, liquidPalette(terrain, texture));
   } else if (mode.type === "fade" && Number(mode.width) === 12 && mode.curve === "sharp") {
     overlay = renderEdgeOverlay(mask, bounds.width, bounds.height, [216, 236, 133, 48]);
   }
@@ -315,6 +320,7 @@ function renderPreparedOverlay(
           tileSize: terrain.map.tileSize,
           mask: fullMask,
           params: mode.params ?? {},
+          source: extractTextureRaster(terrain, texture),
           originX: 0,
           originY: 0,
           timeMs,
@@ -394,6 +400,9 @@ function resolveControlImage(terrain: PreparedTerrainMap): RasterImage | undefin
 }
 
 function extractTextureRaster(terrain: PreparedTerrainMap, definition: TerrainTextureDefinition): RasterImage | undefined {
+  const cache = preparedState.get(terrain)!.rasters;
+  const cached = cache.get(definition.id);
+  if (cached) return cached;
   const source = resolveTexture(terrain, definition);
   if (!source) return undefined;
   const grid = terrain.map.textureGrid;
@@ -410,7 +419,9 @@ function extractTextureRaster(terrain: PreparedTerrainMap, definition: TerrainTe
     const start = ((rect.y + y) * source.width + rect.x) * 4;
     pixels.set(source.pixels.subarray(start, start + width * 4), y * width * 4);
   }
-  return { width, height, pixels };
+  const raster = { width, height, pixels };
+  cache.set(definition.id, raster);
+  return raster;
 }
 
 function renderMorphology(terrain: PreparedTerrainMap, bounds: TerrainRenderBounds, output: Uint8ClampedArray, timeMs?: number): void {
@@ -421,6 +432,8 @@ function renderMorphology(terrain: PreparedTerrainMap, bounds: TerrainRenderBoun
     const fillHeight = clamp(Number(feature.params.fillHeight ?? 0), 0, 100);
     const fillTextureId = typeof feature.params.fillTextureId === "string" ? feature.params.fillTextureId : undefined;
     const fillTexture = fillTextureId ? terrain.map.textures.find((texture) => texture.id === fillTextureId) : undefined;
+    const palette = liquidPalette(terrain, fillTexture, typeof feature.params.fillColor === "string" ? feature.params.fillColor : undefined);
+    const liquidMode = fillTexture?.defaultRenderMode;
     const fillLevel = featureBounds.y + featureBounds.height * (1 - fillHeight / 100);
     const liquidGeometry = resolveTerrainMorphologyLiquidGeometry({
       bounds: {
@@ -452,10 +465,14 @@ function renderMorphology(terrain: PreparedTerrainMap, bounds: TerrainRenderBoun
         if (worldY >= fillLevel || fillHeight === 100) {
           const worldIndex = worldY * terrain.map.width + worldX;
           const wave = timeMs === undefined ? 0 : Math.sin((timeMs * 0.002 + worldIndex * 0.07) * terrain.map.waterAnimation.speed) * terrain.map.waterAnimation.intensity;
-          const sampled = fillTexture ? sampleTexture(terrain, fillTexture, worldX, worldY) : undefined;
+          const sampled = fillTexture && resolveTexture(terrain, fillTexture) ? sampleTexture(terrain, fillTexture, worldX, worldY) : undefined;
           blendPixel(output, offset, sampled
-            ? [sampled[0] + wave * 8, sampled[1] + wave * 10, sampled[2] + wave * 12, Math.min(235, sampled[3])]
-            : [60 + wave * 12, 128 + wave * 16, 151 + wave * 18, 220]);
+            ? [sampled[0] * (1 + wave * 0.04), sampled[1] * (1 + wave * 0.04), sampled[2] * (1 + wave * 0.04), Math.min(235, sampled[3])]
+            : palette ? [...palette.base, 220] : [0, 0, 0, 0]);
+          if (edge && palette && feature.params.border !== false && !(liquidMode?.type === "water" && liquidMode.border === false)) {
+            const foam = feature.params.foam !== false && !(liquidMode?.type === "water" && liquidMode.foam === false);
+            blendPixel(output, offset, [...(foam ? palette.highlight : palette.shadow), foam ? 70 : 45]);
+          }
         }
       } else if (feature.kind === "wall" && y + height < bounds.height && mask[index + Math.round(height) * bounds.width] === 0) {
         blendPixel(output, offset, [30, 22, 16, 90]);
@@ -508,9 +525,20 @@ function rasterizeStroke(mask: Uint8Array, bounds: TerrainRenderBounds, points: 
   }
 }
 
-function renderWaterOverlay(mask: Uint8ClampedArray, bounds: TerrainRenderBounds, mapWidth: number, animation: { enabled: boolean; speed: number; intensity: number }, timeMs?: number, mode?: { border?: boolean; foam?: boolean }): Uint8ClampedArray {
+function liquidPalette(terrain: PreparedTerrainMap, texture?: TerrainTextureDefinition, fillColor?: string): TerrainLiquidPalette | null {
+  const state = preparedState.get(terrain)!;
+  const key = `${texture?.id ?? ""}:${fillColor ?? ""}`;
+  if (!state.palettes.has(key)) {
+    const image = texture ? extractTextureRaster(terrain, texture) : undefined;
+    state.palettes.set(key, resolveTerrainLiquidPalette(image, undefined, fillColor));
+  }
+  return state.palettes.get(key)!;
+}
+
+function renderWaterOverlay(mask: Uint8ClampedArray, bounds: TerrainRenderBounds, mapWidth: number, animation: { enabled: boolean; speed: number; intensity: number }, timeMs?: number, mode?: { border?: boolean; foam?: boolean }, palette?: TerrainLiquidPalette | null): Uint8ClampedArray {
   const { width, height } = bounds;
   const output = new Uint8ClampedArray(mask.length);
+  if (!palette) return output;
   for (let index = 0; index < width * height; index += 1) {
     if (!mask[index * 4 + 3]) continue;
     const edge = isRgbaMaskEdge(mask, width, height, index);
@@ -519,8 +547,10 @@ function renderWaterOverlay(mask: Uint8ClampedArray, bounds: TerrainRenderBounds
     const worldIndex = (bounds.y + y) * mapWidth + bounds.x + x;
     const wave = timeMs === undefined || !animation.enabled ? 0 : Math.sin(timeMs * 0.002 * animation.speed + worldIndex * 0.05) * animation.intensity;
     const offset = index * 4;
-    output[offset] = 95 + wave * 20; output[offset + 1] = 185 + wave * 25; output[offset + 2] = 220 + wave * 25;
-    output[offset + 3] = edge && mode?.border !== false ? (mode?.foam === false ? 85 : 145) : 35;
+    const accent = edge && mode?.border !== false;
+    const color = accent && mode?.foam === false ? palette.shadow : palette.highlight;
+    for (let c = 0; c < 3; c++) output[offset + c] = color[c] * (1 + wave * 0.06);
+    output[offset + 3] = accent ? (mode?.foam === false ? 45 : 70 + Math.sin(worldIndex * 0.11) * 25) : 0;
   }
   return output;
 }

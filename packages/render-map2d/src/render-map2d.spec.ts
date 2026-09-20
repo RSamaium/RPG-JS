@@ -187,7 +187,7 @@ describe("@rpgjs/render-map2d", () => {
       } } },
       terrain: [[0, 0], [0, 0]],
       terrainMorphologyLayer: { features: [{
-        id: "pond", kind: "hole", params: { depth: 12, fillHeight: 100 },
+        id: "pond", kind: "hole", params: { depth: 12, fillHeight: 100, fillColor: "#1766cc" },
         strokes: [{ id: "pond-stroke", radius: 16, points: [{ x: 48, y: 48 }] }],
       }] },
     });
@@ -212,7 +212,7 @@ describe("@rpgjs/render-map2d", () => {
       } } },
       terrain: [[0, 0], [0, 0]],
       terrainMorphologyLayer: { features: [{
-        id: "partial", kind: "hole", params: { depth: 12, fillHeight: 50 },
+        id: "partial", kind: "hole", params: { depth: 12, fillHeight: 50, fillColor: "#1766cc" },
         strokes: [{ id: "paint", radius: 24, points: [{ x: 48, y: 48 }] }],
         operations: [
           { mode: "paint", stroke: { id: "paint", radius: 24, points: [{ x: 48, y: 48 }] } },

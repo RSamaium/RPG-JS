@@ -530,6 +530,7 @@
       const currentSerial = ++studioElementRenderSerial
       const shadowBudget = { remaining: STUDIO_ELEMENT_SHADOW_CASTER_LIMIT }
       const renderOptions = {
+        terrain: data().terrainRenderData,
         sceneMap: engine.sceneMap,
         lighting: mapLighting(),
         shadowBudget,

@@ -1,3 +1,4 @@
+import { normalizeElementSubmersion } from "./map-renderer/element-submersion";
 "use client";
 
 import MapComponentV2 from "./components/draw-map-v2.ce";
@@ -794,6 +795,7 @@ export const loadMap = async (mapId: string) => {
           typeof element.extractGroundShadow === 'boolean'
             ? element.extractGroundShadow
             : tilesetElement.extractGroundShadow,
+        submersion: normalizeElementSubmersion(element.submersion),
         lightSpot: element.lightSpot !== undefined ? element.lightSpot : tilesetElement.lightSpot,
         zIndexOffset,
       }

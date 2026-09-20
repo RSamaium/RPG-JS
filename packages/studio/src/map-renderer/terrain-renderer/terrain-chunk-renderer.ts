@@ -1,6 +1,9 @@
+import type { ElementLiquidRegion } from "../element-submersion";
 import { Container as PixiContainer, Rectangle, Sprite, Texture } from "pixi.js";
 import { hasAutoLightingSunShadows, type LightingColor, type LightingState } from "@rpgjs/common";
 import {
+  resolveTerrainLiquidPalette,
+  type TerrainLiquidPalette,
   builtInTerrainPresets,
   composeTerrainLayerPixels,
   renderNineSlice,
@@ -145,13 +148,6 @@ interface TerrainMorphologyMaskBuffer {
   alphaBounds?: { minX: number; minY: number; maxX: number; maxY: number };
 }
 
-interface TerrainMorphologyLiquidPalette {
-  contactShadow: string;
-  edgeSoft: string;
-  edgeStrong: string;
-  fillFallback: string;
-}
-
 interface TerrainWallRenderParts {
   mask: TerrainMorphologyMaskBuffer;
   topEdge: TerrainMorphologyMaskBuffer;
@@ -236,6 +232,9 @@ export class StudioTerrainChunkRenderer {
   private morphologyCanvasIds = new WeakMap<HTMLCanvasElement, number>();
   private nextMorphologyCanvasId = 1;
   private morphologyClipBounds: StudioTerrainRenderBounds | null = null;
+  private liquidPaletteCache = new Map<string, TerrainLiquidPalette | null>();
+  private liquidSurfaceCache = new WeakMap<StudioTerrainMorphologyFeature, { mask: TerrainMorphologyMaskBuffer; smoothedMask: TerrainMorphologyMaskBuffer; fillMask: TerrainMorphologyMaskBuffer; geometry: ReturnType<typeof resolveTerrainMorphologyLiquidGeometry> } | null>();
+  private liquidContactVersion = "";
   private waterAnimationElapsed = 0;
 
   constructor(world: PixiContainer, options: StudioTerrainChunkRendererOptions = {}) {
@@ -319,7 +318,7 @@ export class StudioTerrainChunkRenderer {
     }
     const collisions = debugCollisions ? buildStudioTerrainCollisionPolygons(map) : [];
 
-    if (previousVersion !== version) this.resetMorphologyRenderCaches();
+    if (previousVersion !== version || streamUpdate) this.resetMorphologyRenderCaches();
     let renderedChunkCount = 0;
     for (const key of nextKeys) {
       if (activeKeys && !activeKeys.has(key)) {
@@ -508,6 +507,90 @@ export class StudioTerrainChunkRenderer {
     this.world.removeChildren();
   }
 
+  /** @internal Samples only an element's bounds; shares cached morphology masks. */
+  async createLiquidContactRegion(data: StudioTerrainRenderData, bounds: StudioTerrainRenderBounds): Promise<ElementLiquidRegion | null> {
+    if (this.destroyed || typeof document === "undefined") return null;
+    const version = `${data.version}:${data.sourceTexture}:${data.streamUpdate?.revision}:${data.streamUpdate?.generation}`;
+    if (this.liquidContactVersion !== version) {
+      this.resetMorphologyRenderCaches();
+      this.patternCache.clear();
+      this.imageBufferCache.clear();
+      this.liquidContactVersion = version;
+    }
+    const image = data.sourceTexture ? await this.loadImage(data.sourceTexture) : null;
+    const width = Math.max(1, Math.ceil(bounds.width)), height = Math.max(1, Math.ceil(bounds.height));
+    const surface = this.createCanvasBuffer(width, height);
+    const contact = this.createCanvasBuffer(width, height);
+    const paint = (mask: HTMLCanvasElement, textureId?: string, fillColor?: string, params: Record<string, unknown> = {}) => {
+      const palette = this.getLiquidPalette(data, image, textureId, fillColor);
+      const mode = getTerrainRenderMode(findTerrainTexture(data.asset, textureId));
+      const layer = this.createCanvasBuffer(width, height);
+      layer.ctx.translate(-bounds.x, -bounds.y);
+      layer.ctx.fillStyle = (textureId && this.getPattern(layer.ctx, data, image, textureId))
+        || fillColor || (palette ? `rgb(${palette.base.join(",")})` : "transparent");
+      layer.ctx.fillRect(bounds.x, bounds.y, width, height);
+      layer.ctx.setTransform(1, 0, 0, 1, 0, 0);
+      layer.ctx.globalCompositeOperation = "destination-in";
+      layer.ctx.drawImage(mask, 0, 0);
+      surface.ctx.drawImage(layer.canvas, 0, 0);
+      // Clear a previous material's contact before applying this material.
+      contact.ctx.globalCompositeOperation = "destination-out";
+      contact.ctx.drawImage(mask, 0, 0);
+      contact.ctx.globalCompositeOperation = "source-over";
+      if (!palette || params.border === false || (mode.type === "water" && mode.border === false)) return;
+      const color = params.foam === false || (mode.type === "water" && mode.foam === false) ? palette.shadow : palette.highlight;
+      layer.ctx.globalCompositeOperation = "source-in";
+      layer.ctx.fillStyle = `rgb(${color.join(",")})`;
+      layer.ctx.fillRect(0, 0, width, height);
+      contact.ctx.drawImage(layer.canvas, 0, 0);
+    };
+    // Painted terrain and tile liquids use the same coverage as terrain rendering.
+    const control = data.terrainControl;
+    const controlImage = control?.source && !control.regions?.length ? await this.loadImage(control.source) : null;
+    const controlBuffer = control ? this.getTerrainControlBuffer(control, controlImage) : null;
+    for (const texture of data.asset?.terrainTextures ?? []) {
+      if (getTerrainRenderMode(texture).type !== "water") continue;
+      const mask = this.createCanvasBuffer(width, height);
+      if (control && controlBuffer) {
+        const index = control.palette.indexOf(texture.id);
+        if (index >= 0) mask.ctx.drawImage(this.buildTerrainControlRawMask(controlBuffer, control, index, bounds), 0, 0);
+      } else {
+        for (let y = Math.max(0, Math.floor(bounds.y / data.tileSize)); y < Math.min(data.heightTiles, Math.ceil((bounds.y + height) / data.tileSize)); y++) {
+          for (let x = Math.max(0, Math.floor(bounds.x / data.tileSize)); x < Math.min(data.widthTiles, Math.ceil((bounds.x + width) / data.tileSize)); x++) {
+            if (data.terrainGrid[y]?.[x]?.terrainTextureId === texture.id) mask.ctx.fillRect(x * data.tileSize - bounds.x, y * data.tileSize - bounds.y, data.tileSize, data.tileSize);
+          }
+        }
+      }
+      paint(mask.canvas, texture.id);
+    }
+    for (const feature of data.morphologyFeatures) {
+      if (feature.kind !== "hole" || !featureIntersectsBounds(feature, bounds)) continue;
+      const liquid = this.getLiquidSurface(data, feature);
+      // Holes remove underlying terrain liquid even when empty.
+      const hole = this.buildTerrainMorphologyMask(data, feature);
+      if (hole) for (const target of [surface, contact]) {
+        target.ctx.globalCompositeOperation = "destination-out";
+        target.ctx.drawImage(hole.canvas, hole.bounds.x - bounds.x, hole.bounds.y - bounds.y);
+        target.ctx.globalCompositeOperation = "source-over";
+      }
+      if (!liquid || !(feature.params.fillTextureId || feature.params.fillColor)) continue;
+      const mask = this.createCanvasBuffer(width, height);
+      mask.ctx.drawImage(liquid.fillMask.canvas, liquid.fillMask.bounds.x - bounds.x, liquid.fillMask.bounds.y - bounds.y);
+      paint(mask.canvas, stringParam(feature.params.fillTextureId), stringParam(feature.params.fillColor), feature.params);
+    }
+    const coverage = this.createCanvasBuffer(width, height);
+    coverage.ctx.fillStyle = "white";
+    const regions = data.streamUpdate?.activeRegions ?? [{ x: 0, y: 0, width: data.width, height: data.height }];
+    for (const region of regions) coverage.ctx.fillRect(region.x - bounds.x, region.y - bounds.y, region.width, region.height);
+    for (const target of [surface, contact]) {
+      target.ctx.globalCompositeOperation = "destination-in";
+      target.ctx.drawImage(coverage.canvas, 0, 0);
+    }
+    try {
+      return { width, height, pixels: surface.ctx.getImageData(0, 0, width, height).data, contact: contact.ctx.getImageData(0, 0, width, height).data };
+    } catch { return null; }
+  }
+
   async createWallOcclusionSprites(map: any, options: { sliceWidth?: number } = {}): Promise<Sprite[]> {
     if (this.destroyed || typeof document === "undefined") return [];
     const data = isStudioTerrainRenderData(map?.terrainRenderData)
@@ -567,6 +650,8 @@ export class StudioTerrainChunkRenderer {
   }
 
   private resetMorphologyRenderCaches(): void {
+    this.liquidPaletteCache.clear();
+    this.liquidSurfaceCache = new WeakMap();
     this.morphologyMaskCache = new WeakMap();
     this.terrainWallRenderPartsCache = new WeakMap();
     this.terrainHoleRenderPartsCache = new WeakMap();
@@ -1085,7 +1170,12 @@ export class StudioTerrainChunkRenderer {
       if (layer.mode.type === "custom") {
         const preset = resolveSharedTerrainPreset(layer.mode.shaderKey);
         if (preset) {
+          const texture = findTerrainTexture(data.asset, layer.terrainTextureId);
+          const buffer = this.getImageBuffer(data.sourceTexture, image);
+          const source = texture && buffer && data.asset
+            ? cropRasterImage(buffer, resolveTerrainTextureSourceRect(data.asset, texture, buffer.width, buffer.height)) : undefined;
           this.drawSharedTerrainPixels(output, preset({
+            source,
             width: output.canvas.width,
             height: output.canvas.height,
             tileSize: data.tileSize,
@@ -1113,22 +1203,19 @@ export class StudioTerrainChunkRenderer {
         continue;
       }
 
-      const edge = this.createTerrainControlLayerEdgeMask(output, control, layer.paletteIndex, bounds, 6);
+      if (layer.mode.type === "water" && layer.mode.border === false) continue;
+      const palette = this.getLiquidPalette(data, image, layer.terrainTextureId);
+      if (!palette) continue;
+      const edge = this.createTerrainControlLayerEdgeMask(output, control, layer.paletteIndex, bounds, 3);
       if (!edge) continue;
-      const gradient = output.ctx.createLinearGradient(0, 0, 0, output.canvas.height);
-      gradient.addColorStop(0, "rgba(180, 235, 255, 0.18)");
-      gradient.addColorStop(0.55, "rgba(89, 161, 185, 0.08)");
-      gradient.addColorStop(1, "rgba(20, 48, 61, 0.22)");
       const overlay = this.createCanvasBuffer(output.canvas.width, output.canvas.height);
-      overlay.ctx.fillStyle = gradient;
-      overlay.ctx.fillRect(0, 0, overlay.canvas.width, overlay.canvas.height);
-      overlay.ctx.save();
-      overlay.ctx.globalCompositeOperation = "destination-in";
       overlay.ctx.drawImage(edge, 0, 0);
-      overlay.ctx.restore();
+      overlay.ctx.globalCompositeOperation = "source-in";
+      const color = layer.mode.type === "water" && layer.mode.foam === false ? palette.shadow : palette.highlight;
+      overlay.ctx.fillStyle = `rgb(${color.join(",")})`;
+      overlay.ctx.fillRect(0, 0, overlay.canvas.width, overlay.canvas.height);
       output.ctx.save();
-      output.ctx.globalCompositeOperation = "screen";
-      output.ctx.globalAlpha = 0.42;
+      output.ctx.globalAlpha = 0.22;
       output.ctx.drawImage(overlay.canvas, 0, 0);
       output.ctx.restore();
     }
@@ -1377,20 +1464,14 @@ export class StudioTerrainChunkRenderer {
     image: HTMLImageElement | null,
     feature: StudioTerrainMorphologyFeature
   ): void {
-    const parts = this.createTerrainHoleRenderParts(data, feature);
-    if (!parts) return;
-
     const fillTextureId = stringParam(feature.params.fillTextureId);
     const fillHeight = Number(feature.params.fillHeight ?? 0);
-    if (
-      fillTextureId
-      && Number.isFinite(fillHeight)
-      && fillHeight > 0
-      && data.asset?.terrainTextures.some((texture) => texture.id === fillTextureId)
-    ) {
-      this.drawTerrainMorphologyLiquidEdge(ctx, parts.mask, feature, data, image);
+    if ((fillTextureId || stringParam(feature.params.fillColor)) && Number.isFinite(fillHeight) && fillHeight > 0) {
+      this.drawTerrainMorphologyLiquidEdge(ctx, feature, data, image);
       return;
     }
+    const parts = this.createTerrainHoleRenderParts(data, feature);
+    if (!parts) return;
 
     this.drawTerrainMorphologyMaskedColor(
       ctx,
@@ -1421,29 +1502,46 @@ export class StudioTerrainChunkRenderer {
     this.drawTerrainHoleFillMorphology(ctx, parts.mask, feature, data, image);
   }
 
+  private getLiquidPalette(data: StudioTerrainRenderData, image: HTMLImageElement | null, textureId?: string, fillColor?: string): TerrainLiquidPalette | null {
+    const key = `${data.sourceTexture}:${textureId ?? ""}:${fillColor ?? ""}`;
+    if (this.liquidPaletteCache.has(key)) return this.liquidPaletteCache.get(key)!;
+    const texture = findTerrainTexture(data.asset, textureId);
+    const buffer = image ? this.getImageBuffer(data.sourceTexture, image) : null;
+    const region = texture && data.asset && buffer
+      ? resolveTerrainTextureSourceRect(data.asset, texture, buffer.width, buffer.height) : undefined;
+    const palette = resolveTerrainLiquidPalette(buffer && region
+      ? { width: buffer.width, height: buffer.height, pixels: buffer.data } : null, region, fillColor);
+    this.liquidPaletteCache.set(key, palette);
+    return palette;
+  }
+
+  private getLiquidSurface(data: StudioTerrainRenderData, feature: StudioTerrainMorphologyFeature) {
+    if (this.liquidSurfaceCache.has(feature)) return this.liquidSurfaceCache.get(feature)!;
+    const mask = this.buildTerrainMorphologyMask(data, feature);
+    const bounds = mask && getTerrainMorphologyLocalMaskBounds(mask);
+    if (!mask || !bounds || !(Number(feature.params.fillHeight) > 0)) {
+      this.liquidSurfaceCache.set(feature, null);
+      return null;
+    }
+    const geometry = resolveTerrainMorphologyLiquidGeometry({
+      bounds, depth: getTerrainMorphologyHeight(feature), fillHeight: Number(feature.params.fillHeight), tileSize: data.tileSize,
+    });
+    const smoothedMask = this.createTerrainMorphologySmoothedLiquidMask(mask, geometry.metrics.contourSmoothingRadius, geometry.metrics.antiAliasWidth);
+    const fillMask = this.createTerrainMorphologyProjectedLevelMask(smoothedMask, geometry.inset, geometry.dropY);
+    const surface = { mask, geometry, smoothedMask, fillMask };
+    this.liquidSurfaceCache.set(feature, surface);
+    return surface;
+  }
+
   private drawTerrainMorphologyLiquidEdge(
     ctx: CanvasRenderingContext2D,
-    mask: TerrainMorphologyMaskBuffer,
     feature: StudioTerrainMorphologyFeature,
     data: StudioTerrainRenderData,
     image: HTMLImageElement | null
   ): void {
-    const bounds = getTerrainMorphologyLocalMaskBounds(mask);
-    if (!bounds) return;
-    const geometry = resolveTerrainMorphologyLiquidGeometry({
-      bounds,
-      depth: getTerrainMorphologyHeight(feature),
-      fillHeight: Number(feature.params.fillHeight ?? 0),
-      tileSize: data.tileSize,
-    });
-    if (geometry.level <= 0) return;
-
-    const smoothedMask = this.createTerrainMorphologySmoothedLiquidMask(
-      mask,
-      geometry.metrics.contourSmoothingRadius,
-      geometry.metrics.antiAliasWidth
-    );
-    const fillMask = this.createTerrainMorphologyProjectedLevelMask(smoothedMask, geometry.inset, geometry.dropY);
+    const surface = this.getLiquidSurface(data, feature);
+    if (!surface) return;
+    const { mask, smoothedMask, fillMask, geometry } = surface;
     if (geometry.wallAlpha > 0) {
       const exposedWallBuffer = this.createCanvasBuffer(mask.canvas.width, mask.canvas.height);
       exposedWallBuffer.ctx.drawImage(mask.canvas, 0, 0);
@@ -1473,22 +1571,31 @@ export class StudioTerrainChunkRenderer {
       geometry.metrics.meniscusWidth,
       geometry.metrics.antiAliasWidth
     );
-    const palette = resolveTerrainMorphologyLiquidPalette(feature.params.fillColor);
+    const palette = this.getLiquidPalette(data, image, stringParam(feature.params.fillTextureId), stringParam(feature.params.fillColor));
+    const texture = findTerrainTexture(data.asset, stringParam(feature.params.fillTextureId));
+    const mode = texture?.defaultRenderMode;
+    const border = feature.params.border !== false && !(mode?.type === "water" && mode.border === false);
+    const foam = feature.params.foam !== false && !(mode?.type === "water" && mode.foam === false);
+    const css = (color: readonly number[]) => `rgb(${color.join(",")})`;
 
-    this.drawTerrainMorphologyMaskedColor(ctx, contactBand, palette.contactShadow, 0.34, "multiply");
+    if (border) this.drawTerrainMorphologyMaskedColor(ctx, contactBand, palette ? css(palette.shadow) : "#151515", 0.2, "multiply");
     this.drawTerrainMorphologyTextureFill(
       ctx,
       fillMask,
       stringParam(feature.params.fillTextureId),
       data,
       image,
-      stringParam(feature.params.fillColor) ?? palette.fillFallback,
+      stringParam(feature.params.fillColor) ?? (palette ? css(palette.base) : "transparent"),
       0.96
     );
-    this.drawTerrainMorphologyMaskedColor(ctx, innerTransition, palette.edgeSoft, 0.42, "source-over");
-    this.drawTerrainMorphologyMaskedColor(ctx, nearEdge, palette.edgeSoft, 0.3, "source-over");
-    this.drawTerrainMorphologyMaskedColor(ctx, meniscus, palette.edgeStrong, 0.78, "source-over");
-    this.drawTerrainMorphologyLiquidMeniscus(ctx, fillMask, feature.id, palette.edgeStrong, geometry.metrics);
+    if (palette && border) {
+      this.drawTerrainMorphologyMaskedColor(ctx, innerTransition, css(palette.base), 0.10, "source-over");
+      this.drawTerrainMorphologyMaskedColor(ctx, nearEdge, css(palette.shadow), 0.12, "multiply");
+      if (foam) {
+        this.drawTerrainMorphologyMaskedColor(ctx, meniscus, css(palette.highlight), 0.22, "source-over");
+        this.drawTerrainMorphologyLiquidMeniscus(ctx, fillMask, feature.id, css(palette.highlight), geometry.metrics);
+      }
+    }
   }
 
   private drawWall(
@@ -3275,29 +3382,6 @@ function hashTerrainString(value: string): number {
     hash = Math.imul(hash ^ value.charCodeAt(index), 16777619);
   }
   return hash >>> 0;
-}
-
-function resolveTerrainMorphologyLiquidPalette(fillColor: unknown): TerrainMorphologyLiquidPalette {
-  const match = typeof fillColor === "string"
-    ? fillColor.trim().match(/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})/i)
-    : null;
-  const base = match
-    ? { r: Number(match[1]), g: Number(match[2]), b: Number(match[3]) }
-    : { r: 68, g: 145, b: 165 };
-  const luma = base.r * 0.2126 + base.g * 0.7152 + base.b * 0.0722;
-  const contrast = luma > 190 ? { r: 0, g: 0, b: 0 } : { r: 255, g: 255, b: 255 };
-  const mix = (target: { r: number; g: number; b: number }, amount: number): string => {
-    const r = Math.round(base.r + (target.r - base.r) * amount);
-    const g = Math.round(base.g + (target.g - base.g) * amount);
-    const b = Math.round(base.b + (target.b - base.b) * amount);
-    return `rgb(${r}, ${g}, ${b})`;
-  };
-  return {
-    contactShadow: mix({ r: 0, g: 0, b: 0 }, 0.68),
-    edgeSoft: mix(contrast, luma > 190 ? 0.16 : 0.24),
-    edgeStrong: mix(contrast, luma > 190 ? 0.34 : 0.52),
-    fillFallback: `rgba(${base.r}, ${base.g}, ${base.b}, 0.92)`,
-  };
 }
 
 function stringParam(value: unknown): string | undefined {

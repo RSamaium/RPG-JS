@@ -43,3 +43,11 @@ code works on the main thread, in a Web Worker, and in Node.js.
 Morphology adapters should use `resolveTerrainMorphologyLiquidGeometry()` for
 filled holes. It returns the deterministic level projection, wall opacity and
 edge widths used by both the Studio editor and the game renderer.
+
+Liquid borders use `resolveTerrainLiquidPalette(image, region?, fillColor?)` to
+sample dominant, light and dark colors from opaque texture pixels in an atlas
+region. The helper returns RGB tuples or `null`; an explicit hex/RGB fill color
+is the fallback, never a default blue. Water effects honor `border` and `foam`.
+Prepared maps cache palettes and cropped textures until disposed; create a new
+prepared map after changing texture pixels. Custom presets receive the cropped
+material through optional `TerrainPresetInput.source`.

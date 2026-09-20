@@ -1,3 +1,4 @@
+import { resolveTerrainLiquidPalette, type TerrainLiquidPalette } from "./liquid";
 import type { TerrainPresetRenderer } from "./types";
 import { createTerrainRoadTownOverlayPixels } from "./road";
 
@@ -24,6 +25,8 @@ export const renderGrassEdgePreset: TerrainPresetRenderer = ({ width, height, ma
   return output;
 };
 
+const waterPaletteCache = new WeakMap<Uint8ClampedArray, Map<string, TerrainLiquidPalette | null>>();
+
 export const renderWaterPreset: TerrainPresetRenderer = ({
   width,
   height,
@@ -32,8 +35,18 @@ export const renderWaterPreset: TerrainPresetRenderer = ({
   originX = 0,
   originY = 0,
   timeMs,
+  source,
 }) => {
   const output = new Uint8ClampedArray(mask.length);
+  const fillColor = typeof params.fillColor === "string" ? params.fillColor : undefined;
+  const cache = source ? waterPaletteCache.get(source.pixels) ?? new Map<string, TerrainLiquidPalette | null>() : undefined;
+  const key = `${source?.width}:${source?.height}:${fillColor ?? ""}`;
+  const palette = cache?.has(key) ? cache.get(key)! : resolveTerrainLiquidPalette(source, undefined, fillColor);
+  if (source && cache) {
+    cache.set(key, palette);
+    waterPaletteCache.set(source.pixels, cache);
+  }
+  if (!palette) return output;
   const speed = finiteNumber(params.speed, 1);
   const intensity = finiteNumber(params.intensity, 0.35);
   const animated = params.enabled !== false && timeMs !== undefined;
@@ -44,12 +57,10 @@ export const renderWaterPreset: TerrainPresetRenderer = ({
     const phase = (originY + y) * width + originX + x;
     const wave = animated ? Math.sin(timeMs * 0.002 * speed + phase * 0.05) * intensity : 0;
     const offset = index * 4;
-    output[offset] = 95 + wave * 20;
-    output[offset + 1] = 185 + wave * 25;
-    output[offset + 2] = 220 + wave * 25;
-    output[offset + 3] = isBoundary(mask, width, height, index) && params.border !== false
-      ? (params.foam === false ? 85 : 145)
-      : 35;
+    const edge = isBoundary(mask, width, height, index) && params.border !== false;
+    const color = params.foam === false ? palette.shadow : palette.highlight;
+    for (let c = 0; c < 3; c++) output[offset + c] = color[c] * (1 + wave * 0.06);
+    output[offset + 3] = edge ? (params.foam === false ? 45 : 70 + Math.sin(phase * 0.11) * 25) : 0;
   }
   return output;
 };

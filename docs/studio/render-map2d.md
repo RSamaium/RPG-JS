@@ -100,3 +100,29 @@ At full height, `wallAlpha` and `dropY` are zero. `inset` and the returned edge
 metrics remain deterministic, which keeps the water contact border identical
 between the Studio editor and game renderer. The helper accepts and returns only
 numbers and plain objects.
+
+## Texture-derived liquid colors
+
+`resolveTerrainLiquidPalette(image, region?, fillColor?)` is the shared palette
+resolver used by Studio's Canvas renderer and this CPU renderer. It samples up to
+1024 opaque RGBA pixels inside `region` (the whole image by default), returning
+`{ base, highlight, shadow }` RGB tuples. Bright and dark accents retain sampled
+saturation instead of mixing systematically with white.
+
+```ts
+import { resolveTerrainLiquidPalette } from '@rpgjs/render-map2d'
+
+const palette = resolveTerrainLiquidPalette(atlas, {
+  x: 256, y: 0, width: 256, height: 256
+}, '#be430c')
+```
+
+No material-name rule is involved. When opaque pixels are unavailable, the optional
+hex or RGB `fillColor` supplies the palette; otherwise the result is `null` and
+renderers omit colored accents. Water borders respect `border: false` and
+`foam: false`. Presets receive an optional decoded, cropped `source` texture via
+`TerrainPresetInput`, so the built-in water preset follows the same policy.
+
+Prepared render jobs cache cropped textures and palettes; create a new prepared
+map after changing texture pixels or atlas regions and dispose the old one.
+Standalone palette users should cache by texture revision and region themselves.

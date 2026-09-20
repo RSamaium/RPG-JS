@@ -36,7 +36,7 @@ function createMap() {
     },
     elementsAlwaysLow: "[]",
     elementsLow: JSON.stringify([
-      { id: 0, tilesetId: "tileset", x: 144, y: 48 },
+      { id: 0, tilesetId: "tileset", x: 144, y: 48, submersion: { depth: 0.2 } },
     ]),
     elementsHigh: "[]",
     terrain: JSON.stringify([
@@ -98,6 +98,7 @@ describe("Studio authoritative map streaming", () => {
     ).toHaveLength(1);
     expect(definition.chunks["1:0"].renderData.elements.elementsLow[0]).toMatchObject({
       extractGroundShadow: true,
+      submersion: { depth: 0.2 },
     });
     expect(definition.chunks["1:0"].hitboxes).toEqual(
       expect.arrayContaining([
@@ -166,6 +167,7 @@ describe("Studio authoritative map streaming", () => {
     const enteredMap = getStudioMapStreamData(state);
     expect(state.generation).toBe(1);
     expect(enteredMap.elementsLow).toHaveLength(1);
+    expect(enteredMap.elementsLow[0].submersion).toEqual({ depth: 0.2 });
     expect(enteredMap.terrainRenderData.streamUpdate).toMatchObject({
       revision: definition.manifest.revision,
       generation: 1,
