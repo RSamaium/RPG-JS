@@ -993,3 +993,87 @@ describe("buildStudioTerrainCollisionPolygons", () => {
     expect(wallPolygons.every((polygon) => polygon.y + polygon.height <= 120)).toBe(true);
   });
 });
+
+describe('final painted morphology collisions', () => {
+  const stroke = (id: string, points: Array<{ x: number; y: number }>, radius = 40) => ({ id, points, radius });
+  const paint = stroke('paint', [{ x: 48, y: 72 }, { x: 144, y: 72 }]);
+  function build(operations: Array<{ mode: 'paint' | 'erase'; stroke: ReturnType<typeof stroke> }>, extra = {}) {
+    return buildStudioTerrainCollisionPolygons(createMap({
+      terrain: '[]',
+      terrainMorphologyLayer: {
+        width: 192, height: 144, tileSize: 48,
+        features: [{ id: 'lake', kind: 'hole', params: { depth: 20 }, strokes: operations.filter(op => op.mode === 'paint').map(op => op.stroke), operations }],
+      },
+      ...extra,
+    }));
+  }
+
+  it('makes identical geometry for repeated paint, without interior caps or joints', () => {
+    const single = build([{ mode: 'paint', stroke: paint }]);
+    const repeated = build(Array.from({ length: 200 }, (_, i) => ({
+      mode: 'paint', stroke: { ...paint, id: `paint-${i}` },
+    })));
+    expect(repeated).toEqual(single);
+    expect(single.length).toBeLessThan(40);
+    expect(hasPolygonCollisionAt(single, 48, 32)).toBe(true);
+    expect(hasPolygonCollisionAt(single, 88, 72)).toBe(false);
+  });
+
+  it('removes the shared edge between overlapping strokes', () => {
+    const polygons = build([
+      { mode: 'paint', stroke: stroke('a', [{ x: 60, y: 72 }]) },
+      { mode: 'paint', stroke: stroke('b', [{ x: 100, y: 72 }]) },
+    ]);
+    expect(hasPolygonCollisionAt(polygons, 100, 72)).toBe(false);
+    expect(hasPolygonCollisionAt(polygons, 60, 72)).toBe(false);
+    expect(hasPolygonCollisionAt(polygons, 140, 72)).toBe(true);
+  });
+
+  it('keeps an erased channel open without growing new end caps into it', () => {
+    const polygons = build([
+      { mode: 'paint', stroke: paint },
+      { mode: 'erase', stroke: stroke('channel', [{ x: 96, y: 0 }, { x: 96, y: 144 }], 18) },
+    ]);
+    for (let y = 0; y < 144; y++) expect(hasPolygonCollisionAt(polygons, 96, y)).toBe(false);
+    expect(hasPolygonCollisionAt(polygons, 76, 72)).toBe(true);
+    expect(hasPolygonCollisionAt(polygons, 116, 72)).toBe(true);
+  });
+
+  it('honours partial erasure away from the original centreline and subsequent repaint', () => {
+    const eraser = stroke('erase-bank', [{ x: 96, y: 28 }], 20);
+    const erased = build([{ mode: 'paint', stroke: paint }, { mode: 'erase', stroke: eraser }]);
+    expect(hasPolygonCollisionAt(erased, 96, 32)).toBe(false);
+    expect(hasPolygonCollisionAt(erased, 96, 48)).toBe(true);
+    expect(build([
+      { mode: 'paint', stroke: paint }, { mode: 'erase', stroke: eraser }, { mode: 'paint', stroke: paint },
+    ])).toEqual(build([{ mode: 'paint', stroke: paint }]));
+  });
+
+  it('retains inner island boundaries instead of filling a concave outline', () => {
+    const polygons = build([
+      { mode: 'paint', stroke: paint },
+      { mode: 'erase', stroke: stroke('island', [{ x: 96, y: 72 }], 18) },
+    ]);
+    expect(hasPolygonCollisionAt(polygons, 96, 72)).toBe(false);
+    expect(hasPolygonCollisionAt(polygons, 96, 54)).toBe(true);
+    expect(hasPolygonCollisionAt(polygons, 96, 32)).toBe(true);
+  });
+
+  it('cuts only the bridge width out of a long bank', () => {
+    const polygons = build([{ mode: 'paint', stroke: paint }], {
+      params: { ...createMap().params, tileset: elementTilesetMedia },
+      elementsAlwaysLow: JSON.stringify([{ x: 80, y: 0, id: 'floor', tilesetId: 'element-tileset', width: 32, height: 144 }]),
+    });
+    expect(hasPolygonCollisionAt(polygons, 96, 32)).toBe(false);
+    expect(hasPolygonCollisionAt(polygons, 60, 32)).toBe(true);
+    expect(hasPolygonCollisionAt(polygons, 130, 32)).toBe(true);
+  });
+
+  it('handles fully erased and outside-map paint without degenerate polygons', () => {
+    expect(build([{ mode: 'paint', stroke: paint }, { mode: 'erase', stroke: { ...paint, radius: 60 } }])).toEqual([]);
+    expect(build([{ mode: 'paint', stroke: stroke('outside', [{ x: -100, y: -100 }]) }])).toEqual([]);
+    const polygons = build([{ mode: 'paint', stroke: stroke('clipped', [{ x: 0, y: 0 }]) }]);
+    expect(polygons.length).toBeGreaterThan(0);
+    expect(polygons.every(p => p.points.every(([x, y]) => x >= 0 && y >= 0 && x <= 192 && y <= 144))).toBe(true);
+  });
+});

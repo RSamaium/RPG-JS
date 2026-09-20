@@ -524,3 +524,19 @@ Studio runtime then enables immediate startup automatically. Explicit
   `chunkSize`, `loadRadius`, and `retainRadius`.
 - `debugCollisions`: display Studio collision debug overlays. This is a shortcut for the built-in Studio debug plugin.
 - `studioPlugins`: attach Studio client-side map renderer plugins. See [Create a Studio plugin](/studio/plugins).
+
+### Terrain collision contours
+
+In standalone RPG and MMORPG games, Studio hole and water borders are generated
+from the final painted surface. Paint strokes are combined and erase operations
+are applied in their recorded order. Overlapping strokes do not create internal
+walls; erased paths and islands retain their own boundaries. Always-low elements
+such as bridges clear only the portion of a border they cover.
+
+Contours are sampled at two-pixel resolution for ordinary maps and simplified
+within three pixels. Very large features use a coarser grid to bound temporary
+memory. Physics uses small convex pieces along these contours, rather than a
+single filled polygon that would block islands or other walkable interiors.
+The same geometry generator is used by server-authoritative collisions, client
+prediction, and collision debugging; enabling debug collisions does not alter
+movement rules.
