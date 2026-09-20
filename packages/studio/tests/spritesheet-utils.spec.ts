@@ -16,6 +16,18 @@ vi.mock("../src/data-provider", () => ({
   }),
 }));
 
+vi.mock("pixi.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("pixi.js")>();
+  return {
+    ...actual,
+    Assets: {
+      ...actual.Assets,
+      load: vi.fn(async () => undefined),
+      get: vi.fn(() => undefined),
+    },
+  };
+});
+
 describe("Studio spritesheet utils", () => {
   beforeEach(() => {
     getMedia.mockReset();
