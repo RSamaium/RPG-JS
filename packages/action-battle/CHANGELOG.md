@@ -1,5 +1,15 @@
 # @rpgjs/action-battle
 
+## 5.0.0-rc.5
+
+### Patch Changes
+
+- f488e28: Keep temporary attack playback and its direction stable during locomotion synchronization. Ignore stale sprite completion callbacks, return stationary characters to idle, and preserve matching predicted attacks when the server confirms them.
+- Updated dependencies [f488e28]
+  - @rpgjs/client@5.0.0-rc.5
+  - @rpgjs/server@5.0.0-rc.5
+  - @rpgjs/vite@5.0.0-rc.5
+
 ## 5.0.0-rc.4
 
 ### Patch Changes
