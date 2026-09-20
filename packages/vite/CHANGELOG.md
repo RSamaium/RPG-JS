@@ -1,5 +1,11 @@
 # @rpgjs/vite
 
+## 5.0.0-rc.5
+
+### Patch Changes
+
+- @rpgjs/server@5.0.0-rc.5
+
 ## 5.0.0-rc.4
 
 ### Patch Changes
