@@ -308,7 +308,13 @@ export const prepareSpriteSheetObject = async (media: any, id?: string): Promise
   for (const texture of Object.values(spritesheet.textures ?? {}) as Array<{ image?: string }>) {
     if (texture.image) images.add(texture.image);
   }
-  await Promise.all([...images].map((image) => Assets.load(image)));
+  await Promise.all([...images].map(async (image) => {
+    try {
+      await Assets.load(image);
+    } catch {
+      // Direct file-name graphics may not be registered with Pixi yet.
+    }
+  }));
   if (parentSheet) {
     const idleHeight = loadedCharacterHeight(parentSheet.image, parentSheet.framesWidth, parentSheet.framesHeight);
     const animationHeight = loadedCharacterHeight(spritesheet.image, spritesheet.framesWidth, spritesheet.framesHeight);
