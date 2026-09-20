@@ -28,14 +28,18 @@ Workflow:
 - List media by type: `GET /api/media/all/:type`
 - Get media group: `GET /api/media/group/:groupId`
 - Read game-ready media data: `GET /api/game/media/:mediaId`
+- Read a generated character's linked animations in-game: `GET /api/game/media/:mediaId/animations` (public, returns only media in the same project whose `metadata.groupId` matches an idle character).
 
 `GET /api/game/media/:mediaId` returns the media data shape intended for the RPGJS runtime. Use it when the game needs to inspect a Studio media record and consume the fields available in-game. Prefer this endpoint over admin media endpoints from runtime code.
+
+The RPGJS runtime reads the 2×2 idle directions from `metadata.idleDirections`, then uses the linked media named `walk` for movement and its saved proportional `metadata.scale`. Other linked names can be played as actions. The game endpoint above is the runtime counterpart of the project-scoped editor group endpoint.
 
 ## Write and generation endpoints
 
 - Update media metadata only: `PUT /api/media/:id`
 - Update media metadata and synchronize the root media type: `PUT /api/media/update/:id`
 - Replace media file: `POST /api/media/replace/:id`
+- Delete an associated character animation and its image: `DELETE /api/media/character/:characterId/animations/:animationId` (Studio project cookie access; the animation must have `metadata.groupId` equal to the character ID). This removes the associated media record, stored file, and any entry in the character's `metadata.animations`. It cannot delete the base idle media or another character's animation. Confirm with the user before deletion because the image is permanent.
 - Estimate or execute generation: `POST /api/media/generate`
 
 Use `PUT /api/media/update/:id` when the payload can change the media category/type. The request body is `{ "metadata": { ... }, "type"?: string }`; when `metadata.type` or `type` is a non-empty string, the endpoint writes both `metadata.type` and the root `type` field so media filters and type-specific tools stay consistent.
@@ -46,8 +50,6 @@ Common payload confirmed in server code:
 
 - `POST /api/media/generate`: `{ "action": "estimate" | "execute", "type": string, "userPrompt": string, "metadata"?: { "source"?: string, "referenceImage"?: string, "referenceImages"?: string[], "duration"?: number, ... } }`
 - `GET /api/media/generate/:instanceId`: returns the project-scoped canonical workflow status and, once complete, the generated `media` record. The public API does not expose internal workflow `steps`. For a known run it falls back to the persisted application status when Cloudflare temporarily reports `instance.not_found`; unknown or cross-project ids return `404`.
-
-Generated `type: "animation"` and `type: "spritesheet"` media use spritesheet.ai. VFX animations use the `effect` preset, one directionless lane, 16 frames, and the provider's dynamic grid metadata; they are not normalized to 4x4. Spritesheets should include either guided `metadata.animationIntent` or advanced `metadata.motionPreset`/`metadata.animationLayout`, plus optional `metadata.frameCount`. For guided `movement` intents containing `walk` or `run`, Studio forces `idleFirstFrame: true`, even if the caller omits it or sends `false`; spritesheet.ai treats it as a generation instruction rather than a guaranteed PNG post-processing operation. Character-editor animations should pass the complete base image as execution-only `metadata.referenceImage`, pass the character media id as `metadata.groupId`, and request a four-direction `character-actions` intent; the persisted `groupId` makes the generated spritesheet appear in `GET /api/media/group/:groupId`. Generic image types use Fal.ai `openai/gpt-image-2.5/sunburst`; reference images select its edit endpoint and transparent asset types use native PNG alpha. Generated tilesets may include `metadata.elements`, a JSON string of packed rectangles produced by the image-processing container. Element set (`type: "tileset"`) generation may pass `metadata.terrainReferenceImage` plus `metadata.terrainReferenceMediaId` to guide generated objects toward the terrain style; `terrainReferenceImage` is execution-only and is stripped from persisted metadata. Generated terrain media include `metadata.sourceTexture`, direct `metadata.rows` and `metadata.columns`, and `metadata.textureGrid`.
 
 Studio terrain generation defaults to a `4x4` `sourceTexture` atlas in the UI and persists the generated atlas directly. It no longer creates Wang/autotile output through the image-processing container. Requests can set `metadata.sourceTextureColumns` and `metadata.sourceTextureRows` to choose the atlas layout, and can pass `terrainStyleId` plus `terrainStylePrompt` to guide the technical terrain prompt. Consumers should read `metadata.rows` and `metadata.columns` or the mirrored `metadata.textureGrid`.
 
@@ -69,7 +71,8 @@ Credit costs available in `common/permissions/credit.ts`:
 - `backgroundMusic`: 10
 - `faceset`: 5
 - `animation`: 15
-- `spritesheet`: 15
+- `spritesheet` with `metadata.generationMode: "idle"`: 5
+- `spritesheet` (animations and existing API calls): 15
 - `spritesheetPreview`: 1
 - `terrain`: 5
 - `tileset`: 15
@@ -140,8 +143,6 @@ curl -sS -X POST "$BASE_URL/api/media/replace/$MEDIA_ID" \
 ## Multiple references and cinematic videos
 
 Images and videos accept `metadata.referenceImages`, an ordered list of up to 9 image URLs or base64 data URIs. Spritesheets and VFX animations accept up to 15. Do not also send `referenceImage`, even with an empty list. The old singular field remains supported for existing integrations. Empty lists mean no reference. All images are passed to the image provider; they are not assembled into a collage. Internal reference payloads are omitted from persisted media metadata.
-
-For `type: "video"`, set `metadata.duration` to a whole number from 5 to 15 (default 5). Estimate and execution charge 8 credits per second, including reference-to-video (40–120 credits). With the new nonempty list, Studio uses `minimax/h3-max/reference-to-video`; without references it uses `minimax/h3-max-turbo/text-to-video`. Legacy `referenceImage` retains Turbo image-to-video and its 16:9 crop. New references are context images and are not cropped. Refer to them in prompt order as Image 1, Image 2, etc. The output is 768P, 16:9, native audio, at most 30 MB; persisted metadata includes the requested duration and actual model.
 
 Read a library record using `GET /api/media/data/:id`, then obtain its image bytes with `GET /api/media/<fileName>`. Read a project's existing map thumbnail with `GET /api/maps/:mapId/thumbnail` (404 when absent or outside the project). Encode these image bytes as data URIs when the provider cannot access their authenticated URLs. Never send map IDs as image URLs. `referenceImageFiles` is internal and cannot be supplied in public requests.
 

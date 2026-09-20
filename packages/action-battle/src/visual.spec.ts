@@ -18,6 +18,24 @@ const createEntity = () => ({
 });
 
 describe("action battle visual composer", () => {
+  test("keeps the predicted local attack playing when the server confirms the same graphic", () => {
+    const player = {
+      setAnimation: vi.fn(),
+      animationPlayback: () => ({ name: "attack", direction: "left" }),
+      graphics: () => ["hero-attack"],
+    };
+    const handler = createActionBattleClientVisuals({ visual: "classic" })[ACTION_BATTLE_CLIENT_VISUAL_ID];
+    const context = {
+      object: player,
+      engine: { scene: { getCurrentPlayer: () => player } },
+      data: { moment: "attack", animations: { attack: { animationName: "attack", graphic: "hero-attack" } } },
+    };
+    handler(context, {});
+    expect(player.setAnimation).not.toHaveBeenCalled();
+    handler({ ...context, data: { ...context.data, animations: { attack: { animationName: "attack", graphic: "other-attack" } } } }, {});
+    expect(player.setAnimation).toHaveBeenCalledWith("attack", "other-attack", 1);
+  });
+
   test("classic hit uses the low-level flash and damage text primitives", () => {
     const target = createEntity();
     const visual = createActionBattleVisual("classic");

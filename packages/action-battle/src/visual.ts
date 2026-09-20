@@ -9,7 +9,7 @@ import type {
   ActionBattleVisualPart,
 } from "./types";
 import { getActionBattleOptions } from "./config";
-import { playActionBattleAnimation } from "./animations";
+import { playActionBattleAnimation, resolveActionBattleAnimation } from "./animations";
 import { playActionBattleMomentAudio } from "./audio";
 
 export const ACTION_BATTLE_CLIENT_VISUAL_ID = "action-battle.visual";
@@ -328,6 +328,8 @@ export function createActionBattleClientVisuals(
       playActionBattleVisual(options.visual, visualContext, {
         ...helpers,
         actionBattleFeedback: feedback,
+        preservePredictedAttack: data.moment === "attack" &&
+          visualContext.entity === context.engine?.scene?.getCurrentPlayer?.(),
       });
     },
   };
@@ -384,6 +386,16 @@ const createHelpers = (
     clientHelpers?.actionBattleFeedback ?? {};
   return {
   graphic(entity, keyOrOptions) {
+    if (clientHelpers?.preservePredictedAttack && entity === context.entity && keyOrOptions === "attack") {
+      const animation = resolveActionBattleAnimation("attack", entity, context.animations ?? getActionBattleOptions().animations);
+      const playback = entity.animationPlayback?.();
+      const graphics = animation?.graphic === undefined ? entity.graphics?.()
+        : Array.isArray(animation.graphic) ? animation.graphic : [animation.graphic];
+      const currentGraphics = entity.graphics?.();
+      if (animation && playback?.name === animation.animationName &&
+        Array.isArray(graphics) && Array.isArray(currentGraphics) &&
+        graphics.length === currentGraphics.length && graphics.every((id, index) => id === currentGraphics[index])) return;
+    }
     callGraphic(entity, keyOrOptions, context);
   },
   flash(entity, options = {}) {

@@ -9,11 +9,13 @@ Use this skill to execute content-management tasks against an RPGJS Studio insta
 
 ## Image and cinematic generation
 
+For a new character, use `type: "spritesheet"` with `metadata.generationMode: "idle"` to create a transparent 1024×768 image of four static poses (down, left, right, up) in a 2×2 grid for 5 credits. Studio then opens `/media/apps/character-editor/:id`; create named animations there through spritesheet.ai as separate media associated with the base character, using the idle sheet as the reference image. Existing spritesheet animation requests remain 15 credits. See [references/media.md](references/media.md).
+
+For deletion in the Studio editor, use the project-scoped character animation endpoint documented in [references/media.md](references/media.md); it removes the animation reference and stored image together.
+
 Base64 references accept MIME parameters; recognized PNG/JPEG/GIF/WebP signatures take precedence over missing or incorrect MIME headers, including `text/xml`. Invalid references return HTTP 400 and refund the startup debit.
 
 Media generation debits metered API-key credits on execute before enqueueing; estimates do not debit. Startup failures are refunded, and terminal execution failures use a persisted refund step. A `queued` response is acceptance only: poll the returned instance. See [references/media.md](references/media.md) for billing and reference storage behavior.
-
-For image/video generation with multiple references, video duration and pricing, read [references/media.md](references/media.md). Use `metadata.referenceImages` for up to 9 ordered context images, or up to 15 for `type: "spritesheet"` and `type: "animation"`; do not combine it with legacy `referenceImage`. Spritesheet and VFX animation generation cost 15 credits and use spritesheet.ai with a fixed top-down RPG context. Generic images use Fal.ai `openai/gpt-image-2.5/sunburst`. Video duration is 5–15 whole seconds, default 5, at 8 credits per second. Use `metadata.style: "reference"` to preserve reference aesthetics (requires at least one reference image). Use `metadata.mapReferenceIndices` (unique zero-based indices into `referenceImages`) to identify map thumbnails as environment context without imposing their overhead camera; explicit camera requests and technical asset constraints still apply. Read map thumbnail bytes with `GET /api/maps/:mapId/thumbnail` before including them as references.
 
 To play a video in an event, use `show_cinematic` with `{ "video": "media-id", "allowSkip": false, "bgm": "pause", "preload": true }`. Only `video` is required: skipping and preloading default to true; `bgm` defaults to `"duck"` (15% music volume). `"pause"` resumes music afterwards. Adjacent video blocks share one overlay. See [references/media.md](references/media.md) for details; no map-to-video association is required.
 
@@ -226,6 +228,7 @@ curl -sS -X POST "$BASE_URL/..." \
 - Playable character settings are database actors under `/api/database/actors`; the project stores the selected actor `_id` in `mainActorId`. Use `GET /api/database/actors/main` and `PUT /api/database/actors/:id/main` to read or change the main hero. The actor owns appearance, hitbox, progression, inventory, animations, and skills.
 - Actor `hitbox: { width, height }` uses positive RPGJS-pixel dimensions and defaults to `32 x 32` when omitted. The public game project and offline export resolve `mainActorId` back to the runtime-compatible `hero`, `animations`, and `skills` fields.
 - Database actors and enemies support combat animation spritesheet media IDs under `animations`: `attack`, `hurt`, `die`, and `castSpell`.
+- Actors and enemies automatically inherit a selected character sprite's linked faceset and named combat animations. Set `faceset` or individual `animations` media IDs only to override those defaults; see [references/database.md](references/database.md).
 - The RPGJS starter runtime uses these spritesheets in action battle: attack actions, damage/hurt feedback, delayed death removal, and skill/cast usage can temporarily switch to the configured spritesheet.
 - Database enemies support action battle AI options under `behavior`: `enemyType`, `attackCooldown`, `visionRange`, `attackRange`, `dodgeChance`, `dodgeCooldown`, `fleeThreshold`, `attackPatterns`, `patrolWaypoints`, and `groupBehavior`.
 - Database enemies expose a lightweight preview endpoint: `GET /api/database/enemies/preview?ids=<id1,id2>`. Use it when only `_id`, `name`, and `graphic` are needed for known enemy ids instead of listing or reading full enemy records. Send at most 100 distinct ids per request.

@@ -74,6 +74,13 @@ fields are `name`, `description`, `classId`, `graphic`, `faceset`, `hitbox`,
 `maxHp`, `maxSp`, `str`, `pdef`, `agi`, `int`, and `dex`. Media and database
 relations use their Studio `_id` values.
 
+When `graphic` points to a character sprite, its linked faceset and its named
+`attack`, `hurt`, `die`, and `castSpell` animations are used automatically by the
+public game database, project hero, and export. Leave `faceset` and individual
+`animations` entries empty to inherit them. A supplied media `_id` overrides
+only that entry. Editing endpoints keep the explicit values rather than writing
+the inherited ones back to the record.
+
 Legacy Actors without `classId` remain readable and keep their Actor-level
 skills until they are edited and assigned a Class.
 
@@ -213,6 +220,7 @@ Notes:
 
 - `graphic` and `faceset` are media `_id`s. Search `/api/media?query=<search>` first.
 - `animations.attack`, `animations.hurt`, `animations.die`, and `animations.castSpell` are spritesheet media `_id`s. Search `/api/media?query=<search>` first.
+- As for Actors, absent `faceset` and combat animation entries inherit the selected sprite's linked media; explicit entries override them in game and export responses.
 - `weaponId`, `armorId`, and `itemId` are item `_id`s. Search `/api/database/items?query=<search>` first.
 - `skills[].skillId` is a skill `_id`. Search `/api/database/skills?query=<search>` first.
 - `skills[].level` is the minimum enemy level required to acquire the skill.

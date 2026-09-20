@@ -9,7 +9,7 @@ import {
 } from "@rpgjs/client";
 import { defineModule } from "@rpgjs/common";
 import {
-  createSpriteSheetObject,
+  prepareSpriteSheetObject,
   resolveAssetSource,
   resolveSpritesheet,
 } from "./spritesheet-utils";
@@ -171,7 +171,7 @@ const resolveHeroMediaSpritesheet = async (value: unknown): Promise<any | null> 
       return resolveSpritesheet(mediaId);
     }
 
-    return createSpriteSheetObject(media, mediaId);
+    return prepareSpriteSheetObject(media, mediaId);
   }
 
   return null;

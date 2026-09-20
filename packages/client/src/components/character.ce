@@ -74,7 +74,7 @@
   import { observeCurrentPlayerControls } from "./current-player-controls";
   import type { Subscription } from "rxjs";
 
-  import { lastValueFrom, combineLatest, pairwise, filter, map, startWith } from "rxjs";
+  import { lastValueFrom, combineLatest, map, startWith } from "rxjs";
   import { Particle } from "@canvasengine/presets";
   import { GameEngineToken, ModulesToken, shouldRenderLightingShadows } from "@rpgjs/common";
   import { RpgClientEngine } from "../RpgClientEngine";
@@ -94,6 +94,7 @@
   import InteractionComponents from "./interaction-components.ce";
   import { RpgGui } from "../Gui/Gui";
   import { getCanMoveValue } from "../utils/readPropValue";
+  import { resolveCharacterAnimation } from "./character-animation";
   import {
     loadCachedSpriteSheetAlphaBounds,
     mergeSpriteAlphaBounds,
@@ -695,14 +696,18 @@
   });
   
   const sheet = (graphicObject) => {
+    const playback = sprite.animationPlayback?.();
+    const playing = playback?.name ?? realAnimationName();
     return {
       definition: graphicObject,
-      playing: realAnimationName(),
+      playing,
       params: {
-        direction: direction()
+        direction: playback?.direction ?? direction()
       },
       onFinish() {
-        animationCurrentIndex.update(index => index + 1)
+        if (playback && sprite.animationPlayback?.() === playback && graphicsSignals().includes(graphicObject)) {
+          animationCurrentIndex.update(index => index + 1)
+        }
       }
     };
   }
@@ -837,7 +842,7 @@
   const resolveTextureOptions = (graphicObject) => {
     const textures = graphicObject?.textures ?? {};
     const texture =
-      textures[realAnimationName()] ??
+      textures[sprite.animationPlayback?.()?.name ?? realAnimationName()] ??
       textures[Animation.Stand] ??
       Object.values(textures)[0] ??
       {};
@@ -854,7 +859,7 @@
 
     try {
       const frames = typeof animations === 'function'
-        ? animations({ direction: direction() })
+        ? animations({ direction: sprite.animationPlayback?.()?.direction ?? direction() })
         : animations;
       if (!Array.isArray(frames)) return [];
       const firstGroup = frames[0];
@@ -1160,7 +1165,6 @@
   const interactionClick = handleInteraction('click');
 
   // Combine animation change detection with movement state from smoothX/smoothY
-  const movementAnimations = ['walk', 'stand'];
   const epsilon = 0; // movement threshold to consider the easing still running
 
   const stateX$ = smoothX.animatedState.observable;
@@ -1176,11 +1180,7 @@
     startWith(false)
   );
 
-  const animationChange$ = animationName$.pipe(
-    startWith(animationName()),
-    pairwise(),
-    filter(([prev, curr]) => prev !== curr)
-  );
+  const animationChange$ = animationName$.pipe(startWith(animationName()));
 
   let beforeRemovePromise = null;
   let beforeRemoveTransitionValue = null;
@@ -1227,34 +1227,13 @@
     }
   });
 
-  const animationMovementSubscription = combineLatest([animationChange$, moving$]).subscribe(([[prev, curr], isMoving]) => {
-    const isMovementAnimation = movementAnimations.includes(curr);
-    const isTemporaryAnimationPlaying =
-      sprite.animationIsPlaying && sprite.animationIsPlaying();
-
-    if (sprite.animationFixed && isMovementAnimation) {
-      realAnimationName.set(curr);
-      return;
-    }
-
-    if (curr == 'stand' && !isMoving) {
-      if (!resumeHeldDirectionWalkAnimation()) {
-        realAnimationName.set(curr);
-      }
-    }
-    else if (curr == 'walk' && isMoving) {
-      realAnimationName.set(curr);
-    }
-    else if (!isMovementAnimation) {
-      realAnimationName.set(curr);
-    }
-    if (!isMoving && isTemporaryAnimationPlaying) {
-      if (isMovementAnimation) {
-        if (typeof sprite.resetAnimationState === 'function') {
-          sprite.resetAnimationState();
-        }
-      }
-    }
+  const animationMovementSubscription = combineLatest([
+    animationChange$, moving$, sprite.animationPlayback.observable,
+    sprite._animationFixed.observable, sprite._canMove.observable,
+  ]).subscribe(([curr, isMoving, playback]) => {
+    realAnimationName.set(resolveCharacterAnimation(
+      curr, isMoving, hasHeldDirection(), canControls(), sprite.animationFixed, playback?.name,
+    ));
   });
 
   const resumeWalkSubscriptions = [

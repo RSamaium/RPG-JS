@@ -19,6 +19,7 @@ export interface GameDataProvider {
   getProject(query: ProjectQuery): Promise<any>;
   getMap(mapId: string): Promise<any>;
   getMedia(mediaId: string): Promise<any>;
+  getMediaGroup?(mediaId: string): Promise<any[]>;
   getDatabase(projectId?: string): Promise<any[]>;
   getPlayerStartConfig?(query: PlayerStartConfigQuery): Promise<Partial<ProjectBasic> | null | undefined>;
 }

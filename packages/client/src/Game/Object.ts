@@ -108,6 +108,8 @@ export abstract class RpgClientObject extends RpgCommonPlayer {
   particleName = signal("");
   animationCurrentIndex = signal(0);
   animationIsPlaying = signal(false);
+  /** @internal Local one-shot playback is independent of synchronized locomotion. */
+  animationPlayback = signal<{ name: string; direction?: string } | null>(null);
   _param = signal({});
   frames: Frame[] = [];
   graphicsSignals = signal<any[]>([]);
@@ -249,6 +251,7 @@ export abstract class RpgClientObject extends RpgCommonPlayer {
       this.animationName.set(restoreState.animationName);
       this.graphics.set([...restoreState.graphics]);
     }
+    this.animationPlayback.set(null);
     this.resolveAnimationWait();
   }
 
@@ -445,6 +448,10 @@ export abstract class RpgClientObject extends RpgCommonPlayer {
       animationName: previousAnimationName,
       graphics: previousGraphics,
     };
+    this.animationPlayback.set({
+      name: animationName,
+      ...(finalNbTimes !== Infinity ? { direction: this.direction() } : {}),
+    });
     this.animationCurrentIndex.set(0);
 
     // Temporarily change graphic if provided

@@ -18,6 +18,13 @@ and send only one compact server event.
 
 ## Spritesheet Animations
 
+Finite character animations keep the direction they started with until playback
+finishes. Incoming locomotion updates do not interrupt them; afterward, a
+stationary character returns to idle, while a moving character resumes walking.
+This client rendering behavior applies to standalone and MMORPG games. Action
+Battle also preserves an ongoing predicted attack when the server confirms the
+same animation and graphic, instead of restarting it.
+
 > **See also:** [Spritesheets Guide](/guide/spritesheets) for comprehensive information about spritesheets, including dynamic spritesheet resolution.
 
 ### 1. Creating the Animation Spritesheet

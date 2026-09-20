@@ -62,6 +62,16 @@ class AutoFallbackGameDataProvider implements GameDataProvider {
     return this.http.getMedia(mediaId);
   }
 
+  async getMediaGroup(mediaId: string): Promise<any[]> {
+    try {
+      const localValue = await this.local.getMediaGroup(mediaId);
+      if (localValue.length > 0) return localValue;
+    } catch {
+      // The online provider can supply groups absent from the local bundle.
+    }
+    return this.http.getMediaGroup(mediaId);
+  }
+
   async getDatabase(projectId?: string): Promise<any[]> {
     try {
       const localValue = await this.local.getDatabase(projectId);
@@ -80,6 +90,7 @@ class CachedGameDataProvider implements GameDataProvider {
   private projectByKey = new Map<string, Promise<any>>();
   private mapById = new Map<string, Promise<any>>();
   private mediaById = new Map<string, Promise<any>>();
+  private mediaGroupById = new Map<string, Promise<any[]>>();
   private databaseByProjectId = new Map<string, Promise<any[]>>();
 
   constructor(private readonly source: GameDataProvider) {
@@ -103,6 +114,10 @@ class CachedGameDataProvider implements GameDataProvider {
   getMedia(mediaId: string): Promise<any> {
     const key = String(mediaId);
     return this.getOrCreate(this.mediaById, key, () => this.source.getMedia(mediaId));
+  }
+
+  getMediaGroup(mediaId: string): Promise<any[]> {
+    return this.getOrCreate(this.mediaGroupById, mediaId, () => this.source.getMediaGroup?.(mediaId) ?? Promise.resolve([]));
   }
 
   getDatabase(projectId?: string): Promise<any[]> {

@@ -135,6 +135,7 @@ const playLocalPlayerAttackAnimation = (
     playActionBattleVisual(options.visual, {
       moment: "attack",
       entity: player,
+      animations: options.animations,
     });
   });
 };

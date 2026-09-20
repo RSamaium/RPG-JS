@@ -3,7 +3,10 @@ import { Presets } from "@rpgjs/client";
 import { assetsUrl } from "./constants";
 import { LPCSpritesheetPreset } from "./spritesheets/lpc";
 import { CharacterSpritesheet } from "./spritesheets/character";
+import { Animation, Direction } from "./spritesheets/types";
 import { getGameDataProvider } from "./data-provider";
+import { Assets } from "pixi.js";
+import { loadedCharacterHeight } from "./character-proportions";
 
 export const STUDIO_DEFAULT_CHARACTER_DISPLAY_SCALE = 0.7;
 export const STUDIO_DEFAULT_ATTACK_ANIMATION_DURATION_MS = 350;
@@ -94,6 +97,35 @@ export const createSpriteSheetObject = async (
   switch (media.type) {
     case "character":
     case "spritesheet":
+      if (media.metadata?.generationMode === "idle") {
+        const directions = Array.isArray(media.metadata.idleDirections)
+          ? media.metadata.idleDirections
+          : [Direction.Down, Direction.Left, Direction.Right, Direction.Up];
+        const columns = media.metadata.columns ?? 2;
+        const rows = media.metadata.rows ?? 2;
+        const width = media.width ?? media.metadata.width ?? 1024;
+        const height = media.height ?? media.metadata.height ?? 768;
+        const cellSize = Math.max(width / columns, height / rows);
+        const stand = {
+          animations: ({ direction }: { direction: Direction }) => {
+            const index = Math.max(0, directions.indexOf(direction));
+            return [[{ time: 0, frameX: index % columns, frameY: Math.floor(index / columns) }]];
+          },
+        };
+        return {
+          id,
+          image: url,
+          framesWidth: columns,
+          framesHeight: rows,
+          scale: [1, 1],
+          displayScale: (128 / cellSize) *
+            (typeof media.metadata.scale === "number" ? media.metadata.scale : 1),
+          textures: {
+            [Animation.Stand]: stand,
+            [Animation.Walk]: stand,
+          },
+        };
+      }
       if (media.metadata?.lpc) {
         const scale =
           typeof media.metadata?.scale === "number"
@@ -222,6 +254,83 @@ export const createSpriteSheetObject = async (
   }
 };
 
+export const attachCharacterAnimations = async (
+  spritesheet: any,
+  idleMedia: any,
+  animations: any[],
+): Promise<any> => {
+  if (idleMedia.metadata?.generationMode !== "idle") return spritesheet;
+  const textures = { ...spritesheet.textures };
+  for (const media of animations) {
+    const name = media.metadata?.name?.trim()?.toLowerCase();
+    if (!name || !media.fileName || media.metadata?.groupId !== (idleMedia._id ?? idleMedia.id)) continue;
+    const animation = name === "walk" ? Animation.Walk : name === "attack" ? Animation.Attack : name;
+    const sheet = await createSpriteSheetObject(media);
+    const texture = sheet?.textures?.[animation] ?? sheet?.textures?.[Animation.Walk];
+    if (!texture) continue;
+    const idleScale = typeof idleMedia.metadata.scale === "number" ? idleMedia.metadata.scale : 1;
+    const animationScale = typeof media.metadata.scale === "number" ? media.metadata.scale : idleScale;
+    textures[animation] = {
+      ...texture,
+      image: sheet.image,
+      framesWidth: sheet.framesWidth,
+      framesHeight: sheet.framesHeight,
+      scale: [animationScale / idleScale, animationScale / idleScale],
+    };
+  }
+  return { ...spritesheet, textures };
+};
+
+/** Resolve linked animations and await their images before exposing a sprite to the client. */
+export const prepareSpriteSheetObject = async (media: any, id?: string): Promise<any> => {
+  let spritesheet = await createSpriteSheetObject(media, id);
+  if (!spritesheet) return null;
+  let parentSheet: any;
+  let parentMedia: any;
+  if (media.type === "spritesheet" && media.metadata?.groupId && media.metadata?.generationMode !== "idle") {
+    parentMedia = await getGameDataProvider().getMedia(media.metadata.groupId);
+    if (parentMedia?.metadata?.generationMode === "idle") {
+      parentSheet = await createSpriteSheetObject(parentMedia);
+    }
+  }
+  if (media.metadata?.generationMode === "idle") {
+    let animations: any[] = [];
+    try {
+      animations = await getGameDataProvider().getMediaGroup?.(media._id ?? media.id ?? id) ?? [];
+    } catch (error) {
+      console.warn(`Could not load animations for character ${id}:`, error);
+    }
+    spritesheet = await attachCharacterAnimations(spritesheet, media, animations);
+  }
+  const images = new Set<string>();
+  if (parentSheet?.image) images.add(parentSheet.image);
+  if (spritesheet.image) images.add(spritesheet.image);
+  for (const texture of Object.values(spritesheet.textures ?? {}) as Array<{ image?: string }>) {
+    if (texture.image) images.add(texture.image);
+  }
+  await Promise.all([...images].map((image) => Assets.load(image)));
+  if (parentSheet) {
+    const idleHeight = loadedCharacterHeight(parentSheet.image, parentSheet.framesWidth, parentSheet.framesHeight);
+    const animationHeight = loadedCharacterHeight(spritesheet.image, spritesheet.framesWidth, spritesheet.framesHeight);
+    const baseScale = parentMedia.metadata.scale ?? 1;
+    const proportion = idleHeight && animationHeight
+      ? idleHeight / animationHeight
+      : (media.metadata.scale ?? baseScale) / baseScale;
+    spritesheet.displayScale = parentSheet.displayScale * proportion;
+  }
+  if (media.metadata?.generationMode === "idle") {
+    const idleHeight = loadedCharacterHeight(spritesheet.image, spritesheet.framesWidth, spritesheet.framesHeight);
+    if (idleHeight) {
+      for (const texture of Object.values(spritesheet.textures) as Array<{ image?: string; framesWidth: number; framesHeight: number; scale?: number[] }>) {
+        if (!texture.image) continue;
+        const animationHeight = loadedCharacterHeight(texture.image, texture.framesWidth, texture.framesHeight);
+        if (animationHeight) texture.scale = [idleHeight / animationHeight, idleHeight / animationHeight];
+      }
+    }
+  }
+  return spritesheet;
+};
+
 /**
  * Resolves spritesheet by fetching media data from the API.
  */
@@ -234,7 +343,7 @@ export const resolveSpritesheet = async (id: string): Promise<any> => {
     try {
       const media = await getGameDataProvider().getMedia(normalizedId);
       if (media && !media.__placeholder) {
-        return await createSpriteSheetObject(media, normalizedId);
+        return await prepareSpriteSheetObject(media, normalizedId);
       }
     } catch {
       // File-name graphics can be direct asset references rather than media ids.
@@ -249,7 +358,7 @@ export const resolveSpritesheet = async (id: string): Promise<any> => {
           frameHeight: 4
         }
       };
-      return await createSpriteSheetObject(media, normalizedId);
+      return await prepareSpriteSheetObject(media, normalizedId);
     }
 
     return null;
