@@ -5,12 +5,23 @@
 ### Patch Changes
 
 - f496a5a: Build hole and water collision borders from the final painted surface instead of every brush segment. Apply paint and erase operations in order, remove internal overlapping edges, simplify the resulting contours, and clip bridge openings precisely. This reduces collision bodies and loading work while keeping erased paths and islands walkable in standalone games and authoritative multiplayer maps.
+- Respect enemy attack phase and cooldown overrides, keep attack facing stable,
+  preserve remote locomotion, and fit complete visual cycles to authoritative
+  combat timings. Expose per-pattern enemy timing overrides in Studio.
+- 01860fa: Calibrate generated character animations per direction against idle, with a fixed visible ground anchor and scale across each timeline. Apply the same correction to separately played linked attacks while preserving the character's global scale and image preloading.
 - 8df5fee: Derive liquid contact colors from opaque pixels of the material's atlas region, with explicit fill-color fallback and no default blue or grey-white foam. Share palettes across Canvas and CPU renderers and honor border/foam settings.
 
   Add opt-in static-element `submersion: { depth: 0.2 }`, preserved in direct loads and streamed chunks. Tint the lower alpha silhouette only where it intersects the actual liquid surface, including fill levels and erasures, after optional ground-shadow extraction. Cache palettes, liquid masks and composed element pixels by terrain revision without changing collisions or server authority.
 
+- Updated dependencies [d88267a]
+- Updated dependencies
 - Updated dependencies [8df5fee]
+  - @rpgjs/common@5.0.0-rc.5
+  - @rpgjs/server@5.0.0-rc.6
+  - @rpgjs/client@5.0.0-rc.6
+  - @rpgjs/action-battle@5.0.0-rc.6
   - @rpgjs/render-map2d@5.0.0-rc.5
+  - @rpgjs/vite@5.0.0-rc.6
 
 ## 5.0.0-rc.7
 

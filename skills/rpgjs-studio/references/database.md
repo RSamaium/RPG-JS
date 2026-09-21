@@ -81,6 +81,11 @@ public game database, project hero, and export. Leave `faceset` and individual
 only that entry. Editing endpoints keep the explicit values rather than writing
 the inherited ones back to the record.
 
+`GET /api/game/database/all?projectId=<id>` resolves these appearances using a
+shared media lookup per project. Linked media (`$link` / `$extends`) retain
+their inherited metadata; media from another project do not supply defaults.
+The inherited values are returned without being saved into the database records.
+
 Legacy Actors without `classId` remain readable and keep their Actor-level
 skills until they are edited and assigned a Class.
 
@@ -272,3 +277,10 @@ Supported fields from `variableSchema`:
 # Semantic search
 
 `GET /api/database/:type` accepts `query` and optional `minScore` (`0..1`, default `0.40`). Results are restricted to the requested database type and the API key project.
+
+Enemy AI timing: `behavior.attackProfiles` (also legacy `aiBehavior.attackProfiles`)
+accepts `melee`, `combo`, `charged`, `zone`, `dashAttack` objects with optional
+`startupMs`, `activeMs`, `recoveryMs`, `cooldownMs` in milliseconds.
+Use nonnegative finite numbers, with `activeMs >= 1`; omit fields to inherit.
+Global `attackCooldown` still applies. Timings drive server phases and the
+complete client attack cycle; do not special-case enemy names or sprite sizes.

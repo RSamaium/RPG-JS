@@ -7,6 +7,10 @@ description: Use the RPGJS Studio HTTP API to create or manage a 2D RPG game. Tr
 
 Use this skill to execute content-management tasks against an RPGJS Studio instance.
 
+Public game database reads resolve actor and enemy appearances in batches per
+project, preserving media links and explicit overrides. See
+[references/database.md](references/database.md) for the response behavior.
+
 ## Image and cinematic generation
 
 For a new character, use `type: "spritesheet"` with `metadata.generationMode: "idle"` to create a transparent 1024×768 image of four static poses (down, left, right, up) in a 2×2 grid for 5 credits. Studio then opens `/media/apps/character-editor/:id`; create named animations there through spritesheet.ai as separate media associated with the base character, using the idle sheet as the reference image. Existing spritesheet animation requests remain 15 credits. See [references/media.md](references/media.md).
@@ -248,3 +252,7 @@ curl -sS -X POST "$BASE_URL/..." \
 - Event workflow blocks can use `set_hitbox` to call `target.setHitbox(width, height)` on `$player`, `$this`, or a map event id. `width` and `height` are positive RPGJS-pixel dimensions and are not scaled by the target graphic scale.
 - Event workflow blocks can use `camera_follow` to call `player.cameraFollow(target, { smoothMove })`. The target is resolved from `eventId` with `$player`, `$this`, or a map event id. `smoothMove` defaults to `true`; optional `time` and `ease` create the advanced smooth transition object supported by RPGJS. The `ease` field is a dropdown enum of common easing names such as `linear`, `easeInQuad`, `easeOutQuad`, and `easeInOutQuad`.
 - Event workflow variable writes must use the public `set_variable` block. `change_variable` is legacy runtime compatibility only and must not be generated for new payloads. `set_variable` supports `valueSource` values `constant`, `variable`, `random`, `player_x`, `player_y`, `player_direction`, `map_id`, `gold`, `player_id`, `player_name`, `level`, `hp`, and `sp`.
+
+For enemy combat pacing, use the per-pattern `behavior.attackProfiles` timing
+overrides documented in `references/database.md`; retain omitted values to
+inherit the engine defaults.

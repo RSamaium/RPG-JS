@@ -1640,3 +1640,43 @@ const Warhammer = {
   _type: "weapon" as const
 };
 ```
+
+### Enemy attack cadence
+
+Enemy attacks separate preparation (`startupMs`), the active phase
+(`activeMs`) and recovery (`recoveryMs`). The enemy stops moving and keeps
+its attack direction during these phases. The telegraph runs during preparation;
+the attack animation then plays one complete cycle over active + recovery time.
+The client receives this duration as `animationDefaults.durationMs`; damage
+and action locks remain authoritative on the server, in both RPG and MMORPG.
+
+A new attack waits for the global `attackCooldown`, the selected profile's
+`cooldownMs`, and its complete phase duration. Combo strikes wait for their
+profile's duration and cooldown before continuing; the global cooldown separates
+attack sequences. Profile overrides allow faster or slower enemies without
+depending on sprite names or image dimensions.
+
+Default timings, in milliseconds:
+
+| Pattern | Preparation | Active | Recovery | Minimum interval |
+| --- | ---: | ---: | ---: | ---: |
+| melee | 250 | 120 | 350 | 1100 |
+| combo | 140 | 80 | 200 | 500 |
+| charged | 800 | 140 | 500 | 1900 |
+| zone | 450 | 180 | 420 | 1500 |
+| dashAttack | 250 | 120 | 350 | 1200 |
+
+Override these values through `BattleAi` options, for example
+`attackProfiles: { melee: { startupMs: 180, recoveryMs: 250, cooldownMs: 800 } }`.
+Without a client animation mapping, combat timings and damage still work.
+Remote characters use the synchronized walk/stand state; local players retain
+input-driven locomotion while temporary attack animations finish.
+
+When `attackPatterns` is explicitly configured, archetype decisions choose only
+from that list. If an archetype suggests no permitted pattern, the configured
+list is retained. This prevents generic aggressive behavior from introducing a
+combo or dash that the enemy designer disabled.
+
+The elapsed-time playback correction also requires the companion CanvasEngine
+sprite scheduler fix (raw and reset-envelope ticks). Publish that patch and
+update the consumer's CanvasEngine lockfile alongside these RPGJS changes.

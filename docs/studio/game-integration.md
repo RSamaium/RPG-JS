@@ -587,3 +587,30 @@ Palettes and liquid masks are cached, and an element's composed pixels are reuse
 until its artwork, placement, depth or terrain revision changes. Stream updates
 invalidate affected rendered state; discarded elements release their cached pixels.
 No sprite-pixel reads or contour reconstruction run in the animation tick.
+
+### Enemy attack timing overrides
+
+An enemy's `behavior.attackProfiles` can override `melee`, `combo`,
+`charged`, `zone`, and `dashAttack`. Each profile accepts millisecond values:
+
+```json
+{
+  "behavior": {
+    "attackCooldown": 900,
+    "attackProfiles": {
+      "melee": {
+        "startupMs": 250,
+        "activeMs": 120,
+        "recoveryMs": 350,
+        "cooldownMs": 1100
+      }
+    }
+  }
+}
+```
+
+Leave fields absent to inherit runtime defaults. Preparation, recovery and
+cooldown accept zero; active duration must be at least 1 ms. Invalid values are
+ignored. The global attack cooldown also applies. The legacy `aiBehavior`
+object supports the same fields. Studio exposes these overrides in the enemy AI
+settings; the runtime applies them to both standalone RPG and MMORPG enemies.

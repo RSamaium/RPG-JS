@@ -1,5 +1,14 @@
 # @rpgjs/server
 
+## 5.0.0-rc.6
+
+### Patch Changes
+
+- d88267a: Keep combat recoil authoritative across RPG and MMORPG runtimes. Prevent velocity accumulation, premature cancellation by idle or locked input, and replay of pre-impact positions. Synchronize the transient recoil phase, smooth its presentation, and release completed attack locks without restarting locomotion during an impact.
+- Updated dependencies [d88267a]
+  - @rpgjs/common@5.0.0-rc.5
+  - @rpgjs/testing@5.0.0-rc.6
+
 ## 5.0.0-rc.5
 
 ### Patch Changes

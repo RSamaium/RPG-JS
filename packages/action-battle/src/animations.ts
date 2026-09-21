@@ -8,6 +8,7 @@ import type {
 export const DEFAULT_DIE_ANIMATION_DELAY_MS = 500;
 
 export interface ResolvedActionBattleAnimation {
+  durationMs?: number;
   animationName: string;
   graphic?: string | string[];
   repeat: number;
@@ -16,6 +17,8 @@ export interface ResolvedActionBattleAnimation {
 }
 
 export interface ActionBattleAnimationDefaults {
+  /** Duration of one visual cycle, matched to the authoritative action phase. */
+  durationMs?: number;
   animationName?: string;
   repeat?: number;
 }
@@ -33,6 +36,15 @@ const playResolvedAnimation = (
       );
     } else {
       entity.setGraphicAnimation(animation.animationName, animation.repeat);
+    }
+    return;
+  }
+
+  if (typeof entity.setAnimation === "function" && animation.durationMs !== undefined) {
+    if (animation.graphic !== undefined) {
+      entity.setAnimation(animation.animationName, animation.graphic, animation.repeat, { durationMs: animation.durationMs });
+    } else {
+      entity.setAnimation(animation.animationName, animation.repeat, { durationMs: animation.durationMs });
     }
     return;
   }
@@ -129,6 +141,7 @@ export function resolveActionBattleAnimation(
   if (typeof result === "string") {
     return {
       animationName: result,
+      ...(defaults.durationMs !== undefined ? { durationMs: defaults.durationMs } : {}),
       repeat: defaultRepeat,
       waitEnd: false,
     };
@@ -137,6 +150,7 @@ export function resolveActionBattleAnimation(
   const animationName = result.animationName ?? defaultAnimationName;
   return {
     animationName,
+    ...(defaults.durationMs !== undefined ? { durationMs: defaults.durationMs } : {}),
     graphic: result.graphic,
     repeat: result.repeat ?? defaultRepeat,
     waitEnd: result.waitEnd ?? false,

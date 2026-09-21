@@ -6,9 +6,10 @@ export function resolveCharacterAnimation(
   controlsEnabled: boolean,
   animationFixed: boolean,
   temporaryName?: string,
+  locallyControlled = true,
 ): string {
   if (temporaryName) return temporaryName;
   if (name !== 'stand' && name !== 'walk') return name;
-  if (animationFixed) return name;
+  if (animationFixed || !locallyControlled) return name;
   return moving || (heldDirection && controlsEnabled) ? 'walk' : 'stand';
 }

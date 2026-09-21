@@ -425,3 +425,14 @@ tick(({ deltaTime }) => {
   }
 });
 ```
+
+### Fit a temporary client animation to a duration
+
+Use `sprite.setAnimation('attack', 1, { durationMs: 620 })` to play all poses
+of one cycle over 620 ms. The alternate-graphic overload also accepts this option:
+`sprite.setAnimation('attack', 'enemy-attack', 1, { durationMs: 620 })`.
+Without `durationMs`, the spritesheet's original frame timing is preserved.
+This changes client presentation only; server gameplay must control its own
+timing. Action Battle supplies this option from the enemy's active + recovery
+phase duration, through the serializable visual context's
+`animationDefaults.durationMs`.

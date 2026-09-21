@@ -1,7 +1,7 @@
 {
   "name": "@rpgjs/chat",
   "repository": "github:RSamaium/RPG-JS",
-  "version": "5.0.0-rc.5",
+  "version": "5.0.0-rc.6",
   "description": "Official renderer-neutral chat module for RPGJS",
   "main": "dist/client/index.js",
   "types": "dist/client/client-index.d.ts",

@@ -138,3 +138,12 @@ describe("RpgClientObject animations", () => {
     expect(object.animationName()).toBe("stand");
   });
 });
+
+test("retains cycle duration until the complete animation finishes", async () => {
+  const object = createObject();
+  const done = object.setAnimation("attack", 1, { durationMs: 620 });
+  expect(object.animationPlayback()).toEqual({ name: "attack", direction: "left", durationMs: 620 });
+  object.animationCurrentIndex.set(1);
+  await done;
+  expect(object.animationPlayback()).toBeNull();
+});

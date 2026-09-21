@@ -6,6 +6,8 @@ import { RpgClientEngine } from "../RpgClientEngine";
 type Frame = { x: number; y: number; ts: number };
 
 type AnimationRestoreOptions = {
+  /** Optional duration in milliseconds of each animation cycle. */
+  durationMs?: number;
   restoreAnimationName?: string;
   restoreGraphics?: any[];
   timeoutMs?: number;
@@ -109,7 +111,7 @@ export abstract class RpgClientObject extends RpgCommonPlayer {
   animationCurrentIndex = signal(0);
   animationIsPlaying = signal(false);
   /** @internal Local one-shot playback is independent of synchronized locomotion. */
-  animationPlayback = signal<{ name: string; direction?: string } | null>(null);
+  animationPlayback = signal<{ name: string; direction?: string; durationMs?: number } | null>(null);
   _param = signal({});
   frames: Frame[] = [];
   graphicsSignals = signal<any[]>([]);
@@ -365,7 +367,7 @@ export abstract class RpgClientObject extends RpgCommonPlayer {
    *
    * @param animationName - Name of the animation to play
    * @param nbTimes - Number of times to repeat the animation (default: Infinity for continuous)
-   * @param options - Restore and timeout options
+   * @param options - Restore, timeout and optional per-cycle durationMs options
    * @returns A promise resolved when a finite animation finishes, is interrupted, or times out
    *
    * @example
@@ -388,7 +390,7 @@ export abstract class RpgClientObject extends RpgCommonPlayer {
    * @param animationName - Name of the animation to play
    * @param graphic - The graphic(s) to temporarily use during the animation
    * @param nbTimes - Number of times to repeat the animation (default: Infinity for continuous)
-   * @param options - Restore and timeout options
+   * @param options - Restore, timeout and optional per-cycle durationMs options
    * @returns A promise resolved when a finite animation finishes, is interrupted, or times out
    *
    * @example
@@ -450,6 +452,8 @@ export abstract class RpgClientObject extends RpgCommonPlayer {
     };
     this.animationPlayback.set({
       name: animationName,
+      ...(typeof restoreOptions?.durationMs === 'number' && Number.isFinite(restoreOptions.durationMs) && restoreOptions.durationMs > 0
+        ? { durationMs: restoreOptions.durationMs } : {}),
       ...(finalNbTimes !== Infinity ? { direction: this.direction() } : {}),
     });
     this.animationCurrentIndex.set(0);
@@ -477,7 +481,7 @@ export abstract class RpgClientObject extends RpgCommonPlayer {
         if (this.animationIsPlaying()) {
           this.finishTemporaryAnimation();
         }
-      }, restoreOptions?.timeoutMs ?? Math.max(1000, finalNbTimes * 1000));
+      }, restoreOptions?.timeoutMs ?? Math.max(1000, finalNbTimes * (restoreOptions?.durationMs ? restoreOptions.durationMs + 250 : 1000)));
     }
 
     this.animationName.set(animationName);

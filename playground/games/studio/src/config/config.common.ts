@@ -1,8 +1,8 @@
 export const studio = {
-  projectId: 'c8672456-90ea-4a85-af68-946af146df3b',
-  startMapId: 'c0d8a05c-2531-49fe-afc7-d481c23726bb',
-  apiUrl: 'http://localhost:5173/api',
-  assetsUrl: 'http://localhost:5173/api/game/assets',
+  projectId: 'd8d6c955-3d7f-421d-9ffc-edf99a940fbc',
+  startMapId: '6a226b8b-5d26-4c33-b0bb-7412d8033831',
+  // apiUrl: 'http://localhost:5173/api',
+  // assetsUrl: 'http://localhost:5173/api/game/assets',
   debugCollisions: false,
 };
 

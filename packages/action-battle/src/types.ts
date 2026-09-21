@@ -359,6 +359,8 @@ export interface ActionBattleVisualContext {
   /** Serializable target-side reaction audio overrides. */
   targetAudio?: ActionBattleAudioOptions;
   animationDefaults?: {
+    /** Visual cycle duration in milliseconds, supplied by the attack profile. */
+    durationMs?: number;
     animationName?: string;
     repeat?: number;
   };

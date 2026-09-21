@@ -94,6 +94,7 @@
   import InteractionComponents from "./interaction-components.ce";
   import { RpgGui } from "../Gui/Gui";
   import { getCanMoveValue } from "../utils/readPropValue";
+  import { fitAnimationTimeline } from "./animation-timing";
   import { RecoilSmoothing } from "./recoil-smoothing";
   import { resolveCharacterAnimation } from "./character-animation";
   import {
@@ -700,14 +701,27 @@
   const sheet = (graphicObject) => {
     const playback = sprite.animationPlayback?.();
     const playing = playback?.name ?? realAnimationName();
+    const definition = {
+      ...graphicObject,
+      textures: Object.fromEntries(Object.entries(graphicObject.textures ?? {}).map(([name, texture]) => [
+        name, {
+          ...texture,
+          animations: params => {
+            const groups = typeof texture.animations === 'function' ? texture.animations(params) : texture.animations;
+            return params.durationMs && groups ? groups.map(frames => fitAnimationTimeline(frames, params.durationMs)) : groups;
+          },
+        },
+      ])),
+    };
     return {
-      definition: graphicObject,
+      definition,
       playing,
       params: {
-        direction: playback?.direction ?? direction()
+        direction: playback?.direction ?? direction(),
+        durationMs: playback?.durationMs
       },
       onFinish() {
-        if (playback && sprite.animationPlayback?.() === playback && graphicsSignals().includes(graphicObject)) {
+        if (sprite.animationPlayback?.() && graphicsSignals().includes(graphicObject)) {
           animationCurrentIndex.update(index => index + 1)
         }
       }
@@ -1234,7 +1248,7 @@
     sprite._animationFixed.observable, sprite._canMove.observable, sprite.knockbackActive.observable,
   ]).subscribe(([curr, isMoving, playback]) => {
     realAnimationName.set(resolveCharacterAnimation(
-      curr, isMoving, hasHeldDirection(), canControls(), sprite.animationFixed || sprite.knockbackActive(), playback?.name,
+      curr, isMoving, hasHeldDirection(), canControls(), sprite.animationFixed || sprite.knockbackActive(), playback?.name, isCurrentPlayer(),
     ));
   });
 

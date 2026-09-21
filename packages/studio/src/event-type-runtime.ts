@@ -264,6 +264,7 @@ const battleAiBehaviorOptionKeys = [
   "moveToCooldown",
   "retreatCooldown",
   "attackPatterns",
+  "attackProfiles",
   "patrolWaypoints",
   "groupBehavior",
 ] as const;
@@ -346,6 +347,19 @@ export const resolveEnemyBattleAiOptions = (
   }
 
   for (const source of [enemy, aiBehavior, legacyAiBehavior]) {
+    if (source?.attackProfiles && typeof source.attackProfiles === "object") {
+      for (const pattern of ["melee", "combo", "charged", "zone", "dashAttack"] as const) {
+        const profile = source.attackProfiles[pattern];
+        if (!profile || typeof profile !== "object") continue;
+        for (const key of ["startupMs", "activeMs", "recoveryMs", "cooldownMs"] as const) {
+          const value = toNumber(profile[key]);
+          if (value === undefined || !Number.isFinite(value) || value < (key === "activeMs" ? 1 : 0)) continue;
+          options.attackProfiles ??= {};
+          options.attackProfiles[pattern] ??= {};
+          options.attackProfiles[pattern]![key] = value;
+        }
+      }
+    }
     pickNumericOption(source, "attackCooldown", options);
     pickNumericOption(source, "visionRange", options);
     pickNumericOption(source, "attackRange", options);

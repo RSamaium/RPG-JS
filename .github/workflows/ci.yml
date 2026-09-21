@@ -19,6 +19,13 @@ on:
 
 jobs:
   tests:
+    # `changesets/action` creates this commit after a successful test run. Its
+    # follow-up workflow only has to build and publish the already validated
+    # release, so avoid running the complete test suite a second time.
+    if: >-
+      github.event_name != 'push' ||
+      github.ref != 'refs/heads/v5' ||
+      !startsWith(github.event.head_commit.message, 'chore: version packages')
     runs-on: ubuntu-22.04
     strategy:
       matrix:
@@ -51,7 +58,13 @@ jobs:
 
   build_and_publish:
       needs: tests
-      if: github.ref == 'refs/heads/v5'
+      # A Changesets version commit deliberately skips `tests` above. Allow
+      # publication after either a successful regular test job or that
+      # version-only follow-up run.
+      if: >-
+        always() &&
+        github.ref == 'refs/heads/v5' &&
+        (needs.tests.result == 'success' || needs.tests.result == 'skipped')
       runs-on: ubuntu-latest
       outputs:
         published: ${{ steps.changesets.outputs.published }}

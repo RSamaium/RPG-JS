@@ -529,3 +529,15 @@ describe("Studio event runtime", () => {
     expect(hitboxCalls).toEqual([[32, 32]]);
   });
 });
+
+test('maps per-enemy attack timings and ignores empty or invalid overrides', () => {
+  const options = resolveEnemyBattleAiOptions({ behavior: {
+    attackCooldown: 900,
+    attackProfiles: {
+      melee: { startupMs: 0, activeMs: 120, recoveryMs: '400', cooldownMs: null },
+      charged: { startupMs: -10, activeMs: 0, recoveryMs: Infinity },
+    },
+  } });
+  expect(options.attackCooldown).toBe(900);
+  expect(options.attackProfiles).toEqual({ melee: { startupMs: 0, activeMs: 120, recoveryMs: 400 } });
+});

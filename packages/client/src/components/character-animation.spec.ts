@@ -18,3 +18,8 @@ describe('character animation reconciliation', () => {
     expect(resolveCharacterAnimation('walk', false, true, false, false)).toBe('stand');
   });
 });
+
+test('remote locomotion follows the authoritative animation', () => {
+  expect(resolveCharacterAnimation('walk', false, false, false, false, undefined, false)).toBe('walk');
+  expect(resolveCharacterAnimation('stand', true, false, false, false, undefined, false)).toBe('stand');
+});

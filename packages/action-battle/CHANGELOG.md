@@ -1,5 +1,19 @@
 # @rpgjs/action-battle
 
+## 5.0.0-rc.6
+
+### Patch Changes
+
+- Respect enemy attack phase and cooldown overrides, keep attack facing stable,
+  preserve remote locomotion, and fit complete visual cycles to authoritative
+  combat timings. Expose per-pattern enemy timing overrides in Studio.
+- Updated dependencies [d88267a]
+- Updated dependencies
+  - @rpgjs/common@5.0.0-rc.5
+  - @rpgjs/server@5.0.0-rc.6
+  - @rpgjs/client@5.0.0-rc.6
+  - @rpgjs/vite@5.0.0-rc.6
+
 ## 5.0.0-rc.5
 
 ### Patch Changes

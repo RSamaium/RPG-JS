@@ -599,6 +599,8 @@ export class BattleAi {
   private event: RpgEvent;
   private target: ActionBattleEntity | null = null;
   private lastAttackTime: number = 0;
+  private nextAttackAt = 0;
+  private attackDirection?: { x: number; y: number };
   private updateInterval?: any;
 
   /**
@@ -630,7 +632,15 @@ export class BattleAi {
   ): void {
     this.isMovingToTarget = false;
     this.event.stopMoveTo();
-    this.lockActionUntil(Date.now() + profile.totalDurationMs, "attack", {
+    const now = Date.now();
+    const dx = this.target ? this.target.x() - this.event.x() : 0;
+    const dy = this.target ? this.target.y() - this.event.y() : 0;
+    const distance = Math.hypot(dx, dy);
+    this.attackDirection = distance ? { x: dx / distance, y: dy / distance } : undefined;
+    this.nextAttackAt = Math.max(this.nextAttackAt, now + Math.max(
+      profile.totalDurationMs, profile.cooldownMs, this.attackCooldown,
+    ));
+    this.lockActionUntil(now + profile.totalDurationMs, "attack", {
       pattern,
       totalDurationMs: profile.totalDurationMs,
       startupMs: profile.startupMs,
@@ -663,6 +673,7 @@ export class BattleAi {
   // Attack configuration
   private attackSkill: any | null; // Skill to use for attacks
   private attackPatterns: AttackPattern[];
+  private configuredAttackPatterns?: AttackPattern[];
   private attackProfiles: NormalizedActionBattleEnemyAttackProfileMap;
   private animations?: ActionBattleAnimationOptions;
   private lastAttackPattern: AttackPattern | null = null;
@@ -802,6 +813,7 @@ export class BattleAi {
     };
 
     // Initialize attack patterns
+    this.configuredAttackPatterns = options.attackPatterns?.length ? [...options.attackPatterns] : undefined;
     this.attackPatterns = options.attackPatterns || [
       AttackPattern.Melee,
       AttackPattern.Combo,
@@ -1153,8 +1165,7 @@ export class BattleAi {
       return;
     }
 
-    if (currentTime < this.actionLockedUntil) {
-      if (this.target) this.faceTarget();
+    if (currentTime < this.actionLockedUntil || this.event.knockbackActive?.()) {
       if (currentTime - this.lastActionLockTraceTime > 250) {
         this.lastActionLockTraceTime = currentTime;
         this.traceLog("state", "waiting action recovery", {
@@ -1678,7 +1689,8 @@ export class BattleAi {
       this.isMovingToTarget = false;
       this.event.stopMoveTo();
     }
-    this.faceTarget();
+    const map = this.event.getCurrentMap?.();
+    if (!map?.isMoving?.(this.event.id)) this.faceTarget();
 
     const strafeCooldown = Math.max(700, this.moveToCooldown);
     if (
@@ -1916,8 +1928,9 @@ export class BattleAi {
 
     if (dist === 0) return [];
 
-    const dirX = dx / dist;
-    const dirY = dy / dist;
+    const lockedDirection = Date.now() < this.actionLockedUntil ? this.attackDirection : undefined;
+    const dirX = lockedDirection?.x ?? dx / dist;
+    const dirY = lockedDirection?.y ?? dy / dist;
 
     return [{
       x: eventX + dirX * 30,
@@ -2117,12 +2130,12 @@ export class BattleAi {
 
     if (this.comboCount < this.comboMax) {
       this.schedule(() => {
-        if (this.target && this.state === AiState.Combat) {
+        if (this.target && this.state === AiState.Combat && !this.event.knockbackActive?.()) {
           this.performComboAttack();
         } else {
           this.comboCount = 0;
         }
-      }, 300);
+      }, Math.max(profile.totalDurationMs, profile.cooldownMs));
     } else {
       this.comboCount = 0;
     }
@@ -2139,7 +2152,7 @@ export class BattleAi {
     this.faceTarget({ force: true });
     this.lockForAttack(profile, AttackPattern.Charged);
     this.telegraphAttack(profile, AttackPattern.Charged);
-    this.playAttackVisual(profile, AttackPattern.Charged, { repeat: 2 });
+    this.playAttackVisual(profile, AttackPattern.Charged);
 
     this.scheduleAttackStartup(profile, () => {
       if (!this.target || this.state !== AiState.Combat) {
@@ -2220,11 +2233,11 @@ export class BattleAi {
 
     this.scheduleAttackStartup(profile, () => {
       if (!this.target || this.state !== AiState.Combat) return;
-      safeActionBattleDash(this.event, { x: dirX, y: dirY }, 10, 200);
+      safeActionBattleDash(this.event, { x: dirX, y: dirY }, 10, profile.activeMs);
       this.schedule(() => {
         if (!this.target || this.state !== AiState.Combat) return;
         this.executeMeleeAttack(profile, AttackPattern.DashAttack);
-      }, 200);
+      }, profile.activeMs);
     });
   }
 
@@ -2264,15 +2277,18 @@ export class BattleAi {
           : "attack"
       );
 
-    withActionBattleAnimationUnlocked(this.event, () => {
-      emitActionBattleClientVisual({
-        moment,
-        entity: this.event,
-        target: targetOverride ?? this.target ?? undefined,
-        pattern,
-        skill: resolvedSkill,
-        animations: this.animations,
-        animationDefaults,
+    this.scheduleAttackStartup(profile, () => {
+      if (this.state !== AiState.Combat || this.event.knockbackActive?.()) return;
+      withActionBattleAnimationUnlocked(this.event, () => {
+        emitActionBattleClientVisual({
+          moment,
+          entity: this.event,
+          target: targetOverride ?? this.target ?? undefined,
+          pattern,
+          skill: resolvedSkill,
+          animations: this.animations,
+          animationDefaults: { ...animationDefaults, durationMs: profile.activeMs + profile.recoveryMs },
+        });
       });
     });
   }
@@ -2308,7 +2324,11 @@ export class BattleAi {
     profile: NormalizedActionBattleAttackProfile,
     callback: () => void
   ) {
-    return scheduleActionBattleStartup(profile, callback, (scheduled, delay) =>
+    const target = this.target;
+    return scheduleActionBattleStartup(profile, () => {
+      if (this.target !== target || !target || this.isTargetDefeated(target) || this.event.knockbackActive?.()) return;
+      callback();
+    }, (scheduled, delay) =>
       this.schedule(scheduled, delay)
     );
   }
@@ -2411,7 +2431,7 @@ export class BattleAi {
     if (this.enemyType === EnemyType.Defensive && Math.random() < 0.5) {
       this.debugLog('dodge', 'Counter-attack after dodge');
       this.schedule(() => {
-        if (this.target && this.state === AiState.Combat) {
+        if (this.target && this.state === AiState.Combat && !this.event.knockbackActive?.()) {
           this.selectAndPerformAttack();
         }
       }, 400);
@@ -2915,7 +2935,7 @@ export class BattleAi {
   }
 
   private isAttackReady(currentTime: number): boolean {
-    return currentTime - this.lastAttackTime >= this.attackCooldown;
+    return currentTime >= this.nextAttackAt && currentTime - this.lastAttackTime >= this.attackCooldown;
   }
 
   private canTarget(target: ActionBattleEntity): boolean {
@@ -3093,7 +3113,9 @@ export class BattleAi {
       this.moveToCooldown = decision.moveToCooldown;
     }
     if (decision.attackPatterns?.length) {
-      this.attackPatterns = decision.attackPatterns;
+      const allowed = this.configuredAttackPatterns;
+      const patterns = allowed ? decision.attackPatterns.filter(pattern => allowed.includes(pattern)) : decision.attackPatterns;
+      this.attackPatterns = patterns.length ? patterns : [...allowed!];
     }
     if (decision.mode) {
       this.behaviorMode = decision.mode;
@@ -3401,6 +3423,8 @@ export class BattleAi {
     };
   }
 
+  private lastMoveTargetSignature?: string;
+
   private requestMoveTo(target: any): boolean {
     const currentTime = Date.now();
     const resolvedTarget = this.resolveMoveTarget(target);
@@ -3411,6 +3435,8 @@ export class BattleAi {
       return false;
     }
 
+    if (resolvedTarget.signature === this.lastMoveTargetSignature &&
+      this.event.getCurrentMap?.()?.isMoving?.(this.event.id)) return false;
     if (currentTime - this.lastMoveToTime < this.moveToCooldown) {
       if (
         this.lastMoveToCooldownTraceSignature !== resolvedTarget.signature ||
@@ -3452,6 +3478,7 @@ export class BattleAi {
       hasMovementBody: hasBody,
     });
     this.event.moveTo(resolvedTarget.target as any);
+    this.lastMoveTargetSignature = resolvedTarget.signature;
     this.lastMoveToTime = currentTime;
     return true;
   }

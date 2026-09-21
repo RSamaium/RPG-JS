@@ -1,6 +1,6 @@
 import { MAXHP } from "@rpgjs/server";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { AiDebug, AttackPattern, BattleAi } from "./ai.server";
+import { AiDebug, AiState, AttackPattern, BattleAi } from "./ai.server";
 import {
   callAction,
   chase,
@@ -666,7 +666,10 @@ describe("BattleAi behavior tree", () => {
     });
 
     ai.onDetectInShape(player as any, {});
+    (ai as any).state = AiState.Combat;
     (ai as any).performDashAttack();
+    expect(clientVisual.mock.calls.some(([, data]) => data.moment === "attack")).toBe(false);
+    vi.advanceTimersByTime(250);
 
     expect(clientVisual).toHaveBeenCalledWith(
       ACTION_BATTLE_CLIENT_VISUAL_ID,
@@ -756,6 +759,7 @@ describe("BattleAi behavior tree", () => {
   });
 
   test("selects a learned ranged skill while keeping other learned skills", () => {
+    vi.useFakeTimers();
     const event = createEvent();
     const clientVisual = vi.fn();
     const melee = {
@@ -798,7 +802,9 @@ describe("BattleAi behavior tree", () => {
       kind: "skill",
       evaluation: { id: "fireball", mode: "projectile" },
     });
+    (ai as any).state = AiState.Combat;
     expect((ai as any).performPlannedSkill(selection.evaluation)).toBe(true);
+    vi.advanceTimersByTime(250);
     expect(clientVisual).toHaveBeenCalledWith(
       ACTION_BATTLE_CLIENT_VISUAL_ID,
       expect.objectContaining({
@@ -945,4 +951,114 @@ describe("BattleAi behavior tree", () => {
     expect(event.teleport).toHaveBeenCalledWith({ x: 130, y: 50 });
     ai.destroy();
   });
+});
+
+
+describe("generic enemy combat cadence", () => {
+  afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
+
+  test("respects profile recovery and cooldown even with a zero global cooldown", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1000);
+    const event = createEvent();
+    const ai = new BattleAi(event as any, { attackCooldown: 0, attackProfiles: {
+      melee: { startupMs: 200, activeMs: 100, recoveryMs: 400, cooldownMs: 1200 },
+    } });
+    (ai as any).lockForAttack((ai as any).getAttackProfile(AttackPattern.Melee), AttackPattern.Melee);
+    expect((ai as any).isAttackReady(1700)).toBe(false);
+    expect((ai as any).isAttackReady(2199)).toBe(false);
+    expect((ai as any).isAttackReady(2200)).toBe(true);
+    ai.destroy();
+  });
+
+  test("does not rotate or replan movement during attack recovery", () => {
+    vi.useFakeTimers();
+    const event = createEvent();
+    const ai = new BattleAi(event as any);
+    (ai as any).target = { hp: 10, x: () => 30, y: () => 30 };
+    (ai as any).actionLockedUntil = Date.now() + 1000;
+    const facing = vi.spyOn(ai as any, 'faceTarget');
+    (ai as any).updateAiBehavior();
+    expect(facing).not.toHaveBeenCalled();
+    expect(event.moveTo).not.toHaveBeenCalled();
+    ai.destroy();
+  });
+
+  test("keeps an existing chase instead of restarting its movement", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1000);
+    const event = createEvent();
+    event.getCurrentMap.mockReturnValue({ isMoving: () => true });
+    const ai = new BattleAi(event as any, { moveToCooldown: 0 });
+    const target = { id: 'target', x: () => 100, y: () => 100 };
+    (ai as any).requestMoveTo(target);
+    vi.setSystemTime(2000);
+    (ai as any).requestMoveTo(target);
+    expect(event.moveTo).toHaveBeenCalledTimes(1);
+    ai.destroy();
+  });
+});
+
+describe("enemy attack phase callbacks", () => {
+  afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
+
+  test("does not execute a prepared hit against a replaced target or during recoil", () => {
+    vi.useFakeTimers();
+    const event = { ...createEvent(), knockbackActive: vi.fn(() => false) };
+    const ai = new BattleAi(event as any);
+    vi.spyOn(ai as any, "updateAiBehavior").mockImplementation(() => {});
+    const target = { hp: 10 };
+    (ai as any).target = target;
+    const hit = vi.fn();
+    const profile = (ai as any).getAttackProfile(AttackPattern.Melee);
+    (ai as any).scheduleAttackStartup(profile, hit);
+    event.knockbackActive.mockReturnValue(true);
+    vi.advanceTimersByTime(profile.startupMs);
+    expect(hit).not.toHaveBeenCalled();
+    event.knockbackActive.mockReturnValue(false);
+    (ai as any).scheduleAttackStartup(profile, hit);
+    (ai as any).target = { hp: 10 };
+    vi.advanceTimersByTime(profile.startupMs);
+    expect(hit).not.toHaveBeenCalled();
+    ai.destroy();
+  });
+
+  test("waits for a custom combo profile before starting the next strike", () => {
+    vi.useFakeTimers();
+    const ai = new BattleAi(createEvent() as any, { attackProfiles: {
+      combo: { startupMs: 200, activeMs: 100, recoveryMs: 500, cooldownMs: 900 },
+    } });
+    (ai as any).target = { hp: 10, x: () => 20, y: () => 0 };
+    (ai as any).state = AiState.Combat;
+    vi.spyOn(ai as any, "updateAiBehavior").mockImplementation(() => {});
+    vi.spyOn(ai as any, "executeMeleeAttack").mockImplementation(() => {});
+    const visual = vi.spyOn(ai as any, "playAttackVisual").mockImplementation(() => {});
+    (ai as any).performComboAttack();
+    vi.advanceTimersByTime(899);
+    expect(visual).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(1);
+    expect(visual).toHaveBeenCalledTimes(2);
+    ai.destroy();
+  });
+});
+
+test("archetype decisions preserve configured enemy attack patterns", () => {
+  vi.useFakeTimers();
+  const ai = new BattleAi(createEvent() as any, { attackPatterns: [AttackPattern.Zone] });
+  (ai as any).applyAiDecision({ attackPatterns: [AttackPattern.Melee, AttackPattern.Combo] }, Date.now());
+  expect((ai as any).attackPatterns).toEqual([AttackPattern.Zone]);
+  ai.destroy();
+  vi.useRealTimers();
+});
+
+test("a prepared melee hit does not turn to follow a target moving behind it", () => {
+  vi.useFakeTimers();
+  const ai = new BattleAi(createEvent() as any);
+  const target = { hp: 10, x: vi.fn(() => 50), y: () => 0 };
+  (ai as any).target = target;
+  (ai as any).lockForAttack((ai as any).getAttackProfile(AttackPattern.Melee), AttackPattern.Melee);
+  target.x.mockReturnValue(-50);
+  expect((ai as any).resolveBasicHitboxes()[0].x).toBe(30);
+  ai.destroy();
+  vi.useRealTimers();
 });
