@@ -20,6 +20,65 @@ const idle = {
 };
 
 describe('generated character spritesheet', () => {
+  test('aligns each direction at the ground and keeps transforms fixed during attacks', async () => {
+    vi.spyOn(getGameDataProvider(), 'getMedia').mockResolvedValue(idle);
+    vi.spyOn(Assets, 'load').mockResolvedValue(Texture.EMPTY);
+    const pose = { width: 512, height: 384, top: 2, bottom: 356, centerX: 258 };
+    const attackPose = { width: 256, height: 256, top: 91, bottom: 177, centerX: 143 };
+    vi.spyOn(proportions, 'loadedCharacterFrames').mockImplementation(image =>
+      image.endsWith('idle.png') ? [pose, pose, pose, pose] : Array.from({ length: 32 }, (_, i) =>
+        i % 8 === 0 ? attackPose : { ...attackPose, top: 0, centerX: 200 }));
+    const attack = await prepareSpriteSheetObject({
+      type: 'spritesheet', fileName: 'attack.png',
+      metadata: { groupId: idle._id, frameWidth: 8, frameHeight: 4 },
+    });
+    const frames = attack.textures.attack.animations({ direction: 'left' })[0];
+    const first = frames[0];
+    expect(first.scale[1] * 86).toBeCloseTo(354);
+    expect(attack.displayScale).toBeCloseTo(128 / 512 * 1.26);
+    // The visible bottom equals the anchor's ground, regardless of padding.
+    const ground = 256 - (256 - first.spriteRealSize.height) / 2;
+    expect(ground).toBe(177);
+    expect((143 - 128) * first.scale[0] + first.x).toBeCloseTo(0);
+    for (const frame of frames) {
+      expect(frame.scale).toEqual(first.scale);
+      expect(frame.x).toBe(first.x);
+      expect(frame.spriteRealSize).toEqual(first.spriteRealSize);
+    }
+  });
+
+  test('matches linked walk and idle in all directions and resets offsets on return to idle', async () => {
+    const directions = ['down', 'left', 'right', 'up'];
+    vi.spyOn(getGameDataProvider(), 'getMediaGroup').mockResolvedValue([{
+      type: 'spritesheet', fileName: 'walk.png',
+      metadata: { groupId: idle._id, name: 'walk', frameWidth: 8, frameHeight: 4,
+        lanes: directions.map(direction => ({ direction })) },
+    }]);
+    vi.spyOn(Assets, 'load').mockResolvedValue(Texture.EMPTY);
+    const poses = directions.map((_, i) => ({ width: 512, height: 384, top: 5, bottom: 305 + i * 10, centerX: 256 }));
+    const walkPoses = Array.from({ length: 32 }, (_, i) => ({ width: 256, height: 256, top: 20, bottom: 120 + Math.floor(i / 8) * 5, centerX: 140 }));
+    vi.spyOn(proportions, 'loadedCharacterFrames').mockImplementation(image => image.endsWith('idle.png') ? poses : walkPoses);
+    const sheet = await prepareSpriteSheetObject(idle);
+    for (const [i, direction] of directions.entries()) {
+      const walking = sheet.textures.walk.animations({ direction })[0][0];
+      const standing = sheet.textures.stand.animations({ direction })[0][0];
+      expect(walking.scale[1] * (100 + i * 5)).toBeCloseTo(300 + i * 10);
+      expect(standing.scale).toEqual([1, 1]);
+      expect(standing.x).toBe(0);
+      expect(standing.y).toBe(0);
+      expect(384 - (384 - standing.spriteRealSize.height) / 2).toBe(poses[i].bottom);
+    }
+  });
+
+  test('reads independent cell bounds and ignores transparent pixels', () => {
+    const pixels = { width: 8, height: 6, data: new Uint8ClampedArray(8 * 6 * 4) };
+    for (let y = 2; y < 5; y++) pixels.data[(y * 8 + 1) * 4 + 3] = 255;
+    pixels.data[7 * 4 + 3] = 16;
+    expect(proportions.characterFrameBounds(pixels, 2, 1)).toEqual([
+      { width: 4, height: 6, top: 2, bottom: 5, centerX: 1.5 }, undefined,
+    ]);
+  });
+
   test('normalizes a separately played attack against its idle parent', async () => {
     const base = { ...idle, metadata: { ...idle.metadata, scale: 0.79 } };
     vi.spyOn(getGameDataProvider(), 'getMedia').mockResolvedValue(base);

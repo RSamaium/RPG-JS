@@ -57,7 +57,7 @@ A spritesheet media record with `metadata.generationMode: "idle"` uses its
 The runtime reads media linked through `metadata.groupId` and uses an animation
 named `walk` while the character moves. Other named animations are available as
 actions. The idle cell is fitted into a 128-pixel game frame before applying its
-saved `metadata.scale`. Each animation uses its own frame grid and saved proportional scale; the
+saved `metadata.scale`. Each animation uses its own frame grid; the
 idle pose remains fixed when the character stops. Online games load these links
 from `GET /api/game/media/:mediaId/animations`; offline bundles use their media
 index. Existing spritesheets without `generationMode: "idle"` retain their
@@ -67,10 +67,16 @@ The client awaits the idle and linked animation images before making the
 spritesheet available, including when the actor appearance contains a complete
 media object. Switching between movement and idle restores each animation's
 scale explicitly, so the movement correction does not carry over into idle.
-After preloading, the client measures the median visible frame height in each
-image, as Character Editor does, and compensates linked animations relative to
-idle. The base character's scale controls the whole group. Saved animation scales
-are used as a fallback when browser pixel access is unavailable.
+After preloading, the client calibrates each animation direction against the
+corresponding idle pose. Its first frame determines the visible height, horizontal
+center and ground position (alpha greater than 16). The transform stays fixed for
+the entire timeline: later effects and pose changes do not rescale the character.
+Transparent padding is removed from the ground anchor without changing the
+hitbox. The base character's scale then controls the whole group.
+Calibration uses visible artwork, not semantic body detection: effects already
+present in the reference frame and differently drawn poses can still affect the
+result. Saved animation scales are used as a fallback when browser pixel access
+is unavailable.
 This also applies when combat plays a linked media as a separate graphic: its
 `metadata.groupId` identifies the idle parent whose reference size and global
 scale must be used.

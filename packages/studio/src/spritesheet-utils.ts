@@ -6,7 +6,7 @@ import { CharacterSpritesheet } from "./spritesheets/character";
 import { Animation, Direction } from "./spritesheets/types";
 import { getGameDataProvider } from "./data-provider";
 import { Assets } from "pixi.js";
-import { loadedCharacterHeight } from "./character-proportions";
+import { loadedCharacterHeight, loadedCharacterFrames, characterFrameTransform } from "./character-proportions";
 
 export const STUDIO_DEFAULT_CHARACTER_DISPLAY_SCALE = 0.7;
 export const STUDIO_DEFAULT_ATTACK_ANIMATION_DURATION_MS = 350;
@@ -332,6 +332,47 @@ export const prepareSpriteSheetObject = async (media: any, id?: string): Promise
         const animationHeight = loadedCharacterHeight(texture.image, texture.framesWidth, texture.framesHeight);
         if (animationHeight) texture.scale = [idleHeight / animationHeight, idleHeight / animationHeight];
       }
+    }
+  }
+  // Calibrate each direction from its first pose, never from attack effects in
+  // later frames. The same path handles linked and explicitly selected attacks.
+  const referenceSheet = parentSheet ?? (media.metadata?.generationMode === "idle" ? spritesheet : undefined);
+  if (referenceSheet) {
+    const referenceFrames = loadedCharacterFrames(referenceSheet.image, referenceSheet.framesWidth, referenceSheet.framesHeight);
+    if (referenceFrames.length) {
+      const referenceAnimation = referenceSheet.textures[Animation.Stand].animations;
+      let calibrated = false;
+      const frameCache = new Map<string, ReturnType<typeof loadedCharacterFrames>>();
+      type Frame = { frameX?: number; frameY?: number; time: number };
+      type Texture = {
+        image?: string; framesWidth?: number; framesHeight?: number;
+        animations: (params: { direction: Direction }) => Frame[][];
+      };
+      for (const [name, texture] of Object.entries(spritesheet.textures) as Array<[string, Texture]>) {
+        const image = texture.image ?? spritesheet.image;
+        const columns = texture.framesWidth ?? spritesheet.framesWidth;
+        const rows = texture.framesHeight ?? spritesheet.framesHeight;
+        const key = `${image}:${columns}:${rows}`;
+        if (!frameCache.has(key)) frameCache.set(key, loadedCharacterFrames(image, columns, rows));
+        const bounds = frameCache.get(key)!;
+        if (!bounds.some(Boolean)) continue;
+        calibrated = true;
+        const animations = texture.animations;
+        spritesheet.textures[name] = {
+          ...texture,
+          animations: (params: { direction: Direction }) => {
+            const groups = animations(params);
+            const first = groups[0]?.find(frame => frame.frameX != null && frame.frameY != null);
+            const reference = referenceAnimation(params)[0]?.[0];
+            const sourceBounds = first && bounds[first.frameY! * columns + first.frameX!];
+            const targetBounds = reference && referenceFrames[reference.frameY * referenceSheet.framesWidth + reference.frameX];
+            if (!sourceBounds || !targetBounds) return groups;
+            const transform = characterFrameTransform(targetBounds, sourceBounds);
+            return groups.map(group => group.map(frame => ({ ...frame, ...transform })));
+          },
+        };
+      }
+      if (calibrated) spritesheet.displayScale = referenceSheet.displayScale;
     }
   }
   return spritesheet;
