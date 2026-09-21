@@ -47,74 +47,6 @@ const runMovementOperation = <T>(fallback: T, operation: () => T): T => {
   }
 };
 
-/**
- * Additive knockback strategy that **adds** an impulse-like velocity on top of the
- * current velocity, instead of overwriting it.
- *
- * This is designed for A-RPG gameplay where the player should keep control during
- * knockback. Inputs keep setting the base velocity, and this strategy adds a decaying
- * impulse each physics step for a short duration.
- *
- * ## Design
- *
- * - The built-in physics `Knockback` strategy overwrites velocity every frame.
- *   When inputs also change velocity, the two systems compete and can cause visible jitter.
- * - This strategy avoids the "tug of war" by reading the current velocity and adding
- *   the knockback impulse on top.
- * - When finished, it does **not** force velocity to zero, so player input remains responsive.
- *
- * @example
- * ```ts
- * // Add a short impulse to the right, while player can still steer
- * await player.addMovement(new AdditiveKnockback({ x: 1, y: 0 }, 5, 0.3));
- * ```
- */
-class AdditiveKnockback implements MovementStrategy {
-  private readonly direction: { x: number; y: number };
-  private elapsed = 0;
-  private currentSpeed: number;
-
-  constructor(
-    direction: { x: number; y: number },
-    initialSpeed: number,
-    private readonly duration: number,
-    private readonly decayFactor = 0.35
-  ) {
-    const magnitude = Math.hypot(direction.x, direction.y);
-    this.direction = magnitude > 0
-      ? { x: direction.x / magnitude, y: direction.y / magnitude }
-      : { x: 1, y: 0 };
-    this.currentSpeed = initialSpeed;
-  }
-
-  update(body: MovementBody, dt: number): void {
-    this.elapsed += dt;
-    if (this.elapsed > this.duration) {
-      return;
-    }
-
-    const impulseX = this.direction.x * this.currentSpeed;
-    const impulseY = this.direction.y * this.currentSpeed;
-
-    body.setVelocity({
-      x: body.velocity.x + impulseX,
-      y: body.velocity.y + impulseY,
-    });
-
-    const decay = Math.max(0, Math.min(1, this.decayFactor));
-    if (decay === 0) {
-      this.currentSpeed = 0;
-    } else if (decay !== 1) {
-      this.currentSpeed *= Math.pow(decay, dt);
-    }
-  }
-
-  isFinished(): boolean {
-    return this.elapsed >= this.duration;
-  }
-}
-
-
 interface PlayerWithMixins extends RpgCommonPlayer {
   getCurrentMap(): RpgMap;
   id: string;
@@ -998,7 +930,7 @@ export function WithMoveManager<TBase extends PlayerCtor>(Base: TBase) {
       };
 
       const hasActiveKnockback = (): boolean =>
-        this.getActiveMovements().some(s => s instanceof Knockback || s instanceof AdditiveKnockback);
+        this.getActiveMovements().some(s => s instanceof Knockback);
 
       const setAnimationName = (name: string): void => {
         if (typeof selfAny.setGraphicAnimation === 'function') {
@@ -1036,10 +968,20 @@ export function WithMoveManager<TBase extends PlayerCtor>(Base: TBase) {
         const lock = getLock();
         if (!lock) return;
 
+        this.knockbackActive.set(false);
+        // A movement ACK captured before impact must never restore the pre-hit position.
+        selfAny._lastFramePositions = null;
+        const map = (this as unknown as PlayerWithMixins).getCurrentMap();
+        if (!this.getActiveMovements().length) {
+          map?.getBody(this.id)?.setVelocity({ x: 0, y: 0 });
+        }
         this.directionFixed = lock.prevDirectionFixed;
 
-        const prevAnimFixed = lock.prevAnimationFixed;
-        const restoredAnimationName = resolveRestoredAnimationName(lock.prevAnimationName);
+        const prevAnimFixed = lock.prevAnimationFixed && this.animationFixed;
+        const actionFinishedDuringRecoil = lock.prevAnimationFixed && !this.animationFixed;
+        const restoredAnimationName = resolveRestoredAnimationName(
+          actionFinishedDuringRecoil ? 'stand' : lock.prevAnimationName,
+        );
         this.animationFixed = false; // temporarily unlock so we can restore animation
         if (!prevAnimFixed && restoredAnimationName) {
           setAnimationName(restoredAnimationName);
@@ -1058,6 +1000,9 @@ export function WithMoveManager<TBase extends PlayerCtor>(Base: TBase) {
           prevAnimationName: getAnimationName(),
         });
 
+        this.knockbackActive.set(true);
+        selfAny._lastFramePositions = null;
+        selfAny.pendingInputs = [];
         this.directionFixed = true;
         setAnimationName('stand');
         this.animationFixed = true;
@@ -1082,8 +1027,8 @@ export function WithMoveManager<TBase extends PlayerCtor>(Base: TBase) {
       // Next knockbacks reuse the lock and keep the fixed flags enabled.
       ensureLockInitialized();
 
-      // Use additive knockback to avoid jitter with player inputs
-      const strategy = new AdditiveKnockback(direction, force, durationSeconds);
+      // Recoil owns velocity until completion; input processing preserves this strategy.
+      const strategy = new Knockback(direction, force, durationSeconds);
       const addPromise = this.addMovement(strategy, options);
 
       try {

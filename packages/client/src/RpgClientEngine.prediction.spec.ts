@@ -93,3 +93,45 @@ describe("RpgClientEngine prediction input scheduling", () => {
     expect(attachPredictedState).toHaveBeenNthCalledWith(2, 9, replayedState);
   });
 });
+
+describe('authoritative recoil', () => {
+  it('does not predict or send held movement while recoiling', async () => {
+    const engine = Object.create(RpgClientEngine.prototype) as any;
+    const player = { knockbackActive: () => true, canMove: true };
+    const interrupt = vi.fn();
+    Object.assign(engine, { sceneMap: { getCurrentPlayer: () => player }, interruptCurrentPlayerMovement: interrupt });
+    await engine.processInput({ input: Direction.Left });
+    expect(interrupt).toHaveBeenCalledWith(player);
+  });
+
+  it.each([true, false])('accepts recoil coordinates including its final packet (active=%s)', active => {
+    const engine = Object.create(RpgClientEngine.prototype) as any;
+    const knockbackActive = Object.assign(() => true, { set: vi.fn() });
+    const player = { knockbackActive };
+    const interrupt = vi.fn();
+    Object.assign(engine, {
+      playerIdSignal: () => 'local', sceneMap: { getCurrentPlayer: () => player },
+      predictionEnabled: true, prediction: {}, interruptCurrentPlayerMovement: interrupt,
+    });
+    const packet = { players: { local: { x: 42, y: 17, knockbackActive: active } } };
+    const result = engine.prepareSyncPayload(packet, { frame: 12, x: 1, y: 1 });
+    expect(result.payload).toEqual(packet);
+    expect(result.serverDrivenMovement).toBe(true);
+    expect(result.localPredictionSnapshot).toBeUndefined();
+    expect(interrupt).toHaveBeenCalledWith(player);
+  });
+});
+
+it('discards buffered recoil trajectories for observers without mutating the received packet', () => {
+  const engine = Object.create(RpgClientEngine.prototype) as any;
+  const remote = { knockbackActive: Object.assign(() => true, { set: vi.fn() }), frames: [{ x: 0, y: 0 }] };
+  Object.assign(engine, {
+    playerIdSignal: () => 'local', sceneMap: { players: () => ({ remote }) },
+    shouldPreserveLocalPlayerPosition: () => false,
+  });
+  const packet = { players: { remote: { x: 40, y: 10, knockbackActive: false, _frames: [{ x: 1, y: 0 }] } } };
+  const result = engine.prepareSyncPayload(packet);
+  expect(result.payload.players.remote._frames).toBeUndefined();
+  expect(packet.players.remote._frames).toHaveLength(1);
+  expect(remote.frames).toEqual([]);
+});

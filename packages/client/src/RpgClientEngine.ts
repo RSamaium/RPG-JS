@@ -800,12 +800,38 @@ export class RpgClientEngine<T = any> {
   ): {
     payload: any;
     localPredictionSnapshot?: PredictionState<Direction>;
+    serverDrivenMovement?: boolean;
   } {
     const payload = { ...(data ?? {}) };
     delete payload.ack;
     delete payload.timestamp;
 
+    // Recoil coordinates replace buffered locomotion, for the local player and observers.
+    for (const kind of ['players', 'events'] as const) {
+      const patches = payload[kind];
+      if (!patches) continue;
+      const objects = this.sceneMap?.[kind]?.() ?? {};
+      payload[kind] = { ...patches };
+      for (const [id, patch] of Object.entries(patches) as Array<[string, { knockbackActive?: boolean; _frames?: unknown }]>) {
+        const object = objects[id];
+        if (patch?.knockbackActive !== true && !object?.knockbackActive?.()) continue;
+        const nextPatch = { ...patch };
+        delete nextPatch._frames;
+        payload[kind][id] = nextPatch;
+        if (object) object.frames = [];
+        if (patch?.knockbackActive === true) object?.knockbackActive?.set(true);
+      }
+    }
     const myId = this.playerIdSignal();
+    const currentPlayer = this.sceneMap?.getCurrentPlayer?.();
+    const patch = myId ? payload.players?.[myId] : undefined;
+    // Include the final recoil packet: stale input must not override its landing position.
+    if (patch?.knockbackActive === true || currentPlayer?.knockbackActive?.()) {
+      this.interruptCurrentPlayerMovement(currentPlayer);
+      // Set the phase before coordinates so the first recoil update is smoothed too.
+      if (patch?.knockbackActive === true) currentPlayer?.knockbackActive?.set(true);
+      return { payload, serverDrivenMovement: true };
+    }
     if (this.predictionEnabled && this.prediction) {
       const currentPlayer = this.sceneMap?.getCurrentPlayer?.();
       const currentState = currentPlayer ? this.getLocalPlayerState() : undefined;
@@ -1246,11 +1272,14 @@ export class RpgClientEngine<T = any> {
       ack && typeof ack.frame === "number" && Number.isFinite(ack.frame)
         ? ack
         : undefined;
-    const { payload, localPredictionSnapshot } = this.prepareSyncPayload(data, normalizedAck);
+    const { payload, localPredictionSnapshot, serverDrivenMovement } = this.prepareSyncPayload(data, normalizedAck);
     load(this.sceneMap, payload, true);
     applySyncedHitboxPayload(this.sceneMap, payload);
 
-    if (normalizedAck) {
+    if (serverDrivenMovement) {
+      const player = this.sceneMap.getCurrentPlayer();
+      if (player) this.applyAuthoritativeState({ x: player.x(), y: player.y() });
+    } else if (normalizedAck) {
       this.applyServerAck(normalizedAck);
     }
     if (localPredictionSnapshot) {
@@ -2187,6 +2216,10 @@ export class RpgClientEngine<T = any> {
     if (this.stopProcessingInput) return;
 
     const currentPlayer = this.sceneMap.getCurrentPlayer() as any;
+    if (currentPlayer?.knockbackActive?.()) {
+      this.interruptCurrentPlayerMovement(currentPlayer);
+      return;
+    }
     const canMove =
       !currentPlayer ||
       getCanMoveValue(currentPlayer);

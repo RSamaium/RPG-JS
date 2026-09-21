@@ -1913,6 +1913,8 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
    */
   @Action('move')
   async onInput(player: RpgPlayer, input: any) {
+    if (player.knockbackActive()) return;
+
     if ((player as any).canMove === false) {
       player.pendingInputs = [];
       player.lastProcessedInputTs = 0;
@@ -2430,6 +2432,16 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
         player,
         inputs: []
       }
+    }
+
+    if (player.knockbackActive()) {
+      player.pendingInputs = [];
+      player.lastProcessedInputTs = 0;
+      player.lastProcessedClientInputTs = 0;
+      player.lastProcessedInputTick = null;
+      player.lastProcessedInputServerTick = null;
+      this._pendingAckFrames.delete(player.id);
+      return { player, inputs: [] };
     }
 
     if ((player as any).canMove === false) {

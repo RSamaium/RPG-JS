@@ -162,6 +162,9 @@ export class RpgCommonPlayer {
   }) _removeTransition = gameplaySignal("");
   @connected() isConnected = gameplaySignal(false)
 
+  /** Server-owned hit recoil phase. Read-only to game code; transient and never persisted. */
+  @sync({ persist: false }) knockbackActive = gameplaySignal(false);
+
   // Store intended movement direction (not synced, only used locally)
   private _intendedDirection: Direction | null = null;
 

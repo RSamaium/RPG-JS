@@ -94,6 +94,7 @@
   import InteractionComponents from "./interaction-components.ce";
   import { RpgGui } from "../Gui/Gui";
   import { getCanMoveValue } from "../utils/readPropValue";
+  import { RecoilSmoothing } from "./recoil-smoothing";
   import { resolveCharacterAnimation } from "./character-animation";
   import {
     loadCachedSpriteSheetAlphaBounds,
@@ -374,7 +375,7 @@
 
   const particleSettings = client.particleSettings;
 
-  const canControls = () => isMe() && getCanMoveValue(sprite)
+  const canControls = () => isMe() && getCanMoveValue(sprite) && !sprite.knockbackActive()
   const keyboardControls = client.globalConfig.keyboardControls;
   const movementBindings = movementPreferences(client).bindings;
   const activeDirectionKeys = new Map();
@@ -672,6 +673,7 @@
     }
   }));
 
+  const recoilSmoothing = new RecoilSmoothing();
   const smoothX = animatedSignal(x(), {
     duration: isMe() ? 0 : 0
   });
@@ -688,11 +690,11 @@
   const realAnimationName = signal(animationName());
 
   const xSubscription = x.observable.subscribe((value) => {
-    smoothX.set(value);
+    smoothX.set(value, { duration: recoilSmoothing.duration(sprite.knockbackActive(), smoothX(), value, Date.now()) });
   });
 
   const ySubscription = y.observable.subscribe((value) => {
-    smoothY.set(value);
+    smoothY.set(value, { duration: recoilSmoothing.duration(sprite.knockbackActive(), smoothY(), value, Date.now()) });
   });
   
   const sheet = (graphicObject) => {
@@ -1229,14 +1231,15 @@
 
   const animationMovementSubscription = combineLatest([
     animationChange$, moving$, sprite.animationPlayback.observable,
-    sprite._animationFixed.observable, sprite._canMove.observable,
+    sprite._animationFixed.observable, sprite._canMove.observable, sprite.knockbackActive.observable,
   ]).subscribe(([curr, isMoving, playback]) => {
     realAnimationName.set(resolveCharacterAnimation(
-      curr, isMoving, hasHeldDirection(), canControls(), sprite.animationFixed, playback?.name,
+      curr, isMoving, hasHeldDirection(), canControls(), sprite.animationFixed || sprite.knockbackActive(), playback?.name,
     ));
   });
 
   const resumeWalkSubscriptions = [
+    sprite.knockbackActive,
     sprite._canMove,
     sprite._animationFixed,
     sprite.animationIsPlaying,
