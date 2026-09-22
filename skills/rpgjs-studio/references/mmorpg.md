@@ -39,6 +39,17 @@ The playable URL intentionally contains only `game`. It omits `map` so the
 MMORPG client runs the title screen and new-game character selection before
 joining the project's start map.
 
+### Studio publication status
+
+`GET /api/mmorpg/publication` uses the same authenticated project selection as
+the publish route. It returns `{ "published": false }` before the first
+successful publication, or `{ "published": true, "gameUrl": "..." }` afterward.
+Studio records the URL only after the publication request succeeds. The game
+button uses this status; older projects need one new publication to initialize it.
+The lobby refreshes its cached project and Actor list when a new player chooses
+Start, so an updated character selection setting takes effect without restarting
+the MMORPG Worker.
+
 ### Publication failure
 
 ```json
