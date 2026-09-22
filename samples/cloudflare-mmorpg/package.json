@@ -11,6 +11,7 @@
     "deploy:dry-run": "wrangler deploy --dry-run",
     "publish:maps": "tsx src/publish-maps.ts",
     "test": "vitest run",
+    "test:publication": "vitest run --config vitest.publication.config.ts",
     "types": "wrangler types ./src/worker-configuration.d.ts"
   },
   "dependencies": {

@@ -65,7 +65,7 @@ import {
 const DEFAULT_DASH_COOLDOWN_MS = 450;
 const MOVEMENT_IDLE_TIMEOUT_MS = 100;
 const GROUND_TOUCH_SENSOR_COVERAGE_THRESHOLD = 0.8;
-const MAP_SOURCE_STORAGE_KEY = "$room:rpgjs-map-source";
+import { readMapSource, writeMapSource } from "../map-source-storage";
 const WORLD_MAPS_STORAGE_KEY = "$room:rpgjs-world-maps";
 
 type StoredWorldMaps = {
@@ -573,7 +573,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
 
   private async restoreMapStreamingRuntime(): Promise<void> {
     if (hasMapStreamingRuntime(this)) return;
-    const storedMap = await this.partyRoom.storage.get<any>(MAP_SOURCE_STORAGE_KEY);
+    const storedMap = await readMapSource(this.partyRoom) as any;
     if (!storedMap?.id) return;
     const token = this.getRuntimeMapUpdateToken();
     await this.updateMap({
@@ -2174,7 +2174,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     // persistence runs. Persist the trusted private source explicitly and await
     // it before acknowledging publication, so a later WebSocket instance can
     // rebuild render chunks, physics and events reliably.
-    await this.partyRoom.storage.put(MAP_SOURCE_STORAGE_KEY, map)
+    await writeMapSource(this.partyRoom, map)
     this.data.set(map)
     this.globalConfig = map.config
     this.damageFormulas = map.damageFormulas || {};

@@ -1,0 +1,14 @@
+{
+  "name": "rpgjs-publication-test",
+  "main": "src/publication-worker.ts",
+  "compatibility_date": "2024-12-30",
+  "compatibility_flags": ["nodejs_compat"],
+  "r2_buckets": [{ "binding": "GAME_DATA", "bucket_name": "rpgjs-publication-test" }],
+  "durable_objects": {
+    "bindings": [
+      { "name": "RPGJS_ROOMS", "class_name": "RpgServerDurableObject" },
+      { "name": "PUBLICATIONS", "class_name": "RpgPublicationDurableObject" }
+    ]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["RpgServerDurableObject", "RpgPublicationDurableObject"] }]
+}

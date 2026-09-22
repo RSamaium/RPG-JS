@@ -157,6 +157,11 @@ curl -sS -X POST "$BASE_URL/..." \
   `POST /api/mmorpg/publish`. Publication prepares every map before sending any
   update. Failures return a stable `code`, `stage`, and optional `resourceId`;
   see `references/mmorpg.md` for the response contract.
+  Preparation caches source reads only for that publication. Versioned R2
+  publication and active-room-only propagation are implemented for RPG-JS #374
+  in the framework working tree and integrated in Studio's local configuration
+  through `MMORPG_PUBLICATIONS`; release and production integration remain pending.
+  Read the framework API section of `references/mmorpg.md` before integrating.
 - A character event whose only behavior is one dialogue can store it directly in
   `triggers[].typeData.dialogue` on an `onAction` trigger. It does not need a
   block collection. Resolve both `graphic` (`spritesheet`) and `faceset` media

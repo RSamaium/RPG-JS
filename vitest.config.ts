@@ -27,6 +27,7 @@ export default defineConfig({
       ...configDefaults.exclude,
       "packages/ui-css/tests/**",
       "samples/cloudflare-mmorpg/src/worker.spec.ts",
+      "samples/cloudflare-mmorpg/src/publication-worker.spec.ts",
       "playground/games/studio/src/worker.spec.ts",
     ],
     environment: "jsdom",
