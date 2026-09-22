@@ -97,6 +97,11 @@ class CachedGameDataProvider implements GameDataProvider {
     this.kind = source.kind;
   }
 
+  invalidateProject(projectId: string): void {
+    this.projectByKey.delete(`projectId:${projectId}`);
+    this.databaseByProjectId.delete(projectId);
+  }
+
   getProject(query: { projectId?: string | null; mapId?: string | null }): Promise<any> {
     let key: string | null = null;
     if (query.projectId) key = `projectId:${String(query.projectId)}`;
@@ -211,6 +216,12 @@ export const getStudioGameRuntimeConfig = (): StudioGameRuntimeConfig => {
 
 export const resetGameDataProvider = (): void => {
   providerInstance = null;
+};
+
+export const invalidateGameDataProviderProject = (projectId: string): void => {
+  if (providerInstance instanceof CachedGameDataProvider) {
+    providerInstance.invalidateProject(projectId);
+  }
 };
 
 export const getGameDataProvider = (): GameDataProvider => {

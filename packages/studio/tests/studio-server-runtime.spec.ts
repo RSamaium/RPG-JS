@@ -278,6 +278,45 @@ describe("Studio server runtime", () => {
     expect(resolveStartup).toHaveBeenCalledTimes(2);
   });
 
+  test("reads character selection enabled after a new MMORPG publication", async () => {
+    let characterSelectEnabled = false;
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const path = new URL(String(input)).pathname;
+      if (path === "/api/game/project") return Response.json({
+        _id: "project-a", startMapId: "first-map",
+        menus: { titleScreen: { enabled: true }, characterSelect: { enabled: characterSelectEnabled, settings: { allActors: true } } },
+      });
+      if (path === "/api/game/database/all") return Response.json([
+        { _id: "actor-a", type: "actor", name: "Hero" },
+      ]);
+      return new Response("Unexpected request", { status: 404 });
+    });
+    configureStudioGameRuntime({ projectId: null, runtimeMode: "online", apiBaseUrl: "http://studio.test/api" });
+    const hooks = (studioServer({
+      resolveStartup: async () => ({ projectId: "project-a", flow: "title" as const }),
+    }) as any).player;
+    const makePlayer = () => ({
+      id: crypto.randomUUID(), initializeDefaultStats: vi.fn(),
+      showCharacterSelect: vi.fn(async () => ({ id: "actor-a" })),
+      setActor: vi.fn(), changeMap: vi.fn(async () => true),
+    });
+    try {
+      const first = makePlayer();
+      await hooks.onAccepted(first, acceptedContext({ game: "project-a" }));
+      await hooks.onStart(first);
+      expect(first.showCharacterSelect).not.toHaveBeenCalled();
+
+      characterSelectEnabled = true;
+      const second = makePlayer();
+      await hooks.onAccepted(second, acceptedContext({ game: "project-a" }));
+      await hooks.onStart(second);
+      expect(second.showCharacterSelect).toHaveBeenCalledOnce();
+      expect(second.changeMap).toHaveBeenCalledWith("first-map");
+    } finally {
+      fetchMock.mockRestore();
+    }
+  });
+
   test("skips character selection for a player-specific direct map startup", async () => {
     configureGameDataProvider({
       kind: "online",

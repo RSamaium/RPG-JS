@@ -10,7 +10,7 @@ import type { ProjectBasic } from "@common/types/project";
 import { applyTriggerSettings, getEventTypeRuntime, getGraphicKey, getGraphicScale, RpgMapExtended } from "./event-type-runtime";
 import { normalizeEventType } from "@common/event-types";
 import { normalizeWeatherState } from "@common/weather";
-import { getGameDataProvider, getStudioGameRuntimeConfig, configureStudioGameRuntime, resetGameDataProvider } from "./data-provider";
+import { getGameDataProvider, getStudioGameRuntimeConfig, configureStudioGameRuntime, invalidateGameDataProviderProject, resetGameDataProvider } from "./data-provider";
 import type { GameDataProvider, GameRuntimeMode } from "./data-provider";
 import { normalizeStudioDatabase, normalizeStudioDatabaseRecord } from "./database-normalizer";
 import { createStudioDefaultClass, normalizeStudioSkillsToLearn } from "./skills-to-learn";
@@ -1116,6 +1116,11 @@ export default (_config?: unknown) => {
       onStart: async (player: RpgPlayer) => {
         const playerConfig = await resolvePlayerStartup(player);
         if (await shouldAutoStart(playerConfig)) return;
+        if (config.resolveStartup) {
+          // A publication may have changed the title flow while this lobby stayed alive.
+          invalidateGameDataProviderProject(playerConfig.projectId!);
+          projectCacheByKey.delete(`project:${playerConfig.projectId}`);
+        }
         await selectStudioActorForNewGame(player, await resolveStudioProject(undefined, playerConfig), playerConfig);
         await player.changeMap(await resolveStartMapId(playerConfig));
       },
