@@ -76,7 +76,9 @@ relations use their Studio `_id` values.
 
 When `graphic` points to a character sprite, its linked faceset and its named
 `attack`, `hurt`, `die`, and `castSpell` animations are used automatically by the
-public game database, project hero, and export. Leave `faceset` and individual
+public game database, project hero, and export. Linked media names `cast`,
+`Cast Spell`, `castspell`, `castSpell`, and `castSkill` resolve to `castSpell`,
+with case-insensitive matching. Leave `faceset` and individual
 `animations` entries empty to inherit them. A supplied media `_id` overrides
 only that entry. Editing endpoints keep the explicit values rather than writing
 the inherited ones back to the record.

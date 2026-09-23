@@ -1159,6 +1159,7 @@ const handleActionBattleSkillUse = (
     }
   }
   const targeting = resolveSkillTargeting(player, skillId, options);
+  let automaticTargetValidated = false;
   if (!targeting || !target) {
     if (actionConfig) {
       const affects = options.targeting?.affects || "events";
@@ -1207,7 +1208,7 @@ const handleActionBattleSkillUse = (
         direction,
         {
           ...softTargeting,
-          ...(targeting
+          ...(targeting && (targeting.range > 0 || actionConfig.mode !== "instant")
             ? { range: Math.max(1, targeting.range * tileSize.width) }
             : {}),
         }
@@ -1218,6 +1219,9 @@ const handleActionBattleSkillUse = (
         && softTarget?.target
       ) {
         target = getActionBattleEntityTile(softTarget.target, tileSize);
+        // Zero-range instant skills use the configured close-combat soft range.
+        // Only a server-selected target may bypass the manual tile-range check.
+        automaticTargetValidated = targeting.range === 0;
       } else {
         if (!softTarget && options.targeting?.allowEmptyTarget === false) {
           return false;
@@ -1239,7 +1243,7 @@ const handleActionBattleSkillUse = (
   const origin = getActionBattleEntityTile(player, tileSize);
   const targetTile = { x: target.x, y: target.y };
 
-  if (manhattanDistance(origin, targetTile) > targeting.range) {
+  if (!automaticTargetValidated && manhattanDistance(origin, targetTile) > targeting.range) {
     return false;
   }
 

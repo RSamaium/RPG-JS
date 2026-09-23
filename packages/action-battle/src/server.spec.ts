@@ -6,6 +6,30 @@ import {
 } from "./server";
 
 describe("action battle player visuals", () => {
+  test.each([48, 200])("instant zero-range skills use nearby soft targets, not distant enemies (%i px)", (distance) => {
+    const onUse = vi.fn();
+    const skill = { id: "ice", _type: "skill", spCost: 10, hitRate: 1,
+      animation: "ice-impact", targeting: { range: 0, aoeMask: ["#"] },
+      action: { mode: "instant", target: "enemy" }, onUse };
+    const enemy = { id: "dragon", hp: 100, battleAi: {}, x: () => distance, y: () => 0,
+      hitbox: () => ({ w: 32, h: 32 }) };
+    const map = { getEvents: () => [enemy], getPlayers: () => [], clientVisual: vi.fn() };
+    const player = { id: "hero", sp: 100, x: () => 0, y: () => 0,
+      hitbox: () => ({ w: 32, h: 32 }), getDirection: () => "right",
+      skills: () => [{ id: "ice" }], getSkill: () => skill, databaseById: () => skill,
+      hasEffect: () => false, getCurrentMap: () => map, getGui: () => null };
+    const server = createActionBattleServer();
+    (server.player?.onInput as any)(player, { action: ACTION_BATTLE_SKILL_USE, data: { id: "ice" } });
+    expect(onUse).toHaveBeenCalledTimes(1);
+    expect(onUse.mock.calls[0][1]).toEqual(distance === 48 ? [enemy] : null);
+    onUse.mockClear();
+    (server.player?.onInput as any)(player, {
+      action: ACTION_BATTLE_SKILL_USE,
+      data: { id: "ice", target: { x: 2, y: 0 } },
+    });
+    expect(onUse).not.toHaveBeenCalled();
+  });
+
   afterEach(() => {
     vi.useRealTimers();
   });

@@ -1,4 +1,5 @@
 import { normalizeRuntimeHitbox } from "./runtime-hitbox";
+import { bindStudioCombatAnimationsToEntity } from "./action-battle-animations";
 import { runPlayerEventOnce } from "./event-execution-guard";
 import { Move, RpgEvent, RpgMap, RpgPlayer, RpgServer, provideServerMapStreaming, type RpgPlayerConnectionContext } from "@rpgjs/server";
 import { defineModule, normalizeLightingState, WorldMapsManager, type RpgActionInput, type WorldMapConfig } from "@rpgjs/common";
@@ -132,7 +133,7 @@ const resolveStudioRuntimeContext = (map?: RpgMap): { gameConfig: any; projectId
 
 const resolvePlayerConfig = async (player: RpgPlayer, map?: RpgMap): Promise<ProjectBasic> => {
   const { gameConfig, projectId } = resolveStudioRuntimeContext(map);
-  const selectedActor = await resolveSelectedStudioActor(player, projectId);
+  const selectedActor = await resolveSelectedStudioActor(player, projectId, gameConfig.mainActorId);
   let selectedClass: Record<string, any> | null = null;
   if (selectedActor?.classId) {
     try {
@@ -178,8 +179,7 @@ const resolvePlayerConfig = async (player: RpgPlayer, map?: RpgMap): Promise<Pro
 
 const startGame = async (player: RpgPlayer, map?: RpgMap, heroConfig?: ProjectBasic) => {
   heroConfig ??= await resolvePlayerConfig(player, map);
-  (player as any).studioCombatAnimations = heroConfig.animations ?? {};
-  (player as any).combatAnimations = heroConfig.animations ?? {};
+  bindStudioCombatAnimationsToEntity(player, heroConfig.animations);
   const startingItems = await ensureStartingItemsInDatabase(player, heroConfig, map);
   assignPlayerStartParams(player, heroConfig, startingItems);
   applyPlayerHitbox(player, heroConfig);
@@ -228,8 +228,7 @@ const applyPlayerPresentation = (player: RpgPlayer, config: ProjectBasic & { gra
   const graphicKey = getGraphicKey(config.graphic);
   (player as any)._graphicScale?.set(graphicKey ? getGraphicScale(config.params, config) ?? null : null);
   player.setGraphic(graphicKey ?? "default_character");
-  (player as any).studioCombatAnimations = config.animations ?? {};
-  (player as any).combatAnimations = config.animations ?? {};
+  bindStudioCombatAnimationsToEntity(player, config.animations);
   applyPlayerHitbox(player, config);
 };
 
@@ -767,9 +766,10 @@ const setSelectedStudioActorId = (player: RpgPlayer, actorId: string): void => {
 const resolveSelectedStudioActor = async (
   player: RpgPlayer,
   projectId: string | null,
+  mainActorId?: string,
 ): Promise<Record<string, any> | null> => {
   const runtimePlayer = player as RpgPlayer & { __studioSelectedActor?: Record<string, any> };
-  const selectedId = selectedStudioActorId(player);
+  const selectedId = selectedStudioActorId(player) ?? mainActorId;
   if (!selectedId) return null;
   if (studioActorRecordId(runtimePlayer.__studioSelectedActor) === selectedId) {
     return runtimePlayer.__studioSelectedActor ?? null;
@@ -1090,6 +1090,11 @@ export default (_config?: unknown) => {
   return defineModule<RpgServer>({
     player: {
       props: {
+        studioCombatAnimations: {
+          $default: "",
+          $syncWithClient: true,
+          $permanent: false,
+        },
         studioStartGameApplied: {
           $default: false,
           $syncWithClient: false,

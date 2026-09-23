@@ -76,8 +76,15 @@ const resolveGraphic = (value: StudioCombatAnimationRef): string | null => {
 const resolveStudioAnimationsFromEntity = (
   entity: ActionBattleAnimationEntity,
 ): StudioCombatAnimationIds => {
+  let authoritative = typeof entity.studioCombatAnimations === "function"
+    ? entity.studioCombatAnimations()
+    : entity.studioCombatAnimations;
+  if (typeof authoritative === "string") {
+    try { authoritative = authoritative ? JSON.parse(authoritative) : undefined; }
+    catch { authoritative = undefined; }
+  }
   return (
-    entity.studioCombatAnimations ??
+    authoritative ??
     entity.combatAnimations ??
     entity.animations ??
     {}
@@ -95,7 +102,13 @@ export const bindStudioCombatAnimationsToEntity = (
 ): void => {
   if (!entity) return;
   const resolvedAnimations = animations ?? {};
-  entity.studioCombatAnimations = resolvedAnimations;
+  if (typeof entity.studioCombatAnimations?.set === "function") {
+    // Send an atomic value: nested object patches cannot hydrate a null field,
+    // and reactive object proxies cannot cross the standalone structuredClone bridge.
+    entity.studioCombatAnimations.set(JSON.stringify(resolvedAnimations));
+  } else {
+    entity.studioCombatAnimations = resolvedAnimations;
+  }
   entity.combatAnimations = resolvedAnimations;
 };
 

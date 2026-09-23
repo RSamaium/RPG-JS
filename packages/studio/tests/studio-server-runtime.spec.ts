@@ -12,6 +12,7 @@ import {
   resetGameDataProvider,
 } from "../src/data-provider";
 import type { GameDataProvider } from "../src/server-entry";
+import { DAMAGE_PHYSIC, DAMAGE_SKILL } from "../../server/src/presets";
 
 const acceptedContext = (query: Record<string, string> = {}) => ({
   connection: {
@@ -32,6 +33,71 @@ afterEach(() => {
 });
 
 describe("Studio server runtime", () => {
+  test("uses main actor animation overrides without character selection", async () => {
+    const hooks = (studioServer() as any).player;
+    const animations = { attack: "actor-attack", castSpell: "actor-cast" };
+    configureGameDataProvider({
+      kind: "online", getProject: vi.fn(), getMap: vi.fn(), getMedia: vi.fn(),
+      getDatabase: async () => [{ _id: "main-actor", type: "actor", animations }],
+    });
+    const database: Record<string, any> = {};
+    const map = {
+      globalConfig: { _id: "project", mainActorId: "main-actor", hero: {}, animations: { attack: "sprite-attack" } },
+      database: () => database,
+      addInDatabase(id: string, value: unknown) { database[id] = value; },
+      scale: 1,
+    } as unknown as RpgMap;
+    const player = new RpgPlayer();
+    player.setSync(hooks.props);
+    player.execMethod = vi.fn(async () => undefined) as any;
+    player.initializeDefaultStats();
+    player.setMap(map);
+    await hooks.onJoinMap(player, map);
+    expect(JSON.parse((player as any).studioCombatAnimations())).toEqual(animations);
+  });
+  test("hydrates nested actor animation updates after the initial client snapshot", () => {
+    const hooks = (studioServer() as any).player;
+    const player = new RpgPlayer();
+    player.setSync(hooks.props);
+    expect((player as any).studioCombatAnimations()).toBe("");
+    (player as any).studioCombatAnimations.set(JSON.stringify({ attack: "actor-attack" }));
+    expect(JSON.parse(structuredClone((player as any).studioCombatAnimations()))).toEqual({ attack: "actor-attack" });
+  });
+  test.each([[0, 44], [50, 0]])("equips a Studio weapon with ATK 10 and applies defense %i", async (defense, expectedDamage) => {
+    const hooks = (studioServer() as any).player;
+    configureGameDataProvider({
+      kind: "online", getProject: vi.fn(), getMap: vi.fn(), getMedia: vi.fn(),
+      getDatabase: async () => [{ _id: "flame-sword", type: "item", itemType: "weapon", name: "Flame Sword", atk: 10 }],
+    });
+    const database: Record<string, any> = {};
+    const map = {
+      globalConfig: { _id: "combat-project", hero: {
+        parameters: { str: { start: 67, end: 635 }, pdef: { start: 50, end: 500 } },
+        startingEquipment: { weaponId: "flame-sword" },
+      } },
+      database: () => database,
+      addInDatabase(id: string, value: unknown) { database[id] = value; },
+      damageFormulas: { damagePhysic: DAMAGE_PHYSIC, damageSkill: DAMAGE_SKILL },
+      scale: 1,
+    } as unknown as RpgMap;
+    const hero = new RpgPlayer();
+    hero.setSync(hooks.props);
+    hero.execMethod = vi.fn(async () => undefined) as any;
+    hero.initializeDefaultStats();
+    hero.setMap(map);
+    await hooks.onJoinMap(hero, map);
+    expect(hero.atk).toBe(10);
+    expect(hero.equipments()).toHaveLength(1);
+    const target = new RpgPlayer();
+    target.initializeDefaultStats();
+    target.setMap(map);
+    target.setParameter("pdef", defense);
+    const hp = target.hp;
+    expect(target.applyDamage(hero).damage).toBe(expectedDamage);
+    expect(target.hp).toBe(hp - expectedDamage);
+    expect(target.applyDamage(hero, { id: "fire", power: 0, coefficient: {} } as any).damage).toBe(0);
+  });
+
   test.each(["snapshot", "legacy-save"])("restores a switched actor without resetting progression or a manually selected class: %s", async (mode) => {
     const actor = {
       _id: "runtime-actor", _type: "actor", name: "Mage",
@@ -49,7 +115,7 @@ describe("Studio server runtime", () => {
     });
     const database: Record<string, any> = {};
     const map = {
-      globalConfig: { _id: "restore-actor-project", hero: { initialLevel: 1, startingInventory: [{ itemId: "potion", amount: 2 }], startingEquipment: { weapon: "sword" } } },
+      globalConfig: { _id: "restore-actor-project", mainActorId: "different-main-actor", hero: { initialLevel: 1, startingInventory: [{ itemId: "potion", amount: 2 }], startingEquipment: { weapon: "sword" } } },
       database: () => database,
       addInDatabase(id: string, value: unknown) { database[id] = value; },
       scale: 1,
@@ -91,7 +157,7 @@ describe("Studio server runtime", () => {
     expect(restored._class()).toMatchObject({ id: "chosen-class" });
     expect((restored as any).studioSelectedActorId()).toBe("runtime-actor");
     expect(restored.graphics()).toContain("mage-graphic");
-    expect((restored as any).studioCombatAnimations).toEqual({ attack: "magic-attack" });
+    expect(JSON.parse((restored as any).studioCombatAnimations())).toEqual({ attack: "magic-attack" });
     expect(addItem).not.toHaveBeenCalled();
     expect(restored.getItem("potion")?.quantity()).toBe(2);
     expect(restored.getItem("sword")?.quantity()).toBe(1);

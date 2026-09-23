@@ -18,6 +18,49 @@ const createEntity = () => ({
 });
 
 describe("action battle visual composer", () => {
+  test.each([
+    ["castSkill", "auto", "magicBurst"],
+    ["castSkill", "healPulse", "healPulse"],
+    ["hurt", "explosionSmall", "explosionSmall"],
+    ["hit", "auto", "magicBurst"],
+    ["heal", "auto", "healPulse"],
+  ] as const)("lets %s FX (%s) finish all their particles", (moment, configured, expected) => {
+    const entity = createEntity();
+    createActionBattleVisual("impact")({
+      moment,
+      entity,
+      target: entity,
+      skill: { id: "fire", name: "Fire" },
+      result: { metadata: {
+        healing: moment === "heal",
+        visual: { castFx: configured, impactFx: configured },
+      } },
+    });
+    const calls = entity.showComponentAnimation.mock.calls.filter(
+      ([id]) => id === ACTION_BATTLE_HIT_FX_COMPONENT_ID
+    );
+    expect(calls).toHaveLength(1);
+    expect(calls[0][1]).toMatchObject({ name: expected });
+    expect(calls[0][1]).not.toHaveProperty("displayDuration");
+    expect(calls[0][1]).not.toHaveProperty("loop", true);
+  });
+
+  test("resolves global cast animations on the authoritative caster when the skill omits overrides", () => {
+    const clientVisual = vi.fn();
+    const caster = { id: "caster", castGraphic: "hero-cast", getCurrentMap: () => ({ clientVisual }) };
+    setActionBattleOptions({ visual: "classic", animations: {
+      castSkill: (entity) => ({ animationName: "attack", graphic: entity.castGraphic }),
+    } });
+    try {
+      emitActionBattleClientVisual({ moment: "castSkill", entity: caster });
+      expect(clientVisual).toHaveBeenCalledWith(ACTION_BATTLE_CLIENT_VISUAL_ID, expect.objectContaining({
+        animations: { castSkill: { animationName: "attack", graphic: "hero-cast" } },
+      }));
+    } finally {
+      setActionBattleOptions({});
+    }
+  });
+
   test("keeps the predicted local attack playing when the server confirms the same graphic", () => {
     const player = {
       setAnimation: vi.fn(),

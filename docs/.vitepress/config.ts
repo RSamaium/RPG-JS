@@ -52,6 +52,7 @@ const advancedMenu = [{
     { text: "MMORPG Entries", link: "/advanced/mmorpg-entries" },
     { text: "Node Production", link: "/advanced/node-server-production" },
     { text: "Cloudflare Production", link: "/advanced/cloudflare-server-production" },
+    { text: "Versioned Publication", link: "/advanced/versioned-cloudflare-publication" },
     { text: "Authentication", link: "/advanced/auth" },
     { text: "Provide Load Map", link: "/advanced/provide-load-map" },
     { text: "Latency Simulation", link: "/advanced/latency-simulation" },

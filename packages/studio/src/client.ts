@@ -25,7 +25,6 @@ import {
 import type { StudioGameModuleConfig } from ".";
 import { createStudioMapPlugins, type StudioMapPlugin } from "./studio-map-plugins";
 import { bindInitialStudioEventHitboxes } from "./initial-event-hitboxes-client";
-import { bindStudioCombatAnimationsToEntity } from "./action-battle-animations";
 import { collectStudioActionBattleMediaRefs } from "./action-battle-animation-preload";
 import { beginStudioMapLoading, waitForStudioMapReady } from "./studio-map-readiness";
 
@@ -404,10 +403,10 @@ export default (config: StudioGameModuleConfig) => {
       onAfterLoading: async (scene) => {
         const engine = inject(RpgClientEngine) as RpgClientEngineWithConfig;
         engine.scene.clearLocalWeather?.();
-        bindStudioCombatAnimationsToEntity(
-          engine.scene.getCurrentPlayer?.(),
-          engine.globalConfig.animations,
-        );
+        const player = engine.scene.getCurrentPlayer?.();
+        // Keep project defaults only as a fallback until actor data is hydrated.
+        // Never replace the server-synchronized actor animation signal.
+        if (player) (player as any).combatAnimations = engine.globalConfig.animations ?? {};
         bindInitialStudioEventHitboxes(scene);
         const loadedScene = engine.scene.data?.();
         await waitForStudioMapReady(loadedScene?.data ?? loadedScene);

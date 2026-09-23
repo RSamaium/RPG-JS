@@ -278,10 +278,30 @@ Each field accepts a CanvasEngine built-in or custom FX preset name. Use
 The legacy `visual.fx` field remains supported as an impact alias, but
 `impactFx` takes precedence.
 
+Cast and impact FX finish naturally after their last particle disappears; the
+combat renderer does not impose a fixed timeout. Use finite, non-looping presets
+for these two phases, and looping presets for projectile trails. This lifecycle
+runs on the client in both standalone and multiplayer games and does not delay
+server damage, cooldowns, or subsequent actions. Custom component animations can
+still use `displayDuration` when an explicit cutoff is intended.
+
+In Studio, the active actor's animation overrides take precedence over its linked
+character spritesheet animations. The server synchronizes the resolved animation
+references to the client, so predicted attacks and server-triggered casts use the
+same actor presentation in standalone and multiplayer games. Project animations
+are only a client fallback before actor data arrives. Skill impact animations
+remain independent of the actor's casting animation.
+
 `key` accepts the same keyboard names as project input controls. If it is
 omitted, learned skills use the numeric slots `1` through `0`. The Adventure
 preset reserves its charged-attack and guard keys, so Studio reports `E` and
 `F` conflicts without blocking the save.
+
+For instant skills, a zero range uses the player's configured soft-targeting
+distance to select a nearby enemy in front of the caster. Positive ranges remain
+explicit limits. This fallback only applies to targets selected by the server;
+manually submitted target tiles still obey the configured range. Impact animations
+play on enemies actually affected by the skill.
 
 `targeting.range` is expressed in map tiles. A projectile can override its
 travel range in pixels; otherwise Action Battle derives it from the targeting
@@ -1047,6 +1067,9 @@ enemy is created from the Studio database. The supported Studio fields are
 `stagger` falls back to the Studio `hurt` animation. These values are resolved
 on the server and sent to the client as plain animation data, so media IDs
 remain usable without transferring resolver functions.
+Global animation resolvers are also evaluated on the server for player skill
+casts that do not supply animation overrides. This uses the caster's configured
+Studio animations in both standalone and MMORPG games.
 
 ## Combat sounds and dynamic music
 

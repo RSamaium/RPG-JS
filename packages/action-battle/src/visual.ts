@@ -261,7 +261,7 @@ const serializeActionBattleVisualContext = (
   skill: serializeSkill(context.skill),
   pattern: context.pattern,
   visual: context.visual,
-  animations: serializeAnimations(context.animations, context),
+  animations: serializeAnimations(context.animations ?? getActionBattleOptions().animations, context),
   sourceAudio: serializeEntityAudio(source),
   targetAudio: serializeEntityAudio(context.target),
   animationDefaults: context.animationDefaults,
@@ -592,7 +592,7 @@ const showImpactFx = (
         : kind === "finisher" || kind === "skill"
           ? 1.05
           : 0.82),
-    displayDuration: kind === "heal" ? 700 : 420,
+    // Let the preset drain its particles and signal completion itself.
     zIndex: 1000,
   });
 };
@@ -783,7 +783,7 @@ const impactParts: Partial<Record<ActionBattleVisualContext["moment"], ActionBat
             ? configured
             : "magicBurst",
         scale: 0.72,
-        displayDuration: 360,
+        // Cast presets can outlive their emission phase (including custom FX).
         zIndex: 900,
       });
     }
