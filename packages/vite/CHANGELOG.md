@@ -1,5 +1,12 @@
 # @rpgjs/vite
 
+## 5.0.0-rc.7
+
+### Patch Changes
+
+- Updated dependencies [ef47908]
+  - @rpgjs/server@5.0.0-rc.7
+
 ## 5.0.0-rc.6
 
 ### Patch Changes

@@ -1,5 +1,16 @@
 # @rpgjs/playground-account
 
+## 1.0.0-rc.7
+
+### Patch Changes
+
+- Updated dependencies
+- Updated dependencies [ef47908]
+  - @rpgjs/client@5.0.0-rc.7
+  - @rpgjs/server@5.0.0-rc.7
+  - @rpgjs/account@5.0.0-rc.7
+  - @rpgjs/vite@5.0.0-rc.7
+
 ## 1.0.0-rc.6
 
 ### Patch Changes

@@ -1,5 +1,18 @@
 # @rpgjs/server
 
+## 5.0.0-rc.7
+
+### Minor Changes
+
+- ef47908: Add opt-in Cloudflare project publication with content-addressed private R2
+  artifacts, transactional revision activation, lazy map hydration, active-room
+  notifications and durable propagation retries. Preserve legacy publication for
+  unclaimed maps and store compact references instead of full sources in rooms.
+
+### Patch Changes
+
+- @rpgjs/testing@5.0.0-rc.7
+
 ## 5.0.0-rc.6
 
 ### Patch Changes

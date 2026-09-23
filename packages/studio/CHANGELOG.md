@@ -1,5 +1,28 @@
 # @rpgjs/studio
 
+## 5.0.0-rc.9
+
+### Patch Changes
+
+- Match Studio terrain texture sampling by excluding atlas cell borders before repeating textures. Measure the HUD portrait frame so facesets fit reliably on first display and after resizing in standalone and multiplayer games.
+- Synchronize resolved actor combat animations to clients, preserving actor
+  overrides for predicted attacks and casts across map loads. Read synchronized
+  animation references at playback time and retain project defaults only until
+  authoritative actor presentation is available.
+
+  Resolve the project main actor when character selection is disabled, so its
+  attack and cast overrides take precedence over inherited project animations.
+
+- Updated dependencies
+- Updated dependencies
+- Updated dependencies
+- Updated dependencies
+- Updated dependencies [ef47908]
+  - @rpgjs/action-battle@5.0.0-rc.7
+  - @rpgjs/client@5.0.0-rc.7
+  - @rpgjs/server@5.0.0-rc.7
+  - @rpgjs/vite@5.0.0-rc.7
+
 ## 5.0.0-rc.8
 
 ### Patch Changes

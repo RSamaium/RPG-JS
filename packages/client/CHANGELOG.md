@@ -1,5 +1,13 @@
 # @rpgjs/client
 
+## 5.0.0-rc.7
+
+### Patch Changes
+
+- Match Studio terrain texture sampling by excluding atlas cell borders before repeating textures. Measure the HUD portrait frame so facesets fit reliably on first display and after resizing in standalone and multiplayer games.
+- Updated dependencies [ef47908]
+  - @rpgjs/server@5.0.0-rc.7
+
 ## 5.0.0-rc.6
 
 ### Patch Changes

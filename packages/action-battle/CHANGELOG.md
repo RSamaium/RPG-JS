@@ -1,5 +1,23 @@
 # @rpgjs/action-battle
 
+## 5.0.0-rc.7
+
+### Patch Changes
+
+- Let skill cast and impact particle effects complete naturally instead of removing
+  them after a fixed timeout. Fire explosions, magic bursts, healing effects, and
+  custom finite presets now retain their full particle lifetime.
+- Fix instant skills with zero targeting range selecting no nearby enemies because
+  their automatic targeting radius was reduced to one pixel. Use the configured
+  soft-targeting distance for server-selected targets, allowing damage and impact
+  animations to execute while preserving explicit target range validation.
+- Resolve global animation functions on the authoritative combat entity before sending client visuals, including skill casts without per-action animation overrides. Preserve explicit animation overrides in standalone and MMORPG games.
+- Updated dependencies
+- Updated dependencies [ef47908]
+  - @rpgjs/client@5.0.0-rc.7
+  - @rpgjs/server@5.0.0-rc.7
+  - @rpgjs/vite@5.0.0-rc.7
+
 ## 5.0.0-rc.6
 
 ### Patch Changes
