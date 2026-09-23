@@ -191,7 +191,18 @@ export function createTerrainPatternCanvas(
   canvas.height = cellSize;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas 2D context unavailable");
-  drawTerrainTexture(ctx, image, source, 0, 0, canvas.width, canvas.height);
+  // Match Studio's terrain sampling: atlas cell borders can contain separator
+  // pixels, which become visible grid lines when repeated in the world.
+  const minimumSize = Math.min(source.width, source.height);
+  const maximumInset = Math.min(12, Math.floor((minimumSize - 2) / 2));
+  const inset = maximumInset < 1 ? 0 : Math.min(maximumInset, Math.max(1, Math.round(minimumSize * 0.03)));
+  const sample = {
+    x: source.x + inset,
+    y: source.y + inset,
+    width: source.width - inset * 2,
+    height: source.height - inset * 2,
+  };
+  drawTerrainTexture(ctx, image, sample, 0, 0, canvas.width, canvas.height);
   return canvas;
 }
 

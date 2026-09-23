@@ -5,8 +5,8 @@
                 <div class="rpg-avatar-face">
                     <DOMSprite 
                         sheet={faceSheet(face())} 
-                        width="100%" 
-                        height="100%" 
+                        width={portraitWidth}
+                        height={portraitHeight}
                         objectFit="contain" 
                     />
                 </div>
@@ -29,13 +29,28 @@
 <script>
     import { inject } from "../../../core/inject";
     import { RpgClientEngine } from "../../../RpgClientEngine";
-    import { computed } from "canvasengine";
+    import { computed, mount, signal } from "canvasengine";
     import { getEntityProp } from "../../../utils/getEntityProp";
 
     const engine = inject(RpgClientEngine)
     const currentPlayer = engine.scene.currentPlayer
     const { data } = defineProps();
-    const { faceset } = data();
+    const portraitWidth = signal("1px");
+    const portraitHeight = signal("1px");
+    mount((element) => {
+        const avatar = element.componentInstance?.element?.querySelector(".rpg-avatar");
+        if (!avatar) return;
+        const measurePortrait = () => {
+            // The face is inset by 3px on each side of the avatar's padding box.
+            // Concrete sizes let DOMSprite fit even when mounted before layout.
+            portraitWidth.set(`${Math.max(1, avatar.clientWidth - 6)}px`);
+            portraitHeight.set(`${Math.max(1, avatar.clientHeight - 6)}px`);
+        };
+        const observer = new ResizeObserver(measurePortrait);
+        observer.observe(avatar);
+        measurePortrait();
+        return () => observer.disconnect();
+    });
 
     const resolveProp = (value) => typeof value === "function" ? value() : value;
     const face = computed(() => resolveProp(data().faceset));
