@@ -63,6 +63,12 @@ import type {
 } from "./types";
 import { RpgRoomRegistry } from "../rooms/registry";
 import type { RpgSyncSchema } from "./types";
+import {
+  buildAttachedShapeMetadata,
+  resolveAttachedShapeDirection,
+  resolveAttachedShapeOffset,
+  resolveAttachedShapeRadius,
+} from "./attachShape";
 import { addPublicSnapshotAliases, addSignalSnapshotAliases, isSnapshotInput, normalizeSnapshotHitbox } from "./snapshot";
 import { inject } from "../core/inject";
 
@@ -1416,72 +1422,44 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
       return undefined;
     }
 
-    // Calculate radius from width/height if not provided
-    let radius: number;
-    if (shapeOptions.radius !== undefined) {
-      radius = shapeOptions.radius;
-    } else if (shapeOptions.width && shapeOptions.height) {
-      // Use the larger dimension as radius, or calculate from area
-      radius = Math.max(shapeOptions.width, shapeOptions.height) / 2;
-    } else {
+    const radius = resolveAttachedShapeRadius(shapeOptions);
+    if (radius === undefined) {
       console.warn('attachShape: radius or width/height must be provided');
       return undefined;
     }
 
-    // Calculate offset based on positioning
-    let offset: Vector2 = new Vector2(0, 0);
     const positioning: ShapePositioning = shapeOptions.positioning || "default";
-    if (shapeOptions.positioning) {
-      const playerWidth = playerEntity.width || playerEntity.radius * 2 || 32;
-      const playerHeight = playerEntity.height || playerEntity.radius * 2 || 32;
-
-      switch (shapeOptions.positioning) {
-        case 'top':
-          offset = new Vector2(0, -playerHeight / 2);
-          break;
-        case 'bottom':
-          offset = new Vector2(0, playerHeight / 2);
-          break;
-        case 'left':
-          offset = new Vector2(-playerWidth / 2, 0);
-          break;
-        case 'right':
-          offset = new Vector2(playerWidth / 2, 0);
-          break;
-        case 'center':
-        default:
-          offset = new Vector2(0, 0);
-          break;
-      }
-    }
-
-    // Get zone manager and create attached zone
+    const offset = resolveAttachedShapeOffset(shapeOptions.positioning, playerEntity);
     const zoneManager = map.physic.getZoneManager();
-
-    // Convert direction from Direction enum to string if needed
-    // Direction enum values are already strings ("up", "down", "left", "right")
-    let direction: 'up' | 'down' | 'left' | 'right' = 'down';
-    if (shapeOptions.direction !== undefined) {
-      if (typeof shapeOptions.direction === 'string') {
-        direction = shapeOptions.direction as 'up' | 'down' | 'left' | 'right';
-      } else {
-        // Direction enum value is already a string, just cast it
-        direction = String(shapeOptions.direction) as 'up' | 'down' | 'left' | 'right';
-      }
-    }
-
-    // Create zone with metadata for name and properties
-    const metadata: Record<string, any> = {};
-    if (shapeOptions.name) {
-      metadata.name = shapeOptions.name;
-    }
-    if (shapeOptions.properties) {
-      metadata.properties = shapeOptions.properties;
-    }
+    const direction = resolveAttachedShapeDirection(shapeOptions.direction);
+    const metadata = buildAttachedShapeMetadata(shapeOptions);
 
     // Get initial position
     const initialX = playerEntity.position.x + offset.x;
     const initialY = playerEntity.position.y + offset.y;
+
+    // Events inside the shape receive onInShape/onOutShape; players inside it
+    // trigger onDetectInShape/onDetectOutShape on the shape owner.
+    const dispatchZoneEntities = (entities: Entity[], phase: "in" | "out") => {
+      entities.forEach((entity) => {
+        const event = map.getEvent<RpgEvent>(entity.uuid);
+        const player = map.getPlayer(entity.uuid);
+
+        if (event && (!map.isEventVisibleForPlayer || map.isEventVisibleForPlayer(event, this))) {
+          event.execMethod(phase === "in" ? "onInShape" : "onOutShape", [shape, this]);
+          const inShapes = (event as any)._inShapes;
+          if (inShapes) {
+            phase === "in" ? inShapes.add(shape) : inShapes.delete(shape);
+          }
+        }
+        if (player) {
+          this.execMethod(phase === "in" ? "onDetectInShape" : "onDetectOutShape", [player, shape]);
+          if (player._inShapes) {
+            phase === "in" ? player._inShapes.add(shape) : player._inShapes.delete(shape);
+          }
+        }
+      });
+    };
 
     const physicZoneId = zoneManager.createAttachedZone(
       playerEntity,
@@ -1490,52 +1468,12 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
         angle: shapeOptions.angle ?? 360,
         direction,
         limitedByWalls: shapeOptions.limitedByWalls ?? false,
-        offset,
-        metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+        offset: new Vector2(offset.x, offset.y),
+        metadata,
       },
       {
-        onEnter: (entities: Entity[]) => {
-          entities.forEach((entity) => {
-            const event = map.getEvent<RpgEvent>(entity.uuid);
-            const player = map.getPlayer(entity.uuid);
-
-            if (event && (!map.isEventVisibleForPlayer || map.isEventVisibleForPlayer(event, this))) {
-              event.execMethod("onInShape", [shape, this]);
-              // Track that this event is in the shape
-              if ((event as any)._inShapes) {
-                (event as any)._inShapes.add(shape);
-              }
-            }
-            if (player) {
-              this.execMethod("onDetectInShape", [player, shape]);
-              // Track that this player is in the shape
-              if (player._inShapes) {
-                player._inShapes.add(shape);
-              }
-            }
-          });
-        },
-        onExit: (entities: Entity[]) => {
-          entities.forEach((entity) => {
-            const event = map.getEvent<RpgEvent>(entity.uuid);
-            const player = map.getPlayer(entity.uuid);
-
-            if (event && (!map.isEventVisibleForPlayer || map.isEventVisibleForPlayer(event, this))) {
-              event.execMethod("onOutShape", [shape, this]);
-              // Remove from tracking
-              if ((event as any)._inShapes) {
-                (event as any)._inShapes.delete(shape);
-              }
-            }
-            if (player) {
-              this.execMethod("onDetectOutShape", [player, shape]);
-              // Remove from tracking
-              if (player._inShapes) {
-                player._inShapes.delete(shape);
-              }
-            }
-          });
-        },
+        onEnter: (entities: Entity[]) => dispatchZoneEntities(entities, "in"),
+        onExit: (entities: Entity[]) => dispatchZoneEntities(entities, "out"),
       }
     );
 

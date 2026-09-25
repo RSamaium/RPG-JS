@@ -761,6 +761,36 @@ test('static shapes dispatch onInShape and onOutShape once per contact', async (
     expect(calls).toEqual(["event:in:zone:shape-npc", "event:out:zone:shape-npc"])
 })
 
+test('attached player shapes dispatch shape hooks to events inside them', async () => {
+    player = await client.waitForMapChange('map1')
+    const map = player.getCurrentMap() as any
+    const calls: string[] = []
+
+    await map.createDynamicEvent({
+      id: "watched-npc",
+      x: player.x() + 40,
+      y: player.y(),
+      event: {
+        onInShape(zone, owner) {
+          calls.push(`in:${zone.name}:${owner.id}`)
+        },
+        onOutShape(zone, owner) {
+          calls.push(`out:${zone.name}:${owner.id}`)
+        },
+      }
+    })
+
+    const shape = player.attachShape("vision", { radius: 120, name: "vision" })
+    expect(shape?.name).toBe("vision")
+
+    for (let i = 0; i < 3; i++) await map.nextTickAsync()
+    expect(calls).toEqual([`in:vision:${player.id}`])
+
+    map.getEvent("watched-npc").teleport({ x: player.x() + 600, y: player.y() })
+    for (let i = 0; i < 3; i++) await map.nextTickAsync()
+    expect(calls).toEqual([`in:vision:${player.id}`, `out:vision:${player.id}`])
+})
+
 test('scenario event touch hooks only run for the owner player', async () => {
     player = await client.waitForMapChange('map1')
     const map = player.getCurrentMap() as any
