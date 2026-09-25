@@ -37,7 +37,6 @@ import { context } from "../core/context";
 import { finalize, lastValueFrom } from "rxjs";
 import { Subject } from "rxjs";
 import { BehaviorSubject } from "rxjs";
-import { COEFFICIENT_ELEMENTS, DAMAGE_CRITICAL, DAMAGE_PHYSIC, DAMAGE_SKILL } from "../presets";
 import { MapOptions } from "../decorators/map";
 import { EventMode } from "../decorators/event";
 import { BaseRoom } from "./BaseRoom";
@@ -46,7 +45,7 @@ import { RpgRoom } from "./registry";
 import type { RpgWritableSignal } from "@rpgjs/common";
 import { buildSaveSlotMeta, resolveSaveStorageStrategy } from "../services/save";
 import { Log } from "../logs/log";
-import { createMapUpdateHeaders, isMapUpdateAuthorized, MAP_UPDATE_TOKEN_ENV, MAP_UPDATE_TOKEN_HEADER } from "../map-update";
+import { createMapUpdateHeaders, isMapUpdateAuthorized, MAP_UPDATE_TOKEN_ENV } from "../map-update";
 import { emitServerStep } from "../server-step";
 import { RpgMapProjectiles } from "../projectiles";
 import type { DamageFormulas } from "../Player/BattleManager";
@@ -62,7 +61,13 @@ import {
 } from "../map-streaming";
 import { readMapSource, writeMapSource } from "../map-source-storage";
 import { MapInputProcessor } from "./map-input-processor";
-import { MapUpdateSchema } from "./map-update-schema";
+import {
+  MapUpdateSchema,
+  normalizeWorldMapConfigs,
+  parseWorldIdFromUpdateUrl,
+  unauthorizedUpdateResponse,
+  withDefaultDamageFormulas,
+} from "./map-update-request";
 import { cloneWeatherState, easeLightingProgress, interpolateLighting } from "./map-environment";
 import { MapTouchCollisions } from "./map-touch";
 import {
@@ -1518,15 +1523,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
   }, MapUpdateSchema as any)
   async updateMap(request: Request) {
     if (!isMapUpdateAuthorized(request.headers, this.getRuntimeMapUpdateToken())) {
-      return new Response(JSON.stringify({
-        error: "Unauthorized map update",
-        message: `Provide ${MAP_UPDATE_TOKEN_HEADER} or Authorization: Bearer <token> to call /map/update when ${MAP_UPDATE_TOKEN_ENV} is set.`,
-      }), {
-        status: 401,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      return unauthorizedUpdateResponse("map", "/map/update");
     }
 
     // Signe exposes the schema-validated body on `request.data`. Native Fetch
@@ -1540,14 +1537,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     await writeMapSource(this.partyRoom, map)
     this.data.set(map)
     this.globalConfig = map.config
-    this.damageFormulas = map.damageFormulas || {};
-    this.damageFormulas = {
-      damageSkill: DAMAGE_SKILL,
-      damagePhysic: DAMAGE_PHYSIC,
-      damageCritical: DAMAGE_CRITICAL,
-      coefficientElements: COEFFICIENT_ELEMENTS,
-      ...this.damageFormulas
-    }
+    this.damageFormulas = withDefaultDamageFormulas(map.damageFormulas);
     await lastValueFrom(this.hooks.callHooks("server-maps-load", this))
     await lastValueFrom(this.hooks.callHooks("server-worldMaps-load", this))
     await lastValueFrom(this.hooks.callHooks("server-databaseHooks-load", this))
@@ -1556,6 +1546,35 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     this.data.set(map)
 
     map.events = map.events ?? []
+    this.applyMapOptions(map)
+
+    await lastValueFrom(this.hooks.callHooks("server-map-onBeforeUpdate", map, this))
+
+    await this.reloadMapEvents(map)
+
+    this.dataIsReady$.complete()
+
+    // Execute global map hooks (from RpgServer.map)
+    await lastValueFrom(this.hooks.callHooks("server-map-onLoad", this))
+
+    // Execute map-specific hooks (from @MapData or MapOptions)
+    if (typeof (this as any)._onLoad === 'function') {
+      await (this as any)._onLoad();
+    }
+
+    if (!this.hasActiveConnections()) {
+      this.setAutoTick(false);
+    }
+
+    // TODO: Update map
+  }
+
+  /**
+   * Apply the registered map options (`@MapData` / `MapOptions`) matching the
+   * published map: events, sounds, hooks, initial weather and lighting.
+   * @private
+   */
+  private applyMapOptions(map: any): void {
     let initialWeather: WeatherState | null | undefined = this.globalConfig?.weather;
     let initialLighting: LightingState | null | undefined = this.globalConfig?.lighting;
 
@@ -1608,9 +1627,14 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     } else {
       this.clearLighting();
     }
+  }
 
-    await lastValueFrom(this.hooks.callHooks("server-map-onBeforeUpdate", map, this))
-
+  /**
+   * Replace every runtime event with the events of the published map and
+   * respawn scenario events for connected players.
+   * @private
+   */
+  private async reloadMapEvents(map: any): Promise<void> {
     this._scenarioEventTemplates = [];
     this._eventModeById.clear();
     this._eventOwnerById.clear();
@@ -1643,22 +1667,6 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
       }
       await this.spawnScenarioEventsForPlayer(player);
     }
-
-    this.dataIsReady$.complete()
-
-    // Execute global map hooks (from RpgServer.map)
-    await lastValueFrom(this.hooks.callHooks("server-map-onLoad", this))
-
-    // Execute map-specific hooks (from @MapData or MapOptions)
-    if (typeof (this as any)._onLoad === 'function') {
-      await (this as any)._onLoad();
-    }
-
-    if (!this.hasActiveConnections()) {
-      this.setAutoTick(false);
-    }
-
-    // TODO: Update map
   }
 
   /**
@@ -1697,44 +1705,16 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
   })
   async updateWorld(request: Request) {
     if (!isMapUpdateAuthorized(request.headers, this.getRuntimeMapUpdateToken())) {
-      return new Response(JSON.stringify({
-        error: "Unauthorized world update",
-        message: `Provide ${MAP_UPDATE_TOKEN_HEADER} or Authorization: Bearer <token> to call /world/:id/update when ${MAP_UPDATE_TOKEN_ENV} is set.`,
-      }), {
-        status: 401,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      return unauthorizedUpdateResponse("world", "/world/:id/update");
     }
 
-    // The request URL can be either the room-local path or the complete
-    // `/parties/<namespace>/<room>/world/:id/update` transport path.
-    let worldId = '';
-    try {
-      const reqUrl = (request as any).url as string;
-      const urlObj = new URL(reqUrl, 'http://localhost');
-      const match = urlObj.pathname.match(/\/world\/([^/]+)\/update\/?$/);
-      worldId = match?.[1] ? decodeURIComponent(match[1]) : '';
-    } catch { }
+    const worldId = parseWorldIdFromUpdateUrl((request as any).url);
     const payload = await request.json();
-
-    // Normalize input to array of WorldMapConfig
-    const mapsConfig: WorldMapConfig[] = Array.isArray(payload)
-      ? payload
-      : payload?.maps ?? [];
-
-    // Ensure map sizes are present; fallback to current map data when ID matches
-    const normalized: WorldMapConfig[] = mapsConfig.map((m: any) => {
-      return {
-        id: m.id,
-        worldX: m.worldX ?? m.x ?? 0,
-        worldY: m.worldY ?? m.y ?? 0,
-        width: m.width ?? m.widthPx ?? this.data()?.width ?? 0,
-        height: m.height ?? m.heightPx ?? this.data()?.height ?? 0,
-        tileWidth: m.tileWidth ?? this.tileWidth ?? 32,
-        tileHeight: m.tileHeight ?? this.tileHeight ?? 32,
-      } as WorldMapConfig;
+    const normalized = normalizeWorldMapConfigs(payload, {
+      width: this.data()?.width,
+      height: this.data()?.height,
+      tileWidth: this.tileWidth,
+      tileHeight: this.tileHeight,
     });
 
     const storedWorld: StoredWorldMaps = { id: worldId, maps: normalized };
