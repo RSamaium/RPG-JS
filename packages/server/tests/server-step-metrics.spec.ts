@@ -109,11 +109,13 @@ describe("server step metrics", () => {
   it("emits typed metrics from the automatic map tick loop", async () => {
     await connectPlayer();
 
+    // The first scheduled delta can be shorter than one fixed physics step and
+    // then reports tick 0; wait for a step that advanced the simulation.
     await vi.waitFor(() => {
-      expect(onStep).toHaveBeenCalled();
-    }, { timeout: 500 });
+      expect(onStep.mock.calls.some(([, metrics]) => metrics?.fixedSteps > 0)).toBe(true);
+    }, { timeout: 1000 });
 
-    const [server, metrics] = onStep.mock.calls.at(-1)!;
+    const [server, metrics] = onStep.mock.calls.findLast(([, metrics]) => metrics?.fixedSteps > 0)!;
     expect(server).toBe(transport.getServer("map-metrics"));
     expect(metrics).toEqual({
       tick: expect.any(Number),
