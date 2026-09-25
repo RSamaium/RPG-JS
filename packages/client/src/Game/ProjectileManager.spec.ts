@@ -447,3 +447,61 @@ describe("ProjectileManager", () => {
     expect(predictionResolver).not.toHaveBeenCalled();
   });
 });
+
+describe("ProjectileManager renderList", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const spawn = (id: string, delay = 0) => ({
+    id,
+    type: "arrow",
+    origin: { x: 0, y: 0 },
+    direction: { x: 1, y: 0 },
+    speed: 100,
+    range: 500,
+    ttl: 5,
+    spawnTick: 1,
+    delay,
+  });
+
+  test("keeps the same items across steps and pushes positions into their signals", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1000);
+    const manager = new ProjectileManager(new Hooks([], "client"));
+    manager.register("arrow", () => null);
+    manager.spawnBatch([spawn("p1")]);
+
+    const first = manager.renderList();
+    expect(first).toHaveLength(1);
+    expect(first[0].props.x()).toBe(0);
+
+    vi.setSystemTime(1200);
+    manager.step();
+    const second = manager.renderList();
+    expect(second).toBe(first);
+    expect(second[0].props.x()).toBe(20);
+    expect(second[0].props.progress()).toBeCloseTo(20 / 500, 5);
+    // The public list still exposes plain values
+    expect(manager.current()[0].props.x).toBe(20);
+  });
+
+  test("changes when projectiles appear after their delay or are destroyed", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1000);
+    const manager = new ProjectileManager(new Hooks([], "client"));
+    manager.register("arrow", () => null);
+    manager.spawnBatch([spawn("delayed", 0.1)]);
+    expect(manager.renderList()).toHaveLength(0);
+
+    vi.setSystemTime(1150);
+    manager.step();
+    const visible = manager.renderList();
+    expect(visible.map((item) => item.id)).toEqual(["delayed"]);
+
+    manager.destroyBatch([{ id: "delayed" }]);
+    vi.setSystemTime(1160);
+    manager.step();
+    expect(manager.renderList()).toHaveLength(0);
+  });
+});

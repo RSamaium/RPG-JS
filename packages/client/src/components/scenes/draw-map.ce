@@ -22,7 +22,7 @@
   }
 
   <Container sortableChildren={true}>
-    @for (projectile of projectiles() ; track projectile.props.id) {
+    @for (projectile of projectiles() ; track projectile.id) {
       <projectile.component ...projectile.props />
     }
   </Container>
@@ -42,7 +42,8 @@
     const { children } = defineProps()
     const engine = inject(RpgClientEngine);
     const componentAnimations = engine.componentAnimations
-    const projectiles = engine.projectiles.current
+    // Stable list whose items carry reactive props: components are not rebuilt every frame
+    const projectiles = engine.projectiles.renderList
     const map = engine.sceneMap?.data
     const emptySceneParams = {}
     const sceneComponent = computed(() => map()?.component)
