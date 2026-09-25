@@ -1,5 +1,20 @@
 # @rpgjs/server
 
+## 5.0.0-rc.8
+
+### Patch Changes
+
+- 973878b: Update CanvasEngine to 2.3.0. The 2.3 compiler no longer injects `computed`, `h`, `cond` and `loop` into every component, so components now import the helpers their script uses. `rpgjs()` declares its `Plugin[]` return type.
+- c69f516: Add `map.findSpawnPosition()` (#367): a deterministic search for the closest collision-free position of a character hitbox near a preferred point. It honors map bounds, map hitboxes and their `z` range, static shapes and blocking events, requires room to move by default, and returns `null` instead of placing a character inside a collider.
+- 7846969: Tighten public map API types: `map.processInput()` returns `RpgMovementInput[]`, `map.setSync()` takes a typed `RpgMapSyncSchema` (`$initial`, `$syncWithClient`, `$permanent`), and `addInDatabase()` / `showComponentAnimation()` accept `unknown` payloads instead of `any`. `pnpm test:types` now really type-checks the public API type tests.
+- fc86ec2: Split large server modules into focused files. The map room now delegates to map types, input processing (`MapInputProcessor`), update request helpers, event definition helpers, weather/lighting interpolation and touch collision tracking (`MapTouchCollisions`). Player snapshot helpers move to `Player/snapshot`. Public exports and behavior are unchanged.
+- a7f44ba: Fix `onInShape` / `onOutShape` never firing for static shapes created with `map.createShape()`: shapes have no owner and no `z`, so the height filter for touch collisions discarded them before the shape hooks ran.
+- Updated dependencies [973878b]
+- Updated dependencies [c69f516]
+- Updated dependencies [0dbe078]
+  - @rpgjs/testing@5.0.0-rc.8
+  - @rpgjs/common@5.0.0-rc.6
+
 ## 5.0.0-rc.7
 
 ### Minor Changes

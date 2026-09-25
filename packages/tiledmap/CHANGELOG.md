@@ -1,5 +1,27 @@
 # @rpgjs/tiledmap
 
+## 5.0.0-rc.8
+
+### Patch Changes
+
+- 973878b: Update CanvasEngine to 2.3.0. The 2.3 compiler no longer injects `computed`, `h`, `cond` and `loop` into every component, so components now import the helpers their script uses. `rpgjs()` declares its `Plugin[]` return type.
+- 0dbe078: Make Tiled tile collisions depend on the character `z`, as in RPGJS v4 (#370). Collision tiles are generated for every Tiled level (layer `z` + tile `z`). A tile on level `n` only blocks characters whose `z` is in `[n * zTileHeight, (n + 1) * zTileHeight)`, so `player.z.set(map.zTileHeight)` lets a player walk over level `0` collisions such as water. Static map hitboxes accept an optional `z`/`zHeight` range, and hitboxes without `z` still block every height.
+- Updated dependencies [973878b]
+- Updated dependencies [a0710ce]
+- Updated dependencies [c69f516]
+- Updated dependencies [7846969]
+- Updated dependencies [13517b8]
+- Updated dependencies [72d3e5d]
+- Updated dependencies [1a45ca5]
+- Updated dependencies [327185b]
+- Updated dependencies [fc86ec2]
+- Updated dependencies [a7f44ba]
+- Updated dependencies [0dbe078]
+  - @rpgjs/client@5.0.0-rc.8
+  - @rpgjs/server@5.0.0-rc.8
+  - @rpgjs/vite@5.0.0-rc.8
+  - @rpgjs/common@5.0.0-rc.6
+
 ## 5.0.0-rc.7
 
 ### Patch Changes
