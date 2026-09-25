@@ -61,7 +61,7 @@ import {
   sendInitialMapStreaming,
 } from "../map-streaming";
 import { readMapSource, writeMapSource } from "../map-source-storage";
-import { DEFAULT_DASH_COOLDOWN_MS, isDashMovementInput, normalizeServerMovementInput, vectorToDirection } from "./map-input";
+import { MapInputProcessor } from "./map-input-processor";
 import { MapUpdateSchema } from "./map-update-schema";
 import { cloneWeatherState, easeLightingProgress, interpolateLighting } from "./map-environment";
 import { MapTouchCollisions } from "./map-touch";
@@ -99,7 +99,6 @@ export type {
   RpgTouchContext,
 } from "./map-types";
 
-const MOVEMENT_IDLE_TIMEOUT_MS = 100;
 const WORLD_MAPS_STORAGE_KEY = "$room:rpgjs-world-maps";
 
 type StoredWorldMaps = {
@@ -260,7 +259,15 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
   private _serverTickInProgress = false;
   private _queuedServerTickDelta = 0;
   private _serverTickLoopVersion = 0;
-  private _pendingAckFrames = new Map<string, number>();
+  private inputProcessor = new MapInputProcessor({
+    getPlayer: (playerId) => this.getPlayer(playerId),
+    getPlayers: () => this.getPlayers(),
+    getTick: () => this.getTick(),
+    getBodyPosition: (playerId) => this.getBodyPosition(playerId, "top-left"),
+    movePlayer: (player, direction) => this.movePlayer(player, direction),
+    dashBody: (player, input) => (this as any).dashBody(player, input),
+    stopMovement: (player) => (this as any).stopMovement(player),
+  });
   /** Enable/disable automatic tick processing (useful for unit tests) */
   private _autoTickEnabled: boolean = true;
   /** Runtime templates for scenario events to instantiate per player */
@@ -954,7 +961,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
    * ```
    */
   async onJoin(player: RpgPlayer, conn: RpgRoomConnection, ctx?: { request?: { url: string } }) {
-    this._pendingAckFrames.delete(player.id);
+    this.inputProcessor.forgetPlayer(player.id);
     // A reconnect reuses the public player id but starts with an empty client
     // entity cache. Force the next sync packet to include every visible entity.
     this.spatialVisibleEventIds.delete(player.id);
@@ -1082,7 +1089,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
    * ```
    */
   async onLeave(player: RpgPlayer, conn: RpgRoomConnection) {
-    this._pendingAckFrames.delete(player.id);
+    this.inputProcessor.forgetPlayer(player.id);
     removeMapStreamingPlayer(this, player);
     this.spatialVisibleEventIds.delete(player.id);
     this.spatialVisiblePlayerIds.delete(player.id);
@@ -1280,20 +1287,12 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     if (player.knockbackActive()) return;
 
     if ((player as any).canMove === false) {
-      player.pendingInputs = [];
-      player.lastProcessedInputTs = 0;
-      player.lastProcessedClientInputTs = 0;
-      player.lastProcessedInputTick = null;
-      player.lastProcessedInputServerTick = null;
-      this._pendingAckFrames.delete(player.id);
+      this.inputProcessor.resetPlayer(player);
       (this as any).stopMovement(player);
       return;
     }
 
-    const lastAckedFrame = Math.max(
-      player._lastFramePositions?.frame ?? 0,
-      this._pendingAckFrames.get(player.id) ?? 0,
-    );
+    const lastAckedFrame = this.inputProcessor.getLastAckedFrame(player);
     const now = Date.now();
     const candidates: Array<{
       input: any;
@@ -1790,194 +1789,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
       throw new Error(`Player ${playerId} not found`);
     }
 
-    if (!player.isConnected()) {
-      player.pendingInputs = [];
-      return {
-        player,
-        inputs: []
-      }
-    }
-
-    if (player.knockbackActive()) {
-      player.pendingInputs = [];
-      player.lastProcessedInputTs = 0;
-      player.lastProcessedClientInputTs = 0;
-      player.lastProcessedInputTick = null;
-      player.lastProcessedInputServerTick = null;
-      this._pendingAckFrames.delete(player.id);
-      return { player, inputs: [] };
-    }
-
-    if ((player as any).canMove === false) {
-      player.pendingInputs = [];
-      player.lastProcessedInputTs = 0;
-      player.lastProcessedClientInputTs = 0;
-      player.lastProcessedInputTick = null;
-      player.lastProcessedInputServerTick = null;
-      this._pendingAckFrames.delete(player.id);
-      (this as any).stopMovement(player);
-      return {
-        player,
-        inputs: []
-      }
-    }
-
-    const processedInputs: any[] = [];
-    const defaultControls: Required<Controls> = {
-      maxTimeDelta: 1000, // 1 second max between inputs
-      maxFrameDelta: 10,  // Max 10 frames skipped
-      minTimeBetweenInputs: 16, // ~60fps minimum
-      enableAntiCheat: false,
-      maxInputsPerTick: 1,
-    };
-
-    const config = { ...defaultControls, ...controls };
-    let lastProcessedTime = player.lastProcessedInputTs || 0;
-    let lastProcessedClientTime = player.lastProcessedClientInputTs || 0;
-    let lastProcessedFrame = Math.max(
-      player._lastFramePositions?.frame ?? 0,
-      this._pendingAckFrames.get(player.id) ?? 0,
-    );
-
-    // Sort inputs by frame number to ensure proper order
-    player.pendingInputs.sort((a, b) => (a.frame || 0) - (b.frame || 0));
-
-    let hasProcessedInputs = false;
-    let processedTickGroups = 0;
-    let activeClientTick: number | undefined;
-    let hasActiveClientTickGroup = false;
-
-    // Process pending inputs progressively to preserve itinerary under latency.
-    // Several input callbacks can run before one fixed client physics step. All
-    // frames carrying that same tick must therefore update velocity before one
-    // authoritative step instead of advancing the server once per frame.
-    while (player.pendingInputs.length > 0) {
-      const input = player.pendingInputs[0];
-
-      if (!input || typeof input.frame !== 'number') {
-        player.pendingInputs.shift();
-        continue;
-      }
-
-      const clientInputTick = typeof input.tick === "number" ? input.tick : undefined;
-      const joinsActiveClientTickGroup =
-        hasActiveClientTickGroup
-        && typeof clientInputTick === "number"
-        && clientInputTick === activeClientTick;
-      if (!joinsActiveClientTickGroup && processedTickGroups >= config.maxInputsPerTick) {
-        break;
-      }
-      const previousClientInputTick = player.lastProcessedInputTick;
-      const previousServerInputTick = player.lastProcessedInputServerTick;
-      if (
-        !joinsActiveClientTickGroup
-        && typeof clientInputTick === "number"
-        && typeof previousClientInputTick === "number"
-        && typeof previousServerInputTick === "number"
-      ) {
-        const clientTickDelta = clientInputTick - previousClientInputTick;
-        if (clientTickDelta <= 0) {
-          player.pendingInputs.shift();
-          continue;
-        }
-        if (this.getTick() < previousServerInputTick + clientTickDelta) {
-          break;
-        }
-      }
-      player.pendingInputs.shift();
-
-      // Anti-cheat validation
-      if (config.enableAntiCheat) {
-        // Check frame delta
-        if (input.frame > lastProcessedFrame + config.maxFrameDelta) {
-          // Reset to last valid frame
-          input.frame = lastProcessedFrame + 1;
-        }
-
-        // Check time delta if timestamp is available
-        if (input.timestamp && lastProcessedClientTime > 0) {
-          const timeDelta = input.timestamp - lastProcessedClientTime;
-          if (timeDelta > config.maxTimeDelta) {
-            input.timestamp = lastProcessedClientTime + config.minTimeBetweenInputs;
-          }
-        }
-
-        // Check minimum time between inputs
-        if (!joinsActiveClientTickGroup && input.timestamp && lastProcessedClientTime > 0) {
-          const timeDelta = input.timestamp - lastProcessedClientTime;
-          if (timeDelta < config.minTimeBetweenInputs) {
-            continue;
-          }
-        }
-      }
-
-      // Skip if frame is too old (more than 10 frames behind)
-      if (input.frame < lastProcessedFrame - 10) {
-        continue;
-      }
-
-      const movementInput = normalizeServerMovementInput(input.input);
-
-      // Process the input - update velocity based on the latest input
-      if (movementInput) {
-        let idleHoldMs = 0;
-        if (isDashMovementInput(movementInput)) {
-          const now = Date.now();
-          const lockedUntil = (player as any).__rpgDashLockedUntil;
-          if (!(typeof lockedUntil === "number" && now < lockedUntil)) {
-            (player as any).__rpgDashLockedUntil =
-              now + (movementInput.cooldown ?? DEFAULT_DASH_COOLDOWN_MS);
-            player.changeDirection(vectorToDirection(movementInput.direction));
-            (this as any).dashBody(player, movementInput);
-            idleHoldMs = movementInput.duration ?? 0;
-          }
-        } else {
-          await this.movePlayer(player, movementInput);
-        }
-        processedInputs.push(input.input);
-        hasProcessedInputs = true;
-        lastProcessedClientTime = (input.timestamp || Date.now()) + idleHoldMs;
-        lastProcessedTime = Date.now() + idleHoldMs;
-        player.lastProcessedInputTick = clientInputTick ?? null;
-        player.lastProcessedInputServerTick = this.getTick();
-        if (!joinsActiveClientTickGroup) {
-          processedTickGroups += 1;
-          activeClientTick = clientInputTick;
-          hasActiveClientTickGroup = true;
-        }
-
-        // Do not expose this frame until the following authoritative physics
-        // step has completed. In particular, never pair the new frame with the
-        // client-authored trajectory position while that step is pending.
-        this._pendingAckFrames.set(player.id, input.frame);
-      }
-
-      // Update tracking variables
-      lastProcessedFrame = input.frame;
-    }
-
-    // Physics is now handled by the main game loop (tick$ -> runFixedTicks)
-    // We only update timestamps and handle idle timeout here
-    // The physics step will be executed in the next tick cycle
-    if (hasProcessedInputs) {
-      player.lastProcessedInputTs = lastProcessedTime;
-      player.lastProcessedClientInputTs = lastProcessedClientTime;
-    } else {
-      const idleTimeout = Math.max(
-        config.minTimeBetweenInputs * 4,
-        MOVEMENT_IDLE_TIMEOUT_MS,
-      );
-      const lastTs = player.lastProcessedInputTs || 0;
-      if (lastTs > 0 && Date.now() - lastTs > idleTimeout) {
-        (this as any).stopMovement(player);
-        player.lastProcessedInputTs = 0;
-      }
-    }
-
-    return {
-      player,
-      inputs: processedInputs
-    };
+    return this.inputProcessor.process(player, controls);
   }
 
   /**
@@ -2028,7 +1840,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
           scheduledDeltaMs: nextDelta,
           queuedDeltaMs: this._queuedServerTickDelta,
           fixedSteps,
-          pendingInputs: this.getPendingInputCount(),
+          pendingInputs: this.inputProcessor.getPendingInputCount(),
         });
       }
     }
@@ -2039,44 +1851,9 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
 
   private async runServerTick(deltaMs: number): Promise<number> {
     return this.runFixedTicksAsync(deltaMs, {
-      beforeStep: () => this.processPendingInputsForTick(),
-      afterStep: (tick) => this.captureProcessedInputPositions(tick),
+      beforeStep: () => this.inputProcessor.processPendingInputsForTick(),
+      afterStep: (tick) => this.inputProcessor.captureProcessedInputPositions(tick),
     });
-  }
-
-  private captureProcessedInputPositions(tick: number): void {
-    for (const [playerId, frame] of this._pendingAckFrames) {
-      const player = this.getPlayer(playerId);
-      if (!player) continue;
-      const bodyPos = this.getBodyPosition(player.id, "top-left");
-      player._lastFramePositions = {
-        frame,
-        position: {
-          x: Math.round(bodyPos?.x ?? player.x()),
-          y: Math.round(bodyPos?.y ?? player.y()),
-          direction: player.direction(),
-        },
-        serverTick: tick,
-      };
-    }
-    this._pendingAckFrames.clear();
-  }
-
-  private async processPendingInputsForTick(): Promise<void> {
-    for (const player of this.getPlayers()) {
-      const anyPlayer = player as any;
-      const shouldProcess = player.pendingInputs.length > 0 || (player.lastProcessedInputTs || 0) > 0;
-      if (!shouldProcess || anyPlayer._isProcessingInputs) {
-        continue;
-      }
-      anyPlayer._isProcessingInputs = true;
-      try {
-        await this.processInput(player.id);
-      }
-      finally {
-        anyPlayer._isProcessingInputs = false;
-      }
-    }
   }
 
   private getServerTickTime(): number {
@@ -2084,15 +1861,6 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     return typeof performanceNow === "number" && Number.isFinite(performanceNow)
       ? performanceNow
       : Date.now();
-  }
-
-  private getPendingInputCount(): number {
-    return this.getPlayers().reduce(
-      (total, player) => total + (
-        Array.isArray(player.pendingInputs) ? player.pendingInputs.length : 0
-      ),
-      0,
-    );
   }
 
   async nextTickAsync(deltaMs?: number): Promise<number> {
