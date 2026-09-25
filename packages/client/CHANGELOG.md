@@ -1,5 +1,29 @@
 # @rpgjs/client
 
+## 5.0.0-rc.8
+
+### Patch Changes
+
+- 973878b: Update CanvasEngine to 2.3.0. The 2.3 compiler no longer injects `computed`, `h`, `cond` and `loop` into every component, so components now import the helpers their script uses. `rpgjs()` declares its `Plugin[]` return type.
+- a0710ce: Fix GUI and map rendering issues seen in the samples:
+
+  - Registering a GUI no longer remounts every displayed GUI. GUIs are keyed by a new `renderKey`, which removes the repeated title screen mounts and the `FocusContainer ... not found` warnings at startup.
+  - The map scene component keeps its last `data` until it is unmounted, so custom map components no longer read `undefined` during a map transfer.
+  - The built-in HUD stays hidden until the player enters a map and while the title screen is displayed.
+
+- 13517b8: Stop rebuilding projectile components on every frame. `ProjectileManager.renderList` only changes when projectiles appear or disappear, and pushes positions and progress into per-projectile signals on each step; the map scene renders from it. `current` keeps its plain-value contract. In the sample, JavaScript work per frame with projectiles drops from about 7.5 ms to 5.2 ms.
+- 72d3e5d: Rendered projectile components receive spawn data as plain values and only the changing props as signals. Before an impact, `impact` is `null` and `impactElapsed` / `impactProgress` are `0`, so typed `defineProps` no longer reject `undefined` signal values.
+- 1a45ca5: Split `RpgClientEngine` into focused services (movement input helpers, canvas resize guard, and more). Public API and behavior are unchanged.
+- 327185b: Spread the previous scene teardown over several frames during a map transfer (characters, then the map tree, then physics). In the sample, the worst blocking frame of a transfer drops from about 94 ms to 36-53 ms.
+- Updated dependencies [973878b]
+- Updated dependencies [c69f516]
+- Updated dependencies [7846969]
+- Updated dependencies [fc86ec2]
+- Updated dependencies [a7f44ba]
+- Updated dependencies [0dbe078]
+  - @rpgjs/server@5.0.0-rc.8
+  - @rpgjs/common@5.0.0-rc.6
+
 ## 5.0.0-rc.7
 
 ### Patch Changes

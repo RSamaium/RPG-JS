@@ -1,5 +1,17 @@
 # @rpgjs/vite
 
+## 5.0.0-rc.8
+
+### Patch Changes
+
+- 973878b: Update CanvasEngine to 2.3.0. The 2.3 compiler no longer injects `computed`, `h`, `cond` and `loop` into every component, so components now import the helpers their script uses. `rpgjs()` declares its `Plugin[]` return type.
+- Updated dependencies [973878b]
+- Updated dependencies [c69f516]
+- Updated dependencies [7846969]
+- Updated dependencies [fc86ec2]
+- Updated dependencies [a7f44ba]
+  - @rpgjs/server@5.0.0-rc.8
+
 ## 5.0.0-rc.7
 
 ### Patch Changes
