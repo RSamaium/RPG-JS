@@ -1166,6 +1166,8 @@
       "Presets",
       "ProjectileManager",
       "ProjectilePredictionResolver",
+      "ProjectileRenderItem",
+      "ProjectileRenderProps",
       "ProjectileSpawnClock",
       "RenderedProjectile",
       "RenderedProjectileProps",
