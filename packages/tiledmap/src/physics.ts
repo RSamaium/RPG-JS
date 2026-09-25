@@ -11,6 +11,8 @@ type RectHitbox = {
   y: number;
   width: number;
   height: number;
+  z: number;
+  zHeight: number;
 };
 
 const TILED_HITBOX_ID_PREFIX = "__tiled_collision__:";
@@ -133,25 +135,43 @@ function collectBlockedTileHitboxes(tiledMap: MapClass): RectHitbox[] {
   const mapHeight = tiledMap.height;
   const tileWidth = tiledMap.tilewidth;
   const tileHeight = tiledMap.tileheight;
+  const zTileHeight = tiledMap.zTileHeight;
 
-  for (let y = 0; y < mapHeight; y++) {
-    for (let x = 0; x < mapWidth; x++) {
-      const tileInfo = tiledMap.getTileByPosition(x * tileWidth, y * tileHeight, [0, 0], {
-        populateTiles: true,
-      });
-      if (tileInfo.hasCollision) {
-        hitboxes.push({
-          id: createTiledHitboxId(x, y),
-          x: x * tileWidth,
-          y: y * tileHeight,
-          width: tileWidth,
-          height: tileHeight,
+  // A tile level is the sum of the layer and tile `z` properties. Each level
+  // only blocks characters whose `z` is within [level * zTileHeight, (level + 1) * zTileHeight).
+  for (const level of getTileLevels(tiledMap)) {
+    const z = level * zTileHeight;
+    for (let y = 0; y < mapHeight; y++) {
+      for (let x = 0; x < mapWidth; x++) {
+        // CanvasEngine shifts the tile row by `z`, so offset y to read tile (x, y) on this level
+        const tileInfo = tiledMap.getTileByPosition(x * tileWidth, y * tileHeight + z, [z, z], {
+          populateTiles: true,
         });
+        if (tileInfo.hasCollision) {
+          hitboxes.push({
+            id: createTiledHitboxId(x, y, level),
+            x: x * tileWidth,
+            y: y * tileHeight,
+            width: tileWidth,
+            height: tileHeight,
+            z,
+            zHeight: zTileHeight,
+          });
+        }
       }
     }
   }
 
   return hitboxes;
+}
+
+function getTileLevels(tiledMap: MapClass): number[] {
+  const tilesIndex = (tiledMap as unknown as { tilesIndex?: Record<string, unknown> }).tilesIndex ?? {};
+  const levels = Object.keys(tilesIndex)
+    .map(Number)
+    .filter((level) => Number.isInteger(level))
+    .sort((a, b) => a - b);
+  return levels.length > 0 ? levels : [0];
 }
 
 function mergeTiledHitboxes(existingHitboxes: any, tiledHitboxes: RectHitbox[]): any[] {
@@ -166,6 +186,7 @@ function isGeneratedTiledHitbox(hitbox: any): boolean {
   return typeof hitbox?.id === "string" && hitbox.id.startsWith(TILED_HITBOX_ID_PREFIX);
 }
 
-function createTiledHitboxId(x: number, y: number): string {
-  return `${TILED_HITBOX_ID_PREFIX}${x},${y}`;
+function createTiledHitboxId(x: number, y: number, level: number): string {
+  const suffix = level === 0 ? "" : `@${level}`;
+  return `${TILED_HITBOX_ID_PREFIX}${x},${y}${suffix}`;
 }

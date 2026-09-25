@@ -166,6 +166,31 @@ A thin temporary boundary is added around the disclosed area, preventing predict
 from moving into a chunk whose physics has not arrived yet. Server reconciliation
 remains authoritative.
 
+### Collision Levels (`z`)
+
+Tile collisions depend on height, as in RPGJS v4. The level of a tile is the sum of
+its layer `z` property and its tile `z` property (both default to `0`). A colliding
+tile on level `n` only blocks characters whose `z` is in
+`[n * zTileHeight, (n + 1) * zTileHeight)`. `map.zTileHeight` is the tile height by
+default.
+
+`player.z()` is measured in pixels, not in levels. With 32px tiles, the player must be
+raised to at least `32` to walk over collision tiles on level `0`:
+
+```ts
+// Server side: walk over level 0 collisions (e.g. water)
+player.z.set(map.zTileHeight)
+
+// Back on the ground
+player.z.set(0)
+```
+
+The server uses this rule for authoritative collisions, and the client applies the same
+rule for prediction in both standalone RPG and MMORPG modes. Custom static hitboxes accept
+the same optional range through `z` and `zHeight` (in pixels). A hitbox without `z`
+blocks characters at every height. This is the case for map borders and for Studio
+hitboxes.
+
 ### Event Integration
 
 Place events in Tiled using point objects:

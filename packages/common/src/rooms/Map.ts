@@ -16,7 +16,7 @@ import { MovementManager } from "../movement";
 import { WorldMapsManager, type RpgWorldMaps } from "./WorldMaps";
 import { queryArea as queryMapArea } from "./area/query";
 import type { MapAreaHit, MapAreaQueryOptions } from "./area/types";
-import type { MapChunkHitbox } from "../map-streaming";
+import type { MapChunkHitbox, MapHitboxElevation } from "../map-streaming";
 import type { RpgReadableSignal, RpgWritableSignal } from "../foundation";
 
 const gameplaySignal = signal as <T>(value: T) => RpgWritableSignal<T>;
@@ -103,6 +103,7 @@ export abstract class RpgCommonMap<T extends RpgCommonPlayer> {
   private physicsAccumulatorMs = 0;
   private physicsSyncDepth = 0;
   private streamedStaticHitboxIds = new Map<string, Set<string>>();
+  private staticHitboxElevations = new WeakMap<Entity, { min: number; max: number }>();
   protected maxFixedStepsPerTick = DEFAULT_MAX_FIXED_STEPS_PER_TICK;
   protected maxTickDeltaMs = DEFAULT_MAX_TICK_DELTA_MS;
 
@@ -380,10 +381,7 @@ export abstract class RpgCommonMap<T extends RpgCommonPlayer> {
     const mapData = this.data?.();
     const mapWidth = typeof mapData?.width === "number" ? mapData.width : 0;
     const mapHeight = typeof mapData?.height === "number" ? mapData.height : 0;
-    const hitboxes: Array<
-      | { id?: string; x: number; y: number; width: number; height: number }
-      | { id?: string; points: number[][] }
-    > = Array.isArray(mapData?.hitboxes) ? mapData.hitboxes : [];
+    const hitboxes: MapChunkHitbox[] = Array.isArray(mapData?.hitboxes) ? mapData.hitboxes : [];
 
     if (mapWidth > 0 && mapHeight > 0) {
       const gap = 100;
@@ -394,11 +392,8 @@ export abstract class RpgCommonMap<T extends RpgCommonPlayer> {
     }
 
     for (let staticHitbox of hitboxes) {
-      if ('points' in staticHitbox) {
-        this.addStaticHitbox(staticHitbox.id ?? generateShortUUID(), staticHitbox.points);
-      }
-      else if ('x' in staticHitbox) {
-        this.addStaticHitbox(staticHitbox.id ?? generateShortUUID(), staticHitbox.x, staticHitbox.y, staticHitbox.width, staticHitbox.height);
+      if ('points' in staticHitbox || 'x' in staticHitbox) {
+        this.addMapHitbox(staticHitbox.id ?? generateShortUUID(), staticHitbox);
       }
     }
 
@@ -1389,12 +1384,7 @@ export abstract class RpgCommonMap<T extends RpgCommonPlayer> {
     hitboxes.forEach((hitbox, index) => {
       const suffix = hitbox.id ?? String(index);
       const id = `__map_stream__:${namespace}:${index}:${suffix}`;
-      if ("points" in hitbox) {
-        this.addStaticHitbox(id, hitbox.points);
-      }
-      else {
-        this.addStaticHitbox(id, hitbox.x, hitbox.y, hitbox.width, hitbox.height);
-      }
+      this.addMapHitbox(id, hitbox);
       ids.add(id);
     });
 
@@ -1417,6 +1407,46 @@ export abstract class RpgCommonMap<T extends RpgCommonPlayer> {
     if (!ids) return;
     ids.forEach((id) => this.removeHitbox(id));
     this.streamedStaticHitboxIds.delete(namespace);
+  }
+
+  /**
+   * Add a map collision hitbox, including its optional height range.
+   * @private
+   */
+  private addMapHitbox(id: string, hitbox: MapChunkHitbox): void {
+    if ("points" in hitbox) {
+      this.addStaticHitbox(id, hitbox.points);
+    }
+    else {
+      this.addStaticHitbox(id, hitbox.x, hitbox.y, hitbox.width, hitbox.height);
+    }
+    this.setStaticHitboxElevation(id, hitbox);
+  }
+
+  private setStaticHitboxElevation(id: string, elevation: MapHitboxElevation): void {
+    if (typeof elevation.z !== "number" || !Number.isFinite(elevation.z)) {
+      return;
+    }
+    const entity = this.physic.getEntityByUUID(id);
+    if (!entity) return;
+    const zHeight = typeof elevation.zHeight === "number" && elevation.zHeight > 0
+      ? elevation.zHeight
+      : Number.POSITIVE_INFINITY;
+    this.staticHitboxElevations.set(entity, { min: elevation.z, max: elevation.z + zHeight });
+  }
+
+  /**
+   * Whether a static hitbox blocks a character at its current height.
+   * Hitboxes without a height range block every character.
+   * @private
+   */
+  private staticHitboxBlocksOwner(hitbox: Entity, owner: any): boolean {
+    const elevation = this.staticHitboxElevations.get(hitbox);
+    if (!elevation || !owner) {
+      return true;
+    }
+    const z = this.resolveNumeric(owner.z);
+    return z >= elevation.min && z < elevation.max;
   }
 
   /**
@@ -1718,9 +1748,12 @@ export abstract class RpgCommonMap<T extends RpgCommonPlayer> {
         return false;
       }
 
-      // If either entity has no owner, resolve collision (e.g., walls, obstacles must block)
+      // Walls and obstacles have no owner: they block unless the character is
+      // outside the hitbox height range (e.g. a Tiled tile on another z level)
       if (!selfOwner || !otherOwner) {
-        return true;
+        return selfOwner
+          ? this.staticHitboxBlocksOwner(other, selfOwner)
+          : this.staticHitboxBlocksOwner(self, otherOwner);
       }
 
       if (this.isAlwaysOnTopEvent(otherOwner)) {

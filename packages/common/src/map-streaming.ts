@@ -20,10 +20,25 @@ export interface MapChunkBounds extends MapChunkCoordinates {
   height: number;
 }
 
+/**
+ * Optional height range of a static hitbox, in the same unit as `player.z()`.
+ *
+ * When `z` is set, the hitbox only blocks characters whose `z` is within
+ * `[z, z + zHeight)`. Without `z`, the hitbox blocks characters at every height.
+ * Tiled tile collisions use `z = level * zTileHeight` and `zHeight = zTileHeight`,
+ * where `level` is the sum of the layer and tile `z` properties.
+ */
+export interface MapHitboxElevation {
+  /** Lowest character `z` blocked by this hitbox. */
+  z?: number;
+  /** Height of the blocked range. Defaults to infinity. */
+  zHeight?: number;
+}
+
 /** Serializable static collision geometry sent to the predicting client. */
 export type MapChunkHitbox =
-  | { id?: string; x: number; y: number; width: number; height: number }
-  | { id?: string; points: number[][] };
+  | ({ id?: string; x: number; y: number; width: number; height: number } & MapHitboxElevation)
+  | ({ id?: string; points: number[][] } & MapHitboxElevation);
 
 /**
  * Public, format-independent description of a streamed map.
