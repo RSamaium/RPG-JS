@@ -63,6 +63,7 @@ import type {
 } from "./types";
 import { RpgRoomRegistry } from "../rooms/registry";
 import type { RpgSyncSchema } from "./types";
+import { addPublicSnapshotAliases, addSignalSnapshotAliases, isSnapshotInput, normalizeSnapshotHitbox } from "./snapshot";
 import { inject } from "../core/inject";
 
 export interface RpgTiledTile {
@@ -954,30 +955,12 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
     // modifiers. Loading their serialized values can overwrite the computed signal.
     const rest = { ...snapshot };
     delete rest._param;
-    const hitbox = this.normalizeSnapshotHitbox(snapshot.hitbox);
+    const hitbox = normalizeSnapshotHitbox(snapshot.hitbox);
     if (hitbox) {
       this.hitbox.set(hitbox);
       delete rest.hitbox;
     }
     return rest;
-  }
-
-  private normalizeSnapshotHitbox(hitbox: unknown): { w: number; h: number } | null {
-    if (!hitbox || typeof hitbox !== "object") {
-      return null;
-    }
-
-    const value = hitbox as Record<string, unknown>;
-    const width = this.normalizeSnapshotHitboxDimension(value.w ?? value.width);
-    const height = this.normalizeSnapshotHitboxDimension(value.h ?? value.height);
-    return width && height ? { w: width, h: height } : null;
-  }
-
-  private normalizeSnapshotHitboxDimension(value: unknown): number | null {
-    const numberValue = typeof value === "string" ? Number(value) : value;
-    return typeof numberValue === "number" && Number.isFinite(numberValue) && numberValue > 0
-      ? numberValue
-      : null;
   }
 
   /**
@@ -995,15 +978,7 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
   snapshot(): RpgPlayerSnapshot {
     const snapshot = createStatesSnapshotDeep(this) as RpgPlayerSnapshot;
     delete (snapshot as any).pendingMapPosition;
-    if ((snapshot as any)._name !== undefined && (snapshot as any).name === undefined) {
-      (snapshot as any).name = (snapshot as any)._name;
-    }
-    if ((snapshot as any)._speed !== undefined && (snapshot as any).speed === undefined) {
-      (snapshot as any).speed = (snapshot as any)._speed;
-    }
-    if ((snapshot as any)._canMove !== undefined && (snapshot as any).canMove === undefined) {
-      (snapshot as any).canMove = (snapshot as any)._canMove;
-    }
+    addPublicSnapshotAliases(snapshot);
     if ((snapshot as any).canMove === undefined) {
       (snapshot as any).canMove = this.canMove;
     }
@@ -1037,15 +1012,7 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
       this.setLocale(hasPreference
         ? preferred : (data as any).locale);
     }
-    if (data && typeof data === "object" && (data as any).name !== undefined && (data as any)._name === undefined) {
-      (data as any)._name = (data as any).name;
-    }
-    if (data && typeof data === "object" && (data as any).speed !== undefined && (data as any)._speed === undefined) {
-      (data as any)._speed = (data as any).speed;
-    }
-    if (data && typeof data === "object" && (data as any).canMove !== undefined && (data as any)._canMove === undefined) {
-      (data as any)._canMove = (data as any).canMove;
-    }
+    addSignalSnapshotAliases(data);
     const withItems = (this as any).resolveItemsSnapshot?.(data) ?? data;
     const withSkills = (this as any).resolveSkillsSnapshot?.(withItems) ?? withItems;
     const withStates = (this as any).resolveStatesSnapshot?.(withSkills) ?? withSkills;
@@ -1075,17 +1042,6 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
       await lastValueFrom(this.hooks.callHooks("server-player-onLoad", this, resolvedSnapshot));
     }
     return resolvedSnapshot;
-  }
-
-  private _isSnapshotInput(input: unknown): input is string | RpgPlayerSnapshot {
-    if (input && typeof input === "object" && !Array.isArray(input)) {
-      return true;
-    }
-    if (typeof input !== "string") {
-      return false;
-    }
-    const trimmed = input.trim();
-    return trimmed.startsWith("{") || trimmed.startsWith("[");
   }
 
   /**
@@ -1132,7 +1088,7 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
     context: SaveRequestContext = {},
     options: { changeMap?: boolean } = {}
   ): Promise<RpgPlayerSlotLoadResult | RpgPlayerSnapshotLoadResult> {
-    if (this._isSnapshotInput(slot)) {
+    if (isSnapshotInput(slot)) {
       const resolvedSnapshot = await this.applySnapshot(slot);
       return { ok: true, snapshot: resolvedSnapshot };
     }
