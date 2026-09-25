@@ -9,13 +9,19 @@ on:
   push:
     branches:
       - "**"
-    paths-ignore:
-      - "docs/**"
+    # Documentation is ignored, except docs/internal: it holds the public API
+    # snapshot checked by `pnpm api:boundary`.
+    paths:
+      - "**"
+      - "!docs/**"
+      - "docs/internal/**"
   pull_request:
     branches:
       - "*"
-    paths-ignore:
-      - "docs/**"
+    paths:
+      - "**"
+      - "!docs/**"
+      - "docs/internal/**"
 
 jobs:
   tests:
