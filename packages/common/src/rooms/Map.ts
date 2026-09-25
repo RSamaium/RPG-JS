@@ -10,6 +10,7 @@ import {
   Dash,
   assignPolygonCollider,
   createCollider,
+  testCollision,
 } from "@rpgjs/physic";
 import { combineLatest, Observable, share, Subject, Subscription } from "rxjs";
 import { MovementManager } from "../movement";
@@ -55,6 +56,27 @@ export type MapHitboxQueryKind = "players" | "events";
 export interface MapHitboxQueryOptions {
   excludeIds?: string[];
   kinds?: MapHitboxQueryKind[];
+}
+
+/** Options of `map.findSpawnPosition()`. */
+export interface MapSpawnPositionOptions {
+  /** Preferred top-left position of the hitbox, e.g. the map `start` point. */
+  preferred: { x: number; y: number };
+  /** Hitbox of the character to place. Defaults to 32x32. */
+  hitbox?: { width: number; height: number };
+  /** Maximum distance in pixels between the preferred and returned positions. Defaults to 320. */
+  maxDistance?: number;
+  /** Distance in pixels between two tested positions. Defaults to half the smallest hitbox side. */
+  step?: number;
+  /** Character height used for hitboxes with a `z` range. Defaults to `0`. */
+  z?: number;
+  /** Player or event ids ignored as obstacles, e.g. the character being placed. */
+  ignoreIds?: string[];
+  /**
+   * Require at least one free neighboring position so the character is not
+   * wedged between obstacles. Defaults to `true`.
+   */
+  requireClearance?: boolean;
 }
 
 type FixedTickHooks = {
@@ -1214,6 +1236,114 @@ export abstract class RpgCommonMap<T extends RpgCommonPlayer> {
         this.removeZone(zoneId);
       };
     });
+  }
+
+  /**
+   * Find a collision-free position for a character hitbox near a preferred point.
+   *
+   * The search tests positions on growing rings around `preferred`, in a
+   * deterministic order, and returns the closest one where the hitbox stays
+   * inside the map and overlaps no blocking body: map hitboxes (Tiled tiles,
+   * Studio elements), static shapes, and non-`through` players and events.
+   * Hitboxes with a `z` range only block when `options.z` is inside it.
+   *
+   * It never disables collisions and never returns a blocked position: when no
+   * position is found within `maxDistance`, it returns `null`. It works on the
+   * server and on the client prediction map; use the server result for
+   * authoritative placement, e.g. with `player.changeMap()` or `player.teleport()`.
+   *
+   * @title Find spawn position
+   * @method map.findSpawnPosition(options)
+   * @param {MapSpawnPositionOptions} options - Preferred position, hitbox and search limits.
+   * @returns {{ x: number, y: number } | null} Top-left position, or `null` when none is free.
+   * @memberof RpgCommonMap
+   * @example
+   * ```ts
+   * // e.g. the `start` point of a generated map
+   * const spawn = map.findSpawnPosition({
+   *   preferred: { x: 480, y: 320 },
+   *   hitbox: { width: 32, height: 32 },
+   *   ignoreIds: [player.id],
+   * });
+   * if (spawn) {
+   *   await player.changeMap(map.id, spawn);
+   * }
+   * ```
+   */
+  findSpawnPosition(options: MapSpawnPositionOptions): { x: number; y: number } | null {
+    const width = Math.max(1, options.hitbox?.width ?? 32);
+    const height = Math.max(1, options.hitbox?.height ?? 32);
+    const step = Math.max(1, options.step ?? Math.min(width, height) / 2);
+    const maxDistance = Math.max(0, options.maxDistance ?? 320);
+    const requireClearance = options.requireClearance !== false;
+    const origin = { x: Math.round(options.preferred.x), y: Math.round(options.preferred.y) };
+    const ignored = new Set(options.ignoreIds ?? []);
+    const owner = { z: () => options.z ?? 0 };
+    const mapData = this.data?.();
+    const mapWidth = typeof mapData?.width === "number" && mapData.width > 0 ? mapData.width : undefined;
+    const mapHeight = typeof mapData?.height === "number" && mapData.height > 0 ? mapData.height : undefined;
+
+    const isFree = (x: number, y: number): boolean => {
+      if (x < 0 || y < 0) return false;
+      if (mapWidth !== undefined && x + width > mapWidth) return false;
+      if (mapHeight !== undefined && y + height > mapHeight) return false;
+
+      // Detached dynamic probe: the detector skips static-static pairs
+      const probe = new Entity({
+        position: { x: x + width / 2, y: y + height / 2 },
+        width,
+        height,
+      });
+      const bounds = new AABB(x, y, x + width, y + height);
+      for (const other of this.physic.queryAABB(bounds)) {
+        if (ignored.has(other.uuid) || !this.isSpawnObstacle(other, owner)) continue;
+        if (testCollision(probe, other)) return false;
+      }
+      return true;
+    };
+
+    const hasClearance = (x: number, y: number): boolean =>
+      isFree(x + step, y) || isFree(x - step, y) || isFree(x, y + step) || isFree(x, y - step);
+
+    const rings = Math.floor(maxDistance / step);
+    for (let ring = 0; ring <= rings; ring++) {
+      const candidates: Array<{ x: number; y: number; distance: number }> = [];
+      for (let dy = -ring; dy <= ring; dy++) {
+        for (let dx = -ring; dx <= ring; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring) continue;
+          const distance = Math.hypot(dx, dy) * step;
+          if (distance > maxDistance) continue;
+          candidates.push({ x: origin.x + dx * step, y: origin.y + dy * step, distance });
+        }
+      }
+      // Closest first; ties are broken top-to-bottom, then left-to-right
+      candidates.sort((a, b) => a.distance - b.distance || a.y - b.y || a.x - b.x);
+      for (const candidate of candidates) {
+        if (isFree(candidate.x, candidate.y) && (!requireClearance || hasClearance(candidate.x, candidate.y))) {
+          return { x: candidate.x, y: candidate.y };
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Whether a body blocks a spawned character: walls and map hitboxes (within
+   * their `z` range), static shapes, and players or events that are not `through`.
+   * @private
+   */
+  private isSpawnObstacle(entity: Entity, owner: { z: () => number }): boolean {
+    const entityOwner = (entity as any).owner;
+    if (!entityOwner) {
+      return this.staticHitboxBlocksOwner(entity, owner);
+    }
+    if (this.isAlwaysOnTopEvent(entityOwner)) {
+      return false;
+    }
+    const through = typeof entityOwner._through === "function"
+      ? entityOwner._through() === true
+      : entityOwner.through === true;
+    return !through;
   }
 
   /**

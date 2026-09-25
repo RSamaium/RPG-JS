@@ -27,6 +27,7 @@ Reference for the `RpgMap` class.
 - [dataIsReady$](#dataisready)
 - [deleteWorldMaps](#deleteworldmaps)
 - [events](#events)
+- [Find spawn position](#find-spawn-position)
 - [getBody](#getbody)
 - [getBodyPosition](#getbodyposition)
 - [getEvent](#getevent)
@@ -727,6 +728,54 @@ const allEvents = map.events();
 
 // Get a specific event
 const event = map.events()['event-id'];
+```
+
+## Find spawn position
+
+Find a collision-free position for a character hitbox near a preferred point.
+
+The search tests positions on growing rings around `preferred`, in a
+deterministic order, and returns the closest one where the hitbox stays
+inside the map and overlaps no blocking body: map hitboxes (Tiled tiles,
+Studio elements), static shapes, and non-`through` players and events.
+Hitboxes with a `z` range only block when `options.z` is inside it.
+
+It never disables collisions and never returns a blocked position: when no
+position is found within `maxDistance`, it returns `null`. It works on the
+server and on the client prediction map; use the server result for
+authoritative placement, e.g. with `player.changeMap()` or `player.teleport()`.
+
+- Source: `packages/common/src/rooms/Map.ts`
+- Kind: `method`
+- Member of: `RpgCommonMap`
+- Defined in: `RpgCommonMap`
+
+### Signature
+
+```ts
+map.findSpawnPosition(options)
+```
+
+### Parameters
+
+- `options`: `MapSpawnPositionOptions`
+
+### Returns
+
+Top-left position, or `null` when none is free.
+
+### Examples
+
+```ts
+// e.g. the `start` point of a generated map
+const spawn = map.findSpawnPosition({
+  preferred: { x: 480, y: 320 },
+  hitbox: { width: 32, height: 32 },
+  ignoreIds: [player.id],
+});
+if (spawn) {
+  await player.changeMap(map.id, spawn);
+}
 ```
 
 ## getBody
