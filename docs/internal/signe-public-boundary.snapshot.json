@@ -1432,11 +1432,13 @@
       "MapChunkBounds",
       "MapChunkCoordinates",
       "MapChunkHitbox",
+      "MapHitboxElevation",
       "MapHitboxQueryKind",
       "MapHitboxQueryOptions",
       "MapHitboxQueryRect",
       "MapPhysicsEntityContext",
       "MapPhysicsInitContext",
+      "MapSpawnPositionOptions",
       "MapStreamChunk",
       "MapStreamDefinition",
       "MapStreamManifest",
@@ -2095,6 +2097,8 @@
       "RpgMapChangeTarget",
       "RpgMapHooks",
       "RpgMapProjectiles",
+      "RpgMapSyncProperty",
+      "RpgMapSyncSchema",
       "RpgModule",
       "RpgPlayer",
       "RpgPlayerConnectionContext",
@@ -2254,6 +2258,7 @@
       "packages/server/dist/rooms/BaseRoom.d.ts",
       "packages/server/dist/rooms/gameplay.d.ts",
       "packages/server/dist/rooms/lobby.d.ts",
+      "packages/server/dist/rooms/map-types.d.ts",
       "packages/server/dist/rooms/map.d.ts",
       "packages/server/dist/rooms/registry.d.ts",
       "packages/server/dist/services/save.d.ts",
@@ -2265,10 +2270,18 @@
     "entry": "packages/server/dist/cloudflare/index.d.ts",
     "exports": [
       "CreateRpgServerWorkerOptions",
+      "RpgPublicationBucket",
+      "RpgPublicationDurableObject",
+      "RpgPublicationHead",
+      "RpgPublicationManifest",
+      "RpgPublicationMap",
+      "RpgPublicationOptions",
+      "RpgPublicationShared",
       "RpgServerDurableObject",
       "RpgServerWorkerConstructor",
       "RpgServerWorkerEnv",
-      "createRpgServerWorker"
+      "createRpgServerWorker",
+      "prepareRpgPublication"
     ],
     "declarations": [
       "packages/server/dist/Gui/CharacterSelectGui.d.ts",
@@ -2304,11 +2317,14 @@
       "packages/server/dist/RpgServer.d.ts",
       "packages/server/dist/RpgServerEngine.d.ts",
       "packages/server/dist/cloudflare/index.d.ts",
+      "packages/server/dist/cloudflare/publication-coordinator.d.ts",
+      "packages/server/dist/cloudflare/publication.d.ts",
       "packages/server/dist/decorators/event.d.ts",
       "packages/server/dist/decorators/map.d.ts",
       "packages/server/dist/projectiles.d.ts",
       "packages/server/dist/rooms/BaseRoom.d.ts",
       "packages/server/dist/rooms/lobby.d.ts",
+      "packages/server/dist/rooms/map-types.d.ts",
       "packages/server/dist/rooms/map.d.ts",
       "packages/server/dist/services/save.d.ts"
     ]
@@ -2399,6 +2415,7 @@
       "packages/server/dist/projectiles.d.ts",
       "packages/server/dist/rooms/BaseRoom.d.ts",
       "packages/server/dist/rooms/lobby.d.ts",
+      "packages/server/dist/rooms/map-types.d.ts",
       "packages/server/dist/rooms/map.d.ts",
       "packages/server/dist/services/save.d.ts"
     ]
