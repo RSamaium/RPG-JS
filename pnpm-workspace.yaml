@@ -9,9 +9,9 @@ allowBuilds:
   workerd: true
   ws: true
 minimumReleaseAgeExclude:
-  - '@canvasengine/compiler@2.1.0'
-  - '@canvasengine/presets@2.1.0'
-  - '@canvasengine/testing@2.1.1'
-  - '@canvasengine/tiled@2.1.0'
-  - 'canvasengine@2.1.1'
+  - '@canvasengine/compiler@2.3.0'
+  - '@canvasengine/presets@2.3.0'
+  - '@canvasengine/testing@2.3.0'
+  - '@canvasengine/tiled@2.3.0'
+  - 'canvasengine@2.3.0'
   - vite@8.1.1

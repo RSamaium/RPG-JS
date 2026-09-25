@@ -1,4 +1,5 @@
 import canvasengine from "@canvasengine/compiler";
+import type { Plugin } from "vite";
 import { replaceConfigImport } from "./replace-config-import";
 import { serverPlugin, type RpgjsDevServerOptions } from "./server-plugin";
 import { entryPointPlugin } from "./entry-point-plugin";
@@ -51,7 +52,7 @@ export function rpgjs({
   server,
   devServer,
   entryPoints
-}: RpgjsPluginOptions) {
+}: RpgjsPluginOptions): Plugin[] {
   const mmorpgEntryPoints = normalizeMmorpgEntryPoints(entryPoints?.mmorpg);
 
   return [

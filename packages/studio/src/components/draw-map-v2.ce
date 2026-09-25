@@ -316,7 +316,7 @@
       let result = String(value).trim()
       if (!result) return ''
       const objectIdMatch =
-        result.match(/^ObjectId\("([^"]+)"\)$/) || result.match(/^ObjectId\('([^']+)'\)$/)
+        result.match(/^ObjectId\(\u0022([^\u0022]+)\u0022\)$/) || result.match(/^ObjectId\(\u0027([^\u0027]+)\u0027\)$/)
       if (objectIdMatch?.[1]) {
         result = objectIdMatch[1]
       }
