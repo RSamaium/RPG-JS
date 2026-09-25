@@ -27,7 +27,7 @@
   @else if (RoomScene()) {
     <RoomScene() room={engine.sceneRoom} descriptor={engine.activeRoom()} />
   }
-  @for (gui of guiList) {
+  @for (gui of guiList; track gui.renderKey ?? gui.name) {
       <Container
         positionType="absolute"
         top={0}

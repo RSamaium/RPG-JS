@@ -1,5 +1,5 @@
 <DOMContainer>
-    <div class="rpg-hud">
+    <div class="rpg-hud" style={{display: hudDisplay}}>
         <div class="rpg-avatar">
             @if (hasFace()) {
                 <div class="rpg-avatar-face">
@@ -31,9 +31,23 @@
     import { RpgClientEngine } from "../../../RpgClientEngine";
     import { computed, mount, signal } from "canvasengine";
     import { getEntityProp } from "../../../utils/getEntityProp";
+    import { RpgGui } from "../../../Gui/Gui";
+    import { PrebuiltGui } from "@rpgjs/common";
 
     const engine = inject(RpgClientEngine)
+    const gui = inject(RpgGui)
     const currentPlayer = engine.scene.currentPlayer
+
+    // Show the HUD once the player has entered a map, and hide it while the
+    // title screen covers the game. It stays visible during map transfers.
+    let hasEnteredMap = false
+    const visible = computed(() => {
+      if (engine.scene.data() != null) hasEnteredMap = true
+      const titleScreen = gui.gui()[PrebuiltGui.TitleScreen]
+      return hasEnteredMap && !titleScreen?.display()
+    })
+    // Hidden with CSS so the avatar exists when the portrait is measured on mount
+    const hudDisplay = computed(() => visible() ? "" : "none")
     const { data } = defineProps();
     const portraitWidth = signal("1px");
     const portraitHeight = signal("1px");

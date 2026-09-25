@@ -64,6 +64,11 @@ export interface GuiInstance<
   dependencies?: Signal<unknown>[];
   subscription?: Subscription;
   attachToSprite?: boolean;
+  /**
+   * Unique key of this registration, used to keep rendered GUIs mounted when
+   * other GUIs are added. Replacing a GUI with the same name gets a new key.
+   */
+  renderKey?: number;
 }
 
 export type GuiRenderState<
@@ -290,6 +295,8 @@ const mainMenuOptimisticReducer: OptimisticReducer = (data, action) => {
   return data;
 };
 
+let nextGuiRenderKey = 0;
+
 export class RpgGui {
   private webSocket: AbstractWebsocket;
   gui = signal<Record<string, GuiInstance>>({});
@@ -497,6 +504,7 @@ export class RpgGui {
     const attachToSprite = this.resolveAttachToSprite(registration, component);
     const renderer = registration.renderer ?? this.resolveLegacyRenderer(component);
     const guiInstance: GuiInstance = {
+      renderKey: ++nextGuiRenderKey,
       name: guiId,
       component,
       renderer,

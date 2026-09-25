@@ -393,3 +393,21 @@ describe("RpgGui Vue integration", () => {
     );
   });
 });
+
+describe("RpgGui render keys", () => {
+  test("gives each registration a unique key and a new key when a GUI is replaced", async () => {
+    const { gui } = await createGui();
+    const titleKey = gui.getAll()[PrebuiltGui.TitleScreen].renderKey;
+
+    gui.add({ name: "inventory", component: CanvasGui });
+    const inventoryKey = gui.getAll()["inventory"].renderKey;
+
+    expect(typeof titleKey).toBe("number");
+    expect(inventoryKey).not.toBe(titleKey);
+    // Adding another GUI keeps the key of already registered GUIs
+    expect(gui.getAll()[PrebuiltGui.TitleScreen].renderKey).toBe(titleKey);
+
+    gui.add({ name: PrebuiltGui.TitleScreen, component: CanvasGui });
+    expect(gui.getAll()[PrebuiltGui.TitleScreen].renderKey).not.toBe(titleKey);
+  });
+});

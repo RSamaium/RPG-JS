@@ -5,7 +5,7 @@
 
   <Container>
     @if (map() && sceneComponent() && sceneData() != null) {
-      <sceneComponent() data={sceneData()} params={map()?.params ?? emptySceneParams} />
+      <sceneComponent() data={renderedSceneData()} params={map()?.params ?? emptySceneParams} />
     }
   </Container>
 
@@ -47,6 +47,14 @@
     const emptySceneParams = {}
     const sceneComponent = computed(() => map()?.component)
     const sceneData = computed(() => map()?.data)
+    // During a map transfer the data is cleared before the @if unmounts the
+    // scene component; keep feeding it the last data so it never reads undefined.
+    let lastSceneData
+    const renderedSceneData = computed(() => {
+      const data = sceneData()
+      if (data != null) lastSceneData = data
+      return lastSceneData
+    })
     const mapFrozen = computed(() => engine.gamePause() || engine.visualPause())
     const weather = engine.sceneMap.weather
     effect(() => engine.music.setMap(map()?.params?.backgroundMusic))

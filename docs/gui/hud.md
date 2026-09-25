@@ -54,6 +54,10 @@ You can also use this exact auto-display config in your client module:
 }
 ```
 
+The HUD stays hidden until the player has entered a map, and while the title
+screen (`PrebuiltGui.TitleScreen`) is displayed. It remains visible during map
+transfers.
+
 ## Faceset (Optional)
 
 The HUD can render a face portrait from a faceset spritesheet. The faceset data
