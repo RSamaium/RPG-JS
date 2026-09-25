@@ -165,6 +165,10 @@ state transitions. Read their READMEs before changing synchronization behavior.
 - Keep changes scoped. Avoid unrelated refactors in feature commits.
 - Add focused unit tests with Vitest when changing shared behavior,
   synchronization, physics, gameplay state, or public APIs.
+- When a change affects connections, room transfers, hooks, or inputs in
+  MMORPG mode, add a scenario to `packages/vite/tests/mmorpg-e2e.spec.ts`. It
+  runs a real Node WebSocket server and a real client connected with
+  `provideMmorpg()`. The `@rpgjs/testing` fixture only covers standalone mode.
 - Ship documentation with every new feature, especially when it adds a new
   module, client API, server API, synchronization behavior, or runtime adapter.
 - Update samples only when they clarify the new API or protect an important
