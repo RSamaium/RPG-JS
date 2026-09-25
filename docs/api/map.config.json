@@ -26,14 +26,14 @@
       "description": "Supporting interfaces related to map controls.",
       "output": "map-types.md",
       "ownerNames": ["Controls"],
-      "sourceFiles": ["packages/server/src/rooms/map.ts"]
+      "sourceFiles": ["packages/server/src/rooms/map-types.ts"]
     },
     {
       "title": "Event hooks",
       "description": "Hooks for events created as plain objects, as shown in the create-event guide.",
       "output": "hooks.md",
       "ownerNames": ["EventHooks"],
-      "sourceFiles": ["packages/server/src/rooms/map.ts"]
+      "sourceFiles": ["packages/server/src/rooms/map-types.ts"]
     }
   ]
 }

@@ -19,7 +19,7 @@ Supporting interfaces related to map controls.
 
 Whether to enable anti-cheat validation
 
-- Source: `packages/server/src/rooms/map.ts`
+- Source: `packages/server/src/rooms/map-types.ts`
 - Kind: `property`
 - Defined in: `Controls`
 
@@ -33,7 +33,7 @@ enableAntiCheat: boolean
 
 Maximum allowed frame delta between inputs
 
-- Source: `packages/server/src/rooms/map.ts`
+- Source: `packages/server/src/rooms/map-types.ts`
 - Kind: `property`
 - Defined in: `Controls`
 
@@ -47,7 +47,7 @@ maxFrameDelta: number
 
 Maximum number of queued inputs processed per server tick
 
-- Source: `packages/server/src/rooms/map.ts`
+- Source: `packages/server/src/rooms/map-types.ts`
 - Kind: `property`
 - Defined in: `Controls`
 
@@ -61,7 +61,7 @@ maxInputsPerTick: number
 
 Maximum allowed time delta between inputs in milliseconds
 
-- Source: `packages/server/src/rooms/map.ts`
+- Source: `packages/server/src/rooms/map-types.ts`
 - Kind: `property`
 - Defined in: `Controls`
 
@@ -75,7 +75,7 @@ maxTimeDelta: number
 
 Minimum time between inputs in milliseconds
 
-- Source: `packages/server/src/rooms/map.ts`
+- Source: `packages/server/src/rooms/map-types.ts`
 - Kind: `property`
 - Defined in: `Controls`
 

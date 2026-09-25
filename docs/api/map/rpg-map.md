@@ -1633,13 +1633,14 @@ the map data to be ready before playing sounds and triggering hooks.
 ### Signature
 
 ```ts
-onJoin(player: RpgPlayer, conn: RpgRoomConnection)
+onJoin(player: RpgPlayer, conn: RpgRoomConnection, ctx?: { request?: { url: string } })
 ```
 
 ### Parameters
 
 - `player`: `RpgPlayer`
 - `conn`: `RpgRoomConnection`
+- `ctx?`: `{ request?: { url: string } }`
 
 ### Examples
 
@@ -1826,7 +1827,7 @@ This method processes pending inputs for a player while performing
 anti-cheat validation to prevent time manipulation and frame skipping.
 It validates the time deltas between inputs and ensures they are within
 acceptable ranges. To preserve movement itinerary under network bursts,
-the number of inputs processed per call is capped.
+the number of distinct client ticks processed per call is capped.
 
 ## Architecture
 
@@ -2748,7 +2749,14 @@ Promise that resolves when the map is fully loaded
 ```ts
 // This endpoint is called automatically when a map is loaded
 // POST /map/update
-// Body: { id: string, width: number, height: number, config?: any, damageFormulas?: any }
+// Body: {
+//   id: string,
+//   width: number,
+//   height: number,
+//   config?: any,
+//   damageFormulas?: any,
+//   database?: any[] | Record<string, any>
+// }
 ```
 
 ## updateWorld

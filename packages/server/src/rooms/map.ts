@@ -33,12 +33,11 @@ import { RpgPlayer, RpgEvent } from "../Player/Player";
 import { createStatesSnapshotDeep, generateShortUUID, sync, type, users } from "@signe/sync";
 import { signal } from "@signe/reactive";
 import { inject } from "@signe/di";
-import { context } from "../core/context";;
+import { context } from "../core/context";
 import { finalize, lastValueFrom } from "rxjs";
 import { Subject } from "rxjs";
 import { BehaviorSubject } from "rxjs";
 import { COEFFICIENT_ELEMENTS, DAMAGE_CRITICAL, DAMAGE_PHYSIC, DAMAGE_SKILL } from "../presets";
-import { z } from "zod";
 import { MapOptions } from "../decorators/map";
 import { EventMode } from "../decorators/event";
 import { BaseRoom } from "./BaseRoom";
@@ -61,11 +60,35 @@ import {
   removeMapStreamingPlayer,
   sendInitialMapStreaming,
 } from "../map-streaming";
+import { readMapSource, writeMapSource } from "../map-source-storage";
+import { DEFAULT_DASH_COOLDOWN_MS, isDashMovementInput, normalizeServerMovementInput, vectorToDirection } from "./map-input";
+import { MapUpdateSchema } from "./map-update-schema";
+import type {
+  Controls,
+  CreateDynamicEventOptions,
+  EventHooks,
+  EventPosOption,
+  LightingSetOptions,
+  MapEventDefinition,
+  RpgRoomConnection,
+  RpgTouchContext,
+  WeatherSetOptions,
+} from "./map-types";
 
-const DEFAULT_DASH_COOLDOWN_MS = 450;
+export type {
+  Controls,
+  EventConstructor,
+  EventDefinition,
+  EventHooks,
+  EventPosOption,
+  MapEventDefinition,
+  MapEventPlacement,
+  RpgRoomConnection,
+  RpgTouchContext,
+} from "./map-types";
+
 const MOVEMENT_IDLE_TIMEOUT_MS = 100;
 const GROUND_TOUCH_SENSOR_COVERAGE_THRESHOLD = 0.8;
-import { readMapSource, writeMapSource } from "../map-source-storage";
 const WORLD_MAPS_STORAGE_KEY = "$room:rpgjs-world-maps";
 
 type StoredWorldMaps = {
@@ -86,67 +109,6 @@ type TrackedTouchCollision = {
   entityB: PhysicsCollisionEntity;
 };
 
-const isDashMovementInput = (input: any): input is {
-  type: "dash";
-  direction: { x: number; y: number };
-  additionalSpeed?: number;
-  duration?: number;
-  cooldown?: number;
-} => input && typeof input === "object" && input.type === "dash";
-
-const isMoveMovementInput = (input: any): input is {
-  type: "move";
-  direction: Direction;
-} => input && typeof input === "object" && input.type === "move";
-
-const normalizeServerMovementInput = (input: any): Direction | {
-  type: "dash";
-  direction: { x: number; y: number };
-  additionalSpeed: number;
-  duration: number;
-  cooldown: number;
-} | null => {
-  if (isMoveMovementInput(input)) {
-    return input.direction;
-  }
-  if (!isDashMovementInput(input)) {
-    if (typeof input !== "string" && typeof input !== "number") return null;
-    return input as Direction;
-  }
-
-  const rawX = Number(input.direction?.x ?? 0);
-  const rawY = Number(input.direction?.y ?? 0);
-  const magnitude = Math.hypot(rawX, rawY);
-  if (!Number.isFinite(magnitude) || magnitude <= 0) return null;
-
-  return {
-    type: "dash",
-    direction: {
-      x: rawX / magnitude,
-      y: rawY / magnitude,
-    },
-    additionalSpeed:
-      typeof input.additionalSpeed === "number" && Number.isFinite(input.additionalSpeed)
-        ? Math.max(0, Math.min(input.additionalSpeed, 64))
-        : 8,
-    duration:
-      typeof input.duration === "number" && Number.isFinite(input.duration)
-        ? Math.max(1, Math.min(input.duration, 1000))
-        : 180,
-    cooldown:
-      typeof input.cooldown === "number" && Number.isFinite(input.cooldown)
-        ? Math.max(0, Math.min(input.cooldown, 5000))
-        : DEFAULT_DASH_COOLDOWN_MS,
-  };
-};
-
-const vectorToDirection = (direction: { x: number; y: number }): Direction => {
-  if (Math.abs(direction.x) > Math.abs(direction.y)) {
-    return direction.x < 0 ? Direction.Left : Direction.Right;
-  }
-  return direction.y < 0 ? Direction.Up : Direction.Down;
-};
-
 function isRpgLog(error: unknown): error is Log {
   return error instanceof Log
     || (typeof error === "object"
@@ -155,218 +117,8 @@ function isRpgLog(error: unknown): error is Log {
       && (error as any).name === "RpgLog");
 }
 
-/**
- * Interface for input controls configuration
- * 
- * Defines the structure for input validation and anti-cheat controls
- */
-export interface Controls {
-  /** Maximum allowed time delta between inputs in milliseconds */
-  maxTimeDelta?: number;
-  /** Maximum allowed frame delta between inputs */
-  maxFrameDelta?: number;
-  /** Minimum time between inputs in milliseconds */
-  minTimeBetweenInputs?: number;
-  /** Whether to enable anti-cheat validation */
-  enableAntiCheat?: boolean;
-  /** Maximum number of queued inputs processed per server tick */
-  maxInputsPerTick?: number;
-}
-
-/**
- * Zod schema for validating map update request body
- * 
- * This schema ensures that the required fields are present and properly typed
- * when updating a map configuration.
- */
-const MapUpdateSchema = z.object({
-  /** Configuration object for the map (optional) */
-  config: z.any().optional(),
-  /** Damage formulas configuration (optional) */
-  damageFormulas: z.any().optional(),
-  /** Unique identifier for the map (required) */
-  id: z.string(),
-  /** Width of the map in pixels (required) */
-  width: z.number(),
-  /** Height of the map in pixels (required) */
-  height: z.number(),
-  /** Map events to spawn (optional) */
-  events: z.array(z.any()).optional(),
-  /** Optional static hitboxes (custom maps) */
-  hitboxes: z.array(z.any()).optional(),
-  /** Optional named positions resolved by map integrations such as Tiled */
-  positions: z.record(z.string(), z.any()).optional(),
-  /** Parsed tiled map payload (optional) */
-  parsedMap: z.any().optional(),
-  /** Raw map source payload (optional) */
-  data: z.any().optional(),
-  /**
-   * Server-owned game database published with the map (optional).
-   *
-   * Studio publishes either its record array or an already normalized record.
-   * Keeping it in the validated payload lets database hooks populate the room
-   * without an HTTP fallback and preserves it across room restoration.
-   */
-  database: z.union([
-    z.array(z.any()),
-    z.record(z.string(), z.any()),
-  ]).optional(),
-  /** Optional map params payload */
-  params: z.any().optional(),
-});
-
 const SAFE_MAP_WIDTH = 1000;
 const SAFE_MAP_HEIGHT = 1000;
-
-/**
- * Interface representing hook methods available for map events
- * 
- * These hooks are triggered at specific moments during the event lifecycle.
- *
- * `onInit()` is intended for base event setup when the event instance is created.
- * At this stage, the event is not reacting to a specific player yet.
- *
- * `onChanges(player)` is reactive. It is called during the change-detection cycle,
- * for example after player state changes such as variable updates or when
- * `player.syncChanges()` is executed manually.
- */
-export interface EventHooks {
-  /**
-   * Called when the event is first initialized.
-   *
-   * Use this hook for default setup that does not depend on a player interaction,
-   * such as setting the initial graphic, speed, or movement route.
-   */
-  onInit?: (this: RpgEvent) => void;
-  /**
-   * Called during the change-detection cycle for the current player.
-   *
-   * Use this hook to recompute the event state from player data, especially
-   * player variables. This is useful for reactive visuals such as an opened
-   * chest, a hidden door, or a conditional NPC graphic.
-   */
-  onChanges?: (this: RpgEvent, player: RpgPlayer) => void;
-  /** Called when a player performs an action on this event */
-  onAction?: (this: RpgEvent, player: RpgPlayer, input: RpgActionInput<unknown>) => void | Promise<void>;
-  /** Called when a player touches this event */
-  onPlayerTouch?: (this: RpgEvent, player: RpgPlayer) => void;
-  /** Called when this event starts touching a player or another event */
-  onTouch?: (this: RpgEvent, other: RpgPlayer | RpgEvent, context: RpgTouchContext) => void | Promise<void>;
-  /** Called when this event stops touching a player or another event */
-  onTouchEnd?: (this: RpgEvent, other: RpgPlayer | RpgEvent, context: RpgTouchContext) => void | Promise<void>;
-  /** Called when a player enters a shape attached to the event */
-  onInShape?: (this: RpgEvent, zone: RpgShape, player: RpgPlayer) => void;
-  /** Called when a player exits a shape attached to the event */
-  onOutShape?: (this: RpgEvent, zone: RpgShape, player: RpgPlayer) => void;
-  /** Called when a player is detected entering a detection shape attached to the event */
-  onDetectInShape?: (this: RpgEvent, player: RpgPlayer, shape: RpgShape) => void;
-  /** Called when a player is detected exiting a detection shape attached to the event */
-  onDetectOutShape?: (this: RpgEvent, player: RpgPlayer, shape: RpgShape) => void;
-}
-
-export interface RpgTouchContext {
-  self: RpgEvent;
-  other: RpgPlayer | RpgEvent;
-  otherType: "player" | "event";
-  player?: RpgPlayer;
-  phase: "start" | "end";
-  pairId: string;
-  map: RpgMap;
-}
-
-/** Type for event class constructor */
-export type EventConstructor = new () => RpgEvent;
-
-/**
- * Object-based event definition.
- *
- * Coordinates belong to the surrounding map event wrapper, not the event definition itself.
- */
-export type EventDefinition = EventHooks & {
-  /** Optional display name copied to the runtime event instance */
-  name?: string;
-  /** Shared or scenario event mode */
-  mode?: EventMode | "shared" | "scenario";
-  /** Whether players can physically push this event. `false` by default. */
-  pushable?: boolean;
-  /** Physical mass used when the event is pushable. `0` or `Infinity` makes it immovable. */
-  mass?: number;
-  /** Allow custom event metadata while keeping placement fields typed separately */
-  [key: string]: unknown;
-  /** Disallow placement fields on the event definition itself */
-  id?: never;
-  event?: never;
-  x?: never;
-  y?: never;
-  scenarioOwnerId?: never;
-};
-
-/** Public event definition type accepted by map events and dynamic event creation */
-export type MapEventDefinition = EventConstructor | EventDefinition;
-
-/** Options for positioning and defining an event on the map */
-export type EventPosOption = {
-  /** ID of the event */
-  id?: string,
-
-  /** X position of the event on the map */
-  x?: number,
-  /** Y position of the event on the map */
-  y?: number,
-  /** Event mode override */
-  mode?: EventMode | "shared" | "scenario",
-  /** Owner player id when mode is scenario */
-  scenarioOwnerId?: string,
-  /** Initial event hitbox in RPGJS pixels */
-  hitbox?: { width?: number; height?: number; w?: number; h?: number },
-  /** 
-   * Event definition - can be either:
-   * - A class that extends RpgEvent
-   * - An object with hook methods
-   */
-  event: MapEventDefinition
-}
-
-/** Public placed map event type */
-export type MapEventPlacement = EventPosOption;
-
-type CreateDynamicEventOptions = {
-  mode?: EventMode | "shared" | "scenario";
-  scenarioOwnerId?: string;
-};
-
-interface WeatherSetOptions {
-  sync?: boolean;
-}
-
-interface LightingSetOptions {
-  sync?: boolean;
-  cancelTransition?: boolean;
-}
-
-/**
- * Stable connection surface passed to RPGJS room lifecycle methods.
- *
- * The room runtime owns the connection. Game code may send data, close the
- * socket, or replace its application state without depending on a transport
- * implementation.
- */
-export interface RpgRoomConnection<TState = unknown> {
-  /** Stable public connection identifier. */
-  readonly id: string;
-  /** Private session identifier retained by supported reconnection flows. */
-  readonly sessionId?: string;
-  /** Current application-owned state. Use `setState()` to replace it. */
-  readonly state: Readonly<TState> | null;
-  /** Replace the application-owned connection state. */
-  setState(
-    state: TState | ((previous: Readonly<TState> | null) => TState) | null,
-  ): Readonly<TState> | null;
-  /** Send data to this connection. */
-  send(data: string | ArrayBuffer | ArrayBufferView): void;
-  /** Close this connection. */
-  close(code?: number, reason?: string): void;
-}
 
 @RpgRoom({
   kind: "map",

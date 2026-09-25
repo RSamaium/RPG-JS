@@ -67,6 +67,7 @@ and optional `tileWidth`, `tileHeight` properties (e.g. your `RpgMap` instance o
 ```ts
 getAdjacentMaps(map: WorldMapSource, search: | { minX: number; minY: number; maxX: number; maxY: number }
       | { x: number; y: number }
+      | Direction
       | number): WorldMapInfo[]
 ```
 
@@ -75,6 +76,7 @@ getAdjacentMaps(map: WorldMapSource, search: | { minX: number; minY: number; max
 - `map`: `WorldMapSource`
 - `search`: `| { minX: number; minY: number; maxX: number; maxY: number }
       | { x: number; y: number }
+      | Direction
       | number`
 
 ### Returns
