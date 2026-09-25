@@ -63,6 +63,8 @@ import {
 import { readMapSource, writeMapSource } from "../map-source-storage";
 import { DEFAULT_DASH_COOLDOWN_MS, isDashMovementInput, normalizeServerMovementInput, vectorToDirection } from "./map-input";
 import { MapUpdateSchema } from "./map-update-schema";
+import { cloneWeatherState, easeLightingProgress, interpolateLighting } from "./map-environment";
+import { MapTouchCollisions } from "./map-touch";
 import type {
   Controls,
   CreateDynamicEventOptions,
@@ -88,25 +90,11 @@ export type {
 } from "./map-types";
 
 const MOVEMENT_IDLE_TIMEOUT_MS = 100;
-const GROUND_TOUCH_SENSOR_COVERAGE_THRESHOLD = 0.8;
 const WORLD_MAPS_STORAGE_KEY = "$room:rpgjs-world-maps";
 
 type StoredWorldMaps = {
   id: string;
   maps: WorldMapConfig[];
-};
-
-type PhysicsCollisionEntity = {
-  uuid: string;
-  owner?: any;
-  position?: { x: number; y: number };
-  width?: number;
-  height?: number;
-};
-
-type TrackedTouchCollision = {
-  entityA: PhysicsCollisionEntity;
-  entityB: PhysicsCollisionEntity;
 };
 
 function isRpgLog(error: unknown): error is Log {
@@ -135,8 +123,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     };
   };
   private _clientListeners = new Map<string, Set<(player: RpgPlayer, data: unknown) => void | Promise<void>>>();
-  private activeTouchCollisions = new Set<string>();
-  private trackedTouchCollisions = new Map<string, TrackedTouchCollision>();
+  private touchCollisions = new MapTouchCollisions(this);
   private spatialVisibleEventIds = new Map<string, Set<string>>();
   private spatialVisiblePlayerIds = new Map<string, Set<string>>();
 
@@ -376,7 +363,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     return super.runFixedTicks(deltaMs, {
       beforeStep: hooks?.beforeStep,
       afterStep: (tick) => {
-        this.refreshTrackedTouchCollisions();
+        this.touchCollisions.refreshTrackedTouchCollisions();
         hooks?.afterStep?.(tick);
         this.projectiles.step(fixedStep);
         refreshMapStreaming(this);
@@ -395,7 +382,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     return super.runFixedTicksAsync(deltaMs, {
       beforeStep: hooks?.beforeStep,
       afterStep: async (tick) => {
-        this.refreshTrackedTouchCollisions();
+        this.touchCollisions.refreshTrackedTouchCollisions();
         await hooks?.afterStep?.(tick);
         this.projectiles.step(fixedStep);
         refreshMapStreaming(this);
@@ -686,257 +673,6 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     this._scenarioEventIdsByPlayer.delete(playerId);
   }
 
-  private readBooleanSignal(value: any): boolean {
-    if (typeof value === "function") {
-      try {
-        return value() === true;
-      } catch {
-        return false;
-      }
-    }
-    return value === true;
-  }
-
-  private isGroundTouchSensorEntity(
-    entity: PhysicsCollisionEntity,
-    other: PhysicsCollisionEntity,
-  ): boolean {
-    const owner = entity.owner;
-    if (!owner) return false;
-    const otherIsEvent = !!this.getEvent(other.uuid);
-    const through = this.readBooleanSignal(owner._through) || owner.through === true;
-    const throughEvent =
-      otherIsEvent &&
-      (this.readBooleanSignal(owner._throughEvent) || owner.throughEvent === true);
-    return through || throughEvent;
-  }
-
-  private haveDifferentTouchableZ(
-    entityA: PhysicsCollisionEntity,
-    entityB: PhysicsCollisionEntity,
-  ): boolean {
-    const zA = entityA.owner?.z();
-    const zB = entityB.owner?.z();
-    if (
-      zA !== zB &&
-      Number(zA) <= 0 &&
-      Number(zB) <= 0 &&
-      (this.isGroundTouchSensorEntity(entityA, entityB) ||
-        this.isGroundTouchSensorEntity(entityB, entityA))
-    ) {
-      return false;
-    }
-    return zA !== zB;
-  }
-
-  private buildTouchPairId(
-    entityA: PhysicsCollisionEntity,
-    entityB: PhysicsCollisionEntity,
-  ): string {
-    return entityA.uuid < entityB.uuid
-      ? `${entityA.uuid}-${entityB.uuid}`
-      : `${entityB.uuid}-${entityA.uuid}`;
-  }
-
-  private getPhysicsRect(entity: PhysicsCollisionEntity): {
-    left: number;
-    top: number;
-    right: number;
-    bottom: number;
-    area: number;
-  } | null {
-    const width = Number(entity.width);
-    const height = Number(entity.height);
-    const centerX = Number(entity.position?.x);
-    const centerY = Number(entity.position?.y);
-    if (
-      !Number.isFinite(width) ||
-      !Number.isFinite(height) ||
-      width <= 0 ||
-      height <= 0 ||
-      !Number.isFinite(centerX) ||
-      !Number.isFinite(centerY)
-    ) {
-      return null;
-    }
-    const left = centerX - width / 2;
-    const top = centerY - height / 2;
-    return {
-      left,
-      top,
-      right: left + width,
-      bottom: top + height,
-      area: width * height,
-    };
-  }
-
-  private getSensorCoverage(
-    sensor: PhysicsCollisionEntity,
-    other: PhysicsCollisionEntity,
-  ): number {
-    const sensorRect = this.getPhysicsRect(sensor);
-    const otherRect = this.getPhysicsRect(other);
-    if (!sensorRect || !otherRect || sensorRect.area <= 0) {
-      return 0;
-    }
-    const overlapWidth = Math.max(
-      0,
-      Math.min(sensorRect.right, otherRect.right) -
-        Math.max(sensorRect.left, otherRect.left),
-    );
-    const overlapHeight = Math.max(
-      0,
-      Math.min(sensorRect.bottom, otherRect.bottom) -
-        Math.max(sensorRect.top, otherRect.top),
-    );
-    return (overlapWidth * overlapHeight) / sensorRect.area;
-  }
-
-  private hasEnoughGroundSensorCoverage(
-    entityA: PhysicsCollisionEntity,
-    entityB: PhysicsCollisionEntity,
-  ): boolean {
-    const eventA = this.getEvent<RpgEvent>(entityA.uuid);
-    const eventB = this.getEvent<RpgEvent>(entityB.uuid);
-    if (!eventA || !eventB) {
-      return true;
-    }
-    const sensors: Array<[PhysicsCollisionEntity, PhysicsCollisionEntity]> = [];
-    if (this.isGroundTouchSensorEntity(entityA, entityB)) {
-      sensors.push([entityA, entityB]);
-    }
-    if (this.isGroundTouchSensorEntity(entityB, entityA)) {
-      sensors.push([entityB, entityA]);
-    }
-    if (sensors.length === 0) {
-      return true;
-    }
-    return sensors.every(([sensor, other]) =>
-      this.getSensorCoverage(sensor, other) >= GROUND_TOUCH_SENSOR_COVERAGE_THRESHOLD
-    );
-  }
-
-  private dispatchTouch(
-    self: RpgEvent,
-    other: RpgPlayer | RpgEvent,
-    otherType: "player" | "event",
-    phase: "start" | "end",
-    pairId: string,
-    player?: RpgPlayer,
-  ): void {
-    const context: RpgTouchContext = {
-      self,
-      other,
-      otherType,
-      player,
-      phase,
-      pairId,
-      map: this,
-    };
-    const method = phase === "start" ? "onTouch" : "onTouchEnd";
-    void self.execMethod(method, [other, context]);
-  }
-
-  private dispatchTouchCollision(
-    entityA: PhysicsCollisionEntity,
-    entityB: PhysicsCollisionEntity,
-    phase: "start" | "end",
-    pairId: string,
-  ): boolean {
-    const playerA = this.getPlayer(entityA.uuid);
-    const playerB = this.getPlayer(entityB.uuid);
-    const eventA = this.getEvent<RpgEvent>(entityA.uuid);
-    const eventB = this.getEvent<RpgEvent>(entityB.uuid);
-
-    if (playerA && eventB && this.isEventVisibleForPlayer(eventB, playerA)) {
-      this.dispatchTouch(eventB, playerA, "player", phase, pairId, playerA);
-      if (phase === "start") {
-        void eventB.execMethod("onPlayerTouch", [playerA]);
-      }
-      return true;
-    }
-
-    if (playerB && eventA && this.isEventVisibleForPlayer(eventA, playerB)) {
-      this.dispatchTouch(eventA, playerB, "player", phase, pairId, playerB);
-      if (phase === "start") {
-        void eventA.execMethod("onPlayerTouch", [playerB]);
-      }
-      return true;
-    }
-
-    if (eventA && eventB) {
-      this.dispatchTouch(eventA, eventB, "event", phase, pairId);
-      this.dispatchTouch(eventB, eventA, "event", phase, pairId);
-      return true;
-    }
-
-    return false;
-  }
-
-  private canActivateTouchCollision(
-    entityA: PhysicsCollisionEntity,
-    entityB: PhysicsCollisionEntity,
-  ): boolean {
-    return (
-      !this.haveDifferentTouchableZ(entityA, entityB) &&
-      this.hasEnoughGroundSensorCoverage(entityA, entityB)
-    );
-  }
-
-  private updateTrackedTouchCollision(
-    pairId: string,
-    collision: TrackedTouchCollision,
-  ): void {
-    const active = this.activeTouchCollisions.has(pairId);
-    const canActivate = this.canActivateTouchCollision(
-      collision.entityA,
-      collision.entityB,
-    );
-
-    if (canActivate && !active) {
-      if (this.dispatchTouchCollision(collision.entityA, collision.entityB, "start", pairId)) {
-        this.activeTouchCollisions.add(pairId);
-      }
-      return;
-    }
-
-    if (!canActivate && active) {
-      this.dispatchTouchCollision(collision.entityA, collision.entityB, "end", pairId);
-      this.activeTouchCollisions.delete(pairId);
-    }
-  }
-
-  private refreshTrackedTouchCollisions(): void {
-    for (const [pairId, collision] of this.trackedTouchCollisions) {
-      this.updateTrackedTouchCollision(pairId, collision);
-    }
-  }
-
-  private trackTouchCollision(
-    entityA: PhysicsCollisionEntity,
-    entityB: PhysicsCollisionEntity,
-  ): void {
-    const pairId = this.buildTouchPairId(entityA, entityB);
-    const collision = { entityA, entityB };
-    this.trackedTouchCollisions.set(pairId, collision);
-    this.updateTrackedTouchCollision(pairId, collision);
-  }
-
-  private untrackTouchCollision(
-    entityA: PhysicsCollisionEntity,
-    entityB: PhysicsCollisionEntity,
-    options: { dispatchEnd?: boolean } = {},
-  ): void {
-    const pairId = this.buildTouchPairId(entityA, entityB);
-    if (this.activeTouchCollisions.has(pairId) && options.dispatchEnd !== false) {
-      this.dispatchTouchCollision(entityA, entityB, "end", pairId);
-    }
-    if (this.activeTouchCollisions.has(pairId)) {
-      this.activeTouchCollisions.delete(pairId);
-    }
-    this.trackedTouchCollisions.delete(pairId);
-  }
-
   /**
    * Setup collision detection between players, events, and shapes
    * 
@@ -979,8 +715,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
   private setupCollisionDetection(): void {
     // Track collisions to avoid calling hooks multiple times for the same collision
     const activeShapeCollisions = new Set<string>();
-    this.activeTouchCollisions.clear();
-    this.trackedTouchCollisions.clear();
+    this.touchCollisions.clear();
 
     // Listen to collision enter events
     this.physic.getEvents().onCollisionEnter((collision) => {
@@ -989,7 +724,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
 
       // Skip collision callbacks if entities have different z (height)
       // Higher z entities should not trigger collision callbacks with lower z entities
-      if (this.haveDifferentTouchableZ(entityA, entityB)) {
+      if (this.touchCollisions.haveDifferentTouchableZ(entityA, entityB)) {
         return;
       }
 
@@ -1024,7 +759,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
         return;
       }
 
-      this.trackTouchCollision(entityA, entityB);
+      this.touchCollisions.trackTouchCollision(entityA, entityB);
     });
 
     // Listen to collision exit events to clean up tracking
@@ -1033,8 +768,8 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
       const entityB = collision.entityB;
 
       // Skip collision callbacks if entities have different z (height)
-      if (this.haveDifferentTouchableZ(entityA, entityB)) {
-        this.untrackTouchCollision(entityA, entityB, { dispatchEnd: false });
+      if (this.touchCollisions.haveDifferentTouchableZ(entityA, entityB)) {
+        this.touchCollisions.untrackTouchCollision(entityA, entityB, { dispatchEnd: false });
         return;
       }
 
@@ -1069,7 +804,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
         return;
       }
 
-      this.untrackTouchCollision(entityA, entityB);
+      this.touchCollisions.untrackTouchCollision(entityA, entityB);
     });
   }
 
@@ -3093,21 +2828,11 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     })
   }
 
-  private cloneWeatherState(weather: WeatherState | null): WeatherState | null {
-    if (!weather) {
-      return null;
-    }
-    return {
-      ...weather,
-      params: weather.params ? { ...weather.params } : undefined,
-    };
-  }
-
   /**
    * Get the current map weather state.
    */
   getWeather(): WeatherState | null {
-    return this.cloneWeatherState(this._weatherState);
+    return cloneWeatherState(this._weatherState);
   }
 
   /**
@@ -3120,7 +2845,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     if (next && !next.effect) {
       throw new Error("setWeather: 'effect' is required when weather is not null.");
     }
-    this._weatherState = this.cloneWeatherState(next);
+    this._weatherState = cloneWeatherState(next);
     if (sync) {
       this.$broadcast({
         type: "weatherState",
@@ -3163,45 +2888,6 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
       clearInterval(this._lightingTransitionTimer);
       this._lightingTransitionTimer = undefined;
     }
-  }
-
-  private interpolateNumber(from: number | undefined, to: number | undefined, progress: number): number | undefined {
-    if (typeof from !== "number" && typeof to !== "number") {
-      return undefined;
-    }
-    const start = typeof from === "number" ? from : 0;
-    const end = typeof to === "number" ? to : start;
-    return start + (end - start) * progress;
-  }
-
-  private easeLightingProgress(progress: number, easing: LightingTransitionOptions["easing"]): number {
-    const value = Math.max(0, Math.min(1, progress));
-    if (easing === "easeInOut") {
-      return value < 0.5 ? 2 * value * value : 1 - Math.pow(-2 * value + 2, 2) / 2;
-    }
-    return value;
-  }
-
-  private interpolateLighting(from: LightingState, to: LightingState, progress: number): LightingState {
-    return {
-      ...to,
-      ambient: {
-        ...(to.ambient ?? {}),
-        darkness: this.interpolateNumber(from.ambient?.darkness, to.ambient?.darkness, progress),
-        fogRadius: this.interpolateNumber(from.ambient?.fogRadius, to.ambient?.fogRadius, progress),
-        fogSoftness: this.interpolateNumber(from.ambient?.fogSoftness, to.ambient?.fogSoftness, progress),
-        fogOpacity: this.interpolateNumber(from.ambient?.fogOpacity, to.ambient?.fogOpacity, progress),
-      },
-      sun: {
-        ...(to.sun ?? {}),
-        x: this.interpolateNumber(from.sun?.x, to.sun?.x, progress),
-        y: this.interpolateNumber(from.sun?.y, to.sun?.y, progress),
-        z: this.interpolateNumber(from.sun?.z, to.sun?.z, progress),
-        radius: this.interpolateNumber(from.sun?.radius, to.sun?.radius, progress),
-        intensity: this.interpolateNumber(from.sun?.intensity, to.sun?.intensity, progress),
-        shadowWeight: this.interpolateNumber(from.sun?.shadowWeight, to.sun?.shadowWeight, progress),
-      },
-    };
   }
 
   /**
@@ -3281,8 +2967,8 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
 
     this._lightingTransitionTimer = setInterval(() => {
       const elapsed = Date.now() - startedAt;
-      const progress = this.easeLightingProgress(elapsed / duration, options.easing);
-      const next = this.interpolateLighting(from, to, progress);
+      const progress = easeLightingProgress(elapsed / duration, options.easing);
+      const next = interpolateLighting(from, to, progress);
       this.setLighting(next, { ...options, cancelTransition: false });
 
       if (elapsed >= duration) {
@@ -3291,7 +2977,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
       }
     }, intervalMs);
 
-    const first = this.interpolateLighting(from, to, 0);
+    const first = interpolateLighting(from, to, 0);
     this.setLighting(first, { ...options, cancelTransition: false });
     return this.getLighting();
   }
