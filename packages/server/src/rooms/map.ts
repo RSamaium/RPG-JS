@@ -563,6 +563,47 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
   }
 
   /**
+   * Dispatch `onInShape` / `onOutShape` when one of the colliding entities is a
+   * static map shape. Returns `true` when the collision involves a shape.
+   * @private
+   */
+  private dispatchShapeCollision(
+    entityA: { uuid: string },
+    entityB: { uuid: string },
+    phase: "in" | "out",
+    activeShapeCollisions: Set<string>,
+  ): boolean {
+    const shapeA = this._shapeEntities.get(entityA.uuid);
+    const shape = shapeA ?? this._shapeEntities.get(entityB.uuid);
+    if (!shape) {
+      return false;
+    }
+
+    const otherEntity = shapeA ? entityB : entityA;
+    const shapeKey = `${otherEntity.uuid}-${shape.name}`;
+    const isActive = activeShapeCollisions.has(shapeKey);
+    if (phase === "in" ? isActive : !isActive) {
+      return true;
+    }
+    if (phase === "in") {
+      activeShapeCollisions.add(shapeKey);
+    } else {
+      activeShapeCollisions.delete(shapeKey);
+    }
+
+    const player = this.getPlayer(otherEntity.uuid);
+    const event = this.getEvent<RpgEvent>(otherEntity.uuid);
+    const hook = phase === "in" ? "onInShape" : "onOutShape";
+    if (player) {
+      player.execMethod(hook, [player, shape]);
+    }
+    if (event) {
+      event.execMethod(hook, [shape, player || event]);
+    }
+    return true;
+  }
+
+  /**
    * Setup collision detection between players, events, and shapes
    * 
    * This method listens to physics collision events and triggers hooks:
@@ -611,40 +652,15 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
       const entityA = collision.entityA;
       const entityB = collision.entityB;
 
-      // Skip collision callbacks if entities have different z (height)
-      // Higher z entities should not trigger collision callbacks with lower z entities
-      if (this.touchCollisions.haveDifferentTouchableZ(entityA, entityB)) {
+      // Shape collisions trigger onInShape instead of touch hooks. Static
+      // shapes have no owner (and no z), so they are handled before the z check.
+      if (this.dispatchShapeCollision(entityA, entityB, "in", activeShapeCollisions)) {
         return;
       }
 
-      // Check for shape collisions first
-      const shapeA = this._shapeEntities.get(entityA.uuid);
-      const shapeB = this._shapeEntities.get(entityB.uuid);
-
-      if (shapeA || shapeB) {
-        // One of the entities is a shape
-        const shape = shapeA || shapeB;
-        const otherEntity = shapeA ? entityB : entityA;
-
-        if (shape) {
-          const shapeKey = `${otherEntity.uuid}-${shape.name}`;
-          if (!activeShapeCollisions.has(shapeKey)) {
-            activeShapeCollisions.add(shapeKey);
-
-            // Check if the other entity is a player or event
-            const player = this.getPlayer(otherEntity.uuid);
-            const event = this.getEvent<RpgEvent>(otherEntity.uuid);
-
-            if (player) {
-              // Trigger onInShape hook on player
-              player.execMethod('onInShape', [player, shape]);
-            }
-            if (event) {
-              // Trigger onInShape hook on event
-              event.execMethod('onInShape', [shape, player || event]);
-            }
-          }
-        }
+      // Skip collision callbacks if entities have different z (height)
+      // Higher z entities should not trigger collision callbacks with lower z entities
+      if (this.touchCollisions.haveDifferentTouchableZ(entityA, entityB)) {
         return;
       }
 
@@ -656,40 +672,14 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
       const entityA = collision.entityA;
       const entityB = collision.entityB;
 
-      // Skip collision callbacks if entities have different z (height)
-      if (this.touchCollisions.haveDifferentTouchableZ(entityA, entityB)) {
-        this.touchCollisions.untrackTouchCollision(entityA, entityB, { dispatchEnd: false });
+      // Shape collisions trigger onOutShape instead of touch hooks
+      if (this.dispatchShapeCollision(entityA, entityB, "out", activeShapeCollisions)) {
         return;
       }
 
-      // Check for shape collisions
-      const shapeA = this._shapeEntities.get(entityA.uuid);
-      const shapeB = this._shapeEntities.get(entityB.uuid);
-
-      if (shapeA || shapeB) {
-        // One of the entities is a shape
-        const shape = shapeA || shapeB;
-        const otherEntity = shapeA ? entityB : entityA;
-
-        if (shape) {
-          const shapeKey = `${otherEntity.uuid}-${shape.name}`;
-          if (activeShapeCollisions.has(shapeKey)) {
-            activeShapeCollisions.delete(shapeKey);
-
-            // Check if the other entity is a player or event
-            const player = this.getPlayer(otherEntity.uuid);
-            const event = this.getEvent<RpgEvent>(otherEntity.uuid);
-
-            if (player) {
-              // Trigger onOutShape hook on player
-              player.execMethod('onOutShape', [player, shape]);
-            }
-            if (event) {
-              // Trigger onOutShape hook on event
-              event.execMethod('onOutShape', [shape, player || event]);
-            }
-          }
-        }
+      // Skip collision callbacks if entities have different z (height)
+      if (this.touchCollisions.haveDifferentTouchableZ(entityA, entityB)) {
+        this.touchCollisions.untrackTouchCollision(entityA, entityB, { dispatchEnd: false });
         return;
       }
 

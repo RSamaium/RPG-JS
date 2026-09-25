@@ -1,4 +1,4 @@
-import { beforeEach, test, expect, afterEach } from 'vitest'
+import { beforeEach, test, expect, afterEach, vi } from 'vitest'
 import { testing, TestingFixture } from '@rpgjs/testing'
 import { defineModule, createModule } from '@rpgjs/common'
 import { EventData, RpgEvent, RpgPlayer, RpgServer, Move } from '../src'
@@ -714,6 +714,51 @@ test('player/event touch keeps onPlayerTouch compatibility and exposes context.p
       `onPlayerTouch:${player.id}`,
       `onTouchEnd:${player.id}:${player.id}:player:end`,
     ])
+})
+
+test('static shapes dispatch onInShape and onOutShape once per contact', async () => {
+    player = await client.waitForMapChange('map1')
+    const map = player.getCurrentMap() as any
+    const calls: string[] = []
+
+    const shape = map.createShape({ name: "zone", x: player.x(), y: player.y(), width: 32, height: 32 })
+    await map.createDynamicEvent({
+      id: "shape-npc",
+      x: player.x(),
+      y: player.y(),
+      event: {
+        onInShape(zone, other) {
+          calls.push(`event:in:${zone.name}:${other.id}`)
+        },
+        onOutShape(zone, other) {
+          calls.push(`event:out:${zone.name}:${other.id}`)
+        },
+      }
+    })
+    const execMethod = vi.spyOn(player, 'execMethod')
+    const shapeBody = map.physic.getEntityByUUID("shape-zone")
+    const playerContact = { entityA: shapeBody, entityB: map.getBody(player.id) }
+    const eventContact = { entityA: map.getBody("shape-npc"), entityB: shapeBody }
+
+    map.physic.getEvents().emitCollisionEnter(playerContact)
+    map.physic.getEvents().emitCollisionEnter(playerContact)
+    map.physic.getEvents().emitCollisionEnter(eventContact)
+    await fixture.wait(0)
+
+    expect(execMethod.mock.calls.filter(([hook]) => hook === 'onInShape')).toEqual([
+      ['onInShape', [player, shape]],
+    ])
+    expect(calls).toEqual(["event:in:zone:shape-npc"])
+
+    map.physic.getEvents().emitCollisionExit(playerContact)
+    map.physic.getEvents().emitCollisionExit(playerContact)
+    map.physic.getEvents().emitCollisionExit(eventContact)
+    await fixture.wait(0)
+
+    expect(execMethod.mock.calls.filter(([hook]) => hook === 'onOutShape')).toEqual([
+      ['onOutShape', [player, shape]],
+    ])
+    expect(calls).toEqual(["event:in:zone:shape-npc", "event:out:zone:shape-npc"])
 })
 
 test('scenario event touch hooks only run for the owner player', async () => {
