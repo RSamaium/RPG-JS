@@ -475,6 +475,13 @@ describe("ProjectileManager renderList", () => {
     const first = manager.renderList();
     expect(first).toHaveLength(1);
     expect(first[0].props.x()).toBe(0);
+    // Spawn data stays plain; missing optional fields are omitted for component defaults
+    expect(first[0].props.id).toBe("p1");
+    expect("params" in first[0].props).toBe(false);
+    // Dynamic props never hold undefined, which components would reject
+    expect(first[0].props.impact()).toBeNull();
+    expect(first[0].props.impactProgress()).toBe(0);
+    expect(first[0].props.destroyed()).toBe(false);
 
     vi.setSystemTime(1200);
     manager.step();

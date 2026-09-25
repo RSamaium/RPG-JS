@@ -366,5 +366,10 @@ Common props:
   `distance` to a locally predicted impact point; `impact` remains undefined
   until the server confirms the collision.
 
+Position and progress props (`x`, `y`, `angle`, `distance`, `elapsed`,
+`progress`, `impact`, `impactElapsed`, `impactProgress`, `destroyed`) are
+updated on every frame without rebuilding the component. Before an impact,
+`impact` is `null` and `impactElapsed` / `impactProgress` are `0`.
+
 Do not apply damage in the component. Components are visual only; gameplay
 effects belong in server projectile hooks.

@@ -83,9 +83,15 @@ interface RuntimeProjectile {
   renderProps?: ProjectileRenderProps;
 }
 
-/** Props of a rendered projectile component, as signals updated every step. */
-export type ProjectileRenderProps = {
-  [K in keyof RenderedProjectileProps]-?: WritableSignal<RenderedProjectileProps[K]>;
+/** Props that change while a projectile is rendered. */
+type ProjectileDynamicProp = typeof PROJECTILE_DYNAMIC_PROPS[number];
+
+/**
+ * Props of a rendered projectile component: spawn data as plain values and the
+ * props that change over time as signals updated every step.
+ */
+export type ProjectileRenderProps = Omit<RenderedProjectileProps, ProjectileDynamicProp> & {
+  [K in ProjectileDynamicProp]-?: WritableSignal<RenderedProjectileProps[K] | null>;
 };
 
 /** Item of `ProjectileManager.renderList`. */
@@ -96,8 +102,22 @@ export interface ProjectileRenderItem {
   props: ProjectileRenderProps;
 }
 
-// Optional props that may appear after the first frame (impact, destruction)
-const LATE_PROJECTILE_PROPS = ["impact", "impactElapsed", "impactProgress", "destroyed"] as const;
+const PROJECTILE_DYNAMIC_PROPS = [
+  "x", "y", "angle", "distance", "elapsed", "progress",
+  "impact", "impactElapsed", "impactProgress", "destroyed",
+] as const;
+
+// Components validate signal values, so dynamic props never hold `undefined`:
+// before an impact, `impact` is null and its progress values are 0.
+const PROJECTILE_DYNAMIC_DEFAULTS: Partial<Record<ProjectileDynamicProp, unknown>> = {
+  impact: null,
+  impactElapsed: 0,
+  impactProgress: 0,
+  destroyed: false,
+};
+
+const dynamicPropValue = (props: RenderedProjectileProps, key: ProjectileDynamicProp): unknown =>
+  props[key] ?? PROJECTILE_DYNAMIC_DEFAULTS[key];
 
 export class ProjectileManager {
   private readonly components = new Map<string, any>();
@@ -404,21 +424,28 @@ export class ProjectileManager {
   }
 
   private syncRenderProps(projectile: RuntimeProjectile, props: RenderedProjectileProps): ProjectileRenderProps {
-    const values = props as unknown as Record<string, unknown>;
     if (!projectile.renderProps) {
       const created: Record<string, unknown> = {};
-      for (const key of [...Object.keys(values), ...LATE_PROJECTILE_PROPS]) {
-        created[key] = signal(values[key]);
+      for (const [key, value] of Object.entries(props)) {
+        // Omit undefined spawn fields so component defaults apply
+        if (value !== undefined && !(PROJECTILE_DYNAMIC_PROPS as readonly string[]).includes(key)) {
+          created[key] = value;
+        }
+      }
+      for (const key of PROJECTILE_DYNAMIC_PROPS) {
+        created[key] = signal(dynamicPropValue(props, key));
       }
       projectile.renderProps = created as ProjectileRenderProps;
       return projectile.renderProps;
     }
     const current = projectile.renderProps as unknown as Record<string, { (): unknown; set(value: unknown): void }>;
-    for (const key of Object.keys(current)) {
-      if (current[key]() !== values[key]) {
-        current[key].set(values[key]);
+    for (const key of PROJECTILE_DYNAMIC_PROPS) {
+      const value = dynamicPropValue(props, key);
+      if (current[key]() !== value) {
+        current[key].set(value);
       }
     }
     return projectile.renderProps;
   }
+
 }
