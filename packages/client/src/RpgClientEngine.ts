@@ -89,6 +89,23 @@ type MapShakeOptions = {
   direction?: string;
 };
 
+/**
+ * Resolve on the next animation frame. Frames are paused in background tabs,
+ * so a short timeout also resolves it to never stall a map transfer.
+ */
+const waitNextFrame = (): Promise<void> => new Promise((resolve) => {
+  let done = false;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    resolve();
+  };
+  setTimeout(finish, 50);
+  if (typeof requestAnimationFrame === "function") {
+    requestAnimationFrame(finish);
+  }
+});
+
 export class RpgClientEngine<T = any> {
   /** Runtime defaults used by modules that specialize the built-in dash. */
   dashDefaults: Partial<RpgDashInput> = {};
@@ -873,17 +890,21 @@ export class RpgClientEngine<T = any> {
     this.clearMapTransferPredictionStates();
   }
 
-  private resetSceneForMapTransfer(nextMapId?: string) {
+  private async resetSceneForMapTransfer(nextMapId?: string) {
     // The before-loading hook has now covered the previous scene. Unmount it
     // before reconnecting so stale map content cannot appear behind the loader.
-    this.sceneMap.data.set(null);
     this.sceneMap.weatherState.set(undefined);
     this.sceneMap.lightingState.set(null);
     this.sceneMap.clearLightSpots();
     this.clearComponentAnimations();
     this.projectiles.setMapId(nextMapId);
     this.resetCameraFollow(false);
+    // Destroying every character and the whole map tree in one frame caused a
+    // visible hitch on map transfers: spread the teardown over several frames.
     this.sceneMap.reset();
+    await waitNextFrame();
+    this.sceneMap.data.set(null);
+    await waitNextFrame();
     this.sceneMap.loadPhysic();
   }
 
@@ -1149,7 +1170,7 @@ export class RpgClientEngine<T = any> {
     this.activeMapStreamController?.detach();
     this.activeMapStreamController = undefined;
     if (this.mapTransitionInProgress) {
-      this.resetSceneForMapTransfer(mapId);
+      await this.resetSceneForMapTransfer(mapId);
     }
 
     // A session-transferred player keeps the last acknowledged input frame on
