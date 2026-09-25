@@ -65,6 +65,16 @@ import { DEFAULT_DASH_COOLDOWN_MS, isDashMovementInput, normalizeServerMovementI
 import { MapUpdateSchema } from "./map-update-schema";
 import { cloneWeatherState, easeLightingProgress, interpolateLighting } from "./map-environment";
 import { MapTouchCollisions } from "./map-touch";
+import {
+  cloneEventTemplate,
+  normalizeEventMode,
+  normalizeEventObject,
+  resolveEventHitbox,
+  resolveEventMass,
+  resolveEventMode,
+  resolveEventPushable,
+  resolveScenarioOwnerId,
+} from "./map-events";
 import type {
   Controls,
   CreateDynamicEventOptions,
@@ -432,139 +442,6 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     }
   }
 
-  private normalizeEventMode(mode: unknown): EventMode {
-    return mode === EventMode.Scenario || mode === "scenario"
-      ? EventMode.Scenario
-      : EventMode.Shared;
-  }
-
-  private resolveEventMode(eventObj: any): EventMode {
-    if (!eventObj) return EventMode.Shared;
-
-    if (eventObj.mode !== undefined) {
-      return this.normalizeEventMode(eventObj.mode);
-    }
-
-    const eventDef = eventObj.event ?? eventObj;
-    if (eventDef?.mode !== undefined) {
-      return this.normalizeEventMode(eventDef.mode);
-    }
-
-    if (typeof eventDef === "function") {
-      const staticMode = (eventDef as any).mode;
-      const prototypeMode = (eventDef as any).prototype?.mode;
-      if (staticMode !== undefined) {
-        return this.normalizeEventMode(staticMode);
-      }
-      if (prototypeMode !== undefined) {
-        return this.normalizeEventMode(prototypeMode);
-      }
-    }
-
-    return EventMode.Shared;
-  }
-
-  private resolveScenarioOwnerId(eventObj: any): string | undefined {
-    if (!eventObj) return undefined;
-    const ownerId = eventObj.scenarioOwnerId
-      ?? eventObj._scenarioOwnerId
-      ?? eventObj.event?.scenarioOwnerId
-      ?? eventObj.event?._scenarioOwnerId;
-    return typeof ownerId === "string" && ownerId.length > 0 ? ownerId : undefined;
-  }
-
-  private resolveEventMass(eventObj: any): number | undefined {
-    const eventDef = eventObj?.event ?? eventObj;
-
-    const readMass = (value: unknown): number | undefined => (
-      typeof value === "number" && !Number.isNaN(value) && value >= 0
-        ? value
-        : undefined
-    );
-
-    const objectMass = readMass(eventDef?.mass);
-    if (objectMass !== undefined) {
-      return objectMass;
-    }
-
-    if (typeof eventDef === "function") {
-      return readMass((eventDef as any).mass)
-        ?? readMass((eventDef as any).prototype?._eventDataMass);
-    }
-
-    return undefined;
-  }
-
-  private resolveEventPushable(eventObj: any): boolean {
-    const eventDef = eventObj?.event ?? eventObj;
-
-    const readPushable = (value: unknown): boolean | undefined => (
-      typeof value === "boolean" ? value : undefined
-    );
-
-    const objectPushable = readPushable(eventDef?.pushable);
-    if (objectPushable !== undefined) {
-      return objectPushable;
-    }
-
-    if (typeof eventDef === "function") {
-      return readPushable((eventDef as any).pushable)
-        ?? readPushable((eventDef as any).prototype?._eventDataPushable)
-        ?? false;
-    }
-
-    return false;
-  }
-
-  private resolveEventHitbox(eventObj: any): { width: number; height: number } | undefined {
-    const readHitbox = (value: unknown): { width: number; height: number } | undefined => {
-      if (!value || typeof value !== "object") return undefined;
-      const record = value as Record<string, unknown>;
-      const widthValue = record.width ?? record.w;
-      const heightValue = record.height ?? record.h;
-      const width = typeof widthValue === "number" ? widthValue : Number(widthValue);
-      const height = typeof heightValue === "number" ? heightValue : Number(heightValue);
-      if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
-        return undefined;
-      }
-      return {
-        width: Math.max(1, Math.round(width)),
-        height: Math.max(1, Math.round(height)),
-      };
-    };
-
-    const eventDef = eventObj?.event ?? eventObj;
-    const directHitbox = readHitbox(eventObj?.hitbox);
-    if (directHitbox) return directHitbox;
-
-    const objectHitbox = readHitbox(eventDef?.hitbox);
-    if (objectHitbox) return objectHitbox;
-
-    if (typeof eventDef === "function") {
-      return readHitbox((eventDef as any).hitbox)
-        ?? readHitbox((eventDef as any).prototype?.hitbox);
-    }
-
-    return undefined;
-  }
-
-  private normalizeEventObject(eventObj: EventPosOption | any): EventPosOption {
-    if (eventObj && typeof eventObj === "object" && "event" in eventObj) {
-      return eventObj as EventPosOption;
-    }
-    return {
-      event: eventObj as any,
-    };
-  }
-
-  private cloneEventTemplate(eventObj: EventPosOption): EventPosOption {
-    const clone: EventPosOption = { ...eventObj };
-    if (clone.event && typeof clone.event === "object") {
-      clone.event = { ...(clone.event as Record<string, any>) } as any;
-    }
-    return clone;
-  }
-
   private buildRuntimeEventId(baseId: string | undefined, mode: EventMode, scenarioOwnerId?: string): string {
     const fallbackId = baseId || generateShortUUID();
     if (mode !== EventMode.Scenario || !scenarioOwnerId) {
@@ -611,7 +488,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
       return runtimeMode;
     }
     const event = this.getEvent(eventId) as any;
-    return this.normalizeEventMode(event?.mode);
+    return normalizeEventMode(event?.mode);
   }
 
   private getScenarioOwnerIdByEventId(eventId: string): string | undefined {
@@ -647,7 +524,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     }
     this.removeScenarioEventsForPlayer(player.id);
     for (const template of this._scenarioEventTemplates) {
-      const clone = this.cloneEventTemplate(template);
+      const clone = cloneEventTemplate(template);
       await this.createDynamicEvent(clone, { mode: EventMode.Scenario, scenarioOwnerId: player.id });
     }
   }
@@ -1749,10 +1626,10 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     this.loadPhysic()
 
     for (let event of map.events ?? []) {
-      const normalizedEvent = this.normalizeEventObject(event);
-      const mode = this.resolveEventMode(normalizedEvent);
+      const normalizedEvent = normalizeEventObject(event);
+      const mode = resolveEventMode(normalizedEvent);
       if (mode === EventMode.Scenario) {
-        this._scenarioEventTemplates.push(this.cloneEventTemplate(normalizedEvent));
+        this._scenarioEventTemplates.push(cloneEventTemplate(normalizedEvent));
         continue;
       }
       await this.createDynamicEvent(normalizedEvent, { mode: EventMode.Shared });
@@ -2448,7 +2325,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
    * });
    */
   async createDynamicEvent(eventObj: EventPosOption, options: CreateDynamicEventOptions = {}): Promise<string | undefined> {
-    eventObj = this.normalizeEventObject(eventObj);
+    eventObj = normalizeEventObject(eventObj);
 
     const value = await lastValueFrom(this.hooks.callHooks("server-event-onBeforeCreated", eventObj, this));
     value.filter(v => v).forEach(v => {
@@ -2458,13 +2335,13 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     const event = eventObj.event;
     const x = typeof eventObj.x === "number" ? eventObj.x : 0;
     const y = typeof eventObj.y === "number" ? eventObj.y : 0;
-    const mass = this.resolveEventMass(eventObj);
-    const pushable = this.resolveEventPushable(eventObj);
-    const hitbox = this.resolveEventHitbox(eventObj);
+    const mass = resolveEventMass(eventObj);
+    const pushable = resolveEventPushable(eventObj);
+    const hitbox = resolveEventHitbox(eventObj);
 
-    const requestedMode = options.mode ?? this.resolveEventMode(eventObj);
-    const mode = this.normalizeEventMode(requestedMode);
-    const ownerFromData = options.scenarioOwnerId ?? this.resolveScenarioOwnerId(eventObj);
+    const requestedMode = options.mode ?? resolveEventMode(eventObj);
+    const mode = normalizeEventMode(requestedMode);
+    const ownerFromData = options.scenarioOwnerId ?? resolveScenarioOwnerId(eventObj);
     const scenarioOwnerId = mode === EventMode.Scenario ? ownerFromData : undefined;
     const effectiveMode = mode === EventMode.Scenario && scenarioOwnerId
       ? EventMode.Scenario

@@ -2,4 +2,4 @@
 "@rpgjs/server": patch
 ---
 
-Split the server map room module: map types, movement input helpers and the map update schema now live in dedicated files. Public exports are unchanged.
+Split the server map room module into focused files: map types, movement input helpers, the map update schema, event definition helpers, weather/lighting interpolation and touch collision tracking (`MapTouchCollisions`). Public exports and behavior are unchanged.
