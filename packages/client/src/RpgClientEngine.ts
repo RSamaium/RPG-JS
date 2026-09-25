@@ -6,7 +6,7 @@ import { AbstractWebsocket, WebSocketToken } from "./services/AbstractSocket";
 import { LoadMapService, LoadMapToken } from "./services/loadMap";
 import { RpgSound } from "./Sound";
 import { RpgResource } from "./Resource";
-import { getOrCreateI18nService, Hooks, ModulesToken, Direction, normalizeLightingState, Vector2, type I18nParams, type I18nService, type RpgRoomDescriptor } from "@rpgjs/common";
+import { getOrCreateI18nService, Hooks, ModulesToken, Direction, normalizeLightingState, type I18nParams, type I18nService, type RpgRoomDescriptor } from "@rpgjs/common";
 import type { EventComponentConfig } from "./RpgClient";
 import type { RpgClientEvent } from "./Game/Event";
 import { load } from "@signe/sync";
@@ -33,7 +33,7 @@ import {
 import { NotificationManager } from "./Gui/NotificationManager";
 import { SaveClientService } from "./services/save";
 import { getCanMoveValue } from "./utils/readPropValue";
-import { ProjectileManager, type ClientProjectileImpact, type ClientProjectileSpawn } from "./Game/ProjectileManager";
+import { ProjectileManager } from "./Game/ProjectileManager";
 import { ClientVisualRegistry, type ClientVisualHandler, type ClientVisualMap, type ClientVisualPacket } from "./Game/ClientVisuals";
 import { normalizeActionInput } from "./services/actionInput";
 import { createClientPointerContext, type ClientPointerContext } from "./services/pointerContext";
@@ -60,6 +60,9 @@ import {
 } from "./Game/AudioManager";
 import { routePredictedLocalPlayerSync } from "./services/localPlayerSync";
 import { installCanvasResizeGuard } from "./services/canvasResizeGuard";
+import { MovePathSender } from "./services/movePathSender";
+import { ServerTickEstimator } from "./services/serverTickEstimator";
+import { predictProjectileImpact } from "./services/projectilePrediction";
 import {
   DEFAULT_DASH_COOLDOWN_MS,
   DEFAULT_DASH_DURATION_MS,
@@ -73,16 +76,6 @@ export type {
   CameraFollowSmoothMove,
   CameraFollowSmoothMoveOptions,
 } from "./services/cameraFollow";
-
-interface MovementTrajectoryPoint {
-  frame: number;
-  tick: number;
-  timestamp: number;
-  input: RpgMovementInput;
-  x: number;
-  y: number;
-  direction?: Direction;
-}
 
 type ConfigurableTrigger<T> = Omit<Trigger<T>, "start"> & {
   start(config?: T): Promise<void>;
@@ -221,8 +214,7 @@ export class RpgClientEngine<T = any> {
   private pendingPredictionFrames: number[] = [];
   private lastClientPhysicsStepAt = 0;
   private frameOffset = 0;
-  private latestServerTick?: number;
-  private latestServerTickAt = 0;
+  private serverTick = new ServerTickEstimator();
   private dashLockedUntil = 0;
   // Ping/Pong for RTT measurement
   private rtt: number = 0; // Round-trip time in ms
@@ -231,10 +223,7 @@ export class RpgClientEngine<T = any> {
   private lastInputTime = 0;
   private latestDirectionalInput?: RpgMovementInput;
   private pendingMapTransferInput?: RpgMovementInput;
-  private readonly MOVE_PATH_RESEND_INTERVAL_MS = 120;
-  private readonly MAX_MOVE_TRAJECTORY_POINTS = 240;
-  private lastMovePathSentAt = 0;
-  private lastMovePathSentFrame = 0;
+  private movePath = new MovePathSender((packet) => this.webSocket.emit("move", packet));
   // Track map loading state for onAfterLoading hook using RxJS
   private mapLoadCompleted$ = new BehaviorSubject<boolean>(false);
   private playerIdReceived$ = new BehaviorSubject<boolean>(false);
@@ -275,7 +264,7 @@ export class RpgClientEngine<T = any> {
     this.i18nService.addMessages(RpgClientBuiltinI18n, "rpgjs-client", 0);
     this.projectiles = new ProjectileManager(
       this.hooks,
-      (projectile) => this.predictProjectileImpact(projectile),
+      (projectile) => predictProjectileImpact((this.sceneMap as any)?.physic, projectile),
     );
     this.globalConfig = inject(GlobalConfigToken)
 
@@ -786,7 +775,7 @@ export class RpgClientEngine<T = any> {
       // This helps us estimate which server tick corresponds to each client input frame
       const estimatedTicksInFlight = Math.floor(this.rtt / 2 / (1000 / 60)); // Estimate ticks during half RTT
       const estimatedServerTickNow = data.serverTick + estimatedTicksInFlight;
-      this.updateServerTickEstimate(estimatedServerTickNow, now);
+      this.serverTick.update(estimatedServerTickNow, now);
 
       // Update frame offset (only if we have inputs to calibrate with)
       if (this.inputFrameCounter > 0) {
@@ -829,7 +818,7 @@ export class RpgClientEngine<T = any> {
       if (!this.shouldProcessProjectilePacket(data)) return;
       this.projectiles.spawnBatch(data?.projectiles ?? [], {
         mapId: data?.mapId,
-        currentServerTick: this.estimateServerTick(),
+        currentServerTick: this.serverTick.estimate(this.getPhysicsTickDurationMs()),
         tickDurationMs: this.getPhysicsTickDurationMs(),
       });
     });
@@ -2261,63 +2250,6 @@ export class RpgClientEngine<T = any> {
       : 1000 / 60;
   }
 
-  private updateServerTickEstimate(serverTick: number | undefined, now = Date.now()): void {
-    if (typeof serverTick !== "number" || !Number.isFinite(serverTick)) {
-      return;
-    }
-    this.latestServerTick = serverTick;
-    this.latestServerTickAt = now;
-  }
-
-  private estimateServerTick(now = Date.now()): number | undefined {
-    if (typeof this.latestServerTick !== "number" || this.latestServerTickAt <= 0) {
-      return undefined;
-    }
-    const elapsedTicks = Math.max(0, (now - this.latestServerTickAt) / this.getPhysicsTickDurationMs());
-    return this.latestServerTick + elapsedTicks;
-  }
-
-  private predictProjectileImpact(projectile: ClientProjectileSpawn): ClientProjectileImpact | null {
-    if (projectile.predictImpact === false) {
-      return null;
-    }
-    const sceneMap = this.sceneMap as any;
-    if (!sceneMap?.physic || !Number.isFinite(projectile.range) || projectile.range <= 0) {
-      return null;
-    }
-    const origin = projectile.origin;
-    const direction = projectile.direction;
-    if (
-      !origin ||
-      !direction ||
-      !Number.isFinite(origin.x) ||
-      !Number.isFinite(origin.y) ||
-      !Number.isFinite(direction.x) ||
-      !Number.isFinite(direction.y) ||
-      (direction.x === 0 && direction.y === 0)
-    ) {
-      return null;
-    }
-
-    const hit = sceneMap.physic.raycast(
-      new Vector2(origin.x, origin.y),
-      new Vector2(direction.x, direction.y),
-      projectile.range,
-      projectile.collisionMask,
-      (entity) => projectile.ignoreOwner === false || !projectile.ownerId || entity.uuid !== projectile.ownerId,
-    );
-    if (!hit) {
-      return null;
-    }
-    return {
-      id: projectile.id,
-      targetId: hit.entity.uuid,
-      x: hit.point.x,
-      y: hit.point.y,
-      distance: hit.distance,
-    };
-  }
-
   private ensureCurrentPlayerBody(): boolean {
     const player = this.sceneMap?.getCurrentPlayer();
     const myId = this.playerIdSignal();
@@ -2387,32 +2319,6 @@ export class RpgClientEngine<T = any> {
     }
   }
 
-  private buildPendingMoveTrajectory(): MovementTrajectoryPoint[] {
-    if (!this.predictionEnabled || !this.prediction) {
-      return [];
-    }
-    const pendingInputs = this.prediction.getPendingInputs();
-    const trajectory: MovementTrajectoryPoint[] = [];
-    for (const entry of pendingInputs) {
-      const state = entry.state;
-      if (!state) continue;
-      if (typeof state.x !== "number" || typeof state.y !== "number") continue;
-      trajectory.push({
-        frame: entry.frame,
-        tick: entry.tick,
-        timestamp: entry.timestamp,
-        input: entry.direction,
-        x: state.x,
-        y: state.y,
-        direction: state.direction ?? resolveMoveDirection(entry.direction),
-      });
-    }
-    if (trajectory.length > this.MAX_MOVE_TRAJECTORY_POINTS) {
-      return trajectory.slice(-this.MAX_MOVE_TRAJECTORY_POINTS);
-    }
-    return trajectory;
-  }
-
   private emitMovePacket(
     input: RpgMovementInput,
     frame: number,
@@ -2420,26 +2326,10 @@ export class RpgClientEngine<T = any> {
     timestamp: number,
     force = false,
   ): void {
-    const trajectory = this.buildPendingMoveTrajectory();
-    const latestTrajectoryFrame =
-      trajectory.length > 0 ? trajectory[trajectory.length - 1].frame : frame;
-    const shouldThrottle =
-      !force &&
-      latestTrajectoryFrame <= this.lastMovePathSentFrame &&
-      timestamp - this.lastMovePathSentAt < this.MOVE_PATH_RESEND_INTERVAL_MS;
-    if (shouldThrottle) {
-      return;
-    }
-
-    this.webSocket.emit("move", {
-      input,
-      timestamp,
-      frame,
-      tick,
-      trajectory,
-    });
-    this.lastMovePathSentAt = timestamp;
-    this.lastMovePathSentFrame = Math.max(this.lastMovePathSentFrame, latestTrajectoryFrame, frame);
+    const pendingInputs = this.predictionEnabled && this.prediction
+      ? this.prediction.getPendingInputs()
+      : [];
+    this.movePath.send({ input, frame, tick, timestamp, pendingInputs, force });
   }
 
   private flushPendingMovePath(): void {
@@ -2469,7 +2359,7 @@ export class RpgClientEngine<T = any> {
       return;
     }
     const now = Date.now();
-    if (now - this.lastMovePathSentAt < this.MOVE_PATH_RESEND_INTERVAL_MS) {
+    if (this.movePath.isThrottled(now)) {
       return;
     }
     this.emitMovePacket(latest.direction, latest.frame, latest.tick, now, false);
@@ -2630,8 +2520,7 @@ export class RpgClientEngine<T = any> {
     this.inputFrameCounter = 0;
     this.pendingPredictionFrames = [];
     this.lastClientPhysicsStepAt = 0;
-    this.lastMovePathSentAt = 0;
-    this.lastMovePathSentFrame = 0;
+    this.movePath.reset();
   }
 
   private clearMapTransferPredictionStates(): void {
@@ -2639,8 +2528,7 @@ export class RpgClientEngine<T = any> {
     this.frameOffset = 0;
     this.pendingPredictionFrames = [];
     this.lastClientPhysicsStepAt = 0;
-    this.lastMovePathSentAt = 0;
-    this.lastMovePathSentFrame = this.inputFrameCounter;
+    this.movePath.reset({ frame: this.inputFrameCounter });
   }
 
   /**
@@ -2666,8 +2554,7 @@ export class RpgClientEngine<T = any> {
     this.prediction?.clearPendingInputs();
     this.pendingPredictionFrames = [];
     this.lastInputTime = 0;
-    this.lastMovePathSentAt = Date.now();
-    this.lastMovePathSentFrame = this.inputFrameCounter;
+    this.movePath.reset({ frame: this.inputFrameCounter, sentAt: Date.now() });
     return true;
   }
 
@@ -2738,7 +2625,7 @@ export class RpgClientEngine<T = any> {
   }
 
   private applyServerAck(ack: { frame: number; serverTick?: number; x?: number; y?: number; direction?: Direction }) {
-    this.updateServerTickEstimate(ack.serverTick);
+    this.serverTick.update(ack.serverTick);
     if (this.predictionEnabled && this.prediction) {
       const result = this.prediction.applyServerAck({
         frame: ack.frame,
@@ -3022,8 +2909,7 @@ export class RpgClientEngine<T = any> {
       this.inputFrameCounter = 0;
       this.frameOffset = 0;
       this.rtt = 0;
-      this.lastMovePathSentAt = 0;
-      this.lastMovePathSentFrame = 0;
+      this.movePath.reset();
 
       // Reset behavior subjects
       this.mapLoadCompleted$.next(false);

@@ -1,6 +1,7 @@
 import { Direction, PredictionController } from "@rpgjs/common";
 import { describe, expect, it, vi } from "vitest";
 import { RpgClientEngine } from "./RpgClientEngine";
+import { MovePathSender } from "./services/movePathSender";
 
 describe("RpgClientEngine prediction input scheduling", () => {
   it("sends same-tick inputs together only after their predicted physics state is attached", async () => {
@@ -18,9 +19,7 @@ describe("RpgClientEngine prediction input scheduling", () => {
       prediction,
       inputFrameCounter: 0,
       pendingPredictionFrames: [],
-      lastMovePathSentAt: 0,
-      lastMovePathSentFrame: 0,
-      MAX_MOVE_TRAJECTORY_POINTS: 240,
+      movePath: new MovePathSender((packet) => emit("move", packet)),
       sceneMap: {
         getCurrentPlayer: () => ({ canMove: true }),
       },
