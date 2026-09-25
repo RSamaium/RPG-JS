@@ -59,6 +59,15 @@ import {
   type RpgUiAudioEvent,
 } from "./Game/AudioManager";
 import { routePredictedLocalPlayerSync } from "./services/localPlayerSync";
+import { installCanvasResizeGuard } from "./services/canvasResizeGuard";
+import {
+  DEFAULT_DASH_COOLDOWN_MS,
+  DEFAULT_DASH_DURATION_MS,
+  isDashInput,
+  normalizeDashInput,
+  resolveMoveDirection,
+  vectorToDirection,
+} from "./services/movementInput";
 export type {
   CameraFollowEase,
   CameraFollowSmoothMove,
@@ -74,87 +83,6 @@ interface MovementTrajectoryPoint {
   y: number;
   direction?: Direction;
 }
-
-interface CanvasResizeSize {
-  width: number;
-  height: number;
-}
-
-const DEFAULT_DASH_ADDITIONAL_SPEED = 8;
-const DEFAULT_DASH_DURATION_MS = 180;
-const DEFAULT_DASH_COOLDOWN_MS = 450;
-
-const isDashInput = (input: RpgMovementInput): input is RpgDashInput =>
-  typeof input === "object" && input !== null && input.type === "dash";
-
-const isMoveInput = (
-  input: RpgMovementInput
-): input is { type: "move"; direction: Direction } =>
-  typeof input === "object" && input !== null && input.type === "move";
-
-const resolveMoveDirection = (input: RpgMovementInput): Direction | undefined => {
-  if (isMoveInput(input)) return input.direction;
-  if (typeof input === "string" || typeof input === "number") {
-    return input as Direction;
-  }
-  return undefined;
-};
-
-const directionToVector = (direction: Direction | undefined) => {
-  switch (direction) {
-    case Direction.Left:
-      return { x: -1, y: 0 };
-    case Direction.Right:
-      return { x: 1, y: 0 };
-    case Direction.Up:
-      return { x: 0, y: -1 };
-    case Direction.Down:
-    default:
-      return { x: 0, y: 1 };
-  }
-};
-
-const vectorToDirection = (direction: { x: number; y: number }): Direction => {
-  if (Math.abs(direction.x) > Math.abs(direction.y)) {
-    return direction.x < 0 ? Direction.Left : Direction.Right;
-  }
-  return direction.y < 0 ? Direction.Up : Direction.Down;
-};
-
-const normalizeDashInput = (
-  input: Partial<RpgDashInput>,
-  fallbackDirection: Direction | undefined
-): RpgDashInput | null => {
-  const rawDirection = input.direction ?? directionToVector(fallbackDirection);
-  const rawX = Number(rawDirection?.x ?? 0);
-  const rawY = Number(rawDirection?.y ?? 0);
-  const magnitude = Math.hypot(rawX, rawY);
-  if (!Number.isFinite(magnitude) || magnitude <= 0) return null;
-
-  const additionalSpeed =
-    typeof input.additionalSpeed === "number" && Number.isFinite(input.additionalSpeed)
-      ? Math.max(0, Math.min(input.additionalSpeed, 64))
-      : DEFAULT_DASH_ADDITIONAL_SPEED;
-  const duration =
-    typeof input.duration === "number" && Number.isFinite(input.duration)
-      ? Math.max(1, Math.min(input.duration, 1000))
-      : DEFAULT_DASH_DURATION_MS;
-  const cooldown =
-    typeof input.cooldown === "number" && Number.isFinite(input.cooldown)
-      ? Math.max(0, Math.min(input.cooldown, 5000))
-      : DEFAULT_DASH_COOLDOWN_MS;
-
-  return {
-    type: "dash",
-    direction: {
-      x: rawX / magnitude,
-      y: rawY / magnitude,
-    },
-    additionalSpeed,
-    duration,
-    cooldown,
-  };
-};
 
 type ConfigurableTrigger<T> = Omit<Trigger<T>, "start"> & {
   start(config?: T): Promise<void>;
@@ -531,7 +459,7 @@ export class RpgClientEngine<T = any> {
       Canvas,
       bootstrapOptions
     );
-    this.installCanvasResizeGuard(app);
+    installCanvasResizeGuard(app);
     this.canvasApp = app;
     this.canvasElement = canvasElement;
     this.renderer = app.renderer as unknown as PIXI.Renderer;
@@ -637,56 +565,6 @@ export class RpgClientEngine<T = any> {
     this.localeConnected = false;
     this.stopPingPong();
     this.webSocket.disconnect();
-  }
-
-  private installCanvasResizeGuard(app: any) {
-    if (!app || typeof app.resize !== "function") return;
-
-    const originalResize = app.resize.bind(app);
-    app.resize = () => {
-      const targetSize = this.readCanvasResizeTargetSize(app);
-      const rendererSize = this.readCanvasRendererSize(app);
-
-      if (
-        targetSize &&
-        rendererSize &&
-        targetSize.width === rendererSize.width &&
-        targetSize.height === rendererSize.height
-      ) {
-        this.cancelCanvasResizeFrame(app);
-        return;
-      }
-
-      originalResize();
-    };
-  }
-
-  private readCanvasResizeTargetSize(app: any): CanvasResizeSize | null {
-    const resizeTarget = app?.resizeTo;
-    if (!resizeTarget || typeof window === "undefined") return null;
-
-    const rawWidth = resizeTarget === window ? window.innerWidth : resizeTarget.clientWidth;
-    const rawHeight = resizeTarget === window ? window.innerHeight : resizeTarget.clientHeight;
-    const width = Math.round(Number(rawWidth));
-    const height = Math.round(Number(rawHeight));
-
-    if (!Number.isFinite(width) || !Number.isFinite(height) || width < 0 || height < 0) return null;
-    return { width, height };
-  }
-
-  private readCanvasRendererSize(app: any): CanvasResizeSize | null {
-    const screen = app?.renderer?.screen;
-    const width = Math.round(Number(screen?.width));
-    const height = Math.round(Number(screen?.height));
-
-    if (!Number.isFinite(width) || !Number.isFinite(height)) return null;
-    return { width, height };
-  }
-
-  private cancelCanvasResizeFrame(app: any) {
-    if (typeof app?._cancelResize === "function") {
-      app._cancelResize();
-    }
   }
 
   private resolveSceneMapComponent() {
