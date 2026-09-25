@@ -63,6 +63,7 @@ import { installCanvasResizeGuard } from "./services/canvasResizeGuard";
 import { MovePathSender } from "./services/movePathSender";
 import { ServerTickEstimator } from "./services/serverTickEstimator";
 import { predictProjectileImpact } from "./services/projectilePrediction";
+import { registerPresentationListeners } from "./services/presentationListeners";
 import {
   DEFAULT_DASH_COOLDOWN_MS,
   DEFAULT_DASH_DURATION_MS,
@@ -801,15 +802,6 @@ export class RpgClientEngine<T = any> {
       void this.handleChangeRoom(data);
     });
 
-    this.webSocket.on("showComponentAnimation", (data) => {
-      const { params, object, position, id } = data;
-      if (!object && position === undefined) {
-        throw new Error("Please provide an object or x and y coordinates");
-      }
-      const player = object ? this.sceneMap.getObjectById(object) : undefined;
-      this.getComponentAnimation(id).displayEffect(params, player || position)
-    });
-
     this.webSocket.on("clientVisual", (data) => {
       this.playClientVisual(data);
     });
@@ -846,98 +838,7 @@ export class RpgClientEngine<T = any> {
       this.notificationManager.add(data);
     });
 
-    this.webSocket.on("setAnimation", (data) => {
-      const {
-        animationName,
-        nbTimes,
-        object,
-        graphic,
-        restoreAnimationName,
-        restoreGraphics,
-      } = data;
-      const player = object ? this.sceneMap.getObjectById(object) : undefined;
-      if (!player) return;
-      const restoreOptions = {
-        restoreAnimationName,
-        restoreGraphics,
-      };
-      if (graphic !== undefined) {
-        player.setAnimation(animationName, graphic, nbTimes, restoreOptions);
-      } else {
-        player.setAnimation(animationName, nbTimes, restoreOptions);
-      }
-    })
-
-    this.webSocket.on("playSound", (data) => {
-      const { soundId, volume, loop } = data;
-      this.playSound(soundId, { volume, loop });
-    });
-
-    this.webSocket.on("stopSound", (data) => {
-      const { soundId } = data;
-      this.stopSound(soundId);
-    });
-
-    this.webSocket.on("stopAllSounds", () => {
-      this.stopAllSounds();
-    });
-
-    this.webSocket.on("cameraFollow", (data) => {
-      const { targetId, smoothMove } = data;
-      this.setCameraFollow(targetId, smoothMove);
-    });
-
-    this.webSocket.on("flash", (data) => {
-      const { object, type, duration, cycles, alpha, tint } = data;
-      const sprite = object ? this.sceneMap.getObjectById(object) : undefined;
-      if (sprite && typeof sprite.flash === 'function') {
-        sprite.flash({ type, duration, cycles, alpha, tint });
-      }
-    });
-
-    this.webSocket.on("shakeMap", (data) => {
-      const { intensity, duration, frequency, direction } = data || {};
-      this.mapShakeTrigger.start({
-        intensity,
-        duration,
-        frequency,
-        direction
-      });
-    });
-
-    this.webSocket.on("weatherState", (data) => {
-      const raw = (data && typeof data === "object" && "value" in data)
-        ? (data as any).value
-        : data;
-
-      if (raw === null) {
-        this.sceneMap.weatherState.set(null);
-        return;
-      }
-
-      const validEffects = ["rain", "snow", "fog", "cloud"];
-      if (!raw || !validEffects.includes((raw as any).effect)) {
-        return;
-      }
-
-      this.sceneMap.weatherState.set({
-        effect: (raw as any).effect,
-        preset: (raw as any).preset,
-        params: (raw as any).params,
-        transitionMs: (raw as any).transitionMs,
-        durationMs: (raw as any).durationMs,
-        startedAt: (raw as any).startedAt,
-        seed: (raw as any).seed,
-      });
-    });
-
-    this.webSocket.on("lightingState", (data) => {
-      const raw = (data && typeof data === "object" && "value" in data)
-        ? (data as any).value
-        : data;
-
-      this.sceneMap.lightingState.set(normalizeLightingState(raw));
-    });
+    registerPresentationListeners(this.webSocket, this);
 
     this.webSocket.on('open', () => {
       this.localeConnected = true;
