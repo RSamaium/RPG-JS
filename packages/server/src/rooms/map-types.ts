@@ -138,6 +138,19 @@ export type CreateDynamicEventOptions = {
   scenarioOwnerId?: string;
 };
 
+/** Property of a runtime synchronized map schema passed to `map.setSync()`. */
+export interface RpgMapSyncProperty<T = unknown> {
+  /** Initial value of the property. Defaults to `null`. */
+  $initial?: T;
+  /** Whether the property is synchronized with clients. */
+  $syncWithClient?: boolean;
+  /** Whether the property is persisted with the room state. */
+  $permanent?: boolean;
+}
+
+/** Schema passed to `map.setSync()`, keyed by property name. */
+export type RpgMapSyncSchema = Record<string, RpgMapSyncProperty>;
+
 export interface WeatherSetOptions {
   sync?: boolean;
 }

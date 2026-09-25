@@ -10,7 +10,7 @@ import { Vector2 } from '../core/math/Vector2';
 import { AABB } from '../core/math/AABB';
 import { Ray, RaycastHit } from '../collision/Ray';
 import type { EntityConfig } from '../physics/Entity';
-import { sweepEntities } from '../collision/sweep';
+import { sweepEntities, type SweepResult } from '../collision/sweep';
 import { invalidateCollider } from '../collision/collider-cache';
 
 /**
@@ -628,7 +628,7 @@ export class World {
 
     const nearby = this.spatialPartition.queryAABB(sweptBounds);
     let minTime = 1.0;
-    let collision = null;
+    let collision: SweepResult | null = null;
 
     for (const other of nearby) {
       if (other === entity || !other.isStatic()) continue;

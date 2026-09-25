@@ -15,6 +15,7 @@ import {
   type MapPhysicsInitContext,
   type MapPhysicsEntityContext,
   type RpgActionInput,
+  type RpgMovementInput,
   MAP_STREAM_REQUEST_EVENT,
 } from "@rpgjs/common";
 import {
@@ -83,6 +84,7 @@ import {
 import type {
   Controls,
   CreateDynamicEventOptions,
+  RpgMapSyncSchema,
   EventHooks,
   EventPosOption,
   LightingSetOptions,
@@ -100,6 +102,8 @@ export type {
   EventPosOption,
   MapEventDefinition,
   MapEventPlacement,
+  RpgMapSyncProperty,
+  RpgMapSyncSchema,
   RpgRoomConnection,
   RpgTouchContext,
 } from "./map-types";
@@ -1752,7 +1756,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
    */
   async processInput(playerId: string, controls?: Controls): Promise<{
     player: RpgPlayer,
-    inputs: any[]
+    inputs: RpgMovementInput[]
   }> {
     const player = this.getPlayer(playerId);
     if (!player) {
@@ -1996,7 +2000,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
    * map.addInDatabase('Potion', UpdatedPotionClass, { force: true });
    * ```
    */
-  addInDatabase(id: string, data: any, options?: { force?: boolean }): boolean {
+  addInDatabase(id: string, data: unknown, options?: { force?: boolean }): boolean {
     return BaseRoom.prototype.addInDatabase.call(this, id, data, options);
   }
 
@@ -2397,7 +2401,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
    * });
    * ```
    */
-  showComponentAnimation(id: string, position: { x: number, y: number }, params: any) {
+  showComponentAnimation(id: string, position: { x: number, y: number }, params: unknown) {
     this.$broadcast({
       type: "showComponentAnimation",
       value: {
@@ -2636,7 +2640,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
    * const currentWeather = map.weather();
    * ```
    */
-  setSync(schema: Record<string, any>) {
+  setSync(schema: RpgMapSyncSchema): void {
     for (let key in schema) {
       const initial = typeof schema[key]?.$initial !== 'undefined' ? schema[key].$initial : null;
       // Use type() directly with a plain object holder to avoid signal type mismatch

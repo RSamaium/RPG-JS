@@ -1,4 +1,4 @@
-import type { Direction } from "@rpgjs/common";
+import type { Direction, RpgMovementInput } from "@rpgjs/common";
 import type { RpgPlayer } from "../Player/Player";
 import {
   DEFAULT_DASH_COOLDOWN_MS,
@@ -70,7 +70,7 @@ export class MapInputProcessor {
 
   async process(player: RpgPlayer, controls?: Controls): Promise<{
     player: RpgPlayer,
-    inputs: any[]
+    inputs: RpgMovementInput[]
   }> {
     if (!player.isConnected()) {
       player.pendingInputs = [];
@@ -94,7 +94,7 @@ export class MapInputProcessor {
       }
     }
 
-    const processedInputs: any[] = [];
+    const processedInputs: RpgMovementInput[] = [];
     const defaultControls: Required<Controls> = {
       maxTimeDelta: 1000, // 1 second max between inputs
       maxFrameDelta: 10,  // Max 10 frames skipped

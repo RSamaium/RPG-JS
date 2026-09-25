@@ -109,13 +109,13 @@ This method delegates to BaseRoom's implementation to avoid code duplication.
 ### Signature
 
 ```ts
-addInDatabase(id: string, data: any, options?: { force?: boolean }): boolean
+addInDatabase(id: string, data: unknown, options?: { force?: boolean }): boolean
 ```
 
 ### Parameters
 
 - `id`: `string`
-- `data`: `any`
+- `data`: `unknown`
 - `options?`: `{ force?: boolean }`
 
 ### Returns
@@ -1847,7 +1847,7 @@ the physics engine. Physics simulation is handled centrally by the game loop
 ```ts
 processInput(playerId: string, controls?: Controls): Promise<{
     player: RpgPlayer,
-    inputs: any[]
+    inputs: RpgMovementInput[]
   }>
 ```
 
@@ -2353,12 +2353,12 @@ structure as module properties with `$initial`, `$syncWithClient`, and `$permane
 ### Signature
 
 ```ts
-setSync(schema: Record<string, any>)
+setSync(schema: RpgMapSyncSchema): void
 ```
 
 ### Parameters
 
-- `schema`: `Record<string, any>`
+- `schema`: `RpgMapSyncSchema`
 
 ### Examples
 
@@ -2528,14 +2528,14 @@ complex effects with custom logic and parameters.
 ### Signature
 
 ```ts
-showComponentAnimation(id: string, position: { x: number, y: number }, params: any)
+showComponentAnimation(id: string, position: { x: number, y: number }, params: unknown)
 ```
 
 ### Parameters
 
 - `id`: `string`
 - `position`: `{ x: number, y: number }`
-- `params`: `any`
+- `params`: `unknown`
 
 ### Examples
 

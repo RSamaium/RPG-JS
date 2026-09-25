@@ -90,7 +90,7 @@ export abstract class BaseRoom {
    * room.addInDatabase('Potion', UpdatedPotionClass, { force: true });
    * ```
    */
-  addInDatabase(id: string, data: any, options?: { force?: boolean }): boolean {
+  addInDatabase(id: string, data: unknown, options?: { force?: boolean }): boolean {
     const database = this.database();
 
     // Check if ID already exists
