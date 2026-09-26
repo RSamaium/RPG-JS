@@ -104,6 +104,8 @@ for (const width of [390, 1280]) {
     await expect(page.locator('.rpg-ui-equip-stat-current strong').last()).toHaveText('0');
     const stats = page.locator('.rpg-ui-equip-stats');
     expect(await stats.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+    // The panel enter animation moves both columns; measure the settled layout.
+    await page.locator('.rpg-ui-menu-panel').evaluate(el => Promise.all(el.getAnimations({ subtree: true }).map(a => a.finished)));
     const list = await page.locator('.rpg-ui-equipment-layout > .rpg-ui-menu-panel-list').boundingBox();
     const inspector = await page.locator('.rpg-ui-equipment-inspector').boundingBox();
     if (width >= 700) {
