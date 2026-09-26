@@ -1,4 +1,4 @@
-<Container x={position.x} y={position.y}>
+<Container x={position().x} y={position().y}>
   <Graphics draw={drawHalo}  />
 </Container>
 
