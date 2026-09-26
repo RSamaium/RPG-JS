@@ -1,5 +1,17 @@
 # @rpgjs/playground-chat
 
+## 1.0.0-rc.17
+
+### Patch Changes
+
+- Updated dependencies [1cae469]
+- Updated dependencies [14f7cf9]
+- Updated dependencies [114469c]
+  - @rpgjs/client@5.0.0-rc.9
+  - @rpgjs/server@5.0.0-rc.9
+  - @rpgjs/vite@5.0.0-rc.9
+  - @rpgjs/chat@5.0.0-rc.9
+
 ## 1.0.0-rc.16
 
 ### Patch Changes
