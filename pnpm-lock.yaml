@@ -163,8 +163,8 @@ importers:
         specifier: 3.1.0
         version: 3.1.0
       '@signe/room':
-        specifier: 3.1.0
-        version: 3.1.0(react@19.2.7)
+        specifier: 3.2.1
+        version: 3.2.1(react@19.2.7)
       '@signe/sync':
         specifier: 3.1.1
         version: 3.1.1(react@19.2.7)
@@ -288,8 +288,8 @@ importers:
         specifier: 3.1.0
         version: 3.1.0
       '@signe/room':
-        specifier: 3.1.0
-        version: 3.1.0(react@19.2.7)
+        specifier: 3.2.1
+        version: 3.2.1(react@19.2.7)
       '@signe/sync':
         specifier: 3.1.1
         version: 3.1.1(react@19.2.7)
@@ -484,8 +484,8 @@ importers:
         specifier: 3.1.0
         version: 3.1.0
       '@signe/room':
-        specifier: 3.1.0
-        version: 3.1.0(react@19.2.7)
+        specifier: 3.2.1
+        version: 3.2.1(react@19.2.7)
       '@signe/sync':
         specifier: 3.1.1
         version: 3.1.1(react@19.2.7)
@@ -2966,11 +2966,8 @@ packages:
   '@signe/reactive@3.1.1':
     resolution: {integrity: sha512-WP3gGmDqQJnssp9CgaNrsZ41/nhktPjzxBj7Xm46xo8l54bmZbg14jqlq/O5GM1FZ0BmvYcUlTdmwDVPaJbysQ==}
 
-  '@signe/room@3.1.0':
-    resolution: {integrity: sha512-9aNzyYK/b0dfkMDOFGCTX0fmAn4nljuvFmFxPbM/ON7GFo3xnzZk5Lq2obC2bcIO+P92n1lXoeUcSttVW7x9eg==}
-
-  '@signe/sync@3.1.0':
-    resolution: {integrity: sha512-RawoP4Cjk3QqnmRVAQT/Rxf36VR3+36U5+/bXwHAym77THaQbu41phhpDGmvTqSm5wYaV7jWgq4iRSPPx+ygrA==}
+  '@signe/room@3.2.1':
+    resolution: {integrity: sha512-g/1LC+jGTRExPRA1V+10dWYH7noZD8UuYhC75ucOHvBLNZ+3EAc9mqRIvgwOmFDN3i/ZPv0a0zM7NSOLrMmD3A==}
 
   '@signe/sync@3.1.1':
     resolution: {integrity: sha512-s6UmuumDGE0n/qyso1mN9rbRLUcuSSRZf9mtBquL99nBMTKUHZ+3ouPxbMX4FKT81m9Tu5gF5DA0wk5r3PI/kg==}
@@ -7147,20 +7144,12 @@ snapshots:
     dependencies:
       rxjs: 7.8.2
 
-  '@signe/room@3.1.0(react@19.2.7)':
+  '@signe/room@3.2.1(react@19.2.7)':
     dependencies:
-      '@signe/sync': 3.1.0(react@19.2.7)
+      '@signe/sync': 3.1.1(react@19.2.7)
       dset: 3.1.4
       partysocket: 1.2.0(react@19.2.7)
       zod: 3.25.76
-    transitivePeerDependencies:
-      - react
-
-  '@signe/sync@3.1.0(react@19.2.7)':
-    dependencies:
-      '@signe/reactive': 3.1.0
-      partysocket: 1.2.0(react@19.2.7)
-      rxjs: 7.8.2
     transitivePeerDependencies:
       - react
 
