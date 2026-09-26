@@ -13,6 +13,7 @@ import {
   type TerrainPresetRenderer,
 } from "@rpgjs/render-map2d";
 import { buildStudioTerrainCollisionPolygons } from "../collision-polygons";
+import { createRockFacePixels } from "./rock-face-pattern";
 import { createStudioTerrainRenderData } from "../map-normalizer";
 import {
   STUDIO_TERRAIN_TILE_SIZE,
@@ -229,6 +230,7 @@ export class StudioTerrainChunkRenderer {
   private terrainHoleRenderPartsCache = new WeakMap<StudioTerrainMorphologyFeature, TerrainHoleRenderParts | null>();
   private morphologyColorOverlayCache = new WeakMap<HTMLCanvasElement, Map<string, HTMLCanvasElement>>();
   private morphologyTextureFillCache = new WeakMap<HTMLCanvasElement, Map<string, HTMLCanvasElement>>();
+  private rockFacePatternCanvas: HTMLCanvasElement | null = null;
   private morphologyCanvasIds = new WeakMap<HTMLCanvasElement, number>();
   private nextMorphologyCanvasId = 1;
   private morphologyClipBounds: StudioTerrainRenderBounds | null = null;
@@ -1619,6 +1621,11 @@ export class StudioTerrainChunkRenderer {
     parts = this.createTerrainWallRenderParts(data, feature)
   ): void {
     if (!parts) return;
+    const rock = feature.params.wallStyle === "rock";
+    if (rock) {
+      // Contact shadow on the floor at the foot of the face.
+      this.drawTerrainMorphologyMaskedColor(ctx, parts.bottomEdge, "#070504", 0.55, "multiply", "blur(7px)", 0, parts.height + 4);
+    }
     this.drawTerrainMorphologyTextureFill(
       ctx,
       parts.mask,
@@ -1628,6 +1635,9 @@ export class StudioTerrainChunkRenderer {
       "#050505",
       stringParam(feature.params.surfaceTextureId) ? 0.92 : 0
     );
+    if (rock) {
+      this.drawTerrainMorphologyMaskedColor(ctx, parts.topEdge, "#9c8e79", 0.5, "source-over", "blur(1px)", 0, 0);
+    }
   }
 
   private drawWallForeground(
@@ -1638,6 +1648,10 @@ export class StudioTerrainChunkRenderer {
     parts = this.createTerrainWallRenderParts(data, feature)
   ): void {
     if (!parts) return;
+    if (feature.params.wallStyle === "rock") {
+      this.drawRockWallForeground(ctx, data, image, feature, parts);
+      return;
+    }
     this.drawTerrainMorphologyMaskedColor(
       ctx,
       parts.faceMask,
@@ -1661,6 +1675,79 @@ export class StudioTerrainChunkRenderer {
     this.drawTerrainMorphologyMaskedColor(ctx, parts.bottomEdge, "#120d09", 0.58 - parts.smoothness * 0.12, "multiply", "none", 0, parts.height);
   }
 
+  /**
+   * Rock style of a wall (dug caves), as in the Studio map editor: stratified rock faces lit
+   * from above and a rock rim above each face. The contact shadow and the top rim belong to
+   * the wall base.
+   */
+  private drawRockWallForeground(
+    ctx: CanvasRenderingContext2D,
+    data: StudioTerrainRenderData,
+    image: HTMLImageElement | null,
+    feature: StudioTerrainMorphologyFeature,
+    parts: TerrainWallRenderParts
+  ): void {
+    const textureId = stringParam(feature.params.textureId);
+    if (textureId) {
+      this.drawTerrainMorphologyTextureFill(ctx, parts.faceMask, textureId, data, image, "#584c42", 1);
+    } else {
+      this.drawTerrainMorphologyPatternFill(ctx, parts.faceMask, "rock-face", this.getRockFacePatternCanvas());
+    }
+    this.drawTerrainMorphologyMaskedColor(ctx, parts.faceMask, "#e8d9bf", 0.16, "screen", "blur(3px)", 0, -Math.round(parts.height * 0.55));
+    this.drawTerrainMorphologyMaskedColor(ctx, parts.faceMask, "#0c0907", 0.5, "multiply", "blur(3px)", 0, Math.round(parts.height * 0.6));
+    this.drawTerrainMorphologySideDepthShading(ctx, parts.faceMask, parts.leftEdge, parts.rightEdge, feature, "raised");
+    this.drawTerrainMorphologyMaskedColor(ctx, parts.bottomEdge, "#b3a48c", 0.55, "source-over", "blur(1px)", 0, -1);
+    this.drawTerrainMorphologyMaskedColor(ctx, parts.bottomEdge, "#1a1410", 0.45, "multiply", "none", 0, 2);
+  }
+
+  /** Fills a mask with a repeating pattern aligned on world coordinates; cached per mask. */
+  private drawTerrainMorphologyPatternFill(
+    ctx: CanvasRenderingContext2D,
+    mask: TerrainMorphologyMaskBuffer,
+    patternKey: string,
+    pattern: HTMLCanvasElement
+  ): void {
+    let cache = this.morphologyTextureFillCache.get(mask.canvas);
+    if (!cache) {
+      cache = new Map();
+      this.morphologyTextureFillCache.set(mask.canvas, cache);
+    }
+    const cacheKey = `pattern|${patternKey}`;
+    let fillCanvas = cache.get(cacheKey);
+    if (!fillCanvas) {
+      const fill = this.createCanvasBuffer(mask.canvas.width, mask.canvas.height);
+      const repeat = fill.ctx.createPattern(pattern, "repeat");
+      if (!repeat) return;
+      fill.ctx.save();
+      fill.ctx.fillStyle = repeat;
+      fill.ctx.translate(-mask.bounds.x, -mask.bounds.y);
+      fill.ctx.fillRect(mask.bounds.x, mask.bounds.y, mask.bounds.width, mask.bounds.height);
+      fill.ctx.restore();
+      fill.ctx.save();
+      fill.ctx.globalCompositeOperation = "destination-in";
+      fill.ctx.drawImage(mask.canvas, 0, 0);
+      fill.ctx.restore();
+      fillCanvas = fill.canvas;
+      cache.set(cacheKey, fillCanvas);
+    }
+
+    ctx.save();
+    ctx.globalCompositeOperation = "source-over";
+    this.drawMorphologyCanvas(ctx, fillCanvas, mask.bounds);
+    ctx.restore();
+  }
+
+  private getRockFacePatternCanvas(): HTMLCanvasElement {
+    if (!this.rockFacePatternCanvas) {
+      const buffer = this.createCanvasBuffer(256, 128);
+      const imageData = buffer.ctx.createImageData(256, 128);
+      imageData.data.set(createRockFacePixels(256, 128));
+      buffer.ctx.putImageData(imageData, 0, 0);
+      this.rockFacePatternCanvas = buffer.canvas as HTMLCanvasElement;
+    }
+    return this.rockFacePatternCanvas;
+  }
+
   private createTerrainWallRenderParts(
     data: StudioTerrainRenderData,
     feature: StudioTerrainMorphologyFeature
@@ -1680,8 +1767,24 @@ export class StudioTerrainChunkRenderer {
     const topEdge = this.createTerrainMorphologyDirectionalEdgeMask(mask, "top", Math.round(12 - smoothness * 4));
     const bottomEdge = this.createTerrainMorphologyDirectionalEdgeMask(mask, "bottom", Math.round(13 - smoothness * 5));
     const faceMask = this.createTerrainMorphologyExtrudedFaceMask(bottomEdge, feature);
-    const leftEdge = this.createTerrainMorphologyDirectionalEdgeMask(faceMask, "left", Math.round(16 - smoothness * 6));
-    const rightEdge = this.createTerrainMorphologyDirectionalEdgeMask(faceMask, "right", Math.round(16 - smoothness * 6));
+    if (stringParam(feature.params.surfaceTextureId)) {
+      // The editor draws an opaque wall top over the face; the game draws the top in the wall
+      // base, below the face, so the face parts over the wall top are removed instead.
+      this.subtractTerrainMorphologyMask(faceMask, mask);
+    }
+    // The face sides come from the wall's own sides, extruded like the face (as in the Studio
+    // map editor): the face outline alone would also shade the slivers along vertical sides.
+    const sideEdgeDistance = Math.round(16 - smoothness * 6);
+    const leftEdge = this.createTerrainMorphologyExtrudedFaceMask(
+      this.createTerrainMorphologyDirectionalEdgeMask(mask, "left", sideEdgeDistance),
+      feature
+    );
+    const rightEdge = this.createTerrainMorphologyExtrudedFaceMask(
+      this.createTerrainMorphologyDirectionalEdgeMask(mask, "right", sideEdgeDistance),
+      feature
+    );
+    this.clipTerrainMorphologyMask(leftEdge, faceMask);
+    this.clipTerrainMorphologyMask(rightEdge, faceMask);
 
     const parts = {
       mask,
@@ -2315,10 +2418,12 @@ export class StudioTerrainChunkRenderer {
     const target = this.createCanvasBuffer(source.canvas.width, source.canvas.height);
     const height = getTerrainMorphologyHeight(feature);
     const smoothness = getTerrainMorphologySmoothness(feature);
-    const step = Math.round(4 + smoothness * 2);
+    // As in the Studio map editor: wall faces are extruded straight and densely, so their
+    // sides stay clean; only holes sway.
+    const step = feature.kind === "wall" ? Math.max(2, Math.round(3 + smoothness)) : Math.round(4 + smoothness * 2);
 
     for (let y = 0; y <= height; y += step) {
-      const sway = Math.round(Math.sin(y * 0.18) * (1 - smoothness) * 2);
+      const sway = feature.kind === "wall" ? 0 : Math.round(Math.sin(y * 0.18) * (1 - smoothness) * 2);
       target.ctx.drawImage(source.canvas, sway, y);
     }
 

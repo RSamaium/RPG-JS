@@ -74,6 +74,8 @@ export interface StudioTerrainMorphologyParams extends Record<string, unknown> {
   waveIntensity?: number;
   /** Clockwise screen-space travel angle in degrees: 0 right, 90 down. */
   waveDirection?: number;
+  /** Wall look: `rock` renders stratified rock faces with a rock rim, as Studio dug caves use. */
+  wallStyle?: "rock";
 }
 
 export interface StudioTerrainMorphologyFeature {
