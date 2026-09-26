@@ -1,6 +1,7 @@
 import type { IncomingHttpHeaders, IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";
 import type { RpgServerEngine } from "../RpgServerEngine";
+import type { RpgConnectionState } from "../rooms/map-types";
 
 /** Filters and limits supported when listing keys from RPGJS room storage. */
 export interface RpgRoomStorageListOptions {
@@ -119,11 +120,11 @@ export interface RpgHostedRoomConnection<TState = unknown> {
   /** Session identifier retained across supported reconnect flows. */
   readonly sessionId?: string;
   /** Current application-owned state. Use `setState()` to replace it. */
-  readonly state: Readonly<TState> | null;
+  readonly state: RpgConnectionState<TState>;
   /** Replace the application-owned connection state. */
   setState(
-    state: TState | ((previous: Readonly<TState> | null) => TState) | null,
-  ): Readonly<TState> | null;
+    state: TState | ((previous: RpgConnectionState<TState>) => TState) | null,
+  ): RpgConnectionState<TState>;
   /** Send data to this connection. */
   send(data: string | ArrayBuffer | ArrayBufferView): void | Promise<void>;
   /** Close this connection. */

@@ -2089,6 +2089,7 @@
       "RpgAuthResult",
       "RpgAuthenticatedIdentity",
       "RpgClassProvider",
+      "RpgConnectionState",
       "RpgContext",
       "RpgEvent",
       "RpgEventHooks",

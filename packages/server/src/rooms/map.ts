@@ -97,6 +97,7 @@ import type {
 export type {
   Controls,
   EventConstructor,
+  RpgConnectionState,
   EventDefinition,
   EventHooks,
   EventPosOption,

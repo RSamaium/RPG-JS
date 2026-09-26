@@ -199,14 +199,10 @@ describe("server public API types", () => {
     expectTypeOf(createMemoryNodeRoomStorage()).toEqualTypeOf<RpgMemoryRoomStorageProvider>();
     expectTypeOf(createSqliteNodeRoomStorage({ databasePath: "rooms.sqlite" }))
       .toEqualTypeOf<RpgRoomStorageProvider>();
-    // Known gap: RpgHostedRoomConnection types `state` as `Readonly<TState> | null`
-    // while @signe/room exposes an untyped connection state, so Signe rooms are
-    // not assignable to the public hosted room types. Remove these directives
-    // once both types are aligned.
-    // @ts-expect-error see the known gap above
     expectTypeOf<NodeRoom>().toExtend<RpgHostedRoom>();
-    // @ts-expect-error see the known gap above
     expectTypeOf<NodeConnection>().toExtend<RpgHostedRoomConnection>();
+    expectTypeOf<NodeConnection<{ privateId: string }>>()
+      .toExtend<RpgHostedRoomConnection<{ privateId: string }>>();
     expectTypeOf(assertions).toBeFunction();
   });
 

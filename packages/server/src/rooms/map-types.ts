@@ -160,6 +160,26 @@ export interface LightingSetOptions {
   cancelTransition?: boolean;
 }
 
+type RpgImmutablePrimitive = undefined | null | boolean | string | number;
+type RpgImmutable<T> = T extends RpgImmutablePrimitive
+  ? T
+  : T extends Array<infer U>
+    ? ReadonlyArray<RpgImmutable<U>>
+    : T extends Map<infer K, infer V>
+      ? ReadonlyMap<RpgImmutable<K>, RpgImmutable<V>>
+      : T extends Set<infer M>
+        ? ReadonlySet<RpgImmutable<M>>
+        : RpgImmutableObject<T>;
+type RpgImmutableObject<T> = { readonly [K in keyof T]: RpgImmutable<T[K]> };
+
+/**
+ * Application-owned connection state, exposed as deeply immutable data.
+ *
+ * Replace it with `setState()` instead of mutating it. The shape matches the
+ * connection state of the room runtime, so hosted connections stay assignable.
+ */
+export type RpgConnectionState<TState = unknown> = RpgImmutableObject<TState> | null;
+
 /**
  * Stable connection surface passed to RPGJS room lifecycle methods.
  *
@@ -173,11 +193,11 @@ export interface RpgRoomConnection<TState = unknown> {
   /** Private session identifier retained by supported reconnection flows. */
   readonly sessionId?: string;
   /** Current application-owned state. Use `setState()` to replace it. */
-  readonly state: Readonly<TState> | null;
+  readonly state: RpgConnectionState<TState>;
   /** Replace the application-owned connection state. */
   setState(
-    state: TState | ((previous: Readonly<TState> | null) => TState) | null,
-  ): Readonly<TState> | null;
+    state: TState | ((previous: RpgConnectionState<TState>) => TState) | null,
+  ): RpgConnectionState<TState>;
   /** Send data to this connection. */
   send(data: string | ArrayBuffer | ArrayBufferView): void;
   /** Close this connection. */
