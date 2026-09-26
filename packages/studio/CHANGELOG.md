@@ -1,5 +1,19 @@
 # @rpgjs/studio
 
+## 5.0.0-rc.11
+
+### Patch Changes
+
+- 1cae469: Update CanvasEngine to 2.4.0. Templates now read computed signals explicitly (`position().x` in the HP bar, light halo and dynamic bar components) and the action-battle projectile trail passes `loop={true}` to its `Fx`.
+- 8ce9856: Render Studio walls with `wallStyle: "rock"` as stratified rock faces with a rock rim and a floor contact shadow, as used by dug caves. Wall faces now match the Studio map editor: they are extruded straight, their sides come from the wall's own sides, and face parts over an opaque wall top are no longer drawn, which removes stray lines along cave and room sides.
+- Updated dependencies [1cae469]
+- Updated dependencies [14f7cf9]
+- Updated dependencies [114469c]
+  - @rpgjs/client@5.0.0-rc.9
+  - @rpgjs/server@5.0.0-rc.9
+  - @rpgjs/vite@5.0.0-rc.9
+  - @rpgjs/action-battle@5.0.0-rc.9
+
 ## 5.0.0-rc.10
 
 ### Patch Changes
