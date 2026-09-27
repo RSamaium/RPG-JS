@@ -1,5 +1,17 @@
 # @rpgjs/chat
 
+## 5.0.0-rc.9
+
+### Patch Changes
+
+- 1cae469: Update CanvasEngine to 2.4.0. Templates now read computed signals explicitly (`position().x` in the HP bar, light halo and dynamic bar components) and the action-battle projectile trail passes `loop={true}` to its `Fx`.
+- Updated dependencies [1cae469]
+- Updated dependencies [14f7cf9]
+- Updated dependencies [114469c]
+  - @rpgjs/client@5.0.0-rc.9
+  - @rpgjs/server@5.0.0-rc.9
+  - @rpgjs/vite@5.0.0-rc.9
+
 ## 5.0.0-rc.8
 
 ### Patch Changes

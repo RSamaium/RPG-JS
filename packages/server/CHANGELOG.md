@@ -1,5 +1,15 @@
 # @rpgjs/server
 
+## 5.0.0-rc.9
+
+### Patch Changes
+
+- 1cae469: Update CanvasEngine to 2.4.0. Templates now read computed signals explicitly (`position().x` in the HP bar, light halo and dynamic bar components) and the action-battle projectile trail passes `loop={true}` to its `Fx`.
+- 14f7cf9: Update `@signe/room` to 3.2.1, which types node connection state like a party connection and includes Cloudflare WebSocket hibernation support from 3.2.0.
+- 114469c: Type connection state as deeply immutable data with the new `RpgConnectionState<TState>` type, used by `RpgRoomConnection` and `RpgHostedRoomConnection`. Node rooms from `@signe/room` are now assignable to `RpgHostedRoom` without casts (requires `@signe/room` 3.2.1).
+- Updated dependencies [1cae469]
+  - @rpgjs/testing@5.0.0-rc.9
+
 ## 5.0.0-rc.8
 
 ### Patch Changes

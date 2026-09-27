@@ -1,5 +1,16 @@
 # @rpgjs/client
 
+## 5.0.0-rc.9
+
+### Patch Changes
+
+- 1cae469: Update CanvasEngine to 2.4.0. Templates now read computed signals explicitly (`position().x` in the HP bar, light halo and dynamic bar components) and the action-battle projectile trail passes `loop={true}` to its `Fx`.
+- 14f7cf9: Update `@signe/room` to 3.2.1, which types node connection state like a party connection and includes Cloudflare WebSocket hibernation support from 3.2.0.
+- Updated dependencies [1cae469]
+- Updated dependencies [14f7cf9]
+- Updated dependencies [114469c]
+  - @rpgjs/server@5.0.0-rc.9
+
 ## 5.0.0-rc.8
 
 ### Patch Changes
