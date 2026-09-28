@@ -90,10 +90,5 @@ export function entryPointPlugin(options: EntryPointPluginOptions = {}): Plugin 
         return transformedHtml;
       }
     },
-    configResolved(config) {
-      // Log the current configuration for debugging
-      console.log(`[rpgjs:entry-point] Using RPG_TYPE: ${rpgType}`);
-      console.log(`[rpgjs:entry-point] Entry point: ${entryPoints[rpgType as keyof typeof entryPoints]}`);
-    }
   };
 } 

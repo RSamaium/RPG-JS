@@ -1,6 +1,7 @@
-import { createRpgServerTransport, logNetworkSimulationStatus } from "@rpgjs/server/node";
+import { createRpgServerTransport } from "@rpgjs/server/node";
 import type { RpgTransportServerConstructor, RpgWebSocketServer } from "@rpgjs/server/node";
 import type { ViteDevServer } from "vite";
+import colors from "picocolors";
 
 export interface RpgjsDevServerOptions {
   /** Remote Node or Wrangler origin. When omitted, Vite hosts the Node transport. */
@@ -36,6 +37,10 @@ async function importWebSocketServer(): Promise<any> {
   }
 }
 
+function formatError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export function serverPlugin(serverModule: RpgTransportServerConstructor, options: RpgjsDevServerOptions = {}) {
   let wsServer: RpgWebSocketServer | null = null;
   const isRemote = Boolean(options.target);
@@ -65,6 +70,15 @@ export function serverPlugin(serverModule: RpgTransportServerConstructor, option
           throw new MapPublicationError(`Unable to publish map ${mapId}: ${response.status} ${await response.text()}`, retryable);
         }
       }),
+    );
+  };
+
+  const logPublication = (server: ViteDevServer, action: string) => {
+    const count = options.mapIds?.length ?? 0;
+    if (count === 0) return;
+    server.config.logger.info(
+      `${colors.magenta("[rpgjs]")} ${count === 1 ? "1 map" : `${count} maps`} ${action} to ${colors.cyan(options.target!)}`,
+      { timestamp: true },
     );
   };
 
@@ -101,7 +115,10 @@ export function serverPlugin(serverModule: RpgTransportServerConstructor, option
     async configureServer(server: ViteDevServer) {
       if (isRemote) {
         server.httpServer?.once("listening", () => {
-          void publishMapsWithRetry().catch((error) => console.error("[RPGJS] Map publication failed:", error));
+          void publishMapsWithRetry().then(
+            () => logPublication(server, "published"),
+            (error) => server.config.logger.error(`[rpgjs] Map publication failed: ${formatError(error)}`, { timestamp: true }),
+          );
         });
         server.watcher.on("change", (file) => {
           const normalizedFile = file.replaceAll("\\", "/");
@@ -110,7 +127,10 @@ export function serverPlugin(serverModule: RpgTransportServerConstructor, option
           }
           if (publishTimer) clearTimeout(publishTimer);
           publishTimer = setTimeout(() => {
-            void publishMapsWithRetry(5).catch((error) => console.error("[RPGJS] Map republication failed:", error));
+            void publishMapsWithRetry(5).then(
+              () => logPublication(server, "republished"),
+              (error) => server.config.logger.error(`[rpgjs] Map republication failed: ${formatError(error)}`, { timestamp: true }),
+            );
           }, 100);
         });
         return;
@@ -122,17 +142,13 @@ export function serverPlugin(serverModule: RpgTransportServerConstructor, option
           wsServer = new WebSocketServerClass({
             noServer: true,
           });
-          console.log("WebSocket server initialized successfully");
         } else {
-          console.log("WebSocket server not available in this environment");
+          server.config.logger.warn("[rpgjs] WebSocket server not available in this environment");
         }
       } catch (error) {
-        console.warn("WebSocket server not available:", error);
+        server.config.logger.warn(`[rpgjs] WebSocket server not available: ${formatError(error)}`);
         wsServer = null;
       }
-
-      console.log("RPG-JS server plugin initialized");
-      logNetworkSimulationStatus();
 
       server.middlewares.use("/parties", async (req, res, next) => {
         await transport.handleNodeRequest(req, res, next, {
@@ -145,12 +161,6 @@ export function serverPlugin(serverModule: RpgTransportServerConstructor, option
           void transport.handleUpgrade(wsServer!, request, socket, head);
         });
       }
-
-      console.log("RPG-JS server plugin configured with HTTP and WebSocket forwarding !");
-    },
-
-    buildStart() {
-      console.log("RPG-JS server starting...");
     },
 
     buildEnd() {
@@ -158,7 +168,6 @@ export function serverPlugin(serverModule: RpgTransportServerConstructor, option
       if (wsServer) {
         wsServer.close();
       }
-      console.log("RPG-JS server stopped");
     },
   };
 }

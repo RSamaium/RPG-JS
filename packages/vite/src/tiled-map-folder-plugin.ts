@@ -1,4 +1,6 @@
 import { Plugin } from 'vite';
+import colors from 'picocolors';
+import { addDevBannerEntry } from './dev-banner';
 import { readFileSync, existsSync, statSync, readdirSync, copyFileSync, mkdirSync } from 'fs';
 import { join, extname, relative, dirname } from 'path';
 
@@ -156,11 +158,14 @@ export function tiledMapFolderPlugin(options: DataFolderPluginOptions): Plugin {
         // Handle development mode - serve files via middleware
         configureServer(server) {
             if (!existsSync(sourceFolder)) {
-                console.warn(`⚠️  Data folder not found: ${sourceFolder}`);
+                server.config.logger.warn(`[rpgjs] Data folder not found: ${sourceFolder}`);
                 return;
             }
 
-            console.log(`📁 Serving data folder: ${sourceFolder} at ${publicPath}`);
+            addDevBannerEntry(server.config, {
+                label: 'Maps',
+                value: `${colors.cyan(sourceFolder)} ${colors.dim('→')} ${colors.cyan(publicPath)}`,
+            });
 
             server.middlewares.use((req: any, res: any, next: any) => {
                 if (!req.url?.startsWith(publicPath)) {
@@ -211,8 +216,6 @@ export function tiledMapFolderPlugin(options: DataFolderPluginOptions): Plugin {
                     res.setHeader('Cache-Control', 'no-cache');
                     res.setHeader('Access-Control-Allow-Origin', '*');
                     res.end(fileContent);
-                    
-                    console.log(`📄 Served data file: ${cleanPath}`);
                 } catch (error) {
                     console.error(`❌ Error serving file ${filePath}:`, error);
                     res.statusCode = 500;

@@ -36,6 +36,7 @@
     "acorn-walk": "^8.3.5",
     "image-size": "^2.0.2",
     "magic-string": "^0.30.21",
+    "picocolors": "^1.1.1",
     "rxjs": "^7.8.2",
     "typescript": "^6.0.3",
     "vite": "^8.0.16",

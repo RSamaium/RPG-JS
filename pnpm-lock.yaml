@@ -504,6 +504,9 @@ importers:
       magic-string:
         specifier: ^0.30.21
         version: 0.30.21
+      picocolors:
+        specifier: ^1.1.1
+        version: 1.1.1
       rxjs:
         specifier: ^7.8.2
         version: 7.8.2
