@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { existsSync } from 'fs'
 import { readFile, writeFile } from 'fs/promises'
 import { resolve } from 'path'
 import { execa } from 'execa'
@@ -12,6 +13,13 @@ interface PreState {
 
 async function main(): Promise<void> {
     const preStatePath = resolve(process.cwd(), '.changeset/pre.json')
+
+    // `changeset version` deletes pre.json once pre mode has been exited.
+    if (!existsSync(preStatePath)) {
+        await execa('changeset', ['publish', '--tag', 'latest'], { stdio: 'inherit' })
+        return
+    }
+
     const original = await readFile(preStatePath, 'utf8')
     const preState = JSON.parse(original) as PreState
 
