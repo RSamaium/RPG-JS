@@ -76,7 +76,12 @@ export interface StudioTerrainMorphologyParams extends Record<string, unknown> {
   waveDirection?: number;
   /** Wall look: `rock` renders stratified rock faces with a rock rim, as Studio dug caves use. */
   wallStyle?: "rock";
+  /** Procedural face texture of a `rock` wall without `textureId` (default `masonry`). */
+  rockTexture?: StudioTerrainRockTexture;
 }
+
+/** Procedural rock face textures: cut stone courses, or irregular natural rock. */
+export type StudioTerrainRockTexture = "masonry" | "natural";
 
 export interface StudioTerrainMorphologyFeature {
   id: string;

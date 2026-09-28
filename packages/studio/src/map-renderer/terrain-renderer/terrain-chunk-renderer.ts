@@ -13,7 +13,7 @@ import {
   type TerrainPresetRenderer,
 } from "@rpgjs/render-map2d";
 import { buildStudioTerrainCollisionPolygons } from "../collision-polygons";
-import { createRockFacePixels } from "./rock-face-pattern";
+import { createRockFacePixels, renderRockFacePixels } from "./rock-face-pattern";
 import { createStudioTerrainRenderData } from "../map-normalizer";
 import {
   STUDIO_TERRAIN_TILE_SIZE,
@@ -24,6 +24,7 @@ import {
   type StudioTerrainMorphologyFeature,
   type StudioTerrainRenderBounds,
   type StudioTerrainRenderData,
+  type StudioTerrainRockTexture,
   type StudioTerrainStreamUpdate,
   type StudioWaterAnimationOptions,
 } from "../types";
@@ -41,6 +42,8 @@ import type { StudioViewportBounds } from "../viewport-culling";
 const DEFAULT_CHUNK_SIZE = 768;
 const SOLID_BLACK_TERRAIN_TEXTURE_ID = "__solid_black__";
 const WATER_ANIMATION_FRAME_DURATION = 1 / 30;
+const ROCK_FACE_TEXTURE_WIDTH = 256;
+const ROCK_FACE_TEXTURE_HEIGHT = 128;
 
 interface TerrainChunk {
   key: string;
@@ -230,7 +233,8 @@ export class StudioTerrainChunkRenderer {
   private terrainHoleRenderPartsCache = new WeakMap<StudioTerrainMorphologyFeature, TerrainHoleRenderParts | null>();
   private morphologyColorOverlayCache = new WeakMap<HTMLCanvasElement, Map<string, HTMLCanvasElement>>();
   private morphologyTextureFillCache = new WeakMap<HTMLCanvasElement, Map<string, HTMLCanvasElement>>();
-  private rockFacePatternCanvas: HTMLCanvasElement | null = null;
+  private rockFacePixels = new Map<StudioTerrainRockTexture, Uint8ClampedArray>();
+  private rockFaceCanvases = new WeakMap<HTMLCanvasElement, { face: HTMLCanvasElement; shadow: HTMLCanvasElement } | null>();
   private morphologyCanvasIds = new WeakMap<HTMLCanvasElement, number>();
   private nextMorphologyCanvasId = 1;
   private morphologyClipBounds: StudioTerrainRenderBounds | null = null;
@@ -659,6 +663,7 @@ export class StudioTerrainChunkRenderer {
     this.terrainHoleRenderPartsCache = new WeakMap();
     this.morphologyColorOverlayCache = new WeakMap();
     this.morphologyTextureFillCache = new WeakMap();
+    this.rockFaceCanvases = new WeakMap();
     this.morphologyCanvasIds = new WeakMap();
     this.nextMorphologyCanvasId = 1;
     this.morphologyClipBounds = null;
@@ -1622,7 +1627,11 @@ export class StudioTerrainChunkRenderer {
   ): void {
     if (!parts) return;
     const rock = feature.params.wallStyle === "rock";
-    if (rock) {
+    if (rock && !stringParam(feature.params.textureId)) {
+      // Procedural faces: their contact shadow on the floor belongs to the base.
+      const canvases = this.getRockFaceCanvases(feature, parts);
+      if (canvases) this.drawMorphologyCanvas(ctx, canvases.shadow, parts.mask.bounds);
+    } else if (rock) {
       // Contact shadow on the floor at the foot of the face.
       this.drawTerrainMorphologyMaskedColor(ctx, parts.bottomEdge, "#070504", 0.55, "multiply", "blur(7px)", 0, parts.height + 4);
     }
@@ -1676,9 +1685,10 @@ export class StudioTerrainChunkRenderer {
   }
 
   /**
-   * Rock style of a wall (dug caves), as in the Studio map editor: stratified rock faces lit
-   * from above and a rock rim above each face. The contact shadow and the top rim belong to
-   * the wall base.
+   * Rock style of a wall (dug caves), as in the Studio map editor. Without a `textureId`, the
+   * faces are procedural and computed per pixel (see `getRockFaceCanvases`); with one, the
+   * tileset texture fills the extruded face, lit from above. Both get a rock rim above each
+   * face. The contact shadow and the top rim belong to the wall base.
    */
   private drawRockWallForeground(
     ctx: CanvasRenderingContext2D,
@@ -1690,62 +1700,73 @@ export class StudioTerrainChunkRenderer {
     const textureId = stringParam(feature.params.textureId);
     if (textureId) {
       this.drawTerrainMorphologyTextureFill(ctx, parts.faceMask, textureId, data, image, "#584c42", 1);
+      this.drawTerrainMorphologyMaskedColor(ctx, parts.faceMask, "#e8d9bf", 0.16, "screen", "blur(3px)", 0, -Math.round(parts.height * 0.55));
+      this.drawTerrainMorphologyMaskedColor(ctx, parts.faceMask, "#0c0907", 0.5, "multiply", "blur(3px)", 0, Math.round(parts.height * 0.6));
+      this.drawTerrainMorphologySideDepthShading(ctx, parts.faceMask, parts.leftEdge, parts.rightEdge, feature, "raised");
     } else {
-      this.drawTerrainMorphologyPatternFill(ctx, parts.faceMask, "rock-face", this.getRockFacePatternCanvas());
+      const canvases = this.getRockFaceCanvases(feature, parts);
+      if (canvases) this.drawMorphologyCanvas(ctx, canvases.face, parts.mask.bounds);
     }
-    this.drawTerrainMorphologyMaskedColor(ctx, parts.faceMask, "#e8d9bf", 0.16, "screen", "blur(3px)", 0, -Math.round(parts.height * 0.55));
-    this.drawTerrainMorphologyMaskedColor(ctx, parts.faceMask, "#0c0907", 0.5, "multiply", "blur(3px)", 0, Math.round(parts.height * 0.6));
-    this.drawTerrainMorphologySideDepthShading(ctx, parts.faceMask, parts.leftEdge, parts.rightEdge, feature, "raised");
     this.drawTerrainMorphologyMaskedColor(ctx, parts.bottomEdge, "#b3a48c", 0.55, "source-over", "blur(1px)", 0, -1);
     this.drawTerrainMorphologyMaskedColor(ctx, parts.bottomEdge, "#1a1410", 0.45, "multiply", "none", 0, 2);
   }
 
-  /** Fills a mask with a repeating pattern aligned on world coordinates; cached per mask. */
-  private drawTerrainMorphologyPatternFill(
-    ctx: CanvasRenderingContext2D,
-    mask: TerrainMorphologyMaskBuffer,
-    patternKey: string,
-    pattern: HTMLCanvasElement
-  ): void {
-    let cache = this.morphologyTextureFillCache.get(mask.canvas);
-    if (!cache) {
-      cache = new Map();
-      this.morphologyTextureFillCache.set(mask.canvas, cache);
-    }
-    const cacheKey = `pattern|${patternKey}`;
-    let fillCanvas = cache.get(cacheKey);
-    if (!fillCanvas) {
-      const fill = this.createCanvasBuffer(mask.canvas.width, mask.canvas.height);
-      const repeat = fill.ctx.createPattern(pattern, "repeat");
-      if (!repeat) return;
-      fill.ctx.save();
-      fill.ctx.fillStyle = repeat;
-      fill.ctx.translate(-mask.bounds.x, -mask.bounds.y);
-      fill.ctx.fillRect(mask.bounds.x, mask.bounds.y, mask.bounds.width, mask.bounds.height);
-      fill.ctx.restore();
-      fill.ctx.save();
-      fill.ctx.globalCompositeOperation = "destination-in";
-      fill.ctx.drawImage(mask.canvas, 0, 0);
-      fill.ctx.restore();
-      fillCanvas = fill.canvas;
-      cache.set(cacheKey, fillCanvas);
-    }
+  /**
+   * Procedural rock faces of a wall, rendered once per wall mask with `renderRockFacePixels`
+   * and the wall's `rockTexture`: the opaque face pixels (foreground) and their contact
+   * shadow on the floor (base), as separate canvases aligned on the mask.
+   */
+  private getRockFaceCanvases(
+    feature: StudioTerrainMorphologyFeature,
+    parts: TerrainWallRenderParts
+  ): { face: HTMLCanvasElement; shadow: HTMLCanvasElement } | null {
+    const mask = parts.mask;
+    if (this.rockFaceCanvases.has(mask.canvas)) return this.rockFaceCanvases.get(mask.canvas) ?? null;
 
-    ctx.save();
-    ctx.globalCompositeOperation = "source-over";
-    this.drawMorphologyCanvas(ctx, fillCanvas, mask.bounds);
-    ctx.restore();
+    const { width, height } = mask.canvas;
+    const rockMask = mask.canvas.getContext("2d", { willReadFrequently: true })?.getImageData(0, 0, width, height).data;
+    if (!rockMask) {
+      this.rockFaceCanvases.set(mask.canvas, null);
+      return null;
+    }
+    const texture = feature.params.rockTexture === "natural" ? "natural" : "masonry";
+    const pixels = renderRockFacePixels({
+      rockMask,
+      width,
+      height,
+      originX: Math.round(mask.bounds.x),
+      faceHeight: Math.round(parts.height),
+      texture: this.getRockFacePixels(texture),
+      textureWidth: ROCK_FACE_TEXTURE_WIDTH,
+      textureHeight: ROCK_FACE_TEXTURE_HEIGHT,
+    });
+    // Face pixels are opaque; shadow pixels are translucent (at most 150).
+    const shadowPixels = new Uint8ClampedArray(pixels.length);
+    for (let offset = 3; offset < pixels.length; offset += 4) {
+      if (pixels[offset] > 0 && pixels[offset] < 255) {
+        shadowPixels.set(pixels.subarray(offset - 3, offset + 1), offset - 3);
+        pixels[offset] = 0;
+      }
+    }
+    const toCanvas = (source: Uint8ClampedArray) => {
+      const buffer = this.createCanvasBuffer(width, height);
+      const imageData = buffer.ctx.createImageData(width, height);
+      imageData.data.set(source);
+      buffer.ctx.putImageData(imageData, 0, 0);
+      return buffer.canvas as HTMLCanvasElement;
+    };
+    const canvases = { face: toCanvas(pixels), shadow: toCanvas(shadowPixels) };
+    this.rockFaceCanvases.set(mask.canvas, canvases);
+    return canvases;
   }
 
-  private getRockFacePatternCanvas(): HTMLCanvasElement {
-    if (!this.rockFacePatternCanvas) {
-      const buffer = this.createCanvasBuffer(256, 128);
-      const imageData = buffer.ctx.createImageData(256, 128);
-      imageData.data.set(createRockFacePixels(256, 128));
-      buffer.ctx.putImageData(imageData, 0, 0);
-      this.rockFacePatternCanvas = buffer.canvas as HTMLCanvasElement;
+  private getRockFacePixels(texture: StudioTerrainRockTexture): Uint8ClampedArray {
+    let pixels = this.rockFacePixels.get(texture);
+    if (!pixels) {
+      pixels = createRockFacePixels(texture, ROCK_FACE_TEXTURE_WIDTH, ROCK_FACE_TEXTURE_HEIGHT);
+      this.rockFacePixels.set(texture, pixels);
     }
-    return this.rockFacePatternCanvas;
+    return pixels;
   }
 
   private createTerrainWallRenderParts(
