@@ -1,5 +1,190 @@
 # @rpgjs/action-battle
 
+## 5.0.0
+
+### Major Changes
+
+- 041d5ee: Add a persistent server-authoritative, type-extensible hotbar for skills, items, and custom gameplay entries. The hotbar now supports a dynamic 1–10 slot capacity, retained locked-slot assignments, unlock hints, a persistent active slot, automatic refresh after level/class/inventory/map changes, direct keyboard shortcuts, a radial gamepad selector, LT/RT slot cycling with X activation, mobile centering, cooldown/cost/quantity presentation, and serialized `instant`, `select`, or `target` activation handlers.
+
+  Replace Action Battle's dedicated `ui.actionBar` and component with the generic `ui.hotbar`. Action Battle skills enrich generic entries with targeting, cooldown, projectile, sound, animation, and visual metadata while their authoritative execution continues through native skill and item hooks. This is an intentional breaking configuration and export cleanup.
+
+  Keep direct 1–0 Zelda-style menu assignment, display unavailable slots with their unlock condition in the root-level assignment picker, execute Studio skill workflows through the native `onUse` hook, make instant skills soft-target without a confirmation step, preserve skill impact media through AI damage feedback, and add translated Studio presentation fields, visual area targeting, phase-specific CanvasEngine cast/trail/impact presets, a default projectile renderer compatible with Studio skill records, and robust object-signal hydration for class and hotbar sync payloads. Upgrade to `@signe/sync` 3.1.1 so object-signal hydration uses the upstream fix without a local package patch.
+
+  Expose a complete set of `--rpg-hotbar-*` CSS variables, bridge them through
+  `@rpgjs/ui-css`, document the public client and server APIs with generated
+  JSDoc references, and add a farm-themed playground showing mixed item and skill
+  slots, menu assignment, and the persistent hotbar show/hide lifecycle.
+
+### Minor Changes
+
+- 1bcd9fc: Keep `playSound()` as the single canonical sound API while adding persisted mixer channels, spatial playback, native interface cues, coordinated map and battle music, and Studio audio configuration, so framework users do not have to choose between overlapping concepts.
+
+### Patch Changes
+
+- b6ab003: Establish `defineModule()` as the canonical runtime module authoring API, export it from the client and server packages, keep `createModule()` for advanced provider composition, and align runtime-specific module installation documentation and examples.
+- 973878b: Update CanvasEngine to 2.3.0. The 2.3 compiler no longer injects `computed`, `h`, `cond` and `loop` into every component, so components now import the helpers their script uses. `rpgjs()` declares its `Plugin[]` return type.
+- 1cae469: Update CanvasEngine to 2.4.0. Templates now read computed signals explicitly (`position().x` in the HP bar, light halo and dynamic bar components) and the action-battle projectile trail passes `loop={true}` to its `Fx`.
+- 59c06c9: Let skill cast and impact particle effects complete naturally instead of removing
+  them after a fixed timeout. Fire explosions, magic bursts, healing effects, and
+  custom finite presets now retain their full particle lifetime.
+- fd12af7: Make Adventure combat more responsive and readable with overlap-safe control locks, guard/parry/counter gameplay, soft targeting, coordinated enemy attack turns, Studio-driven combat animations, skill hit-rate handling, anchored impact feedback, configurable hit-stop, and enemy death effects.
+
+  Let temporary attack spritesheets finish their visual follow-through after gameplay recovery instead of forcing the character back to `stand` mid-animation. Studio four-direction attack spritesheets now play in 350ms by default without changing locomotion speed, with an optional `attackDurationMs` media metadata override.
+
+  Keep repeated Studio event placements as independent runtime entities with deterministic instance ids and separate hitboxes.
+
+  Add configurable attack, skill, hit, hurt, and defeat sounds plus per-player dynamic combat music. Battle music crossfades against map BGM, restores it after a configurable grace period, keeps ambient audio intact, and selects enemy, map, or project tracks with stable boss-aware priority.
+
+  Expose Studio combat-audio project/map fields and `createStudioActionBattleAudio()` / `createStudioActionBattlePreset()` helpers. Studio sound resolution no longer stops every currently playing sound.
+
+- f488e28: Keep temporary attack playback and its direction stable during locomotion synchronization. Ignore stale sprite completion callbacks, return stationary characters to idle, and preserve matching predicted attacks when the server confirms them.
+- 00ac672: Prevent npm releases from containing unresolved `workspace:` dependency protocols, and publish release candidates directly under the npm `latest` tag.
+- 995277f: Upgrade the RPGJS workspace and published package compatibility ranges to
+  CanvasEngine 2.1, including its compiler, presets, testing, and Tiled
+  integrations. Keep PixiJS on the CanvasEngine-supported 8.19 line and verify the
+  existing client, server, sample, and playground builds against the new runtime.
+- 0fa8fb9: Respect enemy attack phase and cooldown overrides, keep attack facing stable,
+  preserve remote locomotion, and fit complete visual cycles to authoritative
+  combat timings. Expose per-pattern enemy timing overrides in Studio.
+- 59c06c9: Fix instant skills with zero targeting range selecting no nearby enemies because
+  their automatic targeting radius was reduced to one pixel. Use the configured
+  soft-targeting distance for server-selected targets, allowing damage and impact
+  animations to execute while preserving explicit target range validation.
+- e0bba29: Keep the legacy Action Battle-specific action bar available alongside the new
+  persistent hotbar, including configured slot ordering, menu access, keyboard
+  activation, and direct activation from its slots. Studio icon spritesheets now
+  expose the default texture expected by GUI components.
+- 15ae51e: Publish release candidates under the npm `latest` tag so fresh RPGJS projects install the current release.
+- 98a30f0: Publish release candidates under npm's `latest` tag while retaining the repository's prerelease mode.
+- 59c06c9: Resolve global animation functions on the authoritative combat entity before sending client visuals, including skill casts without per-action animation overrides. Preserve explicit animation overrides in standalone and MMORPG games.
+- 1393b73: Keep top components such as enemy HP bars attached to scaled sprites when
+  transparent frame bounds are still loading or cannot be scanned.
+
+  Respect each enemy skill cooldown inside combos and choose varied special
+  attacks that fit the current target distance.
+
+  Let enemies choose among every learned skill, normal attacks, and contextual
+  repositioning. Projectile and area skills now respect their targeting metadata,
+  and optional structured AI logs explain each server-authoritative decision.
+
+  Preload Studio skill impact and projectile media so enemy skills render their
+  configured animation on the first use. Resolve reactive skill presentation
+  and impact metadata before client transfer, consume their reactive SP and hit
+  rate values, and play ranged skills as casts.
+
+  Unwrap reactive skill combat values before RPGJS evaluates damage formulas, so
+  enemy skills apply their configured power instead of resolving to zero damage.
+
+  Remove the caster animation control from the Studio skill editor while keeping
+  existing skill records compatible at runtime.
+
+- e5ad24a: Establish the stable RPGJS-owned boundary for reactive gameplay properties,
+  dependency-injection providers, Node room storage, and Cloudflare room hosting.
+  Remove accidental Signe re-exports from the client and server roots, keep
+  direct Signe imports as an explicitly advanced plugin path, and protect every
+  published TypeScript entry with declaration reachability snapshots in CI.
+  Keep provider creation strategies mutually exclusive, support asynchronous
+  provider factories, and preserve strict member checking on the server engine.
+  Enforce these public contracts in CI, test the RPGJS-owned Node storage
+  lifecycle, and document complete stable migration examples.
+- 8ef3f4a: Allow hotbars to filter entry types dynamically, let Action Battle resolve
+  visibility per player, apply RPGJS Studio project hotbar settings, expose a
+  Studio event block for displaying or hiding the Hotbar, and honor the Studio
+  Title Screen, HUD, and Main Menu bindings. The main menu now hides disallowed
+  item or skill assignment actions, displays the item slot picker correctly, and
+  clears the native assignment when the last consumable is used.
+- 3d13f8c: Add composable boss phase helpers, delayed AI sequences, server action intents,
+  movement and teleport conveniences, and a generic server-driven AI visual
+  registry. Resolve animation callbacks into serializable visual packets so
+  Studio combat media are honored without cloning functions across rooms.
+
+  Add the Adventure combat preset with buffered player combos, authoritative
+  charged attacks, dodge invulnerability, attack multipliers, stronger Impact
+  visuals, enemy telegraphs, reuse of the existing RPGJS HUD and graphic-bound
+  HP components, contextual animated damage typography, skill-specific FX,
+  and optional mobile heavy-attack controls. `preset: "classic"` preserves the
+  previous combat and UI defaults.
+
+  Position transient component animations from numeric world coordinates and
+  derive component bounds from visible pixels for generated Studio spritesheets,
+  so telegraphs, damage popups, and HP bars stay anchored to scaled characters
+  without including transparent frame padding.
+
+- Updated dependencies [decf73e]
+- Updated dependencies [b74236b]
+- Updated dependencies [37a4fb0]
+- Updated dependencies [8ef3f4a]
+- Updated dependencies [b6ab003]
+- Updated dependencies [973878b]
+- Updated dependencies [1cae469]
+- Updated dependencies [e7b12ab]
+- Updated dependencies [ccb9495]
+- Updated dependencies [e7d8d13]
+- Updated dependencies [1028c17]
+- Updated dependencies [777541a]
+- Updated dependencies [1bcd9fc]
+- Updated dependencies [a0710ce]
+- Updated dependencies [94cbdac]
+- Updated dependencies [4d53aa7]
+- Updated dependencies [66c0d77]
+- Updated dependencies [66c0d77]
+- Updated dependencies [94cbdac]
+- Updated dependencies [94cbdac]
+- Updated dependencies [fd12af7]
+- Updated dependencies [c69f516]
+- Updated dependencies [f488e28]
+- Updated dependencies [8ef3f4a]
+- Updated dependencies [48fcd25]
+- Updated dependencies [e892732]
+- Updated dependencies [00ac672]
+- Updated dependencies [dc6aed5]
+- Updated dependencies [0909491]
+- Updated dependencies [50611c7]
+- Updated dependencies [995277f]
+- Updated dependencies [1fb8040]
+- Updated dependencies [041d5ee]
+- Updated dependencies [0fa8fb9]
+- Updated dependencies [995277f]
+- Updated dependencies [94cbdac]
+- Updated dependencies [7846969]
+- Updated dependencies [6b8d872]
+- Updated dependencies [13517b8]
+- Updated dependencies [72d3e5d]
+- Updated dependencies [15ae51e]
+- Updated dependencies [e11f2ed]
+- Updated dependencies [f624302]
+- Updated dependencies [59c06c9]
+- Updated dependencies [98a30f0]
+- Updated dependencies [335b768]
+- Updated dependencies [e0bba29]
+- Updated dependencies [85aea0c]
+- Updated dependencies [c849207]
+- Updated dependencies [f6aa046]
+- Updated dependencies [14f7cf9]
+- Updated dependencies [1393b73]
+- Updated dependencies [3fb2765]
+- Updated dependencies [1a45ca5]
+- Updated dependencies [327185b]
+- Updated dependencies [fc86ec2]
+- Updated dependencies [66c0d77]
+- Updated dependencies [e5ad24a]
+- Updated dependencies [a7f44ba]
+- Updated dependencies [83fc2b7]
+- Updated dependencies [8ef3f4a]
+- Updated dependencies [be412cf]
+- Updated dependencies [2719f48]
+- Updated dependencies [aed4d3e]
+- Updated dependencies [06afecc]
+- Updated dependencies [0dbe078]
+- Updated dependencies [114469c]
+- Updated dependencies [ef47908]
+- Updated dependencies [0512640]
+- Updated dependencies [3d13f8c]
+  - @rpgjs/common@5.0.0
+  - @rpgjs/client@5.0.0
+  - @rpgjs/server@5.0.0
+  - @rpgjs/vite@5.0.0
+
 ## 5.0.0-rc.9
 
 ### Patch Changes
