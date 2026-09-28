@@ -5,6 +5,11 @@ description: "Internal milestones and release gates for moving RPGJS v5 from bet
 
 # RPGJS v5 Stabilization Roadmap
 
+> **Status:** RPGJS v5 has left the release candidate phase and is published as
+> stable. This roadmap is kept as the record of the stabilization program.
+> Release gates that were not fully met, such as the Cloudflare staging
+> environment and the extended CI matrix, remain open work for the v5 line.
+
 This document is the source of truth for the v5 stabilization program. GitHub
 issues and a `RPGJS v5.0 Stable` milestone should track execution and link back
 to the relevant sections here. The public feature roadmap remains separate in

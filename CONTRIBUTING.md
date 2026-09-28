@@ -196,3 +196,36 @@ If you create or modify CanvasEngine components (`*.ce`), use the CanvasEngine
 documentation table of contents:
 
 https://canvasengine.net/llms.txt
+
+## Local Development
+
+Install the sources and start the packages in watch mode:
+
+```bash
+git clone https://github.com/RSamaium/RPG-JS.git
+cd RPG-JS
+pnpm install
+pnpm dev
+```
+
+Run `pnpm playground` to try the gameplay demos in `playground/games/*`. Each
+game is independent, with its own assets, RPGJS configuration, Vite config, and
+`playground.config.json`. Add a new demo in `playground/games/<game-id>` and give
+it a unique port in its `playground.config.json`.
+
+## Releases
+
+RPGJS uses Changesets so every package can keep its own version. For each
+publishable change, run:
+
+```bash
+pnpm changeset
+```
+
+Select the affected `@rpgjs/*` packages, choose the semver bump, and write a
+short release note. When changes land on the `v5` branch, GitHub Actions creates
+or updates a version PR. Merging that PR publishes the updated packages to npm.
+
+Internal `@rpgjs/*` dependencies are updated during release. If a package depends
+on another package that is being released, it receives at least a patch release
+so the published npm ranges remain consistent.
