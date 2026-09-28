@@ -1,5 +1,109 @@
 # @rpgjs/common
 
+## 5.0.0
+
+### Minor Changes
+
+- decf73e: Add a server-authoritative Actor selection API, runtime Actor switching that preserves acquired progression, a responsive cinematic CanvasEngine character selector, resolved Actor and Class object inputs, class skill progression for CMS-backed data, RPGJS Studio new-game Actor selection settings, character-select/change-class event blocks, and a native query-area block with per-target child execution.
+- b74236b: Add server-authoritative custom gameplay rooms with registered room paths,
+  session-preserving player transfers, synchronized client room state, and
+  CanvasEngine scene adapters that run independently of maps and map physics.
+  Room providers also accept concrete `RpgGameplayRoom` subclasses with their
+  typed constructor context, so strict TypeScript applications can register them.
+  Returning from a custom room now waits for a fresh map-stream packet before
+  remounting the map component and keeps the room scene visible until that data
+  is ready. Map components are also gated on non-null render data, preventing
+  stale or incomplete values from reaching CanvasEngine presets.
+- 041d5ee: Add a persistent server-authoritative, type-extensible hotbar for skills, items, and custom gameplay entries. The hotbar now supports a dynamic 1–10 slot capacity, retained locked-slot assignments, unlock hints, a persistent active slot, automatic refresh after level/class/inventory/map changes, direct keyboard shortcuts, a radial gamepad selector, LT/RT slot cycling with X activation, mobile centering, cooldown/cost/quantity presentation, and serialized `instant`, `select`, or `target` activation handlers.
+
+  Replace Action Battle's dedicated `ui.actionBar` and component with the generic `ui.hotbar`. Action Battle skills enrich generic entries with targeting, cooldown, projectile, sound, animation, and visual metadata while their authoritative execution continues through native skill and item hooks. This is an intentional breaking configuration and export cleanup.
+
+  Keep direct 1–0 Zelda-style menu assignment, display unavailable slots with their unlock condition in the root-level assignment picker, execute Studio skill workflows through the native `onUse` hook, make instant skills soft-target without a confirmation step, preserve skill impact media through AI damage feedback, and add translated Studio presentation fields, visual area targeting, phase-specific CanvasEngine cast/trail/impact presets, a default projectile renderer compatible with Studio skill records, and robust object-signal hydration for class and hotbar sync payloads. Upgrade to `@signe/sync` 3.1.1 so object-signal hydration uses the upstream fix without a local package patch.
+
+  Expose a complete set of `--rpg-hotbar-*` CSS variables, bridge them through
+  `@rpgjs/ui-css`, document the public client and server APIs with generated
+  JSDoc references, and add a farm-themed playground showing mixed item and skill
+  slots, menu assignment, and the persistent hotbar show/hide lifecycle.
+
+- 83fc2b7: Add production Signe room adapters for persistent Node servers and Cloudflare Durable Objects, plus remote Vite map publication for trusted editor workflows with transient-only retries. Resolve local TMX files and their external tilesets when publishing maps, recreate configured events safely during live map updates, and restore player and event graphics after clients reload the Tiled scene.
+
+  Add provider-neutral authoritative map streaming with progressive render/physics chunks, client prediction barriers, and spatial interest management for players, NPCs, events, and projectiles. Keep complete Tiled TMX/TSX sources server-side in MMORPG mode while sharing the same game module between Node.js, local Wrangler, and Cloudflare Durable Object hosts.
+
+  Use the physics broad-phase index when resolving synchronized entities in each player's retained chunks, avoiding full-room player and event scans on every sync packet.
+
+  Assign Tiled collision geometry to every streamed chunk it intersects, and preserve the generated client reference for action, dash, pointer, and interaction APIs with a dedicated interactions guide.
+
+  Preserve initial room synchronization on older local Workerd runtimes that expose an accepted Durable Object WebSocket with a transient `CONNECTING` ready state.
+
+  Prevent CanvasEngine rain layers from retaining tick subscriptions when an asynchronous mount overlaps destruction or another mount.
+
+  Keep component-ready standalone Studio maps intact when sharing the in-memory server, and select the Cloudflare publisher independently from the generic MMORPG entry so local Node.js development does not require a Worker secret.
+
+  Add Studio v2 authoritative map preparation and progressive chunk streaming, including server physics, nearby rendering data, and provider-neutral entity synchronization. Trusted Vite publishers can now resolve a complete Studio payload before sending it to Node or Cloudflare map rooms, while raw Studio map structure, events, database records, and global collision data stay server-side.
+
+  Make initial map streaming explicit and hibernation-safe: clients request a fresh manifest after joining, trusted map updates are durably stored before acknowledgement, and recreated Durable Object room instances rebuild their transient streaming runtime. Stream Studio terrain control masks per chunk so transition rendering and prediction physics work without disclosing the complete map, and reset spatial visibility on reconnect so existing clients receive newly joined players.
+
+  Preserve custom streaming providers when Studio's built-in streaming is disabled, refresh cached client controllers after Durable Object hibernation, and key terrain-control buffers by their complete streamed region content to prevent stale masks.
+
+  Suppress projectile lifecycle packets that fall outside a player's disclosed interest window, clear client prediction barriers after the final streamed chunk is evicted, and coalesce concurrent requests for the same map stream. Exercise these paths with server, client, and real Workerd WebSocket tests, and run the Cloudflare MMORPG and Studio runtime suites in CI.
+
+  Avoid dereferencing an empty Studio weather state while switching maps.
+
+  Publish authenticated world topology updates to every map room, persist them across Durable Object hibernation, and refresh automatic world-map transitions without restarting the MMORPG server.
+
+  Document the Durable Object room model, map-and-world publication flow, hibernation recovery, production deployment, and common Cloudflare diagnostics.
+
+  Correct the documented default runtime to standalone RPG and add a beginner deployment path that takes the v5 starter through explicit MMORPG development, private map bundling, authenticated map publication, a persistent Node Docker deployment, or a Cloudflare Durable Object deployment. Include an executable production map publisher in the Cloudflare sample and make the production pages discoverable from both documentation navigations.
+
+  Declare the RPGJS Durable Object binding explicitly in Wrangler staging and production environments so isolated deployments keep their room namespace.
+
+  Cover the previous Studio scene before unmounting it during World transfers, preserve recent directional movement into the destination room, then reveal the new map through a full-screen dark transition with a centered, delayed localized loader and a bounded asset wait so stale or white frames cannot flash while fast local transitions stay unobtrusive.
+
+- 0512640: Add reusable typed input and textarea controls for standalone forms and dialog boxes, with shared server-side validation and an RPGJS Studio block that stores the submitted value.
+
+### Patch Changes
+
+- b6ab003: Establish `defineModule()` as the canonical runtime module authoring API, export it from the client and server packages, keep `createModule()` for advanced provider composition, and align runtime-specific module installation documentation and examples.
+- ccb9495: Fix TypeScript declaration errors across the package build, align multi-target declaration exports, complete movement API overloads, and make package and root builds fail when declaration generation reports a type error.
+- e7d8d13: Hydrate Studio event hitboxes from the API initially, apply synchronized hitbox object payloads to client physics bodies, publish runtime Studio hitbox changes through the synced event collection instead of a separate setHitbox websocket path, and keep standalone map transfers on the restored room so transferred player positions and hitboxes are preserved in sample-dev.
+- c69f516: Add `map.findSpawnPosition()` (#367): a deterministic search for the closest collision-free position of a character hitbox near a preferred point. It honors map bounds, map hitboxes and their `z` range, static shapes and blocking events, requires room to move by default, and returns `null` instead of placing a character inside a collider.
+- e892732: Keep the camera attached when MMORPG streaming refreshes Tiled layers and synchronize instant following with the rendered character position so the viewport cannot trail by one frame. Stabilize predicted movement by publishing finalized input batches only after their client physics step, applying every input from the same client tick in one authoritative server step, capturing the matching acknowledged position, ignoring delayed acknowledgements whose prediction history expired, routing local-player snapshots through prediction instead of applying them directly, and sharing the same movement idle window on both peers.
+- 00ac672: Prevent npm releases from containing unresolved `workspace:` dependency protocols, and publish release candidates directly under the npm `latest` tag.
+- 50611c7: Keep combat recoil authoritative across RPG and MMORPG runtimes. Prevent velocity accumulation, premature cancellation by idle or locked input, and replay of pre-impact positions. Synchronize the transient recoil phase, smooth its presentation, and release completed attack locks without restarting locomotion during an impact.
+- 15ae51e: Publish release candidates under the npm `latest` tag so fresh RPGJS projects install the current release.
+- 98a30f0: Publish release candidates under npm's `latest` tag while retaining the repository's prerelease mode.
+- e0bba29: Fix Studio world-map transitions and preserve the reactive HUD state during
+  map transfers.
+
+  - Normalize scaled Studio world coordinates to integer pixels and resolve
+    automatic transitions from exact directional neighbors.
+  - Keep explicit border-entry coordinates through map-room transfers instead of
+    falling back to the destination map's `start` position.
+  - Restore Studio's generated class from every destination map database so a
+    standalone session transfer keeps the player snapshot, including HP and SP,
+    while deferring a runtime class until the destination database has loaded.
+  - Apply synchronized player parameters through their signal and keep the Studio
+    HUD mounted so the avatar, HP, and SP remain reactive across map changes.
+
+- 85aea0c: Restore authoritative player onMove hooks and dispatch onDisconnected from lobby, map, and gameplay rooms. Do not report successful room transfers as disconnections or dispatch duplicate disconnection hooks for the same connection.
+- 66c0d77: Add game-catalogue language selection with browser negotiation, project-scoped persistence, reactive client labels and validated per-player connection/action synchronization. Preserve the current language when loading saves.
+
+  Stabilize dialogue heights across desktop, portrait and landscape layouts. Measure rich-text pagination against available space, retain reading progress on resize, reserve scrollable choice/input space and add a touch-friendly continuation triangle with reduced-motion support.
+
+- e5ad24a: Establish the stable RPGJS-owned boundary for reactive gameplay properties,
+  dependency-injection providers, Node room storage, and Cloudflare room hosting.
+  Remove accidental Signe re-exports from the client and server roots, keep
+  direct Signe imports as an explicitly advanced plugin path, and protect every
+  published TypeScript entry with declaration reachability snapshots in CI.
+  Keep provider creation strategies mutually exclusive, support asynchronous
+  provider factories, and preserve strict member checking on the server engine.
+  Enforce these public contracts in CI, test the RPGJS-owned Node storage
+  lifecycle, and document complete stable migration examples.
+- be412cf: Let Studio event-touch pressure plates overlap pushed events without physical separation, wait until ground sensors are mostly covered before firing, clean up touch tracking when collisions exit after z changes, and clamp route overshoot frames that could make pushed events jitter.
+- 0dbe078: Make Tiled tile collisions depend on the character `z`, as in RPGJS v4 (#370). Collision tiles are generated for every Tiled level (layer `z` + tile `z`). A tile on level `n` only blocks characters whose `z` is in `[n * zTileHeight, (n + 1) * zTileHeight)`, so `player.z.set(map.zTileHeight)` lets a player walk over level `0` collisions such as water. Static map hitboxes accept an optional `z`/`zHeight` range, and hitboxes without `z` still block every height.
+- Updated dependencies [ccb9495]
+  - @rpgjs/physic@5.0.3
+
 ## 5.0.0-rc.6
 
 ### Patch Changes

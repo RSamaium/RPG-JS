@@ -1,7 +1,7 @@
 {
   "name": "@rpgjs/physic",
   "repository": "github:RSamaium/RPG-JS",
-  "version": "5.0.2",
+  "version": "5.0.3",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

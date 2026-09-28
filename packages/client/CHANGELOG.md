@@ -1,5 +1,332 @@
 # @rpgjs/client
 
+## 5.0.0
+
+### Minor Changes
+
+- decf73e: Add a server-authoritative Actor selection API, runtime Actor switching that preserves acquired progression, a responsive cinematic CanvasEngine character selector, resolved Actor and Class object inputs, class skill progression for CMS-backed data, RPGJS Studio new-game Actor selection settings, character-select/change-class event blocks, and a native query-area block with per-target child execution.
+- b74236b: Add server-authoritative custom gameplay rooms with registered room paths,
+  session-preserving player transfers, synchronized client room state, and
+  CanvasEngine scene adapters that run independently of maps and map physics.
+  Room providers also accept concrete `RpgGameplayRoom` subclasses with their
+  typed constructor context, so strict TypeScript applications can register them.
+  Returning from a custom room now waits for a fresh map-stream packet before
+  remounting the map component and keeps the room scene visible until that data
+  is ready. Map components are also gated on non-null render data, preventing
+  stale or incomplete values from reaching CanvasEngine presets.
+- 1bcd9fc: Keep `playSound()` as the single canonical sound API while adding persisted mixer channels, spatial playback, native interface cues, coordinated map and battle music, and Studio audio configuration, so framework users do not have to choose between overlapping concepts.
+- 041d5ee: Add a persistent server-authoritative, type-extensible hotbar for skills, items, and custom gameplay entries. The hotbar now supports a dynamic 1–10 slot capacity, retained locked-slot assignments, unlock hints, a persistent active slot, automatic refresh after level/class/inventory/map changes, direct keyboard shortcuts, a radial gamepad selector, LT/RT slot cycling with X activation, mobile centering, cooldown/cost/quantity presentation, and serialized `instant`, `select`, or `target` activation handlers.
+
+  Replace Action Battle's dedicated `ui.actionBar` and component with the generic `ui.hotbar`. Action Battle skills enrich generic entries with targeting, cooldown, projectile, sound, animation, and visual metadata while their authoritative execution continues through native skill and item hooks. This is an intentional breaking configuration and export cleanup.
+
+  Keep direct 1–0 Zelda-style menu assignment, display unavailable slots with their unlock condition in the root-level assignment picker, execute Studio skill workflows through the native `onUse` hook, make instant skills soft-target without a confirmation step, preserve skill impact media through AI damage feedback, and add translated Studio presentation fields, visual area targeting, phase-specific CanvasEngine cast/trail/impact presets, a default projectile renderer compatible with Studio skill records, and robust object-signal hydration for class and hotbar sync payloads. Upgrade to `@signe/sync` 3.1.1 so object-signal hydration uses the upstream fix without a local package patch.
+
+  Expose a complete set of `--rpg-hotbar-*` CSS variables, bridge them through
+  `@rpgjs/ui-css`, document the public client and server APIs with generated
+  JSDoc references, and add a farm-themed playground showing mixed item and skill
+  slots, menu assignment, and the persistent hotbar show/hide lifecycle.
+
+- 995277f: Add explicit renderer-neutral GUI registrations with an official Vue helper,
+  ship the authoritative and replaceable RPGJS chat module, provide default and
+  pixel chat themes over shared semantic CSS primitives, and enforce client/server
+  production bundle isolation with executable fixtures. Include a runnable pixel
+  chat playground and keep chat socket listeners active across standalone startup
+  and player map transfers. Document client/server setup, moderation hooks,
+  replacement components, themes, translations, and the public chat state API.
+  Emit complete side-specific chat declarations, synchronize the built-in input
+  length with client configuration, and reject explicitly unknown chat channels.
+- f624302: Add a pre-connection MMORPG account GUI, deferred client connections, rich
+  server authentication results, and player-aware authentication lifecycle hooks.
+  Registration uses distinct username and email fields with password confirmation,
+  and restored sessions no longer flash the account GUI before the title screen.
+  Add branded account screens with configurable imagery, music and UI sounds,
+  reusable form feedback primitives, and optional password recovery/reset adapters.
+- 83fc2b7: Add production Signe room adapters for persistent Node servers and Cloudflare Durable Objects, plus remote Vite map publication for trusted editor workflows with transient-only retries. Resolve local TMX files and their external tilesets when publishing maps, recreate configured events safely during live map updates, and restore player and event graphics after clients reload the Tiled scene.
+
+  Add provider-neutral authoritative map streaming with progressive render/physics chunks, client prediction barriers, and spatial interest management for players, NPCs, events, and projectiles. Keep complete Tiled TMX/TSX sources server-side in MMORPG mode while sharing the same game module between Node.js, local Wrangler, and Cloudflare Durable Object hosts.
+
+  Use the physics broad-phase index when resolving synchronized entities in each player's retained chunks, avoiding full-room player and event scans on every sync packet.
+
+  Assign Tiled collision geometry to every streamed chunk it intersects, and preserve the generated client reference for action, dash, pointer, and interaction APIs with a dedicated interactions guide.
+
+  Preserve initial room synchronization on older local Workerd runtimes that expose an accepted Durable Object WebSocket with a transient `CONNECTING` ready state.
+
+  Prevent CanvasEngine rain layers from retaining tick subscriptions when an asynchronous mount overlaps destruction or another mount.
+
+  Keep component-ready standalone Studio maps intact when sharing the in-memory server, and select the Cloudflare publisher independently from the generic MMORPG entry so local Node.js development does not require a Worker secret.
+
+  Add Studio v2 authoritative map preparation and progressive chunk streaming, including server physics, nearby rendering data, and provider-neutral entity synchronization. Trusted Vite publishers can now resolve a complete Studio payload before sending it to Node or Cloudflare map rooms, while raw Studio map structure, events, database records, and global collision data stay server-side.
+
+  Make initial map streaming explicit and hibernation-safe: clients request a fresh manifest after joining, trusted map updates are durably stored before acknowledgement, and recreated Durable Object room instances rebuild their transient streaming runtime. Stream Studio terrain control masks per chunk so transition rendering and prediction physics work without disclosing the complete map, and reset spatial visibility on reconnect so existing clients receive newly joined players.
+
+  Preserve custom streaming providers when Studio's built-in streaming is disabled, refresh cached client controllers after Durable Object hibernation, and key terrain-control buffers by their complete streamed region content to prevent stale masks.
+
+  Suppress projectile lifecycle packets that fall outside a player's disclosed interest window, clear client prediction barriers after the final streamed chunk is evicted, and coalesce concurrent requests for the same map stream. Exercise these paths with server, client, and real Workerd WebSocket tests, and run the Cloudflare MMORPG and Studio runtime suites in CI.
+
+  Avoid dereferencing an empty Studio weather state while switching maps.
+
+  Publish authenticated world topology updates to every map room, persist them across Durable Object hibernation, and refresh automatic world-map transitions without restarting the MMORPG server.
+
+  Document the Durable Object room model, map-and-world publication flow, hibernation recovery, production deployment, and common Cloudflare diagnostics.
+
+  Correct the documented default runtime to standalone RPG and add a beginner deployment path that takes the v5 starter through explicit MMORPG development, private map bundling, authenticated map publication, a persistent Node Docker deployment, or a Cloudflare Durable Object deployment. Include an executable production map publisher in the Cloudflare sample and make the production pages discoverable from both documentation navigations.
+
+  Declare the RPGJS Durable Object binding explicitly in Wrangler staging and production environments so isolated deployments keep their room namespace.
+
+  Cover the previous Studio scene before unmounting it during World transfers, preserve recent directional movement into the destination room, then reveal the new map through a full-screen dark transition with a centered, delayed localized loader and a bounded asset wait so stale or white frames cannot flash while fast local transitions stay unobtrusive.
+
+- 0512640: Add reusable typed input and textarea controls for standalone forms and dialog boxes, with shared server-side validation and an RPGJS Studio block that stores the submitted value.
+
+### Patch Changes
+
+- 8ef3f4a: Add type-aware Studio item fields and lifecycle workflows. Regular items expose
+  consumable use hooks, while weapons and armors expose equipment modifiers and
+  the native equip hook. Regular items can also display a configured spritesheet
+  animation, play a personal sound, and display a built-in particle effect after
+  successful use. The editor groups Item fields into dedicated layouts. Because
+  the Item schema is conditional, it resolves the selected Item, Weapon, or Armor
+  branch before distributing fields across editor tabs, avoiding duplicate
+  generic property sections. Online Studio games refresh database records when a
+  player joins a map, and item use resolves lifecycle hooks from the current map
+  database so a removed use animation no longer survives in an inventory
+  snapshot.
+
+  Clarify the built-in hotbar model: it accepts learned skills and usable regular
+  items, while weapons and armors remain browseable in Items and are managed from
+  Equip. Studio now labels these choices as usable items, filters starting
+  equipment selectors by slot type, and ignores invalid saved equipment without
+  adding it to the player's inventory.
+
+  The Studio Item editor now derives its tabs from the selected item type.
+  Regular items expose Usage and Presentation, while weapons and armors expose
+  Equipment, so conditional schemas no longer leave empty tabs visible.
+  Custom fields now leave their schema description to the shared CMS field
+  wrapper, preventing duplicate help text, and Item and Skill lifecycle actions
+  are consistently presented as triggers in the editor.
+
+  Creating a trigger now persists its parent Item or Skill first, keeps the
+  editor on the newly created record, and immediately saves the trigger
+  attachment. Failed attachments restore the previous form state instead of
+  leaving an untracked trigger.
+
+  The Studio Skill editor now presents its schema layouts as translated tabs,
+  matching the Item editor while keeping Action Battle and its triggers together.
+  Area size, presets, and individual area-mask edits now notify the Skill form,
+  so the updated targeting area is saved and restored after reloading the editor.
+  Translated Skill and Item media fields now render the same native media preview
+  as icon fields, including image, spritesheet, and audio previews.
+  The Studio sidebar now uses a supported panel icon for the GUI editor entry.
+
+- b6ab003: Establish `defineModule()` as the canonical runtime module authoring API, export it from the client and server packages, keep `createModule()` for advanced provider composition, and align runtime-specific module installation documentation and examples.
+- 973878b: Update CanvasEngine to 2.3.0. The 2.3 compiler no longer injects `computed`, `h`, `cond` and `loop` into every component, so components now import the helpers their script uses. `rpgjs()` declares its `Plugin[]` return type.
+- 1cae469: Update CanvasEngine to 2.4.0. Templates now read computed signals explicitly (`position().x` in the HP bar, light halo and dynamic bar components) and the action-battle projectile trail passes `loop={true}` to its `Fx`.
+- e7b12ab: Add cinematic video playback through the existing GUI lifecycle, with aspect-preserving presentation, fades, accessible skip controls, autoplay recovery, temporary music attenuation, and error recovery. Register the Studio show_cinematic block and resolve its media through the game data provider without adding map-media associations.
+
+  Support per-clip skip/music options, map video preloading and consecutive video playlists. Guard overlapping player event interactions and let gameplay release movement keys during cinematics.
+
+  Skip immediately on click, tap or Escape, honoring non-skippable clips and ignoring key repeats and late responses from skipped clips.
+
+- ccb9495: Fix TypeScript declaration errors across the package build, align multi-target declaration exports, complete movement API overloads, and make package and root builds fail when declaration generation reports a type error.
+- e7d8d13: Hydrate Studio event hitboxes from the API initially, apply synchronized hitbox object payloads to client physics bodies, publish runtime Studio hitbox changes through the synced event collection instead of a separate setHitbox websocket path, and keep standalone map transfers on the restored room so transferred player positions and hitboxes are preserved in sample-dev.
+- 1028c17: Use workspace protocol for internal RPGJS package dependencies during prerelease development so CI installs do not fetch unpublished beta packages from npm.
+- a0710ce: Fix GUI and map rendering issues seen in the samples:
+
+  - Registering a GUI no longer remounts every displayed GUI. GUIs are keyed by a new `renderKey`, which removes the repeated title screen mounts and the `FocusContainer ... not found` warnings at startup.
+  - The map scene component keeps its last `data` until it is unmounted, so custom map components no longer read `undefined` during a map transfer.
+  - The built-in HUD stays hidden until the player enters a map and while the title screen is displayed.
+
+- 94cbdac: Move equipment details into a compact inspector beside the list, add a Status menu entry returning to the hero overview, and extend local key preferences to Action and Back with immediate menu/game updates and preserved action payloads.
+- 4d53aa7: Replace the default GUI theme with a crystalline JRPG palette, refined controls,
+  shared panel treatments and semantic customization tokens. Keep existing CSS
+  entry points and support isolated pixel and custom themes on the same page.
+
+  Add a Storybook catalogue of foundations, primitive states and game compositions,
+  browser checks and GitHub Pages deployment. Document theme creation and migration.
+  Bridge mobile canvas control colors to the game CSS palette while preserving
+  explicit withMobile overrides.
+
+- 66c0d77: Fix unnecessarily clipped dialogue choices by sizing short prompts from their complete text and giving choices the remaining fixed-height space. Keep scrolling for genuinely long lists.
+
+  Restore mouse and touch assignment in the hotbar slot picker by avoiding false HTML disabled attributes, preserving locked-slot guards and keyboard focus selection.
+
+- 66c0d77: Remove dialogue page counters, fill the panel's inner height with the portrait, and support Enter confirmation with a short guard against repeated advancement. Align shop attribute comparisons with the compact equipment inspector.
+
+  Fix positive attribute changes rendering only the plus sign in both equipment and shop panels.
+
+- 94cbdac: Polish equipment attribute comparisons and expose Studio's Options menu with per-project movement key preferences, conflict validation, reset controls and existing channel-based audio sliders.
+- 94cbdac: Add reduced-motion-aware GUI transitions, nested input locks, submenu navigation sounds and writable audio sliders. Improve shop comparisons and dialogue typography/portraits. Add safe reusable Markdown text runs, paginated dialogue reveal and a configurable typewriter sound on the UI channel.
+- fd12af7: Make Adventure combat more responsive and readable with overlap-safe control locks, guard/parry/counter gameplay, soft targeting, coordinated enemy attack turns, Studio-driven combat animations, skill hit-rate handling, anchored impact feedback, configurable hit-stop, and enemy death effects.
+
+  Let temporary attack spritesheets finish their visual follow-through after gameplay recovery instead of forcing the character back to `stand` mid-animation. Studio four-direction attack spritesheets now play in 350ms by default without changing locomotion speed, with an optional `attackDurationMs` media metadata override.
+
+  Keep repeated Studio event placements as independent runtime entities with deterministic instance ids and separate hitboxes.
+
+  Add configurable attack, skill, hit, hurt, and defeat sounds plus per-player dynamic combat music. Battle music crossfades against map BGM, restores it after a configurable grace period, keeps ambient audio intact, and selects enemy, map, or project tracks with stable boss-aware priority.
+
+  Expose Studio combat-audio project/map fields and `createStudioActionBattleAudio()` / `createStudioActionBattlePreset()` helpers. Studio sound resolution no longer stops every currently playing sound.
+
+- f488e28: Keep temporary attack playback and its direction stable during locomotion synchronization. Ignore stale sprite completion callbacks, return stationary characters to idle, and preserve matching predicted attacks when the server confirms them.
+- 8ef3f4a: Keep CanvasEngine GUIs registered while hidden and reactively mount their components when their display signal changes, restoring title screens and other GUIs after hide/show operations.
+- e892732: Keep the camera attached when MMORPG streaming refreshes Tiled layers and synchronize instant following with the rendered character position so the viewport cannot trail by one frame. Stabilize predicted movement by publishing finalized input batches only after their client physics step, applying every input from the same client tick in one authoritative server step, capturing the matching acknowledged position, ignoring delayed acknowledgements whose prediction history expired, routing local-player snapshots through prediction instead of applying them directly, and sharing the same movement idle window on both peers.
+- 00ac672: Prevent npm releases from containing unresolved `workspace:` dependency protocols, and publish release candidates directly under the npm `latest` tag.
+- dc6aed5: Initialize recursively nested RPGJS provider lists in client and server setup so
+  sample and consumer configurations register every provider at runtime.
+- 0909491: Preserve weather WebSocket payloads through server reconciliation and render
+  them as authoritative so runtime updates and `clearWeather()` replace weather
+  initially configured in Studio map data.
+- 50611c7: Keep combat recoil authoritative across RPG and MMORPG runtimes. Prevent velocity accumulation, premature cancellation by idle or locked input, and replay of pre-impact positions. Synchronize the transient recoil phase, smooth its presentation, and release completed attack locks without restarting locomotion during an impact.
+- 995277f: Upgrade the RPGJS workspace and published package compatibility ranges to
+  CanvasEngine 2.1, including its compiler, presets, testing, and Tiled
+  integrations. Keep PixiJS on the CanvasEngine-supported 8.19 line and verify the
+  existing client, server, sample, and playground builds against the new runtime.
+- 1fb8040: Keep the mobile joystick connected across MMORPG streamed map updates by preventing retired character effects from overwriting live controls, continue repeating held movement without new pointer events, and preserve joystick power after direction changes.
+
+  Dispose the character controls effect through its underlying subscription so streamed player removal completes without a runtime error.
+
+- 0fa8fb9: Respect enemy attack phase and cooldown overrides, keep attack facing stable,
+  preserve remote locomotion, and fit complete visual cycles to authoritative
+  combat timings. Expose per-pattern enemy timing overrides in Studio.
+- 94cbdac: Repair Studio hero initialization when a class skill is already learned, prefer canonical media references, and guard missing spritesheet identifiers. Refine the integrated status, inventory, equipment, skills, save and shop interfaces with theme-driven layouts, localized empty/unavailable states, safe icon fallbacks and window-local close buttons. Make the mobile hotbar scrollable instead of clipping its slots.
+- 13517b8: Stop rebuilding projectile components on every frame. `ProjectileManager.renderList` only changes when projectiles appear or disappear, and pushes positions and progress into per-projectile signals on each step; the map scene renders from it. `current` keeps its plain-value contract. In the sample, JavaScript work per frame with projectiles drops from about 7.5 ms to 5.2 ms.
+- 72d3e5d: Rendered projectile components receive spawn data as plain values and only the changing props as signals. Before an impact, `impact` is `null` and `impactElapsed` / `impactProgress` are `0`, so typed `defineProps` no longer reject `undefined` signal values.
+- 15ae51e: Publish release candidates under the npm `latest` tag so fresh RPGJS projects install the current release.
+- e11f2ed: Fix main menu Escape handling, add outside-click and touch close controls for prebuilt modal GUIs, make menu layouts responsive on small screens, restore a compact desktop menu with an integrated sidebar and column-based item views, use fade-only menu transitions, improve Skills/Equipment and save slot spacing, make active menu rows less visually harsh, and improve HUD and dialog border rendering.
+- 59c06c9: Match Studio terrain texture sampling by excluding atlas cell borders before repeating textures. Measure the HUD portrait frame so facesets fit reliably on first display and after resizing in standalone and multiplayer games.
+- 98a30f0: Publish release candidates under npm's `latest` tag while retaining the repository's prerelease mode.
+- e0bba29: Fix Studio world-map transitions and preserve the reactive HUD state during
+  map transfers.
+
+  - Normalize scaled Studio world coordinates to integer pixels and resolve
+    automatic transitions from exact directional neighbors.
+  - Keep explicit border-entry coordinates through map-room transfers instead of
+    falling back to the destination map's `start` position.
+  - Restore Studio's generated class from every destination map database so a
+    standalone session transfer keeps the player snapshot, including HP and SP,
+    while deferring a runtime class until the destination database has loaded.
+  - Apply synchronized player parameters through their signal and keep the Studio
+    HUD mounted so the avatar, HP, and SP remain reactive across map changes.
+
+- c849207: Add a post-acceptance player lifecycle context and a connection-scoped Studio MMORPG startup resolver with discriminated title/direct flows, single evaluation, URL project loading, and authoritative project/map validation.
+- 14f7cf9: Update `@signe/room` to 3.2.1, which types node connection state like a party connection and includes Cloudflare WebSocket hibernation support from 3.2.0.
+- 1393b73: Keep top components such as enemy HP bars attached to scaled sprites when
+  transparent frame bounds are still loading or cannot be scanned.
+
+  Respect each enemy skill cooldown inside combos and choose varied special
+  attacks that fit the current target distance.
+
+  Let enemies choose among every learned skill, normal attacks, and contextual
+  repositioning. Projectile and area skills now respect their targeting metadata,
+  and optional structured AI logs explain each server-authoritative decision.
+
+  Preload Studio skill impact and projectile media so enemy skills render their
+  configured animation on the first use. Resolve reactive skill presentation
+  and impact metadata before client transfer, consume their reactive SP and hit
+  rate values, and play ranged skills as casts.
+
+  Unwrap reactive skill combat values before RPGJS evaluates damage formulas, so
+  enemy skills apply their configured power instead of resolving to zero damage.
+
+  Remove the caster animation control from the Studio skill editor while keeping
+  existing skill records compatible at runtime.
+
+- 3fb2765: Apply Studio media scale as a multiplier of the default RPGJS display scale, then combine it with event instance scale instead of overwriting it.
+- 1a45ca5: Split `RpgClientEngine` into focused services (movement input helpers, canvas resize guard, and more). Public API and behavior are unchanged.
+- 327185b: Spread the previous scene teardown over several frames during a map transfer (characters, then the map tree, then physics). In the sample, the worst blocking frame of a transfer drops from about 94 ms to 36-53 ms.
+- 66c0d77: Add game-catalogue language selection with browser negotiation, project-scoped persistence, reactive client labels and validated per-player connection/action synchronization. Preserve the current language when loading saves.
+
+  Stabilize dialogue heights across desktop, portrait and landscape layouts. Measure rich-text pagination against available space, retain reading progress on resize, reserve scrollable choice/input space and add a touch-friendly continuation triangle with reduced-motion support.
+
+- e5ad24a: Establish the stable RPGJS-owned boundary for reactive gameplay properties,
+  dependency-injection providers, Node room storage, and Cloudflare room hosting.
+  Remove accidental Signe re-exports from the client and server roots, keep
+  direct Signe imports as an explicitly advanced plugin path, and protect every
+  published TypeScript entry with declaration reachability snapshots in CI.
+  Keep provider creation strategies mutually exclusive, support asynchronous
+  provider factories, and preserve strict member checking on the server engine.
+  Enforce these public contracts in CI, test the RPGJS-owned Node storage
+  lifecycle, and document complete stable migration examples.
+- 8ef3f4a: Allow hotbars to filter entry types dynamically, let Action Battle resolve
+  visibility per player, apply RPGJS Studio project hotbar settings, expose a
+  Studio event block for displaying or hiding the Hotbar, and honor the Studio
+  Title Screen, HUD, and Main Menu bindings. The main menu now hides disallowed
+  item or skill assignment actions, displays the item slot picker correctly, and
+  clears the native assignment when the last consumable is used.
+- be412cf: Let Studio event-touch pressure plates overlap pushed events without physical separation, wait until ground sensors are mostly covered before firing, clean up touch tracking when collisions exit after z changes, and clamp route overshoot frames that could make pushed events jitter.
+- aed4d3e: Position sprite components from intrinsic spritesheet dimensions and the scaled visible graphic bounds, with a full-frame fallback while transparent bounds are loading.
+- 3d13f8c: Add composable boss phase helpers, delayed AI sequences, server action intents,
+  movement and teleport conveniences, and a generic server-driven AI visual
+  registry. Resolve animation callbacks into serializable visual packets so
+  Studio combat media are honored without cloning functions across rooms.
+
+  Add the Adventure combat preset with buffered player combos, authoritative
+  charged attacks, dodge invulnerability, attack multipliers, stronger Impact
+  visuals, enemy telegraphs, reuse of the existing RPGJS HUD and graphic-bound
+  HP components, contextual animated damage typography, skill-specific FX,
+  and optional mobile heavy-attack controls. `preset: "classic"` preserves the
+  previous combat and UI defaults.
+
+  Position transient component animations from numeric world coordinates and
+  derive component bounds from visible pixels for generated Studio spritesheets,
+  so telegraphs, damage popups, and HP bars stay anchored to scaled characters
+  without including transparent frame padding.
+
+- Updated dependencies [decf73e]
+- Updated dependencies [b74236b]
+- Updated dependencies [37a4fb0]
+- Updated dependencies [8ef3f4a]
+- Updated dependencies [b6ab003]
+- Updated dependencies [973878b]
+- Updated dependencies [1cae469]
+- Updated dependencies [e7b12ab]
+- Updated dependencies [ccb9495]
+- Updated dependencies [e7d8d13]
+- Updated dependencies [777541a]
+- Updated dependencies [1bcd9fc]
+- Updated dependencies [94cbdac]
+- Updated dependencies [4d53aa7]
+- Updated dependencies [66c0d77]
+- Updated dependencies [66c0d77]
+- Updated dependencies [94cbdac]
+- Updated dependencies [94cbdac]
+- Updated dependencies [94cbdac]
+- Updated dependencies [c69f516]
+- Updated dependencies [48fcd25]
+- Updated dependencies [e892732]
+- Updated dependencies [00ac672]
+- Updated dependencies [dc6aed5]
+- Updated dependencies [0909491]
+- Updated dependencies [50611c7]
+- Updated dependencies [995277f]
+- Updated dependencies [041d5ee]
+- Updated dependencies [995277f]
+- Updated dependencies [94cbdac]
+- Updated dependencies [7846969]
+- Updated dependencies [6b8d872]
+- Updated dependencies [15ae51e]
+- Updated dependencies [e11f2ed]
+- Updated dependencies [f624302]
+- Updated dependencies [98a30f0]
+- Updated dependencies [335b768]
+- Updated dependencies [e0bba29]
+- Updated dependencies [85aea0c]
+- Updated dependencies [c849207]
+- Updated dependencies [f6aa046]
+- Updated dependencies [14f7cf9]
+- Updated dependencies [fc86ec2]
+- Updated dependencies [66c0d77]
+- Updated dependencies [e5ad24a]
+- Updated dependencies [a7f44ba]
+- Updated dependencies [83fc2b7]
+- Updated dependencies [8ef3f4a]
+- Updated dependencies [be412cf]
+- Updated dependencies [0dbe078]
+- Updated dependencies [114469c]
+- Updated dependencies [ef47908]
+- Updated dependencies [0512640]
+  - @rpgjs/common@5.0.0
+  - @rpgjs/server@5.0.0
+  - @rpgjs/ui-css@5.0.0
+
 ## 5.0.0-rc.9
 
 ### Patch Changes
