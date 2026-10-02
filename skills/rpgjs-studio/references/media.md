@@ -75,9 +75,21 @@ Credit costs available in `common/permissions/credit.ts`:
 - `spritesheet` (animations and existing API calls): 15
 - `spritesheetPreview`: 1
 - `terrain`: 5
-- `tileset`: 15
+- `tileset`: 25 (15 + 10 for its collision polygons)
+- `tileset-collision`: 3 (collision polygons of an existing `tileset`)
 - `illustration`: 5
 - `image`: 5
+
+`tileset-collision` regenerates the collision of an existing element set: pass
+`metadata.mediaId` (the tileset). It repaints the atlas with the image model, extracts one polygon per
+element and writes them to the tileset's `metadata.elements[].hitbox`; credits are refunded on failure.
+A generated `tileset` already does this (non-fatal: on failure elements keep rectangles).
+
+Element hitbox (`metadata.elements[].hitbox`, local pixels of `rect`): `{ type: "none" }`,
+`{ type: "rectangle", x, y, width, height }` or
+`{ type: "polygon", x, y, width, height, polygons: [x, y][][], parts: [x, y][][] }`. `polygons` are the
+editable simple polygons, `parts` their convex decomposition (what the runtime turns into physics
+hitboxes), `x/y/width/height` the bounding box. Always rebuild `parts` after editing `polygons`.
 
 `illustration` generates one transparent full- or three-quarter-body JRPG
 character image intended for a vertical 4:5 hero selector. Pass the character
