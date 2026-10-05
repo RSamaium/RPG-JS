@@ -1,5 +1,19 @@
 import { describe, expectTypeOf, test } from "vitest";
 import {
+  defineCatalog,
+  defineSkin,
+  history,
+  placement,
+  selection,
+  selectionTool,
+  snapToGrid,
+  type CatalogId,
+  type MaybePromise,
+  type IntentOf,
+  type MapIntent,
+  type PipelineStep,
+  type SkinContext,
+  type TargetRef,
   createMapView,
   defineMapFeature,
   elements,
@@ -32,6 +46,13 @@ import {
 // (the same specifier consumers use, mapped to the sources by tsconfig `paths`).
 declare module "@rpgjs/map-builder/model" {
   interface PatchRegistry {
+    "tilling.till": { readonly x: number; readonly y: number };
+  }
+}
+
+// A feature adds its intents the same way: by merging into the registry.
+declare module "@rpgjs/map-builder/interaction" {
+  interface IntentRegistry {
     "tilling.till": { readonly x: number; readonly y: number };
   }
 }
@@ -198,8 +219,9 @@ describe("map-builder public API types", () => {
 
         const view = createMapView({ model: local, assets, features: [elements(), events()] });
         createMapView({ model: remote, assets, features: [elements()] });
-        expectTypeOf(view).toEqualTypeOf<MapView>();
-        expectTypeOf(elements()).toEqualTypeOf<MapFeature>();
+        expectTypeOf(view).toExtend<MapView<ApplyResult>>();
+        expectTypeOf(elements()).toExtend<MapFeature<"elements">>();
+        expectTypeOf(elements().id).toEqualTypeOf<"elements">();
 
         // @ts-expect-error features are imported objects, not names (they must stay tree-shakeable)
         createMapView({ model: local, assets, features: ["elements"] });
@@ -258,13 +280,119 @@ describe("map-builder public API types", () => {
     });
 
     test("a feature is defined with an id, and attachMapView hosts a view", () => {
-      expectTypeOf(defineMapFeature({ id: "demo", requires: ["elements"] })).toEqualTypeOf<MapFeature>();
+      expectTypeOf(defineMapFeature({ id: "demo", requires: ["elements"] }).id).toEqualTypeOf<"demo">();
       expectTypeOf(attachMapView).returns.toEqualTypeOf<() => void>();
       const rejectedByTheCompiler = () => {
         // @ts-expect-error a feature needs an id
         defineMapFeature({});
       };
       void rejectedByTheCompiler;
+    });
+  });
+
+  describe("interaction", () => {
+    const definition = defineMap(assets, { id: "m", size: [1, 1] });
+    const catalog = defineCatalog([
+      { id: "oak", sprite: "tree-oak" },
+      { id: "cabin", sprite: "house-red" },
+    ]);
+
+    test("the view is typed by its features: only their APIs exist, and only the ids of the catalog can be placed", () => {
+      const compileOnly = () => {
+        const model = createMapModel(definition);
+        const view = createMapView({ model, assets, features: [elements(), selection(), placement({ catalog }), history()] });
+
+        view.placement.start("oak");
+        view.placement.start("cabin");
+        expectTypeOf(view.placement.active).toEqualTypeOf<"oak" | "cabin" | null>();
+        expectTypeOf(view.selection.current).toEqualTypeOf<readonly TargetRef[]>();
+        expectTypeOf(view.selection.hovered).toEqualTypeOf<TargetRef | null>();
+        expectTypeOf(view.history.undo()).toEqualTypeOf<MaybePromise<ApplyResult> | null>();
+        // with a local committer, say so and results are synchronous
+        const local = createMapView({ model, assets, features: [elements(), history<ApplyResult>()] });
+        expectTypeOf(local.history.undo()).toEqualTypeOf<ApplyResult | null>();
+        expectTypeOf(view.placement.onRejected).parameter(0).parameter(0).toHaveProperty("reason");
+
+        // @ts-expect-error "birch" is not in the catalog
+        view.placement.start("birch");
+
+        const drawOnly = createMapView({ model, assets, features: [elements()] });
+        // @ts-expect-error no placement feature in the list, so no view.placement
+        drawOnly.placement;
+        // @ts-expect-error no selection feature either
+        drawOnly.selection;
+      };
+      void compileOnly;
+    });
+
+    test("catalog ids are inferred", () => {
+      expectTypeOf<CatalogId<typeof catalog>>().toEqualTypeOf<"oak" | "cabin">();
+      expectTypeOf(catalog.get("oak")?.sprite).toEqualTypeOf<string | undefined>();
+    });
+
+    test("intents are a discriminated union, extended by merging into the registry", () => {
+      expectTypeOf<MapIntent["type"]>().toEqualTypeOf<"element.move" | "element.remove" | "element.place" | "tilling.till">();
+      const narrow = (intent: MapIntent) => {
+        if (intent.type === "element.place") expectTypeOf(intent.catalogId).toEqualTypeOf<string>();
+        if (intent.type === "tilling.till") expectTypeOf(intent).toEqualTypeOf<IntentOf<"tilling.till">>();
+      };
+      void narrow;
+
+      const compileOnly = (view: MapView<ApplyResult>) => {
+        view.submit({ type: "element.move", id: "t1", x: 1, y: 2 });
+        view.submit([{ type: "element.remove", id: "a" }, { type: "tilling.till", x: 1, y: 1 }]);
+        expectTypeOf(view.submit({ type: "element.remove", id: "a" })).toEqualTypeOf<ApplyResult>();
+
+        // @ts-expect-error unknown intent
+        view.submit({ type: "element.mve", id: "t1", x: 1, y: 2 });
+        // @ts-expect-error element.move needs a position
+        view.submit({ type: "element.move", id: "t1" });
+      };
+      void compileOnly;
+    });
+
+    test("a step of a pipeline is typed on the intent it receives", () => {
+      const step: PipelineStep<"element.place"> = (intent, context, next) => {
+        expectTypeOf(intent.catalogId).toEqualTypeOf<string>();
+        expectTypeOf(context.actor).toEqualTypeOf<unknown>();
+        return context.state.elements.length > 3 ? context.reject("too-many") : next({ ...intent, x: intent.x + 1 });
+      };
+      void step;
+
+      const compileOnly = () => {
+        // a grid can snap anything that has a position…
+        const onPlace: PipelineStep<"element.place"> = snapToGrid(32);
+        const onMove: PipelineStep<"element.move"> = snapToGrid(32);
+        void onPlace;
+        void onMove;
+        // @ts-expect-error …but not a removal, which has none
+        const onRemove: PipelineStep<"element.remove"> = snapToGrid(32);
+        void onRemove;
+        // @ts-expect-error a step for placing cannot be attached to moving
+        const wrong: PipelineStep<"element.move"> = step;
+        void wrong;
+      };
+      void compileOnly;
+    });
+
+    test("tools and skins are typed", () => {
+      selectionTool({ drag: { live: true, threshold: 5 }, remove: true, types: ["element"] });
+      const compileOnly = () => {
+        // @ts-expect-error drag takes an object or false
+        selectionTool({ drag: true });
+        // @ts-expect-error only elements and events can be selected
+        selectionTool({ types: ["terrain"] });
+      };
+      void compileOnly;
+
+      const skin = defineSkin({
+        selection: (context) => {
+          expectTypeOf(context).toEqualTypeOf<SkinContext>();
+          expectTypeOf(context.nodes().at(0)?.bounds.width).toEqualTypeOf<number | undefined>();
+          return { update: (snapshot) => void snapshot.selection.length, destroy: () => undefined };
+        },
+      });
+      void skin;
     });
   });
 });

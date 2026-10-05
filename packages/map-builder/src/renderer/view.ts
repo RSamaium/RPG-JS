@@ -1,8 +1,10 @@
-import { Application, Container, Sprite, Texture } from "pixi.js";
+import { Application, Container, Rectangle, Sprite, Texture } from "pixi.js";
 import type { AssetResolver } from "../model/assets";
 import type { MapState } from "../model/definition";
-import type { MapChange } from "../model/model";
-import type { Unsubscribe } from "../model/result";
+import type { ApplyResult, MaybePromise, Unsubscribe } from "../model/result";
+import { bindKeyboard, type KeyTarget } from "../interaction/keyboard";
+import { createInteraction, type InteractionController, type ModelApi } from "../interaction/controller";
+import type { PointerInput } from "../interaction/input";
 import {
   createEffectRunner,
   type EffectDefinition,
@@ -10,7 +12,7 @@ import {
   type EffectOutput,
   type EffectParams,
 } from "./effects";
-import { validateFeatures, type FeatureRender, type MapFeature } from "./feature";
+import { validateFeatures, type FeatureApis, type FeatureHost, type FeatureRender, type MapFeature } from "./feature";
 import { grow, intersects, type Rect } from "./geometry";
 import {
   STAGE_ORDER,
@@ -21,12 +23,6 @@ import {
   type StageName,
 } from "./scene";
 import { createTextureStore, pixiTextureProvider, type TextureProvider } from "./textures";
-
-/** What the view needs from a model. Any `MapModel` fits, whatever its committer. */
-export interface ModelLike {
-  readonly state: MapState;
-  subscribe(listener: (change: MapChange) => void): Unsubscribe;
-}
 
 export type MapViewErrorCode = "asset-load-failed";
 
@@ -47,6 +43,11 @@ export interface PixiApplicationLike {
 }
 
 export interface MountOptions {
+  /**
+   * Listen to the keyboard (Escape, Delete…) and give it to the interaction layer.
+   * `true` listens on the page, or give an event target. Off by default.
+   */
+  readonly keyboard?: boolean | KeyTarget;
   /** CSS-style colour of the canvas background. Transparent by default. */
   readonly background?: string | number;
   /** Anti-aliasing is off by default: it blurs pixel art. */
@@ -55,11 +56,25 @@ export interface MountOptions {
   readonly createApplication?: () => PixiApplicationLike;
 }
 
-export interface MapViewOptions {
-  readonly model: ModelLike;
+export interface MapViewOptions<
+  F extends readonly MapFeature<string, object>[] = readonly MapFeature<string, object>[],
+  R extends MaybePromise<ApplyResult> = MaybePromise<ApplyResult>,
+> {
+  /** Any `MapModel` fits, whatever its committer. */
+  readonly model: ModelApi<R>;
   readonly assets: AssetResolver;
   /** What the view draws and how. Nothing is drawn without features. */
-  readonly features: readonly MapFeature[];
+  readonly features: F;
+  /** Who is acting, handed to the steps of the pipelines. Whatever the game decides. */
+  readonly actor?: () => unknown;
+  /** Modes active at the start. Tools belong to modes (`play`, `edit`, `inspect`). Defaults to `["edit"]`. */
+  readonly modes?: readonly string[];
+  /**
+   * Turn pointer events on the map into interaction. Defaults to true as soon as a
+   * feature has something to interact with, false otherwise: a view that only
+   * draws never gets in the way of the clicks of a game.
+   */
+  readonly interactive?: boolean;
   /** How images are loaded. Defaults to PixiJS `Assets`. */
   readonly textures?: TextureProvider;
   readonly hooks?: MapViewHooks;
@@ -85,9 +100,13 @@ export interface MapViewEffects {
   readonly running: number;
 }
 
-export interface MapView {
+export interface MapView<R extends MaybePromise<ApplyResult> = MaybePromise<ApplyResult>> {
   /** Add this to any PixiJS stage (a `Application`, a CanvasEngine scene). */
   readonly root: Container;
+  /** The headless layer: modes, tools, selection, pipelines. Observable through `interaction.state`. */
+  readonly interaction: InteractionController<R>;
+  /** Asks for something to be done: runs the pipeline, then applies. See {@link InteractionController.submit}. */
+  readonly submit: InteractionController<R>["submit"];
   /** One container per stage, back to front. */
   readonly stages: Readonly<Record<StageName, Container>>;
   readonly effects: MapViewEffects;
@@ -122,7 +141,10 @@ interface NodeView {
 const sameFrame = (a: ScenePart["frame"], b: ScenePart["frame"]): boolean =>
   a === b || (a !== undefined && b !== undefined && a.every((value, index) => value === b[index]));
 
-export function createMapView(options: MapViewOptions): MapView {
+export function createMapView<
+  const F extends readonly MapFeature<string, object>[],
+  R extends MaybePromise<ApplyResult> = ApplyResult,
+>(options: MapViewOptions<F, R>): MapView<R> & FeatureApis<F> {
   validateFeatures(options.features);
   const renders = options.features.flatMap((feature) => (feature.render ? [feature.render] : []));
 
@@ -145,7 +167,7 @@ export function createMapView(options: MapViewOptions): MapView {
   const pending = new Set<Promise<unknown>>();
   let viewport: Rect | null = null;
   let destroyed = false;
-  let mounted: { app: PixiApplicationLike; tick: (ticker: { deltaMS: number }) => void } | null = null;
+  let mounted: { app: PixiApplicationLike; tick: (ticker: { deltaMS: number }) => void; unbindKeyboard: (() => void) | undefined } | null = null;
 
   const reportError = (error: MapViewError): void => {
     if (options.onError) options.onError(error);
@@ -322,9 +344,53 @@ export function createMapView(options: MapViewOptions): MapView {
 
   resyncAll(options.model.state);
 
-  return {
+  const sceneNodes = (): readonly SceneNode[] => [...views.values()].map((view) => view.node);
+
+  const interaction = createInteraction<R>({
+    model: options.model,
+    assets: options.assets,
+    describe: context,
+    nodes: sceneNodes,
+    ...(options.actor ? { actor: options.actor } : {}),
+    ...(options.modes ? { modes: options.modes } : {}),
+  });
+
+  const tickListeners = new Set<(deltaMs: number) => void>();
+  const advance = (deltaMs: number): void => {
+    runner.tick(deltaMs);
+    for (const listener of [...tickListeners]) listener(deltaMs);
+  };
+
+  // Pointer events on the map become interaction, but only when something is there to interact with:
+  // a view that just draws must never get in the way of the clicks of a game.
+  const interactive = options.interactive ?? options.features.some((feature) => feature.setup !== undefined);
+  if (interactive) {
+    const [width, height] = options.model.state.size;
+    root.eventMode = "static";
+    root.hitArea = new Rectangle(0, 0, width, height);
+    const toInput = (event: PointerEventLike): PointerInput => {
+      const point = event.getLocalPosition(root);
+      return {
+        x: point.x,
+        y: point.y,
+        button: event.button ?? 0,
+        modifiers: { shift: !!event.shiftKey, ctrl: !!event.ctrlKey, alt: !!event.altKey, meta: !!event.metaKey },
+      };
+    };
+    root.on("pointerdown", (event: PointerEventLike) => interaction.feedPointer("down", toInput(event)));
+    // `globalpointermove` keeps a drag going when the pointer leaves the map.
+    root.on("globalpointermove", (event: PointerEventLike) => interaction.feedPointer("move", toInput(event)));
+    root.on("pointerup", (event: PointerEventLike) => interaction.feedPointer("up", toInput(event)));
+    root.on("pointerupoutside", (event: PointerEventLike) => interaction.feedPointer("up", toInput(event)));
+  }
+
+  const instances: Array<{ dispose?(): void }> = [];
+
+  const view: MapView<R> = {
     root,
     stages,
+    interaction,
+    submit: (intent, submitOptions) => interaction.submit(intent, submitOptions),
     effects: {
       play: (target, name, params) => runner.play(targetKey(target), name, params),
       register: (name, definition) => runner.register(name, definition),
@@ -335,9 +401,9 @@ export function createMapView(options: MapViewOptions): MapView {
     },
     setViewport(next) {
       viewport = next;
-      for (const view of views.values()) view.container.visible = isVisible(view.node);
+      for (const nodeView of views.values()) nodeView.container.visible = isVisible(nodeView.node);
     },
-    tick: (deltaMs) => runner.tick(deltaMs),
+    tick: advance,
     async mount(host, mountOptions = {}) {
       if (mounted) throw new Error("The view is already mounted");
       const app = mountOptions.createApplication?.() ?? (new Application() as unknown as PixiApplicationLike);
@@ -354,20 +420,25 @@ export function createMapView(options: MapViewOptions): MapView {
       }
       host.appendChild(app.canvas as never);
       app.stage.addChild(root);
-      const tick = (ticker: { deltaMS: number }): void => runner.tick(ticker.deltaMS);
+      const tick = (ticker: { deltaMS: number }): void => advance(ticker.deltaMS);
       app.ticker.add(tick);
-      mounted = { app, tick };
+      const keyboardTarget = mountOptions.keyboard === true ? (globalThis as unknown as KeyTarget) : mountOptions.keyboard || undefined;
+      mounted = { app, tick, unbindKeyboard: keyboardTarget ? bindKeyboard(interaction, keyboardTarget) : undefined };
     },
     async whenIdle() {
       while (pending.size > 0) await Promise.allSettled([...pending]);
     },
-    describe: () => [...views.values()].map((view) => view.node),
+    describe: sceneNodes,
     destroy() {
       if (destroyed) return;
       destroyed = true;
       unsubscribe();
+      for (const instance of instances) instance.dispose?.();
+      interaction.destroy();
       runner.clear();
+      tickListeners.clear();
       if (mounted) {
+        mounted.unbindKeyboard?.();
         mounted.app.ticker.remove(mounted.tick);
         mounted.app.destroy(true);
         mounted = null;
@@ -377,6 +448,38 @@ export function createMapView(options: MapViewOptions): MapView {
       store.destroy();
     },
   };
+
+  const host: FeatureHost<R> = {
+    model: options.model,
+    assets: options.assets,
+    interaction,
+    stages,
+    textures: store,
+    describe: sceneNodes,
+    onTick(listener) {
+      tickListeners.add(listener);
+      return () => tickListeners.delete(listener);
+    },
+  };
+  // Features are set up in the order they are listed, after the model has already been drawn.
+  for (const feature of options.features) {
+    const instance = feature.setup?.(host as unknown as FeatureHost);
+    if (!instance) continue;
+    instances.push(instance);
+    if (instance.api) Object.defineProperty(view, feature.id, { value: instance.api, enumerable: true });
+  }
+
+  return view as MapView<R> & FeatureApis<F>;
+}
+
+/** The part of a PixiJS federated pointer event that is used. */
+interface PointerEventLike {
+  readonly button?: number;
+  readonly shiftKey?: boolean;
+  readonly ctrlKey?: boolean;
+  readonly altKey?: boolean;
+  readonly metaKey?: boolean;
+  getLocalPosition(target: Container): { x: number; y: number };
 }
 
 /**

@@ -79,7 +79,7 @@ One package with sub-path exports; `@rpgjs/render-map2d` stays separate.
   /model                       MapDefinition, MapSource, AssetResolver, createMapModel, patches, batches, history, localCommitter
   /renderer                    createMapView (CanvasEngine / Pixi)
   /features                    terrain, liquids, elements, selection, history, placement
-  /placement/rules             snapToGrid, requireTerrain, maxCount, minDistance…
+  /interaction                 headless: state, tools, intents, pipelines (snapToGrid, maxCount…), catalog
   /skins                       default skin, gameSkin
   /server                      provideMapBuilder (authority, validation, broadcast)
   /client                      provideMapBuilder (rendering, remote committer)
@@ -600,7 +600,8 @@ while implementing them:
   (`SceneNode`) and reconciled patch by patch. CanvasEngine renders to PixiJS, so
   it hosts the view with the `mount` + `componentInstance` pattern the repository
   already uses for raw PixiJS children (`attachMapView`). `pixi.js` is a peer
-  dependency; `/model` and `/features` do not import it.
+  dependency; `/model` and `/interaction` do not import it (`/features` does, for
+  the skins of the editing features, from step 3 on).
 - **Model additions.** `MapElement.scale` (a number or `[x, y]`, editable with
   `element.update`) and `AssetDescriptor.frame` were needed to express Studio
   elements. Without a `frame`, `size` is also the size of the image; an asset
@@ -619,6 +620,54 @@ while implementing them:
 - **Known limits.** Ties in the sort key follow insertion order. Culling hides
   containers but does not yet avoid creating them. Terrain, lighting and
   post-processing stages exist as empty containers and are filled in milestone 2.
+
+#### Step 3 implementation notes
+
+The headless layer is `@rpgjs/map-builder/interaction`, the visuals are
+`@rpgjs/map-builder/skins`, and `selection()`, `placement()` and `history()` join
+`elements()` and `events()` in `/features`.
+
+- **Intent, pipeline, patch.** An intent is registered with `registerIntent`
+  (`resolve` to patches, optional `footprint`). `submit` runs the pipeline, resolves,
+  then calls `model.apply`: several intents are one atomic batch. A refusal is the
+  same `{ ok: false, rejection }` as a model rejection, with the reason of the step as
+  `code`, and is kept in `state.lastRejection`. `IntentRegistry` is open like
+  `PatchRegistry`.
+- **Pipeline steps are synchronous and pure** (`PipelineStep<K>` is typed on the
+  intent it receives), so the same chain previews on the client and validates on a
+  server. `/model` and `/interaction` do not import PixiJS, which is what makes the
+  server side of step 4 possible. Provided: `snapToGrid`, `withinMap`, `requireFree`,
+  `maxCount`, `minDistance`. A step sees `ctx.footprint(intent)`, the space the intent
+  would take, computed with the same description the renderer uses. Elements moved
+  together are left out of each other's obstacles.
+- **Tools, modes.** A tool belongs to modes and may be gated (`when`, typically a
+  modifier key); the first tool that takes a press also gets the moves and the release.
+  `play` and `edit` coexist: `playTool` plays on a plain click while the selection tool
+  answers to Alt, on the same scene and model. `inspect` is `hoverTool`. The spec's
+  `view.tools.activate(name)` is replaced by modes (`interaction.setModes`).
+- **Selection tool**: hover, click, shift, rubber band, drag, Delete. A drag is
+  committed on release by default (works with any committer, Escape cancels for free);
+  `drag: { live: true }` applies each move with a unique `coalesce` key, so it is one
+  undo step and Escape takes it back with one `undo()`.
+- **Placement**: the `element.place` intent, a catalog, a ghost that previews through
+  the same pipeline (it sits where the steps put it, and says why when it cannot be
+  placed), ids numbered per item and consumed only on success. Catalog items have no
+  `footprint` (the spec's `[2, 2]`): the space comes from the asset and its hitbox.
+  `maxCount` counts by asset, not by catalog id.
+- **Skins** are factories `(context) => { update, tick?, destroy }` per part
+  (`selection`, `hover`, `drag`, `marquee`, `ghost`), replaceable one by one and drawn
+  in the `overlay` stage. `defaultSkin` is sober, `gameSkin` has a halo, game colours
+  and a pulsing ghost. The spec's `studioSkin` belongs to Studio.
+- **Features gained a `setup(host)`** that registers intents and tools, mounts skins and
+  returns an `api`, exposed as `view.<id>` and typed by the list of features. A feature
+  id cannot be a name the view already uses.
+- **Pointer events are wired only when a feature has something to interact with**
+  (`interactive` overrides): a view that only draws never intercepts the clicks of a
+  game. Moves use `globalpointermove`, so a drag survives leaving the map.
+- **Known limits.** Steps cannot be asynchronous (a remote check comes back as a
+  committer rejection). Not yet provided: `requireTerrain` (milestone 2), `ownerOnly`,
+  `rateLimit`, `protectedZone` (step 4). Picking uses drawn bounds or hitboxes, not
+  pixels. A drag of several elements does not yet draw the group's own box.
 
 What milestone 1 delivers on its own: a map usable without Studio (3.3), the
 builder game, the living map (the server changes elements during play), the

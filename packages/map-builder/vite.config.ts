@@ -24,6 +24,8 @@ export default defineConfig({
         "model/index": "src/model/index.ts",
         "renderer/index": "src/renderer/index.ts",
         "features/index": "src/features/index.ts",
+        "interaction/index": "src/interaction/index.ts",
+        "skins/index": "src/skins/index.ts",
       },
       formats: ["es"],
       fileName: (_format, entryName) => `${entryName}.js`,

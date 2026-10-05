@@ -10,7 +10,9 @@ editor or both.
 | --- | --- | --- |
 | `@rpgjs/map-builder/model` | The model, patches, history, sources. Runs in plain Node, without a DOM. | no |
 | `@rpgjs/map-builder/renderer` | `createMapView`: draws a model with PixiJS, updates it patch by patch. | yes (peer dependency) |
-| `@rpgjs/map-builder/features` | `elements()`, `events()`: what the view draws. | no |
+| `@rpgjs/map-builder/features` | `elements()`, `events()`, `selection()`, `placement()`, `history()`. | yes (through the skins) |
+| `@rpgjs/map-builder/interaction` | The headless layer: state, tools, intents, pipelines, catalog. Runs on a server, to validate with the same rules. | no |
+| `@rpgjs/map-builder/skins` | How the interaction looks: `defaultSkin`, `gameSkin`, and the contract to write your own. | yes |
 
 ```ts
 import { createMapModel, defineAssets, defineMap, el } from "@rpgjs/map-builder/model";
@@ -83,6 +85,93 @@ that were applied, and describes again only the elements a patch touched.
   `shake` and `blink` are built in; add yours with `effects: { lift }` or
   `view.effects.register`. Time only moves on `view.tick(deltaMs)`, which `mount`
   calls every frame, so effects are deterministic.
+
+## Editing, and playing, on the same map
+
+The same view serves a game and an editor. What changes is the list of features,
+the active modes and the rules.
+
+```ts
+const catalog = defineCatalog([
+  { id: "oak", sprite: "tree-oak", pipeline: [/* rules of this item */] },
+]);
+
+const view = createMapView({
+  model,
+  assets,
+  features: [
+    elements({ pipeline: { move: [snapToGrid(16)] } }), // rules for every move, whoever asks
+    events(),
+    selection({ drag: { live: true }, remove: true }),
+    placement({ catalog, pipeline: [snapToGrid(32), withinMap(), requireFree()] }),
+    history(),
+  ],
+  modes: ["edit"],
+});
+
+view.placement.start("oak");          // a ghost follows the pointer; typed on the catalog ids
+view.selection.current;               // what is selected
+view.history.undo();
+view.submit({ type: "element.move", id: "t1", x: 160, y: 96 }); // an intent, not a patch
+```
+
+Features are imported objects, and each one that has an API exposes it on the view
+under its id: `view.placement`, `view.selection`, `view.history`. The view is typed
+by the list you give: without `placement()`, `view.placement` does not exist.
+
+### Intents, pipelines, rejections
+
+A user action is an **intent**. It goes through a **pipeline** of steps, then
+becomes patches, which the committer applies. A step may modify the intent, refuse it
+or pass it on, in the style of Koa:
+
+```ts
+const rules: PipelineStep<"element.place">[] = [
+  snapToGrid(32),
+  maxCount("tree-oak", 5),
+  (intent, ctx, next) => (ctx.actor.inventory.wood >= 2 ? next() : ctx.reject("not-enough-wood")),
+];
+```
+
+Steps are synchronous and pure, so **the same pipeline runs on the client**, to
+preview with the ghost, **and on a server**, to validate. A refusal is a value:
+`view.submit(...)` returns `{ ok: false, rejection: { code: "occupied", … } }` and
+`interaction.state.get().lastRejection` keeps it, so the UI can say why.
+
+Provided steps: `snapToGrid`, `withinMap`, `requireFree`, `maxCount`, `minDistance`.
+
+### Modes
+
+Tools belong to modes (`play`, `edit`, `inspect`). Several modes can be active at
+once, and a tool can be gated on a modifier key, which is how a player plays while
+Alt turns the same click into editing:
+
+```ts
+view.interaction.addTool(playTool({ types: ["event"], onInteract: (target) => talkTo(target) }));
+view.interaction.setModes(["play", "edit"]);
+```
+
+The interaction layer is **headless**: it publishes `interaction.state` (hovered,
+selection, drag, rubber band, ghost, last rejection) and draws nothing. Skins read
+that state:
+
+```ts
+selection({ skin: { selection: myGlow } });   // replace one part, keep the others
+placement({ catalog, skin: gameSkin({ ghost: { valid: 0x66ff66, invalid: 0xff5555 }, pulse: true }) });
+```
+
+Keyboard (Escape cancels, Delete removes) is opt-in: `view.mount(host, { keyboard: true })`
+or `bindKeyboard(view.interaction, window)`.
+
+### Adding an intent
+
+```ts
+declare module "@rpgjs/map-builder/interaction" {
+  interface IntentRegistry {
+    "tilling.till": { readonly x: number; readonly y: number };
+  }
+}
+```
 
 ### In a CanvasEngine scene
 

@@ -23,6 +23,14 @@
     "./features": {
       "import": "./dist/features/index.js",
       "types": "./dist/features/index.d.ts"
+    },
+    "./interaction": {
+      "import": "./dist/interaction/index.js",
+      "types": "./dist/interaction/index.d.ts"
+    },
+    "./skins": {
+      "import": "./dist/skins/index.js",
+      "types": "./dist/skins/index.d.ts"
     }
   },
   "files": [

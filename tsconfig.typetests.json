@@ -23,7 +23,11 @@
       "@rpgjs/action-battle": ["./packages/action-battle/src"],
       "@rpgjs/action-battle/server": ["./packages/action-battle/src/server.ts"],
       "@rpgjs/map-builder": ["./packages/map-builder/src/index.ts"],
-      "@rpgjs/map-builder/model": ["./packages/map-builder/src/model/index.ts"]
+      "@rpgjs/map-builder/model": ["./packages/map-builder/src/model/index.ts"],
+      "@rpgjs/map-builder/renderer": ["./packages/map-builder/src/renderer/index.ts"],
+      "@rpgjs/map-builder/features": ["./packages/map-builder/src/features/index.ts"],
+      "@rpgjs/map-builder/interaction": ["./packages/map-builder/src/interaction/index.ts"],
+      "@rpgjs/map-builder/skins": ["./packages/map-builder/src/skins/index.ts"]
     }
   },
   "files": [

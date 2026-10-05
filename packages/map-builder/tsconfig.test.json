@@ -13,7 +13,9 @@
       "@rpgjs/map-builder": ["./src/index.ts"],
       "@rpgjs/map-builder/model": ["./src/model/index.ts"],
       "@rpgjs/map-builder/renderer": ["./src/renderer/index.ts"],
-      "@rpgjs/map-builder/features": ["./src/features/index.ts"]
+      "@rpgjs/map-builder/features": ["./src/features/index.ts"],
+      "@rpgjs/map-builder/interaction": ["./src/interaction/index.ts"],
+      "@rpgjs/map-builder/skins": ["./src/skins/index.ts"]
     }
   },
   "include": ["src/**/*.ts"],

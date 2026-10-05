@@ -1,5 +1,10 @@
+import type { Container } from "pixi.js";
+import type { AssetResolver } from "../model/assets";
 import type { MapState } from "../model/definition";
 import type { MapPatch } from "../model/patches";
+import type { ApplyResult, MaybePromise, Unsubscribe } from "../model/result";
+import type { InteractionController, ModelApi } from "../interaction/controller";
+import type { TextureStore } from "./textures";
 import type { StageName, SceneNode, DescribeContext } from "./scene";
 
 /** Version of the contract between the renderer and a feature. */
@@ -19,13 +24,68 @@ export interface FeatureRender {
   affected(patch: MapPatch): readonly string[] | "all" | "none";
 }
 
-export interface MapFeature {
-  readonly id: string;
+/** What a feature can reach when the view is created: the model, the interaction layer, the scene. */
+export interface FeatureHost<R extends MaybePromise<ApplyResult> = MaybePromise<ApplyResult>> {
+  readonly model: ModelApi<R>;
+  readonly assets: AssetResolver;
+  readonly interaction: InteractionController<R>;
+  readonly stages: Readonly<Record<StageName, Container>>;
+  readonly textures: TextureStore;
+  /** What is drawn right now. */
+  describe(): readonly SceneNode[];
+  /** Called every frame with the time elapsed, in milliseconds. */
+  onTick(listener: (deltaMs: number) => void): Unsubscribe;
+}
+
+export interface FeatureInstance<Api extends object = Record<never, never>> {
+  /** Exposed on the view under the id of the feature: `view.placement`. */
+  readonly api?: Api;
+  /** Called when the view is destroyed. */
+  dispose?(): void;
+}
+
+export interface MapFeature<Id extends string = string, Api extends object = Record<never, never>> {
+  readonly id: Id;
   readonly apiVersion: typeof MAP_FEATURE_API_VERSION;
   /** Ids of the features this one cannot work without. */
   readonly requires: readonly string[];
+  /** What the feature draws. */
   readonly render?: FeatureRender;
+  /**
+   * What the feature does besides drawing: registers intents and tools, mounts skins.
+   * Runs once, when the view is created.
+   */
+  readonly setup?: (host: FeatureHost) => FeatureInstance<Api>;
 }
+
+/** Names the view already uses: a feature cannot take them as its id. */
+export const RESERVED_FEATURE_IDS: readonly string[] = [
+  "root",
+  "stages",
+  "effects",
+  "setViewport",
+  "tick",
+  "mount",
+  "whenIdle",
+  "describe",
+  "destroy",
+  "interaction",
+  "submit",
+  "textures",
+];
+
+type UnionToIntersection<U> = (U extends unknown ? (value: U) => void : never) extends (value: infer I) => void ? I : never;
+
+/** The APIs features add to the view, keyed by feature id: `view.placement`, `view.selection`. */
+export type FeatureApis<F extends readonly MapFeature<string, object>[]> = UnionToIntersection<
+  F[number] extends infer Feature
+    ? Feature extends MapFeature<infer Id, infer Api>
+      ? keyof Api extends never
+        ? never
+        : { readonly [K in Id]: Api }
+      : never
+    : never
+>;
 
 export class MapFeatureError extends Error {
   constructor(message: string) {
@@ -34,27 +94,34 @@ export class MapFeatureError extends Error {
   }
 }
 
-export interface MapFeatureDefinition {
-  readonly id: string;
+export interface MapFeatureDefinition<Id extends string = string, Api extends object = Record<never, never>> {
+  readonly id: Id;
   readonly requires?: readonly string[];
   readonly render?: FeatureRender;
+  readonly setup?: (host: FeatureHost) => FeatureInstance<Api>;
 }
 
 /** Declares a feature. Built-in and third-party features use the same contract. */
-export function defineMapFeature(definition: MapFeatureDefinition): MapFeature {
+export function defineMapFeature<const Id extends string, Api extends object = Record<never, never>>(
+  definition: MapFeatureDefinition<Id, Api>,
+): MapFeature<Id, Api> {
   if (typeof definition.id !== "string" || definition.id.length === 0) {
     throw new MapFeatureError("A feature needs a non-empty id");
+  }
+  if (RESERVED_FEATURE_IDS.includes(definition.id)) {
+    throw new MapFeatureError(`"${definition.id}" is already a property of the view and cannot be the id of a feature`);
   }
   return Object.freeze({
     id: definition.id,
     apiVersion: MAP_FEATURE_API_VERSION,
     requires: Object.freeze([...(definition.requires ?? [])]),
     ...(definition.render ? { render: definition.render } : {}),
+    ...(definition.setup ? { setup: definition.setup } : {}),
   });
 }
 
 /** Checks ids and dependencies. Fails at startup, with a message that says what to add. */
-export function validateFeatures(features: readonly MapFeature[]): void {
+export function validateFeatures(features: readonly MapFeature<string, object>[]): void {
   const seen = new Set<string>();
   for (const feature of features) {
     if (feature.apiVersion !== MAP_FEATURE_API_VERSION) {
