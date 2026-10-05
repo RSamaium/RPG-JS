@@ -1008,6 +1008,9 @@ export const loadMap = async (mapId: string) => {
         );
         return media ? collectMediaImageSource(media) || undefined : undefined;
       },
+      readData() {
+        return (client as unknown as { sceneMap?: { data?: { (): any } } }).sceneMap?.data?.()?.data;
+      },
       updateData(patch) {
         const scene = (client as unknown as { sceneMap?: { data?: { (): any; set(value: any): void } } }).sceneMap?.data;
         const current = scene?.();

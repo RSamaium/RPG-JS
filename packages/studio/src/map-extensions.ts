@@ -22,6 +22,8 @@ export interface StudioMapExtensionContext {
    * Replaces part of the data the map is drawn with, and draws it again:
    * `{ elementsLow: [...resolved elements] }`. Whatever is not named is left as it is.
    */
+  /** The data the scene shows now (what `updateData` merged into), or `undefined` before it is shown. */
+  readData(): any | undefined;
   updateData(patch: Readonly<Record<string, unknown>>): void;
 }
 
