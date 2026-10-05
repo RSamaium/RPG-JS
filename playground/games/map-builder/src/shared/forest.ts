@@ -1,5 +1,6 @@
 import { defineMap, el, event } from "@rpgjs/map-builder/model";
 import { assets } from "./assets";
+import { forestGround } from "./terrain";
 
 const tree = (id: string, x: number, y: number) => el("tree", { id, x, y, data: { hits: 3 } });
 
@@ -11,6 +12,7 @@ export const forest = defineMap(assets, {
   id: "forest",
   size: [960, 640],
   tileSize: 32,
+  terrain: forestGround,
   elements: [
     tree("tree-1", 120, 130),
     tree("tree-2", 220, 300),

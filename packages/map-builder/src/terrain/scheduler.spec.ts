@@ -140,6 +140,21 @@ describe("terrain scheduler", () => {
     expect(applied).toEqual([waiting[1]!.rect.x]);
   });
 
+  it("reports a frame that cannot be applied, and goes on with the next ones", async () => {
+    const errors: string[] = [];
+    const applied: number[] = [];
+    const scheduler = createTerrainScheduler({
+      size: [1024, 512], concurrency: 1,
+      render: async (rect) => ({ ...rect, pixels: new Uint8ClampedArray(0) }),
+      apply: (frame) => { if (frame.x === 512) throw new Error("no canvas"); applied.push(frame.x); },
+      onError: (error) => void errors.push(String(error)),
+    });
+    scheduler.invalidate("all");
+    await scheduler.whenIdle();
+    expect(errors).toEqual(["Error: no canvas"]);
+    expect(applied).toEqual([0]);
+  });
+
   it("ignores changes outside the map, and stops when destroyed", async () => {
     const { render, waiting } = manualRender();
     const applied: number[] = [];

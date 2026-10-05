@@ -61,6 +61,37 @@ def bush():
     save(im, "bush.png", w, h)
 
 
-for build in (tree, fence, wood, bush):
+def terrain_textures():
+    """Four seamless 32 px textures for the painted terrain: grass, dirt, water, rock. Noise is wrapped, so tiling shows no seam."""
+    import random
+
+    def texture(name, base, spread, speckle=None):
+        rnd = random.Random(name)
+        size = 32
+        im = Image.new("RGBA", (size, size))
+        px = im.load()
+        # value noise on a wrapped 8 x 8 lattice, bilinear: smooth and tileable
+        lattice = [[rnd.random() for _ in range(8)] for _ in range(8)]
+        for y in range(size):
+            for x in range(size):
+                gx, gy = x / 4, y / 4
+                x0, y0 = int(gx) % 8, int(gy) % 8
+                x1, y1 = (x0 + 1) % 8, (y0 + 1) % 8
+                fx, fy = gx - int(gx), gy - int(gy)
+                v = (lattice[y0][x0] * (1 - fx) + lattice[y0][x1] * fx) * (1 - fy) + (lattice[y1][x0] * (1 - fx) + lattice[y1][x1] * fx) * fy
+                n = (v - 0.5) * 2 * spread + (rnd.random() - 0.5) * spread * 0.6
+                px[x, y] = tuple(max(0, min(255, int(c + n))) for c in base) + (255,)
+        if speckle:
+            for _ in range(speckle[1]):
+                px[rnd.randrange(size), rnd.randrange(size)] = speckle[0] + (255,)
+        im.save(os.path.join(OUT, name))
+
+    texture("terrain-grass.png", (88, 150, 70), 18, ((120, 180, 90), 26))
+    texture("terrain-dirt.png", (150, 112, 72), 16, ((110, 80, 52), 22))
+    texture("terrain-water.png", (52, 120, 190), 14, ((140, 200, 235), 10))
+    texture("terrain-rock.png", (122, 124, 130), 20, ((90, 92, 98), 20))
+
+
+for build in (tree, fence, wood, bush, terrain_textures):
     build()
 print("sprites written to", os.path.abspath(OUT))

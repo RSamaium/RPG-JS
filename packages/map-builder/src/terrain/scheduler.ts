@@ -103,8 +103,14 @@ export function createTerrainScheduler(options: SchedulerOptions): TerrainSchedu
       finished.delete(applied);
       applied += 1;
       if (destroyed) continue;
-      if (done.frame) options.apply(done.frame);
-      else options.onError?.(done.error, done.rect);
+      if (done.frame) {
+        // A frame that cannot be put on screen must not stop the ones that follow.
+        try {
+          options.apply(done.frame);
+        } catch (error) {
+          options.onError?.(error, done.rect);
+        }
+      } else options.onError?.(done.error, done.rect);
     }
   };
 

@@ -186,3 +186,15 @@ describe("painting the terrain", () => {
     view.destroy();
   });
 });
+
+describe("cost of painting", () => {
+  it("checks a large brush against the ground without decoding a chunk per pixel", () => {
+    const { view } = setup({ pipeline: [requireTerrain(["grass", "dirt"])] });
+    const start = performance.now();
+    const result = view.submit({ type: "terrain.paint", shape: { type: "circle", x: 80, y: 120, radius: 60 }, material: "dirt" });
+    expect(result).toMatchObject({ ok: true });
+    // ~11,000 pixels checked and painted: milliseconds, not seconds
+    expect(performance.now() - start).toBeLessThan(400);
+    view.destroy();
+  });
+});

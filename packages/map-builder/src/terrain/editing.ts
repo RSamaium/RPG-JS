@@ -4,7 +4,7 @@ import type { PointerInput } from "../interaction/input";
 import type { IntentDefinition } from "../interaction/intents";
 import type { PipelineStep } from "../interaction/pipeline";
 import { tryReadTerrain } from "./data";
-import { covers, readPixel, shapeBounds } from "./mask";
+import { covers, readRect, shapeBounds } from "./mask";
 import { NO_MATERIAL, type TerrainShape } from "./types";
 
 declare module "../interaction/intents" {
@@ -38,10 +38,12 @@ export function requireTerrain(materials: readonly string[]): PipelineStep<"terr
     const allowed = new Set(materials.map((id) => terrain.materials.findIndex((material) => material.id === id)).filter((index) => index >= 0));
     const bounds = shapeBounds(terrain.mask, intent.shape);
     if (!bounds) return context.reject("outside-map", "Nothing of this lies on the map");
+    // One read of the whole region: reading pixel by pixel would decode a chunk for each of them.
+    const values = readRect(terrain.mask, bounds);
     for (let y = bounds.y; y < bounds.y + bounds.height; y += 1) {
       for (let x = bounds.x; x < bounds.x + bounds.width; x += 1) {
         if (!covers(terrain.mask, intent.shape, x, y)) continue;
-        const value = readPixel(terrain.mask, x, y);
+        const value = values[(y - bounds.y) * bounds.width + (x - bounds.x)]!;
         if (value === NO_MATERIAL || !allowed.has(value)) {
           return context.reject("wrong-ground", `Can only be painted over ${materials.join(", ")}`);
         }

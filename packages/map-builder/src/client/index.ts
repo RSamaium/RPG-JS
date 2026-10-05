@@ -3,6 +3,7 @@ import { inject, RpgClientEngine, WebSocketToken, type AbstractWebsocket, type R
 import { signal } from "canvasengine";
 import type { Container } from "pixi.js";
 import type { AssetResolver } from "../model/assets";
+import type { PatchHandlers } from "../model/patches";
 import type { ApplyResult, Unsubscribe } from "../model/result";
 import type { ClientMessage, MapTransport, ServerMessage } from "../protocol";
 import { bindRemoteEffects, joinRemoteMap, type RemoteMap } from "../remote";
@@ -37,6 +38,8 @@ export interface MapBuilderClientOptions<F extends Features = Features> {
   readonly view?: Omit<MapViewOptions<F, Promise<ApplyResult>>, "model" | "assets" | "features">;
   /** Keep the static colliders of the client's physics in step, so the player does not walk through what was built. Defaults to true. */
   readonly physics?: boolean;
+  /** Handlers of the patch types the features add (`terrainPatchHandlers`): the model must know them to apply what the server tells. */
+  readonly patchHandlers?: readonly PatchHandlers[];
   /** How long to wait for the server before giving up. Defaults to 10000. */
   readonly timeoutMs?: number;
   /** The player is on a modifiable map: the place to wire controls (`handle.view.placement.start("oak")`). */
@@ -155,7 +158,11 @@ export function createMapBuilderClient<const F extends Features = readonly [Retu
     };
 
     try {
-      const remote = await joinRemoteMap({ transport, ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}) });
+      const remote = await joinRemoteMap({
+        transport,
+        ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
+        ...(options.patchHandlers ? { model: { patchHandlers: options.patchHandlers } } : {}),
+      });
       if (state.joining !== mapId) return remote.disconnect(); // the player moved on while we waited
 
       const view = createMapView({

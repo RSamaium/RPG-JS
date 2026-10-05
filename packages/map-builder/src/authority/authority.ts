@@ -1,6 +1,7 @@
 import type { AssetResolver } from "../model/assets";
 import type { MapDefinition } from "../model/definition";
 import { createMapModel, type MapChange, type MapModel } from "../model/model";
+import type { PatchHandlers } from "../model/patches";
 import type { MapPatch } from "../model/patches";
 import type { ApplyFailure, ApplyResult } from "../model/result";
 import type { Catalog } from "../interaction/catalog";
@@ -67,6 +68,8 @@ export interface MapAuthorityOptions<C extends Catalog<string> = Catalog<string>
   };
   /** What can be placed, and the rules for it. */
   readonly placement?: PlacementIntentOptions<C>;
+  /** Handlers of the patch types features add (`terrainPatchHandlers`): the authority must know them to apply them. */
+  readonly patchHandlers?: readonly PatchHandlers[];
   /** Registers more intents and pipelines, e.g. those of a custom feature. */
   readonly setup?: (controller: InteractionController) => void;
   /**
@@ -129,6 +132,7 @@ export function createMapAuthority<C extends Catalog<string> = Catalog<string>>(
   const reportError = options.onError ?? ((error: unknown) => console.error(error));
   const model = createMapModel(options.definition, {
     ...(options.revision !== undefined ? { revision: options.revision } : {}),
+    ...(options.patchHandlers ? { patchHandlers: options.patchHandlers } : {}),
     // The authority has nothing to undo: clients keep their own history.
     history: false,
     onListenerError: reportError,

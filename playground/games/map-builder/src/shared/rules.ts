@@ -1,4 +1,5 @@
 import { defineCatalog, maxCount, protectedZone, requireFree, snapToGrid, withinMap, type PipelineStep } from "@rpgjs/map-builder/interaction";
+import { maxRadius, requireTerrain, withinTerrain } from "@rpgjs/map-builder/terrain";
 
 /** Where nobody may build: the spot players appear at, and the way to the reward behind the gate. */
 export const PROTECTED_ZONES = [
@@ -37,3 +38,9 @@ export const placementRules: PipelineStep<"element.place">[] = [
 
 /** Moving what you planted is allowed anywhere you could plant it. */
 export const moveRules: PipelineStep<"element.move">[] = [withinMap(), requireFree(), protectedZone(PROTECTED_ZONES)];
+
+/**
+ * Tilling: a player turns grass into dirt and back, nothing else (not the pond, not the rock), with a modest
+ * brush, inside the map. The same steps preview on the client and decide on the server.
+ */
+export const terrainRules: PipelineStep<"terrain.paint">[] = [withinTerrain(), maxRadius(40), requireTerrain(["grass", "dirt"])];

@@ -6,7 +6,8 @@ import meadowJson from "./maps/meadow.json";
 import { defineEvent, refreshHud } from "./modules/main/server";
 import { assets } from "./shared/assets";
 import { forest } from "./shared/forest";
-import { catalog, moveRules, placementRules } from "./shared/rules";
+import { registerTerrainIntents, terrainPatchHandlers } from "@rpgjs/map-builder/terrain";
+import { catalog, moveRules, placementRules, terrainRules } from "./shared/rules";
 
 /**
  * Two maps, from two sources: the forest is written in code, the meadow is a JSON file. The map
@@ -26,6 +27,12 @@ export const mapBuilderServer = () =>
     assets,
     maps: loadMap,
     authority: {
+      patchHandlers: [terrainPatchHandlers],
+      // Tilling: painting the ground goes through the same rules the clients preview with.
+      setup: (controller) => {
+        registerTerrainIntents(controller);
+        controller.usePipeline("terrain.paint", [...terrainRules, rateLimit({ max: 60, windowMs: 1000 })]);
+      },
       pipeline: {
         move: [...moveRules, ownerOnly({ actor: idOf })],
         remove: [ownerOnly({ actor: idOf })],

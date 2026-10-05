@@ -8,4 +8,9 @@ export const assets = defineAssets({
   tree: { src: "/tree.png", size: [64, 96], hitbox: [24, 64, 16, 26] },
   bush: { src: "/bush.png", size: [40, 28], hitbox: [4, 12, 32, 14] },
   fence: { src: "/fence.png", size: [64, 32], hitbox: [0, 12, 64, 16] },
+  // the textures of the painted terrain
+  "terrain-grass": { src: "/terrain-grass.png" },
+  "terrain-dirt": { src: "/terrain-dirt.png" },
+  "terrain-water": { src: "/terrain-water.png" },
+  "terrain-rock": { src: "/terrain-rock.png" },
 });

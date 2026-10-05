@@ -5,7 +5,11 @@ import { Texture, TextureSource } from "pixi.js";
 import { createMapBuilderClient, getMapBuilder, type MapBuilderHandle } from "@rpgjs/map-builder/client";
 import { getMapAuthority } from "@rpgjs/map-builder/server";
 import type { ServerMessage } from "@rpgjs/map-builder/protocol";
-import { features } from "./client-features";
+import { createFeatures } from "./client-features";
+import { inlineTerrainBackend } from "@rpgjs/map-builder/terrain-render";
+import { memorySurface } from "@rpgjs/map-builder/features";
+import { readPixel, readTerrain, terrainPatchHandlers } from "@rpgjs/map-builder/terrain";
+import { pointer } from "@rpgjs/map-builder/interaction";
 import { mapBuilderServer } from "./game";
 import { chop, woodOf } from "./modules/main/server";
 import { provideMain } from "./modules/main";
@@ -21,6 +25,14 @@ import { assets } from "./shared/assets";
 const textures = { load: () => new Texture({ source: new TextureSource({ width: 64, height: 96 }) }) };
 const wait = (ms = 25) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** The terrain is drawn in memory here: there are no canvases or workers in the test environment. */
+const features = createFeatures({
+  surface: memorySurface(),
+  backend: () => inlineTerrainBackend(),
+  loadImage: async () => ({ width: 2, height: 2, pixels: new Uint8ClampedArray(16).fill(200) }),
+  onError: () => undefined,
+});
+
 let fixture: TestingFixture | undefined;
 afterEach(async () => {
   vi.restoreAllMocks();
@@ -32,7 +44,7 @@ type Handle = MapBuilderHandle<typeof features>;
 
 async function boot(mapId: "forest" | "meadow") {
   const clientModule = createModule("WoodcutterClient", [
-    { client: createMapBuilderClient({ assets, features, view: { textures, onError: () => undefined, modes: ["play"] } as never }) },
+    { client: createMapBuilderClient({ assets, features, patchHandlers: [terrainPatchHandlers], view: { textures, onError: () => undefined, modes: ["play"] } as never }) },
   ]);
   fixture = await testing([...mapBuilderServer(), ...provideMain(), ...clientModule]);
   const client = await fixture.createClient();
@@ -272,6 +284,85 @@ describe.each(MAPS)("on the $mapId (map written in $source)", ({ mapId, lever, t
       await wait();
       expect(authority.model.getElement("tree-2")?.data?.hits).toBe(2);
     });
+  });
+});
+
+describe("4. tilling the ground (the forest has painted terrain, the meadow has none)", () => {
+  const groundAt = (state: Parameters<typeof readTerrain>[0], x: number, y: number) => {
+    const data = readTerrain(state)!;
+    return data.materials[readPixel(data.mask, x, y)]?.id;
+  };
+
+  test("the brush turns grass into dirt for everybody, and the chunks draw it", async () => {
+    const { handle, authority, heard } = await boot("forest");
+    expect(groundAt(authority.model.state, 500, 300)).toBe("grass");
+    handle.view.terrain.brush!.start({ material: "dirt", radius: 20 });
+    handle.view.interaction.feedPointer("down", pointer(500, 300));
+    handle.view.interaction.feedPointer("move", pointer(540, 300));
+    handle.view.interaction.feedPointer("up", pointer(540, 300));
+    await wait(100);
+    expect(groundAt(authority.model.state, 500, 300)).toBe("dirt");
+    expect(groundAt(authority.model.state, 530, 300)).toBe("dirt");
+    expect(groundAt(handle.remote.model.state, 520, 300)).toBe("dirt");
+    expect(heard.some((m) => m.type === "patches" && m.patches.some((p) => p.type === "terrain.paint"))).toBe(true);
+    await handle.view.terrain.whenIdle();
+    expect(handle.view.terrain.pending).toBe(0);
+  });
+
+  test("a late player gets the ground as it is now", async () => {
+    const { handle, authority } = await boot("forest");
+    handle.view.terrain.brush!.start({ material: "dirt", radius: 20 });
+    handle.view.interaction.feedPointer("down", pointer(500, 300));
+    handle.view.interaction.feedPointer("up", pointer(500, 300));
+    await wait(100);
+    const snapshot = authority.snapshot();
+    expect(snapshot.type).toBe("snapshot");
+    const definition = (snapshot as unknown as { definition: Parameters<typeof readTerrain>[0] }).definition;
+    expect(groundAt(definition, 500, 300)).toBe("dirt");
+  });
+
+  test("the rules refuse the pond and the rock, on the client and on the server", async () => {
+    const { handle, authority, ask, heard } = await boot("forest");
+    expect(groundAt(authority.model.state, 760, 190)).toBe("water");
+    handle.view.terrain.brush!.start({ material: "dirt", radius: 20 });
+    handle.view.interaction.feedPointer("down", pointer(760, 190));
+    handle.view.interaction.feedPointer("up", pointer(760, 190));
+    await wait(50);
+    expect(handle.view.interaction.state.get().lastRejection).toMatchObject({ reason: "wrong-ground" });
+    expect(groundAt(authority.model.state, 760, 190)).toBe("water");
+    // a client that skips its own rules is still stopped by the server
+    heard.length = 0;
+    ask("cheat", { type: "terrain.paint", shape: { type: "circle", x: 150, y: 300, radius: 10 }, material: "dirt" });
+    expect(heard.find((m) => m.type === "rejected")).toMatchObject({ reason: "wrong-ground" });
+    expect(groundAt(authority.model.state, 150, 300)).toBe("rock");
+    // and nobody can paint a brush bigger than the rules allow
+    ask("big", { type: "terrain.paint", shape: { type: "circle", x: 400, y: 330, radius: 200 }, material: "dirt" });
+    expect(groundAt(authority.model.state, 400, 330 + 60)).toBe("grass");
+    expect(groundAt(authority.model.state, 400, 330 + 30)).toBe("dirt");
+  });
+
+  test("a stroke is one step of the player's history, but taking it back is the server's to allow", async () => {
+    const { handle, authority } = await boot("forest");
+    handle.view.terrain.brush!.start({ material: "dirt", radius: 16 });
+    handle.view.interaction.feedPointer("down", pointer(300, 330));
+    for (let x = 310; x <= 400; x += 10) handle.view.interaction.feedPointer("move", pointer(x, 330));
+    handle.view.interaction.feedPointer("up", pointer(400, 330));
+    await wait(120);
+    expect(groundAt(authority.model.state, 350, 330)).toBe("dirt");
+    // undo sends the inverse patches as they are: a player is not trusted to do that
+    expect(await handle.remote.model.history.undo()).toMatchObject({ ok: false, rejection: { code: "patches-not-allowed" } });
+    await wait(50);
+    expect(groundAt(authority.model.state, 350, 330)).toBe("dirt");
+  });
+
+  test("the meadow has no ground to paint", async () => {
+    const { handle, authority } = await boot("meadow");
+    expect(readTerrain(authority.model.state)).toBeUndefined();
+    handle.view.terrain.brush!.start({ material: "dirt", radius: 20 });
+    handle.view.interaction.feedPointer("down", pointer(300, 300));
+    handle.view.interaction.feedPointer("up", pointer(300, 300));
+    await wait(30);
+    expect(handle.view.interaction.state.get().lastRejection).toMatchObject({ reason: "no-terrain" });
   });
 });
 

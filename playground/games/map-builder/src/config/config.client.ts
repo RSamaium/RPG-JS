@@ -1,5 +1,6 @@
 import { Presets, provideClientGlobalConfig, provideClientModules, provideLoadMap } from "@rpgjs/client";
 import { provideMapBuilder as provideMapBuilderClient } from "@rpgjs/map-builder/client";
+import { terrainPatchHandlers } from "@rpgjs/map-builder/terrain";
 import MapComponent from "../components/map.ce";
 import { features } from "../client-features";
 import { toast, unwireControls, wireControls } from "../controls";
@@ -28,6 +29,7 @@ export default {
     provideMapBuilderClient({
       assets,
       features,
+      patchHandlers: [terrainPatchHandlers],
       view: { modes: ["play"] },
       onJoin: (handle) => {
         wireControls(handle as never);
