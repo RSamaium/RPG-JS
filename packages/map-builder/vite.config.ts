@@ -24,6 +24,7 @@ export default defineConfig({
         "model/index": "src/model/index.ts",
         "renderer/index": "src/renderer/index.ts",
         "features/index": "src/features/index.ts",
+        "terrain/index": "src/terrain/index.ts",
         "interaction/index": "src/interaction/index.ts",
         "skins/index": "src/skins/index.ts",
         "protocol/index": "src/protocol/index.ts",

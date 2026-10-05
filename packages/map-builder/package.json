@@ -20,6 +20,10 @@
       "import": "./dist/renderer/index.js",
       "types": "./dist/renderer/index.d.ts"
     },
+    "./terrain": {
+      "import": "./dist/terrain/index.js",
+      "types": "./dist/terrain/index.d.ts"
+    },
     "./features": {
       "import": "./dist/features/index.js",
       "types": "./dist/features/index.d.ts"

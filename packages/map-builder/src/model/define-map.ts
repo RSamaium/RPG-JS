@@ -1,7 +1,7 @@
 import type { AssetKind, AssetResolver } from "./assets";
 import { MAP_DEFINITION_VERSION, type MapDefinition, type MapDepth, type MapElement, type MapEvent, type MapScale } from "./definition";
 import { MapDefinitionError, type MapIssue } from "./errors";
-import type { JsonObject, JsonValue } from "./json";
+import { isPlainObject, type JsonObject, type JsonValue } from "./json";
 import { parseMapDefinition } from "./parse";
 
 export type TypedElement<K extends string = string> = MapElement & { readonly kind: K };
@@ -34,6 +34,11 @@ export function event<G extends string = never>(kind: string, input: EventInput<
   return { ...input, kind };
 }
 
+/** Something that writes the data a feature owns, once the size of the map is known (e.g. `terrain.layers([...])`). */
+export interface TerrainBuilder {
+  toExtension(size: readonly [width: number, height: number]): JsonValue;
+}
+
 export interface MapInput<K extends string = string> {
   readonly id: string;
   /** World size, in pixels. */
@@ -42,6 +47,8 @@ export interface MapInput<K extends string = string> {
   readonly elements?: readonly TypedElement<K>[];
   readonly events?: readonly TypedEvent<K>[];
   readonly extensions?: { readonly [featureId: string]: JsonValue };
+  /** Painted terrain, from `defineTerrain(...).layers([...])`. Stored under `extensions.terrain`. */
+  readonly terrain?: TerrainBuilder;
 }
 
 /**
@@ -57,7 +64,9 @@ export function defineMap<A extends AssetResolver<string>>(assets: A, input: Map
     ...(input.tileSize !== undefined ? { tileSize: input.tileSize } : {}),
     elements: input.elements ?? [],
     events: input.events ?? [],
-    ...(input.extensions !== undefined ? { extensions: input.extensions } : {}),
+    ...(input.extensions !== undefined || input.terrain !== undefined
+      ? { extensions: { ...(input.extensions ?? {}), ...(input.terrain ? { terrain: input.terrain.toExtension(input.size) } : {}) } }
+      : {}),
   });
 
   const issues: MapIssue[] = [];
@@ -71,6 +80,16 @@ export function defineMap<A extends AssetResolver<string>>(assets: A, input: Map
       issues.push({ path: `events[${index}].graphic`, message: `unknown asset "${entry.graphic}"` });
     }
   });
+  const terrain = definition.extensions?.terrain;
+  const materials = input.terrain && isPlainObject(terrain) ? terrain.materials : undefined;
+  if (Array.isArray(materials)) {
+    materials.forEach((material, index) => {
+      const texture = isPlainObject(material) ? material.texture : undefined;
+      if (typeof texture === "string" && !assets.has(texture)) {
+        issues.push({ path: `extensions.terrain.materials[${index}].texture`, message: `unknown asset "${texture}"` });
+      }
+    });
+  }
   if (issues.length > 0) throw new MapDefinitionError(issues);
   return definition;
 }

@@ -126,6 +126,11 @@ describe("map-builder public API types", () => {
       | "event.move"
       | "extension.set"
       | "tilling.till"
+      // added by the terrain module, which is part of the same program
+      | "terrain.paint"
+      | "terrain.region"
+      | "terrain.materials"
+      | "terrain.morphology"
     >();
 
     const narrow = (patch: MapPatch) => {
@@ -394,5 +399,31 @@ describe("map-builder public API types", () => {
       });
       void skin;
     });
+  });
+});
+
+describe("terrain types", () => {
+  test("the recipe is checked against the materials that were declared", async () => {
+    const { defineTerrain, paint, terrainPatchHandlers } = await import("./terrain");
+    const terrain = defineTerrain({ grass: { texture: "grass" }, water: { texture: "water" } });
+    const compileOnly = () => {
+      terrain.layers([paint.fill("grass"), paint.circle("water", { x: 0, y: 0, radius: 4 })]);
+      // @ts-expect-error "lava" was not declared
+      terrain.layers([paint.fill("lava")]);
+      // @ts-expect-error a circle needs a radius
+      paint.circle("grass", { x: 0, y: 0 });
+    };
+    void compileOnly;
+    expectTypeOf(terrain.materials.at(0)?.id).toEqualTypeOf<string | undefined>();
+    expectTypeOf(terrainPatchHandlers["terrain.paint"]).not.toBeAny();
+  });
+
+  test("terrain patches are part of the MapPatch union once the terrain module is loaded", async () => {
+    await import("./terrain");
+    const patch: import("./model").MapPatch = { type: "terrain.paint", shape: { type: "circle", x: 1, y: 2, radius: 3 }, material: null };
+    expectTypeOf(patch.type).toExtend<string>();
+    // @ts-expect-error the shape is required
+    const missing: import("./model").MapPatch = { type: "terrain.paint", material: "grass" };
+    void missing;
   });
 });
