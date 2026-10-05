@@ -514,6 +514,59 @@ describe("driving the game", () => {
   });
 });
 
+describe("commands and state", () => {
+  it("accepts a command with a plain name and JSON arguments, and nothing else", () => {
+    expect(parseControl({ type: "command", name: "copy" })).toEqual({ type: "command", name: "copy" });
+    expect(parseControl({ type: "command", name: "place", args: { tilesetId: "ts", id: 3 } })).toEqual({ type: "command", name: "place", args: { tilesetId: "ts", id: 3 } });
+    expect(parseControl({ type: "command", name: "tool:select" })).toBeDefined();
+    for (const bad of [{ type: "command" }, { type: "command", name: "" }, { type: "command", name: "9lives" }, { type: "command", name: "a b" }, { type: "command", name: "x", args: () => 1 }, { type: "command", name: "__proto__ x" }]) {
+      expect(parseControl(bad)).toBeUndefined();
+    }
+    expect(parseEvent({ type: "state", key: "tool", value: "hand" })).toEqual({ type: "state", key: "tool", value: "hand" });
+    expect(parseEvent({ type: "state", key: "tool" })).toBeUndefined();
+    expect(parseEvent({ type: "state", key: "", value: 1 })).toBeUndefined();
+  });
+
+  it("runs the commands the game registered, with their arguments, and says when one is unknown or fails", async () => {
+    const calls: unknown[] = [];
+    const r = rig({ hostOptions: { commands: { copy: () => void calls.push("copy"), place: (args) => void calls.push(args), boom: () => { throw new Error("cannot"); } } } });
+    const frame = await r.connect();
+    const errors: string[] = [];
+    frame.onGameError((m) => void errors.push(m));
+    frame.command("copy");
+    frame.command("place", { id: "x", at: [1, 2] });
+    frame.command("boom");
+    frame.command("nope");
+    frame.command("toString"); // an inherited property is not a command
+    await tick(40);
+    expect(calls).toEqual(["copy", { id: "x", at: [1, 2] }]);
+    expect(errors).toEqual(["cannot", 'Unknown command "nope"', 'Unknown command "toString"']);
+    frame.dispose();
+    r.host.dispose();
+  });
+
+  it("tells the Studio what the game keeps, now and to a Studio that connects later", async () => {
+    const r = rig();
+    r.host.publish("canUndo", false); // before anybody is connected
+    const frame = await r.connect();
+    await tick(40);
+    expect(frame.state).toEqual({ canUndo: false });
+    const seen: unknown[] = [];
+    frame.onState("canUndo", (v) => void seen.push(v)); // the value it already has comes at once
+    r.host.publish("canUndo", true);
+    r.host.publish("tool", { name: "hand" });
+    await tick(40);
+    expect(seen).toEqual([false, true]);
+    expect(frame.state).toEqual({ canUndo: true, tool: { name: "hand" } });
+    frame.dispose();
+    const later = await r.connect();
+    await tick(40);
+    expect(later.state).toEqual({ canUndo: true, tool: { name: "hand" } });
+    later.dispose();
+    r.host.dispose();
+  });
+});
+
 describe("ending", () => {
   it("disposing the Studio frees the authority; a new Studio can connect after", async () => {
     const r = rig();

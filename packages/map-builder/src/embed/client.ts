@@ -1,4 +1,5 @@
 import type { TargetRef } from "../interaction/picking";
+import type { JsonValue } from "../model/json";
 import type { MapModel } from "../model/model";
 import type { PatchHandlers } from "../model/patches";
 import type { ApplyResult, Unsubscribe } from "../model/result";
@@ -69,6 +70,12 @@ export interface EditorFrame {
   onPointer(listener: (point: { x: number; y: number }) => void): Unsubscribe;
   /** Problems the game reports (a tool that cannot start, a message it did not understand). */
   onGameError(listener: (message: string) => void): Unsubscribe;
+  /** The last value of what the game keeps for the Studio (`tool`, `canUndo`…), by key. */
+  readonly state: Readonly<Record<string, JsonValue>>;
+  /** Called when the game changes a value, and with the ones it already had when a listener is added. */
+  onState(key: string, listener: (value: JsonValue) => void): Unsubscribe;
+  /** Asks the game to do something it registered: `frame.command("copy")`, `frame.command("place", { … })`. */
+  command(name: string, args?: JsonValue): void;
   setModes(modes: readonly string[]): void;
   setTool(tool: EditorTool): void;
   select(targets: readonly TargetRef[]): void;
@@ -133,6 +140,8 @@ export async function connectEditorFrame(options: ConnectEditorFrameOptions): Pr
   const onPaused = listeners<boolean>();
   const onPointer = listeners<{ x: number; y: number }>();
   const onGameError = listeners<string>();
+  const values = new Map<string, JsonValue>();
+  const stateListeners = new Map<string, Set<(value: JsonValue) => void>>();
 
   const send = (envelope: unknown): void => {
     try {
@@ -191,6 +200,17 @@ export async function connectEditorFrame(options: ConnectEditorFrameOptions): Pr
         return onPaused.emit(paused, report);
       case "pointer":
         return onPointer.emit({ x: event.x, y: event.y }, report);
+      case "state": {
+        values.set(event.key, event.value);
+        for (const listener of [...(stateListeners.get(event.key) ?? [])]) {
+          try {
+            listener(event.value);
+          } catch (error) {
+            report(error);
+          }
+        }
+        return;
+      }
       case "error":
         return onGameError.emit(event.message, report);
     }
@@ -265,6 +285,17 @@ export async function connectEditorFrame(options: ConnectEditorFrameOptions): Pr
     onPaused: onPaused.add,
     onPointer: onPointer.add,
     onGameError: onGameError.add,
+    get state() {
+      return Object.fromEntries(values);
+    },
+    onState(key, listener) {
+      let set = stateListeners.get(key);
+      if (!set) stateListeners.set(key, (set = new Set()));
+      set.add(listener);
+      if (values.has(key)) listener(values.get(key)!);
+      return () => void set!.delete(listener);
+    },
+    command: (name, args) => control({ type: "command", name, ...(args !== undefined ? { args } : {}) }),
     setModes: (modes) => control({ type: "modes", modes }),
     setTool: (tool) => control({ type: "tool", ...tool }),
     select: (targets) => control({ type: "select", targets }),

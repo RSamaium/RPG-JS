@@ -1,4 +1,4 @@
-import { isPlainObject, isJsonValue } from "../model/json";
+import { isPlainObject, isJsonValue, type JsonValue } from "../model/json";
 import type { TargetRef } from "../interaction/picking";
 
 /** Version of the messages between the Studio and a game. Both ends say theirs in the handshake. */
@@ -19,7 +19,9 @@ export type ControlMessage =
   | ({ readonly type: "tool" } & EditorTool)
   | { readonly type: "select"; readonly targets: readonly TargetRef[] }
   | { readonly type: "pause"; readonly paused: boolean }
-  | { readonly type: "camera"; readonly x: number; readonly y: number };
+  | { readonly type: "camera"; readonly x: number; readonly y: number }
+  /** Something only the game knows how to do: a command it registered (`copy`, `place`…). */
+  | { readonly type: "command"; readonly name: string; readonly args?: JsonValue };
 
 /** What the game tells the Studio. */
 export type EditorEvent =
@@ -34,6 +36,8 @@ export type EditorEvent =
     }
   | { readonly type: "paused"; readonly paused: boolean }
   | { readonly type: "pointer"; readonly x: number; readonly y: number }
+  /** A value the game keeps and the Studio shows (`tool`, `canUndo`, `layer`…). */
+  | { readonly type: "state"; readonly key: string; readonly value: JsonValue }
   | { readonly type: "error"; readonly message: string };
 
 /** Messages of the handshake, sent with `window.postMessage`. */
@@ -83,6 +87,10 @@ export function parseControl(raw: unknown): ControlMessage | undefined {
       return typeof raw.paused === "boolean" ? { type: "pause", paused: raw.paused } : undefined;
     case "camera":
       return isFinite(raw.x) && isFinite(raw.y) ? { type: "camera", x: raw.x, y: raw.y } : undefined;
+    case "command":
+      if (!isString(raw.name) || !/^[a-zA-Z][\w.:-]*$/.test(raw.name)) return undefined;
+      if (raw.args !== undefined && !isJsonValue(raw.args)) return undefined;
+      return { type: "command", name: raw.name, ...(raw.args !== undefined ? { args: raw.args as JsonValue } : {}) };
     default:
       return undefined;
   }
@@ -115,6 +123,8 @@ export function parseEvent(raw: unknown): EditorEvent | undefined {
       return typeof raw.paused === "boolean" ? { type: "paused", paused: raw.paused } : undefined;
     case "pointer":
       return isFinite(raw.x) && isFinite(raw.y) ? { type: "pointer", x: raw.x, y: raw.y } : undefined;
+    case "state":
+      return isString(raw.key) && raw.value !== undefined && isJsonValue(raw.value) ? { type: "state", key: raw.key, value: raw.value as JsonValue } : undefined;
     case "error":
       return typeof raw.message === "string" ? { type: "error", message: raw.message.slice(0, 1000) } : undefined;
     default:

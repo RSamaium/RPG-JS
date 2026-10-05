@@ -1,5 +1,6 @@
 import type { AuthorityConnection, AuthoritySession } from "../authority/authority";
 import type { TargetRef } from "../interaction/picking";
+import type { JsonValue } from "../model/json";
 import type { ServerMessage } from "../protocol";
 import {
   EDITOR_PROTOCOL_VERSION,
@@ -60,6 +61,11 @@ export interface EditorHostOptions {
    */
   readonly parentOrigin?: () => string | undefined;
   /**
+   * What the game can be asked to do beyond the tools of the view: `{ copy: () => … }`. The Studio calls them by
+   * name (`frame.command("copy")`) with JSON arguments. A command that throws is reported as an error, not obeyed twice.
+   */
+  readonly commands?: Readonly<Record<string, (args: JsonValue | undefined) => void>>;
+  /**
    * The window the Studio is in, when it is not the direct parent: a game that runs in a sandbox frame inside a
    * wrapper page talks to the top window. Defaults to the parent.
    */
@@ -72,6 +78,11 @@ export interface EditorHostOptions {
 export interface EditorHost {
   /** Whether a Studio is connected. */
   readonly connected: boolean;
+  /**
+   * Tells the Studio a value the game keeps (`publish("canUndo", true)`). Sent at once, and again to any Studio that
+   * connects later: it always has the last value of every key.
+   */
+  publish(key: string, value: JsonValue): void;
   /** The player is on another map, or the view of this one now exists: bind to them. */
   notifyMap(): void;
   dispose(): void;
@@ -99,6 +110,7 @@ export function createEditorHost(options: EditorHostOptions): EditorHost {
   let tool: EditorTool = { tool: "none" };
   let pointerTimer: ReturnType<typeof setInterval> | undefined;
   let disposed = false;
+  const published = new Map<string, JsonValue>();
 
   const post = (message: unknown): void => {
     try {
@@ -187,6 +199,16 @@ export function createEditorHost(options: EditorHostOptions): EditorHost {
       case "camera":
         options.camera?.(message.x, message.y);
         return;
+      case "command": {
+        const run = options.commands && Object.hasOwn(options.commands, message.name) ? options.commands[message.name] : undefined;
+        if (!run) return emit({ type: "error", message: `Unknown command "${message.name}"` });
+        try {
+          run(message.args);
+        } catch (error) {
+          emit({ type: "error", message: error instanceof Error ? error.message : String(error) });
+        }
+        return;
+      }
       default:
         break;
     }
@@ -237,6 +259,8 @@ export function createEditorHost(options: EditorHostOptions): EditorHost {
     port.addEventListener("message", onPort);
     port.start?.();
     bind();
+    // A Studio that connects late learns what the game already keeps.
+    for (const [key, value] of published) emit({ type: "state", key, value });
     if (pointerTimer) clearInterval(pointerTimer);
     if ((options.pointerEveryMs ?? 100) > 0) {
       let last = "";
@@ -273,6 +297,10 @@ export function createEditorHost(options: EditorHostOptions): EditorHost {
   return {
     get connected() {
       return port !== undefined;
+    },
+    publish(key, value) {
+      published.set(key, value);
+      emit({ type: "state", key, value });
     },
     notifyMap: () => {
       if (port && !disposed) bind();
