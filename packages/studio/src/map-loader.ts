@@ -12,8 +12,7 @@ import {
 import { resolveStudioElementSize } from "./studio-element-size";
 import { STUDIO_DIRECT_LOAD_MARKER } from "./map-streaming";
 import { assignStudioEventPlacementIds } from "./event-placement";
-import { isStudioEditorMode, prepareStudioEditor } from "./editor";
-import { isLocalGame, resolveStudioEditorOrigins } from "./editor/origins";
+import { runStudioMapExtensions } from "./map-extensions";
 
 // Type definitions for better type safety
 interface GlobalConfig {
@@ -742,8 +741,7 @@ export const loadMap = async (mapId: string) => {
 
   /**
    * What the runtime draws for one placed element (its tileset element, size, draw rule…), or `null` when its
-   * tileset or its element cannot be found: such an element is not drawn. The editor reuses it to draw again
-   * what it changes.
+   * tileset or its element cannot be found: such an element is not drawn. Map extensions get it too.
    */
   const resolveElementWithTileset = (
     tilesetsById: Map<string, TilesetElementsIndex>,
@@ -994,14 +992,22 @@ export const loadMap = async (mapId: string) => {
 
   await waitForMapImages(map);
 
-  // Opened by a Studio to be edited (iframe + `?editor`): the elements become something it can select and change.
-  if (isV2 && isStudioEditorMode()) {
-    prepareStudioEditor(client as never, { allowedOrigins: resolveStudioEditorOrigins(client.globalConfig as Record<string, unknown>, getStudioGameRuntimeConfig().apiBaseUrl, isLocalGame()) }).start({
+  // Whoever registered an extension (a tool, an overlay) gets the map as it was loaded.
+  if (isV2) {
+    runStudioMapExtensions({
+      engine: client as never,
       mapId: finalMapId,
       size: [map.params.width * 48, map.params.height * 48],
-      raw: { alwaysLow: elementsAlwaysLow, low: elementsLow, high: elementsHigh },
-      resolveOne: (raw, layerNumber) => resolveElementWithTileset(tilesetsById, raw, layerNumber, fallbackElementTilesetId),
-    })
+      elements: { alwaysLow: elementsAlwaysLow, low: elementsLow, high: elementsHigh },
+      resolveElement: (placed, layer) =>
+        resolveElementWithTileset(tilesetsById, placed, layer === "alwaysLow" ? 0 : layer === "low" ? 1 : 2, fallbackElementTilesetId),
+      updateData(patch) {
+        const scene = (client as unknown as { sceneMap?: { data?: { (): any; set(value: any): void } } }).sceneMap?.data;
+        const current = scene?.();
+        if (!scene || !current?.data) return;
+        scene.set({ ...current, data: { ...current.data, ...patch } });
+      },
+    });
   }
 
   return {
