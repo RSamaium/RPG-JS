@@ -753,6 +753,14 @@ What milestone 1 delivers on its own: a map usable without Studio (3.3), the
 builder game, the living map (the server changes elements during play), the
 tree-cutting style of game, and a shared element renderer.
 
+#### Step 5 implementation notes (playground POC)
+
+`playground/games/map-builder/` (port 5192): two maps (`forest` written in code, `meadow` in JSON) served by the same authority, and the three scenarios of the spec: a gameplay lever, a builder with ghost and strict rules then free editing, and tree cutting (shake, then removal and loot events). `src/scenarios.spec.ts` plays them end to end on both maps (31 tests), and the game was also checked by hand in a real browser (render, depth sorting with the hero, colliders, ghost, refusal, planting, drag and selection, map change).
+
+Found while building it, and fixed in the package: the client view needs the engine step to run its effects (`engine.onStep`), and connections are tracked by player id because hooks do not always receive the same player instance (a player changing map was never disconnected from the previous authority).
+
+Environment quirks, not related to the package: pixi 8.19 needs `optimizeDeps.include: ["pixi.js > @xmldom/xmldom"]` in the game's vite config (same issue in pressure-plate); the keyboard needs a first click on the page; `@rpgjs/testing` creates one client, so a second player is an authority session in tests; after a portal, the own player may display a stale position until the first input (RPG-JS client prediction), the server position is right.
+
 ### Decision gate — terrain feasibility
 
 Before committing to milestone 2, build a targeted prototype of **live editable

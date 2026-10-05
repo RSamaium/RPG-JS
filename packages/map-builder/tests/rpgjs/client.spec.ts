@@ -33,9 +33,8 @@ async function boot(clientOptions: Partial<Parameters<typeof createMapBuilderCli
     },
   ]);
   const features = [elements({ edit: true }), selection(), placement({ catalog, pipeline: [snapToGrid(32), requireFree()] })] as const;
-  const clientModule = makeModule("MapBuilderClient", [
-    { client: createMapBuilderClient({ assets, features, view: { textures, onError: () => undefined }, ...clientOptions } as never) },
-  ]);
+  const module = createMapBuilderClient({ assets, features, view: { textures, onError: () => undefined }, ...clientOptions } as never);
+  const clientModule = makeModule("MapBuilderClient", [{ client: module }]);
   fixture = await testing([
     ...provideServer({ assets, maps: serverMaps as never, authority: { placement: { catalog, pipeline: [snapToGrid(32), requireFree()] } } }),
     ...clientModule,
@@ -45,7 +44,7 @@ async function boot(clientOptions: Partial<Parameters<typeof createMapBuilderCli
   const player = await client.waitForMapChange("map1");
   const builder = getMapBuilder<typeof features>(client.client);
   const handle = (await Promise.race([builder.whenReady(), wait(1000).then(() => undefined)])) as MapBuilderHandle<typeof features> | undefined;
-  return { client, player, builder, handle, authority: getMapAuthority(player.getCurrentMap())! };
+  return { client, player, builder, handle, module, authority: getMapAuthority(player.getCurrentMap())! };
 }
 
 describe("joining on the client", () => {
@@ -148,6 +147,25 @@ describe("what the server does", () => {
     authority.effect("t1", "shake", { duration: 500 });
     await wait();
     expect(handle!.view.effects.running).toBe(1);
+  });
+});
+
+describe("time", () => {
+  test("effects move with the game: each step of the engine advances the view", async () => {
+    const { client, handle, authority, module } = await boot();
+    authority.effect("t1", "shake", { duration: 100 });
+    await wait();
+    expect(handle!.view.effects.running).toBe(1);
+
+    module.engine!.onStep!(client.client, 0, 40);
+    expect(handle!.view.effects.running).toBe(1); // 40 ms of 100
+    module.engine!.onStep!(client.client, 0, 70);
+    expect(handle!.view.effects.running).toBe(0);
+  });
+
+  test("a step with nothing joined does nothing", async () => {
+    const { client, module } = await boot({}, {});
+    expect(() => module.engine!.onStep!(client.client, 0, 16)).not.toThrow();
   });
 });
 

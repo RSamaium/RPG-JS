@@ -238,6 +238,10 @@ export function createMapBuilderClient<const F extends Features = readonly [Retu
       onConnected(engine: RpgClientEngine) {
         bindSocket(engine);
       },
+      // Time moves with the game: effects (a shake, a blink) are driven by the engine, not by a clock of their own.
+      onStep(engine: RpgClientEngine, _time?: number, deltaMs?: number) {
+        stateOf(engine).current?.view.tick(deltaMs ?? 16);
+      },
       onDisconnect(engine: RpgClientEngine) {
         leave(engine);
       },

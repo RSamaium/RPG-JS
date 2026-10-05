@@ -73,7 +73,8 @@ export interface MapBuilderServerOptions<C extends Catalog<string> = Catalog<str
 interface Entry {
   readonly ready: Promise<MapAuthority | undefined>;
   authority?: MapAuthority;
-  readonly connections: WeakMap<object, AuthorityConnection>;
+  /** By player id: the player object is not always the same instance from one hook to the other. */
+  readonly connections: Map<string, AuthorityConnection>;
   /** RPGJS events this module created, so it can remove them. */
   readonly eventIds: Set<string>;
   /** Event changes are applied one after the other: creating an event is asynchronous. */
@@ -82,7 +83,7 @@ interface Entry {
 
 const entries = new WeakMap<object, Entry>();
 /** The map each player is connected to. A player changing map does not always leave the old one through a hook. */
-const connectedTo = new WeakMap<object, { readonly map: object; readonly connection: AuthorityConnection }>();
+const connectedTo = new Map<string, { readonly map: object; readonly connection: AuthorityConnection }>();
 
 /** The authority of a map, once it exists. For game code: `getMapAuthority(player.getCurrentMap())?.apply(…)`. */
 export const getMapAuthority = (map: object | null | undefined): MapAuthority | undefined => (map ? entries.get(map)?.authority : undefined);
@@ -169,7 +170,7 @@ export function createMapBuilderServer<C extends Catalog<string> = Catalog<strin
   const createEntry = (map: RpgMap): Entry => {
     const entry: Entry = {
       ready: Promise.resolve(undefined),
-      connections: new WeakMap(),
+      connections: new Map(),
       eventIds: new Set(),
       queue: Promise.resolve(),
     };
@@ -229,17 +230,17 @@ export function createMapBuilderServer<C extends Catalog<string> = Catalog<strin
       const envelope = unwrap(raw);
       const map = player.getCurrentMap() as RpgMap | null | undefined;
       if (!envelope || !map || envelope.map !== map.id) return;
-      entries.get(map)?.connections.get(player)?.receive(envelope.message);
+      entries.get(map)?.connections.get(player.id)?.receive(envelope.message);
     });
   };
 
   /** Ends the connection of a player to a map (to whichever they are on, when none is given). */
   const disconnect = (player: RpgPlayer, only?: object): void => {
-    const current = connectedTo.get(player);
+    const current = connectedTo.get(player.id);
     if (!current || (only && current.map !== only)) return;
     current.connection.disconnect();
-    entries.get(current.map)?.connections.delete(player);
-    connectedTo.delete(player);
+    entries.get(current.map)?.connections.delete(player.id);
+    connectedTo.delete(player.id);
   };
 
   return defineModule<RpgServer>({
@@ -277,8 +278,8 @@ export function createMapBuilderServer<C extends Catalog<string> = Catalog<strin
             player.emit(MAP_BUILDER_CHANNEL, wrap(id, message));
           },
         });
-        entry.connections.set(player, connection);
-        connectedTo.set(player, { map, connection });
+        entry.connections.set(player.id, connection);
+        connectedTo.set(player.id, { map, connection });
       },
       onLeave(player: RpgPlayer, map: RpgMap) {
         disconnect(player, map);
