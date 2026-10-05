@@ -336,7 +336,7 @@ describe("map-builder public API types", () => {
     });
 
     test("intents are a discriminated union, extended by merging into the registry", () => {
-      expectTypeOf<MapIntent["type"]>().toEqualTypeOf<"element.move" | "element.remove" | "element.place" | "tilling.till">();
+      expectTypeOf<MapIntent["type"]>().toEqualTypeOf<"element.move" | "element.remove" | "element.place" | "tilling.till" | "terrain.paint">();
       const narrow = (intent: MapIntent) => {
         if (intent.type === "element.place") expectTypeOf(intent.catalogId).toEqualTypeOf<string>();
         if (intent.type === "tilling.till") expectTypeOf(intent).toEqualTypeOf<IntentOf<"tilling.till">>();
