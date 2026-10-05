@@ -1,0 +1,681 @@
+# Map Builder — Specification
+
+> Status: **draft for review**. No implementation exists yet. Every name and
+> signature below is a proposal; the API is considered experimental until the
+> Studio integration (step 6) validates it.
+>
+> Working package name: `@rpgjs/map-builder`.
+
+## 1. Goal
+
+Provide one map rendering and editing engine that works in three situations:
+
+| Situation | What the user can do |
+| --- | --- |
+| Plain game | Play on a rendered map. Nothing is editable. |
+| Builder game | Place and move elements under gameplay rules (trees, buildings), with a ghost preview and validation. |
+| Editor (RPGJS Studio, any SaaS) | Paint terrain and liquids, place and select freely, undo/redo, save through an API. |
+
+The map can also change **during gameplay**: a lever moves a gate, a quest
+adds an element. That is the same mechanism as editing, driven by the server.
+
+**The objective is a *modifiable map*:** one map whose content can change at
+runtime, whoever causes the change (a player, the server, an editor) and
+whatever the source of the data (code, JSON, Tiled, a database, Studio).
+
+Studio is the first consumer, not the owner. The package must work without
+Studio, without Angular and, for the core, without RPGJS. Studio is a
+**higher-level layer** that assembles a map source, assets, a catalog, rich
+features and a UI on top of this package (see 3.3).
+
+### Non-goals
+
+- Replacing the RPGJS server, physics or event system.
+- Defining a map file format on disk. The model describes the in-memory map and
+  its patches; persistence is delegated to an adapter.
+- Supporting a renderer other than Pixi / CanvasEngine.
+
+## 2. Current state (why this is needed)
+
+The same map is rendered by two separate code bases:
+
+| | Editor (`rpgjs.studio`) | Game (`RPG-JS`) |
+| --- | --- | --- |
+| Entry points | `map-canvas-renderer.service.ts` (~8.5k lines), `map-layers.service.ts` (~2.6k) | `packages/studio/src/map-renderer/` (~5.6k), `map-loader.ts` |
+| Technique | `HTMLCanvasElement` 2D inside Angular services | CanvasEngine / Pixi (`.ce` components) |
+| Coupling | Angular, PrimeNG, `TranslateService` | `RpgClientEngine` |
+
+`@rpgjs/render-map2d` already extracted part of the pixel computation (liquids,
+morphology). The editor still carries its own copies of road, carpet and
+nine-slice drawing (`drawing/*`), which `render-map2d` also implements.
+
+## 3. Architecture
+
+### 3.1 Layers
+
+```
+ intent ─▶ tool ─▶ pipeline (policy) ─▶ committer ─▶ patch ─▶ model ─▶ renderer ─▶ skin
+```
+
+| Layer | Responsibility | Replaceable to… |
+| --- | --- | --- |
+| **Source / Assets** | Where the map data and the images come from (3.3). | Studio API, JSON, Tiled, code |
+| **Model** | Map state, patches, inverses, revisions, history. Single source of truth. | — |
+| **Committer** | Where an intention becomes a fact. | `local` / `remote` |
+| **Pipeline** | Chain of middlewares that snap, validate or reject an intent. | free editor / strict game |
+| **Features** | Opt-in capabilities (terrain, liquids, elements, selection, placement…). | choose per context |
+| **Tools** | Gestures (select, drag, brush, place). Headless: they emit state and intents, no visuals. | game / editor |
+| **Skins** | Visual representation of tool state (selection frame, ghost, handles). | SaaS / game |
+| **Renderer** | Draws the model with CanvasEngine / Pixi. Shared by every context. | — |
+
+### 3.2 Packages
+
+One package with sub-path exports; `@rpgjs/render-map2d` stays separate.
+
+```
+@rpgjs/render-map2d            terrain pixel kernel: textures in, RGBA out. No DOM, Pixi, network.
+        ▲
+@rpgjs/map-builder
+  /model                       MapDefinition, MapSource, AssetResolver, createMapModel, patches, batches, history, localCommitter
+  /renderer                    createMapView (CanvasEngine / Pixi)
+  /features                    terrain, liquids, elements, selection, history, placement
+  /placement/rules             snapToGrid, requireTerrain, maxCount, minDistance…
+  /skins                       default skin, gameSkin
+  /server                      provideMapBuilder (authority, validation, broadcast)
+  /client                      provideMapBuilder (rendering, remote committer)
+  .                            re-exports the common surface
+```
+
+Dependency direction (nothing goes up):
+
+```
+render-map2d ◀ model ◀ renderer ◀ features ◀ client / server
+```
+
+`render-map2d` is **not** a second renderer. It computes terrain texture pixels
+(roads, liquids, nine-slice, morphology). The `renderer` calls it to build the
+textures it then displays as sprites. It stays separate so that it can run in
+Node or a Worker without Pixi (pre-rendering, thumbnails, export).
+
+### 3.3 Sources and assets (independent of Studio)
+
+Today the map renderer fetches its data from the Studio API
+(`map-loader.ts`, `data-provider`, `map-streaming.ts`). The package inverts this:
+the renderer receives a map that is **already described**, by any source, and
+never imports Studio.
+
+| Abstraction | Role | Implemented by |
+| --- | --- | --- |
+| `MapDefinition` | Neutral, minimal description of a map: size, tile size, terrain layers, elements, events. No notion of project, bundle or API. | Defined by the package |
+| `MapSource` | Provides a `MapDefinition`, loadable by regions for large maps: `load(id)`, `loadRegion(id, rect)`. | Studio, JSON file, Tiled, database, code |
+| `AssetResolver` | Turns a reference (`"tree-oak"`) into a texture or spritesheet plus metadata. | Studio (project CDN), local folder, a game |
+
+```
+MapSource ──▶ MapDefinition ──▶ model ──▶ renderer ◀── AssetResolver
+(Studio, JSON, Tiled, code)
+```
+
+Without Studio, the minimal case is a map written in code:
+
+```ts
+const forest = defineMap({
+  id: 'forest', size: [40, 30], tileSize: 32,
+  elements: [{ id: 't1', kind: 'tree-oak', x: 128, y: 96 }],
+})
+const view = createMapView({
+  model: createMapModel(forest),
+  assets: folderAssets('/assets'),
+  features: [elements()],
+})
+await view.mount(host)
+```
+
+Other sources plug in the same way (`httpMapSource({ baseUrl })`,
+`tiledMapSource()`). Studio sits one level above:
+
+```ts
+provideMapBuilder({
+  source: studioMapSource({ projectId }),
+  assets: studioAssets({ projectId }),
+  features: [...studioFeatures()],   // rich terrain, tilesets, editor tools
+})
+```
+
+Rules:
+
+- If Tiled and a local JSON file go through `MapSource`, Studio has no hidden
+  privilege. The POC must ship at least **two sources** (code and JSON) to prove
+  it.
+- Region loading is generic. The streaming logic of `map-streaming.ts` is
+  extracted; Studio keeps only its API calls.
+- Writing mirrors reading: the committer's `persist` is the equivalent of a
+  sink. Studio plugs its API, others plug a file or a database.
+- `MapDefinition` starts **minimal** (elements, events, classic tile layers).
+  Painted terrain (control mask) is an extension (`terrain: {…}`) provided by
+  some sources only, and arrives with milestone 2. Features that need it list
+  it in `requires`.
+- Studio-specific logic (drawing rules, element sizes, spritesheet handling)
+  stays in Studio and is injected through hooks such as `resolveElementSprite`.
+  The `AssetResolver` stays simple: reference in, texture and metadata out.
+- Studio's own format is converted by a normalizer (`map-normalizer.ts` already
+  exists). That normalizer is the boundary.
+
+### 3.4 Designing for the future
+
+The library will be extended in ways we cannot fully list today (pixel-precise
+terrain, HD-2D rendering, new editing tools, new game mechanics). The rule is to
+**reserve extension points now, and build the features later**. A seam is only
+added when a concrete feature on the roadmap (6.1) needs it; nothing is built
+"just in case".
+
+| Principle | What it means concretely |
+| --- | --- |
+| **Versioned data** | `MapDefinition` has a `version` and ships migrations. A map saved today loads tomorrow. |
+| **Lossless round-trip** | Fields unknown to the running version are preserved when a map is loaded and saved again, so an older tool never destroys data written by a newer one. |
+| **Namespaced extensions** | A feature stores its own data under `extensions['<feature-id>']` in the `MapDefinition`, with its own schema version. The core never needs to know about `terrain` or `postFx` to carry them. |
+| **Open patch union** | Patch and intent types are an open registry, extended by features through TypeScript declaration merging. Adding a feature adds its types, without editing the core. |
+| **Named render stages** | The renderer is an ordered list of stages (`ground`, `objects`, `overlay`, `lighting`, `post`). A feature contributes nodes or passes to a stage. Adding a stage or a pass does not change existing features. |
+| **No tile assumption in the core** | The world is in **pixels**. A tile grid is one feature, not the base. This is what allows pixel-precise terrain without a second coordinate system. |
+| **Depth from day one** | Elements carry a depth (`z`, sort anchor, optional height) in the data model, even if the first renderer only uses y-sorting. Adding it later would reopen the format. |
+| **Capability negotiation** | The renderer reports what the device supports (WebGL version, filters, texture limits). Features degrade by quality tier instead of failing. |
+| **Binary data by reference** | Large data (terrain masks, LUTs) is stored as blobs referenced from the definition, never inlined, so formats stay light and streamable. |
+| **Deterministic time** | Effects read time from an injectable clock, so animation and post effects stay testable and replayable. |
+| **Stable contract, private internals** | Only documented entry points are public. Everything else is internal and may change. The API is experimental until step 6 and then follows semver through changesets. |
+| **Feature API versioning** | `defineMapFeature` declares an `apiVersion`. The runtime can reject or adapt a feature built for another contract version, with a clear message. |
+| **Ordering and conflicts** | Features declare `requires` and `before`/`after` relations. Conflicting features fail at startup with an explicit message. |
+
+The renderer stays behind a thin internal interface to limit direct coupling to
+CanvasEngine. This is not to support another backend (a non-goal), but to keep
+upgrades of CanvasEngine and Pixi contained.
+
+## 4. Model and patches
+
+### 4.1 Patches
+
+A patch is a serializable, invertible description of one change.
+
+```ts
+interface MapPatch {
+  type: string               // 'element.move', 'element.add', 'terrain.paint'…
+  baseRevision: number       // revision the patch was computed against
+  [key: string]: unknown     // payload, serializable only
+}
+```
+
+Requirements:
+
+- JSON-serializable (sent over the network, stored, replayed).
+- Has an inverse, used by undo/redo and by rollback of rejected changes.
+- Carries `baseRevision`. The authority rejects or rebases a patch built on a
+  stale revision.
+
+Granularity:
+
+- Elements and events: one patch per element or event.
+- Painted terrain (control mask): **per region** patches (rectangles), never
+  full-map pixels.
+
+### 4.2 Model API (sketch)
+
+```ts
+const model = createMapModel(data, { committer })
+
+model.apply(patch)               // goes through the committer
+model.state                      // current snapshot
+model.revision
+model.history.undo() / redo()
+model.subscribe(cb)              // framework-neutral (no RxJS)
+```
+
+Observables are exposed through a minimal `subscribe(cb): unsubscribe`, so they
+plug into Angular signals, Vue, React or CanvasEngine without imposing RxJS.
+
+### 4.3 Batches (atomic transactions)
+
+Some changes only make sense together, e.g. "remove the tree **and** add the
+loot icons". A batch is applied atomically:
+
+```ts
+model.apply([
+  { type: 'element.remove', id: treeId },
+  { type: 'event.add', id: 'wood-1', graphic: 'wood-icon', x, y },
+])
+```
+
+- A batch gets a **single revision**, so a client that connects at any moment
+  sees either the state before or after, never in between.
+- Its inverse undoes the whole batch at once.
+- A rejected intent inside a batch rejects the whole batch.
+
+### 4.4 Element data
+
+Elements carry an optional serializable `data` payload, modified by patches
+(`element.data`). It holds per-element gameplay state, e.g. the number of
+remaining hits on a tree.
+
+- Advantage: it survives late joins and saves, and travels with the batch.
+- Trade-off: map data and gameplay data are mixed. Only state that must be part
+  of the map's persistent truth belongs there; the rest stays in game code.
+
+### 4.5 Transient effects (not part of the model)
+
+Purely visual, short-lived changes must **not** go through the model, or they
+would be persisted, undoable and replayed to late joiners. Examples: an element
+shaking, a flash, a puff of dust.
+
+```ts
+view.effects.play(treeId, 'shake', { duration: 300 })
+```
+
+- Effects are broadcast by the server as messages and animated by the
+  renderer; they are forgotten afterwards.
+- They are implemented as renderer hooks (section 10), with a small registry of
+  named effects that games and skins can extend.
+
+## 5. Committers
+
+The committer is the only part that knows *where* an intent becomes a fact. The
+renderer and the tools never know which one is in use.
+
+| Committer | Where the fact is created | Use |
+| --- | --- | --- |
+| `localCommitter` | Immediately in the browser; optional `persist(patches, revision)` for API saves | Standalone editor |
+| `remoteCommitter` | On the server, which numbers the revision and broadcasts to all clients | Gameplay |
+
+Authority rules for gameplay:
+
+- The client sends **intents**, never patches.
+- The server runs the pipeline, then applies, then broadcasts.
+- The client replays the same pipeline locally, only to preview (ghost valid /
+  invalid). The server never trusts that result.
+- No optimistic prediction in the first version. It can be added later without
+  changing the public API (the inverse patch already exists).
+
+Persistence in the editor sends incremental patches, with a periodic snapshot.
+
+### 5.1 Multiplayer (MMORPG)
+
+The `remote` committer already gives "one player changes the map, everybody sees
+it". A shared MMORPG map adds concerns that the rendering layer does not solve:
+
+| Concern | Proposal |
+| --- | --- |
+| **Server persistence** | A broadcast patch is not a save. The server stores the modified state per map (snapshot + patches since it). On Cloudflare (`samples/cloudflare-mmorpg`) this goes through the map instance's storage; to be verified. |
+| **Late joiners** | A client that connects receives the current snapshot plus the patches since its revision, not only future patches. The catch-up protocol is based on `revision` and must be specified. |
+| **Concurrency** | The server is sequential. Two players placing a tree on the same spot: the first wins, the second gets a structured rejection (`occupied`). The UI must handle rejections. |
+| **Permissions and abuse** | Who may change what, and where. The game owns the policy through the pipeline, but the package ships ready-made steps: `ownerOnly`, `rateLimit`, `protectedZone`, plus an action log to revert a player's changes. |
+| **Bandwidth** | Group brush strokes into one patch per stroke (never one per pixel) and throttle. |
+| **Instanced or shared map** | A design choice that changes storage and permissions: per-group instances keep changes local, a shared map makes them persistent and global. |
+
+Elements in multiplayer are realistic in milestone 1. Painted terrain in
+multiplayer depends on the terrain feasibility gate (section 13).
+
+## 6. Features
+
+A feature is a self-contained, opt-in capability. It groups: the intents it can
+express, an optional tool, its rendering, and its skin. Rendering and tool are
+separable: a game shows water without being able to paint it.
+
+```ts
+const tilling = defineMapFeature({
+  id: 'tilling',
+  requires: ['terrain'],               // explicit dependency, clear startup error
+  intents: { 'tilling.till': (i) => ({ type: 'terrain.paint', layer: 'soil', ...i }) },
+  pipeline: [snapToGrid(32), requireTerrain(['grass'])],
+  tool: ({ view }) => ({ onPointerDown: (p) => view.submit({ type: 'tilling.till', x: p.tileX, y: p.tileY }) }),
+  skin: TillingCursor,
+})
+```
+
+Rules:
+
+- Features are passed as **imported objects**, never as strings, so unused ones
+  are tree-shaken. Example: `features: [terrain(), placement({ catalog })]`.
+- A feature declares its `requires`. A missing dependency fails at startup with
+  an explicit message ("placement requires elements"), and lets Studio explain
+  why a tool is unavailable.
+- Built-in features and third-party features use the same `defineMapFeature`
+  contract. Studio gets no private API.
+
+Planned built-in features: `terrain`, `liquids`, `elements`, `events`,
+`selection`, `history`, `placement`.
+
+### 6.1 Planned extensions (not in milestone 1)
+
+Listed so that the seams of 3.4 are justified. None of these is built before its
+milestone.
+
+**Pixel-precise terrain** (milestone 2). The terrain is a control mask with a
+material palette, not a tile grid, matching what `render-map2d` already expects
+(`controlTexture`, render modes `hard`, `fade`, `nine-slice`, `water`, `custom`,
+transitions, stroke-based morphology).
+
+```ts
+const terrain = defineTerrain({
+  grass: { texture: '/img/grass.png', mode: { type: 'fade', width: 18 }, priority: 1 },
+  water: { texture: '/img/water.png', mode: { type: 'water', foam: true }, priority: 3, collision: true },
+})
+
+defineMap(assets, {
+  id: 'forest', size: [2560, 1920],            // pixels
+  terrain: terrain.layers([
+    paint.fill('grass'),
+    paint.circle('water', { x: 800, y: 600, radius: 180 }),
+    paint.stroke('road', { points: [[0, 1400], [900, 1380]], radius: 28 }),
+    paint.mask('/img/forest-mask.png', { palette: { '#00ff00': 'grass' } }),
+  ]),
+})
+```
+
+- Shapes, strokes and mask images are ways to **write** the mask; the model
+  stores the `controlTexture` (section 16, question 10, covers keeping the operations).
+- Runtime edits are region patches (one patch per brush stroke).
+- Materials with `collision: true` produce collision polygons from the mask,
+  which must be updated incrementally on a patch.
+- A map is either tile-based (milestone 1) or mask-based (milestone 2); the
+  `terrain` feature declares which one it needs.
+
+**HD-2D rendering** (milestone 2 or later). The look of games like Octopath
+Traveler, approximated in 2D with Pixi:
+
+| Effect | Approach |
+| --- | --- |
+| Detailed background, crisp sprites | Mask terrain with per-material `renderingStyle` (`pixel-art` / `hd-2d`, already in the terrain types) |
+| Tilt-shift depth of field, bloom, color grading | A `postFx` feature: a stack of post-processing filters per map or game state |
+| Dynamic lights and shadows | Extension of the existing lighting (ambient, spots, sprite shadows) |
+| Walking behind objects | Y-sorting plus element depth (already reserved in 3.4) |
+| Layered parallax, light perspective | Depth layers and optional mesh distortion |
+
+Real 3D camera and volumes are out of scope (Pixi is 2D). The `postFx` feature
+must also run in the editor (with a switch, since it hinders precise work) to
+keep WYSIWYG.
+
+```ts
+features: [elements(), terrain(), lighting(),
+  postFx({ tiltShift: { focus: 0.55, blur: 6 }, bloom: { threshold: 0.7, strength: 0.4 } })]
+```
+
+**Other candidates**: new tools (lasso, symmetry brush), collaborative editing
+(the patch log already supports it), time-of-day driven by game state.
+
+## 7. Pipeline (variable logic)
+
+Any logic that differs between contexts is a chain of middlewares, in the Koa
+style. A step may modify the intent, reject it with a reason, or pass it on.
+
+```ts
+placement({
+  pipeline: [
+    snapToGrid(32),
+    requireTerrain(['grass', 'dirt']),
+    maxCount('oak', 5),
+    (intent, ctx, next) => (ctx.actor.inventory.wood >= 2 ? next() : ctx.reject('not-enough-wood')),
+  ],
+})
+```
+
+- Free editor: `[snapToGrid(16)]`. Strict game: add the rules.
+- A rejection is structured (`{ ok: false, reason }`) so the UI can show the
+  reason and the server can log it.
+- The **same pipeline** is defined once in a shared module and runs on both
+  sides (client preview, server validation).
+- Painting tools have their own pipeline (radius, forbidden zones).
+
+## 8. Catalog
+
+For builder games, what can be placed is data, independent of Studio tilesets:
+
+```ts
+const catalog = defineCatalog([
+  { id: 'oak', sprite: 'tree-oak', footprint: [2, 2], pipeline: [/* rules */] },
+])
+```
+
+Studio supplies a rich catalog from its tilesets; a game supplies three trees.
+Same structure.
+
+## 9. Interaction and skins
+
+The interaction layer is **headless**: it publishes observable state (hovered,
+selected, dragging, ghost position and validity) and consumes intents. Skins
+are replaceable CanvasEngine components that read this state.
+
+```ts
+selection({ skin: studioSkin() })                 // handles, dashed frame, guides
+placement({ skin: gameSkin({ ghost: { valid: 0x66ff66, invalid: 0xff5555 } }) })
+selection({ skin: { frame: MyGlowSelection } })   // partial custom skin
+```
+
+Modes (`play`, `edit`, `inspect`) are sets of active tools, not separate
+engines. They can be layered (play the hero while a modifier key enables drag).
+
+## 10. Hooks
+
+The renderer and the features expose typed, side-effect-free extension points:
+`resolveElementSprite`, `onBeforeRenderElement`, `onTerrainTileRendered`,
+per-element filters and shaders, named transient effects (4.5) and custom
+terrain presets (already supported by `render-map2d`).
+
+## 11. RPGJS v5 integration
+
+Follows the existing conventions: no decorators, separate `/server` and
+`/client` entry points, `provideXxx(options)`, `defineModule` for game logic.
+
+```ts
+// shared/placement.ts   (rules written once)
+export const catalog = defineCatalog([/* … */])
+
+// server.ts
+export default createServer({
+  providers: [
+    provideMapBuilder({
+      features: [terrain(), liquids(), elements(), placement({ catalog })],
+    }),
+    provideServerModules([builderServer]),
+  ],
+})
+
+// client.ts
+startGame({
+  providers: [
+    provideMapBuilder({
+      features: [terrain(), liquids(), elements(), placement({ catalog, skin: gameSkin() }), selection()],
+    }),
+    provideClientModules([builderClient]),
+  ],
+})
+```
+
+Constraints from the module guide:
+
+- `server.ts` is never imported from `client.ts`; shared code lives in `shared.ts`.
+- Authoritative validation stays on the server, even though the pipeline also
+  runs on the client.
+- Standalone mode runs the server in the browser: the same `server.ts` must work
+  without a network, using the in-process committer. No secrets in the bundle.
+
+## 12. Integration outside RPGJS (Angular)
+
+The core has no RPGJS or Angular dependency.
+
+```ts
+model = createMapModel(data, { committer: localCommitter({ persist: (p, rev) => api.save(id, p, rev) }) })
+view  = createMapView({
+  model,
+  features: [terrain({ edit: true }), liquids({ edit: true }), elements({ edit: true }),
+             placement({ catalog, pipeline: [snapToGrid(16)] }),
+             selection({ skin: studioSkin() }), history()],
+})
+await view.mount(hostElement)
+view.tools.activate('brush')
+```
+
+A small adapter turns `subscribe(cb)` into Angular signals. Panels, toolbar and
+assistant of Studio only listen to `selection`, `history` and submit intents.
+
+## 13. Migration plan
+
+The work is split into **two milestones separated by a decision gate**. The
+first milestone proves the concept on elements and events, which are the
+simplest and most valuable part. The second one (painted terrain) is the
+riskiest, and is only started once measurements justify it.
+
+Every exit criterion below also requires the typing and unit-test conditions of
+section 14 for the code introduced in that step.
+
+### Milestone 1 — Elements and events (steps 0 to 5)
+
+Scope: `model`, committers, pipeline, `elements`, `events`, `selection`,
+`placement`, skins, RPGJS integration and a local POC. Painted terrain, liquids
+and morphology **stay in the existing editor** during this milestone.
+
+| Step | Content | Exit criterion |
+| --- | --- | --- |
+| 0 | This specification, reviewed. | Spec approved. |
+| 1 | Package skeleton; **`MapDefinition`, `MapSource`, `AssetResolver`** (3.3); `model`, patches, batches, `element.data`, inverses, revisions, history, `localCommitter`. Port existing history tests. | Runs under Node, no DOM; a map loads from code and from a JSON source. |
+| 2 | `renderer` on CanvasEngine for **elements and events**, plus the transient effects channel (4.5). Reference snapshots of the old editor and game render taken **before** porting each type. | Identical pixels, or documented accepted diff. |
+| 3 | Interaction: picking, selection, drag, placement pipeline, ghost, skins. | `play` and `edit` coexist on one scene. |
+| 4 | RPGJS integration: `/server`, `/client`, `remoteCommitter` (intent, policy, patch, broadcast, rejection with reason). Incremental update of element hitboxes and event positions on patch. Server persistence and late-join catch-up (5.1). | Server rejects a forged client patch; moving an element updates its collision; a late joiner sees the current state. |
+| 5 | Local POC in `playground/` with three scenarios and two map sources (code and JSON): **gameplay** (lever moves an element), **builder** (ghost, strict rules, then free edit), **tree cutting** (hits make the tree shake, then a batch removes it and adds loot events). Plus a standalone-mode run. | The three scenarios work end to end, on both sources. |
+
+What milestone 1 delivers on its own: a map usable without Studio (3.3), the
+builder game, the living map (the server changes elements during play), the
+tree-cutting style of game, and a shared element renderer.
+
+### Decision gate — terrain feasibility
+
+Before committing to milestone 2, build a targeted prototype of **live editable
+terrain on Pixi** and measure it. It is a prototype, not a deliverable.
+
+Questions to answer with numbers:
+
+- Can a brush stroke on the control mask re-render the affected region within a
+  frame budget on a large map (tiles of 512 px, ~96 tiles max today)?
+- Is the Pixi output close enough to the current Canvas 2D output (filtering,
+  blending, sub-pixel precision) for the reference snapshots to pass?
+- Does `render-map2d` plus workers keep the main thread free while editing?
+
+Possible outcomes:
+
+| Outcome | Decision |
+| --- | --- |
+| Performance and fidelity are acceptable | Proceed with milestone 2 as planned. |
+| Acceptable only for display, not for live painting | Render terrain on Pixi, keep a dedicated painting path for the editor. |
+| Not acceptable | Stop at milestone 1. Studio keeps its terrain editor; terrain is reused only for display. |
+
+### Milestone 2 — Terrain and Studio migration (steps 6 to 7)
+
+| Step | Content | Exit criterion |
+| --- | --- | --- |
+| 6a | Terrain, liquids and morphology features on the renderer; region patches for the control mask. | Reference snapshots pass for every terrain type. |
+| 6b | Temporary link into Studio (`link:` / `pnpm.overrides`, Vite alias) behind a feature flag, next to the old map. | Parity checked screen by screen. |
+| 7 | Remove the duplicates (`drawing/*`, `studio-element-renderer`), strip Angular from rendering services, document, publish. | Old code deleted. |
+
+If the gate leads to "stop at milestone 1", step 6b still applies to the part
+that was migrated (elements, events, selection), and step 7 is limited to the
+code that was actually replaced.
+
+### Versioning
+
+A changeset is added at each step (see `CONTRIBUTING.md`). The release-candidate
+version switch required by `AGENTS.md` is handled at step 7, or at the end of
+milestone 1 if the package is published before milestone 2.
+
+## 14. Typing and testing requirements
+
+Both are acceptance criteria of every step, not a final polish. A step is not
+done until its types and tests are in place.
+
+### 14.1 Typing
+
+The public API is the product, so it must be strongly typed and **inferred**
+rather than annotated by the user.
+
+- `strict` TypeScript, no `any` in the public surface. `unknown` plus narrowing
+  where the data is truly open.
+- **Patches and intents are discriminated unions** on `type`. A feature
+  registers its own intents, and the union is extended through the feature
+  list, so `view.submit({ type: 'tilling.till', ... })` is checked and an
+  unknown `type` fails to compile.
+- `defineMapFeature`, `defineCatalog`, `defineMap` and `createMapView` **infer**
+  their generics from their arguments (feature ids, intent payloads, catalog
+  kinds). `placement.start('oak')` only accepts ids that exist in the catalog.
+- `requires` is checked at the type level when possible (a feature that needs
+  `terrain` is rejected if `terrain()` is absent), and at startup otherwise.
+- `MapDefinition`, `MapSource`, `AssetResolver`, committers and pipeline steps
+  are exported interfaces, so third parties can implement them without casts.
+- Pipeline steps are typed on the **intent they receive**, so a rule for
+  `placement` cannot be attached to a painting tool by mistake.
+- Server and client entry points do not share runtime-only types: importing
+  `/client` never pulls `/server` types or code.
+
+### 14.2 Unit tests
+
+Tooling follows the repository: **Vitest**, `*.spec.ts` next to the source, and
+type tests with `expectTypeOf` run by `pnpm test:types`.
+
+| Area | What is tested |
+| --- | --- |
+| **Model** | Every patch type applies correctly; every patch has an inverse and `apply(inverse(apply(p)))` restores the state; revision numbering; stale `baseRevision` is rejected or rebased. |
+| **Batches** | Atomicity (all or nothing), single revision, whole-batch undo, a rejected step rejects the batch. |
+| **History** | Undo/redo stacks, limits, interaction with batches. Existing editor history tests are ported first. |
+| **Committers** | `localCommitter` calls `persist` with the right patches and revision. `remoteCommitter` is tested against an in-memory server: valid intent, rejected intent with a reason, forged patch, stale revision, broadcast to several clients. |
+| **Pipeline** | Each built-in step in isolation; chain order; `next()` semantics; a step that modifies, rejects or passes; the same pipeline gives the same result on client and server. |
+| **Sources** | `defineMap`, a JSON source and a Tiled source all produce an equivalent `MapDefinition`; `loadRegion` returns the right region; the Studio normalizer round-trips real Studio maps (fixtures). |
+| **Features** | Dependency resolution and the explicit error for a missing `requires`; each feature's intents map to the expected patches. |
+| **Multiplayer** | Late-join catch-up from a snapshot and a revision; two simultaneous conflicting intents (first wins, second rejected); `rateLimit`, `ownerOnly`, `protectedZone`. |
+| **Interaction** | Tool state machines (hover, select, drag, ghost validity) driven by synthetic pointer events, without rendering. |
+| **Renderer** | Reference **snapshot** tests per rendered type, taken from the old editor and game output **before** porting (see step 2); culling; incremental update touches only the affected objects. |
+| **Public types** | `public-api-types.spec.ts` with `expectTypeOf` for inference of intents, catalog ids and feature generics, plus `@ts-expect-error` cases that must fail to compile. Added to `tsconfig.typetests.json`. |
+
+Principles:
+
+- The model, pipeline, committers and sources run **under Node, without a DOM**.
+  If a test needs a browser, that is a sign the logic is in the wrong layer.
+- Pure logic is tested directly. Rendering is tested through snapshots and
+  through observable scene state, not by pixel-peeking by hand.
+- A bug fix lands with a regression test.
+- The POC scenarios of step 5 double as end-to-end tests where possible
+  (gameplay, builder, tree cutting, on both map sources).
+
+## 15. Risks
+
+| Risk | Mitigation |
+| --- | --- |
+| Rendering diverges between editor and game | Reference snapshots before porting each type. |
+| Live editable terrain is slow or differs from Canvas 2D | Deferred to milestone 2; decided at the terrain feasibility gate, from a measured prototype. |
+| API frozen too early | Mark experimental until step 6. |
+| Studio blocked by the migration | Feature flag and coexistence, never a big bang. |
+| Server code leaking into the client bundle | Separate `/server` and `/client` entry points. |
+| Third-party feature contract becomes a burden | Keep `defineMapFeature` minimal; expand only when Studio needs it. |
+
+## 16. Open questions
+
+1. **Package name.** `@rpgjs/map-builder` suggests a construction game although
+   it also covers plain display. Alternatives: `@rpgjs/map`, `@rpgjs/map-kit`.
+2. **Region patch format for painted terrain.** Raw mask rectangles, or a
+   compressed representation? Decide after measuring in step 2.
+3. **Permissions.** Does the package model editing roles (everyone, a game
+   master), or does the game own them through the pipeline? Current proposal:
+   the game owns them through the pipeline.
+4. **Terrain edited in gameplay.** Dig, till or change ground at runtime, or
+   elements only? It changes the size of the terrain patch work.
+5. **`render-map2d` naming.** Keep the name and clarify its role in the README
+   as a "terrain pixel kernel", or rename it. It stays a separate package.
+6. **`MapDefinition` as single source of truth.** Is it the one representation,
+   or does it synchronize with RPGJS's `RpgMap`? Current leaning: single source,
+   to be confirmed in step 4.
+7. **`element.data` boundary.** Which state belongs to the map's persistent
+   truth, and which stays in game code?
+8. **Shared vs instanced maps in multiplayer** (5.1), and where server
+   persistence lives on each deployment target.
+9. **Asset boundary.** How much of Studio's asset logic (drawing rules, element
+   sizes, spritesheets) can be injected through hooks without leaking into
+   `AssetResolver`.
+10. **Terrain mask resolution and operations.** Fixed 1:1 with world pixels, or
+    configurable per map with a default close to the current render tile setup?
+    Keep the original operations (circle, polygon, stroke) next to the rasterized
+    mask so a shape can be moved later, or keep only the mask?
+11. **Extension data ownership.** Who owns the schema of `extensions[...]` when a
+    third-party feature is removed: preserved untouched (current proposal) or
+    dropped on save?
