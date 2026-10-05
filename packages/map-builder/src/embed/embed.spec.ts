@@ -244,6 +244,22 @@ describe("who may talk", () => {
     r.host.dispose();
   });
 
+  it("announces itself only to the page that embeds it, when the browser says which it is", () => {
+    const posted: string[] = [];
+    const gameWin = new FakeWindow(GAME);
+    const parent: TargetLike = { postMessage: (_m, origin) => void posted.push(origin) };
+    const host = createEditorHost({ allowedOrigins: [STUDIO, "https://other.example.com"], window: gameWin as never, parent, authority: () => undefined, parentOrigin: () => STUDIO });
+    expect(posted).toEqual([STUDIO]);
+    host.dispose();
+    const wide = createEditorHost({ allowedOrigins: [STUDIO, "https://other.example.com"], window: gameWin as never, parent, authority: () => undefined, parentOrigin: () => undefined });
+    expect(posted.slice(1)).toEqual([STUDIO, "https://other.example.com"]);
+    wide.dispose();
+    // an origin the game does not allow is not announced to, even if the browser names it
+    const refused = createEditorHost({ allowedOrigins: [STUDIO], window: gameWin as never, parent, authority: () => undefined, parentOrigin: () => "https://evil.example.com" });
+    expect(posted.slice(3)).toEqual([STUDIO]);
+    refused.dispose();
+  });
+
   it("a game nobody allowed announces itself to nobody", async () => {
     const r = rig({ hostOptions: { allowedOrigins: [] } });
     await expect(connectEditorFrame({ frame: { contentWindow: r.frameTarget }, origin: GAME, window: r.studioWin, timeoutMs: 150, onError: () => undefined })).rejects.toThrow(/did not answer/);

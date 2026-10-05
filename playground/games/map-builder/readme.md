@@ -19,3 +19,14 @@ pnpm --filter @rpgjs/playground-map-builder dev   # http://localhost:5192
 `window.__mapBuilder` exposes the handle (view, mode, placement) in the console. A first click on the page is needed for the keyboard to reach the game.
 
 Tests: `src/scenarios.spec.ts` plays the scenarios end to end on both maps (`vitest run playground/games/map-builder`).
+
+## Studio shell (the game as the editor)
+
+`studio-shell/` is a stand-in for the Studio, on another origin: it embeds the game in an iframe and drives it through the editor channels of `@rpgjs/map-builder/embed`. It lists the elements, edits their properties, undoes, picks the tools (select, till, grass, place an oak), and pauses the game. The game keeps running while you edit.
+
+```bash
+pnpm --filter @rpgjs/playground-map-builder dev          # the game, http://localhost:5192
+pnpm --dir playground/games/map-builder exec vite --config studio-shell/vite.config.ts   # the shell, http://localhost:5194
+```
+
+Open `http://localhost:5194`. The game only becomes an editor when it is embedded with `?editor` from an allowed origin (`VITE_STUDIO_ORIGINS`).

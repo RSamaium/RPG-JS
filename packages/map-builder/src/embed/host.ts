@@ -53,7 +53,12 @@ export interface EditorHostOptions {
   readonly camera?: (x: number, y: number) => void;
   /** Who the Studio acts as in the pipelines. The authority must trust it for raw patches (`trustPatches`). Defaults to `{ editor: true }`. */
   readonly actor?: unknown;
-  readonly window?: WindowLike & { readonly parent?: TargetLike };
+  readonly window?: WindowLike & { readonly parent?: TargetLike; readonly location?: { readonly ancestorOrigins?: { readonly [index: number]: string | undefined } } };
+  /**
+   * Origin of the page that embeds the game, when the browser says (`location.ancestorOrigins`). Announcing only
+   * to it keeps the console clean; without it the game announces to every allowed origin.
+   */
+  readonly parentOrigin?: () => string | undefined;
   readonly parent?: TargetLike;
   /** How often the pointer position is reported, in milliseconds. Defaults to 100. 0 turns it off. */
   readonly pointerEveryMs?: number;
@@ -101,7 +106,9 @@ export function createEditorHost(options: EditorHostOptions): EditorHost {
   const emit = (event: EditorEvent): void => post({ ch: "event", message: event });
 
   const announce = (): void => {
-    for (const origin of options.allowedOrigins) {
+    const known = (options.parentOrigin ?? (() => win.location?.ancestorOrigins?.[0]))();
+    const targets = known && allowed(known) ? [known] : [...options.allowedOrigins];
+    for (const origin of targets) {
       try {
         parent.postMessage({ source: EDITOR_SOURCE, type: "ready", version: EDITOR_PROTOCOL_VERSION }, origin);
       } catch (error) {

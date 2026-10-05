@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Studio shell (playground)</title>
+    <style>
+      :root { color-scheme: light dark; --edge: #cfd5cf; --ink: #18221d; --paper: #f6f5f0; --forest: #17402f; }
+      @media (prefers-color-scheme: dark) { :root { --edge: #264234; --ink: #f3efe2; --paper: #0b1812; --forest: #86d9ae; } }
+      * { box-sizing: border-box; }
+      body { margin: 0; font: 13px/1.4 system-ui, sans-serif; background: var(--paper); color: var(--ink); display: grid; grid-template-columns: minmax(0, 1fr) 320px; height: 100vh; }
+      #stage { display: grid; grid-template-rows: auto 1fr auto; min-width: 0; }
+      header, footer { display: flex; gap: 6px; align-items: center; padding: 8px 10px; border-bottom: 1px solid var(--edge); flex-wrap: wrap; }
+      footer { border-top: 1px solid var(--edge); border-bottom: 0; font-size: 12px; opacity: .85; }
+      iframe { border: 0; width: 100%; height: 100%; background: #111; }
+      aside { border-left: 1px solid var(--edge); overflow: auto; padding: 10px; }
+      h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; margin: 14px 0 6px; opacity: .7; }
+      button { font: inherit; padding: 4px 9px; border: 1px solid var(--edge); background: transparent; color: inherit; border-radius: 6px; cursor: pointer; }
+      button[aria-pressed="true"] { background: var(--forest); color: var(--paper); border-color: var(--forest); }
+      button:disabled { opacity: .4; cursor: default; }
+      ul { list-style: none; margin: 0; padding: 0; max-height: 220px; overflow: auto; border: 1px solid var(--edge); border-radius: 6px; }
+      li { padding: 3px 8px; cursor: pointer; display: flex; justify-content: space-between; }
+      li[aria-selected="true"] { background: color-mix(in srgb, var(--forest) 22%, transparent); }
+      label { display: grid; grid-template-columns: 70px 1fr; gap: 6px; margin: 4px 0; align-items: center; }
+      input { font: inherit; width: 100%; padding: 3px 6px; border: 1px solid var(--edge); border-radius: 5px; background: transparent; color: inherit; }
+      .muted { opacity: .65; }
+      #error { color: #b3261e; }
+    </style>
+  </head>
+  <body>
+    <div id="stage">
+      <header id="toolbar"></header>
+      <iframe id="game" title="Game" allow="autoplay"></iframe>
+      <footer><span id="status">Connecting…</span></footer>
+    </div>
+    <aside id="panel"></aside>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

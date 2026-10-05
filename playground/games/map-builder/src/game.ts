@@ -8,6 +8,7 @@ import { assets } from "./shared/assets";
 import { forest } from "./shared/forest";
 import { registerTerrainIntents, terrainPatchHandlers } from "@rpgjs/map-builder/terrain";
 import { catalog, moveRules, placementRules, terrainRules } from "./shared/rules";
+import { isEditorActor, registerAuthority } from "./editor";
 
 /**
  * Two maps, from two sources: the forest is written in code, the meadow is a JSON file. The map
@@ -28,6 +29,8 @@ export const mapBuilderServer = () =>
     maps: loadMap,
     authority: {
       patchHandlers: [terrainPatchHandlers],
+      // Only the Studio session (created when this page is embedded as an editor) may send raw patches.
+      trustPatches: isEditorActor,
       // Tilling: painting the ground goes through the same rules the clients preview with.
       setup: (controller) => {
         registerTerrainIntents(controller);
@@ -49,4 +52,5 @@ export const mapBuilderServer = () =>
       author: (who) => (who as RpgPlayer).name,
     },
     events: { define: defineEvent },
+    onReady: (authority, map) => registerAuthority(authority.model.state.id, authority, map as never),
   });

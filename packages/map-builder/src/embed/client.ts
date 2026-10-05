@@ -1,5 +1,6 @@
 import type { TargetRef } from "../interaction/picking";
 import type { MapModel } from "../model/model";
+import type { PatchHandlers } from "../model/patches";
 import type { ApplyResult, Unsubscribe } from "../model/result";
 import type { ClientMessage, MapTransport, ServerMessage } from "../protocol";
 import { joinRemoteMap, type RemoteMap } from "../remote";
@@ -40,6 +41,8 @@ export interface ConnectEditorFrameOptions {
   readonly window?: WindowLike;
   /** Creates the channel. Defaults to `new MessageChannel()`. */
   readonly createChannel?: () => { port1: PortLike; port2: PortLike };
+  /** Handlers of the patch types the game's features add (`terrainPatchHandlers`): the Studio's model must know them to apply what it is told. */
+  readonly patchHandlers?: readonly PatchHandlers[];
   /** How long to wait for the first map, once connected. Passed to `joinRemoteMap`. */
   readonly mapTimeoutMs?: number;
   readonly onError?: (error: unknown) => void;
@@ -142,7 +145,11 @@ export async function connectEditorFrame(options: ConnectEditorFrameOptions): Pr
         return () => mine.delete(listener);
       },
     };
-    joinRemoteMap({ transport, ...(options.mapTimeoutMs !== undefined ? { timeoutMs: options.mapTimeoutMs } : {}) }).then(
+    joinRemoteMap({
+      transport,
+      ...(options.mapTimeoutMs !== undefined ? { timeoutMs: options.mapTimeoutMs } : {}),
+      ...(options.patchHandlers ? { model: { patchHandlers: options.patchHandlers } } : {}),
+    }).then(
       (joined) => {
         if (token !== generation || disposed) return joined.disconnect();
         remote = joined;

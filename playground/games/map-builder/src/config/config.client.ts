@@ -4,6 +4,7 @@ import { terrainPatchHandlers } from "@rpgjs/map-builder/terrain";
 import MapComponent from "../components/map.ce";
 import { features } from "../client-features";
 import { toast, unwireControls, wireControls } from "../controls";
+import { bindEditor, setEngine, unbindEditor } from "../editor";
 import { provideMain } from "../modules/main";
 import { assets } from "../shared/assets";
 import { MAP_SIZES, walls } from "../shared/walls";
@@ -33,13 +34,18 @@ export default {
       view: { modes: ["play"] },
       onJoin: (handle) => {
         wireControls(handle as never);
+        bindEditor(handle.mapId, handle.view);
         toast("Welcome: cut trees, pull the lever, plant with B");
       },
-      onLeave: (handle) => unwireControls(handle as never),
+      onLeave: (handle) => {
+        unwireControls(handle as never);
+        unbindEditor();
+      },
     }),
     provideClientModules([
       {
         spritesheets: [{ ...heroPreset, id: "hero", image: "hero.png" }],
+        engine: { onStep: (engine) => setEngine(engine) },
       },
     ]),
   ],
