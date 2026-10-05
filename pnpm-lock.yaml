@@ -230,6 +230,9 @@ importers:
       '@rpgjs/common':
         specifier: workspace:*
         version: link:../common
+      '@rpgjs/render-map2d':
+        specifier: workspace:*
+        version: link:../render-map2d
       '@rpgjs/server':
         specifier: workspace:*
         version: link:../server

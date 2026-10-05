@@ -68,6 +68,7 @@
   "devDependencies": {
     "@rpgjs/client": "workspace:*",
     "@rpgjs/common": "workspace:*",
+    "@rpgjs/render-map2d": "workspace:*",
     "@rpgjs/server": "workspace:*",
     "@rpgjs/testing": "workspace:*",
     "@types/node": "^25.9.3",

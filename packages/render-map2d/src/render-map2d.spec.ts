@@ -229,4 +229,34 @@ describe("@rpgjs/render-map2d", () => {
     expect(frame.pixels[dryTop + 2]).toBeLessThan(frame.pixels[dryTop]);
     expect(frame.pixels[wetBottom + 2]).toBeGreaterThan(frame.pixels[wetBottom]);
   });
+
+  test("renders a small region exactly like a large one with a smaller margin, as long as it covers the widest blend", () => {
+    const size = 256;
+    const control = new Uint8ClampedArray(size * size * 4);
+    for (let y = 0; y < size; y += 1) for (let x = 0; x < size; x += 1) {
+      const offset = (y * size + x) * 4;
+      control[offset] = (x - 128) ** 2 + (y - 128) ** 2 < 70 ** 2 ? 1 : 0; // a disc of dirt on grass
+      control[offset + 3] = 255;
+    }
+    const map = {
+      version: 1 as const, width: size, height: size, tileSize: 48,
+      textureGrid: { columns: 2, rows: 1, tileSize: 4 },
+      textures: [
+        { id: "grass", index: 0, label: "Grass", priority: 0 },
+        { id: "dirt", index: 1, label: "Dirt", priority: 1, defaultRenderMode: { type: "fade" as const, width: 18, curve: "smooth" as const } },
+      ],
+      transitions: [], morphology: [],
+      controlTexture: { width: size, height: size, palette: ["grass", "dirt"], pixels: control },
+      waterAnimation: { enabled: false, speed: 1, intensity: 1, direction: 0 },
+    };
+    const atlas = solid(8, 4, [0, 0, 0, 255]);
+    for (let x = 0; x < 8; x += 1) for (let y = 0; y < 4; y += 1) atlas.pixels.set(x < 4 ? [60, 150, 60, 255] : [150, 110, 70, 255], (y * 8 + x) * 4);
+    const mapWithAtlas = prepareTerrainMap({ map: { ...map, sourceTexture: "atlas" }, textures: { atlas } });
+    const bounds = { x: 150, y: 90, width: 60, height: 60 }; // across the edge of the disc
+    const reference = renderTerrainRegion(mapWithAtlas, { bounds });
+    expect(renderTerrainRegion(mapWithAtlas, { bounds, margin: 24 }).pixels).toEqual(reference.pixels);
+    // Without any margin, the blend at the edge of the region is cut short: this is why the default is wide.
+    expect(renderTerrainRegion(mapWithAtlas, { bounds, margin: 0 }).pixels).not.toEqual(reference.pixels);
+    expect(renderTerrainRegion(mapWithAtlas, { bounds, margin: 24 })).toMatchObject({ x: 150, y: 90, width: 60, height: 60 });
+  });
 });

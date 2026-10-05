@@ -49,11 +49,20 @@ export function disposeTerrainMap(terrain: PreparedTerrainMap): void {
 
 export function renderTerrainRegion(
   terrain: PreparedTerrainMap,
-  options: { bounds?: TerrainRenderBounds; timeMs?: number } = {},
+  options: {
+    bounds?: TerrainRenderBounds;
+    timeMs?: number;
+    /**
+     * Pixels computed around `bounds` so that blends and borders at its edge match a larger render. Defaults to
+     * a value that is safe for any map (at least three tiles); a caller that knows its widest blend (the widest
+     * fade, the water border) can pass less, which makes small regions much cheaper to render.
+     */
+    margin?: number;
+  } = {},
 ): TerrainRenderFrame {
   if (terrain.disposed) throw new Error("Prepared terrain map has been disposed");
   const requested = clampBounds(options.bounds, terrain.map.width, terrain.map.height);
-  const margin = options.bounds ? resolveRenderMargin(terrain) : 0;
+  const margin = options.bounds ? Math.max(0, Math.ceil(options.margin ?? resolveRenderMargin(terrain))) : 0;
   const bounds = clampBounds({
     x: requested.x - margin,
     y: requested.y - margin,

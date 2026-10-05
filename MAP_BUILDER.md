@@ -794,6 +794,17 @@ Possible outcomes:
 | Acceptable only for display, not for live painting | Render terrain on Pixi, keep a dedicated painting path for the editor. |
 | Not acceptable | Stop at milestone 1. Studio keeps its terrain editor; terrain is reused only for display. |
 
+#### Result of the terrain gate
+
+Prototype and measurements in `packages/map-builder/prototypes/terrain-gate/` (see its `RESULTS.md`). In short, on a 96-chunk synthetic map, in Chrome with a real GPU:
+
+- **Fidelity: identical.** The kernel's pixels, Canvas 2D and Pixi WebGL differ by 0 on a whole chunk (nearest filtering, 1:1, opaque terrain). Partial updates, after hundreds of strokes across chunk borders, equal a fresh full render (0 different pixels).
+- **Live painting: feasible with workers, not on the main thread.** The kernel costs about 290 ms per 512 px chunk and its cost follows the rendered area plus a margin of three tiles. With a `margin` option (added to `@rpgjs/render-map2d`) equal to the widest blend, a dab re-renders in about 12 ms (r=24) to 40 ms (r=64); on four workers the main thread stays at 16.7 ms frames and the stroke shows 13 to 50 ms after the pointer. A big brush needs the dirty rectangles coalesced (r=128: 94 ms instead of 228 ms and growing).
+- **Three things the prototype showed that the spec did not say.** A changed mask changes pixels up to one blend radius outside the dab, so the dirty rectangle is the dab grown by the widest blend. Frames from several workers must be applied in stroke order, or stale pixels overwrite newer ones. The first render of a whole map takes 9 to 12 s on four workers, so it must be progressive.
+- **Not covered**: one machine, synthetic scene without morphology, nine-slice or road presets; animated water per frame (stays on the current display path); low-end GPUs.
+
+**Decision: proceed with milestone 2** (outcome 1 of the table, with live painting designed around a worker pool). Open question 2 (region patch format) is answered in this direction: a stroke patch (disc or polyline and a material) that every worker applies to its own copy of the mask.
+
 ### Milestone 2 — Terrain and Studio migration (steps 6 to 7)
 
 | Step | Content | Exit criterion |
