@@ -1,5 +1,5 @@
 export { buildStudioTerrainCollisionPolygons } from "./collision-polygons";
-export { createStudioTerrainRenderData } from "./map-normalizer";
+export { createStudioTerrainRenderData, normalizeMorphologyFeatures } from "./map-normalizer";
 export { StudioTerrainChunkRenderer } from "./terrain-renderer/terrain-chunk-renderer";
 export type {
   StudioCollisionPolygon,

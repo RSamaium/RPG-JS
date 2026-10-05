@@ -7,4 +7,4 @@
 
 The editor channels also carry named commands (`frame.command("copy", args)`, registered by the game with `commands`) and values the game keeps for the Studio (`host.publish(key, value)`, `frame.onState(key, listener)`).
 
-The extension context also gives `tilesetImage(tilesetId)`, the address of the picture of an element tileset, for an overlay that shows the element about to be placed, `readData()`, the data the scene shows now, and `resolveAsset(fileName)`, the address a stored asset is served from.
+The extension context also gives `tilesetImage(tilesetId)`, the address of the picture of an element tileset, for an overlay that shows the element about to be placed, `readData()`, the data the scene shows now, and `resolveAsset(fileName)`, the address a stored asset is served from, and `normalizeMorphology(layer)`, the holes and walls the runtime draws for a stored terrain morphology layer.

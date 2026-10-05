@@ -8,6 +8,7 @@ import { getGameDataProvider, getStudioGameRuntimeConfig } from "./data-provider
 import {
   buildStudioTerrainCollisionPolygons,
   createStudioTerrainRenderData,
+  normalizeMorphologyFeatures,
 } from "./map-renderer";
 import { resolveStudioElementSize } from "./studio-element-size";
 import { STUDIO_DIRECT_LOAD_MARKER } from "./map-streaming";
@@ -1002,6 +1003,7 @@ export const loadMap = async (mapId: string) => {
       resolveElement: (placed, layer) =>
         resolveElementWithTileset(tilesetsById, placed, layer === "alwaysLow" ? 0 : layer === "low" ? 1 : 2, fallbackElementTilesetId),
       resolveAsset: (fileName) => resolveAssetSource(fileName),
+      normalizeMorphology: (layer) => normalizeMorphologyFeatures(layer),
       tilesetImage(tilesetId) {
         const wanted = toIdentifierString(tilesetId);
         const media = [...(Array.isArray(map.params.elementTilesets) ? map.params.elementTilesets : []), map.params.tileset].find(

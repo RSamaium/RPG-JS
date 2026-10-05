@@ -16,6 +16,8 @@ export interface StudioMapExtensionContext {
    * element cannot be found (such an element is not drawn).
    */
   resolveElement(placed: any, layer: StudioElementLayerName): any | null;
+  /** The features the runtime draws for a stored terrain morphology layer (holes and walls). */
+  normalizeMorphology(layer: unknown): unknown[];
   /** The address a stored asset path is served from. */
   resolveAsset(fileName: string): string;
   /** The address of the picture of an element tileset (what a ghost of an element about to be placed shows), or `undefined`. */

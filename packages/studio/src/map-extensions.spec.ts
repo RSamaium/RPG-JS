@@ -9,6 +9,7 @@ const context = (mapId = "map-1"): StudioMapExtensionContext => ({
   resolveElement: () => null,
   tilesetImage: () => undefined,
   resolveAsset: (name: string) => name,
+  normalizeMorphology: () => [],
   readData: () => undefined,
   updateData: () => undefined,
 });
