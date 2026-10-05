@@ -761,6 +761,18 @@ Found while building it, and fixed in the package: the client view needs the eng
 
 Environment quirks, not related to the package: pixi 8.19 needs `optimizeDeps.include: ["pixi.js > @xmldom/xmldom"]` in the game's vite config (same issue in pressure-plate); the keyboard needs a first click on the page; `@rpgjs/testing` creates one client, so a second player is an authority session in tests; after a portal, the own player may display a stale position until the first input (RPG-JS client prediction), the server position is right.
 
+#### Step 6 implementation notes (temporary link into the Studio runtime)
+
+Scope: the Studio **runtime** of this repository (`packages/studio`, `draw-map-v2.ce`). The Angular editor lives in another repository and is not touched; it can use the same entry points.
+
+- **Flag**: `mapBuilderRenderer: true` in the client global configuration (the Studio playground turns it on with `?mapBuilder`). Off by default; when off, the bridge is inert and `@rpgjs/map-builder` is never loaded (dynamic import). `@rpgjs/map-builder` is only a `devDependency` of `@rpgjs/studio` while the package is private.
+- **Partition** (`map-renderer/map-builder-bridge.ts`): `studioOnlyReason` keeps on the Studio renderer every element with a shadow, a light spot, liquid submersion, a drawing rule, a ground-shadow extraction, no image, or while collisions are debugged. It asks with the same functions the Studio renderer uses, without using up the shadow budget. Everything else goes to the map builder. An element is drawn by exactly one renderer, in its original order.
+- **Hosting**: the layer under the characters (`elementsLow`) must sort with them in the event layer, so it returns one container per element carrying its sort key (taken from the objects stage of a view); the two other layers return the root of a view. A layer destroys what it returned only two commits later, once the caller says it is mounted (`commit()`): the event layer keeps its own list of containers, and destroying one it still holds makes PixiJS throw.
+- **Checked**: unit tests (partition reasons, geometry equal to Studio for every plain case of the frozen references, lifetime of the layer); in a real browser on a Studio project, the same map with and without the flag: 81 + 9 elements drawn by the map builder and none left behind, and 8 pixels out of 578,064 differ visibly (animated water), the hero masked.
+- **Findings for the API**: the view needs no change to be hosted element by element (its node containers can be moved to another parent), but this relies on an internal detail; an official way to hand out node containers would be cleaner (decide with milestone 2). Nothing in the model had to change.
+- **Found on the way**: reading `mapBounds()` synchronously in the render effect of `draw-map-v2.ce` made the whole map fail to draw (reactive reads in that effect change when it fires): read it only when needed. The Studio declaration build had been failing since step 2 (the reference snapshots spec uses Node types); specs are now excluded from it. A transient `updateRenderable` error appears a few times while a map loads, with and without the flag (the Studio renderer destroys containers the event layer still holds); not caused by this link, left alone.
+- **Not covered yet** (milestone 2): shadows, lights, liquid submersion, drawing rules, terrain. After step 7, the duplicated code can go.
+
 ### Decision gate — terrain feasibility
 
 Before committing to milestone 2, build a targeted prototype of **live editable

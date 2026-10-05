@@ -37,6 +37,7 @@
     import StudioEventLayer from './studio-event-layer.ce'
     import { StudioTerrainWallOcclusionRenderer, StudioTerrainWallShadowRenderer } from '../map-renderer/terrain-renderer/terrain-chunk-renderer'
     import { StudioElementRenderer } from '../map-renderer/studio-element-renderer'
+    import { createMapBuilderElementLayer, partitionStudioElements } from '../map-renderer/map-builder-bridge'
     import { toCanvasWeatherOptions } from '@common/weather';
     import { assetsUrl } from "../constants";
     import { createViewportCullKey, getPixiLocalViewportBounds } from '../map-renderer/viewport-culling'
@@ -100,6 +101,21 @@
     const elementsAlwaysLowRenderer = new StudioElementRenderer()
     const elementsLowRenderer = new StudioElementRenderer()
     const elementsHighRenderer = new StudioElementRenderer()
+    // Temporary (MAP_BUILDER.md, step 6): with `mapBuilderRenderer: true` in the game configuration, the
+    // elements @rpgjs/map-builder can draw go through it. Loaded on first use; the others stay here.
+    const useMapBuilderRenderer = () => engine.globalConfig?.mapBuilderRenderer === true
+    let builderLayers = null
+    async function createBuilderLayers() {
+      return {
+        alwaysLow: await createMapBuilderElementLayer(),
+        low: await createMapBuilderElementLayer(),
+        high: await createMapBuilderElementLayer()
+      }
+    }
+    function getBuilderLayers() {
+      if (!builderLayers) builderLayers = createBuilderLayers()
+      return builderLayers
+    }
     let terrainWallOcclusionSerial = 0
     let terrainWallShadowSerial = 0
     let studioElementRenderSerial = 0
@@ -205,6 +221,8 @@
         elementsAlwaysLowRenderer.destroy(engine.sceneMap)
         elementsLowRenderer.destroy(engine.sceneMap)
         elementsHighRenderer.destroy(engine.sceneMap)
+        builderLayers?.then((layers) => Object.values(layers).forEach((layer) => layer.destroy()))
+        builderLayers = null
       }
     })
 
@@ -538,22 +556,25 @@
         ...elementPluginOptions()
       }
 
-      const alwaysLowChildren = await elementsAlwaysLowRenderer.renderElements(
-        withElementImages(elementsAlwaysLow()),
-        renderOptions
-      )
+      const builder = useMapBuilderRenderer()
+      const layers = builder ? await getBuilderLayers() : null
+      const drawLayer = async (renderer, layer, elements, mode) => {
+        const all = withElementImages(elements)
+        if (!layers) return renderer.renderElements(all, renderOptions)
+        const { builder: byBuilder, studio } = partitionStudioElements(all, renderOptions)
+        const studioChildren = await renderer.renderElements(studio, renderOptions)
+        const bounds = mapBounds()
+        const builderChildren = await layer.render(byBuilder, mode, [bounds.width, bounds.height])
+        return [...studioChildren, ...builderChildren]
+      }
+
+      const alwaysLowChildren = await drawLayer(elementsAlwaysLowRenderer, layers?.alwaysLow, elementsAlwaysLow(), 'world')
       if (currentSerial !== studioElementRenderSerial) return
 
-      const lowChildren = await elementsLowRenderer.renderElements(
-        withElementImages(elementsLow()),
-        renderOptions
-      )
+      const lowChildren = await drawLayer(elementsLowRenderer, layers?.low, elementsLow(), 'objects')
       if (currentSerial !== studioElementRenderSerial) return
 
-      const highChildren = await elementsHighRenderer.renderElements(
-        withElementImages(elementsHigh()),
-        renderOptions
-      )
+      const highChildren = await drawLayer(elementsHighRenderer, layers?.high, elementsHigh(), 'world')
       if (currentSerial !== studioElementRenderSerial) return
 
       elementsAlwaysLowChildren = alwaysLowChildren
@@ -566,6 +587,7 @@
       ])
       elementsHighChildren = highChildren
       syncPixiWorldChildren(elementsHighWorld, elementsHighChildren)
+      if (layers) Object.values(layers).forEach((layer) => layer.commit())
     }
 
     effect(() => {

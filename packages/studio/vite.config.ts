@@ -81,6 +81,7 @@ function createBuildConfig(target: BuildTarget, watch: boolean) {
           ]),
       dts({
         include: ["src/**/*.ts"],
+        exclude: ["src/**/*.spec.ts"],
         outDirs: `dist/${target}`,
         entryRoot: "src",
         tsconfigPath,

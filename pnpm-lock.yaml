@@ -373,6 +373,9 @@ importers:
       '@canvasengine/compiler':
         specifier: 2.4.0
         version: 2.4.0(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
+      '@rpgjs/map-builder':
+        specifier: workspace:*
+        version: link:../map-builder
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0

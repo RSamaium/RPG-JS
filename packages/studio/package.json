@@ -51,6 +51,7 @@
   ],
   "devDependencies": {
     "@canvasengine/compiler": "2.4.0",
+    "@rpgjs/map-builder": "workspace:*",
     "pixi.js": "^8.19.0",
     "vite": "^8.0.16",
     "vite-plugin-dts": "^5.0.2"
