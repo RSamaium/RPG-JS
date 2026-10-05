@@ -6,3 +6,4 @@ export * from "./patches";
 export * from "./define";
 export * from "./scheduler";
 export * from "./kernel";
+export * from "./editing";

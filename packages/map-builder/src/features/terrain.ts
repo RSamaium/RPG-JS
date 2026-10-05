@@ -1,5 +1,7 @@
 import { Container, Sprite, Texture, TextureSource } from "pixi.js";
 import type { RasterImage } from "@rpgjs/render-map2d";
+import type { InteractionController } from "../interaction/controller";
+import type { PipelineStep } from "../interaction/pipeline";
 import type { MapChange } from "../model/model";
 import type { Unsubscribe } from "../model/result";
 import { defineMapFeature, type MapFeature } from "../renderer/feature";
@@ -8,6 +10,7 @@ import { readTerrain, tryReadTerrain } from "../terrain/data";
 import { dirtyOfPatch, globalOverlayMaterials, renderMargin, widestBlend, type MaterialSource, type TerrainRenderInit } from "../terrain/kernel";
 import { readRect, shapeBounds } from "../terrain/mask";
 import { createTerrainScheduler, type TerrainFrame, type TerrainScheduler } from "../terrain/scheduler";
+import { registerTerrainIntents, terrainBrush, type BrushApi } from "../terrain/editing";
 import type { MaskRect, TerrainData } from "../terrain/types";
 
 export const TERRAIN_FEATURE_ID = "terrain";
@@ -36,6 +39,15 @@ export interface TerrainOptions {
   readonly surface?: TerrainSurfaceFactory;
   /** Receives non-fatal problems (an image that did not load, a render that failed). Defaults to `console.warn`. */
   readonly onError?: (error: unknown) => void;
+  /**
+   * Make the terrain editable: registers the `terrain.paint` intent and the brush (`view.terrain.brush`).
+   * Passing `pipeline` also turns it on.
+   */
+  readonly edit?: boolean;
+  /** Rules every painting goes through, whoever asks: the brush, `view.submit`, a game. */
+  readonly pipeline?: readonly PipelineStep<"terrain.paint">[];
+  /** Modes in which the brush is active. Defaults to `["edit"]`. */
+  readonly brushModes?: readonly string[];
 }
 
 export interface TerrainApi {
@@ -45,6 +57,8 @@ export interface TerrainApi {
   readonly pending: number;
   /** The backend in use, once there is one. */
   readonly backend: TerrainBackend | undefined;
+  /** The brush, when the terrain is editable (`terrain({ edit: true })`). */
+  readonly brush: BrushApi | undefined;
 }
 
 /** Pixels of an image, decoded in the browser. */
@@ -281,7 +295,15 @@ export function terrain(options: TerrainOptions = {}): MapFeature<"terrain", Ter
         }
       };
 
-      const stops: Unsubscribe[] = [host.model.subscribe(onChange), host.onViewport((next) => { viewport = next; scheduler?.setViewport(next); })];
+      const editable = options.edit === true || options.pipeline !== undefined;
+      const brush = editable ? terrainBrush(options.brushModes ? { modes: options.brushModes } : {}) : undefined;
+      const stops: Unsubscribe[] = [];
+      if (editable) {
+        stops.push(registerTerrainIntents(host.interaction as unknown as InteractionController));
+        if (options.pipeline) stops.push(host.interaction.usePipeline("terrain.paint", options.pipeline));
+        stops.push(host.interaction.addTool(brush!.tool));
+      }
+      stops.push(host.model.subscribe(onChange), host.onViewport((next) => { viewport = next; scheduler?.setViewport(next); }));
       restart();
 
       return {
@@ -296,6 +318,7 @@ export function terrain(options: TerrainOptions = {}): MapFeature<"terrain", Ter
           get backend() {
             return backend;
           },
+          brush: brush?.api,
         },
         dispose() {
           destroyed = true;

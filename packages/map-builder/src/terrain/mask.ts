@@ -102,7 +102,7 @@ const distanceToSegment2 = (px: number, py: number, ax: number, ay: number, bx: 
 };
 
 /** Whether the centre of a mask pixel is inside the shape. */
-function covers(mask: TerrainMask, shape: TerrainShape, x: number, y: number): boolean {
+export function covers(mask: TerrainMask, shape: TerrainShape, x: number, y: number): boolean {
   const wx = (x + 0.5) * mask.scale;
   const wy = (y + 0.5) * mask.scale;
   switch (shape.type) {
