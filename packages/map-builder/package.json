@@ -1,0 +1,37 @@
+{
+  "name": "@rpgjs/map-builder",
+  "repository": "github:RSamaium/RPG-JS",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Modifiable map model, renderer and editing features for RPGJS games and editors (experimental)",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./model": {
+      "import": "./dist/model/index.js",
+      "types": "./dist/model/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "test": "vitest run",
+    "test:types": "tsc -p tsconfig.test.json"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^25.9.3",
+    "vite": "^8.0.16",
+    "vite-plugin-dts": "^5.0.2",
+    "vitest": "^4.1.9"
+  }
+}

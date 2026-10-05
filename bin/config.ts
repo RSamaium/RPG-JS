@@ -71,6 +71,10 @@ export const packages = (type: "build" | "dev") => {
       buildScript,
     },
     {
+      name: "map-builder",
+      buildScript,
+    },
+    {
       name: "common",
       buildScript,
       dependencies: createDependencies(packagesPath, ['physic']),

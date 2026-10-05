@@ -118,9 +118,9 @@ MapSource ──▶ MapDefinition ──▶ model ──▶ renderer ◀── A
 Without Studio, the minimal case is a map written in code:
 
 ```ts
-const forest = defineMap({
-  id: 'forest', size: [40, 30], tileSize: 32,
-  elements: [{ id: 't1', kind: 'tree-oak', x: 128, y: 96 }],
+const forest = defineMap(assets, {
+  id: 'forest', size: [2560, 1920],            // world size in pixels
+  elements: [el('tree-oak', { id: 't1', x: 128, y: 96 })],
 })
 const view = createMapView({
   model: createMapModel(forest),
@@ -150,10 +150,10 @@ Rules:
   extracted; Studio keeps only its API calls.
 - Writing mirrors reading: the committer's `persist` is the equivalent of a
   sink. Studio plugs its API, others plug a file or a database.
-- `MapDefinition` starts **minimal** (elements, events, classic tile layers).
-  Painted terrain (control mask) is an extension (`terrain: {…}`) provided by
-  some sources only, and arrives with milestone 2. Features that need it list
-  it in `requires`.
+- `MapDefinition` starts **minimal**: elements and events, in world pixels.
+  Tile layers and painted terrain (control mask) are data owned by the `terrain`
+  feature (`extensions.terrain`), provided by some sources only. Features that
+  need them list `terrain` in `requires`.
 - Studio-specific logic (drawing rules, element sizes, spritesheet handling)
   stays in Studio and is injected through hooks such as `resolveElementSprite`.
   The `AssetResolver` stays simple: reference in, texture and metadata out.
@@ -537,6 +537,44 @@ and morphology **stay in the existing editor** during this milestone.
 | 3 | Interaction: picking, selection, drag, placement pipeline, ghost, skins. | `play` and `edit` coexist on one scene. |
 | 4 | RPGJS integration: `/server`, `/client`, `remoteCommitter` (intent, policy, patch, broadcast, rejection with reason). Incremental update of element hitboxes and event positions on patch. Server persistence and late-join catch-up (5.1). | Server rejects a forged client patch; moving an element updates its collision; a late joiner sees the current state. |
 | 5 | Local POC in `playground/` with three scenarios and two map sources (code and JSON): **gameplay** (lever moves an element), **builder** (ghost, strict rules, then free edit), **tree cutting** (hits make the tree shake, then a batch removes it and adds loot events). Plus a standalone-mode run. | The three scenarios work end to end, on both sources. |
+
+#### Step 1 implementation notes
+
+Decisions taken while implementing step 1 (`packages/map-builder`, sub-path
+`/model`), which refine the sketches above:
+
+- **Package**: private and versioned `0.0.0` until the API is validated (step 6).
+  A changeset records each step.
+- **World in pixels**: `MapDefinition.size` is `[width, height]` in pixels;
+  `tileSize` is optional. Tile layers are deferred to the `terrain` feature.
+- **Depth**: `element.depth = { z?, anchorY?, height? }`, reserved in the format
+  and editable with `element.update`.
+- **Open patch registry**: `PatchRegistry` is a TypeScript interface that
+  features extend by declaration merging on `@rpgjs/map-builder/model`; runtime
+  handlers are registered with `createMapModel({ patchHandlers })`. Handlers are
+  pure and return `{ ok, state, inverse }`; they never throw.
+- **Rejections are values, not exceptions**: `apply` returns
+  `{ ok: true, revision, patches, inverse } | { ok: false, rejection }`, with an
+  open `code` and the `patchIndex` of the culprit.
+- **Sync or async by type**: `MapModel<R>` returns `R` from `apply`.
+  `localCommitter` gives `ApplyResult`, a remote committer will give
+  `Promise<ApplyResult>`. A committer is `attach(host)` + `commit(request)`; the
+  host's `integrate()` is the only way to change the model.
+- **Revisions**: one per successful `apply`, a batch included. An authority can
+  impose the next revision (`revision-gap` otherwise). `baseRevision` is checked
+  per patch; `onStale: "reject" | "rebase"` chooses the policy.
+- **History**: inverse patches, not state snapshots (the Studio history keeps
+  one snapshot list per layer). It records local changes only, strips
+  `baseRevision` from what it stores, and replays undo and redo *through the
+  committer*, so they are persisted and broadcast like any change. `coalesce`
+  merges a continuous edit (a drag) into one step; `group()` is synchronous;
+  default limit 50.
+- **Canonical form**: an empty `data` object is omitted. Unknown fields are
+  preserved at every level.
+- **Known limits**: element lookup is linear (an index will come with the
+  renderer if measurements justify it); a coalesced drag keeps every move in its
+  undo entry (patch compaction later); history entries become stale if someone
+  else removes the element they refer to (undo then returns a rejection).
 
 What milestone 1 delivers on its own: a map usable without Studio (3.3), the
 builder game, the living map (the server changes elements during play), the

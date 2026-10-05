@@ -21,7 +21,9 @@
       "@rpgjs/client": ["./packages/client/src"],
       "@rpgjs/physic": ["./packages/physic/src"],
       "@rpgjs/action-battle": ["./packages/action-battle/src"],
-      "@rpgjs/action-battle/server": ["./packages/action-battle/src/server.ts"]
+      "@rpgjs/action-battle/server": ["./packages/action-battle/src/server.ts"],
+      "@rpgjs/map-builder": ["./packages/map-builder/src/index.ts"],
+      "@rpgjs/map-builder/model": ["./packages/map-builder/src/model/index.ts"]
     }
   },
   "files": [
@@ -29,6 +31,7 @@
     "packages/action-battle/src/public-api-types.spec.ts",
     "packages/client/src/public-api-types.spec.ts",
     "packages/common/src/foundation.spec.ts",
+    "packages/map-builder/src/public-api-types.spec.ts",
     "packages/server/tests/server-api-types.spec.ts"
   ]
 }
