@@ -1001,6 +1001,7 @@ export const loadMap = async (mapId: string) => {
       elements: { alwaysLow: elementsAlwaysLow, low: elementsLow, high: elementsHigh },
       resolveElement: (placed, layer) =>
         resolveElementWithTileset(tilesetsById, placed, layer === "alwaysLow" ? 0 : layer === "low" ? 1 : 2, fallbackElementTilesetId),
+      resolveAsset: (fileName) => resolveAssetSource(fileName),
       tilesetImage(tilesetId) {
         const wanted = toIdentifierString(tilesetId);
         const media = [...(Array.isArray(map.params.elementTilesets) ? map.params.elementTilesets : []), map.params.tileset].find(
