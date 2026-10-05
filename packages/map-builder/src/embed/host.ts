@@ -53,12 +53,16 @@ export interface EditorHostOptions {
   readonly camera?: (x: number, y: number) => void;
   /** Who the Studio acts as in the pipelines. The authority must trust it for raw patches (`trustPatches`). Defaults to `{ editor: true }`. */
   readonly actor?: unknown;
-  readonly window?: WindowLike & { readonly parent?: TargetLike; readonly location?: { readonly ancestorOrigins?: { readonly [index: number]: string | undefined } } };
+  readonly window?: WindowLike & { readonly parent?: TargetLike; readonly location?: { readonly ancestorOrigins?: { readonly [index: number]: string | undefined; readonly length?: number } } };
   /**
    * Origin of the page that embeds the game, when the browser says (`location.ancestorOrigins`). Announcing only
    * to it keeps the console clean; without it the game announces to every allowed origin.
    */
   readonly parentOrigin?: () => string | undefined;
+  /**
+   * The window the Studio is in, when it is not the direct parent: a game that runs in a sandbox frame inside a
+   * wrapper page talks to the top window. Defaults to the parent.
+   */
   readonly parent?: TargetLike;
   /** How often the pointer position is reported, in milliseconds. Defaults to 100. 0 turns it off. */
   readonly pointerEveryMs?: number;
@@ -106,7 +110,15 @@ export function createEditorHost(options: EditorHostOptions): EditorHost {
   const emit = (event: EditorEvent): void => post({ ch: "event", message: event });
 
   const announce = (): void => {
-    const known = (options.parentOrigin ?? (() => win.location?.ancestorOrigins?.[0]))();
+    const known = (options.parentOrigin ?? (() => {
+      // The first ancestor that is allowed: the wrapper page of a sandbox is not, the Studio above it is.
+      const ancestors = win.location?.ancestorOrigins;
+      for (let i = 0; ancestors && i < (ancestors.length ?? 0); i += 1) {
+        const origin = ancestors[i];
+        if (origin && allowed(origin)) return origin;
+      }
+      return undefined;
+    }))();
     const targets = known && allowed(known) ? [known] : [...options.allowedOrigins];
     for (const origin of targets) {
       try {

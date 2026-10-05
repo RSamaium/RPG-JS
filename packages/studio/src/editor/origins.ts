@@ -24,3 +24,11 @@ export function resolveStudioEditorOrigins(config: Record<string, unknown>, apiB
   if (dev) origins.add(STUDIO_DEV_ORIGIN);
   return [...origins];
 }
+
+/**
+ * Whether the game is served from this machine (`localhost`): decided when the game runs, not when the library was
+ * built, because a build bakes `import.meta.env.DEV` in as `false`.
+ */
+export function isLocalGame(hostname = typeof location === "undefined" ? "" : location.hostname): boolean {
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+}

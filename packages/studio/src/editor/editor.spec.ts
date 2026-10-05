@@ -1,7 +1,7 @@
 import { createMapModel, type MapElement } from "@rpgjs/map-builder/model";
 import { describe, expect, it } from "vitest";
 import { buildEditableMap, editorIdOf, rawListsFromElements, resolveLists, type RawElementLists } from "./adapter";
-import { STUDIO_DEV_ORIGIN, resolveStudioEditorOrigins } from "./origins";
+import { STUDIO_DEV_ORIGIN, isLocalGame, resolveStudioEditorOrigins } from "./origins";
 import { registerStudioEditorMap, setStudioMapsPaused, unregisterStudioEditorMap } from "./pause";
 
 /** What a Studio map stores, and what the runtime makes of it (the tileset of the element is known, or not). */
@@ -105,6 +105,16 @@ describe("who may edit the game", () => {
     expect(resolveStudioEditorOrigins({}, undefined, false)).toEqual([]);
     expect(resolveStudioEditorOrigins({}, "/api", false)).toEqual([]); // a relative URL says nothing about the Studio
     expect(resolveStudioEditorOrigins({}, "not a url", false)).toEqual([]);
+  });
+});
+
+describe("is the game local", () => {
+  it("only on this machine, decided at run time", () => {
+    expect(isLocalGame("localhost")).toBe(true);
+    expect(isLocalGame("127.0.0.1")).toBe(true);
+    expect(isLocalGame("game.rpgjs.studio")).toBe(false);
+    expect(isLocalGame("localhost.evil.com")).toBe(false);
+    expect(isLocalGame("")).toBe(false);
   });
 });
 

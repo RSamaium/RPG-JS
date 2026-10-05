@@ -1,4 +1,5 @@
 import { Container } from "pixi.js";
+import type { EditorHost } from "@rpgjs/map-builder/embed";
 import { setStudioMapsPaused } from "./pause";
 import { buildEditableMap, resolveLists, type RawElementLists, type StudioLayerName } from "./adapter";
 
@@ -49,18 +50,41 @@ export function prepareStudioEditor(engine: EngineLike, options: { readonly allo
     plugins.push({ id: STUDIO_EDITOR_PLUGIN_ID, eventLayerPixiChildren: () => [holder] });
   }
 
-  let current: { stop(): void } | undefined;
+  // One host for the whole life of the page: a Studio that connected to it must not lose it when the game loads a
+  // map again (it does, at start) or goes to another one. Only what the host looks at is swapped.
+  let active: Run | undefined;
+  let host: Promise<EditorHost> | undefined;
   let generation = 0;
+
+  const ensureHost = (): Promise<EditorHost> => {
+    host ??= import("@rpgjs/map-builder/embed").then(({ createEditorHost }) =>
+      createEditorHost({
+        allowedOrigins: options.allowedOrigins,
+        // The game may run in a frame inside a wrapper page (a sandbox): the Studio is the top window, not the parent.
+        parent: (window.top ?? window.parent) as never,
+        authority: () => (active ? { id: active.id, authority: active.authority } : undefined),
+        view: () => active?.view as never,
+        setPaused(paused) {
+          setStudioMapsPaused(paused);
+          engine.gamePause?.set(paused);
+        },
+        onError: (error) => console.error("[studio editor]", error),
+      }),
+    );
+    return host;
+  };
 
   const handle: StudioEditorHandle = {
     start(map) {
       const token = ++generation;
-      current?.stop();
-      current = undefined;
-      void run(engine, holder, options.allowedOrigins, map)
-        .then((started) => {
+      const previous = active;
+      active = undefined;
+      previous?.stop();
+      void run(engine, holder, map)
+        .then(async (started) => {
           if (token !== generation) return started.stop();
-          current = started;
+          active = started;
+          (await ensureHost()).notifyMap();
         })
         .catch((error) => console.error("[studio editor]", error));
     },
@@ -69,18 +93,20 @@ export function prepareStudioEditor(engine: EngineLike, options: { readonly allo
   return handle;
 }
 
-async function run(
-  engine: EngineLike,
-  holder: Container,
-  allowedOrigins: readonly string[],
-  map: Parameters<StudioEditorHandle["start"]>[0],
-): Promise<{ stop(): void }> {
-  const [{ createMapAuthority }, { connectInMemory, joinRemoteMap }, { elements, selection }, { createMapView, attachMapView }, { createEditorHost }] = await Promise.all([
+/** The editing session of one map: its authority, and the view that brings the tools. */
+interface Run {
+  readonly id: string;
+  readonly authority: { connect(session: never): never };
+  readonly view: unknown;
+  stop(): void;
+}
+
+async function run(engine: EngineLike, holder: Container, map: Parameters<StudioEditorHandle["start"]>[0]): Promise<Run> {
+  const [{ createMapAuthority }, { connectInMemory, joinRemoteMap }, { elements, selection }, { createMapView, attachMapView }] = await Promise.all([
     import("@rpgjs/map-builder/authority"),
     import("@rpgjs/map-builder/remote"),
     import("@rpgjs/map-builder/features"),
     import("@rpgjs/map-builder/renderer"),
-    import("@rpgjs/map-builder/embed"),
   ]);
 
   const { definition, assets } = buildEditableMap({ id: map.mapId, size: map.size, raw: map.raw, resolveOne: map.resolveOne });
@@ -125,22 +151,13 @@ async function run(
   };
   const stopRedraw = authority.model.subscribe(() => redraw());
 
-  const host = createEditorHost({
-    allowedOrigins,
-    authority: () => ({ id: map.mapId, authority }),
-    view: () => view as never,
-    setPaused(paused) {
-      setStudioMapsPaused(paused);
-      engine.gamePause?.set(paused);
-    },
-    onError: (error) => console.error("[studio editor]", error),
-  });
-
   return {
+    id: map.mapId,
+    authority: authority as never,
+    view,
     stop() {
       stopRedraw();
       stopModes();
-      host.dispose();
       detach();
       view.destroy();
       remote.disconnect();

@@ -260,6 +260,15 @@ describe("who may talk", () => {
     refused.dispose();
   });
 
+  it("looks for the Studio among the ancestors of the page: a wrapper that is not allowed is skipped", () => {
+    const posted: string[] = [];
+    const gameWin = Object.assign(new FakeWindow(GAME), { location: { ancestorOrigins: { 0: "https://game.example.com", 1: STUDIO, length: 2 } } });
+    const parent: TargetLike = { postMessage: (_m, origin) => void posted.push(origin) };
+    const host = createEditorHost({ allowedOrigins: [STUDIO, "https://other.example.com"], window: gameWin as never, parent, authority: () => undefined });
+    expect(posted).toEqual([STUDIO]);
+    host.dispose();
+  });
+
   it("a game nobody allowed announces itself to nobody", async () => {
     const r = rig({ hostOptions: { allowedOrigins: [] } });
     await expect(connectEditorFrame({ frame: { contentWindow: r.frameTarget }, origin: GAME, window: r.studioWin, timeoutMs: 150, onError: () => undefined })).rejects.toThrow(/did not answer/);
@@ -271,6 +280,34 @@ describe("who may talk", () => {
     const wrong = connectEditorFrame({ frame: { contentWindow: r.frameTarget }, origin: "https://other.example.com", window: r.studioWin, timeoutMs: 150, onError: () => undefined });
     await expect(wrong).rejects.toThrow(/did not answer/);
     r.host.dispose();
+  });
+
+  it("finds the game in a frame inside the frame (a sandbox wrapper), and only believes that window", async () => {
+    const studioWin = new FakeWindow(STUDIO);
+    const posted: Array<{ to: string; type: string }> = [];
+    const inner: TargetLike = { postMessage: (m) => void posted.push({ to: "inner", type: (m as { type: string }).type }) };
+    const outer: TargetLike = { postMessage: (m) => void posted.push({ to: "outer", type: (m as { type: string }).type }) };
+    const pending = connectEditorFrame({ frame: { contentWindow: outer }, origin: GAME, window: studioWin, timeoutMs: 300, onError: () => undefined, resolveWindow: () => inner });
+    studioWin.deliverFrom(outer, GAME, { source: EDITOR_SOURCE, type: "ready", version: EDITOR_PROTOCOL_VERSION }); // the wrapper answering: not believed
+    await expect(pending).rejects.toThrow(/did not answer/);
+    expect(posted.every((p) => p.to === "inner")).toBe(true);
+    expect(posted.some((p) => p.type === "hello")).toBe(true);
+    expect(posted.some((p) => p.type === "connect")).toBe(false);
+
+    const ok = connectEditorFrame({ frame: { contentWindow: outer }, origin: GAME, window: studioWin, timeoutMs: 300, onError: () => undefined, resolveWindow: () => inner });
+    studioWin.deliverFrom(inner, GAME, { source: EDITOR_SOURCE, type: "ready", version: EDITOR_PROTOCOL_VERSION });
+    await ok; // the window inside answered: believed
+    expect(posted.some((p) => p.to === "inner" && p.type === "connect")).toBe(true);
+  });
+
+  it("goes on trying while the inner frame is not there yet", async () => {
+    const studioWin = new FakeWindow(STUDIO);
+    let ready = false;
+    const inner: TargetLike = { postMessage: () => undefined };
+    const pending = connectEditorFrame({ frame: { contentWindow: {} as TargetLike }, origin: GAME, window: studioWin, timeoutMs: 800, onError: () => undefined, resolveWindow: () => { if (!ready) throw new Error("no frame yet"); return inner; } });
+    setTimeout(() => { ready = true; }, 250);
+    setTimeout(() => studioWin.deliverFrom(inner, GAME, { source: EDITOR_SOURCE, type: "ready", version: EDITOR_PROTOCOL_VERSION }), 500);
+    await pending;
   });
 
   it("refuses a game built with another protocol version, saying so", async () => {

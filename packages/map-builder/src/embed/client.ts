@@ -36,6 +36,12 @@ export interface ConnectEditorFrameOptions {
   readonly frame: { readonly contentWindow: TargetLike | null } | TargetLike;
   /** Origin of the game, e.g. `"https://game.example.com"`. Nothing from another origin is believed. */
   readonly origin: string;
+  /**
+   * Where the game really runs, when it is not the window of the frame itself: a page that wraps the game in
+   * another frame (a sandbox) gives the inner window, e.g. `(outer) => outer.frames[0]`. Messages are sent to it, and
+   * only messages that come from it are believed.
+   */
+  readonly resolveWindow?: (frameWindow: TargetLike) => TargetLike | null | undefined;
   /** How long to wait for the game to answer. Defaults to 15000. */
   readonly timeoutMs?: number;
   readonly window?: WindowLike;
@@ -100,7 +106,15 @@ export async function connectEditorFrame(options: ConnectEditorFrameOptions): Pr
   const win = options.window ?? (globalThis as unknown as { window?: WindowLike }).window;
   if (!win) throw new Error("connectEditorFrame needs a window");
   const report = options.onError ?? ((error: unknown) => console.error("[map-builder editor]", error));
-  const target = (): TargetLike | null => ("contentWindow" in options.frame ? options.frame.contentWindow : options.frame);
+  const target = (): TargetLike | null => {
+    const frameWindow = "contentWindow" in options.frame ? options.frame.contentWindow : options.frame;
+    if (!frameWindow || !options.resolveWindow) return frameWindow;
+    try {
+      return options.resolveWindow(frameWindow) ?? null;
+    } catch {
+      return null; // the inner frame is not there (yet)
+    }
+  };
   const makeChannel = options.createChannel ?? (() => new MessageChannel() as unknown as { port1: PortLike; port2: PortLike });
 
   let port: PortLike | undefined;
