@@ -43,6 +43,14 @@
     "./remote": {
       "import": "./dist/remote/index.js",
       "types": "./dist/remote/index.d.ts"
+    },
+    "./server": {
+      "import": "./dist/server/index.js",
+      "types": "./dist/server/index.d.ts"
+    },
+    "./client": {
+      "import": "./dist/client/index.js",
+      "types": "./dist/client/index.d.ts"
     }
   },
   "files": [
@@ -53,17 +61,41 @@
     "build": "vite build",
     "dev": "vite build --watch",
     "test": "vitest run",
-    "test:types": "tsc -p tsconfig.test.json"
+    "test:types": "tsc -p tsconfig.test.json",
+    "test:rpgjs": "vitest run --root ../.. packages/map-builder/tests"
   },
   "license": "MIT",
   "devDependencies": {
+    "@rpgjs/client": "workspace:*",
+    "@rpgjs/common": "workspace:*",
+    "@rpgjs/server": "workspace:*",
+    "@rpgjs/testing": "workspace:*",
     "@types/node": "^25.9.3",
+    "canvasengine": "2.4.0",
     "pixi.js": "8.19.0",
     "vite": "^8.0.16",
     "vite-plugin-dts": "^5.0.2",
     "vitest": "^4.1.9"
   },
   "peerDependencies": {
-    "pixi.js": "^8.0.0"
+    "pixi.js": "^8.0.0",
+    "@rpgjs/common": "workspace:*",
+    "@rpgjs/server": "workspace:*",
+    "@rpgjs/client": "workspace:*",
+    "canvasengine": "^2.4.0"
+  },
+  "peerDependenciesMeta": {
+    "@rpgjs/common": {
+      "optional": true
+    },
+    "@rpgjs/server": {
+      "optional": true
+    },
+    "@rpgjs/client": {
+      "optional": true
+    },
+    "canvasengine": {
+      "optional": true
+    }
   }
 }

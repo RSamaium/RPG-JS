@@ -16,6 +16,8 @@ editor or both.
 | `@rpgjs/map-builder/protocol` | The messages between a client and the authority of a map, validated. | no |
 | `@rpgjs/map-builder/authority` | The authority over a map: decides, tells everybody, catches clients up, persists. Runs on a server. | no |
 | `@rpgjs/map-builder/remote` | The client side: a model that asks the authority and follows everybody's changes. | no |
+| `@rpgjs/map-builder/server` | RPGJS: one authority per map, colliders, events. | no (needs `@rpgjs/server`) |
+| `@rpgjs/map-builder/client` | RPGJS: joins the map, view, prediction colliders. | yes (needs `@rpgjs/client`) |
 
 ```ts
 import { createMapModel, defineAssets, defineMap, el } from "@rpgjs/map-builder/model";
@@ -221,6 +223,57 @@ bindRemoteEffects(remote, view.effects);
   the client to preview and on the authority to decide.
 - `connectInMemory(authority)` links a client and an authority with no network: for tests,
   demos, and single-player games that still want the rules.
+
+## In an RPGJS game
+
+```ts
+// server.ts
+import { createServer } from "@rpgjs/server";
+import { provideMapBuilder, getMapAuthority } from "@rpgjs/map-builder/server";
+
+export default createServer({
+  providers: [
+    provideMapBuilder({
+      assets,                                          // a server has no image to measure: declare `size` or `frame`
+      maps: { forest },                                // by RPGJS map id; a function or a MapSource work too
+      authority: { placement: { catalog, pipeline: [snapToGrid(32), requireFree()] } },
+      persist: (map) => ({ store: roomStorageMapStore(map) }),   // optional
+    }),
+  ],
+});
+
+// anywhere in game code: a lever
+getMapAuthority(player.getCurrentMap())?.apply([{ type: "element.remove", id: "gate" }]);
+
+// client.ts
+import { startGame } from "@rpgjs/client";
+import { provideMapBuilder, getMapBuilder } from "@rpgjs/map-builder/client";
+
+startGame({
+  providers: [
+    provideMapBuilder({
+      assets,
+      features: [elements(), selection(), placement({ catalog })],
+      onJoin: (handle) => onKey("b", () => handle.view.placement.start("oak")),
+    }),
+  ],
+});
+```
+
+- **One authority per map**, created when the map loads and restored from the store if there is
+  one. A player is connected to the map they are on and to no other; what they send is checked
+  against the map it is about.
+- **Colliders**: each element with a hitbox gets a static collider in the physics of the server
+  and of the client (prediction), one namespace per element, so building only touches the
+  collider that changed. They are put back whenever the physics is rebuilt.
+- **Events** of the map become RPGJS dynamic events (`builder:<id>`), drawn with their `graphic`.
+  Give them behaviour with `events: { define: (event) => ({ hooks: { onAction } }) }`. They are
+  recreated when RPGJS wipes them on a map update. The client does not use `events()` for them,
+  since RPGJS already draws events.
+- **Drawing**: pass the view to the event layer of the map, so elements and characters are sorted
+  in depth together: `<EventLayerComponent pixiChildren={getMapBuilder(engine).pixiChildren} />`.
+  `handle.attachTo(container)` adds it anywhere else, without that sorting.
+- Standalone and MMORPG work the same: only `socket.emit`, `player.on` and `map.broadcast` are used.
 
 ### In a CanvasEngine scene
 

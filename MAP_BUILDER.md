@@ -712,6 +712,43 @@ The authority and its client are independent of RPGJS: `/protocol`, `/authority`
   behind). A server has no image to measure, so assets must declare a `size` or a `frame` for the
   authority to know footprints. Undo of another player's change is not coordinated.
 
+#### Step 4 implementation notes (RPGJS integration)
+
+`provideMapBuilder` exists twice, as `/server` and `/client`, following the `createModule` pattern
+of the other packages (no decorators, `defineModule`, `provide…`). `@rpgjs/common`,
+`@rpgjs/server`, `@rpgjs/client` and `canvasengine` are optional peer dependencies, and the package
+is built after them.
+
+- **Transport**: one socket event (`map-builder`). Server: `player.on` (bound once per player),
+  `player.emit` per connection. Client: `socket.on` / `socket.emit`. Every message carries the id
+  of its map in an envelope, so a player who changes map never applies the old map's changes.
+- **Server**: an authority per `RpgMap` (kept in a `WeakMap`, created in `onLoad`, which RPGJS runs
+  again on updates and restores, so everything is idempotent). Joining connects the player and
+  sends the map. **`map.onLeave` is not called on a `changeMap`**, so a connection ends when the
+  player joins another map, and an `send` to a player who is no longer on the map drops them.
+- **Colliders** use `replaceStreamedStaticHitboxes` / `clearStreamedStaticHitboxes`, public on the
+  server room and on the client scene, with one namespace per element. RPGJS has no public
+  add/remove for static obstacles, and wipes them when the physics world is rebuilt, hence the
+  re-application from `onPhysicsInit`.
+- **Events**: map events become dynamic RPGJS events with an id prefix, created, teleported and
+  removed in order (creation is asynchronous). RPGJS removes runtime events on a map update, so
+  `onLoad` recreates them. The graphic of a map event is used as an RPGJS graphic.
+- **Persistence**: `persist(map)` gives a `MapStore`. `roomStorageMapStore(map)` uses the storage of
+  the room (a field outside the public types, flagged as such), `keyValueMapStore` any key-value
+  storage. A store that fails makes the map non-modifiable and is reported.
+- **Client**: a channel bound to the socket buffers what arrives before the scene is loaded, then
+  `joinRemoteMap` builds the model, the view, the prediction colliders and the effects. Joining is
+  triggered from several hooks because they are not all called in every setup (in the test
+  harness `onAfterLoading` and `engine.onConnected` are not). The view is offered as a signal of
+  PixiJS children for `EventLayerComponent`, which is what sorts it with the characters.
+- **Tests** run the real server and client in memory (`@rpgjs/testing`) through the root Vitest
+  config (`tests/rpgjs`, `pnpm test:rpgjs`). The harness creates a single client, so several
+  players and map changes are tested with stand-ins for `RpgMap` and `RpgPlayer`.
+- **Known limits.** The view is not mounted for you: a game puts it in its event layer (or uses
+  `attachTo`); this is the part to check in a real browser in step 5. No `studioSkin`, no
+  turnkey placement controls. A large map in a Durable Object key-value store may exceed the value
+  size limit: write snapshots often or bring a store. Dynamic events are rebuilt one at a time.
+
 What milestone 1 delivers on its own: a map usable without Studio (3.3), the
 builder game, the living map (the server changes elements during play), the
 tree-cutting style of game, and a shared element renderer.

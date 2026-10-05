@@ -71,10 +71,6 @@ export const packages = (type: "build" | "dev") => {
       buildScript,
     },
     {
-      name: "map-builder",
-      buildScript,
-    },
-    {
       name: "common",
       buildScript,
       dependencies: createDependencies(packagesPath, ['physic']),
@@ -99,6 +95,12 @@ export const packages = (type: "build" | "dev") => {
       name: "testing",
       buildScript,
       dependencies: createDependencies(packagesPath, ['client', 'server']),
+    },
+    {
+      // Its /server and /client entries use the types of RPGJS, so it is built after them.
+      name: "map-builder",
+      buildScript,
+      dependencies: createDependencies(packagesPath, ['common', 'client', 'server']),
     },
     {
       name: "vue",
