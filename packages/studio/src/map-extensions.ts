@@ -16,6 +16,8 @@ export interface StudioMapExtensionContext {
    * element cannot be found (such an element is not drawn).
    */
   resolveElement(placed: any, layer: StudioElementLayerName): any | null;
+  /** The address of the picture of an element tileset (what a ghost of an element about to be placed shows), or `undefined`. */
+  tilesetImage(tilesetId: string): string | undefined;
   /**
    * Replaces part of the data the map is drawn with, and draws it again:
    * `{ elementsLow: [...resolved elements] }`. Whatever is not named is left as it is.
