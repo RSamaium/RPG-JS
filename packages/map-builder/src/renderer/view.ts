@@ -80,6 +80,12 @@ export interface MapViewOptions<
   readonly hooks?: MapViewHooks;
   /** Extra effects, by name, next to the built-in `shake` and `blink`. */
   readonly effects?: Readonly<Record<string, EffectDefinition>>;
+  /**
+   * Draw the sprites of the elements and events. Defaults to true. With `false` the view only keeps them as
+   * what can be picked and selected (their bounds and hitboxes), so that a game that draws the map itself can
+   * use the tools and the selection of the map builder without drawing everything twice. Nothing is loaded.
+   */
+  readonly draw?: boolean;
   /** Margin, in pixels, added around the viewport before something is hidden. Defaults to 64. */
   readonly cullingMargin?: number;
   /** Receives non-fatal problems. Defaults to `console.warn`, once per image. */
@@ -255,6 +261,7 @@ export function createMapView<
     view.node = node;
     view.container.zIndex = node.sortKey;
     view.container.visible = isVisible(node);
+    if (options.draw === false) return;
 
     const keep = new Set(node.parts.map((part) => part.key));
     for (const [key, entry] of view.sprites) {

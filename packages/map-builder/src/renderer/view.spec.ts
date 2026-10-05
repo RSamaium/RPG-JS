@@ -582,3 +582,25 @@ describe("the same view works with any committer", () => {
     expect((container(view, "elements/t1")!.children[0] as Sprite).x).toBe(321);
   });
 });
+
+describe("a view that does not draw", () => {
+  it("keeps what is on the map as something to pick, loads nothing and draws no sprite", async () => {
+    const textures = fakeTextures();
+    const { view } = setup({ draw: false }, textures);
+    await view.whenIdle();
+    expect(view.describe().map((node) => node.id).sort()).toEqual(["chest-1", "home", "t1", "t2"].sort());
+    expect(textures.loads).toEqual([]);
+    const sprites = (container: import("pixi.js").Container): number => container.children.reduce((count, child) => count + ("texture" in child ? 1 : 0) + sprites(child as import("pixi.js").Container), 0);
+    expect(sprites(view.root)).toBe(0);
+    // and the tools still work on it
+    expect(view.interaction.pick({ x: 130, y: 120 })?.id).toBe("t1");
+    view.destroy();
+  });
+
+  it("follows the model: what is added is described, what is removed is not", async () => {
+    const { view, model } = setup({ draw: false });
+    model.apply({ type: "element.remove", id: "t1" });
+    expect(view.describe().some((node) => node.id === "t1")).toBe(false);
+    view.destroy();
+  });
+});

@@ -12,6 +12,8 @@ import {
 import { resolveStudioElementSize } from "./studio-element-size";
 import { STUDIO_DIRECT_LOAD_MARKER } from "./map-streaming";
 import { assignStudioEventPlacementIds } from "./event-placement";
+import { isStudioEditorMode, prepareStudioEditor } from "./editor";
+import { resolveStudioEditorOrigins } from "./editor/origins";
 
 // Type definitions for better type safety
 interface GlobalConfig {
@@ -738,37 +740,36 @@ export const loadMap = async (mapId: string) => {
     return undefined;
   }
 
-  const mergeElementsWithTilesets = (
+  /**
+   * What the runtime draws for one placed element (its tileset element, size, draw rule…), or `null` when its
+   * tileset or its element cannot be found: such an element is not drawn. The editor reuses it to draw again
+   * what it changes.
+   */
+  const resolveElementWithTileset = (
     tilesetsById: Map<string, TilesetElementsIndex>,
-    elementsData: any[],
+    element: any,
     layerNumber: number,
     fallbackTilesetId?: string
-  ): any[] => {
-    if (!elementsData || elementsData.length === 0) {
-      return []
-    }
-
-    const mergedElements: any[] = []
-    elementsData.forEach((element) => {
+  ): any | null => {
       const tilesetId =
         toIdentifierString(element?.tilesetId) || toIdentifierString(fallbackTilesetId) || ''
       const tileset = tilesetsById.get(tilesetId)
-      if (!tileset) return
+      if (!tileset) return null
 
       const entry = resolveTilesetElement(tileset, element.id)
-      if (!entry) return
+      if (!entry) return null
 
       const tilesetElement = entry.element
       const rect = tilesetElement?.rect
-      if (!Array.isArray(rect) || rect.length < 4) return
+      if (!Array.isArray(rect) || rect.length < 4) return null
 
       const sourceWidth = toFiniteNumber(rect[2])
       const sourceHeight = toFiniteNumber(rect[3])
-      if (sourceWidth === null || sourceHeight === null) return
+      if (sourceWidth === null || sourceHeight === null) return null
 
       const x = toFiniteNumber(element.x)
       const y = toFiniteNumber(element.y)
-      if (x === null || y === null) return
+      if (x === null || y === null) return null
 
       const drawRule = resolveDrawRuleForElement(element, tileset, entry)
       const size = resolveStudioElementSize(
@@ -813,7 +814,23 @@ export const loadMap = async (mapId: string) => {
         mergedElement.drawRuleId = drawRuleId
       }
 
-      mergedElements.push(mergedElement)
+      return mergedElement
+  }
+
+  const mergeElementsWithTilesets = (
+    tilesetsById: Map<string, TilesetElementsIndex>,
+    elementsData: any[],
+    layerNumber: number,
+    fallbackTilesetId?: string
+  ): any[] => {
+    if (!elementsData || elementsData.length === 0) {
+      return []
+    }
+
+    const mergedElements: any[] = []
+    elementsData.forEach((element) => {
+      const merged = resolveElementWithTileset(tilesetsById, element, layerNumber, fallbackTilesetId)
+      if (merged) mergedElements.push(merged)
     })
 
     return mergedElements
@@ -976,6 +993,16 @@ export const loadMap = async (mapId: string) => {
   firstMapLoaded = true;
 
   await waitForMapImages(map);
+
+  // Opened by a Studio to be edited (iframe + `?editor`): the elements become something it can select and change.
+  if (isV2 && isStudioEditorMode()) {
+    prepareStudioEditor(client as never, { allowedOrigins: resolveStudioEditorOrigins(client.globalConfig as Record<string, unknown>, getStudioGameRuntimeConfig().apiBaseUrl, Boolean((import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV)) }).start({
+      mapId: finalMapId,
+      size: [map.params.width * 48, map.params.height * 48],
+      raw: { alwaysLow: elementsAlwaysLow, low: elementsLow, high: elementsHigh },
+      resolveOne: (raw, layerNumber) => resolveElementWithTileset(tilesetsById, raw, layerNumber, fallbackElementTilesetId),
+    })
+  }
 
   return {
     [STUDIO_DIRECT_LOAD_MARKER]: true,

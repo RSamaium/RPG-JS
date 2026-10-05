@@ -56,27 +56,30 @@ export function partitionStudioElements(elements: readonly any[], options: Studi
 
 const number = (value: unknown, fallback: number): number => (typeof value === "number" && Number.isFinite(value) ? value : fallback);
 
-/** A Studio element as a map element and the asset it refers to. Same conversion as the parity spec. */
-export function studioElementToMapBuilder(element: any, index: number) {
+/**
+ * A Studio element as a map element and the asset it refers to. Same conversion as the parity spec.
+ * `id` and `kind` are made from the index unless given.
+ */
+export function studioElementToMapBuilder(element: any, index: number, names: { readonly id?: string; readonly kind?: string } = {}) {
   const rect = (read(element?.rect) ?? [0, 0, 0, 0]) as number[];
   const drawIn = (read(element?.drawIn) ?? []) as number[];
   const metrics = resolveStudioElementMetrics(element);
   const hitbox = read(element?.hitbox) as { x: number; y: number; width: number; height: number } | undefined;
   const scale = read(element?.scale) as number | { x: number; y: number } | undefined;
   const zIndexOffset = number(read(element?.zIndexOffset), 0);
-  const kind = `studio-${index}`;
+  const kind = names.kind ?? `studio-${index}`;
   const descriptor: AssetDescriptor = {
     src: read(element.image) as string,
     frame: [number(rect[0], 0), number(rect[1], 0), number(rect[2], 0), number(rect[3], 0)],
     size: [number(drawIn[2], number(rect[2], 0)), number(drawIn[3], number(rect[3], 0))],
     ...(metrics.hasSortableHitbox && hitbox ? { hitbox: [hitbox.x, hitbox.y, hitbox.width, hitbox.height] as const } : {}),
   };
-  const id = String(read(element?.id) ?? `element-${index}`);
+  const id = names.id ?? `${String(read(element?.id) ?? `element-${index}`)}#${index}`;
   return {
     kind,
     descriptor,
     element: {
-      id: `${id}#${index}`,
+      id,
       kind,
       x: number(drawIn[0], 0),
       y: number(drawIn[1], 0),
@@ -136,7 +139,7 @@ export async function createMapBuilderElementLayer(): Promise<MapBuilderElementL
         candidate = { owned: [] };
         return [];
       }
-      const converted = list.map(studioElementToMapBuilder);
+      const converted = list.map((element, index) => studioElementToMapBuilder(element, index));
       const table = new Map(converted.map(({ kind, descriptor }) => [kind, descriptor]));
       const assets: AssetResolver = {
         kinds: [...table.keys()],

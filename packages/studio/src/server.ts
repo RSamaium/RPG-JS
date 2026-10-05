@@ -2,6 +2,7 @@ import { normalizeRuntimeHitbox } from "./runtime-hitbox";
 import { bindStudioCombatAnimationsToEntity } from "./action-battle-animations";
 import { runPlayerEventOnce } from "./event-execution-guard";
 import { Move, RpgEvent, RpgMap, RpgPlayer, RpgServer, provideServerMapStreaming, type RpgPlayerConnectionContext } from "@rpgjs/server";
+import { registerStudioEditorMap, unregisterStudioEditorMap } from "./editor/pause";
 import { defineModule, normalizeLightingState, WorldMapsManager, type RpgActionInput, type WorldMapConfig } from "@rpgjs/common";
 import { BlockExecutionService } from "./block-executor";
 import { apiUrl, configureStudioConstants } from "./constants";
@@ -1286,6 +1287,8 @@ export default (_config?: unknown) => {
         return map as any;
       },
       async onJoin(player: RpgPlayer, map: RpgMap) {
+        // So that a Studio editing the game can pause it (see editor/pause).
+        registerStudioEditorMap(map);
         const blocks = (map as any).__studioMapLoadBlocks;
         if (!Array.isArray(blocks) || blocks.length === 0) {
           return;
@@ -1295,6 +1298,7 @@ export default (_config?: unknown) => {
         await blockExecutor.executeBlockSequence(blocks);
       },
       onLeave(player: RpgPlayer, map: RpgMap) {
+        unregisterStudioEditorMap(map);
         return streamingModule?.map?.onLeave?.(player, map);
       },
     },
