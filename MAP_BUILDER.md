@@ -934,3 +934,102 @@ Principles:
 11. **Extension data ownership.** Who owns the schema of `extensions[...]` when a
     third-party feature is removed: preserved untouched (current proposal) or
     dropped on save?
+
+## 17. Studio as a shell around the game (iframe)
+
+**Decision.** The Studio stops having an editor of its own. The map is edited **in the game**, inside an iframe, with
+the game's own renderer, so what is edited is what is played (shaders, lights, HD-2D, characters). The Studio
+(Angular) is the shell around it: the palettes (tilesets, materials, catalog), the properties panel, the event editor,
+undo/redo, saving, the assistant. It talks to the game through messages. While editing, **the game keeps running** (NPCs,
+physics, timers), with a **pause** button.
+
+### 17.1 Who owns what
+
+| Piece | Lives in | Why |
+| --- | --- | --- |
+| Rendering of the map, elements, terrain | the game (iframe) | one renderer; nothing to keep in step |
+| The tools that act on the pointer (selection, drag, brush, placement, ghost) | the game (iframe) | they react to pointer events on the spot: no latency, no events crossing the frame |
+| The truth of the map | the game's **authority** (`createMapAuthority`) | rules, validation, history log, late join: all already there |
+| Panels, forms, lists, undo/redo buttons, saving | the Studio | that is what a shell is for |
+| Persistence of the map | the Studio, through its API | it receives the patches and saves them |
+
+The Studio is **one more session of the authority**, a trusted one (`trustPatches`): it sees the snapshot and every patch,
+sends intents, or patches as they are (an undo, a form edit). Its model is the `joinRemoteMap` model of step 4, so it
+reads, subscribes (Angular signals) and keeps a history exactly as any client does. No second protocol for the map.
+
+### 17.2 Channels
+
+One `MessageChannel` per editor session. The two ends first meet with `window.postMessage` (handshake), then everything
+goes through the private port: nothing else on the page can listen.
+
+```
+Studio (parent)                                  Game (iframe)
+  ── new MessageChannel ──────────────────────────────────────────
+  ◄── { type: "ready", version }  (window message, checked: source, origin)
+  ──► { type: "connect", version } + port2 (transfer)
+  port1 ◄───────────────  { ch: "event",   ... }   ready, map, selection, interaction, pointer, paused, error
+  port1 ────────────────► { ch: "control", ... }   modes, tool, select, pause, camera
+  port1 ◄──────────────►  { ch: "map", map, message }   the authority protocol (sync, intent, patches, snapshot…)
+```
+
+- **Map channel**: the messages of section 5 / step 4, tagged with the id of the map, because the game changes map. A
+  `map` event says which map the Studio now looks at; the Studio joins it (a new remote model) and the game connects
+  the session to that map's authority.
+- **Control channel** (Studio to game): `modes`, `tool` (`none`, `brush` with material and radius, `place` with a
+  catalog id), `select`, `pause`, `camera`. Small, typed, validated on arrival like anything that comes from outside.
+- **Events** (game to Studio): `ready`, `map`, `selection`, `interaction` (modes, tool, what is placed, last refusal),
+  `pointer` (world position, for the status bar), `paused`, `error`.
+- **Versions**: the handshake carries the protocol version of both ends. A mismatch is a message to the user ("this game
+  was built with an older map builder"), never a silent failure.
+
+### 17.3 Security
+
+- The iframe is on another origin from the Studio (the game's own), with `sandbox="allow-scripts allow-same-origin"` as the
+  game needs; the Studio's session and tokens are never reachable from it.
+- The handshake checks `event.source` (the frame we created) and `event.origin` (an allow-list); the host checks the same
+  in the other direction. A page that embeds the game without being allowed gets no editor.
+- The editor session is **opt-in**: the game must create the editor host (a module the Studio's build adds, or the
+  `?editor` entry). A normal player never has one.
+- Everything that arrives is parsed with the same strictness as the network protocol; the Studio has no more trust than
+  `trustPatches` gives it, and the authority still runs its steps for intents.
+
+### 17.4 Pause
+
+"Pause" is the game's, not the map builder's: `setAutoTick(false)` on the server map (inputs, physics, projectiles stop)
+and `engine.gamePause` on the client (the map display freezes). Editing keeps working while paused, because patches do not
+depend on ticks. What the game does with its own timers is the game's business: the host asks `setPaused(true)` of the
+integration and reports `paused` back. Dynamic events that run on their own `setTimeout` are not stopped.
+
+### 17.5 What replaces what
+
+| In the Studio today | Becomes |
+| --- | --- |
+| `map-canvas-renderer.service.ts` (8.5k lines), `drawing/*`, `studio-element-renderer` | the game's renderer, in the iframe |
+| the tools of the map editor (select, move, brush, ink, elements) | tools of the game's interaction layer, driven from the Studio's toolbar |
+| history service | the model's history (inverse patches), exposed to the Studio's undo button |
+| saving the map | the Studio persisting the patches it receives |
+| `map-procedure.worker.ts` (assistant procedures) | the same procedures, calling `submit(intent)` through the channel; for untrusted code, a WASM sandbox such as Arrow's, whose host bridge exposes `submit` and read access |
+
+**Arrow is not the iframe.** A WASM VM cannot render WebGL or run workers, so it cannot host the game. It is the right
+tool for the *other* direction: running logic written by the user or the assistant (map procedures, custom tools,
+event scripts) without trusting it, with a host bridge that exposes the same `submit(intent)` the Studio uses.
+
+### 17.6 Migration
+
+Next to the old editor, behind a flag, tool by tool; the old editor is removed when its last tool has a replacement.
+
+1. **Spike (this step)**: the host and the client of the channels, the Studio shell in the playground (a map shown by
+   the frame, a list of elements, a properties form, a brush, pause), no Angular.
+2. A Studio route that embeds a project's game and shows it read-only, with the properties panel.
+3. Selection, move, placement, terrain brush, events, one after the other, each with parity checked against the old tool.
+4. The modes and tools the editor has that the game does not yet (lights, drawing rules, ink) arrive with milestone 2.
+5. The old editor and its renderer are deleted (step 7).
+
+### 17.7 Open points
+
+- Multiplayer games: the Studio connects to the game's server authority directly (WebSocket, authenticated), not through the
+  iframe. The channel of this section then only carries the control messages. Not in the spike.
+- Dragging from a Studio palette over the frame: the pointer position has to be relayed while the drag crosses the
+  boundary (a transparent overlay on the iframe while dragging is the usual answer).
+- Keyboard focus is split between two documents: shortcuts are decided by the frame that has the focus, and the control
+  channel offers the same actions as commands.
