@@ -13,6 +13,9 @@ editor or both.
 | `@rpgjs/map-builder/features` | `elements()`, `events()`, `selection()`, `placement()`, `history()`. | yes (through the skins) |
 | `@rpgjs/map-builder/interaction` | The headless layer: state, tools, intents, pipelines, catalog. Runs on a server, to validate with the same rules. | no |
 | `@rpgjs/map-builder/skins` | How the interaction looks: `defaultSkin`, `gameSkin`, and the contract to write your own. | yes |
+| `@rpgjs/map-builder/protocol` | The messages between a client and the authority of a map, validated. | no |
+| `@rpgjs/map-builder/authority` | The authority over a map: decides, tells everybody, catches clients up, persists. Runs on a server. | no |
+| `@rpgjs/map-builder/remote` | The client side: a model that asks the authority and follows everybody's changes. | no |
 
 ```ts
 import { createMapModel, defineAssets, defineMap, el } from "@rpgjs/map-builder/model";
@@ -172,6 +175,52 @@ declare module "@rpgjs/map-builder/interaction" {
   }
 }
 ```
+
+## Multiplayer
+
+One **authority** holds the truth of a map. Clients **ask** with intents, the authority
+decides with the same pipelines the clients use to preview, and **tells everybody** what
+became true, in the same order. None of this depends on a framework: connect it to
+whatever carries messages. (`@rpgjs/map-builder/server` and `/client` do it for RPGJS.)
+
+```ts
+// server
+const authority = createMapAuthority({
+  definition,
+  assets,                                               // sizes and hitboxes come from here
+  pipeline: { move: [ownerOnly({ actor: (who) => who.id }), protectedZone([square])] },
+  placement: { catalog, pipeline: [snapToGrid(32), requireFree(), rateLimit({ max: 5, windowMs: 1000 })], stamp: (who) => ({ owner: who.id }) },
+  persist: { store, id: "village" },                    // snapshots and a log; restoreMapAuthority brings it back
+});
+const connection = authority.connect({ id, actor: player, send: (message) => socket.send(message) });
+socket.onMessage((raw) => connection.receive(raw));     // anything invalid is ignored
+
+authority.apply({ type: "element.remove", id: "tree-3" });   // the game itself: a lever, a quest
+authority.effect("tree-3", "shake");                          // shown to everybody, never kept
+
+// client
+const remote = await joinRemoteMap({ transport });      // { send(message), onMessage(listener) }
+const view = createMapView({ model: remote.model, assets, features: [elements(), placement({ catalog })] });
+bindRemoteEffects(remote, view.effects);
+```
+
+- **The client never decides.** Its model changes when the authority says so. `submit`
+  and `placement` return a promise that resolves with the decision; a refusal carries the
+  reason (`"occupied"`, `"not-owner"`, `"rate-limit"`…). Patches are only accepted from
+  clients the authority trusts (`trustPatches`), which is what lets an editor undo.
+- **The authority gives the ids.** A client places something without an id and reads the one
+  it was given, so two players can never choose the same.
+- **Late clients catch up.** The authority keeps a log of recent changes: a client that is a
+  little behind gets just those, one that is too far behind gets the map. A hole in the
+  revisions makes a client ask again by itself.
+- **Persistence.** A `MapStore` keeps a snapshot, written every so many revisions or a
+  moment after the last change, and, if it can `append`, every change in between.
+  `restoreMapAuthority` loads the snapshot and replays the log, and refuses a log with a hole.
+- **Rules for a shared world.** `ownerOnly`, `rateLimit` (a preview does not count),
+  `protectedZone`, next to `snapToGrid`, `requireFree`, `maxCount`… The same steps run on
+  the client to preview and on the authority to decide.
+- `connectInMemory(authority)` links a client and an authority with no network: for tests,
+  demos, and single-player games that still want the rules.
 
 ### In a CanvasEngine scene
 

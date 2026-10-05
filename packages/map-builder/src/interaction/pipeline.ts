@@ -11,10 +11,20 @@ export type PipelineResult<K extends IntentType = IntentType> = PipelineAccepted
 export interface PipelineContext {
   readonly state: MapState;
   readonly assets: AssetResolver;
-  /** What is drawn right now, with the sizes and hitboxes the player sees. */
+  /**
+   * What can get in the way: what is drawn right now, with the sizes and hitboxes the
+   * player sees, minus the elements the intents are moving or removing.
+   */
   readonly nodes: readonly SceneNode[];
+  /** Everything that is drawn, including what the intents are moving or removing. */
+  readonly scene: readonly SceneNode[];
   /** Who is acting. Whatever the game decides: a player, a user. */
   readonly actor: unknown;
+  /**
+   * True when the pipeline only previews (a ghost following the pointer) and nothing
+   * will happen. Steps with a side effect, such as `rateLimit`, must not act then.
+   */
+  readonly preview: boolean;
   /** The space the intent would take, or `undefined` when it does not apply. */
   footprint(intent: IntentOf<IntentType>): Footprint | undefined;
   /** Refuses the intent: `return ctx.reject("not-enough-wood")`. */

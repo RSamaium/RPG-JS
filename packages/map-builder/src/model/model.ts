@@ -15,11 +15,18 @@ export interface MapChange {
   readonly origin: "local" | "remote";
   /** State after the change. */
   readonly state: MapState;
+  /**
+   * The whole state was replaced (a snapshot from the authority): `patches` is empty
+   * and whatever was derived from the previous state must be rebuilt.
+   */
+  readonly reset?: true;
 }
 
 export interface ApplyOptions {
   /** Consecutive `apply` calls with the same key become one undo step (a drag, a slider). */
   readonly coalesce?: string;
+  /** The intents the patches come from. A committer that talks to an authority sends these. */
+  readonly intents?: readonly unknown[];
 }
 
 export interface MapModelOptions {
@@ -183,6 +190,19 @@ export function createMapModel(
       return revision;
     },
     integrate,
+    reset(next, nextRevision) {
+      state = parseMapDefinition(next);
+      revision = nextRevision;
+      controller.history.clear();
+      const change: MapChange = { revision, patches: [], inverse: [], origin: "remote", state, reset: true };
+      for (const listener of [...listeners]) {
+        try {
+          listener(change);
+        } catch (error) {
+          reportListenerError(error);
+        }
+      }
+    },
   };
   committer.attach(host);
 
@@ -200,6 +220,7 @@ export function createMapModel(
         patches,
         record: true,
         ...(applyOptions?.coalesce !== undefined ? { coalesce: applyOptions.coalesce } : {}),
+        ...(applyOptions?.intents !== undefined ? { intents: applyOptions.intents } : {}),
       });
     },
     getDefinition: () => cloneJson(state as unknown as JsonValue) as unknown as MapDefinition,

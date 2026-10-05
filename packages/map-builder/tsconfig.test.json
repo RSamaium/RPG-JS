@@ -15,7 +15,10 @@
       "@rpgjs/map-builder/renderer": ["./src/renderer/index.ts"],
       "@rpgjs/map-builder/features": ["./src/features/index.ts"],
       "@rpgjs/map-builder/interaction": ["./src/interaction/index.ts"],
-      "@rpgjs/map-builder/skins": ["./src/skins/index.ts"]
+      "@rpgjs/map-builder/skins": ["./src/skins/index.ts"],
+      "@rpgjs/map-builder/protocol": ["./src/protocol/index.ts"],
+      "@rpgjs/map-builder/authority": ["./src/authority/index.ts"],
+      "@rpgjs/map-builder/remote": ["./src/remote/index.ts"]
     }
   },
   "include": ["src/**/*.ts"],

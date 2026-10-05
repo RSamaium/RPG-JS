@@ -31,6 +31,18 @@
     "./skins": {
       "import": "./dist/skins/index.js",
       "types": "./dist/skins/index.d.ts"
+    },
+    "./protocol": {
+      "import": "./dist/protocol/index.js",
+      "types": "./dist/protocol/index.d.ts"
+    },
+    "./authority": {
+      "import": "./dist/authority/index.js",
+      "types": "./dist/authority/index.d.ts"
+    },
+    "./remote": {
+      "import": "./dist/remote/index.js",
+      "types": "./dist/remote/index.d.ts"
     }
   },
   "files": [

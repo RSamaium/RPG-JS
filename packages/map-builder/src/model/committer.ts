@@ -1,4 +1,4 @@
-import type { MapState } from "./definition";
+import type { MapDefinition, MapState } from "./definition";
 import type { MapPatch } from "./patches";
 import type { ApplyResult, MaybePromise } from "./result";
 
@@ -24,12 +24,23 @@ export interface CommitHost {
   readonly revision: number;
   /** Validates and applies patches atomically, then notifies. This is the only way to change the model. */
   integrate(patches: readonly MapPatch[], options?: IntegrateOptions): ApplyResult;
+  /**
+   * Replaces the whole state, e.g. with a snapshot from the authority after a long
+   * disconnection. The history is cleared, and listeners get a change with `reset: true`.
+   */
+  reset(definition: MapDefinition, revision: number): void;
 }
 
 export interface CommitRequest {
   readonly patches: readonly MapPatch[];
   readonly record: boolean;
   readonly coalesce?: string;
+  /**
+   * The intents the patches were resolved from, when there were some. A committer that
+   * talks to an authority sends these instead of the patches: the client asks, the
+   * authority decides.
+   */
+  readonly intents?: readonly unknown[];
 }
 
 /**

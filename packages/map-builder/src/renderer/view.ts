@@ -322,6 +322,11 @@ export function createMapView<
 
   const unsubscribe = options.model.subscribe((change) => {
     if (destroyed) return;
+    if (change.reset) {
+      // A snapshot replaced the whole state: nothing derived from the old one can be trusted.
+      resyncAll(change.state);
+      return;
+    }
     const touched = new Map<FeatureRender, Set<string> | "all">();
     for (const patch of change.patches) {
       for (const owner of renders) {

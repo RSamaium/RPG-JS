@@ -56,7 +56,7 @@ export interface InteractionSnapshot {
 export interface ModelApi<R extends MaybePromise<ApplyResult> = MaybePromise<ApplyResult>> {
   readonly state: MapState;
   subscribe(listener: (change: MapChange) => void): Unsubscribe;
-  apply(input: MapPatch | readonly MapPatch[], options?: { readonly coalesce?: string }): R;
+  apply(input: MapPatch | readonly MapPatch[], options?: { readonly coalesce?: string; readonly intents?: readonly unknown[] }): R;
   /** Used to take back a drag that applied its moves as it went. */
   readonly history?: MapHistory<R>;
 }
@@ -178,11 +178,13 @@ export function createInteraction<R extends MaybePromise<ApplyResult>>(options: 
   const footprintOf = (intent: IntentOf<IntentType>): Footprint | undefined =>
     intents.get(intent.type)?.footprint?.(intent as never, intentContext());
 
-  const pipelineContext = (nodes: readonly SceneNode[]): PipelineContext => ({
+  const pipelineContext = (nodes: readonly SceneNode[], preview: boolean): PipelineContext => ({
     state: options.model.state,
     assets: options.assets,
     nodes,
+    scene: options.nodes(),
     actor: options.actor?.(),
+    preview,
     footprint: footprintOf,
     reject: (reason, message) => ({ ok: false, reason, ...(message !== undefined ? { message } : {}) }),
   });
@@ -253,7 +255,7 @@ export function createInteraction<R extends MaybePromise<ApplyResult>>(options: 
     preview(intent, previewOptions = {}) {
       const ignore = previewOptions.ignore ?? [];
       const nodes = options.nodes().filter((node) => !ignore.some((target) => sameTarget(target, targetOf(node))));
-      return runPipeline(stepsFor(intent.type) as unknown as readonly PipelineStep<typeof intent.type>[], intent, pipelineContext(nodes));
+      return runPipeline(stepsFor(intent.type) as unknown as readonly PipelineStep<typeof intent.type>[], intent, pipelineContext(nodes, true));
     },
     submit(input, submitOptions) {
       const list: readonly MapIntent[] = Array.isArray(input) ? (input as readonly MapIntent[]) : [input as MapIntent];
@@ -262,7 +264,7 @@ export function createInteraction<R extends MaybePromise<ApplyResult>>(options: 
         intent.type === "element.move" || intent.type === "element.remove" ? [{ type: "element" as const, id: intent.id }] : [],
       );
       const nodes = options.nodes().filter((node) => !leaving.some((target) => sameTarget(target, targetOf(node))));
-      const context = pipelineContext(nodes);
+      const context = pipelineContext(nodes, false);
 
       const patches: MapPatch[] = [];
       for (const [index, intent] of list.entries()) {
@@ -280,7 +282,8 @@ export function createInteraction<R extends MaybePromise<ApplyResult>>(options: 
       }
 
       store.update({ lastRejection: null });
-      return options.model.apply(patches.length === 1 ? patches[0]! : patches, submitOptions);
+      // The intents travel with the patches: a committer that talks to an authority sends those.
+      return options.model.apply(patches.length === 1 ? patches[0]! : patches, { ...submitOptions, intents: list });
     },
     nodes: () => options.nodes(),
     pick: (point, pickOptions) => pickNode(options.nodes(), point, pickOptions),

@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
-import { localCommitter } from "./committer";
+import { localCommitter, type CommitRequest } from "./committer";
+import { spyCommitter } from "./__fixtures__";
 import { createMapModel, type MapChange } from "./model";
 import { patchFail, patchOk, type MapPatch } from "./patches";
 import { forest } from "./__fixtures__";
@@ -250,6 +251,60 @@ describe("createMapModel", () => {
         rejection: { code: "invalid-patch", message: "handler bug", patchIndex: 0 },
       });
       expect(model.revision).toBe(0);
+    });
+  });
+
+  describe("reset (a snapshot from the authority replaces the state)", () => {
+    const snapshot = () => ({ ...forest(), id: "other", elements: [{ id: "only", kind: "tree-oak", x: 1, y: 2 }] });
+
+    it("replaces the state and the revision, and tells listeners the whole state changed", () => {
+      const committer = spyCommitter();
+      const model = createMapModel(forest(), { committer });
+      model.apply(move("t1", 5));
+      const seen: MapChange[] = [];
+      model.subscribe((change) => seen.push(change));
+
+      committer.host().reset(snapshot(), 40);
+      expect(model.revision).toBe(40);
+      expect(model.state.elements.map((e) => e.id)).toEqual(["only"]);
+      expect(seen).toHaveLength(1);
+      expect(seen[0]).toMatchObject({ reset: true, revision: 40, origin: "remote", patches: [], inverse: [] });
+      expect(seen[0]!.state).toBe(model.state);
+    });
+
+    it("forgets the history, whose patches would not make sense on the new state", () => {
+      const committer = spyCommitter();
+      const model = createMapModel(forest(), { committer });
+      model.apply(move("t1", 5));
+      committer.host().reset(snapshot(), 7);
+      expect(model.history.canUndo).toBe(false);
+      model.apply({ type: "element.move", id: "only", x: 9, y: 9 });
+      expect(model.revision).toBe(8); // revisions go on from the snapshot
+    });
+
+    it("validates the snapshot like any definition, and leaves the model alone if it is invalid", () => {
+      const committer = spyCommitter();
+      const model = createMapModel(forest(), { committer });
+      expect(() => committer.host().reset({ version: 1, id: "" } as never, 3)).toThrow(/Invalid map definition/);
+      expect(model.revision).toBe(0);
+      expect(model.getElement("t1")).toBeDefined();
+    });
+  });
+
+  describe("intents", () => {
+    it("travel with the patches to the committer, which may send them instead", () => {
+      const requests: CommitRequest[] = [];
+      const model = createMapModel(forest(), {
+        committer: {
+          attach: () => undefined,
+          commit: (request) => (requests.push(request), { ok: false as const, rejection: { code: "x", message: "y" } }),
+        },
+      });
+      const intents = [{ type: "element.move", id: "t1", x: 1, y: 1 }];
+      model.apply(move("t1", 1), { intents });
+      model.apply(move("t1", 2));
+      expect(requests[0]!.intents).toBe(intents);
+      expect(requests[1]).not.toHaveProperty("intents");
     });
   });
 });

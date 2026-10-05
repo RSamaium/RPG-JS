@@ -669,6 +669,49 @@ The headless layer is `@rpgjs/map-builder/interaction`, the visuals are
   `rateLimit`, `protectedZone` (step 4). Picking uses drawn bounds or hitboxes, not
   pixels. A drag of several elements does not yet draw the group's own box.
 
+#### Step 4 implementation notes (framework-neutral core)
+
+The authority and its client are independent of RPGJS: `/protocol`, `/authority` and
+`/remote`. The RPGJS providers (`/server`, `/client`) sit on top of them.
+
+- **The client asks, the authority decides.** `controller.submit` passes the *intents*
+  along with the patches it resolved; a remote committer sends the intents and ignores the
+  patches. Patches are only accepted from a client for which `trustPatches` says yes, which
+  is how an editor can undo on a shared map. The default is never.
+- **Messages** (`protocol`): `sync`, `intent`, `patches` from the client; `snapshot`,
+  `patches`, `rejected`, `synced`, `effect` from the authority. Both directions are
+  validated (`parseClientMessage`, `parseServerMessage`): shape, size limits, JSON only.
+  The request id goes **only to whoever asked**, so a client recognises its own change and
+  never sees another's id.
+- **Ids are given by the authority.** The placement tool no longer sends an id (the
+  intent is resolved where it is decided), and reads it from the result. This replaces the
+  client-side numbering of step 3 for shared maps.
+- **Authority**: one model (without history), one headless interaction controller with the
+  same intents and pipelines, a log of recent changes (default 512), per-session `send`
+  (it knows nothing of sockets). `connect` sends the map at once; `sync` answers with the
+  missing changes, `synced`, or a snapshot when the client is too far behind or ahead.
+  Server-side code changes the map with `apply` (trusted, no pipeline) or `submit` (for an
+  actor, with the pipeline), and shows effects with `effect`.
+- **Remote committer**: a promise per request, with a timeout; the change comes back as a
+  `patches` message, integrated in order. A change that answers one of our requests is
+  recorded in the history, others are not. A hole in the revisions makes it ask again
+  (once, not at every message), a repeat is ignored, a change that does not fit makes it
+  ask for the whole map. A snapshot replaces the state through `host.reset`, which clears
+  the history and makes views rebuild (`MapChange.reset`). Listening starts when the committer
+  is created, so nothing sent while the model is being built is lost.
+- **Persistence**: `MapStore` (`load`, `save`, optional `append`), `memoryMapStore`,
+  `restoreMapAuthority`. The authority writes the starting snapshot itself when the store
+  may not have one, appends each change, and writes a snapshot every `snapshotEvery`
+  revisions or `saveDelayMs` after the last change. Writes are queued in order and failures are
+  reported, never thrown. A log with a hole is refused rather than guessed.
+- **Pipelines for a shared world**: `ownerOnly`, `rateLimit` (counted per actor, weakly held,
+  a preview is not counted: `PipelineContext.preview`), `protectedZone`
+  (`PipelineContext.scene` is everything drawn, `nodes` only what can be in the way).
+- **Known limits.** No limit on how often one client may `sync`, nor on connections: that is
+  the job of the transport. The log is in memory (a restart sends snapshots to clients that were
+  behind). A server has no image to measure, so assets must declare a `size` or a `frame` for the
+  authority to know footprints. Undo of another player's change is not coordinated.
+
 What milestone 1 delivers on its own: a map usable without Studio (3.3), the
 builder game, the living map (the server changes elements during play), the
 tree-cutting style of game, and a shared element renderer.

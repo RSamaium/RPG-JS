@@ -1,3 +1,4 @@
+import type { JsonObject } from "../model/json";
 import type { Unsubscribe } from "../model/result";
 import type { ApplyResult, MaybePromise } from "../model/result";
 import { describeElement } from "../renderer/scene";
@@ -22,6 +23,11 @@ export interface PlacementOptions<C extends Catalog<string>> {
   readonly idFactory?: (item: CatalogItem, taken: ReadonlySet<string>) => string;
   /** Modes in which the tool is active. Defaults to `["play", "edit"]`: builders place in play. */
   readonly modes?: readonly string[];
+  /**
+   * Data written on every element placed, from whoever places it: `(actor) => ({ owner: actor.id })`.
+   * Merged over the data of the catalog item.
+   */
+  readonly stamp?: (actor: unknown) => JsonObject | undefined;
 }
 
 export interface PlacedEvent {
@@ -52,34 +58,57 @@ export interface PlacementApi<Id extends string = string> {
 const offsetOf = (anchor: PlacementAnchor, width: number, height: number): Point =>
   anchor === "center" ? { x: -width / 2, y: -height / 2 } : anchor === "bottom-center" ? { x: -width / 2, y: -height } : { x: 0, y: 0 };
 
-/**
- * Placing things of a catalog: the `element.place` intent, the ghost that
- * previews it through the same pipeline that validates it, and the tool that
- * drives both. Headless.
- */
-export function createPlacement<C extends Catalog<string>>(
-  controller: InteractionController<MaybePromise<ApplyResult>>,
-  options: PlacementOptions<C>,
-): { readonly api: PlacementApi<CatalogId<C>>; dispose(): void } {
-  const { catalog } = options;
-  const anchor = options.anchor ?? "center";
-  const placedListeners = new Set<(event: PlacedEvent) => void>();
-  const rejectedListeners = new Set<(event: RejectedEvent) => void>();
-  const counters = new Map<string, number>();
+/** What the intent needs, with or without a tool: it is also what a server registers. */
+export type PlacementIntentOptions<C extends Catalog<string>> = Pick<PlacementOptions<C>, "catalog" | "pipeline" | "idFactory" | "stamp">;
 
+export interface PlacementCore {
+  readonly definition: IntentDefinition<"element.place">;
+  itemOf(id: string): CatalogItem | undefined;
+  /** What an item would look like at a position: its bounds and hitbox, as the renderer describes them. */
+  probe(item: CatalogItem, x: number, y: number): ReturnType<typeof describeElement>;
+  dispose(): void;
+}
+
+/**
+ * The `element.place` intent and the rules it goes through: those of the feature, then
+ * those of the catalog item. No tool and no ghost, so a server can register it too.
+ *
+ * Ids are given when the intent is resolved, numbered per item and never reused. A
+ * client that talks to an authority sends the intent without an id and reads the one
+ * it was given in the result: two clients can never choose the same.
+ */
+export function registerPlacementIntent<C extends Catalog<string>>(
+  controller: Pick<InteractionController<MaybePromise<ApplyResult>>, "registerIntent" | "usePipeline" | "describeContext">,
+  options: PlacementIntentOptions<C>,
+): PlacementCore {
+  const { catalog } = options;
+  const counters = new Map<string, number>();
   const itemOf = (id: string): CatalogItem | undefined => catalog.get(id);
 
   const probe = (item: CatalogItem, x: number, y: number) =>
     describeElement({ id: "__placement__", kind: item.sprite, x, y }, controller.describeContext);
 
+  const nextId = (item: CatalogItem, taken: ReadonlySet<string>): string => {
+    if (options.idFactory) return options.idFactory(item, taken);
+    let n = counters.get(item.id) ?? 0;
+    let id: string;
+    do {
+      n += 1;
+      id = `${item.id}-${n}`;
+    } while (taken.has(id));
+    counters.set(item.id, n);
+    return id;
+  };
+
   const definition: IntentDefinition<"element.place"> = {
-    resolve(intent, { state }) {
+    resolve(intent, { state, actor }) {
       const item = itemOf(intent.catalogId);
       if (!item) return { ok: false, reason: "unknown-catalog-item", message: `"${intent.catalogId}" is not in the catalog` };
       const id = intent.id ?? nextId(item, new Set(state.elements.map((element) => element.id)));
+      const data = { ...item.data, ...options.stamp?.(actor) };
       return {
         type: "element.add",
-        element: { id, kind: item.sprite, x: intent.x, y: intent.y, ...(item.data ? { data: item.data } : {}) },
+        element: { id, kind: item.sprite, x: intent.x, y: intent.y, ...(Object.keys(data).length > 0 ? { data } : {}) },
       };
     },
     footprint(intent): Footprint | undefined {
@@ -87,24 +116,6 @@ export function createPlacement<C extends Catalog<string>>(
       const node = item ? probe(item, intent.x, intent.y) : undefined;
       return node ? { bounds: node.bounds, ...(node.hitbox ? { hitbox: node.hitbox } : {}) } : undefined;
     },
-  };
-
-  /** The next free id of an item. Nothing is consumed until `commit` is called, so a refused attempt wastes no number. */
-  const candidate = (item: CatalogItem, taken: ReadonlySet<string>): { id: string; commit(): void } => {
-    if (options.idFactory) return { id: options.idFactory(item, taken), commit: () => undefined };
-    let n = counters.get(item.id) ?? 0;
-    let id: string;
-    do {
-      n += 1;
-      id = `${item.id}-${n}`;
-    } while (taken.has(id));
-    return { id, commit: () => void counters.set(item.id, n) };
-  };
-
-  const nextId = (item: CatalogItem, taken: ReadonlySet<string>): string => {
-    const next = candidate(item, taken);
-    next.commit();
-    return next.id;
   };
 
   // The rules of the item come after those of the feature, on every placement.
@@ -119,6 +130,26 @@ export function createPlacement<C extends Catalog<string>>(
     controller.registerIntent("element.place", definition),
     controller.usePipeline("element.place", [...(options.pipeline ?? []), itemRules]),
   ];
+
+  return { definition, itemOf, probe, dispose: () => stops.forEach((stop) => stop()) };
+}
+
+/**
+ * Placing things of a catalog: the `element.place` intent, the ghost that
+ * previews it through the same pipeline that validates it, and the tool that
+ * drives both. Headless.
+ */
+export function createPlacement<C extends Catalog<string>>(
+  controller: InteractionController<MaybePromise<ApplyResult>>,
+  options: PlacementOptions<C>,
+): { readonly api: PlacementApi<CatalogId<C>>; dispose(): void } {
+  const { catalog } = options;
+  const anchor = options.anchor ?? "center";
+  const placedListeners = new Set<(event: PlacedEvent) => void>();
+  const rejectedListeners = new Set<(event: RejectedEvent) => void>();
+  const core = registerPlacementIntent(controller, options);
+  const { itemOf, probe, definition } = core;
+  const stops: Unsubscribe[] = [core.dispose];
 
   const ghostAt = (id: string, point: Point): void => {
     const item = itemOf(id);
@@ -163,18 +194,17 @@ export function createPlacement<C extends Catalog<string>>(
       }
       if (input.button !== 0) return false;
 
-      const item = itemOf(id);
-      if (!item) return true;
+      if (!itemOf(id)) return true;
       ghostAt(id, input);
       const ghost = controller.state.get().ghost;
       if (!ghost) return true;
 
-      const next = candidate(item, new Set(controller.model.state.elements.map((element) => element.id)));
-      const placedId = next.id;
-      const result = controller.submit({ type: "element.place", catalogId: id, id: placedId, x: ghost.x, y: ghost.y });
+      // No id is sent: whoever resolves the intent gives one, and it comes back in the result.
+      const result = controller.submit({ type: "element.place", catalogId: id, x: ghost.x, y: ghost.y });
       const settle = (outcome: ApplyResult): void => {
         if (outcome.ok) {
-          next.commit();
+          const added = outcome.patches.find((patch) => patch.type === "element.add");
+          const placedId = added && "element" in added ? added.element.id : "";
           for (const listener of [...placedListeners]) listener({ catalogId: id, id: placedId, x: ghost.x, y: ghost.y });
           if (!options.keepPlacing) stopPlacing();
         } else {
