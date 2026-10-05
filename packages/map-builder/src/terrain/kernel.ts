@@ -48,18 +48,65 @@ export function blendRadius(mode: TerrainMode | undefined): number {
   }
 }
 
+/** Presets of the kernel whose pixels depend only on what is near: a change shows up within this many pixels. */
+const LOCAL_OVERLAY_REACH = 32;
+const LOCAL_PRESETS = new Set(["grass-edge", "carpet", "carpet-border", "road-town-sidewalk", "water"]);
+
+/** Whether a material is drawn as an overlay computed on the whole mask (nine-slice and presets). */
+const isOverlay = (mode: TerrainMode | undefined): boolean => mode?.type === "nine-slice" || mode?.type === "custom";
+
 /**
- * The widest blend of the terrain: a changed mask changes pixels this far around it, and rendering a
- * region exactly needs this much context around it. `undefined` when the terrain has features whose
- * reach is not known here (morphology): the kernel's own, wider margin must then be used.
+ * Whether a material's overlay may change far from an edit: presets that are not known to be local
+ * (lane marks follow the whole road, a game's own preset is unknown) count as global.
  */
-export function widestBlend(data: TerrainData): number | undefined {
-  if (data.morphology && data.morphology.length > 0) return undefined;
+const isGlobalOverlay = (mode: TerrainMode | undefined): boolean => mode?.type === "custom" && !LOCAL_PRESETS.has(mode.shaderKey);
+
+/**
+ * How far a changed mask changes pixels: the widest blend of the materials and transitions, or the reach
+ * of an overlay (nine-slice, local presets), plus a few pixels for the tails of the soft mask.
+ */
+export function widestBlend(data: TerrainData): number {
   let widest = 0;
-  for (const material of data.materials) widest = Math.max(widest, blendRadius(material.mode));
+  for (const material of data.materials) {
+    widest = Math.max(widest, blendRadius(material.mode));
+    if (isOverlay(material.mode) && !isGlobalOverlay(material.mode)) widest = Math.max(widest, LOCAL_OVERLAY_REACH);
+  }
   for (const transition of data.transitions ?? []) widest = Math.max(widest, blendRadius(transition.mode));
-  // A few pixels more for the tails of the soft mask.
   return Math.ceil(widest) + 8;
+}
+
+/**
+ * The margin to give the kernel around a region so that it gets the pixels of a larger render: the widest
+ * blend, or how far a hole or a wall reaches (its height or depth) if that is more.
+ */
+export function renderMargin(data: TerrainData): number {
+  let reach = 0;
+  for (const feature of data.morphology ?? []) {
+    const params = (feature.params ?? {}) as { height?: unknown; depth?: unknown };
+    reach = Math.max(reach, Number(params.height ?? params.depth) || 0);
+  }
+  return Math.max(widestBlend(data), Math.ceil(reach) + 8);
+}
+
+/**
+ * Materials drawn as an overlay of the whole mask: the kernel caches it, so a change of the mask has to drop
+ * that cache (the render host does).
+ */
+export function overlayMaterials(data: TerrainData): readonly number[] {
+  const indexes: number[] = [];
+  data.materials.forEach((material, index) => {
+    if (isOverlay(material.mode)) indexes.push(index);
+  });
+  return indexes;
+}
+
+/** Those whose pixels may change anywhere when the mask changes under them: everything is rendered again. */
+export function globalOverlayMaterials(data: TerrainData): readonly number[] {
+  const indexes: number[] = [];
+  data.materials.forEach((material, index) => {
+    if (isGlobalOverlay(material.mode)) indexes.push(index);
+  });
+  return indexes;
 }
 
 /** The mask as the kernel's control image: material index in red and green, opaque where something is painted. */

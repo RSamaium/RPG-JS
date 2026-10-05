@@ -1,0 +1,594 @@
+[
+  {
+    "name": "hard",
+    "description": "Cut edge, no blending.",
+    "hash": "52b76504",
+    "opaque": 24576,
+    "mean": [
+      115,
+      164,
+      33
+    ],
+    "samples": [
+      [
+        105,
+        175,
+        15,
+        255
+      ],
+      [
+        196,
+        156,
+        36,
+        255
+      ],
+      [
+        112,
+        182,
+        22,
+        255
+      ],
+      [
+        112,
+        182,
+        22,
+        255
+      ]
+    ]
+  },
+  {
+    "name": "fade-smooth",
+    "description": "Soft edge, smooth curve.",
+    "hash": "b617c07f",
+    "opaque": 24576,
+    "mean": [
+      118,
+      163,
+      33
+    ],
+    "samples": [
+      [
+        105,
+        175,
+        15,
+        255
+      ],
+      [
+        196,
+        156,
+        36,
+        255
+      ],
+      [
+        145,
+        170,
+        26,
+        255
+      ],
+      [
+        112,
+        182,
+        22,
+        255
+      ]
+    ]
+  },
+  {
+    "name": "fade-linear",
+    "description": "Soft edge, linear curve.",
+    "hash": "dca7efd3",
+    "opaque": 24576,
+    "mean": [
+      118,
+      162,
+      33
+    ],
+    "samples": [
+      [
+        105,
+        175,
+        15,
+        255
+      ],
+      [
+        196,
+        156,
+        36,
+        255
+      ],
+      [
+        145,
+        170,
+        26,
+        255
+      ],
+      [
+        115,
+        181,
+        22,
+        255
+      ]
+    ]
+  },
+  {
+    "name": "fade-sharp",
+    "description": "Narrow soft edge, sharp curve.",
+    "hash": "17d34dac",
+    "opaque": 24576,
+    "mean": [
+      116,
+      163,
+      33
+    ],
+    "samples": [
+      [
+        105,
+        175,
+        15,
+        255
+      ],
+      [
+        196,
+        156,
+        36,
+        255
+      ],
+      [
+        146,
+        169,
+        26,
+        255
+      ],
+      [
+        112,
+        182,
+        22,
+        255
+      ]
+    ]
+  },
+  {
+    "name": "fade-sharp-grass-edge",
+    "description": "The fade the kernel dresses with a grass rim.",
+    "hash": "171bb221",
+    "opaque": 24576,
+    "mean": [
+      117,
+      163,
+      33
+    ],
+    "samples": [
+      [
+        105,
+        175,
+        15,
+        255
+      ],
+      [
+        196,
+        156,
+        36,
+        255
+      ],
+      [
+        146,
+        169,
+        26,
+        255
+      ],
+      [
+        112,
+        182,
+        22,
+        255
+      ]
+    ]
+  },
+  {
+    "name": "nine-slice",
+    "description": "A border cut from a sheet, stretched around the area.",
+    "hash": "3c270ebe",
+    "opaque": 24576,
+    "mean": [
+      131,
+      141,
+      34
+    ],
+    "samples": [
+      [
+        105,
+        175,
+        15,
+        255
+      ],
+      [
+        181,
+        61,
+        61,
+        255
+      ],
+      [
+        222,
+        102,
+        22,
+        255
+      ],
+      [
+        112,
+        182,
+        22,
+        255
+      ]
+    ]
+  },
+  {
+    "name": "water",
+    "description": "Water with border and foam.",
+    "hash": "8afde5ab",
+    "opaque": 24576,
+    "mean": [
+      93,
+      160,
+      55
+    ],
+    "samples": [
+      [
+        105,
+        175,
+        15,
+        255
+      ],
+      [
+        86,
+        146,
+        136,
+        255
+      ],
+      [
+        99,
+        165,
+        68,
+        255
+      ],
+      [
+        112,
+        182,
+        22,
+        255
+      ]
+    ]
+  },
+  {
+    "name": "water-bare",
+    "description": "Water without border or foam.",
+    "hash": "b64980ff",
+    "opaque": 24576,
+    "mean": [
+      93,
+      161,
+      54
+    ],
+    "samples": [
+      [
+        105,
+        175,
+        15,
+        255
+      ],
+      [
+        86,
+        146,
+        136,
+        255
+      ],
+      [
+        99,
+        165,
+        69,
+        255
+      ],
+      [
+        112,
+        182,
+        22,
+        255
+      ]
+    ]
+  },
+  {
+    "name": "custom-grass-edge",
+    "description": "Preset: a rim along the edge.",
+    "hash": "bd514d37",
+    "opaque": 24576,
+    "mean": [
+      124,
+      151,
+      31
+    ],
+    "samples": [
+      [
+        105,
+        175,
+        15,
+        255
+      ],
+      [
+        226,
+        106,
+        26,
+        255
+      ],
+      [
+        158,
+        149,
+        22,
+        255
+      ],
+      [
+        112,
+        182,
+        22,
+        255
+      ]
+    ]
+  },
+  {
+    "name": "custom-carpet",
+    "description": "Preset: carpet border.",
+    "hash": "fc62bcdb",
+    "opaque": 24576,
+    "mean": [
+      123,
+      145,
+      32
+    ],
+    "samples": [
+      [
+        105,
+        175,
+        15,
+        255
+      ],
+      [
+        226,
+        106,
+        26,
+        255
+      ],
+      [
+        202,
+        116,
+        22,
+        255
+      ],
+      [
+        112,
+        182,
+        22,
+        255
+      ]
+    ]
+  },
+  {
+    "name": "custom-road-sidewalk",
+    "description": "Preset: town road with sidewalk.",
+    "hash": "1048f7bd",
+    "opaque": 24576,
+    "mean": [
+      130,
+      153,
+      41
+    ],
+    "samples": [
+      [
+        105,
+        175,
+        15,
+        255
+      ],
+      [
+        226,
+        106,
+        26,
+        255
+      ],
+      [
+        202,
+        116,
+        22,
+        255
+      ],
+      [
+        112,
+        182,
+        22,
+        255
+      ]
+    ]
+  },
+  {
+    "name": "custom-road-marked",
+    "description": "Preset: town road with lane marks.",
+    "hash": "6b2d507c",
+    "opaque": 24576,
+    "mean": [
+      130,
+      155,
+      44
+    ],
+    "samples": [
+      [
+        105,
+        175,
+        15,
+        255
+      ],
+      [
+        226,
+        106,
+        26,
+        255
+      ],
+      [
+        202,
+        116,
+        22,
+        255
+      ],
+      [
+        112,
+        182,
+        22,
+        255
+      ]
+    ]
+  },
+  {
+    "name": "transition-hard",
+    "description": "A rule that makes two materials meet with a cut edge.",
+    "hash": "77854f5d",
+    "opaque": 24576,
+    "mean": [
+      117,
+      163,
+      33
+    ],
+    "samples": [
+      [
+        105,
+        175,
+        15,
+        255
+      ],
+      [
+        196,
+        156,
+        36,
+        255
+      ],
+      [
+        112,
+        182,
+        22,
+        255
+      ],
+      [
+        112,
+        182,
+        22,
+        255
+      ]
+    ]
+  },
+  {
+    "name": "morphology-hole",
+    "description": "A hole filled with liquid.",
+    "hash": "ad945fb",
+    "opaque": 24576,
+    "mean": [
+      117,
+      162,
+      33
+    ],
+    "samples": [
+      [
+        105,
+        175,
+        15,
+        255
+      ],
+      [
+        184,
+        146,
+        35,
+        255
+      ],
+      [
+        145,
+        170,
+        26,
+        255
+      ],
+      [
+        112,
+        182,
+        22,
+        255
+      ]
+    ]
+  },
+  {
+    "name": "morphology-wall",
+    "description": "A wall drawn by a stroke.",
+    "hash": "efab1ad8",
+    "opaque": 24576,
+    "mean": [
+      109,
+      155,
+      34
+    ],
+    "samples": [
+      [
+        105,
+        175,
+        15,
+        255
+      ],
+      [
+        86,
+        68,
+        41,
+        255
+      ],
+      [
+        78,
+        71,
+        39,
+        255
+      ],
+      [
+        194,
+        206,
+        125,
+        255
+      ]
+    ]
+  },
+  {
+    "name": "mask-scale-2",
+    "description": "A mask at half the resolution of the world.",
+    "hash": "2ce70c57",
+    "opaque": 24576,
+    "mean": [
+      118,
+      163,
+      33
+    ],
+    "samples": [
+      [
+        105,
+        175,
+        15,
+        255
+      ],
+      [
+        196,
+        156,
+        36,
+        255
+      ],
+      [
+        146,
+        169,
+        26,
+        255
+      ],
+      [
+        112,
+        182,
+        22,
+        255
+      ]
+    ]
+  }
+]

@@ -30,6 +30,8 @@ export interface LayersOptions {
   readonly chunk?: number;
   readonly transitions?: readonly TerrainTransition[];
   readonly water?: TerrainData["water"];
+  /** Holes and walls, as the kernel takes them. */
+  readonly morphology?: TerrainData["morphology"];
 }
 
 export interface TerrainDefinition<I extends string> {
@@ -78,6 +80,7 @@ export function defineTerrain<const M extends Shapes>(materials: M): TerrainDefi
       ...(options.transitions ? { transitions: options.transitions } : {}),
       mask,
       ...(options.water ? { water: options.water } : {}),
+      ...(options.morphology ? { morphology: options.morphology } : {}),
     };
   };
   return {

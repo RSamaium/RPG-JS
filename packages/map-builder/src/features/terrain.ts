@@ -5,7 +5,7 @@ import type { Unsubscribe } from "../model/result";
 import { defineMapFeature, type MapFeature } from "../renderer/feature";
 import type { TerrainBackend } from "../terrain-render/backend";
 import { readTerrain, tryReadTerrain } from "../terrain/data";
-import { dirtyOfPatch, widestBlend, type MaterialSource, type TerrainRenderInit } from "../terrain/kernel";
+import { dirtyOfPatch, globalOverlayMaterials, renderMargin, widestBlend, type MaterialSource, type TerrainRenderInit } from "../terrain/kernel";
 import { readRect, shapeBounds } from "../terrain/mask";
 import { createTerrainScheduler, type TerrainFrame, type TerrainScheduler } from "../terrain/scheduler";
 import type { MaskRect, TerrainData } from "../terrain/types";
@@ -116,7 +116,8 @@ export function terrain(options: TerrainOptions = {}): MapFeature<"terrain", Ter
       let backend: TerrainBackend | undefined;
       let scheduler: TerrainScheduler | undefined;
       let current: TerrainData | undefined;
-      let grow: number | undefined;
+      let grow = 0;
+      let margin = 0;
       let viewport: { x: number; y: number; width: number; height: number } | null = null;
       let generation = 0;
       let destroyed = false;
@@ -209,6 +210,7 @@ export function terrain(options: TerrainOptions = {}): MapFeature<"terrain", Ter
         phase = "ready";
         current = data;
         grow = widestBlend(data);
+        margin = renderMargin(data);
         scheduler?.destroy();
         clearChunks();
         const used = backend;
@@ -216,7 +218,7 @@ export function terrain(options: TerrainOptions = {}): MapFeature<"terrain", Ter
           size: state.size,
           chunk,
           concurrency: used.concurrency,
-          render: (rect) => used.render(rect, grow),
+          render: (rect) => used.render(rect, margin),
           apply: place,
           onError: (error) => report(error),
         });
@@ -254,16 +256,28 @@ export function terrain(options: TerrainOptions = {}): MapFeature<"terrain", Ter
         // The terrain is read when loading ends: it already includes this change.
         if (phase === "loading") return;
         // Mask changes: the backend gets the new values, in order, then the affected chunks render again.
-        if (phase === "ready") current = next;
+        let overlay = false;
+        const touchesOverlay = (was: TerrainData, now: TerrainData, rect: MaskRect): boolean => {
+          const indexes = globalOverlayMaterials(now);
+          if (indexes.length === 0) return false;
+          const seen = new Set<number>([...readRect(was.mask, rect), ...readRect(now.mask, rect)]);
+          return indexes.some((index) => seen.has(index));
+        };
         for (const patch of patches) {
-          const dirty = dirtyOfPatch(patch, next, grow ?? 0);
+          const dirty = dirtyOfPatch(patch, next, grow);
           if (dirty === "none") continue;
           if (patch.type === "terrain.paint" || patch.type === "terrain.region") {
             const rect: MaskRect | undefined = patch.type === "terrain.region" ? { x: patch.x, y: patch.y, width: patch.width, height: patch.height } : shapeBounds(next.mask, patch.shape);
             if (rect && phase === "initializing") queued.push({ rect, values: readRect(next.mask, rect) });
             else if (rect) backend?.updateMask(rect, readRect(next.mask, rect));
+            // A preset that follows the whole shape (lane marks of a road) may change anywhere when its material is touched.
+            if (rect && phase === "ready" && current && touchesOverlay(current, next, rect)) overlay = true;
           }
           if (phase === "ready") scheduler?.invalidate(dirty);
+        }
+        if (phase === "ready") {
+          current = next;
+          if (overlay) scheduler?.invalidate("all");
         }
       };
 
