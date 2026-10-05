@@ -1,0 +1,1569 @@
+[
+  {
+    "name": "plain",
+    "description": "A sprite drawn at its natural size, sorted by the bottom of its hitbox.",
+    "input": {
+      "id": "element",
+      "rect": [
+        0,
+        0,
+        48,
+        48
+      ],
+      "drawIn": [
+        96,
+        144,
+        48,
+        48
+      ],
+      "hitbox": {
+        "x": 12,
+        "y": 30,
+        "width": 24,
+        "height": 14
+      },
+      "zIndexOffset": 0
+    },
+    "expected": {
+      "draw": {
+        "x": 96,
+        "y": 144,
+        "width": 48,
+        "height": 48
+      },
+      "hitbox": {
+        "x": 12,
+        "y": 30,
+        "width": 24,
+        "height": 14,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "hasSortableHitbox": true,
+      "sortKey": 188,
+      "parts": [
+        {
+          "x": 96,
+          "y": 144,
+          "width": 48,
+          "height": 48,
+          "source": {
+            "x": 0,
+            "y": 0,
+            "width": 48,
+            "height": 48
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "atlas-frame",
+    "description": "A sprite cut from a larger tileset image.",
+    "input": {
+      "id": "element",
+      "rect": [
+        201,
+        693,
+        92,
+        101
+      ],
+      "drawIn": [
+        732,
+        792,
+        92,
+        101
+      ],
+      "hitbox": {
+        "x": 20,
+        "y": 70,
+        "width": 52,
+        "height": 25
+      },
+      "zIndexOffset": 0
+    },
+    "expected": {
+      "draw": {
+        "x": 732,
+        "y": 792,
+        "width": 92,
+        "height": 101
+      },
+      "hitbox": {
+        "x": 20,
+        "y": 70,
+        "width": 52,
+        "height": 25,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "hasSortableHitbox": true,
+      "sortKey": 887,
+      "parts": [
+        {
+          "x": 732,
+          "y": 792,
+          "width": 92,
+          "height": 101,
+          "source": {
+            "x": 201,
+            "y": 693,
+            "width": 92,
+            "height": 101
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "scaled",
+    "description": "A non-uniform scale grows the drawn size and the hitbox with it.",
+    "input": {
+      "id": "element",
+      "rect": [
+        0,
+        0,
+        48,
+        48
+      ],
+      "drawIn": [
+        96,
+        144,
+        48,
+        48
+      ],
+      "hitbox": {
+        "x": 12,
+        "y": 30,
+        "width": 24,
+        "height": 14
+      },
+      "zIndexOffset": 0,
+      "scale": {
+        "x": 2,
+        "y": 1.5
+      }
+    },
+    "expected": {
+      "draw": {
+        "x": 96,
+        "y": 144,
+        "width": 96,
+        "height": 72
+      },
+      "hitbox": {
+        "x": 12,
+        "y": 30,
+        "width": 24,
+        "height": 14,
+        "scaleX": 2,
+        "scaleY": 1.5
+      },
+      "hasSortableHitbox": true,
+      "sortKey": 210,
+      "parts": [
+        {
+          "x": 96,
+          "y": 144,
+          "width": 96,
+          "height": 72,
+          "source": {
+            "x": 0,
+            "y": 0,
+            "width": 48,
+            "height": 48
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "scaled-uniform-number",
+    "description": "A single number scales both axes.",
+    "input": {
+      "id": "element",
+      "rect": [
+        0,
+        0,
+        48,
+        48
+      ],
+      "drawIn": [
+        96,
+        144,
+        48,
+        48
+      ],
+      "hitbox": {
+        "x": 12,
+        "y": 30,
+        "width": 24,
+        "height": 14
+      },
+      "zIndexOffset": 0,
+      "scale": 0.5
+    },
+    "expected": {
+      "draw": {
+        "x": 96,
+        "y": 144,
+        "width": 24,
+        "height": 24
+      },
+      "hitbox": {
+        "x": 12,
+        "y": 30,
+        "width": 24,
+        "height": 14,
+        "scaleX": 0.5,
+        "scaleY": 0.5
+      },
+      "hasSortableHitbox": true,
+      "sortKey": 166,
+      "parts": [
+        {
+          "x": 96,
+          "y": 144,
+          "width": 24,
+          "height": 24,
+          "source": {
+            "x": 0,
+            "y": 0,
+            "width": 48,
+            "height": 48
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "z-offset-positive",
+    "description": "zIndexOffset moves the sort key.",
+    "input": {
+      "id": "element",
+      "rect": [
+        0,
+        0,
+        48,
+        48
+      ],
+      "drawIn": [
+        96,
+        144,
+        48,
+        48
+      ],
+      "hitbox": {
+        "x": 12,
+        "y": 30,
+        "width": 24,
+        "height": 14
+      },
+      "zIndexOffset": 10
+    },
+    "expected": {
+      "draw": {
+        "x": 96,
+        "y": 144,
+        "width": 48,
+        "height": 48
+      },
+      "hitbox": {
+        "x": 12,
+        "y": 30,
+        "width": 24,
+        "height": 14,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "hasSortableHitbox": true,
+      "sortKey": 198,
+      "parts": [
+        {
+          "x": 96,
+          "y": 144,
+          "width": 48,
+          "height": 48,
+          "source": {
+            "x": 0,
+            "y": 0,
+            "width": 48,
+            "height": 48
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "z-offset-negative",
+    "description": "A negative zIndexOffset sorts the element behind.",
+    "input": {
+      "id": "element",
+      "rect": [
+        0,
+        0,
+        48,
+        48
+      ],
+      "drawIn": [
+        96,
+        144,
+        48,
+        48
+      ],
+      "hitbox": {
+        "x": 12,
+        "y": 30,
+        "width": 24,
+        "height": 14
+      },
+      "zIndexOffset": -5
+    },
+    "expected": {
+      "draw": {
+        "x": 96,
+        "y": 144,
+        "width": 48,
+        "height": 48
+      },
+      "hitbox": {
+        "x": 12,
+        "y": 30,
+        "width": 24,
+        "height": 14,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "hasSortableHitbox": true,
+      "sortKey": 183,
+      "parts": [
+        {
+          "x": 96,
+          "y": 144,
+          "width": 48,
+          "height": 48,
+          "source": {
+            "x": 0,
+            "y": 0,
+            "width": 48,
+            "height": 48
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "no-hitbox",
+    "description": "Without a hitbox, the element is sorted by the bottom of its drawn rectangle.",
+    "input": {
+      "id": "element",
+      "rect": [
+        0,
+        0,
+        48,
+        48
+      ],
+      "drawIn": [
+        96,
+        144,
+        48,
+        48
+      ],
+      "hitbox": {
+        "type": "none",
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "zIndexOffset": 0
+    },
+    "expected": {
+      "draw": {
+        "x": 96,
+        "y": 144,
+        "width": 48,
+        "height": 48
+      },
+      "hitbox": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "hasSortableHitbox": false,
+      "sortKey": 192,
+      "parts": [
+        {
+          "x": 96,
+          "y": 144,
+          "width": 48,
+          "height": 48,
+          "source": {
+            "x": 0,
+            "y": 0,
+            "width": 48,
+            "height": 48
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "hitbox-clamped",
+    "description": "An oversized hitbox is clamped to the element bounds.",
+    "input": {
+      "id": "element",
+      "rect": [
+        0,
+        0,
+        48,
+        48
+      ],
+      "drawIn": [
+        10,
+        20,
+        96,
+        96
+      ],
+      "hitbox": {
+        "x": 0,
+        "y": 0,
+        "width": 48,
+        "height": 80
+      },
+      "zIndexOffset": 3
+    },
+    "expected": {
+      "draw": {
+        "x": 10,
+        "y": 20,
+        "width": 96,
+        "height": 96
+      },
+      "hitbox": {
+        "x": 0,
+        "y": 0,
+        "width": 48,
+        "height": 48,
+        "scaleX": 2,
+        "scaleY": 2
+      },
+      "hasSortableHitbox": true,
+      "sortKey": 119,
+      "parts": [
+        {
+          "x": 10,
+          "y": 20,
+          "width": 96,
+          "height": 96,
+          "source": {
+            "x": 0,
+            "y": 0,
+            "width": 48,
+            "height": 48
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "hitbox-with-offset-and-draw-size",
+    "description": "Hitbox bottom is scaled by the ratio between drawn size and source size.",
+    "input": {
+      "id": "element",
+      "rect": [
+        0,
+        0,
+        48,
+        48
+      ],
+      "drawIn": [
+        10,
+        20,
+        96,
+        96
+      ],
+      "hitbox": {
+        "x": 8,
+        "y": 20,
+        "width": 24,
+        "height": 12
+      },
+      "zIndexOffset": 3
+    },
+    "expected": {
+      "draw": {
+        "x": 10,
+        "y": 20,
+        "width": 96,
+        "height": 96
+      },
+      "hitbox": {
+        "x": 8,
+        "y": 20,
+        "width": 24,
+        "height": 12,
+        "scaleX": 2,
+        "scaleY": 2
+      },
+      "hasSortableHitbox": true,
+      "sortKey": 87,
+      "parts": [
+        {
+          "x": 10,
+          "y": 20,
+          "width": 96,
+          "height": 96,
+          "source": {
+            "x": 0,
+            "y": 0,
+            "width": 48,
+            "height": 48
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "repeat-axis-x",
+    "description": "A body rectangle repeated along x, the last repetition cut to fit.",
+    "input": {
+      "id": "element",
+      "rect": [
+        0,
+        0,
+        16,
+        16
+      ],
+      "drawIn": [
+        0,
+        0,
+        40,
+        16
+      ],
+      "hitbox": {
+        "x": 0,
+        "y": 8,
+        "width": 16,
+        "height": 8
+      },
+      "zIndexOffset": 0,
+      "drawRule": {
+        "type": "repeat-axis",
+        "axis": "x",
+        "rects": {
+          "body": [
+            0,
+            0,
+            16,
+            16
+          ]
+        }
+      }
+    },
+    "expected": {
+      "draw": {
+        "x": 0,
+        "y": 0,
+        "width": 40,
+        "height": 16
+      },
+      "hitbox": {
+        "x": 0,
+        "y": 8,
+        "width": 16,
+        "height": 8,
+        "scaleX": 2.5,
+        "scaleY": 1
+      },
+      "hasSortableHitbox": true,
+      "sortKey": 16,
+      "parts": [
+        {
+          "x": 0,
+          "y": 0,
+          "width": 16,
+          "height": 16,
+          "source": {
+            "x": 0,
+            "y": 0,
+            "width": 16,
+            "height": 16
+          }
+        },
+        {
+          "x": 16,
+          "y": 0,
+          "width": 16,
+          "height": 16,
+          "source": {
+            "x": 0,
+            "y": 0,
+            "width": 16,
+            "height": 16
+          }
+        },
+        {
+          "x": 32,
+          "y": 0,
+          "width": 8,
+          "height": 16,
+          "source": {
+            "x": 0,
+            "y": 0,
+            "width": 8,
+            "height": 16
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "repeat-axis-y",
+    "description": "A body rectangle repeated along y.",
+    "input": {
+      "id": "element",
+      "rect": [
+        0,
+        0,
+        16,
+        16
+      ],
+      "drawIn": [
+        0,
+        0,
+        16,
+        40
+      ],
+      "hitbox": {
+        "x": 0,
+        "y": 8,
+        "width": 16,
+        "height": 8
+      },
+      "zIndexOffset": 0,
+      "drawRule": {
+        "type": "repeat-axis",
+        "axis": "y",
+        "rects": {
+          "body": [
+            0,
+            0,
+            16,
+            16
+          ]
+        }
+      }
+    },
+    "expected": {
+      "draw": {
+        "x": 0,
+        "y": 0,
+        "width": 16,
+        "height": 40
+      },
+      "hitbox": {
+        "x": 0,
+        "y": 8,
+        "width": 16,
+        "height": 8,
+        "scaleX": 1,
+        "scaleY": 2.5
+      },
+      "hasSortableHitbox": true,
+      "sortKey": 40,
+      "parts": [
+        {
+          "x": 0,
+          "y": 0,
+          "width": 16,
+          "height": 16,
+          "source": {
+            "x": 0,
+            "y": 0,
+            "width": 16,
+            "height": 16
+          }
+        },
+        {
+          "x": 0,
+          "y": 16,
+          "width": 16,
+          "height": 16,
+          "source": {
+            "x": 0,
+            "y": 0,
+            "width": 16,
+            "height": 16
+          }
+        },
+        {
+          "x": 0,
+          "y": 32,
+          "width": 16,
+          "height": 8,
+          "source": {
+            "x": 0,
+            "y": 0,
+            "width": 16,
+            "height": 8
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "repeat-axis-scaled",
+    "description": "Scaling a repeat-axis element repeats along the axis instead of stretching.",
+    "input": {
+      "id": "element",
+      "rect": [
+        0,
+        0,
+        16,
+        16
+      ],
+      "drawIn": [
+        0,
+        0,
+        16,
+        16
+      ],
+      "hitbox": {
+        "x": 0,
+        "y": 8,
+        "width": 16,
+        "height": 8
+      },
+      "zIndexOffset": 0,
+      "scale": {
+        "x": 2.5,
+        "y": 1
+      },
+      "drawRule": {
+        "type": "repeat-axis",
+        "axis": "x",
+        "rects": {
+          "body": [
+            0,
+            0,
+            16,
+            16
+          ]
+        }
+      }
+    },
+    "expected": {
+      "draw": {
+        "x": 0,
+        "y": 0,
+        "width": 40,
+        "height": 16
+      },
+      "hitbox": {
+        "x": 0,
+        "y": 8,
+        "width": 16,
+        "height": 8,
+        "scaleX": 2.5,
+        "scaleY": 1
+      },
+      "hasSortableHitbox": true,
+      "sortKey": 16,
+      "parts": [
+        {
+          "x": 0,
+          "y": 0,
+          "width": 16,
+          "height": 16,
+          "source": {
+            "x": 0,
+            "y": 0,
+            "width": 16,
+            "height": 16
+          }
+        },
+        {
+          "x": 16,
+          "y": 0,
+          "width": 16,
+          "height": 16,
+          "source": {
+            "x": 0,
+            "y": 0,
+            "width": 16,
+            "height": 16
+          }
+        },
+        {
+          "x": 32,
+          "y": 0,
+          "width": 8,
+          "height": 16,
+          "source": {
+            "x": 0,
+            "y": 0,
+            "width": 8,
+            "height": 16
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "edge-repeat",
+    "description": "Fixed caps with a repeated middle.",
+    "input": {
+      "id": "element",
+      "rect": [
+        201,
+        693,
+        92,
+        101
+      ],
+      "drawIn": [
+        732,
+        792,
+        92,
+        101
+      ],
+      "hitbox": {
+        "x": 0,
+        "y": 80,
+        "width": 92,
+        "height": 21
+      },
+      "zIndexOffset": 0,
+      "scale": {
+        "x": 4.173913043478261,
+        "y": 1
+      },
+      "drawRule": {
+        "type": "edge-repeat",
+        "axis": "x",
+        "rects": {
+          "start": [
+            0,
+            0,
+            19,
+            101
+          ],
+          "middle": [
+            19,
+            0,
+            26,
+            101
+          ],
+          "end": [
+            45,
+            0,
+            47,
+            101
+          ]
+        }
+      }
+    },
+    "expected": {
+      "draw": {
+        "x": 732,
+        "y": 792,
+        "width": 384,
+        "height": 101
+      },
+      "hitbox": {
+        "x": 0,
+        "y": 80,
+        "width": 92,
+        "height": 21,
+        "scaleX": 4.173913043478261,
+        "scaleY": 1
+      },
+      "hasSortableHitbox": true,
+      "sortKey": 893,
+      "parts": [
+        {
+          "x": 732,
+          "y": 792,
+          "width": 19,
+          "height": 101,
+          "source": {
+            "x": 201,
+            "y": 693,
+            "width": 19,
+            "height": 101
+          }
+        },
+        {
+          "x": 751,
+          "y": 792,
+          "width": 26,
+          "height": 101,
+          "source": {
+            "x": 220,
+            "y": 693,
+            "width": 26,
+            "height": 101
+          }
+        },
+        {
+          "x": 777,
+          "y": 792,
+          "width": 26,
+          "height": 101,
+          "source": {
+            "x": 220,
+            "y": 693,
+            "width": 26,
+            "height": 101
+          }
+        },
+        {
+          "x": 803,
+          "y": 792,
+          "width": 26,
+          "height": 101,
+          "source": {
+            "x": 220,
+            "y": 693,
+            "width": 26,
+            "height": 101
+          }
+        },
+        {
+          "x": 829,
+          "y": 792,
+          "width": 26,
+          "height": 101,
+          "source": {
+            "x": 220,
+            "y": 693,
+            "width": 26,
+            "height": 101
+          }
+        },
+        {
+          "x": 855,
+          "y": 792,
+          "width": 26,
+          "height": 101,
+          "source": {
+            "x": 220,
+            "y": 693,
+            "width": 26,
+            "height": 101
+          }
+        },
+        {
+          "x": 881,
+          "y": 792,
+          "width": 26,
+          "height": 101,
+          "source": {
+            "x": 220,
+            "y": 693,
+            "width": 26,
+            "height": 101
+          }
+        },
+        {
+          "x": 907,
+          "y": 792,
+          "width": 26,
+          "height": 101,
+          "source": {
+            "x": 220,
+            "y": 693,
+            "width": 26,
+            "height": 101
+          }
+        },
+        {
+          "x": 933,
+          "y": 792,
+          "width": 26,
+          "height": 101,
+          "source": {
+            "x": 220,
+            "y": 693,
+            "width": 26,
+            "height": 101
+          }
+        },
+        {
+          "x": 959,
+          "y": 792,
+          "width": 26,
+          "height": 101,
+          "source": {
+            "x": 220,
+            "y": 693,
+            "width": 26,
+            "height": 101
+          }
+        },
+        {
+          "x": 985,
+          "y": 792,
+          "width": 26,
+          "height": 101,
+          "source": {
+            "x": 220,
+            "y": 693,
+            "width": 26,
+            "height": 101
+          }
+        },
+        {
+          "x": 1011,
+          "y": 792,
+          "width": 26,
+          "height": 101,
+          "source": {
+            "x": 220,
+            "y": 693,
+            "width": 26,
+            "height": 101
+          }
+        },
+        {
+          "x": 1037,
+          "y": 792,
+          "width": 26,
+          "height": 101,
+          "source": {
+            "x": 220,
+            "y": 693,
+            "width": 26,
+            "height": 101
+          }
+        },
+        {
+          "x": 1063,
+          "y": 792,
+          "width": 6,
+          "height": 101,
+          "source": {
+            "x": 220,
+            "y": 693,
+            "width": 6,
+            "height": 101
+          }
+        },
+        {
+          "x": 1069,
+          "y": 792,
+          "width": 47,
+          "height": 101,
+          "source": {
+            "x": 246,
+            "y": 693,
+            "width": 47,
+            "height": 101
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "edge-repeat-compressed",
+    "description": "Caps are compressed when the target is smaller than the fixed edges.",
+    "input": {
+      "id": "element",
+      "rect": [
+        0,
+        0,
+        30,
+        10
+      ],
+      "drawIn": [
+        0,
+        0,
+        20,
+        10
+      ],
+      "hitbox": {
+        "x": 0,
+        "y": 5,
+        "width": 30,
+        "height": 5
+      },
+      "zIndexOffset": 0,
+      "drawRule": {
+        "type": "edge-repeat",
+        "axis": "x",
+        "rects": {
+          "start": [
+            0,
+            0,
+            15,
+            10
+          ],
+          "middle": [
+            15,
+            0,
+            1,
+            10
+          ],
+          "end": [
+            16,
+            0,
+            14,
+            10
+          ]
+        }
+      }
+    },
+    "expected": {
+      "draw": {
+        "x": 0,
+        "y": 0,
+        "width": 20,
+        "height": 10
+      },
+      "hitbox": {
+        "x": 0,
+        "y": 5,
+        "width": 30,
+        "height": 5,
+        "scaleX": 0.6666666666666666,
+        "scaleY": 1
+      },
+      "hasSortableHitbox": true,
+      "sortKey": 10,
+      "parts": [
+        {
+          "x": 0,
+          "y": 0,
+          "width": 10.344827586206897,
+          "height": 10,
+          "source": {
+            "x": 0,
+            "y": 0,
+            "width": 10.344827586206897,
+            "height": 10
+          }
+        },
+        {
+          "x": 10.344827586206897,
+          "y": 0,
+          "width": 9.655172413793103,
+          "height": 10,
+          "source": {
+            "x": 20.344827586206897,
+            "y": 0,
+            "width": 9.655172413793103,
+            "height": 10
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "frame-9slice",
+    "description": "Nine slices: corners fixed, edges and center stretched.",
+    "input": {
+      "id": "element",
+      "rect": [
+        0,
+        0,
+        30,
+        30
+      ],
+      "drawIn": [
+        0,
+        0,
+        50,
+        50
+      ],
+      "hitbox": {
+        "x": 0,
+        "y": 20,
+        "width": 30,
+        "height": 10
+      },
+      "zIndexOffset": 0,
+      "drawRule": {
+        "type": "frame-9slice",
+        "rects": {
+          "cornerTL": [
+            0,
+            0,
+            10,
+            10
+          ],
+          "cornerTR": [
+            20,
+            0,
+            10,
+            10
+          ],
+          "cornerBL": [
+            0,
+            20,
+            10,
+            10
+          ],
+          "cornerBR": [
+            20,
+            20,
+            10,
+            10
+          ],
+          "edgeT": [
+            10,
+            0,
+            10,
+            10
+          ],
+          "edgeB": [
+            10,
+            20,
+            10,
+            10
+          ],
+          "edgeL": [
+            0,
+            10,
+            10,
+            10
+          ],
+          "edgeR": [
+            20,
+            10,
+            10,
+            10
+          ],
+          "center": [
+            10,
+            10,
+            10,
+            10
+          ]
+        }
+      }
+    },
+    "expected": {
+      "draw": {
+        "x": 0,
+        "y": 0,
+        "width": 50,
+        "height": 50
+      },
+      "hitbox": {
+        "x": 0,
+        "y": 20,
+        "width": 30,
+        "height": 10,
+        "scaleX": 1.6666666666666667,
+        "scaleY": 1.6666666666666667
+      },
+      "hasSortableHitbox": true,
+      "sortKey": 50,
+      "parts": [
+        {
+          "x": 0,
+          "y": 0,
+          "width": 10,
+          "height": 10,
+          "source": {
+            "x": 0,
+            "y": 0,
+            "width": 10,
+            "height": 10
+          }
+        },
+        {
+          "x": 40,
+          "y": 0,
+          "width": 10,
+          "height": 10,
+          "source": {
+            "x": 20,
+            "y": 0,
+            "width": 10,
+            "height": 10
+          }
+        },
+        {
+          "x": 0,
+          "y": 40,
+          "width": 10,
+          "height": 10,
+          "source": {
+            "x": 0,
+            "y": 20,
+            "width": 10,
+            "height": 10
+          }
+        },
+        {
+          "x": 40,
+          "y": 40,
+          "width": 10,
+          "height": 10,
+          "source": {
+            "x": 20,
+            "y": 20,
+            "width": 10,
+            "height": 10
+          }
+        },
+        {
+          "x": 10,
+          "y": 0,
+          "width": 10,
+          "height": 10,
+          "source": {
+            "x": 10,
+            "y": 0,
+            "width": 10,
+            "height": 10
+          }
+        },
+        {
+          "x": 20,
+          "y": 0,
+          "width": 10,
+          "height": 10,
+          "source": {
+            "x": 10,
+            "y": 0,
+            "width": 10,
+            "height": 10
+          }
+        },
+        {
+          "x": 30,
+          "y": 0,
+          "width": 10,
+          "height": 10,
+          "source": {
+            "x": 10,
+            "y": 0,
+            "width": 10,
+            "height": 10
+          }
+        },
+        {
+          "x": 10,
+          "y": 40,
+          "width": 10,
+          "height": 10,
+          "source": {
+            "x": 10,
+            "y": 20,
+            "width": 10,
+            "height": 10
+          }
+        },
+        {
+          "x": 20,
+          "y": 40,
+          "width": 10,
+          "height": 10,
+          "source": {
+            "x": 10,
+            "y": 20,
+            "width": 10,
+            "height": 10
+          }
+        },
+        {
+          "x": 30,
+          "y": 40,
+          "width": 10,
+          "height": 10,
+          "source": {
+            "x": 10,
+            "y": 20,
+            "width": 10,
+            "height": 10
+          }
+        },
+        {
+          "x": 0,
+          "y": 10,
+          "width": 10,
+          "height": 10,
+          "source": {
+            "x": 0,
+            "y": 10,
+            "width": 10,
+            "height": 10
+          }
+        },
+        {
+          "x": 0,
+          "y": 20,
+          "width": 10,
+          "height": 10,
+          "source": {
+            "x": 0,
+            "y": 10,
+            "width": 10,
+            "height": 10
+          }
+        },
+        {
+          "x": 0,
+          "y": 30,
+          "width": 10,
+          "height": 10,
+          "source": {
+            "x": 0,
+            "y": 10,
+            "width": 10,
+            "height": 10
+          }
+        },
+        {
+          "x": 40,
+          "y": 10,
+          "width": 10,
+          "height": 10,
+          "source": {
+            "x": 20,
+            "y": 10,
+            "width": 10,
+            "height": 10
+          }
+        },
+        {
+          "x": 40,
+          "y": 20,
+          "width": 10,
+          "height": 10,
+          "source": {
+            "x": 20,
+            "y": 10,
+            "width": 10,
+            "height": 10
+          }
+        },
+        {
+          "x": 40,
+          "y": 30,
+          "width": 10,
+          "height": 10,
+          "source": {
+            "x": 20,
+            "y": 10,
+            "width": 10,
+            "height": 10
+          }
+        },
+        {
+          "x": 10,
+          "y": 10,
+          "width": 10,
+          "height": 10,
+          "source": {
+            "x": 10,
+            "y": 10,
+            "width": 10,
+            "height": 10
+          }
+        },
+        {
+          "x": 20,
+          "y": 10,
+          "width": 10,
+          "height": 10,
+          "source": {
+            "x": 10,
+            "y": 10,
+            "width": 10,
+            "height": 10
+          }
+        },
+        {
+          "x": 30,
+          "y": 10,
+          "width": 10,
+          "height": 10,
+          "source": {
+            "x": 10,
+            "y": 10,
+            "width": 10,
+            "height": 10
+          }
+        },
+        {
+          "x": 10,
+          "y": 20,
+          "width": 10,
+          "height": 10,
+          "source": {
+            "x": 10,
+            "y": 10,
+            "width": 10,
+            "height": 10
+          }
+        },
+        {
+          "x": 20,
+          "y": 20,
+          "width": 10,
+          "height": 10,
+          "source": {
+            "x": 10,
+            "y": 10,
+            "width": 10,
+            "height": 10
+          }
+        },
+        {
+          "x": 30,
+          "y": 20,
+          "width": 10,
+          "height": 10,
+          "source": {
+            "x": 10,
+            "y": 10,
+            "width": 10,
+            "height": 10
+          }
+        },
+        {
+          "x": 10,
+          "y": 30,
+          "width": 10,
+          "height": 10,
+          "source": {
+            "x": 10,
+            "y": 10,
+            "width": 10,
+            "height": 10
+          }
+        },
+        {
+          "x": 20,
+          "y": 30,
+          "width": 10,
+          "height": 10,
+          "source": {
+            "x": 10,
+            "y": 10,
+            "width": 10,
+            "height": 10
+          }
+        },
+        {
+          "x": 30,
+          "y": 30,
+          "width": 10,
+          "height": 10,
+          "source": {
+            "x": 10,
+            "y": 10,
+            "width": 10,
+            "height": 10
+          }
+        }
+      ]
+    }
+  }
+]
