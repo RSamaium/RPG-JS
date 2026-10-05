@@ -20,9 +20,13 @@ export interface MapElement {
   readonly x: number;
   readonly y: number;
   readonly depth?: MapDepth;
+  /** Draw scale: one number for both axes, or `[x, y]`. Defaults to 1. */
+  readonly scale?: MapScale;
   /** Per-element state that belongs to the map's persistent truth. Omitted when empty. */
   readonly data?: JsonObject;
 }
+
+export type MapScale = number | readonly [x: number, y: number];
 
 export interface MapEvent {
   readonly id: string;

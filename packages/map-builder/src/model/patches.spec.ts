@@ -89,6 +89,12 @@ describe("element patches", () => {
     expect(roundTrip({ type: "element.update", id: "t1", set: { depth: { height: 50 } } })!.elements[1]!.depth).toEqual({
       height: 50,
     });
+    // scale: set as a number or a pair, cleared with null, and restored by the inverse
+    expect(roundTrip({ type: "element.update", id: "t1", set: { scale: 2 } })!.elements[1]!.scale).toBe(2);
+    expect(roundTrip({ type: "element.update", id: "t1", set: { scale: [2, 1.5] } })!.elements[1]!.scale).toEqual([2, 1.5]);
+    expect(roundTrip({ type: "element.update", id: "t1", set: { scale: null } })!.elements[1]).not.toHaveProperty("scale");
+    expect(rejected({ type: "element.update", id: "t1", set: { scale: 0 } })?.code).toBe("invalid-patch");
+    expect(rejected({ type: "element.update", id: "t1", set: { scale: [1] } })?.code).toBe("invalid-patch");
     expect(rejected({ type: "element.update", id: "t1", set: { kind: "" } })?.code).toBe("invalid-patch");
     expect(rejected({ type: "element.update", id: "t1", set: { depth: { z: "x" } } })?.code).toBe("invalid-patch");
     expect(rejected({ type: "element.update", id: "nope", set: {} })?.code).toBe("not-found");

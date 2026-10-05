@@ -14,6 +14,10 @@ export interface ParseMapOptions {
 }
 
 const isFiniteNumber = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
+const isPositive = (value: unknown): value is number => isFiniteNumber(value) && value > 0;
+/** A positive number, or `[x, y]` of positive numbers. */
+export const isScale = (value: unknown): boolean =>
+  isPositive(value) || (Array.isArray(value) && value.length === 2 && value.every(isPositive));
 const isNonEmptyString = (value: unknown): value is string => typeof value === "string" && value.length > 0;
 
 /** Problems found in one element or event, with paths relative to `path`. */
@@ -29,6 +33,9 @@ export function checkPlaced(value: unknown, path: string, kind: "element" | "eve
   }
   if (kind === "event" && value.graphic !== undefined && !isNonEmptyString(value.graphic)) {
     issues.push({ path: `${path}.graphic`, message: "must be a non-empty string" });
+  }
+  if (kind === "element" && value.scale !== undefined && !isScale(value.scale)) {
+    issues.push({ path: `${path}.scale`, message: "must be a positive number or [x, y] of positive numbers" });
   }
   if (kind === "element" && value.depth !== undefined) {
     if (!isPlainObject(value.depth)) {

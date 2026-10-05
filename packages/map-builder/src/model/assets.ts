@@ -2,9 +2,21 @@
 export interface AssetDescriptor {
   /** Where the image lives. How it is fetched and decoded is up to the renderer. */
   readonly src: string;
-  /** Natural size in pixels. */
+  /**
+   * `[x, y, width, height]` of the part of the image to show, for assets cut out
+   * of a larger image (a tileset). Defaults to the whole image.
+   */
+  readonly frame?: readonly [x: number, y: number, width: number, height: number];
+  /**
+   * Size in pixels at which the asset is drawn. Defaults to the size of `frame`.
+   * Without a `frame`, it is also taken as the size of the image. An asset that
+   * declares neither is measured once its image has loaded.
+   */
   readonly size?: readonly [width: number, height: number];
-  /** `[x, y, width, height]` of the collision box, relative to the element origin. */
+  /**
+   * `[x, y, width, height]` of the collision box, in pixels of the *source* image
+   * (`frame`), relative to its top-left corner. It is scaled with the asset.
+   */
   readonly hitbox?: readonly [x: number, y: number, width: number, height: number];
 }
 

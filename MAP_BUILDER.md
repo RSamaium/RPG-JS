@@ -576,6 +576,50 @@ Decisions taken while implementing step 1 (`packages/map-builder`, sub-path
   undo entry (patch compaction later); history entries become stale if someone
   else removes the element they refer to (undo then returns a rejection).
 
+#### Step 2 implementation notes
+
+`renderer` and `features` sub-paths of `@rpgjs/map-builder`. What was decided
+while implementing them:
+
+- **Reference snapshots are geometry, not pixels.** They were frozen from the
+  Studio renderer in a separate, earlier commit
+  (`packages/studio/src/map-renderer/map-builder-references.spec.ts`, fixture
+  `packages/map-builder/src/renderer/__references__/studio-elements.json`). For
+  15 representative Studio elements they record where each sprite part is drawn,
+  which source rectangle it shows, the scaled hitbox and the depth sort key. A
+  Studio spec fails if the Studio renderer stops matching the file, and the new
+  renderer is checked against the same file. The test environment has no GPU
+  (jsdom with a mocked WebGL), so a true pixel comparison is left to the POC of
+  step 5, in a real browser.
+- **Documented difference.** Studio cuts an element into several parts with its
+  own drawing rules (repeat-axis, edge-repeat, frame-9slice). That segmentation
+  stays in Studio and reaches the renderer through `resolveElementSprite`; for
+  those cases the parity test checks that the parts are placed, sorted and
+  bounded exactly as Studio does.
+- **The renderer is a PixiJS container** (`view.root`), described by plain data
+  (`SceneNode`) and reconciled patch by patch. CanvasEngine renders to PixiJS, so
+  it hosts the view with the `mount` + `componentInstance` pattern the repository
+  already uses for raw PixiJS children (`attachMapView`). `pixi.js` is a peer
+  dependency; `/model` and `/features` do not import it.
+- **Model additions.** `MapElement.scale` (a number or `[x, y]`, editable with
+  `element.update`) and `AssetDescriptor.frame` were needed to express Studio
+  elements. Without a `frame`, `size` is also the size of the image; an asset
+  declaring neither is measured once loaded.
+- **Features** have a rendering contract (`describeAll`, `describeOne`,
+  `affected(patch)`), an `apiVersion` and `requires`, validated at startup.
+  `elements()` and `events()` use the same `defineMapFeature` as third parties.
+  `affected` makes updates incremental; `"all"` re-describes a whole feature for
+  patches it does not understand.
+- **Transient effects** (`view.effects`) never touch the model. They are driven
+  by `tick(deltaMs)`, never by the wall clock, and never throw: an unknown effect
+  or element ends at once with a status. Broadcasting them to other clients is
+  part of step 4.
+- **Events** are drawn only when they have a `graphic` that is a known asset.
+  Markers for the editor arrive with the skins (step 3).
+- **Known limits.** Ties in the sort key follow insertion order. Culling hides
+  containers but does not yet avoid creating them. Terrain, lighting and
+  post-processing stages exist as empty containers and are filled in milestone 2.
+
 What milestone 1 delivers on its own: a map usable without Studio (3.3), the
 builder game, the living map (the server changes elements during play), the
 tree-cutting style of game, and a shared element renderer.

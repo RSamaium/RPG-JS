@@ -1,4 +1,4 @@
-import type { MapDepth, MapElement, MapEvent, MapState } from "./definition";
+import type { MapDepth, MapElement, MapEvent, MapScale, MapState } from "./definition";
 import type { MapRejection, RejectionCode } from "./errors";
 import type { JsonObject, JsonValue } from "./json";
 
@@ -23,8 +23,15 @@ export interface PatchRegistry {
   "element.add": { readonly element: MapElement; readonly index?: number };
   "element.remove": { readonly id: string };
   "element.move": { readonly id: string; readonly x: number; readonly y: number };
-  /** `kind` replaces the asset reference. `depth: null` clears the depth. */
-  "element.update": { readonly id: string; readonly set: { readonly kind?: string; readonly depth?: MapDepth | null } };
+  /** `kind` replaces the asset reference. `depth: null` and `scale: null` clear them. */
+  "element.update": {
+    readonly id: string;
+    readonly set: {
+      readonly kind?: string;
+      readonly depth?: MapDepth | null;
+      readonly scale?: MapScale | null;
+    };
+  };
   /** Merges `set` into the element data, then removes the `unset` keys. */
   "element.data": { readonly id: string; readonly set?: JsonObject; readonly unset?: readonly string[] };
   "event.add": { readonly event: MapEvent; readonly index?: number };

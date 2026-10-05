@@ -1,5 +1,16 @@
 import { describe, expectTypeOf, test } from "vitest";
 import {
+  createMapView,
+  defineMapFeature,
+  elements,
+  events,
+  attachMapView,
+  type EffectHandle,
+  type EffectStatus,
+  type MapFeature,
+  type MapView,
+  type MapViewHooks,
+  type SceneNode,
   createMapModel,
   defineAssets,
   defineMap,
@@ -171,6 +182,89 @@ describe("map-builder public API types", () => {
     definePatchHandlers({
       // @ts-expect-error unknown patch type
       "tilling.dig": { apply: () => ({ ok: true as const, state: {} as never, inverse: [] }) },
+    });
+  });
+
+  describe("renderer", () => {
+    const definition = defineMap(assets, { id: "m", size: [1, 1] });
+
+    test("a view accepts a model whatever its committer, and features are imported objects", () => {
+      // Checked by the compiler, never run: nothing here needs a real view.
+      const compileOnly = () => {
+        const local = createMapModel(definition);
+        const remote = createMapModel(definition, {
+          committer: { attach: () => undefined, commit: async () => ({ ok: false as const, rejection: { code: "x", message: "y" } }) },
+        });
+
+        const view = createMapView({ model: local, assets, features: [elements(), events()] });
+        createMapView({ model: remote, assets, features: [elements()] });
+        expectTypeOf(view).toEqualTypeOf<MapView>();
+        expectTypeOf(elements()).toEqualTypeOf<MapFeature>();
+
+        // @ts-expect-error features are imported objects, not names (they must stay tree-shakeable)
+        createMapView({ model: local, assets, features: ["elements"] });
+        // @ts-expect-error a view needs its features, even if the list is empty
+        createMapView({ model: local, assets });
+        // @ts-expect-error a view needs a model
+        createMapView({ assets, features: [] });
+      };
+      void compileOnly;
+    });
+
+    test("effect targets are element ids or typed references", () => {
+      const compileOnly = (view: MapView) => {
+        const handle = view.effects.play("t1", "shake", { intensity: 4 });
+        view.effects.play({ type: "event", id: "chest-1" }, "blink");
+        expectTypeOf(handle).toEqualTypeOf<EffectHandle>();
+        expectTypeOf(handle.finished).toEqualTypeOf<Promise<EffectStatus>>();
+        expectTypeOf<EffectStatus>().toEqualTypeOf<
+          "completed" | "cancelled" | "target-removed" | "unknown-effect" | "target-missing"
+        >();
+
+        // @ts-expect-error only elements and events can be targeted
+        view.effects.play({ type: "terrain", id: "x" }, "shake");
+        // @ts-expect-error an effect needs a name
+        view.effects.play("t1");
+      };
+      void compileOnly;
+    });
+
+    test("hooks are typed on the element they receive and the node they may return", () => {
+      const hooks: MapViewHooks = {
+        resolveElementSprite(element, context) {
+          expectTypeOf(element.id).toEqualTypeOf<string>();
+          expectTypeOf(context.descriptor?.src).toEqualTypeOf<string | undefined>();
+          return { parts: [{ x: 0, y: 0, width: 16, height: 16 }] };
+        },
+        onBeforeRenderElement(node) {
+          expectTypeOf(node).toEqualTypeOf<SceneNode>();
+          return { ...node, sortKey: node.sortKey + 1 };
+        },
+        onMissingAsset(kind, owner) {
+          expectTypeOf(kind).toEqualTypeOf<string>();
+          expectTypeOf(owner.type).toEqualTypeOf<"element" | "event">();
+        },
+      };
+      void hooks;
+
+      const rejectedByTheCompiler = () => {
+        const bad: MapViewHooks = {
+          // @ts-expect-error a part needs a size
+          resolveElementSprite: () => ({ parts: [{ x: 0, y: 0 }] }),
+        };
+        return bad;
+      };
+      void rejectedByTheCompiler;
+    });
+
+    test("a feature is defined with an id, and attachMapView hosts a view", () => {
+      expectTypeOf(defineMapFeature({ id: "demo", requires: ["elements"] })).toEqualTypeOf<MapFeature>();
+      expectTypeOf(attachMapView).returns.toEqualTypeOf<() => void>();
+      const rejectedByTheCompiler = () => {
+        // @ts-expect-error a feature needs an id
+        defineMapFeature({});
+      };
+      void rejectedByTheCompiler;
     });
   });
 });

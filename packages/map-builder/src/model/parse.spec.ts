@@ -69,6 +69,15 @@ describe("parseMapDefinition", () => {
     expect(issuesOf({ ...valid(), extensions: { terrain: new Date() } })).not.toEqual([]);
   });
 
+  it("validates scale: a positive number, or a pair of positive numbers", () => {
+    const withScale = (scale: unknown) => ({ ...valid(), elements: [{ id: "a", kind: "k", x: 0, y: 0, scale }] });
+    expect(issuesOf(withScale(2))).toEqual([]);
+    expect(issuesOf(withScale([2, 1.5]))).toEqual([]);
+    for (const bad of [0, -1, [1], [1, 0], "2", [1, 2, 3], NaN]) {
+      expect(issuesOf(withScale(bad))[0], JSON.stringify(bad)).toMatch(/scale/);
+    }
+  });
+
   it("validates depth", () => {
     expect(issuesOf({ ...valid(), elements: [{ id: "a", kind: "k", x: 0, y: 0, depth: { z: "high" } }] })[0]).toMatch(
       /depth\.z/,

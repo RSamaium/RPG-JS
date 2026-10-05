@@ -19,10 +19,18 @@ export default defineConfig({
     sourcemap: true,
     minify: false,
     lib: {
-      entry: { index: "src/index.ts", "model/index": "src/model/index.ts" },
+      entry: {
+        index: "src/index.ts",
+        "model/index": "src/model/index.ts",
+        "renderer/index": "src/renderer/index.ts",
+        "features/index": "src/features/index.ts",
+      },
       formats: ["es"],
       fileName: (_format, entryName) => `${entryName}.js`,
     },
-    rollupOptions: { output: { preserveModules: true, preserveModulesRoot: "src" } },
+    rollupOptions: {
+      external: ["pixi.js"],
+      output: { preserveModules: true, preserveModulesRoot: "src" },
+    },
   },
 });

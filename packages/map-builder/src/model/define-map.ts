@@ -1,5 +1,5 @@
 import type { AssetKind, AssetResolver } from "./assets";
-import { MAP_DEFINITION_VERSION, type MapDefinition, type MapDepth, type MapElement, type MapEvent } from "./definition";
+import { MAP_DEFINITION_VERSION, type MapDefinition, type MapDepth, type MapElement, type MapEvent, type MapScale } from "./definition";
 import { MapDefinitionError, type MapIssue } from "./errors";
 import type { JsonObject, JsonValue } from "./json";
 import { parseMapDefinition } from "./parse";
@@ -12,6 +12,7 @@ export interface ElementInput {
   readonly x: number;
   readonly y: number;
   readonly depth?: MapDepth;
+  readonly scale?: MapScale;
   readonly data?: JsonObject;
 }
 

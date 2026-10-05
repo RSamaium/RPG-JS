@@ -4,8 +4,13 @@
 > validates it. See [`MAP_BUILDER.md`](../../MAP_BUILDER.md) for the design.
 
 A modifiable map: one model, changed only by patches, usable by a game, an
-editor or both. This first step provides the model (`@rpgjs/map-builder/model`);
-it runs in plain Node, without a DOM.
+editor or both.
+
+| Entry | What it gives | Needs PixiJS |
+| --- | --- | --- |
+| `@rpgjs/map-builder/model` | The model, patches, history, sources. Runs in plain Node, without a DOM. | no |
+| `@rpgjs/map-builder/renderer` | `createMapView`: draws a model with PixiJS, updates it patch by patch. | yes (peer dependency) |
+| `@rpgjs/map-builder/features` | `elements()`, `events()`: what the view draws. | no |
 
 ```ts
 import { createMapModel, defineAssets, defineMap, el } from "@rpgjs/map-builder/model";
@@ -34,6 +39,68 @@ model.apply([
 model.history.undo(); // restores the tree and removes the loot, in one step
 ```
 
+## Drawing a map
+
+```ts
+import { createMapView } from "@rpgjs/map-builder/renderer";
+import { elements, events } from "@rpgjs/map-builder/features";
+
+const view = createMapView({
+  model,
+  assets,
+  features: [elements(), events()], // imported objects, so unused ones are tree-shaken
+});
+
+await view.mount(document.getElementById("game")!); // creates a PixiJS application…
+// …or host `view.root` in any PixiJS stage you already have:
+app.stage.addChild(view.root);
+
+model.apply({ type: "element.move", id: "t1", x: 160, y: 96 }); // only t1 is updated
+```
+
+The view follows the model whatever its committer: it listens to the changes
+that were applied, and describes again only the elements a patch touched.
+
+- **Depth.** Elements are drawn back to front by a sort key: the bottom of the
+  hitbox (or of the drawing without one) plus `depth.z`, as the Studio renderer
+  does. `depth.anchorY` replaces the bottom with an explicit offset.
+- **Assets.** `AssetDescriptor` has an optional `frame` (an asset cut out of a
+  tileset), a `size`, and a `hitbox` in source pixels. An asset that declares
+  neither `frame` nor `size` is measured once its image has loaded.
+- **Culling.** `view.setViewport(rect)` hides what is outside the camera, with a
+  margin (64 px by default). `null` shows everything.
+- **Hooks.** `resolveElementSprite` changes how an element is drawn (Studio uses
+  it for its drawing rules), `onBeforeRenderElement` adjusts the result,
+  `onMissingAsset` reports unknown assets.
+- **Effects.** Short visual changes that never touch the model, so they are not
+  saved, undoable nor replayed to late joiners:
+
+  ```ts
+  const handle = view.effects.play("t1", "shake", { intensity: 4 });
+  await handle.finished; // "completed" | "cancelled" | "target-removed" | …
+  ```
+
+  `shake` and `blink` are built in; add yours with `effects: { lift }` or
+  `view.effects.register`. Time only moves on `view.tick(deltaMs)`, which `mount`
+  calls every frame, so effects are deterministic.
+
+### In a CanvasEngine scene
+
+The view is a PixiJS container, which is what CanvasEngine renders to. Host it
+the way other raw PixiJS objects are hosted:
+
+```ce
+<Container />
+
+<script>
+  import { mount, tick } from "canvasengine";
+  import { attachMapView } from "@rpgjs/map-builder/renderer";
+
+  mount((element) => attachMapView(element.componentInstance, view));
+  tick(({ deltaTime }) => view.tick(deltaTime));
+</script>
+```
+
 ## What is in it
 
 | | |
@@ -45,6 +112,8 @@ model.history.undo(); // restores the tree and removes the loot, in one step
 | `createMapModel` | State, revisions, patches, batches, history, `subscribe`. |
 | Patches | `element.add/remove/move/update/data`, `event.add/remove/move`, `extension.set`. Serializable and invertible. |
 | `localCommitter` | Applies changes immediately, and saves them through `persist`. |
+| `createMapView`, `elements()`, `events()` | Draw the model with PixiJS, incrementally. |
+| `defineMapFeature` | Declares a feature with an id, its dependencies and what it draws. Built-in and third-party features use the same contract. |
 
 ## Rejections are values
 

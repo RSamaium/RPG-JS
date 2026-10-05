@@ -1,6 +1,6 @@
-import type { MapDepth, MapElement, MapEvent, MapState } from "./definition";
+import type { MapDepth, MapElement, MapEvent, MapScale, MapState } from "./definition";
 import { cloneJson, isFiniteNumberValue, isJsonObject, isJsonValue, type JsonObject, type JsonValue } from "./json";
-import { checkPlaced } from "./parse";
+import { checkPlaced, isScale } from "./parse";
 import { definePatchHandlers, patchFail, patchOk, type MapPatch, type PatchOutcome } from "./patches";
 
 type Placed = MapElement | MapEvent;
@@ -70,7 +70,7 @@ export const coreHandlers = definePatchHandlers({
 
   "element.update": {
     apply(state, patch) {
-      const set = patch.set as { kind?: unknown; depth?: unknown } | undefined;
+      const set = patch.set as { kind?: unknown; depth?: unknown; scale?: unknown } | undefined;
       if (typeof set !== "object" || set === null) return patchFail("invalid-patch", "set must be an object");
       if (set.kind !== undefined && (typeof set.kind !== "string" || set.kind.length === 0)) {
         return patchFail("invalid-patch", "kind must be a non-empty string");
@@ -79,12 +79,15 @@ export const coreHandlers = definePatchHandlers({
         const issues = checkPlaced({ id: "_", kind: "_", x: 0, y: 0, depth: set.depth }, "element", "element");
         if (issues.length > 0) return patchFail("invalid-patch", issues.map((i) => `${i.path} ${i.message}`).join("; "));
       }
+      if (set.scale !== undefined && set.scale !== null && !isScale(set.scale)) {
+        return patchFail("invalid-patch", "scale must be a positive number or [x, y] of positive numbers");
+      }
       const index = state.elements.findIndex((entry) => entry.id === patch.id);
       if (index < 0) return patchFail("not-found", `element "${patch.id}" does not exist`);
       const previous = state.elements[index]!;
 
       const next: Record<string, unknown> = { ...previous };
-      const back: { kind?: string; depth?: MapDepth | null } = {};
+      const back: { kind?: string; depth?: MapDepth | null; scale?: MapScale | null } = {};
       if (set.kind !== undefined) {
         next.kind = set.kind;
         back.kind = previous.kind;
@@ -93,6 +96,11 @@ export const coreHandlers = definePatchHandlers({
         if (set.depth === null) delete next.depth;
         else next.depth = cloneJson(set.depth as JsonValue);
         back.depth = previous.depth ?? null;
+      }
+      if (set.scale !== undefined) {
+        if (set.scale === null) delete next.scale;
+        else next.scale = cloneJson(set.scale as JsonValue);
+        back.scale = previous.scale ?? null;
       }
       return patchOk({ ...state, elements: replaceAt(state.elements, index, next as unknown as MapElement) }, [
         { type: "element.update", id: patch.id, set: back },
