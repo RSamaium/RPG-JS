@@ -5,6 +5,7 @@ import type { MapPatch } from "../model/patches";
 import type { ApplyResult, MaybePromise, Unsubscribe } from "../model/result";
 import type { InteractionController, ModelApi } from "../interaction/controller";
 import type { TextureStore } from "./textures";
+import type { Rect } from "./geometry";
 import type { StageName, SceneNode, DescribeContext } from "./scene";
 
 /** Version of the contract between the renderer and a feature. */
@@ -35,6 +36,8 @@ export interface FeatureHost<R extends MaybePromise<ApplyResult> = MaybePromise<
   describe(): readonly SceneNode[];
   /** Called every frame with the time elapsed, in milliseconds. */
   onTick(listener: (deltaMs: number) => void): Unsubscribe;
+  /** What is looked at, in world pixels (`null`: no preference). Called now with the current one, then on every change. */
+  onViewport(listener: (viewport: Rect | null) => void): Unsubscribe;
 }
 
 export interface FeatureInstance<Api extends object = Record<never, never>> {

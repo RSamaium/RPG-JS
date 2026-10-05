@@ -219,3 +219,15 @@ export function history<R extends MaybePromise<ApplyResult> = MaybePromise<Apply
     },
   });
 }
+
+export {
+  terrain,
+  canvasSurface,
+  decodeRaster,
+  memorySurface,
+  TERRAIN_FEATURE_ID,
+  type TerrainApi,
+  type TerrainOptions,
+  type TerrainSurface,
+  type TerrainSurfaceFactory,
+} from "./terrain";

@@ -24,6 +24,14 @@
       "import": "./dist/terrain/index.js",
       "types": "./dist/terrain/index.d.ts"
     },
+    "./terrain-render": {
+      "import": "./dist/terrain-render/index.js",
+      "types": "./dist/terrain-render/index.d.ts"
+    },
+    "./terrain-render/worker": {
+      "import": "./dist/terrain-render/worker.js",
+      "types": "./dist/terrain-render/worker.d.ts"
+    },
     "./features": {
       "import": "./dist/features/index.js",
       "types": "./dist/features/index.d.ts"
@@ -87,6 +95,7 @@
     "@rpgjs/common": "workspace:*",
     "@rpgjs/server": "workspace:*",
     "@rpgjs/client": "workspace:*",
+    "@rpgjs/render-map2d": "workspace:*",
     "canvasengine": "^2.4.0"
   },
   "peerDependenciesMeta": {
@@ -97,6 +106,9 @@
       "optional": true
     },
     "@rpgjs/client": {
+      "optional": true
+    },
+    "@rpgjs/render-map2d": {
       "optional": true
     },
     "canvasengine": {

@@ -36,6 +36,11 @@ describe("run-length encoding", () => {
     expect(encodeRuns(new Uint16Array(65536).fill(3)).length).toBeLessThan(12);
   });
 
+  it("refuses a run of length zero, which would never advance", () => {
+    const zeroRun = btoa(String.fromCharCode(1, 0, 1, 4)); // value 1 x 0, then value 1 x 4
+    expect(() => decodeRuns(zeroRun, 4)).toThrow(/runs do not fit/);
+  });
+
   it.each([
     ["not base64", "***", 4],
     ["truncated", encodeRuns(new Uint16Array([1, 1, 1])).slice(0, 2), 3],

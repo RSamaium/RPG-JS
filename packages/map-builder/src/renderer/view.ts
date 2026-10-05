@@ -166,6 +166,7 @@ export function createMapView<
   const warned = new Set<string>();
   const pending = new Set<Promise<unknown>>();
   let viewport: Rect | null = null;
+  const viewportListeners = new Set<(viewport: Rect | null) => void>();
   let destroyed = false;
   let mounted: { app: PixiApplicationLike; tick: (ticker: { deltaMS: number }) => void; unbindKeyboard: (() => void) | undefined } | null = null;
 
@@ -406,6 +407,7 @@ export function createMapView<
     },
     setViewport(next) {
       viewport = next;
+      for (const listener of [...viewportListeners]) listener(next);
       for (const nodeView of views.values()) nodeView.container.visible = isVisible(nodeView.node);
     },
     tick: advance,
@@ -464,6 +466,11 @@ export function createMapView<
     onTick(listener) {
       tickListeners.add(listener);
       return () => tickListeners.delete(listener);
+    },
+    onViewport(listener) {
+      viewportListeners.add(listener);
+      listener(viewport);
+      return () => viewportListeners.delete(listener);
     },
   };
   // Features are set up in the order they are listed, after the model has already been drawn.
