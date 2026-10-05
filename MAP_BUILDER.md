@@ -1059,3 +1059,14 @@ On `localhost:4200/create` of `rpgjs.studio` the iframe shows the game of the pr
 ### Where the editor lives (decision)
 
 The editor is **not** in an official package. `@rpgjs/map-builder` keeps the primitives anyone can use (model, patches, authority, selection, move, placement, terrain brush, history, the iframe channels, `draw: false`). `@rpgjs/studio` keeps one door, `registerStudioMapExtension`, called with every Studio map that is loaded (engine, id, size, the placed elements as stored, how the runtime resolves one, `updateData`). Everything that makes it an editor (the adapters from the Studio format, the session, pause, the allowed origins, and from now on the shortcuts, clipboard, camera and every editing behaviour of the old editor) is the **`map-editor` plugin of the Studio's game project** (`rpgjs.studio/rpgjs/map-editor`, internal, never published). It is loaded with a dynamic `import()` only when the game is opened in a frame with `?editor`, in the same build as the game: a game opened by a player fetches one 1-line file (`frame.ts`) to find that out, and nothing else. The notes of step 6b above that name `packages/studio/src/editor` describe where this code was before it moved.
+
+### Parity with the old Studio map editor (running list)
+
+The editor lives in `rpgjs.studio/rpgjs/map-editor` (internal, loaded lazily with `?editor`). Done and checked in the browser at `/create`:
+
+- Select all (Ctrl/Cmd+A, or the panel), delete, nudge (arrows, Shift = 10 px), copy / cut / paste / duplicate (Shift+Ctrl+V), layer choice.
+- One history on the game's authority (tools, Studio forms and commands all land in it); the Studio shows `canUndo` / `canRedo` from the published state and sends `undo` / `redo` as commands.
+- Keys are bound in the game frame and resolved by the ported `keymap.ts`; those only the Studio can do (save, change tool) come back as a published `shortcut`.
+- Added elements are saved from their stored form carried in the model (`data.raw`, `data.layer`).
+
+Still to do before the old editor can go: palette with drag and drop placement, free camera (pan / zoom, space = hand), terrain (Studio format), events, settings / test / status bar, opening a chosen map from the World page.
