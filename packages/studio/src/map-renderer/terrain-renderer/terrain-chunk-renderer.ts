@@ -42,6 +42,11 @@ import type { StudioViewportBounds } from "../viewport-culling";
 const DEFAULT_CHUNK_SIZE = 768;
 const SOLID_BLACK_TERRAIN_TEXTURE_ID = "__solid_black__";
 const WATER_ANIMATION_FRAME_DURATION = 1 / 30;
+/**
+ * Time the water may take in one update (ms). Each water overlay is a chunk-sized canvas drawn on the CPU; with several of
+ * them in view, drawing all of them every update stalls the game loop. The ones that do not fit wait for the next update.
+ */
+const WATER_UPDATE_BUDGET_MS = 6;
 const ROCK_FACE_TEXTURE_WIDTH = 256;
 const ROCK_FACE_TEXTURE_HEIGHT = 128;
 
@@ -241,6 +246,7 @@ export class StudioTerrainChunkRenderer {
   private liquidPaletteCache = new Map<string, TerrainLiquidPalette | null>();
   private liquidSurfaceCache = new WeakMap<StudioTerrainMorphologyFeature, { mask: TerrainMorphologyMaskBuffer; smoothedMask: TerrainMorphologyMaskBuffer; fillMask: TerrainMorphologyMaskBuffer; geometry: ReturnType<typeof resolveTerrainMorphologyLiquidGeometry> } | null>();
   private liquidContactVersion = "";
+  private waterCursor = 0;
   private waterAnimationElapsed = 0;
 
   constructor(world: PixiContainer, options: StudioTerrainChunkRendererOptions = {}) {
@@ -461,16 +467,32 @@ export class StudioTerrainChunkRenderer {
     const animationDelta = Math.min(this.waterAnimationElapsed, 0.3);
     this.waterAnimationElapsed %= WATER_ANIMATION_FRAME_DURATION;
 
+    const animated: TerrainWaterOverlay[] = [];
     for (const chunk of this.chunks.values()) {
       const overlay = chunk.waterOverlay;
       if (!overlay || overlay.sprite.destroyed) continue;
+      // The waves keep their speed for every overlay, drawn now or not.
       for (const region of overlay.regions) {
         region.phase += animationDelta * region.speed;
       }
-      if (!overlay.sprite.visible) continue;
-      drawWaterAnimationFrame(overlay);
-      updateCanvasTexture(overlay.texture);
+      if (overlay.sprite.visible) animated.push(overlay);
     }
+    if (animated.length === 0) return;
+
+    // At least one overlay is drawn each update, then as many as fit in the budget, going round from where it stopped.
+    const startedAt = performance.now();
+    let drawn = 0;
+    while (drawn < animated.length) {
+      this.drawWaterOverlay(animated[(this.waterCursor + drawn) % animated.length]!);
+      drawn += 1;
+      if (performance.now() - startedAt > WATER_UPDATE_BUDGET_MS) break;
+    }
+    this.waterCursor = (this.waterCursor + drawn) % animated.length;
+  }
+
+  private drawWaterOverlay(overlay: TerrainWaterOverlay): void {
+    drawWaterAnimationFrame(overlay);
+    updateCanvasTexture(overlay.texture);
   }
 
   invalidateTerrain(bounds?: { x: number; y: number; width: number; height: number }): void {
