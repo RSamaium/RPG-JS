@@ -40,6 +40,8 @@ import {
 import type { StudioViewportBounds } from "../viewport-culling";
 
 const DEFAULT_CHUNK_SIZE = 768;
+/** Room around the chunks drawn again, for the relief to be made in: blurs, insets and the drop of a liquid reach that far. */
+const MORPHOLOGY_CLIP_MARGIN = 192;
 let chunkSizeOverride: number | undefined;
 
 /**
@@ -252,7 +254,12 @@ export class StudioTerrainChunkRenderer {
   private destroyed = false;
   private viewportBounds: TerrainViewportBounds | null = null;
   private viewportMargin = 0;
-  private morphologyMaskCache = new WeakMap<StudioTerrainMorphologyFeature, TerrainMorphologyMaskBuffer | null>();
+  private morphologyMaskCache = new WeakMap<StudioTerrainMorphologyFeature, { value: TerrainMorphologyMaskBuffer | null; clip: StudioTerrainRenderBounds | null }>();
+  /**
+   * While only a part of the map is drawn again (the chunks a stroke touched), the masks of the relief are made for that
+   * part and its surroundings, not for the whole feature: what they cost follows what is drawn.
+   */
+  private morphologyRenderClip: StudioTerrainRenderBounds | null = null;
   private terrainWallRenderPartsCache = new WeakMap<StudioTerrainMorphologyFeature, TerrainWallRenderParts | null>();
   private terrainHoleRenderPartsCache = new WeakMap<StudioTerrainMorphologyFeature, TerrainHoleRenderParts | null>();
   private morphologyColorOverlayCache = new WeakMap<HTMLCanvasElement, Map<string, HTMLCanvasElement>>();
@@ -263,7 +270,7 @@ export class StudioTerrainChunkRenderer {
   private nextMorphologyCanvasId = 1;
   private morphologyClipBounds: StudioTerrainRenderBounds | null = null;
   private liquidPaletteCache = new Map<string, TerrainLiquidPalette | null>();
-  private liquidSurfaceCache = new WeakMap<StudioTerrainMorphologyFeature, TerrainLiquidSurface | null>();
+  private liquidSurfaceCache = new WeakMap<StudioTerrainMorphologyFeature, { value: TerrainLiquidSurface | null; clip: StudioTerrainRenderBounds | null }>();
   private liquidContactVersion = "";
   private waterAnimationElapsed = 0;
 
@@ -349,7 +356,10 @@ export class StudioTerrainChunkRenderer {
     const collisions = debugCollisions ? buildStudioTerrainCollisionPolygons(map) : [];
 
     if (previousVersion !== version || streamUpdate) this.resetMorphologyRenderCaches(true);
+    // Only some chunks are drawn again (a stroke touched them): the relief is made for them and their surroundings.
+    this.morphologyRenderClip = streamUpdate && !renderAllActiveStreamChunks && nextKeys.size > 0 ? this.chunkKeysBounds(nextKeys, data, MORPHOLOGY_CLIP_MARGIN) : null;
     let renderedChunkCount = 0;
+    try {
     for (const key of nextKeys) {
       if (activeKeys && !activeKeys.has(key)) {
         const previous = this.chunks.get(key);
@@ -374,6 +384,9 @@ export class StudioTerrainChunkRenderer {
         if (this.destroyed || requestSerial !== this.renderRequestSerial) return;
       }
     }
+    } finally {
+      this.morphologyRenderClip = null;
+    }
 
     if (!streamUpdate || renderAllActiveStreamChunks) {
       const retainedKeys = activeKeys ?? nextKeys;
@@ -386,6 +399,23 @@ export class StudioTerrainChunkRenderer {
     }
 
     this.updateChunkVisibility(options.viewportBounds ?? this.viewportBounds, options.viewportMargin ?? this.viewportMargin);
+  }
+
+  /** The bounds around some chunks, with room around them. */
+  private chunkKeysBounds(keys: Set<string>, data: StudioTerrainRenderData, margin: number): StudioTerrainRenderBounds | null {
+    let left = Number.POSITIVE_INFINITY;
+    let top = Number.POSITIVE_INFINITY;
+    let right = Number.NEGATIVE_INFINITY;
+    let bottom = Number.NEGATIVE_INFINITY;
+    for (const key of keys) {
+      const bounds = this.getChunkBounds(key, data);
+      left = Math.min(left, bounds.x);
+      top = Math.min(top, bounds.y);
+      right = Math.max(right, bounds.x + bounds.width);
+      bottom = Math.max(bottom, bounds.y + bounds.height);
+    }
+    if (!Number.isFinite(left)) return null;
+    return { x: left - margin, y: top - margin, width: right - left + margin * 2, height: bottom - top + margin * 2 };
   }
 
   private collectAllChunkKeys(data: StudioTerrainRenderData): Set<string> {
@@ -1553,11 +1583,13 @@ export class StudioTerrainChunkRenderer {
   }
 
   private getLiquidSurface(data: StudioTerrainRenderData, feature: StudioTerrainMorphologyFeature): TerrainLiquidSurface | null {
-    if (this.liquidSurfaceCache.has(feature)) return this.liquidSurfaceCache.get(feature)!;
+    const clip = this.morphologyRenderClip;
+    const known = this.liquidSurfaceCache.get(feature);
+    if (known && coversClip(known.clip, clip)) return known.value;
     const mask = this.buildTerrainMorphologyMask(data, feature);
     const bounds = mask && getTerrainMorphologyLocalMaskBounds(mask);
     if (!mask || !bounds || !(Number(feature.params.fillHeight) > 0)) {
-      this.liquidSurfaceCache.set(feature, null);
+      this.liquidSurfaceCache.set(feature, { value: null, clip });
       return null;
     }
     const geometry = resolveTerrainMorphologyLiquidGeometry({
@@ -1566,7 +1598,7 @@ export class StudioTerrainChunkRenderer {
     const smoothedMask = this.createTerrainMorphologySmoothedLiquidMask(mask, geometry.metrics.contourSmoothingRadius, geometry.metrics.antiAliasWidth);
     const fillMask = this.createTerrainMorphologyProjectedLevelMask(smoothedMask, geometry.inset, geometry.dropY);
     const surface = { mask, geometry, smoothedMask, fillMask };
-    this.liquidSurfaceCache.set(feature, surface);
+    this.liquidSurfaceCache.set(feature, { value: surface, clip });
     return surface;
   }
 
@@ -1998,13 +2030,14 @@ export class StudioTerrainChunkRenderer {
     data: StudioTerrainRenderData,
     feature: StudioTerrainMorphologyFeature
   ): TerrainMorphologyMaskBuffer | null {
-    if (this.morphologyMaskCache.has(feature)) {
-      return this.morphologyMaskCache.get(feature) ?? null;
-    }
+    const clip = this.morphologyRenderClip;
+    const known = this.morphologyMaskCache.get(feature);
+    if (known && coversClip(known.clip, clip)) return known.value;
 
-    const bounds = getTerrainMorphologyBounds(data, feature, Math.max(40, getTerrainMorphologyHeight(feature) + 24));
+    const whole = getTerrainMorphologyBounds(data, feature, Math.max(40, getTerrainMorphologyHeight(feature) + 24));
+    const bounds = whole && clip ? intersectBounds(whole, clip) : whole;
     if (!bounds) {
-      this.morphologyMaskCache.set(feature, null);
+      this.morphologyMaskCache.set(feature, { value: null, clip });
       return null;
     }
 
@@ -2038,7 +2071,7 @@ export class StudioTerrainChunkRenderer {
     const result: TerrainMorphologyMaskBuffer = { canvas: mask.canvas, bounds };
     const alphaBounds = getTerrainMorphologyLocalMaskBounds(result);
     const cached = alphaBounds ? { ...result, alphaBounds } : null;
-    this.morphologyMaskCache.set(feature, cached);
+    this.morphologyMaskCache.set(feature, { value: cached, clip });
     return cached;
   }
 
@@ -3222,6 +3255,13 @@ function resolveTransitionNeighborIds(
     .filter((transition) => predicate(transition.mode))
     .map((transition) => (transition.from === terrainTextureId ? transition.to : transition.from))
     .filter((neighborId, index, all) => all.indexOf(neighborId) === index);
+}
+
+/** Whether what was made for `made` (everything when `null`) holds for `wanted` (everything when `null`). */
+function coversClip(made: StudioTerrainRenderBounds | null, wanted: StudioTerrainRenderBounds | null): boolean {
+  if (made === null) return true;
+  if (wanted === null) return false;
+  return made.x <= wanted.x && made.y <= wanted.y && made.x + made.width >= wanted.x + wanted.width && made.y + made.height >= wanted.y + wanted.height;
 }
 
 function intersectBounds(
