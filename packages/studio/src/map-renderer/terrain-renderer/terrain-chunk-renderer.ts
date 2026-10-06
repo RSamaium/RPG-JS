@@ -262,6 +262,10 @@ export class StudioTerrainChunkRenderer {
   private morphologyRenderClip: StudioTerrainRenderBounds | null = null;
   private terrainWallRenderPartsCache = new WeakMap<StudioTerrainMorphologyFeature, TerrainWallRenderParts | null>();
   private terrainHoleRenderPartsCache = new WeakMap<StudioTerrainMorphologyFeature, TerrainHoleRenderParts | null>();
+  /** The water level of a filled hole, made once per render: it is the same for every chunk, and costly (a scan of its pixels). */
+  /** The foam dots along the edge of a liquid surface: the same for every chunk drawn from the surface, made once with it. */
+  private meniscusAccentCache = new WeakMap<HTMLCanvasElement, Map<string, HTMLCanvasElement>>();
+  private waterLevelCache = new WeakMap<StudioTerrainMorphologyFeature, { mask: TerrainMorphologyMaskBuffer; alphaBounds: { x: number; y: number; width: number; height: number } } | null>();
   private morphologyColorOverlayCache = new WeakMap<HTMLCanvasElement, Map<string, HTMLCanvasElement>>();
   private morphologyTextureFillCache = new WeakMap<HTMLCanvasElement, Map<string, HTMLCanvasElement>>();
   private rockFacePixels = new Map<StudioTerrainRockTexture, Uint8ClampedArray>();
@@ -721,6 +725,7 @@ export class StudioTerrainChunkRenderer {
     }
     this.terrainWallRenderPartsCache = new WeakMap();
     this.terrainHoleRenderPartsCache = new WeakMap();
+    this.waterLevelCache = new WeakMap();
     this.morphologyColorOverlayCache = new WeakMap();
     this.morphologyTextureFillCache = new WeakMap();
     this.rockFaceCanvases = new WeakMap();
@@ -1312,18 +1317,21 @@ export class StudioTerrainChunkRenderer {
     );
     for (const { feature, options } of filledHoles) {
       if (!featureIntersectsBounds(feature, bounds)) continue;
-      const parts = this.createTerrainHoleRenderParts(data, feature);
-      if (!parts) continue;
-      const geometry = resolveTerrainHoleFillGeometry(parts.mask, feature, parts.depth);
-      if (!geometry) continue;
-
-      const projectedMask = this.createTerrainMorphologyProjectedLevelMask(
-        parts.mask,
-        geometry.inset,
-        geometry.dropY
-      );
-      const projectedAlphaBounds = resolveWaterMaskAlphaBounds(projectedMask.canvas);
-      if (!projectedAlphaBounds) continue;
+      let level = this.waterLevelCache.get(feature);
+      if (level === undefined) {
+        level = null;
+        const parts = this.createTerrainHoleRenderParts(data, feature);
+        const geometry = parts ? resolveTerrainHoleFillGeometry(parts.mask, feature, parts.depth) : null;
+        if (parts && geometry) {
+          const mask = this.createTerrainMorphologyProjectedLevelMask(parts.mask, geometry.inset, geometry.dropY);
+          const alphaBounds = resolveWaterMaskAlphaBounds(mask.canvas);
+          if (alphaBounds) level = { mask, alphaBounds };
+        }
+        this.waterLevelCache.set(feature, level);
+      }
+      if (!level) continue;
+      const projectedMask = level.mask;
+      const projectedAlphaBounds = level.alphaBounds;
       const intersection = resolveWaterMaskChunkIntersection(
         projectedMask.bounds,
         projectedAlphaBounds,
@@ -2665,35 +2673,46 @@ export class StudioTerrainChunkRenderer {
     color: string,
     metrics: TerrainMorphologyLiquidEdgeMetrics
   ): void {
-    const accent = this.createCanvasBuffer(fillMask.canvas.width, fillMask.canvas.height);
-    const accentBand = this.createTerrainMorphologyInnerEdgeMask(
-      fillMask,
-      metrics.meniscusWidth + 1,
-      metrics.antiAliasWidth
-    );
-    const seed = hashTerrainString(`morphology-liquid-edge:${featureId}`);
-    const spacing = 9;
-    const firstWorldX = Math.floor((fillMask.bounds.x - spacing) / spacing) * spacing;
-    const firstWorldY = Math.floor((fillMask.bounds.y - spacing) / spacing) * spacing;
-    const lastWorldX = fillMask.bounds.x + fillMask.canvas.width + spacing;
-    const lastWorldY = fillMask.bounds.y + fillMask.canvas.height + spacing;
-    accent.ctx.fillStyle = color;
-    for (let worldY = firstWorldY; worldY < lastWorldY; worldY += spacing) {
-      for (let worldX = firstWorldX; worldX < lastWorldX; worldX += spacing) {
-        if (terrainMorphologyNoise(worldX * 0.09, worldY * 0.09, seed) < 0.43) continue;
-        const radius = 3 + terrainMorphologyNoise(worldX, worldY, seed + 17) * 3;
-        accent.ctx.beginPath();
-        accent.ctx.arc(worldX - fillMask.bounds.x, worldY - fillMask.bounds.y, radius, 0, Math.PI * 2);
-        accent.ctx.fill();
-      }
+    const cacheKey = `${featureId}|${color}`;
+    let cache = this.meniscusAccentCache.get(fillMask.canvas);
+    if (!cache) {
+      cache = new Map();
+      this.meniscusAccentCache.set(fillMask.canvas, cache);
     }
-    accent.ctx.save();
-    accent.ctx.globalCompositeOperation = "destination-in";
-    accent.ctx.drawImage(accentBand.canvas, 0, 0);
-    accent.ctx.restore();
+    let accentCanvas = cache.get(cacheKey);
+    if (!accentCanvas) {
+      const accent = this.createCanvasBuffer(fillMask.canvas.width, fillMask.canvas.height);
+      const accentBand = this.createTerrainMorphologyInnerEdgeMask(
+        fillMask,
+        metrics.meniscusWidth + 1,
+        metrics.antiAliasWidth
+      );
+      const seed = hashTerrainString(`morphology-liquid-edge:${featureId}`);
+      const spacing = 9;
+      const firstWorldX = Math.floor((fillMask.bounds.x - spacing) / spacing) * spacing;
+      const firstWorldY = Math.floor((fillMask.bounds.y - spacing) / spacing) * spacing;
+      const lastWorldX = fillMask.bounds.x + fillMask.canvas.width + spacing;
+      const lastWorldY = fillMask.bounds.y + fillMask.canvas.height + spacing;
+      accent.ctx.fillStyle = color;
+      for (let worldY = firstWorldY; worldY < lastWorldY; worldY += spacing) {
+        for (let worldX = firstWorldX; worldX < lastWorldX; worldX += spacing) {
+          if (terrainMorphologyNoise(worldX * 0.09, worldY * 0.09, seed) < 0.43) continue;
+          const radius = 3 + terrainMorphologyNoise(worldX, worldY, seed + 17) * 3;
+          accent.ctx.beginPath();
+          accent.ctx.arc(worldX - fillMask.bounds.x, worldY - fillMask.bounds.y, radius, 0, Math.PI * 2);
+          accent.ctx.fill();
+        }
+      }
+      accent.ctx.save();
+      accent.ctx.globalCompositeOperation = "destination-in";
+      accent.ctx.drawImage(accentBand.canvas, 0, 0);
+      accent.ctx.restore();
+      accentCanvas = accent.canvas;
+      cache.set(cacheKey, accentCanvas);
+    }
     ctx.save();
     ctx.globalAlpha = 0.56;
-    this.drawMorphologyCanvas(ctx, accent.canvas, fillMask.bounds);
+    this.drawMorphologyCanvas(ctx, accentCanvas, fillMask.bounds);
     ctx.restore();
   }
 
