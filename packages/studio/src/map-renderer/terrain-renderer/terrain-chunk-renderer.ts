@@ -40,6 +40,15 @@ import {
 import type { StudioViewportBounds } from "../viewport-culling";
 
 const DEFAULT_CHUNK_SIZE = 768;
+let chunkSizeOverride: number | undefined;
+
+/**
+ * Sets the chunk size, in world pixels, of the terrain renderers created from now on (before a map is loaded). A map
+ * that is edited wants small chunks: drawing again what a stroke touched costs what the chunks it touches cost.
+ */
+export function setStudioTerrainChunkSize(size: number | undefined): void {
+  chunkSizeOverride = size !== undefined && Number.isFinite(size) && size > 0 ? Math.round(size) : undefined;
+}
 const SOLID_BLACK_TERRAIN_TEXTURE_ID = "__solid_black__";
 const WATER_ANIMATION_FRAME_DURATION = 1 / 30;
 const ROCK_FACE_TEXTURE_WIDTH = 256;
@@ -146,6 +155,21 @@ interface CanvasBuffer {
   ctx: CanvasRenderingContext2D;
 }
 
+interface TerrainLiquidSurface {
+  mask: TerrainMorphologyMaskBuffer;
+  smoothedMask: TerrainMorphologyMaskBuffer;
+  fillMask: TerrainMorphologyMaskBuffer;
+  geometry: ReturnType<typeof resolveTerrainMorphologyLiquidGeometry>;
+  /** The edges of the whole surface, made on first use: they are the same for every chunk drawn from it. */
+  edges?: {
+    exposedWall: TerrainMorphologyMaskBuffer | null;
+    contactBand: TerrainMorphologyMaskBuffer;
+    innerTransition: TerrainMorphologyMaskBuffer;
+    nearEdge: TerrainMorphologyMaskBuffer;
+    meniscus: TerrainMorphologyMaskBuffer;
+  };
+}
+
 interface TerrainMorphologyMaskBuffer {
   canvas: HTMLCanvasElement;
   bounds: { x: number; y: number; width: number; height: number };
@@ -239,13 +263,13 @@ export class StudioTerrainChunkRenderer {
   private nextMorphologyCanvasId = 1;
   private morphologyClipBounds: StudioTerrainRenderBounds | null = null;
   private liquidPaletteCache = new Map<string, TerrainLiquidPalette | null>();
-  private liquidSurfaceCache = new WeakMap<StudioTerrainMorphologyFeature, { mask: TerrainMorphologyMaskBuffer; smoothedMask: TerrainMorphologyMaskBuffer; fillMask: TerrainMorphologyMaskBuffer; geometry: ReturnType<typeof resolveTerrainMorphologyLiquidGeometry> } | null>();
+  private liquidSurfaceCache = new WeakMap<StudioTerrainMorphologyFeature, TerrainLiquidSurface | null>();
   private liquidContactVersion = "";
   private waterAnimationElapsed = 0;
 
   constructor(world: PixiContainer, options: StudioTerrainChunkRendererOptions = {}) {
     this.world = world;
-    this.chunkSize = Math.max(STUDIO_TERRAIN_TILE_SIZE, options.chunkSize ?? DEFAULT_CHUNK_SIZE);
+    this.chunkSize = Math.max(STUDIO_TERRAIN_TILE_SIZE, options.chunkSize ?? chunkSizeOverride ?? DEFAULT_CHUNK_SIZE);
     this.world.sortableChildren = true;
   }
 
@@ -324,7 +348,7 @@ export class StudioTerrainChunkRenderer {
     }
     const collisions = debugCollisions ? buildStudioTerrainCollisionPolygons(map) : [];
 
-    if (previousVersion !== version || streamUpdate) this.resetMorphologyRenderCaches();
+    if (previousVersion !== version || streamUpdate) this.resetMorphologyRenderCaches(true);
     let renderedChunkCount = 0;
     for (const key of nextKeys) {
       if (activeKeys && !activeKeys.has(key)) {
@@ -655,10 +679,16 @@ export class StudioTerrainChunkRenderer {
     return sprites;
   }
 
-  private resetMorphologyRenderCaches(): void {
+  /**
+   * Forgets what was made for the morphology. The masks and surfaces of a feature (the costly part: they are the size of
+   * the whole feature) are kept when asked: they depend on the feature, and a feature that changed is another object.
+   */
+  private resetMorphologyRenderCaches(keepFeatureSurfaces = false): void {
     this.liquidPaletteCache.clear();
-    this.liquidSurfaceCache = new WeakMap();
-    this.morphologyMaskCache = new WeakMap();
+    if (!keepFeatureSurfaces) {
+      this.liquidSurfaceCache = new WeakMap();
+      this.morphologyMaskCache = new WeakMap();
+    }
     this.terrainWallRenderPartsCache = new WeakMap();
     this.terrainHoleRenderPartsCache = new WeakMap();
     this.morphologyColorOverlayCache = new WeakMap();
@@ -1522,7 +1552,7 @@ export class StudioTerrainChunkRenderer {
     return palette;
   }
 
-  private getLiquidSurface(data: StudioTerrainRenderData, feature: StudioTerrainMorphologyFeature) {
+  private getLiquidSurface(data: StudioTerrainRenderData, feature: StudioTerrainMorphologyFeature): TerrainLiquidSurface | null {
     if (this.liquidSurfaceCache.has(feature)) return this.liquidSurfaceCache.get(feature)!;
     const mask = this.buildTerrainMorphologyMask(data, feature);
     const bounds = mask && getTerrainMorphologyLocalMaskBounds(mask);
@@ -1549,35 +1579,26 @@ export class StudioTerrainChunkRenderer {
     const surface = this.getLiquidSurface(data, feature);
     if (!surface) return;
     const { mask, smoothedMask, fillMask, geometry } = surface;
-    if (geometry.wallAlpha > 0) {
-      const exposedWallBuffer = this.createCanvasBuffer(mask.canvas.width, mask.canvas.height);
-      exposedWallBuffer.ctx.drawImage(mask.canvas, 0, 0);
-      const exposedWall = { canvas: exposedWallBuffer.canvas, bounds: mask.bounds };
-      this.subtractTerrainMorphologyMask(exposedWall, fillMask);
-      this.drawTerrainMorphologyMaskedColor(ctx, exposedWall, "#070604", geometry.wallAlpha, "source-over", "blur(1px)");
-    }
-
-    const contactBand = this.createTerrainMorphologyOuterEdgeMask(
-      fillMask,
-      geometry.metrics.contactWidth,
-      geometry.metrics.antiAliasWidth,
-      smoothedMask
-    );
-    const innerTransition = this.createTerrainMorphologyInnerEdgeMask(
-      fillMask,
-      geometry.metrics.innerTransitionWidth,
-      geometry.metrics.antiAliasWidth
-    );
-    const nearEdge = this.createTerrainMorphologyInnerEdgeMask(
-      fillMask,
-      geometry.metrics.nearEdgeWidth,
-      geometry.metrics.antiAliasWidth
-    );
-    const meniscus = this.createTerrainMorphologyInnerEdgeMask(
-      fillMask,
-      geometry.metrics.meniscusWidth,
-      geometry.metrics.antiAliasWidth
-    );
+    // The edges of the whole surface are the same for every chunk drawn from it, and cost what the whole surface costs:
+    // they are made once, not once per chunk.
+    const edges = (surface.edges ??= (() => {
+      let exposedWall: TerrainMorphologyMaskBuffer | null = null;
+      if (geometry.wallAlpha > 0) {
+        const exposedWallBuffer = this.createCanvasBuffer(mask.canvas.width, mask.canvas.height);
+        exposedWallBuffer.ctx.drawImage(mask.canvas, 0, 0);
+        exposedWall = { canvas: exposedWallBuffer.canvas, bounds: mask.bounds };
+        this.subtractTerrainMorphologyMask(exposedWall, fillMask);
+      }
+      return {
+        exposedWall,
+        contactBand: this.createTerrainMorphologyOuterEdgeMask(fillMask, geometry.metrics.contactWidth, geometry.metrics.antiAliasWidth, smoothedMask),
+        innerTransition: this.createTerrainMorphologyInnerEdgeMask(fillMask, geometry.metrics.innerTransitionWidth, geometry.metrics.antiAliasWidth),
+        nearEdge: this.createTerrainMorphologyInnerEdgeMask(fillMask, geometry.metrics.nearEdgeWidth, geometry.metrics.antiAliasWidth),
+        meniscus: this.createTerrainMorphologyInnerEdgeMask(fillMask, geometry.metrics.meniscusWidth, geometry.metrics.antiAliasWidth),
+      };
+    })());
+    const { exposedWall, contactBand, innerTransition, nearEdge, meniscus } = edges;
+    if (exposedWall) this.drawTerrainMorphologyMaskedColor(ctx, exposedWall, "#070604", geometry.wallAlpha, "source-over", "blur(1px)");
     const palette = this.getLiquidPalette(data, image, stringParam(feature.params.fillTextureId), stringParam(feature.params.fillColor));
     const texture = findTerrainTexture(data.asset, stringParam(feature.params.fillTextureId));
     const mode = texture?.defaultRenderMode;

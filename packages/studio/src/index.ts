@@ -19,6 +19,7 @@ export {
 export { collectStudioMapPluginPixiChildren, composeStudioMapPluginOptions, createStudioEventCollisionDebugOverlay, createStudioMapPlugins, studioDebugCollisionsPlugin } from "./studio-map-plugins";
 export type { CreateStudioMapPluginsOptions, StudioDebugCollisionsOptions, StudioMapPlugin, StudioMapPluginContext, StudioMapPluginPixiChild, StudioTerrainRenderOptions } from "./studio-map-plugins";
 export { registerStudioMapExtension, runStudioMapExtensions } from "./map-extensions";
+export { setStudioTerrainChunkSize } from "./map-renderer";
 export type { StudioElementLayerName, StudioMapExtension, StudioMapExtensionContext } from "./map-extensions";
 export { createStudioActionBattleAnimations } from "./action-battle-animations";
 export type { StudioCombatAnimationIds, StudioCombatAnimationOptions } from "./action-battle-animations";
