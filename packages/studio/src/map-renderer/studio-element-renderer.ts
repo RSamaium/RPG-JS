@@ -105,6 +105,8 @@ export interface StudioElementMetrics {
   hitboxHeight: number;
   hitboxScaleX: number;
   hitboxScaleY: number;
+  /** Convex parts of a polygon hitbox, in the local pixels of the element; null for a rectangle. */
+  hitboxParts: Array<Array<[number, number]>> | null;
   resolvedZIndex: number;
   hasSortableHitbox: boolean;
 }
@@ -310,6 +312,18 @@ export function normalizeStudioElementDrawRule(value: unknown): NormalizedDrawRu
   };
 }
 
+function readPolygonParts(hitbox: any): Array<Array<[number, number]>> | null {
+  if (!hitbox || hitbox.type !== "polygon" || !Array.isArray(hitbox.parts)) return null;
+  const parts = hitbox.parts
+    .map((part: unknown) => (Array.isArray(part) ? part : []).map((point: unknown): [number, number] | null => {
+      const x = Number(Array.isArray(point) ? point[0] : NaN);
+      const y = Number(Array.isArray(point) ? point[1] : NaN);
+      return Number.isFinite(x) && Number.isFinite(y) ? [x, y] : null;
+    }).filter((point: [number, number] | null): point is [number, number] => point !== null))
+    .filter((part: Array<[number, number]>) => part.length >= 3);
+  return parts.length > 0 ? parts : null;
+}
+
 export function resolveStudioElementMetrics(element: any): StudioElementMetrics {
   const rectValue = readValue(element?.rect) || [0, 0, 0, 0];
   const drawInValue = readValue(element?.drawIn) || [];
@@ -361,6 +375,7 @@ export function resolveStudioElementMetrics(element: any): StudioElementMetrics 
     hitboxHeight,
     hitboxScaleX,
     hitboxScaleY,
+    hitboxParts: readPolygonParts(hitboxValue),
     resolvedZIndex: Math.round(elementSortY + resolvedZIndexOffset),
     hasSortableHitbox,
   };
@@ -1863,10 +1878,20 @@ export class StudioElementRenderer {
     const graphics = new Graphics();
     graphics.label = `${container.label ?? "StudioElement"}:CollisionDebug`;
     graphics.zIndex = 2147483647;
-    graphics
-      .rect(x, y, width, height)
-      .fill({ color: 0xef4444, alpha: 0.18 })
-      .stroke({ width: 1, color: 0xef4444, alpha: 0.72 });
+    if (metrics.hitboxParts) {
+      // A polygon hitbox is what the physics uses: its convex parts, not the box around them.
+      metrics.hitboxParts.forEach((part) => {
+        graphics
+          .poly(part.flatMap(([px, py]) => [px * metrics.hitboxScaleX, py * metrics.hitboxScaleY]))
+          .fill({ color: 0xef4444, alpha: 0.18 })
+          .stroke({ width: 1, color: 0xef4444, alpha: 0.72 });
+      });
+    } else {
+      graphics
+        .rect(x, y, width, height)
+        .fill({ color: 0xef4444, alpha: 0.18 })
+        .stroke({ width: 1, color: 0xef4444, alpha: 0.72 });
+    }
     container.addChild(graphics);
   }
 
