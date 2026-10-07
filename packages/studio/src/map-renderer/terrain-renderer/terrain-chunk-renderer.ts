@@ -2077,7 +2077,21 @@ export class StudioTerrainChunkRenderer {
     }
 
     const result: TerrainMorphologyMaskBuffer = { canvas: mask.canvas, bounds };
-    const alphaBounds = getTerrainMorphologyLocalMaskBounds(result);
+    let alphaBounds = getTerrainMorphologyLocalMaskBounds(result);
+    // The mask is made only inside the clip: the size of the shape (what the water level, the insets and the widths of
+    // the edges are made from) is the size of the whole feature, not of the part of it that is inside the clip, or the
+    // same feature looks different depending on which chunks are drawn again.
+    if (alphaBounds && whole && clip && (bounds.width < whole.width || bounds.height < whole.height)) {
+      const extent = getTerrainMorphologyStrokeExtent(feature);
+      if (extent) {
+        alphaBounds = {
+          minX: Math.floor(extent.minX - bounds.x),
+          minY: Math.floor(extent.minY - bounds.y),
+          maxX: Math.ceil(extent.maxX - bounds.x),
+          maxY: Math.ceil(extent.maxY - bounds.y),
+        };
+      }
+    }
     const cached = alphaBounds ? { ...result, alphaBounds } : null;
     this.morphologyMaskCache.set(feature, { value: cached, clip });
     return cached;
@@ -3527,6 +3541,27 @@ function drawTerrainMorphologyRoundRect(
   ctx.lineTo(x, y + clampedRadius);
   ctx.quadraticCurveTo(x, y, x + clampedRadius, y);
   ctx.closePath();
+}
+
+/** The extent of the strokes of a feature in the world, with their radius (what its mask covers, give or take the blur). */
+function getTerrainMorphologyStrokeExtent(feature: StudioTerrainMorphologyFeature): { minX: number; minY: number; maxX: number; maxY: number } | null {
+  let minX = Number.POSITIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+  const strokes = feature.operations?.length
+    ? feature.operations.filter((operation) => operation.mode !== "erase").map((operation) => operation.stroke)
+    : feature.strokes;
+  for (const stroke of strokes) {
+    const radius = Math.max(1, Number(stroke.radius) || 1);
+    for (const point of stroke.points) {
+      minX = Math.min(minX, point.x - radius);
+      minY = Math.min(minY, point.y - radius);
+      maxX = Math.max(maxX, point.x + radius);
+      maxY = Math.max(maxY, point.y + radius);
+    }
+  }
+  return Number.isFinite(minX) ? { minX, minY, maxX, maxY } : null;
 }
 
 function getTerrainMorphologyLocalMaskBounds(
