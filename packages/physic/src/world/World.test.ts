@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { World } from './World';
 import { Entity } from '../physics/Entity';
 import { AABB } from '../core/math/AABB';
 import { Vector2 } from '../core/math/Vector2';
 import { assignPolygonCollider } from '../collision/PolygonCollider';
+import { EntityState } from '../core/types';
 
 describe('World', () => {
   let world: World;
@@ -173,5 +174,53 @@ describe('World', () => {
 
     const result = world.queryAABB(new AABB(25, -2, 35, 2));
     expect(result).toContain(entity);
+  });
+
+  describe('static entities in the broad phase', () => {
+    const setup = () => {
+      const statics = [0, 1, 2].map((index) => world.createEntity({
+        position: { x: 100 + index * 50, y: 100 },
+        width: 20,
+        height: 20,
+        mass: Infinity,
+        state: EntityState.Static,
+      }));
+      const mover = world.createEntity({ position: { x: 0, y: 0 }, radius: 4, mass: 1, velocity: { x: 5, y: 0 } });
+      const update = vi.spyOn((world as unknown as { spatialPartition: { update: (entity: Entity) => void } }).spatialPartition, 'update');
+      const countFor = (entity: Entity) => update.mock.calls.filter(([updated]) => updated === entity).length;
+      return { statics, mover, update, countFor };
+    };
+
+    it('does not rebuild the bounds of static entities at every step', () => {
+      const { statics, mover, countFor } = setup();
+
+      for (let index = 0; index < 5; index += 1) world.step();
+
+      statics.forEach((wall) => expect(countFor(wall)).toBeLessThanOrEqual(1)); // once, to learn where they are
+      expect(countFor(mover)).toBeGreaterThanOrEqual(5); // a moving entity is followed at every step
+    });
+
+    it('picks up a static entity whose position was changed directly', () => {
+      const { statics, countFor } = setup();
+      world.step();
+      world.step();
+      const before = countFor(statics[0]!);
+
+      statics[0]!.position.x += 200;
+      world.step();
+
+      expect(countFor(statics[0]!)).toBe(before + 1);
+      expect(world.queryAABB(new AABB(290, 90, 310, 110))).toContain(statics[0]);
+    });
+
+    it('picks up a static entity that was resized', () => {
+      const { statics, countFor } = setup();
+      world.step();
+      const before = countFor(statics[1]!);
+
+      statics[1]!.width = 400;
+      world.step();
+      expect(countFor(statics[1]!)).toBe(before + 1);
+    });
   });
 });
