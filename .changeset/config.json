@@ -20,5 +20,8 @@
     "@rpgjs/playground-tiled",
     "@rpgjs/playground-v4-compat",
     "@rpgjs/playground-vue-gui"
-  ]
+  ],
+  "___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH": {
+    "onlyUpdatePeerDependentsWhenOutOfRange": true
+  }
 }
