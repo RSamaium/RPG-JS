@@ -567,6 +567,35 @@ describe("studio element renderer helpers", () => {
     renderer.destroy();
   });
 
+  it("draws the convex parts of a polygon hitbox, scaled with the element, instead of its bounding box", async () => {
+    const renderer = new StudioElementRenderer();
+    const polygon = {
+      type: "polygon", x: 4, y: 20, width: 40, height: 24,
+      polygons: [[[4, 44], [44, 44], [44, 20], [24, 30], [4, 20]]],
+      parts: [[[4, 20], [24, 30], [4, 44]], [[24, 30], [44, 20], [44, 44], [4, 44]]],
+    };
+    const [container] = await renderer.renderElements(
+      [createElement({ image: "", hitbox: polygon, drawIn: [96, 144, 96, 96] })],
+      { debugCollisions: true }
+    );
+    const debug = container.children.find((child: any) => String(child.label ?? "").includes("CollisionDebug")) as any;
+    const rectRenderer = new StudioElementRenderer();
+    const rect = (await rectRenderer.renderElements([createElement({ image: "" })], { debugCollisions: true }))[0]
+      .children.find((child: any) => String(child.label ?? "").includes("CollisionDebug")) as any;
+    const rectInstructions = rect.context.instructions.length;
+    rectRenderer.destroy();
+
+    // One fill + one stroke per part, where a rectangle takes one of each.
+    expect(debug.context.instructions.length).toBe(rectInstructions * 2);
+    // The element is drawn at twice its size: the parts follow.
+    const bounds = debug.getLocalBounds();
+    expect(Math.round(bounds.minX)).toBeLessThanOrEqual(8);
+    expect(Math.round(bounds.maxX)).toBeGreaterThanOrEqual(87);
+    expect(Math.round(bounds.maxY)).toBeGreaterThanOrEqual(87);
+
+    renderer.destroy();
+  });
+
   it("does not attach Studio element collision debug graphics for disabled hitboxes", async () => {
     const renderer = new StudioElementRenderer();
     const [container] = await renderer.renderElements(

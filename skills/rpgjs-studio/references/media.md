@@ -49,7 +49,7 @@ Use `PUT /api/media/update/:id` when the payload can change the media category/t
 Common payload confirmed in server code:
 
 - `POST /api/media/generate`: `{ "action": "estimate" | "execute", "type": string, "userPrompt": string, "metadata"?: { "source"?: string, "referenceImage"?: string, "referenceImages"?: string[], "duration"?: number, ... } }`
-- `GET /api/media/generate/:instanceId`: returns the project-scoped canonical workflow status and, once complete, the generated `media` record. The public API does not expose internal workflow `steps`. For a known run it falls back to the persisted application status when Cloudflare temporarily reports `instance.not_found`; unknown or cross-project ids return `404`.
+- `GET /api/media/generate/:instanceId`: returns `{ instanceId, requestId, type, status: "queued" | "running" | "complete" | "errored", progress: 0-100, creditsRestored, output?: { media }, error? }`: only where the generation stands (`progress` is the share of completed workflow steps) and, once complete, the generated `media` record. Nothing about the workflow itself (steps, outputs) is exposed. For a known run it falls back to the persisted application status when Cloudflare temporarily reports `instance.not_found`; unknown or cross-project ids return `404`.
 
 Studio terrain generation defaults to a `4x4` `sourceTexture` atlas in the UI and persists the generated atlas directly. It no longer creates Wang/autotile output through the image-processing container. Requests can set `metadata.sourceTextureColumns` and `metadata.sourceTextureRows` to choose the atlas layout, and can pass `terrainStyleId` plus `terrainStylePrompt` to guide the technical terrain prompt. Consumers should read `metadata.rows` and `metadata.columns` or the mirrored `metadata.textureGrid`.
 
@@ -75,9 +75,21 @@ Credit costs available in `common/permissions/credit.ts`:
 - `spritesheet` (animations and existing API calls): 15
 - `spritesheetPreview`: 1
 - `terrain`: 5
-- `tileset`: 15
+- `tileset`: 25 (15 + 10 for its collision polygons)
+- `tileset-collision`: 3 (collision polygons of an existing `tileset`)
 - `illustration`: 5
 - `image`: 5
+
+`tileset-collision` regenerates the collision of an existing element set: pass
+`metadata.mediaId` (the tileset). It repaints the atlas with the image model, extracts one polygon per
+element and writes them to the tileset's `metadata.elements[].hitbox`; credits are refunded on failure.
+A generated `tileset` already does this (non-fatal: on failure elements keep rectangles).
+
+Element hitbox (`metadata.elements[].hitbox`, local pixels of `rect`): `{ type: "none" }`,
+`{ type: "rectangle", x, y, width, height }` or
+`{ type: "polygon", x, y, width, height, polygons: [x, y][][], parts: [x, y][][] }`. `polygons` are the
+editable simple polygons, `parts` their convex decomposition (what the runtime turns into physics
+hitboxes), `x/y/width/height` the bounding box. Always rebuild `parts` after editing `polygons`.
 
 `illustration` generates one transparent full- or three-quarter-body JRPG
 character image intended for a vertical 4:5 hero selector. Pass the character

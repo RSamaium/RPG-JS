@@ -1,6 +1,7 @@
 import { normalizeElementSubmersion } from "./map-renderer/element-submersion";
 "use client";
 
+import { buildElementPolygonHitboxes } from './element-polygon-hitbox'
 import MapComponentV2 from "./components/draw-map-v2.ce";
 import { inject, RpgClientEngine } from "@rpgjs/client";
 import { createSpriteSheetObject, resolveAssetSource } from "./spritesheet-utils";
@@ -799,6 +800,7 @@ export const loadMap = async (mapId: string) => {
         submersion: normalizeElementSubmersion(element.submersion),
         lightSpot: element.lightSpot !== undefined ? element.lightSpot : tilesetElement.lightSpot,
         zIndexOffset,
+        sortMode: element.sortMode ?? tilesetElement.sortMode,
       }
 
       if (drawRule) {
@@ -900,6 +902,17 @@ export const loadMap = async (mapId: string) => {
         clampedHitboxY + 1,
         Math.min(elementY + visualHeight, rawHitboxY + rawHitboxHeight)
       )
+
+      const polygonHitboxes = buildElementPolygonHitboxes(
+        hitbox,
+        { x: elementX, y: elementY },
+        { x: finalScaleX, y: finalScaleY },
+        `element_${index}_${tilesetElement.id}`
+      )
+      if (polygonHitboxes) {
+        mergedHitboxes.push(...polygonHitboxes)
+        return
+      }
 
       // Create the absolute hitbox with scale applied
       const absoluteHitbox = {
