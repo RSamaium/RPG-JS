@@ -2462,8 +2462,8 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
    */
   setWeather(next: WeatherState | null, options: WeatherSetOptions = {}): WeatherState | null {
     const sync = options.sync !== false;
-    if (next && !next.effect) {
-      throw new Error("setWeather: 'effect' is required when weather is not null.");
+    if (next && !next.effect && !next.preset) {
+      throw new Error("setWeather: 'effect' or 'preset' is required when weather is not null.");
     }
     this._weatherState = cloneWeatherState(next);
     if (sync) {
@@ -2478,15 +2478,20 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
   /**
    * Patch the current weather state.
    *
-   * Nested `params` values are merged.
+   * Nested `params` values are merged. A patch that names a new `preset` (or a new
+   * `effect`) replaces the previous one, so the old `effect` never overrides the
+   * effect of the new preset.
    */
   patchWeather(patch: Partial<WeatherState>, options: WeatherSetOptions = {}): WeatherState | null {
     const current = this._weatherState ?? null;
-    if (!current && !patch.effect) {
-      throw new Error("patchWeather: 'effect' is required when no weather is currently set.");
+    if (!current && !patch.effect && !patch.preset) {
+      throw new Error("patchWeather: 'effect' or 'preset' is required when no weather is currently set.");
     }
+    const base: Partial<WeatherState> = { ...(current ?? {}) };
+    if (patch.preset !== undefined && patch.effect === undefined) delete base.effect;
+    if (patch.effect !== undefined && patch.preset === undefined) delete base.preset;
     const next: WeatherState = {
-      ...(current ?? {}),
+      ...base,
       ...patch,
       params: {
         ...(current?.params ?? {}),

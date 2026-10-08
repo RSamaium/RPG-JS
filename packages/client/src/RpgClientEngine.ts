@@ -150,6 +150,8 @@ export class RpgClientEngine<T = any> {
       new (Howl as any).Howl({ src: [src], ...options }),
   });
   componentAnimations: any[] = [];
+  /** Custom weather components by id, registered with the `weathers` module option. */
+  weatherComponents = new Map<string, any>();
   clientVisuals = new ClientVisualRegistry();
   projectiles: ProjectileManager;
   /**
@@ -494,6 +496,7 @@ export class RpgClientEngine<T = any> {
     this.hooks.callHooks("client-gui-load", this).subscribe();
     this.hooks.callHooks("client-particles-load", this).subscribe();
     this.hooks.callHooks("client-componentAnimations-load", this).subscribe();
+    this.hooks.callHooks("client-weathers-load", this).subscribe();
     this.hooks.callHooks("client-clientVisuals-load", this).subscribe();
     this.hooks.callHooks("client-projectiles-load", this).subscribe();
     this.hooks.callHooks("client-interactions-load", this).subscribe();
@@ -1934,6 +1937,24 @@ export class RpgClientEngine<T = any> {
   }
 
   /**
+   * Register a custom weather component.
+   *
+   * When the server sets a weather whose `effect` is this id, the scene renders
+   * the component instead of CanvasEngine's `<Weather>`. A custom id also
+   * replaces a built-in effect of the same name.
+   *
+   * @param weather - The weather id and its component
+   * @example
+   * ```ts
+   * engine.addWeather({ id: 'aurora', component: AuroraWeather })
+   * ```
+   */
+  addWeather(weather: { id: string, component: any }) {
+    this.weatherComponents.set(weather.id, weather.component)
+    return weather
+  }
+
+  /**
    * Get a component animation by its ID
    * 
    * Retrieves the EffectManager instance for a specific component animation,
@@ -2823,6 +2844,7 @@ export class RpgClientEngine<T = any> {
       this.spritesheets.clear();
       this.sounds.clear();
       this.componentAnimations = [];
+      this.weatherComponents.clear();
       this.particleSettings.emitters = [];
 
       // Reset state

@@ -27,8 +27,13 @@
     }
   </Container>
 
-  @if (weatherProps()) {
-    <Weather ...weatherProps() />
+  @for (builtinWeather of builtinWeatherList() ; track builtinWeather.key) {
+    <Weather ...builtinWeather.props />
+  }
+  @for (customWeather of customWeatherList() ; track customWeather.key) {
+    <Container zIndex={customWeather.zIndex}>
+      <customWeather.component ...customWeather.props />
+    </Container>
   }
 </Container>
 
@@ -37,7 +42,8 @@
     import './weather-lifecycle-compat'
     import { inject } from "../../core/inject";
     import { RpgClientEngine } from "../../RpgClientEngine";
-    import { Weather } from '@canvasengine/presets'
+    import { Weather, getWeatherPreset } from '@canvasengine/presets'
+    import { resolveWeatherRender } from './weather-render'
 
     const { children } = defineProps()
     const engine = inject(RpgClientEngine);
@@ -72,33 +78,21 @@
       direction: 'both'
     }
 
-    const weatherProps = computed(() => {
-      const state = weather?.()
-      if (!state) {
-        return null
-      }
-      const validEffects = ['rain', 'snow', 'fog', 'cloud']
-      if (!validEffects.includes(state.effect)) {
-        return null
-      }
-      const params = state.params ?? {}
-      return {
-        effect: state.effect,
-        speed: params.speed,
-        windDirection: params.windDirection,
-        windStrength: params.windStrength,
-        density: params.density,
-        maxDrops: params.maxDrops,
-        height: params.height,
-        scale: params.scale,
-        sunIntensity: params.sunIntensity,
-        sunAngle: params.sunAngle,
-        raySpread: params.raySpread,
-        rayTwinkle: params.rayTwinkle,
-        rayTwinkleSpeed: params.rayTwinkleSpeed,
-        zIndex: params.zIndex ?? 1000,
-        alpha: params.alpha,
-        blendMode: params.blendMode,
-      }
+    const weatherRender = computed(() => resolveWeatherRender(weather?.(), {
+      customIds: engine.weatherComponents,
+      hasPreset: (name) => getWeatherPreset(name) !== undefined,
+    }))
+    // CanvasEngine reads `preset` and `effect` when <Weather> is created: keying the list on them
+    // rebuilds it when the weather switches to another preset or effect.
+    const builtinWeatherList = computed(() => {
+      const render = weatherRender()
+      if (!render || render.kind !== 'builtin') return []
+      return [{ key: `${render.props.effect ?? ''}|${render.props.preset ?? ''}`, props: render.props }]
+    })
+    const customWeatherList = computed(() => {
+      const render = weatherRender()
+      const component = render && render.kind === 'custom' ? engine.weatherComponents.get(render.id) : null
+      if (!render || render.kind !== 'custom' || !component) return []
+      return [{ key: render.id, component, props: render.props, zIndex: render.props.zIndex }]
     })
 </script>

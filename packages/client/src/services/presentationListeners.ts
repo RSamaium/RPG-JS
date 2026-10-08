@@ -2,8 +2,6 @@ import { normalizeLightingState } from "@rpgjs/common";
 import type { RpgClientEngine } from "../RpgClientEngine";
 import type { AbstractWebsocket } from "./AbstractSocket";
 
-const WEATHER_EFFECTS = ["rain", "snow", "fog", "cloud"];
-
 type PresentationHost = Pick<
   RpgClientEngine,
   | "scene"
@@ -33,11 +31,14 @@ export function normalizeWeatherPacket(data: unknown) {
   if (raw === null) {
     return null;
   }
-  if (!raw || !WEATHER_EFFECTS.includes(raw.effect)) {
+  // Any effect (CanvasEngine's or a custom id) and any preset is forwarded: the scene decides what it can draw.
+  const hasEffect = typeof raw?.effect === "string" && raw.effect.length > 0;
+  const hasPreset = typeof raw?.preset === "string" && raw.preset.length > 0;
+  if (!raw || (!hasEffect && !hasPreset)) {
     return undefined;
   }
   return {
-    effect: raw.effect,
+    effect: hasEffect ? raw.effect : undefined,
     preset: raw.preset,
     params: raw.params,
     transitionMs: raw.transitionMs,
