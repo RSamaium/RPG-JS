@@ -265,6 +265,8 @@ export class StudioTerrainChunkRenderer {
   /** The water level of a filled hole, made once per render: it is the same for every chunk, and costly (a scan of its pixels). */
   /** The foam dots along the edge of a liquid surface: the same for every chunk drawn from the surface, made once with it. */
   private meniscusAccentCache = new WeakMap<HTMLCanvasElement, Map<string, HTMLCanvasElement>>();
+  /** The chunks a stream update asked for that are not drawn yet: a render that is replaced by another leaves them to it. */
+  private pendingStreamKeys = new Set<string>();
   private waterLevelCache = new WeakMap<StudioTerrainMorphologyFeature, { mask: TerrainMorphologyMaskBuffer; alphaBounds: { x: number; y: number; width: number; height: number } } | null>();
   private morphologyColorOverlayCache = new WeakMap<HTMLCanvasElement, Map<string, HTMLCanvasElement>>();
   private morphologyTextureFillCache = new WeakMap<HTMLCanvasElement, Map<string, HTMLCanvasElement>>();
@@ -308,15 +310,23 @@ export class StudioTerrainChunkRenderer {
       this.updateChunkVisibility(options.viewportBounds ?? this.viewportBounds, options.viewportMargin ?? this.viewportMargin);
       return;
     }
-    if (
+    const sameStreamGeneration = Boolean(
       streamUpdate &&
       version === this.renderVersion &&
       configuration === this.renderConfiguration &&
       streamUpdate.revision === this.streamRevision &&
       streamUpdate.generation === this.streamGeneration
-    ) {
-      return;
+    );
+    // A stream update draws the chunks that changed. The chunks in view that were never drawn (the map was only drawn
+    // where the camera had been, and the camera has moved since) are drawn too, or they stay empty until a stroke
+    // happens to touch them.
+    const missingViewportKeys: string[] = [];
+    if (streamUpdate && this.renderVersion && options.viewportBounds) {
+      const active = this.collectChunkKeys(streamUpdate.activeRegions, data);
+      const inView = this.collectChunkKeys([expandBounds(options.viewportBounds, Math.max(0, options.viewportMargin ?? 0))], data);
+      for (const key of inView) if (active.has(key) && !this.chunks.has(key)) missingViewportKeys.push(key);
     }
+    if (sameStreamGeneration && missingViewportKeys.length === 0 && this.pendingStreamKeys.size === 0) return;
     const renderAllActiveStreamChunks = Boolean(
       streamUpdate &&
         (
@@ -347,11 +357,22 @@ export class StudioTerrainChunkRenderer {
     const activeKeys = streamUpdate
       ? this.collectChunkKeys(streamUpdate.activeRegions, data)
       : null;
-    const nextKeys = streamUpdate
-      ? renderAllActiveStreamChunks
+    let nextKeys: Set<string>;
+    if (streamUpdate) {
+      if (renderAllActiveStreamChunks) this.pendingStreamKeys.clear();
+      const asked = renderAllActiveStreamChunks
         ? activeKeys!
-        : this.collectChunkKeys(streamUpdate.dirtyRegions, data)
-      : viewportKeys ?? this.collectAllChunkKeys(data);
+        : new Set([...(sameStreamGeneration ? [] : this.collectChunkKeys(streamUpdate.dirtyRegions, data)), ...missingViewportKeys]);
+      for (const key of asked) this.pendingStreamKeys.add(key);
+      // What is in view is drawn first.
+      const view = options.viewportBounds ? expandBounds(options.viewportBounds, Math.max(0, options.viewportMargin ?? 0)) : null;
+      const inView = (key: string): boolean => !view || rectsIntersect(this.getChunkBounds(key, data), view);
+      const ordered = [...this.pendingStreamKeys];
+      nextKeys = new Set([...ordered.filter(inView), ...ordered.filter((key) => !inView(key))]);
+    } else {
+      this.pendingStreamKeys.clear();
+      nextKeys = viewportKeys ?? this.collectAllChunkKeys(data);
+    }
     if (!streamUpdate && previousVersion === version) {
       for (const key of [...nextKeys]) {
         if (this.chunks.has(key)) nextKeys.delete(key);
@@ -371,6 +392,7 @@ export class StudioTerrainChunkRenderer {
           this.destroyChunk(previous);
           this.chunks.delete(key);
         }
+        this.pendingStreamKeys.delete(key);
         continue;
       }
       this.renderChunk(
@@ -382,6 +404,7 @@ export class StudioTerrainChunkRenderer {
         collisions,
         splitWallForeground
       );
+      this.pendingStreamKeys.delete(key);
       renderedChunkCount += 1;
       if (renderedChunkCount < nextKeys.size) {
         await yieldToMainThread();
@@ -402,7 +425,8 @@ export class StudioTerrainChunkRenderer {
       }
     }
 
-    this.updateChunkVisibility(options.viewportBounds ?? this.viewportBounds, options.viewportMargin ?? this.viewportMargin);
+    // The camera may have moved while the chunks were drawn: the view it has now decides which are shown, not the one this call began with.
+    this.updateChunkVisibility(this.viewportBounds ?? options.viewportBounds, options.viewportMargin ?? this.viewportMargin);
   }
 
   /** The bounds around some chunks, with room around them. */

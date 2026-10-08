@@ -243,6 +243,72 @@ describe("StudioTerrainChunkRenderer streamed invalidation", () => {
     expect([...(renderer as any).chunks.keys()]).toEqual(["0:0", "1:0"]);
   });
 
+  it("draws the chunks in view that a stream update left out, as the camera moves over a map first drawn in part", async () => {
+    const { renderer, renderChunk } = createInstrumentedRenderer();
+    const map = createTerrainMap(3072, 1536);
+    // The map is drawn where the camera is...
+    await renderer.renderMap(map, { viewportBounds: { x: 0, y: 0, width: 700, height: 700 }, viewportMargin: 0 });
+    expect([...(renderer as any).chunks.keys()]).toEqual(["0:0"]);
+
+    // ...a stroke is given to the runtime as a stream update that touches chunk 0:0 only...
+    const update = {
+      revision: "",
+      generation: 1,
+      dirtyRegions: [{ x: 0, y: 0, width: 100, height: 100 }],
+      activeRegions: [{ x: 0, y: 0, width: 3072, height: 1536 }],
+    };
+    map.terrainRenderData.version = "editor:1";
+    renderChunk.mockClear();
+    await renderer.renderMap(map, { streamUpdate: update, viewportBounds: { x: 0, y: 0, width: 700, height: 700 }, viewportMargin: 0 });
+    expect(renderChunk.mock.calls.map(([key]) => key)).toEqual(["0:0"]);
+
+    // ...and the camera moves over chunks never drawn: they are drawn, the one already there is not drawn again.
+    renderChunk.mockClear();
+    await renderer.renderMap(map, { streamUpdate: update, viewportBounds: { x: 800, y: 0, width: 700, height: 700 }, viewportMargin: 0 });
+    expect(renderChunk.mock.calls.map(([key]) => key)).toEqual(["1:0"]);
+    renderChunk.mockClear();
+    await renderer.renderMap(map, { streamUpdate: update, viewportBounds: { x: 800, y: 0, width: 700, height: 700 }, viewportMargin: 0 });
+    expect(renderChunk).not.toHaveBeenCalled();
+  });
+
+  it("shows the chunks of the view the camera has when the drawing ends, not of the view it had when it began", async () => {
+    const { renderer } = createInstrumentedRenderer();
+    const map = createTerrainMap(3072, 1536);
+    const update = {
+      revision: "",
+      generation: 1,
+      dirtyRegions: [{ x: 0, y: 0, width: 3072, height: 1536 }],
+      activeRegions: [{ x: 0, y: 0, width: 3072, height: 1536 }],
+    };
+    const drawing = renderer.renderMap(map, { streamUpdate: update, viewportBounds: { x: 0, y: 0, width: 700, height: 700 }, viewportMargin: 0 });
+    // the camera moves to the other end of the map while the chunks are drawn
+    renderer.updateChunkVisibility({ x: 2400, y: 800, width: 600, height: 700 }, 0);
+    await drawing;
+    const visible = [...(renderer as any).chunks.values()].filter((chunk: any) => chunk.sprite.visible).map((chunk: any) => chunk.key);
+    expect(visible).toEqual(["3:1"]);
+  });
+
+  it("does not lose the chunks a stream update asked for when another render replaces the one drawing them", async () => {
+    const { renderer, renderChunk } = createInstrumentedRenderer();
+    const map = createTerrainMap(3072, 1536);
+    const update = {
+      revision: "",
+      generation: 1,
+      dirtyRegions: [{ x: 0, y: 0, width: 3072, height: 1536 }],
+      activeRegions: [{ x: 0, y: 0, width: 3072, height: 1536 }],
+    };
+    // the camera moves while the first chunk is drawn: the call it makes replaces the drawing in progress
+    let replaced: Promise<void> | undefined;
+    const original = renderChunk.getMockImplementation()!;
+    renderChunk.mockImplementation((...args: unknown[]) => {
+      original(...args);
+      replaced ??= renderer.renderMap(map, { streamUpdate: update, viewportBounds: { x: 2300, y: 800, width: 700, height: 700 }, viewportMargin: 0 });
+    });
+    await renderer.renderMap(map, { streamUpdate: update, viewportBounds: { x: 0, y: 0, width: 700, height: 700 }, viewportMargin: 0 });
+    await replaced;
+    expect([...(renderer as any).chunks.keys()].sort()).toEqual(["0:0", "0:1", "1:0", "1:1", "2:0", "2:1", "3:0", "3:1"]);
+  });
+
   it("waits for terrain assets and drops an obsolete render request", async () => {
     const { renderer, renderChunk } = createInstrumentedRenderer();
     const map = createTerrainMap(768, 768);
