@@ -1,5 +1,12 @@
 # @rpgjs/vite
 
+## 5.0.1
+
+### Patch Changes
+
+- Updated dependencies [fcf625e]
+  - @rpgjs/server@5.1.0
+
 ## 5.0.0
 
 ### Minor Changes

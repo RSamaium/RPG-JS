@@ -1,5 +1,15 @@
 # @rpgjs/playground-account
 
+## 1.0.1
+
+### Patch Changes
+
+- Updated dependencies [fcf625e]
+  - @rpgjs/common@5.1.0
+  - @rpgjs/client@5.1.0
+  - @rpgjs/server@5.1.0
+  - @rpgjs/vite@5.0.1
+
 ## 1.0.0
 
 ### Patch Changes

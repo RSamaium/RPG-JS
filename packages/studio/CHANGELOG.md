@@ -1,5 +1,17 @@
 # @rpgjs/studio
 
+## 5.1.0
+
+### Minor Changes
+
+- ad3a1ad: Studio maps can use every CanvasEngine weather effect and preset: light rays, embers, ash, leaves, petals, fireflies, spores and sand, with their params (`colors`, `particleSize`, `haze`, `rayFan`, `rayColor`, `cloudOpacity`, ...). The runtime keeps the output of the former presets unchanged, and the map renderers forward the extra params to `<Weather>`.
+
+### Patch Changes
+
+- dfe56ed: Studio elements with a sloped polygon hitbox, such as a mountain, are now drawn in 8 px columns that each sort on the bottom edge of the hitbox at their own x, so a character standing in front of the slope is no longer hidden behind it. A concave hitbox, whose columns cross several ridges, is also cut into one slice per ridge, each sorted on its own base. Flat hitboxes (trees, walls) keep a single sort key. A new `sortMode` on an element (`"auto"` by default, `"hitbox"` to keep the single key, `"slope"` to force the columns) overrides the automatic 16 px slope threshold.
+- 4c51c73: Fix Studio maps with a `scale`: only the map is scaled. The characters/events layer is no longer scaled twice, and the physical world (map size, element/polygon/terrain hitboxes) is expressed in scaled pixels, like the start position and the events, so the camera, the hero and the collisions line up with the scaled map.
+- e908cae: Fix #379: in map streaming (`RPG_TYPE=mmorpg`), a Studio map's `backgroundMusic` and `backgroundAmbientSound` are now resolved to the assets URL (like `loadMap` does), instead of being requested on the game origin. Absolute URLs (`http(s)://`, `/`, `data:`, `blob:`) are left unchanged and media objects (`{ fileName }`) are supported.
+
 ## 5.0.0
 
 ### Minor Changes
