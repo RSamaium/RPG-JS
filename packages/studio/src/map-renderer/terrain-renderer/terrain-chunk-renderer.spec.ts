@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   resolveTerrainHoleWaveDescriptors,
   shouldRenderTerrainGridWithSoftMasks,
@@ -292,5 +292,61 @@ describe("StudioTerrainChunkRenderer streamed invalidation", () => {
     expect(region.phase).toBe(0);
     renderer.update(16);
     expect(region.phase).toBeCloseTo(0.048);
+  });
+
+  describe("water animation budget", () => {
+    const overlays = (count: number) => Array.from({ length: count }, (_, index) => ({
+      id: index,
+      sprite: { destroyed: false, visible: true },
+      regions: [{ phase: 0, speed: 1 }],
+    }));
+    const setup = (count: number, costMs: number) => {
+      const { renderer } = createInstrumentedRenderer();
+      const list = overlays(count);
+      list.forEach((overlay, index) => (renderer as any).chunks.set(`${index}:0`, { sprite: { visible: true }, waterOverlay: overlay }));
+      let clock = 0;
+      vi.spyOn(performance, "now").mockImplementation(() => clock);
+      const drawn: number[] = [];
+      vi.spyOn(renderer as any, "drawWaterOverlay").mockImplementation((overlay: any) => { drawn.push(overlay.id); clock += costMs; });
+      return { renderer, list, drawn };
+    };
+    afterEach(() => vi.restoreAllMocks());
+
+    it("redraws as many water overlays as fit in the budget, and the others on the next update", () => {
+      const { renderer, drawn } = setup(4, 4);
+
+      renderer.update(40);
+      expect(drawn).toEqual([0, 1]); // 4 ms each: the budget (6 ms) is spent after two
+      renderer.update(40);
+      expect(drawn).toEqual([0, 1, 2, 3]); // the others take their turn
+      renderer.update(40);
+      expect(drawn.slice(4)).toEqual([0, 1]); // and it goes round again
+    });
+
+    it("always redraws at least one overlay, even if it alone is over the budget", () => {
+      const { renderer, drawn } = setup(3, 50);
+
+      renderer.update(40);
+      renderer.update(40);
+      renderer.update(40);
+
+      expect(drawn).toEqual([0, 1, 2]);
+    });
+
+    it("keeps the waves moving at their speed for the overlays that wait", () => {
+      const { renderer, list } = setup(4, 4);
+
+      renderer.update(40);
+
+      list.forEach((overlay) => expect(overlay.regions[0]!.phase).toBeCloseTo(0.04)); // all of them, drawn or not
+    });
+
+    it("draws every overlay in one update when they are cheap", () => {
+      const { renderer, drawn } = setup(4, 1);
+
+      renderer.update(40);
+
+      expect(drawn).toEqual([0, 1, 2, 3]);
+    });
   });
 });
