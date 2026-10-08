@@ -36,11 +36,11 @@
   "description": "RPGJS is a framework for creating RPG/MMORPG games",
   "peerDependencies": {
     "@canvasengine/presets": "^2.4.0",
-    "@rpgjs/action-battle": "workspace:*",
-    "@rpgjs/client": "workspace:*",
-    "@rpgjs/common": "workspace:*",
-    "@rpgjs/server": "workspace:*",
-    "@rpgjs/vite": "workspace:*",
+    "@rpgjs/action-battle": "workspace:^",
+    "@rpgjs/client": "workspace:^",
+    "@rpgjs/common": "workspace:^",
+    "@rpgjs/server": "workspace:^",
+    "@rpgjs/vite": "workspace:^",
     "canvasengine": "^2.4.0"
   },
   "publishConfig": {

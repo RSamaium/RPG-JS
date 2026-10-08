@@ -58,13 +58,13 @@ importers:
   packages/account:
     dependencies:
       '@rpgjs/client':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../client
       '@rpgjs/common':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../common
       '@rpgjs/vite':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../vite
       canvasengine:
         specifier: ^2.4.0
@@ -89,16 +89,16 @@ importers:
         specifier: ^2.4.0
         version: 2.4.0(canvasengine@2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/client':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../client
       '@rpgjs/common':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../common
       '@rpgjs/server':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../server
       '@rpgjs/vite':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../vite
       canvasengine:
         specifier: ^2.4.0
@@ -117,16 +117,16 @@ importers:
   packages/chat:
     dependencies:
       '@rpgjs/client':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../client
       '@rpgjs/common':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../common
       '@rpgjs/server':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../server
       '@rpgjs/vite':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../vite
       canvasengine:
         specifier: ^2.4.0
@@ -313,22 +313,22 @@ importers:
         specifier: ^2.4.0
         version: 2.4.0(canvasengine@2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/action-battle':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../action-battle
       '@rpgjs/client':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../client
       '@rpgjs/common':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../common
       '@rpgjs/render-map2d':
         specifier: workspace:*
         version: link:../render-map2d
       '@rpgjs/server':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../server
       '@rpgjs/vite':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../vite
       canvasengine:
         specifier: ^2.4.0
@@ -393,16 +393,16 @@ importers:
         specifier: 2.4.0
         version: 2.4.0
       '@rpgjs/client':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../client
       '@rpgjs/common':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../common
       '@rpgjs/server':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../server
       '@rpgjs/vite':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../vite
       canvasengine:
         specifier: ^2.4.0
@@ -1364,6 +1364,7 @@ packages:
 
   '@cloudflare/vitest-pool-workers@0.5.41':
     resolution: {integrity: sha512-J0uYmOKJgyo/az5nV8QHlR6xQ+HHB6S65tOEutkvUPbuPDbFlBPRT+XHJhSTNNvZGeM1t2qZIzxp0WGmXLtNlQ==}
+    deprecated: '@cloudflare/vitest-pool-workers has been renamed to @cloudflare/vitest-plugin. This package will not receive future updates.'
     peerDependencies:
       '@vitest/runner': 2.0.x - 2.1.x
       '@vitest/snapshot': 2.0.x - 2.1.x
