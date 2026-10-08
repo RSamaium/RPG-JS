@@ -1269,7 +1269,8 @@ export default (_config?: unknown) => {
           mapData.data.lighting = normalizeLightingState(mapData?.data?.lighting);
         }
         if (normalizedInitialWeather) {
-          mapExtended.setWeather(normalizedInitialWeather);
+          // The runtime state is normalized to known params; @rpgjs/common types them as open.
+          mapExtended.setWeather(normalizedInitialWeather as Parameters<typeof mapExtended.setWeather>[0]);
         }
         // Add baseUrl to map context for use in block executors
         (mapExtended as any).apiBaseUrl = apiUrl;
