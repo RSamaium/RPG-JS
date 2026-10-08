@@ -711,6 +711,40 @@ export interface RpgClient {
     }[]
 
     /**
+     * Custom weather components, by id.
+     *
+     * When the server sets a weather whose `effect` is a registered id, the scene
+     * renders that component instead of CanvasEngine's `<Weather>`, in the same
+     * layer. The component receives the weather `params`, `transitionMs`,
+     * `startedAt` and `seed` as props. A custom id replaces a built-in effect of
+     * the same name, so a game can restyle `rain`.
+     *
+     * @example
+     * ```ts
+     * import { defineModule, RpgClient } from '@rpgjs/client'
+     * import AuroraWeather from './aurora.ce'
+     *
+     * defineModule<RpgClient>({
+     *   weathers: [
+     *     { id: 'aurora', component: AuroraWeather }
+     *   ]
+     * })
+     * ```
+     *
+     * ```ts
+     * // server
+     * map.setWeather({ effect: 'aurora', params: { intensity: 0.8 } }, { transitionMs: 2000 })
+     * ```
+     *
+     * @prop {Array<{id: string, component: ComponentFunction}>} [weathers]
+     * @memberof RpgClient
+     * */
+    weathers?: {
+        id: string,
+        component: ComponentFunction
+    }[]
+
+    /**
      * Named client-side visual macros.
      *
      * Use client visuals when the server needs to trigger a group of existing

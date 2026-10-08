@@ -15,12 +15,51 @@ Weather types are exported by `@rpgjs/common`:
 import type { WeatherState, WeatherEffect, WeatherParams } from '@rpgjs/common'
 ```
 
-Supported effects:
+Every weather effect of CanvasEngine (`@canvasengine/presets`) is supported:
 
-- `rain`
-- `snow`
-- `fog`
-- `cloud`
+| Effect | Presets |
+| --- | --- |
+| `rain` | `lightRain`, `steadyRain`, `stormRain` |
+| `snow` | `lightSnow`, `winterSnow`, `blizzardSnow` |
+| `fog` | `rpgMorningMist`, `rpgForestFog`, `rpgSwampFog`, `rpgNightFog`, `rpgHeavyFog` |
+| `cloud` | `lightClouds`, `overcastClouds`, `stormClouds`, `goldenHourRays`, `sunnySoftRays`, `sunsetTwinkleRays`, `dramaticCrepuscularRays`, `morningHazeRays`, `naturalClouds` |
+| `rays` | `morningSunRays`, `goldenHourShafts`, `forestLightShafts`, `moonbeams`, `holyRays`, `radiantBeams` |
+| `embers` | `volcanoEmbers`, `eruptionEmbers` |
+| `ash` | `ashfall` |
+| `leaves` | `autumnLeaves`, `autumnGust` |
+| `petals` | `sakuraPetals`, `sakuraStorm` |
+| `fireflies` | `summerFireflies`, `swampFireflies` |
+| `spores` | `forestSpores`, `enchantedSpores` |
+| `sand` | `dustWind`, `sandstorm` |
+
+`effect` can also be the id of a [custom weather](#custom-weather). The catalog
+is exported by `@rpgjs/common` without importing the renderer, so an editor or a
+server can list it:
+
+```ts
+import { WEATHER_EFFECTS, WEATHER_PRESET_EFFECTS, getWeatherPresetEffect } from '@rpgjs/common'
+
+getWeatherPresetEffect('moonbeams') // 'rays'
+```
+
+## Presets And Params
+
+A weather state can name only a `preset`; `effect` is then the one of the preset.
+`params` override the values of the preset. All `params` are forwarded to
+CanvasEngine's `<Weather>` as they are, so a parameter added by a newer
+CanvasEngine works without a new RPGJS release (`rayFan`, `rayLength`, `rayColor`,
+`fogOpacity`, `colors`, `particleSize`, `haze`, `topDown`, ...).
+
+```ts
+map.setWeather({ preset: 'moonbeams' })
+
+map.setWeather({
+  effect: 'embers',
+  params: { colors: ['#ff6a00'], particleSize: 1.4 }
+})
+```
+
+An unknown preset or effect is reported once in the console and renders nothing.
 
 ## Initial Map Weather
 
@@ -76,6 +115,9 @@ map.patchWeather({
 })
 ```
 
+`patchWeather()` merges `params`. A patch that names a new `preset` (or a new `effect`)
+replaces the previous one, so the old effect never overrides the effect of the new preset.
+
 When `sync` is not `false`, the weather is broadcast to players in the map.
 
 A synchronized `null` is authoritative: `clearWeather()` removes an initial
@@ -106,9 +148,36 @@ engine.sceneMap.setLocalWeather({
 })
 ```
 
+## Custom Weather
+
+Register a weather component by id in a client module, like `componentAnimations`:
+
+```ts
+import { defineModule, RpgClient } from '@rpgjs/client'
+import AuroraWeather from './aurora.ce'
+
+defineModule<RpgClient>({
+  weathers: [
+    { id: 'aurora', component: AuroraWeather }
+  ]
+})
+```
+
+```ts
+// server
+map.setWeather({ effect: 'aurora', params: { intensity: 0.8 } }, { transitionMs: 2000 })
+```
+
+When `effect` matches a registered id, the scene renders that component instead of
+`<Weather>`, in the same layer (`params.zIndex`, 1000 by default). It receives
+`effect`, `params`, `transitionMs`, `durationMs`, `startedAt` and `seed` as props.
+Every client renders it, including players who join later. A registered id replaces
+a built-in effect of the same name, so a game can restyle `rain`.
+
 ## Rendering With CanvasEngine Preset
 
-Use your map weather state to feed `@canvasengine/presets`:
+The scene already renders the weather state with CanvasEngine. To draw it yourself
+elsewhere, feed `@canvasengine/presets` with it:
 
 ```tsx
 <Canvas>

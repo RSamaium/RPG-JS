@@ -158,6 +158,16 @@ export function provideClientModules(modules: RpgClientModule[]): RpgFactoryProv
           },
         };
       }
+      if (module.weathers) {
+        const weathers = [...module.weathers];
+        module.weathers = {
+          load: (engine: RpgClientEngine) => {
+            weathers.forEach((weather) => {
+              engine.addWeather(weather);
+            });
+          },
+        };
+      }
       if (module.clientVisuals) {
         const clientVisuals = { ...module.clientVisuals };
         module.clientVisuals = {
