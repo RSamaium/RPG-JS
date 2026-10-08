@@ -27,12 +27,12 @@
     }
   </Container>
 
-  @if (builtinWeatherProps()) {
-    <Weather ...builtinWeatherProps() />
+  @for (builtinWeather of builtinWeatherList() ; track builtinWeather.key) {
+    <Weather ...builtinWeather.props />
   }
-  @if (customWeatherComponent()) {
-    <Container zIndex={customWeatherZIndex()}>
-      <customWeatherComponent() ...customWeatherProps() />
+  @for (customWeather of customWeatherList() ; track customWeather.key) {
+    <Container zIndex={customWeather.zIndex}>
+      <customWeather.component ...customWeather.props />
     </Container>
   }
 </Container>
@@ -82,17 +82,17 @@
       customIds: engine.weatherComponents,
       hasPreset: (name) => getWeatherPreset(name) !== undefined,
     }))
-    const builtinWeatherProps = computed(() => {
+    // CanvasEngine reads `preset` and `effect` when <Weather> is created: keying the list on them
+    // rebuilds it when the weather switches to another preset or effect.
+    const builtinWeatherList = computed(() => {
       const render = weatherRender()
-      return render && render.kind === 'builtin' ? render.props : null
+      if (!render || render.kind !== 'builtin') return []
+      return [{ key: `${render.props.effect ?? ''}|${render.props.preset ?? ''}`, props: render.props }]
     })
-    const customWeatherProps = computed(() => {
+    const customWeatherList = computed(() => {
       const render = weatherRender()
-      return render && render.kind === 'custom' ? render.props : null
+      const component = render && render.kind === 'custom' ? engine.weatherComponents.get(render.id) : null
+      if (!render || render.kind !== 'custom' || !component) return []
+      return [{ key: render.id, component, props: render.props, zIndex: render.props.zIndex }]
     })
-    const customWeatherComponent = computed(() => {
-      const render = weatherRender()
-      return render && render.kind === 'custom' ? engine.weatherComponents.get(render.id) : null
-    })
-    const customWeatherZIndex = computed(() => customWeatherProps()?.zIndex ?? 1000)
 </script>
