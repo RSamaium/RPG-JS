@@ -22,6 +22,20 @@
       raySpread={weatherOptions()?.raySpread}
       rayTwinkle={weatherOptions()?.rayTwinkle}
       rayTwinkleSpeed={weatherOptions()?.rayTwinkleSpeed}
+      rayFan={weatherOptions()?.rayFan ?? 0}
+      rayLength={weatherOptions()?.rayLength ?? 1}
+      rayDust={weatherOptions()?.rayDust ?? 0.6}
+      rayColor={weatherOptions()?.rayColor ?? '#fff1c7'}
+      fogOpacity={weatherOptions()?.fogOpacity ?? 0.38}
+      fogSoftness={weatherOptions()?.fogSoftness ?? 0.7}
+      shadowIntensity={weatherOptions()?.shadowIntensity ?? 0.38}
+      shadowSoftness={weatherOptions()?.shadowSoftness ?? 0.65}
+      cloudOpacity={weatherOptions()?.cloudOpacity ?? 0}
+      cloudAltitude={weatherOptions()?.cloudAltitude ?? 0.55}
+      colors={weatherOptions()?.colors}
+      particleSize={weatherOptions()?.particleSize ?? 1}
+      haze={weatherOptions()?.haze ?? 1}
+      topDown={weatherOptions()?.topDown ?? true}
       alpha={weatherOptions()?.alpha}
       zIndex={weatherOptions()?.zIndex}
     />
