@@ -799,6 +799,7 @@ export const loadMap = async (mapId: string) => {
         submersion: normalizeElementSubmersion(element.submersion),
         lightSpot: element.lightSpot !== undefined ? element.lightSpot : tilesetElement.lightSpot,
         zIndexOffset,
+        sortMode: element.sortMode ?? tilesetElement.sortMode,
       }
 
       if (drawRule) {

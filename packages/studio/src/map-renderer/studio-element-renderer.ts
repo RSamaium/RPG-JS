@@ -1,3 +1,4 @@
+import { normalizeStudioElementSortMode, resolveStudioElementSortBands } from "./element-slope-sort";
 import { normalizeElementSubmersion, submergeElementPixels } from "./element-submersion";
 import { StudioTerrainChunkRenderer } from "./terrain-renderer/terrain-chunk-renderer";
 import type { StudioTerrainRenderData } from "./types";
@@ -1251,6 +1252,7 @@ const createRenderVersion = (
       drawIn: readValue(element?.drawIn),
       hitbox: readValue(element?.hitbox),
       zIndexOffset: readValue(element?.zIndexOffset),
+      sortMode: readValue(element?.sortMode),
       hasShadow: readValue(element?.hasShadow),
       extractGroundShadow: readValue(element?.extractGroundShadow),
       submersion: readValue(element?.submersion),
@@ -1670,6 +1672,7 @@ export class StudioElementRenderer {
         nextShadowCasterCount += 1;
       }
       nextContainers.push(container);
+      nextContainers.push(...(((container as any).__studioSortBands ?? []) as PixiContainer[]));
       const groundShadows = ((container as any).__studioGroundShadows ?? []) as Sprite[];
       nextGroundShadowSprites.push(...groundShadows);
     }
@@ -1846,6 +1849,8 @@ export class StudioElementRenderer {
       }
     }
 
+    this.splitIntoSortBands(container, element, metrics, createdTextures);
+
     const shadowCaster = resolveStudioElementShadowCaster(element, metrics, options);
     if (shadowCaster) {
       const shadowSprite = createStudioElementShapeShadowSprite(baseTexture, parts, metrics, shadowCaster, container.label ?? "StudioElement");
@@ -1862,6 +1867,80 @@ export class StudioElementRenderer {
     this.addDebugCollisionGraphics(container, metrics, options);
     this.syncLightSpot(element, metrics, options.sceneMap, lightSpotIds);
     return container;
+  }
+
+  /**
+   * Moves the sprites of a sloped polygon element into sibling columns, each
+   * sorted on the bottom edge of the hitbox at its own x. The siblings are
+   * exposed in `__studioSortBands`, to be rendered next to the container.
+   */
+  private splitIntoSortBands(
+    container: PixiContainer,
+    element: any,
+    metrics: StudioElementMetrics,
+    createdTextures: Texture[]
+  ): void {
+    const bands = resolveStudioElementSortBands(
+      metrics.hitboxParts,
+      { x: metrics.hitboxScaleX, y: metrics.hitboxScaleY },
+      metrics.drawWidth,
+      normalizeStudioElementSortMode(readValue(element?.sortMode))
+    );
+    if (!bands) return;
+
+    const offset = toFiniteNumber(readValue(element?.zIndexOffset), 0) ?? 0;
+    const sprites = (container.children as Sprite[]).filter((child) => child instanceof Sprite && child.texture !== Texture.EMPTY);
+    const bandContainers: PixiContainer[] = [];
+    for (const band of bands) {
+      // One slice per stretch of hitbox, from the bottom of the previous one down to its own bottom: a slice is
+      // sorted on the base it stands on, so a character in a cove is in front of the back ridge, behind the front one.
+      const slices = band.bottoms.length
+        ? band.bottoms.map((bottom, index) => ({
+            top: index === 0 ? -Infinity : band.bottoms[index - 1],
+            bottom: index === band.bottoms.length - 1 ? Infinity : bottom,
+            zIndex: Math.round(metrics.drawY + bottom + offset),
+          }))
+        : [{ top: -Infinity, bottom: Infinity, zIndex: container.zIndex }];
+      for (const slice of slices) {
+        const bandContainer = new PixiContainer();
+        bandContainer.x = container.x + band.x;
+        bandContainer.y = container.y;
+        bandContainer.zIndex = slice.zIndex;
+        bandContainer.label = `${container.label}:SortBand`;
+        for (const sprite of sprites) {
+          const left = Math.max(band.x, sprite.x);
+          const right = Math.min(band.x + band.width, sprite.x + sprite.width);
+          const top = Math.max(slice.top, sprite.y);
+          const bottom = Math.min(slice.bottom, sprite.y + sprite.height);
+          if (right - left <= 0 || bottom - top <= 0 || sprite.width <= 0 || sprite.height <= 0) continue;
+          const frame = sprite.texture.frame;
+          const ratioX = frame.width / sprite.width;
+          const ratioY = frame.height / sprite.height;
+          const sourceX = Math.round((left - sprite.x) * ratioX);
+          const sourceY = Math.round((top - sprite.y) * ratioY);
+          const sourceWidth = Math.max(1, Math.min(frame.width - sourceX, Math.round((right - left) * ratioX)));
+          const sourceHeight = Math.max(1, Math.min(frame.height - sourceY, Math.round((bottom - top) * ratioY)));
+          const texture = new Texture({
+            source: sprite.texture.source,
+            frame: new Rectangle(frame.x + sourceX, frame.y + sourceY, sourceWidth, sourceHeight),
+            label: `${container.label}:SortBand`,
+          });
+          createdTextures.push(texture);
+          const piece = new Sprite(texture);
+          piece.x = left - band.x;
+          piece.y = top;
+          piece.width = right - left;
+          piece.height = bottom - top;
+          piece.roundPixels = true;
+          bandContainer.addChild(piece);
+        }
+        if (bandContainer.children.length > 0) bandContainers.push(bandContainer);
+        else bandContainer.destroy();
+      }
+    }
+    if (bandContainers.length === 0) return;
+    for (const sprite of sprites) sprite.destroy();
+    (container as any).__studioSortBands = bandContainers;
   }
 
   private addDebugCollisionGraphics(

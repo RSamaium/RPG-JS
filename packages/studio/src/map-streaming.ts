@@ -200,6 +200,7 @@ function prepareElements(map: Record<string, any>): {
         submersion: normalizeElementSubmersion(placement.submersion),
         lightSpot: placement.lightSpot ?? source.lightSpot,
         zIndexOffset: finite(placement.zIndexOffset),
+        sortMode: placement.sortMode ?? source.sortMode,
         ...(rule
           ? { drawRule: rule, drawRuleId: placement.drawRuleId ?? rule.id }
           : {}),
