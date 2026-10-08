@@ -5,6 +5,7 @@ import MapComponentV2 from "./components/draw-map-v2.ce";
 import { inject, RpgClientEngine } from "@rpgjs/client";
 import { createSpriteSheetObject, resolveAssetSource } from "./spritesheet-utils";
 import { getGameDataProvider, getStudioGameRuntimeConfig } from "./data-provider";
+import { resolveStudioMapScale, scaleStudioHitboxes } from './map-scale';
 import {
   buildStudioTerrainCollisionPolygons,
   createStudioTerrainRenderData,
@@ -977,6 +978,8 @@ export const loadMap = async (mapId: string) => {
 
   await waitForMapImages(map);
 
+  const mapScale = resolveStudioMapScale(map.params)
+
   return {
     [STUDIO_DIRECT_LOAD_MARKER]: true,
     id: finalMapId,
@@ -990,12 +993,13 @@ export const loadMap = async (mapId: string) => {
       terrainRenderData,
       debugCollisions: client.globalConfig.debugCollisions === true,
     },
-    hitboxes: allHitboxes,
+    hitboxes: scaleStudioHitboxes(allHitboxes, mapScale),
     component: MapComponentV2,
     config: client.globalConfig,
     events: map.events,
-    width: isV2 ? map.params.width * 48 : map.params.width,
-    height: isV2 ? map.params.height * 48 : map.params.height,
+    // Physical world size, in scaled pixels (the map is drawn scaled).
+    width: (isV2 ? map.params.width * 48 : map.params.width) * mapScale,
+    height: (isV2 ? map.params.height * 48 : map.params.height) * mapScale,
     params: {
       backgroundMusic: map.params.backgroundMusic,
       backgroundAmbientSound: map.params.backgroundAmbientSound,

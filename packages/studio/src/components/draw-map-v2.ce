@@ -3,7 +3,9 @@
     <Container sortableChildren={true} pixiChildren={terrainWallShadowPixiChildren} />
     <Container sortableChildren={true} pixiChildren={groundShadowPixiChildren} />
     <Container sortableChildren={true} pixiChildren={elementsAlwaysLowPixiChildren} />
-    <StudioEventLayer pixiChildren={eventLayerPixiChildren} /> 
+    <Container scale={eventLayerScale}>
+      <StudioEventLayer pixiChildren={eventLayerPixiChildren} /> 
+    </Container>
     <Container sortableChildren={true} pixiChildren={elementsHighPixiChildren} />
 </Container>
 
@@ -164,7 +166,7 @@
       const currentSerial = ++terrainWallOcclusionSerial
       const children = await terrainWallOcclusionRenderer.renderMap(mapData)
       if (currentSerial !== terrainWallOcclusionSerial) return
-      terrainWallOcclusionChildren.set(children)
+      terrainWallOcclusionChildren.set(toEventLayerSpace(children))
       lastTerrainMorphologyCullKey = ""
       updateTerrainMorphologyCulling()
     }
@@ -513,6 +515,27 @@
       return params?.scale || 1
     })
 
+    // The map is scaled, but characters and events are not: the server already
+    // expresses their positions in scaled pixels. The event layer is rendered at
+    // 1 / scale so they keep their size and position, and the map elements that
+    // share it (y-sorted with the characters) are converted to that same space.
+    const eventLayerScale = computed(() => 1 / scale())
+
+    const toEventLayerSpace = (children) => {
+      const factor = scale()
+      if (factor === 1) return children
+      children.forEach((child) => {
+        if (!child || child.__studioEventLayerSpace) return
+        child.x *= factor
+        child.y *= factor
+        child.scale.x *= factor
+        child.scale.y *= factor
+        child.zIndex *= factor
+        child.__studioEventLayerSpace = true
+      })
+      return children
+    }
+
     const mapBounds = computed(() => {
       const mapData = map()
       const renderData = data()?.terrainRenderData
@@ -572,7 +595,7 @@
 
       elementsAlwaysLowChildren = alwaysLowChildren
       syncPixiWorldChildren(elementsAlwaysLowWorld, elementsAlwaysLowChildren)
-      elementsLowPixiChildren.set(lowChildren)
+      elementsLowPixiChildren.set(toEventLayerSpace(lowChildren))
       syncPixiWorldChildren(groundShadowWorld, [
         ...elementsAlwaysLowRenderer.getGroundShadowSprites(),
         ...elementsLowRenderer.getGroundShadowSprites(),

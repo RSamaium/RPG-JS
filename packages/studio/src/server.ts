@@ -26,6 +26,7 @@ import {
   resolveStudioItemType,
 } from "./starting-equipment";
 import { normalizeStudioCharacterSelectSettings } from "./action-battle-audio";
+import { resolveStudioMapScale, scaleStudioHitboxes } from "./map-scale";
 import { StudioStartupError, type StudioPlayerStartup } from "./startup";
 export { createStudioActionBattleAnimations } from "./action-battle-animations";
 export type { StudioCombatAnimationIds, StudioCombatAnimationOptions } from "./action-battle-animations";
@@ -901,6 +902,7 @@ const normalizeStudioMapPayload = async (
     });
   }
 
+  const mapScale = resolveStudioMapScale(params);
   const normalizedMap = {
     ...mapResponse,
     id: mapResponse._id ?? mapResponse.id ?? mapId,
@@ -921,9 +923,10 @@ const normalizeStudioMapPayload = async (
     }, normalizedMap),
     events: hydratedEvents,
     commonEvents: hydratedCommonEvents,
-    hitboxes: mergedHitboxes,
-    width: initialMapData?.width || (isV2 ? params.width * 48 : params.width) || mapResponse.width || 1,
-    height: initialMapData?.height || (isV2 ? params.height * 48 : params.height) || mapResponse.height || 1,
+    hitboxes: scaleStudioHitboxes(mergedHitboxes, mapScale),
+    // Physical world size, in scaled pixels (the map is drawn scaled).
+    width: initialMapData?.width || ((isV2 ? params.width * 48 : params.width) || mapResponse.width || 1) * mapScale,
+    height: initialMapData?.height || ((isV2 ? params.height * 48 : params.height) || mapResponse.height || 1) * mapScale,
     config: {
       ...project,
       ...(initialMapData?.config ?? {}),
