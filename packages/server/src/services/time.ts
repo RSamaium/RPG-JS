@@ -12,9 +12,11 @@ import {
   timeDurationToMinutes,
   timeInputToElapsedMinutes,
   type LightingState,
+  type TimeDayNightConfig,
   type TimeDuration,
   type TimeEnvironmentReason,
   type TimeInput,
+  type TimeLightingConfig,
   type TimeLightingPhaseTransitionPayload,
   type TimeManagerOptions,
   type TimeSnapshot,
@@ -327,28 +329,38 @@ export class TimeManager {
       return;
     }
 
-    const nextLighting = phase.config?.lighting
-      ?? (state.hour >= 6 && state.hour < 18 ? DEFAULT_DAY_LIGHTING : DEFAULT_NIGHT_LIGHTING);
-    const transitionMs = phase.config ? lighting.transitionMs : 0;
+    const dayNight = normalizeDayNight(lighting.dayNight);
+    const nextLighting: Partial<LightingState> = dayNight
+      ? { dayNight: { ...dayNight, enabled: true } }
+      : phase.config?.lighting
+        ?? (state.hour >= 6 && state.hour < 18 ? DEFAULT_DAY_LIGHTING : DEFAULT_NIGHT_LIGHTING);
+    const transitionMs = !dayNight && phase.config ? lighting.transitionMs : 0;
     const canBroadcast = typeof map.$broadcast === "function";
     const previousLighting = map.getLighting?.();
+    const dispatch = async () => {
+      if (!options.skipHooks && previousKey && previousKey !== phase.key) {
+        await this.dispatchLightingHook(map, previousKey, phase.key, previousLighting, nextLighting, options.reason ?? "tick");
+      }
+    };
 
     if (transitionMs && canBroadcast && typeof map.transitionLighting === "function") {
       map.transitionLighting(nextLighting, { duration: transitionMs });
       this.lightingPhaseByMap.set(map, phase.key);
-      if (!options.skipHooks && previousKey && previousKey !== phase.key) {
-        await this.dispatchLightingHook(map, previousKey, phase.key, previousLighting, nextLighting, options.reason ?? "tick");
-      }
+      await dispatch();
       return;
     }
 
-    if (typeof map.setLighting === "function") {
-      map.setLighting(nextLighting, canBroadcast ? undefined : { sync: false });
-      this.lightingPhaseByMap.set(map, phase.key);
-      if (!options.skipHooks && previousKey && previousKey !== phase.key) {
-        await this.dispatchLightingHook(map, previousKey, phase.key, previousLighting, nextLighting, options.reason ?? "tick");
-      }
+    // The phase lighting is merged into the lighting of the map, so its light spots are kept.
+    const syncOptions = canBroadcast ? undefined : { sync: false };
+    if (typeof map.patchLighting === "function") {
+      map.patchLighting(nextLighting, syncOptions);
+    } else if (typeof map.setLighting === "function") {
+      map.setLighting(nextLighting as LightingState, syncOptions);
+    } else {
+      return;
     }
+    this.lightingPhaseByMap.set(map, phase.key);
+    await dispatch();
   }
 
   private shouldRollWeather(map: RegisteredMap): boolean {
@@ -610,6 +622,9 @@ export class TimeManager {
   }
 
   private resolveLightingPhase(state: TimeState) {
+    if (this.options.lighting && normalizeDayNight(this.options.lighting.dayNight)) {
+      return { key: state.phase as string, config: undefined };
+    }
     const phases = this.options.lighting ? this.options.lighting.phases : undefined;
     if (!phases) {
       return {
@@ -629,6 +644,11 @@ export class TimeManager {
       config: resolved ? resolved[1] : undefined,
     };
   }
+}
+
+function normalizeDayNight(dayNight: TimeLightingConfig["dayNight"]): TimeDayNightConfig | false {
+  if (!dayNight) return false;
+  return dayNight === true ? {} : { ...dayNight };
 }
 
 function cloneWeather(weather: WeatherState | null | undefined): WeatherState | null {

@@ -9,13 +9,22 @@ import { signal } from "canvasengine";
 export class ClientTimeManager {
   private snapshot = signal<TimeSnapshot | null>(null);
   private listeners = new Set<(state: TimeState | null) => void>();
+  /**
+   * Server clock minus client clock, in milliseconds, measured when a snapshot is received.
+   * The snapshot is anchored on the clock of the server: without this offset, a client clock that is
+   * 1 second off shifts the displayed time by `scale / 60` game minutes.
+   */
+  private clockOffset = 0;
 
   configure(_options: TimeManagerOptions = {}): void {
     // Client options are accepted for shared module ergonomics. The server
     // snapshot remains authoritative.
   }
 
-  acceptSnapshot(snapshot: TimeSnapshot | null): void {
+  acceptSnapshot(snapshot: TimeSnapshot | null, options: { measureClock?: boolean } = {}): void {
+    if (snapshot && options.measureClock !== false && Number.isFinite(snapshot.serverTimestamp)) {
+      this.clockOffset = snapshot.serverTimestamp - Date.now();
+    }
     this.snapshot.set(snapshot ? cloneSnapshot(snapshot) : null);
     this.emit();
   }
@@ -39,12 +48,13 @@ export class ClientTimeManager {
     ) {
       return;
     }
-    this.acceptSnapshot(next);
+    // A patch without a new anchor keeps the offset measured with the snapshot it completes.
+    this.acceptSnapshot(next, { measureClock: patch.serverTimestamp !== undefined });
   }
 
   state(now = Date.now()): TimeState | null {
     const snapshot = this.snapshot();
-    return snapshot ? projectTimeState(snapshot, now) : null;
+    return snapshot ? projectTimeState(snapshot, now + this.clockOffset) : null;
   }
 
   onChange(callback: (state: TimeState | null) => void): () => void {
