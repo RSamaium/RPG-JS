@@ -4,14 +4,14 @@ import { collectEventGraphics, resolveGeneratedCharacterDisplayScale, scaleEvent
 const merchant = { metadata: { generationMode: "idle", columns: 2, rows: 2, width: 1024, height: 768 } };
 
 describe("event hitbox scale", () => {
-  it("displays a generated character with a cell of 128 pixels", () => {
-    expect(resolveGeneratedCharacterDisplayScale(merchant)).toBe(0.25);
-    expect(resolveGeneratedCharacterDisplayScale({ metadata: { ...merchant.metadata, scale: 2 } })).toBe(0.5);
+  it("displays a generated character with a cell of 128 pixels, boosted", () => {
+    expect(resolveGeneratedCharacterDisplayScale(merchant)).toBeCloseTo(0.3375);
+    expect(resolveGeneratedCharacterDisplayScale({ metadata: { ...merchant.metadata, scale: 2 } })).toBeCloseTo(0.675);
     expect(resolveGeneratedCharacterDisplayScale({ metadata: { generationMode: "character" } })).toBeUndefined();
   });
 
   it("scales the hitbox of a generated character and leaves the others", () => {
-    expect(scaleEventHitboxToGraphic({ width: 139, height: 117 }, [merchant])).toEqual({ width: 35, height: 29 });
+    expect(scaleEventHitboxToGraphic({ width: 139, height: 117 }, [merchant])).toEqual({ width: 47, height: 39 });
     expect(scaleEventHitboxToGraphic({ width: 139, height: 117 }, [{ metadata: {} }, "graphic-id"])).toEqual({ width: 139, height: 117 });
   });
 
