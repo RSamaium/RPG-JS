@@ -13,3 +13,5 @@ The size of a liquid hole (what its water level, insets and edge widths are made
 A stream update of the terrain renderer no longer loses chunks when the camera moves while it draws: the chunks it asked for and did not draw yet stay pending for the next call (and the ones in view are drawn first), the chunks in view that were never drawn are drawn by the next call, and the chunks shown are those of the view the camera has when the drawing ends, not of the one it had when it began.
 
 The terrain renderer draws once more, when the camera rests, the chunks of a stream update that were drawn while the camera moved, so a row of the map cannot stay out of date on screen.
+
+The terrain container of the Studio map has no width or height any more: Pixi scaled it so that the chunks drawn at that moment filled the map width, so the terrain was drawn larger than the map (and out of line with the elements) once the map data was updated while the camera had moved.
