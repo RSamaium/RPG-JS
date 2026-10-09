@@ -288,6 +288,26 @@ describe("StudioTerrainChunkRenderer streamed invalidation", () => {
     expect(visible).toEqual(["3:1"]);
   });
 
+  it("draws once more, when the camera rests, the chunks drawn while it moved", async () => {
+    const { renderer, renderChunk } = createInstrumentedRenderer();
+    const map = createTerrainMap(3072, 1536);
+    const update = {
+      revision: "",
+      generation: 1,
+      dirtyRegions: [{ x: 0, y: 0, width: 3072, height: 1536 }],
+      activeRegions: [{ x: 0, y: 0, width: 3072, height: 1536 }],
+    };
+    const drawing = renderer.renderMap(map, { streamUpdate: update, viewportBounds: { x: 0, y: 0, width: 700, height: 700 }, viewportMargin: 0 });
+    renderer.updateChunkVisibility({ x: 2400, y: 800, width: 600, height: 700 }, 0);
+    await drawing;
+    renderChunk.mockClear();
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    expect(renderChunk.mock.calls.map(([key]) => key)).toEqual(["3:1"]);
+    renderChunk.mockClear();
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    expect(renderChunk).not.toHaveBeenCalled();
+  });
+
   it("does not lose the chunks a stream update asked for when another render replaces the one drawing them", async () => {
     const { renderer, renderChunk } = createInstrumentedRenderer();
     const map = createTerrainMap(3072, 1536);

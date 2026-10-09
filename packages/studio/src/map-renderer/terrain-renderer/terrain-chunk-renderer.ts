@@ -42,6 +42,7 @@ import type { StudioViewportBounds } from "../viewport-culling";
 const DEFAULT_CHUNK_SIZE = 768;
 /** Room around the chunks drawn again, for the relief to be made in: blurs, insets and the drop of a liquid reach that far. */
 const MORPHOLOGY_CLIP_MARGIN = 192;
+const REPAINT_IDLE_DELAY = 350;
 let chunkSizeOverride: number | undefined;
 
 /**
@@ -267,6 +268,7 @@ export class StudioTerrainChunkRenderer {
   private meniscusAccentCache = new WeakMap<HTMLCanvasElement, Map<string, HTMLCanvasElement>>();
   /** The chunks a stream update asked for that are not drawn yet: a render that is replaced by another leaves them to it. */
   private pendingStreamKeys = new Set<string>();
+  private repaintTimer: ReturnType<typeof setTimeout> | null = null;
   private waterLevelCache = new WeakMap<StudioTerrainMorphologyFeature, { mask: TerrainMorphologyMaskBuffer; alphaBounds: { x: number; y: number; width: number; height: number } } | null>();
   private morphologyColorOverlayCache = new WeakMap<HTMLCanvasElement, Map<string, HTMLCanvasElement>>();
   private morphologyTextureFillCache = new WeakMap<HTMLCanvasElement, Map<string, HTMLCanvasElement>>();
@@ -291,6 +293,7 @@ export class StudioTerrainChunkRenderer {
     const data = isStudioTerrainRenderData(map?.terrainRenderData)
       ? map.terrainRenderData
       : createStudioTerrainRenderData(map);
+    const viewAtStart = viewportSignature(this.viewportBounds ?? options.viewportBounds);
     const debugCollisions = options.debugCollisions === true;
     const splitWallForeground = options.splitWallForeground === true;
     const configuration = `debug:${debugCollisions}|chunk:${this.chunkSize}|splitWall:${splitWallForeground}`;
@@ -384,6 +387,7 @@ export class StudioTerrainChunkRenderer {
     // Only some chunks are drawn again (a stroke touched them): the relief is made for them and their surroundings.
     this.morphologyRenderClip = streamUpdate && !renderAllActiveStreamChunks && nextKeys.size > 0 ? this.chunkKeysBounds(nextKeys, data, MORPHOLOGY_CLIP_MARGIN) : null;
     let renderedChunkCount = 0;
+    const renderedKeys: string[] = [];
     try {
     for (const key of nextKeys) {
       if (activeKeys && !activeKeys.has(key)) {
@@ -405,6 +409,7 @@ export class StudioTerrainChunkRenderer {
         splitWallForeground
       );
       this.pendingStreamKeys.delete(key);
+      renderedKeys.push(key);
       renderedChunkCount += 1;
       if (renderedChunkCount < nextKeys.size) {
         await yieldToMainThread();
@@ -427,6 +432,31 @@ export class StudioTerrainChunkRenderer {
 
     // The camera may have moved while the chunks were drawn: the view it has now decides which are shown, not the one this call began with.
     this.updateChunkVisibility(this.viewportBounds ?? options.viewportBounds, options.viewportMargin ?? this.viewportMargin);
+    // Chunks drawn while the camera moved can stay out of date on screen: draw them once more when it rests.
+    if (streamUpdate && renderedKeys.length > 0 && viewportSignature(this.viewportBounds) !== viewAtStart) {
+      this.scheduleRepaint(map, options, renderedKeys);
+    }
+  }
+
+  private scheduleRepaint(map: any, options: StudioTerrainChunkRendererOptions, keys: string[]): void {
+    if (this.repaintTimer !== null) clearTimeout(this.repaintTimer);
+    const seen = viewportSignature(this.viewportBounds);
+    this.repaintTimer = setTimeout(() => {
+      this.repaintTimer = null;
+      if (this.destroyed) return;
+      if (viewportSignature(this.viewportBounds) !== seen) {
+        this.scheduleRepaint(map, options, keys);
+        return;
+      }
+      const view = this.viewportBounds ? expandBounds(this.viewportBounds, this.viewportMargin) : null;
+      const data = isStudioTerrainRenderData(map?.terrainRenderData) ? map.terrainRenderData : null;
+      if (!data) return;
+      for (const key of keys) {
+        if (this.chunks.has(key) && (!view || rectsIntersect(this.getChunkBounds(key, data), view))) this.pendingStreamKeys.add(key);
+      }
+      if (this.pendingStreamKeys.size === 0) return;
+      void this.renderMap(map, { ...options, streamUpdate: data.streamUpdate ?? options.streamUpdate, viewportBounds: this.viewportBounds ?? options.viewportBounds });
+    }, REPAINT_IDLE_DELAY);
   }
 
   /** The bounds around some chunks, with room around them. */
@@ -578,6 +608,8 @@ export class StudioTerrainChunkRenderer {
 
   destroy(): void {
     this.destroyed = true;
+    if (this.repaintTimer !== null) clearTimeout(this.repaintTimer);
+    this.repaintTimer = null;
     this.renderRequestSerial += 1;
     for (const chunk of this.chunks.values()) {
       this.destroyChunk(chunk);
@@ -4559,6 +4591,10 @@ function featureIntersectsBounds(
   const right = metrics.pointMaxX + margin;
   const bottom = metrics.pointMaxY + margin;
   return rectsIntersect(bounds, { x: left, y: top, width: right - left, height: bottom - top });
+}
+
+function viewportSignature(bounds?: TerrainViewportBounds | null): string {
+  return bounds ? `${Math.round(bounds.x)}|${Math.round(bounds.y)}|${Math.round(bounds.width)}|${Math.round(bounds.height)}` : "";
 }
 
 function rectsIntersect(

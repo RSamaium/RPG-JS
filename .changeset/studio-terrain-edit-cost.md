@@ -11,3 +11,5 @@ The water level of a filled hole (its projected mask and the scan of its pixels)
 The size of a liquid hole (what its water level, insets and edge widths are made from) no longer depends on the part of it that was made when only some chunks are drawn again. A large water hole used to get a smaller, shifted shore after a brush stroke elsewhere, because the geometry was measured on the mask cut to the chunks being redrawn; it is now measured on the strokes of the whole feature.
 
 A stream update of the terrain renderer no longer loses chunks when the camera moves while it draws: the chunks it asked for and did not draw yet stay pending for the next call (and the ones in view are drawn first), the chunks in view that were never drawn are drawn by the next call, and the chunks shown are those of the view the camera has when the drawing ends, not of the one it had when it began.
+
+The terrain renderer draws once more, when the camera rests, the chunks of a stream update that were drawn while the camera moved, so a row of the map cannot stay out of date on screen.
