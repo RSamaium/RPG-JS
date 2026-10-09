@@ -105,6 +105,7 @@
               "gui/mobile",
               "gui/prebuilt-contracts",
               "gui/chat",
+              "gui/calendar",
               "guide/gui/attach-gui",
               "gui/engine-injection",
               "gui/optimistic-actions",

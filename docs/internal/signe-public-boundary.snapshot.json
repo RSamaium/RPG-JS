@@ -974,6 +974,61 @@
       "packages/action-battle/dist/server/visual.d.ts"
     ]
   },
+  "@rpgjs/calendar": {
+    "entry": "packages/calendar/dist/client/client-index.d.ts",
+    "exports": [
+      "CALENDAR_CLIENT_I18N",
+      "CALENDAR_GUI_ID",
+      "CALENDAR_VIEW_INTERACTION",
+      "CalendarClientOptions",
+      "CalendarView",
+      "closeCalendar",
+      "createCalendarClient",
+      "default",
+      "provideCalendar"
+    ],
+    "declarations": [
+      "packages/calendar/dist/client/client-index.d.ts",
+      "packages/calendar/dist/client/client.d.ts",
+      "packages/calendar/dist/client/config.d.ts"
+    ]
+  },
+  "@rpgjs/calendar/client": {
+    "entry": "packages/calendar/dist/client/client-index.d.ts",
+    "exports": [
+      "CALENDAR_CLIENT_I18N",
+      "CALENDAR_GUI_ID",
+      "CALENDAR_VIEW_INTERACTION",
+      "CalendarClientOptions",
+      "CalendarView",
+      "closeCalendar",
+      "createCalendarClient",
+      "default",
+      "provideCalendar"
+    ],
+    "declarations": [
+      "packages/calendar/dist/client/client-index.d.ts",
+      "packages/calendar/dist/client/client.d.ts",
+      "packages/calendar/dist/client/config.d.ts"
+    ]
+  },
+  "@rpgjs/calendar/server": {
+    "entry": "packages/calendar/dist/server/server-index.d.ts",
+    "exports": [
+      "CALENDAR_GUI_ID",
+      "CALENDAR_VIEW_INTERACTION",
+      "CalendarService",
+      "default",
+      "openCalendar",
+      "provideCalendar"
+    ],
+    "declarations": [
+      "packages/calendar/dist/server/config.d.ts",
+      "packages/calendar/dist/server/server-index.d.ts",
+      "packages/calendar/dist/server/server.d.ts",
+      "packages/calendar/dist/server/service.d.ts"
+    ]
+  },
   "@rpgjs/chat": {
     "entry": "packages/chat/dist/client/client-index.d.ts",
     "exports": [
