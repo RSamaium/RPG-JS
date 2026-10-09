@@ -1500,6 +1500,8 @@ export const createActionBattleServer = (
         }
 
         if (input.action == Control.Action) {
+          // The action key talks to an NPC (or opens a chest) instead of attacking
+          if (input.interactedWithEvent) return;
           const combo = objectOption(options.combat?.player?.combo);
           const lockedUntil = Number((player as any).__actionBattleAttackLockedUntil ?? 0);
           if (lockedUntil > now) {

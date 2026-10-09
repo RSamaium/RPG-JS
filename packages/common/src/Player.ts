@@ -151,6 +151,8 @@ export class RpgCommonPlayer {
   @sync() _throughEvent = gameplaySignal(false);
   @sync() _pushable = gameplaySignal(false);
   @sync() _frequency = gameplaySignal(0);
+  /** `true` for an event the player talks to or uses with the action key (it has an `onAction` hook). */
+  @sync() interactive = gameplaySignal(false);
   @sync() _frames = gameplaySignal<{ x: number; y: number; ts: number }[]>([]);
   @sync() componentsTop = gameplaySignal<string | null>(null);
   @sync() componentsBottom = gameplaySignal<string | null>(null);
