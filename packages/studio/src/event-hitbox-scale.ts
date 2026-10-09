@@ -1,5 +1,8 @@
+/** Characters are displayed this much bigger than their source scale, to fit the size of the decor. */
+export const STUDIO_CHARACTER_DISPLAY_BOOST = 1.35;
+
 /** Size, in display pixels, of the cell of a generated character on the map. */
-const GENERATED_CHARACTER_DISPLAY_SIZE = 128;
+const GENERATED_CHARACTER_DISPLAY_SIZE = 128 * STUDIO_CHARACTER_DISPLAY_BOOST;
 
 const toPositive = (value: unknown): number | undefined => {
   const number = typeof value === "string" ? Number(value) : value;

@@ -6,10 +6,10 @@ import { CharacterSpritesheet } from "./spritesheets/character";
 import { Animation, Direction } from "./spritesheets/types";
 import { getGameDataProvider } from "./data-provider";
 import { Assets } from "pixi.js";
-import { resolveGeneratedCharacterDisplayScale } from "./event-hitbox-scale";
+import { resolveGeneratedCharacterDisplayScale, STUDIO_CHARACTER_DISPLAY_BOOST } from "./event-hitbox-scale";
 import { loadedCharacterHeight, loadedCharacterFrames, characterAnimationCalibration, characterFrameTransform } from "./character-proportions";
 
-export const STUDIO_DEFAULT_CHARACTER_DISPLAY_SCALE = 0.7;
+export const STUDIO_DEFAULT_CHARACTER_DISPLAY_SCALE = 0.7 * STUDIO_CHARACTER_DISPLAY_BOOST;
 export const STUDIO_DEFAULT_ATTACK_ANIMATION_DURATION_MS = 350;
 
 const resolveCharacterDisplayScale = (scale: unknown): number => {
@@ -331,8 +331,8 @@ export const prepareSpriteSheetObject = async (media: any, id?: string): Promise
       }
     }
   }
-  // Calibrate each direction from the median pose of its frames (feet, height), never from attack
-  // effects. The same path handles linked and explicitly selected attacks.
+  // Calibrate each direction from the median pose of its frames (feet, height) for stand and walk, and
+  // from its first pose for the other animations. The same path handles linked and explicitly selected attacks.
   const referenceSheet = parentSheet ?? (media.metadata?.generationMode === "idle" ? spritesheet : undefined);
   if (referenceSheet) {
     const referenceFrames = loadedCharacterFrames(referenceSheet.image, referenceSheet.framesWidth, referenceSheet.framesHeight);
@@ -367,7 +367,10 @@ export const prepareSpriteSheetObject = async (media: any, id?: string): Promise
           ...texture,
           animations: (params: { direction: Direction }) => {
             const groups = animations(params);
-            const source = boundsOf(groups, bounds, columns);
+            // Stand and walk loop, so their median pose is stable. Other animations (an attack, with its
+            // effects in later frames) are calibrated from their first pose only.
+            const poses = boundsOf(groups, bounds, columns);
+            const source = name === Animation.Stand || name === Animation.Walk ? poses : poses.slice(0, 1);
             const target = boundsOf(referenceAnimation(params), referenceFrames, referenceSheet.framesWidth);
             if (!source.length || !target.length) return groups;
             const transform = characterFrameTransform(characterAnimationCalibration(target, source));
