@@ -8,10 +8,14 @@ export * from "./core/setup";
 export * from "./core/inject";
 export * from "./services/loadMap";
 export * from "./services/actionInput";
+export * from "./services/hotbar";
+export * from "./services/mapStreaming";
 export * from "./services/pointerContext";
 export * from "./services/interactions";
+export * from "./services/gameplayRooms";
 export * from "./module";
 export * from "./Gui/Gui";
+export type { CinematicData, CinematicResult } from "./Gui/CinematicPlayback";
 export * from "./components/gui";
 export * from "./components/animations";
 export * from "./components/prebuilt";
@@ -22,14 +26,32 @@ export * from "./Sound";
 export * from "./Resource";
 export * from "./decorators/spritesheet";
 export * from "./utils/getEntityProp";
-export { Context } from "@signe/di";
 export { KeyboardControls, Input } from "canvasengine";
 export { Control } from "./services/keyboardControls";
+export { defineModule } from "@rpgjs/common";
+export type {
+  RpgClassProvider,
+  RpgContext,
+  RpgExistingProvider,
+  RpgFactoryProvider,
+  RpgProvider,
+  RpgProviders,
+  RpgProviderToken,
+  RpgReadableSignal,
+  RpgValueProvider,
+  RpgWritableSignal,
+} from "@rpgjs/common";
 export { RpgClientObject } from "./Game/Object";
 export { RpgClientPlayer } from "./Game/Player";
 export { RpgClientEvent } from "./Game/Event";
 export * from "./Game/ProjectileManager";
 export * from "./Game/ClientVisuals";
+export * from "./Game/MusicManager";
+export type {
+    RpgAudioChannel,
+    RpgAudioPosition,
+    RpgPlaySoundOptions,
+} from "./Game/AudioManager";
 export { withMobile } from "./components/gui/mobile";
 export type {
     MobileButtonComponentProps,
@@ -45,3 +67,4 @@ export type {
 } from "./components/gui/mobile";
 export * from "./services/AbstractSocket";
 export * from "./i18n";
+export { parseRichText, sliceRichText, paginateRichText, type RichTextRun } from "./utils/richText";

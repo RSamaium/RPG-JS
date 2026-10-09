@@ -1,0 +1,95 @@
+{
+  "id": "seed-studio",
+  "width": 384,
+  "height": 288,
+  "revision": "fixture-v2",
+  "config": {
+    "startMapId": "seed-studio",
+    "hero": {}
+  },
+  "database": [],
+  "events": [
+    {
+      "eventId": "seed-npc",
+      "id": "seed-npc",
+      "_id": "seed-npc",
+      "name": "Cloudflare test NPC",
+      "eventType": "character",
+      "x": 144,
+      "y": 144,
+      "params": {
+        "graphic": { "fileName": "default_character" },
+        "hitbox": { "width": 32, "height": 32 }
+      },
+      "triggers": [
+        {
+          "type": "onAction",
+          "enabled": true,
+          "graphic": { "fileName": "default_character" },
+          "movement": { "type": "fixed" },
+          "blocks": []
+        }
+      ]
+    }
+  ],
+  "data": {
+    "_id": "seed-studio",
+    "name": "Studio Cloudflare seed",
+    "updatedAt": "2026-07-17T00:00:00.000Z",
+    "creationDetails": { "version": "v2" },
+    "params": {
+      "width": 8,
+      "height": 6,
+      "scale": 1,
+      "backgroundMusic": "",
+      "backgroundAmbientSound": ""
+    },
+    "start": { "x": 2, "y": 2 },
+    "elementsAlwaysLow": "[]",
+    "elementsLow": "[]",
+    "elementsHigh": "[]",
+    "terrain": "[[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]]",
+    "terrainLayer": {
+      "version": 1,
+      "mode": "grid",
+      "width": 384,
+      "height": 288,
+      "tileSize": 48
+    },
+    "terrainMorphologyLayer": {
+      "version": 1,
+      "mode": "terrain-morphology",
+      "width": 384,
+      "height": 288,
+      "tileSize": 48,
+      "features": []
+    },
+    "events": [
+      {
+        "eventId": "seed-npc",
+        "id": "seed-npc",
+        "_id": "seed-npc",
+        "name": "Cloudflare test NPC",
+        "eventType": "character",
+        "x": 144,
+        "y": 144,
+        "params": {
+          "graphic": { "fileName": "default_character" },
+          "hitbox": { "width": 32, "height": 32 }
+        },
+        "triggers": [
+          {
+            "type": "onAction",
+            "enabled": true,
+            "graphic": { "fileName": "default_character" },
+            "movement": { "type": "fixed" },
+            "blocks": []
+          }
+        ]
+      }
+    ],
+    "hitboxes": [
+      { "id": "seed-wall", "x": 240, "y": 96, "width": 48, "height": 144 }
+    ]
+  }
+}

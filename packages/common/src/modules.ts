@@ -1,6 +1,6 @@
 export const ModulesToken = "ModulesToken";
 
-import { Context, Provider, Providers } from "@signe/di";
+import type { RpgContext, RpgFactoryProvider, RpgProvider } from "./foundation";
 import { Subject, Observable, from } from "rxjs";
 import { mergeMap, toArray } from "rxjs/operators";
 
@@ -9,14 +9,14 @@ export enum Side {
   Client = 'client'
 }
 
-type ModuleSide = {
-  client?: any,
-  server?: any
+export type ModuleSide<Client = unknown, Server = unknown> = {
+  client?: Client,
+  server?: Server
 }
 
-export type ModuleType = ModuleSide | [ModuleSide, {
-  client?: any,
-  server?: any
+export type ModuleType<Client = unknown, Server = unknown> = ModuleSide<Client, Server> | [ModuleSide<Client, Server>, {
+  client?: Client,
+  server?: Server
 }]
 
 export function RpgModule<T>(options: T) {
@@ -177,21 +177,26 @@ export class Hooks {
  * const provider = provideModules(modules, 'game');
  * ```
  */
-export function provideModules(modules: any[], namespace: string, transform?: (modules: any, context: Context) => any) {
+export function provideModules(
+  modules: any[],
+  namespace: string,
+  transform?: (modules: any, context: RpgContext) => any
+): RpgFactoryProvider<Hooks> {
   return {
     provide: ModulesToken,
-    useFactory: (context: Context) => {
+    useFactory: (context: RpgContext) => {
       modules = transform ? transform(modules, context) : modules
       return new Hooks(modules, namespace);
     },
   };
 }
 
-export function findModules(context: Context, namespace: string) {
+export function findModules(context: RpgContext, namespace: string) {
   let modules: any[] = []
-  for (let key in context['values']) {
+  const values = (context as any).values;
+  for (let key in values) {
     if (key.endsWith('Module' + namespace)) {
-      modules.push(context['values'][key].values.get('__default__'))
+      modules.push(values[key].values.get('__default__'))
     }
   }
   return modules
@@ -216,7 +221,10 @@ export function findModules(context: Context, namespace: string) {
  * createModule('battle', [regularProvider, { server, client }])
  * ```
  */
-export function createModule(tokenName: string, providers:(Provider | Provider[] | ({ server?: any, client?: any }))[]) {
+export function createModule(
+  tokenName: string,
+  providers: (RpgProvider | RpgProvider[] | ModuleSide)[]
+): RpgProvider[] {
   const results = providers.map(provider => {
     const results: any[] = [];
 
@@ -254,9 +262,34 @@ export function createModule(tokenName: string, providers:(Provider | Provider[]
     return results;
   }).flat(); // Flatten the array to handle multiple results per provider
 
-  return results.flat();
+  return results.flat() as RpgProvider[];
 }
 
-export function defineModule<T>(options: T) {
+/**
+ * Defines the hooks and resources owned by one RPGJS runtime module.
+ *
+ * Use `provideServerModules()` to install a server definition and
+ * `provideClientModules()` to install a client definition. Configurable
+ * packages should expose a runtime-specific `provideX()` function.
+ *
+ * @title Define a module
+ * @method defineModule
+ * @param options - Runtime module hooks and resources.
+ * @returns The same module definition with its precise inferred type.
+ * @memberof Modules
+ * @example
+ * ```ts
+ * import { defineModule, type RpgServer } from '@rpgjs/server'
+ *
+ * export default defineModule<RpgServer>({
+ *   player: {
+ *     onConnected(player) {
+ *       console.log(player.id)
+ *     }
+ *   }
+ * })
+ * ```
+ */
+export function defineModule<T>(options: T): T {
   return options
 }

@@ -2,6 +2,11 @@ import { arrayUniq, PlayerCtor, RpgCommonPlayer } from "@rpgjs/common";
 import { Constructor } from "@rpgjs/common";
 import { RpgPlayer } from "./Player";
 
+export interface ElementAffinity {
+  rate: number;
+  element: string;
+}
+
 /**
  * Element Manager Mixin
  * 
@@ -28,13 +33,13 @@ import { RpgPlayer } from "./Player";
  */
 export function WithElementManager<TBase extends PlayerCtor>(Base: TBase) {
   return class extends Base {
-    _elementsEfficiency: { rate: number; element: any }[] = [];
+    _elementsEfficiency: ElementAffinity[] = [];
 
-    get elementsDefense(): { rate: number; element: any }[] {
+    get elementsDefense(): ElementAffinity[] {
       return (this as any).getFeature("elementsDefense", "element");
     }
 
-    get elementsEfficiency(): { rate: number; element: any }[] {
+    get elementsEfficiency(): ElementAffinity[] {
       if (this._class()) {
         const classData = this._class() as any;
         return <any>[
@@ -104,7 +109,7 @@ export interface IElementManager {
    * 
    * @returns Array of element defense objects with rate and element properties
    */
-  elementsDefense: { rate: number; element: any }[];
+  elementsDefense: ElementAffinity[];
 
   /**
    * Manages the player's elemental efficiency modifiers, which determine how
@@ -114,7 +119,7 @@ export interface IElementManager {
    * 
    * @returns Array of element efficiency objects with rate and element properties
    */
-  elementsEfficiency: { rate: number; element: any }[];
+  elementsEfficiency: ElementAffinity[];
 
   /**
    * Gets all offensive elements available to the player from equipped weapons and armor.

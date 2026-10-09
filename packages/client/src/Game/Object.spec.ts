@@ -31,6 +31,8 @@ function createObject(prototype: object = RpgClientObject.prototype) {
   object.graphics = signal(["hero"]) as any;
   object.animationCurrentIndex = signal(0);
   object.animationIsPlaying = signal(false);
+  object.animationPlayback = signal(null);
+  object.direction = signal("left") as any;
   object.hitbox = signal({ w: 32, h: 32 }) as any;
   return object;
 }
@@ -101,7 +103,7 @@ describe("RpgClientObject animations", () => {
     const object = createObject();
     const animationChanges: Array<{ name: string; isPlaying: boolean }> = [];
 
-    object.animationName.observable.subscribe((name) => {
+    (object.animationName as any).observable.subscribe((name) => {
       animationChanges.push({
         name,
         isPlaying: object.animationIsPlaying(),
@@ -120,4 +122,28 @@ describe("RpgClientObject animations", () => {
       isPlaying: false,
     });
   });
+
+  test("keeps a one-shot attack and its direction when locomotion is synchronized", async () => {
+    const object = createObject();
+    const done = object.setAnimation("attack", 1);
+    const playback = object.animationPlayback();
+    object.animationName.set("stand");
+    object.direction.set("down" as any);
+    expect(object.animationPlayback()).toBe(playback);
+    expect(object.animationPlayback()).toEqual({ name: "attack", direction: "left" });
+    expect(object.animationIsPlaying()).toBe(true);
+    object.animationCurrentIndex.set(1);
+    await done;
+    expect(object.animationPlayback()).toBeNull();
+    expect(object.animationName()).toBe("stand");
+  });
+});
+
+test("retains cycle duration until the complete animation finishes", async () => {
+  const object = createObject();
+  const done = object.setAnimation("attack", 1, { durationMs: 620 });
+  expect(object.animationPlayback()).toEqual({ name: "attack", direction: "left", durationMs: 620 });
+  object.animationCurrentIndex.set(1);
+  await done;
+  expect(object.animationPlayback()).toBeNull();
 });

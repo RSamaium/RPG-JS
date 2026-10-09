@@ -169,6 +169,12 @@ export class LocalBundleGameDataProvider implements GameDataProvider {
     return createPlaceholderMedia(normalizedId);
   }
 
+  async getMediaGroup(mediaId: string): Promise<any[]> {
+    const index = await this.getMediaIndex();
+    const items = Array.isArray(index.items) ? index.items : Object.values(index.byId ?? {});
+    return items.filter((item) => item?.metadata?.groupId === mediaId);
+  }
+
   async getDatabase(_projectId?: string): Promise<any[]> {
     try {
       const value = await fetchJson(`${this.basePath}/database.json`, 'database read');

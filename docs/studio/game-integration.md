@@ -49,112 +49,289 @@ export const configServer = {
 
 When `projectId` is set, the runtime uses online Studio data by default.
 
+## Generated characters
+
+A spritesheet media record with `metadata.generationMode: "idle"` uses its
+`metadata.columns` and `metadata.rows` (normally 2×2) and
+`metadata.idleDirections` (normally down, left, right, up) for stationary poses.
+The runtime reads media linked through `metadata.groupId` and uses an animation
+named `walk` while the character moves. Other named animations are available as
+actions. The idle cell is fitted into a 128-pixel game frame before applying its
+saved `metadata.scale`. Each animation uses its own frame grid; the
+idle pose remains fixed when the character stops. Online games load these links
+from `GET /api/game/media/:mediaId/animations`; offline bundles use their media
+index. Existing spritesheets without `generationMode: "idle"` retain their
+previous frame layout.
+
+The client awaits the idle and linked animation images before making the
+spritesheet available, including when the actor appearance contains a complete
+media object. Switching between movement and idle restores each animation's
+scale explicitly, so the movement correction does not carry over into idle.
+After preloading, the client calibrates each animation direction against the
+corresponding idle pose. Its first frame determines the visible height, horizontal
+center and ground position (alpha greater than 16). The transform stays fixed for
+the entire timeline: later effects and pose changes do not rescale the character.
+Transparent padding is removed from the ground anchor without changing the
+hitbox. The base character's scale then controls the whole group.
+Calibration uses visible artwork, not semantic body detection: effects already
+present in the reference frame and differently drawn poses can still affect the
+result. Saved animation scales are used as a fallback when browser pixel access
+is unavailable.
+This also applies when combat plays a linked media as a separate graphic: its
+`metadata.groupId` identifies the idle parent whose reference size and global
+scale must be used.
+
+## Studio hotbar settings
+
+`createStudioActionBattlePreset()` connects the Action Battle hotbar to the
+Studio project and map menu settings:
+
+```ts
+import { provideActionBattle } from "@rpgjs/action-battle/server"
+import { createStudioActionBattlePreset } from "@rpgjs/studio/server"
+
+provideActionBattle({
+  ...createStudioActionBattlePreset(),
+})
+```
+
+Studio persists the project default under `menus.hotbar`:
+
+```json
+{
+  "menus": {
+    "hotbar": {
+      "enabled": true,
+      "guiId": null,
+      "settings": {
+        "content": "mixed",
+        "slotCount": 8
+      }
+    }
+  }
+}
+```
+
+`guiId: null` selects the native RPGJS GUI. Inside `settings`, `content` is
+`skills`, `items`, or `mixed`, and `slotCount` is between 1 and 10. A map can
+persist the same complete binding to override the project. A map without
+`menus.hotbar` inherits the project configuration. The preset opens or closes
+the hotbar on map changes, filters its allowed entries, and preserves
+temporarily hidden player assignments.
+
 ## MMORPG mode
 
-In MMORPG mode, Studio data is loaded on both sides with different responsibilities:
+Studio MMORPG maps use an authoritative, chunked data path:
 
-- the server loads the Studio project, map, database, hitboxes, and events, then synchronizes players and events to clients;
-- the client loads Studio map data only to render the CanvasEngine map component.
+- a trusted publisher loads and normalizes the complete Studio map, project,
+  database, events, and collisions;
+- the Node server or Cloudflare Durable Object stores that authoritative payload,
+  runs physics and events, and decides which chunks surround each player;
+- the browser receives only the nearby render descriptors and collision barriers
+  required for display and client prediction.
 
-Players must not push map definitions to the MMORPG server. Server map rooms hydrate themselves from Studio data when they start, and authorized tools can still update a map through the server-side `/map/update` flow.
+Terrain transition control masks follow the same rule: the publisher splits
+them into overlapping regions and the server sends only the regions belonging
+to disclosed chunks. The client rebuilds the visible transition masks without
+receiving the complete control texture or the complete map.
+
+The complete map is never sent to the browser. Studio events, trigger logic,
+database records, project configuration, raw terrain structure, and collisions
+outside the streamed area remain server-side. Public image and audio assets are
+still downloaded by the browser because it needs them for rendering and playback.
+
+Authoritative streaming requires Studio map format v2. A v1 Studio map continues
+to work in standalone mode, but publication to an MMORPG map room fails explicitly
+instead of silently exposing or approximating its data.
+
+### Share one server between Studio projects
+
+Use a connection-scoped startup resolver when several Studio projects share the
+same MMORPG Worker. The browser forwards the requested project and optional map,
+while the server makes the authoritative startup decision:
+
+```ts
+// src/config/config.client.ts
+const params = new URLSearchParams(window.location.search)
+const projectId = params.get("game") ?? ""
+const mapId = params.get("map")
+
+provideMmorpg({
+  room: `lobby-${projectId}`,
+  query: {
+    game: projectId,
+    ...(mapId ? { map: mapId } : {}),
+  },
+})
+
+provideStudioGame()
+```
+
+```ts
+// src/config/config.server.ts
+provideStudioGame({
+  resolveStartup: ({ query, connection }) => {
+    // connection.state may contain trusted context attached by auth().
+    const projectId = query.game
+
+    return query.map
+      ? { projectId, flow: "direct", mapId: query.map }
+      : { projectId, flow: "title" }
+  },
+})
+```
+
+`flow: "title"` keeps the Studio-owned title screen, character selection,
+actor application, default stats, and start-map transfer. `flow: "direct"`
+skips the interactive screens and transfers to `mapId` after verifying that the
+map belongs to `projectId`.
+
+The resolver receives `{ player, query, headers, connection }`, runs after the
+RPGJS `connected` packet, and is evaluated only once for that lobby connection.
+Its result is reused when the player presses Start. Missing projects and maps
+from another project fail explicitly; they never fall back to global Studio
+configuration.
+
+The `game` URL parameter also lets the Studio client load the corresponding
+title-screen configuration. When `map` is present, the client does not render
+the title screen while the server validates and performs the direct transfer.
+
+Configure the disclosure window on the shared Studio module:
+
+```ts
+provideStudioGame({
+  projectId: "your-project-id",
+  streaming: {
+    chunkSize: 16,
+    loadRadius: 2,
+    retainRadius: 3,
+  },
+});
+```
+
+`chunkSize` is expressed in Studio cells. `loadRadius` controls the chunks sent
+around the authoritative player position, while `retainRadius` keeps a slightly
+larger client cache to avoid loading churn at chunk boundaries. NPCs, events,
+players, and projectiles continue to use the generic RPGJS spatial synchronization
+path and are disclosed according to server interest management.
+
+Client prediction remains enabled with Studio. Movement is predicted against
+the collision barriers already disclosed for the active chunks, blocked at the
+edge of the streamed window, then reconciled with authoritative Node or Durable
+Object snapshots. Event behavior, NPC decisions, projectile impacts, and every
+collision outside that window remain server-authoritative.
 
 ### Live map updates from Studio
 
-When Studio pushes a live update to a running MMORPG server, it should call the map room update endpoint:
+Players must never publish map definitions. Studio, Vite, CI, an editor backend,
+or another trusted process sends the full payload to the map room:
 
 ```http
 POST /parties/main/map-<mapId>/map/update
 Content-Type: application/json
+X-RPGJS-Map-Update-Token: <secret>
 ```
 
-If the server defines `RPGJS_MAP_UPDATE_TOKEN`, Studio must also send one of these credentials:
+`Authorization: Bearer <secret>` is also accepted. Configure
+`RPGJS_MAP_UPDATE_TOKEN` only on the Node server or Worker. Never put it in browser
+code or in a `VITE_` environment variable.
+
+Map content and world topology are separate authoritative updates. After
+publishing a prepared map, the trusted publisher sends the current topology to
+every map room in that world:
 
 ```http
-X-RPGJS-Map-Update-Token: <token>
+POST /parties/main/map-<eachMapId>/world/<worldId>/update
+Content-Type: application/json
+X-RPGJS-Map-Update-Token: <secret>
+
+{ "id": "<worldId>", "maps": [/* complete runtime topology */] }
 ```
 
-or:
+This fan-out matters because each map is a separate Node room or Durable Object
+with its own world manager. Updating only the room for `marsh`, for example,
+does not update a player who is still connected to `port`.
 
-```http
-Authorization: Bearer <token>
+The easiest development publisher is the RPGJS Vite plugin:
+
+```ts
+import { createStudioMapUpdatePayload } from "@rpgjs/studio/server";
+
+rpgjs({
+  server: ServerModule,
+  devServer: {
+    target: "http://127.0.0.1:8787",
+    mapIds: ["your-map-id"],
+    mapUpdateToken: process.env.RPGJS_MAP_UPDATE_TOKEN,
+    resolveMapPayload: ({ mapId }) =>
+      createStudioMapUpdatePayload(mapId, {
+        projectId: "your-project-id",
+        startMapId: "your-map-id",
+      }),
+  },
+});
 ```
 
-The payload must describe the authoritative server map state. The minimum valid payload is:
+Vite republishes the resolved map after relevant development changes. The same
+callback works with a local Node room provider or a Wrangler Durable Object.
+`createStudioMapUpdatePayload()` supplies `worldUpdates`, and the RPGJS remote
+publisher automatically sends them to every referenced map room.
 
-```json
-{
-  "id": "map-id",
-  "width": 960,
-  "height": 576,
-  "events": []
-}
+To test the HTTP contract directly, send a previously prepared Studio v2 payload:
+
+```bash
+curl --fail-with-body \
+  -X POST \
+  -H 'content-type: application/json' \
+  -H 'x-rpgjs-map-update-token: local-map-update-token' \
+  --data-binary @prepared-studio-map.json \
+  http://127.0.0.1:8787/parties/main/map-<map-id>/map/update
 ```
 
-For Studio maps, send the complete normalized map payload whenever possible:
+The payload must be complete because `/map/update` replaces the authoritative map
+revision. Use `createStudioMapUpdatePayload()` rather than assembling production
+payloads by hand. Its result includes the normalized v2 render data, dimensions,
+server collisions, events, project configuration, and database records needed by
+the room. This direct `curl` updates only one map revision; it does not perform
+the world fan-out. Use the RPGJS publisher or the Studio seed command for a full
+map-and-world publication.
 
-```json
-{
-  "id": "map-id",
-  "width": 960,
-  "height": 576,
-  "config": {
-    "_id": "project-id",
-    "startMapId": "map-id",
-    "hero": {},
-    "worldMaps": []
-  },
-  "data": {
-    "_id": "map-id",
-    "id": "map-id",
-    "data": [],
-    "events": [],
-    "hitboxes": [],
-    "params": {
-      "width": 20,
-      "height": 12,
-      "scale": 1
-    },
-    "weather": null,
-    "lighting": null
-  },
-  "events": [
-    {
-      "id": "event-id",
-      "_id": "event-id",
-      "eventId": "event-id",
-      "x": 96,
-      "y": 144,
-      "eventType": "character",
-      "params": {},
-      "triggers": []
-    }
-  ],
-  "hitboxes": [],
-  "positions": {
-    "start": {
-      "x": 96,
-      "y": 144
-    }
-  },
-  "params": {
-    "backgroundMusic": null
-  },
-  "damageFormulas": {}
-}
+### Trusted publisher data provider
+
+A trusted backend that already owns the Studio project data can inject a
+`GameDataProvider` and avoid calling the public Studio API while preparing an
+MMORPG map update:
+
+```ts
+import {
+  createStudioMapUpdatePayload,
+  type GameDataProvider,
+} from "@rpgjs/studio/server";
+
+const databaseBackedStudioProvider: GameDataProvider = {
+  kind: "online",
+  getProject: async ({ projectId, mapId }) => loadProject({ projectId, mapId }),
+  getMap: async (mapId) => loadMap(mapId),
+  getMedia: async (mediaId) => loadMedia(mediaId),
+  getDatabase: async (projectId) => loadDatabase(projectId),
+};
+
+await createStudioMapUpdatePayload("your-map-id", {
+  projectId: "your-project-id",
+  startMapId: "your-map-id",
+  dataProvider: databaseBackedStudioProvider,
+});
 ```
 
-Important fields:
+The injected provider handles every project, map, event-media, and database
+read for that payload. It is server-owned in both standalone and MMORPG
+deployments: never expose database adapters, private storage handles, or
+credentials to browser code. When `dataProvider` is omitted, the existing
+online, offline, and auto runtime modes keep selecting the built-in provider.
 
-- `id`: Studio map id without the `map-` room prefix.
-- `width` and `height`: map dimensions in pixels, used by server movement and viewport logic.
-- `config`: project-level configuration used by server hooks, including `startMapId`, `hero`, and `worldMaps`.
-- `data`: Studio map document used by Studio server hooks. It should include `params`, `start`, `weather`, `lighting`, and map-specific metadata.
-- `events`: placed Studio events. These become authoritative RPGJS dynamic events and are synchronized to clients.
-- `hitboxes`: collision data used by server physics.
-- `positions`: named positions used by `player.changeMap("map-id", "position-name")`.
-- `damageFormulas`: optional formula overrides merged with RPGJS defaults.
-
-Studio may send partial updates during development, but the update endpoint replaces the runtime map state. For consistent MMORPG behavior, send the full map payload after each Studio edit that changes events, collisions, dimensions, weather, lighting, or project-level map configuration.
+For a runnable local Worker, deterministic fixture, seed script, and real Studio
+API seed command, see the
+[Studio playground](https://github.com/RSamaium/RPG-JS/tree/master/playground/games/studio).
 
 ## Offline mode
 
@@ -204,7 +381,99 @@ The project can define hero skill progression with `skills` or `skillsToLearn`. 
 
 Studio listens to the RPGJS `player.onSkillChange` hook and displays a notification when the hero learns or forgets a skill.
 
-Enemy records can also drive action-battle AI. Use `behavior` on the enemy to set fields such as `enemyType`, `behaviorKey`, `visionRange`, `attackRange`, `attackCooldown`, `dodgeChance`, `dodgeCooldown`, `fleeThreshold`, `attackPatterns`, `patrolWaypoints`, `groupBehavior`, or the nested behavior gauge options. The older `aiBehavior` field is still accepted as a compatibility alias. If the enemy has `attackSkillId`, that skill is used for attacks; otherwise the first learned enemy skill is used.
+Enemy records can also drive action-battle AI. Use `behavior` on the enemy to set fields such as `enemyType`, `behaviorKey`, `visionRange`, `attackRange`, `attackCooldown`, `dodgeChance`, `dodgeCooldown`, `fleeThreshold`, `attackPatterns`, `patrolWaypoints`, `groupBehavior`, or the nested behavior gauge options. The older `aiBehavior` field is still accepted as a compatibility alias. Every learned enemy skill is evaluated from its action mode, targeting range, area mask, SP cost, and cooldown. `attackSkillId` gives one skill priority without disabling normal attacks or the other learned skills.
+
+### Skill workflow triggers
+
+Studio skills may declare `workflowTriggers` that reference Studio block
+collections:
+
+```json
+{
+  "workflowTriggers": [
+    { "phase": "cast", "blockCollectionId": "cast-workflow" },
+    { "phase": "impact", "blockCollectionId": "impact-workflow" },
+    { "phase": "defeat", "blockCollectionId": "defeat-workflow" }
+  ]
+}
+```
+
+This is a Studio orchestration feature built on RPGJS's native skill `onUse`
+hook. It does not add a second engine hook. Studio preserves the default skill
+effect, waits for projectile impact when applicable, then executes the blocks
+from the referenced collection. The block context exposes the caster as the
+player and the affected map event as the current event when one exists. A skill
+workflow can call or spawn Common Events through the corresponding blocks.
+
+### Item workflow triggers
+
+Studio item records expose fields and workflow phases according to their item
+type:
+
+- regular items expose `hpValue`, `mpValue`, `hitRate`, `consumable`,
+  `onAdd`, `onUse`, `onUseFailed`, and `onRemove`;
+- weapons and armors expose their equipment statistics, parameter modifiers,
+  `onAdd`, `onRemove`, and `onEquip`;
+- weapons and armors do not expose `consumable`, `onUse`, or `onUseFailed`.
+
+`hitRate` is edited as a percentage from 0 to 100 and normalized to the
+native RPGJS `hitRate` value from 0 to 1. An equipment `onEquip` workflow can
+test `variables.equip`: it is `true` after equipping and `false` after
+unequipping.
+
+```json
+{
+  "itemType": "weapon",
+  "atk": 12,
+  "workflowTriggers": [
+    { "phase": "onAdd", "blockCollectionId": "sword-found" },
+    { "phase": "onEquip", "blockCollectionId": "sword-equipped" }
+  ]
+}
+```
+
+The runtime maps these workflows to the native item hooks. Workflow blocks run
+in order for each player, can call Common Events, and keep the normal RPGJS item
+or equipment behavior.
+
+The same Studio enemy definition can be placed on a map more than once. The
+runtime keeps the first placement's legacy id and assigns deterministic ids
+such as `enemy-id::2` to later placements, while preserving `sourceEventId` for
+database lookups. Each placement therefore gets its own sprite, hitbox, HP,
+Battle AI state, and defeat lifecycle.
+
+## Built-in GUI settings
+
+Studio projects can bind the native Title Screen, Hotbar, HUD, and Main Menu
+roles. A `null` `guiId` selects the built-in RPGJS component and leaves room
+for a future Studio GUI definition:
+
+```json
+{
+  "menus": {
+    "titleScreen": { "enabled": true, "guiId": null },
+    "hotbar": {
+      "enabled": true,
+      "guiId": null,
+      "settings": { "content": "mixed", "slotCount": 8 }
+    },
+    "hud": { "enabled": true, "guiId": null },
+    "mainMenu": { "enabled": true, "guiId": null }
+  },
+  "keyboardControls": {
+    "back": "escape"
+  }
+}
+```
+
+The client applies Title Screen and HUD visibility. The server starts directly
+when the project disables the Title Screen, controls Main Menu availability,
+and remains authoritative for Hotbar state. The configured Back key and the
+mobile Back touch button produce the same logical action.
+
+Map settings do not override the Hotbar. Studio workflows and events use the
+`set_hotbar` block to display it with `skills`, `items`, or `mixed` content and
+1 to 10 slots, or to hide it without clearing persistent assignments.
 
 ## Auto mode
 
@@ -217,12 +486,131 @@ provideStudioGame({
 });
 ```
 
+## Start without a title screen
+
+Set `displayTitleScreen: false` to enter the starting map as soon as the
+server accepts the connection, in both standalone RPG and MMORPG modes:
+
+```ts
+provideStudioGame({
+  projectId: "your-project-id",
+  startMapId: "requested-map",
+  displayTitleScreen: false,
+});
+```
+
+The server initializes the built-in default player stats, then transfers the
+player to `startMapId` or to the starting map defined by the Studio project.
+An explicit `displayTitleScreen: false` enables startup even if the project
+metadata cannot be loaded or its title screen is enabled. Provide `startMapId`
+when startup must work without project metadata. Character selection is still
+honored when project data is available, unless `skipCharacterSelect` is true.
+When `displayTitleScreen` is omitted, the project setting controls the title flow.
+`autoStart: true` remains an explicit immediate-start override.
+
 ## Options
 
 - `projectId`: Studio project identifier. When provided, the default runtime mode is `"online"`.
 - `runtimeMode`: data loading strategy. Use `"online"`, `"offline"`, or `"auto"`.
 - `bundleBasePath`: public path for exported Studio data. Defaults to `/game-data`.
-- `displayTitleScreen`: display the Studio title screen when supported by the project.
+- `displayTitleScreen`: `false` skips the title screen and starts immediately; `true` retains the title flow unless `autoStart: true` overrides it.
+- `autoStart`: initialize the player and enter the starting map immediately on
+connection. Defaults to `false`.
+
+Studio projects can instead persist `menus.titleScreen.enabled: false`; the
+Studio runtime then enables immediate startup automatically. Explicit
+`autoStart` remains useful for non-Studio configuration and overrides.
 - `startMapId`: force the map used to start the player.
+- `skipCharacterSelect`: skip actor selection during an automatic direct-map startup.
+- `resolveStartup`: resolve a player-specific `title` or `direct` startup after
+  MMORPG authentication. See [Share one server between Studio projects](#share-one-server-between-studio-projects).
+- `streaming`: authoritative Studio v2 chunk settings for MMORPG mode. Set it to
+  `false` only when another server map provider replaces the built-in streaming
+  adapter. Standalone mode always uses the direct loader. Its options are
+  `chunkSize`, `loadRadius`, and `retainRadius`.
 - `debugCollisions`: display Studio collision debug overlays. This is a shortcut for the built-in Studio debug plugin.
 - `studioPlugins`: attach Studio client-side map renderer plugins. See [Create a Studio plugin](/studio/plugins).
+
+### Terrain collision contours
+
+In standalone RPG and MMORPG games, Studio hole and water borders are generated
+from the final painted surface. Paint strokes are combined and erase operations
+are applied in their recorded order. Overlapping strokes do not create internal
+walls; erased paths and islands retain their own boundaries. Always-low elements
+such as bridges clear only the portion of a border they cover.
+
+Contours are sampled at two-pixel resolution for ordinary maps and simplified
+within three pixels. Very large features use a coarser grid to bound temporary
+memory. Physics uses small convex pieces along these contours, rather than a
+single filled polygon that would block islands or other walkable interiors.
+The same geometry generator is used by server-authoritative collisions, client
+prediction, and collision debugging; enabling debug collisions does not alter
+movement rules.
+
+### Liquid contacts and submerged scenery
+
+Liquid borders derive their dominant, light and dark colors from the opaque
+pixels of the selected texture's atlas region. This works with water, lava,
+mud and custom materials without classifying their names. Existing `border`
+and `foam` settings remain supported: disabling foam keeps a subtle dark contact;
+disabling the border removes contact accents. If pixels cannot be read,
+`fillColor` provides the palette; without either, no colored accent is added.
+
+Static scenery placements can opt into visual immersion in map data:
+
+```json
+{
+  "id": 3,
+  "tilesetId": "rocks",
+  "x": 384,
+  "y": 240,
+  "submersion": { "depth": 0.2 },
+  "extractGroundShadow": true
+}
+```
+
+`depth` is the proportion of the element's rendered height that may be immersed,
+from `0` to `1`. Omit it or use zero to disable the effect. Only pixels that also
+intersect liquid are tinted and attenuated. Filled holes use their projected
+surface at the current fill level, including erased areas. Terrain layers marked
+with the existing `water` render mode also support immersion. Contact follows
+sprite alpha, after `extractGroundShadow` separates an embedded shadow when enabled;
+transparent corners never acquire rectangular foam. Scaled elements and draw-rule
+segments retain their position and display order.
+
+The placement option survives direct map loading and authoritative chunk streaming.
+It is a client rendering effect in both standalone RPG and MMORPG games: it changes
+neither collisions nor position nor server authority. There is no new external
+Studio editor control in this contribution; set the property in map data.
+
+Palettes and liquid masks are cached, and an element's composed pixels are reused
+until its artwork, placement, depth or terrain revision changes. Stream updates
+invalidate affected rendered state; discarded elements release their cached pixels.
+No sprite-pixel reads or contour reconstruction run in the animation tick.
+
+### Enemy attack timing overrides
+
+An enemy's `behavior.attackProfiles` can override `melee`, `combo`,
+`charged`, `zone`, and `dashAttack`. Each profile accepts millisecond values:
+
+```json
+{
+  "behavior": {
+    "attackCooldown": 900,
+    "attackProfiles": {
+      "melee": {
+        "startupMs": 250,
+        "activeMs": 120,
+        "recoveryMs": 350,
+        "cooldownMs": 1100
+      }
+    }
+  }
+}
+```
+
+Leave fields absent to inherit runtime defaults. Preparation, recovery and
+cooldown accept zero; active duration must be at least 1 ms. Invalid values are
+ignored. The global attack cooldown also applies. The legacy `aiBehavior`
+object supports the same fields. Studio exposes these overrides in the enemy AI
+settings; the runtime applies them to both standalone RPG and MMORPG enemies.

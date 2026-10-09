@@ -1,28 +1,32 @@
 import {
   HudComponent,
+  PrebuiltComponentAnimations,
   RpgClient,
   RpgClientEngine,
   RpgGui,
-  RpgSound,
   TitleScreenComponent,
   inject,
 } from "@rpgjs/client";
 import { defineModule } from "@rpgjs/common";
 import {
-  createSpriteSheetObject,
+  prepareSpriteSheetObject,
   resolveAssetSource,
   resolveSpritesheet,
 } from "./spritesheet-utils";
 import FadeComponent from "./components/fade.ce";
+import CinematicComponent from "./components/cinematic.ce";
 import { trigger } from "canvasengine";
 import UpComponent from "./components/up.ce";
 import {
+  configureStudioGameRuntime,
   getGameDataProvider,
   getStudioGameRuntimeConfig,
 } from "./data-provider";
 import type { StudioGameModuleConfig } from ".";
 import { createStudioMapPlugins, type StudioMapPlugin } from "./studio-map-plugins";
 import { bindInitialStudioEventHitboxes } from "./initial-event-hitboxes-client";
+import { collectStudioActionBattleMediaRefs } from "./action-battle-animation-preload";
+import { beginStudioMapLoading, waitForStudioMapReady } from "./studio-map-readiness";
 
 interface GlobalConfig {
   projectId?: string;
@@ -36,6 +40,19 @@ interface GlobalConfig {
   };
   animations?: Record<string, any>;
   database?: any[];
+  audio?: {
+    ui?: Record<string, any>;
+  };
+  menus?: {
+    titleScreen?: {
+      enabled: boolean;
+      settings?: {
+        backgroundMusic?: string | null;
+        backgroundImage?: string | null;
+      };
+    };
+    hud?: { enabled: boolean };
+  };
 }
 
 interface RpgClientEngineWithConfig extends RpgClientEngine {
@@ -52,6 +69,16 @@ const DEFAULT_STUDIO_KEYBOARD_CONTROLS = {
   action: "space",
   dash: "shift",
   escape: "escape",
+  hotbar1: "n1",
+  hotbar2: "n2",
+  hotbar3: "n3",
+  hotbar4: "n4",
+  hotbar5: "n5",
+  hotbar6: "n6",
+  hotbar7: "n7",
+  hotbar8: "n8",
+  hotbar9: "n9",
+  hotbar0: "n0",
 };
 
 const normalizeStudioKeyboardControls = (
@@ -63,6 +90,11 @@ const normalizeStudioKeyboardControls = (
     ...(current ?? {}),
     ...(incoming ?? {}),
   };
+  for (const key of Object.keys(DEFAULT_STUDIO_KEYBOARD_CONTROLS)) {
+    if (key.startsWith("hotbar") && /^[0-9]$/.test(merged[key])) {
+      merged[key] = `n${merged[key]}`;
+    }
+  }
 
   if (incoming?.back && !incoming.escape) {
     merged.escape = incoming.back;
@@ -84,6 +116,45 @@ const resolveMediaId = (value: unknown): string | null => {
   return null;
 };
 
+const resolveStudioMediaSource = async (value: unknown): Promise<string> => {
+  if (value && typeof value === "object") {
+    const fileName = (value as Record<string, unknown>).fileName;
+    if (typeof fileName === "string" && fileName.trim()) {
+      return resolveAssetSource(fileName);
+    }
+  }
+  const id = resolveMediaId(value);
+  if (!id) return "";
+  try {
+    const media = await getGameDataProvider().getMedia(id);
+    return resolveAssetSource(media?.fileName);
+  } catch {
+    return "";
+  }
+};
+
+export const displayStudioHudOnce = (
+  gui: Pick<RpgGui, "display" | "get" | "isDisplaying">,
+  engine: RpgClientEngineWithConfig,
+): void => {
+  if (gui.isDisplaying("hud")) return;
+
+  const currentData = gui.get("hud")?.data();
+  const facesetId = resolveMediaId(engine.globalConfig?.hero?.faceset);
+  const nextData: Record<string, any> = currentData && typeof currentData === "object"
+    ? { ...currentData }
+    : {};
+
+  if (facesetId) {
+    nextData.faceset = {
+      id: facesetId,
+      expression: "happy",
+    };
+  }
+
+  gui.display("hud", nextData);
+};
+
 const resolveHeroMediaSpritesheet = async (value: unknown): Promise<any | null> => {
   if (!value) return null;
 
@@ -99,39 +170,10 @@ const resolveHeroMediaSpritesheet = async (value: unknown): Promise<any | null> 
       return resolveSpritesheet(mediaId);
     }
 
-    return createSpriteSheetObject(media, mediaId);
+    return prepareSpriteSheetObject(media, mediaId);
   }
 
   return null;
-};
-
-const getMediaRefKey = (value: unknown): string | null => {
-  if (!value) return null;
-  if (typeof value === "string") return value;
-  if (typeof value !== "object") return null;
-  const candidate = value as Record<string, unknown>;
-  const key =
-    candidate.id ?? candidate._id ?? candidate.mediaId ?? candidate.fileName;
-  return typeof key === "string" && key.trim().length > 0 ? key : null;
-};
-
-const collectStudioCombatAnimationRefs = (database: any[] = []): unknown[] => {
-  const refs: unknown[] = [];
-  const seen = new Set<string>();
-  const add = (value: unknown) => {
-    const key = getMediaRefKey(value);
-    if (!key || seen.has(key)) return;
-    seen.add(key);
-    refs.push(value);
-  };
-
-  for (const entry of database) {
-    const animations = entry?.animations ?? entry?.combatAnimations;
-    if (!animations || typeof animations !== "object") continue;
-    Object.values(animations).forEach(add);
-  }
-
-  return refs;
 };
 
 const resolveStudioDatabaseForPreload = async (
@@ -147,6 +189,48 @@ const resolveStudioDatabaseForPreload = async (
   }
 };
 
+const resolveActorIllustrationRefs = async (
+  database: any[],
+): Promise<unknown[]> => {
+  const provider = getGameDataProvider();
+  const actors = database.filter((record) => (record?.type ?? record?._type) === "actor");
+  const refs = await Promise.all(actors.map(async (actor) => {
+    const direct = actor.illustration ?? actor.graphic?.metadata?.illustration;
+    if (direct) return direct;
+    const graphicId = resolveMediaId(actor.graphic);
+    if (!graphicId) return null;
+    try {
+      const graphicMedia = await provider.getMedia(graphicId);
+      return graphicMedia?.metadata?.illustration ?? null;
+    } catch {
+      return null;
+    }
+  }));
+  return refs.filter(Boolean);
+};
+
+export const resolveStudioClientStartupQuery = (search: string): {
+  projectId?: string;
+  directMapId?: string;
+} => {
+  const params = new URLSearchParams(search);
+  const projectId = params.get("game")?.trim() || undefined;
+  const directMapId = params.get("map")?.trim() || undefined;
+  return { projectId, directMapId };
+};
+
+export const configureStudioClientStartupProject = (
+  projectId: string | undefined,
+  config: StudioGameModuleConfig,
+): void => {
+  const runtimeConfig = getStudioGameRuntimeConfig();
+  if (!projectId || runtimeConfig.projectId || config.projectId !== undefined) return;
+  configureStudioGameRuntime({
+    projectId,
+    runtimeMode: config.runtimeMode ?? "online",
+  });
+};
+
 export default (config: StudioGameModuleConfig) => {
   return defineModule<RpgClient>({
     engine: {
@@ -155,23 +239,20 @@ export default (config: StudioGameModuleConfig) => {
 
         await new Promise((resolve) => setTimeout(resolve, 20));
 
-        const gameParam = config.projectId;
         const configuredProjectId = getStudioGameRuntimeConfig().projectId;
+        const startupQuery = resolveStudioClientStartupQuery(window.location.search);
+        const projectId = configuredProjectId
+          ?? (config.projectId === undefined ? startupQuery.projectId : config.projectId);
+        configureStudioClientStartupProject(projectId ?? undefined, config);
 
         let response: any = {};
         const provider = getGameDataProvider();
 
         // Configuration projectId takes precedence over URL mode.
-        if (configuredProjectId) {
+        if (projectId) {
           response = await provider.getProject({
-            projectId: configuredProjectId,
+            projectId,
           });
-        }
-        // If ?game parameter is present, fetch project by projectId
-        // gameParam should contain the projectId (e.g., ?game=projectId)
-        else if (gameParam !== null) {
-          const projectId = gameParam;
-          response = await provider.getProject({ projectId });
         }
 
         window.gameConfig = response;
@@ -196,6 +277,10 @@ export default (config: StudioGameModuleConfig) => {
             debugCollisions,
           }),
         };
+        (engine as any).configureSound?.({
+          projectId: engine.globalConfig.projectId,
+          ui: engine.globalConfig.audio?.ui,
+        });
 
         const animationMediaRefs = Object.values(
           engine.globalConfig.animations ?? {},
@@ -207,13 +292,20 @@ export default (config: StudioGameModuleConfig) => {
           engine.globalConfig.database = database;
         }
         const databaseAnimationMediaRefs =
-          collectStudioCombatAnimationRefs(database);
+          collectStudioActionBattleMediaRefs(database);
+        const actorMediaRefs = database
+          .filter((record) => (record?.type ?? record?._type) === "actor")
+          .flatMap((actor) => [actor.graphic, actor.faceset])
+          .filter(Boolean);
+        const actorIllustrationRefs = await resolveActorIllustrationRefs(database);
 
         const heroMediaRefs = [
           engine.globalConfig.hero?.graphic,
           engine.globalConfig.hero?.faceset,
           ...animationMediaRefs,
           ...databaseAnimationMediaRefs,
+          ...actorMediaRefs,
+          ...actorIllustrationRefs,
         ].filter(Boolean);
 
         // Load hero and combat animation spritesheets from either direct media objects or media IDs.
@@ -229,10 +321,23 @@ export default (config: StudioGameModuleConfig) => {
             engine.addSpriteSheet(spritesheet);
           });
 
-        if (config.displayTitleScreen !== false) {
+        const displayTitleScreen = startupQuery.directMapId
+          ? false
+          : config.displayTitleScreen
+          ?? response.menus?.titleScreen?.enabled
+          ?? true;
+        if (displayTitleScreen) {
+          const backgroundImage = await resolveStudioMediaSource(
+            response.menus?.titleScreen?.settings?.backgroundImage,
+          );
+          if (backgroundImage && engine.globalConfig.menus?.titleScreen?.settings) {
+            engine.globalConfig.menus.titleScreen.settings.backgroundImage = backgroundImage;
+          }
           gui.display("rpg-title-screen", {
             title: response.name,
             subtitle: response.subtitle,
+            backgroundMusic: response.menus?.titleScreen?.settings?.backgroundMusic,
+            backgroundImage,
             version: "v1.0.0",
             localActions: true,
             saveLoad: {
@@ -265,49 +370,76 @@ export default (config: StudioGameModuleConfig) => {
       },
     },
     sceneMap: {
-      onBeforeLoading: (scene) => {
+      onBeforeLoading: async (scene) => {
         const gui = inject(RpgGui);
-        gui.display("fade", {
-          fadeTrigger,
+        const engine = inject(RpgClientEngine) as RpgClientEngineWithConfig;
+        const hasPreviousMap = Boolean(engine.scene.data?.());
+        beginStudioMapLoading();
+        await new Promise<void>((resolve) => {
+          let completed = false;
+          const complete = () => {
+            if (completed) return;
+            completed = true;
+            clearTimeout(fallbackTimer);
+            resolve();
+          };
+          const fallbackTimer = setTimeout(complete, hasPreviousMap ? 500 : 100);
+          gui.display("fade", {
+            fadeTrigger,
+            coverDuration: hasPreviousMap ? 120 : 0,
+            duration: 180,
+            loaderDelay: 250,
+            maxAssetWait: 1_200,
+            loadingText: engine.t("rpg.transition.loading"),
+            onCovered: complete,
+            onRevealed: () => {
+              if (engine.globalConfig.menus?.hud?.enabled !== false) {
+                displayStudioHudOnce(gui, engine);
+              }
+            },
+          });
         });
       },
       onAfterLoading: async (scene) => {
-        const gui = inject(RpgGui);
-        const engine = inject(RpgClientEngine);
+        const engine = inject(RpgClientEngine) as RpgClientEngineWithConfig;
         engine.scene.clearLocalWeather?.();
+        const player = engine.scene.getCurrentPlayer?.();
+        // Keep project defaults only as a fallback until actor data is hydrated.
+        // Never replace the server-synchronized actor animation signal.
+        if (player) (player as any).combatAnimations = engine.globalConfig.animations ?? {};
         bindInitialStudioEventHitboxes(scene);
+        const loadedScene = engine.scene.data?.();
+        await waitForStudioMapReady(loadedScene?.data ?? loadedScene);
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
         fadeTrigger.start();
-        gui.display("hud", {
-          faceset: {
-            id: resolveMediaId(engine.globalConfig?.hero?.faceset),
-            expression: "happy",
-          },
-        });
       },
     },
     gui: [
+      {
+        id: "studio-cinematic",
+        component: CinematicComponent,
+      },
       {
         id: "rpg-title-screen",
         component: TitleScreenComponent,
       },
       {
-        id: "fade",
-        component: FadeComponent,
-      },
-      {
         id: "hud",
         component: HudComponent,
         dependencies: () => {
-          const engine = inject(RpgClientEngine);
+          const engine = inject(RpgClientEngine) as RpgClientEngineWithConfig;
           return [engine.scene.currentPlayer];
         },
+      },
+      {
+        id: "fade",
+        component: FadeComponent,
       },
     ],
     spritesheetResolver: async (id: string) => {
       return resolveSpritesheet(id);
     },
     soundResolver: async (id: string) => {
-      RpgSound.global.stop();
       try {
         const media = await getGameDataProvider().getMedia(id);
         return {
@@ -321,9 +453,14 @@ export default (config: StudioGameModuleConfig) => {
 
     componentAnimations: [
       {
+        id: "studio-item-use-fx",
+        component: PrebuiltComponentAnimations.Fx,
+      },
+      {
         id: "up",
         component: UpComponent,
       },
     ],
   });
 };
+/// <reference path="./types/canvas-engine.d.ts" />

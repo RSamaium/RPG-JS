@@ -41,7 +41,7 @@ Register the Vue GUI provider on the client:
 
 ```ts
 import { provideClientModules } from '@rpgjs/client'
-import { provideVueGui } from '@rpgjs/vue'
+import { provideVueGui, vueGui } from '@rpgjs/vue'
 import Inventory from './gui/inventory.vue'
 
 export default {
@@ -53,10 +53,10 @@ export default {
     provideClientModules([
       {
         gui: [
-          {
+          vueGui({
             id: 'inventory',
             component: Inventory,
-          },
+          }),
         ],
       },
     ]),
@@ -73,7 +73,7 @@ You can replace a prebuilt CanvasEngine GUI with a Vue component by registering 
 ```ts
 import { provideClientModules } from '@rpgjs/client'
 import { PrebuiltGui } from '@rpgjs/common'
-import { provideVueGui } from '@rpgjs/vue'
+import { provideVueGui, vueGui } from '@rpgjs/vue'
 import Dialog from './gui/dialog.vue'
 
 export default {
@@ -85,16 +85,20 @@ export default {
     provideClientModules([
       {
         gui: [
-          {
+          vueGui({
             id: PrebuiltGui.Dialog,
             component: Dialog,
-          },
+          }),
         ],
       },
     ]),
   ],
 }
 ```
+
+`vueGui()` marks the registration with `renderer: 'vue'`. Explicit renderer
+selection is recommended; component-shape detection remains available only for
+v4 compatibility.
 
 With this setup, `player.showText()` and `player.gui(PrebuiltGui.Dialog).open(data)` open the Vue dialog instead of the built-in CanvasEngine dialog. The same pattern works for other prebuilt IDs such as `PrebuiltGui.MainMenu`, `PrebuiltGui.Shop`, `PrebuiltGui.Save`, `PrebuiltGui.TitleScreen`, and `PrebuiltGui.Gameover`.
 
@@ -187,11 +191,11 @@ import Tooltip from './gui/tooltip.vue'
 
 {
   gui: [
-    {
+    vueGui({
       id: 'player-tooltip',
       component: Tooltip,
       attachToSprite: true,
-    },
+    }),
   ],
 }
 ```

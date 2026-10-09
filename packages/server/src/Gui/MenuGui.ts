@@ -3,8 +3,9 @@ import { Gui } from './Gui'
 import { RpgPlayer } from '../Player/Player'
 import { SaveLoadGui, SaveSlot } from './SaveLoadGui'
 import { resolveAutoSaveStrategy } from '../services/save'
+import { buildPlayerHotbarData } from './HotbarGui'
 
-export type MenuEntryId = 'items' | 'skills' | 'equip' | 'options' | 'save' | 'exit'
+export type MenuEntryId = 'status' | 'items' | 'skills' | 'equip' | 'options' | 'save' | 'exit'
 
 export interface MenuEntry {
     id: MenuEntryId
@@ -53,14 +54,16 @@ export class MenuGui extends Gui {
     }
 
     private buildMenuData(options: MenuGuiOptions) {
+        this.player.initializeHotbar?.()
         const disabledSet = new Set(options.disabled || [])
         const defaultMenus: MenuEntry[] = [
-            { id: 'items', label: 'Items' },
-            { id: 'skills', label: 'Skills' },
-            { id: 'equip', label: 'Equip' },
-            { id: 'options', label: 'Options' },
-            { id: 'save', label: 'Save' },
-            { id: 'exit', label: 'Exit' }
+            { id: 'status', label: 'rpg.menu.status' },
+            { id: 'items', label: 'rpg.menu.items' },
+            { id: 'skills', label: 'rpg.menu.skills' },
+            { id: 'equip', label: 'rpg.menu.equip' },
+            { id: 'options', label: 'rpg.menu.options' },
+            { id: 'save', label: 'rpg.menu.save' },
+            { id: 'exit', label: 'rpg.menu.exit' }
         ]
         const menus = (options.menus && options.menus.length ? options.menus : defaultMenus)
             .map(menu => ({
@@ -117,19 +120,30 @@ export class MenuGui extends Gui {
                 consumable: isConsumable,
                 type,
                 usable,
+                hotbarAssignable: type === 'item' && usable,
                 equipped: equippedIds.has(id)
             }
         })
         const menuEquips = items.filter((item) => item.type === 'weapon' || item.type === 'armor')
-        const skills = (player.skills?.() || []).map((skill) => ({
-            id: readField(skill, 'id', readField(skill, 'name')),
-            name: readField(skill, 'name', readField(skill, 'id', 'Skill')),
-            description: readField(skill, 'description', ''),
-            spCost: readField(skill, 'spCost', 0)
-        }))
+        const skills = (player.skills?.() || []).map((skill) => {
+            const id = readField(skill, 'id', readField(skill, 'name'))
+            const databaseSkill = databaseById ? databaseById(id) : {}
+            return {
+                id,
+                name: readField(skill, 'name', readField(skill, 'id', 'Skill')),
+                description: readField(skill, 'description', ''),
+                icon: readField(databaseSkill, 'icon', readField(skill, 'icon')),
+                spCost: readField(skill, 'spCost', 0),
+                range: readField(databaseSkill?.targeting, 'range', 0),
+                aoeMask: readField(databaseSkill?.targeting, 'aoeMask'),
+                cooldownMs: readField(databaseSkill?.action, 'cooldownMs', 0),
+                action: readField(databaseSkill, 'action')
+            }
+        })
         const saveLoad = this.buildSaveLoad(options)
+        const hotbar = buildPlayerHotbarData(this.player)
 
-        return { menus, items, equips: menuEquips, skills, saveLoad, playerStats: buildStats(), expForNextlevel: readReactiveValue(player.expForNextlevel) }
+        return { menus, items, equips: menuEquips, skills, hotbar, saveLoad, playerStats: buildStats(), expForNextlevel: readReactiveValue(player.expForNextlevel) }
     }
 
     private refreshMenu(clientActionId?: string) {
@@ -141,7 +155,7 @@ export class MenuGui extends Gui {
         this.menuOptions = options
         const data = this.buildMenuData(options)
 
-        this.on('useItem', ({ id, clientActionId }) => {
+        this.on('useItem', ({ id, clientActionId }: { id: string; clientActionId?: string }) => {
             try {
                 this.player.useItem(id)
                 this.player.syncChanges()
@@ -153,13 +167,43 @@ export class MenuGui extends Gui {
                 this.refreshMenu(clientActionId)
             }
         })
-        this.on('equipItem', ({ id, equip, clientActionId }) => {
+        this.on('equipItem', ({ id, equip, clientActionId }: { id: string; equip?: boolean | 'auto'; clientActionId?: string }) => {
             try {
                 this.player.equip(id, equip)
                 this.player.syncChanges()
             }
             catch (err: any) {
                 this.player.showNotification(err.msg)
+            }
+            finally {
+                this.refreshMenu(clientActionId)
+            }
+        })
+        this.on('assignHotbarSlot', ({
+            slot,
+            entry,
+            clientActionId
+        }: {
+            slot: number
+            entry: { type: 'skill' | 'item'; id: string }
+            clientActionId?: string
+        }) => {
+            try {
+                this.player.assignHotbarSlot(slot, entry)
+            }
+            finally {
+                this.refreshMenu(clientActionId)
+            }
+        })
+        this.on('clearHotbarSlot', ({
+            slot,
+            clientActionId
+        }: {
+            slot: number
+            clientActionId?: string
+        }) => {
+            try {
+                this.player.clearHotbarSlot(slot)
             }
             finally {
                 this.refreshMenu(clientActionId)

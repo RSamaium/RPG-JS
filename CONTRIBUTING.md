@@ -22,6 +22,31 @@ client/server game where the server owns gameplay state.
 - Keep APIs small and composable. Prefer focused methods, hooks, providers, and
   components over large configuration objects that cannot be extended cleanly.
 
+## Framework DX and Conceptual Ownership
+
+RPGJS is a framework, so developer experience must be designed around a small,
+coherent vocabulary rather than exposing every internal abstraction. For each
+capability, provide one obvious, documented path that developers can recognize
+in autocomplete, examples, and both client and server APIs.
+
+- Extend an established concept before introducing a parallel manager, service,
+  method family, configuration shape, or naming convention. New behavior should
+  normally appear as an option or extension of the canonical API.
+- Avoid duplicate concepts that leave users asking which API to use. If overlap
+  is unavoidable for backward compatibility, identify the canonical API,
+  preserve the legacy path as an alias or adapter, and document the migration.
+- Be opinionated about ownership, defaults, precedence, and fallbacks. Choose the
+  behavior that fits most RPGJS projects and keep lower-level flexibility behind
+  advanced hooks instead of making every internal choice part of the public API.
+- Keep related vocabulary consistent across decorators, engine methods, module
+  configuration, Studio schemas, server commands, documentation, and examples.
+- Treat public surface area as a long-term maintenance cost. Do not export an
+  internal class or method merely because another RPGJS package needs it; prefer
+  a private adapter, provider, hook, or narrowly scoped integration point.
+
+Before approving a public API, verify that a new RPGJS user can answer “which
+method should I use?” without comparing two equivalent concepts.
+
 ## API and Documentation Rules
 
 - When adding or changing a client-side or server-side API, update the
@@ -32,6 +57,23 @@ client/server game where the server owns gameplay state.
   terminology.
 - Keep backward compatibility where practical. If a legacy path remains, document
   the preferred new path.
+- Add complete JSDoc to every new or modified public API. Document parameters,
+  option fields, return values, runtime ownership, and at least one usage example,
+  using the RPGJS extractor tags (`@title`, `@method` or `@prop`, `@param`,
+  `@returns`, and `@memberof`) where the generated API reference requires them.
+- Give every public framework API precise TypeScript types. Avoid `any` in public
+  parameters, options, and return values; use discriminated unions, overloads,
+  or generics when the result depends on the provided options. Verify that the
+  generated `.d.ts` files preserve the intended inference and add type-level
+  tests (for example with `expectTypeOf`) for important public contracts.
+- Regenerate and review the affected committed API pages with `pnpm
+  docs:player-api`, `pnpm docs:map-api`, or `pnpm docs:client-api` whenever
+  their source JSDoc changes.
+- Route every player-visible label, message, validation error, and notification
+  through the RPGJS i18n service. Do not hard-code user-facing text in
+  components or services. Modules should provide default translation keys and
+  allow game-level messages to override them; explicit per-call labels may be
+  supported when the public API requires them.
 
 ## Plugin-Ready Design
 
@@ -60,6 +102,13 @@ tested, and removed without coupling it to the application shell.
 Game UI components should be built with CanvasEngine by default. This keeps the
 runtime consistent with the rendering stack and makes components composable
 inside RPGJS scenes and modules.
+
+Every new player-facing UI component must be referenced in the `@rpgjs/ui-css`
+Storybook in the same contribution. Add a dedicated story, or extend an existing
+composition when the component is a variant of an established interface. The
+story must demonstrate the component's default styling and its important visual
+states, and should include responsive browser coverage when the layout can vary
+with the viewport.
 
 Vue components belong in `@rpgjs/vue` only when they are low-level RPG building
 blocks or part of the base RPG experience, such as a dialog box. Do not add
@@ -116,10 +165,23 @@ state transitions. Read their READMEs before changing synchronization behavior.
 - Keep changes scoped. Avoid unrelated refactors in feature commits.
 - Add focused unit tests with Vitest when changing shared behavior,
   synchronization, physics, gameplay state, or public APIs.
+- When a change affects connections, room transfers, hooks, or inputs in
+  MMORPG mode, add a scenario to `packages/vite/tests/mmorpg-e2e.spec.ts`. It
+  runs a real Node WebSocket server and a real client connected with
+  `provideMmorpg()`. The `@rpgjs/testing` fixture only covers standalone mode.
 - Ship documentation with every new feature, especially when it adds a new
   module, client API, server API, synchronization behavior, or runtime adapter.
 - Update samples only when they clarify the new API or protect an important
   integration path.
+- Before merging changes that can affect package consumers, validate them
+  against the matching branch of
+  [`rpgjs/starter`](https://github.com/rpgjs/starter) in a temporary directory.
+  Build and pack the affected local packages, install those artifacts in the
+  starter, run its production build, and start the game on a fixed local port.
+  Open it in a browser and check the rendered game, console errors, failed
+  network requests, and at least one basic interaction. Review a screenshot and
+  report any warning that also occurs with the currently published packages so
+  pre-existing starter issues are not mistaken for regressions.
 
 ## External Package Notes
 
@@ -134,3 +196,36 @@ If you create or modify CanvasEngine components (`*.ce`), use the CanvasEngine
 documentation table of contents:
 
 https://canvasengine.net/llms.txt
+
+## Local Development
+
+Install the sources and start the packages in watch mode:
+
+```bash
+git clone https://github.com/RSamaium/RPG-JS.git
+cd RPG-JS
+pnpm install
+pnpm dev
+```
+
+Run `pnpm playground` to try the gameplay demos in `playground/games/*`. Each
+game is independent, with its own assets, RPGJS configuration, Vite config, and
+`playground.config.json`. Add a new demo in `playground/games/<game-id>` and give
+it a unique port in its `playground.config.json`.
+
+## Releases
+
+RPGJS uses Changesets so every package can keep its own version. For each
+publishable change, run:
+
+```bash
+pnpm changeset
+```
+
+Select the affected `@rpgjs/*` packages, choose the semver bump, and write a
+short release note. When changes land on the `v5` branch, GitHub Actions creates
+or updates a version PR. Merging that PR publishes the updated packages to npm.
+
+Internal `@rpgjs/*` dependencies are updated during release. If a package depends
+on another package that is being released, it receives at least a patch release
+so the published npm ranges remain consistent.

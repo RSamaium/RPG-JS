@@ -1,19 +1,19 @@
 {
     "compilerOptions": {
-      "baseUrl": ".",
       "paths": {
-        "@common/*": ["runtime/*"]
+        "@common/*": ["./runtime/*"]
       },
       "target": "ES2020",
       "lib": ["dom", "esnext"],
-      "module": "ES2020",
+      "module": "ESNext",
       "outDir": "./lib",
       "rootDir": ".",
       "strict": true,
       "sourceMap": true,
       "strictNullChecks": true,
       "strictPropertyInitialization": false,
-      "moduleResolution": "node",
+      "moduleResolution": "bundler",
+      "types": ["vite/client"],
       "esModuleInterop": true,
       "removeComments": false,
       "noUnusedParameters": false,
@@ -30,7 +30,6 @@
     "include": [
         "src",
         "runtime",
-        "node_modules/canvasengine/*",
-        "../common/src/database"
+        "node_modules/canvasengine/*"
     ],
   }

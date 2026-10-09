@@ -1,7 +1,35 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { testing, type TestingFixture } from "@rpgjs/testing";
-import { createModule, defineModule, Direction } from "@rpgjs/common";
+import { createModule, defineModule, Direction, type MapStreamDefinition } from "@rpgjs/common";
 import { RpgPlayer, RpgServer } from "../src";
+import { installMapStreaming } from "../src/map-streaming";
+
+function createStreamingDefinition(): MapStreamDefinition {
+  return {
+    manifest: {
+      protocol: 1,
+      mapId: "test-map",
+      revision: "spatial-query",
+      width: 300,
+      height: 100,
+      chunkWidth: 100,
+      chunkHeight: 100,
+      columns: 3,
+      rows: 1,
+      renderData: {},
+    },
+    chunks: Object.fromEntries([0, 1, 2].map((x) => [`${x}:0`, {
+      key: `${x}:0`,
+      x,
+      y: 0,
+      bounds: { x: x * 100, y: 0, width: 100, height: 100 },
+      renderData: {},
+      hitboxes: [],
+    }])),
+  };
+}
+
+let onMoveCalls = 0;
 
 const serverModule = defineModule<RpgServer>({
   maps: [
@@ -14,6 +42,9 @@ const serverModule = defineModule<RpgServer>({
     async onConnected(player) {
       await player.changeMap("test-map", { x: 100, y: 100 });
     },
+    onMove() {
+      onMoveCalls += 1;
+    },
   },
 });
 
@@ -23,6 +54,7 @@ let player: RpgPlayer;
 let serverMap: any;
 
 beforeEach(async () => {
+  onMoveCalls = 0;
   const module = createModule("PredictionServerModule", [
     {
       server: serverModule,
@@ -39,6 +71,18 @@ afterEach(async () => {
 });
 
 describe("Prediction + Reconciliation Server Protocol", () => {
+  test("should call onMove after authoritative movement input changes position", async () => {
+    await serverMap.onInput(player, {
+      input: Direction.Right,
+      frame: 1,
+      tick: 0,
+      timestamp: Date.now(),
+    });
+    await serverMap.nextTickAsync();
+
+    expect(onMoveCalls).toBeGreaterThan(0);
+  });
+
   test("should reply pong with server tick", () => {
     const emitSpy = vi.spyOn(player, "emit");
     const payload = {
@@ -66,7 +110,7 @@ describe("Prediction + Reconciliation Server Protocol", () => {
       tick: 0,
       timestamp: Date.now(),
     });
-    await serverMap.processInput(player.id);
+    await serverMap.nextTickAsync();
 
     const intercepted = serverMap.interceptorPacket(
       player,
@@ -85,7 +129,194 @@ describe("Prediction + Reconciliation Server Protocol", () => {
     );
   });
 
-  test("should align ack position with the synced local player payload when available", () => {
+  test("should preserve custom event payloads without reconciliation metadata", () => {
+    expect(serverMap.interceptorPacket(
+      player,
+      { type: "weatherState", value: null },
+      player.conn,
+    )).toEqual({ type: "weatherState", value: null });
+
+    const weather = { effect: "snow", startedAt: 1234 };
+    expect(serverMap.interceptorPacket(
+      player,
+      { type: "weatherState", value: weather },
+      player.conn,
+    )).toEqual({ type: "weatherState", value: weather });
+  });
+
+  test("should reset spatial entity visibility when a public player id reconnects", () => {
+    serverMap.spatialVisibleEventIds.set(player.id, new Set(["old-event"]));
+    serverMap.spatialVisiblePlayerIds.set(player.id, new Set([player.id]));
+
+    serverMap.onJoin(player, player.conn);
+
+    expect(serverMap.spatialVisibleEventIds.has(player.id)).toBe(false);
+    expect(serverMap.spatialVisiblePlayerIds.has(player.id)).toBe(false);
+  });
+
+  test("should mark an existing visible player as connected in a new client's initial snapshot", () => {
+    const existingPlayer = new RpgPlayer();
+    existingPlayer.id = "existing-player";
+    existingPlayer.x.set(player.x());
+    existingPlayer.y.set(player.y());
+    existingPlayer.isConnected.set(true);
+    existingPlayer.setGraphic("hero");
+    serverMap.players()[existingPlayer.id] = existingPlayer;
+
+    const intercepted = serverMap.interceptorPacket(
+      player,
+      {
+        type: "sync",
+        value: {
+          players: {
+            [existingPlayer.id]: {
+              graphics: ["hero"],
+              x: existingPlayer.x(),
+              y: existingPlayer.y(),
+            },
+          },
+        },
+      },
+      player.conn,
+    );
+
+    expect(intercepted?.value?.players?.[existingPlayer.id]).toEqual(
+      expect.objectContaining({
+        graphics: ["hero"],
+        isConnected: true,
+      }),
+    );
+  });
+
+  test("should use spatial candidates for streamed player visibility transitions", () => {
+    installMapStreaming(serverMap, createStreamingDefinition(), {
+      loadRadius: 0,
+      retainRadius: 0,
+    });
+    serverMap.spatialVisiblePlayerIds.delete(player.id);
+    serverMap.spatialVisibleEventIds.delete(player.id);
+
+    const nearbyPlayer = new RpgPlayer();
+    nearbyPlayer.id = "nearby-player";
+    nearbyPlayer.x.set(player.x());
+    nearbyPlayer.y.set(player.y());
+    nearbyPlayer.isConnected.set(true);
+    nearbyPlayer.setGraphic("hero");
+    serverMap.players()[nearbyPlayer.id] = nearbyPlayer;
+
+    const farPlayer = new RpgPlayer();
+    farPlayer.id = "far-player";
+    farPlayer.x.set(250);
+    farPlayer.y.set(player.y());
+    const farX = vi.fn(() => 250);
+    farPlayer.x = farX as any;
+    serverMap.players()[farPlayer.id] = farPlayer;
+    farX.mockClear();
+
+    const queryHitbox = vi.spyOn(serverMap, "queryHitbox")
+      .mockReturnValue([player])
+      .mockReturnValueOnce([player, nearbyPlayer])
+      .mockReturnValueOnce([player]);
+
+    const entering = serverMap.interceptorPacket(
+      player,
+      { type: "sync", value: {} },
+      player.conn,
+    );
+    expect(entering?.value?.players?.[nearbyPlayer.id]).toEqual(
+      expect.objectContaining({ isConnected: true, graphics: ["hero"] }),
+    );
+    expect(farX).not.toHaveBeenCalled();
+
+    nearbyPlayer.x.set(250);
+    const leaving = serverMap.interceptorPacket(
+      player,
+      { type: "sync", value: {} },
+      player.conn,
+    );
+    expect(leaving?.value?.players?.[nearbyPlayer.id]).toBe("$delete");
+
+    const pendingIndexPlayer = new RpgPlayer();
+    pendingIndexPlayer.id = "pending-index-player";
+    pendingIndexPlayer.x.set(player.x());
+    pendingIndexPlayer.y.set(player.y());
+    pendingIndexPlayer.isConnected.set(true);
+    serverMap.players()[pendingIndexPlayer.id] = pendingIndexPlayer;
+    const supplemented = serverMap.interceptorPacket(
+      player,
+      {
+        type: "sync",
+        value: {
+          players: {
+            [pendingIndexPlayer.id]: { x: player.x(), y: player.y() },
+          },
+        },
+      },
+      player.conn,
+    );
+    expect(supplemented?.value?.players?.[pendingIndexPlayer.id]).toEqual(
+      expect.objectContaining({ isConnected: true }),
+    );
+    expect(queryHitbox).toHaveBeenCalledTimes(3);
+  });
+
+  test("should stream shared and owned scenario events only while they remain visible", async () => {
+    installMapStreaming(serverMap, createStreamingDefinition(), {
+      loadRadius: 0,
+      retainRadius: 0,
+    });
+    serverMap.spatialVisiblePlayerIds.delete(player.id);
+    serverMap.spatialVisibleEventIds.delete(player.id);
+
+    const sharedId = await serverMap.createDynamicEvent({
+      id: "shared-event",
+      x: player.x(),
+      y: player.y(),
+      event: { name: "Shared" },
+    });
+    const ownedId = await serverMap.createDynamicEvent({
+      id: "owned-event",
+      x: player.x(),
+      y: player.y(),
+      event: { name: "Owned" },
+    }, { mode: "scenario", scenarioOwnerId: player.id });
+    const privateId = await serverMap.createDynamicEvent({
+      id: "private-event",
+      x: player.x(),
+      y: player.y(),
+      event: { name: "Private" },
+    }, { mode: "scenario", scenarioOwnerId: "another-player" });
+    const sharedEvent = serverMap.events()[sharedId];
+    const ownedEvent = serverMap.events()[ownedId];
+    const privateEvent = serverMap.events()[privateId];
+
+    vi.spyOn(serverMap, "queryHitbox")
+      .mockReturnValueOnce([player, sharedEvent, ownedEvent, privateEvent])
+      .mockReturnValueOnce([player]);
+
+    const entering = serverMap.interceptorPacket(
+      player,
+      { type: "sync", value: {} },
+      player.conn,
+    );
+    expect(entering?.value?.events?.[sharedId]).toBeDefined();
+    expect(entering?.value?.events?.[ownedId]).toBeDefined();
+    expect(entering?.value?.events?.[privateId]).toBeUndefined();
+
+    sharedEvent.x.set(250);
+    ownedEvent.x.set(250);
+    const leaving = serverMap.interceptorPacket(
+      player,
+      { type: "sync", value: {} },
+      player.conn,
+    );
+    expect(leaving?.value?.events).toEqual({
+      [sharedId]: "$delete",
+      [ownedId]: "$delete",
+    });
+  });
+
+  test("should keep ack position aligned with its processed frame when the sync snapshot advances", () => {
     player._lastFramePositions = {
       frame: 21,
       position: {
@@ -116,12 +347,67 @@ describe("Prediction + Reconciliation Server Protocol", () => {
     expect(intercepted?.value?.ack).toEqual(
       expect.objectContaining({
         frame: 21,
-        x: 321,
-        y: 45,
-        direction: Direction.Left,
-        serverTick: serverMap.getTick(),
+        x: 0,
+        y: 0,
+        direction: Direction.Down,
+        serverTick: 1,
       }),
     );
+  });
+
+  test("should not expose a new frame before its authoritative physics position is captured", async () => {
+    player._lastFramePositions = {
+      frame: 20,
+      position: {
+        x: 90,
+        y: 100,
+        direction: Direction.Right,
+      },
+      serverTick: serverMap.getTick(),
+    };
+
+    await serverMap.onInput(player, {
+      input: Direction.Right,
+      frame: 21,
+      tick: 21,
+      timestamp: Date.now(),
+      trajectory: [{
+        input: Direction.Right,
+        frame: 21,
+        tick: 21,
+        timestamp: Date.now(),
+        x: 500,
+        y: 100,
+        direction: Direction.Right,
+      }],
+    });
+    await serverMap.processInput(player.id);
+
+    const beforeStep = serverMap.interceptorPacket(
+      player,
+      { type: "sync", value: {} },
+      player.conn,
+    );
+
+    expect(beforeStep?.value?.ack).toEqual(expect.objectContaining({
+      frame: 20,
+      x: 90,
+      y: 100,
+    }));
+
+    await serverMap.nextTickAsync();
+    const afterStep = serverMap.interceptorPacket(
+      player,
+      { type: "sync", value: {} },
+      player.conn,
+    );
+
+    expect(afterStep?.value?.ack).toEqual(expect.objectContaining({
+      frame: 21,
+      x: Math.round(player.x()),
+      y: Math.round(player.y()),
+      serverTick: serverMap.getTick(),
+    }));
   });
 
   test("should queue trajectory frames and replay them progressively on server ticks", async () => {
@@ -164,20 +450,119 @@ describe("Prediction + Reconciliation Server Protocol", () => {
 
     expect(player.pendingInputs.map((entry: any) => entry.frame)).toEqual([1, 2, 3]);
 
-    await serverMap.processInput(player.id);
+    await serverMap.nextTickAsync();
     expect(player._lastFramePositions?.frame).toBe(1);
-    expect(player._lastFramePositions?.position?.x).toBe(101);
     expect(player.pendingInputs.map((entry: any) => entry.frame)).toEqual([2, 3]);
 
-    await serverMap.processInput(player.id);
+    await serverMap.nextTickAsync();
     expect(player._lastFramePositions?.frame).toBe(2);
-    expect(player._lastFramePositions?.position?.x).toBe(102);
     expect(player.pendingInputs.map((entry: any) => entry.frame)).toEqual([3]);
 
-    await serverMap.processInput(player.id);
+    await serverMap.nextTickAsync();
     expect(player._lastFramePositions?.frame).toBe(3);
-    expect(player._lastFramePositions?.position?.x).toBe(103);
     expect(player.pendingInputs).toHaveLength(0);
+  });
+
+  test("should apply every input from one client physics tick before a single server step", async () => {
+    const baseTs = Date.now();
+    await serverMap.onInput(player, {
+      input: Direction.Right,
+      frame: 3,
+      tick: 11,
+      timestamp: baseTs + 16,
+      trajectory: [
+        { input: Direction.Right, frame: 1, tick: 10, timestamp: baseTs },
+        { input: Direction.Down, frame: 2, tick: 10, timestamp: baseTs + 1 },
+        { input: Direction.Right, frame: 3, tick: 11, timestamp: baseTs + 16 },
+      ],
+    });
+
+    await serverMap.nextTickAsync();
+
+    expect(player._lastFramePositions?.frame).toBe(2);
+    expect(player._lastFramePositions?.position?.direction).toBe(Direction.Down);
+    expect(player.lastProcessedInputTick).toBe(10);
+    expect(player.pendingInputs.map((entry: any) => entry.frame)).toEqual([3]);
+
+    await serverMap.nextTickAsync();
+
+    expect(player._lastFramePositions?.frame).toBe(3);
+    expect(player._lastFramePositions?.position?.direction).toBe(Direction.Right);
+    expect(player.lastProcessedInputTick).toBe(11);
+    expect(player.pendingInputs).toHaveLength(0);
+  });
+
+  test("should preserve client physics tick spacing while replaying queued inputs", async () => {
+    const baseTs = Date.now();
+    await serverMap.onInput(player, {
+      input: Direction.Right,
+      frame: 2,
+      tick: 13,
+      timestamp: baseTs + 48,
+      trajectory: [
+        { input: Direction.Right, frame: 1, tick: 10, timestamp: baseTs },
+        { input: Direction.Right, frame: 2, tick: 13, timestamp: baseTs + 48 },
+      ],
+    });
+
+    await serverMap.nextTickAsync();
+    const firstServerTick = player.lastProcessedInputServerTick;
+    expect(player._lastFramePositions?.frame).toBe(1);
+
+    await serverMap.nextTickAsync();
+    expect(player._lastFramePositions?.frame).toBe(1);
+    await serverMap.nextTickAsync();
+    expect(player._lastFramePositions?.frame).toBe(1);
+    await serverMap.nextTickAsync();
+
+    expect(player._lastFramePositions?.frame).toBe(2);
+    expect(player.lastProcessedInputTick).toBe(13);
+    expect(player.lastProcessedInputServerTick).toBe(firstServerTick + 3);
+  });
+
+  test("should use server time for movement idle detection despite an old client timestamp", async () => {
+    const staleClientTimestamp = Date.now() - 5_000;
+    await serverMap.onInput(player, {
+      input: Direction.Right,
+      frame: 1,
+      tick: 1,
+      timestamp: staleClientTimestamp,
+    });
+
+    await serverMap.nextTickAsync();
+
+    expect(player.lastProcessedClientInputTs).toBe(staleClientTimestamp);
+    expect(player.lastProcessedInputTs).toBeGreaterThan(staleClientTimestamp + 4_000);
+
+    const stopMovement = vi.spyOn(serverMap, "stopMovement");
+    await serverMap.nextTickAsync();
+    expect(stopMovement).not.toHaveBeenCalled();
+  });
+
+  test("should keep movement active for the same idle window as the client", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-08-05T08:00:00.000Z"));
+      await serverMap.onInput(player, {
+        input: Direction.Right,
+        frame: 1,
+        tick: 1,
+        timestamp: Date.now(),
+      });
+      await serverMap.nextTickAsync();
+
+      const stopMovement = vi.spyOn(serverMap, "stopMovement");
+      vi.advanceTimersByTime(80);
+      await serverMap.nextTickAsync();
+      expect(stopMovement).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(21);
+      await serverMap.nextTickAsync();
+      expect(stopMovement).toHaveBeenCalledWith(player);
+    }
+    finally {
+      vi.useRealTimers();
+    }
   });
 
   test("should process dash inputs through the movement queue", async () => {
@@ -198,7 +583,7 @@ describe("Prediction + Reconciliation Server Protocol", () => {
       timestamp,
     });
 
-    await serverMap.processInput(player.id);
+    await serverMap.nextTickAsync();
 
     expect(dashBody).toHaveBeenCalledWith(
       player,
@@ -232,6 +617,8 @@ describe("Prediction + Reconciliation Server Protocol", () => {
     expect(player.pendingInputs).toHaveLength(0);
     expect(player._lastFramePositions?.frame).toBe(frame);
     expect(player.x()).toBeGreaterThan(initialX);
+    expect(player._lastFramePositions?.position?.x).toBe(Math.round(player.x()));
+    expect(player._lastFramePositions?.serverTick).toBe(serverMap.getTick());
     expect(serverMap.getTick()).toBeGreaterThan(0);
   });
 

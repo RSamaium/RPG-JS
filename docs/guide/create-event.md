@@ -41,8 +41,7 @@ export function ChestEvent(): EventDefinition {
 Register it in your server module:
 
 ```ts
-import { defineModule } from "@rpgjs/common";
-import { RpgServer } from "@rpgjs/server";
+import { defineModule, type RpgServer } from "@rpgjs/server";
 import { ChestEvent } from "./events/chest";
 
 export default defineModule<RpgServer>({

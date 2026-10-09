@@ -15,7 +15,6 @@ Movement APIs, movement strategies, and move route helpers.
 - [applyIceMovement](#applyicemovement)
 - [applyIceMovement](#applyicemovement)
 - [breakRoutes](#breakroutes)
-- [canMove](#canmove)
 - [clearAllPlayerStates](#clearallplayerstates)
 - [clearMovements](#clearmovements)
 - [clearPlayerState](#clearplayerstate)
@@ -25,6 +24,7 @@ Movement APIs, movement strategies, and move route helpers.
 - [followPath](#followpath)
 - [followPath](#followpath)
 - [frequency](#frequency)
+- [frequencyRatio](#frequencyratio)
 - [getActiveMovements](#getactivemovements)
 - [hasActiveMovements](#hasactivemovements)
 - [infiniteMoveRoute](#infinitemoveroute)
@@ -40,7 +40,6 @@ Movement APIs, movement strategies, and move route helpers.
 - [replayRoutes](#replayroutes)
 - [shootProjectile](#shootprojectile)
 - [shootProjectile](#shootprojectile)
-- [speed](#speed)
 - [stopMoveTo](#stopmoveto)
 - [stuckThreshold](#stuckthreshold)
 - [stuckTimeout](#stucktimeout)
@@ -204,30 +203,6 @@ breakRoutes(force?: boolean): void
 ### Parameters
 
 - `force?`: `boolean`
-
-## canMove
-
-Whether the player can move.
-
-The synchronized state is stored internally in `_canMove`; `canMove` is exposed
-as a plain property for v4 compatibility.
-
-- Source: `packages/common/src/Player.ts`
-- Kind: `getter/setter`
-- Defined in: `RpgCommonPlayer`
-
-### Signature
-
-```ts
-canMove: boolean
-```
-
-### Examples
-
-```ts
-player.canMove = false;
-console.log(player.canMove);
-```
 
 ## clearAllPlayerStates
 
@@ -457,6 +432,23 @@ Frequency for movement timing (milliseconds between movements)
 frequency: number
 ```
 
+## frequencyRatio
+
+Multiplier applied to the player's frequency delay between route segments.
+
+The default keeps legacy route timing. Lower values are useful for generated
+routes that need smoother visual motion, such as Studio random movement.
+
+- Source: `packages/server/src/Player/MoveManager.ts`
+- Kind: `property`
+- Defined in: `MoveRoutesOptions`
+
+### Signature
+
+```ts
+frequencyRatio: number
+```
+
 ## getActiveMovements
 
 Get all active movement strategies for this entity
@@ -504,12 +496,13 @@ Give a path that repeats itself in a loop to a character
 ### Signature
 
 ```ts
-infiniteMoveRoute(routes: Routes): void
+infiniteMoveRoute(routes: Routes, options?: MoveRoutesOptions): void
 ```
 
 ### Parameters
 
 - `routes`: `Routes`
+- `options?`: `MoveRoutesOptions`
 
 ## knockback
 
@@ -615,9 +608,10 @@ Promise that resolves when all routes are completed
 
 ## moveTo
 
-Move toward a target player or position using AI pathfinding
+Move toward a target player or position using local obstacle avoidance
 
-Uses the `SeekAvoid` strategy to navigate toward the target while avoiding obstacles.
+Uses the `SeekAvoid` strategy to navigate toward the target while avoiding blocking
+hitboxes and events locally. It does not compute a full path.
 The movement speed is based on the player's current `speed` and `frequency` settings,
 scaled appropriately.
 
@@ -647,7 +641,7 @@ player.moveTo({ x: 200, y: 150 });
 
 ## moveTo
 
-Move toward a target player or position using AI pathfinding
+Move toward a target player or position using local obstacle avoidance
 
 - Source: `packages/server/src/Player/MoveManager.ts`
 - Kind: `method`
@@ -845,30 +839,6 @@ shootProjectile(type: ProjectileType, direction: { x: number, y: number }, speed
 - `direction`: `{ x: number, y: number }`
 - `speedFactor?`: `number`
 
-## speed
-
-Player movement speed.
-
-The synchronized state is stored internally in `_speed`; `speed` is exposed as
-a plain property for v4 compatibility.
-
-- Source: `packages/common/src/Player.ts`
-- Kind: `getter/setter`
-- Defined in: `RpgCommonPlayer`
-
-### Signature
-
-```ts
-speed: number
-```
-
-### Examples
-
-```ts
-player.speed = 6;
-console.log(player.speed);
-```
-
 ## stopMoveTo
 
 Stop the current moveTo behavior
@@ -1020,7 +990,7 @@ player.throughOtherPlayer = false;
 Move Manager Mixin
 
 Provides comprehensive movement management capabilities to any class. This mixin handles
-various types of movement including pathfinding, physics-based movement, route following,
+various types of movement including target seeking, physics-based movement, route following,
 and advanced movement strategies like dashing, knockback, and projectile movement.
 
 - Source: `packages/server/src/Player/MoveManager.ts`

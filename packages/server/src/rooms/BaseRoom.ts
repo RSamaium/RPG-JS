@@ -1,4 +1,5 @@
 import { signal } from "@signe/reactive";
+import type { RpgWritableSignal } from "@rpgjs/common";
 import { inject } from "../core/inject";
 import { context } from "../core/context";
 import { Hooks, ModulesToken } from "@rpgjs/common";
@@ -6,6 +7,7 @@ import { Action } from "@signe/room";
 import { RpgPlayer } from "../Player/Player";
 import { resolveSaveStorageStrategy } from "../services/save";
 import { lastValueFrom } from "rxjs";
+import { applyPlayerLocale } from "./locale";
 
 /**
  * Base class for rooms that need database functionality
@@ -27,6 +29,10 @@ import { lastValueFrom } from "rxjs";
  * ```
  */
 export abstract class BaseRoom {
+    @Action('player.locale')
+    setPlayerLocale(player: RpgPlayer, value: unknown): void {
+      applyPlayerLocale(player, value);
+    }
 
   /**
    * Signal containing the room's database of items, classes, and other game data
@@ -44,7 +50,7 @@ export abstract class BaseRoom {
    * const potion = room.database()['Potion'];
    * ```
    */
-  database = signal({});
+  database = signal({}) as unknown as RpgWritableSignal<Record<string, any>>;
 
 
   async onStart() {
@@ -84,7 +90,7 @@ export abstract class BaseRoom {
    * room.addInDatabase('Potion', UpdatedPotionClass, { force: true });
    * ```
    */
-  addInDatabase(id: string, data: any, options?: { force?: boolean }): boolean {
+  addInDatabase(id: string, data: unknown, options?: { force?: boolean }): boolean {
     const database = this.database();
 
     // Check if ID already exists
@@ -157,6 +163,10 @@ export abstract class BaseRoom {
         return userSnapshot;
       }
 
+      if (user) {
+        await lastValueFrom(this.hooks.callHooks("server-playerProps-load", user));
+      }
+
       let resolvedSnapshot = userSnapshot;
       if (user && typeof (user as any).resolveItemsSnapshot === 'function') {
         resolvedSnapshot = (user as any).resolveItemsSnapshot(resolvedSnapshot, this);
@@ -227,7 +237,7 @@ export abstract class BaseRoom {
           requestId: value?.requestId,
           index: value.index,
           ok: result.ok,
-          slot: result.slot
+          slot: result.ok ? result.slot : undefined
         });
       } catch (error: any) {
         player.emit('save.error', { requestId: value?.requestId, message: error?.message || 'save.load failed' });

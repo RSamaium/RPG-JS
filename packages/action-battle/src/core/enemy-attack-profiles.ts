@@ -17,10 +17,10 @@ export const DEFAULT_ACTION_BATTLE_ENEMY_ATTACK_PROFILES: Record<
 > = {
   melee: {
     id: "enemy-melee",
-    startupMs: 120,
-    activeMs: 100,
-    recoveryMs: 220,
-    cooldownMs: 440,
+    startupMs: 250,
+    activeMs: 120,
+    recoveryMs: 350,
+    cooldownMs: 1100,
     reaction: {
       invincibilityMs: 250,
       hitstunMs: 120,
@@ -29,10 +29,10 @@ export const DEFAULT_ACTION_BATTLE_ENEMY_ATTACK_PROFILES: Record<
   },
   combo: {
     id: "enemy-combo",
-    startupMs: 80,
+    startupMs: 140,
     activeMs: 80,
-    recoveryMs: 140,
-    cooldownMs: 300,
+    recoveryMs: 200,
+    cooldownMs: 500,
     reaction: {
       invincibilityMs: 180,
       hitstunMs: 90,
@@ -43,8 +43,8 @@ export const DEFAULT_ACTION_BATTLE_ENEMY_ATTACK_PROFILES: Record<
     id: "enemy-charged",
     startupMs: 800,
     activeMs: 140,
-    recoveryMs: 320,
-    cooldownMs: 1260,
+    recoveryMs: 500,
+    cooldownMs: 1900,
     reaction: {
       invincibilityMs: 350,
       hitstunMs: 220,
@@ -55,8 +55,8 @@ export const DEFAULT_ACTION_BATTLE_ENEMY_ATTACK_PROFILES: Record<
     id: "enemy-zone",
     startupMs: 450,
     activeMs: 180,
-    recoveryMs: 320,
-    cooldownMs: 950,
+    recoveryMs: 420,
+    cooldownMs: 1500,
     reaction: {
       invincibilityMs: 300,
       hitstunMs: 160,
@@ -65,10 +65,10 @@ export const DEFAULT_ACTION_BATTLE_ENEMY_ATTACK_PROFILES: Record<
   },
   dashAttack: {
     id: "enemy-dash",
-    startupMs: 180,
+    startupMs: 250,
     activeMs: 120,
-    recoveryMs: 260,
-    cooldownMs: 560,
+    recoveryMs: 350,
+    cooldownMs: 1200,
     reaction: {
       invincibilityMs: 280,
       hitstunMs: 150,

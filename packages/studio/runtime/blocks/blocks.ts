@@ -1,9 +1,12 @@
 import type { BlockDefinition, AnyBlockDefinition, BlockType } from './types';
 import {
   schemaShowText,
+  schemaShowCinematic,
+  schemaShowInput,
   schemaShowChoices,
   schemaShowNotification,
   schemaConditionalBranch,
+  schemaQueryArea,
   schemaWait,
   schemaSetVariable,
   schemaSetSwitch,
@@ -13,6 +16,8 @@ import {
   schemaChangeSp,
   schemaChangeExp,
   schemaChangeLevel,
+  schemaCallCharacterSelect,
+  schemaChangeClass,
   schemaChangeParameter,
   schemaRecoverAll,
   schemaChangeItem,
@@ -28,6 +33,7 @@ import {
   schemaShowAnimation,
   schemaCameraFollow,
   schemaSetWeather,
+  schemaSetHotbar,
   schemaCallMainMenu,
   schemaCallGameover,
   schemaShowSave,
@@ -59,8 +65,11 @@ import {
  * ```
  */
 export const defaultBlocks = [
+    schemaShowCinematic,
     // Message & Dialog Blocks
     schemaShowText,
+
+    schemaShowInput,
   
     schemaShowChoices,
 
@@ -68,6 +77,8 @@ export const defaultBlocks = [
   
     // Control Flow Blocks
     schemaConditionalBranch,
+
+    schemaQueryArea,
   
     schemaWait,
   
@@ -163,6 +174,10 @@ export const defaultBlocks = [
     schemaApplyGraphicAnimation,
 
     schemaShowUpAnimation,
+
+    schemaCallCharacterSelect,
+
+    schemaChangeClass,
   
     // Scene & Map Blocks
     schemaTransferPlayer,
@@ -172,6 +187,8 @@ export const defaultBlocks = [
     schemaCameraFollow,
 
     schemaSetWeather,
+
+    schemaSetHotbar,
 
     schemaCallMainMenu,
 

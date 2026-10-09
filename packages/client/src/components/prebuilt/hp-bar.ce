@@ -25,7 +25,7 @@
   ```
 -->
 
-<Container x={position.x} y={position.y}>
+<Container x={position().x} y={position().y}>
   <!-- Background shadow for depth effect -->
   <Graphics draw={drawShadow} x={1} y={1} />
   

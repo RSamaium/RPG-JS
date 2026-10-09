@@ -1,8 +1,10 @@
 import canvasengine from "@canvasengine/compiler";
+import type { Plugin } from "vite";
 import { replaceConfigImport } from "./replace-config-import";
-import { serverPlugin } from "./server-plugin";
+import { serverPlugin, type RpgjsDevServerOptions } from "./server-plugin";
 import { entryPointPlugin } from "./entry-point-plugin";
 import { mmorpgBuildPlugin } from "./mmorpg-build-plugin";
+import { devBannerPlugin } from "./dev-banner";
 
 const runtimeDedupe = ["@canvasengine/presets", "canvasengine", "pixi.js"];
 const runtimeOptimizeDepsExclude = [
@@ -22,8 +24,9 @@ type MmorpgEntryPoints =
       adapters?: Record<string, string>;
     };
 
-interface RpgjsPluginOptions {
+export interface RpgjsPluginOptions {
   server: any;
+  devServer?: RpgjsDevServerOptions;
   entryPoints?: {
     rpg?: string;
     mmorpg?: MmorpgEntryPoints;
@@ -48,9 +51,12 @@ function normalizeMmorpgEntryPoints(entryPoints?: MmorpgEntryPoints) {
 
 export function rpgjs({
   server,
+  devServer,
   entryPoints
-}: RpgjsPluginOptions) {
+}: RpgjsPluginOptions): Plugin[] {
   const mmorpgEntryPoints = normalizeMmorpgEntryPoints(entryPoints?.mmorpg);
+  const rpgType = process.env.RPG_TYPE || "rpg";
+  const rpgEntryPoint = entryPoints?.rpg ?? './src/standalone.ts';
 
   return [
     {
@@ -69,17 +75,24 @@ export function rpgjs({
     },
     canvasengine(),
     replaceConfigImport(),
-    serverPlugin(server),
+    serverPlugin(server, devServer),
     mmorpgBuildPlugin({
-      rpgType: process.env.RPG_TYPE || "rpg",
+      rpgType,
       serverEntry: mmorpgEntryPoints.server,
       adapterEntries: mmorpgEntryPoints.adapters,
     }),
     entryPointPlugin({
       entryPoints: {
-        rpg: entryPoints?.rpg ?? './src/standalone.ts',
+        rpg: rpgEntryPoint,
         mmorpg: mmorpgEntryPoints.client,
       }
-    })
+    }),
+    devBannerPlugin({
+      rpgType,
+      clientEntry: rpgType === "mmorpg" ? mmorpgEntryPoints.client : rpgEntryPoint,
+      serverEntry: mmorpgEntryPoints.server,
+      remoteTarget: devServer?.target,
+      remoteMapIds: devServer?.mapIds,
+    }),
   ]
 }

@@ -153,3 +153,48 @@ test('Player start hook can change map with a custom hitbox in standalone mode',
 
     await startFixture.clear()
 })
+
+test('Player start hook preserves permanent custom props across the first map transfer', async () => {
+    const serverModule = defineModule<RpgServer>({
+        maps: [
+            {
+                id: 'actor-map',
+                file: '',
+            }
+        ],
+        player: {
+            props: {
+                selectedActorId: {
+                    $default: null,
+                    $syncWithClient: false,
+                    $permanent: true,
+                },
+            },
+            onStart(player) {
+                const selectedActorId = (player as any).selectedActorId
+                selectedActorId.set('luna')
+                player.changeMap('actor-map')
+            }
+        }
+    })
+    const myModule = createModule('PermanentPropsStartModule', [{
+        server: serverModule,
+        client: clientModule
+    }])
+    const startFixture = await testing(myModule)
+    const startClient = await startFixture.createClient()
+
+    await startClient.socket.send({
+        action: 'gui.interaction',
+        value: {
+            guiId: 'title-screen',
+            name: 'select',
+            data: { id: 'start' },
+        },
+    })
+
+    const startedPlayer = await startClient.waitForMapChange('actor-map')
+    expect((startedPlayer as any).selectedActorId()).toBe('luna')
+
+    await startFixture.clear()
+})

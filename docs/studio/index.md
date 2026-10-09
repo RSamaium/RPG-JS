@@ -15,6 +15,7 @@ RPGJS Studio can be used directly from an AI coding assistant such as Claude Cod
 - How to connect an RPGJS game to Studio data
 - How to configure Studio event page options
 - How to extend the Studio map renderer with plugins
+- How to render Studio terrain through a framework-independent RGBA API
 
 ## Recommended workflow
 
@@ -44,4 +45,6 @@ RPGSTUDIO_API_KEY=your-api-key
 
 - [Use a game with Studio](/studio/game-integration)
 - [Studio event page options](/studio/event-page-options)
+- [Render embedded ground shadows](/studio/ground-shadows)
 - [Create a Studio plugin](/studio/plugins)
+- [Low-level 2D terrain rendering](/studio/render-map2d)

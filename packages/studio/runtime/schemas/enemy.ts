@@ -58,6 +58,16 @@ export const enemyRewardSchema = {
   },
 } as const;
 
+const enemyAttackTimingSchema = {
+  type: "object",
+  properties: {
+    startupMs: { type: "number", title: "enemy combat.startup", minimum: 0 },
+    activeMs: { type: "number", title: "enemy combat.active", minimum: 1 },
+    recoveryMs: { type: "number", title: "enemy combat.recovery", minimum: 0 },
+    cooldownMs: { type: "number", title: "enemy combat.cooldown", minimum: 0 },
+  },
+} as const;
+
 export const enemyAiBehaviorSchema = {
   type: "object",
   title: "AI Behavior",
@@ -92,6 +102,18 @@ export const enemyAiBehaviorSchema = {
       type: "number",
       title: "Attack Cooldown",
       minimum: 0,
+    },
+    attackProfiles: {
+      type: "object",
+      title: "enemy combat.profiles",
+      description: "enemy combat.profiles help",
+      properties: {
+        melee: { ...enemyAttackTimingSchema, title: "enemy combat.melee" },
+        combo: { ...enemyAttackTimingSchema, title: "enemy combat.combo" },
+        charged: { ...enemyAttackTimingSchema, title: "enemy combat.charged" },
+        zone: { ...enemyAttackTimingSchema, title: "enemy combat.zone" },
+        dashAttack: { ...enemyAttackTimingSchema, title: "enemy combat.dash" },
+      },
     },
     attackPatterns: {
       type: "array",

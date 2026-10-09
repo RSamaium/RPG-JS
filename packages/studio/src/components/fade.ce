@@ -1,14 +1,26 @@
-<Container positionType="absolute" top={0} left={0} right={0} bottom={0} alpha={opacity} zIndex={100000}>
-    <Rect
-      x={0} 
-      y={0} 
-      width={width}
-      height={height}
-      fill={overlayColor}
-    />
+<Container
+  positionType="absolute"
+  top={0}
+  left={0}
+  right={0}
+  bottom={0}
+  width={width}
+  height={height}
+  alpha={opacity}
+  zIndex={100000}
+>
+  <Rect
+    positionType="absolute"
+    top={0}
+    left={0}
+    width={width}
+    height={height}
+    color={overlayColor}
+  />
+  @if (showLoader()) {
     <Loading
-      x={centerX}
-      y={centerY}
+      x={loaderX}
+      y={loaderY}
       size={loaderSize}
       color={loaderColor}
       speed={220}
@@ -16,73 +28,119 @@
       segmentWidth={4}
       inactiveAlpha={0.25}
     />
+    @if (loadingText()) {
+      <Text
+        x={centerX}
+        y={loadingTextY}
+        text={loadingText}
+        color={loaderColor}
+        size={14}
+        anchor={[0.5, 0.5]}
+      />
+    }
+  }
 </Container>
 
+<script>
+  import { animatedSignal, computed, effect, mount, on, signal } from "canvasengine";
+  import { inject, RpgGui } from "@rpgjs/client";
+  import { Loading } from "@canvasengine/presets";
+  import { waitForGlobalAssets } from "../fade-transition";
 
-  <script>
-    import { animatedSignal, mount, computed, signal, on, effect } from "canvasengine";
-    import { inject, RpgClientEngine, RpgGui } from "@rpgjs/client";
-    import { Loading } from '@canvasengine/presets'
+  const { onFinish, data } = defineProps();
 
-    const {
-      onFinish,
-      data
-    } = defineProps();
+  const revealDuration = computed(() => data().duration ?? 350);
+  const coverDuration = computed(() => data().coverDuration ?? 0);
+  const overlayColor = computed(() => data().color ?? "#090d18");
+  const loaderColor = computed(() => data().loaderColor ?? "#ffffff");
+  const loaderSize = computed(() => data().loaderSize ?? 42);
+  const loaderDelay = computed(() => data().loaderDelay ?? 250);
+  const maxAssetWait = computed(() => data().maxAssetWait ?? 1200);
+  const loadingText = computed(() => data().loadingText ?? "");
+  const fadeTrigger = data().fadeTrigger;
+  const gui = inject(RpgGui);
 
-    const duration = computed(() => data().duration ?? 350)
-    const overlayColor = computed(() => data().color ?? 'black')
-    const loaderColor = computed(() => data().loaderColor ?? '#ffffff')
-    const loaderSize = computed(() => data().loaderSize ?? 42)
-    const fadeIn = computed(() => data().fadeIn ?? false)
-    const fadeTrigger = data().fadeTrigger
+  const opacity = animatedSignal(coverDuration() > 0 ? 0 : 1);
+  const showLoader = signal(false);
+  const width = signal(0);
+  const height = signal(0);
+  const centerX = computed(() => width() / 2);
+  const centerY = computed(() => height() / 2);
+  const groupOffset = computed(() => loadingText() ? 16 : 0);
+  const loaderX = computed(() => centerX() - loaderSize());
+  const loaderY = computed(() => centerY() - loaderSize() - groupOffset());
+  const loadingTextY = computed(() => centerY() + loaderSize() + 14);
 
-    const engine = inject(RpgClientEngine);
-    const gui = inject(RpgGui);
-  
-    const width = signal(0)
-    const height = signal(0)
-    const centerX = computed(() => width() / 2)
-    const centerY = computed(() => height() / 2)
+  let loader = null;
+  let loaderTimer = null;
+  let cancelAssetWait = () => {};
+  let destroyed = false;
+  let covered = false;
+  let revealing = false;
 
-    let loader = null;
-  
-    // Animation: fade in from transparent to opaque, or fade out from opaque to transparent
-    const opacity = animatedSignal(fadeIn() ? 0 : 1, {
-      duration: duration(),
-      onComplete: () => {
-        if (onFinish) {
-          onFinish();
-        }
-        gui.hide('fade')
-      }
-    });
+  const clearLoaderTimer = () => {
+    if (!loaderTimer) return;
+    clearTimeout(loaderTimer);
+    loaderTimer = null;
+  };
 
-    const startFade = () => {
-      opacity.set(fadeIn() ? 1 : 0);
-    }
+  const scheduleLoader = () => {
+    clearLoaderTimer();
+    loaderTimer = setTimeout(() => {
+      if (!destroyed && !revealing) showLoader.set(true);
+    }, Math.max(0, loaderDelay()));
+  };
 
-    on(fadeTrigger, () => {
-      if (!loader) {
-        startFade()
-        return
-      }
+  const finishCover = () => {
+    if (destroyed || covered) return;
+    covered = true;
+    scheduleLoader();
+    data().onCovered?.();
+  };
 
-      const assetCount = typeof loader.getAssetCount === "function" ? loader.getAssetCount() : 0
-      const progress = typeof loader.getGlobalProgress === "function" ? loader.getGlobalProgress() : 1
+  const cover = async () => {
+    await opacity.set(1, { duration: Math.max(0, coverDuration()) });
+    requestAnimationFrame(finishCover);
+  };
 
-      if (assetCount === 0 || progress >= 1) {
-        startFade()
-        return
-      }
+  const reveal = async () => {
+    if (destroyed || revealing) return;
+    revealing = true;
+    clearLoaderTimer();
+    showLoader.set(false);
+    await opacity.set(0, { duration: Math.max(0, revealDuration()) });
+    if (destroyed) return;
+    data().onRevealed?.();
+    onFinish?.();
+    gui.hide("fade");
+  };
 
-      loader.onComplete(startFade)
-    });
+  const revealSubscription = on(fadeTrigger, () => {
+    cancelAssetWait();
+    cancelAssetWait = waitForGlobalAssets(
+      loader,
+      maxAssetWait(),
+      () => void reveal(),
+    );
+  });
 
-    mount((element) => {
-      loader = element.props.context?.globalLoader
-      effect(() => {
-        width.set(element.props.context.canvasSize().width)
-        height.set(element.props.context.canvasSize().height)
-      })
-    });
-  </script>
+  mount((element) => {
+    loader = element.props.context?.globalLoader;
+    const syncSize = () => {
+      const size = element.props.context.canvasSize();
+      width.set(size.width);
+      height.set(size.height);
+    };
+    syncSize();
+    const sizeEffect = effect(syncSize);
+    requestAnimationFrame(() => void cover());
+
+    return () => {
+      destroyed = true;
+      clearLoaderTimer();
+      cancelAssetWait();
+      revealSubscription.unsubscribe();
+      sizeEffect.subscription.unsubscribe();
+    };
+  });
+</script>

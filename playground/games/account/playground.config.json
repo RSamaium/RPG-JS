@@ -1,0 +1,8 @@
+{
+  "id": "account",
+  "title": "MMORPG Account",
+  "description": "Deferred MMO connection with local mock sign-in/sign-up endpoints. Demo: hero@example.com / swordfish.",
+  "tags": ["account", "authentication", "gui", "mmorpg"],
+  "modes": ["mmorpg"],
+  "port": 5191
+}

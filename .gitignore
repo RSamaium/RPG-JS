@@ -27,5 +27,14 @@ public
 !playground/games/pressure-plate/public/hero.png
 !playground/games/time-manager/public/
 !playground/games/time-manager/public/hero.png
+!playground/games/hotbar/public/
+!playground/games/hotbar/public/icons/
+!playground/games/hotbar/public/icons/*.svg
 .partykit
+.wrangler
 .vite
+.env.local
+.dev.vars
+storybook-static/
+test-results/
+playwright-report/

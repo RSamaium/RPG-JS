@@ -18,7 +18,13 @@ export async function readGames() {
       `games/${gameDir}/playground.config.json`,
       playgroundRoot,
     );
-    const config = JSON.parse(await readFile(configPath, "utf8"));
+    let config;
+    try {
+      config = JSON.parse(await readFile(configPath, "utf8"));
+    } catch (error) {
+      if (error?.code === "ENOENT") continue;
+      throw error;
+    }
 
     games.push({
       ...config,

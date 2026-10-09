@@ -29,7 +29,7 @@ Register the Vue overlay provider and add Vue components in the regular client `
 
 ```ts
 import { provideClientModules } from '@rpgjs/client'
-import { provideVueGui } from '@rpgjs/vue'
+import { provideVueGui, vueGui } from '@rpgjs/vue'
 import Inventory from './gui/inventory.vue'
 import Tooltip from './gui/tooltip.vue'
 import DialogBox from './gui/dialog-box.ce'
@@ -43,18 +43,19 @@ export default {
     provideClientModules([
       {
         gui: [
-          {
+          vueGui({
             id: 'inventory',
             component: Inventory,
-          },
-          {
+          }),
+          vueGui({
             id: 'player-tooltip',
             component: Tooltip,
             attachToSprite: true,
-          },
+          }),
           {
             id: 'dialog',
             component: DialogBox,
+            renderer: 'canvas',
           },
         ],
       },
@@ -64,6 +65,9 @@ export default {
 ```
 
 CanvasEngine `.ce` GUI components continue to render inside the canvas. Vue components render through the DOM overlay managed by `@rpgjs/vue`.
+Use `vueGui()` for Vue registrations and `renderer: 'canvas'` for explicit
+CanvasEngine registrations. Legacy renderer inference remains available for v4
+compatibility.
 
 ## Server Usage
 
@@ -125,11 +129,11 @@ function useItem(item) {
 Attached Vue GUI components follow visible game objects in the DOM overlay. Use `attachToSprite: true` in the GUI config:
 
 ```ts
-{
+vueGui({
   id: 'player-tooltip',
   component: Tooltip,
   attachToSprite: true,
-}
+})
 ```
 
 For RPGJS v4 compatibility, a Vue component may also expose `rpgAttachToSprite: true`; v5 projects should prefer `attachToSprite` in the GUI config.

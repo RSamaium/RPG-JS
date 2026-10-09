@@ -1,5 +1,6 @@
 import { TIME_MANAGER_MODULE_KEY, TIME_MANAGER_SYNC_KEY, findModules, provideModules, registerI18nMessages } from "@rpgjs/common";
-import { FactoryProvider, inject as diInject, isProvided, provide as diProvide } from "@signe/di";
+import type { RpgFactoryProvider } from "@rpgjs/common";
+import { type Context, inject as diInject, isProvided, provide as diProvide } from "@signe/di";
 import { RpgClientEngine } from "./RpgClientEngine";
 import { RpgClient } from "./RpgClient";
 import { inject } from "@signe/di";
@@ -49,7 +50,7 @@ export type RpgClientModule = RpgClient | (new () => any);
  * provideClientModules([MyClientModule])
  * ```
  */
-export function provideClientModules(modules: RpgClientModule[]): FactoryProvider {
+export function provideClientModules(modules: RpgClientModule[]): RpgFactoryProvider {
   return provideModules(modules, "client", (modules, context) => {
     const mainModuleClient = findModules(context, 'Client')
     modules = [...mainModuleClient, ...modules]
@@ -70,9 +71,9 @@ export function provideClientModules(modules: RpgClientModule[]): FactoryProvide
       }
       if (module[TIME_MANAGER_MODULE_KEY]) {
         const options = module[TIME_MANAGER_MODULE_KEY];
-        const timeManager = isProvided(context, ClientTimeManager)
-          ? diInject<ClientTimeManager>(context, ClientTimeManager)
-          : diProvide(context, ClientTimeManager, new ClientTimeManager());
+        const timeManager = isProvided(context as unknown as Context, ClientTimeManager)
+          ? diInject<ClientTimeManager>(context as unknown as Context, ClientTimeManager)
+          : diProvide(context as unknown as Context, ClientTimeManager, new ClientTimeManager());
         timeManager.configure(options);
         const engineHooks = module.engine ?? {};
         const sceneMapHooks = module.sceneMap ?? {};
@@ -196,6 +197,16 @@ export function provideClientModules(modules: RpgClientModule[]): FactoryProvide
           load: (engine: RpgClientEngine) => {
             componentAnimations.forEach((componentAnimation) => {
               engine.addComponentAnimation(componentAnimation);
+            });
+          },
+        };
+      }
+      if (module.weathers) {
+        const weathers = [...module.weathers];
+        module.weathers = {
+          load: (engine: RpgClientEngine) => {
+            weathers.forEach((weather) => {
+              engine.addWeather(weather);
             });
           },
         };
@@ -344,6 +355,16 @@ export function provideClientGlobalConfig(config: any = {}) {
     action: 'space',
     dash: 'shift',
     escape: 'escape',
+    hotbar1: 'n1',
+    hotbar2: 'n2',
+    hotbar3: 'n3',
+    hotbar4: 'n4',
+    hotbar5: 'n5',
+    hotbar6: 'n6',
+    hotbar7: 'n7',
+    hotbar8: 'n8',
+    hotbar9: 'n9',
+    hotbar0: 'n0',
     ...(config.keyboardControls ?? {}),
   }
   return provideGlobalConfig(config)

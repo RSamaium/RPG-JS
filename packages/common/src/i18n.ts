@@ -1,4 +1,5 @@
-import { Context, inject, provide, type FactoryProvider } from "@signe/di";
+import { Context, inject, provide } from "@signe/di";
+import type { RpgContext, RpgFactoryProvider } from "./foundation";
 
 export type I18nLocaleMessages = Record<string, string>;
 export type I18nMessages = Record<string, I18nLocaleMessages>;
@@ -37,7 +38,7 @@ function normalizeMessages(messages?: I18nMessages): I18nMessages {
 
 function hasMessages(messages?: I18nMessages): messages is I18nMessages {
   if (!messages) return false;
-  return Object.values(messages).some((catalog) => catalog && Object.keys(catalog).length > 0);
+  return Object.values(messages).some((catalog) => catalog && typeof catalog === "object" && !Array.isArray(catalog));
 }
 
 function interpolate(message: string, params: I18nParams = {}): string {
@@ -86,6 +87,17 @@ export class I18nService {
     return this.layers.some((layer) => !!layer.messages[locale]);
   }
 
+  /**
+   * List locales declared by the game's provideI18n catalogues (not modules).
+   * @returns Registered game locales, or defaultLocale when none are declared.
+   * @example service.getAvailableLocales() // ['en', 'fr']
+   */
+  getAvailableLocales(): string[] {
+    const locales = [...new Set(this.layers.filter(layer => layer.source === "game")
+      .flatMap(layer => Object.keys(layer.messages)))];
+    return locales.length ? locales : [this.defaultLocale];
+  }
+
   translate(key: string, params: I18nParams = {}, locale = this.defaultLocale): string {
     const translated = this.resolve(key, locale) ?? this.resolve(key, this.fallbackLocale) ?? key;
     return interpolate(translated, params);
@@ -108,44 +120,46 @@ export class I18nService {
   }
 }
 
-export function getOrCreateI18nService(context?: Context | null, config?: I18nConfig): I18nService {
+export function getOrCreateI18nService(context?: RpgContext | null, config?: I18nConfig): I18nService {
   if (!context) {
     return new I18nService(config);
   }
-  let service = inject<I18nService>(context, I18nServiceToken, { optional: true });
+  const signeContext = context as Context;
+  let service = inject<I18nService>(signeContext, I18nServiceToken, { optional: true });
   if (!service) {
     service = new I18nService();
-    for (const layer of getPendingLayers(context)) {
+    for (const layer of getPendingLayers(signeContext)) {
       service.addMessages(layer.messages, layer.source, layer.priority);
     }
-    provide(context, I18nServiceToken, service);
+    provide(signeContext, I18nServiceToken, service);
   }
   if (config) service.configure(config);
   return service;
 }
 
 export function registerI18nMessages(
-  context: Context,
+  context: RpgContext,
   messages: I18nMessages | undefined,
   source = "module",
   priority = 10
 ) {
   if (!hasMessages(messages)) return;
-  const service = inject<I18nService>(context, I18nServiceToken, { optional: true });
+  const signeContext = context as Context;
+  const service = inject<I18nService>(signeContext, I18nServiceToken, { optional: true });
   if (service) {
     service.addMessages(messages, source, priority);
     return;
   }
-  getPendingLayers(context).push({
+  getPendingLayers(signeContext).push({
     source,
     priority,
     messages: normalizeMessages(messages),
   });
 }
 
-export function createI18nProvider(config: I18nConfig = {}): FactoryProvider {
+export function createI18nProvider(config: I18nConfig = {}): RpgFactoryProvider<I18nService> {
   return {
     provide: I18nServiceToken,
-    useFactory: (context: Context) => getOrCreateI18nService(context, config),
+    useFactory: (context: RpgContext) => getOrCreateI18nService(context, config),
   };
 }

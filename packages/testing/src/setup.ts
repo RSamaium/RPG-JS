@@ -1,4 +1,6 @@
 const LOAD_FAILURE_SRC = 'LOAD_FAILURE_SRC';
+
+export {};
 const originalConsoleWarn = console.warn;
 const originalConsoleError = console.error;
 
@@ -27,6 +29,39 @@ if (typeof Image !== "undefined") {
 }
 
 if (typeof window !== "undefined" && typeof window.HTMLMediaElement !== "undefined") {
+    // Node 26 exposes an optional global localStorage accessor that returns
+    // undefined unless --localstorage-file is configured. Install a deterministic
+    // browser-compatible store so it cannot shadow jsdom's environment value.
+    const values = new Map<string, string>();
+    const testLocalStorage: Storage = {
+        get length() {
+            return values.size;
+        },
+        clear() {
+            values.clear();
+        },
+        getItem(key) {
+            return values.get(String(key)) ?? null;
+        },
+        key(index) {
+            return Array.from(values.keys())[index] ?? null;
+        },
+        removeItem(key) {
+            values.delete(String(key));
+        },
+        setItem(key, value) {
+            values.set(String(key), String(value));
+        },
+    };
+    Object.defineProperty(globalThis, "localStorage", {
+        configurable: true,
+        value: testLocalStorage,
+    });
+    Object.defineProperty(window, "localStorage", {
+        configurable: true,
+        value: testLocalStorage,
+    });
+
     Object.defineProperty(global.window.HTMLMediaElement.prototype, 'play', {
         configurable: true,
         get() {
@@ -69,15 +104,16 @@ if (typeof HTMLCanvasElement !== "undefined") {
     const getContext = HTMLCanvasElement.prototype.getContext;
 
     HTMLCanvasElement.prototype.getContext = function (
+        this: HTMLCanvasElement,
         contextId: string,
         options?: CanvasRenderingContext2DSettings | WebGLContextAttributes,
     ) {
         if (contextId === "webgl2") {
-            return getContext.call(this, "webgl", options as WebGLContextAttributes);
+            return Reflect.apply(getContext, this, ["webgl", options]);
         }
 
         if (contextId === "2d" || contextId === "webgl" || contextId === "experimental-webgl") {
-            return getContext.call(this, contextId, options as never);
+            return Reflect.apply(getContext, this, [contextId, options]);
         }
 
         return null;

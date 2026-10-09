@@ -1,19 +1,26 @@
 import { inject } from "@signe/di";
-import { Action, Room, type RoomMethods } from "@signe/room";
+import { Action } from "@signe/room";
 import { Hooks, ModulesToken } from "@rpgjs/common";
 import { context } from "../core/context";
 import { users } from "@signe/sync";
 import { signal } from "@signe/reactive";
 import { RpgPlayer } from "../Player/Player";
+import type { RpgRoomConnection } from "./map";
 import { BaseRoom } from "./BaseRoom";
+import { applyConnectionLocale } from "./locale";
 import { buildSaveSlotMeta, resolveSaveStorageStrategy } from "../services/save";
 import { lastValueFrom } from "rxjs";
+import type { RpgWritableSignal } from "@rpgjs/common";
+import { RpgRoom } from "./registry";
+import { dispatchPlayerDisconnected } from "./connection-lifecycle";
+import { runPlayerAuthenticationHooks } from "../auth";
 
-@Room({
+@RpgRoom({
+  kind: "lobby",
   path: "lobby-{id}",
 })
 export class LobbyRoom extends BaseRoom {
-  @users(RpgPlayer) players = signal({});
+  @users(RpgPlayer) players = signal({}) as unknown as RpgWritableSignal<Record<string, RpgPlayer>>;
   autoSync: boolean = true;
 
   constructor(room) {
@@ -24,12 +31,24 @@ export class LobbyRoom extends BaseRoom {
     }
   }
 
-  async onJoin(player: RpgPlayer, conn: Parameters<RoomMethods["$send"]>[0]) {
+  async onJoin(player: RpgPlayer, conn: RpgRoomConnection, ctx?: { request?: { url: string } }) {
+    player.room = this as unknown as RpgPlayer["room"];
     player.map = this as unknown as RpgPlayer["map"];
     player.context = context;
     player.conn = conn;
+    applyConnectionLocale(player, ctx);
+    await player._onInit();
+    await runPlayerAuthenticationHooks(this.hooks, player, conn);
     await lastValueFrom(this.hooks.callHooks("server-player-onConnected", player));
+    await lastValueFrom(this.hooks.callHooks("server-room-onJoin", player, this));
+    await lastValueFrom(this.hooks.callHooks("server-player-onJoinRoom", player, this));
     (this as any).$applySync?.();
+  }
+
+  async onLeave(player: RpgPlayer, conn: RpgRoomConnection | null = player.conn) {
+    await lastValueFrom(this.hooks.callHooks("server-room-onLeave", player, this));
+    await lastValueFrom(this.hooks.callHooks("server-player-onLeaveRoom", player, this));
+    await dispatchPlayerDisconnected(this.hooks, player, conn);
   }
 
   @Action('gui.interaction')

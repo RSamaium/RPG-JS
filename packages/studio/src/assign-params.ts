@@ -1,5 +1,10 @@
 import { RpgPlayer } from "@rpgjs/server";
 import { ProjectBasic } from "@common/types/project";
+import {
+  isStartingEquipmentCompatible,
+  resolveStartingEquipmentType,
+  resolveStudioItemType,
+} from "./starting-equipment";
 
 const resolveDatabaseItem = (player: RpgPlayer, itemId: string) => {
   try {
@@ -7,10 +12,6 @@ const resolveDatabaseItem = (player: RpgPlayer, itemId: string) => {
   } catch {
     return null;
   }
-};
-
-const getItemType = (item: any): string | undefined => {
-  return item?._type ?? item?.itemType;
 };
 
 export function assignParams(player: RpgPlayer, config: ProjectBasic) {
@@ -43,10 +44,13 @@ export function assignParams(player: RpgPlayer, config: ProjectBasic) {
       const itemId = config.startingEquipment[type];
       if (!itemId) continue;
       const item = resolveDatabaseItem(player, itemId);
-      const itemType = getItemType(item);
-      if (itemType !== "weapon" && itemType !== "armor") {
+      if (!isStartingEquipmentCompatible(type, item)) {
+        const expectedType = resolveStartingEquipmentType(type);
+        const actualType = resolveStudioItemType(item) ?? "unknown";
         console.warn(
-          `[StudioGame] starting equipment ${type}=${itemId} is not a weapon or armor`,
+          expectedType
+            ? `[StudioGame] starting equipment ${type}=${itemId} must reference a ${expectedType}, received ${actualType}`
+            : `[StudioGame] starting equipment field ${type} is not supported`,
         );
         continue;
       }

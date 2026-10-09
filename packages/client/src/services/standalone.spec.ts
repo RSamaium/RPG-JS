@@ -52,6 +52,26 @@ describe("standalone websocket bridge", () => {
     expect(mmorpgProvider.useFactory(context).mode).toBe("mmorpg");
   });
 
+  test("uses the configured initial MMORPG lobby", () => {
+    const context = new Context();
+    const mmorpgProvider = provideMmorpg({
+      connectionId: "test-client",
+      room: "lobby-project-1",
+    }).find((provider: any) => provider.provide === WebSocketToken) as any;
+
+    expect(mmorpgProvider.useFactory(context).getCurrentRoom()).toBe("lobby-project-1");
+  });
+
+  test("exposes deferred MMORPG connection mode on the websocket provider", () => {
+    const context = new Context();
+    const provider = provideMmorpg({
+      connectionId: "test-client",
+      deferConnection: true,
+    }).find((entry: any) => entry.provide === WebSocketToken) as any;
+
+    expect(provider.useFactory(context).deferConnection).toBe(true);
+  });
+
   test("reconnects standalone rooms with updated room and query", async () => {
     const connects: Array<{ roomId: string; url: string; sessionId: string }> = [];
     class Server {
@@ -77,8 +97,11 @@ describe("standalone websocket bridge", () => {
       (provider: any) => provider.provide === WebSocketToken,
     ) as any;
     const socket = standaloneProvider.useFactory(context);
+    let locale = "fr";
+    socket.locale = () => locale;
 
     await socket.connection();
+    locale = "en";
     socket.updateProperties({
       room: "map-center-map",
       query: { transferToken: "token-1" },
@@ -96,6 +119,8 @@ describe("standalone websocket bridge", () => {
       }),
     ]);
     expect(connects[1].url).toContain("transferToken=token-1");
+    expect(connects[0].url).toContain("locale=fr");
+    expect(connects[1].url).toContain("locale=en");
     expect(socket.getServer().room.id).toBe("map-center-map");
   });
 });

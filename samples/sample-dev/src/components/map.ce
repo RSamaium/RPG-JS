@@ -4,6 +4,7 @@
 </Container>
 
 <script>
+import { computed } from "canvasengine"
 import { EventLayerComponent } from "@rpgjs/client"
 
 const { data } = defineProps()

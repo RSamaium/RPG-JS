@@ -1,0 +1,95 @@
+.rpg-ui-chat {
+  position: absolute;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  gap: var(--rpg-ui-spacing-sm);
+  width: min(var(--rpg-ui-chat-width), calc(100vw - 2 * var(--rpg-ui-spacing)));
+  height: min(var(--rpg-ui-chat-height), calc(100vh - 2 * var(--rpg-ui-spacing)));
+  padding: var(--rpg-ui-spacing);
+  color: var(--rpg-ui-text);
+  pointer-events: auto;
+}
+
+.rpg-ui-chat[data-position="top-left"] {
+  top: var(--rpg-ui-spacing);
+  left: var(--rpg-ui-spacing);
+}
+
+.rpg-ui-chat[data-position="top-right"] {
+  top: var(--rpg-ui-spacing);
+  right: var(--rpg-ui-spacing);
+}
+
+.rpg-ui-chat[data-position="bottom-left"] {
+  bottom: var(--rpg-ui-spacing);
+  left: var(--rpg-ui-spacing);
+}
+
+.rpg-ui-chat[data-position="bottom-right"] {
+  right: var(--rpg-ui-spacing);
+  bottom: var(--rpg-ui-spacing);
+}
+
+.rpg-ui-chat-log {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.rpg-ui-chat-message {
+  display: grid;
+  grid-template-columns: minmax(5rem, auto) 1fr;
+  gap: var(--rpg-ui-spacing-sm);
+  padding: var(--rpg-ui-chat-message-padding);
+  border-bottom: var(--rpg-ui-chat-divider);
+}
+
+.rpg-ui-chat-author {
+  color: var(--rpg-ui-accent);
+  font-weight: var(--rpg-ui-font-weight-bold);
+}
+
+.rpg-ui-chat-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.rpg-ui-chat-error {
+  color: var(--rpg-ui-danger);
+  font-size: var(--rpg-ui-font-size-sm);
+}
+
+.rpg-ui-chat-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--rpg-ui-spacing-sm);
+}
+
+.rpg-ui-chat-input {
+  min-width: 0;
+}
+
+.rpg-ui-chat :is(input, button):focus-visible {
+  outline: var(--rpg-ui-focus-width) solid var(--rpg-ui-focus-color);
+  outline-offset: var(--rpg-ui-focus-offset);
+}
+
+@media (max-width: 600px) {
+  .rpg-ui-chat {
+    right: var(--rpg-ui-spacing-sm);
+    bottom: var(--rpg-ui-spacing-sm);
+    left: var(--rpg-ui-spacing-sm);
+    width: auto;
+    height: min(45vh, var(--rpg-ui-chat-height));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rpg-ui-chat,
+  .rpg-ui-chat * {
+    scroll-behavior: auto;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

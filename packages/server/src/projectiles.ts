@@ -115,7 +115,7 @@ interface PendingProjectile {
   remainingDelay: number;
 }
 
-type NetworkProjectile = Omit<ProjectileServerState, "payload">;
+export type NetworkProjectile = Omit<ProjectileServerState, "payload"> & ProjectileCollisionOptions;
 
 interface NetworkProjectileImpact {
   id: string;
@@ -266,6 +266,7 @@ export class RpgMapProjectiles {
   private readonly system: ProjectileSystem;
   private readonly pending: PendingProjectile[] = [];
   private readonly runtime = new Map<string, ProjectileServerState>();
+  private readonly networkRuntime = new Map<string, NetworkProjectile>();
   private readonly spawnQueue: NetworkProjectile[] = [];
   private readonly impactQueue: NetworkProjectileImpact[] = [];
   private readonly destroyQueue: NetworkProjectileDestroy[] = [];
@@ -290,7 +291,9 @@ export class RpgMapProjectiles {
         remainingDelay: state.delay,
       };
       this.runtime.set(state.id, state);
-      this.spawnQueue.push(toNetworkProjectile(state, pending.config));
+      const networkProjectile = toNetworkProjectile(state, pending.config);
+      this.networkRuntime.set(state.id, networkProjectile);
+      this.spawnQueue.push(networkProjectile);
       this.callHook("server-projectiles-onEmit", {
         projectile: state,
         owner,
@@ -326,6 +329,7 @@ export class RpgMapProjectiles {
   clear(): void {
     this.pending.length = 0;
     this.runtime.clear();
+    this.networkRuntime.clear();
     this.spawnQueue.length = 0;
     this.impactQueue.length = 0;
     this.destroyQueue.length = 0;
@@ -336,6 +340,11 @@ export class RpgMapProjectiles {
         mapId: this.map.id,
       },
     });
+  }
+
+  /** Return client-safe descriptors for projectiles that are still authoritative. */
+  getActiveNetworkProjectiles(): NetworkProjectile[] {
+    return [...this.networkRuntime.values()];
   }
 
   private createStates(options: ProjectileEmitOptions, owner?: RpgPlayer): ProjectileServerState[] {
@@ -491,6 +500,7 @@ export class RpgMapProjectiles {
 
   private handleDestroyState(projectile: ProjectileServerState, reason: string, hit?: RaycastHit): void {
     this.runtime.delete(projectile.id);
+    this.networkRuntime.delete(projectile.id);
     const destroyed: NetworkProjectileDestroy = {
       id: projectile.id,
       reason,

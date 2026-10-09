@@ -1,0 +1,69 @@
+<DOMContainer width="100%" height="100%" class="rpg-chat-root">
+  <section class="rpg-ui-chat rpg-ui-panel" data-position={position()}>
+    <div class="rpg-ui-chat-log" role="log" aria-live="polite">
+      @for (message of messages) {
+        <div class="rpg-ui-chat-message" data-player-id={message.playerId}>
+          <span class="rpg-ui-chat-author">{message.author}</span>
+          <span class="rpg-ui-chat-text">{message.text}</span>
+        </div>
+      }
+    </div>
+    @if (errorText()) {
+      <div class="rpg-ui-chat-error" role="alert">{errorText()}</div>
+    }
+    <form class="rpg-ui-chat-form" submit={submitMessage}>
+      <input
+        class="rpg-ui-input rpg-ui-chat-input"
+        type="text"
+        maxlength={maxLength}
+        placeholder={t("rpg.chat.placeholder")}
+        value={draft}
+        input={onInput}
+      />
+      <button
+        class="rpg-ui-btn rpg-ui-chat-send"
+        type="submit"
+        aria-disabled={isEmpty() ? "true" : "false"}
+      >{t("rpg.chat.send")}</button>
+    </form>
+  </section>
+</DOMContainer>
+
+<script>
+  import { computed, signal } from "canvasengine";
+  import { inject, RpgClientEngine, WebSocketToken } from "@rpgjs/client";
+  import { CHAT_SEND_EVENT } from "../config";
+  import {
+    chatClientOptions,
+    chatError,
+    chatMessages
+  } from "../client-state";
+
+  const { data } = defineProps();
+  const socket = inject(WebSocketToken);
+  const engine = inject(RpgClientEngine);
+  const { t } = engine.i18n();
+  const draft = signal("");
+  const messages = computed(() => chatMessages());
+  const position = computed(() => data()?.position || chatClientOptions().position);
+  const maxLength = computed(() => {
+    return data()?.maxLength ?? chatClientOptions().maxLength;
+  });
+  const isEmpty = computed(() => draft().trim().length === 0);
+  const errorText = computed(() => {
+    const error = chatError();
+    return error ? t(error.key, error.params || {}) : "";
+  });
+
+  function onInput(event) {
+    draft.set(event.target?.value || "");
+  }
+
+  function submitMessage(event) {
+    event.preventDefault();
+    const text = draft().trim();
+    if (!text) return;
+    socket.emit(CHAT_SEND_EVENT, { text, channel: "map" });
+    draft.set("");
+  }
+</script>

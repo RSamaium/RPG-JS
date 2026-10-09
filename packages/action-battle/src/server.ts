@@ -1,20 +1,31 @@
-import { RpgEvent, RpgPlayer, type RpgServer } from "@rpgjs/server";
+import {
+  RpgEvent,
+  RpgPlayer,
+  type HotbarGuiOptions,
+  type RpgServer,
+} from "@rpgjs/server";
 import { Control, defineModule } from "@rpgjs/common";
 import { BattleAi, HitResult, ApplyHitHooks, DEFAULT_KNOCKBACK } from "./ai.server";
 import {
   ActionBattleActionBarData,
   ActionBattleActionBarSkill,
+  ActionBattleHotbarSkill,
   ActionBattleOptions,
 } from "./types";
 import { normalizeActionBattleOptions, setActionBattleOptions } from "./config";
-import { manhattanDistance, parseAoeMask } from "./targeting";
+import {
+  getActionBattleEntityTile,
+  getActionBattleTileSize,
+  manhattanDistance,
+  resolveActionBattleAoeCells,
+  resolveActionBattleSoftTarget,
+} from "./targeting";
 import { emitActionBattleClientVisual } from "./visual";
 import {
   applyActionBattleAttackDirection,
   resolveActionBattleAttackDirection,
 } from "./attack-input";
 import {
-  forceActionBattleLocomotionAnimation,
   withActionBattleAnimationUnlocked,
 } from "./locomotion";
 import { getActionBattleSystems, setActionBattleSystems } from "./core/context";
@@ -26,6 +37,12 @@ import {
   getNormalizedActionBattleAttackProfile,
   runActionBattleActiveHitbox,
 } from "./core/attack-runtime";
+import { setActionBattleInvincibility } from "./core/hit-reaction";
+import {
+  canActionBattleDodge,
+  resolveActionBattleCharge,
+  resolveActionBattleComboStep,
+} from "./core/player-combat";
 import {
   canActionBattleUseTarget,
   executeActionBattleUse,
@@ -34,6 +51,17 @@ import {
   handleActionBattleProjectileImpact,
 } from "./core/action-use";
 import { normalizeActionBattleAttackProfile } from "./core/attack-profile";
+import { getActionBattleControlLockDuration } from "./core/attack-profile";
+import {
+  acquireActionBattleControl,
+  releaseActionBattleControls,
+} from "./core/control-state";
+import {
+  beginActionBattleGuard,
+  clearActionBattleDefense,
+  consumeActionBattleCounter,
+  endActionBattleGuard,
+} from "./core/defense";
 import {
   resolveActionBattleWeapon,
   resolveActionBattleWeaponAttackProfile,
@@ -48,8 +76,10 @@ import type {
   NormalizedActionBattleAttackProfile,
 } from "./types";
 
+export const ACTION_BATTLE_SKILL_USE = "action-battle:use-skill";
+export const ACTION_BATTLE_HOTBAR_USE = "action-battle:use-hotbar";
+export const ACTION_BATTLE_SKILL_PROJECTILE_TYPE = "action-battle-skill";
 export const ACTION_BATTLE_ACTION_BAR_GUI_ID = "action-battle-action-bar";
-const DEFAULT_ATTACK_LOCK_DURATION_MS = 350;
 
 /**
  * Default player attack hitboxes offsets for each direction
@@ -65,11 +95,8 @@ export const DEFAULT_PLAYER_ATTACK_HITBOXES = {
 const beginPlayerAttackLock = (
   player: RpgPlayer,
   map: ReturnType<RpgPlayer["getCurrentMap"]> | undefined,
-  durationMs: number,
-  locks: { movement: boolean; direction: boolean }
+  profile: NormalizedActionBattleAttackProfile
 ): boolean => {
-  if (durationMs <= 0) return true;
-
   const runtimePlayer = player as any;
   const now = Date.now();
   if (
@@ -79,36 +106,65 @@ const beginPlayerAttackLock = (
     return false;
   }
 
-  const lockId = (runtimePlayer.__actionBattleAttackLockId ?? 0) + 1;
-  runtimePlayer.__actionBattleAttackLockId = lockId;
-  runtimePlayer.__actionBattleAttackLockedUntil = now + durationMs;
+  releaseActionBattleControls(player, "attack");
+  const actionId = (runtimePlayer.__actionBattleAttackLockId ?? 0) + 1;
+  runtimePlayer.__actionBattleAttackLockId = actionId;
+  runtimePlayer.__actionBattleAttackLockedUntil =
+    now + profile.totalDurationMs;
+  runtimePlayer.__actionBattleAttackActiveUntil =
+    now + profile.startupMs + profile.activeMs;
+  runtimePlayer.__actionBattleAttackProfile = profile;
 
-  const previousCanMove = player.canMove;
-  const previousDirectionFixed = player.directionFixed;
-  const previousAnimationFixed = player.animationFixed;
+  const movementDuration = getActionBattleControlLockDuration(
+    profile,
+    profile.control.movementLock
+  );
+  const directionDuration = getActionBattleControlLockDuration(
+    profile,
+    profile.control.directionLock
+  );
 
-  if (locks.movement) {
+  if (movementDuration > 0) {
     player.pendingInputs = [];
     player.lastProcessedInputTs = 0;
     (map as any)?.stopMovement?.(player);
-    player.canMove = false;
+    acquireActionBattleControl(player, {
+      owner: "attack",
+      movement: true,
+      durationMs: movementDuration,
+    });
   }
-  if (locks.direction) {
-    player.directionFixed = true;
+  if (directionDuration > 0) {
+    acquireActionBattleControl(player, {
+      owner: "attack",
+      direction: true,
+      durationMs: directionDuration,
+    });
   }
-
+  acquireActionBattleControl(player, {
+    owner: "attack",
+    animation: true,
+    durationMs: profile.totalDurationMs,
+  });
   setTimeout(() => {
-    if (runtimePlayer.__actionBattleAttackLockId !== lockId) return;
+    if (runtimePlayer.__actionBattleAttackLockId !== actionId) return;
     runtimePlayer.__actionBattleAttackLockedUntil = 0;
-    player.canMove = previousCanMove;
-    player.directionFixed = previousDirectionFixed;
-    player.animationFixed = previousAnimationFixed;
-    if (locks.movement && !previousAnimationFixed) {
-      forceActionBattleLocomotionAnimation(player, "stand");
-    }
-  }, durationMs);
+    runtimePlayer.__actionBattleAttackActiveUntil = 0;
+    runtimePlayer.__actionBattleAttackProfile = undefined;
+    releaseActionBattleControls(player, "attack");
+  }, profile.totalDurationMs);
 
   return true;
+};
+
+const cancelPlayerAttackRecovery = (player: RpgPlayer) => {
+  const runtimePlayer = player as any;
+  runtimePlayer.__actionBattleAttackLockId =
+    (runtimePlayer.__actionBattleAttackLockId ?? 0) + 1;
+  runtimePlayer.__actionBattleAttackLockedUntil = 0;
+  runtimePlayer.__actionBattleAttackActiveUntil = 0;
+  runtimePlayer.__actionBattleAttackProfile = undefined;
+  releaseActionBattleControls(player, "attack");
 };
 
 const isBattleEvent = (event: RpgEvent) => !!(event as any).battleAi;
@@ -310,6 +366,20 @@ export function applyActionBattleEntityHit(
     }
   );
 
+  if (result.defense) {
+    emitActionBattleClientVisual({
+      moment: result.defense.kind === "parry" ? "parry" : "block",
+      entity: target,
+      target,
+      attacker,
+      damage: result.damage,
+      result,
+    });
+    if (result.defense.kind === "parry") {
+      (attacker as any).battleAi?.stagger?.(result.defense.staggerMs, target);
+    }
+  }
+
   if (!result.cancelled && ai) {
     ai.handleDamage(attacker, {
       damage: result.damage,
@@ -396,6 +466,138 @@ const getActionBattleHitboxCandidates = (
   return Array.from(candidates.values());
 };
 
+const performPlayerAttack = (
+  player: RpgPlayer,
+  input: any,
+  options: ActionBattleOptions,
+  attackProfile: NormalizedActionBattleAttackProfile,
+  metadata: Record<string, any> = {}
+): boolean => {
+  const map = player.getCurrentMap();
+  const inputDirection = resolveActionBattleAttackDirection(player, input);
+  const softTargeting = options.combat?.player?.softTargeting;
+  const softTargetOptions =
+    softTargeting && typeof softTargeting === "object"
+      ? softTargeting
+      : undefined;
+  const softTarget =
+    softTargetOptions?.enabled !== false && map
+      ? resolveActionBattleSoftTarget(
+          player,
+          map
+            .getEvents()
+            .filter(
+              (event: RpgEvent) =>
+                isBattleEvent(event) &&
+                canActionBattleTarget(
+                  player,
+                  event,
+                  getActionBattleTargets(player, "events"),
+                  options.combat?.targets
+                )
+            ),
+          inputDirection,
+          softTargetOptions
+        )
+      : null;
+  const direction = softTarget?.direction ?? inputDirection;
+  applyActionBattleAttackDirection(player, direction);
+  const directionKey = direction as string;
+  const resolveActiveHitboxes = () =>
+    resolvePlayerAttackHitboxes(player, directionKey, options, attackProfile);
+  const initialHitboxes = resolveActiveHitboxes();
+
+  if (isActionReservedForNormalEvent(player, map, initialHitboxes)) {
+    return false;
+  }
+
+  const actionLocked = attackProfile.totalDurationMs > 0;
+
+  if (actionLocked && !beginPlayerAttackLock(player, map, attackProfile)) {
+    return false;
+  }
+
+  const counter = consumeActionBattleCounter(player);
+
+  withActionBattleAnimationUnlocked(player, () => {
+    emitActionBattleClientVisual({
+      moment: counter
+        ? "counter"
+        : metadata.charged
+          ? "chargeRelease"
+          : "attack",
+      entity: player,
+      pattern: metadata.comboStep !== undefined
+        ? `combo-${metadata.comboStep + 1}`
+        : metadata.charged
+          ? "charged"
+          : undefined,
+      result: { metadata },
+      target: softTarget?.target,
+      // Resolve Studio/player animation functions on the authoritative entity
+      // before the client visual payload is structured-cloned.
+      animations: options.animations,
+    });
+  });
+
+  const attackId = createActionBattleAttackId(player.id, attackProfile.id);
+  const weapon = resolveActionBattleWeapon(player);
+  const hitTracker = new ActionBattleHitTracker(attackProfile.hitPolicy);
+  const targetSelector = getActionBattleTargets(player, "events");
+  const hitMetadata = {
+    ...metadata,
+    counter: Boolean(counter),
+    attackId,
+    attackProfileId: attackProfile.id,
+    reaction: attackProfile.reaction,
+    damageMultiplier:
+      attackProfile.damageMultiplier * (counter?.damageMultiplier ?? 1),
+    knockbackMultiplier:
+      attackProfile.knockbackMultiplier * (counter?.staggerMultiplier ?? 1),
+  };
+
+  const processHits = (hits: any[]) => {
+    hits.forEach((hit: any) => {
+      if (
+        !canActionBattleTarget(
+          player,
+          hit,
+          targetSelector,
+          options.combat?.targets
+        )
+      ) {
+        return;
+      }
+      if (!hitTracker.tryHit(hit)) return;
+      const handledByWeapon =
+        weapon &&
+        executeActionBattleUse({
+          attacker: player,
+          target: hit,
+          usable: weapon,
+          weapon,
+          profile: attackProfile,
+          playVisual: false,
+        });
+      if (handledByWeapon) return;
+      applyActionBattleEntityHit(player, hit, undefined, hitMetadata);
+    });
+  };
+
+  runActionBattleActiveHitbox(
+    attackProfile,
+    resolveActiveHitboxes,
+    (activeHitboxes) => {
+      const candidates = getActionBattleHitboxCandidates(map, activeHitboxes, {
+        excludeIds: [player.id],
+        kinds: ["players", "events"],
+      });
+      processHits(candidates);
+    }
+  );
+  return true;
+};
+
 const mergeAttackProfileOverrides = (
   base: NormalizedActionBattleAttackProfile,
   override: ActionBattleAttackProfile
@@ -405,6 +607,10 @@ const mergeAttackProfileOverrides = (
   reaction: {
     ...base.reaction,
     ...override.reaction,
+  },
+  control: {
+    ...base.control,
+    ...override.control,
   },
   hitboxes: {
     ...base.hitboxes,
@@ -429,8 +635,93 @@ const resolvePlayerAttackProfile = (
   );
 };
 
+const ACTION_BATTLE_CHARGE_START = "action-battle:charge-start";
+const ACTION_BATTLE_CHARGE_RELEASE = "action-battle:charge-release";
+export const ACTION_BATTLE_DODGE = "action-battle:dodge";
+export const ACTION_BATTLE_GUARD_START = Control.Defense;
+export const ACTION_BATTLE_GUARD_END = "action-battle:guard-end";
+
+interface PlayerCombatRuntimeState {
+  comboIndex: number;
+  lastAttackAt: number;
+  queuedCombo: boolean;
+  chargeStartedAt: number | null;
+  chargeToken: number;
+}
+
+const playerCombatStates = new WeakMap<RpgPlayer, PlayerCombatRuntimeState>();
+const playerSkillCooldowns = new WeakMap<RpgPlayer, Map<string, number>>();
+
+const getPlayerCombatState = (player: RpgPlayer): PlayerCombatRuntimeState => {
+  let state = playerCombatStates.get(player);
+  if (!state) {
+    state = {
+      comboIndex: 0,
+      lastAttackAt: 0,
+      queuedCombo: false,
+      chargeStartedAt: null,
+      chargeToken: 0,
+    };
+    playerCombatStates.set(player, state);
+  }
+  return state;
+};
+
+const objectOption = <T extends object>(value: boolean | T | undefined): T | undefined =>
+  value && typeof value === "object" ? value : undefined;
+
+const resolvePlayerComboProfile = (
+  player: RpgPlayer,
+  options: ActionBattleOptions,
+  now = Date.now()
+) => {
+  const base = resolvePlayerAttackProfile(player, options);
+  const combo = objectOption(options.combat?.player?.combo);
+  if (!combo?.enabled || !combo.steps?.length) {
+    return { profile: base, step: 0 };
+  }
+  const state = getPlayerCombatState(player);
+  const step = resolveActionBattleComboStep({
+    comboIndex: state.comboIndex,
+    lastAttackAt: state.lastAttackAt,
+    now,
+    stepCount: combo.steps.length,
+    resetMs: combo.resetMs ?? 700,
+  });
+  return {
+    profile: normalizeActionBattleAttackProfile(
+      mergeAttackProfileOverrides(base, combo.steps[step]),
+      {
+        lockMovement: options.attack?.lockMovement,
+        lockDurationMs: options.attack?.lockDurationMs,
+        hitboxes: options.attack?.hitboxes,
+      }
+    ),
+    step,
+  };
+};
+
 const resolveSignal = (value: any) =>
   typeof value === "function" ? value() : value;
+
+const getPlayerSkillCooldowns = (player: RpgPlayer) => {
+  let cooldowns = playerSkillCooldowns.get(player);
+  if (!cooldowns) {
+    cooldowns = new Map<string, number>();
+    playerSkillCooldowns.set(player, cooldowns);
+  }
+  return cooldowns;
+};
+
+const resolveSkillId = (skill: any): string | undefined => {
+  const value = resolveSignal(skill?.id);
+  return typeof value === "string" && value ? value : undefined;
+};
+
+const isPlayerSkillLearned = (player: RpgPlayer, skillId: string) =>
+  (player.skills?.() ?? []).some(
+    (skill: any) => resolveSkillId(skill) === skillId
+  );
 
 const resolveItemData = (player: RpgPlayer, itemId: string) => {
   try {
@@ -469,8 +760,8 @@ const resolveSkillTargeting = (
     return skillsOptions.getTargeting(skillData);
   }
   const range =
-    skillData?.range ??
-    skillData?.targeting?.range ??
+    resolveSignal(skillData?.targeting?.range) ??
+    resolveSignal(skillData?.range) ??
     (skillData?.targeting?.distance as number | undefined);
   const aoeMask =
     skillData?.aoeMask ??
@@ -482,6 +773,122 @@ const resolveSkillTargeting = (
   return {
     range: range ?? 0,
     aoeMask,
+  };
+};
+
+const serializeSkillAction = (skillData: any) => {
+  const action = getActionBattleActionConfig(skillData);
+  if (!action || typeof action !== "object") return undefined;
+  return {
+    ...(typeof action.mode === "string" ? { mode: action.mode } : {}),
+    ...(typeof action.target === "string" ? { target: action.target } : {}),
+    ...(typeof action.cooldownMs === "number"
+      ? { cooldownMs: Math.max(0, action.cooldownMs) }
+      : {}),
+    ...(action.visual && typeof action.visual === "object"
+      ? { visual: action.visual }
+      : {}),
+  };
+};
+
+const serializeActionBattleSkill = (
+  player: RpgPlayer,
+  skill: any,
+  options: ActionBattleOptions
+): ActionBattleHotbarSkill | null => {
+  const id = resolveSkillId(skill);
+  if (!id) return null;
+  const data = resolveSkillData(player, id) || skill;
+  const name = resolveSignal(data?.name) ?? resolveSignal(skill.name) ?? id;
+  const description =
+    resolveSignal(data?.description) ??
+    resolveSignal(skill.description) ??
+    "";
+  const icon = resolveSignal(data?.icon) ?? resolveSignal(skill.icon);
+  const spCost =
+    resolveSignal(data?.spCost) ?? resolveSignal(skill.spCost) ?? 0;
+  const targeting = resolveSkillTargeting(player, id, options);
+  const action = serializeSkillAction(data);
+  const cooldownMs = Math.max(0, action?.cooldownMs ?? 0);
+  const readyAt = getPlayerSkillCooldowns(player).get(id) ?? 0;
+  const entry: ActionBattleHotbarSkill = {
+    id,
+    name,
+    description,
+    icon,
+    spCost,
+    usable: spCost <= player.sp && readyAt <= Date.now(),
+    range: targeting?.range ?? 0,
+    key: resolveSignal(data?.key),
+    casterAnimation: resolveSignal(data?.casterAnimation),
+    animation: resolveSignal(data?.animation),
+    sound: resolveSignal(data?.sound),
+    impactSound: resolveSignal(data?.impactSound),
+    action,
+    cooldownMs,
+    readyAt,
+  };
+  if (targeting) {
+    const mask = targeting.aoeMask ?? options.skills?.defaultAoeMask;
+    if (mask) entry.aoeMask = normalizeMaskRows(mask);
+  }
+  return entry;
+};
+
+const requiresActionBattleTargeting = (
+  skill: ActionBattleHotbarSkill,
+) => {
+  const mask = Array.isArray(skill.aoeMask) ? skill.aoeMask : [];
+  return (
+    skill.action?.target === "ally"
+    || mask.length > 1
+    || mask.some((row) => row !== "#")
+    || (
+      (skill.range ?? 0) > 0
+      && skill.action?.mode !== "projectile"
+      && skill.action?.target !== "self"
+    )
+  );
+};
+
+const actionBattleHotbarOptions = (
+  options: ActionBattleOptions,
+): HotbarGuiOptions => {
+  const hotbar = (
+    options.ui?.hotbar && typeof options.ui.hotbar === "object"
+      ? options.ui.hotbar
+      : {}
+  );
+  return {
+    capacity: hotbar.capacity,
+    allowedEntryTypes: hotbar.allowedEntryTypes,
+    lockedSlotHint: hotbar.lockedSlotHint,
+    transformEntry(player, entry, presentation) {
+      if (entry.type !== "skill") return presentation;
+      const skill = serializeActionBattleSkill(player, entry, options);
+      if (!skill) return presentation;
+      return {
+        ...presentation,
+        ...skill,
+        type: "skill",
+        cost: skill.spCost
+          ? { value: skill.spCost, label: "SP" }
+          : undefined,
+        activation: {
+          mode: requiresActionBattleTargeting(skill) ? "target" : "instant",
+          handler: "action-battle.skill",
+          payload: { skill },
+        },
+      };
+    },
+    onUse(player, request) {
+      return handleActionBattleHotbarUse(
+        player,
+        request.slot,
+        request.target as { x: number; y: number } | undefined,
+        options,
+      );
+    },
   };
 };
 
@@ -498,6 +905,13 @@ const buildActionBarData = (
   player: RpgPlayer,
   options: ActionBattleOptions
 ): ActionBattleActionBarData => {
+  const actionBar = typeof options.ui?.actionBar === "object"
+    ? options.ui.actionBar
+    : undefined;
+  const requestedSlotCount = Number(actionBar?.slotCount);
+  const slotCount = Number.isFinite(requestedSlotCount)
+    ? Math.min(10, Math.max(1, Math.round(requestedSlotCount)))
+    : 10;
   const items = (player.items?.() || []).map((item: any) => {
     const id = item.id?.() ?? item.id;
     const data = resolveItemData(player, id);
@@ -526,36 +940,54 @@ const buildActionBarData = (
 
   const skills = (player.skills?.() || []).map((skill: any) => {
     const id = skill.id?.() ?? skill.id;
+    const serialized = serializeActionBattleSkill(
+      player,
+      skill,
+      options,
+    );
+    if (serialized) return serialized as ActionBattleActionBarSkill;
+
     const data = resolveSkillData(player, id) || skill;
-    const name = resolveSignal(data?.name) ?? resolveSignal(skill.name) ?? id;
-    const description =
-      resolveSignal(data?.description) ??
-      resolveSignal(skill.description) ??
-      "";
-    const icon = resolveSignal(data?.icon) ?? resolveSignal(skill.icon);
-    const spCost =
-      resolveSignal(data?.spCost) ?? resolveSignal(skill.spCost) ?? 0;
-    const usable = spCost <= player.sp;
-    const targeting = resolveSkillTargeting(player, id, options);
-    const skillEntry: ActionBattleActionBarSkill = {
+    return {
       id,
-      name,
-      description,
-      icon,
-      spCost,
-      usable,
-      range: targeting?.range ?? 0,
-    };
-    if (targeting) {
-      const mask = targeting.aoeMask ?? options.skills?.defaultAoeMask;
-      if (mask) {
-        skillEntry.aoeMask = normalizeMaskRows(mask);
-      }
-    }
-    return skillEntry;
+      name: resolveSignal(data?.name) ?? resolveSignal(skill.name) ?? id,
+      description:
+        resolveSignal(data?.description) ??
+        resolveSignal(skill.description) ??
+        "",
+      icon: resolveSignal(data?.icon) ?? resolveSignal(skill.icon),
+      spCost: resolveSignal(data?.spCost) ?? resolveSignal(skill.spCost) ?? 0,
+      usable: false,
+      range: 0,
+    } satisfies ActionBattleActionBarSkill;
   });
 
-  return { items, skills };
+  const configuredSlots = Array.isArray(actionBar?.slots)
+    ? Array.from({ length: slotCount }, (_, index) => {
+        const assignment = actionBar.slots?.[index];
+        if (assignment?.type === "skill") {
+          const skill = skills.find((entry) => entry.id === assignment.id) ?? null;
+          return skill
+            ? { type: "skill" as const, skill, item: null }
+            : { type: "empty" as const, skill: null, item: null };
+        }
+        if (assignment?.type === "item") {
+          const item = items.find((entry) => entry.id === assignment.id) ?? null;
+          return item
+            ? { type: "item" as const, skill: null, item }
+            : { type: "empty" as const, skill: null, item: null };
+        }
+        return { type: "empty" as const, skill: null, item: null };
+      })
+    : undefined;
+
+  return {
+    items,
+    skills,
+    mode: actionBar?.mode ?? "both",
+    slotCount,
+    slots: configuredSlots,
+  };
 };
 
 const ensureActionBarGui = (
@@ -564,30 +996,40 @@ const ensureActionBarGui = (
 ) => {
   const existing = player.getGui?.(ACTION_BATTLE_ACTION_BAR_GUI_ID);
   const gui = existing || player.gui(ACTION_BATTLE_ACTION_BAR_GUI_ID);
+  (gui as any).__actionBattleOptions = options;
   if (!(gui as any).__actionBattleReady) {
     (gui as any).__actionBattleReady = true;
+    const currentOptions = () =>
+      ((gui as any).__actionBattleOptions ?? options) as ActionBattleOptions;
     gui.on("useItem", ({ id }: { id: string }) => {
       try {
         player.useItem(id);
       } catch {
         // Ignore failures (not usable, not enough, etc.)
       }
-      gui.update(buildActionBarData(player, options));
+      gui.update(buildActionBarData(player, currentOptions()));
     });
     gui.on(
       "useSkill",
       ({ id, target }: { id: string; target?: { x: number; y: number } }) => {
-        handleActionBattleSkillUse(player, id, target, options);
-        gui.update(buildActionBarData(player, options));
+        handleActionBattleSkillUse(player, id, target, currentOptions());
+        gui.update(buildActionBarData(player, currentOptions()));
       }
     );
     gui.on("refresh", () => {
-      gui.update(buildActionBarData(player, options));
+      gui.update(buildActionBarData(player, currentOptions()));
+    });
+    gui.on("openMenu", () => {
+      const actionBar = currentOptions().ui?.actionBar;
+      if (typeof actionBar === "object") {
+        actionBar.onOpenMenu?.();
+      }
     });
   }
   return gui;
 };
 
+/** Open the retained legacy Action Battle-specific bar. */
 export const openActionBattleActionBar = (
   player: RpgPlayer,
   rawOptions: ActionBattleOptions = {}
@@ -597,6 +1039,7 @@ export const openActionBattleActionBar = (
   gui.open(buildActionBarData(player, options));
 };
 
+/** Refresh the retained legacy Action Battle-specific bar. */
 export const updateActionBattleActionBar = (
   player: RpgPlayer,
   rawOptions: ActionBattleOptions = {}
@@ -608,19 +1051,52 @@ export const updateActionBattleActionBar = (
   }
 };
 
-const getTileSize = (map: any) => ({
-  width: map?.tileWidth ?? 32,
-  height: map?.tileHeight ?? 32,
-});
-
-const getEntityTile = (
-  entity: any,
-  tileSize: { width: number; height: number }
+/**
+ * Open the generic hotbar with Action Battle skill presentation and targeting.
+ */
+export const openActionBattleHotbar = (
+  player: RpgPlayer,
+  rawOptions: ActionBattleOptions = {}
 ) => {
-  const hitbox = entity.hitbox?.() || { w: tileSize.width, h: tileSize.height };
-  const x = Math.floor((entity.x() + hitbox.w / 2) / tileSize.width);
-  const y = Math.floor((entity.y() + hitbox.h / 2) / tileSize.height);
-  return { x, y };
+  const options = normalizeActionBattleOptions(rawOptions);
+  return player.showHotbar(actionBattleHotbarOptions(options));
+};
+
+/**
+ * Refresh cooldowns and usability in an open generic hotbar.
+ */
+export const updateActionBattleHotbar = (
+  player: RpgPlayer,
+  rawOptions: ActionBattleOptions = {}
+) => {
+  normalizeActionBattleOptions(rawOptions);
+  player.refreshHotbar?.();
+};
+
+const syncActionBattleHotbar = (
+  player: RpgPlayer,
+  options: ActionBattleOptions,
+) => {
+  const hotbar = options.ui?.hotbar;
+  if (!hotbar || typeof hotbar !== "object" || !hotbar.autoOpen) return;
+  const enabled = typeof hotbar.enabled === "function"
+    ? hotbar.enabled(player)
+    : hotbar.enabled;
+  if (enabled) {
+    return openActionBattleHotbar(player, options);
+  }
+  player.hideHotbar?.();
+};
+
+const syncActionBattleActionBar = (
+  player: RpgPlayer,
+  options: ActionBattleOptions,
+) => {
+  const actionBar = options.ui?.actionBar;
+  if (!actionBar || typeof actionBar !== "object" || !actionBar.autoOpen) return;
+  if (actionBar.enabled) {
+    return openActionBattleActionBar(player, options);
+  }
 };
 
 const handleActionBattleSkillUse = (
@@ -629,64 +1105,161 @@ const handleActionBattleSkillUse = (
   target: { x: number; y: number } | undefined,
   options: ActionBattleOptions
 ) => {
+  if (!isPlayerSkillLearned(player, skillId)) return false;
   const skillData = resolvePlayerSkillUsable(player, skillId);
+  if (!skillData) return false;
   const actionConfig = getActionBattleActionConfig(skillData);
+  const cooldowns = getPlayerSkillCooldowns(player);
+  const now = Date.now();
+  if ((cooldowns.get(skillId) ?? 0) > now) return false;
+  const spCost = Number(resolveSignal(skillData?.spCost) ?? 0);
+  if (Number.isFinite(spCost) && spCost > player.sp) return false;
+
+  const finishUse = (
+    selectedTarget?: RpgPlayer | RpgEvent | Array<RpgPlayer | RpgEvent> | null
+  ) => {
+    try {
+      const used = executeActionBattleUse({
+        attacker: player,
+        target: selectedTarget,
+        usable: skillData,
+        skill: skillData,
+      });
+      if (!used) return false;
+      const cooldownMs = Math.max(0, Number(actionConfig?.cooldownMs ?? 0));
+      if (cooldownMs > 0) {
+        const readyAt = Date.now() + cooldownMs;
+        cooldowns.set(skillId, readyAt);
+        setTimeout(() => {
+          if (cooldowns.get(skillId) !== readyAt) return;
+          cooldowns.delete(skillId);
+          updateActionBattleHotbar(player, options);
+          updateActionBattleActionBar(player, options);
+        }, cooldownMs);
+      }
+      updateActionBattleHotbar(player, options);
+      updateActionBattleActionBar(player, options);
+      return true;
+    } catch {
+      return false;
+    }
+  };
 
   if (actionConfig?.target === "self") {
-    executeActionBattleUse({
-      attacker: player,
-      target: player,
-      usable: skillData,
-      skill: skillData,
-    });
-    return;
+    return finishUse(player);
   }
 
   const map = player.getCurrentMap();
   if (!map) {
-    emitActionBattleClientVisual({
-      moment: "castSkill",
-      entity: player,
-      skill: skillData,
-    });
-    player.useSkill(skillId);
-    return;
+    try {
+      player.useSkill(skillId);
+      return true;
+    } catch {
+      return false;
+    }
   }
   const targeting = resolveSkillTargeting(player, skillId, options);
+  let automaticTargetValidated = false;
   if (!targeting || !target) {
-    emitActionBattleClientVisual({
-      moment: "castSkill",
-      entity: player,
-      skill: skillData,
-    });
-    player.useSkill(skillId);
-    return;
+    if (actionConfig) {
+      const affects = options.targeting?.affects || "events";
+      const candidates: Array<RpgPlayer | RpgEvent> = [];
+      if (affects === "events" || affects === "both") {
+        candidates.push(
+          ...map
+            .getEvents()
+            .filter((event: RpgEvent) =>
+              canActionBattleUseTarget(
+                player,
+                event,
+                actionConfig.target ?? "enemy",
+                options.combat?.targets
+              )
+            )
+        );
+      }
+      if (affects === "players" || affects === "both") {
+        candidates.push(
+          ...map
+            .getPlayers()
+            .filter(
+              (other: RpgPlayer) =>
+                other.id !== player.id &&
+                canActionBattleUseTarget(
+                  player,
+                  other,
+                  actionConfig.target ?? "enemy",
+                  options.combat?.targets
+                )
+            )
+        );
+      }
+      const direction =
+        typeof player.getDirection === "function"
+          ? player.getDirection()
+          : "down";
+      const softTargeting = objectOption(
+        options.combat?.player?.softTargeting
+      );
+      const tileSize = getActionBattleTileSize(map);
+      const softTarget = resolveActionBattleSoftTarget(
+        player,
+        candidates,
+        direction,
+        {
+          ...softTargeting,
+          ...(targeting && (targeting.range > 0 || actionConfig.mode !== "instant")
+            ? { range: Math.max(1, targeting.range * tileSize.width) }
+            : {}),
+        }
+      );
+      if (
+        targeting
+        && actionConfig.mode === "instant"
+        && softTarget?.target
+      ) {
+        target = getActionBattleEntityTile(softTarget.target, tileSize);
+        // Zero-range instant skills use the configured close-combat soft range.
+        // Only a server-selected target may bypass the manual tile-range check.
+        automaticTargetValidated = targeting.range === 0;
+      } else {
+        if (!softTarget && options.targeting?.allowEmptyTarget === false) {
+          return false;
+        }
+        return finishUse(softTarget?.target ?? null);
+      }
+    }
+    if (!target || !targeting) {
+      try {
+        player.useSkill(skillId);
+        return true;
+      } catch {
+        return false;
+      }
+    }
   }
 
-  const tileSize = getTileSize(map);
-  const origin = getEntityTile(player, tileSize);
+  const tileSize = getActionBattleTileSize(map);
+  const origin = getActionBattleEntityTile(player, tileSize);
   const targetTile = { x: target.x, y: target.y };
 
-  if (manhattanDistance(origin, targetTile) > targeting.range) {
-    return;
+  if (!automaticTargetValidated && manhattanDistance(origin, targetTile) > targeting.range) {
+    return false;
   }
 
-  const mask = parseAoeMask(
-    targeting.aoeMask || options.skills?.defaultAoeMask
+  const affected = new Set(
+    resolveActionBattleAoeCells(
+      targetTile,
+      targeting.aoeMask || options.skills?.defaultAoeMask
+    ).map((cell) => `${cell.x},${cell.y}`)
   );
-  const affected = new Set<string>();
-  mask.cells.forEach((cell) => {
-    const x = targetTile.x + cell.dx;
-    const y = targetTile.y + cell.dy;
-    affected.add(`${x},${y}`);
-  });
 
   const targets: any[] = [];
   const actionTarget = actionConfig?.target ?? "enemy";
   const affects = options.targeting?.affects || "events";
   if (affects === "events" || affects === "both") {
     map.getEvents().forEach((event: RpgEvent) => {
-      const tile = getEntityTile(event, tileSize);
+      const tile = getActionBattleEntityTile(event, tileSize);
       if (
         affected.has(`${tile.x},${tile.y}`) &&
         canActionBattleUseTarget(
@@ -703,7 +1276,7 @@ const handleActionBattleSkillUse = (
   if (affects === "players" || affects === "both") {
     map.getPlayers().forEach((other: RpgPlayer) => {
       if (other.id === player.id) return;
-      const tile = getEntityTile(other, tileSize);
+      const tile = getActionBattleEntityTile(other, tileSize);
       if (
         affected.has(`${tile.x},${tile.y}`) &&
         canActionBattleUseTarget(
@@ -719,15 +1292,29 @@ const handleActionBattleSkillUse = (
   }
 
   if (!options.targeting?.allowEmptyTarget && targets.length === 0) {
-    return;
+    return false;
   }
 
-  executeActionBattleUse({
-    attacker: player,
-    target: targets,
-    usable: skillData,
-    skill: skillData,
-  });
+  return finishUse(targets);
+};
+
+const handleActionBattleHotbarUse = (
+  player: RpgPlayer,
+  slot: number,
+  target: { x: number; y: number } | undefined,
+  options: ActionBattleOptions,
+) => {
+  if (!Number.isInteger(slot) || slot < 0 || slot >= 10) return false;
+  const entry = player.getHotbar?.().slots[slot];
+  if (!entry) return false;
+  if (entry.type === "skill") {
+    return handleActionBattleSkillUse(player, entry.id, target, options);
+  }
+  try {
+    return player.useHotbarSlot(slot, target);
+  } catch {
+    return false;
+  }
 };
 
 export const createActionBattleServer = (
@@ -750,112 +1337,224 @@ export const createActionBattleServer = (
        * @param input - Input data containing pressed keys
        */
       onInput(player: RpgPlayer, input: any) {
-        if (input.action == Control.Action) {
-          const map = player.getCurrentMap();
-          const direction = resolveActionBattleAttackDirection(player, input);
-          applyActionBattleAttackDirection(player, direction);
-          const attackProfile = resolvePlayerAttackProfile(player, options);
+        const state = getPlayerCombatState(player);
+        const charged = objectOption(options.combat?.player?.chargedAttack);
+        const dodge = objectOption(options.combat?.player?.dodge);
+        const guard = objectOption(options.combat?.player?.guard);
+        const runtimePlayer = player as any;
+        const now = Date.now();
+        const activeProfile = runtimePlayer
+          .__actionBattleAttackProfile as
+          | NormalizedActionBattleAttackProfile
+          | undefined;
+        const activeUntil = Number(
+          runtimePlayer.__actionBattleAttackActiveUntil ?? 0
+        );
+        const lockedUntil = Number(
+          runtimePlayer.__actionBattleAttackLockedUntil ?? 0
+        );
+        const directionalActions = new Set<any>([
+          Control.Up,
+          Control.Down,
+          Control.Left,
+          Control.Right,
+          "up",
+          "down",
+          "left",
+          "right",
+        ]);
+        if (input.action === ACTION_BATTLE_SKILL_USE) {
+          const skillId =
+            typeof input.data?.id === "string" ? input.data.id : "";
+          if (!skillId) return;
+          const target =
+            typeof input.data?.target?.x === "number" &&
+            typeof input.data?.target?.y === "number"
+              ? {
+                  x: input.data.target.x,
+                  y: input.data.target.y,
+                }
+              : undefined;
+          handleActionBattleSkillUse(player, skillId, target, options);
+          return;
+        }
+        if (input.action === ACTION_BATTLE_HOTBAR_USE) {
+          const slot = Number(input.data?.slot);
+          const target =
+            typeof input.data?.target?.x === "number" &&
+            typeof input.data?.target?.y === "number"
+              ? {
+                  x: input.data.target.x,
+                  y: input.data.target.y,
+                }
+              : undefined;
+          handleActionBattleHotbarUse(player, slot, target, options);
+          return;
+        }
+        if (
+          activeProfile?.control.moveCancelsRecovery &&
+          lockedUntil > now &&
+          activeUntil <= now &&
+          directionalActions.has(input.action)
+        ) {
+          cancelPlayerAttackRecovery(player);
+          state.queuedCombo = false;
+        }
 
-          // Convert Direction enum to string key
-          const directionKey = direction as string;
+        if (input.action === ACTION_BATTLE_GUARD_END) {
+          endActionBattleGuard(player);
+          return;
+        }
 
-          const resolveActiveHitboxes = () => resolvePlayerAttackHitboxes(
-            player,
-            directionKey,
-            options,
-            attackProfile
-          );
-          const initialHitboxes = resolveActiveHitboxes();
-
-          if (isActionReservedForNormalEvent(player, map, initialHitboxes)) {
-            return;
+        if (input.action === ACTION_BATTLE_GUARD_START && guard?.enabled) {
+          if (activeUntil > now) return;
+          if (lockedUntil > now) {
+            cancelPlayerAttackRecovery(player);
+            state.queuedCombo = false;
           }
+          beginActionBattleGuard(player, guard, now);
+          emitActionBattleClientVisual({
+            moment: "guard",
+            entity: player,
+          });
+          return;
+        }
 
-          const lockMovement = attackProfile.movementLock;
-          const lockDirection = attackProfile.directionLock;
-          const lockDurationMs =
-            attackProfile.totalDurationMs ?? DEFAULT_ATTACK_LOCK_DURATION_MS;
-          const actionLocked = (lockMovement || lockDirection) && lockDurationMs > 0;
-
+        if (input.action === ACTION_BATTLE_DODGE && dodge?.enabled) {
+          const lockedUntil = Number((player as any).__actionBattleDodgeLockedUntil ?? 0);
+          const attackLockedUntil = Number((player as any).__actionBattleAttackLockedUntil ?? 0);
+          const activeUntil = Number(
+            (player as any).__actionBattleAttackActiveUntil ?? 0
+          );
           if (
-            actionLocked &&
-            !beginPlayerAttackLock(player, map, Math.max(0, lockDurationMs), {
-              movement: lockMovement,
-              direction: lockDirection,
+            !canActionBattleDodge({
+              now,
+              dodgeLockedUntil: lockedUntil,
+              attackActiveUntil: activeUntil,
             })
           ) {
             return;
           }
-
-          withActionBattleAnimationUnlocked(player, () => {
-            emitActionBattleClientVisual({
-              moment: "attack",
-              entity: player,
-            });
-          });
-          if (actionLocked) {
-            player.animationFixed = true;
+          if (
+            attackLockedUntil > now &&
+            (activeProfile?.control.dodgeCancelsRecovery ?? true)
+          ) {
+            cancelPlayerAttackRecovery(player);
+            state.queuedCombo = false;
           }
-          const attackId = createActionBattleAttackId(
-            player.id,
-            attackProfile.id
+          (player as any).__actionBattleDodgeLockedUntil =
+            now + Math.max(0, dodge.cooldownMs ?? 650);
+          setActionBattleInvincibility(
+            player,
+            Math.max(0, dodge.invincibilityMs ?? 220),
+            now
           );
-          const weapon = resolveActionBattleWeapon(player);
-          const hitTracker = new ActionBattleHitTracker(
-            attackProfile.hitPolicy
-          );
-          const targetSelector = getActionBattleTargets(player, "events");
+          emitActionBattleClientVisual({
+            moment: "dodge",
+            entity: player,
+          });
+          return;
+        }
 
-          const processHits = (hits: any[]) => {
-            hits.forEach((hit: any) => {
-              if (
-                !canActionBattleTarget(
-                  player,
-                  hit,
-                  targetSelector,
-                  options.combat?.targets
-                )
-              ) {
-                return;
-              }
-              if (!hitTracker.tryHit(hit)) return;
-              const handledByWeapon =
-                weapon &&
-                executeActionBattleUse({
-                  attacker: player,
-                  target: hit,
-                  usable: weapon,
-                  weapon,
-                  profile: attackProfile,
-                  playVisual: false,
-                });
-              if (handledByWeapon) return;
-              applyActionBattleEntityHit(player, hit, undefined, {
-                attackId,
-                attackProfileId: attackProfile.id,
-                reaction: attackProfile.reaction,
-              });
-            });
-          };
+        if (input.action === ACTION_BATTLE_CHARGE_START && charged?.enabled) {
+          if (state.chargeStartedAt !== null) return;
+          const lockedUntil = Number((player as any).__actionBattleAttackLockedUntil ?? 0);
+          if (lockedUntil > Date.now()) return;
+          state.chargeStartedAt = Date.now();
+          const chargeToken = ++state.chargeToken;
+          setTimeout(() => {
+            if (state.chargeToken !== chargeToken) return;
+            state.chargeStartedAt = null;
+          }, (charged.maxChargeMs ?? 900) + 1000);
+          emitActionBattleClientVisual({
+            moment: "chargeStart",
+            entity: player,
+          });
+          return;
+        }
 
-          runActionBattleActiveHitbox(
-            attackProfile,
-            resolveActiveHitboxes,
-            (activeHitboxes) => {
-              const candidates = getActionBattleHitboxCandidates(map, activeHitboxes, {
-                excludeIds: [player.id],
-                kinds: ["players", "events"],
-              });
-              processHits(candidates);
+        if (input.action === ACTION_BATTLE_CHARGE_RELEASE && charged?.enabled) {
+          if (state.chargeStartedAt === null) return;
+          const elapsed = Math.max(0, Date.now() - state.chargeStartedAt);
+          state.chargeStartedAt = null;
+          state.chargeToken++;
+          const charge = resolveActionBattleCharge(elapsed, charged);
+          const base = resolvePlayerAttackProfile(player, options);
+          const profile = normalizeActionBattleAttackProfile(
+            mergeAttackProfileOverrides(base, {
+              ...charged.profile,
+              damageMultiplier: charge.damageMultiplier,
+              knockbackMultiplier: charge.knockbackMultiplier,
+            }),
+            {
+              lockMovement: options.attack?.lockMovement,
+              lockDurationMs: options.attack?.lockDurationMs,
+              hitboxes: options.attack?.hitboxes,
             }
           );
+          performPlayerAttack(player, input, options, profile, {
+            charged: true,
+            chargeRatio: charge.ratio,
+          });
+          return;
+        }
+
+        if (input.action == Control.Action) {
+          const combo = objectOption(options.combat?.player?.combo);
+          const lockedUntil = Number((player as any).__actionBattleAttackLockedUntil ?? 0);
+          if (lockedUntil > now) {
+            const remaining = lockedUntil - now;
+            if (
+              combo?.enabled &&
+              remaining <=
+                (combo.bufferMs ??
+                  activeProfile?.control.inputBufferMs ??
+                  160) &&
+              !state.queuedCombo
+            ) {
+              state.queuedCombo = true;
+              setTimeout(() => {
+                state.queuedCombo = false;
+                const next = resolvePlayerComboProfile(player, options);
+                if (
+                  performPlayerAttack(player, input, options, next.profile, {
+                    comboStep: next.step,
+                  })
+                ) {
+                  state.lastAttackAt = Date.now();
+                  state.comboIndex = next.step + 1;
+                }
+              }, remaining + 1);
+            }
+            return;
+          }
+
+          const next = resolvePlayerComboProfile(player, options, now);
+          if (
+            performPlayerAttack(player, input, options, next.profile, {
+              comboStep: next.step,
+            })
+          ) {
+            state.lastAttackAt = now;
+            state.comboIndex = next.step + 1;
+          }
         }
       },
       onConnected(player: RpgPlayer) {
-        const actionBar = options.ui?.actionBar as any;
-        if (actionBar?.enabled && actionBar?.autoOpen) {
-          openActionBattleActionBar(player, options);
-        }
+        player.initializeHotbar?.();
+        syncActionBattleHotbar(player, options);
+        syncActionBattleActionBar(player, options);
+      },
+      onJoinMap(player: RpgPlayer) {
+        player.initializeHotbar?.();
+        syncActionBattleHotbar(player, options);
+        syncActionBattleActionBar(player, options);
+      },
+      onDisconnected(player: RpgPlayer) {
+        releaseActionBattleControls(player);
+        clearActionBattleDefense(player);
+        playerCombatStates.delete(player);
+        playerSkillCooldowns.delete(player);
       },
     },
     event: {
@@ -922,6 +1621,7 @@ export {
 } from "./core/attack-runtime";
 export {
   DEFAULT_ACTION_BATTLE_ATTACK_PROFILE,
+  getActionBattleControlLockDuration,
   normalizeActionBattleAttackProfile,
   type ActionBattleAttackProfileFallbacks,
 } from "./core/attack-profile";
@@ -931,10 +1631,37 @@ export type {
   ActionBattleAttackHitboxMap,
   ActionBattleAttackHitPolicy,
   ActionBattleAttackProfile,
+  ActionBattleAttackControlOptions,
+  ActionBattleControlLock,
+  NormalizedActionBattleAttackControlOptions,
+  ActionBattleGuardOptions,
+  ActionBattleSoftTargetingOptions,
+  ActionBattleCombatDirectorOptions,
+  ActionBattleFeedbackOptions,
   ActionBattleHitReactionProfile,
   NormalizedActionBattleHitReactionProfile,
   NormalizedActionBattleAttackProfile,
 } from "./types";
+export {
+  beginActionBattleGuard,
+  clearActionBattleDefense,
+  consumeActionBattleCounter,
+  endActionBattleGuard,
+  isActionBattleGuarding,
+  normalizeActionBattleGuardOptions,
+  resolveActionBattleDefense,
+  type ActionBattleDefenseKind,
+  type ActionBattleDefenseResolution,
+} from "./core/defense";
+export {
+  acquireActionBattleAttackSlot,
+  releaseActionBattleAttackSlot,
+} from "./core/combat-director";
+export {
+  directionToActionBattleTarget,
+  resolveActionBattleSoftTarget,
+  type ActionBattleSoftTargetResult,
+} from "./targeting";
 export type {
   ActionBattleActionConfig,
   ActionBattleActionMode,
@@ -962,6 +1689,11 @@ export {
   normalizeActionBattleHitReaction,
   setActionBattleInvincibility,
 } from "./core/hit-reaction";
+export {
+  canActionBattleDodge,
+  resolveActionBattleCharge,
+  resolveActionBattleComboStep,
+} from "./core/player-combat";
 export {
   DEFAULT_ACTION_BATTLE_ENEMY_ATTACK_PROFILES,
   normalizeActionBattleEnemyAttackProfiles,
@@ -1000,6 +1732,7 @@ export type {
   BattleAiLegacyDefeatedCallback,
   BattleAiLegacyOptions,
   BattleAiOptions,
+  BattleAiDeathPresentationOptions,
   BattleAiRewardItem,
   BattleAiRewards,
   HitResult,

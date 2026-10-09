@@ -1,7 +1,14 @@
-import { PrebuiltComponentAnimations, RpgClient, RpgClientEngine, RpgGui, inject } from "@rpgjs/client";
+import {
+  PrebuiltComponentAnimations,
+  RpgClient,
+  RpgClientEngine,
+  inject,
+  registerHotbarActivationHandler,
+} from "@rpgjs/client";
 import { defineModule } from "@rpgjs/common";
 import {
   setActionBattleOptions,
+  startTargeting,
   startAttackPreview,
   stopAttackPreview,
 } from "./ui/state";
@@ -12,27 +19,44 @@ import {
   applyActionBattleAttackDirection,
   resolveActionBattleAttackDirection,
 } from "./attack-input";
+import { withActionBattleAnimationUnlocked } from "./locomotion";
+import { getActionBattleControlLockDuration } from "./core/attack-profile";
 import {
-  forceActionBattleLocomotionAnimation,
-  withActionBattleAnimationUnlocked,
-} from "./locomotion";
+  acquireActionBattleControl,
+  releaseActionBattleControls,
+} from "./core/control-state";
+import type { NormalizedActionBattleAttackProfile } from "./types";
 import { resolveActionBattleUi } from "./ui";
 import {
   ACTION_BATTLE_HIT_FX_COMPONENT_ID,
+  ACTION_BATTLE_DAMAGE_COMPONENT_ID,
+  ACTION_BATTLE_TELEGRAPH_COMPONENT_ID,
+  ACTION_BATTLE_SOFT_TARGET_COMPONENT_ID,
   createActionBattleClientVisuals,
   playActionBattleVisual,
   setActionBattlePreviewStarter,
 } from "./visual";
+import {
+  ACTION_BATTLE_COMBAT_AUDIO_ID,
+  createActionBattleCombatAudioVisual,
+  playLocalActionBattleAttackAudio,
+} from "./audio";
+// @ts-ignore CanvasEngine components are compiled by @canvasengine/compiler.
+import AttackTelegraphComponent from "./components/attack-telegraph.ce";
+// @ts-ignore CanvasEngine components are compiled by @canvasengine/compiler.
+import DamagePopupComponent from "./components/damage-popup.ce";
+// @ts-ignore CanvasEngine components are compiled by @canvasengine/compiler.
+import SoftTargetComponent from "./components/soft-target.ce";
+// @ts-ignore CanvasEngine components are compiled by @canvasengine/compiler.
+import SkillProjectileComponent from "./components/skill-projectile.ce";
+import { activateActionBattleSkill } from "./ui/skill-activation";
 
-const DEFAULT_ATTACK_LOCK_DURATION_MS = 350;
+export const ACTION_BATTLE_SKILL_PROJECTILE_TYPE = "action-battle-skill";
 
 const beginLocalPlayerAttackLock = (
   engine: RpgClientEngine,
-  durationMs: number,
-  locks: { movement: boolean; direction: boolean }
+  profile: NormalizedActionBattleAttackProfile
 ): boolean => {
-  if (durationMs <= 0) return true;
-
   const player = engine.scene?.getCurrentPlayer?.() as any;
   if (!player) return true;
 
@@ -45,37 +69,54 @@ const beginLocalPlayerAttackLock = (
     return false;
   }
 
-  const lockId = (runtimePlayer.__actionBattleAttackLockId ?? 0) + 1;
-  runtimePlayer.__actionBattleAttackLockId = lockId;
-  runtimePlayer.__actionBattleAttackLockedUntil = now + durationMs;
+  releaseActionBattleControls(player, "attack");
+  const actionId = (runtimePlayer.__actionBattleAttackLockId ?? 0) + 1;
+  runtimePlayer.__actionBattleAttackLockId = actionId;
+  runtimePlayer.__actionBattleAttackLockedUntil =
+    now + profile.totalDurationMs;
+  runtimePlayer.__actionBattleAttackActiveUntil =
+    now + profile.startupMs + profile.activeMs;
 
-  const previousCanMove = player.canMove;
-  const previousDirectionFixed = player.directionFixed;
-  const previousAnimationFixed = player.animationFixed;
+  const movementDuration = getActionBattleControlLockDuration(
+    profile,
+    profile.control.movementLock
+  );
+  const directionDuration = getActionBattleControlLockDuration(
+    profile,
+    profile.control.directionLock
+  );
 
-  if (locks.movement) {
+  if (movementDuration > 0) {
     if (typeof engine.interruptCurrentPlayerMovement === "function") {
       engine.interruptCurrentPlayerMovement(player);
     } else {
       (engine.scene as any)?.stopMovement?.(player);
     }
-    player.canMove = false;
+    acquireActionBattleControl(player, {
+      owner: "attack",
+      movement: true,
+      durationMs: movementDuration,
+    });
   }
-  if (locks.direction) {
-    player.directionFixed = true;
+  if (directionDuration > 0) {
+    acquireActionBattleControl(player, {
+      owner: "attack",
+      direction: true,
+      durationMs: directionDuration,
+    });
   }
-  player.animationFixed = true;
+  acquireActionBattleControl(player, {
+    owner: "attack",
+    animation: true,
+    durationMs: profile.totalDurationMs,
+  });
 
   setTimeout(() => {
-    if (runtimePlayer.__actionBattleAttackLockId !== lockId) return;
+    if (runtimePlayer.__actionBattleAttackLockId !== actionId) return;
     runtimePlayer.__actionBattleAttackLockedUntil = 0;
-    player.canMove = previousCanMove;
-    player.directionFixed = previousDirectionFixed;
-    player.animationFixed = previousAnimationFixed;
-    if (locks.movement && !previousAnimationFixed) {
-      forceActionBattleLocomotionAnimation(player, "stand");
-    }
-  }, durationMs);
+    runtimePlayer.__actionBattleAttackActiveUntil = 0;
+    releaseActionBattleControls(player, "attack");
+  }, profile.totalDurationMs);
 
   return true;
 };
@@ -94,6 +135,7 @@ const playLocalPlayerAttackAnimation = (
     playActionBattleVisual(options.visual, {
       moment: "attack",
       entity: player,
+      animations: options.animations,
     });
   });
 };
@@ -112,6 +154,17 @@ export const createActionBattleClient = (
 ) => {
   const normalized = normalizeActionBattleOptions(options);
   setActionBattleOptions(normalized);
+  registerHotbarActivationHandler("action-battle.skill", (context) => {
+    const skill = context.slot.activation?.payload?.skill as any;
+    if (!skill) return false;
+    const player = inject(RpgClientEngine).scene?.getCurrentPlayer?.() as any;
+    return activateActionBattleSkill(skill, {
+      direction: resolveLocalPlayerDirection(player),
+      use: () => context.use(),
+      target: (offset) =>
+        startTargeting(skill, offset, (target) => context.use(target)),
+    });
+  });
   setActionBattlePreviewStarter((entity, previewOptions = {}) => {
     const direction = previewOptions.direction ?? resolveLocalPlayerDirection(entity);
     const durationMs = Math.max(
@@ -128,7 +181,6 @@ export const createActionBattleClient = (
     setTimeout(() => stopAttackPreview(previewId), durationMs);
   });
   const resolvedUi = resolveActionBattleUi(normalized.ui);
-  const actionBarEnabled = resolvedUi.actionBar.enabled;
   const hitComponent = PrebuiltComponentAnimations?.Hit;
   const fxComponent = PrebuiltComponentAnimations?.Fx;
   return defineModule<RpgClient>({
@@ -149,8 +201,29 @@ export const createActionBattleClient = (
             },
           ]
         : []),
+      {
+        id: ACTION_BATTLE_TELEGRAPH_COMPONENT_ID,
+        component: AttackTelegraphComponent,
+      },
+      {
+        id: ACTION_BATTLE_DAMAGE_COMPONENT_ID,
+        component: DamagePopupComponent,
+      },
+      {
+        id: ACTION_BATTLE_SOFT_TARGET_COMPONENT_ID,
+        component: SoftTargetComponent,
+      },
     ],
-    clientVisuals: createActionBattleClientVisuals(normalized),
+    clientVisuals: {
+      ...createActionBattleClientVisuals(normalized),
+      [ACTION_BATTLE_COMBAT_AUDIO_ID]:
+        createActionBattleCombatAudioVisual(normalized.audio),
+    },
+    projectiles: {
+      components: {
+        [ACTION_BATTLE_SKILL_PROJECTILE_TYPE]: SkillProjectileComponent,
+      },
+    },
     gui: resolvedUi.gui,
     sprite: {
       componentsBehind: resolvedUi.sprite.componentsBehind,
@@ -158,32 +231,47 @@ export const createActionBattleClient = (
     },
     sceneMap: {
       onAfterLoading() {
-        if (actionBarEnabled && resolvedUi.actionBar.autoOpen) {
-          const gui = inject(RpgGui)
-          gui.display('action-battle-action-bar')
+        const engine = inject(RpgClientEngine);
+        engine.music.resetOverride();
+        const dodge = normalized.combat?.player?.dodge;
+        if (dodge && typeof dodge === "object" && dodge.enabled !== false) {
+          engine.dashDefaults = {
+            duration: dodge.durationMs,
+            cooldown: dodge.cooldownMs,
+            additionalSpeed: dodge.additionalSpeed,
+          };
+        } else {
+          engine.dashDefaults = {};
         }
       }
     },
     engine: {
       onInput(engine: RpgClientEngine, { input, data }: any) {
+        if (input?.type === "dash") {
+          const dodge = normalized.combat?.player?.dodge;
+          if (dodge && typeof dodge === "object" && dodge.enabled !== false) {
+            engine.processAction("action-battle:dodge", {
+              direction: input.direction,
+            });
+          }
+          return;
+        }
         if (input !== "action") return;
         const player = engine.scene?.getCurrentPlayer?.() as any;
         if (!player) return;
         const direction = resolveActionBattleAttackDirection(player, { data });
         applyActionBattleAttackDirection(player, direction);
         const attackProfile = getNormalizedActionBattleAttackProfile(normalized);
-        const lockDurationMs = Math.max(
-          0,
-          attackProfile.totalDurationMs ?? DEFAULT_ATTACK_LOCK_DURATION_MS
-        );
-        if (attackProfile.movementLock || attackProfile.directionLock) {
-          const locked = beginLocalPlayerAttackLock(engine, lockDurationMs, {
-            movement: attackProfile.movementLock,
-            direction: attackProfile.directionLock,
-          });
+        if (attackProfile.totalDurationMs > 0) {
+          const locked = beginLocalPlayerAttackLock(engine, attackProfile);
           if (!locked) return;
         }
         playLocalPlayerAttackAnimation(player, normalized);
+        playLocalActionBattleAttackAudio(engine, normalized.audio, {
+          moment: "attack",
+          entity: player,
+          engine,
+        });
         showLocalAttackPreview(player, normalized);
       },
     }

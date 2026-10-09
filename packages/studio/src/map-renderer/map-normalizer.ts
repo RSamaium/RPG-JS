@@ -226,7 +226,7 @@ function normalizeMorphologyFeatures(value: unknown): StudioTerrainMorphologyFea
         kind,
         params: (candidate.params && typeof candidate.params === "object"
           ? candidate.params
-          : {}) as Record<string, unknown>,
+          : {}) as StudioTerrainMorphologyFeature["params"],
         strokes,
         ...(eraserStrokes.length > 0 ? { eraserStrokes } : {}),
         ...(operations.length > 0 ? { operations } : {}),
@@ -284,18 +284,11 @@ function normalizeTerrainControlTexture(
 
 function normalizeWaterAnimationOptions(value: unknown): StudioWaterAnimationOptions {
   const options = parseObject(value);
-  if (!options || options.enabled !== true) {
-    return {
-      enabled: false,
-      speed: 1,
-      intensity: 0.45,
-    };
-  }
-
   return {
-    enabled: true,
-    speed: clampNumber(positiveNumber(options.speed) ?? 1, 0.1, 4),
-    intensity: clampNumber(positiveNumber(options.intensity) ?? 0.45, 0.05, 1),
+    enabled: options?.enabled === true,
+    speed: clampNumber(finiteNumber(options?.speed) ?? 1, 0.1, 4),
+    intensity: clampNumber(finiteNumber(options?.intensity) ?? 0.45, 0, 1),
+    direction: normalizeDegrees(finiteNumber(options?.direction) ?? 90),
   };
 }
 
@@ -350,6 +343,16 @@ function normalizeTile(value: unknown): number {
 function positiveNumber(value: unknown): number | undefined {
   const numberValue = Number(value);
   return Number.isFinite(numberValue) && numberValue > 0 ? numberValue : undefined;
+}
+
+function finiteNumber(value: unknown): number | undefined {
+  if (value === null || value === undefined || value === "") return undefined;
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue : undefined;
+}
+
+function normalizeDegrees(value: number): number {
+  return ((value % 360) + 360) % 360;
 }
 
 function clampNumber(value: number, min: number, max: number): number {

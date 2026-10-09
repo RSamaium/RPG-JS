@@ -2,18 +2,13 @@ import { provideGlobalConfig, Presets } from "@rpgjs/client";
 import { provideClientModules, withMobile } from "@rpgjs/client";
 import { configCommon, studio } from "./config.common";
 import { provideActionBattle } from "@rpgjs/action-battle/client";
-import { createStudioActionBattleAnimations, provideStudioGame } from "@rpgjs/studio/client";
+import { createStudioActionBattlePreset, provideStudioGame } from "@rpgjs/studio/client";
 
 export const configClient = {
   providers: [
     provideStudioGame(studio),
     provideActionBattle({
-      animations: createStudioActionBattleAnimations(),
-      ui: {
-        actionBar: {
-          enabled: false
-        }
-      }
+      ...createStudioActionBattlePreset()
     }),
     provideGlobalConfig({
       keyboardControls: {
@@ -28,7 +23,12 @@ export const configClient = {
     }),
     ...configCommon.providers,
     provideClientModules([
-      withMobile()
+      withMobile({
+        buttons: {
+          dash: true,
+          heavy: true
+        }
+      })
     ]),
   ],
 };

@@ -1,4 +1,4 @@
-import { computed, signal } from "canvasengine";
+import { computed, signal, type WritableSignal } from "canvasengine";
 import { Hooks } from "@rpgjs/common";
 import { normalizeRoomMapId } from "../utils/mapId";
 
@@ -79,12 +79,52 @@ interface RuntimeProjectile {
   impactStartedAt?: number;
   destroyAt?: number;
   destroyReason?: string;
+  /** Reactive props handed to the rendered component, updated every step. */
+  renderProps?: ProjectileRenderProps;
 }
+
+/** Props that change while a projectile is rendered. */
+type ProjectileDynamicProp = typeof PROJECTILE_DYNAMIC_PROPS[number];
+
+/**
+ * Props of a rendered projectile component: spawn data as plain values and the
+ * props that change over time as signals updated every step.
+ */
+export type ProjectileRenderProps = Omit<RenderedProjectileProps, ProjectileDynamicProp> & {
+  [K in ProjectileDynamicProp]-?: WritableSignal<RenderedProjectileProps[K] | null>;
+};
+
+/** Item of `ProjectileManager.renderList`. */
+export interface ProjectileRenderItem {
+  id: string;
+  type: string;
+  component: any;
+  props: ProjectileRenderProps;
+}
+
+const PROJECTILE_DYNAMIC_PROPS = [
+  "x", "y", "angle", "distance", "elapsed", "progress",
+  "impact", "impactElapsed", "impactProgress", "destroyed",
+] as const;
+
+// Components validate signal values, so dynamic props never hold `undefined`:
+// before an impact, `impact` is null and its progress values are 0.
+const PROJECTILE_DYNAMIC_DEFAULTS: Partial<Record<ProjectileDynamicProp, unknown>> = {
+  impact: null,
+  impactElapsed: 0,
+  impactProgress: 0,
+  destroyed: false,
+};
+
+const dynamicPropValue = (props: RenderedProjectileProps, key: ProjectileDynamicProp): unknown =>
+  props[key] ?? PROJECTILE_DYNAMIC_DEFAULTS[key];
 
 export class ProjectileManager {
   private readonly components = new Map<string, any>();
   private readonly projectiles = new Map<string, RuntimeProjectile>();
   private readonly version = signal(0);
+  /** Changes only when projectiles appear or disappear, not on every step. */
+  private readonly structureVersion = signal(0);
   private readonly impactDurationMs = 350;
   private mapId?: string;
 
@@ -110,6 +150,32 @@ export class ProjectileManager {
       });
     }
     return rendered;
+  });
+
+  /**
+   * Projectiles to render, with reactive props.
+   *
+   * Unlike `current`, this list only changes when a projectile appears or
+   * disappears; positions and progress are pushed into each item's signals by
+   * `step()`, so rendered components are not rebuilt on every frame.
+   */
+  renderList = computed<ProjectileRenderItem[]>(() => {
+    this.structureVersion();
+    const now = Date.now();
+    const items: ProjectileRenderItem[] = [];
+    for (const projectile of this.projectiles.values()) {
+      const props = this.toProps(projectile, now);
+      if (!props) {
+        continue;
+      }
+      items.push({
+        id: projectile.spawn.id,
+        type: projectile.spawn.type,
+        component: projectile.component,
+        props: this.syncRenderProps(projectile, props),
+      });
+    }
+    return items;
   });
 
   register(type: string, component: any): any {
@@ -208,6 +274,7 @@ export class ProjectileManager {
   step(): void {
     const now = Date.now();
     let changed = false;
+    let structureChanged = false;
     for (const [id, projectile] of this.projectiles) {
       const props = this.toProps(projectile, now);
       if (
@@ -216,9 +283,18 @@ export class ProjectileManager {
       ) {
         this.projectiles.delete(id);
         changed = true;
+        structureChanged = true;
+        continue;
+      }
+      // A projectile becomes visible once its delay has elapsed
+      if (props && !projectile.renderProps) {
+        structureChanged = true;
+      }
+      if (props && projectile.renderProps) {
+        this.syncRenderProps(projectile, props);
       }
     }
-    this.touch(changed || this.projectiles.size > 0);
+    this.touch(changed || this.projectiles.size > 0, structureChanged);
   }
 
   private toProps(projectile: RuntimeProjectile, now: number): RenderedProjectileProps | null {
@@ -338,9 +414,38 @@ export class ProjectileManager {
     return a.targetId !== undefined && a.targetId === b.targetId;
   }
 
-  private touch(force = true): void {
+  private touch(force = true, structure = force): void {
     if (force) {
       this.version.update((value) => value + 1);
     }
+    if (structure) {
+      this.structureVersion.update((value) => value + 1);
+    }
   }
+
+  private syncRenderProps(projectile: RuntimeProjectile, props: RenderedProjectileProps): ProjectileRenderProps {
+    if (!projectile.renderProps) {
+      const created: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(props)) {
+        // Omit undefined spawn fields so component defaults apply
+        if (value !== undefined && !(PROJECTILE_DYNAMIC_PROPS as readonly string[]).includes(key)) {
+          created[key] = value;
+        }
+      }
+      for (const key of PROJECTILE_DYNAMIC_PROPS) {
+        created[key] = signal(dynamicPropValue(props, key));
+      }
+      projectile.renderProps = created as ProjectileRenderProps;
+      return projectile.renderProps;
+    }
+    const current = projectile.renderProps as unknown as Record<string, { (): unknown; set(value: unknown): void }>;
+    for (const key of PROJECTILE_DYNAMIC_PROPS) {
+      const value = dynamicPropValue(props, key);
+      if (current[key]() !== value) {
+        current[key].set(value);
+      }
+    }
+    return projectile.renderProps;
+  }
+
 }

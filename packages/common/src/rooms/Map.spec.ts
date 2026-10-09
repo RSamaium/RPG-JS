@@ -101,6 +101,36 @@ describe("RpgCommonMap static hitboxes", () => {
     expect(map.getBody("studio-event")?.height).toBe(50);
   });
 
+  test.each([
+    { name: "blocks characters inside the hitbox z range", hitboxZ: { z: 0, zHeight: 32 }, characterZ: 0, blocked: true },
+    { name: "lets characters above the hitbox z range pass", hitboxZ: { z: 0, zHeight: 32 }, characterZ: 32, blocked: false },
+    { name: "lets characters below the hitbox z range pass", hitboxZ: { z: 64, zHeight: 32 }, characterZ: 0, blocked: false },
+    { name: "blocks characters at every z without a hitbox z range", hitboxZ: {}, characterZ: 96, blocked: true },
+  ])("$name", ({ hitboxZ, characterZ, blocked }) => {
+    const map = new TestMap();
+    const character = {
+      id: "character",
+      x: signal(100),
+      y: signal(100),
+      z: signal(characterZ),
+      hitbox: signal({ w: 32, h: 32 }),
+      _removeTransition: signal(false),
+    };
+
+    map.data.set({
+      width: 200,
+      height: 200,
+      hitboxes: [{ id: "water", x: 96, y: 96, width: 32, height: 32, ...hitboxZ }],
+    });
+    map.events.set({ character });
+    map.loadPhysic();
+
+    map.physic.stepFrame();
+
+    const moved = character.x() !== 100 || character.y() !== 100;
+    expect(moved).toBe(blocked);
+  });
+
   test("lets event touch sensors overlap other events without physical separation", () => {
     const map = new TestMap();
     const plate = {

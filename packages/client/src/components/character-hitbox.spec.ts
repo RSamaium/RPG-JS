@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   resolveHitboxAnchor,
+  resolveScaledGraphicBounds,
   resolveScaledHitboxAnchor,
   scaleHitboxForGraphicDisplay,
 } from "./character-hitbox";
@@ -29,5 +30,61 @@ describe("character hitbox display helpers", () => {
     const renderedBottom = (1 - anchor[1]) * 256 * 0.5;
 
     expect(renderedBottom).toBe(50);
+  });
+
+  test("positions components above the visible pixels of a scaled spritesheet frame", () => {
+    const bounds = resolveScaledGraphicBounds({
+      frameWidth: 256,
+      frameHeight: 256,
+      visibleBounds: {
+        left: 69,
+        top: 28,
+        right: 191,
+        bottom: 222,
+      },
+      anchor: [0.35119047619047616, 0.7023809523809523],
+      scale: [0.42, 0.42],
+    });
+
+    expect(bounds.top).toBeCloseTo(-63.76, 3);
+    expect(bounds.width).toBeCloseTo(51.24, 3);
+    expect(bounds.height).toBeCloseTo(81.48, 3);
+    expect(bounds.centerX).toBeCloseTo(16.84, 2);
+  });
+
+  test("uses the full scaled frame until transparent bounds are available", () => {
+    const bounds = resolveScaledGraphicBounds({
+      frameWidth: 256,
+      frameHeight: 256,
+      anchor: [0.35119047619047616, 0.7023809523809523],
+      scale: [0.42, 0.42],
+    });
+
+    expect(bounds.top).toBeCloseTo(-75.52, 2);
+    expect(bounds.width).toBeCloseTo(107.52, 2);
+    expect(bounds.height).toBeCloseTo(107.52, 2);
+  });
+
+  test("normalizes non-uniform mirrored graphic scales", () => {
+    const bounds = resolveScaledGraphicBounds({
+      frameWidth: 100,
+      frameHeight: 80,
+      visibleBounds: { left: 10, top: 20, right: 70, bottom: 60 },
+      anchor: [0.25, 0.5],
+      scale: [-2, 0.5],
+      x: 4,
+      y: -3,
+    });
+
+    expect(bounds).toEqual({
+      left: -86,
+      top: -13,
+      right: 34,
+      bottom: 7,
+      width: 120,
+      height: 20,
+      centerX: -26,
+      centerY: -3,
+    });
   });
 });

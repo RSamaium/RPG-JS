@@ -1,19 +1,198 @@
 import { describe, expect, test, vi } from "vitest";
 import {
+  CharacterSelectGui,
   DialogGui,
   DialogPosition,
   GameoverGui,
   Gui,
+  InputGui,
   MenuGui,
   NotificationGui,
   RpgPlayer,
   SaveLoadGui,
   ShopGui,
   TitleGui,
-  signal,
 } from "../src";
+import { signal } from "@signe/reactive";
+import { createHotbarState } from "@rpgjs/common";
+
+const emptyHotbarPlayer = {
+  getHotbar: () => createHotbarState(),
+  isHotbarEntryTypeAllowed: () => true,
+};
 
 describe("GUI", () => {
+  test("character select returns only a server-provided actor", async () => {
+    const player: any = { canMove: true, emit: vi.fn() };
+    const hero = { id: "hero", name: "Hero", graphic: "hero-sheet" };
+    const mage = { id: "mage", name: "Mage", description: "Uses magic" };
+    const gui = new CharacterSelectGui(player);
+    const pending = gui.openCharacterSelect([hero, mage], { selectedActorId: "mage" });
+
+    expect(player.emit).toHaveBeenCalledWith("gui.open", expect.objectContaining({
+      guiId: "rpg-character-select",
+      data: expect.objectContaining({
+        actors: [hero, mage],
+        selectedActorId: "mage",
+        allowCancel: false,
+      }),
+    }));
+    expect(player.canMove).toBe(false);
+
+    await gui.emit("select", { id: "intruder" });
+    expect(player.canMove).toBe(false);
+
+    await gui.emit("select", { id: "hero" });
+    await expect(pending).resolves.toBe(hero);
+    expect(player.canMove).toBe(true);
+  });
+
+  test("character select validates candidates and optional cancellation", async () => {
+    const player: any = { canMove: true, emit: vi.fn() };
+    const gui = new CharacterSelectGui(player);
+
+    expect(() => gui.openCharacterSelect([])).toThrow("at least one actor");
+    expect(() => gui.openCharacterSelect([
+      { id: "hero", name: "Hero" },
+      { id: "hero", name: "Copy" },
+    ])).toThrow("unique actor IDs");
+
+    const pending = gui.openCharacterSelect([{ id: "hero", name: "Hero" }], { allowCancel: true });
+    await gui.emit("cancel", {});
+    await expect(pending).resolves.toBeNull();
+  });
+
+  test("character select exposes only presentation-safe class, illustration and stat data", () => {
+    const player: any = { canMove: true, emit: vi.fn() };
+    const gui = new CharacterSelectGui(player);
+
+    const pending = gui.openCharacterSelect([{
+      id: "hero",
+      name: "Lorian",
+      description: "A young knight",
+      illustration: "lorian-illustration",
+      class: {
+        id: "knight",
+        name: "Knight",
+        description: "A sturdy melee fighter",
+        icon: "sword-icon",
+        privateServerValue: "hidden",
+      },
+      parameters: {
+        maxHp: { start: 120, end: 900 },
+        str: { start: 16, end: 80 },
+        pdef: { start: 14, end: 70 },
+        agi: { start: 13, end: 60 },
+        int: { start: 8, end: 45 },
+      },
+      serverOnly: "hidden",
+    }]);
+
+    expect(player.emit).toHaveBeenCalledWith("gui.open", expect.objectContaining({
+      data: expect.objectContaining({
+        actors: [{
+          id: "hero",
+          name: "Lorian",
+          description: "A young knight",
+          graphic: undefined,
+          faceset: undefined,
+          illustration: "lorian-illustration",
+          className: "Knight",
+          classDescription: "A sturdy melee fighter",
+          classIcon: "sword-icon",
+          stats: { maxHp: 120, str: 16, pdef: 14, agi: 13, int: 8 },
+        }],
+      }),
+    }));
+
+    gui.close();
+    return pending;
+  });
+
+  test("input gui returns typed text and number values", async () => {
+    const player: any = { canMove: true, emit: vi.fn() };
+
+    const textGui = new InputGui(player);
+    const textPending = textGui.openInput("Name", { required: true, minLength: 2 });
+    await textGui.emit("submit", { value: "Hero" });
+    await expect(textPending).resolves.toBe("Hero");
+
+    const numberGui = new InputGui(player);
+    const numberPending = numberGui.openInput("Age", { type: "number", min: 1, max: 120 });
+    await numberGui.emit("submit", { value: "42" });
+    await expect(numberPending).resolves.toBe(42);
+    expect(player.canMove).toBe(true);
+  });
+
+  test("input gui keeps invalid submissions open and returns null for an empty optional number", async () => {
+    const sent: any[] = [];
+    const player: any = {
+      canMove: true,
+      emit(type: string, value: any) {
+        sent.push({ type, value });
+      },
+    };
+    const gui = new InputGui(player);
+    const pending = gui.openInput("Age", { type: "number", required: true, min: 18 });
+
+    await gui.emit("submit", { value: "nope" });
+    expect(player.canMove).toBe(false);
+    expect(sent.at(-1)).toMatchObject({
+      type: "gui.update",
+      value: { guiId: "rpg-input", data: { errorKey: "rpg.input.error.number" } },
+    });
+
+    await gui.emit("submit", { value: "18" });
+    await expect(pending).resolves.toBe(18);
+
+    const optionalGui = new InputGui(player);
+    const optionalPending = optionalGui.openInput("Score", { type: "number" });
+    await optionalGui.emit("submit", { value: "" });
+    await expect(optionalPending).resolves.toBeNull();
+  });
+
+  test("input gui validates text constraints and supports cancellation", async () => {
+    const player: any = { canMove: true, emit: vi.fn() };
+    const gui = new InputGui(player);
+    const pending = gui.openInput("Email", { type: "email", required: true, maxLength: 30 });
+
+    await gui.emit("submit", { value: "invalid" });
+    expect(player.emit).toHaveBeenLastCalledWith("gui.update", expect.objectContaining({
+      data: expect.objectContaining({ errorKey: "rpg.input.error.email" }),
+    }));
+
+    await gui.emit("cancel", {});
+    await expect(pending).resolves.toBeNull();
+    expect(player.canMove).toBe(true);
+  });
+
+  test("dialog gui reuses typed input validation and stays open on errors", async () => {
+    const sent: any[] = [];
+    const player: any = {
+      canMove: true,
+      emit(type: string, value: any) {
+        sent.push({ type, value });
+      },
+    };
+    const gui = new DialogGui(player);
+    const pending = gui.openDialog("How old are you?", {
+      input: { type: "number", required: true, min: 18 },
+    });
+
+    await gui.emit("submit", { value: "17" });
+    expect(player.canMove).toBe(false);
+    expect(sent.at(-1)).toMatchObject({
+      type: "gui.update",
+      value: {
+        guiId: "rpg-dialog",
+        data: { input: { errorKey: "rpg.input.error.min", errorParams: { min: 18 } } },
+      },
+    });
+
+    await gui.emit("submit", { value: "21" });
+    await expect(pending).resolves.toBe(21);
+    expect(player.canMove).toBe(true);
+  });
   test("main menu sends cloneable data when inventory data contains signals", () => {
     const inventoryItem = {
       id: signal("sword"),
@@ -33,6 +212,7 @@ describe("GUI", () => {
     };
     const sent: any[] = [];
     const player: any = {
+      ...emptyHotbarPlayer,
       canMove: signal(true),
       items: signal([inventoryItem]),
       equipments: signal([inventoryItem]),
@@ -63,11 +243,13 @@ describe("GUI", () => {
         guiId: "rpg-main-menu",
         data: {
           expForNextlevel: 150,
+          menus: expect.arrayContaining([expect.objectContaining({ id: "status", label: "rpg.menu.status" })]),
           items: [
             {
               id: "sword",
               icon: "db-icon",
               type: "weapon",
+              hotbarAssignable: false,
               equipped: true,
             },
           ],
@@ -75,6 +257,7 @@ describe("GUI", () => {
             {
               id: "fire",
               name: "Fire",
+              icon: "db-icon",
               spCost: 3,
             },
           ],
@@ -89,6 +272,7 @@ describe("GUI", () => {
   test("main menu item and equipment actions sync the player and refresh the client", async () => {
     const sent: any[] = [];
     const player: any = {
+      ...emptyHotbarPlayer,
       canMove: true,
       items: signal([{ id: "potion", name: "Potion", quantity: 2 }]),
       equipments: signal([]),
@@ -109,6 +293,13 @@ describe("GUI", () => {
     const gui = new MenuGui(player);
     const pending = gui.open();
 
+    expect(sent[0].value.data.items[0]).toMatchObject({
+      id: "potion",
+      type: "item",
+      usable: true,
+      hotbarAssignable: true,
+    });
+
     await gui.emit("useItem", { id: "potion", clientActionId: "use-1" });
     await gui.emit("equipItem", { id: "sword", equip: true, clientActionId: "equip-1" });
 
@@ -128,6 +319,7 @@ describe("GUI", () => {
   test("main menu reports action errors and still refreshes the menu", async () => {
     const sent: any[] = [];
     const player: any = {
+      ...emptyHotbarPlayer,
       canMove: true,
       items: signal([{ id: "potion", name: "Potion", quantity: 1 }]),
       equipments: signal([]),
@@ -161,6 +353,7 @@ describe("GUI", () => {
 
   test("main menu exit resolves the waiting open call and restores movement", async () => {
     const player: any = {
+      ...emptyHotbarPlayer,
       canMove: true,
       items: signal([]),
       equipments: signal([]),

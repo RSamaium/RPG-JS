@@ -1,28 +1,33 @@
 <Canvas width={engine.width} height={engine.height}>
-  <Viewport worldWidth worldHeight clamp sortableChildren={true}>
-    @if (lightingAmbientEnabled()) {
-      <NightAmbiant
-        spots={nightLights}
-        darkness={lightingDarknessProps}
-        haze={lightingHaze}
-      />
-    }
-    @if (shadowEnabled()) {
-      <SpriteShadows
-        lights={shadowLights}
-        ambientLight={shadowAmbientLight}
-        minInfluence={shadowMinInfluence}
-        falloffPower={shadowFalloffPower}
-        mode={shadowMode}
-        updateHz={shadowUpdateHz}
-        scanHz={shadowScanHz}
-        cullToViewport={shadowCullToViewport}
-        shadowColor={shadowColor}
-      />
-    }
-    <SceneMap />
-  </Viewport>
-  @for (gui of guiList) {
+  @if (isMapScene()) {
+    <Viewport worldWidth worldHeight clamp sortableChildren={true}>
+      @if (lightingAmbientEnabled()) {
+        <NightAmbiant
+          spots={nightLights}
+          darkness={lightingDarknessProps}
+          haze={lightingHaze}
+        />
+      }
+      @if (shadowEnabled()) {
+        <SpriteShadows
+          lights={shadowLights}
+          ambientLight={shadowAmbientLight}
+          minInfluence={shadowMinInfluence}
+          falloffPower={shadowFalloffPower}
+          mode={shadowMode}
+          updateHz={shadowUpdateHz}
+          scanHz={shadowScanHz}
+          cullToViewport={shadowCullToViewport}
+          shadowColor={shadowColor}
+        />
+      }
+      <SceneMap />
+    </Viewport>
+  }
+  @else if (RoomScene()) {
+    <RoomScene() room={engine.sceneRoom} descriptor={engine.activeRoom()} />
+  }
+  @for (gui of guiList; track gui.renderKey ?? gui.name) {
       <Container
         positionType="absolute"
         top={0}
@@ -32,7 +37,7 @@
         width={engine.width}
         height={engine.height}
       >
-        @if (gui.display) {
+        @if (gui.display()) {
           <gui.component data={gui.data} dependencies={gui.dependencies} guiOpenId={gui.openId} onFinish={(data, guiOpenId) => {
             onGuiFinish(gui, data, guiOpenId)
           }} onInteraction={(name, data) => {
@@ -53,6 +58,8 @@
 
   const engine = inject(RpgClientEngine);
   const SceneMap = engine.sceneMapComponent;
+  const RoomScene = engine.activeRoomSceneComponent;
+  const isMapScene = computed(() => engine.activeSceneKind() === "map");
   const guiService = inject(RpgGui);
   const sceneData = engine.sceneMap.data
   const lighting = engine.sceneMap.lighting

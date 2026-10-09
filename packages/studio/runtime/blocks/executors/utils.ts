@@ -38,6 +38,7 @@ function getBlockEmoji(blockType: string): string {
   const emojiMap: Record<string, string> = {
     // Message blocks
     show_text: '💬',
+    show_input: '⌨️',
     show_choices: '🔀',
     
     // Control blocks
@@ -296,7 +297,7 @@ export function getItemCount(player: ExecutionPlayer, itemId: string): number {
  * ```
  */
 export function getEvent(
-  context: GameExecutionContext,
+  context: Pick<GameExecutionContext, 'player' | 'event'> & Partial<Pick<GameExecutionContext, 'map'>>,
   params: { eventId?: string }
 ): ExecutionEvent | undefined {
   if (!params.eventId) {

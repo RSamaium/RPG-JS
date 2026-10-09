@@ -1,0 +1,51 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "rpgjs-cloudflare-mmorpg",
+  "main": "src/worker.ts",
+  "compatibility_date": "2024-12-30",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./dist/client",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "RPGJS_ROOMS",
+        "class_name": "RpgServerDurableObject"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["RpgServerDurableObject"]
+    }
+  ],
+  "env": {
+    "staging": {
+      "name": "rpgjs-cloudflare-mmorpg-staging",
+      "workers_dev": true,
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "RPGJS_ROOMS",
+            "class_name": "RpgServerDurableObject"
+          }
+        ]
+      }
+    },
+    "production": {
+      "name": "rpgjs-cloudflare-mmorpg-production",
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "RPGJS_ROOMS",
+            "class_name": "RpgServerDurableObject"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -99,12 +99,12 @@ const playerId = client.playerId
 
 ## Testing with Custom Modules
 
-You can test your custom modules by passing them to the `testing()` function. The recommended way is to use `createModule` with an object containing `server` and `client` properties:
+You can test your custom modules by passing their server and client definitions to the `testing()` function:
 
 ```typescript
 import { testing } from '@rpgjs/testing'
-import { defineModule, createModule } from '@rpgjs/common'
-import type { RpgServer, RpgClient } from '@rpgjs/server'
+import { defineModule, type RpgServer } from '@rpgjs/server'
+import type { RpgClient } from '@rpgjs/client'
 
 // Define your server module
 const serverModule = defineModule<RpgServer>({
@@ -139,13 +139,7 @@ const clientModule = defineModule<RpgClient>({
   // Client-side logic
 })
 
-// Create the module with server and client separated
-const myModule = createModule('MyModule', [
-  {
-    server: serverModule,
-    client: clientModule,
-  },
-])
+const myModule = [{ server: serverModule, client: clientModule }]
 
 // Use it in tests
 let player: RpgPlayer
@@ -201,7 +195,6 @@ const fixture = await testing([], {
 import { testing } from '@rpgjs/testing'
 import { beforeEach, afterEach, test, expect } from 'vitest'
 import { RpgPlayer } from '@rpgjs/server'
-import { defineModule, createModule } from '@rpgjs/common'
 import type { RpgServer, RpgClient } from '@rpgjs/server'
 import { myModule } from './my-module'
 
@@ -289,8 +282,8 @@ Test server-side hooks and events:
 
 ```typescript
 import { testing } from '@rpgjs/testing'
-import { defineModule, createModule } from '@rpgjs/common'
-import type { RpgServer, RpgClient } from '@rpgjs/server'
+import { defineModule, type RpgServer } from '@rpgjs/server'
+import type { RpgClient } from '@rpgjs/client'
 import { beforeEach, afterEach, test, expect, vi } from 'vitest'
 import { RpgPlayer } from '@rpgjs/server'
 
@@ -314,12 +307,7 @@ const serverModule = defineModule<RpgServer>({
 
 const clientModule = defineModule<RpgClient>({})
 
-const testModule = createModule('TestModule', [
-  {
-    server: serverModule,
-    client: clientModule,
-  },
-])
+const testModule = [{ server: serverModule, client: clientModule }]
 
 let player: RpgPlayer
 let fixture: any
@@ -356,8 +344,7 @@ First, define maps in your server module and set up an initial map change:
 
 ```typescript
 import { testing } from '@rpgjs/testing'
-import { defineModule, createModule } from '@rpgjs/common'
-import { RpgPlayer, RpgServer } from '@rpgjs/server'
+import { defineModule, RpgPlayer, RpgServer } from '@rpgjs/server'
 import { RpgClient } from '@rpgjs/client'
 import { beforeEach, test, expect } from 'vitest'
 
@@ -394,10 +381,10 @@ let client: any
 let fixture: any
 
 beforeEach(async () => {
-  const myModule = createModule('TestModule', [{
+  const myModule = [{
     server: serverModule,
     client: clientModule
-  }])
+  }]
   
   fixture = await testing(myModule)
   client = await fixture.createClient()
@@ -677,8 +664,8 @@ test('should sync item to client', async () => {
 import { testing } from '@rpgjs/testing'
 import { beforeEach, afterEach, describe, test, expect } from 'vitest'
 import { RpgPlayer, MAXHP_CURVE, MAXSP_CURVE, MAXHP, MAXSP } from '@rpgjs/server'
-import { defineModule, createModule } from '@rpgjs/common'
-import type { RpgServer, RpgClient } from '@rpgjs/server'
+import { defineModule, type RpgServer } from '@rpgjs/server'
+import type { RpgClient } from '@rpgjs/client'
 
 describe('Player Parameters', () => {
   let player: RpgPlayer
@@ -701,12 +688,7 @@ describe('Player Parameters', () => {
 
     const clientModule = defineModule<RpgClient>({})
 
-    const myModule = createModule('TestModule', [
-      {
-        server: serverModule,
-        client: clientModule,
-      },
-    ])
+    const myModule = [{ server: serverModule, client: clientModule }]
 
     fixture = await testing(myModule)
     const client = await fixture.createClient()

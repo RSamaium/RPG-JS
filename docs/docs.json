@@ -40,7 +40,8 @@
               "guide/structure",
               "guide/create-your-first-map",
               "guide/create-hero-in-map",
-              "guide/create-spritesheet"
+              "guide/create-spritesheet",
+              "guide/deploy-mmorpg"
             ]
           },
           {
@@ -53,6 +54,7 @@
               "guide/create-shape",
               "guide/display-animations",
               "guide/client-visuals",
+              "guide/interactions",
               "guide/spritesheets",
               "guide/lighting",
               "guide/time-manager",
@@ -80,6 +82,7 @@
               "guide/move-routes",
               "guide/create-database",
               "guide/items",
+              "guide/hotbar",
               "guide/save-load",
               "guide/i18n",
               "guide/synchronization",
@@ -94,11 +97,15 @@
             "group": "GUI",
             "pages": [
               "gui/index",
+              "gui/theming",
               "gui/title-screen",
+              "gui/account",
+              "gui/character-select",
               "gui/dialog-box",
               "gui/hud",
               "gui/mobile",
               "gui/prebuilt-contracts",
+              "gui/chat",
               "guide/gui/attach-gui",
               "gui/engine-injection",
               "gui/optimistic-actions",
@@ -108,9 +115,14 @@
           {
             "group": "Advanced",
             "pages": [
+              "philosophy",
               "roadmap",
+              "migration/v4-to-v5",
+              "advanced/custom-gameplay-rooms",
+              "advanced/signe-extension-points",
               "advanced/mmorpg-entries",
               "advanced/node-server-production",
+              "advanced/cloudflare-server-production",
               "advanced/latency-simulation",
               "advanced/packet-loss-simulation"
             ]
@@ -140,6 +152,7 @@
               "api/player/element-commands",
               "api/player/item-commands",
               "api/player/skill-commands",
+              "api/player/hotbar-commands",
               "api/player/variable-commands",
               "api/player/move-commands",
               "api/player/gui-commands",

@@ -1,7 +1,7 @@
 <Container width={width} height={containerHeight} minWidth={width} minHeight={containerHeight}>
   <Graphics width={width} height={containerHeight} draw={drawBar} />
   @if (hasLabel) {
-    <Text text={labelText} x={labelPosition.x} y={labelPosition.y} size={labelSize} color={labelColor} />
+    <Text text={labelText} x={labelPosition().x} y={labelPosition().y} size={labelSize} color={labelColor} />
   }
 </Container>
 

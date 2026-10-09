@@ -15,8 +15,12 @@ Dialogs, menus, notifications, and custom GUI commands.
 - [Call Shop Menu](#call-shop-menu)
 - [Close custom GUI](#close-custom-gui)
 - [Displays a notification](#displays-a-notification)
+- [Hide Hotbar](#hide-hotbar)
 - [Hide to GUI attached](#hide-to-gui-attached)
+- [Show Character Select](#show-character-select)
 - [Show Choices](#show-choices)
+- [Show Hotbar](#show-hotbar)
+- [Show Input](#show-input)
 - [Show Load](#show-load)
 - [Show Save](#show-save)
 - [Show Save/Load](#show-save-load)
@@ -134,13 +138,7 @@ player.callShop()
 
 ### Parameters
 
-- `items`: `any[] | {
-      items: any[]
-      sell?: Record<string, number> | Array<{ id: string; multiplier: number }>
-      sellMultiplier?: number
-      message?: string
-      face?: { id: string; expression?: string }
-    }`
+- `items`: `ShopItemInput[] | ShopGuiOptions`
 
 ## Close custom GUI
 
@@ -160,7 +158,8 @@ player.removeGui(guiId,data)
 ### Parameters
 
 - `guiId`: `string`
-- `data?`: `any`
+- `data?`: `unknown`
+- `guiOpenId?`: `unknown`
 
 ## Displays a notification
 
@@ -181,6 +180,31 @@ player.showNotification()
 
 - `message`: `string`
 - `options?`: `{ time?: number; icon?: string; sound?: string; type?: "info" | "warn" | "error" }`
+
+## Hide Hotbar
+
+Hide the default hotbar GUI.
+
+Persistent slot assignments are unchanged. Call `showHotbar()` to create
+and display the GUI again.
+
+- Source: `packages/server/src/Player/GuiManager.ts`
+- Kind: `method`
+- Member of: `RpgPlayer`
+- Defined in: `GuiManagerMixin`
+
+### Signature
+
+```ts
+player.hideHotbar()
+```
+
+### Examples
+
+```ts
+player.hideHotbar();
+await player.showHotbar();
+```
 
 ## Hide to GUI attached
 
@@ -214,6 +238,38 @@ player.hideAttachedGui(aPlayer)
 player.hideAttachedGui([player1, player2])
 ```
 
+## Show Character Select
+
+Display the prebuilt character selection GUI and return the server-owned
+actor chosen by the player. This method never applies the actor.
+
+- Source: `packages/server/src/Player/GuiManager.ts`
+- Kind: `method`
+- Member of: `RpgPlayer`
+- Defined in: `GuiManagerMixin`
+
+### Signature
+
+```ts
+player.showCharacterSelect(actors,options)
+```
+
+### Parameters
+
+- `actors`: `readonly ActorInput[]`
+- `options?`: `CharacterSelectOptions`
+
+### Returns
+
+The validated actor, or `null` when cancellation is allowed and requested.
+
+### Examples
+
+```ts
+const actor = await player.showCharacterSelect([Hero, Mage])
+if (actor) player.setActor(actor)
+```
+
 ## Show Choices
 
 Shows a dialog box with a choice. Opens the GUI named `rpg-dialog`
@@ -244,7 +300,86 @@ player.showChoices(text,choices)
 
 - `msg`: `string`
 - `choices`: `Choice[]`
-- `options?`: `DialogOptions`
+- `options?`: `DialogBaseOptions`
+
+## Show Hotbar
+
+Display the persistent player hotbar.
+
+The server owns slot content and validates every use. The default client
+GUI provides direct keyboard shortcuts and a gamepad radial selector.
+Calling it again refreshes the existing GUI without duplicating it.
+
+- Source: `packages/server/src/Player/GuiManager.ts`
+- Kind: `method`
+- Member of: `RpgPlayer`
+- Defined in: `GuiManagerMixin`
+
+### Signature
+
+```ts
+player.showHotbar(options)
+```
+
+### Parameters
+
+- `options?`: `HotbarGuiOptions`
+
+### Returns
+
+The GUI open result.
+
+### Examples
+
+```ts
+await player.showHotbar({
+  capacity: 8,
+  lockedSlotHint: (_current, slot) => `Unlock slot ${slot + 1}`,
+});
+```
+
+## Show Input
+
+Opens the prebuilt input GUI and waits for the player to submit or cancel it.
+The player cannot move while the form is open. Number inputs resolve to a
+`number`; text inputs and textareas resolve to a `string`; cancellation and
+an empty optional number input resolve to `null`.
+
+```ts
+const age = await player.showInput('Your age', {
+  type: 'number',
+  required: true,
+  min: 1
+})
+// age is number | null
+
+const biography = await player.showInput('Biography', {
+  control: 'textarea',
+  rows: 6,
+  maxLength: 500
+})
+// biography is string | null
+```
+
+- Source: `packages/server/src/Player/GuiManager.ts`
+- Kind: `method`
+- Member of: `GuiManager`
+- Defined in: `IGuiManager`
+
+### Signature
+
+```ts
+player.showInput(message,options)
+```
+
+### Parameters
+
+- `message`: `string`
+- `options`: `NumberInputOptions`
+
+### Returns
+
+The typed submitted value, or `null` when cancelled or when an optional number is empty.
 
 ## Show Load
 
@@ -348,6 +483,15 @@ player.showText('Hello World', {
 })
 ```
 
+Add a typed input directly below the dialog text:
+
+```ts
+const age = await player.showText('How old are you?', {
+  input: { type: 'number', required: true, min: 1 }
+})
+// age is number | null
+```
+
 **Option: fullWidth**
 
 `boolean` (true by default)
@@ -411,7 +555,7 @@ player.showText(text,options)
 ### Parameters
 
 - `msg`: `string`
-- `options?`: `DialogOptions`
+- `options`: `DialogBaseOptions & { input: NumberInputOptions }`
 
 ## View to GUI attached
 

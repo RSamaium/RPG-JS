@@ -1,0 +1,154 @@
+<Container controls={controls} />
+
+<script>
+  import { computed, effect, signal } from "canvasengine";
+  import { inject, RpgClientEngine } from "@rpgjs/client";
+  import { getKeyboardControlBind } from "@rpgjs/client";
+  import {
+    actionBattleCombatOptions,
+    actionBattleTargetingState,
+    confirmActionBattleTarget,
+    moveTargetingOffset,
+    stopTargeting,
+  } from "../ui/state";
+
+  const { object } = defineProps();
+  const engine = inject(RpgClientEngine);
+  const sprite = object();
+
+  const isCurrentPlayer = computed(() => {
+    const id = typeof sprite?.id === "function" ? sprite.id() : sprite?.id;
+    return id === engine.playerId;
+  });
+
+  const chargedOptions = computed(() => {
+    const value = actionBattleCombatOptions().player?.chargedAttack;
+    return value && typeof value === "object" ? value : null;
+  });
+
+  const guardOptions = computed(() => {
+    const value = actionBattleCombatOptions().player?.guard;
+    return value && typeof value === "object" ? value : null;
+  });
+
+  const direction = () =>
+    typeof sprite?.getDirection === "function"
+      ? sprite.getDirection()
+      : typeof sprite?.direction === "function"
+        ? sprite.direction()
+        : sprite?.direction ?? "down";
+
+  const keyboardControls = engine.globalConfig.keyboardControls;
+  const getPlayerTile = () => {
+    const player = engine.scene.getCurrentPlayer();
+    if (!player) return null;
+    const hitbox = player.hitbox?.() || { w: 32, h: 32 };
+    const tileWidth = hitbox.w || 32;
+    const tileHeight = hitbox.h || 32;
+    return {
+      x: Math.floor((player.x() + hitbox.w / 2) / tileWidth),
+      y: Math.floor((player.y() + hitbox.h / 2) / tileHeight),
+    };
+  };
+
+  const confirmTargeting = () => {
+    const state = actionBattleTargetingState();
+    if (!state.skill) return;
+    const origin = getPlayerTile();
+    if (!origin) return;
+    confirmActionBattleTarget({
+      x: origin.x + state.offset.x,
+      y: origin.y + state.offset.y,
+    });
+  };
+
+  const buildControls = () => {
+    const chargedBind = chargedOptions()?.control ?? "e";
+    const guardBind = guardOptions()?.control ?? "f";
+    return {
+      chargedAttack: {
+        bind: chargedBind,
+        keyDown() {
+          if (!isCurrentPlayer() || chargedOptions()?.enabled === false) return;
+          engine.processAction("action-battle:charge-start", {
+            direction: direction(),
+          });
+        },
+        keyUp() {
+          if (!isCurrentPlayer() || chargedOptions()?.enabled === false) return;
+          engine.processAction("action-battle:charge-release", {
+            direction: direction(),
+          });
+        },
+      },
+      guard: {
+        bind: guardBind,
+        keyDown() {
+          if (!isCurrentPlayer() || guardOptions()?.enabled === false) return;
+          engine.processAction("defense", {
+            direction: direction(),
+          });
+        },
+        keyUp() {
+          if (!isCurrentPlayer() || guardOptions()?.enabled === false) return;
+          engine.processAction("action-battle:guard-end", {
+            direction: direction(),
+          });
+        },
+      },
+      targetLeft: {
+        repeat: true,
+        throttle: 150,
+        bind: keyboardControls.left,
+        keyDown() {
+          if (actionBattleTargetingState().active) moveTargetingOffset(-1, 0);
+        },
+      },
+      targetRight: {
+        repeat: true,
+        throttle: 150,
+        bind: keyboardControls.right,
+        keyDown() {
+          if (actionBattleTargetingState().active) moveTargetingOffset(1, 0);
+        },
+      },
+      targetUp: {
+        repeat: true,
+        throttle: 150,
+        bind: keyboardControls.up,
+        keyDown() {
+          if (actionBattleTargetingState().active) moveTargetingOffset(0, -1);
+        },
+      },
+      targetDown: {
+        repeat: true,
+        throttle: 150,
+        bind: keyboardControls.down,
+        keyDown() {
+          if (actionBattleTargetingState().active) moveTargetingOffset(0, 1);
+        },
+      },
+      targetConfirm: {
+        bind: getKeyboardControlBind(keyboardControls.action),
+        keyDown() {
+          if (actionBattleTargetingState().active) confirmTargeting();
+        },
+      },
+      targetCancel: {
+        bind: keyboardControls.escape,
+        keyDown() {
+          if (actionBattleTargetingState().active) stopTargeting();
+        },
+      },
+      gamepad: {
+        enabled: true,
+      },
+    };
+  };
+
+  const controls = signal(buildControls());
+
+  effect(() => {
+    controls.set(buildControls());
+  });
+</script>

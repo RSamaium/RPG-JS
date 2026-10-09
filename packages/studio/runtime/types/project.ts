@@ -6,6 +6,50 @@ type ParamCurve = {
 type ParamValue = ParamCurve | number;
 
 export type ProjectBasic = {
+  audio?: {
+    ui?: {
+      navigate?: string;
+      confirm?: string;
+      cancel?: string;
+      open?: string;
+      close?: string;
+      error?: string;
+    };
+  };
+  menus?: {
+    titleScreen?: {
+      enabled: boolean;
+      guiId?: string | null;
+      settings: {
+        backgroundMusic?: string | null;
+        backgroundImage?: string | null;
+      };
+    };
+    hotbar?: {
+      enabled: boolean;
+      guiId?: string | null;
+      settings: {
+        content: "skills" | "items" | "mixed";
+        slotCount: number;
+      };
+    };
+    hud?: {
+      enabled: boolean;
+      guiId?: string | null;
+    };
+    mainMenu?: {
+      enabled: boolean;
+      guiId?: string | null;
+    };
+  };
+  combatAudio?: {
+    battleMusic?: string;
+    attack?: string;
+    skill?: string;
+    hit?: string;
+    hurt?: string;
+    die?: string;
+  };
   initialLevel?: number;
   finalLevel?: number;
   hitbox?: {

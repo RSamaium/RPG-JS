@@ -1,5 +1,5 @@
-import { TIME_MANAGER_MODULE_KEY, findModules, provideModules, registerI18nMessages } from "@rpgjs/common";
-import { FactoryProvider, inject as diInject, isProvided, provide as diProvide } from "@signe/di";
+import { TIME_MANAGER_MODULE_KEY, findModules, provideModules, registerI18nMessages, type RpgFactoryProvider } from "@rpgjs/common";
+import { type Context, inject as diInject, isProvided, provide as diProvide } from "@signe/di";
 import { RpgServerEngine } from "./RpgServerEngine";
 import { RpgMap } from "./rooms/map";
 import { RpgPlayer } from "./Player/Player";
@@ -48,7 +48,7 @@ export type RpgServerModule = RpgServer | (new () => any);
  * provideServerModules([MyServerModule])
  * ```
  */
-export function provideServerModules(modules: RpgServerModule[]): FactoryProvider {
+export function provideServerModules(modules: RpgServerModule[]): RpgFactoryProvider {
   return provideModules(modules, "server", (modules, context) => {
     const mainModuleServer = findModules(context, 'Server')
     modules = [...mainModuleServer, ...modules]
@@ -69,9 +69,9 @@ export function provideServerModules(modules: RpgServerModule[]): FactoryProvide
       }
       if (module[TIME_MANAGER_MODULE_KEY]) {
         const options = module[TIME_MANAGER_MODULE_KEY];
-        const timeManager = isProvided(context, TimeManager)
-          ? diInject<TimeManager>(context, TimeManager)
-          : diProvide(context, TimeManager, new TimeManager());
+        const timeManager = isProvided(context as unknown as Context, TimeManager)
+          ? diInject<TimeManager>(context as unknown as Context, TimeManager)
+          : diProvide(context as unknown as Context, TimeManager, new TimeManager());
         timeManager.configure(options);
         const mapHooks = module.map ?? {};
         module = {

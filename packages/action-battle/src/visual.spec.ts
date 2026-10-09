@@ -1,6 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 import {
   ACTION_BATTLE_CLIENT_VISUAL_ID,
+  ACTION_BATTLE_DAMAGE_COMPONENT_ID,
   ACTION_BATTLE_HIT_FX_COMPONENT_ID,
   createActionBattleVisual,
   createActionBattleClientVisuals,
@@ -17,6 +18,67 @@ const createEntity = () => ({
 });
 
 describe("action battle visual composer", () => {
+  test.each([
+    ["castSkill", "auto", "magicBurst"],
+    ["castSkill", "healPulse", "healPulse"],
+    ["hurt", "explosionSmall", "explosionSmall"],
+    ["hit", "auto", "magicBurst"],
+    ["heal", "auto", "healPulse"],
+  ] as const)("lets %s FX (%s) finish all their particles", (moment, configured, expected) => {
+    const entity = createEntity();
+    createActionBattleVisual("impact")({
+      moment,
+      entity,
+      target: entity,
+      skill: { id: "fire", name: "Fire" },
+      result: { metadata: {
+        healing: moment === "heal",
+        visual: { castFx: configured, impactFx: configured },
+      } },
+    });
+    const calls = entity.showComponentAnimation.mock.calls.filter(
+      ([id]) => id === ACTION_BATTLE_HIT_FX_COMPONENT_ID
+    );
+    expect(calls).toHaveLength(1);
+    expect(calls[0][1]).toMatchObject({ name: expected });
+    expect(calls[0][1]).not.toHaveProperty("displayDuration");
+    expect(calls[0][1]).not.toHaveProperty("loop", true);
+  });
+
+  test("resolves global cast animations on the authoritative caster when the skill omits overrides", () => {
+    const clientVisual = vi.fn();
+    const caster = { id: "caster", castGraphic: "hero-cast", getCurrentMap: () => ({ clientVisual }) };
+    setActionBattleOptions({ visual: "classic", animations: {
+      castSkill: (entity) => ({ animationName: "attack", graphic: entity.castGraphic }),
+    } });
+    try {
+      emitActionBattleClientVisual({ moment: "castSkill", entity: caster });
+      expect(clientVisual).toHaveBeenCalledWith(ACTION_BATTLE_CLIENT_VISUAL_ID, expect.objectContaining({
+        animations: { castSkill: { animationName: "attack", graphic: "hero-cast" } },
+      }));
+    } finally {
+      setActionBattleOptions({});
+    }
+  });
+
+  test("keeps the predicted local attack playing when the server confirms the same graphic", () => {
+    const player = {
+      setAnimation: vi.fn(),
+      animationPlayback: () => ({ name: "attack", direction: "left" }),
+      graphics: () => ["hero-attack"],
+    };
+    const handler = createActionBattleClientVisuals({ visual: "classic" })[ACTION_BATTLE_CLIENT_VISUAL_ID];
+    const context = {
+      object: player,
+      engine: { scene: { getCurrentPlayer: () => player } },
+      data: { moment: "attack", animations: { attack: { animationName: "attack", graphic: "hero-attack" } } },
+    };
+    handler(context, {});
+    expect(player.setAnimation).not.toHaveBeenCalled();
+    handler({ ...context, data: { ...context.data, animations: { attack: { animationName: "attack", graphic: "other-attack" } } } }, {});
+    expect(player.setAnimation).toHaveBeenCalledWith("attack", "other-attack", 1);
+  });
+
   test("classic hit uses the low-level flash and damage text primitives", () => {
     const target = createEntity();
     const visual = createActionBattleVisual("classic");
@@ -81,6 +143,196 @@ describe("action battle visual composer", () => {
     expect(usesActionBattleFxVisual(visual)).toBe(true);
   });
 
+  test("fx hurt renders the skill impact animation on its target", () => {
+    const target = createEntity();
+    const visual = createActionBattleVisual("fx");
+
+    visual({
+      moment: "hurt",
+      target,
+      skill: {
+        animation: "arcane-impact",
+      },
+    });
+
+    expect(target.showComponentAnimation).toHaveBeenCalledWith("animation", {
+      graphic: "arcane-impact",
+      animationName: "default",
+    });
+  });
+
+  test("impact uses a charged damage popup and impact burst without duplicating classic hit text", () => {
+    const target = createEntity();
+    const visual = createActionBattleVisual("impact");
+
+    visual({
+      moment: "hurt",
+      target,
+      damage: 42,
+      result: {
+        damage: 42,
+        metadata: { charged: true },
+      },
+    });
+
+    expect(target.showHit).not.toHaveBeenCalled();
+    expect(target.showComponentAnimation).toHaveBeenCalledWith(
+      ACTION_BATTLE_DAMAGE_COMPONENT_ID,
+      expect.objectContaining({
+        amount: 42,
+        kind: "charged",
+      })
+    );
+    expect(target.showComponentAnimation).toHaveBeenCalledWith(
+      ACTION_BATTLE_HIT_FX_COMPONENT_ID,
+      expect.objectContaining({
+        name: "impactBurst",
+        scale: 1.3,
+      })
+    );
+  });
+
+  test("impact lets a skill customize its typography and CanvasEngine preset", () => {
+    const target = createEntity();
+    const visual = createActionBattleVisual("impact");
+
+    visual({
+      moment: "hurt",
+      target,
+      damage: 24,
+      skill: { id: "fire", name: "Fire" },
+      result: {
+        damage: 24,
+        metadata: {
+          visual: {
+            fx: "magicBurst",
+            color: "#ffd166",
+            accentColor: "#a62c21",
+            scale: 1.2,
+          },
+        },
+      },
+    });
+
+    expect(target.showComponentAnimation).toHaveBeenCalledWith(
+      ACTION_BATTLE_DAMAGE_COMPONENT_ID,
+      expect.objectContaining({
+        amount: 24,
+        kind: "skill",
+        caption: "Fire",
+        color: "#ffd166",
+        accentColor: "#a62c21",
+      })
+    );
+    expect(target.showComponentAnimation).toHaveBeenCalledWith(
+      ACTION_BATTLE_HIT_FX_COMPONENT_ID,
+      expect.objectContaining({
+        name: "magicBurst",
+        scale: 1.2,
+      })
+    );
+  });
+
+  test("impactFx overrides the legacy fx alias and none disables particles", () => {
+    const target = createEntity();
+    const visual = createActionBattleVisual("impact");
+
+    visual({
+      moment: "hurt",
+      target,
+      damage: 24,
+      skill: { id: "fire", name: "Fire" },
+      result: {
+        damage: 24,
+        metadata: {
+          visual: {
+            fx: "hitSpark",
+            impactFx: "explosionSmall",
+          },
+        },
+      },
+    });
+
+    expect(target.showComponentAnimation).toHaveBeenCalledWith(
+      ACTION_BATTLE_HIT_FX_COMPONENT_ID,
+      expect.objectContaining({ name: "explosionSmall" })
+    );
+
+    target.showComponentAnimation.mockClear();
+    visual({
+      moment: "hurt",
+      target,
+      damage: 24,
+      result: {
+        damage: 24,
+        metadata: { visual: { impactFx: "none" } },
+      },
+    });
+
+    expect(target.showComponentAnimation).not.toHaveBeenCalledWith(
+      ACTION_BATTLE_HIT_FX_COMPONENT_ID,
+      expect.anything()
+    );
+  });
+
+  test("castSkill supports a custom cast preset and can disable particles", () => {
+    const caster = createEntity();
+    const visual = createActionBattleVisual("impact");
+
+    visual({
+      moment: "castSkill",
+      entity: caster,
+      result: { metadata: { visual: { castFx: "healPulse" } } },
+    });
+
+    expect(caster.showComponentAnimation).toHaveBeenCalledWith(
+      ACTION_BATTLE_HIT_FX_COMPONENT_ID,
+      expect.objectContaining({ name: "healPulse" })
+    );
+
+    caster.showComponentAnimation.mockClear();
+    visual({
+      moment: "castSkill",
+      entity: caster,
+      result: { metadata: { visual: { castFx: "none" } } },
+    });
+
+    expect(caster.showComponentAnimation).not.toHaveBeenCalledWith(
+      ACTION_BATTLE_HIT_FX_COMPONENT_ID,
+      expect.anything()
+    );
+  });
+
+  test("impact gives healing skills a green popup and heal pulse", () => {
+    const target = createEntity();
+    const visual = createActionBattleVisual("impact");
+
+    visual({
+      moment: "heal",
+      target,
+      damage: 30,
+      skill: { id: "heal-wave", name: "Heal Wave" },
+      result: {
+        damage: 30,
+        metadata: { healing: true },
+      },
+    });
+
+    expect(target.showComponentAnimation).toHaveBeenCalledWith(
+      ACTION_BATTLE_DAMAGE_COMPONENT_ID,
+      expect.objectContaining({
+        amount: 30,
+        kind: "heal",
+      })
+    );
+    expect(target.showComponentAnimation).toHaveBeenCalledWith(
+      ACTION_BATTLE_HIT_FX_COMPONENT_ID,
+      expect.objectContaining({
+        name: "healPulse",
+      })
+    );
+  });
+
   test("custom composer parts receive helpers", () => {
     const target = createEntity();
     const visual = createActionBattleVisual({
@@ -116,11 +368,21 @@ describe("action battle visual composer", () => {
       entity: attacker,
       target,
       damage: 7,
+      skill: { id: "fire", name: "Fire" },
+      animations: {
+        attack: () => "attack",
+      },
       result: {
         damage: 7,
         defeated: false,
         attacker,
         target,
+        metadata: {
+          visual: {
+            fx: "magicBurst",
+            color: "#ffd166",
+          },
+        },
       },
     });
 
@@ -135,9 +397,92 @@ describe("action battle visual composer", () => {
         result: expect.objectContaining({
           damage: 7,
           defeated: false,
+          metadata: {
+            visual: {
+              fx: "magicBurst",
+              color: "#ffd166",
+            },
+          },
         }),
+        skill: { id: "fire", name: "Fire" },
       })
     );
+    const payload = clientVisual.mock.calls[0][1];
+    expect(payload.animations).toEqual({
+      attack: "attack",
+    });
+    expect(() => structuredClone(payload)).not.toThrow();
+  });
+
+  test("resolves entity-specific animation functions before client transfer", () => {
+    setActionBattleOptions({ visual: "classic" } as any);
+    const clientVisual = vi.fn();
+    const enemy = {
+      id: "enemy-1",
+      studioCombatAnimations: {
+        attack: "studio-attack-media",
+      },
+      getCurrentMap: () => ({ clientVisual }),
+    };
+
+    emitActionBattleClientVisual({
+      moment: "attack",
+      entity: enemy,
+      animations: {
+        attack: (entity) => ({
+          animationName: "attack",
+          graphic: entity.studioCombatAnimations.attack,
+          repeat: 1,
+        }),
+      },
+    });
+
+    const payload = clientVisual.mock.calls[0][1];
+    expect(payload.animations).toEqual({
+      attack: {
+        animationName: "attack",
+        graphic: "studio-attack-media",
+        repeat: 1,
+      },
+    });
+    expect(() => structuredClone(payload)).not.toThrow();
+  });
+
+  test("resolves reactive skill presentation before client transfer", () => {
+    setActionBattleOptions({ visual: "fx" } as any);
+    const clientVisual = vi.fn();
+    const attacker = {
+      id: "enemy-1",
+      getCurrentMap: () => ({ clientVisual }),
+    };
+
+    emitActionBattleClientVisual({
+      moment: "castSkill",
+      entity: attacker,
+      skill: {
+        id: () => "arcane",
+        name: () => "Arcane",
+        skillType: () => "magical",
+        icon: () => "arcane-icon",
+        animation: () => "arcane-impact",
+        sound: () => "arcane-cast",
+        casterAnimation: () => "legacy-caster",
+        impactSound: () => "arcane-impact-sound",
+      },
+    });
+
+    const payload = clientVisual.mock.calls[0][1];
+    expect(payload.skill).toEqual({
+      id: "arcane",
+      name: "Arcane",
+      skillType: "magical",
+      icon: "arcane-icon",
+      animation: "arcane-impact",
+      sound: "arcane-cast",
+      casterAnimation: "legacy-caster",
+      impactSound: "arcane-impact-sound",
+    });
+    expect(() => structuredClone(payload)).not.toThrow();
   });
 
   test("client visual handler replays configured action-battle visual locally", () => {
@@ -161,6 +506,143 @@ describe("action battle visual composer", () => {
       expect.objectContaining({
         name: "hitSpark",
       })
+    );
+  });
+
+  test("impact feedback applies a short render-only hit-stop", () => {
+    vi.useFakeTimers();
+    const target = createEntity();
+    let paused = false;
+    const visualPause = Object.assign(() => paused, {
+      set(value: boolean) {
+        paused = value;
+      },
+    });
+    const visuals = createActionBattleClientVisuals({
+      visual: "impact",
+      animations: {},
+      feedback: {
+        hitStop: true,
+        hitStopMs: 30,
+      },
+    } as any);
+
+    visuals[ACTION_BATTLE_CLIENT_VISUAL_ID]({
+      engine: { visualPause },
+      target,
+      data: {
+        moment: "hit",
+        damage: 11,
+      },
+    });
+
+    expect(paused).toBe(true);
+    vi.advanceTimersByTime(30);
+    expect(paused).toBe(false);
+    vi.useRealTimers();
+  });
+
+  test("feedback accessibility options suppress flash, shake, and damage labels", () => {
+    const target = createEntity();
+    const shake = vi.fn();
+    const visuals = createActionBattleClientVisuals({
+      visual: "impact",
+      animations: {},
+      feedback: {
+        hitStop: false,
+        flashes: false,
+        screenShake: false,
+        damageNumbers: false,
+      },
+    } as any);
+
+    visuals[ACTION_BATTLE_CLIENT_VISUAL_ID](
+      {
+        target,
+        data: {
+          moment: "hit",
+          damage: 11,
+        },
+      },
+      { shake }
+    );
+
+    expect(target.flash).not.toHaveBeenCalled();
+    expect(shake).not.toHaveBeenCalled();
+    expect(target.showHit).not.toHaveBeenCalled();
+    expect(target.showComponentAnimation).not.toHaveBeenCalledWith(
+      ACTION_BATTLE_DAMAGE_COMPONENT_ID,
+      expect.anything()
+    );
+    expect(target.showComponentAnimation).toHaveBeenCalledWith(
+      ACTION_BATTLE_HIT_FX_COMPONENT_ID,
+      expect.anything()
+    );
+  });
+
+  test("client custom visual parts can use sound and camera shake helpers", () => {
+    const sound = vi.fn();
+    const shake = vi.fn();
+    const visual = createActionBattleVisual({
+      hit(_context, fx) {
+        fx.sound("heavy-hit", { volume: 0.8 });
+        fx.shake({ intensity: 5 });
+      },
+    });
+    const visuals = createActionBattleClientVisuals({ visual } as any);
+
+    visuals[ACTION_BATTLE_CLIENT_VISUAL_ID](
+      {
+        data: { moment: "hit" },
+      },
+      { sound, shake }
+    );
+
+    expect(sound).toHaveBeenCalledWith("heavy-hit", { volume: 0.8 });
+    expect(shake).toHaveBeenCalledWith({ intensity: 5 });
+  });
+
+  test("routes generic AI visuals by kind and ignores unknown kinds", () => {
+    const rage = vi.fn();
+    const helpers = { flash: vi.fn() };
+    const object = createEntity();
+    const visuals = createActionBattleClientVisuals({
+      ai: {
+        visuals: {
+          rage,
+        },
+      },
+    } as any);
+    const play = visuals[ACTION_BATTLE_CLIENT_VISUAL_ID];
+
+    play(
+      {
+        object,
+        data: {
+          moment: "ai",
+          visual: { kind: "rage", durationMs: 600 },
+        },
+      },
+      helpers
+    );
+    play(
+      {
+        object,
+        data: {
+          moment: "ai",
+          visual: { kind: "not-registered" },
+        },
+      },
+      helpers
+    );
+
+    expect(rage).toHaveBeenCalledTimes(1);
+    expect(rage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        object,
+        visual: { kind: "rage", durationMs: 600 },
+      }),
+      helpers
     );
   });
 });

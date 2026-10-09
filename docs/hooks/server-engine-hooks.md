@@ -16,8 +16,9 @@ const engine: RpgServerEngineHooks = {
     onStart(server: RpgServerEngine) {
         console.log('Server is starting...')
     },
-    onStep(server: RpgServerEngine) {
-        // Called at each server frame (60 FPS)
+    onStep(server: RpgServerEngine, metrics) {
+        // Called after each queued map tick
+        console.log(metrics.durationMs, metrics.pendingInputs)
     },
     auth(server: RpgServerEngine, socket: any) {
         // Custom authentication logic
@@ -59,19 +60,74 @@ const engine: RpgServerEngineHooks = {
 
 ### onStep
 
-**Description:** Called at each server frame, typically representing 60 FPS
+**Description:** Called for map rooms, once after each queued map tick has been
+processed. It is not emitted for lobby rooms. A queued tick is one pass through
+the server scheduler; depending on the accumulated delta, it can execute zero,
+one, or several fixed simulation steps. Empty maps stop their automatic loop, so
+observability does not keep an idle room active.
 
 **Parameters:**
 - `server: RpgServerEngine` - The server engine instance
+- `metrics: RpgServerStepMetrics` - Metrics for the processed map tick:
+  - `tick` - Current cumulative fixed simulation tick after processing
+  - `durationMs` - Wall-clock processing duration in milliseconds, excluding the hook itself
+  - `scheduledDeltaMs` - Delta in milliseconds passed to the queued tick
+  - `queuedDeltaMs` - Delta in milliseconds that arrived during processing and remains queued
+  - `fixedSteps` - Number of fixed simulation steps executed (which can be zero or greater)
+  - `pendingInputs` - Total unprocessed player inputs after the tick
+
+Handlers that only accept `server` remain compatible. Async handlers are awaited
+in the tick queue. If a handler throws or rejects, RPGJS logs the error for the
+automatic loop and retries queued simulation work on a later tick. Avoid network
+I/O here because it directly increases the server backlog.
 
 **Example:**
 ```ts
+import type { RpgServerEngineHooks, RpgServerStepMetrics } from '@rpgjs/server'
+
+type MetricsWindow = {
+    startedAt: number
+    fixedSteps: number
+    durationMs: number
+    maxQueuedDeltaMs: number
+    maxPendingInputs: number
+}
+
+function createMetricsWindow(): MetricsWindow {
+    return {
+        startedAt: Date.now(),
+        fixedSteps: 0,
+        durationMs: 0,
+        maxQueuedDeltaMs: 0,
+        maxPendingInputs: 0
+    }
+}
+
+// Application-owned queue drained by an exporter outside the tick hook.
+const metricsQueue: Array<MetricsWindow & { mapId: string | null }> = []
+let window = createMetricsWindow()
+
 const engine: RpgServerEngineHooks = {
-    onStep(server: RpgServerEngine) {
-        // Update global timers, check conditions, etc.
-        const currentTime = Date.now()
-        if (currentTime % 10000 === 0) { // Every 10 seconds
-            console.log(`Server running for ${currentTime - server.globalData.startTime}ms`)
+    onStep(server, metrics: RpgServerStepMetrics) {
+        window.fixedSteps += metrics.fixedSteps
+        window.durationMs += metrics.durationMs
+        window.maxQueuedDeltaMs = Math.max(
+            window.maxQueuedDeltaMs,
+            metrics.queuedDeltaMs
+        )
+        window.maxPendingInputs = Math.max(
+            window.maxPendingInputs,
+            metrics.pendingInputs
+        )
+
+        if (Date.now() - window.startedAt >= 10_000) {
+            // Enqueue this aggregate for an out-of-band exporter instead of
+            // performing analytics or network I/O on every server tick.
+            metricsQueue.push({
+                mapId: server.getCurrentRoomId(),
+                ...window
+            })
+            window = createMetricsWindow()
         }
     }
 }
@@ -208,7 +264,8 @@ const engine: RpgServerEngineHooks = {
     },
     
     onStep(server: RpgServerEngine) {
-        // Process global events every frame
+        // The legacy one-argument handler remains supported.
+        // This runs after each processed map tick, not after each fixed step.
         if (server.globalData.events.length > 0) {
             const event = server.globalData.events.shift()
             console.log('Processing global event:', event)

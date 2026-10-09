@@ -55,6 +55,6 @@ export class SaveLoadGui extends Gui {
         return super.open({ slots: uiSlots, mode }, {
             waitingAction: true,
             blockPlayerInput: true
-        })
+        }) as Promise<number | null>
     }
 }

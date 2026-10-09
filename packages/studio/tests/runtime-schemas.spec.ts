@@ -40,6 +40,9 @@ describe("Studio runtime schemas", () => {
       type: "number",
       title: "SP Cost",
     });
+    expect((skillSchema as any).properties).not.toHaveProperty(
+      "casterAnimation",
+    );
   });
 
   test("map schema exposes the map entry workflow collection id", () => {
@@ -64,6 +67,11 @@ describe("Studio runtime schemas", () => {
       "level",
       "hp",
       "sp",
+      "area_target_id",
+      "area_target_kind",
+      "area_distance",
+      "area_distance_ratio",
+      "area_falloff_linear",
     ]);
   });
 });

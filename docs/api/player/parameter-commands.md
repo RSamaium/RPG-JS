@@ -650,8 +650,10 @@ player.finalLevel = 50
 player.finalLevel = 50
 ```
 
+The server retains this curve bound in saves and room transfers in both RPG and MMORPG modes.
+
 - Source: `packages/server/src/Player/ParameterManager.ts`
-- Kind: `property`
+- Kind: `getter`
 - Member of: `ParameterManager`
 
 ### Signature
@@ -695,8 +697,10 @@ player.initialLevel = 5
 player.initialLevel = 5
 ```
 
+The server retains this curve bound in saves and room transfers in both RPG and MMORPG modes.
+
 - Source: `packages/server/src/Player/ParameterManager.ts`
-- Kind: `property`
+- Kind: `getter`
 - Member of: `ParameterManager`
 
 ### Signature
@@ -867,7 +871,7 @@ setParameter(name: string, value: ParameterValue): void
 
 Parameter Manager Mixin with Reactive Signals
 
-Provides comprehensive parameter management functionality using reactive signals from `@signe/reactive`.
+Provides comprehensive parameter management through RPGJS reactive gameplay signals.
 This mixin handles health points (HP), skill points (SP), experience and level progression,
 custom parameters, and parameter modifiers with automatic reactivity.
 

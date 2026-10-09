@@ -2,22 +2,36 @@ name: CI
 
 permissions:
   contents: write
+  id-token: write
   pull-requests: write
 
 on:
   push:
     branches:
-      - "*"
-    paths-ignore:
-      - "docs/**"
+      - "**"
+    # Documentation is ignored, except docs/internal: it holds the public API
+    # snapshot checked by `pnpm api:boundary`.
+    paths:
+      - "**"
+      - "!docs/**"
+      - "docs/internal/**"
   pull_request:
     branches:
       - "*"
-    paths-ignore:
-      - "docs/**"
+    paths:
+      - "**"
+      - "!docs/**"
+      - "docs/internal/**"
 
 jobs:
   tests:
+    # `changesets/action` creates this commit after a successful test run. Its
+    # follow-up workflow only has to build and publish the already validated
+    # release, so avoid running the complete test suite a second time.
+    if: >-
+      github.event_name != 'push' ||
+      github.ref != 'refs/heads/v5' ||
+      !startsWith(github.event.head_commit.message, 'chore: version packages')
     runs-on: ubuntu-22.04
     strategy:
       matrix:
@@ -35,12 +49,28 @@ jobs:
         run: pnpm install --no-frozen-lockfile
       - name: Build
         run: pnpm build
+      - name: Public API boundary
+        run: pnpm api:boundary
+      - name: Public API type contracts
+        run: pnpm test:types
       - name: Unit tests
         run: pnpm test -- --run
+      - name: Cloudflare MMORPG runtime tests
+        run: pnpm --dir samples/cloudflare-mmorpg test
+      - name: Cloudflare Studio runtime tests
+        run: pnpm --dir playground/games/studio test
+      - name: Playground and sample builds
+        run: pnpm --filter '@rpgjs/playground-*' --filter sample run build
 
   build_and_publish:
       needs: tests
-      if: github.ref == 'refs/heads/v5'
+      # A Changesets version commit deliberately skips `tests` above. Allow
+      # publication after either a successful regular test job or that
+      # version-only follow-up run.
+      if: >-
+        always() &&
+        github.ref == 'refs/heads/v5' &&
+        (needs.tests.result == 'success' || needs.tests.result == 'skipped')
       runs-on: ubuntu-latest
       outputs:
         published: ${{ steps.changesets.outputs.published }}
@@ -55,7 +85,7 @@ jobs:
           id: setup-node
           uses: actions/setup-node@v4
           with:
-            node-version: lts/*
+            node-version: 24
             registry-url: https://registry.npmjs.org
 
         - name: 🥡 Setup pnpm
@@ -87,13 +117,6 @@ jobs:
           run: |
             pnpm build
 
-        - name: Configure npm auth
-          run: |
-            pnpm config set "//registry.npmjs.org/:_authToken" "$NPM_AUTH_TOKEN"
-            npm config set "//registry.npmjs.org/:_authToken" "$NPM_AUTH_TOKEN"
-          env:
-            NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
         - name: 📣 Version packages or publish to npm
           id: changesets
           uses: changesets/action@v1
@@ -105,11 +128,11 @@ jobs:
           env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-            NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+            NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   starter_repo_update_dependencies:
       needs: build_and_publish
-      if: github.ref == 'refs/heads/v5' && needs.build_and_publish.outputs.published == 'true'
+      if: github.ref == 'refs/heads/v5' && needs.build_and_publish.result == 'success'
       runs-on: ubuntu-latest
       strategy:
         matrix:
@@ -137,15 +160,20 @@ jobs:
         - name: Install npm-check-updates globally
           run: npm i npm-check-updates -g
 
+        - name: Install pnpm
+          uses: pnpm/action-setup@v4
+          with:
+            version: 10
+
         - name: Run ncu to update dependencies
           run: |
             cd starter
             ncu -u
 
-        - name: Update package lock
+        - name: Update pnpm lock
           run: |
             cd starter
-            npm i --package-lock-only
+            pnpm install --lockfile-only --ignore-scripts
 
         - name: Deploy to external repository
           run: |
@@ -157,6 +185,6 @@ jobs:
 
             git config user.name "${{ github.actor }}"
             git config user.email "${{ github.actor }}@users.noreply.github.com"
-            git add package.json package-lock.json
+            git add package.json pnpm-lock.yaml
             git commit -m "update package dependencies to latest RPGJS version on ${{ matrix.starter_branch }}"
             git push origin HEAD:${{ matrix.starter_branch }}

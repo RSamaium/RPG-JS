@@ -64,6 +64,12 @@
       "sourceFiles": ["packages/server/src/Player/SkillManager.ts"]
     },
     {
+      "title": "Hotbar Commands",
+      "description": "Assign and use persistent server-authoritative skill and item slots.",
+      "output": "hotbar-commands.md",
+      "sourceFiles": ["packages/server/src/Player/HotbarManager.ts"]
+    },
+    {
       "title": "Variable Commands",
       "description": "Store and retrieve player variables that persist across saves and map transfers.",
       "output": "variable-commands.md",

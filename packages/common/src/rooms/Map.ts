@@ -1,5 +1,5 @@
 import { generateShortUUID, users } from "@signe/sync";
-import { effect, Signal, signal } from "@signe/reactive";
+import { effect, signal } from "@signe/reactive";
 import { Direction, RpgCommonPlayer } from "../Player";
 import {
   PhysicsEngine,
@@ -10,12 +10,17 @@ import {
   Dash,
   assignPolygonCollider,
   createCollider,
+  testCollision,
 } from "@rpgjs/physic";
 import { combineLatest, Observable, share, Subject, Subscription } from "rxjs";
 import { MovementManager } from "../movement";
 import { WorldMapsManager, type RpgWorldMaps } from "./WorldMaps";
 import { queryArea as queryMapArea } from "./area/query";
 import type { MapAreaHit, MapAreaQueryOptions } from "./area/types";
+import type { MapChunkHitbox, MapHitboxElevation } from "../map-streaming";
+import type { RpgReadableSignal, RpgWritableSignal } from "../foundation";
+
+const gameplaySignal = signal as <T>(value: T) => RpgWritableSignal<T>;
 
 export type PhysicsEntityKind = "hero" | "npc" | "generic";
 
@@ -53,6 +58,27 @@ export interface MapHitboxQueryOptions {
   kinds?: MapHitboxQueryKind[];
 }
 
+/** Options of `map.findSpawnPosition()`. */
+export interface MapSpawnPositionOptions {
+  /** Preferred top-left position of the hitbox, e.g. the map `start` point. */
+  preferred: { x: number; y: number };
+  /** Hitbox of the character to place. Defaults to 32x32. */
+  hitbox?: { width: number; height: number };
+  /** Maximum distance in pixels between the preferred and returned positions. Defaults to 320. */
+  maxDistance?: number;
+  /** Distance in pixels between two tested positions. Defaults to half the smallest hitbox side. */
+  step?: number;
+  /** Character height used for hitboxes with a `z` range. Defaults to `0`. */
+  z?: number;
+  /** Player or event ids ignored as obstacles, e.g. the character being placed. */
+  ignoreIds?: string[];
+  /**
+   * Require at least one free neighboring position so the character is not
+   * wedged between obstacles. Defaults to `true`.
+   */
+  requireClearance?: boolean;
+}
+
 type FixedTickHooks = {
   beforeStep?: () => void;
   afterStep?: (tick: number) => void;
@@ -70,10 +96,10 @@ const DEFAULT_MAX_FIXED_STEPS_PER_TICK = 5;
 const DEFAULT_MAX_TICK_DELTA_MS = 250;
 
 export abstract class RpgCommonMap<T extends RpgCommonPlayer> {
-  abstract players: Signal<Record<string, T>>;
-  abstract events: Signal<Record<string, any>>;
+  abstract players: RpgReadableSignal<Record<string, T>>;
+  abstract events: RpgReadableSignal<Record<string, any>>;
 
-  data = signal<any | null>(null);
+  data = gameplaySignal<any | null>(null);
   physic = new PhysicsEngine({
     timeStep: 1 / 60,
     gravity: new Vector2(0, 0),
@@ -98,6 +124,8 @@ export abstract class RpgCommonMap<T extends RpgCommonPlayer> {
   eventsSubscription?: Subscription | null;
   private physicsAccumulatorMs = 0;
   private physicsSyncDepth = 0;
+  private streamedStaticHitboxIds = new Map<string, Set<string>>();
+  private staticHitboxElevations = new WeakMap<Entity, { min: number; max: number }>();
   protected maxFixedStepsPerTick = DEFAULT_MAX_FIXED_STEPS_PER_TICK;
   protected maxTickDeltaMs = DEFAULT_MAX_TICK_DELTA_MS;
 
@@ -335,6 +363,7 @@ export abstract class RpgCommonMap<T extends RpgCommonPlayer> {
 
     // Clear all hitboxes and zones from physics system
     this.clearAll();
+    this.streamedStaticHitboxIds.clear();
 
     // Reset movement manager
     this.moveManager.clearAll();
@@ -374,10 +403,7 @@ export abstract class RpgCommonMap<T extends RpgCommonPlayer> {
     const mapData = this.data?.();
     const mapWidth = typeof mapData?.width === "number" ? mapData.width : 0;
     const mapHeight = typeof mapData?.height === "number" ? mapData.height : 0;
-    const hitboxes: Array<
-      | { id?: string; x: number; y: number; width: number; height: number }
-      | { id?: string; points: number[][] }
-    > = Array.isArray(mapData?.hitboxes) ? mapData.hitboxes : [];
+    const hitboxes: MapChunkHitbox[] = Array.isArray(mapData?.hitboxes) ? mapData.hitboxes : [];
 
     if (mapWidth > 0 && mapHeight > 0) {
       const gap = 100;
@@ -388,11 +414,8 @@ export abstract class RpgCommonMap<T extends RpgCommonPlayer> {
     }
 
     for (let staticHitbox of hitboxes) {
-      if ('points' in staticHitbox) {
-        this.addStaticHitbox(staticHitbox.id ?? generateShortUUID(), staticHitbox.points);
-      }
-      else if ('x' in staticHitbox) {
-        this.addStaticHitbox(staticHitbox.id ?? generateShortUUID(), staticHitbox.x, staticHitbox.y, staticHitbox.width, staticHitbox.height);
+      if ('points' in staticHitbox || 'x' in staticHitbox) {
+        this.addMapHitbox(staticHitbox.id ?? generateShortUUID(), staticHitbox);
       }
     }
 
@@ -433,7 +456,7 @@ export abstract class RpgCommonMap<T extends RpgCommonPlayer> {
       },
     );
 
-    this.eventsSubscription = this.events.observable.subscribe(({ value: event, type, key }) => {
+    this.eventsSubscription = (this.events as any).observable.subscribe(({ value: event, type, key }) => {
       if (type === "add") {
         event.id = key;
         this.createCharacterHitbox(event, "npc", {
@@ -1216,6 +1239,114 @@ export abstract class RpgCommonMap<T extends RpgCommonPlayer> {
   }
 
   /**
+   * Find a collision-free position for a character hitbox near a preferred point.
+   *
+   * The search tests positions on growing rings around `preferred`, in a
+   * deterministic order, and returns the closest one where the hitbox stays
+   * inside the map and overlaps no blocking body: map hitboxes (Tiled tiles,
+   * Studio elements), static shapes, and non-`through` players and events.
+   * Hitboxes with a `z` range only block when `options.z` is inside it.
+   *
+   * It never disables collisions and never returns a blocked position: when no
+   * position is found within `maxDistance`, it returns `null`. It works on the
+   * server and on the client prediction map; use the server result for
+   * authoritative placement, e.g. with `player.changeMap()` or `player.teleport()`.
+   *
+   * @title Find spawn position
+   * @method map.findSpawnPosition(options)
+   * @param {MapSpawnPositionOptions} options - Preferred position, hitbox and search limits.
+   * @returns {{ x: number, y: number } | null} Top-left position, or `null` when none is free.
+   * @memberof RpgCommonMap
+   * @example
+   * ```ts
+   * // e.g. the `start` point of a generated map
+   * const spawn = map.findSpawnPosition({
+   *   preferred: { x: 480, y: 320 },
+   *   hitbox: { width: 32, height: 32 },
+   *   ignoreIds: [player.id],
+   * });
+   * if (spawn) {
+   *   await player.changeMap(map.id, spawn);
+   * }
+   * ```
+   */
+  findSpawnPosition(options: MapSpawnPositionOptions): { x: number; y: number } | null {
+    const width = Math.max(1, options.hitbox?.width ?? 32);
+    const height = Math.max(1, options.hitbox?.height ?? 32);
+    const step = Math.max(1, options.step ?? Math.min(width, height) / 2);
+    const maxDistance = Math.max(0, options.maxDistance ?? 320);
+    const requireClearance = options.requireClearance !== false;
+    const origin = { x: Math.round(options.preferred.x), y: Math.round(options.preferred.y) };
+    const ignored = new Set(options.ignoreIds ?? []);
+    const owner = { z: () => options.z ?? 0 };
+    const mapData = this.data?.();
+    const mapWidth = typeof mapData?.width === "number" && mapData.width > 0 ? mapData.width : undefined;
+    const mapHeight = typeof mapData?.height === "number" && mapData.height > 0 ? mapData.height : undefined;
+
+    const isFree = (x: number, y: number): boolean => {
+      if (x < 0 || y < 0) return false;
+      if (mapWidth !== undefined && x + width > mapWidth) return false;
+      if (mapHeight !== undefined && y + height > mapHeight) return false;
+
+      // Detached dynamic probe: the detector skips static-static pairs
+      const probe = new Entity({
+        position: { x: x + width / 2, y: y + height / 2 },
+        width,
+        height,
+      });
+      const bounds = new AABB(x, y, x + width, y + height);
+      for (const other of this.physic.queryAABB(bounds)) {
+        if (ignored.has(other.uuid) || !this.isSpawnObstacle(other, owner)) continue;
+        if (testCollision(probe, other)) return false;
+      }
+      return true;
+    };
+
+    const hasClearance = (x: number, y: number): boolean =>
+      isFree(x + step, y) || isFree(x - step, y) || isFree(x, y + step) || isFree(x, y - step);
+
+    const rings = Math.floor(maxDistance / step);
+    for (let ring = 0; ring <= rings; ring++) {
+      const candidates: Array<{ x: number; y: number; distance: number }> = [];
+      for (let dy = -ring; dy <= ring; dy++) {
+        for (let dx = -ring; dx <= ring; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring) continue;
+          const distance = Math.hypot(dx, dy) * step;
+          if (distance > maxDistance) continue;
+          candidates.push({ x: origin.x + dx * step, y: origin.y + dy * step, distance });
+        }
+      }
+      // Closest first; ties are broken top-to-bottom, then left-to-right
+      candidates.sort((a, b) => a.distance - b.distance || a.y - b.y || a.x - b.x);
+      for (const candidate of candidates) {
+        if (isFree(candidate.x, candidate.y) && (!requireClearance || hasClearance(candidate.x, candidate.y))) {
+          return { x: candidate.x, y: candidate.y };
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Whether a body blocks a spawned character: walls and map hitboxes (within
+   * their `z` range), static shapes, and players or events that are not `through`.
+   * @private
+   */
+  private isSpawnObstacle(entity: Entity, owner: { z: () => number }): boolean {
+    const entityOwner = (entity as any).owner;
+    if (!entityOwner) {
+      return this.staticHitboxBlocksOwner(entity, owner);
+    }
+    if (this.isAlwaysOnTopEvent(entityOwner)) {
+      return false;
+    }
+    const through = typeof entityOwner._through === "function"
+      ? entityOwner._through() === true
+      : entityOwner.through === true;
+    return !through;
+  }
+
+  /**
    * Query players and events whose physics bodies overlap a rectangular hitbox.
    *
    * Unlike `createMovingHitbox()`, this is an immediate deterministic query. It
@@ -1361,6 +1492,91 @@ export abstract class RpgCommonMap<T extends RpgCommonPlayer> {
     options: MapAreaQueryOptions<TCustom>
   ): Array<MapAreaHit<TCustom | T | any>> {
     return queryMapArea(this, options);
+  }
+
+  /**
+   * Replace the client-prediction collision geometry owned by one streamed map chunk.
+   *
+   * The authoritative server still owns collision results. This method only keeps
+   * the predicting client aligned with chunks that the server has disclosed.
+   *
+   * @title Replace streamed static hitboxes
+   * @method map.replaceStreamedStaticHitboxes
+   * @param namespace - Stable chunk key or provider namespace.
+   * @param hitboxes - Serializable rectangles or polygons for that chunk.
+   * @returns {void}
+   * @memberof RpgCommonMap
+   */
+  replaceStreamedStaticHitboxes(namespace: string, hitboxes: MapChunkHitbox[]): void {
+    this.clearStreamedStaticHitboxes(namespace);
+    const ids = new Set<string>();
+
+    hitboxes.forEach((hitbox, index) => {
+      const suffix = hitbox.id ?? String(index);
+      const id = `__map_stream__:${namespace}:${index}:${suffix}`;
+      this.addMapHitbox(id, hitbox);
+      ids.add(id);
+    });
+
+    if (ids.size > 0) {
+      this.streamedStaticHitboxIds.set(namespace, ids);
+    }
+  }
+
+  /**
+   * Remove prediction collision geometry previously registered for a map chunk.
+   *
+   * @title Clear streamed static hitboxes
+   * @method map.clearStreamedStaticHitboxes
+   * @param namespace - Stable chunk key or provider namespace.
+   * @returns {void}
+   * @memberof RpgCommonMap
+   */
+  clearStreamedStaticHitboxes(namespace: string): void {
+    const ids = this.streamedStaticHitboxIds.get(namespace);
+    if (!ids) return;
+    ids.forEach((id) => this.removeHitbox(id));
+    this.streamedStaticHitboxIds.delete(namespace);
+  }
+
+  /**
+   * Add a map collision hitbox, including its optional height range.
+   * @private
+   */
+  private addMapHitbox(id: string, hitbox: MapChunkHitbox): void {
+    if ("points" in hitbox) {
+      this.addStaticHitbox(id, hitbox.points);
+    }
+    else {
+      this.addStaticHitbox(id, hitbox.x, hitbox.y, hitbox.width, hitbox.height);
+    }
+    this.setStaticHitboxElevation(id, hitbox);
+  }
+
+  private setStaticHitboxElevation(id: string, elevation: MapHitboxElevation): void {
+    if (typeof elevation.z !== "number" || !Number.isFinite(elevation.z)) {
+      return;
+    }
+    const entity = this.physic.getEntityByUUID(id);
+    if (!entity) return;
+    const zHeight = typeof elevation.zHeight === "number" && elevation.zHeight > 0
+      ? elevation.zHeight
+      : Number.POSITIVE_INFINITY;
+    this.staticHitboxElevations.set(entity, { min: elevation.z, max: elevation.z + zHeight });
+  }
+
+  /**
+   * Whether a static hitbox blocks a character at its current height.
+   * Hitboxes without a height range block every character.
+   * @private
+   */
+  private staticHitboxBlocksOwner(hitbox: Entity, owner: any): boolean {
+    const elevation = this.staticHitboxElevations.get(hitbox);
+    if (!elevation || !owner) {
+      return true;
+    }
+    const z = this.resolveNumeric(owner.z);
+    return z >= elevation.min && z < elevation.max;
   }
 
   /**
@@ -1621,6 +1837,8 @@ export abstract class RpgCommonMap<T extends RpgCommonPlayer> {
       }
       let changed = false;
 
+      const previousX = typeof currentOwner.x === "function" ? currentOwner.x() : undefined;
+      const previousY = typeof currentOwner.y === "function" ? currentOwner.y() : undefined;
       this.withPhysicsSync(() => {
         if (typeof currentOwner.x === "function" && typeof currentOwner.x.set === "function") {
           currentOwner.x.set(Math.round(topLeftX));
@@ -1632,6 +1850,16 @@ export abstract class RpgCommonMap<T extends RpgCommonPlayer> {
         }
       });
       if (changed) {
+        if (
+          ((typeof currentOwner.x === "function" && previousX !== currentOwner.x()) ||
+            (typeof currentOwner.y === "function" && previousY !== currentOwner.y())) &&
+          typeof currentOwner.execMethod === "function" &&
+          !(typeof currentOwner.isEvent === "function" && currentOwner.isEvent())
+        ) {
+          void Promise.resolve().then(() => currentOwner.execMethod("onMove")).catch((error) => {
+            console.error("[RPGJS] Error during player onMove hooks:", error);
+          });
+        }
         const applyFrames = currentOwner.applyFrames;
         if (typeof applyFrames === "function") {
           queueMicrotask(() => applyFrames.call(currentOwner));
@@ -1650,9 +1878,12 @@ export abstract class RpgCommonMap<T extends RpgCommonPlayer> {
         return false;
       }
 
-      // If either entity has no owner, resolve collision (e.g., walls, obstacles must block)
+      // Walls and obstacles have no owner: they block unless the character is
+      // outside the hitbox height range (e.g. a Tiled tile on another z level)
       if (!selfOwner || !otherOwner) {
-        return true;
+        return selfOwner
+          ? this.staticHitboxBlocksOwner(other, selfOwner)
+          : this.staticHitboxBlocksOwner(self, otherOwner);
       }
 
       if (this.isAlwaysOnTopEvent(otherOwner)) {

@@ -1,14 +1,25 @@
 import { describe, expect, it } from "vitest";
+import { Texture } from "pixi.js";
 import {
   buildStudioElementSpriteParts,
+  extractStudioGroundShadowPixels,
   resolveStudioElementLightSpotOverlay,
   resolveStudioElementMetrics,
   resolveStudioElementShadowCaster,
   StudioElementRenderer,
 } from "./studio-element-renderer";
 import {
+  isTerrainWaveAnimated,
+  resolveCanvasOffsetDrawRegion,
+  resolveTerrainHoleFillGeometry,
+  resolveTerrainHoleWaveDescriptors,
+  resolveTerrainHoleWaveOptions,
   resolveStudioTerrainWallShadowStyle,
   resolveTerrainTextureRepeatLocal,
+  resolveTerrainWaveDirectionVector,
+  resolveTerrainWaveHighlightColor,
+  resolveTerrainWaveRenderStrength,
+  resolveWaterMaskChunkIntersection,
 } from "./terrain-renderer/terrain-chunk-renderer";
 
 const createElement = (overrides: Record<string, any> = {}) => ({
@@ -32,12 +43,233 @@ const createTerrainData = (overrides: Record<string, any> = {}) => ({
   terrainControl: null,
   terrainGrid: [],
   morphologyFeatures: [],
-  waterAnimation: { enabled: false, speed: 1, intensity: 0.45 },
+  waterAnimation: { enabled: false, speed: 1, intensity: 0.45, direction: 90 },
   version: "terrain-v1",
   ...overrides,
 });
 
 describe("studio element renderer helpers", () => {
+  it("extracts only dark, translucent pixels from the lower portion as a ground shadow", () => {
+    const pixels = new Uint8ClampedArray([
+      30, 30, 30, 120, 255, 255, 255, 255,
+      30, 30, 30, 120, 255, 255, 255, 255,
+    ]);
+    const split = extractStudioGroundShadowPixels(pixels, 2, 2);
+
+    expect(split.element[3]).toBe(120);
+    expect(split.element[7]).toBe(255);
+    expect(split.element[11]).toBe(0);
+    expect(split.shadow[11]).toBe(120);
+  });
+
+  it("keeps dark anti-aliased contours attached to opaque artwork", () => {
+    const width = 5;
+    const height = 3;
+    const pixels = new Uint8ClampedArray(width * height * 4);
+    const setPixel = (x: number, y: number, red: number, green: number, blue: number, alpha: number) => {
+      const index = (y * width + x) * 4;
+      pixels.set([red, green, blue, alpha], index);
+    };
+    setPixel(0, 2, 20, 20, 20, 255);
+    setPixel(1, 2, 20, 20, 20, 120);
+    setPixel(4, 2, 20, 20, 20, 120);
+
+    const split = extractStudioGroundShadowPixels(pixels, width, height);
+    const contourAlpha = (2 * width + 1) * 4 + 3;
+    const shadowAlpha = (2 * width + 4) * 4 + 3;
+
+    expect(split.element[contourAlpha]).toBe(120);
+    expect(split.shadow[contourAlpha]).toBe(0);
+    expect(split.element[shadowAlpha]).toBe(0);
+    expect(split.shadow[shadowAlpha]).toBe(120);
+  });
+
+  it("keeps element sprites separate and reuses one derived texture per source rect", async () => {
+    const renderer = new StudioElementRenderer();
+    const sourceCanvas = document.createElement("canvas");
+    sourceCanvas.width = 2;
+    sourceCanvas.height = 2;
+    const baseTexture = Texture.from(sourceCanvas);
+    (renderer as any).textureCache.set("tree.png", Promise.resolve(baseTexture));
+
+    await renderer.renderElements([
+      createElement({ image: "tree.png", rect: [0, 0, 2, 2], drawIn: [10, 20, 2, 2] }),
+    ]);
+    expect(renderer.getGroundShadowSprites()).toHaveLength(0);
+
+    const containers = await renderer.renderElements([
+      createElement({ image: "tree.png", rect: [0, 0, 2, 2], drawIn: [10, 20, 2, 2], extractGroundShadow: true }),
+      createElement({ id: "tree-2", image: "tree.png", rect: [0, 0, 2, 2], drawIn: [30, 40, 2, 2], extractGroundShadow: true }),
+    ]);
+    const shadows = renderer.getGroundShadowSprites();
+
+    expect(containers).toHaveLength(2);
+    expect(shadows).toHaveLength(2);
+    expect(containers[0].children).not.toContain(shadows[0]);
+    expect(containers[1].children).not.toContain(shadows[1]);
+    expect(shadows[0].texture).toBe(shadows[1].texture);
+    expect((renderer as any).groundShadowTextureEntries.size).toBe(1);
+
+    renderer.destroy();
+    baseTexture.destroy(true);
+  });
+  const createMorphologyMask = (width: number, height: number, filled = true) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const alpha = filled ? 255 : 0;
+    const data = new Uint8ClampedArray(width * height * 4);
+    for (let index = 3; index < data.length; index += 4) data[index] = alpha;
+    const context = canvas.getContext("2d")!;
+    context.getImageData = () => ({ data } as ImageData);
+    return { canvas, bounds: { x: 0, y: 0, width, height } };
+  };
+
+  it("resolves the projected water level shared by hole fills and their animation mask", () => {
+    const geometry = resolveTerrainHoleFillGeometry(
+      createMorphologyMask(100, 80),
+      { id: "pond", kind: "hole", params: { fillHeight: 50 }, strokes: [] },
+      60
+    );
+
+    expect(geometry).toEqual({ level: 0.5, dropY: 23, inset: 6 });
+  });
+
+  it("does not create animated water geometry for empty or unfilled holes", () => {
+    const feature = { id: "pond", kind: "hole" as const, params: { fillHeight: 0 }, strokes: [] };
+
+    expect(resolveTerrainHoleFillGeometry(createMorphologyMask(100, 80), feature, 60)).toBeNull();
+    expect(resolveTerrainHoleFillGeometry(
+      createMorphologyMask(100, 80, false),
+      { ...feature, params: { fillHeight: 100 } },
+      60
+    )).toBeNull();
+  });
+
+  it("inherits wave options per hole and clamps explicit overrides", () => {
+    const fallback = { enabled: false, speed: 1.5, intensity: 0.4, direction: 135 };
+    const inherited = { id: "pond-a", kind: "hole" as const, params: {}, strokes: [] };
+    const overridden = {
+      id: "pond-b",
+      kind: "hole" as const,
+      params: { waveSpeed: 9, waveIntensity: 0, waveDirection: -90 },
+      strokes: [],
+    };
+
+    expect(resolveTerrainHoleWaveOptions(inherited, fallback)).toEqual({
+      speed: 1.5,
+      intensity: 0.4,
+      direction: 135,
+    });
+    expect(resolveTerrainHoleWaveOptions(overridden, fallback)).toEqual({
+      speed: 4,
+      intensity: 0,
+      direction: 270,
+    });
+  });
+
+  it("keeps independent descriptors for animated and static filled holes", () => {
+    const descriptors = resolveTerrainHoleWaveDescriptors(
+      [
+        {
+          id: "east-flow",
+          kind: "hole",
+          params: { fillHeight: 60, waveSpeed: 1, waveIntensity: 0.8, waveDirection: 0 },
+          strokes: [],
+        },
+        {
+          id: "static-west",
+          kind: "hole",
+          params: { fillHeight: 80, waveSpeed: 3, waveIntensity: 0, waveDirection: 180 },
+          strokes: [],
+        },
+        { id: "empty", kind: "hole", params: { fillHeight: 0 }, strokes: [] },
+        { id: "wall", kind: "wall", params: { fillHeight: 100 }, strokes: [] },
+      ],
+      { enabled: false, speed: 1.5, intensity: 0.4, direction: 90 }
+    );
+
+    expect(descriptors.map(({ feature, options }) => ({ id: feature.id, ...options }))).toEqual([
+      { id: "east-flow", speed: 1, intensity: 0.8, direction: 0 },
+      { id: "static-west", speed: 3, intensity: 0, direction: 180 },
+    ]);
+    expect(descriptors.map(({ options }) => isTerrainWaveAnimated(options))).toEqual([true, false]);
+  });
+
+  it("maps cardinal wave directions to screen-space vectors", () => {
+    expect(resolveTerrainWaveDirectionVector(0)).toEqual({ x: 1, y: 0 });
+    expect(resolveTerrainWaveDirectionVector(90)).toEqual({ x: 0, y: 1 });
+    expect(resolveTerrainWaveDirectionVector(180)).toEqual({ x: -1, y: 0 });
+    expect(resolveTerrainWaveDirectionVector(270)).toEqual({ x: 0, y: -1 });
+  });
+
+  it("brightens the local liquid color without imposing a blue tint", () => {
+    const highlight = resolveTerrainWaveHighlightColor({ r: 210, g: 30, b: 20, a: 255 });
+
+    expect(highlight).toEqual({ r: 255, g: 41, b: 27, a: 255 });
+    expect(highlight.r).toBeGreaterThan(highlight.g);
+    expect(highlight.g).toBeGreaterThan(highlight.b);
+  });
+
+  it("scales refraction and highlights continuously from zero intensity", () => {
+    expect(resolveTerrainWaveRenderStrength(0)).toMatchObject({
+      refractionAlpha: 0,
+      refractionAcrossAmplitude: 0,
+      refractionFlowAmplitude: 0,
+      glowAlpha: 0,
+      waveAlpha: 0,
+    });
+    expect(resolveTerrainWaveRenderStrength(1).waveAlpha).toBe(0);
+
+    const subtle = resolveTerrainWaveRenderStrength(0.001);
+    expect(subtle.refractionAlpha).toBeLessThan(0.01);
+    expect(subtle.refractionAcrossAmplitude).toBeLessThan(0.01);
+    expect(subtle.waveAlpha).toBeLessThan(0.01);
+  });
+
+  it("crops a filled-hole mask to the current chunk without losing alignment", () => {
+    expect(resolveWaterMaskChunkIntersection(
+      { x: 700, y: 40, width: 140, height: 120 },
+      { x: 20, y: 10, width: 100, height: 80 },
+      { x: 768, y: 0, width: 768, height: 768 }
+    )).toEqual({
+      bounds: { x: 0, y: 50, width: 52, height: 80 },
+      sourceX: 68,
+      sourceY: 10,
+    });
+  });
+
+  it("crops an offset refraction draw to the affected band", () => {
+    expect(resolveCanvasOffsetDrawRegion(
+      768,
+      768,
+      768,
+      768,
+      3,
+      -2,
+      { x: 90, y: 120, width: 580, height: 9 }
+    )).toEqual({
+      sourceX: 87,
+      sourceY: 122,
+      destinationX: 90,
+      destinationY: 120,
+      width: 580,
+      height: 9,
+    });
+  });
+
+  it("returns no refraction draw when the shifted source misses the clipped band", () => {
+    expect(resolveCanvasOffsetDrawRegion(
+      64,
+      64,
+      768,
+      768,
+      700,
+      700,
+      { x: 90, y: 120, width: 580, height: 9 }
+    )).toBeNull();
+  });
+
   it("repeats terrain texture coordinates without mirroring adjacent tiles", () => {
     expect(resolveTerrainTextureRepeatLocal(0, 48)).toBe(0);
     expect(resolveTerrainTextureRepeatLocal(24, 48)).toBe(0.5);
@@ -78,6 +310,55 @@ describe("studio element renderer helpers", () => {
     expect(parts).toHaveLength(3);
     expect(parts.map((part) => part.width)).toEqual([16, 16, 8]);
     expect(parts[2].sourceRect.width).toBe(8);
+  });
+
+  it("repeats along the resized axis instead of scaling repeat-axis segments", () => {
+    const parts = buildStudioElementSpriteParts(
+      createElement({
+        rect: [0, 0, 16, 16],
+        drawIn: [0, 0, 16, 16],
+        scale: { x: 40 / 16, y: 1 },
+        drawRule: {
+          type: "repeat-axis",
+          axis: "x",
+          rects: {
+            body: [0, 0, 16, 16],
+          },
+        },
+      })
+    );
+
+    expect(parts).toHaveLength(3);
+    expect(parts.map((part) => part.width)).toEqual([16, 16, 8]);
+    expect(parts[2].sourceRect.width).toBe(8);
+  });
+
+  it("keeps edge-repeat caps unscaled and repeats the middle across the target width", () => {
+    const parts = buildStudioElementSpriteParts(
+      createElement({
+        rect: [201, 693, 92, 101],
+        drawIn: [732, 792, 92, 101],
+        scale: { x: 384 / 92, y: 1 },
+        drawRule: {
+          type: "edge-repeat",
+          axis: "x",
+          rects: {
+            start: [0, 0, 19, 101],
+            middle: [19, 0, 26, 101],
+            end: [45, 0, 47, 101],
+          },
+        },
+      })
+    );
+
+    expect(parts).toHaveLength(15);
+    expect(parts[0]).toMatchObject({ x: 732, y: 792, width: 19, height: 101 });
+    expect(parts[parts.length - 1]).toMatchObject({ x: 1069, y: 792, width: 47, height: 101 });
+    expect(parts.slice(1, -1).map((part) => part.width)).toEqual([
+      26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 6,
+    ]);
+    expect(parts[1].sourceRect).toMatchObject({ x: 220, y: 693, width: 26, height: 101 });
+    expect(parts[13].sourceRect).toMatchObject({ x: 220, y: 693, width: 6, height: 101 });
   });
 
   it("compresses edge-repeat segments when the target is smaller than fixed edges", () => {
@@ -282,6 +563,35 @@ describe("studio element renderer helpers", () => {
 
     expect(debug).toBeTruthy();
     expect(debug.zIndex).toBeGreaterThan(1000000);
+
+    renderer.destroy();
+  });
+
+  it("draws the convex parts of a polygon hitbox, scaled with the element, instead of its bounding box", async () => {
+    const renderer = new StudioElementRenderer();
+    const polygon = {
+      type: "polygon", x: 4, y: 20, width: 40, height: 24,
+      polygons: [[[4, 44], [44, 44], [44, 20], [24, 30], [4, 20]]],
+      parts: [[[4, 20], [24, 30], [4, 44]], [[24, 30], [44, 20], [44, 44], [4, 44]]],
+    };
+    const [container] = await renderer.renderElements(
+      [createElement({ image: "", hitbox: polygon, drawIn: [96, 144, 96, 96] })],
+      { debugCollisions: true }
+    );
+    const debug = container.children.find((child: any) => String(child.label ?? "").includes("CollisionDebug")) as any;
+    const rectRenderer = new StudioElementRenderer();
+    const rect = (await rectRenderer.renderElements([createElement({ image: "" })], { debugCollisions: true }))[0]
+      .children.find((child: any) => String(child.label ?? "").includes("CollisionDebug")) as any;
+    const rectInstructions = rect.context.instructions.length;
+    rectRenderer.destroy();
+
+    // One fill + one stroke per part, where a rectangle takes one of each.
+    expect(debug.context.instructions.length).toBe(rectInstructions * 2);
+    // The element is drawn at twice its size: the parts follow.
+    const bounds = debug.getLocalBounds();
+    expect(Math.round(bounds.minX)).toBeLessThanOrEqual(8);
+    expect(Math.round(bounds.maxX)).toBeGreaterThanOrEqual(87);
+    expect(Math.round(bounds.maxY)).toBeGreaterThanOrEqual(87);
 
     renderer.destroy();
   });

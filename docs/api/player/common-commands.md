@@ -9,26 +9,37 @@ Core server-side player commands defined on the main Player class.
 
 ## Members
 
+- [Apply Player Snapshot](#apply-player-snapshot)
 - [applyDefaultParameters](#applydefaultparameters)
 - [attachShape](#attachshape)
 - [cameraFollow](#camerafollow)
 - [changeMap](#changemap)
+- [changeRoom](#changeroom)
+- [clientVisual](#clientvisual)
 - [createDynamicEvent](#createdynamicevent)
 - [emit](#emit)
 - [flash](#flash)
+- [getCurrentRoom](#getcurrentroom)
 - [getInShapes](#getinshapes)
 - [getShapes](#getshapes)
 - [getTile](#gettile)
 - [initializeDefaultStats](#initializedefaultstats)
+- [lastProcessedClientInputTs](#lastprocessedclientinputts)
+- [lastProcessedInputServerTick](#lastprocessedinputservertick)
+- [lastProcessedInputTick](#lastprocessedinputtick)
 - [lastProcessedInputTs](#lastprocessedinputts)
 - [Listen one-time to data from the client](#listen-one-time-to-data-from-the-client)
 - [Listen to data from the client](#listen-to-data-from-the-client)
 - [load](#load)
-- [name](#name)
 - [otherPlayersCollision](#otherplayerscollision)
+- [pendingMapPosition](#pendingmapposition)
+- [Player Snapshot](#player-snapshot)
 - [playSound](#playsound)
 - [position](#position)
+- [position](#position)
+- [prepareSnapshotForObjectLoad](#preparesnapshotforobjectload)
 - [Remove listeners of the client event](#remove-listeners-of-the-client-event)
+- [room](#room)
 - [Run Sync Changes](#run-sync-changes)
 - [save](#save)
 - [setAnimation](#setanimation)
@@ -46,6 +57,36 @@ Core server-side player commands defined on the main Player class.
 - [tiles](#tiles)
 - [worldPositionX](#worldpositionx)
 - [worldPositionY](#worldpositiony)
+
+## Apply Player Snapshot
+
+Restore authoritative player state without new-game initialization in RPG
+and MMORPG modes, then run the server onLoad hooks.
+
+- Source: `packages/server/src/Player/Player.ts`
+- Kind: `method`
+- Member of: `RpgPlayer`
+- Defined in: `RpgPlayer`
+
+### Signature
+
+```ts
+player.applySnapshot(snapshot)
+```
+
+### Parameters
+
+- `snapshot`: `string | RpgPlayerSnapshot`
+
+### Returns
+
+The resolved snapshot after database references have been restored.
+
+### Examples
+
+```ts
+await player.applySnapshot(saved);
+```
 
 ## applyDefaultParameters
 
@@ -151,7 +192,14 @@ cameraFollow(otherPlayer: RpgPlayer | RpgEvent, options?: {
 
 - `otherPlayer`: `RpgPlayer | RpgEvent`
 - `options?`: `{
-      smoothMove?: boolean | { enabled?: boolean; time?: number; ease?: CameraFollowEase; speed?: number; acceleration?: number | null; radius?: number | null };
+      smoothMove?: boolean | {
+        enabled?: boolean;
+        time?: number;
+        ease?: CameraFollowEase;
+        speed?: number;
+        acceleration?: number | null;
+        radius?: number | null;
+      };
     }`
 
 ### Examples
@@ -165,17 +213,6 @@ player.cameraFollow(npcEvent, {
   smoothMove: {
     time: 1000,
     ease: "easeInOutQuad"
-  }
-});
-
-// Follow with a smooth transition and softer continuous follow
-player.cameraFollow(npcEvent, {
-  smoothMove: {
-    time: 1000,
-    ease: "easeInOutQuad",
-    speed: 12,
-    acceleration: 0.2,
-    radius: 80
   }
 });
 
@@ -194,7 +231,7 @@ Change the map for this player
 ### Signature
 
 ```ts
-changeMap(mapId: string, positions?: { x: number; y: number; z?: number } | string): Promise<any | null | boolean>
+changeMap(mapId: string, positions?: { x: number; y: number; z?: number } | string): Promise<boolean>
 ```
 
 ### Parameters
@@ -219,8 +256,79 @@ await player.changeMap("dungeon", "entrance");
 await player.changeMap("town");
 ```
 
-When the map is loaded from Tiled, `positions` can be the `name` of a point object.
-If `positions` is omitted, RPGJS tries to use the `start` point.
+## changeRoom
+
+Transfer this player to a registered custom gameplay room.
+
+The server resolves the destination, runs authorization hooks, creates a
+Signe session-transfer token, and tells the client which scene kind to
+mount. Clients cannot select a destination on their own.
+
+- Source: `packages/server/src/Player/Player.ts`
+- Kind: `method`
+- Defined in: `RpgPlayer`
+
+### Signature
+
+```ts
+player.changeRoom(target)
+```
+
+### Parameters
+
+- `target`: `RpgRoomTarget`
+
+### Returns
+
+`false` when a hook rejects the transfer; otherwise `true`.
+
+### Examples
+
+```ts
+await player.changeRoom({
+  kind: "battle",
+  params: { id: "encounter-42" },
+})
+```
+
+## clientVisual
+
+Trigger a named client visual for this player only.
+
+Client visuals are registered in the client module with `clientVisuals`.
+They group existing client-side visual primitives such as flash, sound,
+component animations, sprite animations, or camera shake. The server sends
+only the visual name and a serializable payload, which keeps rendering
+details on the client and avoids sending several visual packets for one
+gameplay moment.
+
+Use direct APIs like `playSound()`, `flash()`, or
+`showComponentAnimation()` for one-off visuals. Use `clientVisual()` when
+several visuals should be orchestrated together by the client.
+
+- Source: `packages/server/src/Player/Player.ts`
+- Kind: `method`
+- Defined in: `RpgPlayer`
+
+### Signature
+
+```ts
+clientVisual(name: string, data?: TData): void
+```
+
+### Parameters
+
+- `name`: `string`
+- `data?`: `TData`
+
+### Examples
+
+```ts
+player.clientVisual("hit", {
+  targetId: enemy.id,
+  damage: 25,
+});
+```
 
 ## createDynamicEvent
 
@@ -231,17 +339,16 @@ Prefer `player.getCurrentMap()?.createDynamicEvent(...)` in new code.
 - Source: `packages/server/src/Player/Player.ts`
 - Kind: `method`
 - Defined in: `RpgPlayer`
-- Deprecated: use `map.createDynamicEvent(...)` instead.
 
 ### Signature
 
 ```ts
-createDynamicEvent(eventObj: any): Promise<string | undefined> | undefined
+createDynamicEvent(eventObj: EventPosOption): Promise<string | undefined> | undefined
 ```
 
 ### Parameters
 
-- `eventObj`: `any`
+- `eventObj`: `EventPosOption`
 
 ### Returns
 
@@ -268,7 +375,7 @@ player.emit(type, value)
 ### Parameters
 
 - `type`: `string`
-- `value?`: `any`
+- `value?`: `T`
 
 ### Examples
 
@@ -356,6 +463,36 @@ player.flash({
 });
 ```
 
+## getCurrentRoom
+
+Return the active RPGJS room.
+
+The result is a lobby, map, or registered custom gameplay room. Use
+`getCurrentMap()` when map-only APIs are required.
+
+- Source: `packages/server/src/Player/Player.ts`
+- Kind: `method`
+- Defined in: `RpgPlayer`
+
+### Signature
+
+```ts
+player.getCurrentRoom()
+```
+
+### Returns
+
+The active room, or `null` before the player joins one.
+
+### Examples
+
+```ts
+const battle = player.getCurrentRoom<BattleRoom>()
+if (battle?.descriptor.kind === "battle") {
+  console.log(battle.state())
+}
+```
+
 ## getInShapes
 
 Get all shapes where this player is currently located
@@ -431,12 +568,11 @@ matching CanvasEngine Tiled's `getTileByPosition(...)` API.
 - Source: `packages/server/src/Player/Player.ts`
 - Kind: `method`
 - Defined in: `RpgPlayer`
-- Deprecated: use `player.getCurrentMap()?.tiled.getTileByPosition(...)` instead.
 
 ### Signature
 
 ```ts
-getTile(x: number, y: number, z?: number): any
+getTile(x: number, y: number, z?: number): RpgTiledTile | undefined
 ```
 
 ### Parameters
@@ -471,9 +607,51 @@ overwrite those values.
 player.initializeDefaultStats()
 ```
 
+## lastProcessedClientInputTs
+
+Last client-authored timestamp, kept separately for anti-cheat validation.
+
+- Source: `packages/server/src/Player/Player.ts`
+- Kind: `property`
+- Defined in: `RpgPlayer`
+
+### Signature
+
+```ts
+lastProcessedClientInputTs: number
+```
+
+## lastProcessedInputServerTick
+
+Server physics tick at which that client tick was applied.
+
+- Source: `packages/server/src/Player/Player.ts`
+- Kind: `property`
+- Defined in: `RpgPlayer`
+
+### Signature
+
+```ts
+lastProcessedInputServerTick: number | null
+```
+
+## lastProcessedInputTick
+
+Client physics tick attached to the last processed movement input.
+
+- Source: `packages/server/src/Player/Player.ts`
+- Kind: `property`
+- Defined in: `RpgPlayer`
+
+### Signature
+
+```ts
+lastProcessedInputTick: number | null
+```
+
 ## lastProcessedInputTs
 
-Last processed client input timestamp for reconciliation
+Server-clock deadline used to stop idle movement.
 
 - Source: `packages/server/src/Player/Player.ts`
 - Kind: `property`
@@ -506,7 +684,7 @@ player.once(key, cb)
 ### Parameters
 
 - `key`: `string`
-- `cb`: `(data: any) => void | Promise<void>`
+- `cb`: `(data: T) => void | Promise<void>`
 
 ### Examples
 
@@ -539,7 +717,7 @@ player.on(key, cb)
 ### Parameters
 
 - `key`: `string`
-- `cb`: `(data: any) => void | Promise<void>`
+- `cb`: `(data: T) => void | Promise<void>`
 
 ### Examples
 
@@ -557,58 +735,13 @@ const socket = inject<AbstractWebsocket>(WebSocketToken);
 socket.emit("chat:message", { text: "Hello server" });
 ```
 
-## name
-
-Player or event display name.
-
-The value is exposed as a plain string property for v4 compatibility.
-
-- Source: `packages/common/src/Player.ts`
-- Kind: `getter/setter`
-- Defined in: `RpgCommonPlayer`
-
-### Signature
-
-```ts
-name: string
-```
-
-### Examples
-
-```ts
-player.name = "Hero";
-console.log(player.name);
-```
-
-## otherPlayersCollision
-
-Legacy v4 list of other players or events currently colliding with this player.
-
-- Source: `packages/server/src/Player/Player.ts`
-- Kind: `getter`
-- Defined in: `RpgPlayer`
-- Deprecated: prefer explicit physics queries on `player.getCurrentMap()`.
-
-### Signature
-
-```ts
-otherPlayersCollision: Array<RpgPlayer | RpgEvent>
-```
-
-### Returns
-
-Runtime players and events whose physics bodies overlap this player.
-
 ## load
 
 Load player state.
 
-For v4 compatibility, `player.load(snapshot)` accepts a JSON string or plain
-snapshot object and applies it directly to the player. A string is treated as a
-snapshot only when it looks like JSON (`{...}` or `[...]`), so `player.load("auto")`
-continues to load the v5 auto save slot.
-
-The v5 save-slot API is still available with `player.load(slot, context, options)`.
+For v4 compatibility, pass a JSON string or plain snapshot object to apply
+it directly. Pass a slot (`"auto"` or a number) to use the v5 storage
+strategy.
 
 - Source: `packages/server/src/Player/Player.ts`
 - Kind: `method`
@@ -617,17 +750,71 @@ The v5 save-slot API is still available with `player.load(slot, context, options
 ### Signature
 
 ```ts
-load(snapshot: string | object): Promise<{ ok: true; snapshot: object }>
-load(slot?: number | "auto", context?: SaveRequestContext, options?: { changeMap?: boolean }): Promise<{ ok: boolean; slot?: SaveSlotMeta; index?: number }>
+load(slot: SaveSlotIndex, context?: SaveRequestContext, options?: { changeMap?: boolean }): Promise<RpgPlayerSlotLoadResult>
 ```
+
+### Parameters
+
+- `slot`: `SaveSlotIndex`
+- `context?`: `SaveRequestContext`
+- `options?`: `{ changeMap?: boolean }`
+
+## otherPlayersCollision
+
+Legacy v4 list of other players or events currently colliding with this player.
+
+- Source: `packages/server/src/Player/Player.ts`
+- Kind: `getter`
+- Defined in: `RpgPlayer`
+
+### Signature
+
+```ts
+otherPlayersCollision
+```
+
+### Returns
+
+Runtime players and events whose physics bodies overlap this player.
+
+## pendingMapPosition
+
+Internal: named map position to resolve after the target map data is ready
+
+- Source: `packages/server/src/Player/Player.ts`
+- Kind: `property`
+- Defined in: `RpgPlayer`
+
+### Signature
+
+```ts
+pendingMapPosition
+```
+
+## Player Snapshot
+
+Capture serializable authoritative player state in RPG and MMORPG modes.
+Derived parameters are recalculated from saved curves, bounds and modifiers.
+
+- Source: `packages/server/src/Player/Player.ts`
+- Kind: `method`
+- Member of: `RpgPlayer`
+- Defined in: `RpgPlayer`
+
+### Signature
+
+```ts
+player.snapshot()
+```
+
+### Returns
+
+Player state suitable for serialization and later restoration.
 
 ### Examples
 
 ```ts
-const snapshot = await player.save();
-await player.load(snapshot);
-
-await player.load(2, { reason: "load", source: "menu" }, { changeMap: true });
+const saved = JSON.stringify(player.snapshot());
 ```
 
 ## playSound
@@ -672,9 +859,6 @@ player.playSound("background-music", {
 
 // Play a notification sound at low volume
 player.playSound("notification", { volume: 0.3 });
-
-// v4 compatibility: play the sound for every player on the map
-player.playSound("bell", true);
 ```
 
 ## position
@@ -684,22 +868,57 @@ Legacy v4 position object.
 Prefer the reactive `x`, `y`, and `z` signals in new code.
 
 - Source: `packages/server/src/Player/Player.ts`
-- Kind: `getter/setter`
+- Kind: `getter`
 - Defined in: `RpgPlayer`
-- Deprecated: use `player.x()`, `player.y()`, `player.z()` and `player.teleport()` instead.
 
 ### Signature
 
 ```ts
-position: { x: number; y: number; z: number }
+position
 ```
 
-### Examples
+### Returns
+
+Current top-left player position.
+
+## position
+
+Set the legacy v4 position object.
+
+This updates the player's top-left coordinates and keeps the physics body in sync
+when the player is currently attached to a map.
+
+- Source: `packages/server/src/Player/Player.ts`
+- Kind: `setter`
+- Defined in: `RpgPlayer`
+
+### Signature
 
 ```ts
-const current = player.position;
-player.position = { x: 100, y: 200, z: 0 };
+position
 ```
+
+## prepareSnapshotForObjectLoad
+
+Preserve runtime signals while preparing serialized player data for loading.
+
+- Source: `packages/server/src/Player/Player.ts`
+- Kind: `method`
+- Defined in: `RpgPlayer`
+
+### Signature
+
+```ts
+prepareSnapshotForObjectLoad(snapshot: RpgPlayerSnapshot): RpgPlayerSnapshot
+```
+
+### Parameters
+
+- `snapshot`: `RpgPlayerSnapshot`
+
+### Returns
+
+A copy excluding fields that are restored separately or recomputed.
 
 ## Remove listeners of the client event
 
@@ -726,6 +945,20 @@ player.off(key)
 player.off("chat:message");
 ```
 
+## room
+
+Active RPGJS room. Unlike `map`, this also covers non-spatial gameplay rooms.
+
+- Source: `packages/server/src/Player/Player.ts`
+- Kind: `property`
+- Defined in: `RpgPlayer`
+
+### Signature
+
+```ts
+room: RpgPlayerRoom | null
+```
+
 ## Run Sync Changes
 
 Run the change detection cycle. Normally, as soon as a hook is called in a class, the cycle is started. But you can start it manually
@@ -740,6 +973,24 @@ The method calls the `onChanges` method on events and synchronizes all map data 
 
 ```ts
 player.syncChanges()
+```
+
+## save
+
+Save the player state.
+
+For v4 compatibility, calling `save()` without arguments returns a JSON
+snapshot string. Pass a slot (`"auto"` or a number) to use the v5 storage
+strategy.
+
+- Source: `packages/server/src/Player/Player.ts`
+- Kind: `method`
+- Defined in: `RpgPlayer`
+
+### Signature
+
+```ts
+save(): Promise<string>
 ```
 
 ## setAnimation
@@ -857,11 +1108,7 @@ player.setHitbox(40, 40);
 
 Set the physical mass for this player or event.
 
-Mass is used by the server-side physics body for collision response. For
-events, mass only lets player collisions push the event when `event.pushable` is
-`true`; non-pushable events can still move through scripted movement such as
-`moveRoutes()`. Higher values make a pushable body harder to push. A mass of
-`0` or `Infinity` makes the body immovable.
+A mass of `0` or `Infinity` makes the physics body immovable.
 
 - Source: `packages/server/src/Player/Player.ts`
 - Kind: `method`
@@ -877,14 +1124,6 @@ setMass(mass: number): void
 
 - `mass`: `number`
 
-### Examples
-
-```ts
-event.pushable = true;
-event.setMass(20);
-event.setMass(Infinity);
-```
-
 ## setSizes
 
 Legacy v4 size setter.
@@ -895,60 +1134,16 @@ legacy object to `setHitbox(...)`.
 - Source: `packages/server/src/Player/Player.ts`
 - Kind: `method`
 - Defined in: `RpgPlayer`
-- Deprecated: use `player.setHitbox(width, height)` instead.
 
 ### Signature
 
 ```ts
 setSizes(obj: { width: number; height: number; hitbox?: { width: number; height: number } }): void
-setSizes(key: "width" | "height" | "hitbox", value: number | { width?: number; height?: number }): void
 ```
 
 ### Parameters
 
 - `obj`: `{ width: number; height: number; hitbox?: { width: number; height: number } }`
-- `key`: `"width" | "height" | "hitbox"`
-- `value`: `number | { width?: number; height?: number }`
-
-### Examples
-
-```ts
-player.setSizes({ width: 32, height: 48 });
-player.setSizes("width", 32);
-player.setSizes("height", 48);
-player.setSizes("hitbox", { width: 24, height: 24 });
-```
-
-## save
-
-Save player state.
-
-For v4 compatibility, `player.save()` with no argument returns a JSON snapshot
-string that can be passed back to `player.load(snapshot)`.
-
-The v5 save-slot API is still available with `player.save(slot, meta, context)`.
-Use this form when you want to write to the configured save storage strategy.
-
-- Source: `packages/server/src/Player/Player.ts`
-- Kind: `method`
-- Defined in: `RpgPlayer`
-
-### Signature
-
-```ts
-save(): Promise<string>
-save(slot: number | "auto", meta?: SaveSlotMeta, context?: SaveRequestContext): Promise<{ index: number; meta: SaveSlotMeta } | null>
-```
-
-### Examples
-
-```ts
-const snapshot = await player.save();
-await player.load(snapshot);
-
-await player.save("auto", {}, { reason: "auto", source: "step" });
-await player.save(2, { label: "Before boss" }, { reason: "manual", source: "menu" });
-```
 
 ## setSync
 
@@ -961,12 +1156,12 @@ Set the sync schema for the map
 ### Signature
 
 ```ts
-setSync(schema: any)
+setSync(schema: RpgSyncSchema): void
 ```
 
 ### Parameters
 
-- `schema`: `any`
+- `schema`: `RpgSyncSchema`
 
 ## shapes
 
@@ -977,12 +1172,11 @@ Prefer `player.getShapes()` in new code.
 - Source: `packages/server/src/Player/Player.ts`
 - Kind: `getter`
 - Defined in: `RpgPlayer`
-- Deprecated: use `player.getShapes()` instead.
 
 ### Signature
 
 ```ts
-shapes: RpgShape[]
+shapes
 ```
 
 ### Returns
@@ -1022,13 +1216,13 @@ to be displayed on the player.
 ### Signature
 
 ```ts
-showComponentAnimation(id: string, params?: any)
+showComponentAnimation(id: string, params?: TParams): void
 ```
 
 ### Parameters
 
 - `id`: `string`
-- `params?`: `any`
+- `params?`: `TParams`
 
 ### Examples
 
@@ -1111,12 +1305,11 @@ This helper is available only when the current map was loaded through
 - Source: `packages/server/src/Player/Player.ts`
 - Kind: `getter`
 - Defined in: `RpgPlayer`
-- Deprecated: use Tiled map APIs from `player.getCurrentMap()?.tiled` instead.
 
 ### Signature
 
 ```ts
-tiles: any[]
+tiles
 ```
 
 ### Returns

@@ -1,4 +1,5 @@
 import { FromSchema } from "json-schema-to-ts";
+import { inputKeyEnum } from "./input-controls";
 
 export const databaseSchema = {
     type: "object",
@@ -16,6 +17,140 @@ export const databaseSchema = {
     },
 } as any;
 
+const createItemWorkflowTriggersSchema = (
+    phases: readonly string[],
+) => ({
+    type: "array",
+    title: "item editor.workflow triggers",
+    description: "item editor.workflow triggers description",
+    format: {
+        name: "item-workflow-triggers",
+        layout: "action",
+        workflowKind: "item",
+    } as any,
+    items: {
+        type: "object",
+        properties: {
+            phase: {
+                type: "string",
+                enum: phases,
+            },
+            blockCollectionId: {
+                type: "string",
+            },
+        },
+        required: ["phase", "blockCollectionId"],
+    },
+});
+
+const paramsModifierSchema = {
+    type: "object",
+    title: "item editor.parameter modifiers",
+    description: "item editor.parameter modifiers description",
+    format: { layout: "specific" },
+    properties: Object.fromEntries(
+        ["maxhp", "maxsp", "str", "int", "dex", "agi"].map((parameter) => [
+            parameter,
+            {
+                type: "object",
+                title: `item editor.parameter ${parameter}`,
+                properties: {
+                    value: { type: "number", title: "item editor.modifier value", default: 0 },
+                    rate: { type: "number", title: "item editor.modifier rate", default: 1 },
+                },
+            },
+        ]),
+    ),
+};
+
+const itemUsageProperties = {
+    hpValue: {
+        type: "number",
+        title: "item editor.hp value",
+        description: "item editor.hp value description",
+        default: 0,
+        format: { layout: "usage" },
+    },
+    mpValue: {
+        type: "number",
+        title: "item editor.sp value",
+        description: "item editor.sp value description",
+        default: 0,
+        format: { layout: "usage" },
+    },
+    hitRate: {
+        type: "number",
+        title: "item editor.hit rate",
+        description: "item editor.hit rate description",
+        minimum: 0,
+        maximum: 100,
+        default: 100,
+        format: { layout: "usage" },
+    },
+    consumable: {
+        type: "boolean",
+        title: "item editor.consumable",
+        description: "item editor.consumable description",
+        default: true,
+        format: { layout: "usage" },
+    },
+    useAnimation: {
+        type: "string",
+        title: "item editor.use animation",
+        description: "item editor.use animation description",
+        format: {
+            name: "translated-media",
+            type: "animation",
+            buttonLabel: "item editor.select use animation",
+            useUpload: { accept: "image/*" },
+            layout: "presentation",
+        } as any,
+    },
+    useSound: {
+        type: "string",
+        title: "item editor.use sound",
+        description: "item editor.use sound description",
+        format: {
+            name: "translated-media",
+            type: "sound",
+            buttonLabel: "item editor.select use sound",
+            useUpload: { accept: "audio/*" },
+            layout: "presentation",
+        } as any,
+    },
+    useParticleEffect: {
+        type: "string",
+        title: "item editor.use particle effect",
+        description: "item editor.use particle effect description",
+        enum: [
+            "none",
+            "healPulse",
+            "magicBurst",
+            "pickup",
+            "levelUp",
+            "hitSpark",
+            "explosionSmall",
+        ],
+        default: "none",
+        format: { layout: "presentation" },
+    },
+    workflowTriggers: createItemWorkflowTriggersSchema([
+        "onAdd",
+        "onUse",
+        "onUseFailed",
+        "onRemove",
+    ]),
+};
+
+const equipmentProperties = {
+    paramsModifier: paramsModifierSchema,
+    workflowTriggers: createItemWorkflowTriggersSchema([
+        "onAdd",
+        "onRemove",
+        "onEquip",
+    ]),
+};
+
 export const itemSchema = {
     type: "object",
     properties: {
@@ -27,7 +162,7 @@ export const itemSchema = {
         description: {
             type: "string",
             title: "Description",
-            format: { name: "textarea" },
+            format: { name: "textarea", layout: "basic" },
         },
         icon: {
             type: "string",
@@ -39,7 +174,8 @@ export const itemSchema = {
                 buttonLabel: "Select Icon",
                 useUpload: {
                     accept: "image/*",
-                }
+                },
+                layout: "basic",
             } as any,
         },
         itemType: {
@@ -56,7 +192,7 @@ export const itemSchema = {
             description: "The price of the item. If the item is not for sale, set the price to 0.",
             default: 0,
             format: { layout: "properties" },
-        }
+        },
     },
     required: ["name", "itemType"],
     allOf: [
@@ -66,6 +202,7 @@ export const itemSchema = {
             },
             then: {
                 properties: {
+                    ...equipmentProperties,
                     atk: {
                         type: "number",
                         title: "Attack Power",
@@ -98,6 +235,7 @@ export const itemSchema = {
                 },
                 then: {
                     properties: {
+                        ...equipmentProperties,
                         pdef: {
                             type: "number",
                             title: "Defense",
@@ -116,7 +254,10 @@ export const itemSchema = {
                         
                     },
                     required: ["pdef"],
-                }
+                },
+                else: {
+                    properties: itemUsageProperties,
+                },
             },
         },
     ],
@@ -196,7 +337,7 @@ export const skillSchema = {
         description: {
             type: "string",
             title: "Description",
-            format: { layout: "basic", type: "textarea" },
+            format: { name: "textarea", layout: "basic" },
         },
         icon: {
             type: "string",
@@ -214,12 +355,12 @@ export const skillSchema = {
         },
         animation: {
             type: "string",
-            title: "Animation",
-            description: "Media animation played by this skill",
+            title: "skill editor.impact animation",
+            description: "skill editor.impact animation description",
             format: {
-                name: "media",
+                name: "translated-media",
                 type: "animation",
-                buttonLabel: "Select Animation",
+                buttonLabel: "skill editor.select impact animation",
                 useUpload: {
                     accept: "image/*",
                 },
@@ -228,16 +369,39 @@ export const skillSchema = {
         },
         sound: {
             type: "string",
-            title: "Sound",
-            description: "Sound effect played by this skill",
+            title: "skill editor.cast sound",
+            description: "skill editor.cast sound description",
             format: {
-                name: "media",
+                name: "translated-media",
                 type: "sound",
-                buttonLabel: "Select Sound Effect",
+                buttonLabel: "skill editor.select cast sound",
                 useUpload: {
                     accept: "audio/*",
                 },
                 layout: "basic",
+            } as any,
+        },
+        key: {
+            type: "string",
+            title: "skill editor.shortcut",
+            description: "skill editor.shortcut description",
+            enum: inputKeyEnum,
+            format: {
+                name: "skill-shortcut",
+                layout: "presentation",
+                allowClear: true,
+            } as any,
+        },
+        impactSound: {
+            type: "string",
+            title: "skill editor.impact sound",
+            description: "skill editor.impact sound description",
+            format: {
+                name: "translated-media",
+                type: "sound",
+                buttonLabel: "skill editor.select impact sound",
+                useUpload: { accept: "audio/*" },
+                layout: "presentation",
             } as any,
         },
         spCost: {
@@ -270,20 +434,90 @@ export const skillSchema = {
             default: "physical",
             format: { layout: "combat" },
         },
-        target: {
-            type: "string",
-            title: "Target",
-            description: "The target of the skill",
-            enum: ["single", "all", "self", "ally", "enemy"],
-            default: "single",
-            format: { layout: "target" },
+        targeting: {
+            type: "object",
+            title: "skill editor.targeting",
+            format: { name: "skill-targeting", layout: "target" },
+            properties: {
+                range: {
+                    type: "number",
+                    title: "skill editor.range",
+                    description: "skill editor.range description",
+                    minimum: 0,
+                    default: 0,
+                },
+                aoeMask: {
+                    type: "array",
+                    title: "skill editor.aoe mask",
+                    description: "skill editor.aoe mask description",
+                    items: { type: "string" },
+                },
+            },
         },
-        range: {
-            type: "number",
-            title: "Range",
-            description: "The range of the skill (0 = melee)",
-            default: 0,
-            format: { layout: "target" },
+        action: {
+            type: "object",
+            title: "skill editor.action",
+            format: {
+                name: "skill-action",
+                layout: "action",
+            } as any,
+            properties: {
+                mode: {
+                    type: "string",
+                    enum: ["instant", "melee", "projectile"],
+                    default: "melee",
+                },
+                target: {
+                    type: "string",
+                    enum: ["enemy", "ally", "self", "any"],
+                    default: "enemy",
+                },
+                cooldownMs: {
+                    type: "number",
+                    minimum: 0,
+                    default: 0,
+                },
+                visual: {
+                    type: "object",
+                    properties: {
+                        castFx: { type: "string", default: "auto" },
+                        trailFx: { type: "string", default: "auto" },
+                        impactFx: { type: "string", default: "auto" },
+                    },
+                },
+                projectile: {
+                    type: "object",
+                    properties: {
+                        graphic: { type: "string" },
+                        speed: { type: "number", minimum: 1, default: 180 },
+                        range: { type: "number", minimum: 1 },
+                        scale: { type: "number", exclusiveMinimum: 0, default: 1 },
+                        rotateToDirection: { type: "boolean", default: true },
+                    },
+                },
+            },
+        },
+        workflowTriggers: {
+            type: "array",
+            title: "skill editor.workflow triggers",
+            description: "skill editor.workflow triggers description",
+            format: {
+                name: "skill-workflow-triggers",
+                layout: "action",
+            } as any,
+            items: {
+                type: "object",
+                properties: {
+                    phase: {
+                        type: "string",
+                        enum: ["cast", "impact", "defeat"],
+                    },
+                    blockCollectionId: {
+                        type: "string",
+                    },
+                },
+                required: ["phase", "blockCollectionId"],
+            },
         },
         successRate: {
             type: "number",

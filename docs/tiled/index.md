@@ -21,6 +21,18 @@ First, install the TiledMap package:
 npm install @rpgjs/tiledmap
 ```
 
+## Runtime ownership
+
+Tiled behaves differently according to the game mode:
+
+- in standalone RPG mode, the browser loads the complete TMX and TSX files
+- in MMORPG mode, the server loads the complete files and owns collisions, objects,
+  events and properties; the browser receives only nearby render chunks and their
+  static hitboxes for prediction
+
+The MMORPG client never needs the raw TMX/TSX source. Keep secrets and gameplay
+configuration in server modules rather than Tiled properties that must be rendered.
+
 ## Vite Configuration
 
 Configure your `vite.config.ts` to handle Tiled map files:
@@ -34,7 +46,9 @@ export default defineConfig({
     tiledMapFolderPlugin({
       sourceFolder: './src/tiled',      // Folder containing your TMX files
       publicPath: '/map',               // Public URL path for maps
-      buildOutputPath: 'assets/data'    // Build output directory
+      buildOutputPath: 'assets/data',   // Build output directory
+      // MMORPG: publish images only. The server/editor reads TMX and TSX privately.
+      allowedExtensions: ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg']
     })
   ]
 });
@@ -47,29 +61,29 @@ export default defineConfig({
 - **`buildOutputPath`**: Target folder in build output (default: `assets/data`)
 - **`allowedExtensions`**: File extensions to include (default: `['.tmx', '.tsx', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg']`)
 
+Keep the default extensions for a standalone browser build. For an MMORPG, use
+the image-only list above so neither development middleware nor `dist/client`
+exposes TMX/TSX files.
+
 ## Client-Side Setup
 
 Configure the client to use TiledMap:
 
 ```ts
-import { mergeConfig } from "@signe/di";
 import { provideClientGlobalConfig, provideRpg, startGame } from "@rpgjs/client";
 import { provideTiledMap } from "@rpgjs/tiledmap/client";
 import startServer from "./server";
 
-startGame(
-  mergeConfig({
-    providers: [
-      provideTiledMap({
-        basePath: "map"  // Must match publicPath in vite.config.ts
-      }),
-      provideClientGlobalConfig(),
-      // ... other client providers
-    ]
-  }, {
-    providers: [provideRpg(startServer)]
-  })
-);
+startGame({
+  providers: [
+    provideTiledMap({
+      basePath: "map"  // Must match publicPath in vite.config.ts
+    }),
+    provideClientGlobalConfig(),
+    provideRpg(startServer),
+    // ... other client providers
+  ],
+});
 ```
 
 ## Server-Side Setup
@@ -82,7 +96,14 @@ import { provideTiledMap } from "@rpgjs/tiledmap/server";
 
 export default createServer({
   providers: [
-    provideTiledMap(),  // No options needed for server
+    ...provideTiledMap({
+      basePath: "/map", // Same image URL prefix as the client
+      streaming: {
+        chunkSize: 16,  // Tiled cells per chunk
+        loadRadius: 2,  // Chunks sent around the authoritative position
+        retainRadius: 3 // Chunks kept to avoid boundary churn
+      }
+    }),
     provideServerModules([
       {
         maps: [
@@ -96,6 +117,24 @@ export default createServer({
   ]
 });
 ```
+
+The server module is transport-neutral. The same configuration works inside the
+Node.js room transport and inside a Cloudflare Durable Object. One map room owns
+one authoritative map instance; Wrangler local development exercises that same
+Durable Object path.
+
+### Custom, Studio, and other map formats
+
+Chunk streaming is not tied to Tiled. A map package can pair
+`provideServerMapStreaming()` with `provideClientMapStreaming()`:
+
+- the server compiler converts private source data into a public manifest and chunks
+- every chunk supplies renderer data plus static collision geometry
+- the client adapter incrementally applies and removes renderer data
+
+Studio or a custom map system can therefore keep its complete document private and
+choose its own chunk representation. Tiled currently supplies the built-in adapter;
+other formats install their own pair of adapters.
 
 ## File Structure
 
@@ -119,8 +158,38 @@ TiledMap automatically detects collision tiles and applies tile rules to physics
 
 - Set the `collision` property to `true` on tiles in Tiled Map Editor
 - Collision rules are attached to entities through physics extension hooks
-- The same collision logic is used on server authority and client prediction
+- The server always uses the complete collision map
+- In MMORPG mode, the client predicts only with hitboxes from disclosed chunks
 - No additional code required for basic tile blocking
+
+A thin temporary boundary is added around the disclosed area, preventing prediction
+from moving into a chunk whose physics has not arrived yet. Server reconciliation
+remains authoritative.
+
+### Collision Levels (`z`)
+
+Tile collisions depend on height, as in RPGJS v4. The level of a tile is the sum of
+its layer `z` property and its tile `z` property (both default to `0`). A colliding
+tile on level `n` only blocks characters whose `z` is in
+`[n * zTileHeight, (n + 1) * zTileHeight)`. `map.zTileHeight` is the tile height by
+default.
+
+`player.z()` is measured in pixels, not in levels. With 32px tiles, the player must be
+raised to at least `32` to walk over collision tiles on level `0`:
+
+```ts
+// Server side: walk over level 0 collisions (e.g. water)
+player.z.set(map.zTileHeight)
+
+// Back on the ground
+player.z.set(0)
+```
+
+The server uses this rule for authoritative collisions, and the client applies the same
+rule for prediction in both standalone RPG and MMORPG modes. Custom static hitboxes accept
+the same optional range through `z` and `zHeight` (in pixels). A hitbox without `z`
+blocks characters at every height. This is the case for map borders and for Studio
+hitboxes.
 
 ### Event Integration
 
@@ -178,3 +247,6 @@ The tiled module now uses shared physics hooks:
 - Client: `sceneMap.onPhysicsInit`, `sceneMap.onPhysicsEntityAdd`, `sceneMap.onPhysicsEntityRemove`, `sceneMap.onPhysicsReset`
 
 This gives consistent tile collision behavior for both client prediction and server validation.
+NPCs, players, events, and projectiles are synchronized by the same interest window:
+a complete visual snapshot is sent on entry and removed on exit, while collisions and
+impacts are still decided by the server.

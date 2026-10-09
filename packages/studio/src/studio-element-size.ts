@@ -8,6 +8,15 @@ export interface StudioElementSizeResolution {
   targetHeight: number;
 }
 
+export interface StudioElementSizeDrawRule {
+  type?: string;
+  axis?: string;
+}
+
+export interface StudioElementSizeOptions {
+  drawRule?: StudioElementSizeDrawRule | null;
+}
+
 const toPositiveNumber = (value: unknown): number | null => {
   if (typeof value === "number" && Number.isFinite(value) && value > 0) {
     return value;
@@ -50,27 +59,33 @@ export const normalizeStudioElementScale = (
 const readSizeCandidate = (
   source: any,
   baseWidth: number,
-  baseHeight: number
+  baseHeight: number,
+  repeatAxis: "x" | "y" | null = null
 ): { width: number; height: number } | null => {
   if (!source || typeof source !== "object") return null;
 
   const size = source.size;
+  const objectSize = size && typeof size === "object" ? size : null;
+  const uniformSize = toPositiveNumber(size);
   const width =
     toPositiveNumber(source.width) ??
     toPositiveNumber(source.w) ??
-    (size && typeof size === "object" ? toPositiveNumber(size.width) ?? toPositiveNumber(size.w) : null) ??
-    toPositiveNumber(size);
+    (objectSize ? toPositiveNumber(objectSize.width) ?? toPositiveNumber(objectSize.w) : null) ??
+    uniformSize;
   const height =
     toPositiveNumber(source.height) ??
     toPositiveNumber(source.h) ??
-    (size && typeof size === "object" ? toPositiveNumber(size.height) ?? toPositiveNumber(size.h) : null) ??
-    toPositiveNumber(size);
+    (objectSize ? toPositiveNumber(objectSize.height) ?? toPositiveNumber(objectSize.h) : null) ??
+    uniformSize;
 
   if (width === null && height === null) return null;
 
+  const keepBaseHeight = repeatAxis === "x" && width !== null && height === null;
+  const keepBaseWidth = repeatAxis === "y" && height !== null && width === null;
+
   return {
-    width: width ?? height! * (baseWidth / baseHeight),
-    height: height ?? width! * (baseHeight / baseWidth),
+    width: width ?? (keepBaseWidth ? baseWidth : height! * (baseWidth / baseHeight)),
+    height: height ?? (keepBaseHeight ? baseHeight : width! * (baseHeight / baseWidth)),
   };
 };
 
@@ -88,13 +103,11 @@ const readTilesetMetadataSize = (
         metadata.tilewidth ??
         metadata.tileWidth ??
         metadata.elementWidth ??
-        metadata.width ??
         (textureGrid && typeof textureGrid === "object" ? textureGrid.tileSize : undefined),
       height:
         metadata.tileheight ??
         metadata.tileHeight ??
         metadata.elementHeight ??
-        metadata.height ??
         (textureGrid && typeof textureGrid === "object" ? textureGrid.tileSize : undefined),
       size: metadata.size,
     },
@@ -103,17 +116,24 @@ const readTilesetMetadataSize = (
   );
 };
 
+const resolveRepeatAxis = (drawRule: StudioElementSizeDrawRule | null | undefined): "x" | "y" | null => {
+  if (drawRule?.type !== "repeat-axis" && drawRule?.type !== "edge-repeat") return null;
+  return drawRule.axis === "x" || drawRule.axis === "y" ? drawRule.axis : null;
+};
+
 export const resolveStudioElementSize = (
   element: any,
   tilesetElement: any,
   tilesetMetadata: any,
   sourceWidth: number,
-  sourceHeight: number
+  sourceHeight: number,
+  options: StudioElementSizeOptions = {}
 ): StudioElementSizeResolution => {
   const baseWidth = Math.max(1, Math.round(sourceWidth));
   const baseHeight = Math.max(1, Math.round(sourceHeight));
+  const repeatAxis = resolveRepeatAxis(options.drawRule);
   const targetSize =
-    readSizeCandidate(element, baseWidth, baseHeight) ??
+    readSizeCandidate(element, baseWidth, baseHeight, repeatAxis) ??
     readSizeCandidate(tilesetElement, baseWidth, baseHeight) ??
     readTilesetMetadataSize(tilesetMetadata, baseWidth, baseHeight);
 

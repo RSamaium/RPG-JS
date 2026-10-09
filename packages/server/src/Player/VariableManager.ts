@@ -1,5 +1,5 @@
-import { Constructor, PlayerCtor } from "@rpgjs/common";
-import { signal, type WritableSignal } from "@signe/reactive";
+import { Constructor, PlayerCtor, type RpgWritableSignal } from "@rpgjs/common";
+import { signal } from "@signe/reactive";
 import { type } from "@signe/sync";
 
 /**
@@ -32,22 +32,22 @@ import { type } from "@signe/sync";
  */
 export function WithVariableManager<TBase extends PlayerCtor>(Base: TBase) {
   return class extends Base {
-    variables: WritableSignal<Record<string, any>> = type(
-      signal<Record<string, any>>({}) as never,
+    variables: RpgWritableSignal<Record<string, unknown>> = type(
+      signal<Record<string, unknown>>({}) as never,
       'variables',
       { persist: true },
       this as never
-    ) as unknown as WritableSignal<Record<string, any>>;
+    ) as unknown as RpgWritableSignal<Record<string, unknown>>;
 
-    setVariable(key: string, val: any): void {
+    setVariable<T = unknown>(key: string, val: T): void {
       this.variables.mutate((variables) => {
         variables[key] = val;
       });
       (this as any).syncChanges?.();
     }
 
-    getVariable<U = any>(key: string): U | undefined {
-      return this.variables()[key];
+    getVariable<T = unknown>(key: string): T | undefined {
+      return this.variables()[key] as T | undefined;
     }
 
     removeVariable(key: string): boolean {
@@ -91,7 +91,7 @@ export interface IVariableManager {
    * These values belong to the player, are persisted, and travel with the
    * player snapshot when switching maps or servers.
    */
-  variables: Map<string, any>;
+  variables: RpgWritableSignal<Record<string, unknown>>;
 
   /**
    * Assign a variable to the player.
@@ -103,7 +103,7 @@ export interface IVariableManager {
    * @param val - The value to store
    * @memberof VariableManager
    */
-  setVariable(key: string, val: any): void;
+  setVariable<T = unknown>(key: string, val: T): void;
 
   /**
    * Get a variable value
@@ -111,7 +111,7 @@ export interface IVariableManager {
    * @param key - The variable identifier to retrieve
    * @returns The stored value or undefined if not found
    */
-  getVariable<U = any>(key: string): U | undefined;
+  getVariable<T = unknown>(key: string): T | undefined;
 
   /**
    * Remove a variable

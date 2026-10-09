@@ -1,5 +1,5 @@
-import { isInstanceOf, isString, PlayerCtor } from "@rpgjs/common";
-import { signal, type WritableArraySignal } from "@signe/reactive";
+import { isInstanceOf, isString, PlayerCtor, type RpgWritableSignal } from "@rpgjs/common";
+import { signal } from "@signe/reactive";
 import { ItemLog, StateLog } from "../logs";
 import { persist } from "@signe/sync";
 import { RpgPlayer } from "./Player";
@@ -13,7 +13,18 @@ interface StateManagerDependencies {
 
 
 
-type StateClass = { new (...args: any[]) };
+export interface StateData {
+  id?: string;
+  name?: string;
+  addStates?: StateApplication[];
+  removeStates?: StateApplication[];
+  [key: string]: unknown;
+}
+
+export type StateClass = { new (): StateData };
+export type StateInput = StateClass | StateData | string;
+export interface StateApplication { state: StateClass | string; rate: number }
+export interface StateEfficiency { state: StateInput; rate: number }
 
 /**
  * State Manager Mixin
@@ -42,7 +53,7 @@ type StateClass = { new (...args: any[]) };
  */
 export function WithStateManager<TBase extends PlayerCtor>(Base: TBase) {
   return class extends Base {
-    _statesEfficiency = signal<any[]>([]);
+    _statesEfficiency = signal<StateEfficiency[]>([]) as unknown as RpgWritableSignal<StateEfficiency[]>;
 
     private _getStateMap(required: boolean = true) {
       // Use this.map directly to support both RpgMap and LobbyRoom
@@ -114,7 +125,7 @@ export function WithStateManager<TBase extends PlayerCtor>(Base: TBase) {
       return { ...snapshot, states };
     }
 
-    get statesDefense(): { rate: number; state: any }[] {
+    get statesDefense(): StateEfficiency[] {
       return (this as any).getFeature("statesDefense", "state");
     }
 
@@ -128,8 +139,8 @@ export function WithStateManager<TBase extends PlayerCtor>(Base: TBase) {
 
     applyStates(
       player: RpgPlayer,
-      { addStates, removeStates }
-    ) {
+      { addStates, removeStates }: { addStates?: StateApplication[]; removeStates?: StateApplication[] }
+    ): void {
       if (addStates) {
         for (let { state, rate } of addStates) {
           (player as any).addState(state, rate);
@@ -142,7 +153,7 @@ export function WithStateManager<TBase extends PlayerCtor>(Base: TBase) {
       }
     }
 
-    getState(stateClass: StateClass | string) {
+    getState(stateClass: StateClass | string): StateData | undefined {
       if (isString(stateClass)) stateClass = (this as any).databaseById(stateClass);
       return this.states().find((state) => {
         if (isString(stateClass)) {
@@ -187,7 +198,7 @@ export function WithStateManager<TBase extends PlayerCtor>(Base: TBase) {
       }
     }
 
-    findStateEfficiency(stateClass) {
+    findStateEfficiency(stateClass: StateClass): StateEfficiency | undefined {
       return this.statesEfficiency().find((state) =>
         isInstanceOf(state.state, stateClass)
       );
@@ -207,14 +218,14 @@ export interface IStateManager {
    * 
    * @returns Array of state defense objects with rate and state properties
    */
-  statesDefense: { rate: number; state: any }[];
+  statesDefense: StateEfficiency[];
 
   /**
    * Manages the player's state efficiency modifiers
    * 
    * @returns Signal containing array of state efficiency objects
    */
-  statesEfficiency: any;
+  statesEfficiency: RpgWritableSignal<StateEfficiency[]>;
 
   /**
    * Apply states to a player from skill or item effects
@@ -222,7 +233,7 @@ export interface IStateManager {
    * @param player - The target player to apply states to
    * @param states - Object containing arrays of states to add or remove
    */
-  applyStates(player: RpgPlayer, states: { addStates?: Array<{ state: any; rate: number }>; removeStates?: Array<{ state: any; rate: number }> }): void;
+  applyStates(player: RpgPlayer, states: { addStates?: StateApplication[]; removeStates?: StateApplication[] }): void;
 
   /**
    * Get a state to the player. Returns null if the state is not present
@@ -230,7 +241,7 @@ export interface IStateManager {
    * @param stateClass - The state class constructor or state ID to search for
    * @returns The state instance if found, null otherwise
    */
-  getState(stateClass: StateClass | string): any | null;
+  getState(stateClass: StateClass | string): StateData | undefined;
 
   /**
    * Adds a state to the player
@@ -258,5 +269,5 @@ export interface IStateManager {
    * @param stateClass - The state class to find efficiency for
    * @returns The efficiency object if found, undefined otherwise
    */
-  findStateEfficiency(stateClass: any): any | undefined;
+  findStateEfficiency(stateClass: StateClass): StateEfficiency | undefined;
 }

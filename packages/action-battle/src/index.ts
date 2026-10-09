@@ -1,6 +1,6 @@
 import server, { createActionBattleServer } from "./server";
 import client, { createActionBattleClient } from "./client";
-import { createModule } from "@rpgjs/common";
+import { createModule, type RpgProvider } from "@rpgjs/common";
 import type { ActionBattleOptions } from "./types";
 
 // AI exports
@@ -16,6 +16,8 @@ export type {
   BattleAiDefeatReward,
   BattleAiLegacyDefeatedCallback,
   BattleAiLegacyOptions,
+  BattleAiHealthBarOptions,
+  BattleAiDeathPresentationOptions,
   BattleAiRewardItem,
   BattleAiRewards,
 } from "./ai.server";
@@ -27,14 +29,24 @@ export type {
   ActionBattleAnimationResolver,
   ActionBattleAnimationResult,
   ActionBattleAiOptions,
+  ActionBattleAiVisualClientContext,
+  ActionBattleAiVisualHandler,
   ActionBattleOptions,
+  ActionBattleAudioCue,
+  ActionBattleAudioCueInput,
+  ActionBattleAudioOptions,
+  ActionBattleMusicOptions,
+  ActionBattleHotbarSkill,
+  ActionBattleActionBarMode,
   ActionBattleActionBarData,
+  ActionBattleActionBarAssignment,
   ActionBattleActionBarItem,
   ActionBattleActionBarSkill,
   ActionBattleSkillTargeting,
   ActionBattleSkillTargetingResolver,
   ActionBattleAttackOptions,
   ActionBattleUiOptions,
+  ActionBattleUiHotbarOptions,
   ActionBattleUiActionBarOptions,
   ActionBattleUiAttackPreviewOptions,
   ActionBattleUiGuiEntry,
@@ -44,10 +56,21 @@ export type {
   ActionBattleAttackHitboxMap,
   ActionBattleAttackHitPolicy,
   ActionBattleAttackProfile,
+  ActionBattleAttackControlOptions,
+  ActionBattleControlLock,
+  NormalizedActionBattleAttackControlOptions,
   ActionBattleHitReactionProfile,
   NormalizedActionBattleHitReactionProfile,
   NormalizedActionBattleAttackProfile,
   ActionBattleCombatOptions,
+  ActionBattlePlayerCombatOptions,
+  ActionBattleComboOptions,
+  ActionBattleChargedAttackOptions,
+  ActionBattleDodgeOptions,
+  ActionBattleGuardOptions,
+  ActionBattleSoftTargetingOptions,
+  ActionBattleCombatDirectorOptions,
+  ActionBattleFeedbackOptions,
   ActionBattleSystemOptions,
   ActionBattleAiSystemOptions,
   ActionBattleVisualComposer,
@@ -58,7 +81,15 @@ export type {
   ActionBattleVisualPart,
   ActionBattleVisualPreset,
 } from "./types";
+export {
+  ACTION_BATTLE_COMBAT_AUDIO_ID,
+  createActionBattleCombatAudioVisual,
+  playActionBattleAudioCue,
+  playActionBattleMomentAudio,
+  playLocalActionBattleAttackAudio,
+} from "./audio";
 export type {
+  ActionBattleAiAction,
   ActionBattleAiBehavior,
   ActionBattleAiContext,
   ActionBattleAiDecision,
@@ -77,6 +108,7 @@ export type {
   ActionBattleTargetSelector,
   ActionBattleProjectileImpactContext,
   ActionBattleProjectileOptions,
+  ActionBattleSkillTargetingConfig,
   ActionBattleUsable,
   ActionBattleUseContext,
   ActionBattleHitContext,
@@ -89,8 +121,10 @@ export type {
 } from "./core/contracts";
 export {
   action,
+  callAction,
   chase,
   condition,
+  cooldown,
   decision,
   defineAiBehavior,
   defineAiTree,
@@ -108,20 +142,34 @@ export {
   isEnemyType,
   keepDistance,
   moveToTarget,
+  moveToPoint,
+  once,
   patrol,
+  phase,
   rule,
+  run,
   selector,
   sequence,
+  sequenceWithDelay,
+  setSpeed,
   setMode,
   targetInRange,
   targetVisible,
   useAttack,
   useSkill,
+  visual,
+  wait,
+  holdPosition,
+  teleportNearTarget,
+  teleportTo,
   type ActionBattleAiCondition,
   type ActionBattleAiIntent,
   type ActionBattleAiIntentInput,
   type ActionBattleAiMemory,
+  type ActionBattleAiPosition,
   type ActionBattleAiRule,
+  type ActionBattleAiRunCallback,
+  type ActionBattleAiSerializable,
   type ActionBattleAiSimpleBehavior,
   type ActionBattleAiSnapshotSelf,
   type ActionBattleAiSnapshotTarget,
@@ -130,12 +178,30 @@ export {
   type ActionBattleAiTreeNode,
   type ActionBattleAiTreeResult,
   type ActionBattleAiTreeStatus,
+  type ActionBattleAiTeleportNearTargetOptions,
+  type ActionBattleAiVisual,
 } from "./core/ai-behavior-tree";
 export {
   DEFAULT_ACTION_BATTLE_ATTACK_PROFILE,
+  getActionBattleControlLockDuration,
   normalizeActionBattleAttackProfile,
   type ActionBattleAttackProfileFallbacks,
 } from "./core/attack-profile";
+export {
+  beginActionBattleGuard,
+  clearActionBattleDefense,
+  consumeActionBattleCounter,
+  endActionBattleGuard,
+  isActionBattleGuarding,
+  normalizeActionBattleGuardOptions,
+  resolveActionBattleDefense,
+  type ActionBattleDefenseKind,
+  type ActionBattleDefenseResolution,
+} from "./core/defense";
+export {
+  acquireActionBattleAttackSlot,
+  releaseActionBattleAttackSlot,
+} from "./core/combat-director";
 export {
   ACTION_BATTLE_HITBOX_FRAME_MS,
   ActionBattleHitTracker,
@@ -197,8 +263,21 @@ export {
 } from "./core/context";
 export { applyActionBattleHit } from "./core/hit";
 export {
+  canActionBattleDodge,
+  resolveActionBattleCharge,
+  resolveActionBattleComboStep,
+} from "./core/player-combat";
+export {
+  directionToActionBattleTarget,
+  resolveActionBattleSoftTarget,
+  type ActionBattleSoftTargetResult,
+} from "./targeting";
+export {
   ACTION_BATTLE_CLIENT_VISUAL_ID,
   ACTION_BATTLE_HIT_FX_COMPONENT_ID,
+  ACTION_BATTLE_DAMAGE_COMPONENT_ID,
+  ACTION_BATTLE_TELEGRAPH_COMPONENT_ID,
+  ACTION_BATTLE_SOFT_TARGET_COMPONENT_ID,
   createActionBattleClientVisuals,
   createActionBattleVisual,
   createClassicActionBattleVisual,
@@ -227,19 +306,24 @@ export {
   getPlayerWeaponKnockbackForce,
   applyActionBattleEntityHit,
   applyPlayerHitToEvent,
+  ACTION_BATTLE_DODGE,
+  ACTION_BATTLE_GUARD_START,
+  ACTION_BATTLE_GUARD_END,
   ACTION_BATTLE_ACTION_BAR_GUI_ID,
   openActionBattleActionBar,
   updateActionBattleActionBar,
+  openActionBattleHotbar,
+  updateActionBattleHotbar,
   createActionBattleServer,
 } from "./server";
 
-export function provideActionBattle(options: ActionBattleOptions = {}) {
+export function provideActionBattle(options: ActionBattleOptions = {}): RpgProvider[] {
   return createModule("ActionBattle", [
     {
       server: createActionBattleServer?.(options),
       client: createActionBattleClient?.(options),
     },
-  ]); 
+  ]);
 }
 
 export default {

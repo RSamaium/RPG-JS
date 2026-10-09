@@ -54,6 +54,52 @@ export interface ShowTextParams {
   faceset?: string | { id?: string; facesetId?: string; expression?: string };
   /** Expression to display (optional) */
   expression?: string;
+  /** Display an input control inside the dialog. */
+  inputEnabled?: boolean;
+  /** Database variable receiving the submitted value or null when cancelled. */
+  inputVariableId?: string;
+  inputControl?: 'input' | 'textarea';
+  inputType?: 'text' | 'number' | 'password' | 'email';
+  inputPlaceholder?: string;
+  inputDefaultValue?: string | number;
+  inputRequired?: boolean;
+  inputConfirmText?: string;
+  inputCancelText?: string;
+  inputCancelButton?: boolean;
+  inputMinLength?: number;
+  inputMaxLength?: number;
+  inputMin?: number;
+  inputMax?: number;
+  inputStep?: number;
+  inputRows?: number;
+}
+
+/** Parameters for the typed player input block. */
+export interface ShowInputParams {
+  message: string;
+  title?: string;
+  variableId: string;
+  presentation?: 'standalone' | 'dialog';
+  control?: 'input' | 'textarea';
+  type?: 'text' | 'number' | 'password' | 'email';
+  placeholder?: string;
+  defaultValue?: string | number;
+  required?: boolean;
+  confirmText?: string;
+  cancelText?: string;
+  cancelButton?: boolean;
+  minLength?: number;
+  maxLength?: number;
+  min?: number;
+  max?: number;
+  step?: number;
+  rows?: number;
+  speaker?: string;
+  position?: 'top' | 'middle' | 'bottom';
+  faceset?: string | { id?: string; facesetId?: string; expression?: string };
+  expression?: string;
+  fullWidth?: boolean;
+  typewriterEffect?: boolean;
 }
 
 /**
@@ -119,6 +165,16 @@ export interface CallMainMenuParams {
   saveAutoSlotIndex?: number;
   /** Auto slot label */
   saveAutoSlotLabel?: string;
+}
+
+/** Parameters for displaying or hiding the persistent player hotbar. */
+export interface SetHotbarParams {
+  /** Whether the hotbar is displayed or hidden. */
+  action: 'show' | 'hide';
+  /** Entry types available when displaying the hotbar. */
+  content?: 'skills' | 'items' | 'mixed';
+  /** Exact visible slot count when displaying the hotbar. */
+  slotCount?: number;
 }
 
 /**
@@ -343,7 +399,12 @@ export type SetVariableValueSource =
   | 'player_name'
   | 'level'
   | 'hp'
-  | 'sp';
+  | 'sp'
+  | 'area_target_id'
+  | 'area_target_kind'
+  | 'area_distance'
+  | 'area_distance_ratio'
+  | 'area_falloff_linear';
 
 /**
  * Parameters for the set_variable block
@@ -365,6 +426,50 @@ export interface SetVariableParams {
   randomMin?: number;
   /** Maximum random value when valueSource is random */
   randomMax?: number;
+}
+
+export type QueryAreaShape = 'circle' | 'rect' | 'line' | 'cross';
+export type QueryAreaTarget = 'players' | 'events';
+export type QueryAreaTargetSelector = QueryAreaTarget | 'all';
+
+export interface QueryAreaParams {
+  centerType: 'entity' | 'position';
+  centerEventId?: string;
+  centerPosition?: { x: number; y: number };
+  shape: QueryAreaShape;
+  targets: QueryAreaTargetSelector;
+  includeOrigin: boolean;
+  offsetX?: number;
+  offsetY?: number;
+  radius?: number;
+  width?: number;
+  height?: number;
+  angleDegrees?: number;
+  length?: number;
+  thickness?: number;
+  direction?: 'up' | 'down' | 'left' | 'right';
+  armLength?: number;
+  children?: BlockInstance<BlockType>[];
+}
+
+export interface AreaHitContext {
+  id: string;
+  kind: QueryAreaTarget;
+  distance: number;
+  distanceRatio: number;
+  falloffLinear: number;
+}
+
+export interface AreaShapeApi {
+  circle(options: { radius: number; offset?: { x?: number; y?: number } }): unknown;
+  rect(options: { width: number; height: number; offset?: { x?: number; y?: number }; angle?: number }): unknown;
+  line(options: {
+    length: number;
+    thickness: number;
+    direction: 'up' | 'down' | 'left' | 'right';
+    offset?: { x?: number; y?: number };
+  }): unknown;
+  cross(options: { armLength: number; thickness: number; offset?: { x?: number; y?: number } }): unknown;
 }
 
 /**
@@ -484,6 +589,16 @@ export interface ChangeLevelParams {
   amount?: number;
   /** Variable ID containing amount (when type is 'variable') */
   amountVariableId?: string;
+}
+
+export interface CallCharacterSelectParams {
+  allActors: boolean;
+  actorIds: string[];
+  allowCancel: boolean;
+}
+
+export interface ChangeClassParams {
+  classId: string;
 }
 
 /**
@@ -788,7 +903,7 @@ export interface CameraFollowParams {
  * Displays a component animation above the player with optional icon and sound.
  */
 export interface ShowUpAnimationParams {
-  /** Text to display (supports {variables}) */
+  /** Text to display (supports Studio string templates and legacy {hp}/{level} placeholders) */
   text: string;
   /** Optional icon to display before the text */
   icon?: string;
@@ -895,6 +1010,8 @@ export interface PlaySeParams {
 export interface CallCommonEventParams {
   /** ID of the event to call */
   commonEventId: string;
+  /** @deprecated v4 compatibility alias for `commonEventId`. */
+  eventId?: string;
   /** Parameters to pass to the event */
   parameters?: Record<string, unknown>;
   /** Recursion guard for nested event calls */
@@ -924,6 +1041,8 @@ export interface CommonEventPositionParams {
 export interface SpawnCommonEventParams extends CommonEventPositionParams {
   /** ID of the event to spawn */
   commonEventId: string;
+  /** @deprecated v4 compatibility alias for `commonEventId`. */
+  eventId?: string;
   /** Runtime event mode */
   mode?: 'shared' | 'scenario';
 }
@@ -972,13 +1091,16 @@ export interface CommentParams {
  * ```
  */
 export interface BlockParamsMap {
+  show_cinematic: { video: string; allowSkip?: boolean; bgm?: 'duck' | 'pause'; preload?: boolean };
   // Message & Dialog
   show_text: ShowTextParams;
+  show_input: ShowInputParams;
   show_choices: ShowChoicesParams;
   show_notification: ShowNotificationParams;
   
   // Control Flow
   conditional_branch: ConditionalBranchParams;
+  query_area: QueryAreaParams;
   loop: LoopParams;
   break_loop: BreakLoopParams;
   wait: WaitParams;
@@ -1007,6 +1129,8 @@ export interface BlockParamsMap {
   set_hitbox: SetHitboxParams;
   apply_graphic_animation: ApplyGraphicAnimationParams;
   show_up_animation: ShowUpAnimationParams;
+  call_character_select: CallCharacterSelectParams;
+  change_class: ChangeClassParams;
   
   // Scene & Map
   transfer_player: TransferPlayerParams;
@@ -1014,6 +1138,7 @@ export interface BlockParamsMap {
   change_screen_tone: ChangeScreenToneParams;
   show_animation: ShowAnimationParams;
   camera_follow: CameraFollowParams;
+  set_hotbar: SetHotbarParams;
   call_main_menu: CallMainMenuParams;
   call_gameover: CallGameoverParams;
   show_save: ShowSaveParams;
@@ -1258,7 +1383,11 @@ export type AnyBlockDefinition = BlockDefinition<BlockType> | BlockDefinition;
  */
 export interface ExecutionPlayer {
   /** Display a text dialog */
-  showText(text: string, options?: { talkWith?: unknown; position?: string }): Promise<void>;
+  showText(text: string, options?: { talkWith?: unknown; position?: string; input?: Record<string, unknown>; [key: string]: unknown }): Promise<string | number | null | void>;
+  /** Ask the player for a typed text or numeric value. */
+  showInput(message: string, options: { type: 'number'; control?: 'input'; [key: string]: unknown }): Promise<number | null>;
+  showInput(message: string, options?: { type?: 'text' | 'password' | 'email'; control?: 'input' | 'textarea'; [key: string]: unknown }): Promise<string | null>;
+  showInput(message: string, options: { type?: string; control?: string; [key: string]: unknown }): Promise<string | number | null>;
   /** Display choices and get player selection */
   showChoices(question: string, choices: Array<{ text: string; value: number }>): Promise<{ value: number }>;
   /** Get a variable value */
@@ -1327,13 +1456,13 @@ export interface ExecutionEvent {
   /** Event ID */
   id?: string;
   /** Move to a position */
-  moveTo(position: { x: number; y: number }): Promise<void>;
+  moveTo(position: { x: number; y: number }): Promise<void> | void;
   /** Move in a direction */
   moveDirection?(direction: string, speed: number): Promise<void>;
   /** Follow a route */
   followRoute?(route: unknown, speed: number): Promise<void>;
   /** Set the graphic/spritesheet */
-  setGraphic(spritesheet: string): Promise<void>;
+  setGraphic(spritesheet: string): Promise<void> | void;
   /** Set collision hitbox size */
   setHitbox?(width: number, height: number): void;
   /** Set the current animation */
@@ -1341,9 +1470,9 @@ export interface ExecutionEvent {
   /** Show a spritesheet animation attached to the event */
   showAnimation?(graphic: string, animationName?: string): Promise<void> | void;
   /** Event world X position */
-  x?: number;
+  x?: number | (() => number);
   /** Event world Y position */
-  y?: number;
+  y?: number | (() => number);
   /** Optional position object */
   position?: { x: number; y: number };
 }
@@ -1410,6 +1539,10 @@ export interface GameExecutionContext {
   map?: any;
   /** Reference to executors for recursive execution */
   executors?: RuntimeBlockExecutorRegistry;
+  /** Metadata for the current target while executing query_area children. */
+  areaHit?: AreaHitContext;
+  /** Native RPGJS AreaShape helpers supplied by the server runtime. */
+  areaShapeApi?: AreaShapeApi;
   /** Resolve an event record by id */
   getCommonEvent?(commonEventId: string): Promise<unknown> | unknown;
   /** Spawn an event on the current map */

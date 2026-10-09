@@ -18,6 +18,10 @@ Use this layout when you want to keep your game server portable across:
 - another Node host such as Fastify or Hono
 - a custom deployment target later
 
+`RPG_TYPE` defaults to `rpg` when it is not set. If this is your first online
+deployment, start with [Put an MMORPG online](/guide/deploy-mmorpg), which covers
+local verification, map publication, Node/Docker, and Cloudflare.
+
 ## Recommended structure
 
 Keep your game logic in `src/server.ts`, and put host-specific bootstraps in `src/entries`.
@@ -55,6 +59,8 @@ export default defineConfig({
       sourceFolder: "./src/tiled",
       publicPath: "/map",
       buildOutputPath: "assets/data",
+      // Keep authoritative Tiled sources out of the browser build.
+      allowedExtensions: [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"],
     }),
     ...rpgjs({
       server: serverModule,
@@ -87,12 +93,12 @@ It should not:
 Example:
 
 ```ts
-import { createServer } from "@rpgjs/server"
-import { provideMain } from "./modules/main"
+import { createServer, provideServerModules } from "@rpgjs/server"
+import mainServerModule from "./modules/server"
 
 export default createServer({
   providers: [
-    provideMain(),
+    provideServerModules([mainServerModule]),
   ],
 })
 ```
@@ -167,9 +173,33 @@ dist/
 
 Meaning of each output:
 
-- `dist/client`: browser assets
+- `dist/client`: browser assets containing client and explicitly shared modules
 - `dist/server/server.js`: built version of your agnostic `src/server.ts`
 - `dist/server/express.js`: built version of your Express adapter
+
+The MMORPG client build does not include modules imported only by
+`src/server.ts`. Conversely, client-only modules and components are not part of
+the server entry. Files imported by both entry graphs are shared code and may be
+present in both outputs.
+
+<Warning>
+Do not import a server module, a server adapter, or a combined module index from
+the client entry graph. Any file reachable from browser code can be included in
+`dist/client`. Keep secrets in the deployment environment, never in source code
+that a browser build can reach.
+</Warning>
+
+### Keep source maps server-side
+
+Map assets follow the same entry boundary as modules. In MMORPG mode, install the
+server side of a map provider in `src/server.ts`; its compiler reads the complete
+map and streams only nearby render and prediction chunks. The client side applies
+those chunks but does not fetch the source document.
+
+For Tiled, expose image files through `tiledMapFolderPlugin()` and omit `.tmx` and
+`.tsx` from `allowedExtensions`. Event definitions, object properties, collision
+rules and the raw tile layer stay in the map room. The same provider module works
+with a Node.js transport or a Cloudflare Durable Object.
 
 Start the built Express server with:
 
@@ -212,4 +242,6 @@ The build will emit one file per adapter in `dist/server`.
 
 ## Related pages
 
+- For the complete beginner deployment path, see [/guide/deploy-mmorpg](/guide/deploy-mmorpg)
 - For the Node transport API and protected map updates, see [/advanced/node-server-production](/advanced/node-server-production)
+- For a Cloudflare Durable Object deployment, see [/advanced/cloudflare-server-production](/advanced/cloudflare-server-production)

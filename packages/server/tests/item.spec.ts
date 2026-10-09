@@ -590,6 +590,53 @@ describe("Item Management - Hooks", () => {
     Math.random = originalRandom;
   });
 
+  test("uses the current database hook instead of a stale inventory hook", () => {
+    const staleOnUse = vi.fn();
+    const currentOnUse = vi.fn();
+    const itemId = "refreshed-hook-item";
+
+    player.addItem({
+      id: itemId,
+      name: "Refreshed Hook Item",
+      consumable: true,
+      onUse: staleOnUse,
+    }, 1);
+
+    player.getCurrentMap().addInDatabase(itemId, {
+      id: itemId,
+      name: "Refreshed Hook Item",
+      consumable: true,
+      onUse: currentOnUse,
+    }, { force: true });
+
+    player.useItem(itemId);
+
+    expect(staleOnUse).not.toHaveBeenCalled();
+    expect(currentOnUse).toHaveBeenCalledWith(player);
+  });
+
+  test("does not execute an inventory hook removed from the database", () => {
+    const staleOnUse = vi.fn();
+    const itemId = "cleared-hook-item";
+
+    player.addItem({
+      id: itemId,
+      name: "Cleared Hook Item",
+      consumable: true,
+      onUse: staleOnUse,
+    }, 1);
+
+    player.getCurrentMap().addInDatabase(itemId, {
+      id: itemId,
+      name: "Cleared Hook Item",
+      consumable: true,
+    }, { force: true });
+
+    player.useItem(itemId);
+
+    expect(staleOnUse).not.toHaveBeenCalled();
+  });
+
   test("should call onUseFailed hook when item usage fails", () => {
     const onUseFailedSpy = vi.fn();
     const customItem: ItemObject = {

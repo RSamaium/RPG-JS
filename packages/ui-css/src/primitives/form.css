@@ -1,0 +1,19 @@
+/* Shared form primitives for account, settings and application GUIs. */
+.rpg-ui-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.rpg-ui-form-grid[data-mode="sign-in"], .rpg-ui-form-grid[data-mode="forgot-password"] { grid-template-columns: minmax(0, 1fr); }
+.rpg-ui-form-field, .rpg-ui-account-field { display: flex; flex-direction: column; gap: 8px; min-width: 0; font-size: .875rem; }
+.rpg-ui-form-field:only-child, .rpg-ui-account-field:only-child, .rpg-ui-form-wide, .rpg-ui-form-grid > p { grid-column: 1 / -1; }
+.rpg-ui-form-field .rpg-ui-input, .rpg-ui-account-field .rpg-ui-input { width: 100%; min-width: 0; box-sizing: border-box; min-height: 44px; }
+.rpg-ui-form-hint { font-size: .875rem; line-height: 1.6; opacity: .8; margin: 0; }
+.rpg-ui-form-actions { display: flex; gap: 12px; margin-top: 4px; }
+.rpg-ui-form-messages:empty { display: none; }
+.rpg-ui-form-feedback { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border: 1px solid; border-radius: var(--rpg-ui-radius, 4px); font-size: .875rem; line-height: 1.5; overflow-wrap: anywhere; }
+.rpg-ui-form-feedback p { margin: 0; }
+.rpg-ui-form-feedback strong { display: block; margin-bottom: 3px; }
+.rpg-ui-form-feedback[data-tone="error"] { color: #ffd2ce; background: rgb(145 42 48 / 20%); border-color: rgb(245 136 137 / 40%); }
+.rpg-ui-form-feedback[data-tone="success"] { color: #c9eddd; background: rgb(38 113 89 / 20%); border-color: rgb(115 196 162 / 40%); }
+.rpg-ui-form-feedback-icon { flex: 0 0 22px; text-align: center; border: 1px solid currentColor; border-radius: 50%; line-height: 20px; }
+.rpg-ui-text-button { appearance: none; border: 0; background: transparent; color: inherit; font: inherit; font-size: .875rem; padding: 10px; min-height: 44px; cursor: pointer; text-underline-offset: 4px; }
+.rpg-ui-text-button:hover { text-decoration: underline; }
+.rpg-ui-text-button:focus-visible, .rpg-ui-account-switch:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+@media (max-width: 480px) { .rpg-ui-form-grid { grid-template-columns: minmax(0, 1fr); } }

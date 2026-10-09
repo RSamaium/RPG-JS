@@ -38,3 +38,11 @@ describe("action battle animations", () => {
     expect(() => playActionBattleAnimation("attack", {})).not.toThrow();
   });
 });
+
+test.each([undefined, "enemy-attack"])("passes authoritative cycle duration to client animation (%s)", (graphic) => {
+  const entity = { setAnimation: vi.fn() };
+  playActionBattleAnimation("attack", entity, { attack: { animationName: "slash", graphic } }, undefined, { durationMs: 620 });
+  expect(entity.setAnimation).toHaveBeenCalledWith(...(graphic
+    ? ["slash", graphic, 1, { durationMs: 620 }]
+    : ["slash", 1, { durationMs: 620 }]));
+});

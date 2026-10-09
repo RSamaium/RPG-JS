@@ -10,40 +10,57 @@
 @if (weatherOptions()) {
   <Container positionType="absolute" top={0} left={0} width="100%" height="100%" pointerEvents="none">
     <Weather
-      effect={weatherOptions().effect}
-      density={weatherOptions().density}
-      speed={weatherOptions().speed}
-      windDirection={weatherOptions().windDirection}
-      windStrength={weatherOptions().windStrength}
-      maxDrops={weatherOptions().maxDrops}
-      scale={weatherOptions().scale}
-      height={weatherOptions().height}
-      sunIntensity={weatherOptions().sunIntensity}
-      sunAngle={weatherOptions().sunAngle}
-      raySpread={weatherOptions().raySpread}
-      rayTwinkle={weatherOptions().rayTwinkle}
-      rayTwinkleSpeed={weatherOptions().rayTwinkleSpeed}
-      alpha={weatherOptions().alpha}
-      zIndex={weatherOptions().zIndex}
+      effect={weatherOptions()?.effect}
+      density={weatherOptions()?.density}
+      speed={weatherOptions()?.speed}
+      windDirection={weatherOptions()?.windDirection}
+      windStrength={weatherOptions()?.windStrength}
+      maxDrops={weatherOptions()?.maxDrops}
+      scale={weatherOptions()?.scale}
+      height={weatherOptions()?.height}
+      sunIntensity={weatherOptions()?.sunIntensity}
+      sunAngle={weatherOptions()?.sunAngle}
+      raySpread={weatherOptions()?.raySpread}
+      rayTwinkle={weatherOptions()?.rayTwinkle}
+      rayTwinkleSpeed={weatherOptions()?.rayTwinkleSpeed}
+      rayFan={weatherOptions()?.rayFan ?? 0}
+      rayLength={weatherOptions()?.rayLength ?? 1}
+      rayDust={weatherOptions()?.rayDust ?? 0.6}
+      rayColor={weatherOptions()?.rayColor ?? '#fff1c7'}
+      fogOpacity={weatherOptions()?.fogOpacity ?? 0.38}
+      fogSoftness={weatherOptions()?.fogSoftness ?? 0.7}
+      shadowIntensity={weatherOptions()?.shadowIntensity ?? 0.38}
+      shadowSoftness={weatherOptions()?.shadowSoftness ?? 0.65}
+      cloudOpacity={weatherOptions()?.cloudOpacity ?? 0}
+      cloudAltitude={weatherOptions()?.cloudAltitude ?? 0.55}
+      colors={weatherOptions()?.colors}
+      particleSize={weatherOptions()?.particleSize ?? 1}
+      haze={weatherOptions()?.haze ?? 1}
+      topDown={weatherOptions()?.topDown ?? true}
+      alpha={weatherOptions()?.alpha}
+      zIndex={weatherOptions()?.zIndex}
     />
   </Container>
 }
   
   <script>
-    import { computed, effect } from 'canvasengine'
+    import { computed, effect, mount, untracked } from 'canvasengine'
+    import { preloadMapCinematics } from '../cinematic';
     import { EventLayerComponent, RpgClientEngine, inject } from "@rpgjs/client";
     import ElementMap from './element-map.ce'
     import { Weather } from '@canvasengine/presets'
     import { toCanvasWeatherOptions } from '@common/weather';
 
     const { data } = defineProps()
+    mount(() => preloadMapCinematics([data()?.events, data()?.commonEvents]));
     
     const middleLayer = computed(() => data().data)
 
     const engine = inject(RpgClientEngine);
 
     effect(() => {
-      engine.sceneMap.setLocalWeather(data().weather ?? data().params?.weather ?? null);
+      const weather = data().weather ?? data().params?.weather ?? null;
+      untracked(() => engine.sceneMap.setMapWeatherFallback(weather));
     })
 
     const weatherOptions = computed(() => {

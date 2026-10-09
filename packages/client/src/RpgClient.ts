@@ -13,6 +13,7 @@ import type {
     RpgInteractionBehavior,
     RpgInteractionMatcher,
 } from './services/interactions'
+import type { GuiEntry } from './Gui/Gui'
 
 type RpgClass<T = any> = new (...args: any[]) => T
 type RpgComponent = RpgClientObject
@@ -259,7 +260,8 @@ export interface RpgSceneHooks<Scene> {
     onRemoveSprite?: (scene: Scene, sprite: RpgComponent) => any
 
      /**
-     * Before the scene is loaded
+     * Before the scene is loaded. Async hooks are awaited while the previous
+     * scene is still mounted, allowing transition UI to cover it before teardown.
      * 
      * @prop { (scene: RpgScene) => any } [onBeforeLoading]
      * @memberof RpgSceneHooks
@@ -569,69 +571,7 @@ export interface RpgClient {
      * @prop {Array<GuiOptions>} [gui]
      * @memberof RpgClient
      * */
-    gui?: ({
-        id: string,
-        component: ComponentFunction,
-        /**
-         * Auto display the GUI when added to the system
-         * @default false
-         */
-        autoDisplay?: boolean,
-        /**
-         * Function that returns an array of Signal dependencies
-         * The GUI will only display when all dependencies are resolved (!= undefined)
-         */
-        dependencies?: () => Signal[]
-        /**
-         * Attach the GUI to sprites instead of displaying globally
-         * 
-         * When set to `true`, the GUI component will be rendered directly on each sprite
-         * in the game world, rather than being displayed as a fixed overlay on the screen.
-         * This is useful for tooltips, health bars, name tags, or any UI element that
-         * should follow a specific sprite.
-         * 
-         * The GUI will be rendered in the `character.ce` component for each sprite.
-         * You can control the display state of attached GUIs from the server side using
-         * `player.showAttachedGui()` and `player.hideAttachedGui()` methods.
-         * 
-         * @default false
-         * @example
-         * ```ts
-         * import { defineModule, RpgClient } from '@rpgjs/client'
-         * import TooltipComponent from './tooltip.ce'
-         * 
-         * defineModule<RpgClient>({
-         *     gui: [
-         *         {
-         *             id: "my-tooltip",
-         *             component: TooltipComponent,
-         *             attachToSprite: true
-         *         }
-         *     ]
-         * })
-         * ```
-         * 
-         * On the server side, control the display:
-         * ```ts
-         * // Show the tooltip for this player
-         * player.showAttachedGui()
-         * 
-         * // Hide the tooltip for this player
-         * player.hideAttachedGui()
-         * 
-         * // Show tooltip for other players
-         * player.showAttachedGui([otherPlayer1, otherPlayer2])
-         * ```
-         */
-        attachToSprite?: boolean
-        /**
-         * Vue v4 compatibility alias for `attachToSprite`.
-         *
-         * Prefer `attachToSprite` in v5 projects. This is read by `@rpgjs/vue`
-         * for Vue GUI components migrated from the v4 GUI API.
-         */
-        rpgAttachToSprite?: boolean
-    } | any)[],
+    gui?: GuiEntry[],
 
     /** 
      * Array containing the list of sounds
@@ -766,6 +706,40 @@ export interface RpgClient {
      * @memberof RpgClient
      * */
     componentAnimations?: {
+        id: string,
+        component: ComponentFunction
+    }[]
+
+    /**
+     * Custom weather components, by id.
+     *
+     * When the server sets a weather whose `effect` is a registered id, the scene
+     * renders that component instead of CanvasEngine's `<Weather>`, in the same
+     * layer. The component receives the weather `params`, `transitionMs`,
+     * `startedAt` and `seed` as props. A custom id replaces a built-in effect of
+     * the same name, so a game can restyle `rain`.
+     *
+     * @example
+     * ```ts
+     * import { defineModule, RpgClient } from '@rpgjs/client'
+     * import AuroraWeather from './aurora.ce'
+     *
+     * defineModule<RpgClient>({
+     *   weathers: [
+     *     { id: 'aurora', component: AuroraWeather }
+     *   ]
+     * })
+     * ```
+     *
+     * ```ts
+     * // server
+     * map.setWeather({ effect: 'aurora', params: { intensity: 0.8 } }, { transitionMs: 2000 })
+     * ```
+     *
+     * @prop {Array<{id: string, component: ComponentFunction}>} [weathers]
+     * @memberof RpgClient
+     * */
+    weathers?: {
         id: string,
         component: ComponentFunction
     }[]

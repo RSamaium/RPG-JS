@@ -1,0 +1,106 @@
+<form
+  class="rpg-ui-input-form"
+  data-layout={layout()}
+  submit={submitForm}
+  keydown={handleKeydown}
+>
+  @if (showMessage()) {
+    <label class="rpg-ui-input-message" for={fieldId()}>{formData().message}</label>
+  }
+  @if (formData().control === "textarea") {
+    <textarea
+      id={fieldId()}
+      class="rpg-ui-input rpg-ui-input-dialog-field"
+      name="value"
+      value={value}
+      placeholder={formData().placeholder || ""}
+      rows={formData().rows || 4}
+      minlength={formData().minLength}
+      maxlength={formData().maxLength}
+      aria-required={formData().required ? "true" : "false"}
+    ></textarea>
+  }
+  @else {
+    <input
+      id={fieldId()}
+      class="rpg-ui-input rpg-ui-input-dialog-field"
+      name="value"
+      type={formData().type || "text"}
+      value={value}
+      placeholder={formData().placeholder || ""}
+      min={formData().min}
+      max={formData().max}
+      step={formData().step}
+      minlength={formData().minLength}
+      maxlength={formData().maxLength}
+      aria-required={formData().required ? "true" : "false"}
+    />
+  }
+  @if (errorText()) {
+    <div class="rpg-ui-input-error" role="alert">{errorText()}</div>
+  }
+  <div class="rpg-ui-input-actions">
+    @if (showCancelButton()) {
+      <button class="rpg-ui-btn rpg-ui-input-button rpg-ui-input-button-cancel" type="button" click={cancelForm}>
+        {formData().cancelText || t("rpg.input.cancel")}
+      </button>
+    }
+    <button
+      class="rpg-ui-btn rpg-ui-input-button rpg-ui-input-button-confirm"
+      data-variant="primary"
+      type="submit"
+    >
+      {formData().confirmText || t("rpg.input.confirm")}
+    </button>
+  </div>
+</form>
+
+<script>
+  import { computed, effect, signal } from "canvasengine";
+  import { inject } from "../../core/inject";
+  import { RpgClientEngine } from "../../RpgClientEngine";
+
+  const engine = inject(RpgClientEngine);
+  const { t } = engine.i18n();
+  const { data, layout, showMessage } = defineProps({
+    layout: "standalone",
+    showMessage: true,
+  });
+  const { submit, cancel } = defineEmits();
+  const formData = computed(() => data() || {});
+  const value = signal(String(formData().defaultValue ?? ""));
+  const fieldId = computed(() => `rpg-input-value-${layout()}`);
+  const errorText = computed(() => formData().errorKey
+    ? t(formData().errorKey, formData().errorParams || {})
+    : ""
+  );
+  const showCancelButton = computed(() => formData().cancelButton !== false);
+  let focused = false;
+
+  function submitForm(event, collectedData) {
+    const submittedValue = collectedData && Object.prototype.hasOwnProperty.call(collectedData, "value")
+      ? collectedData.value
+      : event?.currentTarget?.elements?.value?.value ?? value();
+    value.set(String(submittedValue ?? ""));
+    submit({ value: submittedValue ?? "" });
+  }
+
+  function cancelForm() {
+    cancel();
+  }
+
+  function handleKeydown(event) {
+    if (event?.key !== "Escape") return;
+    event.preventDefault?.();
+    event.stopPropagation?.();
+    cancelForm();
+  }
+
+  effect(() => {
+    if (focused) return;
+    focused = true;
+    setTimeout(() => {
+      document.getElementById(fieldId())?.focus?.();
+    });
+  });
+</script>

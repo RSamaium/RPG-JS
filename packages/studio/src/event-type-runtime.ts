@@ -16,12 +16,9 @@ export { getGraphicKey, getGraphicScale } from "./graphic-key";
  * Extended RpgMap interface with studio-specific properties
  */
 export interface RpgMapExtended extends RpgMap {
-  startPosition: {
-    x: number;
-    y: number;
-  };
   scale: number;
   globalConfig: Record<string, unknown>;
+  setInWorldMaps(worldMap: import("@rpgjs/common").WorldMapsManager): void;
 }
 
 export type InitLifecycleOptions = {
@@ -217,19 +214,14 @@ const resolveEnemySkillIds = (enemy: any): string[] => {
   return [...ids];
 };
 
-const learnEnemySkills = (event: RpgEvent, enemy: any): string | undefined => {
-  let firstSkillId: string | undefined;
-
+const learnEnemySkills = (event: RpgEvent, enemy: any): void => {
   for (const skillId of resolveEnemySkillIds(enemy)) {
     try {
       (event as any).learnSkill?.(skillId);
-      firstSkillId ??= skillId;
     } catch (error) {
       console.warn(`[StudioGame] enemy skill ${skillId} could not be learned`, error);
     }
   }
-
-  return firstSkillId;
 };
 
 const hasStudioParameter = (config: any, parameter: string): boolean => {
@@ -272,6 +264,7 @@ const battleAiBehaviorOptionKeys = [
   "moveToCooldown",
   "retreatCooldown",
   "attackPatterns",
+  "attackProfiles",
   "patrolWaypoints",
   "groupBehavior",
 ] as const;
@@ -314,6 +307,19 @@ export const resolveEnemyBattleAiOptions = (
     visionRange: 150,
     attackRange: 50,
     animations: createStudioActionBattleAnimations(enemy.animations),
+    presentation: {
+      ...(enemy.presentation ?? {}),
+      music: {
+        battle:
+          enemy.audio?.combat?.battleMusic
+          ?? enemy.combatMusic
+          ?? enemy.presentation?.music?.battle,
+        priority:
+          toNumber(enemy.combatMusicPriority) ??
+          toNumber(enemy.presentation?.music?.priority),
+      },
+      audio: enemy.audio?.combat ?? enemy.combatAudio,
+    },
   };
 
   if (typeof behaviorKey === "string" && behaviorKey.trim()) {
@@ -341,6 +347,19 @@ export const resolveEnemyBattleAiOptions = (
   }
 
   for (const source of [enemy, aiBehavior, legacyAiBehavior]) {
+    if (source?.attackProfiles && typeof source.attackProfiles === "object") {
+      for (const pattern of ["melee", "combo", "charged", "zone", "dashAttack"] as const) {
+        const profile = source.attackProfiles[pattern];
+        if (!profile || typeof profile !== "object") continue;
+        for (const key of ["startupMs", "activeMs", "recoveryMs", "cooldownMs"] as const) {
+          const value = toNumber(profile[key]);
+          if (value === undefined || !Number.isFinite(value) || value < (key === "activeMs" ? 1 : 0)) continue;
+          options.attackProfiles ??= {};
+          options.attackProfiles[pattern] ??= {};
+          options.attackProfiles[pattern]![key] = value;
+        }
+      }
+    }
     pickNumericOption(source, "attackCooldown", options);
     pickNumericOption(source, "visionRange", options);
     pickNumericOption(source, "attackRange", options);
@@ -667,8 +686,8 @@ const enemyRuntime: EventTypeRuntime = {
         context.event.level = trigger?.typeData?.level ?? enemy.initialLevel ?? 1;
         initializeEnemyNaturalAttackFromStudioConfig(context.event, enemy);
         initializeEnemyVitalsFromParameters(context.event);
-        const attackSkill = learnEnemySkills(context.event, enemy);
-        const aiOptions = resolveEnemyBattleAiOptions(enemy, attackSkill);
+        learnEnemySkills(context.event, enemy);
+        const aiOptions = resolveEnemyBattleAiOptions(enemy);
         (context.event as any).battleAi = new BattleAi(context.event, {
           ...aiOptions,
           rewards: {

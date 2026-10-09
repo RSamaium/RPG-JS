@@ -1,6 +1,7 @@
 {
   "name": "@rpgjs/server",
-  "version": "5.0.0-beta.24",
+  "repository": "github:RSamaium/RPG-JS",
+  "version": "5.0.0",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -11,6 +12,10 @@
     "./node": {
       "import": "./dist/node/index.js",
       "types": "./dist/node/index.d.ts"
+    },
+    "./cloudflare": {
+      "import": "./dist/cloudflare/index.js",
+      "types": "./dist/cloudflare/index.d.ts"
     }
   },
   "publishConfig": {
@@ -26,15 +31,15 @@
   "license": "MIT",
   "description": "",
   "dependencies": {
-    "@canvasengine/tiled": "2.0.0",
+    "@canvasengine/tiled": "2.4.0",
     "@rpgjs/common": "workspace:*",
     "@rpgjs/database": "^4.3.0",
-    "@rpgjs/physic": "5.0.1",
+    "@rpgjs/physic": "workspace:*",
     "@rpgjs/testing": "workspace:*",
     "@signe/di": "3.1.0",
     "@signe/reactive": "3.1.0",
-    "@signe/room": "3.1.0",
-    "@signe/sync": "3.1.0",
+    "@signe/room": "3.2.1",
+    "@signe/sync": "3.1.1",
     "rxjs": "^7.8.2",
     "zod": "^4.4.3"
   },

@@ -14,7 +14,11 @@ export default defineConfig({
   plugins: [
     dts({ 
       include: ['src/**/*.ts'],
-      outDir: 'dist'
+      outDirs: 'dist',
+      aliasesExclude: [/^@rpgjs\//],
+      afterDiagnostic(diagnostics) {
+        if (diagnostics.length > 0) throw new Error(`Declaration generation failed with ${diagnostics.length} TypeScript diagnostic(s)`)
+      }
     })
   ],
   build: {
@@ -24,7 +28,8 @@ export default defineConfig({
     lib: {
       entry: {
         index: 'src/index.ts',
-        'node/index': 'src/node/index.ts'
+        'node/index': 'src/node/index.ts',
+        'cloudflare/index': 'src/cloudflare/index.ts'
       },
       formats: ['es'],
       fileName: (format, entryName) => `${entryName}.js`
@@ -32,7 +37,8 @@ export default defineConfig({
     rollupOptions: {
       external: [
         ...nodeBuiltins,
-        /^node:/
+        /^node:/,
+        '@signe/room/cloudflare'
       ]
     }
   },

@@ -33,9 +33,12 @@ function createBuildConfig(target: BuildTarget, watch: boolean) {
       plugins: [
         dts({
           include: ["runtime/**/*.ts"],
-          outDir: "dist/runtime",
+          outDirs: "dist/runtime",
           entryRoot: "runtime",
           tsconfigPath,
+          afterDiagnostic(diagnostics) {
+            if (diagnostics.length > 0) throw new Error(`Declaration generation failed with ${diagnostics.length} TypeScript diagnostic(s)`);
+          },
         }),
       ],
       build: {
@@ -78,8 +81,12 @@ function createBuildConfig(target: BuildTarget, watch: boolean) {
           ]),
       dts({
         include: ["src/**/*.ts"],
-        outDir: "dist",
+        outDirs: `dist/${target}`,
+        entryRoot: "src",
         tsconfigPath,
+        afterDiagnostic(diagnostics) {
+          if (diagnostics.length > 0) throw new Error(`Declaration generation failed with ${diagnostics.length} TypeScript diagnostic(s)`);
+        },
       }),
     ],
     build: {
@@ -88,7 +95,7 @@ function createBuildConfig(target: BuildTarget, watch: boolean) {
       minify: false,
       lib: {
         entry: {
-          index: "src/index.ts",
+          index: isClient ? "src/index.ts" : "src/server-entry.ts",
         },
         fileName: "index",
         formats: ["es" as const],

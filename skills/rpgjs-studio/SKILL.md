@@ -7,6 +7,37 @@ description: Use the RPGJS Studio HTTP API to create or manage a 2D RPG game. Tr
 
 Use this skill to execute content-management tasks against an RPGJS Studio instance.
 
+Public game database reads resolve actor and enemy appearances in batches per
+project, preserving media links and explicit overrides. See
+[references/database.md](references/database.md) for the response behavior.
+
+## Image and cinematic generation
+
+For a new character, use `type: "spritesheet"` with `metadata.generationMode: "idle"` to create a transparent 1024×768 image of four static poses (down, left, right, up) in a 2×2 grid for 5 credits. Studio then opens `/media/apps/character-editor/:id`; create named animations there through spritesheet.ai as separate media associated with the base character, using the idle sheet as the reference image. Existing spritesheet animation requests remain 15 credits. See [references/media.md](references/media.md).
+
+For deletion in the Studio editor, use the project-scoped character animation endpoint documented in [references/media.md](references/media.md); it removes the animation reference and stored image together.
+
+Base64 references accept MIME parameters; recognized PNG/JPEG/GIF/WebP signatures take precedence over missing or incorrect MIME headers, including `text/xml`. Invalid references return HTTP 400 and refund the startup debit.
+
+Media generation debits metered API-key credits on execute before enqueueing; estimates do not debit. Startup failures are refunded, and terminal execution failures use a persisted refund step. A `queued` response is acceptance only: poll the returned instance. See [references/media.md](references/media.md) for billing and reference storage behavior.
+
+To play a video in an event, use `show_cinematic` with `{ "video": "media-id", "allowSkip": false, "bgm": "pause", "preload": true }`. Only `video` is required: skipping and preloading default to true; `bgm` defaults to `"duck"` (15% music volume). `"pause"` resumes music afterwards. Adjacent video blocks share one overlay. See [references/media.md](references/media.md) for details; no map-to-video association is required.
+
+## Direct map generation release
+
+Express the requested map visual style in `objective`, in the user's language.
+The generator follows that style and only defaults to high-definition pixel art
+when the objective specifies none. Terrain and wall materials preserve the
+concept art direction. See `references/maps.md`; do not add a separate `style`
+field to the API payload.
+
+For generation without an assistant, read the durable workflow and direct progress
+sections in `references/maps.md`. Use the existing prepare/execute endpoints,
+explicit credit confirmation, project-scoped status and intermediate preview.
+Require `finalized: true` and `mapId` before presenting a saved result. Never infer
+completion from the workflow status alone. Safe spawn is tracked upstream in
+RSamaium/RPG-JS#367; do not implement a local collision workaround.
+
 ## Inputs
 
 - Check whether a local `RPGSTUDIO.md` file exists in the current working directory.
@@ -39,9 +70,11 @@ Use this skill to execute content-management tasks against an RPGJS Studio insta
    - `references/maps.md`
    - `references/events.md`
    - `references/event-examples.md`
-   - `references/blocks.md`
-   - `references/media.md`
-   - `references/settings.md`
+  - `references/blocks.md`
+  - `references/media.md`
+  - `references/settings.md`
+  - `references/project-env.md`
+  - `references/mmorpg.md`
 
 ## Local memory file
 
@@ -115,24 +148,108 @@ curl -sS -X POST "$BASE_URL/..." \
 - `event workflow block` task: read [references/blocks.md](./references/blocks.md)
 - `media` task: read [references/media.md](./references/media.md)
 - `settings` task: read [references/settings.md](./references/settings.md)
+- `project env` task: read [references/project-env.md](./references/project-env.md)
+- `MMORPG publication` task: read [references/mmorpg.md](./references/mmorpg.md)
 
 ## Current schema notes
 
+- An authenticated Studio session can publish the current project with
+  `POST /api/mmorpg/publish`. Publication prepares every map before sending any
+  update. Failures return a stable `code`, `stage`, and optional `resourceId`;
+  see `references/mmorpg.md` for the response contract.
+  `GET /api/mmorpg/publication` reports whether this project's MMORPG has been
+  published successfully and supplies its playable URL.
+  Preparation caches source reads only for that publication. Versioned R2
+  publication and active-room-only propagation are implemented for RPG-JS #374
+  in the framework working tree and integrated in Studio's local configuration
+  through `MMORPG_PUBLICATIONS`; release and production integration remain pending.
+  Read the framework API section of `references/mmorpg.md` before integrating.
+- A character event whose only behavior is one dialogue can store it directly in
+  `triggers[].typeData.dialogue` on an `onAction` trigger. It does not need a
+  block collection. Resolve both `graphic` (`spritesheet`) and `faceset` media
+  first; propose confirmed generation when either type has no suitable result.
+  An explicit faceset-generation refusal may omit the faceset. If the user
+  explicitly forbids all asset generation, create the functional event with
+  whichever coherent searched appearance IDs exist and omit any missing
+  `graphic` or `faceset`.
+- For a character that sells a database item, follow the canonical shop
+  workflow: resolve or create the real item with a positive `price`, then
+  create one `call_shop` block referencing its `_id`. The RPGJS shop charges the
+  price before granting the item. Do not synthesize manual choice/gold/item
+  branches or placeholder resource identifiers.
+- Map-generation `followUpPlan.events[]` accepts an optional pixel
+  `position: { x, y }`. It must stay inside `width * 48` by `height * 48`;
+  Studio validates it through a compact event-map context and falls back to the
+  map start when it is absent or invalid.
+- New assistant map generations include a persisted description, an optional
+  source `assistantConversationId`, and a `followUpPlan.music` suggestion with
+  `{ id, title, description, prompt }`. Historical API callers may omit the
+  conversation id and music suggestion.
+- `show_text` blocks may set `inputEnabled: true` and must then provide
+  `inputVariableId`, the `_id` of a database variable receiving the submitted
+  string or number. Cancelling the input stores `null`; see
+  `references/blocks.md` for the typed input options.
+- Maps, events, block collections, and database records support multilingual semantic search through their existing list endpoints with `query`. The optional `minScore` parameter accepts `0..1` and defaults to `0.40`; see the matching resource reference for endpoint-specific filters and response shapes.
+- Project environment variables are managed with authenticated project routes:
+  `GET /api/projects/:projectId/env`,
+  `PUT /api/projects/:projectId/env/:name`, and
+  `DELETE /api/projects/:projectId/env/:name`. Plain values are returned in
+  responses; secret values expose only `isSet` and must never be logged or
+  printed.
+- Playable characters are database Actors under `/api/database/actors`. The
+  public runtime database includes Actors and the public project exposes
+  `mainActorId` so a new game can preselect the project hero.
+- Playable identities are database Classes under `/api/database/classes`.
+  New Actors require a valid `classId`; existing legacy Actors without one
+  remain readable. Classes own `name`, `description`, `icon`, and level-gated
+  `skills`, while Actors own appearance, statistics, inventory, and equipment.
+  A Class assigned to any Actor cannot be deleted until those Actors are
+  reassigned.
+- Character spritesheet metadata can contain `illustration`, the media `_id`
+  of a transparent 4:5 JRPG character illustration inherited by every Actor
+  using that spritesheet. AI generation type `illustration` costs 5 credits.
+- Database create and update validation treats `null` from non-nullable form
+  fields as an omitted value. When the JSON Schema declares a `default`, that
+  default is applied instead; explicit `0` values and explicitly nullable
+  fields are preserved. Optional object groups containing only omitted values,
+  such as `{ "hitbox": { "width": null, "height": null } }`, are omitted as
+  well. A validation `400` identifies the first invalid field with a dotted path
+  in `message`, for example
+  `{ "message": "parameters.pdef.start: Required" }`.
+- `menus.characterSelect` configures the new-game Actor selector. It supports
+  every Actor with `settings.allActors: true`, or an ordered list of Studio
+  Actor `_id` values in `settings.actorIds`. The selection is player/save-local
+  and does not mutate `mainActorId`.
+- Event workflows can open the same selector with `call_character_select` and
+  can assign a Class to the active player with `change_class`. The selector can
+  expose every Actor or an ordered unique subset and can optionally allow
+  cancellation. Applying a selected Actor preserves acquired progression; see
+  `references/blocks.md` for the exact payloads.
 - Maps may expose a shader terrain `terrainLayer` object with `version: 1`, `mode: "control-texture"`, pixel `width`/`height`, `tileSize`, `palette`, and `controlTexture` metadata. The control texture is RGBA8; terrain palette index is encoded as `R + G * 256`, optional light uses `B` with `128` as neutral, and `A` stores terrain mask coverage for pixel brush strokes. Soft edges are computed from transition/blend metadata at render time. Legacy tile grids are normalized into `tileSize x tileSize` blocks, but brush edits can update individual world pixels in the control texture.
-- Maps may expose a terrain morphology `terrainMorphologyLayer` object with `version: 1`, `mode: "terrain-morphology"`, pixel `width`/`height`, `tileSize`, and `features[]`. Each feature is either `{ kind: "hole", params, strokes }` or `{ kind: "wall", params, strokes }`; strokes store world-pixel `points[]` and `radius`. Hole params support `depth`, `roundness`, `roughness`, optional facade `textureId`, optional bottom-fill `fillTextureId`, and `fillHeight` clamped to `0..100`; `textureId` is not used as the bottom-fill fallback. Wall params support `height`, `roundness`, `roughness`, and optional facade `textureId`; the editor's wall smoothness control maps to `roughness = 1 - smoothness`. The brush tool modifies the terrain surface; hole/wall tools use the selected terrain texture as the vertical facade while the top surface remains the already-painted base terrain. The renderer merges hole/wall masks as signed terrain levels before drawing, so overlapping strokes are clipped or neutralized instead of being rendered as independent overlays. The editor renders morphology after the base terrain control texture and merges morphology strokes into terrain collision as blocking cells.
-- `PUT /api/maps/:mapId` supports partial section updates. Omitted map fields are preserved, so prefer sending only changed sections: `startX/startY` for start position, `events` for placements, `terrainMorphologyLayer` for morphology, terrain fields for terrain/control texture, element layer arrays for objects, and tileset params for media selection.
+- Game or editor integrations that need to reproduce Studio terrain rendering must use `@rpgjs/render-map2d`. Decode terrain and control images in the host, call `normalizeTerrainMap()` and `prepareTerrainMap()`, then render world-aligned regions with `renderTerrainRegion()`. Do not reimplement road, carpet, nine-slice, water, or morphology pixels in an Angular, Pixi, or CanvasEngine adapter.
+- `POST /api/map-generations` is the project-scoped confirmed Cloudflare Workflow for map creation and editing. It accepts optional terrain/element-set references, generates missing assets, extracts semantic terrain patterns, builds terrain/morphology, preserves separated element positions, and persists the final map. Use prepare, explicit confirmation, execute, then poll the returned instance until `complete`; the response includes the final `mapId`. Failed terminal responses expose refund/retry flags, and `POST /api/map-generations/:instanceId/retry` starts a fresh instance only after the former attempt is refunded. Targeted edits use normalized polygons and inherit current assets when omitted; see `references/maps.md`.
+- Maps may expose a terrain morphology `terrainMorphologyLayer` object with `version: 1`, `mode: "terrain-morphology"`, pixel `width`/`height`, `tileSize`, and `features[]`. Each feature is either `{ kind: "hole", params, strokes }` or `{ kind: "wall", params, strokes }`; strokes store world-pixel `points[]` and `radius`. Hole params support `depth`, `roundness`, `roughness`, optional facade `textureId`, optional bottom-fill `fillTextureId`, `fillHeight` clamped to `0..100`, and optional per-hole `waveIntensity`, `waveDirection`, and `waveSpeed`; omitted wave fields inherit the map's `waterAnimation` values, while `waveIntensity: 0` keeps the fill static. `textureId` is not used as the bottom-fill fallback. Wall params support `height`, `roundness`, `roughness`, optional facade `textureId`, `surfaceTextureId`, `trimTextureId`, `baseTextureId`, and `renderMode: "procedural" | "collision-only"`; collision-only generated walls block movement but defer their visual to `wallSurfaceLayer`. `wallStyle: "rock"` renders stratified rock faces with a rock rim and a floor contact shadow; Studio dug caves use it on a wall that covers the whole map, carved by erase operations. Studio also stores `rockTexture: "masonry" | "natural"` on rock walls (procedural face texture, default `masonry`: cut stone courses; `natural`: irregular weathered rock facets). Without `textureId`, the game renders these faces per pixel from the wall mask, like the editor: lit at the top, darker at the foot, at most 55% of the opening below, with a contact shadow in the wall base. The editor's wall smoothness control maps to `roughness = 1 - smoothness`. The renderer merges hole/wall masks as signed terrain levels before drawing and merges morphology strokes into terrain collision as blocking cells. The Studio editor levels holes and walls when they are drawn: a wall drawn over a hole erases the hole there (back to walkable ground) and a hole drawn inside a wall erases the wall there, so saved maps only contain ordinary paint and erase operations.
+- Generated maps may expose `wallSurfaceLayer` with `version: 1`, `mode: "wall-surface"`, map-pixel dimensions, `materials[]`, and an external RGBA8 `controlTexture`. `R` is the zero-based material index, `G` is `0=void`, `1=top`, `2=face`, or `3=trim`, `B` is reserved, and `A` is coverage. Each material references dedicated top, face and trim texture ids plus an optional base id. Studio renders these masks pixel-exactly and edits/undoes them together with wall collision morphology. `PUT /api/maps/:mapId` persists edits from `wallSurfaceLayer` plus base64 `wallSurfaceControlTexture`; the API stores the PNG outside the map document.
+- Maps may expose `waterAnimation: { enabled, speed, intensity, direction }` for map-level liquid animation defaults. `direction` is measured clockwise in screen-space degrees (`0` right, `90` down) and defaults to `90`. Filled holes inherit these defaults unless their params override them; wave highlights are derived from each fill's local color or texture instead of using a fixed blue tint.
+- `PUT /api/maps/:mapId` supports partial section updates. Omitted map fields are preserved, so prefer sending only changed sections: `startX/startY` for start position, `events` for placements, `terrainMorphologyLayer` plus optional `wallSurfaceLayer`/`wallSurfaceControlTexture` for generated wall geometry, terrain fields for terrain/control texture, element layer arrays for objects, and tileset params for media selection.
 - Maps may expose top-level lighting settings as `lighting: { sun: { enabled: boolean, intensity: number } }`. The sun intensity is clamped to `0..1`; when enabled, runtime/editor integrations can use it to display automatic shadows for walls, characters, and elements.
 - Maps may expose `mapLoadBlockCollectionId: string | null`. When set, `GET /api/game/maps/:mapId` hydrates that collection into `mapLoadBlocks`, and the RPGJS Studio runtime executes those blocks from the server `map.onJoin(player, map)` hook when a player enters the map. This workflow has a player and map context, but no current event context.
 - Event workflow builders can use execution profiles. `eventBuilderProfiles.mapLoad` exposes blocks whose `requiredCapabilities` fit a player-aware map context and removes current-event field choices from compatible schemas.
-- Terrain media metadata exposes `sourceTexture`, direct `rows` and `columns`, `textureGrid: { columns, rows, tileSize? }`, `terrainTextures[]`, and `transitions[]`. Each `terrainTextures[]` entry is `{ id, index, label, collision?, renderTileSize?, defaultRenderMode? }`; `index` is the atlas-cell source of truth, `collision` marks painted map cells as blocking, and `renderTileSize` controls the repeated texture size in map-editor world pixels, defaulting to the legacy `320` pattern size when absent. `defaultRenderMode` supports `hard`, `fade`, `water`, and `custom`: `hard` is crisp, `fade` uses `width`, the UI `grass edge` preset is stored as `fade` with `width: 12` and `curve: "sharp"` and renders as a grass fringe, `water` is the stored generic liquid mode and keeps the atlas texture while deriving clipped tint, shoreline depth, static ripples, and edge glints from the atlas cell color so lava/swamp/acid/oil do not get a fixed blue outline, and unknown `custom` modes fall back to an edge highlight unless their `shaderKey` is liquid-like. `transitions[]` stores exception rules `{ from, to, mode, priority? }` between terrain ids; it is not a generated Wang transition matrix. Studio terrain generation defaults to a `4x4` source texture atlas in the UI and persists the generated atlas directly; it no longer creates Wang/autotile output through the image-processing container. Generation requests can set `metadata.sourceTextureColumns` and `metadata.sourceTextureRows`; Studio also sends `terrainAtlasColumns`, `terrainAtlasRows`, `terrainStyleId`, and `terrainStylePrompt` so the server prompt can build a shader-friendly seamless material atlas. Element set (`tileset`) generation can pass `metadata.terrainReferenceImage` and `metadata.terrainReferenceMediaId` to use an existing terrain image as a style-compatibility guide; the image data is execution-only and should not be persisted.
-- Project settings support `hero.hitbox: { width, height }` for the playable hero collision size. Missing or invalid `hero.hitbox` keeps the RPGJS default `32 x 32`; width and height are positive RPGJS-pixel dimensions and are not scaled by `hero.graphic`.
-- Project settings and database enemies both support combat animation spritesheet media IDs under `animations`: `attack`, `hurt`, `die`, and `castSpell`.
+- Terrain media metadata exposes `sourceTexture`, direct `rows` and `columns`, `textureGrid: { columns, rows, tileSize? }`, `terrainTextures[]`, and `transitions[]`. Each `terrainTextures[]` entry is `{ id, index, label, collision?, renderTileSize?, renderingStyle?: "pixel-art" | "hd-2d", defaultRenderMode? }`; `index` is the atlas-cell source of truth, `collision` marks painted map cells as blocking, `renderTileSize` controls the repeated texture size in map-editor world pixels, defaulting to the legacy `320` pattern size when absent, and `renderingStyle: "hd-2d"` enables smooth map-editor scaling while omitted metadata preserves legacy pixel-art rendering. `defaultRenderMode` supports `hard`, `fade`, `nine-slice`, `water`, and `custom`: `hard` is crisp, `fade` uses `width`, the UI `grass edge` preset is stored as `fade` with `width: 12` and `curve: "sharp"` and renders as a grass fringe, `nine-slice` stores a source-cell-pixel `center: { x, y, width, height }`, repeats that center, projects the surrounding border bands along every painted contour, and always prevents fade bleed, `water` is the stored generic liquid mode and keeps the atlas texture while deriving clipped tint, shoreline depth, static ripples, and edge glints from the atlas cell color so lava/swamp/acid/oil do not get a fixed blue outline, and unknown `custom` modes fall back to an edge highlight unless their `shaderKey` is liquid-like. `transitions[]` stores exception rules `{ from, to, mode, priority? }` between terrain ids; it is not a generated Wang transition matrix. Studio terrain generation defaults to a `4x4` source texture atlas in the UI and persists the generated atlas directly; it no longer creates Wang/autotile output through the image-processing container. Generation requests can set `metadata.sourceTextureColumns` and `metadata.sourceTextureRows`; Studio also sends `terrainAtlasColumns`, `terrainAtlasRows`, `terrainStyleId`, and `terrainStylePrompt` so the server prompt can build a shader-friendly seamless material atlas. Element set (`tileset`) generation can pass `metadata.terrainReferenceImage` and `metadata.terrainReferenceMediaId` to use an existing terrain image as a style-compatibility guide; the image data is execution-only and should not be persisted.
+- Playable character settings are database actors under `/api/database/actors`; the project stores the selected actor `_id` in `mainActorId`. Use `GET /api/database/actors/main` and `PUT /api/database/actors/:id/main` to read or change the main hero. The actor owns appearance, hitbox, progression, inventory, animations, and skills.
+- Actor `hitbox: { width, height }` uses positive RPGJS-pixel dimensions and defaults to `32 x 32` when omitted. The public game project and offline export resolve `mainActorId` back to the runtime-compatible `hero`, `animations`, and `skills` fields.
+- Database actors and enemies support combat animation spritesheet media IDs under `animations`: `attack`, `hurt`, `die`, and `castSpell`.
+- Linked character animations named `cast`, `Cast Spell`, `castspell`, `castSpell`, or `castSkill` resolve to the canonical `animations.castSpell` field; explicit actor/enemy overrides retain precedence.
+- Actors and enemies automatically inherit a selected character sprite's linked faceset and named combat animations. Set `faceset` or individual `animations` media IDs only to override those defaults; see [references/database.md](references/database.md).
 - The RPGJS starter runtime uses these spritesheets in action battle: attack actions, damage/hurt feedback, delayed death removal, and skill/cast usage can temporarily switch to the configured spritesheet.
 - Database enemies support action battle AI options under `behavior`: `enemyType`, `attackCooldown`, `visionRange`, `attackRange`, `dodgeChance`, `dodgeCooldown`, `fleeThreshold`, `attackPatterns`, `patrolWaypoints`, and `groupBehavior`.
 - Database enemies expose a lightweight preview endpoint: `GET /api/database/enemies/preview?ids=<id1,id2>`. Use it when only `_id`, `name`, and `graphic` are needed for known enemy ids instead of listing or reading full enemy records. Send at most 100 distinct ids per request.
 - `GET /api/events` returns the legacy event array by default. Add `page` or `limit` to opt into paginated responses: `GET /api/events?page=1&limit=24` returns `{ data, meta }`. Paginated event lists default to `sortBy=createdAt&sortDirection=desc` and support `sortBy=createdAt|updatedAt|name`, `sortDirection=asc|desc`, `eventType=all|character|enemy|free`, and `assignment=all|assigned|unassigned`.
-- Project settings and database enemies both support level-gated skill acquisition under `skills`: `{ skillId, level }`.
+- Database actors and enemies support level-gated skill acquisition under `skills`: `{ skillId, level }`.
 - Database skills support media IDs under `icon`, `animation`, and `sound`.
+- Project settings support global `audio.ui` semantic cues (`navigate`, `confirm`, `cancel`, `open`, `close`, `error`) shared by every native menu. General Action Battle defaults live in `combatAudio` (`battleMusic`, `attack`, `skill`, `hit`, `hurt`, `die`). Both groups are edited in the Project Audio tab.
+- Title-screen background music and image are configured with `menus.titleScreen.settings.backgroundMusic` and `backgroundImage`. Maps do not override combat audio. Database enemies can override battle music and source/reaction cues under `audio.combat`. Database skills use `sound` for casting and `impactSound` for impact; all sound values are Studio media IDs.
+- Generate full-scene title-screen or in-game artwork with media generation type `image`. It produces an opaque, center-cropped 16:9 landscape media record; this is distinct from `illustration`, which remains a transparent 4:5 character portrait. Use the resulting media `_id` in `menus.titleScreen.settings.backgroundImage`.
 - Game/runtime code can read media data usable in the game with `GET /api/game/media/:mediaId`; use `references/media.md` for details.
 - Media type changes should use `PUT /api/media/update/:mediaId` instead of the metadata-only admin endpoint; this synchronizes `metadata.type` with the root `type` field.
 - Game map responses from `GET /api/game/maps/:mapId` hydrate event `params.graphic`, `params.faceset`, `triggers[].graphic`, and `triggers[].faceset` as media objects when possible, and expose the active page hitbox as `event.hitbox: { width, height }`; use `references/maps.md` for the runtime response shape.
@@ -143,3 +260,7 @@ curl -sS -X POST "$BASE_URL/..." \
 - Event workflow blocks can use `set_hitbox` to call `target.setHitbox(width, height)` on `$player`, `$this`, or a map event id. `width` and `height` are positive RPGJS-pixel dimensions and are not scaled by the target graphic scale.
 - Event workflow blocks can use `camera_follow` to call `player.cameraFollow(target, { smoothMove })`. The target is resolved from `eventId` with `$player`, `$this`, or a map event id. `smoothMove` defaults to `true`; optional `time` and `ease` create the advanced smooth transition object supported by RPGJS. The `ease` field is a dropdown enum of common easing names such as `linear`, `easeInQuad`, `easeOutQuad`, and `easeInOutQuad`.
 - Event workflow variable writes must use the public `set_variable` block. `change_variable` is legacy runtime compatibility only and must not be generated for new payloads. `set_variable` supports `valueSource` values `constant`, `variable`, `random`, `player_x`, `player_y`, `player_direction`, `map_id`, `gold`, `player_id`, `player_name`, `level`, `hp`, and `sp`.
+
+For enemy combat pacing, use the per-pattern `behavior.attackProfiles` timing
+overrides documented in `references/database.md`; retain omitted values to
+inherit the engine defaults.

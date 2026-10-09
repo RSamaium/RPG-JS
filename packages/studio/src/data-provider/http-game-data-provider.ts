@@ -77,6 +77,10 @@ export class HttpGameDataProvider implements GameDataProvider {
     return fetchJson(`${this.config.apiBaseUrl}/game/media/${mediaId}`, 'media query');
   }
 
+  getMediaGroup(mediaId: string): Promise<any[]> {
+    return fetchJson(`${this.config.apiBaseUrl}/game/media/${mediaId}/animations`, 'character animations query');
+  }
+
   async getDatabase(projectId?: string): Promise<any[]> {
     if (!projectId) {
       throw new Error('[HttpGameDataProvider] getDatabase requires projectId');

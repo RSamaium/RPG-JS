@@ -6,8 +6,78 @@ import { LobbyRoom } from "./rooms/lobby";
 import { inject } from "./core/inject";
 import { context } from "./core/context";
 import { lastValueFrom } from "rxjs";
+import { RpgRoomRegistry } from "./rooms/registry";
+import type { RpgAuthContext, RpgAuthResult, RpgPlayerConnectionContext, RpgServerAuthSocket, RpgServerStepMetrics } from "./RpgServer";
+import type { RpgPlayer } from "./Player/Player";
+import { registerServerStepEmitter } from "./server-step";
+import { setConnectionAuthentication } from "./auth";
 
-export type RpgServerRoomKind = "lobby" | "map" | "unknown";
+/** Persistent storage available to the RPGJS server runtime. */
+export interface RpgServerRuntimeStorage {
+  /** Read one value from room storage. */
+  get<T = unknown>(key: string): Promise<T | undefined>;
+  /** Store one value in room storage. */
+  put<T = unknown>(key: string, value: T): Promise<void>;
+  /** Delete one or several values from room storage. */
+  delete(key: string | string[]): Promise<unknown>;
+}
+
+/** Low-level room handle owned by an RPGJS server runtime. */
+export interface RpgServerRuntimeRoom {
+  /** Stable low-level room identifier. */
+  readonly id?: string;
+  /** Storage scoped to the room. */
+  readonly storage: RpgServerRuntimeStorage;
+}
+
+/**
+ * RPGJS-owned structural contract for the room server inherited by
+ * {@link RpgServerEngine}.
+ */
+export interface RpgRoomServer {
+  /** Current low-level room handle. */
+  readonly room: RpgServerRuntimeRoom;
+  /** Current initialized gameplay sub-room. */
+  subRoom: unknown | null;
+  /** Gameplay room classes available to this server. */
+  rooms: unknown[];
+  /** Whether the low-level room runtime is hibernating. */
+  readonly isHibernate: boolean;
+  /** Storage scoped to the current room. */
+  readonly roomStorage: RpgServerRuntimeStorage;
+  /** Send a packet to one low-level connection. */
+  send(connection: unknown, payload: unknown, subRoom: unknown): Promise<void>;
+  /** Send a packet to every low-level connection. */
+  broadcast(payload: unknown, subRoom: unknown): void;
+  /** Initialize the current room. */
+  onStart(): Promise<void>;
+  /** Run session garbage collection immediately. */
+  runGarbageCollector(): Promise<void>;
+  /** Resolve one persisted session. */
+  getSession(privateId: string): Promise<unknown | null>;
+  /** Delete one persisted session. */
+  deleteSession(privateId: string): Promise<void>;
+  /** Connect a client to the current gameplay room. */
+  onConnectClient(connection: unknown, context: unknown): Promise<void>;
+  /** Handle an incoming low-level connection. */
+  onConnect(connection: unknown, context: unknown): Promise<void>;
+  /** Handle an incoming packet. */
+  onMessage(message: string, sender: unknown): Promise<void>;
+  /** Handle a closed connection. */
+  onClose(connection: unknown): Promise<void>;
+  /** Handle a room alarm. */
+  onAlarm(): Promise<void>;
+  /** Handle a connection error. */
+  onError(connection: unknown, error: Error): Promise<void>;
+  /** Handle an HTTP request routed to the room. */
+  onRequest(request: Request): Promise<Response>;
+}
+
+const RpgRoomServerBase = Server as unknown as new (
+  room: RpgServerRuntimeRoom,
+) => RpgRoomServer;
+
+export type RpgServerRoomKind = string;
 
 export interface RpgServerRoomInfo {
   /** Full low-level room id, for example `lobby-1` or `map-town`. */
@@ -29,9 +99,66 @@ export interface RpgServerRoomInfo {
 export type RpgServerCompatibilityApp = unknown;
 export type RpgServerCompatibilityIo = unknown;
 
-export class RpgServerEngine extends Server {
-  rooms = [RpgMap, LobbyRoom];
+export class RpgServerEngine extends RpgRoomServerBase {
+  rooms: unknown[] = [RpgMap, LobbyRoom];
+  private roomRegistry = new RpgRoomRegistry([RpgMap, LobbyRoom]);
   private _globalConfig: any = {};
+
+  /** @internal Configure built-in and provider-contributed gameplay rooms. */
+  setRoomRegistry(registry: RpgRoomRegistry): void {
+    this.roomRegistry = registry;
+    this.rooms = registry.roomClasses;
+  }
+
+  constructor(room: RpgServerRuntimeRoom) {
+    super(room);
+    registerServerStepEmitter(room, (metrics) => this.emitServerStep(metrics));
+  }
+
+  /** Run post-acceptance player hooks for the physical WebSocket connection. */
+  async onConnectionAccepted(connection: any, requestContext: any): Promise<void> {
+    const room = this.getCurrentRoom<any>();
+    const players = typeof room?.players === "function" ? room.players() : undefined;
+    if (!players || typeof players !== "object") return;
+
+    const player = Object.values(players).find((candidate: any) =>
+      candidate?.conn === connection || candidate?.conn?.id === connection?.id
+    ) as RpgPlayer | undefined;
+    if (!player) return;
+
+    let hooks: Hooks;
+    try {
+      hooks = inject<Hooks>(ModulesToken, context);
+    }
+    catch {
+      return;
+    }
+
+    const request = requestContext?.request;
+    const url = request?.url ? new URL(request.url, "http://localhost") : new URL("http://localhost");
+    const connectionContext: RpgPlayerConnectionContext = Object.freeze({
+      connection,
+      query: Object.freeze(Object.fromEntries(url.searchParams.entries())),
+      headers: Object.freeze(Object.fromEntries(request?.headers?.entries?.() ?? [])),
+      request,
+    });
+    await lastValueFrom(hooks.callHooks("server-player-onAccepted", player, connectionContext));
+  }
+
+  private async emitServerStep(metrics: RpgServerStepMetrics): Promise<void> {
+    let hooks: Hooks;
+
+    try {
+      hooks = inject<Hooks>(ModulesToken, context);
+    }
+    catch {
+      return;
+    }
+
+    await lastValueFrom(
+      hooks.callHooks("server-engine-onStep", this, metrics),
+    );
+  }
 
   /**
    * Optional compatibility handle for integrations that still expose an
@@ -122,7 +249,7 @@ export class RpgServerEngine extends Server {
    * @returns The current room id, or `null` when unavailable.
    */
   getCurrentRoomId(): string | null {
-    const id = (this.room as any)?.id;
+    const id = this.room?.id;
     return typeof id === "string" ? id : null;
   }
 
@@ -176,16 +303,28 @@ export class RpgServerEngine extends Server {
   }
 
   async onConnectClient(conn: any, ctx: any) {
-    const publicId = await this.authenticateConnection(conn, ctx);
+    const socket = this.createAuthSocket(conn, ctx);
+    let auth: RpgAuthContext | undefined;
+    try {
+      const result = await this.authenticateConnection(conn, ctx);
+      auth = typeof result === "string"
+        ? this.createAuthContext({ id: result })
+        : result;
+    }
+    catch (error) {
+      await this.notifyAuthenticationFailed(error, socket);
+      throw error;
+    }
 
-    if (typeof publicId === "string") {
-      await this.prepareAuthenticatedSession(publicId, conn, ctx);
+    if (auth) {
+      setConnectionAuthentication(conn, { context: auth, server: this, socket });
+      await this.prepareAuthenticatedSession(auth.id, conn, ctx);
     }
 
     return super.onConnectClient(conn, ctx);
   }
 
-  protected async authenticateConnection(conn: any, ctx: any): Promise<string | undefined> {
+  protected async authenticateConnection(conn: any, ctx: any): Promise<RpgAuthContext | string | undefined> {
     let hooks: Hooks;
 
     try {
@@ -198,18 +337,56 @@ export class RpgServerEngine extends Server {
     const results = await lastValueFrom(
       hooks.callHooks("server-engine-auth", this, this.createAuthSocket(conn, ctx))
     );
-    const publicIds = results.filter((result) => typeof result === "string");
+    const identities = results.filter((result): result is RpgAuthResult =>
+      typeof result === "string"
+      || (typeof result === "object" && result !== null && "id" in result)
+    );
 
-    if (publicIds.length === 0) {
+    if (identities.length === 0) {
       return undefined;
     }
 
-    const publicId = publicIds[publicIds.length - 1].trim();
+    const identity = identities[identities.length - 1];
+    const publicId = (typeof identity === "string" ? identity : identity.id).trim();
     if (!publicId) {
       throw new Error("Authentication failed: auth() returned an empty player id");
     }
 
-    return publicId;
+    return this.createAuthContext({
+      id: publicId,
+      ...(typeof identity === "object" && "data" in identity
+        ? { data: identity.data }
+        : {}),
+    });
+  }
+
+  private createAuthContext(identity: { id: string; data?: unknown }): RpgAuthContext {
+    const roomId = this.getCurrentRoomId() ?? undefined;
+    return Object.freeze({
+      ...identity,
+      roomId,
+      roomKind: roomId
+        ? this.getRoomKind(roomId)
+        : undefined,
+    });
+  }
+
+  private async notifyAuthenticationFailed(error: unknown, socket: RpgServerAuthSocket) {
+    let hooks: Hooks;
+    try {
+      hooks = inject<Hooks>(ModulesToken, context);
+    }
+    catch {
+      return;
+    }
+    try {
+      await lastValueFrom(
+        hooks.callHooks("server-engine-onAuthFailed", this, error, socket),
+      );
+    }
+    catch {
+      // Failure observers must not replace the authoritative rejection reason.
+    }
   }
 
   private createAuthSocket(conn: any, ctx: any) {
@@ -255,7 +432,7 @@ export class RpgServerEngine extends Server {
     if (ctx?.request?.url) {
       const transferToken = new URL(ctx.request.url).searchParams.get("transferToken");
       if (transferToken) {
-        const transferData = await this.room.storage.get<any>(`transfer:${transferToken}`);
+        const transferData = await this.room.storage.get(`transfer:${transferToken}`) as any;
         if (transferData?.privateId) {
           privateIds.add(transferData.privateId);
         }
@@ -267,7 +444,7 @@ export class RpgServerEngine extends Server {
 
   private async saveAuthenticatedSession(privateId: string, publicId: string) {
     const sessionKey = `session:${privateId}`;
-    const existingSession = await this.room.storage.get<any>(sessionKey);
+    const existingSession = await this.room.storage.get(sessionKey) as any;
 
     if (existingSession?.publicId && existingSession.publicId !== publicId) {
       await this.removePrivateIdFromPublicIndex(privateId, existingSession.publicId);
@@ -283,7 +460,7 @@ export class RpgServerEngine extends Server {
 
   private async addPrivateIdToPublicIndex(privateId: string, publicId: string) {
     const key = `session-public:${publicId}`;
-    const privateIds = await this.room.storage.get<string[]>(key);
+    const privateIds = await this.room.storage.get(key) as string[] | undefined;
 
     if (Array.isArray(privateIds) && privateIds.includes(privateId)) {
       return;
@@ -294,7 +471,7 @@ export class RpgServerEngine extends Server {
 
   private async removePrivateIdFromPublicIndex(privateId: string, publicId: string) {
     const key = `session-public:${publicId}`;
-    const privateIds = await this.room.storage.get<string[]>(key);
+    const privateIds = await this.room.storage.get(key) as string[] | undefined;
 
     if (!Array.isArray(privateIds)) {
       return;
@@ -323,23 +500,28 @@ export class RpgServerEngine extends Server {
     await (this as any).saveStatePath?.(`${usersPropName}.${publicId}`, createStatesSnapshotDeep(user));
   }
 
+  /** @internal Roll back provisional identity state when player authorization fails. */
+  async rejectAuthenticatedConnection(publicId: string, conn: any, ctx: any): Promise<void> {
+    const privateIds = await this.resolveAuthenticatedPrivateIds(conn, ctx);
+    for (const privateId of privateIds) {
+      await this.room.storage.delete(`session:${privateId}`);
+      await this.removePrivateIdFromPublicIndex(privateId, publicId);
+    }
+
+    const subRoom = await (this as any).getSubRoom?.({ getMemoryAll: true });
+    const signal = subRoom ? (this as any).getUsersProperty?.(subRoom) : undefined;
+    const user = signal?.()[publicId];
+    if (user?.conn === conn) {
+      delete signal()[publicId];
+    }
+  }
+
   private getRoomKind(id: string | null): RpgServerRoomKind {
-    if (id?.startsWith("lobby-")) {
-      return "lobby";
-    }
-    if (id?.startsWith("map-")) {
-      return "map";
-    }
-    return "unknown";
+    if (!id) return "unknown";
+    return this.roomRegistry.describeId(id)?.kind ?? "unknown";
   }
 
   private getRoomName(id: string): string {
-    if (id.startsWith("lobby-")) {
-      return id.slice("lobby-".length);
-    }
-    if (id.startsWith("map-")) {
-      return id.slice("map-".length);
-    }
-    return id;
+    return this.roomRegistry.describeId(id)?.name ?? id;
   }
 }

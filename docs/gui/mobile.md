@@ -110,3 +110,9 @@ they do not create gameplay authority on the client.
 The virtual joystick uses CanvasEngine's `Joystick` component for input. RPGJS
 movement is cardinal, so diagonal joystick positions are resolved to the nearest
 single RPGJS movement control before being repeated.
+
+Holding the joystick continues movement without requiring further pointer movement.
+Changing direction preserves the current joystick power. Releasing the joystick or
+returning it below the configured threshold stops repetition. In MMORPG mode, the
+overlay follows replacement current-player controls so a player remount does not
+require releasing and pressing the joystick again.

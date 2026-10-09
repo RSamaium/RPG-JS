@@ -1,5 +1,4 @@
-import { RpgClient, RpgClientEngine } from "@rpgjs/client";
-import { defineModule } from "@rpgjs/common";
+import { defineModule, RpgClient, RpgClientEngine } from "@rpgjs/client";
 import { effect } from "canvasengine";
 
 export default defineModule<RpgClient>({

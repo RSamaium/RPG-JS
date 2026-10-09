@@ -28,19 +28,13 @@ elemental vulnerabilities, guard effects, and applies the final damage to HP.
 ### Signature
 
 ```ts
-applyDamage(attackerPlayer: RpgPlayer, skill?: any): {
-    damage: number;
-    critical: boolean;
-    elementVulnerable: boolean;
-    guard: boolean;
-    superGuard: boolean;
-  }
+applyDamage(attackerPlayer: RpgPlayer, skill?: SkillData): DamageResult
 ```
 
 ### Parameters
 
 - `attackerPlayer`: `RpgPlayer`
-- `skill?`: `any`
+- `skill?`: `SkillData`
 
 ### Returns
 

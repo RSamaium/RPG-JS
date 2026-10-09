@@ -85,6 +85,9 @@ export default defineConfig(({ command, mode }) => {
       dts({
         insertTypesEntry: true,
         exclude: ['**/*.test.ts', '**/*.spec.ts'],
+        afterDiagnostic(diagnostics) {
+          if (diagnostics.length > 0) throw new Error(`Declaration generation failed with ${diagnostics.length} TypeScript diagnostic(s)`)
+        },
       }),
     ],
     build: {

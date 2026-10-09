@@ -142,6 +142,20 @@ export function removeImportsPlugin(options: RemoveImportsPluginOptions): Plugin
                             replaceNode(s, node.start, node.end, replacement);
                             hasChanges = true;
                         }
+                    },
+                    ExportNamedDeclaration(node: any) {
+                        const exportSource = node.source?.value;
+                        if (exportSource && matchesPattern(exportSource, options.patterns)) {
+                            replaceNode(s, node.start, node.end, `/* removed export: ${exportSource} */`);
+                            hasChanges = true;
+                        }
+                    },
+                    ExportAllDeclaration(node: any) {
+                        const exportSource = node.source?.value;
+                        if (exportSource && matchesPattern(exportSource, options.patterns)) {
+                            replaceNode(s, node.start, node.end, `/* removed export: ${exportSource} */`);
+                            hasChanges = true;
+                        }
                     }
                 });
 
@@ -161,4 +175,4 @@ export function removeImportsPlugin(options: RemoveImportsPluginOptions): Plugin
             }
         }
     };
-} 
+}

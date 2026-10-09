@@ -34,6 +34,6 @@ export class TitleGui extends Gui {
         return super.open(options, {
             waitingAction: true,
             blockPlayerInput: true
-        })
+        }) as Promise<TitleGuiSelection | null>
     }
 }

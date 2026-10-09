@@ -18,6 +18,13 @@ and send only one compact server event.
 
 ## Spritesheet Animations
 
+Finite character animations keep the direction they started with until playback
+finishes. Incoming locomotion updates do not interrupt them; afterward, a
+stationary character returns to idle, while a moving character resumes walking.
+This client rendering behavior applies to standalone and MMORPG games. Action
+Battle also preserves an ongoing predicted attack when the server confirms the
+same animation and graphic, instead of restarting it.
+
 > **See also:** [Spritesheets Guide](/guide/spritesheets) for comprehensive information about spritesheets, including dynamic spritesheet resolution.
 
 ### 1. Creating the Animation Spritesheet
@@ -418,3 +425,14 @@ tick(({ deltaTime }) => {
   }
 });
 ```
+
+### Fit a temporary client animation to a duration
+
+Use `sprite.setAnimation('attack', 1, { durationMs: 620 })` to play all poses
+of one cycle over 620 ms. The alternate-graphic overload also accepts this option:
+`sprite.setAnimation('attack', 'enemy-attack', 1, { durationMs: 620 })`.
+Without `durationMs`, the spritesheet's original frame timing is preserved.
+This changes client presentation only; server gameplay must control its own
+timing. Action Battle supplies this option from the enemy's active + recovery
+phase duration, through the serializable visual context's
+`animationDefaults.durationMs`.

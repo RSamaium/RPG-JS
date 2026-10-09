@@ -66,6 +66,30 @@ describe("LobbyRoom", () => {
     expect(hooks.callHooks).toHaveBeenCalledWith("server-player-onStart", player);
   });
 
+  test("client connection close runs onDisconnected", async () => {
+    const onDisconnected = vi.fn();
+    const serverModule = defineModule<RpgServer>({
+      player: { onDisconnected },
+    });
+    const serverClass = createServer({
+      providers: [provideServerModules([serverModule])],
+    });
+    const room = new ServerIo("lobby-1", { env: { TEST: "true" } });
+    const server = new serverClass(room);
+    await server.onStart();
+    await server.subRoom.onStart();
+    const client = new ClientIo(server, "player-client-id");
+    const request = new Request("http://localhost", {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+    await server.onConnect(client.conn as any, { request } as any);
+    room.clients.set(client.id, client);
+
+    client.conn.close();
+    await vi.waitFor(() => expect(onDisconnected).toHaveBeenCalledOnce());
+  });
+
   test("client title screen interaction reaches lobby and runs onStart", async () => {
     let onStartCalls = 0;
     const serverModule = defineModule<RpgServer>({

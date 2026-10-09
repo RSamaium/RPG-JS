@@ -1,19 +1,25 @@
 import type { RpgTransportServer } from "./types";
 
-type MapUpdateHeadersInit =
-  | HeadersInit
-  | Record<string, string | string[] | undefined>
-  | Map<string, string | undefined>;
+import {
+  createMapUpdateHeaders,
+  MAP_UPDATE_TOKEN_ENV,
+  resolveMapUpdateToken,
+} from "../map-update";
+export {
+  createMapUpdateHeaders,
+  isMapUpdateAuthorized,
+  MAP_UPDATE_TOKEN_ENV,
+  MAP_UPDATE_TOKEN_HEADER,
+  readMapUpdateToken,
+  resolveMapUpdateToken,
+} from "../map-update";
 
-interface ResolveMapOptions {
+export interface ResolveMapOptions {
   host?: string;
   headers?: Headers;
   mapUpdateToken?: string;
   tiledBasePaths?: string[];
 }
-
-export const MAP_UPDATE_TOKEN_HEADER = "x-rpgjs-map-update-token";
-export const MAP_UPDATE_TOKEN_ENV = "RPGJS_MAP_UPDATE_TOKEN";
 
 type RuntimeProcess = {
   cwd?: () => string;
@@ -22,11 +28,6 @@ type RuntimeProcess = {
 
 function getRuntimeProcess(): RuntimeProcess | undefined {
   return (globalThis as { process?: RuntimeProcess }).process;
-}
-
-function readEnvVariable(name: string): string | undefined {
-  const value = getRuntimeProcess()?.env?.[name];
-  return typeof value === "string" ? value : undefined;
 }
 
 function getWorkingDirectory(): string | undefined {
@@ -109,10 +110,19 @@ async function readTextByFilePath(pathLike: string): Promise<string | null> {
   return null;
 }
 
+async function readTextNextToFile(filePath: string, relativePath: string): Promise<string | null> {
+  try {
+    const { dirname, resolve } = await import("node:path");
+    return await readTextByFilePath(resolve(dirname(filePath), relativePath));
+  } catch {
+    return null;
+  }
+}
+
 function getTiledBasePaths(paths?: string[]): string[] {
   const values = [
     ...(paths || []),
-    readEnvVariable("RPGJS_TILED_BASE_PATH"),
+    getRuntimeProcess()?.env?.RPGJS_TILED_BASE_PATH,
     "map",
     "data",
     "assets/data",
@@ -122,73 +132,17 @@ function getTiledBasePaths(paths?: string[]): string[] {
   return Array.from(new Set(values));
 }
 
-export function resolveMapUpdateToken(explicitToken?: string): string {
-  return explicitToken ?? readEnvVariable(MAP_UPDATE_TOKEN_ENV) ?? "";
-}
-
-function normalizeMapUpdateHeaders(init?: MapUpdateHeadersInit): HeadersInit | undefined {
-  if (!init) return undefined;
-  if (init instanceof Headers || Array.isArray(init)) return init;
-  if (init instanceof Map) {
-    return Array.from(init.entries()).filter((entry): entry is [string, string] => entry[1] !== undefined);
-  }
-  return Object.entries(init).flatMap(([key, value]) => {
-    if (value === undefined) return [];
-    return Array.isArray(value)
-      ? value.map((item): [string, string] => [key, item])
-      : [[key, value] as [string, string]];
-  });
-}
-
-export function createMapUpdateHeaders(
-  token?: string,
-  init?: MapUpdateHeadersInit,
-): Headers {
-  const headers = new Headers(normalizeMapUpdateHeaders(init));
-  if (!headers.has("content-type")) {
-    headers.set("content-type", "application/json");
-  }
-  const resolvedToken = resolveMapUpdateToken(token);
-  if (resolvedToken) {
-    headers.set(MAP_UPDATE_TOKEN_HEADER, resolvedToken);
-  }
-  return headers;
-}
-
-export function readMapUpdateToken(headers: Headers): string {
-  const directToken = headers.get(MAP_UPDATE_TOKEN_HEADER);
-  if (directToken) {
-    return directToken;
-  }
-
-  const authorization = headers.get("authorization");
-  if (!authorization) {
-    return "";
-  }
-
-  const [scheme, value] = authorization.split(/\s+/, 2);
-  if (scheme?.toLowerCase() !== "bearer" || !value) {
-    return "";
-  }
-
-  return value.trim();
-}
-
-export function isMapUpdateAuthorized(headers: Headers, expectedToken?: string): boolean {
-  const requiredToken = resolveMapUpdateToken(expectedToken);
-  if (!requiredToken) {
-    return true;
-  }
-  return readMapUpdateToken(headers) === requiredToken;
-}
-
 async function resolveMapDocument(
   mapId: string,
   mapDefinition: any,
   options: ResolveMapOptions,
-): Promise<{ xml: string; sourceUrl?: string }> {
+): Promise<{ xml: string; sourceUrl?: string; sourcePath?: string }> {
   if (typeof mapDefinition?.data === "string" && mapDefinition.data.includes("<map")) {
-    return { xml: mapDefinition.data };
+    const file = typeof mapDefinition?.file === "string" ? mapDefinition.file.trim() : "";
+    if (file && !file.includes("<map") && !/^https?:\/\//i.test(file)) {
+      return { xml: mapDefinition.data, sourcePath: file };
+    }
+    return { xml: mapDefinition.data, sourceUrl: /^https?:\/\//i.test(file) ? file : undefined };
   }
 
   if (typeof mapDefinition?.file === "string") {
@@ -211,7 +165,15 @@ async function resolveMapDocument(
     }
     const xmlFromFile = await readTextByFilePath(file);
     if (xmlFromFile) {
-      return { xml: xmlFromFile };
+      return { xml: xmlFromFile, sourcePath: file };
+    }
+  }
+
+  for (const basePath of getTiledBasePaths(options.tiledBasePaths)) {
+    const candidatePath = `${basePath.replace(/\/+$/, "")}/${mapId}.tmx`;
+    const xml = await readTextByFilePath(candidatePath);
+    if (xml) {
+      return { xml, sourcePath: candidatePath };
     }
   }
 
@@ -260,24 +222,30 @@ export async function enrichMapWithParsedTiledData(payload: any, options: Resolv
         continue;
       }
 
-      let tilesetUrl: string | undefined;
+      let sourceTilesetUrl: string | undefined;
       if (mapDoc.sourceUrl) {
         try {
-          tilesetUrl = new URL(tileset.source, mapDoc.sourceUrl).toString();
+          sourceTilesetUrl = new URL(tileset.source, mapDoc.sourceUrl).toString();
         } catch {
-          tilesetUrl = undefined;
+          sourceTilesetUrl = undefined;
         }
-      } else if (options.host) {
+      }
+
+      let tilesetRaw = mapDoc.sourcePath
+        ? await readTextNextToFile(mapDoc.sourcePath, tileset.source)
+        : null;
+      if (!tilesetRaw && sourceTilesetUrl) {
+        tilesetRaw = await fetchTextByUrl(sourceTilesetUrl);
+      }
+      if (!tilesetRaw && options.host) {
         const prefix = toBasePathPrefix(getTiledBasePaths(options.tiledBasePaths)[0] || "map");
         const candidatePath = tileset.source.startsWith("/")
           ? tileset.source
           : `${prefix}/${tileset.source}`.replace(/\/{2,}/g, "/");
-        tilesetUrl = `http://${options.host}${candidatePath.startsWith("/") ? candidatePath : `/${candidatePath}`}`;
+        const hostedTilesetUrl = `http://${options.host}${candidatePath.startsWith("/") ? candidatePath : `/${candidatePath}`}`;
+        tilesetRaw = await fetchTextByUrl(hostedTilesetUrl);
       }
-
-      const tilesetRaw = tilesetUrl
-        ? await fetchTextByUrl(tilesetUrl)
-        : await readTextByFilePath(tileset.source);
+      tilesetRaw ??= await readTextByFilePath(tileset.source);
 
       if (!tilesetRaw) {
         mergedTilesets.push(tileset);
@@ -317,18 +285,7 @@ export async function updateMap(roomId: string, rpgServer: RpgTransportServer, o
   }
 
   try {
-    const mapId = normalizeRoomMapId(roomId);
-    const serverMaps = Array.isArray(rpgServer.maps) ? rpgServer.maps : [];
-    const defaultMapPayload: any = {
-      id: mapId,
-      width: 0,
-      height: 0,
-      events: [],
-      __maps: serverMaps,
-    };
-
-    await enrichMapWithParsedTiledData(defaultMapPayload, options);
-    delete defaultMapPayload.__maps;
+    const defaultMapPayload = await createMapUpdatePayload(roomId, rpgServer, options);
 
     const headers = createMapUpdateHeaders(options.mapUpdateToken, options.headers);
 
@@ -344,4 +301,23 @@ export async function updateMap(roomId: string, rpgServer: RpgTransportServer, o
   } catch (error) {
     console.warn(`Failed initializing map for room ${roomId}:`, error);
   }
+}
+
+export async function createMapUpdatePayload(
+  roomId: string,
+  rpgServer: RpgTransportServer,
+  options: ResolveMapOptions = {},
+): Promise<any> {
+  const mapId = normalizeRoomMapId(roomId);
+  const serverMaps = Array.isArray(rpgServer.maps) ? rpgServer.maps : [];
+  const payload: any = {
+    id: mapId,
+    width: 0,
+    height: 0,
+    events: [],
+    __maps: serverMaps,
+  };
+  await enrichMapWithParsedTiledData(payload, options);
+  delete payload.__maps;
+  return payload;
 }

@@ -1,34 +1,52 @@
 <Container scale>
     <StudioTerrainMap data debugCollisions={terrainPluginOptions().debugCollisions === true} splitWallForeground={true} /> 
     <Container sortableChildren={true} pixiChildren={terrainWallShadowPixiChildren} />
+    <Container sortableChildren={true} pixiChildren={groundShadowPixiChildren} />
     <Container sortableChildren={true} pixiChildren={elementsAlwaysLowPixiChildren} />
-    <StudioEventLayer pixiChildren={eventLayerPixiChildren} /> 
+    <Container scale={eventLayerScale}>
+      <StudioEventLayer pixiChildren={eventLayerPixiChildren} /> 
+    </Container>
     <Container sortableChildren={true} pixiChildren={elementsHighPixiChildren} />
 </Container>
 
-@if (weatherOptions) {
+@if (weatherOptions()) {
   <Weather
-      effect={weatherOptions().effect}
-      density={weatherOptions().density}
-      speed={weatherOptions().speed}
-      windDirection={weatherOptions().windDirection}
-      windStrength={weatherOptions().windStrength}
-      maxDrops={weatherOptions().maxDrops}
-      scale={weatherOptions().scale}
-      height={weatherOptions().height}
-      sunIntensity={weatherOptions().sunIntensity}
-      sunAngle={weatherOptions().sunAngle}
-      raySpread={weatherOptions().raySpread}
-      rayTwinkle={weatherOptions().rayTwinkle}
-      rayTwinkleSpeed={weatherOptions().rayTwinkleSpeed}
-      alpha={weatherOptions().alpha}
-      zIndex={weatherOptions().zIndex}
+      effect={weatherOptions()?.effect}
+      density={weatherOptions()?.density}
+      speed={weatherOptions()?.speed}
+      windDirection={weatherOptions()?.windDirection}
+      windStrength={weatherOptions()?.windStrength}
+      maxDrops={weatherOptions()?.maxDrops}
+      scale={weatherOptions()?.scale}
+      height={weatherOptions()?.height}
+      sunIntensity={weatherOptions()?.sunIntensity}
+      sunAngle={weatherOptions()?.sunAngle}
+      raySpread={weatherOptions()?.raySpread}
+      rayTwinkle={weatherOptions()?.rayTwinkle}
+      rayTwinkleSpeed={weatherOptions()?.rayTwinkleSpeed}
+      rayFan={weatherOptions()?.rayFan ?? 0}
+      rayLength={weatherOptions()?.rayLength ?? 1}
+      rayDust={weatherOptions()?.rayDust ?? 0.6}
+      rayColor={weatherOptions()?.rayColor ?? '#fff1c7'}
+      fogOpacity={weatherOptions()?.fogOpacity ?? 0.38}
+      fogSoftness={weatherOptions()?.fogSoftness ?? 0.7}
+      shadowIntensity={weatherOptions()?.shadowIntensity ?? 0.38}
+      shadowSoftness={weatherOptions()?.shadowSoftness ?? 0.65}
+      cloudOpacity={weatherOptions()?.cloudOpacity ?? 0}
+      cloudAltitude={weatherOptions()?.cloudAltitude ?? 0.55}
+      colors={weatherOptions()?.colors}
+      particleSize={weatherOptions()?.particleSize ?? 1}
+      haze={weatherOptions()?.haze ?? 1}
+      topDown={weatherOptions()?.topDown ?? true}
+      alpha={weatherOptions()?.alpha}
+      zIndex={weatherOptions()?.zIndex}
     />
 }
 
   <script>
-    import { computed, effect, mount, signal, tick } from 'canvasengine'
+    import { computed, effect, mount, signal, tick, untracked } from 'canvasengine'
     import { Weather } from "@canvasengine/presets";
+    import { preloadMapCinematics } from '../cinematic';
     import { RpgClientEngine, inject } from "@rpgjs/client";
     import { Container as PixiContainer, Graphics } from "pixi.js";
     import StudioTerrainMap from '../map-renderer/components/studio-terrain-map.ce'
@@ -47,18 +65,23 @@
 
     const engine = inject(RpgClientEngine);
     const terrainWallShadowWorld = new PixiContainer()
+    const groundShadowWorld = new PixiContainer()
     const elementsAlwaysLowWorld = new PixiContainer()
     const elementsHighWorld = new PixiContainer()
     const terrainWallShadowMask = new Graphics()
+    const groundShadowMask = new Graphics()
     const elementsAlwaysLowMask = new Graphics()
     const elementsHighMask = new Graphics()
     terrainWallShadowWorld.sortableChildren = true
+    groundShadowWorld.sortableChildren = true
     elementsAlwaysLowWorld.sortableChildren = true
     elementsHighWorld.sortableChildren = true
     terrainWallShadowWorld.mask = terrainWallShadowMask
+    groundShadowWorld.mask = groundShadowMask
     elementsAlwaysLowWorld.mask = elementsAlwaysLowMask
     elementsHighWorld.mask = elementsHighMask
     const terrainWallShadowPixiChildren = [terrainWallShadowWorld, terrainWallShadowMask]
+    const groundShadowPixiChildren = [groundShadowWorld, groundShadowMask]
     const elementsAlwaysLowPixiChildren = [elementsAlwaysLowWorld, elementsAlwaysLowMask]
     const elementsHighPixiChildren = [elementsHighWorld, elementsHighMask]
     let terrainWallShadowChildren = []
@@ -143,7 +166,7 @@
       const currentSerial = ++terrainWallOcclusionSerial
       const children = await terrainWallOcclusionRenderer.renderMap(mapData)
       if (currentSerial !== terrainWallOcclusionSerial) return
-      terrainWallOcclusionChildren.set(children)
+      terrainWallOcclusionChildren.set(toEventLayerSpace(children))
       lastTerrainMorphologyCullKey = ""
       updateTerrainMorphologyCulling()
     }
@@ -177,7 +200,9 @@
     })
 
     mount(() => {
+      const releaseCinematics = preloadMapCinematics([data()?.events, data()?.commonEvents]);
       return () => {
+        releaseCinematics();
         terrainWallOcclusionSerial += 1
         terrainWallShadowSerial += 1
         studioElementRenderSerial += 1
@@ -188,6 +213,7 @@
         elementsLowPixiChildren.set([])
         elementsHighChildren = []
         syncPixiWorldChildren(terrainWallShadowWorld, terrainWallShadowChildren)
+        syncPixiWorldChildren(groundShadowWorld, [])
         syncPixiWorldChildren(elementsAlwaysLowWorld, elementsAlwaysLowChildren)
         syncPixiWorldChildren(elementsHighWorld, elementsHighChildren)
         terrainWallOcclusionRenderer.destroy()
@@ -306,7 +332,7 @@
       let result = String(value).trim()
       if (!result) return ''
       const objectIdMatch =
-        result.match(/^ObjectId\("([^"]+)"\)$/) || result.match(/^ObjectId\('([^']+)'\)$/)
+        result.match(/^ObjectId\(\u0022([^\u0022]+)\u0022\)$/) || result.match(/^ObjectId\(\u0027([^\u0027]+)\u0027\)$/)
       if (objectIdMatch?.[1]) {
         result = objectIdMatch[1]
       }
@@ -489,6 +515,27 @@
       return params?.scale || 1
     })
 
+    // The map is scaled, but characters and events are not: the server already
+    // expresses their positions in scaled pixels. The event layer is rendered at
+    // 1 / scale so they keep their size and position, and the map elements that
+    // share it (y-sorted with the characters) are converted to that same space.
+    const eventLayerScale = computed(() => 1 / scale())
+
+    const toEventLayerSpace = (children) => {
+      const factor = scale()
+      if (factor === 1) return children
+      children.forEach((child) => {
+        if (!child || child.__studioEventLayerSpace) return
+        child.x *= factor
+        child.y *= factor
+        child.scale.x *= factor
+        child.scale.y *= factor
+        child.zIndex *= factor
+        child.__studioEventLayerSpace = true
+      })
+      return children
+    }
+
     const mapBounds = computed(() => {
       const mapData = map()
       const renderData = data()?.terrainRenderData
@@ -505,6 +552,7 @@
     effect(() => {
       const bounds = mapBounds()
       updateMapMask(terrainWallShadowMask, bounds)
+      updateMapMask(groundShadowMask, bounds)
       updateMapMask(elementsAlwaysLowMask, bounds)
       updateMapMask(elementsHighMask, bounds)
     })
@@ -519,6 +567,7 @@
       const currentSerial = ++studioElementRenderSerial
       const shadowBudget = { remaining: STUDIO_ELEMENT_SHADOW_CASTER_LIMIT }
       const renderOptions = {
+        terrain: data().terrainRenderData,
         sceneMap: engine.sceneMap,
         lighting: mapLighting(),
         shadowBudget,
@@ -546,7 +595,12 @@
 
       elementsAlwaysLowChildren = alwaysLowChildren
       syncPixiWorldChildren(elementsAlwaysLowWorld, elementsAlwaysLowChildren)
-      elementsLowPixiChildren.set(lowChildren)
+      elementsLowPixiChildren.set(toEventLayerSpace(lowChildren))
+      syncPixiWorldChildren(groundShadowWorld, [
+        ...elementsAlwaysLowRenderer.getGroundShadowSprites(),
+        ...elementsLowRenderer.getGroundShadowSprites(),
+        ...elementsHighRenderer.getGroundShadowSprites(),
+      ])
       elementsHighChildren = highChildren
       syncPixiWorldChildren(elementsHighWorld, elementsHighChildren)
     }
@@ -564,7 +618,8 @@
     const events = computed(() => engine.sceneMap.events)
 
     effect(() => {
-      engine.sceneMap.setLocalWeather(data().weather ?? data().params?.weather ?? null);
+      const weather = data().weather ?? data().params?.weather ?? null;
+      untracked(() => engine.sceneMap.setMapWeatherFallback(weather));
     })
 
     const weatherOptions = computed(() => {

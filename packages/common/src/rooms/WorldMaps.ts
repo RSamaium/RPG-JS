@@ -31,6 +31,7 @@ export interface WorldMapConfig {
 }
 
 type WorldMapSource = {
+  id?: string;
   worldX: number;
   worldY: number;
   widthPx: number;
@@ -139,38 +140,49 @@ export class WorldMapsManager {
     search:
       | { minX: number; minY: number; maxX: number; maxY: number }
       | { x: number; y: number }
+      | Direction
       | number
   ): WorldMapInfo[] {
     const maps = Array.from(this.maps.values());
+    const direction = typeof search === 'number'
+      ? ([Direction.Up, Direction.Down, Direction.Left, Direction.Right] as const)[search]
+      : typeof search === 'string'
+        ? search
+        : undefined;
 
-    // Direction lookup (number) --------------------------------------------
-    if (typeof search === 'number') {
+    // Direction lookup -----------------------------------------------------
+    if (direction) {
       const src = map;
       return maps.filter(m => {
         // Check if maps overlap or touch in the perpendicular direction
         // For vertical directions (Up/Down), we need horizontal overlap or touch
         // For horizontal directions (Left/Right), we need vertical overlap or touch
+        if (m.id === src.id) {
+          return false;
+        }
+
         const horizontallyOverlapsOrTouches =
           Math.max(src.worldX, m.worldX) <= Math.min(src.worldX + src.widthPx, m.worldX + m.widthPx);
         const verticallyOverlapsOrTouches =
           Math.max(src.worldY, m.worldY) <= Math.min(src.worldY + src.heightPx, m.worldY + m.heightPx);
-
-        const marginLeftRight = (src.tileWidth ?? 32) / 2
-        const marginTopDown = (src.tileHeight ?? 32) / 2
   
-        switch (search) {
-          case 0: // Up
-            return verticallyOverlapsOrTouches && m.worldY + m.heightPx - marginTopDown === src.worldY;
-          case 1: // Down
-            return verticallyOverlapsOrTouches && m.worldY + marginTopDown === src.worldY + src.heightPx;
-          case 2: // Left
-            return horizontallyOverlapsOrTouches && m.worldX + m.widthPx - marginLeftRight === src.worldX;
-          case 3: // Right
-            return horizontallyOverlapsOrTouches && m.worldX + marginLeftRight === src.worldX + src.widthPx;
+        switch (direction) {
+          case Direction.Up:
+            return horizontallyOverlapsOrTouches && m.worldY + m.heightPx === src.worldY;
+          case Direction.Down:
+            return horizontallyOverlapsOrTouches && m.worldY === src.worldY + src.heightPx;
+          case Direction.Left:
+            return verticallyOverlapsOrTouches && m.worldX + m.widthPx === src.worldX;
+          case Direction.Right:
+            return verticallyOverlapsOrTouches && m.worldX === src.worldX + src.widthPx;
           default:
             return false;
         }
       });
+    }
+
+    if (typeof search !== 'object') {
+      return [];
     }
 
     // Point lookup ----------------------------------------------------------

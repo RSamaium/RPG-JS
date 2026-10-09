@@ -1,59 +1,45 @@
-import server from "./server";
-import client from "./client";
-import { createModule } from "@rpgjs/common";
-import { provideLoadMap } from "@rpgjs/client";
-import { TiledParser } from "@canvasengine/tiled";
-import Tiled from "./tiled.ce";
-import { prepareTiledPhysicsData } from "./physics";
+import { createTiledMapServerModule } from "./server";
+import { createModule, type RpgProvider } from "@rpgjs/common";
+import {
+  createTiledMapClientProviders,
+} from "./client-provider";
 
-export function provideTiledMap(options: {
+export interface TiledMapOptions {
+  /** Public URL prefix for image assets and, in standalone mode, TMX/TSX files. */
   basePath: string;
+  /** Callback invoked after a standalone client loads a map. */
   onLoadMap?: (map: string) => Promise<void>;
-}) {
+  /** MMORPG chunk streaming configuration, or `false` to disable the built-in adapter. */
+  streaming?: false | {
+    /** Width and height of a chunk in Tiled cells. Defaults to 16. */
+    chunkSize?: number;
+    /** Chunk radius disclosed around the authoritative player position. Defaults to 2. */
+    loadRadius?: number;
+    /** Chunk radius retained by clients to reduce boundary churn. Defaults to 3. */
+    retainRadius?: number;
+  };
+}
+
+/**
+ * Install Tiled rendering, authoritative physics, and progressive MMORPG chunks.
+ *
+ * In standalone mode the browser loads TMX/TSX directly. In MMORPG mode the
+ * server keeps those sources private and sends only sanitized render/physics
+ * chunks selected from the authoritative player position.
+ *
+ * @param options - Tiled asset path and optional streaming window.
+ * @returns A combined RPGJS module with runtime-specific providers.
+ */
+export function provideTiledMap(
+  options: TiledMapOptions = { basePath: "map" },
+): RpgProvider[] {
+  const clientFeature = createTiledMapClientProviders?.(options);
+  const server = createTiledMapServerModule?.(options);
   return createModule("TiledMap", [
     {
       server,
-      client,
+      client: clientFeature?.client,
     },
-    provideLoadMap?.(async (map) => {
-      "use client";
-      const response = await fetch(`${options.basePath}/${map}.tmx`);
-      const mapData = (await response.text());
-      const parser = new TiledParser(mapData);
-      const parsedMap = parser.parseMap();
-      const tilesets: any = [];
-      for (let tileset of parsedMap.tilesets) {
-        const response = await fetch(`${options.basePath}/${tileset.source}`);
-        const tilesetData = await response.text();
-        const parser = new TiledParser(tilesetData);
-        const parsedTileset = parser.parseTileset();
-        parsedTileset.image.source = `${options.basePath}/${parsedTileset.image.source}`;
-        // Preserve firstgid from the original tileset reference
-        tilesets.push({
-          ...tileset, // Preserve original properties including firstgid
-          ...parsedTileset, // Merge with parsed tileset data
-        });
-      }
-      parsedMap.tilesets = tilesets;
-
-      const obj: any = {
-        data: mapData,
-        component: Tiled,
-        parsedMap,
-        id: map,
-        params: {
-          basePath: options.basePath,
-        },
-      };
-
-      // Populate dimensions and static hitboxes before the first loadPhysic() call.
-      prepareTiledPhysicsData(obj, obj);
-
-      if (options.onLoadMap) {
-        await options.onLoadMap(map);
-      }
-
-      return obj;
-    }),
+    ...(clientFeature?.providers ?? []),
   ]);
 }

@@ -22,13 +22,25 @@ vi.mock("@canvasengine/tiled", () => {
       this.layers = parsedMap.layers;
       this.tilesets = parsedMap.tilesets;
       this.blockedTiles = new Set(parsedMap.blockedTiles ?? []);
+      this.tilesIndex = Object.fromEntries(
+        (parsedMap.levels ?? [0]).map((level: number) => [level, []]),
+      );
     }
 
-    getTileByPosition(x: number, y: number) {
+    private tilesIndex: Record<number, unknown[]>;
+
+    get zTileHeight() {
+      return this.tileheight;
+    }
+
+    // Mirrors CanvasEngine: the tile row is shifted by z, and the level is z / zTileHeight
+    getTileByPosition(x: number, y: number, z: [number, number] = [0, 0]) {
       const tileX = Math.floor(x / this.tilewidth);
-      const tileY = Math.floor(y / this.tileheight);
+      const tileY = Math.floor((y - z[0]) / this.tileheight);
+      const level = Math.floor(z[0] / this.zTileHeight);
+      const key = level === 0 ? `${tileX},${tileY}` : `${tileX},${tileY}@${level}`;
       return {
-        hasCollision: this.blockedTiles.has(`${tileX},${tileY}`),
+        hasCollision: this.blockedTiles.has(key),
       };
     }
   }
@@ -53,8 +65,8 @@ describe("prepareTiledPhysicsData", () => {
     const map: any = {};
     const expectedHitboxes = [
       { id: "custom-hitbox", x: 4, y: 5, width: 6, height: 7 },
-      { id: "__tiled_collision__:1,0", x: 16, y: 0, width: 16, height: 20 },
-      { id: "__tiled_collision__:2,1", x: 32, y: 20, width: 16, height: 20 },
+      { id: "__tiled_collision__:1,0", x: 16, y: 0, width: 16, height: 20, z: 0, zHeight: 20 },
+      { id: "__tiled_collision__:2,1", x: 32, y: 20, width: 16, height: 20, z: 0, zHeight: 20 },
     ];
 
     prepareTiledPhysicsData(mapData, map);
@@ -83,13 +95,34 @@ describe("prepareTiledPhysicsData", () => {
 
     prepareTiledPhysicsData(mapData, map);
     expect(mapData.hitboxes).toEqual([
-      { id: "__tiled_collision__:0,0", x: 0, y: 0, width: 32, height: 32 },
+      { id: "__tiled_collision__:0,0", x: 0, y: 0, width: 32, height: 32, z: 0, zHeight: 32 },
     ]);
 
     mapData.parsedMap.blockedTiles = [];
     prepareTiledPhysicsData(mapData, map);
 
     expect(mapData.hitboxes).toEqual([]);
+  });
+
+  it("gives each tile collision the z range of its Tiled level", () => {
+    const mapData = {
+      parsedMap: {
+        width: 2,
+        height: 1,
+        tilewidth: 32,
+        tileheight: 32,
+        levels: [0, 2],
+        blockedTiles: ["0,0", "1,0@2"],
+      },
+      hitboxes: [],
+    };
+
+    prepareTiledPhysicsData(mapData, {});
+
+    expect(mapData.hitboxes).toEqual([
+      { id: "__tiled_collision__:0,0", x: 0, y: 0, width: 32, height: 32, z: 0, zHeight: 32 },
+      { id: "__tiled_collision__:1,0@2", x: 32, y: 0, width: 32, height: 32, z: 64, zHeight: 32 },
+    ]);
   });
 
   it("adds v4 map helpers backed by Tiled data", () => {

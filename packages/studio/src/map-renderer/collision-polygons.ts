@@ -1,3 +1,4 @@
+import { holeMorphologyContours } from "./morphology-contours";
 import {
   type StudioCollisionPolygon,
   type StudioTerrainMorphologyFeature,
@@ -199,70 +200,26 @@ function createHoleMorphologyCollisionPolygons(
   const thickness = resolveHoleCollisionThickness(feature, tileSize);
   const polygons: StudioCollisionPolygon[] = [];
 
-  getEffectiveMorphologyStrokes(feature).forEach((stroke) => {
-    const points = normalizeStrokePoints(stroke.points);
-    const radius = resolveHoleCollisionRadius(stroke.radius, feature.params);
-    if (points.length === 0) return;
-    if (points.length === 1) {
-      pushArcCollisionPolygons(
-        polygons,
-        points[0],
-        radius,
-        thickness,
-        0,
-        Math.PI * 2,
-        mapWidth,
-        mapHeight,
-        feature.id,
-        `${stroke.id}_cap`,
-        clearRects
-      );
-      return;
-    }
-
-    for (let index = 1; index < points.length; index += 1) {
-      const from = points[index - 1];
-      const to = points[index];
-      const segmentId = `${stroke.id}_${index}`;
-      pushHoleSegmentCollisionPolygon(
-        polygons,
-        from,
-        to,
-        radius,
-        thickness,
-        1,
-        mapWidth,
-        mapHeight,
-        feature.id,
-        `${segmentId}_left`,
-        clearRects
-      );
-      pushHoleSegmentCollisionPolygon(
-        polygons,
-        from,
-        to,
-        radius,
-        thickness,
-        -1,
-        mapWidth,
-        mapHeight,
-        feature.id,
-        `${segmentId}_right`,
-        clearRects
-      );
-    }
-
-    pushHoleStrokeCapsAndJoints(
-      polygons,
-      points,
-      radius,
-      thickness,
-      mapWidth,
-      mapHeight,
-      feature.id,
-      stroke.id,
-      clearRects
-    );
+  holeMorphologyContours(feature, mapWidth, mapHeight).forEach((contour, contourIndex) => {
+    const normals = contour.map((point, index) => {
+      const next = contour[(index + 1) % contour.length];
+      const length = Math.hypot(next.x - point.x, next.y - point.y);
+      return { x: -(next.y - point.y) / length, y: (next.x - point.x) / length };
+    });
+    const offsets = normals.map((normal, index) => {
+      const previous = normals[(index + normals.length - 1) % normals.length];
+      const scale = Math.min(thickness, thickness * 0.5 / Math.max(0.25, 1 + normal.x * previous.x + normal.y * previous.y));
+      return { x: (normal.x + previous.x) * scale, y: (normal.y + previous.y) * scale };
+    });
+    contour.forEach((point, index) => {
+      const next = (index + 1) % contour.length;
+      pushHolePolygon(polygons, [
+        offsetPoint(point, offsets[index], -1),
+        offsetPoint(contour[next], offsets[next], -1),
+        offsetPoint(contour[next], offsets[next], 1),
+        offsetPoint(point, offsets[index], 1),
+      ], mapWidth, mapHeight, feature.id, `${contourIndex}_${index}`, clearRects);
+    });
   });
 
   return polygons;
@@ -276,198 +233,6 @@ function resolveHoleCollisionThickness(feature: StudioTerrainMorphologyFeature, 
   return Math.max(8, Math.min(tileSize * 0.28, 14));
 }
 
-function resolveHoleCollisionRadius(radius: number, params: StudioTerrainMorphologyFeature["params"]): number {
-  const explicitRadius = Number(params.collisionRadius);
-  if (Number.isFinite(explicitRadius) && explicitRadius > 0) {
-    return explicitRadius;
-  }
-  const smoothness = 1 - clampNumber(Number(params.roughness ?? 0), 0, 1);
-  const roughness = (1 - smoothness) * 0.3;
-  return Math.max(1, radius * (1 + roughness * 0.08));
-}
-
-function pushHoleSegmentCollisionPolygon(
-  polygons: StudioCollisionPolygon[],
-  from: Point,
-  to: Point,
-  radius: number,
-  thickness: number,
-  side: 1 | -1,
-  mapWidth: number,
-  mapHeight: number,
-  sourceId: string,
-  segmentId: string,
-  clearRects: PixelRect[]
-): void {
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const length = Math.hypot(dx, dy);
-  if (length < 1) return;
-
-  const tangent = { x: dx / length, y: dy / length };
-  const normal = { x: (-dy / length) * side, y: (dx / length) * side };
-  const inner = Math.max(0, radius - thickness * 0.5);
-  const outer = radius + thickness * 0.5;
-  const extension = Math.min(thickness * 0.5, length * 0.2);
-  const start = { x: from.x - tangent.x * extension, y: from.y - tangent.y * extension };
-  const end = { x: to.x + tangent.x * extension, y: to.y + tangent.y * extension };
-
-  pushHolePolygon(
-    polygons,
-    [
-      offsetPoint(start, normal, inner),
-      offsetPoint(end, normal, inner),
-      offsetPoint(end, normal, outer),
-      offsetPoint(start, normal, outer),
-    ],
-    mapWidth,
-    mapHeight,
-    sourceId,
-    segmentId,
-    clearRects
-  );
-}
-
-function pushHoleStrokeCapsAndJoints(
-  polygons: StudioCollisionPolygon[],
-  points: Point[],
-  radius: number,
-  thickness: number,
-  mapWidth: number,
-  mapHeight: number,
-  sourceId: string,
-  strokeId: string,
-  clearRects: PixelRect[]
-): void {
-  const firstDirection = segmentAngle(points[0], points[1]);
-  const lastDirection = segmentAngle(points[points.length - 2], points[points.length - 1]);
-  pushArcCollisionPolygons(
-    polygons,
-    points[0],
-    radius,
-    thickness,
-    firstDirection + Math.PI * 0.5,
-    firstDirection + Math.PI * 1.5,
-    mapWidth,
-    mapHeight,
-    sourceId,
-    `${strokeId}_start_cap`,
-    clearRects
-  );
-  pushArcCollisionPolygons(
-    polygons,
-    points[points.length - 1],
-    radius,
-    thickness,
-    lastDirection - Math.PI * 0.5,
-    lastDirection + Math.PI * 0.5,
-    mapWidth,
-    mapHeight,
-    sourceId,
-    `${strokeId}_end_cap`,
-    clearRects
-  );
-
-  for (let index = 1; index < points.length - 1; index += 1) {
-    const previousAngle = segmentAngle(points[index - 1], points[index]);
-    const nextAngle = segmentAngle(points[index], points[index + 1]);
-    pushShortestArcCollisionPolygons(
-      polygons,
-      points[index],
-      radius,
-      thickness,
-      previousAngle + Math.PI * 0.5,
-      nextAngle + Math.PI * 0.5,
-      mapWidth,
-      mapHeight,
-      sourceId,
-      `${strokeId}_${index}_left_joint`,
-      clearRects
-    );
-    pushShortestArcCollisionPolygons(
-      polygons,
-      points[index],
-      radius,
-      thickness,
-      previousAngle - Math.PI * 0.5,
-      nextAngle - Math.PI * 0.5,
-      mapWidth,
-      mapHeight,
-      sourceId,
-      `${strokeId}_${index}_right_joint`,
-      clearRects
-    );
-  }
-}
-
-function pushShortestArcCollisionPolygons(
-  polygons: StudioCollisionPolygon[],
-  center: Point,
-  radius: number,
-  thickness: number,
-  startAngle: number,
-  endAngle: number,
-  mapWidth: number,
-  mapHeight: number,
-  sourceId: string,
-  segmentId: string,
-  clearRects: PixelRect[]
-): void {
-  const delta = normalizeSignedAngle(endAngle - startAngle);
-  if (Math.abs(delta) < 0.02) return;
-  pushArcCollisionPolygons(
-    polygons,
-    center,
-    radius,
-    thickness,
-    startAngle,
-    startAngle + delta,
-    mapWidth,
-    mapHeight,
-    sourceId,
-    segmentId,
-    clearRects
-  );
-}
-
-function pushArcCollisionPolygons(
-  polygons: StudioCollisionPolygon[],
-  center: Point,
-  radius: number,
-  thickness: number,
-  startAngle: number,
-  endAngle: number,
-  mapWidth: number,
-  mapHeight: number,
-  sourceId: string,
-  segmentId: string,
-  clearRects: PixelRect[]
-): void {
-  const inner = Math.max(0, radius - thickness * 0.5);
-  const outer = radius + thickness * 0.5;
-  const sweep = endAngle - startAngle;
-  const steps = Math.max(1, Math.ceil(Math.abs(sweep) / (Math.PI / 8)));
-
-  for (let step = 0; step < steps; step += 1) {
-    const angleA = startAngle + (sweep * step) / steps;
-    const angleB = startAngle + (sweep * (step + 1)) / steps;
-    pushHolePolygon(
-      polygons,
-      [
-        pointOnCircle(center, inner, angleA),
-        pointOnCircle(center, inner, angleB),
-        pointOnCircle(center, outer, angleB),
-        pointOnCircle(center, outer, angleA),
-      ],
-      mapWidth,
-      mapHeight,
-      sourceId,
-      `${segmentId}_${step}`,
-      clearRects
-    );
-  }
-}
-
 function pushHolePolygon(
   polygons: StudioCollisionPolygon[],
   points: Point[],
@@ -477,16 +242,17 @@ function pushHolePolygon(
   segmentId: string,
   clearRects: PixelRect[]
 ): void {
-  const clippedPoints = clampPolygonPoints(points, mapWidth, mapHeight);
-  if (clippedPoints.length < 3 || Math.abs(polygonArea(clippedPoints)) < 1) return;
-  if (polygonIntersectsAnyRect(clippedPoints, clearRects)) return;
-  polygons.push(pointsToCollisionPolygon(
-    clippedPoints,
-    "morphology_hole_edge_collision",
-    sourceId,
-    segmentId,
-    "edge"
-  ));
+  let pieces = [convexHull(clampPolygonPoints(points, mapWidth, mapHeight))];
+  for (const rect of clearRects) {
+    pieces = pieces.flatMap(piece => subtractPolygonRect(piece, rect));
+  }
+  pieces.forEach((piece, index) => {
+    const rounded = convexHull(piece.map(point => ({ x: Math.round(point.x), y: Math.round(point.y) })));
+    if (rounded.length < 3 || Math.abs(polygonArea(rounded)) < 1) return;
+    polygons.push(pointsToCollisionPolygon(
+      rounded, "morphology_hole_edge_collision", sourceId, `${segmentId}_${index}`, "edge"
+    ));
+  });
 }
 
 function pointsToCollisionPolygon(
@@ -949,39 +715,11 @@ function subtractRect(rect: PixelRect, clearRect: PixelRect): PixelRect[] {
   return pieces.filter((piece) => piece.width >= 1 && piece.height >= 1);
 }
 
-function normalizeStrokePoints(points: Point[]): Point[] {
-  return points.reduce<Point[]>((normalized, point) => {
-    const previous = normalized[normalized.length - 1];
-    if (!previous || Math.hypot(point.x - previous.x, point.y - previous.y) >= 1) {
-      normalized.push(point);
-    }
-    return normalized;
-  }, []);
-}
-
 function offsetPoint(point: Point, normal: Point, distance: number): Point {
   return {
     x: point.x + normal.x * distance,
     y: point.y + normal.y * distance,
   };
-}
-
-function pointOnCircle(center: Point, radius: number, angle: number): Point {
-  return {
-    x: center.x + Math.cos(angle) * radius,
-    y: center.y + Math.sin(angle) * radius,
-  };
-}
-
-function segmentAngle(from: Point, to: Point): number {
-  return Math.atan2(to.y - from.y, to.x - from.x);
-}
-
-function normalizeSignedAngle(angle: number): number {
-  let normalized = angle;
-  while (normalized <= -Math.PI) normalized += Math.PI * 2;
-  while (normalized > Math.PI) normalized -= Math.PI * 2;
-  return normalized;
 }
 
 function clampPolygonPoints(points: Point[], mapWidth: number, mapHeight: number): Point[] {
@@ -1010,117 +748,54 @@ function polygonArea(points: Point[]): number {
   return area * 0.5;
 }
 
-function polygonCentroid(points: Point[]): Point {
-  const area = polygonArea(points);
-  if (Math.abs(area) < 0.0001) {
-    return {
-      x: points.reduce((sum, point) => sum + point.x, 0) / points.length,
-      y: points.reduce((sum, point) => sum + point.y, 0) / points.length,
-    };
-  }
-
-  let x = 0;
-  let y = 0;
-  for (let index = 0; index < points.length; index += 1) {
-    const current = points[index];
-    const next = points[(index + 1) % points.length];
-    const factor = current.x * next.y - next.x * current.y;
-    x += (current.x + next.x) * factor;
-    y += (current.y + next.y) * factor;
-  }
-
-  return {
-    x: x / (6 * area),
-    y: y / (6 * area),
+// Very short contour edges can have crossing miter offsets at sharp corners.
+// SAT colliders require convex vertices in winding order, never a bow-tie.
+function convexHull(points: Point[]): Point[] {
+  const sorted = [...points].sort((a, b) => a.x - b.x || a.y - b.y);
+  const cross = (a: Point, b: Point, c: Point) =>
+    (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+  const half = (input: Point[]) => {
+    const result: Point[] = [];
+    for (const point of input) {
+      while (result.length >= 2 && cross(result[result.length - 2], result[result.length - 1], point) <= 0) result.pop();
+      result.push(point);
+    }
+    return result.slice(0, -1);
   };
+  return [...half(sorted), ...half([...sorted].reverse())];
 }
 
-function polygonIntersectsAnyRect(points: Point[], rects: PixelRect[]): boolean {
-  if (rects.length === 0) return false;
-  const centroid = polygonCentroid(points);
-  return rects.some((rect) => (
-    isPointInsideRect(centroid, rect) ||
-    points.some((point) => isPointInsideRect(point, rect)) ||
-    rectCorners(rect).some((corner) => isPointInPolygon(corner, points)) ||
-    polygonEdges(points).some(([from, to]) => rectEdges(rect).some(([rectFrom, rectTo]) => (
-      segmentsIntersect(from, to, rectFrom, rectTo)
-    )))
-  ));
-}
-
-function isPointInsideRect(point: Point, rect: PixelRect): boolean {
-  return (
-    point.x >= rect.x &&
-    point.x <= rect.x + rect.width &&
-    point.y >= rect.y &&
-    point.y <= rect.y + rect.height
-  );
-}
-
-function rectCorners(rect: PixelRect): Point[] {
-  return [
-    { x: rect.x, y: rect.y },
-    { x: rect.x + rect.width, y: rect.y },
-    { x: rect.x + rect.width, y: rect.y + rect.height },
-    { x: rect.x, y: rect.y + rect.height },
+// Each outside piece remains convex. Dropping a whole simplified edge when
+// it touches a bridge would open the bank on both sides of the bridge.
+function subtractPolygonRect(points: Point[], rect: PixelRect): Point[][] {
+  let inside = points;
+  const outside: Point[][] = [];
+  const planes: Array<["x" | "y", number, boolean]> = [
+    ["x", rect.x, true], ["x", rect.x + rect.width, false],
+    ["y", rect.y, true], ["y", rect.y + rect.height, false],
   ];
-}
-
-function polygonEdges(points: Point[]): Array<[Point, Point]> {
-  return points.map((point, index) => [point, points[(index + 1) % points.length]]);
-}
-
-function rectEdges(rect: PixelRect): Array<[Point, Point]> {
-  return polygonEdges(rectCorners(rect));
-}
-
-function isPointInPolygon(point: Point, polygon: Point[]): boolean {
-  let inside = false;
-  for (let index = 0, previousIndex = polygon.length - 1; index < polygon.length; previousIndex = index, index += 1) {
-    const current = polygon[index];
-    const previous = polygon[previousIndex];
-    const intersects = ((current.y > point.y) !== (previous.y > point.y)) &&
-      point.x < ((previous.x - current.x) * (point.y - current.y)) / (previous.y - current.y) + current.x;
-    if (intersects) inside = !inside;
+  for (const [axis, boundary, greater] of planes) {
+    const piece = clipPolygon(inside, axis, boundary, !greater);
+    if (piece.length >= 3 && Math.abs(polygonArea(piece)) >= 1) outside.push(piece);
+    inside = clipPolygon(inside, axis, boundary, greater);
+    if (!inside.length) break;
   }
-  return inside;
+  return outside;
 }
 
-function segmentsIntersect(firstA: Point, firstB: Point, secondA: Point, secondB: Point): boolean {
-  const d1 = orientation(firstA, firstB, secondA);
-  const d2 = orientation(firstA, firstB, secondB);
-  const d3 = orientation(secondA, secondB, firstA);
-  const d4 = orientation(secondA, secondB, firstB);
-
-  if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) {
-    return true;
+function clipPolygon(points: Point[], axis: "x" | "y", boundary: number, greater: boolean): Point[] {
+  const result: Point[] = [];
+  for (let i = 0; i < points.length; i++) {
+    const a = points[i], b = points[(i + 1) % points.length];
+    const aInside = greater ? a[axis] >= boundary : a[axis] <= boundary;
+    const bInside = greater ? b[axis] >= boundary : b[axis] <= boundary;
+    if (aInside) result.push(a);
+    if (aInside !== bInside) {
+      const t = (boundary - a[axis]) / (b[axis] - a[axis]);
+      result.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+    }
   }
-
-  return (
-    (d1 === 0 && pointOnSegment(secondA, firstA, firstB)) ||
-    (d2 === 0 && pointOnSegment(secondB, firstA, firstB)) ||
-    (d3 === 0 && pointOnSegment(firstA, secondA, secondB)) ||
-    (d4 === 0 && pointOnSegment(firstB, secondA, secondB))
-  );
-}
-
-function orientation(a: Point, b: Point, c: Point): number {
-  const value = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
-  return Math.abs(value) < 0.0001 ? 0 : value;
-}
-
-function pointOnSegment(point: Point, from: Point, to: Point): boolean {
-  return (
-    point.x >= Math.min(from.x, to.x) - 0.0001 &&
-    point.x <= Math.max(from.x, to.x) + 0.0001 &&
-    point.y >= Math.min(from.y, to.y) - 0.0001 &&
-    point.y <= Math.max(from.y, to.y) + 0.0001
-  );
-}
-
-function clampNumber(value: number, min: number, max: number): number {
-  if (!Number.isFinite(value)) return min;
-  return Math.max(min, Math.min(max, value));
+  return result;
 }
 
 function resolveAlwaysLowElementWalkableRects(map: any, mapWidth: number, mapHeight: number): PixelRect[] {

@@ -25,7 +25,7 @@ import ProjectileComponent from "../components/projectile.ce";
 import { signal, effect } from 'canvasengine'
 import { provideVueGui } from "@rpgjs/vue";
 import { provideTiledMap } from "@rpgjs/tiledmap/client";
-import { provideMain } from "../modules/main";
+import mainClientModule from "../modules/client";
 import TooltipComponent from "../components/tooltip.ce";
 import { withMobile } from "@rpgjs/client";
 import MobileButton from "../components/mobile-button.ce";
@@ -64,16 +64,31 @@ export default {
     // }),
     provideVueGui(),
     provideClientGlobalConfig(),
-    provideMain(),
     provideActionBattle({
       visual: createActionBattleVisual("fx"),
+      ai: {
+        visuals: {
+          bubble({ object, visual }, fx) {
+            fx.showHit(object, String(visual.text ?? "!"));
+          },
+          rage({ object, visual }, fx) {
+            fx.flash(object, {
+              type: "tint",
+              tint: "red",
+              duration: Number(visual.durationMs ?? 900),
+              cycles: 3,
+            });
+          },
+        },
+      },
       ui: createActionBattleUi({
-        actionBar: false,
+        hotbar: false,
         targeting: true,
         attackPreview: true,
       }),
     }),
     provideClientModules([
+      mainClientModule,
       withMobile({
         enabled: "auto",
         layout: {

@@ -145,7 +145,7 @@ export function createBlockInstance<T extends BlockType>(
  */
 export function isValidBlockType(type: string): type is BlockType {
   const validTypes: BlockType[] = [
-    'show_text', 'show_choices',
+    'show_text', 'show_input', 'show_choices',
     'conditional_branch', 'wait',
     'set_variable', 'set_switch', 'self_switch', 'change_gold', 'change_item', 'change_equipment', 'change_variable',
     'change_character_graphic',

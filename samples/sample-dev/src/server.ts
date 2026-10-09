@@ -1,7 +1,7 @@
 import { createServer, Move, provideServerModules, RpgMap, RpgPlayer, DialogPosition, RpgShape, Components, MAXHP, RpgEvent, EventData, MapData, Frequency, ATK, PDEF, LocalStorageSaveStorageStrategy, provideAutoSave, RpgServerEngine, EventDefinition } from "@rpgjs/server";
 import { provideTiledMap } from "@rpgjs/tiledmap/server";
 import { Item } from '@rpgjs/database'
-import { provideMain } from "./modules/main";
+import mainServerModule from "./modules/server";
 import { Direction } from "@rpgjs/common";
 import {
   ACTION_BATTLE_HIT_FX_COMPONENT_ID,
@@ -11,6 +11,7 @@ import {
   AttackPattern,
   provideActionBattle,
   action,
+  callAction,
   chase,
   condition,
   distanceLessThan,
@@ -20,11 +21,17 @@ import {
   ifHpBelow,
   ifTargetInRange,
   keepDistance,
+  phase,
   selector,
   sequence,
+  sequenceWithDelay,
+  setSpeed,
   targetInRange,
+  teleportNearTarget,
   useAttack,
   useSkill,
+  visual,
+  wait,
 } from "@rpgjs/action-battle/server";
 import { provideSaveStorage } from "@rpgjs/server";
 
@@ -416,10 +423,59 @@ export function AiTreeElite(
   };
 }
 
+export function AiPhaseBoss() {
+  return {
+    name: "AI Demo - Phase Boss",
+    onInit() {
+      setupActionBattleEnemy(this, {
+        name: "Phase Boss",
+        x: 420,
+        y: 260,
+        hp: 900,
+        atk: 24,
+        speed: 2,
+        ai: {
+          preset: "tank",
+          attackRange: 72,
+          attackCooldown: 1000,
+          poise: 5,
+          behaviorTree: selector([
+            phase(
+              "boss-alert",
+              0.6,
+              sequenceWithDelay("boss-alert-sequence", [
+                visual({ kind: "bubble", text: "!", durationMs: 700 }),
+                wait(700),
+                setSpeed(3.5),
+                teleportNearTarget({ distance: 140 }),
+              ])
+            ),
+            phase(
+              "boss-rage",
+              0.3,
+              sequenceWithDelay("boss-rage-sequence", [
+                visual({ kind: "rage", durationMs: 900 }),
+                wait(450),
+                callAction("sample-boss-rage", { attackBonus: 8 }),
+                useAttack(AttackPattern.Charged),
+              ])
+            ),
+            sequence([
+              condition(targetInRange(72)),
+              action(useAttack(AttackPattern.Combo)),
+            ]),
+            action(chase()),
+          ]),
+          rewards: { exp: 120, gold: 80 },
+        },
+      });
+    },
+  };
+}
+
 export default createServer({
   providers: [
   //  provideTiledMap(),
-    provideMain(),
     provideActionBattle({
       combat: {
         pvp: true,
@@ -443,6 +499,14 @@ export default createServer({
       },
       visual: sampleActionBattleVisual,
       ai: {
+        actions: {
+          "sample-boss-rage": ({ event }, payload) => {
+            const attackBonus = Number(payload?.attackBonus ?? 0);
+            if (Number.isFinite(attackBonus)) {
+              event.param[ATK] += attackBonus;
+            }
+          },
+        },
         presets: {
           "sample-rusher": {
             preset: "aggressive",
@@ -501,6 +565,7 @@ export default createServer({
     }),
 
     provideServerModules([
+      mainServerModule,
       {
         // Register weapons and armor in database
         database: async () => {
@@ -571,8 +636,10 @@ export default createServer({
             //player.param[MAXHP] = 200;
             player.param[ATK] = 20;
             player.param[PDEF] = 10;
-            
-            
+
+
+
+
             if (!player.getSkill(fireSkill)) {
               player.learnSkill(fireSkill);
             }
@@ -614,11 +681,16 @@ export default createServer({
             // console.log("call shop")
 
             if (input.action == 'action') {
-              const map = player.getCurrentMap()
-              const event = map?.getEvents()[0]
-              player?.cameraFollow(event, {
-                smoothMove: true
+              const val = await player.showText('Comment tu vas ?', {
+                input: {
+                  placeholder: 'Your value',
+                  required: true,
+                  control: 'textarea',
+                  confirmText: 'Validate',
+                  cancelButton: false
+                }
               })
+              console.log(val)
             }
 
             // const choice = await player.showChoices('Hello', [
@@ -679,6 +751,7 @@ export default createServer({
               //{ event: Event() },
               { event: AiTreeElite(200, 300, "elite-a", "brute") },
               { event: AiTreeElite(300, 200, "elite-b", "skirmisher") },
+              { event: AiPhaseBoss() },
             ]
           }
         ],

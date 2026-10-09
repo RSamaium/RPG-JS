@@ -4,22 +4,36 @@
   "main": "index.js",
   "scripts": {
     "dev": "vite",
-    "build": "vite build"
+    "dev:cloudflare": "concurrently -k -n worker,vite \"pnpm dev:worker\" \"pnpm dev:cloudflare:vite\"",
+    "dev:cloudflare:vite": "RPG_TYPE=mmorpg RPGJS_SERVER_ADAPTER=cloudflare vite",
+    "dev:mmorpg": "RPG_TYPE=mmorpg vite",
+    "dev:worker": "wrangler dev --port 8787",
+    "build": "vite build",
+    "build:cloudflare": "RPG_TYPE=mmorpg RPGJS_SERVER_ADAPTER=cloudflare vite build",
+    "seed:cloudflare": "node ./scripts/seed-cloudflare.mjs",
+    "deploy:dry-run": "wrangler deploy --dry-run",
+    "test": "vitest run",
+    "types": "wrangler types ./src/worker-configuration.d.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "devDependencies": {
-    "@canvasengine/compiler": "2.0.0",
+    "@cloudflare/vitest-pool-workers": "0.5.41",
+    "@vitest/runner": "2.1.9",
+    "@vitest/snapshot": "2.1.9",
+    "@canvasengine/compiler": "2.4.0",
     "@rpgjs/testing": "workspace:*",
     "@rpgjs/vite": "workspace:*",
+    "concurrently": "^9.2.1",
     "vite": "^8.1.1",
-    "vitest": "^4.1.9"
+    "vitest": "2.1.9",
+    "wrangler": "3.100.0"
   },
   "private": true,
   "dependencies": {
-    "@canvasengine/presets": "2.0.0",
+    "@canvasengine/presets": "2.4.0",
     "@rpgjs/action-battle": "workspace:*",
     "@rpgjs/client": "workspace:*",
     "@rpgjs/common": "workspace:*",
@@ -28,7 +42,7 @@
     "@rpgjs/tiledmap": "workspace:*",
     "@rpgjs/ui-css": "workspace:*",
     "@signe/di": "3.1.0",
-    "canvasengine": "2.0.1",
+    "canvasengine": "2.4.0",
     "pixi.js": "8.19.0",
     "vite-plugin-dts": "^5.0.3"
   },

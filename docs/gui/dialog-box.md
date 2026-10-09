@@ -42,9 +42,36 @@ if (choice) {
 }
 ```
 
+### Show an Input
+
+Pass `input` to display a typed field in the same dialog box. The field is active
+immediately, including while the typewriter animation is running. It accepts the
+same input, textarea, and validation options as `player.showInput()`.
+
+```typescript
+const age = await player.showText('How old are you?', {
+  speaker: 'Innkeeper',
+  input: {
+    type: 'number',
+    required: true,
+    min: 1,
+    max: 120
+  }
+})
+// age is number | null
+```
+
+Number inputs resolve to `number | null`; text inputs and textareas resolve to
+`string | null`. Input and `choices` are mutually exclusive. Validation runs on
+the server, while the dialog remains open to display translated errors.
+
+Button labels are customizable with `confirmText` and `cancelText`. Set
+`cancelButton: false` to hide the Cancel button while keeping the dialog's normal
+close controls available.
+
 ## Dialog Options
 
-Both `showText()` and `showChoices()` accept an options object with the following properties:
+`showText()` and `showChoices()` accept the following dialog options:
 
 ### Position
 

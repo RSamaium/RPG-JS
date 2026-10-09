@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import {
   createSpriteSheetObject,
   resolveSpritesheet,
+  STUDIO_DEFAULT_ATTACK_ANIMATION_DURATION_MS,
   STUDIO_DEFAULT_CHARACTER_DISPLAY_SCALE,
 } from "../src/spritesheet-utils";
 
@@ -14,6 +15,18 @@ vi.mock("../src/data-provider", () => ({
     getMedia,
   }),
 }));
+
+vi.mock("pixi.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("pixi.js")>();
+  return {
+    ...actual,
+    Assets: {
+      ...actual.Assets,
+      load: vi.fn(async () => undefined),
+      get: vi.fn(() => undefined),
+    },
+  };
+});
 
 describe("Studio spritesheet utils", () => {
   beforeEach(() => {
@@ -34,6 +47,7 @@ describe("Studio spritesheet utils", () => {
     expect(spritesheet.scale).toEqual([1, 1]);
     expect(spritesheet.anchor).toBeUndefined();
     expect(spritesheet.displayScale).toBe(STUDIO_DEFAULT_CHARACTER_DISPLAY_SCALE);
+    expect(spritesheet.trimTransparentBounds).toBeUndefined();
   });
 
   test("keeps explicit Studio media scale", async () => {
@@ -51,6 +65,134 @@ describe("Studio spritesheet utils", () => {
     expect(spritesheet.scale).toEqual([1, 1]);
     expect(spritesheet.anchor).toBeUndefined();
     expect(spritesheet.displayScale).toBe(STUDIO_DEFAULT_CHARACTER_DISPLAY_SCALE * 0.75);
+    expect(spritesheet.trimTransparentBounds).toBeUndefined();
+  });
+
+  test("enables visible-frame bounds for generated four-direction spritesheets", async () => {
+    const spritesheet = await createSpriteSheetObject({
+      type: "spritesheet",
+      id: "generated-enemy",
+      fileName: "enemy.png",
+      metadata: {
+        frameWidth: 4,
+        frameHeight: 4,
+        fourDirections: true,
+      },
+    });
+
+    expect(spritesheet.trimTransparentBounds).toBe(true);
+  });
+
+  test("registers character illustrations as single-frame spritesheets", async () => {
+    const spritesheet = await createSpriteSheetObject({
+      type: "illustration",
+      id: "hero-art",
+      fileName: "hero-art.png",
+      width: 800,
+      height: 1000,
+    });
+
+    expect(spritesheet).toMatchObject({
+      id: "#illustration_hero-art",
+      framesWidth: 1,
+      framesHeight: 1,
+      width: 800,
+      height: 1000,
+    });
+  });
+
+  test("plays attacks in 350ms without accelerating locomotion", async () => {
+    const spritesheet = await createSpriteSheetObject({
+      type: "spritesheet",
+      id: "generated-attack",
+      fileName: "attack.png",
+      metadata: {
+        frameWidth: 4,
+        frameHeight: 4,
+        fourDirections: true,
+      },
+    });
+
+    const params = { direction: "down" };
+    const attack = spritesheet.textures.attack.animations(params)[0];
+    const walk = spritesheet.textures.walk.animations(params)[0];
+    const attackDurationMs =
+      (attack.at(-1).time / 60) * 1_000;
+
+    expect(attackDurationMs).toBe(
+      STUDIO_DEFAULT_ATTACK_ANIMATION_DURATION_MS,
+    );
+    expect(walk.at(-1).time).toBe(41);
+  });
+
+  test("uses generated lane order and frame duration for character locomotion", async () => {
+    const spritesheet = await createSpriteSheetObject({
+      type: "spritesheet",
+      id: "generated-hero",
+      fileName: "hero.png",
+      metadata: {
+        frameWidth: 8,
+        frameHeight: 4,
+        frameDurationMs: 106,
+        lanes: [
+          { id: "walk-down" },
+          { id: "walk-left" },
+          { id: "walk-right" },
+          { id: "walk-up" },
+        ],
+      },
+    });
+
+    const walk = spritesheet.textures.walk.animations({ direction: "up" })[0];
+
+    expect(walk[0]).toMatchObject({ time: 0, frameX: 0, frameY: 3 });
+    expect(walk[1].time).toBeCloseTo(6.36);
+  });
+
+  test("accepts a Studio media attack duration override", async () => {
+    const spritesheet = await createSpriteSheetObject({
+      type: "spritesheet",
+      id: "generated-heavy-attack",
+      fileName: "heavy-attack.png",
+      metadata: {
+        frameWidth: 4,
+        frameHeight: 4,
+        attackDurationMs: 600,
+      },
+    });
+
+    const attack = spritesheet.textures.attack.animations({
+      direction: "down",
+    })[0];
+
+    expect((attack.at(-1).time / 60) * 1_000).toBeCloseTo(600);
+  });
+
+  test("provides the default animation expected by UI icon sprites", async () => {
+    const spritesheet = await createSpriteSheetObject({
+      type: "icon",
+      id: "fire",
+      fileName: "fire.png",
+      width: 32,
+      height: 32,
+    });
+
+    expect(spritesheet.textures.default.animations()).toEqual([
+      [{ time: 0, frameX: 0, frameY: 0 }],
+    ]);
+    expect(spritesheet.textures.stand).toBeDefined();
+  });
+
+  test("uses the neutral face as the default faceset expression", async () => {
+    const spritesheet = await createSpriteSheetObject({
+      type: "faceset",
+      id: "hero-face",
+      fileName: "hero-face.png",
+    });
+
+    expect(spritesheet.textures.default.animations()).toEqual(
+      spritesheet.textures.neutral.animations(),
+    );
   });
 
   test("keeps LPC sprite real size in source pixels when media is scaled", async () => {
@@ -97,5 +239,18 @@ describe("Studio spritesheet utils", () => {
     expect(getMedia).toHaveBeenCalledWith("hero.png");
     expect(spritesheet.framesWidth).toBe(4);
     expect(spritesheet.displayScale).toBe(STUDIO_DEFAULT_CHARACTER_DISPLAY_SCALE);
+  });
+
+  test("exposes Studio icons with the default animation expected by GUI components", async () => {
+    const spritesheet = await createSpriteSheetObject({
+      type: "icon",
+      id: "fire-icon",
+      fileName: "fire.png",
+      width: 32,
+      height: 32,
+    });
+
+    expect(spritesheet.textures.default).toBeDefined();
+    expect(spritesheet.textures.default).toBe(spritesheet.textures.stand);
   });
 });

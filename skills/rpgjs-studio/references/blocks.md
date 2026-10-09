@@ -58,6 +58,13 @@ schemas.
 - Delete a block: `DELETE /api/blocks/:collectionId/blocks/:blockId`
 - Duplicate a block: `POST /api/blocks/:collectionId/blocks/:blockId/duplicate`
 
+For the built-in Studio assistant, event workflow creation is sequenced rather
+than freely planned: read the qualified workflow resource, discover the
+catalog, load exact schemas, then call the combined workflow writer. The writer
+accepts a map ID or exact map name and
+resolves the compact safe position internally. Do not exact-read complete map
+layers to place a new event.
+
 ## Block collection payload
 
 ```json
@@ -337,6 +344,85 @@ Example with self switch:
 
 ## Available blocks and payloads
 
+### `query_area`
+
+Run child blocks once for each player or event selected through the native
+`RpgMap.queryArea()` API. Results run from nearest to farthest, with IDs used as
+the deterministic tie-breaker.
+
+```json
+{
+  "type": "query_area",
+  "data": {
+    "centerType": "entity",
+    "centerEventId": "$this",
+    "shape": "circle",
+    "radius": 64,
+    "targets": "all",
+    "includeOrigin": false,
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "children": []
+}
+```
+
+Supported shapes are `circle`, `rect`, `line`, and `cross`. The center may be
+an entity (`$player`, `$this`, or an event ID) or an absolute pixel position.
+Inside children, a player hit becomes the current player and an event hit
+becomes `$this`.
+
+### `call_character_select`
+
+Open the character selector for the active player. Use every database Actor or
+provide an ordered unique subset. When the player confirms, the selected Actor
+is applied and persisted for that player/save while acquired progression is
+preserved. Cancelling leaves the current Actor unchanged.
+
+All Actors:
+
+```json
+{
+  "type": "call_character_select",
+  "data": {
+    "allActors": true,
+    "actorIds": [],
+    "allowCancel": false
+  }
+}
+```
+
+Selected Actors:
+
+```json
+{
+  "type": "call_character_select",
+  "data": {
+    "allActors": false,
+    "actorIds": ["ACTOR_ID_1", "ACTOR_ID_2"],
+    "allowCancel": true
+  }
+}
+```
+
+`actorIds` values must be Actor `_id` values from `/api/database/actors`. At
+least one valid ID is required when `allActors` is `false`.
+
+### `change_class`
+
+Assign a database Class to the active player.
+
+```json
+{
+  "type": "change_class",
+  "data": {
+    "classId": "CLASS_ID"
+  }
+}
+```
+
+`classId` must be a Class `_id` from `/api/database/classes`.
+
 ### `show_text`
 
 Use for dialogue or narration.
@@ -358,6 +444,32 @@ Allowed `position`:
 - `top`
 - `middle`
 - `bottom`
+
+To collect a value in the same dialog, enable input and select an existing
+database variable (or create one through the Studio variable picker):
+
+```json
+{
+  "type": "show_text",
+  "data": {
+    "text": "How old are you?",
+    "inputEnabled": true,
+    "inputVariableId": "VARIABLE_ID",
+    "inputControl": "input",
+    "inputType": "number",
+    "inputRequired": true,
+    "inputMin": 1,
+    "inputMax": 120
+  }
+}
+```
+
+`inputControl` accepts `input` or `textarea`. Single-line inputs accept
+`text`, `number`, `password`, or `email`; textareas always resolve to text.
+Optional settings include placeholder/default value, confirm/cancel labels,
+cancel-button visibility, length limits, numeric min/max/step, and textarea
+rows. The submitted string or number is stored in `inputVariableId`; cancelling
+stores `null`.
 
 ### `show_choices`
 
@@ -470,6 +582,9 @@ Allowed `valueSource`:
 - `constant`: use `value` as a free text field
 - `variable`: use `sourceVariableId`
 - `random`: use `randomMin` and `randomMax`
+- `area_target_id`, `area_target_kind`, `area_distance`,
+  `area_distance_ratio`, and `area_falloff_linear`: read the current
+  `query_area` hit; outside its children they resolve to `""` or `0`
 - `player_x`
 - `player_y`
 - `player_direction`
@@ -1189,3 +1304,6 @@ Use to execute another reusable event workflow in the current context.
 - Create a new variable only if no existing one matches the intended meaning.
 - For event page conditions, use variable IDs for `switch1`, `switch2`, `variable`, and `goldVariableId`.
 - Stay inside the allowed block list only.
+# Semantic search
+
+`GET /api/blocks` accepts `query` and optional `minScore` (`0..1`, default `0.40`). Block collections expose root `name` and `description`; legacy metadata values remain readable.

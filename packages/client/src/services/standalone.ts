@@ -1,8 +1,7 @@
 import { AbstractWebsocket, SocketUpdateProperties, WebSocketToken } from "./AbstractSocket";
 import { ClientIo, ServerIo } from "@signe/room";
-import { Context } from "@signe/di";
 import { RpgClientEngine } from "../RpgClientEngine";
-import { UpdateMapService, UpdateMapToken } from "@rpgjs/common";
+import { UpdateMapService, UpdateMapToken, type RpgContext, type RpgProvider } from "@rpgjs/common";
 import { LoadMapToken } from "./loadMap";
 import { RpgGui } from "../Gui/Gui";
 import { provideKeyboardControls } from "./keyboardControls";
@@ -43,7 +42,7 @@ class BridgeWebsocket extends AbstractWebsocket {
   }
   private serverInstance: any;
 
-  constructor(protected context: Context, private server: any, options: StandaloneOptions = {}) {
+  constructor(protected context: RpgContext, private server: any, options: StandaloneOptions = {}) {
     super(context);
     // fake room
     this.rooms.env = options.env || {};
@@ -165,6 +164,7 @@ class BridgeWebsocket extends AbstractWebsocket {
         url.searchParams.set(key, value);
       }
     }
+    if (this.locale) url.searchParams.set('locale', this.locale());
     const request = new Request(url.toString(), {
       method: 'GET',
       headers: {
@@ -177,6 +177,7 @@ class BridgeWebsocket extends AbstractWebsocket {
       this.socket.addEventListener("message", handler);
     });
     await this.serverInstance.onConnect(this.socket.conn as any, { request } as any);
+    await this.serverInstance.onConnectionAccepted?.(this.socket.conn as any, { request } as any);
   }
 
   private normalizeQuery(query?: SocketQuery): Record<string, string> | undefined {
@@ -240,11 +241,11 @@ class UpdateMapStandaloneService extends UpdateMapService {
   }
 }
 
-export function provideRpg(server: any, options: StandaloneOptions = {}) {
+export function provideRpg(server: any, options: StandaloneOptions = {}): RpgProvider[] {
   return [
     {
       provide: WebSocketToken,
-      useFactory: (context: Context) => new BridgeWebsocket(context, server, options),
+      useFactory: (context: RpgContext) => new BridgeWebsocket(context, server, options),
     },
     {
       provide: UpdateMapToken,

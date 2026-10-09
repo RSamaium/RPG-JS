@@ -147,7 +147,7 @@ export class ShopGui extends Gui {
         this.sellMultipliers = this.normalizeSellMultipliers(options.sell)
         this.messageInput = options.message
         this.faceInput = options.face
-        this.on('buyItem', ({ id, nb, clientActionId }) => {
+        this.on('buyItem', ({ id, nb, clientActionId }: { id: string; nb: number; clientActionId?: string }) => {
             try {
                 this.player.buyItem(id, nb)
                 this.player.syncChanges()
@@ -159,7 +159,7 @@ export class ShopGui extends Gui {
                 this.refreshShop(clientActionId)
             }
         })
-        this.on('sellItem', ({ id, nb, clientActionId }) => {
+        this.on('sellItem', ({ id, nb, clientActionId }: { id: string; nb: number; clientActionId?: string }) => {
             try {
                 const multiplier = Object.prototype.hasOwnProperty.call(this.sellMultipliers, id)
                     ? this.sellMultipliers[id]

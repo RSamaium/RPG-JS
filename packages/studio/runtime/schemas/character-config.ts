@@ -64,7 +64,7 @@ export const startingEquipmentSchema = {
     weaponId: {
       type: "string",
       title: "Weapon",
-      $ref: "#/functions/item",
+      $ref: "#/functions/weapon",
       format: {
         add: {
           schema: itemSchema,
@@ -74,7 +74,7 @@ export const startingEquipmentSchema = {
     armorId: {
       type: "string",
       title: "Armor",
-      $ref: "#/functions/item",
+      $ref: "#/functions/armor",
       format: {
         add: {
           schema: itemSchema,

@@ -1,6 +1,9 @@
 import { signal } from "@signe/reactive";
 import { id, sync } from "@signe/sync";
 import { RpgCommonPlayer } from "../Player";
+import type { RpgWritableSignal } from "../foundation";
+
+const gameplaySignal = signal as <T>(value: T) => RpgWritableSignal<T>;
 
 interface ItemData {
     name: string;
@@ -15,15 +18,15 @@ interface ItemData {
 }
 
 export class Item {
-    @id() id = signal('');
-    @sync() name = signal('');
-    description = signal('');
-    price = signal(0);
-    atk = signal(0);
-    pdef = signal(0);
-    sdef = signal(0);
-    @sync() icon = signal('')
-    @sync() quantity = signal(1);
+    @id() id = gameplaySignal('');
+    @sync() name = gameplaySignal('');
+    description = gameplaySignal('');
+    price = gameplaySignal(0);
+    atk = gameplaySignal(0);
+    pdef = gameplaySignal(0);
+    sdef = gameplaySignal(0);
+    @sync() icon = gameplaySignal('')
+    @sync() quantity = gameplaySignal(1);
 
     onAdd: (player: RpgCommonPlayer) => void = () => {};
 

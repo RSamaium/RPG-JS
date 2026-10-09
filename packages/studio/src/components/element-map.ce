@@ -526,7 +526,7 @@ const buildSegmentsWithRule = (rule) => {
         if (!bodyRect) return null
 
         if (rule.axis === "x") {
-            const repeatUnitWidth = Math.max(1, bodyRect.width * scaleX)
+            const repeatUnitWidth = Math.max(1, bodyRect.width)
             drawRepeatedHorizontally(
                 segments,
                 bodyRect,
@@ -540,7 +540,7 @@ const buildSegmentsWithRule = (rule) => {
             return segments.length > 0 ? segments : null
         }
 
-        const repeatUnitHeight = Math.max(1, bodyRect.height * scaleY)
+        const repeatUnitHeight = Math.max(1, bodyRect.height)
         drawRepeatedVertically(
             segments,
             bodyRect,
@@ -561,8 +561,8 @@ const buildSegmentsWithRule = (rule) => {
         if (!startRect || !middleRect || !endRect) return null
 
         if (rule.axis === "x") {
-            const startWidth = Math.max(1, startRect.width * scaleX)
-            const endWidth = Math.max(1, endRect.width * scaleX)
+            const startWidth = Math.max(1, startRect.width)
+            const endWidth = Math.max(1, endRect.width)
             const fixedWidth = startWidth + endWidth
 
             if (fixedWidth <= drawWidth) {
@@ -575,19 +575,10 @@ const buildSegmentsWithRule = (rule) => {
                     drawHeight,
                     segmentIndexRef.value++
                 )
-                pushSegment(
-                    segments,
-                    endRect,
-                    drawX + drawWidth - endWidth,
-                    drawY,
-                    endWidth,
-                    drawHeight,
-                    segmentIndexRef.value++
-                )
 
                 const middleTargetWidth = drawWidth - fixedWidth
                 if (middleTargetWidth > 0) {
-                    const middleUnitWidth = Math.max(1, middleRect.width * scaleX)
+                    const middleUnitWidth = Math.max(1, middleRect.width)
                     drawRepeatedHorizontally(
                         segments,
                         middleRect,
@@ -599,6 +590,15 @@ const buildSegmentsWithRule = (rule) => {
                         segmentIndexRef
                     )
                 }
+                pushSegment(
+                    segments,
+                    endRect,
+                    drawX + drawWidth - endWidth,
+                    drawY,
+                    endWidth,
+                    drawHeight,
+                    segmentIndexRef.value++
+                )
                 return segments.length > 0 ? segments : null
             }
 
@@ -630,8 +630,8 @@ const buildSegmentsWithRule = (rule) => {
             return segments.length > 0 ? segments : null
         }
 
-        const startHeight = Math.max(1, startRect.height * scaleY)
-        const endHeight = Math.max(1, endRect.height * scaleY)
+        const startHeight = Math.max(1, startRect.height)
+        const endHeight = Math.max(1, endRect.height)
         const fixedHeight = startHeight + endHeight
 
         if (fixedHeight <= drawHeight) {
@@ -644,19 +644,10 @@ const buildSegmentsWithRule = (rule) => {
                 startHeight,
                 segmentIndexRef.value++
             )
-            pushSegment(
-                segments,
-                endRect,
-                drawX,
-                drawY + drawHeight - endHeight,
-                drawWidth,
-                endHeight,
-                segmentIndexRef.value++
-            )
 
             const middleTargetHeight = drawHeight - fixedHeight
             if (middleTargetHeight > 0) {
-                const middleUnitHeight = Math.max(1, middleRect.height * scaleY)
+                const middleUnitHeight = Math.max(1, middleRect.height)
                 drawRepeatedVertically(
                     segments,
                     middleRect,
@@ -668,6 +659,15 @@ const buildSegmentsWithRule = (rule) => {
                     segmentIndexRef
                 )
             }
+            pushSegment(
+                segments,
+                endRect,
+                drawX,
+                drawY + drawHeight - endHeight,
+                drawWidth,
+                endHeight,
+                segmentIndexRef.value++
+            )
             return segments.length > 0 ? segments : null
         }
 
@@ -714,10 +714,10 @@ const buildSegmentsWithRule = (rule) => {
             return null
         }
 
-        const leftFixed = Math.max(1, Math.max(cornerTL.width, cornerBL.width, edgeL.width) * scaleX)
-        const rightFixed = Math.max(1, Math.max(cornerTR.width, cornerBR.width, edgeR.width) * scaleX)
-        const topFixed = Math.max(1, Math.max(cornerTL.height, cornerTR.height, edgeT.height) * scaleY)
-        const bottomFixed = Math.max(1, Math.max(cornerBL.height, cornerBR.height, edgeB.height) * scaleY)
+        const leftFixed = Math.max(1, Math.max(cornerTL.width, cornerBL.width, edgeL.width))
+        const rightFixed = Math.max(1, Math.max(cornerTR.width, cornerBR.width, edgeR.width))
+        const topFixed = Math.max(1, Math.max(cornerTL.height, cornerTR.height, edgeT.height))
+        const bottomFixed = Math.max(1, Math.max(cornerBL.height, cornerBR.height, edgeB.height))
 
         const fixedWidth = leftFixed + rightFixed
         const fixedHeight = topFixed + bottomFixed
@@ -794,7 +794,7 @@ const buildSegmentsWithRule = (rule) => {
         )
 
         if (middleWidth > 0 && topDraw > 0) {
-            const edgeTopUnitWidth = Math.max(1, edgeT.width * scaleX)
+            const edgeTopUnitWidth = Math.max(1, edgeT.width)
             drawRepeatedHorizontally(
                 segments,
                 edgeT,
@@ -808,7 +808,7 @@ const buildSegmentsWithRule = (rule) => {
         }
 
         if (middleWidth > 0 && bottomDraw > 0) {
-            const edgeBottomUnitWidth = Math.max(1, edgeB.width * scaleX)
+            const edgeBottomUnitWidth = Math.max(1, edgeB.width)
             drawRepeatedHorizontally(
                 segments,
                 edgeB,
@@ -822,7 +822,7 @@ const buildSegmentsWithRule = (rule) => {
         }
 
         if (middleHeight > 0 && leftDraw > 0) {
-            const edgeLeftUnitHeight = Math.max(1, edgeL.height * scaleY)
+            const edgeLeftUnitHeight = Math.max(1, edgeL.height)
             drawRepeatedVertically(
                 segments,
                 edgeL,
@@ -836,7 +836,7 @@ const buildSegmentsWithRule = (rule) => {
         }
 
         if (middleHeight > 0 && rightDraw > 0) {
-            const edgeRightUnitHeight = Math.max(1, edgeR.height * scaleY)
+            const edgeRightUnitHeight = Math.max(1, edgeR.height)
             drawRepeatedVertically(
                 segments,
                 edgeR,
@@ -850,8 +850,8 @@ const buildSegmentsWithRule = (rule) => {
         }
 
         if (middleWidth > 0 && middleHeight > 0) {
-            const centerUnitWidth = Math.max(1, center.width * scaleX)
-            const centerUnitHeight = Math.max(1, center.height * scaleY)
+            const centerUnitWidth = Math.max(1, center.width)
+            const centerUnitHeight = Math.max(1, center.height)
             drawRepeatedGrid(
                 segments,
                 center,
@@ -911,10 +911,10 @@ const mapLocalLightSpotToWorld = (rule, localX, localY) => {
         if (rule.axis === "x") {
             const startSrc = Math.max(1, start[2])
             const endSrc = Math.max(1, end[2])
-            const fixedWidth = (startSrc * scaleX) + (endSrc * scaleX)
+            const fixedWidth = startSrc + endSrc
             const compressRatio = fixedWidth > drawWidth ? drawWidth / fixedWidth : 1
-            const startDraw = (startSrc * scaleX) * compressRatio
-            const endDraw = (endSrc * scaleX) * compressRatio
+            const startDraw = startSrc * compressRatio
+            const endDraw = endSrc * compressRatio
             const middleDraw = Math.max(0, drawWidth - startDraw - endDraw)
             const middleSrc = Math.max(1, sourceWidth - startSrc - endSrc)
 
@@ -949,10 +949,10 @@ const mapLocalLightSpotToWorld = (rule, localX, localY) => {
 
         const startSrc = Math.max(1, start[3])
         const endSrc = Math.max(1, end[3])
-        const fixedHeight = (startSrc * scaleY) + (endSrc * scaleY)
+        const fixedHeight = startSrc + endSrc
         const compressRatio = fixedHeight > drawHeight ? drawHeight / fixedHeight : 1
-        const startDraw = (startSrc * scaleY) * compressRatio
-        const endDraw = (endSrc * scaleY) * compressRatio
+        const startDraw = startSrc * compressRatio
+        const endDraw = endSrc * compressRatio
         const middleDraw = Math.max(0, drawHeight - startDraw - endDraw)
         const middleSrc = Math.max(1, sourceHeight - startSrc - endSrc)
 
@@ -1003,10 +1003,10 @@ const mapLocalLightSpotToWorld = (rule, localX, localY) => {
         const topSrc = Math.max(1, Math.max(cornerTL[3], cornerTR[3], edgeT[3]))
         const bottomSrc = Math.max(1, Math.max(cornerBL[3], cornerBR[3], edgeB[3]))
 
-        const leftFixed = leftSrc * scaleX
-        const rightFixed = rightSrc * scaleX
-        const topFixed = topSrc * scaleY
-        const bottomFixed = bottomSrc * scaleY
+        const leftFixed = leftSrc
+        const rightFixed = rightSrc
+        const topFixed = topSrc
+        const bottomFixed = bottomSrc
         const fixedWidth = leftFixed + rightFixed
         const fixedHeight = topFixed + bottomFixed
 

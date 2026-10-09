@@ -1,6 +1,7 @@
 import type { LightingState, WeatherState } from "@rpgjs/common";
 import type { MapEventDefinition, MapEventPlacement } from "../rooms/map";
 import type { RpgPlayer } from "../Player/Player";
+import type { RpgSyncSchema } from "../Player/types";
 
 export interface MapOptions {
     /** 
@@ -28,7 +29,7 @@ export interface MapOptions {
     * @prop {string} file
     * @memberof MapData
     * */
-    file?: any,
+    file?: unknown,
 
     /** 
      * The name of the map.
@@ -233,7 +234,7 @@ export interface MapOptions {
      * @prop {object} [syncSchema]
      * @memberof MapData
      * */
-    syncSchema?: any
+    syncSchema?: RpgSyncSchema
 
     /** 
      * Decreases the RAM of the map. In this case, some instructions will be different.

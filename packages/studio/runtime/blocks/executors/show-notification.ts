@@ -1,5 +1,6 @@
 import { excludeTriggers } from '../context-helpers';
 import type { BlockExecutor, ShowNotificationParams } from '../types';
+import { resolveStringTemplate, studioStringTemplateFormat } from '../resolve-text';
 
 export const schemaShowNotification = {
   type: 'show_notification',
@@ -15,7 +16,8 @@ export const schemaShowNotification = {
       message: {
         type: 'string',
         title: 'Message',
-        description: 'Notification text to display'
+        description: 'Notification text to display',
+        format: studioStringTemplateFormat
       },
       time: {
         type: 'number',
@@ -60,7 +62,7 @@ export const schemaShowNotification = {
 } as const;
 
 export const show_notification: BlockExecutor<'show_notification'> = async (context, params) => {
-  await context.player.showNotification(params.message, {
+  await context.player.showNotification(resolveStringTemplate(params.message, context), {
     time: params.time,
     icon: params.icon,
     sound: params.sound,

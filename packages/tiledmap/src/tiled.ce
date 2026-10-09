@@ -13,6 +13,7 @@
     const basePath = signal(params().basePath)
 
     effect(() => {
-        map.set(data())
+        const value = data()
+        if (value != null) map.set(value)
     })
 </script>

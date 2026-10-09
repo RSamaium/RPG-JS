@@ -16,6 +16,7 @@ Use this section to learn RPGJS step by step, from project setup to maps, compon
 5. [Create hero in map](/guide/create-hero-in-map)
 6. [Components overview](/guide/components-overview)
 7. [GUI overview](/gui/index)
+8. [Put an MMORPG online](/guide/deploy-mmorpg)
 
 ## Main topics
 

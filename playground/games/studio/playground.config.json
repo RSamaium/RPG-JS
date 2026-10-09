@@ -3,6 +3,6 @@
   "title": "Studio",
   "description": "Official RPGJS Studio integration with maps, modules, and runtime editing workflows.",
   "tags": ["studio", "editor", "integration"],
-  "modes": ["standalone"],
+  "modes": ["standalone", "mmorpg"],
   "port": 5182
 }

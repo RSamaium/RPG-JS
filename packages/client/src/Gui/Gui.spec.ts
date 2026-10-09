@@ -14,6 +14,9 @@ vi.mock("../components/gui", () => {
     NotificationComponent: component,
     TitleScreenComponent: component,
     GameoverComponent: component,
+    InputComponent: component,
+    HotbarComponent: component,
+    CharacterSelectComponent: component,
   };
 });
 
@@ -64,6 +67,14 @@ const VueTooltip = {
 };
 
 describe("RpgGui Vue integration", () => {
+  test("registers the prebuilt input GUI", async () => {
+    const { gui } = await createGui();
+    expect(gui.get(PrebuiltGui.Input)).toBeDefined();
+  });
+  test("registers the prebuilt character select GUI", async () => {
+    const { gui } = await createGui();
+    expect(gui.get(PrebuiltGui.CharacterSelect)).toBeDefined();
+  });
   test("tracks GUI open ids and sends them back when closing", async () => {
     const { gui, socket } = await createGui();
     await gui._initialize();
@@ -169,6 +180,29 @@ describe("RpgGui Vue integration", () => {
     expect(gui.get("tooltip")?.component).toBe(VueTooltip);
     expect(gui.getAttachedGuis().map(item => item.name)).toEqual(["canvas-tooltip"]);
     expect(gui.getAttachedVueGuis().map(item => item.name)).toEqual(["tooltip"]);
+  });
+
+  test("records explicit renderer ownership for both GUI registries", async () => {
+    const { gui } = await createGui();
+
+    gui.add({
+      id: "explicit-canvas",
+      component: CanvasGui,
+      renderer: "canvas",
+    });
+    gui.add({
+      id: "explicit-vue",
+      component: VueInventory,
+      renderer: "vue",
+    });
+
+    expect(gui.getAll()["explicit-canvas"].renderer).toBe("canvas");
+    expect(gui.getVueGuis()).toEqual([
+      expect.objectContaining({
+        name: "explicit-vue",
+        renderer: "vue",
+      }),
+    ]);
   });
 
   test("synchronizes Vue GUI display and hide states through the Vue bridge", async () => {
@@ -329,7 +363,9 @@ describe("RpgGui Vue integration", () => {
 
     gui.guiInteraction(PrebuiltGui.MainMenu, "useItem", { id: "potion" });
 
-    expect(gui.get(PrebuiltGui.MainMenu)?.data().items).toEqual([
+    expect(gui.get<{ items: Array<{ id: string; quantity: number }> }>(
+      PrebuiltGui.MainMenu
+    )?.data().items).toEqual([
       {
         id: "potion",
         quantity: 1,
@@ -355,5 +391,23 @@ describe("RpgGui Vue integration", () => {
         name: "useItem",
       }),
     );
+  });
+});
+
+describe("RpgGui render keys", () => {
+  test("gives each registration a unique key and a new key when a GUI is replaced", async () => {
+    const { gui } = await createGui();
+    const titleKey = gui.getAll()[PrebuiltGui.TitleScreen].renderKey;
+
+    gui.add({ name: "inventory", component: CanvasGui });
+    const inventoryKey = gui.getAll()["inventory"].renderKey;
+
+    expect(typeof titleKey).toBe("number");
+    expect(inventoryKey).not.toBe(titleKey);
+    // Adding another GUI keeps the key of already registered GUIs
+    expect(gui.getAll()[PrebuiltGui.TitleScreen].renderKey).toBe(titleKey);
+
+    gui.add({ name: PrebuiltGui.TitleScreen, component: CanvasGui });
+    expect(gui.getAll()[PrebuiltGui.TitleScreen].renderKey).not.toBe(titleKey);
   });
 });

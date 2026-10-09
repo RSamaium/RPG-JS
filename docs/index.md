@@ -18,19 +18,21 @@ Open `http://localhost:5173`.
 
 ## Choose MMORPG or standalone RPG
 
-By default, the starter runs in MMORPG mode.
+By default, the starter runs as a standalone RPG. This mode runs the client and
+server together in the browser and does not create a public multiplayer server.
 
-For standalone RPG mode, start the dev server with `RPG_TYPE=rpg`:
+To run the client and authoritative server separately for an MMORPG, set
+`RPG_TYPE=mmorpg`:
 
 ```bash
-RPG_TYPE=rpg npm run dev
+RPG_TYPE=mmorpg npm run dev
 ```
 
 On Windows, use `cross-env`:
 
 ```bash
 npm install --save-dev cross-env
-npx cross-env RPG_TYPE=rpg npm run dev
+npx cross-env RPG_TYPE=mmorpg npm run dev
 ```
 
 ## Next steps
@@ -39,6 +41,7 @@ npx cross-env RPG_TYPE=rpg npm run dev
 - [Structure](/guide/structure)
 - [Create your first map](/guide/create-your-first-map)
 - [Create hero in map](/guide/create-hero-in-map)
+- [Put an MMORPG online](/guide/deploy-mmorpg)
 - [API overview](/api)
 - [Studio overview](/studio/index)
 - [GitHub repository](https://github.com/RSamaium/RPG-JS)

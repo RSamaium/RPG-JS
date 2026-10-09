@@ -1,0 +1,26 @@
+<DOMContainer width="100%" height="100%">
+  <div class="rpg-ui-input-layer">
+    <div class="rpg-ui-input-dialog rpg-ui-window rpg-anim-fade-in">
+      @if (title()) {
+        <div class="rpg-ui-window-title">{title()}</div>
+      }
+      <InputField data={data} layout="standalone" submit={submit} cancel={cancel} />
+    </div>
+  </div>
+</DOMContainer>
+
+<script>
+  import { computed } from "canvasengine";
+  import InputField from "./input-field.ce";
+
+  const { data, onInteraction } = defineProps();
+  const title = computed(() => data().title || "");
+
+  function submit(payload) {
+    onInteraction?.("submit", payload);
+  }
+
+  function cancel() {
+    onInteraction?.("cancel");
+  }
+</script>

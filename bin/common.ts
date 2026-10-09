@@ -135,6 +135,10 @@ export async function buildPackage(config: PackageConfig, basePath: string = 'pa
             ...createStdio(config.name)
         });
 
+        if (result.exitCode !== 0) {
+            throw new Error(`${config.name} build exited with code ${result.exitCode}`);
+        }
+
         // Verify build output exists if outputPath is specified
         if (config.outputPath) {
             const outputFullPath = path.join(packagePath, config.outputPath);

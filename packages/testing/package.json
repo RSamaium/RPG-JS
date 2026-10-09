@@ -1,6 +1,7 @@
 {
   "name": "@rpgjs/testing",
-  "version": "5.0.0-beta.24",
+  "repository": "github:RSamaium/RPG-JS",
+  "version": "5.0.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -17,11 +18,12 @@
     "vite-plugin-dts": "^5.0.2"
   },
   "dependencies": {
-    "@canvasengine/testing": "2.0.0",
+    "@canvasengine/testing": "2.4.0",
     "@rpgjs/client": "workspace:*",
+    "@rpgjs/common": "workspace:*",
     "@rpgjs/server": "workspace:*",
     "@signe/di": "3.1.0",
-    "canvasengine": "2.0.1",
+    "canvasengine": "2.4.0",
     "rxjs": "^7.8.2",
     "vitest-webgl-canvas-mock": "^1.1.0"
   },

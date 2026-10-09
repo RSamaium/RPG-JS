@@ -17,19 +17,21 @@ Hooks for events created as plain objects, as shown in the create-event guide.
 - [onInShape](#oninshape)
 - [onOutShape](#onoutshape)
 - [onPlayerTouch](#onplayertouch)
+- [onTouch](#ontouch)
+- [onTouchEnd](#ontouchend)
 
 ## onAction
 
 Called when a player performs an action on this event
 
-- Source: `packages/server/src/rooms/map.ts`
+- Source: `packages/server/src/rooms/map-types.ts`
 - Kind: `property`
 - Defined in: `EventHooks`
 
 ### Signature
 
 ```ts
-onAction: (this: RpgEvent, player: RpgPlayer) => void
+onAction: (this: RpgEvent, player: RpgPlayer, input: RpgActionInput<unknown>) => void | Promise<void>
 ```
 
 ## onChanges
@@ -40,7 +42,7 @@ Use this hook to recompute the event state from player data, especially
 player variables. This is useful for reactive visuals such as an opened
 chest, a hidden door, or a conditional NPC graphic.
 
-- Source: `packages/server/src/rooms/map.ts`
+- Source: `packages/server/src/rooms/map-types.ts`
 - Kind: `property`
 - Defined in: `EventHooks`
 
@@ -54,7 +56,7 @@ onChanges: (this: RpgEvent, player: RpgPlayer) => void
 
 Called when a player is detected entering a detection shape attached to the event
 
-- Source: `packages/server/src/rooms/map.ts`
+- Source: `packages/server/src/rooms/map-types.ts`
 - Kind: `property`
 - Defined in: `EventHooks`
 
@@ -68,7 +70,7 @@ onDetectInShape: (this: RpgEvent, player: RpgPlayer, shape: RpgShape) => void
 
 Called when a player is detected exiting a detection shape attached to the event
 
-- Source: `packages/server/src/rooms/map.ts`
+- Source: `packages/server/src/rooms/map-types.ts`
 - Kind: `property`
 - Defined in: `EventHooks`
 
@@ -85,7 +87,7 @@ Called when the event is first initialized.
 Use this hook for default setup that does not depend on a player interaction,
 such as setting the initial graphic, speed, or movement route.
 
-- Source: `packages/server/src/rooms/map.ts`
+- Source: `packages/server/src/rooms/map-types.ts`
 - Kind: `property`
 - Defined in: `EventHooks`
 
@@ -99,7 +101,7 @@ onInit: (this: RpgEvent) => void
 
 Called when a player enters a shape attached to the event
 
-- Source: `packages/server/src/rooms/map.ts`
+- Source: `packages/server/src/rooms/map-types.ts`
 - Kind: `property`
 - Defined in: `EventHooks`
 
@@ -113,7 +115,7 @@ onInShape: (this: RpgEvent, zone: RpgShape, player: RpgPlayer) => void
 
 Called when a player exits a shape attached to the event
 
-- Source: `packages/server/src/rooms/map.ts`
+- Source: `packages/server/src/rooms/map-types.ts`
 - Kind: `property`
 - Defined in: `EventHooks`
 
@@ -127,7 +129,7 @@ onOutShape: (this: RpgEvent, zone: RpgShape, player: RpgPlayer) => void
 
 Called when a player touches this event
 
-- Source: `packages/server/src/rooms/map.ts`
+- Source: `packages/server/src/rooms/map-types.ts`
 - Kind: `property`
 - Defined in: `EventHooks`
 
@@ -135,4 +137,32 @@ Called when a player touches this event
 
 ```ts
 onPlayerTouch: (this: RpgEvent, player: RpgPlayer) => void
+```
+
+## onTouch
+
+Called when this event starts touching a player or another event
+
+- Source: `packages/server/src/rooms/map-types.ts`
+- Kind: `property`
+- Defined in: `EventHooks`
+
+### Signature
+
+```ts
+onTouch: (this: RpgEvent, other: RpgPlayer | RpgEvent, context: RpgTouchContext) => void | Promise<void>
+```
+
+## onTouchEnd
+
+Called when this event stops touching a player or another event
+
+- Source: `packages/server/src/rooms/map-types.ts`
+- Kind: `property`
+- Defined in: `EventHooks`
+
+### Signature
+
+```ts
+onTouchEnd: (this: RpgEvent, other: RpgPlayer | RpgEvent, context: RpgTouchContext) => void | Promise<void>
 ```

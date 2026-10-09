@@ -160,6 +160,24 @@ player.knockback({ x: -1, y: 0 }, 8, 400);
 player.knockback(attackDirection, 3, 200);
 ```
 
+Recoil owns movement for its duration. Directional input received during the
+impact is discarded rather than replayed after landing. A held direction resumes
+through the normal input loop once recoil ends. `canMove` is not changed by recoil,
+so a dialog or attack lock remains owned by the system that created it.
+
+The impulse decays without accumulating velocity each tick. Completion and
+cancellation release the recoil phase; overlapping hits keep it active until the
+last recoil ends. Collision detection still runs through the physics engine.
+
+This behavior is shared by standalone RPG and MMORPG runtimes. The authoritative
+runtime synchronizes the transient `player.knockbackActive()` phase. Game code may
+read it, but should start recoil with `player.knockback(...)`, not write the phase.
+During this phase the client accepts server positions without replaying predicted
+movement or old trajectory frames. Visual position changes ease over 80 ms, with
+a short settling window after landing; jumps exceeding 128 pixels on an axis are
+applied immediately. Smoothing affects only rendering, never the collision body.
+The client does not predict damage or a recoil before the server confirms it.
+
 ### 4. Path Following
 
 Follow a sequence of waypoints.

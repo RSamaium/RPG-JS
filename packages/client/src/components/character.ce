@@ -68,15 +68,24 @@
 </Container>
 
 <script>
-  import { signal, effect, mount, computed, tick, animatedSignal, on } from "canvasengine";
+  import { signal, effect, mount, computed, tick, animatedSignal, on, untracked } from "canvasengine";
+  import { movementPreferences } from "../services/movementPreferences";
   import { Assets } from "pixi.js";
+  import { observeCurrentPlayerControls } from "./current-player-controls";
+  import type { Subscription } from "rxjs";
 
-  import { lastValueFrom, combineLatest, pairwise, filter, map, startWith } from "rxjs";
+  import { lastValueFrom, combineLatest, map, startWith } from "rxjs";
   import { Particle } from "@canvasengine/presets";
   import { GameEngineToken, ModulesToken, shouldRenderLightingShadows } from "@rpgjs/common";
   import { RpgClientEngine } from "../RpgClientEngine";
-  import { applyCameraFollow, clearCameraFollowPlugins, ownsCameraFollowRevision } from "../services/cameraFollow";
-  import { resolveScaledHitboxAnchor, scaleHitboxForGraphicDisplay, toPositiveNumber } from "./character-hitbox";
+  import {
+    applyCameraFollow,
+    clearCameraFollowPlugins,
+    ownsCameraFollow,
+    ownsCameraFollowRevision,
+    syncCameraFollowPosition,
+  } from "../services/cameraFollow";
+  import { resolveScaledGraphicBounds, resolveScaledHitboxAnchor, scaleHitboxForGraphicDisplay, toPositiveNumber } from "./character-hitbox";
   import { inject } from "../core/inject";  
   import { Direction, Animation } from "@rpgjs/common";
   import { normalizeEventComponent } from "../Game/EventComponentResolver";
@@ -85,6 +94,15 @@
   import InteractionComponents from "./interaction-components.ce";
   import { RpgGui } from "../Gui/Gui";
   import { getCanMoveValue } from "../utils/readPropValue";
+  import { fitAnimationTimeline } from "./animation-timing";
+  import { RecoilSmoothing } from "./recoil-smoothing";
+  import { resolveCharacterAnimation } from "./character-animation";
+  import {
+    loadCachedSpriteSheetAlphaBounds,
+    mergeSpriteAlphaBounds,
+    resolveTextureSourceDimensions,
+    scanSpriteSheetAlphaBounds,
+  } from "./sprite-alpha-bounds";
   import {
     getKeyboardControlBind,
     keyboardEventMatchesBind,
@@ -358,8 +376,9 @@
 
   const particleSettings = client.particleSettings;
 
-  const canControls = () => isMe() && getCanMoveValue(sprite)
+  const canControls = () => isMe() && getCanMoveValue(sprite) && !sprite.knockbackActive()
   const keyboardControls = client.globalConfig.keyboardControls;
+  const movementBindings = movementPreferences(client).bindings;
   const activeDirectionKeys = new Map();
   const activeControlDirections = new Map();
   const activeControlDirectionReleaseTimers = new Map();
@@ -564,10 +583,10 @@
     return isConnected()
   });
 
-  const controls = {
+  const controls = computed(() => ({
     down: {
       repeat: true,
-      bind: keyboardControls.down,
+      bind: movementBindings().down,
       keyDown() {
         activateControlDirection('down', Direction.Down)
         processMovementInput(Direction.Down)
@@ -578,7 +597,7 @@
     },
     up: {
       repeat: true,
-      bind: keyboardControls.up,
+      bind: movementBindings().up,
       keyDown() {
         activateControlDirection('up', Direction.Up)
         processMovementInput(Direction.Up)
@@ -589,7 +608,7 @@
     },
     left: {
       repeat: true,
-      bind: keyboardControls.left,
+      bind: movementBindings().left,
       keyDown() {
         activateControlDirection('left', Direction.Left)
         processMovementInput(Direction.Left)
@@ -600,7 +619,7 @@
     },
     right: {
       repeat: true,
-      bind: keyboardControls.right,
+      bind: movementBindings().right,
       keyDown() {
         activateControlDirection('right', Direction.Right)
         processMovementInput(Direction.Right)
@@ -653,8 +672,9 @@
     gamepad: {
       enabled: true
     }
-  };
+  }));
 
+  const recoilSmoothing = new RecoilSmoothing();
   const smoothX = animatedSignal(x(), {
     duration: isMe() ? 0 : 0
   });
@@ -671,22 +691,39 @@
   const realAnimationName = signal(animationName());
 
   const xSubscription = x.observable.subscribe((value) => {
-    smoothX.set(value);
+    smoothX.set(value, { duration: recoilSmoothing.duration(sprite.knockbackActive(), smoothX(), value, Date.now()) });
   });
 
   const ySubscription = y.observable.subscribe((value) => {
-    smoothY.set(value);
+    smoothY.set(value, { duration: recoilSmoothing.duration(sprite.knockbackActive(), smoothY(), value, Date.now()) });
   });
   
   const sheet = (graphicObject) => {
+    const playback = sprite.animationPlayback?.();
+    const playing = playback?.name ?? realAnimationName();
+    const definition = {
+      ...graphicObject,
+      textures: Object.fromEntries(Object.entries(graphicObject.textures ?? {}).map(([name, texture]) => [
+        name, {
+          ...texture,
+          animations: params => {
+            const groups = typeof texture.animations === 'function' ? texture.animations(params) : texture.animations;
+            return params.durationMs && groups ? groups.map(frames => fitAnimationTimeline(frames, params.durationMs)) : groups;
+          },
+        },
+      ])),
+    };
     return {
-      definition: graphicObject,
-      playing: realAnimationName(),
+      definition,
+      playing,
       params: {
-        direction: direction()
+        direction: playback?.direction ?? direction(),
+        durationMs: playback?.durationMs
       },
       onFinish() {
-        animationCurrentIndex.update(index => index + 1)
+        if (sprite.animationPlayback?.() && graphicsSignals().includes(graphicObject)) {
+          animationCurrentIndex.update(index => index + 1)
+        }
       }
     };
   }
@@ -750,6 +787,8 @@
 
   const imageDimensions = signal({});
   const loadingImageDimensions = new Set();
+  const alphaFrameBounds = signal({});
+  const loadingAlphaFrameBounds = new Set();
 
   const toFiniteNumber = (value, fallback = 0) => {
     const number = typeof value === 'number' ? value : parseFloat(value);
@@ -799,6 +838,7 @@
       'image',
       'sound',
       'spriteRealSize',
+      'trimTransparentBounds',
       'scale',
       'anchor',
       'pivot',
@@ -818,7 +858,7 @@
   const resolveTextureOptions = (graphicObject) => {
     const textures = graphicObject?.textures ?? {};
     const texture =
-      textures[realAnimationName()] ??
+      textures[sprite.animationPlayback?.()?.name ?? realAnimationName()] ??
       textures[Animation.Stand] ??
       Object.values(textures)[0] ??
       {};
@@ -829,22 +869,26 @@
     };
   };
 
-  const resolveFirstAnimationFrame = (textureOptions) => {
+  const resolveAnimationFrames = (textureOptions) => {
     const animations = textureOptions?.animations;
-    if (!animations) return {};
+    if (!animations) return [];
 
     try {
       const frames = typeof animations === 'function'
-        ? animations({ direction: direction() })
+        ? animations({ direction: sprite.animationPlayback?.()?.direction ?? direction() })
         : animations;
-      if (!Array.isArray(frames)) return {};
+      if (!Array.isArray(frames)) return [];
       const firstGroup = frames[0];
-      return Array.isArray(firstGroup) ? firstGroup[0] ?? {} : firstGroup ?? {};
+      return (Array.isArray(firstGroup) ? firstGroup : frames)
+        .filter((frame) => frame && typeof frame === 'object');
     }
     catch {
-      return {};
+      return [];
     }
   };
+
+  const resolveFirstAnimationFrame = (textureOptions) =>
+    resolveAnimationFrames(textureOptions)[0] ?? {};
 
   const optionValue = (prop, frame, textureOptions, graphicObject) => {
     return frame?.[prop] ?? textureOptions?.[prop] ?? graphicObject?.[prop];
@@ -886,13 +930,12 @@
     loadingImageDimensions.add(source);
     Assets.load(source)
       .then((texture) => {
-        const width = toPositiveNumber(texture?.width);
-        const height = toPositiveNumber(texture?.height);
-        if (!width || !height) return;
+        const dimensions = resolveTextureSourceDimensions(texture);
+        if (!dimensions) return;
 
-        imageDimensions.update((dimensions) => ({
-          ...dimensions,
-          [source]: { width, height }
+        imageDimensions.update((current) => ({
+          ...current,
+          [source]: dimensions
         }));
       })
       .catch(() => {})
@@ -901,10 +944,110 @@
       });
   };
 
+  const alphaBoundsKey = (textureOptions) => {
+    const source = resolveImageSource(textureOptions?.image);
+    const framesWidth = Math.floor(toPositiveNumber(textureOptions?.framesWidth) ?? 1);
+    const framesHeight = Math.floor(toPositiveNumber(textureOptions?.framesHeight) ?? 1);
+    return source ? `${source}|${framesWidth}x${framesHeight}` : undefined;
+  };
+
+  const readTexturePixels = (texture, width, height) => {
+    const resource =
+      texture?.source?.resource ??
+      texture?.baseTexture?.resource?.source ??
+      texture?.source?.resource?.source;
+    if (!resource) return undefined;
+
+    const canvas =
+      typeof OffscreenCanvas !== 'undefined'
+        ? new OffscreenCanvas(width, height)
+        : typeof document !== 'undefined'
+          ? Object.assign(document.createElement('canvas'), { width, height })
+          : undefined;
+    const context = canvas?.getContext?.('2d', { willReadFrequently: true });
+    if (!context) return undefined;
+
+    context.clearRect(0, 0, width, height);
+    context.drawImage(resource, 0, 0, width, height);
+    return context.getImageData(0, 0, width, height).data;
+  };
+
+  const loadAlphaBounds = (textureOptions) => {
+    if (textureOptions?.trimTransparentBounds !== true) return;
+    const source = resolveImageSource(textureOptions?.image);
+    const key = alphaBoundsKey(textureOptions);
+    if (
+      !source ||
+      !key ||
+      Object.prototype.hasOwnProperty.call(alphaFrameBounds(), key) ||
+      loadingAlphaFrameBounds.has(key)
+    ) {
+      return;
+    }
+
+    loadingAlphaFrameBounds.add(key);
+    loadCachedSpriteSheetAlphaBounds(key, async () => {
+      const texture = await Assets.load(source);
+      const dimensions = resolveTextureSourceDimensions(texture);
+      const framesWidth = Math.floor(toPositiveNumber(textureOptions?.framesWidth) ?? 1);
+      const framesHeight = Math.floor(toPositiveNumber(textureOptions?.framesHeight) ?? 1);
+      if (!dimensions) return null;
+      const { width, height } = dimensions;
+      const pixels = readTexturePixels(texture, width, height);
+      if (!pixels) return null;
+      return scanSpriteSheetAlphaBounds(
+        pixels,
+        width,
+        height,
+        framesWidth,
+        framesHeight,
+      );
+    })
+      .then((bounds) => {
+        alphaFrameBounds.update((current) => ({
+          ...current,
+          [key]: bounds,
+        }));
+      })
+      .catch(() => {
+        // Cross-origin or non-image resources fall back to rectangular bounds.
+        alphaFrameBounds.update((current) => ({ ...current, [key]: null }));
+      })
+      .finally(() => {
+        loadingAlphaFrameBounds.delete(key);
+      });
+  };
+
+  const resolveVisibleFrameBounds = (textureOptions, boundsByKey) => {
+    if (textureOptions?.trimTransparentBounds !== true) return undefined;
+    const key = alphaBoundsKey(textureOptions);
+    const allBounds = key ? boundsByKey[key] : undefined;
+    if (!Array.isArray(allBounds)) return undefined;
+
+    const framesWidth = Math.floor(toPositiveNumber(textureOptions?.framesWidth) ?? 1);
+    const framesHeight = Math.floor(toPositiveNumber(textureOptions?.framesHeight) ?? 1);
+    const frames = resolveAnimationFrames(textureOptions);
+    const selectedFrames = frames.length > 0 ? frames : [{ frameX: 0, frameY: 0 }];
+    return mergeSpriteAlphaBounds(
+      selectedFrames.map((frame) => {
+        const frameX = Math.min(
+          framesWidth - 1,
+          Math.max(0, Math.floor(toFiniteNumber(frame.frameX, 0))),
+        );
+        const frameY = Math.min(
+          framesHeight - 1,
+          Math.max(0, Math.floor(toFiniteNumber(frame.frameY, 0))),
+        );
+        return allBounds[frameY * framesWidth + frameX];
+      }),
+    );
+  };
+
   effect(() => {
     const sources = new Set();
 
     graphicsSignals().forEach((graphicObject) => {
+      loadAlphaBounds(resolveTextureOptions(graphicObject));
       const baseImage = resolveImageSource(graphicObject?.image);
       if (baseImage) sources.add(baseImage);
 
@@ -942,6 +1085,9 @@
       return fallback;
     }
     const dimensions = imageDimensions();
+    // Keep this signal read inside the computed so the bounds are recalculated
+    // as soon as the asynchronous alpha scan completes.
+    const loadedAlphaBounds = alphaFrameBounds();
     const graphics = graphicsSignals();
     let bounds = null;
 
@@ -967,16 +1113,16 @@
       );
       const x = toFiniteNumber(optionValue('x', frame, textureOptions, graphicObject), 0);
       const y = toFiniteNumber(optionValue('y', frame, textureOptions, graphicObject), 0);
-      const leftEdge = -anchor[0] * spriteWidth * scale[0];
-      const rightEdge = (1 - anchor[0]) * spriteWidth * scale[0];
-      const topEdge = -anchor[1] * spriteHeight * scale[1];
-      const bottomEdge = (1 - anchor[1]) * spriteHeight * scale[1];
-      const graphic = {
-        left: x + Math.min(leftEdge, rightEdge),
-        top: y + Math.min(topEdge, bottomEdge),
-        right: x + Math.max(leftEdge, rightEdge),
-        bottom: y + Math.max(topEdge, bottomEdge)
-      };
+      const visible = resolveVisibleFrameBounds(textureOptions, loadedAlphaBounds);
+      const graphic = resolveScaledGraphicBounds({
+        frameWidth: spriteWidth,
+        frameHeight: spriteHeight,
+        visibleBounds: visible,
+        anchor,
+        scale,
+        x,
+        y,
+      });
 
       bounds = bounds
         ? {
@@ -1004,6 +1150,11 @@
     };
   });
 
+  // Internal world-space anchor used by transient sprite effects such as
+  // action-battle damage popups. Keeping the computed bounds on the client
+  // object lets effects follow graphics that are taller than their hitbox.
+  sprite.__rpgjsGraphicBounds = graphicBounds;
+
   const interactionBounds = () => ({
     bounds: graphicBounds(),
     hitbox: hitboxBounds(),
@@ -1030,7 +1181,6 @@
   const interactionClick = handleInteraction('click');
 
   // Combine animation change detection with movement state from smoothX/smoothY
-  const movementAnimations = ['walk', 'stand'];
   const epsilon = 0; // movement threshold to consider the easing still running
 
   const stateX$ = smoothX.animatedState.observable;
@@ -1046,11 +1196,7 @@
     startWith(false)
   );
 
-  const animationChange$ = animationName$.pipe(
-    startWith(animationName()),
-    pairwise(),
-    filter(([prev, curr]) => prev !== curr)
-  );
+  const animationChange$ = animationName$.pipe(startWith(animationName()));
 
   let beforeRemovePromise = null;
   let beforeRemoveTransitionValue = null;
@@ -1097,37 +1243,17 @@
     }
   });
 
-  const animationMovementSubscription = combineLatest([animationChange$, moving$]).subscribe(([[prev, curr], isMoving]) => {
-    const isMovementAnimation = movementAnimations.includes(curr);
-    const isTemporaryAnimationPlaying =
-      sprite.animationIsPlaying && sprite.animationIsPlaying();
-
-    if (sprite.animationFixed && isMovementAnimation) {
-      realAnimationName.set(curr);
-      return;
-    }
-
-    if (curr == 'stand' && !isMoving) {
-      if (!resumeHeldDirectionWalkAnimation()) {
-        realAnimationName.set(curr);
-      }
-    }
-    else if (curr == 'walk' && isMoving) {
-      realAnimationName.set(curr);
-    }
-    else if (!isMovementAnimation) {
-      realAnimationName.set(curr);
-    }
-    if (!isMoving && isTemporaryAnimationPlaying) {
-      if (isMovementAnimation) {
-        if (typeof sprite.resetAnimationState === 'function') {
-          sprite.resetAnimationState();
-        }
-      }
-    }
+  const animationMovementSubscription = combineLatest([
+    animationChange$, moving$, sprite.animationPlayback.observable,
+    sprite._animationFixed.observable, sprite._canMove.observable, sprite.knockbackActive.observable,
+  ]).subscribe(([curr, isMoving, playback]) => {
+    realAnimationName.set(resolveCharacterAnimation(
+      curr, isMoving, hasHeldDirection(), canControls(), sprite.animationFixed || sprite.knockbackActive(), playback?.name, isCurrentPlayer(),
+    ));
   });
 
   const resumeWalkSubscriptions = [
+    sprite.knockbackActive,
     sprite._canMove,
     sprite._animationFixed,
     sprite.animationIsPlaying,
@@ -1171,7 +1297,11 @@
     });
   };
 
+  let controlsSubscription: Subscription | null = null;
   const onBeforeDestroy = async () => {
+    // Stop publishing controls before asynchronous removal hooks can yield.
+    controlsSubscription?.unsubscribe();
+    controlsSubscription = null;
     await runBeforeRemove();
     await waitForTemporaryAnimationEnd();
     if (typeof document !== 'undefined') {
@@ -1191,47 +1321,70 @@
 
   mount((element) => {
     let appliedCameraFollowRevision = null;
+    let appliedCameraFollowOwnership = null;
+    const cameraFollowTarget = {
+      get x() {
+        return smoothX();
+      },
+      get y() {
+        return smoothY();
+      },
+      get destroyed() {
+        return element.componentInstance?.destroyed ?? true;
+      },
+    };
     if (typeof document !== 'undefined') {
       document.addEventListener('keydown', handleNativeActionWhileMoving);
       document.addEventListener('keyup', handleNativeActionWhileMoving);
     }
     hooks.callHooks("client-sprite-onAdd", sprite).subscribe()
     hooks.callHooks("client-sceneMap-onAddSprite", client.sceneMap, sprite).subscribe()
-    effect(() => {
-      if (isCurrentPlayer()) {
-        client.setKeyboardControls(element.directives.controls)
-      }
-    })
+    controlsSubscription = observeCurrentPlayerControls(
+      isCurrentPlayer,
+      element.directives.controls,
+      (controls) => client.setKeyboardControls(controls)
+    );
 
     effect(() => {
       const followRevision = client.cameraFollowRevision();
       if (!shouldFollowCamera()) {
         appliedCameraFollowRevision = null;
+        appliedCameraFollowOwnership = null;
         return;
       }
 
       const smoothMove = client.cameraFollowSmoothMove;
       const viewport = element.props.context?.viewport;
-      const target = element.componentInstance;
-      if (!viewport || !target) {
+      if (!viewport || !element.componentInstance) {
         appliedCameraFollowRevision = null;
+        appliedCameraFollowOwnership = null;
         return;
       }
 
-      const appliedCameraFollow = applyCameraFollow({
-        viewport,
-        target,
-        smoothMove,
-        followRevision,
-        isCurrentRevision: (revision) => client.cameraFollowRevision() === revision,
-        shouldFollowCamera
-      });
-      appliedCameraFollowRevision = appliedCameraFollow ? followRevision : null;
+      appliedCameraFollowOwnership = untracked(() =>
+        applyCameraFollow({
+          viewport,
+          target: cameraFollowTarget,
+          smoothMove,
+          followRevision,
+          isCurrentRevision: (revision) => client.cameraFollowRevision() === revision,
+          shouldFollowCamera
+        })
+      );
+      appliedCameraFollowRevision = appliedCameraFollowOwnership ? followRevision : null;
+    })
+
+    effect(() => {
+      if (!shouldFollowCamera() || !ownsCameraFollow(appliedCameraFollowOwnership)) return;
+      const viewport = element.props.context?.viewport;
+      if (!viewport || !element.componentInstance) return;
+      syncCameraFollowPosition(viewport, cameraFollowTarget, client.cameraFollowSmoothMove);
     })
 
     return () => {
+      controlsSubscription?.unsubscribe();
       if (ownsCameraFollowRevision(appliedCameraFollowRevision, client.cameraFollowRevision())) {
-        clearCameraFollowPlugins(element.props.context?.viewport);
+        clearCameraFollowPlugins(element.props.context?.viewport, appliedCameraFollowOwnership);
       }
     }
   })

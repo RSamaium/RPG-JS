@@ -17,7 +17,7 @@ import { defineModule, type RpgServer } from "@rpgjs/server";
 export default defineModule<RpgServer>({
   map: {
     onBeforeUpdate(mapData, map) {
-      return map;
+      // Mutate or validate the incoming data before the update is applied.
     },
     onPhysicsInit(map, { mapData }) {
       // Build shared physics metadata
@@ -41,7 +41,8 @@ export default defineModule<RpgServer>({
 
 Called before a map update is applied.
 
-Use this to normalize map data (`width`, `height`, custom fields) before `loadPhysic()`.
+Use this to inspect, normalize, or validate map data before `loadPhysic()`. Its
+return value is ignored; mutate the provided data when normalization is required.
 
 ### `onLoad(map)`
 

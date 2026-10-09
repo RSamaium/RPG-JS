@@ -7,6 +7,14 @@ import {
 } from "./i18n";
 
 describe("i18n service", () => {
+  test("lists only game catalogues, with a default when none exist", () => {
+    const service = getOrCreateI18nService(null, { defaultLocale: "ja" });
+    service.addMessages({ en: { hello: "Hello" }, fr: { hello: "Bonjour" } }, "rpgjs-client", 0);
+    expect(service.getAvailableLocales()).toEqual(["ja"]);
+    service.configure({ messages: { de: { hello: "Hallo" }, es: { hello: "Hola" } } });
+    expect(service.getAvailableLocales()).toEqual(["de", "es"]);
+    expect(getOrCreateI18nService(null, { messages: { fr: {} } }).getAvailableLocales()).toEqual(["fr"]);
+  });
   test("translates with fallback locale and raw key fallback", () => {
     const service = getOrCreateI18nService(null, {
       defaultLocale: "fr",

@@ -573,6 +573,43 @@ const goldSchema = createVariableModificationSchema(
 
 ### Formats Personnalisés
 
+Les chaînes visibles par le joueur peuvent utiliser les templates Studio :
+
+```text
+Bonjour {{ variable:player.name | label:Player name }}
+Client : {{ variable:variable.customer.firstName | label:Customer first name }}
+```
+
+- `player.<path>` lit une propriété du joueur courant.
+- `variable.<id>[.<path>]` lit une variable persistante, puis éventuellement
+  une propriété imbriquée dans sa valeur.
+- `label` est optionnel et sert uniquement à l'éditeur Studio.
+- Un token inconnu ou une valeur `null`/`undefined` reste inchangé dans le texte.
+- `{hp}` et `{level}` restent acceptés pour les anciens projets.
+
+Le parseur et le résolveur sont disponibles depuis `@rpgjs/studio/runtime` :
+
+```typescript
+import {
+  parseStringTemplate,
+  resolveStringTemplate,
+} from '@rpgjs/studio/runtime'
+
+const tokens = parseStringTemplate(message)
+const rendered = resolveStringTemplate(message, { player })
+```
+
+Un champ compatible expose le helper dans son format JSON Schema :
+
+```typescript
+import { studioStringTemplateFormat } from '@rpgjs/studio/runtime'
+
+const messageSchema = {
+  type: 'string',
+  format: studioStringTemplateFormat,
+}
+```
+
 ```typescript
 properties: {
   text: {

@@ -1,6 +1,7 @@
 {
   "name": "@rpgjs/common",
-  "version": "5.0.0-beta.23",
+  "repository": "github:RSamaium/RPG-JS",
+  "version": "5.0.0",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "publishConfig": {
@@ -16,10 +17,10 @@
   "license": "MIT",
   "description": "",
   "dependencies": {
-    "@rpgjs/physic": "5.0.1",
+    "@rpgjs/physic": "workspace:*",
     "@signe/di": "3.1.0",
     "@signe/reactive": "3.1.0",
-    "@signe/sync": "3.1.0",
+    "@signe/sync": "3.1.1",
     "rxjs": "^7.8.2"
   },
   "devDependencies": {

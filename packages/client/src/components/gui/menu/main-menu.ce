@@ -1,8 +1,10 @@
 <DOMContainer width="100%" height="100%" controls={menuControls}>
-    <div class="rpg-ui-main-menu rpg-anim-fade-in" click={closeMenuFromPointer}>
+    <div class="rpg-ui-main-menu rpg-anim-fade-in" data-closing={transition.closing() ? "true" : "false"} click={closeMenuFromPointer}>
         <div class="rpg-ui-main-menu-backdrop"></div>
-        <button class="rpg-ui-close-button" type="button" title="Close" aria-label="Close menu" click={closeMenuFromPointer}>x</button>
         <div class="rpg-ui-main-menu-layout" click={stopEvent}>
+            @if (!saveOverlay() && !hotbarAssignmentOpen()) {
+                <button class="rpg-ui-close-button" type="button" aria-label={t("rpg.ui.close")} click={closeMenuFromPointer}>×</button>
+            }
             <div class="rpg-ui-main-menu-left rpg-ui-menu rpg-ui-panel">
                 <div class="rpg-ui-menu-header">{t("rpg.menu.title")}</div>
                 <div class="rpg-ui-main-menu-list">
@@ -20,7 +22,20 @@
             <div class="rpg-ui-main-menu-right">
                 @if (view() === "menu") {
                     <div class="rpg-ui-panel">
-                        <div class="rpg-ui-main-menu-section-title">{t("rpg.menu.status")}</div>
+                        <div class="rpg-ui-dossier">
+                            <div class="rpg-ui-dossier-portrait">
+                                @if (heroGraphic()) {
+                                    <DOMSprite sheet={heroSheet()} playing="stand" width="100px" height="110px" objectFit="contain" />
+                                } @else {
+                                    <span class="rpg-ui-fallback-icon" aria-hidden="true">◇</span>
+                                }
+                            </div>
+                            <div>
+                                <div class="rpg-ui-eyebrow">{t("rpg.menu.status")}</div>
+                                <h1 class="rpg-ui-dossier-name">{heroName()}</h1>
+                                <div class="rpg-ui-dossier-caption">{t("rpg.menu.level") + ' ' + level()}</div>
+                            </div>
+                        </div>
                         <div class="rpg-ui-main-menu-status-card">
                             <div class="rpg-ui-main-menu-status-block">
                                 <div class="rpg-ui-main-menu-status-label">{t("rpg.menu.level")}</div>
@@ -31,13 +46,13 @@
                                 <div class="rpg-ui-main-menu-status-value">{gold()}</div>
                             </div>
                             <div class="rpg-ui-main-menu-status-block">
-                                <div class="rpg-ui-main-menu-status-label">HP {hp()}/{hpMax()}</div>
+                                <div class="rpg-ui-main-menu-status-label">HP {hp() ?? 0}/{hpMax() ?? 0}</div>
                                 <div class="rpg-ui-main-menu-status-bar">
                                     <div class="rpg-ui-main-menu-status-bar-fill hp" style={{width: hpPercent}}></div>
                                 </div>
                             </div>
                             <div class="rpg-ui-main-menu-status-block">
-                                <div class="rpg-ui-main-menu-status-label">SP {sp()}/{spMax()}</div>
+                                <div class="rpg-ui-main-menu-status-label">SP {sp() ?? 0}/{spMax() ?? 0}</div>
                                 <div class="rpg-ui-main-menu-status-bar">
                                     <div class="rpg-ui-main-menu-status-bar-fill sp" style={{width: spPercent}}></div>
                                 </div>
@@ -61,10 +76,22 @@
                     </div>
                 }
                 @if (view() === "items") {
-                    <ItemsMenu data={data} onInteraction={onInteraction} onBack={goBack} />
+                    <ItemsMenu
+                        data={data}
+                        assignmentOpen={hotbarAssignmentOpen}
+                        onAssignHotbar={openHotbarAssignment}
+                        onInteraction={onInteraction}
+                        onBack={goBack}
+                    />
                 }
                 @if (view() === "skills") {
-                    <SkillsMenu data={data} onBack={goBack} />
+                    <SkillsMenu
+                        data={data}
+                        assignmentOpen={hotbarAssignmentOpen}
+                        onAssignHotbar={openHotbarAssignment}
+                        onInteraction={onInteraction}
+                        onBack={goBack}
+                    />
                 }
                 @if (view() === "equip") {
                     <EquipMenu data={data} onInteraction={onInteraction} onBack={goBack} />
@@ -77,6 +104,15 @@
                 }
             </div>
         </div>
+        @if (hotbarAssignmentOpen()) {
+            <HotbarSlotPicker
+                hotbar={menuHotbar}
+                entry={hotbarAssignmentEntry}
+                onAssign={assignHotbarSlot}
+                onClear={clearHotbarSlot}
+                onCancel={closeHotbarAssignment}
+            />
+        }
         @if (saveOverlay) {
             <div class="rpg-ui-main-menu-overlay">
                 <div class="rpg-ui-main-menu-overlay-backdrop" click={closeSaveOverlayFromPointer}></div>
@@ -101,11 +137,16 @@
     import EquipMenu from "./equip-menu.ce";
     import OptionsMenu from "./options-menu.ce";
     import ExitMenu from "./exit-menu.ce";
+    import HotbarSlotPicker from "./hotbar-slot-picker.ce";
     import { getEntityProp } from "../../../utils/getEntityProp";
-    import { delay } from "@rpgjs/common";
+    import { delay, Direction } from "@rpgjs/common";
     import { getKeyboardControlBind } from "../../../services/actionInput";
 
+    import { movementPreferences, refreshKeyboardBindings } from "../../../services/movementPreferences";
+    import { guiTransition, lockGuiInput } from "../lifecycle";
     const engine = inject(RpgClientEngine);
+    const transition = guiTransition();
+    const releaseInput = lockGuiInput(engine);
     const { t } = engine.i18n();
     const currentPlayer = engine.scene.currentPlayer;
     const keyboardControls = engine.globalConfig.keyboardControls;
@@ -113,18 +154,19 @@
     const { data, onFinish, onInteraction } = defineProps();
     const { menus, items, skills, equips, saveLoad } = data();
 
-    const defaultMenus = [
+    const defaultMenus = computed(() => [
+        { id: "status", label: t("rpg.menu.status") },
         { id: "items", label: t("rpg.menu.items") },
         { id: "skills", label: t("rpg.menu.skills") },
         { id: "equip", label: t("rpg.menu.equip") },
         { id: "options", label: t("rpg.menu.options") },
         { id: "save", label: t("rpg.menu.save") },
         { id: "exit", label: t("rpg.menu.exit") }
-    ];
+    ]);
 
     const menuEntries = computed(() => {
-        if (menus && Array.isArray(menus) && menus.length) return menus;
-        return defaultMenus;
+        if (menus && Array.isArray(menus) && menus.length) return menus.map(entry => ({ ...entry, label: entry.label?.startsWith("rpg.") ? t(entry.label) : entry.label }));
+        return defaultMenus();
     });
 
     const resolveProp = (value) => typeof value === "function" ? value() : value;
@@ -144,6 +186,13 @@
     const selectedMenu = signal(0);
     const view = signal("menu");
     const saveOverlay = signal(false);
+    const hotbarAssignmentEntry = signal(null);
+    const hotbarAssignmentOpen = computed(() => Boolean(hotbarAssignmentEntry()));
+    const menuHotbar = computed(() => resolveProp(data)?.hotbar || { slots: [] });
+    const canAssignHotbarType = (type) => {
+        const allowed = menuHotbar().allowedEntryTypes;
+        return !Array.isArray(allowed) || allowed.includes(type);
+    };
 
     const selectableIndexes = computed(() => {
         const entries = menuEntries();
@@ -168,18 +217,24 @@
         const currentIndex = Math.max(0, available.indexOf(current));
         const nextIndex = (currentIndex + delta + available.length) % available.length;
         selectedMenu.set(available[nextIndex]);
+        engine.playUiSound("navigate");
     };
 
     function selectMenu(index) {
         return function() {
             selectedMenu.set(index);
+            engine.playUiSound("navigate");
             openMenu();
         }
     }
 
     const openMenu = () => {
         const entry = menuEntries()[selectedMenu()];
-        if (!entry || isMenuDisabled(entry)) return;
+        if (!entry || isMenuDisabled(entry)) {
+            engine.playUiSound("error");
+            return;
+        }
+        engine.playUiSound("confirm");
         if (entry.id === "save") {
             saveOverlay.set(true);
             return;
@@ -188,13 +243,50 @@
             view.set("exit");
             return;
         }
-        view.set(entry.id);
+        view.set(entry.id === "status" ? "menu" : entry.id);
     };
 
     const goBack = () => {
+        engine.playUiSound("cancel");
+        if (hotbarAssignmentOpen()) {
+            closeHotbarAssignment();
+            return;
+        }
         delay(() => {
             view.set("menu");
+            const statusIndex = menuEntries().findIndex(entry => entry.id === "status");
+            if (statusIndex >= 0) selectedMenu.set(statusIndex);
         });
+    };
+
+    const openHotbarAssignment = (entry) => {
+        if (!entry?.id || !canAssignHotbarType(entry.type)) return;
+        hotbarAssignmentEntry.set({
+            type: entry.type || "skill",
+            id: entry.id,
+            name: entry.name || entry.id
+        });
+    };
+
+    const closeHotbarAssignment = () => {
+        // Keep the modal state active until the current CanvasEngine control
+        // dispatch finishes so parent/child Escape handlers cannot both act.
+        queueMicrotask(() => hotbarAssignmentEntry.set(null));
+    };
+
+    const assignHotbarSlot = (slot) => {
+        const entry = hotbarAssignmentEntry();
+        if (!entry) return;
+        onInteraction?.("assignHotbarSlot", {
+            slot,
+            entry: { type: entry.type, id: entry.id }
+        });
+        closeHotbarAssignment();
+    };
+
+    const clearHotbarSlot = (slot) => {
+        onInteraction?.("clearHotbarSlot", { slot });
+        closeHotbarAssignment();
     };
 
     const closeSaveOverlay = () => {
@@ -218,7 +310,8 @@
             closeSaveOverlay();
             return;
         }
-        onFinish();
+        engine.playUiSound("close");
+        transition.finish(() => onFinish());
     };
 
     const closeMenuFromPointer = (event) => {
@@ -237,6 +330,9 @@
     const level = getEntityProp(currentPlayer, "level");
     const exp = getEntityProp(currentPlayer, "exp");
     const gold = getEntityProp(currentPlayer, "gold");
+    const heroName = getEntityProp(currentPlayer, "name");
+    const heroGraphic = computed(() => currentPlayer()?.graphicsSignals?.()?.[0]);
+    const heroSheet = () => ({ definition: heroGraphic(), params: { direction: Direction.Down } });
     const expForNextlevel = computed(() => data().expForNextlevel || 0);
     const hpPercent = computed(() => {
         const max = hpMax() || 1;
@@ -261,7 +357,7 @@
             { label: "INT", value: data().playerStats.int },
             { label: "AGI", value: data().playerStats.agi }
         ]
-    }
+    });
 
     const menuControls = signal({
         up: {
@@ -269,7 +365,7 @@
             bind: keyboardControls.up,
             throttle: 150,
             keyDown() {
-                if (saveOverlay()) return;
+                if (saveOverlay() || hotbarAssignmentOpen()) return;
                 if (view() !== "menu") return;
                 moveMenu(-1);
             }
@@ -279,7 +375,7 @@
             bind: keyboardControls.down,
             throttle: 150,
             keyDown() {
-                if (saveOverlay()) return;
+                if (saveOverlay() || hotbarAssignmentOpen()) return;
                 if (view() !== "menu") return;
                 moveMenu(1);
             }
@@ -287,7 +383,7 @@
         action: {
             bind: getKeyboardControlBind(keyboardControls.action),
             keyDown() {
-                if (saveOverlay()) return;
+                if (saveOverlay() || hotbarAssignmentOpen()) return;
                 if (view() !== "menu") return;
                 openMenu();
             }
@@ -296,11 +392,15 @@
             bind: keyboardControls.escape,
             keyDown() {
                 if (saveOverlay()) return;
+                if (hotbarAssignmentOpen()) {
+                    closeHotbarAssignment();
+                    return;
+                }
                 if (view() !== "menu") {
                     goBack();
                     return;
                 }
-                onFinish()
+                closeMenu()
             }
         },
         gamepad: {
@@ -309,17 +409,23 @@
     });
 
     mount((element) => {
+        const bindingsSubscription = effect(() => {
+            refreshKeyboardBindings(element.directives.controls, movementPreferences(engine).bindings());
+        }).subscription;
+        engine.playUiSound("open");
         const inputLockToken = {};
-        const previousStopProcessingInput = engine.stopProcessingInput;
         const previousGamePause = engine.gamePause();
         engine.__rpgMainMenuInputLock = inputLockToken;
         engine.stopProcessingInput = true;
         engine.gamePause.set(true);
         return () => {
+            transition.dispose();
+            releaseInput();
+            bindingsSubscription.subscription?.unsubscribe?.();
+            bindingsSubscription.unsubscribe?.();
             delay(() => {
                 if (engine.__rpgMainMenuInputLock !== inputLockToken) return;
                 engine.__rpgMainMenuInputLock = undefined;
-                engine.stopProcessingInput = previousStopProcessingInput;
                 engine.gamePause.set(previousGamePause);
             });
         }

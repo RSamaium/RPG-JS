@@ -1,8 +1,7 @@
 import { FromSchema } from "json-schema-to-ts";
 import { createAppearanceSchema, parameterSchemas, inventorySchemas } from "./character-config";
 import { skillSchema } from "./database";
-
-const keyEnum = ["down", "up", "left", "right", "space", "backspace", "tab", "shift", "control", "alt", "meta", "capslock", "numlock", "scrolllock", "printscreen", "pause", "insert", "delete", "home", "end", "pageup", "pagedown", "arrowup", "arrowdown", "arrowleft", "arrowright", "escape", "enter", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"] as const;
+import { inputKeyEnum } from "./input-controls";
 
 export const projectSchema = {
   type: "object",
@@ -24,42 +23,81 @@ export const projectSchema = {
         down: {
           type: "string",
           title: "Down",
-          enum: keyEnum,
+          enum: inputKeyEnum,
           default: "down",
         },
         up: {
           type: "string",
           title: "Up",
-          enum: keyEnum,
+          enum: inputKeyEnum,
           default: "up",
         },
         left: {
           type: "string",
           title: "Left",
-          enum: keyEnum,
+          enum: inputKeyEnum,
           default: "left",
         },
         right: {
           type: "string",
           title: "Right",
-          enum: keyEnum,
+          enum: inputKeyEnum,
           default: "right",
         },
         action: {
           type: "string",
           title: "Action",
-          enum: keyEnum,
+          enum: inputKeyEnum,
           default: "space",
         },
         back: {
           type: "string",
           title: "Back",
-          enum: keyEnum,
+          enum: inputKeyEnum,
           default: "escape",
         },
       },
     },
     hero: createAppearanceSchema("Hero"),
+    combatAudio: {
+      type: "object",
+      title: "Combat Audio",
+      properties: {
+        battleMusic: {
+          type: "string",
+          title: "Default Battle Music",
+          format: {
+            name: "media",
+            type: "bgm",
+            buttonLabel: "Select Battle Music",
+            useUpload: { accept: "audio/*" },
+          } as any,
+        },
+        attack: { type: "string", title: "Attack Sound", format: { name: "media", type: "sound" } as any },
+        skill: { type: "string", title: "Cast Sound", format: { name: "media", type: "sound" } as any },
+        hit: { type: "string", title: "Impact Sound", format: { name: "media", type: "sound" } as any },
+        hurt: { type: "string", title: "Hurt Sound", format: { name: "media", type: "sound" } as any },
+        die: { type: "string", title: "Defeat Sound", format: { name: "media", type: "sound" } as any },
+      },
+    },
+    audio: {
+      type: "object",
+      title: "Audio",
+      properties: {
+        ui: {
+          type: "object",
+          title: "Interface Audio",
+          properties: {
+            navigate: { type: "string" },
+            confirm: { type: "string" },
+            cancel: { type: "string" },
+            open: { type: "string" },
+            close: { type: "string" },
+            error: { type: "string" },
+          },
+        },
+      },
+    },
     skills: {
       type: "array",
       title: "Skills",

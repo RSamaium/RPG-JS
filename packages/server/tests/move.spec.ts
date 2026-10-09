@@ -1,8 +1,10 @@
-import { beforeEach, test, expect, afterEach, describe } from "vitest";
+import { beforeEach, test, expect, afterEach, describe, vi } from "vitest";
 import { testing, TestingFixture } from "@rpgjs/testing";
 import { defineModule, createModule, Direction } from "@rpgjs/common";
 import { RpgPlayer, RpgServer, Move } from "../src";
 import { RpgClient } from "../../client/src";
+
+let onMoveCalls = 0;
 
 // Define server module with test map
 const serverModule = defineModule<RpgServer>({
@@ -15,6 +17,9 @@ const serverModule = defineModule<RpgServer>({
   player: {
     async onConnected(player) {
       await player.changeMap("test-map", { x: 100, y: 100 });
+    },
+    onMove() {
+      onMoveCalls += 1;
     },
   },
 });
@@ -29,6 +34,7 @@ let client: any;
 let fixture: TestingFixture;
 
 beforeEach(async () => {
+  onMoveCalls = 0;
   const myModule = createModule("TestModule", [
     {
       server: serverModule,
@@ -48,6 +54,23 @@ afterEach(async () => {
 
 
 describe("Move Routes - Basic Movements", () => {
+  test("does not dispatch onMove for unchanged positions or events", async () => {
+    const body = player.getCurrentMap()!.getBody(player.id)!;
+    onMoveCalls = 0;
+    body.notifyPositionChange();
+    await Promise.resolve();
+    expect(onMoveCalls).toBe(0);
+    vi.spyOn(player, 'isEvent').mockReturnValue(true);
+    await fixture.waitUntil(player.moveRoutes([Direction.Right]));
+    expect(onMoveCalls).toBe(0);
+  });
+
+  test("calls the player onMove hook when its position changes", async () => {
+    await fixture.waitUntil(player.moveRoutes([Direction.Right]));
+
+    expect(onMoveCalls).toBeGreaterThan(0);
+  });
+
   test("should create player physics body with rectangular RPG hitbox and speed", async () => {
     const map = player.getCurrentMap() as any;
     const entity = map.getBody(player.id);
@@ -705,5 +728,82 @@ describe("Move Routes - Stuck Detection", () => {
     
     // Player should have moved successfully
     expect(player.x()).toBeGreaterThan(initialX);
+  });
+});
+
+describe('Combat recoil', () => {
+  test('decays without accumulating speed and stops at the end', async () => {
+    const initialX = player.x();
+    player._lastFramePositions = { frame: 9, serverTick: 9, position: { x: initialX, y: player.y(), direction: Direction.Down } };
+    const recoil = player.knockback({ x: 1, y: 0 }, 80, 300);
+    expect(player.knockbackActive()).toBe(true);
+    await fixture.waitUntil(recoil);
+    expect(player.knockbackActive()).toBe(false);
+    expect(player.x() - initialX).toBeGreaterThan(0);
+    expect(player.x() - initialX).toBeLessThanOrEqual(25);
+    const landedX = player.x();
+    await fixture.nextTickTimes(10);
+    expect(player.x()).toBe(landedX);
+    expect(player.animationName()).toBe('stand');
+    expect(player._lastFramePositions).toBeNull();
+  });
+
+  test('held inputs and an attack movement lock cannot cancel the recoil', async () => {
+    const map = player.getCurrentMap()!;
+    player.canMove = false;
+    const initialX = player.x();
+    const recoil = player.knockback({ x: 1, y: 0 }, 80, 300);
+    await map.onInput(player, { input: Direction.Left, frame: 1, timestamp: Date.now() });
+    expect(player.getActiveMovements()).toHaveLength(1);
+    await fixture.waitUntil(recoil);
+    expect(player.x()).toBeGreaterThan(initialX);
+    expect(player.pendingInputs).toHaveLength(0);
+    expect(player.canMove).toBe(false);
+    expect(player.knockbackActive()).toBe(false);
+  });
+
+  test('does not restore an attack lock that ended during the impact', async () => {
+    player.animationName.set('attack');
+    player.animationFixed = true;
+    const recoil = player.knockback({ x: 1, y: 0 }, 80, 300);
+    player.animationFixed = false;
+    await fixture.waitUntil(recoil);
+    expect(player.animationFixed).toBe(false);
+    expect(player.animationName()).toBe('stand');
+  });
+
+  test('keeps recoil active until overlapping impacts are both finished', async () => {
+    const first = player.knockback({ x: 1, y: 0 }, 80, 100);
+    const second = player.knockback({ x: -1, y: 0 }, 40, 300);
+    await fixture.waitUntil(first);
+    expect(player.knockbackActive()).toBe(true);
+    await fixture.waitUntil(second);
+    expect(player.knockbackActive()).toBe(false);
+  });
+
+  test('keeps collision checks during recoil and survives the idle input timeout', async () => {
+    const map = player.getCurrentMap()!;
+    const body = map.getBody(player.id)!;
+    const initialX = player.x();
+    const wallTile = Math.ceil((initialX + player.hitbox().w + 20) / 32);
+    map.physic.createEntity({
+      uuid: 'recoil-wall', position: { x: wallTile * 32 + 16, y: body.position.y },
+      width: 32, height: 200, mass: 0,
+    });
+    player.lastProcessedInputTs = Date.now() - 200;
+    const recoil = player.knockback({ x: 1, y: 0 }, 400, 300);
+    await fixture.waitUntil(recoil);
+    expect(player.x()).toBeGreaterThan(initialX);
+    expect(player.x() + player.hitbox().w).toBeLessThanOrEqual(wallTile * 32 + 1);
+    expect(player.knockbackActive()).toBe(false);
+  });
+
+  test('clears the synchronized phase when recoil is cancelled', async () => {
+    const recoil = player.knockback({ x: 1, y: 0 }, 80, 300);
+    player.clearMovements();
+    await recoil;
+    expect(player.knockbackActive()).toBe(false);
+    expect(player.directionFixed).toBe(false);
+    expect(player.animationFixed).toBe(false);
   });
 });

@@ -54,13 +54,13 @@ Apply states to a player from skill or item effects
 ### Signature
 
 ```ts
-applyStates(player: RpgPlayer, states: { addStates?: Array<{ state: any; rate: number }>; removeStates?: Array<{ state: any; rate: number }> }): void
+applyStates(player: RpgPlayer, states: { addStates?: StateApplication[]; removeStates?: StateApplication[] }): void
 ```
 
 ### Parameters
 
 - `player`: `RpgPlayer`
-- `states`: `{ addStates?: Array<{ state: any; rate: number }>; removeStates?: Array<{ state: any; rate: number }> }`
+- `states`: `{ addStates?: StateApplication[]; removeStates?: StateApplication[] }`
 
 ## createStateInstance
 
@@ -90,12 +90,12 @@ Find state efficiency modifier for a specific state class
 ### Signature
 
 ```ts
-findStateEfficiency(stateClass: any): any | undefined
+findStateEfficiency(stateClass: StateClass): StateEfficiency | undefined
 ```
 
 ### Parameters
 
-- `stateClass`: `any`
+- `stateClass`: `StateClass`
 
 ### Returns
 
@@ -112,7 +112,7 @@ Get a state to the player. Returns null if the state is not present
 ### Signature
 
 ```ts
-getState(stateClass: StateClass | string): any | null
+getState(stateClass: StateClass | string): StateData | undefined
 ```
 
 ### Parameters
@@ -171,7 +171,7 @@ Gets the defensive capabilities against various states from equipped items
 ### Signature
 
 ```ts
-statesDefense: { rate: number; state: any }[]
+statesDefense: StateEfficiency[]
 ```
 
 ### Returns
@@ -189,7 +189,7 @@ Manages the player's state efficiency modifiers
 ### Signature
 
 ```ts
-statesEfficiency: any
+statesEfficiency: RpgWritableSignal<StateEfficiency[]>
 ```
 
 ### Returns

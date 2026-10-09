@@ -1,0 +1,61 @@
+name: GUI catalogue
+on:
+  push:
+    branches: ["**"]
+    paths:
+      [
+        "packages/ui-css/**",
+        "pnpm-lock.yaml",
+        ".github/workflows/storybook.yml",
+      ]
+  pull_request:
+    paths:
+      [
+        "packages/ui-css/**",
+        "pnpm-lock.yaml",
+        ".github/workflows/storybook.yml",
+      ]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  catalogue:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @rpgjs/ui-css test
+      - run: pnpm --filter @rpgjs/ui-css build-storybook
+      - run: pnpm --filter @rpgjs/ui-css exec playwright install --with-deps chromium
+      - run: pnpm --filter @rpgjs/ui-css test:browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gui-browser-results
+          path: packages/ui-css/test-results
+      - uses: actions/upload-pages-artifact@v3
+        if: github.ref == 'refs/heads/v5'
+        with:
+          path: packages/ui-css/storybook-static
+  deploy:
+    if: github.ref == 'refs/heads/v5' && github.event_name != 'pull_request'
+    needs: catalogue
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: storybook-pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy catalogue
+        id: deployment
+        uses: actions/deploy-pages@v4

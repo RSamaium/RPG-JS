@@ -5,10 +5,23 @@ export const CharacterSpritesheet = (options: {
   imageSource: string;
   framesWidth: number;
   framesHeight: number;
+  frameDurationMs?: number;
+  lanes?: Array<{ id?: string; direction?: string }>;
+  attackDurationMs?: number;
   scale?: [number, number];
   anchor?: [number, number];
 }) => {
+  const timelineTicksPerSecond = 60;
+
   const frameY = (direction: Direction) => {
+    const lane = options.lanes?.findIndex((candidate) => {
+      const laneDirection = candidate.direction
+        ?? [Direction.Down, Direction.Left, Direction.Right, Direction.Up]
+          .find((value) => candidate.id?.endsWith(`-${value}`));
+      return laneDirection === direction;
+    });
+    if (lane !== undefined && lane >= 0) return lane;
+
     return {
       [Direction.Right]: 3,
       [Direction.Left]: 1,
@@ -37,6 +50,18 @@ export const CharacterSpritesheet = (options: {
     return array;
   };
 
+  const attackDurationMs = Math.max(1, options.attackDurationMs ?? 350);
+  const walkFrameDurationTicks = Math.max(
+    1,
+    ((options.frameDurationMs ?? (10 / timelineTicksPerSecond) * 1_000) / 1_000)
+      * timelineTicksPerSecond,
+  );
+  const attackDurationTicks =
+    (attackDurationMs / 1_000) * timelineTicksPerSecond;
+  const attackFrameSpeed = Math.max(
+    1,
+    (attackDurationTicks - 1) / options.framesWidth,
+  );
   const scale = options.scale ?? [1, 1];
 
   return {
@@ -52,10 +77,14 @@ export const CharacterSpritesheet = (options: {
         animations: ({ direction }) => [stand(direction)],
       },
       [Animation.Walk]: {
-        animations: ({ direction }) => [anim(direction, options.framesWidth)],
+        animations: ({ direction }) => [
+          anim(direction, options.framesWidth, walkFrameDurationTicks),
+        ],
       },
       [Animation.Attack]: {
-        animations: ({ direction }) => [anim(direction, options.framesWidth)],
+        animations: ({ direction }) => [
+          anim(direction, options.framesWidth, attackFrameSpeed),
+        ],
       }
     },
   };

@@ -2,7 +2,7 @@ import type {
   BlockExecutor,
   BlockDefinition
 } from '../types';
-import { resolveVariablesInText } from '../resolve-text';
+import { resolveStringTemplate, studioStringTemplateFormat } from '../resolve-text';
 
 
 export const schemaShowUpAnimation: BlockDefinition<'show_up_animation'> = {
@@ -18,7 +18,8 @@ export const schemaShowUpAnimation: BlockDefinition<'show_up_animation'> = {
       text: {
         type: 'string',
         title: 'Text',
-        description: 'Text to display (supports {variables})'
+        description: 'Text to display (supports Studio string templates)',
+        format: studioStringTemplateFormat
       },
       icon: {
         type: 'string',
@@ -53,7 +54,7 @@ export const schemaShowUpAnimation: BlockDefinition<'show_up_animation'> = {
 
 export const show_up_animation: BlockExecutor<'show_up_animation'> = async (context, params) => {
   await context.player.showComponentAnimation?.('up', {
-    text: resolveVariablesInText(params.text, context.player),
+    text: resolveStringTemplate(params.text, context),
     icon: params.icon
   });
 };

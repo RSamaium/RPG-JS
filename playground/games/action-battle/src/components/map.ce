@@ -197,6 +197,7 @@
     { id: "brute", name: "Brute", skill: "Melee patterns", icon: "B" },
     { id: "wood-thrower", name: "Wood Thrower", skill: "Lancer bois", icon: "W" },
     { id: "fire-caster", name: "Fire Caster", skill: "Fire / exp.png", icon: "F" },
+    { id: "guardian", name: "Guardian", skill: "Boss / charged combo", icon: "G" },
   ];
 
   const dragging = signal(false);

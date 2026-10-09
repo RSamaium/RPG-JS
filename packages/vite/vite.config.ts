@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import dts from 'vite-plugin-dts'
+import packageJson from './package.json' with { type: 'json' }
 
 // List of Node.js built-in modules to mark as external
 const nodeBuiltins = [
@@ -11,10 +12,18 @@ const nodeBuiltins = [
 ]
 
 export default defineConfig({
+  define: {
+    // Shown in the dev server banner. Vite may bundle this package into the
+    // user's config, so the version cannot be read from disk at runtime.
+    __RPGJS_VERSION__: JSON.stringify(packageJson.version),
+  },
   plugins: [
     dts({ 
       include: ['src/**/*.ts'],
-      outDir: 'dist'
+      outDirs: 'dist',
+      afterDiagnostic(diagnostics) {
+        if (diagnostics.length > 0) throw new Error(`Declaration generation failed with ${diagnostics.length} TypeScript diagnostic(s)`)
+      }
     })
   ],
   build: {
@@ -43,7 +52,8 @@ export default defineConfig({
         '@babel/generator',
         '@babel/types',
         'chokidar',
-        'ws'
+        'ws',
+        'picocolors'
       ]
     }
   },

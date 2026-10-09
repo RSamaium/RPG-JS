@@ -1,3 +1,4 @@
+import { show_cinematic, playCinematicSequence } from './show-cinematic';
 import type {
   BlockType,
   BlockParamsMap,
@@ -20,7 +21,8 @@ import {
  */
 const BLOCKS_WITH_SELF_MANAGED_CHILDREN = new Set<BlockType>([
   'conditional_branch',
-  'show_choices'
+  'show_choices',
+  'query_area'
 ]);
 
 /**
@@ -155,12 +157,23 @@ export async function executeBlocksRecursively(
     logBlockSequenceStart(blocks.length);
   }
 
-  for (const block of blocks) {
+  for (let index = 0; index < blocks.length; index++) {
+    const block = blocks[index];
     if (!block || !block.type) {
       continue;
     }
 
     try {
+      // Only batch adjacent standard cinematic blocks without children. Custom
+      // executors and control-flow boundaries keep their existing semantics.
+      if (block.type === 'show_cinematic' && !block.children?.length && executors['show_cinematic'] === (show_cinematic as unknown)) {
+        const videos = [block.data as BlockParamsMap['show_cinematic']];
+        while (blocks[index + 1]?.type === 'show_cinematic' && !blocks[index + 1]?.children?.length) {
+          videos.push(blocks[++index].data as BlockParamsMap['show_cinematic']);
+        }
+        await playCinematicSequence(context, videos);
+        continue;
+      }
       // Execute the block itself, passing the full block so children are available in params
       await executeBlock(
         block.type,
@@ -199,4 +212,3 @@ export async function executeBlocksRecursively(
     logBlockSequenceEnd(blocks.length, totalDuration);
   }
 }
-

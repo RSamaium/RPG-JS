@@ -1,0 +1,67 @@
+@import "@rpgjs/ui-css/index.css";
+
+:root {
+  --rpg-ui-font: "Courier New", monospace;
+  --rpg-ui-accent: #6f8f45;
+  --rpg-ui-bg: #3b251a;
+  --rpg-ui-surface: #8a542f;
+  --rpg-ui-text: #fff4c9;
+
+  --rpg-hotbar-font-family: "Courier New", monospace;
+  --rpg-hotbar-dock-bottom: 18px;
+  --rpg-hotbar-dock-shadow: drop-shadow(0 8px 0 rgb(72 39 24 / 45%));
+  --rpg-hotbar-gap: 5px;
+  --rpg-hotbar-slot-size: 58px;
+  --rpg-hotbar-mobile-slot-size: 50px;
+  --rpg-hotbar-gold: #78984c;
+  --rpg-hotbar-gold-bright: #fff0a8;
+  --rpg-hotbar-wood: #a86638;
+  --rpg-hotbar-wood-dark: #5a321f;
+  --rpg-hotbar-plate-padding: 8px 10px 11px;
+  --rpg-hotbar-plate-border: 3px solid #4c2c1d;
+  --rpg-hotbar-plate-radius: 7px;
+  --rpg-hotbar-plate-background:
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 4%) 0 3px, transparent 3px 22px),
+    linear-gradient(180deg, #c17a45, #8c4f2e 55%, #5b331f);
+  --rpg-hotbar-plate-shadow:
+    inset 0 3px 0 #e4a66b,
+    inset 0 -4px 0 #3b2117,
+    0 0 0 2px #f4d58b;
+  --rpg-hotbar-slot-border: 3px solid #573421;
+  --rpg-hotbar-slot-radius: 4px;
+  --rpg-hotbar-slot-background:
+    linear-gradient(135deg, rgb(255 255 255 / 9%), transparent 40%),
+    linear-gradient(180deg, #f1d79a, #c69a58);
+  --rpg-hotbar-empty-slot-background: linear-gradient(180deg, #b88a50, #8e6138);
+  --rpg-hotbar-slot-color: #402719;
+  --rpg-hotbar-active-shadow:
+    inset 0 2px 0 #fff3bf,
+    inset 0 -3px 0 #805126,
+    0 0 0 3px #78984c,
+    0 7px 0 rgb(71 45 25 / 30%);
+  --rpg-hotbar-key-border: 2px solid #4f321f;
+  --rpg-hotbar-key-radius: 3px;
+  --rpg-hotbar-key-background: #fff0a8;
+  --rpg-hotbar-key-color: #3c281a;
+  --rpg-hotbar-nameplate-border: 2px solid #4e301f;
+  --rpg-hotbar-nameplate-radius: 5px;
+  --rpg-hotbar-nameplate-background: linear-gradient(180deg, #fff3be, #dfbd77);
+  --rpg-hotbar-nameplate-color: #3e281a;
+  --rpg-hotbar-nameplate-muted-color: #725039;
+  --rpg-hotbar-badge-background: #4b2f20;
+  --rpg-hotbar-badge-color: #fff4c9;
+  --rpg-hotbar-cost-color: #d8f3ff;
+  --rpg-hotbar-wheel-background:
+    radial-gradient(circle, #f2d58b 0 23%, transparent 24%),
+    radial-gradient(circle, #9d6239 0 64%, #4a2b1d 65% 100%);
+}
+
+html,
+body,
+#rpg {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: #273a24;
+}

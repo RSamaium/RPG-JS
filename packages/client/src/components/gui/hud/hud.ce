@@ -1,12 +1,12 @@
 <DOMContainer>
-    <div class="rpg-hud">
+    <div class="rpg-hud" style={{display: hudDisplay}}>
         <div class="rpg-avatar">
             @if (hasFace()) {
                 <div class="rpg-avatar-face">
                     <DOMSprite 
                         sheet={faceSheet(face())} 
-                        width="100%" 
-                        height="100%" 
+                        width={portraitWidth}
+                        height={portraitHeight}
                         objectFit="contain" 
                     />
                 </div>
@@ -15,11 +15,11 @@
         </div>
         <div class="rpg-status-bars">
             <div class="rpg-bar-container">
-                <span class="rpg-bar-text">HP {{ hp() }}/{{ hpMax() }}</span>
+                <span class="rpg-bar-text">HP {{ currentHp() }}/{{ maxHp() }}</span>
                 <div class="rpg-bar-fill health" style={{width: percentHp}}></div>
             </div>
             <div class="rpg-bar-container">
-                <span class="rpg-bar-text">SP {{ sp() }}/{{ spMax() }}</span>
+                <span class="rpg-bar-text">SP {{ currentSp() }}/{{ maxSp() }}</span>
                 <div class="rpg-bar-fill mana" style={{width: percentSp}}></div>
             </div>
         </div>
@@ -29,16 +29,47 @@
 <script>
     import { inject } from "../../../core/inject";
     import { RpgClientEngine } from "../../../RpgClientEngine";
-    import { computed } from "canvasengine";
+    import { computed, mount, signal } from "canvasengine";
     import { getEntityProp } from "../../../utils/getEntityProp";
+    import { RpgGui } from "../../../Gui/Gui";
+    import { PrebuiltGui } from "@rpgjs/common";
 
     const engine = inject(RpgClientEngine)
+    const gui = inject(RpgGui)
     const currentPlayer = engine.scene.currentPlayer
+
+    // Show the HUD once the player has entered a map, and hide it while the
+    // title screen covers the game. It stays visible during map transfers.
+    let hasEnteredMap = false
+    const visible = computed(() => {
+      if (engine.scene.data() != null) hasEnteredMap = true
+      const titleScreen = gui.gui()[PrebuiltGui.TitleScreen]
+      return hasEnteredMap && !titleScreen?.display()
+    })
+    // Hidden with CSS so the avatar exists when the portrait is measured on mount
+    const hudDisplay = computed(() => visible() ? "" : "none")
     const { data } = defineProps();
-    const { faceset } = data();
+    const portraitWidth = signal("1px");
+    const portraitHeight = signal("1px");
+    mount((element) => {
+        const avatar = element.componentInstance?.element?.querySelector(".rpg-avatar");
+        if (!avatar) return;
+        const measurePortrait = () => {
+            // The face is inset by 3px on each side of the avatar's padding box.
+            // Concrete sizes let DOMSprite fit even when mounted before layout.
+            portraitWidth.set(`${Math.max(1, avatar.clientWidth - 6)}px`);
+            portraitHeight.set(`${Math.max(1, avatar.clientHeight - 6)}px`);
+        };
+        const observer = new ResizeObserver(measurePortrait);
+        observer.observe(avatar);
+        measurePortrait();
+        return () => observer.disconnect();
+    });
 
     const resolveProp = (value) => typeof value === "function" ? value() : value;
     const face = computed(() => resolveProp(data().faceset));
+    const resolveNumeric = (value: unknown): number =>
+        typeof value === "number" && Number.isFinite(value) ? value : 0
 
     const hasFace = computed(() => {
         const value = face();
@@ -50,11 +81,15 @@
     });
     const hp = getEntityProp(currentPlayer, "hp")
     const hpMax = getEntityProp(currentPlayer, "params.maxHp")
-    const percentHp = computed(() => (hp() / hpMax() * 100) + '%')
+    const currentHp = computed(() => resolveNumeric(hp()))
+    const maxHp = computed(() => resolveNumeric(hpMax()))
+    const percentHp = computed(() => (maxHp() === 0 ? 0 : Math.min(100, Math.max(0, (currentHp() / maxHp()) * 100))) + '%')
 
     const sp = getEntityProp(currentPlayer, "sp")
     const spMax = getEntityProp(currentPlayer, "params.maxSp")
-    const percentSp = computed(() => (sp() / spMax() * 100) + '%')
+    const currentSp = computed(() => resolveNumeric(sp()))
+    const maxSp = computed(() => resolveNumeric(spMax()))
+    const percentSp = computed(() => (maxSp() === 0 ? 0 : Math.min(100, Math.max(0, (currentSp() / maxSp()) * 100))) + '%')
 
     const level = getEntityProp(currentPlayer, "level")
 </script>

@@ -1,6 +1,7 @@
 import { excludeTriggers } from '../context-helpers';
 import type { BlockExecutor, CallShopParams } from '../types';
 import { itemSchema } from '@common/schemas/database';
+import { resolveStringTemplate, studioStringTemplateFormat } from '../resolve-text';
 
 export const schemaCallShop = {
   type: 'call_shop',
@@ -40,7 +41,8 @@ export const schemaCallShop = {
       },
       message: {
         type: 'string',
-        title: 'Message'
+        title: 'Message',
+        format: studioStringTemplateFormat
       },
       face: {
         type: 'string',
@@ -73,7 +75,9 @@ export const call_shop: BlockExecutor<'call_shop'> = async (context, params) => 
         items: params.items.map((item: string) => map.database()[item]),
         sell: params.sell,
         sellMultiplier: params.sellMultiplier,
-        message: params.message,
+        message: params.message === undefined
+          ? undefined
+          : resolveStringTemplate(params.message, context),
         face: params.face
       }
     : params.items;

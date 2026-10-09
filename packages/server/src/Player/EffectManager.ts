@@ -46,7 +46,7 @@ export function WithEffectManager<TBase extends PlayerCtor>(Base: TBase) {
       return this.effects.includes(effect);
     }
 
-    get effects(): any[] {
+    get effects(): string[] {
       const getEffects = (prop) => {
         return arrayFlat(this[prop]().map((el) => el.effects || []));
       };
@@ -79,7 +79,7 @@ export interface IEffectManager {
    * 
    * @returns Array of all active effects on the player
    */
-  effects: any[];
+  effects: string[];
 
   /**
    * Check if the player has a specific effect

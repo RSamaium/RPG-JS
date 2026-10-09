@@ -62,6 +62,16 @@ class AutoFallbackGameDataProvider implements GameDataProvider {
     return this.http.getMedia(mediaId);
   }
 
+  async getMediaGroup(mediaId: string): Promise<any[]> {
+    try {
+      const localValue = await this.local.getMediaGroup(mediaId);
+      if (localValue.length > 0) return localValue;
+    } catch {
+      // The online provider can supply groups absent from the local bundle.
+    }
+    return this.http.getMediaGroup(mediaId);
+  }
+
   async getDatabase(projectId?: string): Promise<any[]> {
     try {
       const localValue = await this.local.getDatabase(projectId);
@@ -77,38 +87,63 @@ class AutoFallbackGameDataProvider implements GameDataProvider {
 
 class CachedGameDataProvider implements GameDataProvider {
   readonly kind: GameDataProvider['kind'];
+  private projectByKey = new Map<string, Promise<any>>();
+  private mapById = new Map<string, Promise<any>>();
   private mediaById = new Map<string, Promise<any>>();
+  private mediaGroupById = new Map<string, Promise<any[]>>();
+  private databaseByProjectId = new Map<string, Promise<any[]>>();
 
   constructor(private readonly source: GameDataProvider) {
     this.kind = source.kind;
   }
 
+  invalidateProject(projectId: string): void {
+    this.projectByKey.delete(`projectId:${projectId}`);
+    this.databaseByProjectId.delete(projectId);
+  }
+
   getProject(query: { projectId?: string | null; mapId?: string | null }): Promise<any> {
-    return this.source.getProject(query);
+    let key: string | null = null;
+    if (query.projectId) key = `projectId:${String(query.projectId)}`;
+    else if (query.mapId) key = `mapId:${String(query.mapId)}`;
+
+    if (!key) return this.source.getProject(query);
+    return this.getOrCreate(this.projectByKey, key, () => this.source.getProject(query));
   }
 
   getMap(mapId: string): Promise<any> {
-    return this.source.getMap(mapId);
+    const key = String(mapId);
+    return this.getOrCreate(this.mapById, key, () => this.source.getMap(mapId));
   }
 
   getMedia(mediaId: string): Promise<any> {
     const key = String(mediaId);
-    if (!this.mediaById.has(key)) {
-      const promise = this.source.getMedia(mediaId).catch((error) => {
-        this.mediaById.delete(key);
-        throw error;
-      });
-      this.mediaById.set(key, promise);
-    }
-    return this.mediaById.get(key)!;
+    return this.getOrCreate(this.mediaById, key, () => this.source.getMedia(mediaId));
+  }
+
+  getMediaGroup(mediaId: string): Promise<any[]> {
+    return this.getOrCreate(this.mediaGroupById, mediaId, () => this.source.getMediaGroup?.(mediaId) ?? Promise.resolve([]));
   }
 
   getDatabase(projectId?: string): Promise<any[]> {
-    return this.source.getDatabase(projectId);
+    const key = String(projectId ?? '');
+    return this.getOrCreate(this.databaseByProjectId, key, () => this.source.getDatabase(projectId));
   }
 
   getPlayerStartConfig?(query: PlayerStartConfigQuery): Promise<any> {
     return this.source.getPlayerStartConfig?.(query) ?? Promise.resolve(null);
+  }
+
+  private getOrCreate<T>(cache: Map<string, Promise<T>>, key: string, load: () => Promise<T>): Promise<T> {
+    const cached = cache.get(key);
+    if (cached) return cached;
+
+    const promise = load().catch((error) => {
+      cache.delete(key);
+      throw error;
+    });
+    cache.set(key, promise);
+    return promise;
   }
 }
 
@@ -181,6 +216,12 @@ export const getStudioGameRuntimeConfig = (): StudioGameRuntimeConfig => {
 
 export const resetGameDataProvider = (): void => {
   providerInstance = null;
+};
+
+export const invalidateGameDataProviderProject = (projectId: string): void => {
+  if (providerInstance instanceof CachedGameDataProvider) {
+    providerInstance.invalidateProject(projectId);
+  }
 };
 
 export const getGameDataProvider = (): GameDataProvider => {

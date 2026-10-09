@@ -8,6 +8,7 @@
 </Container>
 
 <script>
+  import { computed } from "canvasengine";
   import { RpgClientEngine, inject } from "../../index";
 
   const { width, height, children, color, top, left } = defineProps();

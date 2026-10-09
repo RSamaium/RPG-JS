@@ -34,6 +34,6 @@ export class GameoverGui extends Gui {
         return super.open(options, {
             waitingAction: true,
             blockPlayerInput: true
-        })
+        }) as Promise<GameoverGuiSelection | null>
     }
 }

@@ -2,11 +2,11 @@ import { ActionBattleOptions } from "./types";
 import { normalizeActionBattleAttackProfile } from "./core/attack-profile";
 
 export const DEFAULT_ACTION_BATTLE_OPTIONS: ActionBattleOptions = {
+  preset: "adventure",
   ui: {
-    actionBar: {
+    hotbar: {
       enabled: false,
       autoOpen: false,
-      mode: "both",
     },
     targeting: {
       enabled: true,
@@ -33,7 +33,103 @@ export const DEFAULT_ACTION_BATTLE_OPTIONS: ActionBattleOptions = {
     previewColor: 0xfff3b0,
     previewAccentColor: 0xffffff,
   },
+  combat: {
+    player: {
+      combo: {
+        enabled: true,
+        bufferMs: 140,
+        resetMs: 700,
+        steps: [
+          {
+            id: "adventure-combo-1",
+            startupMs: 55,
+            activeMs: 90,
+            recoveryMs: 120,
+            damageMultiplier: 0.85,
+            knockbackMultiplier: 0.7,
+          },
+          {
+            id: "adventure-combo-2",
+            startupMs: 45,
+            activeMs: 95,
+            recoveryMs: 130,
+            damageMultiplier: 1,
+            knockbackMultiplier: 0.85,
+          },
+          {
+            id: "adventure-combo-3",
+            startupMs: 90,
+            activeMs: 120,
+            recoveryMs: 240,
+            damageMultiplier: 1.35,
+            knockbackMultiplier: 1.4,
+          },
+        ],
+      },
+      chargedAttack: {
+        enabled: true,
+        control: "e",
+        minChargeMs: 300,
+        maxChargeMs: 900,
+        minDamageMultiplier: 1.5,
+        maxDamageMultiplier: 2.4,
+        minKnockbackMultiplier: 1.6,
+        maxKnockbackMultiplier: 2.3,
+        profile: {
+          id: "adventure-charged",
+          startupMs: 100,
+          activeMs: 140,
+          recoveryMs: 380,
+        },
+      },
+      dodge: {
+        enabled: true,
+        durationMs: 180,
+        cooldownMs: 650,
+        invincibilityMs: 220,
+        additionalSpeed: 8,
+      },
+      guard: {
+        enabled: true,
+        control: "f",
+        parryWindowMs: 140,
+        guardDamageReduction: 0.65,
+        guardKnockbackReduction: 0.6,
+        guardArcDegrees: 120,
+        staggerMs: 650,
+        counterWindowMs: 700,
+        counterDamageMultiplier: 1.5,
+        counterStaggerMultiplier: 1.5,
+      },
+      softTargeting: {
+        enabled: true,
+        range: 112,
+        coneDegrees: 110,
+        directionWeight: 0.48,
+        distanceWeight: 0.32,
+        threatWeight: 0.2,
+        indicatorDurationMs: 220,
+      },
+    },
+  },
+  visual: "impact",
+  feedback: {
+    hitStop: true,
+    hitStopMs: 32,
+    heavyHitStopMs: 52,
+    parryHitStopMs: 68,
+    flashes: true,
+    screenShake: true,
+    damageNumbers: true,
+  },
   animations: {},
+  ai: {
+    director: {
+      enabled: true,
+      maxConcurrentAttackers: 1,
+      slotDurationMs: 1200,
+    },
+  },
 };
 
 let currentActionBattleOptions: ActionBattleOptions =
@@ -42,7 +138,38 @@ let currentActionBattleOptions: ActionBattleOptions =
 export function normalizeActionBattleOptions(
   options: ActionBattleOptions = {}
 ): ActionBattleOptions {
+  const preset = options.preset ?? DEFAULT_ACTION_BATTLE_OPTIONS.preset;
+  const classic = preset === "classic";
+  const defaultCombat = classic
+    ? {
+        player: {
+          combo: false,
+          chargedAttack: false,
+          dodge: false,
+          guard: false,
+          softTargeting: false,
+        },
+      }
+    : DEFAULT_ACTION_BATTLE_OPTIONS.combat;
+  const defaultAdventurePlayer = DEFAULT_ACTION_BATTLE_OPTIONS.combat?.player;
+  const requestedPlayer = {
+    ...defaultCombat?.player,
+    ...options.systems?.combat?.player,
+    ...options.combat?.player,
+  };
+  const normalizePlayerFeature = (
+    value: any,
+    defaults: any
+  ) => {
+    if (value === false) return false;
+    if (value === true) return { ...defaults, enabled: true };
+    if (value && typeof value === "object") {
+      return { ...defaults, ...value, enabled: value.enabled ?? true };
+    }
+    return value;
+  };
   const combat = {
+    ...defaultCombat,
     ...DEFAULT_ACTION_BATTLE_OPTIONS.systems?.combat,
     ...options.systems?.combat,
     ...options.combat,
@@ -51,12 +178,52 @@ export function normalizeActionBattleOptions(
       ...options.systems?.combat?.hooks,
       ...options.combat?.hooks,
     },
+    player: {
+      ...requestedPlayer,
+      combo: normalizePlayerFeature(
+        requestedPlayer.combo,
+        defaultAdventurePlayer?.combo
+      ),
+      chargedAttack: normalizePlayerFeature(
+        requestedPlayer.chargedAttack,
+        defaultAdventurePlayer?.chargedAttack
+      ),
+      dodge: normalizePlayerFeature(
+        requestedPlayer.dodge,
+        defaultAdventurePlayer?.dodge
+      ),
+      guard: normalizePlayerFeature(
+        requestedPlayer.guard,
+        defaultAdventurePlayer?.guard
+      ),
+      softTargeting: normalizePlayerFeature(
+        requestedPlayer.softTargeting,
+        defaultAdventurePlayer?.softTargeting
+      ),
+    },
   };
   const attack = {
     ...DEFAULT_ACTION_BATTLE_OPTIONS.attack,
     ...options.attack,
     ...combat.attack,
   };
+  if (
+    !classic &&
+    options.attack?.profile?.control === undefined &&
+    options.combat?.attack?.profile?.control === undefined &&
+    options.systems?.combat?.attack?.profile?.control === undefined
+  ) {
+    attack.profile = {
+      ...attack.profile,
+      control: {
+        movementLock: "active",
+        directionLock: "active",
+        moveCancelsRecovery: true,
+        dodgeCancelsRecovery: true,
+        inputBufferMs: 160,
+      },
+    };
+  }
   const attackProfile = normalizeActionBattleAttackProfile(attack.profile, {
     lockMovement: attack.lockMovement,
     lockDurationMs: attack.lockDurationMs,
@@ -73,17 +240,17 @@ export function normalizeActionBattleOptions(
   skills.targeting = skills.targeting ?? skills.getTargeting;
   skills.getTargeting = skills.getTargeting ?? skills.targeting;
 
-  const defaultActionBar = DEFAULT_ACTION_BATTLE_OPTIONS.ui?.actionBar as any;
+  const defaultHotbar = DEFAULT_ACTION_BATTLE_OPTIONS.ui?.hotbar as any;
   const defaultTargeting = DEFAULT_ACTION_BATTLE_OPTIONS.ui?.targeting as any;
-  const optionActionBar = options.ui?.actionBar as any;
+  const optionHotbar = options.ui?.hotbar as any;
   const optionTargeting = options.ui?.targeting as any;
   const optionAttackPreview = options.ui?.attackPreview as any;
-  const actionBar =
-    options.ui?.actionBar === false
-      ? { ...defaultActionBar, enabled: false }
+  const hotbar =
+    options.ui?.hotbar === false
+      ? { ...defaultHotbar, enabled: false }
       : {
-          ...defaultActionBar,
-          ...(options.ui?.actionBar === true ? { enabled: true } : optionActionBar),
+          ...defaultHotbar,
+          ...(options.ui?.hotbar === true ? { enabled: true } : optionHotbar),
         };
   const legacyPreviewEnabled = normalizedAttack.showPreview !== false;
   const attackPreview =
@@ -110,6 +277,11 @@ export function normalizeActionBattleOptions(
     ...DEFAULT_ACTION_BATTLE_OPTIONS.systems?.ai,
     ...options.systems?.ai,
     ...options.ai,
+    actions: {
+      ...DEFAULT_ACTION_BATTLE_OPTIONS.systems?.ai?.actions,
+      ...options.systems?.ai?.actions,
+      ...options.ai?.actions,
+    },
     behaviors: {
       ...DEFAULT_ACTION_BATTLE_OPTIONS.systems?.ai?.behaviors,
       ...options.systems?.ai?.behaviors,
@@ -120,12 +292,26 @@ export function normalizeActionBattleOptions(
       ...options.systems?.ai?.presets,
       ...options.ai?.presets,
     },
+    visuals: {
+      ...DEFAULT_ACTION_BATTLE_OPTIONS.systems?.ai?.visuals,
+      ...options.systems?.ai?.visuals,
+      ...options.ai?.visuals,
+    },
+    director:
+      options.ai?.director === false
+        ? false
+        : {
+            ...((DEFAULT_ACTION_BATTLE_OPTIONS.ai?.director as object) ?? {}),
+            ...((options.systems?.ai?.director as object) ?? {}),
+            ...((options.ai?.director as object) ?? {}),
+          },
   };
 
   return {
+    preset,
     ui: {
       ...options.ui,
-      actionBar,
+      hotbar,
       targeting,
       attackPreview,
     },
@@ -140,11 +326,17 @@ export function normalizeActionBattleOptions(
       attack: normalizedAttack,
     },
     ai,
-    visual: options.visual,
+    visual: options.visual ?? (classic ? "classic" : DEFAULT_ACTION_BATTLE_OPTIONS.visual),
+    feedback: {
+      ...DEFAULT_ACTION_BATTLE_OPTIONS.feedback,
+      ...(classic ? { hitStop: false } : {}),
+      ...options.feedback,
+    },
     animations: {
       ...DEFAULT_ACTION_BATTLE_OPTIONS.animations,
       ...options.animations,
     },
+    audio: options.audio,
     systems: {
       combat: {
         ...combat,

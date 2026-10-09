@@ -13,13 +13,12 @@ On the server:
 
 ```ts
 import { createServer, provideServerModules } from "@rpgjs/server";
-import { provideMain } from "./modules/main";
+import mainServerModule from "./modules/server";
 import { provideTiledMap } from "@rpgjs/tiledmap/server";
 
 export default createServer({
   providers: [
-    provideMain(),
-    provideServerModules([]),
+    provideServerModules([mainServerModule]),
     provideTiledMap()
   ]
 });
@@ -56,8 +55,7 @@ The map ID used by RPGJS must match the file name, so `simplemap.tmx` becomes th
 In your server module:
 
 ```ts
-import { defineModule } from "@rpgjs/common";
-import { RpgServer } from "@rpgjs/server";
+import { defineModule, type RpgServer } from "@rpgjs/server";
 import { player } from "./player";
 
 export default defineModule<RpgServer>({
@@ -85,4 +83,3 @@ If you want your own renderer or your own map format, use [Custom map rendering 
 ## Next step
 
 Continue with [Create hero in map](/guide/create-hero-in-map).
-

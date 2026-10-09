@@ -1,5 +1,17 @@
 # @rpgjs/physic
 
+## 5.0.3
+
+### Patch Changes
+
+- ccb9495: Fix TypeScript declaration errors across the package build, align multi-target declaration exports, complete movement API overloads, and make package and root builds fail when declaration generation reports a type error.
+
+## 5.0.2
+
+### Patch Changes
+
+- ccb9495: Fix TypeScript declaration errors across the package build, align multi-target declaration exports, complete movement API overloads, and make package and root builds fail when declaration generation reports a type error.
+
 ## 5.0.1-beta.0
 
 ### Patch Changes

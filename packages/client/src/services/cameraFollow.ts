@@ -74,6 +74,28 @@ export interface CameraFollowApplyContext {
   shouldFollowCamera: () => boolean;
 }
 
+export type CameraFollowOwnership = {
+  readonly viewport: object;
+  readonly token: symbol;
+};
+
+const cameraFollowOwners = new WeakMap<object, symbol>();
+
+const isTrackableViewport = (viewport: unknown): viewport is object => {
+  return (typeof viewport === "object" && viewport !== null) || typeof viewport === "function";
+};
+
+const claimCameraFollow = (viewport: unknown): CameraFollowOwnership | null => {
+  if (!isTrackableViewport(viewport)) return null;
+  const token = Symbol("camera-follow-owner");
+  cameraFollowOwners.set(viewport, token);
+  return { viewport, token };
+};
+
+export const ownsCameraFollow = (ownership: CameraFollowOwnership | null): boolean => {
+  return ownership !== null && cameraFollowOwners.get(ownership.viewport) === ownership.token;
+};
+
 const finiteNumber = (value: unknown, fallback: number) => {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 };
@@ -120,9 +142,19 @@ export const cameraFollowOptions = (smoothMove: CameraFollowSmoothMove) => {
   return Object.keys(options).length > 0 ? options : undefined;
 };
 
-export const clearCameraFollowPlugins = (viewport: any) => {
+export const clearCameraFollowPlugins = (
+  viewport: any,
+  ownership: CameraFollowOwnership | null = null
+) => {
+  if (ownership && (ownership.viewport !== viewport || !ownsCameraFollow(ownership))) {
+    return false;
+  }
   viewport?.plugins?.remove?.("animate");
   viewport?.plugins?.remove?.("follow");
+  if (isTrackableViewport(viewport)) {
+    cameraFollowOwners.delete(viewport);
+  }
+  return true;
 };
 
 export const ownsCameraFollowRevision = (
@@ -190,6 +222,25 @@ export const followCameraInstantly = (
   return true;
 };
 
+export const syncCameraFollowPosition = (
+  viewport: any,
+  target: CameraFollowTarget,
+  smoothMove: CameraFollowSmoothMove
+) => {
+  if (smoothMoveEnabled(smoothMove) || typeof viewport?.moveCenter !== "function") {
+    return false;
+  }
+
+  const position = readCameraFollowPosition(target);
+  if (!position) return false;
+
+  const center = viewport.center;
+  if (center?.x !== position.x || center?.y !== position.y) {
+    viewport.moveCenter(position.x, position.y);
+  }
+  return true;
+};
+
 export const applyCameraFollow = ({
   viewport,
   target,
@@ -201,11 +252,18 @@ export const applyCameraFollow = ({
   clearCameraFollowPlugins(viewport);
 
   const position = readCameraFollowPosition(target);
-  if (!position) return false;
+  if (!position) return null;
+
+  const ownership = claimCameraFollow(viewport);
+  if (!ownership) return null;
 
   const animationOptions = cameraFollowAnimationOptions(smoothMove);
   if (!animationOptions || animationOptions.time <= 0) {
-    return followCameraInstantly(viewport, target, smoothMove);
+    if (!followCameraInstantly(viewport, target, smoothMove)) {
+      clearCameraFollowPlugins(viewport, ownership);
+      return null;
+    }
+    return ownership;
   }
 
   viewport.animate({
@@ -213,10 +271,11 @@ export const applyCameraFollow = ({
     time: animationOptions.time,
     ease: animationOptions.ease,
     callbackOnComplete: () => {
-      if (!isCurrentRevision(followRevision) || !shouldFollowCamera()) return;
-      if (!readCameraFollowPosition(target)) return;
-      followCameraInstantly(viewport, target, smoothMove);
+      if (!ownsCameraFollow(ownership) || !isCurrentRevision(followRevision) || !shouldFollowCamera()) return;
+      if (!readCameraFollowPosition(target) || !followCameraInstantly(viewport, target, smoothMove)) {
+        clearCameraFollowPlugins(viewport, ownership);
+      }
     },
   });
-  return true;
+  return ownership;
 };

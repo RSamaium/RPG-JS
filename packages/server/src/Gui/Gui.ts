@@ -10,9 +10,9 @@ export interface GuiOpenOptions {
 export class Gui {
 
     private static _openSequence = 0
-    private _close: Function = () => {}
+    private _close: (data?: unknown) => void = () => {}
     private _blockPlayerInput: boolean = false
-    private _events = new Map<string, (data: any) => void>()
+    private _events = new Map<string, (data: unknown) => unknown | Promise<unknown>>()
     private _closed = false
     openId: string | null = null
 
@@ -26,7 +26,7 @@ export class Gui {
     open(data?: unknown, {
         waitingAction = false,
         blockPlayerInput = false
-    }: GuiOpenOptions = {}): Promise<any> {
+    }: GuiOpenOptions = {}): Promise<unknown | null> {
         return new Promise((resolve) => {
             this._closed = false
             this.openId = `${Date.now()}-${++Gui._openSequence}`
@@ -43,7 +43,7 @@ export class Gui {
                 resolve(null)
             }
             else {
-                this._close = resolve
+                this._close = resolve as (data?: unknown) => void
             }
         })
     }
@@ -55,20 +55,20 @@ export class Gui {
         return this.openId === openId
     }
 
-    on(event: string, callback: (data: any) => void) {
-        this._events.set(event, callback)
+    on<T = unknown>(event: string, callback: (data: T) => unknown | Promise<unknown>): void {
+        this._events.set(event, callback as (data: unknown) => unknown | Promise<unknown>)
     }
 
-    async emit(event: string, data: any): Promise<any> {
+    async emit<TResult = unknown>(event: string, data: unknown): Promise<TResult | null> {
         const callback = this._events.get(event)
         if (callback) {
-            return await callback(data)
+            return await callback(data) as TResult
         } else {
             return null
         }
     }
 
-    close(data?: unknown) {
+    close(data?: unknown): void {
         if (this._closed) {
             return
         }
@@ -86,7 +86,7 @@ export class Gui {
         this._close(data)
     }
 
-    update(data?: unknown, { clientActionId }: { clientActionId?: string } = {}) {
+    update(data?: unknown, { clientActionId }: { clientActionId?: string } = {}): void {
         this.player.emit('gui.update', {
             guiId: this.id,
             data,

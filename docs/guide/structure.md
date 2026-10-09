@@ -14,19 +14,17 @@ The starter separates client boot, server boot, shared client config, and module
 ```ts
 import { startGame, provideMmorpg } from "@rpgjs/client";
 import configClient from "./config/config.client";
-import { mergeConfig } from "@signe/di";
 
-startGame(
-  mergeConfig(configClient, {
-    providers: [provideMmorpg({})],
-  }) 
-);
+startGame({
+  ...configClient,
+  providers: [...configClient.providers, provideMmorpg({})],
+});
 ```
 
 Use this entry when the client connects to a remote RPGJS server.
 
 By default, MMORPG mode stores a stable session id in `localStorage` and passes it
-to `@signe/room` as the connection session id. Refreshes and multiple tabs from
+to the RPGJS room adapter as the connection session id. Refreshes and multiple tabs from
 the same browser therefore restore the same player session while each WebSocket
 keeps its own connection id. Use `connectionIdScope: "session"` to keep the
 session only for one browser tab, or `connectionIdScope: "ephemeral"` to create a
@@ -34,6 +32,12 @@ new player session on each page load:
 
 ```ts
 providers: [provideMmorpg({ connectionIdScope: "session" })]
+```
+
+When one host serves several games, give each game its own initial lobby room:
+
+```ts
+providers: [provideMmorpg({ room: `lobby-${projectId}` })]
 ```
 
 If your server uses `engine.auth()`, send the token with the MMORPG connection
@@ -50,21 +54,25 @@ providers: [
 ]
 ```
 
+Set `deferConnection: true` when a client GUI such as `@rpgjs/account` must run
+before credentials are available. The GUI calls `RpgClientEngine.connect()`
+after it obtains a token; without this option, startup connects automatically as
+before.
+
 ## `server.ts`
 
 `server.ts` creates the game server and registers your providers:
 
 ```ts
 import { createServer, provideServerModules, LocalStorageSaveStorageStrategy } from "@rpgjs/server";
-import { provideMain } from "./modules/main";
+import mainServerModule from "./modules/server";
 import { provideSaveStorage } from "@rpgjs/server";
 import { provideTiledMap } from "@rpgjs/tiledmap/server";
 
 export default createServer({
   providers: [
-    provideMain(),
+    provideServerModules([mainServerModule]),
     provideSaveStorage(new LocalStorageSaveStorageStrategy({ key: "save" })),
-    provideServerModules([]),
     provideTiledMap()
   ]
 });
@@ -77,19 +85,23 @@ This is where you plug modules, maps, database content, save strategies, or serv
 `standalone.ts` runs the client and server together for a standalone RPG:
 
 ```ts
-import { mergeConfig } from "@signe/di";
 import { provideRpg, startGame } from "@rpgjs/client";
 import startServer from "./server";
 import configClient from "./config/config.client";
 
-startGame(
-  mergeConfig(configClient, {
-    providers: [provideRpg(startServer)],
-  })
-);
+startGame({
+  ...configClient,
+  providers: [...configClient.providers, provideRpg(startServer)],
+});
 ```
 
 Use this entry when you want a single-player RPG running entirely from the client app.
+
+<Warning>
+Because standalone mode runs the server inside the browser, its production
+bundle includes the code imported by `server.ts`. Do not put secrets or private
+service credentials in a standalone game bundle.
+</Warning>
 
 ## `config/config.client.ts`
 
@@ -97,7 +109,7 @@ Use this entry when you want a single-player RPG running entirely from the clien
 
 ```ts
 import { provideClientGlobalConfig, provideClientModules, Presets } from "@rpgjs/client";
-import { provideMain } from "../modules/main";
+import mainClientModule from "../modules/client";
 import { provideTiledMap } from "@rpgjs/tiledmap/client";
 
 export default {
@@ -106,8 +118,8 @@ export default {
       basePath: "map",
     }),
     provideClientGlobalConfig(),
-    provideMain(),
     provideClientModules([
+      mainClientModule,
       {
         spritesheets: [
           {
@@ -169,6 +181,7 @@ If you omit `keyboardControls`, RPGJS injects the default bindings automatically
   escape: "escape"
 }
 ```
+
 
 Partial `keyboardControls` objects are merged with these defaults, so a game can
 override one key without redefining every movement/action binding.
@@ -242,8 +255,7 @@ loop.
 You can retrieve this global config anywhere on the client with `inject(GlobalConfigToken)`:
 
 ```ts
-import { inject } from "@signe/di";
-import { GlobalConfigToken } from "@rpgjs/client";
+import { inject, GlobalConfigToken } from "@rpgjs/client";
 import type { KeyboardActionConfig } from "@rpgjs/client";
 
 const config = inject(GlobalConfigToken) as {
@@ -268,19 +280,26 @@ console.log(config.ui?.locale);
 This is useful in client services, GUI components, or custom systems that need access to
 global input bindings or project-specific client configuration.
 
-## `modules/main`
+## `modules/server.ts` and `modules/client.ts`
 
-The main module is usually where you declare your first server hooks and maps:
+The main module keeps client and server ownership explicit. Define server hooks
+in `modules/server.ts`:
 
 ```ts
-import { createModule } from "@rpgjs/common";
-import server from "./server";
+import { defineModule, type RpgServer } from "@rpgjs/server";
 
-export function provideMain() {
-  return createModule("main", [{
-    server
-  }]);
-}
+export default defineModule<RpgServer>({
+  player: {
+    onConnected(player) {
+      console.log("Player connected", player.id);
+    }
+  }
+});
 ```
 
-This keeps your game logic modular. You can add more modules later for battle, UI, quests, chat, or any custom feature.
+Define visual behavior in `modules/client.ts`, then install each definition with
+the matching runtime provider as shown above. This keeps server code out of the
+client bundle and client components out of the server bundle when building an
+MMORPG. This isolation depends on the import graph: never import the server
+module from client code. See [Creating Modules](/guide/create-module) for the
+complete bundle-ownership rules and the standalone exception.

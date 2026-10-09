@@ -67,6 +67,10 @@ export const packages = (type: "build" | "dev") => {
       buildScript,
     },
     {
+      name: "render-map2d",
+      buildScript,
+    },
+    {
       name: "common",
       buildScript,
       dependencies: createDependencies(packagesPath, ['physic']),
@@ -92,6 +96,11 @@ export const packages = (type: "build" | "dev") => {
       buildScript,
       dependencies: createDependencies(packagesPath, ['client', 'server']),
     },
+    {
+      name: "vue",
+      buildScript,
+      dependencies: createDependencies(packagesPath, ['common', 'client']),
+    },
     
     // Packages depending on client/server
     {
@@ -105,9 +114,20 @@ export const packages = (type: "build" | "dev") => {
       dependencies: createDependencies(packagesPath, ['client', 'server', 'vite']),
     },
     {
+      name: "chat",
+      buildScript,
+      dependencies: createDependencies(packagesPath, ['client', 'server', 'vite']),
+    },
+    {
+      name: "account",
+      buildScript,
+      dependencies: createDependencies(packagesPath, ['client', 'vite']),
+    },
+    {
       name: "studio",
       buildScript,
       dependencies: [
+        createDependency(packagesPath, 'render-map2d'),
         createDependency(packagesPath, 'action-battle', 'client/index.d.ts'),
         createDependency(packagesPath, 'vite'),
       ],

@@ -1,10 +1,8 @@
+import type { TerrainRenderMode } from "@rpgjs/render-map2d";
+
 export const STUDIO_TERRAIN_TILE_SIZE = 48;
 
-export type TerrainRenderMode =
-  | { type: "hard" }
-  | { type: "fade"; width?: number; curve?: "linear" | "smooth" | "sharp" }
-  | { type: "water"; border?: boolean; foam?: boolean }
-  | { type: "custom"; shaderKey: string; params?: Record<string, unknown> };
+export type { TerrainNineSliceCenter, TerrainRenderMode } from "@rpgjs/render-map2d";
 
 export interface TerrainTextureMetadata {
   id: string;
@@ -64,13 +62,56 @@ export interface StudioTerrainMorphologyOperation {
   stroke: StudioTerrainStroke;
 }
 
+/**
+ * Extensible rendering parameters persisted on a Studio terrain morphology
+ * feature. Wave overrides apply to filled holes and inherit map defaults when
+ * omitted.
+ */
+export interface StudioTerrainMorphologyParams extends Record<string, unknown> {
+  /** Filled-hole animation speed override, clamped from 0.1 to 4. */
+  waveSpeed?: number;
+  /** Filled-hole animation strength from 0 (static) to 1. */
+  waveIntensity?: number;
+  /** Clockwise screen-space travel angle in degrees: 0 right, 90 down. */
+  waveDirection?: number;
+  /** Wall look: `rock` renders stratified rock faces with a rock rim, as Studio dug caves use. */
+  wallStyle?: "rock";
+  /** Procedural face texture of a `rock` wall without `textureId` (default `masonry`). */
+  rockTexture?: StudioTerrainRockTexture;
+}
+
+/** Procedural rock face textures: cut stone courses, or irregular natural rock. */
+export type StudioTerrainRockTexture = "masonry" | "natural";
+
 export interface StudioTerrainMorphologyFeature {
   id: string;
   kind: "hole" | "wall";
-  params: Record<string, unknown>;
+  params: StudioTerrainMorphologyParams;
   strokes: StudioTerrainStroke[];
   eraserStrokes?: StudioTerrainStroke[];
   operations?: StudioTerrainMorphologyOperation[];
+}
+
+export interface StudioTerrainRenderBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Client-only invalidation data produced after an authoritative Studio stream
+ * packet has been consolidated.
+ */
+export interface StudioTerrainStreamUpdate {
+  /** Authoritative map revision represented by the active chunks. */
+  revision: string;
+  /** Monotonic client generation incremented once per consolidated packet. */
+  generation: number;
+  /** Terrain regions whose disclosed content changed in this generation. */
+  dirtyRegions: StudioTerrainRenderBounds[];
+  /** Terrain regions represented by all chunks currently retained by the client. */
+  activeRegions: StudioTerrainRenderBounds[];
 }
 
 export interface StudioTerrainRenderData {
@@ -86,12 +127,24 @@ export interface StudioTerrainRenderData {
   morphologyFeatures: StudioTerrainMorphologyFeature[];
   waterAnimation: StudioWaterAnimationOptions;
   version: string;
+  /** Incremental invalidation state for streamed maps; absent for direct loads. */
+  streamUpdate?: StudioTerrainStreamUpdate;
 }
 
+/**
+ * Client-side visual settings for animated Studio liquids.
+ * Filled terrain holes may override speed, intensity, and direction through
+ * their morphology params without changing gameplay or server authority.
+ */
 export interface StudioWaterAnimationOptions {
+  /** Whether painted water terrain receives the animated overlay. */
   enabled: boolean;
+  /** Animation speed multiplier, clamped from 0.1 to 4. */
   speed: number;
+  /** Overlay strength from 0 (static) to 1. */
   intensity: number;
+  /** Clockwise screen-space travel angle in degrees: 0 right, 90 down. */
+  direction: number;
 }
 
 export interface StudioTerrainControlTexture {
@@ -101,6 +154,18 @@ export interface StudioTerrainControlTexture {
   tileSize: number;
   palette: string[];
   encoding?: string;
+  /** Client-safe control-texture regions disclosed with the active map chunks. */
+  regions?: StudioTerrainControlRegion[];
+}
+
+export interface StudioTerrainControlRegion {
+  key: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  encoding: "rgba8-base64" | "rgba8-rle-base64";
+  data: string;
 }
 
 export interface StudioCollisionPolygon {

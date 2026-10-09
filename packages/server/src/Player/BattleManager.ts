@@ -5,6 +5,25 @@ import { Effect } from "./EffectManager";
 import type { IElementManager } from "./ElementManager";
 import type { IEffectManager } from "./EffectManager";
 import type { IParameterManager } from "./ParameterManager";
+import type { SkillData } from "./SkillManager";
+
+export interface DamageResult {
+  damage: number;
+  critical: boolean;
+  elementVulnerable: boolean;
+  guard: boolean;
+  superGuard: boolean;
+}
+
+export type BattleParameterSet = Record<string, number>;
+
+export interface DamageFormulas {
+  damageSkill?: (attacker: BattleParameterSet, defender: BattleParameterSet, skill: SkillData) => number;
+  damagePhysic?: (attacker: BattleParameterSet, defender: BattleParameterSet) => number;
+  damageCritical?: (damage: number, attacker: BattleParameterSet, defender: BattleParameterSet) => number;
+  damageGuard?: (damage: number, attacker: BattleParameterSet, defender: BattleParameterSet) => number;
+  coefficientElements?: (attacker: { rate: number }, defender: { rate: number }, defenderBase: { rate: number }) => number;
+}
 
 /**
  * Interface combining methods from other managers needed by BattleManager
@@ -48,27 +67,15 @@ export interface IBattleManager {
      * }
      * ```
      */
-  applyDamage(attackerPlayer: RpgPlayer, skill?: any): {
-    damage: number;
-    critical: boolean;
-    elementVulnerable: boolean;
-    guard: boolean;
-    superGuard: boolean;
-  };
+  applyDamage(attackerPlayer: RpgPlayer, skill?: SkillData): DamageResult;
 }
 
 export function WithBattleManager<TBase extends PlayerCtor>(Base: TBase): new (...args: ConstructorParameters<TBase>) => InstanceType<TBase> & IBattleManager {
   return class extends Base {
     applyDamage(
       attackerPlayer: RpgPlayer,
-      skill?: any
-    ): {
-      damage: number;
-      critical: boolean;
-      elementVulnerable: boolean;
-      guard: boolean;
-      superGuard: boolean;
-    } {
+      skill?: SkillData
+    ): DamageResult {
       const self = this as unknown as PlayerWithMixins;
       const getParam = (player: RpgPlayer) => {
         const params = {};

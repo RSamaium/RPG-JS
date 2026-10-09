@@ -120,7 +120,7 @@ States to add when used
 ### Signature
 
 ```ts
-addStates: any[]
+addStates: StateApplication[]
 ```
 
 ## atk
@@ -248,7 +248,7 @@ Elemental properties
 ### Signature
 
 ```ts
-elements: any[]
+elements: ElementAffinity[]
 ```
 
 ## equip
@@ -525,7 +525,7 @@ Parameter modifiers
 ### Signature
 
 ```ts
-paramsModifier: Record<string, any>
+paramsModifier: Record<string, unknown>
 ```
 
 ## pdef
@@ -619,7 +619,7 @@ States to remove when used
 ### Signature
 
 ```ts
-removeStates: any[]
+removeStates: StateApplication[]
 ```
 
 ## resolveEquipmentsSnapshot

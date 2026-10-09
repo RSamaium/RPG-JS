@@ -1,14 +1,19 @@
+import { normalizeElementSubmersion } from "./map-renderer/element-submersion";
 "use client";
 
+import { buildElementPolygonHitboxes } from './element-polygon-hitbox'
 import MapComponentV2 from "./components/draw-map-v2.ce";
 import { inject, RpgClientEngine } from "@rpgjs/client";
 import { createSpriteSheetObject, resolveAssetSource } from "./spritesheet-utils";
 import { getGameDataProvider, getStudioGameRuntimeConfig } from "./data-provider";
+import { resolveStudioMapScale, scaleStudioHitboxes } from './map-scale';
 import {
   buildStudioTerrainCollisionPolygons,
   createStudioTerrainRenderData,
 } from "./map-renderer";
 import { resolveStudioElementSize } from "./studio-element-size";
+import { STUDIO_DIRECT_LOAD_MARKER } from "./map-streaming";
+import { assignStudioEventPlacementIds } from "./event-placement";
 
 // Type definitions for better type safety
 interface GlobalConfig {
@@ -490,11 +495,11 @@ export const loadMap = async (mapId: string) => {
   params.backgroundMusic = await resolveAudioSource(params.backgroundMusic);
   params.backgroundAmbientSound = await resolveAudioSource(params.backgroundAmbientSound);
 
-  const resolvedMapEvents = await hydrateEventMediaReferences(
+  const resolvedMapEvents = assignStudioEventPlacementIds(await hydrateEventMediaReferences(
     await resolveMapEventReferences(mapResponse.events, {
       useLocalBundleEvents,
     })
-  );
+  ));
   // Merge polygons with hitboxes to create polygon-based hitboxes
   const mergedHitboxes = [...(mapResponse.hitboxes ?? [])];
   
@@ -767,15 +772,16 @@ export const loadMap = async (mapId: string) => {
       const y = toFiniteNumber(element.y)
       if (x === null || y === null) return
 
+      const drawRule = resolveDrawRuleForElement(element, tileset, entry)
       const size = resolveStudioElementSize(
         element,
         tilesetElement,
         tileset.metadata,
         sourceWidth,
-        sourceHeight
+        sourceHeight,
+        { drawRule }
       )
       const zIndexOffset = toFiniteNumber(element.zIndexOffset) ?? 0
-      const drawRule = resolveDrawRuleForElement(element, tileset, entry)
 
       const mergedElement: Record<string, unknown> = {
         ...tilesetElement,
@@ -787,8 +793,14 @@ export const loadMap = async (mapId: string) => {
           typeof element.hasShadow === 'boolean'
             ? element.hasShadow
             : tilesetElement.hasShadow,
+        extractGroundShadow:
+          typeof element.extractGroundShadow === 'boolean'
+            ? element.extractGroundShadow
+            : tilesetElement.extractGroundShadow,
+        submersion: normalizeElementSubmersion(element.submersion),
         lightSpot: element.lightSpot !== undefined ? element.lightSpot : tilesetElement.lightSpot,
         zIndexOffset,
+        sortMode: element.sortMode ?? tilesetElement.sortMode,
       }
 
       if (drawRule) {
@@ -891,6 +903,17 @@ export const loadMap = async (mapId: string) => {
         Math.min(elementY + visualHeight, rawHitboxY + rawHitboxHeight)
       )
 
+      const polygonHitboxes = buildElementPolygonHitboxes(
+        hitbox,
+        { x: elementX, y: elementY },
+        { x: finalScaleX, y: finalScaleY },
+        `element_${index}_${tilesetElement.id}`
+      )
+      if (polygonHitboxes) {
+        mergedHitboxes.push(...polygonHitboxes)
+        return
+      }
+
       // Create the absolute hitbox with scale applied
       const absoluteHitbox = {
         id: `element_${index}_${tilesetElement.id}`,
@@ -968,7 +991,10 @@ export const loadMap = async (mapId: string) => {
 
   await waitForMapImages(map);
 
+  const mapScale = resolveStudioMapScale(map.params)
+
   return {
+    [STUDIO_DIRECT_LOAD_MARKER]: true,
     id: finalMapId,
     data: {
       ...map,
@@ -980,12 +1006,13 @@ export const loadMap = async (mapId: string) => {
       terrainRenderData,
       debugCollisions: client.globalConfig.debugCollisions === true,
     },
-    hitboxes: allHitboxes,
+    hitboxes: scaleStudioHitboxes(allHitboxes, mapScale),
     component: MapComponentV2,
     config: client.globalConfig,
     events: map.events,
-    width: isV2 ? map.params.width * 48 : map.params.width,
-    height: isV2 ? map.params.height * 48 : map.params.height,
+    // Physical world size, in scaled pixels (the map is drawn scaled).
+    width: (isV2 ? map.params.width * 48 : map.params.width) * mapScale,
+    height: (isV2 ? map.params.height * 48 : map.params.height) * mapScale,
     params: {
       backgroundMusic: map.params.backgroundMusic,
       backgroundAmbientSound: map.params.backgroundAmbientSound,
@@ -994,3 +1021,4 @@ export const loadMap = async (mapId: string) => {
 };
 
 export default loadMap;
+/// <reference path="./types/canvas-engine.d.ts" />

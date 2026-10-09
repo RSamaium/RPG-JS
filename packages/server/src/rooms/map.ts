@@ -1,4 +1,5 @@
-import { Action, Request, Room, UnhandledAction, type RoomMethods, type RoomOnJoin } from "@signe/room";
+import { dispatchPlayerDisconnected } from "./connection-lifecycle";
+import { Action, Request, UnhandledAction } from "@signe/room";
 import {
   Hooks,
   IceMovement,
@@ -13,6 +14,9 @@ import {
   findModules,
   type MapPhysicsInitContext,
   type MapPhysicsEntityContext,
+  type RpgActionInput,
+  type RpgMovementInput,
+  MAP_STREAM_REQUEST_EVENT,
 } from "@rpgjs/common";
 import {
   DEFAULT_DAY_LIGHTING,
@@ -23,106 +27,93 @@ import {
   normalizeLightingState,
   type LightingState,
   type LightingTransitionOptions,
-  type TimeDayTransitionPayload,
-  type TimeLightingPhaseTransitionPayload,
-  type TimeTransitionPayload,
-  type TimeWeatherTransitionPayload,
   type WeatherState,
   type WorldMapConfig,
 } from "@rpgjs/common";
 import { RpgPlayer, RpgEvent } from "../Player/Player";
-import { generateShortUUID, sync, type, users } from "@signe/sync";
-import { signal, type WritableSignal } from "@signe/reactive";
+import { createStatesSnapshotDeep, generateShortUUID, sync, type, users } from "@signe/sync";
+import { signal } from "@signe/reactive";
 import { inject } from "@signe/di";
-import { context } from "../core/context";;
+import { context } from "../core/context";
 import { finalize, lastValueFrom } from "rxjs";
 import { Subject } from "rxjs";
 import { BehaviorSubject } from "rxjs";
-import { COEFFICIENT_ELEMENTS, DAMAGE_CRITICAL, DAMAGE_PHYSIC, DAMAGE_SKILL } from "../presets";
-import { z } from "zod";
 import { MapOptions } from "../decorators/map";
 import { EventMode } from "../decorators/event";
 import { BaseRoom } from "./BaseRoom";
+import { applyConnectionLocale, applyPlayerLocale } from "./locale";
+import { RpgRoom } from "./registry";
+import type { RpgWritableSignal } from "@rpgjs/common";
 import { buildSaveSlotMeta, resolveSaveStorageStrategy } from "../services/save";
 import { Log } from "../logs/log";
-import { isMapUpdateAuthorized, MAP_UPDATE_TOKEN_ENV, MAP_UPDATE_TOKEN_HEADER } from "../node/map";
+import { createMapUpdateHeaders, isMapUpdateAuthorized, MAP_UPDATE_TOKEN_ENV } from "../map-update";
+import { emitServerStep } from "../server-step";
 import { RpgMapProjectiles } from "../projectiles";
+import type { DamageFormulas } from "../Player/BattleManager";
+import { runPlayerAuthenticationHooks } from "../auth";
+import {
+  filterMapStreamingProjectilePacket,
+  getMapStreamingVisibleEntityIds,
+  hasMapStreamingRuntime,
+  isMapStreamingPositionVisible,
+  refreshMapStreaming,
+  removeMapStreamingPlayer,
+  sendInitialMapStreaming,
+} from "../map-streaming";
+import { readMapSource, writeMapSource } from "../map-source-storage";
+import { MapInputProcessor } from "./map-input-processor";
+import {
+  MapUpdateSchema,
+  normalizeWorldMapConfigs,
+  parseWorldIdFromUpdateUrl,
+  unauthorizedUpdateResponse,
+  withDefaultDamageFormulas,
+} from "./map-update-request";
+import { cloneWeatherState, easeLightingProgress, interpolateLighting } from "./map-environment";
+import { MapTouchCollisions } from "./map-touch";
+import {
+  cloneEventTemplate,
+  normalizeEventMode,
+  normalizeEventObject,
+  resolveEventHitbox,
+  resolveEventMass,
+  resolveEventMode,
+  resolveEventPushable,
+  resolveScenarioOwnerId,
+} from "./map-events";
+import type {
+  Controls,
+  CreateDynamicEventOptions,
+  RpgMapSyncSchema,
+  EventHooks,
+  EventPosOption,
+  LightingSetOptions,
+  MapEventDefinition,
+  RpgRoomConnection,
+  RpgTouchContext,
+  WeatherSetOptions,
+} from "./map-types";
 
-const DEFAULT_DASH_COOLDOWN_MS = 450;
-const GROUND_TOUCH_SENSOR_COVERAGE_THRESHOLD = 0.8;
+export type {
+  Controls,
+  EventConstructor,
+  RpgConnectionState,
+  EventDefinition,
+  EventHooks,
+  EventPosOption,
+  MapEventDefinition,
+  MapEventPlacement,
+  RpgMapSyncProperty,
+  RpgMapSyncSchema,
+  RpgRoomConnection,
+  RpgTouchContext,
+} from "./map-types";
 
-type PhysicsCollisionEntity = {
-  uuid: string;
-  owner?: any;
-  position?: { x: number; y: number };
-  width?: number;
-  height?: number;
-};
+const WORLD_MAPS_STORAGE_KEY = "$room:rpgjs-world-maps";
 
-type TrackedTouchCollision = {
-  entityA: PhysicsCollisionEntity;
-  entityB: PhysicsCollisionEntity;
-};
-
-const isDashMovementInput = (input: any): input is {
-  type: "dash";
-  direction: { x: number; y: number };
-  additionalSpeed?: number;
-  duration?: number;
-  cooldown?: number;
-} => input && typeof input === "object" && input.type === "dash";
-
-const isMoveMovementInput = (input: any): input is {
-  type: "move";
-  direction: Direction;
-} => input && typeof input === "object" && input.type === "move";
-
-const normalizeServerMovementInput = (input: any): Direction | {
-  type: "dash";
-  direction: { x: number; y: number };
-  additionalSpeed: number;
-  duration: number;
-  cooldown: number;
-} | null => {
-  if (isMoveMovementInput(input)) {
-    return input.direction;
-  }
-  if (!isDashMovementInput(input)) {
-    if (typeof input !== "string" && typeof input !== "number") return null;
-    return input as Direction;
-  }
-
-  const rawX = Number(input.direction?.x ?? 0);
-  const rawY = Number(input.direction?.y ?? 0);
-  const magnitude = Math.hypot(rawX, rawY);
-  if (!Number.isFinite(magnitude) || magnitude <= 0) return null;
-
-  return {
-    type: "dash",
-    direction: {
-      x: rawX / magnitude,
-      y: rawY / magnitude,
-    },
-    additionalSpeed:
-      typeof input.additionalSpeed === "number" && Number.isFinite(input.additionalSpeed)
-        ? Math.max(0, Math.min(input.additionalSpeed, 64))
-        : 8,
-    duration:
-      typeof input.duration === "number" && Number.isFinite(input.duration)
-        ? Math.max(1, Math.min(input.duration, 1000))
-        : 180,
-    cooldown:
-      typeof input.cooldown === "number" && Number.isFinite(input.cooldown)
-        ? Math.max(0, Math.min(input.cooldown, 5000))
-        : DEFAULT_DASH_COOLDOWN_MS,
-  };
-};
-
-const vectorToDirection = (direction: { x: number; y: number }): Direction => {
-  if (Math.abs(direction.x) > Math.abs(direction.y)) {
-    return direction.x < 0 ? Direction.Left : Direction.Right;
-  }
-  return direction.y < 0 ? Direction.Up : Direction.Down;
+type StoredWorldMaps = {
+  id: string;
+  maps: WorldMapConfig[];
 };
 
 function isRpgLog(error: unknown): error is Log {
@@ -133,205 +124,32 @@ function isRpgLog(error: unknown): error is Log {
       && (error as any).name === "RpgLog");
 }
 
-/**
- * Interface for input controls configuration
- * 
- * Defines the structure for input validation and anti-cheat controls
- */
-export interface Controls {
-  /** Maximum allowed time delta between inputs in milliseconds */
-  maxTimeDelta?: number;
-  /** Maximum allowed frame delta between inputs */
-  maxFrameDelta?: number;
-  /** Minimum time between inputs in milliseconds */
-  minTimeBetweenInputs?: number;
-  /** Whether to enable anti-cheat validation */
-  enableAntiCheat?: boolean;
-  /** Maximum number of queued inputs processed per server tick */
-  maxInputsPerTick?: number;
-}
-
-/**
- * Zod schema for validating map update request body
- * 
- * This schema ensures that the required fields are present and properly typed
- * when updating a map configuration.
- */
-const MapUpdateSchema = z.object({
-  /** Configuration object for the map (optional) */
-  config: z.any().optional(),
-  /** Damage formulas configuration (optional) */
-  damageFormulas: z.any().optional(),
-  /** Unique identifier for the map (required) */
-  id: z.string(),
-  /** Width of the map in pixels (required) */
-  width: z.number(),
-  /** Height of the map in pixels (required) */
-  height: z.number(),
-  /** Map events to spawn (optional) */
-  events: z.array(z.any()).optional(),
-  /** Optional static hitboxes (custom maps) */
-  hitboxes: z.array(z.any()).optional(),
-  /** Optional named positions resolved by map integrations such as Tiled */
-  positions: z.record(z.string(), z.any()).optional(),
-  /** Parsed tiled map payload (optional) */
-  parsedMap: z.any().optional(),
-  /** Raw map source payload (optional) */
-  data: z.any().optional(),
-  /** Optional map params payload */
-  params: z.any().optional(),
-});
-
 const SAFE_MAP_WIDTH = 1000;
 const SAFE_MAP_HEIGHT = 1000;
 
-/**
- * Interface representing hook methods available for map events
- * 
- * These hooks are triggered at specific moments during the event lifecycle.
- *
- * `onInit()` is intended for base event setup when the event instance is created.
- * At this stage, the event is not reacting to a specific player yet.
- *
- * `onChanges(player)` is reactive. It is called during the change-detection cycle,
- * for example after player state changes such as variable updates or when
- * `player.syncChanges()` is executed manually.
- */
-export interface EventHooks {
-  /**
-   * Called when the event is first initialized.
-   *
-   * Use this hook for default setup that does not depend on a player interaction,
-   * such as setting the initial graphic, speed, or movement route.
-   */
-  onInit?: (this: RpgEvent) => void;
-  /**
-   * Called during the change-detection cycle for the current player.
-   *
-   * Use this hook to recompute the event state from player data, especially
-   * player variables. This is useful for reactive visuals such as an opened
-   * chest, a hidden door, or a conditional NPC graphic.
-   */
-  onChanges?: (this: RpgEvent, player: RpgPlayer) => void;
-  /** Called when a player performs an action on this event */
-  onAction?: (this: RpgEvent, player: RpgPlayer) => void;
-  /** Called when a player touches this event */
-  onPlayerTouch?: (this: RpgEvent, player: RpgPlayer) => void;
-  /** Called when this event starts touching a player or another event */
-  onTouch?: (this: RpgEvent, other: RpgPlayer | RpgEvent, context: RpgTouchContext) => void | Promise<void>;
-  /** Called when this event stops touching a player or another event */
-  onTouchEnd?: (this: RpgEvent, other: RpgPlayer | RpgEvent, context: RpgTouchContext) => void | Promise<void>;
-  /** Called when a player enters a shape attached to the event */
-  onInShape?: (this: RpgEvent, zone: RpgShape, player: RpgPlayer) => void;
-  /** Called when a player exits a shape attached to the event */
-  onOutShape?: (this: RpgEvent, zone: RpgShape, player: RpgPlayer) => void;
-  /** Called when a player is detected entering a detection shape attached to the event */
-  onDetectInShape?: (this: RpgEvent, player: RpgPlayer, shape: RpgShape) => void;
-  /** Called when a player is detected exiting a detection shape attached to the event */
-  onDetectOutShape?: (this: RpgEvent, player: RpgPlayer, shape: RpgShape) => void;
-  /** Called when the TimeManager observes a time transition */
-  onTimeChange?: (this: RpgEvent, payload: TimeTransitionPayload) => void | Promise<void>;
-  /** Called when the TimeManager observes a day transition */
-  onDayChange?: (this: RpgEvent, payload: TimeDayTransitionPayload) => void | Promise<void>;
-  /** Called when the TimeManager applies a lighting phase transition */
-  onLightingPhaseChange?: (this: RpgEvent, payload: TimeLightingPhaseTransitionPayload) => void | Promise<void>;
-  /** Called when the TimeManager applies a weather ambience transition */
-  onWeatherChange?: (this: RpgEvent, payload: TimeWeatherTransitionPayload) => void | Promise<void>;
-}
-
-export interface RpgTouchContext {
-  self: RpgEvent;
-  other: RpgPlayer | RpgEvent;
-  otherType: "player" | "event";
-  player?: RpgPlayer;
-  phase: "start" | "end";
-  pairId: string;
-  map: RpgMap;
-}
-
-/** Type for event class constructor */
-export type EventConstructor = new () => RpgEvent;
-
-/**
- * Object-based event definition.
- *
- * Coordinates belong to the surrounding map event wrapper, not the event definition itself.
- */
-export type EventDefinition = EventHooks & {
-  /** Optional display name copied to the runtime event instance */
-  name?: string;
-  /** Shared or scenario event mode */
-  mode?: EventMode | "shared" | "scenario";
-  /** Whether players can physically push this event. `false` by default. */
-  pushable?: boolean;
-  /** Physical mass used when the event is pushable. `0` or `Infinity` makes it immovable. */
-  mass?: number;
-  /** Allow custom event metadata while keeping placement fields typed separately */
-  [key: string]: unknown;
-  /** Disallow placement fields on the event definition itself */
-  id?: never;
-  event?: never;
-  x?: never;
-  y?: never;
-  scenarioOwnerId?: never;
-};
-
-/** Public event definition type accepted by map events and dynamic event creation */
-export type MapEventDefinition = EventConstructor | EventDefinition;
-
-/** Options for positioning and defining an event on the map */
-export type EventPosOption = {
-  /** ID of the event */
-  id?: string,
-
-  /** X position of the event on the map */
-  x?: number,
-  /** Y position of the event on the map */
-  y?: number,
-  /** Event mode override */
-  mode?: EventMode | "shared" | "scenario",
-  /** Owner player id when mode is scenario */
-  scenarioOwnerId?: string,
-  /** Initial event hitbox in RPGJS pixels */
-  hitbox?: { width?: number; height?: number; w?: number; h?: number },
-  /** 
-   * Event definition - can be either:
-   * - A class that extends RpgEvent
-   * - An object with hook methods
-   */
-  event: MapEventDefinition
-}
-
-/** Public placed map event type */
-export type MapEventPlacement = EventPosOption;
-
-type CreateDynamicEventOptions = {
-  mode?: EventMode | "shared" | "scenario";
-  scenarioOwnerId?: string;
-};
-
-interface WeatherSetOptions {
-  sync?: boolean;
-}
-
-interface LightingSetOptions {
-  sync?: boolean;
-  cancelTransition?: boolean;
-}
-
-@Room({
+@RpgRoom({
+  kind: "map",
   path: "map-{id}",
-  persistState: false
+  persistState: true
 })
-export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
-  private _clientListeners = new Map<string, Set<(player: RpgPlayer, data: any) => void | Promise<void>>>();
-  private activeTouchCollisions = new Set<string>();
-  private trackedTouchCollisions = new Map<string, TrackedTouchCollision>();
+export class RpgMap extends RpgCommonMap<RpgPlayer> {
+  private readonly partyRoom: {
+    env: Record<string, unknown>;
+    getConnections(): Iterable<unknown>;
+    storage: {
+      get<T = unknown>(key: string): Promise<T | undefined>;
+      put(key: string, value: unknown): Promise<void>;
+    };
+  };
+  private _clientListeners = new Map<string, Set<(player: RpgPlayer, data: unknown) => void | Promise<void>>>();
+  private touchCollisions = new MapTouchCollisions(this);
+  private spatialVisibleEventIds = new Map<string, Set<string>>();
+  private spatialVisiblePlayerIds = new Map<string, Set<string>>();
 
   /** 
    * Synchronized signal containing all players currently on the map
    * 
-   * This signal is automatically synchronized with clients using @signe/sync.
+   * This signal is automatically synchronized with clients by RPGJS.
    * Players are indexed by their unique ID.
    * 
    * @example
@@ -343,12 +161,12 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
    * const player = map.players()['player-id'];
    * ```
    */
-  @users(RpgPlayer) players = signal({});
+  @users(RpgPlayer) players = signal({}) as unknown as RpgWritableSignal<Record<string, RpgPlayer>>;
 
   /** 
    * Synchronized signal containing all events (NPCs, objects) on the map
    * 
-   * This signal is automatically synchronized with clients using @signe/sync.
+   * This signal is automatically synchronized with clients by RPGJS.
    * Events are indexed by their unique ID.
    * 
    * @example
@@ -360,7 +178,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
    * const event = map.events()['event-id'];
    * ```
    */
-  @sync(RpgPlayer) events = signal({});
+  @sync(RpgPlayer) events = signal({}) as unknown as RpgWritableSignal<Record<string, RpgEvent>>;
 
   /** 
    * Signal containing the map's database of items, classes, and other game data
@@ -378,14 +196,14 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
    * const potion = map.database()['Potion'];
    * ```
    */
-  database = signal({});
+  database = signal({}) as unknown as RpgWritableSignal<Record<string, any>>;
 
-  variables: WritableSignal<Record<string, any>> = type(
-    signal<Record<string, any>>({}) as never,
+  variables: RpgWritableSignal<Record<string, unknown>> = type(
+    signal<Record<string, unknown>>({}) as never,
     "variables",
     { persist: true },
     this as never
-  ) as unknown as WritableSignal<Record<string, any>>;
+  ) as unknown as RpgWritableSignal<Record<string, unknown>>;
 
   /** 
    * Array of map configurations - can contain MapOptions objects or instances of map classes
@@ -440,7 +258,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
    * critical hits, and element coefficients. Default formulas are merged
    * with custom formulas when the map is loaded.
    */
-  damageFormulas: any = {}
+  damageFormulas: DamageFormulas = {}
   private _weatherState: WeatherState | null = null;
   private _lightingState: LightingState | null = null;
   private _lightingTransitionTimer?: ReturnType<typeof setInterval>;
@@ -451,6 +269,15 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
   private _serverTickInProgress = false;
   private _queuedServerTickDelta = 0;
   private _serverTickLoopVersion = 0;
+  private inputProcessor = new MapInputProcessor({
+    getPlayer: (playerId) => this.getPlayer(playerId),
+    getPlayers: () => this.getPlayers(),
+    getTick: () => this.getTick(),
+    getBodyPosition: (playerId) => this.getBodyPosition(playerId, "top-left"),
+    movePlayer: (player, direction) => this.movePlayer(player, direction),
+    dashBody: (player, input) => (this as any).dashBody(player, input),
+    stopMovement: (player) => (this as any).stopMovement(player),
+  });
   /** Enable/disable automatic tick processing (useful for unit tests) */
   private _autoTickEnabled: boolean = true;
   /** Runtime templates for scenario events to instantiate per player */
@@ -468,6 +295,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
 
   constructor(room) {
     super();
+    this.partyRoom = room;
     this.hooks.callHooks("server-map-onStart", this).subscribe();
     const isTest = room.env.TEST === 'true' ? true : false;
     if (isTest) {
@@ -487,6 +315,52 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
 
   onStart() {
     return BaseRoom.prototype.onStart.call(this)
+  }
+
+  /** Rebuild non-serializable map resources after a room restart or hibernation. */
+  async onRestore() {
+    const restoredMap = this.data();
+    if (!restoredMap?.id) return;
+    const token = this.getRuntimeMapUpdateToken();
+    await this.updateMap({
+      url: `http://localhost/parties/main/map-${restoredMap.id}/map/update`,
+      method: "POST",
+      headers: createMapUpdateHeaders(token),
+      json: async () => restoredMap,
+      text: async () => JSON.stringify(restoredMap),
+    } as Request);
+    await this.restoreWorldMapsRuntime();
+  }
+
+  private getRuntimeMapUpdateToken(): string | undefined {
+    const token = this.partyRoom.env[MAP_UPDATE_TOKEN_ENV];
+    return typeof token === "string" && token.length > 0 ? token : undefined;
+  }
+
+  private async restoreMapStreamingRuntime(): Promise<void> {
+    if (hasMapStreamingRuntime(this)) return;
+    const storedMap = await readMapSource(this.partyRoom) as any;
+    if (!storedMap?.id) return;
+    const token = this.getRuntimeMapUpdateToken();
+    await this.updateMap({
+      url: `http://localhost/parties/main/map-${storedMap.id}/map/update`,
+      method: "POST",
+      headers: createMapUpdateHeaders(token),
+      data: storedMap,
+      json: async () => storedMap,
+      text: async () => JSON.stringify(storedMap),
+    } as unknown as Request);
+    await this.restoreWorldMapsRuntime();
+  }
+
+  private async restoreWorldMapsRuntime(): Promise<void> {
+    const storedWorld = await this.partyRoom.storage.get<StoredWorldMaps>(WORLD_MAPS_STORAGE_KEY);
+    if (!storedWorld?.id || !Array.isArray(storedWorld.maps)) return;
+    await this.updateWorldMaps(storedWorld.id, storedWorld.maps);
+  }
+
+  private hasActiveConnections(): boolean {
+    return Array.from(this.partyRoom.getConnections()).length > 0;
   }
 
   protected emitPhysicsInit(context: MapPhysicsInitContext): void {
@@ -516,9 +390,10 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
     return super.runFixedTicks(deltaMs, {
       beforeStep: hooks?.beforeStep,
       afterStep: (tick) => {
-        this.refreshTrackedTouchCollisions();
+        this.touchCollisions.refreshTrackedTouchCollisions();
         hooks?.afterStep?.(tick);
         this.projectiles.step(fixedStep);
+        refreshMapStreaming(this);
       },
     });
   }
@@ -534,9 +409,10 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
     return super.runFixedTicksAsync(deltaMs, {
       beforeStep: hooks?.beforeStep,
       afterStep: async (tick) => {
-        this.refreshTrackedTouchCollisions();
+        this.touchCollisions.refreshTrackedTouchCollisions();
         await hooks?.afterStep?.(tick);
         this.projectiles.step(fixedStep);
+        refreshMapStreaming(this);
       },
     });
   }
@@ -581,139 +457,6 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
         ? worldMapInfo.height
         : SAFE_MAP_HEIGHT;
     }
-  }
-
-  private normalizeEventMode(mode: unknown): EventMode {
-    return mode === EventMode.Scenario || mode === "scenario"
-      ? EventMode.Scenario
-      : EventMode.Shared;
-  }
-
-  private resolveEventMode(eventObj: any): EventMode {
-    if (!eventObj) return EventMode.Shared;
-
-    if (eventObj.mode !== undefined) {
-      return this.normalizeEventMode(eventObj.mode);
-    }
-
-    const eventDef = eventObj.event ?? eventObj;
-    if (eventDef?.mode !== undefined) {
-      return this.normalizeEventMode(eventDef.mode);
-    }
-
-    if (typeof eventDef === "function") {
-      const staticMode = (eventDef as any).mode;
-      const prototypeMode = (eventDef as any).prototype?.mode;
-      if (staticMode !== undefined) {
-        return this.normalizeEventMode(staticMode);
-      }
-      if (prototypeMode !== undefined) {
-        return this.normalizeEventMode(prototypeMode);
-      }
-    }
-
-    return EventMode.Shared;
-  }
-
-  private resolveScenarioOwnerId(eventObj: any): string | undefined {
-    if (!eventObj) return undefined;
-    const ownerId = eventObj.scenarioOwnerId
-      ?? eventObj._scenarioOwnerId
-      ?? eventObj.event?.scenarioOwnerId
-      ?? eventObj.event?._scenarioOwnerId;
-    return typeof ownerId === "string" && ownerId.length > 0 ? ownerId : undefined;
-  }
-
-  private resolveEventMass(eventObj: any): number | undefined {
-    const eventDef = eventObj?.event ?? eventObj;
-
-    const readMass = (value: unknown): number | undefined => (
-      typeof value === "number" && !Number.isNaN(value) && value >= 0
-        ? value
-        : undefined
-    );
-
-    const objectMass = readMass(eventDef?.mass);
-    if (objectMass !== undefined) {
-      return objectMass;
-    }
-
-    if (typeof eventDef === "function") {
-      return readMass((eventDef as any).mass)
-        ?? readMass((eventDef as any).prototype?._eventDataMass);
-    }
-
-    return undefined;
-  }
-
-  private resolveEventPushable(eventObj: any): boolean {
-    const eventDef = eventObj?.event ?? eventObj;
-
-    const readPushable = (value: unknown): boolean | undefined => (
-      typeof value === "boolean" ? value : undefined
-    );
-
-    const objectPushable = readPushable(eventDef?.pushable);
-    if (objectPushable !== undefined) {
-      return objectPushable;
-    }
-
-    if (typeof eventDef === "function") {
-      return readPushable((eventDef as any).pushable)
-        ?? readPushable((eventDef as any).prototype?._eventDataPushable)
-        ?? false;
-    }
-
-    return false;
-  }
-
-  private resolveEventHitbox(eventObj: any): { width: number; height: number } | undefined {
-    const readHitbox = (value: unknown): { width: number; height: number } | undefined => {
-      if (!value || typeof value !== "object") return undefined;
-      const record = value as Record<string, unknown>;
-      const widthValue = record.width ?? record.w;
-      const heightValue = record.height ?? record.h;
-      const width = typeof widthValue === "number" ? widthValue : Number(widthValue);
-      const height = typeof heightValue === "number" ? heightValue : Number(heightValue);
-      if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
-        return undefined;
-      }
-      return {
-        width: Math.max(1, Math.round(width)),
-        height: Math.max(1, Math.round(height)),
-      };
-    };
-
-    const eventDef = eventObj?.event ?? eventObj;
-    const directHitbox = readHitbox(eventObj?.hitbox);
-    if (directHitbox) return directHitbox;
-
-    const objectHitbox = readHitbox(eventDef?.hitbox);
-    if (objectHitbox) return objectHitbox;
-
-    if (typeof eventDef === "function") {
-      return readHitbox((eventDef as any).hitbox)
-        ?? readHitbox((eventDef as any).prototype?.hitbox);
-    }
-
-    return undefined;
-  }
-
-  private normalizeEventObject(eventObj: EventPosOption | any): EventPosOption {
-    if (eventObj && typeof eventObj === "object" && "event" in eventObj) {
-      return eventObj as EventPosOption;
-    }
-    return {
-      event: eventObj as any,
-    };
-  }
-
-  private cloneEventTemplate(eventObj: EventPosOption): EventPosOption {
-    const clone: EventPosOption = { ...eventObj };
-    if (clone.event && typeof clone.event === "object") {
-      clone.event = { ...(clone.event as Record<string, any>) } as any;
-    }
-    return clone;
   }
 
   private buildRuntimeEventId(baseId: string | undefined, mode: EventMode, scenarioOwnerId?: string): string {
@@ -762,7 +505,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
       return runtimeMode;
     }
     const event = this.getEvent(eventId) as any;
-    return this.normalizeEventMode(event?.mode);
+    return normalizeEventMode(event?.mode);
   }
 
   private getScenarioOwnerIdByEventId(eventId: string): string | undefined {
@@ -798,7 +541,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
     }
     this.removeScenarioEventsForPlayer(player.id);
     for (const template of this._scenarioEventTemplates) {
-      const clone = this.cloneEventTemplate(template);
+      const clone = cloneEventTemplate(template);
       await this.createDynamicEvent(clone, { mode: EventMode.Scenario, scenarioOwnerId: player.id });
     }
   }
@@ -824,255 +567,45 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
     this._scenarioEventIdsByPlayer.delete(playerId);
   }
 
-  private readBooleanSignal(value: any): boolean {
-    if (typeof value === "function") {
-      try {
-        return value() === true;
-      } catch {
-        return false;
-      }
-    }
-    return value === true;
-  }
-
-  private isGroundTouchSensorEntity(
-    entity: PhysicsCollisionEntity,
-    other: PhysicsCollisionEntity,
+  /**
+   * Dispatch `onInShape` / `onOutShape` when one of the colliding entities is a
+   * static map shape. Returns `true` when the collision involves a shape.
+   * @private
+   */
+  private dispatchShapeCollision(
+    entityA: { uuid: string },
+    entityB: { uuid: string },
+    phase: "in" | "out",
+    activeShapeCollisions: Set<string>,
   ): boolean {
-    const owner = entity.owner;
-    if (!owner) return false;
-    const otherIsEvent = !!this.getEvent(other.uuid);
-    const through = this.readBooleanSignal(owner._through) || owner.through === true;
-    const throughEvent =
-      otherIsEvent &&
-      (this.readBooleanSignal(owner._throughEvent) || owner.throughEvent === true);
-    return through || throughEvent;
-  }
-
-  private haveDifferentTouchableZ(
-    entityA: PhysicsCollisionEntity,
-    entityB: PhysicsCollisionEntity,
-  ): boolean {
-    const zA = entityA.owner?.z();
-    const zB = entityB.owner?.z();
-    if (
-      zA !== zB &&
-      Number(zA) <= 0 &&
-      Number(zB) <= 0 &&
-      (this.isGroundTouchSensorEntity(entityA, entityB) ||
-        this.isGroundTouchSensorEntity(entityB, entityA))
-    ) {
+    const shapeA = this._shapeEntities.get(entityA.uuid);
+    const shape = shapeA ?? this._shapeEntities.get(entityB.uuid);
+    if (!shape) {
       return false;
     }
-    return zA !== zB;
-  }
 
-  private buildTouchPairId(
-    entityA: PhysicsCollisionEntity,
-    entityB: PhysicsCollisionEntity,
-  ): string {
-    return entityA.uuid < entityB.uuid
-      ? `${entityA.uuid}-${entityB.uuid}`
-      : `${entityB.uuid}-${entityA.uuid}`;
-  }
-
-  private getPhysicsRect(entity: PhysicsCollisionEntity): {
-    left: number;
-    top: number;
-    right: number;
-    bottom: number;
-    area: number;
-  } | null {
-    const width = Number(entity.width);
-    const height = Number(entity.height);
-    const centerX = Number(entity.position?.x);
-    const centerY = Number(entity.position?.y);
-    if (
-      !Number.isFinite(width) ||
-      !Number.isFinite(height) ||
-      width <= 0 ||
-      height <= 0 ||
-      !Number.isFinite(centerX) ||
-      !Number.isFinite(centerY)
-    ) {
-      return null;
-    }
-    const left = centerX - width / 2;
-    const top = centerY - height / 2;
-    return {
-      left,
-      top,
-      right: left + width,
-      bottom: top + height,
-      area: width * height,
-    };
-  }
-
-  private getSensorCoverage(
-    sensor: PhysicsCollisionEntity,
-    other: PhysicsCollisionEntity,
-  ): number {
-    const sensorRect = this.getPhysicsRect(sensor);
-    const otherRect = this.getPhysicsRect(other);
-    if (!sensorRect || !otherRect || sensorRect.area <= 0) {
-      return 0;
-    }
-    const overlapWidth = Math.max(
-      0,
-      Math.min(sensorRect.right, otherRect.right) -
-        Math.max(sensorRect.left, otherRect.left),
-    );
-    const overlapHeight = Math.max(
-      0,
-      Math.min(sensorRect.bottom, otherRect.bottom) -
-        Math.max(sensorRect.top, otherRect.top),
-    );
-    return (overlapWidth * overlapHeight) / sensorRect.area;
-  }
-
-  private hasEnoughGroundSensorCoverage(
-    entityA: PhysicsCollisionEntity,
-    entityB: PhysicsCollisionEntity,
-  ): boolean {
-    const eventA = this.getEvent<RpgEvent>(entityA.uuid);
-    const eventB = this.getEvent<RpgEvent>(entityB.uuid);
-    if (!eventA || !eventB) {
+    const otherEntity = shapeA ? entityB : entityA;
+    const shapeKey = `${otherEntity.uuid}-${shape.name}`;
+    const isActive = activeShapeCollisions.has(shapeKey);
+    if (phase === "in" ? isActive : !isActive) {
       return true;
     }
-    const sensors: Array<[PhysicsCollisionEntity, PhysicsCollisionEntity]> = [];
-    if (this.isGroundTouchSensorEntity(entityA, entityB)) {
-      sensors.push([entityA, entityB]);
-    }
-    if (this.isGroundTouchSensorEntity(entityB, entityA)) {
-      sensors.push([entityB, entityA]);
-    }
-    if (sensors.length === 0) {
-      return true;
-    }
-    return sensors.every(([sensor, other]) =>
-      this.getSensorCoverage(sensor, other) >= GROUND_TOUCH_SENSOR_COVERAGE_THRESHOLD
-    );
-  }
-
-  private dispatchTouch(
-    self: RpgEvent,
-    other: RpgPlayer | RpgEvent,
-    otherType: "player" | "event",
-    phase: "start" | "end",
-    pairId: string,
-    player?: RpgPlayer,
-  ): void {
-    const context: RpgTouchContext = {
-      self,
-      other,
-      otherType,
-      player,
-      phase,
-      pairId,
-      map: this,
-    };
-    const method = phase === "start" ? "onTouch" : "onTouchEnd";
-    void self.execMethod(method, [other, context]);
-  }
-
-  private dispatchTouchCollision(
-    entityA: PhysicsCollisionEntity,
-    entityB: PhysicsCollisionEntity,
-    phase: "start" | "end",
-    pairId: string,
-  ): boolean {
-    const playerA = this.getPlayer(entityA.uuid);
-    const playerB = this.getPlayer(entityB.uuid);
-    const eventA = this.getEvent<RpgEvent>(entityA.uuid);
-    const eventB = this.getEvent<RpgEvent>(entityB.uuid);
-
-    if (playerA && eventB && this.isEventVisibleForPlayer(eventB, playerA)) {
-      this.dispatchTouch(eventB, playerA, "player", phase, pairId, playerA);
-      if (phase === "start") {
-        void eventB.execMethod("onPlayerTouch", [playerA]);
-      }
-      return true;
+    if (phase === "in") {
+      activeShapeCollisions.add(shapeKey);
+    } else {
+      activeShapeCollisions.delete(shapeKey);
     }
 
-    if (playerB && eventA && this.isEventVisibleForPlayer(eventA, playerB)) {
-      this.dispatchTouch(eventA, playerB, "player", phase, pairId, playerB);
-      if (phase === "start") {
-        void eventA.execMethod("onPlayerTouch", [playerB]);
-      }
-      return true;
+    const player = this.getPlayer(otherEntity.uuid);
+    const event = this.getEvent<RpgEvent>(otherEntity.uuid);
+    const hook = phase === "in" ? "onInShape" : "onOutShape";
+    if (player) {
+      player.execMethod(hook, [player, shape]);
     }
-
-    if (eventA && eventB) {
-      this.dispatchTouch(eventA, eventB, "event", phase, pairId);
-      this.dispatchTouch(eventB, eventA, "event", phase, pairId);
-      return true;
+    if (event) {
+      event.execMethod(hook, [shape, player || event]);
     }
-
-    return false;
-  }
-
-  private canActivateTouchCollision(
-    entityA: PhysicsCollisionEntity,
-    entityB: PhysicsCollisionEntity,
-  ): boolean {
-    return (
-      !this.haveDifferentTouchableZ(entityA, entityB) &&
-      this.hasEnoughGroundSensorCoverage(entityA, entityB)
-    );
-  }
-
-  private updateTrackedTouchCollision(
-    pairId: string,
-    collision: TrackedTouchCollision,
-  ): void {
-    const active = this.activeTouchCollisions.has(pairId);
-    const canActivate = this.canActivateTouchCollision(
-      collision.entityA,
-      collision.entityB,
-    );
-
-    if (canActivate && !active) {
-      if (this.dispatchTouchCollision(collision.entityA, collision.entityB, "start", pairId)) {
-        this.activeTouchCollisions.add(pairId);
-      }
-      return;
-    }
-
-    if (!canActivate && active) {
-      this.dispatchTouchCollision(collision.entityA, collision.entityB, "end", pairId);
-      this.activeTouchCollisions.delete(pairId);
-    }
-  }
-
-  private refreshTrackedTouchCollisions(): void {
-    for (const [pairId, collision] of this.trackedTouchCollisions) {
-      this.updateTrackedTouchCollision(pairId, collision);
-    }
-  }
-
-  private trackTouchCollision(
-    entityA: PhysicsCollisionEntity,
-    entityB: PhysicsCollisionEntity,
-  ): void {
-    const pairId = this.buildTouchPairId(entityA, entityB);
-    const collision = { entityA, entityB };
-    this.trackedTouchCollisions.set(pairId, collision);
-    this.updateTrackedTouchCollision(pairId, collision);
-  }
-
-  private untrackTouchCollision(
-    entityA: PhysicsCollisionEntity,
-    entityB: PhysicsCollisionEntity,
-    options: { dispatchEnd?: boolean } = {},
-  ): void {
-    const pairId = this.buildTouchPairId(entityA, entityB);
-    if (this.activeTouchCollisions.has(pairId) && options.dispatchEnd !== false) {
-      this.dispatchTouchCollision(entityA, entityB, "end", pairId);
-    }
-    if (this.activeTouchCollisions.has(pairId)) {
-      this.activeTouchCollisions.delete(pairId);
-    }
-    this.trackedTouchCollisions.delete(pairId);
+    return true;
   }
 
   /**
@@ -1117,52 +650,26 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
   private setupCollisionDetection(): void {
     // Track collisions to avoid calling hooks multiple times for the same collision
     const activeShapeCollisions = new Set<string>();
-    this.activeTouchCollisions.clear();
-    this.trackedTouchCollisions.clear();
+    this.touchCollisions.clear();
 
     // Listen to collision enter events
     this.physic.getEvents().onCollisionEnter((collision) => {
       const entityA = collision.entityA;
       const entityB = collision.entityB;
 
+      // Shape collisions trigger onInShape instead of touch hooks. Static
+      // shapes have no owner (and no z), so they are handled before the z check.
+      if (this.dispatchShapeCollision(entityA, entityB, "in", activeShapeCollisions)) {
+        return;
+      }
+
       // Skip collision callbacks if entities have different z (height)
       // Higher z entities should not trigger collision callbacks with lower z entities
-      if (this.haveDifferentTouchableZ(entityA, entityB)) {
+      if (this.touchCollisions.haveDifferentTouchableZ(entityA, entityB)) {
         return;
       }
 
-      // Check for shape collisions first
-      const shapeA = this._shapeEntities.get(entityA.uuid);
-      const shapeB = this._shapeEntities.get(entityB.uuid);
-
-      if (shapeA || shapeB) {
-        // One of the entities is a shape
-        const shape = shapeA || shapeB;
-        const otherEntity = shapeA ? entityB : entityA;
-
-        if (shape) {
-          const shapeKey = `${otherEntity.uuid}-${shape.name}`;
-          if (!activeShapeCollisions.has(shapeKey)) {
-            activeShapeCollisions.add(shapeKey);
-
-            // Check if the other entity is a player or event
-            const player = this.getPlayer(otherEntity.uuid);
-            const event = this.getEvent<RpgEvent>(otherEntity.uuid);
-
-            if (player) {
-              // Trigger onInShape hook on player
-              player.execMethod('onInShape', [player, shape]);
-            }
-            if (event) {
-              // Trigger onInShape hook on event
-              event.execMethod('onInShape', [shape, player || event]);
-            }
-          }
-        }
-        return;
-      }
-
-      this.trackTouchCollision(entityA, entityB);
+      this.touchCollisions.trackTouchCollision(entityA, entityB);
     });
 
     // Listen to collision exit events to clean up tracking
@@ -1170,56 +677,30 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
       const entityA = collision.entityA;
       const entityB = collision.entityB;
 
+      // Shape collisions trigger onOutShape instead of touch hooks
+      if (this.dispatchShapeCollision(entityA, entityB, "out", activeShapeCollisions)) {
+        return;
+      }
+
       // Skip collision callbacks if entities have different z (height)
-      if (this.haveDifferentTouchableZ(entityA, entityB)) {
-        this.untrackTouchCollision(entityA, entityB, { dispatchEnd: false });
+      if (this.touchCollisions.haveDifferentTouchableZ(entityA, entityB)) {
+        this.touchCollisions.untrackTouchCollision(entityA, entityB, { dispatchEnd: false });
         return;
       }
 
-      // Check for shape collisions
-      const shapeA = this._shapeEntities.get(entityA.uuid);
-      const shapeB = this._shapeEntities.get(entityB.uuid);
-
-      if (shapeA || shapeB) {
-        // One of the entities is a shape
-        const shape = shapeA || shapeB;
-        const otherEntity = shapeA ? entityB : entityA;
-
-        if (shape) {
-          const shapeKey = `${otherEntity.uuid}-${shape.name}`;
-          if (activeShapeCollisions.has(shapeKey)) {
-            activeShapeCollisions.delete(shapeKey);
-
-            // Check if the other entity is a player or event
-            const player = this.getPlayer(otherEntity.uuid);
-            const event = this.getEvent<RpgEvent>(otherEntity.uuid);
-
-            if (player) {
-              // Trigger onOutShape hook on player
-              player.execMethod('onOutShape', [player, shape]);
-            }
-            if (event) {
-              // Trigger onOutShape hook on event
-              event.execMethod('onOutShape', [shape, player || event]);
-            }
-          }
-        }
-        return;
-      }
-
-      this.untrackTouchCollision(entityA, entityB);
+      this.touchCollisions.untrackTouchCollision(entityA, entityB);
     });
   }
 
-  setVariable(key: string, val: any): void {
+  setVariable<T = unknown>(key: string, val: T): void {
     this.variables.mutate((variables) => {
       variables[key] = val;
     });
     this.syncChanges();
   }
 
-  getVariable<U = any>(key: string): U | undefined {
-    return this.variables()[key];
+  getVariable<T = unknown>(key: string): T | undefined {
+    return this.variables()[key] as T | undefined;
   }
 
   removeVariable(key: string): boolean {
@@ -1265,7 +746,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
   /**
    * Intercepts and modifies packets before they are sent to clients
    * 
-   * This method is automatically called by @signe/room for each packet sent to clients.
+   * This method is automatically called by the RPGJS room runtime for each packet sent to clients.
    * It adds timestamp and acknowledgment information to sync packets for client-side
    * prediction reconciliation. This helps with network synchronization and reduces
    * perceived latency.
@@ -1287,56 +768,159 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
    * // You typically don't call it directly
    * ```
    */
-  interceptorPacket(player: RpgPlayer, packet: any, conn: Parameters<RoomMethods["$send"]>[0]) {
+  interceptorPacket(player: RpgPlayer, packet: any, conn: RpgRoomConnection) {
     let obj: any = {}
     let packetValue = packet?.value;
 
     if (!player) {
       return null
     }
+    packet = filterMapStreamingProjectilePacket(this, player, packet);
+    if (!packet) return null;
+    packetValue = packet?.value;
 
-    // Add timestamp to sync packets for client-side prediction reconciliation
-    if (packet && typeof packet === 'object') {
+    // Add timestamp only to sync packets for client-side prediction reconciliation.
+    // Custom events must preserve their payload exactly, including null values.
+    if (packet?.type === "sync" && packetValue && typeof packetValue === "object") {
       obj.timestamp = Date.now();
 
-      // Add ack info: last processed frame and authoritative position.
-      // When the sync payload already contains this player's coordinates,
-      // prefer them to keep ack state aligned with the snapshot sent to the client.
+      // Keep the acknowledged frame paired with the authoritative position
+      // captured immediately after that input's physics step. A newer sync
+      // snapshot may already represent another server tick.
       if (player) {
         const value = packet.value && typeof packet.value === "object" ? packet.value : undefined;
         const packetPlayers = value?.players && typeof value.players === "object" ? value.players : undefined;
         const playerSnapshot = packetPlayers?.[player.id];
         const bodyPos = this.getBodyPosition(player.id, "top-left");
-        const ackX =
-          typeof playerSnapshot?.x === "number" ? playerSnapshot.x : bodyPos?.x ?? player.x();
-        const ackY =
-          typeof playerSnapshot?.y === "number" ? playerSnapshot.y : bodyPos?.y ?? player.y();
         const lastFramePositions = player._lastFramePositions;
+        const ackPosition = lastFramePositions?.position;
+        const ackX =
+          typeof ackPosition?.x === "number"
+            ? ackPosition.x
+            : typeof playerSnapshot?.x === "number" ? playerSnapshot.x : bodyPos?.x ?? player.x();
+        const ackY =
+          typeof ackPosition?.y === "number"
+            ? ackPosition.y
+            : typeof playerSnapshot?.y === "number" ? playerSnapshot.y : bodyPos?.y ?? player.y();
         obj.ack = {
           frame: lastFramePositions?.frame ?? 0,
-          serverTick: this.getTick(),
+          serverTick: lastFramePositions?.serverTick ?? this.getTick(),
           x: Math.round(ackX),
           y: Math.round(ackY),
-          direction: playerSnapshot?.direction ?? player.direction(),
+          direction: ackPosition?.direction ?? playerSnapshot?.direction ?? player.direction(),
         };
       }
     }
 
-    if (packetValue && typeof packetValue === "object" && packetValue.events && typeof packetValue.events === "object") {
-      const eventEntries = Object.entries(packetValue.events);
-      const filteredEntries = eventEntries.filter(([eventId]) => this.isEventVisibleForPlayer(eventId, player));
-      if (filteredEntries.length !== eventEntries.length) {
-        packetValue = { ...packetValue };
-        if (filteredEntries.length === 0) {
-          delete (packetValue as any).events;
+    if (packet?.type === "sync" && packetValue && typeof packetValue === "object") {
+      packetValue = { ...packetValue };
+      const previousEvents = this.spatialVisibleEventIds.get(player.id) ?? new Set<string>();
+      const previousPlayers = this.spatialVisiblePlayerIds.get(player.id) ?? new Set<string>();
+      const streamingVisibility = getMapStreamingVisibleEntityIds(this, player);
+      const visibleEvents = streamingVisibility?.events ?? new Set(previousEvents);
+      const visiblePlayers = streamingVisibility?.players ?? new Set(previousPlayers);
+
+      // Keep previously visible entities when their current authoritative
+      // position is still retained. This avoids a transient delete if the
+      // physics broad phase is one update behind synchronized state.
+      if (streamingVisibility) {
+        for (const eventId of previousEvents) {
+          const event = this.events()[eventId];
+          if (event && isMapStreamingPositionVisible(this, player, event.x(), event.y())) {
+            visibleEvents.add(eventId);
+          }
         }
-        else {
-          (packetValue as any).events = Object.fromEntries(filteredEntries);
+        for (const otherId of previousPlayers) {
+          const other = this.players()[otherId];
+          if (other && (otherId === player.id
+            || isMapStreamingPositionVisible(this, player, other.x(), other.y()))) {
+            visiblePlayers.add(otherId);
+          }
         }
       }
+
+      // Packet entries supplement the physics query. This covers an entity
+      // created or moved immediately before the broad-phase index is updated.
+      for (const [eventId, value] of Object.entries(packetValue.events ?? {})) {
+        if (value === "$delete") {
+          visibleEvents.delete(eventId);
+          continue;
+        }
+        const event = this.events()[eventId];
+        if (event && this.isEventVisibleForPlayer(eventId, player)
+          && (!streamingVisibility || isMapStreamingPositionVisible(this, player, event.x(), event.y()))) {
+          visibleEvents.add(eventId);
+        }
+        else {
+          visibleEvents.delete(eventId);
+        }
+      }
+      for (const eventId of [...visibleEvents]) {
+        const event = this.events()[eventId];
+        if (!event || !this.isEventVisibleForPlayer(eventId, player)) {
+          visibleEvents.delete(eventId);
+        }
+      }
+
+      for (const [otherId, value] of Object.entries(packetValue.players ?? {})) {
+        if (value === "$delete") {
+          visiblePlayers.delete(otherId);
+          continue;
+        }
+        const other = this.players()[otherId];
+        if (other && (otherId === player.id || !streamingVisibility
+          || isMapStreamingPositionVisible(this, player, other.x(), other.y()))) {
+          visiblePlayers.add(otherId);
+        }
+        else {
+          visiblePlayers.delete(otherId);
+        }
+      }
+      visiblePlayers.add(player.id);
+
+      const eventChanges: Record<string, unknown> = {};
+      for (const [eventId, value] of Object.entries(packetValue.events ?? {})) {
+        if (visibleEvents.has(eventId)) eventChanges[eventId] = value;
+      }
+      for (const eventId of visibleEvents) {
+        if (!previousEvents.has(eventId)) {
+          eventChanges[eventId] = createStatesSnapshotDeep(this.events()[eventId]);
+        }
+      }
+      for (const eventId of previousEvents) {
+        if (!visibleEvents.has(eventId)) eventChanges[eventId] = "$delete";
+      }
+      if (Object.keys(eventChanges).length > 0) packetValue.events = eventChanges;
+      else delete packetValue.events;
+      this.spatialVisibleEventIds.set(player.id, visibleEvents);
+
+      const playerChanges: Record<string, unknown> = {};
+      for (const [otherId, value] of Object.entries(packetValue.players ?? {})) {
+        if (visiblePlayers.has(otherId)) playerChanges[otherId] = value;
+      }
+      for (const otherId of visiblePlayers) {
+        if (!previousPlayers.has(otherId)) {
+          const otherPlayer = this.players()[otherId];
+          const existingPatch = playerChanges[otherId];
+          playerChanges[otherId] = {
+            ...createStatesSnapshotDeep(otherPlayer),
+            ...(existingPatch && typeof existingPatch === "object" ? existingPatch : {}),
+            // createStatesSnapshotDeep intentionally excludes persist:false
+            // signals. `isConnected` is one of them, but the client uses it to
+            // decide whether the character sprite is visible.
+            isConnected: otherPlayer.isConnected(),
+          };
+        }
+      }
+      for (const otherId of previousPlayers) {
+        if (!visiblePlayers.has(otherId)) playerChanges[otherId] = "$delete";
+      }
+      if (Object.keys(playerChanges).length > 0) packetValue.players = playerChanges;
+      else delete packetValue.players;
+      this.spatialVisiblePlayerIds.set(player.id, visiblePlayers);
     }
 
-    if (typeof packet.value == 'string') {
+    if (packet?.type !== "sync" || typeof packet.value == 'string') {
       return packet
     }
 
@@ -1352,7 +936,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
   /**
    * Called when a player joins the map
    * 
-   * This method is automatically called by @signe/room when a player connects to the map.
+   * This method is automatically called by the RPGJS room runtime when a player connects to the map.
    * It initializes the player's connection, sets up the map context, and waits for
    * the map data to be ready before playing sounds and triggering hooks.
    * 
@@ -1376,7 +960,15 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
    * });
    * ```
    */
-  onJoin(player: RpgPlayer, conn: Parameters<RoomMethods["$send"]>[0]) {
+  async onJoin(player: RpgPlayer, conn: RpgRoomConnection, ctx?: { request?: { url: string } }) {
+    this.inputProcessor.forgetPlayer(player.id);
+    // A reconnect reuses the public player id but starts with an empty client
+    // entity cache. Force the next sync packet to include every visible entity.
+    this.spatialVisibleEventIds.delete(player.id);
+    this.spatialVisiblePlayerIds.delete(player.id);
+    if (this.data()?.id) {
+      this.setAutoTick(true);
+    }
     const alignPlayerBodyWithSignals = () => {
       const hitbox = (typeof player.hitbox === 'function' ? player.hitbox() : player.hitbox) as any;
       const width = hitbox?.w ?? hitbox?.width ?? 32;
@@ -1415,10 +1007,19 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
     }
     player.context = context;
     player.conn = conn;
+    applyConnectionLocale(player, ctx);
+    // Deliver opportunistically when this room instance is already compiled.
+    // The explicit client request below remains the reliable fallback when a
+    // hibernating provider recreated the room or the transport was not ready.
+    sendInitialMapStreaming(this, player);
     player.pendingInputs = [];
     player.lastProcessedInputTs = 0;
+    player.lastProcessedClientInputTs = 0;
+    player.lastProcessedInputTick = null;
+    player.lastProcessedInputServerTick = null;
     player._lastFramePositions = null;
-    player._onInit()
+    await player._onInit()
+    await runPlayerAuthenticationHooks(this.hooks, player, conn);
     alignPlayerBodyWithSignals();
     this.dataIsReady$.pipe(
       finalize(() => {
@@ -1440,6 +1041,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
 
             // Execute global map hooks (from RpgServer.map)
             await lastValueFrom(this.hooks.callHooks("server-map-onJoin", player, this));
+            await lastValueFrom(this.hooks.callHooks("server-room-onJoin", player, this));
 
             // // Execute map-specific hooks (from @MapData or MapOptions)
             if (typeof (this as any)._onJoin === 'function') {
@@ -1447,7 +1049,9 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
             }
 
             // Execute player hooks
+            await lastValueFrom(this.hooks.callHooks("server-player-onJoinRoom", player, this));
             await lastValueFrom(this.hooks.callHooks("server-player-onJoinMap", player, this));
+            player.refreshHotbar?.();
           }
           catch (error) {
             if (isRpgLog(error)) {
@@ -1464,7 +1068,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
   /**
    * Called when a player leaves the map
    * 
-   * This method is automatically called by @signe/room when a player disconnects from the map.
+   * This method is automatically called by the RPGJS room runtime when a player disconnects from the map.
    * It cleans up the player's pending inputs and triggers the appropriate hooks.
    * 
    * ## Architecture
@@ -1484,9 +1088,14 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
    * });
    * ```
    */
-  async onLeave(player: RpgPlayer, conn: Parameters<RoomMethods["$send"]>[0]) {
+  async onLeave(player: RpgPlayer, conn: RpgRoomConnection) {
+    this.inputProcessor.forgetPlayer(player.id);
+    removeMapStreamingPlayer(this, player);
+    this.spatialVisibleEventIds.delete(player.id);
+    this.spatialVisiblePlayerIds.delete(player.id);
     // Execute global map hooks (from RpgServer.map)
     await lastValueFrom(this.hooks.callHooks("server-map-onLeave", player, this));
+    await lastValueFrom(this.hooks.callHooks("server-room-onLeave", player, this));
 
     // Execute map-specific hooks (from @MapData or MapOptions)
     if (typeof (this as any)._onLeave === 'function') {
@@ -1495,10 +1104,18 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
 
     // Execute player hooks
     await lastValueFrom(this.hooks.callHooks("server-player-onLeaveMap", player, this));
+    await lastValueFrom(this.hooks.callHooks("server-player-onLeaveRoom", player, this));
     this.removeScenarioEventsForPlayer(player.id);
     player.pendingInputs = [];
     player.lastProcessedInputTs = 0;
+    player.lastProcessedClientInputTs = 0;
+    player.lastProcessedInputTick = null;
+    player.lastProcessedInputServerTick = null;
     player._lastFramePositions = null;
+    if (!this.hasActiveConnections()) {
+      this.setAutoTick(false);
+    }
+    await dispatchPlayerDisconnected(this.hooks, player, conn);
   }
 
   /**
@@ -1519,7 +1136,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
     return BaseRoom.prototype.hooks;
   }
 
-  private _getClientListenerBucket(type: string) {
+  private _getClientListenerBucket(type: string): Set<(player: RpgPlayer, data: unknown) => void | Promise<void>> {
     let listeners = this._clientListeners.get(type);
     if (!listeners) {
       listeners = new Set();
@@ -1528,7 +1145,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
     return listeners;
   }
 
-  private async _dispatchClientEvent(type: string, player: RpgPlayer, data: any) {
+  private async _dispatchClientEvent(type: string, player: RpgPlayer, data: unknown): Promise<void> {
     const listeners = [...(this._clientListeners.get(type) ?? [])];
     for (const callback of listeners) {
       await callback(player, data);
@@ -1606,8 +1223,9 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
    * ```
    */
   @Action('action')
-  onAction(player: RpgPlayer, action: any) {
-    const actionName = action?.action ?? action?.input ?? action;
+  onAction(player: RpgPlayer, action: RpgActionInput<unknown>): void {
+    const legacyAction = action as RpgActionInput<unknown> & { input?: string };
+    const actionName = action?.action ?? legacyAction.input ?? action;
     const isDefaultAction = actionName === Control.Action || actionName === "action";
 
     if (isDefaultAction) {
@@ -1666,14 +1284,15 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
    */
   @Action('move')
   async onInput(player: RpgPlayer, input: any) {
+    if (player.knockbackActive()) return;
+
     if ((player as any).canMove === false) {
-      player.pendingInputs = [];
-      player.lastProcessedInputTs = 0;
+      this.inputProcessor.resetPlayer(player);
       (this as any).stopMovement(player);
       return;
     }
 
-    const lastAckedFrame = player._lastFramePositions?.frame ?? 0;
+    const lastAckedFrame = this.inputProcessor.getLastAckedFrame(player);
     const now = Date.now();
     const candidates: Array<{
       input: any;
@@ -1750,6 +1369,17 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
     });
   }
 
+  @Action(MAP_STREAM_REQUEST_EVENT)
+  async onMapStreamRequest(player: RpgPlayer, payload?: { mapId?: string }) {
+    const requestedMapId = payload?.mapId?.replace(/^map-/, "");
+    const currentMapId = String(this.data()?.id ?? this.id ?? "").replace(/^map-/, "");
+    if (requestedMapId && currentMapId && requestedMapId !== currentMapId) {
+      return;
+    }
+    await this.restoreMapStreamingRuntime();
+    sendInitialMapStreaming(this, player);
+  }
+
   @Action('save.save')
   async saveSlot(player: RpgPlayer, value: { requestId: string; index: number; meta?: any }) {
     BaseRoom.prototype.saveSlot(player, value);
@@ -1763,6 +1393,11 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
   @Action('save.list')
   async listSaveSlots(player: RpgPlayer, value: { requestId: string }) {
     return await BaseRoom.prototype.listSaveSlots(player, value);
+  }
+
+  @Action('player.locale')
+  setPlayerLocale(player: RpgPlayer, value: unknown): void {
+    applyPlayerLocale(player, value);
   }
 
   /**
@@ -1784,8 +1419,8 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
    * });
    * ```
    */
-  on(type: string, cb: (player: RpgPlayer, data: any) => void | Promise<void>) {
-    this._getClientListenerBucket(type).add(cb);
+  on<T = unknown>(type: string, cb: (player: RpgPlayer, data: T) => void | Promise<void>): void {
+    this._getClientListenerBucket(type).add(cb as (player: RpgPlayer, data: unknown) => void | Promise<void>);
   }
 
   /**
@@ -1830,7 +1465,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
    * });
    * ```
    */
-  broadcast(type: string, value?: any) {
+  broadcast<T = unknown>(type: string, value?: T): void {
     this.$broadcast({
       type,
       value,
@@ -1838,7 +1473,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
   }
 
   @UnhandledAction()
-  async _onUnhandledAction(player: RpgPlayer, message: { action: string; value: any }) {
+  async _onUnhandledAction(player: RpgPlayer, message: { action: string; value: unknown }): Promise<void> {
     if (!player) return;
     await player._dispatchClientEvent(message.action, message.value);
     await this._dispatchClientEvent(message.action, player, message.value);
@@ -1867,7 +1502,14 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
    * ```ts
    * // This endpoint is called automatically when a map is loaded
    * // POST /map/update
-   * // Body: { id: string, width: number, height: number, config?: any, damageFormulas?: any }
+   * // Body: {
+   * //   id: string,
+   * //   width: number,
+   * //   height: number,
+   * //   config?: any,
+   * //   damageFormulas?: any,
+   * //   database?: any[] | Record<string, any>
+   * // }
    * ```
    */
   @Request({
@@ -1875,29 +1517,22 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
     method: "POST"
   }, MapUpdateSchema as any)
   async updateMap(request: Request) {
-    if (!isMapUpdateAuthorized(request.headers)) {
-      return new Response(JSON.stringify({
-        error: "Unauthorized map update",
-        message: `Provide ${MAP_UPDATE_TOKEN_HEADER} or Authorization: Bearer <token> to call /map/update when ${MAP_UPDATE_TOKEN_ENV} is set.`,
-      }), {
-        status: 401,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+    if (!isMapUpdateAuthorized(request.headers, this.getRuntimeMapUpdateToken())) {
+      return unauthorizedUpdateResponse("map", "/map/update");
     }
 
-    const map = await request.json()
+    // Signe exposes the schema-validated body on `request.data`. Native Fetch
+    // bodies are single-use, so prefer it before falling back to `json()` for
+    // direct calls that do not pass through the request decorator.
+    const map = (request as Request & { data?: any }).data ?? await request.json()
+    // Hibernating Durable Objects may freeze before Signe's debounced reactive
+    // persistence runs. Persist the trusted private source explicitly and await
+    // it before acknowledging publication, so a later WebSocket instance can
+    // rebuild render chunks, physics and events reliably.
+    await writeMapSource(this.partyRoom, map)
     this.data.set(map)
     this.globalConfig = map.config
-    this.damageFormulas = map.damageFormulas || {};
-    this.damageFormulas = {
-      damageSkill: DAMAGE_SKILL,
-      damagePhysic: DAMAGE_PHYSIC,
-      damageCritical: DAMAGE_CRITICAL,
-      coefficientElements: COEFFICIENT_ELEMENTS,
-      ...this.damageFormulas
-    }
+    this.damageFormulas = withDefaultDamageFormulas(map.damageFormulas);
     await lastValueFrom(this.hooks.callHooks("server-maps-load", this))
     await lastValueFrom(this.hooks.callHooks("server-worldMaps-load", this))
     await lastValueFrom(this.hooks.callHooks("server-databaseHooks-load", this))
@@ -1906,6 +1541,35 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
     this.data.set(map)
 
     map.events = map.events ?? []
+    this.applyMapOptions(map)
+
+    await lastValueFrom(this.hooks.callHooks("server-map-onBeforeUpdate", map, this))
+
+    await this.reloadMapEvents(map)
+
+    this.dataIsReady$.complete()
+
+    // Execute global map hooks (from RpgServer.map)
+    await lastValueFrom(this.hooks.callHooks("server-map-onLoad", this))
+
+    // Execute map-specific hooks (from @MapData or MapOptions)
+    if (typeof (this as any)._onLoad === 'function') {
+      await (this as any)._onLoad();
+    }
+
+    if (!this.hasActiveConnections()) {
+      this.setAutoTick(false);
+    }
+
+    // TODO: Update map
+  }
+
+  /**
+   * Apply the registered map options (`@MapData` / `MapOptions`) matching the
+   * published map: events, sounds, hooks, initial weather and lighting.
+   * @private
+   */
+  private applyMapOptions(map: any): void {
     let initialWeather: WeatherState | null | undefined = this.globalConfig?.weather;
     let initialLighting: LightingState | null | undefined = this.globalConfig?.lighting;
 
@@ -1958,41 +1622,46 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
     } else {
       this.clearLighting();
     }
+  }
 
-    await lastValueFrom(this.hooks.callHooks("server-map-onBeforeUpdate", map, this))
-
+  /**
+   * Replace every runtime event with the events of the published map and
+   * respawn scenario events for connected players.
+   * @private
+   */
+  private async reloadMapEvents(map: any): Promise<void> {
     this._scenarioEventTemplates = [];
     this._eventModeById.clear();
     this._eventOwnerById.clear();
     this._scenarioEventIdsByPlayer.clear();
+    this.spatialVisibleEventIds.clear();
+    this.spatialVisiblePlayerIds.clear();
+
+    for (const eventId of Object.keys(this.events())) {
+      this.removeEvent(eventId);
+    }
 
     this.loadPhysic()
 
     for (let event of map.events ?? []) {
-      const normalizedEvent = this.normalizeEventObject(event);
-      const mode = this.resolveEventMode(normalizedEvent);
+      const normalizedEvent = normalizeEventObject(event);
+      const mode = resolveEventMode(normalizedEvent);
       if (mode === EventMode.Scenario) {
-        this._scenarioEventTemplates.push(this.cloneEventTemplate(normalizedEvent));
+        this._scenarioEventTemplates.push(cloneEventTemplate(normalizedEvent));
         continue;
       }
       await this.createDynamicEvent(normalizedEvent, { mode: EventMode.Shared });
     }
 
     for (const player of this.getPlayers()) {
+      const graphics = [...player.graphics()];
+      if (graphics.length > 0) {
+        // A client reloads its Tiled scene when map data changes. Re-emit the
+        // current graphic so its player sprite is restored in that new scene.
+        player.setGraphic(graphics);
+      }
       await this.spawnScenarioEventsForPlayer(player);
     }
-
-    this.dataIsReady$.complete()
-
-    // Execute global map hooks (from RpgServer.map)
-    await lastValueFrom(this.hooks.callHooks("server-map-onLoad", this))
-
-    // Execute map-specific hooks (from @MapData or MapOptions)
-    if (typeof (this as any)._onLoad === 'function') {
-      await (this as any)._onLoad();
-    }
-
-    // TODO: Update map
   }
 
   /**
@@ -2003,10 +1672,11 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
    * 
    * ## Architecture
    * 
-   * 1. Extracts world ID from URL path parameter
-   * 2. Normalizes input to array of WorldMapConfig
-   * 3. Ensures all required map properties are present (width, height, tile sizes)
-   * 4. Creates or updates the world manager
+   * 1. Authenticates the administrative update request
+   * 2. Extracts the world ID from the `/world/:id/update` path segment
+   * 3. Normalizes input to array of WorldMapConfig
+   * 4. Persists the topology so it survives Durable Object hibernation
+   * 5. Creates or updates the world manager
    * 
    * Expected payload examples:
    * - `{ id: string, maps: WorldMapConfig[] }`
@@ -2029,35 +1699,21 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
     method: "POST",
   })
   async updateWorld(request: Request) {
-    // Extract world id from URL: /world/:id/update
-    let worldId = '';
-    try {
-      const reqUrl = (request as any).url as string;
-      const urlObj = new URL(reqUrl, 'http://localhost');
-      const parts = urlObj.pathname.split('/');
-      // ['', 'world', ':id', 'update'] → index 2
-      worldId = parts[2] ?? '';
-    } catch { }
+    if (!isMapUpdateAuthorized(request.headers, this.getRuntimeMapUpdateToken())) {
+      return unauthorizedUpdateResponse("world", "/world/:id/update");
+    }
+
+    const worldId = parseWorldIdFromUpdateUrl((request as any).url);
     const payload = await request.json();
-
-    // Normalize input to array of WorldMapConfig
-    const mapsConfig: WorldMapConfig[] = Array.isArray(payload)
-      ? payload
-      : payload?.maps ?? [];
-
-    // Ensure map sizes are present; fallback to current map data when ID matches
-    const normalized: WorldMapConfig[] = mapsConfig.map((m: any) => {
-      return {
-        id: m.id,
-        worldX: m.worldX ?? m.x ?? 0,
-        worldY: m.worldY ?? m.y ?? 0,
-        width: m.width ?? m.widthPx ?? this.data()?.width ?? 0,
-        height: m.height ?? m.heightPx ?? this.data()?.height ?? 0,
-        tileWidth: m.tileWidth ?? this.tileWidth ?? 32,
-        tileHeight: m.tileHeight ?? this.tileHeight ?? 32,
-      } as WorldMapConfig;
+    const normalized = normalizeWorldMapConfigs(payload, {
+      width: this.data()?.width,
+      height: this.data()?.height,
+      tileWidth: this.tileWidth,
+      tileHeight: this.tileHeight,
     });
 
+    const storedWorld: StoredWorldMaps = { id: worldId, maps: normalized };
+    await this.partyRoom.storage.put(WORLD_MAPS_STORAGE_KEY, storedWorld);
     await this.updateWorldMaps(worldId, normalized);
     return { ok: true } as any;
   }
@@ -2069,7 +1725,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
    * anti-cheat validation to prevent time manipulation and frame skipping.
    * It validates the time deltas between inputs and ensures they are within
    * acceptable ranges. To preserve movement itinerary under network bursts,
-   * the number of inputs processed per call is capped.
+   * the number of distinct client ticks processed per call is capped.
    * 
    * ## Architecture
    * 
@@ -2101,153 +1757,14 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
    */
   async processInput(playerId: string, controls?: Controls): Promise<{
     player: RpgPlayer,
-    inputs: any[]
+    inputs: RpgMovementInput[]
   }> {
     const player = this.getPlayer(playerId);
     if (!player) {
       throw new Error(`Player ${playerId} not found`);
     }
 
-    if (!player.isConnected()) {
-      player.pendingInputs = [];
-      return {
-        player,
-        inputs: []
-      }
-    }
-
-    if ((player as any).canMove === false) {
-      player.pendingInputs = [];
-      player.lastProcessedInputTs = 0;
-      (this as any).stopMovement(player);
-      return {
-        player,
-        inputs: []
-      }
-    }
-
-    const processedInputs: any[] = [];
-    const defaultControls: Required<Controls> = {
-      maxTimeDelta: 1000, // 1 second max between inputs
-      maxFrameDelta: 10,  // Max 10 frames skipped
-      minTimeBetweenInputs: 16, // ~60fps minimum
-      enableAntiCheat: false,
-      maxInputsPerTick: 1,
-    };
-
-    const config = { ...defaultControls, ...controls };
-    let lastProcessedTime = player.lastProcessedInputTs || 0;
-    let lastProcessedFrame = player._lastFramePositions?.frame ?? 0;
-
-    // Sort inputs by frame number to ensure proper order
-    player.pendingInputs.sort((a, b) => (a.frame || 0) - (b.frame || 0));
-
-    let hasProcessedInputs = false;
-    let processedThisTick = 0;
-
-    // Process pending inputs progressively to preserve itinerary under latency.
-    while (player.pendingInputs.length > 0 && processedThisTick < config.maxInputsPerTick) {
-      const input = player.pendingInputs.shift();
-
-      if (!input || typeof input.frame !== 'number') {
-        continue;
-      }
-
-      // Anti-cheat validation
-      if (config.enableAntiCheat) {
-        // Check frame delta
-        if (input.frame > lastProcessedFrame + config.maxFrameDelta) {
-          // Reset to last valid frame
-          input.frame = lastProcessedFrame + 1;
-        }
-
-        // Check time delta if timestamp is available
-        if (input.timestamp && lastProcessedTime > 0) {
-          const timeDelta = input.timestamp - lastProcessedTime;
-          if (timeDelta > config.maxTimeDelta) {
-            input.timestamp = lastProcessedTime + config.minTimeBetweenInputs;
-          }
-        }
-
-        // Check minimum time between inputs
-        if (input.timestamp && lastProcessedTime > 0) {
-          const timeDelta = input.timestamp - lastProcessedTime;
-          if (timeDelta < config.minTimeBetweenInputs) {
-            continue;
-          }
-        }
-      }
-
-      // Skip if frame is too old (more than 10 frames behind)
-      if (input.frame < lastProcessedFrame - 10) {
-        continue;
-      }
-
-      const movementInput = normalizeServerMovementInput(input.input);
-
-      // Process the input - update velocity based on the latest input
-      if (movementInput) {
-        let idleHoldMs = 0;
-        if (isDashMovementInput(movementInput)) {
-          const now = Date.now();
-          const lockedUntil = (player as any).__rpgDashLockedUntil;
-          if (!(typeof lockedUntil === "number" && now < lockedUntil)) {
-            (player as any).__rpgDashLockedUntil =
-              now + (movementInput.cooldown ?? DEFAULT_DASH_COOLDOWN_MS);
-            player.changeDirection(vectorToDirection(movementInput.direction));
-            (this as any).dashBody(player, movementInput);
-            idleHoldMs = movementInput.duration ?? 0;
-          }
-        } else {
-          await this.movePlayer(player, movementInput);
-        }
-        processedInputs.push(input.input);
-        hasProcessedInputs = true;
-        lastProcessedTime = (input.timestamp || Date.now()) + idleHoldMs;
-        processedThisTick += 1;
-
-        const bodyPos = this.getBodyPosition(player.id, "top-left");
-        const ackX =
-          typeof input.clientState?.x === "number"
-            ? input.clientState.x
-            : bodyPos?.x ?? player.x();
-        const ackY =
-          typeof input.clientState?.y === "number"
-            ? input.clientState.y
-            : bodyPos?.y ?? player.y();
-        player._lastFramePositions = {
-          frame: input.frame,
-          position: {
-            x: Math.round(ackX),
-            y: Math.round(ackY),
-            direction: input.clientState?.direction ?? player.direction(),
-          },
-          serverTick: this.getTick(),
-        };
-      }
-
-      // Update tracking variables
-      lastProcessedFrame = input.frame;
-    }
-
-    // Physics is now handled by the main game loop (tick$ -> runFixedTicks)
-    // We only update timestamps and handle idle timeout here
-    // The physics step will be executed in the next tick cycle
-    if (hasProcessedInputs) {
-      player.lastProcessedInputTs = lastProcessedTime;
-    } else {
-      const idleTimeout = Math.max(config.minTimeBetweenInputs * 4, 50);
-      const lastTs = player.lastProcessedInputTs || 0;
-      if (lastTs > 0 && Date.now() - lastTs > idleTimeout) {
-        (this as any).stopMovement(player);
-        player.lastProcessedInputTs = 0;
-      }
-    }
-
-    return {
-      player,
-      inputs: processedInputs
-    };
+    return this.inputProcessor.process(player, controls);
   }
 
   /**
@@ -2260,7 +1777,9 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
     this.stopServerTickLoop();
     const loopVersion = ++this._serverTickLoopVersion;
     this.tickSubscription = this.tick$.subscribe(({ delta }) => {
-      void this.runQueuedServerTick(delta, loopVersion);
+      void this.runQueuedServerTick(delta, loopVersion).catch((error) => {
+        console.error("[RPGJS] Error during server tick:", error);
+      });
     });
   }
 
@@ -2287,7 +1806,17 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
       while (this._queuedServerTickDelta > 0 && loopVersion === this._serverTickLoopVersion) {
         const nextDelta = this._queuedServerTickDelta;
         this._queuedServerTickDelta = 0;
-        await this.runServerTick(nextDelta);
+        const startedAt = this.getServerTickTime();
+        const fixedSteps = await this.runServerTick(nextDelta);
+        const durationMs = Math.max(0, this.getServerTickTime() - startedAt);
+        await emitServerStep(this.partyRoom, {
+          tick: this.getTick(),
+          durationMs,
+          scheduledDeltaMs: nextDelta,
+          queuedDeltaMs: this._queuedServerTickDelta,
+          fixedSteps,
+          pendingInputs: this.inputProcessor.getPendingInputCount(),
+        });
       }
     }
     finally {
@@ -2297,25 +1826,16 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
 
   private async runServerTick(deltaMs: number): Promise<number> {
     return this.runFixedTicksAsync(deltaMs, {
-      beforeStep: () => this.processPendingInputsForTick(),
+      beforeStep: () => this.inputProcessor.processPendingInputsForTick(),
+      afterStep: (tick) => this.inputProcessor.captureProcessedInputPositions(tick),
     });
   }
 
-  private async processPendingInputsForTick(): Promise<void> {
-    for (const player of this.getPlayers()) {
-      const anyPlayer = player as any;
-      const shouldProcess = player.pendingInputs.length > 0 || (player.lastProcessedInputTs || 0) > 0;
-      if (!shouldProcess || anyPlayer._isProcessingInputs) {
-        continue;
-      }
-      anyPlayer._isProcessingInputs = true;
-      try {
-        await this.processInput(player.id);
-      }
-      finally {
-        anyPlayer._isProcessingInputs = false;
-      }
-    }
+  private getServerTickTime(): number {
+    const performanceNow = globalThis.performance?.now?.();
+    return typeof performanceNow === "number" && Number.isFinite(performanceNow)
+      ? performanceNow
+      : Date.now();
   }
 
   async nextTickAsync(deltaMs?: number): Promise<number> {
@@ -2481,7 +2001,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
    * map.addInDatabase('Potion', UpdatedPotionClass, { force: true });
    * ```
    */
-  addInDatabase(id: string, data: any, options?: { force?: boolean }): boolean {
+  addInDatabase(id: string, data: unknown, options?: { force?: boolean }): boolean {
     return BaseRoom.prototype.addInDatabase.call(this, id, data, options);
   }
 
@@ -2548,7 +2068,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
    * });
    */
   async createDynamicEvent(eventObj: EventPosOption, options: CreateDynamicEventOptions = {}): Promise<string | undefined> {
-    eventObj = this.normalizeEventObject(eventObj);
+    eventObj = normalizeEventObject(eventObj);
 
     const value = await lastValueFrom(this.hooks.callHooks("server-event-onBeforeCreated", eventObj, this));
     value.filter(v => v).forEach(v => {
@@ -2558,13 +2078,13 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
     const event = eventObj.event;
     const x = typeof eventObj.x === "number" ? eventObj.x : 0;
     const y = typeof eventObj.y === "number" ? eventObj.y : 0;
-    const mass = this.resolveEventMass(eventObj);
-    const pushable = this.resolveEventPushable(eventObj);
-    const hitbox = this.resolveEventHitbox(eventObj);
+    const mass = resolveEventMass(eventObj);
+    const pushable = resolveEventPushable(eventObj);
+    const hitbox = resolveEventHitbox(eventObj);
 
-    const requestedMode = options.mode ?? this.resolveEventMode(eventObj);
-    const mode = this.normalizeEventMode(requestedMode);
-    const ownerFromData = options.scenarioOwnerId ?? this.resolveScenarioOwnerId(eventObj);
+    const requestedMode = options.mode ?? resolveEventMode(eventObj);
+    const mode = normalizeEventMode(requestedMode);
+    const ownerFromData = options.scenarioOwnerId ?? resolveScenarioOwnerId(eventObj);
     const scenarioOwnerId = mode === EventMode.Scenario ? ownerFromData : undefined;
     const effectiveMode = mode === EventMode.Scenario && scenarioOwnerId
       ? EventMode.Scenario
@@ -2596,7 +2116,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
       class DynamicEvent extends RpgEvent {
         onInit?: (this: RpgEvent) => void;
         onChanges?: (this: RpgEvent, player: RpgPlayer) => void;
-        onAction?: (this: RpgEvent, player: RpgPlayer) => void;
+        onAction?: (this: RpgEvent, player: RpgPlayer, input: RpgActionInput<unknown>) => void | Promise<void>;
         onPlayerTouch?: (this: RpgEvent, player: RpgPlayer) => void;
         onTouch?: (this: RpgEvent, other: RpgPlayer | RpgEvent, context: RpgTouchContext) => void | Promise<void>;
         onTouchEnd?: (this: RpgEvent, other: RpgPlayer | RpgEvent, context: RpgTouchContext) => void | Promise<void>;
@@ -2647,9 +2167,16 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
     }
 
     await eventInstance.teleport({ x, y });
-    await eventInstance.execMethod('onInit');
-
     this.events()[id] = eventInstance;
+    try {
+      // Register the event before onInit so changes to nested synchronized
+      // values (notably graphics) are observed by every transport runtime.
+      await eventInstance.execMethod('onInit');
+    }
+    catch (error) {
+      this.removeEvent(id);
+      throw error;
+    }
     if (hitbox) {
       eventInstance.setHitbox(hitbox.width, hitbox.height);
     }
@@ -2679,8 +2206,8 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
    * }
    * ```
    */
-  getEvent<T extends RpgPlayer>(eventId: string): T | undefined {
-    return this.events()[eventId] as T
+  getEvent<T extends RpgEvent = RpgEvent>(eventId: string): T | undefined {
+    return this.events()[eventId] as unknown as T
   }
 
   /**
@@ -2875,7 +2402,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
    * });
    * ```
    */
-  showComponentAnimation(id: string, position: { x: number, y: number }, params: any) {
+  showComponentAnimation(id: string, position: { x: number, y: number }, params: unknown) {
     this.$broadcast({
       type: "showComponentAnimation",
       value: {
@@ -2921,21 +2448,11 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
     })
   }
 
-  private cloneWeatherState(weather: WeatherState | null): WeatherState | null {
-    if (!weather) {
-      return null;
-    }
-    return {
-      ...weather,
-      params: weather.params ? { ...weather.params } : undefined,
-    };
-  }
-
   /**
    * Get the current map weather state.
    */
   getWeather(): WeatherState | null {
-    return this.cloneWeatherState(this._weatherState);
+    return cloneWeatherState(this._weatherState);
   }
 
   /**
@@ -2945,10 +2462,10 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
    */
   setWeather(next: WeatherState | null, options: WeatherSetOptions = {}): WeatherState | null {
     const sync = options.sync !== false;
-    if (next && !next.effect) {
-      throw new Error("setWeather: 'effect' is required when weather is not null.");
+    if (next && !next.effect && !next.preset) {
+      throw new Error("setWeather: 'effect' or 'preset' is required when weather is not null.");
     }
-    this._weatherState = this.cloneWeatherState(next);
+    this._weatherState = cloneWeatherState(next);
     if (sync) {
       this.$broadcast({
         type: "weatherState",
@@ -2961,15 +2478,20 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
   /**
    * Patch the current weather state.
    *
-   * Nested `params` values are merged.
+   * Nested `params` values are merged. A patch that names a new `preset` (or a new
+   * `effect`) replaces the previous one, so the old `effect` never overrides the
+   * effect of the new preset.
    */
   patchWeather(patch: Partial<WeatherState>, options: WeatherSetOptions = {}): WeatherState | null {
     const current = this._weatherState ?? null;
-    if (!current && !patch.effect) {
-      throw new Error("patchWeather: 'effect' is required when no weather is currently set.");
+    if (!current && !patch.effect && !patch.preset) {
+      throw new Error("patchWeather: 'effect' or 'preset' is required when no weather is currently set.");
     }
+    const base: Partial<WeatherState> = { ...(current ?? {}) };
+    if (patch.preset !== undefined && patch.effect === undefined) delete base.effect;
+    if (patch.effect !== undefined && patch.preset === undefined) delete base.preset;
     const next: WeatherState = {
-      ...(current ?? {}),
+      ...base,
       ...patch,
       params: {
         ...(current?.params ?? {}),
@@ -2991,45 +2513,6 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
       clearInterval(this._lightingTransitionTimer);
       this._lightingTransitionTimer = undefined;
     }
-  }
-
-  private interpolateNumber(from: number | undefined, to: number | undefined, progress: number): number | undefined {
-    if (typeof from !== "number" && typeof to !== "number") {
-      return undefined;
-    }
-    const start = typeof from === "number" ? from : 0;
-    const end = typeof to === "number" ? to : start;
-    return start + (end - start) * progress;
-  }
-
-  private easeLightingProgress(progress: number, easing: LightingTransitionOptions["easing"]): number {
-    const value = Math.max(0, Math.min(1, progress));
-    if (easing === "easeInOut") {
-      return value < 0.5 ? 2 * value * value : 1 - Math.pow(-2 * value + 2, 2) / 2;
-    }
-    return value;
-  }
-
-  private interpolateLighting(from: LightingState, to: LightingState, progress: number): LightingState {
-    return {
-      ...to,
-      ambient: {
-        ...(to.ambient ?? {}),
-        darkness: this.interpolateNumber(from.ambient?.darkness, to.ambient?.darkness, progress),
-        fogRadius: this.interpolateNumber(from.ambient?.fogRadius, to.ambient?.fogRadius, progress),
-        fogSoftness: this.interpolateNumber(from.ambient?.fogSoftness, to.ambient?.fogSoftness, progress),
-        fogOpacity: this.interpolateNumber(from.ambient?.fogOpacity, to.ambient?.fogOpacity, progress),
-      },
-      sun: {
-        ...(to.sun ?? {}),
-        x: this.interpolateNumber(from.sun?.x, to.sun?.x, progress),
-        y: this.interpolateNumber(from.sun?.y, to.sun?.y, progress),
-        z: this.interpolateNumber(from.sun?.z, to.sun?.z, progress),
-        radius: this.interpolateNumber(from.sun?.radius, to.sun?.radius, progress),
-        intensity: this.interpolateNumber(from.sun?.intensity, to.sun?.intensity, progress),
-        shadowWeight: this.interpolateNumber(from.sun?.shadowWeight, to.sun?.shadowWeight, progress),
-      },
-    };
   }
 
   /**
@@ -3109,8 +2592,8 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
 
     this._lightingTransitionTimer = setInterval(() => {
       const elapsed = Date.now() - startedAt;
-      const progress = this.easeLightingProgress(elapsed / duration, options.easing);
-      const next = this.interpolateLighting(from, to, progress);
+      const progress = easeLightingProgress(elapsed / duration, options.easing);
+      const next = interpolateLighting(from, to, progress);
       this.setLighting(next, { ...options, cancelTransition: false });
 
       if (elapsed >= duration) {
@@ -3119,7 +2602,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
       }
     }, intervalMs);
 
-    const first = this.interpolateLighting(from, to, 0);
+    const first = interpolateLighting(from, to, 0);
     this.setLighting(first, { ...options, cancelTransition: false });
     return this.getLighting();
   }
@@ -3134,7 +2617,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
    * ## Architecture
    * 
    * - Reads a schema object shaped like module props
-   * - Creates typed sync signals with @signe/sync
+   * - Creates typed synchronized signals through the RPGJS gameplay contract
    * - Properties are accessible as `map.propertyName`
    * 
    * @param schema - Schema object defining the properties to sync
@@ -3163,7 +2646,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
    * const currentWeather = map.weather();
    * ```
    */
-  setSync(schema: Record<string, any>) {
+  setSync(schema: RpgMapSyncSchema): void {
     for (let key in schema) {
       const initial = typeof schema[key]?.$initial !== 'undefined' ? schema[key].$initial : null;
       // Use type() directly with a plain object holder to avoid signal type mismatch
@@ -3491,7 +2974,10 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
    * });
    * ```
    */
-  clientVisual(name: string, data: Record<string, any> = {}): void {
+  clientVisual<TData extends Record<string, unknown> = Record<string, unknown>>(
+    name: string,
+    data: TData = {} as TData
+  ): void {
     this.$broadcast({
       type: "clientVisual",
       value: {
@@ -3619,4 +3105,9 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> implements RoomOnJoin {
   }
 }
 
-export interface RpgMap extends RoomMethods { }
+export interface RpgMap {
+  $send(connection: RpgRoomConnection, packet: unknown): void;
+  $broadcast(packet: unknown, without?: string[]): void;
+  $applySync(): void;
+  $sessionTransfer(connection: RpgRoomConnection, roomId: string): Promise<unknown>;
+}

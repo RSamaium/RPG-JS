@@ -102,7 +102,7 @@ the highest protection rate for each element type.
 ### Signature
 
 ```ts
-elementsDefense: { rate: number; element: any }[]
+elementsDefense: ElementAffinity[]
 ```
 
 ### Returns
@@ -123,7 +123,7 @@ This combines both class-based efficiency and player-specific modifiers.
 ### Signature
 
 ```ts
-elementsEfficiency: { rate: number; element: any }[]
+elementsEfficiency: ElementAffinity[]
 ```
 
 ### Returns

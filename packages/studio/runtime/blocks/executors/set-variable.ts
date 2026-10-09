@@ -21,7 +21,12 @@ const valueSourceValues = [
   'player_name',
   'level',
   'hp',
-  'sp'
+  'sp',
+  'area_target_id',
+  'area_target_kind',
+  'area_distance',
+  'area_distance_ratio',
+  'area_falloff_linear'
 ] as const;
 
 const readCallableOrValue = (value: unknown): unknown => {
@@ -98,6 +103,16 @@ export const resolveSetVariableValue = (
       return normalizeNumber(context.player?.hp);
     case 'sp':
       return normalizeNumber(context.player?.sp);
+    case 'area_target_id':
+      return context.areaHit?.id ?? '';
+    case 'area_target_kind':
+      return context.areaHit?.kind ?? '';
+    case 'area_distance':
+      return context.areaHit?.distance ?? 0;
+    case 'area_distance_ratio':
+      return context.areaHit?.distanceRatio ?? 0;
+    case 'area_falloff_linear':
+      return context.areaHit?.falloffLinear ?? 0;
   }
 };
 
@@ -195,7 +210,12 @@ export const schemaSetVariable = {
             'Player Name',
             'Level',
             'HP',
-            'SP'
+            'SP',
+            'block.set variable.area target id',
+            'block.set variable.area target kind',
+            'block.set variable.area distance',
+            'block.set variable.area distance ratio',
+            'block.set variable.area falloff linear'
           ]
         }
       }

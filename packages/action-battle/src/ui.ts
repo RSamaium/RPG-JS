@@ -5,8 +5,11 @@ import ActionBarComponent from "./components/action-bar.ce";
 import TargetingOverlayComponent from "./components/targeting-overlay.ce";
 // @ts-ignore CanvasEngine components are compiled by @canvasengine/compiler.
 import AttackPreviewComponent from "./components/attack-preview.ce";
+// @ts-ignore CanvasEngine components are compiled by @canvasengine/compiler.
+import CombatInputComponent from "./components/combat-input.ce";
 import type {
   ActionBattleUiActionBarOptions,
+  ActionBattleUiHotbarOptions,
   ActionBattleUiAttackPreviewOptions,
   ActionBattleUiOptions,
   ActionBattleUiTargetingOptions,
@@ -16,6 +19,7 @@ export const ActionBattleUi = {
   ActionBar: ActionBarComponent,
   TargetingOverlay: TargetingOverlayComponent,
   AttackPreview: AttackPreviewComponent,
+  CombatInput: CombatInputComponent,
 };
 
 export interface ResolvedActionBattleUi {
@@ -24,12 +28,13 @@ export interface ResolvedActionBattleUi {
     componentsInFront: any[];
     componentsBehind: any[];
   };
+  hotbar: ActionBattleUiHotbarOptions;
   actionBar: ActionBattleUiActionBarOptions;
   targeting: ActionBattleUiTargetingOptions;
   attackPreview: ActionBattleUiAttackPreviewOptions;
 }
 
-const normalizeToggle = <T extends { enabled?: boolean }>(
+const normalizeToggle = <T extends { enabled?: unknown }>(
   value: boolean | T | undefined,
   defaults: T
 ): T => {
@@ -59,10 +64,14 @@ export function createActionBattleUi(
 }
 
 export function resolveActionBattleUi(options: ActionBattleUiOptions = {}): ResolvedActionBattleUi {
+  const hotbar = normalizeToggle(options.hotbar, {
+    enabled: false,
+    autoOpen: false,
+  });
   const actionBar = normalizeToggle(options.actionBar, {
     enabled: false,
     autoOpen: false,
-    mode: "both",
+    mode: "both" as const,
     component: ActionBattleUi.ActionBar,
   });
   const targeting = normalizeToggle(options.targeting, {
@@ -79,7 +88,6 @@ export function resolveActionBattleUi(options: ActionBattleUiOptions = {}): Reso
     enabled: true,
     component: ActionBattleUi.AttackPreview,
   });
-
   const gui = [...(options.gui ?? [])];
   if (actionBar.enabled && actionBar.component) {
     gui.unshift({
@@ -91,7 +99,6 @@ export function resolveActionBattleUi(options: ActionBattleUiOptions = {}): Reso
       },
     });
   }
-
   const configuredSpriteComponents = Array.isArray(options.spriteComponents)
     ? { front: options.spriteComponents, back: [] }
     : options.spriteComponents ?? {};
@@ -102,10 +109,12 @@ export function resolveActionBattleUi(options: ActionBattleUiOptions = {}): Reso
       componentsInFront: [
         ...(targeting.enabled && targeting.component ? [targeting.component] : []),
         ...(attackPreview.enabled && attackPreview.component ? [attackPreview.component] : []),
+        CombatInputComponent,
         ...(configuredSpriteComponents.front ?? []),
       ],
       componentsBehind: configuredSpriteComponents.back ?? [],
     },
+    hotbar,
     actionBar,
     targeting,
     attackPreview,

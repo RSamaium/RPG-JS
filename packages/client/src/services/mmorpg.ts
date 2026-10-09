@@ -1,32 +1,46 @@
-import { Context } from "@signe/di";
 import { connectionRoom } from "@signe/sync/client";
 import { RpgGui } from "../Gui/Gui";
 import { RpgClientEngine } from "../RpgClientEngine";
 import { AbstractWebsocket, SocketQuery, SocketUpdateProperties, WebSocketToken } from "./AbstractSocket";
-import { UpdateMapService, UpdateMapToken } from "@rpgjs/common";
+import { UpdateMapService, UpdateMapToken, type RpgContext, type RpgProvider } from "@rpgjs/common";
 import { provideKeyboardControls } from "./keyboardControls";
 import { provideSaveClient } from "./save";
 import { isNativeSocketEvent, waitForRpgjsConnected } from "./mmorpg-connection";
 
 export interface MmorpgOptions {
     host?: string;
+    /** Initial lobby room used before the first map transfer. */
+    room?: string;
     connectionId?: string;
     connectionIdScope?: "local" | "session" | "ephemeral";
     query?: SocketQuery | (() => SocketQuery | undefined);
     socketOptions?: Record<string, any>;
+    /**
+     * Time allowed for a room to restore and send the RPGJS acceptance packet.
+     * Increase this for cold edge rooms or local Durable Object startup.
+     * Defaults to 10 seconds.
+     */
+    connectionAcceptanceTimeoutMs?: number;
+    /** Render the client and its GUIs before opening the initial WebSocket. */
+    deferConnection?: boolean;
 }
 
 export class BridgeWebsocket extends AbstractWebsocket {
   readonly mode = "mmorpg" as const;
+  readonly deferConnection: boolean;
 
   private socket: any;
   private privateId: string;
   private pendingOn: Array<{ event: string; callback: (data: any) => void }> = [];
   private acceptedOpenListeners = new Set<(data: any) => void>();
-  private targetRoom = "lobby-1";
+  private targetRoom: string;
+  private transferQuery?: SocketQuery;
+  private targetHost?: string;
 
-  constructor(protected context: Context, private options: MmorpgOptions = {}) {
+  constructor(protected context: RpgContext, private options: MmorpgOptions = {}) {
     super(context);
+    this.deferConnection = options.deferConnection === true;
+    this.targetRoom = options.room ?? "lobby-1";
     this.privateId = this.resolveConnectionId();
   }
 
@@ -80,6 +94,7 @@ export class BridgeWebsocket extends AbstractWebsocket {
         id: this.privateId,
         query: {
           ...this.resolveQuery(),
+          locale: this.locale?.(),
           id: this.privateId,
         },
     }, instance)
@@ -89,7 +104,10 @@ export class BridgeWebsocket extends AbstractWebsocket {
     pendingOn
       .filter(({ event }) => !this.isNativeSocketEvent(event))
       .forEach(({ event, callback }) => this.attachEvent(event, callback));
-    await waitForRpgjsConnected(this.socket.conn);
+    await waitForRpgjsConnected(
+      this.socket.conn,
+      this.options.connectionAcceptanceTimeoutMs ?? 10_000,
+    );
     pendingOn
       .filter(({ event }) => this.isNativeSocketEvent(event))
       .forEach(({ event, callback }) => this.attachEvent(event, callback));
@@ -142,13 +160,16 @@ export class BridgeWebsocket extends AbstractWebsocket {
   updateProperties({ room, host, query }: SocketUpdateProperties) {
     if (!this.socket?.conn) return;
     this.targetRoom = room;
+    this.transferQuery = query;
+    this.targetHost = host || this.targetHost || this.options.host || window.location.host;
     this.socket.conn.updateProperties({
       room,
       id: this.privateId,
-      host: host || this.options.host || window.location.host,
+      host: this.targetHost,
       query: {
         ...this.resolveQuery(),
         ...query,
+        locale: this.locale?.(),
         id: this.privateId,
       },
     })
@@ -161,10 +182,20 @@ export class BridgeWebsocket extends AbstractWebsocket {
   async reconnect(_listeners?: (data: any) => void): Promise<void> {
     if (!this.socket?.conn) return;
     const conn = this.socket.conn;
-    const connected = waitForRpgjsConnected(conn, 10000, { ignoreCleanClose: true });
+    this.updateProperties({ room: this.targetRoom, query: this.transferQuery });
+    const connected = waitForRpgjsConnected(
+      conn,
+      this.options.connectionAcceptanceTimeoutMs ?? 10_000,
+      { ignoreCleanClose: true },
+    );
     conn.reconnect();
     await connected;
     this.emitAcceptedOpen();
+  }
+
+  disconnect(): void {
+    this.socket?.conn?.close?.();
+    this.socket = undefined;
   }
 
   getCurrentRoom(): string {
@@ -173,7 +204,7 @@ export class BridgeWebsocket extends AbstractWebsocket {
 }
 
 class UpdateMapStandaloneService extends UpdateMapService {
-  constructor(protected context: Context, private _options: MmorpgOptions) {
+  constructor(protected context: RpgContext, private _options: MmorpgOptions) {
     super(context);
   }
 
@@ -184,15 +215,15 @@ class UpdateMapStandaloneService extends UpdateMapService {
   }
 }
 
-export function provideMmorpg(options: MmorpgOptions) {
+export function provideMmorpg(options: MmorpgOptions): RpgProvider[] {
   return [
     {
       provide: WebSocketToken,
-      useFactory: (context: Context) => new BridgeWebsocket(context, options),
+      useFactory: (context: RpgContext) => new BridgeWebsocket(context, options),
     },
     {
       provide: UpdateMapToken,
-      useFactory: (context: Context) => new UpdateMapStandaloneService(context, options),
+      useFactory: (context: RpgContext) => new UpdateMapStandaloneService(context, options),
     },
     provideKeyboardControls(),
     provideSaveClient(),

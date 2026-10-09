@@ -11,6 +11,34 @@ describe("normalizeActionBattleAttackProfile", () => {
     const profile = normalizeActionBattleAttackProfile();
 
     expect(profile).toEqual(DEFAULT_ACTION_BATTLE_ATTACK_PROFILE);
+    expect(profile.control).toEqual({
+      movementLock: "full",
+      directionLock: "full",
+      moveCancelsRecovery: false,
+      dodgeCancelsRecovery: true,
+      inputBufferMs: 140,
+    });
+  });
+
+  test("normalizes responsive active-frame control locks", () => {
+    const profile = normalizeActionBattleAttackProfile({
+      startupMs: 50,
+      activeMs: 100,
+      recoveryMs: 200,
+      control: {
+        movementLock: "active",
+        directionLock: "none",
+        moveCancelsRecovery: true,
+        inputBufferMs: 160,
+      },
+    });
+
+    expect(profile.control).toMatchObject({
+      movementLock: "active",
+      directionLock: "none",
+      moveCancelsRecovery: true,
+      inputBufferMs: 160,
+    });
   });
 
   test("derives recovery from the legacy lock duration when recovery is omitted", () => {
@@ -43,6 +71,8 @@ describe("normalizeActionBattleAttackProfile", () => {
       directionLock: false,
       animationKey: "castSkill",
       hitPolicy: "allowRepeatHits",
+      damageMultiplier: 2.2,
+      knockbackMultiplier: 1.8,
       hitboxes,
     });
 
@@ -56,6 +86,8 @@ describe("normalizeActionBattleAttackProfile", () => {
       directionLock: false,
       animationKey: "castSkill",
       hitPolicy: "allowRepeatHits",
+      damageMultiplier: 2.2,
+      knockbackMultiplier: 1.8,
       totalDurationMs: 500,
     });
     expect(profile.hitboxes).toBe(hitboxes);
@@ -102,6 +134,57 @@ describe("normalizeActionBattleAttackProfile", () => {
     });
   });
 
+  test("enables Adventure combat and impact visuals by default with a classic escape hatch", () => {
+    const adventure = normalizeActionBattleOptions();
+    const classic = normalizeActionBattleOptions({ preset: "classic" });
+
+    expect(adventure.preset).toBe("adventure");
+    expect((adventure.combat?.player?.combo as any).enabled).toBe(true);
+    expect((adventure.combat?.player?.chargedAttack as any).control).toBe("e");
+    expect((adventure.combat?.player?.dodge as any).invincibilityMs).toBe(220);
+    expect((adventure.combat?.player?.guard as any).enabled).toBe(true);
+    expect((adventure.combat?.player?.softTargeting as any).enabled).toBe(true);
+    expect(
+      (adventure.attack?.profile as NormalizedActionBattleAttackProfile).control
+    ).toMatchObject({
+      movementLock: "active",
+      directionLock: "active",
+      inputBufferMs: 160,
+    });
+    expect(adventure.ui).not.toHaveProperty("health");
+    expect(adventure.visual).toBe("impact");
+
+    expect(classic.preset).toBe("classic");
+    expect(classic.combat?.player?.combo).toBe(false);
+    expect(classic.combat?.player?.guard).toBe(false);
+    expect(classic.combat?.player?.softTargeting).toBe(false);
+    expect(classic.visual).toBe("classic");
+  });
+
+  test("merges partial Adventure player features and supports boolean toggles", () => {
+    const options = normalizeActionBattleOptions({
+      combat: {
+        player: {
+          combo: { bufferMs: 220 },
+          chargedAttack: false,
+          dodge: true,
+        },
+      },
+    });
+
+    expect(options.combat?.player?.combo).toMatchObject({
+      enabled: true,
+      bufferMs: 220,
+      resetMs: 700,
+    });
+    expect(options.combat?.player?.chargedAttack).toBe(false);
+    expect(options.combat?.player?.dodge).toMatchObject({
+      enabled: true,
+      cooldownMs: 650,
+      invincibilityMs: 220,
+    });
+  });
+
   test("keeps legacy lockDurationMs when no explicit profile is provided", () => {
     const options = normalizeActionBattleOptions({
       attack: {
@@ -144,7 +227,7 @@ describe("normalizeActionBattleAttackProfile", () => {
         targeting,
       },
       ui: {
-        actionBar: true,
+        hotbar: true,
         targeting: false,
         attackPreview: false,
       },
@@ -157,7 +240,7 @@ describe("normalizeActionBattleAttackProfile", () => {
     expect(options.ai?.behaviors?.slime).toBe(behavior);
     expect(options.skills?.getTargeting).toBe(targeting);
     expect(options.skills?.targeting).toBe(targeting);
-    expect((options.ui?.actionBar as any).enabled).toBe(true);
+    expect((options.ui?.hotbar as any).enabled).toBe(true);
     expect((options.ui?.targeting as any).enabled).toBe(false);
     expect((options.ui?.attackPreview as any).enabled).toBe(false);
   });

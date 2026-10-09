@@ -40,6 +40,20 @@ describe("removeImportsPlugin", () => {
     expect(result.code).toContain("export const ready = true;");
   });
 
+  test("removes named and star re-exports from the opposite runtime", async () => {
+    const result = await transform(`
+      export { createSecretServer } from "@server/api"; export const ready = true;
+      export * from "@server/hooks"; export const count = 1;
+      export { keepClient } from "client";
+    `);
+
+    expect(result.code).toContain("/* removed export: @server/api */");
+    expect(result.code).toContain("/* removed export: @server/hooks */");
+    expect(result.code).toContain("export const ready = true;");
+    expect(result.code).toContain("export const count = 1;");
+    expect(result.code).toContain('export { keepClient } from "client";');
+  });
+
   test("ignores unmatched files and parse failures", async () => {
     expect(await transform('import "vue";', "/tmp/style.css")).toBeNull();
     expect(await transform('import { broken from "vue";')).toBeNull();

@@ -1,4 +1,4 @@
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 import canvasengine from "@canvasengine/compiler";
 import path from "path";
 
@@ -24,7 +24,19 @@ export default defineConfig({
     },
   },
   test: {
+    exclude: [
+      ...configDefaults.exclude,
+      "packages/ui-css/tests/**",
+      "samples/cloudflare-mmorpg/src/worker.spec.ts",
+      "samples/cloudflare-mmorpg/src/publication-worker.spec.ts",
+      "playground/games/studio/src/worker.spec.ts",
+    ],
     environment: "jsdom",
+    environmentOptions: {
+      jsdom: {
+        url: "http://localhost/",
+      },
+    },
     globals: true,
     silent: true,
     setupFiles: ["./packages/testing/src/setup.ts"],

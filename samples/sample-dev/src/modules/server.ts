@@ -1,5 +1,4 @@
-import { defineModule } from "@rpgjs/common";
-import { RpgPlayer, RpgServer } from "@rpgjs/server";
+import { defineModule, RpgPlayer, RpgServer } from "@rpgjs/server";
 
 export default defineModule<RpgServer>({
     player: {
@@ -8,4 +7,3 @@ export default defineModule<RpgServer>({
       }
     }
   });
-  

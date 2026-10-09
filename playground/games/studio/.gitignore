@@ -1,0 +1,9 @@
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.env
+.env.*
+!.env.example
+.wrangler/
+dist/
+src/worker-configuration.d.ts

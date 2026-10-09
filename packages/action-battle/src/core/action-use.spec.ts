@@ -4,6 +4,10 @@ import {
   handleActionBattleProjectileImpact,
 } from "./action-use";
 import { setActionBattleSystems } from "./context";
+import {
+  beginActionBattleGuard,
+  clearActionBattleDefense,
+} from "./defense";
 
 const createEntity = (id: string, hp = 100) => ({
   id,
@@ -52,6 +56,160 @@ describe("executeActionBattleUse", () => {
     expect(attacker.sp).toBe(90);
     expect(attacker.applyStates).toHaveBeenCalled();
     expect(target.applyDamage).toHaveBeenCalledWith(attacker, expect.objectContaining({ id: "fire" }));
+  });
+
+  test("forwards skill presentation through AI-owned hurt feedback", () => {
+    const attacker = createEntity("caster");
+    const handleDamage = vi.fn();
+    const target = {
+      ...createEntity("target"),
+      battleAi: { handleDamage },
+    };
+    target.applyDamage.mockReturnValue({ damage: 25 });
+    const skill = {
+      id: "arcane",
+      _type: "skill",
+      spCost: 0,
+      hitRate: 1,
+      animation: "arcane-impact",
+    };
+
+    executeActionBattleUse({
+      attacker: attacker as any,
+      target: target as any,
+      usable: skill,
+      skill,
+    });
+
+    expect(handleDamage).toHaveBeenCalledWith(
+      attacker,
+      expect.objectContaining({
+        skill: expect.objectContaining({
+          animation: "arcane-impact",
+        }),
+      }),
+    );
+  });
+
+  test("resolves reactive skill metadata before impact client transfer", () => {
+    const packets: any[] = [];
+    const attacker = {
+      ...createEntity("caster"),
+      getCurrentMap: () => ({
+        clientVisual: (_id: string, payload: any) => {
+          packets.push(structuredClone(payload));
+        },
+      }),
+    };
+    const target = createEntity("target");
+    target.applyDamage.mockReturnValue({ damage: 25 });
+    const skill = {
+      id: () => "arcane",
+      _type: () => "skill",
+      name: () => "Arcane",
+      spCost: () => 5,
+      hitRate: () => 1,
+      animation: () => "arcane-impact",
+    };
+
+    expect(() =>
+      executeActionBattleUse({
+        attacker: attacker as any,
+        target: target as any,
+        usable: skill,
+        skill,
+      })
+    ).not.toThrow();
+
+    expect(attacker.sp).toBe(95);
+    expect(packets).toContainEqual(
+      expect.objectContaining({
+        moment: "hurt",
+        skill: expect.objectContaining({
+          id: "arcane",
+          animation: "arcane-impact",
+        }),
+        result: expect.objectContaining({
+          metadata: expect.objectContaining({
+            actionId: "arcane",
+            actionType: "skill",
+          }),
+        }),
+      })
+    );
+  });
+
+  test("consumes SP and resolves a failed skill without basic damage", () => {
+    vi.spyOn(Math, "random").mockReturnValue(0.99);
+    const attacker = {
+      ...createEntity("caster"),
+      getCurrentMap: () => ({
+        clientVisual: vi.fn(),
+      }),
+    };
+    const target = createEntity("target");
+
+    const handled = executeActionBattleUse({
+      attacker: attacker as any,
+      target: target as any,
+      usable: {
+        id: "risky",
+        _type: "skill",
+        spCost: 5,
+        hitRate: 0.95,
+      },
+      skill: {
+        id: "risky",
+        _type: "skill",
+        spCost: 5,
+        hitRate: 0.95,
+      },
+    });
+
+    expect(handled).toBe(true);
+    expect(attacker.sp).toBe(95);
+    expect(target.applyDamage).not.toHaveBeenCalled();
+  });
+
+  test("parries skill damage before states and staggers the attacking AI", () => {
+    const clientVisual = vi.fn();
+    const stagger = vi.fn();
+    const attacker = {
+      ...createEntity("monster"),
+      battleAi: { stagger },
+      getCurrentMap: () => ({ clientVisual }),
+    };
+    const target = {
+      ...createEntity("hero"),
+      direction: "up",
+    };
+    beginActionBattleGuard(target, { parryWindowMs: 200 });
+
+    executeActionBattleUse({
+      attacker: attacker as any,
+      target: target as any,
+      usable: {
+        id: "claw",
+        _type: "skill",
+        spCost: 0,
+        hitRate: 1,
+      },
+      skill: {
+        id: "claw",
+        _type: "skill",
+        spCost: 0,
+        hitRate: 1,
+      },
+    });
+
+    expect(target.applyDamage).not.toHaveBeenCalled();
+    expect(attacker.applyStates).not.toHaveBeenCalled();
+    expect(stagger).toHaveBeenCalledWith(650, target);
+    expect(clientVisual).toHaveBeenCalledWith(
+      "action-battle.visual",
+      expect.objectContaining({ moment: "parry" })
+    );
+    clearActionBattleDefense(target);
   });
 
   test("lets onUse compose custom behavior with defaultEffect", () => {
@@ -172,11 +330,12 @@ describe("executeActionBattleUse", () => {
     const target = createEntity("target");
     target.applyDamage.mockReturnValue({ damage: 30 });
     const emitted = [{ id: "bolt-1" }];
+    const emit = vi.fn(() => emitted);
     const attacker = {
       ...createEntity("caster"),
       getCurrentMap: () => ({
         projectiles: {
-          emit: vi.fn(() => emitted),
+          emit,
         },
       }),
     };
@@ -192,6 +351,9 @@ describe("executeActionBattleUse", () => {
         action: {
           mode: "projectile",
           range: 200,
+          visual: {
+            trailFx: "torchFire",
+          },
           projectile: {
             type: "bolt",
             speed: 200,
@@ -208,6 +370,12 @@ describe("executeActionBattleUse", () => {
     });
 
     expect(target.applyDamage).not.toHaveBeenCalled();
+    expect(emit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        params: expect.objectContaining({ trailFx: "torchFire" }),
+      }),
+      attacker
+    );
 
     handleActionBattleProjectileImpact({
       attacker: attacker as any,
@@ -313,5 +481,59 @@ describe("executeActionBattleUse", () => {
       direction: { x: 1, y: 0 },
       spreadDegrees: 20,
     });
+  });
+
+  test("uses the built-in projectile and serializes Studio presentation", () => {
+    const emit = vi.fn(() => [{ id: "studio-bolt-1" }]);
+    const attacker = {
+      ...createEntity("caster"),
+      getCurrentMap: () => ({
+        tileWidth: 48,
+        projectiles: { emit },
+      }),
+    };
+
+    executeActionBattleUse({
+      attacker: attacker as any,
+      usable: {
+        id: "studio-bolt",
+        _type: "skill",
+        spCost: 0,
+        targeting: { range: 6 },
+        action: {
+          mode: "projectile",
+          projectile: {
+            graphic: "fireball-spritesheet",
+            scale: 1.4,
+            rotateToDirection: false,
+          },
+        },
+      },
+      skill: {
+        id: "studio-bolt",
+        _type: "skill",
+        spCost: 0,
+        _skillInstance: {
+          targeting: { range: 6 },
+        },
+      },
+    });
+
+    expect(emit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "action-battle-skill",
+        trajectory: {
+          type: "linear",
+          speed: 180,
+          range: 288,
+        },
+        params: {
+          graphic: "fireball-spritesheet",
+          scale: 1.4,
+          rotateToDirection: false,
+        },
+      }),
+      attacker,
+    );
   });
 });

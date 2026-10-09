@@ -1,4 +1,5 @@
-import { mergeConfig, Provider } from "@signe/di";
+import { mergeConfig } from "@signe/di";
+import type { RpgProvider } from "@rpgjs/common";
 import {
   provideRpg,
   startGame,
@@ -17,6 +18,7 @@ import {
   provideServerModules,
   RpgServer,
   RpgPlayer,
+  getRpgRoomMetadata,
 } from "@rpgjs/server";
 import { h, Container } from "canvasengine";
 import { clearInject as clearClientInject } from "@rpgjs/client";
@@ -42,7 +44,7 @@ import { combineLatest, filter, take, firstValueFrom, Subject, map, throwError, 
  * })
  * ```
  */
-export function provideTestingLoadMap() {
+export function provideTestingLoadMap(): RpgProvider[] {
   return provideLoadMap((id: string) => {
     return {
       id,
@@ -60,7 +62,7 @@ export function provideTestingLoadMap() {
 }
 
 /**
- * Normalizes modules input to extract server/client modules from createModule providers or direct module objects
+ * Normalizes direct runtime module definitions and advanced composed providers.
  *
  * @param modules - Array of modules that can be either:
  *   - Direct module objects: { server: RpgServer, client: RpgClient }
@@ -71,7 +73,7 @@ export function provideTestingLoadMap() {
  * // Direct modules
  * normalizeModules([{ server: serverModule, client: clientModule }])
  *
- * // createModule providers
+ * // Advanced createModule providers remain supported
  * const providers = createModule('MyModule', [{ server: serverModule, client: clientModule }])
  * normalizeModules(providers)
  * ```
@@ -164,6 +166,7 @@ export interface TestingFixture {
     playerId: string;
     player: RpgPlayer;
     waitForMapChange(expectedMapId: string, timeout?: number): Promise<RpgPlayer>;
+    waitForRoomChange(expectedKind: string, timeout?: number): Promise<RpgPlayer>;
   }>;
   server: RpgServer;
   clear(): Promise<void>;
@@ -182,7 +185,7 @@ export interface TestingFixture {
  *
  * @param modules - Array of modules that can be either:
  *   - Direct module objects: { server: RpgServer, client: RpgClient }
- *   - Providers returned by createModule(): Provider[] with meta.server/client and useValue
+ *   - Advanced providers returned by createModule()
  * @param clientConfig - Optional client configuration
  * @param serverConfig - Optional server configuration
  * @returns Testing fixture with createClient method
@@ -194,7 +197,7 @@ export interface TestingFixture {
  *   client: clientModule
  * }])
  *
- * // Using createModule
+ * // Advanced composed providers are also accepted
  * const myModule = createModule('MyModule', [{
  *   server: serverModule,
  *   client: clientModule
@@ -203,7 +206,7 @@ export interface TestingFixture {
  * ```
  */
 export async function testing(
-  modules: ({ server?: RpgServer; client?: RpgClient } | Provider)[] = [],
+  modules: ({ server?: RpgServer; client?: RpgClient } | RpgProvider)[] = [],
   clientConfig: any = {},
   serverConfig: any = {}
 ): Promise<TestingFixture> {
@@ -360,6 +363,33 @@ export async function testing(
                 `Current map: ${currentMap?.id || "null"}`
             );
           }
+        },
+
+        /** Wait until the player joins a registered room kind. */
+        async waitForRoomChange(
+          expectedKind: string,
+          timeout = 5000,
+        ): Promise<RpgPlayer> {
+          const currentRoom = clientObj.player?.getCurrentRoom();
+          if (currentRoom && getRpgRoomMetadata(currentRoom.constructor as any)?.kind === expectedKind) {
+            return clientObj.player;
+          }
+
+          const roomChange$ = timer(0, 10).pipe(
+            map(() => clientObj.player),
+            filter((player): player is RpgPlayer => {
+              const room = player?.getCurrentRoom();
+              return Boolean(room && getRpgRoomMetadata(room.constructor as any)?.kind === expectedKind);
+            }),
+            take(1),
+          );
+          const timeout$ = timer(timeout).pipe(
+            take(1),
+            switchMap(() => throwError(() => new Error(
+              `Timeout: Player did not reach room kind ${expectedKind} within ${timeout}ms`,
+            ))),
+          );
+          return firstValueFrom(race([roomChange$, timeout$])) as Promise<RpgPlayer>;
         },
         
       };

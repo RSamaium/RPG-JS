@@ -1,5 +1,5 @@
 <DOMContainer width="100%" height="100%">
-    <div class="rpg-ui-title-screen rpg-anim-fade-in">
+    <div class="rpg-ui-title-screen rpg-anim-fade-in" style={{backgroundImage: backgroundImageStyle()}}>
         <div class="rpg-ui-title-screen-header rpg-anim-float">
             <div class="rpg-ui-title-screen-title">{titleText()}</div>
             @if (subtitleText()) {
@@ -26,7 +26,7 @@
 </DOMContainer>
 
 <script>
-    import { signal, computed, effect } from "canvasengine";
+    import { signal, computed, effect, mount } from "canvasengine";
     import { PrebuiltGui } from "@rpgjs/common";
     import { inject } from "../../core/inject";
     import { RpgClientEngine } from "../../RpgClientEngine";
@@ -47,10 +47,16 @@
         },
         localActions: {
             default: false
+        },
+        backgroundMusic: {
+            default: null
+        },
+        backgroundImage: {
+            default: null
         }
     });
 
-    const { entries, title, subtitle, version, saveLoad, localActions } = data();
+    const { entries, title, subtitle, version, saveLoad, localActions, backgroundMusic, backgroundImage } = data();
 
     const defaultEntries = [
         { id: "start", label: t("rpg.title.start") },
@@ -62,6 +68,20 @@
     const subtitleText = computed(() => resolveProp(subtitle) || "");
     const versionText = computed(() => resolveProp(version) || "");
     const localActionsEnabled = computed(() => resolveProp(localActions) === true);
+    const backgroundMusicId = computed(() =>
+        resolveProp(backgroundMusic)
+        || engine.globalConfig?.menus?.titleScreen?.settings?.backgroundMusic
+        || ""
+    );
+    const backgroundImageSource = computed(() =>
+        resolveProp(backgroundImage)
+        || engine.globalConfig?.menus?.titleScreen?.settings?.backgroundImage
+        || ""
+    );
+    const backgroundImageStyle = computed(() => {
+        const source = backgroundImageSource();
+        return source ? `url(${source})` : "none";
+    });
 
     const entryList = computed(() => {
         const list = resolveProp(entries);
@@ -100,12 +120,17 @@
         const currentIndex = Math.max(0, available.indexOf(current));
         const nextIndex = (currentIndex + delta + available.length) % available.length;
         selectedEntry.set(available[nextIndex]);
+        engine.playUiSound("navigate");
     };
 
     const triggerSelect = (index) => {
         const list = entryList();
         const entry = list[index];
-        if (!entry || isEntryDisabled(entry)) return;
+        if (!entry || isEntryDisabled(entry)) {
+            engine.playUiSound("error");
+            return;
+        }
+        engine.playUiSound("confirm");
         if (localActionsEnabled()) {
             if (entry.id === "start") {
                 guiService.hide(PrebuiltGui.TitleScreen);
@@ -128,6 +153,7 @@
     function selectEntry(index) {
         return function() {
             selectedEntry.set(index);
+            engine.playUiSound("navigate");
             triggerSelect(index);
         };
     }
@@ -161,5 +187,24 @@
         gamepad: {
             enabled: true
         }
+    });
+
+    mount(() => {
+        engine.playUiSound("open");
+        const music = backgroundMusicId();
+        if (music) {
+            engine.music.contextId = "title-screen";
+            void engine.music.enter(music, {
+                volume: 0.8,
+                mapVolume: 0,
+                fadeInMs: 600,
+                fadeOutMs: 400
+            });
+        }
+        return () => {
+            if (engine.music.contextId !== "title-screen") return;
+            engine.music.contextId = undefined;
+            engine.music.leave({ exitDelayMs: 0, fadeOutMs: 400 });
+        };
     });
 </script>

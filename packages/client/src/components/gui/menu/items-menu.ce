@@ -7,6 +7,7 @@
                     <div class="rpg-ui-menu-panel-details rpg-ui-panel">
                         <div class="rpg-ui-menu-panel-hero">
                             <div class="rpg-ui-menu-panel-hero-icon">
+                                @if (currentItem()?.icon) {
                                 <DOMSprite 
                                     sheet={iconSheet(currentItem()?.icon)} 
                                     playing="default" 
@@ -14,10 +15,23 @@
                                     height="48px"
                                     objectFit="contain"
                                 />
+                                } @else {
+                                    <span class="rpg-ui-fallback-icon" aria-hidden="true">◇</span>
+                                }
                             </div>
                             <div>
                                 <div class="rpg-ui-menu-panel-details-title">{currentItem()?.name}</div>
                                 <div class="rpg-ui-menu-panel-details-desc">{currentItem()?.description || ""}</div>
+                                @if (currentItemSlot() >= 0) {
+                                    <div class="rpg-item-menu-assigned">
+                                        {t("rpg.menu.assigned-slot", { slot: slotLabels[currentItemSlot()] })}
+                                    </div>
+                                }
+                                @if (currentItem()?.type !== "item") {
+                                    <div class="rpg-item-menu-equipment-help">
+                                        {t("rpg.menu.manage-in-equip")}
+                                    </div>
+                                }
                             </div>
                         </div>
                     </div>
@@ -32,20 +46,24 @@
                             class={{active: selectedTab() === tabIndex}}
                             tabindex={tabIndex}
                             click={selectTab(tabIndex)}
-                        >{tab.label}</div>
+                        >{t(tab.label)}</div>
                     }
                 </div>
                 <Navigation tabindex={selectedItem} controls={controls}>
+                    @if (!filteredItems().length) {
+                        <div class="rpg-ui-empty-state"><span aria-hidden="true">◇</span><h3>{t("rpg.menu.no-items")}</h3><p>{t("rpg.menu.no-items-help")}</p></div>
+                    }
                     @for ((item,index) of filteredItems) {
                         <div
                             class="rpg-ui-menu-item rpg-ui-menu-row"
-                            class={{disabled: !item.usable}}
+                            class={{disabled: item.type === "item" && !item.usable}}
                             data-selected={selectedItem() === index ? "true" : "false"}
                             tabindex={index}
                             click={selectItem(index)}
                         >
                             <div class="rpg-ui-menu-row-main">
                                 <div class="rpg-ui-menu-row-icon">
+                                    @if (item.icon) {
                                     <DOMSprite 
                                         sheet={iconSheet(item.icon)} 
                                         playing="default" 
@@ -53,6 +71,9 @@
                                         height="28px"
                                         objectFit="contain"
                                     />
+                                    } @else {
+                                        <span class="rpg-ui-fallback-icon" aria-hidden="true">◇</span>
+                                    }
                                 </div>
                                 <span>{item.name}</span>
                             </div>
@@ -86,8 +107,25 @@
     </div>
 </DOMContainer>
 
+<style>
+    .rpg-item-menu-assigned {
+        margin-top: 8px;
+        color: var(--rpg-ui-accent);
+        font-size: 0.76rem;
+        font-weight: 800;
+    }
+
+    .rpg-item-menu-equipment-help {
+        margin-top: 8px;
+        color: var(--rpg-ui-text-muted, #b9b2a6);
+        font-size: 0.76rem;
+        font-weight: 700;
+    }
+</style>
+
 <script>
     import { signal, computed, createTabindexNavigator, effect } from "canvasengine";
+    import { selectionSound } from "../lifecycle";
     import { inject } from "../../../core/inject";
     import { RpgClientEngine } from "../../../RpgClientEngine";
     import { delay } from "@rpgjs/common";
@@ -99,18 +137,26 @@
 
     const selectedItem = signal(0);
     const selectedTab = signal(0);
+    selectionSound(() => `${selectedTab()}:${selectedItem()}`, () => engine.playUiSound("navigate"));
     const selectedConfirm = signal(0);
     const confirmOpen = signal(false);
     const confirmItem = signal(null);
 
-    const { data, onInteraction, onBack } = defineProps();
+    const { data, assignmentOpen, onAssignHotbar, onInteraction, onBack } = defineProps();
 
     const items = computed(() => data().items);
+    const hotbar = computed(() => data().hotbar || { slots: [] });
+    const isAssignmentOpen = () => Boolean(resolveProp(assignmentOpen));
+    const canAssignItems = computed(() => {
+        const allowed = hotbar().allowedEntryTypes;
+        return !Array.isArray(allowed) || allowed.includes("item");
+    });
+    const slotLabels = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
 
     const tabs = [
-        { id: "item", label: t("rpg.menu.items") },
-        { id: "weapon", label: t("rpg.menu.weapons") },
-        { id: "armor", label: t("rpg.menu.armor") }
+        { id: "item", label: "rpg.menu.items" },
+        { id: "weapon", label: "rpg.menu.weapons" },
+        { id: "armor", label: "rpg.menu.armor" }
     ];
 
     const resolveProp = (value) => typeof value === "function" ? value() : value;
@@ -126,14 +172,24 @@
         return items.filter((item) => item.type === tab.id && (item.quantity ?? 1) > 0);
     });
 
-    const confirmOptions = [
+    const confirmOptions = computed(() => [
         { id: "use", label: t("rpg.menu.use") },
+        ...(canAssignItems() && confirmItem()?.hotbarAssignable
+            ? [{ id: "assign", label: t("rpg.menu.assign-hotbar") }]
+            : []),
         { id: "cancel", label: t("rpg.menu.cancel") }
-    ];
+    ]);
 
     const nav = createTabindexNavigator(selectedItem, { count: () => filteredItems().length }, "wrap");
-    const navConfirm = createTabindexNavigator(selectedConfirm, { count: () => confirmOptions.length }, "wrap");
+    const navConfirm = createTabindexNavigator(selectedConfirm, { count: () => confirmOptions().length }, "wrap");
     const currentItem = computed(() => filteredItems()[selectedItem()]);
+    const itemSlot = (item) => {
+        if (!item) return -1;
+        return (hotbar().slots || []).findIndex(
+            (slot) => slot?.entry?.type === "item" && slot.entry.id === item.id
+        );
+    };
+    const currentItemSlot = computed(() => itemSlot(currentItem()));
     const iconSheet = (iconId) => ({
         definition: engine.getSpriteSheet(iconId)
     });
@@ -165,13 +221,13 @@
 
     const useItem = (index) => {
         const item = filteredItems()[index];
-        if (!item || !item.usable) return;
+        if (!item || item.type !== "item" || !item.usable) return;
         if (onInteraction) onInteraction("useItem", { id: item.id });
     };
 
     const requestUseItem = (index) => {
         const item = filteredItems()[index];
-        if (!item || !item.usable) return;
+        if (!item || item.type !== "item" || !item.usable) return;
         if (item.consumable) {
             confirmItem.set(item);
             confirmOpen.set(true);
@@ -198,6 +254,14 @@
         });
     };
 
+    const openAssignment = () => {
+        const item = confirmItem();
+        if (!item?.hotbarAssignable || !canAssignItems()) return;
+        confirmOpen.set(false);
+        confirmItem.set(null);
+        onAssignHotbar?.({ type: "item", id: item.id, name: item.name });
+    };
+
     const stopEvent = (event) => {
         event?.stopPropagation?.();
     };
@@ -210,8 +274,12 @@
     function confirmSelect(index) {
         return function() {
             selectedConfirm.set(index);
-            if (index === 0) {
+            if (confirmOptions()[index]?.id === "use") {
                 confirmUse();
+                return;
+            }
+            if (confirmOptions()[index]?.id === "assign") {
+                openAssignment();
                 return;
             }
             cancelConfirm();
@@ -259,7 +327,7 @@
             bind: keyboardControls.up,
             throttle: 150,
             keyDown() {
-                if (confirmOpen()) {
+                if (confirmOpen() || isAssignmentOpen()) {
                     return;
                 }
                 nav.next(-1);
@@ -270,7 +338,7 @@
             bind: keyboardControls.left,
             throttle: 150,
             keyDown() {
-                if (confirmOpen()) {
+                if (confirmOpen() || isAssignmentOpen()) {
                     return;
                 }
                 selectedTab.update((value) => (value - 1 + tabs.length) % tabs.length);
@@ -282,7 +350,7 @@
             bind: keyboardControls.right,
             throttle: 150,
             keyDown() {
-                if (confirmOpen()) {
+                if (confirmOpen() || isAssignmentOpen()) {
                     return;
                 }
                 selectedTab.update((value) => (value + 1) % tabs.length);
@@ -294,7 +362,7 @@
             bind: keyboardControls.down,
             throttle: 150,
             keyDown() {
-                if (confirmOpen()) {
+                if (confirmOpen() || isAssignmentOpen()) {
                     return;
                 }
                 nav.next(1);
@@ -303,6 +371,7 @@
         action: {
             bind: getKeyboardControlBind(keyboardControls.action),
             keyDown() {
+                if (isAssignmentOpen()) return;
                 if (confirmOpen()) {
                     confirmSelect(selectedConfirm())();
                     return;
@@ -313,6 +382,7 @@
         escape: {
             bind: keyboardControls.escape,
             keyDown() {
+                if (isAssignmentOpen()) return;
                 if (confirmOpen()) {
                     cancelConfirm();
                     return;

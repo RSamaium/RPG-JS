@@ -13,6 +13,12 @@
       "description": "Reference for the `RpgClientEngine` class.",
       "output": "rpg-client-engine.md",
       "sourceFiles": ["packages/client/src/RpgClientEngine.ts"]
+    },
+    {
+      "title": "Hotbar Activation",
+      "description": "Client preparation helpers for server-authoritative hotbar entries.",
+      "output": "hotbar-activation.md",
+      "sourceFiles": ["packages/client/src/services/hotbar.ts"]
     }
   ]
 }

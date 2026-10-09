@@ -1,12 +1,12 @@
 import Canvas from "./components/scenes/canvas.ce";
 import BuiltinSceneMap from "./components/scenes/draw-map.ce";
 import { inject } from './core/inject'
-import { signal, bootstrapCanvas, Howl, trigger, type Trigger } from "canvasengine";
+import { signal, bootstrapCanvas, Howl, Howler, trigger, type Trigger, type ControlsDirective } from "canvasengine";
 import { AbstractWebsocket, WebSocketToken } from "./services/AbstractSocket";
 import { LoadMapService, LoadMapToken } from "./services/loadMap";
 import { RpgSound } from "./Sound";
 import { RpgResource } from "./Resource";
-import { getOrCreateI18nService, Hooks, ModulesToken, Direction, normalizeLightingState, Vector2, type I18nParams, type I18nService } from "@rpgjs/common";
+import { getOrCreateI18nService, Hooks, ModulesToken, Direction, normalizeLightingState, type I18nParams, type I18nService, type RpgRoomDescriptor } from "@rpgjs/common";
 import type { EventComponentConfig } from "./RpgClient";
 import type { RpgClientEvent } from "./Game/Event";
 import { load } from "@signe/sync";
@@ -33,112 +33,50 @@ import {
 import { NotificationManager } from "./Gui/NotificationManager";
 import { SaveClientService } from "./services/save";
 import { getCanMoveValue } from "./utils/readPropValue";
-import { ProjectileManager, type ClientProjectileImpact, type ClientProjectileSpawn } from "./Game/ProjectileManager";
+import { ProjectileManager } from "./Game/ProjectileManager";
 import { ClientVisualRegistry, type ClientVisualHandler, type ClientVisualMap, type ClientVisualPacket } from "./Game/ClientVisuals";
 import { normalizeActionInput } from "./services/actionInput";
 import { createClientPointerContext, type ClientPointerContext } from "./services/pointerContext";
 import { RpgClientInteractions } from "./services/interactions";
 import { normalizeRoomMapId } from "./utils/mapId";
 import { applySyncedHitboxPayload } from "./utils/syncHitbox";
+import { applySyncedParamPayload } from "./utils/syncParams";
 import { EventComponentResolverRegistry, type EventComponentResolver } from "./Game/EventComponentResolver";
 import { RpgClientBuiltinI18n } from "./i18n";
-import type { CameraFollowSmoothMove } from "./services/cameraFollow";
+import { createLocalePreferences } from "./services/localePreferences";
+import { clearCameraFollowPlugins, type CameraFollowSmoothMove } from "./services/cameraFollow";
+import { RpgMusicManager } from "./Game/MusicManager";
+import {
+  RpgClientRoom,
+  RpgClientSceneRegistry,
+  type RpgClientSceneDefinition,
+} from "./services/gameplayRooms";
+import {
+  RpgAudioManager,
+  type RpgAudioChannel,
+  type RpgPlaySoundOptions,
+  type RpgSoundConfiguration,
+  type RpgUiAudioEvent,
+} from "./Game/AudioManager";
+import { routePredictedLocalPlayerSync } from "./services/localPlayerSync";
+import { installCanvasResizeGuard } from "./services/canvasResizeGuard";
+import { MovePathSender } from "./services/movePathSender";
+import { ServerTickEstimator } from "./services/serverTickEstimator";
+import { predictProjectileImpact } from "./services/projectilePrediction";
+import { registerPresentationListeners } from "./services/presentationListeners";
+import {
+  DEFAULT_DASH_COOLDOWN_MS,
+  DEFAULT_DASH_DURATION_MS,
+  isDashInput,
+  normalizeDashInput,
+  resolveMoveDirection,
+  vectorToDirection,
+} from "./services/movementInput";
 export type {
   CameraFollowEase,
   CameraFollowSmoothMove,
   CameraFollowSmoothMoveOptions,
 } from "./services/cameraFollow";
-
-interface MovementTrajectoryPoint {
-  frame: number;
-  tick: number;
-  timestamp: number;
-  input: RpgMovementInput;
-  x: number;
-  y: number;
-  direction?: Direction;
-}
-
-interface CanvasResizeSize {
-  width: number;
-  height: number;
-}
-
-const DEFAULT_DASH_ADDITIONAL_SPEED = 8;
-const DEFAULT_DASH_DURATION_MS = 180;
-const DEFAULT_DASH_COOLDOWN_MS = 450;
-
-const isDashInput = (input: RpgMovementInput): input is RpgDashInput =>
-  typeof input === "object" && input !== null && input.type === "dash";
-
-const isMoveInput = (
-  input: RpgMovementInput
-): input is { type: "move"; direction: Direction } =>
-  typeof input === "object" && input !== null && input.type === "move";
-
-const resolveMoveDirection = (input: RpgMovementInput): Direction | undefined => {
-  if (isMoveInput(input)) return input.direction;
-  if (typeof input === "string" || typeof input === "number") {
-    return input as Direction;
-  }
-  return undefined;
-};
-
-const directionToVector = (direction: Direction | undefined) => {
-  switch (direction) {
-    case Direction.Left:
-      return { x: -1, y: 0 };
-    case Direction.Right:
-      return { x: 1, y: 0 };
-    case Direction.Up:
-      return { x: 0, y: -1 };
-    case Direction.Down:
-    default:
-      return { x: 0, y: 1 };
-  }
-};
-
-const vectorToDirection = (direction: { x: number; y: number }): Direction => {
-  if (Math.abs(direction.x) > Math.abs(direction.y)) {
-    return direction.x < 0 ? Direction.Left : Direction.Right;
-  }
-  return direction.y < 0 ? Direction.Up : Direction.Down;
-};
-
-const normalizeDashInput = (
-  input: Partial<RpgDashInput>,
-  fallbackDirection: Direction | undefined
-): RpgDashInput | null => {
-  const rawDirection = input.direction ?? directionToVector(fallbackDirection);
-  const rawX = Number(rawDirection?.x ?? 0);
-  const rawY = Number(rawDirection?.y ?? 0);
-  const magnitude = Math.hypot(rawX, rawY);
-  if (!Number.isFinite(magnitude) || magnitude <= 0) return null;
-
-  const additionalSpeed =
-    typeof input.additionalSpeed === "number" && Number.isFinite(input.additionalSpeed)
-      ? Math.max(0, Math.min(input.additionalSpeed, 64))
-      : DEFAULT_DASH_ADDITIONAL_SPEED;
-  const duration =
-    typeof input.duration === "number" && Number.isFinite(input.duration)
-      ? Math.max(1, Math.min(input.duration, 1000))
-      : DEFAULT_DASH_DURATION_MS;
-  const cooldown =
-    typeof input.cooldown === "number" && Number.isFinite(input.cooldown)
-      ? Math.max(0, Math.min(input.cooldown, 5000))
-      : DEFAULT_DASH_COOLDOWN_MS;
-
-  return {
-    type: "dash",
-    direction: {
-      x: rawX / magnitude,
-      y: rawY / magnitude,
-    },
-    additionalSpeed,
-    duration,
-    cooldown,
-  };
-};
 
 type ConfigurableTrigger<T> = Omit<Trigger<T>, "start"> & {
   start(config?: T): Promise<void>;
@@ -151,12 +89,41 @@ type MapShakeOptions = {
   direction?: string;
 };
 
+/**
+ * Resolve on the next animation frame. Frames are paused in background tabs,
+ * so a short timeout also resolves it to never stall a map transfer.
+ */
+const waitNextFrame = (): Promise<void> => new Promise((resolve) => {
+  let done = false;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    resolve();
+  };
+  setTimeout(finish, 50);
+  if (typeof requestAnimationFrame === "function") {
+    requestAnimationFrame(finish);
+  }
+});
+
 export class RpgClientEngine<T = any> {
+  /** Runtime defaults used by modules that specialize the built-in dash. */
+  dashDefaults: Partial<RpgDashInput> = {};
   private guiService: RpgGui;
   private webSocket: AbstractWebsocket;
   private loadMapService: LoadMapService;
   private hooks: Hooks;
   private sceneMap: RpgClientMap
+  /** Synchronized state for the active non-map gameplay room. */
+  public readonly sceneRoom = new RpgClientRoom();
+  /** Authoritative descriptor of the active room. */
+  public readonly activeRoom = signal<RpgRoomDescriptor | null>(null);
+  /** Active room kind; `map` keeps the historical map pipeline enabled. */
+  public readonly activeSceneKind = signal("map");
+  /** CanvasEngine component selected for a custom gameplay room. */
+  public readonly activeRoomSceneComponent = signal<any>(undefined);
+  private readonly clientSceneRegistry: RpgClientSceneRegistry;
+  private activeClientScene?: RpgClientSceneDefinition;
   private selector: HTMLElement;
   public globalConfig: T;
   public sceneComponent: any;
@@ -167,10 +134,60 @@ export class RpgClientEngine<T = any> {
   spritesheets: Map<string | number, any> = new Map();
   private spritesheetPromises: Map<string | number, Promise<any>> = new Map();
   sounds: Map<string, any> = new Map();
+  /** Internal mixer behind the established sound API. */
+  private readonly audio = new RpgAudioManager({
+    getSound: (id) => this.getSound(id),
+    addSound: (sound) => this.addSound(sound),
+    onPreferencesChange: (preferences) => {
+      (Howler as any).volume(preferences.master);
+      this.music?.setOutputGain(preferences.music);
+    },
+  });
+  /** Client-only controller for temporary looping music and map BGM crossfades. */
+  music = new RpgMusicManager({
+    getSound: (id) => this.getSound(id),
+    createSound: (src, options) =>
+      new (Howl as any).Howl({ src: [src], ...options }),
+  });
   componentAnimations: any[] = [];
+  /** Custom weather components by id, registered with the `weathers` module option. */
+  weatherComponents = new Map<string, any>();
   clientVisuals = new ClientVisualRegistry();
   projectiles: ProjectileManager;
+  /**
+   * Read the latest pointer position tracked by the client canvas. World
+   * coordinates are suitable for action payloads and map interactions.
+   *
+   * @title pointer
+   * @prop pointer: ClientPointerContext
+   * @memberof RpgClientEngine
+   * @example
+   * ```ts
+   * const target = engine.pointer.world()
+   * if (target) engine.processAction('projectile:shoot', { target })
+   * ```
+   */
   pointer: ClientPointerContext = createClientPointerContext();
+  /**
+   * Register client-only pointer behaviors for map sprites. Interactions remain
+   * local unless a behavior explicitly sends an action to the server.
+   *
+   * See the [client interactions guide](../../guide/interactions.md) for hover,
+   * selection, hit testing, drag-and-drop, overlays, and network rules.
+   *
+   * @title interactions
+   * @prop interactions: RpgClientInteractions
+   * @memberof RpgClientEngine
+   * @example
+   * ```ts
+   * engine.interactions.use('Guard', {
+   *   cursor: 'pointer',
+   *   click(ctx) {
+   *     ctx.action('guard:talk', { eventId: ctx.target.id })
+   *   }
+   * })
+   * ```
+   */
   interactions: RpgClientInteractions = new RpgClientInteractions(this);
   private spritesheetResolver?: (id: string | number) => any | Promise<any>;
   private soundResolver?: (id: string) => any | Promise<any>;
@@ -198,7 +215,14 @@ export class RpgClientEngine<T = any> {
   mapShakeTrigger: ConfigurableTrigger<MapShakeOptions> = trigger<MapShakeOptions>();
 
   controlsReady = signal<boolean | undefined>(undefined); 
+  // Active client input directive, shared with the mobile overlay.
+  activeKeyboardControls = signal<ControlsDirective | null>(null);
   gamePause = signal(false);
+  /**
+   * Freezes map rendering for short presentation-only beats such as combat
+   * hit-stop. It is deliberately separate from menu/gameplay pause ownership.
+   */
+  visualPause = signal(false);
 
   private predictionEnabled = false;
   private prediction?: PredictionController<RpgMovementInput, Direction>;
@@ -210,18 +234,16 @@ export class RpgClientEngine<T = any> {
   private pendingPredictionFrames: number[] = [];
   private lastClientPhysicsStepAt = 0;
   private frameOffset = 0;
-  private latestServerTick?: number;
-  private latestServerTickAt = 0;
+  private serverTick = new ServerTickEstimator();
   private dashLockedUntil = 0;
   // Ping/Pong for RTT measurement
   private rtt: number = 0; // Round-trip time in ms
   private pingInterval: any = null;
   private readonly PING_INTERVAL_MS = 5000; // Send ping every 5 seconds
   private lastInputTime = 0;
-  private readonly MOVE_PATH_RESEND_INTERVAL_MS = 120;
-  private readonly MAX_MOVE_TRAJECTORY_POINTS = 240;
-  private lastMovePathSentAt = 0;
-  private lastMovePathSentFrame = 0;
+  private latestDirectionalInput?: RpgMovementInput;
+  private pendingMapTransferInput?: RpgMovementInput;
+  private movePath = new MovePathSender((packet) => this.webSocket.emit("move", packet));
   // Track map loading state for onAfterLoading hook using RxJS
   private mapLoadCompleted$ = new BehaviorSubject<boolean>(false);
   private playerIdReceived$ = new BehaviorSubject<boolean>(false);
@@ -231,9 +253,11 @@ export class RpgClientEngine<T = any> {
   private sceneResetQueued = false;
   private mapTransitionInProgress = false;
   private currentMapRoomId?: string;
+  private activeMapStreamController?: { attach(map: RpgClientMap): void; detach(): void };
   private socketListenersInitialized = false;
   private clientReadyForMapChanges = false;
   private pendingMapChanges: any[] = [];
+  private pendingRoomChanges: unknown[] = [];
   
   // Store subscriptions and event listeners for cleanup
   private tickSubscriptions: any[] = [];
@@ -245,24 +269,35 @@ export class RpgClientEngine<T = any> {
   private pendingSyncPackets: any[] = [];
   private notificationManager: NotificationManager = new NotificationManager();
   private i18nService: I18nService;
-  private locale?: string;
+  private locale = signal("");
+  private localePreferences: ReturnType<typeof createLocalePreferences>;
+  private localeConnected = false;
+  private connectionPromise?: Promise<void>;
 
   constructor(public context) {
     this.webSocket = inject(WebSocketToken);
     this.guiService = inject(RpgGui);
     this.loadMapService = inject(LoadMapToken);
     this.hooks = inject<Hooks>(ModulesToken);
+    this.clientSceneRegistry = inject(RpgClientSceneRegistry);
     this.i18nService = getOrCreateI18nService(context);
     this.i18nService.addMessages(RpgClientBuiltinI18n, "rpgjs-client", 0);
     this.projectiles = new ProjectileManager(
       this.hooks,
-      (projectile) => this.predictProjectileImpact(projectile),
+      (projectile) => predictProjectileImpact((this.sceneMap as any)?.physic, projectile),
     );
     this.globalConfig = inject(GlobalConfigToken)
 
     if (!this.globalConfig) {
       this.globalConfig = {} as T
     }
+    let localeStorage: Storage | undefined;
+    try { localeStorage = window.localStorage; } catch { /* Storage is optional. */ }
+    this.localePreferences = createLocalePreferences(this.getAvailableLocales(), this.i18nService.defaultLocale,
+      (this.globalConfig as any).projectId ?? (this.globalConfig as any)._id ?? (typeof location !== "undefined" ? location.pathname : "default"),
+      typeof navigator !== "undefined" ? navigator.languages : [], localeStorage);
+    this.locale.set(this.localePreferences.resolve());
+    this.webSocket.locale = () => this.getLocale();
     if (!(this.globalConfig as any).box) {
       (this.globalConfig as any).box = {
         styles: {
@@ -272,6 +307,11 @@ export class RpgClientEngine<T = any> {
         sounds: {}
       }
     }
+    this.audio.configure({
+      projectId: (this.globalConfig as any).projectId ?? (this.globalConfig as any)._id,
+      ui: (this.globalConfig as any).audio?.ui,
+    });
+    this.music.setOutputGain(this.audio.channelGain("music"));
 
     this.addComponentAnimation({
       id: "animation",
@@ -316,13 +356,52 @@ export class RpgClientEngine<T = any> {
     return this.webSocket.mode === "standalone";
   }
 
-  setLocale(locale: string) {
-    this.locale = locale;
+  /**
+   * Select and persist a game language, or `auto` for browser negotiation.
+   * Updates client labels and the connected player's future translations.
+   * @title setLocale
+   * @method setLocale
+   * @param locale - Registered game locale or `auto`.
+   * @returns Nothing.
+   * @memberof RpgClientEngine
+   * @example client.setLocale('fr')
+   */
+  setLocale(locale: string): void {
+    this.localePreferences.select(locale);
+    this.locale.set(this.localePreferences.resolve());
+    if (this.localeConnected) this.webSocket.emit("player.locale", { locale: this.getLocale() });
   }
 
+  /**
+   * Read the resolved client locale, reactively inside CanvasEngine computations.
+   * Works in standalone RPG and MMORPG modes.
+   * @title getLocale
+   * @method getLocale
+   * @returns The resolved game locale, never `auto`.
+   * @memberof RpgClientEngine
+   * @example client.getLocale() // 'fr'
+   */
   getLocale(): string {
-    return this.locale || this.i18nService.defaultLocale;
+    return this.locale() || this.i18nService.defaultLocale;
   }
+
+  /** Game catalogue locales only, in both standalone and MMORPG mode.
+   * @title getAvailableLocales
+   * @method getAvailableLocales
+   * @returns Registered game locales; defaultLocale if there are no catalogues.
+   * @memberof RpgClientEngine
+   * @example client.getAvailableLocales() // ['en', 'fr']
+   */
+  getAvailableLocales(): string[] { return this.i18nService.getAvailableLocales(); }
+
+  /** Current client preference in standalone RPG and MMORPG modes.
+   * @title getLocalePreference
+   * @method getLocalePreference
+   * @returns Locale preference, reactive in client components.
+   * @memberof RpgClientEngine
+   * @example client.getLocalePreference() // 'auto'
+   */
+  getLocalePreference(): string { return this.localePreferences.preference(); }
 
   t(key: string, params?: I18nParams): string {
     return this.i18nService.t(key, params, this.getLocale());
@@ -336,44 +415,34 @@ export class RpgClientEngine<T = any> {
   }
 
   /**
-   * Assigns a CanvasEngine KeyboardControls instance to the dependency injection context
-   * 
-   * This method registers a KeyboardControls instance from CanvasEngine into the DI container,
-   * making it available for injection throughout the application. The particularity is that
-   * this method is automatically called when a sprite is displayed on the map, allowing the
-   * controls to be automatically associated with the active sprite.
-   * 
-   * ## Design
-   * 
-   * - The instance is stored in the DI context under the `KeyboardControls` token
-   * - It's automatically assigned when a sprite component mounts (in `character.ce`)
-   * - The controls instance comes from the CanvasEngine component's directives
-   * - Once registered, it can be retrieved using `inject(KeyboardControls)` from anywhere
-   * 
-   * @param controlInstance - The CanvasEngine KeyboardControls instance to register
-   * 
+   * Registers the current player's live CanvasEngine controls on the client.
+   *
+   * Used automatically when the player component mounts in standalone RPG and
+   * MMORPG modes. Destroyed directives are ignored so a retiring component cannot
+   * overwrite replacement controls during streamed map updates. Input handling
+   * remains client-side; this does not change server movement authority.
+   *
+   * @title setKeyboardControls
+   * @method setKeyboardControls
+   * @param controlInstance - The live CanvasEngine controls directive to register.
+   * @returns Nothing.
+   * @memberof RpgClientEngine
    * @example
    * ```ts
-   * // The method is automatically called when a sprite is displayed:
-   * // client.setKeyboardControls(element.directives.controls)
-   * 
-   * // Later, retrieve and use the controls instance:
-   * import { Input, inject, KeyboardControls } from '@rpgjs/client'
-   * 
-   * const controls = inject(KeyboardControls)
-   * const control = controls.getControl(Input.Enter)
-   * 
-   * if (control) {
-   *   console.log(control.actionName) // 'action'
-   * }
+   * // Inside the current player's CanvasEngine mount callback:
+   * client.setKeyboardControls(element.directives.controls)
    * ```
    */
-  setKeyboardControls(controlInstance: any) {
+  setKeyboardControls(controlInstance: ControlsDirective): void {
+    // CanvasEngine clears the keyboard when a controls directive is destroyed.
+    // A retiring character's effect must not replace the new player's controls.
+    if (!controlInstance?.keyboard) return;
     const currentValues = this.context.values['inject:' + 'KeyboardControls']
     this.context.values['inject:' + 'KeyboardControls'] = {
       ...currentValues,
       values: new Map([['__default__', controlInstance]])
     }
+    this.activeKeyboardControls.set(controlInstance);
     this.controlsReady.set(true);
   }
 
@@ -383,19 +452,13 @@ export class RpgClientEngine<T = any> {
     this.sceneMap.loadPhysic();
     this.resolveSceneMapComponent();
 
+    this.loadMapService.initialize?.();
     const saveClient = inject(SaveClientService);
     saveClient.initialize();
     this.initListeners();
     this.guiService._initialize();
 
-    try {
-      await this.webSocket.connection();
-    }
-    catch (error) {
-      this.stopPingPong();
-      await this.callConnectError(error);
-      throw error;
-    }
+    if (!this.webSocket.deferConnection) await this.connect();
 
     this.selector = document.body.querySelector("#rpg") as HTMLElement;
 
@@ -405,7 +468,7 @@ export class RpgClientEngine<T = any> {
       Canvas,
       bootstrapOptions
     );
-    this.installCanvasResizeGuard(app);
+    installCanvasResizeGuard(app);
     this.canvasApp = app;
     this.canvasElement = canvasElement;
     this.renderer = app.renderer as unknown as PIXI.Renderer;
@@ -433,6 +496,7 @@ export class RpgClientEngine<T = any> {
     this.hooks.callHooks("client-gui-load", this).subscribe();
     this.hooks.callHooks("client-particles-load", this).subscribe();
     this.hooks.callHooks("client-componentAnimations-load", this).subscribe();
+    this.hooks.callHooks("client-weathers-load", this).subscribe();
     this.hooks.callHooks("client-clientVisuals-load", this).subscribe();
     this.hooks.callHooks("client-projectiles-load", this).subscribe();
     this.hooks.callHooks("client-interactions-load", this).subscribe();
@@ -441,6 +505,7 @@ export class RpgClientEngine<T = any> {
     await lastValueFrom(this.hooks.callHooks("client-engine-onStart", this));
     this.clientReadyForMapChanges = true;
     this.flushPendingMapChanges();
+    this.flushPendingRoomChanges();
 
     // wondow is resize
     this.resizeHandler = () => {
@@ -451,7 +516,6 @@ export class RpgClientEngine<T = any> {
     const tickSubscription = this.tick.subscribe((tick) => {
       this.stepClientPhysicsTick();
       this.projectiles.step();
-      this.flushPendingPredictedStates();
       this.flushPendingMovePath();
       this.hooks.callHooks("client-engine-onStep", this, tick).subscribe();
 
@@ -464,57 +528,53 @@ export class RpgClientEngine<T = any> {
     });
     this.tickSubscriptions.push(tickSubscription);
 
-    this.startPingPong();
   }
 
-  private installCanvasResizeGuard(app: any) {
-    if (!app || typeof app.resize !== "function") return;
-
-    const originalResize = app.resize.bind(app);
-    app.resize = () => {
-      const targetSize = this.readCanvasResizeTargetSize(app);
-      const rendererSize = this.readCanvasRendererSize(app);
-
-      if (
-        targetSize &&
-        rendererSize &&
-        targetSize.width === rendererSize.width &&
-        targetSize.height === rendererSize.height
-      ) {
-        this.cancelCanvasResizeFrame(app);
-        return;
+  /**
+   * Open the initial MMORPG connection after a deferred account flow.
+   * Concurrent calls share the same attempt. Standalone and normal MMORPG starts
+   * call this automatically.
+   *
+   * @title connect
+   * @method connect
+   * @returns A promise resolved after the RPGJS server accepts the connection.
+   * @memberof RpgClientEngine
+   */
+  async connect(): Promise<void> {
+    if (this.localeConnected) return;
+    if (this.connectionPromise) return this.connectionPromise;
+    this.connectionPromise = (async () => {
+      try {
+        await this.webSocket.connection();
+        this.localeConnected = true;
+        this.webSocket.emit("player.locale", { locale: this.getLocale() });
+        this.startPingPong();
       }
-
-      originalResize();
-    };
+      catch (error) {
+        this.stopPingPong();
+        await this.callConnectError(error);
+        throw error;
+      }
+      finally {
+        this.connectionPromise = undefined;
+      }
+    })();
+    return this.connectionPromise;
   }
 
-  private readCanvasResizeTargetSize(app: any): CanvasResizeSize | null {
-    const resizeTarget = app?.resizeTo;
-    if (!resizeTarget || typeof window === "undefined") return null;
-
-    const rawWidth = resizeTarget === window ? window.innerWidth : resizeTarget.clientWidth;
-    const rawHeight = resizeTarget === window ? window.innerHeight : resizeTarget.clientHeight;
-    const width = Math.round(Number(rawWidth));
-    const height = Math.round(Number(rawHeight));
-
-    if (!Number.isFinite(width) || !Number.isFinite(height) || width < 0 || height < 0) return null;
-    return { width, height };
-  }
-
-  private readCanvasRendererSize(app: any): CanvasResizeSize | null {
-    const screen = app?.renderer?.screen;
-    const width = Math.round(Number(screen?.width));
-    const height = Math.round(Number(screen?.height));
-
-    if (!Number.isFinite(width) || !Number.isFinite(height)) return null;
-    return { width, height };
-  }
-
-  private cancelCanvasResizeFrame(app: any) {
-    if (typeof app?._cancelResize === "function") {
-      app._cancelResize();
-    }
+  /**
+   * Close the current physical connection without destroying the rendered client.
+   * Account modules can return to a pre-connection GUI and call `connect()` again.
+   *
+   * @title disconnect
+   * @method disconnect
+   * @returns Nothing.
+   * @memberof RpgClientEngine
+   */
+  disconnect(): void {
+    this.localeConnected = false;
+    this.stopPingPong();
+    this.webSocket.disconnect();
   }
 
   private resolveSceneMapComponent() {
@@ -619,16 +679,59 @@ export class RpgClientEngine<T = any> {
 
   private clearCameraFollowViewportPlugins(): void {
     const viewport = this.findViewportInstance();
-    viewport?.plugins?.remove?.("animate");
-    viewport?.plugins?.remove?.("follow");
+    clearCameraFollowPlugins(viewport);
   }
 
-  private prepareSyncPayload(data: any): any {
+  private prepareSyncPayload(
+    data: any,
+    ack?: { frame: number; serverTick?: number; x?: number; y?: number; direction?: Direction },
+  ): {
+    payload: any;
+    localPredictionSnapshot?: PredictionState<Direction>;
+    serverDrivenMovement?: boolean;
+  } {
     const payload = { ...(data ?? {}) };
     delete payload.ack;
     delete payload.timestamp;
 
+    // Recoil coordinates replace buffered locomotion, for the local player and observers.
+    for (const kind of ['players', 'events'] as const) {
+      const patches = payload[kind];
+      if (!patches) continue;
+      const objects = this.sceneMap?.[kind]?.() ?? {};
+      payload[kind] = { ...patches };
+      for (const [id, patch] of Object.entries(patches) as Array<[string, { knockbackActive?: boolean; _frames?: unknown }]>) {
+        const object = objects[id];
+        if (patch?.knockbackActive !== true && !object?.knockbackActive?.()) continue;
+        const nextPatch = { ...patch };
+        delete nextPatch._frames;
+        payload[kind][id] = nextPatch;
+        if (object) object.frames = [];
+        if (patch?.knockbackActive === true) object?.knockbackActive?.set(true);
+      }
+    }
     const myId = this.playerIdSignal();
+    const currentPlayer = this.sceneMap?.getCurrentPlayer?.();
+    const patch = myId ? payload.players?.[myId] : undefined;
+    // Include the final recoil packet: stale input must not override its landing position.
+    if (patch?.knockbackActive === true || currentPlayer?.knockbackActive?.()) {
+      this.interruptCurrentPlayerMovement(currentPlayer);
+      // Set the phase before coordinates so the first recoil update is smoothed too.
+      if (patch?.knockbackActive === true) currentPlayer?.knockbackActive?.set(true);
+      return { payload, serverDrivenMovement: true };
+    }
+    if (this.predictionEnabled && this.prediction) {
+      const currentPlayer = this.sceneMap?.getCurrentPlayer?.();
+      const currentState = currentPlayer ? this.getLocalPlayerState() : undefined;
+      const routed = routePredictedLocalPlayerSync<Direction>(payload, myId, currentState, ack);
+      if (routed.payload !== payload) {
+        return {
+          payload: routed.payload,
+          ...(routed.snapshot ? { localPredictionSnapshot: routed.snapshot } : {}),
+        };
+      }
+    }
+
     const players = payload.players;
     const localPatch = myId && players ? players[myId] : undefined;
     const shouldMaskLocalPosition = this.shouldPreserveLocalPlayerPosition(localPatch);
@@ -644,7 +747,7 @@ export class RpgClientEngine<T = any> {
       };
     }
 
-    return payload;
+    return { payload };
   }
 
   private shouldPreserveLocalPlayerPosition(localPatch?: any): boolean {
@@ -672,28 +775,6 @@ export class RpgClientEngine<T = any> {
     return Date.now() - this.lastLocalMovementInputAt <= this.LOCAL_MOVEMENT_AUTHORITY_ACK_GRACE_MS;
   }
 
-  private normalizeAckWithSyncState(
-    ack: { frame: number; serverTick?: number; x?: number; y?: number; direction?: Direction },
-    syncData: any,
-  ): { frame: number; serverTick?: number; x?: number; y?: number; direction?: Direction } {
-    const myId = this.playerIdSignal();
-    if (!myId) {
-      return ack;
-    }
-
-    const localPatch = syncData?.players?.[myId];
-    if (typeof localPatch?.x !== "number" || typeof localPatch?.y !== "number") {
-      return ack;
-    }
-
-    return {
-      ...ack,
-      x: localPatch.x,
-      y: localPatch.y,
-      direction: localPatch.direction ?? ack.direction,
-    };
-  }
-
   private initListeners() {
     if (this.socketListenersInitialized) return;
     this.socketListenersInitialized = true;
@@ -715,7 +796,7 @@ export class RpgClientEngine<T = any> {
       // This helps us estimate which server tick corresponds to each client input frame
       const estimatedTicksInFlight = Math.floor(this.rtt / 2 / (1000 / 60)); // Estimate ticks during half RTT
       const estimatedServerTickNow = data.serverTick + estimatedTicksInFlight;
-      this.updateServerTickEstimate(estimatedServerTickNow, now);
+      this.serverTick.update(estimatedServerTickNow, now);
 
       // Update frame offset (only if we have inputs to calibrate with)
       if (this.inputFrameCounter > 0) {
@@ -733,13 +814,12 @@ export class RpgClientEngine<T = any> {
       this.handleChangeMap(data);
     });
 
-    this.webSocket.on("showComponentAnimation", (data) => {
-      const { params, object, position, id } = data;
-      if (!object && position === undefined) {
-        throw new Error("Please provide an object or x and y coordinates");
+    this.webSocket.on("changeRoom", (data) => {
+      if (!this.clientReadyForMapChanges) {
+        this.pendingRoomChanges.push(data);
+        return;
       }
-      const player = object ? this.sceneMap.getObjectById(object) : undefined;
-      this.getComponentAnimation(id).displayEffect(params, player || position)
+      void this.handleChangeRoom(data);
     });
 
     this.webSocket.on("clientVisual", (data) => {
@@ -750,7 +830,7 @@ export class RpgClientEngine<T = any> {
       if (!this.shouldProcessProjectilePacket(data)) return;
       this.projectiles.spawnBatch(data?.projectiles ?? [], {
         mapId: data?.mapId,
-        currentServerTick: this.estimateServerTick(),
+        currentServerTick: this.serverTick.estimate(this.getPhysicsTickDurationMs()),
         tickDurationMs: this.getPhysicsTickDurationMs(),
       });
     });
@@ -778,106 +858,18 @@ export class RpgClientEngine<T = any> {
       this.notificationManager.add(data);
     });
 
-    this.webSocket.on("setAnimation", (data) => {
-      const {
-        animationName,
-        nbTimes,
-        object,
-        graphic,
-        restoreAnimationName,
-        restoreGraphics,
-      } = data;
-      const player = object ? this.sceneMap.getObjectById(object) : undefined;
-      if (!player) return;
-      const restoreOptions = {
-        restoreAnimationName,
-        restoreGraphics,
-      };
-      if (graphic !== undefined) {
-        player.setAnimation(animationName, graphic, nbTimes, restoreOptions);
-      } else {
-        player.setAnimation(animationName, nbTimes, restoreOptions);
-      }
-    })
-
-    this.webSocket.on("playSound", (data) => {
-      const { soundId, volume, loop } = data;
-      this.playSound(soundId, { volume, loop });
-    });
-
-    this.webSocket.on("stopSound", (data) => {
-      const { soundId } = data;
-      this.stopSound(soundId);
-    });
-
-    this.webSocket.on("stopAllSounds", () => {
-      this.stopAllSounds();
-    });
-
-    this.webSocket.on("cameraFollow", (data) => {
-      const { targetId, smoothMove } = data;
-      this.setCameraFollow(targetId, smoothMove);
-    });
-
-    this.webSocket.on("flash", (data) => {
-      const { object, type, duration, cycles, alpha, tint } = data;
-      const sprite = object ? this.sceneMap.getObjectById(object) : undefined;
-      if (sprite && typeof sprite.flash === 'function') {
-        sprite.flash({ type, duration, cycles, alpha, tint });
-      }
-    });
-
-    this.webSocket.on("shakeMap", (data) => {
-      const { intensity, duration, frequency, direction } = data || {};
-      this.mapShakeTrigger.start({
-        intensity,
-        duration,
-        frequency,
-        direction
-      });
-    });
-
-    this.webSocket.on("weatherState", (data) => {
-      const raw = (data && typeof data === "object" && "value" in data)
-        ? (data as any).value
-        : data;
-
-      if (raw === null) {
-        this.sceneMap.weatherState.set(null);
-        return;
-      }
-
-      const validEffects = ["rain", "snow", "fog", "cloud"];
-      if (!raw || !validEffects.includes((raw as any).effect)) {
-        return;
-      }
-
-      this.sceneMap.weatherState.set({
-        effect: (raw as any).effect,
-        preset: (raw as any).preset,
-        params: (raw as any).params,
-        transitionMs: (raw as any).transitionMs,
-        durationMs: (raw as any).durationMs,
-        startedAt: (raw as any).startedAt,
-        seed: (raw as any).seed,
-      });
-    });
-
-    this.webSocket.on("lightingState", (data) => {
-      const raw = (data && typeof data === "object" && "value" in data)
-        ? (data as any).value
-        : data;
-
-      this.sceneMap.lightingState.set(normalizeLightingState(raw));
-    });
+    registerPresentationListeners(this.webSocket, this);
 
     this.webSocket.on('open', () => {
+      this.localeConnected = true;
+      this.webSocket.emit("player.locale", { locale: this.getLocale() });
       this.hooks.callHooks("client-engine-onConnected", this, this.socket).subscribe();
       // Start ping/pong for synchronization
       this.startPingPong();
     })
 
     this.webSocket.on('close', () => {
+      this.localeConnected = false;
       this.hooks.callHooks("client-engine-onDisconnected", this, this.socket).subscribe();
       // Stop ping/pong when disconnected
       this.stopPingPong();
@@ -888,18 +880,34 @@ export class RpgClientEngine<T = any> {
     })
   }
 
-  private beginMapTransfer(nextMapId?: string) {
+  private beginMapTransfer(
+    nextMapId?: string,
+    continueMovement = false,
+  ) {
+    this.pendingMapTransferInput = continueMovement
+      ? this.latestDirectionalInput
+      : undefined;
     this.mapTransitionInProgress = true;
     this.currentMapRoomId = nextMapId;
     this.sceneResetQueued = false;
-    this.clearClientPredictionStates();
-    this.sceneMap.weatherState.set(null);
+    this.clearMapTransferPredictionStates();
+  }
+
+  private async resetSceneForMapTransfer(nextMapId?: string) {
+    // The before-loading hook has now covered the previous scene. Unmount it
+    // before reconnecting so stale map content cannot appear behind the loader.
+    this.sceneMap.weatherState.set(undefined);
     this.sceneMap.lightingState.set(null);
     this.sceneMap.clearLightSpots();
     this.clearComponentAnimations();
     this.projectiles.setMapId(nextMapId);
     this.resetCameraFollow(false);
+    // Destroying every character and the whole map tree in one frame caused a
+    // visible hitch on map transfers: spread the teardown over several frames.
     this.sceneMap.reset();
+    await waitNextFrame();
+    this.sceneMap.data.set(null);
+    await waitNextFrame();
     this.sceneMap.loadPhysic();
   }
 
@@ -934,11 +942,90 @@ export class RpgClientEngine<T = any> {
     packets.forEach((packet) => this.handleChangeMap(packet));
   }
 
-  private handleChangeMap(data: any) {
+  private flushPendingRoomChanges(): void {
+    const packets = this.pendingRoomChanges;
+    this.pendingRoomChanges = [];
+    packets.forEach((packet) => void this.handleChangeRoom(packet));
+  }
+
+  private async handleChangeMap(data: any) {
     const nextMapId = typeof data?.mapId === "string" ? data.mapId : undefined;
-    this.beginMapTransfer(nextMapId);
+    const descriptor: RpgRoomDescriptor | undefined = nextMapId
+      ? {
+          id: nextMapId,
+          kind: "map",
+          name: typeof data?.name === "string" ? data.name : nextMapId.replace(/^map-/, ""),
+        }
+      : undefined;
+    if (descriptor) {
+      await this.leaveActiveClientScene(descriptor);
+      this.sceneRoom.reset();
+      this.activeRoom.set(descriptor);
+    }
+    this.beginMapTransfer(nextMapId, data?.continueMovement === true);
     const transferToken = typeof data?.transferToken === "string" ? data.transferToken : undefined;
-    this.loadScene(data.mapId, transferToken);
+    await this.loadScene(data.mapId, transferToken);
+    // Keep the custom room scene mounted until the destination map has valid
+    // render data. Mounting SceneMap earlier can briefly feed a detached or
+    // incomplete streamed map into its CanvasEngine component.
+    this.activeRoomSceneComponent.set(undefined);
+    this.activeSceneKind.set("map");
+  }
+
+  private async handleChangeRoom(data: unknown): Promise<void> {
+    const packet = data as Partial<RpgRoomDescriptor> & { transferToken?: unknown };
+    if (
+      typeof packet.id !== "string"
+      || typeof packet.kind !== "string"
+      || typeof packet.name !== "string"
+    ) {
+      await this.callConnectError(new Error("Invalid RPGJS room-change packet"));
+      return;
+    }
+    const definition = this.clientSceneRegistry.get(packet.kind);
+    if (!definition) {
+      await this.callConnectError(new Error(`No client scene registered for room kind: ${packet.kind}`));
+      return;
+    }
+    const descriptor: RpgRoomDescriptor = {
+      id: packet.id,
+      kind: packet.kind,
+      name: packet.name,
+    };
+
+    await this.leaveActiveClientScene(descriptor);
+    this.sceneRoom.reset(descriptor);
+    await definition.onBeforeEnter?.(this.sceneRoom, descriptor);
+    this.sceneMap.reset();
+    this.sceneMap.configureClientPrediction(false);
+    this.activeMapStreamController?.detach();
+    this.activeMapStreamController = undefined;
+    this.projectiles.clear();
+    this.activeClientScene = definition;
+    this.activeRoom.set(descriptor);
+    this.activeSceneKind.set(descriptor.kind);
+    this.activeRoomSceneComponent.set(definition.component);
+    this.webSocket.updateProperties({
+      room: descriptor.id,
+      query: typeof packet.transferToken === "string"
+        ? { transferToken: packet.transferToken }
+        : undefined,
+    });
+
+    try {
+      await this.webSocket.reconnect();
+      await definition.onEnter?.(this.sceneRoom, descriptor);
+    }
+    catch (error) {
+      await this.callConnectError(error);
+      throw error;
+    }
+  }
+
+  private async leaveActiveClientScene(next: RpgRoomDescriptor): Promise<void> {
+    if (!this.activeClientScene) return;
+    await this.activeClientScene.onLeave?.(this.sceneRoom, next);
+    this.activeClientScene = undefined;
   }
 
   private applySyncPacket(data: any) {
@@ -946,6 +1033,17 @@ export class RpgClientEngine<T = any> {
       this.playerIdSignal.set(data.pId);
       // Signal that player ID was received
       this.playerIdReceived$.next(true);
+    }
+
+    if (this.activeSceneKind() !== "map") {
+      if (data && typeof data === "object" && Object.prototype.hasOwnProperty.call(data, "state")) {
+        this.sceneRoom.state.set(data.state);
+      }
+      if (data && typeof data === "object" && Object.prototype.hasOwnProperty.call(data, "players")) {
+        this.sceneRoom.loadPlayers(data.players);
+      }
+      void this.activeClientScene?.onChanges?.(this.sceneRoom, data);
+      return;
     }
 
     if (this.sceneResetQueued) {
@@ -963,24 +1061,24 @@ export class RpgClientEngine<T = any> {
 
     const ack = data?.ack;
     const normalizedAck =
-      ack && typeof ack.frame === "number"
-        ? this.normalizeAckWithSyncState(ack, data)
+      ack && typeof ack.frame === "number" && Number.isFinite(ack.frame)
+        ? ack
         : undefined;
-    const payload = this.prepareSyncPayload(data);
+    const { payload, localPredictionSnapshot, serverDrivenMovement } = this.prepareSyncPayload(data, normalizedAck);
     load(this.sceneMap, payload, true);
     applySyncedHitboxPayload(this.sceneMap, payload);
 
-    if (normalizedAck) {
+    if (serverDrivenMovement) {
+      const player = this.sceneMap.getCurrentPlayer();
+      if (player) this.applyAuthoritativeState({ x: player.x(), y: player.y() });
+    } else if (normalizedAck) {
       this.applyServerAck(normalizedAck);
     }
-
-    for (const playerId in payload.players ?? {}) {
-      const player = payload.players[playerId]
-      if (!player._param) continue
-      for (const param in player._param) {
-       this.sceneMap.players()[playerId]._param()[param] = player._param[param]
-      }
+    if (localPredictionSnapshot) {
+      this.prediction?.queueServerSnapshot(localPredictionSnapshot);
     }
+
+    applySyncedParamPayload(this.sceneMap, payload);
 
     // Check if players and events are present in sync data
     const players = payload.players || this.sceneMap.players();
@@ -1067,10 +1165,25 @@ export class RpgClientEngine<T = any> {
   }
 
   private async loadScene(mapId: string, transferToken?: string) {
+    // Keep the previous scene mounted while async before-loading hooks install
+    // and animate their transition UI. The hook contract is awaited, allowing
+    // modules to report when the old scene is fully covered.
     await lastValueFrom(this.hooks.callHooks("client-sceneMap-onBeforeLoading", this.sceneMap));
 
-    // Clear client prediction states when changing maps
-    this.clearClientPredictionStates();
+    this.activeMapStreamController?.detach();
+    this.activeMapStreamController = undefined;
+    if (this.mapTransitionInProgress) {
+      await this.resetSceneForMapTransfer(mapId);
+    }
+
+    // A session-transferred player keeps the last acknowledged input frame on
+    // the server. Preserve the client's monotonic frame sequence so movement
+    // sent in the destination room is not discarded as stale.
+    if (this.mapTransitionInProgress) {
+      this.clearMapTransferPredictionStates();
+    } else {
+      this.clearClientPredictionStates();
+    }
 
     // Reset all conditions for new map loading
     this.mapLoadCompleted$.next(false);
@@ -1095,6 +1208,7 @@ export class RpgClientEngine<T = any> {
     }
     catch (error) {
       this.mapTransitionInProgress = false;
+      this.pendingMapTransferInput = undefined;
       this.stopPingPong();
       await this.callConnectError(error);
       throw error;
@@ -1130,6 +1244,33 @@ export class RpgClientEngine<T = any> {
     this.mapTransitionInProgress = false;
     this.sceneMap.configureClientPrediction(this.predictionEnabled);
     this.sceneMap.loadPhysic()
+    if (res?.streamController) {
+      const controller = res.streamController;
+      this.activeMapStreamController = controller;
+      controller.attach(this.sceneMap);
+    }
+    const transferInput = this.pendingMapTransferInput;
+    this.pendingMapTransferInput = undefined;
+    if (transferInput !== undefined) {
+      void this.resumeMapTransferMovement(transferInput, mapId);
+    }
+  }
+
+  private async resumeMapTransferMovement(
+    input: RpgMovementInput,
+    mapId: string,
+  ): Promise<void> {
+    const repeatCount = 4;
+    const repeatIntervalMs = 50;
+    for (let index = 0; index < repeatCount; index += 1) {
+      if (this.mapTransitionInProgress || this.currentMapRoomId !== mapId) return;
+      await this.processInput({ input });
+      if (index < repeatCount - 1) {
+        await new Promise<void>((resolve) =>
+          setTimeout(resolve, repeatIntervalMs),
+        );
+      }
+    }
   }
 
   addSpriteSheet<T = any>(spritesheetClass: any, id?: string): any {
@@ -1372,6 +1513,56 @@ export class RpgClientEngine<T = any> {
     return undefined;
   }
 
+  /** @internal Configure project-owned preferences and semantic cues for framework modules. */
+  private configureSound(configuration: RpgSoundConfiguration = {}): void {
+    this.audio.configure(configuration);
+  }
+
+  /** @internal Play a semantic sound used by RPGJS native interfaces. */
+  private playUiSound(event: RpgUiAudioEvent): void {
+    void this.audio.playUi(event);
+  }
+
+  /**
+   * Set the persisted volume of one sound channel for the current project.
+   * Master volume is applied through Howler, including sounds controlled through
+   * the legacy `RpgSound.global` facade. This client-owned preference behaves the
+   * same in standalone and MMORPG games and never changes server state.
+   *
+   * @title setSoundVolume
+   * @method setSoundVolume(channel: RpgAudioChannel, value: number): void
+   * @param {RpgAudioChannel} channel - Channel to update.
+   * @param {number} value - Volume between 0 and 1; out-of-range values are clamped.
+   * @returns {void}
+   * @memberof RpgClientEngine
+   * @example
+   * ```ts
+   * engine.setSoundVolume('music', 0.6)
+   * engine.setSoundVolume('master', 0.8)
+   * ```
+   */
+  setSoundVolume(channel: RpgAudioChannel, value: number): void {
+    this.audio.setVolume(channel, value);
+  }
+
+  /**
+   * Read the persisted volume of one sound channel for the current project.
+   * Calls made inside a CanvasEngine computed value remain reactive.
+   *
+   * @title getSoundVolume
+   * @method getSoundVolume(channel: RpgAudioChannel): number
+   * @param {RpgAudioChannel} channel - Channel to read.
+   * @returns {number} Volume between 0 and 1.
+   * @memberof RpgClientEngine
+   * @example
+   * ```ts
+   * const musicVolume = engine.getSoundVolume('music')
+   * ```
+   */
+  getSoundVolume(channel: RpgAudioChannel): number {
+    return this.audio.getVolume(channel);
+  }
+
   /**
    * Play a sound by its ID
    * 
@@ -1379,10 +1570,9 @@ export class RpgClientEngine<T = any> {
    * If the sound is not found, it will attempt to resolve it using the soundResolver.
    * Uses Howler.js for audio playback instead of native Audio elements.
    * 
-   * @param soundId - The sound ID to play
-   * @param options - Optional sound configuration
-   * @param options.volume - Volume level (0.0 to 1.0, overrides sound default)
-   * @param options.loop - Whether the sound should loop (overrides sound default)
+   * The existing API remains the single entry point for ordinary, channel-aware,
+   * and spatial sounds. Playback is client-owned in both standalone and MMORPG
+   * games; server calls only ask the receiving client to play a registered ID.
    * 
    * @example
    * ```ts
@@ -1394,53 +1584,24 @@ export class RpgClientEngine<T = any> {
    * 
    * // Play a sound asynchronously (when resolver returns Promise)
    * await engine.playSound('dynamic-sound', { volume: 0.8 });
+   *
+   * // Play a spatial sound without exposing CanvasEngine signals
+   * await engine.playSound('enemy-hit', {
+   *   channel: 'sfx',
+   *   position: { x: enemy.x(), y: enemy.y() },
+   *   listener: { x: player.x(), y: player.y() },
+   * });
    * ```
+   * @title playSound
+   * @method playSound(soundId: string, options?: RpgPlaySoundOptions): Promise<void>
+   * @param {string} soundId - Registered sound ID or ID handled by the sound resolver.
+   * @param {RpgPlaySoundOptions} [options] - Playback, channel, and spatial options.
+   * @returns {Promise<void>} Resolves after the sound has been resolved and started when available.
+   * @memberof RpgClientEngine
    */
-  async playSound(soundId: string, options?: { volume?: number; loop?: boolean }): Promise<void> {
-    const sound = await this.getSound(soundId);
-    if (sound && sound.play) {
-      // Sound is already a Howler instance or has a play method
-      const howlSoundId = sound._sounds?.[0]?._id;
-      
-      // Apply volume if provided
-      if (options?.volume !== undefined) {
-        if (howlSoundId !== undefined) {
-          sound.volume(Math.max(0, Math.min(1, options.volume)), howlSoundId);
-        } else {
-          sound.volume(Math.max(0, Math.min(1, options.volume)));
-        }
-      }
-      
-      // Apply loop if provided
-      if (options?.loop !== undefined) {
-        if (howlSoundId !== undefined) {
-          sound.loop(options.loop, howlSoundId);
-        } else {
-          sound.loop(options.loop);
-        }
-      }
-      
-      if (howlSoundId !== undefined) {
-        sound.play(howlSoundId);
-      } else {
-        sound.play();
-      }
-    } else if (sound && sound.src) {
-      // If sound is just a source URL, create a Howler instance and cache it
-      const howlOptions: any = {
-        src: [sound.src],
-        loop: options?.loop !== undefined ? options.loop : (sound.loop || false),
-        volume: options?.volume !== undefined ? Math.max(0, Math.min(1, options.volume)) : (sound.volume !== undefined ? sound.volume : 1.0),
-      };
-
-      const howl = new (Howl as any).Howl(howlOptions);
-      
-      // Cache the Howler instance for future use
-      this.sounds.set(soundId, howl);
-      
-      // Play the sound
-      howl.play();
-    } else {
+  async playSound(soundId: string, options: RpgPlaySoundOptions = {}): Promise<void> {
+    const played = await this.audio.play(soundId, options);
+    if (played === undefined) {
       console.warn(`Sound with id "${soundId}" not found or cannot be played`);
     }
   }
@@ -1776,6 +1937,24 @@ export class RpgClientEngine<T = any> {
   }
 
   /**
+   * Register a custom weather component.
+   *
+   * When the server sets a weather whose `effect` is this id, the scene renders
+   * the component instead of CanvasEngine's `<Weather>`. A custom id also
+   * replaces a built-in effect of the same name.
+   *
+   * @param weather - The weather id and its component
+   * @example
+   * ```ts
+   * engine.addWeather({ id: 'aurora', component: AuroraWeather })
+   * ```
+   */
+  addWeather(weather: { id: string, component: any }) {
+    this.weatherComponents.set(weather.id, weather.component)
+    return weather
+  }
+
+  /**
    * Get a component animation by its ID
    * 
    * Retrieves the EffectManager instance for a specific component animation,
@@ -1847,6 +2026,10 @@ export class RpgClientEngine<T = any> {
     if (this.stopProcessingInput) return;
 
     const currentPlayer = this.sceneMap.getCurrentPlayer() as any;
+    if (currentPlayer?.knockbackActive?.()) {
+      this.interruptCurrentPlayerMovement(currentPlayer);
+      return;
+    }
     const canMove =
       !currentPlayer ||
       getCanMoveValue(currentPlayer);
@@ -1860,6 +2043,9 @@ export class RpgClientEngine<T = any> {
       ? normalizeDashInput(input, currentPlayer?.direction?.())
       : input;
     if (!movementInput) return;
+    if (!isDashInput(movementInput)) {
+      this.latestDirectionalInput = movementInput;
+    }
     if (isDashInput(movementInput)) {
       const cooldown = movementInput.cooldown ?? DEFAULT_DASH_COOLDOWN_MS;
       if (timestamp < this.dashLockedUntil) return;
@@ -1881,6 +2067,7 @@ export class RpgClientEngine<T = any> {
     this.hooks.callHooks("client-engine-onInput", this, { input: movementInput, playerId: this.playerId }).subscribe();
 
     const bodyReady = this.ensureCurrentPlayerBody();
+    let waitsForPredictionStep = false;
     if (currentPlayer && bodyReady) {
       this.applyPredictedMovementInput(currentPlayer, movementInput);
       if (this.predictionEnabled && this.prediction) {
@@ -1888,26 +2075,72 @@ export class RpgClientEngine<T = any> {
         if (this.pendingPredictionFrames.length > 240) {
           this.pendingPredictionFrames = this.pendingPredictionFrames.slice(-240);
         }
+        waitsForPredictionStep = true;
       }
     }
 
-    this.emitMovePacket(movementInput, frame, tick, timestamp, true);
+    // Prediction input can be sampled more often than the fixed physics loop.
+    // Wait for that loop to attach the resulting state so every input sharing
+    // one client tick is sent to the server as one complete batch.
+    if (!waitsForPredictionStep) {
+      this.emitMovePacket(movementInput, frame, tick, timestamp, true);
+    }
     this.lastInputTime = isDashInput(movementInput)
       ? Date.now() + (movementInput.duration ?? DEFAULT_DASH_DURATION_MS)
       : Date.now();
   }
 
-  async processDash(input: Partial<RpgDashInput> = {}) {
+  /**
+   * Start a predicted dash for the current player and send it through the
+   * authoritative movement channel.
+   *
+   * @title processDash
+   * @method processDash(input?: Partial<RpgDashInput>): Promise<void>
+   * @param input - Optional direction, speed, duration, and cooldown overrides.
+   * @returns A promise resolved after the dash input has been processed locally.
+   * @memberof RpgClientEngine
+   * @example
+   * ```ts
+   * await engine.processDash({
+   *   direction: { x: 1, y: 0 },
+   *   additionalSpeed: 10,
+   *   duration: 220,
+   *   cooldown: 600,
+   * })
+   * ```
+   */
+  async processDash(input: Partial<RpgDashInput> = {}): Promise<void> {
     const currentPlayer = this.sceneMap.getCurrentPlayer() as any;
     const fallbackDirection =
       typeof currentPlayer?.direction === "function"
         ? currentPlayer.direction()
         : currentPlayer?.direction;
-    const dashInput = normalizeDashInput(input, fallbackDirection);
+    const dashInput = normalizeDashInput(
+      { ...this.dashDefaults, ...input },
+      fallbackDirection
+    );
     if (!dashInput) return;
     await this.processInput({ input: dashInput });
   }
 
+  /**
+   * Send an action intent to the authoritative server. Client-provided data
+   * must be validated by the receiving player input handler or action.
+   *
+   * @title processAction
+   * @method processAction(action: RpgActionName | RpgActionInput, data?: any): void
+   * @param action - Action name/control value, or a normalized action object.
+   * @param data - Optional serializable context sent with an action name.
+   * @returns Nothing.
+   * @memberof RpgClientEngine
+   * @example
+   * ```ts
+   * engine.processAction('projectile:shoot', {
+   *   target: engine.pointer.world(),
+   *   source: 'map-click',
+   * })
+   * ```
+   */
   processAction(action: RpgActionName, data?: any): void;
   processAction(action: RpgActionInput): void;
   processAction(action: RpgActionName | RpgActionInput, data?: any): void {
@@ -1960,63 +2193,6 @@ export class RpgClientEngine<T = any> {
       : 1000 / 60;
   }
 
-  private updateServerTickEstimate(serverTick: number | undefined, now = Date.now()): void {
-    if (typeof serverTick !== "number" || !Number.isFinite(serverTick)) {
-      return;
-    }
-    this.latestServerTick = serverTick;
-    this.latestServerTickAt = now;
-  }
-
-  private estimateServerTick(now = Date.now()): number | undefined {
-    if (typeof this.latestServerTick !== "number" || this.latestServerTickAt <= 0) {
-      return undefined;
-    }
-    const elapsedTicks = Math.max(0, (now - this.latestServerTickAt) / this.getPhysicsTickDurationMs());
-    return this.latestServerTick + elapsedTicks;
-  }
-
-  private predictProjectileImpact(projectile: ClientProjectileSpawn): ClientProjectileImpact | null {
-    if (projectile.predictImpact === false) {
-      return null;
-    }
-    const sceneMap = this.sceneMap as any;
-    if (!sceneMap?.physic || !Number.isFinite(projectile.range) || projectile.range <= 0) {
-      return null;
-    }
-    const origin = projectile.origin;
-    const direction = projectile.direction;
-    if (
-      !origin ||
-      !direction ||
-      !Number.isFinite(origin.x) ||
-      !Number.isFinite(origin.y) ||
-      !Number.isFinite(direction.x) ||
-      !Number.isFinite(direction.y) ||
-      (direction.x === 0 && direction.y === 0)
-    ) {
-      return null;
-    }
-
-    const hit = sceneMap.physic.raycast(
-      new Vector2(origin.x, origin.y),
-      new Vector2(direction.x, direction.y),
-      projectile.range,
-      projectile.collisionMask,
-      (entity) => projectile.ignoreOwner === false || !projectile.ownerId || entity.uuid !== projectile.ownerId,
-    );
-    if (!hit) {
-      return null;
-    }
-    return {
-      id: projectile.id,
-      targetId: hit.entity.uuid,
-      x: hit.point.x,
-      y: hit.point.y,
-      distance: hit.distance,
-    };
-  }
-
   private ensureCurrentPlayerBody(): boolean {
     const player = this.sceneMap?.getCurrentPlayer();
     const myId = this.playerIdSignal();
@@ -2048,7 +2224,12 @@ export class RpgClientEngine<T = any> {
     }
     const deltaMs = Math.max(1, Math.min(100, now - this.lastClientPhysicsStepAt));
     this.lastClientPhysicsStepAt = now;
-    this.sceneMap.stepClientPhysics(deltaMs);
+    this.sceneMap.stepClientPhysics(deltaMs, {
+      // A slow render can execute several fixed physics steps at once. An input
+      // frame belongs to the first of those steps, which is also where the
+      // authoritative server captures its matching ACK position.
+      afterStep: () => this.flushPendingPredictedStates(),
+    });
   }
 
   private flushPendingPredictedStates(): void {
@@ -2056,38 +2237,29 @@ export class RpgClientEngine<T = any> {
       return;
     }
     const state = this.getLocalPlayerState();
+    let latestFlushedFrame: number | undefined;
     while (this.pendingPredictionFrames.length > 0) {
       const frame = this.pendingPredictionFrames.shift();
       if (typeof frame === "number") {
         this.prediction.attachPredictedState(frame, state);
+        latestFlushedFrame = frame;
       }
     }
-  }
-
-  private buildPendingMoveTrajectory(): MovementTrajectoryPoint[] {
-    if (!this.predictionEnabled || !this.prediction) {
-      return [];
+    if (typeof latestFlushedFrame !== "number") {
+      return;
     }
-    const pendingInputs = this.prediction.getPendingInputs();
-    const trajectory: MovementTrajectoryPoint[] = [];
-    for (const entry of pendingInputs) {
-      const state = entry.state;
-      if (!state) continue;
-      if (typeof state.x !== "number" || typeof state.y !== "number") continue;
-      trajectory.push({
-        frame: entry.frame,
-        tick: entry.tick,
-        timestamp: entry.timestamp,
-        input: entry.direction,
-        x: state.x,
-        y: state.y,
-        direction: state.direction ?? resolveMoveDirection(entry.direction),
-      });
+    const latest = this.prediction
+      .getPendingInputs()
+      .find((entry) => entry.frame === latestFlushedFrame);
+    if (latest?.state) {
+      this.emitMovePacket(
+        latest.direction,
+        latest.frame,
+        latest.tick,
+        latest.timestamp,
+        true,
+      );
     }
-    if (trajectory.length > this.MAX_MOVE_TRAJECTORY_POINTS) {
-      return trajectory.slice(-this.MAX_MOVE_TRAJECTORY_POINTS);
-    }
-    return trajectory;
   }
 
   private emitMovePacket(
@@ -2097,26 +2269,10 @@ export class RpgClientEngine<T = any> {
     timestamp: number,
     force = false,
   ): void {
-    const trajectory = this.buildPendingMoveTrajectory();
-    const latestTrajectoryFrame =
-      trajectory.length > 0 ? trajectory[trajectory.length - 1].frame : frame;
-    const shouldThrottle =
-      !force &&
-      latestTrajectoryFrame <= this.lastMovePathSentFrame &&
-      timestamp - this.lastMovePathSentAt < this.MOVE_PATH_RESEND_INTERVAL_MS;
-    if (shouldThrottle) {
-      return;
-    }
-
-    this.webSocket.emit("move", {
-      input,
-      timestamp,
-      frame,
-      tick,
-      trajectory,
-    });
-    this.lastMovePathSentAt = timestamp;
-    this.lastMovePathSentFrame = Math.max(this.lastMovePathSentFrame, latestTrajectoryFrame, frame);
+    const pendingInputs = this.predictionEnabled && this.prediction
+      ? this.prediction.getPendingInputs()
+      : [];
+    this.movePath.send({ input, frame, tick, timestamp, pendingInputs, force });
   }
 
   private flushPendingMovePath(): void {
@@ -2135,12 +2291,18 @@ export class RpgClientEngine<T = any> {
     if (pendingInputs.length === 0) {
       return;
     }
-    const latest = pendingInputs[pendingInputs.length - 1];
-    if (!latest) {
+    let latest: PredictionHistoryEntry<RpgMovementInput, Direction> | undefined;
+    for (let index = pendingInputs.length - 1; index >= 0; index -= 1) {
+      if (pendingInputs[index].state) {
+        latest = pendingInputs[index];
+        break;
+      }
+    }
+    if (!latest?.state) {
       return;
     }
     const now = Date.now();
-    if (now - this.lastMovePathSentAt < this.MOVE_PATH_RESEND_INTERVAL_MS) {
+    if (this.movePath.isThrottled(now)) {
       return;
     }
     this.emitMovePacket(latest.direction, latest.frame, latest.tick, now, false);
@@ -2229,7 +2391,14 @@ export class RpgClientEngine<T = any> {
   }
 
   getCurrentPlayer() {
-    return this.sceneMap.getCurrentPlayer()
+    if (this.activeSceneKind() === "map") return this.sceneMap.getCurrentPlayer();
+    const playerId = this.playerIdSignal();
+    return playerId ? this.sceneRoom.players()[playerId] : undefined;
+  }
+
+  /** Return the active map scene or synchronized custom gameplay room. */
+  getCurrentRoom(): RpgClientMap | RpgClientRoom {
+    return this.activeSceneKind() === "map" ? this.sceneMap : this.sceneRoom;
   }
 
   emitSceneMapHook(hookName: string, ...args: any[]): void {
@@ -2294,8 +2463,15 @@ export class RpgClientEngine<T = any> {
     this.inputFrameCounter = 0;
     this.pendingPredictionFrames = [];
     this.lastClientPhysicsStepAt = 0;
-    this.lastMovePathSentAt = 0;
-    this.lastMovePathSentFrame = 0;
+    this.movePath.reset();
+  }
+
+  private clearMapTransferPredictionStates(): void {
+    this.prediction?.clearPendingInputs();
+    this.frameOffset = 0;
+    this.pendingPredictionFrames = [];
+    this.lastClientPhysicsStepAt = 0;
+    this.movePath.reset({ frame: this.inputFrameCounter });
   }
 
   /**
@@ -2321,8 +2497,7 @@ export class RpgClientEngine<T = any> {
     this.prediction?.clearPendingInputs();
     this.pendingPredictionFrames = [];
     this.lastInputTime = 0;
-    this.lastMovePathSentAt = Date.now();
-    this.lastMovePathSentFrame = this.inputFrameCounter;
+    this.movePath.reset({ frame: this.inputFrameCounter, sentAt: Date.now() });
     return true;
   }
 
@@ -2393,14 +2568,14 @@ export class RpgClientEngine<T = any> {
   }
 
   private applyServerAck(ack: { frame: number; serverTick?: number; x?: number; y?: number; direction?: Direction }) {
-    this.updateServerTickEstimate(ack.serverTick);
-    const keepLocalMovement = this.shouldKeepLocalPlayerMovement();
+    this.serverTick.update(ack.serverTick);
     if (this.predictionEnabled && this.prediction) {
       const result = this.prediction.applyServerAck({
         frame: ack.frame,
         serverTick: ack.serverTick,
         state:
-          !keepLocalMovement && typeof ack.x === "number" && typeof ack.y === "number"
+          typeof ack.x === "number" && Number.isFinite(ack.x)
+            && typeof ack.y === "number" && Number.isFinite(ack.y)
             ? { x: ack.x, y: ack.y, direction: ack.direction }
             : undefined,
       });
@@ -2410,6 +2585,7 @@ export class RpgClientEngine<T = any> {
       return;
     }
 
+    const keepLocalMovement = this.shouldKeepLocalPlayerMovement();
     if (typeof ack.x !== "number" || typeof ack.y !== "number") {
       return;
     }
@@ -2449,17 +2625,28 @@ export class RpgClientEngine<T = any> {
     (this.sceneMap as any).stopMovement(player);
     this.applyAuthoritativeState(authoritativeState);
 
-    if (!pendingInputs.length) {
-      return;
-    }
-
-    // Keep replay bounded while still tolerating high-latency links.
+    // Keep replay bounded while still tolerating high-latency links. Inputs
+    // sampled during the same fixed client tick must update velocity together
+    // and then share the one resulting physics state.
     const replayInputs = pendingInputs.slice(-600);
-    for (const entry of replayInputs) {
-      if (!entry?.direction) continue;
-      this.applyPredictedMovementInput(player, entry.direction);
+    for (let index = 0; index < replayInputs.length;) {
+      const first = replayInputs[index];
+      const tick = first.tick;
+      const group: PredictionHistoryEntry<RpgMovementInput, Direction>[] = [];
+      while (index < replayInputs.length && replayInputs[index].tick === tick) {
+        group.push(replayInputs[index]);
+        index += 1;
+      }
+      for (const entry of group) {
+        if (entry?.direction) {
+          this.applyPredictedMovementInput(player, entry.direction);
+        }
+      }
       this.sceneMap.stepPredictionTick();
-      this.prediction?.attachPredictedState(entry.frame, this.getLocalPlayerState());
+      const state = this.getLocalPlayerState();
+      for (const entry of group) {
+        this.prediction?.attachPredictedState(entry.frame, state);
+      }
     }
   }
 
@@ -2547,6 +2734,11 @@ export class RpgClientEngine<T = any> {
       if (this.sceneMap && typeof (this.sceneMap as any).reset === 'function') {
         (this.sceneMap as any).reset(true);
       }
+      this.sceneRoom.reset();
+      this.activeClientScene = undefined;
+      this.activeRoom.set(null);
+      this.activeSceneKind.set("map");
+      this.activeRoomSceneComponent.set(undefined);
 
       // Stop all sounds
       this.stopAllSounds();
@@ -2652,6 +2844,7 @@ export class RpgClientEngine<T = any> {
       this.spritesheets.clear();
       this.sounds.clear();
       this.componentAnimations = [];
+      this.weatherComponents.clear();
       this.particleSettings.emitters = [];
 
       // Reset state
@@ -2660,8 +2853,7 @@ export class RpgClientEngine<T = any> {
       this.inputFrameCounter = 0;
       this.frameOffset = 0;
       this.rtt = 0;
-      this.lastMovePathSentAt = 0;
-      this.lastMovePathSentFrame = 0;
+      this.movePath.reset();
 
       // Reset behavior subjects
       this.mapLoadCompleted$.next(false);

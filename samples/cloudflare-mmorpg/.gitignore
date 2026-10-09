@@ -1,0 +1,7 @@
+.dev.vars
+.env
+.env.local
+.env.publisher
+.wrangler/
+dist/
+src/worker-configuration.d.ts

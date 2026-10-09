@@ -13,9 +13,11 @@ Reference for the `RpgMap` class.
 - [applySyncToClient](#applysynctoclient)
 - [broadcast](#broadcast)
 - [clear](#clear)
+- [Clear streamed static hitboxes](#clear-streamed-static-hitboxes)
 - [clearLighting](#clearlighting)
 - [clearPhysic](#clearphysic)
 - [clearWeather](#clearweather)
+- [clientVisual](#clientvisual)
 - [createDynamicEvent](#createdynamicevent)
 - [createDynamicWorldMaps](#createdynamicworldmaps)
 - [createMovingHitbox](#createmovinghitbox)
@@ -25,6 +27,7 @@ Reference for the `RpgMap` class.
 - [dataIsReady$](#dataisready)
 - [deleteWorldMaps](#deleteworldmaps)
 - [events](#events)
+- [Find spawn position](#find-spawn-position)
 - [getBody](#getbody)
 - [getBodyPosition](#getbodyposition)
 - [getEvent](#getevent)
@@ -57,6 +60,7 @@ Reference for the `RpgMap` class.
 - [onInput](#oninput)
 - [onJoin](#onjoin)
 - [onLeave](#onleave)
+- [onRestore](#onrestore)
 - [patchLighting](#patchlighting)
 - [patchWeather](#patchweather)
 - [players](#players)
@@ -64,10 +68,12 @@ Reference for the `RpgMap` class.
 - [processInput](#processinput)
 - [queryArea](#queryarea)
 - [queryHitbox](#queryhitbox)
+- [refreshCharacterHitboxes](#refreshcharacterhitboxes)
 - [removeEvent](#removeevent)
 - [removeFromWorldMaps](#removefromworldmaps)
 - [removeInDatabase](#removeindatabase)
 - [removeShape](#removeshape)
+- [Replace streamed static hitboxes](#replace-streamed-static-hitboxes)
 - [setAutoTick](#setautotick)
 - [setBodyPosition](#setbodyposition)
 - [setDay](#setday)
@@ -104,13 +110,13 @@ This method delegates to BaseRoom's implementation to avoid code duplication.
 ### Signature
 
 ```ts
-addInDatabase(id: string, data: any, options?: { force?: boolean }): boolean
+addInDatabase(id: string, data: unknown, options?: { force?: boolean }): boolean
 ```
 
 ### Parameters
 
 - `id`: `string`
-- `data`: `any`
+- `data`: `unknown`
 - `options?`: `{ force?: boolean }`
 
 ### Returns
@@ -176,7 +182,7 @@ map.broadcast(type, value)
 ### Parameters
 
 - `type`: `string`
-- `value?`: `any`
+- `value?`: `T`
 
 ### Examples
 
@@ -228,6 +234,25 @@ afterEach(() => {
   map.clear();
 });
 ```
+
+## Clear streamed static hitboxes
+
+Remove prediction collision geometry previously registered for a map chunk.
+
+- Source: `packages/common/src/rooms/Map.ts`
+- Kind: `method`
+- Member of: `RpgCommonMap`
+- Defined in: `RpgCommonMap`
+
+### Signature
+
+```ts
+map.clearStreamedStaticHitboxes
+```
+
+### Parameters
+
+- `namespace`: `string`
 
 ## clearLighting
 
@@ -299,6 +324,44 @@ clearWeather(options?: WeatherSetOptions): void
 ### Parameters
 
 - `options?`: `WeatherSetOptions`
+
+## clientVisual
+
+Trigger a named client visual for all players on the map.
+
+Client visuals are registered in the client module with `clientVisuals`.
+They are client-side macros for grouping existing visual primitives such as
+flash, sound, component animations, sprite animations, or camera shake.
+The map broadcasts one compact packet containing the visual name and a
+serializable payload; each client resolves and renders the visual locally.
+
+Prefer direct APIs such as `playSound()`, `showComponentAnimation()`, or
+`flash()` for a single visual operation. Use `clientVisual()` when one
+gameplay moment should trigger several client-side visuals together.
+
+- Source: `packages/server/src/rooms/map.ts`
+- Kind: `method`
+- Defined in: `RpgMap`
+
+### Signature
+
+```ts
+clientVisual(name: string, data?: TData): void
+```
+
+### Parameters
+
+- `name`: `string`
+- `data?`: `TData`
+
+### Examples
+
+```ts
+map.clientVisual("explosion", {
+  position: { x: 320, y: 180 },
+  power: 2,
+});
+```
 
 ## createDynamicEvent
 
@@ -549,7 +612,7 @@ with custom formulas when the map is loaded.
 ### Signature
 
 ```ts
-damageFormulas: any
+damageFormulas: DamageFormulas
 ```
 
 ## database
@@ -644,7 +707,8 @@ if (deleted) {
 
 Synchronized signal containing all events (NPCs, objects) on the map
 
-This signal is automatically synchronized with clients using
+This signal is automatically synchronized with clients by RPGJS.
+Events are indexed by their unique ID.
 
 - Source: `packages/server/src/rooms/map.ts`
 - Kind: `property`
@@ -664,6 +728,54 @@ const allEvents = map.events();
 
 // Get a specific event
 const event = map.events()['event-id'];
+```
+
+## Find spawn position
+
+Find a collision-free position for a character hitbox near a preferred point.
+
+The search tests positions on growing rings around `preferred`, in a
+deterministic order, and returns the closest one where the hitbox stays
+inside the map and overlaps no blocking body: map hitboxes (Tiled tiles,
+Studio elements), static shapes, and non-`through` players and events.
+Hitboxes with a `z` range only block when `options.z` is inside it.
+
+It never disables collisions and never returns a blocked position: when no
+position is found within `maxDistance`, it returns `null`. It works on the
+server and on the client prediction map; use the server result for
+authoritative placement, e.g. with `player.changeMap()` or `player.teleport()`.
+
+- Source: `packages/common/src/rooms/Map.ts`
+- Kind: `method`
+- Member of: `RpgCommonMap`
+- Defined in: `RpgCommonMap`
+
+### Signature
+
+```ts
+map.findSpawnPosition(options)
+```
+
+### Parameters
+
+- `options`: `MapSpawnPositionOptions`
+
+### Returns
+
+Top-left position, or `null` when none is free.
+
+### Examples
+
+```ts
+// e.g. the `start` point of a generated map
+const spawn = map.findSpawnPosition({
+  preferred: { x: 480, y: 320 },
+  hitbox: { width: 32, height: 32 },
+  ignoreIds: [player.id],
+});
+if (spawn) {
+  await player.changeMap(map.id, spawn);
+}
 ```
 
 ## getBody
@@ -1161,13 +1273,13 @@ It removes the GUI from the player's active GUIs.
 ### Signature
 
 ```ts
-guiExit(player: RpgPlayer, { guiId, data })
+guiExit(player: RpgPlayer, { guiId, data, guiOpenId })
 ```
 
 ### Parameters
 
 - `player`: `RpgPlayer`
-- `{ guiId, data }`
+- `{ guiId, data, guiOpenId }`
 
 ### Examples
 
@@ -1287,7 +1399,16 @@ console.log(`Current map: ${mapId}`);
 
 Intercepts and modifies packets before they are sent to clients
 
-This method is automatically called by
+This method is automatically called by the RPGJS room runtime for each packet sent to clients.
+It adds timestamp and acknowledgment information to sync packets for client-side
+prediction reconciliation. This helps with network synchronization and reduces
+perceived latency.
+
+## Architecture
+
+Adds metadata to packets:
+- `timestamp`: Current server time for client-side prediction
+- `ack`: Acknowledgment info with last processed frame and authoritative position
 
 - Source: `packages/server/src/rooms/map.ts`
 - Kind: `method`
@@ -1296,14 +1417,14 @@ This method is automatically called by
 ### Signature
 
 ```ts
-interceptorPacket(player: RpgPlayer, packet: any, conn: Parameters<RoomMethods["$send"]>[0])
+interceptorPacket(player: RpgPlayer, packet: any, conn: RpgRoomConnection)
 ```
 
 ### Parameters
 
 - `player`: `RpgPlayer`
 - `packet`: `any`
-- `conn`: `Parameters<RoomMethods["$send"]>[0]`
+- `conn`: `RpgRoomConnection`
 
 ### Returns
 
@@ -1457,7 +1578,7 @@ map.on(type, cb)
 ### Parameters
 
 - `type`: `string`
-- `cb`: `(player: RpgPlayer, data: any) => void | Promise<void>`
+- `cb`: `(player: RpgPlayer, data: T) => void | Promise<void>`
 
 ### Examples
 
@@ -1487,13 +1608,13 @@ It checks for collisions with events and triggers the appropriate hooks.
 ### Signature
 
 ```ts
-onAction(player: RpgPlayer, action: any)
+onAction(player: RpgPlayer, action: RpgActionInput<unknown>): void
 ```
 
 ### Parameters
 
 - `player`: `RpgPlayer`
-- `action`: `any`
+- `action`: `RpgActionInput<unknown>`
 
 ### Examples
 
@@ -1542,7 +1663,17 @@ onInput(player: RpgPlayer, input: any)
 
 Called when a player joins the map
 
-This method is automatically called by
+This method is automatically called by the RPGJS room runtime when a player connects to the map.
+It initializes the player's connection, sets up the map context, and waits for
+the map data to be ready before playing sounds and triggering hooks.
+
+## Architecture
+
+1. Sets player's map reference and context
+2. Initializes the player
+3. Waits for map data to be ready
+4. Plays map sounds for the player
+5. Triggers `server-player-onJoinMap` hook
 
 - Source: `packages/server/src/rooms/map.ts`
 - Kind: `method`
@@ -1551,13 +1682,14 @@ This method is automatically called by
 ### Signature
 
 ```ts
-onJoin(player: RpgPlayer, conn: Parameters<RoomMethods["$send"]>[0])
+onJoin(player: RpgPlayer, conn: RpgRoomConnection, ctx?: { request?: { url: string } })
 ```
 
 ### Parameters
 
 - `player`: `RpgPlayer`
-- `conn`: `Parameters<RoomMethods["$send"]>[0]`
+- `conn`: `RpgRoomConnection`
+- `ctx?`: `{ request?: { url: string } }`
 
 ### Examples
 
@@ -1565,7 +1697,7 @@ onJoin(player: RpgPlayer, conn: Parameters<RoomMethods["$send"]>[0])
 // This method is called automatically by the framework
 // You can listen to the hook to perform custom logic
 server.addHook('server-player-onJoinMap', (player, map) => {
-console.log(`Player ${player.id} joined map ${map.id}`);
+  console.log(`Player ${player.id} joined map ${map.id}`);
 });
 ```
 
@@ -1573,7 +1705,13 @@ console.log(`Player ${player.id} joined map ${map.id}`);
 
 Called when a player leaves the map
 
-This method is automatically called by
+This method is automatically called by the RPGJS room runtime when a player disconnects from the map.
+It cleans up the player's pending inputs and triggers the appropriate hooks.
+
+## Architecture
+
+1. Triggers `server-player-onLeaveMap` hook
+2. Clears pending inputs to prevent processing after disconnection
 
 - Source: `packages/server/src/rooms/map.ts`
 - Kind: `method`
@@ -1582,13 +1720,13 @@ This method is automatically called by
 ### Signature
 
 ```ts
-onLeave(player: RpgPlayer, conn: Parameters<RoomMethods["$send"]>[0])
+onLeave(player: RpgPlayer, conn: RpgRoomConnection)
 ```
 
 ### Parameters
 
 - `player`: `RpgPlayer`
-- `conn`: `Parameters<RoomMethods["$send"]>[0]`
+- `conn`: `RpgRoomConnection`
 
 ### Examples
 
@@ -1596,8 +1734,22 @@ onLeave(player: RpgPlayer, conn: Parameters<RoomMethods["$send"]>[0])
 // This method is called automatically by the framework
 // You can listen to the hook to perform custom cleanup
 server.addHook('server-player-onLeaveMap', (player, map) => {
-console.log(`Player ${player.id} left map ${map.id}`);
+  console.log(`Player ${player.id} left map ${map.id}`);
 });
+```
+
+## onRestore
+
+Rebuild non-serializable map resources after a room restart or hibernation.
+
+- Source: `packages/server/src/rooms/map.ts`
+- Kind: `method`
+- Defined in: `RpgMap`
+
+### Signature
+
+```ts
+onRestore()
 ```
 
 ## patchLighting
@@ -1646,7 +1798,8 @@ patchWeather(patch: Partial<WeatherState>, options?: WeatherSetOptions): Weather
 
 Synchronized signal containing all players currently on the map
 
-This signal is automatically synchronized with clients using
+This signal is automatically synchronized with clients by RPGJS.
+Players are indexed by their unique ID.
 
 - Source: `packages/server/src/rooms/map.ts`
 - Kind: `property`
@@ -1723,7 +1876,7 @@ This method processes pending inputs for a player while performing
 anti-cheat validation to prevent time manipulation and frame skipping.
 It validates the time deltas between inputs and ensures they are within
 acceptable ranges. To preserve movement itinerary under network bursts,
-the number of inputs processed per call is capped.
+the number of distinct client ticks processed per call is capped.
 
 ## Architecture
 
@@ -1743,7 +1896,7 @@ the physics engine. Physics simulation is handled centrally by the game loop
 ```ts
 processInput(playerId: string, controls?: Controls): Promise<{
     player: RpgPlayer,
-    inputs: string[]
+    inputs: RpgMovementInput[]
   }>
 ```
 
@@ -1754,7 +1907,7 @@ processInput(playerId: string, controls?: Controls): Promise<{
 
 ### Returns
 
-Promise containing the player and processed input strings
+Promise containing the player and processed movement inputs
 
 ### Examples
 
@@ -1811,8 +1964,8 @@ Each hit includes `target`, `id`, `kind`, `x`, `y`, `bounds`, `distance`,
 `distanceRatio`, and `falloff`.
 
 `distanceRatio` is clamped between `0` and `1`. `falloff.linear()` returns
-strong values near the center and weaker values near the edge, which is useful
-for explosions and other radial effects.
+strong values near the center and weaker values near the edge, which is
+useful for explosions and other radial effects.
 
 - Source: `packages/common/src/rooms/Map.ts`
 - Kind: `method`
@@ -1908,6 +2061,18 @@ queryHitbox(rect: MapHitboxQueryRect, options?: MapHitboxQueryOptions): Array<T 
 
 - `rect`: `MapHitboxQueryRect`
 - `options?`: `MapHitboxQueryOptions`
+
+## refreshCharacterHitboxes
+
+- Source: `packages/common/src/rooms/Map.ts`
+- Kind: `method`
+- Defined in: `RpgCommonMap`
+
+### Signature
+
+```ts
+refreshCharacterHitboxes(): void
+```
 
 ## removeEvent
 
@@ -2050,13 +2215,36 @@ const shape = map.createShape({
 map.removeShape("temp-zone");
 ```
 
+## Replace streamed static hitboxes
+
+Replace the client-prediction collision geometry owned by one streamed map chunk.
+
+The authoritative server still owns collision results. This method only keeps
+the predicting client aligned with chunks that the server has disclosed.
+
+- Source: `packages/common/src/rooms/Map.ts`
+- Kind: `method`
+- Member of: `RpgCommonMap`
+- Defined in: `RpgCommonMap`
+
+### Signature
+
+```ts
+map.replaceStreamedStaticHitboxes
+```
+
+### Parameters
+
+- `namespace`: `string`
+- `hitboxes`: `MapChunkHitbox[]`
+
 ## setAutoTick
 
-Enable or disable automatic tick processing
+Enable or disable automatic server tick processing
 
-When disabled, the input processing loop will not run automatically.
-This is useful for unit tests where you want manual control over when
-inputs are processed.
+When disabled, the unified input/physics/projectile loop will not run
+automatically. This is useful for unit tests where you want manual control
+over server ticks.
 
 - Source: `packages/server/src/rooms/map.ts`
 - Kind: `method`
@@ -2079,7 +2267,7 @@ setAutoTick(enabled: boolean): void
 map.setAutoTick(false);
 
 // Manually trigger tick processing
-await map.processInput('player1');
+await map.nextTickAsync();
 ```
 
 ## setBodyPosition
@@ -2204,7 +2392,8 @@ structure as module properties with `$initial`, `$syncWithClient`, and `$permane
 ## Architecture
 
 - Reads a schema object shaped like module props
-- Creates typed sync signals with
+- Creates typed synchronized signals through the RPGJS gameplay contract
+- Properties are accessible as `map.propertyName`
 
 - Source: `packages/server/src/rooms/map.ts`
 - Kind: `method`
@@ -2213,28 +2402,28 @@ structure as module properties with `$initial`, `$syncWithClient`, and `$permane
 ### Signature
 
 ```ts
-setSync(schema: Record<string, any>)
+setSync(schema: RpgMapSyncSchema): void
 ```
 
 ### Parameters
 
-- `schema`: `Record<string, any>`
+- `schema`: `RpgMapSyncSchema`
 
 ### Examples
 
 ```ts
 // Add synchronized properties to the map
 map.setSync({
-weather: {
-$initial: 'sunny',
-$syncWithClient: true,
-$permanent: false
-},
-timeOfDay: {
-$initial: 12,
-$syncWithClient: true,
-$permanent: false
-}
+  weather: {
+    $initial: 'sunny',
+    $syncWithClient: true,
+    $permanent: false
+  },
+  timeOfDay: {
+    $initial: 12,
+    $syncWithClient: true,
+    $permanent: false
+  }
 });
 
 // Use the properties
@@ -2388,14 +2577,14 @@ complex effects with custom logic and parameters.
 ### Signature
 
 ```ts
-showComponentAnimation(id: string, position: { x: number, y: number }, params: any)
+showComponentAnimation(id: string, position: { x: number, y: number }, params: unknown)
 ```
 
 ### Parameters
 
 - `id`: `string`
 - `position`: `{ x: number, y: number }`
-- `params`: `any`
+- `params`: `unknown`
 
 ### Examples
 
@@ -2479,9 +2668,9 @@ map.stopSound("battle-theme");
 
 Observable representing the game loop tick
 
-This observable emits the current timestamp every 16ms (approximately 60fps).
-It's shared using the share() operator, meaning that all subscribers will receive
-events from a single interval rather than creating multiple intervals.
+This observable emits elapsed time and the current epoch timestamp at roughly
+60fps. It is shared using the share() operator, meaning that all subscribers
+receive events from a single timer rather than creating multiple timers.
 
 ## Physics Loop Architecture
 
@@ -2609,7 +2798,14 @@ Promise that resolves when the map is fully loaded
 ```ts
 // This endpoint is called automatically when a map is loaded
 // POST /map/update
-// Body: { id: string, width: number, height: number, config?: any, damageFormulas?: any }
+// Body: {
+//   id: string,
+//   width: number,
+//   height: number,
+//   config?: any,
+//   damageFormulas?: any,
+//   database?: any[] | Record<string, any>
+// }
 ```
 
 ## updateWorld
@@ -2621,10 +2817,11 @@ and creates or updates the world manager. The world ID is extracted from the URL
 
 ## Architecture
 
-1. Extracts world ID from URL path parameter
-2. Normalizes input to array of WorldMapConfig
-3. Ensures all required map properties are present (width, height, tile sizes)
-4. Creates or updates the world manager
+1. Authenticates the administrative update request
+2. Extracts the world ID from the `/world/:id/update` path segment
+3. Normalizes input to array of WorldMapConfig
+4. Persists the topology so it survives Durable Object hibernation
+5. Creates or updates the world manager
 
 Expected payload examples:
 - `{ id: string, maps: WorldMapConfig[] }`

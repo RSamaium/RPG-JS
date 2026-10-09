@@ -5,22 +5,57 @@ description: "Guide for Creating Modules in RPGJS in RPGJS."
 
 # Creating Modules in RPGJS
 
-This guide explains how to create and structure modules in RPGJS using `defineModule` and `createModule`.
+This guide explains the canonical RPGJS module pattern. `defineModule()` authors
+runtime behavior and `provideServerModules()` or `provideClientModules()` installs it.
 
 ## Module Structure
 
-A typical module consists of three main files:
+A module that runs on both sides consists of two explicit files:
+
 - `server.ts` - Server-side logic and hooks
-- `client.ts` - Client-side logic and hooks  
-- `index.ts` - Module configuration and dependency injection
+- `client.ts` - Client-side logic and hooks
+
+Code used by both runtimes can live in a separate `shared.ts` file.
+
+## Bundle ownership
+
+The entry point that imports a module determines which bundle contains it. The
+file name makes ownership clear, but it does not override an explicit import.
+
+| Module file | MMORPG browser bundle | MMORPG server bundle | Standalone browser bundle |
+| --- | --- | --- | --- |
+| `client.ts` | Included | Excluded | Included |
+| `server.ts` | Excluded | Included | Included |
+| `shared.ts` | Included when imported | Included when imported | Included when imported |
+
+In MMORPG mode, install `server.ts` only from the server bootstrap and
+`client.ts` only from the client configuration. The browser build then excludes
+the server module and its imports.
+
+<Warning>
+Standalone mode runs the RPGJS server in the browser. Its bundle therefore
+contains both client and server modules. Never place credentials, private keys,
+service tokens, or other secrets in a game compiled for standalone mode.
+</Warning>
+
+Follow these boundaries when structuring a module:
+
+- do not import `server.ts` from `client.ts`
+- do not import an `index.ts` that eagerly imports both runtimes from browser code
+- keep `shared.ts` limited to types, serializable data, constants, and logic safe
+  to expose to a browser
+- keep authoritative validation for movement, combat, inventory, and saves on
+  the server, even when the implementation is absent from the client bundle
+
+Reusable packages should expose separate `/client` and `/server` entry points
+instead of asking applications to import a combined runtime entry.
 
 ## Step 1: Define Server-Side Module
 
 Create a `server.ts` file using `defineModule` to define server-side behavior:
 
 ```typescript
-import { RpgEvent, RpgPlayer, type RpgServer } from "@rpgjs/server";
-import { defineModule } from "@rpgjs/common";
+import { RpgPlayer, defineModule, type RpgServer } from "@rpgjs/server";
 
 export default defineModule<RpgServer>({
     player: {},
@@ -32,8 +67,7 @@ export default defineModule<RpgServer>({
 Create a `client.ts` file using `defineModule` for client-side logic:
 
 ```typescript
-import { RpgClient, RpgClientEngine } from "@rpgjs/client";
-import { defineModule } from "@rpgjs/common";
+import { defineModule, type RpgClient } from "@rpgjs/client";
 
 export default defineModule<RpgClient>({
     // Client-side hooks and logic
@@ -41,72 +75,35 @@ export default defineModule<RpgClient>({
 })
 ```
 
-## Step 3: Create Module with Dependency Injection
+## Step 3: Install Each Runtime Module
 
-Create an `index.ts` file using `createModule` to configure the module and its dependencies:
-
-```typescript
-import server from "./server";
-import client from "./client";
-import { createModule } from "@rpgjs/common";
-import { BattleAi } from "./ai";
-
-export function provideBattle() {
-  return createModule("Battle", [
-    {
-      server,
-      client,
-    },
-  ]);
-}
-```
-
-## Understanding createModule Parameters
-
-The `createModule` function takes two parameters:
-
-### 1. Token Name (First Parameter)
-- **Purpose**: Unique identifier for dependency injection
-- **Usage**: Allows other modules to inject this module as a dependency
-- **Example**: `"Battle"` can be injected elsewhere using this token
-
-### 2. Dependencies Array (Second Parameter)
-The array can contain two types of objects:
-
-#### Dependency Injection Objects
-```typescript
-{
-  provide: "BattleActionRpg",  // Token name for injection
-  useClass: BattleAi,          // Class to instantiate
-}
-```
-
-#### Server/Client Extension Objects
-```typescript
-{
-  server,  // Extends server-side functionality
-  client,  // Extends client-side functionality
-}
-```
-
-## How Hooks Work
-
-When you include `server` and `client` objects in the `createModule` array, they **extend** the core modules with additional hooks:
-
-- **Server hooks**: Extend `RpgServer` with custom player and event behaviors
-- **Client hooks**: Extend `RpgClient` with custom client-side logic
-- **Event-driven**: Hooks are automatically called at specific game events
-
-## Example Usage
+Install the server definition in `server.ts`:
 
 ```typescript
-// In your main game configuration
-import { provideBattle } from "./modules/battle";
+import { createServer, provideServerModules } from "@rpgjs/server";
+import battleServer from "./modules/battle/server";
 
-const gameModules = [
-  provideBattle(),
-  // other modules...
-];
+export default createServer({
+  providers: [provideServerModules([battleServer])]
+});
 ```
 
-This modular approach allows for clean separation of concerns, easy testing, and flexible dependency management in your RPGJS game.
+Install the client definition in the shared client configuration:
+
+```typescript
+import { provideClientModules } from "@rpgjs/client";
+import battleClient from "./modules/battle/client";
+
+export default {
+  providers: [provideClientModules([battleClient])]
+};
+```
+
+Standalone and MMORPG clients use this same client configuration. In MMORPG
+mode, the server definition is built separately and remains authoritative for
+gameplay state. In standalone mode, that definition executes in the browser.
+
+Reusable packages should expose a `provideFeature(options)` function from
+explicit `/server` and `/client` entry points. Direct DI composition with
+`createModule()` remains available for advanced integrations, but is not needed
+for ordinary gameplay modules.

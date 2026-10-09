@@ -5,6 +5,7 @@ import type {
   ShowChoicesParams
 } from '../types';
 import { executeBlocksRecursively, getExecutorsFromContext } from './execution';
+import { resolveStringTemplate, studioStringTemplateFormat } from '../resolve-text';
 
 export const schemaShowChoices = {
   type: 'show_choices',
@@ -22,7 +23,8 @@ export const schemaShowChoices = {
       question: { 
         type: 'string', 
         title: 'Question Text',
-        description: 'The question to ask the player'
+        description: 'The question to ask the player',
+        format: studioStringTemplateFormat
       },
       choices: {
         type: 'array',
@@ -30,7 +32,7 @@ export const schemaShowChoices = {
         items: {
           type: 'object',
           properties: {
-            text: { type: 'string', title: 'Choice Text' },
+            text: { type: 'string', title: 'Choice Text', format: studioStringTemplateFormat },
             condition: { type: 'string', title: 'Show Condition (optional)' }
           }
         },
@@ -72,9 +74,9 @@ export const schemaShowChoices = {
  */
 export const show_choices: BlockExecutor<'show_choices'> = async (context, params) => {
   const choice = await context.player.showChoices(
-    params.question,
+    resolveStringTemplate(params.question, context),
     params.choices.map((c, index) => ({
-      text: c.text,
+      text: resolveStringTemplate(c.text, context),
       value: index
     }))
   );

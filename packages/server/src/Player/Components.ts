@@ -118,7 +118,7 @@ export interface ShapeComponentOptions {
 }
 
 export type ComponentDefinition = 
-  | { type: 'custom'; id: string; props?: Record<string, any> }
+  | { type: 'custom'; id: string; props?: Record<string, unknown> }
   | { type: 'text'; id: 'rpg:text'; value: string; props: { value: string; style?: TextComponentOptions }; style?: TextComponentOptions }
   | { type: 'hpBar'; id: 'rpg:hpBar'; props: { current: string; max: string; style?: BarComponentOptions; text?: string | null }; style?: BarComponentOptions; text?: string | null }
   | { type: 'spBar'; id: 'rpg:spBar'; props: { current: string; max: string; style?: BarComponentOptions; text?: string | null }; style?: BarComponentOptions; text?: string | null }
@@ -172,7 +172,7 @@ export const Components = {
    * });
    * ```
    */
-  custom(id: string, props: Record<string, any> = {}): ComponentDefinition {
+  custom(id: string, props: Record<string, unknown> = {}): ComponentDefinition {
     return {
       type: 'custom',
       id,

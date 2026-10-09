@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["dom", "esnext"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "strictPropertyInitialization": false,
+    "noImplicitAny": false,
+    "noImplicitThis": false,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": ["node", "vitest/globals"],
+    "paths": {
+      "@rpgjs/common": ["./packages/common/src"],
+      "@rpgjs/server": ["./packages/server/src"],
+      "@rpgjs/server/node": ["./packages/server/src/node"],
+      "@rpgjs/client": ["./packages/client/src"],
+      "@rpgjs/physic": ["./packages/physic/src"],
+      "@rpgjs/action-battle": ["./packages/action-battle/src"],
+      "@rpgjs/action-battle/server": ["./packages/action-battle/src/server.ts"]
+    }
+  },
+  "files": [
+    "packages/client/src/types/canvas-engine.d.ts",
+    "packages/action-battle/src/public-api-types.spec.ts",
+    "packages/client/src/public-api-types.spec.ts",
+    "packages/common/src/foundation.spec.ts",
+    "packages/server/tests/server-api-types.spec.ts"
+  ]
+}

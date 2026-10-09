@@ -14,7 +14,10 @@ export default defineConfig({
   plugins: [
     dts({ 
       include: ['src/**/*.ts'],
-      outDir: 'dist'
+      outDirs: 'dist',
+      afterDiagnostic(diagnostics) {
+        if (diagnostics.length > 0) throw new Error(`Declaration generation failed with ${diagnostics.length} TypeScript diagnostic(s)`)
+      }
     })
   ],
   build: {

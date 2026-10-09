@@ -27,4 +27,20 @@ describe("AnimationManager", () => {
     expect(onFinish).toHaveBeenCalledWith({ ok: true });
     expect(manager.current()).toHaveLength(0);
   });
+
+  test("snapshots reactive target coordinates for world-space components", () => {
+    const manager = new AnimationManager();
+    const target = {
+      x: vi.fn(() => 128),
+      y: vi.fn(() => 96),
+    };
+
+    void manager.displayEffect({}, target);
+
+    expect(manager.current()[0]).toMatchObject({
+      x: 128,
+      y: 96,
+      object: target,
+    });
+  });
 });

@@ -3,12 +3,16 @@ import {
   applyCameraFollow,
   cameraFollowAnimationOptions,
   cameraFollowOptions,
+  clearCameraFollowPlugins,
   ownsCameraFollowRevision,
+  syncCameraFollowPosition,
 } from "./cameraFollow";
 
 const createViewport = () => ({
   animate: vi.fn(),
   follow: vi.fn(),
+  moveCenter: vi.fn(),
+  center: { x: 0, y: 0 },
   plugins: {
     remove: vi.fn(),
   },
@@ -102,6 +106,26 @@ describe("camera follow", () => {
     expect(followTarget.y).toBe(240);
   });
 
+  it("synchronizes an instant camera with the rendered target position", () => {
+    const viewport = createViewport();
+    const target = { x: 120, y: 240 };
+
+    expect(syncCameraFollowPosition(viewport, target, false)).toBe(true);
+    expect(viewport.moveCenter).toHaveBeenCalledWith(120, 240);
+
+    viewport.moveCenter.mockClear();
+    viewport.center = { x: 120, y: 240 };
+    expect(syncCameraFollowPosition(viewport, target, false)).toBe(true);
+    expect(viewport.moveCenter).not.toHaveBeenCalled();
+  });
+
+  it("leaves animated camera following to the viewport plugin", () => {
+    const viewport = createViewport();
+
+    expect(syncCameraFollowPosition(viewport, { x: 120, y: 240 }, true)).toBe(false);
+    expect(viewport.moveCenter).not.toHaveBeenCalled();
+  });
+
   it("does not follow after animation if another camera command superseded it", () => {
     const viewport = createViewport();
 
@@ -116,6 +140,63 @@ describe("camera follow", () => {
 
     const animateOptions = viewport.animate.mock.calls[0][0];
     animateOptions.callbackOnComplete();
+
+    expect(viewport.follow).not.toHaveBeenCalled();
+  });
+
+  it("does not let a remounted sprite cleanup remove the newer follow owner", () => {
+    const viewport = createViewport();
+
+    const previousOwner = applyCameraFollow({
+      viewport,
+      target: { x: 120, y: 240 },
+      smoothMove: false,
+      followRevision: 2,
+      isCurrentRevision: () => true,
+      shouldFollowCamera: () => true,
+    });
+    const currentOwner = applyCameraFollow({
+      viewport,
+      target: { x: 160, y: 280 },
+      smoothMove: false,
+      followRevision: 2,
+      isCurrentRevision: () => true,
+      shouldFollowCamera: () => true,
+    });
+
+    viewport.plugins.remove.mockClear();
+
+    expect(clearCameraFollowPlugins(viewport, previousOwner)).toBe(false);
+    expect(viewport.plugins.remove).not.toHaveBeenCalled();
+    expect(clearCameraFollowPlugins(viewport, currentOwner)).toBe(true);
+    expect(viewport.plugins.remove).toHaveBeenCalledWith("animate");
+    expect(viewport.plugins.remove).toHaveBeenCalledWith("follow");
+  });
+
+  it("ignores an animation callback from a previous owner with the same revision", () => {
+    const viewport = createViewport();
+
+    applyCameraFollow({
+      viewport,
+      target: { x: 120, y: 240 },
+      smoothMove: true,
+      followRevision: 2,
+      isCurrentRevision: () => true,
+      shouldFollowCamera: () => true,
+    });
+    const previousAnimation = viewport.animate.mock.calls[0][0];
+
+    applyCameraFollow({
+      viewport,
+      target: { x: 160, y: 280 },
+      smoothMove: false,
+      followRevision: 2,
+      isCurrentRevision: () => true,
+      shouldFollowCamera: () => true,
+    });
+    viewport.follow.mockClear();
+
+    previousAnimation.callbackOnComplete();
 
     expect(viewport.follow).not.toHaveBeenCalled();
   });

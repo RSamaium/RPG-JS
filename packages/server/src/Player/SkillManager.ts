@@ -12,7 +12,7 @@ import { Effect } from "./EffectManager";
 /**
  * Type for skill class constructor
  */
-export type SkillClass = { new (...args: any[]): any };
+export type SkillClass = { new (): SkillObject; readonly name: string; readonly id?: string };
 
 export type SkillChangeAction = "learn" | "forget";
 
@@ -150,8 +150,10 @@ export interface SkillObject extends SkillHooks {
   /**
    * Allow additional properties
    */
-  [key: string]: any;
+  [key: string]: unknown;
 }
+
+export type SkillData = Skill | SkillObject;
 
 /**
  * Skill Manager Mixin
@@ -446,7 +448,7 @@ export function WithSkillManager<TBase extends PlayerCtor>(Base: TBase): TBase {
     learnSkill(
       skillInput: SkillClass | SkillObject | string,
       options: SkillChangeOptions = {},
-    ): any {
+    ): SkillObject {
       const map = this._getSkillMap();
       const { skillId, skillData, skillInstance } = this._resolveSkillInput(skillInput, map);
 
@@ -471,8 +473,9 @@ export function WithSkillManager<TBase extends PlayerCtor>(Base: TBase): TBase {
           level: options.level,
         },
       ]);
+      this["refreshHotbar"]?.();
       
-      return skillData;
+      return skillData as SkillObject;
     }
 
     /**
@@ -494,7 +497,7 @@ export function WithSkillManager<TBase extends PlayerCtor>(Base: TBase): TBase {
     forgetSkill(
       skillInput: SkillClass | SkillObject | string,
       options: SkillChangeOptions = {},
-    ): any {
+    ): SkillData {
       const index = this._getSkillIndex(skillInput);
       
       if (index === -1) {
@@ -531,8 +534,9 @@ export function WithSkillManager<TBase extends PlayerCtor>(Base: TBase): TBase {
           level: options.level,
         },
       ]);
+      this["refreshHotbar"]?.();
       
-      return skillData;
+      return skillData as SkillData;
     }
 
     /**
@@ -561,7 +565,7 @@ export function WithSkillManager<TBase extends PlayerCtor>(Base: TBase): TBase {
      * player.useSkill('fire', [enemy1, enemy2]);
      * ```
      */
-    useSkill(skillInput: SkillClass | SkillObject | string, otherPlayer?: RpgPlayer | RpgPlayer[]): any {
+    useSkill(skillInput: SkillClass | SkillObject | string, otherPlayer?: RpgPlayer | RpgPlayer[]): SkillData {
       const skillEntry = this._getLearnedSkillEntry(skillInput);
       const skill = this._getSkillSnapshot(skillEntry);
       
@@ -630,7 +634,7 @@ export interface ISkillManager {
    * @param skillInput - Skill class, object, or data id
    * @returns The skill data or null
    */
-  getSkill(skillInput: SkillClass | SkillObject | string): any | null;
+  getSkill(skillInput: SkillClass | SkillObject | string): Skill | null;
 
   /**
    * Learn a skill
@@ -644,7 +648,7 @@ export interface ISkillManager {
    * @returns The learned skill data
    * @throws SkillLog.alreadyLearned if the player already knows the skill
    */
-  learnSkill(skillInput: SkillClass | SkillObject | string, options?: SkillChangeOptions): any;
+  learnSkill(skillInput: SkillClass | SkillObject | string, options?: SkillChangeOptions): SkillObject;
 
   /**
    * Forget a skill
@@ -653,7 +657,7 @@ export interface ISkillManager {
    * @returns The forgotten skill data
    * @throws SkillLog.notLearned if trying to forget a skill not learned
    */
-  forgetSkill(skillInput: SkillClass | SkillObject | string, options?: SkillChangeOptions): any;
+  forgetSkill(skillInput: SkillClass | SkillObject | string, options?: SkillChangeOptions): SkillData;
 
   /**
    * Use a skill
@@ -666,5 +670,5 @@ export interface ISkillManager {
    * @throws SkillLog.notEnoughSp if player does not have enough SP
    * @throws SkillLog.chanceToUseFailed if the chance to use the skill has failed
    */
-  useSkill(skillInput: SkillClass | SkillObject | string, otherPlayer?: RpgPlayer | RpgPlayer[]): any;
+  useSkill(skillInput: SkillClass | SkillObject | string, otherPlayer?: RpgPlayer | RpgPlayer[]): SkillData;
 }

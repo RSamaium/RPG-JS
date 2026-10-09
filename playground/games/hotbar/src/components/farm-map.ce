@@ -1,0 +1,68 @@
+<Container>
+  <Rect width={960} height={640} color="#86aa55" />
+
+  @for (stripe of grassStripes) {
+    <Rect x={stripe.x} y={stripe.y} width={stripe.width} height={3} color="#759b47" alpha={0.48} />
+  }
+
+  <Rect x={24} y={24} width={912} height={12} color="#f0cf83" />
+  <Rect x={24} y={604} width={912} height={12} color="#f0cf83" />
+  <Rect x={24} y={24} width={12} height={592} color="#d8ae61" />
+  <Rect x={924} y={24} width={12} height={592} color="#d8ae61" />
+
+  <Rect x={54} y={54} width={390} height={126} color="#f5e6b8" />
+  <Rect x={62} y={62} width={374} height={110} color="#5d3825" />
+  <Text x={82} y={78} text="FARM HOTBAR" color="#fff0a8" size={24} fontFamily="Courier New" />
+  <Text x={82} y={112} text="1-2  use a mixed item / skill slot" color="#f6dfaa" size={14} fontFamily="Courier New" />
+  <Text x={82} y={134} text="M    open Items + Skills assignment" color="#f6dfaa" size={14} fontFamily="Courier New" />
+  <Text x={82} y={156} text="H    hide / show the native hotbar" color="#f6dfaa" size={14} fontFamily="Courier New" />
+
+  @for (plot of plots) {
+    <Rect x={plot.x} y={plot.y} width={plot.width} height={plot.height} color="#74452c" />
+    @for (row of cropRows(plot)) {
+      <Rect x={plot.x + 8} y={row} width={plot.width - 16} height={3} color="#a66a3d" />
+    }
+  }
+
+  @for (crop of crops) {
+    <Rect x={crop.x} y={crop.y} width={12} height={18} color="#4f7738" />
+    <Circle x={crop.x + 6} y={crop.y} radius={8} color={crop.color} />
+  }
+
+  <Rect x={704} y={70} width={164} height={118} color="#c77743" />
+  <Rect x={688} y={50} width={196} height={28} color="#8f3e2e" />
+  <Rect x={760} y={122} width={50} height={66} color="#593527" />
+  <Text x={732} y={91} text="SEED SHED" color="#fff0b3" size={15} fontFamily="Courier New" />
+
+  <Circle x={708} y={438} radius={70} color="#74b8ce" />
+  <Circle x={708} y={438} radius={57} color="#8fd1df" />
+  <Rect x={620} y={508} width={178} height={14} color="#d9b56a" />
+
+  <EventLayerComponent />
+</Container>
+
+<script>
+  import { EventLayerComponent } from "@rpgjs/client";
+
+  const grassStripes = Array.from({ length: 24 }, (_, index) => ({
+    x: 42 + (index % 6) * 154,
+    y: 205 + Math.floor(index / 6) * 96,
+    width: 78 + (index % 3) * 18,
+  }));
+
+  const plots = [
+    { x: 88, y: 238, width: 220, height: 128 },
+    { x: 340, y: 238, width: 220, height: 128 },
+    { x: 88, y: 402, width: 220, height: 128 },
+    { x: 340, y: 402, width: 220, height: 128 },
+  ];
+
+  const cropRows = (plot) =>
+    Array.from({ length: 4 }, (_, index) => plot.y + 20 + index * 28);
+
+  const crops = Array.from({ length: 24 }, (_, index) => ({
+    x: 108 + (index % 6) * 34,
+    y: 258 + Math.floor(index / 6) * 28,
+    color: index % 2 ? "#e8c84e" : "#d96548",
+  }));
+</script>
