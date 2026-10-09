@@ -150,6 +150,18 @@ export interface TimeManagerHooks {
   onWeatherChange?: (payload: TimeWeatherTransitionPayload) => any;
 }
 
+export type TimeHudPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right";
+
+/** The clock the client draws on screen: the day, the hour and a medallion whose sky follows the hour. */
+export interface TimeHudOptions {
+  /** Corner of the screen. Default `top-right`. */
+  position?: TimeHudPosition;
+  /** `compact` shows the medallion only. Default `default`. */
+  size?: "default" | "compact";
+  /** Shows the fast forward badge from this scale on. Nothing by default. */
+  fastScale?: number;
+}
+
 export interface TimeManagerOptions {
   start?: TimeInput | string;
   /**
@@ -161,6 +173,11 @@ export interface TimeManagerOptions {
   lighting?: boolean | TimeLightingConfig;
   weather?: boolean | TimeWeatherConfig;
   hooks?: TimeManagerHooks;
+  /**
+   * Draws the clock on the client (the `rpg-time-hud` GUI). Off by default.
+   * The client must register the same module: `provideClientModules([TimeManagerModule])`.
+   */
+  hud?: boolean | TimeHudOptions;
 }
 
 export interface TimeSnapshot {

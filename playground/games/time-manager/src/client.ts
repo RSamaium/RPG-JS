@@ -1,3 +1,4 @@
+import "./styles.css";
 import { mergeConfig } from "@signe/di";
 import { provideMmorpg, startGame } from "@rpgjs/client";
 import startServer from "./server";

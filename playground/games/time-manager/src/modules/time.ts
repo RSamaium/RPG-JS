@@ -69,6 +69,8 @@ function formatTime(time: TimeState): string {
 export const timeManagerModule = withTimeManager({
   start: "0001-01-01 07:45",
   scale: 2000,
+  // The clock drawn on screen: the day, the hour and a sky that follows the hour
+  hud: { position: "top-right", fastScale: 1000 },
   calendar: {
     months: 12,
     daysPerMonth: 30,

@@ -69,6 +69,28 @@ provideClientModules([
 
 There is **one clock for the whole server**: every map shares the same time, and `pause()` or `set()` applies to all of them. To keep a map out of the day night cycle (a cave, an interior), see [Per map lighting](#per-map-lighting).
 
+## Clock on screen
+
+`hud` draws the clock on the client: a pill with the day and the hour, and a round medallion whose sky follows the
+hour (a sun that crosses it, a moon and stars at night, colors that change at dawn and dusk). It is off by default.
+
+```ts
+withTimeManager({
+  scale: 10,
+  hud: { position: "top-right", fastScale: 1000 }, // or `hud: true`
+})
+```
+
+| Option | Default | |
+| --- | --- | --- |
+| `position` | `top-right` | `top-left`, `top-right`, `bottom-left` or `bottom-right`. |
+| `size` | `default` | `compact` shows the medallion only. |
+| `fastScale` | none | Shows the fast forward badge from this `scale` on. A paused clock always shows its badge. |
+
+The client must register the same module (`provideClientModules([TimeManagerModule])`) and load the styles
+(`import "@rpgjs/ui-css/index.css"`). "Day N" counts the days since the start. The texts are the `rpg.time.*`
+keys (English and French are included). The catalogue of the GUI has it in **Compositions / Game clock**.
+
 ## Server API
 
 Use `TimeManager` from server hooks, events, or services:

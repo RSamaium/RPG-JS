@@ -7,12 +7,24 @@ import { inject } from "@signe/di";
 import { RpgGui } from "./Gui/Gui";
 import { getSoundMetadata } from "./Sound";
 import { ClientTimeManager } from "./services/time";
+import { resolveHudOptions } from "./services/timeHud";
+import { inject as injectClient } from "./core/inject";
+import { TimeHudComponent } from "./components/gui";
+import { TIME_HUD_GUI_ID, TIME_HUD_I18N } from "./timeHudConfig";
 
 /**
  * Type for client modules that can be either:
  * - An object implementing RpgClient interface
  * - A class decorated with @RpgModule decorator
  */
+function mergeI18n(base: Record<string, Record<string, string>>, extra?: Record<string, Record<string, string>>) {
+  const merged: Record<string, Record<string, string>> = {};
+  for (const locale of new Set([...Object.keys(base), ...Object.keys(extra ?? {})])) {
+    merged[locale] = { ...(base[locale] ?? {}), ...(extra?.[locale] ?? {}) };
+  }
+  return merged;
+}
+
 export type RpgClientModule = RpgClient | (new () => any);
 
 /**
@@ -109,6 +121,24 @@ export function provideClientModules(modules: RpgClientModule[]): RpgFactoryProv
           },
         };
         delete module[TIME_MANAGER_MODULE_KEY];
+        if (options.hud) {
+          // The clock drawn on screen, opt-in with `withTimeManager({ hud: true })`
+          module = {
+            ...module,
+            i18n: mergeI18n(TIME_HUD_I18N, module.i18n),
+            gui: [
+              ...(module.gui ?? []),
+              {
+                id: TIME_HUD_GUI_ID,
+                component: TimeHudComponent,
+                renderer: "canvas",
+                autoDisplay: true,
+                data: resolveHudOptions(options.hud),
+                dependencies: () => [injectClient(RpgClientEngine).scene.currentPlayer],
+              },
+            ],
+          };
+        }
       }
       if (module.i18n) {
         registerI18nMessages(context, module.i18n, "client-module", 10);
