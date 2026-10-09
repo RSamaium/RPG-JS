@@ -54,6 +54,8 @@ export interface CharacterFrameBounds {
   top: number;
   bottom: number;
   centerX: number;
+  /** Horizontal center of the feet: the opaque pixels of the lowest rows, so arms and weapons do not move it. */
+  footX: number;
 }
 
 /** Bounds of each cell. Empty cells deliberately have no calibration. */
@@ -78,7 +80,17 @@ export function characterFrameBounds(
         bottom = Math.max(bottom, y);
       }
     }
-    return bottom < top ? undefined : { width, height, top, bottom: bottom + 1, centerX: (left + right + 1) / 2 };
+    if (bottom < top) return undefined;
+    const band = Math.max(2, Math.round((bottom - top + 1) * 0.06));
+    let sum = 0, count = 0;
+    for (let y = Math.max(top, bottom - band + 1); y <= bottom; y++) {
+      for (let x = left; x <= right; x++) {
+        const offset = (((Math.floor(index / columns) * height + y) * pixels.width)
+          + (index % columns) * width + x) * 4 + 3;
+        if (pixels.data[offset] > 16) { sum += x + 0.5; count++; }
+      }
+    }
+    return { width, height, top, bottom: bottom + 1, centerX: (left + right + 1) / 2, footX: count ? sum / count : (left + right + 1) / 2 };
   });
 }
 
@@ -98,14 +110,44 @@ export function loadedCharacterFrames(image: string, columns: number, rows: numb
   }
 }
 
-/** Keep the reference pose's ground point and scale throughout the timeline. */
-export function characterFrameTransform(reference: CharacterFrameBounds, frame: CharacterFrameBounds) {
-  const scale = (reference.bottom - reference.top) / (frame.bottom - frame.top);
+const median = (values: number[]): number => {
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.floor(sorted.length / 2)];
+};
+
+/**
+ * Calibrate one animation (one direction) against the reference one, so that going from one to the other
+ * keeps the character the same size and the feet on the same spot.
+ *
+ * Medians are used instead of the first pose: a lifted foot or a raised arm in the first image would
+ * shift the whole animation, while the movement inside the animation (steps, breathing) is kept.
+ */
+export function characterAnimationCalibration(reference: CharacterFrameBounds[], frames: CharacterFrameBounds[]) {
+  const height = (bounds: CharacterFrameBounds) => bounds.bottom - bounds.top;
+  const scale = median(reference.map(height)) / median(frames.map(height));
+  return {
+    scale,
+    footX: median(frames.map(bounds => bounds.footX)),
+    bottom: median(frames.map(bounds => bounds.bottom)),
+    width: frames[0].width,
+    height: frames[0].height,
+  };
+}
+
+/**
+ * Frame properties of a calibrated animation.
+ *
+ * `footAnchor` is the ground point of the character in the cell (`0` to `1` of the cell): the client puts it on the
+ * bottom center of the hitbox, whatever the size of the cell and the scale. `spriteRealSize` and `x`
+ * only keep the bounds of the graphic right where the footAnchor is not applied.
+ */
+export function characterFrameTransform(calibration: ReturnType<typeof characterAnimationCalibration>) {
+  const { scale, footX, bottom, width, height } = calibration;
   return {
     scale: [scale, scale],
-    // CanvasEngine subtracts half the difference from the cell's ground anchor.
-    spriteRealSize: { height: 2 * frame.bottom - frame.height },
-    x: (frame.width / 2 - frame.centerX) * scale,
+    spriteRealSize: { height: 2 * bottom - height },
+    x: (width / 2 - footX) * scale,
     y: 0,
+    footAnchor: [footX / width, bottom / height],
   };
 }

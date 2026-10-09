@@ -6,7 +6,8 @@ import { CharacterSpritesheet } from "./spritesheets/character";
 import { Animation, Direction } from "./spritesheets/types";
 import { getGameDataProvider } from "./data-provider";
 import { Assets } from "pixi.js";
-import { loadedCharacterHeight, loadedCharacterFrames, characterFrameTransform } from "./character-proportions";
+import { resolveGeneratedCharacterDisplayScale } from "./event-hitbox-scale";
+import { loadedCharacterHeight, loadedCharacterFrames, characterAnimationCalibration, characterFrameTransform } from "./character-proportions";
 
 export const STUDIO_DEFAULT_CHARACTER_DISPLAY_SCALE = 0.7;
 export const STUDIO_DEFAULT_ATTACK_ANIMATION_DURATION_MS = 350;
@@ -103,9 +104,6 @@ export const createSpriteSheetObject = async (
           : [Direction.Down, Direction.Left, Direction.Right, Direction.Up];
         const columns = media.metadata.columns ?? 2;
         const rows = media.metadata.rows ?? 2;
-        const width = media.width ?? media.metadata.width ?? 1024;
-        const height = media.height ?? media.metadata.height ?? 768;
-        const cellSize = Math.max(width / columns, height / rows);
         const stand = {
           animations: ({ direction }: { direction: Direction }) => {
             const index = Math.max(0, directions.indexOf(direction));
@@ -118,8 +116,7 @@ export const createSpriteSheetObject = async (
           framesWidth: columns,
           framesHeight: rows,
           scale: [1, 1],
-          displayScale: (128 / cellSize) *
-            (typeof media.metadata.scale === "number" ? media.metadata.scale : 1),
+          displayScale: resolveGeneratedCharacterDisplayScale(media),
           textures: {
             [Animation.Stand]: stand,
             [Animation.Walk]: stand,
@@ -334,8 +331,8 @@ export const prepareSpriteSheetObject = async (media: any, id?: string): Promise
       }
     }
   }
-  // Calibrate each direction from its first pose, never from attack effects in
-  // later frames. The same path handles linked and explicitly selected attacks.
+  // Calibrate each direction from the median pose of its frames (feet, height), never from attack
+  // effects. The same path handles linked and explicitly selected attacks.
   const referenceSheet = parentSheet ?? (media.metadata?.generationMode === "idle" ? spritesheet : undefined);
   if (referenceSheet) {
     const referenceFrames = loadedCharacterFrames(referenceSheet.image, referenceSheet.framesWidth, referenceSheet.framesHeight);
@@ -348,6 +345,11 @@ export const prepareSpriteSheetObject = async (media: any, id?: string): Promise
         image?: string; framesWidth?: number; framesHeight?: number;
         animations: (params: { direction: Direction }) => Frame[][];
       };
+      const boundsOf = (groups: Frame[][], bounds: ReturnType<typeof loadedCharacterFrames>, columns: number) =>
+        groups.flat()
+          .filter(frame => frame.frameX != null && frame.frameY != null)
+          .map(frame => bounds[frame.frameY! * columns + frame.frameX!])
+          .filter((frame): frame is NonNullable<typeof frame> => Boolean(frame));
       for (const [name, texture] of Object.entries(spritesheet.textures) as Array<[string, Texture]>) {
         const image = texture.image ?? spritesheet.image;
         const columns = texture.framesWidth ?? spritesheet.framesWidth;
@@ -355,19 +357,20 @@ export const prepareSpriteSheetObject = async (media: any, id?: string): Promise
         const key = `${image}:${columns}:${rows}`;
         if (!frameCache.has(key)) frameCache.set(key, loadedCharacterFrames(image, columns, rows));
         const bounds = frameCache.get(key)!;
-        if (!bounds.some(Boolean)) continue;
+        if (!bounds.some(Boolean)) {
+          console.warn(`[studio] Cannot read the pixels of "${image}": the "${name}" animation is not aligned on the feet of the character.`);
+          continue;
+        }
         calibrated = true;
         const animations = texture.animations;
         spritesheet.textures[name] = {
           ...texture,
           animations: (params: { direction: Direction }) => {
             const groups = animations(params);
-            const first = groups[0]?.find(frame => frame.frameX != null && frame.frameY != null);
-            const reference = referenceAnimation(params)[0]?.[0];
-            const sourceBounds = first && bounds[first.frameY! * columns + first.frameX!];
-            const targetBounds = reference && referenceFrames[reference.frameY * referenceSheet.framesWidth + reference.frameX];
-            if (!sourceBounds || !targetBounds) return groups;
-            const transform = characterFrameTransform(targetBounds, sourceBounds);
+            const source = boundsOf(groups, bounds, columns);
+            const target = boundsOf(referenceAnimation(params), referenceFrames, referenceSheet.framesWidth);
+            if (!source.length || !target.length) return groups;
+            const transform = characterFrameTransform(characterAnimationCalibration(target, source));
             return groups.map(group => group.map(frame => ({ ...frame, ...transform })));
           },
         };
