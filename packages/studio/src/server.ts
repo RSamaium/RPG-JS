@@ -1,4 +1,5 @@
 import { normalizeRuntimeHitbox } from "./runtime-hitbox";
+import { collectEventGraphics, scaleEventHitboxToGraphic } from "./event-hitbox-scale";
 import { bindStudioCombatAnimationsToEntity } from "./action-battle-animations";
 import { runPlayerEventOnce } from "./event-execution-guard";
 import { Move, RpgEvent, RpgMap, RpgPlayer, RpgServer, provideServerMapStreaming, type RpgPlayerConnectionContext } from "@rpgjs/server";
@@ -105,7 +106,8 @@ export const resolveRuntimeEventHitbox = (object: any, params: any): { width: nu
     ? [...object.triggers].reverse().find((trigger: any) => trigger?.enabled !== false && normalizeRuntimeHitbox(trigger?.hitbox))?.hitbox
     : undefined;
 
-  return normalizeRuntimeHitbox(object?.hitbox) ?? normalizeRuntimeHitbox(triggerHitbox) ?? normalizeRuntimeHitbox(params?.hitbox);
+  const hitbox = normalizeRuntimeHitbox(object?.hitbox) ?? normalizeRuntimeHitbox(triggerHitbox) ?? normalizeRuntimeHitbox(params?.hitbox);
+  return hitbox ? scaleEventHitboxToGraphic(hitbox, collectEventGraphics(object)) : undefined;
 };
 
 const normalizeProjectId = (value: unknown): string | null => {
@@ -1427,11 +1429,12 @@ export default (_config?: unknown) => {
                 loop();
               };
               const runInitLifecycle = async (options?: { runInitBlocks?: boolean; startParallelLoop?: boolean }) => {
-                eventObj.applyActiveTrigger(player, this);
+                // Teleport first: the movement route (and its frequency wait) must start from the final position
                 this.teleport({
                   x: object.x * mapExtended.scale,
                   y: object.y * mapExtended.scale,
                 });
+                eventObj.applyActiveTrigger(player, this);
                 if (options?.runInitBlocks !== false) {
                   await eventObj.executeBlocks(player, "onInit", this);
                 }
