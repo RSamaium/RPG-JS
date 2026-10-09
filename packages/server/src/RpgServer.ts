@@ -658,6 +658,11 @@ export interface RpgEventHooks {
     onLightingPhaseChange?: (event: RpgEvent, payload: TimeLightingPhaseTransitionPayload) => any
 
     /**
+     * Same transition as `onLightingPhaseChange`, named for gameplay rules.
+     */
+    onPhaseChange?: (event: RpgEvent, payload: TimeLightingPhaseTransitionPayload) => any
+
+    /**
      * Called when the TimeManager applies a weather ambience transition on the event map.
      */
     onWeatherChange?: (event: RpgEvent, payload: TimeWeatherTransitionPayload) => any

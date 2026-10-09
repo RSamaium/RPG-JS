@@ -27,6 +27,7 @@ import {
   type TimeWeatherTable,
   type TimeWeatherTransitionPayload,
   type WeatherState,
+  resolveTimeLightingForMap,
 } from "@rpgjs/common";
 import type { RpgMap } from "../rooms/map";
 
@@ -58,6 +59,7 @@ export class TimeManager {
   private lightingPhaseByMap = new WeakMap<RegisteredMap, string>();
   private weatherStateByMap = new WeakMap<RegisteredMap, WeatherRuntimeState>();
   private timeStateByMap = new WeakMap<RegisteredMap, TimeState>();
+  private lightingOptOut = new WeakSet<RegisteredMap>();
   private environmentTimer: ReturnType<typeof setInterval> | undefined;
   private dispatchDepth = 0;
   private pendingEnvironmentSync = false;
@@ -66,6 +68,7 @@ export class TimeManager {
     this.options = normalizeTimeOptions(options);
     this.snapshot = createTimeSnapshot(options);
     this.lightingPhaseByMap = new WeakMap();
+    this.lightingOptOut = new WeakSet();
     this.weatherStateByMap = new WeakMap();
     this.timeStateByMap = new WeakMap();
     this.refreshEnvironmentTimer();
@@ -75,6 +78,10 @@ export class TimeManager {
     const runtimeMap = map as RegisteredMap;
     const isFirstRegistration = !this.maps.has(runtimeMap);
     this.maps.add(runtimeMap);
+    if (isFirstRegistration && runtimeMap.getLighting?.()?.dayNight?.enabled === false) {
+      // The map declares that it has no day night cycle (an interior, a dungeon).
+      this.lightingOptOut.add(runtimeMap);
+    }
     this.ensureMapSignal(runtimeMap);
     this.syncMap(runtimeMap, {
       forceLighting: isFirstRegistration,
@@ -89,6 +96,7 @@ export class TimeManager {
     const runtimeMap = map as RegisteredMap;
     this.maps.delete(runtimeMap);
     this.lightingPhaseByMap.delete(runtimeMap);
+    this.lightingOptOut.delete(runtimeMap);
     this.weatherStateByMap.delete(runtimeMap);
     this.timeStateByMap.delete(runtimeMap);
     this.refreshEnvironmentTimer();
@@ -241,10 +249,9 @@ export class TimeManager {
   }
 
   private syncEnvironment(): void {
-    const lighting = this.options.lighting;
-    const shouldSyncLighting = Boolean(lighting && lighting.enabled !== false);
     for (const map of this.maps) {
-      const phaseKey = shouldSyncLighting ? this.resolveLightingPhase(this.state()).key : undefined;
+      const lighting = this.resolveMapLighting(map);
+      const phaseKey = lighting ? this.resolveLightingPhase(this.state(), lighting).key : undefined;
       if (phaseKey && this.lightingPhaseByMap.get(map) !== phaseKey) {
         this.syncMap(map, { reason: "tick" });
         continue;
@@ -317,13 +324,13 @@ export class TimeManager {
   }
 
   private async applyLighting(map: RegisteredMap, options: EnvironmentSyncOptions = {}): Promise<void> {
-    const lighting = this.options.lighting;
-    if (!lighting || lighting.enabled === false) {
+    const lighting = this.resolveMapLighting(map);
+    if (!lighting) {
       return;
     }
 
     const state = this.state();
-    const phase = this.resolveLightingPhase(state);
+    const phase = this.resolveLightingPhase(state, lighting);
     const previousKey = this.lightingPhaseByMap.get(map);
     if (!options.forceLighting && previousKey === phase.key) {
       return;
@@ -331,7 +338,7 @@ export class TimeManager {
 
     const dayNight = normalizeDayNight(lighting.dayNight);
     const nextLighting: Partial<LightingState> = dayNight
-      ? { dayNight: { ...dayNight, enabled: true } }
+      ? { dayNight: { ...dayNight, enabled: true, timeManager: true } }
       : phase.config?.lighting
         ?? (state.hour >= 6 && state.hour < 18 ? DEFAULT_DAY_LIGHTING : DEFAULT_NIGHT_LIGHTING);
     const transitionMs = !dayNight && phase.config ? lighting.transitionMs : 0;
@@ -522,6 +529,7 @@ export class TimeManager {
       reason,
     };
     await this.dispatchEnvironmentHook(map, "onLightingPhaseChange", payload);
+    await this.dispatchEnvironmentHook(map, "onPhaseChange", payload);
   }
 
   private async dispatchBeforeWeatherHook(
@@ -621,11 +629,19 @@ export class TimeManager {
     console.error(`[RPGJS] Error during TimeManager ${hookName} hook on map "${map.id}":`, error);
   }
 
-  private resolveLightingPhase(state: TimeState) {
-    if (this.options.lighting && normalizeDayNight(this.options.lighting.dayNight)) {
+  /** Lighting configuration for a map, `false` when the time manager must not touch its lighting. */
+  private resolveMapLighting(map: RegisteredMap): false | TimeLightingConfig {
+    if (this.lightingOptOut.has(map)) {
+      return false;
+    }
+    return resolveTimeLightingForMap(this.options.lighting, map.id);
+  }
+
+  private resolveLightingPhase(state: TimeState, lighting: TimeLightingConfig) {
+    if (normalizeDayNight(lighting.dayNight)) {
       return { key: state.phase as string, config: undefined };
     }
-    const phases = this.options.lighting ? this.options.lighting.phases : undefined;
+    const phases = lighting.phases;
     if (!phases) {
       return {
         key: state.hour >= 6 && state.hour < 18 ? "default:day" : "default:night",

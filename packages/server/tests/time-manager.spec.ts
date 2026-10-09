@@ -590,12 +590,13 @@ test("time manager day night lighting enables the cycle without replacing the li
   vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
 
   const onLightingPhaseChange = vi.fn();
+  const onPhaseChange = vi.fn();
   const timeManager = new TimeManager();
   timeManager.configure({
     start: "0001-01-01 17:29",
     scale: 60,
     lighting: { enabled: true, dayNight: { lightIntensity: 1.5 }, phases: { night: { hour: 21, lighting: {} } } },
-    hooks: { onLightingPhaseChange },
+    hooks: { onLightingPhaseChange, onPhaseChange },
   });
   const map = { ...createRuntimeMap("map1"), patchLighting: vi.fn() };
 
@@ -603,7 +604,7 @@ test("time manager day night lighting enables the cycle without replacing the li
   await flushEnvironment();
 
   expect(map.setLighting).not.toHaveBeenCalled();
-  expect(map.patchLighting).toHaveBeenCalledWith({ dayNight: { enabled: true, lightIntensity: 1.5 } }, undefined);
+  expect(map.patchLighting).toHaveBeenCalledWith({ dayNight: { enabled: true, lightIntensity: 1.5, timeManager: true } }, undefined);
 
   // 17:30 is the start of the dusk.
   vi.advanceTimersByTime(1000);
@@ -611,6 +612,7 @@ test("time manager day night lighting enables the cycle without replacing the li
 
   expect(onLightingPhaseChange).toHaveBeenCalledTimes(1);
   expect(onLightingPhaseChange.mock.calls[0][0]).toMatchObject({ previousKey: "day", currentKey: "dusk" });
+  expect(onPhaseChange).toHaveBeenCalledTimes(1);
   expect(map.patchLighting).toHaveBeenCalledTimes(2);
 });
 
@@ -619,4 +621,44 @@ test("time state exposes the decimal hour and the phase of the day", () => {
   timeManager.configure({ start: "0001-01-01 18:30" });
   expect(timeManager.state()).toMatchObject({ hour: 18, minute: 30, phase: "dusk" });
   expect(timeManager.state().hourFloat).toBeCloseTo(18.5, 1);
+});
+
+test("time manager lighting can be disabled or overridden for a map", async () => {
+  const timeManager = new TimeManager();
+  timeManager.configure({
+    start: "0001-01-01 12:00",
+    lighting: {
+      enabled: true,
+      dayNight: true,
+      maps: { cave: false, tavern: { dayNight: { lightIntensity: 2 } } },
+    },
+  });
+  const cave = { ...createRuntimeMap("cave"), patchLighting: vi.fn() };
+  const tavern = { ...createRuntimeMap("tavern"), patchLighting: vi.fn() };
+  const town = { ...createRuntimeMap("town"), patchLighting: vi.fn() };
+
+  for (const map of [cave, tavern, town]) {
+    timeManager.registerMap(map as any);
+  }
+  await flushEnvironment();
+
+  expect(cave.patchLighting).not.toHaveBeenCalled();
+  expect(tavern.patchLighting).toHaveBeenCalledWith({ dayNight: { enabled: true, lightIntensity: 2, timeManager: true } }, undefined);
+  expect(town.patchLighting).toHaveBeenCalledWith({ dayNight: { enabled: true, timeManager: true } }, undefined);
+});
+
+test("time manager keeps a map that declares dayNight.enabled false without a cycle", async () => {
+  const timeManager = new TimeManager();
+  timeManager.configure({ start: "0001-01-01 12:00", lighting: { enabled: true, dayNight: true } });
+  const house = {
+    ...createRuntimeMap("house"),
+    getLighting: vi.fn(() => ({ dayNight: { enabled: false } })),
+    patchLighting: vi.fn(),
+  };
+
+  timeManager.registerMap(house as any);
+  await flushEnvironment();
+
+  expect(house.patchLighting).not.toHaveBeenCalled();
+  expect(house.setLighting).not.toHaveBeenCalled();
 });

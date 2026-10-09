@@ -60,6 +60,15 @@ provideClientModules([
 ])
 ```
 
+## Units and limits
+
+| Option | Unit |
+| --- | --- |
+| `scale` | Game minutes per **real minute** (`1` is real time, `60` is one game hour per real minute). |
+| `useGameClock({ speed })` of CanvasEngine | Game minutes per real **second**: divide `scale` by 60. |
+
+There is **one clock for the whole server**: every map shares the same time, and `pause()` or `set()` applies to all of them. To keep a map out of the day night cycle (a cave, an interior), see [Per map lighting](#per-map-lighting).
+
 ## Server API
 
 Use `TimeManager` from server hooks, events, or services:
@@ -162,7 +171,41 @@ withTimeManager({
 })
 ```
 
-`onLightingPhaseChange` is still called, with the keys `night`, `dawn`, `day` and `dusk`. The state exposes them too: `state.phase` and `state.hourFloat` (the hour with decimals, `18.5` is 18:30).
+Two sets of phases exist, do not mix them up:
+
+| Mode | Keys | Boundaries |
+| --- | --- | --- |
+| `phases` | Your own keys | The hours you give (`hour: 21`). |
+| `dayNight` | `night`, `dawn`, `day`, `dusk` | 0h, 5h, 7h30, 17h30 and 20h30, like the `DayNightCycle` preset. |
+
+The hooks `onLightingPhaseChange` and `onPhaseChange` (the same transition, the second one reads better for gameplay rules) receive those keys. The state exposes them too: `state.phase` and `state.hourFloat` (the hour with decimals, `18.5` is 18:30).
+
+### Per map lighting
+
+The time manager lights every registered map. Override or disable it per map, like `weather.maps`:
+
+```ts
+withTimeManager({
+  lighting: {
+    enabled: true,
+    dayNight: true,
+    maps: {
+      cave: false,                                      // untouched
+      tavern: { dayNight: { lightIntensity: 1.4 } }     // other options for this map
+    }
+  }
+})
+```
+
+A map can also opt out on its own side, in its `lighting`:
+
+```ts
+{ id: 'house', lighting: { dayNight: { enabled: false }, ambient: { darkness: 0.3 } } }
+```
+
+### Client module
+
+The client must register the same module (`provideClientModules([TimeManagerModule])`). Without it the client falls back to a local clock and shows the wrong hour: a warning is logged in the console when the server drives the cycle with the time manager.
 
 The client projects the time from the clock of the server, so a client whose clock is off still shows the same hour as the other players.
 

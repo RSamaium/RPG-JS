@@ -81,7 +81,11 @@ Enable it on the map and describe the lights with `spots`:
 - `schedule` (`[on, off]`): hours the light is on. Without it, the light follows the darkness.
 - While `dayNight` is enabled, the `ambient` darkness overlay is not drawn.
 
-**Where does the hour come from?** Register the [Time Manager](./time-manager.md) module with `lighting: { dayNight: true }`: the server owns the hour and every player sees the same one. Without that module, the map has its own local clock: `dayNight.time` (start hour, `18.5` is 18:30), `dayNight.speed` (game minutes per real second) and `dayNight.paused`.
+**Where does the hour come from?** Register the [Time Manager](./time-manager.md) module with `lighting: { dayNight: true }`: the server owns the hour and every player sees the same one. The `time`, `speed` and `paused` keys of `dayNight` are ignored then.
+
+**Without the Time Manager**, the map has its own local clock (the same on every client, but not synchronized by the server): `dayNight.time` (start hour, `18.5` is 18:30), `dayNight.speed` (game minutes per real **second**) and `dayNight.paused`.
+
+To keep a map out of the cycle, set `dayNight: { enabled: false }` on that map.
 
 ## Runtime API (Server)
 

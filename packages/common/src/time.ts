@@ -42,6 +42,12 @@ export interface TimeDayNightConfig {
   vignette?: number;
 }
 
+/**
+ * Lighting of the time manager for one map. `false` leaves the lighting of the map untouched (an interior, a dungeon).
+ * Otherwise the keys replace those of the shared `lighting` configuration for that map.
+ */
+export type TimeLightingMapConfig = false | Pick<TimeLightingConfig, "dayNight" | "phases" | "transitionMs">;
+
 export interface TimeLightingConfig {
   enabled?: boolean;
   /**
@@ -51,6 +57,16 @@ export interface TimeLightingConfig {
   dayNight?: boolean | TimeDayNightConfig;
   phases?: Record<string, TimeLightingPhase>;
   transitionMs?: number;
+  /**
+   * Per map overrides, by map id. Same idea as `weather.maps`:
+   *
+   * ```ts
+   * lighting: { dayNight: true, maps: { cave: false, tavern: { dayNight: { lightIntensity: 1.4 } } } }
+   * ```
+   *
+   * A map can also opt out on its own side with `lighting: { dayNight: { enabled: false } }`.
+   */
+  maps?: Record<string, TimeLightingMapConfig>;
 }
 
 export type TimeWeatherWeight = number | {
@@ -128,12 +144,18 @@ export interface TimeManagerHooks {
   onTimeChange?: (payload: TimeTransitionPayload) => any;
   onDayChange?: (payload: TimeDayTransitionPayload) => any;
   onLightingPhaseChange?: (payload: TimeLightingPhaseTransitionPayload) => any;
+  /** Same transition as `onLightingPhaseChange`, named for gameplay rules (`night` falls, NPCs go home). */
+  onPhaseChange?: (payload: TimeLightingPhaseTransitionPayload) => any;
   onBeforeWeatherChange?: (payload: TimeWeatherBeforeTransitionPayload) => TimeWeatherBeforeTransitionResult | Promise<TimeWeatherBeforeTransitionResult>;
   onWeatherChange?: (payload: TimeWeatherTransitionPayload) => any;
 }
 
 export interface TimeManagerOptions {
   start?: TimeInput | string;
+  /**
+   * Game minutes elapsed per **real minute** (`60` is one game hour per real minute, `1` is real time).
+   * The clock of CanvasEngine (`useGameClock`) counts per real second instead: divide by 60.
+   */
   scale?: number;
   calendar?: Partial<TimeCalendarConfig>;
   lighting?: boolean | TimeLightingConfig;
@@ -288,7 +310,23 @@ export function normalizeTimeLighting(lighting: TimeManagerOptions["lighting"]):
     ...lighting,
     enabled: lighting.enabled !== false,
     phases: lighting.phases ? { ...lighting.phases } : undefined,
+    maps: lighting.maps ? { ...lighting.maps } : undefined,
   };
+}
+
+/**
+ * Lighting configuration of the time manager for one map, from the shared configuration and its `maps` override.
+ * `false` when the time manager must not touch the lighting of that map.
+ */
+export function resolveTimeLightingForMap(
+  lighting: false | TimeLightingConfig,
+  mapId: string | undefined,
+): false | TimeLightingConfig {
+  if (!lighting || lighting.enabled === false) return false;
+  const override = mapId !== undefined ? lighting.maps?.[mapId] : undefined;
+  if (override === false) return false;
+  if (!override) return lighting;
+  return { ...lighting, ...override, maps: undefined };
 }
 
 export function normalizeTimeWeather(weather: TimeManagerOptions["weather"]): false | TimeWeatherConfig {

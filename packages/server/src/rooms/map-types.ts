@@ -78,6 +78,8 @@ export interface EventHooks {
   onDayChange?: (this: RpgEvent, payload: TimeDayTransitionPayload) => void | Promise<void>;
   /** Called when the TimeManager applies a lighting phase transition */
   onLightingPhaseChange?: (this: RpgEvent, payload: TimeLightingPhaseTransitionPayload) => void | Promise<void>;
+  /** Same transition as `onLightingPhaseChange`, named for gameplay rules */
+  onPhaseChange?: (this: RpgEvent, payload: TimeLightingPhaseTransitionPayload) => void | Promise<void>;
   /** Called when the TimeManager applies a weather ambience transition */
   onWeatherChange?: (this: RpgEvent, payload: TimeWeatherTransitionPayload) => void | Promise<void>;
 }

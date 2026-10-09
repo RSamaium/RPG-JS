@@ -33,10 +33,16 @@ export interface LightSpot {
  */
 export interface LightingDayNight {
   enabled?: boolean;
-  /** Hour the clock starts at, `0` to `24` (decimals are minutes: `18.5` = 18:30). */
+  /**
+   * Set by the Time Manager: the hour then comes from it (synchronized with the server) and `time`, `speed`
+   * and `paused` are ignored.
+   */
+  timeManager?: boolean;
+  /** Local clock, used only without the Time Manager module: hour it starts at, `0` to `24` (`18.5` = 18:30). */
   time?: number;
-  /** Game minutes elapsed per real second. */
+  /** Local clock, used only without the Time Manager module: game minutes elapsed per real second. */
   speed?: number;
+  /** Local clock, used only without the Time Manager module. */
   paused?: boolean;
   /** Multiplies every light intensity. */
   lightIntensity?: number;

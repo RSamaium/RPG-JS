@@ -172,9 +172,14 @@
   const dayNightLights = computed(() => toDayNightLights(lighting?.()?.spots))
   const dayNightLightIntensity = computed(() => dayNight()?.lightIntensity ?? 1)
   const dayNightVignette = computed(() => dayNight()?.vignette ?? 1)
+  let warnedMissingTimeManager = false
   effect(() => {
     const cycle = dayNight()
     if (!cycle?.enabled) return
+    if (cycle.timeManager && !timeManager && !warnedMissingTimeManager) {
+      warnedMissingTimeManager = true
+      console.warn("[RPGJS] The server drives the day night cycle with the Time Manager, but the client module is not registered: the hour shown here is wrong. Add `withTimeManager()` to `provideClientModules()`.")
+    }
     dayClock.setTime(cycle.time ?? 12)
     dayClock.setSpeed(cycle.speed ?? 1)
     if (cycle.paused) dayClock.pause()
