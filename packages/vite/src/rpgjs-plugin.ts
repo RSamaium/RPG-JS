@@ -68,7 +68,8 @@ export function rpgjs({
           },
           optimizeDeps: {
             exclude: runtimeOptimizeDepsExclude,
-            include: ["pixi.js > eventemitter3"],
+            // pixi.js is excluded, so its CommonJS dependencies must be pre-bundled explicitly to get named exports.
+            include: ["pixi.js > eventemitter3", "pixi.js > @xmldom/xmldom"],
           },
         };
       },

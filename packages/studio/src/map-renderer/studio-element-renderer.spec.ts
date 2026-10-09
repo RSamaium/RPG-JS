@@ -670,6 +670,40 @@ describe("studio element renderer helpers", () => {
     expect(overlay.style).toBe("soft");
   });
 
+  it("resolves the color, halo and schedule of a light spot for the day night cycle", () => {
+    const overlay = resolveStudioElementLightSpotOverlay(
+      createElement({
+        drawIn: [0, 0, 48, 48],
+        rect: [0, 0, 48, 48],
+        lightSpot: { enabled: true, color: "#ffcf7a", halo: 40, schedule: { from: 19, to: 23.5 } },
+      })
+    );
+
+    expect(overlay.color).toBe("#ffcf7a");
+    expect(overlay.halo).toBe(0.4);
+    expect(overlay.schedule).toEqual([19, 23.5]);
+  });
+
+  it("leaves the color, halo and schedule out of a light spot that has none, and ignores invalid ones", () => {
+    const plain = resolveStudioElementLightSpotOverlay(
+      createElement({ drawIn: [0, 0, 48, 48], rect: [0, 0, 48, 48], lightSpot: { enabled: true } })
+    );
+    const invalid = resolveStudioElementLightSpotOverlay(
+      createElement({
+        drawIn: [0, 0, 48, 48],
+        rect: [0, 0, 48, 48],
+        lightSpot: { enabled: true, color: "javascript:alert(1)", halo: 400, schedule: { from: "x", to: 3 } },
+      })
+    );
+
+    expect(plain).not.toHaveProperty("color");
+    expect(plain).not.toHaveProperty("halo");
+    expect(plain).not.toHaveProperty("schedule");
+    expect(invalid).not.toHaveProperty("color");
+    expect(invalid.halo).toBe(1);
+    expect(invalid).not.toHaveProperty("schedule");
+  });
+
   it("resolves static wall shadow style from an active sun", () => {
     const style = resolveStudioTerrainWallShadowStyle(
       createTerrainData(),

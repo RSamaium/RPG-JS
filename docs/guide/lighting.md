@@ -55,6 +55,38 @@ import { MapData, RpgMap } from '@rpgjs/server'
 export class ForestNightMap extends RpgMap {}
 ```
 
+## Day Night Cycle
+
+The `DayNightCycle` preset of CanvasEngine color grades the scene by the hour of the day (blue moonlight, pink dawn, neutral day, golden hour, purple dusk) and lights the light spots of the map when it is dark.
+
+Enable it on the map and describe the lights with `spots`:
+
+```ts
+{
+  id: 'town',
+  file: require('./tmx/town.tmx'),
+  lighting: {
+    dayNight: { enabled: true, lightIntensity: 1, vignette: 1 },
+    spots: [
+      // Lit when it is dark
+      { id: 'lamp', x: 300, y: 320, radius: 180, flicker: true, halo: 0.4 },
+      // Lit between 19:00 and 23:00 (the hours may cross midnight)
+      { id: 'shop', x: 500, y: 200, color: '#ffd9a0', schedule: [19, 23] }
+    ]
+  }
+}
+```
+
+- `halo` (`0` to `1`): glow of the light in the air.
+- `schedule` (`[on, off]`): hours the light is on. Without it, the light follows the darkness.
+- While `dayNight` is enabled, the `ambient` darkness overlay is not drawn.
+
+**Where does the hour come from?** Register the [Time Manager](./time-manager.md) module with `lighting: { dayNight: true }`: the server owns the hour and every player sees the same one. The `time`, `speed` and `paused` keys of `dayNight` are ignored then.
+
+**Without the Time Manager**, the map has its own local clock (the same on every client, but not synchronized by the server): `dayNight.time` (start hour, `18.5` is 18:30), `dayNight.speed` (game minutes per real **second**) and `dayNight.paused`.
+
+To keep a map out of the cycle, set `dayNight: { enabled: false }` on that map.
+
 ## Runtime API (Server)
 
 `RpgMap` exposes:
