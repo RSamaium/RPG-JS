@@ -4,7 +4,6 @@ import {
   provideClientModules,
   provideLoadMap,
 } from "@rpgjs/client";
-import { Animation } from "@rpgjs/common";
 import MapComponent from "../components/map.ce";
 import { provideMain } from "../modules/main";
 import { timeManagerModule } from "../modules/time";
@@ -16,32 +15,6 @@ const heroPreset = Presets.LPCSpritesheetPreset({
   height: 5568,
   ratio: 1.5,
 });
-const cropSeasons = ["spring", "summer", "autumn", "winter"];
-const cropSpritesheets = cropSeasons.flatMap((season) => (
-  Array.from({ length: 4 }, (_, stage) => ({
-    id: `crop-${season}-${stage}`,
-    image: `assets/crops/crop-${season}-${stage}.png`,
-    width: 64,
-    height: 64,
-    rectWidth: 64,
-    rectHeight: 64,
-    framesWidth: 1,
-    framesHeight: 1,
-    spriteRealSize: {
-      width: 44,
-      height: 44,
-    },
-    textures: {
-      [Animation.Stand]: {
-        animations: () => [[{ time: 0, frameX: 0, frameY: 0 }]],
-      },
-      [Animation.Walk]: {
-        animations: () => [[{ time: 0, frameX: 0, frameY: 0 }]],
-      },
-    },
-  }))
-));
-
 export default {
   providers: [
     provideLoadMap((id: string) => ({
@@ -80,7 +53,6 @@ export default {
             id: "hero",
             image: "hero.png",
           },
-          ...cropSpritesheets,
         ],
       },
     ]),

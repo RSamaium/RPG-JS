@@ -28,6 +28,13 @@ const CROP_NAMES: Record<string, string> = {
   winter: "Cabbage",
 };
 
+const CROP_COLORS: Record<string, string> = {
+  spring: "#d96548",
+  summer: "#e8503a",
+  autumn: "#e8962e",
+  winter: "#9bd16a",
+};
+
 type CropState = {
   planted: boolean;
   stage: number;
@@ -47,18 +54,28 @@ function renderCropPlot(event: any, state: CropState): void {
         ? `${cropName} ${state.stage}/3`
         : "Water";
 
+  // The crops are drawn with shapes: no image to ship in the repository.
+  const soil = Components.shape({
+    type: "rounded-rectangle",
+    fill: state.watered ? "#6f5237" : "#8a613b",
+    width: 38,
+    height: 38,
+    line: { color: "#513621", width: 2 },
+  });
   if (state.planted) {
-    event.setGraphic(`crop-${state.season}-${state.stage}`);
-    event.removeComponents("center");
+    // The plant grows with its stage and takes the color of the season when it is ripe.
+    const ripe = state.stage >= CROP_MAX_STAGE;
+    event.setComponentsCenter([
+      soil,
+      Components.shape({
+        type: "circle",
+        fill: ripe ? (CROP_COLORS[state.season] ?? "#6faa4c") : "#6faa4c",
+        radius: 4 + state.stage * 4,
+        line: { color: "#3f6a2c", width: 2 },
+      }),
+    ]);
   } else {
-    event.setGraphic([]);
-    event.setComponentsCenter(Components.shape({
-      type: "rounded-rectangle",
-      fill: state.watered ? "#6f5237" : "#8a613b",
-      width: 38,
-      height: 38,
-      line: { color: "#513621", width: 2 },
-    }));
+    event.setComponentsCenter(soil);
   }
   event.setComponentsTop([
     Components.text(status, { fill: "#25321e", fontSize: 10 }),
