@@ -77,13 +77,8 @@ export const timeManagerModule = withTimeManager({
   },
   lighting: {
     enabled: true,
-    transitionMs: 900,
-    phases: {
-      dawn: { hour: 6, lighting: { ambient: { darkness: 0.16 }, sun: { intensity: 0.55 } } },
-      day: { hour: 8, lighting: { ambient: { darkness: 0 }, sun: { intensity: 1 } } },
-      dusk: { hour: 18, lighting: { ambient: { darkness: 0.34 }, sun: { intensity: 0.45 } } },
-      night: { hour: 21, lighting: { ambient: { darkness: 0.62 }, sun: { intensity: 0.18 } } },
-    },
+    // Continuous color grading by the hour; the light spots of the map are lit at night.
+    dayNight: true,
   },
   weather: {
     enabled: true,

@@ -566,3 +566,57 @@ test("time manager before weather hook can replace a weather ambience", async ()
     currentWeather: null,
   }));
 });
+
+test("time manager merges the phase lighting into the lighting of the map and keeps its light spots", async () => {
+  const timeManager = new TimeManager();
+  timeManager.configure({
+    start: "0001-01-01 08:00",
+    lighting: {
+      enabled: true,
+      phases: { day: { hour: 6, lighting: { ambient: { darkness: 0 } } } },
+    },
+  });
+  const map = { ...createRuntimeMap("map1"), patchLighting: vi.fn() };
+
+  timeManager.registerMap(map as any);
+  await flushEnvironment();
+
+  expect(map.setLighting).not.toHaveBeenCalled();
+  expect(map.patchLighting).toHaveBeenCalledWith({ ambient: { darkness: 0 } }, undefined);
+});
+
+test("time manager day night lighting enables the cycle without replacing the lighting of the map", async () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+
+  const onLightingPhaseChange = vi.fn();
+  const timeManager = new TimeManager();
+  timeManager.configure({
+    start: "0001-01-01 17:29",
+    scale: 60,
+    lighting: { enabled: true, dayNight: { lightIntensity: 1.5 }, phases: { night: { hour: 21, lighting: {} } } },
+    hooks: { onLightingPhaseChange },
+  });
+  const map = { ...createRuntimeMap("map1"), patchLighting: vi.fn() };
+
+  timeManager.registerMap(map as any);
+  await flushEnvironment();
+
+  expect(map.setLighting).not.toHaveBeenCalled();
+  expect(map.patchLighting).toHaveBeenCalledWith({ dayNight: { enabled: true, lightIntensity: 1.5 } }, undefined);
+
+  // 17:30 is the start of the dusk.
+  vi.advanceTimersByTime(1000);
+  await flushEnvironment();
+
+  expect(onLightingPhaseChange).toHaveBeenCalledTimes(1);
+  expect(onLightingPhaseChange.mock.calls[0][0]).toMatchObject({ previousKey: "day", currentKey: "dusk" });
+  expect(map.patchLighting).toHaveBeenCalledTimes(2);
+});
+
+test("time state exposes the decimal hour and the phase of the day", () => {
+  const timeManager = new TimeManager();
+  timeManager.configure({ start: "0001-01-01 18:30" });
+  expect(timeManager.state()).toMatchObject({ hour: 18, minute: 30, phase: "dusk" });
+  expect(timeManager.state().hourFloat).toBeCloseTo(18.5, 1);
+});

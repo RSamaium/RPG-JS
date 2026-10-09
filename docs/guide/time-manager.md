@@ -144,7 +144,27 @@ withTimeManager({
 })
 ```
 
+A phase is merged into the lighting of the map: the light spots, the shadows and the other keys that the phase does not set are kept.
+
 If lighting is omitted or disabled, the time manager does not modify map lighting.
+
+### Day night cycle
+
+Use `dayNight` to replace the phases by the continuous color grading of the `DayNightCycle` preset. The scene follows the hour of the time manager and the `spots` of the map are lit at night (see [Lighting](./lighting.md#day-night-cycle)):
+
+```ts
+withTimeManager({
+  scale: 10,
+  lighting: {
+    enabled: true,
+    dayNight: { lightIntensity: 1.2, vignette: 1 } // or `true`
+  }
+})
+```
+
+`onLightingPhaseChange` is still called, with the keys `night`, `dawn`, `day` and `dusk`. The state exposes them too: `state.phase` and `state.hourFloat` (the hour with decimals, `18.5` is 18:30).
+
+The client projects the time from the clock of the server, so a client whose clock is off still shows the same hour as the other players.
 
 ## Weather Ambiences
 

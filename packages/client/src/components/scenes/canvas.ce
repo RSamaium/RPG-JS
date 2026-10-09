@@ -1,6 +1,14 @@
 <Canvas width={engine.width} height={engine.height}>
   @if (isMapScene()) {
     <Viewport worldWidth worldHeight clamp sortableChildren={true}>
+      @if (dayNightEnabled()) {
+        <DayNightCycle
+          time={dayTime}
+          lights={dayNightLights}
+          lightIntensity={dayNightLightIntensity}
+          vignette={dayNightVignette}
+        />
+      }
       @if (lightingAmbientEnabled()) {
         <NightAmbiant
           spots={nightLights}
@@ -49,12 +57,13 @@
 </Canvas>
 
 <script>
-  import { computed, effect } from "canvasengine";
+  import { computed, effect, signal, tick } from "canvasengine";
   import { inject } from "../../core/inject";
   import { RpgClientEngine } from "../../RpgClientEngine";
   import { RpgGui } from "../../Gui/Gui";
-  import { NightAmbiant, SpriteShadows } from '@canvasengine/presets'
-  import { shouldRenderLightingShadows } from "@rpgjs/common";
+  import { ClientTimeManager } from "../../services/time";
+  import { DayNightCycle, NightAmbiant, SpriteShadows, useGameClock } from '@canvasengine/presets'
+  import { hasActiveLightingDayNight, shouldRenderLightingShadows, toDayNightLights } from "@rpgjs/common";
 
   const engine = inject(RpgClientEngine);
   const SceneMap = engine.sceneMapComponent;
@@ -144,6 +153,34 @@
       }
     })
   })
+  // Day night cycle: the hour comes from the `TimeManager` module (synchronized with the server); the light spots are its lights.
+  // Without that module, the map gives the hour its own clock starts at and its speed (`lighting.dayNight`).
+  const dayClock = useGameClock({ time: 12, speed: 1, paused: true })
+  let timeManager = null
+  try {
+    timeManager = inject(ClientTimeManager)
+  } catch {
+    timeManager = null
+  }
+  const timeNow = signal(Date.now())
+  if (timeManager) {
+    tick(() => timeNow.set(Date.now()))
+  }
+  const dayTime = computed(() => timeManager?.state(timeNow())?.hourFloat ?? dayClock.time())
+  const dayNight = computed(() => lighting?.()?.dayNight ?? null)
+  const dayNightEnabled = computed(() => hasActiveLightingDayNight(lighting?.()))
+  const dayNightLights = computed(() => toDayNightLights(lighting?.()?.spots))
+  const dayNightLightIntensity = computed(() => dayNight()?.lightIntensity ?? 1)
+  const dayNightVignette = computed(() => dayNight()?.vignette ?? 1)
+  effect(() => {
+    const cycle = dayNight()
+    if (!cycle?.enabled) return
+    dayClock.setTime(cycle.time ?? 12)
+    dayClock.setSpeed(cycle.speed ?? 1)
+    if (cycle.paused) dayClock.pause()
+    else dayClock.resume()
+  })
+
   const lightingDarkness = computed(() => {
     const darkness = lightingAmbient().darkness
     return typeof darkness === "number" ? darkness : 0
@@ -151,7 +188,7 @@
 
   const lightingAmbientEnabled = computed(() => {
     const state = lighting?.()
-    return Boolean(state && lightingDarkness() > 0)
+    return Boolean(state && lightingDarkness() > 0 && !dayNightEnabled())
   })
 
   const lightingDarknessProps = computed(() => ({

@@ -31,8 +31,24 @@ export interface TimeLightingPhase {
   lighting: Partial<LightingState>;
 }
 
+/**
+ * Continuous day night cycle of the `DayNightCycle` preset of `@canvasengine/presets`.
+ * The scene is color graded by the hour of the time manager and the light spots of the map are lit at night.
+ */
+export interface TimeDayNightConfig {
+  /** Multiplies every light intensity. */
+  lightIntensity?: number;
+  /** Multiplies the vignette. */
+  vignette?: number;
+}
+
 export interface TimeLightingConfig {
   enabled?: boolean;
+  /**
+   * Replaces the `phases` by a continuous color grading by the hour. The light spots of the map are kept.
+   * `onLightingPhaseChange` is called with the keys of `DayPhase`: `night`, `dawn`, `day` and `dusk`.
+   */
+  dayNight?: boolean | TimeDayNightConfig;
   phases?: Record<string, TimeLightingPhase>;
   transitionMs?: number;
 }
@@ -133,12 +149,39 @@ export interface TimeSnapshot {
   calendar: TimeCalendarConfig;
 }
 
+export type DayPhase = "night" | "dawn" | "day" | "dusk";
+
+/** Hours at which each phase starts. Same values as the `DayNightCycle` preset of `@canvasengine/presets`. */
+export const DAY_PHASES: ReadonlyArray<{ phase: DayPhase; from: number }> = [
+  { phase: "night", from: 0 },
+  { phase: "dawn", from: 5 },
+  { phase: "day", from: 7.5 },
+  { phase: "dusk", from: 17.5 },
+  { phase: "night", from: 20.5 },
+];
+
+/** Phase of the day (`night`, `dawn`, `day` or `dusk`) of an hour, `0` to `24` (decimals are minutes). */
+export function getDayPhase(hour: number): DayPhase {
+  const wrapped = ((hour % 24) + 24) % 24;
+  let result: DayPhase = "night";
+  for (const entry of DAY_PHASES) {
+    if (wrapped >= entry.from) {
+      result = entry.phase;
+    }
+  }
+  return result;
+}
+
 export interface TimeState extends TimeSnapshot {
   year: number;
   month: number;
   day: number;
   hour: number;
   minute: number;
+  /** Hour of the day, `0` to `24`, with the minutes and seconds as decimals (`18.5` is 18:30). */
+  hourFloat: number;
+  /** Phase of the day, from `hourFloat`. */
+  phase: DayPhase;
   weekday: number;
   season?: string;
 }
@@ -325,6 +368,7 @@ export function elapsedMinutesToTimeState(snapshot: TimeSnapshot, elapsedMinutes
 
   const hour = Math.floor(minuteOfDay / 60);
   const minute = minuteOfDay % 60;
+  const hourFloat = (((elapsedMinutes % 1440) + 1440) % 1440) / 60;
 
   return {
     ...snapshot,
@@ -334,6 +378,8 @@ export function elapsedMinutesToTimeState(snapshot: TimeSnapshot, elapsedMinutes
     day: dayOfYear + 1,
     hour,
     minute,
+    hourFloat,
+    phase: getDayPhase(hourFloat),
     weekday: totalDays % snapshot.calendar.daysPerWeek,
     season: resolveSeason(snapshot.calendar, month),
   };

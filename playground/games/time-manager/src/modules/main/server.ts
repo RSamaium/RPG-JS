@@ -390,6 +390,11 @@ export default defineModule<RpgServer>({
         sun: {
           intensity: 1,
         },
+        spots: [
+          { id: "lamp-left", x: 180, y: 180, radius: 90, color: "#ffd9a0", halo: 0.5, flicker: true },
+          { id: "lamp-right", x: 760, y: 180, radius: 90, color: "#ffd9a0", halo: 0.5, flicker: true },
+          { id: "shop", x: 480, y: 480, radius: 110, color: "#ffb347", halo: 0.4, schedule: [19, 23] },
+        ],
       },
       onLoad() {
         ensureEnvironmentHookLog(this as any);
