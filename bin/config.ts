@@ -119,6 +119,11 @@ export const packages = (type: "build" | "dev") => {
       dependencies: createDependencies(packagesPath, ['client', 'server', 'vite']),
     },
     {
+      name: "calendar",
+      buildScript,
+      dependencies: createDependencies(packagesPath, ['client', 'server', 'vite']),
+    },
+    {
       name: "account",
       buildScript,
       dependencies: createDependencies(packagesPath, ['client', 'vite']),

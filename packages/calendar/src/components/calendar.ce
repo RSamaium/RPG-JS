@@ -1,0 +1,206 @@
+<DOMContainer width="100%" height="100%" class="rpg-calendar-root">
+  <Navigation tabindex={0} controls={controls}>
+    <div class="rpg-ui-calendar-overlay" click={closeFromPointer}>
+      <div class="rpg-ui-calendar-backdrop"></div>
+      <section class="rpg-ui-calendar-window" role="dialog" aria-modal="true" aria-label={t("rpg.calendar.title")} click={stopEvent}>
+        <button class="rpg-ui-close-button rpg-ui-calendar-close" type="button" aria-label={t("rpg.ui.close")} click={closeFromPointer}>×</button>
+        <header class="rpg-ui-calendar-header">
+          <span class="rpg-ui-calendar-header-icon" aria-hidden="true">▦</span>
+          <div>
+            <h2 class="rpg-ui-calendar-title">{t("rpg.calendar.title")}</h2>
+            <p class="rpg-ui-calendar-subtitle">{t("rpg.calendar.subtitle")}</p>
+          </div>
+        </header>
+        <div class="rpg-ui-calendar-body">
+          <div class="rpg-ui-calendar-main">
+            <div class="rpg-ui-calendar-nav">
+              <button class="rpg-ui-calendar-arrow" type="button" aria-label={t("rpg.calendar.previous")} click={goPrevious}>‹</button>
+              <div class="rpg-ui-calendar-month" aria-live="polite">
+                <span>{monthLabel()}</span>
+                <span class="rpg-ui-calendar-dot-separator" aria-hidden="true">·</span>
+                <span>{yearLabel()}</span>
+              </div>
+              <button class="rpg-ui-calendar-arrow" type="button" aria-label={t("rpg.calendar.next")} click={goNext}>›</button>
+            </div>
+            <div class="rpg-ui-calendar-weekdays" role="row">
+              @for (weekday of weekdayLabels) {
+                <span role="columnheader">{weekday.label}</span>
+              }
+            </div>
+            <div class="rpg-ui-calendar-grid" role="grid">
+              @for (cell of cells; track cell.key) {
+                <div
+                  class="rpg-ui-calendar-cell"
+                  role="gridcell"
+                  style={cell.dotStyle}
+                  data-empty={cell.empty ? "true" : "false"}
+                  data-today={cell.today ? "true" : "false"}
+                  data-selected={cell.selected ? "true" : "false"}
+                  data-has-events={cell.entries.length ? "true" : "false"}
+                  aria-label={cell.label}
+                  aria-current={cell.today ? "date" : "false"}
+                  click={selectDay(cell.day)}
+                >
+                  <span class="rpg-ui-calendar-day">{cell.empty ? "" : cell.day}</span>
+                  @if (cell.entries.length) {
+                    <span class="rpg-ui-calendar-dot"></span>
+                    @if (cell.iconUrl) {
+                      <img class="rpg-ui-calendar-icon" src={cell.iconUrl} alt="" />
+                    }
+                    @else {
+                      <span class="rpg-ui-calendar-icon" aria-hidden="true">{cell.glyph}</span>
+                    }
+                  }
+                </div>
+              }
+            </div>
+          </div>
+          <aside class="rpg-ui-calendar-events" aria-label={t("rpg.calendar.events")}>
+            <div class="rpg-ui-calendar-events-header">
+              <h3>{t("rpg.calendar.events")}</h3>
+              <span class="rpg-ui-calendar-selected">{selectedLabel()}</span>
+            </div>
+            <div class="rpg-ui-calendar-event-list">
+              @for (item of eventItems) {
+                <button
+                  class="rpg-ui-calendar-event"
+                  type="button"
+                  style={item.dotStyle}
+                  data-selected={item.selected ? "true" : "false"}
+                  click={selectEntry(item.entry)}
+                >
+                  @if (item.iconUrl) {
+                    <img class="rpg-ui-calendar-event-icon" src={item.iconUrl} alt="" />
+                  }
+                  @else {
+                    <span class="rpg-ui-calendar-event-icon" aria-hidden="true">{item.glyph}</span>
+                  }
+                  <span class="rpg-ui-calendar-event-text">
+                    <strong>{item.title}</strong>
+                    @if (item.description) {
+                      <small>{item.description}</small>
+                    }
+                  </span>
+                  <span class="rpg-ui-calendar-event-day">{item.when}</span>
+                </button>
+              }
+              @if (!eventItems().length) {
+                <div class="rpg-ui-empty-state">
+                  <span aria-hidden="true">◇</span>
+                  <h3>{t("rpg.calendar.empty")}</h3>
+                  <p>{t("rpg.calendar.empty-help")}</p>
+                </div>
+              }
+            </div>
+          </aside>
+        </div>
+      </section>
+    </div>
+  </Navigation>
+</DOMContainer>
+
+<script>
+  import { computed, signal } from "canvasengine";
+  import { inject, RpgClientEngine } from "@rpgjs/client";
+  import { CALENDAR_VIEW_INTERACTION } from "../config";
+  import {
+    buildCells,
+    buildEventItems,
+    formatSelected,
+    labelFor,
+    moveSelection,
+  } from "../client-view";
+
+  const { data, onFinish, onInteraction } = defineProps();
+  const engine = inject(RpgClientEngine);
+  const { t } = engine.i18n();
+  const keyboardControls = engine.globalConfig.keyboardControls;
+
+  const view = computed(() => (typeof data === "function" ? data() : data) || null);
+  const pendingSelected = signal(null);
+  const selected = computed(() => pendingSelected() || view()?.selected || null);
+
+  const request = (payload) => onInteraction?.(CALENDAR_VIEW_INTERACTION, payload);
+
+  const monthLabel = computed(() => {
+    const v = view();
+    if (!v) return "";
+    const season = v.season
+      ? labelFor(t, "rpg.calendar.season." + v.season, v.season.charAt(0).toUpperCase() + v.season.slice(1))
+      : "";
+    // A season of several months shows which one it is: "Spring 2".
+    const named = season && v.monthInSeason && v.monthInSeason.count > 1 ? season + " " + v.monthInSeason.index : season;
+    return labelFor(t, "rpg.calendar.month." + v.month, named || t("rpg.calendar.month-number", { month: v.month }));
+  });
+  const yearLabel = computed(() => (view() ? t("rpg.calendar.year", { year: view().year }) : ""));
+  const weekdayLabels = computed(() => (view()?.weekdays || []).map((key) => ({
+    key,
+    label: labelFor(t, "rpg.calendar.weekday." + key, key.charAt(0).toUpperCase() + key.slice(1, 3)),
+  })));
+  const cells = computed(() => (view() ? buildCells(view(), selected(), t) : []));
+  const eventItems = computed(() => (view() ? buildEventItems(view(), selected(), t) : []));
+  const selectedLabel = computed(() => (view() ? formatSelected(view(), selected(), t) : ""));
+
+  const stopEvent = (event) => event?.stopPropagation?.();
+  const close = () => {
+    engine.playUiSound?.("close");
+    onFinish?.();
+  };
+  const closeFromPointer = (event) => {
+    stopEvent(event);
+    close();
+  };
+
+  const showMonth = (year, month, day) => {
+    pendingSelected.set(null);
+    request({ year, month, selected: day ? { year, month, day } : undefined });
+  };
+  const goPrevious = (event) => {
+    stopEvent(event);
+    const v = view();
+    if (!v) return;
+    const month = v.month === 1 ? v.months : v.month - 1;
+    showMonth(v.month === 1 ? Math.max(1, v.year - 1) : v.year, month);
+  };
+  const goNext = (event) => {
+    stopEvent(event);
+    const v = view();
+    if (!v) return;
+    showMonth(v.month === v.months ? v.year + 1 : v.year, v.month === v.months ? 1 : v.month + 1);
+  };
+
+  const selectDay = (day) => (event) => {
+    stopEvent(event);
+    const v = view();
+    if (!v || !day) return;
+    pendingSelected.set({ year: v.year, month: v.month, day });
+    request({ year: v.year, month: v.month, selected: { year: v.year, month: v.month, day } });
+  };
+  const selectEntry = (entry) => (event) => {
+    stopEvent(event);
+    const date = entry.date;
+    pendingSelected.set(null);
+    request({ year: date.year, month: date.month, selected: date });
+  };
+
+  const move = (delta) => {
+    const v = view();
+    if (!v) return;
+    const next = moveSelection(v, selected(), delta);
+    if (next.sameMonth) {
+      pendingSelected.set(next.selected);
+      request({ year: v.year, month: v.month, selected: next.selected });
+    } else {
+      showMonth(next.year, next.month, next.day);
+    }
+  };
+
+  const controls = signal({
+    left: { repeat: true, bind: keyboardControls.left, throttle: 120, keyDown() { move({ days: -1 }); } },
+    right: { repeat: true, bind: keyboardControls.right, throttle: 120, keyDown() { move({ days: 1 }); } },
+    up: { repeat: true, bind: keyboardControls.up, throttle: 120, keyDown() { move({ weeks: -1 }); } },
+    down: { repeat: true, bind: keyboardControls.down, throttle: 120, keyDown() { move({ weeks: 1 }); } },
+    escape: { bind: keyboardControls.escape, keyDown() { close(); } },
+    gamepad: { enabled: true },
+  });
+</script>
