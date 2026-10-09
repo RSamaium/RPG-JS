@@ -1759,41 +1759,46 @@ export abstract class RpgCommonMap<T extends RpgCommonPlayer> {
       owner.changeDirection(cardinalDirection as Direction);
     });
 
+    // The walk / stand animation only follows a movement that lasts: an NPC that pushes against an
+    // obstacle starts and stops its velocity every tick without moving, which made it flicker
+    // between the stand and walk sheets.
+    const MOVEMENT_ANIMATION_DELAY_MS = 120;
+    let movementAnimationTimer: ReturnType<typeof setTimeout> | undefined;
+    let pendingMovementAnimation: "walk" | "stand" | undefined;
     entity.onMovementChange(({ isMoving, intensity }) => {
       // Prevent animation changes on client side (same as onDirectionChange)
       if (!('$send' in this)) return;
-      
-      // Get owner from entity (same pattern as onDirectionChange)
-      const owner = (entity as any).owner;
-      if (!owner) return;
-      
-      // Don't change animation if it's locked
-      if (owner.animationFixed) return;
-      
+
       // Only change animation if intensity is low (avoid animation flicker on micro-movements)
       // Intensity threshold: 10 pixels/second (adjust based on your game's needs)
       const LOW_INTENSITY_THRESHOLD = 10;
-      
-      // Try to use setAnimation method if available (preferred method)
-      // Otherwise, try to access animationName signal directly
-      const hasSetAnimation = typeof owner.setAnimation === 'function';
-      const animationNameSignal = owner.animationName;
-      const ownerHasAnimationName = animationNameSignal && typeof animationNameSignal === 'object' && typeof animationNameSignal.set === 'function';
-      
-      if (isMoving && intensity > LOW_INTENSITY_THRESHOLD) {
-        if (hasSetAnimation) {
-          owner.setGraphicAnimation("walk");
-        } else if (ownerHasAnimationName) {
-          animationNameSignal.set("walk");
-        }
-      } else if (!isMoving) {
-        if (hasSetAnimation) {
-          owner.setGraphicAnimation("stand");
-        } else if (ownerHasAnimationName) {
-          animationNameSignal.set("stand");
-        }
-      }
+      let animation: "walk" | "stand" | undefined;
+      if (isMoving && intensity > LOW_INTENSITY_THRESHOLD) animation = "walk";
+      else if (!isMoving) animation = "stand";
       // If moving with high intensity, keep current animation (e.g., already running)
+
+      // A slow movement says nothing: it must not cancel the animation that is waiting to be applied
+      if (!animation || animation === pendingMovementAnimation) return;
+      clearTimeout(movementAnimationTimer);
+      pendingMovementAnimation = animation;
+      movementAnimationTimer = setTimeout(() => {
+        pendingMovementAnimation = undefined;
+        // Get owner from entity (same pattern as onDirectionChange)
+        const owner = (entity as any).owner;
+        if (!owner) return;
+
+        // Don't change animation if it's locked
+        if (owner.animationFixed) return;
+
+        // Try to use setAnimation method if available (preferred method)
+        // Otherwise, try to access animationName signal directly
+        const animationNameSignal = owner.animationName;
+        if (typeof owner.setAnimation === 'function') {
+          owner.setGraphicAnimation(animation);
+        } else if (animationNameSignal && typeof animationNameSignal === 'object' && typeof animationNameSignal.set === 'function') {
+          animationNameSignal.set(animation);
+        }
+      }, MOVEMENT_ANIMATION_DELAY_MS);
     });
 
     this.configureCharacterPushability(entity, owner, options.kind ?? "generic");

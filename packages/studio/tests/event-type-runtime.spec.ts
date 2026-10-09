@@ -299,7 +299,7 @@ describe("Studio event runtime", () => {
     const randomCall = calls.find(([name]) => name === "infiniteMoveRoute");
     expect(randomCall).toBeTruthy();
     expect(randomCall[2]?.onStuck?.()).toBe(true);
-    expect(randomCall[2]?.frequencyRatio).toBe(1);
+    expect(randomCall[2]?.frequencyRatio).toBeUndefined();
     expect(calls).toContainEqual(["setGraphicAnimation", "walk"]);
     expect(calls).not.toContainEqual(["setGraphicAnimation", "stand", Infinity]);
     expect(event.speed).toBeGreaterThan(4);

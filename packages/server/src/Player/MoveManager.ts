@@ -597,6 +597,7 @@ export function WithMoveManager<TBase extends PlayerCtor>(Base: TBase) {
 
     // Properties for infinite route management
     _infiniteRoutes: Routes | null = null;
+    _infiniteRouteOptions: MoveRoutesOptions | undefined = undefined;
     _finishRoute: ((value: boolean) => void) | null = null;
     _isInfiniteRouteActive: boolean = false;
 
@@ -1669,8 +1670,16 @@ export function WithMoveManager<TBase extends PlayerCtor>(Base: TBase) {
                       this.lastDistanceToTarget = null;
                       this.stuckCheckInitialized = false;
 
-                      // Advance to next route instruction immediately
-                      this.processNextRoute();
+                      // The route goes on after the wait of the frequency, as after a move that is done:
+                      // a blocked character stands still instead of trying a new direction every 500 ms
+                      this.remainingDistance = 0;
+                      const stuckFrequency = this.player.frequency;
+                      if (stuckFrequency && stuckFrequency > 0) {
+                        this.waitingForFrequency = true;
+                        this.frequencyWaitStartTime = Date.now();
+                      } else {
+                        this.processNextRoute();
+                      }
                       return;
                     }
                   }
@@ -1850,6 +1859,7 @@ export function WithMoveManager<TBase extends PlayerCtor>(Base: TBase) {
 
     infiniteMoveRoute(routes: Routes, options?: MoveRoutesOptions): void {
       this._infiniteRoutes = routes;
+      this._infiniteRouteOptions = options;
       this._isInfiniteRouteActive = true;
 
       const executeInfiniteRoute = (isBreaking: boolean = false) => {
@@ -1895,7 +1905,7 @@ export function WithMoveManager<TBase extends PlayerCtor>(Base: TBase) {
 
     replayRoutes(): void {
       if (this._infiniteRoutes && !this._isInfiniteRouteActive) {
-        this.infiniteMoveRoute(this._infiniteRoutes);
+        this.infiniteMoveRoute(this._infiniteRoutes, this._infiniteRouteOptions);
       }
     }
   }
