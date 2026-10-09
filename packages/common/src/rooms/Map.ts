@@ -2243,6 +2243,13 @@ export abstract class RpgCommonMap<T extends RpgCommonPlayer> {
    * physics solver may leave a tiny gap even though gameplay expects an
    * interaction.
    */
+  getInteractableObjectIds(id: string, direction?: Direction | string): string[] {
+    return Array.from(new Set([
+      ...this.getCollisions(id),
+      ...this.getInteractionCollisions(id, direction),
+    ]));
+  }
+
   private getInteractionCollisions(
     id: string,
     direction?: Direction | string,

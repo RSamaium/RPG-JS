@@ -72,6 +72,49 @@ describe("Action interactions", () => {
     expect(actionCount).toBe(1);
   });
 
+  test("flags the action as an interaction so an attack can be skipped", async () => {
+    const map = player.getCurrentMap() as any;
+    const hitbox = player.hitbox();
+
+    await map.createDynamicEvent({
+      id: "talk-event",
+      x: player.x(),
+      y: player.y() + hitbox.h + 2,
+      event: { onAction() {} },
+    });
+    await fixture.nextTick();
+    expect(map.getEvent("talk-event").interactive()).toBe(true);
+
+    player.changeDirection(Direction.Down);
+    const action = { action: Control.Action };
+    map.onAction(player, action);
+    await fixture.wait(0);
+
+    expect((action as any).interactedWithEvent).toBe(true);
+    expect(Object.keys(action)).toEqual(["action"]);
+  });
+
+  test("does not flag the action when the event in front has no onAction", async () => {
+    const map = player.getCurrentMap() as any;
+    const hitbox = player.hitbox();
+
+    await map.createDynamicEvent({
+      id: "decor-event",
+      x: player.x(),
+      y: player.y() + hitbox.h + 2,
+      event: {},
+    });
+    await fixture.nextTick();
+    expect(map.getEvent("decor-event").interactive()).toBe(false);
+
+    player.changeDirection(Direction.Down);
+    const action = { action: Control.Action };
+    map.onAction(player, action);
+    await fixture.wait(0);
+
+    expect((action as any).interactedWithEvent).toBeUndefined();
+  });
+
   test("ignores a nearby event behind the player", async () => {
     const map = player.getCurrentMap() as any;
     const hitbox = player.hitbox();
