@@ -144,16 +144,13 @@ export function toDayNightLights(spots: LightSpot[] | null | undefined): DayNigh
   });
 }
 
+/** Shadows are opt-in: nothing casts one (sprites, elements, terrain) unless `shadows.enabled` is `true`. */
 export function hasAutoLightingSunShadows(lighting: LightingState | null | undefined): boolean {
-  return Boolean(hasActiveLightingSun(lighting) && lighting?.shadows?.enabled !== false);
+  return Boolean(hasActiveLightingSun(lighting) && lighting?.shadows?.enabled === true);
 }
 
 export function shouldRenderLightingShadows(lighting: LightingState | null | undefined): boolean {
-  return Boolean(
-    lighting?.shadows?.enabled ||
-      (lighting?.spots?.length ?? 0) > 0 ||
-      hasAutoLightingSunShadows(lighting)
-  );
+  return lighting?.shadows?.enabled === true;
 }
 
 export const DEFAULT_DAY_LIGHTING: LightingState = {
