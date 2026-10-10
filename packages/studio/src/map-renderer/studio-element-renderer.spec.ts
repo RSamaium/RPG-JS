@@ -438,7 +438,7 @@ describe("studio element renderer helpers", () => {
 
   it("respects the shared shadow budget", () => {
     const budget = { remaining: 1 };
-    const options = { shadowBudget: budget, lighting: { sun: { intensity: 0.95 } } };
+    const options = { shadowBudget: budget, lighting: { sun: { intensity: 0.95 }, shadows: { enabled: true } } };
     const first = resolveStudioElementShadowCaster(createElement(), undefined, options);
     const second = resolveStudioElementShadowCaster(createElement(), undefined, options);
 
@@ -450,7 +450,7 @@ describe("studio element renderer helpers", () => {
   it("enables element shadow casters from an active map sun", () => {
     const caster = resolveStudioElementShadowCaster(createElement(), undefined, {
       sceneMap: {
-        lighting: () => ({ sun: { intensity: 0.95 } }),
+        lighting: () => ({ sun: { intensity: 0.95 }, shadows: { enabled: true } }),
       },
     });
 
@@ -465,7 +465,7 @@ describe("studio element renderer helpers", () => {
       }),
       undefined,
       {
-        lighting: { sun: { intensity: 0.95 } },
+        lighting: { sun: { intensity: 0.95 }, shadows: { enabled: true } },
       }
     );
 
@@ -495,6 +495,7 @@ describe("studio element renderer helpers", () => {
       {
         lighting: {
           sun: { x: -0.45, y: -1, intensity: 0.95 },
+          shadows: { enabled: true },
           spots: [{ x: 200, y: 110, radius: 240, intensity: 2 }],
         },
       }
@@ -511,7 +512,7 @@ describe("studio element renderer helpers", () => {
       createElement({ hasShadow: false }),
       undefined,
       {
-        lighting: { sun: { intensity: 0.95 } },
+        lighting: { sun: { intensity: 0.95 }, shadows: { enabled: true } },
       }
     );
 
@@ -523,7 +524,7 @@ describe("studio element renderer helpers", () => {
     const renderer = new StudioElementRenderer();
     const [container] = await renderer.renderElements(
       [createElement({ image: "" })],
-      { lighting: { sun: { intensity: 0.95 } } }
+      { lighting: { sun: { intensity: 0.95 }, shadows: { enabled: true } } }
     );
 
     const shadow = container.children.find((child: any) => child.label === "StudioElement:tree:shape-shadow") as any;
@@ -619,7 +620,7 @@ describe("studio element renderer helpers", () => {
           hitbox: { x: 4, y: 30, width: 10, height: 14 },
         }),
       ],
-      { lighting: { sun: { intensity: 0.95 } } }
+      { lighting: { sun: { intensity: 0.95 }, shadows: { enabled: true } } }
     );
 
     const shadow = container.children.find((child: any) => child.label === "StudioElement:tree:shape-shadow") as any;
@@ -709,6 +710,7 @@ describe("studio element renderer helpers", () => {
       createTerrainData(),
       {
         sun: { intensity: 0.95 },
+        shadows: { enabled: true },
       }
     );
 
@@ -721,9 +723,11 @@ describe("studio element renderer helpers", () => {
   it("keeps wall shadow projection independent from sun distance", () => {
     const near = resolveStudioTerrainWallShadowStyle(createTerrainData(), {
       sun: { x: -10, y: -12, z: 120, intensity: 0.95 },
+      shadows: { enabled: true },
     });
     const far = resolveStudioTerrainWallShadowStyle(createTerrainData(), {
       sun: { x: -9999, y: -9999, z: 1200, intensity: 0.95 },
+      shadows: { enabled: true },
     });
 
     expect(near).not.toBeNull();
