@@ -1,4 +1,11 @@
-import type { RpgActionInput, RpgShape } from "@rpgjs/common";
+import type {
+  RpgActionInput,
+  RpgShape,
+  TimeDayTransitionPayload,
+  TimeLightingPhaseTransitionPayload,
+  TimeTransitionPayload,
+  TimeWeatherTransitionPayload,
+} from "@rpgjs/common";
 import type { EventMode } from "../decorators/event";
 import type { RpgEvent, RpgPlayer } from "../Player/Player";
 import type { RpgMap } from "./map";
@@ -65,6 +72,16 @@ export interface EventHooks {
   onDetectInShape?: (this: RpgEvent, player: RpgPlayer, shape: RpgShape) => void;
   /** Called when a player is detected exiting a detection shape attached to the event */
   onDetectOutShape?: (this: RpgEvent, player: RpgPlayer, shape: RpgShape) => void;
+  /** Called when the TimeManager observes a time transition */
+  onTimeChange?: (this: RpgEvent, payload: TimeTransitionPayload) => void | Promise<void>;
+  /** Called when the TimeManager observes a day transition */
+  onDayChange?: (this: RpgEvent, payload: TimeDayTransitionPayload) => void | Promise<void>;
+  /** Called when the TimeManager applies a lighting phase transition */
+  onLightingPhaseChange?: (this: RpgEvent, payload: TimeLightingPhaseTransitionPayload) => void | Promise<void>;
+  /** Same transition as `onLightingPhaseChange`, named for gameplay rules */
+  onPhaseChange?: (this: RpgEvent, payload: TimeLightingPhaseTransitionPayload) => void | Promise<void>;
+  /** Called when the TimeManager applies a weather ambience transition */
+  onWeatherChange?: (this: RpgEvent, payload: TimeWeatherTransitionPayload) => void | Promise<void>;
 }
 
 export interface RpgTouchContext {

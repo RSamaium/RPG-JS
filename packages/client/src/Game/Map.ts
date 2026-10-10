@@ -50,7 +50,10 @@ const lightSpotsEqual = (left: LightSpot | undefined, right: LightSpot): boolean
     && left.flickerSpeed === right.flickerSpeed
     && left.pulse === right.pulse
     && left.pulseSpeed === right.pulseSpeed
-    && left.phase === right.phase;
+    && left.phase === right.phase
+    && left.halo === right.halo
+    && left.schedule?.[0] === right.schedule?.[0]
+    && left.schedule?.[1] === right.schedule?.[1];
 };
 
 export class RpgClientMap extends RpgCommonMap<any> {

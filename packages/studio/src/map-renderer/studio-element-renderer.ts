@@ -3,7 +3,7 @@ import { normalizeElementSubmersion, submergeElementPixels } from "./element-sub
 import { StudioTerrainChunkRenderer } from "./terrain-renderer/terrain-chunk-renderer";
 import type { StudioTerrainRenderData } from "./types";
 import { Assets, CanvasSource, Container as PixiContainer, Graphics, Rectangle, Sprite, Texture } from "pixi.js";
-import { hasAutoLightingSunShadows, shouldRenderLightingShadows, type LightingState } from "@rpgjs/common";
+import { hasActiveLightingDayNight, hasAutoLightingSunShadows, shouldRenderLightingShadows, type LightingState } from "@rpgjs/common";
 
 const DEFAULT_SHADOW_CASTER_LIMIT = 1000;
 const LIGHT_SPOT_TEXTURE_SIZE = 256;
@@ -140,6 +140,12 @@ export interface StudioElementLightSpotOverlay {
   flicker: boolean;
   flickerSpeed: number;
   style: "soft" | "normal" | "intense";
+  /** Tint of the light in the day night cycle, a CSS hex color. */
+  color?: string;
+  /** Glow of the light in the air, `0` to `1`, in the day night cycle. */
+  halo?: number;
+  /** Hours `[on, off]` the light is on in the day night cycle. */
+  schedule?: [number, number];
 }
 
 interface StudioElementShadowContactMetrics {
@@ -1181,6 +1187,20 @@ const normalizeLightSpot = (value: any, rectangle: StudioElementRect): any => {
     flicker: typeof value.flicker === "boolean" ? value.flicker : defaults.flicker,
     flickerSpeed: Math.round(clamp(toFiniteNumber(value.flickerSpeed, defaults.flickerSpeed) ?? defaults.flickerSpeed, 1, 60)),
     style: normalizeLightStyle(typeof value.style === "string" ? value.style : typeof value.preset === "string" ? value.preset : defaults.style),
+    ...normalizeLightSpotDayNight(value),
+  };
+};
+
+/** The settings of a light spot that only the day night cycle uses: they are left out when the spot does not set them. */
+const normalizeLightSpotDayNight = (value: any): { color?: string; halo?: number; schedule?: { from: number; to: number } } => {
+  const color = typeof value.color === "string" && /^#[0-9a-f]{3,8}$/i.test(value.color.trim()) ? value.color.trim() : undefined;
+  const halo = toFiniteNumber(value.halo, null);
+  const from = toFiniteNumber(value.schedule?.from, null);
+  const to = toFiniteNumber(value.schedule?.to, null);
+  return {
+    ...(color ? { color } : {}),
+    ...(halo !== null ? { halo: Number(clamp(halo, 0, 100).toFixed(2)) } : {}),
+    ...(from !== null && to !== null ? { schedule: { from: clamp(from, 0, 24), to: clamp(to, 0, 24) } } : {}),
   };
 };
 
@@ -1222,6 +1242,9 @@ export function resolveStudioElementLightSpotOverlay(
     flicker: lightSpot.flicker,
     flickerSpeed: lightSpot.flickerSpeed,
     style,
+    ...(lightSpot.color ? { color: lightSpot.color } : {}),
+    ...(lightSpot.halo !== undefined ? { halo: lightSpot.halo / 100 } : {}),
+    ...(lightSpot.schedule ? { schedule: [lightSpot.schedule.from, lightSpot.schedule.to] as [number, number] } : {}),
   };
 }
 
@@ -1232,6 +1255,7 @@ const createLightingShadowRenderVersion = (lighting: LightingState | null | unde
     sun: lighting?.sun ?? null,
     shadows: lighting?.shadows ?? null,
     spots: lighting?.spots ?? null,
+    dayNight: hasActiveLightingDayNight(lighting),
   };
 };
 
@@ -1863,7 +1887,10 @@ export class StudioElementRenderer {
       }
     }
 
-    this.addLightSpotSprite(container, element, metrics);
+    // The day night cycle draws the light and its halo: the additive glow would add to it.
+    if (!hasActiveLightingDayNight(resolveLighting(options))) {
+      this.addLightSpotSprite(container, element, metrics);
+    }
     this.addDebugCollisionGraphics(container, metrics, options);
     this.syncLightSpot(element, metrics, options.sceneMap, lightSpotIds);
     return container;
@@ -2080,6 +2107,9 @@ export class StudioElementRenderer {
       intensity: overlay.intensity,
       flicker: overlay.flicker,
       flickerSpeed: overlay.flickerSpeed,
+      ...(overlay.color ? { color: overlay.color } : {}),
+      ...(overlay.halo !== undefined ? { halo: overlay.halo } : {}),
+      ...(overlay.schedule ? { schedule: overlay.schedule } : {}),
     });
   }
 

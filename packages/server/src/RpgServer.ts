@@ -2,7 +2,11 @@ import { MapOptions } from "./decorators/map"
 import { RpgPlayer, type RpgPlayerRoom } from "./Player/Player"
 import { type RpgMap, type RpgRoomConnection } from "./rooms/map"
 import type { RpgServerEngine } from "./RpgServerEngine"
-import { WorldMapConfig, RpgShape, type I18nMessages, type MapPhysicsInitContext, type MapPhysicsEntityContext, type RpgActionInput, type RpgRoomDescriptor } from "@rpgjs/common"
+import { WorldMapConfig, RpgShape, type I18nMessages, type MapPhysicsInitContext, type MapPhysicsEntityContext, type RpgActionInput, type RpgRoomDescriptor,
+    type TimeDayTransitionPayload,
+    type TimeLightingPhaseTransitionPayload,
+    type TimeTransitionPayload,
+    type TimeWeatherTransitionPayload } from "@rpgjs/common"
 import { RpgEvent } from "./Player/Player"
 import type { MaybePromise, RpgMapChangeTarget, RpgPlayerSnapshot, RpgSyncSchema } from "./Player/types"
 import type { EventPosOption, RpgTouchContext } from "./rooms/map"
@@ -637,6 +641,31 @@ export interface RpgEventHooks {
      * ```
      */
     onOutShape?: (event: RpgEvent, shape: RpgShape, actor: RpgPlayer | RpgEvent) => MaybePromise<void>
+
+    /**
+     * Called when the TimeManager observes a time transition on the event map.
+     */
+    onTimeChange?: (event: RpgEvent, payload: TimeTransitionPayload) => any
+
+    /**
+     * Called when the TimeManager observes a day transition on the event map.
+     */
+    onDayChange?: (event: RpgEvent, payload: TimeDayTransitionPayload) => any
+
+    /**
+     * Called when the TimeManager applies a lighting phase transition on the event map.
+     */
+    onLightingPhaseChange?: (event: RpgEvent, payload: TimeLightingPhaseTransitionPayload) => any
+
+    /**
+     * Same transition as `onLightingPhaseChange`, named for gameplay rules.
+     */
+    onPhaseChange?: (event: RpgEvent, payload: TimeLightingPhaseTransitionPayload) => any
+
+    /**
+     * Called when the TimeManager applies a weather ambience transition on the event map.
+     */
+    onWeatherChange?: (event: RpgEvent, payload: TimeWeatherTransitionPayload) => any
 
     /**
      * Called when the event collides with a player (without requiring action key press)

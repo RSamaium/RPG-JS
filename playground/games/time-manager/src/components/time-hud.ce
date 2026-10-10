@@ -1,0 +1,177 @@
+<DOMContainer x={28} y={26} zIndex={30000} class="time-hud-wrap">
+  <div class="time-hud">
+    <div class="time-row">
+      <span class="label">Time</span>
+      <strong>{clockText()}</strong>
+    </div>
+    <div class="time-row compact">
+      <span>Day {dateText()}</span>
+      <span>{seasonText()}</span>
+    </div>
+    <div class="time-row compact">
+      <span>Scale x{scaleText()}</span>
+      <span>{weatherText()}</span>
+    </div>
+    <div class="hook-log">
+      <div class="hook-title">Hooks</div>
+      @if (hookEntries().length === 0) {
+        <div class="hook-empty">waiting for transition</div>
+      }
+      @for ((entry,index) of hookEntries()) {
+        <div class="hook-entry" class={{plugin: entry.source === "plugin", event: entry.source === "event"}}>
+          <span class="hook-source">{entry.source}</span>
+          <span class="hook-name">{entry.hook}</span>
+          <span class="hook-detail">{entry.detail}</span>
+          <span class="hook-time">{entry.time}</span>
+        </div>
+      }
+    </div>
+  </div>
+</DOMContainer>
+
+<script>
+  import { computed, signal, tick } from "canvasengine";
+  import { ClientTimeManager, RpgClientEngine, inject } from "@rpgjs/client";
+
+  const timeManager = inject(ClientTimeManager);
+  const engine = inject(RpgClientEngine);
+  const now = signal(Date.now());
+
+  tick(() => {
+    now.set(Date.now());
+  });
+
+  const timeState = computed(() => timeManager.state(now()));
+  const weatherState = engine.sceneMap.weather;
+  const hookEntries = computed(() => engine.sceneMap.environmentHookLog?.()?.entries ?? []);
+
+  const pad = (value) => String(Math.floor(value)).padStart(2, "0");
+  const clockText = computed(() => {
+    const time = timeState();
+    if (!time) return "--:--";
+    return `${pad(time.hour)}:${pad(time.minute)}`;
+  });
+  const dateText = computed(() => {
+    const time = timeState();
+    if (!time) return "-";
+    return `${time.day} / M${time.month} / Y${time.year}`;
+  });
+  const seasonText = computed(() => timeState()?.season ?? "season ?");
+  const scaleText = computed(() => String(timeState()?.scale ?? "-"));
+  const weatherText = computed(() => {
+    const weather = weatherState?.();
+    return weather?.effect ? `Weather ${weather.effect}` : "Weather clear";
+  });
+</script>
+
+<style>
+  .time-hud-wrap {
+    pointer-events: none;
+  }
+
+  .time-hud {
+    width: 292px;
+    padding: 10px 12px;
+    border: 1px solid rgba(34, 47, 62, 0.18);
+    border-radius: 6px;
+    background: rgba(248, 250, 252, 0.94);
+    color: #17202a;
+    font-family: Arial, sans-serif;
+    box-shadow: 0 8px 18px rgba(31, 41, 55, 0.16);
+  }
+
+  .time-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .time-row + .time-row {
+    margin-top: 6px;
+  }
+
+  .time-row strong {
+    font-size: 24px;
+    line-height: 1;
+  }
+
+  .time-row .label {
+    color: #52616f;
+    font-size: 12px;
+    text-transform: uppercase;
+  }
+
+  .time-row.compact {
+    color: #475569;
+    font-size: 12px;
+  }
+
+  .hook-log {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(34, 47, 62, 0.12);
+    display: grid;
+    gap: 5px;
+  }
+
+  .hook-title {
+    color: #52616f;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .hook-empty {
+    color: #64748b;
+    font-size: 11px;
+  }
+
+  .hook-entry {
+    display: grid;
+    grid-template-columns: 42px 1fr 42px;
+    gap: 6px;
+    align-items: center;
+    min-height: 22px;
+    padding: 3px 5px;
+    border-radius: 4px;
+    background: rgba(241, 245, 249, 0.88);
+    color: #1f2937;
+    font-size: 11px;
+  }
+
+  .hook-entry.plugin {
+    border-left: 3px solid #2563eb;
+  }
+
+  .hook-entry.event {
+    border-left: 3px solid #0f766e;
+  }
+
+  .hook-source {
+    color: #475569;
+    font-weight: 700;
+  }
+
+  .hook-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .hook-detail {
+    grid-column: 2;
+    overflow: hidden;
+    color: #64748b;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .hook-time {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+    color: #475569;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+</style>

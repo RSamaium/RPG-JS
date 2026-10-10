@@ -57,6 +57,7 @@
               "guide/interactions",
               "guide/spritesheets",
               "guide/lighting",
+              "guide/time-manager",
               "guide/weather"
             ]
           },
