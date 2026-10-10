@@ -21,6 +21,45 @@ export interface LightSpot {
   pulse?: boolean;
   pulseSpeed?: number;
   phase?: number;
+  /** Glow of the light in the air, `0` to `1`. Used by the day night cycle. */
+  halo?: number;
+  /** Hours `[on, off]` the light is on (it may cross midnight). Used by the day night cycle. */
+  schedule?: [number, number];
+}
+
+/**
+ * Day night cycle of a map: the scene is color graded by the hour of an in-game clock and the light spots
+ * are lit when it is dark (or on their own schedule). It replaces the darkness overlay of `ambient`.
+ */
+export interface LightingDayNight {
+  enabled?: boolean;
+  /**
+   * Set by the Time Manager: the hour then comes from it (synchronized with the server) and `time`, `speed`
+   * and `paused` are ignored.
+   */
+  timeManager?: boolean;
+  /** Local clock, used only without the Time Manager module: hour it starts at, `0` to `24` (`18.5` = 18:30). */
+  time?: number;
+  /** Local clock, used only without the Time Manager module: game minutes elapsed per real second. */
+  speed?: number;
+  /** Local clock, used only without the Time Manager module. */
+  paused?: boolean;
+  /** Multiplies every light intensity. */
+  lightIntensity?: number;
+  /** Multiplies the vignette. */
+  vignette?: number;
+}
+
+/** A light of the `DayNightCycle` preset of `@canvasengine/presets`. */
+export interface DayNightLight {
+  x: number;
+  y: number;
+  radius: number;
+  color?: LightingColor;
+  intensity?: number;
+  halo?: number;
+  flicker: number;
+  schedule?: [number, number];
 }
 
 export interface LightingSun {
@@ -60,6 +99,7 @@ export interface LightingState {
   spots?: LightSpot[];
   sun?: LightingSun;
   shadows?: LightingShadows;
+  dayNight?: LightingDayNight;
 }
 
 export interface LightingTransitionOptions {
@@ -75,16 +115,42 @@ export function hasActiveLightingSun(lighting: LightingState | null | undefined)
   return (sun.intensity ?? 1) > 0;
 }
 
+export function hasActiveLightingDayNight(lighting: LightingState | null | undefined): boolean {
+  return lighting?.dayNight?.enabled === true;
+}
+
+/** Reach of a light spot in the day night cycle, in world pixels, from the radius of the spot. */
+const DAY_NIGHT_SPOT_RADIUS_SCALE = 3.5;
+const DAY_NIGHT_SPOT_MIN_RADIUS = 120;
+/** Strength of the flame flicker of a spot that flickers, `0` to `1`. */
+const DAY_NIGHT_FLICKER = 0.2;
+
+export function toDayNightLights(spots: LightSpot[] | null | undefined): DayNightLight[] {
+  return (spots ?? []).map((spot) => {
+    const schedule = Array.isArray(spot.schedule) && spot.schedule.length === 2
+      && spot.schedule.every((hour) => Number.isFinite(Number(hour)))
+      ? ([Number(spot.schedule[0]), Number(spot.schedule[1])] as [number, number])
+      : undefined;
+    return {
+      x: spot.x,
+      y: spot.y,
+      radius: Math.max((spot.radius ?? 180) * DAY_NIGHT_SPOT_RADIUS_SCALE, DAY_NIGHT_SPOT_MIN_RADIUS),
+      ...(spot.color !== undefined ? { color: spot.color } : {}),
+      ...(spot.intensity !== undefined ? { intensity: spot.intensity } : {}),
+      ...(spot.halo !== undefined ? { halo: spot.halo } : {}),
+      flicker: spot.flicker ? DAY_NIGHT_FLICKER : 0,
+      ...(schedule ? { schedule } : {}),
+    };
+  });
+}
+
+/** Shadows are opt-in: nothing casts one (sprites, elements, terrain) unless `shadows.enabled` is `true`. */
 export function hasAutoLightingSunShadows(lighting: LightingState | null | undefined): boolean {
-  return Boolean(hasActiveLightingSun(lighting) && lighting?.shadows?.enabled !== false);
+  return Boolean(hasActiveLightingSun(lighting) && lighting?.shadows?.enabled === true);
 }
 
 export function shouldRenderLightingShadows(lighting: LightingState | null | undefined): boolean {
-  return Boolean(
-    lighting?.shadows?.enabled ||
-      (lighting?.spots?.length ?? 0) > 0 ||
-      hasAutoLightingSunShadows(lighting)
-  );
+  return lighting?.shadows?.enabled === true;
 }
 
 export const DEFAULT_DAY_LIGHTING: LightingState = {
@@ -135,6 +201,7 @@ export function cloneLightingState(lighting: LightingState | null | undefined): 
     spots: lighting.spots ? lighting.spots.map((spot) => ({ ...spot })) : undefined,
     sun: lighting.sun ? { ...lighting.sun } : undefined,
     shadows: lighting.shadows ? { ...lighting.shadows } : undefined,
+    dayNight: lighting.dayNight ? { ...lighting.dayNight } : undefined,
   };
 }
 
@@ -164,6 +231,12 @@ export function mergeLightingState(
           ...patch.shadows,
         }
       : current?.shadows,
+    dayNight: patch.dayNight
+      ? {
+          ...(current?.dayNight ?? {}),
+          ...patch.dayNight,
+        }
+      : current?.dayNight,
   };
 }
 
@@ -196,6 +269,9 @@ export function normalizeLightingState(value: unknown): LightingState | null {
   }
   if (raw.shadows && typeof raw.shadows === "object") {
     next.shadows = { ...raw.shadows };
+  }
+  if (raw.dayNight && typeof raw.dayNight === "object") {
+    next.dayNight = { ...raw.dayNight };
   }
 
   return Object.keys(next).length > 0 ? next : null;

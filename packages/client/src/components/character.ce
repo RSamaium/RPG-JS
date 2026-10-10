@@ -698,6 +698,20 @@
     smoothY.set(value, { duration: recoilSmoothing.duration(sprite.knockbackActive(), smoothY(), value, Date.now()) });
   });
   
+  // A frame with a `footAnchor` (the ground point of the character in its cell) is placed so that point
+  // sits at the bottom center of the hitbox: the animations of a character (stand, walk...) then keep the
+  // feet on the same spot whatever the size of their cells or their scale.
+  // The position is in the space of the scaled container, so it comes from the real hitbox and not from
+  // `graphicHitbox` (which is in cell pixels and changes with the scale of each animation).
+  const alignFootAnchor = (graphicObject) => {
+    const box = hitbox();
+    const [containerX, containerY] = graphicContainerScale(graphicObject);
+    return (frame) => {
+      if (!Array.isArray(frame?.footAnchor) || !box || !containerX || !containerY) return frame;
+      return { ...frame, anchor: frame.footAnchor, x: box.w / 2 / containerX, y: box.h / containerY };
+    };
+  };
+
   const sheet = (graphicObject) => {
     const playback = sprite.animationPlayback?.();
     const playing = playback?.name ?? realAnimationName();
@@ -708,7 +722,8 @@
           ...texture,
           animations: params => {
             const groups = typeof texture.animations === 'function' ? texture.animations(params) : texture.animations;
-            return params.durationMs && groups ? groups.map(frames => fitAnimationTimeline(frames, params.durationMs)) : groups;
+            const timeline = params.durationMs && groups ? groups.map(frames => fitAnimationTimeline(frames, params.durationMs)) : groups;
+            return timeline ? timeline.map(frames => frames.map(alignFootAnchor(graphicObject))) : timeline;
           },
         },
       ])),

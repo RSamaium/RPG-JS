@@ -1,0 +1,239 @@
+/*
+ * Game clock: a pill with the day and the hour, and a round medallion whose sky follows the hour.
+ * The sky is driven by custom properties, set by the runtime (or a story):
+ * --rpg-ui-clock-sky-top, -sky-horizon, -sea, -stars, -sun-x/-y/-opacity, -moon-x/-y/-opacity.
+ */
+.rpg-ui-clock {
+  --rpg-ui-clock-size: 96px;
+  --rpg-ui-clock-gold: var(--rpg-ui-selection, #d9a43a);
+  --rpg-ui-clock-sky-top: #3f8fe0;
+  --rpg-ui-clock-sky-horizon: #bfe3ff;
+  --rpg-ui-clock-sea: #5d86a8;
+  --rpg-ui-clock-stars: 0;
+  --rpg-ui-clock-sun-x: 50%;
+  --rpg-ui-clock-sun-y: 28%;
+  --rpg-ui-clock-sun-opacity: 1;
+  --rpg-ui-clock-moon-x: 50%;
+  --rpg-ui-clock-moon-y: 150%;
+  --rpg-ui-clock-moon-opacity: 0;
+  position: absolute;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  color: var(--rpg-ui-text);
+  pointer-events: none;
+}
+
+.rpg-ui-clock[data-position="top-right"] { top: var(--rpg-ui-spacing); right: var(--rpg-ui-spacing); }
+.rpg-ui-clock[data-position="top-left"] { top: var(--rpg-ui-spacing); left: var(--rpg-ui-spacing); flex-direction: row-reverse; }
+.rpg-ui-clock[data-position="bottom-right"] { bottom: var(--rpg-ui-spacing); right: var(--rpg-ui-spacing); }
+.rpg-ui-clock[data-position="bottom-left"] { bottom: var(--rpg-ui-spacing); left: var(--rpg-ui-spacing); flex-direction: row-reverse; }
+
+.rpg-ui-clock[data-size="compact"] { --rpg-ui-clock-size: 72px; }
+.rpg-ui-clock[data-size="compact"] .rpg-ui-clock-pill { display: none; }
+
+.rpg-ui-clock-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px calc(var(--rpg-ui-clock-size) * 0.45 + 12px) 8px 12px;
+  margin-right: calc(var(--rpg-ui-clock-size) * -0.4);
+  border: 1px solid var(--rpg-ui-border);
+  border-radius: var(--rpg-ui-radius-md);
+  background: var(--rpg-ui-surface-overlay-strong);
+  box-shadow: var(--rpg-ui-shadow-sm);
+}
+
+.rpg-ui-clock[data-position$="left"] .rpg-ui-clock-pill {
+  padding: 8px 12px 8px calc(var(--rpg-ui-clock-size) * 0.45 + 12px);
+  margin-right: 0;
+  margin-left: calc(var(--rpg-ui-clock-size) * -0.4);
+}
+
+.rpg-ui-clock-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.rpg-ui-clock-day {
+  color: var(--rpg-ui-text-muted);
+  font-size: 0.8rem;
+}
+
+.rpg-ui-clock-time {
+  font: 500 1.4rem/1.1 var(--rpg-ui-font-display, var(--rpg-ui-font));
+  font-variant-numeric: tabular-nums;
+}
+
+/* Phase icon: a sun, a moon, or a half sun on the horizon */
+.rpg-ui-clock-phase {
+  position: relative;
+  flex: none;
+  width: 30px;
+  height: 30px;
+}
+
+.rpg-ui-clock-phase::before,
+.rpg-ui-clock-phase::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+}
+
+.rpg-ui-clock[data-phase="day"] .rpg-ui-clock-phase::before {
+  inset: 7px;
+  background: #ffd35c;
+  box-shadow: 0 0 0 5px rgba(255, 211, 92, 0.28);
+}
+
+.rpg-ui-clock[data-phase="night"] .rpg-ui-clock-phase::before {
+  inset: 5px;
+  background: #e8eefc;
+}
+
+.rpg-ui-clock[data-phase="night"] .rpg-ui-clock-phase::after {
+  inset: 3px -1px 7px 9px;
+  background: var(--rpg-ui-surface-overlay-strong, #0e1730);
+}
+
+.rpg-ui-clock[data-phase="dawn"] .rpg-ui-clock-phase::before,
+.rpg-ui-clock[data-phase="dusk"] .rpg-ui-clock-phase::before {
+  inset: 6px 5px 11px;
+  border-radius: 50% 50% 0 0;
+  background: #f2a27a;
+}
+
+.rpg-ui-clock[data-phase="dusk"] .rpg-ui-clock-phase::before { background: #f08a4a; }
+
+.rpg-ui-clock[data-phase="dawn"] .rpg-ui-clock-phase::after,
+.rpg-ui-clock[data-phase="dusk"] .rpg-ui-clock-phase::after {
+  inset: auto 2px 10px;
+  height: 2px;
+  border-radius: 0;
+  background: var(--rpg-ui-text-muted);
+}
+
+/* The medallion */
+.rpg-ui-clock-medallion {
+  position: relative;
+  flex: none;
+  box-sizing: border-box;
+  width: var(--rpg-ui-clock-size);
+  height: var(--rpg-ui-clock-size);
+  border: calc(var(--rpg-ui-clock-size) * 0.07) solid var(--rpg-ui-surface-overlay-strong, #0e1730);
+  border-radius: 50%;
+  background: linear-gradient(
+    to bottom,
+    var(--rpg-ui-clock-sky-top) 0%,
+    var(--rpg-ui-clock-sky-horizon) 52%,
+    var(--rpg-ui-clock-sea) 52%,
+    var(--rpg-ui-clock-sea) 100%
+  );
+  box-shadow: 0 0 0 1px var(--rpg-ui-border), inset 0 0 0 2px var(--rpg-ui-clock-gold), var(--rpg-ui-shadow-sm);
+  overflow: hidden;
+}
+
+/* The part above the horizon: the sun and the moon set behind its bottom edge */
+.rpg-ui-clock-sky {
+  position: absolute;
+  inset: 0 0 48% 0;
+  overflow: hidden;
+}
+
+.rpg-ui-clock-sun,
+.rpg-ui-clock-moon,
+.rpg-ui-clock-star {
+  position: absolute;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.rpg-ui-clock-sun {
+  left: var(--rpg-ui-clock-sun-x);
+  top: var(--rpg-ui-clock-sun-y);
+  width: 16%;
+  height: 30%;
+  min-width: 14px;
+  opacity: var(--rpg-ui-clock-sun-opacity);
+  background: #ffd35c;
+  box-shadow: 0 0 0 4px rgba(255, 211, 92, 0.35);
+}
+
+.rpg-ui-clock-moon {
+  left: var(--rpg-ui-clock-moon-x);
+  top: var(--rpg-ui-clock-moon-y);
+  width: 12%;
+  height: 22%;
+  min-width: 11px;
+  opacity: var(--rpg-ui-clock-moon-opacity);
+  background: #e8eefc;
+  overflow: hidden;
+}
+
+.rpg-ui-clock-moon::after {
+  content: "";
+  position: absolute;
+  inset: -10% -45% 20% 35%;
+  border-radius: 50%;
+  background: var(--rpg-ui-clock-sky-top);
+}
+
+.rpg-ui-clock-star {
+  width: 2px;
+  height: 2px;
+  background: #fff;
+  opacity: var(--rpg-ui-clock-stars);
+}
+
+.rpg-ui-clock-land {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 46%;
+  height: 30%;
+  background: #0b1226;
+  clip-path: polygon(0 100%, 28% 20%, 50% 55%, 74% 0, 100% 100%);
+}
+
+/* Graduations: four large ones, four small ones */
+.rpg-ui-clock-tick {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 3px;
+  height: 8px;
+  margin: -4px 0 0 -1.5px;
+  background: var(--rpg-ui-clock-gold);
+  transform: rotate(var(--rpg-ui-clock-tick-angle)) translateY(calc(var(--rpg-ui-clock-size) * -0.42));
+}
+
+.rpg-ui-clock-tick[data-minor="true"] {
+  width: 1.5px;
+  height: 5px;
+  margin-top: -2.5px;
+}
+
+.rpg-ui-clock-badge {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  display: none;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 1.5px solid var(--rpg-ui-clock-gold);
+  border-radius: 50%;
+  background: var(--rpg-ui-surface-overlay-strong, #0e1730);
+  color: var(--rpg-ui-clock-gold);
+  font-size: 11px;
+  line-height: 1;
+}
+
+.rpg-ui-clock[data-state="paused"] .rpg-ui-clock-badge,
+.rpg-ui-clock[data-state="fast"] .rpg-ui-clock-badge {
+  display: grid;
+}
+
+.rpg-ui-clock[data-state="paused"] .rpg-ui-clock-badge::before { content: "❚❚"; letter-spacing: -2px; font-size: 8px; }
+.rpg-ui-clock[data-state="fast"] .rpg-ui-clock-badge::before { content: "»"; font-size: 15px; }

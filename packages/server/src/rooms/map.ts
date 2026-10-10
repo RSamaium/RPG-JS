@@ -1255,6 +1255,10 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
         events.forEach(event => {
           event.execMethod('onAction', [player, action]);
         });
+        // Tell the `onInput` hooks (an attack, for instance) that the action was used to interact
+        if (action && typeof action === 'object' && events.some(event => event.interactive())) {
+          Object.defineProperty(action, 'interactedWithEvent', { value: true, enumerable: false });
+        }
       }
     }
     player.execMethod('onInput', [action]);
@@ -2132,7 +2136,10 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
           const hookObj = event as EventHooks;
           if (hookObj.onInit) this.onInit = hookObj.onInit.bind(this);
           if (hookObj.onChanges) this.onChanges = hookObj.onChanges.bind(this);
-          if (hookObj.onAction) this.onAction = hookObj.onAction.bind(this);
+          if (hookObj.onAction) {
+            this.onAction = hookObj.onAction.bind(this);
+            this.interactive.set(true);
+          }
           if (hookObj.onPlayerTouch) this.onPlayerTouch = hookObj.onPlayerTouch.bind(this);
           if (hookObj.onTouch) this.onTouch = hookObj.onTouch.bind(this);
           if (hookObj.onTouchEnd) this.onTouchEnd = hookObj.onTouchEnd.bind(this);

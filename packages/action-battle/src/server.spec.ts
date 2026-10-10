@@ -111,6 +111,42 @@ describe("action battle player visuals", () => {
     expect(player.setGraphicAnimation).not.toHaveBeenCalledWith("stand");
   });
 
+  test("does not attack when the action key was used to talk to an event", () => {
+    vi.useFakeTimers();
+    const clientVisual = vi.fn();
+    const map = {
+      clientVisual,
+      getEvents: () => [],
+      getPlayers: () => [],
+      queryHitbox: () => [],
+      stopMovement: vi.fn(),
+    };
+    const player = {
+      id: "hero",
+      canMove: true,
+      directionFixed: false,
+      animationFixed: false,
+      pendingInputs: [],
+      lastProcessedInputTs: 0,
+      x: () => 100,
+      y: () => 120,
+      hitbox: () => ({ w: 32, h: 32 }),
+      getDirection: () => "down",
+      changeDirection: vi.fn(),
+      getCurrentMap: () => map,
+      equipments: () => [],
+      setGraphicAnimation: vi.fn(),
+    };
+    const server = createActionBattleServer();
+    const action = { action: "action", data: { direction: "down" } };
+    Object.defineProperty(action, "interactedWithEvent", { value: true, enumerable: false });
+
+    (server.player?.onInput as any)(player, action);
+
+    expect(clientVisual).not.toHaveBeenCalled();
+    expect(player.setGraphicAnimation).not.toHaveBeenCalled();
+  });
+
   test("validates learned skills and cooldowns on the server", () => {
     vi.useFakeTimers();
     const onUse = vi.fn();

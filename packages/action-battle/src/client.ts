@@ -127,6 +127,13 @@ const resolveLocalPlayerDirection = (player: any) => {
   return player.direction ?? "down";
 };
 
+/** The action key talks to an NPC (or opens a chest) instead of attacking. */
+const isFacingInteractiveEvent = (engine: RpgClientEngine, player: any): boolean => {
+  const map = engine.scene as any;
+  const ids: string[] = map?.getInteractableObjectIds?.(player.id, resolveActionBattleAttackDirection(player)) ?? [];
+  return ids.some((id) => map.getObjectById?.(id)?.interactive?.() === true);
+};
+
 const playLocalPlayerAttackAnimation = (
   player: any,
   options: ActionBattleOptions
@@ -259,6 +266,7 @@ export const createActionBattleClient = (
         if (input !== "action") return;
         const player = engine.scene?.getCurrentPlayer?.() as any;
         if (!player) return;
+        if (isFacingInteractiveEvent(engine, player)) return;
         const direction = resolveActionBattleAttackDirection(player, { data });
         applyActionBattleAttackDirection(player, direction);
         const attackProfile = getNormalizedActionBattleAttackProfile(normalized);

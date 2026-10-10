@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import { Assets, Texture } from 'pixi.js';
 import { getGameDataProvider } from '../src/data-provider';
 import * as proportions from '../src/character-proportions';
+import { STUDIO_CHARACTER_DISPLAY_BOOST } from '../src/event-hitbox-scale';
 import { attachCharacterAnimations, createSpriteSheetObject, prepareSpriteSheetObject } from '../src/spritesheet-utils';
 
 afterEach(() => vi.restoreAllMocks());
@@ -23,11 +24,11 @@ describe('generated character spritesheet', () => {
   test('aligns each direction at the ground and keeps transforms fixed during attacks', async () => {
     vi.spyOn(getGameDataProvider(), 'getMedia').mockResolvedValue(idle);
     vi.spyOn(Assets, 'load').mockResolvedValue(Texture.EMPTY);
-    const pose = { width: 512, height: 384, top: 2, bottom: 356, centerX: 258 };
-    const attackPose = { width: 256, height: 256, top: 91, bottom: 177, centerX: 143 };
+    const pose = { width: 512, height: 384, top: 2, bottom: 356, centerX: 258, footX: 258 };
+    const attackPose = { width: 256, height: 256, top: 91, bottom: 177, centerX: 143, footX: 143 };
     vi.spyOn(proportions, 'loadedCharacterFrames').mockImplementation(image =>
       image.endsWith('idle.png') ? [pose, pose, pose, pose] : Array.from({ length: 32 }, (_, i) =>
-        i % 8 === 0 ? attackPose : { ...attackPose, top: 0, centerX: 200 }));
+        i % 8 === 0 ? attackPose : { ...attackPose, top: 0, centerX: 200, footX: 200 }));
     const attack = await prepareSpriteSheetObject({
       type: 'spritesheet', fileName: 'attack.png',
       metadata: { groupId: idle._id, frameWidth: 8, frameHeight: 4 },
@@ -35,7 +36,7 @@ describe('generated character spritesheet', () => {
     const frames = attack.textures.attack.animations({ direction: 'left' })[0];
     const first = frames[0];
     expect(first.scale[1] * 86).toBeCloseTo(354);
-    expect(attack.displayScale).toBeCloseTo(128 / 512 * 1.26);
+    expect(attack.displayScale).toBeCloseTo(128 * STUDIO_CHARACTER_DISPLAY_BOOST / 512 * 1.26);
     // The visible bottom equals the anchor's ground, regardless of padding.
     const ground = 256 - (256 - first.spriteRealSize.height) / 2;
     expect(ground).toBe(177);
@@ -55,8 +56,8 @@ describe('generated character spritesheet', () => {
         lanes: directions.map(direction => ({ direction })) },
     }]);
     vi.spyOn(Assets, 'load').mockResolvedValue(Texture.EMPTY);
-    const poses = directions.map((_, i) => ({ width: 512, height: 384, top: 5, bottom: 305 + i * 10, centerX: 256 }));
-    const walkPoses = Array.from({ length: 32 }, (_, i) => ({ width: 256, height: 256, top: 20, bottom: 120 + Math.floor(i / 8) * 5, centerX: 140 }));
+    const poses = directions.map((_, i) => ({ width: 512, height: 384, top: 5, bottom: 305 + i * 10, centerX: 256, footX: 256 }));
+    const walkPoses = Array.from({ length: 32 }, (_, i) => ({ width: 256, height: 256, top: 20, bottom: 120 + Math.floor(i / 8) * 5, centerX: 140, footX: 140 }));
     vi.spyOn(proportions, 'loadedCharacterFrames').mockImplementation(image => image.endsWith('idle.png') ? poses : walkPoses);
     const sheet = await prepareSpriteSheetObject(idle);
     for (const [i, direction] of directions.entries()) {
@@ -75,7 +76,7 @@ describe('generated character spritesheet', () => {
     for (let y = 2; y < 5; y++) pixels.data[(y * 8 + 1) * 4 + 3] = 255;
     pixels.data[7 * 4 + 3] = 16;
     expect(proportions.characterFrameBounds(pixels, 2, 1)).toEqual([
-      { width: 4, height: 6, top: 2, bottom: 5, centerX: 1.5 }, undefined,
+      { width: 4, height: 6, top: 2, bottom: 5, centerX: 1.5, footX: 1.5 }, undefined,
     ]);
   });
 
@@ -115,13 +116,13 @@ describe('generated character spritesheet', () => {
     const idleSize = 300 * sheet.displayScale * sheet.scale[1];
     const walkSize = 200 * sheet.displayScale * sheet.textures.walk.scale[1];
     expect(walkSize).toBeCloseTo(idleSize);
-    expect(sheet.displayScale).toBeCloseTo(128 / 512 * 0.79);
+    expect(sheet.displayScale).toBeCloseTo(128 * STUDIO_CHARACTER_DISPLAY_BOOST / 512 * 0.79);
   });
 
   test('uses valid cells for each idle direction without animating the pose', async () => {
     const sheet = await createSpriteSheetObject(idle);
     expect([sheet.framesWidth, sheet.framesHeight]).toEqual([2, 2]);
-    expect(sheet.displayScale).toBe(1.26 * 128 / 512);
+    expect(sheet.displayScale).toBe(1.26 * 128 * STUDIO_CHARACTER_DISPLAY_BOOST / 512);
     for (const [direction, frameX, frameY] of [
       ['down', 0, 0], ['left', 1, 0], ['right', 0, 1], ['up', 1, 1],
     ] as const) {

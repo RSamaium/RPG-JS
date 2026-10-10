@@ -1,0 +1,8 @@
+{
+  "id": "time-manager",
+  "title": "Time Manager",
+  "description": "Shared time manager module with a synchronized HUD and a server event that cycles map weather.",
+  "tags": ["time", "weather", "sync"],
+  "modes": ["standalone", "mmorpg"],
+  "port": 5189
+}
