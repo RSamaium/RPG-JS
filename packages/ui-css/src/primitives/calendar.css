@@ -1,0 +1,331 @@
+.rpg-ui-calendar-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(10px, 3vw, 32px);
+  box-sizing: border-box;
+  overflow: hidden;
+  color: var(--rpg-ui-text);
+}
+
+.rpg-ui-calendar-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.46);
+}
+
+.rpg-ui-calendar-window {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: min(940px, 100%);
+  max-height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--rpg-ui-border);
+  border-radius: var(--rpg-ui-radius-lg);
+  background: var(--rpg-ui-surface-overlay-strong);
+  box-shadow: var(--rpg-ui-shadow-lg);
+  backdrop-filter: var(--rpg-ui-backdrop-blur);
+  -webkit-backdrop-filter: var(--rpg-ui-backdrop-blur);
+}
+
+.rpg-ui-calendar-close.rpg-ui-close-button {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  left: auto;
+  z-index: 2;
+}
+
+.rpg-ui-calendar-header {
+  display: flex;
+  align-items: center;
+  gap: var(--rpg-ui-spacing);
+  padding: var(--rpg-ui-spacing) calc(var(--rpg-ui-spacing-lg) + 44px) var(--rpg-ui-spacing) var(--rpg-ui-spacing-lg);
+  border-bottom: 1px solid var(--rpg-ui-border);
+}
+
+.rpg-ui-calendar-header-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--rpg-ui-selection, var(--rpg-ui-accent));
+  border-radius: var(--rpg-ui-radius-md);
+  color: var(--rpg-ui-selection, var(--rpg-ui-accent));
+  font-size: 22px;
+}
+
+.rpg-ui-calendar-title {
+  margin: 0;
+  font: 500 22px/1.2 var(--rpg-ui-font-display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rpg-ui-selection, var(--rpg-ui-accent));
+}
+
+.rpg-ui-calendar-subtitle {
+  margin: 2px 0 0;
+  color: var(--rpg-ui-text-muted);
+  font-size: 0.9rem;
+}
+
+.rpg-ui-calendar-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: var(--rpg-ui-spacing-lg);
+  min-height: 0;
+  padding: var(--rpg-ui-spacing-lg);
+  overflow: auto;
+}
+
+.rpg-ui-calendar-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rpg-ui-spacing);
+  margin-bottom: var(--rpg-ui-spacing);
+}
+
+.rpg-ui-calendar-arrow {
+  appearance: none;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--rpg-ui-selection, var(--rpg-ui-accent));
+  border-radius: var(--rpg-ui-radius-md);
+  background: var(--rpg-ui-surface-light);
+  color: var(--rpg-ui-selection, var(--rpg-ui-accent));
+  font: 500 24px/1 var(--rpg-ui-font-display);
+  cursor: pointer;
+}
+
+.rpg-ui-calendar-arrow:hover,
+.rpg-ui-calendar-arrow:focus-visible {
+  background: color-mix(in srgb, var(--rpg-ui-selection, var(--rpg-ui-accent)), transparent 80%);
+  outline: none;
+}
+
+.rpg-ui-calendar-month {
+  display: flex;
+  align-items: baseline;
+  gap: var(--rpg-ui-spacing-sm);
+  font: 500 20px/1.2 var(--rpg-ui-font-display);
+}
+
+.rpg-ui-calendar-dot-separator {
+  color: var(--rpg-ui-text-muted);
+}
+
+.rpg-ui-calendar-weekdays,
+.rpg-ui-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.rpg-ui-calendar-weekdays {
+  margin-bottom: 6px;
+  text-align: center;
+  color: var(--rpg-ui-text-muted);
+  font-size: 0.85rem;
+}
+
+.rpg-ui-calendar-cell {
+  position: relative;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 60px;
+  padding: 6px 8px;
+  border: 1px solid var(--rpg-ui-border);
+  border-radius: var(--rpg-ui-radius-md);
+  background: var(--rpg-ui-surface-light);
+  color: var(--rpg-ui-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+}
+
+.rpg-ui-calendar-cell[data-empty="true"] {
+  border-color: transparent;
+  background: none;
+  cursor: default;
+}
+
+.rpg-ui-calendar-cell:hover:not([data-empty="true"]),
+.rpg-ui-calendar-cell:focus-visible {
+  border-color: var(--rpg-ui-border-light);
+  outline: none;
+}
+
+.rpg-ui-calendar-cell[data-has-events="true"] {
+  border-color: color-mix(in srgb, var(--rpg-ui-accent), transparent 55%);
+}
+
+.rpg-ui-calendar-cell[data-today="true"] {
+  border-color: var(--rpg-ui-selection, var(--rpg-ui-accent));
+  color: var(--rpg-ui-selection, var(--rpg-ui-accent));
+}
+
+.rpg-ui-calendar-cell[data-selected="true"] {
+  border-color: var(--rpg-ui-selection, var(--rpg-ui-accent));
+  box-shadow: 0 0 0 1px var(--rpg-ui-selection, var(--rpg-ui-accent)), 0 0 14px color-mix(in srgb, var(--rpg-ui-selection, var(--rpg-ui-accent)), transparent 60%);
+}
+
+.rpg-ui-calendar-day {
+  font-size: 0.95rem;
+}
+
+.rpg-ui-calendar-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--rpg-ui-radius-full);
+  background: var(--rpg-ui-calendar-color, var(--rpg-ui-accent));
+}
+
+.rpg-ui-calendar-icon {
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  width: 28px;
+  height: 28px;
+  transform: translateX(-50%);
+  object-fit: contain;
+  font-size: 22px;
+  line-height: 28px;
+  text-align: center;
+  color: var(--rpg-ui-calendar-color, var(--rpg-ui-accent));
+}
+
+.rpg-ui-calendar-events {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: var(--rpg-ui-spacing);
+  border: 1px solid var(--rpg-ui-border);
+  border-radius: var(--rpg-ui-radius-md);
+  background: var(--rpg-ui-surface);
+}
+
+.rpg-ui-calendar-events-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--rpg-ui-spacing-sm);
+}
+
+.rpg-ui-calendar-events-header h3 {
+  margin: 0;
+  font: 500 18px/1.2 var(--rpg-ui-font-display);
+  color: var(--rpg-ui-selection, var(--rpg-ui-accent));
+}
+
+.rpg-ui-calendar-selected {
+  color: var(--rpg-ui-selection, var(--rpg-ui-accent));
+  font-weight: 500;
+}
+
+.rpg-ui-calendar-event-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.rpg-ui-calendar-event {
+  appearance: none;
+  flex: none;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--rpg-ui-spacing);
+  min-height: 56px;
+  padding: 8px 10px;
+  border: 1px solid var(--rpg-ui-border);
+  border-radius: var(--rpg-ui-radius-md);
+  background: var(--rpg-ui-surface-light);
+  color: var(--rpg-ui-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rpg-ui-calendar-event:hover,
+.rpg-ui-calendar-event:focus-visible {
+  border-color: var(--rpg-ui-border-light);
+  outline: none;
+}
+
+.rpg-ui-calendar-event[data-selected="true"] {
+  border-color: var(--rpg-ui-selection, var(--rpg-ui-accent));
+  box-shadow: 0 0 0 1px var(--rpg-ui-selection, var(--rpg-ui-accent));
+}
+
+.rpg-ui-calendar-event-icon {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  font-size: 24px;
+  line-height: 36px;
+  text-align: center;
+  color: var(--rpg-ui-calendar-color, var(--rpg-ui-accent));
+}
+
+.rpg-ui-calendar-event-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.rpg-ui-calendar-event-text strong {
+  font-weight: 500;
+}
+
+.rpg-ui-calendar-event-text small {
+  color: var(--rpg-ui-text-muted);
+  font-size: 0.8rem;
+  line-height: 1.3;
+}
+
+.rpg-ui-calendar-event-day {
+  align-self: start;
+  color: var(--rpg-ui-text-muted);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .rpg-ui-calendar-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rpg-ui-calendar-cell {
+    min-height: 48px;
+    padding: 4px 6px;
+  }
+
+  .rpg-ui-calendar-icon {
+    width: 22px;
+    height: 22px;
+    font-size: 18px;
+    line-height: 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rpg-ui-calendar-cell,
+  .rpg-ui-calendar-arrow,
+  .rpg-ui-calendar-event {
+    transition: none;
+  }
+}
