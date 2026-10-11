@@ -8,6 +8,7 @@ import {
 } from "@rpgjs/action-battle/server";
 import { normalizeEventType } from "@common/event-types";
 import { assignParams } from "./assign-params";
+import { collectEventGraphics, scaleEventHitboxToGraphic } from "./event-hitbox-scale";
 import { createStudioActionBattleAnimations } from "./action-battle-animations";
 import { getGraphicKey, getGraphicScale } from "./graphic-key";
 export { getGraphicKey, getGraphicScale } from "./graphic-key";
@@ -498,9 +499,9 @@ const applyMovementSetting: TriggerSettingsApplier = ({ event, trigger }) => {
     case "random":
       event.stopMoveTo();
       event.setGraphicAnimation?.("walk");
+      // The default frequency ratio is kept: the event waits for its frequency between two moves
       event.infiniteMoveRoute([Move.tileRandom()], {
         onStuck: () => true,
-        frequencyRatio: 1,
       });
       break;
     case "approach": {
@@ -544,11 +545,13 @@ const applyHitboxSetting: TriggerSettingsApplier = ({
   object,
 }) => {
   if (typeof event.setHitbox !== "function") return;
-  const hitbox =
+  const configured =
     normalizeEventHitbox(trigger?.hitbox) ??
     normalizeEventHitbox(fallbackParams?.hitbox) ??
-    normalizeEventHitbox(object?.hitbox) ??
-    DEFAULT_EVENT_HITBOX;
+    normalizeEventHitbox(object?.hitbox);
+  const hitbox = configured
+    ? scaleEventHitboxToGraphic(configured, [trigger?.graphic, ...collectEventGraphics(object)])
+    : DEFAULT_EVENT_HITBOX;
   event.setHitbox(hitbox.width, hitbox.height);
 };
 

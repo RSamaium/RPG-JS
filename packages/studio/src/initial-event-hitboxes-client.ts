@@ -1,3 +1,4 @@
+import { collectEventGraphics, scaleEventHitboxToGraphic } from "./event-hitbox-scale";
 export type StudioEventHitboxSize = {
   width: number;
   height: number;
@@ -49,11 +50,11 @@ const resolveStudioEventHitbox = (event: any): StudioEventHitboxSize | undefined
       ?.hitbox
     : undefined;
 
-  return (
+  const hitbox =
     normalizeHitbox(event?.hitbox) ??
     normalizeHitbox(triggerHitbox) ??
-    normalizeHitbox(event?.params?.hitbox)
-  );
+    normalizeHitbox(event?.params?.hitbox);
+  return hitbox ? scaleEventHitboxToGraphic(hitbox, collectEventGraphics(event)) : undefined;
 };
 
 const readEventHitbox = (event: any): StudioEventHitboxSize | undefined => {

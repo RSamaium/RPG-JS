@@ -19,16 +19,13 @@ describe("lighting shadow helpers", () => {
     expect(hasActiveLightingSun({ sun: { enabled: false, intensity: 1 } })).toBe(false);
   });
 
-  it("enables automatic sun shadows unless shadows are explicitly disabled", () => {
-    expect(hasAutoLightingSunShadows({ sun: { intensity: 0.95 } })).toBe(true);
+  it("renders shadows only when they are explicitly enabled", () => {
+    expect(hasAutoLightingSunShadows({ sun: { intensity: 0.95 } })).toBe(false);
     expect(hasAutoLightingSunShadows({ sun: { intensity: 0.95 }, shadows: { enabled: true } })).toBe(true);
     expect(hasAutoLightingSunShadows({ sun: { intensity: 0.95 }, shadows: { enabled: false } })).toBe(false);
-  });
-
-  it("keeps light spots as shadow triggers even when automatic sun shadows are disabled", () => {
-    expect(shouldRenderLightingShadows({ spots: [{ x: 10, y: 20 }], shadows: { enabled: false } })).toBe(true);
-    expect(shouldRenderLightingShadows({ sun: { intensity: 0.95 }, shadows: { enabled: false } })).toBe(false);
-    expect(shouldRenderLightingShadows({ sun: { intensity: 0.95 } })).toBe(true);
+    expect(shouldRenderLightingShadows({ spots: [{ x: 10, y: 20 }] })).toBe(false);
+    expect(shouldRenderLightingShadows({ sun: { intensity: 0.95 } })).toBe(false);
+    expect(shouldRenderLightingShadows({ shadows: { enabled: true } })).toBe(true);
     expect(shouldRenderLightingShadows(DEFAULT_DAY_LIGHTING)).toBe(false);
   });
 });

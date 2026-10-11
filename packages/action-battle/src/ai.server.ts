@@ -796,6 +796,8 @@ export class BattleAi {
   ) {
     options = mergeBattleAiPresetOptions(options);
     event.battleAi = this;
+    // An enemy is attacked, not talked to
+    (event as any).interactive?.set?.(false);
     this.event = event;
 
     // Set enemy type and apply behavior modifiers
