@@ -836,14 +836,17 @@ const serializeActionBattleSkill = (
   return entry;
 };
 
+/** Cells an area mask hits: `["...", ".#.", "..."]` is a single cell, not an area. */
+const countActionBattleMaskCells = (mask: string[]) =>
+  mask.reduce((total, row) => total + (row.match(/#/g)?.length ?? 0), 0);
+
 const requiresActionBattleTargeting = (
   skill: ActionBattleHotbarSkill,
 ) => {
   const mask = Array.isArray(skill.aoeMask) ? skill.aoeMask : [];
   return (
     skill.action?.target === "ally"
-    || mask.length > 1
-    || mask.some((row) => row !== "#")
+    || countActionBattleMaskCells(mask) > 1
     || (
       (skill.range ?? 0) > 0
       && skill.action?.mode !== "projectile"

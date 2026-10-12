@@ -4,7 +4,8 @@ export type ActionBattleSkillActivationMode = "immediate" | "targeting";
 
 const hasAreaMask = (skill: ActionBattleHotbarSkill) => {
   const rows = Array.isArray(skill.aoeMask) ? skill.aoeMask : [];
-  return rows.length > 1 || rows.some((row) => row !== "#");
+  // A mask with a single cell (even in a 3x3 grid) is not an area
+  return rows.reduce((total, row) => total + (row.match(/#/g)?.length ?? 0), 0) > 1;
 };
 
 export const resolveActionBattleSkillActivationMode = (
