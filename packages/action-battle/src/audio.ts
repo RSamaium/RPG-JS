@@ -188,7 +188,7 @@ export const createActionBattleCombatAudioVisual = (
     typeof configured.battle === "function"
       ? configured.battle(context)
       : configured.battle;
-  const battle = selected?.music ?? projectMusic;
+  const battle = selected?.music?.trim() || projectMusic;
   engine.music.contextId = selected?.enemyId;
   if (battle) {
     void engine.music.enter(battle, configured);
@@ -228,10 +228,15 @@ export const updateActionBattleThreat = (
   }
   if (active) {
     const previous = entries.get(enemy);
+    const enemyId = input.enemyId ?? `enemy-${++threatOrder}`;
+    for (const [other, entry] of entries) {
+      // A stale entry of the same enemy (a re-created AI) would never be cleared.
+      if (other !== enemy && entry.enemyId === enemyId) entries.delete(other);
+    }
     entries.set(enemy, {
       enemy,
-      enemyId: input.enemyId ?? `enemy-${++threatOrder}`,
-      music: input.music,
+      enemyId,
+      music: input.music?.trim() || undefined,
       priority: input.priority ?? (input.boss ? 100 : 0),
       order: previous?.order ?? ++threatOrder,
     });

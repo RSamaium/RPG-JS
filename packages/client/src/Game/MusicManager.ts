@@ -29,6 +29,8 @@ export class RpgMusicManager {
   private currentId?: string;
   private currentSound?: any;
   private pendingId?: string;
+  /** Track asked by the last `enter`, until `leave` or a reset: repeated calls for it are no-ops. */
+  private targetId?: string;
   private mapId?: string;
   private mapSound?: any;
   private readonly sounds = new Map<string, any>();
@@ -77,7 +79,8 @@ export class RpgMusicManager {
     id: string | undefined,
     options: RpgMusicTransitionOptions = {},
   ): Promise<void> {
-    if (id && id === this.pendingId) return;
+    if (id && id === this.targetId) return;
+    this.targetId = id;
     const revision = ++this.revision;
     this.clearTimers();
     this.pendingId = undefined;
@@ -132,6 +135,7 @@ export class RpgMusicManager {
   }
 
   leave(options: RpgMusicTransitionOptions = {}): void {
+    this.targetId = undefined;
     const revision = ++this.revision;
     this.clearTimers();
     this.pendingId = undefined;
@@ -152,6 +156,7 @@ export class RpgMusicManager {
   /** Clear title or battle music while preserving the current map track. */
   resetOverride(): void {
     this.revision += 1;
+    this.targetId = undefined;
     this.clearTimers();
     this.currentSound?.stop?.();
     this.currentSound = undefined;

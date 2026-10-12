@@ -95,6 +95,26 @@ const createDamageSkillSnapshot = (skill: any) => {
   return snapshot;
 };
 
+const REFERENCE_BODY_SIZE = 32;
+
+/**
+ * Default attack offsets are written for a 32x32 body. Re-anchor them on the real hitbox of the
+ * attacker: centered on its body, and pushed out of its edge along the facing direction.
+ */
+export const resolveAttackOrigin = (
+  attacker: any,
+  direction: string
+): { x: number; y: number } => {
+  const hitbox =
+    typeof attacker.hitbox === "function" ? attacker.hitbox() : attacker.hitbox;
+  const extraX = Math.max(0, (hitbox?.w ?? REFERENCE_BODY_SIZE) - REFERENCE_BODY_SIZE);
+  const extraY = Math.max(0, (hitbox?.h ?? REFERENCE_BODY_SIZE) - REFERENCE_BODY_SIZE);
+  return {
+    x: attacker.x() + extraX / 2 + (direction === "right" ? extraX / 2 : direction === "left" ? -extraX / 2 : 0),
+    y: attacker.y() + extraY / 2 + (direction === "down" ? extraY / 2 : direction === "up" ? -extraY / 2 : 0),
+  };
+};
+
 export const createDefaultPlayerHitboxResolver =
   (hitboxes = DEFAULT_ZELDA_PLAYER_HITBOXES) =>
   (context: ActionBattleAttackContext) => {
@@ -106,10 +126,11 @@ export const createDefaultPlayerHitboxResolver =
         : "default");
     const config =
       hitboxes[direction as keyof typeof hitboxes] || hitboxes.default;
+    const origin = resolveAttackOrigin(attacker, direction);
     return [
       {
-        x: attacker.x() + config.offsetX,
-        y: attacker.y() + config.offsetY,
+        x: origin.x + config.offsetX,
+        y: origin.y + config.offsetY,
         width: config.width,
         height: config.height,
       },

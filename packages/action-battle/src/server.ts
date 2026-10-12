@@ -30,7 +30,7 @@ import {
 } from "./locomotion";
 import { getActionBattleSystems, setActionBattleSystems } from "./core/context";
 import { applyActionBattleHit } from "./core/hit";
-import { DEFAULT_ZELDA_PLAYER_HITBOXES } from "./core/defaults";
+import { DEFAULT_ZELDA_PLAYER_HITBOXES, resolveAttackOrigin } from "./core/defaults";
 import {
   ActionBattleHitTracker,
   createActionBattleAttackId,
@@ -416,10 +416,11 @@ const resolvePlayerAttackHitboxes = (
     configuredHitboxes[
       directionKey as keyof typeof DEFAULT_PLAYER_ATTACK_HITBOXES
     ] || configuredHitboxes.default;
+  const origin = resolveAttackOrigin(player, directionKey);
   const defaultHitboxes = [
     {
-      x: player.x() + hitboxConfig.offsetX,
-      y: player.y() + hitboxConfig.offsetY,
+      x: origin.x + hitboxConfig.offsetX,
+      y: origin.y + hitboxConfig.offsetY,
       width: hitboxConfig.width,
       height: hitboxConfig.height,
     },

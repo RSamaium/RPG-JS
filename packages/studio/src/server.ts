@@ -185,7 +185,7 @@ const startGame = async (player: RpgPlayer, map?: RpgMap, heroConfig?: ProjectBa
   bindStudioCombatAnimationsToEntity(player, heroConfig.animations);
   const startingItems = await ensureStartingItemsInDatabase(player, heroConfig, map);
   assignPlayerStartParams(player, heroConfig, startingItems);
-  applyPlayerHitbox(player, heroConfig);
+  await applyPlayerHitbox(player, heroConfig);
 };
 
 const markStudioInitialized = (player: RpgPlayer): void => {
@@ -221,18 +221,21 @@ const collectStartingItemIds = (config: ProjectBasic): string[] => {
   return [...ids];
 };
 
-const applyPlayerHitbox = (player: RpgPlayer, config: ProjectBasic): void => {
+const applyPlayerHitbox = async (player: RpgPlayer, config: ProjectBasic): Promise<void> => {
   const hitbox = normalizeRuntimeHitbox((config as any).hitbox);
   if (!hitbox || typeof (player as any).setHitbox !== "function") return;
-  (player as any).setHitbox(hitbox.width, hitbox.height);
+  // The hitbox of a generated character is set in pixels of its source image: it follows the display scale.
+  const graphic = await resolveMediaReference((config as any).graphic, getGameDataProvider());
+  const scaled = scaleEventHitboxToGraphic(hitbox, collectEventGraphics({ graphic }));
+  (player as any).setHitbox(scaled.width, scaled.height);
 };
 
-const applyPlayerPresentation = (player: RpgPlayer, config: ProjectBasic & { graphic?: unknown; params?: unknown }): void => {
+const applyPlayerPresentation = async (player: RpgPlayer, config: ProjectBasic & { graphic?: unknown; params?: unknown }): Promise<void> => {
   const graphicKey = getGraphicKey(config.graphic);
   (player as any)._graphicScale?.set(graphicKey ? getGraphicScale(config.params, config) ?? null : null);
   player.setGraphic(graphicKey ?? "default_character");
   bindStudioCombatAnimationsToEntity(player, config.animations);
-  applyPlayerHitbox(player, config);
+  await applyPlayerHitbox(player, config);
 };
 
 const addStudioDefaultClass = (
@@ -1150,7 +1153,7 @@ export default (_config?: unknown) => {
         await refreshOnlineStudioDatabase(map);
         const heroConfig = await resolvePlayerConfig(player, map);
         await applyStartGameOnce(player, map, heroConfig);
-        applyPlayerPresentation(player, heroConfig);
+        await applyPlayerPresentation(player, heroConfig);
       },
       onLoad: async (player: RpgPlayer, snapshot) => {
         // Loading a saved game is never new-game initialization, including old
@@ -1167,7 +1170,7 @@ export default (_config?: unknown) => {
           if (snapshot && snapshot._finalLevelSignal === undefined && config.finalLevel !== undefined) {
             player.finalLevel = Math.max(config.finalLevel, player.level);
           }
-          applyPlayerPresentation(player, config);
+          await applyPlayerPresentation(player, config);
         }
       },
       onInput: (player: RpgPlayer, input: RpgActionInput<unknown>) => {
@@ -1204,7 +1207,38 @@ export default (_config?: unknown) => {
       onDead: async (player: RpgPlayer) => {
         const selection = await player.callGameover();
         if (selection?.id === "title") {
-          await player.gui("rpg-title-screen").open();
+          // The title screen is shown over the dead hero: its "Start" has to start a new game itself,
+          // because only the lobby handles it.
+          const gameConfig = readGameConfig();
+          const gui = player.gui("rpg-title-screen");
+          const titleSelection = await new Promise<{ id?: string } | null>((resolve) => {
+            gui.on("select", (value: { id?: string }) => {
+              gui.close();
+              resolve(value);
+            });
+            void gui.open(
+              {
+                title: gameConfig.name,
+                subtitle: gameConfig.subtitle,
+                localActions: true,
+                entries: [
+                  { id: "start", label: "Start" },
+                  { id: "load", label: "Load" },
+                ],
+              },
+              { waitingAction: true, blockPlayerInput: true },
+            ).then(() => resolve(null));
+          });
+          if (titleSelection?.id === "start") {
+            const playerConfig = await resolvePlayerStartup(player);
+            (player as any).studioStartGameApplied?.set(false);
+            (player as any).__studioStartGameApplied = false;
+            player.initializeDefaultStats();
+            await selectStudioActorForNewGame(player, await resolveStudioProject(undefined, playerConfig), playerConfig);
+            await player.changeMap(await resolveStartMapId(playerConfig));
+          } else if (titleSelection?.id === "load") {
+            await player.showLoad();
+          }
         } else if (selection?.id === "load") {
           await player.showLoad();
         }

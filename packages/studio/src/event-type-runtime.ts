@@ -312,9 +312,11 @@ export const resolveEnemyBattleAiOptions = (
       ...(enemy.presentation ?? {}),
       music: {
         battle:
-          enemy.audio?.combat?.battleMusic
-          ?? enemy.combatMusic
-          ?? enemy.presentation?.music?.battle,
+          [
+            enemy.audio?.combat?.battleMusic,
+            enemy.combatMusic,
+            enemy.presentation?.music?.battle,
+          ].find((id) => typeof id === "string" && id.trim()) || undefined,
         priority:
           toNumber(enemy.combatMusicPriority) ??
           toNumber(enemy.presentation?.music?.priority),
