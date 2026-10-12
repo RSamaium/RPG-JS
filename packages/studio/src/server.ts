@@ -1363,6 +1363,10 @@ export default (_config?: unknown) => {
           };
 
           eventObj.applyActiveTrigger = function (player: RpgPlayer | null, event: RpgEvent) {
+            // While a player workflow runs, keep the page it started on: the switch change is applied once it ends
+            if (eventObj.__pageLockCount > 0 && eventObj.__activeTriggerIndex !== undefined) {
+              return object.triggers[eventObj.__activeTriggerIndex] ?? null;
+            }
             let resolved = eventObj.resolveActiveTrigger(player, event);
             if (!resolved && !player) {
               const fallbackIndex = object.triggers.findIndex((trigger: any) => trigger?.enabled !== false);
@@ -1405,7 +1409,13 @@ export default (_config?: unknown) => {
             if (trigger && trigger.blocks) {
               const run = () => blockExecutor.executeBlockSequence(trigger.blocks);
               if (player && (triggerType === 'onAction' || (triggerType === 'onTouch' && options?.touchTarget !== 'event'))) {
-                await runPlayerEventOnce(player, run);
+                eventObj.__pageLockCount = (eventObj.__pageLockCount ?? 0) + 1;
+                try {
+                  await runPlayerEventOnce(player, run);
+                } finally {
+                  eventObj.__pageLockCount -= 1;
+                  eventObj.applyActiveTrigger(conditionPlayer, event);
+                }
               } else {
                 await run();
               }

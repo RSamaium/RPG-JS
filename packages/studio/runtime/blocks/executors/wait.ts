@@ -44,6 +44,6 @@ export const schemaWait = {
  * ```
  */
 export const wait: BlockExecutor<'wait'> = async (context, params) => {
-  await new Promise(resolve => setTimeout(resolve, params.duration * 1000));
+  await new Promise(resolve => setTimeout(resolve, (params.duration ?? 1) * 1000));
 };
 
