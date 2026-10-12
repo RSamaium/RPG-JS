@@ -9,7 +9,9 @@
   import { inject, RpgClientEngine } from "@rpgjs/client";
   import { actionBattleAttackPreviewState } from "../ui/state";
 
-  const { object } = defineProps();
+  const { object: objectProp } = defineProps();
+  // The sprite is handed over as a signal
+  const getObject = () => (typeof objectProp === "function" ? objectProp() : objectProp);
   const engine = inject(RpgClientEngine);
   const now = signal(Date.now());
 
@@ -20,6 +22,7 @@
   });
 
   const isCurrentPlayer = computed(() => {
+    const object = getObject();
     if (!object?.id) return false;
     const idValue = typeof object.id === "function" ? object.id() : object.id;
     return idValue === engine.playerId;
@@ -38,7 +41,7 @@
     return isCurrentPlayer() && state.active && progress() < 1;
   });
 
-  const getHitbox = () => object.hitbox?.() || { w: 32, h: 32 };
+  const getHitbox = () => getObject()?.hitbox?.() || { w: 32, h: 32 };
 
   const drawRect = (g, x, y, width, height, color, alpha) => {
     g.rect(x, y, width, height);

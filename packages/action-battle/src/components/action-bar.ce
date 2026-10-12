@@ -82,7 +82,8 @@
     actionBattleUiOptions,
     startTargeting,
     stopTargeting,
-    moveTargetingOffset
+    moveTargetingOffset,
+    resolveActionBattleClientTileSize
   } from "../ui/state";
 
   const engine = inject(RpgClientEngine);
@@ -250,8 +251,7 @@
     const player = engine.scene.getCurrentPlayer();
     if (!player) return null;
     const hitbox = player.hitbox?.() || { w: 32, h: 32 };
-    const tileWidth = hitbox.w || 32;
-    const tileHeight = hitbox.h || 32;
+    const { width: tileWidth, height: tileHeight } = resolveActionBattleClientTileSize(engine);
     const x = Math.floor((player.x() + hitbox.w / 2) / tileWidth);
     const y = Math.floor((player.y() + hitbox.h / 2) / tileHeight);
     return { x, y };

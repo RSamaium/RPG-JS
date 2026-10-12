@@ -9,6 +9,7 @@
     actionBattleTargetingState,
     confirmActionBattleTarget,
     moveTargetingOffset,
+    resolveActionBattleClientTileSize,
     stopTargeting,
   } from "../ui/state";
 
@@ -43,8 +44,7 @@
     const player = engine.scene.getCurrentPlayer();
     if (!player) return null;
     const hitbox = player.hitbox?.() || { w: 32, h: 32 };
-    const tileWidth = hitbox.w || 32;
-    const tileHeight = hitbox.h || 32;
+    const { width: tileWidth, height: tileHeight } = resolveActionBattleClientTileSize(engine);
     return {
       x: Math.floor((player.x() + hitbox.w / 2) / tileWidth),
       y: Math.floor((player.y() + hitbox.h / 2) / tileHeight),
