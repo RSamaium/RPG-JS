@@ -935,6 +935,12 @@ export abstract class RpgCommonMap<T extends RpgCommonPlayer> {
     delete entityAny.__rpgSignalSyncOwner;
   }
 
+  private isThroughEvent(owner: any): boolean {
+    return typeof owner?.isEvent === "function"
+      && owner.isEvent() === true
+      && this.shouldDisableCharacterCollisions(owner);
+  }
+
   private shouldDisableCharacterCollisions(owner: any): boolean {
     if (this.isAlwaysOnTopEvent(owner)) {
       return true;
@@ -1886,6 +1892,12 @@ export abstract class RpgCommonMap<T extends RpgCommonPlayer> {
       // Walls and obstacles have no owner: they block unless the character is
       // outside the hitbox height range (e.g. a Tiled tile on another z level)
       if (!selfOwner || !otherOwner) {
+        // An event set to `through` is not pushed by walls either: an immobile event placed on a
+        // collision (a seller behind a counter) would otherwise be pushed out and put back at every step.
+        const character = selfOwner ?? otherOwner;
+        if (character && this.isThroughEvent(character)) {
+          return false;
+        }
         return selfOwner
           ? this.staticHitboxBlocksOwner(other, selfOwner)
           : this.staticHitboxBlocksOwner(self, otherOwner);

@@ -1473,6 +1473,10 @@ export default (_config?: unknown) => {
                 loop();
               };
               const runInitLifecycle = async (options?: { runInitBlocks?: boolean; startParallelLoop?: boolean }) => {
+                // `through` first: an event set on a collision (a seller behind a counter) is otherwise pushed out of it by the teleport
+                if (eventObj.resolveActiveTrigger(player, this)?.trigger?.options?.through) {
+                  this.through = true;
+                }
                 // Teleport first: the movement route (and its frequency wait) must start from the final position
                 this.teleport({
                   x: object.x * mapExtended.scale,
