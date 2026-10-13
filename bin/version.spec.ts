@@ -20,6 +20,19 @@ describe('publish manifest versioning', () => {
     })
   })
 
+  it('keeps the range operator of workspace:^ and workspace:~ (peer dependencies)', () => {
+    const packages = new Map([
+      ['@rpgjs/client', { name: '@rpgjs/client', version: '5.1.0', path: '/tmp/client' }]
+    ])
+
+    expect(replaceWorkspaceReferences({
+      '@rpgjs/client': 'workspace:^'
+    }, packages)).toEqual({ '@rpgjs/client': '^5.1.0' })
+    expect(replaceWorkspaceReferences({
+      '@rpgjs/client': 'workspace:~'
+    }, packages)).toEqual({ '@rpgjs/client': '~5.1.0' })
+  })
+
   it('leaves external dependency ranges unchanged', () => {
     const dependencies = { rxjs: '^7.8.2' }
 
