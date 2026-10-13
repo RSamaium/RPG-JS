@@ -1,5 +1,12 @@
 # @rpgjs/ui-css
 
+## 5.1.0
+
+### Minor Changes
+
+- 0380564: Add `@rpgjs/calendar`, a generic calendar module that works on its own (it has no clock: the game moves today's date). It gives a configurable calendar (months, weekdays, seasons), events that are declared (one date, a weekday, a number of days, a season) or that come from sources (quests, birthdays, weather…, per world or per player), hooks (`onDayChange`, `onEventStart`, `onEventEnd`) and a calendar window opened with `inject(CalendarService).open(player)`. `@rpgjs/ui-css` gets the matching `rpg-ui-calendar` styles and Storybook stories.
+- 831d23a: Add a clock on screen for the Time Manager: `withTimeManager({ hud: true })` (or `hud: { position, size, fastScale }`) draws a pill with the day and the hour, and a round medallion whose sky, sun, moon and stars follow the hour of the server, with a badge when the time is paused or fast. `@rpgjs/ui-css` gets the `rpg-ui-clock` styles and Storybook stories.
+
 ## 5.0.0
 
 ### Minor Changes
