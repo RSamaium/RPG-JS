@@ -226,6 +226,21 @@ context.updateParams({ scale: 2, backgroundMusic: await context.resolveAudio(set
 context.updateParams({ backgroundMusic: undefined }); // silence
 ```
 
+### Events that follow the editor
+
+A map editor that runs in the same page as the server (a standalone game) can change the events the game runs without loading the map again. The Studio server map has these methods; positions are those the map stores (the game applies the map scale):
+
+- `placeStudioEvent(record, { x, y, runtimeId })`: puts an event of the project on the map as the load does (media resolved, workflows and hitbox of the project), so an enemy attacks and a character answers. It resolves to `runtimeId`, or `undefined` when an event already has that id. `record` is the event as the project stores it (`{ _id, ... }`).
+- `moveStudioEvent(runtimeId, x, y)`: moves an event; resolves to `false` when there is none.
+- `removeStudioEvent(runtimeId)`: takes an event off the map; `false` when there is none.
+- `listStudioEvents()`: the events the game runs, as `{ runtimeId, sourceEventId }`. An event of the map has the id of its event, then `id::2`, `id::3` for each other placement of it.
+
+```ts
+await map.placeStudioEvent(record, { x: 320, y: 240, runtimeId: `${record._id}::drop1` });
+await map.moveStudioEvent(`${record._id}::drop1`, 352, 240);
+map.removeStudioEvent(`${record._id}::drop1`);
+```
+
 ### Collisions that follow the elements
 
 The hitboxes of the placed elements are made when the map loads. After a tool adds, moves or removes elements, call `rebuildElementCollisions` with the placed elements of the `elementsLow` layer as stored (`{ id, tilesetId, x, y, … }`):

@@ -6,7 +6,7 @@
     <Container sortableChildren={true} pixiChildren={groundShadowPixiChildren} />
     <Container sortableChildren={true} alpha={elementsAlwaysLowAlpha} pixiChildren={elementsAlwaysLowPixiChildren} />
     <Container scale={eventLayerScale}>
-      <StudioEventLayer pixiChildren={eventLayerPixiChildren} /> 
+      <StudioEventLayer pixiChildren={eventLayerPixiChildren} hideEvents={eventsHidden} /> 
     </Container>
     <Container sortableChildren={true} alpha={elementsHighAlpha} pixiChildren={elementsHighPixiChildren} />
 </Container>
@@ -566,6 +566,8 @@
       const value = Number(data().layerOpacity?.[key])
       return Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 1
     })
+    // `hideEvents` is a key of the scene data a map extension sets while the map is edited: the events the game runs are not drawn.
+    const eventsHidden = computed(() => data().hideEvents === true)
     const terrainAlpha = layerOpacity('terrain')
     const elementsAlwaysLowAlpha = layerOpacity('elementsAlwaysLow')
     const elementsHighAlpha = layerOpacity('elementsHigh')

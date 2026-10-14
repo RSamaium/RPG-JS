@@ -31,6 +31,9 @@ export interface StudioMapExtensionContext {
    * `layerOpacity` is a key the renderer reads: `{ layerOpacity: { terrain: 0.4, elementsLow: 1 } }` draws each named layer
    * (`terrain`, `elementsAlwaysLow`, `elementsLow`, `elementsHigh`) at that opacity, from 0 to 1. A layer that is not named
    * stays opaque. Characters and events are not affected.
+   *
+   * `hideEvents: true` stops drawing the events the game runs (the characters of the players are still drawn): a map editor shows
+   * the events of the map as its own markers while the map is edited. `false` draws them again.
    */
   updateData(patch: Readonly<Record<string, unknown>>): void;
   /**
