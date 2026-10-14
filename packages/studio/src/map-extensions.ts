@@ -22,12 +22,12 @@ export interface StudioMapExtensionContext {
   resolveAsset(fileName: string): string;
   /** The address of the picture of an element tileset (what a ghost of an element about to be placed shows), or `undefined`. */
   tilesetImage(tilesetId: string): string | undefined;
+  /** The data the scene shows now (what `updateData` merged into), or `undefined` before it is shown. */
+  readData(): any | undefined;
   /**
    * Replaces part of the data the map is drawn with, and draws it again:
    * `{ elementsLow: [...resolved elements] }`. Whatever is not named is left as it is.
    */
-  /** The data the scene shows now (what `updateData` merged into), or `undefined` before it is shown. */
-  readData(): any | undefined;
   updateData(patch: Readonly<Record<string, unknown>>): void;
 }
 

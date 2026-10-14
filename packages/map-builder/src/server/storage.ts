@@ -15,7 +15,16 @@ export interface KeyValueStorage {
 export function keyValueMapStore(storage: KeyValueStorage, prefix = "$room:map-builder:"): MapStore {
   const snapshotKey = (id: string): string => `${prefix}${id}:snapshot`;
   const logKey = (id: string): string => `${prefix}${id}:log`;
-  const readLog = async (id: string): Promise<PatchEntry[]> => ((await storage.get(logKey(id))) as PatchEntry[] | undefined) ?? [];
+  /** The log as this store wrote it: the authority is the only writer, so it is read from the storage once. */
+  const logs = new Map<string, PatchEntry[]>();
+  const readLog = async (id: string): Promise<PatchEntry[]> => {
+    let log = logs.get(id);
+    if (!log) {
+      log = ((await storage.get(logKey(id))) as PatchEntry[] | undefined) ?? [];
+      logs.set(id, log);
+    }
+    return log;
+  };
 
   return {
     async load(id): Promise<StoredMap | undefined> {
@@ -26,10 +35,14 @@ export function keyValueMapStore(storage: KeyValueStorage, prefix = "$room:map-b
     async save(id, snapshot) {
       await storage.put(snapshotKey(id), snapshot);
       // What the snapshot covers is no longer needed.
-      await storage.put(logKey(id), (await readLog(id)).filter((entry) => entry.revision > snapshot.revision));
+      const rest = (await readLog(id)).filter((entry) => entry.revision > snapshot.revision);
+      logs.set(id, rest);
+      await storage.put(logKey(id), rest);
     },
     async append(id, entry) {
-      await storage.put(logKey(id), [...(await readLog(id)), entry]);
+      const log = [...(await readLog(id)), entry];
+      logs.set(id, log);
+      await storage.put(logKey(id), log);
     },
   };
 }

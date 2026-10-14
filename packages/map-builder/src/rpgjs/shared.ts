@@ -56,6 +56,7 @@ export function changedElementIds(patches: readonly MapPatch[]): ReadonlySet<str
       case "element.remove":
       case "element.move":
       case "element.update":
+      case "element.data": // hooks may derive size and hitbox from the data of an element
         ids.add(patch.id);
         break;
       default:

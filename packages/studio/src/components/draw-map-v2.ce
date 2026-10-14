@@ -129,7 +129,13 @@
       }
     }
     function getBuilderLayers() {
-      if (!builderLayers) builderLayers = createBuilderLayers()
+      if (!builderLayers) {
+        // A failed import must not be cached: the next render tries again.
+        builderLayers = createBuilderLayers().catch((error) => {
+          builderLayers = null
+          throw error
+        })
+      }
       return builderLayers
     }
     let terrainWallOcclusionSerial = 0

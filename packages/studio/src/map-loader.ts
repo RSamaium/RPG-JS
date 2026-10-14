@@ -17,6 +17,9 @@ import { STUDIO_DIRECT_LOAD_MARKER } from "./map-streaming";
 import { assignStudioEventPlacementIds } from "./event-placement";
 import { runStudioMapExtensions } from "./map-extensions";
 
+/** Pixels of one map cell in a v2 Studio map. */
+const STUDIO_V2_CELL_SIZE = 48;
+
 // Type definitions for better type safety
 interface GlobalConfig {
   projectId?: string;
@@ -1012,7 +1015,7 @@ export const loadMap = async (mapId: string) => {
     runStudioMapExtensions({
       engine: client as never,
       mapId: finalMapId,
-      size: [map.params.width * 48, map.params.height * 48],
+      size: [map.params.width * STUDIO_V2_CELL_SIZE, map.params.height * STUDIO_V2_CELL_SIZE],
       elements: { alwaysLow: elementsAlwaysLow, low: elementsLow, high: elementsHigh },
       resolveElement: (placed, layer) =>
         resolveElementWithTileset(tilesetsById, placed, layer === "alwaysLow" ? 0 : layer === "low" ? 1 : 2, fallbackElementTilesetId),
@@ -1057,8 +1060,8 @@ export const loadMap = async (mapId: string) => {
     config: client.globalConfig,
     events: map.events,
     // Physical world size, in scaled pixels (the map is drawn scaled).
-    width: (isV2 ? map.params.width * 48 : map.params.width) * mapScale,
-    height: (isV2 ? map.params.height * 48 : map.params.height) * mapScale,
+    width: (isV2 ? map.params.width * STUDIO_V2_CELL_SIZE : map.params.width) * mapScale,
+    height: (isV2 ? map.params.height * STUDIO_V2_CELL_SIZE : map.params.height) * mapScale,
     params: {
       backgroundMusic: map.params.backgroundMusic,
       backgroundAmbientSound: map.params.backgroundAmbientSound,
