@@ -601,23 +601,25 @@
 
       const builder = useMapBuilderRenderer()
       const layers = builder ? await getBuilderLayers() : null
-      const drawLayer = async (renderer, layer, elements, mode) => {
+      // One container per element in every layer, each carrying its sort key: the world containers sort their children
+      // by zIndex, so builder and Studio elements of the same layer stay in depth order together.
+      const drawLayer = async (renderer, layer, elements) => {
         const all = withElementImages(elements)
         if (!layers) return renderer.renderElements(all, renderOptions)
         const { builder: byBuilder, studio } = partitionStudioElements(all, renderOptions)
         const studioChildren = await renderer.renderElements(studio, renderOptions)
         const bounds = mapBounds()
-        const builderChildren = await layer.render(byBuilder, mode, [bounds.width, bounds.height])
+        const builderChildren = await layer.render(byBuilder, 'objects', [bounds.width, bounds.height])
         return [...studioChildren, ...builderChildren]
       }
 
-      const alwaysLowChildren = await drawLayer(elementsAlwaysLowRenderer, layers?.alwaysLow, elementsAlwaysLow(), 'world')
+      const alwaysLowChildren = await drawLayer(elementsAlwaysLowRenderer, layers?.alwaysLow, elementsAlwaysLow())
       if (currentSerial !== studioElementRenderSerial) return
 
-      const lowChildren = await drawLayer(elementsLowRenderer, layers?.low, elementsLow(), 'objects')
+      const lowChildren = await drawLayer(elementsLowRenderer, layers?.low, elementsLow())
       if (currentSerial !== studioElementRenderSerial) return
 
-      const highChildren = await drawLayer(elementsHighRenderer, layers?.high, elementsHigh(), 'world')
+      const highChildren = await drawLayer(elementsHighRenderer, layers?.high, elementsHigh())
       if (currentSerial !== studioElementRenderSerial) return
 
       elementsAlwaysLowChildren = alwaysLowChildren
