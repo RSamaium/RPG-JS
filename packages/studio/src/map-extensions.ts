@@ -41,6 +41,16 @@ export interface StudioMapExtensionContext {
    * with it. The server applies it only for a player it allows: see `createStudioElementCollisionsServer`.
    */
   rebuildElementCollisions(placed: Readonly<{ low: readonly unknown[] }>): void;
+  /**
+   * Changes the params of the map the scene shows, without loading it again: `{ scale: 2, backgroundMusic: "<url>" }`. They
+   * go to the params the map is drawn from (`readData().params`) and, for `backgroundMusic` and `backgroundAmbientSound`,
+   * to where the client plays the music and the ambient sound from: a value that is `undefined` takes the key off, which
+   * stops the sound. The two sounds are addresses, see `resolveAudio`. The size and the scale of the collisions are not made
+   * again: a change of scale shows on the picture only.
+   */
+  updateParams(patch: Readonly<Record<string, unknown>>): void;
+  /** The address a sound of the map settings is played from (a stored file name, a media, a media id), or `""`. */
+  resolveAudio(value: unknown): Promise<string>;
 }
 
 /**

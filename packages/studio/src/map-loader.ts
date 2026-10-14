@@ -17,6 +17,7 @@ import { STUDIO_DIRECT_LOAD_MARKER } from "./map-streaming";
 import { assignStudioEventPlacementIds } from "./event-placement";
 import { runStudioMapExtensions } from "./map-extensions";
 import { rebuildStudioElementCollisions } from "./element-collisions";
+import { applySceneParams } from "./scene-params";
 
 /** Pixels of one map cell in a v2 Studio map. */
 const STUDIO_V2_CELL_SIZE = 48;
@@ -1039,6 +1040,13 @@ export const loadMap = async (mapId: string) => {
         if (!scene || !current?.data) return;
         scene.set({ ...current, data: { ...current.data, ...patch } });
       },
+      updateParams(patch) {
+        const scene = (client as unknown as { sceneMap?: { data?: { (): any; set(value: any): void } } }).sceneMap?.data;
+        const current = scene?.();
+        if (!scene || !current) return;
+        scene.set(applySceneParams(current, patch));
+      },
+      resolveAudio: (value) => resolveAudioSource(value),
       rebuildElementCollisions(placed) {
         rebuildStudioElementCollisions(
           {

@@ -213,6 +213,19 @@ context.updateData({
 });
 ```
 
+### Params without a reload
+
+`updateParams(patch)` changes the params of the map the scene shows, without loading it again: the scale, the weather kept in the
+params, and the sounds. `backgroundMusic` and `backgroundAmbientSound` are the addresses the client plays from: give them
+`await context.resolveAudio(value)` for a value of the map settings (a stored file name, a media, a media id), and `undefined` to
+stop the sound. A change of scale shows on the picture only: the collisions are not made again, so a game that is played after
+it should be loaded again.
+
+```ts
+context.updateParams({ scale: 2, backgroundMusic: await context.resolveAudio(settings.backgroundMusic) });
+context.updateParams({ backgroundMusic: undefined }); // silence
+```
+
 ### Collisions that follow the elements
 
 The hitboxes of the placed elements are made when the map loads. After a tool adds, moves or removes elements, call `rebuildElementCollisions` with the placed elements of the `elementsLow` layer as stored (`{ id, tilesetId, x, y, … }`):

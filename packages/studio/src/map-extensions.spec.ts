@@ -13,6 +13,8 @@ const context = (mapId = "map-1"): StudioMapExtensionContext => ({
   readData: () => undefined,
   updateData: () => undefined,
   rebuildElementCollisions: () => undefined,
+  updateParams: () => undefined,
+  resolveAudio: async () => "",
 });
 
 describe("studio map extensions", () => {
