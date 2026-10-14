@@ -33,6 +33,7 @@ starts each game dev server for you:
 - Mouse Interactions: `http://localhost:5186/`
 - Dash: `http://localhost:5187/`
 - Pressure Plate: `http://localhost:5188/`
+- Map Builder: `http://localhost:5192/`
 - Pixel Chat: `http://localhost:5189/`
 - Farm Hotbar: `http://localhost:5190/`
 
@@ -88,6 +89,7 @@ Use a unique `port` for each game. The current reserved ports are:
 - `5186`: Mouse Interactions
 - `5187`: Dash
 - `5188`: Pressure Plate
+- `5192`: Map Builder
 - `5189`: Pixel Chat
 - `5190`: Farm Hotbar
 

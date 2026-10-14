@@ -10,10 +10,15 @@ import { resolveStudioMapScale, scaleStudioHitboxes } from './map-scale';
 import {
   buildStudioTerrainCollisionPolygons,
   createStudioTerrainRenderData,
+  normalizeMorphologyFeatures,
 } from "./map-renderer";
 import { resolveStudioElementSize } from "./studio-element-size";
 import { STUDIO_DIRECT_LOAD_MARKER } from "./map-streaming";
 import { assignStudioEventPlacementIds } from "./event-placement";
+import { runStudioMapExtensions } from "./map-extensions";
+
+/** Pixels of one map cell in a v2 Studio map. */
+const STUDIO_V2_CELL_SIZE = 48;
 
 // Type definitions for better type safety
 interface GlobalConfig {
@@ -740,37 +745,35 @@ export const loadMap = async (mapId: string) => {
     return undefined;
   }
 
-  const mergeElementsWithTilesets = (
+  /**
+   * What the runtime draws for one placed element (its tileset element, size, draw rule…), or `null` when its
+   * tileset or its element cannot be found: such an element is not drawn. Map extensions get it too.
+   */
+  const resolveElementWithTileset = (
     tilesetsById: Map<string, TilesetElementsIndex>,
-    elementsData: any[],
+    element: any,
     layerNumber: number,
     fallbackTilesetId?: string
-  ): any[] => {
-    if (!elementsData || elementsData.length === 0) {
-      return []
-    }
-
-    const mergedElements: any[] = []
-    elementsData.forEach((element) => {
+  ): any | null => {
       const tilesetId =
         toIdentifierString(element?.tilesetId) || toIdentifierString(fallbackTilesetId) || ''
       const tileset = tilesetsById.get(tilesetId)
-      if (!tileset) return
+      if (!tileset) return null
 
       const entry = resolveTilesetElement(tileset, element.id)
-      if (!entry) return
+      if (!entry) return null
 
       const tilesetElement = entry.element
       const rect = tilesetElement?.rect
-      if (!Array.isArray(rect) || rect.length < 4) return
+      if (!Array.isArray(rect) || rect.length < 4) return null
 
       const sourceWidth = toFiniteNumber(rect[2])
       const sourceHeight = toFiniteNumber(rect[3])
-      if (sourceWidth === null || sourceHeight === null) return
+      if (sourceWidth === null || sourceHeight === null) return null
 
       const x = toFiniteNumber(element.x)
       const y = toFiniteNumber(element.y)
-      if (x === null || y === null) return
+      if (x === null || y === null) return null
 
       const drawRule = resolveDrawRuleForElement(element, tileset, entry)
       const size = resolveStudioElementSize(
@@ -816,7 +819,23 @@ export const loadMap = async (mapId: string) => {
         mergedElement.drawRuleId = drawRuleId
       }
 
-      mergedElements.push(mergedElement)
+      return mergedElement
+  }
+
+  const mergeElementsWithTilesets = (
+    tilesetsById: Map<string, TilesetElementsIndex>,
+    elementsData: any[],
+    layerNumber: number,
+    fallbackTilesetId?: string
+  ): any[] => {
+    if (!elementsData || elementsData.length === 0) {
+      return []
+    }
+
+    const mergedElements: any[] = []
+    elementsData.forEach((element) => {
+      const merged = resolveElementWithTileset(tilesetsById, element, layerNumber, fallbackTilesetId)
+      if (merged) mergedElements.push(merged)
     })
 
     return mergedElements
@@ -991,6 +1010,36 @@ export const loadMap = async (mapId: string) => {
 
   await waitForMapImages(map);
 
+  // Whoever registered an extension (a tool, an overlay) gets the map as it was loaded.
+  if (isV2) {
+    runStudioMapExtensions({
+      engine: client as never,
+      mapId: finalMapId,
+      size: [map.params.width * STUDIO_V2_CELL_SIZE, map.params.height * STUDIO_V2_CELL_SIZE],
+      elements: { alwaysLow: elementsAlwaysLow, low: elementsLow, high: elementsHigh },
+      resolveElement: (placed, layer) =>
+        resolveElementWithTileset(tilesetsById, placed, layer === "alwaysLow" ? 0 : layer === "low" ? 1 : 2, fallbackElementTilesetId),
+      resolveAsset: (fileName) => resolveAssetSource(fileName),
+      normalizeMorphology: (layer) => normalizeMorphologyFeatures(layer),
+      tilesetImage(tilesetId) {
+        const wanted = toIdentifierString(tilesetId);
+        const media = [...(Array.isArray(map.params.elementTilesets) ? map.params.elementTilesets : []), map.params.tileset].find(
+          (entry: any) => entry && typeof entry === "object" && [entry.id, entry._id, entry.mediaId].some((id) => toIdentifierString(id) === wanted)
+        );
+        return media ? collectMediaImageSource(media) || undefined : undefined;
+      },
+      readData() {
+        return (client as unknown as { sceneMap?: { data?: { (): any } } }).sceneMap?.data?.()?.data;
+      },
+      updateData(patch) {
+        const scene = (client as unknown as { sceneMap?: { data?: { (): any; set(value: any): void } } }).sceneMap?.data;
+        const current = scene?.();
+        if (!scene || !current?.data) return;
+        scene.set({ ...current, data: { ...current.data, ...patch } });
+      },
+    });
+  }
+
   const mapScale = resolveStudioMapScale(map.params)
 
   return {
@@ -1011,8 +1060,8 @@ export const loadMap = async (mapId: string) => {
     config: client.globalConfig,
     events: map.events,
     // Physical world size, in scaled pixels (the map is drawn scaled).
-    width: (isV2 ? map.params.width * 48 : map.params.width) * mapScale,
-    height: (isV2 ? map.params.height * 48 : map.params.height) * mapScale,
+    width: (isV2 ? map.params.width * STUDIO_V2_CELL_SIZE : map.params.width) * mapScale,
+    height: (isV2 ? map.params.height * STUDIO_V2_CELL_SIZE : map.params.height) * mapScale,
     params: {
       backgroundMusic: map.params.backgroundMusic,
       backgroundAmbientSound: map.params.backgroundAmbientSound,

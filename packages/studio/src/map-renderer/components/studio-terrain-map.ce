@@ -1,12 +1,10 @@
 <Container
-  width={terrainSize().width}
-  height={terrainSize().height}
   pixiChildren={terrainPixiChildren}
   onBeforeDestroy={destroyTerrainRenderer}
 />
 
 <script>
-import { computed, effect, tick } from "canvasengine"
+import { effect, tick } from "canvasengine"
 import { RpgClientEngine, inject } from "@rpgjs/client"
 import { Container as PixiContainer } from "pixi.js"
 import { StudioTerrainChunkRenderer } from "../terrain-renderer/terrain-chunk-renderer"
@@ -24,6 +22,8 @@ const { data, debugCollisions, splitWallForeground } = defineProps({
   }
 })
 
+// The container is given no width or height: a Pixi container with a width is scaled so that what it holds is that wide,
+// and the chunks held change as the camera moves (only the ones in view are drawn), so the terrain was stretched.
 const TERRAIN_CULL_MARGIN = 384
 const TERRAIN_CULL_GRID_SIZE = 128
 const readValue = (value) => typeof value === "function" ? value() : value
@@ -36,18 +36,6 @@ let terrainRenderer = new StudioTerrainChunkRenderer(terrainWorld)
 let renderSerial = 0
 let lastCullKey = ""
 let readyMapData = null
-
-const terrainSize = computed(() => {
-  const mapData = readValue(data)
-  const renderData = mapData?.terrainRenderData
-  const width =
-    Number(renderData?.width) ||
-    Math.max(1, Math.floor(Number(mapData?.params?.width) || 50)) * 48
-  const height =
-    Number(renderData?.height) ||
-    Math.max(1, Math.floor(Number(mapData?.params?.height) || 50)) * 48
-  return { width, height }
-})
 
 const renderTerrain = async (viewportBounds = getPixiLocalViewportBounds(engine, terrainWorld)) => {
   const mapData = readValue(data)

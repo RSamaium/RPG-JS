@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "id": "meadow",
+  "size": [
+    800,
+    560
+  ],
+  "tileSize": 32,
+  "elements": [
+    {
+      "id": "tree-1",
+      "kind": "tree",
+      "x": 90,
+      "y": 110,
+      "data": {
+        "hits": 3
+      }
+    },
+    {
+      "id": "tree-2",
+      "kind": "tree",
+      "x": 250,
+      "y": 360,
+      "data": {
+        "hits": 3
+      }
+    },
+    {
+      "id": "tree-3",
+      "kind": "tree",
+      "x": 430,
+      "y": 150,
+      "data": {
+        "hits": 3
+      }
+    },
+    {
+      "id": "tree-4",
+      "kind": "tree",
+      "x": 560,
+      "y": 380,
+      "data": {
+        "hits": 3
+      }
+    },
+    {
+      "id": "tree-5",
+      "kind": "tree",
+      "x": 650,
+      "y": 120,
+      "data": {
+        "hits": 3
+      }
+    },
+    {
+      "id": "bush-1",
+      "kind": "bush",
+      "x": 330,
+      "y": 260
+    },
+    {
+      "id": "bush-2",
+      "kind": "bush",
+      "x": 160,
+      "y": 430
+    },
+    {
+      "id": "bush-3",
+      "kind": "bush",
+      "x": 690,
+      "y": 300
+    }
+  ],
+  "events": [
+    {
+      "id": "lever",
+      "kind": "lever",
+      "x": 120,
+      "y": 240,
+      "data": {
+        "target": "bush-3"
+      }
+    }
+  ]
+}

@@ -91,17 +91,26 @@ export const getFrameTimestamp = (frame: Frame): number => {
   return Number.isFinite(timestamp) ? timestamp : 0;
 };
 
+/**
+ * Frames waiting to be applied are consumed one per client tick. The tick follows
+ * `requestAnimationFrame`, which is paused in a hidden tab while the server keeps
+ * sending frames: without a bound the queue is replayed at once on return.
+ */
+export const MAX_PENDING_FRAMES = 8;
+
 export const mergeFreshFramePayload = (
   current: unknown,
   items: unknown,
   lastAppliedFrameTs = 0,
+  maxPending = Number.POSITIVE_INFINITY,
 ): Frame[] => {
-  return appendFramePayload(current, items)
+  const fresh = appendFramePayload(current, items)
     .filter((frame) => {
       const timestamp = getFrameTimestamp(frame);
       return timestamp === 0 || timestamp > lastAppliedFrameTs;
     })
     .sort((a, b) => getFrameTimestamp(a) - getFrameTimestamp(b));
+  return fresh.length > maxPending ? fresh.slice(-maxPending) : fresh;
 };
 
 export abstract class RpgClientObject extends RpgCommonPlayer {
@@ -134,6 +143,8 @@ export abstract class RpgClientObject extends RpgCommonPlayer {
         this.frames,
         items,
         this.lastAppliedFrameTs,
+        // Only a hidden tab (tick paused) bounds the queue: while visible, every frame is replayed.
+        typeof document !== "undefined" && document.hidden ? MAX_PENDING_FRAMES : undefined,
       );
     });
 

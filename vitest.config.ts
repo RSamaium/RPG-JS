@@ -20,6 +20,7 @@ export default defineConfig({
         "packages/action-battle/src/server.ts",
       ),
       "@rpgjs/action-battle": path.resolve(__dirname, "packages/action-battle/src"),
+      "@rpgjs/map-builder": path.resolve(__dirname, "packages/map-builder/src"),
       "@common": path.resolve(__dirname, "packages/studio/runtime"),
     },
   },

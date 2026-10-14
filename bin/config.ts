@@ -97,6 +97,12 @@ export const packages = (type: "build" | "dev") => {
       dependencies: createDependencies(packagesPath, ['client', 'server']),
     },
     {
+      // Its /server and /client entries use the types of RPGJS, so it is built after them.
+      name: "map-builder",
+      buildScript,
+      dependencies: createDependencies(packagesPath, ['common', 'client', 'server']),
+    },
+    {
       name: "vue",
       buildScript,
       dependencies: createDependencies(packagesPath, ['common', 'client']),
@@ -133,6 +139,8 @@ export const packages = (type: "build" | "dev") => {
       buildScript,
       dependencies: [
         createDependency(packagesPath, 'render-map2d'),
+        // Temporary link (MAP_BUILDER.md, step 6): types of the elements drawn by the map builder.
+        createDependency(packagesPath, 'map-builder'),
         createDependency(packagesPath, 'action-battle', 'client/index.d.ts'),
         createDependency(packagesPath, 'vite'),
       ],
