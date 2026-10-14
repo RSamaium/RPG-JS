@@ -3,7 +3,7 @@ import { cloneJson, isFiniteNumberValue, isPlainObject } from "../model/json";
 import type { MapState } from "../model/definition";
 import { definePatchHandlers, patchFail, patchOk, type MapPatch, type PatchHandlers } from "../model/patches";
 import { terrainIssues } from "./data";
-import { clipRect, paintShape, readRect, writeRect } from "./mask";
+import { clipRect, paintShape, readRect, shapeBounds, writeRect } from "./mask";
 import { decodeRuns, encodeRuns } from "./rle";
 import { TERRAIN_EXTENSION_ID, type MaskRect, type TerrainData, type TerrainMaterial, type TerrainShape, NO_MATERIAL } from "./types";
 
@@ -50,6 +50,16 @@ const validShape = (shape: unknown): shape is TerrainShape => {
   }
 };
 
+/** Most pixel tests one paint may ask for (pixels in the bounds x segments of a stroke): a client must not be able to stall the authority. */
+export const MAX_PAINT_COST = 50_000_000;
+
+export const paintCost = (mask: TerrainData["mask"], shape: TerrainShape): number => {
+  if (shape.type === "fill") return 0;
+  const bounds = shapeBounds(mask, shape);
+  if (!bounds) return 0;
+  return bounds.width * bounds.height * (shape.type === "stroke" ? Math.max(1, shape.points.length - 1) : 1);
+};
+
 const regionPatch = (rect: MaskRect, values: Uint16Array): MapPatch => ({ type: "terrain.region", ...rect, runs: encodeRuns(values) });
 
 /** Handlers of the terrain patches. Pass them to `createMapModel({ patchHandlers: [terrainPatchHandlers] })`. */
@@ -59,6 +69,7 @@ export const terrainPatchHandlers: PatchHandlers = definePatchHandlers({
       const terrain = terrainOf(state);
       if ("failure" in terrain) return patchFail("invalid-patch", terrain.failure);
       if (!validShape(patch.shape)) return patchFail("invalid-patch", "shape is not valid");
+      if (paintCost(terrain.mask, patch.shape) > MAX_PAINT_COST) return patchFail("invalid-patch", "shape is too large to paint at once");
       let value: number;
       if (patch.material === null) value = NO_MATERIAL;
       else {

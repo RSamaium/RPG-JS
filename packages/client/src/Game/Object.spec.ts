@@ -3,6 +3,7 @@ import { signal } from "canvasengine";
 import {
   appendFramePayload,
   mergeFreshFramePayload,
+  MAX_PENDING_FRAMES,
   multiplyGraphicDisplayScale,
   RpgClientObject,
   withGraphicDisplayScale,
@@ -56,6 +57,18 @@ describe("RpgClientObject animations", () => {
         300,
       ),
     ).toEqual([]);
+  });
+
+  test("keeps only the latest frames when the tick was paused (hidden tab)", () => {
+    const backlog = Array.from({ length: 500 }, (_, i) => ({ x: i, y: 0, ts: i + 1 }));
+    const merged = mergeFreshFramePayload([], backlog, 0, MAX_PENDING_FRAMES);
+    expect(merged).toHaveLength(MAX_PENDING_FRAMES);
+    expect(merged[merged.length - 1]).toEqual({ x: 499, y: 0, ts: 500 });
+  });
+
+  test("keeps every frame by default (visible tab)", () => {
+    const backlog = Array.from({ length: 50 }, (_, i) => ({ x: i, y: 0, ts: i + 1 }));
+    expect(mergeFreshFramePayload([], backlog, 0)).toHaveLength(50);
   });
 
   test("keeps instance scale outside the spritesheet transform scale", () => {

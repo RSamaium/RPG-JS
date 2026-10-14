@@ -147,9 +147,17 @@ export function remoteCommitter(options: RemoteCommitterOptions): RemoteCommitte
           queue.push(message);
           return;
         }
+        // The authority applied one of our requests: it is done even if we cannot integrate it here
+        // (we caught up past it, or we are catching up), so the caller must not wait for a timeout.
+        const answered = (): void => {
+          if (message.requestId !== undefined) settle(message.requestId, { ok: true, revision: message.revision, patches: message.patches, inverse: [] });
+        };
         // Already known: a repeat, or a change we got while catching up.
-        if (message.revision <= host.revision) return;
-        if (message.revision !== host.revision + 1) return requestSync();
+        if (message.revision <= host.revision) return answered();
+        if (message.revision !== host.revision + 1) {
+          answered();
+          return requestSync();
+        }
 
         const mine = message.requestId !== undefined ? pending.get(message.requestId) : undefined;
         const result = host.integrate(message.patches, {

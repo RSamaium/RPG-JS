@@ -424,3 +424,16 @@ describe("messages the client may receive", () => {
     expect(ann.model.state.elements).toHaveLength(3);
   });
 });
+
+describe("answers that are skipped", () => {
+  it("settles a request whose answer is a revision the client already has, instead of timing out", async () => {
+    const a = newAuthority();
+    const ann = await client(a);
+    ann.wire.hold(); // the authority never hears of it: the answer below is the only one
+    const pending = ann.controller.submit(move("t1", 160, 96));
+    const sent = ann.wire.sent[ann.wire.sent.length - 1] as { id: string };
+    ann.wire.emit({ type: "patches", revision: ann.model.revision, patches: [{ type: "element.move", id: "t1", x: 160, y: 96 }], requestId: sent.id });
+    const result = await Promise.race([pending, new Promise((resolve) => setTimeout(() => resolve("still waiting"), 50))]);
+    expect(result).toMatchObject({ ok: true });
+  });
+});

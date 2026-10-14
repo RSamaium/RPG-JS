@@ -5,6 +5,7 @@ import type { IntentDefinition } from "../interaction/intents";
 import type { PipelineStep } from "../interaction/pipeline";
 import { tryReadTerrain } from "./data";
 import { covers, readRect, shapeBounds } from "./mask";
+import { MAX_PAINT_COST, paintCost } from "./patches";
 import { NO_MATERIAL, type TerrainShape } from "./types";
 
 declare module "../interaction/intents" {
@@ -38,6 +39,8 @@ export function requireTerrain(materials: readonly string[]): PipelineStep<"terr
     const allowed = new Set(materials.map((id) => terrain.materials.findIndex((material) => material.id === id)).filter((index) => index >= 0));
     const bounds = shapeBounds(terrain.mask, intent.shape);
     if (!bounds) return context.reject("outside-map", "Nothing of this lies on the map");
+    // The check below tests every pixel against the shape: bound it as the patch does.
+    if (paintCost(terrain.mask, intent.shape) > MAX_PAINT_COST) return context.reject("too-large", "This is too large to paint at once");
     // One read of the whole region: reading pixel by pixel would decode a chunk for each of them.
     const values = readRect(terrain.mask, bounds);
     for (let y = bounds.y; y < bounds.y + bounds.height; y += 1) {

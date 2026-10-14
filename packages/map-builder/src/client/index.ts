@@ -258,8 +258,11 @@ export function createMapBuilderClient<const F extends Features = readonly [Retu
         const engine = inject(RpgClientEngine);
         bindSocket(engine);
         // A different map from the one we joined: leave it, and join this one once the server has sent it.
-        const joined = stateOf(engine).current;
-        if (joined && (scene as { id?: string }).id !== joined.mapId) leave(engine);
+        const state = stateOf(engine);
+        const sceneId = (scene as { id?: string }).id;
+        // A join still waiting for another map is given up too: its result must not be installed on this one.
+        if (state.joining !== undefined && state.joining !== sceneId) state.joining = undefined;
+        if (state.current && state.current.mapId !== sceneId) leave(engine);
         onMapLoaded(engine);
       },
       // Not every RPGJS setup calls `onAfterLoading`: the map being loaded, or its physics being built, also tell us the scene is ready.

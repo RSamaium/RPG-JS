@@ -283,6 +283,9 @@ export function createMapBuilderServer<C extends Catalog<string> = Catalog<strin
       },
       onLeave(player: RpgPlayer, map: RpgMap) {
         disconnect(player, map);
+        // RPGJS has no hook for a map that is unloaded: the last player leaving is the closest moment to save what is pending.
+        const entry = entries.get(map);
+        if (entry && entry.connections.size === 0) void entry.authority?.flush().catch(reportError);
       },
     },
   });

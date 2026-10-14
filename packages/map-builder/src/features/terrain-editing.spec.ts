@@ -198,3 +198,12 @@ describe("cost of painting", () => {
     view.destroy();
   });
 });
+
+describe("the cost of a paint", () => {
+  it("refuses a stroke whose cost would stall the authority", () => {
+    const { model } = setup();
+    const points = Array.from({ length: 9_000 }, (_, i) => [i % 256, (i * 7) % 256] as [number, number]);
+    const result = model.apply({ type: "terrain.paint", shape: { type: "stroke", points, radius: 400 }, material: "dirt" });
+    expect(result.ok).toBe(false);
+  });
+});
