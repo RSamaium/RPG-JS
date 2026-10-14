@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { StudioTerrainPainter } from "./terrain-painter";
+import type { TerrainPaintBackend } from "./terrain-paint-backend";
 import {
   resolveTerrainHoleWaveDescriptors,
   shouldRenderTerrainGridWithSoftMasks,
@@ -37,7 +39,7 @@ function createInstrumentedRenderer() {
   const renderChunk = vi
     .spyOn(renderer as any, "renderChunk")
     .mockImplementation((...args: unknown[]) => {
-      const [key, , , , bounds] = args as [string, unknown, unknown, unknown, any];
+      const [key, bounds] = args as [string, any];
       (renderer as any).chunks.set(key, {
         key,
         ...bounds,
@@ -52,9 +54,9 @@ function createInstrumentedRenderer() {
 
 describe("StudioTerrainChunkRenderer terrain control cache", () => {
   it("does not reuse a buffer when region content changes after the base64 prefix", () => {
-    const renderer = new StudioTerrainChunkRenderer({ sortableChildren: false } as any);
+    const painter = new StudioTerrainPainter();
     const getBuffer = (control: any) =>
-      (renderer as any).getTerrainControlBuffer(control, null);
+      (painter as any).getTerrainControlBuffer(control, null);
     const baseRegion = {
       key: "0:0",
       x: 0,
@@ -319,48 +321,63 @@ describe("StudioTerrainChunkRenderer streamed invalidation", () => {
     };
     // the camera moves while the first chunk is drawn: the call it makes replaces the drawing in progress
     let replaced: Promise<void> | undefined;
+    let replacing = false;
     const original = renderChunk.getMockImplementation()!;
     renderChunk.mockImplementation((...args: unknown[]) => {
       original(...args);
-      replaced ??= renderer.renderMap(map, { streamUpdate: update, viewportBounds: { x: 2300, y: 800, width: 700, height: 700 }, viewportMargin: 0 });
+      if (replacing) return;
+      replacing = true;
+      replaced = renderer.renderMap(map, { streamUpdate: update, viewportBounds: { x: 2300, y: 800, width: 700, height: 700 }, viewportMargin: 0 });
     });
     await renderer.renderMap(map, { streamUpdate: update, viewportBounds: { x: 0, y: 0, width: 700, height: 700 }, viewportMargin: 0 });
     await replaced;
     expect([...(renderer as any).chunks.keys()].sort()).toEqual(["0:0", "0:1", "1:0", "1:1", "2:0", "2:1", "3:0", "3:1"]);
   });
 
-  it("waits for terrain assets and drops an obsolete render request", async () => {
-    const { renderer, renderChunk } = createInstrumentedRenderer();
+  it("drops a chunk drawn for a render that another render replaced", async () => {
+    const pending: Array<(paint: { canvas: unknown; water: null }) => void> = [];
+    const painter: TerrainPaintBackend = {
+      setData: vi.fn(),
+      paintChunk: () => new Promise((resolve) => void pending.push(resolve as never)),
+      paintWallOcclusion: async () => [],
+      paintWallShadow: async () => [],
+      paintLiquidContact: async () => null,
+      clearCaches: vi.fn(),
+      destroy: vi.fn(),
+    };
+    const renderer = new StudioTerrainChunkRenderer({ sortableChildren: false } as any, { chunkSize: 768, painter });
+    const placeChunk = vi.spyOn(renderer as any, "placeChunk").mockImplementation(() => undefined);
     const map = createTerrainMap(768, 768);
-    map.terrainRenderData.sourceTexture = "terrain.png";
-    map.terrainRenderData.terrainControl = {
-      source: "control.png",
-      width: 768,
-      height: 768,
-      palette: [],
-    } as any;
-    const pending = new Map<string, {
-      promise: Promise<HTMLImageElement>;
-      resolve: (image: HTMLImageElement) => void;
-    }>();
-    for (const source of ["terrain.png", "control.png"]) {
-      let resolve!: (image: HTMLImageElement) => void;
-      const promise = new Promise<HTMLImageElement>((done) => { resolve = done; });
-      pending.set(source, { promise, resolve });
-    }
-    vi.spyOn(renderer as any, "loadImage").mockImplementation(
-      (...args: unknown[]) => pending.get(String(args[0]))!.promise
-    );
 
     const obsolete = renderer.renderMap(map);
     map.terrainRenderData.version = "streamed:revision-1:2";
     const current = renderer.renderMap(map);
-    expect(renderChunk).not.toHaveBeenCalled();
+    expect(pending).toHaveLength(2); // each render waits for its chunk
 
-    pending.get("terrain.png")?.resolve({} as HTMLImageElement);
-    pending.get("control.png")?.resolve({} as HTMLImageElement);
+    pending[0]!({ canvas: {}, water: null });
+    pending[1]!({ canvas: {}, water: null });
     await Promise.all([obsolete, current]);
-    expect(renderChunk).toHaveBeenCalledTimes(1);
+
+    expect(placeChunk).toHaveBeenCalledTimes(1);
+  });
+
+  it("closes the bitmaps a worker gave when a chunk goes", () => {
+    class FakeBitmap { close = vi.fn(); }
+    vi.stubGlobal("ImageBitmap", FakeBitmap);
+    try {
+      const { renderer } = createInstrumentedRenderer();
+      const [chunk, surface, mask] = [new FakeBitmap(), new FakeBitmap(), new FakeBitmap()];
+      (renderer as any).destroyChunk.mockRestore?.();
+      const real = (StudioTerrainChunkRenderer.prototype as any).destroyChunk;
+      real.call(renderer, {
+        sprite: { destroyed: true },
+        canvas: chunk,
+        waterOverlay: { sprite: { destroyed: true }, surface, regions: [{ mask }] },
+      });
+      expect([chunk.close, surface.close, mask.close].map((close) => close.mock.calls.length)).toEqual([1, 1, 1]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("updates water animation smoothly at no more than thirty frames per second", () => {

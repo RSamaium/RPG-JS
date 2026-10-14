@@ -7,6 +7,7 @@ import type {
   TerrainTileAtlasMetadata,
   TerrainTransitionRule,
 } from "../types";
+import { createTerrainCanvas, type TerrainCanvas, type TerrainContext } from "./terrain-canvas";
 
 interface TerrainMediaLike {
   fileName?: string;
@@ -168,7 +169,7 @@ export function isWaterTerrainTexture(
 }
 
 export function drawTerrainTexture(
-  ctx: CanvasRenderingContext2D,
+  ctx: TerrainContext,
   image: CanvasImageSource,
   source: TerrainSourceRect,
   x: number,
@@ -184,12 +185,10 @@ export function createTerrainPatternCanvas(
   image: CanvasImageSource,
   source: TerrainSourceRect,
   destinationCellSize: number
-): HTMLCanvasElement {
+): TerrainCanvas {
   const cellSize = Math.max(1, Math.floor(destinationCellSize));
-  const canvas = document.createElement("canvas");
-  canvas.width = cellSize;
-  canvas.height = cellSize;
-  const ctx = canvas.getContext("2d");
+  const canvas = createTerrainCanvas(cellSize, cellSize);
+  const ctx = canvas.getContext("2d") as TerrainContext | null;
   if (!ctx) throw new Error("Canvas 2D context unavailable");
   // Match Studio's terrain sampling: atlas cell borders can contain separator
   // pixels, which become visible grid lines when repeated in the world.
