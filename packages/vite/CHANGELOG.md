@@ -1,5 +1,19 @@
 # @rpgjs/vite
 
+## 5.0.1
+
+### Patch Changes
+
+- a689626: Pre-bundle `@xmldom/xmldom` in the dev server. `pixi.js` is excluded from the optimizer, so its CommonJS dependency was served as is and the page stayed blank with "does not provide an export named 'DOMParser'".
+- Updated dependencies [3d240d7]
+- Updated dependencies [9f92e2d]
+- Updated dependencies [8abce20]
+- Updated dependencies [6a924a3]
+- Updated dependencies [acf93b3]
+- Updated dependencies [9f92e2d]
+- Updated dependencies [fcf625e]
+  - @rpgjs/server@5.1.0
+
 ## 5.0.0
 
 ### Minor Changes

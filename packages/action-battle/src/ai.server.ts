@@ -796,6 +796,8 @@ export class BattleAi {
   ) {
     options = mergeBattleAiPresetOptions(options);
     event.battleAi = this;
+    // An enemy is attacked, not talked to
+    (event as any).interactive?.set?.(false);
     this.event = event;
 
     // Set enemy type and apply behavior modifiers
@@ -1067,11 +1069,22 @@ export class BattleAi {
   }
 
   /**
+   * Whether the event is still the one registered on its map. A map reload removes its events
+   * without clearing `event.map`: the AI of a replaced event would go on, invisible, and attack.
+   */
+  private isEventOnMap(): boolean {
+    const map = this.event.getCurrentMap() as any;
+    if (!map) return false;
+    const registered = typeof map.events === "function" ? map.events()?.[this.event.id] : undefined;
+    return registered === undefined || registered === this.event || registered.battleAi === this;
+  }
+
+  /**
    * Start the AI behavior loop
    */
   private startAiBehaviorLoop() {
     const updateInterval = setInterval(() => {
-      if (!this.event.getCurrentMap()) {
+      if (!this.isEventOnMap()) {
         this.destroy();
         return;
       }

@@ -30,7 +30,7 @@ import {
 } from "./locomotion";
 import { getActionBattleSystems, setActionBattleSystems } from "./core/context";
 import { applyActionBattleHit } from "./core/hit";
-import { DEFAULT_ZELDA_PLAYER_HITBOXES } from "./core/defaults";
+import { DEFAULT_ZELDA_PLAYER_HITBOXES, resolveAttackOrigin } from "./core/defaults";
 import {
   ActionBattleHitTracker,
   createActionBattleAttackId,
@@ -416,10 +416,11 @@ const resolvePlayerAttackHitboxes = (
     configuredHitboxes[
       directionKey as keyof typeof DEFAULT_PLAYER_ATTACK_HITBOXES
     ] || configuredHitboxes.default;
+  const origin = resolveAttackOrigin(player, directionKey);
   const defaultHitboxes = [
     {
-      x: player.x() + hitboxConfig.offsetX,
-      y: player.y() + hitboxConfig.offsetY,
+      x: origin.x + hitboxConfig.offsetX,
+      y: origin.y + hitboxConfig.offsetY,
       width: hitboxConfig.width,
       height: hitboxConfig.height,
     },
@@ -835,14 +836,17 @@ const serializeActionBattleSkill = (
   return entry;
 };
 
+/** Cells an area mask hits: `["...", ".#.", "..."]` is a single cell, not an area. */
+const countActionBattleMaskCells = (mask: string[]) =>
+  mask.reduce((total, row) => total + (row.match(/#/g)?.length ?? 0), 0);
+
 const requiresActionBattleTargeting = (
   skill: ActionBattleHotbarSkill,
 ) => {
   const mask = Array.isArray(skill.aoeMask) ? skill.aoeMask : [];
   return (
     skill.action?.target === "ally"
-    || mask.length > 1
-    || mask.some((row) => row !== "#")
+    || countActionBattleMaskCells(mask) > 1
     || (
       (skill.range ?? 0) > 0
       && skill.action?.mode !== "projectile"
@@ -1500,6 +1504,8 @@ export const createActionBattleServer = (
         }
 
         if (input.action == Control.Action) {
+          // The action key talks to an NPC (or opens a chest) instead of attacking
+          if (input.interactedWithEvent) return;
           const combo = objectOption(options.combat?.player?.combo);
           const lockedUntil = Number((player as any).__actionBattleAttackLockedUntil ?? 0);
           if (lockedUntil > now) {

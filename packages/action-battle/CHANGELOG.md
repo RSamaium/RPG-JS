@@ -1,5 +1,20 @@
 # @rpgjs/action-battle
 
+## 5.0.1
+
+### Patch Changes
+
+- acf93b3: With Action Battle, the action key talks to an NPC (or uses a chest) instead of attacking. Events with an `onAction` hook are now synchronized as `interactive` (enemies with a `BattleAi` are not), `map.getInteractableObjectIds()` lists what is in front of a character, and the `onInput` hooks receive the action with `interactedWithEvent` when an interactive event handled it. The client no longer plays its predicted attack when it faces an interactive event.
+- 1f2f2aa: Fix the battle music of the project not playing when an enemy is approached. An enemy without its own battle music sent an empty track that hid the project one (Studio now drops empty values and Action Battle falls back to the project music on a blank track). A threat re-sent by a re-created enemy AI no longer piles up, and `engine.music.enter()` ignores a call for the track it already targets instead of cancelling its own transition on every tick (which also created a duplicate sound each time).
+- 1f2f2aa: Fix an enemy that came back invisible after being defeated: a map reload (`updateMap`, run about twenty times when a Studio map loads) replaces the events, but the Action Battle AI of each replaced event kept running, unseen, and kept attacking and holding the battle music. The AI now stops as soon as its event is no longer the one registered on the map.
+
+  Fix "Start" doing nothing after Game Over → Title screen: the title screen opened over the map, where nothing handles "Start". Studio now handles the title entries there: "Start" resets the hero, selects the actor and restarts on the start map, "Load" opens the load menu.
+
+- 1f2f2aa: The hitbox of a Studio hero (actor) with a generated character now follows the display scale of the character, like the hitbox of an event, instead of being as big as the cell of its image (it was 160x105 next to a 32x32 enemy). The default attack zones of Action Battle are anchored on the real hitbox of the attacker (centered on its body, pushed out of its edge in the facing direction) instead of assuming a 32x32 body.
+- b8f80ba: Fix hotbar skills that could not be used (Studio). The targeting cursor took the size of the hitbox of the player as the size of a tile, so the tile sent to the server did not match the server one and the skill was rejected as out of range; it now uses the configured tile size, else the one of the map. The targeting overlay and the attack preview never showed, because they read the id of the sprite from a signal instead of its value.
+
+  A skill whose area mask hits a single cell (Studio writes it as a 3x3 grid, `["...", ".#.", "..."]`) is no longer treated as an area skill: a melee skill without range is used at once on the enemy in front of the player, with no manual targeting cursor.
+
 ## 5.0.0
 
 ### Major Changes

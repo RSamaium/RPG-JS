@@ -8,3 +8,4 @@ export * from './context-helpers';
 export * from './execution-profiles';
 export * from './condition-evaluator';
 export * from './resolve-text';
+export * from './schema-defaults';

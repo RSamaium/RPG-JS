@@ -43,14 +43,17 @@
   import { computed } from "canvasengine";
   import { inject } from "@rpgjs/client";
   import { RpgClientEngine } from "@rpgjs/client";
-  import { actionBattleTargetingState, actionBattleUiOptions } from "../ui/state";
+  import { actionBattleTargetingState, actionBattleUiOptions, resolveActionBattleClientTileSize } from "../ui/state";
   import { parseAoeMask } from "../targeting";
 
-  const { object } = defineProps();
+  const { object: objectProp } = defineProps();
+  // The sprite is handed over as a signal
+  const getObject = () => (typeof objectProp === "function" ? objectProp() : objectProp);
   const engine = inject(RpgClientEngine);
   const { t } = engine.i18n();
 
   const isCurrentPlayer = computed(() => {
+    const object = getObject();
     if (!object?.id) return false;
     const idValue = typeof object.id === "function" ? object.id() : object.id;
     return idValue === engine.playerId;
@@ -64,14 +67,10 @@
     return targetingState().active;
   });
 
-  const getTileSize = () => {
-    const uiTile = uiOptions().targeting?.tileSize;
-    if (uiTile?.width && uiTile?.height) return uiTile;
-    const hitbox = object.hitbox?.() || { w: 32, h: 32 };
-    return { width: hitbox.w || 32, height: hitbox.h || 32 };
-  };
+  const getTileSize = () => resolveActionBattleClientTileSize(engine);
 
   const getOriginTile = () => {
+    const object = getObject();
     const hitbox = object.hitbox?.() || { w: 32, h: 32 };
     const tileSize = getTileSize();
     const x = Math.floor((object.x() + hitbox.w / 2) / tileSize.width);
@@ -102,6 +101,7 @@
     const cursorColor = toColor(colors.cursor, 0xffd166);
 
     const showGrid = uiOptions().targeting?.showGrid !== false;
+    const object = getObject();
     const playerX = object.x();
     const playerY = object.y();
 

@@ -208,6 +208,8 @@ export class World {
   private syncEntity(entity: Entity): void {
     this.syncEntityCollection(entity);
     this.spatialPartition.update(entity);
+    if (entity.isStatic()) this.rememberStatic(entity);
+    else this.staticSignatures.delete(entity);
   }
 
   /**
@@ -497,10 +499,45 @@ export class World {
     }
   }
 
+  /**
+   * Static entities do not move: rebuilding their bounds at every step is wasted work, and it is the larger part of the
+   * step when a map has thousands of polygon obstacles. They are synchronized once, then again only if their position,
+   * size or rotation was changed directly (`updateEntity` also forces it).
+   */
   private refreshEntitiesInPartition(): void {
     for (const entity of this.entities) {
+      if (entity.isStatic() && this.isSyncedStatic(entity)) continue;
       this.syncEntity(entity);
     }
+  }
+
+  /** Position, rotation and size of a static entity when it was last synchronized (numbers: no allocation per step). */
+  private staticSignatures: WeakMap<Entity, Float64Array> = new WeakMap();
+
+  private isSyncedStatic(entity: Entity): boolean {
+    const signature = this.staticSignatures.get(entity);
+    return signature !== undefined
+      && signature[0] === entity.position.x
+      && signature[1] === entity.position.y
+      && signature[2] === entity.rotation
+      && signature[3] === entity.width
+      && signature[4] === entity.height
+      && signature[5] === entity.radius
+      && this.staticEntities.has(entity);
+  }
+
+  private rememberStatic(entity: Entity): void {
+    let signature = this.staticSignatures.get(entity);
+    if (!signature) {
+      signature = new Float64Array(6);
+      this.staticSignatures.set(entity, signature);
+    }
+    signature[0] = entity.position.x;
+    signature[1] = entity.position.y;
+    signature[2] = entity.rotation;
+    signature[3] = entity.width;
+    signature[4] = entity.height;
+    signature[5] = entity.radius;
   }
 
   private syncEntityCollection(entity: Entity): void {

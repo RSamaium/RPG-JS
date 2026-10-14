@@ -1,0 +1,15 @@
+<Container>
+  <Rect width={960} height={640} color="#6f8f55" />
+  <Rect x={0} y={280} width={960} height={70} color="#c9b27c" />
+  <Rect x={120} y={90} width={180} height={130} color="#a8613c" />
+  <Rect x={110} y={70} width={200} height={30} color="#6b3a26" />
+  <Rect x={640} y={110} width={180} height={120} color="#b5774a" />
+  <Rect x={630} y={90} width={200} height={30} color="#6b3a26" />
+  <Text x={300} y={420} text="Press Space: calendar" color="#fff4d0" size={20} fontFamily="Courier New" />
+  <Text x={300} y={450} text="Closing it lets one day pass" color="#fff4d0" size={14} fontFamily="Courier New" />
+  <EventLayerComponent />
+</Container>
+
+<script>
+  import { EventLayerComponent } from "@rpgjs/client";
+</script>

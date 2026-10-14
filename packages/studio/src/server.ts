@@ -1,4 +1,5 @@
 import { normalizeRuntimeHitbox } from "./runtime-hitbox";
+import { collectEventGraphics, scaleEventHitboxToGraphic } from "./event-hitbox-scale";
 import { bindStudioCombatAnimationsToEntity } from "./action-battle-animations";
 import { runPlayerEventOnce } from "./event-execution-guard";
 import { Move, RpgEvent, RpgMap, RpgPlayer, RpgServer, provideServerMapStreaming, type RpgPlayerConnectionContext } from "@rpgjs/server";
@@ -26,6 +27,7 @@ import {
   resolveStudioItemType,
 } from "./starting-equipment";
 import { normalizeStudioCharacterSelectSettings } from "./action-battle-audio";
+import { resolveStudioMapScale, scaleStudioHitboxes } from "./map-scale";
 import { StudioStartupError, type StudioPlayerStartup } from "./startup";
 export { createStudioActionBattleAnimations } from "./action-battle-animations";
 export type { StudioCombatAnimationIds, StudioCombatAnimationOptions } from "./action-battle-animations";
@@ -104,7 +106,8 @@ export const resolveRuntimeEventHitbox = (object: any, params: any): { width: nu
     ? [...object.triggers].reverse().find((trigger: any) => trigger?.enabled !== false && normalizeRuntimeHitbox(trigger?.hitbox))?.hitbox
     : undefined;
 
-  return normalizeRuntimeHitbox(object?.hitbox) ?? normalizeRuntimeHitbox(triggerHitbox) ?? normalizeRuntimeHitbox(params?.hitbox);
+  const hitbox = normalizeRuntimeHitbox(object?.hitbox) ?? normalizeRuntimeHitbox(triggerHitbox) ?? normalizeRuntimeHitbox(params?.hitbox);
+  return hitbox ? scaleEventHitboxToGraphic(hitbox, collectEventGraphics(object)) : undefined;
 };
 
 const normalizeProjectId = (value: unknown): string | null => {
@@ -182,7 +185,7 @@ const startGame = async (player: RpgPlayer, map?: RpgMap, heroConfig?: ProjectBa
   bindStudioCombatAnimationsToEntity(player, heroConfig.animations);
   const startingItems = await ensureStartingItemsInDatabase(player, heroConfig, map);
   assignPlayerStartParams(player, heroConfig, startingItems);
-  applyPlayerHitbox(player, heroConfig);
+  await applyPlayerHitbox(player, heroConfig);
 };
 
 const markStudioInitialized = (player: RpgPlayer): void => {
@@ -218,18 +221,21 @@ const collectStartingItemIds = (config: ProjectBasic): string[] => {
   return [...ids];
 };
 
-const applyPlayerHitbox = (player: RpgPlayer, config: ProjectBasic): void => {
+const applyPlayerHitbox = async (player: RpgPlayer, config: ProjectBasic): Promise<void> => {
   const hitbox = normalizeRuntimeHitbox((config as any).hitbox);
   if (!hitbox || typeof (player as any).setHitbox !== "function") return;
-  (player as any).setHitbox(hitbox.width, hitbox.height);
+  // The hitbox of a generated character is set in pixels of its source image: it follows the display scale.
+  const graphic = await resolveMediaReference((config as any).graphic, getGameDataProvider());
+  const scaled = scaleEventHitboxToGraphic(hitbox, collectEventGraphics({ graphic }));
+  (player as any).setHitbox(scaled.width, scaled.height);
 };
 
-const applyPlayerPresentation = (player: RpgPlayer, config: ProjectBasic & { graphic?: unknown; params?: unknown }): void => {
+const applyPlayerPresentation = async (player: RpgPlayer, config: ProjectBasic & { graphic?: unknown; params?: unknown }): Promise<void> => {
   const graphicKey = getGraphicKey(config.graphic);
   (player as any)._graphicScale?.set(graphicKey ? getGraphicScale(config.params, config) ?? null : null);
   player.setGraphic(graphicKey ?? "default_character");
   bindStudioCombatAnimationsToEntity(player, config.animations);
-  applyPlayerHitbox(player, config);
+  await applyPlayerHitbox(player, config);
 };
 
 const addStudioDefaultClass = (
@@ -901,6 +907,7 @@ const normalizeStudioMapPayload = async (
     });
   }
 
+  const mapScale = resolveStudioMapScale(params);
   const normalizedMap = {
     ...mapResponse,
     id: mapResponse._id ?? mapResponse.id ?? mapId,
@@ -921,9 +928,10 @@ const normalizeStudioMapPayload = async (
     }, normalizedMap),
     events: hydratedEvents,
     commonEvents: hydratedCommonEvents,
-    hitboxes: mergedHitboxes,
-    width: initialMapData?.width || (isV2 ? params.width * 48 : params.width) || mapResponse.width || 1,
-    height: initialMapData?.height || (isV2 ? params.height * 48 : params.height) || mapResponse.height || 1,
+    hitboxes: scaleStudioHitboxes(mergedHitboxes, mapScale),
+    // Physical world size, in scaled pixels (the map is drawn scaled).
+    width: initialMapData?.width || ((isV2 ? params.width * 48 : params.width) || mapResponse.width || 1) * mapScale,
+    height: initialMapData?.height || ((isV2 ? params.height * 48 : params.height) || mapResponse.height || 1) * mapScale,
     config: {
       ...project,
       ...(initialMapData?.config ?? {}),
@@ -1145,7 +1153,7 @@ export default (_config?: unknown) => {
         await refreshOnlineStudioDatabase(map);
         const heroConfig = await resolvePlayerConfig(player, map);
         await applyStartGameOnce(player, map, heroConfig);
-        applyPlayerPresentation(player, heroConfig);
+        await applyPlayerPresentation(player, heroConfig);
       },
       onLoad: async (player: RpgPlayer, snapshot) => {
         // Loading a saved game is never new-game initialization, including old
@@ -1162,7 +1170,7 @@ export default (_config?: unknown) => {
           if (snapshot && snapshot._finalLevelSignal === undefined && config.finalLevel !== undefined) {
             player.finalLevel = Math.max(config.finalLevel, player.level);
           }
-          applyPlayerPresentation(player, config);
+          await applyPlayerPresentation(player, config);
         }
       },
       onInput: (player: RpgPlayer, input: RpgActionInput<unknown>) => {
@@ -1199,7 +1207,38 @@ export default (_config?: unknown) => {
       onDead: async (player: RpgPlayer) => {
         const selection = await player.callGameover();
         if (selection?.id === "title") {
-          await player.gui("rpg-title-screen").open();
+          // The title screen is shown over the dead hero: its "Start" has to start a new game itself,
+          // because only the lobby handles it.
+          const gameConfig = readGameConfig();
+          const gui = player.gui("rpg-title-screen");
+          const titleSelection = await new Promise<{ id?: string } | null>((resolve) => {
+            gui.on("select", (value: { id?: string }) => {
+              gui.close();
+              resolve(value);
+            });
+            void gui.open(
+              {
+                title: gameConfig.name,
+                subtitle: gameConfig.subtitle,
+                localActions: true,
+                entries: [
+                  { id: "start", label: "Start" },
+                  { id: "load", label: "Load" },
+                ],
+              },
+              { waitingAction: true, blockPlayerInput: true },
+            ).then(() => resolve(null));
+          });
+          if (titleSelection?.id === "start") {
+            const playerConfig = await resolvePlayerStartup(player);
+            (player as any).studioStartGameApplied?.set(false);
+            (player as any).__studioStartGameApplied = false;
+            player.initializeDefaultStats();
+            await selectStudioActorForNewGame(player, await resolveStudioProject(undefined, playerConfig), playerConfig);
+            await player.changeMap(await resolveStartMapId(playerConfig));
+          } else if (titleSelection?.id === "load") {
+            await player.showLoad();
+          }
         } else if (selection?.id === "load") {
           await player.showLoad();
         }
@@ -1269,7 +1308,8 @@ export default (_config?: unknown) => {
           mapData.data.lighting = normalizeLightingState(mapData?.data?.lighting);
         }
         if (normalizedInitialWeather) {
-          mapExtended.setWeather(normalizedInitialWeather);
+          // The runtime state is normalized to known params; @rpgjs/common types them as open.
+          mapExtended.setWeather(normalizedInitialWeather as Parameters<typeof mapExtended.setWeather>[0]);
         }
         // Add baseUrl to map context for use in block executors
         (mapExtended as any).apiBaseUrl = apiUrl;
@@ -1357,6 +1397,10 @@ export default (_config?: unknown) => {
           };
 
           eventObj.applyActiveTrigger = function (player: RpgPlayer | null, event: RpgEvent) {
+            // While a player workflow runs, keep the page it started on: the switch change is applied once it ends
+            if (eventObj.__pageLockCount > 0 && eventObj.__activeTriggerIndex !== undefined) {
+              return object.triggers[eventObj.__activeTriggerIndex] ?? null;
+            }
             let resolved = eventObj.resolveActiveTrigger(player, event);
             if (!resolved && !player) {
               const fallbackIndex = object.triggers.findIndex((trigger: any) => trigger?.enabled !== false);
@@ -1399,7 +1443,13 @@ export default (_config?: unknown) => {
             if (trigger && trigger.blocks) {
               const run = () => blockExecutor.executeBlockSequence(trigger.blocks);
               if (player && (triggerType === 'onAction' || (triggerType === 'onTouch' && options?.touchTarget !== 'event'))) {
-                await runPlayerEventOnce(player, run);
+                eventObj.__pageLockCount = (eventObj.__pageLockCount ?? 0) + 1;
+                try {
+                  await runPlayerEventOnce(player, run);
+                } finally {
+                  eventObj.__pageLockCount -= 1;
+                  eventObj.applyActiveTrigger(conditionPlayer, event);
+                }
               } else {
                 await run();
               }
@@ -1423,11 +1473,16 @@ export default (_config?: unknown) => {
                 loop();
               };
               const runInitLifecycle = async (options?: { runInitBlocks?: boolean; startParallelLoop?: boolean }) => {
-                eventObj.applyActiveTrigger(player, this);
+                // `through` first: an event set on a collision (a seller behind a counter) is otherwise pushed out of it by the teleport
+                if (eventObj.resolveActiveTrigger(player, this)?.trigger?.options?.through) {
+                  this.through = true;
+                }
+                // Teleport first: the movement route (and its frequency wait) must start from the final position
                 this.teleport({
                   x: object.x * mapExtended.scale,
                   y: object.y * mapExtended.scale,
                 });
+                eventObj.applyActiveTrigger(player, this);
                 if (options?.runInitBlocks !== false) {
                   await eventObj.executeBlocks(player, "onInit", this);
                 }

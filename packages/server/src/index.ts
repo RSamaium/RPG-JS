@@ -19,6 +19,7 @@ export * from "./rooms/registry";
 export * from "./presets";
 export * from "./Gui";
 export * from "./services/save";
+export * from "./services/time";
 export * from "./storage";
 export * from "./projectiles";
 export { provideServerMapStreaming } from "./map-streaming";

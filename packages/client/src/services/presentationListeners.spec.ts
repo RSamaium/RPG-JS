@@ -9,8 +9,12 @@ describe("presentation packets", () => {
 
   it("normalizes weather packets", () => {
     expect(normalizeWeatherPacket({ value: null })).toBeNull();
-    expect(normalizeWeatherPacket({ effect: "lava" })).toBeUndefined();
+    expect(normalizeWeatherPacket({})).toBeUndefined();
+    expect(normalizeWeatherPacket({ effect: "" })).toBeUndefined();
     expect(normalizeWeatherPacket(undefined)).toBeUndefined();
+    // Custom weather ids and presets are forwarded: the scene decides what it can draw.
+    expect(normalizeWeatherPacket({ effect: "aurora", params: { intensity: 0.8 }, seed: 4 })).toMatchObject({ effect: "aurora", params: { intensity: 0.8 }, seed: 4 });
+    expect(normalizeWeatherPacket({ preset: "moonbeams" })).toMatchObject({ effect: undefined, preset: "moonbeams" });
     expect(normalizeWeatherPacket({ value: { effect: "rain", params: { speed: 2 }, extra: true } })).toEqual({
       effect: "rain",
       preset: undefined,
@@ -39,7 +43,7 @@ describe("presentation packets", () => {
     registerPresentationListeners(socket, engine);
 
     handlers.get("playSound")!({ soundId: "hit", volume: 0.5, loop: false });
-    handlers.get("weatherState")!({ effect: "lava" });
+    handlers.get("weatherState")!({});
     handlers.get("weatherState")!(null);
     handlers.get("shakeMap")!({ intensity: 3 });
 

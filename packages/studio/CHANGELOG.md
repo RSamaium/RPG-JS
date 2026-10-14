@@ -1,5 +1,38 @@
 # @rpgjs/studio
 
+## 5.1.0
+
+### Minor Changes
+
+- ad3a1ad: Studio maps can use every CanvasEngine weather effect and preset: light rays, embers, ash, leaves, petals, fireflies, spores and sand, with their params (`colors`, `particleSize`, `haze`, `rayFan`, `rayColor`, `cloudOpacity`, ...). The runtime keeps the output of the former presets unchanged, and the map renderers forward the extra params to `<Weather>`.
+
+### Patch Changes
+
+- 32a6ae2: Studio characters are displayed 35% bigger by default (`STUDIO_CHARACTER_DISPLAY_BOOST`), to fit the size of the decor. The hitbox of an event with a generated character follows the same scale. Stand and walk are calibrated on the median pose of their frames, the other animations (attacks) on their first pose.
+- 3d240d7: Add a day night cycle based on the `DayNightCycle` preset of CanvasEngine. Maps enable it with `lighting.dayNight`, and light spots get `halo` and `schedule` (hours they are on). With the Time Manager, `lighting: { dayNight: true }` drives the scene from the synchronized server hour; `state.hourFloat` and `state.phase` expose the hour with decimals and the phase of the day.
+
+  Time Manager fixes: the lighting phases are now merged into the lighting of the map instead of replacing it (light spots were lost), and the client projects the time from the clock of the server so a client clock that is off no longer shifts the displayed hour.
+
+  The Time Manager lighting accepts per map overrides (`lighting.maps`, `false` to leave a map untouched) and a map can opt out with `lighting.dayNight.enabled: false`. A new `onPhaseChange` hook fires with `onLightingPhaseChange`, the client warns when the server drives the cycle with the Time Manager and the client module is missing, and the docs state the unit of `scale` (game minutes per real minute).
+
+- 8abce20: An event set to `through` and placed on a collision (a seller behind a counter) stays where it was placed and no longer jumps. The collision filter only let `through` events cross other characters: walls and map hitboxes still pushed the event out (5 px at a time) before its position was put back, at every physics step. A `through` event now ignores them too (players are unchanged), and the Studio init applies `through` before it teleports the event to its position.
+- 1f2f2aa: Fix the battle music of the project not playing when an enemy is approached. An enemy without its own battle music sent an empty track that hid the project one (Studio now drops empty values and Action Battle falls back to the project music on a blank track). A threat re-sent by a re-created enemy AI no longer piles up, and `engine.music.enter()` ignores a call for the track it already targets instead of cancelling its own transition on every tick (which also created a duplicate sound each time).
+- 9f92e2d: Studio events with a generated character: the hitbox saved in the map (in pixels of the source image) now follows the scale the character is displayed at, instead of staying as big as its cell.
+
+  Studio random movement waits for the frequency of the event between two moves, at map load as well as after an interaction: the `frequencyRatio: 1` override is removed, and `replayRoutes()` keeps the options (`onStuck`, `frequencyRatio`) of the infinite route it replays. The event now starts its route from its final position, after the teleport of its initialization.
+
+- 1f2f2aa: Fix an enemy that came back invisible after being defeated: a map reload (`updateMap`, run about twenty times when a Studio map loads) replaces the events, but the Action Battle AI of each replaced event kept running, unseen, and kept attacking and holding the battle music. The AI now stops as soon as its event is no longer the one registered on the map.
+
+  Fix "Start" doing nothing after Game Over → Title screen: the title screen opened over the map, where nothing handles "Start". Studio now handles the title entries there: "Start" resets the hero, selects the actor and restarts on the start map, "Load" opens the load menu.
+
+- 8558980: Studio blocks that were never opened in the editor now behave with their schema defaults. The "Show Notification" block defaults to the `info` type and a 2000 ms duration (the engine defaults), empty optional fields (`null` or an empty value) are ignored when running it, and the "Wait" block waits 1 second when it has no duration. `applyBlockSchemaDefaults()` is exported to fill a block's missing fields with the defaults of its schema.
+- dfe56ed: Studio elements with a sloped polygon hitbox, such as a mountain, are now drawn in 8 px columns that each sort on the bottom edge of the hitbox at their own x, so a character standing in front of the slope is no longer hidden behind it. A concave hitbox, whose columns cross several ridges, is also cut into one slice per ridge, each sorted on its own base. Flat hitboxes (trees, walls) keep a single sort key. A new `sortMode` on an element (`"auto"` by default, `"hitbox"` to keep the single key, `"slope"` to force the columns) overrides the automatic 16 px slope threshold.
+- 1a7befc: Align the animations of a Studio character on its feet. Each direction of an animation is now calibrated on the median pose of its frames (height and feet position) instead of its first image, and a frame can carry a `footAnchor` that the client puts on the bottom center of the hitbox. Switching between stand and walk no longer shifts or resizes the character. A warning is logged when the pixels of a sheet cannot be read.
+- 8558980: A Studio event keeps its current page while its action/touch workflow is running. A Self Switch set in the middle of the workflow (for example opening a chest) is still saved immediately, but the event only switches to the new page once the workflow has ended, so the remaining blocks (text, gold…) no longer run while the event already shows another page.
+- 4c51c73: Fix Studio maps with a `scale`: only the map is scaled. The characters/events layer is no longer scaled twice, and the physical world (map size, element/polygon/terrain hitboxes) is expressed in scaled pixels, like the start position and the events, so the camera, the hero and the collisions line up with the scaled map.
+- e908cae: Fix #379: in map streaming (`RPG_TYPE=mmorpg`), a Studio map's `backgroundMusic` and `backgroundAmbientSound` are now resolved to the assets URL (like `loadMap` does), instead of being requested on the game origin. Absolute URLs (`http(s)://`, `/`, `data:`, `blob:`) are left unchanged and media objects (`{ fileName }`) are supported.
+- 1f2f2aa: The hitbox of a Studio hero (actor) with a generated character now follows the display scale of the character, like the hitbox of an event, instead of being as big as the cell of its image (it was 160x105 next to a 32x32 enemy). The default attack zones of Action Battle are anchored on the real hitbox of the attacker (centered on its body, pushed out of its edge in the facing direction) instead of assuming a 32x32 body.
+
 ## 5.0.0
 
 ### Minor Changes

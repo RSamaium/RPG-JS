@@ -438,7 +438,7 @@ describe("studio element renderer helpers", () => {
 
   it("respects the shared shadow budget", () => {
     const budget = { remaining: 1 };
-    const options = { shadowBudget: budget, lighting: { sun: { intensity: 0.95 } } };
+    const options = { shadowBudget: budget, lighting: { sun: { intensity: 0.95 }, shadows: { enabled: true } } };
     const first = resolveStudioElementShadowCaster(createElement(), undefined, options);
     const second = resolveStudioElementShadowCaster(createElement(), undefined, options);
 
@@ -450,7 +450,7 @@ describe("studio element renderer helpers", () => {
   it("enables element shadow casters from an active map sun", () => {
     const caster = resolveStudioElementShadowCaster(createElement(), undefined, {
       sceneMap: {
-        lighting: () => ({ sun: { intensity: 0.95 } }),
+        lighting: () => ({ sun: { intensity: 0.95 }, shadows: { enabled: true } }),
       },
     });
 
@@ -465,7 +465,7 @@ describe("studio element renderer helpers", () => {
       }),
       undefined,
       {
-        lighting: { sun: { intensity: 0.95 } },
+        lighting: { sun: { intensity: 0.95 }, shadows: { enabled: true } },
       }
     );
 
@@ -495,6 +495,7 @@ describe("studio element renderer helpers", () => {
       {
         lighting: {
           sun: { x: -0.45, y: -1, intensity: 0.95 },
+          shadows: { enabled: true },
           spots: [{ x: 200, y: 110, radius: 240, intensity: 2 }],
         },
       }
@@ -511,7 +512,7 @@ describe("studio element renderer helpers", () => {
       createElement({ hasShadow: false }),
       undefined,
       {
-        lighting: { sun: { intensity: 0.95 } },
+        lighting: { sun: { intensity: 0.95 }, shadows: { enabled: true } },
       }
     );
 
@@ -523,7 +524,7 @@ describe("studio element renderer helpers", () => {
     const renderer = new StudioElementRenderer();
     const [container] = await renderer.renderElements(
       [createElement({ image: "" })],
-      { lighting: { sun: { intensity: 0.95 } } }
+      { lighting: { sun: { intensity: 0.95 }, shadows: { enabled: true } } }
     );
 
     const shadow = container.children.find((child: any) => child.label === "StudioElement:tree:shape-shadow") as any;
@@ -567,6 +568,35 @@ describe("studio element renderer helpers", () => {
     renderer.destroy();
   });
 
+  it("draws the convex parts of a polygon hitbox, scaled with the element, instead of its bounding box", async () => {
+    const renderer = new StudioElementRenderer();
+    const polygon = {
+      type: "polygon", x: 4, y: 20, width: 40, height: 24,
+      polygons: [[[4, 44], [44, 44], [44, 20], [24, 30], [4, 20]]],
+      parts: [[[4, 20], [24, 30], [4, 44]], [[24, 30], [44, 20], [44, 44], [4, 44]]],
+    };
+    const [container] = await renderer.renderElements(
+      [createElement({ image: "", hitbox: polygon, drawIn: [96, 144, 96, 96] })],
+      { debugCollisions: true }
+    );
+    const debug = container.children.find((child: any) => String(child.label ?? "").includes("CollisionDebug")) as any;
+    const rectRenderer = new StudioElementRenderer();
+    const rect = (await rectRenderer.renderElements([createElement({ image: "" })], { debugCollisions: true }))[0]
+      .children.find((child: any) => String(child.label ?? "").includes("CollisionDebug")) as any;
+    const rectInstructions = rect.context.instructions.length;
+    rectRenderer.destroy();
+
+    // One fill + one stroke per part, where a rectangle takes one of each.
+    expect(debug.context.instructions.length).toBe(rectInstructions * 2);
+    // The element is drawn at twice its size: the parts follow.
+    const bounds = debug.getLocalBounds();
+    expect(Math.round(bounds.minX)).toBeLessThanOrEqual(8);
+    expect(Math.round(bounds.maxX)).toBeGreaterThanOrEqual(87);
+    expect(Math.round(bounds.maxY)).toBeGreaterThanOrEqual(87);
+
+    renderer.destroy();
+  });
+
   it("does not attach Studio element collision debug graphics for disabled hitboxes", async () => {
     const renderer = new StudioElementRenderer();
     const [container] = await renderer.renderElements(
@@ -590,7 +620,7 @@ describe("studio element renderer helpers", () => {
           hitbox: { x: 4, y: 30, width: 10, height: 14 },
         }),
       ],
-      { lighting: { sun: { intensity: 0.95 } } }
+      { lighting: { sun: { intensity: 0.95 }, shadows: { enabled: true } } }
     );
 
     const shadow = container.children.find((child: any) => child.label === "StudioElement:tree:shape-shadow") as any;
@@ -641,11 +671,46 @@ describe("studio element renderer helpers", () => {
     expect(overlay.style).toBe("soft");
   });
 
+  it("resolves the color, halo and schedule of a light spot for the day night cycle", () => {
+    const overlay = resolveStudioElementLightSpotOverlay(
+      createElement({
+        drawIn: [0, 0, 48, 48],
+        rect: [0, 0, 48, 48],
+        lightSpot: { enabled: true, color: "#ffcf7a", halo: 40, schedule: { from: 19, to: 23.5 } },
+      })
+    );
+
+    expect(overlay.color).toBe("#ffcf7a");
+    expect(overlay.halo).toBe(0.4);
+    expect(overlay.schedule).toEqual([19, 23.5]);
+  });
+
+  it("leaves the color, halo and schedule out of a light spot that has none, and ignores invalid ones", () => {
+    const plain = resolveStudioElementLightSpotOverlay(
+      createElement({ drawIn: [0, 0, 48, 48], rect: [0, 0, 48, 48], lightSpot: { enabled: true } })
+    );
+    const invalid = resolveStudioElementLightSpotOverlay(
+      createElement({
+        drawIn: [0, 0, 48, 48],
+        rect: [0, 0, 48, 48],
+        lightSpot: { enabled: true, color: "javascript:alert(1)", halo: 400, schedule: { from: "x", to: 3 } },
+      })
+    );
+
+    expect(plain).not.toHaveProperty("color");
+    expect(plain).not.toHaveProperty("halo");
+    expect(plain).not.toHaveProperty("schedule");
+    expect(invalid).not.toHaveProperty("color");
+    expect(invalid.halo).toBe(1);
+    expect(invalid).not.toHaveProperty("schedule");
+  });
+
   it("resolves static wall shadow style from an active sun", () => {
     const style = resolveStudioTerrainWallShadowStyle(
       createTerrainData(),
       {
         sun: { intensity: 0.95 },
+        shadows: { enabled: true },
       }
     );
 
@@ -658,9 +723,11 @@ describe("studio element renderer helpers", () => {
   it("keeps wall shadow projection independent from sun distance", () => {
     const near = resolveStudioTerrainWallShadowStyle(createTerrainData(), {
       sun: { x: -10, y: -12, z: 120, intensity: 0.95 },
+      shadows: { enabled: true },
     });
     const far = resolveStudioTerrainWallShadowStyle(createTerrainData(), {
       sun: { x: -9999, y: -9999, z: 1200, intensity: 0.95 },
+      shadows: { enabled: true },
     });
 
     expect(near).not.toBeNull();

@@ -1,0 +1,8 @@
+{
+  "id": "calendar",
+  "title": "Calendar",
+  "description": "A generic calendar window with declared events, a player quest source and day hooks. Press the action key to open it.",
+  "tags": ["calendar", "gui", "events"],
+  "modes": ["standalone", "mmorpg"],
+  "port": 5192
+}

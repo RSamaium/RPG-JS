@@ -1,4 +1,5 @@
 import { normalizeElementSubmersion } from "./map-renderer/element-submersion";
+import { buildElementPolygonHitboxes } from "./element-polygon-hitbox";
 import {
   getMapChunkKey,
   type MapChunkBounds,
@@ -199,6 +200,7 @@ function prepareElements(map: Record<string, any>): {
         submersion: normalizeElementSubmersion(placement.submersion),
         lightSpot: placement.lightSpot ?? source.lightSpot,
         zIndexOffset: finite(placement.zIndexOffset),
+        sortMode: placement.sortMode ?? source.sortMode,
         ...(rule
           ? { drawRule: rule, drawRuleId: placement.drawRuleId ?? rule.id }
           : {}),
@@ -213,6 +215,16 @@ function prepareElements(map: Record<string, any>): {
       )
         return;
       const hitbox = source.hitbox;
+      const polygonHitboxes = buildElementPolygonHitboxes(
+        hitbox,
+        { x, y },
+        size.scale,
+        `studio-element:${placementIndex}`
+      );
+      if (polygonHitboxes) {
+        hitboxes.push(...polygonHitboxes);
+        return;
+      }
       const hx = x + finite(hitbox.x) * size.scale.x;
       const hy = y + finite(hitbox.y) * size.scale.y;
       const width = Math.max(1, finite(hitbox.width, 1) * size.scale.x);

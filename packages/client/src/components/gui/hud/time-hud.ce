@@ -1,0 +1,79 @@
+<DOMContainer width="100%" height="100%" class="rpg-time-hud-root">
+  @if (view()) {
+    <div
+      class="rpg-ui-clock"
+      role="timer"
+      aria-label={ariaLabel()}
+      data-phase={view().phase}
+      data-state={view().badge}
+      data-position={view().position}
+      data-size={view().size}
+      style={view().style}
+    >
+      <div class="rpg-ui-clock-pill">
+        <span class="rpg-ui-clock-phase" aria-hidden="true"></span>
+        <div class="rpg-ui-clock-text">
+          <small class="rpg-ui-clock-day">{dayLabel()}</small>
+          <b class="rpg-ui-clock-time">{view().clock}</b>
+        </div>
+      </div>
+      <div class="rpg-ui-clock-medallion" aria-hidden="true">
+        <div class="rpg-ui-clock-sky">
+          <span class="rpg-ui-clock-star" style="left:18%;top:28%"></span>
+          <span class="rpg-ui-clock-star" style="left:34%;top:14%"></span>
+          <span class="rpg-ui-clock-star" style="left:62%;top:22%"></span>
+          <span class="rpg-ui-clock-star" style="left:78%;top:34%"></span>
+          <span class="rpg-ui-clock-star" style="left:26%;top:44%"></span>
+          <span class="rpg-ui-clock-star" style="left:52%;top:36%"></span>
+          <span class="rpg-ui-clock-star" style="left:44%;top:20%"></span>
+          <span class="rpg-ui-clock-sun"></span>
+          <span class="rpg-ui-clock-moon"></span>
+          <span class="rpg-ui-clock-land"></span>
+        </div>
+        <span class="rpg-ui-clock-tick" style="--rpg-ui-clock-tick-angle:0deg"></span>
+        <span class="rpg-ui-clock-tick" style="--rpg-ui-clock-tick-angle:90deg"></span>
+        <span class="rpg-ui-clock-tick" style="--rpg-ui-clock-tick-angle:180deg"></span>
+        <span class="rpg-ui-clock-tick" style="--rpg-ui-clock-tick-angle:270deg"></span>
+        <span class="rpg-ui-clock-tick" data-minor="true" style="--rpg-ui-clock-tick-angle:45deg"></span>
+        <span class="rpg-ui-clock-tick" data-minor="true" style="--rpg-ui-clock-tick-angle:135deg"></span>
+        <span class="rpg-ui-clock-tick" data-minor="true" style="--rpg-ui-clock-tick-angle:225deg"></span>
+        <span class="rpg-ui-clock-tick" data-minor="true" style="--rpg-ui-clock-tick-angle:315deg"></span>
+        <span class="rpg-ui-clock-badge"></span>
+      </div>
+    </div>
+  }
+</DOMContainer>
+
+<script>
+  import { computed, signal, tick } from "canvasengine";
+  import { inject } from "../../../core/inject";
+  import { RpgClientEngine } from "../../../RpgClientEngine";
+  import { ClientTimeManager } from "../../../services/time";
+  import { buildHudView, resolveHudOptions } from "../../../services/timeHud";
+
+  const { data } = defineProps();
+  const engine = inject(RpgClientEngine);
+  const { t } = engine.i18n();
+  const timeManager = inject(ClientTimeManager);
+
+  // The hour is projected from the last snapshot of the server. Four updates a second are plenty for a clock.
+  const now = signal(Date.now());
+  let lastSlot = 0;
+  tick(() => {
+    const slot = Math.floor(Date.now() / 250);
+    if (slot === lastSlot) return;
+    lastSlot = slot;
+    now.set(Date.now());
+  });
+
+  const options = computed(() => resolveHudOptions(typeof data === "function" ? data() : data));
+  const view = computed(() => {
+    const state = timeManager.state(now());
+    return state ? buildHudView(state, options()) : null;
+  });
+  const dayLabel = computed(() => (view() ? t("rpg.time.day", { day: view().day }) : ""));
+  const ariaLabel = computed(() => {
+    const v = view();
+    return v ? t("rpg.time.hud", { day: v.day, time: v.clock, phase: t("rpg.time.phase." + v.phase) }) : "";
+  });
+</script>

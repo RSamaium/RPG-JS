@@ -2,6 +2,7 @@ import DialogboxComponent from "./dialogbox/index.ce";
 import BoxComponent from "./box.ce";
 import ShopComponent from "./shop/shop.ce";
 import HudComponent from "./hud/hud.ce";
+import TimeHudComponent from "./hud/time-hud.ce";
 import SaveLoadComponent from "./save-load.ce";
 import MainMenuComponent from "./menu/main-menu.ce";
 import ItemsMenuComponent from "./menu/items-menu.ce";
@@ -23,6 +24,7 @@ export {
     BoxComponent,
     ShopComponent,
     HudComponent,
+    TimeHudComponent,
     SaveLoadComponent,
     MainMenuComponent,
     ItemsMenuComponent,

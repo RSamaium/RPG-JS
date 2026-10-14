@@ -32,12 +32,14 @@ synchronization are already there — you write the game, not the engine.
 
 <table>
 <tr>
-<td width="50%"><a href="https://youtu.be/JYzx0JG_cts"><img src="https://img.youtube.com/vi/JYzx0JG_cts/maxresdefault.jpg" alt="Build an RPG Once, Run It as an MMORPG | RPGJS Explained"></a></td>
-<td width="50%"><a href="https://youtu.be/FxKeLzf4yLM"><img src="https://img.youtube.com/vi/FxKeLzf4yLM/maxresdefault.jpg" alt="From Empty Folder to Multiplayer RPG in 5 Steps | RPGJS Tutorial"></a></td>
+<td width="33%"><a href="https://youtu.be/JYzx0JG_cts"><img src="https://img.youtube.com/vi/JYzx0JG_cts/maxresdefault.jpg" alt="Build an RPG Once, Run It as an MMORPG | RPGJS Explained"></a></td>
+<td width="33%"><a href="https://youtu.be/FxKeLzf4yLM"><img src="https://img.youtube.com/vi/FxKeLzf4yLM/maxresdefault.jpg" alt="From Empty Folder to Multiplayer RPG in 5 Steps | RPGJS Tutorial"></a></td>
+<td width="33%"><a href="https://youtu.be/5U81jlK-ZV8"><img src="https://img.youtube.com/vi/5U81jlK-ZV8/maxresdefault.jpg" alt="Spritesheets & Maps in RPGJS: Tiled or Your Own Map System"></a></td>
 </tr>
 <tr>
 <td align="center"><b>RPGJS explained</b><br>Build an RPG once, run it as an MMORPG</td>
 <td align="center"><b>Getting started tutorial</b><br>From an empty folder to a multiplayer RPG in 5 steps</td>
+<td align="center"><b>Spritesheets &amp; maps tutorial</b><br>Tiled or your own map system</td>
 </tr>
 </table>
 

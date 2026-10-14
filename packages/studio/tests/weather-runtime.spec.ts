@@ -109,3 +109,39 @@ describe("Studio weather runtime", () => {
     expect(snowPreset.enum).not.toContain("rpgMorningMist");
   });
 });
+
+describe("extra weather effects and presets", () => {
+  test("resolves a preset of an ambient effect with the params it sets", () => {
+    const state = normalizeWeatherState({ preset: "swampFireflies" }, 1);
+    expect(state?.effect).toBe("fireflies");
+    expect(state?.params).toMatchObject({ density: 200, maxDrops: 110, colors: ["#b8ff7a", "#7affc8", "#e8ff8a"] });
+    expect(normalizeWeatherState({ preset: "moonbeams" }, 1)).toMatchObject({
+      effect: "rays",
+      params: { sunIntensity: 0.75, rayFan: 0.15, rayColor: "#b8d4ff" },
+    });
+    expect(normalizeWeatherState({ effect: "lava" })).toBeNull();
+  });
+
+  test("keeps the output of a former preset free of extra params", () => {
+    expect(Object.keys(normalizeWeatherState({ preset: "steadyRain" }, 1)!.params!)).toHaveLength(13);
+  });
+
+  test("hands the extra params of an effect to the renderer, and nothing for the others", () => {
+    const fireflies = toCanvasWeatherOptions(normalizeWeatherState({ preset: "swampFireflies" }, 1)!);
+    expect(fireflies).toMatchObject({ effect: "fireflies", density: 200, maxDrops: 110, colors: ["#b8ff7a", "#7affc8", "#e8ff8a"] });
+    const sand = toCanvasWeatherOptions(normalizeWeatherState({ preset: "sandstorm" }, 1)!);
+    expect(sand).toMatchObject({ effect: "sand", density: 320, haze: 1.6 });
+    expect(toCanvasWeatherOptions(normalizeWeatherState({ preset: "steadyRain" }, 1)!)).not.toHaveProperty("colors");
+  });
+
+  test("clamps and filters the extra params", () => {
+    const params = normalizeWeatherState({ preset: "custom", effect: "rays", params: { rayFan: 9, rayColor: "red", colors: ["#fff", 3], sunIntensity: 2 } }, 1)!.params!;
+    expect(params).toMatchObject({ rayFan: 1, sunIntensity: 2, colors: ["#fff"] });
+    expect(params).not.toHaveProperty("rayColor");
+  });
+
+  test("switches to the effect of a new preset when merging", () => {
+    const rain = normalizeWeatherState({ preset: "steadyRain" }, 1);
+    expect(mergeWeatherState(rain, { preset: "holyRays" }, 2)).toMatchObject({ effect: "rays", params: { rayFan: 0.9 } });
+  });
+});

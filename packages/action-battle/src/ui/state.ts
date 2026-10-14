@@ -145,3 +145,18 @@ export const stopAttackPreview = (id?: number) => {
     active: false,
   });
 };
+
+/**
+ * Tile size used to place a targeting cursor: the configured one, else the map's, as the server does.
+ * It must never come from the hitbox of the player: that one is the size of its body, not of a tile.
+ */
+export const resolveActionBattleClientTileSize = (engine: any) => {
+  const targeting = actionBattleUiOptions().targeting;
+  const configured = typeof targeting === "object" ? targeting.tileSize : undefined;
+  if (configured?.width && configured?.height) return configured;
+  const map = engine?.sceneMap;
+  return {
+    width: Number(map?.tileWidth) || 32,
+    height: Number(map?.tileHeight) || 32,
+  };
+};

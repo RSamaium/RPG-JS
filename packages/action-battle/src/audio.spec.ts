@@ -123,3 +123,15 @@ describe("action battle audio", () => {
     }));
   });
 });
+
+describe("battle music of an enemy without its own track", () => {
+  it("an empty enemy music falls back to the project battle music", () => {
+    const enter = vi.fn();
+    const engine = { music: { enter, leave: vi.fn(), contextId: undefined, overrideId: undefined } };
+    createActionBattleCombatAudioVisual({ music: { battle: "project-battle" } } as any)({
+      engine,
+      data: { threats: [{ enemyId: "a", music: "", priority: 0, order: 1 }] },
+    });
+    expect(enter).toHaveBeenCalledWith("project-battle", expect.anything());
+  });
+});

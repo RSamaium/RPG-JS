@@ -99,12 +99,16 @@ function replaceWorkspaceReferences(
   let hasChanges = false;
   
   for (const [packageName, version] of Object.entries(updated)) {
-    if (version === 'workspace:*') {
+    // `workspace:*` pins the version, `workspace:^` / `workspace:~` keep the range operator
+    // (peer dependencies use `workspace:^`), as `pnpm publish` does.
+    const workspaceRange = /^workspace:([*^~])$/.exec(version);
+    if (workspaceRange) {
       const cachedPackage = packageCache.get(packageName);
       if (cachedPackage) {
-        updated[packageName] = cachedPackage.version;
+        const operator = workspaceRange[1] === '*' ? '' : workspaceRange[1];
+        updated[packageName] = `${operator}${cachedPackage.version}`;
         hasChanges = true;
-        console.log(`  → Replaced ${packageName}: workspace:* → ${cachedPackage.version}`);
+        console.log(`  → Replaced ${packageName}: ${version} → ${updated[packageName]}`);
       } else {
         console.warn(`  ⚠ No cached version found for ${packageName}`);
       }

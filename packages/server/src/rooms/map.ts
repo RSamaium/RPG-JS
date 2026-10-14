@@ -1255,6 +1255,10 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
         events.forEach(event => {
           event.execMethod('onAction', [player, action]);
         });
+        // Tell the `onInput` hooks (an attack, for instance) that the action was used to interact
+        if (action && typeof action === 'object' && events.some(event => event.interactive())) {
+          Object.defineProperty(action, 'interactedWithEvent', { value: true, enumerable: false });
+        }
       }
     }
     player.execMethod('onInput', [action]);
@@ -2132,7 +2136,10 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
           const hookObj = event as EventHooks;
           if (hookObj.onInit) this.onInit = hookObj.onInit.bind(this);
           if (hookObj.onChanges) this.onChanges = hookObj.onChanges.bind(this);
-          if (hookObj.onAction) this.onAction = hookObj.onAction.bind(this);
+          if (hookObj.onAction) {
+            this.onAction = hookObj.onAction.bind(this);
+            this.interactive.set(true);
+          }
           if (hookObj.onPlayerTouch) this.onPlayerTouch = hookObj.onPlayerTouch.bind(this);
           if (hookObj.onTouch) this.onTouch = hookObj.onTouch.bind(this);
           if (hookObj.onTouchEnd) this.onTouchEnd = hookObj.onTouchEnd.bind(this);
@@ -2462,8 +2469,8 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
    */
   setWeather(next: WeatherState | null, options: WeatherSetOptions = {}): WeatherState | null {
     const sync = options.sync !== false;
-    if (next && !next.effect) {
-      throw new Error("setWeather: 'effect' is required when weather is not null.");
+    if (next && !next.effect && !next.preset) {
+      throw new Error("setWeather: 'effect' or 'preset' is required when weather is not null.");
     }
     this._weatherState = cloneWeatherState(next);
     if (sync) {
@@ -2478,15 +2485,20 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
   /**
    * Patch the current weather state.
    *
-   * Nested `params` values are merged.
+   * Nested `params` values are merged. A patch that names a new `preset` (or a new
+   * `effect`) replaces the previous one, so the old `effect` never overrides the
+   * effect of the new preset.
    */
   patchWeather(patch: Partial<WeatherState>, options: WeatherSetOptions = {}): WeatherState | null {
     const current = this._weatherState ?? null;
-    if (!current && !patch.effect) {
-      throw new Error("patchWeather: 'effect' is required when no weather is currently set.");
+    if (!current && !patch.effect && !patch.preset) {
+      throw new Error("patchWeather: 'effect' or 'preset' is required when no weather is currently set.");
     }
+    const base: Partial<WeatherState> = { ...(current ?? {}) };
+    if (patch.preset !== undefined && patch.effect === undefined) delete base.effect;
+    if (patch.effect !== undefined && patch.preset === undefined) delete base.preset;
     const next: WeatherState = {
-      ...(current ?? {}),
+      ...base,
       ...patch,
       params: {
         ...(current?.params ?? {}),

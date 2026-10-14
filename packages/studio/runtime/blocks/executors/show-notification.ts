@@ -23,7 +23,8 @@ export const schemaShowNotification = {
         type: 'number',
         title: 'Duration (ms)',
         description: 'How long to display the notification',
-        minimum: 0
+        minimum: 0,
+        default: 2000
       },
       icon: {
         type: 'string',
@@ -54,7 +55,8 @@ export const schemaShowNotification = {
       type: {
         type: 'string',
         title: 'Type',
-        enum: ['info', 'warn', 'error']
+        enum: ['info', 'warn', 'error'],
+        default: 'info'
       }
     },
     required: ['message']
@@ -63,9 +65,9 @@ export const schemaShowNotification = {
 
 export const show_notification: BlockExecutor<'show_notification'> = async (context, params) => {
   await context.player.showNotification(resolveStringTemplate(params.message, context), {
-    time: params.time,
-    icon: params.icon,
-    sound: params.sound,
-    type: params.type
+    time: params.time ?? undefined,
+    icon: params.icon || undefined,
+    sound: params.sound || undefined,
+    type: params.type || undefined
   });
 };

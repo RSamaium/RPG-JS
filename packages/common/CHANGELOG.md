@@ -1,5 +1,33 @@
 # @rpgjs/common
 
+## 5.1.0
+
+### Minor Changes
+
+- fcf625e: Weather supports every CanvasEngine effect and preset, and custom weather components.
+
+  - `WeatherState.preset` is forwarded to CanvasEngine's `<Weather>`, `effect` is optional when a preset gives it, and every param is forwarded as it is. `map.setWeather()` and `patchWeather()` accept a preset without an effect, and a patch with a new preset or effect replaces the previous one.
+  - `WeatherEffect` accepts the CanvasEngine effects (`rays`, `embers`, `ash`, `leaves`, `petals`, `fireflies`, `spores`, `sand`) and custom ids; `WeatherParams` is open. `@rpgjs/common` exports the catalog (`WEATHER_EFFECTS`, `WEATHER_PRESET_EFFECTS`, `WEATHER_PRESET_NAMES`, `getWeatherPresetEffect()`, `resolveWeatherEffect()`) without importing the renderer.
+  - New `weathers: [{ id, component }]` client module option: when `effect` is a registered id, the scene renders that component in the weather layer, and a registered id replaces a built-in effect of the same name. An unknown effect or preset is reported once and renders nothing.
+
+### Patch Changes
+
+- 3d240d7: Add a day night cycle based on the `DayNightCycle` preset of CanvasEngine. Maps enable it with `lighting.dayNight`, and light spots get `halo` and `schedule` (hours they are on). With the Time Manager, `lighting: { dayNight: true }` drives the scene from the synchronized server hour; `state.hourFloat` and `state.phase` expose the hour with decimals and the phase of the day.
+
+  Time Manager fixes: the lighting phases are now merged into the lighting of the map instead of replacing it (light spots were lost), and the client projects the time from the clock of the server so a client clock that is off no longer shifts the displayed hour.
+
+  The Time Manager lighting accepts per map overrides (`lighting.maps`, `false` to leave a map untouched) and a map can opt out with `lighting.dayNight.enabled: false`. A new `onPhaseChange` hook fires with `onLightingPhaseChange`, the client warns when the server drives the cycle with the Time Manager and the client module is missing, and the docs state the unit of `scale` (game minutes per real minute).
+
+- 9f92e2d: Fix the walk / stand flicker of a character that is not really moving (an NPC pushing against an obstacle): the movement animation now follows a movement only once it lasts 120 ms.
+- 8abce20: An event set to `through` and placed on a collision (a seller behind a counter) stays where it was placed and no longer jumps. The collision filter only let `through` events cross other characters: walls and map hitboxes still pushed the event out (5 px at a time) before its position was put back, at every physics step. A `through` event now ignores them too (players are unchanged), and the Studio init applies `through` before it teleports the event to its position.
+- 6a924a3: Add a shared `withTimeManager()` module that synchronizes authoritative map time snapshots, exposes server and client time managers, supports calendars and pause/scale controls, and can optionally drive map lighting and weighted weather ambiences without adding new public methods to `RpgMap`.
+
+  The time manager now also exposes map-aware environment hooks for plugin-level rules and event-level reactions when time, day, lighting phase, or weather ambience changes.
+
+- acf93b3: With Action Battle, the action key talks to an NPC (or uses a chest) instead of attacking. Events with an `onAction` hook are now synchronized as `interactive` (enemies with a `BattleAi` are not), `map.getInteractableObjectIds()` lists what is in front of a character, and the `onInput` hooks receive the action with `interactedWithEvent` when an interactive event handled it. The client no longer plays its predicted attack when it faces an interactive event.
+- 7b2e8d6: Lighting shadows are now opt-in: sprites, elements and terrain only cast a shadow when `lighting.shadows.enabled` is `true`. An active sun or a light spot no longer turns shadows on by itself (it put a harsh shadow on every character and made walking NPCs flicker).
+- 831d23a: Add a clock on screen for the Time Manager: `withTimeManager({ hud: true })` (or `hud: { position, size, fastScale }`) draws a pill with the day and the hour, and a round medallion whose sky, sun, moon and stars follow the hour of the server, with a badge when the time is paused or fast. `@rpgjs/ui-css` gets the `rpg-ui-clock` styles and Storybook stories.
+
 ## 5.0.0
 
 ### Minor Changes

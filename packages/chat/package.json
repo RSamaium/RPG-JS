@@ -28,10 +28,10 @@
     "test:types": "tsc --noEmit --strict --skipLibCheck true --target ES2022 --module ESNext --moduleResolution Bundler tests/public-api-types.ts"
   },
   "peerDependencies": {
-    "@rpgjs/client": "workspace:*",
-    "@rpgjs/common": "workspace:*",
-    "@rpgjs/server": "workspace:*",
-    "@rpgjs/vite": "workspace:*",
+    "@rpgjs/client": "workspace:^",
+    "@rpgjs/common": "workspace:^",
+    "@rpgjs/server": "workspace:^",
+    "@rpgjs/vite": "workspace:^",
     "canvasengine": "^2.4.0"
   },
   "devDependencies": {
