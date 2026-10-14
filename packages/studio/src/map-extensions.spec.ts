@@ -12,6 +12,7 @@ const context = (mapId = "map-1"): StudioMapExtensionContext => ({
   normalizeMorphology: () => [],
   readData: () => undefined,
   updateData: () => undefined,
+  rebuildElementCollisions: () => undefined,
 });
 
 describe("studio map extensions", () => {

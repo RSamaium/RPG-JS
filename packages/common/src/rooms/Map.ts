@@ -22,6 +22,8 @@ import type { RpgReadableSignal, RpgWritableSignal } from "../foundation";
 
 const gameplaySignal = signal as <T>(value: T) => RpgWritableSignal<T>;
 
+const REPLACED_HITBOXES_NAMESPACE = "__replaced__";
+
 export type PhysicsEntityKind = "hero" | "npc" | "generic";
 
 export interface MapPhysicsInitContext {
@@ -1543,6 +1545,41 @@ export abstract class RpgCommonMap<T extends RpgCommonPlayer> {
     if (!ids) return;
     ids.forEach((id) => this.removeHitbox(id));
     this.streamedStaticHitboxIds.delete(namespace);
+  }
+
+  /**
+   * Replace the static hitboxes whose id matches, wherever they came from: those of the map data, loaded with the
+   * physics world, and those of a streamed chunk. The others (the rest of the map, characters, events) are left as
+   * they are. Use it when a tool changes what the collisions are made of while the map runs, e.g. a map editor that
+   * moves placed elements.
+   *
+   * The new hitboxes are registered like a streamed chunk, under the `replaced` namespace, so a call replaces what the
+   * previous one added.
+   *
+   * @title Replace static hitboxes
+   * @method map.replaceStaticHitboxes
+   * @param match - Tells if the id of a static hitbox is one to remove.
+   * @param hitboxes - The hitboxes that take their place: serializable rectangles or polygons.
+   * @returns {void}
+   * @memberof RpgCommonMap
+   * @example
+   * ```ts
+   * map.replaceStaticHitboxes((id) => id.includes("studio-element:"), [{ id: "studio-element:0", x: 96, y: 48, width: 32, height: 32 }]);
+   * ```
+   */
+  replaceStaticHitboxes(match: (id: string) => boolean, hitboxes: MapChunkHitbox[]): void {
+    for (const entity of this.physic.getEntities()) {
+      if (!entity.isStatic()) continue;
+      const id = String(entity.uuid);
+      if (match(id)) this.removeHitbox(id);
+    }
+    for (const [namespace, ids] of this.streamedStaticHitboxIds) {
+      for (const id of [...ids]) {
+        if (!this.physic.getEntityByUUID(id)) ids.delete(id);
+      }
+      if (ids.size === 0) this.streamedStaticHitboxIds.delete(namespace);
+    }
+    this.replaceStreamedStaticHitboxes(REPLACED_HITBOXES_NAMESPACE, hitboxes);
   }
 
   /**

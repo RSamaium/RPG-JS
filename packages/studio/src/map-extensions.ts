@@ -27,8 +27,20 @@ export interface StudioMapExtensionContext {
   /**
    * Replaces part of the data the map is drawn with, and draws it again:
    * `{ elementsLow: [...resolved elements] }`. Whatever is not named is left as it is.
+   *
+   * `layerOpacity` is a key the renderer reads: `{ layerOpacity: { terrain: 0.4, elementsLow: 1 } }` draws each named layer
+   * (`terrain`, `elementsAlwaysLow`, `elementsLow`, `elementsHigh`) at that opacity, from 0 to 1. A layer that is not named
+   * stays opaque. Characters and events are not affected.
    */
   updateData(patch: Readonly<Record<string, unknown>>): void;
+  /**
+   * Makes the collisions follow the placed elements: given them as stored (`{ elementsLow: [...] }`, the layer that blocks),
+   * it replaces every hitbox the elements of the map made, on the client map and on the server map, and leaves the others
+   * (the base map, the terrain). Same rules as at load: only `elementsLow`, the polygon hitboxes of an element, its scale
+   * and its draw rule. After the editor adds, moves or removes an element, the hero collides with what is drawn, and only
+   * with it. The server applies it only for a player it allows: see `createStudioElementCollisionsServer`.
+   */
+  rebuildElementCollisions(placed: Readonly<{ low: readonly unknown[] }>): void;
 }
 
 /**

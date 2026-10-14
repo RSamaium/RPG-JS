@@ -26,8 +26,8 @@
       "types": "./dist/client/index.d.ts"
     },
     "./server": {
-      "import": "./dist/server/index.js",
-      "types": "./dist/server/server-entry.d.ts"
+      "types": "./dist/server/server-entry.d.ts",
+      "import": "./dist/server/index.js"
     }
   },
   "keywords": [],

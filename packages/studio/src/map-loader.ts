@@ -3,7 +3,7 @@ import { normalizeElementSubmersion } from "./map-renderer/element-submersion";
 
 import { buildElementPolygonHitboxes } from './element-polygon-hitbox'
 import MapComponentV2 from "./components/draw-map-v2.ce";
-import { inject, RpgClientEngine } from "@rpgjs/client";
+import { inject, RpgClientEngine, WebSocketToken, type AbstractWebsocket } from "@rpgjs/client";
 import { createSpriteSheetObject, resolveAssetSource } from "./spritesheet-utils";
 import { getGameDataProvider, getStudioGameRuntimeConfig } from "./data-provider";
 import { resolveStudioMapScale, scaleStudioHitboxes } from './map-scale';
@@ -16,6 +16,7 @@ import { resolveStudioElementSize } from "./studio-element-size";
 import { STUDIO_DIRECT_LOAD_MARKER } from "./map-streaming";
 import { assignStudioEventPlacementIds } from "./event-placement";
 import { runStudioMapExtensions } from "./map-extensions";
+import { rebuildStudioElementCollisions } from "./element-collisions";
 
 /** Pixels of one map cell in a v2 Studio map. */
 const STUDIO_V2_CELL_SIZE = 48;
@@ -332,6 +333,7 @@ const resolveMapEventReferences = async (
 
 export const loadMap = async (mapId: string) => {
   const client = inject(RpgClientEngine) as RpgClientEngineWithConfig;
+  const socket = inject<AbstractWebsocket>(WebSocketToken);
   const hasProjectId = Boolean(client.globalConfig.projectId && client.globalConfig.projectId.trim().length > 0);
   const runtimeMode =
     getStudioGameRuntimeConfig().runtimeMode ??
@@ -1036,6 +1038,16 @@ export const loadMap = async (mapId: string) => {
         const current = scene?.();
         if (!scene || !current?.data) return;
         scene.set({ ...current, data: { ...current.data, ...patch } });
+      },
+      rebuildElementCollisions(placed) {
+        rebuildStudioElementCollisions(
+          {
+            scene: (client as unknown as { scene?: any }).scene,
+            socket,
+            mapData: map,
+          },
+          placed.low
+        );
       },
     });
   }

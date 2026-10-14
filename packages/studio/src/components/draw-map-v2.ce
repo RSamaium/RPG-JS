@@ -1,12 +1,14 @@
 <Container scale>
-    <StudioTerrainMap data debugCollisions={terrainPluginOptions().debugCollisions === true} splitWallForeground={true} /> 
+    <Container alpha={terrainAlpha}>
+      <StudioTerrainMap data debugCollisions={terrainPluginOptions().debugCollisions === true} splitWallForeground={true} />
+    </Container>
     <Container sortableChildren={true} pixiChildren={terrainWallShadowPixiChildren} />
     <Container sortableChildren={true} pixiChildren={groundShadowPixiChildren} />
-    <Container sortableChildren={true} pixiChildren={elementsAlwaysLowPixiChildren} />
+    <Container sortableChildren={true} alpha={elementsAlwaysLowAlpha} pixiChildren={elementsAlwaysLowPixiChildren} />
     <Container scale={eventLayerScale}>
       <StudioEventLayer pixiChildren={eventLayerPixiChildren} /> 
     </Container>
-    <Container sortableChildren={true} pixiChildren={elementsHighPixiChildren} />
+    <Container sortableChildren={true} alpha={elementsHighAlpha} pixiChildren={elementsHighPixiChildren} />
 </Container>
 
 @if (weatherOptions()) {
@@ -560,6 +562,15 @@
       return children
     }
 
+    const layerOpacity = (key) => computed(() => {
+      const value = Number(data().layerOpacity?.[key])
+      return Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 1
+    })
+    const terrainAlpha = layerOpacity('terrain')
+    const elementsAlwaysLowAlpha = layerOpacity('elementsAlwaysLow')
+    const elementsHighAlpha = layerOpacity('elementsHigh')
+    const elementsLowAlpha = layerOpacity('elementsLow')
+
     const mapBounds = computed(() => {
       const mapData = map()
       const renderData = data()?.terrainRenderData
@@ -625,6 +636,7 @@
       elementsAlwaysLowChildren = alwaysLowChildren
       syncPixiWorldChildren(elementsAlwaysLowWorld, elementsAlwaysLowChildren)
       elementsLowPixiChildren.set(toEventLayerSpace(lowChildren))
+      applyLowAlpha()
       syncPixiWorldChildren(groundShadowWorld, [
         ...elementsAlwaysLowRenderer.getGroundShadowSprites(),
         ...elementsLowRenderer.getGroundShadowSprites(),
@@ -634,6 +646,16 @@
       syncPixiWorldChildren(elementsHighWorld, elementsHighChildren)
       if (layers) Object.values(layers).forEach((layer) => layer.commit())
     }
+
+    // The low elements share the event layer with the characters, so their opacity is set on each of them.
+    const applyLowAlpha = () => {
+      const alpha = untracked(() => elementsLowAlpha())
+      elementsLowPixiChildren().forEach((child) => { if (child) child.alpha = alpha })
+    }
+    effect(() => {
+      elementsLowAlpha()
+      untracked(applyLowAlpha)
+    })
 
     effect(() => {
       data()
