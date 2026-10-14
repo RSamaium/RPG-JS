@@ -1088,6 +1088,8 @@ export class BattleAi {
         this.destroy();
         return;
       }
+      // A paused map (a map editor holds it) holds its enemies too.
+      if ((this.event.getCurrentMap() as { isAutoTickEnabled?: () => boolean } | undefined)?.isAutoTickEnabled?.() === false) return;
       this.updateAiBehavior();
     }, 100);
 

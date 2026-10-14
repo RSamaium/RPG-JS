@@ -1876,6 +1876,14 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
   }
 
   /**
+   * Whether the map runs its own loop (see {@link setAutoTick}). Systems that keep their own timers, such as the AI of enemies,
+   * read it to stand still while the map is paused.
+   */
+  isAutoTickEnabled(): boolean {
+    return this._autoTickEnabled;
+  }
+
+  /**
    * Get a world manager by id
    * 
    * Returns the world maps manager for the given world ID. Currently, only
