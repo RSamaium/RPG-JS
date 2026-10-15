@@ -226,11 +226,24 @@ context.updateParams({ scale: 2, backgroundMusic: await context.resolveAudio(set
 context.updateParams({ backgroundMusic: undefined }); // silence
 ```
 
+### The size a map gives to an event
+
+A placement of an event on a map (`events: [{ eventId, x, y }]`) can carry the size this map gives to it, so the same event is bigger here than there:
+
+- `scale` (number above 0, default `1`): multiplies the character **and** the hitbox of that placement.
+- `hitbox` (`{ width, height }`, above 0): the hitbox this map gives to the placement instead of the one of the event, in the same unit as the event's own hitbox (before the scale).
+
+```json
+{ "eventId": "goblin", "x": 320, "y": 240, "scale": 1.5, "hitbox": { "width": 40, "height": 24 } }
+```
+
+The Studio server keeps both on save (`PUT /api/maps/:id`, a value that is not a size is a `400`) and sends them with the game's map; the runtime applies them when it makes the event (character through its graphic scale, hitbox through the hitbox of the event). `resolveStudioEventDisplay({ media, frame, hitbox, scale })` (from `@rpgjs/studio/client`) takes the same `scale`, so a map editor draws the event at the size the player sees. `placeStudioEvent` (below) takes them too.
+
 ### Events that follow the editor
 
 A map editor that runs in the same page as the server (a standalone game) can change the events the game runs without loading the map again. The Studio server map has these methods; positions are those the map stores (the game applies the map scale):
 
-- `placeStudioEvent(record, { x, y, runtimeId })`: puts an event of the project on the map as the load does (media resolved, workflows and hitbox of the project), so an enemy attacks and a character answers. It resolves to `runtimeId`, or `undefined` when an event already has that id. `record` is the event as the project stores it (`{ _id, ... }`).
+- `placeStudioEvent(record, { x, y, runtimeId, scale?, hitbox? })`: puts an event of the project on the map as the load does (media resolved, workflows and hitbox of the project), so an enemy attacks and a character answers. It resolves to `runtimeId`, or `undefined` when an event already has that id. `record` is the event as the project stores it (`{ _id, ... }`).
 - `moveStudioEvent(runtimeId, x, y)`: moves an event; resolves to `false` when there is none.
 - `removeStudioEvent(runtimeId)`: takes an event off the map; `false` when there is none.
 - `listStudioEvents()`: the events the game runs, as `{ runtimeId, sourceEventId }`. An event of the map has the id of its event, then `id::2`, `id::3` for each other placement of it.

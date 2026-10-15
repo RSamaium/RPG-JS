@@ -1,5 +1,6 @@
 import { normalizeRuntimeHitbox } from "./runtime-hitbox";
 import { collectEventGraphics, scaleEventHitboxToGraphic } from "./event-hitbox-scale";
+import { scaleHitboxToPlacement } from "./placement-scale";
 import { bindStudioCombatAnimationsToEntity } from "./action-battle-animations";
 import { runPlayerEventOnce } from "./event-execution-guard";
 import { createStudioRuntimeEventEditing } from "./runtime-event-editing";
@@ -108,7 +109,7 @@ export const resolveRuntimeEventHitbox = (object: any, params: any): { width: nu
     : undefined;
 
   const hitbox = normalizeRuntimeHitbox(object?.hitbox) ?? normalizeRuntimeHitbox(triggerHitbox) ?? normalizeRuntimeHitbox(params?.hitbox);
-  return hitbox ? scaleEventHitboxToGraphic(hitbox, collectEventGraphics(object)) : undefined;
+  return hitbox ? scaleHitboxToPlacement(scaleEventHitboxToGraphic(hitbox, collectEventGraphics(object)), object) : undefined;
 };
 
 const normalizeProjectId = (value: unknown): string | null => {

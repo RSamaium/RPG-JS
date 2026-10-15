@@ -106,7 +106,7 @@ Music and ambience fields must use media `_id` values resolved through `/api/med
 This endpoint accepts partial section updates. Omitted fields are preserved. Send only the section that changed when possible:
 
 - Start position only: `{ "startX": 0, "startY": 0 }`
-- Events only: `{ "events": [{ "eventId": "...", "x": 10, "y": 20 }] }` or `{ "events": [] }`
+- Events only: `{ "events": [{ "eventId": "...", "x": 10, "y": 20 }] }` or `{ "events": [] }`. A placement can also carry `scale` (number above 0, multiplies the character and the hitbox of that placement, default 1) and `hitbox` (`{ "width": 40, "height": 24 }`, above 0, the hitbox this map gives it instead of the one of the event, before the scale); anything else is a `400`
 - Terrain morphology only: `{ "terrainMorphologyLayer": { ... } }` or `{ "terrainMorphologyLayer": null }`
 - Semantic generated walls: send `wallSurfaceLayer` together with base64 `wallSurfaceControlTexture`; send `{ "wallSurfaceLayer": null }` to remove the semantic visual layer
 - Terrain only: send `terrain`, and optionally `terrainLayer` plus `terrainControlTexture`
@@ -125,7 +125,7 @@ Useful fields from `mapSchema` when a full map update is needed:
 - `lighting?: { sun: { enabled: boolean, intensity: number } } | null`
 - `waterAnimation?: { enabled: boolean, speed?: number, intensity?: number, direction?: number }`
 - `mapLoadBlockCollectionId?: string | null`
-- `events?: Array<{ eventId: string, x: number, y: number }>`
+- `events?: Array<{ eventId: string, x: number, y: number, scale?: number, hitbox?: { width: number, height: number } }>`
 - `elementsAlwaysLow?: string`
 - `elementsLow?: string`
 - `elementsHigh?: string`

@@ -1,4 +1,5 @@
 import { resolveGeneratedCharacterDisplayScale, scaleEventHitboxToGraphic } from "./event-hitbox-scale";
+import { readPlacementScale, scaleHitboxToPlacement } from "./placement-scale";
 import { STUDIO_DEFAULT_CHARACTER_DISPLAY_SCALE } from "./spritesheet-utils";
 
 export interface StudioEventDisplayInput {
@@ -8,6 +9,8 @@ export interface StudioEventDisplayInput {
   readonly frame?: readonly [number, number, number, number] | null;
   /** The hitbox of the event as the event says it, before the size of its character is taken into account. */
   readonly hitbox: { readonly width: number; readonly height: number };
+  /** The scale the map gives to this placement (see `readPlacementScale`): it multiplies the character and the hitbox. */
+  readonly scale?: number;
 }
 
 export interface StudioEventDisplay {
@@ -24,12 +27,13 @@ export interface StudioEventDisplay {
  */
 export function resolveStudioEventDisplay(input: StudioEventDisplayInput): StudioEventDisplay {
   const media = input.media ?? null;
-  const hitbox = media ? scaleEventHitboxToGraphic(input.hitbox, [media]) : input.hitbox;
+  const factor = readPlacementScale(input);
+  const hitbox = scaleHitboxToPlacement(media ? scaleEventHitboxToGraphic(input.hitbox, [media]) : input.hitbox, input);
   const frame = input.frame;
   if (!media || !frame || !(frame[2] > 0) || !(frame[3] > 0)) return { hitbox };
   const metadataScale = media.metadata?.["scale"];
   const scale =
     resolveGeneratedCharacterDisplayScale(media) ??
     (typeof metadataScale === "number" ? STUDIO_DEFAULT_CHARACTER_DISPLAY_SCALE * metadataScale : STUDIO_DEFAULT_CHARACTER_DISPLAY_SCALE);
-  return { hitbox, image: { width: frame[2] * scale, height: frame[3] * scale } };
+  return { hitbox, image: { width: frame[2] * scale * factor, height: frame[3] * scale * factor } };
 }
