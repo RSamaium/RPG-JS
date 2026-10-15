@@ -7,6 +7,7 @@ const context = (mapId = "map-1"): StudioMapExtensionContext => ({
   size: [960, 720],
   elements: { alwaysLow: [], low: [{ id: "a", x: 1, y: 2 }], high: [] },
   resolveElement: () => null,
+  addElementTileset: async () => undefined,
   tilesetImage: () => undefined,
   resolveAsset: (name: string) => name,
   normalizeMorphology: () => [],

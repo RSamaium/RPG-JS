@@ -16,6 +16,13 @@ export interface StudioMapExtensionContext {
    * element cannot be found (such an element is not drawn).
    */
   resolveElement(placed: any, layer: StudioElementLayerName): any | null;
+  /**
+   * Teaches the map an element tileset it was not loaded with (a set the person added while editing): its elements can then be
+   * resolved (`resolveElement`), drawn and given collisions, as those of the sets the map came with. `tileset` is the media of the
+   * set (`{ _id, fileName, metadata: { elements, drawRules } }`). A set it already knows is replaced. Resolves once its picture is
+   * loaded.
+   */
+  addElementTileset(tileset: unknown): Promise<void>;
   /** The features the runtime draws for a stored terrain morphology layer (holes and walls). */
   normalizeMorphology(layer: unknown): unknown[];
   /** The address a stored asset path is served from. */

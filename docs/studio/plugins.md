@@ -201,6 +201,7 @@ Use the context for rendering decisions only. Server-owned gameplay state should
 
 - `resolveElement(placed, layer)`: what the runtime draws for a placed element, or `null`.
 - `readData()` and `updateData(patch)`: read the data the scene shows, and merge new data into it (the scene is drawn again).
+- `addElementTileset(tileset)`: teaches the map an element set it was not loaded with (a set the person added while editing), so that its elements can be resolved, placed, drawn and given collisions. `tileset` is the media of the set (`{ _id, fileName, metadata: { elements, drawRules } }`); a set the map already has is replaced. Resolves once its picture is loaded.
 - `rebuildElementCollisions({ low })`: make the collisions follow the placed elements (see below).
 
 ### Fading layers

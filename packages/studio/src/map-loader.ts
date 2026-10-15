@@ -1023,6 +1023,19 @@ export const loadMap = async (mapId: string) => {
       resolveElement: (placed, layer) =>
         resolveElementWithTileset(tilesetsById, placed, layer === "alwaysLow" ? 0 : layer === "low" ? 1 : 2, fallbackElementTilesetId),
       resolveAsset: (fileName) => resolveAssetSource(fileName),
+      async addElementTileset(tileset: any) {
+        const id = toIdentifierString(tileset?._id || tileset?.id);
+        if (!id) return;
+        tilesetsById.set(id, buildTilesetElementsMap(tileset));
+        const others = normalizeTilesets(map.params.elementTilesets).filter((entry: any) => toIdentifierString(entry?._id || entry?.id) !== id);
+        map.params.elementTilesets = [...others, tileset];
+        // The scene draws an element with the picture of its set, from the params it shows
+        const scene = (client as unknown as { sceneMap?: { data?: { (): any; set(value: any): void } } }).sceneMap?.data;
+        const current = scene?.();
+        if (scene && current?.data) scene.set({ ...current, data: { ...current.data, params: { ...(current.data.params ?? {}), elementTilesets: map.params.elementTilesets } } });
+        const source = collectMediaImageSource(tileset);
+        if (source) await waitForImageLoad(source);
+      },
       normalizeMorphology: (layer) => normalizeMorphologyFeatures(layer),
       tilesetImage(tilesetId) {
         const wanted = toIdentifierString(tilesetId);
