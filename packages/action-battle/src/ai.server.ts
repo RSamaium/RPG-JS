@@ -1088,8 +1088,14 @@ export class BattleAi {
         this.destroy();
         return;
       }
-      // A paused map (a map editor holds it) holds its enemies too.
-      if ((this.event.getCurrentMap() as { isAutoTickEnabled?: () => boolean } | undefined)?.isAutoTickEnabled?.() === false) return;
+      // A paused map holds its enemies too, and so does a map whose `battleAiHeld` is set (a map editor does, to keep the enemies still
+      // while it works on a map that goes on running)
+      const map = this.event.getCurrentMap() as { isAutoTickEnabled?: () => boolean; battleAiHeld?: boolean } | undefined;
+      if (map?.battleAiHeld === true) {
+        this.event.stopMoveTo?.();
+        return;
+      }
+      if (map?.isAutoTickEnabled?.() === false) return;
       this.updateAiBehavior();
     }, 100);
 

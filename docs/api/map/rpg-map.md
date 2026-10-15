@@ -2305,7 +2305,7 @@ Enable or disable automatic server tick processing
 When disabled, the unified input/physics/projectile loop will not run
 automatically. This is useful for unit tests where you want manual control
 over server ticks. A map editor that holds the map also holds the enemies of `@rpgjs/action-battle`:
-their AI reads `map.isAutoTickEnabled()` (`true` unless the loop was disabled) and stands still while it is `false`.
+their AI reads `map.isAutoTickEnabled()` (`true` unless the loop was disabled) and stands still while it is `false`. To hold only the enemies while the map goes on running, set `map.battleAiHeld = true` (and `false` to let them go).
 
 - Source: `packages/server/src/rooms/map.ts`
 - Kind: `method`
