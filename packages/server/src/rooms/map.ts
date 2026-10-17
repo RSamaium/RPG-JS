@@ -1028,6 +1028,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
           try {
             await teleportToPendingNamedPosition();
             alignPlayerBodyWithSignals();
+            this.touchCollisions.suppressArrivalContacts(player);
             await this.spawnScenarioEventsForPlayer(player);
 
             // Check if we should stop all sounds before playing new ones

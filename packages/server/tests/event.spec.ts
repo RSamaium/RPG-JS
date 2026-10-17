@@ -4,6 +4,7 @@ import { defineModule, createModule } from '@rpgjs/common'
 import { EventData, RpgEvent, RpgPlayer, RpgServer, Move } from '../src'
 import { RpgClient } from '../../client/src'
 import { createStatesSnapshotDeep } from '@signe/sync'
+import { ARRIVAL_GRACE_MS } from '../src/rooms/map-touch'
 
 const Event = () => {
   return {
@@ -673,6 +674,8 @@ test('class-based events receive touch hooks', async () => {
 
 test('player/event touch keeps onPlayerTouch compatibility and exposes context.player', async () => {
     player = await client.waitForMapChange('map1')
+    // A player who has just arrived and sent no input yet does not receive touches
+    await fixture.wait(ARRIVAL_GRACE_MS + 100)
     const map = player.getCurrentMap() as any
     const calls: string[] = []
 
@@ -793,6 +796,8 @@ test('attached player shapes dispatch shape hooks to events inside them', async 
 
 test('scenario event touch hooks only run for the owner player', async () => {
     player = await client.waitForMapChange('map1')
+    // A player who has just arrived and sent no input yet does not receive touches
+    await fixture.wait(ARRIVAL_GRACE_MS + 100)
     const map = player.getCurrentMap() as any
     const calls: string[] = []
 
