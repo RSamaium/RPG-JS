@@ -22,7 +22,7 @@
               <div class="rpg-ui-menu-row-main">
                 <div class="rpg-ui-menu-row-icon rpg-skill-menu-row-icon">
                   @if (skill.icon) {
-                    <DOMSprite sheet={iconSheet(skill.icon)} width="32px" height="32px" scale={2} objectFit="contain" />
+                    <DOMSprite sheet={iconSheet(skill.icon)} width="32px" height="32px" objectFit="contain" />
                   } @else {
                     <span>✦</span>
                   }
@@ -44,7 +44,7 @@
           <div class="rpg-ui-menu-panel-hero">
             <div class="rpg-ui-menu-panel-hero-icon">
               @if (currentSkill().icon) {
-                <DOMSprite sheet={iconSheet(currentSkill().icon)} width="48px" height="48px" scale={2} objectFit="contain" />
+                <DOMSprite sheet={iconSheet(currentSkill().icon)} width="48px" height="48px" objectFit="contain" />
               } @else {
                 <span class="rpg-ui-fallback-icon" aria-hidden="true">✦</span>
               }

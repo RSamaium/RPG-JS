@@ -25,7 +25,7 @@
           >
             <span class="rpg-ui-hotbar-key">{slotLabels[index]}</span>
             @if (slot.icon) {
-              <DOMSprite sheet={iconSheet(slot.icon)} width="48px" height="48px" scale={2} objectFit="contain" />
+              <DOMSprite sheet={iconSheet(slot.icon)} width="48px" height="48px" objectFit="contain" />
             } @else {
               <span class="rpg-ui-hotbar-text">{slot.name || t("rpg.menu.empty")}</span>
             }

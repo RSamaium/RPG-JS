@@ -35,7 +35,7 @@
                 <span class="rpg-ui-hotbar-key rpg-hotbar-key">{slotLabels[slot.index]}</span>
                 <span class="rpg-hotbar-icon-frame">
                   @if (slot.icon) {
-                    <DOMSprite sheet={iconSheet(slot.icon)} width="56px" height="56px" scale={2} objectFit="contain" />
+                    <DOMSprite sheet={iconSheet(slot.icon)} width="56px" height="56px" objectFit="contain" />
                   } @else if (slot.type !== "empty") {
                     <span class="rpg-hotbar-fallback">{fallbackIcon(slot.type)}</span>
                   }
@@ -82,7 +82,7 @@
           >
             <span class="rpg-hotbar-wheel-key">{slotLabels[slot.index]}</span>
             @if (slot.icon) {
-              <DOMSprite sheet={iconSheet(slot.icon)} width="58px" height="58px" scale={2} objectFit="contain" />
+              <DOMSprite sheet={iconSheet(slot.icon)} width="58px" height="58px" objectFit="contain" />
             } @else {
               <span class="rpg-hotbar-fallback">{fallbackIcon(slot.type)}</span>
             }
