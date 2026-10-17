@@ -73,6 +73,38 @@ Map transfer is still snapshot-based:
 
 The transfer preserves player state; map definitions remain server authority.
 
+## Movement Frames And Hidden Tabs
+
+The server records every position change of a player or event as a timestamped
+frame (`_frames`) and syncs them in batches. The client queues them on each
+`RpgClientObject` (`frames`) and applies **one frame per render tick** through
+`setBodyPosition`, which keeps remote movement smooth.
+
+A hidden or frozen browser tab pauses the render loop but keeps receiving
+packets. The queue then grows by hundreds of frames. After the tab is visible
+again the client consumes one frame per tick while the server produces about
+one per tick, so the queue never drains: remote players and NPCs replay their
+old positions with a permanent delay.
+
+Design choice: `mergeFreshFramePayload` caps the queue at `MAX_FRAME_BACKLOG`
+(10 frames). When it is exceeded, only the newest frame is kept.
+
+- Positions are absolute, so dropping stale frames loses no information; the
+  object snaps to the current server position instead of replaying the past.
+- The cap is applied when frames are merged, so it also bounds memory while the
+  tab is hidden, without relying on `visibilitychange` (which does not cover a
+  frozen tab or a slow render loop).
+- 10 frames is about 0.2 s at 60 fps. In normal play the queue stays at or near
+  0; Chrome measurements after an 18 s hidden tab gave a peak of 9 frames that
+  drained in about 10 ticks. A higher cap (30) kept about one second of visible
+  replay.
+- The trade-off is that a network burst of more than 10 frames shows as a short
+  snap instead of being smoothed. Raise the constant only if a game has very
+  irregular latency, and re-measure the drain time after a hidden tab.
+
+This applies to MMORPG mode. In standalone RPG mode the server runs in the page
+and pauses with the render loop, so no backlog builds up.
+
 ## Operational Rule
 
 Client gameplay traffic can move players, not redefine maps.

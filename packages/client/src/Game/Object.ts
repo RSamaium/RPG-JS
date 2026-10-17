@@ -91,17 +91,27 @@ export const getFrameTimestamp = (frame: Frame): number => {
   return Number.isFinite(timestamp) ? timestamp : 0;
 };
 
+/**
+ * Largest movement backlog replayed frame by frame. One frame is consumed per
+ * render tick, so a longer queue (a hidden or frozen tab keeps receiving
+ * positions while the render loop is paused) would never drain and the object
+ * would replay old positions long after the tab is visible again.
+ */
+export const MAX_FRAME_BACKLOG = 10;
+
 export const mergeFreshFramePayload = (
   current: unknown,
   items: unknown,
   lastAppliedFrameTs = 0,
 ): Frame[] => {
-  return appendFramePayload(current, items)
+  const frames = appendFramePayload(current, items)
     .filter((frame) => {
       const timestamp = getFrameTimestamp(frame);
       return timestamp === 0 || timestamp > lastAppliedFrameTs;
     })
     .sort((a, b) => getFrameTimestamp(a) - getFrameTimestamp(b));
+  // Positions are absolute: when the backlog is stale, only the newest matters.
+  return frames.length > MAX_FRAME_BACKLOG ? frames.slice(-1) : frames;
 };
 
 export abstract class RpgClientObject extends RpgCommonPlayer {
