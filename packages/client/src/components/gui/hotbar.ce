@@ -558,7 +558,7 @@
     return `conic-gradient(rgb(7 8 13 / 78%) 0 ${degrees}deg, transparent ${degrees}deg 360deg)`;
   };
   const slotAriaLabel = (slot, index) =>
-    `${t("rpg.hotbar.slot", { index: slotLabels[index] })}: ${slot.name || t("rpg.menu.empty")}`;
+    t("rpg.ui.labeled-value", { label: t("rpg.hotbar.slot", { index: slotLabels[index] }), value: slot.name || t("rpg.menu.empty") });
 
   const activateSlot = async (index) => {
     const slot = slots()[index];

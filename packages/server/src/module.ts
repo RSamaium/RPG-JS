@@ -5,6 +5,7 @@ import { RpgMap } from "./rooms/map";
 import { RpgPlayer } from "./Player/Player";
 import { RpgServer } from "./RpgServer";
 import { TimeManager } from "./services/time";
+import { RpgServerBuiltinI18n } from "./i18n";
 
 /**
  * Type for server modules that can be either:
@@ -50,6 +51,7 @@ export type RpgServerModule = RpgServer | (new () => any);
  */
 export function provideServerModules(modules: RpgServerModule[]): RpgFactoryProvider {
   return provideModules(modules, "server", (modules, context) => {
+    registerI18nMessages(context, RpgServerBuiltinI18n, "rpgjs-server", 0);
     const mainModuleServer = findModules(context, 'Server')
     modules = [...mainModuleServer, ...modules]
     modules = modules.map((module) => {

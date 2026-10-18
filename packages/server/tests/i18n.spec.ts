@@ -97,4 +97,17 @@ describe("server i18n", () => {
     expect(restored.getLocale()).toBe("fr");
     expect(restored.t("npc.hello")).toBe("Bonjour");
   });
+
+  test("ships default server messages that the game can override", async () => {
+    const context = new Context();
+    await injector(context, [provideServerModules([]), provideI18n({ messages: {
+      en: { "rpg.notification.level-up": "Level {level}!" }, fr: {},
+    } })]);
+    const player = new RpgPlayer();
+    player.context = context;
+    expect(player.t("rpg.notification.level-up", { level: 3 })).toBe("Level 3!");
+    expect(player.t("rpg.notification.skill-learned", { name: "Fire" })).toBe("Learned Fire");
+    player.setLocale("fr");
+    expect(player.t("rpg.notification.skill-learned", { name: "Feu" })).toBe("Feu appris");
+  });
 });

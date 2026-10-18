@@ -85,9 +85,9 @@
         </div>
         @if (confirmOpen) {
             <div class="rpg-ui-menu-confirm" click={cancelConfirmFromPointer}>
-                <button class="rpg-ui-close-button" type="button" title="Close" aria-label="Close confirmation" click={cancelConfirmFromPointer}>x</button>
+                <button class="rpg-ui-close-button" type="button" title={t("rpg.ui.close")} aria-label={t("rpg.menu.close-confirmation")} click={cancelConfirmFromPointer}>x</button>
                 <div class="rpg-ui-menu-confirm-card" click={stopEvent}>
-                    <div class="rpg-ui-menu-confirm-title">{t("rpg.menu.use")} {confirmItem()?.name}?</div>
+                    <div class="rpg-ui-menu-confirm-title">{t("rpg.menu.use-item", { name: confirmItem()?.name })}</div>
                     <Navigation tabindex={selectedConfirm} controls={confirmControls}>
                         <div class="rpg-ui-menu-confirm-actions">
                             @for ((option,index) of confirmOptions) {

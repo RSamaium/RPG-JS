@@ -212,7 +212,7 @@
         const slot = currentSlot();
         if (!slot) return "";
         const equipped = currentEquippedItem();
-        return equipped ? `${slot.label}: ${equipped.name}` : `${slot.label}: ${t("rpg.menu.empty")}`;
+        return t("rpg.ui.labeled-value", { label: slot.label, value: equipped ? equipped.name : t("rpg.menu.empty") });
     });
     const listEmpty = computed(() => listEntries().length === 0);
 

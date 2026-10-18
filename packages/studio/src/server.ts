@@ -332,7 +332,7 @@ const assignPlayerStartParams = (player: RpgPlayer, config: ProjectBasic, starti
 };
 
 const notifySkillChange = (player: RpgPlayer, payload: any) => {
-  const notification = getStudioSkillChangeNotification(payload);
+  const notification = getStudioSkillChangeNotification(payload, (key, params) => player.t(key, params));
 
   player.showNotification(notification.message, { type: notification.type });
 };
@@ -1244,7 +1244,7 @@ export default (_config?: unknown) => {
         }
       },
       onLevelUp: async (player: RpgPlayer, nbLevel: number) => {
-        player.showNotification(`You reached level ${player.level}`);
+        player.showNotification(player.t("rpg.notification.level-up", { level: player.level }));
       },
       onSkillChange: async (player: RpgPlayer, payload: any) => {
         notifySkillChange(player, payload);

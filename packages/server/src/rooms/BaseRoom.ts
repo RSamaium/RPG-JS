@@ -203,7 +203,7 @@ export abstract class BaseRoom {
         player.emit('save.list.result', { requestId: value?.requestId, slots });
         return slots;
       } catch (error: any) {
-        player.showNotification(error?.message || 'save.list failed');
+        player.showNotification(player.t('rpg.error.save-list-failed'), { type: 'error' });
         return [];
       }
     }

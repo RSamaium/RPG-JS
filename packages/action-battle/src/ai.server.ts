@@ -335,7 +335,7 @@ const createDefeatReward = (
       if (gold > 0) player.gold += gold;
 
       if (rewards.showNotification && (exp > 0 || gold > 0)) {
-        player.showNotification(`You won ${exp} experience and ${gold} gold`);
+        player.showNotification(player.t("rpg.notification.reward.exp-gold", { exp, gold }));
       }
 
       for (const rawItem of rewards.items ?? []) {
@@ -352,7 +352,10 @@ const createDefeatReward = (
               ? getPlayerMap(player)?.database?.()?.[itemRef]
               : undefined;
           player.showNotification(
-            `You won ${amount} ${getRewardItemName(inventoryItem, itemRef)}`,
+            player.t("rpg.notification.reward.item", {
+              amount,
+              name: getRewardItemName(inventoryItem, itemRef),
+            }),
             {
               icon: itemData?.icon,
             }
