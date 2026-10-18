@@ -123,7 +123,7 @@ describe("StudioTerrainChunkRenderer streamed invalidation", () => {
     };
 
     await renderer.renderMap(map, { streamUpdate: firstUpdate });
-    expect(renderChunk.mock.calls.map(([key]) => key)).toEqual(["0:0", "1:0"]);
+    expect(renderChunk.mock.calls.map(([key]) => key).sort()).toEqual(["0:0", "1:0"]);
     const firstChunk = (renderer as any).chunks.get("0:0");
 
     renderChunk.mockClear();
@@ -182,7 +182,7 @@ describe("StudioTerrainChunkRenderer streamed invalidation", () => {
         activeRegions: [{ x: 0, y: 0, width: 2304, height: 768 }],
       },
     });
-    expect(renderChunk.mock.calls.map(([key]) => key)).toEqual([
+    expect(renderChunk.mock.calls.map(([key]) => key).sort()).toEqual([
       "0:0",
       "1:0",
       "2:0",
@@ -217,11 +217,26 @@ describe("StudioTerrainChunkRenderer streamed invalidation", () => {
   it("keeps full-map rendering for non-streamed terrain", async () => {
     const { renderer, renderChunk } = createInstrumentedRenderer();
     await renderer.renderMap(createTerrainMap());
-    expect(renderChunk.mock.calls.map(([key]) => key)).toEqual([
+    expect(renderChunk.mock.calls.map(([key]) => key).sort()).toEqual([
       "0:0",
       "1:0",
       "2:0",
     ]);
+  });
+
+  it("renders the chunks nearest to the middle of the map first", async () => {
+    const { renderer, renderChunk } = createInstrumentedRenderer();
+    await renderer.renderMap(createTerrainMap());
+    expect(renderChunk.mock.calls.map(([key]) => key)[0]).toBe("1:0");
+  });
+
+  it("renders the chunks nearest to the viewport first", async () => {
+    const { renderer, renderChunk } = createInstrumentedRenderer();
+    await renderer.renderMap(createTerrainMap(), {
+      viewportBounds: { x: 1500, y: 0, width: 800, height: 600 },
+      viewportMargin: 1500,
+    });
+    expect(renderChunk.mock.calls.map(([key]) => key)[0]).toBe("2:0");
   });
 
   it("rasterizes non-streamed chunks lazily as the viewport moves", async () => {

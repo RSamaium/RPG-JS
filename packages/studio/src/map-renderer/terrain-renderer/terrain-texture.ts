@@ -1,3 +1,4 @@
+import { createCanvasElement } from "../canvas-env";
 import type {
   TerrainAssetMetadata,
   TerrainRenderMode,
@@ -186,7 +187,7 @@ export function createTerrainPatternCanvas(
   destinationCellSize: number
 ): HTMLCanvasElement {
   const cellSize = Math.max(1, Math.floor(destinationCellSize));
-  const canvas = document.createElement("canvas");
+  const canvas = createCanvasElement();
   canvas.width = cellSize;
   canvas.height = cellSize;
   const ctx = canvas.getContext("2d");
