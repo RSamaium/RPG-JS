@@ -269,7 +269,6 @@ function normalizeTerrainTextures(
       id: `terrain-${index}`,
       index,
       label: `Terrain ${index + 1}`,
-      renderTileSize: 48,
     }));
   }
 
@@ -285,7 +284,7 @@ function normalizeTerrainTextures(
         index: nonNegativeInteger(texture.index) ?? index,
         label,
         ...(typeof texture.collision === "boolean" ? { collision: texture.collision } : {}),
-        renderTileSize: positiveInteger(texture.renderTileSize) ?? 48,
+        ...(positiveInteger(texture.renderTileSize) ? { renderTileSize: positiveInteger(texture.renderTileSize) } : {}),
         ...(specialType ? { specialType } : {}),
         ...(isTerrainRenderMode(texture.defaultRenderMode)
           ? { defaultRenderMode: texture.defaultRenderMode as TerrainRenderMode }

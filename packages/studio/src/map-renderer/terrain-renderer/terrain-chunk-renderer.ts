@@ -1223,7 +1223,7 @@ export class StudioTerrainChunkRenderer {
             mask: maskPixels,
             source: cropRasterImage(sourceBuffer, rect),
             center: layer.mode.center,
-            renderTileSize: texture.renderTileSize ?? data.tileSize,
+            renderTileSize: texture.renderTileSize ?? rect.width,
           }));
         }
       }
@@ -2814,11 +2814,11 @@ export class StudioTerrainChunkRenderer {
     if (!data.asset || !image) return null;
     const texture = findTerrainTexture(data.asset, textureId);
     if (!texture) return null;
-    const renderSize = Math.max(1, Math.round(sizeOverride ?? texture.renderTileSize ?? data.tileSize));
+    const source = resolveTerrainTextureSourceRect(data.asset, texture, image.naturalWidth, image.naturalHeight);
+    const renderSize = Math.max(1, Math.round(sizeOverride ?? texture.renderTileSize ?? source.width));
     const cacheKey = `${data.sourceTexture}:${texture.id}:${renderSize}`;
     let patternCanvas = this.patternCache.get(cacheKey);
     if (!patternCanvas) {
-      const source = resolveTerrainTextureSourceRect(data.asset, texture, image.naturalWidth, image.naturalHeight);
       patternCanvas = createTerrainPatternCanvas(image, source, renderSize);
       this.patternCache.set(cacheKey, patternCanvas);
     }
