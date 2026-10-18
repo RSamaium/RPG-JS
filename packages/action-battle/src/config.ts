@@ -1,4 +1,4 @@
-import { ActionBattleOptions } from "./types";
+import { ActionBattleEnabledContext, ActionBattleOptions } from "./types";
 import { normalizeActionBattleAttackProfile } from "./core/attack-profile";
 
 export const DEFAULT_ACTION_BATTLE_OPTIONS: ActionBattleOptions = {
@@ -309,6 +309,7 @@ export function normalizeActionBattleOptions(
 
   return {
     preset,
+    enabled: options.enabled,
     ui: {
       ...options.ui,
       hotbar,
@@ -353,4 +354,19 @@ export function setActionBattleOptions(options: ActionBattleOptions) {
 
 export function getActionBattleOptions(): ActionBattleOptions {
   return currentActionBattleOptions;
+}
+
+/**
+ * Tells whether the module is active for a player, an event or a map.
+ *
+ * Evaluated on every call so the option can read state that is only known
+ * later (the project a player plays).
+ */
+export function isActionBattleEnabled(
+  context: ActionBattleEnabledContext = {},
+  options: ActionBattleOptions = currentActionBattleOptions
+): boolean {
+  const enabled = options.enabled;
+  if (typeof enabled === "function") return enabled(context) !== false;
+  return enabled !== false;
 }
