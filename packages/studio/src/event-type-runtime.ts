@@ -8,6 +8,7 @@ import {
 } from "@rpgjs/action-battle/server";
 import { normalizeEventType } from "@common/event-types";
 import { assignParams } from "./assign-params";
+import { getStudioEnemyInteractionResolver } from "./enemy-interaction";
 import { collectEventGraphics, scaleEventHitboxToGraphic } from "./event-hitbox-scale";
 import { createStudioActionBattleAnimations } from "./action-battle-animations";
 import { getGraphicKey, getGraphicScale } from "./graphic-key";
@@ -678,34 +679,6 @@ const characterRuntime: EventTypeRuntime = {
   },
 };
 
-/**
- * How an enemy event reacts to the players, chosen by the host of the game.
- *
- * - `"action"`: the enemy fights in real time (`BattleAi`), the default.
- * - `"none"`: no `BattleAi` is created.
- * - `{ onTouch }`: no `BattleAi`; `onTouch(player)` runs when a player touches the event.
- */
-export type StudioEnemyInteraction =
-  | "action"
-  | "none"
-  | { onTouch(player: RpgPlayer): void | Promise<void> };
-
-export type StudioEnemyInteractionResolver = (context: {
-  event: RpgEvent;
-  /** Database record of the enemy. */
-  enemy: Record<string, any>;
-  map: RpgMap;
-}) => StudioEnemyInteraction;
-
-let enemyInteractionResolver: StudioEnemyInteractionResolver | undefined;
-
-/** Sets the resolver given to `provideStudioGame({ enemyInteraction })`. */
-export const configureStudioEnemyInteraction = (
-  resolver?: StudioEnemyInteractionResolver,
-): void => {
-  enemyInteractionResolver = resolver;
-};
-
 const enemyRuntime: EventTypeRuntime = {
   triggerSettings: [applyEnemyGraphicSetting, applyHitboxSetting],
   hooks: {
@@ -720,8 +693,8 @@ const enemyRuntime: EventTypeRuntime = {
         initializeEnemyNaturalAttackFromStudioConfig(context.event, enemy);
         initializeEnemyVitalsFromParameters(context.event);
         learnEnemySkills(context.event, enemy);
-        const interaction = enemyInteractionResolver && map
-          ? enemyInteractionResolver({ event: context.event, enemy, map })
+        const interaction = getStudioEnemyInteractionResolver() && map
+          ? getStudioEnemyInteractionResolver()!({ event: context.event, enemy, map })
           : "action";
         if (typeof interaction === "object" && interaction) {
           (context.event as any).__studioEnemyTouch = interaction.onTouch;

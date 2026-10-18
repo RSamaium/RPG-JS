@@ -8,7 +8,7 @@ import type { GameRuntimeMode } from "./data-provider/types";
 import type { StudioMapPlugin } from "./studio-map-plugins";
 import type { StudioStartupResolver } from "./startup";
 import { configureStudioBlockExecutors } from "./block-executor";
-import { configureStudioEnemyInteraction, type StudioEnemyInteractionResolver } from "./event-type-runtime";
+import { configureStudioEnemyInteraction, type StudioEnemyInteractionResolver } from "./enemy-interaction";
 import type { CustomBlockExecutors } from "@common/blocks";
 export {
   StudioStartupError,
@@ -46,7 +46,7 @@ export {
   createStudioItemWorkflowHooks,
   normalizeStudioItemWorkflowTriggers,
 } from "./item-workflow";
-export type { StudioEnemyInteraction, StudioEnemyInteractionResolver } from "./event-type-runtime";
+export type { StudioEnemyInteraction, StudioEnemyInteractionResolver } from "./enemy-interaction";
 export { runStudioEvent } from "./run-event";
 export { runStudioSkillTrigger } from "./skill-workflow";
 export type {

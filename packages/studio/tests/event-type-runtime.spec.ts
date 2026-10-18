@@ -4,12 +4,12 @@ import { AttackPattern, EnemyType } from "@rpgjs/action-battle/server";
 import { getGraphicKey, getGraphicScale } from "../src/graphic-key";
 import {
   applyTriggerSettings,
-  configureStudioEnemyInteraction,
   getEventTypeRuntime,
   initializeEnemyNaturalAttackFromStudioConfig,
   initializeEnemyVitalsFromParameters,
   resolveEnemyBattleAiOptions,
 } from "../src/event-type-runtime";
+import { configureStudioEnemyInteraction } from "../src/enemy-interaction";
 
 describe("Studio event runtime", () => {
   test("uses the media id before fileName for Studio media graphics", () => {
