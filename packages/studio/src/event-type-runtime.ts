@@ -678,6 +678,34 @@ const characterRuntime: EventTypeRuntime = {
   },
 };
 
+/**
+ * How an enemy event reacts to the players, chosen by the host of the game.
+ *
+ * - `"action"`: the enemy fights in real time (`BattleAi`), the default.
+ * - `"none"`: no `BattleAi` is created.
+ * - `{ onTouch }`: no `BattleAi`; `onTouch(player)` runs when a player touches the event.
+ */
+export type StudioEnemyInteraction =
+  | "action"
+  | "none"
+  | { onTouch(player: RpgPlayer): void | Promise<void> };
+
+export type StudioEnemyInteractionResolver = (context: {
+  event: RpgEvent;
+  /** Database record of the enemy. */
+  enemy: Record<string, any>;
+  map: RpgMap;
+}) => StudioEnemyInteraction;
+
+let enemyInteractionResolver: StudioEnemyInteractionResolver | undefined;
+
+/** Sets the resolver given to `provideStudioGame({ enemyInteraction })`. */
+export const configureStudioEnemyInteraction = (
+  resolver?: StudioEnemyInteractionResolver,
+): void => {
+  enemyInteractionResolver = resolver;
+};
+
 const enemyRuntime: EventTypeRuntime = {
   triggerSettings: [applyEnemyGraphicSetting, applyHitboxSetting],
   hooks: {
@@ -692,18 +720,33 @@ const enemyRuntime: EventTypeRuntime = {
         initializeEnemyNaturalAttackFromStudioConfig(context.event, enemy);
         initializeEnemyVitalsFromParameters(context.event);
         learnEnemySkills(context.event, enemy);
-        const aiOptions = resolveEnemyBattleAiOptions(enemy);
-        (context.event as any).battleAi = new BattleAi(context.event, {
-          ...aiOptions,
-          rewards: {
-            ...enemy.reward,
-            showNotification: true,
-          },
-        });
+        const interaction = enemyInteractionResolver && map
+          ? enemyInteractionResolver({ event: context.event, enemy, map })
+          : "action";
+        if (typeof interaction === "object" && interaction) {
+          (context.event as any).__studioEnemyTouch = interaction.onTouch;
+        }
+        if (interaction === "action" || !interaction) {
+          const aiOptions = resolveEnemyBattleAiOptions(enemy);
+          (context.event as any).battleAi = new BattleAi(context.event, {
+            ...aiOptions,
+            rewards: {
+              ...enemy.reward,
+              showNotification: true,
+            },
+          });
+        }
         applyGraphicSetting({ event: context.event, trigger: enemy, fallbackParams: context.params, object: context.object, eventType: context.eventType });
       }
       await next();
-    }
+    },
+    onTouch: async (context, next) => {
+      const onTouch = (context.event as any).__studioEnemyTouch;
+      if (typeof onTouch === "function" && context.player && context.touchContext?.otherType !== "event") {
+        await onTouch(context.player);
+      }
+      await next();
+    },
   }
 };
 

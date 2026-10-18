@@ -1,9 +1,11 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { ATK, MAXHP, MAXSP, STR } from "@rpgjs/server";
 import { AttackPattern, EnemyType } from "@rpgjs/action-battle/server";
 import { getGraphicKey, getGraphicScale } from "../src/graphic-key";
 import {
   applyTriggerSettings,
+  configureStudioEnemyInteraction,
+  getEventTypeRuntime,
   initializeEnemyNaturalAttackFromStudioConfig,
   initializeEnemyVitalsFromParameters,
   resolveEnemyBattleAiOptions,
@@ -540,4 +542,59 @@ test('maps per-enemy attack timings and ignores empty or invalid overrides', () 
   } });
   expect(options.attackCooldown).toBe(900);
   expect(options.attackProfiles).toEqual({ melee: { startupMs: 0, activeMs: 120, recoveryMs: 400 } });
+});
+
+describe("Studio enemy interaction chosen by the host", () => {
+  const createContext = (touchContext?: unknown) => {
+    const event: any = { hp: 0, sp: 0, param: {}, getCurrentMap: () => map };
+    const map: any = { database: () => ({ slime: { parameters: {} } }) };
+    const player = { id: "hero" };
+    return {
+      event,
+      player,
+      context: {
+        event,
+        player,
+        map,
+        object: { typeData: { enemyId: "slime" } },
+        params: {},
+        eventType: "enemy",
+        triggerType: "onTouch",
+        touchContext,
+        resolveActiveTrigger: () => null,
+      } as any,
+    };
+  };
+
+  test("starts no AI and calls the touch handler of the host", async () => {
+    const onTouch = vi.fn();
+    configureStudioEnemyInteraction(() => ({ onTouch }));
+    try {
+      const hooks = getEventTypeRuntime("enemy").hooks!;
+      const { event, player, context } = createContext();
+      await hooks.onInit!(context, async () => {});
+      expect(event.battleAi).toBeUndefined();
+
+      const next = vi.fn();
+      await hooks.onTouch!(context, next);
+      expect(onTouch).toHaveBeenCalledWith(player);
+      expect(next).toHaveBeenCalledOnce();
+
+      await hooks.onTouch!({ ...context, touchContext: { otherType: "event" } }, next);
+      expect(onTouch).toHaveBeenCalledOnce();
+    } finally {
+      configureStudioEnemyInteraction(undefined);
+    }
+  });
+
+  test('"none" starts no AI', async () => {
+    configureStudioEnemyInteraction(() => "none");
+    try {
+      const { event, context } = createContext();
+      await getEventTypeRuntime("enemy").hooks!.onInit!(context, async () => {});
+      expect(event.battleAi).toBeUndefined();
+    } finally {
+      configureStudioEnemyInteraction(undefined);
+    }
+  });
 });

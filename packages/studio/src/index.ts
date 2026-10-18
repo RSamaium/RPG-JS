@@ -8,6 +8,7 @@ import type { GameRuntimeMode } from "./data-provider/types";
 import type { StudioMapPlugin } from "./studio-map-plugins";
 import type { StudioStartupResolver } from "./startup";
 import { configureStudioBlockExecutors } from "./block-executor";
+import { configureStudioEnemyInteraction, type StudioEnemyInteractionResolver } from "./event-type-runtime";
 import type { CustomBlockExecutors } from "@common/blocks";
 export {
   StudioStartupError,
@@ -45,6 +46,7 @@ export {
   createStudioItemWorkflowHooks,
   normalizeStudioItemWorkflowTriggers,
 } from "./item-workflow";
+export type { StudioEnemyInteraction, StudioEnemyInteractionResolver } from "./event-type-runtime";
 export { runStudioEvent } from "./run-event";
 export { runStudioSkillTrigger } from "./skill-workflow";
 export type {
@@ -113,6 +115,13 @@ export interface StudioGameModuleConfig {
    * ```
    */
   blockExecutors?: CustomBlockExecutors;
+  /**
+   * Chooses how an enemy event reacts, evaluated when the event is initialized
+   * (the host can read `map.globalConfig`). Returns `"action"` (default, real-time
+   * `BattleAi`), `"none"` (no AI) or `{ onTouch(player) }` (no AI; called when a
+   * player touches the event, the host may `event.remove()`).
+   */
+  enemyInteraction?: StudioEnemyInteractionResolver;
   studioPlugins?: StudioMapPlugin[];
   /** Authoritative Studio v2 map streaming, or `false` to disable it. */
   streaming?:
@@ -143,6 +152,7 @@ export function provideStudioGame(config: StudioGameModuleConfig = {}): RpgProvi
   });
 
   configureStudioBlockExecutors(config.blockExecutors);
+  configureStudioEnemyInteraction(config.enemyInteraction);
 
   configureStudioGameRuntime({
     projectId: config.projectId ?? null,
