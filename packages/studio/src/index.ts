@@ -7,6 +7,8 @@ import { configureStudioConstants } from "./constants";
 import type { GameRuntimeMode } from "./data-provider/types";
 import type { StudioMapPlugin } from "./studio-map-plugins";
 import type { StudioStartupResolver } from "./startup";
+import { configureStudioBlockExecutors } from "./block-executor";
+import type { CustomBlockExecutors } from "@common/blocks";
 export {
   StudioStartupError,
   type StudioDirectStartup,
@@ -43,6 +45,8 @@ export {
   createStudioItemWorkflowHooks,
   normalizeStudioItemWorkflowTriggers,
 } from "./item-workflow";
+export { runStudioEvent } from "./run-event";
+export { runStudioSkillTrigger } from "./skill-workflow";
 export type {
   StudioItemWorkflowHooks,
   StudioItemWorkflowPhase,
@@ -92,6 +96,23 @@ export interface StudioGameModuleConfig {
    */
   resolveStartup?: StudioStartupResolver;
   debugCollisions?: boolean;
+  /**
+   * Block executors of the game. They run in every Studio workflow (events, maps,
+   * items, skills). A key may be a block type the framework does not know, or a
+   * default block type to replace.
+   *
+   * @example
+   * ```ts
+   * provideStudioGame({
+   *   blockExecutors: {
+   *     call_battle: async (context, params) => {
+   *       await context.player.callBattle(params.troopId);
+   *     },
+   *   },
+   * })
+   * ```
+   */
+  blockExecutors?: CustomBlockExecutors;
   studioPlugins?: StudioMapPlugin[];
   /** Authoritative Studio v2 map streaming, or `false` to disable it. */
   streaming?:
@@ -120,6 +141,8 @@ export function provideStudioGame(config: StudioGameModuleConfig = {}): RpgProvi
     assetsUrl: resolvedAssetsUrl,
     apiUrl: resolvedApiUrl,
   });
+
+  configureStudioBlockExecutors(config.blockExecutors);
 
   configureStudioGameRuntime({
     projectId: config.projectId ?? null,

@@ -4,7 +4,7 @@ import { bindStudioCombatAnimationsToEntity } from "./action-battle-animations";
 import { runPlayerEventOnce } from "./event-execution-guard";
 import { Move, RpgEvent, RpgMap, RpgPlayer, RpgServer, provideServerMapStreaming, type RpgPlayerConnectionContext } from "@rpgjs/server";
 import { defineModule, normalizeLightingState, WorldMapsManager, type RpgActionInput, type WorldMapConfig } from "@rpgjs/common";
-import { BlockExecutionService } from "./block-executor";
+import { createBlockExecutionService } from "./block-executor";
 import { apiUrl, configureStudioConstants } from "./constants";
 import { RATIO_MAP_X, RATIO_MAP_Y } from "@common/map";
 import { matchesPageConditions } from "@common/blocks";
@@ -1331,7 +1331,7 @@ export default (_config?: unknown) => {
           return;
         }
 
-        const blockExecutor = new BlockExecutionService(player, null, map);
+        const blockExecutor = createBlockExecutionService(player, null, map);
         await blockExecutor.executeBlockSequence(blocks);
       },
       onLeave(player: RpgPlayer, map: RpgMap) {
@@ -1434,7 +1434,7 @@ export default (_config?: unknown) => {
               variableScope?: "player" | "map";
             },
           ) {
-            const blockExecutor = new BlockExecutionService(player, event, event.getCurrentMap?.() ?? map, { variableScope: options?.variableScope });
+            const blockExecutor = createBlockExecutionService(player, event, event.getCurrentMap?.() ?? map, { variableScope: options?.variableScope });
             const conditionPlayer = options?.variableScope === "map" ? null : player;
             const trigger = eventObj.applyActiveTrigger(conditionPlayer, event);
             if (!triggerMatchesExecution(trigger, triggerType, options?.touchTarget)) {

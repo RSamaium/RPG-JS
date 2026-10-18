@@ -1,6 +1,6 @@
 import type { RpgEvent, RpgMap, RpgPlayer } from "@rpgjs/server";
 import type { AnyBlockInstance } from "@common/blocks";
-import { BlockExecutionService } from "./block-executor";
+import { createBlockExecutionService } from "./block-executor";
 
 export type StudioSkillWorkflowPhase = "cast" | "impact" | "defeat";
 
@@ -61,6 +61,8 @@ const asEvent = (target: unknown): RpgEvent | null => {
     : null;
 };
 
+const skillTriggers = new Map<string, StudioSkillWorkflowTrigger[]>();
+
 const getMap = (player: RpgPlayer): RpgMap | null =>
   player.getCurrentMap?.() ?? (player as RpgPlayer & { map?: RpgMap }).map ?? null;
 
@@ -69,11 +71,12 @@ const runWorkflow = async (
   skillId: string,
   trigger: StudioSkillWorkflowTrigger,
   target?: unknown,
+  ids?: { targetId?: string; casterId?: string },
 ): Promise<void> => {
   const map = getMap(player);
   if (!map) return;
 
-  const executor = new BlockExecutionService(player, asEvent(target), map);
+  const executor = createBlockExecutionService(player, asEvent(target), map);
   if (Array.isArray(trigger.blocks)) {
     await executor.executeBlockSequence(trigger.blocks);
     return;
@@ -88,8 +91,8 @@ const runWorkflow = async (
       parameters: {
         skillId,
         phase: trigger.phase,
-        casterId: player.id,
-        targetId: entityId(target),
+        casterId: ids?.casterId ?? player.id,
+        targetId: ids?.targetId ?? entityId(target),
       },
     },
   });
@@ -101,6 +104,7 @@ const enqueueWorkflow = (
   triggers: StudioSkillWorkflowTrigger[],
   phase: StudioSkillWorkflowPhase,
   target?: unknown,
+  ids?: { targetId?: string; casterId?: string },
 ): Promise<void> => {
   const matching = triggers.filter((trigger) => trigger.phase === phase);
   if (matching.length === 0) return Promise.resolve();
@@ -111,7 +115,7 @@ const enqueueWorkflow = (
     .then(async () => {
       for (const trigger of matching) {
         try {
-          await runWorkflow(player, skillId, trigger, target);
+          await runWorkflow(player, skillId, trigger, target, ids);
         } catch (error) {
           console.error(
             `[studio] Skill workflow "${trigger.blockCollectionId ?? trigger.commonEventId}" failed during ${phase}`,
@@ -192,6 +196,7 @@ export const createStudioSkillOnUse = (
 ): ((player: RpgPlayer, target?: unknown, action?: StudioActionUseContext) => Promise<void>) | undefined => {
   const triggers = normalizeStudioSkillWorkflowTriggers(value);
   if (triggers.length === 0) return undefined;
+  skillTriggers.set(skillId, triggers);
 
   return (player, target, action) => {
     enqueueWorkflow(player, skillId, triggers, "cast", target);
@@ -218,4 +223,36 @@ export const createStudioSkillOnUse = (
     dispatchImpactWorkflows(player, skillId, triggers, target, result);
     return workflowQueues.get(player) ?? Promise.resolve();
   };
+};
+
+/**
+ * Runs the workflow triggers of a skill for one phase, outside of `onUse`
+ * (a turn-based battle plays `cast`, `impact` and `defeat` once per target).
+ *
+ * With `target` an event of the map, the workflow is bound to it. A fighter that
+ * is not an object of the map gives `targetId` only. Calls are serialised per
+ * player. A skill without triggers resolves at once.
+ *
+ * @param player - Caster the workflow runs for
+ * @param skillId - Identifier of the skill
+ * @param phase - Trigger phase to play
+ * @param options - Target of the phase and identifiers read by the workflow
+ *
+ * @example
+ * ```ts
+ * await runStudioSkillTrigger(player, "fireball", "impact", { targetId: "slime-1" });
+ * ```
+ */
+export const runStudioSkillTrigger = (
+  player: RpgPlayer,
+  skillId: string,
+  phase: StudioSkillWorkflowPhase,
+  options: { target?: unknown; targetId?: string; casterId?: string } = {},
+): Promise<void> => {
+  const triggers = skillTriggers.get(skillId);
+  if (!triggers) return Promise.resolve();
+  return enqueueWorkflow(player, skillId, triggers, phase, options.target, {
+    targetId: options.targetId,
+    casterId: options.casterId,
+  });
 };

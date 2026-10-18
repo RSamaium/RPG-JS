@@ -1,6 +1,6 @@
 import type { AnyBlockInstance } from "@common/blocks";
 import type { RpgMap, RpgPlayer } from "@rpgjs/server";
-import { BlockExecutionService } from "./block-executor";
+import { createBlockExecutionService } from "./block-executor";
 
 /**
  * Native RPGJS item lifecycle phases supported by Studio workflows.
@@ -104,7 +104,7 @@ const runWorkflow = async (
     hook: trigger.phase,
     ...(typeof equip === "boolean" ? { equip } : {}),
   };
-  const executor = new BlockExecutionService(player, null, map, {
+  const executor = createBlockExecutionService(player, null, map, {
     initialVariables,
   });
   if (Array.isArray(trigger.blocks)) {

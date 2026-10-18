@@ -6,6 +6,7 @@ import {
   GameExecutionContext,
   RuntimeBlockExecutorRegistry,
   PartialBlockExecutorRegistry,
+  CustomBlockExecutors,
   AnyBlockInstance,
   BlockType,
   BlockParamsMap
@@ -160,7 +161,7 @@ export class BlockExecutionService {
    * });
    * ```
    */
-  addCustomExecutors(customExecutors: PartialBlockExecutorRegistry): void {
+  addCustomExecutors(customExecutors: PartialBlockExecutorRegistry | CustomBlockExecutors): void {
     this.executors = createExecutorRegistry(customExecutors);
     // Update context with new executors
     this.context.executors = this.executors;
@@ -415,3 +416,32 @@ export class BlockExecutionService {
     this.switches.clear();
   }
 }
+
+
+let gameBlockExecutors: CustomBlockExecutors | undefined;
+
+/**
+ * Sets the block executors a game gave to `provideStudioGame({ blockExecutors })`.
+ *
+ * @param executors - Executors added to (or replacing) the default ones
+ */
+export const configureStudioBlockExecutors = (executors?: CustomBlockExecutors): void => {
+  gameBlockExecutors = executors;
+};
+
+/**
+ * Creates a `BlockExecutionService` that includes the executors of the game.
+ *
+ * Every Studio workflow (events, maps, items, skills) starts from here so a
+ * custom block runs wherever it is placed.
+ */
+export const createBlockExecutionService = (
+  player: RpgPlayer | null,
+  event: RpgEvent | null,
+  map: RpgMap | null = null,
+  options?: BlockExecutionOptions,
+): BlockExecutionService => {
+  const service = new BlockExecutionService(player, event, map, options);
+  if (gameBlockExecutors) service.addCustomExecutors(gameBlockExecutors);
+  return service;
+};

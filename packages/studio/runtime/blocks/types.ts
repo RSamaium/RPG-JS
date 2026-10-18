@@ -1651,3 +1651,14 @@ export type BlockExecutorRegistry<T extends BlockType = BlockType> = {
  * Use this type when adding custom executors that don't cover all block types.
  */
 export type PartialBlockExecutorRegistry = Partial<BlockExecutorRegistry<BlockType>>;
+
+/**
+ * Executors a game adds to the block runtime.
+ *
+ * Keys may be block types the framework does not know (a battle, a crafting
+ * system...) or default block types to replace.
+ */
+export type CustomBlockExecutors = Record<
+  string,
+  (context: GameExecutionContext, params: any) => Promise<void> | void
+>;
