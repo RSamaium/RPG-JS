@@ -76,6 +76,7 @@
     import { parseRichText, paginateRichText, sliceRichText } from "../../../utils/richText";
     import { measureRichText, richTextLength, locateReadPosition } from "../../../utils/measuredRichText";
     import { getKeyboardControlBind } from "../../../services/actionInput";
+    import { menuGamepadControls } from "../../../services/gamepadControls";
     import InputField from "../input-field.ce";
 
     const engine = inject(RpgClientEngine);
@@ -271,9 +272,7 @@
                 nav.next(1);
             }
         },
-        gamepad: {
-            enabled: true
-        }
+        gamepad: menuGamepadControls
     });
     
     const dialogControls = signal({
@@ -281,6 +280,7 @@
             bind: getKeyboardControlBind(keyboardControls.action),
             keyDown: advance
         },
+        gamepad: menuGamepadControls,
     })
 
     const faceSheet = (faceValue) => {

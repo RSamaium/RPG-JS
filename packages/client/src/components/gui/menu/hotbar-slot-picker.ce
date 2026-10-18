@@ -168,6 +168,7 @@
   import { inject } from "../../../core/inject";
   import { RpgClientEngine } from "../../../RpgClientEngine";
   import { getKeyboardControlBind } from "../../../services/actionInput";
+  import { menuGamepadControls } from "../../../services/gamepadControls";
 
   const { hotbar, entry, onAssign, onClear, onCancel } = defineProps();
   const engine = inject(RpgClientEngine);
@@ -285,10 +286,9 @@
       }
     },
     gamepad: {
-      enabled: true,
+      ...menuGamepadControls,
       buttonMapping: {
-        button_0: "action",
-        button_1: "escape",
+        ...menuGamepadControls.buttonMapping,
         button_2: "clear",
         button_6: "left",
         button_7: "right"

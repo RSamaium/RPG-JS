@@ -103,6 +103,7 @@
     import { inject } from "../../../core/inject";
     import { RpgClientEngine } from "../../../RpgClientEngine";
     import { getKeyboardControlBind } from "../../../services/actionInput";
+    import { menuGamepadControls } from "../../../services/gamepadControls";
 
     const engine = inject(RpgClientEngine);
     const { t } = engine.i18n();
@@ -407,9 +408,7 @@
                 if (onBack) onBack();
             }
         },
-        gamepad: {
-            enabled: true
-        }
+        gamepad: menuGamepadControls
     });
 
     effect(() => {

@@ -141,6 +141,7 @@
     import { getEntityProp } from "../../../utils/getEntityProp";
     import { delay, Direction } from "@rpgjs/common";
     import { getKeyboardControlBind } from "../../../services/actionInput";
+    import { menuGamepadControls } from "../../../services/gamepadControls";
 
     import { movementPreferences, refreshKeyboardBindings } from "../../../services/movementPreferences";
     import { guiTransition, lockGuiInput } from "../lifecycle";
@@ -253,10 +254,28 @@
             return;
         }
         delay(() => {
+            // The cursor stays on the entry the player came from.
             view.set("menu");
-            const statusIndex = menuEntries().findIndex(entry => entry.id === "status");
-            if (statusIndex >= 0) selectedMenu.set(statusIndex);
         });
+    };
+
+    // Entries that open a panel; "save" (overlay) and "exit" (confirmation) are not tabs.
+    const tabIndexes = computed(() => selectableIndexes().filter((index) => {
+        const id = menuEntries()[index]?.id;
+        return id !== "save" && id !== "exit";
+    }));
+
+    const switchTab = (delta) => {
+        if (saveOverlay() || hotbarAssignmentOpen() || view() === "exit") return;
+        const tabs = tabIndexes();
+        if (!tabs.length) return;
+        const position = tabs.indexOf(selectedMenu());
+        const next = tabs[(Math.max(0, position) + delta + tabs.length) % tabs.length];
+        if (next === selectedMenu() && position >= 0 && tabs.length === 1) return;
+        selectedMenu.set(next);
+        engine.playUiSound("navigate");
+        const id = menuEntries()[next].id;
+        view.set(id === "status" ? "menu" : id);
     };
 
     const openHotbarAssignment = (entry) => {
@@ -388,6 +407,18 @@
                 openMenu();
             }
         },
+        tabPrev: {
+            bind: "page up",
+            keyDown() {
+                switchTab(-1);
+            }
+        },
+        tabNext: {
+            bind: "page down",
+            keyDown() {
+                switchTab(1);
+            }
+        },
         escape: {
             bind: keyboardControls.escape,
             keyDown() {
@@ -403,9 +434,7 @@
                 closeMenu()
             }
         },
-        gamepad: {
-            enabled: true
-        }
+        gamepad: menuGamepadControls
     });
 
     mount((element) => {
