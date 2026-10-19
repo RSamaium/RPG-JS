@@ -1389,7 +1389,8 @@
           smoothMove,
           followRevision,
           isCurrentRevision: (revision) => client.cameraFollowRevision() === revision,
-          shouldFollowCamera
+          shouldFollowCamera,
+          pixelSnap: client.cameraPixelSnap
         })
       );
       appliedCameraFollowRevision = appliedCameraFollowOwnership ? followRevision : null;

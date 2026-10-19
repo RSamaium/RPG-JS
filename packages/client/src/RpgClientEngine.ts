@@ -213,6 +213,8 @@ export class RpgClientEngine<T = any> {
   cameraFollowTargetId = signal<string | null>(null);
   /** Camera follow transition options used by character components when the target changes */
   cameraFollowSmoothMove: CameraFollowSmoothMove = false;
+  /** Render the camera on whole pixels so tilemaps do not shimmer with a fractional camera. Set to false for a fully fluid camera. */
+  cameraPixelSnap = true;
   /** Incremented for each camera follow command so repeated commands on the same target are applied */
   cameraFollowRevision = signal(0);
   /** Trigger for map shake animation */
@@ -451,11 +453,11 @@ export class RpgClientEngine<T = any> {
   }
 
   async start() {
-    this.sceneMap = new RpgClientMap()
-    this.sceneMap.configureClientPrediction(this.predictionEnabled);
     // The page may show a startup splash from its first paint; a game that never dismisses it must not stay covered.
     setStartupSplashLabel(this.t("rpg.transition.loading"));
     setTimeout(dismissStartupSplash, STARTUP_SPLASH_MAX_MS);
+    this.sceneMap = new RpgClientMap()
+    this.sceneMap.configureClientPrediction(this.predictionEnabled);
     this.sceneMap.loadPhysic();
     this.resolveSceneMapComponent();
 
@@ -466,10 +468,10 @@ export class RpgClientEngine<T = any> {
     this.guiService._initialize();
 
     if (!this.webSocket.deferConnection) await this.connect();
-
-    this.selector = document.body.querySelector("#rpg") as HTMLElement;
     // The locale may only be known once connected.
     setStartupSplashLabel(this.t("rpg.transition.loading"));
+
+    this.selector = document.body.querySelector("#rpg") as HTMLElement;
 
     const bootstrapOptions = (this.globalConfig as any)?.bootstrapCanvasOptions;
     const { app, canvasElement } = await bootstrapCanvas(

@@ -72,6 +72,8 @@ export interface CameraFollowApplyContext {
   followRevision: number;
   isCurrentRevision: (revision: number) => boolean;
   shouldFollowCamera: () => boolean;
+  /** Snap the viewport translation to whole pixels when rendering. Defaults to true. */
+  pixelSnap?: boolean;
 }
 
 export type CameraFollowOwnership = {
@@ -94,6 +96,41 @@ const claimCameraFollow = (viewport: unknown): CameraFollowOwnership | null => {
 
 export const ownsCameraFollow = (ownership: CameraFollowOwnership | null): boolean => {
   return ownership !== null && cameraFollowOwners.get(ownership.viewport) === ownership.token;
+};
+
+const pixelSnapOriginals = new WeakMap<object, () => void>();
+
+/**
+ * Rounds the viewport translation to whole pixels at render time only.
+ *
+ * Tilemap shaders ignore Pixi's `roundPixels`, so a fractional camera (interpolated follow
+ * target, odd screen size) makes tiles land on a different sub-pixel every frame and shimmer.
+ * `viewport.x` / `viewport.y` stay fractional, so follow, clamp and animations are not affected.
+ */
+export const setViewportPixelSnap = (component: any, enabled: boolean) => {
+  // The CanvasEngine Viewport component wraps the pixi-viewport that actually holds the camera transform.
+  const viewport = component?.viewport ?? component;
+  if (!isTrackableViewport(viewport)) return;
+  const original = pixelSnapOriginals.get(viewport);
+  const updateLocalTransform = (viewport as any).updateLocalTransform;
+  if (enabled === (original !== undefined) || typeof updateLocalTransform !== "function") return;
+
+  if (!enabled) {
+    original?.();
+    pixelSnapOriginals.delete(viewport);
+    return;
+  }
+
+  (viewport as any).updateLocalTransform = function (this: any, ...args: unknown[]) {
+    updateLocalTransform.apply(this, args);
+    const transform = this.localTransform;
+    transform.tx = Math.round(transform.tx);
+    transform.ty = Math.round(transform.ty);
+  };
+  pixelSnapOriginals.set(viewport, () => {
+    (viewport as any).updateLocalTransform = updateLocalTransform;
+    (viewport as any)._didLocalTransformChangeId = -1;
+  });
 };
 
 const finiteNumber = (value: unknown, fallback: number) => {
@@ -248,8 +285,10 @@ export const applyCameraFollow = ({
   followRevision,
   isCurrentRevision,
   shouldFollowCamera,
+  pixelSnap = true,
 }: CameraFollowApplyContext) => {
   clearCameraFollowPlugins(viewport);
+  setViewportPixelSnap(viewport, pixelSnap);
 
   const position = readCameraFollowPosition(target);
   if (!position) return null;

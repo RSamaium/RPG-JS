@@ -5,6 +5,7 @@ import {
   cameraFollowOptions,
   clearCameraFollowPlugins,
   ownsCameraFollowRevision,
+  setViewportPixelSnap,
   syncCameraFollowPosition,
 } from "./cameraFollow";
 
@@ -297,5 +298,91 @@ describe("camera follow", () => {
     expect(ownsCameraFollowRevision(2, 2)).toBe(true);
     expect(ownsCameraFollowRevision(2, 3)).toBe(false);
     expect(ownsCameraFollowRevision(null, 2)).toBe(false);
+  });
+});
+
+describe("viewport pixel snap", () => {
+  const createRenderableViewport = () => {
+    const viewport: any = {
+      x: 0,
+      y: 0,
+      localTransform: { tx: 0, ty: 0 },
+      updateLocalTransform() {
+        this.localTransform.tx = this.x;
+        this.localTransform.ty = this.y;
+      },
+    };
+    return viewport;
+  };
+
+  it("rounds the local transform and keeps the viewport position fractional", () => {
+    const viewport = createRenderableViewport();
+    setViewportPixelSnap(viewport, true);
+
+    viewport.x = -279.5;
+    viewport.y = -359.37;
+    viewport.updateLocalTransform();
+
+    expect(viewport.localTransform).toEqual({ tx: -279, ty: -359 });
+    expect(viewport.x).toBe(-279.5);
+    expect(viewport.y).toBe(-359.37);
+  });
+
+  it("is idempotent and can be disabled", () => {
+    const viewport = createRenderableViewport();
+    setViewportPixelSnap(viewport, true);
+    const patched = viewport.updateLocalTransform;
+    setViewportPixelSnap(viewport, true);
+    expect(viewport.updateLocalTransform).toBe(patched);
+
+    setViewportPixelSnap(viewport, false);
+    viewport.x = 10.4;
+    viewport.updateLocalTransform();
+    expect(viewport.localTransform.tx).toBe(10.4);
+  });
+
+  it("is applied by applyCameraFollow unless pixelSnap is false", () => {
+    const snapped = { ...createViewport(), ...createRenderableViewport() };
+    applyCameraFollow({
+      viewport: snapped,
+      target: { x: 1, y: 1 },
+      smoothMove: false,
+      followRevision: 1,
+      isCurrentRevision: () => true,
+      shouldFollowCamera: () => true,
+    });
+    snapped.x = 5.6;
+    snapped.updateLocalTransform();
+    expect(snapped.localTransform.tx).toBe(6);
+
+    const fluid = { ...createViewport(), ...createRenderableViewport() };
+    applyCameraFollow({
+      viewport: fluid,
+      target: { x: 1, y: 1 },
+      smoothMove: false,
+      followRevision: 1,
+      isCurrentRevision: () => true,
+      shouldFollowCamera: () => true,
+      pixelSnap: false,
+    });
+    fluid.x = 5.6;
+    fluid.updateLocalTransform();
+    expect(fluid.localTransform.tx).toBe(5.6);
+  });
+
+  it("patches the pixi-viewport wrapped by the CanvasEngine component", () => {
+    const inner = createRenderableViewport();
+    const component = { viewport: inner, updateLocalTransform: vi.fn() };
+    setViewportPixelSnap(component, true);
+
+    inner.x = 3.7;
+    inner.updateLocalTransform();
+
+    expect(inner.localTransform.tx).toBe(4);
+    expect(component.updateLocalTransform).not.toHaveBeenCalled();
+  });
+
+  it("ignores viewports without a local transform", () => {
+    expect(() => setViewportPixelSnap(createViewport(), true)).not.toThrow();
   });
 });
