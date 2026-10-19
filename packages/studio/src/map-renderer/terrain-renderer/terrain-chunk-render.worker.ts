@@ -66,6 +66,11 @@ scope.onmessage = async (event: MessageEvent<TerrainWorkerRequest>) => {
     renderer.resetRenderCaches();
     return;
   }
+  if (message.type === "prefetch") {
+    // Images the next paints need: fetched and decoded now, found ready when the first chunk is asked.
+    for (const source of message.sources) void loadImage(source);
+    return;
+  }
   if (message.type === "walls-occlusion" || message.type === "walls-shadow") {
     try {
       // Walls are made from their own data and caches, like the page does for them.

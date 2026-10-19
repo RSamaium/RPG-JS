@@ -11,6 +11,7 @@ import {
   buildStudioTerrainCollisionPolygons,
   createStudioTerrainRenderData,
 } from "./map-renderer";
+import { TerrainWorkerClient } from "./map-renderer/terrain-renderer/terrain-worker-client";
 import { resolveStudioElementSize } from "./studio-element-size";
 import { STUDIO_DIRECT_LOAD_MARKER } from "./map-streaming";
 import { assignStudioEventPlacementIds } from "./event-placement";
@@ -1001,6 +1002,15 @@ export const loadMap = async (mapId: string) => {
     ...map,
     terrainByTileset,
   }) : null;
+  if (terrainRenderData) {
+    // The terrain workers can fetch the atlas while the rest of the map loads.
+    TerrainWorkerClient.prefetchImages([
+      terrainRenderData.sourceTexture,
+      terrainRenderData.terrainControl && !terrainRenderData.terrainControl.regions?.length
+        ? terrainRenderData.terrainControl.source
+        : null,
+    ]);
+  }
   const allHitboxes = [
     ...(Array.isArray(finalHitboxes) ? finalHitboxes : []),
     ...terrainCollisionPolygons,

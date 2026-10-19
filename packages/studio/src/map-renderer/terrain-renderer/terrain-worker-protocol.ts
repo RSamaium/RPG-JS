@@ -10,6 +10,7 @@ export type TerrainWorkerRequest =
       collisions: StudioCollisionPolygon[];
       splitWallForeground: boolean;
     }
+  | { type: "prefetch"; sources: string[] }
   | { type: "paint"; requestId: number; bounds: TerrainWorkerBounds }
   | { type: "walls-occlusion"; requestId: number; data: StudioTerrainRenderData; sliceWidth: number }
   | { type: "walls-shadow"; requestId: number; data: StudioTerrainRenderData; style: StudioTerrainWallShadowStyle };

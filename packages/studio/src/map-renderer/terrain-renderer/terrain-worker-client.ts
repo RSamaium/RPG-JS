@@ -81,6 +81,18 @@ export class TerrainWorkerClient {
     }, TerrainWorkerClient.WARM_KEEP_MS);
   }
 
+  /**
+   * Has the warmed workers fetch and decode the images of a terrain (its atlas, its control texture) before
+   * its first chunk is painted. Does nothing when no worker is warmed.
+   */
+  static prefetchImages(sources: Array<string | null | undefined>): void {
+    const list = sources.filter((source): source is string => typeof source === "string" && source.length > 0);
+    if (list.length === 0) return;
+    for (const worker of TerrainWorkerClient.warmed) {
+      worker.worker.postMessage({ type: "prefetch", sources: list } satisfies TerrainWorkerRequest);
+    }
+  }
+
   static create(): TerrainWorkerClient | null {
     return TerrainWorkerClient.warmed.pop() ?? TerrainWorkerClient.spawn();
   }

@@ -56,6 +56,19 @@ describe("TerrainWorkerClient warm-up", () => {
     expect(workers.every((worker) => worker.terminate.mock.calls.length === 1)).toBe(true);
   });
 
+  it("has the warmed workers fetch the images of a terrain", async () => {
+    const { TerrainWorkerClient } = await import("./terrain-worker-client");
+    TerrainWorkerClient.warm(2);
+    TerrainWorkerClient.prefetchImages(["atlas.png", null, undefined, "", "control.png"]);
+    for (const worker of workers as unknown as Array<{ postMessage: ReturnType<typeof vi.fn> }>) {
+      expect(worker.postMessage).toHaveBeenCalledWith({ type: "prefetch", sources: ["atlas.png", "control.png"] });
+    }
+
+    (workers as unknown as Array<{ postMessage: ReturnType<typeof vi.fn> }>).forEach((worker) => worker.postMessage.mockClear());
+    TerrainWorkerClient.prefetchImages([null, ""]);
+    expect((workers as unknown as Array<{ postMessage: ReturnType<typeof vi.fn> }>).every((worker) => worker.postMessage.mock.calls.length === 0)).toBe(true);
+  });
+
   it("does nothing where workers are not available", async () => {
     vi.stubGlobal("Worker", undefined);
     const { TerrainWorkerClient } = await import("./terrain-worker-client");
