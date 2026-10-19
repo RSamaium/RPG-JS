@@ -173,6 +173,7 @@ export class StudioTerrainWallOcclusionRenderer {
   private readonly renderer = new StudioTerrainChunkRenderer(new PixiContainer());
   private sprites: Sprite[] = [];
   private renderVersion = "";
+  private inflight: { version: string; promise: Promise<Sprite[]> } | null = null;
 
   async renderMap(map: any): Promise<Sprite[]> {
     const data = isStudioTerrainRenderData(map?.terrainRenderData)
@@ -183,11 +184,22 @@ export class StudioTerrainWallOcclusionRenderer {
       return this.sprites;
     }
 
-    const nextSprites = await this.renderer.createWallOcclusionSprites(map);
-    this.clearSprites();
-    this.sprites = nextSprites;
-    this.renderVersion = version;
-    return this.sprites;
+    // The scene asks again for the same walls while they are being painted: they are painted once.
+    if (this.inflight?.version === version) return this.inflight.promise;
+    const promise = (async () => {
+      const nextSprites = await this.renderer.createWallOcclusionSprites(map);
+      this.clearSprites();
+      this.sprites = nextSprites;
+      this.renderVersion = version;
+      return this.sprites;
+    })();
+    const entry = { version, promise };
+    this.inflight = entry;
+    try {
+      return await promise;
+    } finally {
+      if (this.inflight === entry) this.inflight = null;
+    }
   }
 
   updateSpriteVisibility(bounds?: StudioViewportBounds | null, margin = 0): void {
@@ -214,6 +226,7 @@ export class StudioTerrainWallShadowRenderer {
   private readonly renderer = new StudioTerrainChunkRenderer(new PixiContainer());
   private sprites: Sprite[] = [];
   private renderVersion = "";
+  private inflight: { version: string; promise: Promise<Sprite[]> } | null = null;
 
   async renderMap(map: any, lighting: LightingState | null | undefined): Promise<Sprite[]> {
     const data = isStudioTerrainRenderData(map?.terrainRenderData)
@@ -225,11 +238,21 @@ export class StudioTerrainWallShadowRenderer {
       return this.sprites;
     }
 
-    const nextSprites = style ? await this.renderer.createWallShadowSprites(map, lighting) : [];
-    this.clearSprites();
-    this.sprites = nextSprites;
-    this.renderVersion = version;
-    return this.sprites;
+    if (this.inflight?.version === version) return this.inflight.promise;
+    const promise = (async () => {
+      const nextSprites = style ? await this.renderer.createWallShadowSprites(map, lighting) : [];
+      this.clearSprites();
+      this.sprites = nextSprites;
+      this.renderVersion = version;
+      return this.sprites;
+    })();
+    const entry = { version, promise };
+    this.inflight = entry;
+    try {
+      return await promise;
+    } finally {
+      if (this.inflight === entry) this.inflight = null;
+    }
   }
 
   updateSpriteVisibility(bounds?: StudioViewportBounds | null, margin = 0): void {

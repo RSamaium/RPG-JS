@@ -27,6 +27,7 @@ import type { StudioGameModuleConfig } from ".";
 import { createStudioMapPlugins, type StudioMapPlugin } from "./studio-map-plugins";
 import { bindInitialStudioEventHitboxes } from "./initial-event-hitboxes-client";
 import { collectStudioActionBattleMediaRefs } from "./action-battle-animation-preload";
+import { setStudioMediaPreload, waitForStudioMediaPreload } from "./startup-preload";
 import { beginStudioMapLoading, waitForStudioMapReady } from "./studio-map-readiness";
 
 interface GlobalConfig {
@@ -298,29 +299,33 @@ export default (config: StudioGameModuleConfig) => {
           .filter((record) => (record?.type ?? record?._type) === "actor")
           .flatMap((actor) => [actor.graphic, actor.faceset])
           .filter(Boolean);
-        const actorIllustrationRefs = await resolveActorIllustrationRefs(database);
-
-        const heroMediaRefs = [
-          engine.globalConfig.hero?.graphic,
-          engine.globalConfig.hero?.faceset,
-          ...animationMediaRefs,
-          ...databaseAnimationMediaRefs,
-          ...actorMediaRefs,
-          ...actorIllustrationRefs,
-        ].filter(Boolean);
-
-        // Load hero and combat animation spritesheets from either direct media objects or media IDs.
-        // Preloading database combat animations avoids lazy-load races when a temporary
-        // attack/hurt graphic is restored while Pixi is still resolving the spritesheet.
-        const heroSpritesheets = await Promise.all(
-          heroMediaRefs.map((mediaRef) => resolveHeroMediaSpritesheet(mediaRef)),
-        );
-
-        heroSpritesheets
-          .filter((value) => value && typeof value === "object")
-          .forEach((spritesheet) => {
-            engine.addSpriteSheet(spritesheet);
-          });
+        // Only the hero is needed to start. The other media (combat animations, actors, illustrations) load
+        // while the first map loads, and the map is revealed once they are in: preloading them avoids
+        // lazy-load races when a temporary attack/hurt graphic is restored while Pixi is still resolving
+        // the spritesheet.
+        const addSpritesheets = (sheets: any[]) =>
+          sheets
+            .filter((value) => value && typeof value === "object")
+            .forEach((spritesheet) => engine.addSpriteSheet(spritesheet));
+        addSpritesheets(await Promise.all(
+          [engine.globalConfig.hero?.graphic, engine.globalConfig.hero?.faceset]
+            .filter(Boolean)
+            .map((mediaRef) => resolveHeroMediaSpritesheet(mediaRef)),
+        ));
+        setStudioMediaPreload((async () => {
+          const actorIllustrationRefs = await resolveActorIllustrationRefs(database);
+          const mediaRefs = [
+            ...animationMediaRefs,
+            ...databaseAnimationMediaRefs,
+            ...actorMediaRefs,
+            ...actorIllustrationRefs,
+          ].filter(Boolean);
+          addSpritesheets(await Promise.all(
+            mediaRefs.map((mediaRef) => resolveHeroMediaSpritesheet(mediaRef)),
+          ));
+        })().catch((error) => {
+          console.warn("[StudioGame] media preload failed", error);
+        }));
 
         const displayTitleScreen = startupQuery.directMapId
           ? false
@@ -413,6 +418,8 @@ export default (config: StudioGameModuleConfig) => {
         bindInitialStudioEventHitboxes(scene);
         const loadedScene = engine.scene.data?.();
         await waitForStudioMapReady(loadedScene?.data ?? loadedScene);
+        // The map is ready: wait only a moment for the background media still loading.
+        await waitForStudioMediaPreload();
         await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
         fadeTrigger.start();
       },

@@ -3,6 +3,7 @@ import {
   resolveTerrainHoleWaveDescriptors,
   shouldRenderTerrainGridWithSoftMasks,
   StudioTerrainChunkRenderer,
+  StudioTerrainWallOcclusionRenderer,
 } from "./terrain-chunk-renderer";
 
 function createTerrainMap(width = 2304, height = 768) {
@@ -394,5 +395,29 @@ describe("StudioTerrainChunkRenderer overlapping renders", () => {
     expect([...(renderer as any).chunks.keys()].sort()).toEqual(["0:0", "1:0", "2:0"]);
     // A chunk is not painted twice for the same state.
     expect(painting).toBe(3);
+  });
+});
+
+describe("StudioTerrainWallOcclusionRenderer", () => {
+  it("paints the walls once when the scene asks for them again while they are being painted", async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const create = vi
+      .spyOn(StudioTerrainChunkRenderer.prototype, "createWallOcclusionSprites")
+      .mockImplementation(async () => { await gate; return []; });
+    try {
+      const walls = new StudioTerrainWallOcclusionRenderer();
+      const map = createTerrainMap();
+      const requests = [walls.renderMap(map), walls.renderMap(map), walls.renderMap(map)];
+      release();
+      const results = await Promise.all(requests);
+      expect(create).toHaveBeenCalledTimes(1);
+      expect(results[1]).toBe(results[0]);
+      // Painted: a new request for the same terrain does not paint again.
+      await walls.renderMap(map);
+      expect(create).toHaveBeenCalledTimes(1);
+    } finally {
+      create.mockRestore();
+    }
   });
 });
