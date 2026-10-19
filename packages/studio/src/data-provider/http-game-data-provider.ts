@@ -5,12 +5,31 @@ import type {
   ProjectQuery,
 } from './types';
 
+/**
+ * Requests on their way. The client and the server of a standalone game ask for the same map, project
+ * or media at the same time: one request answers them all. Only requests in flight are shared, never
+ * an answer kept for later, so a republished project is always read again.
+ */
+const inflightRequests = new Map<string, Promise<any>>();
+
 const fetchJson = async (url: string, label: string): Promise<any> => {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`[HttpGameDataProvider] ${label} failed (${response.status}) for ${url}`);
+  let request = inflightRequests.get(url);
+  if (!request) {
+    request = (async () => {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`[HttpGameDataProvider] ${label} failed (${response.status}) for ${url}`);
+      }
+      return response.json();
+    })();
+    inflightRequests.set(url, request);
+    const forget = () => {
+      if (inflightRequests.get(url) === request) inflightRequests.delete(url);
+    };
+    request.then(forget, forget);
   }
-  return response.json();
+  // Every caller gets its own copy: they change what they receive (resolved media, normalized events).
+  return structuredClone(await request);
 };
 
 const getStudioApiKey = (): string | null => {
