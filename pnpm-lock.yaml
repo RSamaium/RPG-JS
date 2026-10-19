@@ -22,11 +22,11 @@ importers:
         version: 9.0.10
     devDependencies:
       '@canvasengine/compiler':
-        specifier: 2.4.0
-        version: 2.4.0(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
+        specifier: 2.4.1
+        version: 2.4.1(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
       '@canvasengine/presets':
-        specifier: 2.4.0
-        version: 2.4.0(canvasengine@2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        specifier: 2.4.1
+        version: 2.4.1(canvasengine@2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@changesets/cli':
         specifier: ^2.31.0
         version: 2.31.0(@types/node@25.9.3)
@@ -34,8 +34,8 @@ importers:
         specifier: ^25.9.3
         version: 25.9.3
       canvasengine:
-        specifier: 2.4.0
-        version: 2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.4.1
+        version: 2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       jsdom:
         specifier: ^29.1.1
         version: 29.1.1
@@ -67,12 +67,12 @@ importers:
         specifier: workspace:^
         version: link:../vite
       canvasengine:
-        specifier: ^2.4.0
-        version: 2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: ^2.4.1
+        version: 2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
     devDependencies:
       '@canvasengine/compiler':
-        specifier: 2.4.0
-        version: 2.4.0(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
+        specifier: 2.4.1
+        version: 2.4.1(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
       vite:
         specifier: ^8.0.16
         version: 8.1.5(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
@@ -86,8 +86,8 @@ importers:
   packages/action-battle:
     dependencies:
       '@canvasengine/presets':
-        specifier: ^2.4.0
-        version: 2.4.0(canvasengine@2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        specifier: ^2.4.1
+        version: 2.4.1(canvasengine@2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/client':
         specifier: workspace:^
         version: link:../client
@@ -101,12 +101,12 @@ importers:
         specifier: workspace:^
         version: link:../vite
       canvasengine:
-        specifier: ^2.4.0
-        version: 2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: ^2.4.1
+        version: 2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
     devDependencies:
       '@canvasengine/compiler':
-        specifier: 2.4.0
-        version: 2.4.0(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
+        specifier: 2.4.1
+        version: 2.4.1(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
       vite:
         specifier: ^8.0.16
         version: 8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
@@ -129,12 +129,12 @@ importers:
         specifier: workspace:^
         version: link:../vite
       canvasengine:
-        specifier: ^2.4.0
-        version: 2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: ^2.4.1
+        version: 2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
     devDependencies:
       '@canvasengine/compiler':
-        specifier: 2.4.0
-        version: 2.4.0(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
+        specifier: 2.4.1
+        version: 2.4.1(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
       vite:
         specifier: ^8.0.16
         version: 8.1.5(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
@@ -160,12 +160,12 @@ importers:
         specifier: workspace:^
         version: link:../vite
       canvasengine:
-        specifier: ^2.4.0
-        version: 2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: ^2.4.1
+        version: 2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
     devDependencies:
       '@canvasengine/compiler':
-        specifier: 2.4.0
-        version: 2.4.0(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
+        specifier: 2.4.1
+        version: 2.4.1(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
       vite:
         specifier: ^8.0.16
         version: 8.1.5(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
@@ -179,8 +179,8 @@ importers:
   packages/client:
     dependencies:
       '@canvasengine/presets':
-        specifier: ^2.4.0
-        version: 2.4.0(canvasengine@2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        specifier: ^2.4.1
+        version: 2.4.1(canvasengine@2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/common':
         specifier: workspace:*
         version: link:../common
@@ -200,8 +200,8 @@ importers:
         specifier: 3.1.1
         version: 3.1.1(react@19.2.7)
       canvasengine:
-        specifier: ^2.4.0
-        version: 2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: ^2.4.1
+        version: 2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi-filters:
         specifier: ^6.1.5
         version: 6.1.5(pixi.js@8.19.0)
@@ -213,8 +213,8 @@ importers:
         version: 7.8.2
     devDependencies:
       '@canvasengine/compiler':
-        specifier: 2.4.0
-        version: 2.4.0(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
+        specifier: 2.4.1
+        version: 2.4.1(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
       vite:
         specifier: ^8.1.5
         version: 8.1.5(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
@@ -298,8 +298,8 @@ importers:
   packages/server:
     dependencies:
       '@canvasengine/tiled':
-        specifier: 2.4.0
-        version: 2.4.0
+        specifier: 2.4.1
+        version: 2.4.1
       '@rpgjs/common':
         specifier: workspace:*
         version: link:../common
@@ -341,8 +341,8 @@ importers:
   packages/studio:
     dependencies:
       '@canvasengine/presets':
-        specifier: ^2.4.0
-        version: 2.4.0(canvasengine@2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        specifier: ^2.4.1
+        version: 2.4.1(canvasengine@2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/action-battle':
         specifier: workspace:^
         version: link:../action-battle
@@ -362,15 +362,15 @@ importers:
         specifier: workspace:^
         version: link:../vite
       canvasengine:
-        specifier: ^2.4.0
-        version: 2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: ^2.4.1
+        version: 2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       json-schema-to-ts:
         specifier: ^3.1.1
         version: 3.1.1
     devDependencies:
       '@canvasengine/compiler':
-        specifier: 2.4.0
-        version: 2.4.0(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
+        specifier: 2.4.1
+        version: 2.4.1(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0
@@ -384,8 +384,8 @@ importers:
   packages/testing:
     dependencies:
       '@canvasengine/testing':
-        specifier: 2.4.0
-        version: 2.4.0(canvasengine@2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(vitest@4.1.10(@types/node@25.9.3)(@vitest/coverage-v8@4.1.9(vitest@4.1.9))(@vitest/ui@4.1.9(vitest@4.1.9))(jsdom@29.1.1)(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)))
+        specifier: 2.4.1
+        version: 2.4.1(canvasengine@2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(vitest@4.1.10(@types/node@25.9.3)(@vitest/coverage-v8@4.1.9(vitest@4.1.9))(@vitest/ui@4.1.9(vitest@4.1.9))(jsdom@29.1.1)(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)))
       '@rpgjs/client':
         specifier: workspace:*
         version: link:../client
@@ -399,8 +399,8 @@ importers:
         specifier: 3.1.0
         version: 3.1.0
       canvasengine:
-        specifier: 2.4.0
-        version: 2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.4.1
+        version: 2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       rxjs:
         specifier: ^7.8.2
         version: 7.8.2
@@ -418,11 +418,11 @@ importers:
   packages/tiledmap:
     dependencies:
       '@canvasengine/presets':
-        specifier: ^2.4.0
-        version: 2.4.0(canvasengine@2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        specifier: ^2.4.1
+        version: 2.4.1(canvasengine@2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@canvasengine/tiled':
-        specifier: 2.4.0
-        version: 2.4.0
+        specifier: 2.4.1
+        version: 2.4.1
       '@rpgjs/client':
         specifier: workspace:^
         version: link:../client
@@ -436,12 +436,12 @@ importers:
         specifier: workspace:^
         version: link:../vite
       canvasengine:
-        specifier: ^2.4.0
-        version: 2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: ^2.4.1
+        version: 2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
     devDependencies:
       '@canvasengine/compiler':
-        specifier: 2.4.0
-        version: 2.4.0(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
+        specifier: 2.4.1
+        version: 2.4.1(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
       vite:
         specifier: ^8.0.16
         version: 8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
@@ -494,11 +494,11 @@ importers:
         specifier: ^7.29.7
         version: 7.29.7
       '@canvasengine/compiler':
-        specifier: 2.4.0
-        version: 2.4.0(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
+        specifier: 2.4.1
+        version: 2.4.1(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
       '@canvasengine/tiled':
-        specifier: 2.4.0
-        version: 2.4.0
+        specifier: 2.4.1
+        version: 2.4.1
       '@hono/vite-dev-server':
         specifier: ^0.26.0
         version: 0.26.0(hono@4.12.25)(miniflare@4.20260714.0)(wrangler@4.112.0)
@@ -580,8 +580,8 @@ importers:
         version: 7.8.2
     devDependencies:
       '@canvasengine/compiler':
-        specifier: 2.4.0
-        version: 2.4.0(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
+        specifier: 2.4.1
+        version: 2.4.1(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
       vite:
         specifier: ^8.0.16
         version: 8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
@@ -604,8 +604,8 @@ importers:
   playground/games/account:
     dependencies:
       '@canvasengine/presets':
-        specifier: 2.4.0
-        version: 2.4.0(canvasengine@2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        specifier: 2.4.1
+        version: 2.4.1(canvasengine@2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/account':
         specifier: workspace:*
         version: link:../../../packages/account
@@ -625,15 +625,15 @@ importers:
         specifier: workspace:*
         version: link:../../../packages/vite
       canvasengine:
-        specifier: 2.4.0
-        version: 2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.4.1
+        version: 2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0
     devDependencies:
       '@canvasengine/compiler':
-        specifier: 2.4.0
-        version: 2.4.0(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
+        specifier: 2.4.1
+        version: 2.4.1(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
       vite:
         specifier: ^8.0.16
         version: 8.1.5(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
@@ -641,8 +641,8 @@ importers:
   playground/games/action-battle:
     dependencies:
       '@canvasengine/presets':
-        specifier: 2.4.0
-        version: 2.4.0(canvasengine@2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        specifier: 2.4.1
+        version: 2.4.1(canvasengine@2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/action-battle':
         specifier: workspace:*
         version: link:../../../packages/action-battle
@@ -665,15 +665,15 @@ importers:
         specifier: 3.1.0
         version: 3.1.0
       canvasengine:
-        specifier: 2.4.0
-        version: 2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.4.1
+        version: 2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0
     devDependencies:
       '@canvasengine/compiler':
-        specifier: 2.4.0
-        version: 2.4.0(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
+        specifier: 2.4.1
+        version: 2.4.1(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
       vite:
         specifier: ^8.0.16
         version: 8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
@@ -699,15 +699,15 @@ importers:
         specifier: workspace:*
         version: link:../../../packages/vite
       canvasengine:
-        specifier: 2.4.0
-        version: 2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.4.1
+        version: 2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0
     devDependencies:
       '@canvasengine/compiler':
-        specifier: 2.4.0
-        version: 2.4.0(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
+        specifier: 2.4.1
+        version: 2.4.1(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
       vite:
         specifier: ^8.0.16
         version: 8.1.5(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
@@ -715,8 +715,8 @@ importers:
   playground/games/chat:
     dependencies:
       '@canvasengine/presets':
-        specifier: 2.4.0
-        version: 2.4.0(canvasengine@2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        specifier: 2.4.1
+        version: 2.4.1(canvasengine@2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/chat':
         specifier: workspace:*
         version: link:../../../packages/chat
@@ -736,15 +736,15 @@ importers:
         specifier: workspace:*
         version: link:../../../packages/vite
       canvasengine:
-        specifier: 2.4.0
-        version: 2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.4.1
+        version: 2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0
     devDependencies:
       '@canvasengine/compiler':
-        specifier: 2.4.0
-        version: 2.4.0(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
+        specifier: 2.4.1
+        version: 2.4.1(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
       vite:
         specifier: ^8.0.16
         version: 8.1.5(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
@@ -752,8 +752,8 @@ importers:
   playground/games/dash:
     dependencies:
       '@canvasengine/presets':
-        specifier: 2.4.0
-        version: 2.4.0(canvasengine@2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        specifier: 2.4.1
+        version: 2.4.1(canvasengine@2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/client':
         specifier: workspace:*
         version: link:../../../packages/client
@@ -773,15 +773,15 @@ importers:
         specifier: 3.1.0
         version: 3.1.0
       canvasengine:
-        specifier: 2.4.0
-        version: 2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.4.1
+        version: 2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0
     devDependencies:
       '@canvasengine/compiler':
-        specifier: 2.4.0
-        version: 2.4.0(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
+        specifier: 2.4.1
+        version: 2.4.1(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
       vite:
         specifier: ^8.0.16
         version: 8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
@@ -804,15 +804,15 @@ importers:
         specifier: workspace:*
         version: link:../../../packages/vite
       canvasengine:
-        specifier: 2.4.0
-        version: 2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.4.1
+        version: 2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0
     devDependencies:
       '@canvasengine/compiler':
-        specifier: 2.4.0
-        version: 2.4.0(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
+        specifier: 2.4.1
+        version: 2.4.1(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
       vite:
         specifier: ^8.0.16
         version: 8.1.5(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
@@ -820,8 +820,8 @@ importers:
   playground/games/mouse-interactions:
     dependencies:
       '@canvasengine/presets':
-        specifier: 2.4.0
-        version: 2.4.0(canvasengine@2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        specifier: 2.4.1
+        version: 2.4.1(canvasengine@2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/client':
         specifier: workspace:*
         version: link:../../../packages/client
@@ -841,15 +841,15 @@ importers:
         specifier: 3.1.0
         version: 3.1.0
       canvasengine:
-        specifier: 2.4.0
-        version: 2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.4.1
+        version: 2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0
     devDependencies:
       '@canvasengine/compiler':
-        specifier: 2.4.0
-        version: 2.4.0(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
+        specifier: 2.4.1
+        version: 2.4.1(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
       vite:
         specifier: ^8.0.16
         version: 8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
@@ -857,8 +857,8 @@ importers:
   playground/games/pressure-plate:
     dependencies:
       '@canvasengine/presets':
-        specifier: 2.4.0
-        version: 2.4.0(canvasengine@2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        specifier: 2.4.1
+        version: 2.4.1(canvasengine@2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/client':
         specifier: workspace:*
         version: link:../../../packages/client
@@ -878,15 +878,15 @@ importers:
         specifier: 3.1.0
         version: 3.1.0
       canvasengine:
-        specifier: 2.4.0
-        version: 2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.4.1
+        version: 2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0
     devDependencies:
       '@canvasengine/compiler':
-        specifier: 2.4.0
-        version: 2.4.0(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
+        specifier: 2.4.1
+        version: 2.4.1(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
       vite:
         specifier: ^8.0.16
         version: 8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
@@ -894,8 +894,8 @@ importers:
   playground/games/projectiles:
     dependencies:
       '@canvasengine/presets':
-        specifier: 2.4.0
-        version: 2.4.0(canvasengine@2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        specifier: 2.4.1
+        version: 2.4.1(canvasengine@2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/client':
         specifier: workspace:*
         version: link:../../../packages/client
@@ -915,15 +915,15 @@ importers:
         specifier: 3.1.0
         version: 3.1.0
       canvasengine:
-        specifier: 2.4.0
-        version: 2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.4.1
+        version: 2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0
     devDependencies:
       '@canvasengine/compiler':
-        specifier: 2.4.0
-        version: 2.4.0(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
+        specifier: 2.4.1
+        version: 2.4.1(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
       vite:
         specifier: ^8.0.16
         version: 8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
@@ -931,8 +931,8 @@ importers:
   playground/games/studio:
     dependencies:
       '@canvasengine/presets':
-        specifier: 2.4.0
-        version: 2.4.0(canvasengine@2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        specifier: 2.4.1
+        version: 2.4.1(canvasengine@2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/action-battle':
         specifier: workspace:*
         version: link:../../../packages/action-battle
@@ -958,8 +958,8 @@ importers:
         specifier: 3.1.0
         version: 3.1.0
       canvasengine:
-        specifier: 2.4.0
-        version: 2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.4.1
+        version: 2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js:
         specifier: 8.19.0
         version: 8.19.0
@@ -968,8 +968,8 @@ importers:
         version: 5.0.3(@microsoft/api-extractor@7.58.9(@types/node@25.9.3))(esbuild@0.17.19)(rolldown@1.1.5)(rollup@4.62.0)(typescript@6.0.3)(vite@8.1.1(@types/node@25.9.3)(esbuild@0.17.19)(tsx@4.22.4)(yaml@2.9.0))
     devDependencies:
       '@canvasengine/compiler':
-        specifier: 2.4.0
-        version: 2.4.0(@types/node@25.9.3)(esbuild@0.17.19)(tsx@4.22.4)(yaml@2.9.0)
+        specifier: 2.4.1
+        version: 2.4.1(@types/node@25.9.3)(esbuild@0.17.19)(tsx@4.22.4)(yaml@2.9.0)
       '@cloudflare/vitest-pool-workers':
         specifier: 0.5.41
         version: 0.5.41(@vitest/runner@2.1.9)(@vitest/snapshot@2.1.9)(vitest@2.1.9(@types/node@25.9.3)(@vitest/ui@4.1.9(vitest@4.1.9))(jsdom@29.1.1)(lightningcss@1.32.0))
@@ -1001,8 +1001,8 @@ importers:
   playground/games/tiled:
     dependencies:
       '@canvasengine/presets':
-        specifier: 2.4.0
-        version: 2.4.0(canvasengine@2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        specifier: 2.4.1
+        version: 2.4.1(canvasengine@2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/action-battle':
         specifier: workspace:*
         version: link:../../../packages/action-battle
@@ -1031,15 +1031,15 @@ importers:
         specifier: 3.1.0
         version: 3.1.0
       canvasengine:
-        specifier: 2.4.0
-        version: 2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.4.1
+        version: 2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0
     devDependencies:
       '@canvasengine/compiler':
-        specifier: 2.4.0
-        version: 2.4.0(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
+        specifier: 2.4.1
+        version: 2.4.1(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
       '@vitejs/plugin-vue':
         specifier: ^6.0.7
         version: 6.0.7(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0))(vue@3.5.38(typescript@6.0.3))
@@ -1053,8 +1053,8 @@ importers:
   playground/games/time-manager:
     dependencies:
       '@canvasengine/presets':
-        specifier: 2.4.0
-        version: 2.4.0(canvasengine@2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        specifier: 2.4.1
+        version: 2.4.1(canvasengine@2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/client':
         specifier: workspace:*
         version: link:../../../packages/client
@@ -1074,15 +1074,15 @@ importers:
         specifier: 3.1.0
         version: 3.1.0
       canvasengine:
-        specifier: 2.4.0
-        version: 2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.4.1
+        version: 2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0
     devDependencies:
       '@canvasengine/compiler':
-        specifier: 2.4.0
-        version: 2.4.0(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
+        specifier: 2.4.1
+        version: 2.4.1(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
       vite:
         specifier: ^8.0.16
         version: 8.1.5(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
@@ -1090,8 +1090,8 @@ importers:
   playground/games/v4-compat:
     dependencies:
       '@canvasengine/presets':
-        specifier: 2.4.0
-        version: 2.4.0(canvasengine@2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        specifier: 2.4.1
+        version: 2.4.1(canvasengine@2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/client':
         specifier: workspace:*
         version: link:../../../packages/client
@@ -1114,15 +1114,15 @@ importers:
         specifier: 3.1.0
         version: 3.1.0
       canvasengine:
-        specifier: 2.4.0
-        version: 2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.4.1
+        version: 2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0
     devDependencies:
       '@canvasengine/compiler':
-        specifier: 2.4.0
-        version: 2.4.0(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
+        specifier: 2.4.1
+        version: 2.4.1(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
       vite:
         specifier: ^8.0.16
         version: 8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
@@ -1130,8 +1130,8 @@ importers:
   playground/games/vue-gui:
     dependencies:
       '@canvasengine/presets':
-        specifier: 2.4.0
-        version: 2.4.0(canvasengine@2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        specifier: 2.4.1
+        version: 2.4.1(canvasengine@2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/client':
         specifier: workspace:*
         version: link:../../../packages/client
@@ -1154,8 +1154,8 @@ importers:
         specifier: 3.1.0
         version: 3.1.0
       canvasengine:
-        specifier: 2.4.0
-        version: 2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.4.1
+        version: 2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0
@@ -1164,8 +1164,8 @@ importers:
         version: 3.5.38(typescript@6.0.3)
     devDependencies:
       '@canvasengine/compiler':
-        specifier: 2.4.0
-        version: 2.4.0(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
+        specifier: 2.4.1
+        version: 2.4.1(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
       '@vitejs/plugin-vue':
         specifier: ^6.0.7
         version: 6.0.7(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0))(vue@3.5.38(typescript@6.0.3))
@@ -1225,8 +1225,8 @@ importers:
   samples/sample-dev:
     dependencies:
       '@canvasengine/presets':
-        specifier: 2.4.0
-        version: 2.4.0(canvasengine@2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        specifier: 2.4.1
+        version: 2.4.1(canvasengine@2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/action-battle':
         specifier: workspace:*
         version: link:../../packages/action-battle
@@ -1258,8 +1258,8 @@ importers:
         specifier: 3.1.0
         version: 3.1.0
       canvasengine:
-        specifier: 2.4.0
-        version: 2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.4.1
+        version: 2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       express:
         specifier: ^5.2.1
         version: 5.2.1
@@ -1274,8 +1274,8 @@ importers:
         version: 8.21.0
     devDependencies:
       '@canvasengine/compiler':
-        specifier: 2.4.0
-        version: 2.4.0(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
+        specifier: 2.4.1
+        version: 2.4.1(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
       '@types/express':
         specifier: ^5.0.6
         version: 5.0.6
@@ -1366,26 +1366,26 @@ packages:
     resolution: {integrity: sha512-ctxtJ/eA+t+6q2++vj5j7FYX3nRu311q1wfYH3xjlLOsczhlhxAg2FWNUXhpGvAw3BWo1xBcvOV6/YLc2r5FJw==}
     hasBin: true
 
-  '@canvasengine/compiler@2.4.0':
-    resolution: {integrity: sha512-MjaJwOq2gFk+fwkRFnLrqHi9Op8EoibnBAC7MsxDnF2bOtgpFxNXv+wQYmZrRJyfmMLUVftYxBAIws4t/x6u6w==}
+  '@canvasengine/compiler@2.4.1':
+    resolution: {integrity: sha512-6PFHWm6qb93oSAjD0X6TQqN48gMPGehs7ErB1CYVOdVO1FEmhpSzZhILasbACpVZVCg1TA4vilpHraI2oj3Ypw==}
 
-  '@canvasengine/presets@2.4.0':
-    resolution: {integrity: sha512-kAyPGWvQATagqJ69uKwnh63WUosi0DXBurcO0WRj72LJUz+SsG+5K1RfcW9VzhTI8fp/Dw1MWA2P2/4UjQ+bqA==}
+  '@canvasengine/presets@2.4.1':
+    resolution: {integrity: sha512-rXZvKLRA2uPuf8wx5qBlIEzPJeKpV4cS2GCDJozhASE9VUpD3+gL7TpDLNezOFL8RhgE4Xjio0ye6ZSiY3g/Og==}
     peerDependencies:
       canvasengine: ^2.1.1
       pixi.js: ^8.19.0
 
-  '@canvasengine/testing@2.4.0':
-    resolution: {integrity: sha512-oMONHZNylEcFuyPC0HsqIGNgUEZaU/vslKyBLXff/3k2nkjLwB3E7m1RoJvTLGks9pIRlT5/tdW95Q8cAyr2mA==}
+  '@canvasengine/testing@2.4.1':
+    resolution: {integrity: sha512-1FDcsQvplP5n3sJmNGB4+SjkKzjDKBPoMikSODjKscpKlGbu3ZdKaxHwA0/Vw4txr5Tekij66s37nYnDPCj7ng==}
     peerDependencies:
-      canvasengine: 2.4.0
+      canvasengine: 2.4.1
       vitest: '*'
 
-  '@canvasengine/tiled@2.4.0':
-    resolution: {integrity: sha512-1xRUHB39GbBf1HgRa6Ed6Czt1TrG7beJEWzEekD0Zhkwv3upZr2FI4wjU4346WFUMhvPgtrHtd7fknhtJKALUg==}
+  '@canvasengine/tiled@2.4.1':
+    resolution: {integrity: sha512-hlyghJ4s87q/59OEVbsXBkk9Pes7kxMC/ddMEsDYqQTXh28sWruah2Co05wiBJKG12bIjeFUHpi5077I/UprQA==}
 
-  '@canvasengine/tilemap@5.0.1':
-    resolution: {integrity: sha512-QZgTueWWYLwkdwYo+9oQ5aVxHGB15Oyac0VTiKinnOO+NDzBGJZi9GUu/s9AW7cJA4w36I0JwsqpW84J77gm7Q==}
+  '@canvasengine/tilemap@5.0.2':
+    resolution: {integrity: sha512-fEP8+Rf84FRGRzaVIvQvOv51rZCSxJHRb8l11MqKD57C6Nzi+q0EsONEv52TWZrRFkAnkAHLFcImT/K/sRKEFw==}
     peerDependencies:
       pixi.js: '>=8.5.0'
 
@@ -3574,8 +3574,8 @@ packages:
     resolution: {integrity: sha512-+ys997U96po4Kx/ABpBCqhA9EuxJaQWDQg7295H4hBphv3IZg0boBKuwYpt4YXp6MZ5AmZQnU/tyMTlRpaSejg==}
     engines: {node: '>= 0.4'}
 
-  canvasengine@2.4.0:
-    resolution: {integrity: sha512-D9rZZurhiHx4zJQsvgjgnSIuvYwSwdzoRweMGjshoKrn3tdfZ15MwNfx92WPDUeYJvGk4cxJXunbW0vCsl3I+Q==}
+  canvasengine@2.4.1:
+    resolution: {integrity: sha512-fCe58PQU95HokjWVPreX0GiE5M2bQYW5xmPeL+xibT4Znf2QA10wehueoct11jzMLmSdIypHNY3mCw/iGAHkEg==}
     peerDependencies:
       pixi.js: ^8.19.0
 
@@ -5886,7 +5886,7 @@ snapshots:
     dependencies:
       css-tree: 3.2.1
 
-  '@canvasengine/compiler@2.4.0(@types/node@25.9.3)(esbuild@0.17.19)(tsx@4.22.4)(yaml@2.9.0)':
+  '@canvasengine/compiler@2.4.1(@types/node@25.9.3)(esbuild@0.17.19)(tsx@4.22.4)(yaml@2.9.0)':
     dependencies:
       acorn: 8.17.0
       lightningcss: 1.32.0
@@ -5908,7 +5908,7 @@ snapshots:
       - tsx
       - yaml
 
-  '@canvasengine/compiler@2.4.0(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)':
+  '@canvasengine/compiler@2.4.1(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)':
     dependencies:
       acorn: 8.17.0
       lightningcss: 1.32.0
@@ -5930,27 +5930,27 @@ snapshots:
       - tsx
       - yaml
 
-  '@canvasengine/presets@2.4.0(canvasengine@2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)':
+  '@canvasengine/presets@2.4.1(canvasengine@2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)':
     dependencies:
-      '@canvasengine/tiled': 2.4.0
-      '@canvasengine/tilemap': 5.0.1(pixi.js@8.19.0)
-      canvasengine: 2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+      '@canvasengine/tiled': 2.4.1
+      '@canvasengine/tilemap': 5.0.2(pixi.js@8.19.0)
+      canvasengine: 2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js: 8.19.0
       rxjs: 7.8.2
 
-  '@canvasengine/testing@2.4.0(canvasengine@2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(vitest@4.1.10(@types/node@25.9.3)(@vitest/coverage-v8@4.1.9(vitest@4.1.9))(@vitest/ui@4.1.9(vitest@4.1.9))(jsdom@29.1.1)(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)))':
+  '@canvasengine/testing@2.4.1(canvasengine@2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(vitest@4.1.10(@types/node@25.9.3)(@vitest/coverage-v8@4.1.9(vitest@4.1.9))(@vitest/ui@4.1.9(vitest@4.1.9))(jsdom@29.1.1)(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)))':
     dependencies:
-      canvasengine: 2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+      canvasengine: 2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       rxjs: 7.8.2
       vitest: 4.1.10(@types/node@25.9.3)(@vitest/coverage-v8@4.1.9(vitest@4.1.9))(@vitest/ui@4.1.9(vitest@4.1.9))(jsdom@29.1.1)(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0))
 
-  '@canvasengine/tiled@2.4.0':
+  '@canvasengine/tiled@2.4.1':
     dependencies:
       buffer: 6.0.3
       xml-js: 1.6.11
       xmlbuilder: 15.1.1
 
-  '@canvasengine/tilemap@5.0.1(pixi.js@8.19.0)':
+  '@canvasengine/tilemap@5.0.2(pixi.js@8.19.0)':
     dependencies:
       pixi.js: 8.19.0
 
@@ -7876,7 +7876,7 @@ snapshots:
       call-bind-apply-helpers: 1.0.2
       get-intrinsic: 1.3.0
 
-  canvasengine@2.4.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7):
+  canvasengine@2.4.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7):
     dependencies:
       '@barvynkoa/particle-emitter': 0.0.1(pixi.js@8.19.0)
       '@chenglou/pretext': 0.0.6
