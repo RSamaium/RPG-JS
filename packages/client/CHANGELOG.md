@@ -1,5 +1,29 @@
 # @rpgjs/client
 
+## 5.2.0
+
+### Minor Changes
+
+- ddc9fd5: Add a startup splash that shows at the first paint. A page declares `#rpg-splash` (the new `rpg-ui-splash` classes of `@rpgjs/ui-css`, pure HTML and CSS, so it keeps turning while the main thread is busy); the client fills its translated label, and `dismissStartupSplash()`, `setStartupSplashLabel()` and `hasStartupSplash()` are exported. Studio dismisses it when the first map is revealed or the title screen is shown, and shows its own loader without delay on the first map load.
+
+### Patch Changes
+
+- ba179fc: Render the camera on whole pixels so the tilemap no longer shimmers when the camera follows an interpolated (fractional) position. Set `engine.cameraPixelSnap = false` to keep a fully fluid camera.
+- cd51839: Update CanvasEngine to 2.4.1.
+- 27367eb: Gamepad in the menus: B and Start open, go back from and close the GUIs (they were mapped to a `back` control that the menus, which name it `escape`, never received); A advances dialog boxes; the d-pad navigates menus, the item confirmation popup and the hotbar slot picker; L/R (shoulder buttons) switch tabs in the main menu; the Options menu can be driven with the gamepad; the cursor stays on the entry you came from when leaving a submenu; the stick no longer races through entries.
+
+  Closed GUIs no longer keep answering to the gamepad (a patch unsubscribes the CanvasEngine `GamepadControls` directive from joypad.js on destroy), which fixed A saving several slots at once and B/A acting on a GUI that was already closed.
+
+- 2fbd534: Route the remaining player-facing texts through the i18n service: stat labels and close buttons of the menu, the action-battle menu button, level-up, skill and reward notifications, and item error notifications. The server now ships default `en`/`fr` messages (`rpg.notification.*`, `rpg.error.*`) that games can override with `provideI18n()`.
+- 92cdd87: Fix: the icons of the skills menu, of the hotbar and of the hotbar slot picker are no longer drawn at twice the size of their box. `DOMSprite` already fits the icon into its width and height with `objectFit="contain"`, the extra `scale={2}` doubled it (the icon covered the skill name in the skills menu and was cropped in the hotbar).
+- eafbca6: Fix: NPCs and other players no longer replay their old positions after a browser tab was hidden or frozen. The client consumes one movement frame per render tick, so the positions received while the render loop was paused formed a backlog that never drained; the backlog is now collapsed to the latest position.
+- Updated dependencies [cd51839]
+- Updated dependencies [2fbd534]
+- Updated dependencies [dcd5a2d]
+- Updated dependencies [ddc9fd5]
+  - @rpgjs/server@5.1.1
+  - @rpgjs/ui-css@5.2.0
+
 ## 5.1.0
 
 ### Minor Changes

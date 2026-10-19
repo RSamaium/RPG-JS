@@ -1,5 +1,11 @@
 # @rpgjs/chat
 
+## 5.0.1
+
+### Patch Changes
+
+- cd51839: Update CanvasEngine to 2.4.1.
+
 ## 5.0.0
 
 ### Minor Changes

@@ -1,5 +1,16 @@
 # @rpgjs/action-battle
 
+## 5.1.0
+
+### Minor Changes
+
+- 1626a67: Add an `enabled` option to `provideActionBattle()` (a boolean or a function of the player, event and map) to keep the module installed but inactive: no attack, dodge, guard or hotbar on the input, no AI for the events. The local attack animation of the client still follows the input.
+
+### Patch Changes
+
+- cd51839: Update CanvasEngine to 2.4.1.
+- 2fbd534: Route the remaining player-facing texts through the i18n service: stat labels and close buttons of the menu, the action-battle menu button, level-up, skill and reward notifications, and item error notifications. The server now ships default `en`/`fr` messages (`rpg.notification.*`, `rpg.error.*`) that games can override with `provideI18n()`.
+
 ## 5.0.1
 
 ### Patch Changes

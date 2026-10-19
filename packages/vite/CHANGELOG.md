@@ -1,5 +1,15 @@
 # @rpgjs/vite
 
+## 5.0.2
+
+### Patch Changes
+
+- cd51839: Update CanvasEngine to 2.4.1.
+- Updated dependencies [cd51839]
+- Updated dependencies [2fbd534]
+- Updated dependencies [dcd5a2d]
+  - @rpgjs/server@5.1.1
+
 ## 5.0.1
 
 ### Patch Changes
