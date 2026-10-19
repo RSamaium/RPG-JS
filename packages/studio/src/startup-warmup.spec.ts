@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { collectMapMediaIds, warmUpStartupData } from "./startup-warmup";
+import { isHydratedMedia } from "./media-reference";
+import { collectMapMediaIds, collectMediaIds, warmUpStartupData } from "./startup-warmup";
 
 describe("collectMapMediaIds", () => {
   it("finds the ids of the tilesets and terrains, whatever their shape", () => {
@@ -28,6 +29,7 @@ describe("warmUpStartupData", () => {
     getDatabase: vi.fn(async (_id?: string) => [] as any[]),
     getMap: vi.fn(async (_id: string) => map as any),
     getMedia: vi.fn(async (_id: string) => ({})),
+    prefetchMedia: vi.fn((_ids: string[]) => undefined),
   });
 
   it("asks for the project, the database, the map and then the media of the map", async () => {
@@ -37,7 +39,8 @@ describe("warmUpStartupData", () => {
     expect(source.getProject).toHaveBeenCalledWith({ projectId: "p" });
     expect(source.getDatabase).toHaveBeenCalledWith("p");
     expect(source.getMap).toHaveBeenCalledWith("m");
-    expect(source.getMedia.mock.calls.map(([id]) => id).sort()).toEqual(["e", "t"]);
+    expect(source.prefetchMedia).toHaveBeenCalledTimes(1);
+    expect([...source.prefetchMedia.mock.calls[0]![0]].sort()).toEqual(["e", "t"]);
   });
 
   it("asks for nothing it does not know", () => {
@@ -53,5 +56,32 @@ describe("warmUpStartupData", () => {
     source.getMap.mockRejectedValue(new Error("offline"));
     expect(() => warmUpStartupData(source, { projectId: "p", startMapId: "m" })).not.toThrow();
     await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+});
+
+describe("media the API sent whole", () => {
+  const whole = { _id: "t", fileName: "tileset.png", metadata: {} };
+
+  it("are recognised by their file name, and a reference is not", () => {
+    expect(isHydratedMedia(whole)).toBe(true);
+    expect(isHydratedMedia({ _id: "t" })).toBe(false);
+    expect(isHydratedMedia({ _id: "t", fileName: "" })).toBe(false);
+    expect(isHydratedMedia({ fileName: "x.png", __placeholder: true })).toBe(false);
+    expect(isHydratedMedia("t")).toBe(false);
+    expect(isHydratedMedia(null)).toBe(false);
+  });
+
+  it("are left out of the ids to fetch", () => {
+    expect(collectMediaIds([whole, "a", { _id: "b" }, "#c", "a", null])).toEqual(["a", "b", "c"]);
+    expect(collectMapMediaIds({ tileset: whole, elementTilesets: [whole, "e"], baseTerrain: { id: "ground" } }).sort()).toEqual(["e", "ground"]);
+  });
+});
+
+describe("media a map carries whole", () => {
+  it("does not ask for the tileset an id names when the map already holds it", () => {
+    const tileset = { _id: "t1", fileName: "t1.png" };
+    expect(
+      collectMapMediaIds({ primaryElementTileset: "t1", elementTilesets: [tileset], primaryTerrainTileset: "t2" }),
+    ).toEqual(["t2"]);
   });
 });

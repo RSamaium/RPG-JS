@@ -20,6 +20,7 @@ import { getStudioSkillChangeNotification } from "./skill-notification";
 import { triggerMatchesExecution, type StudioTouchTarget } from "./touch-runtime";
 import { compileStudioMapStream, isStudioDirectLoadPayload, prepareStudioMapPayload, type PreparedStudioMapPayload } from "./map-streaming";
 import { prepareStudioTerrainControlRegions } from "./terrain-control-streaming";
+import { isHydratedMedia } from "./media-reference";
 import { assignStudioEventPlacementIds } from "./event-placement";
 import {
   isStartingEquipmentCompatible,
@@ -514,6 +515,7 @@ const toIdentifierString = (value: unknown): string => {
 
 const resolveMediaReference = async (value: unknown, provider: GameDataProvider): Promise<unknown> => {
   if (!value) return value;
+  if (isHydratedMedia(value)) return value;
   const referenceId = toIdentifierString(value);
   if (!referenceId) return value;
 

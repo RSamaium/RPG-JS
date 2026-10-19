@@ -28,7 +28,7 @@ import { createStudioMapPlugins, type StudioMapPlugin } from "./studio-map-plugi
 import { bindInitialStudioEventHitboxes } from "./initial-event-hitboxes-client";
 import { collectStudioActionBattleMediaRefs } from "./action-battle-animation-preload";
 import { setStudioMediaPreload, waitForStudioMediaPreload } from "./startup-preload";
-import { warmUpStartupData } from "./startup-warmup";
+import { collectMediaIds, warmUpStartupData } from "./startup-warmup";
 import { keepStudioApiAnswers } from "./data-provider/http-game-data-provider";
 import { TerrainWorkerClient } from "./map-renderer/terrain-renderer/terrain-worker-client";
 import { beginStudioMapLoading, waitForStudioMapReady } from "./studio-map-readiness";
@@ -199,6 +199,10 @@ const resolveActorIllustrationRefs = async (
 ): Promise<unknown[]> => {
   const provider = getGameDataProvider();
   const actors = database.filter((record) => (record?.type ?? record?._type) === "actor");
+  // The graphics of the actors that have no illustration of their own are asked for together, not one by one.
+  provider.prefetchMedia?.(collectMediaIds(
+    actors.filter((actor) => !(actor.illustration ?? actor.graphic?.metadata?.illustration)).map((actor) => actor.graphic),
+  ));
   const refs = await Promise.all(actors.map(async (actor) => {
     const direct = actor.illustration ?? actor.graphic?.metadata?.illustration;
     if (direct) return direct;
@@ -328,8 +332,10 @@ export default (config: StudioGameModuleConfig) => {
           sheets
             .filter((value) => value && typeof value === "object")
             .forEach((spritesheet) => engine.addSpriteSheet(spritesheet));
+        const heroReferences = [engine.globalConfig.hero?.graphic, engine.globalConfig.hero?.faceset];
+        provider.prefetchMedia?.(collectMediaIds(heroReferences));
         addSpritesheets(await Promise.all(
-          [engine.globalConfig.hero?.graphic, engine.globalConfig.hero?.faceset]
+          heroReferences
             .filter(Boolean)
             .map((mediaRef) => resolveHeroMediaSpritesheet(mediaRef)),
         ));
@@ -341,6 +347,8 @@ export default (config: StudioGameModuleConfig) => {
             ...actorMediaRefs,
             ...actorIllustrationRefs,
           ].filter(Boolean);
+          // Every media of the preload in one request (a hundred at most), then each spritesheet is built from the cache.
+          provider.prefetchMedia?.(collectMediaIds(mediaRefs));
           addSpritesheets(await Promise.all(
             mediaRefs.map((mediaRef) => resolveHeroMediaSpritesheet(mediaRef)),
           ));

@@ -1,4 +1,5 @@
 import type { GameDataProvider } from "./data-provider";
+import { collectEmbeddedMedia, isHydratedMedia } from "./media-reference";
 
 const toId = (value: unknown): string => {
   if (typeof value === "string") return value.trim();
@@ -20,6 +21,7 @@ const parseJson = (value: unknown): unknown => {
 /** A media reference of a map is an id, a `#id`, or an object that carries one. */
 const referenceId = (value: unknown): string => {
   const parsed = parseJson(value);
+  if (isHydratedMedia(parsed)) return "";
   if (typeof parsed === "string") {
     const raw = parsed.trim();
     return raw.startsWith("#") ? raw.slice(1) : raw;
@@ -44,12 +46,14 @@ const referenceList = (value: unknown): unknown[] => {
   return [parsed];
 };
 
-/**
- * Ids of the media a map needs to be drawn (its tilesets and terrains): the slowest answers of the
- * start-up, because they carry whole tileset descriptions.
- */
+/** Ids of the media still to fetch among some references: the media the API sent whole are left out. */
+export const collectMediaIds = (references: unknown[]): string[] =>
+  [...new Set(references.map(referenceId).filter(Boolean))];
+
+/** Ids of the media still to fetch among the tilesets and terrains of a map. */
 export const collectMapMediaIds = (params: Record<string, unknown> | null | undefined): string[] => {
   if (!params) return [];
+  const embedded = collectEmbeddedMedia(params, ["elementTilesets", "terrainTilesets"], ["tileset", "baseTerrain"]);
   const references = [
     params.tileset,
     params.primaryElementTileset,
@@ -58,7 +62,7 @@ export const collectMapMediaIds = (params: Record<string, unknown> | null | unde
     ...referenceList(params.elementTilesets),
     ...referenceList(params.terrainTilesets),
   ];
-  return [...new Set(references.map(referenceId).filter(Boolean))];
+  return collectMediaIds(references).filter((id) => !embedded.has(id));
 };
 
 /**
@@ -80,7 +84,7 @@ export const warmUpStartupData = (
   if (startMapId) {
     provider
       .getMap(startMapId)
-      .then((map) => collectMapMediaIds(map?.params).forEach((id) => ignore(provider.getMedia(id))))
+      .then((map) => provider.prefetchMedia?.(collectMapMediaIds(map?.params)))
       .catch(() => undefined);
   }
 };

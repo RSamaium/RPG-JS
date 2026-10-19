@@ -12,6 +12,7 @@ import {
   createStudioTerrainRenderData,
 } from "./map-renderer";
 import { TerrainWorkerClient } from "./map-renderer/terrain-renderer/terrain-worker-client";
+import { collectEmbeddedMedia, isHydratedMedia } from "./media-reference";
 import { resolveStudioElementSize } from "./studio-element-size";
 import { STUDIO_DIRECT_LOAD_MARKER } from "./map-streaming";
 import { assignStudioEventPlacementIds } from "./event-placement";
@@ -369,10 +370,23 @@ export const loadMap = async (mapId: string) => {
     return [parsedValue];
   };
 
+  // The tilesets the map carries whole answer the ids that name them (`primaryElementTileset`, `primaryTerrainTileset`).
+  const embeddedMedia = collectEmbeddedMedia(
+    params,
+    ['elementTilesets', 'terrainTilesets'],
+    ['tileset', 'baseTerrain'],
+  );
+
   const resolveMediaReference = async (value: unknown): Promise<any> => {
     const parsedValue = parseJsonValue(value);
+    if (typeof parsedValue === 'string' || (parsedValue && typeof parsedValue === 'object' && !isHydratedMedia(parsedValue))) {
+      const id = typeof parsedValue === 'string' ? parsedValue.trim().replace(/^#/, '') : extractMediaReferenceId(parsedValue);
+      const embedded = id ? embeddedMedia.get(id) : undefined;
+      if (embedded) return embedded;
+    }
     if (parsedValue === undefined || parsedValue === null) return parsedValue;
     if (typeof parsedValue === 'object') {
+      if (isHydratedMedia(parsedValue)) return parsedValue;
       const referenceId = extractMediaReferenceId(parsedValue);
       if (!referenceId) return parsedValue;
       const candidateIds = Array.from(

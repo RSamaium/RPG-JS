@@ -121,6 +121,64 @@ class CachedGameDataProvider implements GameDataProvider {
     return this.getOrCreate(this.mediaById, key, () => this.source.getMedia(mediaId));
   }
 
+  /** Set once the source refused a batch (a server without the route): the next ones ask one by one. */
+  private mediaBatchRefused = false;
+
+  prefetchMedia(mediaIds: string[]): void {
+    const source = this.source;
+    if (this.mediaBatchRefused || typeof source.getMediaMany !== 'function') return;
+    const missing = [...new Set(mediaIds.map(String).filter(Boolean))].filter((id) => !this.mediaById.has(id));
+    if (missing.length === 0) return;
+
+    const batch = source.getMediaMany(missing);
+    batch.catch(() => {
+      this.mediaBatchRefused = true;
+    });
+    batch.then((list) => this.prefetchMediaGroups(list), () => undefined);
+    for (const id of missing) {
+      const media = batch
+        // A batch that failed, or a media it did not return: ask for this one alone, as before.
+        .then((list) => list.find((item) => String(item?._id) === id), () => undefined)
+        .then((found) => found ?? source.getMedia(id))
+        .catch((error) => {
+          this.mediaById.delete(id);
+          throw error;
+        });
+      media.catch(() => undefined);
+      this.mediaById.set(id, media);
+    }
+  }
+
+  /** Set once the source refused a group batch: the groups are asked one by one. */
+  private mediaGroupBatchRefused = false;
+
+  /** Asks in one request for the animations of the idle characters of a list of media. */
+  private prefetchMediaGroups(media: any[]): void {
+    const source = this.source;
+    if (this.mediaGroupBatchRefused || typeof source.getMediaGroupMany !== 'function') return;
+    const ids = media
+      .filter((item) => item?.metadata?.generationMode === 'idle' && item._id)
+      .map((item) => String(item._id))
+      .filter((id) => !this.mediaGroupById.has(id));
+    if (ids.length === 0) return;
+
+    const batch = source.getMediaGroupMany(ids);
+    batch.catch(() => {
+      this.mediaGroupBatchRefused = true;
+    });
+    for (const id of ids) {
+      const group = batch
+        .then((answer) => answer[id], () => undefined)
+        .then((found) => found ?? source.getMediaGroup?.(id) ?? [])
+        .catch((error) => {
+          this.mediaGroupById.delete(id);
+          throw error;
+        });
+      group.catch(() => undefined);
+      this.mediaGroupById.set(id, group);
+    }
+  }
+
   getMediaGroup(mediaId: string): Promise<any[]> {
     return this.getOrCreate(this.mediaGroupById, mediaId, () => this.source.getMediaGroup?.(mediaId) ?? Promise.resolve([]));
   }
