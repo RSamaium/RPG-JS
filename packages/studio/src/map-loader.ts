@@ -485,21 +485,40 @@ export const loadMap = async (mapId: string) => {
     return "";
   };
 
-  params.tileset = await resolveMediaReference(params.tileset);
-  params.primaryElementTileset = await resolveMediaReference(params.primaryElementTileset);
-  params.baseTerrain = await resolveMediaReference(params.baseTerrain);
-  params.primaryTerrainTileset = await resolveMediaReference(params.primaryTerrainTileset);
-  params.elementTilesets = await resolveMediaList(params.elementTilesets);
-  params.terrainTilesets = await resolveMediaList(params.terrainTilesets);
-
-  params.backgroundMusic = await resolveAudioSource(params.backgroundMusic);
-  params.backgroundAmbientSound = await resolveAudioSource(params.backgroundAmbientSound);
-
-  const resolvedMapEvents = assignStudioEventPlacementIds(await hydrateEventMediaReferences(
-    await resolveMapEventReferences(mapResponse.events, {
-      useLocalBundleEvents,
-    })
-  ));
+  // These requests do not depend on one another: they run together instead of one round trip after the other.
+  const [
+    r_tileset,
+    r_primaryElementTileset,
+    r_baseTerrain,
+    r_primaryTerrainTileset,
+    r_elementTilesets,
+    r_terrainTilesets,
+    r_backgroundMusic,
+    r_backgroundAmbientSound,
+    resolvedMapEvents,
+  ] = await Promise.all([
+    resolveMediaReference(params.tileset),
+    resolveMediaReference(params.primaryElementTileset),
+    resolveMediaReference(params.baseTerrain),
+    resolveMediaReference(params.primaryTerrainTileset),
+    resolveMediaList(params.elementTilesets),
+    resolveMediaList(params.terrainTilesets),
+    resolveAudioSource(params.backgroundMusic),
+    resolveAudioSource(params.backgroundAmbientSound),
+    hydrateEventMediaReferences(
+      await resolveMapEventReferences(mapResponse.events, {
+        useLocalBundleEvents,
+      })
+    ).then(assignStudioEventPlacementIds),
+  ]);
+  params.tileset = r_tileset;
+  params.primaryElementTileset = r_primaryElementTileset;
+  params.baseTerrain = r_baseTerrain;
+  params.primaryTerrainTileset = r_primaryTerrainTileset;
+  params.elementTilesets = r_elementTilesets;
+  params.terrainTilesets = r_terrainTilesets;
+  params.backgroundMusic = r_backgroundMusic;
+  params.backgroundAmbientSound = r_backgroundAmbientSound;
   // Merge polygons with hitboxes to create polygon-based hitboxes
   const mergedHitboxes = [...(mapResponse.hitboxes ?? [])];
   
