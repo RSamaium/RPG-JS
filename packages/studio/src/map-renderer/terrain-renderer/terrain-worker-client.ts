@@ -41,7 +41,13 @@ export class TerrainWorkerClient {
     worker.onerror = (event) => this.failAll(new Error(event.message || "terrain worker failed"));
   }
 
-  static create(): TerrainWorkerClient | null {
+  /** Workers started ahead of time: booting one (parsing its code) is off the path of the first map. */
+  private static warmed: TerrainWorkerClient[] = [];
+  private static warmedTimer: ReturnType<typeof setTimeout> | undefined;
+  /** A warmed worker nobody asked for (a map without terrain) is not kept for ever. */
+  private static readonly WARM_KEEP_MS = 60_000;
+
+  private static spawn(): TerrainWorkerClient | null {
     if (
       typeof document === "undefined" ||
       typeof Worker === "undefined" ||
@@ -55,6 +61,28 @@ export class TerrainWorkerClient {
     } catch {
       return null;
     }
+  }
+
+  /**
+   * Starts workers now so they are booted when the first map needs them. Safe to call again and
+   * where workers are not available.
+   *
+   * @param count - Workers kept ready (the terrain and its walls use one each)
+   */
+  static warm(count = 2): void {
+    while (TerrainWorkerClient.warmed.length < count) {
+      const worker = TerrainWorkerClient.spawn();
+      if (!worker) return;
+      TerrainWorkerClient.warmed.push(worker);
+    }
+    clearTimeout(TerrainWorkerClient.warmedTimer);
+    TerrainWorkerClient.warmedTimer = setTimeout(() => {
+      TerrainWorkerClient.warmed.splice(0).forEach((worker) => worker.dispose());
+    }, TerrainWorkerClient.WARM_KEEP_MS);
+  }
+
+  static create(): TerrainWorkerClient | null {
+    return TerrainWorkerClient.warmed.pop() ?? TerrainWorkerClient.spawn();
   }
 
   /** Gives the worker the terrain data the next chunks are painted from. */

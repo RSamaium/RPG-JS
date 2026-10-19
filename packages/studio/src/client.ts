@@ -28,6 +28,7 @@ import { createStudioMapPlugins, type StudioMapPlugin } from "./studio-map-plugi
 import { bindInitialStudioEventHitboxes } from "./initial-event-hitboxes-client";
 import { collectStudioActionBattleMediaRefs } from "./action-battle-animation-preload";
 import { setStudioMediaPreload, waitForStudioMediaPreload } from "./startup-preload";
+import { TerrainWorkerClient } from "./map-renderer/terrain-renderer/terrain-worker-client";
 import { beginStudioMapLoading, waitForStudioMapReady } from "./studio-map-readiness";
 
 interface GlobalConfig {
@@ -237,6 +238,8 @@ export default (config: StudioGameModuleConfig) => {
   return defineModule<RpgClient>({
     engine: {
       async onStart(engine: RpgClientEngine<any>) {
+        // Boot the terrain workers now: they parse their code while the project and the hero load.
+        TerrainWorkerClient.warm();
         const gui = inject(RpgGui);
 
         await new Promise((resolve) => setTimeout(resolve, 20));
