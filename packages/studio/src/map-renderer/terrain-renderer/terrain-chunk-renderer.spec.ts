@@ -293,7 +293,31 @@ describe("StudioTerrainChunkRenderer streamed invalidation", () => {
     expect(renderChunk).toHaveBeenCalledTimes(1);
   });
 
-  it("updates water animation smoothly at no more than thirty frames per second", () => {
+  it("moves the water drawn by a shader on every frame, and only syncs it where it can be seen", () => {
+    const { renderer } = createInstrumentedRenderer();
+    const visible = { phase: 0, speed: 2 };
+    const hidden = { phase: 0, speed: 1 };
+    const syncVisible = vi.fn();
+    const syncHidden = vi.fn();
+    (renderer as any).chunks.set("0:0", {
+      sprite: { visible: true },
+      waterOverlay: { sprite: { destroyed: false, visible: true }, regions: [visible], gpu: { sync: syncVisible } },
+    });
+    (renderer as any).chunks.set("1:0", {
+      sprite: { visible: false },
+      waterOverlay: { sprite: { destroyed: false, visible: false }, regions: [hidden], gpu: { sync: syncHidden } },
+    });
+
+    renderer.update(16);
+    renderer.update(16);
+
+    expect(visible.phase).toBeCloseTo(0.064);
+    expect(hidden.phase).toBeCloseTo(0.032); // the waves keep their speed where nobody looks
+    expect(syncVisible).toHaveBeenCalledTimes(2);
+    expect(syncHidden).not.toHaveBeenCalled();
+  });
+
+  it("updates water animation drawn on the CPU smoothly at no more than thirty frames per second", () => {
     const { renderer } = createInstrumentedRenderer();
     const region = { phase: 0, speed: 1 };
     (renderer as any).chunks.set("0:0", {
@@ -301,6 +325,7 @@ describe("StudioTerrainChunkRenderer streamed invalidation", () => {
       waterOverlay: {
         sprite: { destroyed: false, visible: false },
         regions: [region],
+        cpu: {},
       },
     });
 
@@ -315,6 +340,7 @@ describe("StudioTerrainChunkRenderer streamed invalidation", () => {
       id: index,
       sprite: { destroyed: false, visible: true },
       regions: [{ phase: 0, speed: 1 }],
+      cpu: {},
     }));
     const setup = (count: number, costMs: number) => {
       const { renderer } = createInstrumentedRenderer();

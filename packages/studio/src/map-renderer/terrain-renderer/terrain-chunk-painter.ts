@@ -965,21 +965,24 @@ export function drawWaterAnimationRegion(overlay: TerrainWaterAnimationTarget, r
   );
   frameCtx.restore();
 
-  drawDirectionalWaveMask(
-    waveMask,
-    region,
-    phase,
-    width,
-    height,
-    overlay.originX,
-    overlay.originY
-  );
-  resetCanvasContext(waveMask.ctx);
+  // The wave lines are drawn with an alpha of 0 for now: drawing them changes nothing, so it is not done.
+  if (strength.waveAlpha > 0) {
+    drawDirectionalWaveMask(
+      waveMask,
+      region,
+      phase,
+      width,
+      height,
+      overlay.originX,
+      overlay.originY
+    );
+    resetCanvasContext(waveMask.ctx);
 
-  frameCtx.save();
-  frameCtx.globalAlpha = strength.waveAlpha;
-  drawCanvasBounds(frameCtx, waveMask.canvas, renderBounds);
-  frameCtx.restore();
+    frameCtx.save();
+    frameCtx.globalAlpha = strength.waveAlpha;
+    drawCanvasBounds(frameCtx, waveMask.canvas, renderBounds);
+    frameCtx.restore();
+  }
 
   frameCtx.globalCompositeOperation = "destination-in";
   frameCtx.drawImage(region.mask, region.bounds.x, region.bounds.y);

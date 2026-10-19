@@ -14,6 +14,7 @@ import {
 } from "@rpgjs/render-map2d";
 import { buildStudioTerrainCollisionPolygons } from "../collision-polygons";
 import { TerrainWorkerClient } from "./terrain-worker-client";
+import { createTerrainWaterGpuOverlay, type TerrainWaterGpuOverlay } from "./terrain-water-shader";
 import { createCanvasElement } from "../canvas-env";
 import { createRockFacePixels, renderRockFacePixels } from "./rock-face-pattern";
 import { createStudioTerrainRenderData } from "../map-normalizer";
@@ -164,9 +165,18 @@ interface TerrainChunk {
   waterOverlay?: TerrainWaterOverlay;
 }
 
-interface TerrainWaterOverlay extends TerrainWaterAnimationTarget {
+interface TerrainWaterCpuOverlay extends TerrainWaterAnimationTarget {
   texture: Texture;
-  sprite: Sprite;
+}
+
+interface TerrainWaterOverlay {
+  /** Placed in the world, holds the water of a chunk (a sprite drawn on the CPU, or the quads of the GPU version). */
+  sprite: PixiContainer;
+  regions: TerrainWaterRegion[];
+  /** The water drawn by a shader. */
+  gpu?: TerrainWaterGpuOverlay;
+  /** The water drawn with 2D canvases, where there is no shader. */
+  cpu?: TerrainWaterCpuOverlay;
 }
 
 export class StudioTerrainWallOcclusionRenderer {
@@ -723,15 +733,25 @@ export class StudioTerrainChunkRenderer extends StudioTerrainChunkPainter {
   update(deltaTime: number): void {
     if (this.destroyed) return;
     const safeDelta = clampNumber(Number(deltaTime) || 16.67, 0, 120) / 1000;
+
+    // The water drawn by a shader moves on every frame: a frame is only a few uniforms.
+    for (const chunk of this.chunks.values()) {
+      const overlay = chunk.waterOverlay;
+      if (!overlay?.gpu || overlay.sprite.destroyed) continue;
+      for (const region of overlay.regions) region.phase += safeDelta * region.speed;
+      if (overlay.sprite.visible) overlay.gpu.sync();
+    }
+
     this.waterAnimationElapsed += safeDelta;
     if (this.waterAnimationElapsed < WATER_ANIMATION_FRAME_DURATION) return;
     const animationDelta = Math.min(this.waterAnimationElapsed, 0.3);
     this.waterAnimationElapsed %= WATER_ANIMATION_FRAME_DURATION;
 
+    // The water drawn on the CPU is redrawn at thirty frames a second, within a time budget.
     const animated: TerrainWaterOverlay[] = [];
     for (const chunk of this.chunks.values()) {
       const overlay = chunk.waterOverlay;
-      if (!overlay || overlay.sprite.destroyed) continue;
+      if (!overlay?.cpu || overlay.sprite.destroyed) continue;
       // The waves keep their speed for every overlay, drawn now or not.
       for (const region of overlay.regions) {
         region.phase += animationDelta * region.speed;
@@ -752,8 +772,10 @@ export class StudioTerrainChunkRenderer extends StudioTerrainChunkPainter {
   }
 
   private drawWaterOverlay(overlay: TerrainWaterOverlay): void {
-    drawWaterAnimationFrame(overlay);
-    updateCanvasTexture(overlay.texture);
+    const cpu = overlay.cpu;
+    if (!cpu) return;
+    drawWaterAnimationFrame(cpu);
+    updateCanvasTexture(cpu.texture);
   }
 
   invalidateTerrain(bounds?: { x: number; y: number; width: number; height: number }): void {
@@ -911,8 +933,10 @@ export class StudioTerrainChunkRenderer extends StudioTerrainChunkPainter {
     if (!chunk.sprite.destroyed) {
       chunk.sprite.destroy({ texture: true });
     }
-    if (chunk.waterOverlay && !chunk.waterOverlay.sprite.destroyed) {
-      chunk.waterOverlay.sprite.destroy({ texture: true });
+    const overlay = chunk.waterOverlay;
+    if (overlay && !overlay.sprite.destroyed) {
+      overlay.gpu?.dispose();
+      overlay.sprite.destroy({ texture: true });
     }
   }
 
@@ -920,33 +944,45 @@ export class StudioTerrainChunkRenderer extends StudioTerrainChunkPainter {
     water: TerrainWaterOverlayData,
     bounds: { x: number; y: number; width: number; height: number }
   ): TerrainWaterOverlay {
+    const originX = bounds.x + water.overlayBounds.x;
+    const originY = bounds.y + water.overlayBounds.y;
+    const place = (node: PixiContainer) => {
+      node.x = Math.round(originX);
+      node.y = Math.round(originY);
+      node.zIndex = 0.15;
+      node.cullable = true;
+      node.cullArea = new Rectangle(0, 0, water.overlayBounds.width, water.overlayBounds.height);
+      node.label = "StudioTerrain:water-animation";
+    };
+
+    try {
+      const gpu = createTerrainWaterGpuOverlay(water, { x: originX, y: originY });
+      place(gpu.container);
+      return { sprite: gpu.container, regions: water.regions, gpu };
+    } catch {
+      // No shader here (no WebGL): the water is drawn with 2D canvases, as it always was.
+    }
+
     const canvas = this.createCanvasBuffer(water.overlayBounds.width, water.overlayBounds.height, true);
     const texture = Texture.from(canvas.canvas);
     setNearestTextureScale(texture);
     const sprite = new Sprite(texture);
-    sprite.x = Math.round(bounds.x + water.overlayBounds.x);
-    sprite.y = Math.round(bounds.y + water.overlayBounds.y);
-    sprite.zIndex = 0.15;
+    place(sprite);
     sprite.roundPixels = true;
-    sprite.cullable = true;
-    sprite.cullArea = new Rectangle(0, 0, water.overlayBounds.width, water.overlayBounds.height);
-    sprite.label = "StudioTerrain:water-animation";
 
-    const overlay: TerrainWaterOverlay = {
+    const cpu: TerrainWaterCpuOverlay = {
       canvas: canvas.canvas,
       ctx: canvas.ctx,
       frame: this.createCanvasBuffer(water.overlayBounds.width, water.overlayBounds.height, true),
       waveMask: this.createCanvasBuffer(water.overlayBounds.width, water.overlayBounds.height, true),
       surface: water.surface,
       texture,
-      sprite,
       regions: water.regions,
-      originX: bounds.x + water.overlayBounds.x,
-      originY: bounds.y + water.overlayBounds.y,
+      originX,
+      originY,
     };
-    drawWaterAnimationFrame(overlay);
+    drawWaterAnimationFrame(cpu);
     updateCanvasTexture(texture);
-    return overlay;
+    return { sprite, regions: water.regions, cpu };
   }
-
 }
