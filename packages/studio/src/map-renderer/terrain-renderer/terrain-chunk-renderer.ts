@@ -51,6 +51,7 @@ import {
   SOLID_BLACK_TERRAIN_TEXTURE_ID,
   StudioTerrainChunkPainter,
   TerrainWaterAnimationTarget,
+  TerrainWallSlice,
   StudioTerrainChunkRendererOptions,
   StudioTerrainWallShadowStyle,
   TERRAIN_TRANSITION_DIRECTIONS,
@@ -736,30 +737,13 @@ export class StudioTerrainChunkRenderer extends StudioTerrainChunkPainter {
     const data = isStudioTerrainRenderData(map?.terrainRenderData)
       ? map.terrainRenderData
       : createStudioTerrainRenderData(map);
-    const image = data.sourceTexture ? await this.loadImage(data.sourceTexture) : null;
     const sliceWidth = Math.max(12, Math.round(options.sliceWidth ?? data.tileSize / 2));
-    const sprites: Sprite[] = [];
-
-    this.resetMorphologyRenderCaches();
-    try {
-      for (const feature of data.morphologyFeatures) {
-        if (feature.kind !== "wall") continue;
-        const parts = this.createTerrainWallRenderParts(data, feature);
-        if (!parts) continue;
-        const rendered = this.createCanvasBuffer(parts.mask.canvas.width, parts.mask.canvas.height, true);
-        rendered.ctx.save();
-        rendered.ctx.translate(-parts.mask.bounds.x, -parts.mask.bounds.y);
-        this.drawWallBase(rendered.ctx, data, image, feature, parts);
-        this.drawWallForeground(rendered.ctx, data, image, feature, parts);
-        rendered.ctx.restore();
-
-        sprites.push(...this.createWallOcclusionSliceSprites(rendered.canvas, parts.mask, feature, sliceWidth));
-      }
-    } finally {
-      this.resetMorphologyRenderCaches();
-    }
-
-    return sprites;
+    const slices = await this.paintWalls(
+      data,
+      { type: "walls-occlusion", sliceWidth },
+      async () => this.paintWallOcclusionSlices(data, data.sourceTexture ? await this.loadImage(data.sourceTexture) : null, sliceWidth)
+    );
+    return this.createWallSprites(slices, true);
   }
 
   async createWallShadowSprites(map: any, lighting: LightingState | null | undefined): Promise<Sprite[]> {
@@ -770,23 +754,46 @@ export class StudioTerrainChunkRenderer extends StudioTerrainChunkPainter {
     const style = resolveStudioTerrainWallShadowStyle(data, lighting);
     if (!style) return [];
 
-    const sprites: Sprite[] = [];
-    this.resetMorphologyRenderCaches();
-    try {
-      for (const feature of data.morphologyFeatures) {
-        if (feature.kind !== "wall") continue;
-        const parts = this.createTerrainWallRenderParts(data, feature);
-        if (!parts) continue;
-        const sprite = this.createWallShadowSprite(parts, feature, style);
-        if (sprite) {
-          sprites.push(sprite);
-        }
-      }
-    } finally {
-      this.resetMorphologyRenderCaches();
-    }
+    const slices = await this.paintWalls(
+      data,
+      { type: "walls-shadow", style },
+      async () => this.paintWallShadowSlices(data, style)
+    );
+    return this.createWallSprites(slices, false);
+  }
 
-    return sprites;
+  /** Paints the walls in the worker, or here when there is none. */
+  private async paintWalls(
+    data: StudioTerrainRenderData,
+    request: { type: "walls-occlusion"; sliceWidth: number } | { type: "walls-shadow"; style: StudioTerrainWallShadowStyle },
+    paintHere: () => Promise<TerrainWallSlice[]>
+  ): Promise<TerrainWallSlice[]> {
+    const worker = this.getWorker();
+    if (worker) {
+      try {
+        return await worker.paintWalls(data, request);
+      } catch {
+        this.disableWorker();
+      }
+    }
+    return paintHere();
+  }
+
+  private createWallSprites(slices: TerrainWallSlice[], occlusion: boolean): Sprite[] {
+    return slices.map((slice) => {
+      const texture = Texture.from(slice.canvas);
+      if (occlusion) setNearestTextureScale(texture);
+      const sprite = new Sprite(texture);
+      sprite.x = slice.x;
+      sprite.y = slice.y;
+      sprite.zIndex = slice.zIndex;
+      sprite.roundPixels = true;
+      if (!occlusion) sprite.eventMode = "none";
+      sprite.cullable = true;
+      sprite.cullArea = new Rectangle(0, 0, slice.canvas.width, slice.canvas.height);
+      sprite.label = slice.label;
+      return sprite;
+    });
   }
 
   private renderChunk(
@@ -873,118 +880,4 @@ export class StudioTerrainChunkRenderer extends StudioTerrainChunkPainter {
     return overlay;
   }
 
-  private createWallOcclusionSliceSprites(
-    canvas: HTMLCanvasElement,
-    mask: TerrainMorphologyMaskBuffer,
-    feature: StudioTerrainMorphologyFeature,
-    sliceWidth: number
-  ): Sprite[] {
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    if (!ctx) return [];
-
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-    const sprites: Sprite[] = [];
-
-    for (let sliceX = 0; sliceX < canvas.width; sliceX += sliceWidth) {
-      const width = Math.min(sliceWidth, canvas.width - sliceX);
-      const bands = findAlphaBands(imageData, canvas.width, canvas.height, {
-        x: sliceX,
-        y: 0,
-        width,
-        height: canvas.height,
-      });
-
-      bands.forEach((band, bandIndex) => {
-        const alphaBounds = findAlphaBounds(imageData, canvas.width, canvas.height, {
-          x: sliceX,
-          y: band.y,
-          width,
-          height: band.height,
-        });
-        if (!alphaBounds) return;
-
-        const slice = this.createCanvasBuffer(alphaBounds.width, alphaBounds.height, true);
-        slice.ctx.drawImage(
-          canvas,
-          alphaBounds.x,
-          alphaBounds.y,
-          alphaBounds.width,
-          alphaBounds.height,
-          0,
-          0,
-          alphaBounds.width,
-          alphaBounds.height
-        );
-
-        const texture = Texture.from(slice.canvas);
-        setNearestTextureScale(texture);
-        const sprite = new Sprite(texture);
-        sprite.x = Math.round(mask.bounds.x + alphaBounds.x);
-        sprite.y = Math.round(mask.bounds.y + alphaBounds.y);
-        sprite.zIndex = Math.round(mask.bounds.y + alphaBounds.y + alphaBounds.height);
-        sprite.roundPixels = true;
-        sprite.cullable = true;
-        sprite.cullArea = new Rectangle(0, 0, alphaBounds.width, alphaBounds.height);
-        sprite.label = `StudioWallOcclusion:${feature.id}:${sliceX}:${bandIndex}`;
-        sprites.push(sprite);
-      });
-    }
-
-    return sprites;
-  }
-
-  private createWallShadowSprite(
-    parts: TerrainWallRenderParts,
-    feature: StudioTerrainMorphologyFeature,
-    style: StudioTerrainWallShadowStyle
-  ): Sprite | null {
-    const mask = parts.mask;
-    const baseEdge = this.createTerrainMorphologyDirectionalEdgeMask(parts.faceMask, "bottom", 10);
-    const spreadX = Math.ceil(Math.abs(style.offsetX) + style.blur * 2);
-    const spreadY = Math.ceil(Math.abs(style.offsetY) + style.blur * 2 + 12);
-    const canvas = this.createCanvasBuffer(
-      Math.max(1, mask.canvas.width + spreadX * 2),
-      Math.max(1, mask.canvas.height + spreadY * 2),
-      true
-    );
-    const originX = spreadX;
-    const originY = spreadY;
-
-    canvas.ctx.save();
-    canvas.ctx.globalAlpha = style.alpha * 1.35;
-    for (let y = 0; y <= 5; y += 1) {
-      canvas.ctx.drawImage(baseEdge.canvas, originX, originY + y);
-    }
-    canvas.ctx.restore();
-
-    canvas.ctx.save();
-    canvas.ctx.filter = `blur(${style.blur}px)`;
-    for (let step = 1; step <= 5; step += 1) {
-      const ratio = step / 5;
-      canvas.ctx.globalAlpha = style.alpha * (0.58 - ratio * 0.32);
-      canvas.ctx.drawImage(
-        baseEdge.canvas,
-        originX + style.offsetX * ratio,
-        originY + 4 + style.offsetY * ratio
-      );
-    }
-    canvas.ctx.restore();
-
-    canvas.ctx.globalCompositeOperation = "source-in";
-    canvas.ctx.fillStyle = style.color;
-    canvas.ctx.fillRect(0, 0, canvas.canvas.width, canvas.canvas.height);
-    canvas.ctx.globalCompositeOperation = "source-over";
-
-    const texture = Texture.from(canvas.canvas);
-    const sprite = new Sprite(texture);
-    sprite.x = Math.round(mask.bounds.x - originX);
-    sprite.y = Math.round(mask.bounds.y - originY);
-    sprite.zIndex = 0;
-    sprite.roundPixels = true;
-    sprite.eventMode = "none";
-    sprite.cullable = true;
-    sprite.cullArea = new Rectangle(0, 0, canvas.canvas.width, canvas.canvas.height);
-    sprite.label = `StudioWallShadow:${feature.id}`;
-    return sprite;
-  }
 }

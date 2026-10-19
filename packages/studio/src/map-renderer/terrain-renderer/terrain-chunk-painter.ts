@@ -62,6 +62,15 @@ export interface TerrainWaterAnimationTarget {
   originY: number;
 }
 
+/** A canvas the wall occlusion or the wall shadow is made of, with where and how the page places it. */
+export interface TerrainWallSlice {
+  canvas: HTMLCanvasElement;
+  x: number;
+  y: number;
+  zIndex: number;
+  label: string;
+}
+
 export interface TerrainWaterOverlayData {
   overlayBounds: { x: number; y: number; width: number; height: number };
   regions: TerrainWaterRegion[];
@@ -3865,5 +3874,160 @@ export class StudioTerrainChunkPainter {
     };
     this.imageBufferCache.set(key, buffer);
     return buffer;
+  }
+
+  /**
+   * Draws the wall occlusion of every wall feature and cuts it into slices (no Pixi): the
+   * terrain worker calls it; the page calls it when no worker is available.
+   */
+  paintWallOcclusionSlices(
+    data: StudioTerrainRenderData,
+    image: HTMLImageElement | null,
+    sliceWidth: number
+  ): TerrainWallSlice[] {
+    const slices: TerrainWallSlice[] = [];
+    this.resetMorphologyRenderCaches();
+    try {
+      for (const feature of data.morphologyFeatures) {
+        if (feature.kind !== "wall") continue;
+        const parts = this.createTerrainWallRenderParts(data, feature);
+        if (!parts) continue;
+        const rendered = this.createCanvasBuffer(parts.mask.canvas.width, parts.mask.canvas.height, true);
+        rendered.ctx.save();
+        rendered.ctx.translate(-parts.mask.bounds.x, -parts.mask.bounds.y);
+        this.drawWallBase(rendered.ctx, data, image, feature, parts);
+        this.drawWallForeground(rendered.ctx, data, image, feature, parts);
+        rendered.ctx.restore();
+
+        slices.push(...this.cutWallOcclusionSlices(rendered.canvas, parts.mask, feature.id, sliceWidth));
+      }
+    } finally {
+      this.resetMorphologyRenderCaches();
+    }
+    return slices;
+  }
+
+  /** Draws the wall shadow of every wall feature (no Pixi). */
+  paintWallShadowSlices(data: StudioTerrainRenderData, style: StudioTerrainWallShadowStyle): TerrainWallSlice[] {
+    const slices: TerrainWallSlice[] = [];
+    this.resetMorphologyRenderCaches();
+    try {
+      for (const feature of data.morphologyFeatures) {
+        if (feature.kind !== "wall") continue;
+        const parts = this.createTerrainWallRenderParts(data, feature);
+        if (!parts) continue;
+        const slice = this.paintWallShadow(parts, feature.id, style);
+        if (slice) slices.push(slice);
+      }
+    } finally {
+      this.resetMorphologyRenderCaches();
+    }
+    return slices;
+  }
+
+  protected cutWallOcclusionSlices(
+    canvas: HTMLCanvasElement,
+    mask: TerrainMorphologyMaskBuffer,
+    featureId: string,
+    sliceWidth: number
+  ): TerrainWallSlice[] {
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return [];
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    const slices: TerrainWallSlice[] = [];
+
+    for (let sliceX = 0; sliceX < canvas.width; sliceX += sliceWidth) {
+      const width = Math.min(sliceWidth, canvas.width - sliceX);
+      const bands = findAlphaBands(imageData, canvas.width, canvas.height, {
+        x: sliceX,
+        y: 0,
+        width,
+        height: canvas.height,
+      });
+
+      bands.forEach((band, bandIndex) => {
+        const alphaBounds = findAlphaBounds(imageData, canvas.width, canvas.height, {
+          x: sliceX,
+          y: band.y,
+          width,
+          height: band.height,
+        });
+        if (!alphaBounds) return;
+
+        const slice = this.createCanvasBuffer(alphaBounds.width, alphaBounds.height, true);
+        slice.ctx.drawImage(
+          canvas,
+          alphaBounds.x,
+          alphaBounds.y,
+          alphaBounds.width,
+          alphaBounds.height,
+          0,
+          0,
+          alphaBounds.width,
+          alphaBounds.height
+        );
+        slices.push({
+          canvas: slice.canvas,
+          x: Math.round(mask.bounds.x + alphaBounds.x),
+          y: Math.round(mask.bounds.y + alphaBounds.y),
+          zIndex: Math.round(mask.bounds.y + alphaBounds.y + alphaBounds.height),
+          label: `StudioWallOcclusion:${featureId}:${sliceX}:${bandIndex}`,
+        });
+      });
+    }
+
+    return slices;
+  }
+
+  protected paintWallShadow(
+    parts: TerrainWallRenderParts,
+    featureId: string,
+    style: StudioTerrainWallShadowStyle
+  ): TerrainWallSlice | null {
+    const mask = parts.mask;
+    const baseEdge = this.createTerrainMorphologyDirectionalEdgeMask(parts.faceMask, "bottom", 10);
+    const spreadX = Math.ceil(Math.abs(style.offsetX) + style.blur * 2);
+    const spreadY = Math.ceil(Math.abs(style.offsetY) + style.blur * 2 + 12);
+    const canvas = this.createCanvasBuffer(
+      Math.max(1, mask.canvas.width + spreadX * 2),
+      Math.max(1, mask.canvas.height + spreadY * 2),
+      true
+    );
+    const originX = spreadX;
+    const originY = spreadY;
+
+    canvas.ctx.save();
+    canvas.ctx.globalAlpha = style.alpha * 1.35;
+    for (let y = 0; y <= 5; y += 1) {
+      canvas.ctx.drawImage(baseEdge.canvas, originX, originY + y);
+    }
+    canvas.ctx.restore();
+
+    canvas.ctx.save();
+    canvas.ctx.filter = `blur(${style.blur}px)`;
+    for (let step = 1; step <= 5; step += 1) {
+      const ratio = step / 5;
+      canvas.ctx.globalAlpha = style.alpha * (0.58 - ratio * 0.32);
+      canvas.ctx.drawImage(
+        baseEdge.canvas,
+        originX + style.offsetX * ratio,
+        originY + 4 + style.offsetY * ratio
+      );
+    }
+    canvas.ctx.restore();
+
+    canvas.ctx.globalCompositeOperation = "source-in";
+    canvas.ctx.fillStyle = style.color;
+    canvas.ctx.fillRect(0, 0, canvas.canvas.width, canvas.canvas.height);
+    canvas.ctx.globalCompositeOperation = "source-over";
+
+    return {
+      canvas: canvas.canvas,
+      x: Math.round(mask.bounds.x - originX),
+      y: Math.round(mask.bounds.y - originY),
+      zIndex: 0,
+      label: `StudioWallShadow:${featureId}`,
+    };
   }
 }

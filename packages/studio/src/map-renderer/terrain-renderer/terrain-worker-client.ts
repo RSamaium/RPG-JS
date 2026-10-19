@@ -1,4 +1,4 @@
-import type { TerrainWaterOverlayData } from "./terrain-chunk-painter";
+import type { StudioTerrainWallShadowStyle, TerrainWallSlice, TerrainWaterOverlayData } from "./terrain-chunk-painter";
 import type { StudioCollisionPolygon, StudioTerrainRenderData } from "../types";
 import type {
   TerrainWorkerBounds,
@@ -31,7 +31,7 @@ export class TerrainWorkerClient {
   private nextRequestId = 1;
   private pending = new Map<
     number,
-    { resolve: (painted: TerrainWorkerPainted) => void; reject: (error: Error) => void }
+    { resolve: (result: any) => void; reject: (error: Error) => void }
   >();
 
   private constructor(private readonly worker: Worker) {
@@ -70,6 +70,20 @@ export class TerrainWorkerClient {
     });
   }
 
+  /** Paints the wall occlusion or the wall shadow slices of a terrain. */
+  paintWalls(
+    data: StudioTerrainRenderData,
+    request:
+      | { type: "walls-occlusion"; sliceWidth: number }
+      | { type: "walls-shadow"; style: StudioTerrainWallShadowStyle }
+  ): Promise<TerrainWallSlice[]> {
+    const requestId = this.nextRequestId++;
+    return new Promise((resolve, reject) => {
+      this.pending.set(requestId, { resolve, reject });
+      this.worker.postMessage({ ...request, requestId, data } as TerrainWorkerRequest);
+    });
+  }
+
   dispose(): void {
     this.worker.terminate();
     this.failAll(new Error("terrain worker disposed"));
@@ -81,6 +95,12 @@ export class TerrainWorkerClient {
     this.pending.delete(message.requestId);
     if (message.type === "error") {
       request.reject(new Error(message.message));
+      return;
+    }
+    if (message.type === "walls") {
+      request.resolve(
+        message.slices.map(({ bitmap, ...slice }) => ({ ...slice, canvas: bitmapToCanvas(bitmap) }))
+      );
       return;
     }
     const water = message.water

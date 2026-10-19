@@ -66,6 +66,34 @@ scope.onmessage = async (event: MessageEvent<TerrainWorkerRequest>) => {
     renderer.resetRenderCaches();
     return;
   }
+  if (message.type === "walls-occlusion" || message.type === "walls-shadow") {
+    try {
+      // Walls are made from their own data and caches, like the page does for them.
+      const walls = new StudioTerrainChunkPainter();
+      let slices;
+      if (message.type === "walls-occlusion") {
+        const image = await loadImage(message.data.sourceTexture);
+        slices = walls.paintWallOcclusionSlices(
+          message.data,
+          image as unknown as HTMLImageElement | null,
+          message.sliceWidth
+        );
+      } else {
+        slices = walls.paintWallShadowSlices(message.data, message.style);
+      }
+      const packed = await Promise.all(
+        slices.map(async ({ canvas, ...slice }) => ({ ...slice, bitmap: await toBitmap(canvas) }))
+      );
+      reply({ type: "walls", requestId: message.requestId, slices: packed }, packed.map((slice) => slice.bitmap));
+    } catch (error) {
+      reply({
+        type: "error",
+        requestId: message.requestId,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+    return;
+  }
   if (message.type !== "paint") return;
   try {
     const current = data;
