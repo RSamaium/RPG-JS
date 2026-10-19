@@ -6,30 +6,50 @@ import type {
 } from './types';
 
 /**
- * Requests on their way. The client and the server of a standalone game ask for the same map, project
- * or media at the same time: one request answers them all. Only requests in flight are shared, never
- * an answer kept for later, so a republished project is always read again.
+ * Answers of the API, shared by every copy of this module in the page. In a standalone game the server
+ * and the client are bundled apart but run together, and both ask for the same project, database,
+ * map and media. A request is shared while it is on its way and, where the client has asked for it with
+ * `keepStudioApiAnswers()`, for a few seconds after its answer, then forgotten: the cache never outlives the
+ * start-up, and a new page always reads the API again. A server process lives for long and re-reads a project
+ * that was published, so it keeps nothing after an answer.
  */
-const inflightRequests = new Map<string, Promise<any>>();
+const SHARED_ANSWER_MS = 10_000;
+type SharedAnswer = { promise: Promise<any>; expiresAt: number };
+const KEEP_ANSWERS = Symbol.for("rpgjs.studio.keep-api-answers");
+
+/** Called by the client of a page: its answers may be reused for a few seconds, whichever copy of the module asks. */
+export const keepStudioApiAnswers = (enabled = true): void => {
+  (globalThis as any)[KEEP_ANSWERS] = enabled;
+};
+
+const sharedAnswers: Map<string, SharedAnswer> = ((globalThis as any)[Symbol.for("rpgjs.studio.api-answers")] ??= new Map());
 
 const fetchJson = async (url: string, label: string): Promise<any> => {
-  let request = inflightRequests.get(url);
-  if (!request) {
-    request = (async () => {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`[HttpGameDataProvider] ${label} failed (${response.status}) for ${url}`);
-      }
-      return response.json();
-    })();
-    inflightRequests.set(url, request);
-    const forget = () => {
-      if (inflightRequests.get(url) === request) inflightRequests.delete(url);
+  let shared = sharedAnswers.get(url);
+  if (shared && shared.expiresAt <= Date.now()) {
+    sharedAnswers.delete(url);
+    shared = undefined;
+  }
+  if (!shared) {
+    const entry: SharedAnswer = {
+      promise: (async () => {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`[HttpGameDataProvider] ${label} failed (${response.status}) for ${url}`);
+        }
+        return response.json();
+      })(),
+      expiresAt: Infinity,
     };
-    request.then(forget, forget);
+    sharedAnswers.set(url, entry);
+    entry.promise.then(
+      () => { entry.expiresAt = Date.now() + ((globalThis as any)[KEEP_ANSWERS] ? SHARED_ANSWER_MS : 0); },
+      () => { if (sharedAnswers.get(url) === entry) sharedAnswers.delete(url); },
+    );
+    shared = entry;
   }
   // Every caller gets its own copy: they change what they receive (resolved media, normalized events).
-  return structuredClone(await request);
+  return structuredClone(await shared.promise);
 };
 
 const getStudioApiKey = (): string | null => {
