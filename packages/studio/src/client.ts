@@ -253,6 +253,12 @@ export default (config: StudioGameModuleConfig) => {
         let response: any = {};
         const provider = getGameDataProvider();
 
+        // The provider keeps what it fetches: asking now for what the next steps need overlaps their round trips
+        // with the project request (a round trip to the API costs a few hundred milliseconds).
+        const warmUp = (request: Promise<unknown> | undefined) => void request?.catch(() => undefined);
+        if (projectId) warmUp(provider.getDatabase(projectId));
+        if (config.startMapId && !startupQuery.directMapId) warmUp(provider.getMap(config.startMapId));
+
         // Configuration projectId takes precedence over URL mode.
         if (projectId) {
           response = await provider.getProject({
@@ -260,6 +266,8 @@ export default (config: StudioGameModuleConfig) => {
           });
         }
 
+        // Without a start map in the configuration, the project says which one the game starts on.
+        if (!config.startMapId && !startupQuery.directMapId && response.startMapId) warmUp(provider.getMap(response.startMapId));
         window.gameConfig = response;
 
         const debugCollisions = config.debugCollisions === true || response.debugCollisions === true || engine.globalConfig?.debugCollisions === true;
