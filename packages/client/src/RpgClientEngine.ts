@@ -43,6 +43,7 @@ import { applySyncedHitboxPayload } from "./utils/syncHitbox";
 import { applySyncedParamPayload } from "./utils/syncParams";
 import { EventComponentResolverRegistry, type EventComponentResolver } from "./Game/EventComponentResolver";
 import { RpgClientBuiltinI18n } from "./i18n";
+import { dismissStartupSplash, setStartupSplashLabel } from "./services/splash";
 import { createLocalePreferences } from "./services/localePreferences";
 import { clearCameraFollowPlugins, type CameraFollowSmoothMove } from "./services/cameraFollow";
 import { RpgMusicManager } from "./Game/MusicManager";
@@ -105,6 +106,9 @@ const waitNextFrame = (): Promise<void> => new Promise((resolve) => {
     requestAnimationFrame(finish);
   }
 });
+
+/** Longest time the startup splash may stay when no module dismisses it. */
+const STARTUP_SPLASH_MAX_MS = 20_000;
 
 export class RpgClientEngine<T = any> {
   /** Runtime defaults used by modules that specialize the built-in dash. */
@@ -449,6 +453,9 @@ export class RpgClientEngine<T = any> {
   async start() {
     this.sceneMap = new RpgClientMap()
     this.sceneMap.configureClientPrediction(this.predictionEnabled);
+    // The page may show a startup splash from its first paint; a game that never dismisses it must not stay covered.
+    setStartupSplashLabel(this.t("rpg.transition.loading"));
+    setTimeout(dismissStartupSplash, STARTUP_SPLASH_MAX_MS);
     this.sceneMap.loadPhysic();
     this.resolveSceneMapComponent();
 
@@ -461,6 +468,8 @@ export class RpgClientEngine<T = any> {
     if (!this.webSocket.deferConnection) await this.connect();
 
     this.selector = document.body.querySelector("#rpg") as HTMLElement;
+    // The locale may only be known once connected.
+    setStartupSplashLabel(this.t("rpg.transition.loading"));
 
     const bootstrapOptions = (this.globalConfig as any)?.bootstrapCanvasOptions;
     const { app, canvasElement } = await bootstrapCanvas(

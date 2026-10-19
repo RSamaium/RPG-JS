@@ -6,6 +6,7 @@ import {
   RpgGui,
   TitleScreenComponent,
   inject,
+  dismissStartupSplash,
 } from "@rpgjs/client";
 import { defineModule } from "@rpgjs/common";
 import {
@@ -349,6 +350,8 @@ export default (config: StudioGameModuleConfig) => {
               { id: "load", label: "Load" },
             ],
           });
+          // The title screen is the first screen the player sees: the startup splash has done its job.
+          dismissStartupSplash();
         }
       },
     },
@@ -388,7 +391,7 @@ export default (config: StudioGameModuleConfig) => {
             fadeTrigger,
             coverDuration: hasPreviousMap ? 120 : 0,
             duration: 180,
-            loaderDelay: 250,
+            loaderDelay: hasPreviousMap ? 250 : 0,
             maxAssetWait: 1_200,
             loadingText: engine.t("rpg.transition.loading"),
             onCovered: complete,

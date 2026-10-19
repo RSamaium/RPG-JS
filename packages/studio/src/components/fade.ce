@@ -43,7 +43,7 @@
 
 <script>
   import { animatedSignal, computed, effect, mount, on, signal } from "canvasengine";
-  import { inject, RpgGui } from "@rpgjs/client";
+  import { dismissStartupSplash, hasStartupSplash, inject, RpgGui } from "@rpgjs/client";
   import { Loading } from "@canvasengine/presets";
   import { waitForGlobalAssets } from "../fade-transition";
 
@@ -86,9 +86,16 @@
 
   const scheduleLoader = () => {
     clearLoaderTimer();
-    loaderTimer = setTimeout(() => {
-      if (!destroyed && !revealing) showLoader.set(true);
-    }, Math.max(0, loaderDelay()));
+    // The page's startup splash is the loader while it is there: it is HTML, so it keeps turning when the main thread is busy.
+    const show = () => {
+      if (destroyed || revealing) return;
+      if (hasStartupSplash()) {
+        loaderTimer = setTimeout(show, 250);
+        return;
+      }
+      showLoader.set(true);
+    };
+    loaderTimer = setTimeout(show, Math.max(0, loaderDelay()));
   };
 
   const finishCover = () => {
@@ -106,6 +113,7 @@
   const reveal = async () => {
     if (destroyed || revealing) return;
     revealing = true;
+    dismissStartupSplash();
     clearLoaderTimer();
     showLoader.set(false);
     await opacity.set(0, { duration: Math.max(0, revealDuration()) });

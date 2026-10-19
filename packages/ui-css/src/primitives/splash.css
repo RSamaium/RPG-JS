@@ -1,0 +1,62 @@
+/*
+ * Startup splash: pure HTML + CSS, shown by the first paint, before any script runs.
+ * Its animation runs on the compositor, so it keeps turning while the main thread is
+ * busy loading the first map. `@rpgjs/client` fills the label and fades it out.
+ */
+.rpg-ui-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  background: var(--rpg-ui-splash-background, #090d18);
+  color: var(--rpg-ui-splash-color, #ffffff);
+  font: 14px/1.2 var(--rpg-ui-font-family, system-ui, sans-serif);
+  opacity: 1;
+  transition: opacity var(--rpg-ui-splash-duration, 350ms) ease;
+}
+
+.rpg-ui-splash[data-leaving="true"] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.rpg-ui-splash__spinner {
+  position: relative;
+  width: 84px;
+  height: 84px;
+}
+
+/* Ten segments around a ring; each one dims in turn, so a lit tail chases round it. */
+.rpg-ui-splash__spinner > i {
+  position: absolute;
+  top: 0;
+  left: calc(50% - 8px);
+  width: 16px;
+  height: 20px;
+  border-radius: 2px;
+  background: currentColor;
+  opacity: 0.25;
+  transform-origin: 50% 42px;
+  transform: rotate(calc(var(--segment) * 36deg));
+  animation: rpg-ui-splash-chase 1s linear infinite;
+  animation-delay: calc(var(--segment) * -0.1s);
+}
+
+.rpg-ui-splash__label {
+  margin: 0;
+  min-height: 1.2em;
+}
+
+@keyframes rpg-ui-splash-chase {
+  0% { opacity: 1; }
+  100% { opacity: 0.25; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rpg-ui-splash__spinner > i { animation-duration: 2.5s; }
+  .rpg-ui-splash { transition-duration: 1ms; }
+}
