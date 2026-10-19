@@ -1115,6 +1115,10 @@ export default (_config?: unknown) => {
         },
       },
       onAccepted: async (player: RpgPlayer, connectionContext: RpgPlayerConnectionContext) => {
+        // A connection with a transfer token is the player moving into a room (a map): the game has already
+        // started. Handling it again sent the player to the start map again, so the client reloaded the map
+        // on every reconnection.
+        if (connectionContext?.query?.transferToken) return;
         const roomId = String((player as any).getCurrentMap?.()?.id ?? (player as any).map?.id ?? "");
         if (roomId && !roomId.startsWith("lobby-")) return;
 
