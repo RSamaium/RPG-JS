@@ -1,5 +1,37 @@
 # @rpgjs/studio
 
+## 5.2.0
+
+### Minor Changes
+
+- ddc9fd5: Add a startup splash that shows at the first paint. A page declares `#rpg-splash` (the new `rpg-ui-splash` classes of `@rpgjs/ui-css`, pure HTML and CSS, so it keeps turning while the main thread is busy); the client fills its translated label, and `dismissStartupSplash()`, `setStartupSplashLabel()` and `hasStartupSplash()` are exported. Studio dismisses it when the first map is revealed or the title screen is shown, and shows its own loader without delay on the first map load.
+- bf87927: Let a game add block executors with `provideStudioGame({ blockExecutors })` (applied by every Studio workflow), and run a Studio event or a skill phase from game code with `runStudioEvent(player, eventId, variables)` and `runStudioSkillTrigger(player, skillId, phase, options)`.
+- 2197f72: Add `provideStudioGame({ enemyInteraction })` so a host chooses how an enemy event reacts: the real-time action battle (default), nothing, or a touch handler.
+- 3911107: Let the scene data carry a `layerOpacity` (`terrain`, `elementsAlwaysLow`, `elementsLow`, `elementsHigh`, each from 0 to 1, default 1) so the map editor can dim layers without drawing the map again.
+- 93fefe0: Paint the terrain chunks in a worker (on `OffscreenCanvas`) so a map with terrain no longer freezes the page while it loads. The chunks nearest to the middle of the screen are drawn first, and the page falls back to painting itself where workers are not available.
+- 3288d2e: Paint the terrain walls (occlusion and shadow slices) in the terrain worker too, so building them no longer blocks the page while a map with walls loads.
+- c1dd4a7: Draw the water animation of the terrain with a shader instead of 2D canvases redrawn on the CPU. Each region of water is one quad that shifts the surface in bands (refraction), adds the pale glow and is cut by the shape of the water; a frame only updates the phase, so the water moves on every frame and no longer costs a canvas redraw. Where no shader can be made, the water is drawn on the CPU as before, and the unseen wave lines (drawn with an alpha of 0) are no longer drawn.
+
+### Patch Changes
+
+- cd51839: Update CanvasEngine to 2.4.1.
+- 9abf360: Load the media of a map with far fewer requests: the media a map, the heroes and the preload need are asked together (`GET /game/media?ids=`, by slices of 100), and so are the animations of the idle characters (`GET /game/animations?ids=`). A media the API already sent whole (the tilesets a map carries) is not asked again. A server without these routes is still served, one media at a time.
+- 2fbd534: Route the remaining player-facing texts through the i18n service: stat labels and close buttons of the menu, the action-battle menu button, level-up, skill and reward notifications, and item error notifications. The server now ships default `en`/`fr` messages (`rpg.notification.*`, `rpg.error.*`) that games can override with `provideI18n()`.
+- 703db76: Fix: the conditional branch on the player direction now reads the `direction` signal of the player, so it matches the direction the player is facing instead of never matching.
+- 1cb8919: Read the pixels of a character spritesheet once, with a faster scan, and keep the result: loading a map with several characters no longer blocks the page for a second to measure them. The calibration is unchanged.
+- 3f935d9: Ask the terrain worker for the next chunk while the page builds the sprite of the previous one, share one paint request per chunk between overlapping renders, and do not repaint a chunk already drawn for the same state.
+- 62aa9c2: Answer simultaneous requests for the same map, project or media with one request, and give each caller its own copy. The client and the server of a standalone game no longer download the same media twice.
+- dc603e8: Shorten the time before the first map is shown: the scene no longer asks the worker to paint the same terrain walls several times, only the hero's spritesheets are awaited before the map loads, and the other startup media (combat animations, actors, illustrations) load while the map loads, with the reveal waiting for them at most 800 ms.
+- 238589f: Resolve the media and events of a map together instead of one round trip after the other, which shortens the map loading.
+- e93ecd1: Ask for the database and the start map as soon as Studio starts, so their round trips overlap the project request instead of following it.
+- 13707d4: Have the warmed terrain workers fetch and decode the terrain atlas as soon as the map data is known, so the first chunk no longer waits for its image.
+- 0419221: Wait for the terrain walls (the mountains) before revealing a map, so they no longer pop in a few seconds after it, and make a terrain render wait for the chunks another render is already painting. A terrain worker request that is never answered now times out and falls back to painting on the page.
+- 4bcce78: Share the answers of the API between the client and the server of a standalone page: a request is shared while it is on its way and, once the client has asked for it with `keepStudioApiAnswers()`, for ten seconds after its answer. The page no longer downloads the project, the database or a media twice. A server process keeps nothing after an answer.
+- b47ef05: Do not start the game again when a connection only transfers the player into a map. Every reconnection to the map room used to send the player to the start map again, so the client loaded the map about eight times before the first one was shown.
+- 0a53d94: Start the terrain workers when Studio starts, so they are booted by the time the first map needs them. An unused warmed worker is stopped after a minute.
+- cae633c: Ask for the project, the database, the start map and the tilesets of that map when the Studio client module is created, long before the engine starts, instead of one round trip after the other once it has.
+- ba85abe: Draw a terrain texture without `renderTileSize` at its size in the atlas instead of 48 px, so the game matches the map editor.
+
 ## 5.1.0
 
 ### Minor Changes

@@ -1,5 +1,21 @@
 # @rpgjs/testing
 
+## 5.0.2
+
+### Patch Changes
+
+- cd51839: Update CanvasEngine to 2.4.1.
+- Updated dependencies [ba179fc]
+- Updated dependencies [cd51839]
+- Updated dependencies [27367eb]
+- Updated dependencies [2fbd534]
+- Updated dependencies [92cdd87]
+- Updated dependencies [dcd5a2d]
+- Updated dependencies [eafbca6]
+- Updated dependencies [ddc9fd5]
+  - @rpgjs/client@5.2.0
+  - @rpgjs/server@5.1.1
+
 ## 5.0.1
 
 ### Patch Changes

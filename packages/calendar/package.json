@@ -1,7 +1,7 @@
 {
   "name": "@rpgjs/calendar",
   "repository": "github:RSamaium/RPG-JS",
-  "version": "5.1.0",
+  "version": "5.1.1",
   "description": "Official generic calendar module for RPGJS: dates, recurring events and a calendar window",
   "main": "dist/client/index.js",
   "types": "dist/client/client-index.d.ts",
