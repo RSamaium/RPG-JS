@@ -421,3 +421,28 @@ describe("StudioTerrainWallOcclusionRenderer", () => {
     }
   });
 });
+
+describe("StudioTerrainChunkRenderer pipeline", () => {
+  it("asks the worker for the next chunk before the previous one has been handled", async () => {
+    const { renderer } = createInstrumentedRenderer();
+    const map = createTerrainMap();
+    let inFlight = 0;
+    let maxInFlight = 0;
+    (renderer as any).worker = {
+      setData: () => undefined,
+      dispose: () => undefined,
+      paint: async () => {
+        inFlight += 1;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        inFlight -= 1;
+        return { canvas: {} as HTMLCanvasElement, water: null };
+      },
+    };
+
+    await renderer.renderMap(map);
+
+    expect(maxInFlight).toBeGreaterThanOrEqual(2);
+    expect([...(renderer as any).chunks.keys()].sort()).toEqual(["0:0", "1:0", "2:0"]);
+  });
+});

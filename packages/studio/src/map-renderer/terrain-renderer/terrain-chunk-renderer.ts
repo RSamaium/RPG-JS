@@ -380,6 +380,8 @@ export class StudioTerrainChunkRenderer extends StudioTerrainChunkPainter {
   private chunkTokenCounter = 0;
   private chunkTokens = new Map<string, number>();
   private inflightChunks = new Map<string, { signature: string; done: Promise<void> }>();
+  private renderedSignatures = new Map<string, string>();
+  private paintRequests = new Map<string, { signature: string; promise: Promise<{ canvas: HTMLCanvasElement; water: TerrainWaterOverlayData | null }> }>();
   private workerData: StudioTerrainRenderData | null = null;
 
   constructor(world: PixiContainer, options: StudioTerrainChunkRendererOptions = {}) {
@@ -475,8 +477,11 @@ export class StudioTerrainChunkRenderer extends StudioTerrainChunkPainter {
     const signature = `${version}|${this.streamRevision}|${this.streamGeneration}`;
     const isStale = () => this.destroyed || this.renderVersion !== version;
     const pending: Promise<void>[] = [];
+    const wantsPaint = (candidate: string) =>
+      !(activeKeys && !activeKeys.has(candidate)) && this.inflightChunks.get(candidate)?.signature !== signature;
     let renderedChunkCount = 0;
-    for (const key of orderedKeys) {
+    for (let index = 0; index < orderedKeys.length; index += 1) {
+      const key = orderedKeys[index]!;
       if (activeKeys && !activeKeys.has(key)) {
         const previous = this.chunks.get(key);
         if (previous) {
@@ -485,6 +490,8 @@ export class StudioTerrainChunkRenderer extends StudioTerrainChunkPainter {
         }
         continue;
       }
+      // Already drawn for this very state by another render: nothing to paint again.
+      if (this.chunks.has(key) && this.renderedSignatures.get(key) === signature) continue;
       const inflight = this.inflightChunks.get(key);
       if (inflight?.signature === signature) {
         // Already on its way for this state: this call is done only once it has arrived.
@@ -504,7 +511,13 @@ export class StudioTerrainChunkRenderer extends StudioTerrainChunkPainter {
               this.worker.setData(data, collisions, splitWallForeground);
               this.workerData = data;
             }
-            painted = await this.worker.paint(bounds);
+            // The worker paints the next chunk while this thread builds the sprite of the one that has just arrived.
+            const nextKey = orderedKeys[index + 1];
+            const current = this.askWorkerToPaint(key, bounds, signature);
+            if (nextKey !== undefined && wantsPaint(nextKey)) {
+              this.askWorkerToPaint(nextKey, this.getChunkBounds(nextKey, data), signature).catch(() => undefined);
+            }
+            painted = await current;
           } catch {
             // No worker for this page (blocked, cloning failed...): paint here, as before.
             this.disableWorker();
@@ -526,6 +539,7 @@ export class StudioTerrainChunkRenderer extends StudioTerrainChunkPainter {
         }
         if (this.chunkTokens.get(key) !== token) continue;
         this.renderChunk(key, data, bounds, painted);
+        this.renderedSignatures.set(key, signature);
         renderedChunkCount += 1;
       } finally {
         if (this.chunkTokens.get(key) === token) this.inflightChunks.delete(key);
@@ -612,6 +626,24 @@ export class StudioTerrainChunkRenderer extends StudioTerrainChunkPainter {
       width: Math.min(this.chunkSize, data.width - x),
       height: Math.min(this.chunkSize, data.height - y),
     };
+  }
+
+  /** One paint request per chunk and state of the terrain, shared by the renders that need it. */
+  private askWorkerToPaint(
+    key: string,
+    bounds: { x: number; y: number; width: number; height: number },
+    signature: string
+  ): Promise<{ canvas: HTMLCanvasElement; water: TerrainWaterOverlayData | null }> {
+    const asked = this.paintRequests.get(key);
+    if (asked?.signature === signature) return asked.promise;
+    const promise = this.worker!.paint(bounds);
+    const entry = { signature, promise };
+    this.paintRequests.set(key, entry);
+    const forget = () => {
+      if (this.paintRequests.get(key) === entry) this.paintRequests.delete(key);
+    };
+    promise.then(forget, forget);
+    return promise;
   }
 
   private getWorker(): TerrainWorkerClient | null {
