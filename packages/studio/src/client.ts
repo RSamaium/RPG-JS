@@ -28,6 +28,8 @@ import { createStudioMapPlugins, type StudioMapPlugin } from "./studio-map-plugi
 import { bindInitialStudioEventHitboxes } from "./initial-event-hitboxes-client";
 import { collectStudioActionBattleMediaRefs } from "./action-battle-animation-preload";
 import { setStudioMediaPreload, waitForStudioMediaPreload } from "./startup-preload";
+import { warmUpStartupData } from "./startup-warmup";
+import { keepStudioApiAnswers } from "./data-provider/http-game-data-provider";
 import { TerrainWorkerClient } from "./map-renderer/terrain-renderer/terrain-worker-client";
 import { beginStudioMapLoading, waitForStudioMapReady } from "./studio-map-readiness";
 
@@ -235,6 +237,12 @@ export const configureStudioClientStartupProject = (
 };
 
 export default (config: StudioGameModuleConfig) => {
+  // In a page the client and the server (standalone) ask for the same data: the answers are shared during the start-up.
+  if (typeof window !== "undefined") keepStudioApiAnswers();
+  // The module is created long before the engine starts: the game data is already asked for while the engine boots.
+  if (typeof window !== "undefined" && config.projectId && !resolveStudioClientStartupQuery(window.location.search).directMapId) {
+    warmUpStartupData(getGameDataProvider(), { projectId: config.projectId, startMapId: config.startMapId });
+  }
   return defineModule<RpgClient>({
     engine: {
       async onStart(engine: RpgClientEngine<any>) {
@@ -267,7 +275,9 @@ export default (config: StudioGameModuleConfig) => {
         }
 
         // Without a start map in the configuration, the project says which one the game starts on.
-        if (!config.startMapId && !startupQuery.directMapId && response.startMapId) warmUp(provider.getMap(response.startMapId));
+        if (!config.startMapId && !startupQuery.directMapId && response.startMapId) {
+          warmUpStartupData(provider, { startMapId: response.startMapId });
+        }
         window.gameConfig = response;
 
         const debugCollisions = config.debugCollisions === true || response.debugCollisions === true || engine.globalConfig?.debugCollisions === true;
