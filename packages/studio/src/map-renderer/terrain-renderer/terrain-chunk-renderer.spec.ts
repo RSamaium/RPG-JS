@@ -37,7 +37,7 @@ function createInstrumentedRenderer() {
   const renderChunk = vi
     .spyOn(renderer as any, "renderChunk")
     .mockImplementation((...args: unknown[]) => {
-      const [key, , , , bounds] = args as [string, unknown, unknown, unknown, any];
+      const [key, , bounds] = args as [string, unknown, any];
       (renderer as any).chunks.set(key, {
         key,
         ...bounds,
@@ -363,5 +363,36 @@ describe("StudioTerrainChunkRenderer streamed invalidation", () => {
 
       expect(drawn).toEqual([0, 1, 2, 3]);
     });
+  });
+});
+
+describe("StudioTerrainChunkRenderer overlapping renders", () => {
+  it("resolves a render only once the chunks already on their way have arrived", async () => {
+    const { renderer } = createInstrumentedRenderer();
+    const map = createTerrainMap();
+    let painting = 0;
+    (renderer as any).worker = {
+      setData: () => undefined,
+      dispose: () => undefined,
+      paint: async () => {
+        painting += 1;
+        await new Promise((resolve) => setTimeout(resolve, 25));
+        return { canvas: {} as HTMLCanvasElement, water: null };
+      },
+    };
+
+    const first = renderer.renderMap(map);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    const second = renderer.renderMap(map);
+    let secondDone = false;
+    void second.then(() => { secondDone = true; });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(secondDone).toBe(false);
+
+    await Promise.all([first, second]);
+    // Whichever call resolves, no chunk is missing when it does.
+    expect([...(renderer as any).chunks.keys()].sort()).toEqual(["0:0", "1:0", "2:0"]);
+    // A chunk is not painted twice for the same state.
+    expect(painting).toBe(3);
   });
 });

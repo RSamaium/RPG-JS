@@ -356,7 +356,7 @@ export class StudioTerrainChunkRenderer extends StudioTerrainChunkPainter {
   private workerDisabled = false;
   private chunkTokenCounter = 0;
   private chunkTokens = new Map<string, number>();
-  private inflightChunks = new Map<string, string>();
+  private inflightChunks = new Map<string, { signature: string; done: Promise<void> }>();
   private workerData: StudioTerrainRenderData | null = null;
 
   constructor(world: PixiContainer, options: StudioTerrainChunkRendererOptions = {}) {
@@ -451,6 +451,7 @@ export class StudioTerrainChunkRenderer extends StudioTerrainChunkPainter {
     // way for that state nor throws away its result: it only drops a result a newer request for the chunk replaced.
     const signature = `${version}|${this.streamRevision}|${this.streamGeneration}`;
     const isStale = () => this.destroyed || this.renderVersion !== version;
+    const pending: Promise<void>[] = [];
     let renderedChunkCount = 0;
     for (const key of orderedKeys) {
       if (activeKeys && !activeKeys.has(key)) {
@@ -461,10 +462,16 @@ export class StudioTerrainChunkRenderer extends StudioTerrainChunkPainter {
         }
         continue;
       }
-      if (this.inflightChunks.get(key) === signature) continue;
+      const inflight = this.inflightChunks.get(key);
+      if (inflight?.signature === signature) {
+        // Already on its way for this state: this call is done only once it has arrived.
+        pending.push(inflight.done);
+        continue;
+      }
       const token = ++this.chunkTokenCounter;
       this.chunkTokens.set(key, token);
-      this.inflightChunks.set(key, signature);
+      let finish!: () => void;
+      this.inflightChunks.set(key, { signature, done: new Promise<void>((resolve) => { finish = resolve; }) });
       try {
         const bounds = this.getChunkBounds(key, data);
         let painted: { canvas: HTMLCanvasElement; water: TerrainWaterOverlayData | null } | null = null;
@@ -499,11 +506,16 @@ export class StudioTerrainChunkRenderer extends StudioTerrainChunkPainter {
         renderedChunkCount += 1;
       } finally {
         if (this.chunkTokens.get(key) === token) this.inflightChunks.delete(key);
+        finish();
       }
       if (renderedChunkCount < orderedKeys.length) {
         await yieldToMainThread();
         if (isStale()) return;
       }
+    }
+    if (pending.length > 0) {
+      await Promise.all(pending);
+      if (isStale()) return;
     }
     if (requestSerial !== this.renderRequestSerial) return;
 
@@ -737,6 +749,7 @@ export class StudioTerrainChunkRenderer extends StudioTerrainChunkPainter {
     const data = isStudioTerrainRenderData(map?.terrainRenderData)
       ? map.terrainRenderData
       : createStudioTerrainRenderData(map);
+    if (!data.morphologyFeatures.some((feature) => feature.kind === "wall")) return [];
     const sliceWidth = Math.max(12, Math.round(options.sliceWidth ?? data.tileSize / 2));
     const slices = await this.paintWalls(
       data,
@@ -753,6 +766,7 @@ export class StudioTerrainChunkRenderer extends StudioTerrainChunkPainter {
       : createStudioTerrainRenderData(map);
     const style = resolveStudioTerrainWallShadowStyle(data, lighting);
     if (!style) return [];
+    if (!data.morphologyFeatures.some((feature) => feature.kind === "wall")) return [];
 
     const slices = await this.paintWalls(
       data,

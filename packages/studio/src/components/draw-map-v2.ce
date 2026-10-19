@@ -55,6 +55,7 @@
     import StudioEventLayer from './studio-event-layer.ce'
     import { StudioTerrainWallOcclusionRenderer, StudioTerrainWallShadowRenderer } from '../map-renderer/terrain-renderer/terrain-chunk-renderer'
     import { StudioElementRenderer } from '../map-renderer/studio-element-renderer'
+    import { holdStudioMapReady } from '../studio-map-readiness'
     import { toCanvasWeatherOptions } from '@common/weather';
     import { assetsUrl } from "../constants";
     import { createViewportCullKey, getPixiLocalViewportBounds } from '../map-renderer/viewport-culling'
@@ -183,11 +184,17 @@
       const mapData = data()
       if (!mapData) return
       const currentSerial = ++terrainWallOcclusionSerial
-      const children = await terrainWallOcclusionRenderer.renderMap(mapData)
-      if (currentSerial !== terrainWallOcclusionSerial) return
-      terrainWallOcclusionChildren.set(toEventLayerSpace(children))
-      lastTerrainMorphologyCullKey = ""
-      updateTerrainMorphologyCulling()
+      // The reveal waits for the walls: the mountains must not pop in after it.
+      const releaseReveal = holdStudioMapReady()
+      try {
+        const children = await terrainWallOcclusionRenderer.renderMap(mapData)
+        if (currentSerial !== terrainWallOcclusionSerial) return
+        terrainWallOcclusionChildren.set(toEventLayerSpace(children))
+        lastTerrainMorphologyCullKey = ""
+        updateTerrainMorphologyCulling()
+      } finally {
+        releaseReveal()
+      }
     }
 
     const mapLighting = computed(() => {
@@ -199,12 +206,17 @@
       const mapData = data()
       if (!mapData) return
       const currentSerial = ++terrainWallShadowSerial
-      const children = await terrainWallShadowRenderer.renderMap(mapData, mapLighting())
-      if (currentSerial !== terrainWallShadowSerial) return
-      terrainWallShadowChildren = children
-      syncPixiWorldChildren(terrainWallShadowWorld, terrainWallShadowChildren)
-      lastTerrainMorphologyCullKey = ""
-      updateTerrainMorphologyCulling()
+      const releaseReveal = holdStudioMapReady()
+      try {
+        const children = await terrainWallShadowRenderer.renderMap(mapData, mapLighting())
+        if (currentSerial !== terrainWallShadowSerial) return
+        terrainWallShadowChildren = children
+        syncPixiWorldChildren(terrainWallShadowWorld, terrainWallShadowChildren)
+        lastTerrainMorphologyCullKey = ""
+        updateTerrainMorphologyCulling()
+      } finally {
+        releaseReveal()
+      }
     }
 
     effect(() => {

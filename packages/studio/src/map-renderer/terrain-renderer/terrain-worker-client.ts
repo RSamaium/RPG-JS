@@ -33,6 +33,8 @@ export class TerrainWorkerClient {
     number,
     { resolve: (result: any) => void; reject: (error: Error) => void }
   >();
+  /** A request the worker never answers (an image that hangs) must not hold the map for ever. */
+  private static readonly REQUEST_TIMEOUT_MS = 30_000;
 
   private constructor(private readonly worker: Worker) {
     worker.onmessage = (event: MessageEvent<TerrainWorkerResponse>) => this.receive(event.data);
@@ -64,7 +66,7 @@ export class TerrainWorkerClient {
   paint(bounds: TerrainWorkerBounds): Promise<TerrainWorkerPainted> {
     const requestId = this.nextRequestId++;
     return new Promise((resolve, reject) => {
-      this.pending.set(requestId, { resolve, reject });
+      this.track(requestId, resolve, reject);
       const request: TerrainWorkerRequest = { type: "paint", requestId, bounds };
       this.worker.postMessage(request);
     });
@@ -79,8 +81,22 @@ export class TerrainWorkerClient {
   ): Promise<TerrainWallSlice[]> {
     const requestId = this.nextRequestId++;
     return new Promise((resolve, reject) => {
-      this.pending.set(requestId, { resolve, reject });
+      this.track(requestId, resolve, reject);
       this.worker.postMessage({ ...request, requestId, data } as TerrainWorkerRequest);
+    });
+  }
+
+  private track(
+    requestId: number,
+    resolve: (result: any) => void,
+    reject: (error: Error) => void
+  ): void {
+    const timer = setTimeout(() => {
+      if (this.pending.delete(requestId)) reject(new Error("terrain worker request timed out"));
+    }, TerrainWorkerClient.REQUEST_TIMEOUT_MS);
+    this.pending.set(requestId, {
+      resolve: (result) => { clearTimeout(timer); resolve(result); },
+      reject: (error) => { clearTimeout(timer); reject(error); },
     });
   }
 
