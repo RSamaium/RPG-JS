@@ -6,15 +6,20 @@ shared({ stock: { initial: 3, client: true } });
 
 on("event.action", { where: { "event.name": "shop" } }, () => {
   if ($player.gold < 10) {
-    say("A potion costs 10 gold.");
+    $player.showText("A potion costs 10 gold.");
     return;
   }
+  const answer = $player.showChoices("A potion costs 10 gold. Buy one?", [
+    { text: "Yes", value: "yes" },
+    { text: "No", value: "no" },
+  ]);
+  if (!answer || answer.value !== "yes") return;
   if (!$shared.take("stock", 1)) {
-    say("Sold out!");
+    $player.showText("Sold out!");
     return;
   }
   $player.gold -= 10;
   $player.addItem("Potion", 1);
-  notify("Bought a potion. Gold: " + $player.gold + ", left in stock: " + $shared.stock);
+  $player.showNotification("Bought a potion. Gold: " + $player.gold + ", left in stock: " + $shared.stock);
 });
 `;

@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createModule, defineModule } from "@rpgjs/common";
-import type { RpgPlayer, RpgServer } from "@rpgjs/server";
+import type { RpgActionInput, RpgPlayer, RpgServer } from "@rpgjs/server";
 import { testing, type TestingFixture } from "@rpgjs/testing";
-import { ScriptService, provideScripts, type ScriptSource } from "../src/server";
+import { ScriptService, provideScripts, signalBinding, type ScriptSource } from "../src/server";
 
 const Potion = { id: "Potion", name: "Potion", description: "Restores HP", price: 10, hpValue: 50, consumable: true, _type: "item" as const };
 
@@ -42,7 +42,7 @@ afterEach(async () => {
 
 describe("scripts listening to the hooks of a real RPGJS game", () => {
   it("runs when a player enters a map, with the map in the payload", async () => {
-    const { player } = await start([{ id: "welcome", source: `on("player.joinMap", { where: { map: "test-map" } }, (e) => { $var.entered_${n} += 1; notify("welcome to " + e.map); });` }]);
+    const { player } = await start([{ id: "welcome", source: `on("player.joinMap", { where: { map: "test-map" } }, (e) => { $player.setVariable("entered_${n}", ($player.getVariable("entered_${n}") ?? 0) + 1); $player.showNotification("welcome to " + e.map); });` }]);
 
     await settled(() => expect(player.getVariable(`entered_${n}`)).toBe(1));
   });
@@ -57,19 +57,17 @@ describe("scripts listening to the hooks of a real RPGJS game", () => {
     await settled(() => expect(player.gold).toBe(30));
   });
 
-  it("tells the levels gained, while $player.level is still the level before the gain (what RPGJS does today)", async () => {
-    const { player } = await start([{ id: "seen", source: `on("player.levelUp", (e) => { $var.before_${n} = $player.level; $var.gained_${n} = e.gained; });` }]);
+  it("tells the levels gained and the level after the gain, which $player.level is too (RPGJS sends the hook before it sets the level)", async () => {
+    const { player } = await start([{ id: "seen", source: `on("player.levelUp", (e) => { $player.setVariable("now_${n}", [$player.level, e.level, e.gained]); });` }]);
     const before = player.level;
 
     player.level = before + 3;
 
-    await settled(() => expect(player.getVariable(`gained_${n}`)).toBe(3));
-    expect(player.getVariable(`before_${n}`)).toBe(before);
-    expect(player.level).toBe(before + 3);
+    await settled(() => expect(player.getVariable(`now_${n}`)).toEqual([before + 3, before + 3, 3]));
   });
 
   it("runs when a player has no health left", async () => {
-    const { player } = await start([{ id: "deaths", source: `on("player.dead", () => { $var.deaths_${n} += 1; });` }]);
+    const { player } = await start([{ id: "deaths", source: `on("player.dead", () => { $player.setVariable("deaths_${n}", ($player.getVariable("deaths_${n}") ?? 0) + 1); });` }]);
 
     player.hp = 0;
 
@@ -79,7 +77,7 @@ describe("scripts listening to the hooks of a real RPGJS game", () => {
   it("runs when a player acts on an event, for that event, and only the one whose name matches", async () => {
     const { player, map } = await start([{
       id: "chest",
-      source: `on("event.action", { where: { "event.name": "chest" } }, () => { $self.A = true; $player.addItem("Potion", 1); });`,
+      source: `on("event.action", { where: { "event.name": "chest" } }, () => { $player.setVariable($event.id + "_A", true); $player.addItem("Potion", 1); });`,
     }]);
     const chestId = (await map.createDynamicEvent({ id: "chest-1", x: 150, y: 100, event: { name: "chest" } as any }))!;
     const doorId = (await map.createDynamicEvent({ id: "door-1", x: 200, y: 100, event: { name: "door" } as any }))!;
@@ -93,7 +91,7 @@ describe("scripts listening to the hooks of a real RPGJS game", () => {
   });
 
   it("runs when a player touches an event", async () => {
-    const { player, map } = await start([{ id: "touch", source: `on("event.touch", () => { $var.touched_${n} += 1; });` }]);
+    const { player, map } = await start([{ id: "touch", source: `on("event.touch", () => { $player.setVariable("touched_${n}", ($player.getVariable("touched_${n}") ?? 0) + 1); });` }]);
     const id = (await map.createDynamicEvent({ id: "trap-1", x: 150, y: 100, event: {} }))!;
 
     await map.getEvent(id)!.execMethod("onPlayerTouch", [player]);
@@ -102,7 +100,7 @@ describe("scripts listening to the hooks of a real RPGJS game", () => {
   });
 
   it("keeps the conditions on the player: the listener waits for its switch", async () => {
-    const { player } = await start([{ id: "tournament", source: `on("player.levelUp", { when: [{ switch: "tournament" }] }, () => { $var.bonus_${n} += 1; });` }]);
+    const { player } = await start([{ id: "tournament", source: `on("player.levelUp", { when: [{ variable: "tournament", eq: true }] }, () => { $player.setVariable("bonus_${n}", ($player.getVariable("bonus_${n}") ?? 0) + 1); });` }]);
 
     player.level = player.level + 1;
     await new Promise((resolve) => setTimeout(resolve, 50));
@@ -129,7 +127,7 @@ describe("scripts listening to the hooks of a real RPGJS game", () => {
 
 describe("a script that does harm, or that is wrong", () => {
   const hostile: [string, string][] = [
-    ["a loop that never ends", `on("player.levelUp", () => { while (true) { $var.spin += 1; } });`],
+    ["a loop that never ends", `on("player.levelUp", () => { while (true) { $player.gold += 1; } });`],
     ["a function that calls itself for ever", `function again(n) { return again(n + 1); } on("player.levelUp", () => { again(0); });`],
     ["a list that grows without end", `on("player.levelUp", () => { const l = []; while (true) { l.push(1); } });`],
     ["a script that fails by itself", `on("player.levelUp", () => { $shared_missing.x = 1; });`],
@@ -139,7 +137,7 @@ describe("a script that does harm, or that is wrong", () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     const { player } = await start([
       { id: "hostile", source },
-      { id: "honest", source: `on("player.levelUp", () => { $var.honest_${n} += 1; });` },
+      { id: "honest", source: `on("player.levelUp", () => { $player.setVariable("honest_${n}", ($player.getVariable("honest_${n}") ?? 0) + 1); });` },
     ]);
 
     player.level = player.level + 1;
@@ -155,7 +153,7 @@ describe("a script that does harm, or that is wrong", () => {
       { id: "eval", source: `on("player.levelUp", () => { eval("1"); });` },
       { id: "unknown-signal", source: `on("enemy.killed", () => {});` },
       { id: "not-a-script", source: `import fs from "fs";` },
-      { id: "honest", source: `on("player.levelUp", () => { $var.honest_${n} += 1; });` },
+      { id: "honest", source: `on("player.levelUp", () => { $player.setVariable("honest_${n}", ($player.getVariable("honest_${n}") ?? 0) + 1); });` },
     ]);
 
     player.level = player.level + 1;
@@ -173,7 +171,7 @@ describe("the service that holds the scripts", () => {
     const service = new ScriptService({});
     const { player } = await start(service);
 
-    service.install({ id: "late", source: `on("player.levelUp", () => { $var.late_${n} += 1; });` });
+    service.install({ id: "late", source: `on("player.levelUp", () => { $player.setVariable("late_${n}", ($player.getVariable("late_${n}") ?? 0) + 1); });` });
     player.level = player.level + 1;
     await settled(() => expect(player.getVariable(`late_${n}`)).toBe(1));
 
@@ -193,7 +191,7 @@ describe("the service that holds the scripts", () => {
   it("takes the signals a plugin adds, which scripts can then listen to and the service can emit", async () => {
     const service = new ScriptService({
       signals: { "quests.start": { payload: { questId: { type: "string" } } } },
-      scripts: [{ id: "quests", source: `on("quests.start", { where: { questId: "wolves" } }, (e) => { $var.started_${n} += 1; });` }],
+      scripts: [{ id: "quests", source: `on("quests.start", { where: { questId: "wolves" } }, (e) => { $player.setVariable("started_${n}", ($player.getVariable("started_${n}") ?? 0) + 1); });` }],
     });
     const { player, map } = await start(service);
 
@@ -201,5 +199,66 @@ describe("the service that holds the scripts", () => {
     await service.emit("quests.start", { questId: "wolves" }, { player, map });
 
     expect(player.getVariable(`started_${n}`)).toBe(1);
+  });
+});
+
+describe("the mapping from hooks to signals can be extended", () => {
+  const inputBinding = signalBinding<[RpgPlayer, RpgActionInput<unknown>]>({
+    signal: "player.input",
+    scope: "player",
+    hook: "onInput",
+    describe: { doc: "A player presses an input.", payload: { action: { type: "string" } } },
+    emit: (player, data) => {
+      const map = player.getCurrentMap();
+      return map ? { payload: { action: String((data as { action?: unknown })?.action ?? "") }, context: { player, map } } : undefined;
+    },
+  });
+
+  it("turns another hook of RPGJS into a signal, which scripts listen to with its payload checked", async () => {
+    const service = new ScriptService({
+      bindings: [inputBinding],
+      scripts: [
+        { id: "uses", source: `on("player.input", { where: { action: "use" } }, (e) => { $player.setVariable("used_${n}", e.action); });` },
+        { id: "typo", source: `on("player.input", { where: { acton: "use" } }, () => {});` },
+      ],
+    });
+    const { player } = await start(service);
+
+    await player.execMethod("onInput", [{ action: "jump" }]);
+    expect(player.getVariable(`used_${n}`)).toBeUndefined();
+    await player.execMethod("onInput", [{ action: "use" }]);
+
+    expect(player.getVariable(`used_${n}`)).toBe("use");
+    expect(service.errors).toEqual([{ script: "typo", message: expect.stringContaining('"acton" is not in the payload of "player.input"') }]);
+  });
+
+  it("lets several bindings listen to the same hook, the ones of the game and the added ones", async () => {
+    const arrived = signalBinding<[RpgPlayer, import("@rpgjs/server").RpgMap]>({
+      signal: "player.arrived",
+      scope: "player",
+      hook: "onJoinMap",
+      describe: { payload: { map: { type: "string" } } },
+      emit: (player, map) => ({ payload: { map: String(map.id) }, context: { player, map } }),
+    });
+    const service = new ScriptService({
+      bindings: [arrived],
+      scripts: [
+        { id: "game", source: `on("player.joinMap", () => { $player.setVariable("joined_${n}", true); });` },
+        { id: "added", source: `on("player.arrived", (e) => { $player.setVariable("arrived_${n}", e.map); });` },
+      ],
+    });
+    const { player } = await start(service);
+
+    await settled(() => expect([player.getVariable(`joined_${n}`), player.getVariable(`arrived_${n}`)]).toEqual([true, "test-map"]));
+  });
+
+  it("emits nothing when a binding gives nothing (a player on no map, say)", async () => {
+    const quiet = signalBinding<[RpgPlayer]>({ signal: "player.quiet", scope: "player", hook: "onInput", describe: { payload: {} }, emit: () => undefined });
+    const service = new ScriptService({ bindings: [quiet], scripts: [{ id: "q", source: `on("player.quiet", () => { $player.setVariable("quiet_${n}", true); });` }] });
+    const { player } = await start(service);
+
+    await player.execMethod("onInput", [{ action: "use" }]);
+
+    expect(player.getVariable(`quiet_${n}`)).toBeUndefined();
   });
 });

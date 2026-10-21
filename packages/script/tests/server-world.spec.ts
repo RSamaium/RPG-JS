@@ -60,14 +60,14 @@ describe("a script that runs on a real RPGJS player", () => {
     expect(player.gold).toBe(0);
   });
 
-  it("gives and takes items by the database of the game, and counts them", async () => {
+  it("gives and takes items by the database of the game, and reads them as RPGJS does", async () => {
     const { value } = await run(`export function f() {
       $player.addItem("Potion", 3);
       $player.removeItem("Potion", 1);
-      return [$player.itemCount("Potion"), $player.hasItem("Potion"), $player.itemCount("Elixir")];
+      return [$player.getItem("Potion"), $player.getItem("Potion")?.quantity, $player.hasItem("Potion"), $player.getItem("Elixir")];
     }`);
 
-    expect(value).toEqual([2, true, 0]);
+    expect(value).toEqual([{ id: "Potion", name: "Potion", quantity: 2 }, 2, true, undefined]);
     expect(player.getItem("Potion").quantity()).toBe(2);
   });
 
@@ -83,51 +83,56 @@ describe("a script that runs on a real RPGJS player", () => {
     expect(player.hasItem("Potion")).toBe(false);
   });
 
-  it("sets switches and variables of the player, and reads them back", async () => {
+  it("sets, reads, tests and removes the variables of the player, which hold any plain value", async () => {
     const { value } = await run(`export function f() {
-      $switch.door_open = true;
-      $var.visits += 2;
-      $var.visits *= 3;
-      return [$switch.door_open, $switch.never_set, $var.visits];
+      $player.setVariable("door_open", true);
+      $player.setVariable("visits", ($player.getVariable("visits") ?? 0) + 2);
+      $player.setVariable("quest", { step: 2, tags: ["wolves"] });
+      const removed = $player.removeVariable("door_open");
+      return [$player.getVariable("visits"), $player.hasVariable("quest"), $player.getVariable("quest").tags[0], removed, $player.hasVariable("door_open")];
     }`);
 
-    expect(value).toEqual([true, false, 6]);
-    expect(player.getVariable("door_open")).toBe(true);
-    expect(player.getVariable("visits")).toBe(6);
+    expect(value).toEqual([2, true, "wolves", true, false]);
+    expect(player.getVariable("visits")).toBe(2);
+    expect(player.getVariable("quest")).toEqual({ step: 2, tags: ["wolves"] });
+    expect(player.hasVariable("door_open")).toBe(false);
   });
 
-  it("names the self switches of an event after it, and refuses them without an event", async () => {
-    await run(`export function f() { $self.A = true; return $self.A; }`, { event: { id: "chest_1" } as any });
-    expect(player.getVariable("chest_1_A")).toBe(true);
+  it("names the event the script runs for", async () => {
+    const { value } = await run(`export function f() { return [$event.id, $event.name]; }`, { event: { id: "chest_1", name: () => "chest" } as any });
 
-    await expect(run(`export function f() { $self.A = true; }`)).rejects.toThrow(/no self switch/);
+    expect(value).toEqual(["chest_1", "chest"]);
   });
 
-  it("shows a notification to the player", async () => {
+  it("shows a text and a notification to the player, with the options RPGJS knows", async () => {
+    const showText = vi.spyOn(player, "showText").mockResolvedValue(null);
     const showNotification = vi.spyOn(player, "showNotification");
 
-    await run(`export function f() { notify("Found it", { type: "info", time: 2000 }); }`);
+    await run(`export function f() { $player.showText("Hello", { position: "top", speaker: "Mira" }); $player.showNotification("Found it", { type: "info", time: 2000 }); }`);
 
+    expect(showText).toHaveBeenCalledWith("Hello", { position: "top", speaker: "Mira" });
     expect(showNotification).toHaveBeenCalledWith("Found it", { type: "info", time: 2000 });
   });
 
-  it("asks the player to choose and gives the index, or -1 when nothing is picked", async () => {
+  it("asks the player to choose and gives the choice, or null when nothing is picked", async () => {
     const showChoices = vi.spyOn(player, "showChoices");
-    showChoices.mockResolvedValueOnce({ text: "No", value: 1 } as any).mockResolvedValueOnce(null as any);
+    showChoices.mockResolvedValueOnce({ text: "No", value: "no" } as any).mockResolvedValueOnce(null as any);
+    const source = `export function f() { return $player.showChoices("Buy?", [{ text: "Yes", value: "yes" }, { text: "No", value: "no" }]); }`;
 
-    const { value: picked } = await run(`export function f() { return choice(["Yes", "No"]); }`);
-    const { value: closed } = await run(`export function f() { return choice(["Yes", "No"]); }`);
+    const { value: picked } = await run(source);
+    const { value: closed } = await run(source);
 
-    expect(showChoices).toHaveBeenCalledWith("", [{ text: "Yes", value: 0 }, { text: "No", value: 1 }]);
-    expect([picked, closed]).toEqual([1, -1]);
+    expect(showChoices).toHaveBeenCalledWith("Buy?", [{ text: "Yes", value: "yes" }, { text: "No", value: "no" }]);
+    expect([picked, closed]).toEqual([{ text: "No", value: "no" }, null]);
   });
 
   it("sends the player to another map", async () => {
     const changeMap = vi.spyOn(player, "changeMap").mockResolvedValue(true);
 
-    await run(`export function f() { transfer("town", 12, 8); }`);
+    await run(`export function f() { $player.changeMap("town", { x: 12, y: 8 }); $player.changeMap("cave"); }`);
 
-    expect(changeMap).toHaveBeenCalledWith("town", { x: 12, y: 8 });
+    expect(changeMap).toHaveBeenNthCalledWith(1, "town", { x: 12, y: 8 });
+    expect(changeMap).toHaveBeenNthCalledWith(2, "cave", undefined);
   });
 
   it("keeps the properties shared by the players on the real map, between runs and between players", async () => {

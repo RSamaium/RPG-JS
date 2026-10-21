@@ -9,6 +9,7 @@ import { ScriptService, type ScriptServiceOptions } from "./service";
 export { ScriptService, type ScriptServiceOptions, type ScriptSource, type ScriptError, type SignalContext } from "./service";
 export { createRpgjsWorld, sharedPropsOf, SHARED_PREFIX, type RpgjsWorldOptions } from "./world";
 export { scriptHooks } from "./hooks";
+export { DEFAULT_SIGNAL_BINDINGS, signalBinding, type HookScope, type SignalBinding, type SignalEmission } from "./bindings";
 
 /**
  * Plugs scripts into the server of a game: the hooks of RPGJS emit the signals scripts listen to (`player.joinMap`,

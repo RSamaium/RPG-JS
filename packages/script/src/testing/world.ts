@@ -2,61 +2,70 @@
  * A game without the game: a player, an event and some shared state, enough to run a script and see what it did. Every operation
  * a script asks for is applied to in-memory state and recorded in `effects`, so a test can say what the script did.
  */
-import type { GoldOperation, PlayerPort, ScriptWorld, VariableOperation } from "../game/impl";
-
-const num = (v: unknown, fallback = 0) => (typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" && !Number.isNaN(Number(v)) ? Number(v) : fallback);
+import type { Choice, DialogOptions, ItemSnapshot, NotificationOptions, PlayerPort, ScriptWorld, VariableValue } from "../game/impl";
 
 /** The player of a simulation: the state of the player in memory, and what the script asked for recorded as it happens. */
 export class SimPlayer implements PlayerPort {
-  gold = 100;
+  private amount = 100;
   level = 3;
   name = "Hero";
   map = "start";
-  pos = { x: 0, y: 0 };
   items = new Map<string, number>();
   vars = new Map<string, unknown>();
-  texts: string[] = [];
-  notes: string[] = [];
-  /** Id of the event of the script, which names its self switches. */
-  eventId = "event_1";
+  /** The answers `showChoices` gives, in order (the index of the choice, -1 to close it). */
+  answers: number[] = [];
+  /** Answers `showChoices` instead of `answers`, for a test that has to wait (the player thinks). */
+  chooser?: (text: string, choices: Choice[]) => Promise<Choice | null>;
   constructor(private record: (effect: string, params: unknown) => void = () => {}) {}
-  itemCount(id: string) { return this.items.get(id) ?? 0; }
-  getVariable(id: string) { return this.vars.get(id); }
-  setVariable(id: string, v: unknown) { this.vars.set(id, v); }
 
-  changeGold(operation: GoldOperation, amount: number) {
-    this.record("change_gold", { type: "constant", operation, amount });
-    if (operation === "set") this.gold = amount;
-    else if (operation === "add") this.gold += amount;
-    else if (operation === "sub") this.gold = Math.max(0, this.gold - amount);
-    else if (operation === "mul") this.gold *= amount;
+  get gold() { return this.amount; }
+  set gold(value: number) {
+    this.amount = Math.max(0, value);
+    this.record("gold", { value: this.amount });
   }
-  addItem(id: string, count: number) {
-    this.record("change_item", { itemId: id, operation: "add", amountType: "constant", amount: count });
-    this.items.set(id, this.itemCount(id) + count);
+  /** Sets the gold without recording an effect: the starting point of a simulation. */
+  start(gold: number) { this.amount = gold; }
+
+  getItem(id: string): ItemSnapshot | undefined {
+    const quantity = this.items.get(id) ?? 0;
+    return quantity > 0 ? { id, name: id, quantity } : undefined;
   }
-  removeItem(id: string, count: number) {
-    this.record("change_item", { itemId: id, operation: "remove", amountType: "constant", amount: count });
-    this.items.set(id, Math.max(0, this.itemCount(id) - count));
+  hasItem(id: string) { return (this.items.get(id) ?? 0) > 0; }
+  addItem(id: string, nb: number) {
+    this.record("addItem", { id, nb });
+    this.items.set(id, (this.items.get(id) ?? 0) + nb);
   }
-  setSwitch(name: string, value: boolean) {
-    this.record("set_switch", { switchName: name, value });
-    this.vars.set(name, value);
+  removeItem(id: string, nb: number) {
+    this.record("removeItem", { id, nb });
+    const left = (this.items.get(id) ?? 0) - nb;
+    if (left > 0) this.items.set(id, left);
+    else this.items.delete(id);
   }
-  setSelfSwitch(letter: string, value: boolean) {
-    this.record("self_switch", { switchName: letter, value });
-    this.vars.set(this.eventId + "_" + letter, value);
+  getVariable(key: string) { return this.vars.get(key); }
+  setVariable(key: string, value: VariableValue) {
+    this.record("setVariable", { key, value });
+    this.vars.set(key, value);
   }
-  changeVariable(name: string, operation: VariableOperation, value: number) {
-    this.record("set_variable", { variableId: name, operation, valueSource: "constant", value: String(value) });
-    const current = num(this.vars.get(name));
-    const next: Record<VariableOperation, number> = { set: value, add: current + value, subtract: current - value, multiply: current * value, divide: current / value, modulo: current % value };
-    this.vars.set(name, next[operation]);
+  hasVariable(key: string) { return this.vars.has(key); }
+  removeVariable(key: string) {
+    this.record("removeVariable", { key });
+    return this.vars.delete(key);
   }
-  transfer(map: string, x: number, y: number, direction?: string) {
-    this.record("transfer_player", { destination: { mapId: map, x, y }, ...(direction ? { direction } : {}) });
+  showText(text: string, options: DialogOptions = {}) {
+    this.record("showText", { text, ...options });
+  }
+  async showChoices(text: string, choices: Choice[]): Promise<Choice | null> {
+    this.record("showChoices", { text, choices });
+    if (this.chooser) return this.chooser(text, choices);
+    const answer = this.answers.length ? this.answers.shift()! : 0;
+    return choices[answer] ?? null;
+  }
+  showNotification(message: string, options: NotificationOptions = {}) {
+    this.record("showNotification", { message, ...options });
+  }
+  changeMap(map: string, positions?: { x: number; y: number }) {
+    this.record("changeMap", { map, ...(positions ? { positions } : {}) });
     this.map = map;
-    this.pos = { x, y };
   }
 }
 
@@ -80,10 +89,13 @@ export interface WorldInit {
   sharedValues?: Record<string, unknown>;
   /** Forces the next values of random(), in order. */
   dice?: number[];
-  /** Answers choice() in order (index of the option). */
+  /** Answers `showChoices` in order: the index of the choice picked, -1 when the player closes it. */
   choices?: number[];
+  /** The event the script runs for. */
+  event?: { id?: string; name?: string; x?: number; y?: number };
+  /** Answers `showChoices`, after any delay, instead of `choices`. */
+  choose?: (text: string, choices: Choice[]) => Promise<Choice | null>;
   seed?: number;
-  choice?: (options: string[]) => Promise<number>;
 }
 
 /**
@@ -97,55 +109,44 @@ export interface WorldInit {
  * ```
  */
 export class SimWorld implements ScriptWorld {
-  player = new SimPlayer((block, params) => this.effects.push({ block, params }));
-  event = { id: "event_1", x: 5, y: 3 };
+  player = new SimPlayer((name, params) => this.effects.push({ name, params }));
+  event = { id: "event_1", name: "", x: 5, y: 3 };
   state: Record<string, unknown> = {};
   hook: Record<string, unknown> = {};
   shared: SharedStore;
-  effects: { block: string; params: unknown }[] = [];
+  effects: { name: string; params: unknown }[] = [];
   private seed: number;
-  private choiceFn?: (options: string[]) => Promise<number>;
   private dice: number[] = [];
-  private answers: number[] = [];
 
   constructor(init: WorldInit = {}) {
-    Object.assign(this.player, { gold: init.player?.gold ?? 100, level: init.player?.level ?? 3, name: init.player?.name ?? "Hero" });
+    this.player.start(init.player?.gold ?? 100);
+    Object.assign(this.player, { level: init.player?.level ?? 3, name: init.player?.name ?? "Hero" });
     for (const [k, v] of Object.entries(init.player?.items ?? {})) this.player.items.set(k, v);
     for (const [k, v] of Object.entries(init.vars ?? {})) this.player.vars.set(k, v);
     Object.assign(this.state, JSON.parse(JSON.stringify(init.state ?? {})));
     Object.assign(this.hook, init.hook ?? {});
     this.shared = init.shared ?? new SharedStore();
     this.seed = init.seed ?? 1;
-    this.choiceFn = init.choice;
     this.dice = [...(init.dice ?? [])];
-    this.answers = [...(init.choices ?? [])];
-    this.player.eventId = this.event.id;
+    this.player.answers = [...(init.choices ?? [])];
+    this.player.chooser = init.choose;
+    Object.assign(this.event, init.event ?? {});
   }
 
   /** The properties shared by the players, as the game API sees them: every change is recorded as a `sync` effect. */
   readonly sharedProps: ScriptWorld["sharedProps"] = {
     has: (name) => name in this.shared.values,
     get: (name) => this.shared.values[name],
-    set: (name, value, op, operand) => { this.shared.values[name] = value; this.effects.push({ block: "sync", params: { name, op, value: operand } }); },
+    set: (name, value, op, operand) => { this.shared.values[name] = value; this.effects.push({ name: "sync", params: { name, op, value: operand } }); },
   };
 
   readonly stateProps: ScriptWorld["stateProps"] = {
     get: (key) => this.state[key],
-    set: (key, value) => { this.effects.push({ block: "state", params: { key } }); this.state[key] = value; },
+    set: (key, value) => { this.effects.push({ name: "state", params: { key } }); this.state[key] = value; },
   };
 
-  async say(text: string, options: { speaker?: string; position?: string } = {}) {
-    this.effects.push({ block: "show_text", params: { text, ...options } });
-    this.player.texts.push(text);
-  }
-
-  async notify(message: string, options: { type?: string; time?: number } = {}) {
-    this.effects.push({ block: "show_notification", params: { message, ...options } });
-    this.player.notes.push(message);
-  }
-
   async wait(seconds: number) {
-    this.effects.push({ block: "wait", params: { duration: seconds } });
+    this.effects.push({ name: "wait", params: { seconds } });
   }
 
   rand(min: number, max: number) {
@@ -161,15 +162,9 @@ export class SimWorld implements ScriptWorld {
     return min + Math.floor(r * (max - min + 1));
   }
 
-  async choose(options: string[]) {
-    this.effects.push({ block: "show_choices", params: { choices: options } });
-    if (this.choiceFn) return this.choiceFn(options);
-    return this.answers.length ? this.answers.shift()! : 0;
-  }
-
   snapshot() {
     return {
-      player: { gold: this.player.gold, level: this.player.level, name: this.player.name, map: this.player.map, pos: this.player.pos, items: Object.fromEntries(this.player.items) },
+      player: { gold: this.player.gold, level: this.player.level, name: this.player.name, map: this.player.map, items: Object.fromEntries(this.player.items) },
       vars: Object.fromEntries(this.player.vars),
       state: this.state,
       shared: this.shared.values,

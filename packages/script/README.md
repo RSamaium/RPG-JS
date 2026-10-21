@@ -4,8 +4,8 @@ Sandboxed scripts for RPGJS v5. A script is text in a JavaScript subset; it is r
 JavaScript, so a script can only use what the game exposes. A script does not call the game: it **listens** to the signals of the
 game (a player levels up, an event is activated…) and reacts.
 
-This package is under construction. Today it holds the interpreter, the registry of listeners, the API of scripts (`$player`, `$event`, `$switch`, `$var`,
-`$shared`, `$state`, `say`, `notify`, `choice`, `transfer`, `random`…) and the tools to check, simulate and test a script in an
+This package is under construction. Today it holds the interpreter, the registry of listeners, the API of scripts, which follows the one of RPGJS
+(`$player.showText`, `showChoices`, `showNotification`, `changeMap`, `addItem`, `getVariable`…, `$event`, `$shared`, `$state`, `random`…) and the tools to check, simulate and test a script in an
 in-memory world. `provideScripts` connects the registry to the hooks of RPGJS.
 
 | Entry | Role |
@@ -30,7 +30,7 @@ A script listens with `on(signal, filter?, handler)`. The handler receives the p
 cannot change: listeners **observe**, they never refuse or modify what happened. They run in the order the scripts were installed.
 
 ```js
-on("skill.cast", { where: { "skill.tags": { has: "fire" }, power: { gte: 5 } }, when: [{ switch: "tournament" }] }, (e) => {
+on("skill.cast", { where: { "skill.tags": { has: "fire" }, power: { gte: 5 } }, when: [{ variable: "tournament", eq: true }] }, (e) => {
   $player.gold += e.power;
 });
 ```
@@ -39,7 +39,7 @@ The filter is plain data, never computed, so who listens to what is known before
 
 - `where`: conditions on the payload, by dotted path. A value alone means equal; operators are `eq`, `ne`, `gt`, `gte`, `lt`,
   `lte`, `in: [...]`, `has: value` (the field is a list that contains it) and `exists: true | false`. All must hold.
-- `when`: conditions on the player, a list that must all hold: `{ switch, is? }`, `{ variable, <comparison> }`,
+- `when`: conditions on the player, a list that must all hold: `{ variable, <comparison> }`,
   `{ item, <comparison> }` (the player has it, by default) and `{ stat: "gold" | "level", <comparison> }`.
 
 An API that declares its signals (`signals` of the `ApiDescription`) makes the compiler refuse an unknown signal and a path that is
@@ -49,7 +49,7 @@ others did not run.
 
 ## The world of a script
 
-A script never calls the engine. What it asks for goes through a port, `ScriptWorld`, that speaks of the game: change the gold, give
+A script never calls the engine. What it asks for goes through a port, `ScriptWorld`, that has the shape of the API of RPGJS: change the gold, give
 an item, show a text, ask a choice. Each environment says how:
 
 - `createRpgjsWorld({ player, map, event?, shared?, hook? })` (`@rpgjs/script/server`) does it with the API of RPGJS. Shared

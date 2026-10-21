@@ -15,9 +15,9 @@ const diag = (source: string) => checkScript(source).diagnostics;
 
 const CRAFT = `
 export function canCraft(recipe) {
-  const missing = recipe.ingredients.filter(i => $player.itemCount(i.item) < i.count);
+  const missing = recipe.ingredients.filter(i => ($player.getItem(i.item)?.quantity ?? 0) < i.count);
   if (missing.length > 0) {
-    notify(\`Il manque : \${missing.map(i => i.name).join(", ")}\`);
+    $player.showNotification(\`Il manque : \${missing.map(i => i.name).join(", ")}\`);
     return false;
   }
   return $player.gold >= recipe.gold;
@@ -31,7 +31,7 @@ export function craft(recipe) {
   crafted[recipe.id] = (crafted[recipe.id] ?? 0) + 1;
   $state.crafted = crafted;
   if (crafted[recipe.id] === 10) {
-    say(\`Vous maîtrisez \${recipe.name} !\`);
+    $player.showText(\`Vous maîtrisez \${recipe.name} !\`);
     $player.gold += 50 * recipe.gold;
   }
   return true;
@@ -48,14 +48,14 @@ test("crafting with list methods and $state, through the real executors", async 
   expect(r.state!.player.gold).toBe(90);
   expect(r.state!.player.items).toMatchObject({ herbe: 3, fiole: 2, potion: 1 });
   expect(r.state!.state).toEqual({ crafted: { r1: 1 } });
-  expect(r.effects.map((e) => e.block)).toEqual(["change_item", "change_item", "change_gold", "change_item", "state"]);
+  expect(r.effects.map((e) => e.name)).toEqual(["removeItem", "removeItem", "gold", "addItem", "state"]);
   expect((await run(CRAFT, "totalCount", [recipe])).value).toBe(3);
 });
 
 test("missing ingredients: a notification lists them, nothing is consumed", async () => {
   const r = await run(CRAFT, "craft", [recipe], { player: { items: { herbe: 1 } } });
   expect(r.value).toBe(false);
-  expect(r.effects).toEqual([{ block: "show_notification", params: { message: "Il manque : Herbe, Fiole" } }]);
+  expect(r.effects).toEqual([{ name: "showNotification", params: { message: "Il manque : Herbe, Fiole" } }]);
   expect(r.state!.player.gold).toBe(100);
 });
 
@@ -64,7 +64,7 @@ test("the tenth craft gives the bonus (state carried between runs)", async () =>
   const r = await run(CRAFT, "craft", [recipe], world);
   expect(r.state!.state).toEqual({ crafted: { r1: 10 } });
   expect(r.state!.player.gold).toBe(1000 - 10 + 500);
-  expect(r.effects.some((e) => e.block === "show_text")).toBe(true);
+  expect(r.effects.some((e) => e.name === "showText")).toBe(true);
 });
 
 const MERCHANT = `
@@ -72,50 +72,51 @@ const marchand = event({
   name: "Marchand", x: 12, y: 8,
   pages: [
     page({ graphic: Graphic("npc_marchand"), trigger: "action", run: parler }),
-    page({ when: () => $switch.boutique_ouverte, graphic: Graphic("npc_marchand_content"), trigger: "action", run: remercier }),
+    page({ when: () => $player.getVariable("boutique_ouverte") === true, graphic: Graphic("npc_marchand_content"), trigger: "action", run: remercier }),
   ],
 });
 function parler() {
-  say("Bienvenue !", { speaker: "$this", position: "bottom" });
-  const c = choice(["Acheter une potion (10 or)", "Une quête ?", "Partir"]);
+  $player.showText("Bienvenue !", { speaker: "$this", position: "bottom" });
+  const answer = $player.showChoices("Que voulez-vous ?", [{ text: "Acheter une potion (10 or)", value: 0 }, { text: "Une quête ?", value: 1 }, { text: "Partir", value: 2 }]);
+  const c = answer ? answer.value : -1;
   if (c === 0) {
-    if ($player.gold < 10) { say("Pas assez d'or."); return; }
+    if ($player.gold < 10) { $player.showText("Pas assez d'or."); return; }
     $player.gold -= 10;
     $player.addItem(Item("potion"), 1);
-    $switch.boutique_ouverte = true;
-    say("Merci, bon voyage !");
+    $player.setVariable("boutique_ouverte", true);
+    $player.showText("Merci, bon voyage !");
   } else if (c === 1) {
-    if ($self.A) { say("Je n'ai plus rien pour vous."); return; }
-    say("Rapportez-moi trois herbes.");
-    $self.A = true;
-    notify("Quête acceptée");
+    if ($player.getVariable($event.id + "_A")) { $player.showText("Je n'ai plus rien pour vous."); return; }
+    $player.showText("Rapportez-moi trois herbes.");
+    $player.setVariable($event.id + "_A", true);
+    $player.showNotification("Quête acceptée");
   }
 }
 function remercier() {
-  say(\`Merci de votre visite, \${$player.name} !\`);
-  const herbes = $player.itemCount(Item("herbe"));
+  $player.showText(\`Merci de votre visite, \${$player.name} !\`);
+  const herbes = ($player.getItem(Item("herbe"))?.quantity ?? 0);
   if (herbes >= 3) {
-    say("Vous avez les herbes !");
+    $player.showText("Vous avez les herbes !");
     $player.removeItem(Item("herbe"), 3);
     $player.gold += 50;
   }
 }
 `;
 test("merchant event: page choice, buying, self switch, second page", async () => {
-  const buy = await simulate({ source: MERCHANT, event: 0, world: { choice: async () => 0 } });
+  const buy = await simulate({ source: MERCHANT, event: 0, world: { choices: [0] } });
   expect(buy.ok).toBe(true);
   expect(buy.page).toBe(0);
   expect(buy.state!.player.gold).toBe(90);
   expect(buy.state!.player.items.potion).toBe(1);
   expect(buy.state!.vars.boutique_ouverte).toBe(true);
-  expect(buy.effects[0]).toEqual({ block: "show_text", params: { text: "Bienvenue !", speaker: "$this", position: "bottom" } });
+  expect(buy.effects[0]).toEqual({ name: "showText", params: { text: "Bienvenue !", speaker: "$this", position: "bottom" } });
 
-  const poor = await simulate({ source: MERCHANT, event: 0, world: { player: { gold: 3 }, choice: async () => 0 } });
-  expect(poor.effects.map((e: any) => e.params.text).filter(Boolean)).toEqual(["Bienvenue !", "Pas assez d'or."]);
+  const poor = await simulate({ source: MERCHANT, event: 0, world: { player: { gold: 3 }, choices: [0] } });
+  expect(poor.effects.filter((e) => e.name === "showText").map((e: any) => e.params.text)).toEqual(["Bienvenue !", "Pas assez d'or."]);
 
-  const quest = await simulate({ source: MERCHANT, event: 0, world: { choice: async () => 1 } });
+  const quest = await simulate({ source: MERCHANT, event: 0, world: { choices: [1] } });
   expect(quest.state!.vars.event_1_A).toBe(true);
-  const again = await simulate({ source: MERCHANT, event: 0, world: { choice: async () => 1, vars: { event_1_A: true } } });
+  const again = await simulate({ source: MERCHANT, event: 0, world: { choices: [1], vars: { event_1_A: true } } });
   expect(again.effects.map((e: any) => e.params.text).filter(Boolean)).toContain("Je n'ai plus rien pour vous.");
 
   const second = await simulate({ source: MERCHANT, event: 0, world: { vars: { boutique_ouverte: true }, player: { items: { herbe: 4 } } } });
@@ -132,14 +133,18 @@ test("the dice are reproducible in a simulation (seed)", async () => {
   for (const v of a.value as number[]) expect(v >= 1 && v <= 6).toBe(true);
 });
 
-test("choice() suspends the script until the answer arrives", async () => {
-  let answer!: (n: number) => void;
-  const pending = simulate({ source: `export function f() { const c = choice(["a", "b"]); if (c === 1) { say("b"); } return c; }`, call: { fn: "f" }, world: { choice: () => new Promise<number>((r) => (answer = r)) } });
+test("showChoices() suspends the script until the answer arrives", async () => {
+  let answer!: (choice: { text: string; value: number }) => void;
+  const pending = simulate({
+    source: `export function f() { const c = $player.showChoices("?", [{ text: "a", value: 0 }, { text: "b", value: 1 }]); if (c && c.value === 1) { $player.showText("b"); } return c ? c.value : -1; }`,
+    call: { fn: "f" },
+    world: { choose: () => new Promise((r) => (answer = r)) },
+  });
   await new Promise((r) => setTimeout(r, 20));
-  answer(1);
+  answer({ text: "b", value: 1 });
   const r = await pending;
   expect(r.value).toBe(1);
-  expect(r.effects.map((e) => e.block)).toEqual(["show_choices", "show_text"]);
+  expect(r.effects.map((e) => e.name)).toEqual(["showChoices", "showText"]);
 });
 
 // ---------------------------------------------------------------- language
@@ -186,7 +191,7 @@ export function f() {
 });
 
 test("callbacks may call the game (asynchronous callbacks)", async () => {
-  const r = await run(`export function f(items) { items.forEach(i => $player.addItem(i, 2)); return items.map(i => $player.itemCount(i)); }`, "f", [["a", "b"]]);
+  const r = await run(`export function f(items) { items.forEach(i => $player.addItem(i, 2)); return items.map(i => ($player.getItem(i)?.quantity ?? 0)); }`, "f", [["a", "b"]]);
   expect(r.value).toEqual([2, 2]);
   expect(r.effects.length).toBe(2);
 });
@@ -207,18 +212,18 @@ test("check_script collects several errors with their lines and says what exists
   expect(d.map((x) => x.line)).toEqual([2, 3, 4, 6]);
   expect(d[0].message).toMatch(/"\$player.goldd" does not exist. Available members of \$player: gold, level, name/);
   expect(d[1].message).toBe('unknown name "unknownThing"');
-  expect(d[2].message).toMatch(/"\$player.fly" does not exist. Available methods of \$player: itemCount, hasItem, addItem, removeItem/);
+  expect(d[2].message).toMatch(/"\$player.fly" does not exist. Available methods of \$player: getItem, hasItem, addItem, removeItem, getVariable, setVariable, hasVariable, removeVariable, showText, showChoices, showNotification, changeMap/);
   expect(d[3].message).toMatch(/"NewExpression" is not available/);
 });
 
 test("check_script: syntax errors, catalog references, permissions", () => {
   expect(diag("export function f( {")[0].message).toMatch(/syntax error/);
-  const c = checkScript(`export function f() { $player.addItem(Item("potoin")); $player.gold += 1; $switch.x = true; return $var.visits; }`, { item: ["potion"] });
+  const c = checkScript(`export function f() { $player.addItem(Item("potoin")); $player.gold += 1; $player.setVariable("x", true); return $player.getVariable("visits"); }`, { item: ["potion"] });
   expect(c.ok).toBe(false);
   expect(c.diagnostics[0].message).toBe('unknown item "potoin"');
-  const ok = checkScript(`export function f() { $player.addItem(Item("potion")); $player.gold += 1; $switch.x = true; return $var.visits; }\non("player.levelUp", () => { notify("hi"); });`, { item: ["potion"] });
+  const ok = checkScript(`export function f() { $player.addItem(Item("potion")); $player.gold += 1; $player.setVariable("x", true); return $player.getVariable("visits"); }\non("player.levelUp", () => { $player.showNotification("hi"); });`, { item: ["potion"] });
   expect(ok.ok).toBe(true);
-  expect(ok.permissions).toEqual(["player.addItem", "player.gold", "switch.*", "var.*"]);
+  expect(ok.permissions).toEqual(["player.addItem", "player.getVariable", "player.gold", "player.setVariable", "player.showNotification"]);
   expect(ok.refs).toEqual([{ function: "Item", id: "potion", line: 1 }]);
   expect(ok.exports).toEqual(["f"]);
   expect(ok.handlers).toEqual(["player.levelUp"]);
@@ -229,9 +234,10 @@ test("describe_api lists what exists, as TypeScript declarations", () => {
   expect(d).toContain("declare const $player: {");
   expect(d).toContain("gold: number;");
   expect(d).toContain("readonly level: number;");
-  expect(d).toContain("addItem(item: string, count?: number): void;");
-  expect(d).toContain("declare function say(");
-  expect(d).toContain("[name: string]: boolean;");
+  expect(d).toContain("addItem(id: string, nb?: number): void;");
+  expect(d).toContain("declare function wait(");
+  expect(d).toContain("[name: string]: number | string | boolean | null;");
+  expect(d).toContain("showChoices(text: string, choices: { text: string; value: string | number | boolean }[])");
   expect(d).toContain("Script entry points");
 });
 
@@ -284,7 +290,7 @@ test("hostile: refused syntax", () => {
 });
 
 test("hostile: oversized host arguments and state", async () => {
-  expect((await sim(`export function f(s) { say(s); }`, { fn: "f", args: ["y".repeat(5000)] }, {}, { steps: 1e5, iterations: 100, maxString: 1e6 })).error).toMatch(/text of 5000 characters refused/);
+  expect((await sim(`export function f(s) { $player.showText(s); }`, { fn: "f", args: ["y".repeat(5000)] }, {}, { steps: 1e5, iterations: 100, maxString: 1e6 })).error).toMatch(/text of 5000 characters refused/);
   expect((await sim(`export function f() { let s = "ab"; for (let i = 0; i < 8; i++) { s += s; } const o = {}; for (let i = 0; i < 60; i++) { o["key" + i] = s; } $state.big = o; }`, { fn: "f" })).error).toMatch(/limit 10000/);
 });
 
@@ -321,7 +327,7 @@ shared({
   annonce: { initial: "Bienvenue", client: true },
 });
 export function acheter() {
-  if (!$shared.take("stock", 1)) { say("Rupture de stock."); return false; }
+  if (!$shared.take("stock", 1)) { $player.showText("Rupture de stock."); return false; }
   $player.gold -= $shared.prix;
   $player.addItem(Item("potion"), 1);
   $shared.annonce = \`Il reste \${$shared.stock} potions\`;
@@ -329,7 +335,7 @@ export function acheter() {
 }
 export function acheterMalAvise() {          // check, wait, then write: not safe when two players interleave
   if ($shared.stock > 0) {
-    choice(["Oui", "Non"]);
+    $player.showChoices("?", [{ text: "Oui", value: 0 }, { text: "Non", value: 1 }]);
     $shared.stock -= 1;
     return true;
   }
@@ -358,7 +364,7 @@ test("shared properties: declared once, read and written by the script, flags re
   expect(a.value).toBe(true);
   expect(a.world.player.gold).toBe(80);
   expect(store.values).toEqual({ stock: 2, prix: 20, annonce: "Il reste 2 potions" });
-  expect(a.world.effects.filter((e) => e.block === "sync").map((e: any) => e.params.name)).toEqual(["stock", "annonce"]);
+  expect(a.world.effects.filter((e) => e.name === "sync").map((e: any) => e.params.name)).toEqual(["stock", "annonce"]);
   expect((await runShared("surchauffe", store)).value).toBe(24);
 });
 
@@ -373,7 +379,7 @@ test("shared properties: check-then-write across a wait is NOT atomic (why take(
   const store = new SharedStore();
   store.declare([{ name: "stock", initial: 1, client: true, persist: false }, { name: "prix", initial: 20, client: true, persist: false }, { name: "annonce", initial: "", client: true, persist: false }]);
   const gate = new Promise<void>((r) => setTimeout(r, 20));
-  const mk = () => new World({ shared: store, choice: async () => { await gate; return 0; } });
+  const mk = () => new World({ shared: store, choose: async (_text, choices) => { await gate; return choices[0]; } });
   const check = checkScript(SHOP).program!;
   const [wa, wb] = [mk(), mk()];
   await Promise.all([check.call("acheterMalAvise", [], hostOf(wa), { steps: 1e5, iterations: 100 }), check.call("acheterMalAvise", [], hostOf(wb), { steps: 1e5, iterations: 100 })]);
@@ -412,7 +418,7 @@ test("a handle of the game cannot be spread or copied (it would copy the capabil
 
 const SELL = `export function vendre(a) {
   if (a !== "potion") return false;
-  if ($player.itemCount(a) < 1) return false;
+  if (($player.getItem(a)?.quantity ?? 0) < 1) return false;
   if ($player.gold >= 100) return false;     // a wrong rule that still compiles: a rich player can never sell
   $player.gold += 12;
   return true;
@@ -425,7 +431,7 @@ test("coverage: the lines no test has executed are reported, by function", async
   const ok = await sim2({ source: SELL, call: { fn: "vendre", args: ["potion"] }, world: { player: { items: { potion: 1 } } } });
   expect(ok.value).toBe(false);
   expect(ok.uncovered).toEqual({ vendre: "5-6" });         // the bug is visible: the sale stops at line 4
-  const handlers = await sim2({ source: `on("player.joinMap", () => {\n  if ($hook.map === "cave") {\n    notify("cave");\n  }\n});`, fire: "player.joinMap", world: { hook: { map: "town" } } });
+  const handlers = await sim2({ source: `on("player.joinMap", () => {\n  if ($hook.map === "cave") {\n    $player.showNotification("cave");\n  }\n});`, fire: "player.joinMap", world: { hook: { map: "town" } } });
   expect(handlers.uncovered).toEqual({ "on:player.joinMap": "3" });
 });
 
@@ -453,17 +459,17 @@ test("a function that returns nothing cannot be used as a value", () => {
   const bad: [string, RegExp][] = [
     [`export function f(a) { if (!$player.removeItem(a, 1)) return false; return true; }`, /"\$player.removeItem" returns nothing/],
     [`export function f() { const ok = $player.addItem("x"); return ok; }`, /"\$player.addItem" returns nothing/],
-    [`export function f() { return say("a"); }`, /"say" returns nothing/],
-    [`export function f() { if (notify("a")) { return 1; } return 2; }`, /"notify" returns nothing/],
+    [`export function f() { return $player.showText("a"); }`, /"\$player.showText" returns nothing/],
+    [`export function f() { if ($player.showNotification("a")) { return 1; } return 2; }`, /"\$player.showNotification" returns nothing/],
     [`export function f(c) { return c && $player.addItem("x"); }`, /returns nothing/],
     [`export function f() { return [wait(1)]; }`, /"wait" returns nothing/],
   ];
   for (const [src, re] of bad) { const d = diag(src); expect(d.length, src).toBe(1); expect(d[0].message, src).toMatch(re); expect(d[0].line).toBe(1); }
   const good = [
-    `export function f(a) { $player.removeItem(a, 1); say("ok"); return true; }`,
+    `export function f(a) { $player.removeItem(a, 1); $player.showText("ok"); return true; }`,
     `export function f(list) { list.forEach(i => $player.addItem(i, 2)); }`,
-    `export function f() { const n = $player.itemCount("x"); const t = $shared.take("s", 1); return n > 0 || t; }\nshared({ s: { initial: 1 } });`,
-    `export function f() { const c = choice(["a", "b"]); const r = random(1, 6); return c + r; }`,
+    `export function f() { const n = ($player.getItem("x")?.quantity ?? 0); const t = $shared.take("s", 1); return n > 0 || t; }\nshared({ s: { initial: 1 } });`,
+    `export function f() { const c = $player.showChoices("?", [{ text: "a", value: 0 }, { text: "b", value: 1 }]); const r = random(1, 6); return (c ? c.value : 0) + r; }`,
   ];
   for (const src of good) expect(diag(src), src).toEqual([]);
 });

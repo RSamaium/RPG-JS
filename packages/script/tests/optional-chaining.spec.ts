@@ -36,7 +36,7 @@ describe("optional chaining", () => {
   });
 
   it("does not run the arguments of a call that is skipped", async () => {
-    const r = await simulate({ source: `export function f(o) { o?.list?.map(() => notify("ran")); return 1; }`, call: { fn: "f", args: [{}] } });
+    const r = await simulate({ source: `export function f(o) { o?.list?.map(() => $player.showNotification("ran")); return 1; }`, call: { fn: "f", args: [{}] } });
 
     expect(r.ok).toBe(true);
     expect(r.effects).toEqual([]);

@@ -59,14 +59,14 @@ describe("the filter on a payload (where)", () => {
 describe("the conditions on the player (when)", () => {
   const world = () => new SimWorld({ player: { gold: 50, level: 4, items: { potion: 2 } }, vars: { tournoi: true, visits: 3, open: 0 } });
 
-  it("checks a switch, a variable, an item, the gold and the level", () => {
+  it("checks a variable, an item, the gold and the level", () => {
     const player = world().player;
-    expect(evaluateConditions([{ switch: "tournoi" }], player)).toBe(true);
-    expect(evaluateConditions([{ switch: "open" }], player)).toBe(false);
-    expect(evaluateConditions([{ switch: "open", is: false }], player)).toBe(true);
+    expect(evaluateConditions([{ variable: "tournoi", eq: true }], player)).toBe(true);
+    expect(evaluateConditions([{ variable: "open", eq: true }], player)).toBe(false);
+    expect(evaluateConditions([{ variable: "open", ne: true }], player)).toBe(true);
     expect(evaluateConditions([{ variable: "visits", gte: 3 }], player)).toBe(true);
     expect(evaluateConditions([{ variable: "visits", gt: 3 }], player)).toBe(false);
-    expect(evaluateConditions([{ variable: "unknown", eq: 0 }], player)).toBe(true);
+    expect(evaluateConditions([{ variable: "unknown", gte: 0 }], player)).toBe(false); // a variable nobody set is not a number
     expect(evaluateConditions([{ item: "potion" }], player)).toBe(true);
     expect(evaluateConditions([{ item: "potion", gte: 3 }], player)).toBe(false);
     expect(evaluateConditions([{ item: "elixir" }], player)).toBe(false);
@@ -76,7 +76,7 @@ describe("the conditions on the player (when)", () => {
 
   it("needs every condition to hold, and holds when there is none", () => {
     const player = world().player;
-    expect(evaluateConditions([{ switch: "tournoi" }, { stat: "level", gte: 5 }], player)).toBe(false);
+    expect(evaluateConditions([{ variable: "tournoi", eq: true }, { stat: "level", gte: 5 }], player)).toBe(false);
     expect(evaluateConditions([], player)).toBe(true);
     expect(evaluateConditions(undefined, player)).toBe(true);
   });
@@ -85,13 +85,13 @@ describe("the conditions on the player (when)", () => {
 describe("on(signal, filter, handler)", () => {
   it("keeps the signal, the filter and the handler of each listener, with or without a filter", () => {
     const program = compile(`
-      on("player.levelUp", () => { notify("up"); });
-      on("skill.cast", { where: { "skill.tags": { has: "fire" } }, when: [{ switch: "tournoi" }] }, (e) => { notify(e.skill.id); });
+      on("player.levelUp", () => { $player.showNotification("up"); });
+      on("skill.cast", { where: { "skill.tags": { has: "fire" } }, when: [{ variable: "tournoi", eq: true }] }, (e) => { $player.showNotification(e.skill.id); });
     `);
 
     expect(program.handlers.map((h) => h.event)).toEqual(["player.levelUp", "skill.cast"]);
     expect(program.handlers[0].filter).toBeUndefined();
-    expect(program.handlers[1].filter).toEqual({ where: { "skill.tags": { has: "fire" } }, when: [{ switch: "tournoi" }] });
+    expect(program.handlers[1].filter).toEqual({ where: { "skill.tags": { has: "fire" } }, when: [{ variable: "tournoi", eq: true }] });
   });
 
   it("refuses a signal the game does not have, and lists the ones it has", () => {
@@ -114,7 +114,7 @@ describe("on(signal, filter, handler)", () => {
   it("refuses what a filter is not made of: an unknown key, an unknown operator, a bad condition, a path to the prototype", () => {
     expect(errorOf(`on("skill.cast", { whare: {} }, () => {});`)).toMatch(/where, when/);
     expect(errorOf(`on("skill.cast", { where: { power: { bigger: 1 } } }, () => {});`)).toMatch(/unknown operator "bigger"/);
-    expect(errorOf(`on("skill.cast", { when: [{ mood: "happy" }] }, () => {});`)).toMatch(/switch, variable, item, stat/);
+    expect(errorOf(`on("skill.cast", { when: [{ mood: "happy" }] }, () => {});`)).toMatch(/variable, item, stat/);
     expect(errorOf(`on("skill.cast", { when: [{ variable: "visits" }] }, () => {});`)).toMatch(/comparison/);
     expect(errorOf(`on("skill.cast", { where: { "__proto__.x": 1 } }, () => {});`)).toMatch(/not a valid path/);
   });
@@ -124,7 +124,7 @@ describe("on(signal, filter, handler)", () => {
   });
 
   it("gives the handler the payload, which it can read and cannot change", async () => {
-    const program = compile(`on("skill.cast", (e) => { notify(e.skill.id + ":" + e.power); e.power = 99; });`);
+    const program = compile(`on("skill.cast", (e) => { $player.showNotification(e.skill.id + ":" + e.power); e.power = 99; });`);
     const registry = new SignalRegistry({ description: API, impl: GAME_API_IMPL });
     registry.install("s1", program);
     const worlds: SimWorld[] = [];
@@ -150,8 +150,8 @@ describe("the registry of listeners", () => {
     const said: string[] = [];
     const report = await r.emit(signal, payload, (id) => {
       const world = new SimWorld(init);
-      const notify = world.notify.bind(world);
-      world.notify = async (message, options) => { said.push(`${id}:${message}`); return notify(message, options); };
+      const show = world.player.showNotification.bind(world.player);
+      world.player.showNotification = (message, options) => { said.push(`${id}:${message}`); return show(message, options); };
       return world;
     });
     return { said, report };
@@ -159,8 +159,8 @@ describe("the registry of listeners", () => {
 
   it("runs the listeners of a signal in the order the scripts were installed", async () => {
     const r = registry();
-    r.install("b", compile(`on("player.levelUp", () => { notify("b"); });`));
-    r.install("a", compile(`on("player.levelUp", () => { notify("a1"); }); on("player.levelUp", () => { notify("a2"); });`));
+    r.install("b", compile(`on("player.levelUp", () => { $player.showNotification("b"); });`));
+    r.install("a", compile(`on("player.levelUp", () => { $player.showNotification("a1"); }); on("player.levelUp", () => { $player.showNotification("a2"); });`));
 
     const { said } = await emit(r, "player.levelUp", { level: 2 });
 
@@ -169,10 +169,10 @@ describe("the registry of listeners", () => {
 
   it("runs only the listeners whose filter holds, on the payload and on the player", async () => {
     const r = registry();
-    r.install("fire", compile(`on("skill.cast", { where: { "skill.tags": { has: "fire" } } }, () => { notify("fire"); });`));
-    r.install("ice", compile(`on("skill.cast", { where: { "skill.tags": { has: "ice" } } }, () => { notify("ice"); });`));
-    r.install("rich", compile(`on("skill.cast", { when: [{ stat: "gold", gte: 500 }] }, () => { notify("rich"); });`));
-    r.install("any", compile(`on("skill.cast", () => { notify("any"); });`));
+    r.install("fire", compile(`on("skill.cast", { where: { "skill.tags": { has: "fire" } } }, () => { $player.showNotification("fire"); });`));
+    r.install("ice", compile(`on("skill.cast", { where: { "skill.tags": { has: "ice" } } }, () => { $player.showNotification("ice"); });`));
+    r.install("rich", compile(`on("skill.cast", { when: [{ stat: "gold", gte: 500 }] }, () => { $player.showNotification("rich"); });`));
+    r.install("any", compile(`on("skill.cast", () => { $player.showNotification("any"); });`));
 
     const { said, report } = await emit(r, "skill.cast", { skill: { id: "fireball", tags: ["fire"] }, power: 1 });
 
@@ -199,13 +199,13 @@ describe("the registry of listeners", () => {
 
   it("stops the listeners of a script that is uninstalled, and puts one that is installed again last", async () => {
     const r = registry();
-    r.install("a", compile(`on("player.levelUp", () => { notify("a"); });`));
-    r.install("b", compile(`on("player.levelUp", () => { notify("b"); });`));
+    r.install("a", compile(`on("player.levelUp", () => { $player.showNotification("a"); });`));
+    r.install("b", compile(`on("player.levelUp", () => { $player.showNotification("b"); });`));
     r.uninstall("a");
     expect((await emit(r, "player.levelUp", { level: 1 })).said).toEqual(["b:b"]);
 
-    r.install("a", compile(`on("player.levelUp", () => { notify("a"); });`));
-    r.install("b", compile(`on("player.levelUp", () => { notify("b2"); });`));
+    r.install("a", compile(`on("player.levelUp", () => { $player.showNotification("a"); });`));
+    r.install("b", compile(`on("player.levelUp", () => { $player.showNotification("b2"); });`));
 
     expect((await emit(r, "player.levelUp", { level: 1 })).said).toEqual(["a:a", "b:b2"]);
     expect(r.has("a")).toBe(true);
@@ -215,8 +215,8 @@ describe("the registry of listeners", () => {
 
   it("keeps going when a listener fails, and reports the failure", async () => {
     const r = registry();
-    r.install("loop", compile(`on("player.levelUp", () => { while (true) { $var.x += 1; } });`));
-    r.install("ok", compile(`on("player.levelUp", () => { notify("ok"); });`));
+    r.install("loop", compile(`on("player.levelUp", () => { while (true) { $player.gold += 1; } });`));
+    r.install("ok", compile(`on("player.levelUp", () => { $player.showNotification("ok"); });`));
 
     const { said, report } = await emit(r, "player.levelUp", { level: 1 });
 

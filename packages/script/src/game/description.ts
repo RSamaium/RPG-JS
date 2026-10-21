@@ -1,48 +1,48 @@
 /**
- * The game API of scripts, as data: what a script may read, assign and call in a game.
- * What each of these does is not here: the game (a player, a map) and the simulation each implement it
+ * The game API of scripts, as data: what a script may read, assign and call in a game. It follows the API of RPGJS: the names are
+ * the ones of `RpgPlayer` (`showText`, `showChoices`, `showNotification`, `changeMap`, `addItem`, `getVariable`…), and so are the
+ * options that exist there. What each of these does is not here: the game (a player, a map) and the simulation each implement it
  * (`ApiImpl`), and `missingImplementations` checks that they cover exactly this list.
  */
 import type { ApiDescription } from "../core/api";
 import { GAME_SIGNALS } from "./signals";
 
-/**
- * The API of scripts in a game, as data: `$player`, `$event`, `$switch`, `$self`, `$var`, `$shared`, `$hook`, `$state`, and the
- * functions `say`, `notify`, `choice`, `wait`, `transfer`, `random`, `Item`, `Graphic`, with the signals of the game. What each name
- * does is in `GAME_API_IMPL`, over a `ScriptWorld`.
- */
+const VALUE = "string | number | boolean | null | object";
+
 export const GAME_API_DESCRIPTION: ApiDescription = {
   signals: GAME_SIGNALS,
   handles: {
     $player: {
-      doc: "The player who triggered the script.",
+      doc: "The player the script acts for. The names are the ones of RpgPlayer.",
       members: {
-        gold: { type: "number", writable: true, doc: "Gold. Assignments (=, +=, -=, *=) run the change_gold block." },
+        gold: { type: "number", writable: true, doc: "The gold. Assign it with =, +=, -=, *=: it never goes below 0." },
         level: { type: "number" },
         name: { type: "string" },
       },
       methods: {
-        itemCount: { sig: "(item: string): number", doc: "How many of an item the player has." },
-        hasItem: { sig: "(item: string): boolean" },
-        addItem: { sig: "(item: string, count?: number): void", doc: "Runs the change_item block." },
-        removeItem: { sig: "(item: string, count?: number): void" },
+        getItem: { sig: "(id: string): { id: string; name: string; quantity: number } | undefined", doc: "A copy of an item of the inventory, or undefined when the player has none." },
+        hasItem: { sig: "(id: string): boolean" },
+        addItem: { sig: "(id: string, nb?: number): void", doc: "Gives an item of the database of the game." },
+        removeItem: { sig: "(id: string, nb?: number): void", doc: "Takes up to nb items: a player who has fewer loses what they have, one who has none loses nothing." },
+        getVariable: { sig: `(key: string): ${VALUE} | undefined`, doc: "A variable of the player. What you read is read-only: copy it before changing the copy." },
+        setVariable: { sig: `(key: string, value: ${VALUE}): void`, doc: "Sets a variable of the player: a text, a number, true/false, null, or plain data of at most 2 000 characters. The value is copied." },
+        hasVariable: { sig: "(key: string): boolean" },
+        removeVariable: { sig: "(key: string): boolean", doc: "Returns whether there was something to remove." },
+        showText: {
+          sig: '(text: string, options?: { position?: "top" | "middle" | "bottom"; speaker?: string; fullWidth?: boolean; autoClose?: boolean; typewriterEffect?: boolean }): void',
+          doc: "Shows a dialogue and waits for the player to close it.",
+        },
+        showChoices: {
+          sig: "(text: string, choices: { text: string; value: string | number | boolean }[]): { text: string; value: string | number | boolean } | null",
+          doc: "Asks the player to pick one of 2 to 8 choices and waits. Gives the choice picked, or null when the player closes it.",
+        },
+        showNotification: { sig: '(message: string, options?: { type?: "info" | "warn" | "error"; time?: number }): void', doc: "Shows a notification." },
+        changeMap: { sig: "(map: string, positions?: { x: number; y: number }): void", doc: "Moves the player to a map, at a position when given." },
       },
     },
     $event: {
-      doc: "The event running the script.",
-      members: { id: { type: "string" }, x: { type: "number" }, y: { type: "number" } },
-    },
-    $switch: {
-      doc: "Global switches by name: $switch.door_open = true.",
-      dynamic: { keyDoc: "name: string", type: "boolean", writable: true },
-    },
-    $self: {
-      doc: "Switches private to the current event, named A to F.",
-      dynamic: { keyDoc: "letter: string", type: "boolean", writable: true },
-    },
-    $var: {
-      doc: "Numeric game variables by name: $var.visits += 1.",
-      dynamic: { keyDoc: "name: string", type: "number", writable: true },
+      doc: "The event the script runs for (for the signals of an event).",
+      members: { id: { type: "string" }, name: { type: "string", doc: "Empty when the event has none." }, x: { type: "number" }, y: { type: "number" } },
     },
     $shared: {
       doc: "Properties shared by all the players of the map, declared with shared({ ... }). Assignments (=, +=, -=) are applied at once; use take() to test and decrease in one step.",
@@ -56,7 +56,7 @@ export const GAME_API_DESCRIPTION: ApiDescription = {
       dynamic: { keyDoc: "name: string", type: "number | string | boolean | null", writable: true },
     },
     $hook: {
-      doc: "Data of the event that fired the hook declared with on(...): $hook.enemy for enemy_killed, $hook.item for item_added.",
+      doc: "The payload of the signal that fired the script (the handler receives the same data as its argument).",
       dynamic: { keyDoc: "key: string", type: "string | undefined" },
     },
     $state: {
@@ -65,20 +65,7 @@ export const GAME_API_DESCRIPTION: ApiDescription = {
     },
   },
   functions: {
-    say: {
-      sig: '(text: string, options?: { speaker?: "$this" | "$player"; position?: "top" | "middle" | "bottom" }): void',
-      doc: "Show a dialogue text (show_text block).",
-    },
-    notify: {
-      sig: '(message: string, options?: { type?: "info" | "warn" | "error"; time?: number }): void',
-      doc: "Show a notification (show_notification block).",
-    },
-    choice: { sig: "(options: string[]): number", doc: "Ask the player to pick one option (2 to 4). Returns the index, or -1 when the player closes the choice. The script waits for the answer." },
-    wait: { sig: "(seconds: number): void", doc: "Pause the script (not slept in a simulation)." },
-    transfer: {
-      sig: '(map: string, x: number, y: number, options?: { direction?: "up" | "down" | "left" | "right" }): void',
-      doc: "Move the player to a map (transfer_player block).",
-    },
+    wait: { sig: "(seconds: number): void", doc: "Pauses the script (60 seconds at most; not slept in a simulation)." },
     random: { sig: "(min: number, max: number): number", doc: "A whole number between min and max, both included. Seeded in a simulation." },
     Item: { sig: "(id: string): string", ref: "item", doc: 'Reference to an item of the database, checked when the script is saved: Item("potion").' },
     Graphic: { sig: "(id: string): string", ref: "graphic", doc: 'Reference to a graphic of the database: Graphic("npc_marchand").' },

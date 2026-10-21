@@ -43,7 +43,7 @@ export default createServer({
 export default `
   on("event.action", { where: { "event.name": "chest" } }, () => {
     $player.gold += 10;
-    notify("You found 10 gold");
+    $player.showNotification("You found 10 gold");
   });
 `
 ```
@@ -63,15 +63,15 @@ reason is logged and kept in `service.errors`, and the other scripts run.
 | --- | --- | --- |
 | `player.joinMap` | `onJoinMap` of the player | `map` (id of the map) |
 | `player.leaveMap` | `onLeaveMap` of the player | `map` |
-| `player.levelUp` | `onLevelUp` of the player | `gained` (levels gained) |
+| `player.levelUp` | `onLevelUp` of the player | `gained` (levels gained), `level` (the level after the gain) |
 | `player.dead` | `onDead` of the player | |
 | `event.action` | `onAction` of any event | `event.id`, `event.name` |
 | `event.touch` | `onPlayerTouch` of any event | `event.id`, `event.name` |
 
 The script acts for **the player of the signal** (`$player`) and, for the event signals, for **that event** (`$event`, `$self`).
 
-> While `player.levelUp` runs, `$player.level` is still the level **before** the gain: RPGJS sends the hook before it sets the
-> level. The new level is `$player.level + e.gained`.
+The names of the signals say what happened (`player.levelUp` is the hook `onLevelUp`). The hooks that are not signals yet are added
+with a binding, see "Add more signals" below.
 
 A listener is written `on(signal, handler)` or `on(signal, filter, handler)`. The handler receives the payload `e`, which it can
 read and cannot change. Listeners **observe**: none can refuse or modify what happened. They run in the order the scripts were
@@ -84,7 +84,7 @@ The filter is plain data, never computed, so it is known before anything runs. A
 ```js
 on("player.levelUp", {
   where: { gained: { gte: 2 } },
-  when: [{ switch: "tournament" }, { stat: "gold", gte: 100 }],
+  when: [{ variable: "tournament", eq: true }, { stat: "gold", gte: 100 }],
 }, (e) => {
   $player.gold += 10 * e.gained;
 });
@@ -97,8 +97,7 @@ on("player.levelUp", {
 
 | Condition | Holds when |
 | --- | --- |
-| `{ switch: "name" }` | the switch is on (`is: false` for off) |
-| `{ variable: "name", gte: 3 }` | the numeric variable matches (a variable never set is 0) |
+| `{ variable: "name", eq: true }` | the variable of the player matches (`gte: 3`…); a variable nobody set matches nothing |
 | `{ item: "id" }` | the player has the item (or give `gte: 2`…) |
 | `{ stat: "gold" \| "level", gte: 50 }` | the gold or the level matches |
 
@@ -106,27 +105,34 @@ Comparisons are `eq`, `ne`, `gt`, `gte`, `lt`, `lte`.
 
 ## What a script can use
 
+A script uses the names of the API of RPGJS. `$player` is the player of the signal, with the names of `RpgPlayer`:
+
 | Name | What it is |
 | --- | --- |
-| `$player` | `gold` (read, `=` `+=` `-=` `*=`), `level`, `name`, `itemCount(id)`, `hasItem(id)`, `addItem(id, n?)`, `removeItem(id, n?)` |
-| `$event` | `id`, `x`, `y` of the event the script runs for |
-| `$switch.name`, `$var.name` | the switches (`=` only) and numeric variables (`=` `+=` `-=` `*=` `/=` `%=`) of the player |
-| `$self.A` … `$self.F` | switches private to the event |
+| `$player.gold` | read, and assign with `=`, `+=`, `-=`, `*=`: it never goes below 0 |
+| `$player.level`, `$player.name` | read |
+| `$player.getItem(id)` | a copy `{ id, name, quantity }` of an item of the inventory, or `undefined` |
+| `$player.hasItem(id)`, `addItem(id, nb?)`, `removeItem(id, nb?)` | a player who has fewer items loses what they have, one who has none loses nothing |
+| `$player.getVariable(key)`, `setVariable(key, value)`, `hasVariable(key)`, `removeVariable(key)` | the variables of the player. A value is a text, a number, true/false, null or plain data of at most 2 000 characters, and is copied |
+| `$player.showText(text, options?)` | a dialogue, which waits for the player. Options: `position` (`top`, `middle`, `bottom`), `speaker`, `fullWidth`, `autoClose`, `typewriterEffect` |
+| `$player.showChoices(text, choices)` | 2 to 8 choices `{ text, value }`; gives the choice picked, or `null` when the player closes it |
+| `$player.showNotification(message, options?)` | a notification. Options: `type` (`info`, `warn`, `error`), `time` |
+| `$player.changeMap(map, { x, y }?)` | moves the player to a map |
+| `$event` | `id`, `name`, `x`, `y` of the event the script runs for |
 | `$shared` | properties shared by the players of the map (below) |
 | `$hook` | the payload of the signal, as `$hook.map` (`e` is the same data) |
 | `$state` | data kept by the script. Assign a whole value: `$state.crafted = { ...$state.crafted, potion: 1 }` |
-| `say(text, options?)` | a dialogue, which waits for the player |
-| `notify(message, options?)` | a notification |
-| `choice(["Yes", "No"])` | asks the player, returns the index, or -1 when the choice is closed |
-| `transfer(map, x, y, options?)` | moves the player to a map |
 | `wait(seconds)` | pauses the script (60 seconds at most) |
 | `random(min, max)` | a whole number, both included |
 | `Item("id")` | a reference to an item of the database |
 
+RPGJS has variables, not switches: a flag is a variable (`$player.setVariable("tournament", true)`). A private switch of an event is
+a variable of the player named after the event (`$event.id + "_opened"`), as the chest of the playground does.
+
 The language is a subset of JavaScript: `const`/`let`, functions and arrow functions, `if`/`for`/`while`, template texts, lists and
-objects with the usual methods (`map`, `filter`, `find`, `reduce`, `includes`, `join`…). Not available: `eval`, `Function`,
-classes, `import`, `new`, timers, the prototype. **Data that comes from the game is read-only**: copy it (`{ ...x }`, `[...x]`)
-before changing the copy.
+objects with the usual methods (`map`, `filter`, `find`, `reduce`, `includes`, `join`…), `??` and `?.`. Not available: `eval`,
+`Function`, classes, `import`, `new`, timers, the prototype. **Data that comes from the game is read-only**: copy it (`{ ...x }`,
+`[...x]`) before changing the copy.
 
 A script has a budget: steps, 100 iterations per loop, texts of 10 000 characters, lists and objects of 1 000 entries, call depth
 20, `$state` of 10 000 characters. A script that goes over is stopped, reported in the console, and the game goes on.
@@ -139,7 +145,7 @@ A script declares what the players of a map share, and every player reads and ch
 shared({ stock: { initial: 3, client: true, persist: false } });
 
 on("event.action", { where: { "event.name": "shop" } }, () => {
-  if (!$shared.take("stock", 1)) { notify("Sold out"); return; }
+  if (!$shared.take("stock", 1)) { $player.showNotification("Sold out"); return; }
   $player.addItem("Potion", 1);
 });
 ```
@@ -162,7 +168,7 @@ import { ScriptService, provideScripts } from "@rpgjs/script/server"
 const scripts = new ScriptService()
 // providers: [provideScripts(scripts), provideServerModules([])]
 
-scripts.install({ id: "late", source: `on("player.dead", () => { notify("Careful!"); });` })
+scripts.install({ id: "late", source: `on("player.dead", () => { $player.showNotification("Careful!"); });` })
 scripts.uninstall("late")
 ```
 
@@ -180,6 +186,32 @@ const scripts = new ScriptService({
 
 await scripts.emit("quests.start", { questId: "wolves" }, { player, map })
 ```
+
+### Add more signals
+
+The mapping from the hooks of RPGJS to signals is data, so it can be extended. A binding says which hook of which module scope
+(`player`, `event`, `map`, `room`, `engine`, `projectiles`) to listen to, and turns the arguments of the hook into the payload of the
+signal and the place it happened:
+
+```ts
+import { signalBinding, provideScripts } from "@rpgjs/script/server"
+
+const input = signalBinding<[RpgPlayer, RpgActionInput<unknown>]>({
+  signal: "player.input",
+  scope: "player",
+  hook: "onInput",
+  describe: { doc: "A player presses an input.", payload: { action: { type: "string" } } },
+  emit: (player, data) => {
+    const map = player.getCurrentMap()
+    return map ? { payload: { action: String(data.action) }, context: { player, map } } : undefined
+  },
+})
+
+provideScripts({ bindings: [input], scripts })
+```
+
+`describe` adds the signal to the catalog, so a script that listens to it has its filter checked against the payload. Several
+bindings may listen to the same hook. Return nothing from `emit` to emit nothing. `DEFAULT_SIGNAL_BINDINGS` lists the ones of the game.
 
 ## Write and test scripts without the game
 
@@ -204,11 +236,14 @@ await runTests(source, [
 
 `expect` keys are `returns`, `error`, `effects`, `effectsInclude`, `effectsExclude`, `texts`, `notifications`, and paths
 `player.gold`, `player.items.<id>`, `shared.<name>`, `state.<key>`, `vars.<name>`; a value is exact or `{ min, max }`.
+The effects are named after the call that made them: `showText`, `showNotification`, `showChoices`, `changeMap`, `addItem`,
+`removeItem`, `setVariable`, `removeVariable`, `gold` (with the new `value`), `wait`, `sync` (a shared property) and `state`.
 
 ## Run your own world
 
-The behavior of every name is written once over a port, `ScriptWorld`, that speaks of the game (change the gold, give an item, show
-a text). `createRpgjsWorld({ player, map, event?, shared?, hook? })` implements it with the API of RPGJS, and `SimWorld` in memory.
+The behavior of every name is written once over a port, `ScriptWorld`, that has the shape of the API of RPGJS (`getItem`, `addItem`,
+`getVariable`, `showText`, `showChoices`…). `createRpgjsWorld({ player, map, event?, shared?, hook? })` implements it with the API of
+RPGJS, and `SimWorld` in memory.
 A host with its own vocabulary, such as a block editor, implements it with its own operations, and gets the same behavior.
 
 | Entry | For |

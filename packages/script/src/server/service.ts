@@ -11,6 +11,7 @@ import { SignalRegistry, type EmitReport } from "../core/signals";
 import { GAME_API_DESCRIPTION } from "../game/description";
 import { GAME_API_IMPL } from "../game/impl";
 import { parseScript } from "../parse";
+import { DEFAULT_SIGNAL_BINDINGS, type SignalBinding } from "./bindings";
 import { createRpgjsWorld } from "./world";
 
 /** A script given to the game: its text, or the tree an editor already computed from it. The id and the version name it. */
@@ -21,6 +22,8 @@ export interface ScriptServiceOptions {
   scripts?: ScriptSource[];
   /** Signals a plugin adds to the ones of the game: scripts can listen to them and `emit` can send them. */
   signals?: Record<string, SignalDesc>;
+  /** Hooks of RPGJS to turn into signals, in addition to the ones of the game. A binding that describes its signal adds it to the catalog. */
+  bindings?: SignalBinding[];
   /** Budget of each handler. */
   limits?: Limits;
 }
@@ -39,7 +42,7 @@ export interface SignalContext { player: RpgPlayer; map: RpgMap; event?: RpgEven
  * @example
  * ```ts
  * const scripts = new ScriptService({ signals: { "quests.start": { payload: { questId: { type: "string" } } } } })
- * scripts.install({ id: "quests", source: `on("quests.start", { where: { questId: "wolves" } }, () => { notify("Go!"); });` })
+ * scripts.install({ id: "quests", source: `on("quests.start", { where: { questId: "wolves" } }, () => { $player.showNotification("Go!"); });` })
  * await scripts.emit("quests.start", { questId: "wolves" }, { player, map })
  * ```
  */
@@ -47,11 +50,15 @@ export class ScriptService {
   /** The scripts that were refused, and why. */
   errors: ScriptError[] = [];
   readonly description: ApiDescription;
+  /** The hooks that emit signals: the ones of the game, then the ones that were added. */
+  readonly bindings: SignalBinding[];
   private registry: SignalRegistry;
   private states = new Map<string, Map<string, unknown>>();
 
   constructor(options: ScriptServiceOptions = {}) {
-    this.description = { ...GAME_API_DESCRIPTION, signals: { ...GAME_API_DESCRIPTION.signals, ...options.signals } };
+    this.bindings = [...DEFAULT_SIGNAL_BINDINGS, ...(options.bindings ?? [])];
+    const described = Object.fromEntries(this.bindings.flatMap((b) => (b.describe ? [[b.signal, b.describe]] : [])));
+    this.description = { ...GAME_API_DESCRIPTION, signals: { ...GAME_API_DESCRIPTION.signals, ...described, ...options.signals } };
     this.registry = new SignalRegistry({ description: this.description, impl: GAME_API_IMPL, limits: options.limits });
     for (const script of options.scripts ?? []) this.install(script);
   }

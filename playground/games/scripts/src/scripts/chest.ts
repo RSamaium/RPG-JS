@@ -1,13 +1,13 @@
 /** The script `chest`: it is plain text, run by the interpreter of @rpgjs/script (never as JavaScript). */
 export default `
-// A chest gives gold once: the self switch A remembers that it was opened.
+// A chest gives gold once. A variable of the player, named after the event, remembers that it was opened.
 on("event.action", { where: { "event.name": "chest" } }, () => {
-  if ($self.A) {
-    say("The chest is empty.");
+  if ($player.getVariable($event.id + "_opened")) {
+    $player.showText("The chest is empty.");
     return;
   }
-  $self.A = true;
+  $player.setVariable($event.id + "_opened", true);
   $player.gold += 25;
-  notify("You found 25 gold. Gold: " + $player.gold);
+  $player.showNotification("You found 25 gold. Gold: " + $player.gold);
 });
 `;

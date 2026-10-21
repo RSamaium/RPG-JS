@@ -4,7 +4,7 @@
  * simulation.
  */
 import type { RpgEvent, RpgMap, RpgPlayer } from "@rpgjs/server";
-import type { GoldOperation, PlayerPort, ScriptWorld, VariableOperation } from "../game/impl";
+import type { Choice, PlayerPort, ScriptWorld, VariableValue } from "../game/impl";
 import type { SharedDecl } from "../core/interpreter";
 
 /** A value that RPGJS keeps in a signal is read by calling it. */
@@ -71,56 +71,48 @@ export function createRpgjsWorld(options: RpgjsWorldOptions): ScriptWorld {
 
   const playerPort: PlayerPort = {
     get gold() { return number(p.gold); },
+    set gold(value: number) { p.gold = value; },
     get level() { return number(read(p.level)); },
     get name() { return String(read(p.name)); },
-    itemCount: (id) => number(read(p.getItem(id)?.quantity)),
-    getVariable: (id) => p.getVariable(id),
-    changeGold(operation: GoldOperation, amount: number) {
-      const gold = number(p.gold);
-      p.gold = operation === "set" ? amount : operation === "add" ? gold + amount : operation === "sub" ? gold - amount : gold * amount;
+    getItem(id) {
+      const item = p.getItem(id);
+      if (!item) return undefined;
+      return { id: String(read(item.id) ?? id), name: String(read(item.name) ?? ""), quantity: number(read(item.quantity)) };
     },
-    addItem(id, count) {
-      p.addItem(id, count);
+    hasItem: (id) => !!p.getItem(id),
+    addItem(id, nb) {
+      p.addItem(id, nb);
     },
-    removeItem(id, count) {
-      if (playerPort.itemCount(id) > 0) p.removeItem(id, count);
+    removeItem(id, nb) {
+      // RPGJS refuses to remove what the player does not have: a script just loses nothing
+      if (p.getItem(id)) p.removeItem(id, nb);
     },
-    setSwitch: (name, value) => p.setVariable(name, value),
-    setSelfSwitch(letter, value) {
-      if (!event) throw new Error("this script does not run for an event: it has no self switch");
-      p.setVariable(`${event.id}_${letter}`, value);
+    getVariable: (key) => p.getVariable(key),
+    setVariable: (key, value: VariableValue) => p.setVariable(key, value),
+    hasVariable: (key) => !!p.hasVariable(key),
+    removeVariable: (key) => !!p.removeVariable(key),
+    async showText(text, opts = {}) {
+      await p.showText(text, opts);
     },
-    changeVariable(name: string, operation: VariableOperation, value: number) {
-      const current = number(p.getVariable(name));
-      const next: Record<VariableOperation, number> = { set: value, add: current + value, subtract: current - value, multiply: current * value, divide: current / value, modulo: current % value };
-      p.setVariable(name, next[operation]);
+    async showChoices(text, choices: Choice[]) {
+      const picked = await p.showChoices(text, choices);
+      return picked ? { text: String(picked.text), value: picked.value } : null;
     },
-    async transfer(mapId, x, y, direction) {
-      await p.changeMap(mapId, { x, y });
-      if (direction) p.changeDirection?.(direction);
+    async showNotification(message, opts = {}) {
+      await p.showNotification(message, opts);
+    },
+    async changeMap(mapId, positions) {
+      await p.changeMap(mapId, positions);
     },
   };
-
-  const speakerOf = (speaker?: string): string | undefined =>
-    speaker === "$player" ? playerPort.name : speaker === "$this" ? String(read((event as any)?.name) || event?.id || "") || undefined : speaker;
 
   return {
     player: playerPort,
     event: {
       get id() { return event?.id ?? ""; },
+      get name() { return String(read((event as any)?.name) ?? ""); },
       get x() { return number(read((event as any)?.x)); },
       get y() { return number(read((event as any)?.y)); },
-    },
-    async say(text, opts = {}) {
-      const speaker = speakerOf(opts.speaker);
-      await p.showText(text, { ...(opts.position ? { position: opts.position } : {}), ...(speaker ? { speaker } : {}) });
-    },
-    async notify(message, opts = {}) {
-      await p.showNotification(message, opts);
-    },
-    async choose(choices) {
-      const picked = await p.showChoices("", choices.map((text, index) => ({ text, value: index })));
-      return picked ? Number(picked.value) : -1;
     },
     wait: (seconds) => new Promise<void>((resolve) => setTimeout(resolve, Math.min(Math.max(seconds, 0), MAX_WAIT_SECONDS) * 1000)),
     rand: options.rand ?? ((min, max) => min + Math.floor(Math.random() * (max - min + 1))),

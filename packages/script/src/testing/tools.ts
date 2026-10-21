@@ -94,7 +94,7 @@ export interface SimulateResult {
   steps?: number;
   /** With `emit`: what happened to each listener. */
   listeners?: ListenerReport[];
-  effects: { block: string; params: unknown }[];
+  effects: { name: string; params: unknown }[];
   state?: ReturnType<SimWorld["snapshot"]>;
   error?: string;
   uncovered?: Record<string, string>;
@@ -193,7 +193,7 @@ function judge(t: TestCase, r: SimulateResult): string[] {
     if (r.ok || !String(r.error).includes(String(exp.error))) out.push(`expected the error "${exp.error}", got ${r.ok ? "no error" : r.error}`);
   } else if (!r.ok) out.push(`the script failed: ${r.error ?? JSON.stringify(r.diagnostics)}`);
   if (!r.ok) return out;
-  const names = r.effects.map((e) => e.block);
+  const names = r.effects.map((e) => e.name);
   for (const [k, want] of Object.entries(exp)) {
     if (k === "error") continue;
     if (k === "returns") { if (!same(r.value, want)) out.push(`returns ${JSON.stringify(r.value)}, expected ${JSON.stringify(want)}`); }
@@ -201,8 +201,8 @@ function judge(t: TestCase, r: SimulateResult): string[] {
     else if (k === "effects") { if (!same(names, want)) out.push(`effects ${JSON.stringify(names)}, expected ${JSON.stringify(want)}`); }
     else if (k === "effectsInclude") { for (const b of want as string[]) if (!names.includes(b)) out.push(`expected an effect "${b}"`); }
     else if (k === "effectsExclude") { for (const b of want as string[]) if (names.includes(b)) out.push(`unexpected effect "${b}"`); }
-    else if (k === "texts") { const got = r.effects.filter((e) => e.block === "show_text").map((e: any) => e.params.text); if (!same(got, want)) out.push(`texts ${JSON.stringify(got)}, expected ${JSON.stringify(want)}`); }
-    else if (k === "notifications") { const got = r.effects.filter((e) => e.block === "show_notification").map((e: any) => e.params.message); if (!same(got, want)) out.push(`notifications ${JSON.stringify(got)}, expected ${JSON.stringify(want)}`); }
+    else if (k === "texts") { const got = r.effects.filter((e) => e.name === "showText").map((e: any) => e.params.text); if (!same(got, want)) out.push(`texts ${JSON.stringify(got)}, expected ${JSON.stringify(want)}`); }
+    else if (k === "notifications") { const got = r.effects.filter((e) => e.name === "showNotification").map((e: any) => e.params.message); if (!same(got, want)) out.push(`notifications ${JSON.stringify(got)}, expected ${JSON.stringify(want)}`); }
     else if (!KNOWN.has(k) && /^(player|shared|state|vars)\./.test(k)) {
       const got = atPath(r.state, k);
       if (!matches(got, want)) out.push(`${k} is ${JSON.stringify(got)}, expected ${JSON.stringify(want)}`);

@@ -1,8 +1,9 @@
 import { describe, expectTypeOf, test } from "vitest";
 import type { Condition, ListenFilter, SignalDesc } from "./core/filter";
 import type { EmitReport } from "./core/signals";
-import type { PlayerPort, ScriptWorld } from "./game/impl";
-import { provideScripts, ScriptService, type ScriptServiceOptions, type ScriptSource } from "./server";
+import type { Choice, ItemSnapshot, PlayerPort, ScriptWorld } from "./game/impl";
+import { provideScripts, ScriptService, signalBinding, type ScriptServiceOptions, type ScriptSource, type SignalBinding } from "./server";
+import type { RpgPlayer } from "@rpgjs/server";
 import { checkScript, runTests, simulate, SimWorld, SharedStore, type CheckResult, type SimulateInput, type TestCase } from "./testing";
 
 describe("the public API of @rpgjs/script", () => {
@@ -23,9 +24,10 @@ describe("the public API of @rpgjs/script", () => {
     expectTypeOf<ScriptService["errors"]>().toEqualTypeOf<{ script: string; message: string }[]>();
   });
 
-  test("a condition is about a switch, a variable, an item or a stat, and a stat is the gold or the level", () => {
-    expectTypeOf<{ switch: "tournament"; is: false }>().toExtend<Condition>();
+  test("a condition is about a variable, an item or a stat, and a stat is the gold or the level", () => {
+    expectTypeOf<{ variable: "tournament"; eq: true }>().toExtend<Condition>();
     expectTypeOf<{ variable: "visits"; gte: 3 }>().toExtend<Condition>();
+    expectTypeOf<{ switch: "tournament" }>().not.toExtend<Condition>();
     expectTypeOf<{ item: "potion" }>().toExtend<Condition>();
     expectTypeOf<{ stat: "gold"; gte: 50 }>().toExtend<Condition>();
     expectTypeOf<{ stat: "mana"; gte: 50 }>().not.toExtend<Condition>();
@@ -37,10 +39,18 @@ describe("the public API of @rpgjs/script", () => {
     expectTypeOf<{ payload: { gained: { type: "decimal" } } }>().not.toExtend<SignalDesc>();
   });
 
-  test("a world speaks of the game, and the simulation is one", () => {
-    expectTypeOf<PlayerPort["changeGold"]>().parameters.toEqualTypeOf<["set" | "add" | "sub" | "mul", number]>();
+  test("a world has the shape of the API of RPGJS, and the simulation is one", () => {
+    expectTypeOf<PlayerPort["gold"]>().toEqualTypeOf<number>();
+    expectTypeOf<PlayerPort["getItem"]>().returns.toEqualTypeOf<ItemSnapshot | undefined>();
+    expectTypeOf<PlayerPort["showChoices"]>().returns.toEqualTypeOf<Promise<Choice | null>>();
+    expectTypeOf<PlayerPort["changeMap"]>().parameter(1).toEqualTypeOf<{ x: number; y: number } | undefined>();
     expectTypeOf<SimWorld>().toExtend<ScriptWorld>();
-    expectTypeOf<ScriptWorld["choose"]>().returns.toEqualTypeOf<Promise<number>>();
+  });
+
+  test("a hook of RPGJS becomes a signal with a binding, typed by the arguments of the hook", () => {
+    const binding = signalBinding<[RpgPlayer, number]>({ signal: "player.levelUp", scope: "player", hook: "onLevelUp", emit: () => undefined });
+    expectTypeOf(binding).toEqualTypeOf<SignalBinding>();
+    expectTypeOf<ScriptServiceOptions["bindings"]>().toEqualTypeOf<SignalBinding[] | undefined>();
   });
 
   test("the tools check, simulate and test, and an agent can give plain shared values", () => {

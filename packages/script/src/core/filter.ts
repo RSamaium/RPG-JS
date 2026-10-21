@@ -18,12 +18,10 @@ export type Comparison = { eq?: unknown; ne?: unknown; gt?: number; gte?: number
 /** `{ "skill.tags": { has: "fire" }, power: { gte: 5 }, map: "town" }`: a value alone means equal. */
 export type WhereMatcher = string | number | boolean | null | (Comparison & { in?: unknown[]; has?: unknown; exists?: boolean });
 /**
- * A condition on the player, in a `when` list: a switch (`{ switch: "tournament" }`, `is: false` for off), a variable
- * (`{ variable: "visits", gte: 3 }`), an item (`{ item: "potion" }` means the player has it, or give a comparison) or a stat
- * (`{ stat: "gold", gte: 50 }`).
+ * A condition on the player, in a `when` list: a variable (`{ variable: "visits", gte: 3 }`, `{ variable: "tournament", eq: true }`),
+ * an item (`{ item: "Potion" }` means the player has it, or give a comparison) or a stat (`{ stat: "gold", gte: 50 }`).
  */
 export type Condition =
-  | ({ switch: string; is?: boolean })
   | ({ variable: string } & Comparison)
   | ({ item: string } & Comparison)
   | ({ stat: "gold" | "level" } & Comparison);
@@ -35,12 +33,12 @@ export type Condition =
 export interface ListenFilter { where?: Record<string, WhereMatcher>; when?: Condition[] }
 
 /** What a condition reads of the player. */
-export interface ConditionPlayer { gold: number; level: number; itemCount(id: string): number; getVariable(id: string): unknown }
+export interface ConditionPlayer { gold: number; level: number; getItem(id: string): { quantity: number } | undefined; getVariable(id: string): unknown }
 
 const COMPARATORS = ["eq", "ne", "gt", "gte", "lt", "lte"] as const;
 const MATCH_OPERATORS = [...COMPARATORS, "in", "has", "exists"] as const;
 const NUMERIC = new Set(["gt", "gte", "lt", "lte"]);
-const SUBJECTS = ["switch", "variable", "item", "stat"] as const;
+const SUBJECTS = ["variable", "item", "stat"] as const;
 const UNSAFE = new Set(["__proto__", "constructor", "prototype"]);
 const PATH = /^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$/;
 
@@ -100,17 +98,11 @@ export const matchesWhere = (payload: unknown, where: Record<string, WhereMatche
 /** The first condition that does not hold, as text (`stat gold gte 500`), or undefined when they all hold. */
 export function conditionFailure(conditions: Condition[] | undefined, player: ConditionPlayer): string | undefined {
   for (const c of conditions ?? []) {
-    if ("switch" in c) {
-      const v = player.getVariable(c.switch);
-      const on = v === true || v === 1;
-      if (on !== (c.is ?? true)) return `switch ${c.switch} is not ${c.is ?? true}`;
-      continue;
-    }
     const subject = "variable" in c ? "variable" : "item" in c ? "item" : "stat";
     const name = (c as any)[subject] as string;
     const value =
-      subject === "variable" ? (typeof player.getVariable(name) === "number" ? (player.getVariable(name) as number) : 0)
-      : subject === "item" ? player.itemCount(name)
+      subject === "variable" ? player.getVariable(name)
+      : subject === "item" ? (player.getItem(name)?.quantity ?? 0)
       : name === "gold" ? player.gold : player.level;
     const ops = COMPARATORS.filter((op) => (c as any)[op] !== undefined);
     if (!ops.length) ops.push("gte"); // an item with no comparison: the player has it
@@ -181,10 +173,9 @@ export function validateFilter(filter: unknown, signal?: SignalDesc & { name: st
       const subjects = SUBJECTS.filter((s) => s in c);
       if (subjects.length !== 1) return `a condition starts with one of: ${SUBJECTS.join(", ")}`;
       const subject = subjects[0];
-      const allowed = subject === "switch" ? ["switch", "is"] : [subject, ...COMPARATORS];
+      const allowed: string[] = [subject, ...COMPARATORS];
       for (const key of Object.keys(c)) if (!allowed.includes(key)) return `"${key}" is not part of a ${subject} condition (${allowed.join(", ")})`;
       if (typeof c[subject] !== "string") return `the ${subject} of a condition is a name`;
-      if (subject === "switch" && c.is !== undefined && typeof c.is !== "boolean") return '"is" needs true or false';
       if (subject === "stat" && c.stat !== "gold" && c.stat !== "level") return 'a stat is "gold" or "level"';
       if (subject === "variable" && !COMPARATORS.some((op) => op in c)) return `a variable condition needs a comparison (${COMPARATORS.join(", ")})`;
       if (subject === "stat" && !COMPARATORS.some((op) => op in c)) return `a stat condition needs a comparison (${COMPARATORS.join(", ")})`;

@@ -2,4 +2,4 @@
 "@rpgjs/script": minor
 ---
 
-Add `@rpgjs/script`, sandboxed scripts for RPGJS: a JavaScript subset run by its own interpreter (never as JavaScript), which listens to the signals of the game. Scripts listen to the signals of the game (`player.joinMap`, `player.leaveMap`, `player.levelUp`, `player.dead`, `event.action`, `event.touch`) with a declared filter, and `provideScripts` from `@rpgjs/script/server` plugs them into the server of a game.
+Add `@rpgjs/script`, sandboxed scripts for RPGJS: a JavaScript subset run by its own interpreter (never as JavaScript), which listens to the signals of the game. The API of scripts follows the one of RPGJS (`$player.showText`, `showChoices`, `showNotification`, `changeMap`, `addItem`, `getItem`, `getVariable`…) and the mapping from hooks to signals is data that `provideScripts` takes more of (`bindings`). Scripts listen to the signals of the game (`player.joinMap`, `player.leaveMap`, `player.levelUp`, `player.dead`, `event.action`, `event.touch`) with a declared filter, and `provideScripts` from `@rpgjs/script/server` plugs them into the server of a game.

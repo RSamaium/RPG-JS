@@ -1,44 +1,34 @@
 /**
- * Binds the hooks of RPGJS to the signals of the game: each hook emits its signal, with the player the script acts for. This is a
- * module like any other (`player`, `event` hooks), so it sees every player and every event without changing any of them.
+ * Binds the hooks of RPGJS to the signals of the game: each binding of the service (`bindings`) listens to its hook and emits its
+ * signal. This is a module like any other (`player`, `event`… hooks), so it sees every player and every event without changing
+ * any of them. Several bindings may listen to the same hook.
  */
 import type { RpgServer } from "@rpgjs/server";
+import type { HookScope, SignalBinding } from "./bindings";
 import type { ScriptService } from "./service";
 
-const read = <T>(value: unknown): T => (typeof value === "function" ? (value as () => T)() : (value as T));
-const eventOf = (event: any) => ({ id: String(event.id ?? ""), name: String(read(event.name) ?? "") });
-
 /**
- * The hooks of RPGJS that emit the signals of the game for a `ScriptService`: `onJoinMap`, `onLeaveMap`, `onLevelUp` and `onDead`
- * of the player, and `onAction` and `onPlayerTouch` of every event. `provideScripts` adds it as a module; use it directly only to
- * build your own provider.
+ * The hooks of RPGJS that emit the signals of a `ScriptService`, one per binding. `provideScripts` adds it as a module; use it
+ * directly only to build your own provider.
  *
- * @param service - The service that receives the signals.
+ * @param service - The service that receives the signals, and whose `bindings` say which hooks to listen to.
  * @returns A server module.
  */
 export function scriptHooks(service: ScriptService): RpgServer {
-  return {
-    player: {
-      onJoinMap: (player, map) => void service.emit("player.joinMap", { map: String(map.id) }, { player, map }),
-      onLeaveMap: (player, map) => void service.emit("player.leaveMap", { map: String(map.id) }, { player, map }),
-      onLevelUp: async (player, gained) => {
-        const map = player.getCurrentMap();
-        if (map) await service.emit("player.levelUp", { gained }, { player, map });
-      },
-      onDead: async (player) => {
-        const map = player.getCurrentMap();
-        if (map) await service.emit("player.dead", {}, { player, map });
-      },
-    },
-    event: {
-      onAction: async (event, player) => {
-        const map = player.getCurrentMap();
-        if (map) await service.emit("event.action", { event: eventOf(event) }, { player, map, event });
-      },
-      onPlayerTouch: async (event, player) => {
-        const map = player.getCurrentMap();
-        if (map) await service.emit("event.touch", { event: eventOf(event) }, { player, map, event });
-      },
-    },
-  };
+  const module: Partial<Record<HookScope, Record<string, (...args: unknown[]) => Promise<void>>>> = {};
+  const byHook = new Map<string, SignalBinding[]>();
+  for (const binding of service.bindings) {
+    const id = `${binding.scope}.${binding.hook}`;
+    byHook.set(id, [...(byHook.get(id) ?? []), binding]);
+  }
+  for (const [id, bindings] of byHook) {
+    const [scope, hook] = id.split(".") as [HookScope, string];
+    (module[scope] ??= {})[hook] = async (...args: unknown[]) => {
+      for (const binding of bindings) {
+        const emission = await binding.emit(...args);
+        if (emission) await service.emit(binding.signal, emission.payload, emission.context);
+      }
+    };
+  }
+  return module as unknown as RpgServer;
 }

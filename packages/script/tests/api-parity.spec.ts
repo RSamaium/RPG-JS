@@ -9,9 +9,9 @@ test("the implementation covers exactly what the game API describes", () => {
 
 test("an implementation that forgets or invents a name is reported", () => {
   const impl = { handles: { ...GAME_API_IMPL.handles, $ghost: {} }, functions: { ...GAME_API_IMPL.functions } };
-  delete (impl.functions as any).say;
+  delete (impl.functions as any).wait;
   expect(missingImplementations(GAME_API_DESCRIPTION, impl)).toEqual(
-    expect.arrayContaining(["function say() is not implemented", "handle $ghost is implemented but not described"]),
+    expect.arrayContaining(["function wait() is not implemented", "handle $ghost is implemented but not described"]),
   );
 });
 
@@ -21,5 +21,7 @@ test("the declarations given to an agent list the handles and functions", () => 
   expect(d).toContain("readonly level: number;");
   expect(d).toMatch(/\*\/ gold: number;/);
   expect(d).not.toContain("readonly gold");
-  expect(d).toContain("declare function say(");
+  expect(d).toContain("declare function wait(");
+  expect(d).toContain("showText(text: string");
+  expect(d).toContain("showChoices(text: string");
 });
