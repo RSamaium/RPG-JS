@@ -26,28 +26,30 @@ the server part runs next to the client. Scripts are never sent to players. The 
 // server.ts
 import { provideScripts } from "@rpgjs/script/server"
 import { createServer, provideServerModules } from "@rpgjs/server"
+import chest from "./scripts/chest"
 
 export default createServer({
   providers: [
-    provideScripts({
-      scripts: [
-        {
-          id: "chests",
-          source: `
-            on("event.action", { where: { "event.name": "chest" } }, () => {
-              $player.gold += 10;
-              notify("You found 10 gold");
-            });
-          `,
-        },
-      ],
-    }),
+    provideScripts({ scripts: [{ id: "chest", source: chest }] }),
     provideServerModules([]),
   ],
 })
 ```
 
 `provideScripts` is a module: it adds to the modules of the game, it does not replace `provideServerModules`.
+
+```ts
+// scripts/chest.ts: a script is text, so it can live in a plain module
+export default `
+  on("event.action", { where: { "event.name": "chest" } }, () => {
+    $player.gold += 10;
+    notify("You found 10 gold");
+  });
+`
+```
+
+Keep the text in a `.ts` module rather than importing a file with `?raw`: the server module is also loaded by `vite.config.ts`
+(`rpgjs({ server })`), which does not resolve `?raw`.
 
 A script is `{ id, source }`, or `{ id, tree }` when the tree was already computed from the text (an editor does it once, on its
 server, with `parseScript` from `@rpgjs/script/parse`). `version` is optional and names the version.
@@ -145,6 +147,12 @@ on("event.action", { where: { "event.name": "shop" } }, () => {
 They live on the map with `map.setSync`, under the prefix `script_` (`script_stock`), so a script cannot reach another property of
 the map. `client: true` sends the value to the clients. `$shared.take(name, amount)` tests and decreases in one step: two players
 cannot both take the last one.
+
+## A game to run
+
+`playground/games/scripts` is a small town with a chest, a shop whose stock is shared by the players, and a trap, all written as
+scripts (`src/scripts`). Run it with `pnpm --dir playground/games/scripts dev`, walk with the arrow keys, press the action key next
+to the chest or the shop, and step on the red block.
 
 ## Install scripts while the game runs
 

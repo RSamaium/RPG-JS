@@ -1,0 +1,11 @@
+<Container>
+  <Rect width={960} height={640} color="#6f8f55" />
+  <Rect x={0} y={280} width={960} height={70} color="#c9b27c" />
+  <Text x={40} y={30} text="Space on the chest or the shop, step on the red block" color="#fff4d0" size={18} fontFamily="Courier New" />
+  <Text x={40} y={56} text="The scripts are in src/scripts" color="#fff4d0" size={14} fontFamily="Courier New" />
+  <EventLayerComponent />
+</Container>
+
+<script>
+  import { EventLayerComponent } from "@rpgjs/client";
+</script>
