@@ -10,7 +10,8 @@
     "declaration": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
-    "stripInternal": true
+    "stripInternal": true,
+    "experimentalDecorators": true
   },
   "include": ["src"],
   "exclude": ["src/**/*.spec.ts"]

@@ -3,7 +3,7 @@
  * that is refused (it does not parse, it uses what does not exist, it listens to a signal the game does not have) is reported and
  * left out: it never stops the others, and never the game.
  */
-import type { RpgEvent, RpgMap, RpgPlayer } from "@rpgjs/server";
+import type { RpgEvent, RpgMap, RpgPlayer, RpgPlayerRoom } from "@rpgjs/server";
 import { apiInfo, globalNames, type ApiDescription } from "../core/api";
 import type { SignalDesc } from "../core/filter";
 import { CompileError, CompileErrors, compileProgram, type AstNode, type Limits, type Program } from "../core/interpreter";
@@ -31,8 +31,11 @@ export interface ScriptServiceOptions {
 /** Why a script was refused. */
 export interface ScriptError { script: string; message: string }
 
-/** Where a signal happened: the player the scripts act for, the map, and the event if there is one. */
-export interface SignalContext { player: RpgPlayer; map: RpgMap; event?: RpgEvent | null }
+/**
+ * Where a signal happened: the player the scripts act for, and where they are. The room and the map are the ones of the player when not
+ * given; a player in a gameplay room that is not a map has no map.
+ */
+export interface SignalContext { player: RpgPlayer; map?: RpgMap | null; room?: RpgPlayerRoom | null; event?: RpgEvent | null }
 
 /**
  * The scripts of a game, on its server: installs them, says who listens to what, and emits signals. `provideScripts` makes one and
@@ -43,7 +46,7 @@ export interface SignalContext { player: RpgPlayer; map: RpgMap; event?: RpgEven
  * ```ts
  * const scripts = new ScriptService({ signals: { "quests.start": { payload: { questId: { type: "string" } } } } })
  * scripts.install({ id: "quests", source: `on("quests.start", { where: { questId: "wolves" } }, () => { $player.showNotification("Go!"); });` })
- * await scripts.emit("quests.start", { questId: "wolves" }, { player, map })
+ * await scripts.emit("quests.start", { questId: "wolves" }, { player })
  * ```
  */
 export class ScriptService {

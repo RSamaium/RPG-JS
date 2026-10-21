@@ -44,6 +44,8 @@ export interface PlayerPort {
 /** What a script run needs from its environment. */
 export interface ScriptWorld {
   player: PlayerPort;
+  /** The room the script runs in: `kind` is "map" for a map, otherwise the kind of the gameplay room. */
+  room: { id: string; kind: string };
   event: { id: string; name: string; x: number; y: number };
   /** Pauses the script. */
   wait(seconds: number): void | Promise<void>;
@@ -152,6 +154,7 @@ export const GAME_API_IMPL: ApiImpl<ScriptWorld> = {
         },
       },
     },
+    $room: { members: { kind: { read: (w) => w.room.kind }, id: { read: (w) => w.room.id } } },
     $event: { members: { id: { read: (w) => w.event.id }, name: { read: (w) => w.event.name }, x: { read: (w) => w.event.x }, y: { read: (w) => w.event.y } } },
     $shared: {
       methods: {

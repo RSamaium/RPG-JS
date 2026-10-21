@@ -2,7 +2,7 @@ import { describe, expectTypeOf, test } from "vitest";
 import type { Condition, ListenFilter, SignalDesc } from "./core/filter";
 import type { EmitReport } from "./core/signals";
 import type { Choice, ItemSnapshot, PlayerPort, ScriptWorld } from "./game/impl";
-import { provideScripts, ScriptService, signalBinding, type ScriptServiceOptions, type ScriptSource, type SignalBinding } from "./server";
+import { provideScripts, ScriptService, signalBinding, type ScriptServiceOptions, type ScriptSource, type SignalBinding, type SignalContext } from "./server";
 import type { RpgPlayer } from "@rpgjs/server";
 import { checkScript, runTests, simulate, SimWorld, SharedStore, type CheckResult, type SimulateInput, type TestCase } from "./testing";
 
@@ -16,6 +16,12 @@ describe("the public API of @rpgjs/script", () => {
     expectTypeOf<{ id: string; version: number; tree: { type: string } }>().toExtend<ScriptSource>();
     expectTypeOf<{ id: string }>().not.toExtend<ScriptSource>();
     expectTypeOf<{ id: string; source: string; tree: { type: string } }>().not.toExtend<ScriptSource>();
+  });
+
+  test("a signal can happen where there is no map: the context needs a player only", () => {
+    expectTypeOf<{ player: RpgPlayer }>().toExtend<SignalContext>();
+    expectTypeOf<{ player: RpgPlayer; map: null; room: null; event: null }>().toExtend<SignalContext>();
+    expectTypeOf<{ map: null }>().not.toExtend<SignalContext>();
   });
 
   test("the service installs and emits", () => {

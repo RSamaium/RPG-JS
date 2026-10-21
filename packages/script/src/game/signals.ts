@@ -5,16 +5,23 @@
  */
 import type { SignalDesc } from "../core/filter";
 
+const ROOM: SignalDesc["payload"] = {
+  kind: { type: "string", doc: 'The kind of the room: "map" for a map, otherwise the kind the room was registered with.' },
+  id: { type: "string", doc: "Id of the room." },
+};
 const MAP: SignalDesc["payload"] = { map: { type: "string", doc: "Id of the map." } };
 const EVENT: SignalDesc["payload"] = {
   event: { type: "object", fields: { id: { type: "string" }, name: { type: "string", doc: "Name of the event, empty when it has none." } } },
 };
 
 /**
- * The signals of the game: `player.joinMap`, `player.leaveMap`, `player.levelUp`, `player.dead`, `event.action`, `event.touch`.
+ * The signals of the game: `player.joinRoom`, `player.leaveRoom`, `player.joinMap`, `player.leaveMap`, `player.levelUp`, `player.dead`,
+ * `event.action`, `event.touch`. The room ones fire in every kind of room; the map and event ones only in a map.
  * A plugin adds its own with the `signals` option of `ScriptService`.
  */
 export const GAME_SIGNALS: Record<string, SignalDesc> = {
+  "player.joinRoom": { doc: "A player enters a room: a map, or a gameplay room that is not a map.", payload: ROOM },
+  "player.leaveRoom": { doc: "A player leaves a room.", payload: ROOM },
   "player.joinMap": { doc: "A player enters a map.", payload: MAP },
   "player.leaveMap": { doc: "A player leaves a map.", payload: MAP },
   "player.levelUp": {

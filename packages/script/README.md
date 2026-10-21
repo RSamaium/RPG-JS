@@ -77,11 +77,12 @@ export default createServer({
 A script is refused when it does not parse, uses what does not exist, or listens to a signal the game does not have: the reason is
 logged (`service.errors` keeps it) and the other scripts run. A script that fails at run time is stopped by its budgets (steps,
 loops, call depth, sizes), reported, and the game goes on. Pass a `ScriptService` to `provideScripts` to install and uninstall
-scripts while the game runs, and give `signals` to add the signals of a plugin: `service.emit(signal, payload, { player, map })`.
+scripts while the game runs, and give `signals` to add the signals of a plugin: `service.emit(signal, payload, { player })`.
 
 | Signal | Emitted by | Payload |
 | --- | --- | --- |
-| `player.joinMap` / `player.leaveMap` | `onJoinMap` / `onLeaveMap` of the player | `map` |
+| `player.joinRoom` / `player.leaveRoom` | `onJoinRoom` / `onLeaveRoom` of the player, in every kind of room | `kind` (`"map"` or the kind of the gameplay room), `id` |
+| `player.joinMap` / `player.leaveMap` | `onJoinMap` / `onLeaveMap` of the player, in a map | `map` |
 | `player.levelUp` | `onLevelUp` | `gained`. While it runs, `$player.level` is still the level before the gain |
 | `player.dead` | `onDead` | |
 | `event.action` / `event.touch` | `onAction` / `onPlayerTouch` of every event | `event.id`, `event.name` |

@@ -61,14 +61,20 @@ reason is logged and kept in `service.errors`, and the other scripts run.
 
 | Signal | Emitted by | Payload |
 | --- | --- | --- |
-| `player.joinMap` | `onJoinMap` of the player | `map` (id of the map) |
-| `player.leaveMap` | `onLeaveMap` of the player | `map` |
+| `player.joinRoom` | `onJoinRoom` of the player | `kind` (`"map"`, or the kind of the gameplay room), `id` |
+| `player.leaveRoom` | `onLeaveRoom` of the player | `kind`, `id` |
+| `player.joinMap` | `onJoinMap` of the player, in a map | `map` (id of the map) |
+| `player.leaveMap` | `onLeaveMap` of the player, in a map | `map` |
 | `player.levelUp` | `onLevelUp` of the player | `gained` (levels gained), `level` (the level after the gain) |
 | `player.dead` | `onDead` of the player | |
 | `event.action` | `onAction` of any event | `event.id`, `event.name` |
 | `event.touch` | `onPlayerTouch` of any event | `event.id`, `event.name` |
 
 The script acts for **the player of the signal** (`$player`) and, for the event signals, for **that event** (`$event`, `$self`).
+
+A player can be in a room that is not a map (a custom gameplay room, see [Custom Gameplay Rooms](/advanced/custom-gameplay-rooms)): there
+is no map, no event and no `joinMap`, but `player.joinRoom`, `player.leaveRoom`, `player.levelUp` and `player.dead` fire all the same,
+and the script acts for the player. `event.action` and `event.touch` only exist in a map, since events do.
 
 The names of the signals say what happened (`player.levelUp` is the hook `onLevelUp`). The hooks that are not signals yet are added
 with a binding, see "Add more signals" below.
@@ -118,6 +124,7 @@ A script uses the names of the API of RPGJS. `$player` is the player of the sign
 | `$player.showChoices(text, choices)` | 2 to 8 choices `{ text, value }`; gives the choice picked, or `null` when the player closes it |
 | `$player.showNotification(message, options?)` | a notification. Options: `type` (`info`, `warn`, `error`), `time` |
 | `$player.changeMap(map, { x, y }?)` | moves the player to a map |
+| `$room` | `kind` (`"map"` for a map, otherwise the kind of the gameplay room) and `id` of the room the script runs in |
 | `$event` | `id`, `name`, `x`, `y` of the event the script runs for |
 | `$shared` | properties shared by the players of the map (below) |
 | `$hook` | the payload of the signal, as `$hook.map` (`e` is the same data) |
@@ -150,8 +157,10 @@ on("event.action", { where: { "event.name": "shop" } }, () => {
 });
 ```
 
-They live on the map with `map.setSync`, under the prefix `script_` (`script_stock`), so a script cannot reach another property of
-the map. `client: true` sends the value to the clients. `$shared.take(name, amount)` tests and decreases in one step: two players
+In a map they live on the map with `map.setSync`, under the prefix `script_` (`script_stock`), so a script cannot reach another
+property of the map. In a gameplay room that is not a map they live in the `state` of the room, under the same prefix: RPGJS
+synchronizes that state with the clients, and the state of the room then holds the `script_*` keys next to its own. A lobby has
+neither, and a script that uses shared properties there gets an error that says so. `client: true` sends the value to the clients. `$shared.take(name, amount)` tests and decreases in one step: two players
 cannot both take the last one.
 
 ## A game to run
@@ -184,7 +193,7 @@ const scripts = new ScriptService({
   signals: { "quests.start": { payload: { questId: { type: "string" } } } },
 })
 
-await scripts.emit("quests.start", { questId: "wolves" }, { player, map })
+await scripts.emit("quests.start", { questId: "wolves" }, { player })
 ```
 
 ### Add more signals

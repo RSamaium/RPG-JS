@@ -4,9 +4,10 @@
  * are the signals of the game; add your own with the `bindings` option of `provideScripts`, for example to turn a hook of
  * the projectiles or of a plugin into a signal.
  */
-import type { RpgEvent, RpgMap, RpgPlayer } from "@rpgjs/server";
+import type { RpgEvent, RpgMap, RpgPlayer, RpgPlayerRoom } from "@rpgjs/server";
 import type { SignalDesc } from "../core/filter";
 import type { SignalContext } from "./service";
+import { describeRoom } from "./world";
 
 /** Where a hook lives in a server module of RPGJS: `player`, `event`, `map`, `room`, `engine` or `projectiles`. */
 export type HookScope = "player" | "event" | "map" | "room" | "engine" | "projectiles";
@@ -28,8 +29,7 @@ export interface SignalEmission {
  *   hook: "onSkillChange",
  *   describe: { doc: "A skill is learned or forgotten.", payload: { skill: { type: "string" } } },
  *   emit: (player, change) => {
- *     const map = player.getCurrentMap();
- *     return map ? { payload: { skill: change.skill }, context: { player, map } } : undefined;
+ *     return { payload: { skill: change.skill }, context: { player } };
  *   },
  * })
  * ```
@@ -51,19 +51,23 @@ export function signalBinding<TArgs extends unknown[]>(binding: SignalBinding<TA
   return binding as unknown as SignalBinding;
 }
 
-const onMapOf = (player: RpgPlayer): RpgMap | null => player.getCurrentMap() ?? null;
-const ofPlayer = (player: RpgPlayer, payload: Record<string, unknown>): SignalEmission | undefined => {
-  const map = onMapOf(player);
-  return map ? { payload, context: { player, map } } : undefined;
-};
 const eventPayload = (event: RpgEvent) => ({ event: { id: String(event.id ?? ""), name: String(typeof event.name === "function" ? (event.name as () => unknown)() : event.name ?? "") } });
-const ofEvent = (event: RpgEvent, player: RpgPlayer): SignalEmission | undefined => {
-  const map = onMapOf(player);
-  return map ? { payload: eventPayload(event), context: { player, map, event } } : undefined;
-};
+/** A signal of an event: events exist in maps only, so the map is the one of the player. */
+const ofEvent = (event: RpgEvent, player: RpgPlayer): SignalEmission => ({ payload: eventPayload(event), context: { player, event } });
 
-/** The signals of the game: the hooks `onJoinMap`, `onLeaveMap`, `onLevelUp` and `onDead` of the player, and `onAction` and `onPlayerTouch` of the events. */
+/**
+ * The signals of the game: the hooks `onJoinRoom`, `onLeaveRoom`, `onJoinMap`, `onLeaveMap`, `onLevelUp` and `onDead` of the player, and
+ * `onAction` and `onPlayerTouch` of the events. The ones of the player fire in every kind of room, a map or not.
+ */
 export const DEFAULT_SIGNAL_BINDINGS: SignalBinding[] = [
+  signalBinding<[RpgPlayer, RpgPlayerRoom]>({
+    signal: "player.joinRoom", scope: "player", hook: "onJoinRoom",
+    emit: (player, room) => ({ payload: { ...describeRoom(room) }, context: { player, room } }),
+  }),
+  signalBinding<[RpgPlayer, RpgPlayerRoom]>({
+    signal: "player.leaveRoom", scope: "player", hook: "onLeaveRoom",
+    emit: (player, room) => ({ payload: { ...describeRoom(room) }, context: { player, room } }),
+  }),
   signalBinding<[RpgPlayer, RpgMap]>({
     signal: "player.joinMap", scope: "player", hook: "onJoinMap",
     emit: (player, map) => ({ payload: { map: String(map.id) }, context: { player, map } }),
@@ -77,12 +81,12 @@ export const DEFAULT_SIGNAL_BINDINGS: SignalBinding[] = [
     emit: async (player, gained) => {
       // RPGJS sends this hook, then sets the level in the same step: one turn later the player has the new level, whatever the order
       await Promise.resolve();
-      return ofPlayer(player, { gained, level: player.level });
+      return { payload: { gained, level: player.level }, context: { player } };
     },
   }),
   signalBinding<[RpgPlayer]>({
     signal: "player.dead", scope: "player", hook: "onDead",
-    emit: (player) => ofPlayer(player, {}),
+    emit: (player) => ({ payload: {}, context: { player } }),
   }),
   signalBinding<[RpgEvent, RpgPlayer]>({
     signal: "event.action", scope: "event", hook: "onAction",

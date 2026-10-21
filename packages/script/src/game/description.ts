@@ -40,6 +40,10 @@ export const GAME_API_DESCRIPTION: ApiDescription = {
         changeMap: { sig: "(map: string, positions?: { x: number; y: number }): void", doc: "Moves the player to a map, at a position when given." },
       },
     },
+    $room: {
+      doc: "The room the script runs in: a map, or a gameplay room that is not a map.",
+      members: { kind: { type: "string", doc: '"map" for a map, otherwise the kind the room was registered with.' }, id: { type: "string" } },
+    },
     $event: {
       doc: "The event the script runs for (for the signals of an event).",
       members: { id: { type: "string" }, name: { type: "string", doc: "Empty when the event has none." }, x: { type: "number" }, y: { type: "number" } },

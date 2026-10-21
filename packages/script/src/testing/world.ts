@@ -91,6 +91,8 @@ export interface WorldInit {
   dice?: number[];
   /** Answers `showChoices` in order: the index of the choice picked, -1 when the player closes it. */
   choices?: number[];
+  /** The room the script runs in (a map called `start` by default). */
+  room?: { id?: string; kind?: string };
   /** The event the script runs for. */
   event?: { id?: string; name?: string; x?: number; y?: number };
   /** Answers `showChoices`, after any delay, instead of `choices`. */
@@ -110,6 +112,7 @@ export interface WorldInit {
  */
 export class SimWorld implements ScriptWorld {
   player = new SimPlayer((name, params) => this.effects.push({ name, params }));
+  room = { id: "start", kind: "map" };
   event = { id: "event_1", name: "", x: 5, y: 3 };
   state: Record<string, unknown> = {};
   hook: Record<string, unknown> = {};
@@ -131,6 +134,7 @@ export class SimWorld implements ScriptWorld {
     this.player.answers = [...(init.choices ?? [])];
     this.player.chooser = init.choose;
     Object.assign(this.event, init.event ?? {});
+    Object.assign(this.room, init.room ?? {});
   }
 
   /** The properties shared by the players, as the game API sees them: every change is recorded as a `sync` effect. */
