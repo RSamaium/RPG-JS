@@ -1,0 +1,55 @@
+{
+  "name": "@rpgjs/script",
+  "repository": "github:RSamaium/RPG-JS",
+  "version": "5.0.0",
+  "description": "Sandboxed scripts for RPGJS: a JavaScript subset run by its own interpreter, which listens to the signals of the game",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./server": {
+      "import": "./dist/server/index.js",
+      "types": "./dist/server/index.d.ts"
+    },
+    "./core": {
+      "import": "./dist/core/index.js",
+      "types": "./dist/core/index.d.ts"
+    },
+    "./parse": {
+      "import": "./dist/parse.js",
+      "types": "./dist/parse.d.ts"
+    },
+    "./testing": {
+      "import": "./dist/testing/index.js",
+      "types": "./dist/testing/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "vite build",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "acorn": "^8.16.0"
+  },
+  "peerDependencies": {
+    "@rpgjs/common": "workspace:^",
+    "@rpgjs/server": "workspace:^"
+  },
+  "devDependencies": {
+    "vite": "^8.0.16",
+    "vite-plugin-dts": "^5.0.2",
+    "vitest": "^4.1.9"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT"
+}

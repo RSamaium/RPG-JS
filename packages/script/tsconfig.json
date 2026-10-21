@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "rootDir": "./src",
+    "outDir": "./lib",
+    "strict": true,
+    "declaration": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "stripInternal": true
+  },
+  "include": ["src"],
+  "exclude": ["src/**/*.spec.ts"]
+}
