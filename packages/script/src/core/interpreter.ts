@@ -81,6 +81,8 @@ type Binder = (scope: Scope, value: unknown) => void;
 type ScriptFn = { kind: "fn"; binders: Binder[]; body: C; exprBody?: C; closure: Scope; name: string };
 
 const RET = Symbol("return"), BRK = Symbol("break"), CNT = Symbol("continue");
+/** What an optional link of a chain (`a?.b`) gives when there is nothing: it travels up the chain, which then gives `undefined`. */
+const SHORT = Symbol("short-circuit");
 const NS = Symbol("namespace"), STDFN = Symbol("std-fn");
 const DENIED = new Set(["constructor", "__proto__", "prototype", "__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__"]);
 
@@ -376,6 +378,8 @@ export function compileProgram(ast: AstNode, hostGlobalNames: string[], api?: Ap
   };
 
   // ---- expressions
+  /** True while the nodes of an optional chain (`a?.b.c`) are compiled: they then pass on a short circuit. */
+  let inChain = false;
   const combine = (kids: C[], fn: (vals: any[], env: Env) => any): C => {
     if (kids.every((k) => !k.a)) {
       if (kids.length === 1) { const k = kids[0]; return { a: false, f: (env) => { tick(env); return fn([k.f(env)], env); } }; }
@@ -461,20 +465,28 @@ export function compileProgram(ast: AstNode, hostGlobalNames: string[], api?: Ap
         });
       }
       case "MemberExpression": {
-        if (n.optional) fail("optional chaining is not available, use ?? or check first", n);
+        const chain = inChain;
         const obj = expr(n.object);
+        const stops = (o: unknown) => chain && (o === SHORT || (n.optional && o == null));
         if (!n.computed) {
           const key = n.property.name;
           isDenied(key, n);
           memberCheck(n.object, key, n, false);
-          return combine([obj], ([o], env) => readMember(env, o, key, n));
+          return combine([obj], ([o], env) => (stops(o) ? SHORT : readMember(env, o, key, n)));
         }
-        return combine([obj, expr(n.property)], ([o, k], env) => readMember(env, o, String(k), n));
+        return combine([obj, expr(n.property)], ([o, k], env) => (stops(o) ? SHORT : readMember(env, o, String(k), n)));
       }
       case "CallExpression": return call(n);
       case "AssignmentExpression": return assignment(n);
       case "ArrowFunctionExpression": return fnValue(n);
-      case "ChainExpression": return fail("optional chaining is not available, use ?? or check first", n);
+      case "ChainExpression": {
+        const outer = inChain;
+        inChain = true;
+        const inner = expr(n.expression);
+        inChain = outer;
+        const end = (v: unknown) => (v === SHORT ? undefined : v);
+        return inner.a ? { a: true, f: async (env) => end(await inner.f(env)) } : { a: false, f: (env) => end(inner.f(env)) };
+      }
       case "FunctionExpression": return fail("write an arrow function: (x) => ...", n);
       case "UpdateExpression": return fail("++ and -- are only available as a statement or in a for loop; write i += 1 elsewhere", n);
       default:
@@ -496,6 +508,8 @@ export function compileProgram(ast: AstNode, hostGlobalNames: string[], api?: Ap
 
   const call = (n: AstNode): C => {
     const callee = n.callee;
+    if (n.optional) fail("an optional call (a.b?.()) is not available: the methods a script can call are known, call them with a?.b()", n);
+    const chain = inChain;
     const args = argList(n);
     if (callee.type === "Identifier") {
       const name = callee.name;
@@ -530,6 +544,7 @@ export function compileProgram(ast: AstNode, hostGlobalNames: string[], api?: Ap
       return { a: true, f: async (env) => {
         tick(env);
         const o = obj.a ? await obj.f(env) : obj.f(env);
+        if (chain && (o === SHORT || (callee.optional && o == null))) return SHORT;
         const vals = await evalArgs(args, env);
         if (isNs(o)) { const g = o[key]; if (isStdFn(g)) return g[STDFN](vals); throw new RuntimeError(`line ${n.loc?.start.line}: "${key}" is not a function`); }
         if (env.run.host.isHandle(o)) return env.run.host.callMethod(o, key, vals);
