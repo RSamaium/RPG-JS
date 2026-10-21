@@ -4,7 +4,7 @@
  * simulation.
  */
 import type { RpgEvent, RpgMap, RpgPlayer, RpgPlayerRoom } from "@rpgjs/server";
-import type { Choice, PlayerPort, ScriptWorld, VariableValue } from "../game/impl";
+import { MAX_SCRIPT_EVENTS, type Choice, type EventOptions, type EventSnapshot, type MapPort, type PlayerPort, type ScriptWorld, type VariableValue } from "../game/impl";
 import type { SharedDecl } from "../core/interpreter";
 
 /** A value that RPGJS keeps in a signal is read by calling it. */
@@ -18,6 +18,53 @@ export const SHARED_PREFIX = "script_";
 const MAX_WAIT_SECONDS = 60;
 
 const isMap = (place: unknown): place is RpgMap => !!place && typeof (place as { setSync?: unknown }).setSync === "function";
+
+/** The events scripts made, by map: a script removes these and no other, and makes `MAX_SCRIPT_EVENTS` of them at most. */
+const madeByScripts = new WeakMap<object, Set<string>>();
+let eventCounter = 0;
+
+/** The map of a script, over the map of RPGJS: the events a script makes are real events that listen to the same signals. */
+function mapPortOf(map: RpgMap): MapPort {
+  const m = map as any;
+  const made = madeByScripts.get(map) ?? madeByScripts.set(map, new Set()).get(map)!;
+  const snapshot = (e: any): EventSnapshot => ({ id: String(e.id ?? ""), name: String(read(e.name) ?? ""), x: number(read(e.x)), y: number(read(e.y)) });
+  return {
+    get id() { return String(m.id ?? ""); },
+    async createDynamicEvent(o: EventOptions) {
+      if (made.size >= MAX_SCRIPT_EVENTS) throw new Error(`a script makes ${MAX_SCRIPT_EVENTS} events on a map at most`);
+      const id = o.id ?? `script-event-${Date.now().toString(36)}-${++eventCounter}`;
+      if (m.getEvent(id)) throw new Error(`an event "${id}" is already on the map`);
+      const definition = {
+        name: o.name ?? "",
+        onInit(this: any) {
+          this.name = o.name ?? "";
+          this.through = o.through ?? false;
+          if (o.graphic) this.setGraphic(o.graphic);
+        },
+      };
+      const created: string | undefined = await m.createDynamicEvent({ id, x: o.x, y: o.y, ...(o.hitbox ? { hitbox: o.hitbox } : {}), event: definition });
+      if (!created) throw new Error("the map did not make the event");
+      made.add(created);
+      return created;
+    },
+    getEvent(id) {
+      const event = m.getEvent(id);
+      return event ? snapshot(event) : undefined;
+    },
+    getEvents: () => (m.getEvents() as unknown[]).map(snapshot),
+    removeEvent(id) {
+      if (!made.has(id)) return false;
+      m.removeEvent(id);
+      made.delete(id);
+      return true;
+    },
+    getPlayers: () => (m.getPlayers() as any[]).map((p) => ({ id: String(p.id), name: String(read(p.name) ?? "") })),
+    getVariable: (key) => m.getVariable(key),
+    setVariable: (key, value: VariableValue) => m.setVariable(key, value),
+    hasVariable: (key) => !!m.hasVariable(key),
+    removeVariable: (key) => !!m.removeVariable(key),
+  };
+}
 
 /** What a room is, as a script sees it: `kind` is "map" for a map, otherwise the kind a gameplay room was registered with. */
 export function describeRoom(room: RpgPlayerRoom | RpgMap | null | undefined): { id: string; kind: string } {
@@ -143,6 +190,7 @@ export function createRpgjsWorld(options: RpgjsWorldOptions): ScriptWorld {
   return {
     player: playerPort,
     room: where,
+    ...(map ? { map: mapPortOf(map) } : {}),
     event: {
       get id() { return event?.id ?? ""; },
       get name() { return String(read((event as any)?.name) ?? ""); },

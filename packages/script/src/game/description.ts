@@ -40,6 +40,24 @@ export const GAME_API_DESCRIPTION: ApiDescription = {
         changeMap: { sig: "(map: string, positions?: { x: number; y: number }): void", doc: "Moves the player to a map, at a position when given." },
       },
     },
+    $map: {
+      doc: "The map the script runs in, with the names of RpgMap. It is not there in a room that is not a map: $room.kind says where the script runs.",
+      members: { id: { type: "string" } },
+      methods: {
+        createDynamicEvent: {
+          sig: "(event: { id?: string; x: number; y: number; name?: string; graphic?: string; hitbox?: { width: number; height: number }; through?: boolean }): string",
+          doc: "Creates an event on the map and gives its id. It is described by plain data and listens to the same signals as any event (event.action, event.touch). A script makes 50 events on a map at most.",
+        },
+        getEvent: { sig: "(id: string): { id: string; name: string; x: number; y: number } | undefined", doc: "A copy of an event of the map, or undefined." },
+        getEvents: { sig: "(): { id: string; name: string; x: number; y: number }[]", doc: "Copies of the events of the map." },
+        removeEvent: { sig: "(id: string): boolean", doc: "Removes an event that a script made. The events of the game are not removed: it gives false." },
+        getPlayers: { sig: "(): { id: string; name: string }[]", doc: "The players on the map." },
+        getVariable: { sig: `(key: string): ${VALUE} | undefined`, doc: "A variable of the map, shared by its players. What you read is read-only." },
+        setVariable: { sig: `(key: string, value: ${VALUE}): void`, doc: "Sets a variable of the map, with the same values as the variables of the player." },
+        hasVariable: { sig: "(key: string): boolean" },
+        removeVariable: { sig: "(key: string): boolean" },
+      },
+    },
     $room: {
       doc: "The room the script runs in: a map, or a gameplay room that is not a map.",
       members: { kind: { type: "string", doc: '"map" for a map, otherwise the kind the room was registered with.' }, id: { type: "string" } },

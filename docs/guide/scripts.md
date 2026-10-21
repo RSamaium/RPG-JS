@@ -125,6 +125,7 @@ A script uses the names of the API of RPGJS. `$player` is the player of the sign
 | `$player.showNotification(message, options?)` | a notification. Options: `type` (`info`, `warn`, `error`), `time` |
 | `$player.changeMap(map, { x, y }?)` | moves the player to a map |
 | `$room` | `kind` (`"map"` for a map, otherwise the kind of the gameplay room) and `id` of the room the script runs in |
+| `$map` | the map, with the names of `RpgMap`: `id`, `createDynamicEvent(options)`, `getEvent(id)`, `getEvents()`, `removeEvent(id)`, `getPlayers()`, and `getVariable`, `setVariable`, `hasVariable`, `removeVariable`. Only in a map (below) |
 | `$event` | `id`, `name`, `x`, `y` of the event the script runs for |
 | `$shared` | properties shared by the players of the map (below) |
 | `$hook` | the payload of the signal, as `$hook.map` (`e` is the same data) |
@@ -143,6 +144,32 @@ objects with the usual methods (`map`, `filter`, `find`, `reduce`, `includes`, `
 
 A script has a budget: steps, 100 iterations per loop, texts of 10 000 characters, lists and objects of 1 000 entries, call depth
 20, `$state` of 10 000 characters. A script that goes over is stopped, reported in the console, and the game goes on.
+
+### The map
+
+`$map` is the map the script runs in. In a room that is not a map it does not exist: using it is an error that says so, and
+`$room.kind === "map"` tells before.
+
+```js
+on("player.joinMap", () => {
+  if ($map.getEvent("well")) return;
+  $map.createDynamicEvent({ id: "well", x: 700, y: 450, name: "well", hitbox: { width: 50, height: 50 } });
+});
+
+on("event.action", { where: { "event.name": "well" } }, () => {
+  $player.showNotification($map.getPlayers().length + " player(s) on " + $map.id);
+});
+```
+
+- `createDynamicEvent` takes plain data: `id` (letters, digits, `_`, `.`, `-`), `x` and `y`, and optionally `name`, `graphic` (the id of
+  a graphic), `hitbox: { width, height }` and `through`. It gives the id. An event made this way is a real event of the map: it
+  listens to `event.action` and `event.touch` like the others. It has no look beyond its graphic.
+- A script makes **50 events on a map at most**, and an id that is already on the map is refused.
+- `getEvent` and `getEvents` give copies `{ id, name, x, y }` of the events of the map, the ones of the game too.
+- `removeEvent(id)` removes an event **a script made**; the events of the game stay and it gives `false`.
+- `getPlayers()` gives `{ id, name }` for the players on the map.
+- The variables of the map (`getVariable`, `setVariable`, `hasVariable`, `removeVariable`) are shared by its players and are
+  separate from the variables of a player. They hold the same plain values.
 
 ### Shared properties
 

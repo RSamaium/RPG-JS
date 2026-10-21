@@ -2,7 +2,7 @@
  * A game without the game: a player, an event and some shared state, enough to run a script and see what it did. Every operation
  * a script asks for is applied to in-memory state and recorded in `effects`, so a test can say what the script did.
  */
-import type { Choice, DialogOptions, ItemSnapshot, NotificationOptions, PlayerPort, ScriptWorld, VariableValue } from "../game/impl";
+import { MAX_SCRIPT_EVENTS, type Choice, type DialogOptions, type EventOptions, type EventSnapshot, type ItemSnapshot, type MapPort, type NotificationOptions, type PlayerPort, type PlayerSnapshot, type ScriptWorld, type VariableValue } from "../game/impl";
 
 /** The player of a simulation: the state of the player in memory, and what the script asked for recorded as it happens. */
 export class SimPlayer implements PlayerPort {
@@ -69,6 +69,42 @@ export class SimPlayer implements PlayerPort {
   }
 }
 
+/** The map of a simulation: events and variables in memory, with the rules of the real map (the events of the game stay, 50 events from scripts at most). */
+export class SimMap implements MapPort {
+  events = new Map<string, EventSnapshot>();
+  vars = new Map<string, unknown>();
+  private made = new Set<string>();
+  private counter = 0;
+  constructor(readonly id: string, private player: SimPlayer, private record: (effect: string, params: unknown) => void) {}
+
+  createDynamicEvent(options: EventOptions): string {
+    if (this.made.size >= MAX_SCRIPT_EVENTS) throw new Error(`a script makes ${MAX_SCRIPT_EVENTS} events on a map at most`);
+    const id = options.id ?? `script-event-${++this.counter}`;
+    if (this.events.has(id)) throw new Error(`an event "${id}" is already on the map`);
+    this.record("createDynamicEvent", options);
+    this.events.set(id, { id, name: options.name ?? "", x: options.x, y: options.y });
+    this.made.add(id);
+    return id;
+  }
+  getEvent(id: string): EventSnapshot | undefined {
+    const event = this.events.get(id);
+    return event ? { ...event } : undefined;
+  }
+  getEvents(): EventSnapshot[] { return [...this.events.values()].map((e) => ({ ...e })); }
+  removeEvent(id: string): boolean {
+    if (!this.made.has(id)) return false;
+    this.record("removeEvent", { id });
+    this.events.delete(id);
+    this.made.delete(id);
+    return true;
+  }
+  getPlayers(): PlayerSnapshot[] { return [{ id: "player_1", name: this.player.name }]; }
+  getVariable(key: string) { return this.vars.get(key); }
+  setVariable(key: string, value: VariableValue) { this.record("setMapVariable", { key, value }); this.vars.set(key, value); }
+  hasVariable(key: string) { return this.vars.has(key); }
+  removeVariable(key: string) { this.record("removeMapVariable", { key }); return this.vars.delete(key); }
+}
+
 /** Properties shared by the players of a map: in the game, map.setSync({ name: { $initial, $syncWithClient, $permanent } }). */
 export class SharedStore {
   values: Record<string, unknown> = {};
@@ -93,6 +129,8 @@ export interface WorldInit {
   choices?: number[];
   /** The room the script runs in (a map called `start` by default). */
   room?: { id?: string; kind?: string };
+  /** Events of the game that are on the map: scripts can read them, and cannot remove them. */
+  events?: { id: string; name?: string; x?: number; y?: number }[];
   /** The event the script runs for. */
   event?: { id?: string; name?: string; x?: number; y?: number };
   /** Answers `showChoices`, after any delay, instead of `choices`. */
@@ -113,6 +151,8 @@ export interface WorldInit {
 export class SimWorld implements ScriptWorld {
   player = new SimPlayer((name, params) => this.effects.push({ name, params }));
   room = { id: "start", kind: "map" };
+  /** The map, when the room is one. */
+  map?: SimMap;
   event = { id: "event_1", name: "", x: 5, y: 3 };
   state: Record<string, unknown> = {};
   hook: Record<string, unknown> = {};
@@ -135,6 +175,10 @@ export class SimWorld implements ScriptWorld {
     this.player.chooser = init.choose;
     Object.assign(this.event, init.event ?? {});
     Object.assign(this.room, init.room ?? {});
+    if (this.room.kind === "map") {
+      this.map = new SimMap(this.room.id, this.player, (name, params) => this.effects.push({ name, params }));
+      for (const e of init.events ?? []) this.map.events.set(e.id, { id: e.id, name: e.name ?? "", x: e.x ?? 0, y: e.y ?? 0 });
+    }
   }
 
   /** The properties shared by the players, as the game API sees them: every change is recorded as a `sync` effect. */
@@ -170,6 +214,7 @@ export class SimWorld implements ScriptWorld {
     return {
       player: { gold: this.player.gold, level: this.player.level, name: this.player.name, map: this.player.map, items: Object.fromEntries(this.player.items) },
       vars: Object.fromEntries(this.player.vars),
+      mapVars: Object.fromEntries(this.map?.vars ?? []),
       state: this.state,
       shared: this.shared.values,
     };

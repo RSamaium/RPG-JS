@@ -1,7 +1,7 @@
 import { describe, expectTypeOf, test } from "vitest";
 import type { Condition, ListenFilter, SignalDesc } from "./core/filter";
 import type { EmitReport } from "./core/signals";
-import type { Choice, ItemSnapshot, PlayerPort, ScriptWorld } from "./game/impl";
+import type { Choice, EventOptions, EventSnapshot, ItemSnapshot, MapPort, PlayerPort, ScriptWorld } from "./game/impl";
 import { provideScripts, ScriptService, signalBinding, type ScriptServiceOptions, type ScriptSource, type SignalBinding, type SignalContext } from "./server";
 import type { RpgPlayer } from "@rpgjs/server";
 import { checkScript, runTests, simulate, SimWorld, SharedStore, type CheckResult, type SimulateInput, type TestCase } from "./testing";
@@ -51,6 +51,13 @@ describe("the public API of @rpgjs/script", () => {
     expectTypeOf<PlayerPort["showChoices"]>().returns.toEqualTypeOf<Promise<Choice | null>>();
     expectTypeOf<PlayerPort["changeMap"]>().parameter(1).toEqualTypeOf<{ x: number; y: number } | undefined>();
     expectTypeOf<SimWorld>().toExtend<ScriptWorld>();
+  });
+
+  test("the map of a world is optional, and makes events described by plain data", () => {
+    expectTypeOf<ScriptWorld["map"]>().toEqualTypeOf<MapPort | undefined>();
+    expectTypeOf<{ x: number; y: number; name: string; hitbox: { width: number; height: number } }>().toExtend<EventOptions>();
+    expectTypeOf<{ x: number }>().not.toExtend<EventOptions>();
+    expectTypeOf<MapPort["getEvent"]>().returns.toEqualTypeOf<EventSnapshot | undefined>();
   });
 
   test("a hook of RPGJS becomes a signal with a binding, typed by the arguments of the hook", () => {

@@ -18,6 +18,32 @@ export interface Choice { text: string; value: string | number | boolean }
 export interface DialogOptions { position?: string; speaker?: string; fullWidth?: boolean; autoClose?: boolean; typewriterEffect?: boolean }
 export interface NotificationOptions { type?: string; time?: number }
 
+/** What a script gets of an event of the map: a copy, whose changes change nothing. */
+export interface EventSnapshot { id: string; name: string; x: number; y: number }
+/** What a script gets of a player of the map. */
+export interface PlayerSnapshot { id: string; name: string }
+/** An event a script makes, described by plain data: the game builds the real event. */
+export interface EventOptions { id?: string; x: number; y: number; name?: string; graphic?: string; hitbox?: { width: number; height: number }; through?: boolean }
+
+/** The most events scripts make on one map. */
+export const MAX_SCRIPT_EVENTS = 50;
+
+/** The map of the script, with the names of `RpgMap`. Not there when the room is not a map. */
+export interface MapPort {
+  readonly id: string;
+  /** Makes an event. Refuses an id that is taken and more than `MAX_SCRIPT_EVENTS` events made by scripts. Gives the id. */
+  createDynamicEvent(options: EventOptions): string | Promise<string>;
+  getEvent(id: string): EventSnapshot | undefined;
+  getEvents(): EventSnapshot[];
+  /** Removes an event a script made; the events of the game stay and it gives false. */
+  removeEvent(id: string): boolean | Promise<boolean>;
+  getPlayers(): PlayerSnapshot[];
+  getVariable(key: string): unknown;
+  setVariable(key: string, value: VariableValue): void | Promise<void>;
+  hasVariable(key: string): boolean;
+  removeVariable(key: string): boolean | Promise<boolean>;
+}
+
 /** The player of the script, with the names of `RpgPlayer`. Every change is the engine's to apply. */
 export interface PlayerPort {
   /** Never goes below 0. */
@@ -46,6 +72,8 @@ export interface ScriptWorld {
   player: PlayerPort;
   /** The room the script runs in: `kind` is "map" for a map, otherwise the kind of the gameplay room. */
   room: { id: string; kind: string };
+  /** The map, when the room is one. */
+  map?: MapPort;
   event: { id: string; name: string; x: number; y: number };
   /** Pauses the script. */
   wait(seconds: number): void | Promise<void>;
@@ -90,6 +118,32 @@ function plain(value: unknown, depth = 0): VariableValue {
   if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, plain(v, depth + 1)]));
   throw new Error("a variable holds a text, a number, true/false, null, or plain data; use removeVariable() to remove one");
 }
+const EVENT_KEYS = ["id", "x", "y", "name", "graphic", "hitbox", "through"];
+const EVENT_ID = /^[A-Za-z0-9_.-]{1,100}$/;
+const COORDINATE = 100_000;
+/** What a script describes of an event, checked: plain data, and nothing the game does not know. */
+function eventOptions(o: unknown): EventOptions {
+  const x = opts(o);
+  for (const k of Object.keys(x)) if (!EVENT_KEYS.includes(k)) throw new Error(`an event is described by plain data: ${EVENT_KEYS.join(", ")} (not "${k}")`);
+  const inRange = (v: unknown) => typeof v === "number" && Number.isFinite(v) && Math.abs(v) <= COORDINATE;
+  if (!inRange(x.x) || !inRange(x.y)) throw new Error(`x and y are numbers between -${COORDINATE} and ${COORDINATE}`);
+  const out: EventOptions = { x: x.x, y: x.y };
+  if (x.id !== undefined) { if (typeof x.id !== "string" || !EVENT_ID.test(x.id)) throw new Error("an event id is 1 to 100 letters, digits, _ . or -"); out.id = x.id; }
+  if (x.name !== undefined) out.name = text(x.name, "name");
+  if (x.graphic !== undefined) { if (typeof x.graphic !== "string" || x.graphic.length > 200) throw new Error("graphic is the id of a graphic, a text of 200 characters at most"); out.graphic = x.graphic; }
+  if (x.hitbox !== undefined) {
+    const h = opts(x.hitbox);
+    const size = (v: unknown) => typeof v === "number" && Number.isFinite(v) && v >= 1 && v <= 2000;
+    if (!size(h.width) || !size(h.height)) throw new Error("hitbox is { width, height }, two numbers from 1 to 2000");
+    out.hitbox = { width: h.width, height: h.height };
+  }
+  if (x.through !== undefined) out.through = Boolean(x.through);
+  return out;
+}
+const mapOf = (w: ScriptWorld): MapPort => {
+  if (!w.map) throw new Error("this script does not run in a map but in a room that is not a map: $room.kind says where it runs");
+  return w.map;
+};
 const dialogOptions = (o: unknown): DialogOptions => {
   const x = opts(o), out: DialogOptions = {};
   if (x.position !== undefined) { if (!POSITIONS.includes(x.position)) throw new Error(`position is ${POSITIONS.join(", ")}`); out.position = x.position; }
@@ -152,6 +206,24 @@ export const GAME_API_IMPL: ApiImpl<ScriptWorld> = {
           if (!Number.isFinite(x) || !Number.isFinite(y)) throw new Error("positions is { x, y }, two numbers");
           return w.player.changeMap(map, { x, y });
         },
+      },
+    },
+    $map: {
+      members: { id: { read: (w) => mapOf(w).id } },
+      methods: {
+        createDynamicEvent: (w, [o]) => mapOf(w).createDynamicEvent(eventOptions(o)),
+        getEvent: (w, [id]) => mapOf(w).getEvent(text(id, "an event id")),
+        getEvents: (w) => mapOf(w).getEvents(),
+        removeEvent: (w, [id]) => mapOf(w).removeEvent(text(id, "an event id")),
+        getPlayers: (w) => mapOf(w).getPlayers(),
+        getVariable: (w, [k]) => mapOf(w).getVariable(key(k)),
+        setVariable: (w, [k, v]) => {
+          const value = plain(v);
+          if (JSON.stringify(value).length > MAX_VARIABLE_JSON) throw new Error(`a variable holds ${MAX_VARIABLE_JSON} characters at most`);
+          return mapOf(w).setVariable(key(k), value);
+        },
+        hasVariable: (w, [k]) => mapOf(w).hasVariable(key(k)),
+        removeVariable: (w, [k]) => mapOf(w).removeVariable(key(k)),
       },
     },
     $room: { members: { kind: { read: (w) => w.room.kind }, id: { read: (w) => w.room.id } } },

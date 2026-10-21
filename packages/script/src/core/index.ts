@@ -14,6 +14,11 @@ export { GAME_SIGNALS } from "../game/signals";
 export {
   GAME_API_IMPL,
   type Choice,
+  type EventOptions,
+  type EventSnapshot,
+  MAX_SCRIPT_EVENTS,
+  type MapPort,
+  type PlayerSnapshot,
   type DialogOptions,
   type ItemSnapshot,
   type NotificationOptions,
