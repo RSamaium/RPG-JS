@@ -66,7 +66,7 @@ export const GAME_API_DESCRIPTION: ApiDescription = {
       sig: '(message: string, options?: { type?: "info" | "warn" | "error"; time?: number }): void',
       doc: "Show a notification (show_notification block).",
     },
-    choice: { sig: "(options: string[]): number", doc: "Ask the player to pick one option (2 to 4). Returns the index. The script waits for the answer." },
+    choice: { sig: "(options: string[]): number", doc: "Ask the player to pick one option (2 to 4). Returns the index, or -1 when the player closes the choice. The script waits for the answer." },
     wait: { sig: "(seconds: number): void", doc: "Pause the script (not slept in a simulation)." },
     transfer: {
       sig: '(map: string, x: number, y: number, options?: { direction?: "up" | "down" | "left" | "right" }): void',

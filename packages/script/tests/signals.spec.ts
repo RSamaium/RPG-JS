@@ -150,8 +150,8 @@ describe("the registry of listeners", () => {
     const said: string[] = [];
     const report = await r.emit(signal, payload, (id) => {
       const world = new SimWorld(init);
-      const perform = world.perform.bind(world);
-      world.perform = async (block, params: any) => { if (block === "show_notification") said.push(`${id}:${params.message}`); return perform(block, params); };
+      const notify = world.notify.bind(world);
+      world.notify = async (message, options) => { said.push(`${id}:${message}`); return notify(message, options); };
       return world;
     });
     return { said, report };

@@ -6,4 +6,4 @@
  * - `@rpgjs/script/parse` turns the text of a script into the tree the interpreter walks.
  * - `@rpgjs/script/testing` checks, simulates and tests scripts without the game.
  */
-export type { ScriptWorld } from "./game/impl";
+export type { ScriptWorld, PlayerPort } from "./game/impl";

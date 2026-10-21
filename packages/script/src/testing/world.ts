@@ -2,9 +2,12 @@
  * A game without the game: a player, an event and some shared state, enough to run a script and see what it did. Every operation
  * a script asks for is applied to in-memory state and recorded in `effects`, so a test can say what the script did.
  */
-import type { ScriptWorld } from "../game/impl";
+import type { GoldOperation, PlayerPort, ScriptWorld, VariableOperation } from "../game/impl";
 
-export class SimPlayer {
+const num = (v: unknown, fallback = 0) => (typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" && !Number.isNaN(Number(v)) ? Number(v) : fallback);
+
+/** The player of a simulation: the state of the player in memory, and what the script asked for recorded as it happens. */
+export class SimPlayer implements PlayerPort {
   gold = 100;
   level = 3;
   name = "Hero";
@@ -14,9 +17,47 @@ export class SimPlayer {
   vars = new Map<string, unknown>();
   texts: string[] = [];
   notes: string[] = [];
+  /** Id of the event of the script, which names its self switches. */
+  eventId = "event_1";
+  constructor(private record: (effect: string, params: unknown) => void = () => {}) {}
   itemCount(id: string) { return this.items.get(id) ?? 0; }
   getVariable(id: string) { return this.vars.get(id); }
   setVariable(id: string, v: unknown) { this.vars.set(id, v); }
+
+  changeGold(operation: GoldOperation, amount: number) {
+    this.record("change_gold", { type: "constant", operation, amount });
+    if (operation === "set") this.gold = amount;
+    else if (operation === "add") this.gold += amount;
+    else if (operation === "sub") this.gold = Math.max(0, this.gold - amount);
+    else if (operation === "mul") this.gold *= amount;
+  }
+  addItem(id: string, count: number) {
+    this.record("change_item", { itemId: id, operation: "add", amountType: "constant", amount: count });
+    this.items.set(id, this.itemCount(id) + count);
+  }
+  removeItem(id: string, count: number) {
+    this.record("change_item", { itemId: id, operation: "remove", amountType: "constant", amount: count });
+    this.items.set(id, Math.max(0, this.itemCount(id) - count));
+  }
+  setSwitch(name: string, value: boolean) {
+    this.record("set_switch", { switchName: name, value });
+    this.vars.set(name, value);
+  }
+  setSelfSwitch(letter: string, value: boolean) {
+    this.record("self_switch", { switchName: letter, value });
+    this.vars.set(this.eventId + "_" + letter, value);
+  }
+  changeVariable(name: string, operation: VariableOperation, value: number) {
+    this.record("set_variable", { variableId: name, operation, valueSource: "constant", value: String(value) });
+    const current = num(this.vars.get(name));
+    const next: Record<VariableOperation, number> = { set: value, add: current + value, subtract: current - value, multiply: current * value, divide: current / value, modulo: current % value };
+    this.vars.set(name, next[operation]);
+  }
+  transfer(map: string, x: number, y: number, direction?: string) {
+    this.record("transfer_player", { destination: { mapId: map, x, y }, ...(direction ? { direction } : {}) });
+    this.map = map;
+    this.pos = { x, y };
+  }
 }
 
 /** Properties shared by the players of a map: in the game, map.setSync({ name: { $initial, $syncWithClient, $permanent } }). */
@@ -44,10 +85,8 @@ export interface WorldInit {
   choice?: (options: string[]) => Promise<number>;
 }
 
-const num = (v: unknown, fallback = 0) => (typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" && !Number.isNaN(Number(v)) ? Number(v) : fallback);
-
 export class SimWorld implements ScriptWorld {
-  player = new SimPlayer();
+  player = new SimPlayer((block, params) => this.effects.push({ block, params }));
   event = { id: "event_1", x: 5, y: 3 };
   state: Record<string, unknown> = {};
   hook: Record<string, unknown> = {};
@@ -69,6 +108,7 @@ export class SimWorld implements ScriptWorld {
     this.choiceFn = init.choice;
     this.dice = [...(init.dice ?? [])];
     this.answers = [...(init.choices ?? [])];
+    this.player.eventId = this.event.id;
   }
 
   /** The properties shared by the players, as the game API sees them: every change is recorded as a `sync` effect. */
@@ -83,37 +123,18 @@ export class SimWorld implements ScriptWorld {
     set: (key, value) => { this.effects.push({ block: "state", params: { key } }); this.state[key] = value; },
   };
 
-  async perform(block: string, params: any) {
-    this.effects.push({ block, params });
-    const p = this.player;
-    switch (block) {
-      case "change_gold": {
-        const amount = num(params.amount);
-        if (params.operation === "set") p.gold = amount;
-        else if (params.operation === "add") p.gold += amount;
-        else if (params.operation === "sub") p.gold = Math.max(0, p.gold - amount);
-        else if (params.operation === "mul") p.gold *= amount;
-        break;
-      }
-      case "change_item": {
-        const amount = num(params.amount, 1);
-        if (params.operation === "add") p.items.set(params.itemId, p.itemCount(params.itemId) + amount);
-        else p.items.set(params.itemId, Math.max(0, p.itemCount(params.itemId) - amount));
-        break;
-      }
-      case "set_switch": p.setVariable(params.switchName, params.value); break;
-      case "self_switch": p.setVariable(this.event.id + "_" + params.switchName, params.value); break;
-      case "set_variable": {
-        const current = num(p.getVariable(params.variableId));
-        const value = num(params.value);
-        const next: Record<string, number> = { set: value, add: current + value, subtract: current - value, multiply: current * value, divide: current / value, modulo: current % value };
-        p.setVariable(params.variableId, next[params.operation]);
-        break;
-      }
-      case "show_text": p.texts.push(params.text); break;
-      case "show_notification": p.notes.push(params.message); break;
-      case "transfer_player": p.map = params.destination.mapId; p.pos = { x: params.destination.x, y: params.destination.y }; break;
-    }
+  async say(text: string, options: { speaker?: string; position?: string } = {}) {
+    this.effects.push({ block: "show_text", params: { text, ...options } });
+    this.player.texts.push(text);
+  }
+
+  async notify(message: string, options: { type?: string; time?: number } = {}) {
+    this.effects.push({ block: "show_notification", params: { message, ...options } });
+    this.player.notes.push(message);
+  }
+
+  async wait(seconds: number) {
+    this.effects.push({ block: "wait", params: { duration: seconds } });
   }
 
   rand(min: number, max: number) {
