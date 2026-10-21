@@ -99,7 +99,7 @@ describe("on(signal, filter, handler)", () => {
   });
 
   it("accepts any signal name when the API declares no signal", () => {
-    expect(errorOf(`on("anything", () => {});`, GAME_API_DESCRIPTION)).toBe("");
+    expect(errorOf(`on("anything", () => {});`, { ...GAME_API_DESCRIPTION, signals: undefined })).toBe("");
   });
 
   it("refuses a payload field the signal does not have, and says which it has", () => {
@@ -241,8 +241,8 @@ describe("the registry of listeners", () => {
 
 describe("the tools that write a script", () => {
   const SOURCE = `
-    on("skill.cast", { where: { "skill.tags": { has: "fire" } } }, (e) => { $player.gold += e.power; });
-    on("skill.cast", { where: { "skill.tags": { has: "ice" } } }, () => { $player.gold = 0; });
+    on("player.levelUp", { where: { gained: { gte: 2 } } }, (e) => { $player.gold += e.gained; });
+    on("player.levelUp", { where: { gained: { lt: 2 } } }, () => { $player.gold = 0; });
   `;
 
   it("tell what a script listens to, with the filter of each listener", () => {
@@ -250,16 +250,23 @@ describe("the tools that write a script", () => {
 
     expect(check.ok).toBe(true);
     expect(check.listeners).toEqual([
-      { signal: "skill.cast", filter: { where: { "skill.tags": { has: "fire" } } } },
-      { signal: "skill.cast", filter: { where: { "skill.tags": { has: "ice" } } } },
+      { signal: "player.levelUp", filter: { where: { gained: { gte: 2 } } } },
+      { signal: "player.levelUp", filter: { where: { gained: { lt: 2 } } } },
     ]);
   });
 
   it("simulate a signal, and say which listeners it reached", async () => {
-    const result = await simulate({ source: SOURCE, emit: { signal: "skill.cast", payload: { skill: { id: "fireball", tags: ["fire"] }, power: 7 } }, world: { player: { gold: 10 } } });
+    const result = await simulate({ source: SOURCE, emit: { signal: "player.levelUp", payload: { gained: 3 } }, world: { player: { gold: 10 } } });
 
     expect(result.ok).toBe(true);
-    expect(result.state?.player.gold).toBe(17);
+    expect(result.state?.player.gold).toBe(13);
     expect(result.listeners?.map((l) => [l.matched, l.ran])).toEqual([[true, true], [false, false]]);
+  });
+
+  it("refuse a signal the game does not have, and list the ones it has", () => {
+    const check = checkScript(`on("enemy.killed", () => {});`);
+
+    expect(check.ok).toBe(false);
+    expect(check.diagnostics[0].message).toMatch(/unknown signal "enemy.killed".*event.action, event.touch, player.dead/);
   });
 });

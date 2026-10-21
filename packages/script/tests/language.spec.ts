@@ -216,12 +216,12 @@ test("check_script: syntax errors, catalog references, permissions", () => {
   const c = checkScript(`export function f() { $player.addItem(Item("potoin")); $player.gold += 1; $switch.x = true; return $var.visits; }`, { item: ["potion"] });
   expect(c.ok).toBe(false);
   expect(c.diagnostics[0].message).toBe('unknown item "potoin"');
-  const ok = checkScript(`export function f() { $player.addItem(Item("potion")); $player.gold += 1; $switch.x = true; return $var.visits; }\non("item_added", () => { notify("hi"); });`, { item: ["potion"] });
+  const ok = checkScript(`export function f() { $player.addItem(Item("potion")); $player.gold += 1; $switch.x = true; return $var.visits; }\non("player.levelUp", () => { notify("hi"); });`, { item: ["potion"] });
   expect(ok.ok).toBe(true);
   expect(ok.permissions).toEqual(["player.addItem", "player.gold", "switch.*", "var.*"]);
   expect(ok.refs).toEqual([{ function: "Item", id: "potion", line: 1 }]);
   expect(ok.exports).toEqual(["f"]);
-  expect(ok.handlers).toEqual(["item_added"]);
+  expect(ok.handlers).toEqual(["player.levelUp"]);
 });
 
 test("describe_api lists what exists, as TypeScript declarations", () => {
@@ -425,8 +425,8 @@ test("coverage: the lines no test has executed are reported, by function", async
   const ok = await sim2({ source: SELL, call: { fn: "vendre", args: ["potion"] }, world: { player: { items: { potion: 1 } } } });
   expect(ok.value).toBe(false);
   expect(ok.uncovered).toEqual({ vendre: "5-6" });         // the bug is visible: the sale stops at line 4
-  const handlers = await sim2({ source: `on("enemy_killed", () => {\n  if ($hook.enemy === "loup") {\n    notify("loup");\n  }\n});`, fire: "enemy_killed", world: { hook: { enemy: "autre" } } });
-  expect(handlers.uncovered).toEqual({ "on:enemy_killed": "3" });
+  const handlers = await sim2({ source: `on("player.joinMap", () => {\n  if ($hook.map === "cave") {\n    notify("cave");\n  }\n});`, fire: "player.joinMap", world: { hook: { map: "town" } } });
+  expect(handlers.uncovered).toEqual({ "on:player.joinMap": "3" });
 });
 
 test("tests as data: expectations, ranges, failures that say what differed, union coverage", async () => {

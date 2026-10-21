@@ -6,14 +6,14 @@ game (a player levels up, an event is activated…) and reacts.
 
 This package is under construction. Today it holds the interpreter, the registry of listeners, the API of scripts (`$player`, `$event`, `$switch`, `$var`,
 `$shared`, `$state`, `say`, `notify`, `choice`, `transfer`, `random`…) and the tools to check, simulate and test a script in an
-in-memory world. The server plugin that connects the registry to the hooks of RPGJS is added next.
+in-memory world. `provideScripts` connects the registry to the hooks of RPGJS.
 
 | Entry | Role |
 | --- | --- |
 | `@rpgjs/script/core` | the interpreter and the API of scripts, with no dependency on the engine: runs in Node, a Worker and a browser |
 | `@rpgjs/script/parse` | the text of a script to the tree the interpreter walks (`parseScript`) |
 | `@rpgjs/script/testing` | check, simulate and test scripts without the game |
-| `@rpgjs/script/server` | `createRpgjsWorld`: the world of a script on a real RPGJS player, event and map (the plugin that binds the hooks is not there yet) |
+| `@rpgjs/script/server` | `provideScripts` plugs scripts into the server of a game and binds the hooks of RPGJS to signals; `ScriptService` installs and emits; `createRpgjsWorld` is the world of a script on a real player, event and map |
 
 ```ts
 import { parseScript } from "@rpgjs/script/parse";
@@ -57,3 +57,31 @@ an item, show a text, ask a choice. Each environment says how:
   loses nothing when a script removes it; the gold never goes below 0.
 - `SimWorld` (`@rpgjs/script/testing`) does it in memory and records every effect, so a test can say what a script did.
 - A host with its own vocabulary (a block editor, for example) maps each operation to it.
+
+## Plug it into a game
+
+```ts
+import { provideScripts } from "@rpgjs/script/server";
+import { createServer, provideServerModules } from "@rpgjs/server";
+
+export default createServer({
+  providers: [
+    provideScripts({
+      scripts: [{ id: "chests", source: `on("event.action", { where: { "event.name": "chest" } }, () => { $player.gold += 10; });` }],
+    }),
+    provideServerModules([]),
+  ],
+});
+```
+
+A script is refused when it does not parse, uses what does not exist, or listens to a signal the game does not have: the reason is
+logged (`service.errors` keeps it) and the other scripts run. A script that fails at run time is stopped by its budgets (steps,
+loops, call depth, sizes), reported, and the game goes on. Pass a `ScriptService` to `provideScripts` to install and uninstall
+scripts while the game runs, and give `signals` to add the signals of a plugin: `service.emit(signal, payload, { player, map })`.
+
+| Signal | Emitted by | Payload |
+| --- | --- | --- |
+| `player.joinMap` / `player.leaveMap` | `onJoinMap` / `onLeaveMap` of the player | `map` |
+| `player.levelUp` | `onLevelUp` | `gained`. While it runs, `$player.level` is still the level before the gain |
+| `player.dead` | `onDead` | |
+| `event.action` / `event.touch` | `onAction` / `onPlayerTouch` of every event | `event.id`, `event.name` |

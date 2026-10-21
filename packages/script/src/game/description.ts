@@ -4,8 +4,10 @@
  * (`ApiImpl`), and `missingImplementations` checks that they cover exactly this list.
  */
 import type { ApiDescription } from "../core/api";
+import { GAME_SIGNALS } from "./signals";
 
 export const GAME_API_DESCRIPTION: ApiDescription = {
+  signals: GAME_SIGNALS,
   handles: {
     $player: {
       doc: "The player who triggered the script.",
