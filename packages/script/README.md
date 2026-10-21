@@ -4,9 +4,9 @@ Sandboxed scripts for RPGJS v5. A script is text in a JavaScript subset; it is r
 JavaScript, so a script can only use what the game exposes. A script does not call the game: it **listens** to the signals of the
 game (a player levels up, an event is activated…) and reacts.
 
-This package is under construction. Today it holds the interpreter, the API of scripts (`$player`, `$event`, `$switch`, `$var`,
+This package is under construction. Today it holds the interpreter, the registry of listeners, the API of scripts (`$player`, `$event`, `$switch`, `$var`,
 `$shared`, `$state`, `say`, `notify`, `choice`, `transfer`, `random`…) and the tools to check, simulate and test a script in an
-in-memory world. The signals, the filters and the server plugin that connects them to the hooks of RPGJS are added next.
+in-memory world. The server plugin that connects the registry to the hooks of RPGJS is added next.
 
 | Entry | Role |
 | --- | --- |
@@ -23,3 +23,26 @@ const source = "export function f() { $player.gold += 5; return $player.gold; }"
 const result = await simulate({ source, call: { fn: "f" }, world: { player: { gold: 10 } } });
 // result.value === 15, result.effects lists what the script did
 ```
+
+## Listening to a signal
+
+A script listens with `on(signal, filter?, handler)`. The handler receives the payload of the signal, which it can read and
+cannot change: listeners **observe**, they never refuse or modify what happened. They run in the order the scripts were installed.
+
+```js
+on("skill.cast", { where: { "skill.tags": { has: "fire" }, power: { gte: 5 } }, when: [{ switch: "tournament" }] }, (e) => {
+  $player.gold += e.power;
+});
+```
+
+The filter is plain data, never computed, so who listens to what is known before anything runs:
+
+- `where`: conditions on the payload, by dotted path. A value alone means equal; operators are `eq`, `ne`, `gt`, `gte`, `lt`,
+  `lte`, `in: [...]`, `has: value` (the field is a list that contains it) and `exists: true | false`. All must hold.
+- `when`: conditions on the player, a list that must all hold: `{ switch, is? }`, `{ variable, <comparison> }`,
+  `{ item, <comparison> }` (the player has it, by default) and `{ stat: "gold" | "level", <comparison> }`.
+
+An API that declares its signals (`signals` of the `ApiDescription`) makes the compiler refuse an unknown signal and a path that is
+not in its payload, and says what is available. `SignalRegistry` (`@rpgjs/script/core`) installs, uninstalls and emits;
+`simulate({ source, emit: { signal, payload } })` (`@rpgjs/script/testing`) says which listeners a signal reached and why the
+others did not run.

@@ -7,5 +7,7 @@
  */
 export * from "./interpreter";
 export * from "./api";
+export * from "./filter";
+export * from "./signals";
 export { GAME_API_DESCRIPTION } from "../game/description";
 export { GAME_API_IMPL, type ScriptWorld } from "../game/impl";

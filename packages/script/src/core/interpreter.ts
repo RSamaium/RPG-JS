@@ -2,11 +2,13 @@
  * Whitelist compiler and interpreter for a JavaScript subset.
  *
  * A tree (produced elsewhere, with acorn: see `../parse.ts`) goes in, closures come out. Nothing is ever eval'd.
- * This file is pure TypeScript with no import and no Node API: it runs in Node, in a browser and in a Cloudflare Worker /
+ * This file is pure TypeScript with no import but `./filter` (itself pure) and no Node API: it runs in Node, in a browser and in a Cloudflare Worker /
  * Durable Object. The parser is deliberately not part of it, so that code that only runs trees does not carry it.
  *
  * What a script can touch is described once, as data, in `api.ts`; what it does is supplied by the environment.
  */
+
+import { validateFilter, type ListenFilter, type SignalDesc } from "./filter";
 
 export type AstNode = { type: string; loc?: { start: { line: number } }; [key: string]: any };
 
@@ -46,6 +48,8 @@ export interface ApiInfo {
   handles: Record<string, { dynamic?: boolean; declared?: boolean; members: string[]; methods: string[]; voidMethods?: string[] }>;
   functions: Record<string, { ref?: string; void?: boolean }>;
   catalog?: Record<string, string[]>; // ref type -> known ids
+  /** The signals the game emits. When given, `on("signal", ...)` only accepts these, and checks the paths of its filter. */
+  signals?: Record<string, SignalDesc>;
 }
 
 export interface SharedDecl { name: string; initial: string | number | boolean | null; client: boolean; persist: boolean }
@@ -195,10 +199,13 @@ const STRING: Record<string, Method> = {
 };
 
 // ------------------------------------------------------------------ program and execution
+/** A listener declared with `on(signal, filter?, handler)`. */
+export interface Handler { event: string; filter?: ListenFilter; fn: ScriptFn }
+
 export class Program {
   fns = new Map<string, ScriptFn>();
   exported = new Set<string>();
-  handlers: { event: string; fn: ScriptFn }[] = [];
+  handlers: Handler[] = [];
   events: EventDecl[] = [];
   shared: SharedDecl[] = [];
   permissions = new Set<string>();
@@ -227,8 +234,13 @@ export class Program {
     const value = await callScript(fn, args, run);
     return { value, steps: run.steps };
   }
-  async fire(event: string, host: Host, limits: Limits, cover?: Set<number>) {
-    for (const h of this.handlers.filter((x) => x.event === event)) await callScript(h.fn, [], { steps: 0, depth: 0, limits, host, program: this, covered: cover });
+  /** Runs the handlers of a signal, whatever their filter says (a registry applies the filters: see `SignalRegistry`). */
+  async fire(event: string, host: Host, limits: Limits, cover?: Set<number>, payload?: unknown) {
+    for (const h of this.handlers.filter((x) => x.event === event)) await this.run(h, payload === undefined ? [] : [payload], host, limits, cover);
+  }
+  /** Runs one handler with its arguments (the payload of the signal). */
+  async run(handler: Handler, args: unknown[], host: Host, limits: Limits, cover?: Set<number>) {
+    await callScript(handler.fn, args, { steps: 0, depth: 0, limits, host, program: this, covered: cover });
   }
   /** The page shown: the last whose condition holds (a page without condition always holds). */
   async pageIndex(eventIndex: number, host: Host, limits: Limits, cover?: Set<number>): Promise<number> {
@@ -739,6 +751,23 @@ export function compileProgram(ast: AstNode, hostGlobalNames: string[], api?: Ap
     if (!n || n.type !== "Literal") return fail(`${what} must be a plain value`, n ?? ast);
     return n.value;
   };
+  /** A value written as plain data: texts, numbers, true/false/null, lists and objects of those. Nothing computed. */
+  const dataOf = (n: AstNode, what: string): unknown => {
+    if (n.type === "Literal") return n.value;
+    if (n.type === "UnaryExpression" && n.operator === "-" && n.argument.type === "Literal" && typeof n.argument.value === "number") return -n.argument.value;
+    if (n.type === "ArrayExpression") return n.elements.map((e: AstNode) => (e ? dataOf(e, what) : fail(`${what} cannot have an empty slot`, n)));
+    if (n.type === "ObjectExpression") {
+      const out: Record<string, unknown> = {};
+      for (const p of n.properties as AstNode[]) {
+        if (p.type !== "Property" || p.computed || p.kind !== "init" || p.method) return fail(`${what} must be plain data: { key: value }`, p);
+        const key = p.key.type === "Identifier" ? p.key.name : String(p.key.value);
+        if (DENIED.has(key)) return fail(`"${key}" is not allowed as a key in ${what}`, p);
+        out[key] = dataOf(p.value, what);
+      }
+      return out;
+    }
+    return fail(`${what} must be plain data (texts, numbers, true/false, lists and objects), nothing computed`, n);
+  };
   const prop = (o: AstNode, key: string) => o.properties.find((p: AstNode) => p.type === "Property" && !p.computed && (p.key.name === key || p.key.value === key))?.value as AstNode | undefined;
   const asFn = (n: AstNode, name: string): ScriptFn => {
     if (n.type === "ArrowFunctionExpression") return compileFn(n, name);
@@ -812,9 +841,20 @@ export function compileProgram(ast: AstNode, hostGlobalNames: string[], api?: Ap
     else if (n.type === "VariableDeclaration" && n.declarations.length === 1 && n.declarations[0].init?.type === "CallExpression" && n.declarations[0].init.callee.name === "event") eventDecl(n.declarations[0].init);
     else if (n.type === "ExpressionStatement" && n.expression.type === "CallExpression" && n.expression.callee.name === "event") eventDecl(n.expression);
     else if (n.type === "ExpressionStatement" && n.expression.type === "CallExpression" && n.expression.callee.name === "on") {
-      const [ev, fn] = n.expression.arguments;
-      if (ev?.type !== "Literal" || typeof ev.value !== "string" || !fn) fail('write: on("event", () => { ... })', n);
-      program.handlers.push({ event: ev.value, fn: asFn(fn, `on:${ev.value}`) });
+      const args = n.expression.arguments as AstNode[];
+      const [ev] = args;
+      const fn = args.length === 3 ? args[2] : args[1];
+      if (args.length < 2 || args.length > 3 || ev?.type !== "Literal" || typeof ev.value !== "string" || !fn) fail('write: on("signal", () => { ... }) or on("signal", { where, when }, (e) => { ... })', n);
+      const signal = api?.signals?.[ev.value];
+      if (api?.signals && !signal) fail(`unknown signal "${ev.value}". Available: ${Object.keys(api.signals).sort().join(", ")}`, ev);
+      let filter: ListenFilter | undefined;
+      if (args.length === 3) {
+        if (args[1].type !== "ObjectExpression") fail('the filter of a listener is an object: { where: { ... }, when: [ ... ] }', args[1]);
+        filter = dataOf(args[1], "a filter") as ListenFilter;
+        const problem = validateFilter(filter, signal ? { ...signal, name: ev.value } : undefined);
+        if (problem) fail(problem, args[1]);
+      }
+      program.handlers.push({ event: ev.value, filter, fn: asFn(fn, `on:${ev.value}`) });
     } else if (n.type === "VariableDeclaration" && n.kind === "const" && n.declarations.every((d: AstNode) => d.id.type === "Identifier" && d.init && (d.init.type === "Literal" || d.init.type === "ArrayExpression" || d.init.type === "ObjectExpression" || d.init.type === "ArrowFunctionExpression"))) {
       for (const d of n.declarations) topConsts.push({ name: d.id.name, init: d.init });
     } else fail(`"${n.type}" is not available at the top level (functions, const data, event(...) and on(...))`, n);

@@ -3,6 +3,8 @@
  * They run against the in-memory world of `./world` and cost nothing but compute.
  */
 import { compileProgram, CompileError, CompileErrors, type Limits, type Program } from "../core/interpreter";
+import type { ListenFilter } from "../core/filter";
+import { SignalRegistry, type ListenerReport } from "../core/signals";
 import { apiInfo, describeApi, globalNames, hostFromApi } from "../core/api";
 import { GAME_API_DESCRIPTION } from "../game/description";
 import { GAME_API_IMPL } from "../game/impl";
@@ -15,6 +17,8 @@ export interface CheckResult {
   diagnostics: Diagnostic[];
   exports: string[];
   handlers: string[];
+  /** What the script listens to: the signal and the filter of each listener. */
+  listeners: { signal: string; filter?: ListenFilter }[];
   events: { name?: string; pages: number }[];
   refs: { function: string; id: string; line: number }[];
   permissions: string[];
@@ -25,7 +29,7 @@ const strip = (m: string) => m.replace(/^line \S+: /, "");
 
 export interface CheckOptions { requiredExports?: string[] }
 export function checkScript(source: string, catalog?: Record<string, string[]>, options: CheckOptions = {}): CheckResult {
-  const empty = { exports: [], handlers: [], events: [], refs: [], permissions: [], shared: [] as CheckResult["shared"] };
+  const empty = { exports: [], handlers: [], listeners: [], events: [], refs: [], permissions: [], shared: [] as CheckResult["shared"] };
   let ast;
   try { ast = parseScript(source); } catch (e: any) {
     return { ok: false, diagnostics: [{ line: e.loc?.line ?? 0, message: `syntax error: ${strip(String(e.message))}` }], ...empty };
@@ -37,6 +41,7 @@ export function checkScript(source: string, catalog?: Record<string, string[]>, 
     return {
       ok: true, diagnostics: [], program,
       exports: [...program.exported], handlers: program.handlers.map((h) => h.event),
+      listeners: program.handlers.map((h) => ({ signal: h.event, filter: h.filter })),
       events: program.events.map((e) => ({ name: e.name, pages: e.pages.length })),
       refs: program.refs, permissions: [...program.permissions].sort(), shared: program.shared,
     };
@@ -51,6 +56,8 @@ export interface RunSpec {
   call?: { fn: string; args?: unknown[] };
   event?: number;
   fire?: string;
+  /** Emits a signal as the game would: only the listeners whose filter holds run, and the result says which. */
+  emit?: { signal: string; payload?: unknown };
   world?: WorldInit & Record<string, any>;
   limits?: Limits;
 }
@@ -61,6 +68,8 @@ export interface SimulateResult {
   value?: unknown;
   page?: number;
   steps?: number;
+  /** With `emit`: what happened to each listener. */
+  listeners?: ListenerReport[];
   effects: { block: string; params: unknown }[];
   state?: ReturnType<SimWorld["snapshot"]>;
   error?: string;
@@ -86,6 +95,13 @@ async function execute(program: Program, spec: RunSpec, cover: Set<number>): Pro
     if (spec.call) ({ value, steps } = await program.call(spec.call.fn, spec.call.args ?? [], host, limits, cover));
     else if (spec.event !== undefined) ({ page, steps } = await program.runEvent(spec.event, host, limits, cover));
     else if (spec.fire) await program.fire(spec.fire, host, limits, cover);
+    else if (spec.emit) {
+      const registry = new SignalRegistry({ description: GAME_API_DESCRIPTION, impl: GAME_API_IMPL, limits });
+      registry.install("script", program);
+      world.hook = (spec.emit.payload && typeof spec.emit.payload === "object" ? spec.emit.payload : {}) as Record<string, unknown>;
+      const report = await registry.emit(spec.emit.signal, spec.emit.payload ?? {}, () => world);
+      return { ok: true, listeners: report.listeners, effects: world.effects, state: world.snapshot() };
+    }
     return { ok: true, value, page, steps, effects: world.effects, state: world.snapshot() };
   } catch (e: any) {
     return { ok: false, error: `${e.constructor.name}: ${e.message}`, effects: world.effects, state: world.snapshot() };

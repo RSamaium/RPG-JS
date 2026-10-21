@@ -7,6 +7,7 @@
  *   `missingImplementations` proves that an implementation covers exactly what the description announces, so that a
  *   simulation cannot drift from the game by forgetting or inventing a name.
  */
+import type { PayloadField, SignalDesc } from "./filter";
 import type { ApiInfo, Host } from "./interpreter";
 
 export interface MemberDesc { type: string; doc?: string; writable?: boolean }
@@ -21,7 +22,12 @@ export interface HandleDesc {
   dynamic?: DynamicDesc;
 }
 export interface FnDesc { sig: string; doc?: string; /** a reference to a record of the database, checked when the script is saved */ ref?: string }
-export interface ApiDescription { handles: Record<string, HandleDesc>; functions: Record<string, FnDesc> }
+export interface ApiDescription {
+  handles: Record<string, HandleDesc>;
+  functions: Record<string, FnDesc>;
+  /** The signals the game emits, which scripts listen to with `on("signal", ...)`. */
+  signals?: Record<string, SignalDesc>;
+}
 
 export interface HandleImpl<W> {
   members?: Record<string, { read?: (w: W) => unknown; write?: (w: W, op: string, value: unknown) => void | Promise<void> }>;
@@ -48,14 +54,18 @@ export function apiInfo(desc: ApiDescription, catalog?: Record<string, string[]>
     }])),
     functions: Object.fromEntries(Object.entries(desc.functions).map(([name, f]) => [name, { ref: f.ref, void: returnsNothing(f.sig) }])),
     catalog,
+    signals: desc.signals,
   };
 }
 
 export const globalNames = (desc: ApiDescription) => [...Object.keys(desc.handles), ...Object.keys(desc.functions)];
 
+const payloadType = (f: PayloadField): string =>
+  f.type === "object" && f.fields ? `{ ${Object.entries(f.fields).map(([k, v]) => `${k}: ${payloadType(v)}`).join("; ")} }` : f.type === "object" ? "object" : f.type;
+
 /** TypeScript declarations: what an agent is given to know what exists. */
 export function describeApi(desc: ApiDescription): string {
-  const out: string[] = ["// Studio script API. Scripts are a JavaScript subset; only what is declared here exists.", ""];
+  const out: string[] = ["// Script API. Scripts are a JavaScript subset; only what is declared here exists.", ""];
   for (const [name, h] of Object.entries(desc.handles)) {
     out.push(`${h.doc ? `/** ${h.doc} */\n` : ""}declare const ${name}: {`);
     for (const [k, m] of Object.entries(h.members ?? {})) out.push(`  ${m.doc ? `/** ${m.doc} */ ` : ""}${m.writable ? "" : "readonly "}${k}: ${m.type};`);
@@ -65,6 +75,15 @@ export function describeApi(desc: ApiDescription): string {
     out.push("};", "");
   }
   for (const [name, f] of Object.entries(desc.functions)) out.push(`${f.doc ? `/** ${f.doc} */\n` : ""}declare function ${name}${f.sig};`);
+  if (desc.signals) {
+    out.push("", "// Scripts listen to signals: on(\"signal\", handler) or on(\"signal\", { where?, when? }, handler). The handler receives the payload `e`, read-only.",
+      "// where: { \"path.to.field\": value | { eq, ne, gt, gte, lt, lte, in: [...], has: value, exists: boolean } }  (all must hold)",
+      "// when: [{ switch: name, is?: boolean } | { variable: name, <comparison> } | { item: id, <comparison> } | { stat: \"gold\" | \"level\", <comparison> }]  (all must hold)");
+    for (const [name, sig] of Object.entries(desc.signals)) {
+      out.push(`${sig.doc ? `/** ${sig.doc} */\n` : ""}declare function on(signal: "${name}", filter: { where?: object; when?: object[] }, handler: (e: ${payloadType({ type: "object", fields: sig.payload })}) => void): void;`);
+      out.push(`declare function on(signal: "${name}", handler: (e: ${payloadType({ type: "object", fields: sig.payload })}) => void): void;`);
+    }
+  }
   out.push("", "// Also available: Math (min max floor ceil round abs sqrt pow trunc sign PI), Object (keys values entries), Array.isArray,",
     "// Number, String, Boolean, parseInt, parseFloat, isNaN, list methods (map filter find findIndex some every forEach reduce includes",
     "// indexOf join slice concat reverse sort push pop) and text methods (includes startsWith endsWith indexOf slice toUpperCase",
