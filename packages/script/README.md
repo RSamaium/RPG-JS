@@ -52,7 +52,7 @@ others did not run.
 A script never calls the engine. What it asks for goes through a port, `ScriptWorld`, that has the shape of the API of RPGJS: change the gold, give
 an item, show a text, ask a choice. Each environment says how:
 
-- `createRpgjsWorld({ player, map, event?, shared?, hook? })` (`@rpgjs/script/server`) does it with the API of RPGJS. Shared
+- `createRpgjsWorld({ player, map?, room?, event?, shared?, hook? })` (`@rpgjs/script/server`) does it with the API of RPGJS. Shared
   properties (`shared({ ... })`) live on the map with `map.setSync`, under the prefix `script_`; a player who has none of an item
   loses nothing when a script removes it; the gold never goes below 0.
 - `SimWorld` (`@rpgjs/script/testing`) does it in memory and records every effect, so a test can say what a script did.

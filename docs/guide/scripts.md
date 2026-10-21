@@ -210,17 +210,14 @@ const input = signalBinding<[RpgPlayer, RpgActionInput<unknown>]>({
   scope: "player",
   hook: "onInput",
   describe: { doc: "A player presses an input.", payload: { action: { type: "string" } } },
-  emit: (player, data) => {
-    const map = player.getCurrentMap()
-    return map ? { payload: { action: String(data.action) }, context: { player, map } } : undefined
-  },
+  emit: (player, data) => ({ payload: { action: String(data.action) }, context: { player } }),
 })
 
 provideScripts({ bindings: [input], scripts })
 ```
 
 `describe` adds the signal to the catalog, so a script that listens to it has its filter checked against the payload. Several
-bindings may listen to the same hook. Return nothing from `emit` to emit nothing. `DEFAULT_SIGNAL_BINDINGS` lists the ones of the game.
+bindings may listen to the same hook. Return nothing from `emit` to emit nothing. The context is the player; the room and the map are the ones of the player. `DEFAULT_SIGNAL_BINDINGS` lists the ones of the game.
 
 ## Write and test scripts without the game
 
@@ -251,7 +248,7 @@ The effects are named after the call that made them: `showText`, `showNotificati
 ## Run your own world
 
 The behavior of every name is written once over a port, `ScriptWorld`, that has the shape of the API of RPGJS (`getItem`, `addItem`,
-`getVariable`, `showText`, `showChoices`…). `createRpgjsWorld({ player, map, event?, shared?, hook? })` implements it with the API of
+`getVariable`, `showText`, `showChoices`…). `createRpgjsWorld({ player, map?, room?, event?, shared?, hook? })` implements it with the API of
 RPGJS, and `SimWorld` in memory.
 A host with its own vocabulary, such as a block editor, implements it with its own operations, and gets the same behavior.
 
