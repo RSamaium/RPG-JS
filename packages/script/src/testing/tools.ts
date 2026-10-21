@@ -11,7 +11,9 @@ import { GAME_API_IMPL } from "../game/impl";
 import { SharedStore, SimWorld, type WorldInit } from "./world";
 import { parseScript } from "../parse";
 
+/** A problem found in a script, with its line (0 when it is about the script as a whole). */
 export interface Diagnostic { line: number; message: string }
+/** What checking a script found: whether it is valid, why not, and what it declares (exports, listeners, events, references, permissions, shared properties). */
 export interface CheckResult {
   ok: boolean;
   diagnostics: Diagnostic[];
@@ -25,9 +27,28 @@ export interface CheckResult {
   shared: { name: string; initial: unknown; client: boolean; persist: boolean }[];
   program?: Program;
 }
+/** The world of a simulation, as an agent writes it: `shared` may be plain values (`{ stock: 5 }`) as well as a store. */
+export type SimulatedWorld = Omit<WorldInit, "shared"> & { shared?: SharedStore | Record<string, unknown> };
+
 const strip = (m: string) => m.replace(/^line \S+: /, "");
 
+/** Options of `checkScript`: the exported functions the request requires, which make the check fail when missing. */
 export interface CheckOptions { requiredExports?: string[] }
+/**
+ * Checks a script without running it: parses it, compiles it against the API, and reports what it declares. Free to call, so it can
+ * be called after every edit.
+ *
+ * @param source - The text of the script.
+ * @param catalog - The ids a reference may take, by kind (`{ item: ["potion"] }`). A kind that is not given is not checked.
+ * @param options - See `CheckOptions`.
+ * @returns `ok`, the diagnostics with their lines (and what is available for an unknown name), and what the script declares.
+ * @example
+ * ```ts
+ * const check = checkScript(`on("player.levelUp", () => { $player.gold += 5; });`)
+ * check.ok        // true
+ * check.listeners // [{ signal: "player.levelUp", filter: undefined }]
+ * ```
+ */
 export function checkScript(source: string, catalog?: Record<string, string[]>, options: CheckOptions = {}): CheckResult {
   const empty = { exports: [], handlers: [], listeners: [], events: [], refs: [], permissions: [], shared: [] as CheckResult["shared"] };
   let ast;
@@ -52,16 +73,19 @@ export function checkScript(source: string, catalog?: Record<string, string[]>, 
   }
 }
 
+/** What to run in a simulation: a function (`call`), an event page, the handlers of a signal bypassing their filters (`fire`) or a signal as the game emits it (`emit`), in a world. */
 export interface RunSpec {
   call?: { fn: string; args?: unknown[] };
   event?: number;
   fire?: string;
   /** Emits a signal as the game would: only the listeners whose filter holds run, and the result says which. */
   emit?: { signal: string; payload?: unknown };
-  world?: WorldInit & Record<string, any>;
+  world?: SimulatedWorld;
   limits?: Limits;
 }
+/** A simulation: the script, and what to run. */
 export interface SimulateInput extends RunSpec { source: string; catalog?: Record<string, string[]>; requiredExports?: string[] }
+/** What a simulation did: the value it returned, the effects in order, the final state, which listeners a signal reached, and the lines nothing ran. */
 export interface SimulateResult {
   ok: boolean;
   diagnostics?: Diagnostic[];
@@ -79,7 +103,7 @@ export interface SimulateResult {
 /** Runs one scenario against a compiled program. `cover` collects the lines that were executed. */
 async function execute(program: Program, spec: RunSpec, cover: Set<number>): Promise<SimulateResult> {
   // an agent writes "shared": { "stock": 5 } in its world: those are preset values, not a store
-  const init: any = { ...(spec.world ?? {}) };
+  const init: WorldInit & { shared?: unknown } = { ...(spec.world ?? {}) } as WorldInit;
   let presets = init.sharedValues;
   if (init.shared !== undefined && !(init.shared instanceof SharedStore)) {
     presets = { ...(presets ?? {}), ...(init.shared && typeof init.shared === "object" ? init.shared : {}) };
@@ -108,6 +132,22 @@ async function execute(program: Program, spec: RunSpec, cover: Set<number>): Pro
   }
 }
 
+/**
+ * Runs a script in an in-memory world and says what it did. Nothing of a game is needed.
+ *
+ * @param input - The script and what to run (see `RunSpec`).
+ * @returns The result: `ok`, the value, the effects (what the script asked the game to do, in order), the final state of the
+ * player, the shared properties and `$state`, and the `uncovered` lines.
+ * @example
+ * ```ts
+ * const result = await simulate({
+ *   source: `export function buy() { $player.gold -= 10; $player.addItem(Item("potion")); }`,
+ *   call: { fn: "buy" },
+ *   world: { player: { gold: 50 } },
+ * })
+ * result.state?.player.gold // 40
+ * ```
+ */
 export async function simulate(input: SimulateInput): Promise<SimulateResult> {
   const check = checkScript(input.source, input.catalog, { requiredExports: input.requiredExports });
   if (!check.ok || !check.program) return { ok: false, diagnostics: check.diagnostics, effects: [] };
@@ -117,6 +157,7 @@ export async function simulate(input: SimulateInput): Promise<SimulateResult> {
 }
 
 // ---------------------------------------------------------------- tests as data
+/** A test written as data: what to run (a `RunSpec`), what the dice and the choices answer, and what is expected. */
 export interface TestCase extends RunSpec {
   name: string;
   dice?: number[];
@@ -126,7 +167,9 @@ export interface TestCase extends RunSpec {
    *  a value is a number, text, boolean, null, or { min, max } for a range. */
   expect?: Record<string, unknown>;
 }
+/** The outcome of a test: whether it passed (`null` when it expected nothing), why not, and the whole simulation. */
 export interface TestResult { name: string; pass: boolean | null; failures: string[]; result: SimulateResult }
+/** The outcome of a list of tests, with the lines none of them ran. */
 export interface TestsReport { ok: boolean; diagnostics?: Diagnostic[]; results: TestResult[]; uncovered: Record<string, string> }
 
 const KNOWN = new Set(["returns", "page", "error", "effects", "effectsInclude", "effectsExclude", "texts", "notifications"]);
@@ -168,6 +211,19 @@ function judge(t: TestCase, r: SimulateResult): string[] {
   return out;
 }
 
+/**
+ * Runs tests written as data against a script, and reports which passed and which lines no test ran.
+ *
+ * @param source - The text of the script.
+ * @param tests - The tests (see `TestCase`).
+ * @param catalog - The ids a reference may take, by kind.
+ * @example
+ * ```ts
+ * const report = await runTests(source, [
+ *   { name: "buys", call: { fn: "buy" }, world: { player: { gold: 50 } }, expect: { "player.gold": 40, "player.items.potion": 1 } },
+ * ])
+ * ```
+ */
 export async function runTests(source: string, tests: TestCase[], catalog?: Record<string, string[]>): Promise<TestsReport> {
   const check = checkScript(source, catalog);
   if (!check.ok || !check.program) return { ok: false, diagnostics: check.diagnostics, results: [], uncovered: {} };
@@ -181,4 +237,9 @@ export async function runTests(source: string, tests: TestCase[], catalog?: Reco
   return { ok: true, results, uncovered: check.program.uncovered(cover) };
 }
 
+/**
+ * The API of scripts in a game as TypeScript declarations, with its signals: what an agent reads before writing a script.
+ *
+ * @returns Declarations, as text.
+ */
 export const describeGameApi = () => describeApi(GAME_API_DESCRIPTION);

@@ -10,6 +10,10 @@ const EVENT: SignalDesc["payload"] = {
   event: { type: "object", fields: { id: { type: "string" }, name: { type: "string", doc: "Name of the event, empty when it has none." } } },
 };
 
+/**
+ * The signals of the game: `player.joinMap`, `player.leaveMap`, `player.levelUp`, `player.dead`, `event.action`, `event.touch`.
+ * A plugin adds its own with the `signals` option of `ScriptService`.
+ */
 export const GAME_SIGNALS: Record<string, SignalDesc> = {
   "player.joinMap": { doc: "A player enters a map.", payload: MAP },
   "player.leaveMap": { doc: "A player leaves a map.", payload: MAP },

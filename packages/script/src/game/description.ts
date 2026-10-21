@@ -1,11 +1,16 @@
 /**
- * The game API of Studio scripts, as data: what a script may read, assign and call in a game.
+ * The game API of scripts, as data: what a script may read, assign and call in a game.
  * What each of these does is not here: the game (a player, a map) and the simulation each implement it
  * (`ApiImpl`), and `missingImplementations` checks that they cover exactly this list.
  */
 import type { ApiDescription } from "../core/api";
 import { GAME_SIGNALS } from "./signals";
 
+/**
+ * The API of scripts in a game, as data: `$player`, `$event`, `$switch`, `$self`, `$var`, `$shared`, `$hook`, `$state`, and the
+ * functions `say`, `notify`, `choice`, `wait`, `transfer`, `random`, `Item`, `Graphic`, with the signals of the game. What each name
+ * does is in `GAME_API_IMPL`, over a `ScriptWorld`.
+ */
 export const GAME_API_DESCRIPTION: ApiDescription = {
   signals: GAME_SIGNALS,
   handles: {

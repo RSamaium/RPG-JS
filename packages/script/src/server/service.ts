@@ -13,9 +13,10 @@ import { GAME_API_IMPL } from "../game/impl";
 import { parseScript } from "../parse";
 import { createRpgjsWorld } from "./world";
 
-/** A script given to the game: its text, or the tree the Studio already computed from it. The id and the version name it. */
+/** A script given to the game: its text, or the tree an editor already computed from it. The id and the version name it. */
 export type ScriptSource = { id: string; version?: number } & ({ source: string; tree?: undefined } | { tree: AstNode; source?: undefined });
 
+/** What a `ScriptService` starts with: the scripts to install, the signals a plugin adds, and the budget of each handler. */
 export interface ScriptServiceOptions {
   scripts?: ScriptSource[];
   /** Signals a plugin adds to the ones of the game: scripts can listen to them and `emit` can send them. */
@@ -30,6 +31,18 @@ export interface ScriptError { script: string; message: string }
 /** Where a signal happened: the player the scripts act for, the map, and the event if there is one. */
 export interface SignalContext { player: RpgPlayer; map: RpgMap; event?: RpgEvent | null }
 
+/**
+ * The scripts of a game, on its server: installs them, says who listens to what, and emits signals. `provideScripts` makes one and
+ * binds the hooks of RPGJS to it; make your own and pass it to `provideScripts` to install and uninstall scripts while the game
+ * runs, or to emit the signals of a plugin.
+ *
+ * @example
+ * ```ts
+ * const scripts = new ScriptService({ signals: { "quests.start": { payload: { questId: { type: "string" } } } } })
+ * scripts.install({ id: "quests", source: `on("quests.start", { where: { questId: "wolves" } }, () => { notify("Go!"); });` })
+ * await scripts.emit("quests.start", { questId: "wolves" }, { player, map })
+ * ```
+ */
 export class ScriptService {
   /** The scripts that were refused, and why. */
   errors: ScriptError[] = [];

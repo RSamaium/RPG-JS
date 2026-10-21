@@ -36,6 +36,7 @@ export function sharedPropsOf(map: RpgMap, declared: readonly SharedDecl[]): Scr
   };
 }
 
+/** What the world of a script is built from: the player it acts for, the event and the map, the shared properties it declared, and the payload that fired it. */
 export interface RpgjsWorldOptions {
   player: RpgPlayer;
   /** The event the script runs for, if any (`$event`, `$self`). */
@@ -51,6 +52,18 @@ export interface RpgjsWorldOptions {
   rand?: (min: number, max: number) => number;
 }
 
+/**
+ * The world of a script on a real RPGJS player, event and map: every change goes through the API of RPGJS, so a script changes
+ * the game the way the code of a game would. The server owns it: use it where the gameplay state lives.
+ *
+ * @param options - See `RpgjsWorldOptions`.
+ * @returns The world to give to `hostFromApi(GAME_API_DESCRIPTION, GAME_API_IMPL, world)`.
+ * @example
+ * ```ts
+ * const world = createRpgjsWorld({ player, map: player.getCurrentMap()!, shared: program.shared })
+ * await program.call("f", [], hostFromApi(GAME_API_DESCRIPTION, GAME_API_IMPL, world), { steps: 20000, iterations: 100 })
+ * ```
+ */
 export function createRpgjsWorld(options: RpgjsWorldOptions): ScriptWorld {
   const { player, event, map } = options;
   const p = player as any;

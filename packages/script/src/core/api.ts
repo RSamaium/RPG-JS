@@ -10,9 +10,13 @@
 import type { PayloadField, SignalDesc } from "./filter";
 import type { ApiInfo, Host } from "./interpreter";
 
+/** A member of a handle (`$player.gold`): its TypeScript type, its documentation, and whether a script may assign it. */
 export interface MemberDesc { type: string; doc?: string; writable?: boolean }
+/** A method of a handle (`$player.addItem(...)`): its signature as TypeScript, e.g. `(item: string): void`. A method that returns `void` cannot be used as a value. */
 export interface MethodDesc { sig: string; doc?: string }
+/** Members a handle takes by name (`$switch.door_open`, `$var.visits`): the description of the key, the type of the value, and whether a script may assign it. */
 export interface DynamicDesc { keyDoc: string; type: string; doc?: string; writable?: boolean }
+/** A `$name` a script can use: what it has (members, methods, a dynamic part), and whether its properties are declared by the script itself (`shared({ ... })`). */
 export interface HandleDesc {
   doc?: string;
   /** Properties are declared by the script itself (`shared({ ... })`): `$shared.x` is checked against them. */
@@ -21,7 +25,12 @@ export interface HandleDesc {
   methods?: Record<string, MethodDesc>;
   dynamic?: DynamicDesc;
 }
+/** A function a script can call. `ref` names the kind of record of the database a literal argument must be (`Item("potion")`), checked against the catalog when the script is checked. */
 export interface FnDesc { sig: string; doc?: string; /** a reference to a record of the database, checked when the script is saved */ ref?: string }
+/**
+ * Everything a script may use, as plain data: the compiler refuses what is not here, `describeApi` turns it into the declarations
+ * given to an agent, and each environment provides an `ApiImpl` for it.
+ */
 export interface ApiDescription {
   handles: Record<string, HandleDesc>;
   functions: Record<string, FnDesc>;
@@ -29,11 +38,13 @@ export interface ApiDescription {
   signals?: Record<string, SignalDesc>;
 }
 
+/** What an environment does for a handle of the description, over a world `W`: the read and write of each member, each method, the dynamic part. */
 export interface HandleImpl<W> {
   members?: Record<string, { read?: (w: W) => unknown; write?: (w: W, op: string, value: unknown) => void | Promise<void> }>;
   methods?: Record<string, (w: W, args: unknown[]) => unknown>;
   dynamic?: { read: (w: W, key: string) => unknown; write?: (w: W, key: string, op: string, value: unknown) => void | Promise<void> };
 }
+/** What an environment does for the whole description. `missingImplementations` proves it covers exactly what the description announces. */
 export interface ApiImpl<W> {
   handles: Record<string, HandleImpl<W>>;
   functions: Record<string, (w: W, args: unknown[]) => unknown>;
@@ -42,7 +53,14 @@ export interface ApiImpl<W> {
 const HANDLE = Symbol("handle"), HOSTFN = Symbol("host-fn");
 const returnsNothing = (sig: string) => /\)\s*:\s*void\s*$/.test(sig);
 
-/** What the compiler needs to know: names, members, methods, which functions return nothing, which are references. */
+/**
+ * What the compiler needs to know about an API: names, members, methods, which functions return nothing, which are references,
+ * and the signals.
+ *
+ * @param desc - The description of the API.
+ * @param catalog - The ids a reference may take, by kind (`{ item: ["potion"] }`). A kind that is not given is not checked.
+ * @returns The `ApiInfo` to give to `compileProgram`.
+ */
 export function apiInfo(desc: ApiDescription, catalog?: Record<string, string[]>): ApiInfo {
   return {
     handles: Object.fromEntries(Object.entries(desc.handles).map(([name, h]) => [name, {
@@ -58,12 +76,28 @@ export function apiInfo(desc: ApiDescription, catalog?: Record<string, string[]>
   };
 }
 
+/**
+ * The names a script can use without declaring them: its handles (`$player`) and its functions (`say`).
+ *
+ * @param desc - The description of the API.
+ * @returns The global names, to give to `compileProgram`.
+ */
 export const globalNames = (desc: ApiDescription) => [...Object.keys(desc.handles), ...Object.keys(desc.functions)];
 
 const payloadType = (f: PayloadField): string =>
   f.type === "object" && f.fields ? `{ ${Object.entries(f.fields).map(([k, v]) => `${k}: ${payloadType(v)}`).join("; ")} }` : f.type === "object" ? "object" : f.type;
 
-/** TypeScript declarations: what an agent is given to know what exists. */
+/**
+ * The API as TypeScript declarations: what an agent is given to know what exists, with the documentation of every name and the
+ * signals a script can listen to.
+ *
+ * @param desc - The description of the API.
+ * @returns Declarations, as text.
+ * @example
+ * ```ts
+ * const declarations = describeApi(GAME_API_DESCRIPTION) // declare const $player: { readonly level: number; ... }
+ * ```
+ */
 export function describeApi(desc: ApiDescription): string {
   const out: string[] = ["// Script API. Scripts are a JavaScript subset; only what is declared here exists.", ""];
   for (const [name, h] of Object.entries(desc.handles)) {
@@ -92,7 +126,19 @@ export function describeApi(desc: ApiDescription): string {
   return out.join("\n");
 }
 
-/** Names the description announces and the implementation lacks, and the other way round. Both must be empty. */
+/**
+ * Compares an implementation with its description: the names the description announces and the implementation lacks, and the
+ * names the implementation has that nothing announces. A simulation that passes this cannot drift from the game by forgetting or
+ * inventing a name.
+ *
+ * @param desc - The description of the API.
+ * @param impl - The implementation to check.
+ * @returns One sentence per problem. Empty when the implementation covers exactly the description.
+ * @example
+ * ```ts
+ * expect(missingImplementations(GAME_API_DESCRIPTION, GAME_API_IMPL)).toEqual([])
+ * ```
+ */
 export function missingImplementations<W>(desc: ApiDescription, impl: ApiImpl<W>): string[] {
   const problems: string[] = [];
   for (const [name, h] of Object.entries(desc.handles)) {
@@ -117,7 +163,15 @@ export function missingImplementations<W>(desc: ApiDescription, impl: ApiImpl<W>
   return problems;
 }
 
-/** The facade a script runs against: handles and functions that exist only as far as the description says. */
+/**
+ * The facade a script runs against: handles and functions that exist only as far as the description says, and do what the
+ * implementation does in the given world.
+ *
+ * @param desc - The description of the API.
+ * @param impl - What each name does.
+ * @param world - The world of this run (a player, a map…).
+ * @returns The `Host` to give to `Program.call`, `Program.fire` or `Program.run`.
+ */
 export function hostFromApi<W>(desc: ApiDescription, impl: ApiImpl<W>, world: W): Host {
   const handles: Record<string, unknown> = {};
   for (const name of Object.keys(desc.handles)) handles[name] = { [HANDLE]: name };

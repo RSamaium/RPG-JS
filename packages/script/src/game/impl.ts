@@ -9,7 +9,9 @@
  */
 import type { ApiImpl } from "../core/api";
 
+/** How a script changes the gold: `=`, `+=`, `-=`, `*=`. */
 export type GoldOperation = "set" | "add" | "sub" | "mul";
+/** How a script changes a variable: `=`, `+=`, `-=`, `*=`, `/=`, `%=`. */
 export type VariableOperation = "set" | "add" | "subtract" | "multiply" | "divide" | "modulo";
 
 /** The player of the script: what it can read, and what it can ask to change. Every change is the engine's to apply. */
@@ -63,6 +65,10 @@ const GOLD_OPS: Record<string, GoldOperation> = { "=": "set", "+=": "add", "-=":
 const VAR_OPS: Record<string, VariableOperation> = { "=": "set", "+=": "add", "-=": "subtract", "*=": "multiply", "/=": "divide", "%=": "modulo" };
 const SELF = new Set(["A", "B", "C", "D", "E", "F"]);
 
+/**
+ * What each name of `GAME_API_DESCRIPTION` does, over a `ScriptWorld`. Written once: the game and a simulation provide a world,
+ * and the behavior (checks, limits, what is refused) is the same in both.
+ */
 export const GAME_API_IMPL: ApiImpl<ScriptWorld> = {
   handles: {
     $player: {

@@ -10,8 +10,10 @@
 
 import { validateFilter, type ListenFilter, type SignalDesc } from "./filter";
 
+/** A node of the tree of a script, as `acorn` produces it. The interpreter reads the nodes it knows and refuses the rest. */
 export type AstNode = { type: string; loc?: { start: { line: number } }; [key: string]: any };
 
+/** What is wrong with one place of a script, with its line. */
 export class CompileError extends Error {
   line: number;
   constructor(message: string, node?: AstNode) {
@@ -19,6 +21,7 @@ export class CompileError extends Error {
     this.line = node?.loc?.start.line ?? 0;
   }
 }
+/** Everything that is wrong with a script, collected in one pass so that an author sees all of it at once. */
 export class CompileErrors extends Error {
   errors: CompileError[];
   constructor(errors: CompileError[]) {
@@ -26,9 +29,12 @@ export class CompileErrors extends Error {
     this.errors = errors;
   }
 }
+/** A script did something it cannot: an unknown member, a value of the wrong kind, a change to read-only data. */
 export class RuntimeError extends Error {}
+/** A script used more than its budget: too many steps, a loop that ran too long, a text or a list that grew too big, calls nested too deep. */
 export class BudgetExceeded extends Error {}
 
+/** The budget of one run of a script. Only `steps` and `iterations` are required; the others have defaults (texts 10 000 characters, lists and objects 1 000 entries, call depth 20). */
 export interface Limits { steps: number; iterations: number; maxString?: number; maxList?: number; depth?: number }
 const DEF = { maxString: 10_000, maxList: 1000, depth: 20 };
 
@@ -52,8 +58,11 @@ export interface ApiInfo {
   signals?: Record<string, SignalDesc>;
 }
 
+/** A property shared by the players of a map, declared by a script with `shared({ name: { initial, client, persist } })`. */
 export interface SharedDecl { name: string; initial: string | number | boolean | null; client: boolean; persist: boolean }
+/** A page of an event written as a script: `page({ trigger, when?, run })`. */
 export interface Page { graphic?: string; trigger: string; when?: ScriptFn; run: ScriptFn }
+/** An event written as a script: `event({ name, x, y, pages: [page({ ... })] })`. */
 export interface EventDecl { name?: string; x?: number; y?: number; pages: Page[] }
 
 class Scope {
@@ -202,6 +211,11 @@ const STRING: Record<string, Method> = {
 /** A listener declared with `on(signal, filter?, handler)`. */
 export interface Handler { event: string; filter?: ListenFilter; fn: ScriptFn }
 
+/**
+ * A compiled script: its functions, its listeners, its events, the shared properties it declares, what it touches and which
+ * references it makes. It is the result of `compileProgram` and holds no state of a run: the same program serves any number of
+ * players.
+ */
 export class Program {
   fns = new Map<string, ScriptFn>();
   exported = new Set<string>();
@@ -291,6 +305,20 @@ function readMember(env: Env, obj: unknown, key: string, node: AstNode): unknown
 }
 
 // ------------------------------------------------------------------ compiler
+/**
+ * Compiles the tree of a script. Only what the interpreter knows is accepted, and only the names the API gives; nothing is ever
+ * evaluated as JavaScript.
+ *
+ * @param ast - The tree of the script (`parseScript` produces it from the text).
+ * @param hostGlobalNames - The names the API provides (`globalNames(description)`).
+ * @param api - What the compiler knows of the API (`apiInfo(description, catalog)`). Without it, any member of a handle is accepted.
+ * @returns The program.
+ * @throws {CompileErrors} With the line and the reason of every problem, and what is available when a name is unknown.
+ * @example
+ * ```ts
+ * const program = compileProgram(parseScript(source), globalNames(GAME_API_DESCRIPTION), apiInfo(GAME_API_DESCRIPTION))
+ * ```
+ */
 export function compileProgram(ast: AstNode, hostGlobalNames: string[], api?: ApiInfo): Program {
   const program = new Program();
   const errors: CompileError[] = [];
@@ -353,7 +381,7 @@ export function compileProgram(ast: AstNode, hostGlobalNames: string[], api?: Ap
       if (kids.length === 1) { const k = kids[0]; return { a: false, f: (env) => { tick(env); return fn([k.f(env)], env); } }; }
       return { a: false, f: (env) => { tick(env); return fn(kids.map((k) => k.f(env)), env); } };
     }
-    return { a: true, f: async (env) => { tick(env); const vals = []; for (const k of kids) vals.push(k.a ? await k.f(env) : k.f(env)); return fn(vals, env); } };
+    return { a: true, f: async (env) => { tick(env); const vals: unknown[] = []; for (const k of kids) vals.push(k.a ? await k.f(env) : k.f(env)); return fn(vals, env); } };
   };
 
   const expr = (n: AstNode): C => {
@@ -450,7 +478,7 @@ export function compileProgram(ast: AstNode, hostGlobalNames: string[], api?: Ap
       case "FunctionExpression": return fail("write an arrow function: (x) => ...", n);
       case "UpdateExpression": return fail("++ and -- are only available as a statement or in a for loop; write i += 1 elsewhere", n);
       default:
-        return fail(`"${n.type}" is not available in Studio scripts`, n);
+        return fail(`"${n.type}" is not available in scripts`, n);
     }
   };
 
@@ -737,7 +765,7 @@ export function compileProgram(ast: AstNode, hostGlobalNames: string[], api?: Ap
       }
       case "FunctionDeclaration": return fail("declare functions at the start of a block or at the top level", n);
       default:
-        return fail(`"${n.type}" is not available in Studio scripts`, n);
+        return fail(`"${n.type}" is not available in scripts`, n);
     }
   };
 

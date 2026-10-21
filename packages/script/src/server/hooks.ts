@@ -8,6 +8,14 @@ import type { ScriptService } from "./service";
 const read = <T>(value: unknown): T => (typeof value === "function" ? (value as () => T)() : (value as T));
 const eventOf = (event: any) => ({ id: String(event.id ?? ""), name: String(read(event.name) ?? "") });
 
+/**
+ * The hooks of RPGJS that emit the signals of the game for a `ScriptService`: `onJoinMap`, `onLeaveMap`, `onLevelUp` and `onDead`
+ * of the player, and `onAction` and `onPlayerTouch` of every event. `provideScripts` adds it as a module; use it directly only to
+ * build your own provider.
+ *
+ * @param service - The service that receives the signals.
+ * @returns A server module.
+ */
 export function scriptHooks(service: ScriptService): RpgServer {
   return {
     player: {

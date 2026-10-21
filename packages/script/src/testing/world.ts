@@ -69,6 +69,7 @@ export class SharedStore {
   }
 }
 
+/** The starting point of a simulation: the player (gold, level, name, items), their variables and switches, the data of `$state` and `$hook`, preset shared properties, forced dice and answers. */
 export interface WorldInit {
   player?: { gold?: number; level?: number; name?: string; items?: Record<string, number> };
   vars?: Record<string, unknown>;
@@ -85,6 +86,16 @@ export interface WorldInit {
   choice?: (options: string[]) => Promise<number>;
 }
 
+/**
+ * A game without the game: it implements `ScriptWorld` in memory and records every effect, so a test can say what a script did.
+ *
+ * @example
+ * ```ts
+ * const world = new SimWorld({ player: { gold: 50 } })
+ * await world.player.changeGold("sub", 10)
+ * world.snapshot().player.gold // 40
+ * ```
+ */
 export class SimWorld implements ScriptWorld {
   player = new SimPlayer((block, params) => this.effects.push({ block, params }));
   event = { id: "event_1", x: 5, y: 3 };

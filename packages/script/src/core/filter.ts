@@ -4,6 +4,7 @@
  * Pure TypeScript with no import: it runs anywhere the interpreter does.
  */
 
+/** The type of a field of a payload: what a filter can compare it with. */
 export type PayloadType = "string" | "number" | "boolean" | "string[]" | "number[]" | "object";
 
 /** A field of the payload of a signal. An `object` lists its `fields`. */
@@ -12,15 +13,25 @@ export interface PayloadField { type: PayloadType; doc?: string; fields?: Record
 /** A signal the game emits: what it is, and what its payload holds. */
 export interface SignalDesc { doc?: string; payload: Record<string, PayloadField> }
 
+/** Comparisons of a number (`gte: 5`), or of any value for `eq` and `ne`. Several in one object must all hold. */
 export type Comparison = { eq?: unknown; ne?: unknown; gt?: number; gte?: number; lt?: number; lte?: number };
 /** `{ "skill.tags": { has: "fire" }, power: { gte: 5 }, map: "town" }`: a value alone means equal. */
 export type WhereMatcher = string | number | boolean | null | (Comparison & { in?: unknown[]; has?: unknown; exists?: boolean });
+/**
+ * A condition on the player, in a `when` list: a switch (`{ switch: "tournament" }`, `is: false` for off), a variable
+ * (`{ variable: "visits", gte: 3 }`), an item (`{ item: "potion" }` means the player has it, or give a comparison) or a stat
+ * (`{ stat: "gold", gte: 50 }`).
+ */
 export type Condition =
   | ({ switch: string; is?: boolean })
   | ({ variable: string } & Comparison)
   | ({ item: string } & Comparison)
   | ({ stat: "gold" | "level" } & Comparison);
 
+/**
+ * What a listener asks before it runs: `where` (conditions on the payload) and `when` (conditions on the player). All entries must
+ * hold. A filter is plain data, so it can be read before anything runs.
+ */
 export interface ListenFilter { where?: Record<string, WhereMatcher>; when?: Condition[] }
 
 /** What a condition reads of the player. */
@@ -74,6 +85,16 @@ export function whereFailure(payload: unknown, where: Record<string, WhereMatche
   return undefined;
 }
 
+/**
+ * Whether a payload holds every entry of a `where`.
+ *
+ * @param payload - The payload of the signal.
+ * @param where - The `where` of a filter (a missing one always holds).
+ * @example
+ * ```ts
+ * matchesWhere({ skill: { tags: ["fire"] }, power: 12 }, { "skill.tags": { has: "fire" }, power: { gte: 5 } }) // true
+ * ```
+ */
 export const matchesWhere = (payload: unknown, where: Record<string, WhereMatcher> | undefined): boolean => whereFailure(payload, where) === undefined;
 
 /** The first condition that does not hold, as text (`stat gold gte 500`), or undefined when they all hold. */
@@ -101,6 +122,12 @@ export function conditionFailure(conditions: Condition[] | undefined, player: Co
   return undefined;
 }
 
+/**
+ * Whether the player holds every condition of a `when`.
+ *
+ * @param conditions - The `when` of a filter (a missing or empty one always holds).
+ * @param player - What a condition reads of the player.
+ */
 export const evaluateConditions = (conditions: Condition[] | undefined, player: ConditionPlayer): boolean => conditionFailure(conditions, player) === undefined;
 
 function fieldAt(payload: Record<string, PayloadField>, path: string): PayloadField | undefined {

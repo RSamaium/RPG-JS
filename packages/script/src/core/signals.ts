@@ -20,8 +20,10 @@ export interface ListenerReport {
   /** Why the handler did not run to the end. */
   error?: string;
 }
+/** What happened to every listener a signal reached, in the order they ran. */
 export interface EmitReport { listeners: ListenerReport[] }
 
+/** What a registry needs: the API scripts run against, and the budget of each handler. */
 export interface SignalRegistryOptions {
   description: ApiDescription;
   impl: ApiImpl<ScriptWorld>;
@@ -38,6 +40,17 @@ function frozen<T>(value: T): T {
   return value;
 }
 
+/**
+ * The scripts that are installed and what they listen to. The game emits a signal with its payload; the listeners whose filter
+ * holds run, in the order the scripts were installed. Listeners only observe.
+ *
+ * @example
+ * ```ts
+ * const registry = new SignalRegistry({ description: GAME_API_DESCRIPTION, impl: GAME_API_IMPL })
+ * registry.install("chests", program)
+ * const report = await registry.emit("event.action", { event: { id: "chest-1", name: "chest" } }, (script) => worldOf(script))
+ * ```
+ */
 export class SignalRegistry {
   private scripts = new Map<string, Program>();
 
