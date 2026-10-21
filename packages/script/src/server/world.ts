@@ -4,7 +4,7 @@
  * simulation.
  */
 import type { RpgEvent, RpgMap, RpgPlayer, RpgPlayerRoom } from "@rpgjs/server";
-import { MAX_SCRIPT_EVENTS, type Choice, type EventOptions, type EventSnapshot, type MapPort, type PlayerPort, type ScriptWorld, type VariableValue } from "../game/impl";
+import { MAX_SCRIPT_EVENTS, MAX_SCRIPT_SHAPES, type Choice, type EventOptions, type EventSnapshot, type LightingTransition, type MapPort, type PlayerPort, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue } from "../game/impl";
 import type { SharedDecl } from "../core/interpreter";
 
 /** A value that RPGJS keeps in a signal is read by calling it. */
@@ -21,12 +21,19 @@ const isMap = (place: unknown): place is RpgMap => !!place && typeof (place as {
 
 /** The events scripts made, by map: a script removes these and no other, and makes `MAX_SCRIPT_EVENTS` of them at most. */
 const madeByScripts = new WeakMap<object, Set<string>>();
+/** The zones scripts made, by map. */
+const shapesMadeByScripts = new WeakMap<object, Set<string>>();
 let eventCounter = 0;
+
+/** A state of the map as plain data: what RPGJS keeps may hold fields set to undefined, which a script has no use for. */
+const plainCopy = (state: unknown): object | null => (state == null ? null : JSON.parse(JSON.stringify(state)));
 
 /** The map of a script, over the map of RPGJS: the events a script makes are real events that listen to the same signals. */
 function mapPortOf(map: RpgMap): MapPort {
   const m = map as any;
   const made = madeByScripts.get(map) ?? madeByScripts.set(map, new Set()).get(map)!;
+  const madeShapes = shapesMadeByScripts.get(map) ?? shapesMadeByScripts.set(map, new Set()).get(map)!;
+  const shapeSnapshot = (s: any): ShapeSnapshot => ({ name: String(s.name), x: number(s.x), y: number(s.y), width: number(s.width), height: number(s.height) });
   const snapshot = (e: any): EventSnapshot => ({ id: String(e.id ?? ""), name: String(read(e.name) ?? ""), x: number(read(e.x)), y: number(read(e.y)) });
   return {
     get id() { return String(m.id ?? ""); },
@@ -63,6 +70,41 @@ function mapPortOf(map: RpgMap): MapPort {
     setVariable: (key, value: VariableValue) => m.setVariable(key, value),
     hasVariable: (key) => !!m.hasVariable(key),
     removeVariable: (key) => !!m.removeVariable(key),
+    getWeather: () => plainCopy(m.getWeather()),
+    setWeather: (state) => void m.setWeather(state),
+    patchWeather: (patch) => void m.patchWeather(patch),
+    clearWeather: () => m.clearWeather(),
+    getLighting: () => plainCopy(m.getLighting()),
+    setLighting: (state) => void m.setLighting(state),
+    patchLighting: (patch) => void m.patchLighting(patch),
+    clearLighting: () => m.clearLighting(),
+    setDay: () => void m.setDay(),
+    setNight: () => void m.setNight(),
+    transitionLighting: (to, options: LightingTransition = {}) => void m.transitionLighting(to, options),
+    createShape(o: ShapeOptions) {
+      if (madeShapes.size >= MAX_SCRIPT_SHAPES) throw new Error(`a script makes ${MAX_SCRIPT_SHAPES} zones on a map at most`);
+      const name = o.name ?? `script-zone-${Date.now().toString(36)}-${++eventCounter}`;
+      if (m.getShape(name)) throw new Error(`a zone "${name}" is already on the map`);
+      const shape = m.createShape({ ...o, name });
+      madeShapes.add(String(shape.name));
+      return String(shape.name);
+    },
+    getShape(name) {
+      const shape = m.getShape(name);
+      return shape ? shapeSnapshot(shape) : undefined;
+    },
+    getShapes: () => (m.getShapes() as unknown[]).map(shapeSnapshot),
+    removeShape(name) {
+      if (!madeShapes.has(name)) return false;
+      m.removeShape(name);
+      madeShapes.delete(name);
+      return true;
+    },
+    playSound: (id, options: SoundOptions = {}) => m.playSound(id, options),
+    stopSound: (id) => m.stopSound(id),
+    showAnimation: (position, graphic, animationName) => m.showAnimation(position, graphic, animationName),
+    showComponentAnimation: (id, position, params) => m.showComponentAnimation(id, position, params),
+    shakeMap: (options: ShakeOptions = {}) => m.shakeMap(options),
   };
 }
 

@@ -2,7 +2,7 @@
  * A game without the game: a player, an event and some shared state, enough to run a script and see what it did. Every operation
  * a script asks for is applied to in-memory state and recorded in `effects`, so a test can say what the script did.
  */
-import { MAX_SCRIPT_EVENTS, type Choice, type DialogOptions, type EventOptions, type EventSnapshot, type ItemSnapshot, type MapPort, type NotificationOptions, type PlayerPort, type PlayerSnapshot, type ScriptWorld, type VariableValue } from "../game/impl";
+import { MAX_SCRIPT_EVENTS, MAX_SCRIPT_SHAPES, type Choice, type DialogOptions, type EventOptions, type EventSnapshot, type ItemSnapshot, type LightingTransition, type MapPort, type NotificationOptions, type PlayerPort, type PlayerSnapshot, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue } from "../game/impl";
 
 /** The player of a simulation: the state of the player in memory, and what the script asked for recorded as it happens. */
 export class SimPlayer implements PlayerPort {
@@ -70,6 +70,9 @@ export class SimPlayer implements PlayerPort {
 }
 
 /** The map of a simulation: events and variables in memory, with the rules of the real map (the events of the game stay, 50 events from scripts at most). */
+const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
+
+/** The map of a simulation, as `$map` sees it. */
 export class SimMap implements MapPort {
   events = new Map<string, EventSnapshot>();
   vars = new Map<string, unknown>();
@@ -103,6 +106,58 @@ export class SimMap implements MapPort {
   setVariable(key: string, value: VariableValue) { this.record("setMapVariable", { key, value }); this.vars.set(key, value); }
   hasVariable(key: string) { return this.vars.has(key); }
   removeVariable(key: string) { this.record("removeMapVariable", { key }); return this.vars.delete(key); }
+
+  weather: Record<string, any> | null = null;
+  lighting: Record<string, any> | null = null;
+  getWeather() { return this.weather ? clone(this.weather) : null; }
+  setWeather(state: object | null) {
+    if (state && !("effect" in state) && !("preset" in state)) throw new Error("setWeather: 'effect' or 'preset' is required when weather is not null.");
+    this.record("setWeather", { state });
+    this.weather = state ? clone(state) : null;
+  }
+  patchWeather(patch: Record<string, any>) {
+    if (!this.weather && !patch.effect && !patch.preset) throw new Error("patchWeather: 'effect' or 'preset' is required when no weather is currently set.");
+    this.record("patchWeather", { patch });
+    this.weather = { ...(this.weather ?? {}), ...patch, params: { ...(this.weather?.params ?? {}), ...(patch.params ?? {}) } };
+  }
+  clearWeather() { this.record("clearWeather", {}); this.weather = null; }
+  getLighting() { return this.lighting ? clone(this.lighting) : null; }
+  setLighting(state: object | null) { this.record("setLighting", { state }); this.lighting = state ? clone(state) : null; }
+  patchLighting(patch: object) { this.record("patchLighting", { patch }); this.lighting = { ...(this.lighting ?? {}), ...patch }; }
+  clearLighting() { this.record("clearLighting", {}); this.lighting = null; }
+  setDay() { this.record("setDay", {}); }
+  setNight() { this.record("setNight", {}); }
+  transitionLighting(to: object, options: LightingTransition = {}) { this.record("transitionLighting", { to, ...options }); this.lighting = { ...(this.lighting ?? {}), ...to }; }
+
+  shapes = new Map<string, ShapeSnapshot>();
+  private madeShapes = new Set<string>();
+  createShape(options: ShapeOptions): string {
+    if (this.madeShapes.size >= MAX_SCRIPT_SHAPES) throw new Error(`a script makes ${MAX_SCRIPT_SHAPES} zones on a map at most`);
+    const name = options.name ?? `script-zone-${++this.counter}`;
+    if (this.shapes.has(name)) throw new Error(`a zone "${name}" is already on the map`);
+    this.record("createShape", options);
+    this.shapes.set(name, { name, x: options.x, y: options.y, width: options.width, height: options.height });
+    this.madeShapes.add(name);
+    return name;
+  }
+  getShape(name: string): ShapeSnapshot | undefined {
+    const shape = this.shapes.get(name);
+    return shape ? { ...shape } : undefined;
+  }
+  getShapes(): ShapeSnapshot[] { return [...this.shapes.values()].map((s) => ({ ...s })); }
+  removeShape(name: string): boolean {
+    if (!this.madeShapes.has(name)) return false;
+    this.record("removeShape", { name });
+    this.shapes.delete(name);
+    this.madeShapes.delete(name);
+    return true;
+  }
+
+  playSound(id: string, options: SoundOptions = {}) { this.record("playSound", { id, ...options }); }
+  stopSound(id: string) { this.record("stopSound", { id }); }
+  showAnimation(position: { x: number; y: number }, graphic: string, animationName: string) { this.record("showAnimation", { position, graphic, animationName }); }
+  showComponentAnimation(id: string, position: { x: number; y: number }, params: object) { this.record("showComponentAnimation", { id, position, params }); }
+  shakeMap(options: ShakeOptions = {}) { this.record("shakeMap", options); }
 }
 
 /** Properties shared by the players of a map: in the game, map.setSync({ name: { $initial, $syncWithClient, $permanent } }). */
@@ -129,6 +184,8 @@ export interface WorldInit {
   choices?: number[];
   /** The room the script runs in (a map called `start` by default). */
   room?: { id?: string; kind?: string };
+  /** Zones of the game that are on the map: scripts can read them, and cannot remove them. */
+  shapes?: { name: string; x?: number; y?: number; width?: number; height?: number }[];
   /** Events of the game that are on the map: scripts can read them, and cannot remove them. */
   events?: { id: string; name?: string; x?: number; y?: number }[];
   /** The event the script runs for. */
@@ -177,6 +234,7 @@ export class SimWorld implements ScriptWorld {
     Object.assign(this.room, init.room ?? {});
     if (this.room.kind === "map") {
       this.map = new SimMap(this.room.id, this.player, (name, params) => this.effects.push({ name, params }));
+      for (const s of init.shapes ?? []) this.map.shapes.set(s.name, { name: s.name, x: s.x ?? 0, y: s.y ?? 0, width: s.width ?? 1, height: s.height ?? 1 });
       for (const e of init.events ?? []) this.map.events.set(e.id, { id: e.id, name: e.name ?? "", x: e.x ?? 0, y: e.y ?? 0 });
     }
   }

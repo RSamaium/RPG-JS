@@ -9,6 +9,10 @@ import { GAME_SIGNALS } from "./signals";
 
 const VALUE = "string | number | boolean | null | object";
 
+/**
+ * The API of scripts in a game, as data: `$player`, `$map`, `$room`, `$event`, `$shared`, `$hook`, `$state`, the functions `wait`, `random`,
+ * `Item`, `Graphic`, and the signals of the game. What each name does is in `GAME_API_IMPL`, over a `ScriptWorld`.
+ */
 export const GAME_API_DESCRIPTION: ApiDescription = {
   signals: GAME_SIGNALS,
   handles: {
@@ -56,6 +60,29 @@ export const GAME_API_DESCRIPTION: ApiDescription = {
         setVariable: { sig: `(key: string, value: ${VALUE}): void`, doc: "Sets a variable of the map, with the same values as the variables of the player." },
         hasVariable: { sig: "(key: string): boolean" },
         removeVariable: { sig: "(key: string): boolean" },
+        getWeather: { sig: "(): object | null", doc: "The weather of the map: { effect, preset, params, transitionMs, durationMs }, or null." },
+        setWeather: { sig: "(state: object | null): void", doc: "Sets the weather of the map with plain data: it needs an effect (\"rain\", \"snow\"…) or a preset; null clears it." },
+        patchWeather: { sig: "(patch: object): void", doc: "Changes some fields of the weather, its params included, and keeps the others." },
+        clearWeather: { sig: "(): void" },
+        getLighting: { sig: "(): object | null", doc: "The lighting of the map: { ambient, spots, sun, shadows, dayNight }, or null." },
+        setLighting: { sig: "(state: object | null): void", doc: "Sets the lighting of the map with plain data; null clears it." },
+        patchLighting: { sig: "(patch: object): void", doc: "Changes some parts of the lighting and keeps the others." },
+        clearLighting: { sig: "(): void" },
+        setDay: { sig: "(): void", doc: "Turns the day on." },
+        setNight: { sig: "(): void", doc: "Turns the night on." },
+        transitionLighting: { sig: '(to: object, options?: { duration?: number; easing?: "linear" | "easeInOut" }): void', doc: "Moves the lighting to another one over duration milliseconds." },
+        createShape: {
+          sig: "(zone: { name?: string; x: number; y: number; width: number; height: number; z?: number; color?: string; collision?: boolean; properties?: object }): string",
+          doc: 'Makes a zone on the map and gives its name. Players entering and leaving it fire player.inShape and player.outShape. `color` is "#rrggbb". A script makes 50 zones on a map at most.',
+        },
+        getShape: { sig: "(name: string): { name: string; x: number; y: number; width: number; height: number } | undefined", doc: "A copy of a zone of the map, or undefined." },
+        getShapes: { sig: "(): { name: string; x: number; y: number; width: number; height: number }[]", doc: "Copies of the zones of the map." },
+        removeShape: { sig: "(name: string): boolean", doc: "Removes a zone that a script made. The zones of the game are not removed: it gives false." },
+        playSound: { sig: "(id: string, options?: { volume?: number; loop?: boolean }): void", doc: "Plays a sound for the players of the map. volume is 0 to 1." },
+        stopSound: { sig: "(id: string): void" },
+        showAnimation: { sig: "(position: { x: number; y: number }, graphic: string, animationName?: string): void", doc: 'Shows an animation of a graphic at a position of the map, for its players. animationName is "default" when not given.' },
+        showComponentAnimation: { sig: "(id: string, position: { x: number; y: number }, params?: object): void", doc: "Shows an animation made by a component of the game, with plain data as params." },
+        shakeMap: { sig: '(options?: { intensity?: number; duration?: number; frequency?: number; direction?: "x" | "y" | "both" }): void', doc: "Shakes the screen of the players of the map." },
       },
     },
     $room: {

@@ -4,6 +4,7 @@ import town from "./modules/town/server";
 import chest from "./scripts/chest";
 import shop from "./scripts/shop";
 import trap from "./scripts/trap";
+import zone from "./scripts/zone";
 
 export default createServer({
   providers: [
@@ -13,6 +14,7 @@ export default createServer({
         { id: "chest", source: chest },
         { id: "shop", source: shop },
         { id: "trap", source: trap },
+        { id: "zone", source: zone },
       ],
     }),
     provideServerModules([town]),

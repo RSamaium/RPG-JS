@@ -1,7 +1,7 @@
 import { describe, expectTypeOf, test } from "vitest";
 import type { Condition, ListenFilter, SignalDesc } from "./core/filter";
 import type { EmitReport } from "./core/signals";
-import type { Choice, EventOptions, EventSnapshot, ItemSnapshot, MapPort, PlayerPort, ScriptWorld } from "./game/impl";
+import type { Choice, EventOptions, EventSnapshot, ItemSnapshot, MapPort, PlayerPort, ScriptWorld, ShakeOptions, ShapeOptions, ShapeSnapshot } from "./game/impl";
 import { provideScripts, ScriptService, signalBinding, type ScriptServiceOptions, type ScriptSource, type SignalBinding, type SignalContext } from "./server";
 import type { RpgPlayer } from "@rpgjs/server";
 import { checkScript, runTests, simulate, SimWorld, SharedStore, type CheckResult, type SimulateInput, type TestCase } from "./testing";
@@ -58,6 +58,18 @@ describe("the public API of @rpgjs/script", () => {
     expectTypeOf<{ x: number; y: number; name: string; hitbox: { width: number; height: number } }>().toExtend<EventOptions>();
     expectTypeOf<{ x: number }>().not.toExtend<EventOptions>();
     expectTypeOf<MapPort["getEvent"]>().returns.toEqualTypeOf<EventSnapshot | undefined>();
+  });
+
+  test("the map has the weather, the lighting, the zones, the sounds and the effects of RpgMap", () => {
+    expectTypeOf<MapPort["getWeather"]>().returns.toEqualTypeOf<object | null>();
+    expectTypeOf<MapPort["setWeather"]>().parameter(0).toEqualTypeOf<object | null>();
+    expectTypeOf<MapPort["transitionLighting"]>().parameter(1).toEqualTypeOf<{ duration?: number; easing?: "linear" | "easeInOut" } | undefined>();
+    expectTypeOf<{ x: number; y: number; width: number; height: number; name: string; color: string }>().toExtend<ShapeOptions>();
+    expectTypeOf<{ x: number; y: number; width: number }>().not.toExtend<ShapeOptions>();
+    expectTypeOf<MapPort["getShape"]>().returns.toEqualTypeOf<ShapeSnapshot | undefined>();
+    expectTypeOf<{ direction: "x" | "y" | "both" }>().toExtend<ShakeOptions>();
+    expectTypeOf<{ direction: "z" }>().not.toExtend<ShakeOptions>();
+    expectTypeOf<MapPort["showAnimation"]>().parameters.toEqualTypeOf<[{ x: number; y: number }, string, string]>();
   });
 
   test("a hook of RPGJS becomes a signal with a binding, typed by the arguments of the hook", () => {

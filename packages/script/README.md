@@ -5,7 +5,8 @@ JavaScript, so a script can only use what the game exposes. A script does not ca
 game (a player levels up, an event is activated…) and reacts.
 
 This package is under construction. Today it holds the interpreter, the registry of listeners, the API of scripts, which follows the one of RPGJS
-(`$player.showText`, `showChoices`, `showNotification`, `changeMap`, `addItem`, `getVariable`…, `$event`, `$shared`, `$state`, `random`…) and the tools to check, simulate and test a script in an
+(`$player.showText`, `showChoices`, `showNotification`, `changeMap`, `addItem`, `getVariable`…, `$room`, `$event`, `$map` with its events,
+zones, variables, weather, lighting, sounds and effects, `$shared`, `$state`, `random`…) and the tools to check, simulate and test a script in an
 in-memory world. `provideScripts` connects the registry to the hooks of RPGJS.
 
 | Entry | Role |
@@ -83,6 +84,7 @@ scripts while the game runs, and give `signals` to add the signals of a plugin: 
 | --- | --- | --- |
 | `player.joinRoom` / `player.leaveRoom` | `onJoinRoom` / `onLeaveRoom` of the player, in every kind of room | `kind` (`"map"` or the kind of the gameplay room), `id` |
 | `player.joinMap` / `player.leaveMap` | `onJoinMap` / `onLeaveMap` of the player, in a map | `map` |
+| `player.inShape` / `player.outShape` | `onInShape` / `onOutShape` of the player | `shape` (`name`, `x`, `y`, `width`, `height`) |
 | `player.levelUp` | `onLevelUp` | `gained`. While it runs, `$player.level` is still the level before the gain |
 | `player.dead` | `onDead` | |
 | `event.action` / `event.touch` | `onAction` / `onPlayerTouch` of every event | `event.id`, `event.name` |

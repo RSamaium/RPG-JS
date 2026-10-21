@@ -14,8 +14,11 @@ import type { ApiImpl } from "../core/api";
 export interface ItemSnapshot { id: string; name: string; quantity: number }
 /** A plain value a variable of the player can hold. */
 export type VariableValue = string | number | boolean | null | VariableValue[] | { [key: string]: VariableValue };
+/** A choice of `showChoices`: what the player reads, and the value the script gets back. */
 export interface Choice { text: string; value: string | number | boolean }
+/** The options of a dialogue: where it is, who speaks, and how it shows. */
 export interface DialogOptions { position?: string; speaker?: string; fullWidth?: boolean; autoClose?: boolean; typewriterEffect?: boolean }
+/** The options of a notification: its `type` and how long it stays, in ms. */
 export interface NotificationOptions { type?: string; time?: number }
 
 /** What a script gets of an event of the map: a copy, whose changes change nothing. */
@@ -25,8 +28,21 @@ export interface PlayerSnapshot { id: string; name: string }
 /** An event a script makes, described by plain data: the game builds the real event. */
 export interface EventOptions { id?: string; x: number; y: number; name?: string; graphic?: string; hitbox?: { width: number; height: number }; through?: boolean }
 
+/** What a script gets of a zone of the map: a copy. */
+export interface ShapeSnapshot { name: string; x: number; y: number; width: number; height: number }
+/** A zone a script makes, described by plain data. */
+export interface ShapeOptions { name?: string; x: number; y: number; width: number; height: number; z?: number; color?: string; collision?: boolean; properties?: object }
+/** The options of a sound: `volume` from 0 to 1, and whether it loops. */
+export interface SoundOptions { volume?: number; loop?: boolean }
+/** The options of a screen shake: `intensity` 0 to 100, `duration` in ms up to 10 000, `frequency` 1 to 60, and the `direction`. */
+export interface ShakeOptions { intensity?: number; duration?: number; frequency?: number; direction?: "x" | "y" | "both" }
+/** The options of a move of the lighting: `duration` in ms up to 600 000, and the `easing`. */
+export interface LightingTransition { duration?: number; easing?: "linear" | "easeInOut" }
+
 /** The most events scripts make on one map. */
 export const MAX_SCRIPT_EVENTS = 50;
+/** The most zones scripts make on one map. */
+export const MAX_SCRIPT_SHAPES = 50;
 
 /** The map of the script, with the names of `RpgMap`. Not there when the room is not a map. */
 export interface MapPort {
@@ -42,6 +58,29 @@ export interface MapPort {
   setVariable(key: string, value: VariableValue): void | Promise<void>;
   hasVariable(key: string): boolean;
   removeVariable(key: string): boolean | Promise<boolean>;
+  getWeather(): object | null;
+  /** Needs an `effect` or a `preset`, or null to clear. */
+  setWeather(state: object | null): void | Promise<void>;
+  patchWeather(patch: object): void | Promise<void>;
+  clearWeather(): void | Promise<void>;
+  getLighting(): object | null;
+  setLighting(state: object | null): void | Promise<void>;
+  patchLighting(patch: object): void | Promise<void>;
+  clearLighting(): void | Promise<void>;
+  setDay(): void | Promise<void>;
+  setNight(): void | Promise<void>;
+  transitionLighting(to: object, options?: LightingTransition): void | Promise<void>;
+  /** Makes a zone. Refuses a name that is taken and more than `MAX_SCRIPT_SHAPES` zones made by scripts. Gives the name. */
+  createShape(options: ShapeOptions): string | Promise<string>;
+  getShape(name: string): ShapeSnapshot | undefined;
+  getShapes(): ShapeSnapshot[];
+  /** Removes a zone a script made; the zones of the game stay and it gives false. */
+  removeShape(name: string): boolean | Promise<boolean>;
+  playSound(id: string, options?: SoundOptions): void | Promise<void>;
+  stopSound(id: string): void | Promise<void>;
+  showAnimation(position: { x: number; y: number }, graphic: string, animationName: string): void | Promise<void>;
+  showComponentAnimation(id: string, position: { x: number; y: number }, params: object): void | Promise<void>;
+  shakeMap(options?: ShakeOptions): void | Promise<void>;
 }
 
 /** The player of the script, with the names of `RpgPlayer`. Every change is the engine's to apply. */
@@ -140,6 +179,62 @@ function eventOptions(o: unknown): EventOptions {
   if (x.through !== undefined) out.through = Boolean(x.through);
   return out;
 }
+const MAX_STATE_DATA = 4000;
+/** Plain data for the weather or the lighting: an object of at most `MAX_STATE_DATA` characters. `null` clears, where `nullable` says so. */
+function stateData(value: unknown, what: string, nullable = false): object | null {
+  if (value === null && nullable) return null;
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(`${what} is plain data { ... }${nullable ? ", or null" : ""}`);
+  const data = plain(value) as object;
+  if (JSON.stringify(data).length > MAX_STATE_DATA) throw new Error(`${what} holds ${MAX_STATE_DATA} characters at most`);
+  return data;
+}
+const SHAPE_KEYS = ["name", "x", "y", "width", "height", "z", "color", "collision", "properties"];
+function shapeOptions(o: unknown): ShapeOptions {
+  const x = opts(o);
+  for (const k of Object.keys(x)) if (!SHAPE_KEYS.includes(k)) throw new Error(`a zone is described by plain data: ${SHAPE_KEYS.join(", ")} (not "${k}")`);
+  const coordinate = (v: unknown) => typeof v === "number" && Number.isFinite(v) && Math.abs(v) <= COORDINATE;
+  if (!coordinate(x.x) || !coordinate(x.y)) throw new Error(`x and y are numbers between -${COORDINATE} and ${COORDINATE}`);
+  const size = (v: unknown) => typeof v === "number" && Number.isFinite(v) && v >= 1 && v <= COORDINATE;
+  if (!size(x.width) || !size(x.height)) throw new Error(`width and height are numbers from 1 to ${COORDINATE}`);
+  const out: ShapeOptions = { x: x.x, y: x.y, width: x.width, height: x.height };
+  if (x.name !== undefined) { if (typeof x.name !== "string" || !EVENT_ID.test(x.name)) throw new Error("a zone name is 1 to 100 letters, digits, _ . or -"); out.name = x.name; }
+  if (x.z !== undefined) { if (typeof x.z !== "number" || !Number.isFinite(x.z)) throw new Error("z is a number"); out.z = x.z; }
+  if (x.color !== undefined) { if (typeof x.color !== "string" || !/^#[0-9a-fA-F]{6}$/.test(x.color)) throw new Error('color is "#rrggbb"'); out.color = x.color; }
+  if (x.collision !== undefined) out.collision = Boolean(x.collision);
+  if (x.properties !== undefined) { const p = stateData(x.properties, "properties") as object; if (JSON.stringify(p).length > 1000) throw new Error("properties hold 1000 characters at most"); out.properties = p; }
+  return out;
+}
+const range = (v: unknown, min: number, max: number, what: string): number => {
+  if (typeof v !== "number" || !Number.isFinite(v) || v < min || v > max) throw new Error(`${what} is a number from ${min} to ${max}`);
+  return v;
+};
+const position = (p: unknown): { x: number; y: number } => {
+  const { x, y } = opts(p);
+  if (typeof x !== "number" || typeof y !== "number" || !Number.isFinite(x) || !Number.isFinite(y)) throw new Error("position is { x, y }, two numbers");
+  return { x, y };
+};
+const SHAKE_KEYS = ["intensity", "duration", "frequency", "direction"];
+function shakeOptions(o: unknown): ShakeOptions {
+  const x = opts(o), out: ShakeOptions = {};
+  for (const k of Object.keys(x)) if (!SHAKE_KEYS.includes(k)) throw new Error(`a shake is described by ${SHAKE_KEYS.join(", ")} (not "${k}")`);
+  if (x.intensity !== undefined) out.intensity = range(x.intensity, 0, 100, "intensity");
+  if (x.duration !== undefined) out.duration = range(x.duration, 0, 10_000, "duration");
+  if (x.frequency !== undefined) out.frequency = range(x.frequency, 1, 60, "frequency");
+  if (x.direction !== undefined) { if (!["x", "y", "both"].includes(x.direction)) throw new Error('direction is "x", "y" or "both"'); out.direction = x.direction; }
+  return out;
+}
+function soundOptions(o: unknown): SoundOptions {
+  const x = opts(o), out: SoundOptions = {};
+  if (x.volume !== undefined) out.volume = range(x.volume, 0, 1, "volume");
+  if (x.loop !== undefined) out.loop = Boolean(x.loop);
+  return out;
+}
+function lightingTransition(o: unknown): LightingTransition {
+  const x = opts(o), out: LightingTransition = {};
+  if (x.duration !== undefined) out.duration = range(x.duration, 0, 600_000, "duration");
+  if (x.easing !== undefined) { if (!["linear", "easeInOut"].includes(x.easing)) throw new Error('easing is "linear" or "easeInOut"'); out.easing = x.easing; }
+  return out;
+}
 const mapOf = (w: ScriptWorld): MapPort => {
   if (!w.map) throw new Error("this script does not run in a map but in a room that is not a map: $room.kind says where it runs");
   return w.map;
@@ -166,6 +261,10 @@ const choices = (v: unknown): Choice[] => {
   });
 };
 
+/**
+ * What each name of `GAME_API_DESCRIPTION` does, over a `ScriptWorld`. Written once: the game and a simulation provide a world, and the
+ * behavior (checks, limits, what is refused) is the same in both.
+ */
 export const GAME_API_IMPL: ApiImpl<ScriptWorld> = {
   handles: {
     $player: {
@@ -224,6 +323,26 @@ export const GAME_API_IMPL: ApiImpl<ScriptWorld> = {
         },
         hasVariable: (w, [k]) => mapOf(w).hasVariable(key(k)),
         removeVariable: (w, [k]) => mapOf(w).removeVariable(key(k)),
+        getWeather: (w) => mapOf(w).getWeather(),
+        setWeather: (w, [s]) => mapOf(w).setWeather(stateData(s, "the weather", true)),
+        patchWeather: (w, [p]) => mapOf(w).patchWeather(stateData(p, "the weather patch") as object),
+        clearWeather: (w) => mapOf(w).clearWeather(),
+        getLighting: (w) => mapOf(w).getLighting(),
+        setLighting: (w, [s]) => mapOf(w).setLighting(stateData(s, "the lighting", true)),
+        patchLighting: (w, [p]) => mapOf(w).patchLighting(stateData(p, "the lighting patch") as object),
+        clearLighting: (w) => mapOf(w).clearLighting(),
+        setDay: (w) => mapOf(w).setDay(),
+        setNight: (w) => mapOf(w).setNight(),
+        transitionLighting: (w, [to, o]) => mapOf(w).transitionLighting(stateData(to, "the lighting") as object, lightingTransition(o)),
+        createShape: (w, [o]) => mapOf(w).createShape(shapeOptions(o)),
+        getShape: (w, [name]) => mapOf(w).getShape(text(name, "a zone name")),
+        getShapes: (w) => mapOf(w).getShapes(),
+        removeShape: (w, [name]) => mapOf(w).removeShape(text(name, "a zone name")),
+        playSound: (w, [id, o]) => mapOf(w).playSound(text(id, "a sound id"), soundOptions(o)),
+        stopSound: (w, [id]) => mapOf(w).stopSound(text(id, "a sound id")),
+        showAnimation: (w, [p, graphic, name]) => mapOf(w).showAnimation(position(p), text(graphic, "a graphic id"), name === undefined ? "default" : text(name, "an animation name")),
+        showComponentAnimation: (w, [id, p, params]) => mapOf(w).showComponentAnimation(text(id, "an animation id"), position(p), params === undefined ? {} : (stateData(params, "params") as object)),
+        shakeMap: (w, [o]) => mapOf(w).shakeMap(shakeOptions(o)),
       },
     },
     $room: { members: { kind: { read: (w) => w.room.kind }, id: { read: (w) => w.room.id } } },

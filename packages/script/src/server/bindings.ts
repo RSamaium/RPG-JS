@@ -8,6 +8,7 @@ import type { RpgEvent, RpgMap, RpgPlayer, RpgPlayerRoom } from "@rpgjs/server";
 import type { SignalDesc } from "../core/filter";
 import type { SignalContext } from "./service";
 import { describeRoom } from "./world";
+import type { RpgShape } from "@rpgjs/common";
 
 /** Where a hook lives in a server module of RPGJS: `player`, `event`, `map`, `room`, `engine` or `projectiles`. */
 export type HookScope = "player" | "event" | "map" | "room" | "engine" | "projectiles";
@@ -51,12 +52,19 @@ export function signalBinding<TArgs extends unknown[]>(binding: SignalBinding<TA
   return binding as unknown as SignalBinding;
 }
 
+/**
+ * The zone of an `onInShape` / `onOutShape` hook. The map sends `execMethod("onInShape", [player, shape])`, which gives a module
+ * hook `(player, player, shape)`, so the zone is the argument that is one rather than the second one.
+ */
+const zoneOf = (args: unknown[]): RpgShape | undefined =>
+  args.find((a): a is RpgShape => !!a && typeof (a as { playerIsIn?: unknown }).playerIsIn === "function");
+const shapePayload = (shape: RpgShape) => ({ shape: { name: String(shape.name), x: Number(shape.x), y: Number(shape.y), width: Number(shape.width), height: Number(shape.height) } });
 const eventPayload = (event: RpgEvent) => ({ event: { id: String(event.id ?? ""), name: String(typeof event.name === "function" ? (event.name as () => unknown)() : event.name ?? "") } });
 /** A signal of an event: events exist in maps only, so the map is the one of the player. */
 const ofEvent = (event: RpgEvent, player: RpgPlayer): SignalEmission => ({ payload: eventPayload(event), context: { player, event } });
 
 /**
- * The signals of the game: the hooks `onJoinRoom`, `onLeaveRoom`, `onJoinMap`, `onLeaveMap`, `onLevelUp` and `onDead` of the player, and
+ * The signals of the game: the hooks `onJoinRoom`, `onLeaveRoom`, `onJoinMap`, `onLeaveMap`, `onInShape`, `onOutShape`, `onLevelUp` and `onDead` of the player, and
  * `onAction` and `onPlayerTouch` of the events. The ones of the player fire in every kind of room, a map or not.
  */
 export const DEFAULT_SIGNAL_BINDINGS: SignalBinding[] = [
@@ -83,6 +91,14 @@ export const DEFAULT_SIGNAL_BINDINGS: SignalBinding[] = [
       await Promise.resolve();
       return { payload: { gained, level: player.level }, context: { player } };
     },
+  }),
+  signalBinding<[RpgPlayer, ...unknown[]]>({
+    signal: "player.inShape", scope: "player", hook: "onInShape",
+    emit: (player, ...args) => { const shape = zoneOf(args); return shape ? { payload: shapePayload(shape), context: { player } } : undefined; },
+  }),
+  signalBinding<[RpgPlayer, ...unknown[]]>({
+    signal: "player.outShape", scope: "player", hook: "onOutShape",
+    emit: (player, ...args) => { const shape = zoneOf(args); return shape ? { payload: shapePayload(shape), context: { player } } : undefined; },
   }),
   signalBinding<[RpgPlayer]>({
     signal: "player.dead", scope: "player", hook: "onDead",

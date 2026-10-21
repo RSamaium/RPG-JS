@@ -10,6 +10,12 @@ const ROOM: SignalDesc["payload"] = {
   id: { type: "string", doc: "Id of the room." },
 };
 const MAP: SignalDesc["payload"] = { map: { type: "string", doc: "Id of the map." } };
+const SHAPE: SignalDesc["payload"] = {
+  shape: {
+    type: "object",
+    fields: { name: { type: "string" }, x: { type: "number" }, y: { type: "number" }, width: { type: "number" }, height: { type: "number" } },
+  },
+};
 const EVENT: SignalDesc["payload"] = {
   event: { type: "object", fields: { id: { type: "string" }, name: { type: "string", doc: "Name of the event, empty when it has none." } } },
 };
@@ -31,6 +37,8 @@ export const GAME_SIGNALS: Record<string, SignalDesc> = {
       level: { type: "number", doc: "The level of the player after the gain." },
     },
   },
+  "player.inShape": { doc: "A player enters a zone of the map (a shape, made by the game or by a script).", payload: SHAPE },
+  "player.outShape": { doc: "A player leaves a zone of the map.", payload: SHAPE },
   "player.dead": { doc: "A player has no health left.", payload: {} },
   "event.action": { doc: "A player acts on an event (the action key, next to it).", payload: EVENT },
   "event.touch": { doc: "A player touches an event.", payload: EVENT },
