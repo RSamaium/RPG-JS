@@ -13,6 +13,7 @@ import type { CustomBlockExecutors } from "@common/blocks";
 export {
   StudioStartupError,
   type StudioDirectStartup,
+  type StudioNewGameStartup,
   type StudioPlayerStartup,
   type StudioStartupErrorCode,
   type StudioStartupResolver,
