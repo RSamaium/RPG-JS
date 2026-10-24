@@ -35,6 +35,9 @@ export interface StudioMapExtensionContext {
    * Replaces part of the data the map is drawn with, and draws it again:
    * `{ elementsLow: [...resolved elements] }`. Whatever is not named is left as it is.
    *
+   * It only draws: the collisions are not touched. After the editor changes the elements of the `elementsLow` layer, call
+   * `rebuildElementCollisions` so the hero collides with what is drawn.
+   *
    * `layerOpacity` is a key the renderer reads: `{ layerOpacity: { terrain: 0.4, elementsLow: 1 } }` draws each named layer
    * (`terrain`, `elementsAlwaysLow`, `elementsLow`, `elementsHigh`) at that opacity, from 0 to 1. A layer that is not named
    * stays opaque. Characters and events are not affected.
