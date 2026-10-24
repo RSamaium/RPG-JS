@@ -8,6 +8,7 @@ import type { GameRuntimeMode } from "./data-provider/types";
 import type { StudioMapPlugin } from "./studio-map-plugins";
 import type { StudioStartupResolver } from "./startup";
 import { configureStudioBlockExecutors } from "./block-executor";
+export { createStudioBlockRunner, type StudioBlockRunner } from "./block-executor";
 import { configureStudioEnemyInteraction, type StudioEnemyInteractionResolver } from "./enemy-interaction";
 import type { CustomBlockExecutors } from "@common/blocks";
 export {

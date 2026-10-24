@@ -442,6 +442,28 @@ such as `enemy-id::2` to later placements, while preserving `sourceEventId` for
 database lookups. Each placement therefore gets its own sprite, hitbox, HP,
 Battle AI state, and defeat lifecycle.
 
+### Run one block from game code
+
+`createStudioBlockRunner` (from `@rpgjs/studio/server`) runs Studio blocks one
+at a time for a player, outside a workflow, for example from a script or a game
+callback. The blocks go through the default executors plus the ones registered
+with `provideStudioGame({ blockExecutors })`, with the same context helpers as
+a workflow, so a script and a visual block behave identically.
+
+```ts
+import { createStudioBlockRunner } from "@rpgjs/studio/server"
+
+const runner = createStudioBlockRunner(player, null, player.getCurrentMap(), {
+  variableScope: "player",
+})
+await runner.run("change_gold", { type: "constant", operation: "add", amount: 10 })
+await runner.run("show_text", { text: "Hello" })
+```
+
+`run(type, params)` rejects for a block type that has no executor, and when an
+executor throws. There is no per-player queue and no skill variable: the caller
+owns the ordering, so it is safe to call from inside a workflow callback.
+
 ## Built-in GUI settings
 
 Studio projects can bind the native Title Screen, Hotbar, HUD, and Main Menu
