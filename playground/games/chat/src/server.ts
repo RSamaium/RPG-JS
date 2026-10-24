@@ -18,8 +18,12 @@ export default createServer({
     provideMain(),
     provideChat({
       server: {
-        channels: ["map"],
+        channels: ["map", "global"],
         maxLength: 120,
+        // One process, one map: everybody is on the map of the sender. A deployment with several rooms carries it elsewhere.
+        deliver(_audience, message, player) {
+          player.getCurrentMap()?.broadcast(CHAT_MESSAGE_EVENT, message);
+        },
         rateLimit: {
           maxMessages: 5,
           windowMs: 10_000,

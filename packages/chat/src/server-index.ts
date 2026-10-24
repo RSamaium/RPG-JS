@@ -6,6 +6,7 @@ import server, {
 import type { ChatServerOptions } from "./server-types";
 
 export {
+  CHAT_DELETE_EVENT,
   CHAT_ERROR_EVENT,
   CHAT_GUI_ID,
   CHAT_MESSAGE_EVENT,

@@ -75,6 +75,154 @@
   outline-offset: var(--rpg-ui-focus-offset);
 }
 
+/*
+ * The chat with a bar (channels, size, collapse) above the messages: `data-size` is on the panel, `data-channel` and
+ * `data-color` on the tabs and the messages. The panel keeps its default look when none of them is used.
+ */
+.rpg-ui-chat[data-size] {
+  display: flex;
+  flex-direction: column;
+  transition: height 0.28s ease;
+}
+
+.rpg-ui-chat[data-size="tall"] {
+  height: min(var(--rpg-ui-chat-tall-height), calc(100vh - 2 * var(--rpg-ui-spacing)));
+}
+
+.rpg-ui-chat[data-size] .rpg-ui-chat-log {
+  flex: 1;
+}
+
+.rpg-ui-chat-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rpg-ui-spacing-sm);
+}
+
+.rpg-ui-chat-title {
+  font-weight: var(--rpg-ui-font-weight-bold);
+}
+
+.rpg-ui-chat-tabs {
+  display: flex;
+  overflow: hidden;
+  border: 1px solid var(--rpg-ui-border);
+  border-radius: var(--rpg-ui-radius-sm);
+}
+
+.rpg-ui-chat-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.7rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: var(--rpg-ui-font-size-sm);
+  cursor: pointer;
+}
+
+.rpg-ui-chat-tab[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--rpg-ui-text), transparent 82%);
+}
+
+.rpg-ui-chat-tab-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--rpg-ui-radius-full);
+  background: var(--rpg-ui-chat-channel-color, currentColor);
+}
+
+.rpg-ui-chat-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.rpg-ui-chat-icon-button {
+  min-width: 1.9rem;
+  height: 1.75rem;
+  padding: 0 0.5rem;
+  border: 1px solid var(--rpg-ui-border);
+  border-radius: var(--rpg-ui-radius-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.rpg-ui-chat-send[aria-busy="true"] {
+  cursor: progress;
+}
+
+.rpg-ui-chat-message[data-channel] {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-left: var(--rpg-ui-spacing-sm);
+  border-left: 3px solid var(--rpg-ui-chat-channel-color, var(--rpg-ui-border));
+}
+
+.rpg-ui-chat-message[data-channel] .rpg-ui-chat-author {
+  color: var(--rpg-ui-chat-channel-color, var(--rpg-ui-accent));
+}
+
+.rpg-ui-chat-message[data-self="true"] .rpg-ui-chat-author {
+  color: var(--rpg-ui-success);
+}
+
+.rpg-ui-chat-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.5rem;
+}
+
+.rpg-ui-chat-time {
+  color: var(--rpg-ui-text-muted);
+  font-size: 0.75em;
+}
+
+/* Specific enough to win over `.rpg-ui-btn`, which is positioned relatively. */
+.rpg-ui-btn.rpg-ui-chat-pill {
+  position: absolute;
+  margin: var(--rpg-ui-spacing);
+  pointer-events: auto;
+}
+
+.rpg-ui-btn.rpg-ui-chat-pill[data-position="top-left"],
+.rpg-ui-btn.rpg-ui-chat-pill[data-position="top-right"] { top: 0; }
+.rpg-ui-btn.rpg-ui-chat-pill[data-position="bottom-left"],
+.rpg-ui-btn.rpg-ui-chat-pill[data-position="bottom-right"] { bottom: 0; }
+.rpg-ui-btn.rpg-ui-chat-pill[data-position$="left"] { left: 0; }
+.rpg-ui-btn.rpg-ui-chat-pill[data-position$="right"] { right: 0; }
+
+.rpg-ui-chat-unread {
+  margin-left: 0.4rem;
+  padding: 0 0.4rem;
+  border-radius: var(--rpg-ui-radius-full);
+  background: var(--rpg-ui-danger);
+  color: #fff;
+  font-size: 0.75em;
+}
+
+/* The colours of the channels: a hue given to the tab and to the messages of the channel. */
+[data-color="slate"] { --rpg-ui-chat-channel-color: #a9b8d8; }
+[data-color="amber"] { --rpg-ui-chat-channel-color: #e5c777; }
+[data-color="violet"] { --rpg-ui-chat-channel-color: #c4b5fd; }
+[data-color="emerald"] { --rpg-ui-chat-channel-color: #7ee0b0; }
+[data-color="rose"] { --rpg-ui-chat-channel-color: #f4a3b5; }
+[data-color="sky"] { --rpg-ui-chat-channel-color: #8fd0ff; }
+
+@media (pointer: coarse) {
+  .rpg-ui-chat-tab,
+  .rpg-ui-chat-icon-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
 @media (max-width: 600px) {
   .rpg-ui-chat {
     right: var(--rpg-ui-spacing-sm);

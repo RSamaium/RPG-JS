@@ -7,6 +7,7 @@ import client, {
 import type { ChatClientOptions } from "./client-types";
 
 export {
+  CHAT_DELETE_EVENT,
   CHAT_ERROR_EVENT,
   CHAT_GUI_ID,
   CHAT_MESSAGE_EVENT,
@@ -15,11 +16,23 @@ export {
 export { normalizeChatClientOptions } from "./client-config";
 export {
   addChatMessage,
+  chatChannels,
   chatClientOptions,
   chatError,
+  chatExpanded,
   chatMessages,
+  chatSelectedChannel,
+  chatSending,
+  chatTall,
+  chatUnread,
   clearChatMessages,
   configureChatClient,
+  removeChatMessage,
+  selectChatChannel,
+  setChatExpanded,
+  setChatTall,
+  showChatError,
+  startChatSending,
 } from "./client-state";
 export {
   createChatClient,
@@ -27,8 +40,10 @@ export {
   sendChatMessage,
 };
 export type {
+  ChatClientChannel,
   ChatClientOptions,
   ChatPosition,
+  ResolvedChatChannel,
   ResolvedChatClientOptions,
 } from "./client-types";
 export type {

@@ -1,42 +1,88 @@
 <DOMContainer width="100%" height="100%" class="rpg-chat-root">
-  <section class="rpg-ui-chat rpg-ui-panel" data-position={position()}>
-    <div class="rpg-ui-chat-log" role="log" aria-live="polite">
-      @for (message of messages) {
-        <div class="rpg-ui-chat-message" data-player-id={message.playerId}>
-          <span class="rpg-ui-chat-author">{message.author}</span>
-          <span class="rpg-ui-chat-text">{message.text}</span>
+  @if (expanded()) {
+    <section class="rpg-ui-chat rpg-ui-panel" data-position={position()} data-size={size()}>
+      <div class="rpg-ui-chat-bar">
+        @if (hasChannels()) {
+          <div class="rpg-ui-chat-tabs" role="group" aria-label={channelGroupLabel()}>
+            @for (tab of tabs) {
+              <button type="button" class="rpg-ui-chat-tab" data-channel={tab.id} data-color={tab.color} aria-pressed={tab.pressed} click={onChannelClick}>
+                <span class="rpg-ui-chat-tab-dot" aria-hidden="true"></span>{tab.label}
+              </button>
+            }
+          </div>
+        } @else {
+          <span class="rpg-ui-chat-title">{t("rpg.chat.title")}</span>
+        }
+        <div class="rpg-ui-chat-actions">
+          <button type="button" class="rpg-ui-chat-icon-button" aria-label={sizeLabel()} title={sizeLabel()} aria-pressed={tallPressed()} click={toggleSize}>{sizeIcon()}</button>
+          <button type="button" class="rpg-ui-chat-icon-button" aria-label={t("rpg.chat.collapse")} title={t("rpg.chat.collapse")} click={collapse}>–</button>
         </div>
+      </div>
+      <div class="rpg-ui-chat-log" role="log" aria-live="polite" scroll={onLogScroll}>
+        @for (row of rows) {
+          <div class="rpg-ui-chat-message" data-player-id={row.playerId} data-channel={row.channel} data-color={row.color} data-self={row.self}>
+            <div class="rpg-ui-chat-meta">
+              <span class="rpg-ui-chat-author">{row.author}</span>
+              <span class="rpg-ui-chat-time">{row.time}</span>
+            </div>
+            <span class="rpg-ui-chat-text">{row.text}</span>
+          </div>
+        }
+      </div>
+      @if (errorText()) {
+        <div class="rpg-ui-chat-error" role="alert">{errorText()}</div>
       }
-    </div>
-    @if (errorText()) {
-      <div class="rpg-ui-chat-error" role="alert">{errorText()}</div>
-    }
-    <form class="rpg-ui-chat-form" submit={submitMessage}>
-      <input
-        class="rpg-ui-input rpg-ui-chat-input"
-        type="text"
-        maxlength={maxLength}
-        placeholder={t("rpg.chat.placeholder")}
-        value={draft}
-        input={onInput}
-      />
-      <button
-        class="rpg-ui-btn rpg-ui-chat-send"
-        type="submit"
-        aria-disabled={isEmpty() ? "true" : "false"}
-      >{t("rpg.chat.send")}</button>
-    </form>
-  </section>
+      <form class="rpg-ui-chat-form" submit={submitMessage}>
+        <input
+          id="rpg-chat-input"
+          class="rpg-ui-input rpg-ui-chat-input"
+          type="text"
+          autocomplete="off"
+          maxlength={maxLength}
+          aria-label={placeholder()}
+          placeholder={placeholder()}
+          value={draft}
+          input={onInput}
+          keydown={stopKeys}
+          keyup={stopKeys}
+        />
+        <button
+          class="rpg-ui-btn rpg-ui-chat-send"
+          type="submit"
+          aria-disabled={cannotSend() ? "true" : "false"}
+          aria-busy={sending() ? "true" : "false"}
+          aria-label={sendLabel()}
+        >{sendContent()}</button>
+      </form>
+    </section>
+  } @else {
+    <button class="rpg-ui-btn rpg-ui-chat-pill" type="button" data-position={position()} aria-label={t("rpg.chat.open")} click={expand}>
+      <span>{t("rpg.chat.title")}</span>
+      @if (unread() > 0) {
+        <span class="rpg-ui-chat-unread">{unread()}</span>
+      }
+    </button>
+  }
 </DOMContainer>
 
 <script>
-  import { computed, signal } from "canvasengine";
+  import { computed, effect, signal } from "canvasengine";
   import { inject, RpgClientEngine, WebSocketToken } from "@rpgjs/client";
   import { CHAT_SEND_EVENT } from "../config";
   import {
+    chatChannels,
     chatClientOptions,
     chatError,
-    chatMessages
+    chatExpanded,
+    chatMessages,
+    chatSelectedChannel,
+    chatSending,
+    chatTall,
+    chatUnread,
+    selectChatChannel,
+    setChatExpanded,
+    setChatTall,
+    startChatSending,
   } from "../client-state";
 
   const { data } = defineProps();
@@ -44,26 +90,135 @@
   const engine = inject(RpgClientEngine);
   const { t } = engine.i18n();
   const draft = signal("");
-  const messages = computed(() => chatMessages());
+
+  const expanded = computed(() => chatExpanded());
+  const unread = computed(() => chatUnread());
   const position = computed(() => data()?.position || chatClientOptions().position);
-  const maxLength = computed(() => {
-    return data()?.maxLength ?? chatClientOptions().maxLength;
-  });
+  const maxLength = computed(() => data()?.maxLength ?? chatClientOptions().maxLength);
   const isEmpty = computed(() => draft().trim().length === 0);
+  const hasChannels = computed(() => chatChannels().length > 1);
+  const channelById = computed(() => Object.fromEntries(chatChannels().map((channel) => [channel.id, channel])));
+  const channelLabel = (id) => {
+    const channel = channelById()[id];
+    return channel ? t(channel.label) : id;
+  };
+
+  const rows = computed(() => {
+    const selfId = engine.playerIdSignal ? engine.playerIdSignal() : null;
+    const pad = (value) => String(value).padStart(2, "0");
+    return chatMessages().map((message) => {
+      const date = new Date(message.createdAt);
+      return {
+        ...message,
+        color: channelById()[message.channel]?.color || "slate",
+        self: message.playerId === selfId ? "true" : "false",
+        time: pad(date.getHours()) + ":" + pad(date.getMinutes()),
+      };
+    });
+  });
+
+  const tabs = computed(() =>
+    chatChannels().map((channel) => ({
+      id: channel.id,
+      color: channel.color,
+      label: t(channel.label),
+      pressed: chatSelectedChannel() === channel.id ? "true" : "false",
+    })),
+  );
+  const channelGroupLabel = computed(() => t("rpg.chat.channel.label"));
+  const placeholder = computed(() =>
+    hasChannels()
+      ? t("rpg.chat.placeholder.channel", { channel: channelLabel(chatSelectedChannel()) })
+      : t("rpg.chat.placeholder"),
+  );
+
+  // The box grows and shrinks with a short animation, which the styles drop for a player who asked for less motion.
+  const size = computed(() => (chatTall() ? "tall" : "default"));
+  const tallPressed = computed(() => (chatTall() ? "true" : "false"));
+  const sizeIcon = computed(() => (chatTall() ? "▼" : "▲"));
+  const sizeLabel = computed(() => t(chatTall() ? "rpg.chat.shrink" : "rpg.chat.grow"));
+  function toggleSize() {
+    setChatTall(!chatTall());
+  }
+
+  // The loading of the button: a turning mark while the message is on its way, a still one for reduced motion.
+  const reducedMotion = () =>
+    typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const sending = computed(() => chatSending());
+  const cannotSend = computed(() => isEmpty() || sending());
+  const sendLabel = computed(() => t(sending() ? "rpg.chat.sending" : "rpg.chat.send"));
+  const SPINNER = ["◐", "◓", "◑", "◒"];
+  const frame = signal(0);
+  let spinTimer;
+  effect(() => {
+    clearInterval(spinTimer);
+    if (sending() && !reducedMotion()) spinTimer = setInterval(() => frame.set((frame() + 1) % SPINNER.length), 140);
+  });
+  const sendContent = computed(() => (sending() ? (reducedMotion() ? "…" : SPINNER[frame()]) : t("rpg.chat.send")));
+
   const errorText = computed(() => {
     const error = chatError();
     return error ? t(error.key, error.params || {}) : "";
   });
 
+  // The log follows the new messages, unless the player scrolled up to read.
+  let stick = true;
+  function onLogScroll(event) {
+    const log = event.currentTarget;
+    stick = log.scrollHeight - log.scrollTop - log.clientHeight < 40;
+  }
+  effect(() => {
+    rows();
+    expanded();
+    setTimeout(() => {
+      const log = document.querySelector(".rpg-chat-root .rpg-ui-chat-log");
+      if (log && stick) log.scrollTop = log.scrollHeight;
+    });
+  });
+
+  // The layer of the chat is full-screen like the ones of the other interfaces, and a layer added after it covers it and takes
+  // its clicks. The layer lets the clicks through; the panel and the pill take their own.
+  function liftRoot() {
+    const root = document.querySelector(".rpg-chat-root");
+    if (!root) return;
+    root.style.zIndex = "500";
+    root.style.pointerEvents = "none";
+  }
+  effect(() => {
+    expanded();
+    setTimeout(liftRoot);
+    setTimeout(liftRoot, 300);
+  });
+
+  function focusInput() {
+    setTimeout(() => document.getElementById("rpg-chat-input")?.focus?.());
+  }
+  function expand() {
+    setChatExpanded(true);
+    focusInput();
+  }
+  function collapse() {
+    document.getElementById("rpg-chat-input")?.blur?.();
+    setChatExpanded(false);
+  }
+  function onChannelClick(event) {
+    selectChatChannel(event.currentTarget.dataset.channel);
+    focusInput();
+  }
   function onInput(event) {
     draft.set(event.target?.value || "");
   }
-
+  // The keys typed in the chat are not for the game: the hero must not walk while the player writes.
+  function stopKeys(event) {
+    event.stopPropagation();
+  }
   function submitMessage(event) {
     event.preventDefault();
     const text = draft().trim();
-    if (!text) return;
-    socket.emit(CHAT_SEND_EVENT, { text, channel: "map" });
+    // One message at a time: the button waits for the answer of the server.
+    if (!text || chatSending()) return;
+    startChatSending();
+    socket.emit(CHAT_SEND_EVENT, { text, channel: chatSelectedChannel() });
     draft.set("");
   }
 </script>
